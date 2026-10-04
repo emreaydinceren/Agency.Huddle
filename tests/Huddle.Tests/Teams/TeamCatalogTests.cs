@@ -63,7 +63,7 @@ public sealed class TeamCatalogTests
         using TeamCatalog catalog = new(personas, tasks);
         Assert.Empty(catalog.Teams);
         int raised = 0;
-        void Count() => raised++;
+        void Count() => Interlocked.Increment(ref raised);
         catalog.Changed += Count;
 
         personas.Update("Nova", PersonaText("Nova", "Ops"), model: null, effort: null, workMode: null);

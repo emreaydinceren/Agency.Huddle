@@ -350,10 +350,10 @@
             this.fieldsContainer?.Refresh();
         }
 
-        string grouping = string.Join('|', this.grouping);
-        if (!string.Equals(grouping, this.groupingSignature, StringComparison.Ordinal))
+        string groupingKey = string.Join('|', this.grouping);
+        if (!string.Equals(groupingKey, this.groupingSignature, StringComparison.Ordinal))
         {
-            this.groupingSignature = grouping;
+            this.groupingSignature = groupingKey;
             this.groupingContainer?.Refresh();
         }
 

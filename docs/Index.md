@@ -41,6 +41,7 @@ subtree a page is in: **chat** is the chat surface, **acp** is the ACP effort
 | Change anything a Human sees | [Huddle.UserGuide.md](Huddle.UserGuide.md): update it in the same change |
 | "Fix" something that looks missing | [known-limits.md](engineering/known-limits.md) first |
 | Revisit a decision | [decisions.md](engineering/decisions.md), then the ADR in §4 |
+| Enable, disable or suppress an analyzer rule | [analyzer-decisions.md](engineering/analyzer-decisions.md) first |
 | Add to the product plan | [roadmap.md](engineering/roadmap.md) |
 | Learn what the product is for | [why-agency-huddle.md](why-agency-huddle.md), then [Huddle.EngineeringGuide.md](Huddle.EngineeringGuide.md) |
 
@@ -89,6 +90,7 @@ that exercise it. All are **chat** unless stated.
 | [installer-plan.md](engineering/installer-plan.md) | The delivery plan for the Windows and macOS one-line installers: decisions, spec, 79 tasks. Read a task and the spec sections it cites, never the whole page | chat | ~22k |
 | [installer.md](engineering/installer.md) | How to install Agency.Huddle on Windows or macOS, what the installer checks and why it stays idempotent, release process, integrity verification | chat | ~4k |
 | [decisions.md](engineering/decisions.md) | The decision record and the old-to-new vocabulary mapping | chat | ~6.3k |
+| [analyzer-decisions.md](engineering/analyzer-decisions.md) | Which compiler and Sonar rules are off or on, what each group rests on, and which are proven to fire | chat | ~4.5k |
 | [mudblazor.md](engineering/mudblazor.md) | Which MudBlazor facts were checked against the package | chat | small |
 | [acp-agent-guide.md](engineering/acp-agent-guide.md) | What was verified against the real adapter and what is only assumed. Written under the old `Team.*` names | acp | ~9k |
 | [acp-session-config.md](engineering/acp-session-config.md) | How an ACP agent advertises models and effort, and how a client selects them | acp | ~4k |
@@ -179,6 +181,6 @@ Do not orient from these. They explain how the product got here.
 
 | Page | What it is |
 | --- | --- |
-| [why-agency-huddle.md](why-agency-huddle.md) | The essay: why a chat app, and where it differs from a pipeline. Updated 2026-10-01 |
+| [why-agency-huddle.md](why-agency-huddle.md) | The essay: why a chat app, and where it differs from a pipeline. Updated 2026-10-03 |
 | [engineering/product-observations.md](engineering/product-observations.md) | Observations about the product, kept as notes |
 | [Huddle.TeamPages-RetroActions.md](Huddle.TeamPages-RetroActions.md) | Actions from the Team Pages retrospectives |

@@ -1,0 +1,72 @@
+# Enabled Sonar rules that have no probe in tests/Huddle.AnalyzerProbes, and why.
+# Format: <RuleId> <reason>. agents/scripts/Check-Analyzers.ps1 fails if an enabled rule is in neither
+# a probe nor this file, or if a rule listed here gets a probe or stops being enabled.
+#
+#   no-technology       the repository uses nothing the rule is about, so there is nothing to build
+#   compiler-rejects    the violation is a compile error, so the analyzer never gets to run
+#   needs-package       the probe needs a package the repository does not reference
+#   probe-did-not-fire  a probe was written and the rule did not fire; either the probe is wrong or the
+#                       rule is narrower than its title, and nobody has checked which
+#   not-yet-probed      no probe written yet
+
+S3431 no-technology
+S3597 no-technology
+S3598 no-technology
+S3925 no-technology
+S3926 no-technology
+S3927 no-technology
+S4159 no-technology
+S4200 no-technology
+S4210 no-technology
+S4211 no-technology
+S4260 no-technology
+S4277 no-technology
+S4428 no-technology
+S6419 no-technology
+S6420 no-technology
+S6422 no-technology
+S6424 no-technology
+S6575 no-technology
+
+S2934 compiler-rejects
+S3449 compiler-rejects
+S3464 compiler-rejects
+S8368 compiler-rejects
+S8380 compiler-rejects
+S8381 compiler-rejects
+
+S2115 needs-package
+S3363 needs-package
+S4433 needs-package
+S5659 needs-package
+S5753 needs-package
+S5766 needs-package
+S6377 needs-package
+
+S1172 probe-did-not-fire
+S1607 probe-did-not-fire
+S1944 probe-did-not-fire
+S2187 probe-did-not-fire
+S2198 probe-did-not-fire
+S2612 probe-did-not-fire
+S3172 probe-did-not-fire
+S3397 probe-did-not-fire
+S3433 probe-did-not-fire
+S3458 probe-did-not-fire
+S3604 probe-did-not-fire
+S4015 probe-did-not-fire
+S4019 probe-did-not-fire
+S5332 probe-did-not-fire
+S5542 probe-did-not-fire
+S6797 probe-did-not-fire
+S6930 probe-did-not-fire
+S6931 probe-did-not-fire
+S6960 probe-did-not-fire
+S6967 probe-did-not-fire
+S6968 probe-did-not-fire
+S8367 probe-did-not-fire
+
+S2857 not-yet-probed
+S2970 not-yet-probed
+S3904 not-yet-probed
+S4583 not-yet-probed

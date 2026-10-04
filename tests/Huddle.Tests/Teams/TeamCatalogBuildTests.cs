@@ -6,7 +6,6 @@ namespace Agency.Huddle.Tests.Teams;
 /// <summary>Tests for TeamCatalog.Build pure projection.</summary>
 public sealed class TeamCatalogBuildTests
 {
-    private static readonly string[] Empty = [];
     private static readonly string[] Business_Empty_Empty_False = ["Business|projects=|members=|folder=False"];
     private static readonly string[] Business_Empty_Empty_True = ["Business|projects=|members=|folder=True"];
     private static readonly string[] B_Empty_Empty_False = ["B|projects=|members=|folder=False"];

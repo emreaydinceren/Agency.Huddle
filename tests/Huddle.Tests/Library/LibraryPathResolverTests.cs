@@ -76,7 +76,7 @@ public sealed class LibraryPathResolverTests
 
         using Fixture fixture = BuildFixture();
 
-        bool resolved = fixture.Resolver.TryResolve("teams", "marketing/launch q4/PLAN.md", out LibraryPath? path, out string? error);
+        bool resolved = fixture.Resolver.TryResolve("teams", "marketing/launch q4/PLAN.md", out LibraryPath? path, out _);
 
         Assert.True(resolved);
         Assert.NotNull(path);

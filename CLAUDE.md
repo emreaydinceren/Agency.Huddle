@@ -100,5 +100,6 @@ Read the one that matches the stage you're in:
 | `agents/Testing.md` | Writing or changing any test: what a test must pin, proving it can fail, flaky-test triage, the shared helpers, prompts and goldens |
 | `agents/BlazorTesting.md` | Testing a Razor component with bUnit, and the Razor traps those tests catch |
 | `agents/DeliveryPlaybook.md` | Running a project plan with parallel subagents; its scripts are in `agents/scripts/` |
+| `agents/GiteaToGitHubPlaybook.md` | Touching `sync-github.yaml`, `.github/workflows/ci.yaml` or `.gitleaks.toml`, or taking a GitHub pull request: the scrubbed public mirror, its rules and the merge flow |
 
 @agents/CSharpPrinciples.md

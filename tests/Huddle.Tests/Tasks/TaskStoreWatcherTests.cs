@@ -424,7 +424,6 @@ public sealed class TaskStoreWatcherTests
     [Fact]
     public async Task Watcher_ProjectFolderCreated_AppearsInTeams()
     {
-        CancellationToken ct = TestContext.Current.CancellationToken;
         using TempDataDir dir = new();
         string root = TestTaskStore.Root(dir);
         TestTaskStore.WriteTask(root, Path.Combine("Platform", "_tasks", "PLAT-0001.md"), TestTasks.Make(id: "PLAT-0001", location: new("Platform", null, false)));

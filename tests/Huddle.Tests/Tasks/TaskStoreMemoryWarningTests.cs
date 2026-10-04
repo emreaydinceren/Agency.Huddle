@@ -213,7 +213,9 @@ public sealed class TaskStoreMemoryWarningTests
 
     /// <summary>Every Warning the recorder captured, as its rendered message.</summary>
     private static List<string> Warnings(RecordingLogger<TaskStore> logger) =>
+#pragma warning disable S2971 // Entries is the live list the logger appends to from other threads; ToList() is the snapshot taken before filtering.
         logger.Entries.ToList().Where(entry => entry.Level == LogLevel.Warning).Select(entry => entry.Message).ToList();
+#pragma warning restore S2971
 
     /// <summary>Writes arbitrary raw text under <paramref name="root"/>, for fixtures that need no real Task.</summary>
     private static string WriteRawFile(string root, string relativePath, string text)

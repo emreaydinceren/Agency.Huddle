@@ -46,9 +46,11 @@ public sealed class TempDataDir : IDisposable
         }
         catch (IOException)
         {
+            // Best-effort cleanup of a temp directory; a leftover is not a test failure.
         }
         catch (UnauthorizedAccessException)
         {
+            // Best-effort cleanup of a temp directory; a leftover is not a test failure.
         }
     }
 

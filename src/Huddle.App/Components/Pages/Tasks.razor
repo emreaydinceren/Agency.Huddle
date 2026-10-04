@@ -562,7 +562,26 @@
     /// forces Blazor to tear down and recreate <see cref="TaskDetail"/> whenever the drawer switches to
     /// a different Task or a fresh create-mode Draft.
     /// </summary>
-    private object DetailKey => this.selectedDraft is { } draft ? draft : this.selectedTaskId is { } id ? id : "tasks-detail-none";
+    private object DetailKey
+    {
+        get
+        {
+            if (this.selectedDraft is { } draft)
+            {
+                return draft;
+            }
+
+            if (this.selectedTaskId is { } id)
+            {
+                return id;
+            }
+
+            return NoDetailKey;
+        }
+    }
+
+    /// <summary>The <see cref="DetailKey"/> used when neither a Draft nor a Task is selected.</summary>
+    private const string NoDetailKey = "tasks-detail-none";
 
     /// <summary>The ids of every Task in the current effective View (Spec §10.8), unnarrowed by the search box, for <see cref="AiReactingChip.Watched"/>.</summary>
     private IReadOnlyList<TaskId> WatchedTaskIds => this.FilteredTasks(null).Select(t => t.Id).ToList();

@@ -81,7 +81,4 @@ public sealed class ListAgentsToolTests
 
         Assert.Equal("Agents:\n- echo (online)\n\nPersonas: none", result);
     }
-
-    /// <summary>Minimal valid Persona frontmatter (Name, Title and Alias all <paramref name="name"/>) wrapped around <paramref name="body"/> - identity is front-matter driven from this phase on.</summary>
-    private static string PersonaText(string name, string body) => $"---\nName: {name}\nTitle: {name}\nAlias: {name}\n---\n{body}";
 }

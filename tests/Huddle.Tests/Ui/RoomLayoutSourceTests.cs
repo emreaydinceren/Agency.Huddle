@@ -80,6 +80,70 @@ public sealed class RoomLayoutSourceTests
         Assert.False(File.Exists(scoped), "ElicitationCard.razor.css must not exist: ::deep cannot reach a MudPaper root, so its rules never apply. Put them in app.css.");
     }
 
+    /// <summary>
+    /// A Question card's option buttons are at least 44 pixels tall (Questions spec §6.7, so the card
+    /// works at phone width) and keep the case the Agent wrote. The rule is global because the buttons
+    /// are <c>MudButton</c>s, which Blazor's CSS isolation never stamps its attribute onto.
+    /// </summary>
+    [Fact]
+    public void AppCss_QuestionCardOption_IsTouchSizedAndKeepsItsCase()
+    {
+        string body = RuleBody(ReadAppCss(), ".question-card-option");
+
+        Assert.Contains("min-height: 44px;", body, StringComparison.Ordinal); // contains-ok: stylesheet source text, not markup
+        Assert.Contains("text-transform: none;", body, StringComparison.Ordinal); // contains-ok: stylesheet source text, not markup
+    }
+
+    /// <summary>A ranking row, whose arrow buttons are <c>MudIconButton</c>s, is at least 44 pixels tall.</summary>
+    [Fact]
+    public void AppCss_QuestionCardRankRow_IsTouchSized()
+    {
+        string body = RuleBody(ReadAppCss(), ".question-card-rank-row");
+
+        Assert.Contains("min-height: 44px;", body, StringComparison.Ordinal); // contains-ok: stylesheet source text, not markup
+    }
+
+    /// <summary>
+    /// The Send row sits below the last Question. Its element is a <c>MudStack</c> that is a direct child
+    /// of the <c>MudPaper</c> root, so a scoped <c>::deep</c> rule had no scoped ancestor to hang from
+    /// and its margin never applied.
+    /// </summary>
+    [Fact]
+    public void AppCss_QuestionCardActions_SitBelowTheQuestions()
+    {
+        string body = RuleBody(ReadAppCss(), ".question-card-actions");
+
+        Assert.Contains("margin-top: 0.75rem;", body, StringComparison.Ordinal); // contains-ok: stylesheet source text, not markup
+    }
+
+    /// <summary>
+    /// The two rules that styled plain elements keep their effect after the move: each Question is set
+    /// off from the one above, and a ranking row's label takes the space the arrows leave.
+    /// </summary>
+    [Fact]
+    public void AppCss_QuestionCardPlainElements_KeepTheirSpacingAndFlex()
+    {
+        string css = ReadAppCss();
+
+        Assert.Contains("margin-top: 0.75rem;", RuleBody(css, ".question-card-question"), StringComparison.Ordinal); // contains-ok: stylesheet source text, not markup
+        Assert.Contains("flex: 1 1 auto;", RuleBody(css, ".question-card-rank-label"), StringComparison.Ordinal); // contains-ok: stylesheet source text, not markup
+    }
+
+    /// <summary>
+    /// The Question card has no scoped stylesheet. Its root is a <c>MudPaper</c> and its controls are Mud
+    /// components, so a <c>::deep</c> rule there only matched what happened to sit inside the plain
+    /// <c>div</c> wrapping each Question - the Send row, outside it, never matched - and reshaping that
+    /// div would have broken the rest without a test failing. Rules for a card of Mud components live in
+    /// <c>app.css</c> (see MudBlazorImplementation.md).
+    /// </summary>
+    [Fact]
+    public void QuestionCard_HasNoScopedStylesheetThatCouldNeverMatch()
+    {
+        string scoped = CssSource.RepoPath("src", "Huddle.App", "Components", "Shared", "QuestionCard.razor.css");
+
+        Assert.False(File.Exists(scoped), "QuestionCard.razor.css must not exist: ::deep cannot reach a MudPaper root or its Mud children, so its rules apply by accident or never. Put them in app.css.");
+    }
+
     /// <summary>Reads <c>app.css</c> from the repository.</summary>
     /// <returns>The stylesheet's text.</returns>
     private static string ReadAppCss() => File.ReadAllText(CssSource.RepoPath("src", "Huddle.App", "wwwroot", "app.css"));

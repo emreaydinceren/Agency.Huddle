@@ -688,11 +688,15 @@ public static partial class MarkdownRenderer
         }
 
         string text = link.Alias ?? (link.Heading is null ? link.Target : string.Concat(link.Target, "#", link.Heading));
-        string? title = !reference.Exists
-            ? string.Format(CultureInfo.InvariantCulture, MarkdownRenderer.UnresolvedNoteTitleFormat, link.Target)
-            : reference.IsAmbiguous
-                ? string.Format(CultureInfo.InvariantCulture, MarkdownRenderer.AmbiguousNoteTitleFormat, link.Target)
-                : null;
+        string? title = null;
+        if (!reference.Exists)
+        {
+            title = string.Format(CultureInfo.InvariantCulture, MarkdownRenderer.UnresolvedNoteTitleFormat, link.Target);
+        }
+        else if (reference.IsAmbiguous)
+        {
+            title = string.Format(CultureInfo.InvariantCulture, MarkdownRenderer.AmbiguousNoteTitleFormat, link.Target);
+        }
 
         LinkInline result = new(MarkdownRenderer.BuildLibraryHref(reference.RootId, reference.RelativePath), title ?? string.Empty);
         result.AppendChild(new LiteralInline(text));

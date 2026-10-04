@@ -1,21 +1,21 @@
 # Agents as colleagues, not a pipeline
 
-*What building a Slack-shaped chat for Claude agents taught us about multi-agent
-systems.*
+*An open-source multi-agent workspace where the human is in every room, and what
+building it taught us about why agent teams fail.*
 
-Every explainer on multi-agent systems opens the same way, and it is right. One
-model, one context window, one many-sided task — a literature review, a
-competitive analysis, a report and a deck — and somewhere around the third
-sub-goal the context degrades, the citations drift, and the output confidently
-describes a world that is not there. The monolithic bottleneck.
+Using an AI agent still feels like manual work. You write the prompt, read the
+response, catch the errors, and carry the output to the next step. The agent is
+fast; you are still the planner, the router and the reviewer.
 
-The consensus answer is to stop asking one model to be everyone. Split the work
-across specialists. Give them channels to talk on, rules for who acts when, tools
-for ground truth, and memory that outlasts a prompt. Five pillars; every
-framework claims them.
+The obvious fix is more agents: split the work across specialists, give them
+channels to talk on, rules for who acts when, tools for ground truth, and memory
+that outlasts a prompt. Most multi-agent frameworks are built on some version of
+those five pillars, and so is Agency.Huddle.
 
-We agree with all of that. Agency.Huddle is built on those five pillars. Where we part
-company is the diagram that usually comes next.
+On its own, though, the fix makes things worse. Five agents on one model give you
+one opinion five times, at five times the cost. Where we part company with most
+frameworks is in what we think turns a crowd of agents into a team, and in where
+the human sits.
 
 ## What makes a team worth having
 
@@ -29,16 +29,53 @@ More agents alone adds cost, not quality.
 The gain comes from three things together:
 
 1. **Different roles.** Each member has its own job, instructions and tools.
-2. **Separate context.** Each member holds only its own part, so its attention is
-   not diluted and it does not inherit the author's assumptions.
+2. **Separate context, and ideally a different model.** Each member holds only its
+   own part, so its attention is not diluted and it does not inherit the author's
+   assumptions. A reviewer on a different model goes further: it does not share the
+   author's blind spots either.
 3. **A real review or test step.** Something checks the result against ground
    truth: a test, a source, or a person.
 
 Put those in a loop and you have **Generate → Challenge → Verify**. One agent
 produces the work, a second with its own context hunts for flaws, and a third step
 checks the result against something real. Without the last step it is just two
-agents agreeing. Everything below is how Agency.Huddle tries to supply all three,
-and where it does not yet.
+agents agreeing. Here is how Agency.Huddle supplies each step, and where it does
+not yet:
+
+| Step | In Agency.Huddle | Status |
+| --- | --- | --- |
+| Generate | A Teammate with its own role, context and model | Built |
+| Challenge | `@`-mention a second Teammate, ideally on another model | Built; you have to ask for it |
+| Verify | You, a member of every room; Tasks with a named owner | Partly: no built-in test step |
+
+The rest of this page explains each row.
+
+### Making members disagree on purpose
+
+A different title on the same model is a costume, not a perspective. Four things
+make members reach different conclusions, listed roughly by how hard each is to
+fake with a prompt:
+
+1. **Different models.** Members on one model share its priors however their roles
+   read. A Teammate's Model and Adapter are set per Teammate, so one team can span
+   vendors and the strongest lever is a setting.
+2. **Different information.** A member that reads other files, or a different slice
+   of the conversation, argues from different evidence. Each Teammate has its own
+   Work Dir and memory, so what it knows is its own.
+3. **Opposed incentives.** "Find what breaks" produces a different answer than
+   "Review this". Give roles that pull against each other, such as builder and
+   breaker or cost and quality, rather than roles that merely differ.
+4. **Independent first answers.** Mention several members in one Message and each
+   answers before seeing the others, so the discussion starts from real
+   differences. After that they read each other, as colleagues do. That is the
+   point, and it is why the first three levers matter: they decide whether a
+   disagreement survives the conversation.
+
+A **Skill** supplies a method, not a viewpoint, such as a threat-modeling
+procedure for the one Teammate who reviews security. Because Skills are assigned per
+Teammate, a method does not spread to the whole team and flatten it. The first lever
+depends on you setting each Teammate's Model; see
+[What we have not solved](#what-we-have-not-solved).
 
 ## The diagram with a hole in it
 
@@ -60,11 +97,10 @@ critique — happens somewhere the human is not.
 The standard fix is a *human-in-the-loop checkpoint*: a gate inserted between
 stages where the pipeline pauses and asks permission. A checkpoint is something
 you add. It can be skipped in configuration, placed at the wrong stage, or
-forgotten when a new stage is inserted. And the failures the same explainers warn
-about — the Scale Fallacy, where agent chatter bloats cost without improving the
-answer; the cascading error, where one upstream hallucination is trusted by
-everything downstream — are exactly what happens in the part of the diagram
-nobody is watching.
+forgotten when a new stage is inserted. And the two failures multi-agent systems
+are known for — agent chatter that inflates cost without improving the answer, and
+the cascading error, where one upstream hallucination is trusted by everything
+downstream — happen exactly in the part of the diagram nobody is watching.
 
 ## Put the human in the room
 
@@ -72,10 +108,10 @@ Agency.Huddle is a chat app. It looks like Slack because Slack already solved th
 problem for people: work happens in rooms, and you are in the rooms that concern
 you.
 
-The other members of your rooms are Claude processes. Each is a separate `claude`
-session, spawned as a child process, connected to the app over a named pipe. They
-read the room, answer when spoken to, start rooms of their own, and pull each
-other in when a question is not theirs.
+The other members of your rooms are AI agents. Each Teammate runs as its own agent
+process, driven over the [Agent Client Protocol](https://agentclientprotocol.com)
+(ACP). They read the room, answer when spoken to, start rooms of their own, and
+pull each other in when a question is not theirs.
 
 ```text
 #  valentines-strategy                                4 members
@@ -101,17 +137,18 @@ caller, the named agents — and you. There is no way to create a room the human
 is not in, because the code has no branch for it.
 
 Oversight stops being a feature and becomes a consequence of the data model.
-Nobody has to remember to insert the checkpoint. The Scale Fallacy is still real
+Nobody has to remember to insert the checkpoint. Runaway chatter is still possible
 — two agents can still tag each other — but it happens in a room you can open, and
 a cap stops it (see [What we have not solved](#what-we-have-not-solved)).
 
-That human is also the **Verify** step. A person who is in the room at the moment
-a claim is made can ask for the source, which a gate at the bottom of a pipeline
-cannot do for a mistake made three stages earlier.
+Being in the room is also what makes you able to be the **Verify** step. A person
+who is there at the moment a claim is made can ask for the source, which a gate at
+the bottom of a pipeline cannot do for a mistake made three stages earlier.
+Agency.Huddle puts you in the room; it does not make you check.
 
 ## Five pillars, five answers
 
-**Specialised agents.** A **Teammate** is a Markdown file,
+**Specialized agents.** A **Teammate** is a Markdown file,
 `Teammates/<Name>/<Name>.md`. Its frontmatter says who it is and what it knows; its
 body becomes its private instructions. Drop a new file in and `@CFO` comes online
 without a restart.
@@ -127,22 +164,24 @@ consult_when: 'A recommendation rests on figures nobody has sourced'
 
 The fields other Teammates may see compose into a job description, which is what
 lets one agent bring in the right colleague instead of guessing at a name. The body
-never reaches anyone else, so a character can hold goals the others do not see.
-A Teammate's **Model**, **Effort** and **Work Mode** (how much it may do before it
-must ask) are set per Teammate, and so is its **Adapter**, the AI process behind it,
-so one team can span vendors and different blind spots are a setting rather than a
-project. A **Skill** is know-how an agent reads on demand, and the built-in Chief of
-Staff proposes a whole team from it: nothing is created until you select Approve.
-Teammates group into **Teams** and work on **Projects**, which are folders.
+never reaches anyone else, so a Teammate can hold goals the others do not see.
 
-**Communication channels.** A named pipe, one JSON object per line. An agent
-exists in Agency.Huddle for exactly one reason: some process connected to the pipe and
-said `hello`. That is the entire contract. A forty-line PowerShell script that
-echoes text back is a full member of any room, and so is a real Claude session —
+Each Teammate also names its **Adapter**, the ACP agent process behind it, and its
+model. One Teammate can run on Anthropic's `claude-agent-acp` in the cloud while
+the one reviewing its work runs a local model through `agency-acp`, which is the
+first lever in [Making members disagree on purpose](#making-members-disagree-on-purpose).
+The [User Guide](Huddle.UserGuide.md) covers the rest of a Teammate's settings, the
+Skills it can read, and the Teams and Projects it works in.
+
+**Communication channels.** Inside the app, a named pipe carries one JSON object
+per line. An agent exists in Agency.Huddle for exactly one reason: some process
+connected to the pipe and said `hello`. That is the entire contract. A
+forty-line PowerShell script that echoes text back is a full member of any room,
+and so is a Teammate whose runner speaks ACP to a real agent on the other side —
 the chat surface cannot tell them apart, and that is the point. Any language, any
 process, one line of JSON.
 
-**Coordination rules.** The reply rule is still one pure function:
+**Coordination rules.** The reply rule is one pure function:
 
 ```csharp
 return memberCount <= 2 || mentioned || following ? ReplyDecision.Reply : ReplyDecision.CatchUp;
@@ -150,7 +189,7 @@ return memberCount <= 2 || mentioned || following ? ReplyDecision.Reply : ReplyD
 
 Two members is a private conversation, so the agent answers everything. Three or
 more is a group, so it answers only when `@`-mentioned, or when it has chosen to
-follow the room. A room's behaviour comes from how many members it has. There is
+follow the room. A room's behavior comes from how many members it has. There is
 no "direct room" type in the schema, because a stored type would have to be kept in
 sync on every invite and would drift. Above that rule sits one override: a room
 that has spent its **Budget** of agent replies answers nothing until you speak or
@@ -178,7 +217,7 @@ Researcher, Analyst, Critic, Writer. It is a natural reading, and we think it is
 wrong.
 
 Those are things a colleague *does*, not who a colleague *is*. A CFO plans,
-researches, analyses, critiques and writes, depending on what you asked. Hire a
+researches, analyzes, critiques and writes, depending on what you asked. Hire a
 "Critic" and you have fragmented one person into five, none of whom knows the
 numbers well enough to critique them.
 
@@ -194,22 +233,18 @@ critiques the numbers *because* it is the CFO.
 
 ## Topology without an engine
 
-The other diagram in every explainer is peer-to-peer mesh versus hierarchical
-tree, with a selection matrix for choosing between them. Most frameworks make you
-pick up front.
-
-Agency.Huddle is a mesh by default: a room of peers, every member sees every message. It
-becomes a tree the moment one agent creates a room, seeds it with the context the
-specialists need, and follows it. The Chief of Staff you asked for a Valentine's
-strategy starts a room with the CMO and the CFO, writes the brief as the first
-message, and brings the outcome back to you. You are in that room too; you are
-just not interrupted by it.
-
 Reports on multi-agent systems name three layouts: **centralized** (one coordinator
 routes everything, easy to follow but a bottleneck), **peer-to-peer** (agents talk
 directly, flexible but hard to track and prone to drift) and **hierarchical** (leads
-supervise sub-teams, scales but costs more hand-offs). Most tools ask you to choose
-one before you start.
+supervise sub-teams, scales but costs more hand-offs). Most frameworks make you
+choose one before you start.
+
+Agency.Huddle is a mesh by default: a room of peers, every member sees every
+message. It becomes a tree the moment one agent creates a room, seeds it with the
+context the specialists need, and follows it. The Chief of Staff you asked for a
+Valentine's strategy starts a room with the CMO and the CFO, writes the brief as the
+first message, and brings the outcome back to you. You are in that room too; you
+are just not interrupted by it.
 
 Nothing switches modes. There is no room kind. Topology is whatever falls out of
 which Teammates exist, which tools each holds, and who is in the room. The design
@@ -218,10 +253,45 @@ on specialists to tag the coordinator back turned out to be a silent failure
 path — is in
 [ADR-0005](adr/0005-agent-topologies-are-emergent.md).
 
+## This repository is built the way it describes
+
+The argument above is that nobody can read everything a team of agents produces,
+so the work moves from reading output to engineering what checks it. This
+repository follows that rule, and each piece below can be opened and read:
+
+- **Rules are code, not review comments.** Warnings are errors, nullable
+  references are on, and the .NET and Sonar analyzers run inside the build, so a
+  style or language rule fails a build instead of waiting for someone to notice.
+  [CSharpPrinciples.md](../agents/CSharpPrinciples.md) lists them for the agents
+  that write the code.
+- **A test has to be able to fail.** `Prove-Mutation.ps1` changes one line of
+  source, runs the tests and restores the file byte for byte, so a green test that
+  exercises nothing shows itself. [Testing.md](../agents/Testing.md) says when to
+  use it.
+- **Gates are scripts.** `Check-All.ps1` runs the line-ending, diff, visibility and
+  documentation-index checks. CI repeats restore, build and test on every pull
+  request, with a secret scan and a vulnerable-dependency check beside them.
+- **Decisions are written down.** The [decision records](Index.md#4-decisions-adrs)
+  say why the system is shaped as it is, so an agent or a person reads the reason
+  instead of guessing at it.
+- **The documentation is routed.** [Index.md](Index.md) sends a reader to the one
+  page that owns an answer, with a rough cost in tokens, and `Check-DocIndex.ps1`
+  fails when a page is missing from it. An agent spends its context on the answer
+  rather than on working out the layout.
+
+None of this removes a person. A person sets what done means, and the checks say
+whether it was met. It also checks the repository, not your Teammates: a team in
+the app still has no built-in test step, as the table below says.
+
 ## What we have not solved
 
-A team fixes none of its own failure modes by default. Four are worth saying plainly:
+A team fixes none of its own failure modes by default. Five are worth saying plainly:
 
+- **Convergence.** A team the Chief of Staff proposes starts every Teammate on the
+  installation's default Model and Adapter, because a Candidate cannot carry either.
+  Until you change them on each Teammate card, the team is one model in several
+  roles, and a discussion between them can settle too easily
+  ([why this matters](#making-members-disagree-on-purpose)).
 - **Collaboration is not automatic value.** Teammates talking to each other is not
   a review. Mention a challenger to attack a specific piece of work.
 - **Cascading errors.** If one Teammate makes a wrong assumption early and the next
@@ -268,4 +338,13 @@ the switch. [`docs/Huddle.UserGuide.md`](Huddle.UserGuide.md) walks through
 Teammates, Teams, Tasks and the Library, and
 [`docs/Huddle.EngineeringGuide.md`](Huddle.EngineeringGuide.md) holds the whole design.
 
-.NET 10 and Blazor Server, 5,284 tests, zero build warnings.
+Built with .NET 10 and Blazor Server, with thousands of tests and zero build
+warnings.
+
+## Where this leaves us
+
+Putting the human in every room solves the problem of work happening out of sight.
+It does not solve verification: being able to check is not the same as checking,
+and a person cannot read everything a team of agents produces. Making the Verify
+step something the system does, not only something a person may do, is the next
+problem, and the one we are working on now.

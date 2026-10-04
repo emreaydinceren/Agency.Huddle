@@ -147,13 +147,11 @@ internal static class LibraryFileKinds
         }
 
         // WebP signature (RIFF....WEBP)
-        if (head.Length >= 12)
+        if (head.Length >= 12 &&
+            head[0] == (byte)'R' && head[1] == (byte)'I' && head[2] == (byte)'F' && head[3] == (byte)'F' &&
+            head[8] == (byte)'W' && head[9] == (byte)'E' && head[10] == (byte)'B' && head[11] == (byte)'P')
         {
-            if (head[0] == (byte)'R' && head[1] == (byte)'I' && head[2] == (byte)'F' && head[3] == (byte)'F' &&
-                head[8] == (byte)'W' && head[9] == (byte)'E' && head[10] == (byte)'B' && head[11] == (byte)'P')
-            {
-                return "image/webp";
-            }
+            return "image/webp";
         }
 
         return null;

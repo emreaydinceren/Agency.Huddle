@@ -508,7 +508,7 @@ public sealed class TaskStoreTests
         Directory.CreateDirectory(Path.Combine(root, "Platform"));
         using PersonaStore personas = TestTaskStore.CreatePersonaStore(dir);
         using TaskStore store = TestTaskStore.CreateTaskStore(dir, personas);
-        _ = TaskId.TryParse("PLAT-0001", out TaskId id);
+        _ = TaskId.TryParse("PLAT-0001", out _);
         TaskItem candidate = TestTasks.Make(id: "PLAT-0001", location: new("platform", null, false), path: "");
         string text = TaskFileFormat.Compose(candidate);
 

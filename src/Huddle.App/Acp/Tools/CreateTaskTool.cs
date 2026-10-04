@@ -206,9 +206,11 @@ internal sealed class CreateTaskTool(
             return actorRefusal;
         }
 
-        string? resolvedAssignee = string.IsNullOrEmpty(assigneeText)
-            ? null
-            : string.Equals(assigneeText, "me", StringComparison.Ordinal) ? actor.Name : assigneeText;
+        string? resolvedAssignee = null;
+        if (!string.IsNullOrEmpty(assigneeText))
+        {
+            resolvedAssignee = string.Equals(assigneeText, "me", StringComparison.Ordinal) ? actor.Name : assigneeText;
+        }
 
         TaskDraft draft = new(
             titleText,

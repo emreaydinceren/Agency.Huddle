@@ -144,11 +144,9 @@ internal static partial class WikiLinkParser
         for (int i = fromIndexInclusive; i < toIndexExclusive; i++)
         {
             char c = text[i];
-            if (c == '\n')
-            {
-                count++;
-            }
-            else if (c == '\r' && (i + 1 >= text.Length || text[i + 1] != '\n'))
+            bool lineFeed = c == '\n';
+            bool loneCarriageReturn = c == '\r' && (i + 1 >= text.Length || text[i + 1] != '\n');
+            if (lineFeed || loneCarriageReturn)
             {
                 count++;
             }

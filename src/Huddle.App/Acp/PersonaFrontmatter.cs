@@ -884,14 +884,14 @@ internal static class PersonaFrontmatter
     private static List<string> SplitFlowListItems(string inner)
     {
         var items = new List<string>();
-        var current = string.Empty;
+        StringBuilder current = new();
         char? openQuote = null;
 
         foreach (var ch in inner)
         {
             if (openQuote is not null)
             {
-                current += ch;
+                current.Append(ch);
                 if (ch == openQuote.Value)
                 {
                     openQuote = null;
@@ -903,21 +903,21 @@ internal static class PersonaFrontmatter
             if (ch is '\'' or '"')
             {
                 openQuote = ch;
-                current += ch;
+                current.Append(ch);
                 continue;
             }
 
             if (ch == ',')
             {
-                items.Add(current);
-                current = string.Empty;
+                items.Add(current.ToString());
+                current.Clear();
                 continue;
             }
 
-            current += ch;
+            current.Append(ch);
         }
 
-        items.Add(current);
+        items.Add(current.ToString());
         return items;
     }
 

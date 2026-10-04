@@ -1642,3 +1642,41 @@ button:focus-visible {
     gap: 0.25rem;
     align-items: baseline;
 }
+
+/* ---- The Question card: the options an Agent's ask_human put to the Human -------------------------
+   These rules live HERE and not in QuestionCard.razor.css, for the same reason as the Elicitation card
+   above: the card's root is a MudPaper and its controls are Mud components, and Blazor's CSS isolation
+   stamps its [b-xxxxx] attribute only onto HTML elements written in the component's own markup. A
+   "::deep .question-card-actions" there compiled to "[b-xxxxx] .question-card-actions" with no scoped
+   ancestor - the Send row is a direct child of the MudPaper - and never matched. The ::deep rules for
+   the options and the ranking rows did match, but only because each Question happens to be wrapped in
+   a plain div the component writes itself; reshaping that div would have dropped them without a test
+   failing. A global rule depends on nothing but the class name.
+
+   No var() and no colour here: nothing on this card carries a colour or typography of its own, so
+   ThemeSourceTests has nothing to object to. */
+
+/* Each Question is set off from the one above (the first from the card's header). */
+.question-card-question {
+    margin-top: 0.75rem;
+}
+
+/* Options are at least 44 pixels tall and wrap, so the card works at phone width (Questions spec
+   §6.7); an option keeps the case the Agent wrote instead of MudBlazor's button default. */
+.question-card-option {
+    min-height: 44px;
+    text-transform: none;
+}
+
+.question-card-rank-row {
+    min-height: 44px;
+}
+
+/* A ranking row's label takes the space the two arrow buttons leave. */
+.question-card-rank-label {
+    flex: 1 1 auto;
+}
+
+.question-card-actions {
+    margin-top: 0.75rem;
+}

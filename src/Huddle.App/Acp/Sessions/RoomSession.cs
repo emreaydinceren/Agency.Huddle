@@ -35,8 +35,6 @@ internal enum RoomSessionState
 /// </summary>
 internal sealed class RoomSession : IAsyncDisposable, IElicitationScope
 {
-    private const int MaxDescriptionLength = 200;
-
     // The bounds on Acp:UserInputTimeoutSeconds. The floor keeps a question from expiring before a
     // Human could read it and, since zero and below are raised to it, means a question is never
     // unbounded. The ceiling keeps CancellationTokenSource from throwing on a typo.
@@ -533,7 +531,7 @@ internal sealed class RoomSession : IAsyncDisposable, IElicitationScope
     /// <summary>The unlocked core behind <see cref="OpenAsync"/>, reused by the consumer's own "open if Closed" step (RS §6.1 step 2).</summary>
     private async Task OpenCoreAsync(CancellationToken cancellationToken)
     {
-        Task open;
+        Task opening;
         lock (this.gate)
         {
             if (this.state is RoomSessionState.Idle or RoomSessionState.Busy)
@@ -543,19 +541,19 @@ internal sealed class RoomSession : IAsyncDisposable, IElicitationScope
 
             if (this.openTask is { } inFlight)
             {
-                open = inFlight;
+                opening = inFlight;
             }
             else
             {
                 this.state = RoomSessionState.Opening;
-                open = this.OpenAndStartReaderAsync(cancellationToken);
-                this.openTask = open;
+                opening = this.OpenAndStartReaderAsync(cancellationToken);
+                this.openTask = opening;
             }
         }
 
         try
         {
-            await open;
+            await opening;
         }
         finally
         {
