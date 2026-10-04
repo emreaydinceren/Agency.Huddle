@@ -49,7 +49,7 @@ Describe 'Check-Eol' {
             try {
                 git init -q | Out-Null
                 git config user.name 'Test' | Out-Null
-                git config user.email 'test@example.invalid' | Out-Null
+                git config user.email 'test@example.com' | Out-Null
                 [IO.File]::WriteAllBytes((Join-Path $dir $FileName), $Bytes)
             }
             finally {
