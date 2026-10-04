@@ -203,7 +203,13 @@ function Resolve-AssetSource {
         $location = $root + '/latest/download/' + $Name
     }
     else {
-        $location = $root + '/download/' + $Version + '/' + $Name
+        # The release workflow takes 1.0.0 and creates the tag v1.0.0; both spellings reach the same URL.
+        $tag = $Version
+        if (-not $tag.StartsWith('v', [System.StringComparison]::Ordinal)) {
+            $tag = 'v' + $tag
+        }
+
+        $location = $root + '/download/' + $tag + '/' + $Name
     }
 
     return [pscustomobject]@{
@@ -733,6 +739,50 @@ function Test-HuddleMarker {
     return $false
 }
 
+# True when the folder is an install: it holds install-state.json, or release-info.json together with
+# the app executable. A release-info.json alone could belong to any other project.
+function Test-HuddleInstallRoot {
+    [CmdletBinding()]
+    param(
+        [Parameter(Mandatory)]
+        [string]$Path
+    )
+
+    if (Test-Path -LiteralPath (Join-Path $Path 'install-state.json') -PathType Leaf) {
+        return $true
+    }
+
+    return ((Test-Path -LiteralPath (Join-Path $Path 'release-info.json') -PathType Leaf) -and (Test-Path -LiteralPath (Join-Path $Path 'app\Huddle.App.exe') -PathType Leaf))
+}
+
+# Describes how the two roots overlap (one equals or contains the other), or returns $null when they
+# are separate folders. Installing would otherwise replace the data, or an uninstall would delete it.
+function Get-RootOverlap {
+    [CmdletBinding()]
+    param(
+        [Parameter(Mandatory)]
+        $Paths
+    )
+
+    $installKey = [System.IO.Path]::GetFullPath($Paths.InstallRoot).TrimEnd('\', '/')
+    $dataKey = [System.IO.Path]::GetFullPath($Paths.DataRoot).TrimEnd('\', '/')
+    $ordinal = [System.StringComparison]::OrdinalIgnoreCase
+
+    if ([string]::Equals($installKey, $dataKey, $ordinal)) {
+        return 'InstallRoot and DataRoot are the same folder (' + $installKey + ')'
+    }
+
+    if ($dataKey.StartsWith($installKey + '\', $ordinal)) {
+        return 'the data folder ' + $dataKey + ' is inside the install folder ' + $installKey + ', and an upgrade replaces that folder'
+    }
+
+    if ($installKey.StartsWith($dataKey + '\', $ordinal)) {
+        return 'the install folder ' + $installKey + ' is inside the data folder ' + $dataKey
+    }
+
+    return $null
+}
+
 # Installs the app from a verified archive. Returns $true when the install changed, $false when
 # the step was skipped. Does not write the install state (Invoke-Main does, last).
 function Install-App {
@@ -776,7 +826,7 @@ function Install-App {
         }
 
         $isEmpty = @(Get-ChildItem -LiteralPath $installRoot -Force).Count -eq 0
-        if ((-not $isEmpty) -and (-not (Test-HuddleMarker -Path $installRoot))) {
+        if ((-not $isEmpty) -and (-not (Test-HuddleInstallRoot -Path $installRoot))) {
             throw ($installRoot + ' is not empty and is not an Agency Huddle install. ' + $refusal)
         }
     }
@@ -2491,6 +2541,15 @@ function Invoke-Main {
         }
 
         $paths = Resolve-InstallPaths -InstallRoot $InstallRoot -DataRoot $DataRoot
+
+        # The defaults are siblings under different parents; any nesting of one root in the other is refused.
+        if (-not $Uninstall) {
+            $overlap = Get-RootOverlap -Paths $paths
+            if ($null -ne $overlap) {
+                Write-Step -Status '!!' -Name 'usage' -Detail $overlap -Fix 'pass -InstallRoot and -DataRoot as separate folders, neither inside the other'
+                return $script:ExitCodes.BadUsage
+            }
+        }
 
         # From here an unexpected error is a failed step, not a usage problem.
         $failureCode = $script:ExitCodes.StepFailed

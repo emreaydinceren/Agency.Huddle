@@ -12,13 +12,22 @@
     powershell.exe -NoProfile -ExecutionPolicy Bypass -File installer/tests/smoke.ps1 -ReleaseDir <dir>
 .PARAMETER ReleaseDir
     Folder with huddle-win-x64.zip and SHA256SUMS. Built when the zip is missing.
+.PARAMETER ExpectedRepo
+    Optional owner/repo the release workflow stamped into install.ps1 (the workflow passes its own repository).
+    When given, the stamped copy must contain it and must no longer contain the placeholder.
 .PARAMETER KeepSandbox
     Keep the temp sandbox for inspection instead of deleting it.
+.NOTES
+    The installer under test is <ReleaseDir>\install.ps1 (the stamped copy users download) when it exists.
+    Otherwise a stamped copy is built in the sandbox from installer\install.ps1 with the same replacement
+    the release workflow makes.
 #>
 [CmdletBinding()]
 param(
     [Parameter(Mandatory = $true)]
     [string]$ReleaseDir,
+
+    [string]$ExpectedRepo = '',
 
     [switch]$KeepSandbox
 )
@@ -30,6 +39,7 @@ $ProgressPreference = 'SilentlyContinue'
 $script:Step = 0
 $script:RepoRoot = [System.IO.Path]::GetFullPath((Join-Path $PSScriptRoot '..\..'))
 $script:InstallPs1 = Join-Path $script:RepoRoot 'installer\install.ps1'
+$script:LocalStampRepo = 'emreaydinceren/Agency.Huddle'
 $script:Sandbox = ''
 $script:SandboxLeaf = ''
 $script:InstallRoot = ''
@@ -157,6 +167,65 @@ function Invoke-Installer {
     }
 
     return $result
+}
+
+# Chooses the installer under test and proves it is a stamped copy: <ReleaseFolder>\install.ps1 when it
+# exists (what users download), else a copy built in the sandbox with the workflow's replacement. Sets
+# $script:InstallPs1. The stamped file must not hold the placeholder and must hold the repository; the
+# release URL it builds for a bare version must name that repository and the v-prefixed tag.
+function Select-StampedInstaller {
+    param([string]$ReleaseFolder, [string]$Expected)
+
+    $placeholder = '__HUDDLE_' + 'REPO__'
+    $stamped = Join-Path $ReleaseFolder 'install.ps1'
+    $repo = $Expected
+    if (Test-Path -LiteralPath $stamped -PathType Leaf) {
+        Write-Info ('installer under test: the stamped copy in the release folder, ' + $stamped)
+    }
+    else {
+        $repo = $script:LocalStampRepo
+        if ($Expected) {
+            $repo = $Expected
+        }
+
+        $stampDir = Join-Path $script:Sandbox 'stamped'
+        New-Item -ItemType Directory -Path $stampDir -Force | Out-Null
+        $stamped = Join-Path $stampDir 'install.ps1'
+        $text = [System.IO.File]::ReadAllText($script:InstallPs1)
+        [System.IO.File]::WriteAllText($stamped, $text.Replace($placeholder, $repo), [System.Text.Encoding]::ASCII)
+        Write-Info ('installer under test: no install.ps1 in the release folder, so a stamped copy of installer\install.ps1 (repository ' + $repo + ') at ' + $stamped)
+    }
+
+    $stampedText = [System.IO.File]::ReadAllText($stamped)
+    if ($stampedText.Contains($placeholder)) {
+        Stop-Smoke ('the stamped installer still contains the repository placeholder: ' + $stamped)
+    }
+
+    if ($repo -and (-not $stampedText.Contains($repo))) {
+        Stop-Smoke ('the stamped installer does not contain the repository ' + $repo + ': ' + $stamped)
+    }
+
+    $probe = Join-Path $script:LogDir 'probe-asset.ps1'
+    $probeText = "param([string]`$Installer)`r`n`$env:HUDDLE_INSTALL_NO_MAIN = '1'`r`nRemove-Item Env:HUDDLE_REPO -ErrorAction SilentlyContinue`r`n. `$Installer`r`nWrite-Output ('LOCATION:' + (Resolve-AssetSource -Name 'x.zip' -Version '1.0.0').Location)`r`n"
+    [System.IO.File]::WriteAllText($probe, $probeText, [System.Text.Encoding]::ASCII)
+    $result = Invoke-Child -File $script:PowerShellExe -Arguments ('-NoProfile -ExecutionPolicy Bypass -File ' + (ConvertTo-Quoted $probe) + ' -Installer ' + (ConvertTo-Quoted $stamped)) -WorkingDirectory $script:Sandbox -TimeoutSec 120
+    $location = @($result.Lines | Where-Object { $_ -like 'LOCATION:*' } | Select-Object -First 1)
+    if ($location.Count -eq 0) {
+        Stop-Smoke ('the stamped installer could not build a release URL: ' + ((@($result.Lines) | Select-Object -Last 4) -join ' | '))
+    }
+
+    $url = ([string]$location[0]).Substring('LOCATION:'.Length)
+    $pattern = '^https://github\.com/[^/]+/[^/]+/releases/download/v1\.0\.0/x\.zip$'
+    if ($repo) {
+        $pattern = '^' + [regex]::Escape('https://github.com/' + $repo + '/releases/download/v1.0.0/x.zip') + '$'
+    }
+
+    if ($url -notmatch $pattern) {
+        Stop-Smoke ('the stamped installer built the unexpected release URL ' + $url)
+    }
+
+    Write-Info ('placeholder replaced; a bare version resolves to ' + $url)
+    $script:InstallPs1 = $stamped
 }
 
 # The "[status] name - detail" lines of the installer output, as objects.
@@ -452,6 +521,7 @@ try {
     }
 
     Write-Info ('release zip: ' + [math]::Round((Get-Item -LiteralPath $zip1).Length / 1MB, 1) + ' MB')
+    Select-StampedInstaller -ReleaseFolder $ReleaseDir -Expected $ExpectedRepo
 
     # STEP 1: install.
     Start-SmokeStep 1 'install.ps1 into the sandbox (downloads Node and runs npm ci)'

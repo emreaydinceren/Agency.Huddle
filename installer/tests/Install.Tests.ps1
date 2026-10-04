@@ -124,6 +124,26 @@ Describe 'Resolve-AssetSource' {
         $source.Location | Should -Be 'https://github.com/o/r/releases/download/v1.2.3/x'
     }
 
+    It 'prefixes v to a bare version so the URL names the tag the release workflow creates' {
+        $source = Resolve-AssetSource -Name 'x' -Version '1.0.0' -Repo 'o/r'
+        $source.Location | Should -Be 'https://github.com/o/r/releases/download/v1.0.0/x'
+    }
+
+    It 'keeps a version that already starts with v' {
+        $source = Resolve-AssetSource -Name 'x' -Version 'v1.0.0' -Repo 'o/r'
+        $source.Location | Should -Be 'https://github.com/o/r/releases/download/v1.0.0/x'
+    }
+
+    It 'prefixes v to a pre-release version' {
+        $source = Resolve-AssetSource -Name 'x' -Version '1.0.0-rc.1' -Repo 'o/r'
+        $source.Location | Should -Be 'https://github.com/o/r/releases/download/v1.0.0-rc.1/x'
+    }
+
+    It 'leaves latest unchanged' {
+        $source = Resolve-AssetSource -Name 'x' -Version 'latest' -Repo 'o/r'
+        $source.Location | Should -Be 'https://github.com/o/r/releases/latest/download/x'
+    }
+
     It 'throws a run-from-a-release message when the repo placeholder is unreplaced and no BaseUrl is given' {
         { Resolve-AssetSource -Name 'x' -Version 'latest' -Repo '__HUDDLE_REPO__' } | Should -Throw '*release*'
     }
@@ -1099,6 +1119,35 @@ Describe 'Install-App' {
         Test-Path -LiteralPath $script:Staging | Should -BeFalse
         Should -Invoke Invoke-Tar -Times 0 -Exactly
         Should -Invoke Invoke-HuddleStop -Times 0 -Exactly
+    }
+
+    It 'refuses a folder whose only marker is an unrelated release-info.json and touches nothing' {
+        New-Item -ItemType Directory -Path $script:AppPaths.InstallRoot | Out-Null
+        $unrelated = Join-Path $script:AppPaths.InstallRoot 'release-info.json'
+        [System.IO.File]::WriteAllText($unrelated, '{"other":"project"}')
+        $precious = Join-Path $script:AppPaths.InstallRoot 'precious.txt'
+        [System.IO.File]::WriteAllText($precious, 'keep me')
+        { Install-App -Paths $script:AppPaths -Archive $script:AppArchive -State $null 6>$null } | Should -Throw '*fix: choose an empty folder or remove it*'
+        [System.IO.File]::ReadAllText($precious) | Should -Be 'keep me'
+        [System.IO.File]::ReadAllText($unrelated) | Should -Be '{"other":"project"}'
+        Test-Path -LiteralPath $script:OldDir | Should -BeFalse
+        Test-Path -LiteralPath $script:Staging | Should -BeFalse
+        Should -Invoke Invoke-Tar -Times 0 -Exactly
+    }
+
+    It 'accepts a folder that holds release-info.json together with app\Huddle.App.exe' {
+        New-Item -ItemType Directory -Path (Join-Path $script:AppPaths.InstallRoot 'app') -Force | Out-Null
+        [System.IO.File]::WriteAllText($script:AppPaths.ExePath, 'old exe')
+        [System.IO.File]::WriteAllText($script:AppPaths.ReleaseInfoPath, '{}')
+        Install-App -Paths $script:AppPaths -Archive $script:AppArchive -State $null 6>$null | Should -BeTrue
+        [System.IO.File]::ReadAllText($script:AppPaths.ExePath) | Should -Be 'new exe'
+    }
+
+    It 'accepts a folder that holds install-state.json alone' {
+        New-Item -ItemType Directory -Path $script:AppPaths.InstallRoot | Out-Null
+        Write-InstallState -Path $script:AppPaths.StatePath -State @{ version = '0.9.0' }
+        Install-App -Paths $script:AppPaths -Archive $script:AppArchive -State $null 6>$null | Should -BeTrue
+        [System.IO.File]::ReadAllText($script:AppPaths.ExePath) | Should -Be 'new exe'
     }
 
     It 'installs into an existing empty InstallRoot' {
@@ -2906,6 +2955,44 @@ Describe 'Invoke-Main orchestration' {
         [System.IO.File]::ReadAllText($precious) | Should -Be 'keep me'
         Test-Path -LiteralPath ($script:OInstall + '.old') | Should -BeFalse
         Test-Path -LiteralPath ($script:OInstall + '.staging') | Should -BeFalse
+    }
+
+    It 'a DataRoot inside the InstallRoot exits 3 with [!!] and fix, before the mutex, and creates nothing' {
+        $arguments = $script:OArgs.Clone()
+        $arguments.DataRoot = Join-Path $script:OInstall 'data'
+        $result = Invoke-MainCapture -Arguments $arguments
+        $result.Code | Should -Be 3
+        $result.Text | Should -BeLike '*[[]!!]*'
+        $result.Text | Should -BeLike '*fix:*'
+        Should -Invoke Enter-InstallerMutex -Times 0 -Exactly
+        Test-Path -LiteralPath $script:OInstall | Should -BeFalse
+    }
+
+    It 'an InstallRoot inside the DataRoot exits 3 with [!!] and fix, before the mutex, and creates nothing' {
+        $arguments = $script:OArgs.Clone()
+        $arguments.InstallRoot = Join-Path $script:OData 'app-install'
+        $result = Invoke-MainCapture -Arguments $arguments
+        $result.Code | Should -Be 3
+        $result.Text | Should -BeLike '*[[]!!]*'
+        $result.Text | Should -BeLike '*fix:*'
+        Should -Invoke Enter-InstallerMutex -Times 0 -Exactly
+        Test-Path -LiteralPath $script:OData | Should -BeFalse
+    }
+
+    It 'the same folder for InstallRoot and DataRoot exits 3' {
+        $arguments = $script:OArgs.Clone()
+        $arguments.DataRoot = $script:OInstall.ToUpperInvariant() + '\'
+        $result = Invoke-MainCapture -Arguments $arguments
+        $result.Code | Should -Be 3
+        $result.Text | Should -BeLike '*fix:*'
+    }
+
+    It 'sibling folders that share a name prefix are not an overlap (the default layout is two siblings)' {
+        $arguments = $script:OArgs.Clone()
+        $arguments.InstallRoot = Join-Path $script:ORoot 'Agency.Huddle'
+        $arguments.DataRoot = Join-Path $script:ORoot 'Agency.Huddle-data'
+        $result = Invoke-MainCapture -Arguments $arguments
+        $result.Code | Should -Be 0
     }
 
     It 'a root on a drive that does not exist exits 3 with [!!] and fix, no stack trace, no mutex' {

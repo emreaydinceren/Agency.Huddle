@@ -149,7 +149,9 @@ jobs:
       # Windows PowerShell 5.1 on purpose: that is what users run.
       - name: Smoke test
         shell: pwsh
-        run: powershell.exe -NoProfile -ExecutionPolicy Bypass -File installer/tests/smoke.ps1 -ReleaseDir dist
+        env:
+          EXPECTED_REPO: ${{ github.repository }}
+        run: powershell.exe -NoProfile -ExecutionPolicy Bypass -File installer/tests/smoke.ps1 -ReleaseDir dist -ExpectedRepo $env:EXPECTED_REPO
 
   smoke-macos:
     needs: assemble
