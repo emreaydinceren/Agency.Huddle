@@ -72,7 +72,7 @@ test_parse_args_accepts_every_flag() {
 }
 
 test_parse_args_resets_between_calls() {
-    parse_args --force --version v9
+    parse_args --force --version v9.0.0
     parse_args
     t_assert_eq "0" "$OPT_FORCE" "force reset"
     t_assert_eq "latest" "$OPT_VERSION" "version reset"
@@ -92,6 +92,67 @@ test_parse_args_missing_value_exits_3() {
     rc=0
     (parse_args --base-url) >/dev/null 2>&1 || rc=$?
     t_assert_eq "3" "$rc" "--base-url without a value"
+}
+
+test_parse_args_rejects_a_version_that_is_not_latest_or_a_release_tag() {
+    for bad in '../x' 'v1.2.3?x=1' 'v1.2.3#a' 'v1' 'v1.2' '' ' ' 'v1.2.3/../../x' 'v1.2.3 ' "v1.2.3${NL}x" 'latest2' 'v1.2.3-'; do
+        rc=0
+        err=$( (parse_args --version "$bad") 2>&1 ) || rc=$?
+        t_assert_eq "3" "$rc" "--version '$bad' exits 3"
+        t_assert_contains "$err" "[!!]" "--version '$bad' prints a failure line"
+        t_assert_contains "$err" "fix: use latest or a version such as v1.2.3" "--version '$bad' prints the fix"
+    done
+    rc=0
+    err=$( (HUDDLE_VERSION='v1.2.3?x=1'; export HUDDLE_VERSION; parse_args) 2>&1 ) || rc=$?
+    t_assert_eq "3" "$rc" "HUDDLE_VERSION with a query exits 3"
+    t_assert_contains "$err" "fix: use latest or a version such as v1.2.3" "HUDDLE_VERSION prints the fix"
+    rc=0
+    err=$( (main --version '../x') 2>&1 ) || rc=$?
+    t_assert_eq "3" "$rc" "main returns 3 for a bad version"
+}
+
+test_parse_args_accepts_latest_and_release_tags() {
+    for good in latest v1.2.3 1.2.3 v10.20.30 v1.2.3-rc.1 v1.2.3+build.5 v1.2.3.4; do
+        rc=0
+        (parse_args --version "$good") >/dev/null 2>&1 || rc=$?
+        t_assert_eq "0" "$rc" "--version $good is accepted"
+    done
+    parse_args --version v1.2.3-rc.1
+    t_assert_eq "v1.2.3-rc.1" "$OPT_VERSION" "the accepted version is kept as given"
+}
+
+test_parse_args_makes_the_roots_absolute_without_requiring_them_to_exist() {
+    pa_dir=$(mktemp -d "$TEST_HOME/pa.XXXXXX")
+    got=$(cd "$pa_dir" && parse_args --install-root rel/inst --data-root ./a/../b/./c/ && printf '%s|%s|%s' "$OPT_INSTALL_ROOT" "$OPT_DATA_ROOT" "$PWD")
+    pa_pwd=${got##*|}
+    pa_rest=${got%|*}
+    t_assert_eq "$pa_pwd/rel/inst|$pa_pwd/b/c" "$pa_rest" "relative roots become absolute and . .. are collapsed"
+    t_assert_no_file "$pa_pwd/rel" "nothing is created"
+    parse_args --install-root /opt/hi/ --data-root /opt//hd/./x/..
+    t_assert_eq "/opt/hi" "$OPT_INSTALL_ROOT" "a trailing slash is dropped"
+    t_assert_eq "/opt/hd" "$OPT_DATA_ROOT" "slashes and dots are collapsed in an absolute root"
+    got=$(cd "$pa_dir" && HUDDLE_INSTALL_ROOT=envrel HUDDLE_DATA_ROOT=../envdata && export HUDDLE_INSTALL_ROOT HUDDLE_DATA_ROOT && parse_args && printf '%s|%s|%s' "$OPT_INSTALL_ROOT" "$OPT_DATA_ROOT" "$PWD")
+    pa_pwd=${got##*|}
+    pa_rest=${got%|*}
+    t_assert_eq "$pa_pwd/envrel|$(dirname "$pa_pwd")/envdata" "$pa_rest" "HUDDLE_*_ROOT values are made absolute too"
+}
+
+test_parse_args_refuses_an_empty_or_root_folder() {
+    for flag in --install-root --data-root; do
+        for bad in '' / // /. /..; do
+            rc=0
+            err=$( (parse_args "$flag" "$bad") 2>&1 ) || rc=$?
+            t_assert_eq "3" "$rc" "$flag '$bad' exits 3"
+            t_assert_contains "$err" "[!!]" "$flag '$bad' prints a failure line"
+            t_assert_contains "$err" "$flag" "$flag '$bad' names the option"
+        done
+    done
+    rc=0
+    (HUDDLE_INSTALL_ROOT=/; export HUDDLE_INSTALL_ROOT; parse_args) >/dev/null 2>&1 || rc=$?
+    t_assert_eq "3" "$rc" "HUDDLE_INSTALL_ROOT=/ exits 3"
+    rc=0
+    (HUDDLE_DATA_ROOT=/; export HUDDLE_DATA_ROOT; parse_args) >/dev/null 2>&1 || rc=$?
+    t_assert_eq "3" "$rc" "HUDDLE_DATA_ROOT=/ exits 3"
 }
 
 test_resolve_asset_folder_is_file() {
@@ -516,6 +577,11 @@ dl_setup() {
     HG_BODY=good
     : >"$HG_LOG"
     : >"$SLEEP_LOG"
+    # Fake sleep seam: records the requested seconds instead of waiting. Defined here, not at the top
+    # level, because the ap_* sandboxes install their own sleep_seconds fake.
+    sleep_seconds() {
+        printf '%s\n' "$1" >>"$SLEEP_LOG"
+    }
 }
 
 # Fake http_get: records "URL|OUTFILE" per call; the first HG_FAIL_FIRST calls leave junk in the
@@ -533,11 +599,6 @@ http_get() {
     else
         printf 'hello\n' >"$2"
     fi
-}
-
-# Fake sleep seam: records the requested seconds instead of waiting.
-sleep_seconds() {
-    printf '%s\n' "$1" >>"$SLEEP_LOG"
 }
 
 dl_calls() {
@@ -975,6 +1036,12 @@ ap_stubs() {
     run_kill_process() {
         printf 'kill %s\n' "$1" >>"$AP_CALLS"
     }
+    app_running() {
+        process_running "$1"
+    }
+    sleep_seconds() {
+        printf 'sleep %s\n' "$1" >>"$AP_CALLS"
+    }
 }
 
 # ap_child <script line>...: runs the lines in a child shell that sourced the real install.sh and
@@ -1229,6 +1296,7 @@ test_install_app_recovers_a_swap_that_died_between_its_renames() {
     mv "$INSTALL_ROOT" "$INSTALL_ROOT.old"
     mkdir -p "$INSTALL_ROOT.staging"
     printf 'junk\n' >"$INSTALL_ROOT.staging/junk"
+    printf '{}\n' >"$INSTALL_ROOT.staging/release-info.json"
     ap_build_archive v2
     rc=0
     install_app "$AP_ARCHIVE" >"$AP/out" 2>&1 || rc=$?
@@ -1274,6 +1342,211 @@ test_install_app_survivor_aborts_the_upgrade_untouched() {
     t_assert_eq "node-marker" "$(cat "$INSTALL_ROOT/node/bin/node")" "node/ is untouched"
     t_assert_no_file "$INSTALL_ROOT.staging" "no staging folder is left"
     t_assert_contains "$(cat "$AP/out")" "--force" "the fix names --force"
+}
+
+# ap_assert_refused <label>: the last install_app was refused by the root guard with the fix text.
+ap_assert_refused() {
+    t_assert_eq "1" "$rc" "$1: install_app fails"
+    t_assert_eq "0" "$APP_CHANGED" "$1: APP_CHANGED stays 0"
+    t_assert_contains "$(cat "$AP/out")" "[!!] app" "$1: a failure line"
+    t_assert_contains "$(cat "$AP/out")" "fix: choose an empty folder or remove it" "$1: the fix"
+    t_assert_eq "0" "$(ap_count_calls '^stop')" "$1: the app was not stopped"
+}
+
+test_install_app_refuses_an_install_root_that_is_not_a_huddle_install() {
+    ap_setup
+    mkdir -p "$INSTALL_ROOT/sub"
+    printf 'precious\n' >"$INSTALL_ROOT/precious.txt"
+    printf 'deep\n' >"$INSTALL_ROOT/sub/deep.txt"
+    ap_build_archive v1
+    rc=0
+    install_app "$AP_ARCHIVE" >"$AP/out" 2>&1 || rc=$?
+    ap_assert_refused "foreign folder"
+    t_assert_eq "precious" "$(cat "$INSTALL_ROOT/precious.txt")" "the foreign file is untouched"
+    t_assert_eq "deep" "$(cat "$INSTALL_ROOT/sub/deep.txt")" "the foreign subfolder is untouched"
+    t_assert_no_file "$INSTALL_ROOT.old" "no .old folder is created"
+    t_assert_no_file "$INSTALL_ROOT.staging" "no staging folder is created"
+    t_assert_no_file "$INSTALL_ROOT/app" "nothing is installed into it"
+}
+
+test_install_app_refuses_an_install_root_that_is_a_file() {
+    ap_setup
+    mkdir -p "$(dirname "$INSTALL_ROOT")"
+    printf 'a file\n' >"$INSTALL_ROOT"
+    ap_build_archive v1
+    rc=0
+    install_app "$AP_ARCHIVE" >"$AP/out" 2>&1 || rc=$?
+    ap_assert_refused "file as root"
+    t_assert_eq "a file" "$(cat "$INSTALL_ROOT")" "the file is untouched"
+    t_assert_no_file "$INSTALL_ROOT.old" "no .old"
+}
+
+test_install_app_accepts_an_empty_install_root() {
+    ap_setup
+    mkdir -p "$INSTALL_ROOT"
+    ap_build_archive v1
+    rc=0
+    install_app "$AP_ARCHIVE" >"$AP/out" 2>&1 || rc=$?
+    t_assert_eq "0" "$rc" "an empty folder is accepted: $(cat "$AP/out")"
+    t_assert_eq "1" "$APP_CHANGED" "APP_CHANGED"
+    t_assert_eq "# host v1" "$(tail -1 "$APP_EXE")" "the host is installed"
+    t_assert_no_file "$INSTALL_ROOT.old" "no .old left"
+}
+
+test_install_app_upgrades_a_folder_with_either_marker() {
+    ap_setup
+    ap_install_with_markers v1
+    rm -f "$STATE_FILE"
+    ap_build_archive v2
+    rc=0
+    install_app "$AP_ARCHIVE" >"$AP/out" 2>&1 || rc=$?
+    t_assert_eq "0" "$rc" "release-info.json alone is a marker: $(cat "$AP/out")"
+    t_assert_eq "# host v2" "$(tail -1 "$APP_EXE")" "upgraded"
+    rm -f "$INSTALL_ROOT/release-info.json"
+    printf 'schema=1\n' >"$STATE_FILE"
+    ap_build_archive v3
+    rc=0
+    install_app "$AP_ARCHIVE" >"$AP/out" 2>&1 || rc=$?
+    t_assert_eq "0" "$rc" "install-state alone is a marker: $(cat "$AP/out")"
+    t_assert_eq "# host v3" "$(tail -1 "$APP_EXE")" "upgraded again"
+    t_assert_eq "module-marker" "$(cat "$INSTALL_ROOT/tools/acp/node_modules/marker")" "node_modules carried over"
+}
+
+test_install_app_does_not_delete_an_unmarked_sibling_old_or_staging() {
+    ap_setup
+    ap_install_with_markers v1
+    mkdir -p "$INSTALL_ROOT.old"
+    printf 'keep\n' >"$INSTALL_ROOT.old/keep.txt"
+    ap_build_archive v2
+    rc=0
+    install_app "$AP_ARCHIVE" >"$AP/out" 2>&1 || rc=$?
+    ap_assert_refused "unmarked .old"
+    t_assert_eq "keep" "$(cat "$INSTALL_ROOT.old/keep.txt")" "the unmarked .old is not deleted"
+    t_assert_eq "# host v1" "$(tail -1 "$APP_EXE")" "the install is untouched"
+    rm -rf "$INSTALL_ROOT.old"
+    mkdir -p "$INSTALL_ROOT.staging"
+    printf 'keep\n' >"$INSTALL_ROOT.staging/keep.txt"
+    rc=0
+    install_app "$AP_ARCHIVE" >"$AP/out" 2>&1 || rc=$?
+    ap_assert_refused "unmarked .staging"
+    t_assert_eq "keep" "$(cat "$INSTALL_ROOT.staging/keep.txt")" "the unmarked .staging is not deleted"
+    t_assert_eq "# host v1" "$(tail -1 "$APP_EXE")" "the install is still untouched"
+}
+
+test_install_app_does_not_restore_an_unmarked_old_into_a_missing_root() {
+    ap_setup
+    mkdir -p "$INSTALL_ROOT.old"
+    printf 'keep\n' >"$INSTALL_ROOT.old/keep.txt"
+    ap_build_archive v1
+    rc=0
+    install_app "$AP_ARCHIVE" >"$AP/out" 2>&1 || rc=$?
+    ap_assert_refused "unmarked .old, no root"
+    t_assert_eq "keep" "$(cat "$INSTALL_ROOT.old/keep.txt")" "the folder is left alone"
+    t_assert_no_file "$INSTALL_ROOT" "and not renamed into place"
+}
+
+test_install_app_deletes_a_marked_leftover_old_and_staging() {
+    ap_setup
+    ap_install_with_markers v1
+    mkdir -p "$INSTALL_ROOT.old" "$INSTALL_ROOT.staging"
+    printf '{}\n' >"$INSTALL_ROOT.old/release-info.json"
+    printf 'schema=1\n' >"$INSTALL_ROOT.staging/install-state"
+    ap_build_archive v2
+    rc=0
+    install_app "$AP_ARCHIVE" >"$AP/out" 2>&1 || rc=$?
+    t_assert_eq "0" "$rc" "marked leftovers are cleaned: $(cat "$AP/out")"
+    t_assert_no_file "$INSTALL_ROOT.old" "no .old left"
+    t_assert_no_file "$INSTALL_ROOT.staging" "no .staging left"
+    t_assert_eq "# host v2" "$(tail -1 "$APP_EXE")" "upgraded"
+}
+
+test_install_app_refuses_the_home_folder_even_with_a_marker() {
+    ap_setup
+    printf 'schema=1\n' >"$HOME/install-state"
+    INSTALL_ROOT=$HOME
+    ap_build_archive v1
+    rc=0
+    install_app "$AP_ARCHIVE" >"$AP/out" 2>&1 || rc=$?
+    rm -f "$HOME/install-state"
+    ap_assert_refused "HOME as root"
+    t_assert_no_file "$HOME.old" "HOME is not moved aside"
+    t_assert_no_file "$HOME.staging" "no staging beside HOME"
+}
+
+test_install_root_check_applies_the_safe_path_rules() {
+    ap_setup
+    rc=0
+    install_root_check /opt/huddle >/dev/null 2>&1 || rc=$?
+    t_assert_eq "0" "$rc" "a missing two-segment root such as /opt/huddle is accepted"
+    for bad in "" / /huddle relative/dir "$HOME" "$(dirname "$HOME")"; do
+        rc=0
+        install_root_check "$bad" >/dev/null 2>&1 || rc=$?
+        t_assert_eq "1" "$rc" "'$bad' is refused"
+        t_assert_contains "${SAFE_REASON:-}" " " "'$bad' sets a reason"
+    done
+    rc=0
+    install_root_check "$HOME/nested/deep" >/dev/null 2>&1 || rc=$?
+    t_assert_eq "0" "$rc" "a folder below HOME is accepted"
+}
+
+test_install_app_with_force_reinstalls_although_the_state_matches() {
+    ap_setup
+    ap_build_archive v1
+    install_app "$AP_ARCHIVE" >"$AP/out" 2>&1 || true
+    write_state_key "$STATE_FILE" app_sha256 "$(file_sha256 "$AP_ARCHIVE")"
+    OPT_FORCE=0
+    install_app "$AP_ARCHIVE" >"$AP/out" 2>&1 || true
+    t_assert_eq "0" "$APP_CHANGED" "without --force the matching state is a skip"
+    OPT_FORCE=1
+    install_app "$AP_ARCHIVE" >"$AP/out" 2>&1 || true
+    OPT_FORCE=0
+    t_assert_eq "1" "$APP_CHANGED" "--force reinstalls"
+    t_assert_contains "$(cat "$AP/out")" "[ok] app" "and says so"
+}
+
+test_stop_waits_for_the_process_to_exit_after_the_stop_request() {
+    ap_setup
+    ap_instance_json 4242
+    AP_POLLS=0
+    app_running() {
+        AP_POLLS=$((AP_POLLS + 1))
+        [ "$AP_POLLS" -le 3 ]
+    }
+    OPT_FORCE=0
+    rc=0
+    stop_huddle_if_running >"$AP/out" 2>&1 || rc=$?
+    t_assert_eq "0" "$rc" "a process that exits during the wait is not an error: $(cat "$AP/out")"
+    t_assert_eq "3" "$(ap_count_calls '^sleep 1$')" "one 1 s sleep per poll that still saw the process"
+    t_assert_eq "0" "$(ap_count_calls '^kill')" "nothing is killed"
+    t_assert_contains "$(cat "$AP/out")" "[ok] stop" "the stop is reported"
+}
+
+test_stop_gives_up_after_ten_seconds_and_names_the_force_switches() {
+    ap_setup
+    ap_instance_json 4242
+    AP_ALIVE=1
+    OPT_FORCE=0
+    rc=0
+    stop_huddle_if_running >"$AP/out" 2>&1 || rc=$?
+    t_assert_eq "1" "$rc" "a survivor fails"
+    t_assert_eq "10" "$(ap_count_calls '^sleep 1$')" "the wait is ten 1 s polls"
+    t_assert_contains "$(cat "$AP/out")" "--force" "the fix names --force"
+    t_assert_contains "$(cat "$AP/out")" "HUDDLE_FORCE=1" "and HUDDLE_FORCE=1"
+    t_assert_eq "0" "$(ap_count_calls '^kill')" "nothing is killed"
+}
+
+test_stop_without_a_survivor_does_not_sleep() {
+    ap_setup
+    ap_instance_json 4242
+    OPT_FORCE=0
+    stop_huddle_if_running >"$AP/out" 2>&1 || true
+    t_assert_eq "0" "$(ap_count_calls '^sleep')" "a process that is already gone costs no wait"
+}
+
+test_app_running_seam_sees_live_and_dead_processes() {
+    ap_setup
+    out=$(ap_child 'app_running $$ && echo live' 'app_running 2147483646 || echo dead')
+    t_assert_eq "live${NL}dead" "$out" "app_running reports whether the pid exists"
 }
 
 test_stop_without_an_instance_record_never_calls_stop() {
@@ -1686,8 +1959,10 @@ ad_setup() {
     chmod +x "$NODE_BIN"
     printf '// npm\n' >"$INSTALL_ROOT/node/lib/node_modules/npm/bin/npm-cli.js"
     printf '{"lockfileVersion": 3}\n' >"$INSTALL_ROOT/tools/acp/package-lock.json"
+    printf '{"name": "acp"}\n' >"$INSTALL_ROOT/tools/acp/package.json"
     run_npm_ci() {
         printf 'npm_ci pwd=%s path1=%s args=%s\n' "$(pwd)" "${PATH%%:*}" "$*" >>"$AP_CALLS"
+        printf 'files=%s\n' "$(ls | tr '\n' ' ')" >>"$AP_CALLS"
         if [ "$AD_NPM_RC" -ne 0 ]; then
             ad_n=1
             while [ "$ad_n" -le 20 ]; do
@@ -1697,8 +1972,10 @@ ad_setup() {
             return "$AD_NPM_RC"
         fi
         if [ "$AD_NPM_ENTRY" -eq 1 ]; then
-            mkdir -p "$(dirname "$ADAPTER_ENTRY")"
-            printf '// adapter\n' >"$ADAPTER_ENTRY"
+            # npm ci installs into ./node_modules of its working directory (the staged copy).
+            ad_rel=${ADAPTER_ENTRY#"$INSTALL_ROOT/tools/acp/"}
+            mkdir -p "$(dirname "./$ad_rel")"
+            printf '// adapter\n' >"./$ad_rel"
         fi
         return 0
     }
@@ -1714,7 +1991,7 @@ ad_run() {
 test_install_adapter_runs_npm_ci_when_nothing_is_installed() {
     ad_setup
     ad_run
-    ad_dir=$(cd "$INSTALL_ROOT/tools/acp" && pwd)
+    ad_dir=$(cd "$INSTALL_ROOT/tools" && pwd)/acp.staging
     t_assert_eq "0" "$ADRC" "install_adapter succeeded: $ADOUT"
     t_assert_eq "1" "$ADAPTER_CHANGED" "ADAPTER_CHANGED"
     t_assert_file "$ADAPTER_ENTRY" "the adapter entry exists"
@@ -1829,11 +2106,90 @@ test_run_npm_ci_runs_the_bundled_node_on_the_bundled_npm() {
     t_assert_eq "node $INSTALL_ROOT/node/lib/node_modules/npm/bin/npm-cli.js ci --omit=dev --no-audit --no-fund" "$out" "node runs npm-cli.js with the arguments, no global npm"
 }
 
+test_install_adapter_runs_npm_ci_in_a_staged_copy_and_swaps_node_modules_in() {
+    ad_setup
+    mkdir -p "$INSTALL_ROOT/tools/acp/node_modules"
+    printf 'old\n' >"$INSTALL_ROOT/tools/acp/node_modules/marker"
+    ad_run
+    t_assert_eq "0" "$ADRC" "install_adapter succeeded: $ADOUT"
+    t_assert_eq "1" "$ADAPTER_CHANGED" "ADAPTER_CHANGED"
+    t_assert_contains "$(grep '^files=' "$AP_CALLS")" "package.json" "the staged copy holds package.json"
+    t_assert_contains "$(grep '^files=' "$AP_CALLS")" "package-lock.json" "and package-lock.json"
+    t_assert_not_contains "$(grep '^files=' "$AP_CALLS")" "node_modules" "but not the live node_modules"
+    t_assert_no_file "$INSTALL_ROOT/tools/acp/node_modules/marker" "the previous node_modules was replaced"
+    t_assert_file "$ADAPTER_ENTRY" "the staged tree is now the live node_modules"
+    t_assert_no_file "$INSTALL_ROOT/tools/acp.staging" "no staging folder is left"
+    t_assert_no_file "$INSTALL_ROOT/tools/acp/node_modules.old" "no node_modules.old is left"
+}
+
+test_install_adapter_failure_leaves_the_previous_node_modules_untouched() {
+    ad_setup
+    mkdir -p "$INSTALL_ROOT/tools/acp/node_modules"
+    printf 'old\n' >"$INSTALL_ROOT/tools/acp/node_modules/marker"
+    AD_NPM_RC=7
+    ad_run
+    t_assert_eq "1" "$ADRC" "a failing npm ci fails the step"
+    t_assert_eq "old" "$(cat "$INSTALL_ROOT/tools/acp/node_modules/marker")" "the previous node_modules is intact"
+    t_assert_no_file "$INSTALL_ROOT/tools/acp.staging" "the staging folder is deleted"
+    t_assert_no_file "$INSTALL_ROOT/tools/acp/node_modules.old" "no node_modules.old"
+    t_assert_contains "$ADOUT" "HTTPS_PROXY" "the proxy fix is still shown"
+}
+
+test_install_adapter_missing_entry_in_the_staged_tree_leaves_the_previous_node_modules() {
+    ad_setup
+    mkdir -p "$INSTALL_ROOT/tools/acp/node_modules"
+    printf 'old\n' >"$INSTALL_ROOT/tools/acp/node_modules/marker"
+    AD_NPM_ENTRY=0
+    ad_run
+    t_assert_eq "1" "$ADRC" "an npm ci that leaves no entry fails the step"
+    t_assert_eq "old" "$(cat "$INSTALL_ROOT/tools/acp/node_modules/marker")" "the previous node_modules is intact"
+    t_assert_no_file "$INSTALL_ROOT/tools/acp.staging" "the staging folder is deleted"
+    t_assert_contains "$ADOUT" "claude-agent-acp" "the message names the adapter"
+}
+
+test_install_adapter_rolls_back_when_the_swap_fails() {
+    ad_setup
+    mkdir -p "$INSTALL_ROOT/tools/acp/node_modules"
+    printf 'old\n' >"$INSTALL_ROOT/tools/acp/node_modules/marker"
+    mv() {
+        case $1 in
+            *acp.staging/node_modules) return 1 ;;
+        esac
+        command mv "$@"
+    }
+    ad_run
+    unset -f mv
+    t_assert_eq "1" "$ADRC" "a failed swap fails the step"
+    t_assert_eq "0" "$ADAPTER_CHANGED" "ADAPTER_CHANGED"
+    t_assert_eq "old" "$(cat "$INSTALL_ROOT/tools/acp/node_modules/marker")" "the previous node_modules is back"
+    t_assert_no_file "$INSTALL_ROOT/tools/acp.staging" "the staging folder is deleted"
+    t_assert_no_file "$INSTALL_ROOT/tools/acp/node_modules.old" "no node_modules.old"
+    t_assert_contains "$ADOUT" "[!!] adapter" "the failure is reported"
+}
+
+test_install_adapter_needs_a_package_json() {
+    ad_setup
+    rm -f "$INSTALL_ROOT/tools/acp/package.json"
+    ad_run
+    t_assert_eq "1" "$ADRC" "no package.json fails"
+    t_assert_eq "0" "$(ap_count_calls '^npm_ci')" "npm ci did not run"
+    t_assert_no_file "$INSTALL_ROOT/tools/acp.staging" "no staging folder is left"
+}
+
+test_install_adapter_replaces_a_leftover_staging_folder() {
+    ad_setup
+    mkdir -p "$INSTALL_ROOT/tools/acp.staging/node_modules"
+    printf 'stale\n' >"$INSTALL_ROOT/tools/acp.staging/node_modules/stale"
+    ad_run
+    t_assert_eq "0" "$ADRC" "install_adapter succeeded: $ADOUT"
+    t_assert_no_file "$INSTALL_ROOT/tools/acp/node_modules/stale" "stale staged files do not reach the live tree"
+}
+
 test_install_adapter_uses_local_variables() {
     ad_setup
-    acp_dir=KEEP lock=KEEP sha=KEEP npm_cli=KEEP log=KEEP rc=KEEP root=KEEP
+    acp_dir=KEEP lock=KEEP sha=KEEP npm_cli=KEEP log=KEEP rc=KEEP root=KEEP staging=KEEP aside=KEEP entry_rel=KEEP
     install_adapter >"$AP/out" 2>&1 || true
-    for kept in "$acp_dir" "$lock" "$sha" "$npm_cli" "$log" "$rc" "$root"; do
+    for kept in "$acp_dir" "$lock" "$sha" "$npm_cli" "$log" "$rc" "$root" "$staging" "$aside" "$entry_rel"; do
         t_assert_eq "KEEP" "$kept" "a caller variable survived install_adapter"
     done
 }
@@ -2012,8 +2368,10 @@ mn_fakes() {
             printf 'npm exploded\n'
             return 1
         fi
-        mkdir -p "$(dirname "$ADAPTER_ENTRY")"
-        printf '// adapter\n' >"$ADAPTER_ENTRY"
+        # npm ci installs into ./node_modules of its working directory (the staged copy).
+        mn_rel=${ADAPTER_ENTRY#"$INSTALL_ROOT/tools/acp/"}
+        mkdir -p "$(dirname "./$mn_rel")"
+        printf '// adapter\n' >"./$mn_rel"
     }
     run_open() {
         printf 'run_open %s\n' "$1" >>"$AP_CALLS"
@@ -2064,6 +2422,24 @@ mn_entry() {
     else
         env HOME="$MN_HOME" HUDDLE_INSTALL_NO_MAIN= HUDDLE_REPO=owner/repo "$mn_shell" "$mn_script" "$@" </dev/null 2>&1 || printf 'rc=%s\n' "$?"
     fi
+}
+
+test_main_refuses_a_foreign_install_root_and_a_bad_version() {
+    mn_setup
+    mkdir -p "$MN_ROOT"
+    printf 'precious\n' >"$MN_ROOT/precious.txt"
+    mn_run
+    t_assert_eq "1" "$MN_RC" "a foreign install root exits 1: $MN_OUT"
+    t_assert_contains "$MN_OUT" "[!!] app" "the failure line"
+    t_assert_contains "$MN_OUT" "fix: choose an empty folder or remove it" "the fix"
+    t_assert_eq "precious" "$(cat "$MN_ROOT/precious.txt")" "the foreign file is untouched"
+    t_assert_no_file "$MN_ROOT.old" "no .old"
+    t_assert_no_file "$MN_ROOT.staging" "no .staging"
+    mn_run --version v1
+    t_assert_eq "3" "$MN_RC" "a bad version exits 3: $MN_OUT"
+    t_assert_contains "$MN_OUT" "fix: use latest or a version such as v1.2.3" "with its fix"
+    mn_run --install-root /
+    t_assert_eq "3" "$MN_RC" "a root install folder exits 3: $MN_OUT"
 }
 
 test_main_first_run_installs_everything() {
@@ -2449,6 +2825,12 @@ t_run test_install_adapter_failure_shows_the_log_tail_and_a_proxy_fix
 t_run test_install_adapter_verifies_the_entry_afterwards
 t_run test_install_adapter_needs_the_bundled_node_and_a_lock_file
 t_run test_run_npm_ci_runs_the_bundled_node_on_the_bundled_npm
+t_run test_install_adapter_runs_npm_ci_in_a_staged_copy_and_swaps_node_modules_in
+t_run test_install_adapter_failure_leaves_the_previous_node_modules_untouched
+t_run test_install_adapter_missing_entry_in_the_staged_tree_leaves_the_previous_node_modules
+t_run test_install_adapter_rolls_back_when_the_swap_fails
+t_run test_install_adapter_needs_a_package_json
+t_run test_install_adapter_replaces_a_leftover_staging_folder
 t_run test_install_adapter_uses_local_variables
 t_run test_install_node_fresh_install
 t_run test_install_node_is_skipped_when_state_and_binary_agree
@@ -2479,6 +2861,20 @@ t_run test_install_app_recovers_a_swap_that_died_between_its_renames
 t_run test_install_app_stops_a_running_instance_before_the_swap
 t_run test_install_app_fresh_install_never_stops
 t_run test_install_app_survivor_aborts_the_upgrade_untouched
+t_run test_install_app_refuses_an_install_root_that_is_not_a_huddle_install
+t_run test_install_app_refuses_an_install_root_that_is_a_file
+t_run test_install_app_accepts_an_empty_install_root
+t_run test_install_app_upgrades_a_folder_with_either_marker
+t_run test_install_app_does_not_delete_an_unmarked_sibling_old_or_staging
+t_run test_install_app_does_not_restore_an_unmarked_old_into_a_missing_root
+t_run test_install_app_deletes_a_marked_leftover_old_and_staging
+t_run test_install_app_refuses_the_home_folder_even_with_a_marker
+t_run test_install_root_check_applies_the_safe_path_rules
+t_run test_install_app_with_force_reinstalls_although_the_state_matches
+t_run test_stop_waits_for_the_process_to_exit_after_the_stop_request
+t_run test_stop_gives_up_after_ten_seconds_and_names_the_force_switches
+t_run test_stop_without_a_survivor_does_not_sleep
+t_run test_app_running_seam_sees_live_and_dead_processes
 t_run test_stop_without_an_instance_record_never_calls_stop
 t_run test_stop_with_an_instance_record_calls_stop
 t_run test_stop_survivor_fails_without_force
@@ -2539,6 +2935,10 @@ t_run test_parse_args_accepts_every_flag
 t_run test_parse_args_resets_between_calls
 t_run test_parse_args_unknown_flag_exits_3
 t_run test_parse_args_missing_value_exits_3
+t_run test_parse_args_rejects_a_version_that_is_not_latest_or_a_release_tag
+t_run test_parse_args_accepts_latest_and_release_tags
+t_run test_parse_args_makes_the_roots_absolute_without_requiring_them_to_exist
+t_run test_parse_args_refuses_an_empty_or_root_folder
 t_run test_resolve_asset_folder_is_file
 t_run test_resolve_asset_https_base_is_url
 t_run test_resolve_asset_bad_base_exits_3
@@ -3123,6 +3523,7 @@ t_run test_do_uninstall_does_not_delete_when_the_app_will_not_stop
 t_run test_do_uninstall_does_not_stop_anything_when_nothing_is_installed
 t_run test_do_uninstall_protects_caller_variables
 t_run test_remove_tree_refuses_empty_and_root
+t_run test_main_refuses_a_foreign_install_root_and_a_bad_version
 t_run test_main_first_run_installs_everything
 t_run test_main_second_run_skips_everything_and_changes_no_file
 t_run test_main_changed_archive_runs_only_the_app_step

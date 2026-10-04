@@ -12,11 +12,56 @@ HUDDLE_REPO="${HUDDLE_REPO:-__HUDDLE_REPO__}"
 # value is built from two pieces and survives the replacement.
 HUDDLE_REPO_PLACEHOLDER="__HUDDLE_""REPO__"
 
-# Prints a "[!!] usage" line with its fix on stderr and returns 3. Callers pass the 3 up to main,
-# which returns it; only the entry guard at the end of the file exits.
+# Prints a "[!!] usage" line with its fix on stderr and returns 3. The fix is $2 when given, else
+# the usage line. Callers pass the 3 up to main, which returns it; only the entry guard at the end
+# of the file exits.
 usage_error() {
-    log_step fail usage "$1" "usage: install.sh [--version TAG] [--base-url URL|DIR] [--install-root DIR] [--data-root DIR] [--check-only] [--uninstall [--purge-data]] [--force] [--no-launch]" >&2
+    log_step fail usage "$1" "${2:-usage: install.sh [--version TAG] [--base-url URL|DIR] [--install-root DIR] [--data-root DIR] [--check-only] [--uninstall [--purge-data]] [--force] [--no-launch]}" >&2
     return 3
+}
+
+# Succeeds when $1 is `latest` or a release tag: an optional v, three dot-separated numbers and
+# optional -, + or . suffixes of letters, digits and dots (it is spliced into a download URL, so
+# nothing else may get through: no slash, query, fragment or newline).
+valid_version() {
+    case ${1:-} in
+        latest) return 0 ;;
+        '' | *[!0-9A-Za-z.+-]*) return 1 ;;
+    esac
+    printf '%s\n' "$1" | LC_ALL=C grep -E '^v?[0-9]+\.[0-9]+\.[0-9]+([-+.][0-9A-Za-z.]+)*$' >/dev/null
+}
+
+# Prints the absolute form of the folder $2 (the value of the option or variable named $1), with
+# . and .. collapsed textually and no trailing slash. The folder does not have to exist. An empty
+# value, or one that collapses to the filesystem root, is a usage error (returns 3).
+absolute_root() {
+    local name value rest comp out
+    name=$1
+    value=$2
+    if [ -z "$value" ]; then
+        usage_error "$name needs a folder, but the value is empty" "pass an absolute folder such as /Users/you/Huddle, or leave it out for the default" || return $?
+    fi
+    case $value in
+        /*) rest=$value ;;
+        *) rest="${PWD:-$(pwd)}/$value" ;;
+    esac
+    out=""
+    while [ -n "$rest" ]; do
+        comp=${rest%%/*}
+        case $rest in
+            */*) rest=${rest#*/} ;;
+            *) rest="" ;;
+        esac
+        case $comp in
+            '' | .) ;;
+            ..) out=${out%/*} ;;
+            *) out="$out/$comp" ;;
+        esac
+    done
+    if [ -z "$out" ]; then
+        usage_error "$name must not be the filesystem root: $value" "choose a folder of its own, such as /Users/you/Huddle" || return $?
+    fi
+    printf '%s' "$out"
 }
 
 # Returns 3 (after the usage message) unless the flag in $1 has a value in $2.
@@ -45,12 +90,18 @@ parse_args() {
     OPT_PURGE_DATA=$(env_switch "${HUDDLE_PURGE_DATA:-}")
     OPT_FORCE=$(env_switch "${HUDDLE_FORCE:-}")
     OPT_NO_LAUNCH=$(env_switch "${HUDDLE_NO_LAUNCH:-}")
+    if [ -n "$OPT_INSTALL_ROOT" ]; then
+        OPT_INSTALL_ROOT=$(absolute_root HUDDLE_INSTALL_ROOT "$OPT_INSTALL_ROOT") || return $?
+    fi
+    if [ -n "$OPT_DATA_ROOT" ]; then
+        OPT_DATA_ROOT=$(absolute_root HUDDLE_DATA_ROOT "$OPT_DATA_ROOT") || return $?
+    fi
     while [ "$#" -gt 0 ]; do
         case $1 in
             --version) need_value "$@" || return $?; OPT_VERSION=$2; shift 2 ;;
             --base-url) need_value "$@" || return $?; OPT_BASE_URL=$2; shift 2 ;;
-            --install-root) need_value "$@" || return $?; OPT_INSTALL_ROOT=$2; shift 2 ;;
-            --data-root) need_value "$@" || return $?; OPT_DATA_ROOT=$2; shift 2 ;;
+            --install-root) need_value "$@" || return $?; OPT_INSTALL_ROOT=$(absolute_root --install-root "$2") || return $?; shift 2 ;;
+            --data-root) need_value "$@" || return $?; OPT_DATA_ROOT=$(absolute_root --data-root "$2") || return $?; shift 2 ;;
             --check-only) OPT_CHECK_ONLY=1; shift ;;
             --uninstall) OPT_UNINSTALL=1; shift ;;
             --purge-data) OPT_PURGE_DATA=1; shift ;;
@@ -59,6 +110,9 @@ parse_args() {
             *) usage_error "unknown option: $1" || return $? ;;
         esac
     done
+    if ! valid_version "$OPT_VERSION"; then
+        usage_error "the version '$OPT_VERSION' is not latest or a release tag" "use latest or a version such as v1.2.3" || return $?
+    fi
 }
 
 # Derives every install path from HOME and the OPT_* overrides (Spec section 3). Creates nothing.
@@ -569,6 +623,27 @@ process_running() {
     kill -0 "$1" 2>/dev/null
 }
 
+# Seam: succeeds while the Agency Huddle process $1 (the pid in instance.json) is still running.
+app_running() {
+    process_running "$1"
+}
+
+# Waits up to 10 s (ten polls, 1 s apart) for the Agency Huddle process $1 to disappear. The app's
+# own `stop` verb can return before the process has exited. Returns 1 if it is still running.
+wait_for_app_exit() {
+    local pid waited
+    pid=$1
+    waited=0
+    while app_running "$pid"; do
+        if [ "$waited" -ge 10 ]; then
+            return 1
+        fi
+        sleep_seconds 1
+        waited=$((waited + 1))
+    done
+    return 0
+}
+
 # Seam: kills the process $1 and waits up to 10 s for it to go. Returns 1 if it is still there.
 run_kill_process() {
     local pid waited
@@ -612,9 +687,9 @@ stop_huddle_if_running() {
     rc=0
     run_huddle_stop || rc=$?
     if [ "$pid" -gt 0 ]; then
-        if process_running "$pid"; then
+        if ! wait_for_app_exit "$pid"; then
             if [ "${OPT_FORCE:-0}" -ne 1 ]; then
-                log_step fail stop "Agency Huddle (pid $pid) is still running after the stop request" "Close it and run the installer again, or pass --force to end the process."
+                log_step fail stop "Agency Huddle (pid $pid) is still running after the stop request" "Close it and run the installer again, or pass --force (HUDDLE_FORCE=1 when you use the one-line install) to end the process."
                 return 1
             fi
             log_step work stop "ending process $pid (--force)"
@@ -626,7 +701,7 @@ stop_huddle_if_running() {
         fi
     elif [ "$rc" -ne 0 ]; then
         if [ "${OPT_FORCE:-0}" -ne 1 ]; then
-            log_step fail stop "the stop request for Agency Huddle failed (exit code $rc)" "Close it and run the installer again, or pass --force."
+            log_step fail stop "the stop request for Agency Huddle failed (exit code $rc)" "Close it and run the installer again, or pass --force (HUDDLE_FORCE=1 when you use the one-line install)."
             return 1
         fi
         log_step work stop "stop request exited with code $rc; continuing because of --force"
@@ -678,6 +753,90 @@ install_app_restore() {
     return 0
 }
 
+# Succeeds when the folder $1 is safe to replace: it is an empty folder or holds one of the
+# files an Agency Huddle install always has (install-state or release-info.json).
+folder_is_replaceable() {
+    if [ ! -d "$1" ] || [ -L "$1" ]; then
+        return 1
+    fi
+    if [ -e "$1/install-state" ] || [ -e "$1/release-info.json" ]; then
+        return 0
+    fi
+    [ -z "$(ls -A "$1" 2>/dev/null)" ]
+}
+
+# Decides whether install_app may move and delete around the install folder $1: the path must be
+# absolute, not the filesystem root, not the home folder or a folder holding it, and have at least
+# 2 path segments (a short root such as /opt/huddle is fine; uninstall keeps its stricter
+# safe_to_delete). The folder must be missing, an empty folder, or hold install-state or
+# release-info.json, and a leftover $1.staging or $1.old must be empty or hold one of those too.
+# Touches nothing. On failure sets SAFE_REASON and returns 1.
+install_root_check() {
+    local dir canon home_dir home_canon slashes leftover
+    dir=${1:-}
+    SAFE_REASON=""
+    if [ -z "$dir" ]; then
+        SAFE_REASON="the path is empty"
+        return 1
+    fi
+    case $dir in
+        /*) ;;
+        *)
+            SAFE_REASON="the path is not absolute"
+            return 1
+            ;;
+    esac
+    canon=$dir
+    if [ -d "$dir" ]; then
+        canon=$(cd "$dir" 2>/dev/null && pwd -P) || canon=""
+        if [ -z "$canon" ]; then
+            SAFE_REASON="the folder cannot be resolved"
+            return 1
+        fi
+    fi
+    if [ "$canon" = "/" ]; then
+        SAFE_REASON="it is the filesystem root"
+        return 1
+    fi
+    home_dir=${HOME:-}
+    if [ -n "$home_dir" ]; then
+        home_canon=$(cd "$home_dir" 2>/dev/null && pwd -P) || home_canon=$home_dir
+        case "$home_canon/" in
+            "$canon/"*)
+                SAFE_REASON="it is your home folder or a folder that contains your home folder"
+                return 1
+                ;;
+        esac
+        case "${home_dir%/}/" in
+            "$canon/"*)
+                SAFE_REASON="it is your home folder or a folder that contains your home folder"
+                return 1
+                ;;
+        esac
+    fi
+    slashes=$(printf '%s' "$canon" | tr -cd '/' | wc -c)
+    if [ "$((slashes))" -lt 2 ]; then
+        SAFE_REASON="it has fewer than 2 path segments"
+        return 1
+    fi
+    if [ -e "$dir" ] || [ -L "$dir" ]; then
+        if ! folder_is_replaceable "$dir"; then
+            SAFE_REASON="$dir is not empty and does not look like an Agency Huddle install (no install-state or release-info.json)"
+            return 1
+        fi
+    fi
+    for leftover in "$dir.staging" "$dir.old"; do
+        if [ -e "$leftover" ] || [ -L "$leftover" ]; then
+            if ! folder_is_replaceable "$leftover"; then
+                SAFE_REASON="$leftover exists and does not look like an Agency Huddle folder (no install-state or release-info.json)"
+                return 1
+            fi
+        fi
+    done
+    SAFE_REASON=""
+    return 0
+}
+
 # Installs the app from the verified archive in $1 (Spec section 6, rule 3). Sets APP_CHANGED to 1
 # when the install was replaced and 0 when the step was skipped (the state holds this archive's
 # hash and the host exists) or failed. Returns 1 on a failure, after logging it; the previous
@@ -700,6 +859,11 @@ install_app() {
     staging="$root.staging"
     old="$root.old"
     parent=$(dirname "$root")
+    # Nothing is moved or deleted unless the folder is ours: --install-root can point anywhere.
+    if ! install_root_check "$root"; then
+        log_step fail app "cannot install into $root: $SAFE_REASON" "choose an empty folder or remove it"
+        return 1
+    fi
     # Leftovers of an interrupted run: a swap that died between its two renames, then stale folders.
     if [ ! -e "$root" ] && [ -e "$old" ]; then
         if ! mv "$old" "$root"; then
@@ -947,10 +1111,13 @@ run_npm_ci() {
 # stopped only once `npm ci` is certain to run. Does not write the install state (the caller does,
 # last). Needs install_node to have run: it uses the node and npm under <InstallRoot>/node.
 install_adapter() {
-    local root acp_dir lock sha npm_cli log rc
+    local root acp_dir lock sha npm_cli log rc staging aside entry_rel
     ADAPTER_CHANGED=0
     root=${INSTALL_ROOT%/}
     acp_dir="$root/tools/acp"
+    staging="$root/tools/acp.staging"
+    aside="$acp_dir/node_modules.old"
+    entry_rel=${ADAPTER_ENTRY#"$root/tools/acp/"}
     lock="$acp_dir/package-lock.json"
     npm_cli="$root/node/lib/node_modules/npm/bin/npm-cli.js"
     log="$CACHE_DIR/npm-ci.log"
@@ -962,6 +1129,10 @@ install_adapter() {
     if [ -f "$ADAPTER_ENTRY" ] && step_satisfied "$STATE_FILE" lock_sha256 "$sha"; then
         log_step skip adapter "already installed"
         return 0
+    fi
+    if [ ! -f "$acp_dir/package.json" ]; then
+        log_step fail adapter "$acp_dir/package.json does not exist" "Download the release again."
+        return 1
     fi
     if [ ! -x "$NODE_BIN" ] || [ ! -f "$npm_cli" ]; then
         log_step fail adapter "the bundled node and npm are missing from $root/node" "Run the installer again so the node step runs first."
@@ -975,20 +1146,47 @@ install_adapter() {
     if ! stop_huddle_if_running; then
         return 1
     fi
+    # npm ci runs on a staged copy (package.json and the lock file), so a failure part-way (offline,
+    # proxy) leaves the previous node_modules runnable; it is replaced only after the staged one is
+    # verified.
+    rm -rf "$staging"
+    if ! mkdir -p "$staging" || ! cp "$acp_dir/package.json" "$lock" "$staging/"; then
+        rm -rf "$staging"
+        log_step fail adapter "cannot stage the adapter files in $staging" "Check the permissions on $root/tools."
+        return 1
+    fi
     log_step work adapter "installing the adapter with npm ci"
     rc=0
     (
-        cd "$acp_dir" && PATH="$root/node/bin:$PATH" && export PATH && run_npm_ci ci --omit=dev --no-audit --no-fund
+        cd "$staging" && PATH="$root/node/bin:$PATH" && export PATH && run_npm_ci ci --omit=dev --no-audit --no-fund
     ) >"$log" 2>&1 </dev/null || rc=$?
     if [ "$rc" -ne 0 ]; then
+        rm -rf "$staging"
         tail -n 15 "$log" >&2
         log_step fail adapter "npm ci failed (exit code $rc); the full log is $log" "Check your network, and if you are behind a proxy set HTTPS_PROXY (and HTTP_PROXY), then run the installer again."
         return 1
     fi
-    if [ ! -f "$ADAPTER_ENTRY" ]; then
+    if [ ! -f "$staging/$entry_rel" ]; then
+        rm -rf "$staging"
         log_step fail adapter "npm ci finished but claude-agent-acp is missing (expected $ADAPTER_ENTRY); the full log is $log" "Run the installer again, or check $log."
         return 1
     fi
+    rm -rf "$aside"
+    if [ -e "$acp_dir/node_modules" ] && ! mv "$acp_dir/node_modules" "$aside"; then
+        rm -rf "$staging"
+        log_step fail adapter "cannot replace $acp_dir/node_modules; the previous one was left untouched" "Close anything using it and run the installer again."
+        return 1
+    fi
+    if ! mv "$staging/node_modules" "$acp_dir/node_modules"; then
+        if [ -e "$aside" ] && ! mv "$aside" "$acp_dir/node_modules"; then
+            log_step fail adapter "cannot put the new adapter in place, and the rollback failed" "Rename $aside to $acp_dir/node_modules by hand and run the installer again."
+            return 1
+        fi
+        rm -rf "$staging"
+        log_step fail adapter "cannot put the new adapter in place; the previous one was restored" "Run the installer again."
+        return 1
+    fi
+    rm -rf "$aside" "$staging"
     ADAPTER_CHANGED=1
     log_step ok adapter "installed"
     return 0
