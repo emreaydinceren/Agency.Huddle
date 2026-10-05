@@ -40,7 +40,7 @@
             {
                 string presenceText = string.Create(CultureInfo.InvariantCulture, $"{assignee} is {presence}");
                 <MudTooltip Text="@presenceText">
-                    <MudBadge Dot="true" Overlap="true" Color="@TaskColors.For(presence)" BadgeAriaLabel="@presenceText">
+                    <MudBadge Dot="true" Overlap="true" Origin="Origin.BottomRight" Class="task-card-presence" Color="@TaskColors.For(presence)" BadgeAriaLabel="@presenceText">
                         <TeammateAvatar Name="@assignee" Avatar="this.AvatarStore.Get(assignee)" Size="Size.Small" />
                     </MudBadge>
                 </MudTooltip>
