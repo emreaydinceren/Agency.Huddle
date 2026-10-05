@@ -122,17 +122,18 @@ public sealed class TeamFilesTabTests : IDisposable
         Assert.Equal("brief", cut.Find(SearchInput).GetAttribute("value"));
     }
 
-    /// <summary>Without a <c>Search</c> the explorer gets no filter and shows its tree, not a result list.</summary>
+    /// <summary>Without a <c>Search</c> the explorer gets no filter and shows its tree - the folder's own contents, not a row for the folder itself - and not a result list.</summary>
     [Fact]
     public async Task NoSearch_ExplorerHasNoFilter_AndShowsTheTree()
     {
         this.SeedTeam("Business");
+        File.WriteAllText(Path.Combine(this.fixture.TeamsPath, "Business", "Existing.md"), "existing");
 
         await using MudBunitContext ctx = this.fixture.NewContext();
         IRenderedComponent<ContainerFragment> cut = RenderTab(ctx, "Business");
 
         Assert.Null(cut.FindComponent<LibraryExplorer>().Instance.Filter);
-        cut.WaitForAssertion(() => Assert.Equal(["Business"], NodeNames(cut)));
+        cut.WaitForAssertion(() => Assert.Equal(["Existing.md"], NodeNames(cut)));
         Assert.Empty(cut.FindAll(".library-search-results"));
     }
 
@@ -193,7 +194,7 @@ public sealed class TeamFilesTabTests : IDisposable
 
         await using MudBunitContext ctx = this.fixture.NewContext();
         IRenderedComponent<ContainerFragment> cut = RenderTab(ctx, "Business");
-        cut.WaitForAssertion(() => Assert.Equal(["Business"], NodeNames(cut)));
+        cut.WaitForAssertion(() => Assert.Equal(["Existing.md"], NodeNames(cut)));
 
         _ = cut.InvokeAsync(() => cut.Find(ActionButton).Click());
 
@@ -216,9 +217,7 @@ public sealed class TeamFilesTabTests : IDisposable
 
         await using MudBunitContext ctx = this.fixture.NewContext();
         IRenderedComponent<ContainerFragment> cut = RenderTab(ctx, "Business");
-        cut.WaitForAssertion(() => Assert.NotEmpty(cut.FindAll("div.mud-treeview-item-arrow button")));
-        await cut.InvokeAsync(() => cut.Find("div.mud-treeview-item-arrow button").ClickAsync());
-        cut.WaitForAssertion(() => Assert.Equal(["Business", "Existing.md"], SortedNodeNames(cut)));
+        cut.WaitForAssertion(() => Assert.Equal(["Existing.md"], SortedNodeNames(cut)));
 
         _ = cut.InvokeAsync(() => cut.Find(ActionButton).Click());
         cut.WaitForAssertion(() => Assert.Equal("New note", cut.Find(".mud-dialog-title").TextContent.Trim()));
@@ -226,35 +225,36 @@ public sealed class TeamFilesTabTests : IDisposable
         await cut.InvokeAsync(() => cut.FindAll(".mud-dialog-actions button")[0].ClickAsync());
 
         cut.WaitForAssertion(() => Assert.True(File.Exists(Path.Combine(this.fixture.TeamsPath, "Business", "Idea.md"))), TimeSpan.FromSeconds(5));
-        cut.WaitForAssertion(() => Assert.Equal(["Business", "Existing.md", "Idea.md"], SortedNodeNames(cut)));
+        cut.WaitForAssertion(() => Assert.Equal(["Existing.md", "Idea.md"], SortedNodeNames(cut)));
         cut.WaitForAssertion(() => Assert.Equal("Business/Idea.md", cut.FindComponent<LibraryDocument>().Instance.Path.RelativePath));
     }
 
     /// <summary>
     /// A Team page that gains a Project (same tab instance, new parameters) gets a NEW explorer: the explorer
-    /// resolves its scopes only in <c>OnInitialized</c>, so the tab keys it by its scope and the tree's top node
-    /// becomes the Project.
+    /// resolves its scopes only in <c>OnInitialized</c>, so the tab keys it by its scope and the tree's top
+    /// nodes become the Project's own contents.
     /// </summary>
     [Fact]
     public async Task ProjectChange_ReplacesTheExplorer_AndTheTreeShowsTheProject()
     {
         this.SeedTeam("Business/Marketing Project");
+        File.WriteAllText(Path.Combine(this.fixture.TeamsPath, "Business", "Marketing Project", "plan.md"), "plan");
 
         await using MudBunitContext ctx = this.fixture.NewContext();
         IRenderedComponent<ContainerFragment> cut = RenderTab(ctx, "Business");
-        cut.WaitForAssertion(() => Assert.Equal(["Business"], NodeNames(cut)));
+        cut.WaitForAssertion(() => Assert.Equal(["Marketing Project"], NodeNames(cut)));
         LibraryExplorer before = cut.FindComponent<LibraryExplorer>().Instance;
 
         cut.FindComponent<TeamFilesTab>().Render(parameters => parameters.Add(tab => tab.Project, "Marketing Project"));
 
-        cut.WaitForAssertion(() => Assert.Equal(["Marketing Project"], NodeNames(cut)));
+        cut.WaitForAssertion(() => Assert.Equal(["plan.md"], NodeNames(cut)));
         LibraryExplorer after = cut.FindComponent<LibraryExplorer>().Instance;
         Assert.NotSame(before, after);
         IReadOnlyList<LibraryLocation> expected = [new LibraryLocation("teams", "Business/Marketing Project")];
         Assert.Equal(expected, after.Scopes);
     }
 
-    /// <summary>A Team with no folder on disk renders an empty tree (just its own node, nothing to expand), not an alert and not an exception.</summary>
+    /// <summary>A Team with no folder on disk renders an empty tree (no nodes at all, since the folder's own row is not shown), not an alert and not an exception.</summary>
     [Fact]
     public async Task TeamWithoutAFolder_RendersAnEmptyTree()
     {
@@ -263,7 +263,8 @@ public sealed class TeamFilesTabTests : IDisposable
         await using MudBunitContext ctx = this.fixture.NewContext();
         IRenderedComponent<ContainerFragment> cut = RenderTab(ctx, "Ghost");
 
-        cut.WaitForAssertion(() => Assert.Equal(["Ghost"], NodeNames(cut)));
+        cut.WaitForAssertion(() => Assert.NotNull(cut.FindComponent<LibraryTree>()));
+        Assert.Empty(NodeNames(cut));
         Assert.Empty(cut.FindAll(".library-explorer-unavailable"));
         Assert.Empty(cut.FindAll("div.library-tree-missing"));
         Assert.Empty(cut.FindAll("div.mud-treeview-item-arrow button"));

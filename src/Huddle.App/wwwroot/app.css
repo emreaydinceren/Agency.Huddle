@@ -1018,6 +1018,8 @@ button:focus-visible {
 /* A column is a tinted lane (background-gray, darker than the page) and each card on it is a light
    surface, so cards read as separate objects on a contrasting column. Theme tokens only. */
 .task-board-column {
+    display: flex;
+    flex-direction: column;
     min-width: 0;
     background-color: var(--mud-palette-background-gray);
     border-radius: var(--mud-default-borderradius);
@@ -1029,9 +1031,10 @@ button:focus-visible {
 .task-zone {
     display: flex;
     flex-direction: column;
-    gap: 0.5rem;
+    flex: 1 1 auto;
+    gap: 0.75rem;
     min-height: 4rem;
-    padding: 0.25rem;
+    padding: 0.5rem;
 }
 
 .task-ghost-bucket-label {
@@ -1041,27 +1044,27 @@ button:focus-visible {
 /* One class per TaskColors state family, so a Board column's left edge reads the same
    colour as the state's chip without a second lookup table. */
 .task-col-edge-default {
-    border-inline-start: 3px solid var(--mud-palette-lines-default);
+    border-inline-start: 6px solid var(--mud-palette-lines-default);
 }
 
 .task-col-edge-info {
-    border-inline-start: 3px solid var(--mud-palette-info);
+    border-inline-start: 6px solid var(--mud-palette-info);
 }
 
 .task-col-edge-warning {
-    border-inline-start: 3px solid var(--mud-palette-warning);
+    border-inline-start: 6px solid var(--mud-palette-warning);
 }
 
 .task-col-edge-secondary {
-    border-inline-start: 3px solid var(--mud-palette-secondary);
+    border-inline-start: 6px solid var(--mud-palette-secondary);
 }
 
 .task-col-edge-success {
-    border-inline-start: 3px solid var(--mud-palette-success);
+    border-inline-start: 6px solid var(--mud-palette-success);
 }
 
 .task-col-edge-error {
-    border-inline-start: 3px solid var(--mud-palette-error);
+    border-inline-start: 6px solid var(--mud-palette-error);
 }
 
 /* A ghost bucket: a drop zone with nothing in it, its icon and state name laid out in a row.
@@ -1083,8 +1086,32 @@ button:focus-visible {
 
 .task-card {
     text-align: left;
+    padding: 0.5rem 0.75rem;
     background-color: var(--mud-palette-surface);
     border-radius: var(--mud-default-borderradius);
+}
+
+/* The open button holds every field of the card; they stack top to bottom, left-aligned, rather
+   than flowing in a row that squeezes the title into a narrow column. */
+.task-card-open {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0.25rem;
+    width: 100%;
+    text-align: left;
+}
+
+/* The presence dot sits on the avatar's bottom-right rim, ringed in the card's surface colour so it
+   reads as separate from the initials rather than painted over them. MudBlazor's own Bordered
+   option is not used: it adds padding that swells the dot to about 21px, over the initials. The
+   inset overrides the overlap position so the dot's centre lands on the avatar's corner. */
+.task-card-presence .mud-badge.mud-badge-dot.mud-badge-overlap {
+    box-sizing: content-box;
+    width: 8px;
+    height: 8px;
+    border: 2px solid var(--mud-palette-surface);
+    inset: calc(100% - 9px) auto auto calc(100% - 9px);
 }
 
 /* The card currently being dragged. */

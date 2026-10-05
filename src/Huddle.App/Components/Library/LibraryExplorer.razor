@@ -61,7 +61,7 @@
             <div class="library-explorer-title">@this.ResolvedTitle()</div>
         }
     }
-    else if (this.SingleScope() is { } scopeRoot)
+    else if (this.ShowTitle && this.SingleScope() is { } scopeRoot)
     {
         @* The sidebar row already names the folder, so the header names WHERE it is instead: the
            root's full path, in the Tasks page header's own type (h5). h2, not h1, because the
@@ -171,10 +171,10 @@
     public bool ShowScopeRoot { get; set; } = true;
 
     /// <summary>
-    /// Whether the header label (<see cref="ResolvedTitle"/>) shows above the tree when
-    /// <see cref="ShowScopeRoot"/> is on. Defaults to <see langword="true"/>; the Team and Project
-    /// Files tab passes <see langword="false"/> because its page header already names the folder and
-    /// the tree's own top row repeats it.
+    /// Whether a header shows above the tree: the label (<see cref="ResolvedTitle"/>) when
+    /// <see cref="ShowScopeRoot"/> is on, or the root's full path when it is off. Defaults to
+    /// <see langword="true"/>; the Team and Project Files tab passes <see langword="false"/> (with
+    /// <see cref="ShowScopeRoot"/> off) because its page header already names the folder.
     /// </summary>
     [Parameter]
     public bool ShowTitle { get; set; } = true;
