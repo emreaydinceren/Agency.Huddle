@@ -700,6 +700,10 @@ public sealed class RoomSessionTests
 
             await WaitUntilAsync(() => owner.ReportCalls.Contains(nameof(IRoomSessionOwner.ReportTurnFailure)), ct);
 
+            // ReportTurnFailure runs in the catch, End in the finally after the watchdog awaits, so
+            // the failure report is visible before End has run; wait for it rather than assert it.
+            await WaitUntilAsync(() => !turnActivity.IsBusyIn("agent-1", "room-a"), ct);
+
             Assert.True(busyObserved);
             Assert.False(turnActivity.IsBusyIn("agent-1", "room-a"));
         }
