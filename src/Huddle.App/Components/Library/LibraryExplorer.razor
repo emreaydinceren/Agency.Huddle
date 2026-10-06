@@ -117,6 +117,19 @@
                 {
                     <LibraryDocument @ref="this.document" Path="@this.currentPath" Scope="@this.SingleScope()" OnOpenInLibrary="@this.OnOpenInLibrary" OnNavigate="@this.OnOpenFileAsync" />
                 }
+                else if (this.resultTerm is null)
+                {
+                    @* Nothing is open: say what to do rather than leave the whole pane blank. *@
+                    <div class="library-empty-pane">
+                        <MudIcon Icon="@Icons.Material.Outlined.Description" Size="Size.Large" />
+                        <MudText Typo="Typo.subtitle1">Select a note to read it</MudText>
+                        <MudText Typo="Typo.body2" Class="mud-text-secondary">Pick a file from the tree, or start a new one.</MudText>
+                        @if (this.SingleScope() is not null)
+                        {
+                            <MudButton Variant="Variant.Outlined" Color="Color.Primary" StartIcon="@Icons.Material.Outlined.Add" OnClick="this.NewNoteAsync">New note</MudButton>
+                        }
+                    </div>
+                }
                 <LibraryFileOps @ref="this.fileOps" Scope="@this.SingleScope()" OnChanged="@this.OnFileOpsChangedAsync" BeforeChangeAsync="@this.BeforeChangeAsync" />
             </SecondPanel>
         </MudSplitPanel>

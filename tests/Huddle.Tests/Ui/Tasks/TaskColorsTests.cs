@@ -70,9 +70,9 @@ public sealed class TaskColorsTests
     [Fact]
     public void Icon_EveryPriority_MatchesNamedGlyph()
     {
-        Assert.Equal(Icons.Material.Filled.ArrowDownward, TaskColors.Icon(TaskPriority.Low));
+        Assert.Equal(Icons.Material.Filled.KeyboardArrowDown, TaskColors.Icon(TaskPriority.Low));
         Assert.Equal(Icons.Material.Filled.Remove, TaskColors.Icon(TaskPriority.Medium));
-        Assert.Equal(Icons.Material.Filled.ArrowUpward, TaskColors.Icon(TaskPriority.High));
-        Assert.Equal(Icons.Material.Filled.PriorityHigh, TaskColors.Icon(TaskPriority.Urgent));
+        Assert.Equal(Icons.Material.Filled.KeyboardArrowUp, TaskColors.Icon(TaskPriority.High));
+        Assert.Equal(Icons.Material.Filled.KeyboardDoubleArrowUp, TaskColors.Icon(TaskPriority.Urgent));
     }
 }

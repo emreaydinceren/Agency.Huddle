@@ -109,7 +109,7 @@ public sealed class TaskCardTests : IDisposable
         Assert.Equal("Refactor the widget", cut.Find(".task-card-title").TextContent.Trim());
     }
 
-    /// <summary>Plan 12.1.t bullet 2 and Spec §13.10: the priority chip's <c>Color</c> and <c>Icon</c> follow <see cref="TaskColors"/>, for every <see cref="TaskPriority"/>.</summary>
+    /// <summary>Priority is shown by its <c>Icon</c> alone (from <see cref="TaskColors"/>) on a neutral chip, so it never competes with the status colour, for every <see cref="TaskPriority"/>.</summary>
     [Theory]
     [InlineData(TaskPriority.Low)]
     [InlineData(TaskPriority.Medium)]
@@ -123,7 +123,7 @@ public sealed class TaskCardTests : IDisposable
         IRenderedComponent<ContainerFragment> cut = this.Render(ctx, task);
 
         IRenderedComponent<MudChip<string>> chip = cut.FindComponent<MudChip<string>>();
-        Assert.Equal(TaskColors.For(priority), chip.Instance.Color);
+        Assert.Equal(Color.Default, chip.Instance.Color);
         Assert.Equal(TaskColors.Icon(priority), chip.Instance.Icon);
         Assert.Equal(priority.ToWire(), cut.Find(".task-card-header .mud-chip").TextContent.Trim());
     }

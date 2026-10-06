@@ -188,7 +188,7 @@ public sealed class TaskRouteAndCopyTests
         ctx.JSInterop.Setup<bool>("huddleClipboard.copy", expected).SetResult(true);
 
         var cut = RenderPanel(ctx, task.Id);
-        await cut.InvokeAsync(() => cut.Find("button[aria-label=\"Copy options\"]").ClickAsync());
+        await cut.InvokeAsync(() => cut.Find("button[aria-label=\"More actions\"]").ClickAsync());
         await cut.InvokeAsync(() => cut.Find(".task-detail-copy-link").ClickAsync());
 
         JSRuntimeInvocation invocation = ctx.JSInterop.VerifyInvoke("huddleClipboard.copy");

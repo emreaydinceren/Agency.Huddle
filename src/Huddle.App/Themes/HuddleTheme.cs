@@ -43,8 +43,8 @@ internal static class HuddleTheme
     public static PaletteLight Light() => new()
     {
         Background = "#f2f0ed",
-        Surface = "#fbfaf8",
-        DrawerBackground = "#f5f4f2",
+        Surface = "#ffffff",
+        DrawerBackground = "#e6e2dc",
         BackgroundGray = "#e5e2e0",
         TableHover = "#efefed",
         Divider = "#e5e5e4",
@@ -52,7 +52,7 @@ internal static class HuddleTheme
         LinesInputs = "#e0e0df",
         LinesDefault = "#d4d3d1",
         TextPrimary = "#141413",
-        TextSecondary = "#52514e",
+        TextSecondary = "#45443f",
         TextDisabled = "#8a8882",
         Primary = "#007c85",
         PrimaryDarken = "#00565c",

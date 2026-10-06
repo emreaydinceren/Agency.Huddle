@@ -6,6 +6,7 @@ using Markdig.Helpers;
 using Markdig.Renderers.Html;
 using Markdig.Syntax;
 using Markdig.Syntax.Inlines;
+using Agency.Huddle.App.Components.Tasks;
 using Agency.Huddle.App.Library;
 using Agency.Huddle.App.Tasks;
 
@@ -281,6 +282,11 @@ public static partial class MarkdownRenderer
         LinkInline link = new(string.Concat("/tasks/item/", reference.Id.ToString()), reference.Title);
         link.AppendChild(new LiteralInline(token));
         link.GetAttributes().AddClass("task-ref");
+        if (reference.Status is { } status)
+        {
+            link.GetAttributes().AddClass(string.Create(CultureInfo.InvariantCulture, $"task-ref-status-{TaskColors.For(status).ToString().ToLowerInvariant()}"));
+        }
+
         if (reference.Closed)
         {
             link.GetAttributes().AddClass("task-ref-closed");

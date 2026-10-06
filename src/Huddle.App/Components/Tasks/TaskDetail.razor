@@ -197,15 +197,21 @@ else if (this.loaded is { } task)
                             <MudIconButton Icon="@Icons.Material.Outlined.ContentCopy" aria-label="@($"Copy task id {effective.Id}")"
                                            Class="task-detail-copy-id" OnClick="@(() => this.CopyIdAsync(effective.Id))" />
                         </MudTooltip>
-                        <MudMenu Class="task-detail-copy-menu">
-                            <ActivatorContent Context="copyMenuContext">
-                                <MudIconButton Icon="@Icons.Material.Filled.MoreVert" Size="Size.Small" aria-label="Copy options" OnClick="copyMenuContext.ToggleAsync" />
-                            </ActivatorContent>
-                            <ChildContent>
-                                <MudMenuItem Class="task-detail-copy-link" OnClick="@(() => this.CopyLinkAsync(effective.Id))">Copy link</MudMenuItem>
-                            </ChildContent>
-                        </MudMenu>
                     }
+                }
+
+                @if (!this.createMode)
+                {
+                    <MudMenu Class="task-detail-copy-menu">
+                        <ActivatorContent Context="copyMenuContext">
+                            <MudIconButton Icon="@Icons.Material.Filled.MoreVert" Size="Size.Small" aria-label="More actions" OnClick="copyMenuContext.ToggleAsync" />
+                        </ActivatorContent>
+                        <ChildContent>
+                            <MudMenuItem Class="task-detail-copy-link" OnClick="@(() => this.CopyLinkAsync(effective.Id))">Copy link</MudMenuItem>
+                            <MudMenuItem Class="task-detail-copy" OnClick="this.MakeACopyAsync">Make a copy</MudMenuItem>
+                            <MudMenuItem Class="task-detail-close" OnClick="this.CloseOrReopenAsync">@(task.Location.Closed ? "Reopen" : "Close task")</MudMenuItem>
+                        </ChildContent>
+                    </MudMenu>
                 }
             </div>
 
@@ -405,21 +411,19 @@ else if (this.loaded is { } task)
         @sideContent
     }
 
-    @if (!this.HasPending)
-    {
-        <MudButton OnClick="this.SaveAsync" Disabled="saveDisabled">@saveLabel</MudButton>
-    }
-
-    @if (!this.createMode)
-    {
-        @if (this.Mode == TaskDetailMode.Panel)
+    @* One filled primary action (Save), with Cancel and Expand as quiet siblings. The rare actions - Make a
+       copy and Close/Reopen - live in the title row's more-actions menu. *@
+    <div class="task-detail-actions">
+        @if (!this.HasPending)
+        {
+            <MudButton Variant="Variant.Filled" Color="Color.Primary" OnClick="this.SaveAsync" Disabled="saveDisabled">@saveLabel</MudButton>
+        }
+        <MudButton Variant="Variant.Outlined" Class="task-detail-cancel" OnClick="this.CancelAsync">Cancel</MudButton>
+        @if (!this.createMode && this.Mode == TaskDetailMode.Panel)
         {
             <MudIconButton Icon="@Icons.Material.Filled.OpenInFull" aria-label="Expand" Class="task-detail-expand" OnClick="this.ExpandAsync" />
         }
-        <MudButton Class="task-detail-copy" OnClick="this.MakeACopyAsync">Make a copy</MudButton>
-        <MudButton Class="task-detail-close" OnClick="this.CloseOrReopenAsync">@(task.Location.Closed ? "Reopen" : "Close task")</MudButton>
-    }
-    <MudButton Class="task-detail-cancel" OnClick="this.CancelAsync">Cancel</MudButton>
+    </div>
 
     <MudExitPrompt Title="Discard changes?" Text="Your unsaved edits to this task will be lost." Disabled="@(!this.HasPending)" Class="task-detail-exit-prompt" />
 

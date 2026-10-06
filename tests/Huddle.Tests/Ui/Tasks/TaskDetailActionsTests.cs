@@ -146,7 +146,7 @@ public sealed class TaskDetailActionsTests
         await EditPriorityAsync(cut, TaskPriority.Urgent);
         int tasksBefore = harness.Store.All.Count;
 
-        await cut.InvokeAsync(() => cut.Find(".task-detail-copy").ClickAsync());
+        await ClickMenuItemAsync(cut, "Make a copy");
 
         IRenderedComponent<TaskDetailDialog> dialog = cut.FindComponent<TaskDetailDialog>();
         Assert.Null(dialog.Instance.Id);
@@ -170,13 +170,14 @@ public sealed class TaskDetailActionsTests
         await using MudBunitContext ctx = NewContext(harness);
         var cut = RenderPanel(ctx, task.Id);
 
-        await cut.InvokeAsync(() => FindButton(cut, "Close task").ClickAsync());
+        await ClickMenuItemAsync(cut, "Close task");
 
         TaskItem closed = harness.Store.Get(task.Id) ?? throw new InvalidOperationException("Task missing.");
         Assert.True(closed.Location.Closed);
         Assert.Equal(logCountBefore + 1, closed.ChangeLog.Count);
         Assert.Equal("closed", closed.ChangeLog[^1].Summary);
-        cut.WaitForAssertion(() => FindButton(cut, "Reopen"));
+        await OpenMenuItemsAsync(cut);
+        cut.WaitForAssertion(() => Assert.Single(cut.FindAll(".mud-menu-item"), HasText("Reopen")));
     }
 
     /// <summary>Close task with a pending edit saves it first, then closes, as one <see cref="TaskService.Update"/> then <see cref="TaskService.Close"/> - two new Change log entries (corrections-B5 D14 item 9).</summary>
@@ -190,7 +191,7 @@ public sealed class TaskDetailActionsTests
         var cut = RenderPanel(ctx, task.Id);
         await EditPriorityAsync(cut, TaskPriority.Urgent);
 
-        await cut.InvokeAsync(() => FindButton(cut, "Close task").ClickAsync());
+        await ClickMenuItemAsync(cut, "Close task");
 
         TaskItem closed = harness.Store.Get(task.Id) ?? throw new InvalidOperationException("Task missing.");
         Assert.True(closed.Location.Closed);
@@ -212,7 +213,7 @@ public sealed class TaskDetailActionsTests
         TaskResult outsideEdit = harness.Service.Update(task.Id, new TaskPatch { Priority = TaskPriority.Low }, baseVersion: null, TaskActors.Human(harness.Options.Value));
         Assert.IsType<TaskResult.Saved>(outsideEdit);
 
-        await cut.InvokeAsync(() => FindButton(cut, "Close task").ClickAsync());
+        await ClickMenuItemAsync(cut, "Close task");
 
         Assert.False(harness.Store.Get(task.Id)?.Location.Closed);
         Assert.Equal("Unsaved edits", TextOf(cut, ".task-detail-unsaved-text"));
@@ -230,7 +231,7 @@ public sealed class TaskDetailActionsTests
         IRenderedComponent<MudTextField<string>> titleField = cut.FindComponents<MudTextField<string>>().Single(HasClass<MudTextField<string>>("task-detail-title"));
         await cut.InvokeAsync(() => titleField.Instance.ValueChanged.InvokeAsync(""));
 
-        await cut.InvokeAsync(() => FindButton(cut, "Close task").ClickAsync());
+        await ClickMenuItemAsync(cut, "Close task");
 
         Assert.False(harness.Store.Get(task.Id)?.Location.Closed);
         Assert.Equal("Title is empty.", TextOf(cut, ".task-detail-save-error-problem"));
@@ -246,9 +247,9 @@ public sealed class TaskDetailActionsTests
         TaskItem closed = Assert.IsType<TaskResult.Saved>(closeResult).Task;
         await using MudBunitContext ctx = NewContext(harness);
         var cut = RenderPanel(ctx, task.Id);
-        Assert.DoesNotContain(cut.FindAll("button"), HasText("Close task"));
+        Assert.DoesNotContain(await OpenMenuItemsAsync(cut), HasText("Close task"));
 
-        await cut.InvokeAsync(() => FindButton(cut, "Reopen").ClickAsync());
+        await ClickMenuItemAsync(cut, "Reopen");
 
         TaskItem reopened = harness.Store.Get(task.Id) ?? throw new InvalidOperationException("Task missing.");
         Assert.False(reopened.Location.Closed);
@@ -582,6 +583,28 @@ public sealed class TaskDetailActionsTests
             builder.AddAttribute(2, nameof(TaskDetail.Mode), TaskDetailMode.Panel);
             builder.CloseComponent();
         });
+    }
+
+    /// <summary>Opens the title row's more-actions menu and returns its items - where Make a copy and Close/Reopen live.</summary>
+    /// <param name="cut">The rendered panel.</param>
+    private static async Task<IReadOnlyList<IElement>> OpenMenuItemsAsync(IRenderedComponent<ContainerFragment> cut)
+    {
+        await cut.InvokeAsync(() => cut.Find("button[aria-label=\"More actions\"]").ClickAsync());
+        return [.. cut.FindAll(".mud-menu-item")];
+    }
+
+    /// <summary>Opens the more-actions menu and clicks the item whose trimmed text is exactly <paramref name="text"/>.</summary>
+    /// <param name="cut">The rendered panel.</param>
+    /// <param name="text">The item's exact text.</param>
+    private static async Task ClickMenuItemAsync(IRenderedComponent<ContainerFragment> cut, string text)
+    {
+        if (cut.FindAll(".mud-menu-item").Count == 0)
+        {
+            await cut.InvokeAsync(() => cut.Find("button[aria-label=\"More actions\"]").ClickAsync());
+        }
+
+        IElement item = cut.FindAll(".mud-menu-item").Single(element => string.Equals(element.TextContent.Trim(), text, StringComparison.Ordinal));
+        await cut.InvokeAsync(() => item.ClickAsync());
     }
 
     /// <summary>Finds the one <c>&lt;button&gt;</c> whose trimmed text is exactly <paramref name="text"/> - mirrors <see cref="TaskDetailTests"/>'s own helper.</summary>

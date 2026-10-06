@@ -5,28 +5,75 @@
 @inject AvatarStore Avatars
 @inject ITaskReferenceResolver Tasks
 @inject IOptions<TeamOptions> Options
+@inject TimeProvider Clock
 @inject ILibraryReferenceResolver LibraryResolver
 
 <div class="message-list" @ref="this.container">
-    @foreach (var message in this.Messages)
+    @for (var messageIndex = 0; messageIndex < this.Messages.Count; messageIndex++)
     {
+        var message = this.Messages[messageIndex];
+        ChatMessage? previousMessage = messageIndex > 0 ? this.Messages[messageIndex - 1] : null;
+        var time = message.Timestamp.ToLocalTime().ToString("HH:mm", System.Globalization.CultureInfo.CurrentCulture);
+        @if (MessageDisplay.StartsNewDay(previousMessage?.Timestamp, message.Timestamp))
+        {
+            <div class="day-separator" role="separator">
+                <span>@MessageDisplay.DayLabel(message.Timestamp, this.Clock.GetLocalNow())</span>
+            </div>
+        }
+        var continues = previousMessage is not null
+            && MessageDisplay.ContinuesGroup(previousMessage.SenderId, previousMessage.Timestamp, message.SenderId, message.Timestamp);
         @if (this.HumanIds.Contains(message.SenderId))
         {
+            @* A Task wake-up is posted as the Human but is not something they typed, so it is a slim,
+               muted system row. The agent-facing "Call get_task ..." line is dropped from view. *@
+            @if (MessageDisplay.TryParseTaskWake(message.Text, out var wake))
+            {
+                <details class="system-row">
+                    <summary>
+                        <MudIcon Icon="@Icons.Material.Outlined.TaskAlt" Size="Size.Small" />
+                        <span class="system-row-text"><strong class="task-id">@wake.TaskId</strong> changed by @wake.Actor@(wake.Changes.Count > 0 ? " · " + wake.Changes[0] : string.Empty)</span>
+                        <span class="system-row-time">@time</span>
+                        <MudIcon Icon="@Icons.Material.Filled.ExpandMore" Size="Size.Small" Class="system-row-chevron" />
+                    </summary>
+                    <div class="system-row-detail">
+                        <div>@wake.Title</div>
+                        <ul>
+                            @foreach (var change in wake.Changes)
+                            {
+                                <li>@change</li>
+                            }
+                        </ul>
+                    </div>
+                </details>
+                continue;
+            }
+
             @* The Human's own Message needs no avatar or name to say who wrote it: its side of the
-               transcript says that, as in any chat app. The time moves into the tooltip. *@
-            <div class="message-row human" title="@message.Timestamp.ToLocalTime().ToString("HH:mm", System.Globalization.CultureInfo.CurrentCulture)">
+               transcript says that, as in any chat app. Consecutive ones are tighter, and the time
+               stays in the tooltip. *@
+            <div class="@(continues ? "message-row human grouped" : "message-row human")" title="@time">
                 <div class="message-bubble message-body">@((MarkupString)MarkdownRenderer.ToHtml(message.Text, this.TaskResolver, this.ChatLibraryResolver))</div>
             </div>
             continue;
         }
-        <div class="message-row">
-            <TeammateAvatar Name="@message.SenderName" Avatar="this.Avatars.Get(message.SenderName)" Size="Size.Small" />
+        <div class="@(continues ? "message-row grouped" : "message-row")">
+            @if (continues)
+            {
+                <span class="message-gutter" title="@time"></span>
+            }
+            else
+            {
+                <TeammateAvatar Name="@message.SenderName" Avatar="this.Avatars.Get(message.SenderName)" Size="Size.Small" />
+            }
             <div class="message-content">
-                <div class="message-meta">
-                    <span class="message-sender">@message.SenderName</span>
-                    <span class="message-time">@message.Timestamp.ToLocalTime().ToString("HH:mm", System.Globalization.CultureInfo.CurrentCulture)</span>
-                </div>
-                <div class="message-body">@((MarkupString)MarkdownRenderer.ToHtml(message.Text, this.TaskResolver, this.ChatLibraryResolver))</div>
+                @if (!continues)
+                {
+                    <div class="message-meta">
+                        <span class="message-sender">@message.SenderName</span>
+                        <span class="message-time">@time</span>
+                    </div>
+                }
+                <div class="message-body message-card">@((MarkupString)MarkdownRenderer.ToHtml(message.Text, this.TaskResolver, this.ChatLibraryResolver))</div>
             </div>
         </div>
     }
@@ -59,7 +106,7 @@
                    markdown path more often than necessary is the wrong direction from that rule, not a
                    harmless extra step. The text settles into rendered Markdown the moment the real Message
                    arrives and this row is replaced. *@
-                <div class="message-body streaming">@draft.Text<span class="draft-caret"></span></div>
+                <div class="message-body message-card streaming">@draft.Text<span class="draft-caret"></span></div>
                 @* The Turn detail: one row per tool call, oldest first, under the text. A real <ul> with a
                    name and deliberately no aria-live - a Turn fires several updates a second and a live
                    region would read every one out. Every mark has a text label: state never rests on
