@@ -9,7 +9,7 @@ internal static class ViewFieldKeys
     public static readonly FrozenSet<string> All = new[]
     {
         "id", "title", "status", "priority", "assignee", "creator", "team", "project", "parent",
-        "blocked_by", "tags", "start_date", "due_date", "created", "updated", "closed", "origin",
+        "blocked_by", "tags", "start_date", "due_date", "created", "updated", "closed", "origin", "sprint",
     }.ToFrozenSet(StringComparer.Ordinal);
 
     /// <summary>Every key except <c>blocked_by</c> and <c>tags</c>, which cannot be sorted on.</summary>

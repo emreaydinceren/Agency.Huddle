@@ -31,6 +31,7 @@
 @inject TaskStore Store
 @inject TaskEvents Events
 @inject TaskService Service
+@inject SprintStore Sprints
 @inject TaskTriggerService Triggers
 @inject TaskActivity Activity
 @inject PersonaStore Personas
@@ -61,7 +62,10 @@ else if (this.loaded is { } task)
     string saveLabel = TaskDetail.SaveLabel(preview);
     bool budgetExhausted = this.Activity.Budget(task.Id).Exhausted;
     int agentWakeBudget = this.Options.Value.Tasks.AgentWakeBudget;
+    string? sprintProblem = this.SprintProblem();
+    string? sprintHelper = sprintProblem ?? (this.IsNewSprintName() ? "New sprint: it will be created when you save" : null);
     bool saveDisabled = (effective.Status == TaskState.Duplicate && effective.DuplicateOf is null) ||
+        sprintProblem is not null ||
         (this.conflict is { } openConflict && !openConflict.Fields.All(this.conflictChoices.ContainsKey));
 
     @if (this.saveError is not null || this.saveProblems.Count > 0)
@@ -80,8 +84,12 @@ else if (this.loaded is { } task)
 
     @if (this.conflict is { } activeConflict)
     {
-        List<FieldChange> conflictDiff = [.. TaskDiff.Compare(activeConflict.Current, this.pending.ApplyTo(activeConflict.Current))
+        List<FieldChange> conflictDiff = [.. TaskDiff.Compare(activeConflict.Current, this.PendingPatch().ApplyTo(activeConflict.Current))
             .Where(change => activeConflict.Fields.Contains(change.Field))];
+        if (this.sprintInput is { } typedSprint && activeConflict.Fields.Contains(TaskField.Sprint) && !conflictDiff.Any(c => c.Field == TaskField.Sprint))
+        {
+            conflictDiff.Add(new FieldChange(TaskField.Sprint, this.SprintText(activeConflict.Current.Sprint), typedSprint.Trim()));
+        }
         string conflictFieldList = string.Join(", ", activeConflict.Fields.Select(TaskDiff.FieldLabel));
 
         <MudAlert Severity="Severity.Warning" role="alert" Class="task-detail-conflict-alert">
@@ -289,6 +297,20 @@ else if (this.loaded is { } task)
                                   CoerceValue="true" SearchFunc="this.SearchProjects" Class="task-detail-project" Label="Project" aria-label="Project" />
             }
 
+            <div class="task-detail-sprint">
+                <MudAutocomplete T="string" Value="@this.SprintFieldText(task)" ValueChanged="this.OnSprintChanged" Immediate="true"
+                                  CoerceValue="true" Clearable="true" SearchFunc="this.SearchSprints" Class="task-detail-sprint-field"
+                                  Label="Sprint" aria-label="Sprint" HelperText="@sprintHelper"
+                                  Error="@(sprintProblem is not null)" ErrorText="@sprintProblem" />
+                @if (this.SprintIsMissing(task))
+                {
+                    <MudTooltip Text="Not in sprints.md">
+                        <MudIcon Icon="@Icons.Material.Filled.Warning" Color="Color.Warning" Size="Size.Small" Class="task-detail-sprint-missing" aria-label="Not in sprints.md" />
+                    </MudTooltip>
+                    <MudButton Class="task-detail-sprint-clear" Variant="Variant.Text" OnClick="this.ClearSprint">Clear</MudButton>
+                }
+            </div>
+
             <MudAutocomplete T="TaskItem" Strict="true" SearchFunc="this.SearchTaskCandidates" ToStringFunc="TaskDetail.TaskToString"
                               Value="@(effective.Parent is { } parentId ? this.Store.Get(parentId) : null)" ValueChanged="this.OnParentChanged"
                               Label="Parent" Class="task-detail-parent" />
@@ -439,6 +461,7 @@ else if (this.loaded is { } task)
     private bool deleted;
     private bool createMode;
     private TaskPatch pending = new();
+    private string? sprintInput;
     private string? baseVersion;
     private TaskResult.Conflict? conflict;
     private Dictionary<TaskField, ConflictChoice> conflictChoices = [];
@@ -481,22 +504,124 @@ else if (this.loaded is { } task)
     public EventCallback<bool> HasPendingChanged { get; set; }
 
     /// <summary>Whether the Human has an unsaved edit pending. Public so the hosting page (corrections-B7 14.5.i item 2) can drive its own drawer's <c>OverlayAutoClose</c> from it - see <see cref="HasPendingChanged"/> for why a page must not simply read this on its own schedule.</summary>
-    public bool HasPending => !this.pending.IsEmpty;
+    public bool HasPending => !this.pending.IsEmpty || this.sprintInput is not null;
 
-    /// <summary>Assigns <see cref="pending"/> and raises <see cref="HasPendingChanged"/> exactly when <see cref="HasPending"/> flips (J58) - every call site that used to assign <c>this.pending</c> directly goes through this instead.</summary>
+    /// <summary>Assigns <see cref="pending"/> and raises <see cref="HasPendingChanged"/> exactly when <see cref="HasPending"/> flips (J58) - every call site that used to assign <c>this.pending</c> directly goes through this instead. A pending Sprint text is kept.</summary>
     /// <param name="value">The new pending patch.</param>
-    private void SetPending(TaskPatch value)
+    private void SetPending(TaskPatch value) => this.SetPending(value, this.sprintInput);
+
+    /// <summary>Assigns <see cref="pending"/> and <see cref="sprintInput"/> together and raises <see cref="HasPendingChanged"/> exactly when <see cref="HasPending"/> flips.</summary>
+    /// <param name="value">The new pending patch.</param>
+    /// <param name="sprint">The new pending Sprint text, or <see langword="null"/> for no Sprint edit.</param>
+    private void SetPending(TaskPatch value, string? sprint)
     {
         bool wasPending = this.HasPending;
         this.pending = value;
+        this.sprintInput = sprint;
         if (this.HasPending != wasPending)
         {
             _ = this.HasPendingChanged.InvokeAsync(this.HasPending);
         }
     }
 
-    /// <summary><see cref="loaded"/> with <see cref="pending"/> applied, or <see langword="null"/> before anything has loaded.</summary>
-    private TaskItem? Effective => this.loaded is { } current ? this.pending.ApplyTo(current) : null;
+    /// <summary>Drops every pending edit, the Sprint text included (Revert, a settled Save).</summary>
+    private void ClearPending() => this.SetPending(new TaskPatch(), null);
+
+    /// <summary>
+    /// <see cref="pending"/> plus the Sprint edit when it already names a Sprint in the file (or clears it). A new
+    /// name has no id until Save creates it, so it is not in this patch (Sprints spec §12.1: the value is pending
+    /// until Save).
+    /// </summary>
+    private TaskPatch PendingPatch()
+    {
+        if (this.sprintInput is not { } text)
+        {
+            return this.pending;
+        }
+
+        string trimmed = text.Trim();
+        if (trimmed.Length == 0)
+        {
+            return this.pending with { Sprint = Optional<SprintId?>.Set(null) };
+        }
+
+        return this.Sprints.FindByName(trimmed) is { } found
+            ? this.pending with { Sprint = Optional<SprintId?>.Set(found.Id) }
+            : this.pending;
+    }
+
+    /// <summary><see cref="loaded"/> with <see cref="PendingPatch"/> applied, or <see langword="null"/> before anything has loaded.</summary>
+    private TaskItem? Effective => this.loaded is { } current ? this.PendingPatch().ApplyTo(current) : null;
+
+    /// <summary>The Sprint as the field shows it: its name, the bare id when it is not in the file, or <see langword="null"/> for none.</summary>
+    /// <param name="sprint">A Sprint a Task holds.</param>
+    private string? SprintText(SprintId? sprint) => sprint is { } id ? this.Sprints.Get(id)?.Name ?? id.ToString() : null;
+
+    /// <summary>The Sprint field's text: what was typed or picked while an edit is pending, otherwise the loaded Task's Sprint.</summary>
+    /// <param name="task">The loaded Task.</param>
+    private string SprintFieldText(TaskItem task) => this.sprintInput ?? this.SprintText(task.Sprint) ?? string.Empty;
+
+    /// <summary>Whether the loaded Task's own Sprint is not in <c>sprints.md</c> and the Human has not edited the field yet (Sprints spec §12.1).</summary>
+    /// <param name="task">The loaded Task.</param>
+    private bool SprintIsMissing(TaskItem task) => this.sprintInput is null && task.Sprint is { } id && this.Sprints.Get(id) is null;
+
+    /// <summary>The §6.1 problem with the typed Sprint name, or <see langword="null"/> when there is none, the name is an existing Sprint's, or nothing is typed.</summary>
+    private string? SprintProblem()
+    {
+        if (this.sprintInput is not { } text || text.Trim().Length == 0 || this.Sprints.FindByName(text) is not null)
+        {
+            return null;
+        }
+
+        return SprintFileFormat.ValidateName(text);
+    }
+
+    /// <summary>Whether the typed Sprint name is valid and names no existing Sprint, so Save will create it.</summary>
+    private bool IsNewSprintName() =>
+        this.sprintInput is { } text && text.Trim().Length > 0 && this.Sprints.FindByName(text) is null && SprintFileFormat.ValidateName(text) is null;
+
+    /// <summary>Records the picked or typed Sprint text as pending; text equal to what the Task already shows is no edit.</summary>
+    /// <param name="value">The field's new text, or <see langword="null"/> when cleared.</param>
+    private void OnSprintChanged(string? value)
+    {
+        if (this.loaded is not { } current)
+        {
+            return;
+        }
+
+        string text = value ?? string.Empty;
+        string shown = this.SprintText(current.Sprint) ?? string.Empty;
+        this.SetPending(this.pending, string.Equals(text.Trim(), shown, StringComparison.OrdinalIgnoreCase) ? null : text);
+    }
+
+    /// <summary>The Clear button of a missing Sprint: a pending edit that removes the Sprint on Save.</summary>
+    private void ClearSprint()
+    {
+        if (this.loaded is not null)
+        {
+            this.SetPending(this.pending, string.Empty);
+        }
+    }
+
+    /// <summary>The Sprint names containing <paramref name="query"/>, ignoring case, newest first; all of them when empty (Sprints spec §12.1).</summary>
+    /// <param name="query">The typed text, or <see langword="null"/> for no filter.</param>
+    /// <param name="cancellationToken">Unused: the search is synchronous over in-memory data.</param>
+    private Task<IEnumerable<string>> SearchSprints(string? query, CancellationToken cancellationToken)
+    {
+        _ = cancellationToken;
+        IEnumerable<string> names = this.Sprints.All
+            .OrderByDescending(sprint => sprint.Id.Number)
+            .Select(sprint => sprint.Name)
+            .Where(name => string.IsNullOrEmpty(query) || name.Contains(query, StringComparison.OrdinalIgnoreCase));
+        return Task.FromResult<IEnumerable<string>>([.. names]);
+    }
+
+    /// <summary>Re-renders when <c>sprints.md</c> changed, so the list, the missing marker and the new-name helper follow the file.</summary>
+    private void OnSprintsChanged() => _ = this.DispatchAsync(() =>
+    {
+        this.StateHasChanged();
+        return Task.CompletedTask;
+    });
 
     /// <inheritdoc />
     protected override async Task OnInitializedAsync()
@@ -514,6 +639,7 @@ else if (this.loaded is { } task)
         this.Events.TaskChanged += this.OnTaskChanged;
         this.Events.TasksReloaded += this.OnTasksReloaded;
         this.Activity.Changed += this.OnActivityChanged;
+        this.Sprints.SprintsChanged += this.OnSprintsChanged;
         await this.RefreshOriginRoomAsync();
     }
 
@@ -534,6 +660,7 @@ else if (this.loaded is { } task)
         Tags = draft.Tags ?? [],
         StartDate = draft.StartDate,
         DueDate = draft.DueDate,
+        Sprint = draft.Sprint,
         Description = draft.Description,
         Location = new TaskLocation(draft.Team, draft.Project, false),
         Path = string.Empty,
@@ -555,7 +682,8 @@ else if (this.loaded is { } task)
         item.Tags,
         item.StartDate,
         item.DueDate,
-        item.Description);
+        item.Description,
+        item.Sprint);
 
     /// <summary>Re-reads <see cref="Id"/> from <see cref="Store"/>: updates <see cref="loaded"/>, and advances <see cref="baseVersion"/> only while <see cref="pending"/> is empty (corrections-B5 D14 item 6).</summary>
     private void Refresh()
@@ -954,7 +1082,7 @@ else if (this.loaded is { } task)
 
     private void Revert()
     {
-        this.SetPending(new TaskPatch());
+        this.ClearPending();
         this.saveError = null;
         this.saveProblems = [];
         this.conflict = null;
@@ -1096,7 +1224,7 @@ else if (this.loaded is { } task)
         this.conflictChoices = new Dictionary<TaskField, ConflictChoice>(this.conflictChoices) { [field] = resolvedChoice };
         if (resolvedChoice == ConflictChoice.Theirs)
         {
-            this.SetPending(TaskDetail.DropField(this.pending, field));
+            this.SetPending(TaskDetail.DropField(this.pending, field), field == TaskField.Sprint ? null : this.sprintInput);
         }
 
         this.baseVersion = activeConflict.Current.Version;
@@ -1176,19 +1304,46 @@ else if (this.loaded is { } task)
 
         this.saveError = null;
         this.saveProblems = [];
+        if (this.SprintProblem() is not null)
+        {
+            return Task.CompletedTask;
+        }
+
         TaskActor actor = TaskActors.Human(this.Options.Value);
+        Sprint? createdSprint = null;
+        TaskResult? outcome = null;
 
         try
         {
+            TaskPatch patch = this.PendingPatch();
+            if (this.sprintInput is { } typedSprint && !patch.Sprint.IsSet)
+            {
+                // A name no Sprint has yet (Sprints spec §12.1): it is created now, on Save, never on typing.
+                switch (this.Sprints.Create(typedSprint.Trim()))
+                {
+                    case SprintCreateResult.Created created:
+                        createdSprint = created.Sprint;
+                        patch = patch with { Sprint = Optional<SprintId?>.Set(created.Sprint.Id) };
+                        break;
+                    case SprintCreateResult.Existing existing:
+                        patch = patch with { Sprint = Optional<SprintId?>.Set(existing.Sprint.Id) };
+                        break;
+                    case SprintCreateResult.Refused refusedSprint:
+                        this.saveProblems = [refusedSprint.Problem];
+                        return Task.CompletedTask;
+                }
+            }
+
             TaskResult result = this.createMode
-                ? this.Service.Create(TaskDetail.BuildDraft(this.Effective ?? current), actor)
-                : this.Service.Update(current.Id, this.pending, this.baseVersion, actor);
+                ? this.Service.Create(TaskDetail.BuildDraft(patch.ApplyTo(current)), actor)
+                : this.Service.Update(current.Id, patch, this.baseVersion, actor);
+            outcome = result;
             switch (result)
             {
                 case TaskResult.Saved saved:
                     this.loaded = saved.Task;
                     this.baseVersion = saved.Task.Version;
-                    this.SetPending(new TaskPatch());
+                    this.ClearPending();
                     this.conflict = null;
                     this.conflictChoices = [];
                     this.createMode = false;
@@ -1196,7 +1351,7 @@ else if (this.loaded is { } task)
                 case TaskResult.Unchanged unchanged:
                     this.loaded = unchanged.Task;
                     this.baseVersion = unchanged.Task.Version;
-                    this.SetPending(new TaskPatch());
+                    this.ClearPending();
                     this.conflict = null;
                     this.conflictChoices = [];
                     break;
@@ -1217,6 +1372,13 @@ else if (this.loaded is { } task)
         catch (IOException ex)
         {
             this.saveError = ex.Message;
+        }
+
+        if (createdSprint is not null && outcome is not TaskResult.Saved)
+        {
+            // The save failed after this panel created the Sprint: take the empty line back (E-S25). An Existing
+            // Sprint is never undone, because someone else may be using it.
+            _ = this.Sprints.RemoveIfUnused(createdSprint.Id);
         }
 
         return Task.CompletedTask;
@@ -1263,5 +1425,6 @@ else if (this.loaded is { } task)
         this.Events.TaskChanged -= this.OnTaskChanged;
         this.Events.TasksReloaded -= this.OnTasksReloaded;
         this.Activity.Changed -= this.OnActivityChanged;
+        this.Sprints.SprintsChanged -= this.OnSprintsChanged;
     }
 }

@@ -356,6 +356,7 @@ public sealed class TaskCardTests : IDisposable
         ManualTimeProvider clock = new() { UtcNow = new DateTimeOffset(2026, 9, 24, 0, 0, 0, TimeSpan.Zero) };
         ctx.Services.AddSingleton<TimeProvider>(clock);
         ctx.Services.AddSingleton(this.avatarStore);
+        ctx.Services.AddSingleton<ISprintCatalog>(new EmptySprintCatalog());
 
         return ctx.RenderWithPopovers(builder =>
         {

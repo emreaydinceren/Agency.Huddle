@@ -16,7 +16,7 @@ public sealed class CreateTaskToolTests
     {
         CancellationToken ct = TestContext.Current.CancellationToken;
         using TaskToolHarness harness = await TaskToolHarness.CreateAsync(ct);
-        CreateTaskTool tool = new(harness.Service, harness.Triggers, harness.Directory, new FakePromptSource(), RequireId(harness.NovaId));
+        CreateTaskTool tool = new(harness.Service, harness.Triggers, harness.Directory, harness.Sprints, new FakePromptSource(), RequireId(harness.NovaId));
         JsonObject arguments = new() { ["team"] = "Platform" };
 
         string result = await tool.InvokeAsync(arguments, ct);
@@ -31,7 +31,7 @@ public sealed class CreateTaskToolTests
     {
         CancellationToken ct = TestContext.Current.CancellationToken;
         using TaskToolHarness harness = await TaskToolHarness.CreateAsync(ct);
-        CreateTaskTool tool = new(harness.Service, harness.Triggers, harness.Directory, new FakePromptSource(), RequireId(harness.NovaId));
+        CreateTaskTool tool = new(harness.Service, harness.Triggers, harness.Directory, harness.Sprints, new FakePromptSource(), RequireId(harness.NovaId));
         JsonObject arguments = new() { ["title"] = "Support SAML login" };
 
         string result = await tool.InvokeAsync(arguments, ct);
@@ -49,7 +49,7 @@ public sealed class CreateTaskToolTests
         User? kai = await harness.Directory.GetUserAsync(RequireId(harness.KaiId), ct);
         Assert.NotNull(kai);
         Room room = await harness.Chat.EnsureRoomForAsync(kai, ct);
-        CreateTaskTool tool = new(harness.Service, harness.Triggers, harness.Directory, new FakePromptSource(), RequireId(harness.NovaId));
+        CreateTaskTool tool = new(harness.Service, harness.Triggers, harness.Directory, harness.Sprints, new FakePromptSource(), RequireId(harness.NovaId));
         JsonObject arguments = new() { ["title"] = "Support SAML login", ["team"] = "Platform", ["originRoomId"] = room.Id };
 
         string result = await tool.InvokeAsync(arguments, ct);
@@ -69,7 +69,7 @@ public sealed class CreateTaskToolTests
         User? nova = await harness.Directory.GetUserAsync(RequireId(harness.NovaId), ct);
         Assert.NotNull(nova);
         Room room = await harness.Chat.EnsureRoomForAsync(nova, ct);
-        CreateTaskTool tool = new(harness.Service, harness.Triggers, harness.Directory, new FakePromptSource(), RequireId(harness.NovaId));
+        CreateTaskTool tool = new(harness.Service, harness.Triggers, harness.Directory, harness.Sprints, new FakePromptSource(), RequireId(harness.NovaId));
         JsonObject arguments = new() { ["title"] = "Support SAML login", ["team"] = "Platform", ["originRoomId"] = room.Id };
 
         string result = await tool.InvokeAsync(arguments, ct);
@@ -85,7 +85,7 @@ public sealed class CreateTaskToolTests
     {
         CancellationToken ct = TestContext.Current.CancellationToken;
         using TaskToolHarness harness = await TaskToolHarness.CreateAsync(ct);
-        CreateTaskTool tool = new(harness.Service, harness.Triggers, harness.Directory, new FakePromptSource(), RequireId(harness.NovaId));
+        CreateTaskTool tool = new(harness.Service, harness.Triggers, harness.Directory, harness.Sprints, new FakePromptSource(), RequireId(harness.NovaId));
         JsonObject arguments = new() { ["title"] = "Support SAML login", ["team"] = "Platform", ["status"] = "Cancelled" };
 
         string result = await tool.InvokeAsync(arguments, ct);
@@ -100,7 +100,7 @@ public sealed class CreateTaskToolTests
     {
         CancellationToken ct = TestContext.Current.CancellationToken;
         using TaskToolHarness harness = await TaskToolHarness.CreateAsync(ct);
-        CreateTaskTool tool = new(harness.Service, harness.Triggers, harness.Directory, new FakePromptSource(), RequireId(harness.NovaId));
+        CreateTaskTool tool = new(harness.Service, harness.Triggers, harness.Directory, harness.Sprints, new FakePromptSource(), RequireId(harness.NovaId));
         JsonObject arguments = new() { ["title"] = "Support SAML login", ["team"] = "Platform", ["due_date"] = "09/01/2026" };
 
         string result = await tool.InvokeAsync(arguments, ct);
@@ -115,7 +115,7 @@ public sealed class CreateTaskToolTests
     {
         CancellationToken ct = TestContext.Current.CancellationToken;
         using TaskToolHarness harness = await TaskToolHarness.CreateAsync(ct);
-        CreateTaskTool tool = new(harness.Service, harness.Triggers, harness.Directory, new FakePromptSource(), RequireId(harness.NovaId));
+        CreateTaskTool tool = new(harness.Service, harness.Triggers, harness.Directory, harness.Sprints, new FakePromptSource(), RequireId(harness.NovaId));
         JsonObject arguments = new() { ["title"] = new string('x', 201), ["team"] = "Nonexistent Team" };
 
         string result = await tool.InvokeAsync(arguments, ct);
@@ -132,7 +132,7 @@ public sealed class CreateTaskToolTests
     {
         CancellationToken ct = TestContext.Current.CancellationToken;
         using TaskToolHarness harness = await TaskToolHarness.CreateAsync(ct);
-        CreateTaskTool tool = new(harness.Service, harness.Triggers, harness.Directory, new FakePromptSource(), RequireId(harness.NovaId));
+        CreateTaskTool tool = new(harness.Service, harness.Triggers, harness.Directory, harness.Sprints, new FakePromptSource(), RequireId(harness.NovaId));
         JsonObject arguments = new() { ["title"] = "Support SAML login", ["team"] = "Platform", ["assignee"] = "Kai" };
 
         string result = await tool.InvokeAsync(arguments, ct);
@@ -148,7 +148,7 @@ public sealed class CreateTaskToolTests
     {
         CancellationToken ct = TestContext.Current.CancellationToken;
         using TaskToolHarness harness = await TaskToolHarness.CreateAsync(ct);
-        CreateTaskTool tool = new(harness.Service, harness.Triggers, harness.Directory, new FakePromptSource(), RequireId(harness.NovaId));
+        CreateTaskTool tool = new(harness.Service, harness.Triggers, harness.Directory, harness.Sprints, new FakePromptSource(), RequireId(harness.NovaId));
         JsonObject arguments = new() { ["title"] = "Support SAML login", ["team"] = "Platform" };
 
         string result = await tool.InvokeAsync(arguments, ct);
@@ -162,7 +162,7 @@ public sealed class CreateTaskToolTests
     {
         CancellationToken ct = TestContext.Current.CancellationToken;
         using TaskToolHarness harness = await TaskToolHarness.CreateAsync(ct);
-        CreateTaskTool tool = new(harness.Service, harness.Triggers, harness.Directory, new FakePromptSource(), RequireId(harness.NovaId));
+        CreateTaskTool tool = new(harness.Service, harness.Triggers, harness.Directory, harness.Sprints, new FakePromptSource(), RequireId(harness.NovaId));
         JsonObject arguments = new() { ["title"] = "Support SAML login", ["team"] = "Platform", ["assignee"] = "me" };
 
         string result = await tool.InvokeAsync(arguments, ct);
@@ -178,7 +178,7 @@ public sealed class CreateTaskToolTests
     {
         CancellationToken ct = TestContext.Current.CancellationToken;
         using TaskToolHarness harness = await TaskToolHarness.CreateAsync(ct);
-        CreateTaskTool tool = new(harness.Service, harness.Triggers, harness.Directory, new FakePromptSource(), "ghost-agent-id");
+        CreateTaskTool tool = new(harness.Service, harness.Triggers, harness.Directory, harness.Sprints, new FakePromptSource(), "ghost-agent-id");
         JsonObject arguments = new() { ["title"] = "Support SAML login", ["team"] = "Platform" };
 
         string result = await tool.InvokeAsync(arguments, ct);
@@ -193,7 +193,7 @@ public sealed class CreateTaskToolTests
     {
         CancellationToken ct = TestContext.Current.CancellationToken;
         using TaskToolHarness harness = await TaskToolHarness.CreateAsync(ct);
-        CreateTaskTool tool = new(harness.Service, harness.Triggers, harness.Directory, new FakePromptSource(), RequireId(harness.NovaId));
+        CreateTaskTool tool = new(harness.Service, harness.Triggers, harness.Directory, harness.Sprints, new FakePromptSource(), RequireId(harness.NovaId));
         JsonObject arguments = new() { ["title"] = "Support SAML login", ["team"] = "Platform", ["blocked_by"] = "PLAT-0001" };
 
         string result = await tool.InvokeAsync(arguments, ct);
@@ -208,7 +208,7 @@ public sealed class CreateTaskToolTests
     {
         CancellationToken ct = TestContext.Current.CancellationToken;
         using TaskToolHarness harness = await TaskToolHarness.CreateAsync(ct);
-        CreateTaskTool tool = new(harness.Service, harness.Triggers, harness.Directory, new FakePromptSource(), RequireId(harness.NovaId));
+        CreateTaskTool tool = new(harness.Service, harness.Triggers, harness.Directory, harness.Sprints, new FakePromptSource(), RequireId(harness.NovaId));
         JsonObject arguments = new() { ["title"] = 42, ["team"] = "Platform" };
 
         string result = await tool.InvokeAsync(arguments, ct);
@@ -226,7 +226,7 @@ public sealed class CreateTaskToolTests
         string collidingPath = Path.Combine(harness.Store.RootDirectory, TestTaskStore.RelativePath("Platform", null, closed: false, "PLAT-0001.md"));
         Directory.CreateDirectory(Path.GetDirectoryName(collidingPath) ?? throw new InvalidOperationException("Expected a parent directory."));
         File.WriteAllText(collidingPath, "not a task file");
-        CreateTaskTool tool = new(harness.Service, harness.Triggers, harness.Directory, new FakePromptSource(), RequireId(harness.NovaId));
+        CreateTaskTool tool = new(harness.Service, harness.Triggers, harness.Directory, harness.Sprints, new FakePromptSource(), RequireId(harness.NovaId));
         JsonObject arguments = new() { ["title"] = "Support SAML login", ["team"] = "Platform" };
 
         string result = await tool.InvokeAsync(arguments, ct);
@@ -241,7 +241,7 @@ public sealed class CreateTaskToolTests
     {
         CancellationToken ct = TestContext.Current.CancellationToken;
         using TaskToolHarness harness = await TaskToolHarness.CreateAsync(ct);
-        CreateTaskTool tool = new(harness.Service, harness.Triggers, harness.Directory, new FakePromptSource(), RequireId(harness.NovaId));
+        CreateTaskTool tool = new(harness.Service, harness.Triggers, harness.Directory, harness.Sprints, new FakePromptSource(), RequireId(harness.NovaId));
         JsonObject arguments = new() { ["title"] = "Support SAML login", ["team"] = "Platform", ["status"] = "Not A Status" };
 
         string result = await tool.InvokeAsync(arguments, ct);
@@ -256,7 +256,7 @@ public sealed class CreateTaskToolTests
     {
         CancellationToken ct = TestContext.Current.CancellationToken;
         using TaskToolHarness harness = await TaskToolHarness.CreateAsync(ct);
-        CreateTaskTool tool = new(harness.Service, harness.Triggers, harness.Directory, new FakePromptSource(), RequireId(harness.NovaId));
+        CreateTaskTool tool = new(harness.Service, harness.Triggers, harness.Directory, harness.Sprints, new FakePromptSource(), RequireId(harness.NovaId));
         JsonObject arguments = new() { ["title"] = "Support SAML login", ["team"] = "Platform", ["priority"] = "Not A Priority" };
 
         string result = await tool.InvokeAsync(arguments, ct);
@@ -271,7 +271,7 @@ public sealed class CreateTaskToolTests
     {
         CancellationToken ct = TestContext.Current.CancellationToken;
         using TaskToolHarness harness = await TaskToolHarness.CreateAsync(ct);
-        CreateTaskTool tool = new(harness.Service, harness.Triggers, harness.Directory, new FakePromptSource(), RequireId(harness.NovaId));
+        CreateTaskTool tool = new(harness.Service, harness.Triggers, harness.Directory, harness.Sprints, new FakePromptSource(), RequireId(harness.NovaId));
         JsonObject arguments = new() { ["title"] = "Support SAML login", ["team"] = "Platform", ["originRoomId"] = "no-such-room" };
 
         string result = await tool.InvokeAsync(arguments, ct);
@@ -286,7 +286,7 @@ public sealed class CreateTaskToolTests
     {
         CancellationToken ct = TestContext.Current.CancellationToken;
         using TaskToolHarness harness = await TaskToolHarness.CreateAsync(ct);
-        CreateTaskTool tool = new(harness.Service, harness.Triggers, harness.Directory, new FakePromptSource(), RequireId(harness.NovaId));
+        CreateTaskTool tool = new(harness.Service, harness.Triggers, harness.Directory, harness.Sprints, new FakePromptSource(), RequireId(harness.NovaId));
         JsonObject arguments = new() { ["title"] = "Support SAML login", ["team"] = "Platform", ["parent"] = "PLAT-0999" };
 
         string result = await tool.InvokeAsync(arguments, ct);
@@ -301,7 +301,7 @@ public sealed class CreateTaskToolTests
     {
         CancellationToken ct = TestContext.Current.CancellationToken;
         using TaskToolHarness harness = await TaskToolHarness.CreateAsync(ct);
-        CreateTaskTool tool = new(harness.Service, harness.Triggers, harness.Directory, new FakePromptSource(), RequireId(harness.NovaId));
+        CreateTaskTool tool = new(harness.Service, harness.Triggers, harness.Directory, harness.Sprints, new FakePromptSource(), RequireId(harness.NovaId));
         JsonObject arguments = new() { ["title"] = "Support SAML login", ["team"] = "Platform", ["blocked_by"] = new JsonArray { "PLAT-0999" } };
 
         string result = await tool.InvokeAsync(arguments, ct);
@@ -316,7 +316,7 @@ public sealed class CreateTaskToolTests
     {
         CancellationToken ct = TestContext.Current.CancellationToken;
         using TaskToolHarness harness = await TaskToolHarness.CreateAsync(ct);
-        CreateTaskTool tool = new(harness.Service, harness.Triggers, harness.Directory, new FakePromptSource(), RequireId(harness.NovaId));
+        CreateTaskTool tool = new(harness.Service, harness.Triggers, harness.Directory, harness.Sprints, new FakePromptSource(), RequireId(harness.NovaId));
 
         JsonArray? required = tool.InputSchema["required"] as JsonArray;
 

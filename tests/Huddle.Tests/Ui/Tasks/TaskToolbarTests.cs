@@ -260,6 +260,7 @@ public sealed class TaskToolbarTests
     {
         MudBunitContext ctx = new();
         ctx.Services.AddSingleton(store);
+        ctx.Services.AddSingleton<ISprintCatalog>(new Agency.Huddle.Tests.Tasks.EmptySprintCatalog());
         return ctx;
     }
 }

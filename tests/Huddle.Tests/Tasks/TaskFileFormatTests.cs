@@ -242,6 +242,130 @@ public sealed class TaskFileFormatTests
         Assert.Equal("invalid due_date: '15/10/2026'", error);
     }
 
+    /// <summary>A <c>sprint: S2</c> line parses to the Sprint id, and a lower-case or padded id reads the same.</summary>
+    [Theory]
+    [InlineData("sprint: S2")]
+    [InlineData("sprint: s02")]
+    [InlineData("sprint:   S2  ")]
+    public void TryParse_Sprint_ReadsTheId(string line)
+    {
+        string text = SpecExampleWithLinesInserted("due_date: 2026-10-15", line);
+
+        bool result = TaskFileFormat.TryParse(text, "p.md", DefaultLocation, out TaskItem? task, out string error);
+
+        Assert.True(result);
+        Assert.NotNull(task);
+        Assert.Equal(new SprintId(2), task.Sprint);
+        Assert.Empty(error);
+        Assert.Empty(task.UnknownFields);
+    }
+
+    /// <summary>A value that is not a Sprint id rejects the file, naming sprint and the value.</summary>
+    [Theory]
+    [InlineData("banana")]
+    [InlineData("S0")]
+    [InlineData("PLAT-0001")]
+    public void TryParse_BadSprint_Fails(string value)
+    {
+        string text = SpecExampleWithLinesInserted("due_date: 2026-10-15", $"sprint: {value}");
+
+        bool result = TaskFileFormat.TryParse(text, "p.md", DefaultLocation, out TaskItem? task, out string error);
+
+        Assert.False(result);
+        Assert.Null(task);
+        Assert.Equal($"invalid sprint: '{value}'", error);
+    }
+
+    /// <summary>An absent <c>sprint</c> key and an empty one both mean no Sprint.</summary>
+    [Theory]
+    [InlineData(null)]
+    [InlineData("sprint:")]
+    [InlineData("sprint:   ")]
+    public void TryParse_AbsentOrEmptySprint_IsNull(string? line)
+    {
+        string text = line is null ? SpecExampleText() : SpecExampleWithLinesInserted("due_date: 2026-10-15", line);
+
+        bool result = TaskFileFormat.TryParse(text, "p.md", DefaultLocation, out TaskItem? task, out string error);
+
+        Assert.True(result);
+        Assert.NotNull(task);
+        Assert.Null(task.Sprint);
+        Assert.Empty(error);
+    }
+
+    /// <summary>A well-formed Sprint id needs no matching line in <c>sprints.md</c>: the parser never looks.</summary>
+    [Fact]
+    public void TryParse_SprintNotInTheFile_StillLoads()
+    {
+        string text = SpecExampleWithLinesInserted("due_date: 2026-10-15", "sprint: S999");
+
+        bool result = TaskFileFormat.TryParse(text, "p.md", DefaultLocation, out TaskItem? task, out _);
+
+        Assert.True(result);
+        Assert.NotNull(task);
+        Assert.Equal(new SprintId(999), task.Sprint);
+    }
+
+    /// <summary>A Task with a Sprint composes <c>sprint:</c> right after <c>due_date</c> and before an unknown key.</summary>
+    [Fact]
+    public void Compose_Sprint_SitsAfterDueDateAndBeforeUnknownKeys()
+    {
+        TaskItem task = TestTasks.Make(
+            dueDate: new DateOnly(2026, 10, 15),
+            sprint: new SprintId(2),
+            unknownFields: [new("estimate", "3")]);
+
+        string[] lines = TaskFileFormat.Compose(task).Split('\n');
+
+        int dueIndex = Array.IndexOf(lines, "due_date: 2026-10-15");
+        Assert.True(dueIndex >= 0);
+        Assert.Equal("sprint: S2", lines[dueIndex + 1]);
+        Assert.Equal("estimate: 3", lines[dueIndex + 2]);
+    }
+
+    /// <summary>A Task with no Sprint writes no <c>sprint:</c> line, so a file that never had one composes byte-identically.</summary>
+    [Fact]
+    public void Compose_NoSprint_WritesNoSprintLine()
+    {
+        TaskItem task = TestTasks.Make(dueDate: new DateOnly(2026, 10, 15));
+
+        string composed = TaskFileFormat.Compose(task);
+
+        Assert.DoesNotContain("sprint", composed, StringComparison.Ordinal);
+        string expected = string.Join(
+            '\n',
+            "---",
+            "id: PLAT-0001",
+            "title: T",
+            "status: To Do",
+            "priority: Medium",
+            "creator: Human",
+            "due_date: 2026-10-15",
+            "---",
+            string.Empty,
+            string.Empty,
+            TaskFileFormat.ChangeLogHeading);
+        Assert.Equal(expected, composed);
+    }
+
+    /// <summary>Composing a parsed Task with a Sprint, parsing that and composing again gives the same text.</summary>
+    [Fact]
+    public void Compose_SprintRoundTrip_IsStable()
+    {
+        string text = SpecExampleWithLinesInserted("due_date: 2026-10-15", "sprint: S2");
+        _ = TaskFileFormat.TryParse(text, "p.md", DefaultLocation, out TaskItem? first, out _);
+        Assert.NotNull(first);
+        string once = TaskFileFormat.Compose(first);
+
+        bool reparsed = TaskFileFormat.TryParse(once, "p.md", DefaultLocation, out TaskItem? second, out _);
+
+        Assert.True(reparsed);
+        Assert.NotNull(second);
+        Assert.Equal(new SprintId(2), second.Sprint);
+        Assert.Equal(once, TaskFileFormat.Compose(second));
+        Assert.Contains("sprint: S2", once.Split('\n'));
+    }
+
     /// <summary>A title longer than 200 characters after trimming fails, naming title.</summary>
     [Fact]
     public void TryParse_TitleOver200_Fails()

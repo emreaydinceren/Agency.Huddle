@@ -249,6 +249,7 @@ public sealed class TaskListViewTests : IDisposable
         ManualTimeProvider clock = new() { UtcNow = new DateTimeOffset(2026, 9, 24, 0, 0, 0, TimeSpan.Zero) };
         ctx.Services.AddSingleton<TimeProvider>(clock);
         ctx.Services.AddSingleton(this.store);
+        ctx.Services.AddSingleton<ISprintCatalog>(new EmptySprintCatalog());
         ctx.Services.AddSingleton(new AvatarStore(this.dataDir.Options(), NullLogger<AvatarStore>.Instance));
 
         return ctx.RenderWithPopovers(builder =>

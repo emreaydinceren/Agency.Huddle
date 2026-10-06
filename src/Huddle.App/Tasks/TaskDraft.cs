@@ -21,6 +21,7 @@ namespace Agency.Huddle.App.Tasks;
 /// <param name="StartDate">The date the Task should start, or <see langword="null"/>.</param>
 /// <param name="DueDate">The date the Task is due, or <see langword="null"/>.</param>
 /// <param name="Description">The Task's description in markdown format. Must not contain a Change log heading.</param>
+/// <param name="Sprint">The Sprint the Task belongs to, or <see langword="null"/> for none.</param>
 public sealed record TaskDraft(
     string Title,
     string Team,
@@ -34,4 +35,5 @@ public sealed record TaskDraft(
     IReadOnlyList<string>? Tags = null,
     DateOnly? StartDate = null,
     DateOnly? DueDate = null,
-    string Description = "");
+    string Description = "",
+    SprintId? Sprint = null);

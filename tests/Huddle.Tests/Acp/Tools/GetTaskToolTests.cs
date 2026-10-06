@@ -16,7 +16,7 @@ public sealed class GetTaskToolTests
     {
         CancellationToken ct = TestContext.Current.CancellationToken;
         using TaskToolHarness harness = new();
-        GetTaskTool tool = new(harness.Store, new FakePromptSource());
+        GetTaskTool tool = new(harness.Store, harness.Sprints, new FakePromptSource());
 
         string result = await tool.InvokeAsync(new JsonObject(), ct);
 
@@ -29,7 +29,7 @@ public sealed class GetTaskToolTests
     {
         CancellationToken ct = TestContext.Current.CancellationToken;
         using TaskToolHarness harness = new();
-        GetTaskTool tool = new(harness.Store, new FakePromptSource());
+        GetTaskTool tool = new(harness.Store, harness.Sprints, new FakePromptSource());
         JsonObject arguments = new() { ["taskId"] = "not-an-id!" };
 
         string result = await tool.InvokeAsync(arguments, ct);
@@ -43,7 +43,7 @@ public sealed class GetTaskToolTests
     {
         CancellationToken ct = TestContext.Current.CancellationToken;
         using TaskToolHarness harness = new();
-        GetTaskTool tool = new(harness.Store, new FakePromptSource());
+        GetTaskTool tool = new(harness.Store, harness.Sprints, new FakePromptSource());
         JsonObject arguments = new() { ["taskId"] = "PLAT-0999" };
 
         string result = await tool.InvokeAsync(arguments, ct);
@@ -58,7 +58,7 @@ public sealed class GetTaskToolTests
         CancellationToken ct = TestContext.Current.CancellationToken;
         using TaskToolHarness harness = new();
         TaskItem task = CreateInStore(harness.Store, TestTasks.Make(id: "PLAT-0001", title: "Support SAML login", assignee: "Kai", changeLog: [TestTasks.Entry("2026-09-01T09:00:00Z", "Nova", "created")]));
-        GetTaskTool tool = new(harness.Store, new FakePromptSource());
+        GetTaskTool tool = new(harness.Store, harness.Sprints, new FakePromptSource());
         JsonObject arguments = new() { ["taskId"] = "PLAT-0001" };
 
         string result = await tool.InvokeAsync(arguments, ct);
@@ -76,7 +76,7 @@ public sealed class GetTaskToolTests
             id: "PLAT-0001",
             location: new TaskLocation("Platform", null, true),
             changeLog: [TestTasks.Entry("2026-09-01T09:00:00Z", "Nova", "created")]));
-        GetTaskTool tool = new(harness.Store, new FakePromptSource());
+        GetTaskTool tool = new(harness.Store, harness.Sprints, new FakePromptSource());
         JsonObject arguments = new() { ["taskId"] = "PLAT-0001" };
 
         string result = await tool.InvokeAsync(arguments, ct);
@@ -96,7 +96,7 @@ public sealed class GetTaskToolTests
             tags: ["urgent"],
             parent: null,
             changeLog: [TestTasks.Entry("2026-09-01T09:00:00Z", "Nova", "created")]));
-        GetTaskTool tool = new(harness.Store, new FakePromptSource());
+        GetTaskTool tool = new(harness.Store, harness.Sprints, new FakePromptSource());
         JsonObject arguments = new() { ["taskId"] = "PLAT-0001" };
 
         string result = await tool.InvokeAsync(arguments, ct);
@@ -118,7 +118,7 @@ public sealed class GetTaskToolTests
             id: "PLAT-0002",
             blockedBy: [TaskIdOf("PLAT-0011"), TaskIdOf("PLAT-0030")],
             changeLog: [TestTasks.Entry("2026-09-01T09:00:00Z", "Nova", "created")]));
-        GetTaskTool tool = new(harness.Store, new FakePromptSource());
+        GetTaskTool tool = new(harness.Store, harness.Sprints, new FakePromptSource());
         JsonObject arguments = new() { ["taskId"] = "PLAT-0002" };
 
         string result = await tool.InvokeAsync(arguments, ct);
@@ -136,7 +136,7 @@ public sealed class GetTaskToolTests
             id: "PLAT-0001",
             description: "Some details.",
             changeLog: [TestTasks.Entry("2026-09-01T09:00:00Z", "Nova", "created")]));
-        GetTaskTool tool = new(harness.Store, new FakePromptSource());
+        GetTaskTool tool = new(harness.Store, harness.Sprints, new FakePromptSource());
         JsonObject arguments = new() { ["taskId"] = "PLAT-0001" };
 
         string result = await tool.InvokeAsync(arguments, ct);
@@ -154,7 +154,7 @@ public sealed class GetTaskToolTests
         CancellationToken ct = TestContext.Current.CancellationToken;
         using TaskToolHarness harness = new();
         _ = CreateInStore(harness.Store, TestTasks.Make(id: "PLAT-0001", changeLog: [TestTasks.Entry("2026-09-01T09:00:00Z", "Nova", "created")]));
-        GetTaskTool tool = new(harness.Store, new FakePromptSource());
+        GetTaskTool tool = new(harness.Store, harness.Sprints, new FakePromptSource());
         JsonObject arguments = new() { ["taskId"] = "PLAT-0001" };
 
         string result = await tool.InvokeAsync(arguments, ct);
@@ -177,7 +177,7 @@ public sealed class GetTaskToolTests
         }
 
         _ = CreateInStore(harness.Store, TestTasks.Make(id: "PLAT-0001", changeLog: entries));
-        GetTaskTool tool = new(harness.Store, new FakePromptSource());
+        GetTaskTool tool = new(harness.Store, harness.Sprints, new FakePromptSource());
         JsonObject arguments = new() { ["taskId"] = "PLAT-0001", ["include_change_log"] = true };
 
         string result = await tool.InvokeAsync(arguments, ct);
@@ -206,7 +206,7 @@ public sealed class GetTaskToolTests
             new ChangeLogEntry(new DateTimeOffset(2026, 9, 2, 10, 30, 0, TimeSpan.Zero), "Kai", "status: To Do -> In Progress"),
         ];
         _ = CreateInStore(harness.Store, TestTasks.Make(id: "PLAT-0001", description: "Some details.", changeLog: entries));
-        GetTaskTool tool = new(harness.Store, new FakePromptSource());
+        GetTaskTool tool = new(harness.Store, harness.Sprints, new FakePromptSource());
         JsonObject arguments = new() { ["taskId"] = "PLAT-0001", ["include_change_log"] = true };
 
         string result = await tool.InvokeAsync(arguments, ct);
@@ -225,7 +225,7 @@ public sealed class GetTaskToolTests
         CancellationToken ct = TestContext.Current.CancellationToken;
         using TaskToolHarness harness = new();
         _ = CreateInStore(harness.Store, TestTasks.Make(id: "PLAT-0001", changeLog: [TestTasks.Entry("2026-09-01T09:00:00Z", "Nova", "created")]));
-        GetTaskTool tool = new(harness.Store, new FakePromptSource());
+        GetTaskTool tool = new(harness.Store, harness.Sprints, new FakePromptSource());
         JsonObject arguments = new() { ["taskId"] = "PLAT-0001", ["include_change_log"] = "yes" };
 
         string result = await tool.InvokeAsync(arguments, ct);
@@ -240,7 +240,7 @@ public sealed class GetTaskToolTests
         CancellationToken ct = TestContext.Current.CancellationToken;
         using TaskToolHarness harness = new();
         _ = CreateInStore(harness.Store, TestTasks.Make(id: "PLAT-0001", creator: "Nova", changeLog: [TestTasks.Entry("2026-09-01T09:00:00Z", "Nova", "created")]));
-        GetTaskTool tool = new(harness.Store, new FakePromptSource());
+        GetTaskTool tool = new(harness.Store, harness.Sprints, new FakePromptSource());
         JsonObject arguments = new() { ["taskId"] = "PLAT-0001" };
 
         string result = await tool.InvokeAsync(arguments, ct);
@@ -259,7 +259,7 @@ public sealed class GetTaskToolTests
             id: "PLAT-0002",
             parent: TaskIdOf("PLAT-0010"),
             changeLog: [TestTasks.Entry("2026-09-01T09:00:00Z", "Nova", "created")]));
-        GetTaskTool tool = new(harness.Store, new FakePromptSource());
+        GetTaskTool tool = new(harness.Store, harness.Sprints, new FakePromptSource());
         JsonObject arguments = new() { ["taskId"] = "PLAT-0002" };
 
         string result = await tool.InvokeAsync(arguments, ct);
@@ -279,7 +279,7 @@ public sealed class GetTaskToolTests
             status: TaskState.Duplicate,
             duplicateOf: TaskIdOf("PLAT-0020"),
             changeLog: [TestTasks.Entry("2026-09-01T09:00:00Z", "Nova", "created")]));
-        GetTaskTool tool = new(harness.Store, new FakePromptSource());
+        GetTaskTool tool = new(harness.Store, harness.Sprints, new FakePromptSource());
         JsonObject arguments = new() { ["taskId"] = "PLAT-0003" };
 
         string result = await tool.InvokeAsync(arguments, ct);
@@ -298,7 +298,7 @@ public sealed class GetTaskToolTests
             startDate: new DateOnly(2026, 1, 15),
             dueDate: new DateOnly(2026, 2, 1),
             changeLog: [TestTasks.Entry("2026-09-01T09:00:00Z", "Nova", "created")]));
-        GetTaskTool tool = new(harness.Store, new FakePromptSource());
+        GetTaskTool tool = new(harness.Store, harness.Sprints, new FakePromptSource());
         JsonObject arguments = new() { ["taskId"] = "PLAT-0001" };
 
         string result = await tool.InvokeAsync(arguments, ct);
@@ -315,7 +315,7 @@ public sealed class GetTaskToolTests
         CancellationToken ct = TestContext.Current.CancellationToken;
         using TaskToolHarness harness = new();
         _ = CreateInStore(harness.Store, TestTasks.Make(id: "PLAT-0001", changeLog: [TestTasks.Entry("2026-09-01T09:00:00Z", "Nova", "created")]));
-        GetTaskTool tool = new(harness.Store, new FakePromptSource());
+        GetTaskTool tool = new(harness.Store, harness.Sprints, new FakePromptSource());
         JsonObject arguments = new() { ["taskId"] = "PLAT-0001" };
 
         string result = await tool.InvokeAsync(arguments, ct);

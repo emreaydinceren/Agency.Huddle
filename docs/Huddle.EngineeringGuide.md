@@ -328,15 +328,16 @@ An installation running `agency-acp`, unverified for resume or for several sessi
 
 Four runtime files and two runtime directories sit outside that section, because none of
 them is a setting: the Persona library under `{DataDir}/{Acp:TeamsDir}`,
-`{DataDir}/prompts.json`, `{DataDir}/appearance.json`, `{DataDir}/avatars.json`, the
-uploaded avatar images under `{DataDir}/avatars/`, and Skill folders under
-`{DataDir}/Skills/`.
+`{DataDir}/prompts.json`, `{DataDir}/appearance.json`, `{DataDir}/avatars.json`,
+`{DataDir}/sprints.md`, the uploaded avatar images under `{DataDir}/avatars/`, and
+Skill folders under `{DataDir}/Skills/`.
 
 | File | Holds |
 | --- | --- |
 | `{DataDir}/prompts.json` | **Overrides only**, one key per changed Prompt. Absent is normal and means nothing is overridden; the app does not create it, and it appears on the first save from `/settings`. Hand-editing it is supported and watched — a save in an editor reaches the next Turn without a restart. |
 | `{DataDir}/appearance.json` | The selected Theme id. **That one key** — the per-Token override map went with the Tokens on 2026-09-14 ([ADR-0010](adr/0010-a-theme-is-a-mudblazor-theme.md)), and the `dark` light/dark preference went on 2026-09-21 when a Theme became a single palette ([ADR-0017](adr/0017-a-theme-is-a-palette-not-a-pair.md)). A file written before that still carries `dark`; it is an unknown key now, so it is ignored and kept, and there is no migration. Absent is normal and means the default Theme; the app does not create it. Hand-editable and watched, exactly like `prompts.json`. Not a setting under `Team:`: it is state this application writes. |
 | `{DataDir}/avatars.json` | One entry per Teammate that has chosen an **Avatar**, keyed by Name — the Human included, since the Human has a Name but no Persona file. **Overrides only**, exactly like `prompts.json`: an absent file is normal, the app does not create it, and a Teammate with no entry renders the initials it always did. Hand-editable and watched. Deliberately not part of the Persona, so changing an avatar never restarts a session ([ADR-0019](adr/0019-an-avatar-is-chosen-and-is-not-part-of-the-persona.md)). |
+| `{DataDir}/sprints.md` | The list of Sprints: one line per Sprint with id and name, created when a Task is assigned to a new Sprint and removed when the last Task leaves it. Hand-editable; a rename is propagated to every Task without rewriting the file. See [Huddle.Sprints-Specifications.md](Huddle.Sprints-Specifications.md) (Spec §6, §8). |
 | `{DataDir}/avatars/` | The uploaded avatar images themselves, each named by a generated id rather than by a Teammate's Name. Served at `/teammate-avatars` by a `PhysicalFileProvider` — `MapStaticAssets` is manifest-driven and cannot see a file written at run time. Created at startup, unlike the JSON files, because a `PhysicalFileProvider` throws when its root is missing. |
 | `{DataDir}/Skills/` | **Overrides and additions only.** A shipped Skill such as `team-building` lives in code as embedded resources; a folder here with the same name overrides it file by file (Source *Overridden*), and a folder with a new name is a Skill of the Human's own (*Yours*). An override whose `SKILL.md` is invalid falls back to the shipped one with a Warning; an invalid new Skill is left out. Watched: an edited file is what the next `read_skill` returns, while a changed name or description reaches a Teammate's system prompt only at its next session. Created at startup, because its watcher throws when the root is missing. Settings › Skills lists it and restores a default by deleting the override folder. |
 | `prompts.default.json` (beside the binary) | Every Prompt's shipped wording, **generated** from `PromptCatalog` and copied to the output folder. The restore source, and readable as a reference. It is not the authority: delete both files and the app still runs on exactly the text it shipped with. |

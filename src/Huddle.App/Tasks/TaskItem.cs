@@ -64,6 +64,9 @@ public sealed record TaskItem
     /// <summary>The date the Task is due, or null if not set.</summary>
     public DateOnly? DueDate { get; init; }
 
+    /// <summary>The Sprint the Task belongs to, or null for none. The id need not be in <c>sprints.md</c>.</summary>
+    public SprintId? Sprint { get; init; }
+
     /// <summary>The Task's description in markdown format.</summary>
     public string Description { get; init; } = "";
 

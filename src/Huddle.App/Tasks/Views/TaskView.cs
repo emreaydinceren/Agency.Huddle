@@ -36,6 +36,9 @@ public enum TaskGroupField
 
     /// <summary>Group by <see cref="TaskItem.Status"/>. Invalid on a Board.</summary>
     State,
+
+    /// <summary>Group by <see cref="TaskItem.Sprint"/>, newest first, with "No sprint" last.</summary>
+    Sprint,
 }
 
 /// <summary>The direction a sort key is applied in.</summary>
@@ -123,6 +126,9 @@ public sealed record TaskFilter
     /// <summary>Whether to keep only blocked or only unblocked Tasks. <see cref="BlockedFilter.All"/> (the default) is not written to <c>views.json</c>, so a View that never used it stays byte-identical.</summary>
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
     public BlockedFilter Blocked { get; init; } = BlockedFilter.All;
+
+    /// <summary>Matches Tasks whose Sprint is one of these ids (<c>"S2"</c>), or <c>"@current"</c>, or <c>"@none"</c>. Empty matches every Task, and is not written to <c>views.json</c> (see <c>ViewJson</c>), so a View that never used it stays byte-identical.</summary>
+    public IReadOnlyList<string> Sprints { get; init; } = [];
 }
 
 /// <summary>A Team, and optionally a Project within it. A null Project matches Tasks directly under the Team ("No project").</summary>

@@ -71,6 +71,58 @@ internal static class TaskToolText
     }
 
     /// <summary>
+    /// Resolves a <c>sprint</c> argument against <paramref name="catalog"/> (Sprints spec §10.1), in a fixed
+    /// order: <c>current</c> (case-insensitive) is the catalogue's current Sprint, then a Sprint id, then a
+    /// Sprint name (case-insensitive), and anything else is refused with the known Sprints. §6.1 guarantees no
+    /// name can be mistaken for <c>current</c> or an id, so the order cannot change an answer.
+    /// </summary>
+    /// <param name="catalog">The read-only Sprint catalogue; a tool never holds the store that can create one.</param>
+    /// <param name="text">The argument text.</param>
+    /// <param name="sprint">The resolved Sprint's id, or <see langword="null"/> when this returns <see langword="false"/>.</param>
+    /// <param name="refusal">The refusal text when this returns <see langword="false"/>; otherwise <see cref="string.Empty"/>.</param>
+    public static bool TryResolveSprint(ISprintCatalog catalog, string text, [NotNullWhen(true)] out SprintId? sprint, out string refusal)
+    {
+        ArgumentNullException.ThrowIfNull(catalog);
+        ArgumentNullException.ThrowIfNull(text);
+
+        string trimmed = text.Trim();
+        Sprint? found;
+        if (string.Equals(trimmed, "current", StringComparison.OrdinalIgnoreCase))
+        {
+            found = catalog.Current;
+            if (found is null)
+            {
+                sprint = null;
+                refusal = "There is no current sprint; no sprints exist yet.";
+                return false;
+            }
+        }
+        else if (SprintId.TryParse(trimmed, out SprintId id))
+        {
+            found = catalog.Get(id);
+        }
+        else
+        {
+            found = catalog.FindByName(trimmed);
+        }
+
+        if (found is null)
+        {
+            IReadOnlyList<Sprint> known = catalog.All;
+            string knownText = known.Count == 0
+                ? "There are no sprints yet."
+                : "Known sprints: " + string.Join(", ", known.Select(static each => $"{each.Id} {each.Name}")) + ".";
+            sprint = null;
+            refusal = $"Unknown sprint '{text}'. {knownText}";
+            return false;
+        }
+
+        sprint = found.Id;
+        refusal = string.Empty;
+        return true;
+    }
+
+    /// <summary>
     /// Resolves the calling Agent's <see cref="TaskActor"/> from <see cref="ITeamDirectory.GetUserAsync"/>
     /// (Spec §11.1, corrections-B4 D10 item 2). An unknown caller is refused; the raw
     /// <paramref name="callerAgentId"/> is never used as the Actor's Name.

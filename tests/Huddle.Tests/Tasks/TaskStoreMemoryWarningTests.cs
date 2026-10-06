@@ -132,7 +132,7 @@ public sealed class TaskStoreMemoryWarningTests
         RecordingLogger<TaskStore> logger = new();
         using PersonaStore personas = TestTaskStore.CreatePersonaStore(dir);
         using TaskStore store = new(dir.Options(), personas, TimeProvider.System, logger);
-        TaskService service = new(store, new TaskIdAllocator(dir.Options()), new TaskEvents(), personas, dir.Options(), TimeProvider.System, NullLogger<TaskService>.Instance);
+        TaskService service = new(store, new TaskIdAllocator(dir.Options()), new TaskEvents(), personas, new EmptySprintCatalog(), dir.Options(), TimeProvider.System, NullLogger<TaskService>.Instance);
         Assert.Single(Warnings(logger));
 
         store.RebuildFromWatcher();

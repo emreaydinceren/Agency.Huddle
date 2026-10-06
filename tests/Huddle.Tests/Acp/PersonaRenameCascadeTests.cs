@@ -762,6 +762,7 @@ public sealed class PersonaRenameCascadeTests
             new TaskIdAllocator(dir.Options()),
             new TaskEvents(),
             personaStore,
+            new Agency.Huddle.Tests.Tasks.EmptySprintCatalog(),
             dir.Options(),
             TimeProvider.System,
             NullLogger<TaskService>.Instance);

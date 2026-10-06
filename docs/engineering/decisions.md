@@ -8,6 +8,12 @@ disagrees with current vocabulary and you need the old-to-new mapping.
 This is history, not instruction. Nothing here binds you the way [Rules](rules.md)
 and [Traps](traps.md) do. Back to the hub: [Huddle.EngineeringGuide.md](../Huddle.EngineeringGuide.md).
 
+**2026-10-05 — Sprints: a named group of Tasks in time, with no dates, state or screen.**
+
+One file, `sprints.md`, lists them. A Task holds the Sprint's id; a Sprint disappears when the
+last Task leaves it. See [ADR-0037](../adr/0037-a-sprint-is-a-named-group-of-tasks-in-one-markdown-file.md)
+and [the Sprints design](../Huddle.Sprints-Specifications.md).
+
 **2026-09-25 — Tasks: a Markdown file per unit of work, wired to the same Reply Gate and Budget
 chat runs on.**
 

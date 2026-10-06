@@ -515,6 +515,7 @@ public sealed class TaskDetailTests
         private readonly PersonaStore personas;
         private readonly TaskStore store;
         private readonly TaskService service;
+        private readonly SprintStore sprints;
         private readonly TaskEvents events;
         private readonly TaskTriggerService triggers;
         private readonly TaskActivity taskActivity;
@@ -539,7 +540,8 @@ public sealed class TaskDetailTests
             this.store = new TaskStore(this.options, this.personas, TimeProvider.System, NullLogger<TaskStore>.Instance);
             TaskIdAllocator ids = new(this.options);
             this.events = new TaskEvents();
-            this.service = new TaskService(this.store, ids, this.events, this.personas, this.options, TimeProvider.System, NullLogger<TaskService>.Instance);
+            this.service = new TaskService(this.store, ids, this.events, this.personas, new Agency.Huddle.Tests.Tasks.EmptySprintCatalog(), this.options, TimeProvider.System, NullLogger<TaskService>.Instance);
+            this.sprints = new SprintStore(this.options, this.store, this.events, NullLogger<SprintStore>.Instance);
 
             this.turnActivity = new TurnActivity();
             this.taskActivity = new TaskActivity(this.options);
@@ -598,6 +600,7 @@ public sealed class TaskDetailTests
             ctx.Services.AddSingleton(this.store);
             ctx.Services.AddSingleton(this.events);
             ctx.Services.AddSingleton(this.service);
+            ctx.Services.AddSingleton(this.sprints);
             ctx.Services.AddSingleton(this.triggers);
             ctx.Services.AddSingleton(this.taskActivity);
             ctx.Services.AddSingleton(this.turnActivity);
@@ -613,6 +616,7 @@ public sealed class TaskDetailTests
         public ValueTask DisposeAsync()
         {
             this.triggers.Dispose();
+            this.sprints.Dispose();
             this.service.Dispose();
             this.store.Dispose();
             this.personas.Dispose();

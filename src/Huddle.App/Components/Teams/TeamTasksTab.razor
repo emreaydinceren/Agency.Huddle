@@ -20,6 +20,7 @@
 @using Microsoft.Extensions.Options
 @inject TaskStore Store
 @inject TaskEvents Events
+@inject ISprintCatalog Sprints
 @inject IOptions<TeamOptions> Options
 @inject IDialogService Dialogs
 @inject IJSRuntime JS
@@ -147,7 +148,8 @@
             view.Scope,
             view.Filter,
             this.Search,
-            this.Options.Value.HumanName);
+            this.Options.Value.HumanName,
+            currentSprint: this.Sprints.Current?.Id);
         return TaskQuery.Sort(filtered, view.Sort);
     }
 

@@ -41,6 +41,7 @@ internal sealed class TaskService : IDisposable
     private readonly TaskIdAllocator ids;
     private readonly TaskEvents events;
     private readonly PersonaStore personas;
+    private readonly ISprintCatalog sprints;
     private readonly TeamOptions options;
     private readonly TimeProvider clock;
     private readonly ILogger<TaskService> logger;
@@ -55,6 +56,7 @@ internal sealed class TaskService : IDisposable
     /// <param name="ids">Allocates a new Task's id.</param>
     /// <param name="events">The hub this service raises <see cref="TaskEvents.TaskChanged"/> and re-raised reloads on.</param>
     /// <param name="personas">Supplies known Team labels and resolves an assignee's Alias to its Name.</param>
+    /// <param name="sprints">The read-only Sprint catalogue a Sprint is validated and labelled against (Sprints spec §9.2, §9.4).</param>
     /// <param name="options">Supplies <see cref="TeamOptions.HumanName"/>.</param>
     /// <param name="clock">Supplies the Change log entry's timestamp.</param>
     /// <param name="logger">Used for diagnostics; unused so far.</param>
@@ -63,6 +65,7 @@ internal sealed class TaskService : IDisposable
         TaskIdAllocator ids,
         TaskEvents events,
         PersonaStore personas,
+        ISprintCatalog sprints,
         IOptions<TeamOptions> options,
         TimeProvider clock,
         ILogger<TaskService> logger)
@@ -71,6 +74,7 @@ internal sealed class TaskService : IDisposable
         ArgumentNullException.ThrowIfNull(ids);
         ArgumentNullException.ThrowIfNull(events);
         ArgumentNullException.ThrowIfNull(personas);
+        ArgumentNullException.ThrowIfNull(sprints);
         ArgumentNullException.ThrowIfNull(options);
         ArgumentNullException.ThrowIfNull(clock);
         ArgumentNullException.ThrowIfNull(logger);
@@ -79,6 +83,7 @@ internal sealed class TaskService : IDisposable
         this.ids = ids;
         this.events = events;
         this.personas = personas;
+        this.sprints = sprints;
         this.options = options.Value;
         this.clock = clock;
         this.logger = logger;
@@ -257,7 +262,7 @@ internal sealed class TaskService : IDisposable
             return bareWritten is null ? null : new TaskChange(null, bareWritten, [], actor, bareEntry);
         }
 
-        IReadOnlyList<FieldChange> changes = TaskDiff.Compare(edit.Before, edit.After);
+        IReadOnlyList<FieldChange> changes = this.LabelSprintChange(TaskDiff.Compare(edit.Before, edit.After), edit.Before, edit.After);
         if (changes.Count == 0)
         {
             return null;
@@ -382,6 +387,7 @@ internal sealed class TaskService : IDisposable
             Tags = draft.Tags ?? [],
             StartDate = draft.StartDate,
             DueDate = draft.DueDate,
+            Sprint = draft.Sprint,
             Description = draft.Description,
             Location = new TaskLocation(team, project, false),
             Path = "",
@@ -443,7 +449,7 @@ internal sealed class TaskService : IDisposable
             return (new TaskResult.Refused(problems), null);
         }
 
-        IReadOnlyList<FieldChange> diff = TaskDiff.Compare(current, candidate);
+        IReadOnlyList<FieldChange> diff = this.LabelSprintChange(TaskDiff.Compare(current, candidate), current, candidate);
 
         if (baseVersion is not null && !string.Equals(baseVersion, current.Version, StringComparison.Ordinal))
         {
@@ -729,6 +735,11 @@ internal sealed class TaskService : IDisposable
             AddTagProblems(candidate.Tags, problems);
         }
 
+        if (Touches(TaskField.Sprint))
+        {
+            this.AddSprintProblems(candidate.Sprint, problems);
+        }
+
         AddReasonProblems(reason, candidate.Status, problems);
 
         return problems;
@@ -917,6 +928,55 @@ internal sealed class TaskService : IDisposable
         {
             problems.Add(string.Create(CultureInfo.InvariantCulture, $"Unknown task '{duplicateOf}'."));
         }
+    }
+
+    /// <summary>Sprints spec §9.4: a Sprint being set is in the catalogue. Clearing (<see langword="null"/>) is always valid.</summary>
+    private void AddSprintProblems(SprintId? sprint, List<string> problems)
+    {
+        if (sprint is not { } id || this.sprints.Get(id) is not null)
+        {
+            return;
+        }
+
+        IReadOnlyList<Sprint> known = this.sprints.All;
+        string tail = known.Count == 0
+            ? "There are no sprints yet."
+            : string.Create(CultureInfo.InvariantCulture, $"Known sprints: {string.Join(", ", known.Select(static entry => $"{entry.Id} {entry.Name}"))}.");
+        problems.Add(string.Create(CultureInfo.InvariantCulture, $"Unknown sprint '{id}'. {tail}"));
+    }
+
+    /// <summary>
+    /// Sprints spec §9.2: returns <paramref name="changes"/> with the Sprint entry's Old and New replaced
+    /// by <c>S1 (Sprint 1)</c> labels (the bare id when the Sprint is not in the file), so the Change log
+    /// keeps a removed Sprint's name. <see cref="TaskDiff.Compare"/> stays pure. Must run before
+    /// <see cref="TaskDiff.Summarise"/>, and while the vacated Sprint's line is still in the catalogue.
+    /// </summary>
+    /// <param name="changes">What <see cref="TaskDiff.Compare"/> returned for <paramref name="before"/> and <paramref name="after"/>.</param>
+    /// <param name="before">The Task before the change.</param>
+    /// <param name="after">The Task after the change.</param>
+    private IReadOnlyList<FieldChange> LabelSprintChange(IReadOnlyList<FieldChange> changes, TaskItem before, TaskItem after)
+    {
+        if (!changes.Any(static change => change.Field == TaskField.Sprint))
+        {
+            return changes;
+        }
+
+        FieldChange labelled = new(TaskField.Sprint, this.SprintLabel(before.Sprint), this.SprintLabel(after.Sprint));
+        return [.. changes.Select(change => change.Field == TaskField.Sprint ? labelled : change)];
+    }
+
+    /// <summary>The id and name of a Sprint, <c>S1 (Sprint 1)</c>; the bare id when it is not in the file; <see langword="null"/> for none.</summary>
+    /// <param name="sprint">The Sprint a Task holds, or <see langword="null"/>.</param>
+    private string? SprintLabel(SprintId? sprint)
+    {
+        if (sprint is not { } id)
+        {
+            return null;
+        }
+
+        return this.sprints.Get(id) is { } found
+            ? string.Create(CultureInfo.InvariantCulture, $"{id} ({found.Name})")
+            : id.ToString();
     }
 
     /// <summary>Spec §9.2/§7.2: a tag has no ',' or ';'.</summary>

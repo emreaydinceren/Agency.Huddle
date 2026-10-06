@@ -14,7 +14,7 @@ using Agency.Huddle.App.Tasks;
 /// because reading a Task changes nothing, so there is no actor to resolve and no notify clause to
 /// build.
 /// </summary>
-internal sealed class GetTaskTool(TaskStore store, IPromptSource prompts) : IAppTool
+internal sealed class GetTaskTool(TaskStore store, ISprintCatalog sprints, IPromptSource prompts) : IAppTool
 {
     private static readonly IReadOnlyDictionary<string, string> NoValues = new Dictionary<string, string>();
 
@@ -112,6 +112,12 @@ internal sealed class GetTaskTool(TaskStore store, IPromptSource prompts) : IApp
         if (task.DueDate is { } dueDate)
         {
             lines.Add(string.Create(CultureInfo.InvariantCulture, $"due_date: {dueDate:yyyy-MM-dd}"));
+        }
+
+        if (task.Sprint is { } sprint)
+        {
+            string sprintName = sprints.Get(sprint)?.Name ?? "missing";
+            lines.Add(string.Create(CultureInfo.InvariantCulture, $"sprint: {sprint} ({sprintName})"));
         }
 
         string header = string.Join('\n', lines);

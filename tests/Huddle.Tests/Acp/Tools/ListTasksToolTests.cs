@@ -46,7 +46,7 @@ public sealed class ListTasksToolTests
     }
 
     private static ListTasksTool CreateTool(TaskToolHarness harness, string callerAgentId) =>
-        new(harness.Store, harness.Directory, harness.Personas, new FakePromptSource(), callerAgentId);
+        new(harness.Store, harness.Directory, harness.Personas, harness.Sprints, new FakePromptSource(), callerAgentId);
 
     /// <summary>Filtering by <c>team</c> returns only Tasks in that Team, and the returned line matches <see cref="TaskToolText.Line"/>.</summary>
     [Fact]

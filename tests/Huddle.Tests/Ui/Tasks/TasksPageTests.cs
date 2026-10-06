@@ -264,12 +264,15 @@ public sealed class TasksPageTests
         TaskEvents events = new();
         using ViewStore views = new(dir.Options(), NullLogger<ViewStore>.Instance);
         Assert.Single(views.InvalidViews);
+        using SprintStore sprints = new(dir.Options(), store, events, NullLogger<SprintStore>.Instance);
 
         await using MudBunitContext ctx = new();
         ctx.Services.AddSingleton(personas);
         ctx.Services.AddSingleton(store);
         ctx.Services.AddSingleton(events);
         ctx.Services.AddSingleton(views);
+        ctx.Services.AddSingleton(sprints);
+        ctx.Services.AddSingleton<ISprintCatalog>(sprints);
         ctx.Services.AddSingleton(Options.Create(new TeamOptions()));
         // 14.5.i: the page always hosts WakeToasts (Spec §13.8), which @injects TaskActivity.
         ctx.Services.AddSingleton<TaskActivity>();
@@ -331,7 +334,9 @@ public sealed class TasksPageTests
         });
 
         Assert.Equal(1, SubscriberCount(harness.Events, nameof(TaskEvents.TasksReloaded)));
-        Assert.Equal(1, SubscriberCount(harness.Events, nameof(TaskEvents.TaskChanged)));
+        // 2, not 1: the page's own, plus the SprintStore the page injects (the harness builds an empty one on demand),
+        // which subscribes to the same hub to remove a vacated Sprint (Sprints spec §8.2).
+        Assert.Equal(2, SubscriberCount(harness.Events, nameof(TaskEvents.TaskChanged)));
         // 2, not 1: the page's own subscription plus ViewEditorDrawer's (13.2.i hosts it here now,
         // and it re-seeds its draft on ViewsChanged too - corrections-B5 D13 item 4).
         Assert.Equal(2, SubscriberCount(harness.Views, nameof(ViewStore.ViewsChanged)));

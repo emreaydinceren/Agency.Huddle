@@ -467,12 +467,14 @@ contexts](../Huddle.EngineeringGuide.md#two-bounded-contexts). Back to the hub:
 See
 [Huddle.Tasks-Specifications.md](../Huddle.Tasks-Specifications.md),
 [ADR-0025](../adr/0025-in-tasks-a-team-is-a-folder-by-convention.md) and
-[ADR-0026](../adr/0026-a-change-to-a-task-wakes-its-assignee.md).
+[ADR-0026](../adr/0026-a-change-to-a-task-wakes-its-assignee.md); for Sprints,
+[Huddle.Sprints-Specifications.md](../Huddle.Sprints-Specifications.md) and
+[ADR-0037](../adr/0037-a-sprint-is-a-named-group-of-tasks-in-one-markdown-file.md).
 
 **Task**
 : A unit of work that the Human and the Agents share. It is one Markdown file at
   `{DataDir}/{Team:Teams:Dir}/<Team>/[<Project>/]_tasks/[_closed/]<ID>.md`: a title, a status,
-  a priority, at most one assignee, a description, and a Change log. Its identity is the `id`
+  a priority, at most one assignee, at most one Sprint, a description, and a Change log. Its identity is the `id`
   in its frontmatter, such as `PLAT-0042`, and it never changes, even when the Task moves. In
   code the record is `TaskItem`, because a type named `Task` would shadow
   `System.Threading.Tasks.Task`.
@@ -490,6 +492,20 @@ See
   folder. Its name is unique only within its Team, so write it as
   *Team / Project* wherever the Team isn't clear.
 : *Avoid*: epic, milestone, board, workspace.
+
+**Sprint**
+: A named group of Tasks in time. Proposed, not built. It is an id and a name, listed one per
+  line in `{DataDir}/sprints.md`, such as `- S2 | Auth hardening`. A Task is in at most one
+  Sprint, by writing the id in its `sprint:` key, and a Sprint spans Teams and Projects. It
+  has no dates, goal or state. Its order is its id's number, and the **current** Sprint is the
+  one with the highest number. The Human creates one by typing a new name in place in the
+  Sprint field on the Task panel; an Agent can only use one that exists. A Sprint lasts while a
+  Task, Active or Closed, holds it: when a change moves the last Task out, the app removes its
+  line.
+: Not a **Project**: a Project is a folder, a Task has exactly one, and it says what the Task
+  is part of. A Sprint is a field, a Task has at most one, and it says when.
+: *Avoid*: iteration, cycle, release, milestone (a milestone is a date, and a Sprint has
+  none), and sprint board (a Board filtered to one Sprint is still a Board).
 
 **Closed**
 : A Task that has been put away. Its file sits in a `_closed/` folder, and it is
@@ -551,7 +567,7 @@ See
   when a card is dragged. Each column holds one or more statuses, and every
   status is in exactly one column. Always shows Active Tasks.
 : *Avoid*: kanban in interface copy (fine in prose about the design), swimlane
-  board, sprint board.
+  board, sprint board (filter a Board to a **Sprint** instead).
 
 ## Messages and storage
 

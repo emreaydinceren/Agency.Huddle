@@ -15,6 +15,8 @@
 @using Agency.Huddle.App.Avatars
 @inject AvatarStore AvatarStore
 @inject TimeProvider Clock
+@inject ISprintCatalog Sprints
+@implements IDisposable
 
 <div class="@this.RootClass">
     <button type="button" class="task-card-open" aria-label="@($"Open {this.Task.Id}")" @onclick="() => this.OnOpen.InvokeAsync()">
@@ -55,7 +57,13 @@
         {
             @if (this.FieldText(field) is { } text)
             {
-                <span class="@($"task-card-field-{field.Replace('_', '-')}")">@text</span>
+                <span class="@($"task-card-field-{field.Replace('_', '-')}")">
+                    @if (string.Equals(field, "sprint", StringComparison.Ordinal) && this.Task.Sprint is { } sprint && this.Sprints.Get(sprint) is null)
+                    {
+                        <MudIcon Icon="@Icons.Material.Filled.Warning" Color="Color.Warning" Size="Size.Small" Class="task-sprint-missing" aria-label="@SprintLabels.MissingText" />
+                    }
+                    @text
+                </span>
             }
         }
     </button>
@@ -122,6 +130,31 @@
     [Parameter]
     public EventCallback OnCopyId { get; set; }
 
+    /// <summary>Re-renders when <c>sprints.md</c> changed, so the Sprint field follows the file even when the Board does not re-lay out.</summary>
+    protected override void OnInitialized() => this.Sprints.SprintsChanged += this.OnSprintsChanged;
+
+    /// <summary>Leaves <see cref="ISprintCatalog.SprintsChanged"/>.</summary>
+    public void Dispose() => this.Sprints.SprintsChanged -= this.OnSprintsChanged;
+
+    private void OnSprintsChanged() => _ = this.RerenderAsync();
+
+    /// <summary>Marshals a re-render onto the renderer's context, tolerating a card already disposed.</summary>
+    private async Task RerenderAsync()
+    {
+        try
+        {
+            await this.InvokeAsync(this.StateHasChanged);
+        }
+        catch (ObjectDisposedException)
+        {
+            // The renderer was disposed before this dispatched re-render ran: nothing left to draw.
+        }
+        catch (InvalidOperationException)
+        {
+            // The render handle is gone (the circuit ended): same as above.
+        }
+    }
+
     /// <summary>The root <c>class</c>: <c>task-card</c>, plus <c>task-col-edge-{colour}</c> (Spec §13.10) and <c>task-overdue</c> when it applies.</summary>
     private string RootClass
     {
@@ -167,6 +200,7 @@
         "tags" => this.Task.Tags.Count > 0 ? string.Join(", ", this.Task.Tags) : null,
         "start_date" => this.Task.StartDate is { } startDate ? TaskDates.Display(startDate) : null,
         "due_date" => this.Task.DueDate is { } dueDate ? TaskDates.Display(dueDate) : null,
+        "sprint" => this.Task.Sprint is { } sprint ? SprintLabels.Text(this.Sprints, sprint) : null,
         "created" => this.Task.Created is { } created ? TaskDates.Display(created) : null,
         "updated" => this.Task.Updated is { } updated ? TaskDates.Display(updated) : null,
         "closed" => this.Task.ClosedAt is { } closed ? TaskDates.Display(closed) : null,

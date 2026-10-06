@@ -27,6 +27,7 @@ internal static class TestTasks
     /// <param name="path">File path. Default: ""</param>
     /// <param name="version">Version hash. Default: ""</param>
     /// <param name="closedAt">Close date. Default: null</param>
+    /// <param name="sprint">Sprint id. Default: null</param>
     public static TaskItem Make(
         string id = "PLAT-0001",
         string title = "T",
@@ -47,7 +48,8 @@ internal static class TestTasks
         IReadOnlyList<KeyValuePair<string, string>>? unknownFields = null,
         string? path = null,
         string? version = null,
-        DateTimeOffset? closedAt = null)
+        DateTimeOffset? closedAt = null,
+        SprintId? sprint = null)
     {
         _ = TaskId.TryParse(id, out TaskId taskId);
 
@@ -66,6 +68,7 @@ internal static class TestTasks
             Tags = tags ?? [],
             StartDate = startDate,
             DueDate = dueDate,
+            Sprint = sprint,
             Description = description ?? "",
             Location = location ?? new("Platform", null, false),
             ChangeLog = changeLog ?? [],

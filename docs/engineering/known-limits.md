@@ -698,6 +698,18 @@ so, and names its [Roadmap](roadmap.md) item or its ADR. Back to the hub: [Huddl
     it was not load at all: it counted the bare substring `Amy` in the raw `/teammates` HTML, and the
     Blazor prerender marker's random base64 contains `Amy` about once in a hundred runs. It now
     counts the name element (`class="teammates-item-name">Amy<`); 3/288 failing before, 0/288 after.
+- **Sprints is built, and here is what it does not cover.** A Sprint groups Tasks in time, with a name and no dates, state or screen — see
+  [the Sprints spec](../Huddle.Sprints-Specifications.md) and
+  [ADR-0037](../adr/0037-a-sprint-is-a-named-group-of-tasks-in-one-markdown-file.md). Four gaps are deliberate:
+  - **A removed Sprint's name survives only in Change log lines.** When the last Task leaves a Sprint, its line is removed from `sprints.md` and the
+    Sprint vanishes from dropdowns and filters. A Task that held that Sprint shows its Change log entry `sprint: S2 (Auth hardening) → S1 (Release prep)`,
+    but the Sprint name is gone unless another Task still holds it.
+  - **A hand-deleted Sprint line leaves its Tasks pointing at a missing id.** If you edit `sprints.md` directly and delete a line, Tasks with that Sprint
+    id show a warning in the field and are still filtered/grouped by the missing id. Nothing rewrites the Task files.
+  - **A Sprint whose last Task file was deleted by hand stays in the list.** Removal runs only when a Task change vacates a Sprint, never on a
+    reload, so a Task file deleted outside Huddle, or a missing Team folder, removes nothing. The line stays until you edit it out of `sprints.md`.
+  - **A removal racing a save of the same Sprint can leave `S2 (missing)`.** If one change vacates `S2` while another save sets it, within a few
+    milliseconds, the Task can end up holding an id that is no longer in the file. Type the name again to fix it.
 - **The installer and desktop mode are built, and these are the deliberate gaps.** See
   [installer.md](installer.md) for what they do.
   - **No in-app Quit button.** Stop the app with `huddle stop`, or on Windows close the console

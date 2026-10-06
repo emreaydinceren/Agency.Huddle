@@ -15,6 +15,7 @@ internal static class ViewValidator
         ValidateGrouping(view, problems);
         ValidateBoardOrList(view, problems);
         ValidateSort(view, problems);
+        ValidateSprints(view, problems);
 
         return problems;
     }
@@ -109,6 +110,20 @@ internal static class ViewValidator
             else if (count > 1)
             {
                 problems.Add($"{state.ToWire()} appears in more than one column.");
+            }
+        }
+    }
+
+    /// <summary>A Sprint filter value is <c>@current</c>, <c>@none</c> or a sprint id. The id need not exist.</summary>
+    private static void ValidateSprints(TaskView view, List<string> problems)
+    {
+        foreach (string value in view.Filter.Sprints)
+        {
+            if (!string.Equals(value, "@current", StringComparison.OrdinalIgnoreCase) &&
+                !string.Equals(value, "@none", StringComparison.OrdinalIgnoreCase) &&
+                !SprintId.TryParse(value, out _))
+            {
+                problems.Add($"Sprint filter value '{value}' is not a sprint id, @current or @none.");
             }
         }
     }

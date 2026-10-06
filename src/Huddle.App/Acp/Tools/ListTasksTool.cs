@@ -23,6 +23,7 @@ internal sealed class ListTasksTool(
     TaskStore store,
     ITeamDirectory directory,
     PersonaStore personas,
+    ISprintCatalog sprints,
     IPromptSource prompts,
     string callerAgentId) : IAppTool
 {
@@ -57,6 +58,7 @@ internal sealed class ListTasksTool(
             ["priority"] = new JsonObject { ["type"] = "array", ["items"] = new JsonObject { ["type"] = "string" } },
             ["text"] = new JsonObject { ["type"] = "string" },
             ["limit"] = new JsonObject { ["type"] = "integer" },
+            ["sprint"] = new JsonObject { ["type"] = "string" },
         },
     };
 
@@ -116,6 +118,11 @@ internal sealed class ListTasksTool(
             return "'limit' must be between 1 and 200.";
         }
 
+        if (!TryResolveSprintFilter(arguments, sprints, out IReadOnlyList<string> sprintValues, out string sprintRefusal))
+        {
+            return sprintRefusal;
+        }
+
         TaskFilter filter = new()
         {
             Teams = team is null ? [] : [team],
@@ -123,13 +130,47 @@ internal sealed class ListTasksTool(
             Assignees = assignees,
             States = states,
             Priorities = priorities,
+            Sprints = sprintValues,
         };
 
         string humanName = await ResolveHumanNameAsync(directory, cancellationToken);
-        IReadOnlyList<TaskItem> filtered = TaskQuery.Filter(store.All, scope, filter, text, humanName);
+        IReadOnlyList<TaskItem> filtered = TaskQuery.Filter(store.All, scope, filter, text, humanName, sprints.Current?.Id);
         IReadOnlyList<TaskItem> sorted = TaskQuery.Sort(filtered, []);
 
         return Render(sorted, limit);
+    }
+
+    /// <summary>
+    /// Resolves the <c>sprint</c> argument (Sprints spec §10.2) into the one-value <see cref="TaskFilter.Sprints"/>:
+    /// <c>none</c> becomes <c>@none</c>, anything else is resolved by <see cref="TaskToolText.TryResolveSprint"/> to its id.
+    /// An absent or empty argument adds no filter.
+    /// </summary>
+    private static bool TryResolveSprintFilter(JsonObject arguments, ISprintCatalog catalog, out IReadOnlyList<string> values, out string refusal)
+    {
+        values = [];
+        if (!TaskToolText.TryGetString(arguments, "sprint", out string? text, out refusal))
+        {
+            return false;
+        }
+
+        if (string.IsNullOrWhiteSpace(text))
+        {
+            return true;
+        }
+
+        if (string.Equals(text.Trim(), "none", StringComparison.OrdinalIgnoreCase))
+        {
+            values = ["@none"];
+            return true;
+        }
+
+        if (!TaskToolText.TryResolveSprint(catalog, text, out SprintId? sprint, out refusal))
+        {
+            return false;
+        }
+
+        values = [sprint.Value.ToString()];
+        return true;
     }
 
     /// <summary>Parses the <c>scope</c> argument (Spec §11.4): absent defaults to Active; anything but "active"/"closed" is refused.</summary>

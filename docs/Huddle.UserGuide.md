@@ -770,6 +770,17 @@ You can edit a Task file in any editor. Huddle watches the `Teams/` folder:
 A file that fails to load is shown under **Tasks that didn't load**, with the
 reason.
 
+### Sprints
+
+A **Sprint** groups Tasks in time. It has a name, nothing else — no dates, no state, no screen.
+Type a new Sprint name in the Sprint field on the Task panel to create one; pick an existing
+Sprint from the list, or leave it blank. A Sprint disappears when the last Task leaves it.
+
+In a View, you can filter by Sprint (including **@current** for the newest, or **@none** for
+Tasks with no Sprint), group by it, or sort by it. Teammates can set a Task's Sprint by name
+or id, or use **current** to mean the newest. Only you can create a new Sprint by typing a
+name; Teammates cannot — they must pick from the existing ones.
+
 ## Keeping notes in the Library
 
 The **Library** is a file browser and Markdown editor over your data folders. It

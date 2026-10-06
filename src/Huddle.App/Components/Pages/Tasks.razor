@@ -53,6 +53,7 @@
 @inject TaskStore Store
 @inject TaskEvents Events
 @inject ViewStore Views
+@inject SprintStore Sprints
 @inject IOptions<TeamOptions> Options
 @inject IJSRuntime JS
 @inject ISnackbar Snackbar
@@ -131,6 +132,20 @@
                             <span class="tasks-rejected-path">@rejected.Path</span>
                             <span class="tasks-rejected-reason">@rejected.Reason</span>
                         </li>
+                    }
+                </ul>
+            </MudAlert>
+        }
+
+        @if (this.Sprints.Problems.Count > 0)
+        {
+            @* Sprints spec §12.4: the only Sprint UI on the page. Same shape as the rejected-file alert above. *@
+            <MudAlert Severity="Severity.Warning" role="status" Class="tasks-sprints-alert">
+                <MudText Typo="Typo.subtitle2" Class="tasks-sprints-heading">sprints.md has lines that were ignored</MudText>
+                <ul class="tasks-sprints-list">
+                    @foreach (SprintProblem problem in this.Sprints.Problems)
+                    {
+                        <li class="tasks-sprints-problem">@problem.Text</li>
                     }
                 </ul>
             </MudAlert>
@@ -232,6 +247,7 @@
         this.Events.TasksReloaded += this.OnTasksReloaded;
         this.Events.TaskChanged += this.OnTaskChanged;
         this.Views.ViewsChanged += this.OnViewsChanged;
+        this.Sprints.SprintsChanged += this.OnSprintsChanged;
     }
 
     /// <summary>Unsubscribes from all three hubs (rules.md: every component subscribing to a singleton hub must unsubscribe in Dispose).</summary>
@@ -240,6 +256,7 @@
         this.Events.TasksReloaded -= this.OnTasksReloaded;
         this.Events.TaskChanged -= this.OnTaskChanged;
         this.Views.ViewsChanged -= this.OnViewsChanged;
+        this.Sprints.SprintsChanged -= this.OnSprintsChanged;
     }
 
     /// <summary>Resolves the effective View from the route's ViewId, then (Spec §13.13.3) the item route's <see cref="TaskIdText"/>, every time either changes.</summary>
@@ -460,7 +477,8 @@
             this.effectiveView.Scope,
             this.effectiveView.Filter,
             searchText,
-            this.Options.Value.HumanName);
+            this.Options.Value.HumanName,
+            currentSprint: this.Sprints.Current?.Id);
         return TaskQuery.Sort(filtered, this.effectiveView.Sort);
     }
 
@@ -593,6 +611,13 @@
     });
 
     private void OnTaskChanged(TaskChange change) => _ = this.DispatchAsync(() =>
+    {
+        this.StateHasChanged();
+        return Task.CompletedTask;
+    });
+
+    /// <summary>A change to <c>sprints.md</c> re-queries: <c>@current</c> and every Sprint name are resolved again on the next render (Sprints spec §12.4, E-S17).</summary>
+    private void OnSprintsChanged() => _ = this.DispatchAsync(() =>
     {
         this.StateHasChanged();
         return Task.CompletedTask;

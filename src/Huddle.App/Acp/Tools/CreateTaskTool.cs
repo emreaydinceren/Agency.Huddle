@@ -19,6 +19,7 @@ internal sealed class CreateTaskTool(
     TaskService tasks,
     TaskTriggerService triggers,
     ITeamDirectory directory,
+    ISprintCatalog sprints,
     IPromptSource prompts,
     string callerAgentId) : IAppTool
 {
@@ -65,6 +66,7 @@ internal sealed class CreateTaskTool(
             },
             ["start_date"] = new JsonObject { ["type"] = "string" },
             ["due_date"] = new JsonObject { ["type"] = "string" },
+            ["sprint"] = new JsonObject { ["type"] = "string" },
         },
         ["required"] = new JsonArray { "title", "team" },
     };
@@ -151,6 +153,11 @@ internal sealed class CreateTaskTool(
             return dueDateTypeRefusal;
         }
 
+        if (!TaskToolText.TryGetString(arguments, "sprint", out string? sprintText, out string sprintTypeRefusal))
+        {
+            return sprintTypeRefusal;
+        }
+
         if (!string.IsNullOrWhiteSpace(originRoomIdText))
         {
             string? membershipRefusal = await this.CheckOriginRoomMembershipAsync(originRoomIdText, cancellationToken).ConfigureAwait(false);
@@ -190,6 +197,12 @@ internal sealed class CreateTaskTool(
             return dueDateRefusal;
         }
 
+        SprintId? sprintId = null;
+        if (!string.IsNullOrWhiteSpace(sprintText) && !TaskToolText.TryResolveSprint(sprints, sprintText, out sprintId, out string sprintRefusal))
+        {
+            return sprintRefusal;
+        }
+
         if (!TryParseTaskId(parentText, out TaskId? parentId, out string parentRefusal))
         {
             return parentRefusal;
@@ -225,7 +238,8 @@ internal sealed class CreateTaskTool(
             tagsText,
             startDate,
             dueDate,
-            descriptionText ?? "");
+            descriptionText ?? "",
+            sprintId);
 
         if (!TaskToolText.TryRun(() => tasks.Create(draft, actor), out TaskResult? result, out string runRefusal))
         {

@@ -26,6 +26,7 @@ internal static class TaskDiff
         { TaskField.Tags, "tags" },
         { TaskField.StartDate, "start_date" },
         { TaskField.DueDate, "due_date" },
+        { TaskField.Sprint, "sprint" },
     };
 
     /// <summary>
@@ -81,6 +82,7 @@ internal static class TaskDiff
 
         AddIfDifferent(changes, TaskField.StartDate, FormatDate(before.StartDate), FormatDate(after.StartDate));
         AddIfDifferent(changes, TaskField.DueDate, FormatDate(before.DueDate), FormatDate(after.DueDate));
+        AddIfDifferent(changes, TaskField.Sprint, before.Sprint?.ToString(), after.Sprint?.ToString());
 
         if (!string.Equals(before.Description, after.Description, StringComparison.Ordinal))
         {
