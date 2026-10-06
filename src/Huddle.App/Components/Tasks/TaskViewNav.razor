@@ -37,7 +37,8 @@
                 <div class="hover-reveal-row"
                      @oncontextmenu="@(e => this.OnRowContextMenuAsync(view.Id, e))"
                      @oncontextmenu:preventDefault="true">
-                    <MudNavLink Href="@($"/tasks/{view.Id}")" Class="hover-reveal-link">@view.Name</MudNavLink>
+                    <MudNavLink Href="@($"/tasks/{view.Id}")" Class="hover-reveal-link"
+                                Icon="@(view.Kind == ViewKind.Board ? Icons.Material.Filled.ViewWeek : Icons.Material.Filled.TableRows)">@view.Name</MudNavLink>
                     <MudMenu @ref="@this.menuRefs[view.Id]" Class="hover-reveal-menu">
                         @* ActivatorContent replaces MudMenu's own built-in activator entirely, so
                            MudMenu does not wire a click listener around it automatically - the

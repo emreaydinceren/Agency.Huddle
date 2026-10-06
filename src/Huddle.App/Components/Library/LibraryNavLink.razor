@@ -26,7 +26,7 @@
         <MudNavGroup Title="Library" Icon="@Icons.Material.Filled.MenuBook" @bind-Expanded="this.expanded">
             @foreach (LibraryRoot root in this.Roots.VisibleRoots)
             {
-                <MudNavLink Href="@BuildRootHref(root)" Class="library-nav-root-link">@root.DisplayName</MudNavLink>
+                <MudNavLink Href="@BuildRootHref(root)" Icon="@Icons.Material.Filled.LibraryBooks" Class="library-nav-root-link">@root.DisplayName</MudNavLink>
             }
             <MudNavLink Icon="@Icons.Material.Filled.Add" IconColor="Color.Primary" Class="nav-action-link" OnClick="this.OpenAddFolderAsync">Add Folder</MudNavLink>
         </MudNavGroup>
