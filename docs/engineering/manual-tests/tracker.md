@@ -1,6 +1,14 @@
 # Manual test tracker
 
-Where every one of the 512 tests stands. One row per test, updated as you run it.
+Where every one of the 495 tests stands. One row per test, updated as you run it.
+
+> [!NOTE]
+> **The demo-agent cases were removed on 2026-10-06**, when `Team:DemoAgent:Enabled` became `false`
+> by default: STARTUPCONFIG-03, 04, 05, 16, 18, 19 and 25; PIPEEXTERNAL-01, 02, 06 and 33;
+> INVITEROOMS-01; ROOMMESSAGING-18, 19 and 20; REPLYGATEBUDGET-01; TEAMMATESLIBRARY-26. Other cases
+> used `echo` and `alpha` as the way to get a Room and a reply; they now run on Ada and Bo, two mock-adapter
+> Teammates built by [`P-LAUNCH-UAT`](common.md#p-launch-uat), which is an explicit opt-in and never part
+> of a normal install. Their rewritten Pass-if lines have not been run yet, so treat them as Active.
 
 > [!NOTE]
 > **An earlier full run exists, against the previous UI, and its results are deliberately not
@@ -161,9 +169,6 @@ Startup, configuration and first-run state — [area file](startup-config.md)
 | --- | --- | --- | --- | --- |
 | [STARTUPCONFIG-01](startup-config.md#startupconfig-01-the-documented-launch-command-serves-the-styled-app-shell-on-httplocalhost5100) |  | Pass | |  |
 | [STARTUPCONFIG-02](startup-config.md#startupconfig-02-every-stylesheet-in-the-document-head-returns-200-the-silent-assets-regression) |  | Active | | |
-| [STARTUPCONFIG-03](startup-config.md#startupconfig-03-two-demo-rooms-echo-and-alpha-exist-at-startup-with-no-user-action) |  | Pass | |  |
-| [STARTUPCONFIG-04](startup-config.md#startupconfig-04-a-demo-agent-answers-a-two-member-room-with-or-without-a-mention-and-answers-in-bold) |  | Pass | |  |
-| [STARTUPCONFIG-05](startup-config.md#startupconfig-05-the-demo-agent-streams-a-draft-before-posting-the-real-streaming-path-free) |  | Active | | |
 | [STARTUPCONFIG-06](startup-config.md#startupconfig-06-every-navigation-surface-is-reachable-from-a-cold-start) |  | Active | | |
 | [STARTUPCONFIG-07](startup-config.md#startupconfig-07-start-chat-on-one-known-agent-reuses-its-room-two-agents-create-one-new-named-room) |  | Active | | |
 | [STARTUPCONFIG-08](startup-config.md#startupconfig-08-teammates-lists-personas-only-demo-agents-and-pipe-clients-never-appear-there) |  | Active | | |
@@ -174,16 +179,12 @@ Startup, configuration and first-run state — [area file](startup-config.md)
 | [STARTUPCONFIG-13](startup-config.md#startupconfig-13-team__agentmessagebudget1-pauses-the-room-after-one-agent-reply-and-shows-the-continue-prompt) |  | Active | | |
 | [STARTUPCONFIG-14](startup-config.md#startupconfig-14-continue-grants-budget-and-produces-no-new-reply-the-trap-that-reads-as-a-dead-button) |  | Active | | |
 | [STARTUPCONFIG-15](startup-config.md#startupconfig-15-team__agentmessagebudget0-removes-the-guard-entirely-and-hides-every-budget-surface-a-restart-un-pauses-everything) |  | Active | | |
-| [STARTUPCONFIG-16](startup-config.md#startupconfig-16-team__demoagent__enabledfalse-on-a-clean-app_data-leaves-the-app-with-no-rooms-and-no-agents) |  | Active | | |
 | [STARTUPCONFIG-17](startup-config.md#startupconfig-17-a-mis-spelled-configuration-key-changes-nothing-and-reports-nothing) |  | Active | | |
-| [STARTUPCONFIG-18](startup-config.md#startupconfig-18-disabling-the-demo-agents-against-an-existing-app_data-keeps-the-rooms-but-leaves-them-dead) |  | Active | | |
-| [STARTUPCONFIG-19](startup-config.md#startupconfig-19-team__demoagent__names-changes-which-demo-rooms-exist-and-must-replace-rather-than-append) |  | Active | | |
 | [STARTUPCONFIG-20](startup-config.md#startupconfig-20-team__datadir-points-the-whole-application-at-a-different-folder-a-clean-slate-without-deleting-anything) |  | Active | | |
 | [STARTUPCONFIG-21](startup-config.md#startupconfig-21-team__humanname-renames-the-human-everywhere-new-while-old-transcript-lines-keep-the-old-name) |  | Active | | |
 | [STARTUPCONFIG-22](startup-config.md#startupconfig-22-the-renamed-team__acp__personadir-key-refuses-to-start-the-app-rather-than-scanning-nothing) |  | Active | | |
 | [STARTUPCONFIG-23](startup-config.md#startupconfig-23-an-external-pipe-client-creates-a-room-live-with-no-page-refresh) |  | Active | | |
 | [STARTUPCONFIG-24](startup-config.md#startupconfig-24-team__pipename-changes-the-pipe-and-silently-orphans-any-external-client) |  | Active | | |
-| [STARTUPCONFIG-25](startup-config.md#startupconfig-25-two-app-instances-sharing-one-pipe-name-cross-wire-the-demo-agents) |  | Active | | |
 | [STARTUPCONFIG-26](startup-config.md#startupconfig-26-environment-selection-decides-whether-acp-is-on-and-which-port-is-used) |  | Active | | |
 | [STARTUPCONFIG-27](startup-config.md#startupconfig-27-team__acp__enabledfalse-starts-no-agent-process-and-costs-nothing-while-teammates-still-works-fully) |  | Active | | |
 | [STARTUPCONFIG-28](startup-config.md#startupconfig-28-team__acp__enabledtrue-with-zero-personas-still-starts-no-process) |  | Active | | |
@@ -217,9 +218,6 @@ Room view, posting Messages and Transcript rendering — [area file](room-messag
 | [ROOMMESSAGING-15](room-messaging.md#roommessaging-15-the-transcript-survives-a-browser-reload-and-is-present-in-the-prerendered-html) |  | Active | | |
 | [ROOMMESSAGING-16](room-messaging.md#roommessaging-16-sender-name-and-timestamp-in-the-message-meta-line) |  | Active | | |
 | [ROOMMESSAGING-17](room-messaging.md#roommessaging-17-the-transcript-autoscrolls-on-a-new-message-and-while-a-draft-grows) |  | Active | | |
-| [ROOMMESSAGING-18](room-messaging.md#roommessaging-18-a-demo-echo-reply-streams-as-a-plain-text-draft-and-settles-into-rendered-markdown) |  | Active | | |
-| [ROOMMESSAGING-19](room-messaging.md#roommessaging-19-the-echo-reply-strips-every-from-the-quoted-text-loop-safety) |  | Active | | |
-| [ROOMMESSAGING-20](room-messaging.md#roommessaging-20-the-demo-agent-replies-only-to-a-real-mention-at-a-word-boundary) |  | Active | | |
 | [ROOMMESSAGING-21](room-messaging.md#roommessaging-21-invite-name-from-the-composer-green-info-line-room-rename-live-sidebar-update) |  | Active | | |
 | [ROOMMESSAGING-22](room-messaging.md#roommessaging-22-composer-errors-unknown-command-unknown-agent-and-the-typed-text-is-lost) |  | Active | | |
 | [ROOMMESSAGING-23](room-messaging.md#roommessaging-23-typed-but-unsent-composer-text-carries-over-into-the-room-you-switch-to) |  | Active | | |
@@ -276,7 +274,6 @@ Reply Gate, Mentions and Room Budget — [area file](reply-gate-budget.md)
 
 | Test | 💰 | Status | Issue | Notes |
 | --- | --- | --- | --- | --- |
-| [REPLYGATEBUDGET-01](reply-gate-budget.md#replygatebudget-01-a-demo-two-member-room-answers-with-or-without-a-mention) |  | Pass |  | Re-run 2026-09-14 on the corrected step-8 expectation: body read `echo: hello echo`, `echo:` bold, no `@`. Silence held 15s on the bare `hello`; transcript held exactly three lines. |
 | [REPLYGATEBUDGET-02](reply-gate-budget.md#replygatebudget-02-three-or-more-members-makes-the-same-room-mention-gated) |  | Pass | |  |
 | [REPLYGATEBUDGET-03](reply-gate-budget.md#replygatebudget-03-invite-from-the-composer-and-its-two-error-strips-never-touch-the-transcript) |  | Active | | |
 | [REPLYGATEBUDGET-04](reply-gate-budget.md#replygatebudget-04-a-mention-is-case-insensitive-and-ends-at-trailing-punctuation) |  | Active | | |
@@ -344,7 +341,6 @@ Teammates page: tiles, Teams grouping, filter and rejected files — [area file]
 | [TEAMMATESLIBRARY-23](teammates-library.md#teammateslibrary-23-a-dropped-event-storm-still-converges-on-what-is-on-disk) |  | Active | | |
 | [TEAMMATESLIBRARY-24](teammates-library.md#teammateslibrary-24-a-tile-click-opens-the-card-and-the-card-shows-the-real-file-path) |  | Active | | |
 | [TEAMMATESLIBRARY-25](teammates-library.md#teammateslibrary-25-offline-is-the-honest-default-with-no-invented-reason) |  | Active | | |
-| [TEAMMATESLIBRARY-26](teammates-library.md#teammateslibrary-26-online-proved-for-free-through-a-demo-agent) |  | Active | | |
 | [TEAMMATESLIBRARY-27](teammates-library.md#teammateslibrary-27-badges-repaint-live-on-connect-and-disconnect-with-no-refresh) |  | Active | | |
 | [TEAMMATESLIBRARY-28](teammates-library.md#teammateslibrary-28-moving-a-persona-file-between-team-sub-folders-is-a-complete-no-op) |  | Active | | |
 | [TEAMMATESLIBRARY-29](teammates-library.md#teammateslibrary-29-new-teammate-writes-to-the-teams-root-with-the-teams-field-it-was-given) |  | Active | | |
@@ -485,7 +481,6 @@ Creating Rooms, inviting Agents, Room naming — [area file](invite-rooms.md)
 
 | Test | 💰 | Status | Issue | Notes |
 | --- | --- | --- | --- | --- |
-| [INVITEROOMS-01](invite-rooms.md#inviterooms-01-a-virgin-install-seeds-one-room-per-demo-agent-named-after-it-and-lands-you-in-the-first) |  | Active | | |
 | [INVITEROOMS-02](invite-rooms.md#inviterooms-02-routing-redirects-to-the-first-room-and-an-unknown-room-id-shows-the-empty-state-instead-of-crashing) |  | Active | | |
 | [INVITEROOMS-03](invite-rooms.md#inviterooms-03-the-new-chat-panel-toggles-lists-every-agent-with-a-status-dot-and-keeps-start-chat-disabled-until-something-is-ticked) |  | Active | |  |
 | [INVITEROOMS-04](invite-rooms.md#inviterooms-04-a-pipe-client-connecting-creates-its-room-and-it-appears-in-the-sidebar-with-no-page-refresh) |  | Active | | |
@@ -612,12 +607,9 @@ The named pipe: external agents and the wire — [area file](pipe-external.md)
 
 | Test | 💰 | Status | Issue | Notes |
 | --- | --- | --- | --- | --- |
-| [PIPEEXTERNAL-01](pipe-external.md#pipeexternal-01-the-two-demo-agents-are-already-there-and-they-reply-to-a-mention) |  | Active | | |
-| [PIPEEXTERNAL-02](pipe-external.md#pipeexternal-02-a-demo-agent-streams-a-draft-then-replaces-it-with-the-finished-message) |  | Active | | |
 | [PIPEEXTERNAL-03](pipe-external.md#pipeexternal-03-new-chat-builds-a-group-room-named-after-its-agents-and-that-room-is-mention-gated) |  | Active | | |
 | [PIPEEXTERNAL-04](pipe-external.md#pipeexternal-04-a-room-appears-in-the-sidebar-the-moment-an-external-agent-says-hello-with-no-refresh) |  | Pass | |  |
 | [PIPEEXTERNAL-05](pipe-external.md#pipeexternal-05-the-welcome-envelope-shape-fields-and-version-3) |  | Active | | |
-| [PIPEEXTERNAL-06](pipe-external.md#pipeexternal-06-the-echo-round-trip-a-mention-produces-a-bold-reply-in-the-room) |  | Active | | |
 | [PIPEEXTERNAL-07](pipe-external.md#pipeexternal-07-an-agent-never-receives-its-own-message-and-nothing-loops) |  | Active | | |
 | [PIPEEXTERNAL-08](pipe-external.md#pipeexternal-08-hello-property-order-does-not-matter-so-connecting-is-not-intermittently-refused) |  | Active | | |
 | [PIPEEXTERNAL-09](pipe-external.md#pipeexternal-09-reconnecting-under-the-same-name-keeps-the-agent-id-and-creates-no-second-room) |  | Active | | |
@@ -644,7 +636,6 @@ The named pipe: external agents and the wire — [area file](pipe-external.md)
 | [PIPEEXTERNAL-30](pipe-external.md#pipeexternal-30-after-the-handshake-a-bad-line-or-a-bad-request-is-reported-and-the-connection-stays-open) |  | Active | | |
 | [PIPEEXTERNAL-31](pipe-external.md#pipeexternal-31-an-agent-cannot-write-a-draft-into-a-room-it-is-not-a-member-of-even-by-reusing-a-message-id) |  | Active | | |
 | [PIPEEXTERNAL-32](pipe-external.md#pipeexternal-32-an-agent-disconnecting-mid-draft-clears-its-draft-rather-than-freezing-it-on-screen) |  | Active | | |
-| [PIPEEXTERNAL-33](pipe-external.md#pipeexternal-33-the-displacement-trap-an-external-bot-named-echo-kills-that-demo-agent-for-the-life-of-the-process) |  | Active | | |
 | [PIPEEXTERNAL-34](pipe-external.md#pipeexternal-34-stopping-the-app-closes-every-agent-connection-cleanly-and-the-browsers-reconnect-dialog-is-readable) |  | Active | | |
 | [PIPEEXTERNAL-35](pipe-external.md#pipeexternal-35-an-empty-install-shows-its-two-empty-state-strings-and-the-main-pane-does-not-auto-open-the-first-new-room) |  | Active | | |
 | [PIPEEXTERNAL-36](pipe-external.md#pipeexternal-36-two-app-instances-on-one-pipe-name-split-clients-unpredictably) |  | Active | | |

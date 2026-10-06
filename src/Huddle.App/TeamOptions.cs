@@ -47,7 +47,7 @@ public sealed class TeamOptions
 
 public sealed class DemoAgentOptions
 {
-    public bool Enabled { get; set; } = true;
+    public bool Enabled { get; set; }
 
     // Left null by default rather than pre-populated with ["echo", "alpha"]: the configuration binder
     // appends bound array elements to an already-populated list/array property instead of replacing it,

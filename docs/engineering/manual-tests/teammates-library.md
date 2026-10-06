@@ -939,7 +939,7 @@ A `.md` file elsewhere in the tree (a README, a scratch note) makes the count no
 
 **Inconclusive if**
 
-You cannot tell whether a repaint happened -> repeat with the browser devtools open on the Elements panel, where a re-render highlights, or repeat this test after TEAMMATESLIBRARY-26 so an Online badge gives you a visible marker of a page reload.
+You cannot tell whether a repaint happened -> repeat with the browser devtools open on the Elements panel, where a re-render highlights, or repeat this test in the `P-LAUNCH-UAT` lane, where Ada is Online and its badge gives you a visible marker of a page reload.
 
 ### TEAMMATESLIBRARY-19 — The watcher is live and recursive: a NESTED Persona reloads on edit
 
@@ -1234,7 +1234,6 @@ The card does not open at all and other clicks on the page are also dead -> the 
 
 - App started WITHOUT `--Team:Acp:Enabled=true` (the ship default).
 - Core fixture set in place.
-- No Persona named `echo` or `alpha` present.
 
 **Steps**
 
@@ -1253,70 +1252,21 @@ The card does not open at all and other clicks on the page are also dead -> the 
 - The card's action row contains `Edit`, `Open`, `Restart` and `Remove` (a `Message` link appears only if that teammate already has a Room).
 - A hint below the action row reads `Like saving an edit, this restarts the teammate, which clears what it remembers.`
 - `O-ADAPTERS` prints `0`.
-- In `users`, the only `agent` rows are the demo agents `echo` and `alpha`.
+- In `users`, there are no `agent` rows (nothing has connected).
 
 **Fail if — any of these**
 
 - A tile reads `Online` when nothing is running -> the badge is not derived from real presence; a user will message a teammate that cannot answer.
 - A tooltip appears with a reason although nothing has ever started -> a reason is being fabricated.
 - No `Restart` button appears on an Offline teammate -> the user can see the failure but cannot act on it.
-- A `Restart` button appears on a HEALTHY teammate (check again after TEAMMATESLIBRARY-26) -> Restart is meant to be offered only for Offline or Degraded.
+- A `Restart` button appears on a HEALTHY teammate (check again in the `P-LAUNCH-UAT` lane, where Ada is Online) -> Restart is meant to be offered only for Offline or Degraded.
 
 **Inconclusive if**
 
-Some tiles read Online -> check whether you left ACP enabled from a later test, or whether a Persona is named after a demo agent; restart the app without the flag and rerun.
+Some tiles read Online -> check whether you left ACP enabled from a later test, or whether you launched with `P-LAUNCH-UAT` (Ada and Bo go Online there); restart the app without the flag and rerun.
 
 > [!NOTE]
 > Every tile reading Offline on a stock install is CORRECT and is listed as a known limit. Do not file it.
-
-### TEAMMATESLIBRARY-26 — Online, proved for free through a demo agent
-
-**Free** · about 5 min
-
-*Gets a real green Online badge with ACP off and no money spent, by naming a Persona after a connected demo agent.*
-
-**Before you start**
-
-- App started WITHOUT `--Team:Acp:Enabled=true`.
-- `Team:DemoAgent:Enabled` is true (the shipped default) with names `echo` and `alpha`.
-- Core fixture set in place.
-
-**Steps**
-
-1. In the `dotnet run` console, search the startup output for the line `Demo agent echo connected.` Confirm it is there.
-2. Create `src\Huddle.App\App_Data\Teams\echo.md` containing exactly:
----
-name: 'echo'
-title: 'Demo Agent'
-alias: 'ech'
-teams: ['Business']
----
-You are echo. Answer in one short sentence.
-3. Go to /teammates and press F5.
-4. Read the status label and dot colour on the `echo` tile, and on every other tile.
-5. Click the `echo` tile and read its status line and the action row.
-6. If you have sqlite3, run `sqlite3 src/Huddle.App/App_Data/team.db "select id,name,kind from users;"`.
-
-**Pass if — all of these**
-
-- The `echo` tile reads `Online` with a green dot.
-- Every other tile still reads `Offline` with a red dot (`agent-dot offline`).
-- The echo card shows `Online`, no reason paragraph, and NO `Restart` button in its action row (Restart is offered only for Offline or Degraded).
-- The `users` table has an `agent` row named `echo`.
-- No `node` process is running — this Online badge costs nothing.
-
-**Fail if — any of these**
-
-- The `echo` tile still reads `Offline` -> the page is failing to join the Persona's frontmatter Name to the connected directory user; that join is case-insensitive by design, so a case mismatch is not an excuse.
-- Every tile reads `Online` -> presence is not being resolved per teammate.
-- A `Restart` button appears on the Online echo card -> Restart is being offered for a healthy teammate, which just throws away its memory for nothing.
-
-**Inconclusive if**
-
-The console has no `Demo agent echo connected.` line -> the demo agents are disabled or failed to connect; check `appsettings.json` for `Team:DemoAgent:Enabled` and look for `Demo agent echo failed to connect to pipe`. Without a connected agent this test cannot be judged.
-
-> [!NOTE]
-> Keep `echo.md` in place for TEAMMATESLIBRARY-38, which needs a Persona whose pipe is live while its health is Offline.
 
 ### TEAMMATESLIBRARY-27 — Badges repaint live on connect and disconnect, with no refresh
 
@@ -1571,7 +1521,7 @@ After Save, the card on screen looks empty (no Title, no Persona text, no `Perso
 **Before you start**
 
 - A Persona with a stored Model = Haiku and Effort = low (reuse Mira/Mira Prime from -31, or set them on a fresh one).
-- Ideally the `echo` Persona from -26, which has a real Room, so the non-cascade half can be observed.
+- Ideally the app is running in the `P-LAUNCH-UAT` lane, so Ada (a real Persona with a real Room) can be the one removed and the non-cascade half observed. Ada's own file is `C:\seeds\huddle\uat\data\Teammates\Ada\Ada.md`, so use that path in the file check in step 6.
 
 **Steps**
 
@@ -1605,7 +1555,7 @@ After Save, the card on screen looks empty (no Title, no Persona text, no `Perso
 
 **Inconclusive if**
 
-The teammate never had a Room (nothing ever connected as it), so the non-cascade half cannot be observed -> run this against the `echo` Persona instead: open its card, click **Message** (or use **New chat** in the sidebar, tick `echo`, click **Start chat**), send `hi`, then rerun. Messaging a demo agent is free.
+The teammate never had a Room (nothing ever connected as it), so the non-cascade half cannot be observed -> run this against Ada instead in the `P-LAUNCH-UAT` lane: open its card, click **Message**, send `hi`, then rerun. Messaging Ada is free.
 
 ### TEAMMATESLIBRARY-33 — Open launches the Persona file on the SERVER, including for a nested file
 
@@ -1818,38 +1768,44 @@ You cannot rename `node_modules` because a process has it open -> stop the app f
 
 **Before you start**
 
-- `Team:DemoAgent:Enabled` true (the shipped default) with `echo` among its names.
-- The `echo.md` Persona from TEAMMATESLIBRARY-26 in place.
+- PowerShell available to run `tools/echo-bot.ps1` (`P-ECHO-BOT`); it stands in for a live pipe client.
 - `tools\acp\node_modules` renamed aside so no adapter can be found.
 
 **Steps**
 
 1. Stop the app with Ctrl+C.
 2. Confirm the adapter is unfindable: `Test-Path tools\acp\node_modules` must return `False` (rename it aside if not: `Rename-Item tools\acp\node_modules node_modules.off`).
-3. Confirm `src\Huddle.App\App_Data\Teams\echo.md` exists with `name: 'echo'`.
+3. Create `src\Huddle.App\App_Data\Teams\Scout.md` containing exactly:
+---
+name: 'Scout'
+title: 'Pipe Tester'
+alias: 'sct'
+---
+You are Scout. Answer in one short sentence.
 4. Start the app with ACP ON: `dotnet run --project src/Huddle.App -- --Team:Acp:Enabled=true`
-5. In the console, confirm BOTH of these appear: `Demo agent echo connected.` AND a warning `Persona 'echo' failed to start.`
-6. Go to http://localhost:5100/teammates and press F5.
-7. Read the `echo` tile's status label and dot colour.
-8. Hover its status line and read the tooltip.
-9. If you have sqlite3, run `sqlite3 src/Huddle.App/App_Data/team.db "select id,name,kind from users;"` and confirm the `echo` agent row is there.
-10. Restore the adapter (`Rename-Item tools\acp\node_modules.off node_modules`) and restart the app without the ACP flag when you are finished.
+5. In the console, confirm the warning `Persona 'Scout' failed to start.` appears.
+6. In a third PowerShell window at the repo root, run `pwsh tools/echo-bot.ps1 -Name Scout` and confirm it prints `Sent hello. Listening for messages (Ctrl+C to exit)...`.
+7. Go to http://localhost:5100/teammates and press F5.
+8. Read the `Scout` tile's status label and dot colour.
+9. Hover its status line and read the tooltip.
+10. If you have sqlite3, run `sqlite3 src/Huddle.App/App_Data/team.db "select id,name,kind from users;"` and confirm the `Scout` agent row is there.
+11. Stop the echo bot, delete `Scout.md`, restore the adapter (`Rename-Item tools\acp\node_modules.off node_modules`) and restart the app without the ACP flag when you are finished.
 
 **Pass if — all of these**
 
-- Both facts are true at once: the console shows `Demo agent echo connected.` (the pipe is live) AND `Persona 'echo' failed to start.` (health says Offline).
-- The `echo` tile reads `Offline`, not `Online`.
+- Both facts are true at once: the echo bot is connected (the pipe is live) AND the console shows `Persona 'Scout' failed to start.` (health says Offline).
+- The `Scout` tile reads `Offline`, not `Online`.
 - Hovering it shows the start-failure reason in its tooltip.
-- The `users` table still holds the connected `echo` agent row — the pipe really is up, which is the whole point.
+- The `users` table still holds the connected `Scout` agent row — the pipe really is up, which is the whole point.
 
 **Fail if — any of these**
 
-- The `echo` tile reads `Online` -> precedence has been reversed: connectivity is being checked before health. This is the documented silent failure — a teammate whose loops have died keeps a green badge for as long as its dead pipe stays open, it compiles, and it passes every test written before health existed.
+- The `Scout` tile reads `Online` -> precedence has been reversed: connectivity is being checked before health. This is the documented silent failure — a teammate whose loops have died keeps a green badge for as long as its dead pipe stays open, it compiles, and it passes every test written before health existed.
 - The tile reads Offline but carries NO reason -> half the signal is lost; the user sees a fault with no diagnosis.
 
 **Inconclusive if**
 
-Only one of the two console lines appears -> the setup is not in the state this test needs. No `Demo agent echo connected.` means the demo agents are off or failed; no `Persona 'echo' failed to start.` means ACP is not actually enabled or the adapter is still findable. Fix the setup and rerun; do not judge the badge until both lines are present.
+Only one of the two facts holds -> the setup is not in the state this test needs. The echo bot not connecting means the pipe name differs (pass `-Pipe <name>`); no `Persona 'Scout' failed to start.` means ACP is not actually enabled or the adapter is still findable. Fix the setup and rerun; do not judge the badge until both are present.
 
 > [!NOTE]
 > This is the only combination that can prove the ordering through a browser, and it is entirely free.

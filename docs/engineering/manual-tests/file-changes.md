@@ -196,20 +196,20 @@ that the Human never had auto-memory on to begin with.
 
 **Steps**
 
-1. In one Room, tell Alpha (or any Teammate) "I prefer C# for any code."
-2. Restart Alpha from the Teammates page (not the whole app).
+1. In one Room, tell a real Teammate (call it `<Teammate>`) "I prefer C# for any code."
+2. Restart `<Teammate>` from the Teammates page (not the whole app).
 3. In a different Room, ask it for code.
-4. Check `App_Data\work\Alpha\memory\` for a file recording the preference (`TraceWire` also shows
+4. Check `App_Data\work\<Teammate>\memory\` for a file recording the preference (`TraceWire` also shows
    the index in the new session's system prompt).
 5. Check `~\.claude\projects\<derived from the Work Dir>\memory\` on the machine running the
    Adapter for anything new since step 1.
 
 **Expect**
 
-- `App_Data\work\Alpha\memory\` holds a file recording the C# preference (step 4), and the new
+- `App_Data\work\<Teammate>\memory\` holds a file recording the C# preference (step 4), and the new
   session's system prompt lists it in `TraceWire`.
 - The code in step 3's reply is in C#.
-- **Nothing new appears** under the Human's `~\.claude\projects\...\memory\` for Alpha's Work Dir
+- **Nothing new appears** under the Human's `~\.claude\projects\...\memory\` for `<Teammate>`'s Work Dir
   (step 5) — this is the clause that proves Claude Code's own auto-memory is out of the way, and
   the one most likely to fail given the known settings-replacement risk (see Known limits).
 

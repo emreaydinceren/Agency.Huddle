@@ -736,7 +736,7 @@ If the click produced neither of the two outcomes above — no file change AND n
 
 **Before you start**
 
-- The application is running.
+- The application is running in the free lane with Teammates: `P-LAUNCH-UAT` has been run and Ada and Bo are Online.
 - The file reads exactly `{ "theme": "huddle-dark" }`.
 - The operating system is in LIGHT mode, so anything that failed to switch is obvious.
 - For the rejected-persona part, you will hand-edit a Persona file (see steps). If you create or edit a Persona through the UI, set Model = Haiku and Effort = low - the standing convention. Nothing here needs a model and nothing here costs money.
@@ -745,14 +745,14 @@ If the click produced neither of the two outcomes above — no file change AND n
 
 1. Press Ctrl+Shift+R on http://localhost:5100/ and confirm the whole application is dark.
 2. In DevTools -> Elements, select `<body>` and read Computed `background-color`. It must be `rgb(27, 27, 31)`.
-3. (a) With no room selected, inspect: the empty state reading `No rooms yet. Start an agent to create one.`; the sidebar drawer; the `New chat` button; the room list; and the two nav links `Teammates` and `Settings`. Note anything light.
-4. (b) Click `New chat`. Inspect the panel: the agent rows for `echo` and `alpha`, their coloured status dots, and the `Start chat` button.
-5. (c) Tick `echo` and click `Start chat`. In the Room, inspect: the chat header, the member line, each message row (sender name, timestamp, body), the composer textarea including its placeholder `Message… (/invite @agent)`, and the budget note line.
+3. (a) With no room selected, inspect: the page body; the sidebar drawer; the `New chat` button; the room list; and the two nav links `Teammates` and `Settings`. Note anything light.
+4. (b) Click `New chat`. Inspect the panel: the agent rows for `Ada` and `Bo`, their coloured status dots, and the `Start chat` button.
+5. (c) Close the panel and click the `Ada` Room in the sidebar. In the Room, inspect: the chat header, the member line, each message row (sender name, timestamp, body), the composer textarea including its placeholder `Message… (/invite @agent)`, and the budget note line.
 6. (d) Type `hello` and press Enter. WATCH THE DRAFT STREAM IN: inspect the streaming row, its caret, the stop control (a small outlined button), and any tool-activity line while they are on screen.
 7. (e) Type a fenced code block: type three backticks, then `code`, then three backticks, and press Enter. Inspect the rendered code block - it exercises the monospace token, still declared in `wwwroot/app-vars.css` since MudBlazor's theme has no monospace equivalent.
 8. (f) Click `Teammates` in the sidebar. Inspect the tiles, the avatar monograms, the team filter select, and the `New teammate` button.
 9. (g) Click a teammate tile to open the card. It is now a real dialog with a dimmed, scrollable-page-behind backdrop: inspect the dialog surface, the scrim behind it, the `Persona`, `Model` and `Effort` sections, and the Edit / Open / Remove buttons (and the Close icon). Close the dialog with Escape.
-10. (h) Create a rejected persona file so the rejected block renders: in `E:\Repos\Huddle\src\Huddle.App\App_Data\Teams\`, create `broken.md` containing exactly:
+10. (h) Create a rejected persona file so the rejected block renders: in `C:\seeds\huddle\uat\data\Teammates\`, create `broken.md` containing exactly:
 ---
 name: broken
 ---
@@ -786,10 +786,10 @@ Save it, then press F5 on /teammates.
 
 **Inconclusive if**
 
-If you cannot create a Room because `New chat` lists no agents, parts (c), (d) and (e) are INCONCLUSIVE - check `Team:DemoAgent:Enabled` is `true` in src/Huddle.App/appsettings.json and restart, then repeat. If /teammates shows `No Personas yet. Choose New teammate to add one.`, parts (f) and (g) are INCONCLUSIVE until you add a Persona.
+If the sidebar has no `Ada` Room or `New chat` lists no agents, parts (c), (d) and (e) are INCONCLUSIVE - the app was not launched with `P-LAUNCH-UAT`; relaunch it (the seeder run is the reset) and repeat. If /teammates shows `No Personas yet. Choose New teammate to add one.`, parts (f) and (g) are INCONCLUSIVE until you add a Persona.
 
 > [!NOTE]
-> TWO THINGS MUST NOT SWITCH AND ARE NOT BUGS. (1) The `An unhandled error has occurred.` banner stays LIGHT YELLOW in dark mode on purpose - it is shown when the application has already failed, the one moment a Theme cannot be trusted. (2) The Persona's Markdown source shown on the teammate dialog deliberately keeps the inherited font rather than the monospace token. Free: the demo echo agent needs no Claude turn.
+> TWO THINGS MUST NOT SWITCH AND ARE NOT BUGS. (1) The `An unhandled error has occurred.` banner stays LIGHT YELLOW in dark mode on purpose - it is shown when the application has already failed, the one moment a Theme cannot be trusted. (2) The Persona's Markdown source shown on the teammate dialog deliberately keeps the inherited font rather than the monospace token. Free: Ada runs on the mock adapter and needs no Claude turn.
 
 ### APPEARANCETHEME-23 — Hover, selection and focus surfaces all switch, and the four old hover colours are still one
 
@@ -800,7 +800,7 @@ If you cannot create a Room because `New chat` lists no agents, parts (c), (d) a
 **Before you start**
 
 - The application is running with `{ "theme": "huddle-dark" }` and the operating system in LIGHT mode.
-- At least one Room exists and at least one Teammate tile is visible (the demo agents supply the Room for free; if you add a Persona, use Model = Haiku and Effort = low).
+- At least one Room exists and at least one Teammate tile is visible (`P-LAUNCH-UAT` supplies Ada and Bo and their Rooms for free; if you add a Persona, use Model = Haiku and Effort = low).
 
 **Steps**
 

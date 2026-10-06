@@ -39,7 +39,7 @@ oracles `O-LOG` / `O-ADAPTERS` / `O-TRANSCRIPT` / `O-DB` / `O-WIRE`, the four re
 
 **Free** · about 3 min
 
-*Proves the page's zero-Persona state renders the empty message, hides the Team filter entirely, and never lists the demo pipe clients.*
+*Proves the page's zero-Persona state renders the empty message, and hides the Team filter entirely.*
 
 **Before you start**
 
@@ -53,7 +53,6 @@ oracles `O-LOG` / `O-ADAPTERS` / `O-TRANSCRIPT` / `O-DB` / `O-WIRE`, the four re
 3. Read the top of the page.
 4. Look for a `<select>` labelled **Team** anywhere on the page.
 5. Read the body text below the intro paragraph.
-6. Scan the whole page for the words `echo` or `alpha`.
 
 **Pass if — all of these**
 
@@ -61,13 +60,11 @@ oracles `O-LOG` / `O-ADAPTERS` / `O-TRANSCRIPT` / `O-DB` / `O-WIRE`, the four re
 - An intro paragraph begins `A Persona is a Markdown file describing how one teammate should behave, plus the model it thinks with.`
 - The body reads `No Personas yet. Choose New teammate to add one.` with `New teammate` in bold.
 - No **Team** filter select is rendered at all.
-- Neither `echo` nor `alpha` appears anywhere on the page.
 
 **Fail if — any of these**
 
 - A **Team** filter select is rendered while the list is empty -> the filter is no longer inside the non-empty branch and will offer an empty choice list.
 - The empty-state sentence is missing or replaced by a blank area -> a user with a genuinely empty Teams folder is given no next action and no explanation.
-- `echo` or `alpha` is listed as a teammate -> the page is reading the Agent directory instead of the Persona index; those are pipe clients with no Persona file, so every card action on them would fail.
 
 **Inconclusive if**
 
@@ -173,14 +170,14 @@ If the card does not open at all, this test is blocked by TEAMMATECARD-02 — re
 **Steps**
 
 1. Click `New teammate` and look at the circular avatar with the **Name** field empty.
-2. Type `echo` into **Name** and read the avatar.
+2. Type `ada` into **Name** and read the avatar.
 3. Clear the field, type `Emily Lee`, and read the avatar.
 4. Clear the field, type `Chief of Staff`, and read the avatar.
 
 **Pass if — all of these**
 
 - Empty Name shows `?`.
-- `echo` shows `E`.
+- `ada` shows `A`.
 - `Emily Lee` shows `EL`.
 - `Chief of Staff` shows `CS`.
 

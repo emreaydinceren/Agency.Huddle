@@ -80,6 +80,47 @@ Every Persona must already be Haiku / low before the first Message. After the la
 paid test of a session, run `O-ADAPTERS` expecting `0`; any survivor is an orphaned
 Adapter holding a live session open, so stop it with `Stop-Process -Id <ProcessId>`.
 
+### P-LAUNCH-UAT
+
+The free lane with someone to talk to. **Explicit opt-in:** nothing a normal install does
+creates these Teammates, and the shipped app has no demo agents (`Team:DemoAgent:Enabled`
+is `false`). They exist only in the data folder this procedure builds. Use it for any test
+that needs a Teammate to answer without spending money; the test names it in **Before you
+start**.
+
+The cast is **Ada** and **Bo**, two Teammates on the free mock adapter, in no Team, each
+with an empty one-to-one Room named after itself. Run in `T-A`, from the repo root, after `P-BUILD`:
+
+```powershell
+dotnet run --project src\Huddle.Seeder -- --scenario uat --root C:\seeds\huddle\uat
+$mock = (Resolve-Path src\Huddle.MockAdapter\bin\Debug\net10.0\mock-acp.exe).Path
+dotnet run --project src/Huddle.App -- --urls http://localhost:5100 `
+  --Team:DataDir=C:\seeds\huddle\uat\data `
+  --Team:DemoAgent:Enabled=false `
+  --Team:Acp:Enabled=true `
+  --Team:Acp:Adapters:0:Id=mock `
+  "--Team:Acp:Adapters:0:Command=$mock" `
+  --Team:Acp:Adapters:0:Args:0=--mock `
+  --Team:Acp:Adapters:0:UsesToolNamePrefix=false
+```
+
+The seeder wipes `C:\seeds\huddle\uat` first, so running it again **is** the reset: it
+returns to exactly Ada, Bo and their two empty Rooms. It never touches `src\Huddle.App\App_Data`.
+Wait for `Now listening on: http://localhost:5100`; Ada and Bo go **Online** within a few
+seconds.
+
+What the mock Teammates do, so a Pass-if is never written against a model:
+
+- A reply is the **whole prompt echoed back**, split into three streamed chunks. It is long,
+  it contains the text you sent, and it is plain text with no bold prefix. Judge "a reply
+  arrived and contains `<your text>`", never an exact body.
+- It goes through the real Reply Gate, so a two-Member Room answers every Message and a Room
+  with three or more Members answers only a Mention, exactly as a real Persona does.
+- It streams, so a Draft row appears before the Message settles.
+- It spends nothing. `O-ADAPTERS` still reports the `mock-acp` processes, and that is correct.
+
+The built-in Chief of Staff is also present and is not part of the cast.
+
 ### P-STOP
 
 Ctrl+C in `T-A` and **wait for the prompt to return**. Two instances cannot bind
@@ -272,10 +313,12 @@ finds where `Team:DataDir` actually resolved.
 - **There is no send button.** The composer is a bare textarea with placeholder
   `Message… (/invite @agent)`; Enter posts, Shift+Enter adds a newline. Its absence
   is not a defect.
-- **`echo` and `alpha` are demo agents** — pipe clients, not Personas
-  (`Team:DemoAgent:Enabled` is `true` in `appsettings.json`). They hold Rooms and
-  spend Budget, and must never appear on `/teammates`. Turn them off with
-  `$env:Team__DemoAgent__Enabled = 'false'`.
+- **There are no demo agents in manual testing.** The built-in `echo` and `alpha`
+  agents are off by default (`Team:DemoAgent:Enabled` is `false`) and exist for the
+  automated tests only; no manual test turns them on. A test that needs a Teammate to
+  answer for free uses `P-LAUNCH-UAT` and **Ada** and **Bo**, which are real Personas
+  on the mock adapter, appear on `/teammates`, and exist only in the data folder that
+  procedure builds. A test that needs an external pipe client uses `P-ECHO-BOT`.
 - **Names are permanent; Rooms are not, since 2026-09-21.** Nothing in the UI
   deletes an *Agent*, so every Name you connect under still leaves a Room behind —
   but that Room can now be archived or deleted from the context menu on its sidebar

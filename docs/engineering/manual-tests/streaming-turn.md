@@ -17,7 +17,7 @@ oracles `O-LOG` / `O-ADAPTERS` / `O-TRANSCRIPT` / `O-DB` / `O-WIRE`, the four re
 
 1. Take the [§0.4](../manual-tests.md#04-rollback) rollback copy before touching anything. Several tests here edit config, Personas and the database.
 2. Free lane is `P-LAUNCH-FREE`. Tests STREAMINGTURN-21 onward additionally need the Adapter: run `pwsh tools/acp/install.ps1`, then confirm `tools\acp\node_modules` exists and `node --version` prints a version. Without both, every ACP test here is INCONCLUSIVE, not failed.
-3. Open a Chromium browser at `http://localhost:5100`. Confirm it redirects to `/rooms/<some id>` and the sidebar shows, top to bottom: **New chat**, the Room list, **Teammates**, **Settings**. Write down the room id — tests call it ROOMID. Keep DevTools (F12) on the **Elements** tab; every "search the DOM" step below means Ctrl+F inside Elements, which searches the live DOM and not the page text.
+3. Open a Chromium browser at `http://localhost:5100`. The free lane has no Teammates, so a fresh data folder has no Room yet: sidebar and main column read `No rooms yet. Start an agent to create one.` Start the slow-draft client (step 5) or `pwsh tools/echo-bot.ps1 -Name pipebot` in `T-C` to create one. Then confirm the page redirects to `/rooms/<some id>` and the sidebar shows, top to bottom: **New chat**, the Room list, **Teammates**, **Settings**. Write down the room id — tests call it ROOMID. Keep DevTools (F12) on the **Elements** tab; every "search the DOM" step below means Ctrl+F inside Elements, which searches the live DOM and not the page text.
 4. Open `T-C` for pipe clients and `T-D` for file and HTTP checks.
 5. SAVE THE SLOW-DRAFT CLIENT. It is the workhorse of this area: it holds a Draft open for as long as you like, costs nothing and needs no real agent. Create `$env:TEMP\drip.ps1` with exactly this content:
 
@@ -65,11 +65,11 @@ Read-Host 'ENTER = disconnect'
 4. Click each room link in the sidebar in turn and repeat the same search in each Room.
 5. In `T-D` run: `(Invoke-WebRequest "http://localhost:5100/rooms/ROOMID" -UseBasicParsing).Content | Select-String 'member-health-alert'` (substituting the real id). Record whether anything is printed.
 6. Click **Teammates** in the sidebar and record the status label and dot colour shown for each teammate.
-7. Go back to a Room and, in `T-C`, run `pwsh tools/echo-bot.ps1 -Name echo`, wait for it to print `Sent hello`, then press Ctrl+C in that window to disconnect it. Reload the Room in the browser and search for `member-health-alert` again.
+7. Go back to a Room and, in `T-C`, run `pwsh tools/echo-bot.ps1 -Name pipebot`, wait for it to print `Sent hello`, then press Ctrl+C in that window to disconnect it. Reload the Room in the browser and search for `member-health-alert` again.
 
 **Pass if — all of these**
 
-- The DOM search finds 0 matches for `member-health-alert` in every Room, before and after the echo agent connects and disconnects.
+- The DOM search finds 0 matches for `member-health-alert` in every Room, before and after the pipe bot connects and disconnects.
 - The same search finds 0 matches for `reply-note` and `continue-note`. Those carry the same
   obligation as the health strip: in a stock configuration no Teammate is reachable, so an
   unreachable Teammate is not a recipient and the Room has nothing to explain. A note standing
@@ -80,12 +80,12 @@ Read-Host 'ENTER = disconnect'
 **Fail if — any of these**
 
 - A `member-health-alert` strip appears in any Room -> an unhealthy state with no reported Reason is now being rendered, which puts a permanent role="alert" in every Room; an alert that is always on is the exact failure this strip exists to prevent.
-- The strip appears only after the echo agent disconnects -> mere pipe absence is being treated as a reportable reason; disconnection without a reported failure must stay silent in the Room.
+- The strip appears only after the pipe bot disconnects -> mere pipe absence is being treated as a reportable reason; disconnection without a reported failure must stay silent in the Room.
 - `Invoke-WebRequest` prints a matching line while devtools shows none -> the strip is in the prerendered HTML and is being removed by the interactive render, so a reloading Human sees a flash of a false alert.
 
 **Inconclusive if**
 
-If the sidebar shows `No rooms yet. Start an agent to create one.`, no Room exists: run `pwsh tools/echo-bot.ps1 -Name echo` in `T-C`, wait for the sidebar to gain an `echo` room, then start again. If `Invoke-WebRequest` fails to connect, the app is not running on port 5100 - fix that first and do not record a result.
+If the sidebar shows `No rooms yet. Start an agent to create one.`, no Room exists: run `pwsh tools/echo-bot.ps1 -Name pipebot` in `T-C`, wait for the sidebar to gain a `pipebot` room, then start again. If `Invoke-WebRequest` fails to connect, the app is not running on port 5100 - fix that first and do not record a result.
 
 > [!NOTE]
 > This is the cheapest and highest-value negative test in the failure-surfacing half. Run it first and re-run it after any test that leaves a Persona broken, to be sure the strip cleared.
@@ -345,7 +345,7 @@ If the second tab shows an `Attempting to reconnect` overlay, its circuit droppe
 
 **Before you start**
 
-- At least two Rooms in the sidebar (the `drip` room plus any other, e.g. `echo`). If only one exists, run `pwsh tools/echo-bot.ps1 -Name echo` once in `T-D` to create a second, then Ctrl+C it.
+- At least two Rooms in the sidebar (the `drip` room plus any other, e.g. `pipebot`). If only one exists, run `pwsh tools/echo-bot.ps1 -Name pipebot` once in `T-D` to create a second, then Ctrl+C it.
 
 **Steps**
 
@@ -372,7 +372,7 @@ If the second tab shows an `Attempting to reconnect` overlay, its circuit droppe
 
 **Inconclusive if**
 
-If the sidebar has only one room, the test cannot run - create a second Room first (New chat, or connect echo-bot) and record this as not run until then.
+If the sidebar has only one room, the test cannot run - create a second Room first (New chat, or connect `tools/echo-bot.ps1`) and record this as not run until then.
 
 > [!NOTE]
 > Judge 'flicker' with devtools' paint-flashing enabled if the naked eye is ambiguous; otherwise report only the two decisive observations (leak, and survival on return).
@@ -571,11 +571,11 @@ If the row does not appear at step 3, check `T-C` for an `error` envelope - a `b
 
 **Before you start**
 
-- Two Rooms exist: the `drip` room and one other (e.g. `echo`) that drip is NOT a member of.
+- Two Rooms exist: the `drip` room and one other (e.g. `pipebot`, from `pwsh tools/echo-bot.ps1 -Name pipebot`) that drip is NOT a member of.
 
 **Steps**
 
-1. In the browser, click the OTHER room (e.g. `echo`) and copy its id from the address bar. Call it OTHERROOM.
+1. In the browser, click the OTHER room (e.g. `pipebot`) and copy its id from the address bar. Call it OTHERROOM.
 2. In `T-C` run: `pwsh $env:TEMP\drip.ps1 -Name drip -RoomId <OTHERROOM>`.
 3. Watch the OTHER room in the browser for 15 seconds while the script sends its chunks.
 4. In devtools Elements, search that Room for `streaming` and record the count.
@@ -744,7 +744,7 @@ If the Draft row clears too fast to click, re-run with a longer `-DelaySeconds` 
 
 **Free** · about 8 min
 
-*Separates 'the server never sent the stop' (a real defect) from 'the client ignored the stop' (expected for demo and raw clients), using the client's own console as the oracle.*
+*Separates 'the server never sent the stop' (a real defect) from 'the client ignored the stop' (expected for raw pipe clients), using the client's own console as the oracle.*
 
 **Before you start**
 
@@ -791,7 +791,7 @@ while($true){ $line=$r.ReadLine(); if($null -eq $line){ break }; Write-Host $lin
 If `T-C` prints nothing after the click AND the Draft row was not visible at that moment, you clicked nothing - re-run and confirm the Stop button is present first. If pwsh exits immediately with a pipe error, the app is not running.
 
 > [!NOTE]
-> The built-in demo agents (`echo`, `alpha`) and `tools/echo-bot.ps1` also ignore stopTurn by design and will still post their reply. Honouring stopTurn is a real-Persona behaviour, proven in STREAMINGTURN-24.
+> `tools/echo-bot.ps1` also ignores stopTurn by design and will still post its reply. Honouring stopTurn is a real-Persona behaviour, proven in STREAMINGTURN-24.
 
 ### STREAMINGTURN-18 — A Draft stops growing at 256 KB but the posted Message still arrives intact
 
@@ -904,44 +904,43 @@ If the app fails to restart (port in use), wait for the old process to exit full
 
 **Before you start**
 
-- The demo agents are enabled (default), so `echo` is available in the New chat panel or as a Room.
+- `P-LAUNCH-UAT` is the lane for this test; Ada and Bo are Online after step 1.
 
 **Steps**
 
-1. Press Ctrl+C in `T-A`. In the same window run: `$env:Team__AgentMessageBudget="2"; $env:Team__Acp__Enabled="false"; dotnet run --project src/Huddle.App`.
-2. Reload the browser and open the `echo` room. If it does not exist, click **New chat**, tick `echo`, click **Start chat**.
-3. Click into the composer, type `@echo hello one` and press Enter. Wait for the reply, and read the grey line: `1 of 2 agent replies since you last spoke.`
-4. Put a SECOND Agent in the Room - type `/invite @alpha` and press Enter.
-5. Send ONE Message mentioning both: `hello @echo and @alpha`. Wait for both replies.
+1. Press Ctrl+C in `T-A`. In the same window run `$env:Team__AgentMessageBudget="2"`, then the `P-LAUNCH-UAT` seeder and launch commands. Wait for Ada and Bo to be **Online**.
+2. Reload the browser. Click **New chat**, tick `Ada` and `Bo`, click **Start chat**. This Room has three Members, so each Agent answers only a Mention.
+3. Click into the composer, type `@Ada hello one` and press Enter. Wait for Ada's reply, and read the grey line: `1 of 2 agent replies since you last spoke.`
+4. Send ONE Message mentioning both Agents: `hello @Ada and @Bo`. Wait for both replies.
 
-   > A Human Message RESETS this counter, so sending `@echo hello two` and `@echo hello three`
+   > A Human Message RESETS this counter, so sending `@Ada hello two` and `@Ada hello three`
    > can never fill a budget of 2: each Message you type zeroes it and draws exactly one reply,
    > leaving the line at `1 of 2` forever. Two replies must arrive between two Human Messages,
    > which needs two Agents. Same rule as `ROOMMESSAGING-30` and `STARTUPCONFIG-33`.
-6. Read the area between the transcript and the composer.
-7. In devtools Elements, search for `member-health-alert` and record the count; then search for `budget-prompt`.
-8. Click **Teammates** and read the status label and dot for `echo`.
-9. The refusal needs its own configuration, because at a budget of 2 with two Agents both replies are accepted. Stop the app, relaunch with `$env:Team__AgentMessageBudget="1"`, and send one `hello again @echo and @alpha`: the first Agent to answer spends the budget and the second is refused. Check `T-A` for a Warning line reading `Room '<id>' refused a message from '<agent>': its budget of 1 agent messages since a human last spoke is spent.` - the number is the configured budget.
-10. Return to the Room and click **Continue**, then send `@echo hello four` and confirm a reply arrives.
-11. Press Ctrl+C in `T-A` and restart without the variable: `Remove-Item Env:Team__AgentMessageBudget; dotnet run --project src/Huddle.App`.
+5. Read the area between the transcript and the composer.
+6. In devtools Elements, search for `member-health-alert` and record the count; then search for `budget-prompt`.
+7. Click **Teammates** and read the status label and dot for `Ada`.
+8. The refusal needs its own configuration, because at a budget of 2 with two Agents both replies are accepted. Stop the app, relaunch with `$env:Team__AgentMessageBudget="1"` using the `P-LAUNCH-UAT` launch command only (do NOT re-run the seeder, which would wipe the Room), and send one `hello again @Ada and @Bo`: the first Agent to answer spends the budget and the second is refused. Check `T-A` for a Warning line reading `Room '<id>' refused a message from '<agent>': its budget of 1 agent messages since a human last spoke is spent.` - the number is the configured budget.
+9. Return to the Room and click **Continue**, then send `@Ada hello four` and confirm a reply from Ada arrives.
+10. Press Ctrl+C in `T-A` and restart without the variable: `Remove-Item Env:Team__AgentMessageBudget`, then the `P-LAUNCH-UAT` launch command.
 
 **Pass if — all of these**
 
 - Once the budget is spent, the Room shows `Agents have sent 2 replies since you last spoke, and are paused.` with a **Continue** button and a **Leave paused** button.
 - Zero `member-health-alert` elements exist in that Room.
-- /teammates does not show `echo` as **Degraded** because of the pause.
+- /teammates does not show `Ada` or `Bo` as **Degraded** because of the pause.
 - `T-A` logs the refusal at Warning with no health report alongside it.
 - Clicking **Continue** lets the next reply through.
 
 **Fail if — any of these**
 
 - A `member-health-alert` strip appears alongside the Continue prompt -> a budgetExhausted refusal is being reported as a health failure, marking an Agent that is behaving exactly as designed as broken.
-- `echo` reads **Degraded** on /teammates after the pause -> the same defect on the other surface.
+- `Ada` or `Bo` reads **Degraded** on /teammates after the pause -> the same defect on the other surface.
 - No Continue prompt appears although the console logged the refusal -> the pause is invisible, and the Human sees only a Room that stopped answering.
 
 **Inconclusive if**
 
-This `echo` Room has exactly two Members, so per ADR-0004 `echo` answers every Message it receives, with or without `@echo` — an accidental unmentioned Message would still consume Budget exactly like a mentioned one, so watch the count if you deviate from the steps. If no reply ever arrives, check `T-A` for `Demo agent echo connected.`; if it is missing, the demo agents are off and this test cannot run.
+This Room has three Members, so per ADR-0004 each Agent answers only a Mention; in a two-Member Room (Ada's own Room) she would answer every Message, and an unmentioned Message would consume Budget exactly like a mentioned one, so stay in this Room and watch the count if you deviate from the steps. If no reply ever arrives, check that Ada and Bo are **Online** on `/teammates`; if they are not, `P-LAUNCH-UAT` did not run and this test cannot run.
 
 > [!NOTE]
 > `Team__AgentMessageBudget` maps to the `Team:AgentMessageBudget` setting and only takes effect on restart.
@@ -1234,7 +1233,7 @@ If the composer shows the budget pause prompt, the Room Budget intervened and th
 
 **Steps**
 
-1. Click **New chat** in the sidebar, tick `Nova` and one other agent (e.g. `echo`), and click **Start chat**. Call this ROOM B; Nova's own direct Room is ROOM A.
+1. Click **New chat** in the sidebar, tick `Nova` and one other connected agent (e.g. a second Persona from `P-NEW-PERSONA`), and click **Start chat**. Call this ROOM B; Nova's own direct Room is ROOM A.
 2. Open ROOM B, type `@Nova count from 1 to 300, one number per line` and press Enter. Confirm a Draft starts streaming there.
 3. Switch to ROOM A and type `@Nova list ten countries` and press Enter.
 4. Switch back to ROOM B and click **Stop** on Nova's Draft.
@@ -1257,7 +1256,7 @@ If the composer shows the budget pause prompt, the Room Budget intervened and th
 
 **Inconclusive if**
 
-If ROOM A's prompt never queued because Nova answered it before you clicked Stop, the test did not set up its condition - retry with a longer first prompt. If `echo` is not offered in New chat, pick any other connected agent; the second agent only exists to make it a Group Room.
+If ROOM A's prompt never queued because Nova answered it before you clicked Stop, the test did not set up its condition - retry with a longer first prompt. If no second agent is offered in New chat, create one with `P-NEW-PERSONA`; the second agent only exists to make it a Group Room.
 
 > [!NOTE]
 > COSTS MONEY: one partial Haiku turn. Stopping Nova in every Room at once is a documented limit - do NOT file 'Stop killed my other conversation'.
