@@ -1,6 +1,6 @@
 # Startup, configuration and first-run state
 
-Prove that Agency.Huddle launches on http://localhost:5100 with the state a first-time user is promised — two demo Rooms, an App_Data directory built from nothing, a styled two-column shell — and that every `Team:` configuration key and `Team__*` environment variable that a tester can reach actually changes what the browser shows. The area exists because nearly everything in it is a startup side effect (a directory created, a pipe bound, a Room seeded, a Persona process spawned) that no unit test observes end to end, and because this repo's most expensive failures here are SILENT: a single-underscore environment variable that binds to nothing, a demo agent that never dials the pipe, a stale `Logging:LogLevel` key that deletes the console evidence other tests rely on, and an `@Assets` key that 404s a stylesheet with no build warning, no startup error and no log line. Several tests below exist purely as controls for those silences.
+Prove that Agency.Huddle launches on http://localhost:5100 with the state a first-time user is promised — no Rooms yet, an App_Data directory built from nothing, a styled two-column shell — and that every `Team:` configuration key and `Team__*` environment variable that a tester can reach actually changes what the browser shows. The area exists because nearly everything in it is a startup side effect (a directory created, a pipe bound, a Persona process spawned) that no unit test observes end to end, and because this repo's most expensive failures here are SILENT: a single-underscore environment variable that binds to nothing, a stale `Logging:LogLevel` key that deletes the console evidence other tests rely on, and an `@Assets` key that 404s a stylesheet with no build warning, no startup error and no log line. Several tests below exist purely as controls for those silences.
 
 **34 tests** · 32 free, 2 paid 💰 · about 3.9 hours.
 
@@ -19,7 +19,8 @@ standing conventions. This area adds:
 2. Know the launch profile this area keeps probing. `dotnet run --project src/Huddle.App` picks up the only profile (`http`), which sets `ASPNETCORE_ENVIRONMENT=Development`, `applicationUrl http://localhost:5100` and `launchBrowser true`. The `--urls` argument is therefore redundant but harmless.
 3. Know the environment-variable form, because this area is mostly about it: the separator is a DOUBLE underscore, and the variable must be set in the same window that then runs `dotnet run`. Precedence is environment variable, then `appsettings.Development.json`, then `appsettings.json`.
 4. AFTER EVERY ENVIRONMENT-VARIABLE TEST, clear what you set before moving on, or the next test inherits it and reports a false result.
-5. For the ACP tests at the end only: `node --version` must print a version, `Test-Path tools\acp\node_modules\@agentclientprotocol\claude-agent-acp\dist\index.js` must be True (if not, run `pwsh tools\acp\install.ps1`), and the Claude login requirement in [§0.1](../manual-tests.md#01-what-you-need) must be met. Tests that need this say so in their preconditions.
+5. A fresh install has NO Agents and NO Rooms: the shipped app ships with no built-in chat partners of any kind. Tests that need a Teammate to answer name [`P-LAUNCH-UAT`](common.md#p-launch-uat) in **Before you start** and use Ada and Bo. That procedure keeps its data in `C:\seeds\huddle\uat\data`, not `src\Huddle.App\App_Data`, so a disk, database or reset step in such a test points there, and re-running the seeder line of `P-LAUNCH-UAT` is its reset.
+6. For the ACP tests at the end only: `node --version` must print a version, `Test-Path tools\acp\node_modules\@agentclientprotocol\claude-agent-acp\dist\index.js` must be True (if not, run `pwsh tools\acp\install.ps1`), and the Claude login requirement in [§0.1](../manual-tests.md#01-what-you-need) must be met. Tests that need this say so in their preconditions.
 
 ## Tests
 
@@ -48,8 +49,8 @@ standing conventions. This area adds:
 - The console prints `Now listening on: http://localhost:5100`.
 - The console prints `Hosting environment: Development`.
 - The page renders as TWO columns: a narrow sidebar on the left and a wide main column on the right.
-- The sidebar contains, in this order: a button labelled exactly `New chat`, a list of rooms, a link labelled exactly `Teammates`, a link labelled exactly `Settings`.
-- The main column shows a Room: a large heading with the Room name and a comma-separated members line directly under it.
+- The sidebar contains, in this order: a button labelled exactly `New chat`, a room list that reads `No rooms yet. Start an agent to create one.`, a link labelled exactly `Teammates`, a link labelled exactly `Settings`.
+- The main column shows the same empty state, `No rooms yet. Start an agent to create one.`, and no Room.
 
 **Fail if — any of these**
 
@@ -107,132 +108,6 @@ If DevTools shows CSS rows served `(from disk cache)` with no status code, you d
 > [!NOTE]
 > This behaviour genuinely cannot be judged without a browser network panel — 'the page looks fine' is not evidence, because a partially-loaded shell still renders text. See SHELLNAV-01 for the same check driven from `curl.exe` instead of DevTools — the automated guard `tests/Huddle.Tests/Ui/AppStylesheetTests.cs` covers exactly this for stylesheets, so a failure here means that test also broke.
 
-### STARTUPCONFIG-03 — Two demo Rooms, echo and alpha, exist at startup with no user action
-
-**Free** · about 5 min
-
-*Proves the demo agents dialled the pipe and seeded the two Rooms a first-time user is promised, and that `/` redirects to the first Room.*
-
-**Before you start**
-
-- The app is running with no `Team__*` environment variables set.
-- `Team:DemoAgent:Names` left at the shipped `["echo", "alpha"]`.
-
-**Steps**
-
-1. Navigate the browser to http://localhost:5100 (the bare root, no path).
-2. Wait up to 10 seconds, then read the room list in the sidebar.
-3. Read the browser's address bar.
-4. Read the large heading at the top of the main column, and the line directly underneath it.
-5. Switch to the console window and search the output for lines containing `Demo agent`.
-
-**Pass if — all of these**
-
-- The sidebar room list shows exactly two entries, reading `echo` then `alpha`, in that order.
-- The address bar has changed from `http://localhost:5100/` to `http://localhost:5100/rooms/<some id>`.
-- The main column's heading reads exactly `echo`.
-- The line under the heading reads exactly `You, echo`.
-- The console contains `Demo agent echo connected.` and `Demo agent alpha connected.`
-
-**Fail if — any of these**
-
-- The main column shows `No rooms yet. Start an agent to create one.` and never changes -> the demo agents failed to connect to the pipe. The page gives NO other signal; the console is the only witness. Look for `Demo agent {name} failed to connect to pipe team after 30 attempts.`
-- Three or more Rooms appear on a clean App_Data, or `echo` appears twice -> the configuration binder APPENDED bound array elements to an already-populated Names collection instead of replacing it. This is the exact hazard `TeamOptions.DemoAgentOptions.Names` is written to avoid.
-- The address bar stays at `/` with a Room clearly present in the sidebar -> the redirect in `Chat.razor`'s parameter handling broke.
-- The members line reads anything other than `You, echo` (for example just `echo`) -> the Human was not seeded as a Room member.
-
-**Inconclusive if**
-
-The Rooms may take a second or two to appear — the demo agents dial the pipe as ordinary clients and retry up to 30 times at 200 ms apart. Only judge after 10 seconds. If `App_Data` already existed from an earlier session with different demo names, run `P-RESET-ALL` and relaunch before judging the Room count.
-
-> [!NOTE]
-> Optional disk oracle: `Get-ChildItem -Recurse src\Huddle.App\App_Data` — and, if `sqlite3` is available, `sqlite3 src\Huddle.App\App_Data\team.db "SELECT name,kind FROM users; SELECT name FROM rooms;"` should show one `human` row, two `agent` rows, and two Rooms.
-
-### STARTUPCONFIG-04 — A demo agent answers a two-Member Room with or without a Mention, and answers in bold
-
-**Free** · about 5 min
-
-*Proves the whole free message round trip — composer to pipe to transcript — and pins the single result testers most often misfile as a bug.*
-
-**Before you start**
-
-- Demo agents connected (STARTUPCONFIG-03 passed).
-- The `echo` Room is open.
-
-**Steps**
-
-1. Click `echo` in the sidebar room list.
-2. Read the placeholder text in the message box at the bottom of the main column.
-3. Click into the message box, type exactly `hi @echo` and press Enter.
-4. Watch the message area for up to 10 seconds.
-5. Now type exactly `hi` (no mention) and press Enter.
-6. Watch the message area for a further 10 seconds.
-7. Run `Get-ChildItem src\Huddle.App\App_Data\rooms` in a SECOND pwsh window (do not disturb the running app).
-
-**Pass if — all of these**
-
-- The message box placeholder reads exactly `Message… (/invite @agent)`.
-- After step 3, a message appears immediately with sender `You` and body `hi @echo`.
-- Within a few seconds a second message appears with sender `echo`, whose body renders `echo:` in BOLD followed by `hi echo` — rendered bold text, not literal `**` asterisks.
-- The `echo` reply contains NO `@` character.
-- After step 5, the `hi` message appears with sender `You`, and within a few seconds a second reply appears with sender `echo` whose body reads `echo: hi` — the `echo` Room has exactly two Members (the Human and `echo`), and per ADR-0004 a Direct Room answers every Message without a Mention.
-- A `rooms` folder now exists under `App_Data` containing a `.jsonl` file.
-
-**Fail if — any of these**
-
-- Nothing answers `hi @echo` -> the mention was not parsed, or the demo agent's read loop is dead. Check the console for `Demo agent echo stopped unexpectedly.`
-- The reply renders as literal `**echo:** hi echo` with visible asterisks -> the Markdown render path for a posted Message is broken.
-- The reply still contains an `@` -> the demo agent's `@`-stripping loop-safety step was lost; a reply that carries a mention can re-trigger another agent.
-- Nothing answers the plain `hi` -> the `echo` Room has only two Members, so ADR-0004 requires a reply without a Mention; silence here means the demo agent is still gating on `mentioned` alone instead of calling `ReplyGate.Decide` (or, for `tools/echo-bot.ps1`, its mirror of that logic).
-
-**Inconclusive if**
-
-If you typed `hi @echo` and got no reply, first re-check the console for a `connected.` line before filing — an agent that never connected produces exactly this symptom.
-
-> [!NOTE]
-> Shift+Enter inserts a newline instead of sending; Enter alone sends.
-
-### STARTUPCONFIG-05 — The demo agent streams a Draft before posting — the real streaming path, free
-
-**Free** · about 5 min
-
-*Proves the Draft rendering path (the same one a real, paid Persona uses) works end to end at zero token cost, including the Stop control and the hand-off to the finished Message.*
-
-**Before you start**
-
-- The `echo` Room is open and demo agents are connected.
-
-**Steps**
-
-1. Position the browser so the bottom of the message area is fully visible.
-2. Type exactly `hi @echo please write this out slowly` and press Enter.
-3. Watch the message area continuously, without clicking anything, for the next 5 seconds.
-4. Note whether a row appears with a blinking caret before the final message settles.
-5. Look for a button beside the streaming row's sender name.
-6. After the exchange settles, count the message rows: there should be exactly the Human message and one agent message, with no leftover streaming row.
-
-**Pass if — all of these**
-
-- Before the final message settles, a row appears with sender `echo`, a blinking caret at the end of its text, and a button labelled exactly `Stop` next to the sender name.
-- That row's text grows in visible steps (three chunks, roughly 40 ms apart) rather than appearing all at once.
-- The streaming row is then REPLACED by a finished message whose `echo:` prefix renders in bold.
-- No streaming row, caret or `Stop` button remains after the finished message arrives.
-- No `.jsonl` line is written for the Draft itself — the transcript file gains exactly one line for the finished reply.
-
-**Fail if — any of these**
-
-- A streaming row with text and caret remains on screen after the real message arrives -> the stream terminator or the message-id correlation broke; a Draft is outliving its Turn.
-- The streaming row renders formatted Markdown (bold `echo:`) WHILE streaming -> a Draft is deliberately plain text until it completes; rendering it through the Markdown path mid-stream is wrong.
-- No `Stop` button appears beside the streaming row -> the Human has lost the only control that ends a Turn in progress.
-- The reply appears in one jump with no intermediate growth -> the delta stream was collapsed or bypassed.
-
-**Inconclusive if**
-
-The whole stream takes well under a second on localhost — if you blink you will miss it. If you saw only the finished message, repeat with a longer prompt (the chunking splits the reply into three, so a longer echoed text streams longer) before judging. A Draft lives in memory only: if the app restarted mid-stream, the Draft is simply gone and that is a documented limit, not a result.
-
-> [!NOTE]
-> This is the free stand-in for the paid streaming path. Do not spend money to test streaming.
-
 ### STARTUPCONFIG-06 — Every navigation surface is reachable from a cold start
 
 **Free** · about 6 min
@@ -241,14 +116,14 @@ The whole stream takes well under a second on localhost — if you blink you wil
 
 **Before you start**
 
-- The app is running with defaults and at least one Room exists.
+- `P-LAUNCH-UAT` has been run (stop any other instance first) and Ada and Bo are Online, so at least one Room exists.
 
 **Steps**
 
 1. Click `New chat` in the sidebar.
 2. Read the panel that opens: note whether it lists agents with checkboxes and a coloured dot each, and whether a button is present at the bottom.
 3. Without ticking anything, try to click the `Start chat` button.
-4. Tick the checkbox beside `echo`.
+4. Tick the checkbox beside `Ada`.
 5. Try the `Start chat` button again — note whether it is now clickable. Then click `New chat` again to close the panel WITHOUT starting a chat.
 6. Click `Teammates` in the sidebar and read the address bar and the page heading.
 7. Click `Settings` in the sidebar and read the address bar and the page heading.
@@ -256,9 +131,9 @@ The whole stream takes well under a second on localhost — if you blink you wil
 
 **Pass if — all of these**
 
-- The `New chat` panel lists `echo` and `alpha`, each with a checkbox and a small status dot.
+- The `New chat` panel lists `Ada` and `Bo`, each with a checkbox and a small status dot.
 - With nothing ticked, the `Start chat` button is present but DISABLED (clicking does nothing).
-- With `echo` ticked, `Start chat` becomes enabled.
+- With `Ada` ticked, `Start chat` becomes enabled.
 - `Teammates` navigates to `/teammates` and the page heading reads exactly `Teammates`.
 - `Settings` navigates to `/settings` and the page heading reads exactly `Settings`.
 - Clicking a Room navigates to `/rooms/<id>` and the main column heading is that Room's name.
@@ -271,7 +146,7 @@ The whole stream takes well under a second on localhost — if you blink you wil
 
 **Inconclusive if**
 
-If the `New chat` panel says `No agents have connected yet…` instead of listing agents, the demo agents did not connect — that is STARTUPCONFIG-03's result, not this test's. Fix that first and re-run; record this test as inconclusive meanwhile.
+If the `New chat` panel says `No agents have connected yet…` instead of listing agents, Ada and Bo have not come Online yet (wait a few seconds and reopen the panel) or `P-LAUNCH-UAT` was not the launch used. Fix that first and re-run; record this test as inconclusive meanwhile.
 
 > [!NOTE]
 > Do not actually click `Start chat` here — STARTUPCONFIG-07 owns that path and needs a known Room count first.
@@ -284,39 +159,39 @@ If the `New chat` panel says `No agents have connected yet…` instead of listin
 
 **Before you start**
 
-- The app is running with defaults, and exactly two Rooms (`echo`, `alpha`) exist.
+- `P-LAUNCH-UAT` has been run and Ada and Bo are Online, so exactly two Rooms (`Ada`, `Bo`) exist, both empty.
 
 **Steps**
 
-1. Count the entries in the sidebar room list and write the number down (expected: 2).
-2. Click `New chat`, tick ONLY `echo`, and click `Start chat`.
+1. Click the `Ada` Room, type `hello ada` and press Enter, and wait for Ada's reply to settle. Then count the entries in the sidebar room list and write the number down (expected: 2).
+2. Click `New chat`, tick ONLY `Ada`, and click `Start chat`.
 3. Read the address bar and the main column heading, then count the sidebar room list again.
-4. Click `New chat`, tick BOTH `echo` and `alpha`, and click `Start chat`.
+4. Click `New chat`, tick BOTH `Ada` and `Bo`, and click `Start chat`.
 5. Read the main column heading and count the sidebar room list again.
-6. Click `New chat`, tick BOTH `echo` and `alpha` again, and click `Start chat` once more.
+6. Click `New chat`, tick BOTH `Ada` and `Bo` again, and click `Start chat` once more.
 7. Count the sidebar room list a final time.
 
 **Pass if — all of these**
 
 - After step 2, the room list still shows 2 entries — no new Room was created.
-- After step 2, the browser lands on the EXISTING `echo` Room, and its transcript still contains the messages from STARTUPCONFIG-04.
-- After step 4, exactly one new Room exists (3 total) and its heading reads `echo, alpha`.
+- After step 2, the browser lands on the EXISTING `Ada` Room, and its transcript still contains `hello ada` and Ada's reply from step 1.
+- After step 4, exactly one new Room exists (3 total) and its heading reads `Ada, Bo`.
 - After step 6, the count behaves consistently with step 4's rule — record exactly what it does.
 
 **Fail if — any of these**
 
-- Step 2 produces a SECOND Room also named `echo` (3 entries) -> single-agent selection stopped routing through the exact-membership lookup; every `Start chat` will now mint duplicates.
-- Step 2 lands on an empty transcript rather than the existing `echo` history -> a new Room was created even though the sidebar count looks right; check the Room id in the address bar against the original.
-- The two-agent Room's heading is not `echo, alpha` -> the multi-member Room naming rule changed.
+- Step 2 produces a SECOND Room also named `Ada` (3 entries) -> single-agent selection stopped routing through the exact-membership lookup; every `Start chat` will now mint duplicates.
+- Step 2 lands on an empty transcript rather than the existing `Ada` history -> a new Room was created even though the sidebar count looks right; check the Room id in the address bar against the original.
+- The two-agent Room's heading is not `Ada, Bo` -> the multi-member Room naming rule changed.
 
 **Inconclusive if**
 
-If you have already created extra Rooms by hand in earlier exploration, the counts will not match. Run `P-RESET-ALL`, relaunch, and start this test from step 1. If step 6's behaviour is ambiguous, record it verbatim as an observation rather than a verdict — the reuse rule is defined for single-agent selection; multi-agent Room reuse is not specified here.
+If you have already created extra Rooms by hand in earlier exploration, the counts will not match. Re-run the seeder line of `P-LAUNCH-UAT` (that is the reset), relaunch, and start this test from step 1. If step 6's behaviour is ambiguous, record it verbatim as an observation rather than a verdict — the reuse rule is defined for single-agent selection; multi-agent Room reuse is not specified here.
 
 > [!NOTE]
-> Optional oracle if `sqlite3` is available: `sqlite3 src\Huddle.App\App_Data\team.db "SELECT COUNT(*) FROM rooms;"` before and after each Start chat.
+> Optional oracle if `sqlite3` is available: `sqlite3 C:\seeds\huddle\uat\data\team.db "SELECT COUNT(*) FROM rooms;"` before and after each Start chat.
 
-### STARTUPCONFIG-08 — /teammates lists Personas only — demo agents and pipe clients never appear there
+### STARTUPCONFIG-08 — /teammates lists Personas only — pipe clients never appear there
 
 **Free** · about 4 min
 
@@ -324,31 +199,33 @@ If you have already created extra Rooms by hand in earlier exploration, the coun
 
 **Before you start**
 
-- Demo agents are connected and visibly online in the sidebar.
-- `src\Huddle.App\App_Data\Teams` is empty (`Get-ChildItem -Recurse src\Huddle.App\App_Data\Teams` prints nothing).
+- The app is running on `P-LAUNCH-FREE` with the default `src\Huddle.App\App_Data`.
+- No Persona file of your own exists under `src\Huddle.App\App_Data\Teams` (the built-in Chief of Staff may be there; it is a Persona and is expected).
 
 **Steps**
 
-1. Confirm the sidebar shows the `echo` and `alpha` Rooms.
-2. Click `Teammates` in the sidebar.
-3. Read the page heading, the button beside it, the intro paragraph, and whatever appears below.
-4. Scan the whole page for the words `echo` or `alpha`.
+1. In `T-C`, run `pwsh tools/echo-bot.ps1 -Name mybot` and wait for its welcome line.
+2. Confirm the sidebar shows a `mybot` Room.
+3. Click `Teammates` in the sidebar.
+4. Read the page heading, the button beside it, the intro paragraph, and whatever appears below.
+5. Scan the whole page for the word `mybot`.
+6. Press Ctrl+C in `T-C`.
 
 **Pass if — all of these**
 
 - The heading reads exactly `Teammates` and a button beside it reads exactly `New teammate`.
 - The intro paragraph begins `A Persona is a Markdown file describing how one teammate should behave`.
-- The page shows exactly `No Personas yet. Choose New teammate to add one.`
-- Neither `echo` nor `alpha` appears anywhere on the page.
+- The page lists only Personas that have a file under `App_Data\Teams` (the built-in Chief of Staff, if present, and nothing you did not create), or reads `No Personas yet. Choose New teammate to add one.` when there are none.
+- `mybot` does not appear anywhere on the page, although its Room is in the sidebar.
 
 **Fail if — any of these**
 
-- `echo` or `alpha` appears as a Teammate tile -> pipe-connected Agents are leaking into the Persona list; the two concepts have been conflated.
-- The page shows tiles despite `App_Data\Teams` being empty -> the Persona index is reading somewhere other than the configured Teams directory (check for a leftover `App_Data\Teams` legacy folder being read, which it must not be).
+- `mybot` appears as a Teammate tile -> pipe-connected Agents are leaking into the Persona list; the two concepts have been conflated.
+- The page shows tiles for names that have no Persona file -> the Persona index is reading somewhere other than the configured Teams directory (check for a leftover `App_Data\Teams` legacy folder being read, which it must not be).
 
 **Inconclusive if**
 
-Expecting `echo` and `alpha` here is a category error, not a defect — do not file it. If `App_Data\Teams` is NOT empty because an earlier test left a file there, remove that file (or note it) before judging the empty-state copy.
+Expecting `mybot` here is a category error, not a defect — do not file it. If `App_Data\Teams` holds a file an earlier test left there, remove that file (or note it) before judging the empty-state copy.
 
 > [!NOTE]
 > `App_Data\Teams\` is a legacy folder from before the Teams rename and is never read by the app.
@@ -361,6 +238,7 @@ Expecting `echo` and `alpha` here is a category error, not a defect — do not f
 
 **Before you start**
 
+- The app is running on `P-LAUNCH-FREE` with the default `src\Huddle.App\App_Data` (if STARTUPCONFIG-06 or -07 left `P-LAUNCH-UAT` running, stop it and relaunch `P-LAUNCH-FREE`).
 - No `prompts.json` exists: `Test-Path src\Huddle.App\App_Data\prompts.json` returns False. If it returns True, run `P-RESET-ALL` and relaunch.
 
 **Steps**
@@ -410,6 +288,7 @@ Do not confuse `prompts.json` (the override file, under App_Data, absent until s
 
 **Before you start**
 
+- The app is running on `P-LAUNCH-FREE` with the default `src\Huddle.App\App_Data` (if `P-LAUNCH-UAT` is still running, stop it and relaunch `P-LAUNCH-FREE`).
 - `Test-Path src\Huddle.App\App_Data\appearance.json` returns False. If True, delete the file and reload the page before starting.
 
 **Steps**
@@ -461,18 +340,18 @@ Do not confuse `prompts.json` (the override file, under App_Data, absent until s
 
 **Before you start**
 
-- At least three messages exist across the `echo` and `alpha` Rooms (use STARTUPCONFIG-04's `hi @echo` form to generate them).
+- `P-LAUNCH-UAT` has been run and Ada and Bo are Online. In each of their Rooms send `hello` and wait for the reply, so at least four messages exist across the two Rooms.
 
 **Steps**
 
-1. Open `echo` and count its messages; write down the count, the first sender name, and the first timestamp shown.
-2. Open `alpha`, send `hi @alpha`, and count its messages the same way.
+1. Open `Ada` and count its messages; write down the count, the first sender name, and the first timestamp shown.
+2. Open `Bo`, send `hello again`, wait for the reply, and count its messages the same way.
 3. Count the entries in the sidebar room list.
 4. Switch to the run window and press Ctrl+C to stop the app. Wait for the prompt to return.
-5. Relaunch: `dotnet run --project src/Huddle.App --urls http://localhost:5100`.
+5. Relaunch by re-running ONLY the `$mock = ...` line and the `dotnet run` command of `P-LAUNCH-UAT`. Do NOT re-run the seeder line: it wipes `C:\seeds\huddle\uat` and would erase the very Rooms this test checks.
 6. Reopen http://localhost:5100 and count the sidebar room list again.
-7. Open `echo` and compare its message count, order, sender names and the first timestamp against what you wrote down.
-8. Open `alpha` and do the same.
+7. Open `Ada` and compare its message count, order, sender names and the first timestamp against what you wrote down.
+8. Open `Bo` and do the same.
 
 **Pass if — all of these**
 
@@ -483,21 +362,21 @@ Do not confuse `prompts.json` (the override file, under App_Data, absent until s
 **Fail if — any of these**
 
 - Messages are missing after the restart -> transcript durability is broken. Before filing, confirm the DataDir did not change (open `/settings` and read the path in the Prompts tab's overrides paragraph).
-- A DUPLICATE Room appears for `echo` or `alpha` after the restart -> reconnecting under the same name created a second two-Member Room instead of re-attaching to the existing one by exact membership. This is a real bug.
+- A DUPLICATE Room appears for `Ada` or `Bo` after the restart -> reconnecting under the same name created a second two-Member Room instead of re-attaching to the existing one by exact membership. This is a real bug.
 - The room count grows by more than the agents that reconnected -> the same duplication bug in another shape.
 
 **Inconclusive if**
 
-A Draft that was mid-stream when you pressed Ctrl+C is simply gone — that is a documented limit (Drafts are in memory, per process), not a result. Likewise, any Budget pause you had reached is cleared by the restart; that is STARTUPCONFIG-15's subject, not a failure here. If `Get-ChildItem src\Huddle.App\App_Data\rooms` shows no `.jsonl` files at all, you are looking at the wrong App_Data — re-read the path from `/settings`.
+A Draft that was mid-stream when you pressed Ctrl+C is simply gone — that is a documented limit (Drafts are in memory, per process), not a result. Likewise, any Budget pause you had reached is cleared by the restart; that is STARTUPCONFIG-15's subject, not a failure here. If `Get-ChildItem C:\seeds\huddle\uat\data\rooms` shows no `.jsonl` files at all, you are looking at the wrong data folder — re-read the path from `/settings`.
 
 > [!NOTE]
-> Optional oracle: count the lines of `src\Huddle.App\App_Data\rooms\<roomId>.jsonl` before and after with `(Get-Content <path> | Measure-Object -Line).Lines`.
+> Optional oracle: count the lines of `C:\seeds\huddle\uat\data\rooms\<roomId>.jsonl` before and after with `(Get-Content <path> | Measure-Object -Line).Lines`.
 
 ### STARTUPCONFIG-12 — Deleting App_Data while running fails; stopping first makes the clean slate reliable
 
 **Free** · about 8 min
 
-*Establishes the reset procedure every later configuration test depends on, and proves a clean run rebuilds App_Data, an empty Teams directory, team.db and the two demo Rooms from nothing.*
+*Establishes the reset procedure every later configuration test depends on, and proves a clean run rebuilds App_Data, an empty Teams directory and team.db from nothing, with no Rooms in it.*
 
 **Before you start**
 
@@ -517,10 +396,10 @@ A Draft that was mid-stream when you pressed Ctrl+C is simply gone — that is a
 
 - Step 1 fails with a file-in-use error that NAMES `team.db`.
 - After the app is stopped, step 3 succeeds and step 4 returns False.
-- After relaunch, the sidebar again shows exactly `echo` and `alpha`.
+- After relaunch, the sidebar room list reads `No rooms yet. Start an agent to create one.` — a fresh App_Data holds no Rooms.
 - The App_Data listing contains: a `Teams` directory that is EMPTY, `team.db`, `team.db-wal` and `team.db-shm`.
 - The listing does NOT contain `prompts.json`, `appearance.json`, or a `work` directory.
-- A `rooms` directory appears only AFTER you send the first message — confirm by re-listing before typing anything.
+- No `rooms` directory exists yet; it appears only after the first Message is sent in some Room.
 
 **Fail if — any of these**
 
@@ -544,16 +423,16 @@ On some runs the SQLite handle lingers briefly even after the app has exited —
 
 **Before you start**
 
-- Demo agents enabled (default).
 - No other `Team__*` variables set.
+- Ada is needed, so this test launches `P-LAUNCH-UAT` itself (below), with the budget variable set first.
 
 **Steps**
 
 1. Stop the app (Ctrl+C).
 2. In the run window set `$env:Team__AgentMessageBudget = '1'`.
-3. Relaunch in that SAME window: `dotnet run --project src/Huddle.App --urls http://localhost:5100`.
-4. Open http://localhost:5100 and click `echo`.
-5. Type exactly `hi @echo` and press Enter. Wait for the reply.
+3. Relaunch in that SAME window by running all of `P-LAUNCH-UAT` (seeder line, `$mock` line and `dotnet run` command), so Ada's Room starts empty and the variable is inherited by the app.
+4. Open http://localhost:5100 and click `Ada`.
+5. Type exactly `hi @Ada` and press Enter. Wait for Ada's reply (a long plain-text reply that repeats your Message back, streamed in three chunks).
 6. Read what appears between the message list and the message box at the bottom.
 7. Note the two buttons in that block and their exact labels.
 8. Click `Leave paused` and read what replaces the block.
@@ -595,11 +474,11 @@ If no prompt appears, FIRST verify the variable took: `Get-ChildItem Env:Team__A
 **Before you start**
 
 - `Team__AgentMessageBudget` is still `1` and the app from STARTUPCONFIG-13 is running.
-- The `echo` Room is in the paused state with the agent's own reply as the most recent Message.
+- The `Ada` Room is in the paused state with the agent's own reply as the most recent Message.
 
 **Steps**
 
-1. In the `echo` Room, type exactly `hi @echo` and press Enter, and wait for the reply so the Room is paused again with the AGENT's reply as the last Message.
+1. In the `Ada` Room, type exactly `hi @Ada` and press Enter, and wait for the reply so the Room is paused again with the AGENT's reply as the last Message.
 2. Confirm the `Agents have sent 1 replies since you last spoke, and are paused.` block is showing with its two buttons, and read the grey line above them.
 3. Click `Continue`.
 4. Watch the button's own label while the request is in flight.
@@ -627,7 +506,7 @@ If no prompt appears, FIRST verify the variable took: `Get-ChildItem Env:Team__A
 
 **Inconclusive if**
 
-'No new reply' is CORRECT and must not be filed — and as of #40 the Room says so itself, both before the click and after it, so this paragraph is now a cross-reference rather than the only place the fact is written down. Continue re-delivers only the Room's most recent Message, and delivery always skips that Message's own sender — so when the last Message is the agent's own reply, there is nobody left to wake, regardless of Mention or Member count. The rising allowance figure is still the authoritative proof the grant worked; a missing `was extended to` line is a real defect even if both notes render. To see Continue actually wake something you would need the last Message to be a Human Message instead of the agent's own reply, which only happens if the agent was paused mid-run — and per ADR-0004, this two-Member `echo` Room would wake `echo` for that re-delivered Human Message even without a Mention.
+'No new reply' is CORRECT and must not be filed — and as of #40 the Room says so itself, both before the click and after it, so this paragraph is now a cross-reference rather than the only place the fact is written down. Continue re-delivers only the Room's most recent Message, and delivery always skips that Message's own sender — so when the last Message is the agent's own reply, there is nobody left to wake, regardless of Mention or Member count. The rising allowance figure is still the authoritative proof the grant worked; a missing `was extended to` line is a real defect even if both notes render. To see Continue actually wake something you would need the last Message to be a Human Message instead of the agent's own reply, which only happens if the agent was paused mid-run — and per ADR-0004, this two-Member `Ada` Room would wake `Ada` for that re-delivered Human Message even without a Mention.
 
 > [!NOTE]
 > Also documented: a Message declined for Budget is held for re-delivery, not kept as Catch-up. If you type something instead of clicking Continue, the agent's next prompt will not carry the Message it was paused on, even though that Message is still visible in the transcript.
@@ -640,15 +519,15 @@ If no prompt appears, FIRST verify the variable took: `Get-ChildItem Env:Team__A
 
 **Before you start**
 
-- Demo agents enabled.
+- The app from STARTUPCONFIG-13 and -14 is running on `P-LAUNCH-UAT` with `Team__AgentMessageBudget = '1'`.
 
 **Steps**
 
-1. With the app still running at `Team__AgentMessageBudget = '1'` and the `echo` Room paused, press Ctrl+C in the run window.
-2. Relaunch in the same window (the variable is still `1`): `dotnet run --project src/Huddle.App --urls http://localhost:5100`.
-3. Reopen the `echo` Room and look at the area between the message list and the message box, and at the transcript itself.
-4. Stop the app. Run `$env:Team__AgentMessageBudget = '0'` and relaunch in the same window.
-5. Open `echo` and send `hi @echo`. Wait for the reply. Repeat four more times, for five agent replies in total.
+1. With the app still running at `Team__AgentMessageBudget = '1'` and the `Ada` Room paused, press Ctrl+C in the run window.
+2. Relaunch in the same window (the variable is still `1`) by re-running ONLY the `$mock = ...` line and the `dotnet run` command of `P-LAUNCH-UAT`. Do NOT re-run the seeder line: it wipes the data folder and the transcript this step checks.
+3. Reopen the `Ada` Room and look at the area between the message list and the message box, and at the transcript itself.
+4. Stop the app. Run `$env:Team__AgentMessageBudget = '0'` and relaunch in the same window the same way (`$mock` line and `dotnet run` command only).
+5. Open `Ada` and send `hi @Ada`. Wait for the reply. Repeat four more times, for five agent replies in total.
 6. After each reply, look at the area between the message list and the message box.
 7. Stop the app and run `Remove-Item Env:Team__AgentMessageBudget`.
 
@@ -660,7 +539,7 @@ If no prompt appears, FIRST verify the variable took: `Get-ChildItem Env:Team__A
 **Fail if — any of these**
 
 - Any budget text at all appears with the value set to `0` -> zero-or-less is documented as the only way back to pre-guard behaviour; a counter showing here means the disable path is broken.
-- The transcript is missing messages after the restart at step 3 -> that is a REAL bug (Messages are durable in `App_Data\rooms\*.jsonl`), unlike the lost pause.
+- The transcript is missing messages after the restart at step 3 -> that is a REAL bug (Messages are durable in `C:\seeds\huddle\uat\data\rooms\*.jsonl`), unlike the lost pause.
 - With `0` set, a reply is ever refused -> the cap is still enforcing despite being disabled.
 
 **Inconclusive if**
@@ -669,47 +548,6 @@ A restart clearing the pause is DELIBERATE — the counter is in memory and per 
 
 > [!NOTE]
 > Two behaviours are combined here deliberately: they share one restart and would otherwise duplicate five minutes of setup.
-
-### STARTUPCONFIG-16 — Team__DemoAgent__Enabled=false on a clean App_Data leaves the app with no Rooms and no Agents
-
-**Free** · about 8 min
-
-*The positive control for the whole environment-variable surface: a correctly spelled variable must produce an unmistakable, observable difference.*
-
-**Before you start**
-
-- The app is stopped and `src\Huddle.App\App_Data` has been deleted (see STARTUPCONFIG-12).
-
-**Steps**
-
-1. In the pwsh window run `$env:Team__DemoAgent__Enabled = 'false'`.
-2. Run `Get-ChildItem Env:Team__DemoAgent__Enabled` and confirm it prints the name and value `false`.
-3. Launch in that SAME window: `dotnet run --project src/Huddle.App --urls http://localhost:5100`.
-4. Open http://localhost:5100 and read the main column and the sidebar room list.
-5. Click `New chat` and read the panel.
-6. Search the whole console output for the text `Demo agent`.
-7. When finished, stop the app and run `Remove-Item Env:Team__DemoAgent__Enabled`.
-
-**Pass if — all of these**
-
-- The main column reads exactly `No rooms yet. Start an agent to create one.`
-- The sidebar room list shows the same sentence and no Room entries.
-- The `New chat` panel reads exactly `No agents have connected yet. Start one with tools/echo-bot.ps1, or enable the demo agent in appsettings.json.`
-- The `New chat` panel shows NO `Start chat` button.
-- The console contains NO line containing `Demo agent` — neither a `connected.` nor a `failed to connect` line.
-
-**Fail if — any of these**
-
-- Rooms still appear -> the variable did not bind. The overwhelmingly likely cause is a SINGLE underscore or a different shell, not a product defect. Re-check step 2 before filing anything.
-- Rooms are absent but the console DOES contain `Demo agent … failed to connect to pipe team after 30 attempts.` -> the agents were still enabled and simply could not reach the pipe; the flag did not take, and you would have recorded a false pass.
-- A `Start chat` button renders with no agents listed -> the empty-state guard is gone.
-
-**Inconclusive if**
-
-A negative result (nothing appears) is only trustworthy when the console ALSO shows no `Demo agent` lines at all. If the console is silent for a different reason — a mis-set log filter — see STARTUPCONFIG-25 before judging. If you cannot get a clean App_Data because the delete fails, stop the app first (STARTUPCONFIG-12).
-
-> [!NOTE]
-> Run this test before any other environment-variable test. It is the proof that your shell, your spelling and your launch window are wired up correctly.
 
 ### STARTUPCONFIG-17 — A mis-spelled configuration key changes nothing and reports nothing
 
@@ -724,116 +562,32 @@ A negative result (nothing appears) is only trustworthy when the console ALSO sh
 
 **Steps**
 
-1. Run `$env:Team_DemoAgent_Enabled = 'false'` — note the SINGLE underscores, which is the mistake under test.
+1. Run `$env:Team_PipeName = 'team-test'` — note the SINGLE underscores, which is the mistake under test. (The correctly spelled variable would move the pipe off `team`; see STARTUPCONFIG-24.)
 2. Launch in that same window: `dotnet run --project src/Huddle.App --urls http://localhost:5100`.
 3. Read the whole console output from the first line to `Now listening on:`.
-4. Open http://localhost:5100 and read the sidebar room list.
-5. Stop the app. Run `Remove-Item Env:Team_DemoAgent_Enabled`.
-6. Now run `$env:Team__DemoAgent__Enable = 'false'` — correct separators, misspelled leaf key — and relaunch.
-7. Read the console and the sidebar again.
-8. Stop the app and run `Remove-Item Env:Team__DemoAgent__Enable`.
+4. Open http://localhost:5100. In `T-C` run `pwsh tools/echo-bot.ps1 -Name mybot` (default pipe `team`) and read what it prints.
+5. Stop the bot (Ctrl+C) and the app. Run `Remove-Item Env:Team_PipeName`.
+6. Now run `$env:Team__PipeNam = 'team-test'` — correct separators, misspelled leaf key — and relaunch.
+7. Read the console, then run the bot again as in step 4.
+8. Stop the bot and the app and run `Remove-Item Env:Team__PipeNam`.
 
 **Pass if — all of these**
 
-- With the single-underscore spelling, the app starts normally and the sidebar shows `echo` and `alpha` exactly as with no variable set.
-- With the misspelled leaf key, the same: the app starts normally and both Rooms appear.
+- With the single-underscore spelling, the app starts normally, the bot prints a `welcome` line on the default pipe `team`, and a `mybot` Room appears in the sidebar — exactly as with no variable set.
+- With the misspelled leaf key, the same: the app starts normally and the bot connects on `team`.
 - In BOTH cases the console prints no warning, no error and no line mentioning the variable — the value simply bound to nothing.
 
 **Fail if — any of these**
 
 - The app refuses to start, or prints a warning naming the mis-spelled key -> record it as an OBSERVATION, not a defect: a loud failure here would be an improvement, but the documented current behaviour is silence. Note that exactly one key IS guarded loudly — see STARTUPCONFIG-22.
-- The mis-spelled variable DOES disable the demo agents -> configuration is being bound by something other than the documented double-underscore scheme; every other test's spelling assumptions are then wrong.
+- The mis-spelled variable DOES move the pipe (the bot times out on `team`) -> configuration is being bound by something other than the documented double-underscore scheme; every other test's spelling assumptions are then wrong.
 
 **Inconclusive if**
 
-This test has no failing outcome in the usual sense; its job is to calibrate the tester. The rule it teaches is binding on every other test here: NEVER conclude that a configuration value took effect because you set a variable. Always confirm positively — a Room that is or is not there, a budget note, a file on disk, a console line. STARTUPCONFIG-16 is the positive control to pair this with.
+This test has no failing outcome in the usual sense; its job is to calibrate the tester. The rule it teaches is binding on every other test here: NEVER conclude that a configuration value took effect because you set a variable. Always confirm positively — a Room that is or is not there, a budget note, a file on disk, a console line. STARTUPCONFIG-24 is the positive control to pair this with: the same key spelled correctly DOES move the pipe.
 
 > [!NOTE]
 > This is why every configuration test above and below names an observable positive effect rather than saying 'set the variable and check it worked'.
-
-### STARTUPCONFIG-18 — Disabling the demo agents against an EXISTING App_Data keeps the Rooms but leaves them dead
-
-**Free** · about 7 min
-
-*Pins the silence that is most likely to be misfiled as 'the app stopped replying', and proves the Room view deliberately shows no health banner for an Agent that merely never started.*
-
-**Before you start**
-
-- An App_Data in which the demo agents have already connected at least once and at least one message exists (run STARTUPCONFIG-03 and -04 first if not).
-- The app is stopped.
-
-**Steps**
-
-1. Run `$env:Team__DemoAgent__Enabled = 'false'` and relaunch in the same window.
-2. Open http://localhost:5100 and read the sidebar room list.
-3. Open the `echo` Room and read its transcript.
-4. Look carefully at the area between the message list and the message box.
-5. Click `New chat` and inspect the status dot beside `echo` and `alpha`; hover each dot and read its tooltip.
-6. Close the panel, type exactly `hi @echo` and press Enter. Wait 30 seconds.
-7. Search the console for `Demo agent`.
-8. Stop the app and run `Remove-Item Env:Team__DemoAgent__Enabled`.
-
-**Pass if — all of these**
-
-- The sidebar still lists `echo` and `alpha`.
-- The `echo` transcript still shows every earlier message.
-- The `New chat` panel still lists both agents, each carrying `class="agent-dot offline"` and a tooltip reading `offline`. The dot is RED, not grey: `--status-offline` is `light-dark(#b32121, #e05a5a)` in `theme.css` by design.
-- The Human message posts and NOTHING answers it for the full 30 seconds.
-- NO alert strip, banner or error appears anywhere in the Room.
-- The console contains no `Demo agent` lines.
-
-**Fail if — any of these**
-
-- An always-on alert strip appears in the Room naming the offline agents -> a Member that merely never started has no recorded reason, and the Room view is deliberately quiet about it; a permanent alert is one nobody reads.
-- The status dot beside `echo` shows green/online -> presence is being inferred from the database row rather than from a live pipe connection.
-- The Rooms or transcript are gone -> that IS a real bug; check the DataDir via `/settings` first.
-
-**Inconclusive if**
-
-The silence here is CORRECT. Judging 'no reply' requires checking the dot in the `New chat` panel or the console — never the Room, which shows nothing by design. If you need to distinguish 'the agent is offline' from 'the mention did not parse', re-enable the demo agents and confirm the same message DOES get a reply (STARTUPCONFIG-04) before filing.
-
-> [!NOTE]
-> The agents remain listed because they are rows in team.db, not live connections.
-
-### STARTUPCONFIG-19 — Team__DemoAgent__Names changes which demo Rooms exist, and must replace rather than append
-
-**Free** · about 8 min
-
-*Proves array-element configuration binding reaches the Rooms, and specifically watches for the documented binder hazard where bound elements are appended to an already-populated collection.*
-
-**Before you start**
-
-- The app is stopped and `src\Huddle.App\App_Data` has been deleted — an existing team.db keeps the old Rooms alongside the new ones and makes the result unreadable.
-
-**Steps**
-
-1. Run `$env:Team__DemoAgent__Names__0 = 'zeta'`.
-2. Launch in the same window: `dotnet run --project src/Huddle.App --urls http://localhost:5100`.
-3. Open http://localhost:5100, wait 10 seconds, and read the sidebar room list. Write down every entry.
-4. Search the console for lines containing `connected.` and write down each agent name.
-5. Run `P-RESET-ALL`. Now ALSO run `$env:Team__DemoAgent__Names__2 = 'gamma'` and relaunch.
-6. Read the sidebar room list again and write down every entry.
-7. Stop the app and run `Remove-Item Env:Team__DemoAgent__Names__0; Remove-Item Env:Team__DemoAgent__Names__2`.
-
-**Pass if — all of these**
-
-- After step 3 the sidebar shows exactly two Rooms, `zeta` and `alpha` — index 0 was overridden and index 1 survived.
-- `echo` does NOT appear.
-- The console shows `Demo agent zeta connected.` and `Demo agent alpha connected.`
-- After step 6 the sidebar shows exactly three Rooms: `zeta`, `alpha` and `gamma`.
-
-**Fail if — any of these**
-
-- `echo` reappears alongside `zeta`, or four Rooms exist where three were expected -> the configuration binder APPENDED the bound elements to an already-populated collection instead of replacing it. This is the exact hazard the options type is written to avoid; file it.
-- A named Room simply never appears and the sidebar count is short -> the name was rejected at the pipe handshake. The only trace is a console line naming an invalid-name error; look for it before concluding the binding failed.
-- No change at all from the default `echo`/`alpha` -> the index-form variable did not bind; re-check the double underscores and the index digits.
-
-**Inconclusive if**
-
-If `App_Data` was not deleted between steps, old Rooms persist alongside new ones and the count means nothing — redo from `P-RESET-ALL`. If a name you chose contains characters outside letters, digits, spaces, `-` and `_`, the handshake rejects it and no Room appears; that is correct behaviour, not a binding failure.
-
-> [!NOTE]
-> Windows reserved device names (`CON`, `NUL`, `COM1`) pass the name rules and then fail to become files — do not use them as demo names.
 
 ### STARTUPCONFIG-20 — Team__DataDir points the whole application at a different folder — a clean slate without deleting anything
 
@@ -843,39 +597,38 @@ If `App_Data` was not deleted between steps, old Rooms persist alongside new one
 
 **Before you start**
 
-- An App_Data with Rooms and at least one message already in it.
+- `P-LAUNCH-UAT` has been run once, and Ada's Room holds at least one exchange (send `hello` and wait for the reply), so `C:\seeds\huddle\uat\data` has Rooms and messages in it.
 - The app is stopped.
 
 **Steps**
 
-1. Run `$env:Team__DataDir = 'App_Data_test'`.
-2. Launch in the same window: `dotnet run --project src/Huddle.App --urls http://localhost:5100`.
-3. Open http://localhost:5100 and read the main column immediately, then again after 10 seconds.
-4. Open each Room and read its transcript.
-5. Click `Settings` and read the absolute path printed in the Prompts tab's overrides paragraph.
-6. In `T-B` run `Get-ChildItem -Recurse -Force src\Huddle.App\App_Data_test`.
-7. Stop the app, run `Remove-Item Env:Team__DataDir`, and relaunch.
-8. Open each Room and read its transcript again.
+1. Relaunch with a DIFFERENT data folder by running the `$mock = ...` line of `P-LAUNCH-UAT` and then its `dotnet run` command with the one argument `--Team:DataDir=C:\seeds\huddle\uat\data` changed to `--Team:DataDir=C:\seeds\huddle\uat\data_test`. Do NOT re-run the seeder line, and do NOT add a second `DataDir` setting or an `$env:Team__DataDir`: a command-line argument outranks an environment variable, so the argument in the command is the one to replace.
+2. Open http://localhost:5100 and read the main column and the sidebar immediately, then again after 10 seconds.
+3. Click `New chat` and read the panel.
+4. Click `Settings` and read the absolute path printed in the Prompts tab's overrides paragraph.
+5. In `T-B` run `Get-ChildItem -Recurse -Force C:\seeds\huddle\uat\data_test`.
+6. Stop the app and relaunch with the ORIGINAL `P-LAUNCH-UAT` `dotnet run` command (DataDir back to `...\uat\data`, still no seeder line).
+7. Open the `Ada` Room and read its transcript again.
 
 **Pass if — all of these**
 
-- The two demo Rooms appear freshly recreated with EMPTY transcripts — none of the earlier messages are present.
-- The path printed on the Settings page ends `\src\Huddle.App\App_Data_test\prompts.json`.
-- `src\Huddle.App\App_Data_test\` exists and holds its own `team.db` and an empty `Teams\` folder.
-- After removing the variable and relaunching, the ORIGINAL Rooms and their full history are back, untouched.
+- With `data_test` live, the sidebar room list holds no `Ada` or `Bo` Room and none of the earlier messages (it reads `No rooms yet. Start an agent to create one.`, or at most shows the built-in Chief of Staff's own Room, which the app creates itself) — because the seeder never wrote there.
+- The path printed on the Settings page ends `\uat\data_test\prompts.json`.
+- `C:\seeds\huddle\uat\data_test\` exists and holds its own `team.db` and a `Teams\` folder.
+- After relaunching with the original DataDir, the `Ada` and `Bo` Rooms and Ada's full history are back, untouched.
 
 **Fail if — any of these**
 
-- Old messages still appear with the variable set -> the variable did not bind (see STARTUPCONFIG-17); do not file this as a DataDir defect until the Settings path confirms which directory is live.
+- Old messages or the `Ada` Room still appear with `data_test` set -> the new DataDir did not take effect (check that you replaced the argument rather than added a second one); do not file this as a DataDir defect until the Settings path confirms which directory is live.
 - The Settings path names a different directory from the one that actually gained files -> the page is reporting a path the app is not using, which would make it useless as an oracle everywhere else.
 - The original data is missing after removing the variable -> a real data-loss bug; confirm the working directory has not changed before filing.
 
 **Inconclusive if**
 
-The value is resolved against the process working directory, so a relative value lands under `src\Huddle.App`, NOT the repo root. A tester looking for `E:\Repos\Huddle\App_Data_test` will find nothing and wrongly conclude the variable did nothing. Always read the absolute path from the Settings page rather than guessing where the folder went.
+This test uses an absolute path on purpose. A RELATIVE `Team:DataDir` is resolved against the process working directory, so it lands under `src\Huddle.App`, NOT the repo root, and a tester looking for it at the repo root will find nothing and wrongly conclude the setting did nothing. Always read the absolute path from the Settings page rather than guessing where the folder went.
 
 > [!NOTE]
-> Clean up afterwards with `Remove-Item -Recurse -Force src\Huddle.App\App_Data_test` once the app is stopped.
+> Clean up afterwards with `Remove-Item -Recurse -Force C:\seeds\huddle\uat\data_test` once the app is stopped.
 
 ### STARTUPCONFIG-21 — Team__HumanName renames the Human everywhere new, while old transcript lines keep the old name
 
@@ -885,30 +638,30 @@ The value is resolved against the process working directory, so a relative value
 
 **Before you start**
 
-- An App_Data with at least one Human message already in a transcript.
-- The app is stopped.
+- `P-LAUNCH-UAT` has been run and Ada is Online.
+- The app is running (it is stopped and relaunched below).
 
 **Steps**
 
-1. Open a Room in the browser first (before changing anything) and note that earlier Human messages show sender `You` and the members line reads `You, echo`.
-2. Stop the app if it is running. Run `$env:Team__HumanName = 'Emre'`.
-3. Relaunch in the same window and reopen the same Room.
+1. Open the `Ada` Room in the browser first (before changing anything), type `hello` and press Enter, wait for the reply, and note that your Message shows sender `You` and the members line reads `You, Ada`.
+2. Stop the app. Run `$env:Team__HumanName = 'Emre'`.
+3. Relaunch in the same window by re-running ONLY the `$mock = ...` line and the `dotnet run` command of `P-LAUNCH-UAT` (not the seeder line, which would wipe the old transcript), and reopen the same Room.
 4. Read the members line under the Room heading.
 5. Read the sender name on the OLD messages already in the transcript.
-6. Type exactly `hello again @echo` and press Enter.
+6. Type exactly `hello again` and press Enter.
 7. Read the sender name on the message you just sent.
 8. Stop the app and run `Remove-Item Env:Team__HumanName`.
 
 **Pass if — all of these**
 
-- The members line now reads exactly `Emre, echo`.
+- The members line now reads exactly `Emre, Ada`.
 - Every message sent BEFORE the change still shows sender `You`.
 - The message sent AFTER the change shows sender `Emre`.
 - No error appears anywhere.
 
 **Fail if — any of these**
 
-- The members line still reads `You, echo` -> the rename did not reach the directory; check the variable spelling before filing.
+- The members line still reads `You, Ada` -> the rename did not reach the directory; check the variable spelling before filing.
 - The NEW message still shows `You` -> the sender name is not being read from the renamed directory row at post time.
 - Old messages were rewritten to `Emre` -> transcript lines are being mutated after the fact, which they must never be.
 
@@ -917,7 +670,7 @@ The value is resolved against the process working directory, so a relative value
 The mixed attribution is CORRECT and must not be filed as 'the rename only half applied'. The directory row is renamed in place, but each transcript line carries a sender name captured at post time and is never rewritten. If you cannot tell old messages from new, note the time on each message row.
 
 > [!NOTE]
-> Optional oracle if sqlite3 is available: `sqlite3 src\Huddle.App\App_Data\team.db "SELECT name FROM users WHERE id='human';"` returns the new name, while older lines in `App_Data\rooms\*.jsonl` still carry `"senderName":"You"`.
+> Optional oracle if sqlite3 is available: `sqlite3 C:\seeds\huddle\uat\data\team.db "SELECT name FROM users WHERE id='human';"` returns the new name, while older lines in `C:\seeds\huddle\uat\data\rooms\*.jsonl` still carry `"senderName":"You"`.
 
 ### STARTUPCONFIG-22 — The renamed Team__Acp__PersonaDir key refuses to start the app rather than scanning nothing
 
@@ -1023,7 +776,7 @@ The `version` field in the welcome envelope must equal the CURRENT protocol vers
 
 **Pass if — all of these**
 
-- The two demo Rooms still appear — the demo agents dial whatever pipe name is configured, so they are unaffected.
+- The sidebar room list reads `No rooms yet. Start an agent to create one.` and stays that way.
 - The script prints `Connecting to pipe '\\.\pipe\team' as agent 'mybot'...` and then fails (a timeout after roughly five seconds) or blocks — it never prints a `welcome` line.
 - NO `mybot` Room ever appears in the browser.
 - The browser gives no error, no warning and no visible change of any kind.
@@ -1031,7 +784,6 @@ The `version` field in the welcome envelope must equal the CURRENT protocol vers
 **Fail if — any of these**
 
 - A `mybot` Room DOES appear -> another instance of the app is still running on the default pipe name and answering the script; stop every `dotnet` process and repeat.
-- The demo Rooms do NOT appear -> the pipe-name change broke the demo agents too, which should follow the configured name.
 - The script connects successfully to `\\.\pipe\team` -> a server is still bound to the default name.
 
 **Inconclusive if**
@@ -1040,43 +792,6 @@ The complete silence in the browser is the POINT of this test, not a defect. To 
 
 > [!NOTE]
 > `tools/echo-bot.ps1` also takes a `-Pipe` parameter (default `team`); this test deliberately leaves it at the default so the client and server disagree.
-
-### STARTUPCONFIG-25 — Two app instances sharing one pipe name cross-wire the demo agents
-
-**Free** · about 8 min
-
-*Documents a confusing-but-correct configuration outcome so its four distinctive symptoms are never filed as product bugs, and establishes the single-instance precondition every pipe test depends on.*
-
-**Before you start**
-
-- One instance of the app is already running on port 5100 with the default pipe name and default DataDir.
-
-**Steps**
-
-1. Confirm exactly one instance is running: `Get-Process dotnet`.
-2. In a SECOND pwsh window run `dotnet run --project src/Huddle.App --urls http://localhost:5101 --no-launch-profile` — note this deliberately uses the SAME default pipe name.
-3. Open http://localhost:5100 in one browser window and http://localhost:5101 in another, side by side.
-4. In each window, read the sidebar room list and click `New chat` to read the agent list and status dots.
-5. In the 5100 window, open a Room and send `hi @echo`. Watch BOTH browser windows.
-6. Record exactly which window the Room, the reply and the online dots appeared in.
-7. Stop the second instance (Ctrl+C in its window).
-8. Before launching the second instance, set `$env:Team__DataDir = 'App_Data2'` in that terminal. Without it both processes share one `team.db` and one set of transcripts, which ADR-0002 forbids and which corrupts the first instance's state.
-
-**Pass if — all of these**
-
-- You can articulate, from what you observed, that Rooms/replies/online status did not stay confined to the instance that launched the agent — for example a reply landing in the 'wrong' window, or an agent showing online in a browser whose own process never launched it.
-- Stopping the second instance restores predictable single-instance behaviour in the 5100 window.
-
-**Fail if — any of these**
-
-- There is no fail condition here in the product sense. If you cannot reproduce any cross-wiring, record that as an observation — the pipe server accepts multiple server instances and the name is the whole address, so cross-wiring is possible but not guaranteed on every run.
-
-**Inconclusive if**
-
-This test is diagnostic, not a pass/fail gate. The symptoms it produces — 'replies go to the wrong room', 'an agent is online twice', 'my rooms doubled' — are configuration, not defects, and must never be filed. The takeaway is operational: ANY test involving pipes must first confirm only one instance is running, or give the second instance its own `Team__PipeName` AND its own `Team__DataDir`.
-
-> [!NOTE]
-> The second instance uses `--no-launch-profile`, so it runs in Production (ACP off) on the URL you pass — see STARTUPCONFIG-26. The cross-wiring this test demonstrates is a property of the shared pipe name alone, so a separate DataDir costs the test nothing.
 
 ### STARTUPCONFIG-26 — Environment selection decides whether ACP is on and which port is used
 
@@ -1097,7 +812,7 @@ This test is diagnostic, not a pass/fail gate. The symptoms it produces — 'rep
 4. Run `dotnet run --project src/Huddle.App --no-launch-profile`.
 5. Read the console's `Hosting environment:` and `Now listening on:` lines again.
 6. Try to open http://localhost:5100 in the browser and note what happens.
-7. Open the URL the console actually named. The app will answer, but it will render UNSTYLED and non-interactive - see the pass condition. Confirm the routes resolve (a 302 from `/` to a room) rather than that the page looks right.
+7. Open the URL the console actually named. The app will answer, but it will render UNSTYLED and non-interactive - see the pass condition. Confirm the routes resolve (`/` answers and the app responds) rather than that the page looks right.
 8. Compare the two runs' configured log level for `Agency.Huddle`: `appsettings.Development.json` sets it to `Debug`, `appsettings.json` leaves it at `Information`. Do NOT expect run (a)'s console to be visibly longer - see the pass condition.
 9. Stop the app.
 
@@ -1273,22 +988,22 @@ If the tile never appears even at startup, first confirm the file really is unde
 **Steps**
 
 1. Run `git status` and confirm the working tree is clean, so you can revert cleanly.
-2. Launch normally and confirm the baseline: the console contains `Demo agent echo connected.` Then stop the app.
+2. Launch normally. In `T-C` run `pwsh tools/echo-bot.ps1 -Name logbase` and confirm the baseline: the console contains `Created direct room '<id>' for agent 'logbase'.` Then stop the bot and the app.
 3. Make the stale rename in BOTH settings files, and drop the fallback that would otherwise rescue the category. Three edits, all of which are needed - see the note below for why one alone does nothing:
    - `src/Huddle.App/appsettings.json`: change the `Logging.LogLevel` key `"Agency.Huddle"` to the stale name `"Team"`, value `"Information"` unchanged.
    - `src/Huddle.App/appsettings.Development.json`: change the `Logging.LogLevel` key `"Agency.Huddle"` to the stale name `"Team"`, value unchanged.
    - `src/Huddle.App/appsettings.Development.json`: change `"Default": "Information"` to `"Default": "Warning"`.
    Save both.
 4. Relaunch and open http://localhost:5100.
-5. Read the sidebar room list and send `hi @echo` in the `echo` Room.
-6. Search the WHOLE console output for `Demo agent`, for `Created direct room` and for any `Agency.Huddle` category line.
-7. Stop the app and run `git checkout -- src/Huddle.App/appsettings.json src/Huddle.App/appsettings.Development.json`.
-8. Relaunch and confirm the `Demo agent echo connected.` line is back.
+5. In `T-C` run `pwsh tools/echo-bot.ps1 -Name logstale`, read the sidebar room list, then open the `logstale` Room and send `hi @logstale`.
+6. Search the WHOLE console output for `Created direct room` and for any `Agency.Huddle` category line.
+7. Stop the bot and the app and run `git checkout -- src/Huddle.App/appsettings.json src/Huddle.App/appsettings.Development.json`.
+8. Relaunch, run `pwsh tools/echo-bot.ps1 -Name logfinal`, and confirm the `Created direct room '<id>' for agent 'logfinal'.` line is back. (Use a new bot name each time: reconnecting under an existing name re-attaches to its Room and logs no creation line.)
 
 **Pass if — all of these**
 
-- With the stale `"Team"` key, the app behaves IDENTICALLY in the browser: the two Rooms appear and `hi @echo` gets its bold reply.
-- With the stale key, the `Demo agent … connected.` line and other `Agency.Huddle` category lines are ABSENT from the console.
+- With the stale `"Team"` key, the app behaves IDENTICALLY in the browser: the `logstale` Room appears with no refresh and `hi @logstale` gets its bold reply.
+- With the stale key, the `Created direct room … for agent 'logstale'.` line and other `Agency.Huddle` category lines are ABSENT from the console.
 - No warning of any kind reports that the key matched nothing.
 - After reverting the file, the console lines return.
 
@@ -1296,7 +1011,7 @@ If the tile never appears even at startup, first confirm the file really is unde
 
 - The app behaves differently in the browser with the stale key -> log configuration is affecting behaviour, which it must not.
 - A warning IS emitted naming the unmatched key -> record as an observation; a loud failure would be an improvement over the documented silence.
-- The `Agency.Huddle` lines are still present after ALL THREE edits -> log categories are not derived from the namespace as documented, and the whole prefix model is different from what the docs describe. Before concluding that, run the control: put `"Agency.Huddle": "Warning"` in `appsettings.Development.json` on its own. If the `Demo agent` lines vanish for that, the prefix model is fine and one of the three edits was missed.
+- The `Agency.Huddle` lines are still present after ALL THREE edits -> log categories are not derived from the namespace as documented, and the whole prefix model is different from what the docs describe. Before concluding that, run the control: put `"Agency.Huddle": "Warning"` in `appsettings.Development.json` on its own. If the `Created direct room` lines vanish for that, the prefix model is fine and one of the three edits was missed.
 
 **Inconclusive if**
 

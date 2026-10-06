@@ -22,15 +22,15 @@ defines the terminals, states, procedures and oracles this page names. Both are 
 
 ## Setup
 
-Run [`P-BUILD`](common.md#p-build) then [`P-LAUNCH-FREE`](common.md#p-launch-free) from
-[Common procedures](common.md), which also defines the terminals `T-A` and `T-B`, the
+Run [`P-BUILD`](common.md#p-build) then [`P-LAUNCH-UAT`](common.md#p-launch-uat) from
+[Common procedures](common.md) (the free lane with Ada and Bo to talk to), which also defines the terminals `T-A` and `T-B`, the
 oracles `O-LOG` / `O-ADAPTERS` / `O-TRANSCRIPT` / `O-DB`, the four resets, and the
 standing conventions. This area adds:
 
 1. Browse to `http://localhost:5100` in Chrome or Edge. Open DevTools (F12) and keep the Console, Network and Elements tabs available.
 2. In DevTools Network, tick **Disable cache** and leave the tab recording for the whole session. Several tests read its Status column.
 3. Every `curl.exe` oracle in this area runs in `T-B`, so it never disturbs the app.
-4. Confirm the baseline demo state: the sidebar lists exactly two Rooms, `echo` and `alpha`. A different set means an earlier session left state behind — that is fine for most tests here, but note it, because tests that name `echo` and `alpha` assume the default pair.
+4. Confirm the baseline state: the sidebar lists the one-to-one Rooms `Ada` and `Bo`, and both Teammates are **Online** on `/teammates`. A different set means an earlier session left state behind — that is fine for most tests here, but note it, because tests that name `Ada` and `Bo` assume this pair. Re-run `P-LAUNCH-UAT` to return to it.
 5. No test in this area needs a Model or an Effort. If a step below appears to ask you to pick one, that step is in the wrong area — stop and report it rather than picking.
 6. Do NOT click **New teammate** on `/teammates` during this area. Opening that card probes the model catalog, which is another area's business and the one place on these pages that can reach an Adapter.
 
@@ -148,7 +148,7 @@ If the Console shows a Content-Security-Policy or extension error rather than a 
 
 **Steps**
 
-1. In the browser, click `echo` in the sidebar.
+1. In the browser, click `Ada` in the sidebar.
 2. Click once on an empty part of the main column, then press the **End** key.
 3. Scroll the window to its very bottom with the mouse wheel as well.
 4. Look for yellow-backgrounded text reading `An unhandled error has occurred.` with a `Reload` link and a 🗙.
@@ -186,7 +186,7 @@ If `document.getElementById('blazor-error-ui')` returns `null`, the markup itsel
 
 **Before you start**
 
-- At least one room exists (the default `echo` and `alpha` demo state).
+- At least one room exists (`P-LAUNCH-UAT` has been run, so the `Ada` and `Bo` Rooms are there).
 
 **Steps**
 
@@ -203,7 +203,7 @@ If `document.getElementById('blazor-error-ui')` returns `null`, the markup itsel
 - The `Location:` header names `/rooms/` followed by a 32-character hexadecimal id.
 - In the browser, the address bar ends on `http://localhost:5100/rooms/<32-hex-id>`, never on the bare `/`.
 - The main column shows a transcript with an `<h1>` naming that room.
-- With the default demo pair present, the `<h1>` reads `echo`, and `echo` is the first entry in the sidebar list.
+- With the `P-LAUNCH-UAT` pair present, the `<h1>` equals the first entry in the sidebar list, which is `Ada` (seeded before `Bo`) unless a built-in Room precedes it.
 
 **Fail if — any of these**
 
@@ -217,7 +217,7 @@ If `document.getElementById('blazor-error-ui')` returns `null`, the markup itsel
 If `sqlite3` is available you can confirm the target exactly with `sqlite3 src/Huddle.App/App_Data/team.db "SELECT id, name FROM rooms ORDER BY created, id LIMIT 1;"`. If `sqlite3` is NOT installed, do not treat that as a failure - compare the `<h1>` against the first sidebar entry instead, which reads from the same query. If the sidebar is empty, this test does not apply; run SHELLNAV-24 instead.
 
 > [!NOTE]
-> Rooms are ordered by creation time then id, never alphabetically and never by recent activity. `echo` landing first is correct because it is seeded before `alpha`.
+> Rooms are ordered by creation time then id, never alphabetically and never by recent activity. `Ada` landing before `Bo` is correct because it is seeded first.
 
 ### SHELLNAV-05 — /rooms/{unknown-id} returns 200 and shows the shared empty state while the sidebar still lists rooms
 
@@ -242,7 +242,7 @@ If `sqlite3` is available you can confirm the target exactly with `sqlite3 src/H
 **Pass if — all of these**
 
 - Step 1 printed `200`.
-- The sidebar still lists `echo` and `alpha`.
+- The sidebar still lists `Ada` and `Bo`.
 - The main column shows the single sentence `No rooms yet. Start an agent to create one.`
 - There is no `<h1>` on the page.
 - There is no composer.
@@ -256,7 +256,7 @@ If `sqlite3` is available you can confirm the target exactly with `sqlite3 src/H
 
 **Inconclusive if**
 
-If the sidebar is empty because no rooms exist, the contradiction cannot be observed - create a room first (SHELLNAV-18) or run this after the default demo state is restored.
+If the sidebar is empty because no rooms exist, the contradiction cannot be observed - create a room first (SHELLNAV-18) or run this after `P-LAUNCH-UAT` has restored the `Ada` and `Bo` Rooms.
 
 > [!NOTE]
 > KNOWN LIMIT, NOT A BUG: this 200-with-'No rooms yet' screen is the current deliberate behaviour - `Chat.razor` renders the same shared empty state whenever its room resolves to null. Record the misleading wording as a UX observation, never as a defect.
@@ -390,23 +390,23 @@ If the console commands return `null`, the page had not finished rendering - wai
 
 **Before you start**
 
-- At least two rooms, so the active/inactive contrast is visible. The default `echo` and `alpha` pair is enough.
+- At least two rooms, so the active/inactive contrast is visible. The `Ada` and `Bo` pair from `P-LAUNCH-UAT` is enough.
 
 **Steps**
 
-1. In the browser, click `echo` in the sidebar.
+1. In the browser, click `Ada` in the sidebar.
 2. In the DevTools Console, type `document.querySelectorAll('.room-list a.active').length` and press Enter.
 3. In the Console, type `[...document.querySelectorAll('.room-list a')].filter(a => a.getAttribute('aria-current')).map(a => a.textContent.trim() + ' | ' + a.getAttribute('aria-current'))` and press Enter.
-4. Look at the sidebar: confirm `echo` has a tinted background and heavier text, and `alpha` has neither.
+4. Look at the sidebar: confirm `Ada` has a tinted background and heavier text, and `Bo` has neither.
 5. Read the `<h1>` in the main column.
-6. Click `alpha` in the sidebar.
-7. Repeat steps 2, 3, 4 and 5, expecting `alpha` to be the highlighted one and `echo` to be plain.
+6. Click `Bo` in the sidebar.
+7. Repeat steps 2, 3, 4 and 5, expecting `Bo` to be the highlighted one and `Ada` to be plain.
 8. Read the `<h1>` in the main column again.
 
 **Pass if — all of these**
 
 - Step 2 printed `1` both times.
-- Step 3 printed `echo | page` the first time and `alpha | page` the second time - one entry, never two.
+- Step 3 printed `Ada | page` the first time and `Bo | page` the second time - one entry, never two.
 - Exactly one room link is tinted and bold at a time; the other is plain.
 - The `<h1>` matches the highlighted room name each time.
 
@@ -658,7 +658,7 @@ If the browser tab is too narrow to read the label, hover it for the tooltip or 
 4. In the Console, type `document.activeElement.tagName + ' | ' + document.activeElement.textContent.trim()` and press Enter. Record it.
 5. In the Elements panel, select the `<h1>` and read its attributes.
 6. Click **Settings** in the sidebar, then repeat step 4.
-7. Click `echo` in the sidebar, then repeat step 4.
+7. Click `Ada` in the sidebar, then repeat step 4.
 8. Click into the page (not the console), then press Tab once and run `document.activeElement.tagName + ' | ' + (document.activeElement.className || document.activeElement.textContent.trim())`. Record where Tab landed.
 9. Navigate to `http://localhost:5100/rooms/does-not-exist` and repeat step 4.
 
@@ -734,7 +734,7 @@ If the Console was cleared by a DevTools setting rather than by a reload, `windo
 
 **Before you start**
 
-- At least one Agent registered. With the demo agents on, `echo` and `alpha` are listed.
+- At least one Agent registered. `P-LAUNCH-UAT` has been run, so `Ada` and `Bo` are listed (the built-in Chief of Staff may be listed too).
 
 **Steps**
 
@@ -746,9 +746,9 @@ If the Console was cleared by a DevTools setting rather than by a reload, `windo
 6. Hover the mouse over one dot and wait for the tooltip. Read it.
 7. In the Console, type `[...document.querySelectorAll('.agent-dot')].map(d => d.title)` and press Enter. Record the array.
 8. In the Console, type `[...document.querySelectorAll('.new-chat button')].find(b => b.textContent.trim() === 'Start chat').disabled` and press Enter.
-9. Tick the checkbox beside `echo`.
+9. Tick the checkbox beside `Ada`.
 10. Re-run the Console command from step 8.
-11. Untick `echo`.
+11. Untick `Ada`.
 12. Re-run the Console command from step 8.
 13. Click **New chat** again.
 14. Re-run the Console command from step 4.
@@ -772,7 +772,7 @@ If the Console was cleared by a DevTools setting rather than by a reload, `windo
 
 **Inconclusive if**
 
-`MudCollapse` keeps its content in the DOM at all times and animates height, so do not judge open/closed from View Source or a `curl.exe` fetch — use the `.mud-collapse-container` height (or the eye) as in step 4. If no agents are listed at all, this test cannot run; that is SHELLNAV-28's territory - confirm `Team:DemoAgent:Enabled` is true in `appsettings.json` and restart.
+`MudCollapse` keeps its content in the DOM at all times and animates height, so do not judge open/closed from View Source or a `curl.exe` fetch — use the `.mud-collapse-container` height (or the eye) as in step 4. If no agents are listed at all, this test cannot run; that is SHELLNAV-28's territory - confirm you launched with `P-LAUNCH-UAT` (the plain lanes have no Teammates beyond the Chief of Staff) and restart it.
 
 > [!NOTE]
 > Cross-check the dot colours against the health and presence lines in `T-A` for the same agent name; they must agree.
@@ -785,15 +785,15 @@ If the Console was cleared by a DevTools setting rather than by a reload, `windo
 
 **Before you start**
 
-- Two or more Agents listed in the New chat panel (the default `echo` and `alpha`).
+- Two or more Agents listed in the New chat panel (`Ada` and `Bo` from `P-LAUNCH-UAT`).
 - SHELLNAV-17 passed, so the panel is known to work.
 
 **Steps**
 
 1. Note the current entries in the sidebar room list.
 2. Click **New chat** in the sidebar.
-3. Tick the checkbox beside `echo`.
-4. Tick the checkbox beside `alpha`.
+3. Tick the checkbox beside `Ada`.
+4. Tick the checkbox beside `Bo`.
 5. Click **Start chat**.
 6. Read the address bar.
 7. Read the `<h1>` in the main column.
@@ -806,9 +806,9 @@ If the Console was cleared by a DevTools setting rather than by a reload, `windo
 
 - The panel closed by itself after **Start chat**.
 - The address bar reads `http://localhost:5100/rooms/<32-hex-id>`, with a real id and never a trailing empty `/rooms/`.
-- The `<h1>` reads exactly `echo, alpha` - the agent names comma-space joined in selection order.
+- The `<h1>` reads exactly `Ada, Bo` - the agent names comma-space joined in selection order.
 - The member line below the heading lists `You` plus both agent names.
-- The sidebar gained an entry reading `echo, alpha`, with no page refresh.
+- The sidebar gained an entry reading `Ada, Bo`, with no page refresh.
 - In step 10 every checkbox is clear - the previous selection did not stick.
 
 **Fail if — any of these**
@@ -823,7 +823,7 @@ If the Console was cleared by a DevTools setting rather than by a reload, `windo
 If `sqlite3` is installed you can confirm with `sqlite3 src/Huddle.App/App_Data/team.db "SELECT id, name FROM rooms ORDER BY created DESC LIMIT 1;"`. If it is NOT installed, judge from the sidebar entry and the `<h1>` alone and say the DB check was skipped - do not call the test inconclusive on that account. If **Start chat** shows an error line instead, read it and report it verbatim.
 
 > [!NOTE]
-> Ticking a SINGLE agent reuses that agent's existing room rather than creating a new one - so if you tick only `echo` you land back on the existing `echo` room and the sidebar does not grow. That is correct, not a failure. Leaves a new room behind; it does no harm to later tests.
+> Ticking a SINGLE agent reuses that agent's existing room rather than creating a new one - so if you tick only `Ada` you land back on the existing `Ada` room and the sidebar does not grow. That is correct, not a failure. Leaves a new room behind; it does no harm to later tests.
 
 ### SHELLNAV-19 — app.js is proven functionally: Enter sends and clears, and the transcript scrolls
 
@@ -834,27 +834,27 @@ If `sqlite3` is installed you can confirm with `sqlite3 src/Huddle.App/App_Data/
 **Before you start**
 
 - A room with a composer is open.
-- The demo `echo` agent is running (default). This test is FREE - the demo agent is an in-process pipe client, not a Claude agent, so no model, no effort and no spend are involved.
+- `P-LAUNCH-UAT` has been run and Ada is Online. This test is FREE - Ada runs on the mock adapter, not a Claude model, so no model, no effort and no spend are involved.
 
 **Steps**
 
-1. In the browser, click `echo` in the sidebar.
+1. In the browser, click `Ada` in the sidebar.
 2. Scroll to the bottom of the main column and find the textarea with the placeholder `Message… (/invite @agent)`.
 3. Click into the textarea.
-4. Type exactly: `hi @echo`
+4. Type exactly: `hi there`
 5. Press **Enter** (not Shift+Enter).
 6. Observe the textarea immediately after.
 7. Observe the transcript above it.
-8. Wait up to five seconds and read whether a reply from `echo` appears.
+8. Wait up to five seconds and read whether a reply from `Ada` appears.
 9. Click into the textarea again, type `second line test`, press **Shift+Enter**, then type `still typing`.
 10. Observe whether the textarea now holds two lines rather than having sent.
 
 **Pass if — all of these**
 
 - Pressing Enter sent the message: the textarea is EMPTY afterwards and no newline was inserted.
-- The typed message `hi @echo` appears in the transcript.
+- The typed message `hi there` appears in the transcript.
 - The transcript is scrolled to the bottom so the newest message is visible without scrolling by hand.
-- A reply from `echo` appears in the transcript within a few seconds.
+- A reply from `Ada` appears in the transcript within a few seconds; it is plain text containing `hi there`.
 - Shift+Enter inserted a newline and did NOT send - the textarea holds both lines.
 
 **Fail if — any of these**
@@ -865,10 +865,10 @@ If `sqlite3` is installed you can confirm with `sqlite3 src/Huddle.App/App_Data/
 
 **Inconclusive if**
 
-If the message sends but `echo` never replies, the composer half still PASSED - record the reply timeout separately as a chat-area observation, not as an app.js failure. If the circuit has not connected yet, the textarea will not respond at all; wait for the `_blazor` websocket and retry once.
+If the message sends but `Ada` never replies, the composer half still PASSED - record the reply timeout separately as a chat-area observation, not as an app.js failure. If the circuit has not connected yet, the textarea will not respond at all; wait for the `_blazor` websocket and retry once.
 
 > [!NOTE]
-> Leaves two messages in the `echo` room. That is harmless and actively useful - SHELLNAV-22 needs at least one message body on screen to see a font override take effect.
+> Leaves two messages in the `Ada` room. That is harmless and actively useful - SHELLNAV-22 needs at least one message body on screen to see a font override take effect.
 
 ### SHELLNAV-20 — The room list updates live, with no refresh, when a room appears from outside the app
 
@@ -976,16 +976,16 @@ If the file watcher does not react within ten seconds, restart the app in `T-A` 
 
 **Before you start**
 
-- At least one room with messages - run SHELLNAV-19 first so the `echo` room has content.
+- At least one room with messages - run SHELLNAV-19 first so the `Ada` room has content.
 - The room's 32-hex id copied from the address bar.
 
 **Steps**
 
-1. In the browser, open the `echo` room and copy its full URL from the address bar.
+1. In the browser, open the `Ada` room and copy its full URL from the address bar.
 2. In `T-B` run: `$r = curl.exe -s "<paste the room URL>" | Out-String`
 3. Run: `([regex]::Matches($r, '<h1>')).Count`
 4. Run: `[regex]::Match($r, '<h1>([^<]*)</h1>').Groups[1].Value`
-5. Run: `$r.Contains('hi @echo')` - this checks the prerendered HTML already carries the transcript.
+5. Run: `$r.Contains('hi there')` - this checks the prerendered HTML already carries the transcript.
 6. Run: `$r.Contains('No rooms yet')`
 7. Open a NEW private/incognito window.
 8. Paste the room URL and press Enter, watching the first paint closely.
@@ -1027,12 +1027,12 @@ If your machine is fast enough that you cannot judge the first paint by eye, tru
 **Before you start**
 
 - Two browser tabs against the same `http://localhost:5100`.
-- Two or more agents listed in the New chat panel.
+- `P-LAUNCH-UAT` has been run, so `Ada` and `Bo` are listed in the New chat panel.
 
 **Steps**
 
 1. Open TAB A on a room page and TAB B on `http://localhost:5100/teammates`.
-2. In TAB A, click **New chat**, tick `echo` and `alpha`, and click **Start chat**.
+2. In TAB A, click **New chat**, tick `Ada` and `Bo`, and click **Start chat**.
 3. Without touching TAB B, switch to it and read its sidebar.
 4. Switch back to TAB A and navigate to `http://localhost:5100/settings/appearance`.
 5. Select `Dark` in the `Appearance` select.
@@ -1042,7 +1042,7 @@ If your machine is fast enough that you cannot judge the first paint by eye, tru
 
 **Pass if — all of these**
 
-- TAB B's sidebar gained the `echo, alpha` room with no refresh and no navigation.
+- TAB B's sidebar gained the `Ada, Bo` room with no refresh and no navigation.
 - TAB A repaints dark immediately, with no page load.
 - TAB B ALSO repaints dark within about half a second, with no refresh and no navigation — this is the behaviour change from before the migration; a second tab is no longer stuck on the old appearance until its next load.
 
@@ -1122,7 +1122,7 @@ If the browser simply shows a connection-refused error page instead of the modal
 1. In `T-A` press Ctrl+C to stop the app.
 2. In `T-B` run: `Rename-Item src/Huddle.App/App_Data App_Data_backup` so the existing state is preserved rather than destroyed.
 3. In `T-A` run: `$env:Team__Acp__Enabled = 'false'`
-4. In `T-A` run: `$env:Team__DemoAgent__Enabled = 'false'`
+4. In `T-A` run: `Get-ChildItem Env:\Team__*` and confirm the only variable printed is `Team__Acp__Enabled`, so this is a clean lane with no seeded Teammates.
 5. In `T-A` run: `dotnet run --project src/Huddle.App --urls http://localhost:5100` and wait for `Now listening on: http://localhost:5100`.
 6. In `T-B` run: `curl.exe -s -D - -o NUL http://localhost:5100/` and read the status line.
 7. In `T-B` run: `$h = curl.exe -s http://localhost:5100/ | Out-String; ([regex]::Matches($h, 'No rooms yet')).Count`
@@ -1162,7 +1162,7 @@ If step 6 still returns a redirect, `team.db` was not actually removed - confirm
 
 **Before you start**
 
-- SHELLNAV-27's setup is still in force: demo agents disabled, App_Data removed, app running.
+- SHELLNAV-27's setup is still in force: clean lane, App_Data removed, app running.
 - No `tools/echo-bot.ps1` connected - stop TERMINAL C's bot if it is running.
 
 **Steps**
@@ -1175,16 +1175,16 @@ If step 6 still returns a redirect, `team.db` was not actually removed - confirm
 6. In the Console, type `[...document.querySelectorAll('.new-chat .empty-state code')].map(c => c.textContent)` and press Enter.
 7. CLEANUP: in `T-A` press Ctrl+C.
 8. In `T-B` run: `Remove-Item -Recurse -Force src/Huddle.App/App_Data` then `Rename-Item src/Huddle.App/App_Data_backup App_Data`.
-9. In `T-A` run: `$env:Team__Acp__Enabled = 'false'` then `Remove-Item Env:\Team__DemoAgent__Enabled` then `dotnet run --project src/Huddle.App --urls http://localhost:5100`.
+9. In `T-A` run: `$env:Team__Acp__Enabled = 'false'` then `dotnet run --project src/Huddle.App --urls http://localhost:5100`.
 10. In the browser, reload and confirm the sidebar shows the original rooms again.
 
 **Pass if — all of these**
 
-- The panel shows the single sentence `No agents have connected yet. Start one with tools/echo-bot.ps1, or enable the demo agent in appsettings.json.`
-- `tools/echo-bot.ps1` and `appsettings.json` are rendered in a monospace face.
+- The panel shows a single sentence beginning `No agents have connected yet. Start one with tools/echo-bot.ps1` and ending with the app's own pointer to the configuration file (record its exact wording).
+- Each file name in that sentence is rendered in a monospace face.
 - Step 4 printed `null` - the **Start chat** button is not rendered at all in this state.
 - Step 5 printed `null` - there is no agent list.
-- Step 6 printed exactly `['tools/echo-bot.ps1', 'appsettings.json']`.
+- Step 6 printed an array whose first entry is `tools/echo-bot.ps1` and whose other entries are the file names in the sentence, each a real file.
 - After cleanup, the original rooms are back in the sidebar.
 
 **Fail if — any of these**
@@ -1195,7 +1195,7 @@ If step 6 still returns a redirect, `team.db` was not actually removed - confirm
 
 **Inconclusive if**
 
-If any agent is still listed, something is connected - stop any `echo-bot.ps1` in TERMINAL C, confirm `$env:Team__DemoAgent__Enabled` is `false` in the terminal that launched the app, and relaunch. If the cleanup in steps 7 to 9 fails because a file is locked, wait for the dotnet process to exit fully and retry; do not force-delete while the app is running.
+If any agent is still listed, something is connected - stop any `echo-bot.ps1` in TERMINAL C, confirm `Get-ChildItem Env:\Team__*` in the terminal that launched the app shows only `Team__Acp__Enabled`, and relaunch. If the cleanup in steps 7 to 9 fails because a file is locked, wait for the dotnet process to exit fully and retry; do not force-delete while the app is running.
 
 > [!NOTE]
 > Run this immediately after SHELLNAV-27 - it reuses the same expensive setup. The cleanup steps are part of the test and must not be skipped, or every subsequent run starts from an empty install.

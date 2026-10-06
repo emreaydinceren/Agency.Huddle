@@ -29,7 +29,9 @@ entity means to a user, read [the user guide](../docs/Huddle.UserGuide.md).
 > normal configuration names (add `-NoAcp` to keep paid models from running). `-SeedRoot` points it
 > at a different seed root.
 > `tests/Huddle.Tests/Seeder/` loads the result through Huddle's own loaders, so it goes red when
-> this guide and the app drift apart. Use the manual procedure below for a scenario the tool
+> this guide and the app drift apart. A second scenario, `--scenario uat`, builds only two mock-adapter
+> Teammates (Ada and Bo) with an empty Room each; the manual-test lane `P-LAUNCH-UAT` uses it, and it exists only
+> when someone asks for it. Use the manual procedure below for a scenario the tool
 > does not have yet; adding one is a new `IScenario` in `src/Huddle.Seeder/Scenarios/`.
 
 ## The rules
@@ -140,7 +142,7 @@ Run Huddle with these settings. Every one of them matters:
 | `--Team:DataDir=<absolute path>` | Isolates your data. A relative path resolves against the process working directory. |
 | `--urls http://localhost:5199` | A port that does not clash with the user's instance on 5100. |
 | `--Team:PipeName=huddle-seed` | Instances sharing a pipe name cross-connect their agents. |
-| `--Team:DemoAgent:Enabled=false` | Removes the `echo` and `alpha` demo agents from Rooms and pickers. |
+| `--Team:DemoAgent:Enabled=false` | Keeps the `echo` and `alpha` demo agents out of Rooms and pickers. Off by default now; keep passing it so the launch does not depend on the default. |
 | `--Team:Tasks:WakeEnabled=false` | Stops Task changes from posting wake-up messages. |
 | `--Team:Acp:Enabled=true` plus the four `Adapters:0` keys | Runs every Teammate on the free mock adapter. Set it explicitly: `appsettings.Development.json` changes the default. |
 

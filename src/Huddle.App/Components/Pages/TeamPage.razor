@@ -158,7 +158,7 @@
         ? [new BreadcrumbItem(team, href: null, disabled: true, icon: Icons.Material.Outlined.Groups)]
         : [
             new BreadcrumbItem(team, TeamHref(team), icon: Icons.Material.Outlined.Groups),
-            new BreadcrumbItem(project, href: null, disabled: true, icon: Icons.Material.Filled.FactCheck),
+            new BreadcrumbItem(project, href: null, disabled: true, icon: Icons.Material.Filled.LibraryBooks),
         ];
 
     private TeamPageFeatures Features() => new(this.TeamConfig.Value.Library.Enabled, this.TeamConfig.Value.Tasks.Enabled);

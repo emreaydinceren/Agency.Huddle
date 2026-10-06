@@ -7,7 +7,7 @@ internal static class ScenarioCatalog
     internal const string DefaultName = "software-co";
 
     /// <summary>Every scenario, in the order they are listed in help.</summary>
-    internal static IReadOnlyList<IScenario> All { get; } = [new SoftwareCoScenario()];
+    internal static IReadOnlyList<IScenario> All { get; } = [new SoftwareCoScenario(), new UatScenario()];
 
     /// <summary>Finds a scenario by name, ignoring case.</summary>
     /// <param name="name">The scenario name.</param>

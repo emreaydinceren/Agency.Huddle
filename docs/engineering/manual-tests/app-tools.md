@@ -21,9 +21,8 @@ oracles `O-LOG` / `O-ADAPTERS` / `O-TRANSCRIPT` / `O-DB` / `O-WIRE`, the four re
 4. Free tests (APPTOOLS-01 to -04) use `P-LAUNCH-FREE`; everything from APPTOOLS-05 uses `P-LAUNCH-PAID`.
 5. LOG LEVEL: Development already gives `Agency.Huddle` at `Debug`, which prints `App tool server listening…` and `App tool server received {Method}.`. For any test whose oracle needs the tool's actual JSON output, set `${env:Logging__LogLevel__Agency.Huddle} = "Trace"` before starting — the double underscore replaces the colon and the dot in the category stays a dot, so the key is `Logging:LogLevel:Agency.Huddle`. The category must be spelled `Agency.Huddle` exactly; a key spelled `Team` matches nothing and silently disables the filter with no error.
 6. PERSONAS YOU WILL NEED for the paid tests: `P-NEW-PERSONA` twice, both Haiku/low — `Nova` (Title `Coordinator`, Alias `nova`) and `Jarvis` (Title `Researcher`, Alias `jar`). The alias `jar` on `Jarvis` is load-bearing for APPTOOLS-10.
-7. To make `list_agents` output contain Personas only, start with `$env:Team__DemoAgent__Enabled = "false"`.
-8. Reset between scenarios with `P-RESET-ALL`. `team.db` is created with `CREATE TABLE IF NOT EXISTS`, so nothing ever migrates — a half-deleted `App_Data` produces confusing results.
-9. TEST ORDER: run APPTOOLS-01 through -04 first. They are free and they tell you whether the wiring is sound. Do not spend a single token until APPTOOLS-04 passes: `acp-agent-guide.md` §3.6 records two sessions lost to debugging 'the model cannot find the tool' when the tool server had never received a single request.
+7. Reset between scenarios with `P-RESET-ALL`. `team.db` is created with `CREATE TABLE IF NOT EXISTS`, so nothing ever migrates — a half-deleted `App_Data` produces confusing results.
+8. TEST ORDER: run APPTOOLS-01 through -04 first. They are free and they tell you whether the wiring is sound. Do not spend a single token until APPTOOLS-04 passes: `acp-agent-guide.md` §3.6 records two sessions lost to debugging 'the model cannot find the tool' when the tool server had never received a single request.
 
 ## Tests
 
@@ -148,7 +147,7 @@ If `App_Data/prompts.json` cannot be written (a permissions error paragraph appe
 **Before you start**
 
 - Two Personas exist (`Nova`, `Jarvis`), both Haiku/low. If they do not, create them now with **New teammate** — creating a Persona is free.
-- Demo agents left at their default (`echo` and `alpha` enabled).
+- `pwsh` available and a THIRD terminal free (`T-C`) — the bot in step 11 is `P-ECHO-BOT`, a PowerShell pipe client, so this test stays free.
 
 **Steps**
 
@@ -162,10 +161,10 @@ If `App_Data/prompts.json` cannot be written (a permissions error paragraph appe
 8. Click the **Nova** tile to open its card. Confirm the card shows **Offline** and shows NO reason line beneath the status.
 9. Close the card with the × button.
 10. Read the app's console window from the top. Confirm there is NO line containing `App tool server listening at`.
-11. In the browser, click **New chat** in the left sidebar.
-12. Tick the checkbox next to `echo`, then click **Start chat**.
+11. In `T-C`, from the repo root, run `pwsh tools/echo-bot.ps1 -Name mybot` and wait for a line containing `"type":"welcome"`.
+12. In the browser, click **New chat** in the left sidebar, tick the checkbox next to `mybot`, then click **Start chat**.
 13. In the room that opens, type exactly `hello` and press Enter.
-14. Confirm `echo` replies within a few seconds and its reply appears as a message row with sender `echo`.
+14. Confirm `mybot` replies within a few seconds and its reply appears as a message row with sender `mybot`.
 15. Confirm no red `member-health-alert` strip appears anywhere between the transcript and the composer.
 16. Return to Task Manager and confirm no new `node.exe` process appeared during any of the above.
 
@@ -174,19 +173,19 @@ If `App_Data/prompts.json` cannot be written (a permissions error paragraph appe
 - Every Persona tile reads **Offline** with no reason, on the tile and on the card.
 - No `App tool server listening at` line anywhere in the console.
 - No `node.exe` process starts at any point.
-- `echo` connects and replies, proving the chat surface works with zero spend.
+- `mybot` connects and replies, proving the chat surface works with zero spend.
 - No `member-health-alert` strip appears in the room.
 
 **Fail if — any of these**
 
 - A permanent red alert strip appears in the room listing every offline Agent -> an always-on alert is one nobody reads; Offline-with-no-reason is deliberately not an alarm. This is a regression in `Chat.razor`'s `UnhealthyMembers` filter.
 - A `node.exe` process starts, or `App tool server listening at` appears in the log, while `Team__Acp__Enabled` is `false` -> code is turning ACP on by itself. This is the most serious possible finding in this area: the flag exists precisely because starting an adapter spends the user's money.
-- `echo` does not reply -> the chat surface itself is broken, independent of App Tools. Stop and fix that first; every later test in this area will be unreadable.
+- `mybot` does not reply -> the chat surface itself is broken, independent of App Tools. Stop and fix that first; every later test in this area will be unreadable.
 - A Persona tile reads **Online** with ACP disabled -> the status resolver is reading something other than real pipe liveness.
 
 **Inconclusive if**
 
-If a `node.exe` process was ALREADY running before you started the app (a leftover from an earlier run, or an unrelated tool), you cannot attribute it — kill every `node.exe`, restart the app, and rerun. If `echo` does not appear in the **New chat** panel, the demo agents are disabled in your environment; set `$env:Team__DemoAgent__Enabled = "true"` and restart before judging. Do NOT file the fact that opening a Create/Edit teammate card spawns a `node` probe in this mode — that is a documented, deliberate and free behaviour (no Turn is started, so no tokens are spent).
+If a `node.exe` process was ALREADY running before you started the app (a leftover from an earlier run, or an unrelated tool), you cannot attribute it — kill every `node.exe`, restart the app, and rerun. If `mybot` does not appear in the **New chat** panel, the bot never registered; check `T-C` for the `welcome` line before judging. Do NOT file the fact that opening a Create/Edit teammate card spawns a `node` probe in this mode — that is a documented, deliberate and free behaviour (no Turn is started, so no tokens are spent).
 
 > [!NOTE]
 > Task Manager is the honest oracle here, not the log. A missing log line proves the server did not bind; only the process list proves no adapter was launched.
@@ -466,7 +465,6 @@ If the transcript is empty after the restart, check you reopened the right room:
 **Before you start**
 
 - Two Personas (`Nova`, `Jarvis`) exist; at least `Nova` is **Online**.
-- Demo agents `echo` and `alpha` enabled (the default).
 - COST: one turn on Haiku at effort low.
 
 **Steps**
@@ -478,9 +476,8 @@ If the transcript is empty after the restart, check you reopened the right room:
 5. Press Enter and wait for the reply.
 6. Compare the reply's list of names against the two lists you wrote down. Every name must appear, and no name may appear that is not on your lists.
 7. Confirm the reply distinguishes registered Agents (with an online/offline state each) from Personas that have never come online.
-8. Confirm the demo agents `echo` and `alpha` are both named, if they are enabled.
-9. Confirm the online/offline states in the reply match the dot colours you recorded.
-10. Switch to the console. At Trace, find the `App tool server replied to tools/call:` line whose payload begins with `Agents:` and confirm its shape: `- <Name> (online)` or `- <Name> (offline)` lines, each optionally followed by indented job-description lines, then a blank line and `Personas:`.
+8. Confirm the online/offline states in the reply match the dot colours you recorded.
+9. Switch to the console. At Trace, find the `App tool server replied to tools/call:` line whose payload begins with `Agents:` and confirm its shape: `- <Name> (online)` or `- <Name> (offline)` lines, each optionally followed by indented job-description lines, then a blank line and `Personas:`.
 
 **Pass if — all of these**
 
@@ -512,15 +509,16 @@ If the reply lists the right names but gives no online/offline state, rerun once
 **Before you start**
 
 - Two Personas online: `Nova` (alias `nova`) and `Jarvis` (alias `jar`). Both Haiku/low.
-- A room with three or more members. Create it: click **New chat**, tick `Nova` and `echo`, click **Start chat**.
+- A bot `mybot` connected in a third terminal (`pwsh tools/echo-bot.ps1 -Name mybot`, `P-ECHO-BOT`) — it is free and gives the room its third member.
+- A room with three or more members. Create it: click **New chat**, tick `Nova` and `mybot`, click **Start chat**.
 - COST: one turn on Haiku at effort low, plus one free re-check.
 
 **Steps**
 
 1. Open http://localhost:5100/teammates and confirm the `Jarvis` tile's second line reads `Researcher · @jar`.
-2. FREE PATH FIRST — in the three-member room (`Nova, echo`), click into the composer and type exactly `/invite @jar` then press Enter.
+2. FREE PATH FIRST — in the three-member room (`Nova, mybot`), click into the composer and type exactly `/invite @jar` then press Enter.
 3. Confirm the sidebar entry and the chat header `<h1>` both rename to include `Jarvis`, with no page refresh.
-4. Now undo it so the tool path can be tested: run `P-RESET-ALL`, relaunch, recreate `Nova` and `Jarvis` (Haiku/low), and create a fresh three-member room with `Nova` and `echo` via **New chat**.
+4. Now undo it so the tool path can be tested: run `P-RESET-ALL`, relaunch, recreate `Nova` and `Jarvis` (Haiku/low), restart the `mybot` bot so it re-registers, and create a fresh three-member room with `Nova` and `mybot` via **New chat**.
 5. In that fresh room, click into the composer and type exactly: `List the agents here with their handles, then use mcp__team__invite_agent to add jar to this room.`
 6. Press Enter and wait for the turn to finish.
 7. Confirm Nova's reply quotes `Alias: jar` (or clearly reports `jar` as Jarvis's handle) from the job description it read.
@@ -560,17 +558,18 @@ If Nova asks you which room to invite into rather than reading the id from its o
 
 - APPTOOLS-05 has passed (the agent can read its own room id).
 - `Nova` and `Jarvis` both **Online**, Haiku/low.
-- A three-member room containing `Nova` and `echo` but NOT `Jarvis`. Create it via **New chat**: tick `Nova` and `echo`, click **Start chat**.
+- A bot `mybot` connected in a third terminal (`pwsh tools/echo-bot.ps1 -Name mybot`, `P-ECHO-BOT`).
+- A three-member room containing `Nova` and `mybot` but NOT `Jarvis`. Create it via **New chat**: tick `Nova` and `mybot`, click **Start chat**.
 - COST: one turn, plus one short turn for Jarvis's answer. Haiku at effort low.
 
 **Steps**
 
 1. Open the three-member room and write down its id from the `/rooms/<id>` URL.
-2. Confirm the chat header `<h1>` reads `Nova, echo` and `.chat-members` lists `You`, `Nova` and `echo`.
+2. Confirm the chat header `<h1>` reads `Nova, mybot` and `.chat-members` lists `You`, `Nova` and `mybot`.
 3. Click into the composer and type exactly: `@Nova use mcp__team__invite_agent to add Jarvis to this room. Take the room id from the label at the start of this message. When you are done, tell me the exact id you used.`
 4. Press Enter and wait for the turn to finish.
-5. WITHOUT pressing F5, confirm the sidebar entry for this room has renamed to `Nova, echo, Jarvis`.
-6. WITHOUT pressing F5, confirm the chat header `<h1>` has renamed to `Nova, echo, Jarvis`.
+5. WITHOUT pressing F5, confirm the sidebar entry for this room has renamed to `Nova, mybot, Jarvis`.
+6. WITHOUT pressing F5, confirm the chat header `<h1>` has renamed to `Nova, mybot, Jarvis`.
 7. Confirm `.chat-members` under the header now includes `Jarvis`.
 8. Compare the id Nova reported in its reply against the id you wrote down from the URL, character for character.
 9. In the console, find `Invited agent 'Jarvis' (<agentId>) into room '<roomId>'.` and confirm the `<roomId>` matches the URL id.
@@ -579,7 +578,7 @@ If Nova asks you which room to invite into rather than reading the id from its o
 
 **Pass if — all of these**
 
-- The sidebar entry and the header `<h1>` both change to `Nova, echo, Jarvis` with NO page refresh.
+- The sidebar entry and the header `<h1>` both change to `Nova, mybot, Jarvis` with NO page refresh.
 - `.chat-members` includes `Jarvis`.
 - The id Nova reports equals the id in the `/rooms/<id>` URL, character for character.
 - The console shows `Invited agent 'Jarvis' (<agentId>) into room '<roomId>'.` with the matching room id.
@@ -589,7 +588,7 @@ If Nova asks you which room to invite into rather than reading the id from its o
 
 - Nothing changes in the sidebar, and Nova's reply reports something like `Could not invite Jarvis: Unknown room '<whatever>'.` -> this is THE silent failure of this area. The tool returned ordinary result text, the model read it as prose, and nothing was logged as an error. Record the exact id string Nova used and compare it against the URL — a truncated, name-substituted or hallucinated id each point somewhere different.
 - Nova asks YOU for the room id instead of reading its own label -> the `[Room: ...]` label is not reaching the prompt. Go back to APPTOOLS-05.
-- Nova passes the room NAME (`Nova, echo`) as the id -> it did not recognise the id in the label.
+- Nova passes the room NAME (`Nova, mybot`) as the id -> it did not recognise the id in the label.
 - Nova calls `create_room` instead and a SECOND room appears in the sidebar -> wrong tool chosen. The original room is unchanged; note both.
 - The rename only appears after F5 -> a `RoomEvents` subscription bug, not a tool bug. Report it separately.
 - `@Jarvis are you there?` gets no reply -> Jarvis is a member on paper but is not receiving the room's messages.
@@ -609,17 +608,17 @@ If `Jarvis` is **Offline** or **Degraded** on /teammates when you start, this te
 
 **Before you start**
 
-- APPTOOLS-12 has passed: `Jarvis` is already a member of the room now named `Nova, echo, Jarvis`.
+- APPTOOLS-12 has passed: `Jarvis` is already a member of the room now named `Nova, mybot, Jarvis`.
 - COST: one short turn on Haiku at effort low.
 
 **Steps**
 
-1. Open the room named `Nova, echo, Jarvis` and note the exact text of its `.chat-members` line and its header `<h1>`.
+1. Open the room named `Nova, mybot, Jarvis` and note the exact text of its `.chat-members` line and its header `<h1>`.
 2. Click into the composer and type exactly: `@Nova add Jarvis to this room again with mcp__team__invite_agent, then tell me exactly what the tool said back.`
 3. Press Enter and wait for the reply.
 4. Confirm Nova quotes back text of the form `Jarvis is already a member of room '<id>'. Nothing to do.`
 5. Confirm the `.chat-members` line is unchanged from what you noted.
-6. Confirm the header `<h1>` still reads `Nova, echo, Jarvis` and has not become `Nova, echo, Jarvis, Jarvis`.
+6. Confirm the header `<h1>` still reads `Nova, mybot, Jarvis` and has not become `Nova, mybot, Jarvis, Jarvis`.
 7. Confirm the sidebar entry for the room is likewise unchanged.
 8. Confirm the console shows NO new `Invited agent 'Jarvis'` line for this attempt.
 
@@ -632,7 +631,7 @@ If `Jarvis` is **Offline** or **Degraded** on /teammates when you start, this te
 **Fail if — any of these**
 
 - `Jarvis` appears twice in `.chat-members` -> the membership write is not idempotent and a room can accumulate duplicate members.
-- The room renames to `Nova, echo, Jarvis, Jarvis` -> the name is composed from a member list that now contains a duplicate.
+- The room renames to `Nova, mybot, Jarvis, Jarvis` -> the name is composed from a member list that now contains a duplicate.
 - The turn ends with an error or the persona flips to **Degraded** -> these tools are designed to return errors as TEXT the model can read and correct itself from; a thrown exception here breaks that contract.
 - A new `Invited agent 'Jarvis'` line appears in the console -> the already-a-member check ran after the write instead of before it.
 
@@ -942,8 +941,8 @@ THE CONFUSING PART, and it is NOT a bug: after the refusal, Nova's own explanato
 
 1. In the paused room, click **Leave paused**.
 2. Confirm the red alert panel is replaced by a grey line reading `Paused — 2 of 2 agent replies since you last spoke.`
-3. Open the **Add teammate** control on the room header, and add `echo` to this room so a second agent can speak into it.
-4. Ask `echo` to speak by typing a message it will echo — but note this resets the budget, so instead do the following: do NOT type anything into this room.
+3. Start the bot in a third terminal (`pwsh tools/echo-bot.ps1 -Name mybot`, `P-ECHO-BOT`), then open the **Add teammate** control on the room header and add `mybot` to this room so a second agent is present.
+4. Do NOT type anything into this room: a human message resets the budget and ends the pause.
 5. Instead, open a SECOND browser tab on the same room URL and simply watch the transcript.
 6. Back in the first tab, confirm no streaming draft row appears in the paused room and no tool-activity line appears.
 7. In the console, find a line of the form `Persona 'Nova' declined a turn in room <roomId>: the room has spent its budget of 2 agent messages.`
@@ -965,7 +964,7 @@ THE CONFUSING PART, and it is NOT a bug: after the refusal, Nova's own explanato
 
 **Inconclusive if**
 
-Testers commonly expect the paused agent to 'say it is paused'. It cannot, and must not — it was never prompted. Do not record its silence as a defect. If no message ever arrives in the paused room during this test, there is nothing to decline and the test is INCONCLUSIVE: have a second agent (`echo`, added via **Add teammate**) receive a message from another room, or simply note that you could not create the condition, rather than passing it by default. Note that typing a human message into the paused room RESETS the budget and ends the pause — do not do it while this test is running.
+Testers commonly expect the paused agent to 'say it is paused'. It cannot, and must not — it was never prompted. Do not record its silence as a defect. If no message ever arrives in the paused room during this test, there is nothing to decline and the test is INCONCLUSIVE: have a second agent (`mybot`, added via **Add teammate**) receive a message from another room, or simply note that you could not create the condition, rather than passing it by default. Note that typing a human message into the paused room RESETS the budget and ends the pause — do not do it while this test is running.
 
 > [!NOTE]
 > Free, but it depends entirely on APPTOOLS-19 having left the room paused. Run it immediately afterwards, before anything resets the budget.
@@ -1079,14 +1078,14 @@ A **Next session** prompt silently having no effect on a running teammate is EXP
 
 **Before you start**
 
-- `Nova` and `Jarvis` both **Online**, Haiku/low. Demo agent `echo` enabled (the default).
-- A four-member room containing `Nova`, `Jarvis` and `echo`: click **New chat**, tick all three, click **Start chat**.
+- `Nova` and `Jarvis` both **Online**, Haiku/low. A bot `mybot` connected in a third terminal (`pwsh tools/echo-bot.ps1 -Name mybot`, `P-ECHO-BOT`) as the free control.
+- A four-member room containing `Nova`, `Jarvis` and `mybot`: click **New chat**, tick all three, click **Start chat**.
 - Neither Persona has restarted since this room was created — a restart clears every follow (see the Inconclusive note).
 - COST: two short turns on Haiku at effort low — one for the `follow_room` call, one for the test message.
 
 **Steps**
 
-1. Open the four-member room and confirm `.chat-members` lists `You`, `Nova`, `Jarvis` and `echo`.
+1. Open the four-member room and confirm `.chat-members` lists `You`, `Nova`, `Jarvis` and `mybot`.
 2. Write down the room id from the `/rooms/<id>` URL.
 3. Click into the composer and type exactly: `@Nova use mcp__team__follow_room to follow this room, using the room id from your own [Room: ...] label. Tell me exactly what it said back.` then press Enter.
 4. Wait for Nova's reply. Confirm it quotes `Now following room` and the id you wrote down.
@@ -1095,23 +1094,23 @@ A **Next session** prompt silently having no effect on a running teammate is EXP
 7. Wait for every streaming row to finish, then wait an extra ten seconds.
 8. Confirm a message row from `Jarvis` appears containing `present`.
 9. Confirm a SEPARATE message row from `Nova` ALSO appears, even though step 6's message did not name Nova.
-10. Confirm NO message row from `echo` appears anywhere in this room since step 6 — the control: `echo` was not mentioned and holds no `follow_room` tool, so it must stay exactly as silent as it would have before roadmap item 8 shipped.
-11. Open `E:\Repos\Huddle\src\Huddle.App\App_Data\rooms\<roomId>.jsonl` and confirm it gained exactly two new lines for step 6's turn — one sender `Jarvis`, one sender `Nova` — and no line from `echo`.
+10. Confirm NO message row from `mybot` appears anywhere in this room since step 6 — the control: `mybot` was not mentioned and holds no `follow_room` tool, so it must stay exactly as silent as it would have before roadmap item 8 shipped.
+11. Open `E:\Repos\Huddle\src\Huddle.App\App_Data\rooms\<roomId>.jsonl` and confirm it gained exactly two new lines for step 6's turn — one sender `Jarvis`, one sender `Nova` — and no line from `mybot`.
 
 **Pass if — all of these**
 
 - Nova's `follow_room` call succeeds and quotes the room id back.
 - `Jarvis` replies to being mentioned (expected, and not what this test is about).
 - `Nova` ALSO replies to the same message, despite never being named in it.
-- `echo` — the control — stays silent throughout.
-- The room's `.jsonl` file gained exactly the two agent lines above, none from `echo`.
+- `mybot` — the control — stays silent throughout.
+- The room's `.jsonl` file gained exactly the two agent lines above, none from `mybot`.
 
 **Fail if — any of these**
 
 - `Nova` stays silent on the un-mentioning message -> `follow_room` is not reaching `ReplyGate.Decide`'s `following` argument, or `RoomFollows` never recorded the follow. Roadmap item 8 is not wired end to end, and this is the one finding this test exists to catch.
-- `echo` also replies -> the control itself is broken, or step 6's text accidentally mentioned it — re-read exactly what you sent. A failing control means this run proves nothing either way; do not record the Nova half as a pass.
+- `mybot` also replies -> the control itself is broken, or step 6's text accidentally mentioned it — re-read exactly what you sent. A failing control means this run proves nothing either way; do not record the Nova half as a pass.
 - Nova's reply is a duplicate of an earlier answer, or otherwise reads as though it silently reused a cached reply rather than actually taking a fresh Turn -> report the reply text verbatim.
-- The `.jsonl` file gains a THIRD line from `echo` -> the same failure as the on-screen one, confirmed at the storage layer; report both facts together.
+- The `.jsonl` file gains a THIRD line from `mybot` -> the same failure as the on-screen one, confirmed at the storage layer; report both facts together.
 
 **Inconclusive if**
 
@@ -1139,7 +1138,7 @@ If Nova's `follow_room` call fails or Nova answers in prose without calling the 
 4. Click into the composer and type exactly: `Just checking in here — no action needed from anyone in particular.` (a message that names nobody at all) and press Enter.
 5. Immediately look at the area between the transcript and the composer, without waiting for any reply.
 6. Wait thirty seconds, watching the transcript continuously.
-7. Confirm NO new message row appears from `Nova`, `Jarvis` or `echo`.
+7. Confirm NO new message row appears from `Nova`, `Jarvis` or `mybot`.
 8. In the console (`T-A`), find the Information line `Persona 'Nova' read a message in room <roomId> as context only: it was not mentioned and the room has <n> members.`
 9. Open `App_Data/rooms/<roomId>.jsonl` and confirm no new line was appended for step 4's message.
 

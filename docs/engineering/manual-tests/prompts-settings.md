@@ -1717,7 +1717,7 @@ A model may decline or forget a formatting instruction, so one non-BANANA reply 
 Models are unreliable at quoting tool descriptions back, so step 9 is the weaker half. If the step-9 reply is evasive or the model claims it cannot see its tool descriptions, do NOT fail — mark that half INCONCLUSIVE and, if you need certainty, read the wire instead: enable `Team:Acp:TraceWire=true` with `Logging:LogLevel:Agency.Huddle=Trace` and inspect the tool list sent at `session/new` and the tool result text for the help call. If ACP cannot be enabled, mark the whole test INCONCLUSIVE.
 
 > [!NOTE]
-> COST: two to three short Turns on Haiku at low effort — cents at most. A get_help call returns a long block, so keep the request scoped to one section as written above, or the reply will be needlessly long. Remember the demo agents `echo` and `alpha` are pipe clients that never see prompt-rendered text — never use them to test whether a prompt took effect. WARNING: wire tracing dumps the tool-server bearer token; throwaway sessions only.
+> COST: two to three short Turns on Haiku at low effort — cents at most. A get_help call returns a long block, so keep the request scoped to one section as written above, or the reply will be needlessly long. Remember the mock Teammates Ada and Bo (`P-LAUNCH-UAT`) only echo the prompt back and never act on prompt-rendered text — never use them to test whether a prompt took effect. WARNING: wire tracing dumps the tool-server bearer token; throwaway sessions only.
 
 ---
 

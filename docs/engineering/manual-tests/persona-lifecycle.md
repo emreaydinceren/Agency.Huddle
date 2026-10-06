@@ -55,10 +55,8 @@ oracles `O-LOG` / `O-ADAPTERS` / `O-TRANSCRIPT` / `O-DB` / `O-WIRE`, the four re
 13. Read the card that appears, then click the **×** in its header to close it.
 14. Hover the mouse over the status line under `Nova` in the tile list and hold it for three seconds.
 15. Look at the sidebar Room list.
-16. Click the Room named `echo` in the sidebar.
-17. Click into the composer (placeholder `Message… (/invite @agent)`), type `hello there @echo` and press Enter.
-18. In `T-B` run `Adapters` again.
-19. In `T-B` run `Get-ChildItem 'E:\Repos\Huddle\src\Huddle.App\App_Data\work'`.
+16. In `T-B` run `Adapters` again.
+17. In `T-B` run `Get-ChildItem 'E:\Repos\Huddle\src\Huddle.App\App_Data\work'`.
 
 **Pass if — all of these**
 
@@ -66,15 +64,13 @@ oracles `O-LOG` / `O-ADAPTERS` / `O-TRANSCRIPT` / `O-DB` / `O-WIRE`, the four re
 - The tile list contains a tile `Nova` whose status line reads **Offline**.
 - Hovering that status line shows NO tooltip text at all (an empty tooltip, not a tooltip saying "Offline").
 - The card for `Nova` shows no reason line under the status, and its action row has **Edit**, **Open**, **Restart** and **Remove** but NO **Message** link.
-- The sidebar Room list contains `echo` and `alpha` and does NOT contain a Room named `Nova`.
-- The `echo` Room shows NO red alert strip anywhere above the composer.
-- Typing `hello there @echo` in `echo` produces a reply beginning `**echo:**` followed by the quoted text.
+- The sidebar Room list does NOT contain a Room named `Nova`.
 - `Adapters` lists no more `node.exe` rows than it did at step 2 (the picker probe processes from steps 10-11 are short-lived and may already be gone).
 - `App_Data\work` contains no folder named `Nova` (a bare `work` folder with nothing in it is expected — the Model picker creates it).
 
 **Fail if — any of these**
 
-- A red alert strip appears in the `echo` or `alpha` Room listing not-running agents -> the Room health strip is rendering on unhealthy STATE rather than on a REASON, which puts a permanent alert in every Room of a stock install and trains users to ignore it.
+- A red alert strip appears in any Room listing not-running agents -> the Room health strip is rendering on unhealthy STATE rather than on a REASON, which puts a permanent alert in every Room of a stock install and trains users to ignore it.
 - The `Nova` tile reads **Starting** -> "Starting" is being rendered without a pipe connection; PersonaStatusResolver's connected-first rule has been reversed and a never-connected Persona now looks like one that is launching.
 - A Room named `Nova` appears in the sidebar -> a Room is being minted for a Persona that never connected, so the sidebar will fill with Rooms nobody can talk in.
 - A **Message** link appears on `Nova`'s card -> the card is offering a Room that does not exist; clicking it will 404 or land on an empty page.
@@ -940,7 +936,7 @@ If no teammate is Online (adapters disabled, or all failed), this test cannot di
 
 - The app is running.
 - A teammate exists that has connected at least once and has a Room (for example `Chief of Staff`).
-- Optional: its Transcript has content — you can create content for free by posting a Message in the demo `echo` Room instead, but for this test a Room with even one Human Message is enough (typing a Message to a teammate that will then reply costs money; to stay free, type a Message and then immediately remove the teammate, or accept an empty Transcript).
+- Optional: its Transcript has content — for this test a Room with even one Human Message is enough (typing a Message to a teammate that will then reply costs money; to stay free, type a Message and then immediately remove the teammate, or accept an empty Transcript).
 
 **Steps**
 
@@ -1484,13 +1480,13 @@ If the Model has no effort ladder at all, the select will show only `Use the age
 **Before you start**
 
 - The app is running with `Nova` **Online** and a two-member Room named `Nova`.
-- The demo agent `echo` exists (default configuration).
+- The built-in `Chief of Staff` exists. It is the second Member, and it only answers when Mentioned, so it costs nothing here.
 - COST: two one-sentence Haiku Turns.
 
 **Steps**
 
 1. In the sidebar click **New chat**.
-2. In the panel tick the checkbox next to `Nova` AND the checkbox next to `echo`.
+2. In the panel tick the checkbox next to `Nova` AND the checkbox next to `Chief of Staff`.
 3. Click **Start chat** and note the new Room that appears in the sidebar; open it.
 4. Go back to the two-member Room named `Nova`.
 5. In its composer type `My favourite fruit is a quince. Reply with just OK.` and press Enter; wait for the reply.
@@ -1519,7 +1515,7 @@ If the Model has no effort ladder at all, the select will show only `Use the age
 
 **Inconclusive if**
 
-If `Nova` says it does not know the fruit, that is also acceptable — the memory is shared but the model may not use it, and the `[Room: …]` prefix on every prompt is a convention it may follow. Record what happened; only the routing conditions decide pass or fail. If **New chat** shows `No agents have connected yet`, the demo agent is disabled or nothing has connected — enable it or use **Add teammate** in the `Nova` Room header instead.
+If `Nova` says it does not know the fruit, that is also acceptable — the memory is shared but the model may not use it, and the `[Room: …]` prefix on every prompt is a convention it may follow. Record what happened; only the routing conditions decide pass or fail. If **New chat** shows `No agents have connected yet`, nothing has connected — wait for `Nova` to go Online, or use **Add teammate** in the `Nova` Room header instead.
 
 > [!NOTE]
 > DO NOT FILE THE BLEED AS A BUG. One ACP session spans every Room its Agent is in; a session per (Persona, Room) was rejected on cost. In the same family: **Stop** stops that Agent in every Room at once, because there is nothing narrower to stop.
