@@ -218,6 +218,11 @@ public sealed class SprintStoreTests
     [Fact]
     public async Task UnreadableFile_KeepsLastSnapshot()
     {
+        if (!OperatingSystem.IsWindows())
+        {
+            Assert.Skip("Linux does not mandatory-lock files opened with FileShare.None");
+        }
+
         CancellationToken ct = TestContext.Current.CancellationToken;
         using Harness h = new(TwoSprints);
         int raised = 0;
