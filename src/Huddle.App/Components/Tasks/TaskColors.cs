@@ -40,10 +40,10 @@ internal static class TaskColors
     /// <summary>The icon that always accompanies a priority alongside its colour and word.</summary>
     public static string Icon(TaskPriority priority) => priority switch
     {
-        TaskPriority.Low => Icons.Material.Filled.ArrowDownward,
+        TaskPriority.Low => Icons.Material.Filled.KeyboardArrowDown,
         TaskPriority.Medium => Icons.Material.Filled.Remove,
-        TaskPriority.High => Icons.Material.Filled.ArrowUpward,
-        TaskPriority.Urgent => Icons.Material.Filled.PriorityHigh,
+        TaskPriority.High => Icons.Material.Filled.KeyboardArrowUp,
+        TaskPriority.Urgent => Icons.Material.Filled.KeyboardDoubleArrowUp,
         _ => Icons.Material.Filled.Remove,
     };
 }

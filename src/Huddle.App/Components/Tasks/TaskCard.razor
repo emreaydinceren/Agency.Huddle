@@ -22,7 +22,7 @@
     <button type="button" class="task-card-open" aria-label="@($"Open {this.Task.Id}")" @onclick="() => this.OnOpen.InvokeAsync()">
         <div class="task-card-header">
             <span class="task-card-id">@this.Task.Id.ToString()</span>
-            <MudChip T="string" Size="Size.Small" Color="@TaskColors.For(this.Task.Priority)" Icon="@TaskColors.Icon(this.Task.Priority)">
+            <MudChip T="string" Size="Size.Small" Color="Color.Default" Class="task-priority-chip" Icon="@TaskColors.Icon(this.Task.Priority)">
                 @this.Task.Priority.ToWire()
             </MudChip>
         </div>

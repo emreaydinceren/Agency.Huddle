@@ -513,6 +513,13 @@ its adapter reports a cost. It is a figure for this run, not a ledger.
 > Tool-call rows are not saved. They disappear when the reply is finished or
 > the app restarts, and are never written to the transcript.
 
+### How the conversation reads
+
+- Your messages sit on the right in a bubble tinted with the accent colour; a Teammate's sit on a light card beside its avatar.
+- A separator marks each day ("Today", "Yesterday", "Fri 2 Oct"), and consecutive messages from one Teammate share a single name and avatar.
+- When a Task changes and wakes its assignee, the Room shows one slim line (such as "PLAT-0004 changed by You") instead of a message from you. Choose the line to see the changes.
+- A Task link carries a small dot in its status colour, the same colour as the status on the List and Board.
+
 ### Linking to Tasks and files
 
 - Type `#` at the start of a word to pick a Task. A Task ID such as `BUSI-0001`
@@ -695,8 +702,8 @@ If the Task is assigned to a Teammate, the button reads **Save & Notify
 | **Edit any field** | Rewrites the frontmatter and appends one Change log line summarising what changed, such as `status: To Do → In Progress`. |
 | **Drag a card on the Board** | Saves immediately, same as an edit. |
 | **Change Team or Project** | Moves the file to the other folder's `_tasks/`, and logs `moved: A → B`. A new Project name typed here creates the Project folder. |
-| **Close task** / **Reopen** | Moves the file into or out of `_tasks/_closed/` and logs `closed` or `reopened`. |
-| **Make a copy** | Opens an unsaved copy titled `Copy of …`. Nothing is written until you save. |
+| **Close task** / **Reopen** | In the panel's **⋮** menu. Moves the file into or out of `_tasks/_closed/` and logs `closed` or `reopened`. |
+| **Make a copy** | In the panel's **⋮** menu. Opens an unsaved copy titled `Copy of …`. Nothing is written until you save. |
 
 Every write goes to a temporary file first and is then moved into place, so a
 Task file is never half-written. If someone else (a Teammate, or you in another

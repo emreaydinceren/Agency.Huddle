@@ -41,6 +41,11 @@ internal static class ThemeDefaults
     private static MudTheme WithSharedTypography(MudTheme theme)
     {
         theme.Typography.Default.FontFamily = UiFontFamily;
+
+        // Sentence-case buttons everywhere: MudBlazor upper-cases Typo.button by default.
+        theme.Typography.Button.TextTransform = "none";
+        theme.Typography.H5.FontSize = "1.375rem";
+        theme.Typography.H5.FontWeight = "600";
         return theme;
     }
 }

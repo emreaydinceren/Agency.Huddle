@@ -226,7 +226,7 @@ internal sealed partial class TaskStore : IDisposable, ITaskReferenceResolver
     /// </summary>
     /// <param name="id">The candidate Task id.</param>
     TaskReference? ITaskReferenceResolver.Resolve(TaskId id) =>
-        this.Get(id) is { } task ? new TaskReference(task.Id, task.Title, task.Location.Closed) : null;
+        this.Get(id) is { } task ? new TaskReference(task.Id, task.Title, task.Location.Closed, task.Status) : null;
 
     /// <summary>
     /// Writes <paramref name="text"/> atomically to <paramref name="task"/>'s file (Spec §8.3), after

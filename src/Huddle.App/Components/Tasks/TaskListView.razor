@@ -36,13 +36,13 @@
             @switch (key)
             {
                 case "id":
-                    <PropertyColumn @key="key" T="TaskItem" TProperty="TaskId" Property="t => t.Id" Title="ID" Sortable="true"
+                    <PropertyColumn @key="key" T="TaskItem" TProperty="TaskId" Property="t => t.Id" Title="ID" Sortable="true" CellClass="task-list-id-cell" HeaderClass="task-list-id-cell"
                                      SortBy="@(t => (object)(t.Id.Prefix, t.Id.Number))" />
                     break;
                 case "title":
-                    <TemplateColumn @key="key" T="TaskItem" Title="Title" Sortable="true" SortBy="@(t => (object)t.Title)">
+                    <TemplateColumn @key="key" T="TaskItem" Title="Title" Sortable="true" SortBy="@(t => (object)t.Title)" CellClass="task-list-title-cell">
                         <CellTemplate>
-                            <span class="task-list-title"><MudHighlighter Text="@context.Item.Title" HighlightedText="@this.Search" /></span>
+                            <span class="task-list-title" title="@context.Item.Title"><MudHighlighter Text="@context.Item.Title" HighlightedText="@this.Search" /></span>
                         </CellTemplate>
                     </TemplateColumn>
                     break;
@@ -61,7 +61,7 @@
                     <TemplateColumn @key="key" T="TaskItem" Title="Priority" Hidden="@(!this.Shows("priority"))" Sortable="true"
                                      SortBy="@(t => (object)(int)t.Priority)">
                         <CellTemplate>
-                            <MudChip T="string" Size="Size.Small" Color="@TaskColors.For(context.Item.Priority)"
+                            <MudChip T="string" Size="Size.Small" Color="Color.Default" Class="task-priority-chip"
                                      Icon="@TaskColors.Icon(context.Item.Priority)">@context.Item.Priority.ToWire()</MudChip>
                         </CellTemplate>
                     </TemplateColumn>
@@ -90,7 +90,7 @@
                     </TemplateColumn>
                     break;
                 case "creator":
-                    <TemplateColumn @key="key" T="TaskItem" Title="Creator" Hidden="@(!this.Shows("creator"))" Sortable="true" SortBy="@(t => (object)t.Creator)">
+                    <TemplateColumn @key="key" T="TaskItem" Title="Creator" Hidden="@(!this.Shows("creator"))" CellClass="task-col-low-1" HeaderClass="task-col-low-1" Sortable="true" SortBy="@(t => (object)t.Creator)">
                         <CellTemplate>@context.Item.Creator</CellTemplate>
                     </TemplateColumn>
                     break;
@@ -148,7 +148,7 @@
                     </TemplateColumn>
                     break;
                 case "tags":
-                    <TemplateColumn @key="key" T="TaskItem" Title="Tags" Hidden="@(!this.Shows("tags"))" Sortable="false">
+                    <TemplateColumn @key="key" T="TaskItem" Title="Tags" Hidden="@(!this.Shows("tags"))" CellClass="task-col-low-3" HeaderClass="task-col-low-3" Sortable="false">
                         <CellTemplate>
                             @foreach (string tag in context.Item.Tags)
                             {
@@ -182,7 +182,7 @@
                     </TemplateColumn>
                     break;
                 case "updated":
-                    <TemplateColumn @key="key" T="TaskItem" Title="Updated" Hidden="@(!this.Shows("updated"))" Sortable="true"
+                    <TemplateColumn @key="key" T="TaskItem" Title="Updated" Hidden="@(!this.Shows("updated"))" CellClass="task-col-low-2" HeaderClass="task-col-low-2" Sortable="true"
                                      SortBy="@(t => (object?)t.Updated)">
                         <CellTemplate>@TaskDates.Display(context.Item.Updated)</CellTemplate>
                     </TemplateColumn>

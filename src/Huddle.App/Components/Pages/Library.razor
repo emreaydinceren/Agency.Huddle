@@ -41,8 +41,9 @@
     }
     else
     {
+        <MudText HtmlTag="h1" Typo="Typo.h5" Class="mb-3">Library</MudText>
         <LibraryExplorer @key="@this.QueryKey()" Layout="LibraryExplorerLayout.SideBySide" StateKey="page"
-                          Scopes="@this.Scopes()" ShowScopeRoot="@(this.Scopes() is null)" InitialFile="@this.InitialFile()" />
+                          Scopes="@this.Scopes()" ShowScopeRoot="@(this.Scopes() is null)" ShowTitle="@(this.Scopes() is not null)" InitialFile="@this.InitialFile()" />
     }
 </MudContainer>
 
