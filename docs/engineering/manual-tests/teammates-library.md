@@ -1269,55 +1269,6 @@ Some tiles read Online -> check whether you left ACP enabled from a later test, 
 > [!NOTE]
 > Every tile reading Offline on a stock install is CORRECT and is listed as a known limit. Do not file it.
 
-### TEAMMATESLIBRARY-26 — Online, proved for free through a demo agent
-
-**Free** · about 5 min
-
-*Gets a real green Online badge with ACP off and no money spent, by naming a Persona after a connected demo agent.*
-
-**Before you start**
-
-- App started WITHOUT `--Team:Acp:Enabled=true`.
-- `Team:DemoAgent:Enabled` is true (the shipped default) with names `echo` and `alpha`.
-- Core fixture set in place.
-
-**Steps**
-
-1. In the `dotnet run` console, search the startup output for the line `Demo agent echo connected.` Confirm it is there.
-2. Create `src\Huddle.App\App_Data\Teams\echo.md` containing exactly:
----
-name: 'echo'
-title: 'Demo Agent'
-alias: 'ech'
-teams: ['Business']
----
-You are echo. Answer in one short sentence.
-3. Go to /teammates and press F5.
-4. Read the status label and dot colour on the `echo` tile, and on every other tile.
-5. Click the `echo` tile and read its status line and the action row.
-6. If you have sqlite3, run `sqlite3 src/Huddle.App/App_Data/team.db "select id,name,kind from users;"`.
-
-**Pass if — all of these**
-
-- The `echo` tile reads `Online` with a green dot.
-- Every other tile still reads `Offline` with a red dot (`agent-dot offline`).
-- The echo card shows `Online`, no reason paragraph, and NO `Restart` button in its action row (Restart is offered only for Offline or Degraded).
-- The `users` table has an `agent` row named `echo`.
-- No `node` process is running — this Online badge costs nothing.
-
-**Fail if — any of these**
-
-- The `echo` tile still reads `Offline` -> the page is failing to join the Persona's frontmatter Name to the connected directory user; that join is case-insensitive by design, so a case mismatch is not an excuse.
-- Every tile reads `Online` -> presence is not being resolved per teammate.
-- A `Restart` button appears on the Online echo card -> Restart is being offered for a healthy teammate, which just throws away its memory for nothing.
-
-**Inconclusive if**
-
-The console has no `Demo agent echo connected.` line -> the demo agents are disabled or failed to connect; check `appsettings.json` for `Team:DemoAgent:Enabled` and look for `Demo agent echo failed to connect to pipe`. Without a connected agent this test cannot be judged.
-
-> [!NOTE]
-> Keep `echo.md` in place for TEAMMATESLIBRARY-38, which needs a Persona whose pipe is live while its health is Offline.
-
 ### TEAMMATESLIBRARY-27 — Badges repaint live on connect and disconnect, with no refresh
 
 **Free** · about 6 min

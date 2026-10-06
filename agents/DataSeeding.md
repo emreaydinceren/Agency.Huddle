@@ -140,7 +140,7 @@ Run Huddle with these settings. Every one of them matters:
 | `--Team:DataDir=<absolute path>` | Isolates your data. A relative path resolves against the process working directory. |
 | `--urls http://localhost:5199` | A port that does not clash with the user's instance on 5100. |
 | `--Team:PipeName=huddle-seed` | Instances sharing a pipe name cross-connect their agents. |
-| `--Team:DemoAgent:Enabled=false` | Removes the `echo` and `alpha` demo agents from Rooms and pickers. |
+| `--Team:DemoAgent:Enabled=false` | Keeps the `echo` and `alpha` demo agents out of Rooms and pickers. Off by default now; keep passing it so the launch does not depend on the default. |
 | `--Team:Tasks:WakeEnabled=false` | Stops Task changes from posting wake-up messages. |
 | `--Team:Acp:Enabled=true` plus the four `Adapters:0` keys | Runs every Teammate on the free mock adapter. Set it explicitly: `appsettings.Development.json` changes the default. |
 

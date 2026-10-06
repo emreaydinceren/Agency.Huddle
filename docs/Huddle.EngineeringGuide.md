@@ -264,7 +264,7 @@ All under the `Team:` section — `TeamOptions.cs`, `Acp/AcpOptions.cs`, `FileCh
 | `PipeName` | `team` | |
 | `HumanName` | `You` | |
 | `AgentMessageBudget` | `40` | Agent-authored Messages one Room takes between Human Messages. Any Human Message resets it; the Room view offers the Human one more Budget at a time. **Zero or less removes the runaway-loop guard entirely.** |
-| `DemoAgent:Enabled` | `true` | The echo agents. |
+| `DemoAgent:Enabled` | `false` | The echo agents. Off by default; set `true` to get the `echo` and `alpha` Rooms. |
 | `DemoAgent:Names` | `["echo", "alpha"]` | |
 | `Acp:Enabled` | `false` | **Spends money when true.** |
 | `Acp:Command` | `node` | |
@@ -417,9 +417,15 @@ $env:Team__Acp__Enabled = 'false'
 dotnet run --project src/Huddle.App --urls http://localhost:5100
 ```
 
-Open `http://localhost:5100`. Two Rooms, `echo` and `alpha`, are already there,
-because the app starts its own demo agents. Click `echo`, type `hi @echo`, press
-Enter, and it answers in bold.
+Open `http://localhost:5100`. A fresh install has no Rooms, because the demo
+agents are off by default. To get the two demo Rooms, `echo` and `alpha`, start
+the app with the demo agents on:
+
+```powershell
+$env:Team__DemoAgent__Enabled = 'true'
+```
+
+Click `echo`, type `hi @echo`, press Enter, and it answers in bold.
 
 To talk to it as an external process instead, connect to the pipe:
 

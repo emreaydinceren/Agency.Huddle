@@ -35,93 +35,6 @@ Send one envelope with `$w.WriteLine('<json>')`, read one line back with `$r.Rea
 
 ## Tests
 
-### PIPEEXTERNAL-01 — The two demo agents are already there, and they reply to a mention
-
-**Free** · about 4 min
-
-*Proves the zero-cost stand-in works: the app dials its own pipe on startup, two Agents exist and two Rooms appear before any external process is started, and a mention produces a reply.*
-
-**Before you start**
-
-- The app is running per `P-LAUNCH-FREE`.
-- `Team:DemoAgent:Enabled` is at its default `true` and `Team:DemoAgent:Names` is unset (no `Team__DemoAgent__*` environment variable is set in `T-A` — check with `Get-ChildItem Env:Team__DemoAgent__*`, which should print nothing).
-
-**Steps**
-
-1. Look at the sidebar Room list in the browser. Confirm it contains an entry reading exactly `echo` and an entry reading exactly `alpha`. Other Rooms left over from earlier work may also be present; that is fine.
-2. Scroll `T-A`'s console back to the app's startup output and find the lines `Demo agent echo connected.` and `Demo agent alpha connected.`
-3. Click the sidebar entry `echo`.
-4. Confirm the page heading (`<h1>`) reads `echo` and the line directly beneath it reads `You, echo`.
-5. Click into the message box at the bottom (its placeholder reads `Message… (/invite @agent)`), type `hi @echo` and press Enter.
-6. Wait 3 seconds and read the last row in the transcript.
-7. Click the sidebar entry `alpha`, type `hi @alpha` and press Enter, then wait 3 seconds.
-
-**Pass if — all of these**
-
-- Both `echo` and `alpha` appear in the sidebar Room list.
-- `T-A` shows one `Demo agent echo connected.` line and one `Demo agent alpha connected.` line — exactly one each, not two.
-- In the `echo` Room, a new row appears whose sender name is `echo` and whose body reads `echo: hi echo` with `echo:` rendered in BOLD (not as literal asterisks).
-- A sender name and an `HH:mm` timestamp appear above both the human row and the agent row.
-- In the `alpha` Room, the same happens with `alpha: hi alpha`.
-
-**Fail if — any of these**
-
-- No `echo`/`alpha` Rooms at startup and `T-A` shows `Demo agent echo failed to connect to pipe team after 30 attempts.` -> the pipe server is not accepting, so nothing in this area can work; report and stop.
-- The sidebar shows `echo` (or `alpha`) twice and `T-A` shows two `Demo agent echo connected.` lines -> `DemoAgentOptions.Names` was given a pre-populated default and the configuration binder appended to it instead of replacing it, doubling the built-in agents.
-- The Rooms appear but nothing ever replies to `hi @echo` -> the demo client connected but the mention label or the delivery fan-out is broken; check whether the survey's displacement trap applies (has anyone run `echo-bot.ps1 -Name echo` against this process? see PIPEEXTERNAL-33).
-- The reply appears but renders as the literal text `**echo:** hi echo` -> the markdown pipeline is not being applied to Message bodies.
-- The reply text still contains an `@` (`hi @echo`) -> the demo client stopped stripping `@` from quoted text, which is the amplification bug; expect PIPEEXTERNAL-23 to fail too.
-
-**Inconclusive if**
-
-If the sidebar has no `echo`/`alpha` but `T-A` shows no demo-agent lines at all, the demo agents are switched off rather than broken: run `Get-ChildItem Env:Team__DemoAgent__*` and check `src/Huddle.App/appsettings.json` for `Team:DemoAgent:Enabled`. If either is `false`, the result is INCONCLUSIVE — clear the variable, restart the app and re-run. If a reply does not arrive within 3 seconds but `T-A` is still printing startup output, wait until startup is quiet and send the mention again before judging.
-
-> [!NOTE]
-> Typing a bare `hi` with no `@echo` now DOES draw a reply here, and that is correct, not a fail: the `echo` Room has exactly two Members, and both the demo clients and `tools/echo-bot.ps1` implement ADR-0004's rule directly — a Room with at most two Members answers every Message without a Mention. Mention-gating only applies once a Room has three or more Members.
-
-### PIPEEXTERNAL-02 — A demo agent streams a Draft, then replaces it with the finished Message
-
-**Free** · about 6 min
-
-*Proves the Draft path works end to end over the pipe — deltas produce a live streaming row with a Stop button, and the terminator plus the real Message replace it exactly once.*
-
-**Before you start**
-
-- PIPEEXTERNAL-01 passed.
-- The `echo` Room is open.
-
-**Steps**
-
-1. In the browser, press F12 to open developer tools and select the Elements/Inspector tab. Leave it open and scrolled to the message list (the `div` with class `message-list`).
-2. Start a screen recording, or be ready to watch closely — the whole stream lasts about 120 ms.
-3. Click into the message box, type `hi @echo` and press Enter.
-4. Watch the message list for a row that appears and then disappears.
-5. If you missed it, repeat steps 3-4 with `hi @echo streaming check` and watch the Elements panel for a `div` whose class is `message-row streaming` appearing and then being removed.
-6. After the stream finishes, read the final transcript row.
-7. Open `src\Huddle.App\App_Data\rooms\` and open the `.jsonl` file whose name matches the room id in the browser address bar (`/rooms/{id}`). Read the last two lines.
-
-**Pass if — all of these**
-
-- A transient row appears carrying the sender name `echo`, a **Stop** button beside the name, and text that grows in about three visible chunks, with a blinking caret at the end of the text.
-- That transient row is styled `message-row streaming` in the Elements panel and its body text is PLAIN — the `**echo:**` prefix shows as literal asterisks while streaming.
-- The transient row disappears and is replaced by exactly one finished Message row rendered in bold (`echo: hi echo`). There is never both a streaming row and a finished row for the same reply at once.
-- The `.jsonl` file's last two lines are the human Message then the `echo` Message. No line in that file corresponds to the partial Draft text.
-
-**Fail if — any of these**
-
-- No streaming row ever appears, only the finished Message -> either the deltas are being refused on the wire or `DraftChanged` is not reaching the Room view; check the bot-facing behaviour with PIPEEXTERNAL-31/32 before blaming the UI.
-- The streaming row never disappears and sits half-written on screen forever -> the terminator or the Draft-complete path is broken, which is the exact failure streaming exists to remove. Confirm by opening a second browser tab on the same Room: if the frozen row is there too, the server-side Draft store was never cleared and only an app restart will clear it.
-- Both the streaming row and the finished Message remain, so the reply shows twice -> the `PostMessage` is not completing the Draft that carried the same message id.
-- The Draft text renders as formatted Markdown mid-stream (the `**echo:**` prefix already bold before the reply finishes) -> the Draft is being pushed through the markdown renderer, which makes a half-written code fence flip to a code block and read as broken.
-- A Draft line appears in the `.jsonl` transcript -> a Draft is being persisted, which it never should be.
-
-**Inconclusive if**
-
-If the stream is simply too fast to see and you have no recording tool, the visual half of this test is INCONCLUSIVE — do not guess. Fall back to the Elements panel: a `message-row streaming` node appearing in the DOM at all is enough to pass the first two conditions, and the transcript check still stands. If you cannot observe either, record the test as INCONCLUSIVE and say which observation you could not make.
-
-> [!NOTE]
-> `tools/echo-bot.ps1` cannot show this at all — it sends only `postMessage` and never a `messageDelta`. The absence of a streaming row when using the PowerShell bot is NOT a streaming bug. Only the demo agents and real Personas stream.
-
 ### PIPEEXTERNAL-03 — New chat builds a group Room named after its Agents, and that Room is mention-gated
 
 **Free** · about 5 min
@@ -250,48 +163,6 @@ If `T-C`'s scrollback has been lost, do not reconstruct the line from memory: Ct
 
 > [!NOTE]
 > `docs/Huddle.EngineeringGuide.md` shows a sample welcome ending `"version":2`. That doc sample is stale; the app is right at 3. Do not file the doc's number as the expected value.
-
-### PIPEEXTERNAL-06 — The echo round trip: a mention produces a bold reply in the Room
-
-**Free** · about 4 min
-
-*Proves the full loop over the wire — human Message in, labelled envelope out to the external client, the client's post back in, rendered Message on screen and appended to the Transcript.*
-
-**Before you start**
-
-- `mybot` is connected in `T-C` and its Room is open in the browser.
-
-**Steps**
-
-1. Position the browser and `T-C` so both are visible.
-2. Click into the message box (placeholder `Message… (/invite @agent)`), type `hi @mybot` and press Enter.
-3. Immediately read the new line `T-C` prints.
-4. Read the new rows in the browser transcript.
-5. Copy the room id from the browser address bar (`/rooms/{id}`).
-6. Open `src\Huddle.App\App_Data\rooms\{that id}.jsonl` in a text editor and read the last two lines.
-
-**Pass if — all of these**
-
-- `T-C` prints exactly one new line beginning `{"type":"messagePosted",` and containing `"mentioned":true`.
-- The browser gains a human row reading `hi @mybot` and then one agent row whose sender name is `mybot` and whose body reads `mybot: hi mybot` with `mybot:` in BOLD.
-- The quoted text in the reply has NO `@` in it.
-- A sender name and an `HH:mm` timestamp appear above both rows.
-- The `.jsonl` file's last two lines are, in order, the human Message then the agent Message; the agent line's `senderName` is `mybot`.
-
-**Fail if — any of these**
-
-- Nothing replies and `T-C` printed no `messagePosted` line -> the fan-out never reached the connection; the Agent is registered but not receiving.
-- `T-C` printed the line but with `"mentioned":false` -> mention resolution failed for this Name; cross-check PIPEEXTERNAL-16 if the Name contains a space.
-- The reply renders as the literal text `**mybot:** hi mybot` -> the markdown pipeline is not being applied to Message bodies.
-- The reply keeps the `@` -> the client is no longer stripping it, and any second agent in the Room will now be re-triggered by the quote; expect PIPEEXTERNAL-23 to storm.
-- The reply appears twice in the transcript -> the Message is being delivered or persisted twice.
-
-**Inconclusive if**
-
-If the bot console shows the envelope but the browser shows nothing new, refresh the page once. If the Message is there after the refresh, the wire is fine and the defect is in the Room view's live update — record that distinction rather than a flat fail. If the browser shows a red error strip above the message box, read it verbatim and report it; the result is INCONCLUSIVE for the wire.
-
-> [!NOTE]
-> Wire JSON HTML-escapes some characters: a Message containing an em-dash or a quote shows up escaped in the bot console. That is correct for wire JSON and is not a fail.
 
 ### PIPEEXTERNAL-07 — An Agent never receives its own Message, and nothing loops
 
@@ -1425,56 +1296,6 @@ If step 4 produces no streaming row at all, either the delta was refused (check 
 
 > [!NOTE]
 > `$c.Dispose()` is the closest safe equivalent to a client crashing without sending its terminator. Closing the whole terminal window works too.
-
-### PIPEEXTERNAL-33 — THE DISPLACEMENT TRAP: an external bot named echo kills that demo agent for the life of the process
-
-**Free** · about 8 min
-
-*Confirms the area's most dangerous silent failure — there is no log line for it at all, and a tester who once ran the bot under a demo agent's name will wrongly conclude the demo agents are broken for the rest of the session.*
-
-**Before you start**
-
-- The app has been freshly restarted and PIPEEXTERNAL-01 passes (both demo agents reply).
-- You accept that this test poisons the app process and REQUIRES a restart afterwards. Run it last among the free tests.
-
-**Steps**
-
-1. Confirm the baseline: open the `echo` Room, type `hi @echo` and press Enter, and confirm `echo: hi echo` comes back.
-2. In `T-C`, run `pwsh tools/echo-bot.ps1 -Name echo`.
-3. Read its welcome line and note the `agentId`.
-4. Compare that `agentId` to the `echo` member id in any earlier `messagePosted` line from another bot, or simply note that the same `echo` Room is reused rather than a new one appearing.
-5. Press Ctrl+C in `T-C` to kill the external bot.
-6. In the browser, open the `echo` Room, type `hi @echo` and press Enter.
-7. Wait 30 seconds and watch the Room, the area between the transcript and the message box, and `T-A`.
-8. Click **New chat** and read `echo`'s dot and tooltip.
-9. Try once more: type `hi @echo` and press Enter, wait 15 seconds.
-10. Scan `T-A`'s entire log since step 2 for ANY line mentioning `echo` or `Demo agent`.
-11. Press Ctrl+C in `T-A` and restart the app with `P-LAUNCH-FREE`.
-12. Once restarted, open the `echo` Room and type `hi @echo` again.
-
-**Pass if — all of these**
-
-- Step 3's welcome carries the SAME `agentId` the demo agent had — the external bot took over the identity rather than creating a second one.
-- No new `echo` Room appears; the existing one is reused.
-- After the external bot is killed, `hi @echo` produces NO reply, ever, for the rest of the process's life.
-- The browser shows no error, no banner and no badge for this — the Room looks entirely normal.
-- The New chat panel shows `echo`'s dot grey and titled `offline`.
-- `T-A` logs NOTHING about the demo agent's death — no `Demo agent echo stopped unexpectedly.` line, no warning, nothing. THE ABSENCE OF A LOG LINE IS THE FINDING.
-- After the app restart, `T-A` logs `Demo agent echo connected.` again and `hi @echo` is answered normally.
-
-**Fail if — any of these**
-
-- The demo agent reconnects by itself and answers again without an app restart -> behaviour has changed (arguably for the better); report it as a change, since the documented behaviour and the test-fixture rule that avoids these names both assume it does not.
-- `T-A` DOES log the demo agent's death -> also a change, and a welcome one; report it so the trap documentation can be updated.
-- The external bot under the name `echo` is REFUSED rather than displacing the demo agent -> displacement semantics changed; cross-check PIPEEXTERNAL-24, which must then also fail.
-- After the app restart, `echo` still does not answer -> something persisted that should not have; presence is in-memory only and a restart must fully recover.
-
-**Inconclusive if**
-
-If step 6 produces a reply, check whether `T-C` is genuinely dead (its prompt has returned) — an external bot still running under the name `echo` will answer, and that is not the trap. Re-run from step 5 before judging. Do NOT skip step 11: leaving the app in this state makes every later demo-agent test fail for the wrong reason.
-
-> [!NOTE]
-> This is a confirm-the-silence test. The evidence is the empty log, not a visible symptom. The same collision is why the automated test fixtures switch the demo agents off: their names collide with the names the pipe tests register.
 
 ### PIPEEXTERNAL-34 — Stopping the app closes every Agent connection cleanly, and the browser's reconnect dialog is readable
 

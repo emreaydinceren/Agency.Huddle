@@ -25,53 +25,6 @@ oracles `O-LOG` / `O-ADAPTERS` / `O-TRANSCRIPT` / `O-DB` / `O-WIRE`, the four re
 
 ## Tests
 
-### REPLYGATEBUDGET-01 — A demo two-Member Room answers with or without a Mention
-
-**Free** · about 6 min
-
-*Proves the stock free installation works end to end and establishes the baseline every later free test builds on, including that the server labels a Mention correctly.*
-
-**Before you start**
-
-- No app running.
-- Nothing running on port 5100.
-
-**Steps**
-
-1. Run `P-RESET-ROOMS`.
-2. Start the app with PROFILE A leaving the budget at `40`.
-3. Open `http://localhost:5100` in a browser.
-4. In the sidebar, click the Room named `echo`.
-5. Read the grey member line directly under the Room heading.
-6. Click into the composer, type `hello` and press Enter.
-7. Wait 5 seconds and watch for a reply.
-8. Type `hello @echo` and press Enter.
-9. Wait 5 seconds.
-10. In `T-A`, note the Room id from the browser URL's last segment, and run `Get-Content E:\Repos\Huddle\src\Huddle.App\App_Data\rooms\<RoomId>.jsonl` in a second PowerShell window.
-
-**Pass if — all of these**
-
-- The heading reads `echo` and the member line reads exactly `You, echo`.
-- After step 6 your Message `hello` appears in the transcript with the sender name `You`, and within a few seconds a streaming row appears with sender `echo`, settling into an ordinary Message whose body reads `echo: hello`, with `echo:` in bold and no `@` in it. The `echo` Room has exactly two Members, so per ADR-0004 it answers without needing a Mention.
-- A grey line reading exactly `1 of 40 agent replies since you last spoke.` appears between the transcript and the composer.
-- After step 8 a second streaming row appears with sender `echo` and a **Stop** button beside the name, then settles into an ordinary Message whose body reads `echo: hello echo`, with `echo:` in bold and no `@` anywhere in it. The demo agent strips only the `@` character from what it quotes, so the mention word survives even though the at-sign does not.
-- The grey line now reads exactly `2 of 40 agent replies since you last spoke.`
-- The `.jsonl` file holds exactly four lines: `hello` from `human`, the first reply from the agent, `hello @echo` from `human`, and the second reply from the agent.
-
-**Fail if — any of these**
-
-- `echo` does not reply to the bare `hello` at step 6 and the agent is confirmed connected (see INCONCLUSIVE) -> the `echo` Room has only two Members, so ADR-0004 requires a reply without a Mention; silence here means the demo agent is still gating on `mentioned` alone instead of calling `ReplyGate.Decide`.
-- `echo` does not reply to `hello @echo` and the agent is confirmed connected (see INCONCLUSIVE) -> the Mention did not resolve, i.e. mention parsing is broken at its simplest case.
-- Either reply lands but no matching `N of 40 agent replies since you last spoke.` line appears -> the Room view is not reading the Budget carried on the posted-Message event, so the pause block tested later will also never appear and a capped Room will look identical to a crashed one.
-- Either reply body still contains an `@` -> the demo agent's loop guard is gone and two agents quoting each other can re-trigger each other indefinitely.
-
-**Inconclusive if**
-
-If there is no Room named `echo` in the sidebar at all, the demo agents never connected: search `T-A` for `Demo agent echo connected.`; if it is missing, stop, re-run RESET, confirm `$env:Team__DemoAgent__Enabled` is `'true'`, and start again. If `T-A` mentions Personas starting or a `node` process, `Team__Acp__Enabled` was not set to `false` — press Ctrl+C at once, money is being spent, and re-run the test from step 1.
-
-> [!NOTE]
-> A reply to the bare `hello` at step 6 is correct and documented: the `echo` Room has exactly two Members, and per ADR-0004 a Direct Room answers every Message without a Mention. The real defect to watch for in this test is silence, in either half.
-
 ### REPLYGATEBUDGET-02 — Three or more Members makes the same Room Mention-gated
 
 **Free** · about 7 min

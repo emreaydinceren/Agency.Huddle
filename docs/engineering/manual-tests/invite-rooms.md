@@ -25,55 +25,6 @@ oracles `O-LOG` / `O-ADAPTERS` / `O-TRANSCRIPT` / `O-DB` / `O-WIRE`, the four re
 
 ## Tests
 
-### INVITEROOMS-01 — A virgin install seeds one Room per demo Agent, named after it, and lands you in the first
-
-**Free** · about 6 min
-
-*Proves the whole registration-to-Room pipeline works end to end from nothing: two demo Agents connect over the named pipe, each gets a Direct Room named after itself, the sidebar renders them in created order, and / redirects into the first.*
-
-**Before you start**
-
-- The app can be stopped and its data deleted (this test destroys all existing Rooms and Transcripts).
-- `Team:DemoAgent:Enabled` is `true` and `Team:DemoAgent:Names` is `["echo", "alpha"]` — these are the shipped defaults in `src\Huddle.App\appsettings.json`. Do not change them.
-
-**Steps**
-
-1. Press Ctrl+C in `T-A` to stop the app.
-2. Delete the folder `E:\Repos\Huddle\src\Huddle.App\App_Data` entirely.
-3. In `T-A` run `$env:Team__Acp__Enabled = 'false'`.
-4. In `T-A` run `dotnet run --project src/Huddle.App --urls http://localhost:5100`.
-5. Wait until `T-A` stops emitting startup lines (about 5-15 seconds).
-6. Read `T-A` and find the two lines `Created direct room '<id>' for agent 'echo'.` and `Created direct room '<id>' for agent 'alpha'.` Write both room ids down — you will reuse them.
-7. In the browser, navigate to `http://localhost:5100/` (type the bare address, do not use a bookmark with a path).
-8. Read the browser address bar.
-9. Read the sidebar (the left column) from top to bottom.
-10. Read the `<h1>` at the top of the main column, and the grey line directly beneath it.
-
-**Pass if — all of these**
-
-- `T-A` contains exactly two `Created direct room` lines, one naming `echo` and one naming `alpha`.
-- The address bar has changed from `http://localhost:5100/` to `http://localhost:5100/rooms/<id>`, where `<id>` is the room id logged for `echo`.
-- The sidebar reads, top to bottom: a **New chat** button, a link **echo**, a link **alpha**, a link **Teammates**, a link **Settings**.
-- The main column `<h1>` reads exactly `echo`.
-- The grey line under the `<h1>` reads exactly `You, echo`.
-- Optional DB check: `sqlite3 src\Huddle.App\App_Data\team.db "SELECT r.name, count(*) FROM rooms r JOIN room_members m ON m.room_id=r.id GROUP BY r.id;"` returns exactly two rows, `echo|2` and `alpha|2`.
-
-**Fail if — any of these**
-
-- The sidebar shows `No rooms yet. Start an agent to create one.` -> the demo Agents never reached the named pipe; look in `T-A` for `Demo agent <name> failed to connect to pipe team after <n> attempts.` and treat that as the defect.
-- Only ONE of `echo` / `alpha` appears -> the pipe server is reusing an instance instead of creating the next one before doing I/O on the accepted one (the exact regression `docs/engineering/rules.md` warns about under 'Create the next pipe server instance before any I/O on the accepted one'). This is a server bug, not a demo-agent bug.
-- A Room is named anything other than the Agent's Name (e.g. a guid, or `You, echo`) -> `EnsureRoomForAsync` is no longer naming the Room after the Agent, and every downstream rename test will also be wrong.
-- The members line reads `echo` without `You` -> the Human is not being seeded into the Direct Room, which would make the Room unpostable and breaks ADR-0005's structural-auditability guarantee.
-- The browser stays on `/` with Rooms visible in the sidebar -> the redirect in `Chat.razor` OnParametersSetAsync is broken.
-- The browser flickers between `/` and `/rooms/<id>` forever -> a redirect loop.
-
-**Inconclusive if**
-
-If `T-A` shows no `Created direct room` lines AND no `failed to connect` line, the demo agent host may not be running at all — check `Team:DemoAgent:Enabled` in `src\Huddle.App\appsettings.json` is still `true`. If a stale app instance is holding the pipe (you see a port-in-use or pipe-in-use error), find and kill any other `Huddle.App` process, then start over from step 1. Do NOT judge the test until exactly one app instance is running.
-
-> [!NOTE]
-> This test is first because it establishes the deterministic baseline that INVITEROOMS-02 through INVITEROOMS-25 assume. If you ever lose track of the state during the free tests, come back and re-run this one.
-
 ### INVITEROOMS-02 — Routing: / redirects to the first Room, and an unknown room id shows the empty state instead of crashing
 
 **Free** · about 3 min

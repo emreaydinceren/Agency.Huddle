@@ -273,9 +273,10 @@ finds where `Team:DataDir` actually resolved.
   `Message… (/invite @agent)`; Enter posts, Shift+Enter adds a newline. Its absence
   is not a defect.
 - **`echo` and `alpha` are demo agents** — pipe clients, not Personas
-  (`Team:DemoAgent:Enabled` is `true` in `appsettings.json`). They hold Rooms and
-  spend Budget, and must never appear on `/teammates`. Turn them off with
-  `$env:Team__DemoAgent__Enabled = 'false'`.
+  (`Team:DemoAgent:Enabled` is `false` in `appsettings.json` since 2026-10-06). They
+  hold Rooms and spend Budget, and must never appear on `/teammates`. A test that
+  needs them must turn them on with `$env:Team__DemoAgent__Enabled = 'true'`; a
+  page that still says they are "the default" predates the change.
 - **Names are permanent; Rooms are not, since 2026-09-21.** Nothing in the UI
   deletes an *Agent*, so every Name you connect under still leaves a Room behind —
   but that Room can now be archived or deleted from the context menu on its sidebar
