@@ -52,6 +52,7 @@ the hub: [Huddle.EngineeringGuide.md](../Huddle.EngineeringGuide.md).
 | `Components/Tasks/ReasonDialog.razor` | Asks for an optional reason when a Task moves to Cancelled or Rejected (Spec §13.4 Dropping step 3). |
 | `Components/Tasks/AiReactingChip.razor` | The page header's "AI reacting" chip (Spec §13.8, §10.8): shown while a Watched Task's last wake's Room has a Turn running. |
 | `Components/Tasks/WakeToasts.razor` | Turns `TaskActivity` wake events into Snackbar toasts while the Tasks page is open (Spec §13.8). |
+| `Components/Tasks/SprintLabels.cs` | Renders Sprint labels for Tasks: the Sprint name if known, or a warning if the Sprint id is missing from the catalog. |
 | `Components/Settings/PromptsPanel.razor` | The twenty-two Prompts, grouped and editable. Takes exactly one non-string parameter, so it cannot hit the missing-`@` trap [Rules](rules.md) describes and needs no source-regex guard of its own. |
 | `Components/Settings/PromptFieldFactory.cs` | The grouping, the three-state flags and the textarea sizing, as pure functions — extracted for the same reason `TeammateGrouping` is: `HtmlRenderer` cannot dispatch a click, so logic inside a component is untestable here. |
 | `Components/Settings/PromptFieldState.cs` | One row's view-model, plus `PromptEdit` and the group record. Public because a Razor `[Parameter]` may not be of an internal type; the catalog and the store stay internal behind it. |
@@ -223,6 +224,11 @@ order decides per Token, independently.
 | `TaskPresence.cs` | Resolves the Tasks UI's presence badge (Awake/Asleep/Offline) from an Agent's online and busy state (Spec §10.8). |
 | `TaskReference.cs` | Resolves a candidate Task id found in rendered Markdown to the Task it names, so `MarkdownRenderer` can link it (Spec §13.13.2). |
 | `TasksOptions.cs` | Configuration for the Tasks feature: `Enabled`, `Dir`, `WakeEnabled`, `WakeCoalesceSeconds`, `AgentWakeBudget`. |
+| `SprintId.cs` | A Sprint's unique identifier: `S42`, parsed and formatted case-insensitively. |
+| `Sprint.cs` | The Sprint record: its `Id` and human-readable `Name`. |
+| `SprintFileFormat.cs` | Parses and composes the `sprints.md` file (Spec §6); the only place that reads or writes Sprint lines. |
+| `ISprintCatalog.cs` | The live list of Sprints, rebuilt when the file changes or a Task changes its Sprint. |
+| `SprintStore.cs` | Owns `{DataDir}/sprints.md`: the in-memory index, file writes on Sprint create and removal, and the watcher that detects outside edits (Spec §8). |
 
 `src/Huddle.App/Tasks/Views` — saved arrangements of Tasks (Spec §12):
 

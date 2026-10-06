@@ -35,7 +35,7 @@ public sealed class UpdateTaskToolTests
 
     /// <summary>Builds an <see cref="UpdateTaskTool"/> over <paramref name="harness"/>'s real collaborators, calling as <paramref name="callerAgentId"/>.</summary>
     private static UpdateTaskTool CreateTool(TaskToolHarness harness, string callerAgentId) =>
-        new(harness.Service, harness.Store, harness.Triggers, harness.Directory, new FakePromptSource(), callerAgentId);
+        new(harness.Service, harness.Store, harness.Triggers, harness.Directory, harness.Sprints, new FakePromptSource(), callerAgentId);
 
     /// <summary>Narrows <see cref="TaskToolHarness.NovaId"/>, seeded by <see cref="TaskToolHarness.CreateAsync"/>, to a non-null caller id.</summary>
     private static string RequireNovaId(TaskToolHarness harness)

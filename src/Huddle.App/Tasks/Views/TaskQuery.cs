@@ -26,12 +26,14 @@ internal static class TaskQuery
     /// <param name="filter">The filter dimensions to apply.</param>
     /// <param name="search">An optional case-insensitive search over id and title.</param>
     /// <param name="humanName">The Human's Name, which <c>"@me"</c> resolves to.</param>
+    /// <param name="currentSprint">The Sprint <c>"@current"</c> resolves to, or <see langword="null"/> when there is none (it then matches nothing).</param>
     public static IReadOnlyList<TaskItem> Filter(
         IReadOnlyList<TaskItem> all,
         ViewScope scope,
         TaskFilter filter,
         string? search,
-        string humanName)
+        string humanName,
+        SprintId? currentSprint = null)
     {
         // Blockers are looked up across every Task, not just the ones in scope: a Done blocker sits in
         // the Closed folder, and must still read as terminal while the Active scope is showing.
@@ -46,6 +48,7 @@ internal static class TaskQuery
                 MatchesStates(task, filter.States) &&
                 MatchesPriorities(task, filter.Priorities) &&
                 MatchesBlocked(task, filter.Blocked, byId) &&
+                MatchesSprints(task, filter.Sprints, currentSprint) &&
                 MatchesSearch(task, search))
             {
                 matches.Add(task);
@@ -95,6 +98,26 @@ internal static class TaskQuery
 
         string resolved = string.Equals(assignee, "@me", StringComparison.OrdinalIgnoreCase) ? humanName : assignee;
         return string.Equals(resolved, task.Assignee, StringComparison.OrdinalIgnoreCase);
+    }
+
+    /// <summary>Whether the Task's Sprint matches one of <paramref name="sprints"/>, or the dimension is empty.</summary>
+    private static bool MatchesSprints(TaskItem task, IReadOnlyList<string> sprints, SprintId? currentSprint) =>
+        sprints.Count == 0 || sprints.Any(value => MatchesSprint(task, value, currentSprint));
+
+    /// <summary>Whether a single Sprint value matches the Task, resolving <c>"@current"</c> and <c>"@none"</c>. An id that is not in the file still matches.</summary>
+    private static bool MatchesSprint(TaskItem task, string value, SprintId? currentSprint)
+    {
+        if (string.Equals(value, "@none", StringComparison.OrdinalIgnoreCase))
+        {
+            return task.Sprint is null;
+        }
+
+        if (string.Equals(value, "@current", StringComparison.OrdinalIgnoreCase))
+        {
+            return currentSprint is not null && task.Sprint == currentSprint;
+        }
+
+        return SprintId.TryParse(value, out SprintId id) && task.Sprint == id;
     }
 
     /// <summary>Whether the Task's Status is one of <paramref name="states"/>, or the dimension is empty.</summary>
@@ -173,14 +196,33 @@ internal static class TaskQuery
     /// <param name="task">The Task to label.</param>
     /// <param name="field">The field being grouped by.</param>
     /// <param name="teamAlsoGrouped">Whether Team is also one of the grouping fields.</param>
-    public static string GroupLabel(TaskItem task, TaskGroupField field, bool teamAlsoGrouped) => field switch
+    /// <param name="sprintName">Resolves a Sprint id to its name, or null when it is not in the file. When omitted, a Sprint is labelled by its bare id.</param>
+    public static string GroupLabel(
+        TaskItem task, TaskGroupField field, bool teamAlsoGrouped, Func<SprintId, string?>? sprintName = null) => field switch
     {
         TaskGroupField.Team => task.Location.Team,
         TaskGroupField.Project => ProjectLabel(task, teamAlsoGrouped),
         TaskGroupField.Assignee => task.Assignee ?? "Unassigned",
         TaskGroupField.State => task.Status.ToWire(),
+        TaskGroupField.Sprint => SprintLabel(task, sprintName),
         _ => throw new ArgumentOutOfRangeException(nameof(field), field, "Unknown grouping field."),
     };
+
+    /// <summary>The Sprint group label: "No sprint" when unset, the name when resolved, "S5 (missing)" when the resolver does not know it, else the bare id.</summary>
+    private static string SprintLabel(TaskItem task, Func<SprintId, string?>? sprintName)
+    {
+        if (task.Sprint is not { } sprint)
+        {
+            return "No sprint";
+        }
+
+        if (sprintName is null)
+        {
+            return sprint.ToString();
+        }
+
+        return sprintName(sprint) ?? $"{sprint} (missing)";
+    }
 
     /// <summary>The Project group label: "No project" when unset, the bare name when Team is also grouped, else "Team / Project".</summary>
     private static string ProjectLabel(TaskItem task, bool teamAlsoGrouped)
@@ -211,6 +253,7 @@ internal static class TaskQuery
         TaskGroupField.Project => ProjectRawGroupKey(task, teamAlsoGrouped),
         TaskGroupField.Assignee => task.Assignee ?? NullGroupSentinel,
         TaskGroupField.State => task.Status.ToWire(),
+        TaskGroupField.Sprint => task.Sprint?.ToString() ?? NullGroupSentinel,
         _ => throw new ArgumentOutOfRangeException(nameof(field), field, "Unknown grouping field."),
     };
 
@@ -232,15 +275,22 @@ internal static class TaskQuery
     /// </summary>
     /// <param name="sorted">The already-sorted Tasks to group.</param>
     /// <param name="grouping">The fields to nest by, in order.</param>
-    public static TaskGroupNode Group(IReadOnlyList<TaskItem> sorted, IReadOnlyList<TaskGroupField> grouping)
+    /// <param name="sprintName">Resolves a Sprint id to its name for a Sprint grouping; see <see cref="GroupLabel"/>.</param>
+    public static TaskGroupNode Group(
+        IReadOnlyList<TaskItem> sorted, IReadOnlyList<TaskGroupField> grouping, Func<SprintId, string?>? sprintName = null)
     {
         bool teamAlsoGrouped = grouping.Contains(TaskGroupField.Team);
-        return BuildGroupLevel(sorted, grouping, 0, teamAlsoGrouped, null);
+        return BuildGroupLevel(sorted, grouping, 0, teamAlsoGrouped, null, sprintName);
     }
 
     /// <summary>Builds one level of the group tree, recursing until <paramref name="grouping"/> is exhausted.</summary>
     private static TaskGroupNode BuildGroupLevel(
-        IReadOnlyList<TaskItem> items, IReadOnlyList<TaskGroupField> grouping, int level, bool teamAlsoGrouped, string? label)
+        IReadOnlyList<TaskItem> items,
+        IReadOnlyList<TaskGroupField> grouping,
+        int level,
+        bool teamAlsoGrouped,
+        string? label,
+        Func<SprintId, string?>? sprintName)
     {
         if (level >= grouping.Count)
         {
@@ -248,12 +298,23 @@ internal static class TaskQuery
         }
 
         TaskGroupField field = grouping[level];
-        List<TaskGroupNode> children = items
+        IOrderedEnumerable<IGrouping<string, TaskItem>> groups = items
             .GroupBy(task => RawGroupKey(task, field, teamAlsoGrouped), StringComparer.OrdinalIgnoreCase)
-            .OrderBy(group => string.Equals(group.Key, NullGroupSentinel, StringComparison.Ordinal) ? 1 : 0)
-            .ThenBy(group => group.Key, StringComparer.OrdinalIgnoreCase)
+            .OrderBy(group => string.Equals(group.Key, NullGroupSentinel, StringComparison.Ordinal) ? 1 : 0);
+
+        // A Sprint grouping is the one exception to ordering by label: newest first, by number (spec D-S13).
+        groups = field == TaskGroupField.Sprint
+            ? groups.ThenByDescending(group => group.First().Sprint?.Number ?? 0)
+            : groups.ThenBy(group => group.Key, StringComparer.OrdinalIgnoreCase);
+
+        List<TaskGroupNode> children = groups
             .Select(group => BuildGroupLevel(
-                group.ToList(), grouping, level + 1, teamAlsoGrouped, GroupLabel(group.First(), field, teamAlsoGrouped)))
+                group.ToList(),
+                grouping,
+                level + 1,
+                teamAlsoGrouped,
+                GroupLabel(group.First(), field, teamAlsoGrouped, sprintName),
+                sprintName))
             .ToList();
 
         return new TaskGroupNode(label, items.Count, children, []);
@@ -280,6 +341,7 @@ internal static class TaskQuery
             "updated" => (left, right) => CompareNullableTimestamps(left.Updated, right.Updated, sign),
             "closed" => (left, right) => CompareNullableTimestamps(left.ClosedAt, right.ClosedAt, sign),
             "origin" => (left, right) => CompareNullableStrings(left.OriginRoomId, right.OriginRoomId, sign),
+            "sprint" => (left, right) => CompareNullableSprints(left.Sprint, right.Sprint, sign),
             _ => throw new NotSupportedException($"The field '{field}' cannot be sorted on."),
         };
     }
@@ -310,6 +372,27 @@ internal static class TaskQuery
         }
 
         return sign * CompareIds(left.Value, right.Value);
+    }
+
+    /// <summary>Compares two optional Sprints by number, with a null sorting last regardless of <paramref name="sign"/>.</summary>
+    private static int CompareNullableSprints(SprintId? left, SprintId? right, int sign)
+    {
+        if (left is null && right is null)
+        {
+            return 0;
+        }
+
+        if (left is null)
+        {
+            return 1;
+        }
+
+        if (right is null)
+        {
+            return -1;
+        }
+
+        return sign * left.Value.Number.CompareTo(right.Value.Number);
     }
 
     /// <summary>Compares two Task states by declaration order.</summary>

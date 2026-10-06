@@ -21,6 +21,7 @@ internal sealed class UpdateTaskTool(
     TaskStore store,
     TaskTriggerService triggers,
     ITeamDirectory directory,
+    ISprintCatalog sprints,
     IPromptSource prompts,
     string callerAgentId) : IAppTool
 {
@@ -53,6 +54,7 @@ internal sealed class UpdateTaskTool(
             ["start_date"] = new JsonObject { ["type"] = "string" },
             ["due_date"] = new JsonObject { ["type"] = "string" },
             ["reason"] = new JsonObject { ["type"] = "string" },
+            ["sprint"] = new JsonObject { ["type"] = "string" },
         },
         ["required"] = new JsonArray { "taskId" },
     };
@@ -78,7 +80,7 @@ internal sealed class UpdateTaskTool(
             return actorRefusal;
         }
 
-        if (!TryBuildPatch(actor, arguments, out TaskPatch? patch, out string patchRefusal))
+        if (!TryBuildPatch(actor, sprints, arguments, out TaskPatch? patch, out string patchRefusal))
         {
             return patchRefusal;
         }
@@ -124,10 +126,11 @@ internal sealed class UpdateTaskTool(
     /// <c>assignee: "me"</c> resolves to <paramref name="actor"/>'s own Name.
     /// </summary>
     /// <param name="actor">The caller, whose Name resolves <c>assignee: "me"</c>.</param>
+    /// <param name="sprints">The read-only catalogue a <c>sprint</c> argument is resolved against; <c>""</c> clears the Sprint.</param>
     /// <param name="arguments">The tool's JSON arguments.</param>
     /// <param name="patch">The assembled patch, or <see langword="null"/> when this returns <see langword="false"/>.</param>
     /// <param name="refusal">The refusal text when this returns <see langword="false"/>; otherwise <see cref="string.Empty"/>.</param>
-    private static bool TryBuildPatch(TaskActor actor, JsonObject arguments, [NotNullWhen(true)] out TaskPatch? patch, out string refusal)
+    private static bool TryBuildPatch(TaskActor actor, ISprintCatalog sprints, JsonObject arguments, [NotNullWhen(true)] out TaskPatch? patch, out string refusal)
     {
         if (!TaskToolText.TryGetString(arguments, "title", out string? title, out refusal))
         {
@@ -321,6 +324,30 @@ internal sealed class UpdateTaskTool(
             return false;
         }
 
+        if (!TaskToolText.TryGetString(arguments, "sprint", out string? sprintText, out refusal))
+        {
+            patch = null;
+            return false;
+        }
+
+        Optional<SprintId?> sprint = default;
+        if (sprintText is not null)
+        {
+            if (sprintText.Trim().Length == 0)
+            {
+                sprint = Optional<SprintId?>.Set(null);
+            }
+            else if (TaskToolText.TryResolveSprint(sprints, sprintText, out SprintId? resolved, out refusal))
+            {
+                sprint = Optional<SprintId?>.Set(resolved);
+            }
+            else
+            {
+                patch = null;
+                return false;
+            }
+        }
+
         patch = new TaskPatch
         {
             Title = title,
@@ -337,6 +364,7 @@ internal sealed class UpdateTaskTool(
             Team = team,
             Project = project,
             Reason = reason,
+            Sprint = sprint,
         };
         refusal = string.Empty;
         return true;

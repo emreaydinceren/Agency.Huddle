@@ -22,6 +22,7 @@ internal static partial class TaskFileFormat
     {
         "id", "title", "status", "priority", "creator", "assignee", "origin",
         "parent", "blocked_by", "duplicate_of", "tags", "start_date", "due_date",
+        "sprint",
     };
 
     private static readonly char[] LineBreakCharacters = ['\n', '\r'];
@@ -159,6 +160,12 @@ internal static partial class TaskFileFormat
             return false;
         }
 
+        if (!TryParseSprint(fields, out SprintId? sprint, out error))
+        {
+            task = null;
+            return false;
+        }
+
         List<KeyValuePair<string, string>> unknownFields = [];
         foreach (PersonaFrontmatterField field in fields)
         {
@@ -185,6 +192,7 @@ internal static partial class TaskFileFormat
             Tags = tags,
             StartDate = startDate,
             DueDate = dueDate,
+            Sprint = sprint,
             Description = description,
             Location = location,
             ChangeLog = changeLog,
@@ -294,6 +302,11 @@ internal static partial class TaskFileFormat
         if (task.DueDate is { } dueDate)
         {
             lines.Add(string.Create(CultureInfo.InvariantCulture, $"due_date: {dueDate:yyyy-MM-dd}"));
+        }
+
+        if (task.Sprint is { } sprint)
+        {
+            lines.Add(string.Create(CultureInfo.InvariantCulture, $"sprint: {sprint}"));
         }
 
         foreach (KeyValuePair<string, string> field in task.UnknownFields)
@@ -613,6 +626,25 @@ internal static partial class TaskFileFormat
         }
 
         tags = items;
+        error = "";
+        return true;
+    }
+
+    /// <summary>Parses the optional "sprint" key: absent or empty is none, a value that is not a <see cref="SprintId"/> rejects the file (Sprints spec §9.1).</summary>
+    private static bool TryParseSprint(IReadOnlyList<PersonaFrontmatterField> fields, out SprintId? sprint, out string error)
+    {
+        sprint = null;
+        if (TryGetField(fields, "sprint", out string? raw) && NullIfEmpty(raw) is { } trimmed)
+        {
+            if (!SprintId.TryParse(trimmed, out SprintId parsed))
+            {
+                error = string.Create(CultureInfo.InvariantCulture, $"invalid sprint: '{raw}'");
+                return false;
+            }
+
+            sprint = parsed;
+        }
+
         error = "";
         return true;
     }

@@ -43,6 +43,7 @@
 @inject IOptions<TeamOptions> TeamOptions
 @inject ViewStore ViewStore
 @inject TaskStore Store
+@inject ISprintCatalog Sprints
 
 <div class="task-board">
     @if (this.model.HiddenTaskCount > 0)
@@ -193,7 +194,7 @@
     /// <summary>Rebuilds the layout and the task-id maps; a changed Task list also asks the container to refresh after rendering (D12-9).</summary>
     protected override void OnParametersSet()
     {
-        this.model = BoardLayout.Build(this.Tasks, this.View);
+        this.model = BoardLayout.Build(this.Tasks, this.View, id => this.Sprints.Get(id)?.Name);
         Dictionary<TaskId, string> zones = [];
         Dictionary<TaskId, string> lanes = [];
         foreach (BoardLane lane in this.model.Lanes)

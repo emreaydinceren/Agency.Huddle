@@ -39,6 +39,9 @@ public enum TaskField
     /// <summary>The due date for the Task.</summary>
     DueDate,
 
+    /// <summary>The Sprint the Task belongs to.</summary>
+    Sprint,
+
     /// <summary>The Task's description.</summary>
     Description,
 

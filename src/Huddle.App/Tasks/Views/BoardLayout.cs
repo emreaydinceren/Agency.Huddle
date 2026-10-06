@@ -37,7 +37,8 @@ internal static class BoardLayout
     /// </summary>
     /// <param name="sorted">The already-filtered and sorted Tasks to lay out.</param>
     /// <param name="view">The Board View: its grouping and its columns.</param>
-    public static BoardModel Build(IReadOnlyList<TaskItem> sorted, TaskView view)
+    /// <param name="sprintName">Resolves a Sprint id to its name for a Sprint grouping; see <see cref="TaskQuery.GroupLabel"/>.</param>
+    public static BoardModel Build(IReadOnlyList<TaskItem> sorted, TaskView view, Func<SprintId, string?>? sprintName = null)
     {
         List<BoardColumn> visibleColumns = view.Columns.Where(column => !column.Hidden).ToList();
         HashSet<TaskState> hiddenStates = view.Columns
@@ -52,7 +53,7 @@ internal static class BoardLayout
             return new BoardModel([], visibleColumns, hiddenTaskCount);
         }
 
-        TaskGroupNode root = TaskQuery.Group(sorted, view.Grouping);
+        TaskGroupNode root = TaskQuery.Group(sorted, view.Grouping, sprintName);
         List<BoardLane> lanes = FlattenLeaves(root, [])
             .Select(leaf => BuildLane(leaf.Labels, leaf.Items, visibleColumns, view.Grouping))
             .ToList();
@@ -148,6 +149,7 @@ internal static class BoardLayout
         TaskGroupField.Project => task.Location.Project ?? NullSentinel,
         TaskGroupField.Assignee => task.Assignee ?? NullSentinel,
         TaskGroupField.State => task.Status.ToWire(),
+        TaskGroupField.Sprint => task.Sprint?.ToString() ?? NullSentinel,
         _ => throw new ArgumentOutOfRangeException(nameof(field), field, "Unknown grouping field."),
     };
 

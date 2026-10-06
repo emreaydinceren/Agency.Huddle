@@ -304,6 +304,13 @@ public static class ServiceCollectionExtensions
         // aliased registrations elsewhere in this file exist to avoid.
         services.AddSingleton<ViewStore>();
 
+        // Sprints (spec §13): the store is the one instance; the read-only catalogue the tools and
+        // TaskService see resolves to it, so there is one watcher on sprints.md. It needs TaskStore and
+        // TaskEvents, registered earlier. Like ViewStore it is lazy, so nothing reads sprints.md
+        // unless something that shows Sprints is resolved (Team:Tasks:Enabled=false hides all of it).
+        services.AddSingleton<SprintStore>();
+        services.AddSingleton<ISprintCatalog>(sp => sp.GetRequiredService<SprintStore>());
+
         // Scoped (Task 13.2.i): one Library Pane open/closed state per circuit, shared by
         // LibraryNavLink, LibraryPaneHost and any ?library= navigation.
         services.AddScoped<LibraryPaneState>();

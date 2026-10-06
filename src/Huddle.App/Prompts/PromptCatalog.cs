@@ -1019,7 +1019,7 @@ internal static class PromptCatalog
                 "placeholders.",
             Default:
                 """
-                Creates a Task: durable work tracked outside this conversation. Create one to hand work to a Teammate so it is not lost when this conversation ends, or to track your own multi-step work across Turns. Give it a title, a Team, and optionally an assignee; creating it wakes the assignee unless you assign it to yourself. Pass originRoomId with the id of the Room you are acting in, so the Task remembers where it came from.
+                Creates a Task: durable work tracked outside this conversation. Create one to hand work to a Teammate so it is not lost when this conversation ends, or to track your own multi-step work across Turns. Give it a title, a Team, and optionally an assignee; creating it wakes the assignee unless you assign it to yourself. Pass originRoomId with the id of the Room you are acting in, so the Task remembers where it came from. A sprint groups Tasks in time and spans Teams. Optionally set sprint to a sprint's name or id, or to current for the newest sprint; it must already exist, because you cannot create one.
                 """,
             Placeholders: [],
             RequiredPlaceholders: [],
@@ -1048,7 +1048,7 @@ internal static class PromptCatalog
                 "placeholders.",
             Default:
                 """
-                Lists Tasks matching the filters you give: scope ("active" or "closed"), team, project, assignee, status, or priority. Give assignee "me" to find your own work, or "unassigned" for Tasks no one owns yet. text searches both id and title, case-insensitively.
+                Lists Tasks matching the filters you give: scope ("active" or "closed"), team, project, assignee, status, or priority. Give assignee "me" to find your own work, or "unassigned" for Tasks no one owns yet. text searches both id and title, case-insensitively. sprint filters by one sprint: give its name or id, current for the newest sprint, or none for Tasks in no sprint.
                 """,
             Placeholders: [],
             RequiredPlaceholders: [],
@@ -1062,7 +1062,7 @@ internal static class PromptCatalog
                 "placeholders.",
             Default:
                 """
-                Changes one or more fields on a Task. Changing a field wakes the assignee, unless you are the assignee. Set status as you work through it: To Do, then In Progress, then Review, then Done. Setting status to Duplicate also needs duplicate_of, the id of the Task it duplicates.
+                Changes one or more fields on a Task. Changing a field wakes the assignee, unless you are the assignee. Set status as you work through it: To Do, then In Progress, then Review, then Done. Setting status to Duplicate also needs duplicate_of, the id of the Task it duplicates. A sprint groups Tasks in time and spans Teams. Optionally set sprint to a sprint's name or id, or to current for the newest sprint; it must already exist, because you cannot create one. Pass an empty sprint to take the Task out of its sprint.
                 """,
             Placeholders: [],
             RequiredPlaceholders: [],
@@ -1108,7 +1108,9 @@ internal static class PromptCatalog
                 Tasks track work outside this conversation. Changing one wakes its assignee, unless
                 you are the assignee. Use create_task, get_task, list_tasks, update_task, close_task
                 and reopen_task to work with them. Write a Task's id, for example PLAT-0042, to refer
-                to it in a Message; the Human sees it as a link.
+                to it in a Message; the Human sees it as a link. A sprint groups Tasks in time and
+                spans Teams. Give create_task, update_task or list_tasks a sprint as its name or id, or
+                as current; it must already exist, because you cannot create one.
                 """,
             Placeholders: [],
             RequiredPlaceholders: [],

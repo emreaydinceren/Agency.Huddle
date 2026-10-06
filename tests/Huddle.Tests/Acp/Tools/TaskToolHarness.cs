@@ -56,9 +56,20 @@ internal sealed class TaskToolHarness : IDisposable
     /// clock (e.g. <see cref="Agency.Huddle.Tests.Acp.Fakes.ManualTimeProvider"/>) for a test that
     /// needs a deterministic Change log time (R8 facts "TaskToolHarness.Clock").
     /// </param>
-    public TaskToolHarness(TimeProvider? clock = null)
+    /// <param name="sprintsText">
+    /// The text of <c>sprints.md</c> to start with. When given, it is written and <see cref="Sprints"/> is a real
+    /// <see cref="SprintStore"/> over it (which subscribes to <see cref="TaskEvents.TaskChanged"/>); <see langword="null"/>
+    /// (the default) means an <see cref="Agency.Huddle.Tests.Tasks.EmptySprintCatalog"/>, so tests that don't use Sprints
+    /// see no extra subscriber.
+    /// </param>
+    public TaskToolHarness(TimeProvider? clock = null, string? sprintsText = null)
     {
         this.Options = this.dir.Options();
+        if (sprintsText is not null)
+        {
+            File.WriteAllText(this.SprintsFilePath, sprintsText);
+        }
+
         this.Clock = clock ?? TimeProvider.System;
 
         this.Personas = new PersonaStore(
@@ -75,11 +86,15 @@ internal sealed class TaskToolHarness : IDisposable
         this.Store = new TaskStore(this.Options, this.Personas, this.Clock, NullLogger<TaskStore>.Instance);
         this.Ids = new TaskIdAllocator(this.Options);
         this.Events = new TaskEvents();
+        this.Sprints = sprintsText is null
+            ? new Agency.Huddle.Tests.Tasks.EmptySprintCatalog()
+            : new SprintStore(this.Options, this.Store, this.Events, NullLogger<SprintStore>.Instance);
         this.Service = new TaskService(
             this.Store,
             this.Ids,
             this.Events,
             this.Personas,
+            this.Sprints,
             this.Options,
             this.Clock,
             NullLogger<TaskService>.Instance);
@@ -133,10 +148,11 @@ internal sealed class TaskToolHarness : IDisposable
     /// </summary>
     /// <param name="ct">Cancels the seeding calls.</param>
     /// <param name="clock">Forwarded to the constructor; see its own parameter doc.</param>
+    /// <param name="sprintsText">Forwarded to the constructor; see its own parameter doc.</param>
     /// <returns>A harness whose <see cref="Directory"/> already knows the Human, Nova and Kai.</returns>
-    public static async Task<TaskToolHarness> CreateAsync(CancellationToken ct, TimeProvider? clock = null)
+    public static async Task<TaskToolHarness> CreateAsync(CancellationToken ct, TimeProvider? clock = null, string? sprintsText = null)
     {
-        TaskToolHarness harness = new(clock);
+        TaskToolHarness harness = new(clock, sprintsText);
 
         await harness.Directory.InitializeAsync("You", ct);
         User nova = await harness.Directory.UpsertAgentUserAsync("Nova", null, ct)
@@ -170,6 +186,12 @@ internal sealed class TaskToolHarness : IDisposable
 
     /// <summary>Creates and updates Tasks, raising <see cref="TaskEvents.TaskChanged"/> as it goes.</summary>
     public TaskService Service { get; }
+
+    /// <summary>The read-only Sprint catalogue a tool receives: a real <see cref="SprintStore"/> when the harness was given <c>sprints.md</c> text, otherwise empty.</summary>
+    public ISprintCatalog Sprints { get; }
+
+    /// <summary>The absolute path of <c>sprints.md</c>, whether or not it exists.</summary>
+    public string SprintsFilePath => System.IO.Path.Combine(this.Options.Value.DataDir, "sprints.md");
 
     /// <summary>The saved Views over <see cref="TempDataDir"/>'s <c>views.json</c>.</summary>
     public ViewStore Views { get; }
@@ -271,6 +293,22 @@ internal sealed class TaskToolHarness : IDisposable
         services.AddSingleton(this.Store);
         services.AddSingleton(this.Ids);
         services.AddSingleton(this.Events);
+        services.AddSingleton(this.Sprints);
+        if (this.Sprints is SprintStore sprintStore)
+        {
+            services.AddSingleton(sprintStore);
+        }
+        else
+        {
+            // A component that injects the concrete SprintStore (TaskDetail) gets an own, lazily built, empty one,
+            // so a harness without sprints.md text adds no TaskChanged subscriber until such a component renders.
+            services.AddSingleton(sp => new SprintStore(
+                sp.GetRequiredService<IOptions<TeamOptions>>(),
+                sp.GetRequiredService<TaskStore>(),
+                sp.GetRequiredService<TaskEvents>(),
+                NullLogger<SprintStore>.Instance));
+        }
+
         services.AddSingleton(this.Service);
         services.AddSingleton(this.Views);
         services.AddSingleton(this.TurnActivity);
@@ -290,6 +328,7 @@ internal sealed class TaskToolHarness : IDisposable
     public void Dispose()
     {
         this.Triggers.Dispose();
+        (this.Sprints as IDisposable)?.Dispose();
         this.Service.Dispose();
         this.Store.Dispose();
         this.Views.Dispose();

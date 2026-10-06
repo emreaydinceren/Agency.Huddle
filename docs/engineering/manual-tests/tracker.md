@@ -1,6 +1,6 @@
 # Manual test tracker
 
-Where every one of the 508 tests stands. One row per test, updated as you run it.
+Where every one of the 512 tests stands. One row per test, updated as you run it.
 
 > [!NOTE]
 > **An earlier full run exists, against the previous UI, and its results are deliberately not
@@ -109,7 +109,7 @@ the per-area tables below.
 | [The named pipe: external agents and the wire](pipe-external.md) | 36 | — | [below](#pipe-external) |
 | [App Tools a real model calls (progressive discovery)](app-tools.md) | 26 | 20 | [below](#app-tools) |
 | [Persona lifecycle: supervisor, work dirs, health and restarts](persona-lifecycle.md) | 32 | 7 | [below](#persona-lifecycle) |
-| [Tasks: creating, moving, viewing and referencing a unit of work](tasks.md) | 15 | 4 | [below](#tasks) |
+| [Tasks: creating, moving, viewing and referencing a unit of work](tasks.md) | 19 | 5 | [below](#tasks) |
 | [Work Mode: how much an Agent may do before it asks](work-mode.md) | 9 | 4 | [below](#work-mode) |
 | [Questions: an Agent asks the Human by tapping, not typing](questions.md) | 10 | 9 | [below](#questions) |
 | [Prompt blocks: an image the Human names reaches the Teammate](prompt-blocks.md) | 5 | 5 | [below](#prompt-blocks) |
@@ -742,6 +742,10 @@ Tasks: creating, moving, viewing and referencing a unit of work — [area file](
 | [TASKS-13](tasks.md#tasks-13-the-copy-button-works-on-localhost-and-from-another-machine-and-the-pasted-id-shows-as-a-link) |  | Active | | |
 | [TASKS-14](tasks.md#tasks-14-the-picker-keyboard-only) |  | Active | | |
 | [TASKS-15](tasks.md#tasks-15-an-agent-sent-please-look-at-plat-0042-calls-get_task-with-that-id-without-being-told-the-tool-name) | 💰 | Active | | |
+| [TASKS-16](tasks.md#tasks-16-typing-a-new-sprint-in-the-task-panel-writes-sprintsmd-on-save-and-moving-the-last-task-out-removes-its-line) |  | Active | | |
+| [TASKS-17](tasks.md#tasks-17-a-hand-edit-of-sprintsmd-shows-within-a-second-and-changes-no-task-file-deleting-a-task-file-removes-no-sprint) |  | Active | | |
+| [TASKS-18](tasks.md#tasks-18-the-toolbar-sprint-filter-a-saved-view-with-current-sprint-and-a-board-grouped-by-sprint) |  | Active | | |
+| [TASKS-19](tasks.md#tasks-19-an-agent-given-a-sprint-name-sets-it-with-update_task-a-typo-is-refused-with-the-known-list-and-the-assignee-is-woken) | 💰 | Active | | |
 
 ## adapters
 

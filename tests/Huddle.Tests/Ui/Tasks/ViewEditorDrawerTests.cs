@@ -746,6 +746,7 @@ public sealed class ViewEditorDrawerTests
         ctx.Services.AddSingleton(personas);
         ctx.Services.AddSingleton(store);
         ctx.Services.AddSingleton(views);
+        ctx.Services.AddSingleton<ISprintCatalog>(new EmptySprintCatalog());
         ctx.Services.AddSingleton(Options.Create(new TeamOptions()));
         IRenderedComponent<ContainerFragment> root = RenderDrawer(ctx, "any-id");
 

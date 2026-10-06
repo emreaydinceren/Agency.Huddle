@@ -24,8 +24,10 @@
 @inject AvatarStore AvatarStore
 @inject TimeProvider Clock
 @inject TaskStore Store
+@inject ISprintCatalog Sprints
+@implements IDisposable
 
-<MudDataGrid T="TaskItem" @key="@this.View.Id" Items="@this.Tasks" ReadOnly="true" Dense="@(this.View.Dense ?? true)" Hover="true"
+<MudDataGrid T="TaskItem" @key="@this.View.Id" Items="@this.GroupOrdered()" ReadOnly="true" Dense="@(this.View.Dense ?? true)" Hover="true"
              Groupable="true" GroupExpanded="true" ShowColumnOptions="false" Filterable="false"
              RowClick="@this.OnRowClickAsync" RowClassFunc="@this.RowClass">
     <Columns>
@@ -113,6 +115,26 @@
                                      GroupBy="@(t => this.GroupSortKey(t, TaskGroupField.Project))">
                         <CellTemplate>@(context.Item.Location.Project ?? "No project")</CellTemplate>
                         <GroupTemplate>@this.GroupHeading(context, TaskGroupField.Project)</GroupTemplate>
+                    </TemplateColumn>
+                    break;
+                case "sprint":
+                    <TemplateColumn @key="key" T="TaskItem" Title="Sprint" Hidden="@(!this.Shows("sprint"))" Sortable="true"
+                                     SortBy="@(t => (object)(t.Sprint?.Number ?? int.MaxValue))"
+                                     Grouping="@this.IsGrouped(TaskGroupField.Sprint)" GroupByOrder="@this.GroupOrder(TaskGroupField.Sprint)"
+                                     GroupBy="@(t => this.GroupSortKey(t, TaskGroupField.Sprint))">
+                        <CellTemplate>
+                            @if (context.Item.Sprint is { } sprint)
+                            {
+                                <span class="task-list-sprint">
+                                    @if (this.Sprints.Get(sprint) is null)
+                                    {
+                                        <MudIcon Icon="@Icons.Material.Filled.Warning" Color="Color.Warning" Size="Size.Small" Class="task-sprint-missing" aria-label="@SprintLabels.MissingText" />
+                                    }
+                                    @SprintLabels.Text(this.Sprints, sprint)
+                                </span>
+                            }
+                        </CellTemplate>
+                        <GroupTemplate>@this.GroupHeading(context, TaskGroupField.Sprint)</GroupTemplate>
                     </TemplateColumn>
                     break;
                 case "parent":
@@ -226,7 +248,36 @@
         [TaskGroupField.Project] = "project",
         [TaskGroupField.Assignee] = "assignee",
         [TaskGroupField.State] = "status",
+        [TaskGroupField.Sprint] = "sprint",
     };
+
+    /// <summary>Re-renders when <c>sprints.md</c> changed, so a Sprint's name, its missing marker and its group follow the file.</summary>
+    protected override void OnInitialized() => this.Sprints.SprintsChanged += this.OnSprintsChanged;
+
+    /// <summary>Leaves <see cref="ISprintCatalog.SprintsChanged"/>.</summary>
+    public void Dispose() => this.Sprints.SprintsChanged -= this.OnSprintsChanged;
+
+    /// <summary>Marshals a re-render onto the renderer's context, tolerating a component already disposed (the same rule as the page's hub handlers).</summary>
+    private void OnSprintsChanged() => _ = this.RerenderAsync();
+
+    private async Task RerenderAsync()
+    {
+        try
+        {
+            await this.InvokeAsync(this.StateHasChanged);
+        }
+        catch (ObjectDisposedException)
+        {
+            // The renderer was disposed before this dispatched re-render ran: nothing left to draw.
+        }
+        catch (InvalidOperationException)
+        {
+            // The render handle is gone (the circuit ended): same as above.
+        }
+    }
+
+    /// <summary>Resolves a Sprint id to its name for a group label, or <see langword="null"/> when it is not in the file.</summary>
+    private string? SprintName(SprintId id) => this.Sprints.Get(id)?.Name;
 
     /// <summary>
     /// The columns to render, in order: ID and Title first (always shown, implicit in <see cref="TaskView.Fields"/>),
@@ -289,6 +340,16 @@
     /// </summary>
     private string GroupSortKey(TaskItem task, TaskGroupField field)
     {
+        if (field == TaskGroupField.Sprint)
+        {
+            // Spec §11.4, D-S13: newest first by number, No sprint last - so the key sorts by the number's
+            // complement, and by the id rather than the label (two Sprints may not share a name, but a missing
+            // one has none). The rank prefix keeps "no Sprint" last whatever the numbers are.
+            return task.Sprint is { } sprint
+                ? string.Create(CultureInfo.InvariantCulture, $"0\u0000{999_999_999 - sprint.Number:D9}")
+                : "1\u0000";
+        }
+
         bool isNullGroup = field switch
         {
             TaskGroupField.Assignee => task.Assignee is null,
@@ -299,6 +360,26 @@
         string label = TaskQuery.GroupLabel(task, field, this.TeamAlsoGrouped);
         string rank = isNullGroup ? "1" : "0";
         return string.Create(CultureInfo.InvariantCulture, $"{rank}\u0000{label.ToUpperInvariant()}");
+    }
+
+    /// <summary>
+    /// <see cref="Tasks"/> stably ordered by the View's grouping chain, each level by <see cref="GroupSortKey"/>: the grid lists
+    /// groups in the order its items first appear (it does not sort by the key), so this is what makes a Sprint grouping read
+    /// newest first with No sprint last (Sprints spec §11.4, D-S13) and the null group of every other field last. Rows keep their
+    /// order inside a group, because <c>OrderBy</c> is stable.
+    /// </summary>
+    private IReadOnlyList<TaskItem> GroupOrdered()
+    {
+        IOrderedEnumerable<TaskItem>? ordered = null;
+        foreach (TaskGroupField field in this.View.Grouping)
+        {
+            TaskGroupField level = field;
+            ordered = ordered is null
+                ? this.Tasks.OrderBy(task => this.GroupSortKey(task, level), StringComparer.Ordinal)
+                : ordered.ThenBy(task => this.GroupSortKey(task, level), StringComparer.Ordinal);
+        }
+
+        return ordered is null ? this.Tasks : [.. ordered];
     }
 
     /// <summary>The group header text shown by GroupTemplate: the real label (never the raw sort key) and the group's count.</summary>
@@ -313,7 +394,7 @@
     private string GroupHeading(GroupDefinition<TaskItem> group, TaskGroupField field)
     {
         TaskItem sample = group.Grouping.First();
-        string label = TaskQuery.GroupLabel(sample, field, this.TeamAlsoGrouped);
+        string label = TaskQuery.GroupLabel(sample, field, this.TeamAlsoGrouped, this.SprintName);
         return string.Create(CultureInfo.InvariantCulture, $"{label} ({group.Grouping.Count()})");
     }
 

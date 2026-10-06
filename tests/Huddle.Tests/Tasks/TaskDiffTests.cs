@@ -203,6 +203,21 @@ public sealed class TaskDiffTests
                 TestTasks.Make(dueDate: new DateOnly(2026, 10, 15)),
                 TaskField.DueDate, null, "2026-10-15"
             },
+            {
+                TestTasks.Make(sprint: new SprintId(1)),
+                TestTasks.Make(sprint: new SprintId(2)),
+                TaskField.Sprint, "S1", "S2"
+            },
+            {
+                TestTasks.Make(sprint: null),
+                TestTasks.Make(sprint: new SprintId(2)),
+                TaskField.Sprint, null, "S2"
+            },
+            {
+                TestTasks.Make(sprint: new SprintId(2)),
+                TestTasks.Make(sprint: null),
+                TaskField.Sprint, "S2", null
+            },
         };
 
         return data;
@@ -212,6 +227,32 @@ public sealed class TaskDiffTests
 /// <summary>Tests for <see cref="TaskDiff.Summarise"/>: the exact Spec §7.4 summary texts.</summary>
 public sealed class TaskDiffSummariseTests
 {
+    /// <summary>A Sprint change reads "sprint: S1 → S2", and a missing side reads as the em dash.</summary>
+    [Fact]
+    public void Summarise_SprintChange_ArrowTextWithDashForNone()
+    {
+        string text = TaskDiff.Summarise(
+        [
+            new FieldChange(TaskField.Sprint, "S1", "S2"),
+            new FieldChange(TaskField.Sprint, null, "S2"),
+            new FieldChange(TaskField.Sprint, "S2", null),
+        ]);
+
+        Assert.Equal("sprint: S1 → S2; sprint: — → S2; sprint: S2 → —", text);
+    }
+
+    /// <summary>The same Sprint on both sides, or none on both, is no change, and the label is the wire key "sprint".</summary>
+    [Fact]
+    public void Compare_SameSprint_NoChange_AndLabelIsWireKey()
+    {
+        TaskItem before = TestTasks.Make(sprint: new SprintId(2));
+        TaskItem after = TestTasks.Make(sprint: new SprintId(2));
+
+        Assert.Empty(TaskDiff.Compare(before, after));
+        Assert.Empty(TaskDiff.Compare(TestTasks.Make(), TestTasks.Make()));
+        Assert.Equal("sprint", TaskDiff.FieldLabel(TaskField.Sprint));
+    }
+
     /// <summary>A scalar status change reads "status: To Do → In Progress".</summary>
     [Fact]
     public void Summarise_StatusChange_ArrowText()

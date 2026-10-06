@@ -40,10 +40,10 @@ public sealed class TaskToolDescriptionsTests
         FakePromptSource prompts = new();
         IReadOnlyList<IAppTool> tools =
         [
-            new CreateTaskTool(harness.Service, harness.Triggers, harness.Directory, prompts, "caller-id"),
-            new GetTaskTool(harness.Store, prompts),
-            new ListTasksTool(harness.Store, harness.Directory, harness.Personas, prompts, "caller-id"),
-            new UpdateTaskTool(harness.Service, harness.Store, harness.Triggers, harness.Directory, prompts, "caller-id"),
+            new CreateTaskTool(harness.Service, harness.Triggers, harness.Directory, harness.Sprints, prompts, "caller-id"),
+            new GetTaskTool(harness.Store, harness.Sprints, prompts),
+            new ListTasksTool(harness.Store, harness.Directory, harness.Personas, harness.Sprints, prompts, "caller-id"),
+            new UpdateTaskTool(harness.Service, harness.Store, harness.Triggers, harness.Directory, harness.Sprints, prompts, "caller-id"),
             new CloseTaskTool(harness.Service, harness.Store, harness.Triggers, harness.Directory, prompts, "caller-id"),
             new ReopenTaskTool(harness.Service, harness.Store, harness.Triggers, harness.Directory, prompts, "caller-id"),
         ];

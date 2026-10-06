@@ -316,5 +316,5 @@ public sealed class OutsideEditLoggingTests
 
     /// <summary>Constructs the <see cref="TaskService"/> under test, with a fresh <see cref="TaskEvents"/> hub unless <paramref name="events"/> is supplied.</summary>
     private static TaskService CreateTaskService(TempDataDir dir, TaskStore store, PersonaStore personas, TaskEvents? events = null) =>
-        new(store, new TaskIdAllocator(dir.Options()), events ?? new TaskEvents(), personas, dir.Options(), TimeProvider.System, NullLogger<TaskService>.Instance);
+        new(store, new TaskIdAllocator(dir.Options()), events ?? new TaskEvents(), personas, new EmptySprintCatalog(), dir.Options(), TimeProvider.System, NullLogger<TaskService>.Instance);
 }

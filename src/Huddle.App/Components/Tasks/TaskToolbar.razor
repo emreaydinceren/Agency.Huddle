@@ -12,6 +12,7 @@
 
 @using System.Text.Json
 @inject ViewStore ViewStore
+@inject ISprintCatalog Sprints
 
 <MudToolBar Dense="true" Class="task-toolbar">
     <MudButton StartIcon="@Icons.Material.Outlined.Add" Color="Color.Primary" OnClick="this.OnNewTaskClickedAsync" Class="btn-action-tight">New task</MudButton>
@@ -35,6 +36,14 @@
                        ValueChanged="this.OnTeamFilterInputChanged" Class="task-toolbar-filter-input" />
         <MudIconButton Icon="@Icons.Material.Filled.Add" aria-label="Add team filter" Class="task-toolbar-filter-add"
                         OnClick="this.OnAddTeamFilterAsync" />
+        @* Sprints spec §12.3: the "filter dynamically" path. A value no longer in sprints.md stays selected as "S5 (missing)". *@
+        <MudSelect T="string" Label="Sprint" MultiSelection="true" SelectedValues="this.EffectiveView.Filter.Sprints"
+                   SelectedValuesChanged="this.OnSprintFilterChangedAsync" Class="task-toolbar-filter-sprint">
+            @foreach ((string value, string label) in SprintLabels.FilterOptions(this.Sprints, this.EffectiveView.Filter.Sprints))
+            {
+                <MudSelectItem T="string" Value="@value" Class="task-toolbar-filter-sprint-option">@label</MudSelectItem>
+            }
+        </MudSelect>
     </MudMenu>
 
     <MudMenu Label="Group, Sort" Class="task-toolbar-group-sort">
@@ -43,6 +52,7 @@
             <MudSelectItem T="TaskGroupField?" Value="TaskGroupField.Team">Team</MudSelectItem>
             <MudSelectItem T="TaskGroupField?" Value="TaskGroupField.Project">Project</MudSelectItem>
             <MudSelectItem T="TaskGroupField?" Value="TaskGroupField.Assignee">Assignee</MudSelectItem>
+            <MudSelectItem T="TaskGroupField?" Value="TaskGroupField.Sprint">Sprint</MudSelectItem>
         </MudSelect>
     </MudMenu>
 
@@ -151,6 +161,9 @@
         TaskView updated = this.EffectiveView with { Filter = this.EffectiveView.Filter with { Teams = teams } };
         return this.EffectiveViewChanged.InvokeAsync(updated);
     }
+
+    private Task OnSprintFilterChangedAsync(IEnumerable<string> values) =>
+        this.EffectiveViewChanged.InvokeAsync(this.EffectiveView with { Filter = this.EffectiveView.Filter with { Sprints = [.. values] } });
 
     private Task OnGroupingChangedAsync(TaskGroupField? field)
     {

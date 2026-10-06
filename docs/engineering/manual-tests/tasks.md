@@ -13,7 +13,7 @@ exists only here. The tests are ordered cheapest-first: TASKS-01 to TASKS-09 nee
 TASKS-13 and TASKS-14 need only a chat surface already covered elsewhere, and TASKS-10, -11, -12
 and -15 are the only ones that spend money.
 
-**15 tests** · 11 free, 4 paid 💰 · about 3.5 hours.
+**19 tests** · 14 free, 5 paid 💰 · about 4.5 hours.
 
 Read [the manual test script](../manual-tests.md) first — the cost guard, the Model and Effort
 convention, and the rules for concluding a result — then [Common procedures](common.md), which
@@ -25,7 +25,7 @@ Run [`P-BUILD`](common.md#p-build) then the lane named below from
 [Common procedures](common.md). This area adds:
 
 1. `Team:Tasks:Enabled` defaults to `true`; the free tests below need only `P-LAUNCH-FREE`.
-   TASKS-10, -11, -12 and -15 need `P-LAUNCH-PAID` and a Persona already Online — create one
+   TASKS-10, -11, -12, -15 and -19 need `P-LAUNCH-PAID` and a Persona already Online — create one
    Haiku/low Persona named `Rae` before starting the paid half, alias `rae`.
 2. Tasks live under `App_Data\Tasks\<Team>\[<Project>\]<ID>.md`, and a Closed Task sits in a
    `_closed\` folder at the same level. `App_Data\Tasks\` does not exist until the first Task is
@@ -40,7 +40,7 @@ Run [`P-BUILD`](common.md#p-build) then the lane named below from
 6. **Firefox will not start a drag from a `<button>` inside a draggable card.** TASKS-03 is written
    for Chrome/Edge; if you must use Firefox, drag from the card body, never from its ⋮ menu button,
    and record which browser you used.
-7. MONEY. TASKS-01 to -09 and -13/-14 are free. TASKS-10, -11, -12 and -15 are marked and each
+7. MONEY. TASKS-01 to -09, -13/-14 and -16 to -18 are free. TASKS-10, -11, -12, -15 and -19 are marked and each
    spends the Persona's Budget the same way any Room does.
 
 ## Tests
@@ -719,6 +719,186 @@ in the prompt, not because the tool's name was spelled out to it.*
 - The Persona clearly does not know what to do with an id shaped like `PLAT-0042` and never calls
   any Tasks tool -> record as a model-behaviour finding per
   [§0.6](../manual-tests.md#06-not-a-defect), not a code Fail, unless the tool was unavailable.
+
+### TASKS-16 — Typing a new Sprint in the Task panel writes `sprints.md` on Save, and moving the last Task out removes its line
+
+**Free** · about 12 min
+
+*Proves Sprints spec §12.1 and §8.2 in a real browser: a new name is created on **Save**, never on
+typing; the Task file gains `sprint:`; and a Sprint lasts only while a Task holds it, with the
+removal touching no other line of the file.* TASKS-16 to -19 follow the Sprints feature
+([Sprints specification](../../Huddle.Sprints-Specifications.md)), so they are appended after the
+paid TASKS-15; TASKS-19 is the paid one.
+
+**Before you start**
+
+- `E-FREE` app running, two Tasks `T-1` and `T-2` in one Team.
+- `App_Data\sprints.md` holding a heading, a prose note of your own and one Sprint:
+
+  ```markdown
+  # Sprints
+
+  My note, which the app must never touch.
+
+  - S1 | Sprint 1
+  ```
+
+**Steps**
+
+1. Open `T-1`. In the **Sprint** field (after Team / Project), type `Auth hardening`, and look at
+   the helper text under the field. Do not save yet.
+2. Open `sprints.md` in an editor. Then click **Revert**, and look at the file and the field again.
+3. Type `Auth hardening` again and click **Save**. Read `sprints.md` and `T-1`'s file.
+4. Open `T-2`, and set its Sprint to `Auth hardening` (pick it from the list); **Save**.
+5. Back on `T-1`, change its Sprint to `Sprint 1`; **Save**. Read `sprints.md` and open the Sprint
+   field's list on `T-2`.
+6. On `T-2`, change its Sprint to `Sprint 1`; **Save**. Read `sprints.md` and open the list on
+   either Task.
+7. Type `S3` into a Sprint field and look at the field and at **Save**.
+
+**Pass if — all of these**
+
+- Step 1: the helper text reads **New sprint: it will be created when you save**, and the panel
+  shows **Unsaved edits**.
+- Step 2: `sprints.md` is unchanged after typing and after **Revert**, and **Revert** restores the
+  field.
+- Step 3: `sprints.md` gains exactly one line, `- S2 | Auth hardening`, after `- S1 | Sprint 1`,
+  with the heading and your note untouched. `T-1`'s file has `sprint: S2` after `due_date:` (or
+  after the last field before it).
+- Step 5: with `T-2` still in `Auth hardening`, the line `- S2 | Auth hardening` **stays**.
+- Step 6: now the last Task has left, so the line `- S2 | Auth hardening` is **gone**, the heading,
+  the note and `- S1 | Sprint 1` are byte-for-byte as before, and `Auth hardening` has left the
+  field's list.
+- Step 7: the field shows the error **A sprint name can't look like an id (S3).** and **Save** is
+  disabled.
+
+**Fail if — any of these**
+- The file changes while you are only typing, or after **Revert** -> the panel created the Sprint
+  on typing instead of on Save (D-S7).
+- Step 5 removes the line while `T-2` still holds it -> `RemoveIfUnused` is not counting Tasks.
+- Your note or the heading is rewritten -> `SprintFileFormat.RemoveLine` is touching more than the
+  one line.
+
+### TASKS-17 — A hand edit of `sprints.md` shows within a second and changes no Task file; deleting a Task file removes no Sprint
+
+**Free** · about 12 min
+
+*Proves §6, §8 and E-S4 to E-S7 and E-S22: the file is the list, a rename, a delete and a reorder
+reach the UI with no Task file rewritten, a deleted Sprint reads as missing, and the app never
+removes a Sprint because a Task file went away.*
+
+**Before you start**
+
+- `E-FREE` app running, `sprints.md` with `S1 | Sprint 1` and `S2 | Auth hardening`, one Task in
+  each, and the **All Tasks** View open with the **Sprint** field shown (add it in the View editor if
+  needed).
+- Note each Task file's hash (`Get-FileHash`).
+
+**Steps**
+
+1. In an editor, rename `Auth hardening` to `Auth rework` in `sprints.md`; save. Watch the page.
+2. Swap the order of the two Sprint lines; save. Watch the page.
+3. Delete the line `- S1 | Sprint 1`; save. Watch the page, and the **Sprint** field of the Task
+   that held `S1`.
+4. Add a line `- S2 | Again` (a repeated id) at the end; save. Watch the page.
+5. Remove that line. Then delete the Task file of the Task in `S2` by hand, in Explorer.
+6. Read `sprints.md`, and compare every remaining Task file's hash with the one you noted.
+
+**Pass if — all of these**
+
+- Steps 1 to 3: each edit appears in the List within a second. The renamed Sprint shows the new
+  name; reordering changes nothing visible; the Task of the deleted Sprint reads `S1 (missing)` with
+  a warning icon, and its panel shows `S1`, a warning icon and **Clear**.
+- Step 4: an alert headed **sprints.md has lines that were ignored** appears on the Tasks page, with
+  the line number and the problem.
+- Step 6: **no Task file's hash changed**, and `sprints.md` still lists `S2 | Auth rework` although
+  its only Task file is gone (E-S22: the app never removes a Sprint on a vanished file).
+
+**Fail if — any of these**
+- A Task file's hash changes after a rename, reorder or delete -> the app rewrote a Task for a
+  Sprint edit (D-S3).
+- `S2` disappears from `sprints.md` after the Task file is deleted -> a removal ran outside a
+  vacating change (D-S15).
+- The alert never appears -> `SprintStore.Problems` is not reaching the page.
+
+### TASKS-18 — The toolbar Sprint filter, a saved View with Current sprint, and a Board grouped by Sprint
+
+**Free** · about 15 min
+
+*Proves §11 and §12.3 together: the filter row's options and its dynamic behaviour, a saved View
+that follows the current Sprint, and Sprint lanes ordered newest first with No sprint last.*
+
+**Before you start**
+
+- `E-FREE` app running, `sprints.md` with `S1 | Sprint 1`, `S2 | Auth hardening`, and four Tasks:
+  one in each Sprint, two with none.
+
+**Steps**
+
+1. On **All Tasks**, open the toolbar **Filter** menu and open its **Sprint** row. Choose **Current
+   sprint**, then also **No sprint**.
+2. Open **Group, Sort**, and group by **Sprint**. Switch the page to Board. Do not click **Save to
+   View**.
+3. Click **+ New View** (or edit one): name it `Now`, filter **Sprint** to **Current sprint**, add
+   the **Sprint** field, kind Board, group by **Sprint**; **Save view**.
+4. Open `Now`. Then, in an editor, append `- S3 | Release train` to `sprints.md` and save.
+5. In `Now`'s editor, also select `Sprint 1` in the Sprint filter and **Save view**. Then delete
+   `- S1 | Sprint 1` from the file, save it, and reopen `Now`'s editor.
+
+**Pass if — all of these**
+
+- Step 1: the options read **Current sprint**, **No sprint**, then `Auth hardening`, `Sprint 1`;
+  the List narrows to the Tasks in `S2` plus the two with none.
+- Step 2: the Board has a lane per Sprint labelled by name, newest first, **No sprint** last; the
+  toolbar offers **Save to View** only after a filter or grouping change, and nothing was written
+  before it was clicked.
+- Step 3: the saved View shows only `S2`'s Task, as a card with the Sprint name.
+- Step 4: within a second the View becomes empty (`S3` is current and holds no Task), with no
+  reload.
+- Step 5: the Sprint filter still lists `S1 (missing)`, selected, beside **Current sprint**, and
+  saving the View does not drop it.
+
+**Fail if — any of these**
+- Lanes are in label order (`Auth hardening` before `Sprint 1` by accident) rather than by number
+  -> the rank rule (D-S13) is not applied in `BoardLayout`.
+- The View does not follow step 4 without a reload -> the page does not re-query on
+  `SprintsChanged` (E-S17).
+
+### TASKS-19 — An Agent given a Sprint name sets it with `update_task`, a typo is refused with the known list, and the assignee is woken
+
+**Paid 💰** · about 10 min · 1-2 Turns
+
+*Proves §10 against a real model: the `sprint` argument takes a name, an unknown name is refused
+with the list of Sprints (so a typo cannot create one), and a Sprint change wakes the assignee like
+any other field (D-S8).*
+
+**Before you start**
+
+- `E-PAID` app running, `Rae` Online (Haiku/low), `sprints.md` with `S1 | Sprint 1` and
+  `S2 | Auth hardening`, and a Task `T-1` assigned to `Rae`.
+
+**Steps**
+
+1. In a Room with `Rae`, send: `Put <T-1's id> in the Auth hardening sprint.`
+2. Wait for `Rae`'s Turn. Open `T-1` and read its **Sprint** and Change log.
+3. Send: `Now move <T-1's id> to the Auth hardning sprint.` (misspelled on purpose).
+4. Read `Rae`'s reply and `sprints.md`.
+5. From the panel, move `T-1` to `Sprint 1`; **Save & Notify Rae**. Watch for a wake-up Message.
+
+**Pass if — all of these**
+
+- Step 2: `T-1` has `sprint: S2`, the Change log reads `sprint: — → S2 (Auth hardening)`, attributed
+  to `Rae`.
+- Step 4: the call is refused with a message listing `S1 Sprint 1, S2 Auth hardening`; `Rae` says
+  so or retries correctly, and `sprints.md` has **no new line**.
+- Step 5: a wake-up Message Mentioning `Rae` appears, naming the change.
+
+**Fail if — any of these**
+- A misspelled name creates a Sprint -> a tool can reach `SprintStore.Create` (D-S5).
+- No Sprint exists afterwards yet no error was shown to the model -> the refusal is not reaching
+  the tool result.
+- `Rae` never calls `update_task` -> record as a model-behaviour finding per
+  [§0.6](../manual-tests.md#06-not-a-defect), unless the tool was unavailable.
 
 ---
 

@@ -473,6 +473,37 @@ public sealed partial class PromptCatalogTests
         Assert.Equal(PromptTiming.Live, prompt.Timing);
     }
 
+    /// <summary>
+    /// Sprints spec §10.4 (SP-T10): the three Task tool descriptions and <c>getHelp.tasks</c> tell an Agent it can set a
+    /// sprint by name, id or <c>current</c>, and (for create, update and help) that the sprint must already exist and
+    /// that a sprint groups Tasks in time and spans Teams.
+    /// </summary>
+    /// <param name="key">The prompt's key.</param>
+    /// <param name="mustExist">Whether the prompt also says the sprint must already exist and cannot be created.</param>
+    [Theory]
+    [InlineData("tool.createTask.description", true)]
+    [InlineData("tool.updateTask.description", true)]
+    [InlineData("tool.listTasks.description", false)]
+    [InlineData("getHelp.tasks", true)]
+    public void TaskPrompts_ExplainSprints(string key, bool mustExist)
+    {
+        string text = PromptCatalog.Get(key).Default.Replace("\n", " ", StringComparison.Ordinal);
+
+        Assert.Contains("sprint", text, StringComparison.Ordinal);
+        Assert.Contains("current", text, StringComparison.Ordinal);
+        Assert.Contains("name or id", text, StringComparison.Ordinal);
+        if (mustExist)
+        {
+            Assert.Contains("must already exist, because you cannot create one", text, StringComparison.Ordinal);
+            Assert.Contains("groups Tasks in time and", text, StringComparison.Ordinal);
+            Assert.Contains("spans Teams", text, StringComparison.Ordinal);
+        }
+        else
+        {
+            Assert.Contains("none", text, StringComparison.Ordinal);
+        }
+    }
+
     /// <summary>Spec §11.9: <c>systemPrompt.tools</c> gains a clause mentioning Tasks (Task 10.7).</summary>
     [Fact]
     public void SystemPromptTools_MentionsTasks()

@@ -26,6 +26,7 @@
 @inject ViewStore ViewStore
 @inject PersonaStore Personas
 @inject TaskStore Store
+@inject ISprintCatalog Sprints
 @inject IOptions<TeamOptions> Options
 @inject IDialogService DialogService
 @inject NavigationManager Navigation
@@ -149,6 +150,24 @@
             @foreach ((string value, string label) in this.AssigneeFilterOptions())
             {
                 <MudSelectItem T="string" Value="@value" Class="view-editor-filter-assignee-option">@label</MudSelectItem>
+            }
+        </MudSelect>
+
+        <div class="view-editor-filter-sprint-row">
+            @foreach ((string sprint, int index) in this.sprintFilter.Select((value, index) => (value, index)))
+            {
+                @if (index > 0)
+                {
+                    <span class="view-editor-filter-sprint-or">OR</span>
+                }
+                <MudChip T="string" Size="Size.Small" Class="view-editor-filter-sprint-chip">@SprintLabels.FilterLabel(this.Sprints, sprint)</MudChip>
+            }
+        </div>
+        <MudSelect T="string" Label="Sprint" MultiSelection="true" SelectedValues="this.sprintFilter" SelectedValuesChanged="this.OnSprintFilterChanged"
+                   Disabled="this.ControlsDisabled" Class="view-editor-filter-sprint">
+            @foreach ((string value, string label) in SprintLabels.FilterOptions(this.Sprints, this.sprintFilter))
+            {
+                <MudSelectItem T="string" Value="@value" Class="view-editor-filter-sprint-option">@label</MudSelectItem>
             }
         </MudSelect>
 
@@ -294,6 +313,7 @@
     private List<string> teamFilter = [];
     private List<string> projectFilter = [];
     private List<string> assigneeFilter = [];
+    private List<string> sprintFilter = [];
     private List<TaskState> stateFilter = [];
     private List<TaskPriority> priorityFilter = [];
     private BlockedFilter blockedFilter = BlockedFilter.All;
@@ -319,7 +339,11 @@
     private string ColumnsSectionClass => this.Section == ViewEditorSection.Columns ? "view-editor-section-columns view-editor-section-active" : "view-editor-section-columns";
 
     /// <summary>Subscribes to <see cref="ViewStore.ViewsChanged"/> so an external Save re-seeds the draft (item 4), unless it is dirty.</summary>
-    protected override void OnInitialized() => this.ViewStore.ViewsChanged += this.OnViewsChanged;
+    protected override void OnInitialized()
+    {
+        this.ViewStore.ViewsChanged += this.OnViewsChanged;
+        this.Sprints.SprintsChanged += this.OnSprintsChanged;
+    }
 
     /// <summary>The <c>localStorage</c> key <c>huddleResize.attachDrawer</c> (app.js) remembers the editor's dragged width under.</summary>
     private const string WidthStorageKey = "viewEditorDrawerWidth";
@@ -366,7 +390,18 @@
     }
 
     /// <summary>Unsubscribes from <see cref="ViewStore.ViewsChanged"/> (rules.md: every subscriber to a singleton hub must unsubscribe).</summary>
-    public void Dispose() => this.ViewStore.ViewsChanged -= this.OnViewsChanged;
+    public void Dispose()
+    {
+        this.ViewStore.ViewsChanged -= this.OnViewsChanged;
+        this.Sprints.SprintsChanged -= this.OnSprintsChanged;
+    }
+
+    /// <summary>Re-renders so the Sprint filter's options follow <c>sprints.md</c>; the draft is untouched.</summary>
+    private void OnSprintsChanged() => _ = this.DispatchAsync(() =>
+    {
+        this.StateHasChanged();
+        return Task.CompletedTask;
+    });
 
     /// <summary>Loads the draft for <see cref="Id"/> the first time it is seen - always on this instance's very first call, per <see cref="seeded"/>'s own remarks, even when <see cref="Id"/> is null both then and now.</summary>
     protected override void OnParametersSet()
@@ -406,6 +441,7 @@
         this.teamFilter = [.. view.Filter.Teams];
         this.projectFilter = [.. view.Filter.Projects.Select(ProjectKey)];
         this.assigneeFilter = [.. view.Filter.Assignees];
+        this.sprintFilter = [.. view.Filter.Sprints];
         this.stateFilter = [.. view.Filter.States];
         this.priorityFilter = [.. view.Filter.Priorities];
         this.blockedFilter = view.Filter.Blocked;
@@ -464,6 +500,8 @@
     private void OnProjectFilterChanged(IEnumerable<string> values) => this.projectFilter = [.. values];
 
     private void OnAssigneeFilterChanged(IEnumerable<string> values) => this.assigneeFilter = [.. values];
+
+    private void OnSprintFilterChanged(IEnumerable<string> values) => this.sprintFilter = [.. values];
 
     private void OnStateFilterChanged(IEnumerable<TaskState> values) => this.stateFilter = [.. values];
 
@@ -679,6 +717,7 @@
             Teams = [.. this.teamFilter],
             Projects = [.. this.projectFilter.Select(ParseProjectKey)],
             Assignees = [.. this.assigneeFilter],
+            Sprints = [.. this.sprintFilter],
             States = [.. this.stateFilter],
             Priorities = [.. this.priorityFilter],
             Blocked = this.blockedFilter,
