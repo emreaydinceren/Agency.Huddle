@@ -17,6 +17,12 @@ one opinion five times, at five times the cost. Where we part company with most
 frameworks is in what we think turns a crowd of agents into a team, and in where
 the human sits.
 
+Agency.Huddle is a shared workspace for people and agents. Some tools run a company
+with a fixed org chart and approval chains. Some run agent teams in terminal panes,
+where the agents talk out of your sight. Some are toolkits you build your own system
+from. This is a different bet: a chat app where you are in the room, installed with
+one command on Windows or macOS.
+
 ## What makes a team worth having
 
 A team is not a gain just because it has more members. Agents on the same model,
@@ -25,6 +31,13 @@ easily as one agent agrees with itself. The research on why multi-agent systems
 fail points the same way: poor role design, agents out of step with each other,
 and weak verification (Cemri et al., [arXiv 2503.13657](https://arxiv.org/abs/2503.13657)).
 More agents alone adds cost, not quality.
+
+The evidence for diversity is concrete: 2 diverse agents can match or exceed 16
+homogeneous ones ([arXiv 2602.03794](https://arxiv.org/abs/2602.03794)). And more
+agents is not free. In Google Research's tests, centralized coordination improved a
+parallelizable financial-reasoning task by 80.9% over a single agent, while on
+strictly sequential planning every multi-agent variant they tried did 39–70% worse
+([*Towards a science of scaling agent systems*](https://research.google/blog/towards-a-science-of-scaling-agent-systems-when-and-why-agent-systems-work/)).
 
 The gain comes from three things together:
 
@@ -46,7 +59,7 @@ not yet:
 | --- | --- | --- |
 | Generate | A Teammate with its own role, context and model | Built |
 | Challenge | `@`-mention a second Teammate, ideally on another model | Built; you have to ask for it |
-| Verify | You, a member of every room; Tasks with a named owner | Partly: no built-in test step |
+| Verify | You, a member of every room; Tasks with a named owner and a Review status | Partly: no built-in test step |
 
 The rest of this page explains each row.
 
@@ -64,7 +77,8 @@ fake with a prompt:
    Work Dir and memory, so what it knows is its own.
 3. **Opposed incentives.** "Find what breaks" produces a different answer than
    "Review this". Give roles that pull against each other, such as builder and
-   breaker or cost and quality, rather than roles that merely differ.
+   breaker or cost and quality, rather than roles that merely differ. Write the
+   stance into the Teammate's own instructions so it holds whatever you ask.
 4. **Independent first answers.** Mention several members in one Message and each
    answers before seeing the others, so the discussion starts from real
    differences. After that they read each other, as colleagues do. That is the
@@ -139,7 +153,8 @@ is not in, because the code has no branch for it.
 Oversight stops being a feature and becomes a consequence of the data model.
 Nobody has to remember to insert the checkpoint. Runaway chatter is still possible
 — two agents can still tag each other — but it happens in a room you can open, and
-a cap stops it (see [What we have not solved](#what-we-have-not-solved)).
+a Budget pauses it and asks whether you want to continue (see
+[What we have not solved](#what-we-have-not-solved)).
 
 Being in the room is also what makes you able to be the **Verify** step. A person
 who is there at the moment a claim is made can ask for the source, which a gate at
@@ -172,6 +187,10 @@ the one reviewing its work runs a local model through `agency-acp`, which is the
 first lever in [Making members disagree on purpose](#making-members-disagree-on-purpose).
 The [User Guide](Huddle.UserGuide.md) covers the rest of a Teammate's settings, the
 Skills it can read, and the Teams and Projects it works in.
+
+You do not have to write the files yourself. The built-in Chief of Staff proposes a
+team, and nothing is created until you select **Approve**. By default it proposes
+no more than eight Teammates, because every Teammate is a process.
 
 **Communication channels.** Inside the app, a named pipe carries one JSON object
 per line. An agent exists in Agency.Huddle for exactly one reason: some process
@@ -206,9 +225,23 @@ everyone reads, plus a **Team Memory** folder every member of a Team sees. Indiv
 each Teammate has its own memory folder and its own **Room Session** per room, so the
 context of one conversation does not leak into another. Work that must outlast a
 chat lives in **Tasks**, a Markdown file with an owner, a status and a change log,
-and in the **Library**, where you and your Teammates keep notes side by side. A
-Teammate is told which watched files changed since its last turn. There is no vector
-store; the memory is files you can open.
+and in the **Library**, where you and your Teammates keep notes side by side. Notes
+link to each other with `[[wiki links]]`, show their backlinks, and keep their links
+when you rename or move them. A Teammate is told which watched files changed since
+its last turn. A Teammate does not keep its conversation across a restart, so
+anything worth keeping goes into a memory file. There is no vector store; the memory
+is files you can open.
+
+## Work that wakes people up
+
+**Tasks** are Markdown files you can see as a List or as a Board, with one swimlane
+per Project and cards you drag between columns. When a Task assigned to a Teammate
+changes, whether you drag a card, edit the file by hand or another Teammate updates
+it, Huddle posts a message in a Room that wakes the assignee. Work moves without
+anyone polling a chat. Every change is appended to the Task's change log, and the
+statuses include **Review**, which is where a Challenge step belongs. Teammates
+changing each other's Tasks could loop, so each Task allows ten Teammate-made
+wake-ups until you select **Allow 10 more**.
 
 ## Stages are verbs, not people
 
@@ -231,6 +264,10 @@ So in Agency.Huddle the verb goes in the request:
 Two Teammates, two verbs, no mechanism. Mention-gating routes it. The CFO
 critiques the numbers *because* it is the CFO.
 
+The verb is in the request; the stance is lasting. A Teammate's Markdown body is its
+private instructions, so a CFO told to doubt every margin assumption keeps doing so
+whichever verb you use.
+
 ## Topology without an engine
 
 Reports on multi-agent systems name three layouts: **centralized** (one coordinator
@@ -246,6 +283,12 @@ Valentine's strategy starts a room with the CMO and the CFO, writes the brief as
 first message, and brings the outcome back to you. You are in that room too; you
 are just not interrupted by it.
 
+Research gives a reason for care here. Google Research found that independent
+agents working in parallel without talking amplified errors 17.2x, against 4.4x for a
+centralized system with an orchestrator. A Huddle room is not the independent case:
+members read each other, you are in the room, and a Budget stops runaway chatter. It
+is still why we treat checking at each hand-off as the open problem.
+
 Nothing switches modes. There is no room kind. Topology is whatever falls out of
 which Teammates exist, which tools each holds, and who is in the room. The design
 record — including why we rejected a blocking `delegate()` tool, and why relying
@@ -256,8 +299,9 @@ path — is in
 ## This repository is built the way it describes
 
 The argument above is that nobody can read everything a team of agents produces,
-so the work moves from reading output to engineering what checks it. This
-repository follows that rule, and each piece below can be opened and read:
+so the work moves from reading output to engineering what checks it. Testing made
+the same move once, from a role into a system of automated checks and telemetry.
+This repository applies it to review, and each piece below can be opened and read:
 
 - **Rules are code, not review comments.** Warnings are errors, nullable
   references are on, and the .NET and Sonar analyzers run inside the build, so a
@@ -298,7 +342,10 @@ A team fixes none of its own failure modes by default. Five are worth saying pla
   trusts it, every later step builds on it and the work looks more finished, not
   less. The fix is to verify at each hand-off, not only at the end.
 - **Cost.** Every hand-off is more model calls. A team costs more than one agent
-  doing the same job.
+  doing the same job. A Teammate's card shows what it spent since it started, and a
+  long-running Teammate can be summarized with `@name /compact` to shrink the
+  conversation it carries. The compaction itself is a model call that the card does
+  not count.
 - **Mental load moves, it does not vanish.** Setting up roles and reviewing a team's
   output is work. The payoff comes on repeated or long-running jobs. Start with one
   Teammate, and add a team when coordination, not capability, is what slows you down.
@@ -309,9 +356,9 @@ And here is where Agency.Huddle stands on the guardrails an autonomous network n
 | --- | --- |
 | Human-in-the-loop | **Structural.** Every room, by schema. |
 | A verify step | **Partly.** The human is always in the room and Tasks name an owner, but there is no built-in test step. A team that has only a Generate and a Challenge Teammate has no Verify. |
-| Runaway-loop guard | **Yes.** A per-room Budget of agent replies (40 by default) that any human message resets, a per-Teammate token Budget, and an idle timeout on a silent Turn. **Stop** cancels a Turn. |
+| Runaway-loop guard | **Yes.** A per-room Budget of agent replies (40 by default) that any human message resets; when it is spent the agents pause and you choose **Continue** or **Leave paused**. A per-Teammate token Budget, ten Teammate-made wake-ups per Task, and an idle timeout on a silent Turn. **Stop** cancels a Turn. |
 | Seeing what an agent did | **Mostly.** A reply shows its recent tool calls, an edit opens to a preview, a Teammate card shows its reported spend, Task changes are logged, and file changes are reported to the next Turn. None of the tool-call detail is kept after the reply. |
-| Least-privilege tool access | **Partly.** A Work Mode limits what a Teammate may do before it asks, and writes outside its Work Dir are refused. Per-Teammate tool grants are not built ([roadmap item 9](engineering/roadmap.md)), and asking the human before a tool runs is proposed, not built (item 20). |
+| Least-privilege tool access | **Partly.** A Work Mode limits what the agent does before it asks, but Huddle approves the agent's permission requests itself, so nothing asks you before a tool runs. The one write refused in every mode is into the agent's own `~/.claude` folder, and a shell command that redirects there is not caught. A write outside the Work Dir is not refused. Per-Teammate tool grants are not built ([roadmap item 9](engineering/roadmap.md)), and asking the human before a tool runs is proposed, not built (item 20). |
 | Sandboxing | No. A Teammate's work directory is real disk. |
 | Authentication | None, by design. Run it on your own machine. |
 
@@ -323,19 +370,40 @@ and that is a setting, not a guarantee.
 
 ## Try it
 
-Requires the .NET 10 SDK. For a first run that spends nothing, turn the agent
-process off, because the development configuration starts a real one per Teammate:
+One command installs it, with no admin rights and nothing installed first. On
+Windows, in a normal PowerShell window:
+
+```powershell
+irm https://github.com/emreaydinceren/Agency.Huddle/releases/latest/download/install.ps1 | iex
+```
+
+On macOS, in Terminal:
+
+```sh
+curl -fsSL https://github.com/emreaydinceren/Agency.Huddle/releases/latest/download/install.sh | sh
+```
+
+It checks your machine, sets the app up in your own folders and opens it in your
+browser. If you are not signed in to Claude yet, it prints `claude auth login` for you
+to run once. Start it later by typing `huddle`, stop it with `huddle stop`, and run
+the same command again to upgrade; your rooms and settings are kept. Real Claude
+agents **spend money**.
+
+To work on the code instead, you need the .NET 10 SDK. For a first run that spends
+nothing, turn the agent process off, because the development configuration starts a
+real one per Teammate:
 
 ```powershell
 $env:Team__Acp__Enabled = 'false'
 dotnet run --project src/Huddle.App --urls http://localhost:5100
 ```
 
-Open `http://localhost:5100`. Two rooms, `echo` and `alpha`, are already there.
-Click **echo**, type `hi`, and it answers. Bringing real Claude agents online takes
-Node.js and a logged-in `claude` CLI, and **spends money**; `Team:Acp:Enabled` is
-the switch. [`docs/Huddle.UserGuide.md`](Huddle.UserGuide.md) walks through
-Teammates, Teams, Tasks and the Library, and
+Open `http://localhost:5100`. A fresh install has no rooms. To try the two built-in
+demo agents, `echo` and `alpha`, set `Team__DemoAgent__Enabled` to `true` before
+`dotnet run`, click **echo**, type `hi`, and it answers. Bringing real Claude agents online from
+source takes Node.js and a logged-in `claude` CLI; `Team:Acp:Enabled` is the switch.
+[`docs/Huddle.UserGuide.md`](Huddle.UserGuide.md) walks through Teammates, Teams,
+Tasks and the Library, and
 [`docs/Huddle.EngineeringGuide.md`](Huddle.EngineeringGuide.md) holds the whole design.
 
 Built with .NET 10 and Blazor Server, with thousands of tests and zero build
@@ -348,3 +416,15 @@ It does not solve verification: being able to check is not the same as checking,
 and a person cannot read everything a team of agents produces. Making the Verify
 step something the system does, not only something a person may do, is the next
 problem, and the one we are working on now.
+
+A person cannot read everything, but a person can read less. What people should own
+is the small surface: the goals, the specs and the acceptance criteria. A Task body
+is that spec, written where the Teammate who takes it and the person who accepts it
+both read it.
+
+The next problem also has a shape. Verifying means checking results against goals:
+correctness, security, safety, reliability, scalability, performance,
+maintainability and extensibility. Some of these are easy to automate today, such as
+security scanners, load tests and performance budgets. Maintainability and
+extensibility are harder, and architecture tests and complexity limits only get part
+of the way. Agency.Huddle does not run any of these checks for you yet.
