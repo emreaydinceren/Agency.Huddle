@@ -10,17 +10,17 @@ defines the terminals, states, procedures and oracles this page names. Both are 
 
 ## Setup
 
-Run [`P-BUILD`](common.md#p-build) then [`P-LAUNCH-FREE`](common.md#p-launch-free) from
+Run [`P-BUILD`](common.md#p-build) then [`P-LAUNCH-UAT`](common.md#p-launch-uat) from
 [Common procedures](common.md), which also defines the terminals `T-A` and `T-B`, the
 oracles `O-LOG` / `O-ADAPTERS` / `O-TRANSCRIPT` / `O-DB`, the four resets, and the
 standing conventions. This area adds:
 
-1. Wait for `O-LOG` to print `Demo agent echo connected.` and `Demo agent alpha connected.` before starting. Two Rooms and two free in-process echo agents exist from that point. If those lines never appear, every test needing an agent reply is INCONCLUSIVE — say so rather than failing it.
-2. Open a browser at `http://localhost:5100` with DevTools (F12) available. Several tests are settled only by inspecting the DOM in the Elements panel.
-3. In `T-B` set the data path once: `$data = 'E:\Repos\Huddle\src\Huddle.App\App_Data'`.
-4. Get the open Room's id — the 32 hex characters after `/rooms/` in the address bar — and set `$room = '<those characters>'`. Then define the two helpers this area reuses throughout: `function Lines { if (Test-Path "$data\rooms\$room.jsonl") { (Get-Content "$data\rooms\$room.jsonl").Count } else { 0 } }` and `function Tail { Get-Content "$data\rooms\$room.jsonl" -Tail 3 }`. Re-set `$room` every time you switch Rooms.
+1. Wait until **Ada** and **Bo** are both **Online** on `/teammates` before starting. Two empty one-to-one Rooms, `Ada` and `Bo`, and two free mock Teammates exist from that point. A reply from a mock Teammate is the whole prompt echoed back in three streamed chunks, so it is long, plain text, and contains the text you sent; judge "a reply from Ada appears and contains `<what you sent>`", never an exact body. To make that check reliable, send a single token with no spaces when you need to find it in a reply (a space can be lost where two streamed chunks join). If Ada never comes Online, every test needing an agent reply is INCONCLUSIVE — say so rather than failing it.
+2. Open a browser at `http://localhost:5100` with DevTools (F12) available. Several tests are settled only by inspecting the DOM in the Elements panel. Run ROOMMESSAGING-01 first, on the seeded `Ada` Room, then make the **quiet Room** for the rest: click **New chat**, tick `Ada` and `Bo`, click **Start chat**. It has three Members (You, Ada, Bo), so by the Reply Gate nobody answers a Message unless it Mentions them: `@Ada` is answered by Ada and `@Bo` by Bo. Every test below that says "a Room is open" means this quiet Room, so a Human Message adds exactly one line to its Transcript. A test that needs a reply sends `hi @Ada`; the tests that need Ada's two-Member `Ada` Room (where she answers every Message) say so.
+3. In `T-B` set the data path once: `$data = 'C:\seeds\huddle\uat\data'` (the folder `P-LAUNCH-UAT` builds, not `App_Data`).
+4. Get the open quiet Room's id (step 2) — the 32 hex characters after `/rooms/` in the address bar — and set `$room = '<those characters>'`. Then define the two helpers this area reuses throughout: `function Lines { if (Test-Path "$data\rooms\$room.jsonl") { (Get-Content "$data\rooms\$room.jsonl").Count } else { 0 } }` and `function Tail { Get-Content "$data\rooms\$room.jsonl" -Tail 3 }`. Re-set `$room` every time you switch Rooms.
 5. To type a multi-line Message, Shift+Enter between the lines. Every step below that says Shift+Enter means exactly that and never means Enter.
-6. When a test says to reset, it means `P-RESET-ROOMS`. ROOMMESSAGING-32 is the one test that runs on `P-LAUNCH-PAID` instead.
+6. When a test says to reset, it means re-run the seeder step of `P-LAUNCH-UAT` (it wipes `C:\seeds\huddle\uat` and returns to Ada, Bo and their two empty Rooms). A test that says to relaunch the app means the `P-LAUNCH-UAT` launch command, with whatever change the test names. ROOMMESSAGING-32 is the one test that runs on `P-LAUNCH-PAID` instead.
 
 ## Tests
 
@@ -32,7 +32,7 @@ standing conventions. This area adds:
 
 **Before you start**
 
-- The app is running with demo agents connected.
+- `P-LAUNCH-UAT` has been run and Ada and Bo are Online.
 - No test has deleted team.db.
 
 **Steps**
@@ -45,31 +45,31 @@ standing conventions. This area adds:
 6. Read the sidebar top to bottom and list every item you see.
 7. Select the whole URL from the address bar, open a new browser tab, paste it, press Enter.
 8. In the new tab, look at the sidebar and note whether the entry for the currently open Room is visually distinguished from the other entry.
-9. Click `alpha` in the sidebar and confirm the `<h1>` and the address bar both change.
+9. Click `Bo` in the sidebar and confirm the `<h1>` and the address bar both change.
 
 **Pass if — all of these**
 
 - The address bar changed from `http://localhost:5100/` to `http://localhost:5100/rooms/` followed by exactly 32 hexadecimal characters.
-- The `<h1>` reads `echo` (a word, not 32 hex characters).
-- The muted line beneath it reads exactly `You, echo`.
+- The `<h1>` reads `Ada` (a word, not 32 hex characters).
+- The muted line beneath it reads exactly `You, Ada`.
 - A button labelled `Add teammate` sits at the right of the header row.
-- The sidebar contains, in order: a `New chat` button, a room list containing `echo` and `alpha`, a `Teammates` link and a `Settings` link.
+- The sidebar contains, in order: a `New chat` button, a room list containing `Ada` and `Bo`, a `Teammates` link and a `Settings` link.
 - The pasted URL in the second tab opens the same Room with the same `<h1>` and the same transcript.
 - The sidebar entry for the open Room is visually distinguished (different colour or weight) from the other entry.
-- Clicking `alpha` changes the `<h1>` to `alpha` and changes the id in the address bar.
+- Clicking `Bo` changes the `<h1>` to `Bo` and changes the id in the address bar.
 
 **Fail if — any of these**
 
 - The browser stays on `http://localhost:5100/` with a blank main column -> the redirect never fired; the Room lookup returned nothing where the sidebar shows Rooms.
 - The address bar cycles between `/` and `/rooms/...` repeatedly -> a redirect loop.
-- The `<h1>` shows 32 hex characters instead of `echo` -> the header is rendering the Room id, not its Name.
-- The members line shows 32-hex ids instead of `You, echo` -> the member projection is reading Id where it should read Name.
-- The sidebar shows `echo`/`alpha` but the main column reads `No rooms yet. Start an agent to create one.`, or the reverse -> the two copies of that same literal have drifted apart; the one that disagrees with the sidebar's actual contents is the bug.
-- Clicking `alpha` changes the URL but the `<h1>` and transcript still show `echo` -> the page is not reloading on a route-parameter change.
+- The `<h1>` shows 32 hex characters instead of `Ada` -> the header is rendering the Room id, not its Name.
+- The members line shows 32-hex ids instead of `You, Ada` -> the member projection is reading Id where it should read Name.
+- The sidebar shows `Ada`/`Bo` but the main column reads `No rooms yet. Start an agent to create one.`, or the reverse -> the two copies of that same literal have drifted apart; the one that disagrees with the sidebar's actual contents is the bug.
+- Clicking `Bo` changes the URL but the `<h1>` and transcript still show `Ada` -> the page is not reloading on a route-parameter change.
 
 **Inconclusive if**
 
-If BOTH the sidebar and the main column read `No rooms yet. Start an agent to create one.`, no agent connected and there are no Rooms to test. Check `T-A` for `Demo agent echo connected.`. If it is absent, this test and every agent-dependent test below are INCONCLUSIVE — restart the app and retry once before recording anything. Do not record a FAIL.
+If BOTH the sidebar and the main column read `No rooms yet. Start an agent to create one.`, the seeded Rooms are missing and there are no Rooms to test. Re-run `P-LAUNCH-UAT` and check that the launch used `--Team:DataDir=C:\seeds\huddle\uat\data`. If they are still absent, this test and every agent-dependent test below are INCONCLUSIVE — retry once before recording anything. Do not record a FAIL.
 
 > [!NOTE]
 > Optional cross-check if you have `sqlite3` on PATH: `sqlite3 "$data\team.db" "select id, name from rooms order by created, id;"`. The first row's `id` must equal the 32 hex characters in the address bar, and its `name` must equal the `<h1>`. Skip this cross-check silently if sqlite3 is not installed — its absence is not a finding.
@@ -82,8 +82,8 @@ If BOTH the sidebar and the main column read `No rooms yet. Start an agent to cr
 
 **Before you start**
 
-- A Room is open in the browser and `$room` in `T-B` holds that Room's id.
-- No agent is required — a Human Message posts whether or not anyone is listening.
+- The quiet Room (Setup step 2) is open in the browser and `$room` in `T-B` holds that Room's id.
+- No agent is required — a Human Message posts whether or not anyone is listening, and nobody answers a Message in the quiet Room unless it Mentions them.
 
 **Steps**
 
@@ -103,6 +103,7 @@ If BOTH the sidebar and the main column read `No rooms yet. Start an agent to cr
 - That row's meta line shows the sender `You` in a heavier weight and a time in `HH:mm` form beside it.
 - That row's body reads `hello there`.
 - The transcript is scrolled so the new row is visible.
+- No reply appears — nobody was Mentioned.
 - `Lines` increased by exactly 1 (or the file was created and now holds 1 line).
 - The last JSONL line is one complete JSON object ending with `,"senderId":"human","senderName":"You","text":"hello there"}`.
 
@@ -111,13 +112,13 @@ If BOTH the sidebar and the main column read `No rooms yet. Start an agent to cr
 - Enter inserts a newline in the textarea and nothing posts -> the keydown listener in `wwwroot/app.js` never attached; check the browser Console for an error naming `teamComposer.attach`.
 - The textarea still holds `hello there` after Enter -> the JS clear did not run even though the send did.
 - The row appears only after pressing F5 -> the live `MessagePosted` subscription on the Room page is broken; the store is fine but the page is not listening.
-- `Lines` grew by 2 or more for one Enter -> the Message is being appended more than once.
+- `Lines` grew by 2 or more for one Enter -> the Message is being appended more than once (or a Teammate answered an unmentioned Message in a three-Member Room, which is a Reply Gate defect to report separately).
 - The row appears on screen but `Lines` did not change -> the Message never reached disk; a restart would lose it.
 - Nothing happens at all — no row, no file change, no console error -> the send path is dead end to end.
 
 **Inconclusive if**
 
-If `$data\rooms` does not exist AND no row appeared, you cannot tell a posting failure from a storage failure. Check `T-A` for an exception, then retry once in the other demo Room (`alpha`). If it works there, record a FAIL scoped to the first Room; if it fails in both, record INCONCLUSIVE and report the console output verbatim.
+If `$data\rooms` does not exist AND no row appeared, you cannot tell a posting failure from a storage failure. Check `T-A` for an exception, then retry once in the seeded `Bo` Room. If it works there, record a FAIL scoped to the first Room; if it fails in both, record INCONCLUSIVE and report the console output verbatim.
 
 > [!NOTE]
 > The textarea is cleared by JavaScript BEFORE the server round-trip finishes. That is why a rejected send loses the typed text — tested deliberately in ROOMMESSAGING-22, not here.
@@ -256,20 +257,20 @@ If the JSONL file cannot be read (locked, missing), the screen alone cannot sett
 
 **Steps**
 
-1. In the composer type `alpha`, press **Shift+Enter**, type `beta`, press **Shift+Enter**, type `gamma`, then press **Enter**.
+1. In the composer type `red`, press **Shift+Enter**, type `green`, press **Shift+Enter**, type `blue`, then press **Enter**.
 2. Read the rendered row.
 3. Right-click that row's body text and choose Inspect. In the Elements panel, find the enclosing element with class `message-body` and count how many `<p>` children it has.
-4. In the composer type `alpha`, press **Shift+Enter** twice (leaving a blank line), type `beta`, then press **Enter**.
+4. In the composer type `red`, press **Shift+Enter** twice (leaving a blank line), type `green`, then press **Enter**.
 5. Read the rendered row and inspect its `message-body` the same way.
 6. In the composer type `- one`, press **Shift+Enter**, type `- two`, press **Shift+Enter**, type `- three`, then press **Enter**.
 7. Read the rendered row and inspect its `message-body`.
 
 **Pass if — all of these**
 
-- The first message renders as one line reading `alpha beta gamma`.
-- Its `message-body` contains exactly one `<p>` element whose text is `alpha beta gamma`.
+- The first message renders as one line reading `red green blue`.
+- Its `message-body` contains exactly one `<p>` element whose text is `red green blue`.
 - The second message renders as two stacked paragraphs with a small vertical gap.
-- Its `message-body` contains exactly two sibling `<p>` elements, `alpha` and `beta`.
+- Its `message-body` contains exactly two sibling `<p>` elements, `red` and `green`.
 - The third message renders as a real bulleted list with three bullets.
 - Its `message-body` contains a `<ul>` with three `<li>` children.
 
@@ -284,7 +285,7 @@ If the JSONL file cannot be read (locked, missing), the screen alone cannot sett
 If devtools cannot be opened (locked-down browser), the first case cannot be distinguished from a rendering fault by eye. Record INCONCLUSIVE for the `<p>`-count checks and report only what was visible.
 
 > [!NOTE]
-> `alpha beta gamma` on ONE line is CORRECT — the pipeline deliberately does not treat a soft line break as a hard one, so a single newline is a space, exactly as CommonMark specifies. The newline is still stored (ROOMMESSAGING-03 proves that). Do NOT file this. The genuine bug is the opposite direction: blank lines failing to split, or the list failing to render.
+> `red green blue` on ONE line is CORRECT — the pipeline deliberately does not treat a soft line break as a hard one, so a single newline is a space, exactly as CommonMark specifies. The newline is still stored (ROOMMESSAGING-03 proves that). Do NOT file this. The genuine bug is the opposite direction: blank lines failing to split, or the list failing to render.
 
 ### ROOMMESSAGING-07 — Core Markdown renders: bold, italic, heading, lists, blockquote, inline and fenced code, rule
 
@@ -616,28 +617,28 @@ If the paste is silently truncated by the browser rather than by the app, the pr
 
 **Before you start**
 
-- The `echo` Room is open; `$room` is set to its id.
-- Demo agents are connected.
+- The quiet Room is open; `$room` is set to its id.
+- `P-LAUNCH-UAT` has been run and Ada is Online.
 
 **Steps**
 
 1. Send five Messages in quick succession, one per Enter: `1`, then `2`, then `3`, then `4`, then `5`.
 2. Read the transcript top to bottom and write down the order of those five rows.
-3. Send `hi @echo` and wait for the reply to finish arriving.
-4. Note whether the reply row sits below the `hi @echo` row.
+3. Send `hi @Ada` and wait for Ada's reply to finish arriving.
+4. Note whether the reply row sits below the `hi @Ada` row.
 5. Press F5 to reload the page.
 6. Read the transcript top to bottom again and compare with what you wrote down.
 7. In `T-B` run `Get-Content "$data\rooms\$room.jsonl" | ForEach-Object { ($_ | ConvertFrom-Json).text }` and read the list top to bottom.
-8. Now the duplicate hunt: send `hi @echo` and, within one second of pressing Enter, click `alpha` in the sidebar, then click the first Room's entry again to come back.
+8. Now the duplicate hunt: send `hi @Ada` and, within one second of pressing Enter, click `Bo` in the sidebar, then click the quiet Room's entry again to come back.
 9. Read the last few rows of the transcript carefully.
 
 **Pass if — all of these**
 
 - The five rows appear top to bottom as `1`, `2`, `3`, `4`, `5`.
-- The echo reply row sits immediately below the `hi @echo` row that prompted it.
+- Ada's reply row sits immediately below the `hi @Ada` row that prompted it.
 - After the reload the on-screen order is identical to the order before the reload.
 - The text list printed from the JSONL, read top to bottom, matches the on-screen order row for row, one line per row.
-- After the rapid Room switch, the echo reply appears exactly once — no row is duplicated.
+- After the rapid Room switch, Ada's reply appears exactly once — no row is duplicated.
 
 **Fail if — any of these**
 
@@ -648,7 +649,7 @@ If the paste is silently truncated by the browser rather than by the app, the pr
 
 **Inconclusive if**
 
-If the echo agent never replies, the interleaving half cannot be judged — check `T-A` for `Demo agent echo connected.`, confirm you typed `@echo` with the at-sign, and record the interleaving and duplicate sub-cases as INCONCLUSIVE while still judging the five-message ordering.
+If Ada never replies, the interleaving half cannot be judged — check that Ada is **Online** on `/teammates`, confirm you typed `@Ada` with the at-sign, and record the interleaving and duplicate sub-cases as INCONCLUSIVE while still judging the five-message ordering.
 
 > [!NOTE]
 > The duplicate at step 8 is timing-dependent — if it does not reproduce in three attempts, record "not reproduced in 3 attempts" rather than PASS on that sub-case.
@@ -703,7 +704,7 @@ If `curl.exe` is unavailable, substitute the browser's View Source (Ctrl+U) and 
 
 **Before you start**
 
-- A Room is open with at least one Human Message and one agent reply; `$room` is set.
+- The quiet Room is open with at least one Human Message and one agent reply (send `hi @Ada` and wait for Ada's reply to settle if there is none); `$room` is set.
 
 **Steps**
 
@@ -719,7 +720,7 @@ If `curl.exe` is unavailable, substitute the browser's View Source (Ctrl+U) and 
 **Pass if — all of these**
 
 - A Human Message's meta line shows the sender `You`.
-- An agent reply's meta line shows the agent's Name (`echo` or `alpha`), not a 32-hex id.
+- An agent reply's meta line shows the agent's Name (`Ada` or `Bo`), not a 32-hex id.
 - The time is 24-hour `HH:mm` — four digits and a colon, with no seconds, no AM/PM and no date.
 - The two Messages sent a minute apart show different times.
 - Neither time changes across a reload.
@@ -737,7 +738,7 @@ If `curl.exe` is unavailable, substitute the browser's View Source (Ctrl+U) and 
 
 **Inconclusive if**
 
-If no agent reply exists yet, judge only the Human half and record the agent-attribution checks as INCONCLUSIVE until ROOMMESSAGING-18 has produced a reply.
+If no agent reply exists yet, judge only the Human half and record the agent-attribution checks as INCONCLUSIVE until `hi @Ada` has produced a reply.
 
 > [!NOTE]
 > Two documented NON-bugs: (a) the displayed time is converted to local time on the SERVER, so in a multi-machine deployment it would show the server's timezone, not the browser's — irrelevant when testing on one machine, and not to be filed from a single-machine run; (b) there is no date and no day separator, so a Message from last week shows only `HH:mm`. Optional extra: setting `$env:Team__HumanName='Emre'`, deleting `team.db` and restarting causes NEW Messages to be attributed to `Emre` — only run this if a full reset is acceptable.
@@ -750,16 +751,16 @@ If no agent reply exists yet, judge only the Human half and record the agent-att
 
 **Before you start**
 
-- The `echo` Room is open and holds enough Messages to overflow the transcript area vertically (send `filler` twenty times if not).
+- The quiet Room is open and holds enough Messages to overflow the transcript area vertically (send `filler` twenty times if not).
 - Devtools Console is open.
-- Demo agents are connected.
+- `P-LAUNCH-UAT` has been run and Ada is Online.
 
 **Steps**
 
 1. Scroll the transcript area to the bottom.
 2. Send `bottom check` and watch whether the view moves to show it.
 3. In the devtools Console run: `const l=document.querySelector('.message-list'); l.scrollTop, l.scrollHeight - l.clientHeight` and compare the two numbers.
-4. Send `hi @echo` and watch the streaming Draft row appear and grow.
+4. Send `hi @Ada` and watch the streaming Draft row appear and grow.
 5. While the text is still arriving, watch whether the view follows the growing text down, or only jumps once the reply settles.
 6. Scroll the transcript up so older messages fill the view.
 7. While scrolled up, send `yank test` and watch what the view does.
@@ -781,7 +782,7 @@ If no agent reply exists yet, judge only the Human half and record the agent-att
 
 **Inconclusive if**
 
-If the transcript does not overflow its area, none of this is observable — send more filler Messages until a scrollbar appears on the transcript area, then restart the test. If the echo agent never replies, record the Draft sub-cases as INCONCLUSIVE.
+If the transcript does not overflow its area, none of this is observable — send more filler Messages until a scrollbar appears on the transcript area, then restart the test. If Ada never replies, record the Draft sub-cases as INCONCLUSIVE. The reply is only three chunks, so the Draft grows for a moment; if it settles before you can judge, send a longer line of your own first (the reply echoes the whole prompt, so a longer Message makes a longer Draft).
 
 > [!NOTE]
 > The snap-back at step 7 IS the current behaviour: there is no "the reader is scrolled up" guard, so any new Message or Draft growth yanks the view to the bottom. Report it as a UX limitation at low severity, not as a functional defect.
@@ -794,38 +795,39 @@ If the transcript does not overflow its area, none of this is observable — sen
 
 **Before you start**
 
-- The `echo` Room is open; `$room` is set to its id.
-- Both demo agents are connected and `alpha` is NOT already a member of this Room.
-- If `alpha` is already a member, do a full RESET (stop app, delete `team.db`, relaunch) before running this.
+- `P-LAUNCH-UAT` has been run and Ada and Bo are Online.
+- The seeded `Ada` Room (two Members) is open; `$room` is set to its id. Not the quiet Room.
+- `Bo` is NOT already a member of this Room.
+- If `Bo` is already a member, or a Room named `Ada, Bo` already exists from the quiet Room, do a full RESET (stop the app, re-run the seeder step of `P-LAUNCH-UAT`, relaunch) before running this.
 
 **Steps**
 
 1. In `T-B` run `Lines` and write down the number.
 2. Note the current `<h1>`, the members line beneath it, and the sidebar entry text for this Room.
-3. In the composer type exactly `/invite @alpha` and press **Enter**.
+3. In the composer type exactly `/invite @Bo` and press **Enter**.
 4. Read the line that appears above the composer, and note its colour.
 5. Read the `<h1>` and the members line again.
 6. Read the sidebar entry for this Room again — do NOT refresh the page.
 7. In `T-B` run `Lines` again.
 8. Look at `T-A`'s console output for a line mentioning an invitation.
 9. Send an ordinary Message `after invite` and check whether the line above the composer is still there.
-10. Send `hi @alpha` and confirm alpha now replies in this Room.
+10. Send `hi @Bo` and confirm Bo now replies in this Room.
 
 **Pass if — all of these**
 
 - No Message row is added to the transcript for the `/invite` command itself.
-- A GREEN line appears above the composer reading exactly `Invited alpha. Room is now "echo, alpha".`
-- The `<h1>` now reads `echo, alpha`.
-- The members line now reads `You, echo, alpha`.
-- The sidebar entry for this Room now reads `echo, alpha`, with no page refresh.
+- A GREEN line appears above the composer reading exactly `Invited Bo. Room is now "Ada, Bo".`
+- The `<h1>` now reads `Ada, Bo`.
+- The members line now reads `You, Ada, Bo`.
+- The sidebar entry for this Room now reads `Ada, Bo`, with no page refresh.
 - `Lines` is unchanged by the invite.
-- `T-A` shows a line of the form `Invited agent 'alpha' (<id>) into room '<roomId>'.`
+- `T-A` shows a line of the form `Invited agent 'Bo' (<id>) into room '<roomId>'.`
 - After sending `after invite`, the green line is gone.
-- `hi @alpha` now gets a reply in this Room.
+- `hi @Bo` now gets a reply from Bo in this Room.
 
 **Fail if — any of these**
 
-- A transcript row appears containing the text `/invite @alpha` -> a slash-prefixed submit reached the Transcript, which it must never do.
+- A transcript row appears containing the text `/invite @Bo` -> a slash-prefixed submit reached the Transcript, which it must never do.
 - `Lines` increased -> the command was persisted as a Message.
 - The line above the composer is RED rather than green -> a successful invite is being presented in the error style.
 - The header renames but the sidebar entry does not -> the rooms-changed event is not reaching the sidebar; a refresh would be needed, which defeats the design.
@@ -833,10 +835,10 @@ If the transcript does not overflow its area, none of this is observable — sen
 
 **Inconclusive if**
 
-If `alpha` is already a member, the invite will behave differently and the rename will be a no-op — do the RESET named in the preconditions and re-run, rather than judging. If `alpha` never connected (no `Demo agent alpha connected.` in `T-A`), record INCONCLUSIVE.
+If `Bo` is already a member, the invite will behave differently and the rename will be a no-op — do the RESET named in the preconditions and re-run, rather than judging. If Bo never came Online on `/teammates`, record INCONCLUSIVE.
 
 > [!NOTE]
-> Optional cross-check with sqlite3: `sqlite3 "$data\team.db" "select name from rooms where id='<roomId>';"` must now return `echo, alpha`, and `select count(*) from room_members where room_id='<roomId>';` must return 3.
+> Optional cross-check with sqlite3: `sqlite3 "$data\team.db" "select name from rooms where id='<roomId>';"` must now return `Ada, Bo`, and `select count(*) from room_members where room_id='<roomId>';` must return 3.
 
 ### ROOMMESSAGING-22 — Composer errors: unknown command, unknown agent, and the typed text is lost
 
@@ -895,31 +897,31 @@ If the composer shows no line at all AND nothing posts, you cannot tell a missin
 
 **Before you start**
 
-- At least two Rooms exist in the sidebar (`echo` and `alpha` by default).
+- At least two Rooms exist in the sidebar (the seeded `Ada` and `Bo` Rooms). Bo will answer the Message in step 6, because his Room has two Members; that reply is expected and does not affect the check.
 
 **Steps**
 
-1. Open the `echo` Room and note its 32-hex id from the address bar. Call this ID-ECHO.
-2. In the composer type exactly `this was meant for echo` and DO NOT press Enter.
-3. Click `alpha` in the sidebar.
-4. Note the id now in the address bar. Call this ID-ALPHA.
+1. Open the `Ada` Room and note its 32-hex id from the address bar. Call this ID-ADA.
+2. In the composer type exactly `this was meant for ada` and DO NOT press Enter.
+3. Click `Bo` in the sidebar.
+4. Note the id now in the address bar. Call this ID-BO.
 5. Look at the composer and note whether it still contains the typed text.
 6. Press **Enter**.
 7. Read which Room's transcript the Message lands in.
-8. In `T-B` run `Select-String -Path "$data\rooms\$($idAlpha).jsonl" -Pattern 'meant for echo' -SimpleMatch` and the same against ID-ECHO's file (substitute the real ids).
-9. Now the second half: open the `echo` Room, type `second attempt` without pressing Enter, click `Teammates` in the sidebar, then click a Room in the sidebar to come back.
+8. In `T-B` run `Select-String -Path "$data\rooms\$($idBo).jsonl" -Pattern 'meant for ada' -SimpleMatch` and the same against ID-ADA's file (substitute the real ids). Bo's reply echoes the prompt, so it contains the same text; the Human line is the one with `"senderName":"You"`.
+9. Now the second half: open the `Ada` Room, type `second attempt` without pressing Enter, click `Teammates` in the sidebar, then click a Room in the sidebar to come back.
 10. Look at the composer.
 
 **Pass if — all of these**
 
-- After the Room switch, the composer still contains `this was meant for echo`.
-- Pressing Enter posts it into the Room whose id is in the address bar at that moment — ID-ALPHA.
-- The text appears in ID-ALPHA's JSONL file and does NOT appear in ID-ECHO's.
+- After the Room switch, the composer still contains `this was meant for ada`.
+- Pressing Enter posts it into the Room whose id is in the address bar at that moment — ID-BO.
+- The text appears in ID-BO's JSONL file and does NOT appear in ID-ADA's.
 - After navigating away to `Teammates` and back into a Room, the composer is EMPTY.
 
 **Fail if — any of these**
 
-- The Message posts into ID-ECHO after you switched to alpha -> the composer is still bound to a stale Room id; a Message can land in a Room the Human is not looking at. This is an outright bug and outranks everything else here.
+- The Message posts into ID-ADA after you switched to Bo -> the composer is still bound to a stale Room id; a Message can land in a Room the Human is not looking at. This is an outright bug and outranks everything else here.
 - The text lands in neither file but appears on screen -> the post did not reach disk.
 - The composer is empty immediately after the Room switch AND navigating away also clears it -> not a failure, but note it: the behaviour has changed and this test's premise no longer holds.
 
@@ -938,22 +940,22 @@ If only one Room exists, this cannot be run — create a second Room (`pwsh tool
 
 **Before you start**
 
-- At least one Message has been posted in the `echo` Room and at least one in the `alpha` Room.
+- At least one Message has been posted in the `Ada` Room and at least one in the `Bo` Room (each Teammate answers, so each file holds a Human line and a reply).
 - `$data` is set in `T-B`.
 
 **Steps**
 
 1. In `T-B` run `Get-ChildItem "$data\rooms"` and list the files you see.
 2. Confirm each filename is 32 hexadecimal characters followed by `.jsonl`.
-3. Open the `echo` Room's file with `Get-Content "$data\rooms\<echoId>.jsonl"` and read every line.
+3. Open the `Ada` Room's file with `Get-Content "$data\rooms\<adaId>.jsonl"` and read every line.
 4. Confirm each line is one complete JSON object on one line, and that every line has the fields `id`, `timestamp`, `senderId`, `senderName`, `text` and nothing else.
 5. Read a `timestamp` value and confirm it ends with `+00:00`.
 6. Find a Human line and confirm it has `"senderId":"human"` and `"senderName":"You"`.
 7. Find an agent line and confirm its `senderId` is 32 hex characters and its `senderName` is the agent's Name.
-8. Copy the whole `echo` file to a snapshot: `Copy-Item "$data\rooms\<echoId>.jsonl" "$env:TEMP\before.jsonl"`.
-9. In the browser, post three more Messages into the `echo` Room.
-10. Run `Compare-Object (Get-Content "$env:TEMP\before.jsonl") (Get-Content "$data\rooms\<echoId>.jsonl")` and read the result.
-11. Record `alpha`'s file length, then post a Message in `echo`, then re-check `alpha`'s file length.
+8. Copy the whole `Ada` file to a snapshot: `Copy-Item "$data\rooms\<adaId>.jsonl" "$env:TEMP\before.jsonl"`.
+9. In the browser, post three more Messages into the `Ada` Room, waiting for each reply to settle.
+10. Run `Compare-Object (Get-Content "$env:TEMP\before.jsonl") (Get-Content "$data\rooms\<adaId>.jsonl")` and read the result.
+11. Record `Bo`'s file length, then post a Message in `Ada` and wait for the reply to settle, then re-check `Bo`'s file length.
 
 **Pass if — all of these**
 
@@ -962,7 +964,7 @@ If only one Room exists, this cannot be run — create a second Room (`pwsh tool
 - Every `timestamp` is UTC and ends `+00:00`.
 - Human lines carry `"senderId":"human"` and `"senderName":"You"`; agent lines carry a 32-hex `senderId` and the agent's Name.
 - The `Compare-Object` result shows ONLY added lines (side indicator `=>`), never a changed or removed one — the file is append-only.
-- Posting in `echo` leaves `alpha`'s file length unchanged.
+- Posting in `Ada` leaves `Bo`'s file length unchanged.
 
 **Fail if — any of these**
 
@@ -1093,7 +1095,7 @@ If the bot does not connect or no Room appears, record INCONCLUSIVE — the Ment
 4. Reload the browser page (F5).
 5. Look at the Message bodies in the transcript. Compare against what you wrote down in step 1 — is anything serif?
 6. Re-read the computed `font-family` on a `message-body` element and on a `message-sender` element; compare both against step 1.
-7. Send `hi @echo` and, while the Draft is streaming, note the Draft text's typeface against the rest of the transcript.
+7. In the quiet Room send `hi @Ada` and, while the Draft is streaming, note the Draft text's typeface against the rest of the transcript. (The Draft is short-lived; if it settles before you can read it, send a longer line first, since the reply echoes the whole prompt.)
 8. In `T-B` run `(Get-FileHash "$data\appearance.json").Hash` again and compare with what you wrote down in step 3.
 9. In `T-B` run `Get-Content "$data\appearance.json"` and confirm the `overrides` key you wrote in step 2 is still there, untouched.
 10. In `T-B` run `Remove-Item "$data\appearance.json"` and reload the browser to restore the default.
@@ -1140,7 +1142,7 @@ If `.message-body` and `.message-sender` already read different font families on
 4. In `T-B` append a truncated line: `Add-Content -Path "$data\rooms\$room.jsonl" -Value '{"id":"x"'`.
 5. In `T-B` insert a garbage line in the middle: read the file into an array, splice `not json at all` in after the second line, and write it back — `$l = Get-Content "$data\rooms\$room.jsonl"; $new = $l[0..1] + 'not json at all' + $l[2..($l.Count-1)]; Set-Content -Path "$data\rooms\$room.jsonl" -Value $new`.
 6. In `T-B` also append one completely blank line: `Add-Content -Path "$data\rooms\$room.jsonl" -Value ''`.
-7. In `T-A` relaunch: `$env:Team__Acp__Enabled = 'false'` then `dotnet run --project src/Huddle.App --urls http://localhost:5100`.
+7. In `T-A` relaunch with the `P-LAUNCH-UAT` launch command, changing `--Team:Acp:Enabled=true` to `--Team:Acp:Enabled=false` (keep `--Team:DataDir`).
 8. Open that Room in the browser and read the transcript.
 9. Compare it with the list you noted at step 1.
 10. Read `T-A`'s console output and count the warnings mentioning an unparsable line, noting each line number named.
@@ -1184,8 +1186,8 @@ If you cannot tell which physical line numbers your edits produced (line endings
 
 1. In the browser, note the exact text, sender and time of every Message in the Room.
 2. In `T-B` run `(Get-FileHash "$data\rooms\$room.jsonl").Hash` and write it down.
-3. In the browser, send `hi @echo` and, WHILE the Draft is still streaming, immediately press Ctrl+C in `T-A` to stop the app.
-4. Relaunch in `T-A`: `$env:Team__Acp__Enabled = 'false'` then `dotnet run --project src/Huddle.App --urls http://localhost:5100`.
+3. In the browser, send `hi @Ada` and, WHILE the Draft is still streaming, immediately press Ctrl+C in `T-A` to stop the app. (The mock reply is short; paste a long line after `@Ada` to make the Draft last longer, since the reply echoes the whole prompt.)
+4. Relaunch in `T-A` with the `P-LAUNCH-UAT` launch command, changing `--Team:Acp:Enabled=true` to `--Team:Acp:Enabled=false` (keep `--Team:DataDir`). Ada and Bo will not come Online; only the stored Rooms matter here.
 5. Reload the browser and reopen the same Room from the sidebar.
 6. Compare the transcript with what you noted at step 1.
 7. Note whether any streaming Draft row, caret or `Stop` button is present.
@@ -1223,32 +1225,32 @@ If the Draft finishes before you manage to press Ctrl+C, the Draft-loss half was
 **Before you start**
 
 - You are willing to stop and relaunch the app with a different environment variable.
-- Demo agents connect on launch.
+- `P-LAUNCH-UAT` has been run once so the seeded data folder exists, and the quiet Room (Setup step 2) exists in it, with Ada and Bo as its two Agents.
 
 **Steps**
 
 1. In `T-A` press Ctrl+C to stop the app.
-2. In `T-A` run `$env:Team__Acp__Enabled = 'false'` and `$env:Team__AgentMessageBudget = '2'`.
-3. In `T-A` relaunch: `dotnet run --project src/Huddle.App --urls http://localhost:5100`.
-4. Open the `echo` Room in the browser and set `$room` in `T-B` to its id.
-5. Send `hi @echo` and wait for the reply.
+2. In `T-A` run `$env:Team__AgentMessageBudget = '2'`.
+3. In `T-A` relaunch with the `P-LAUNCH-UAT` launch command (do NOT re-run the seeder, which would wipe the quiet Room). Wait for Ada and Bo to be Online.
+4. Open the quiet Room in the browser and set `$room` in `T-B` to its id.
+5. Send `hi @Ada` and wait for Ada's reply.
 6. Read any grey line between the transcript and the composer and write down its exact wording.
-7. Put a SECOND Agent in the Room - type `/invite @alpha` and press Enter - then send ONE Message mentioning both: `hi @echo and @alpha`. Wait for both replies.
+7. Send ONE Message mentioning both Agents: `hi @Ada and @Bo`. Wait for both replies.
 
    > A Human Message RESETS this counter (the note says "since you last spoke"), so alternating
    > Human/agent Messages can never reach a budget above 1: each Message you type zeroes it and
    > draws exactly one reply. Two replies have to arrive between two Human Messages, which needs
-   > two Agents in the Room. The same rule governs `STARTUPCONFIG-33`.
+   > two Agents in the Room; the quiet Room has Ada and Bo. The same rule governs `STARTUPCONFIG-33`.
 8. Look between the transcript and the composer and read the panel that appears, plus the labels of its two buttons.
 9. Confirm the panel sits BELOW the last transcript row and ABOVE the composer, not above the transcript.
 10. Press F5 and check whether the panel is still there.
-11. Provoke a REFUSAL, which needs its own configuration: stop the app, relaunch with `$env:Team__AgentMessageBudget = '1'`, and send one `hi @echo and @alpha`. The first Agent to answer spends the budget; the second is refused. (Typing a third Message instead would reset the counter and simply get a reply - see the note at step 7.) Watch `T-A`'s console.
+11. Provoke a REFUSAL, which needs its own configuration: stop the app, relaunch with `$env:Team__AgentMessageBudget = '1'` (same launch command, no re-seed), and send one `hi @Ada and @Bo`. The first Agent to answer spends the budget; the second is refused. (Typing a third Message instead would reset the counter and simply get a reply - see the note at step 7.) Watch `T-A`'s console.
 12. Click **Leave paused** and read what replaces the panel.
 13. Now send an ordinary Message `resuming` and check whether the pause clears.
-14. Send `hi @echo` and confirm the agent replies again.
+14. Send `hi @Ada` and confirm Ada replies again.
 15. Reach the pause once more (two more mentions), then click **Continue** and immediately try to click it a second time; read its label while the grant is in flight.
 16. Read `T-A`'s console for the extension line.
-17. In `T-B` run `Get-Content "$data\rooms\$room.jsonl" | ForEach-Object { ($_ | ConvertFrom-Json).senderName }` and count the `echo` entries between your Human Messages.
+17. In `T-B` run `Get-Content "$data\rooms\$room.jsonl" | ForEach-Object { ($_ | ConvertFrom-Json).senderName }` and count the `Ada` and `Bo` entries between your Human Messages.
 
 **Pass if — all of these**
 
@@ -1256,9 +1258,9 @@ If the Draft finishes before you manage to press Ctrl+C, the Draft-loss half was
 - After the second reply, a panel appears reading exactly `Agents have sent 2 replies since you last spoke, and are paused.` with buttons labelled `Continue` and `Leave paused`.
 - The panel sits between the last transcript row and the composer.
 - The panel is still present after F5.
-- At the budget of 1, the second Agent's reply is refused: it never appears as a row, and `T-A` logs `Room '<roomId>' refused a message from '<agent>': its budget of 1 agent messages since a human last spoke is spent.` (The number in that line is the configured budget.) The refused Agent's Draft text stays on screen unrendered - literal `**echo:**` asterisks - because a Draft only clears when its Message posts; that is expected here, not a stuck Draft.
+- At the budget of 1, the second Agent's reply is refused: it never appears as a row, and `T-A` logs `Room '<roomId>' refused a message from '<agent>': its budget of 1 agent messages since a human last spoke is spent.` (The number in that line is the configured budget.) The refused Agent's Draft text stays on screen as unrendered plain text (the echoed prompt) because a Draft only clears when its Message posts; that is expected here, not a stuck Draft.
 - Clicking `Leave paused` replaces the panel with a grey line reading exactly `Paused — 2 of 2 agent replies since you last spoke.`
-- Sending `resuming` clears the pause, and a following `@echo` mention gets a reply.
+- Sending `resuming` clears the pause, and a following `@Ada` mention gets a reply.
 - While a `Continue` grant is in flight the button is disabled and reads `Continuing…`.
 - `T-A` logs `Room '<roomId>' was extended to 4 agent messages.` on Continue.
 - The refused reply appears nowhere in the JSONL — only Messages that reached the Transcript count against the Budget.
@@ -1274,7 +1276,7 @@ If the Draft finishes before you manage to press Ctrl+C, the Draft-loss half was
 
 **Inconclusive if**
 
-If the agents never reply at all, no Budget can be spent and nothing here is testable — confirm `Demo agent echo connected.` in `T-A` and that the env var took effect (`$env:Team__AgentMessageBudget` should echo `2`). If the pause never appears after several replies, check the env var was set in the SAME terminal that launched the app before recording a FAIL.
+If the agents never reply at all, no Budget can be spent and nothing here is testable — confirm Ada and Bo are **Online** on `/teammates` and that the env var took effect (`$env:Team__AgentMessageBudget` should print `2`). If the pause never appears after several replies, check the env var was set in the SAME terminal that launched the app before recording a FAIL.
 
 > [!NOTE]
 > Remember to clear the env var (`Remove-Item Env:Team__AgentMessageBudget`) and relaunch before running any other test, or every later test will pause after two agent replies. A documented NON-bug: a Message declined for Budget is held for re-delivery rather than kept as catch-up, so if you leave a Room paused and then type instead of clicking Continue, the agent's next prompt will not carry the Message it was paused on — though that Message is still in the Transcript and still on screen.
@@ -1297,7 +1299,7 @@ If the agents never reply at all, no Budget can be spent and nothing here is tes
 3. Count how many distinct state paragraphs are visible inside the reconnect overlay.
 4. Note whether a dimmed backdrop covers the page behind it.
 5. While disconnected, type `sent while down` in the composer and press Enter.
-6. In `T-A` relaunch: `$env:Team__Acp__Enabled = 'false'` then `dotnet run --project src/Huddle.App --urls http://localhost:5100`.
+6. In `T-A` relaunch with the `P-LAUNCH-UAT` launch command (Ada and Bo may come Online; they are not used here).
 7. Let the browser reconnect on its own; if it does not, reload the page.
 8. Read the transcript and confirm it is intact.
 9. Send `back online` and confirm it posts.
@@ -1335,14 +1337,14 @@ If the overlay never appears because the browser closed the connection instantly
 
 **💰 Spends money** · about 15 min
 
-*Proves the real agent path produces the same Draft-then-rendered-Markdown behaviour the free demo agent does, and that tool-activity lines never reach the Transcript.*
+*Proves the real agent path produces the same Draft-then-rendered-Markdown behaviour the free mock Teammates do, and that tool-activity lines never reach the Transcript.*
 
 **Before you start**
 
 - `node` is on PATH (`node --version` succeeds).
 - The agent adapter is installed under `E:\Repos\Huddle\tools\acp\node_modules`.
 - You accept a small token charge: ONE prompt, ONE short turn — a few hundred tokens on Haiku at low effort. Roughly the cost of a single short chat message.
-- Every other test in this area has already been run for free; do NOT use this test to check Markdown cases the echo agent already proved.
+- Every other test in this area has already been run for free; do NOT use this test to check Markdown cases the mock Teammates already proved.
 
 **Steps**
 
@@ -1353,7 +1355,7 @@ If the overlay never appears because the browser closed the connection instantly
 5. Click the `New teammate` button.
 6. Fill in a Name, then in the `Model` dropdown select **Haiku**, and in the `Effort` dropdown select **low**. These two settings are the standing convention and keep the charge small — do not pick any other model or effort.
 7. Click `Add teammate` to save.
-8. Wait for the teammate to come online, then open its Room from the sidebar. Set `$room` in `T-B` to that Room's id and run `Lines`.
+8. Wait for the teammate to come online, then open its Room from the sidebar. This launch uses the default `App_Data`, not the seeded folder, so in `T-B` set `$data = 'E:\Repos\Huddle\src\Huddle.App\App_Data'`, set `$room` to that Room's id and run `Lines`.
 9. Type ONE prompt and press Enter: `In under 80 words, reply with a short heading, a three-item bullet list, a fenced code block of one line, and a link to https://example.com`.
 10. Watch the reply arrive: note whether a streaming row appears with the sender's Name, a `Stop` button, a blinking caret, and plain (unrendered) text.
 11. Watch for a muted italic line beneath the streaming text describing tool activity, if any appears.
@@ -1374,7 +1376,7 @@ If the overlay never appears because the browser closed the connection instantly
 
 **Fail if — any of these**
 
-- No Draft ever appears and only the finished Message shows up -> the streaming delta path is dead for real agents even though it works for the demo agent.
+- No Draft ever appears and only the finished Message shows up -> the streaming delta path is dead for real agents even though it works for the mock Teammates.
 - The Draft appears but is never replaced by a settled Message -> the completion signal is not arriving; the caret will blink indefinitely.
 - The reply renders as literal Markdown characters -> the Markdown path is broken specifically for agent-authored text.
 - A tool-activity line persists after the Message settles, or appears in the JSONL -> activity lines are leaking into the durable Transcript, which must only ever record what an agent SAID.
@@ -1385,7 +1387,7 @@ If the overlay never appears because the browser closed the connection instantly
 If `node` is missing, the adapter is not installed, or the teammate never comes online, NOTHING here is testable and no money should be spent — stop the app and record INCONCLUSIVE with the exact console message. If the model dropdown does not offer Haiku, do NOT substitute another model: stop and record INCONCLUSIVE, because a substitution changes the cost.
 
 > [!NOTE]
-> COST CONTROL IS PART OF THIS TEST: one prompt, one short turn, Model = Haiku, Effort = low, then stop the app. Do not re-run it to re-check Markdown cases — every Markdown, safety, ordering, autoscroll and Budget behaviour in this area is fully provable for free with the demo echo agent in ROOMMESSAGING-06 through -20. This test exists only to prove the REAL agent travels the same Draft-and-render path. The Budget is pinned to 4 rather than cleared. Clearing the override restores the default of 40, which is 40 Turns of exposure on a test that needs one.
+> COST CONTROL IS PART OF THIS TEST: one prompt, one short turn, Model = Haiku, Effort = low, then stop the app. Do not re-run it to re-check Markdown cases — every Markdown, safety, ordering, autoscroll and Budget behaviour in this area is fully provable for free with the mock Teammates (Ada and Bo, `P-LAUNCH-UAT`) in ROOMMESSAGING-06 through -17. This test exists only to prove the REAL agent travels the same Draft-and-render path. The Budget is pinned to 4 rather than cleared. Clearing the override restores the default of 40, which is 40 Turns of exposure on a test that needs one.
 
 ---
 

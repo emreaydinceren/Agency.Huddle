@@ -337,8 +337,8 @@ the Human holds an unprompted introduction before the Human has typed anything, 
 **Inconclusive if**
 
 Node, the `claude` CLI login, or the inference budget is not available, so `run.ps1 -Clean` cannot
-start a real Adapter. Record that and do not substitute a demo agent — nothing in the demo-agent
-path implements a Greeting at all, so a demo agent answering something is not evidence either way.
+start a real Adapter. Record that and do not substitute the `P-LAUNCH-UAT` Teammates — the mock
+adapter does not implement a Greeting at all, so Ada or Bo answering something is not evidence either way.
 
 > [!NOTE]
 > A Greeting that fails, is Stopped, or runs with ACP off leaves the Room empty and retries at the

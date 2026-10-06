@@ -1,6 +1,6 @@
 # The named pipe: external agents and the wire
 
-Prove that the named pipe `\\.\pipe\team` — the one door every Agent enters through — behaves as documented end to end: a client connects and says hello, the server mints an Agent and a Room that appear in the browser with no refresh, every posted Message fans out to the right Members with the right per-recipient labels, and every malformed, unauthorised or over-budget request is refused in the one way the client can act on. Almost nothing on this wire has dedicated UI, so most failures here are silent in the browser and visible only as a single JSON line in the client's own console or a single line in the server log. These tests deliberately put those two consoles beside the browser and treat them as the oracle. Every test in this area is FREE: the demo agents and `tools/echo-bot.ps1` are ordinary pipe clients speaking exactly the envelopes a real Persona speaks, so no test here needs a model turn.
+Prove that the named pipe `\\.\pipe\team` — the one door every Agent enters through — behaves as documented end to end: a client connects and says hello, the server mints an Agent and a Room that appear in the browser with no refresh, every posted Message fans out to the right Members with the right per-recipient labels, and every malformed, unauthorised or over-budget request is refused in the one way the client can act on. Almost nothing on this wire has dedicated UI, so most failures here are silent in the browser and visible only as a single JSON line in the client's own console or a single line in the server log. These tests deliberately put those two consoles beside the browser and treat them as the oracle. Every test in this area is FREE: `tools/echo-bot.ps1` is an ordinary pipe client speaking exactly the envelopes a real Persona speaks, so no test here needs a model turn.
 
 **36 tests** · 36 free, none paid · about 3.9 hours.
 
@@ -19,7 +19,7 @@ oracles `O-LOG` / `O-ADAPTERS` / `O-TRANSCRIPT` / `O-DB` / `O-WIRE`, the four re
 2. `T-A` runs the app. Extra terminals are opened by individual tests as `T-C`, `T-D` and so on, each at `E:\Repos\Huddle`.
 3. Arrange the browser at `http://localhost:5100` and `T-A` so both are visible at once. Confirm the sidebar shows, top to bottom: **New chat**, a list of Rooms, **Teammates**, **Settings**. If it does not, STOP and report the app as not starting; every test below is INCONCLUSIVE.
 4. No test in this area configures a Persona and ACP stays off throughout, so nothing here spends money.
-5. DO NOT run `P-ECHO-BOT` under the name `echo` or `alpha` anywhere except PIPEEXTERNAL-33, which exists to test exactly that. Connecting an external client under a demo agent's name silently kills that demo agent for the life of the app process, with no log line anywhere, and every later demo-agent test then fails for the wrong reason.
+5. A fresh install has NO in-process Agents: the sidebar starts with no Rooms, and a bot's own Room appears only when it connects. Tests that need an extra in-process Agent in a Room use Ada or Bo from [`P-LAUNCH-UAT`](common.md#p-launch-uat), and say so in **Before you start**. Do not run `P-ECHO-BOT` under the name `Ada` or `Bo` in such a test: an external client under an in-process Agent's name collides with it.
 6. **RAW-CLIENT** (used by PIPEEXTERNAL-28 through -32): a plain PowerShell pipe client, distinct from `P-ECHO-BOT`. In a new terminal, line by line:
 
 ``powershell
@@ -43,41 +43,41 @@ Send one envelope with `$w.WriteLine('<json>')`, read one line back with `$r.Rea
 
 **Before you start**
 
-- PIPEEXTERNAL-01 passed, so `echo` and `alpha` exist and are online.
+- `P-LAUNCH-UAT` has been run (in place of `P-LAUNCH-FREE` for this test) and Ada and Bo are Online.
 
 **Steps**
 
 1. Click **New chat** in the sidebar.
-2. Confirm the panel lists `echo` and `alpha`, each as a checkbox with a small coloured dot and a name.
-3. Tick the checkbox next to `echo`.
-4. Tick the checkbox next to `alpha`.
+2. Confirm the panel lists `Ada` and `Bo`, each as a checkbox with a small coloured dot and a name.
+3. Tick the checkbox next to `Ada`.
+4. Tick the checkbox next to `Bo`.
 5. Click **Start chat**.
 6. Read the page heading and the line beneath it.
 7. Read `T-A`'s newest log line.
-8. Type `hi @echo` in the message box and press Enter, then wait 5 seconds.
+8. Type `hi @Ada` in the message box and press Enter, then wait 10 seconds.
 9. Type `hi` (with no `@`) and press Enter, then wait 10 seconds.
 
 **Pass if — all of these**
 
 - Before any checkbox is ticked, the **Start chat** button is disabled; it becomes enabled once at least one box is ticked.
-- The browser navigates to a new Room whose heading reads exactly `echo, alpha` and whose members line reads exactly `You, echo, alpha`.
-- `T-A` logs `Created room '<id>' (echo, alpha) with 3 members.`
-- After `hi @echo`, exactly ONE new Message appears, from `echo`, reading `echo: hi echo` in bold. `alpha` posts nothing.
+- The browser navigates to a new Room whose heading reads exactly `Ada, Bo` and whose members line reads exactly `You, Ada, Bo`.
+- `T-A` logs `Created room '<id>' (Ada, Bo) with 3 members.`
+- After `hi @Ada`, exactly ONE new Message appears, from `Ada`, a long plain-text reply that contains `hi`. `Bo` posts nothing.
 - After the bare `hi`, NOTHING replies within 10 seconds.
 
 **Fail if — any of these**
 
 - The Room heading is something other than the comma-joined Agent names -> the Room name is not being rebuilt from its Members.
-- Both `echo` and `alpha` reply to `hi @echo` -> the per-recipient `mentioned` label is wrong, or the clients are ignoring it; cross-check with PIPEEXTERNAL-22.
+- Both `Ada` and `Bo` reply to `hi @Ada` -> the per-recipient `mentioned` label is wrong, or the Reply Gate is not applying it; cross-check with PIPEEXTERNAL-22.
 - Ticking a single agent and clicking Start chat creates a duplicate two-member Room instead of opening that agent's existing Room -> the single-agent path is no longer routed through the reuse check, and every New chat will mint a Room.
 - The **Start chat** button is clickable with nothing ticked -> the guard on an empty selection is gone.
 
 **Inconclusive if**
 
-If a Room named `echo, alpha` already exists from an earlier run, a NEW second Room with the same name is created — that is expected for a multi-agent New chat and is not a fail. If neither `echo` nor `alpha` appears in the panel, this test is INCONCLUSIVE: PIPEEXTERNAL-01's precondition has not held, so fix that first.
+If a Room named `Ada, Bo` already exists from an earlier run, a NEW second Room with the same name is created — that is expected for a multi-agent New chat and is not a fail. If neither `Ada` nor `Bo` appears in the panel, this test is INCONCLUSIVE: the `P-LAUNCH-UAT` precondition has not held, so fix that first.
 
 > [!NOTE]
-> The bare `hi` producing no reply is correct here: this is a three-Member Room, so per ADR-0004 it stays Mention-gated by design. That is different from a two-Member Room, which now answers every Message without a Mention — see PIPEEXTERNAL-01's note.
+> The bare `hi` producing no reply is correct here: this is a three-Member Room, so per ADR-0004 it stays Mention-gated by design. That is different from a two-Member Room, which now answers every Message without a Mention.
 
 ### PIPEEXTERNAL-04 — A Room appears in the sidebar the moment an external agent says hello, with no refresh
 
@@ -172,11 +172,11 @@ If `T-C`'s scrollback has been lost, do not reconstruct the line from memory: Ct
 
 **Before you start**
 
-- PIPEEXTERNAL-06 has just been run, so `mybot` has just replied.
+- `mybot` is connected in `T-C` and its Room is open. In that Room you have just typed `hi @mybot` and `mybot` has replied.
 
 **Steps**
 
-1. Look at `T-C`'s console immediately after the reply from PIPEEXTERNAL-06.
+1. Look at `T-C`'s console immediately after that reply.
 2. Count how many lines beginning `{"type":"messagePosted"` `T-C` has printed since you pressed Enter.
 3. Watch the browser transcript and `T-C` for a full 30 seconds without typing anything.
 4. Re-open the Room's `.jsonl` file in `src\Huddle.App\App_Data\rooms\` and count its lines.
@@ -246,7 +246,7 @@ If any run times out on connect rather than returning a line, that run says noth
 
 **Before you start**
 
-- `mybot` exists and its Room holds at least one Message (run PIPEEXTERNAL-06 first).
+- `mybot` exists and its Room holds at least one Message (type `hi @mybot` in its Room and wait for the reply first).
 - `mybot`'s Room has NOT been turned into a three-member Room. If you have already invited anyone into it, use a fresh Name for this test instead.
 
 **Steps**
@@ -361,7 +361,7 @@ If `mybot` was never registered (no such sidebar entry), this test has no baseli
 If a banner DOES appear and the name it lists is a Persona (an entry that also appears on the **Teammates** page), this test is INCONCLUSIVE for this area — that banner belongs to Persona health, not to the pipe. Confirm `mybot` is absent from /teammates before judging.
 
 > [!NOTE]
-> A pipe-only Agent NEVER appears on the **Teammates** page — that page renders Persona files, and `mybot`, `echo` and `alpha` have none. "My bot is missing from Teammates" is not a bug.
+> A pipe-only Agent NEVER appears on the **Teammates** page — that page renders Persona files, and `mybot` has none. "My bot is missing from Teammates" is not a bug.
 
 ### PIPEEXTERNAL-12 — Where a disconnect IS visible: the agent-dot in New chat and Add teammate
 
@@ -391,7 +391,6 @@ If a banner DOES appear and the name it lists is a Persona (an entry that also a
 - While the bot is connected, `mybot`'s dot in the New chat panel is green and its `title` / tooltip reads `online` (the element's class is `agent-dot online`).
 - After Ctrl+C and REOPENING the panel, `mybot`'s dot is grey and its `title` reads `offline` (class `agent-dot offline`).
 - The **Add teammate** panel shows the same dot and the same tooltip for `mybot`.
-- While the bot is connected, `echo` and `alpha` also show green `online` dots.
 - The dot's colour and its tooltip text agree with each other in every case.
 
 **Fail if — any of these**
@@ -603,8 +602,7 @@ If the composer strips or collapses the space before sending (check the human ro
 
 **Inconclusive if**
 
-If step 7 also fails to connect, the app may not have finished starting — wait for `T-A` to print its listening URL, then retry once before judging. If the demo agents log `Demo agent echo failed to connect to pipe huddle after 30 attempts.` during the renamed run, that is a separate startup-race observation; note it but judge this test on the external client only.
-
+If step 7 also fails to connect, the app may not have finished starting — wait for `T-A` to print its listening URL, then retry once before judging.
 > [!NOTE]
 > This wire is local-machine only by design. There is no port, no HTTP endpoint and no remote-agent story; do not look for one.
 
@@ -617,7 +615,7 @@ If step 7 also fails to connect, the app may not have finished starting — wait
 **Before you start**
 
 - `mybot` is connected in `T-C` and its Room is open.
-- The demo agent `echo` is online.
+- The app was launched with `P-LAUNCH-UAT` and Ada is Online (`mybot` connects to it on the same default pipe).
 
 **Steps**
 
@@ -625,7 +623,7 @@ If step 7 also fails to connect, the app may not have finished starting — wait
 2. In `T-C`, find the `"members":[` section of the delivered line and count its entries.
 3. Click **Add teammate** at the top right of the Room.
 4. Leave the `Team` dropdown on `All teams`.
-5. Click `echo` in the list.
+5. Click `Ada` in the list.
 6. Read the info line the panel shows, then read the page heading and the members line.
 7. Read `T-A`'s newest log line.
 8. Type `hi @mybot` again and press Enter.
@@ -634,9 +632,9 @@ If step 7 also fails to connect, the app may not have finished starting — wait
 **Pass if — all of these**
 
 - The first delivered line's `members` array holds exactly two objects: `{"id":"human","name":"You","kind":"human"}` and one with `"name":"mybot","kind":"agent"`.
-- The Add teammate panel's info line reads `Invited echo. Room is now "mybot, echo".`
-- The page heading becomes `mybot, echo`, the members line becomes `You, mybot, echo`, and the sidebar entry renames itself — all without a refresh.
-- `T-A` logs `Invited agent 'echo' (<id>) into room '<roomId>'.`
+- The Add teammate panel's info line reads `Invited Ada. Room is now "mybot, Ada".`
+- The page heading becomes `mybot, Ada`, the members line becomes `You, mybot, Ada`, and the sidebar entry renames itself — all without a refresh.
+- `T-A` logs `Invited agent 'Ada' (<id>) into room '<roomId>'.`
 - The SECOND delivered line's `members` array holds exactly THREE objects, including the Human and both agents.
 - Every `messagePosted` line carries the full list, not only the first one.
 
@@ -649,7 +647,7 @@ If step 7 also fails to connect, the app may not have finished starting — wait
 
 **Inconclusive if**
 
-If `echo` does not appear in the Add teammate list, check the `Team` dropdown is on `All teams` — a pipe-only agent has no Team and is filtered out by any narrower selection, and the panel then reads `No agents in this team.` That is correct filtering, not a missing agent. If the panel reads `Every agent is already in this room.`, `echo` is already a Member and this test needs a fresh two-member Room.
+If `Ada` does not appear in the Add teammate list, check the `Team` dropdown is on `All teams` — a pipe-only agent has no Team and is filtered out by any narrower selection, and the panel then reads `No agents in this team.` That is correct filtering, not a missing agent. If the panel reads `Every agent is already in this room.`, `Ada` is already a Member and this test needs a fresh two-member Room.
 
 > [!NOTE]
 > Leave this three-member Room in place: PIPEEXTERNAL-20 and PIPEEXTERNAL-21 build on it.
@@ -663,28 +661,28 @@ If `echo` does not appear in the Add teammate list, check the `Team` dropdown is
 **Before you start**
 
 - `mybot` is connected in `T-C` and has NOT been restarted since it connected.
-- `echo` and `alpha` are online.
+- The app was launched with `P-LAUNCH-UAT` and Ada and Bo are Online.
 
 **Steps**
 
-1. Click **New chat**, tick `echo` and `alpha`, and click **Start chat**. You are now in a Room named `echo, alpha` that `mybot` is not a Member of.
+1. Click **New chat**, tick `Ada` and `Bo`, and click **Start chat**. You are now in a Room named `Ada, Bo` that `mybot` is not a Member of.
 2. Copy the room id from the address bar (`/rooms/{id}`).
 3. Click **Add teammate**, leave the Team filter on `All teams`, and click `mybot`.
 4. Read the panel's info line, the page heading, the members line and the sidebar.
 5. Read `T-A`'s newest log line.
 6. Type `hi @mybot` in this Room and press Enter.
 7. Read the line `T-C` prints — in particular its `roomId` and `roomName` — and watch the browser.
-8. Now test the other door: click **New chat**, tick only `alpha`, click **Start chat** to open `alpha`'s own Room (or click the `alpha` entry in the sidebar).
+8. Now test the other door: click **New chat**, tick only `Bo`, click **Start chat** to open `Bo`'s own Room (or click the `Bo` entry in the sidebar).
 9. In that Room, type `/invite @mybot` in the message box and press Enter.
 10. Read the info line above the message box and the page heading.
 
 **Pass if — all of these**
 
-- The Add teammate info line reads `Invited mybot. Room is now "echo, alpha, mybot".`
-- The heading becomes `echo, alpha, mybot`, the members line becomes `You, echo, alpha, mybot`, and the sidebar entry renames itself — all live, with no refresh and with no restart of the bot.
+- The Add teammate info line reads `Invited mybot. Room is now "Ada, Bo, mybot".`
+- The heading becomes `Ada, Bo, mybot`, the members line becomes `You, Ada, Bo, mybot`, and the sidebar entry renames itself — all live, with no refresh and with no restart of the bot.
 - `T-A` logs `Invited agent 'mybot' (<id>) into room '<roomId>'.`
-- `T-C` — the same process that has been running since before this Room existed — prints a `messagePosted` line whose `roomId` is the id you copied and whose `roomName` is `echo, alpha, mybot`, and the bot's reply appears in that Room.
-- The `/invite @mybot` command produces the same result: an info line reading `Invited mybot. Room is now "alpha, mybot".` and the same live rename.
+- `T-C` — the same process that has been running since before this Room existed — prints a `messagePosted` line whose `roomId` is the id you copied and whose `roomName` is `Ada, Bo, mybot`, and the bot's reply appears in that Room.
+- The `/invite @mybot` command produces the same result: an info line reading `Invited mybot. Room is now "Bo, mybot".` and the same live rename.
 
 **Fail if — any of these**
 
@@ -705,7 +703,7 @@ If `/invite @mybot` returns a red error strip reading `Unknown agent @mybot`, ch
 
 **Before you start**
 
-- PIPEEXTERNAL-18 has been run, so `mybot`'s original Room is now the three-member `mybot, echo`.
+- PIPEEXTERNAL-18 has been run, so `mybot`'s original Room is now the three-member `mybot, Ada` (the app was launched with `P-LAUNCH-UAT`).
 - `mybot` is connected in `T-C`.
 
 **Steps**
@@ -722,8 +720,8 @@ If `/invite @mybot` returns a red error strip reading `Unknown agent @mybot`, ch
 **Pass if — all of these**
 
 - The new welcome line's `rooms` array holds at least TWO entries.
-- One entry is named `mybot, echo` and its `members` array has three objects; another is named `mybot` and its `members` array has two.
-- The sidebar now shows BOTH `mybot, echo` and a plain `mybot`, and the new one appeared with no refresh.
+- One entry is named `mybot, Ada` and its `members` array has three objects; another is named `mybot` and its `members` array has two.
+- The sidebar now shows BOTH `mybot, Ada` and a plain `mybot`, and the new one appeared with no refresh.
 - `T-A` logs a second `Created direct room '<id>' for agent 'mybot'.`
 - The new plain `mybot` Room's transcript is empty.
 
@@ -737,7 +735,7 @@ If `/invite @mybot` returns a red error strip reading `Unknown agent @mybot`, ch
 
 **Inconclusive if**
 
-If the sidebar shows only one `mybot`-prefixed entry, check whether PIPEEXTERNAL-18's invite actually landed (does any entry read `mybot, echo`?). If it did not, this test has no setup and is INCONCLUSIVE — run PIPEEXTERNAL-18 first.
+If the sidebar shows only one `mybot`-prefixed entry, check whether PIPEEXTERNAL-18's invite actually landed (does any entry read `mybot, Ada`?). If it did not, this test has no setup and is INCONCLUSIVE — run PIPEEXTERNAL-18 first.
 
 > [!NOTE]
 > Two sidebar entries beginning `mybot` is the EXPECTED outcome here, recorded as a consequence of defining a direct Room by its exact membership. Do not file it as a duplicate-room bug.
@@ -750,33 +748,33 @@ If the sidebar shows only one `mybot`-prefixed entry, check whether PIPEEXTERNAL
 
 **Before you start**
 
-- A Room contains both `mybot` (the external bot, connected in `T-C`) and the demo agent `echo` — the `mybot, echo` Room from PIPEEXTERNAL-18 is exactly this.
+- A Room contains both `mybot` (the external bot, connected in `T-C`) and the in-process Teammate `Ada` (app launched with `P-LAUNCH-UAT`) — the `mybot, Ada` Room from PIPEEXTERNAL-18 is exactly this.
 
 **Steps**
 
-1. Open the `mybot, echo` Room in the browser.
-2. Clear `T-C`'s console (`Clear-Host`) so new lines are easy to spot, then reconnect if clearing killed the process — if you reconnect, use the Room that now reads `mybot, echo`, not the new plain `mybot` Room.
-3. Type `hi @echo` in the message box and press Enter.
-4. Watch the browser: `echo` streams a Draft and then posts its reply.
+1. Open the `mybot, Ada` Room in the browser.
+2. Clear `T-C`'s console (`Clear-Host`) so new lines are easy to spot, then reconnect if clearing killed the process — if you reconnect, use the Room that now reads `mybot, Ada`, not the new plain `mybot` Room.
+3. Type `hi @Ada` in the message box and press Enter.
+4. Watch the browser: `Ada` streams a Draft (three chunks) and then posts its reply.
 5. Read every line `T-C` printed during and after that exchange.
 6. Count the lines by `type`.
 
 **Pass if — all of these**
 
-- `T-C` printed exactly TWO lines: one `{"type":"messagePosted"` for your Message, and one `{"type":"messagePosted"` for `echo`'s finished reply.
+- `T-C` printed exactly TWO lines: one `{"type":"messagePosted"` for your Message, and one `{"type":"messagePosted"` for `Ada`'s finished reply.
 - `T-C` printed NO line containing `"type":"messageDelta"`.
 - `T-C` printed NO line containing `"type":"toolActivity"`.
-- The browser did show the streaming row for `echo`, so deltas were definitely flowing on the server side.
+- The browser did show the streaming row for `Ada`, so deltas were definitely flowing on the server side.
 
 **Fail if — any of these**
 
 - `messageDelta` lines reach `mybot` -> Drafts are being fanned out to Agents. The visible symptom in the browser is agents replying to half-sentences, and in a Room with two reactive clients it amplifies faster than the echo loop does.
 - `toolActivity` lines reach `mybot` -> same defect on the tool-activity path.
-- `mybot` receives `echo`'s reply twice -> the finished Message is being delivered on both the Message path and the Draft path.
+- `mybot` receives `Ada`'s reply twice -> the finished Message is being delivered on both the Message path and the Draft path.
 
 **Inconclusive if**
 
-If the browser showed NO streaming row for `echo`, no deltas were produced at all and this test proves nothing — it is INCONCLUSIVE. Fix or confirm PIPEEXTERNAL-02 first, then re-run. If `T-C` was reconnected mid-test, make sure you are typing in the three-member `mybot, echo` Room and not in the fresh two-member `mybot` Room.
+If the browser showed NO streaming row for `Ada`, no deltas were produced at all and this test proves nothing — it is INCONCLUSIVE. Confirm Ada is Online and replies in her own Room first, then re-run. If `T-C` was reconnected mid-test, make sure you are typing in the three-member `mybot, Ada` Room and not in the fresh two-member `mybot` Room.
 
 ### PIPEEXTERNAL-22 — The mentioned flag is per recipient, and unmentioned Members still receive the envelope
 
@@ -867,12 +865,12 @@ If the Room reaches the pause prompt during this test, stop both bots immediatel
 
 **Free** · about 6 min
 
-*Proves the one-connection-per-Agent rule and, critically, that the displaced client is TOLD rather than left hanging — the mechanism behind the displacement trap in PIPEEXTERNAL-33.*
+*Proves the one-connection-per-Agent rule and, critically, that the displaced client is TOLD rather than left hanging — so a displaced client does not sit silent with no diagnosis.*
 
 **Before you start**
 
 - `T-C` and 3 are free.
-- A Name that is not a demo agent name — use `dup1`.
+- Use the Name `dup1`.
 
 **Steps**
 
@@ -1204,12 +1202,12 @@ If `$wel.rooms[0].id` is empty, the handshake did not complete and every case be
 
 **Before you start**
 
-- The app is running with the demo agents online, so an `echo` Room exists that a new client is not a Member of.
+- The app was launched with `P-LAUNCH-UAT` and Ada is Online, so an `Ada` Room exists that a new client is not a Member of.
 
 **Steps**
 
-1. In the browser, click the sidebar entry `echo` and copy the room id from the address bar (`/rooms/{id}`). Call this ECHOROOM.
-2. Keep the `echo` Room open in the browser and visible.
+1. In the browser, click the sidebar entry `Ada` and copy the room id from the address bar (`/rooms/{id}`). Call this ADAROOM.
+2. Keep the `Ada` Room open in the browser and visible.
 3. Open a new terminal and run the raw-client connect block:
 ``powershell
 $c = [System.IO.Pipes.NamedPipeClientStream]::new('.', 'team', 'InOut')
@@ -1217,23 +1215,23 @@ $c.Connect(5000)
 $w = [System.IO.StreamWriter]::new($c); $w.AutoFlush = $true
 $r = [System.IO.StreamReader]::new($c)
 ``
-4. Handshake as a client that is NOT in the echo Room: `$w.WriteLine('{"type":"hello","version":3,"name":"raw2"}')` then `$wel = $r.ReadLine() | ConvertFrom-Json; $own = $wel.rooms[0].id; $own`
-5. Set the target: `$echo = '<paste ECHOROOM here>'`
-6. Attempt an intrusion: `$w.WriteLine('{"type":"messageDelta","version":3,"roomId":"' + $echo + '","messageId":"m1","text":"intruder","isFinal":false}')` then `$r.ReadLine()`
-7. Watch the browser's `echo` Room for 10 seconds.
+4. Handshake as a client that is NOT in the Ada Room: `$w.WriteLine('{"type":"hello","version":3,"name":"raw2"}')` then `$wel = $r.ReadLine() | ConvertFrom-Json; $own = $wel.rooms[0].id; $own`
+5. Set the target: `$target = '<paste ADAROOM here>'`
+6. Attempt an intrusion: `$w.WriteLine('{"type":"messageDelta","version":3,"roomId":"' + $target + '","messageId":"m1","text":"intruder","isFinal":false}')` then `$r.ReadLine()`
+7. Watch the browser's `Ada` Room for 10 seconds.
 8. Now write a LEGITIMATE Draft into raw2's own Room under the SAME message id: `$w.WriteLine('{"type":"messageDelta","version":3,"roomId":"' + $own + '","messageId":"m1","text":"mine","isFinal":false}')`
 9. Open the `raw2` Room in the browser and confirm a streaming row appears.
-10. Immediately retry the intrusion with the same id: `$w.WriteLine('{"type":"messageDelta","version":3,"roomId":"' + $echo + '","messageId":"m1","text":"intruder again","isFinal":false}')` then `$r.ReadLine()`
-11. Switch back to the `echo` Room in the browser and look again.
+10. Immediately retry the intrusion with the same id: `$w.WriteLine('{"type":"messageDelta","version":3,"roomId":"' + $target + '","messageId":"m1","text":"intruder again","isFinal":false}')` then `$r.ReadLine()`
+11. Switch back to the `Ada` Room in the browser and look again.
 12. Close the client: `$c.Dispose()`
 
 **Pass if — all of these**
 
 - Step 6 returns a line with `"code":"notMember"` and `"relatedMessageId":"m1"`.
-- The `echo` Room in the browser shows NOTHING new — no streaming row, no text, no `intruder`.
+- The `Ada` Room in the browser shows NOTHING new — no streaming row, no text, no `intruder`.
 - Step 8 is accepted (no error line comes back) and a streaming row reading `mine` appears in the `raw2` Room.
 - Step 10 is STILL refused with `"code":"notMember"` — reusing the message id that was just accepted elsewhere does not buy access.
-- The `echo` Room never shows `intruder` or `intruder again` at any point.
+- The `Ada` Room never shows `intruder` or `intruder again` at any point.
 
 **Fail if — any of these**
 
@@ -1244,7 +1242,7 @@ $r = [System.IO.StreamReader]::new($c)
 
 **Inconclusive if**
 
-If step 8 produces no streaming row in the browser, Drafts are not rendering at all and the second half of this test cannot be judged — check PIPEEXTERNAL-02 first; the refusal half (steps 6 and 10) still stands on its own. If `$wel.rooms[0].id` is empty, the handshake failed and the whole test is INCONCLUSIVE.
+If step 8 produces no streaming row in the browser, Drafts are not rendering at all and the second half of this test cannot be judged — the refusal half (steps 6 and 10) still stands on its own. If `$wel.rooms[0].id` is empty, the handshake failed and the whole test is INCONCLUSIVE.
 
 ### PIPEEXTERNAL-32 — An Agent disconnecting mid-Draft clears its Draft rather than freezing it on screen
 
@@ -1292,7 +1290,7 @@ $r = [System.IO.StreamReader]::new($c)
 
 **Inconclusive if**
 
-If step 4 produces no streaming row at all, either the delta was refused (check with an `$r.ReadLine()` — an error line means a membership or id problem) or Drafts do not render; either way this test is INCONCLUSIVE and PIPEEXTERNAL-02 and PIPEEXTERNAL-31 should be resolved first.
+If step 4 produces no streaming row at all, either the delta was refused (check with an `$r.ReadLine()` — an error line means a membership or id problem) or Drafts do not render; either way this test is INCONCLUSIVE and PIPEEXTERNAL-31 should be resolved first.
 
 > [!NOTE]
 > `$c.Dispose()` is the closest safe equivalent to a client crashing without sending its terminator. Closing the whole terminal window works too.
@@ -1358,7 +1356,7 @@ If the browser tab was already disconnected or backgrounded before step 3, the d
 
 1. Press Ctrl+C in `T-A` and in every bot terminal. Wait for all prompts to return.
 2. Delete the whole folder `E:\Repos\Huddle\src\Huddle.App\App_Data`.
-3. In `T-A` run `$env:Team__DemoAgent__Enabled = 'false'` and `$env:Team__Acp__Enabled = 'false'`.
+3. In `T-A` run `$env:Team__Acp__Enabled = 'false'`.
 4. In `T-A` run `dotnet run --project src/Huddle.App --urls http://localhost:5100`.
 5. Open a fresh browser tab at http://localhost:5100.
 6. Read the sidebar's Room list area and read the main pane.
@@ -1368,13 +1366,13 @@ If the browser tab was already disconnected or backgrounded before step 3, the d
 10. Click the `mybot` sidebar entry and read the heading.
 11. Confirm `src\Huddle.App\App_Data` was recreated and contains `team.db`.
 12. Type `hi @mybot`, press Enter, and confirm `src\Huddle.App\App_Data\rooms\` now exists with one `.jsonl` file.
-13. When done, press Ctrl+C everywhere, run `Remove-Item Env:Team__DemoAgent__Enabled`, and restart the app with `P-LAUNCH-FREE`.
+13. When done, press Ctrl+C everywhere and restart the app with `P-LAUNCH-FREE`.
 
 **Pass if — all of these**
 
 - The sidebar's Room list reads exactly `No rooms yet. Start an agent to create one.`
 - The main pane reads exactly the SAME sentence: `No rooms yet. Start an agent to create one.`
-- The New chat panel reads exactly `No agents have connected yet. Start one with tools/echo-bot.ps1, or enable the demo agent in appsettings.json.`
+- The New chat panel reads `No agents have connected yet. Start one with tools/echo-bot.ps1` followed by whatever the rest of that sentence currently says (the app's empty-state copy, which is not what this test judges).
 - After the bot connects, the sidebar gains `mybot` with NO refresh.
 - The MAIN PANE still reads `No rooms yet. Start an agent to create one.` until you click the sidebar entry.
 - Clicking the entry opens the Room with heading `mybot`.
@@ -1386,7 +1384,7 @@ If the browser tab was already disconnected or backgrounded before step 3, the d
 - The New chat panel lists ghost agents after `App_Data` was deleted -> it is reading a stale database; find where `Team:DataDir` actually resolved (`Get-ChildItem -Recurse -Filter team.db E:\Repos\Huddle`) before filing, because the likely cause is that you deleted the wrong folder.
 - The main pane throws or shows a Blazor error instead of the empty state -> the Room view does not handle having no Room.
 - `App_Data` is not recreated at startup -> the data initialiser is not running, and nothing will persist.
-- Demo agent Rooms appear despite `Team__DemoAgent__Enabled=false` -> the switch is not being read; every "empty install" test is then impossible.
+- Any Room already exists in the sidebar before the bot connects -> the fresh install is not empty, and every "empty install" test is then impossible; check that the right `App_Data` was deleted.
 
 **Inconclusive if**
 

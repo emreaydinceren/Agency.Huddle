@@ -208,7 +208,7 @@ Delete the row afterwards: `Set-TeamDb "DELETE FROM persona_work_modes"`.
 
 **Steps**
 
-1. Send `Create a file named wm-scratch.txt containing the single word alpha, then change the word to beta. Reply done.`
+1. Send `Create a file named wm-scratch.txt containing the single word first, then change the word to second. Reply done.`
 2. When it replies, search the trace in `T-A` for `session/request_permission` and for `session/set_config_option`.
 3. Open `wm-scratch.txt` in the Teammate's Work Dir.
 
@@ -216,7 +216,7 @@ Delete the row afterwards: `Set-TeamDb "DELETE FROM persona_work_modes"`.
 
 - Step 2 finds a `session/set_config_option` for the mode, set to `acceptEdits`, and its response shows `acceptEdits` as the current value.
 - Step 2 finds **no** `session/request_permission` for the create or the edit.
-- Step 3 shows the file holding `beta`.
+- Step 3 shows the file holding `second`.
 
 **Fail if — any of these**
 

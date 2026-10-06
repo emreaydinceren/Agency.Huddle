@@ -29,7 +29,9 @@ entity means to a user, read [the user guide](../docs/Huddle.UserGuide.md).
 > normal configuration names (add `-NoAcp` to keep paid models from running). `-SeedRoot` points it
 > at a different seed root.
 > `tests/Huddle.Tests/Seeder/` loads the result through Huddle's own loaders, so it goes red when
-> this guide and the app drift apart. Use the manual procedure below for a scenario the tool
+> this guide and the app drift apart. A second scenario, `--scenario uat`, builds only two mock-adapter
+> Teammates (Ada and Bo) with an empty Room each; the manual-test lane `P-LAUNCH-UAT` uses it, and it exists only
+> when someone asks for it. Use the manual procedure below for a scenario the tool
 > does not have yet; adding one is a new `IScenario` in `src/Huddle.Seeder/Scenarios/`.
 
 ## The rules

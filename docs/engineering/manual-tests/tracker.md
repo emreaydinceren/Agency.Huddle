@@ -6,9 +6,9 @@ Where every one of the 495 tests stands. One row per test, updated as you run it
 > **The demo-agent cases were removed on 2026-10-06**, when `Team:DemoAgent:Enabled` became `false`
 > by default: STARTUPCONFIG-03, 04, 05, 16, 18, 19 and 25; PIPEEXTERNAL-01, 02, 06 and 33;
 > INVITEROOMS-01; ROOMMESSAGING-18, 19 and 20; REPLYGATEBUDGET-01; TEAMMATESLIBRARY-26. Other cases
-> still use `echo` and `alpha` as the way to get a Room and a reply, and some cite a removed id as
-> a precondition. They run only with `$env:Team__DemoAgent__Enabled = 'true'`, and they need
-> re-pointing at Personas on the mock adapter before they are trusted again.
+> used `echo` and `alpha` as the way to get a Room and a reply; they now run on Ada and Bo, two mock-adapter
+> Teammates built by [`P-LAUNCH-UAT`](common.md#p-launch-uat), which is an explicit opt-in and never part
+> of a normal install. Their rewritten Pass-if lines have not been run yet, so treat them as Active.
 
 > [!NOTE]
 > **An earlier full run exists, against the previous UI, and its results are deliberately not
