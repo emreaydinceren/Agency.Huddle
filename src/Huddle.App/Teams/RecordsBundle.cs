@@ -145,8 +145,9 @@ internal sealed class RecordsBundleBuilder(TaskStore tasks, ITeamCatalog teams, 
     /// <summary>Renders the bundle as one line per event: counts first, then events newest first with their links.</summary>
     /// <param name="bundle">The bundle to render.</param>
     /// <param name="maxCharacters">The length cap; surplus events are replaced by a count line.</param>
+    /// <param name="rowsToVerify">The register rows due for verification (RT-7), or <see langword="null"/> when the Team has no register; they lead the text.</param>
     /// <returns>The text, within the cap unless the counts alone exceed it.</returns>
-    public static string RenderText(RecordsBundle bundle, int maxCharacters = 12000)
+    public static string RenderText(RecordsBundle bundle, int maxCharacters = 12000, IReadOnlyList<VerificationPrompt>? rowsToVerify = null)
     {
         ArgumentNullException.ThrowIfNull(bundle);
 
@@ -157,7 +158,8 @@ internal sealed class RecordsBundleBuilder(TaskStore tasks, ITeamCatalog teams, 
             : string.Join("; ", bundle.SpendByMember.OrderBy(static pair => pair.Key, StringComparer.Ordinal).Select(static pair =>
                 string.Concat(pair.Key, " ", string.Join(", ", pair.Value.Select(static s => string.Create(CultureInfo.InvariantCulture, $"{s.Amount:0.00} {s.Currency}"))))));
 
-        List<string> header =
+        List<string> header = VerifyLines(rowsToVerify);
+        header.AddRange(
         [
             string.Create(CultureInfo.InvariantCulture, $"Records for {bundle.Team} since {bundle.Since.UtcDateTime:yyyy-MM-dd}"),
             string.Create(CultureInfo.InvariantCulture, $"tasks: {bundle.Tasks.Count}"),
@@ -169,7 +171,7 @@ internal sealed class RecordsBundleBuilder(TaskStore tasks, ITeamCatalog teams, 
             string.Create(CultureInfo.InvariantCulture, $"tool calls: {calls} ({failures} failed)"),
             $"spend: {spendText}",
             "events (newest first):",
-        ];
+        ]);
 
         List<(DateTimeOffset Time, string Line)> events = [];
         AddLines(events, "bounce", bundle.ReviewBounces);
@@ -205,6 +207,30 @@ internal sealed class RecordsBundleBuilder(TaskStore tasks, ITeamCatalog teams, 
         }
 
         return text.ToString();
+    }
+
+    private static List<string> VerifyLines(IReadOnlyList<VerificationPrompt>? rowsToVerify)
+    {
+        List<string> lines = [];
+        if (rowsToVerify is null)
+        {
+            return lines;
+        }
+
+        if (rowsToVerify.Count == 0)
+        {
+            lines.Add("Rows to verify: none");
+            return lines;
+        }
+
+        lines.Add("Rows to verify:");
+        foreach (VerificationPrompt prompt in rowsToVerify)
+        {
+            string line = $"{prompt.RowId}: {prompt.Finding} | action: {prompt.Action} | check: {prompt.EvidenceNextCheck}";
+            lines.Add(line);
+        }
+
+        return lines;
     }
 
     private static string MoreLine(int count) =>

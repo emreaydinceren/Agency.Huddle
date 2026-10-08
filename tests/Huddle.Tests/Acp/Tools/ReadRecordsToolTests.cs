@@ -171,6 +171,28 @@ public sealed class ReadRecordsToolTests
         Assert.Contains("bounce 2026-10-07 12:00 Kai PLAT-0001 status: Review → To Do [PLAT-0001]", lines);
     }
 
+    /// <summary>A Team with a register gets the "Rows to verify" section first, listing only its Done and Partial rows (Task 78).</summary>
+    [Fact]
+    public async Task Invoke_TeamWithRegister_LeadsWithRowsToVerify()
+    {
+        CancellationToken ct = TestContext.Current.CancellationToken;
+        using Scene scene = await CreateSceneAsync(ct);
+        _ = Directory.CreateDirectory(scene.TeamFolder);
+        RegisterRow[] rows =
+        [
+            new RegisterRow("R-001", "Slow reviews", "Checklist", "Mia", RetroStatus.Open, "later"),
+            new RegisterRow("R-002", "Flaky tests", "Quarantine", "Sam", RetroStatus.Done, "watch"),
+        ];
+        File.WriteAllText(Path.Combine(scene.TeamFolder, TeamPaths.RetroRegisterFileName), RetroRegister.Render(rows));
+
+        string result = await scene.Tool("Rae").InvokeAsync(Args(), ct);
+
+        string[] lines = result.Split('\n');
+        Assert.Equal("Rows to verify:", lines[0]);
+        Assert.Equal("R-002: Flaky tests | action: Quarantine | check: watch", lines[1]);
+        Assert.Equal("Records for Platform since 2026-09-08", lines[2]);
+    }
+
     /// <summary>The Team's manager may read too.</summary>
     [Fact]
     public async Task Invoke_Manager_ReturnsTheBundle()

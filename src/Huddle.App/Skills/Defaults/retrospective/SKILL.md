@@ -1,7 +1,7 @@
 ---
 name: retrospective
 description: Use when you run or join a Team retrospective and need the Team's records as evidence.
-tools: [read_records, propose_retro_changes]
+tools: [read_records, propose_retro_changes, mark_retro_row]
 ---
 
 # Retrospective
@@ -42,6 +42,9 @@ evidence or the next check.
 
 ## Verify
 
-At the next retro, check each Done row against new evidence. Mark a row Verified only
-when later evidence shows the change worked, and cite that evidence. Mark it Partial
-when it helped less than planned, and Changed when the Team replaced it.
+At the next retro, check each Done row against new evidence. `read_records` starts its
+text with the "Rows to verify" section: the Done and Partial rows. Mark a row with
+`mark_retro_row`. Verified only when later evidence shows the change worked, and the
+evidence must link a Task id, a `logs/...#L` line or a `_retros/` file; Huddle refuses
+Verified without one. Mark it Partial when it helped less than planned, and Changed
+when the Team replaced it.

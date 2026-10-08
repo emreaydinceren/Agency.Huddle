@@ -144,6 +144,7 @@ public sealed class SkillGrantsTests
     [InlineData("confirm_request")]
     [InlineData("read_records")]
     [InlineData("propose_retro_changes")]
+    [InlineData("mark_retro_row")]
     public void Grantable_RequestAndRecordsTools_AreListed(string tool)
     {
         Assert.Contains(tool, (IEnumerable<string>)SkillGrants.Grantable);

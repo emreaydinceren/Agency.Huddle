@@ -41,6 +41,9 @@ internal static class SkillGrants
     /// <summary>The name of the tool that proposes retro changes to the Human (Task 76).</summary>
     private const string ProposeRetroChangesToolName = "propose_retro_changes";
 
+    /// <summary>The name of the tool that closes a Done retro register row at the next retro (Task 78).</summary>
+    private const string MarkRetroRowToolName = "mark_retro_row";
+
     /// <summary>Tools that exist only for Personas holding a Skill that lists them (Spec §6.5).</summary>
     internal static readonly FrozenSet<string> Grantable =
         FrozenSet.ToFrozenSet(
@@ -54,6 +57,7 @@ internal static class SkillGrants
                 ConfirmRequestToolName,
                 ReadRecordsToolName,
                 ProposeRetroChangesToolName,
+                MarkRetroRowToolName,
             ],
             StringComparer.Ordinal);
 

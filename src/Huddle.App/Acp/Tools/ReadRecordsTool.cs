@@ -42,9 +42,6 @@ internal sealed class ReadRecordsTool(
     /// <summary>The window used when the Team has no report yet.</summary>
     private const int DefaultWindowDays = 30;
 
-    /// <summary>The Skill a caller must hold.</summary>
-    private const string SkillName = "retrospective";
-
     private const string DateFormat = "yyyy-MM-dd";
 
     private const string MinuteFormat = "yyyy-MM-dd HH:mm";
@@ -146,7 +143,8 @@ internal sealed class ReadRecordsTool(
             return "since must be a date like 2026-10-01.";
         }
 
-        return RecordsBundleBuilder.RenderText(builder.Build(team.Name, since), MaxCharacters);
+        IReadOnlyList<RegisterRow> register = new RetroFileStore(folders).ReadRegister(team.Name);
+        return RecordsBundleBuilder.RenderText(builder.Build(team.Name, since), MaxCharacters, register.Count > 0 ? RetroVerifier.Due(register) : null);
     }
 
     /// <summary>Keeps the newest lines whose joined length fits <paramref name="limit"/>.</summary>
@@ -182,35 +180,8 @@ internal sealed class ReadRecordsTool(
     /// <param name="team">The named Team.</param>
     /// <param name="caller">The caller's name.</param>
     /// <returns>The refusal, or <see langword="null"/> when the caller may read.</returns>
-    private string? CheckCaller(TeamSummary team, string caller)
-    {
-        if (!team.Members.Contains(caller, StringComparer.OrdinalIgnoreCase))
-        {
-            return $"You are not a member of Team {team.Name}.";
-        }
-
-        PersonaIdentity? identity = personas.Get(caller) is { } persona
-            && PersonaFrontmatter.TryReadIdentity(persona.Text, out PersonaIdentity? read, out _)
-            ? read
-            : null;
-        if (identity?.Skills is not { } skills || !skills.Contains(SkillName, StringComparer.Ordinal))
-        {
-            return "You do not hold the retrospective Skill.";
-        }
-
-        if (string.Equals(team.Manager, caller, StringComparison.OrdinalIgnoreCase))
-        {
-            return null;
-        }
-
-        string? retroRole = team.TeamType is { } typeRef ? types.Find(typeRef.Id)?.RetroRole : null;
-        bool isRetro = retroRole is not null
-            && team.TeamType is { } type
-            && identity.Role is { } role
-            && string.Equals(role.TypeId, type.Id, StringComparison.Ordinal)
-            && string.Equals(role.RoleId, retroRole, StringComparison.Ordinal);
-        return isRetro ? null : "Only the Team's manager or its Retro agent may read its records.";
-    }
+    private string? CheckCaller(TeamSummary team, string caller) =>
+        RetroCaller.Check(personas, types, team, caller, "Only the Team's manager or its Retro agent may read its records.");
 
     /// <summary>The start of the window: the date of the newest report in the Team's <c>_retros</c> folder, else thirty days back.</summary>
     /// <param name="team">The Team name.</param>

@@ -2,7 +2,7 @@
 
 Status of the Teams delivery in [engineering/teams-plan.md](engineering/teams-plan.md). Each task is a `.t` (failing tests first) and `.i` (implementation) pair; a task's `.i` cannot be Done before its `.t`. Ids are `<phase>.<task>.<t|i>`, the form `agents/scripts/Set-Tracker.ps1` updates. `(H)` marks a Haiku task, `(B)` a boundary task that also gets an Opus architect review.
 
-**Status:** 154 of 170 tasks Done · 5 of 6 retrospectives done · last updated 2026-10-08.
+**Status:** 156 of 170 tasks Done · 5 of 6 retrospectives done · last updated 2026-10-08.
 
 | **Deliverable / Task** | **Active** | **In Progress** | **Done** |
 |---|---|---|---|
@@ -170,9 +170,9 @@ Status of the Teams delivery in [engineering/teams-plan.md](engineering/teams-pl
 | 4.76.i Task 76 Retro proposal card (Huddle applies the edit): implement (B) | | | ✔ |
 | 4.77.t Task 77 Retro agent role and prompts: write failing tests (H) | | | ✔ |
 | 4.77.i Task 77 Retro agent role and prompts: implement (H) | | | ✔ |
-| 4.78.t Task 78 Retro verification: write failing tests | | ✔ | |
-| 4.78.i Task 78 Retro verification: implement | | | |
-| 4.79.t Task 79 Chief of Staff rollup: write failing tests | | | |
+| 4.78.t Task 78 Retro verification: write failing tests | | | ✔ |
+| 4.78.i Task 78 Retro verification: implement | | | ✔ |
+| 4.79.t Task 79 Chief of Staff rollup: write failing tests | | ✔ | |
 | 4.79.i Task 79 Chief of Staff rollup: implement | | | |
 | 4.80.t Task 80 Phase 4 functional end-to-end test: write failing tests (B) | | | |
 | 4.80.i Task 80 Phase 4 functional end-to-end test: implement (B) | | | |
