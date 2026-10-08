@@ -161,6 +161,7 @@ public static class ServiceCollectionExtensions
         services.AddSingleton<PersonaModelStore>();
         services.AddSingleton<PersonaEffortStore>();
         services.AddSingleton<PersonaWorkModeStore>();
+        services.AddSingleton<PersonaSpendStore>();
         services.AddSingleton<TaskIdAllocator>();
 
         // No interface, same reasoning as AvatarStore/PromptStore above: a second, independently

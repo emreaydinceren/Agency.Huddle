@@ -919,7 +919,8 @@ public sealed class PersonaRunnerTests
         factory.Session.EnqueueReplyWithUsageAndCost([100], [new UsageCost(0.05m, "USD")], "done");
         var persona = new Persona("nova", "You are Nova.");
         var options = Options.Create(new TeamOptions { PipeName = server.PipeName });
-        PersonaSpend spend = new(NullLogger<PersonaSpend>.Instance);
+        using TempDataDir spendDir = new();
+        PersonaSpend spend = new(NullLogger<PersonaSpend>.Instance, new PersonaSpendStore(spendDir.Options()));
 
         await using var runner = new PersonaRunner(persona, options, factory, new FakePromptSource(), new RoomFollows(), NullLogger<PersonaRunner>.Instance, spend: spend);
         await server.HandshakeAsync(runner, ct);

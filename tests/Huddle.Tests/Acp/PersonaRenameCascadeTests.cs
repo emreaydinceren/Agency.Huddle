@@ -768,7 +768,7 @@ public sealed class PersonaRenameCascadeTests
             NullLogger<TaskService>.Instance);
         var viewStore = new ViewStore(dir.Options(), NullLogger<ViewStore>.Instance);
         var folderMoves = new TeammateFolderMoves();
-        var spend = new PersonaSpend(NullLogger<PersonaSpend>.Instance);
+        var spend = new PersonaSpend(NullLogger<PersonaSpend>.Instance, new PersonaSpendStore(dir.Options()));
         var commands = new PersonaCommands(NullLogger<PersonaCommands>.Instance);
         var cascade = new PersonaRenameCascade(
             teamDirectory,

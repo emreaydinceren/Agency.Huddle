@@ -1,3 +1,5 @@
+using Agency.Huddle.App.Data;
+
 namespace Agency.Huddle.App.Acp;
 
 /// <summary>An amount of money in one currency, as an Adapter reported it.</summary>
@@ -17,10 +19,12 @@ internal sealed record SpendAmount(decimal Amount, string Currency);
 /// is keyed by session id rather than by <c>RoomSession</c> instance: a Room Session closed and
 /// re-opened by <c>session/resume</c> in the same Adapter process presents the same id and the same
 /// total, which adds nothing; a restarted Adapter presents the same id and a lower total, which is
-/// new spend. The figure is this run only. It is not persisted, and a restart starts from zero.
+/// new spend. <see cref="Get"/> is this run only and starts from zero after a restart; every increase is also
+/// written through to a <see cref="PersonaSpendStore"/>, and <see cref="GetPersisted"/> reads the lasting total.
 /// </remarks>
 /// <param name="logger">Records an ignored report and a <see cref="SpendChanged"/> subscriber that threw.</param>
-internal sealed class PersonaSpend(ILogger<PersonaSpend> logger)
+/// <param name="store">Receives every increase, so Spend survives a restart.</param>
+internal sealed class PersonaSpend(ILogger<PersonaSpend> logger, PersonaSpendStore store)
 {
     private readonly Lock gate = new();
     private readonly Dictionary<string, PersonaSpendState> personas = new(StringComparer.OrdinalIgnoreCase);
@@ -43,7 +47,8 @@ internal sealed class PersonaSpend(ILogger<PersonaSpend> logger)
     /// <param name="sessionId">The Adapter session the total belongs to.</param>
     /// <param name="runningTotal">The session's running total so far.</param>
     /// <param name="currency">The currency of <paramref name="runningTotal"/>.</param>
-    internal void Add(string personaName, string sessionId, decimal runningTotal, string currency)
+    /// <param name="taskId">The Task the Spend belongs to, or <see langword="null"/> when it belongs to none.</param>
+    internal void Add(string personaName, string sessionId, decimal runningTotal, string currency, string? taskId = null)
     {
         if (runningTotal < 0 || string.IsNullOrWhiteSpace(currency))
         {
@@ -78,6 +83,10 @@ internal sealed class PersonaSpend(ILogger<PersonaSpend> logger)
             }
 
             raise = delta > 0;
+            if (raise)
+            {
+                store.Add(personaName, taskId, currency, delta);
+            }
         }
 
         if (raise)
@@ -115,6 +124,8 @@ internal sealed class PersonaSpend(ILogger<PersonaSpend> logger)
             {
                 this.personas[newName] = state;
             }
+
+            store.Rename(oldName, newName);
         }
     }
 
@@ -125,8 +136,22 @@ internal sealed class PersonaSpend(ILogger<PersonaSpend> logger)
         lock (this.gate)
         {
             this.personas.Remove(personaName);
+            store.Remove(personaName);
         }
     }
+
+    /// <summary>The Spend persisted for <paramref name="personaName"/> across restarts, one entry per currency.</summary>
+    /// <param name="personaName">The Persona, compared without regard to case.</param>
+    /// <returns>A snapshot; empty when nothing is stored.</returns>
+    internal IReadOnlyList<SpendAmount> GetPersisted(string personaName) => ToAmounts(store.ForPersona(personaName));
+
+    /// <summary>The Spend persisted for <paramref name="taskId"/> across all Personas, one entry per currency.</summary>
+    /// <param name="taskId">The Task id.</param>
+    /// <returns>A snapshot; empty when nothing is stored.</returns>
+    internal IReadOnlyList<SpendAmount> GetPersistedForTask(string taskId) => ToAmounts(store.ForTask(taskId));
+
+    private static List<SpendAmount> ToAmounts(IReadOnlyList<StoredSpend> stored) =>
+        [.. stored.OrderBy(static spend => spend.Currency, StringComparer.Ordinal).Select(static spend => new SpendAmount(spend.Amount, spend.Currency))];
 
     private void RaiseSpendChanged(string personaName)
     {
