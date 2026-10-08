@@ -3,6 +3,7 @@ using System.Text;
 using System.Text.Json;
 using Microsoft.Extensions.Options;
 using Agency.Huddle.App.Data;
+using Agency.Huddle.App.Services;
 using Agency.Huddle.App.Tasks;
 
 namespace Agency.Huddle.App.Teams;
@@ -236,7 +237,7 @@ internal sealed class RecordsBundleBuilder(TaskStore tasks, ITeamCatalog teams, 
         int unreadable = 0;
         foreach (string member in members)
         {
-            string folder = Path.Combine(options.Value.DataDir, TeamPaths.ToolCallLogDir, member);
+            string folder = Path.Combine(options.Value.DataDir, TeamPaths.ToolCallLogDir, ToolCallLogWriter.SanitiseName(member));
             if (!Directory.Exists(folder))
             {
                 continue;

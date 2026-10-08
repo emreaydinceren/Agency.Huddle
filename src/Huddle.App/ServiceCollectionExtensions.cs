@@ -170,6 +170,7 @@ public static class ServiceCollectionExtensions
         services.AddSingleton<PersonaEffortStore>();
         services.AddSingleton<PersonaWorkModeStore>();
         services.AddSingleton<PersonaSpendStore>();
+        services.AddSingleton<Agency.Huddle.App.Teams.RecordsBundleBuilder>();
         services.AddSingleton<TaskIdAllocator>();
 
         // No interface, same reasoning as AvatarStore/PromptStore above: a second, independently

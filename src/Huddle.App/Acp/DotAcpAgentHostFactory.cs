@@ -183,6 +183,7 @@ internal sealed class DotAcpAgentHostFactory : IAgentHostFactory
             ActivatorUtilities.CreateInstance<FileRequestTool>(this.serviceProvider, agentId),
             ActivatorUtilities.CreateInstance<TriageRequestTool>(this.serviceProvider, agentId),
             ActivatorUtilities.CreateInstance<ConfirmRequestTool>(this.serviceProvider, agentId),
+            ActivatorUtilities.CreateInstance<ReadRecordsTool>(this.serviceProvider, agentId),
         ];
 
         // Spec §11.1: the six Task tools are not in SkillGrants.Grantable, so every Persona gets

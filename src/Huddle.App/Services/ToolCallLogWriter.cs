@@ -224,7 +224,7 @@ internal sealed class ToolCallLogWriter(IOptions<TeamOptions> options)
     /// Replaces every character invalid in a file name by <c>_</c>, a name made only of dots by underscores,
     /// a trailing dot or space (which Windows strips) by <c>_</c>, and prefixes a Windows reserved device name with <c>_</c>.
     /// </summary>
-    private static string SanitiseName(string name)
+    internal static string SanitiseName(string name)
     {
         char[] invalid = Path.GetInvalidFileNameChars();
         StringBuilder builder = new(name.Length);
