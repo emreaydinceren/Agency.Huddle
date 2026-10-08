@@ -209,6 +209,7 @@ public static class ServiceCollectionExtensions
             sp.GetRequiredService<SkillStore>(),
             new HttpClient { Timeout = TimeSpan.FromSeconds(15) },
             sp.GetService<TimeProvider>()));
+        services.AddSingleton<ISkillImporter>(static sp => sp.GetRequiredService<SkillImporter>());
 
         // No interface, same reasoning as PromptStore/SkillStore above: nothing needs to
         // substitute this, and it is built entirely from other singletons already registered

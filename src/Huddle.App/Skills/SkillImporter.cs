@@ -38,6 +38,27 @@ internal sealed record ImportPreview(
 /// <param name="SkillFolder">The installed folder, or <see langword="null"/> on failure.</param>
 internal sealed record ImportOutcome(bool Installed, string? Error, string? SkillFolder);
 
+/// <summary>What the import screen and the hiring installer need from <see cref="SkillImporter"/>, so either can be tested without the network or the disk.</summary>
+internal interface ISkillImporter
+{
+    /// <summary>Previews the catalog entry <paramref name="catalogId"/>.</summary>
+    /// <param name="catalogId">The catalog entry id.</param>
+    /// <param name="ct">Cancels the download.</param>
+    /// <returns>The preview, or <see langword="null"/> when the catalog has no such entry.</returns>
+    Task<ImportPreview?> PreviewFromCatalogAsync(string catalogId, CancellationToken ct);
+
+    /// <summary>Previews the skill at a GitHub tree URL.</summary>
+    /// <param name="githubTreeUrl">The tree URL.</param>
+    /// <param name="ct">Cancels the requests.</param>
+    /// <returns>The preview, or <see langword="null"/> when the text is not a GitHub tree URL.</returns>
+    Task<ImportPreview?> PreviewFromUrlAsync(string githubTreeUrl, CancellationToken ct);
+
+    /// <summary>Writes the previewed skill into the Skills folder.</summary>
+    /// <param name="preview">The preview the user confirmed.</param>
+    /// <returns>The outcome.</returns>
+    ImportOutcome Install(ImportPreview preview);
+}
+
 /// <summary>
 /// Orchestrates a skill import: preview the provenance, download, validate against the catalog and scan, and
 /// write only on <see cref="Install"/> (SK-2 to SK-7). A preview never touches the disk.
@@ -47,7 +68,7 @@ internal sealed record ImportOutcome(bool Installed, string? Error, string? Skil
 /// <param name="skills">The skill store whose folder receives the install.</param>
 /// <param name="http">Resolves a branch name to a commit through the GitHub API.</param>
 /// <param name="clock">The clock for the import time; the system clock when omitted.</param>
-internal sealed class SkillImporter(SkillsCatalogIndex catalog, SkillDownloader downloader, SkillStore skills, HttpClient http, TimeProvider? clock = null)
+internal sealed class SkillImporter(SkillsCatalogIndex catalog, SkillDownloader downloader, SkillStore skills, HttpClient http, TimeProvider? clock = null) : ISkillImporter
 {
     private const int CommitLength = 40;
 
