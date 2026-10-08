@@ -80,7 +80,7 @@ public sealed class HireServiceStartTests
           ] }
         """;
 
-    private static HireService Create(TempDataDir dir, out PersonaStore personas, out FakeSkillInstaller installer, out FakeStartGate gate, TeamOptions? options = null)
+    private static HireService Create(TempDataDir dir, out PersonaStore personas, out FakeSkillInstaller installer, out FakeStartGate gate, TeamOptions? options = null, Func<TeamTypeCatalog, ProcessProvisioner>? makeProvisioner = null)
     {
         personas = new(new TeammatePaths(dir.Options()), new PersonaModelStore(dir.Options()), new PersonaEffortStore(dir.Options()), new PersonaWorkModeStore(dir.Options()), NullLogger<PersonaStore>.Instance);
         Dictionary<string, string> builtins = new(StringComparer.Ordinal)
@@ -100,7 +100,7 @@ public sealed class HireServiceStartTests
         AvatarStore avatars = new(dir.Options(), NullLogger<AvatarStore>.Instance);
         installer = new FakeSkillInstaller();
         gate = new FakeStartGate();
-        return new HireService(personas, types, packs, avatars, harness.Guard, installer, gate, NullLogger<HireService>.Instance);
+        return new HireService(personas, types, packs, avatars, harness.Guard, installer, gate, NullLogger<HireService>.Instance, makeProvisioner?.Invoke(types));
     }
 
     private static HireRequest Request(string name, string roleId, CardReadiness readiness = CardReadiness.Ready)
@@ -128,6 +128,28 @@ public sealed class HireServiceStartTests
         Assert.Equal(["Lee", "Dan", "Dee"], result.Started);
         Assert.Equal(["Lee"], gate.Waited);
         Assert.Equal(["Lee"], seenAtWait);
+    }
+
+    /// <summary>A started Team that has no <c>Process.md</c> receives the type's default process; one that has it keeps its file.</summary>
+    [Fact]
+    public async Task StartTeamAsync_TeamWithoutProcess_ProvisionsDefaultProcessOnce()
+    {
+        CancellationToken ct = TestContext.Current.CancellationToken;
+        using TempDataDir dir = new();
+        using TempDataDir teamFolder = new();
+        DiskTeamFolders folders = new(teamFolder.Path) { File = new TeamFile(new VersionedRef("web", "1.2.0"), null, null, null, TeamPaths.ProcessFileName, string.Empty) };
+        HireService service = Create(dir, out _, out _, out _, makeProvisioner: types => new ProcessProvisioner(types, folders));
+        string path = Path.Combine(teamFolder.Path, TeamPaths.ProcessFileName);
+
+        StartTeamResult result = await service.StartTeamAsync(TeamName, [Request("Lee", "lead")], ct);
+        string first = File.ReadAllText(path);
+        File.WriteAllText(path, "# Edited\n");
+        HireService again = Create(dir, out _, out _, out _, makeProvisioner: types => new ProcessProvisioner(types, folders));
+        _ = await again.StartTeamAsync(TeamName, [Request("Lee", "lead")], ct);
+
+        Assert.True(result.Ok);
+        Assert.Equal("# Flow", first);
+        Assert.Equal("# Edited\n", File.ReadAllText(path));
     }
 
     /// <summary>The installer is asked once for the distinct skills of every card, before anything is hired.</summary>

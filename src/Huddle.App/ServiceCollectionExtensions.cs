@@ -265,6 +265,7 @@ public static class ServiceCollectionExtensions
         // CardResolver and TierModelPicker are static and need no registration.
         services.AddSingleton<Agency.Huddle.App.Teams.ISkillInstaller, Agency.Huddle.App.Teams.ImportingSkillInstaller>();
         services.AddSingleton<Agency.Huddle.App.Teams.IPersonaStartGate>(sp => sp.GetService<PersonaSupervisor>() as Agency.Huddle.App.Teams.IPersonaStartGate ?? new Agency.Huddle.App.Teams.NoHostStartGate());
+        services.AddSingleton<Agency.Huddle.App.Teams.ProcessProvisioner>();
         services.AddSingleton<Agency.Huddle.App.Teams.HireService>();
         services.AddSingleton<Agency.Huddle.App.Teams.IHireContext, Agency.Huddle.App.Teams.HireContext>();
         services.AddSingleton<Agency.Huddle.App.Teams.RoleHirer>();

@@ -59,6 +59,7 @@ internal sealed record StartTeamResult(bool Ok, string? Error, IReadOnlyList<str
 /// <param name="installer">Installs the Team's skills before any member is hired.</param>
 /// <param name="startGate">Tells when the manager is running.</param>
 /// <param name="logger">Receives post-write failures.</param>
+/// <param name="processProvisioner">Gives a started Team the type's default process when it has none; <see langword="null"/> skips that step.</param>
 internal sealed class HireService(
     PersonaStore personas,
     TeamTypeCatalog types,
@@ -67,7 +68,8 @@ internal sealed class HireService(
     HireLimitGuard limits,
     ISkillInstaller installer,
     IPersonaStartGate startGate,
-    ILogger<HireService> logger)
+    ILogger<HireService> logger,
+    ProcessProvisioner? processProvisioner = null)
 {
     /// <summary>How long the manager gets to report running before the start stops.</summary>
     internal static readonly TimeSpan ManagerStartTimeout = TimeSpan.FromSeconds(60);
@@ -103,6 +105,7 @@ internal sealed class HireService(
             return HireService.Stop($"Skills not installed: {names}.", []);
         }
 
+        _ = processProvisioner?.ProvisionDefault(team);
         HireRequest manager = hires.First(h => string.Equals(h.RoleId, managerRole.Id, StringComparison.Ordinal));
         List<string> started = [];
         string? failure = this.HireOrKeep(manager, started);
