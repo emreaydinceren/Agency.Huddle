@@ -38,6 +38,9 @@ internal static class SkillGrants
     /// <summary>The name of the tool that reads the Team's retro evidence bundle (Task 68).</summary>
     private const string ReadRecordsToolName = "read_records";
 
+    /// <summary>The name of the tool that proposes retro changes to the Human (Task 76).</summary>
+    private const string ProposeRetroChangesToolName = "propose_retro_changes";
+
     /// <summary>Tools that exist only for Personas holding a Skill that lists them (Spec §6.5).</summary>
     internal static readonly FrozenSet<string> Grantable =
         FrozenSet.ToFrozenSet(
@@ -50,6 +53,7 @@ internal static class SkillGrants
                 TriageRequestToolName,
                 ConfirmRequestToolName,
                 ReadRecordsToolName,
+                ProposeRetroChangesToolName,
             ],
             StringComparer.Ordinal);
 

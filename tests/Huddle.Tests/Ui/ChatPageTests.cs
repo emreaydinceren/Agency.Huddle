@@ -1034,6 +1034,10 @@ public sealed class ChatPageTests
         ctx.Services.AddSingleton(factory.Services.GetRequiredService<Agency.Huddle.App.Tasks.SprintProposalService>());
         ctx.Services.AddSingleton(factory.Services.GetRequiredService<Agency.Huddle.App.Tasks.TaskStore>());
 
+        // Chat.razor renders RetroProposalCard beside them (Task 76), which injects these two.
+        ctx.Services.AddSingleton(factory.Services.GetRequiredService<Agency.Huddle.App.Teams.RetroProposalStore>());
+        ctx.Services.AddSingleton(factory.Services.GetRequiredService<Agency.Huddle.App.Teams.RetroProposalService>());
+
         // Chat.razor renders QuestionCard beside ProposalCard (Questions spec §6.7), which injects these
         // two even though these tests never ask a Question - RoomEvents, Drafts and ITeamDirectory are
         // already registered above, for Chat.razor's own sake.

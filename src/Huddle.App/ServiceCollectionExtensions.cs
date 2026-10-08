@@ -171,6 +171,11 @@ public static class ServiceCollectionExtensions
         services.AddSingleton<PersonaWorkModeStore>();
         services.AddSingleton<PersonaSpendStore>();
         services.AddSingleton<Agency.Huddle.App.Teams.RecordsBundleBuilder>();
+        services.AddSingleton<Agency.Huddle.App.Teams.RetroFileStore>();
+
+        // Retro proposals (Task 76): held under _proposals/retro/ in the Team folder; Huddle applies an accepted edit.
+        services.AddSingleton<Agency.Huddle.App.Teams.RetroProposalStore>();
+        services.AddSingleton<Agency.Huddle.App.Teams.RetroProposalService>();
         services.AddSingleton<TaskIdAllocator>();
 
         // No interface, same reasoning as AvatarStore/PromptStore above: a second, independently

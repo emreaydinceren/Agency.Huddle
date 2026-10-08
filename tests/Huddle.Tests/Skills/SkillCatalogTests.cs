@@ -53,7 +53,7 @@ public sealed class SkillCatalogTests
 
         Assert.Equal(["SKILL.md"], files.Keys.ToList());
         Assert.Empty(validation.Issues);
-        Assert.Equal(["read_records"], validation.Tools);
+        Assert.Equal(["read_records", "propose_retro_changes"], validation.Tools);
     }
 
     /// <summary>The catalog lists both team skills by name next to <c>team-building</c> (Task 68).</summary>
