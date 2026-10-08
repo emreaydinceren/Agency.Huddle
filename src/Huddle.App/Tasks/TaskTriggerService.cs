@@ -1,3 +1,4 @@
+using System.Globalization;
 using Microsoft.Extensions.Options;
 using Agency.Huddle.App.Acp;
 using Agency.Huddle.App.Acp.Sessions;
@@ -344,6 +345,11 @@ internal sealed partial class TaskTriggerService : IHostedService, IDisposable
             this.activity.ResetForHuman(change.After.Id);
         }
 
+        if (change.After.Status == TaskState.Done && change.Before?.Status != TaskState.Done)
+        {
+            this.StartUnblock(change);
+        }
+
         BatchKey key = new(change.After.Id, change.Actor.Name);
         int seconds = this.teamOptions.Tasks.WakeCoalesceSeconds;
         bool fireNow = seconds <= 0;
@@ -415,6 +421,150 @@ internal sealed partial class TaskTriggerService : IHostedService, IDisposable
             this.inFlight.RemoveWhere(static done => done.IsCompleted);
             this.inFlight.Add(fire);
         }
+    }
+
+    /// <summary>Starts the unblock pass for a Task that reached Done and tracks it for <see cref="WhenIdleAsync"/>.</summary>
+    /// <param name="change">The change that finished the Task.</param>
+    private void StartUnblock(TaskChange change)
+    {
+        lock (this.gate)
+        {
+            if (this.stopped)
+            {
+                return;
+            }
+        }
+
+        Task pass = this.UnblockAsync(change);
+        lock (this.gate)
+        {
+            this.inFlight.RemoveWhere(static done => done.IsCompleted);
+            this.inFlight.Add(pass);
+        }
+    }
+
+    /// <summary>Runs one unblock pass behind the fire gate. Catches and logs everything, like <see cref="FireAsync"/>.</summary>
+    /// <param name="change">The change that finished the Task.</param>
+    /// <returns>A task that completes when the pass is done; it never faults.</returns>
+    private async Task UnblockAsync(TaskChange change)
+    {
+        TaskId id = change.After.Id;
+        try
+        {
+            CancellationToken ct;
+            lock (this.gate)
+            {
+                if (this.stopped)
+                {
+                    return;
+                }
+
+                ct = this.lifetime.Token;
+            }
+
+            await this.fireGate.WaitAsync(ct);
+            try
+            {
+                await this.WakeUnblockedAsync(change, ct);
+            }
+            finally
+            {
+                this.fireGate.Release();
+            }
+        }
+        catch (OperationCanceledException ex) when (this.stopped)
+        {
+            LogFireCancelled(this.logger, id, ex);
+        }
+        catch (Exception ex)
+        {
+            // Detached like a fire: log, so the next Done event still gets its pass (corrections-B3 D9 item 7).
+            LogFireFailed(this.logger, id, ex);
+        }
+    }
+
+    /// <summary>
+    /// RQ-6: for every Task (in any Team) whose <c>blocked_by</c> lists the Task that just reached
+    /// Done, that is neither Done nor Rejected, and whose blockers are now all Done, wakes its
+    /// assignee - or the Team's manager when it has none. Each unblocking is recorded as an entry in
+    /// the blocked Task's own change log, keyed by when the blocker last reached Done, so a duplicate
+    /// event wakes nobody again while a reopen followed by a new Done does.
+    /// </summary>
+    /// <param name="change">The change that finished the Task.</param>
+    /// <param name="ct">The service lifetime.</param>
+    /// <returns>A task that completes when every unblocked Task was handled.</returns>
+    private async Task WakeUnblockedAsync(TaskChange change, CancellationToken ct)
+    {
+        if (!this.teamOptions.Tasks.Enabled || !this.teamOptions.Tasks.WakeEnabled)
+        {
+            return;
+        }
+
+        TaskItem finished = change.After;
+        DateTimeOffset doneAt = change.Entry.At;
+        foreach (ChangeLogEntry entry in finished.ChangeLog)
+        {
+            if (entry.Summary.StartsWith("Status:", StringComparison.Ordinal) && entry.Summary.EndsWith("→ Done", StringComparison.Ordinal))
+            {
+                doneAt = entry.At;
+            }
+        }
+
+        string marker = string.Create(CultureInfo.InvariantCulture, $"Unblocked: {finished.Id} Done at {doneAt:O}");
+        List<TaskItem> candidates = [.. this.store.All.Where(task => task.BlockedBy.Contains(finished.Id))];
+        foreach (TaskItem blocked in candidates)
+        {
+            bool open = blocked.Status is not (TaskState.Done or TaskState.Rejected);
+            bool allDone = blocked.BlockedBy.All(blocker => blocker == finished.Id || this.store.Get(blocker)?.Status == TaskState.Done);
+            bool alreadyWoken = blocked.ChangeLog.Any(entry => string.Equals(entry.Summary, marker, StringComparison.Ordinal));
+            if (open && allDone && !alreadyWoken)
+            {
+                await this.WakeUnblockedTaskAsync(blocked, change.Actor, marker, ct);
+            }
+        }
+    }
+
+    /// <summary>Picks the recipient for one unblocked Task, records the unblocking in its change log and delivers the wake.</summary>
+    /// <param name="blocked">The Task that is no longer blocked.</param>
+    /// <param name="actor">Who finished the last blocker.</param>
+    /// <param name="marker">The change-log summary that records this unblocking.</param>
+    /// <param name="ct">The service lifetime.</param>
+    /// <returns>A task that completes when the wake was posted or skipped.</returns>
+    private async Task WakeUnblockedTaskAsync(TaskItem blocked, TaskActor actor, string marker, CancellationToken ct)
+    {
+        string? recipient;
+        if (string.IsNullOrEmpty(blocked.Assignee))
+        {
+            string? manager = this.teams?.Find(blocked.Location.Team)?.Manager;
+            bool usable = !string.IsNullOrEmpty(manager)
+                && !string.Equals(manager, actor.Name, StringComparison.OrdinalIgnoreCase)
+                && !string.Equals(manager, this.teamOptions.HumanName, StringComparison.OrdinalIgnoreCase)
+                && this.personas.Get(manager) is not null;
+            recipient = usable ? manager : null;
+        }
+        else
+        {
+            WakePreview preview = this.Preview(null, blocked, actor);
+            recipient = preview.Block == WakeBlock.None ? preview.AssigneeName : null;
+        }
+
+        if (recipient is null)
+        {
+            LogBlocked(this.logger, blocked.Id, WakeBlock.NoAssignee);
+            return;
+        }
+
+        ChangeLogEntry unblocked = new(this.clock.GetUtcNow(), actor.Name, marker);
+        TaskItem? recorded = this.store.AppendEntry(blocked.Id, blocked.Version, unblocked);
+        if (recorded is null)
+        {
+            LogTaskGone(this.logger, blocked.Id);
+            return;
+        }
+
+        Batch batch = new(new BatchKey(blocked.Id, actor.Name)) { Actor = actor };
+        batch.Entries.Add(unblocked);
+        await this.DeliverAsync(batch, recorded, recipient, ct);
     }
 
     /// <summary>
