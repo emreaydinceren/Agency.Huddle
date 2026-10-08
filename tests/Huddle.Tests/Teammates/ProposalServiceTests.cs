@@ -7,7 +7,11 @@ using Agency.Huddle.App.Acp;
 using Agency.Huddle.App.Data;
 using Agency.Huddle.App.Services;
 using Agency.Huddle.App.Questions;
+using Agency.Huddle.App.Avatars;
+using Agency.Huddle.App.TeamTypes;
 using Agency.Huddle.App.Teammates;
+using Agency.Huddle.App.Teams;
+using Agency.Huddle.Tests.Teams;
 using Agency.Huddle.Tests.Acp.Tools;
 
 /// <summary>
@@ -406,6 +410,46 @@ public sealed class ProposalServiceTests
     }
 
     /// <summary>
+    /// A Candidate with a role is hired through <see cref="App.Teams.HireService"/>: its file carries
+    /// the role's skills, the pack's skills, the <c>_role</c> reference and the pack's consult-when
+    /// text, while a plain Candidate in the same Proposal is written as before, with none of them.
+    /// </summary>
+    [Fact]
+    public async Task Approve_RoleCandidate_ArrivesWithRoleSkillsAndPackText()
+    {
+        CancellationToken ct = TestContext.Current.CancellationToken;
+        using Fixture fixture = await Fixture.CreateAsync(ct, withRoles: true);
+        var proposer = await fixture.Directory.UpsertAgentUserAsync("Chief of Staff", null, ct);
+        Assert.NotNull(proposer);
+        var room = await fixture.Directory.CreateRoomAsync("Launch", [KnownIds.Human, proposer.Id], ct);
+        IReadOnlyList<Candidate> candidates =
+        [
+            new Candidate("Jane", "jane", "Whatever", "Ignored body.", [RoleFixtures.TeamName], null, "web/dev"),
+            new Candidate("Quill", "quill", "Writer", "You write things.", [], null),
+        ];
+        var proposal = ProposalServiceTests.MakeProposal(room.Id, proposer.Id, proposer.Name, candidates);
+        _ = fixture.Proposals.TryPut(proposal);
+
+        var outcome = await fixture.Service.ApproveAsync(room.Id, proposal.Id, ct);
+
+        Assert.Equal(ProposalOutcomeKind.Created, outcome.Kind);
+        Persona? jane = fixture.Personas.Get("Jane");
+        Assert.NotNull(jane);
+        Assert.True(PersonaFrontmatter.TryReadIdentity(jane.Text, out PersonaIdentity? identity, out _));
+        Assert.Equal("web/dev@1.2.0", identity.Role?.ToString());
+        Assert.Equal(["test-driven-development", "target-authoring"], identity.Skills);
+        Assert.Equal("Developer", identity.Title);
+        Assert.Equal("sonnet", jane.Model);
+        (IReadOnlyList<PersonaFrontmatterField> fields, _) = PersonaFrontmatter.Parse(jane.Text);
+        Assert.Equal("code changes; .csproj changes", fields.Single(f => string.Equals(f.Key, "consult_when", StringComparison.Ordinal)).Value);
+        Persona? quill = fixture.Personas.Get("Quill");
+        Assert.NotNull(quill);
+        Assert.True(PersonaFrontmatter.TryReadIdentity(quill.Text, out PersonaIdentity? plain, out _));
+        Assert.Null(plain.Role);
+        Assert.Empty(plain.Skills ?? []);
+    }
+
+    /// <summary>
     /// Bundles the real collaborators one <see cref="ProposalService"/> under test needs - a
     /// <see cref="SqliteTeamDirectory"/>, a <see cref="PersonaStore"/>, a <see cref="CandidateChecker"/>,
     /// a <see cref="ProposalStore"/>, a <see cref="FileChatStore"/> and a <see cref="ChatService"/> -
@@ -464,7 +508,8 @@ public sealed class ProposalServiceTests
         /// <param name="ct">Cancels Team Directory initialisation.</param>
         /// <param name="maxPerTeam"><see cref="AcpOptions.MaxTeammatesPerTeam"/> for this fixture.</param>
         /// <param name="maxLive"><see cref="AcpOptions.MaxLiveProcesses"/> for this fixture.</param>
-        public static async Task<Fixture> CreateAsync(CancellationToken ct, int maxPerTeam = 8, int maxLive = 16)
+        /// <param name="withRoles">When <see langword="true"/>, the service can hire Candidates that carry a role, from the fake <c>web</c> team type.</param>
+        public static async Task<Fixture> CreateAsync(CancellationToken ct, int maxPerTeam = 8, int maxLive = 16, bool withRoles = false)
         {
             var dataDir = new TempDataDir();
 
@@ -484,13 +529,23 @@ public sealed class ProposalServiceTests
             var personas = new PersonaStore(
                 new TeammatePaths(options), new PersonaModelStore(options), new PersonaEffortStore(options), new PersonaWorkModeStore(options), NullLogger<PersonaStore>.Instance);
             var gateway = new FakeAgentGateway();
-            var checker = new CandidateChecker(personas, directory, gateway);
+            TeamTypeCatalog? types = withRoles ? RoleFixtures.Types(dataDir) : null;
+            var checker = new CandidateChecker(personas, directory, gateway, types, new FakeTeamCatalog());
             var events = new RoomEvents(NullLogger<RoomEvents>.Instance);
             var proposals = new ProposalStore(events);
             var store = new FileChatStore(options, NullLogger<FileChatStore>.Instance);
             var chat = new ChatService(directory, store, events, personas, options, proposals, new QuestionStore(events), NullLogger<ChatService>.Instance);
             var limits = new HireLimitHarness(options);
-            var service = new ProposalService(proposals, checker, personas, chat, directory, limits.Guard, NullLogger<ProposalService>.Instance);
+            RoleHirer? roleHirer = null;
+            if (types is not null)
+            {
+                SkillPackStore packs = RoleFixtures.Packs(dataDir);
+                AvatarStore avatars = new(options, NullLogger<AvatarStore>.Instance);
+                HireService hires = new(personas, types, packs, avatars, limits.Guard, new FakeSkillInstaller(), new FakeStartGate(), NullLogger<HireService>.Instance);
+                roleHirer = new RoleHirer(hires, types, packs, new RoleFixtures.Context());
+            }
+
+            var service = new ProposalService(proposals, checker, personas, chat, directory, limits.Guard, NullLogger<ProposalService>.Instance, roleHirer);
 
             return new Fixture(dataDir, directory, personas, proposals, store, chat, service, limits);
         }

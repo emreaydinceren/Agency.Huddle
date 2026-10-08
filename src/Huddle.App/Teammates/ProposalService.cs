@@ -1,6 +1,7 @@
 using Agency.Huddle.App.Acp;
 using Agency.Huddle.App.Data;
 using Agency.Huddle.App.Services;
+using Agency.Huddle.App.Teams;
 
 namespace Agency.Huddle.App.Teammates;
 
@@ -25,6 +26,7 @@ namespace Agency.Huddle.App.Teammates;
 /// <param name="directory">Resolves the Human's User, and the proposer's current Name, at post time.</param>
 /// <param name="hireLimits">Checks the Proposal against the per-Team and live-process hire limits.</param>
 /// <param name="logger">Used to log what an Approve did.</param>
+/// <param name="roleHirer">Hires a Candidate that carries a role from its team type; <see langword="null"/> when team types are not available, and such a Candidate is written as a plain one.</param>
 internal sealed partial class ProposalService(
     ProposalStore proposals,
     CandidateChecker checker,
@@ -32,7 +34,8 @@ internal sealed partial class ProposalService(
     ChatService chat,
     ITeamDirectory directory,
     HireLimitGuard hireLimits,
-    ILogger<ProposalService> logger)
+    ILogger<ProposalService> logger,
+    RoleHirer? roleHirer = null)
 {
     // Serialises Persona creation across every Proposal in the app - the same race
     // PersonaStore.Add's own writeGate closes for the Teammate card (Spec §6.10's implementation
@@ -83,6 +86,21 @@ internal sealed partial class ProposalService(
                 if (!check.IsValid)
                 {
                     failed.Add(new CandidateFailure(candidate.Name, check.Problems[0]));
+                    continue;
+                }
+
+                if (candidate.Role is not null && roleHirer is not null)
+                {
+                    HireResult hired = roleHirer.Hire(candidate);
+                    if (hired.PersonaName is not null)
+                    {
+                        created.Add(candidate.Name);
+                    }
+                    else
+                    {
+                        failed.Add(new CandidateFailure(candidate.Name, hired.Error ?? string.Empty));
+                    }
+
                     continue;
                 }
 

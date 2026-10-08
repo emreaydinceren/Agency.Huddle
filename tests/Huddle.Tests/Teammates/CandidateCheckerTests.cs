@@ -4,6 +4,8 @@ using Agency.Huddle.App.Acp;
 using Agency.Huddle.App.Data;
 using Agency.Huddle.App.Pipes;
 using Agency.Huddle.App.Teammates;
+using Agency.Huddle.App.Teams;
+using Agency.Huddle.Tests.Teams;
 using Agency.Huddle.Tests.Acp;
 using Agency.Huddle.Tests.Acp.Tools;
 
@@ -257,6 +259,104 @@ public sealed partial class CandidateCheckerTests
         Assert.Contains(result.Problems, p => p.Contains("Body", StringComparison.Ordinal) && p.Contains("---", StringComparison.Ordinal));
         Assert.True(result.Problems.Count >= 3, $"Expected all three faults reported together; got {result.Problems.Count}: {string.Join(" | ", result.Problems)}");
         AssertProblemsAreModelFacing(result.Problems);
+    }
+
+    /// <summary>A Candidate whose role names a type that does not exist is flagged.</summary>
+    [Fact]
+    public async Task Check_RoleNamesUnknownType_Flagged()
+    {
+        CancellationToken ct = TestContext.Current.CancellationToken;
+        using Fixture fixture = await CreateFixtureAsync(ct);
+        using TempDataDir typesDir = new();
+        CandidateChecker checker = RoleChecker(fixture, typesDir, []);
+
+        CandidateCheck result = await checker.CheckAsync([MakeCandidate(teams: [RoleFixtures.TeamName]) with { Role = "nope/dev" }], ct);
+
+        Assert.False(result.IsValid);
+        Assert.Equal(["Vera's role 'nope/dev' names a team type that does not exist."], result.Problems);
+    }
+
+    /// <summary>A Candidate whose role names a role the type does not define is flagged.</summary>
+    [Fact]
+    public async Task Check_RoleNamesUnknownRole_Flagged()
+    {
+        CancellationToken ct = TestContext.Current.CancellationToken;
+        using Fixture fixture = await CreateFixtureAsync(ct);
+        using TempDataDir typesDir = new();
+        CandidateChecker checker = RoleChecker(fixture, typesDir, []);
+
+        CandidateCheck result = await checker.CheckAsync([MakeCandidate(teams: [RoleFixtures.TeamName]) with { Role = "web/ghost" }], ct);
+
+        Assert.False(result.IsValid);
+        Assert.Equal(["Vera's role 'web/ghost' is not a role of team type 'web'."], result.Problems);
+    }
+
+    /// <summary>A role that is not <c>typeId/roleId</c> is flagged.</summary>
+    [Fact]
+    public async Task Check_RoleMalformed_Flagged()
+    {
+        CancellationToken ct = TestContext.Current.CancellationToken;
+        using Fixture fixture = await CreateFixtureAsync(ct);
+        using TempDataDir typesDir = new();
+        CandidateChecker checker = RoleChecker(fixture, typesDir, []);
+
+        CandidateCheck result = await checker.CheckAsync([MakeCandidate(teams: [RoleFixtures.TeamName]) with { Role = "dev" }], ct);
+
+        Assert.False(result.IsValid);
+        Assert.Equal(["Vera's role 'dev' must look like <typeId>/<roleId>."], result.Problems);
+    }
+
+    /// <summary>The manager role is refused for a Team that already has a manager.</summary>
+    [Fact]
+    public async Task Check_ManagerRoleInTeamWithManager_Flagged()
+    {
+        CancellationToken ct = TestContext.Current.CancellationToken;
+        using Fixture fixture = await CreateFixtureAsync(ct);
+        using TempDataDir typesDir = new();
+        CandidateChecker checker = RoleChecker(fixture, typesDir, [new TeamSummary(RoleFixtures.TeamName, [], ["Ann"], true) { Manager = "Ann" }]);
+
+        CandidateCheck result = await checker.CheckAsync([MakeCandidate(teams: [RoleFixtures.TeamName]) with { Role = "web/lead" }], ct);
+
+        Assert.False(result.IsValid);
+        Assert.Equal(["Vera's role 'web/lead' is the manager role, and Team 'Web Team' already has a manager."], result.Problems);
+    }
+
+    /// <summary>The manager role is fine for a Team without a manager, and a non-manager role is fine for a Team with one.</summary>
+    [Fact]
+    public async Task Check_ManagerRoleWithoutManagerAndPlainRole_Valid()
+    {
+        CancellationToken ct = TestContext.Current.CancellationToken;
+        using Fixture fixture = await CreateFixtureAsync(ct);
+        using TempDataDir typesDir = new();
+        CandidateChecker open = RoleChecker(fixture, typesDir, [new TeamSummary(RoleFixtures.TeamName, [], [], false)]);
+        CandidateChecker staffed = RoleChecker(fixture, typesDir, [new TeamSummary(RoleFixtures.TeamName, [], ["Ann"], true) { Manager = "Ann" }]);
+
+        CandidateCheck lead = await open.CheckAsync([MakeCandidate(teams: [RoleFixtures.TeamName]) with { Role = "web/lead" }], ct);
+        CandidateCheck dev = await staffed.CheckAsync([MakeCandidate(teams: [RoleFixtures.TeamName]) with { Role = "web/dev" }], ct);
+
+        Assert.True(lead.IsValid);
+        Assert.True(dev.IsValid);
+    }
+
+    /// <summary>A role Candidate that names no Team is flagged, since a hire needs one.</summary>
+    [Fact]
+    public async Task Check_RoleWithoutTeam_Flagged()
+    {
+        CancellationToken ct = TestContext.Current.CancellationToken;
+        using Fixture fixture = await CreateFixtureAsync(ct);
+        using TempDataDir typesDir = new();
+        CandidateChecker checker = RoleChecker(fixture, typesDir, []);
+
+        CandidateCheck result = await checker.CheckAsync([MakeCandidate() with { Role = "web/dev" }], ct);
+
+        Assert.False(result.IsValid);
+        Assert.Equal(["Vera has a role but no Team; name the Team the role joins."], result.Problems);
+    }
+
+    /// <summary>Builds the checker under test wired to the fake team type catalog and a Team list.</summary>
+    private static CandidateChecker RoleChecker(Fixture fixture, TempDataDir typesDir, IReadOnlyList<TeamSummary> teams)
+    {
+        return new CandidateChecker(fixture.Personas, fixture.Directory, fixture.Gateway, RoleFixtures.Types(typesDir), new FakeTeamCatalog { Teams = teams });
     }
 
     /// <summary>
