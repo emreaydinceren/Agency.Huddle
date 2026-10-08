@@ -27,7 +27,7 @@ internal sealed class TeamTypeCatalog
     private readonly string userDir;
     private readonly ILogger<TeamTypeCatalog> logger;
     private readonly IReadOnlyDictionary<string, string> builtins;
-    private volatile Snapshot snapshot = new([], [], new Dictionary<string, TeamTypeManifest>(StringComparer.Ordinal));
+    private volatile Snapshot snapshot = new([], [], new Dictionary<string, TeamTypeManifest>(StringComparer.Ordinal), new HashSet<string>(StringComparer.Ordinal));
 
     /// <summary>Creates the catalog over the assembly's embedded built-in types.</summary>
     /// <param name="options">Supplies <see cref="TeamOptions.DataDir"/>.</param>
@@ -68,6 +68,15 @@ internal sealed class TeamTypeCatalog
     {
         ArgumentNullException.ThrowIfNull(id);
         return this.snapshot.ById.GetValueOrDefault(id);
+    }
+
+    /// <summary>Tells whether a valid type's manifest comes from the user's folder rather than the built-ins.</summary>
+    /// <param name="id">The type id.</param>
+    /// <returns>True when the loaded manifest is the user's own (a new type or a replacement of a built-in).</returns>
+    public bool IsUserDefined(string id)
+    {
+        ArgumentNullException.ThrowIfNull(id);
+        return this.snapshot.UserIds.Contains(id);
     }
 
     /// <summary>Reads and parses the candidate file of a role.</summary>
@@ -112,12 +121,18 @@ internal sealed class TeamTypeCatalog
         List<TeamTypeFileProblem> problems = [];
         Dictionary<string, TeamTypeManifest> byId = new(StringComparer.Ordinal);
 
+        HashSet<string> userIds = new(StringComparer.Ordinal);
         foreach (string id in this.ListTypeIds())
         {
-            TeamTypeManifest? manifest = this.LoadUser(id, problems) ?? this.LoadBuiltin(id, problems);
+            TeamTypeManifest? user = this.LoadUser(id, problems);
+            TeamTypeManifest? manifest = user ?? this.LoadBuiltin(id, problems);
             if (manifest is not null)
             {
                 byId[id] = manifest;
+                if (user is not null)
+                {
+                    userIds.Add(id);
+                }
             }
         }
 
@@ -127,7 +142,7 @@ internal sealed class TeamTypeCatalog
         }
 
         List<TeamTypeManifest> types = [.. byId.Values.OrderBy(static t => t.Order).ThenBy(static t => t.DisplayName, StringComparer.Ordinal)];
-        this.snapshot = new Snapshot(types, problems, byId);
+        this.snapshot = new Snapshot(types, problems, byId, userIds);
         this.Changed?.Invoke();
     }
 
@@ -320,5 +335,10 @@ internal sealed class TeamTypeCatalog
     /// <param name="Types">The valid types in display order.</param>
     /// <param name="Problems">The rejected types.</param>
     /// <param name="ById">The valid types by id.</param>
-    private sealed record Snapshot(IReadOnlyList<TeamTypeManifest> Types, IReadOnlyList<TeamTypeFileProblem> Problems, IReadOnlyDictionary<string, TeamTypeManifest> ById);
+    /// <param name="UserIds">The ids of the valid types whose manifest came from the user's folder.</param>
+    private sealed record Snapshot(
+        IReadOnlyList<TeamTypeManifest> Types,
+        IReadOnlyList<TeamTypeFileProblem> Problems,
+        IReadOnlyDictionary<string, TeamTypeManifest> ById,
+        IReadOnlySet<string> UserIds);
 }

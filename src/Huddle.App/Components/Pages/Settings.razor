@@ -68,6 +68,9 @@
         <MudTabPanel Text="Skills">
             <SkillsPanel />
         </MudTabPanel>
+        <MudTabPanel Text="Team Types">
+            <TeamTypesPanel />
+        </MudTabPanel>
         <MudTabPanel Text="Library">
             <LibraryPanel />
         </MudTabPanel>
@@ -110,6 +113,7 @@
         SettingsTab.Appearance => 1,
         SettingsTab.Personas => 2,
         SettingsTab.Skills => 3,
+        SettingsTab.TeamTypes => 4,
         _ => 0,
     };
 
@@ -146,6 +150,7 @@
             1 => SettingsTab.Appearance,
             2 => SettingsTab.Personas,
             3 => SettingsTab.Skills,
+            4 => SettingsTab.TeamTypes,
             _ => SettingsTab.Prompts,
         });
     }

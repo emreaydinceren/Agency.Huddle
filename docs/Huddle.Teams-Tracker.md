@@ -2,7 +2,7 @@
 
 Status of the Teams delivery in [engineering/teams-plan.md](engineering/teams-plan.md). Each task is a `.t` (failing tests first) and `.i` (implementation) pair; a task's `.i` cannot be Done before its `.t`. Ids are `<phase>.<task>.<t|i>`, the form `agents/scripts/Set-Tracker.ps1` updates. `(H)` marks a Haiku task, `(B)` a boundary task that also gets an Opus architect review.
 
-**Status:** 60 of 170 tasks Done · 1 of 6 retrospectives done · last updated 2026-10-07.
+**Status:** 62 of 170 tasks Done · 1 of 6 retrospectives done · last updated 2026-10-07.
 
 | **Deliverable / Task** | **Active** | **In Progress** | **Done** |
 |---|---|---|---|
@@ -67,8 +67,8 @@ Status of the Teams delivery in [engineering/teams-plan.md](engineering/teams-pl
 | 1.28.i Task 28 Member warnings: implement | | | ✔ |
 | 1.29.t Task 29 Role block in the system prompt: write failing tests | | | ✔ |
 | 1.29.i Task 29 Role block in the system prompt: implement | | | ✔ |
-| 1.30.t Task 30 Settings: Team Types: write failing tests | | ✔ | |
-| 1.30.i Task 30 Settings: Team Types: implement | | | |
+| 1.30.t Task 30 Settings: Team Types: write failing tests | | | ✔ |
+| 1.30.i Task 30 Settings: Team Types: implement | | | ✔ |
 | 🔁 R2 Opus retrospective after Task 30: token tally, repeated reads, cost fixes, update the plan | | | |
 | 1.31.t Task 31 Create Team screen: write failing tests | | | |
 | 1.31.i Task 31 Create Team screen: implement | | | |
