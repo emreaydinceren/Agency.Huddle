@@ -133,6 +133,7 @@ public static class ServiceCollectionExtensions
         services.AddSingleton<TeammatePaths>();
         services.AddSingleton<SkillPackStore>();
         services.AddSingleton<TeamTypeCatalog>();
+        services.AddSingleton<SkillsCatalogIndex>();
         services.AddSingleton<UserCandidateWriter>();
         services.AddSingleton<IConnectorStatus, EmptyConnectorStatus>();
 

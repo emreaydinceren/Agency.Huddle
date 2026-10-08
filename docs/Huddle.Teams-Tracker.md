@@ -2,7 +2,7 @@
 
 Status of the Teams delivery in [engineering/teams-plan.md](engineering/teams-plan.md). Each task is a `.t` (failing tests first) and `.i` (implementation) pair; a task's `.i` cannot be Done before its `.t`. Ids are `<phase>.<task>.<t|i>`, the form `agents/scripts/Set-Tracker.ps1` updates. `(H)` marks a Haiku task, `(B)` a boundary task that also gets an Opus architect review.
 
-**Status:** 76 of 170 tasks Done · 2 of 6 retrospectives done · last updated 2026-10-08.
+**Status:** 78 of 170 tasks Done · 2 of 6 retrospectives done · last updated 2026-10-08.
 
 | **Deliverable / Task** | **Active** | **In Progress** | **Done** |
 |---|---|---|---|
@@ -85,9 +85,9 @@ Status of the Teams delivery in [engineering/teams-plan.md](engineering/teams-pl
 | **2. Skills with provenance** | | | |
 | 2.37.t Task 37 Generate `SkillsCatalog.json`: write failing tests (B) | | | ✔ |
 | 2.37.i Task 37 Generate `SkillsCatalog.json`: implement (B) | | | ✔ |
-| 2.38.t Task 38 SkillsCatalogIndex: write failing tests | | ✔ | |
-| 2.38.i Task 38 SkillsCatalogIndex: implement | | | |
-| 2.39.t Task 39 Provenance record: write failing tests (H) | | | |
+| 2.38.t Task 38 SkillsCatalogIndex: write failing tests | | | ✔ |
+| 2.38.i Task 38 SkillsCatalogIndex: implement | | | ✔ |
+| 2.39.t Task 39 Provenance record: write failing tests (H) | | ✔ | |
 | 2.39.i Task 39 Provenance record: implement (H) | | | |
 | 2.40.t Task 40 Folder hash: write failing tests | | | |
 | 2.40.i Task 40 Folder hash: implement | | | |

@@ -4,6 +4,7 @@ using Bunit.Rendering;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging.Abstractions;
 using Agency.Huddle.App.Acp;
+using Agency.Huddle.App.Skills;
 using Agency.Huddle.App.TeamTypes;
 using Agency.Huddle.App.Teams;
 using Agency.Huddle.Tests.Teammates;
@@ -156,6 +157,30 @@ public sealed class TeammateCardSetupTests
         IRenderedComponent<ContainerFragment> cut = await OpenEditAsync(factory, ctx, "Dev");
 
         Assert.Equal(["Dev has 11 skills; more than 10 makes skill choice harder."], cut.FindAll(".teammate-card-warning").Select(alert => alert.TextContent.Trim()).ToList());
+    }
+
+    /// <summary>Two skills the catalog files under one Sub Category produce the shared-Sub-Category warning.</summary>
+    [Fact]
+    public async Task SharedSubCategory_ShowsTheCatalogWarning()
+    {
+        using TempDataDir dir = new();
+        await File.WriteAllTextAsync(Path.Combine(dir.Path, TeamPaths.SkillsCatalogFile), """
+            [
+              { "id": "a/b/alpha", "name": "alpha", "description": "A.", "publisher": "P", "repo": "https://github.com/a/b",
+                "path": "alpha", "link": "l", "commit": "c", "license": "MIT", "category": "Cat", "subCategory": "Sub", "requires": [] },
+              { "id": "a/b/beta", "name": "beta", "description": "B.", "publisher": "P", "repo": "https://github.com/a/b",
+                "path": "beta", "link": "l", "commit": "c", "license": "MIT", "category": "Cat", "subCategory": "Sub", "requires": [] }
+            ]
+            """, Xunit.TestContext.Current.CancellationToken);
+        await using TeamWebApplicationFactory factory = new();
+        await factory.WriteDefinitionAsync("Dev", Dev("skills: [alpha, beta]\n"), CancellationToken.None);
+        await using MudBunitContext ctx = NewContext(factory);
+        AddTeamTypes(ctx, dir);
+        ctx.Services.AddSingleton(new SkillsCatalogIndex(dir.Options(), NullLogger<SkillsCatalogIndex>.Instance));
+
+        IRenderedComponent<ContainerFragment> cut = await OpenEditAsync(factory, ctx, "Dev");
+
+        Assert.Equal(["alpha and beta are both in Sub."], cut.FindAll(".teammate-card-warning").Select(alert => alert.TextContent.Trim()).ToList());
     }
 
     /// <summary>The View card shows the lasting spend next to the since-start spend (NF-6).</summary>

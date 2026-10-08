@@ -1622,8 +1622,8 @@
 
     /// <summary>
     /// The MS-3 and MS-5 warnings for this Teammate against the rest of its Team: <c>Model</c> holds the
-    /// shared-vendor ones, <c>Skills</c> the skill-count and Sub Category ones. The catalog Sub Category
-    /// lookup arrives with the skills catalog index, so until then no two skills are reported as sharing one.
+    /// shared-vendor ones, <c>Skills</c> the skill-count and Sub Category ones. The Sub Category of a skill
+    /// comes from the skills catalog index; without one registered no two skills are reported as sharing one.
     /// </summary>
     private (IReadOnlyList<string> Model, IReadOnlyList<string> Skills) SetupWarnings
     {
@@ -1648,8 +1648,11 @@
             }
 
             Agency.Huddle.App.Teams.MemberView self = new(this.name, this.roleRef.RoleId, this.adapter, this.skills);
-            IReadOnlyList<string> vendorOnly = Agency.Huddle.App.Teams.MemberWarnings.For(self with { Skills = [] }, this.roleSpec, members, static _ => null);
-            IReadOnlyList<string> all = Agency.Huddle.App.Teams.MemberWarnings.For(self, this.roleSpec, members, static _ => null);
+            Func<string, string?> subCategoryOf = this.Services.GetService<Agency.Huddle.App.Skills.SkillsCatalogIndex>() is { } catalog
+                ? catalog.SubCategoryOf
+                : static _ => null;
+            IReadOnlyList<string> vendorOnly = Agency.Huddle.App.Teams.MemberWarnings.For(self with { Skills = [] }, this.roleSpec, members, subCategoryOf);
+            IReadOnlyList<string> all = Agency.Huddle.App.Teams.MemberWarnings.For(self, this.roleSpec, members, subCategoryOf);
             return (vendorOnly, [.. all.Where(warning => !vendorOnly.Contains(warning, StringComparer.Ordinal))]);
         }
     }
