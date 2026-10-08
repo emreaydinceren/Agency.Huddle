@@ -19,8 +19,6 @@ public sealed class BuiltinDevelopmentTypeTests
         "release-engineer",
     ];
 
-    private static readonly string[] MissingFileCodes = ["candidate-missing", "process-missing"];
-
     /// <summary>Reads the embedded manifest and parses it with the one set of team-type JSON options.</summary>
     /// <returns>The parsed manifest.</returns>
     private static TeamTypeManifest LoadManifest()
@@ -89,20 +87,14 @@ public sealed class BuiltinDevelopmentTypeTests
         Assert.Equal(ModelTier.Strongest, manager.Model.Tier);
     }
 
-    /// <summary>The validator reports no problems over the shipped files, except for files that later tasks still have to add.</summary>
-    /// <remarks>
-    /// Task 15 adds the candidate files and Task 55 adds the process files. Until both land, only
-    /// <c>candidate-missing</c> and <c>process-missing</c> are allowed. Task 55 must tighten this to an empty check.
-    /// </remarks>
+    /// <summary>The validator reports no problems over the shipped files: the candidates and the four process templates are all present.</summary>
     [Fact]
-    public void Validate_ShippedFiles_OnlyReportsFilesNotYetAdded()
+    public void Validate_ShippedFiles_ReportsNoProblems()
     {
         TeamTypeManifest manifest = LoadManifest();
         HashSet<string> files = EmbeddedTypeFiles();
 
-        IEnumerable<string> codes = TeamTypeValidator.Validate(manifest, files.Contains).Select(static p => p.Code);
-
-        Assert.All(codes, code => Assert.Contains(code, MissingFileCodes));
+        Assert.Empty(TeamTypeValidator.Validate(manifest, files.Contains));
     }
 
     /// <summary>The default process is lightweight-flow, and the four processes are declared in the plan's order.</summary>

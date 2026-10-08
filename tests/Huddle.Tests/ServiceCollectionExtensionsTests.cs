@@ -76,11 +76,7 @@ public sealed class ServiceCollectionExtensionsTests
         Assert.Equal($"'Team:Teams:Dir' ({teammatesRoot}) and 'Team:Acp:TeammatesDir' ({teammatesRoot}) must not overlap.", ex.Message);
     }
 
-    /// <summary>The team type catalog resolves from the container with the real embedded built-ins and no problems, except the Development type's missing process file.</summary>
-    /// <remarks>
-    /// The Development process file is added by Task 55, so until then the only tolerated problem is a
-    /// <c>process-missing</c> message for the development type. Task 55 must tighten this to an empty check.
-    /// </remarks>
+    /// <summary>The team type catalog resolves from the container with the real embedded built-ins and no problems.</summary>
     [Fact]
     public void AddTeamServices_ResolvesTeamTypeCatalog()
     {
@@ -95,23 +91,7 @@ public sealed class ServiceCollectionExtensionsTests
 
         var catalog = provider.GetRequiredService<Agency.Huddle.App.TeamTypes.TeamTypeCatalog>();
 
-        List<Agency.Huddle.App.TeamTypes.TeamTypeFileProblem> unexpected = catalog.Problems
-            .Where(static p => !IsDevelopmentMissingProcessProblem(p))
-            .ToList();
-        Assert.Empty(unexpected);
-    }
-
-    /// <summary>Tells whether a catalog problem is only the Development type's missing process files, which Task 55 adds.</summary>
-    /// <param name="problem">The catalog problem to classify.</param>
-    /// <returns><see langword="true"/> when the problem is for the development type and every sentence in it is a <c>process-missing</c> message.</returns>
-    private static bool IsDevelopmentMissingProcessProblem(Agency.Huddle.App.TeamTypes.TeamTypeFileProblem problem)
-    {
-        return string.Equals(problem.TypeId, "development", StringComparison.Ordinal)
-            && System.Text.RegularExpressions.Regex.IsMatch(
-                problem.Message,
-                @"^(?:The process '[^']+' has no file at '[^']+'\.\s*)+$",
-                System.Text.RegularExpressions.RegexOptions.CultureInvariant,
-                TimeSpan.FromSeconds(2));
+        Assert.Empty(catalog.Problems);
     }
 
     /// <summary>The skill pack store resolves from the container with the real embedded built-ins.</summary>
