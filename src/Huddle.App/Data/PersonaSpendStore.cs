@@ -106,14 +106,14 @@ public sealed class PersonaSpendStore
     }
 
     /// <summary>Returns the combined total per currency of the given Personas.</summary>
-    /// <param name="personaNames">The Persona names; duplicates (ignoring case) count once.</param>
+    /// <param name="personaNames">The Persona names; duplicates (ignoring ASCII case, as SQLite NOCASE does) count once.</param>
     /// <returns>One entry per currency; empty when nothing is stored.</returns>
     public IReadOnlyList<StoredSpend> ForPersonas(IEnumerable<string> personaNames)
     {
         ArgumentNullException.ThrowIfNull(personaNames);
 
         Dictionary<string, decimal> totals = new(StringComparer.Ordinal);
-        foreach (string name in personaNames.Where(static n => !string.IsNullOrWhiteSpace(n)).Distinct(StringComparer.OrdinalIgnoreCase))
+        foreach (string name in personaNames.Where(static n => !string.IsNullOrWhiteSpace(n)).Distinct(SqliteNoCaseComparer.Instance))
         {
             foreach (StoredSpend spend in this.ForPersona(name))
             {
@@ -241,5 +241,43 @@ public sealed class PersonaSpendStore
         SqliteConnection connection = new(this.connectionString);
         connection.Open();
         return connection;
+    }
+
+    /// <summary>Compares names the way SQLite <c>NOCASE</c> does: only the ASCII letters A-Z fold, every other character is compared ordinally.</summary>
+    private sealed class SqliteNoCaseComparer : IEqualityComparer<string>
+    {
+        /// <summary>The shared instance.</summary>
+        public static readonly SqliteNoCaseComparer Instance = new();
+
+        /// <inheritdoc/>
+        public bool Equals(string? x, string? y)
+        {
+            if (x is null || y is null)
+            {
+                return x is null && y is null;
+            }
+
+            return string.Equals(Fold(x), Fold(y), StringComparison.Ordinal);
+        }
+
+        /// <inheritdoc/>
+        public int GetHashCode(string obj)
+        {
+            ArgumentNullException.ThrowIfNull(obj);
+            return Fold(obj).GetHashCode(StringComparison.Ordinal);
+        }
+
+        /// <summary>Lower-cases the ASCII letters of <paramref name="text"/> and leaves all other characters alone.</summary>
+        private static string Fold(string text)
+        {
+            return string.Create(text.Length, text, static (span, source) =>
+            {
+                for (int i = 0; i < source.Length; i++)
+                {
+                    char c = source[i];
+                    span[i] = c is >= 'A' and <= 'Z' ? (char)(c + 32) : c;
+                }
+            });
+        }
     }
 }

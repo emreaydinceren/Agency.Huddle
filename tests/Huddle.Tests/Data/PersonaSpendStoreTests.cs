@@ -184,4 +184,31 @@ public sealed class PersonaSpendStoreTests
         Assert.Throws<ArgumentException>(() => store.Rename("Maya", ""));
         Assert.Throws<ArgumentException>(() => store.Remove(""));
     }
+
+    /// <summary>Names that differ only by a non-ASCII case are distinct to the store, as they are to SQLite NOCASE, so ForPersonas counts both.</summary>
+    [Fact]
+    public void ForPersonas_NonAsciiCaseVariants_CountsBothAsDistinctNames()
+    {
+        using TempDataDir dir = new();
+        PersonaSpendStore store = new(dir.Options());
+        store.Add("Émile", null, "USD", 1m);
+        store.Add("émile", null, "USD", 2m);
+
+        IReadOnlyList<StoredSpend> total = store.ForPersonas(["Émile", "émile"]);
+
+        Assert.Equal(3m, Assert.Single(total).Amount);
+    }
+
+    /// <summary>ASCII case variants still count once in ForPersonas.</summary>
+    [Fact]
+    public void ForPersonas_AsciiCaseVariants_CountOnce()
+    {
+        using TempDataDir dir = new();
+        PersonaSpendStore store = new(dir.Options());
+        store.Add("Maya", null, "USD", 1m);
+
+        IReadOnlyList<StoredSpend> total = store.ForPersonas(["Maya", "MAYA"]);
+
+        Assert.Equal(1m, Assert.Single(total).Amount);
+    }
 }

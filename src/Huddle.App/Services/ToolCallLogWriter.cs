@@ -40,6 +40,13 @@ internal sealed class ToolCallLogWriter(IOptions<TeamOptions> options)
 
     private const string Ellipsis = "…";
 
+    private static readonly HashSet<string> ReservedNames = new(StringComparer.OrdinalIgnoreCase)
+    {
+        "CON", "PRN", "AUX", "NUL",
+        "COM0", "COM1", "COM2", "COM3", "COM4", "COM5", "COM6", "COM7", "COM8", "COM9",
+        "LPT0", "LPT1", "LPT2", "LPT3", "LPT4", "LPT5", "LPT6", "LPT7", "LPT8", "LPT9",
+    };
+
     private static readonly JsonSerializerOptions JsonOptions = new()
     {
         PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
@@ -48,7 +55,7 @@ internal sealed class ToolCallLogWriter(IOptions<TeamOptions> options)
 
     private readonly string dataDir = options.Value.DataDir;
     private readonly Lock gate = new();
-    private readonly Dictionary<string, int> lineCounts = new(StringComparer.OrdinalIgnoreCase);
+    private readonly Dictionary<string, (int Lines, long Length)> lineCounts = new(StringComparer.Ordinal);
 
     /// <summary>Appends <paramref name="entry"/> to the Persona's log for the entry's UTC day.</summary>
     /// <param name="personaName">The Persona the call belongs to; characters invalid in a file name are replaced by <c>_</c>.</param>
@@ -74,16 +81,31 @@ internal sealed class ToolCallLogWriter(IOptions<TeamOptions> options)
         {
             _ = Directory.CreateDirectory(Path.GetDirectoryName(fullPath) ?? this.dataDir);
 
-            if (!this.lineCounts.TryGetValue(fullPath, out int existing))
+            using FileStream stream = new(fullPath, FileMode.OpenOrCreate, FileAccess.ReadWrite, FileShare.Read);
+            long length = stream.Length;
+            int existing;
+            bool needsNewline = false;
+            if (this.lineCounts.TryGetValue(fullPath, out (int Lines, long Length) cached) && cached.Length == length)
             {
-                existing = CountLines(fullPath);
+                existing = cached.Lines;
+            }
+            else
+            {
+                (existing, needsNewline) = CountLines(stream);
             }
 
-            using FileStream stream = new(fullPath, FileMode.Append, FileAccess.Write, FileShare.Read);
+            _ = stream.Seek(0, SeekOrigin.End);
+            if (needsNewline)
+            {
+                stream.WriteByte((byte)'\n');
+                existing++;
+            }
+
             stream.Write(Encoding.UTF8.GetBytes(json));
+            stream.Flush();
 
             int line = existing + 1;
-            this.lineCounts[fullPath] = line;
+            this.lineCounts[fullPath] = (line, stream.Length);
             return new ToolCallLogRef(relativePath, line);
         }
     }
@@ -91,26 +113,28 @@ internal sealed class ToolCallLogWriter(IOptions<TeamOptions> options)
     /// <summary>The shape of a log line; <see cref="DateTime"/> of kind UTC serialises as ISO-8601 with a <c>Z</c> suffix.</summary>
     private sealed record WireEntry(DateTime Time, string Room, string? Task, string Tool, string Arguments, string Status, long DurationMs);
 
-    /// <summary>Counts the lines already in a log file left by an earlier run; zero when it does not exist.</summary>
-    private static int CountLines(string path)
+    /// <summary>Counts the lines already in the open log file and whether its last line lacks a newline.</summary>
+    private static (int Lines, bool MissingFinalNewline) CountLines(FileStream stream)
     {
-        if (!File.Exists(path))
-        {
-            return 0;
-        }
-
+        _ = stream.Seek(0, SeekOrigin.Begin);
+        byte[] buffer = new byte[8192];
         int count = 0;
-        using FileStream stream = new(path, FileMode.Open, FileAccess.Read, FileShare.ReadWrite);
-        int next;
-        while ((next = stream.ReadByte()) >= 0)
+        int last = '\n';
+        int read;
+        while ((read = stream.Read(buffer, 0, buffer.Length)) > 0)
         {
-            if (next == '\n')
+            for (int i = 0; i < read; i++)
             {
-                count++;
+                if (buffer[i] == '\n')
+                {
+                    count++;
+                }
             }
+
+            last = buffer[read - 1];
         }
 
-        return count;
+        return (count, last != '\n');
     }
 
     /// <summary>Cuts the text to <see cref="MaxArgumentsLength"/> characters, the last being an ellipsis, without splitting a surrogate pair.</summary>
@@ -130,7 +154,10 @@ internal sealed class ToolCallLogWriter(IOptions<TeamOptions> options)
         return text[..keep] + Ellipsis;
     }
 
-    /// <summary>Replaces every character invalid in a file name by <c>_</c>, and a name made only of dots by underscores, so the folder stays inside the log root.</summary>
+    /// <summary>
+    /// Replaces every character invalid in a file name by <c>_</c>, a name made only of dots by underscores,
+    /// a trailing dot or space (which Windows strips) by <c>_</c>, and prefixes a Windows reserved device name with <c>_</c>.
+    /// </summary>
     private static string SanitiseName(string name)
     {
         char[] invalid = Path.GetInvalidFileNameChars();
@@ -141,6 +168,18 @@ internal sealed class ToolCallLogWriter(IOptions<TeamOptions> options)
         }
 
         string sanitised = builder.ToString();
-        return sanitised.All(static c => c == '.') ? new string('_', sanitised.Length) : sanitised;
+        if (sanitised.All(static c => c == '.'))
+        {
+            return new string('_', sanitised.Length);
+        }
+
+        if (sanitised[^1] is '.' or ' ')
+        {
+            sanitised = sanitised[..^1] + "_";
+        }
+
+        int dot = sanitised.IndexOf('.');
+        string stem = (dot < 0 ? sanitised : sanitised[..dot]).TrimEnd(' ');
+        return ReservedNames.Contains(stem) ? "_" + sanitised : sanitised;
     }
 }
