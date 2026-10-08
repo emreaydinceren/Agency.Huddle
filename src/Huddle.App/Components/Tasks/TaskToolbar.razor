@@ -65,6 +65,10 @@
         <MudToggleItem Value="BlockedFilter.Unblocked" Text="Unblocked" />
     </HuddleSegmentedControl>
 
+    @* Ad hoc like the Blocked control: toggles the effective View's Requests-only filter. *@
+    <MudChip T="string" Size="Size.Small" Class="task-toolbar-requests" Color="@(this.EffectiveView.Filter.RequestsOnly ? Color.Primary : Color.Default)"
+             OnClick="this.OnRequestsToggledAsync">Requests</MudChip>
+
     <MudTextField T="string" Value="@this.Search" ValueChanged="this.OnSearchChangedAsync" Immediate="true"
                    DebounceInterval="200" Clearable="true" Adornment="Adornment.Start"
                    AdornmentIcon="@Icons.Material.Filled.Search" Placeholder="Search" Class="task-toolbar-search" />
@@ -209,6 +213,9 @@
 
     private Task OnBlockedChangedAsync(BlockedFilter blocked) =>
         this.EffectiveViewChanged.InvokeAsync(this.EffectiveView with { Filter = this.EffectiveView.Filter with { Blocked = blocked } });
+
+    private Task OnRequestsToggledAsync() =>
+        this.EffectiveViewChanged.InvokeAsync(this.EffectiveView with { Filter = this.EffectiveView.Filter with { RequestsOnly = !this.EffectiveView.Filter.RequestsOnly } });
 
     private Task OnDenseChangedAsync(bool dense) =>
         this.EffectiveViewChanged.InvokeAsync(this.EffectiveView with { Dense = dense });

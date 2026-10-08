@@ -49,6 +49,7 @@ internal static class TaskQuery
                 MatchesPriorities(task, filter.Priorities) &&
                 MatchesBlocked(task, filter.Blocked, byId) &&
                 MatchesSprints(task, filter.Sprints, currentSprint) &&
+                MatchesRequests(task, filter.RequestsOnly) &&
                 MatchesSearch(task, search))
             {
                 matches.Add(task);
@@ -127,6 +128,10 @@ internal static class TaskQuery
     /// <summary>Whether the Task's Priority is one of <paramref name="priorities"/>, or the dimension is empty.</summary>
     private static bool MatchesPriorities(TaskItem task, IReadOnlyList<TaskPriority> priorities) =>
         priorities.Count == 0 || priorities.Contains(task.Priority);
+
+    /// <summary>Whether the Task is a Request, or <paramref name="requestsOnly"/> is off.</summary>
+    private static bool MatchesRequests(TaskItem task, bool requestsOnly) =>
+        !requestsOnly || RequestFields.TryRead(task, out _);
 
     /// <summary>Whether the Task's blocked-ness matches <paramref name="blocked"/>. A Task is blocked when at least one of its <see cref="TaskItem.BlockedBy"/> exists in <paramref name="byId"/> and is not terminal - the rule the detail panel's "Blocked by N open tasks" line uses.</summary>
     private static bool MatchesBlocked(TaskItem task, BlockedFilter blocked, Dictionary<TaskId, TaskItem>? byId)

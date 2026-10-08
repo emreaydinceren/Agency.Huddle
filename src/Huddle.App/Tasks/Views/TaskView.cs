@@ -129,6 +129,10 @@ public sealed record TaskFilter
 
     /// <summary>Matches Tasks whose Sprint is one of these ids (<c>"S2"</c>), or <c>"@current"</c>, or <c>"@none"</c>. Empty matches every Task, and is not written to <c>views.json</c> (see <c>ViewJson</c>), so a View that never used it stays byte-identical.</summary>
     public IReadOnlyList<string> Sprints { get; init; } = [];
+
+    /// <summary>Whether to keep only Request Tasks (those with a <c>request</c> key). <see langword="false"/> (the default) is not written to <c>views.json</c>.</summary>
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
+    public bool RequestsOnly { get; init; }
 }
 
 /// <summary>A Team, and optionally a Project within it. A null Project matches Tasks directly under the Team ("No project").</summary>

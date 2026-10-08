@@ -111,6 +111,22 @@ internal sealed record RequestFields(RequestKind Kind, string FromTeam, string R
         return true;
     }
 
+    /// <summary>Reads the Request fields from a Task's unknown frontmatter keys.</summary>
+    /// <param name="task">The Task.</param>
+    /// <param name="fields">The Request fields when the result is true; otherwise <see langword="null"/>.</param>
+    /// <returns>True when the Task is a Request.</returns>
+    public static bool TryRead(TaskItem task, out RequestFields? fields)
+    {
+        ArgumentNullException.ThrowIfNull(task);
+        Dictionary<string, string> frontmatter = new(StringComparer.Ordinal);
+        foreach (KeyValuePair<string, string> field in task.UnknownFields)
+        {
+            frontmatter[field.Key] = field.Value;
+        }
+
+        return TryRead(frontmatter, out fields);
+    }
+
     /// <summary>Writes the Request fields as the six frontmatter keys, with their wire values.</summary>
     /// <returns>A new dictionary keyed by frontmatter key.</returns>
     public IReadOnlyDictionary<string, string> ToFrontmatter() => new Dictionary<string, string>(StringComparer.Ordinal)

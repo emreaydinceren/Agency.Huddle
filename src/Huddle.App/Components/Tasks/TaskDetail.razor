@@ -230,6 +230,28 @@ else if (this.loaded is { } task)
                     </MudMenu>
                 }
             </div>
+            @if (!this.createMode && RequestFields.TryRead(task, out RequestFields? request) && request is not null)
+            {
+                <div class="task-detail-request">
+                    <MudChip T="string" Size="Size.Small" Color="Color.Info" Class="task-detail-request-chip">@string.Concat("Request · ", request.Kind.ToString(), " · from ", request.FromTeam)</MudChip>
+                    @if (RequestTriageText(request.Triage, task.Status) is { } triageText)
+                    {
+                        <MudChip T="string" Size="Size.Small" Class="task-detail-request-triage">@triageText</MudChip>
+                    }
+                    @if (!string.IsNullOrEmpty(request.Requester))
+                    {
+                        <span class="task-detail-request-label">Requested by</span> <span class="task-detail-request-requester">@request.Requester</span>
+                    }
+                    @if (!string.IsNullOrEmpty(request.DeclineReason))
+                    {
+                        <span class="task-detail-request-label">Decline reason</span> <span class="task-detail-request-decline-reason">@request.DeclineReason</span>
+                    }
+                    @if (!string.IsNullOrEmpty(request.ConfirmedBy))
+                    {
+                        <span class="task-detail-request-label">Confirmed by</span> <span class="task-detail-request-confirmed-by">@request.ConfirmedBy</span>
+                    }
+                </div>
+            }
 
             <MudSelect T="TaskState" Value="effective.Status" ValueChanged="this.OnStatusChanged"
                        Label="Status" Class="task-detail-status">
@@ -1470,6 +1492,17 @@ else if (this.loaded is { } task)
         { Block: WakeBlock.None, Presence: PresenceState.Offline } => $"{preview.AssigneeName} is offline, so this change won't reach them.",
         { Block: WakeBlock.Disabled } => "Wake-ups are off.",
         _ => null,
+    };
+
+    /// <summary>The triage chip text for a Request: <c>Needs triage</c> for an untriaged Backlog Request, else the state's name; <see langword="null"/> for no chip.</summary>
+    /// <param name="triage">The Request's triage state.</param>
+    /// <param name="status">The Task's Status.</param>
+    private static string? RequestTriageText(TriageState triage, TaskState status) => triage switch
+    {
+        TriageState.NeedsInfo => "Needs info",
+        TriageState.Accepted => "Accepted",
+        TriageState.Declined => "Declined",
+        _ => status == TaskState.Backlog ? "Needs triage" : null,
     };
 
     /// <summary>Formats a Task for the Parent, Duplicate of and Blocked-by pickers: Spec §13.6's own example, "PLAT-0030 · title".</summary>
