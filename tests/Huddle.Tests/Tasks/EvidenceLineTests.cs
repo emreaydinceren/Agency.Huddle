@@ -1,0 +1,124 @@
+using Agency.Huddle.App.Tasks;
+
+namespace Agency.Huddle.Tests.Tasks;
+
+/// <summary>Tests for <see cref="EvidenceLine"/>: parsing and formatting Evidence lines under a Task's "## Evidence" section.</summary>
+public sealed class EvidenceLineTests
+{
+    private const string SpecExample = "2026-10-08T17:04Z | Maya | dotnet test | exit 0 | logs/tool-calls/Maya/2026-10-08.jsonl#L212";
+
+    /// <summary>Parses a line that is expected to be valid and returns it, failing the test when it is not.</summary>
+    private static EvidenceLine Parsed(string text)
+    {
+        Assert.True(EvidenceLine.TryParse(text, out EvidenceLine? evidence));
+        Assert.NotNull(evidence);
+        return evidence;
+    }
+
+    /// <summary>The Spec example parses into every field and formats back to the same bytes.</summary>
+    [Fact]
+    public void TryParse_SpecExample_ParsesEveryFieldAndFormatsIdentically()
+    {
+        EvidenceLine line = Parsed(SpecExample);
+
+        Assert.Equal(new DateTimeOffset(2026, 10, 8, 17, 4, 0, TimeSpan.Zero), line.Time);
+        Assert.Equal("Maya", line.Author);
+        Assert.Equal("dotnet test", line.Command);
+        Assert.Equal(0, line.ExitCode);
+        Assert.Equal("logs/tool-calls/Maya/2026-10-08.jsonl", line.LogPath);
+        Assert.Equal(212, line.LogLine);
+        Assert.Equal(SpecExample, line.Format());
+    }
+
+    /// <summary>A failing check records its non-zero exit code.</summary>
+    [Fact]
+    public void TryParse_FailingTest_RecordsExitOne()
+    {
+        EvidenceLine line = Parsed("2026-10-08T17:04Z | Maya | dotnet test | exit 1");
+
+        Assert.Equal(1, line.ExitCode);
+        Assert.Equal("dotnet test", line.Command);
+        Assert.Equal("2026-10-08T17:04Z | Maya | dotnet test | exit 1", line.Format());
+    }
+
+    /// <summary>A line without a log reference leaves LogPath and LogLine null and formats without one.</summary>
+    [Fact]
+    public void TryParse_NoLogReference_LeavesLogFieldsNull()
+    {
+        EvidenceLine line = Parsed("2026-10-08T17:04Z | Maya | dotnet test | exit 0");
+
+        Assert.Null(line.LogPath);
+        Assert.Null(line.LogLine);
+        Assert.Equal("2026-10-08T17:04Z | Maya | dotnet test | exit 0", line.Format());
+    }
+
+    /// <summary>A free-text note with no pipes parses with RawText set and an empty Command, and formats as the note itself.</summary>
+    [Fact]
+    public void TryParse_PlainNote_KeepsTextAsRawText()
+    {
+        const string note = "Reviewed the migration plan with Ana";
+
+        EvidenceLine line = Parsed(note);
+
+        Assert.Equal(note, line.RawText);
+        Assert.Equal(string.Empty, line.Command);
+        Assert.Null(line.ExitCode);
+        Assert.Equal(note, line.Format());
+    }
+
+    /// <summary>A time with seconds or a missing Z is malformed and is rejected.</summary>
+    [Theory]
+    [InlineData("2026-10-08T17:04:05Z | Maya | dotnet test | exit 0")]
+    [InlineData("2026-10-08T17:04 | Maya | dotnet test | exit 0")]
+    [InlineData("2026-10-8 17:04Z | Maya | dotnet test | exit 0")]
+    public void TryParse_MalformedTime_IsRejected(string text)
+    {
+        bool parsed = EvidenceLine.TryParse(text, out EvidenceLine? evidence);
+
+        Assert.False(parsed);
+        Assert.Null(evidence);
+    }
+
+    /// <summary>ParseSection reads only the lines under "## Evidence" and keeps unparseable lines there as notes.</summary>
+    [Fact]
+    public void ParseSection_IgnoresOtherSections_AndKeepsNotes()
+    {
+        const string markdown = """
+            # Task body
+
+            ## Change log
+            2026-10-08T16:00Z | Maya | not evidence | exit 9 | logs/x.jsonl#L1
+
+            ## Evidence
+            2026-10-08T17:04Z | Maya | dotnet test | exit 0 | logs/tool-calls/Maya/2026-10-08.jsonl#L212
+            Ana checked the diff by hand
+            2026-10-8 17:30 | Ana | dotnet test | exit 1
+
+            2026-10-08T17:30Z | Ana | dotnet build | exit 0
+
+            ## Notes
+            2026-10-08T18:00Z | Ana | dotnet format | exit 0
+            """;
+
+        IReadOnlyList<EvidenceLine> lines = EvidenceLine.ParseSection(markdown);
+
+        Assert.Equal(4, lines.Count);
+        Assert.Equal("dotnet test", lines[0].Command);
+        Assert.Equal(212, lines[0].LogLine);
+        Assert.Equal("Ana checked the diff by hand", lines[1].RawText);
+        Assert.Equal(string.Empty, lines[1].Command);
+        Assert.Equal("2026-10-8 17:30 | Ana | dotnet test | exit 1", lines[2].RawText);
+        Assert.Equal(string.Empty, lines[2].Command);
+        Assert.Equal("dotnet build", lines[3].Command);
+        Assert.Equal(0, lines[3].ExitCode);
+    }
+
+    /// <summary>ParseSection returns an empty list when the document has no Evidence section.</summary>
+    [Fact]
+    public void ParseSection_NoEvidenceSection_ReturnsEmpty()
+    {
+        IReadOnlyList<EvidenceLine> lines = EvidenceLine.ParseSection("# Task\n\n## Change log\n2026-10-08T16:00Z | Maya | dotnet test | exit 0\n");
+
+        Assert.Empty(lines);
+    }
+}
