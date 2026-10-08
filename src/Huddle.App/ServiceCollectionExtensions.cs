@@ -268,6 +268,7 @@ public static class ServiceCollectionExtensions
         services.AddSingleton<Agency.Huddle.App.Teams.IPersonaStartGate>(sp => sp.GetService<PersonaSupervisor>() as Agency.Huddle.App.Teams.IPersonaStartGate ?? new Agency.Huddle.App.Teams.NoHostStartGate());
         services.AddSingleton<Agency.Huddle.App.Teams.ProcessProvisioner>();
         services.AddSingleton<Agency.Huddle.App.Teams.IOnboardingPoster, Agency.Huddle.App.Teams.ChatOnboardingPoster>();
+        services.AddSingleton<Agency.Huddle.App.Acp.Tools.IRequestNotifier, Agency.Huddle.App.Acp.Tools.NullRequestNotifier>();
         services.AddSingleton<Agency.Huddle.App.Teams.TeamOnboarding>();
         services.AddSingleton<Agency.Huddle.App.Teams.HireService>();
         services.AddSingleton<Agency.Huddle.App.Teams.IHireContext, Agency.Huddle.App.Teams.HireContext>();

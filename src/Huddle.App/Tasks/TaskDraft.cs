@@ -36,4 +36,8 @@ public sealed record TaskDraft(
     DateOnly? StartDate = null,
     DateOnly? DueDate = null,
     string Description = "",
-    SprintId? Sprint = null);
+    SprintId? Sprint = null)
+{
+    /// <summary>Extra frontmatter keys written verbatim (a Request's six fields); <see langword="null"/> for none.</summary>
+    public IReadOnlyList<KeyValuePair<string, string>>? ExtraFields { get; init; }
+}

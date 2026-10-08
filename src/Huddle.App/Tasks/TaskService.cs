@@ -470,6 +470,7 @@ internal sealed class TaskService : IDisposable
             DueDate = draft.DueDate,
             Sprint = draft.Sprint,
             Description = draft.Description,
+            UnknownFields = draft.ExtraFields ?? [],
             Location = new TaskLocation(team, project, false),
             Path = "",
             Version = "",
