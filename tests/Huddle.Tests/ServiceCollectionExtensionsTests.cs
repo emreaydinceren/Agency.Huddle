@@ -94,6 +94,58 @@ public sealed class ServiceCollectionExtensionsTests
         Assert.Empty(catalog.Problems);
     }
 
+    private static ServiceProvider BuildTeamProvider(TempDataDir dataDir)
+    {
+        var configuration = new ConfigurationBuilder()
+            .AddInMemoryCollection(new Dictionary<string, string?> { ["Team:DataDir"] = dataDir.Path })
+            .Build();
+        var services = new ServiceCollection();
+        services.AddLogging();
+        services.AddTeamServices(configuration);
+        return services.BuildServiceProvider();
+    }
+
+    /// <summary>The hire service resolves from the container.</summary>
+    [Fact]
+    public void AddTeamServices_ResolvesHireService()
+    {
+        using TempDataDir dataDir = new();
+        using ServiceProvider provider = BuildTeamProvider(dataDir);
+
+        Assert.NotNull(provider.GetRequiredService<Agency.Huddle.App.Teams.HireService>());
+    }
+
+    /// <summary>The skill installer resolves to the built-in installer.</summary>
+    [Fact]
+    public void AddTeamServices_ResolvesSkillInstaller()
+    {
+        using TempDataDir dataDir = new();
+        using ServiceProvider provider = BuildTeamProvider(dataDir);
+
+        Assert.IsType<Agency.Huddle.App.Teams.BuiltinSkillInstaller>(provider.GetRequiredService<Agency.Huddle.App.Teams.ISkillInstaller>());
+    }
+
+    /// <summary>The start gate resolves to the one persona supervisor.</summary>
+    [Fact]
+    public void AddTeamServices_ResolvesStartGateAsTheSupervisor()
+    {
+        using TempDataDir dataDir = new();
+        using ServiceProvider provider = BuildTeamProvider(dataDir);
+
+        Assert.Same(provider.GetRequiredService<PersonaSupervisor>(), provider.GetRequiredService<Agency.Huddle.App.Teams.IPersonaStartGate>());
+    }
+
+    /// <summary>The role hirer and the hire context it needs resolve from the container.</summary>
+    [Fact]
+    public void AddTeamServices_ResolvesRoleHirerAndHireContext()
+    {
+        using TempDataDir dataDir = new();
+        using ServiceProvider provider = BuildTeamProvider(dataDir);
+
+        Assert.NotNull(provider.GetRequiredService<Agency.Huddle.App.Teams.IHireContext>());
+        Assert.NotNull(provider.GetRequiredService<Agency.Huddle.App.Teams.RoleHirer>());
+    }
+
     /// <summary>The skill pack store resolves from the container with the real embedded built-ins.</summary>
     [Fact]
     public void AddTeamServices_ResolvesSkillPackStore()

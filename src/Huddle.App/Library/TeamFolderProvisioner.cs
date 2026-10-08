@@ -212,7 +212,9 @@ internal sealed class TeamFolderProvisioner : IHostedService, IDisposable, ITeam
         ArgumentNullException.ThrowIfNull(team);
         ArgumentNullException.ThrowIfNull(file);
 
-        if (TeamNames.ValidateTeamName(team, []) is not null)
+        // A Team with exactly this name keeps its AlreadyExists path below; only a name that differs by case is refused here.
+        IReadOnlyList<TeamSummary> others = [.. this.catalog.Teams.Where(t => !string.Equals(t.Name, team, StringComparison.Ordinal))];
+        if (TeamNames.ValidateTeamName(team, others) is not null)
         {
             return new TeamCreateResult(TeamCreateOutcome.InvalidName, null);
         }
@@ -241,10 +243,23 @@ internal sealed class TeamFolderProvisioner : IHostedService, IDisposable, ITeam
         }
         finally
         {
-            File.Delete(temp);
+            DeleteQuietly(temp);
         }
 
         return new TeamCreateResult(TeamCreateOutcome.Created, target);
+    }
+
+    /// <summary>Deletes a leftover temporary file; a failure must not hide the outcome of the write that preceded it.</summary>
+    private static void DeleteQuietly(string path)
+    {
+        try
+        {
+            File.Delete(path);
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+        {
+            // The temporary file is harmless debris; the Team file's outcome is already decided.
+        }
     }
 
     /// <inheritdoc/>

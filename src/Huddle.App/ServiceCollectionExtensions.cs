@@ -245,6 +245,15 @@ public static class ServiceCollectionExtensions
             sp.GetRequiredService<Microsoft.Extensions.Options.IOptions<TeamOptions>>(),
             () => sp.GetService<PersonaSupervisor>()?.RunningHostCount ?? 0));
 
+        // Hiring a role-based Team. The start gate is the supervisor, resolved lazily through a factory
+        // so HireService does not force PersonaSupervisor to construct before it is registered below;
+        // CardResolver and TierModelPicker are static and need no registration.
+        services.AddSingleton<Agency.Huddle.App.Teams.ISkillInstaller, Agency.Huddle.App.Teams.BuiltinSkillInstaller>();
+        services.AddSingleton<Agency.Huddle.App.Teams.IPersonaStartGate>(sp => sp.GetService<PersonaSupervisor>() as Agency.Huddle.App.Teams.IPersonaStartGate ?? new Agency.Huddle.App.Teams.NoHostStartGate());
+        services.AddSingleton<Agency.Huddle.App.Teams.HireService>();
+        services.AddSingleton<Agency.Huddle.App.Teams.IHireContext, Agency.Huddle.App.Teams.HireContext>();
+        services.AddSingleton<Agency.Huddle.App.Teams.RoleHirer>();
+
         // No interface: nothing needs to substitute this, and CSharpPrinciples.md says not to add
         // abstraction a feature has not asked for. This is state the app writes (a chosen theme, a
         // few token overrides), not host-supplied configuration, so it is registered here rather

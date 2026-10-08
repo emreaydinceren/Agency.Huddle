@@ -144,6 +144,12 @@ internal sealed class PersonaSupervisor : BackgroundService, Agency.Huddle.App.T
                     }
                 }
 
+                // A host that already failed to start will not appear; do not wait out the timeout for it.
+                if (this.health.Get(name) is { State: PersonaState.Offline })
+                {
+                    return false;
+                }
+
                 await Task.Delay(StartPollInterval, limit.Token).ConfigureAwait(false);
             }
         }

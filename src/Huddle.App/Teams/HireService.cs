@@ -72,6 +72,9 @@ internal sealed class HireService(
     /// <summary>How long the manager gets to report running before the start stops.</summary>
     internal static readonly TimeSpan ManagerStartTimeout = TimeSpan.FromSeconds(60);
 
+    /// <summary>Serialises check-and-write so concurrent hires cannot both pass the same limit.</summary>
+    private readonly Lock gate = new();
+
     /// <summary>
     /// Starts a Team: checks every card and required role, installs the skills, hires the manager and
     /// waits until it runs, then hires the rest in request order. Checks and installation write nothing;
@@ -102,7 +105,7 @@ internal sealed class HireService(
 
         HireRequest manager = hires.First(h => string.Equals(h.RoleId, managerRole.Id, StringComparison.Ordinal));
         List<string> started = [];
-        string? failure = this.HireOne(manager, started);
+        string? failure = this.HireOrKeep(manager, started);
         if (failure is not null)
         {
             return HireService.Stop(failure, started);
@@ -130,7 +133,7 @@ internal sealed class HireService(
                 return HireService.Stop("The start was cancelled.", started);
             }
 
-            failure = this.HireOne(hire, started);
+            failure = this.HireOrKeep(hire, started);
             if (failure is not null)
             {
                 return HireService.Stop(failure, started);
@@ -176,8 +179,110 @@ internal sealed class HireService(
             }
         }
 
+        StartTeamResult? refused = this.CheckMembers(team, type, hires);
+        if (refused is not null)
+        {
+            return refused;
+        }
+
         managerRole = type.Roles.FirstOrDefault(r => r.Manager && hires.Any(h => string.Equals(h.RoleId, r.Id, StringComparison.Ordinal)));
         return null;
+    }
+
+    /// <summary>
+    /// Checks names, role limits and hire limits for every member at once. A member already hired into
+    /// the same Team and role (an earlier, interrupted start) counts as started, not as a collision.
+    /// </summary>
+    private StartTeamResult? CheckMembers(string team, TeamTypeManifest type, IReadOnlyList<HireRequest> hires)
+    {
+        lock (this.gate)
+        {
+            HashSet<string> seen = new(StringComparer.OrdinalIgnoreCase);
+            List<HireRequest> pending = [];
+            foreach (HireRequest hire in hires)
+            {
+                string name = hire.Card.Name;
+                if (this.AlreadyHired(hire))
+                {
+                    _ = seen.Add(name);
+                    continue;
+                }
+
+                if (!seen.Add(name) || this.NameInUse(name))
+                {
+                    return HireService.Stop($"The name '{name}' is already in use.", []);
+                }
+
+                pending.Add(hire);
+            }
+
+            foreach (IGrouping<string, HireRequest> group in pending.GroupBy(static h => h.RoleId, StringComparer.Ordinal))
+            {
+                RoleSpec? role = type.Roles.FirstOrDefault(r => string.Equals(r.Id, group.Key, StringComparison.Ordinal));
+                if (role is null)
+                {
+                    return HireService.Stop($"Team type '{type.Id}' has no role '{group.Key}'.", []);
+                }
+
+                if (role.MaxPerTeam > 0 && (this.CountInRole(team, type.Id, role.Id) + group.Count()) > role.MaxPerTeam)
+                {
+                    return HireService.Stop($"Team '{team}' already has the most {role.Title} Teammates it allows ({role.MaxPerTeam}).", []);
+                }
+            }
+
+            List<Candidate> candidates = [];
+            foreach (HireRequest hire in pending)
+            {
+                CandidateTemplate? template = types.ReadCandidate(hire.TypeId, hire.RoleId);
+                if (template is null)
+                {
+                    return HireService.Stop($"Team type '{hire.TypeId}' has no role '{hire.RoleId}'.", []);
+                }
+
+                candidates.Add(this.BuildCandidate(hire, template));
+            }
+
+            HireRefusal? refusal = candidates.Count == 0 ? null : limits.Check(candidates);
+            return refusal is null ? null : HireService.Stop(HireService.Describe(refusal), []);
+        }
+    }
+
+    /// <summary>Builds the Candidate the hire limits are checked for.</summary>
+    private Candidate BuildCandidate(HireRequest request, CandidateTemplate template)
+    {
+        string name = request.Card.Name;
+        return new Candidate(name, name.ToLowerInvariant(), template.Title, template.Stance, [request.Team], this.MergeConsultWhen(template, request.Card));
+    }
+
+    /// <summary>Whether a Teammate by this name or alias exists.</summary>
+    private bool NameInUse(string name)
+    {
+        return personas.ResolveByNameOrAlias(name) is not null || personas.ResolveByNameOrAlias(name.ToLowerInvariant()) is not null;
+    }
+
+    /// <summary>Whether the request's Teammate already exists in the same Team and role of the same team type.</summary>
+    private bool AlreadyHired(HireRequest request)
+    {
+        PersonaEntry? entry = personas.ResolveByNameOrAlias(request.Card.Name);
+        return entry is not null
+            && entry.Teams.Contains(request.Team, StringComparer.OrdinalIgnoreCase)
+            && PersonaFrontmatter.TryReadIdentity(entry.Text, out PersonaIdentity? identity, out _)
+            && identity.Role is { } hired
+            && string.Equals(hired.TypeId, request.TypeId, StringComparison.Ordinal)
+            && string.Equals(hired.RoleId, request.RoleId, StringComparison.Ordinal);
+    }
+
+    /// <summary>Keeps a member that is already hired, otherwise hires it; either way the name is recorded.</summary>
+    /// <returns>The refusal text, or <see langword="null"/> when the member is in place.</returns>
+    private string? HireOrKeep(HireRequest request, List<string> started)
+    {
+        if (this.AlreadyHired(request))
+        {
+            started.Add(request.Card.Name);
+            return null;
+        }
+
+        return this.HireOne(request, started);
     }
 
     /// <summary>Hires one member and records the name.</summary>
@@ -206,6 +311,15 @@ internal sealed class HireService(
     {
         ArgumentNullException.ThrowIfNull(request);
 
+        lock (this.gate)
+        {
+            return this.HireLocked(request);
+        }
+    }
+
+    /// <summary>Checks and writes one hire; the caller holds <see cref="gate"/> so no other hire interleaves.</summary>
+    private HireResult HireLocked(HireRequest request)
+    {
         TeamTypeManifest? type = types.Find(request.TypeId);
         if (type is null)
         {
@@ -257,6 +371,11 @@ internal sealed class HireService(
         catch (ChatException ex)
         {
             return HireService.Refuse(ex.Message);
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+        {
+            logger.LogWarning(ex, "Teammate {PersonaName} could not be written.", name);
+            return HireService.Refuse($"{name} could not be hired: the Teammate file could not be written.");
         }
 
         return this.SaveAvatar(name);

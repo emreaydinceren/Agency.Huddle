@@ -57,6 +57,40 @@ public sealed class TeamTypeCatalogTests
         File.WriteAllText(path, text);
     }
 
+    /// <summary>A directory junction inside a user type folder that points outside it is not followed; the built-in text is used instead.</summary>
+    [Fact]
+    public void ReadProcess_UserFolderIsJunctionToOutside_IgnoredAndBuiltinUsed()
+    {
+        if (!OperatingSystem.IsWindows())
+        {
+            Assert.True(OperatingSystem.IsLinux() || OperatingSystem.IsMacOS());
+            return;
+        }
+
+        using TempDataDir dir = new();
+        using TempDataDir outside = new();
+        File.WriteAllText(Path.Combine(outside.Path, "flow.md"), "# Outside");
+        string typeDir = Path.Combine(dir.Path, "TeamTypes", "alpha");
+        Directory.CreateDirectory(typeDir);
+        string link = Path.Combine(typeDir, "processes");
+        System.Diagnostics.ProcessStartInfo start = new("cmd.exe", $"/c mklink /J \"{link}\" \"{outside.Path}\"")
+        {
+            CreateNoWindow = true,
+            RedirectStandardOutput = true,
+        };
+        using (System.Diagnostics.Process? mk = System.Diagnostics.Process.Start(start))
+        {
+            Assert.NotNull(mk);
+            mk.WaitForExit();
+            Assert.Equal(0, mk.ExitCode);
+        }
+
+        TeamTypeCatalog catalog = Create(dir);
+
+        Assert.Equal("# Built-in flow", catalog.ReadProcess("alpha", "flow"));
+        Directory.Delete(link);
+    }
+
     /// <summary>Valid types are listed ordered by Order, then display name.</summary>
     [Fact]
     public void Types_Builtins_OrderedByOrderThenName()

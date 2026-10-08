@@ -314,7 +314,7 @@ internal sealed class TeamTypeCatalog
 
         string typeDir = Path.GetFullPath(Path.Combine(this.userDir, typeId));
         string full = Path.GetFullPath(Path.Combine(typeDir, relativePath));
-        if (full.StartsWith(typeDir + Path.DirectorySeparatorChar, StringComparison.OrdinalIgnoreCase) && File.Exists(full))
+        if (full.StartsWith(typeDir + Path.DirectorySeparatorChar, StringComparison.OrdinalIgnoreCase) && File.Exists(full) && !LeavesTypeFolder(typeDir, full))
         {
             try
             {
@@ -329,6 +329,43 @@ internal sealed class TeamTypeCatalog
 
         string key = typeId + "/" + relativePath.Replace('\\', '/');
         return this.builtins.GetValueOrDefault(key);
+    }
+
+    /// <summary>
+    /// Whether a junction or symbolic link between the type folder and the file resolves outside the type
+    /// folder; the string path check alone cannot see that.
+    /// </summary>
+    /// <param name="typeDir">The full path of the type folder.</param>
+    /// <param name="full">The full path of the file, already checked to sit under <paramref name="typeDir"/>.</param>
+    /// <returns><see langword="true"/> when the file must not be read.</returns>
+    private static bool LeavesTypeFolder(string typeDir, string full)
+    {
+        string prefix = typeDir + Path.DirectorySeparatorChar;
+        string? current = full;
+        try
+        {
+            while (current is not null && current.Length > typeDir.Length)
+            {
+                FileSystemInfo info = Directory.Exists(current) ? new DirectoryInfo(current) : new FileInfo(current);
+                if (info.Attributes.HasFlag(FileAttributes.ReparsePoint))
+                {
+                    FileSystemInfo? target = info.ResolveLinkTarget(returnFinalTarget: true);
+                    if (target is null || !(target.FullName + Path.DirectorySeparatorChar).StartsWith(prefix, StringComparison.OrdinalIgnoreCase))
+                    {
+                        return true;
+                    }
+                }
+
+                current = Path.GetDirectoryName(current);
+            }
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+        {
+            // A link that cannot be inspected is treated as leaving the folder; refusing it is the safe answer.
+            return true;
+        }
+
+        return false;
     }
 
     /// <summary>One consistent view of the loaded types.</summary>

@@ -80,7 +80,7 @@ public sealed class HireServiceStartTests
           ] }
         """;
 
-    private static HireService Create(TempDataDir dir, out PersonaStore personas, out FakeSkillInstaller installer, out FakeStartGate gate)
+    private static HireService Create(TempDataDir dir, out PersonaStore personas, out FakeSkillInstaller installer, out FakeStartGate gate, TeamOptions? options = null)
     {
         personas = new(new TeammatePaths(dir.Options()), new PersonaModelStore(dir.Options()), new PersonaEffortStore(dir.Options()), new PersonaWorkModeStore(dir.Options()), NullLogger<PersonaStore>.Instance);
         Dictionary<string, string> builtins = new(StringComparer.Ordinal)
@@ -96,7 +96,7 @@ public sealed class HireServiceStartTests
         };
         TeamTypeCatalog types = new(dir.Options(), NullLogger<TeamTypeCatalog>.Instance, builtins);
         SkillPackStore packs = new(dir.Options(), NullLogger<SkillPackStore>.Instance, new Dictionary<string, string>(StringComparer.Ordinal));
-        HireLimitHarness harness = new(Microsoft.Extensions.Options.Options.Create(new TeamOptions()));
+        HireLimitHarness harness = new(Microsoft.Extensions.Options.Options.Create(options ?? new TeamOptions()));
         AvatarStore avatars = new(dir.Options(), NullLogger<AvatarStore>.Instance);
         installer = new FakeSkillInstaller();
         gate = new FakeStartGate();
@@ -276,20 +276,161 @@ public sealed class HireServiceStartTests
         Assert.Equal(["Lee"], personas.ListNames());
     }
 
-    /// <summary>A refused later hire stops the start and reports who already started.</summary>
+    /// <summary>A name already used by a member of another Team refuses the whole start before anything is written.</summary>
     [Fact]
-    public async Task StartTeamAsync_LaterHireRefused_StopsAndReportsStarted()
+    public async Task StartTeamAsync_NameUsedElsewhere_RefusedBeforeAnyWrite()
     {
         CancellationToken ct = TestContext.Current.CancellationToken;
         using TempDataDir dir = new();
-        HireService service = Create(dir, out PersonaStore personas, out _, out _);
-        Assert.True(service.Hire(Request("Dee", "dev")).Ok);
+        HireService service = Create(dir, out PersonaStore personas, out _, out FakeStartGate gate);
+        Assert.True(service.Hire(Request("Dee", "dev") with { Team = "Other Team" }).Ok);
 
         StartTeamResult result = await service.StartTeamAsync(TeamName, [Request("Lee", "lead"), Request("Dan", "dev"), Request("Dee", "dev"), Request("Dot", "dev")], ct);
 
         Assert.False(result.Ok);
         Assert.Equal("The name 'Dee' is already in use.", result.Error);
-        Assert.Equal(["Lee", "Dan"], result.Started);
-        Assert.DoesNotContain("Dot", personas.ListNames());
+        Assert.Empty(result.Started);
+        Assert.Equal(["Dee"], personas.ListNames());
+        Assert.Empty(gate.Waited);
+    }
+
+    /// <summary>Two members of one batch that share a name (ignoring case) refuse the whole start before anything is written.</summary>
+    [Fact]
+    public async Task StartTeamAsync_DuplicateNameInBatch_RefusedBeforeAnyWrite()
+    {
+        CancellationToken ct = TestContext.Current.CancellationToken;
+        using TempDataDir dir = new();
+        HireService service = Create(dir, out PersonaStore personas, out _, out _);
+
+        StartTeamResult result = await service.StartTeamAsync(TeamName, [Request("Lee", "lead"), Request("Dan", "dev"), Request("dan", "dev")], ct);
+
+        Assert.False(result.Ok);
+        Assert.Equal("The name 'dan' is already in use.", result.Error);
+        Assert.Empty(result.Started);
+        Assert.Empty(personas.ListNames());
+    }
+
+    /// <summary>More members of a role than it allows refuse the whole start before anything is written.</summary>
+    [Fact]
+    public async Task StartTeamAsync_RoleOverfullInBatch_RefusedBeforeAnyWrite()
+    {
+        CancellationToken ct = TestContext.Current.CancellationToken;
+        using TempDataDir dir = new();
+        HireService service = Create(dir, out PersonaStore personas, out _, out _);
+
+        StartTeamResult result = await service.StartTeamAsync(TeamName,
+            [Request("Lee", "lead"), Request("Dan", "dev"), Request("Dee", "dev"), Request("Dot", "dev"), Request("Dib", "dev")], ct);
+
+        Assert.False(result.Ok);
+        Assert.Equal("Team 'Web Team' already has the most Developer Teammates it allows (3).", result.Error);
+        Assert.Empty(result.Started);
+        Assert.Empty(personas.ListNames());
+    }
+
+    /// <summary>Existing members of the role in the Team count against the role's limit together with the batch.</summary>
+    [Fact]
+    public async Task StartTeamAsync_RoleFullWithExistingMembers_RefusedBeforeAnyWrite()
+    {
+        CancellationToken ct = TestContext.Current.CancellationToken;
+        using TempDataDir dir = new();
+        HireService service = Create(dir, out PersonaStore personas, out _, out _);
+        Assert.True(service.Hire(Request("Eve", "dev")).Ok);
+        Assert.True(service.Hire(Request("Eli", "dev")).Ok);
+
+        StartTeamResult result = await service.StartTeamAsync(TeamName, [Request("Lee", "lead"), Request("Dan", "dev"), Request("Dee", "dev")], ct);
+
+        Assert.False(result.Ok);
+        Assert.Equal("Team 'Web Team' already has the most Developer Teammates it allows (3).", result.Error);
+        Assert.Empty(result.Started);
+        Assert.Equal(["Eli", "Eve"], personas.ListNames().Order(StringComparer.Ordinal));
+    }
+
+    /// <summary>The hire limits are checked for every member at once, so a batch that exceeds the Team limit writes nobody.</summary>
+    [Fact]
+    public async Task StartTeamAsync_BatchExceedsTeamLimit_RefusedBeforeAnyWrite()
+    {
+        CancellationToken ct = TestContext.Current.CancellationToken;
+        using TempDataDir dir = new();
+        TeamOptions options = new();
+        options.Acp.MaxTeammatesPerTeam = 2;
+        HireService service = Create(dir, out PersonaStore personas, out _, out _, options);
+
+        StartTeamResult result = await service.StartTeamAsync(TeamName, [Request("Lee", "lead"), Request("Dan", "dev"), Request("Dee", "dev")], ct);
+
+        Assert.False(result.Ok);
+        Assert.Empty(result.Started);
+        Assert.Empty(personas.ListNames());
+    }
+
+    /// <summary>After the manager timed out, starting again treats the members already hired into their roles as started and hires only the rest.</summary>
+    [Fact]
+    public async Task StartTeamAsync_RetryAfterManagerTimeout_HiresOnlyTheRest()
+    {
+        CancellationToken ct = TestContext.Current.CancellationToken;
+        using TempDataDir dir = new();
+        HireService service = Create(dir, out PersonaStore personas, out _, out FakeStartGate gate);
+        gate.Running = false;
+        List<HireRequest> hires = [Request("Lee", "lead"), Request("Dan", "dev")];
+        StartTeamResult first = await service.StartTeamAsync(TeamName, hires, ct);
+        Assert.False(first.Ok);
+        gate.Running = true;
+
+        StartTeamResult second = await service.StartTeamAsync(TeamName, hires, ct);
+
+        Assert.True(second.Ok);
+        Assert.Null(second.Error);
+        Assert.Equal(["Lee", "Dan"], second.Started);
+        Assert.Equal(["Dan", "Lee"], personas.ListNames().Order(StringComparer.Ordinal));
+        Assert.Equal(["Lee", "Lee"], gate.Waited);
+    }
+
+    /// <summary>Concurrent hires of one role never exceed the role's limit, because check and write are one step.</summary>
+    [Fact]
+    public async Task Hire_ConcurrentHiresOfOneRole_NeverExceedTheRoleLimit()
+    {
+        CancellationToken ct = TestContext.Current.CancellationToken;
+        using TempDataDir dir = new();
+        HireService service = Create(dir, out PersonaStore personas, out _, out _);
+        string[] names = ["Ann", "Bob", "Cat", "Dot", "Eve", "Fay", "Gus", "Hal"];
+
+        HireResult[] results = await Task.WhenAll(names.Select(name => Task.Run(() => service.Hire(Request(name, "dev")), ct)));
+
+        Assert.Equal(3, results.Count(static r => r.Ok));
+        Assert.Equal(3, personas.ListNames().Count);
+    }
+
+    /// <summary>A file system failure while writing the Teammate is a refusal, not an exception.</summary>
+    [Fact]
+    public void Hire_TeammateCannotBeWritten_RefusesInsteadOfThrowing()
+    {
+        using TempDataDir dir = new();
+        HireService service = Create(dir, out PersonaStore personas, out _, out _);
+        TeammatePaths paths = new(dir.Options());
+        Directory.CreateDirectory(paths.DefinitionsRoot);
+        File.WriteAllText(paths.TeammateFolder("Dan"), "in the way");
+
+        HireResult result = service.Hire(Request("Dan", "dev"));
+
+        Assert.False(result.Ok);
+        Assert.Equal("Dan could not be hired: the Teammate file could not be written.", result.Error);
+        Assert.Null(result.PersonaName);
+        Assert.Empty(personas.ListNames());
+    }
+
+    /// <summary>A failure writing a later member stops the start and still reports who started.</summary>
+    [Fact]
+    public async Task StartTeamAsync_LaterWriteFails_ReportsStartedSoFar()
+    {
+        CancellationToken ct = TestContext.Current.CancellationToken;
+        using TempDataDir dir = new();
+        HireService service = Create(dir, out _, out _, out FakeStartGate gate);
+        TeammatePaths paths = new(dir.Options());
+        gate.OnWait = _ => File.WriteAllText(paths.TeammateFolder("Dan"), "in the way");
+
+        StartTeamResult result = await service.StartTeamAsync(TeamName, [Request("Lee", "lead"), Request("Dan", "dev")], ct);
+
+        Assert.False(result.Ok);
+        Assert.NotNull(result.Error);
+        Assert.Equal(["Lee"], result.Started);
     }
 }

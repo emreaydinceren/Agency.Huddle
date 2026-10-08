@@ -58,6 +58,20 @@ public sealed class TeamFolderProvisionerCreateTeamTests
         Assert.Equal(before, File.ReadAllBytes(path));
     }
 
+    /// <summary>A name that differs from an existing Team only by case is refused as invalid and writes nothing.</summary>
+    [Fact]
+    public void CreateTeam_NameDiffersByCaseFromExistingTeam_InvalidNameAndNothingWritten()
+    {
+        using Fixture fixture = new("Dev");
+        using TeamFolderProvisioner provisioner = fixture.CreateProvisioner();
+
+        TeamCreateResult result = provisioner.CreateTeam("dev", Sample());
+
+        Assert.Equal(TeamCreateOutcome.InvalidName, result.Outcome);
+        Assert.Null(result.Path);
+        Assert.False(File.Exists(Path.Combine(fixture.TeamsRoot, "Dev", TeamPaths.TeamFileName)));
+    }
+
     /// <summary>A Team folder that exists without a <c>_team.md</c> (a Persona-label Team) receives the file.</summary>
     [Fact]
     public void CreateTeam_FolderWithoutTeamFile_WritesFile()
