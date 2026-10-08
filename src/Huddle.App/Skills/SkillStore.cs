@@ -572,7 +572,7 @@ internal sealed class SkillStore : IDisposable
     /// thread, so <see cref="OnDebounceElapsed"/> can leave the previous snapshot in place.
     /// </summary>
     /// <returns>The freshly built snapshot, or <see langword="null"/> if every attempt failed.</returns>
-    private SkillSnapshot? TryRebuildWithRetries()
+    internal SkillSnapshot? TryRebuildWithRetries()
     {
         for (int attempt = 1; attempt <= RebuildRetryAttempts; attempt++)
         {
@@ -580,11 +580,11 @@ internal sealed class SkillStore : IDisposable
             {
                 return this.Rebuild();
             }
-            catch (IOException) when (attempt < RebuildRetryAttempts)
+            catch (Exception ex) when (ex is IOException or UnauthorizedAccessException && attempt < RebuildRetryAttempts)
             {
                 Thread.Sleep(RebuildRetryDelayMilliseconds);
             }
-            catch (IOException ex)
+            catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
             {
                 this.logger.LogWarning(
                     ex,
@@ -634,7 +634,7 @@ internal sealed class SkillStore : IDisposable
     /// looks up.
     /// </param>
     /// <param name="Issues">Every problem found while resolving this snapshot's Skills.</param>
-    private sealed record SkillSnapshot(
+    internal sealed record SkillSnapshot(
         IReadOnlyList<Skill> All,
         FrozenDictionary<string, Skill> ByName,
         FrozenDictionary<string, FrozenDictionary<string, string>> ResolvedFiles,

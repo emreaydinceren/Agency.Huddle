@@ -234,4 +234,35 @@ public sealed class UserCandidateWriterTests
         Assert.Equal(NotSaved, result.Error);
         Assert.False(File.Exists(Path.Combine(typeDir, "team-type.json")));
     }
+
+    /// <summary>A failure while replacing the manifest removes the temporary manifest file as well as the candidate.</summary>
+    [Fact]
+    public void Save_ManifestReplaceFails_LeavesNoTempFile()
+    {
+        using TempDataDir dir = new();
+        string typeDir = Path.Combine(dir.Path, "TeamTypes", "alpha");
+        Directory.CreateDirectory(Path.Combine(typeDir, "team-type.json"));
+        UserCandidateWriter writer = new(dir.Options(), CreateCatalog(dir));
+
+        WriteResult result = writer.Save("alpha", "researcher", "Researcher", "when", "stance");
+
+        Assert.False(result.Success);
+        Assert.Equal(NotSaved, result.Error);
+        Assert.False(File.Exists(Path.Combine(typeDir, "team-type.json.tmp")));
+        Assert.False(File.Exists(Path.Combine(typeDir, "candidates", "researcher.md")));
+    }
+
+    /// <summary>Concurrent saves of different roles all complete without an error.</summary>
+    [Fact]
+    public async Task Save_ConcurrentDifferentRoles_AllSucceed()
+    {
+        using TempDataDir dir = new();
+        UserCandidateWriter writer = new(dir.Options(), CreateCatalog(dir));
+
+        WriteResult[] results = await Task.WhenAll(Enumerable.Range(0, 8).Select(i => Task.Run(
+            () => writer.Save("alpha", "role-" + i, "Role " + i, "when", "stance"),
+            TestContext.Current.CancellationToken)));
+
+        Assert.All(results, static r => Assert.True(r.Success));
+    }
 }

@@ -402,4 +402,87 @@ public sealed class SkillImporterTests
         Assert.Empty(Directory.GetFileSystemEntries(harness.SkillsDir));
         Assert.Empty(harness.LeftoverTempFolders());
     }
+
+    /// <summary>A skill named like a built-in is refused, and the message names the built-in.</summary>
+    [Fact]
+    public void Install_NameOfBuiltInSkill_IsRefused()
+    {
+        using Harness harness = new();
+        ImportPreview preview = PreviewOf(new Dictionary<string, byte[]> { ["SKILL.md"] = Encoding.UTF8.GetBytes(SkillText) }) with { Name = "team-building" };
+
+        ImportOutcome outcome = harness.Importer.Install(preview);
+
+        Assert.False(outcome.Installed);
+        Assert.Equal("'team-building' is a built-in skill and cannot be replaced by an import.", outcome.Error);
+        Assert.Empty(harness.LeftoverTempFolders());
+    }
+
+    /// <summary>An owner, repository or branch segment with a percent, query, fragment or slash character is not a tree URL and sends no request.</summary>
+    /// <param name="url">The URL to preview.</param>
+    [Theory]
+    [InlineData("https://github.com/ac%3Fme/skills/tree/main/x")]
+    [InlineData("https://github.com/acme/sk%23ills/tree/main/x")]
+    [InlineData("https://github.com/acme/skills/tree/ma%2Fin/x")]
+    [InlineData("https://github.com/ac%25me/skills/tree/main/x")]
+    public async Task PreviewFromUrlAsync_UnsafeSegment_ReturnsNullWithoutRequest(string url)
+    {
+        CancellationToken ct = TestContext.Current.CancellationToken;
+        using Harness harness = new();
+
+        ImportPreview? preview = await harness.Importer.PreviewFromUrlAsync(url, ct);
+
+        Assert.Null(preview);
+        Assert.Empty(harness.Handler.Requests);
+    }
+
+    /// <summary>A 403 or 429 from the GitHub API is reported as a rate limit, not as an unresolved branch.</summary>
+    /// <param name="status">The HTTP status.</param>
+    [Theory]
+    [InlineData(HttpStatusCode.Forbidden)]
+    [InlineData(HttpStatusCode.TooManyRequests)]
+    public async Task PreviewFromUrlAsync_ApiRateLimited_SaysSo(HttpStatusCode status)
+    {
+        CancellationToken ct = TestContext.Current.CancellationToken;
+        using Harness harness = new(_ => new HttpResponseMessage(status));
+
+        ImportPreview? preview = await harness.Importer.PreviewFromUrlAsync("https://github.com/acme/skills/tree/main/skills/alpha", ct);
+
+        Assert.NotNull(preview);
+        Assert.False(preview.CanInstall);
+        Assert.Equal(["The GitHub rate limit was reached; try again later."], preview.ValidationProblems);
+    }
+
+    /// <summary>An API response over 1 MB is not read, so the branch stays unresolved.</summary>
+    [Fact]
+    public async Task PreviewFromUrlAsync_OversizedApiResponse_IsUnresolved()
+    {
+        CancellationToken ct = TestContext.Current.CancellationToken;
+        string body = "{\"sha\":\"" + Commit + "\",\"pad\":\"" + new string('x', 1024 * 1024 + 10) + "\"}";
+        using Harness harness = new(_ => new HttpResponseMessage(HttpStatusCode.OK) { Content = new StringContent(body) });
+
+        ImportPreview? preview = await harness.Importer.PreviewFromUrlAsync("https://github.com/acme/skills/tree/main/skills/alpha", ct);
+
+        Assert.NotNull(preview);
+        Assert.Equal(["The branch or commit could not be resolved."], preview.ValidationProblems);
+    }
+
+    /// <summary>An install removes temporary import folders older than an hour and keeps newer ones.</summary>
+    [Fact]
+    public void Install_StaleTempFolders_AreRemoved()
+    {
+        using Harness harness = new();
+        string parent = Path.GetDirectoryName(harness.SkillsDir) ?? harness.SkillsDir;
+        string stale = Path.Combine(parent, ".skill-import-stale");
+        string fresh = Path.Combine(parent, ".skill-import-fresh");
+        Directory.CreateDirectory(stale);
+        Directory.CreateDirectory(fresh);
+        Directory.SetLastWriteTimeUtc(stale, harness.Clock.GetUtcNow().UtcDateTime.AddHours(-2));
+        Directory.SetLastWriteTimeUtc(fresh, harness.Clock.GetUtcNow().UtcDateTime.AddMinutes(-5));
+
+        ImportOutcome outcome = harness.Importer.Install(PreviewOf(new Dictionary<string, byte[]> { ["SKILL.md"] = Encoding.UTF8.GetBytes(SkillText) }));
+
+        Assert.True(outcome.Installed);
+        Assert.False(Directory.Exists(stale));
+        Assert.True(Directory.Exists(fresh));
+    }
 }

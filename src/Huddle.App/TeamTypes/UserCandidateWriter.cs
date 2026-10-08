@@ -38,6 +38,7 @@ internal sealed partial class UserCandidateWriter(IOptions<TeamOptions> options,
     private static readonly UTF8Encoding Utf8NoBom = new(false);
 
     private readonly string userDir = Path.Combine(options.Value.DataDir, TeamPaths.TeamTypesDir);
+    private readonly Lock saveGate = new();
 
     /// <summary>Writes the candidate file and appends the role to the user manifest of the type.</summary>
     /// <param name="typeId">The id of an existing team type.</param>
@@ -75,24 +76,27 @@ internal sealed partial class UserCandidateWriter(IOptions<TeamOptions> options,
             return WriteResult.Refused("The stance is required.");
         }
 
-        string typeDir = Path.GetFullPath(Path.Combine(this.userDir, typeId));
-        string candidateDir = Path.Combine(typeDir, CandidatesFolder);
-        string candidatePath = Path.GetFullPath(Path.Combine(candidateDir, roleId + ".md"));
-        if (!candidatePath.StartsWith(candidateDir + Path.DirectorySeparatorChar, StringComparison.OrdinalIgnoreCase)
-            || type.Roles.Any(r => string.Equals(r.Id, roleId, StringComparison.Ordinal))
-            || File.Exists(candidatePath))
+        lock (this.saveGate)
         {
-            return WriteResult.Refused("A role with that id already exists in this team type.");
-        }
+            string typeDir = Path.GetFullPath(Path.Combine(this.userDir, typeId));
+            string candidateDir = Path.Combine(typeDir, CandidatesFolder);
+            string candidatePath = Path.GetFullPath(Path.Combine(candidateDir, roleId + ".md"));
+            if (!candidatePath.StartsWith(candidateDir + Path.DirectorySeparatorChar, StringComparison.OrdinalIgnoreCase)
+                || type.Roles.Any(r => string.Equals(r.Id, roleId, StringComparison.Ordinal))
+                || File.Exists(candidatePath))
+            {
+                return WriteResult.Refused("A role with that id already exists in this team type.");
+            }
 
-        RoleSpec role = new(roleId, CollapseLines(title), CandidatesFolder + "/" + roleId + ".md", Manager: false, Required: false, MaxPerTeam: 1);
-        TeamTypeManifest extended = type with { Roles = [.. type.Roles, role] };
-        if (TeamTypeValidator.Validate(extended, static _ => true).Count > 0)
-        {
-            return WriteResult.Refused("The role could not be saved.");
-        }
+            RoleSpec role = new(roleId, CollapseLines(title), CandidatesFolder + "/" + roleId + ".md", Manager: false, Required: false, MaxPerTeam: 1);
+            TeamTypeManifest extended = type with { Roles = [.. type.Roles, role] };
+            if (TeamTypeValidator.Validate(extended, static _ => true).Count > 0)
+            {
+                return WriteResult.Refused("The role could not be saved.");
+            }
 
-        return Write(typeDir, candidateDir, candidatePath, ComposeCandidate(title, consultWhen, stance), extended);
+            return Write(typeDir, candidateDir, candidatePath, ComposeCandidate(title, consultWhen, stance), extended);
+        }
     }
 
     /// <summary>Collapses line breaks to single spaces and trims, for a one-line frontmatter value.</summary>
@@ -140,6 +144,7 @@ internal sealed partial class UserCandidateWriter(IOptions<TeamOptions> options,
     private static WriteResult Write(string typeDir, string candidateDir, string candidatePath, string candidateText, TeamTypeManifest manifest)
     {
         bool candidateCreated = false;
+        string temp = Path.Combine(typeDir, ManifestFile + ".tmp");
         try
         {
             Directory.CreateDirectory(candidateDir);
@@ -150,7 +155,6 @@ internal sealed partial class UserCandidateWriter(IOptions<TeamOptions> options,
             }
 
             string manifestPath = Path.Combine(typeDir, ManifestFile);
-            string temp = manifestPath + ".tmp";
             File.WriteAllText(temp, JsonSerializer.Serialize(manifest, WriteOptions).ReplaceLineEndings("\n") + "\n", Utf8NoBom);
             File.Move(temp, manifestPath, overwrite: true);
             return WriteResult.Saved;
@@ -161,6 +165,8 @@ internal sealed partial class UserCandidateWriter(IOptions<TeamOptions> options,
             {
                 TryDelete(candidatePath);
             }
+
+            TryDelete(temp);
 
             return WriteResult.Refused("The role could not be saved.");
         }

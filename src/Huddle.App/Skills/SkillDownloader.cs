@@ -28,6 +28,15 @@ internal sealed class SkillDownloader(HttpClient http, ILogger<SkillDownloader> 
 
     private const int MaxFiles = 200;
 
+    private static readonly System.Buffers.SearchValues<char> ForbiddenWindowsChars = System.Buffers.SearchValues.Create("<>\"|?*");
+
+    private static readonly HashSet<string> ReservedDeviceNames = new(StringComparer.OrdinalIgnoreCase)
+    {
+        "CON", "PRN", "AUX", "NUL",
+        "COM1", "COM2", "COM3", "COM4", "COM5", "COM6", "COM7", "COM8", "COM9",
+        "LPT1", "LPT2", "LPT3", "LPT4", "LPT5", "LPT6", "LPT7", "LPT8", "LPT9",
+    };
+
     private const long MaxTotalBytes = 5L * 1024 * 1024;
 
     private const int CommitLength = 40;
@@ -107,6 +116,7 @@ internal sealed class SkillDownloader(HttpClient http, ILogger<SkillDownloader> 
     {
         string prefix = folder.Length == 0 ? string.Empty : folder + "/";
         Dictionary<string, byte[]> files = new(StringComparer.Ordinal);
+        HashSet<string> seenNames = new(StringComparer.OrdinalIgnoreCase);
         long total = 0;
         try
         {
@@ -130,6 +140,16 @@ internal sealed class SkillDownloader(HttpClient http, ILogger<SkillDownloader> 
                 if (((entry.ExternalAttributes >> 16) & 0xF000) == 0xA000)
                 {
                     return Fail("The archive contains a symbolic link.");
+                }
+
+                if (!IsWindowsStorable(rest))
+                {
+                    return Fail("The archive contains a name that cannot be stored on Windows.");
+                }
+
+                if (!seenNames.Add(rest))
+                {
+                    return Fail("The archive contains two files whose names differ only in case.");
                 }
 
                 if (files.Count >= MaxFiles)
@@ -191,6 +211,30 @@ internal sealed class SkillDownloader(HttpClient http, ILogger<SkillDownloader> 
         }
 
         return !name.Split('/').Contains("..", StringComparer.Ordinal);
+    }
+
+    /// <summary>Whether every segment of a relative path can be stored on Windows: no forbidden characters, no trailing dot or space, no device name.</summary>
+    private static bool IsWindowsStorable(string relativePath)
+    {
+        foreach (string segment in relativePath.Split('/'))
+        {
+            if (segment.AsSpan().IndexOfAny(ForbiddenWindowsChars) >= 0
+                || segment.Any(static c => char.IsControl(c))
+                || segment.EndsWith('.')
+                || segment.EndsWith(' '))
+            {
+                return false;
+            }
+
+            int dot = segment.IndexOf('.');
+            string stem = dot < 0 ? segment : segment[..dot];
+            if (ReservedDeviceNames.Contains(stem.TrimEnd(' ')))
+            {
+                return false;
+            }
+        }
+
+        return true;
     }
 
     /// <summary>Validates the repository URL and extracts owner and repo.</summary>

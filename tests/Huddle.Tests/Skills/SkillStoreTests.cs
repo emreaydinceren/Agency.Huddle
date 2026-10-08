@@ -493,4 +493,35 @@ public sealed class SkillStoreTests
         Assert.Contains(overLimit.Issues, issue => issue.Severity == SkillIssueSeverity.Error);
         Assert.Equal("'big' has 201 files; an imported Skill may have no more than 200 files.", overLimit.Issues[0].Message);
     }
+
+    /// <summary>A file the process may not read during a rebuild is handled like a sharing violation: the previous snapshot stays and nothing is thrown.</summary>
+    [Fact]
+    [System.Runtime.Versioning.SupportedOSPlatform("windows")]
+    public void TryRebuildWithRetries_UnreadableFile_ReturnsNullWithoutThrowing()
+    {
+        Assert.SkipUnless(OperatingSystem.IsWindows(), "Needs a Windows ACL deny rule.");
+        using TempDataDir dir = new();
+        using SkillStore store = new(dir.Options(), NullLogger<SkillStore>.Instance);
+        string folder = Path.Combine(store.SkillsDirectory, "mine");
+        Directory.CreateDirectory(folder);
+        string file = Path.Combine(folder, "SKILL.md");
+        File.WriteAllText(file, "---\nname: mine\ndescription: Mine.\n---\nBody\n");
+        FileInfo info = new(file);
+        System.Security.AccessControl.FileSecurity security = info.GetAccessControl();
+        System.Security.Principal.SecurityIdentifier me = System.Security.Principal.WindowsIdentity.GetCurrent().User ?? throw new InvalidOperationException("No current user SID.");
+        System.Security.AccessControl.FileSystemAccessRule deny = new(me, System.Security.AccessControl.FileSystemRights.Read, System.Security.AccessControl.AccessControlType.Deny);
+        security.AddAccessRule(deny);
+        info.SetAccessControl(security);
+        try
+        {
+            SkillStore.SkillSnapshot? snapshot = store.TryRebuildWithRetries();
+
+            Assert.Null(snapshot);
+        }
+        finally
+        {
+            security.RemoveAccessRule(deny);
+            info.SetAccessControl(security);
+        }
+    }
 }

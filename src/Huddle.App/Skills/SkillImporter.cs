@@ -1,3 +1,4 @@
+using System.Net;
 using System.Text;
 using System.Text.Json;
 
@@ -76,6 +77,12 @@ internal sealed class SkillImporter(SkillsCatalogIndex catalog, SkillDownloader 
 
     private const string SkillFileName = "SKILL.md";
 
+    private const int MaxApiResponseBytes = 1024 * 1024;
+
+    private static readonly System.Buffers.SearchValues<char> UnsafeReferenceChars = System.Buffers.SearchValues.Create("%?#/\\");
+
+    private static readonly TimeSpan StaleTempAge = TimeSpan.FromHours(1);
+
     private readonly Lock installGate = new();
 
     /// <summary>Previews the catalog entry <paramref name="catalogId"/>.</summary>
@@ -114,10 +121,10 @@ internal sealed class SkillImporter(SkillsCatalogIndex catalog, SkillDownloader 
         string publisher = entry?.Publisher ?? owner;
         string license = entry?.License ?? "none";
 
-        string? commit = SkillImporter.IsCommit(reference) ? reference : await this.ResolveCommitAsync(owner, repo, reference, ct);
+        (string? commit, string? resolveError) = SkillImporter.IsCommit(reference) ? (reference, null) : await this.ResolveCommitAsync(owner, repo, reference, ct);
         if (commit is null)
         {
-            return SkillImporter.Failed(entry, repoUrl, path, reference, publisher, license, folderName, "The branch or commit could not be resolved.");
+            return SkillImporter.Failed(entry, repoUrl, path, reference, publisher, license, folderName, resolveError ?? "The branch or commit could not be resolved.");
         }
 
         return await this.BuildPreviewAsync(entry, repoUrl, path, commit, publisher, license, folderName, ct);
@@ -139,9 +146,15 @@ internal sealed class SkillImporter(SkillsCatalogIndex catalog, SkillDownloader 
             return new ImportOutcome(false, "This skill cannot be installed.", null);
         }
 
+        if (SkillCatalog.All.ContainsKey(preview.Name))
+        {
+            return new ImportOutcome(false, $"'{preview.Name}' is a built-in skill and cannot be replaced by an import.", null);
+        }
+
         string target = Path.Combine(skills.SkillsDirectory, preview.Name);
         lock (this.installGate)
         {
+            this.DeleteStaleTempFolders();
             if (Directory.Exists(target) || File.Exists(target))
             {
                 return SkillImporter.IsSameImport(target, preview)
@@ -228,8 +241,33 @@ internal sealed class SkillImporter(SkillsCatalogIndex catalog, SkillDownloader 
             download.Skill);
     }
 
-    /// <summary>Resolves a branch, tag or commit name to a commit hash through the GitHub API.</summary>
-    private async Task<string?> ResolveCommitAsync(string owner, string repo, string reference, CancellationToken ct)
+    /// <summary>Removes <c>.skill-import-*</c> folders next to the Skills folder that were last touched over an hour ago.</summary>
+    private void DeleteStaleTempFolders()
+    {
+        string parent = Path.GetDirectoryName(skills.SkillsDirectory) ?? skills.SkillsDirectory;
+        DateTime cutoff = (clock ?? TimeProvider.System).GetUtcNow().UtcDateTime - SkillImporter.StaleTempAge;
+        try
+        {
+            foreach (string folder in Directory.EnumerateDirectories(parent, SkillImporter.TempFolderPrefix + "*"))
+            {
+                if (Directory.GetLastWriteTimeUtc(folder) < cutoff)
+                {
+                    SkillImporter.DeleteQuietly(folder);
+                }
+            }
+        }
+        catch (IOException)
+        {
+            // Cleaning up is best effort; a folder that cannot be listed is left for the next import.
+        }
+        catch (UnauthorizedAccessException)
+        {
+            // Same as above.
+        }
+    }
+
+    /// <summary>Resolves a branch, tag or commit name to a commit hash through the GitHub API; the error is <see langword="null"/> unless the API refused for rate limiting.</summary>
+    private async Task<(string? Commit, string? Error)> ResolveCommitAsync(string owner, string repo, string reference, CancellationToken ct)
     {
         Uri uri = new($"https://api.github.com/repos/{owner}/{repo}/commits/{Uri.EscapeDataString(reference)}");
         try
@@ -238,35 +276,73 @@ internal sealed class SkillImporter(SkillsCatalogIndex catalog, SkillDownloader 
             request.Headers.UserAgent.ParseAdd("Agency.Huddle");
             request.Headers.Accept.ParseAdd("application/vnd.github+json");
             using HttpResponseMessage response = await http.SendAsync(request, ct);
+            if (response.StatusCode is HttpStatusCode.Forbidden or HttpStatusCode.TooManyRequests)
+            {
+                return (null, "The GitHub rate limit was reached; try again later.");
+            }
+
             if (!response.IsSuccessStatusCode)
             {
-                return null;
+                return (null, null);
+            }
+
+            if (response.Content.Headers.ContentLength > SkillImporter.MaxApiResponseBytes)
+            {
+                return (null, null);
             }
 
             await using Stream body = await response.Content.ReadAsStreamAsync(ct);
-            using JsonDocument document = await JsonDocument.ParseAsync(body, cancellationToken: ct);
+            using MemoryStream buffer = new();
+            byte[] chunk = new byte[16 * 1024];
+            int read;
+            while ((read = await body.ReadAsync(chunk, ct)) > 0)
+            {
+                if (buffer.Length + read > SkillImporter.MaxApiResponseBytes)
+                {
+                    return (null, null);
+                }
+
+                buffer.Write(chunk, 0, read);
+            }
+
+            using JsonDocument document = JsonDocument.Parse(buffer.ToArray());
             string? sha = document.RootElement.ValueKind == JsonValueKind.Object
                 && document.RootElement.TryGetProperty("sha", out JsonElement value)
                 && value.ValueKind == JsonValueKind.String
                     ? value.GetString()
                     : null;
-            return sha is not null && SkillImporter.IsCommit(sha) ? sha : null;
+            return (sha is not null && SkillImporter.IsCommit(sha) ? sha : null, null);
         }
         catch (HttpRequestException)
         {
             // An unreachable API means the branch is unresolved; the preview reports that in words.
-            return null;
+            return (null, null);
         }
         catch (TaskCanceledException) when (!ct.IsCancellationRequested)
         {
             // A request timeout is an unresolved branch, not a cancellation by the caller.
-            return null;
+            return (null, null);
         }
         catch (JsonException)
         {
             // A body that is not JSON cannot name a commit.
-            return null;
+            return (null, null);
         }
+    }
+
+    /// <summary>Whether an owner or repository name holds only letters, digits, dot, hyphen and underscore and is not a dot segment.</summary>
+    private static bool IsRepoSegment(string segment)
+    {
+        return segment.Length > 0
+            && !string.Equals(segment, ".", StringComparison.Ordinal)
+            && !string.Equals(segment, "..", StringComparison.Ordinal)
+            && segment.All(static c => char.IsAsciiLetterOrDigit(c) || c is '.' or '-' or '_');
+    }
+
+    /// <summary>Whether a branch or commit name is free of the characters that could change the API request.</summary>
+    private static bool IsReferenceSegment(string reference)
+    {
+        return reference.AsSpan().IndexOfAny(SkillImporter.UnsafeReferenceChars) < 0;
     }
 
     /// <summary>Lists each way the downloaded name or description differs from the catalog entry.</summary>
@@ -391,6 +467,11 @@ internal sealed class SkillImporter(SkillsCatalogIndex catalog, SkillDownloader 
 
         string[] parts = uri.AbsolutePath.Trim('/').Split('/').Select(Uri.UnescapeDataString).ToArray();
         if (parts.Length < 4 || !string.Equals(parts[2], "tree", StringComparison.Ordinal) || parts[..4].Any(static part => part.Length == 0))
+        {
+            return false;
+        }
+
+        if (!SkillImporter.IsRepoSegment(parts[0]) || !SkillImporter.IsRepoSegment(parts[1]) || !SkillImporter.IsReferenceSegment(parts[3]))
         {
             return false;
         }

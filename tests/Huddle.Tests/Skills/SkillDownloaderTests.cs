@@ -306,4 +306,39 @@ public sealed class SkillDownloaderTests
             return false;
         }
     }
+
+    /// <summary>An entry name Windows cannot store (reserved device name, forbidden character, trailing dot or space) is rejected.</summary>
+    /// <param name="entryName">The entry below the selected folder.</param>
+    [Theory]
+    [InlineData("CON.txt")]
+    [InlineData("nul")]
+    [InlineData("bad<name.txt")]
+    [InlineData("q?.md")]
+    [InlineData("trail.")]
+    [InlineData("space ")]
+    public async Task DownloadAsync_WindowsUnsafeName_ReturnsError(string entryName)
+    {
+        CancellationToken ct = TestContext.Current.CancellationToken;
+        byte[] zip = BuildZip([(Root + "a/SKILL.md", Text("x")), (Root + "a/" + entryName, Text("x"))]);
+        (SkillDownloader downloader, _) = Create(() => Ok(zip));
+
+        DownloadResult result = await downloader.DownloadAsync("https://github.com/o/repo", "a", Commit, ct);
+
+        Assert.Null(result.Skill);
+        Assert.Equal("The archive contains a name that cannot be stored on Windows.", result.Error);
+    }
+
+    /// <summary>Two entries whose names differ only in case are rejected, because they would collide on a case-insensitive disk.</summary>
+    [Fact]
+    public async Task DownloadAsync_CaseInsensitiveDuplicate_ReturnsError()
+    {
+        CancellationToken ct = TestContext.Current.CancellationToken;
+        byte[] zip = BuildZip([(Root + "a/SKILL.md", Text("x")), (Root + "a/skill.md", Text("y"))]);
+        (SkillDownloader downloader, _) = Create(() => Ok(zip));
+
+        DownloadResult result = await downloader.DownloadAsync("https://github.com/o/repo", "a", Commit, ct);
+
+        Assert.Null(result.Skill);
+        Assert.Equal("The archive contains two files whose names differ only in case.", result.Error);
+    }
 }
