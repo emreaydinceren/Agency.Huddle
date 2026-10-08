@@ -23,9 +23,35 @@ internal static class SkillGrants
     /// <summary>The name of the tool that proposes a Sprint to the Human (Task 62).</summary>
     private const string ProposeSprintToolName = "propose_sprint";
 
+    /// <summary>The name of the tool that lists every Team's card and open Request count (Task 68).</summary>
+    private const string ListTeamsToolName = "list_teams";
+
+    /// <summary>The name of the tool that files a Request into another Team's backlog (Task 68).</summary>
+    private const string FileRequestToolName = "file_request";
+
+    /// <summary>The name of the tool that triages a Request in the receiving Team (Task 68).</summary>
+    private const string TriageRequestToolName = "triage_request";
+
+    /// <summary>The name of the tool that confirms a Done Request before it closes (Task 68).</summary>
+    private const string ConfirmRequestToolName = "confirm_request";
+
+    /// <summary>The name of the tool that reads the Team's retro evidence bundle (Task 68).</summary>
+    private const string ReadRecordsToolName = "read_records";
+
     /// <summary>Tools that exist only for Personas holding a Skill that lists them (Spec §6.5).</summary>
     internal static readonly FrozenSet<string> Grantable =
-        FrozenSet.ToFrozenSet([ValidateTeammateToolName, ProposeTeammatesToolName, ProposeSprintToolName], StringComparer.Ordinal);
+        FrozenSet.ToFrozenSet(
+            [
+                ValidateTeammateToolName,
+                ProposeTeammatesToolName,
+                ProposeSprintToolName,
+                ListTeamsToolName,
+                FileRequestToolName,
+                TriageRequestToolName,
+                ConfirmRequestToolName,
+                ReadRecordsToolName,
+            ],
+            StringComparer.Ordinal);
 
     /// <summary>
     /// Filters <paramref name="all"/> down to the tools this session should be offered:

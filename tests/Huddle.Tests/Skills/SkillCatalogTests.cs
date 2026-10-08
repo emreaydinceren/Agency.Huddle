@@ -30,9 +30,9 @@ public sealed class SkillCatalogTests
         Assert.Equal(expectedFiles, teamBuilding.Keys.ToHashSet(StringComparer.Ordinal));
     }
 
-    /// <summary>The catalog holds <c>team-management</c> (Task 62): valid, and its tools list is exactly <c>propose_sprint</c>.</summary>
+    /// <summary>The catalog holds <c>team-management</c> (Tasks 62, 68): valid, and it lists the four Request tools and <c>propose_sprint</c>.</summary>
     [Fact]
-    public void All_ContainsTeamManagement_GrantingProposeSprint()
+    public void All_ContainsTeamManagement_GrantingRequestToolsAndProposeSprint()
     {
         IReadOnlyDictionary<string, string> files = SkillCatalog.All["team-management"];
 
@@ -40,7 +40,29 @@ public sealed class SkillCatalogTests
 
         Assert.Equal(["SKILL.md"], files.Keys.ToList());
         Assert.Empty(validation.Issues);
-        Assert.Equal(["propose_sprint"], validation.Tools);
+        Assert.Equal(["list_teams", "file_request", "triage_request", "confirm_request", "propose_sprint"], validation.Tools);
+    }
+
+    /// <summary>The catalog holds <c>retrospective</c> (Task 68): valid, one file, and its tools list is exactly <c>read_records</c>.</summary>
+    [Fact]
+    public void All_ContainsRetrospective_GrantingReadRecords()
+    {
+        IReadOnlyDictionary<string, string> files = SkillCatalog.All["retrospective"];
+
+        SkillValidation validation = SkillValidator.Validate("retrospective", files);
+
+        Assert.Equal(["SKILL.md"], files.Keys.ToList());
+        Assert.Empty(validation.Issues);
+        Assert.Equal(["read_records"], validation.Tools);
+    }
+
+    /// <summary>The catalog lists both team skills by name next to <c>team-building</c> (Task 68).</summary>
+    [Fact]
+    public void All_ListsTeamBuildingTeamManagementAndRetrospective()
+    {
+        Assert.Contains("team-building", SkillCatalog.All.Keys);
+        Assert.Contains("team-management", SkillCatalog.All.Keys);
+        Assert.Contains("retrospective", SkillCatalog.All.Keys);
     }
 
     /// <summary>
