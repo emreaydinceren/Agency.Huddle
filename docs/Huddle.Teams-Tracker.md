@@ -2,7 +2,7 @@
 
 Status of the Teams delivery in [engineering/teams-plan.md](engineering/teams-plan.md). Each task is a `.t` (failing tests first) and `.i` (implementation) pair; a task's `.i` cannot be Done before its `.t`. Ids are `<phase>.<task>.<t|i>`, the form `agents/scripts/Set-Tracker.ps1` updates. `(H)` marks a Haiku task, `(B)` a boundary task that also gets an Opus architect review.
 
-**Status:** 92 of 170 tasks Done · 2 of 6 retrospectives done · last updated 2026-10-08.
+**Status:** 92 of 170 tasks Done · 3 of 6 retrospectives done · last updated 2026-10-08.
 
 | **Deliverable / Task** | **Active** | **In Progress** | **Done** |
 |---|---|---|---|
@@ -101,7 +101,7 @@ Status of the Teams delivery in [engineering/teams-plan.md](engineering/teams-pl
 | 2.44.i Task 44 SkillStore: folders, scripts, provenance: implement (B) | | | ✔ |
 | 2.45.t Task 45 Skill import screen: write failing tests | | | ✔ |
 | 2.45.i Task 45 Skill import screen: implement | | | ✔ |
-| 🔁 R3 Opus retrospective after Task 45: token tally, repeated reads, cost fixes, update the plan | | | |
+| 🔁 R3 Opus retrospective after Task 45: token tally, repeated reads, cost fixes, update the plan | | | ✔ |
 | 2.46.t Task 46 Provenance badges: write failing tests | | ✔ | |
 | 2.46.i Task 46 Provenance badges: implement | | | |
 | 2.47.t Task 47 Hiring installs missing skills by import: write failing tests (B) | | | |
