@@ -2,7 +2,7 @@
 
 Status of the Teams delivery in [engineering/teams-plan.md](engineering/teams-plan.md). Each task is a `.t` (failing tests first) and `.i` (implementation) pair; a task's `.i` cannot be Done before its `.t`. Ids are `<phase>.<task>.<t|i>`, the form `agents/scripts/Set-Tracker.ps1` updates. `(H)` marks a Haiku task, `(B)` a boundary task that also gets an Opus architect review.
 
-**Status:** 138 of 170 tasks Done · 4 of 6 retrospectives done · last updated 2026-10-08.
+**Status:** 140 of 170 tasks Done · 4 of 6 retrospectives done · last updated 2026-10-08.
 
 | **Deliverable / Task** | **Active** | **In Progress** | **Done** |
 |---|---|---|---|
@@ -153,9 +153,9 @@ Status of the Teams delivery in [engineering/teams-plan.md](engineering/teams-pl
 | 4.68.i Task 68 Grants for the team-management tools: implement | | | ✔ |
 | 4.69.t Task 69 `list_teams` and `file_request`: write failing tests (B) | | | ✔ |
 | 4.69.i Task 69 `list_teams` and `file_request`: implement (B) | | | ✔ |
-| 4.70.t Task 70 `triage_request` and `confirm_request`: write failing tests (B) | | ✔ | |
-| 4.70.i Task 70 `triage_request` and `confirm_request`: implement (B) | | | |
-| 4.71.t Task 71 Request wake-ups: write failing tests (B) | | | |
+| 4.70.t Task 70 `triage_request` and `confirm_request`: write failing tests (B) | | | ✔ |
+| 4.70.i Task 70 `triage_request` and `confirm_request`: implement (B) | | | ✔ |
+| 4.71.t Task 71 Request wake-ups: write failing tests (B) | | ✔ | |
 | 4.71.i Task 71 Request wake-ups: implement (B) | | | |
 | 4.72.t Task 72 Request in the Task panel: write failing tests | | | |
 | 4.72.i Task 72 Request in the Task panel: implement | | | |
