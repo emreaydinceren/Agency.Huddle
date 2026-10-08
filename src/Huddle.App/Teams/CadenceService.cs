@@ -195,7 +195,7 @@ internal sealed class CadenceService(
 
     private ProcessDocument? ReadProcess(string team)
     {
-        LibraryResult<LibraryPath> folder = folders.EnsureTeam(team);
+        LibraryResult<LibraryPath> folder = folders.FindTeam(team);
         if (folder.Value is null)
         {
             return null;

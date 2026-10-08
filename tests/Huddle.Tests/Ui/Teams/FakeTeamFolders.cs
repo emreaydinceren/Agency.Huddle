@@ -45,6 +45,9 @@ internal sealed class FakeTeamFolders : ITeamFolders
     }
 
     /// <inheritdoc />
+    public LibraryResult<LibraryPath> FindTeam(string name) => this.TeamResult;
+
+    /// <inheritdoc />
     public LibraryResult<LibraryPath> EnsureProjectIn(string team, string project)
     {
         lock (this.gate)

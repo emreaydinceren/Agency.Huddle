@@ -18,6 +18,11 @@ internal interface ITeamFolders
     /// <returns>The new Team folder's path, or the refusal reason.</returns>
     LibraryResult<LibraryPath> EnsureTeam(string name);
 
+    /// <summary>Finds the folder of a Team that already exists on disk; unlike <see cref="EnsureTeam"/> it never creates and never refuses an existing Team.</summary>
+    /// <param name="name">The Team's name.</param>
+    /// <returns>The Team folder's path, or the reason there is none.</returns>
+    LibraryResult<LibraryPath> FindTeam(string name);
+
     /// <summary>Creates <c>Teams/&lt;team&gt;/&lt;project&gt;/</c>, creating the Team folder first when the Team exists only as a Persona label.</summary>
     /// <param name="team">The Team's name, matched ignoring case.</param>
     /// <param name="project">The new Project's name.</param>

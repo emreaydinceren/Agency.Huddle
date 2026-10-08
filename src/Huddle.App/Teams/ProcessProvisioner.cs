@@ -157,7 +157,7 @@ internal sealed class ProcessProvisioner(TeamTypeCatalog types, ITeamFolders fol
 
     private string? ProcessPath(string team)
     {
-        LibraryResult<LibraryPath> folder = folders.EnsureTeam(team);
+        LibraryResult<LibraryPath> folder = folders.FindTeam(team);
         return folder.Value is null ? null : Path.Combine(folder.Value.FullPath, TeamPaths.ProcessFileName);
     }
 }

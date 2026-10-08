@@ -57,7 +57,7 @@ internal sealed class TeamOnboarding(ITeamFolders folders, IPromptSource prompts
 
     private string? ReadSteps(string team)
     {
-        LibraryResult<LibraryPath> folder = folders.EnsureTeam(team);
+        LibraryResult<LibraryPath> folder = folders.FindTeam(team);
         if (folder.Value is null)
         {
             return null;

@@ -164,6 +164,9 @@ internal sealed class DiskTeamFolders(string folder) : ITeamFolders
     }
 
     /// <inheritdoc />
+    public LibraryResult<LibraryPath> FindTeam(string name) => this.EnsureTeam(name);
+
+    /// <inheritdoc />
     public LibraryResult<LibraryPath> EnsureProjectIn(string team, string project) => this.EnsureTeam(team);
 
     /// <inheritdoc />

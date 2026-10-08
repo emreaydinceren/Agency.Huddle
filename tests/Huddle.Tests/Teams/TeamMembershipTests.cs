@@ -501,6 +501,9 @@ public sealed class TeamMembershipTests
         public LibraryResult<LibraryPath> EnsureTeam(string name) => throw new NotSupportedException();
 
         /// <inheritdoc />
+        public LibraryResult<LibraryPath> FindTeam(string name) => throw new NotSupportedException();
+
+        /// <inheritdoc />
         public LibraryResult<LibraryPath> EnsureProjectIn(string team, string project) => throw new NotSupportedException();
 
         /// <inheritdoc />

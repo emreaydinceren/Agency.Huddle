@@ -62,7 +62,7 @@
     /// <inheritdoc />
     protected override void OnParametersSet() => this.Load();
 
-    private LibraryPath? Folder => this.Folders.EnsureTeam(this.Team).Value;
+    private LibraryPath? Folder => this.Folders.FindTeam(this.Team).Value;
 
     private string? FilePath => this.Folder is { } folder ? Path.Combine(folder.FullPath, TeamPaths.ProcessFileName) : null;
 

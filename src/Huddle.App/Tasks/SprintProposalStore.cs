@@ -163,7 +163,7 @@ internal sealed class SprintProposalStore(ITeamFolders folders)
     /// <param name="team">The Team's name.</param>
     private string? ProposalsDirectory(string team)
     {
-        LibraryResult<LibraryPath> result = folders.EnsureTeam(team);
+        LibraryResult<LibraryPath> result = folders.FindTeam(team);
         return result.Succeeded && result.Value is { } path
             ? Path.Combine(path.FullPath, ProposalsFolder)
             : null;

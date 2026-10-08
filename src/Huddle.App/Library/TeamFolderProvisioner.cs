@@ -24,6 +24,12 @@ internal sealed class TeamFolderProvisioner : IHostedService, IDisposable, ITeam
 {
     private const string TeamsRootId = "teams";
 
+    /// <summary>How many times <see cref="MoveOver"/> tries before it lets the failure through.</summary>
+    private const int MoveAttempts = 10;
+
+    /// <summary>How long <see cref="MoveOver"/> waits between tries.</summary>
+    private static readonly TimeSpan MoveRetryDelay = TimeSpan.FromMilliseconds(30);
+
     private static readonly UTF8Encoding TeamFileEncoding = new(encoderShouldEmitUTF8Identifier: false);
 
     private readonly Lock teamFileGate = new();
@@ -162,6 +168,24 @@ internal sealed class TeamFolderProvisioner : IHostedService, IDisposable, ITeam
     }
 
     /// <inheritdoc/>
+    /// <remarks>Reads the disk only: a Team folder the catalog has not noticed yet is still found.</remarks>
+    public LibraryResult<LibraryPath> FindTeam(string name)
+    {
+        ArgumentNullException.ThrowIfNull(name);
+
+        if (LibraryNames.Validate(name) is not null
+            || TaskLayout.IsReservedFolderName(name)
+            || !this.resolver.TryResolve(TeamsRootId, name, out LibraryPath? teamPath, out _)
+            || teamPath.Role != LibraryNodeRole.TeamFolder
+            || !Directory.Exists(teamPath.FullPath))
+        {
+            return new LibraryResult<LibraryPath>(null, $"There is no Team named \"{name}\".");
+        }
+
+        return new LibraryResult<LibraryPath>(teamPath, null);
+    }
+
+    /// <inheritdoc/>
     /// <remarks>A Team that exists only as a Persona label first gets its folder, after the same name
     /// checks the start-up sync applies to a label; then <see cref="EnsureProject"/> creates the Project.</remarks>
     public LibraryResult<LibraryPath> EnsureProjectIn(string team, string project)
@@ -285,7 +309,7 @@ internal sealed class TeamFolderProvisioner : IHostedService, IDisposable, ITeam
             try
             {
                 File.WriteAllText(temp, updated.Compose(), TeamFileEncoding);
-                File.Move(temp, path, overwrite: true);
+                MoveOver(temp, path);
             }
             finally
             {
@@ -293,6 +317,31 @@ internal sealed class TeamFolderProvisioner : IHostedService, IDisposable, ITeam
             }
 
             return true;
+        }
+    }
+
+    /// <summary>Moves <paramref name="temp"/> over <paramref name="path"/>, retrying briefly while a reader (the catalog's watcher) still holds the target open.</summary>
+    /// <param name="temp">The finished temporary file.</param>
+    /// <param name="path">The file to replace.</param>
+    private static void MoveOver(string temp, string path)
+    {
+        for (int attempt = 1; ; attempt++)
+        {
+            try
+            {
+                File.Move(temp, path, overwrite: true);
+                return;
+            }
+            catch (IOException) when (attempt < MoveAttempts)
+            {
+                // The target is open in a reader for a moment: wait and try again.
+                Thread.Sleep(MoveRetryDelay);
+            }
+            catch (UnauthorizedAccessException) when (attempt < MoveAttempts)
+            {
+                // Windows reports a file open in a reader as access denied: wait and try again.
+                Thread.Sleep(MoveRetryDelay);
+            }
         }
     }
 

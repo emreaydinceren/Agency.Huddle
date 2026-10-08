@@ -150,7 +150,7 @@ internal sealed class ProcessGateService(ITeamCatalog teams, ITeamFolders folder
             return null;
         }
 
-        LibraryResult<LibraryPath> folder = folders.EnsureTeam(team);
+        LibraryResult<LibraryPath> folder = folders.FindTeam(team);
         if (folder.Value is null)
         {
             return null;
