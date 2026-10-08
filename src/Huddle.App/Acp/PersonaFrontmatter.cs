@@ -2,6 +2,7 @@ namespace Agency.Huddle.App.Acp;
 
 using System.Diagnostics.CodeAnalysis;
 using System.Text;
+using Agency.Huddle.App.Teams;
 using Agency.Huddle.Contracts;
 
 /// <summary>
@@ -35,6 +36,8 @@ internal static class PersonaFrontmatter
     private const string SkillsKey = "Skills";
     private const string BuiltinKey = "_builtin";
     private const string WatchesKey = "Watches";
+    private const string RoleKey = "_role";
+    private const string PacksKey = "_packs";
 
     /// <summary>
     /// Frontmatter keys excluded from <see cref="ComposeJobDescription"/> beyond the <c>_</c>-prefix
@@ -117,7 +120,9 @@ internal static class PersonaFrontmatter
             || !TryGetField(fields, AdapterKey, out var rawAdapter, out error)
             || !TryGetField(fields, SkillsKey, out var rawSkills, out error)
             || !TryGetField(fields, BuiltinKey, out var rawBuiltin, out error)
-            || !TryGetField(fields, WatchesKey, out var rawWatches, out error))
+            || !TryGetField(fields, WatchesKey, out var rawWatches, out error)
+            || !TryGetField(fields, RoleKey, out var rawRole, out error)
+            || !TryGetField(fields, PacksKey, out var rawPacks, out error))
         {
             return false;
         }
@@ -144,7 +149,17 @@ internal static class PersonaFrontmatter
         var adapter = string.IsNullOrWhiteSpace(rawAdapter) ? null : rawAdapter;
         var builtin = string.IsNullOrWhiteSpace(rawBuiltin) ? null : rawBuiltin.Trim();
 
-        identity = new PersonaIdentity(name, title, alias, SplitList(rawTeams), adapter, SplitList(rawSkills), builtin, SplitList(rawWatches));
+        var role = RoleRef.TryParse(rawRole, out var parsedRole) ? parsedRole : null;
+        var packs = new List<VersionedRef>();
+        foreach (var rawPack in SplitList(rawPacks))
+        {
+            if (VersionedRef.TryParse(rawPack, out var pack))
+            {
+                packs.Add(pack);
+            }
+        }
+
+        identity = new PersonaIdentity(name, title, alias, SplitList(rawTeams), adapter, SplitList(rawSkills), builtin, SplitList(rawWatches), role, packs);
         error = string.Empty;
         return true;
     }
@@ -208,6 +223,16 @@ internal static class PersonaFrontmatter
         if (identity.Builtin is not null)
         {
             lines.Add($"_builtin: {QuoteScalar(identity.Builtin)}");
+        }
+
+        if (identity.Role is not null)
+        {
+            lines.Add($"_role: {QuoteScalar(identity.Role.ToString())}");
+        }
+
+        if (identity.Packs is { Count: > 0 })
+        {
+            lines.Add($"_packs: [{string.Join(", ", identity.Packs.Select(pack => QuoteScalar(pack.ToString())))}]");
         }
 
         lines.Add(FrontmatterDelimiter);
