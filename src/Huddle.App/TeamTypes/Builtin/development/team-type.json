@@ -4,6 +4,7 @@
   "version": "1.0.0",
   "displayName": "Development Team",
   "order": 10,
+  "retroRole": "retro-agent",
   "workspace": { "kind": "repo", "label": "Repository", "required": true },
   "coverage": [ "generate", "challenge", "verify" ],
   "presets": [
@@ -102,6 +103,18 @@
       "model": { "tier": "fast" },
       "packs": [ "msbuild-authoring" ],
       "suggestedNames": [ "Eli", "Yara", "Bruno", "Mina" ]
+    },
+    {
+      "id": "retro-agent",
+      "title": "Retro Agent",
+      "candidate": "candidates/retro-agent.md",
+      "required": false,
+      "maxPerTeam": 1,
+      "model": { "tier": "strongest", "differentVendorFrom": [ "development-manager" ] },
+      "skills": [
+        { "name": "retrospective", "source": "builtin", "path": "retrospective" }
+      ],
+      "suggestedNames": [ "Wren", "Ada", "Iris", "Cal" ]
     }
   ]
 }

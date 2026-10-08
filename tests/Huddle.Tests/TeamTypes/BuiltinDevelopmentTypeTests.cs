@@ -8,6 +8,17 @@ public sealed class BuiltinDevelopmentTypeTests
 {
     private const string TypeFolder = "TeamTypes/Builtin/development/";
 
+    private static readonly string[] FullPresetRoles =
+    [
+        "development-manager",
+        "tech-lead",
+        "developer",
+        "reviewer",
+        "security-engineer",
+        "qa-engineer",
+        "release-engineer",
+    ];
+
     private static readonly string[] ExpectedRoles =
     [
         "development-manager",
@@ -17,6 +28,7 @@ public sealed class BuiltinDevelopmentTypeTests
         "security-engineer",
         "qa-engineer",
         "release-engineer",
+        "retro-agent",
     ];
 
     /// <summary>Reads the embedded manifest and parses it with the one set of team-type JSON options.</summary>
@@ -67,9 +79,9 @@ public sealed class BuiltinDevelopmentTypeTests
         Assert.Equal(["generate", "challenge", "verify"], manifest.Coverage);
     }
 
-    /// <summary>The manifest declares exactly the seven TT-7 roles, in the plan's order.</summary>
+    /// <summary>The manifest declares the seven TT-7 roles in the plan's order, then the optional Retro agent (RT-1).</summary>
     [Fact]
-    public void Manifest_Roles_AreTheSevenTT7Roles()
+    public void Manifest_Roles_AreTheSevenTT7RolesThenRetroAgent()
     {
         TeamTypeManifest manifest = LoadManifest();
 
@@ -132,7 +144,7 @@ public sealed class BuiltinDevelopmentTypeTests
         Assert.Equal("Small", small.Label);
         Assert.Equal(["development-manager", "developer", "reviewer", "qa-engineer"], small.Roles);
         Assert.Equal("Full", full.Label);
-        Assert.Equal(ExpectedRoles, full.Roles);
+        Assert.Equal(FullPresetRoles, full.Roles);
         Assert.All(manifest.Presets.SelectMany(static p => p.Roles), role => Assert.Contains(role, ExpectedRoles));
     }
 
