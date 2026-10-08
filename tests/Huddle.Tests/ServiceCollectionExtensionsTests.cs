@@ -115,6 +115,16 @@ public sealed class ServiceCollectionExtensionsTests
         Assert.NotNull(provider.GetRequiredService<Agency.Huddle.App.Teams.HireService>());
     }
 
+    /// <summary>The team duplicator resolves from the container.</summary>
+    [Fact]
+    public void AddTeamServices_ResolvesTeamDuplicator()
+    {
+        using TempDataDir dataDir = new();
+        using ServiceProvider provider = BuildTeamProvider(dataDir);
+
+        Assert.NotNull(provider.GetRequiredService<Agency.Huddle.App.Teams.TeamDuplicator>());
+    }
+
     /// <summary>The skill installer resolves to the built-in installer.</summary>
     [Fact]
     public void AddTeamServices_ResolvesSkillInstaller()

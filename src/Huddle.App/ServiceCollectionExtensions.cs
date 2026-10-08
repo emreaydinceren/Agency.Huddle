@@ -253,6 +253,7 @@ public static class ServiceCollectionExtensions
         services.AddSingleton<Agency.Huddle.App.Teams.HireService>();
         services.AddSingleton<Agency.Huddle.App.Teams.IHireContext, Agency.Huddle.App.Teams.HireContext>();
         services.AddSingleton<Agency.Huddle.App.Teams.RoleHirer>();
+        services.AddSingleton<Agency.Huddle.App.Teams.TeamDuplicator>();
 
         // No interface: nothing needs to substitute this, and CSharpPrinciples.md says not to add
         // abstraction a feature has not asked for. This is state the app writes (a chosen theme, a
