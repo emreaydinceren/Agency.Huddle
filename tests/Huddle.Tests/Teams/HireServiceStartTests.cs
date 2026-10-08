@@ -4,6 +4,7 @@ using Agency.Huddle.App.Avatars;
 using Agency.Huddle.App.Data;
 using Agency.Huddle.App.TeamTypes;
 using Agency.Huddle.App.Teams;
+using Agency.Huddle.Tests.Acp.Fakes;
 using Agency.Huddle.Tests.Teammates;
 using Microsoft.Extensions.Logging.Abstractions;
 
@@ -80,7 +81,7 @@ public sealed class HireServiceStartTests
           ] }
         """;
 
-    private static HireService Create(TempDataDir dir, out PersonaStore personas, out FakeSkillInstaller installer, out FakeStartGate gate, TeamOptions? options = null, Func<TeamTypeCatalog, ProcessProvisioner>? makeProvisioner = null)
+    private static HireService Create(TempDataDir dir, out PersonaStore personas, out FakeSkillInstaller installer, out FakeStartGate gate, TeamOptions? options = null, Func<TeamTypeCatalog, ProcessProvisioner>? makeProvisioner = null, Func<TeamTypeCatalog, TeamOnboarding>? makeOnboarding = null)
     {
         personas = new(new TeammatePaths(dir.Options()), new PersonaModelStore(dir.Options()), new PersonaEffortStore(dir.Options()), new PersonaWorkModeStore(dir.Options()), NullLogger<PersonaStore>.Instance);
         Dictionary<string, string> builtins = new(StringComparer.Ordinal)
@@ -100,7 +101,7 @@ public sealed class HireServiceStartTests
         AvatarStore avatars = new(dir.Options(), NullLogger<AvatarStore>.Instance);
         installer = new FakeSkillInstaller();
         gate = new FakeStartGate();
-        return new HireService(personas, types, packs, avatars, harness.Guard, installer, gate, NullLogger<HireService>.Instance, makeProvisioner?.Invoke(types));
+        return new HireService(personas, types, packs, avatars, harness.Guard, installer, gate, NullLogger<HireService>.Instance, makeProvisioner?.Invoke(types), makeOnboarding?.Invoke(types));
     }
 
     private static HireRequest Request(string name, string roleId, CardReadiness readiness = CardReadiness.Ready)
@@ -454,5 +455,102 @@ public sealed class HireServiceStartTests
         Assert.False(result.Ok);
         Assert.NotNull(result.Error);
         Assert.Equal(["Lee"], result.Started);
+    }
+
+    private const string ProcessWithOnboarding = "# Process\n\n## Onboarding\n\n- Read the workspace.\n- Run the tests.\n";
+
+    /// <summary>The manager's first Turn is the onboarding prompt with the process's steps, posted once the manager runs.</summary>
+    [Fact]
+    public async Task StartTeamAsync_ProcessWithOnboarding_PostsStepsToManagerOnce()
+    {
+        CancellationToken ct = TestContext.Current.CancellationToken;
+        using TempDataDir dir = new();
+        using TempDataDir teamFolder = new();
+        File.WriteAllText(Path.Combine(teamFolder.Path, TeamPaths.ProcessFileName), ProcessWithOnboarding);
+        DiskTeamFolders folders = new(teamFolder.Path);
+        FakeOnboardingPoster poster = new();
+        HireService service = Create(dir, out _, out _, out _, makeOnboarding: _ => new TeamOnboarding(folders, new FakePromptSource(), poster));
+
+        StartTeamResult result = await service.StartTeamAsync(TeamName, [Request("Lee", "lead"), Request("Dan", "dev")], ct);
+
+        Assert.True(result.Ok);
+        (string manager, string text) = Assert.Single(poster.Posts);
+        Assert.Equal("Lee", manager);
+        Assert.Equal("Your Team has just started. Work through these onboarding steps, then tell the Human what you found and propose a starter Task:\n\n- Read the workspace.\n- Run the tests.", text);
+        Assert.True(folders.File?.Onboarded);
+    }
+
+    /// <summary>A Team whose file already carries the marker is not onboarded again after a restart.</summary>
+    [Fact]
+    public async Task StartTeamAsync_MarkerPresent_PostsNothing()
+    {
+        CancellationToken ct = TestContext.Current.CancellationToken;
+        using TempDataDir dir = new();
+        using TempDataDir teamFolder = new();
+        File.WriteAllText(Path.Combine(teamFolder.Path, TeamPaths.ProcessFileName), ProcessWithOnboarding);
+        DiskTeamFolders folders = new(teamFolder.Path);
+        FakeOnboardingPoster poster = new();
+        HireService first = Create(dir, out _, out _, out _, makeOnboarding: _ => new TeamOnboarding(folders, new FakePromptSource(), poster));
+        _ = await first.StartTeamAsync(TeamName, [Request("Lee", "lead")], ct);
+        using TempDataDir secondDir = new();
+        HireService second = Create(secondDir, out _, out _, out _, makeOnboarding: _ => new TeamOnboarding(folders, new FakePromptSource(), poster));
+
+        StartTeamResult result = await second.StartTeamAsync(TeamName, [Request("Lee", "lead")], ct);
+
+        Assert.True(result.Ok);
+        Assert.Single(poster.Posts);
+    }
+
+    /// <summary>A process with no onboarding steps posts nothing and leaves the marker unset.</summary>
+    [Fact]
+    public async Task StartTeamAsync_ProcessWithoutOnboarding_PostsNothing()
+    {
+        CancellationToken ct = TestContext.Current.CancellationToken;
+        using TempDataDir dir = new();
+        using TempDataDir teamFolder = new();
+        File.WriteAllText(Path.Combine(teamFolder.Path, TeamPaths.ProcessFileName), "# Process\n");
+        DiskTeamFolders folders = new(teamFolder.Path);
+        FakeOnboardingPoster poster = new();
+        HireService service = Create(dir, out _, out _, out _, makeOnboarding: _ => new TeamOnboarding(folders, new FakePromptSource(), poster));
+
+        _ = await service.StartTeamAsync(TeamName, [Request("Lee", "lead")], ct);
+
+        Assert.Empty(poster.Posts);
+        Assert.False(folders.File?.Onboarded);
+    }
+
+    /// <summary>A poster that cannot reach the manager leaves the marker unset, so the next start tries again.</summary>
+    [Fact]
+    public async Task StartTeamAsync_PostFails_MarkerStaysUnset()
+    {
+        CancellationToken ct = TestContext.Current.CancellationToken;
+        using TempDataDir dir = new();
+        using TempDataDir teamFolder = new();
+        File.WriteAllText(Path.Combine(teamFolder.Path, TeamPaths.ProcessFileName), ProcessWithOnboarding);
+        DiskTeamFolders folders = new(teamFolder.Path);
+        FakeOnboardingPoster poster = new() { Delivers = false };
+        HireService service = Create(dir, out _, out _, out _, makeOnboarding: _ => new TeamOnboarding(folders, new FakePromptSource(), poster));
+
+        StartTeamResult result = await service.StartTeamAsync(TeamName, [Request("Lee", "lead")], ct);
+
+        Assert.True(result.Ok);
+        Assert.False(folders.File?.Onboarded);
+    }
+}
+
+/// <summary>An onboarding poster that records what it was asked to post.</summary>
+internal sealed class FakeOnboardingPoster : IOnboardingPoster
+{
+    /// <summary>Gets the posts, each the manager's name and the text.</summary>
+    public List<(string Manager, string Text)> Posts { get; } = [];
+
+    /// <summary>Gets or sets whether the post reaches the manager.</summary>
+    public bool Delivers { get; set; } = true;
+
+    /// <inheritdoc />
+    public Task<bool> PostAsync(string managerName, string text, CancellationToken ct)
+    {
+        this.Posts.Add((managerName, text));
+        return Task.FromResult(this.Delivers);
     }
 }

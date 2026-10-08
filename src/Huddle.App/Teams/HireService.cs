@@ -60,6 +60,7 @@ internal sealed record StartTeamResult(bool Ok, string? Error, IReadOnlyList<str
 /// <param name="startGate">Tells when the manager is running.</param>
 /// <param name="logger">Receives post-write failures.</param>
 /// <param name="processProvisioner">Gives a started Team the type's default process when it has none; <see langword="null"/> skips that step.</param>
+/// <param name="onboarding">Seeds the running manager's first Turn with the process's onboarding steps, once per Team; <see langword="null"/> skips that step.</param>
 internal sealed class HireService(
     PersonaStore personas,
     TeamTypeCatalog types,
@@ -69,7 +70,8 @@ internal sealed class HireService(
     ISkillInstaller installer,
     IPersonaStartGate startGate,
     ILogger<HireService> logger,
-    ProcessProvisioner? processProvisioner = null)
+    ProcessProvisioner? processProvisioner = null,
+    TeamOnboarding? onboarding = null)
 {
     /// <summary>How long the manager gets to report running before the start stops.</summary>
     internal static readonly TimeSpan ManagerStartTimeout = TimeSpan.FromSeconds(60);
@@ -127,6 +129,11 @@ internal sealed class HireService(
         if (!running)
         {
             return HireService.Stop($"{manager.Card.Name} did not start in time.", started);
+        }
+
+        if (onboarding is not null)
+        {
+            _ = await onboarding.PostIfDueAsync(team, manager.Card.Name, ct).ConfigureAwait(false);
         }
 
         foreach (HireRequest hire in hires.Where(h => !ReferenceEquals(h, manager)))

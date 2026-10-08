@@ -22,12 +22,19 @@ internal sealed record TeamFile(VersionedRef TeamType, string? Manager, string? 
     private const string WorkspaceKey = "workspace";
     private const string OwnsKey = "owns";
     private const string ProcessKey = "process";
+    private const string OnboardedKey = "onboarded";
 
     /// <summary>
     /// Frontmatter lines whose key this type does not know, in file order and verbatim. They are
     /// written back by <see cref="Compose"/> so a hand edit survives a rewrite.
     /// </summary>
     public IReadOnlyList<string> UnknownLines { get; init; } = [];
+
+    /// <summary>
+    /// Whether the manager has been sent the onboarding prompt (PR-5). Stored as an <c>onboarded: true</c>
+    /// line so a restart does not repeat the post.
+    /// </summary>
+    public bool Onboarded { get; init; }
 
     /// <summary>Parses the text of a <c>_team.md</c> file.</summary>
     /// <param name="text">The file text, with LF or CRLF line endings.</param>
@@ -106,6 +113,7 @@ internal sealed record TeamFile(VersionedRef TeamType, string? Manager, string? 
             notes)
         {
             UnknownLines = unknown,
+            Onboarded = string.Equals(values.GetValueOrDefault(OnboardedKey), "true", StringComparison.OrdinalIgnoreCase),
         };
         return true;
     }
@@ -133,6 +141,11 @@ internal sealed record TeamFile(VersionedRef TeamType, string? Manager, string? 
         }
 
         AppendScalar(builder, ProcessKey, this.Process);
+        if (this.Onboarded)
+        {
+            builder.Append(OnboardedKey).Append(": true\n");
+        }
+
         foreach (string line in this.UnknownLines)
         {
             builder.Append(line).Append('\n');
@@ -148,7 +161,8 @@ internal sealed record TeamFile(VersionedRef TeamType, string? Manager, string? 
         || string.Equals(key, ManagerKey, StringComparison.OrdinalIgnoreCase)
         || string.Equals(key, WorkspaceKey, StringComparison.OrdinalIgnoreCase)
         || string.Equals(key, OwnsKey, StringComparison.OrdinalIgnoreCase)
-        || string.Equals(key, ProcessKey, StringComparison.OrdinalIgnoreCase);
+        || string.Equals(key, ProcessKey, StringComparison.OrdinalIgnoreCase)
+        || string.Equals(key, OnboardedKey, StringComparison.OrdinalIgnoreCase);
 
     private static string? NullIfBlank(string? value) => string.IsNullOrWhiteSpace(value) ? null : value;
 

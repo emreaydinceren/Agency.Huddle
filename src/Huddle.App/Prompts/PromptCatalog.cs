@@ -159,6 +159,49 @@ internal static class PromptCatalog
             Timing: PromptTiming.NextSession),
 
         new PromptDefinition(
+            Key: "systemPrompt.processBlockManager",
+            Label: "Process block (manager)",
+            HelperText:
+                "Gives a Team's manager the Team's whole Process.md, read afresh at each session start. " +
+                "Must keep {{process}}, where the document text is substituted in.",
+            Default:
+                """
+                This is your Team's process. Follow it and keep it current.
+
+                {{process}}
+                """,
+            Placeholders: ["{{process}}"],
+            RequiredPlaceholders: ["{{process}}"],
+            Timing: PromptTiming.NextSession),
+
+        new PromptDefinition(
+            Key: "systemPrompt.processBlockMember",
+            Label: "Process block (member)",
+            HelperText:
+                "Points every other member of a Team that has a Process.md at it. Must keep {{path}}, " +
+                "where the document's Library path is substituted in.",
+            Default: "Your Team follows a written process. Read it before you start work: {{path}}",
+            Placeholders: ["{{path}}"],
+            RequiredPlaceholders: ["{{path}}"],
+            Timing: PromptTiming.NextSession),
+
+        new PromptDefinition(
+            Key: "turn.onboarding",
+            Label: "Onboarding turn",
+            HelperText:
+                "Posted to the manager as its first Turn after the Team first starts. Must keep {{steps}}, " +
+                "where the steps of the process's Onboarding section are substituted in.",
+            Default:
+                """
+                Your Team has just started. Work through these onboarding steps, then tell the Human what you found and propose a starter Task:
+
+                {{steps}}
+                """,
+            Placeholders: ["{{steps}}"],
+            RequiredPlaceholders: ["{{steps}}"],
+            Timing: PromptTiming.Live),
+
+        new PromptDefinition(
             Key: "systemPrompt.skills",
             Label: "Skills block",
             HelperText:

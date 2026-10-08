@@ -172,6 +172,44 @@ public sealed class PromptGoldenTests
         AssertMatchesGolden("systemPrompt.hiredMember.txt", actual);
     }
 
+    /// <summary>Pins the composed prompt of a Team's manager: the role block followed by the whole process (Task 58, PR-4).</summary>
+    [Fact]
+    public void SystemPrompt_HiredManagerWithProcess_MatchesGolden()
+    {
+        var persona = new Persona("Grace", "You are Grace.");
+        var roleBlock = new RoleBlockInput(
+            "Grace",
+            "Lead",
+            "Apollo",
+            [new ConsultLine("Ada", "Developer", "Ask about code.")],
+            [],
+            new ProcessBlockInput(true, "# Process\n\n## Stages\n\n- Plan, build, review."));
+
+        var actual = SystemPromptComposer.Compose(
+            persona, new FakePromptSource(), "mcp__team__get_help", ToolNames, [], string.Empty, null, SessionScope.Shared, roleBlock: roleBlock);
+
+        AssertMatchesGolden("systemPrompt.managerProcess.txt", actual);
+    }
+
+    /// <summary>Pins the composed prompt of another member: the role block followed by one line with the process path (Task 58, PR-4).</summary>
+    [Fact]
+    public void SystemPrompt_HiredMemberWithProcess_MatchesGolden()
+    {
+        var persona = new Persona("Ada", "You are Ada.");
+        var roleBlock = new RoleBlockInput(
+            "Ada",
+            "Developer",
+            "Apollo",
+            [new ConsultLine("Grace", "Lead", "Ask about scope.")],
+            [],
+            new ProcessBlockInput(false, "Teams/Apollo/Process.md"));
+
+        var actual = SystemPromptComposer.Compose(
+            persona, new FakePromptSource(), "mcp__team__get_help", ToolNames, [], string.Empty, null, SessionScope.Shared, roleBlock: roleBlock);
+
+        AssertMatchesGolden("systemPrompt.memberProcess.txt", actual);
+    }
+
     /// <summary>
     /// Pins that <see cref="SystemPromptComposer.Compose(Persona, IPromptSource, string, IReadOnlyList{string}, IReadOnlyList{Skill}, string)"/>'s Skills overload, called with an empty
     /// Skill list, produces exactly today's <c>systemPrompt.txt</c> golden (Spec §6.4: the skills block

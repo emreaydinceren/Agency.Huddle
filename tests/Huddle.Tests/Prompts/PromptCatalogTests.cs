@@ -33,7 +33,22 @@ public sealed partial class PromptCatalogTests
     [Fact]
     public void All_HasExactlyThirtySevenPrompts()
     {
-        Assert.Equal(72, PromptCatalog.All.Count);
+        Assert.Equal(75, PromptCatalog.All.Count);
+    }
+
+    /// <summary>Task 58 (PR-4, PR-5): the process blocks and the onboarding turn take and require their one placeholder and carry no tool prefix.</summary>
+    [Theory]
+    [InlineData("systemPrompt.processBlockManager", "{{process}}", PromptTiming.NextSession)]
+    [InlineData("systemPrompt.processBlockMember", "{{path}}", PromptTiming.NextSession)]
+    [InlineData("turn.onboarding", "{{steps}}", PromptTiming.Live)]
+    public void ProcessPrompts_TakeTheirPlaceholder(string key, string placeholder, PromptTiming timing)
+    {
+        var prompt = PromptCatalog.Get(key);
+
+        Assert.Equal(timing, prompt.Timing);
+        Assert.Equal([placeholder], prompt.Placeholders);
+        Assert.Equal([placeholder], prompt.RequiredPlaceholders);
+        Assert.False(prompt.Default.Contains("mcp__team__", StringComparison.Ordinal));
     }
 
     /// <summary>

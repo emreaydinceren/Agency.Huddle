@@ -250,6 +250,12 @@ internal static class SystemPromptComposer
         if (roleBlock is not null)
         {
             parts.Add(BuildRoleBlock(prompts, roleBlock));
+            if (roleBlock.Process is { } process)
+            {
+                parts.Add(process.IsManager
+                    ? prompts.Render("systemPrompt.processBlockManager", new Dictionary<string, string> { ["{{process}}"] = process.Content })
+                    : prompts.Render("systemPrompt.processBlockMember", new Dictionary<string, string> { ["{{path}}"] = process.Content }));
+            }
         }
 
         if (skills.Count > 0)

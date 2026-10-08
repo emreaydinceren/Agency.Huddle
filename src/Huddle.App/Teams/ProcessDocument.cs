@@ -202,6 +202,39 @@ internal sealed record ProcessDocument(
         return string.Join('\n', lines);
     }
 
+    /// <summary>Reads the lines of the <c>## Onboarding</c> section (PR-5), up to the next heading.</summary>
+    /// <param name="text">The document text, with LF or CRLF line endings.</param>
+    /// <returns>The section's trimmed lines joined with LF, or <see langword="null"/> when the section is absent or empty.</returns>
+    public static string? OnboardingSteps(string text)
+    {
+        ArgumentNullException.ThrowIfNull(text);
+
+        List<string> steps = [];
+        bool inSection = false;
+        foreach (string raw in text.Replace("\r\n", "\n", StringComparison.Ordinal).Split('\n'))
+        {
+            string line = raw.TrimEnd();
+            if (line.StartsWith('#'))
+            {
+                if (inSection)
+                {
+                    break;
+                }
+
+                inSection = string.Equals(line.TrimStart('#').Trim(), "Onboarding", StringComparison.OrdinalIgnoreCase);
+                continue;
+            }
+
+            if (inSection)
+            {
+                steps.Add(line);
+            }
+        }
+
+        string joined = string.Join('\n', steps).Trim();
+        return joined.Length == 0 ? null : joined;
+    }
+
     private static string QuotedId(GateId gate) => string.Concat("'", ToId(gate), "'");
 
     /// <summary>Returns the frontmatter id of a gate.</summary>

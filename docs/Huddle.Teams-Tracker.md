@@ -2,7 +2,7 @@
 
 Status of the Teams delivery in [engineering/teams-plan.md](engineering/teams-plan.md). Each task is a `.t` (failing tests first) and `.i` (implementation) pair; a task's `.i` cannot be Done before its `.t`. Ids are `<phase>.<task>.<t|i>`, the form `agents/scripts/Set-Tracker.ps1` updates. `(H)` marks a Haiku task, `(B)` a boundary task that also gets an Opus architect review.
 
-**Status:** 114 of 170 tasks Done · 3 of 6 retrospectives done · last updated 2026-10-08.
+**Status:** 116 of 170 tasks Done · 3 of 6 retrospectives done · last updated 2026-10-08.
 
 | **Deliverable / Task** | **Active** | **In Progress** | **Done** |
 |---|---|---|---|
@@ -127,9 +127,9 @@ Status of the Teams delivery in [engineering/teams-plan.md](engineering/teams-pl
 | 3.56.i Task 56 ProcessProvisioner: implement | | | ✔ |
 | 3.57.t Task 57 Process step and Process view: write failing tests | | | ✔ |
 | 3.57.i Task 57 Process step and Process view: implement | | | ✔ |
-| 3.58.t Task 58 Process block and onboarding seed: write failing tests | | ✔ | |
-| 3.58.i Task 58 Process block and onboarding seed: implement | | | |
-| 3.59.t Task 59 Wake the manager (OR-2): write failing tests (B) | | | |
+| 3.58.t Task 58 Process block and onboarding seed: write failing tests | | | ✔ |
+| 3.58.i Task 58 Process block and onboarding seed: implement | | | ✔ |
+| 3.59.t Task 59 Wake the manager (OR-2): write failing tests (B) | | ✔ | |
 | 3.59.i Task 59 Wake the manager (OR-2): implement (B) | | | |
 | 3.60.t Task 60 Wake blocked Tasks (RQ-6): write failing tests (B) | | | |
 | 3.60.i Task 60 Wake blocked Tasks (RQ-6): implement (B) | | | |
