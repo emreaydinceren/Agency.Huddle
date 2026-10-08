@@ -346,4 +346,151 @@ public sealed class SkillStoreTests
         Assert.Empty(resolution.Skills);
         Assert.Empty(resolution.Warnings);
     }
+
+    private const string ImportedName = "imported-skill";
+
+    private static string WriteImportedSkill(TempDataDir dataDir, bool withSource)
+    {
+        string folder = Path.Combine(dataDir.Path, "Skills", ImportedName);
+        Directory.CreateDirectory(Path.Combine(folder, "scripts"));
+        Directory.CreateDirectory(Path.Combine(folder, "refs"));
+        File.WriteAllText(
+            Path.Combine(folder, "SKILL.md"),
+            "---\nname: imported-skill\ndescription: An imported skill with scripts.\n---\n\n# Imported\n");
+        File.WriteAllText(Path.Combine(folder, "scripts", "x.ps1"), "Write-Host 'hi'\n");
+        File.WriteAllText(Path.Combine(folder, "refs", "a.md"), "# Reference A\n");
+        if (withSource)
+        {
+            SkillProvenance provenance = new(
+                "https://github.com/acme/skills",
+                "skills/imported-skill",
+                "0123456789abcdef0123456789abcdef01234567",
+                SkillFolderHash.ComputeFolder(folder),
+                "acme",
+                "MIT",
+                new DateTimeOffset(2026, 10, 1, 12, 0, 0, TimeSpan.Zero));
+            provenance.Write(folder);
+        }
+
+        return folder;
+    }
+
+    private static async Task EditAndWaitAsync(SkillStore store, string file, string text)
+    {
+        TaskCompletionSource changed = new(TaskCreationOptions.RunContinuationsAsynchronously);
+        void Handler()
+        {
+            changed.TrySetResult();
+        }
+
+        store.SkillsChanged += Handler;
+        try
+        {
+            File.WriteAllText(file, text);
+            await changed.Task.WaitAsync(TimeSpan.FromSeconds(10), TestContext.Current.CancellationToken);
+        }
+        finally
+        {
+            store.SkillsChanged -= Handler;
+        }
+    }
+
+    /// <summary>A skill folder with a valid <c>.source.json</c> keeps its scripts and sub-folder files, and exposes its provenance.</summary>
+    [Fact]
+    public void Get_ImportedSkillWithSubfolders_IsAcceptedWithAllFiles()
+    {
+        using TempDataDir dataDir = new();
+        WriteImportedSkill(dataDir, withSource: true);
+        using SkillStore store = new(dataDir.Options(), NullLogger<SkillStore>.Instance);
+
+        Skill? skill = store.Get(ImportedName);
+
+        Assert.NotNull(skill);
+        Assert.Equal(["SKILL.md", "refs/a.md", "scripts/x.ps1"], skill.Files);
+        Assert.NotNull(skill.Provenance);
+        Assert.Equal("acme", skill.Provenance.Publisher);
+        Assert.False(skill.ModifiedLocally);
+    }
+
+    /// <summary>The same layout without <c>.source.json</c> keeps the flat <c>.md</c> rule: only <c>SKILL.md</c> loads and the sub-folders are reported.</summary>
+    [Fact]
+    public void Get_SameLayoutWithoutSource_StaysFlat()
+    {
+        using TempDataDir dataDir = new();
+        WriteImportedSkill(dataDir, withSource: false);
+        using SkillStore store = new(dataDir.Options(), NullLogger<SkillStore>.Instance);
+
+        Skill? skill = store.Get(ImportedName);
+
+        Assert.NotNull(skill);
+        Assert.Equal(["SKILL.md"], skill.Files);
+        Assert.Null(skill.Provenance);
+        Assert.False(skill.ModifiedLocally);
+        Assert.Contains(
+            new SkillIssue(
+                ImportedName,
+                "'scripts' is a sub-folder inside 'imported-skill'; Skill files are flat, so it and everything inside it are ignored.",
+                SkillIssueSeverity.Info),
+            store.Issues);
+    }
+
+    /// <summary>Editing an imported file flips <see cref="Skill.ModifiedLocally"/> on, and restoring the text flips it back off.</summary>
+    [Fact]
+    public async Task ModifiedLocally_EditThenRestore_FlipsAndFlipsBack()
+    {
+        using TempDataDir dataDir = new();
+        string folder = WriteImportedSkill(dataDir, withSource: true);
+        using SkillStore store = new(dataDir.Options(), NullLogger<SkillStore>.Instance);
+        string script = Path.Combine(folder, "scripts", "x.ps1");
+
+        await EditAndWaitAsync(store, script, "Write-Host 'changed'\n");
+        bool modified = store.Get(ImportedName)?.ModifiedLocally ?? false;
+        await EditAndWaitAsync(store, script, "Write-Host 'hi'\n");
+        bool restored = store.Get(ImportedName)?.ModifiedLocally ?? true;
+
+        Assert.True(modified);
+        Assert.False(restored);
+    }
+
+    /// <summary>A relative path with <c>/</c> separators reads a sub-folder file; a <c>..</c> path and an unknown path return null.</summary>
+    [Fact]
+    public void ReadFile_RelativePath_ReadsSubfolderFileAndRejectsTraversal()
+    {
+        using TempDataDir dataDir = new();
+        WriteImportedSkill(dataDir, withSource: true);
+        File.WriteAllText(Path.Combine(dataDir.Path, "Skills", "secret.md"), "secret");
+        using SkillStore store = new(dataDir.Options(), NullLogger<SkillStore>.Instance);
+
+        string? inside = store.ReadFile(ImportedName, "refs/a.md");
+        string? script = store.ReadFile(ImportedName, "scripts/x.ps1");
+        string? traversal = store.ReadFile(ImportedName, "../secret.md");
+        string? nested = store.ReadFile(ImportedName, "refs/../../secret.md");
+
+        Assert.Equal("# Reference A\n", inside);
+        Assert.Equal("Write-Host 'hi'\n", script);
+        Assert.Null(traversal);
+        Assert.Null(nested);
+    }
+
+    /// <summary>A provenance-backed folder over 200 files is an Error issue; at 200 it is accepted.</summary>
+    [Fact]
+    public void Validate_ImportedFolderOver200Files_IsAnError()
+    {
+        Dictionary<string, string> files = new(StringComparer.Ordinal)
+        {
+            ["SKILL.md"] = "---\nname: big\ndescription: Big.\n---\n",
+        };
+        for (int index = 0; index < 199; index++)
+        {
+            files[$"refs/f{index}.md"] = "x";
+        }
+
+        SkillValidation atLimit = SkillValidator.Validate("big", files, allowSupportingFiles: true);
+        files["refs/one-more.md"] = "x";
+        SkillValidation overLimit = SkillValidator.Validate("big", files, allowSupportingFiles: true);
+
+        Assert.False(atLimit.HasErrors);
+        Assert.Contains(overLimit.Issues, issue => issue.Severity == SkillIssueSeverity.Error);
+        Assert.Equal("'big' has 201 files; an imported Skill may have no more than 200 files.", overLimit.Issues[0].Message);
+    }
 }
