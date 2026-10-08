@@ -334,6 +334,7 @@ public sealed class TeamCheckBarViewTests
             ctx.Services.AddSingleton(this.Personas);
             ctx.Services.AddSingleton(this.Hire);
             ctx.Services.AddSingleton<IHireContext>(this.Context);
+            ctx.Services.AddSingleton(new ProcessProvisioner(this.Types, this.Folders));
             return ctx;
         }
 

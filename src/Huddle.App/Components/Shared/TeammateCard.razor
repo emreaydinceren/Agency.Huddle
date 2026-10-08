@@ -376,6 +376,12 @@
                 </MudStack>
             }
 
+            @* PR-2: a manager's Complete Setup panel adds the Process step. *@
+            @if (this.managedTeam is { } processTeam)
+            {
+                <ProcessStep Team="@processTeam" />
+            }
+
             @* MS-5: too many skills, or two sharing a catalog Sub Category. *@
             @foreach (var warning in this.SetupWarnings.Skills)
             {
@@ -1559,7 +1565,17 @@
         {
             this.rolePacks = this.Services.GetService<SkillPackStore>()?.ForRole(role.RoleId) ?? [];
         }
+
+        if (this.roleSpec is { Manager: true } && this.Services.GetService<Agency.Huddle.App.Library.ITeamFolders>() is { } folders)
+        {
+            this.managedTeam = this.Teams
+                .Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
+                .FirstOrDefault(team => string.Equals(folders.ReadTeamFile(team)?.Manager, this.Name, StringComparison.OrdinalIgnoreCase));
+        }
     }
+
+    /// <summary>The Team this member manages, or <see langword="null"/> when the member's role is not the manager role (PR-2).</summary>
+    private string? managedTeam;
 
     /// <summary>The packs recorded in <see cref="text"/> (<c>_packs</c>).</summary>
     private IReadOnlyList<Agency.Huddle.App.Teams.VersionedRef> ActivePacks =>

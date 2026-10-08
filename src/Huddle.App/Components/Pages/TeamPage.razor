@@ -3,11 +3,13 @@
 @page "/teams/{Team}/projects/{Project}"
 @page "/teams/{Team}/projects/{Project}/{Tab}"
 @implements IDisposable
+@using Agency.Huddle.App.Library
 @using Microsoft.Extensions.Options
 @inject ITeamCatalog Catalog
 @inject IOptions<TeamOptions> TeamConfig
 @inject NavigationManager Navigation
 @inject IDialogService DialogService
+@inject IServiceProvider Services
 
 @*
     Spec §6.6: the Team page and the Project page, one component. The route drives everything:
@@ -108,6 +110,9 @@
                                 <TeamTasksTab Team="@summary.Name" Project="@project" Search="@this.SearchFor(current)"
                                               SearchChanged="@(text => this.SetSearch(current, text))" />
                                 break;
+                            case TeamPageTab.Process:
+                                <ProcessTab Team="@summary.Name" />
+                                break;
                         }
                     </MudTabPanel>
                 }
@@ -158,6 +163,7 @@
     {
         TeamPageTab.Members => Icons.Material.Filled.People,
         TeamPageTab.Files => Icons.Material.Filled.MenuBook,
+        TeamPageTab.Process => Icons.Material.Outlined.AccountTree,
         _ => Icons.Material.Outlined.TaskAlt,
     };
 
@@ -177,7 +183,11 @@
             new BreadcrumbItem(project, href: null, disabled: true, icon: Icons.Material.Filled.LibraryBooks),
         ];
 
-    private TeamPageFeatures Features() => new(this.TeamConfig.Value.Library.Enabled, this.TeamConfig.Value.Tasks.Enabled);
+    /// <summary>The installation's features plus whether this Team has a process (its <c>_team.md</c> names one), which adds the Process tab.</summary>
+    private TeamPageFeatures Features() => new(
+        this.TeamConfig.Value.Library.Enabled,
+        this.TeamConfig.Value.Tasks.Enabled,
+        this.Services.GetService<ITeamFolders>()?.ReadTeamFile(this.Team) is { Process.Length: > 0 });
 
     /// <summary>The catalog's own spelling of the route's Project, or <see langword="null"/> when the Team has no such Project.</summary>
     private string? FindProject(TeamSummary summary) =>

@@ -38,6 +38,18 @@ internal sealed class ProcessGateService(ITeamCatalog teams, ITeamFolders folder
 {
     private const string VerifyCoverage = "verify";
 
+    /// <summary>The one-sentence risk shown when a gate is turned off.</summary>
+    /// <param name="gate">The gate.</param>
+    /// <returns>The risk sentence.</returns>
+    public static string GateRisk(GateId gate) => gate switch
+    {
+        GateId.QaEvidenceBeforeDone => "A Task can then be marked Done with no verified Evidence.",
+        GateId.ChecksBeforeMerge => "Code can then be merged or pushed without a passing check run on record.",
+        GateId.SpecApprovedBeforeBuild => "Work can then start on a Task before its spec is approved.",
+        GateId.FailingTestBeforeFix => "A bug can then move to Review without a test that failed first.",
+        _ => throw new ArgumentOutOfRangeException(nameof(gate), gate, null),
+    };
+
     /// <summary>Checks a proposed status change against the Team's enabled Task gates.</summary>
     /// <param name="context">The proposed change.</param>
     /// <returns>The first refusal, or <see langword="null"/> when no enabled gate refuses.</returns>

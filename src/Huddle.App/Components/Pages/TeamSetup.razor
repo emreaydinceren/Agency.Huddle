@@ -88,6 +88,7 @@
         {
             TeamCheck check = TeamCheckBar.Compute(teamType, this.selection.Cards);
             <HiringPool Team="@this.Team" TypeId="@teamType.Id" Selection="this.selection" SelectionChanged="@(() => this.StateHasChanged())" />
+            <ProcessStep Team="@this.Team" />
             <TeamCheckBarView Check="check" />
             @if (this.starting)
             {

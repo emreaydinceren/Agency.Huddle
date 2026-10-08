@@ -354,6 +354,7 @@ public sealed class TeamSetupTests
             ctx.Services.AddSingleton(this.Personas);
             ctx.Services.AddSingleton(this.Hire);
             ctx.Services.AddSingleton(this.hireContext);
+            ctx.Services.AddSingleton(new ProcessProvisioner(this.Types, folders ?? this.Folders));
             return ctx;
         }
 

@@ -167,6 +167,43 @@ internal sealed record ProcessDocument(
         return true;
     }
 
+    /// <summary>Rewrites the <c>gates</c> line of the frontmatter, keeping every other line as it is.</summary>
+    /// <param name="text">The document text.</param>
+    /// <param name="gates">The gates the rewritten line lists.</param>
+    /// <returns>The new text.</returns>
+    public static string WithGates(string text, IReadOnlyList<GateId> gates)
+    {
+        ArgumentNullException.ThrowIfNull(text);
+        ArgumentNullException.ThrowIfNull(gates);
+
+        List<string> lines = [.. text.Split('\n')];
+        if (!string.Equals(lines[0].TrimEnd(), Delimiter, StringComparison.Ordinal))
+        {
+            return text;
+        }
+
+        int closing = lines.FindIndex(1, static line => string.Equals(line.TrimEnd(), Delimiter, StringComparison.Ordinal));
+        if (closing < 0)
+        {
+            return text;
+        }
+
+        int existing = lines.FindIndex(1, closing - 1, static line => line.StartsWith("gates:", StringComparison.OrdinalIgnoreCase));
+        string newLine = string.Concat("gates: [", string.Join(", ", gates.Select(QuotedId)), "]");
+        if (existing >= 0)
+        {
+            lines[existing] = lines[existing].EndsWith('\r') ? newLine + "\r" : newLine;
+        }
+        else
+        {
+            lines.Insert(closing, lines[closing].EndsWith('\r') ? newLine + "\r" : newLine);
+        }
+
+        return string.Join('\n', lines);
+    }
+
+    private static string QuotedId(GateId gate) => string.Concat("'", ToId(gate), "'");
+
     /// <summary>Returns the frontmatter id of a gate.</summary>
     /// <param name="gate">The gate.</param>
     /// <returns>The kebab-case id, for example <c>qa-evidence-before-done</c>.</returns>

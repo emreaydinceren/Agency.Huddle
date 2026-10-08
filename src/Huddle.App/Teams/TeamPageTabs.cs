@@ -33,22 +33,23 @@ internal static class TeamPageTabs
         else
         {
             // Team pages always have Members
-            if (features.Library && features.Tasks)
+            List<TeamPageTab> tabs = [TeamPageTab.Members];
+            if (features.Library)
             {
-                return [TeamPageTab.Members, TeamPageTab.Files, TeamPageTab.Tasks];
+                tabs.Add(TeamPageTab.Files);
             }
-            else if (features.Library)
+
+            if (features.Tasks)
             {
-                return [TeamPageTab.Members, TeamPageTab.Files];
+                tabs.Add(TeamPageTab.Tasks);
             }
-            else if (features.Tasks)
+
+            if (features.Process)
             {
-                return [TeamPageTab.Members, TeamPageTab.Tasks];
+                tabs.Add(TeamPageTab.Process);
             }
-            else
-            {
-                return [TeamPageTab.Members];
-            }
+
+            return tabs;
         }
     }
 
@@ -102,6 +103,7 @@ internal static class TeamPageTabs
         TeamPageTab.Members => "members",
         TeamPageTab.Files => "files",
         TeamPageTab.Tasks => "tasks",
+        TeamPageTab.Process => "process",
         _ => "members",
     };
 }
