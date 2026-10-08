@@ -2,7 +2,7 @@
 
 Status of the Teams delivery in [engineering/teams-plan.md](engineering/teams-plan.md). Each task is a `.t` (failing tests first) and `.i` (implementation) pair; a task's `.i` cannot be Done before its `.t`. Ids are `<phase>.<task>.<t|i>`, the form `agents/scripts/Set-Tracker.ps1` updates. `(H)` marks a Haiku task, `(B)` a boundary task that also gets an Opus architect review.
 
-**Status:** 16 of 170 tasks Done · 0 of 6 retrospectives done · last updated 2026-10-07.
+**Status:** 18 of 170 tasks Done · 0 of 6 retrospectives done · last updated 2026-10-07.
 
 | **Deliverable / Task** | **Active** | **In Progress** | **Done** |
 |---|---|---|---|
@@ -24,9 +24,9 @@ Status of the Teams delivery in [engineering/teams-plan.md](engineering/teams-pl
 | 0.8.t Task 8 Reserved `_role` and `_packs` keys: write failing tests | | | ✔ |
 | 0.8.i Task 8 Reserved `_role` and `_packs` keys: implement | | | ✔ |
 | **1. Team types and hiring** | | | |
-| 1.9.t Task 9 Team type manifest records: write failing tests (H) | | ✔ | |
-| 1.9.i Task 9 Team type manifest records: implement (H) | | | |
-| 1.10.t Task 10 TeamTypeValidator: write failing tests | | | |
+| 1.9.t Task 9 Team type manifest records: write failing tests (H) | | | ✔ |
+| 1.9.i Task 9 Team type manifest records: implement (H) | | | ✔ |
+| 1.10.t Task 10 TeamTypeValidator: write failing tests | | ✔ | |
 | 1.10.i Task 10 TeamTypeValidator: implement | | | |
 | 1.11.t Task 11 Candidate template parser: write failing tests | | | |
 | 1.11.i Task 11 Candidate template parser: implement | | | |
