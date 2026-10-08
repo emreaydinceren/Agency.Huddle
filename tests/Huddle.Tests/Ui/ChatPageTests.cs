@@ -1026,6 +1026,7 @@ public sealed class ChatPageTests
         // RoomEvents are already copied above, for the same reason.
         ctx.Services.AddSingleton(factory.Services.GetRequiredService<ProposalStore>());
         ctx.Services.AddSingleton(factory.Services.GetRequiredService<ProposalService>());
+        ctx.Services.AddSingleton(factory.Services.GetRequiredService<HireLimitGuard>());
 
         // Chat.razor renders QuestionCard beside ProposalCard (Questions spec §6.7), which injects these
         // two even though these tests never ask a Question - RoomEvents, Drafts and ITeamDirectory are

@@ -40,7 +40,7 @@ public sealed class ToolNamesTests
             new FollowRoomTool(follows, directory, "caller-id", new FakePromptSource()),
             new UnfollowRoomTool(follows, directory, "caller-id", new FakePromptSource()),
             new ValidateTeammateTool(checker, new FakePromptSource()),
-            new ProposeTeammatesTool(proposals, checker, personaStore, directory, Options.Create(new TeamOptions()), TimeProvider.System, "caller-id", new FakePromptSource()),
+            new ProposeTeammatesTool(proposals, checker, directory, new HireLimitGuard(new Agency.Huddle.Tests.Teams.FakeTeamCatalog(), Options.Create(new TeamOptions()), static () => 0), TimeProvider.System, "caller-id", new FakePromptSource()),
             new GetHelpTool([], new FakePromptSource(), "mcp__team__"),
             new CreateTaskTool(taskHarness.Service, taskHarness.Triggers, taskHarness.Directory, taskHarness.Sprints, new FakePromptSource(), "caller-id"),
             new GetTaskTool(taskHarness.Store, taskHarness.Sprints, new FakePromptSource()),

@@ -231,6 +231,14 @@ public static class ServiceCollectionExtensions
         // ProposalService back - construction order is safe and there is no cycle.
         services.AddSingleton<ProposalService>();
 
+        // The one hire-limit check ProposalService, ProposeTeammatesTool and ProposalCard share. The
+        // live-process count reads PersonaSupervisor lazily, per call, so registering it here (before
+        // the supervisor) creates no construction cycle.
+        services.AddSingleton(sp => new HireLimitGuard(
+            sp.GetRequiredService<ITeamCatalog>(),
+            sp.GetRequiredService<Microsoft.Extensions.Options.IOptions<TeamOptions>>(),
+            () => sp.GetService<PersonaSupervisor>()?.RunningHostCount ?? 0));
+
         // No interface: nothing needs to substitute this, and CSharpPrinciples.md says not to add
         // abstraction a feature has not asked for. This is state the app writes (a chosen theme, a
         // few token overrides), not host-supplied configuration, so it is registered here rather

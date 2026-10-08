@@ -829,7 +829,7 @@ public sealed class PromptGoldenTests
             new UnfollowRoomTool(follows, directory, "caller-id", new FakePromptSource()),
             new AskHumanTool(new QuestionStore(events), chat, directory, TimeProvider.System, "caller-id", new FakePromptSource()),
             new ValidateTeammateTool(checker, new FakePromptSource()),
-            new ProposeTeammatesTool(proposals, checker, personaStore, directory, options, TimeProvider.System, "test-agent", new FakePromptSource()),
+            new ProposeTeammatesTool(proposals, checker, directory, new HireLimitGuard(new Agency.Huddle.Tests.Teams.FakeTeamCatalog(), options, static () => 0), TimeProvider.System, "test-agent", new FakePromptSource()),
             new CreateTaskTool(taskHarness.Service, taskHarness.Triggers, taskHarness.Directory, taskHarness.Sprints, new FakePromptSource(), "caller-id"),
             new GetTaskTool(taskHarness.Store, taskHarness.Sprints, new FakePromptSource()),
             new ListTasksTool(taskHarness.Store, taskHarness.Directory, taskHarness.Personas, taskHarness.Sprints, new FakePromptSource(), "caller-id"),

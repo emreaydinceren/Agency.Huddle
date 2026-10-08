@@ -58,7 +58,7 @@ public enum ProposalOutcomeKind
     /// <summary>No Candidate became a Teammate, but at least one was attempted.</summary>
     NoneCreated,
 
-    /// <summary>Nothing was attempted: creating every Candidate would have exceeded <see cref="Acp.AcpOptions.MaxTeammates"/>.</summary>
+    /// <summary>Nothing was attempted: creating every Candidate would have exceeded a hire limit (<see cref="HireLimits"/>).</summary>
     OverLimit,
 
     /// <summary>The Human declined the Proposal; nothing was created.</summary>

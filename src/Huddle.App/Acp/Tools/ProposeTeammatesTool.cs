@@ -1,7 +1,6 @@
 namespace Agency.Huddle.App.Acp.Tools;
 
 using System.Text.Json.Nodes;
-using Microsoft.Extensions.Options;
 using Agency.Huddle.Acp.Abstractions;
 using Agency.Huddle.App.Data;
 using Agency.Huddle.App.Prompts;
@@ -17,9 +16,8 @@ using Agency.Huddle.App.Teammates;
 internal sealed class ProposeTeammatesTool(
     ProposalStore proposals,
     CandidateChecker checker,
-    PersonaStore personas,
     ITeamDirectory directory,
-    IOptions<TeamOptions> options,
+    HireLimitGuard hireLimits,
     TimeProvider clock,
     string callerAgentId,
     IPromptSource prompts) : IAppTool
@@ -66,7 +64,7 @@ internal sealed class ProposeTeammatesTool(
     /// Runs Spec §6.9's internal flow, in order: the Room must exist, the caller must be a Member
     /// of it, it must not be Archived, the Candidate count must be one to four, every Candidate must
     /// parse and pass <see cref="CandidateChecker"/>, and the Proposal must not push the Teammate
-    /// count over <see cref="AcpOptions.MaxTeammates"/> - only then is it handed to
+    /// count over a hire limit (<see cref="HireLimitGuard"/>) - only then is it handed to
     /// <see cref="ProposalStore.TryPut"/>. Every early exit is a string; this never throws for an
     /// expected failure (Spec §5.3 Contract B).
     /// </summary>
@@ -123,11 +121,12 @@ internal sealed class ProposeTeammatesTool(
             return string.Join('\n', check.Problems);
         }
 
-        var max = options.Value.Acp.MaxTeammates;
-        var count = personas.Entries.Count;
-        if (max > 0 && count + candidates.Count > max)
+        var refusal = hireLimits.Check(candidates);
+        if (refusal is not null)
         {
-            return $"{count} Teammates exist and the limit is {max}; propose at most {max - count}.";
+            return refusal.Kind == HireLimitKind.PerTeam
+                ? $"Team {refusal.Team} has {refusal.Used} Teammates and the limit is {refusal.Limit} per Team; propose at most {refusal.Fits}."
+                : $"{refusal.Used} live processes are running and the limit is {refusal.Limit} live processes; propose at most {refusal.Fits}.";
         }
 
         var caller = await directory.GetUserAsync(callerAgentId, cancellationToken);

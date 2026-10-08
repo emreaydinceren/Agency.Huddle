@@ -123,9 +123,9 @@ public sealed class AcpOptions
 
     /// <summary>
     /// The install-wide Teammate cap of the single-Team era. Bound so an existing configuration still
-    /// loads, but superseded by <see cref="MaxTeammatesPerTeam"/> and <see cref="MaxLiveProcesses"/>
-    /// (HR-10, decision D1), which limit each Team and the live processes separately. Zero or less
-    /// disables the limit entirely.
+    /// loads, but it is no longer enforced anywhere: <see cref="MaxTeammatesPerTeam"/> and
+    /// <see cref="MaxLiveProcesses"/> (HR-10, decision D1) limit each Team and the live processes
+    /// separately.
     /// </summary>
     public int MaxTeammates { get; set; } = 8;
 

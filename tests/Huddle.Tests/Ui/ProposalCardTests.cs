@@ -10,6 +10,7 @@ using Agency.Huddle.App.Data;
 using Agency.Huddle.App.Services;
 using Agency.Huddle.App.Questions;
 using Agency.Huddle.App.Teammates;
+using Agency.Huddle.Tests.Teammates;
 
 namespace Agency.Huddle.Tests.Ui;
 
@@ -31,9 +32,9 @@ public sealed class ProposalCardTests
     /// Spec §6.11's Responsibilities: the proposer, the copy ("{Proposer} proposes new Teammates.
     /// Approve creates these Teammates." - never "will be created"), every Candidate's Name, Alias,
     /// Title, Teams and Consult When, and the headroom line recomputed from
-    /// <see cref="PersonaStore.Entries"/> against the default <see cref="AcpOptions.MaxTeammates"/>
-    /// of 8 - five existing Teammates plus a two-Candidate Proposal reads "This adds 2 Teammates; 5
-    /// of 8 exist.", the Spec's own worked example with the count changed.
+    /// <see cref="PersonaStore.Entries"/> against the default <see cref="AcpOptions.MaxTeammatesPerTeam"/>
+    /// of 8 - a Business Team of five plus a two-Candidate Proposal reads "This adds 2 Teammates; 5
+    /// of 8 per Team.".
     /// </summary>
     [Fact]
     public async Task Renders_CandidatesAndHeadroom()
@@ -41,7 +42,7 @@ public sealed class ProposalCardTests
         Xunit.TestContext.Current.CancellationToken.ThrowIfCancellationRequested();
         CancellationToken ct = Xunit.TestContext.Current.CancellationToken;
         using Fixture fixture = await Fixture.CreateAsync(ct);
-        SeedExistingPersonas(fixture, 5);
+        fixture.Limits.SetTeam("Business", 5);
         var proposer = await fixture.Directory.UpsertAgentUserAsync("Chief of Staff", null, ct);
         Assert.NotNull(proposer);
         var room = await fixture.Directory.CreateRoomAsync("Launch", [KnownIds.Human, proposer.Id], ct);
@@ -59,7 +60,7 @@ public sealed class ProposalCardTests
 
         Assert.Contains("Chief of Staff proposes new Teammates. Approve creates these Teammates.", cut.Markup, StringComparison.Ordinal);
         Assert.DoesNotContain("will be created", cut.Markup, StringComparison.Ordinal);
-        Assert.Contains("This adds 2 Teammates; 5 of 8 exist.", cut.Markup, StringComparison.Ordinal);
+        Assert.Equal("This adds 2 Teammates; 5 of 8 per Team.", cut.Find(".proposal-card-headroom").TextContent.Trim());
         Assert.Contains("Vera", cut.Markup, StringComparison.Ordinal);
         Assert.Contains("vera", cut.Markup, StringComparison.Ordinal);
         Assert.Contains("Researcher", cut.Markup, StringComparison.Ordinal);
@@ -200,15 +201,70 @@ public sealed class ProposalCardTests
         return ctx.Render<ProposalCard>(parameters => parameters.Add(p => p.RoomId, roomId));
     }
 
-    /// <summary>Adds <paramref name="count"/> minimally-valid existing Personas, named <c>Existing1</c>, <c>Existing2</c>, and so on, so a headroom line has something real to count.</summary>
-    /// <param name="fixture">The fixture whose <see cref="PersonaStore"/> to add them through.</param>
-    /// <param name="count">How many to add.</param>
-    private static void SeedExistingPersonas(Fixture fixture, int count)
+    /// <summary>
+    /// The headroom line reports the tighter limit: the Team has 3 of 8 members (5 left) while 14 of
+    /// 16 processes run (2 left), so the line names live processes.
+    /// </summary>
+    [Fact]
+    public async Task Headroom_LiveProcessesTighter_ReportsLiveProcesses()
     {
-        for (var i = 1; i <= count; i++)
-        {
-            fixture.Personas.Add(new PersonaIdentity($"Existing{i}", "Role", $"existing{i}", []), "Body text.");
-        }
+        CancellationToken ct = Xunit.TestContext.Current.CancellationToken;
+        using Fixture fixture = await Fixture.CreateAsync(ct);
+        fixture.Limits.SetTeam("Business", 3);
+        fixture.Limits.LiveProcesses = 14;
+        await using MudBunitContext ctx = new();
+        fixture.RegisterInto(ctx);
+        string roomId = await PutProposalAsync(fixture, [new Candidate("Quill", "quill", "Writer", "You write things.", ["Business"], null)], ct);
+
+        var cut = RenderCard(ctx, roomId);
+
+        Assert.Equal("This adds 1 Teammate; 14 of 16 live processes.", cut.Find(".proposal-card-headroom").TextContent.Trim());
+    }
+
+    /// <summary>A Candidate with no Team is counted only against the live limit, so the line names live processes.</summary>
+    [Fact]
+    public async Task Headroom_CandidateWithoutTeam_ReportsLiveProcesses()
+    {
+        CancellationToken ct = Xunit.TestContext.Current.CancellationToken;
+        using Fixture fixture = await Fixture.CreateAsync(ct);
+        fixture.Limits.SetTeam("Business", 8);
+        fixture.Limits.LiveProcesses = 2;
+        await using MudBunitContext ctx = new();
+        fixture.RegisterInto(ctx);
+        string roomId = await PutProposalAsync(fixture, [new Candidate("Vera", "vera", "Researcher", "You research things.", [], null)], ct);
+
+        var cut = RenderCard(ctx, roomId);
+
+        Assert.Equal("This adds 1 Teammate; 2 of 16 live processes.", cut.Find(".proposal-card-headroom").TextContent.Trim());
+    }
+
+    /// <summary>With both limits off the clause is dropped, as the single limit's off state was.</summary>
+    [Fact]
+    public async Task Headroom_BothLimitsOff_DropsTheClause()
+    {
+        CancellationToken ct = Xunit.TestContext.Current.CancellationToken;
+        using Fixture fixture = await Fixture.CreateAsync(ct, maxPerTeam: 0, maxLive: 0);
+        await using MudBunitContext ctx = new();
+        fixture.RegisterInto(ctx);
+        string roomId = await PutProposalAsync(fixture, [new Candidate("Vera", "vera", "Researcher", "You research things.", [], null)], ct);
+
+        var cut = RenderCard(ctx, roomId);
+
+        Assert.Equal("This adds 1 Teammate.", cut.Find(".proposal-card-headroom").TextContent.Trim());
+    }
+
+    /// <summary>Creates a Room with a proposer and stores a Proposal of <paramref name="candidates"/> in it.</summary>
+    /// <param name="fixture">The fixture to arrange through.</param>
+    /// <param name="candidates">The Candidates the Proposal carries.</param>
+    /// <param name="ct">Cancels the directory calls.</param>
+    /// <returns>The Room id.</returns>
+    private static async Task<string> PutProposalAsync(Fixture fixture, IReadOnlyList<Candidate> candidates, CancellationToken ct)
+    {
+        var proposer = await fixture.Directory.UpsertAgentUserAsync("Chief of Staff", null, ct);
+        Assert.NotNull(proposer);
+        var room = await fixture.Directory.CreateRoomAsync("Launch", [KnownIds.Human, proposer.Id], ct);
+        _ = fixture.Proposals.TryPut(MakeProposal(room.Id, proposer.Id, proposer.Name, candidates));
+        return room.Id;
     }
 
     /// <summary>Builds a Proposal ready to store via <see cref="ProposalStore.TryPut"/>, timestamped from the real clock - matching <c>ProposalServiceTests.MakeProposal</c>.</summary>
@@ -253,7 +309,8 @@ public sealed class ProposalCardTests
             GatedTeamDirectory directory,
             RoomEvents events,
             ProposalStore proposals,
-            ProposalService service)
+            ProposalService service,
+            HireLimitHarness limits)
         {
             this.DataDir = dataDir;
             this.Personas = personas;
@@ -261,7 +318,11 @@ public sealed class ProposalCardTests
             this.Events = events;
             this.Proposals = proposals;
             this.Service = service;
+            this.Limits = limits;
         }
+
+        /// <summary>The Team catalog and live-process count the hire-limit guard reads.</summary>
+        public HireLimitHarness Limits { get; }
 
         /// <summary>The temp directory backing this fixture's <see cref="TeamOptions.DataDir"/>.</summary>
         public TempDataDir DataDir { get; }
@@ -283,10 +344,16 @@ public sealed class ProposalCardTests
 
         /// <summary>Builds a fresh <see cref="Fixture"/> with an initialised Team Directory (Human Name <c>"You"</c>) and no Personas yet loaded.</summary>
         /// <param name="ct">Cancels Team Directory initialisation.</param>
-        public static async Task<Fixture> CreateAsync(CancellationToken ct)
+        /// <param name="maxPerTeam"><see cref="AcpOptions.MaxTeammatesPerTeam"/> for this fixture.</param>
+        /// <param name="maxLive"><see cref="AcpOptions.MaxLiveProcesses"/> for this fixture.</param>
+        public static async Task<Fixture> CreateAsync(CancellationToken ct, int maxPerTeam = 8, int maxLive = 16)
         {
             var dataDir = new TempDataDir();
-            IOptions<TeamOptions> options = Microsoft.Extensions.Options.Options.Create(new TeamOptions { DataDir = dataDir.Path });
+            IOptions<TeamOptions> options = Microsoft.Extensions.Options.Options.Create(new TeamOptions
+            {
+                DataDir = dataDir.Path,
+                Acp = new AcpOptions { MaxTeammatesPerTeam = maxPerTeam, MaxLiveProcesses = maxLive },
+            });
 
             var realDirectory = new SqliteTeamDirectory(options);
             await realDirectory.InitializeAsync("You", ct);
@@ -300,9 +367,10 @@ public sealed class ProposalCardTests
             var proposals = new ProposalStore(events);
             var store = new FileChatStore(options, NullLogger<FileChatStore>.Instance);
             var chat = new ChatService(directory, store, events, personas, options, proposals, new QuestionStore(events), NullLogger<ChatService>.Instance);
-            var service = new ProposalService(proposals, checker, personas, chat, directory, options, NullLogger<ProposalService>.Instance);
+            var limits = new HireLimitHarness(options);
+            var service = new ProposalService(proposals, checker, personas, chat, directory, limits.Guard, NullLogger<ProposalService>.Instance);
 
-            return new Fixture(dataDir, personas, directory, events, proposals, service);
+            return new Fixture(dataDir, personas, directory, events, proposals, service, limits);
         }
 
         /// <summary>Registers every real collaborator <see cref="ProposalCard"/> injects into <paramref name="ctx"/>'s container.</summary>
@@ -314,6 +382,7 @@ public sealed class ProposalCardTests
             ctx.Services.AddSingleton(this.Events);
             ctx.Services.AddSingleton(this.Proposals);
             ctx.Services.AddSingleton(this.Service);
+            ctx.Services.AddSingleton(this.Limits.Guard);
         }
 
         /// <summary>Disposes the real <see cref="PersonaStore"/> and the underlying temp directory.</summary>

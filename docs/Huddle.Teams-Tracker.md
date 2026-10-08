@@ -2,7 +2,7 @@
 
 Status of the Teams delivery in [engineering/teams-plan.md](engineering/teams-plan.md). Each task is a `.t` (failing tests first) and `.i` (implementation) pair; a task's `.i` cannot be Done before its `.t`. Ids are `<phase>.<task>.<t|i>`, the form `agents/scripts/Set-Tracker.ps1` updates. `(H)` marks a Haiku task, `(B)` a boundary task that also gets an Opus architect review.
 
-**Status:** 4 of 170 tasks Done · 0 of 6 retrospectives done · last updated 2026-10-07.
+**Status:** 6 of 170 tasks Done · 0 of 6 retrospectives done · last updated 2026-10-07.
 
 | **Deliverable / Task** | **Active** | **In Progress** | **Done** |
 |---|---|---|---|
@@ -11,9 +11,9 @@ Status of the Teams delivery in [engineering/teams-plan.md](engineering/teams-pl
 | 0.1.i Task 1 Hire-limit options: implement (H) | | | ✔ |
 | 0.2.t Task 2 HireLimits check: write failing tests | | | ✔ |
 | 0.2.i Task 2 HireLimits check: implement | | | ✔ |
-| 0.3.t Task 3 Wire HireLimits into the three cap sites: write failing tests | | ✔ | |
-| 0.3.i Task 3 Wire HireLimits into the three cap sites: implement | | | |
-| 0.4.t Task 4 PersonaSpendStore (persisted spend): write failing tests (B) | ✔ | | |
+| 0.3.t Task 3 Wire HireLimits into the three cap sites: write failing tests | | | ✔ |
+| 0.3.i Task 3 Wire HireLimits into the three cap sites: implement | | | ✔ |
+| 0.4.t Task 4 PersonaSpendStore (persisted spend): write failing tests (B) | | ✔ | |
 | 0.4.i Task 4 PersonaSpendStore (persisted spend): implement (B) | | | |
 | 0.5.t Task 5 PersonaSpend writes through to the store: write failing tests | | | |
 | 0.5.i Task 5 PersonaSpend writes through to the store: implement | | | |

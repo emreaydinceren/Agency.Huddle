@@ -106,45 +106,101 @@ public sealed class ProposalServiceTests
     }
 
     /// <summary>
-    /// Spec §6.10's OverLimit branch, worded exactly as the Spec's own example: 7 Teammates
-    /// already exist, the limit is 8, and the Proposal adds 3 - nothing is attempted, so no
-    /// Candidate file is ever written (Spec §14 D-7: the only all-or-nothing rule is the limit).
+    /// The live-process limit refuses an Approve whose Candidates carry no Team: 7 processes run, the
+    /// limit is 8 and the Proposal adds 3 - nothing is attempted, so no Candidate file is written, and
+    /// the text names "live processes".
     /// </summary>
     [Fact]
-    public async Task Approve_OverLimit_CreatesNoneAndSaysBy()
+    public async Task Approve_LiveProcessesExceeded_CreatesNoneAndNamesLiveProcesses()
     {
         CancellationToken ct = TestContext.Current.CancellationToken;
-        using Fixture fixture = await Fixture.CreateAsync(ct, maxTeammates: 8);
-        for (var i = 1; i <= 7; i++)
-        {
-            fixture.Personas.Add(new PersonaIdentity($"Existing{i}", "Role", $"existing{i}", []), "Body text.");
-        }
-
-        var proposer = await fixture.Directory.UpsertAgentUserAsync("Chief of Staff", null, ct);
-        Assert.NotNull(proposer);
-        var room = await fixture.Directory.CreateRoomAsync("Launch", [KnownIds.Human, proposer.Id], ct);
-
+        using Fixture fixture = await Fixture.CreateAsync(ct, maxLive: 8);
+        fixture.Limits.LiveProcesses = 7;
+        (string RoomId, string ProposerId, string ProposerName) arranged = await ArrangeRoomAsync(fixture, ct);
         IReadOnlyList<Candidate> candidates =
         [
             new Candidate("Vera", "vera", "Researcher", "You research things.", [], null),
             new Candidate("Quill", "quill", "Writer", "You write things.", [], null),
             new Candidate("Iris", "iris", "Reviewer", "You review things.", [], null),
         ];
-        var proposal = ProposalServiceTests.MakeProposal(room.Id, proposer.Id, proposer.Name, candidates);
+        Proposal proposal = ProposalServiceTests.MakeProposal(arranged.RoomId, arranged.ProposerId, arranged.ProposerName, candidates);
         _ = fixture.Proposals.TryPut(proposal);
 
-        var outcome = await fixture.Service.ApproveAsync(room.Id, proposal.Id, ct);
+        ProposalOutcome outcome = await fixture.Service.ApproveAsync(arranged.RoomId, proposal.Id, ct);
 
         Assert.Equal(ProposalOutcomeKind.OverLimit, outcome.Kind);
         Assert.Empty(outcome.Created);
         Assert.Empty(outcome.Failed);
         Assert.Equal(
-            "Approved, but nothing was created: 7 Teammates exist, the limit is 8, and this Proposal adds 3. @Chief of Staff",
+            "Approved, but nothing was created: 7 live processes are running, the limit is 8 live processes, and this Proposal adds 3. @Chief of Staff",
             outcome.PostedText);
-
         Assert.False(File.Exists(fixture.Personas.Paths.DefinitionFile("Vera")));
         Assert.False(File.Exists(fixture.Personas.Paths.DefinitionFile("Quill")));
         Assert.False(File.Exists(fixture.Personas.Paths.DefinitionFile("Iris")));
+    }
+
+    /// <summary>
+    /// A full Team refuses an Approve naming "per Team" while another Team with room still accepts
+    /// the same hire: Alpha holds 8 of 8, Beta holds 1.
+    /// </summary>
+    [Fact]
+    public async Task Approve_TeamFullWhileAnotherHasRoom_RefusesOnlyTheFullTeam()
+    {
+        CancellationToken ct = TestContext.Current.CancellationToken;
+        using Fixture fixture = await Fixture.CreateAsync(ct);
+        fixture.Limits.SetTeam("Alpha", 8);
+        fixture.Limits.SetTeam("Beta", 1);
+        (string RoomId, string ProposerId, string ProposerName) arranged = await ArrangeRoomAsync(fixture, ct);
+        Proposal full = ProposalServiceTests.MakeProposal(
+            arranged.RoomId, arranged.ProposerId, arranged.ProposerName, [new Candidate("Vera", "vera", "Researcher", "You research things.", ["Alpha"], null)]);
+        _ = fixture.Proposals.TryPut(full);
+
+        ProposalOutcome refused = await fixture.Service.ApproveAsync(arranged.RoomId, full.Id, ct);
+
+        Assert.Equal(ProposalOutcomeKind.OverLimit, refused.Kind);
+        Assert.Equal(
+            "Approved, but nothing was created: Team Alpha has 8 Teammates, the limit is 8 per Team, and this Proposal adds 1. @Chief of Staff",
+            refused.PostedText);
+        Assert.False(File.Exists(fixture.Personas.Paths.DefinitionFile("Vera")));
+
+        Proposal roomy = ProposalServiceTests.MakeProposal(
+            arranged.RoomId, arranged.ProposerId, arranged.ProposerName, [new Candidate("Quill", "quill", "Writer", "You write things.", ["Beta"], null)]);
+        _ = fixture.Proposals.TryPut(roomy);
+
+        ProposalOutcome accepted = await fixture.Service.ApproveAsync(arranged.RoomId, roomy.Id, ct);
+
+        Assert.Equal(ProposalOutcomeKind.Created, accepted.Kind);
+    }
+
+    /// <summary>
+    /// A Candidate with no Team counts only against the live-process limit: the per-Team limit is 1 and
+    /// a Team is full, yet the Team-less hire is created.
+    /// </summary>
+    [Fact]
+    public async Task Approve_CandidateWithoutTeam_IgnoresPerTeamLimit()
+    {
+        CancellationToken ct = TestContext.Current.CancellationToken;
+        using Fixture fixture = await Fixture.CreateAsync(ct, maxPerTeam: 1);
+        fixture.Limits.SetTeam("Alpha", 1);
+        (string RoomId, string ProposerId, string ProposerName) arranged = await ArrangeRoomAsync(fixture, ct);
+        Proposal proposal = ProposalServiceTests.MakeProposal(
+            arranged.RoomId, arranged.ProposerId, arranged.ProposerName, [new Candidate("Vera", "vera", "Researcher", "You research things.", [], null)]);
+        _ = fixture.Proposals.TryPut(proposal);
+
+        ProposalOutcome outcome = await fixture.Service.ApproveAsync(arranged.RoomId, proposal.Id, ct);
+
+        Assert.Equal(ProposalOutcomeKind.Created, outcome.Kind);
+    }
+
+    /// <summary>Creates the proposer "Chief of Staff" and a Room with the Human, for the hire-limit tests.</summary>
+    /// <param name="fixture">The fixture whose directory the Room is created in.</param>
+    /// <param name="ct">Cancels the directory calls.</param>
+    private static async Task<(string RoomId, string ProposerId, string ProposerName)> ArrangeRoomAsync(Fixture fixture, CancellationToken ct)
+    {
+        var proposer = await fixture.Directory.UpsertAgentUserAsync("Chief of Staff", null, ct);
+        Assert.NotNull(proposer);
+        var room = await fixture.Directory.CreateRoomAsync("Launch", [KnownIds.Human, proposer.Id], ct);
+        return (room.Id, proposer.Id, proposer.Name);
     }
 
     /// <summary>
@@ -364,7 +420,8 @@ public sealed class ProposalServiceTests
             ProposalStore proposals,
             FileChatStore store,
             ChatService chat,
-            ProposalService service)
+            ProposalService service,
+            HireLimitHarness limits)
         {
             this.DataDir = dataDir;
             this.Directory = directory;
@@ -373,7 +430,11 @@ public sealed class ProposalServiceTests
             this.Store = store;
             this.Chat = chat;
             this.Service = service;
+            this.Limits = limits;
         }
+
+        /// <summary>The Team catalog and live-process count the hire-limit guard reads.</summary>
+        public HireLimitHarness Limits { get; }
 
         /// <summary>The temp directory backing this fixture's <see cref="TeamOptions.DataDir"/>.</summary>
         public TempDataDir DataDir { get; }
@@ -401,8 +462,9 @@ public sealed class ProposalServiceTests
         /// <c>"You"</c>) and no Personas yet loaded.
         /// </summary>
         /// <param name="ct">Cancels Team Directory initialisation.</param>
-        /// <param name="maxTeammates"><see cref="AcpOptions.MaxTeammates"/> for this fixture; defaults to the Spec §7.3 default of 8.</param>
-        public static async Task<Fixture> CreateAsync(CancellationToken ct, int maxTeammates = 8)
+        /// <param name="maxPerTeam"><see cref="AcpOptions.MaxTeammatesPerTeam"/> for this fixture.</param>
+        /// <param name="maxLive"><see cref="AcpOptions.MaxLiveProcesses"/> for this fixture.</param>
+        public static async Task<Fixture> CreateAsync(CancellationToken ct, int maxPerTeam = 8, int maxLive = 16)
         {
             var dataDir = new TempDataDir();
 
@@ -413,7 +475,7 @@ public sealed class ProposalServiceTests
             IOptions<TeamOptions> options = Microsoft.Extensions.Options.Options.Create(new TeamOptions
             {
                 DataDir = dataDir.Path,
-                Acp = new AcpOptions { MaxTeammates = maxTeammates },
+                Acp = new AcpOptions { MaxTeammatesPerTeam = maxPerTeam, MaxLiveProcesses = maxLive },
             });
 
             var directory = new SqliteTeamDirectory(options);
@@ -427,9 +489,10 @@ public sealed class ProposalServiceTests
             var proposals = new ProposalStore(events);
             var store = new FileChatStore(options, NullLogger<FileChatStore>.Instance);
             var chat = new ChatService(directory, store, events, personas, options, proposals, new QuestionStore(events), NullLogger<ChatService>.Instance);
-            var service = new ProposalService(proposals, checker, personas, chat, directory, options, NullLogger<ProposalService>.Instance);
+            var limits = new HireLimitHarness(options);
+            var service = new ProposalService(proposals, checker, personas, chat, directory, limits.Guard, NullLogger<ProposalService>.Instance);
 
-            return new Fixture(dataDir, directory, personas, proposals, store, chat, service);
+            return new Fixture(dataDir, directory, personas, proposals, store, chat, service, limits);
         }
 
         /// <summary>Disposes the real <see cref="PersonaStore"/> and the underlying temp directory.</summary>
