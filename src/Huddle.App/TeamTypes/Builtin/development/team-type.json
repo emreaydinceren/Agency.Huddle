@@ -1,0 +1,93 @@
+{
+  "schemaVersion": 1,
+  "id": "development",
+  "version": "1.0.0",
+  "displayName": "Development Team",
+  "order": 10,
+  "workspace": { "kind": "repo", "label": "Repository", "required": true },
+  "coverage": [ "generate", "challenge", "verify" ],
+  "presets": [
+    { "id": "small", "label": "Small", "roles": [ "development-manager", "developer", "reviewer", "qa-engineer" ] },
+    { "id": "full", "label": "Full", "roles": [ "development-manager", "tech-lead", "developer", "reviewer", "security-engineer", "qa-engineer", "release-engineer" ] }
+  ],
+  "processes": [
+    { "id": "lightweight-flow", "file": "processes/lightweight-flow.md", "default": true },
+    { "id": "spec-driven", "file": "processes/spec-driven.md" },
+    { "id": "sprints", "file": "processes/sprints.md" },
+    { "id": "maintenance", "file": "processes/maintenance.md" }
+  ],
+  "roles": [
+    {
+      "id": "development-manager",
+      "title": "Development Manager",
+      "candidate": "candidates/development-manager.md",
+      "manager": true,
+      "required": true,
+      "maxPerTeam": 1,
+      "model": { "tier": "strongest" },
+      "suggestedNames": [ "Joe", "Omar", "Rhea", "Sam" ]
+    },
+    {
+      "id": "tech-lead",
+      "title": "Tech Lead",
+      "candidate": "candidates/tech-lead.md",
+      "required": false,
+      "maxPerTeam": 1,
+      "covers": [ "challenge" ],
+      "model": { "tier": "strongest" },
+      "suggestedNames": [ "Kai", "Mei", "Dana", "Ravi" ]
+    },
+    {
+      "id": "developer",
+      "title": "Developer",
+      "candidate": "candidates/developer.md",
+      "required": true,
+      "maxPerTeam": 4,
+      "covers": [ "generate" ],
+      "model": { "tier": "balanced" },
+      "packs": [ "msbuild-authoring" ],
+      "suggestedNames": [ "Jane", "Priya", "Leo", "Ana" ]
+    },
+    {
+      "id": "reviewer",
+      "title": "Reviewer",
+      "candidate": "candidates/reviewer.md",
+      "required": false,
+      "maxPerTeam": 2,
+      "covers": [ "challenge" ],
+      "model": { "tier": "balanced", "differentVendorFrom": [ "developer" ] },
+      "packs": [ "code-review-and-quality" ],
+      "suggestedNames": [ "Nadia", "Tomas", "Ines", "Hugo" ]
+    },
+    {
+      "id": "security-engineer",
+      "title": "Security Engineer",
+      "candidate": "candidates/security-engineer.md",
+      "required": false,
+      "maxPerTeam": 1,
+      "covers": [ "challenge" ],
+      "model": { "tier": "balanced", "differentVendorFrom": [ "developer" ] },
+      "suggestedNames": [ "Vera", "Idris", "Lena", "Marco" ]
+    },
+    {
+      "id": "qa-engineer",
+      "title": "QA Engineer",
+      "candidate": "candidates/qa-engineer.md",
+      "required": false,
+      "maxPerTeam": 1,
+      "covers": [ "verify" ],
+      "model": { "tier": "balanced", "differentVendorFrom": [ "developer" ] },
+      "suggestedNames": [ "Zoe", "Felix", "Amara", "Otto" ]
+    },
+    {
+      "id": "release-engineer",
+      "title": "Release Engineer",
+      "candidate": "candidates/release-engineer.md",
+      "required": false,
+      "maxPerTeam": 1,
+      "model": { "tier": "fast" },
+      "packs": [ "msbuild-authoring" ],
+      "suggestedNames": [ "Eli", "Yara", "Bruno", "Mina" ]
+    }
+  ]
+}

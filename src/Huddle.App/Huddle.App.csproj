@@ -29,7 +29,7 @@
     <EmbeddedResource Include="Skills\Defaults\**\*.md" LogicalName="Skills/Defaults/%(RecursiveDir)%(Filename)%(Extension)" />
     <EmbeddedResource Include="Builtin\*.md" LogicalName="Builtin/%(Filename)%(Extension)" />
     <EmbeddedResource Include="TeamTypes\Builtin\SkillPacks\*.json" LogicalName="TeamTypes/Builtin/SkillPacks/%(Filename)%(Extension)" />
-    <EmbeddedResource Include="TeamTypes\Builtin\*\team-type.json;TeamTypes\Builtin\*\candidates\*.md;TeamTypes\Builtin\*\processes\*.md" LogicalName="TeamTypes/Builtin/%(RecursiveDir)%(Filename)%(Extension)" />
+    <EmbeddedResource Include="TeamTypes\Builtin\**\team-type.json;TeamTypes\Builtin\**\candidates\*.md;TeamTypes\Builtin\**\processes\*.md" LogicalName="TeamTypes/Builtin/%(RecursiveDir)%(Filename)%(Extension)" />
   </ItemGroup>
 
 </Project>
