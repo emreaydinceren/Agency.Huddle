@@ -729,17 +729,17 @@ member card. The catalog path is settled in decision D7.
 - **Goal:** Model and read/write `Skills/<name>/.source.json` (SK-7, Spec §Provenance lines 142-156).
 - **Read first:** `Conversation/teams-spec.md:142-156`.
 - **Risk:** `data`.
-- **Deliverable:** `src/Huddle.App/Skills/SkillSource.cs`:
+- **Deliverable:** `src/Huddle.App/Skills/SkillProvenance.cs`:
   ```csharp
-  internal sealed record SkillSource(string Repo, string Path, string Commit, string Sha256, string Publisher, string License, DateTimeOffset ImportedAt)
+  internal sealed record SkillProvenance(string Repo, string Path, string Commit, string Sha256, string Publisher, string License, DateTimeOffset ImportedAt)
   {
       public const string FileName = ".source.json";
-      public static bool TryRead(string skillFolder, out SkillSource? source);
+      public static bool TryRead(string skillFolder, out SkillProvenance? source);
       public void Write(string skillFolder);          // temp file then move; indented camelCase JSON, LF
   }
   ```
-  `.t` in `SkillSourceTests.cs` with `TempDataDir`: round trip; the JSON keys equal the Spec example (`repo, path, commit, sha256, publisher, license, importedAt`); malformed file → `false`; missing file → `false`; `importedAt` written as ISO-8601 UTC.
-- **Acceptance:** `SkillSourceTests` green.
+  `.t` in `SkillProvenanceTests.cs` with `TempDataDir`: round trip; the JSON keys equal the Spec example (`repo, path, commit, sha256, publisher, license, importedAt`); malformed file → `false`; missing file → `false`; `importedAt` written as ISO-8601 UTC.
+- **Acceptance:** `SkillProvenanceTests` green.
 
 ### Task 40 — Folder hash
 
@@ -807,9 +807,9 @@ member card. The catalog path is settled in decision D7.
 ### Task 44 — SkillStore: folders, scripts, provenance
 
 - **Goal:** Let `SkillStore` hold imported skills with sub-folders and scripts, read their provenance and say "modified locally" (SK-7, SK-8, SK-9, Spec §Provenance line 154, §Changes line 333).
-- **Read first:** `src/Huddle.App/Skills/SkillStore.cs` (grep for the 64 KB limit and the flat-file rule: `grep -n "64\|Length\|\.md" src/Huddle.App/Skills/SkillStore.cs src/Huddle.App/Skills/SkillValidator.cs | head -30`); `src/Huddle.App/Skills/Skill.cs`; `src/Huddle.App/Skills/SkillSource.cs`, `SkillFolderHash.cs`; `tests/Huddle.Tests/Skills/SkillStoreTests.cs` (first 60 lines).
+- **Read first:** `src/Huddle.App/Skills/SkillStore.cs` (grep for the 64 KB limit and the flat-file rule: `grep -n "64\|Length\|\.md" src/Huddle.App/Skills/SkillStore.cs src/Huddle.App/Skills/SkillValidator.cs | head -30`); `src/Huddle.App/Skills/Skill.cs`; `src/Huddle.App/Skills/SkillProvenance.cs`, `SkillFolderHash.cs`; `tests/Huddle.Tests/Skills/SkillStoreTests.cs` (first 60 lines).
 - **Risk:** `boundary`.
-- **Deliverable:** `SkillValidator` accepts supporting files in sub-folders and non-`.md` files **only when the skill folder has a valid `.source.json`** (a hand-made skill keeps the flat `.md` rule, unchanged); the per-file 64 KB limit stays and a folder over 200 files is an issue. `Skill` gains `SkillSource? Source` and `bool ModifiedLocally` (true when `SkillFolderHash.ComputeFolder(folder)` ≠ `Source.Sha256`; computed on scan, cached until the folder changes). `SkillStore` exposes them and `ReadFile` accepts a relative path with `/` separators, rejecting `..`. `.t` extending `SkillStoreTests.cs`: imported skill with a `scripts/x.ps1` and `refs/a.md` is accepted; the same layout without `.source.json` is still rejected as today; editing a file flips `ModifiedLocally`; restoring it flips it back; `ReadFile("refs/a.md")` works and `ReadFile("../x")` fails.
+- **Deliverable:** `SkillValidator` accepts supporting files in sub-folders and non-`.md` files **only when the skill folder has a valid `.source.json`** (a hand-made skill keeps the flat `.md` rule, unchanged); the per-file 64 KB limit stays and a folder over 200 files is an issue. `Skill` gains `SkillProvenance? Source` and `bool ModifiedLocally` (true when `SkillFolderHash.ComputeFolder(folder)` ≠ `Source.Sha256`; computed on scan, cached until the folder changes). `SkillStore` exposes them and `ReadFile` accepts a relative path with `/` separators, rejecting `..`. `.t` extending `SkillStoreTests.cs`: imported skill with a `scripts/x.ps1` and `refs/a.md` is accepted; the same layout without `.source.json` is still rejected as today; editing a file flips `ModifiedLocally`; restoring it flips it back; `ReadFile("refs/a.md")` works and `ReadFile("../x")` fails.
 - **Acceptance:** `SkillStoreTests`, `SkillValidator` tests and `SkillCatalogTests` green; architect review (path traversal on `ReadFile`).
 
 ### Task 45 — Skill import screen
