@@ -220,6 +220,11 @@ internal static class PersonaFrontmatter
             lines.Add($"watches: [{string.Join(", ", identity.Watches)}]");
         }
 
+        if (!string.IsNullOrWhiteSpace(identity.ConsultWhen))
+        {
+            lines.Add($"consult_when: {QuoteScalar(identity.ConsultWhen)}");
+        }
+
         if (identity.Builtin is not null)
         {
             lines.Add($"_builtin: {QuoteScalar(identity.Builtin)}");
