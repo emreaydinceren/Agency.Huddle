@@ -2,7 +2,7 @@
 
 Status of the Teams delivery in [engineering/teams-plan.md](engineering/teams-plan.md). Each task is a `.t` (failing tests first) and `.i` (implementation) pair; a task's `.i` cannot be Done before its `.t`. Ids are `<phase>.<task>.<t|i>`, the form `agents/scripts/Set-Tracker.ps1` updates. `(H)` marks a Haiku task, `(B)` a boundary task that also gets an Opus architect review.
 
-**Status:** 28 of 170 tasks Done · 0 of 6 retrospectives done · last updated 2026-10-07.
+**Status:** 30 of 170 tasks Done · 0 of 6 retrospectives done · last updated 2026-10-07.
 
 | **Deliverable / Task** | **Active** | **In Progress** | **Done** |
 |---|---|---|---|
@@ -36,8 +36,8 @@ Status of the Teams delivery in [engineering/teams-plan.md](engineering/teams-pl
 | 1.13.i Task 13 TeamTypeCatalog: implement (B) | | | ✔ |
 | 1.14.t Task 14 Development team type manifest: write failing tests (H) | | | ✔ |
 | 1.14.i Task 14 Development team type manifest: implement (H) | | | ✔ |
-| 1.15.t Task 15 Development candidate files: write failing tests (H) | | ✔ | |
-| 1.15.i Task 15 Development candidate files: implement (H) | | | |
+| 1.15.t Task 15 Development candidate files: write failing tests (H) | | | ✔ |
+| 1.15.i Task 15 Development candidate files: implement (H) | | | ✔ |
 | 🔁 R1 Opus retrospective after Task 15: token tally, repeated reads, cost fixes, update the plan | | | |
 | 1.16.t Task 16 Starter skill packs: write failing tests (H) | | | |
 | 1.16.i Task 16 Starter skill packs: implement (H) | | | |
