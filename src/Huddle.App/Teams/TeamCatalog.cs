@@ -1,3 +1,5 @@
+using System.Diagnostics.CodeAnalysis;
+using System.Text;
 using Agency.Huddle.App.Acp;
 using Agency.Huddle.App.Tasks;
 
@@ -7,24 +9,43 @@ namespace Agency.Huddle.App.Teams;
 /// Live catalog of teams built from labels, persona team memberships, and team folders. It holds one
 /// immutable snapshot, rebuilt on every <see cref="PersonaStore.PersonasChanged"/> and
 /// <see cref="TaskStore.IndexChanged"/> event, swapped in before <see cref="Changed"/> is raised. No lock:
-/// a reader always sees a whole snapshot.
+/// a reader always sees a whole snapshot. It also watches each Team folder's <c>_team.md</c> and rebuilds
+/// (debounced) when one changes, because the Task store ignores that file. It reads the file itself rather
+/// than through <c>ITeamFolders</c>, which depends on this catalog.
 /// </summary>
 internal sealed class TeamCatalog : ITeamCatalog, IDisposable
 {
+    private const int TeamFileDebounceMilliseconds = 300;
+
     private readonly PersonaStore personas;
     private readonly TaskStore tasks;
+    private readonly FileSystemWatcher teamFileWatcher;
+    private readonly ITimer teamFileTimer;
+    private volatile bool disposed;
     private volatile IReadOnlyList<TeamSummary> snapshot;
 
     /// <summary>Builds the first snapshot and subscribes to both change signals.</summary>
     /// <param name="personas">The Persona store: Team labels and each Persona's Teams.</param>
-    /// <param name="tasks">The Task store: the Team and Project folders on disk.</param>
-    public TeamCatalog(PersonaStore personas, TaskStore tasks)
+    /// <param name="tasks">The Task store: the Team and Project folders on disk, and the Teams root the team files live under.</param>
+    /// <param name="timeProvider">Clock for the team-file debounce; defaults to the system clock.</param>
+    public TeamCatalog(PersonaStore personas, TaskStore tasks, TimeProvider? timeProvider = null)
     {
         ArgumentNullException.ThrowIfNull(personas);
         ArgumentNullException.ThrowIfNull(tasks);
 
         this.personas = personas;
         this.tasks = tasks;
+        this.teamFileTimer = (timeProvider ?? TimeProvider.System).CreateTimer(this.OnTeamFileTimer, null, Timeout.InfiniteTimeSpan, Timeout.InfiniteTimeSpan);
+        this.teamFileWatcher = new FileSystemWatcher(tasks.RootDirectory, TeamPaths.TeamFileName)
+        {
+            IncludeSubdirectories = true,
+            NotifyFilter = NotifyFilters.LastWrite | NotifyFilters.FileName,
+        };
+        this.teamFileWatcher.Changed += this.OnTeamFileEvent;
+        this.teamFileWatcher.Created += this.OnTeamFileEvent;
+        this.teamFileWatcher.Deleted += this.OnTeamFileEvent;
+        this.teamFileWatcher.Renamed += this.OnTeamFileEvent;
+        this.teamFileWatcher.EnableRaisingEvents = true;
         this.snapshot = this.Rebuild();
         this.personas.PersonasChanged += this.OnSourceChanged;
         this.tasks.IndexChanged += this.OnSourceChanged;
@@ -45,9 +66,12 @@ internal sealed class TeamCatalog : ITeamCatalog, IDisposable
         this.Find(team) is { } found
         && found.Projects.Any(p => string.Equals(p, project, StringComparison.OrdinalIgnoreCase));
 
-    /// <summary>Unsubscribes from both change signals. Safe to call more than once.</summary>
+    /// <summary>Unsubscribes from both change signals and stops the team-file watcher. Safe to call more than once.</summary>
     public void Dispose()
     {
+        this.disposed = true;
+        this.teamFileWatcher.Dispose();
+        this.teamFileTimer.Dispose();
         this.personas.PersonasChanged -= this.OnSourceChanged;
         this.tasks.IndexChanged -= this.OnSourceChanged;
     }
@@ -57,7 +81,63 @@ internal sealed class TeamCatalog : ITeamCatalog, IDisposable
         Build(
             this.personas.Teams,
             [.. this.personas.Entries.Select(static e => (e.Name, e.Teams))],
-            this.tasks.Teams);
+            this.tasks.Teams,
+            this.ReadTeamFiles());
+
+    /// <summary>Reads the <c>_team.md</c> of every Team folder; a missing or malformed file is simply absent.</summary>
+    private Dictionary<string, TeamFile> ReadTeamFiles()
+    {
+        Dictionary<string, TeamFile> files = new(StringComparer.OrdinalIgnoreCase);
+        foreach (TeamFolder folder in this.tasks.Teams)
+        {
+            if (!files.ContainsKey(folder.Name) && TryReadTeamFile(Path.Combine(this.tasks.RootDirectory, folder.Name, TeamPaths.TeamFileName), out TeamFile? file))
+            {
+                files[folder.Name] = file;
+            }
+        }
+
+        return files;
+    }
+
+    /// <summary>Reads and parses <paramref name="path"/>; an unreadable or malformed file is a miss.</summary>
+    private static bool TryReadTeamFile(string path, [NotNullWhen(true)] out TeamFile? file)
+    {
+        file = null;
+        try
+        {
+            return TeamFile.TryParse(File.ReadAllText(path, Encoding.UTF8), out file);
+        }
+        catch (IOException)
+        {
+            return false;
+        }
+        catch (UnauthorizedAccessException)
+        {
+            return false;
+        }
+    }
+
+    /// <summary>Starts the debounce for a <c>_team.md</c> that sits directly in a Team folder; anything deeper is not a team file.</summary>
+    /// <param name="sender">Unused; required by the event handler shape.</param>
+    /// <param name="e">Describes what changed.</param>
+    private void OnTeamFileEvent(object sender, FileSystemEventArgs e)
+    {
+        string relative = Path.GetRelativePath(this.tasks.RootDirectory, e.FullPath);
+        if (!this.disposed && relative.Split([Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar], StringSplitOptions.RemoveEmptyEntries).Length == 2)
+        {
+            this.teamFileTimer.Change(TimeSpan.FromMilliseconds(TeamFileDebounceMilliseconds), Timeout.InfiniteTimeSpan);
+        }
+    }
+
+    /// <summary>Rebuilds and raises <see cref="Changed"/> once the debounce elapses, unless the catalog was disposed meanwhile.</summary>
+    /// <param name="state">Unused; required by the timer callback shape.</param>
+    private void OnTeamFileTimer(object? state)
+    {
+        if (!this.disposed)
+        {
+            this.OnSourceChanged();
+        }
+    }
 
     /// <summary>Swaps in a fresh snapshot, then raises <see cref="Changed"/> once.</summary>
     private void OnSourceChanged()
@@ -72,15 +152,19 @@ internal sealed class TeamCatalog : ITeamCatalog, IDisposable
     /// <param name="labels">Known team labels.</param>
     /// <param name="members">Persona team memberships.</param>
     /// <param name="folders">Team folders on disk.</param>
+    /// <param name="teamFiles">Parsed <c>_team.md</c> files by Team name; a Team without an entry has no team card.</param>
     /// <returns>Sorted list of team summaries.</returns>
     internal static IReadOnlyList<TeamSummary> Build(
         IReadOnlyList<string> labels,
         IReadOnlyList<(string Persona, IReadOnlyList<string> Teams)> members,
-        IReadOnlyList<TeamFolder> folders)
+        IReadOnlyList<TeamFolder> folders,
+        IReadOnlyDictionary<string, TeamFile>? teamFiles = null)
     {
         ArgumentNullException.ThrowIfNull(labels);
         ArgumentNullException.ThrowIfNull(members);
         ArgumentNullException.ThrowIfNull(folders);
+
+        Dictionary<string, TeamFile> cards = new(teamFiles ?? new Dictionary<string, TeamFile>(), StringComparer.OrdinalIgnoreCase);
 
         // Dictionary grouped by OrdinalIgnoreCase to handle case-insensitive duplicates
         Dictionary<string, TeamData> byName = new(StringComparer.OrdinalIgnoreCase);
@@ -186,7 +270,13 @@ internal sealed class TeamCatalog : ITeamCatalog, IDisposable
                     .Distinct(StringComparer.OrdinalIgnoreCase)
                     .OrderBy(m => m, StringComparer.OrdinalIgnoreCase)
                     .ToList(),
-                data.HasFolder))
+                data.HasFolder)
+            {
+                TeamType = cards.GetValueOrDefault(data.DisplayName)?.TeamType,
+                Manager = cards.GetValueOrDefault(data.DisplayName)?.Manager,
+                Workspace = cards.GetValueOrDefault(data.DisplayName)?.Workspace,
+                Owns = cards.GetValueOrDefault(data.DisplayName)?.Owns,
+            })
             .OrderBy(s => s.Name, StringComparer.OrdinalIgnoreCase)
             .ToList();
 
