@@ -19,7 +19,7 @@ internal readonly record struct Optional<T>(bool IsSet, T Value)
 /// <summary>
 /// Only the fields being changed are non-null (or, for a field whose "clear" state is itself
 /// <see langword="null"/>, set through an <see cref="Optional{T}"/>) - Spec §9.1. Passed to
-/// <see cref="TaskService.Update(TaskId, TaskPatch, string?, TaskActor)"/>.
+/// <see cref="TaskService.Update(TaskId, TaskPatch, string?, TaskActor, bool)"/>.
 /// </summary>
 internal sealed record TaskPatch
 {

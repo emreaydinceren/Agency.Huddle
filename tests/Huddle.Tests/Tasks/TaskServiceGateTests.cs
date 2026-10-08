@@ -21,11 +21,11 @@ public sealed class TaskServiceGateTests
 {
     private const string Team = "Platform";
     private const string Check = "dotnet test";
-    private const string QaDone = "Gate qa-evidence-before-done: an Evidence line from a member who verifies (for example QA Engineer) is needed before this Task can be Done.";
+    internal const string QaDone ="Gate qa-evidence-before-done: an Evidence line from a member who verifies (for example QA Engineer) is needed before this Task can be Done.";
     private const string SpecFirst = "Gate spec-approved-before-build: the parent spec Task must be approved before this Task can move to In Progress.";
     private const string FailFirst = "Gate failing-test-before-fix: an Evidence line showing a failing test before the fix is needed before this bug can move to Review.";
     private const string HumanOnly = "Only the Human can set approved_by.";
-    private const string QaGate = "'qa-evidence-before-done'";
+    internal const string QaGate ="'qa-evidence-before-done'";
     private const string SpecGate = "'spec-approved-before-build'";
     private const string FailGate = "'failing-test-before-fix'";
 
@@ -47,11 +47,11 @@ public sealed class TaskServiceGateTests
     private static TaskActor HumanOf(TaskToolHarness harness) => TaskActors.Human(harness.Options.Value);
 
     /// <summary>A Process.md frontmatter enabling the given comma-joined, quoted gate ids.</summary>
-    private static string Process(string gates) =>
+    internal static string Process(string gates) =>
         $"---\ntitle: 'Flow'\ngates: [{gates}]\ncheckCommand: '{Check}'\n---\n# Flow\n";
 
     /// <summary>Builds a gate service for Team Platform whose Process.md holds <paramref name="processText"/>, or no file when null.</summary>
-    private static ProcessGateService BuildGates(TempDataDir dir, string? processText)
+    internal static ProcessGateService BuildGates(TempDataDir dir, string? processText)
     {
         if (processText is not null)
         {

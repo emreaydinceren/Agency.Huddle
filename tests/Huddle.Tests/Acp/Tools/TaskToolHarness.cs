@@ -45,6 +45,7 @@ namespace Agency.Huddle.Tests.Acp.Tools;
 internal sealed class TaskToolHarness : IDisposable
 {
     private readonly TempDataDir dir = new();
+    private readonly Agency.Huddle.App.Teams.ProcessGateService? gates;
 
     /// <summary>
     /// Builds the whole stack: a fresh <see cref="TempDataDir"/>, a real <see cref="PersonaStore"/>
@@ -66,6 +67,7 @@ internal sealed class TaskToolHarness : IDisposable
     public TaskToolHarness(TimeProvider? clock = null, string? sprintsText = null, Agency.Huddle.App.Teams.ProcessGateService? gates = null)
     {
         this.Options = this.dir.Options();
+        this.gates = gates;
         if (sprintsText is not null)
         {
             File.WriteAllText(this.SprintsFilePath, sprintsText);
@@ -313,6 +315,11 @@ internal sealed class TaskToolHarness : IDisposable
         }
 
         services.AddSingleton(this.Service);
+        if (this.gates is not null)
+        {
+            services.AddSingleton(this.gates);
+        }
+
         services.AddSingleton(this.Views);
         services.AddSingleton(this.TurnActivity);
         services.AddSingleton(this.TaskActivity);

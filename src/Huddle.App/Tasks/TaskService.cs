@@ -150,7 +150,12 @@ internal sealed class TaskService : IDisposable
     /// what changed since, or reported as a <see cref="TaskResult.Conflict"/>.
     /// </param>
     /// <param name="actor">Who is making the change.</param>
-    public TaskResult Update(TaskId id, TaskPatch patch, string? baseVersion, TaskActor actor)
+    /// <param name="humanOverridesGates">
+    /// When <see langword="true"/> (the default) the Human's status change passes a refusing process gate and the
+    /// override is logged; when <see langword="false"/> the Human gets the <see cref="TaskResult.GateRefused"/> like
+    /// anyone else, so the Task panel can show it and offer "Move anyway" (PR-7).
+    /// </param>
+    public TaskResult Update(TaskId id, TaskPatch patch, string? baseVersion, TaskActor actor, bool humanOverridesGates = true)
     {
         ArgumentNullException.ThrowIfNull(patch);
         ArgumentNullException.ThrowIfNull(actor);
@@ -159,7 +164,7 @@ internal sealed class TaskService : IDisposable
         TaskResult result;
         lock (this.mutateGate)
         {
-            (result, change) = this.UpdateCore(id, patch, baseVersion, actor);
+            (result, change) = this.UpdateCore(id, patch, baseVersion, actor, humanOverridesGates);
         }
 
         if (change is not null)
@@ -491,7 +496,7 @@ internal sealed class TaskService : IDisposable
     }
 
     /// <summary>The body of <see cref="Update"/>, run under <see cref="mutateGate"/>. Returns the change to raise, or <see langword="null"/> when nothing was written.</summary>
-    private (TaskResult Result, TaskChange? Change) UpdateCore(TaskId id, TaskPatch patch, string? baseVersion, TaskActor actor)
+    private (TaskResult Result, TaskChange? Change) UpdateCore(TaskId id, TaskPatch patch, string? baseVersion, TaskActor actor, bool humanOverridesGates)
     {
         TaskItem? current = this.store.Get(id);
         if (current is null)
@@ -538,7 +543,7 @@ internal sealed class TaskService : IDisposable
         // Spec §Gates: runs after validation, the version check and the "nothing changed" exit, so a
         // stale or no-op update never reports a gate, and before any write. The Human overrides.
         GateRefusal? refusal = current.Status != candidate.Status ? this.CheckGates(current, candidate, currentText, actor) : null;
-        if (refusal is not null && actor.Kind != TaskActorKind.Human)
+        if (refusal is not null && (actor.Kind != TaskActorKind.Human || !humanOverridesGates))
         {
             return (new TaskResult.GateRefused(refusal.Gate, refusal.Message), null);
         }

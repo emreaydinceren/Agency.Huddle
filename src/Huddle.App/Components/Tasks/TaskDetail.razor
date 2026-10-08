@@ -28,7 +28,9 @@
 @using Agency.Huddle.App.Avatars
 @using Agency.Huddle.App.Pipes
 @using Agency.Huddle.App.Services
+@using Agency.Huddle.App.Teams
 @inject TaskStore Store
+@inject IServiceProvider Provider
 @inject TaskEvents Events
 @inject TaskService Service
 @inject SprintStore Sprints
@@ -79,6 +81,14 @@ else if (this.loaded is { } task)
             {
                 <div class="task-detail-save-error-problem">@problem</div>
             }
+        </MudAlert>
+    }
+
+    @if (this.gateRefusal is { } refusal)
+    {
+        <MudAlert Severity="Severity.Warning" role="alert" Class="task-detail-gate-refusal">
+            <span class="task-detail-gate-refusal-text">@refusal.Message</span>
+            <MudButton Class="task-detail-gate-override" OnClick="this.MoveAnywayAsync">Move anyway</MudButton>
         </MudAlert>
     }
 
@@ -177,7 +187,13 @@ else if (this.loaded is { } task)
         </MudAlert>
     }
 
+    IReadOnlyList<GateId> teamGates = this.Gates?.EnabledGates(effective.Location.Team) ?? [];
+
     RenderFragment fieldsContent = @<text>
+            @if (teamGates.Count > 0)
+            {
+                <div class="task-detail-gates">@("Gates: " + string.Join(", ", teamGates.Select(ProcessDocument.ToId)))</div>
+            }
             <div class="task-detail-title-row">
                 @if (this.titleEditing)
                 {
@@ -468,6 +484,7 @@ else if (this.loaded is { } task)
     private string? sprintInput;
     private string? baseVersion;
     private TaskResult.Conflict? conflict;
+    private TaskResult.GateRefused? gateRefusal;
     private Dictionary<TaskField, ConflictChoice> conflictChoices = [];
     private string? saveError;
     private IReadOnlyList<string> saveProblems = [];
@@ -1299,7 +1316,39 @@ else if (this.loaded is { } task)
     /// <see cref="HasPending"/> afterwards. An <see cref="IOException"/> from the store (Spec §13.6
     /// "Save errors") is shown in <see cref="saveError"/>, following <c>TeammateCard.SaveAsync</c>.
     /// </summary>
-    private Task SaveAsync()
+    private Task SaveAsync() => this.SaveCore(humanOverridesGates: false);
+
+    /// <summary>
+    /// The Team's process gates, or <see langword="null"/> when none are registered (a host without Teams enforces
+    /// none, matching <see cref="TaskService"/>).
+    /// </summary>
+    private ProcessGateService? Gates => this.Provider.GetService(typeof(ProcessGateService)) as ProcessGateService;
+
+    /// <summary>
+    /// "Move anyway" on a gate refusal (PR-7, Spec §Gates): asks for confirmation naming the gate, and only on yes
+    /// repeats the pending change as the Human, which the service logs as a gate override.
+    /// </summary>
+    private async Task MoveAnywayAsync()
+    {
+        if (this.gateRefusal is not { } refusal)
+        {
+            return;
+        }
+
+        bool? confirmed = await this.Dialogs.ShowMessageBoxAsync(
+            "Move anyway?",
+            $"This skips the {ProcessDocument.ToId(refusal.Gate)} gate and is logged in the Change log.",
+            yesText: "Move anyway",
+            cancelText: "Cancel");
+        if (confirmed == true)
+        {
+            await this.SaveCore(humanOverridesGates: true);
+        }
+    }
+
+    /// <summary>The body of <see cref="SaveAsync"/>; <paramref name="humanOverridesGates"/> is true only for a confirmed "Move anyway".</summary>
+    /// <param name="humanOverridesGates">Whether the Human's change may pass a refusing process gate.</param>
+    private Task SaveCore(bool humanOverridesGates)
     {
         if (this.loaded is not { } current)
         {
@@ -1308,6 +1357,7 @@ else if (this.loaded is { } task)
 
         this.saveError = null;
         this.saveProblems = [];
+        this.gateRefusal = null;
         if (this.SprintProblem() is not null)
         {
             return Task.CompletedTask;
@@ -1340,7 +1390,7 @@ else if (this.loaded is { } task)
 
             TaskResult result = this.createMode
                 ? this.Service.Create(TaskDetail.BuildDraft(patch.ApplyTo(current)), actor)
-                : this.Service.Update(current.Id, patch, this.baseVersion, actor);
+                : this.Service.Update(current.Id, patch, this.baseVersion, actor, humanOverridesGates);
             outcome = result;
             switch (result)
             {
@@ -1366,6 +1416,9 @@ else if (this.loaded is { } task)
                     break;
                 case TaskResult.Refused refused:
                     this.saveProblems = refused.Problems;
+                    break;
+                case TaskResult.GateRefused gateRefused:
+                    this.gateRefusal = gateRefused;
                     break;
                 case TaskResult.NotFound:
                     this.deleted = true;
