@@ -33,7 +33,26 @@ public sealed partial class PromptCatalogTests
     [Fact]
     public void All_HasExactlyThirtySevenPrompts()
     {
-        Assert.Equal(71, PromptCatalog.All.Count);
+        Assert.Equal(72, PromptCatalog.All.Count);
+    }
+
+    /// <summary>
+    /// Task 29 (MS-7): <c>systemPrompt.roleBlock</c> is <see cref="PromptTiming.NextSession"/>, takes and requires the five
+    /// role placeholders, reads in the order identity, colleagues, skills, and never contains the tool prefix.
+    /// </summary>
+    [Fact]
+    public void RoleBlockSystemPrompt_TakesTheFivePlaceholdersInOrder()
+    {
+        var prompt = PromptCatalog.Get("systemPrompt.roleBlock");
+        string[] placeholders = ["{{name}}", "{{role}}", "{{team}}", "{{consult}}", "{{skills}}"];
+
+        Assert.Equal(PromptTiming.NextSession, prompt.Timing);
+        Assert.Equal(placeholders, prompt.Placeholders);
+        Assert.Equal(placeholders, prompt.RequiredPlaceholders);
+        Assert.False(prompt.Default.Contains("mcp__team__", StringComparison.Ordinal));
+        Assert.True(prompt.Default.IndexOf("{{name}}", StringComparison.Ordinal) < prompt.Default.IndexOf("Consult these colleagues when", StringComparison.Ordinal));
+        Assert.True(prompt.Default.IndexOf("{{consult}}", StringComparison.Ordinal) < prompt.Default.IndexOf("Your skills, read one with read_skill when its trigger applies:", StringComparison.Ordinal));
+        Assert.True(prompt.Default.IndexOf("Your skills, read one with read_skill when its trigger applies:", StringComparison.Ordinal) < prompt.Default.IndexOf("{{skills}}", StringComparison.Ordinal));
     }
 
     /// <summary>

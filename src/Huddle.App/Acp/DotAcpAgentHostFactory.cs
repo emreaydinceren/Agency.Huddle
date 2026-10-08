@@ -281,6 +281,8 @@ internal sealed class DotAcpAgentHostFactory : IAgentHostFactory
             }
             : null;
 
+        PersonaStore personaStore = this.serviceProvider.GetRequiredService<PersonaStore>();
+
         return new DotAcpPersonaHost(
             innerHost,
             toolServer,
@@ -303,6 +305,9 @@ internal sealed class DotAcpAgentHostFactory : IAgentHostFactory
             toolServer.Endpoint,
             meta,
             this.loggerFactory,
-            this.workModePolicy);
+            this.workModePolicy,
+            () => parsed is null
+                ? null
+                : RoleBlockBuilder.Build(parsed, skillResolution.Skills, this.teamCatalog, personaStore.Get));
     }
 }

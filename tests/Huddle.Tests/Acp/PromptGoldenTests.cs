@@ -146,6 +146,32 @@ public sealed class PromptGoldenTests
         AssertMatchesGolden("systemPrompt.skills.txt", actual);
     }
 
+    /// <summary>Pins the composed prompt of one hired Team member: the role block with its colleagues and skills (Task 29, MS-7).</summary>
+    [Fact]
+    public void SystemPrompt_HiredMember_MatchesGolden()
+    {
+        var persona = new Persona("Ada", "You are Ada.");
+        var roleBlock = new RoleBlockInput(
+            "Ada",
+            "Developer",
+            "Apollo",
+            [new ConsultLine("Grace", "Lead", "Ask about scope and priorities."), new ConsultLine("Linus", "Reviewer", "Ask for a review before you hand work back.")],
+            [new SkillLine("team-building", "Use when you are asked to propose or change a Team.")]);
+
+        var actual = SystemPromptComposer.Compose(
+            persona,
+            new FakePromptSource(),
+            "mcp__team__get_help",
+            ToolNames,
+            [],
+            string.Empty,
+            null,
+            SessionScope.Shared,
+            roleBlock: roleBlock);
+
+        AssertMatchesGolden("systemPrompt.hiredMember.txt", actual);
+    }
+
     /// <summary>
     /// Pins that <see cref="SystemPromptComposer.Compose(Persona, IPromptSource, string, IReadOnlyList{string}, IReadOnlyList{Skill}, string)"/>'s Skills overload, called with an empty
     /// Skill list, produces exactly today's <c>systemPrompt.txt</c> golden (Spec §6.4: the skills block

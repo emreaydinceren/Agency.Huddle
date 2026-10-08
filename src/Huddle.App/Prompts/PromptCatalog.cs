@@ -135,6 +135,30 @@ internal static class PromptCatalog
             Timing: PromptTiming.NextSession),
 
         new PromptDefinition(
+            Key: "systemPrompt.roleBlock",
+            Label: "Role block",
+            HelperText:
+                "Primes a hired Team member with who it is in its Team, which colleagues to consult and " +
+                "which skills it holds, appended only for a Persona hired into a role. Must keep {{name}}, " +
+                "{{role}}, {{team}}, {{consult}} and {{skills}}: the last two are where the colleague list " +
+                "and the skill list with their triggers are substituted in.",
+            Default:
+                """
+                You are {{name}}, the {{role}} in the {{team}} Team.
+
+                Consult these colleagues when their job description says their work bears on yours:
+
+                {{consult}}
+
+                Your skills, read one with read_skill when its trigger applies:
+
+                {{skills}}
+                """,
+            Placeholders: ["{{name}}", "{{role}}", "{{team}}", "{{consult}}", "{{skills}}"],
+            RequiredPlaceholders: ["{{name}}", "{{role}}", "{{team}}", "{{consult}}", "{{skills}}"],
+            Timing: PromptTiming.NextSession),
+
+        new PromptDefinition(
             Key: "systemPrompt.skills",
             Label: "Skills block",
             HelperText:

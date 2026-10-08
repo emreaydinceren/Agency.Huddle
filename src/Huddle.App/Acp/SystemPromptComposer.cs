@@ -187,6 +187,11 @@ internal static class SystemPromptComposer
     /// <c>ask_human</c>'s own name, already carrying its full prefix, or <see langword="null"/> when the
     /// session does not offer it. When set, <c>systemPrompt.askHuman</c> follows the tools paragraph.
     /// </param>
+    /// <param name="roleBlock">
+    /// The hired member's role block (Task 29, MS-7), or <see langword="null"/> for a Persona with no
+    /// <c>_role</c>; <see langword="null"/> leaves the output byte-identical to a call without it. When
+    /// set, <c>systemPrompt.roleBlock</c> follows the tools paragraph and any asking-the-Human paragraph.
+    /// </param>
     /// <returns>
     /// The five parts joined with a blank line, plus a sixth Skills block when <paramref name="skills"/>
     /// is non-empty, plus a seventh memory block when <paramref name="memory"/> is non-null, plus a
@@ -206,7 +211,8 @@ internal static class SystemPromptComposer
         MemorySnapshot? memory,
         SessionScope scope,
         TeamMemorySnapshot? teamMemory = null,
-        string? askHumanToolName = null)
+        string? askHumanToolName = null,
+        RoleBlockInput? roleBlock = null)
     {
         ArgumentNullException.ThrowIfNull(persona);
         ArgumentNullException.ThrowIfNull(prompts);
@@ -239,6 +245,11 @@ internal static class SystemPromptComposer
             parts.Add(prompts.Render(
                 "systemPrompt.askHuman",
                 new Dictionary<string, string> { ["{{askHumanTool}}"] = askHumanToolName }));
+        }
+
+        if (roleBlock is not null)
+        {
+            parts.Add(BuildRoleBlock(prompts, roleBlock));
         }
 
         if (skills.Count > 0)
@@ -284,6 +295,39 @@ internal static class SystemPromptComposer
         }
 
         return string.Join("\n\n", parts);
+    }
+
+    /// <summary>
+    /// Renders the <c>systemPrompt.roleBlock</c> block. The colleague and skill lists are built first and
+    /// handed over as values, so a name containing <c>{{x}}</c> stays literal; an empty list renders
+    /// <c>- (none)</c> so the heading above it is never left dangling.
+    /// </summary>
+    /// <param name="prompts">Resolves the role block prompt's current text.</param>
+    /// <param name="roleBlock">The member's role, Team, colleagues and skills.</param>
+    private static string BuildRoleBlock(IPromptSource prompts, RoleBlockInput roleBlock)
+    {
+        string consult = roleBlock.Consult.Count == 0
+            ? "- (none)"
+            : string.Join(
+                '\n',
+                roleBlock.Consult.Select(static line => string.IsNullOrWhiteSpace(line.ConsultWhen)
+                    ? $"- {line.Name} ({line.Role})"
+                    : $"- {line.Name} ({line.Role}): {line.ConsultWhen}"));
+
+        string skillLines = roleBlock.Skills.Count == 0
+            ? "- (none)"
+            : string.Join('\n', roleBlock.Skills.Select(static skill => $"- {skill.Name}: {skill.Description}"));
+
+        return prompts.Render(
+            "systemPrompt.roleBlock",
+            new Dictionary<string, string>
+            {
+                ["{{name}}"] = roleBlock.Name,
+                ["{{role}}"] = roleBlock.Role,
+                ["{{team}}"] = roleBlock.Team,
+                ["{{consult}}"] = consult,
+                ["{{skills}}"] = skillLines,
+            });
     }
 
     /// <summary>Renders the <c>systemPrompt.memory</c> block, with its index built from <paramref name="memory"/>'s entries.</summary>
