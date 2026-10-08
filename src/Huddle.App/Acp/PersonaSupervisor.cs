@@ -14,7 +14,7 @@ namespace Agency.Huddle.App.Acp;
 /// ACP bridge because <see cref="PersonaRunner"/> instances are created per Persona at runtime, while
 /// hosted services themselves are fixed at build time.
 /// </summary>
-internal sealed class PersonaSupervisor : BackgroundService
+internal sealed class PersonaSupervisor : BackgroundService, Agency.Huddle.App.Teams.IPersonaStartGate
 {
     private readonly TeamOptions options;
     private readonly PersonaStore personaStore;
@@ -124,6 +124,37 @@ internal sealed class PersonaSupervisor : BackgroundService
         this.commands = commands;
         this.elicitationBridge = elicitationBridge;
     }
+
+    /// <inheritdoc />
+    public async Task<bool> WaitUntilRunningAsync(string name, TimeSpan timeout, CancellationToken ct)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(name);
+
+        using CancellationTokenSource limit = CancellationTokenSource.CreateLinkedTokenSource(ct);
+        limit.CancelAfter(timeout);
+        try
+        {
+            while (true)
+            {
+                lock (this.gate)
+                {
+                    if (this.hosts.ContainsKey(name))
+                    {
+                        return true;
+                    }
+                }
+
+                await Task.Delay(StartPollInterval, limit.Token).ConfigureAwait(false);
+            }
+        }
+        catch (OperationCanceledException) when (!ct.IsCancellationRequested)
+        {
+            // Only the timeout fired: the caller asked "is it running yet", and the answer is no.
+            return false;
+        }
+    }
+
+    private static readonly TimeSpan StartPollInterval = TimeSpan.FromMilliseconds(50);
 
     /// <summary>The number of Personas with a currently running host. Test seam only.</summary>
     internal int RunningHostCount

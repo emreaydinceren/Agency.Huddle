@@ -19,16 +19,45 @@ internal sealed record HireRequest(string Team, string TypeId, string RoleId, Ca
 /// <param name="PersonaName">The new Teammate's name when the file was written; otherwise <see langword="null"/>.</param>
 internal sealed record HireResult(bool Ok, string? Error, string? PersonaName);
 
+/// <summary>Makes sure a Team's skills are present before its members start (HR-9).</summary>
+internal interface ISkillInstaller
+{
+    /// <summary>Installs what is missing.</summary>
+    /// <param name="skills">The skills the Team's cards carry.</param>
+    /// <param name="ct">Cancels the installation.</param>
+    /// <returns>The skills that could not be installed; empty when all are present.</returns>
+    Task<IReadOnlyList<SkillRef>> EnsureInstalledAsync(IReadOnlyList<SkillRef> skills, CancellationToken ct);
+}
+
+/// <summary>Tells when a freshly hired Teammate's host is running.</summary>
+internal interface IPersonaStartGate
+{
+    /// <summary>Waits until the Teammate has a running host or the timeout passes.</summary>
+    /// <param name="name">The Teammate name.</param>
+    /// <param name="timeout">The longest wait.</param>
+    /// <param name="ct">Cancels the wait.</param>
+    /// <returns><see langword="true"/> when the Teammate is running; <see langword="false"/> on timeout.</returns>
+    Task<bool> WaitUntilRunningAsync(string name, TimeSpan timeout, CancellationToken ct);
+}
+
+/// <summary>The outcome of starting a Team.</summary>
+/// <param name="Ok">Whether every member was hired and the manager is running.</param>
+/// <param name="Error">Why the start stopped; <see langword="null"/> when it did not.</param>
+/// <param name="Started">The Teammates hired before the start finished or stopped, in hire order.</param>
+internal sealed record StartTeamResult(bool Ok, string? Error, IReadOnlyList<string> Started);
+
 /// <summary>
 /// Turns a resolved card into an ordinary Teammate file, a model row and an avatar (HR-5, HR-6,
 /// Spec §Hiring steps 4-5). Refusals write nothing; a failure after the file is written is logged and
-/// reported, and the Teammate stays.
+/// reported, and the Teammate stays. <see cref="StartTeamAsync"/> hires a whole Team, manager first.
 /// </summary>
 /// <param name="personas">Where the Teammate file is written.</param>
 /// <param name="types">The team types, for the role and its candidate.</param>
 /// <param name="packs">The skill packs, for their consult-when additions.</param>
 /// <param name="avatars">Where the avatar is saved.</param>
 /// <param name="limits">The shared hire-limit check.</param>
+/// <param name="installer">Installs the Team's skills before any member is hired.</param>
+/// <param name="startGate">Tells when the manager is running.</param>
 /// <param name="logger">Receives post-write failures.</param>
 internal sealed class HireService(
     PersonaStore personas,
@@ -36,8 +65,140 @@ internal sealed class HireService(
     SkillPackStore packs,
     AvatarStore avatars,
     HireLimitGuard limits,
+    ISkillInstaller installer,
+    IPersonaStartGate startGate,
     ILogger<HireService> logger)
 {
+    /// <summary>How long the manager gets to report running before the start stops.</summary>
+    internal static readonly TimeSpan ManagerStartTimeout = TimeSpan.FromSeconds(60);
+
+    /// <summary>
+    /// Starts a Team: checks every card and required role, installs the skills, hires the manager and
+    /// waits until it runs, then hires the rest in request order. Checks and installation write nothing;
+    /// once hiring begins the first failure stops the start and reports who already started.
+    /// </summary>
+    /// <param name="team">The Team to start.</param>
+    /// <param name="hires">One request per member, all for the same team type.</param>
+    /// <param name="ct">Cancels the start; a cancelled start keeps the members already hired.</param>
+    /// <returns>The outcome with the Teammates hired so far.</returns>
+    public async Task<StartTeamResult> StartTeamAsync(string team, IReadOnlyList<HireRequest> hires, CancellationToken ct)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(team);
+        ArgumentNullException.ThrowIfNull(hires);
+
+        StartTeamResult? blocked = this.CheckStart(team, hires, out RoleSpec? managerRole);
+        if (blocked is not null || managerRole is null)
+        {
+            return blocked ?? HireService.Stop("The team needs a manager.", []);
+        }
+
+        IReadOnlyList<SkillRef> skills = [.. hires.SelectMany(static h => h.Card.Skills).DistinctBy(static s => s.Name, StringComparer.Ordinal)];
+        IReadOnlyList<SkillRef> missing = await installer.EnsureInstalledAsync(skills, ct).ConfigureAwait(false);
+        if (missing.Count > 0)
+        {
+            string names = string.Join(", ", missing.Select(static s => s.Name));
+            return HireService.Stop($"Skills not installed: {names}.", []);
+        }
+
+        HireRequest manager = hires.First(h => string.Equals(h.RoleId, managerRole.Id, StringComparison.Ordinal));
+        List<string> started = [];
+        string? failure = this.HireOne(manager, started);
+        if (failure is not null)
+        {
+            return HireService.Stop(failure, started);
+        }
+
+        bool running;
+        try
+        {
+            running = await startGate.WaitUntilRunningAsync(manager.Card.Name, HireService.ManagerStartTimeout, ct).ConfigureAwait(false);
+        }
+        catch (OperationCanceledException)
+        {
+            return HireService.Stop("The start was cancelled.", started);
+        }
+
+        if (!running)
+        {
+            return HireService.Stop($"{manager.Card.Name} did not start in time.", started);
+        }
+
+        foreach (HireRequest hire in hires.Where(h => !ReferenceEquals(h, manager)))
+        {
+            if (ct.IsCancellationRequested)
+            {
+                return HireService.Stop("The start was cancelled.", started);
+            }
+
+            failure = this.HireOne(hire, started);
+            if (failure is not null)
+            {
+                return HireService.Stop(failure, started);
+            }
+        }
+
+        return new StartTeamResult(true, null, started);
+    }
+
+    /// <summary>Checks the start before anything is written.</summary>
+    /// <returns>The blocking result, or <see langword="null"/> when the start may go ahead.</returns>
+    private StartTeamResult? CheckStart(string team, IReadOnlyList<HireRequest> hires, out RoleSpec? managerRole)
+    {
+        managerRole = null;
+        if (hires.Count == 0)
+        {
+            return HireService.Stop("There is nobody to start.", []);
+        }
+
+        string typeId = hires[0].TypeId;
+        if (hires.Any(h => !string.Equals(h.TypeId, typeId, StringComparison.Ordinal) || !string.Equals(h.Team, team, StringComparison.Ordinal)))
+        {
+            return HireService.Stop("Every member must belong to the same team and team type.", []);
+        }
+
+        TeamTypeManifest? type = types.Find(typeId);
+        if (type is null)
+        {
+            return HireService.Stop($"Unknown team type '{typeId}'.", []);
+        }
+
+        HireRequest? unready = hires.FirstOrDefault(static h => h.Card.Readiness != CardReadiness.Ready);
+        if (unready is not null)
+        {
+            return HireService.Stop($"{unready.Card.Name} still needs setup.", []);
+        }
+
+        foreach (RoleSpec role in type.Roles.Where(static r => r.Required))
+        {
+            if (!hires.Any(h => string.Equals(h.RoleId, role.Id, StringComparison.Ordinal)))
+            {
+                return HireService.Stop($"The team needs a {role.Title}.", []);
+            }
+        }
+
+        managerRole = type.Roles.FirstOrDefault(r => r.Manager && hires.Any(h => string.Equals(h.RoleId, r.Id, StringComparison.Ordinal)));
+        return null;
+    }
+
+    /// <summary>Hires one member and records the name.</summary>
+    /// <returns>The refusal text, or <see langword="null"/> when the Teammate was written.</returns>
+    private string? HireOne(HireRequest request, List<string> started)
+    {
+        HireResult result = this.Hire(request);
+        if (result.PersonaName is not null)
+        {
+            started.Add(result.PersonaName);
+        }
+
+        return result.Ok ? null : result.Error ?? string.Empty;
+    }
+
+    /// <summary>Builds the result of a stopped start.</summary>
+    private static StartTeamResult Stop(string error, IReadOnlyList<string> started)
+    {
+        return new StartTeamResult(false, error, started);
+    }
+
     /// <summary>Hires one Teammate.</summary>
     /// <param name="request">What to hire.</param>
     /// <returns>The outcome; a refusal writes nothing.</returns>

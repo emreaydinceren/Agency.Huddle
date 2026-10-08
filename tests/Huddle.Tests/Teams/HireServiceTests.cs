@@ -61,7 +61,7 @@ public sealed class HireServiceTests
         options.Acp.MaxTeammatesPerTeam = perTeam;
         harness = new HireLimitHarness(Microsoft.Extensions.Options.Options.Create(options));
         AvatarStore avatars = new(dir.Options(), NullLogger<AvatarStore>.Instance);
-        return new HireService(personas, types, packs, avatars, harness.Guard, NullLogger<HireService>.Instance);
+        return new HireService(personas, types, packs, avatars, harness.Guard, new FakeSkillInstaller(), new FakeStartGate(), NullLogger<HireService>.Instance);
     }
 
     private static HireRequest Request(string name, string roleId = "dev", string? model = "sonnet")
