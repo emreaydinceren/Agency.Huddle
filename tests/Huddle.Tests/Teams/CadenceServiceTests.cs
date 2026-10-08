@@ -232,6 +232,62 @@ public sealed class CadenceServiceTests
         Assert.Null(harness.State.Get(Team));
     }
 
+    /// <summary>Review fix 5: a Team whose post throws is logged and skipped, so the next Team still gets its digest.</summary>
+    [Fact]
+    public async Task Tick_PostThrowsForOneTeam_OtherTeamsStillFire()
+    {
+        CancellationToken ct = TestContext.Current.CancellationToken;
+        using Harness harness = new();
+        harness.AddTeam("Design", "Dan");
+        harness.WriteProcess(Both);
+        CadenceService service = harness.Service();
+        await service.TickAsync(ct);
+        harness.Clock.UtcNow = Start.AddDays(1);
+        harness.Poster.ThrowOnce = true;
+
+        await service.TickAsync(ct);
+
+        Assert.Equal([("Dan", "prompt.digest|Design|2026-10-08")], harness.Poster.Posts);
+    }
+
+    /// <summary>Review fix 5: Done Tasks that vanish lower the baseline, so the retro counts from the lower number instead of stalling.</summary>
+    [Fact]
+    public async Task Tick_DoneCountFalls_RebaselinesTheRetroCount()
+    {
+        CancellationToken ct = TestContext.Current.CancellationToken;
+        using Harness harness = new();
+        harness.WriteProcess(Both);
+        harness.WriteDone(5);
+        await harness.Service().TickAsync(ct);
+        harness.DeleteDone(keep: 2);
+        await harness.Service().TickAsync(ct);
+        harness.WriteDone(12);
+
+        await harness.Service().TickAsync(ct);
+
+        Assert.Equal([(Manager, NoRetroNote + "prompt.retro|Platform|2026-10-08")], harness.Poster.Posts);
+    }
+
+    /// <summary>Review fix 5: a clock that moved backwards re-baselines the digest instead of stalling until the old time is passed again.</summary>
+    [Fact]
+    public async Task Tick_ClockMovesBackwards_RebaselinesTheDigest()
+    {
+        CancellationToken ct = TestContext.Current.CancellationToken;
+        using Harness harness = new();
+        harness.WriteProcess(Both);
+        CadenceService service = harness.Service();
+        await service.TickAsync(ct);
+        harness.Clock.UtcNow = Start.AddDays(1);
+        await service.TickAsync(ct);
+        harness.Clock.UtcNow = Start.AddHours(12);
+        await service.TickAsync(ct);
+
+        harness.Clock.UtcNow = Start.AddHours(36);
+        await service.TickAsync(ct);
+
+        Assert.Equal(2, harness.Poster.Posts.Count);
+    }
+
     private static string Both =>
         "---\ntitle: 'Flow'\ndigest: { every: 1, unit: 'days' }\nretro: { every: 10, unit: 'done-tasks' }\n---\n# Flow\n";
 
@@ -244,9 +300,18 @@ public sealed class CadenceServiceTests
         /// <summary>What <see cref="PostAsync"/> reports; false simulates a refused post.</summary>
         public bool Accept { get; set; } = true;
 
+        /// <summary>When true the next post throws once, simulating a failing Team.</summary>
+        public bool ThrowOnce { get; set; }
+
         /// <inheritdoc />
         public Task<bool> PostAsync(string managerName, string text, CancellationToken ct)
         {
+            if (this.ThrowOnce)
+            {
+                this.ThrowOnce = false;
+                throw new InvalidOperationException("Post failed.");
+            }
+
             this.Posts.Add((managerName, text));
             return Task.FromResult(this.Accept);
         }
@@ -337,6 +402,23 @@ public sealed class CadenceServiceTests
                     root,
                     Path.Combine(Team, "_tasks", $"{id}.md"),
                     TestTasks.Make(id: id, status: TaskState.Done, location: new(Team, null, false)));
+            }
+        }
+
+        /// <summary>Adds a second Team, with the same Process.md and folder.</summary>
+        /// <param name="name">The Team name.</param>
+        /// <param name="manager">Its manager.</param>
+        public void AddTeam(string name, string manager) =>
+            this.catalog.Teams = [.. this.catalog.Teams, new TeamSummary(name, [], [manager], true) { TeamType = new VersionedRef("web", "1.2.0"), Manager = manager }];
+
+        /// <summary>Deletes the Done Tasks numbered above <paramref name="keep"/>.</summary>
+        /// <param name="keep">How many Done Tasks stay.</param>
+        public void DeleteDone(int keep)
+        {
+            string folder = Path.Combine(TestTaskStore.Root(this.dir), Team, "_tasks");
+            foreach (string file in Directory.GetFiles(folder, "PLAT-*.md").Where(file => int.Parse(Path.GetFileNameWithoutExtension(file)[5..], System.Globalization.CultureInfo.InvariantCulture) > keep))
+            {
+                File.Delete(file);
             }
         }
 

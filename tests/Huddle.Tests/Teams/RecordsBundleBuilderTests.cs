@@ -194,6 +194,25 @@ public sealed class RecordsBundleBuilderTests
         Assert.Equal(string.Create(CultureInfo.InvariantCulture, $"... {300 - shown} more, ask for a narrower window"), lines[^1]);
     }
 
+    /// <summary>Review fix 6: a tool-call log over 1 MB is read from its tail, so the newest lines count and the memory used is bounded.</summary>
+    [Fact]
+    public void Build_OversizedLog_ReadsOnlyTheLastMegabyte()
+    {
+        using TempDataDir dir = new();
+        using Fixture fixture = new(dir);
+        string head = Line("2026-10-02T09:00:00Z", "head_tool", "completed");
+        List<string> lines = [.. Enumerable.Repeat(head, 12000), Line("2026-10-02T10:00:00Z", "tail_tool", "completed")];
+        fixture.WriteLog("Ada", "2026-10-02", lines);
+
+        RecordsBundle bundle = fixture.Builder.Build("Platform", Since);
+
+        ToolCallSummary tail = Assert.Single(bundle.ToolCalls, static call => call.Tool == "tail_tool");
+        ToolCallSummary heads = Assert.Single(bundle.ToolCalls, static call => call.Tool == "head_tool");
+        Assert.Equal(1, tail.Calls);
+        Assert.InRange(heads.Calls, 1, 1048576 / (head.Length + 1));
+        Assert.Equal(0, bundle.Unreadable);
+    }
+
     private static string Describe(RecordEvent e) =>
         string.Create(CultureInfo.InvariantCulture, $"{e.Time.UtcDateTime:yyyy-MM-ddTHH:mm:ssZ}|{e.Member}|{e.TaskId}|{e.Link}");
 

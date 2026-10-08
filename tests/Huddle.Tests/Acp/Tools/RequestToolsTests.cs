@@ -71,7 +71,7 @@ public sealed class RequestToolsTests
         Put(harness, TestTasks.Make(id: "DES-0001", location: design, unknownFields: RequestPairs()));
         Put(harness, TestTasks.Make(id: "DES-0002", status: TaskState.Rejected, location: design, unknownFields: RequestPairs()));
         Put(harness, TestTasks.Make(id: "DES-0003", location: design));
-        ListTeamsTool tool = new(Catalog(), harness.Store);
+        ListTeamsTool tool = new(Catalog(), harness.Store, harness.Directory, harness.NovaId ?? throw new InvalidOperationException("Harness not seeded."));
 
         string result = await tool.InvokeAsync([], ct);
 
@@ -241,5 +241,64 @@ public sealed class RequestToolsTests
 
         Assert.Equal("The related Task must be one of your own Team's Tasks.", result);
         Assert.Single(harness.Store.All);
+    }
+
+    /// <summary>Review fix 7: a caller who manages no Team cannot list Teams.</summary>
+    [Fact]
+    public async Task ListTeams_NonManager_IsRefused()
+    {
+        CancellationToken ct = TestContext.Current.CancellationToken;
+        using TaskToolHarness harness = await CreateHarnessAsync(ct);
+        ListTeamsTool tool = new(Catalog(), harness.Store, harness.Directory, harness.KaiId ?? throw new InvalidOperationException("Harness not seeded."));
+
+        string result = await tool.InvokeAsync([], ct);
+
+        Assert.Equal("Only managers list Teams; ask your own manager.", result);
+    }
+
+    /// <summary>Builds a catalog where Nova manages Platform and Ops, and Dana manages Design.</summary>
+    private static FakeTeamCatalog TwoTeamCatalog() => new()
+    {
+        Teams =
+        [
+            new TeamSummary("Platform", [], ["Nova"], true) { Manager = "Nova" },
+            new TeamSummary("Ops", [], ["Nova"], true) { Manager = "Nova" },
+            new TeamSummary("Design", [], ["Dana"], true) { Manager = "Dana" },
+        ],
+    };
+
+    /// <summary>Review fix 7: a manager of several Teams must say which Team files the Request.</summary>
+    [Fact]
+    public async Task FileRequest_ManagerOfSeveralTeams_NeedsFromTeam()
+    {
+        CancellationToken ct = TestContext.Current.CancellationToken;
+        using TaskToolHarness harness = await CreateHarnessAsync(ct);
+        FileRequestTool tool = new(TwoTeamCatalog(), harness.Service, harness.Store, new FakeRequestNotifier(), harness.Directory, harness.NovaId ?? throw new InvalidOperationException("Harness not seeded."));
+
+        string result = await tool.InvokeAsync(BugArguments(), ct);
+
+        Assert.Equal("You manage several Teams (Ops, Platform); name the Team filing this Request in 'fromTeam'.", result);
+        Assert.Empty(harness.Store.All);
+    }
+
+    /// <summary>Review fix 7: with <c>fromTeam</c> a manager of several Teams files as that Team, and a Team they do not manage is refused.</summary>
+    [Fact]
+    public async Task FileRequest_FromTeam_FilesAsThatTeam()
+    {
+        CancellationToken ct = TestContext.Current.CancellationToken;
+        using TaskToolHarness harness = await CreateHarnessAsync(ct);
+        FileRequestTool tool = new(TwoTeamCatalog(), harness.Service, harness.Store, new FakeRequestNotifier(), harness.Directory, harness.NovaId ?? throw new InvalidOperationException("Harness not seeded."));
+        JsonObject foreign = BugArguments();
+        foreign["fromTeam"] = "Design";
+        JsonObject own = BugArguments();
+        own["fromTeam"] = "Ops";
+
+        string refused = await tool.InvokeAsync(foreign, ct);
+        string filed = await tool.InvokeAsync(own, ct);
+
+        Assert.Equal("You do not manage a Team named 'Design'.", refused);
+        Assert.Equal("Filed DESI-0001 in Design.", filed);
+        TaskItem request = Assert.Single(harness.Store.All);
+        Assert.Equal("Ops", Field(request, "from_team"));
     }
 }

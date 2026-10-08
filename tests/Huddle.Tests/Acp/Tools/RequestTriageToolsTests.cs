@@ -327,4 +327,33 @@ public sealed class RequestTriageToolsTests
 
         Assert.Equal("PLAT-0002 is not a Request.", result);
     }
+
+    /// <summary>Review fix 7: an accept naming an assignee outside the receiving Team is refused and the Request stays in Backlog.</summary>
+    [Fact]
+    public async Task Triage_AssigneeOutsideReceivingTeam_IsRefused()
+    {
+        CancellationToken ct = TestContext.Current.CancellationToken;
+        using Scene scene = await CreateSceneAsync(ct);
+
+        string result = await scene.TriageTool("Nova").InvokeAsync(Triage("accept", assignee: "Dana"), ct);
+
+        Assert.Equal("Dana is not a member of Platform.", result);
+        Assert.Equal(TaskState.Backlog, scene.Current().Status);
+        Assert.Empty(scene.Notifier.Calls);
+    }
+
+    /// <summary>Review fix 7: when closing is refused after confirmed_by was written, confirmed_by is put back and nobody is woken.</summary>
+    [Fact]
+    public async Task Confirm_CloseRefused_RollsConfirmedByBack()
+    {
+        CancellationToken ct = TestContext.Current.CancellationToken;
+        using Scene scene = await CreateSceneAsync(ct, TaskState.Done, TriageState.Accepted);
+        _ = Assert.IsType<TaskResult.Saved>(scene.Harness.Service.Close(scene.Current().Id, TaskActors.Human(scene.Harness.Options.Value)));
+
+        string result = await scene.ConfirmTool("Quinn").InvokeAsync(new JsonObject { ["taskId"] = TaskId, ["note"] = "Verified." }, ct);
+
+        Assert.Equal("PLAT-0001 is already closed.", result);
+        Assert.Equal(string.Empty, Field(scene.Current(), "confirmed_by"));
+        Assert.Empty(scene.Notifier.Calls);
+    }
 }

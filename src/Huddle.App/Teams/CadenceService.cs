@@ -70,6 +70,11 @@ internal sealed class CadenceService(
                 // The prompt behind this cadence is not in the catalog (yet); skip the Team and retry next minute.
                 logger.LogWarning("Cadence prompt missing for Team {Team}.", team.Name);
             }
+            catch (Exception ex) when (ex is not OperationCanceledException)
+            {
+                // One Team's failure (a refused file, a failing post) must not stop the others: log it and go on to the next Team.
+                logger.LogError(ex, "Cadence check failed for Team {Team}.", team.Name);
+            }
         }
     }
 
@@ -109,6 +114,19 @@ internal sealed class CadenceService(
         DateTimeOffset now = this.clock.GetUtcNow();
         int done = this.CountDone(team.Name);
         CadenceState current = state.Get(team.Name) ?? new CadenceState(team.Name, null, null, null);
+        CadenceState rebased = current with
+        {
+            LastDigestUtc = current.LastDigestUtc > now ? now : current.LastDigestUtc,
+            LastRetroUtc = current.LastRetroUtc > now ? now : current.LastRetroUtc,
+            DoneAtLastRetro = current.DoneAtLastRetro > done ? done : current.DoneAtLastRetro,
+        };
+        if (rebased != current)
+        {
+            // The clock moved backwards or Done Tasks went away: count from here instead of stalling until the old mark is passed.
+            current = rebased;
+            state.Set(current);
+        }
+
         bool digestBaselined = process.Digest is not null && current.LastDigestUtc is null;
         bool retroBaselined = process.Retro is not null && (current.LastRetroUtc is null || current.DoneAtLastRetro is null);
         if (digestBaselined || retroBaselined)
@@ -131,7 +149,7 @@ internal sealed class CadenceService(
 
         if (!retroBaselined && process.Retro is { } retro
             && current.LastRetroUtc is { } lastRetro && current.DoneAtLastRetro is { } doneAtLast
-            && RetroDue(retro, now, lastRetro, done - doneAtLast))
+            && RetroDue(retro, now, lastRetro, Math.Max(0, done - doneAtLast)))
         {
             string text = prompts.Render(RetroPrompt, Values(team.Name, lastRetro));
             (string recipient, string message) = this.RetroRecipient(team, manager, text);

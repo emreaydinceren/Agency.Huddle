@@ -95,6 +95,10 @@ internal sealed partial class TaskTriggerService : IHostedService, IDisposable
     private readonly CancellationTokenSource lifetime = new();
 
     private readonly Dictionary<BatchKey, Batch> batches = [];
+
+    /// <summary>When a Request lifecycle wake last reached a recipient for a Task, keyed by Task and Name; a status-change wake for the same event is then skipped.</summary>
+    private readonly Dictionary<string, DateTimeOffset> requestWakes = new(StringComparer.OrdinalIgnoreCase);
+
     private readonly HashSet<Task> inFlight = [];
     private OutsideWindow? outsideWindow;
     private bool subscribed;
@@ -752,11 +756,46 @@ internal sealed partial class TaskTriggerService : IHostedService, IDisposable
         await this.fireGate.WaitAsync(ct);
         try
         {
-            return await this.DeliverAsync(batch, request, recipient, ct);
+            bool posted = await this.DeliverAsync(batch, request, recipient, ct, viaRequest: true);
+            if (posted)
+            {
+                lock (this.gate)
+                {
+                    this.requestWakes[RequestWakeKey(request.Id, recipient)] = this.clock.GetUtcNow();
+                }
+            }
+
+            return posted;
         }
         finally
         {
             this.fireGate.Release();
+        }
+    }
+
+    /// <summary>The key of <see cref="requestWakes"/>.</summary>
+    /// <param name="id">The Task.</param>
+    /// <param name="name">The recipient's Name.</param>
+    private static string RequestWakeKey(TaskId id, string name) => string.Concat(id.ToString(), "|", name);
+
+    /// <summary>
+    /// Whether a Request lifecycle wake already reached <paramref name="name"/> for this Task since the batch's first change, so the
+    /// status-change wake for the same event is not a second one.
+    /// </summary>
+    /// <param name="id">The Task.</param>
+    /// <param name="name">The recipient's Name.</param>
+    /// <param name="batch">The batch about to wake the recipient.</param>
+    private bool WokenForRequest(TaskId id, string name, Batch batch)
+    {
+        if (batch.Entries.Count == 0)
+        {
+            return false;
+        }
+
+        DateTimeOffset batchStart = batch.Entries.Min(static entry => entry.At);
+        lock (this.gate)
+        {
+            return this.requestWakes.TryGetValue(RequestWakeKey(id, name), out DateTimeOffset woken) && woken >= batchStart;
         }
     }
 
@@ -821,10 +860,16 @@ internal sealed partial class TaskTriggerService : IHostedService, IDisposable
     /// <param name="latest">The Task's latest state.</param>
     /// <param name="assigneeName">The Name to wake: the assignee, or the Team's manager.</param>
     /// <param name="ct">The service lifetime.</param>
+    /// <param name="viaRequest">Whether this is a Request lifecycle wake, which is never skipped for an earlier one.</param>
     /// <returns><see langword="true"/> when the wake was posted; <see langword="false"/> when it was skipped or failed.</returns>
-    private async Task<bool> DeliverAsync(Batch batch, TaskItem latest, string assigneeName, CancellationToken ct)
+    private async Task<bool> DeliverAsync(Batch batch, TaskItem latest, string assigneeName, CancellationToken ct, bool viaRequest = false)
     {
         TaskId id = latest.Id;
+        if (!viaRequest && this.WokenForRequest(id, assigneeName, batch))
+        {
+            return false;
+        }
+
         TaskActor actor = batch.Actor;
         User? assignee = await this.directory.FindUserByNameAsync(assigneeName, ct);
         if (assignee is null)

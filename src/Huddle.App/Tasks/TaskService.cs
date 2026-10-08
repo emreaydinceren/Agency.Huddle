@@ -570,6 +570,11 @@ internal sealed class TaskService : IDisposable
             return (new TaskResult.NotFound(id), null);
         }
 
+        if (LeavesBacklogWithoutTriage(current, candidate) && (actor.Kind != TaskActorKind.Human || !humanOverridesGates))
+        {
+            return (new TaskResult.Refused([LeaveBacklogRefusal]), null);
+        }
+
         // Spec §Gates: runs after validation, the version check and the "nothing changed" exit, so a
         // stale or no-op update never reports a gate, and before any write. The Human overrides.
         GateRefusal? refusal = current.Status != candidate.Status ? this.CheckGates(current, candidate, currentText, actor) : null;
@@ -656,6 +661,45 @@ internal sealed class TaskService : IDisposable
         return null;
     }
 
+    /// <summary>Refusal for an agent moving a Request out of Backlog without a triage accept or decline.</summary>
+    private const string LeaveBacklogRefusal = "A Request leaves Backlog only when its receiving manager accepts or declines it with triage_request.";
+
+    /// <summary>Refusal for an agent closing a Request nobody confirmed.</summary>
+    private const string CloseRequestRefusal = "A Request closes only after the requesting Team's QA confirms it with confirm_request.";
+
+    /// <summary>Reads the Request fields of a Task.</summary>
+    /// <param name="task">The Task.</param>
+    /// <param name="fields">The fields when the Task is a Request.</param>
+    private static bool TryReadRequest(TaskItem task, [NotNullWhen(true)] out RequestFields? fields)
+    {
+        Dictionary<string, string> frontmatter = new(StringComparer.Ordinal);
+        foreach (KeyValuePair<string, string> field in task.UnknownFields)
+        {
+            _ = frontmatter.TryAdd(field.Key, field.Value);
+        }
+
+        return RequestFields.TryRead(frontmatter, out fields) && fields is not null;
+    }
+
+    /// <summary>Whether a change takes a Request out of Backlog other than by the triage that accepts or declines it (Spec §Lifecycle).</summary>
+    /// <param name="current">The Task now.</param>
+    /// <param name="candidate">The Task after the change.</param>
+    private static bool LeavesBacklogWithoutTriage(TaskItem current, TaskItem candidate)
+    {
+        if (current.Status != TaskState.Backlog || candidate.Status == TaskState.Backlog || !TryReadRequest(current, out _))
+        {
+            return false;
+        }
+
+        TriageState triage = TryReadRequest(candidate, out RequestFields? next) ? next.Triage : TriageState.None;
+        return !((candidate.Status == TaskState.ToDo && triage == TriageState.Accepted) || (candidate.Status == TaskState.Rejected && triage == TriageState.Declined));
+    }
+
+    /// <summary>Whether closing the Task closes a Request that was neither confirmed by the requesting Team's QA nor declined.</summary>
+    /// <param name="task">The Task to close.</param>
+    private static bool ClosesUnconfirmedRequest(TaskItem task) =>
+        TryReadRequest(task, out RequestFields? fields) && fields.Triage != TriageState.Declined && string.IsNullOrWhiteSpace(fields.ConfirmedBy);
+
     /// <summary>Whether the Task is a bug: a <c>request: bug</c> field or a <c>bug</c> label.</summary>
     /// <param name="task">The Task.</param>
     private static bool HasBugMarker(TaskItem task) =>
@@ -700,6 +744,11 @@ internal sealed class TaskService : IDisposable
                 ? string.Create(CultureInfo.InvariantCulture, $"{id} is already closed.")
                 : string.Create(CultureInfo.InvariantCulture, $"{id} is already active.");
             return (new TaskResult.Refused([problem]), null);
+        }
+
+        if (closing && actor.Kind != TaskActorKind.Human && ClosesUnconfirmedRequest(current))
+        {
+            return (new TaskResult.Refused([CloseRequestRefusal]), null);
         }
 
         string? currentText = this.store.ReadText(id);

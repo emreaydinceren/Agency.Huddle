@@ -123,6 +123,22 @@ public sealed class SprintProposalServiceTests
         Assert.Empty(fixture.Proposals.Pending("Platform"));
     }
 
+    /// <summary>Review fix 4: when creating the Sprint throws, the proposal stays pending so the manager can approve it again.</summary>
+    [Fact]
+    public async Task ApproveAsync_CreateThrows_KeepsTheProposal()
+    {
+        CancellationToken ct = TestContext.Current.CancellationToken;
+        using Fixture fixture = await Fixture.CreateAsync(ct);
+        _ = fixture.Put("PLAT-0001");
+        SprintProposal proposal = fixture.Propose("Launch", "PLAT-0001");
+        File.Delete(fixture.Harness.SprintsFilePath);
+        _ = Directory.CreateDirectory(fixture.Harness.SprintsFilePath);
+
+        _ = await Record.ExceptionAsync(() => fixture.Service.ApproveAsync(fixture.ManagerRoomId, proposal.Id, ct));
+
+        Assert.Equal(proposal.Id, Assert.Single(fixture.Proposals.Pending("Platform")).Id);
+    }
+
     /// <summary>A Task that no longer exists or is Done is skipped and named; the others are still added.</summary>
     [Fact]
     public async Task ApproveAsync_VanishedAndDoneTasks_AreSkippedAndNamed()

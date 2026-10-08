@@ -290,10 +290,26 @@ internal sealed class ReadRecordsTool(
     private async Task<string> ReadRoomAsync(TeamSummary team, string room, CancellationToken cancellationToken)
     {
         string roomId = room.Trim();
-        IReadOnlyList<ChatMessage> messages = await chat.ReadAllAsync(roomId, cancellationToken);
+        IReadOnlyList<ChatMessage> messages;
+        try
+        {
+            messages = await chat.ReadAllAsync(roomId, cancellationToken);
+        }
+        catch (ArgumentException)
+        {
+            return $"Room '{roomId}' is not a valid Room id.";
+        }
+
         if (!messages.Any(message => team.Members.Contains(message.SenderName, StringComparer.OrdinalIgnoreCase)))
         {
             return $"Room {roomId} has no messages from Team {team.Name}.";
+        }
+
+        string human = (await directory.GetHumanAsync(cancellationToken)).Name;
+        if (messages.Any(message => !team.Members.Contains(message.SenderName, StringComparer.OrdinalIgnoreCase)
+            && !string.Equals(message.SenderName, human, StringComparison.OrdinalIgnoreCase)))
+        {
+            return $"Room {roomId} has participants outside Team {team.Name}.";
         }
 
         List<string> lines = [.. messages

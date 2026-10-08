@@ -1,5 +1,6 @@
 using System.Text.Json.Nodes;
 using Agency.Huddle.Acp.Abstractions;
+using Agency.Huddle.App.Data;
 using Agency.Huddle.App.Tasks;
 using Agency.Huddle.App.Teams;
 
@@ -9,7 +10,7 @@ namespace Agency.Huddle.App.Acp.Tools;
 /// Lists every Team's card - name, type, manager, what it owns - and how many Requests are open in its backlog (RQ-8), so a
 /// manager knows where a Request belongs. Offered only to a Persona holding a Skill that lists it.
 /// </summary>
-internal sealed class ListTeamsTool(ITeamCatalog teams, TaskStore store) : IAppTool
+internal sealed class ListTeamsTool(ITeamCatalog teams, TaskStore store, ITeamDirectory directory, string callerAgentId) : IAppTool
 {
     /// <inheritdoc />
     public string Name => "list_teams";
@@ -27,9 +28,20 @@ internal sealed class ListTeamsTool(ITeamCatalog teams, TaskStore store) : IAppT
     };
 
     /// <inheritdoc />
-    public Task<string> InvokeAsync(JsonObject arguments, CancellationToken cancellationToken)
+    public async Task<string> InvokeAsync(JsonObject arguments, CancellationToken cancellationToken)
     {
         ArgumentNullException.ThrowIfNull(arguments);
+
+        (TaskActor? actor, string actorRefusal) = await TaskToolText.ResolveActorAsync(directory, callerAgentId, cancellationToken);
+        if (actor is null)
+        {
+            return actorRefusal;
+        }
+
+        if (!teams.Teams.Any(team => string.Equals(team.Manager, actor.Name, StringComparison.OrdinalIgnoreCase)))
+        {
+            return "Only managers list Teams; ask your own manager.";
+        }
 
         JsonArray cards = [];
         foreach (TeamSummary team in teams.Teams)
@@ -44,7 +56,7 @@ internal sealed class ListTeamsTool(ITeamCatalog teams, TaskStore store) : IAppT
             });
         }
 
-        return Task.FromResult(cards.ToJsonString());
+        return cards.ToJsonString();
     }
 
     /// <summary>Counts the Requests in a Team's backlog that are neither closed nor in a Won't do state.</summary>

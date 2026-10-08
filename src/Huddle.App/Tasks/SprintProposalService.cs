@@ -22,6 +22,8 @@ internal sealed class SprintProposalService(
     IOptions<TeamOptions> options,
     ILogger<SprintProposalService> logger)
 {
+    private readonly System.Collections.Concurrent.ConcurrentDictionary<string, SemaphoreSlim> approveGates = new(StringComparer.Ordinal);
+
     private const string MissingReason = "no longer exists";
     private const string DoneReason = "already Done";
     private const string NotUpdatedReason = "could not be updated";
@@ -63,7 +65,27 @@ internal sealed class SprintProposalService(
         ArgumentException.ThrowIfNullOrWhiteSpace(roomId);
         ArgumentException.ThrowIfNullOrWhiteSpace(proposalId);
 
-        SprintProposal? proposal = await this.TakeAsync(roomId, proposalId, ct);
+        // One approval of a proposal at a time, so a second approve finds it gone (idempotence) while a failed one leaves it pending.
+        SemaphoreSlim gate = this.approveGates.GetOrAdd(proposalId, static _ => new SemaphoreSlim(1, 1));
+        await gate.WaitAsync(ct);
+        try
+        {
+            return await this.ApproveCoreAsync(roomId, proposalId, ct);
+        }
+        finally
+        {
+            _ = gate.Release();
+        }
+    }
+
+    /// <summary>Approves a proposal under its gate: the proposal is removed only after the Sprint exists.</summary>
+    /// <param name="roomId">The manager's room.</param>
+    /// <param name="proposalId">The proposal's id.</param>
+    /// <param name="ct">Cancels the lookups and the post.</param>
+    private async Task<SprintProposalOutcome> ApproveCoreAsync(string roomId, string proposalId, CancellationToken ct)
+    {
+        IReadOnlyList<SprintProposal> pending = await this.PendingAsync(roomId, ct);
+        SprintProposal? proposal = pending.FirstOrDefault(each => string.Equals(each.Id, proposalId, StringComparison.Ordinal));
         if (proposal is null)
         {
             return Gone();
@@ -82,12 +104,13 @@ internal sealed class SprintProposalService(
                 existed = true;
                 break;
             case SprintCreateResult.Refused refused:
-                _ = proposals.Add(proposal);
                 logger.LogWarning("Sprint proposal {ProposalId} could not be approved: {Problem}", proposal.Id, refused.Problem);
                 return new SprintProposalOutcome(SprintProposalOutcomeKind.Failed, false, [], [], refused.Problem);
             default:
                 throw new InvalidOperationException("Unknown Sprint create result.");
         }
+
+        _ = proposals.Remove(proposal.Id);
 
         TaskActor human = TaskActors.Human(options.Value);
         List<string> applied = [];

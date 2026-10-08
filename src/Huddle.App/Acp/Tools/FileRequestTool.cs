@@ -42,6 +42,7 @@ internal sealed class FileRequestTool(
             ["title"] = new JsonObject { ["type"] = "string" },
             ["body"] = new JsonObject { ["type"] = "string" },
             ["relatedTaskId"] = new JsonObject { ["type"] = "string" },
+            ["fromTeam"] = new JsonObject { ["type"] = "string" },
         },
         ["required"] = new JsonArray { "toTeam", "kind", "title", "body" },
     };
@@ -57,10 +58,34 @@ internal sealed class FileRequestTool(
             return actorRefusal;
         }
 
-        TeamSummary? fromTeam = teams.Teams.FirstOrDefault(team => string.Equals(team.Manager, actor.Name, StringComparison.OrdinalIgnoreCase));
-        if (fromTeam is null)
+        List<TeamSummary> managed = [.. teams.Teams.Where(team => string.Equals(team.Manager, actor.Name, StringComparison.OrdinalIgnoreCase))];
+        if (managed.Count == 0)
         {
             return "Only managers file Requests; ask your own manager.";
+        }
+
+        if (!TaskToolText.TryGetString(arguments, "fromTeam", out string? fromTeamText, out string fromTeamRefusal))
+        {
+            return fromTeamRefusal;
+        }
+
+        TeamSummary? fromTeam;
+        if (!string.IsNullOrWhiteSpace(fromTeamText))
+        {
+            fromTeam = managed.FirstOrDefault(team => string.Equals(team.Name, fromTeamText.Trim(), StringComparison.OrdinalIgnoreCase));
+            if (fromTeam is null)
+            {
+                return string.Create(CultureInfo.InvariantCulture, $"You do not manage a Team named '{fromTeamText.Trim()}'.");
+            }
+        }
+        else if (managed.Count > 1)
+        {
+            string names = string.Join(", ", managed.Select(static team => team.Name).Order(StringComparer.Ordinal));
+            return string.Create(CultureInfo.InvariantCulture, $"You manage several Teams ({names}); name the Team filing this Request in 'fromTeam'.");
+        }
+        else
+        {
+            fromTeam = managed[0];
         }
 
         if (!TaskToolText.TryGetString(arguments, "toTeam", out string? toTeamText, out string toTeamRefusal))

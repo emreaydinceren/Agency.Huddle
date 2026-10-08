@@ -221,7 +221,7 @@ public sealed class TeamsPhase3EndToEndTests
         CancellationToken ct = TestContext.Current.CancellationToken;
         using TempDataDir workspace = NewWorkspace();
         await using TeamWebApplicationFactory root = new();
-        CadenceState seeded = new(TeamName, new DateTimeOffset(2026, 10, 1, 8, 0, 0, TimeSpan.Zero), new DateTimeOffset(2026, 10, 2, 9, 0, 0, TimeSpan.Zero), 3);
+        CadenceState seeded = new(TeamName, new DateTimeOffset(2026, 10, 1, 8, 0, 0, TimeSpan.Zero), new DateTimeOffset(2026, 10, 2, 9, 0, 0, TimeSpan.Zero), 0);
         TeamCast cast;
         string[] namesBefore;
         await using (Run first = Run.Open(root))

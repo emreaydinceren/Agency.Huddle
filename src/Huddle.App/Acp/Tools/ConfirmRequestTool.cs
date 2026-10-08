@@ -97,17 +97,29 @@ internal sealed class ConfirmRequestTool(
 
         if (!TaskToolText.TryRun(() => tasks.Close(confirmed.Id, actor), out TaskResult? closeResult, out string closeRunRefusal))
         {
+            this.RollBack(request, fields, actor);
             return closeRunRefusal;
         }
 
         if (!RequestTaskLookup.TrySaved(closeResult,out TaskItem? closed, out string closeRefusal))
         {
+            this.RollBack(request, fields, actor);
             return closeRefusal;
         }
 
         await notifier.NotifyAsync(closed, RequestEvent.Confirm, transition.Wake, actor.Name, cancellationToken);
 
         return string.Create(CultureInfo.InvariantCulture, $"Confirmed {closed.Id}; it is closed.");
+    }
+
+    /// <summary>Puts back the Request fields and body that confirming changed, after closing was refused.</summary>
+    /// <param name="original">The Request as it was before the confirmation was written.</param>
+    /// <param name="fields">The Request fields as they were.</param>
+    /// <param name="actor">The caller.</param>
+    private void RollBack(TaskItem original, RequestFields fields, TaskActor actor)
+    {
+        TaskPatch patch = new() { Description = original.Description, ExtraFields = [.. fields.ToFrontmatter()] };
+        _ = TaskToolText.TryRun(() => tasks.Update(original.Id, patch, null, actor), out _, out _);
     }
 
     /// <summary>Whether <paramref name="member"/> belongs to <paramref name="team"/> in a role whose coverage includes <c>verify</c>.</summary>

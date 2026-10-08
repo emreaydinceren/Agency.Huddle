@@ -179,7 +179,7 @@ internal sealed class DotAcpAgentHostFactory : IAgentHostFactory
             ActivatorUtilities.CreateInstance<ValidateTeammateTool>(this.serviceProvider),
             ActivatorUtilities.CreateInstance<ProposeTeammatesTool>(this.serviceProvider, agentId),
             ActivatorUtilities.CreateInstance<ProposeSprintTool>(this.serviceProvider, agentId),
-            ActivatorUtilities.CreateInstance<ListTeamsTool>(this.serviceProvider),
+            ActivatorUtilities.CreateInstance<ListTeamsTool>(this.serviceProvider, agentId),
             ActivatorUtilities.CreateInstance<FileRequestTool>(this.serviceProvider, agentId),
             ActivatorUtilities.CreateInstance<TriageRequestTool>(this.serviceProvider, agentId),
             ActivatorUtilities.CreateInstance<ConfirmRequestTool>(this.serviceProvider, agentId),

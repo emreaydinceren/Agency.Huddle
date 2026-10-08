@@ -298,6 +298,47 @@ public sealed class ReadRecordsToolTests
         Assert.Equal("Room room-1 has no messages from Team Platform.", result);
     }
 
+    /// <summary>Review fix 3: a Room that also holds a member of another Team is refused, even when a Platform member posted in it.</summary>
+    [Fact]
+    public async Task Invoke_CrossTeamRoom_IsRefused()
+    {
+        CancellationToken ct = TestContext.Current.CancellationToken;
+        using Scene scene = await CreateSceneAsync(ct);
+        await scene.Chat.AppendAsync(RoomId, new ChatMessage("a", Now.AddHours(-2), "u1", "Rae", "hello"), ct);
+        await scene.Chat.AppendAsync(RoomId, new ChatMessage("b", Now.AddHours(-1), "u2", "Ola", "secret from Design"), ct);
+
+        string result = await scene.Tool("Rae").InvokeAsync(Args(room: RoomId), ct);
+
+        Assert.Equal("Room room-1 has participants outside Team Platform.", result);
+    }
+
+    /// <summary>Review fix 3: the Human taking part in a Team's Room does not make it a cross-Team Room.</summary>
+    [Fact]
+    public async Task Invoke_RoomWithTeamAndHuman_IsRead()
+    {
+        CancellationToken ct = TestContext.Current.CancellationToken;
+        using Scene scene = await CreateSceneAsync(ct);
+        string human = scene.Harness.Options.Value.HumanName;
+        await scene.Chat.AppendAsync(RoomId, new ChatMessage("a", Now.AddHours(-2), "u1", "Rae", "hello"), ct);
+        await scene.Chat.AppendAsync(RoomId, new ChatMessage("b", Now.AddHours(-1), "u0", human, "thanks"), ct);
+
+        string result = await scene.Tool("Rae").InvokeAsync(Args(room: RoomId), ct);
+
+        Assert.Equal("2026-10-08 10:00 Rae: hello\n2026-10-08 11:00 " + human + ": thanks", result);
+    }
+
+    /// <summary>Review fix 6: a Room id the chat store rejects gives a normal refusal rather than an exception.</summary>
+    [Fact]
+    public async Task Invoke_InvalidRoomId_IsRefused()
+    {
+        CancellationToken ct = TestContext.Current.CancellationToken;
+        using Scene scene = await CreateSceneAsync(ct);
+
+        string result = await scene.Tool("Rae").InvokeAsync(Args(room: "../outside"), ct);
+
+        Assert.Equal("Room '../outside' is not a valid Room id.", result);
+    }
+
     /// <summary>A caller that is not a member of the Team is refused.</summary>
     [Fact]
     public async Task Invoke_NonMember_IsRefused()

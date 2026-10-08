@@ -230,6 +230,9 @@ internal sealed class RecordsBundleBuilder(TaskStore tasks, ITeamCatalog teams, 
         }
     }
 
+    /// <summary>The most bytes of one tool-call log that are read; only the tail counts.</summary>
+    private const long MaxLogBytes = 1024 * 1024;
+
     private (List<ToolCallSummary> Calls, int Unreadable) ReadToolCalls(IReadOnlyList<string> members, DateTimeOffset since)
     {
         string firstDay = since.UtcDateTime.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture);
@@ -249,10 +252,24 @@ internal sealed class RecordsBundleBuilder(TaskStore tasks, ITeamCatalog teams, 
                 try
                 {
                     using FileStream stream = new(file, FileMode.Open, FileAccess.Read, FileShare.ReadWrite);
+                    bool cut = stream.Length > MaxLogBytes;
+                    if (cut)
+                    {
+                        _ = stream.Seek(-MaxLogBytes, SeekOrigin.End);
+                    }
+
                     using StreamReader reader = new(stream, Encoding.UTF8);
-                    lines = reader.ReadToEnd().Split('\n');
+                    string[] read = reader.ReadToEnd().Split('\n');
+
+                    // A tail read starts mid-line: drop the cut first line so it is not counted as corrupt.
+                    lines = cut ? read[1..] : read;
                 }
                 catch (IOException)
+                {
+                    unreadable++;
+                    continue;
+                }
+                catch (UnauthorizedAccessException)
                 {
                     unreadable++;
                     continue;

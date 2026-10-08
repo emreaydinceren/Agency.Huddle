@@ -118,6 +118,11 @@ internal sealed class TriageRequestTool(
         }
 
         string assignee = (assigneeText ?? string.Empty).Trim();
+        if (requestEvent == RequestEvent.Accept && assignee.Length > 0 && !receiving.Members.Contains(assignee, StringComparer.OrdinalIgnoreCase))
+        {
+            return string.Create(CultureInfo.InvariantCulture, $"{assignee} is not a member of {receiving.Name}.");
+        }
+
         RequestFields next = fields with
         {
             Triage = transition.Next.Triage,
