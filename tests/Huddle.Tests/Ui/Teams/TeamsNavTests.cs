@@ -65,6 +65,7 @@ public sealed class TeamsNavTests
             "/teams/Sales%20%26%20Ops",
             "/teams/Lab%20%232",
             "/teams/Lab%20%232/projects/Item%20%231",
+            "/teams/new",
         ];
         string?[] actualHrefs = [.. cut.FindAll(".teams-nav a[href]").Select(a => a.GetAttribute("href"))];
         Assert.Equal(expectedHrefs, actualHrefs);

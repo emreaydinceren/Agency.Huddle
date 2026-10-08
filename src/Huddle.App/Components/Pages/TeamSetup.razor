@@ -1,0 +1,275 @@
+@page "/teams/new"
+@page "/teams/{Team}/setup"
+@using Agency.Huddle.App.Acp
+@using Agency.Huddle.App.Library
+@using Agency.Huddle.App.TeamTypes
+@using Agency.Huddle.App.Teams
+@inject ITeamFolders Folders
+@inject ITeamCatalog Catalog
+@inject TeamTypeCatalog Types
+@inject SkillPackStore Packs
+@inject PersonaStore Personas
+@inject HireService Hiring
+@inject IHireContext HireContext
+@inject NavigationManager Navigation
+
+@*
+    Task 31 (HR-1, HR-2, TT-2): the Create Team screen and, on /teams/{Team}/setup, the setup screen
+    the Team lands on. New mode picks a Team type (catalog order), a title and, for a type that has a
+    workspace, the workspace folder. Create writes the Team folder and its _team.md with an empty
+    manager, resolves the manager card with CardResolver, hires it, records its name in the file and
+    goes to the setup route. A manager card that needs setup still creates the Team; the setup route
+    shows the card's reasons and hires the manager once they are fixed. Later tasks add the hiring pool
+    and Start Team to this page.
+*@
+
+<MudContainer MaxWidth="MaxWidth.Medium" Class="team-setup py-4">
+    @if (this.Team is null)
+    {
+        <MudText Typo="Typo.h5" Class="mb-4">New Team</MudText>
+        <MudStack Spacing="3">
+            <MudSelect T="string" Label="Team type" Value="this.typeId" ValueChanged="this.OnTypeChanged" Class="team-setup-type">
+                @foreach (TeamTypeManifest type in this.Types.Types)
+                {
+                    <MudSelectItem T="string" Value="@type.Id">@type.DisplayName</MudSelectItem>
+                }
+            </MudSelect>
+            <MudTextField T="string" Label="Team title" Value="this.title" ValueChanged="this.OnTitleChanged" Immediate="true"
+                          Class="team-setup-title" />
+            @if (this.SelectedType is { Workspace.Kind: not WorkspaceKind.None } selected)
+            {
+                <MudTextField T="string" Label="@selected.Workspace.Label" Value="this.workspace" ValueChanged="this.OnWorkspaceChanged"
+                              Immediate="true" Class="team-setup-workspace" />
+            }
+            @if (this.CurrentProblem is { } problem)
+            {
+                <MudText Typo="Typo.body2" Color="Color.Error" role="alert" Class="team-setup-problem">@problem</MudText>
+            }
+            @if (this.continueTeam is not null)
+            {
+                <MudButton Href="@this.SetupHref(this.continueTeam)" Class="team-setup-continue">Open setup</MudButton>
+            }
+            <MudStack Row="true">
+                <MudButton Color="Color.Primary" Variant="Variant.Filled" Disabled="@(!this.CanCreate)" OnClick="this.Create"
+                           Class="team-setup-create">Create</MudButton>
+            </MudStack>
+        </MudStack>
+    }
+    else if (this.teamFile is null)
+    {
+        <MudAlert Severity="Severity.Warning" role="alert" Class="team-setup-notice">This Team has no setup file.</MudAlert>
+    }
+    else
+    {
+        <MudText Typo="Typo.h5" Class="mb-4">@this.Team</MudText>
+        @if (this.teamFile.Manager is not null)
+        {
+            <MudText Class="team-setup-manager">@this.teamFile.Manager</MudText>
+        }
+        else if (this.managerCard is not null)
+        {
+            @foreach (string reason in this.managerCard.Reasons)
+            {
+                <MudText Typo="Typo.body2" Class="team-setup-reason">@reason</MudText>
+            }
+            <MudButton Color="Color.Primary" Variant="Variant.Filled" Disabled="@(this.managerCard.Readiness != CardReadiness.Ready)"
+                       OnClick="this.HireManager" Class="team-setup-hire">Hire manager</MudButton>
+        }
+        @if (this.hireError is not null)
+        {
+            <MudText Typo="Typo.body2" Color="Color.Error" role="alert" Class="team-setup-problem">@this.hireError</MudText>
+        }
+    }
+</MudContainer>
+
+@code {
+    private string? typeId;
+    private string title = string.Empty;
+    private string workspace = string.Empty;
+    private string? submitError;
+    private string? continueTeam;
+    private TeamFile? teamFile;
+    private CardState? managerCard;
+    private string? hireError;
+
+    /// <summary>The Team being set up; <see langword="null"/> on the new-Team route.</summary>
+    [Parameter]
+    public string? Team { get; set; }
+
+    private TeamTypeManifest? SelectedType => this.typeId is null ? null : this.Types.Find(this.typeId);
+
+    private string TrimmedTitle => this.title.Trim();
+
+    /// <summary>The refusal for the current input, or <see langword="null"/>; a failed Create outranks the field rules.</summary>
+    private string? CurrentProblem => this.submitError ?? this.TitleProblem ?? this.WorkspaceProblem;
+
+    private string? TitleProblem
+    {
+        get
+        {
+            string trimmed = this.TrimmedTitle;
+            if (trimmed.Length == 0)
+            {
+                return null;
+            }
+
+            if (this.Catalog.Teams.Any(team => string.Equals(team.Name, trimmed, StringComparison.OrdinalIgnoreCase)))
+            {
+                return ExistsMessage;
+            }
+
+            return TeamNames.ValidateTeamName(trimmed, this.Catalog.Teams);
+        }
+    }
+
+    private string? WorkspaceProblem
+    {
+        get
+        {
+            WorkspaceSpec? spec = this.SelectedType?.Workspace;
+            if (spec is null || spec.Kind == WorkspaceKind.None)
+            {
+                return null;
+            }
+
+            string trimmed = this.workspace.Trim();
+            if (trimmed.Length == 0)
+            {
+                return spec.Required ? "Choose a workspace folder." : null;
+            }
+
+            return Directory.Exists(trimmed) ? null : "That folder does not exist.";
+        }
+    }
+
+    private bool CanCreate => this.SelectedType is not null && this.TrimmedTitle.Length > 0 && this.TitleProblem is null && this.WorkspaceProblem is null;
+
+    private const string ExistsMessage = "A Team with that name exists.";
+
+    /// <inheritdoc />
+    protected override void OnInitialized()
+    {
+        this.typeId = this.Types.Types.FirstOrDefault()?.Id;
+    }
+
+    /// <inheritdoc />
+    protected override void OnParametersSet()
+    {
+        if (this.Team is not null)
+        {
+            this.LoadSetup(this.Team);
+        }
+    }
+
+    private static CardState ResolveManager(RoleSpec role, IReadOnlyCollection<string> namesInUse, IReadOnlyList<SkillPack> packs, IHireContext context) =>
+        CardResolver.Resolve(role, namesInUse, context.Answered, context.TierMap, context.AvoidAdapters, packs, context.Connectors);
+
+    private string SetupHref(string team) => $"/teams/{Uri.EscapeDataString(team)}/setup";
+
+    private void OnTypeChanged(string? value)
+    {
+        this.typeId = value;
+        this.submitError = null;
+    }
+
+    private void OnTitleChanged(string? value)
+    {
+        this.title = value ?? string.Empty;
+        this.submitError = null;
+    }
+
+    private void OnWorkspaceChanged(string? value)
+    {
+        this.workspace = value ?? string.Empty;
+        this.submitError = null;
+    }
+
+    private void Create()
+    {
+        TeamTypeManifest? type = this.SelectedType;
+        if (type is null || !this.CanCreate)
+        {
+            return;
+        }
+
+        string team = this.TrimmedTitle;
+        string workspaceFolder = this.workspace.Trim();
+        string? workspaceValue = type.Workspace.Kind == WorkspaceKind.None || workspaceFolder.Length == 0 ? null : workspaceFolder;
+        TeamFile file = new(new VersionedRef(type.Id, type.Version), null, workspaceValue, null, TeamPaths.ProcessFileName, string.Empty);
+        TeamCreateResult created = this.Folders.CreateTeam(team, file);
+        if (created.Outcome == TeamCreateOutcome.AlreadyExists)
+        {
+            this.submitError = ExistsMessage;
+            return;
+        }
+
+        if (created.Outcome != TeamCreateOutcome.Created)
+        {
+            this.submitError = "That Team name is not allowed.";
+            return;
+        }
+
+        RoleSpec? role = type.Roles.FirstOrDefault(static r => r.Manager);
+        string? error = null;
+        if (role is not null)
+        {
+            CardState card = ResolveManager(role, this.Personas.ListNames(), this.Packs.All, this.HireContext);
+            error = this.TryHire(team, type.Id, role.Id, card);
+        }
+
+        if (error is not null)
+        {
+            this.submitError = error;
+            this.continueTeam = team;
+            return;
+        }
+
+        this.Navigation.NavigateTo(this.SetupHref(team));
+    }
+
+    /// <summary>Hires <paramref name="card"/> when it is Ready and records the manager; returns the refusal, or <see langword="null"/>.</summary>
+    private string? TryHire(string team, string typeId, string roleId, CardState card)
+    {
+        if (card.Readiness != CardReadiness.Ready)
+        {
+            return null;
+        }
+
+        HireResult result = this.Hiring.Hire(new HireRequest(team, typeId, roleId, card));
+        if (result.PersonaName is null)
+        {
+            return result.Error;
+        }
+
+        string manager = result.PersonaName;
+        this.Folders.UpdateTeamFile(team, current => current with { Manager = manager });
+        return result.Error;
+    }
+
+    private void LoadSetup(string team)
+    {
+        this.teamFile = this.Folders.ReadTeamFile(team);
+        this.managerCard = null;
+        if (this.teamFile is null || this.teamFile.Manager is not null)
+        {
+            return;
+        }
+
+        RoleSpec? role = this.Types.Find(this.teamFile.TeamType.Id)?.Roles.FirstOrDefault(static r => r.Manager);
+        if (role is not null)
+        {
+            this.managerCard = ResolveManager(role, this.Personas.ListNames(), this.Packs.All, this.HireContext);
+        }
+    }
+
+    private void HireManager()
+    {
+        if (this.Team is null || this.teamFile is null || this.managerCard is null)
+        {
+            return;
+        }
+
+        this.hireError = this.TryHire(this.Team, this.teamFile.TeamType.Id, this.managerCard.RoleId, this.managerCard);
+        this.LoadSetup(this.Team);
+    }
+}

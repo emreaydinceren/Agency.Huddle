@@ -2,7 +2,7 @@
 
 Status of the Teams delivery in [engineering/teams-plan.md](engineering/teams-plan.md). Each task is a `.t` (failing tests first) and `.i` (implementation) pair; a task's `.i` cannot be Done before its `.t`. Ids are `<phase>.<task>.<t|i>`, the form `agents/scripts/Set-Tracker.ps1` updates. `(H)` marks a Haiku task, `(B)` a boundary task that also gets an Opus architect review.
 
-**Status:** 62 of 170 tasks Done · 2 of 6 retrospectives done · last updated 2026-10-07.
+**Status:** 64 of 170 tasks Done · 2 of 6 retrospectives done · last updated 2026-10-07.
 
 | **Deliverable / Task** | **Active** | **In Progress** | **Done** |
 |---|---|---|---|
@@ -70,9 +70,9 @@ Status of the Teams delivery in [engineering/teams-plan.md](engineering/teams-pl
 | 1.30.t Task 30 Settings: Team Types: write failing tests | | | ✔ |
 | 1.30.i Task 30 Settings: Team Types: implement | | | ✔ |
 | 🔁 R2 Opus retrospective after Task 30: token tally, repeated reads, cost fixes, update the plan | | | ✔ |
-| 1.31.t Task 31 Create Team screen: write failing tests | | ✔ | |
-| 1.31.i Task 31 Create Team screen: implement | | | |
-| 1.32.t Task 32 Hiring pool: write failing tests | | | |
+| 1.31.t Task 31 Create Team screen: write failing tests | | | ✔ |
+| 1.31.i Task 31 Create Team screen: implement | | | ✔ |
+| 1.32.t Task 32 Hiring pool: write failing tests | | ✔ | |
 | 1.32.i Task 32 Hiring pool: implement | | | |
 | 1.33.t Task 33 Team check bar and Start Team: write failing tests | | | |
 | 1.33.i Task 33 Team check bar and Start Team: implement | | | |
