@@ -166,6 +166,7 @@ public static class ServiceCollectionExtensions
         services.AddSingleton<AdapterCatalog>();
         services.AddSingleton<AdapterProfileResolver>();
         services.AddSingleton<PersonaModelStore>();
+        services.AddSingleton<CadenceStateStore>();
         services.AddSingleton<PersonaEffortStore>();
         services.AddSingleton<PersonaWorkModeStore>();
         services.AddSingleton<PersonaSpendStore>();
@@ -412,6 +413,10 @@ public static class ServiceCollectionExtensions
         // item 2).
         services.AddSingleton<TaskTriggerService>();
         services.AddHostedService(sp => sp.GetRequiredService<TaskTriggerService>());
+
+        // Digest and retro wake-ups on schedule or count (OR-3, RT-2); singleton plus hosted, like the service above.
+        services.AddSingleton<Agency.Huddle.App.Teams.CadenceService>();
+        services.AddHostedService(sp => sp.GetRequiredService<Agency.Huddle.App.Teams.CadenceService>());
 
         // Unconditional, unlike PersonaSupervisor's hosted service above: the Agent row a rename
         // cascades from may exist from an earlier session or a raw pipe client, so a Persona rename
