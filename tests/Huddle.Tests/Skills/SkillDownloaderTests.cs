@@ -258,4 +258,52 @@ public sealed class SkillDownloaderTests
         Assert.Null(result.Skill);
         Assert.Equal("The download is not a valid zip archive.", result.Error);
     }
+
+    /// <summary>An archive whose declared length is over the configured limit is refused before it is read.</summary>
+    [Fact]
+    public async Task DownloadAsync_DeclaredLengthOverLimit_IsRejected()
+    {
+        CancellationToken ct = TestContext.Current.CancellationToken;
+        byte[] zip = BuildZip([(Root + "a/one.bin", System.Security.Cryptography.RandomNumberGenerator.GetBytes(2 * 1024 * 1024))]);
+        FakeHttpHandler handler = new((_, _) => Ok(zip));
+        SkillDownloader downloader = new(new HttpClient(handler), NullLogger<SkillDownloader>.Instance, maxDownloadBytes: 1024 * 1024);
+
+        DownloadResult result = await downloader.DownloadAsync("https://github.com/o/repo", "a", Commit, ct);
+
+        Assert.Null(result.Skill);
+        Assert.Equal("The download is larger than 1 MB.", result.Error);
+    }
+
+    /// <summary>A body with no declared length is cut off once it passes the configured limit.</summary>
+    [Fact]
+    public async Task DownloadAsync_UnknownLengthOverLimit_IsRejected()
+    {
+        CancellationToken ct = TestContext.Current.CancellationToken;
+        byte[] zip = BuildZip([(Root + "a/one.bin", System.Security.Cryptography.RandomNumberGenerator.GetBytes(2 * 1024 * 1024))]);
+        FakeHttpHandler handler = new((_, _) => new HttpResponseMessage(HttpStatusCode.OK) { Content = new UnknownLengthContent(zip) });
+        SkillDownloader downloader = new(new HttpClient(handler), NullLogger<SkillDownloader>.Instance, maxDownloadBytes: 1024 * 1024);
+
+        DownloadResult result = await downloader.DownloadAsync("https://github.com/o/repo", "a", Commit, ct);
+
+        Assert.Null(result.Skill);
+        Assert.Equal("The download is larger than 1 MB.", result.Error);
+    }
+
+    /// <summary>HTTP content that streams its bytes without declaring a length.</summary>
+    /// <param name="bytes">The body.</param>
+    private sealed class UnknownLengthContent(byte[] bytes) : HttpContent
+    {
+        /// <inheritdoc />
+        protected override Task SerializeToStreamAsync(Stream stream, TransportContext? context)
+        {
+            return stream.WriteAsync(bytes, 0, bytes.Length);
+        }
+
+        /// <inheritdoc />
+        protected override bool TryComputeLength(out long length)
+        {
+            length = 0;
+            return false;
+        }
+    }
 }

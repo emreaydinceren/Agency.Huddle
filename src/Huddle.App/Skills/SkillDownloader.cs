@@ -18,8 +18,14 @@ internal sealed record DownloadResult(DownloadedSkill? Skill, string? Error);
 /// </summary>
 /// <param name="http">The client used for the archive request; it carries the request timeout.</param>
 /// <param name="logger">The logger.</param>
-internal sealed class SkillDownloader(HttpClient http, ILogger<SkillDownloader> logger)
+/// <param name="maxDownloadBytes">The largest archive that is read into memory; a bigger one is refused.</param>
+internal sealed class SkillDownloader(HttpClient http, ILogger<SkillDownloader> logger, long maxDownloadBytes = SkillDownloader.DefaultMaxDownloadBytes)
 {
+    /// <summary>The default limit on the size of the downloaded archive: 50 MB.</summary>
+    public const long DefaultMaxDownloadBytes = 50L * 1024 * 1024;
+
+    private const long BytesPerMegabyte = 1024L * 1024;
+
     private const int MaxFiles = 200;
 
     private const long MaxTotalBytes = 5L * 1024 * 1024;
@@ -53,14 +59,34 @@ internal sealed class SkillDownloader(HttpClient http, ILogger<SkillDownloader> 
         byte[] archive;
         try
         {
-            using HttpResponseMessage response = await http.GetAsync(uri, ct);
+            using HttpResponseMessage response = await http.GetAsync(uri, HttpCompletionOption.ResponseHeadersRead, ct);
             if (!response.IsSuccessStatusCode)
             {
                 string status = ((int)response.StatusCode).ToString(CultureInfo.InvariantCulture);
                 return Fail($"The download failed with HTTP status {status}.");
             }
 
-            archive = await response.Content.ReadAsByteArrayAsync(ct);
+            long? declared = response.Content.Headers.ContentLength;
+            if (declared > maxDownloadBytes)
+            {
+                return this.TooLarge();
+            }
+
+            using MemoryStream buffer = new();
+            await using Stream body = await response.Content.ReadAsStreamAsync(ct);
+            byte[] chunk = new byte[81920];
+            int read;
+            while ((read = await body.ReadAsync(chunk, ct)) > 0)
+            {
+                if (buffer.Length + read > maxDownloadBytes)
+                {
+                    return this.TooLarge();
+                }
+
+                buffer.Write(chunk, 0, read);
+            }
+
+            archive = buffer.ToArray();
         }
         catch (HttpRequestException exception)
         {
@@ -230,6 +256,13 @@ internal sealed class SkillDownloader(HttpClient http, ILogger<SkillDownloader> 
 
     /// <summary>Builds a failed result.</summary>
     private static DownloadResult Fail(string error) => new(null, error);
+
+    /// <summary>Builds the failure for an archive over the download limit.</summary>
+    private DownloadResult TooLarge()
+    {
+        string megabytes = (maxDownloadBytes / (double)BytesPerMegabyte).ToString("0.##", CultureInfo.InvariantCulture);
+        return Fail($"The download is larger than {megabytes} MB.");
+    }
 
     /// <summary>Logs a transport failure.</summary>
     private void LogFailure(Exception exception)

@@ -135,6 +135,17 @@ public sealed class ServiceCollectionExtensionsTests
         Assert.IsType<Agency.Huddle.App.Teams.BuiltinSkillInstaller>(provider.GetRequiredService<Agency.Huddle.App.Teams.ISkillInstaller>());
     }
 
+    /// <summary>The skill downloader and the skill importer resolve from the container.</summary>
+    [Fact]
+    public void AddTeamServices_ResolvesSkillDownloaderAndImporter()
+    {
+        using TempDataDir dataDir = new();
+        using ServiceProvider provider = BuildTeamProvider(dataDir);
+
+        Assert.NotNull(provider.GetRequiredService<Agency.Huddle.App.Skills.SkillDownloader>());
+        Assert.NotNull(provider.GetRequiredService<Agency.Huddle.App.Skills.SkillImporter>());
+    }
+
     /// <summary>The start gate resolves to the one persona supervisor.</summary>
     [Fact]
     public void AddTeamServices_ResolvesStartGateAsTheSupervisor()
