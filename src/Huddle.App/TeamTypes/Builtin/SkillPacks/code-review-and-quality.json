@@ -1,0 +1,8 @@
+{
+  "id": "code-review-and-quality",
+  "version": "1.0.0",
+  "title": "Code Review and Quality",
+  "appliesTo": ["reviewer"],
+  "consultWhenAdds": "A change is in Review and needs depth beyond style",
+  "skills": [{ "name": "code-review-and-quality", "source": "addyosmani/agent-skills", "path": "skills/code-review-and-quality" }]
+}

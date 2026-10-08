@@ -1,0 +1,8 @@
+{
+  "id": "msbuild-authoring",
+  "version": "1.0.0",
+  "title": "MSBuild Authoring",
+  "appliesTo": ["developer", "release-engineer"],
+  "consultWhenAdds": ".csproj, .props or .targets changes, build failures, slow or broken incremental builds",
+  "skills": [{ "name": "target-authoring", "source": "dotnet/skills", "path": "plugins/dotnet-msbuild/skills/target-authoring" }]
+}
