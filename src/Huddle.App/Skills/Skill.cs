@@ -12,7 +12,7 @@ namespace Agency.Huddle.App.Skills;
 /// <param name="FolderPath">The on-disk folder this Skill was resolved from, or <see langword="null"/> for a <see cref="SkillSource.Default"/> with no folder on disk.</param>
 /// <param name="Provenance">The <c>.source.json</c> record of an imported Skill, or <see langword="null"/> for a Skill that was not imported (SK-7).</param>
 /// <param name="ModifiedLocally">Whether the folder's current hash differs from <see cref="SkillProvenance.Sha256"/>; always <see langword="false"/> without <paramref name="Provenance"/> (SK-9).</param>
-internal sealed record Skill(
+public sealed record Skill(
     string Name,
     string Description,
     IReadOnlyList<string> Tools,
@@ -23,7 +23,7 @@ internal sealed record Skill(
     bool ModifiedLocally = false);
 
 /// <summary>Where a resolved <see cref="Skill"/>'s current text came from.</summary>
-internal enum SkillSource
+public enum SkillSource
 {
     /// <summary>The shipped default, with no override folder on disk.</summary>
     Default,

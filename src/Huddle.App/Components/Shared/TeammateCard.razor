@@ -341,6 +341,7 @@
                     <MudSelectItem T="string" Value="@skill.Name">
                         <MudText>@skill.Name</MudText>
                         <MudText Typo="Typo.caption" Class="mud-text-secondary">@skill.Description</MudText>
+                        <SkillProvenanceLine Skill="@skill" />
                     </MudSelectItem>
                 }
             </MudSelect>

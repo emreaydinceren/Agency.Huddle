@@ -15,7 +15,7 @@ namespace Agency.Huddle.App.Skills;
 /// <param name="Publisher">Who publishes the Skill.</param>
 /// <param name="License">The Skill's license identifier.</param>
 /// <param name="ImportedAt">When the Skill was imported; written as UTC ISO-8601.</param>
-internal sealed record SkillProvenance(
+public sealed record SkillProvenance(
     string Repo,
     string Path,
     string Commit,
