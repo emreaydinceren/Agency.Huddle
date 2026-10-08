@@ -1,3 +1,5 @@
+using Agency.Huddle.App.Teams;
+
 namespace Agency.Huddle.App.Library;
 
 /// <summary>
@@ -21,4 +23,24 @@ internal interface ITeamFolders
     /// <param name="project">The new Project's name.</param>
     /// <returns>The new Project folder's path, or the refusal reason.</returns>
     LibraryResult<LibraryPath> EnsureProjectIn(string team, string project);
+
+    /// <summary>
+    /// Creates the Team folder when it is missing and writes its <c>_team.md</c> atomically. Never
+    /// overwrites an existing <c>_team.md</c>; a Team folder that has none (a Persona-label Team) receives one.
+    /// </summary>
+    /// <param name="team">The Team's name, validated with the Team-name rules.</param>
+    /// <param name="file">The team file to write.</param>
+    /// <returns>The outcome and, on success, the path of the written file.</returns>
+    TeamCreateResult CreateTeam(string team, TeamFile file);
+
+    /// <summary>Rewrites a Team's <c>_team.md</c> through <paramref name="change"/>, atomically.</summary>
+    /// <param name="team">The Team's name.</param>
+    /// <param name="change">Maps the current file to the new one.</param>
+    /// <returns><see langword="false"/> when the Team has no readable <c>_team.md</c>; <paramref name="change"/> is then not called.</returns>
+    bool UpdateTeamFile(string team, Func<TeamFile, TeamFile> change);
+
+    /// <summary>Reads a Team's <c>_team.md</c>.</summary>
+    /// <param name="team">The Team's name.</param>
+    /// <returns>The parsed file, or <see langword="null"/> when the Team or its file is missing or unreadable.</returns>
+    TeamFile? ReadTeamFile(string team);
 }

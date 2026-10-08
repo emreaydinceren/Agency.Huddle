@@ -1,4 +1,5 @@
 using System.Globalization;
+using System.Text;
 using Agency.Huddle.App.Acp;
 using Agency.Huddle.App.Tasks;
 using Agency.Huddle.App.Teams;
@@ -23,6 +24,9 @@ internal sealed class TeamFolderProvisioner : IHostedService, IDisposable, ITeam
 {
     private const string TeamsRootId = "teams";
 
+    private static readonly UTF8Encoding TeamFileEncoding = new(encoderShouldEmitUTF8Identifier: false);
+
+    private readonly Lock teamFileGate = new();
     private readonly PersonaStore personas;
     private readonly LibraryRootStore roots;
     private readonly LibraryPathResolver resolver;
@@ -196,6 +200,129 @@ internal sealed class TeamFolderProvisioner : IHostedService, IDisposable, ITeam
         }
 
         return this.EnsureProject(teamFolder.Value, project);
+    }
+
+    /// <inheritdoc/>
+    /// <remarks>Reuses the folder creation of <see cref="EnsureTeam"/> but, unlike it, accepts a folder that
+    /// already exists without a <c>_team.md</c>. The file is written to a temporary name beside the target and
+    /// moved into place without overwriting, so a concurrent writer can never be clobbered. An I/O failure while
+    /// writing propagates to the caller.</remarks>
+    public TeamCreateResult CreateTeam(string team, TeamFile file)
+    {
+        ArgumentNullException.ThrowIfNull(team);
+        ArgumentNullException.ThrowIfNull(file);
+
+        if (TeamNames.ValidateTeamName(team, []) is not null)
+        {
+            return new TeamCreateResult(TeamCreateOutcome.InvalidName, null);
+        }
+
+        LibraryResult<LibraryPath> folder = this.CreateTeamFolder(team);
+        if (folder.Value is null)
+        {
+            return new TeamCreateResult(TeamCreateOutcome.InvalidName, null);
+        }
+
+        string target = Path.Combine(folder.Value.FullPath, TeamPaths.TeamFileName);
+        if (File.Exists(target))
+        {
+            return new TeamCreateResult(TeamCreateOutcome.AlreadyExists, null);
+        }
+
+        string temp = $"{target}.{Guid.NewGuid():N}.tmp";
+        try
+        {
+            File.WriteAllText(temp, file.Compose(), TeamFileEncoding);
+            File.Move(temp, target, overwrite: false);
+        }
+        catch (IOException) when (File.Exists(target))
+        {
+            return new TeamCreateResult(TeamCreateOutcome.AlreadyExists, null);
+        }
+        finally
+        {
+            File.Delete(temp);
+        }
+
+        return new TeamCreateResult(TeamCreateOutcome.Created, target);
+    }
+
+    /// <inheritdoc/>
+    /// <remarks>Updates in this process are serialised; the new text is written to a temporary file and moved over
+    /// the old one, so a reader sees either the old or the new file, never a partial one.</remarks>
+    public bool UpdateTeamFile(string team, Func<TeamFile, TeamFile> change)
+    {
+        ArgumentNullException.ThrowIfNull(team);
+        ArgumentNullException.ThrowIfNull(change);
+
+        lock (this.teamFileGate)
+        {
+            string? path = this.TeamFilePath(team);
+            if (path is null || !TryReadTeamFile(path, out TeamFile? current))
+            {
+                return false;
+            }
+
+            TeamFile updated = change(current);
+            ArgumentNullException.ThrowIfNull(updated);
+
+            string temp = $"{path}.{Guid.NewGuid():N}.tmp";
+            try
+            {
+                File.WriteAllText(temp, updated.Compose(), TeamFileEncoding);
+                File.Move(temp, path, overwrite: true);
+            }
+            finally
+            {
+                File.Delete(temp);
+            }
+
+            return true;
+        }
+    }
+
+    /// <inheritdoc/>
+    public TeamFile? ReadTeamFile(string team)
+    {
+        ArgumentNullException.ThrowIfNull(team);
+
+        string? path = this.TeamFilePath(team);
+        return path is not null && TryReadTeamFile(path, out TeamFile? file) ? file : null;
+    }
+
+    /// <summary>The path of an existing Team's <c>_team.md</c>, or <see langword="null"/> when the name is invalid, the Team folder is missing or the file is absent.</summary>
+    private string? TeamFilePath(string team)
+    {
+        if (LibraryNames.Validate(team) is not null || TaskLayout.IsReservedFolderName(team))
+        {
+            return null;
+        }
+
+        if (!this.resolver.TryResolve(TeamsRootId, team, out LibraryPath? teamPath, out _) || teamPath.Role != LibraryNodeRole.TeamFolder)
+        {
+            return null;
+        }
+
+        string path = Path.Combine(teamPath.FullPath, TeamPaths.TeamFileName);
+        return File.Exists(path) ? path : null;
+    }
+
+    /// <summary>Reads and parses <paramref name="path"/>; an unreadable or malformed file is a miss.</summary>
+    private static bool TryReadTeamFile(string path, [System.Diagnostics.CodeAnalysis.NotNullWhen(true)] out TeamFile? file)
+    {
+        file = null;
+        try
+        {
+            return TeamFile.TryParse(File.ReadAllText(path, TeamFileEncoding), out file);
+        }
+        catch (IOException)
+        {
+            return false;
+        }
+        catch (UnauthorizedAccessException)
+        {
+            return false;
+        }
     }
 
     /// <summary>Whether a directory directly under the Teams root already carries <paramref name="name"/>, ignoring case (the <see cref="SyncFolders"/> pattern).</summary>
