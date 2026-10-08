@@ -2,7 +2,7 @@
 
 Status of the Teams delivery in [engineering/teams-plan.md](engineering/teams-plan.md). Each task is a `.t` (failing tests first) and `.i` (implementation) pair; a task's `.i` cannot be Done before its `.t`. Ids are `<phase>.<task>.<t|i>`, the form `agents/scripts/Set-Tracker.ps1` updates. `(H)` marks a Haiku task, `(B)` a boundary task that also gets an Opus architect review.
 
-**Status:** 22 of 170 tasks Done · 0 of 6 retrospectives done · last updated 2026-10-07.
+**Status:** 24 of 170 tasks Done · 0 of 6 retrospectives done · last updated 2026-10-07.
 
 | **Deliverable / Task** | **Active** | **In Progress** | **Done** |
 |---|---|---|---|
@@ -30,9 +30,9 @@ Status of the Teams delivery in [engineering/teams-plan.md](engineering/teams-pl
 | 1.10.i Task 10 TeamTypeValidator: implement | | | ✔ |
 | 1.11.t Task 11 Candidate template parser: write failing tests | | | ✔ |
 | 1.11.i Task 11 Candidate template parser: implement | | | ✔ |
-| 1.12.t Task 12 Skill packs: write failing tests | | ✔ | |
-| 1.12.i Task 12 Skill packs: implement | | | |
-| 1.13.t Task 13 TeamTypeCatalog: write failing tests (B) | | | |
+| 1.12.t Task 12 Skill packs: write failing tests | | | ✔ |
+| 1.12.i Task 12 Skill packs: implement | | | ✔ |
+| 1.13.t Task 13 TeamTypeCatalog: write failing tests (B) | | ✔ | |
 | 1.13.i Task 13 TeamTypeCatalog: implement (B) | | | |
 | 1.14.t Task 14 Development team type manifest: write failing tests (H) | | | |
 | 1.14.i Task 14 Development team type manifest: implement (H) | | | |

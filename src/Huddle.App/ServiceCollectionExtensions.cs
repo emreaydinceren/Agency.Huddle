@@ -18,6 +18,7 @@ using Agency.Huddle.App.Tasks.Views;
 using Agency.Huddle.App.Questions;
 using Agency.Huddle.App.Teammates;
 using Agency.Huddle.App.Teams;
+using Agency.Huddle.App.TeamTypes;
 
 namespace Agency.Huddle.App;
 
@@ -130,6 +131,7 @@ public static class ServiceCollectionExtensions
         services.AddSingleton<IAgentGateway>(sp => sp.GetRequiredService<AgentGateway>());
 
         services.AddSingleton<TeammatePaths>();
+        services.AddSingleton<SkillPackStore>();
 
         // Shared between PersonaRenameCascade (signals around a Teammate-folder move) and
         // DotAcpAgentHostFactory (waits on it before creating a Persona's Work Dir) - corrections-B2

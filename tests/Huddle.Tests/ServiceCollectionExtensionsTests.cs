@@ -76,6 +76,24 @@ public sealed class ServiceCollectionExtensionsTests
         Assert.Equal($"'Team:Teams:Dir' ({teammatesRoot}) and 'Team:Acp:TeammatesDir' ({teammatesRoot}) must not overlap.", ex.Message);
     }
 
+    /// <summary>The skill pack store resolves from the container with the real embedded built-ins.</summary>
+    [Fact]
+    public void AddTeamServices_ResolvesSkillPackStore()
+    {
+        using TempDataDir dataDir = new();
+        var configuration = new ConfigurationBuilder()
+            .AddInMemoryCollection(new Dictionary<string, string?> { ["Team:DataDir"] = dataDir.Path })
+            .Build();
+        var services = new ServiceCollection();
+        services.AddLogging();
+        services.AddTeamServices(configuration);
+        using var provider = services.BuildServiceProvider();
+
+        var store = provider.GetRequiredService<Agency.Huddle.App.TeamTypes.SkillPackStore>();
+
+        Assert.Empty(store.Problems);
+    }
+
     /// <summary>
     /// The negative case: a configuration that never mentions the old key must compose normally,
     /// so the guard above cannot be a false positive for every other test in the suite that calls
