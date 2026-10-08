@@ -89,6 +89,8 @@ that exercise it. All are **chat** unless stated.
 | [known-limits.md](engineering/known-limits.md) | What is deliberately absent, before you "fix" it | chat | ~1.9k |
 | [roadmap.md](engineering/roadmap.md) | The numbered plan, and what exists before work in `PersonaRunner`, `ReplyGate`, `app.css` or `Themes/` | chat | ~10.7k |
 | [analysis-hardening-plan.md](engineering/analysis-hardening-plan.md) | The ranked plan for hardening automated code analysis against agent shortcuts, with each item's state | chat | ~5k |
+| [teams-plan.md](engineering/teams-plan.md) | The 85-task, test-first delivery plan for Teams: team types, hiring, skills with provenance, process gates, Requests, retrospectives and Household | chat | ~40k, read by task range only |
+| [Huddle.Teams-Tracker.md](Huddle.Teams-Tracker.md) | The Kanban tracker for the Teams delivery: 170 `.t`/`.i` rows and 6 retrospectives, updated with `Set-Tracker.ps1` | chat | ~9k |
 | [installer.md](engineering/installer.md) | How to install Agency.Huddle on Windows or macOS, what the installer checks and why it stays idempotent, release process, integrity verification | chat | ~4k |
 | [decisions.md](engineering/decisions.md) | The decision record and the old-to-new vocabulary mapping | chat | ~6.3k |
 | [analyzer-decisions.md](engineering/analyzer-decisions.md) | Which compiler and Sonar rules are off or on, what each group rests on, and which are proven to fire | chat | ~4.5k |
