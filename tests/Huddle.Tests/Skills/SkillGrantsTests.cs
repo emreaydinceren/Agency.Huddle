@@ -124,6 +124,17 @@ public sealed class SkillGrantsTests
         Assert.Equal(["ask_human"], SkillGrants.Offer(all, [TeamBuildingSkill(["ask_human"])]).Select(tool => tool.Name));
     }
 
+    /// <summary>propose_sprint is offered to a Persona holding a Skill that lists it, and withheld from one without (Task 62).</summary>
+    [Fact]
+    public void Offer_ProposeSprint_IsOfferedOnlyToAHolderOfTheSkill()
+    {
+        IReadOnlyList<IAppTool> all = [new StubTool("post_message"), new StubTool("propose_sprint")];
+
+        Assert.Contains("propose_sprint", (IEnumerable<string>)SkillGrants.Grantable);
+        Assert.Equal(["post_message"], SkillGrants.Offer(all, [TeamBuildingSkill([])]).Select(tool => tool.Name));
+        Assert.Equal(["post_message", "propose_sprint"], SkillGrants.Offer(all, [TeamBuildingSkill(["propose_sprint"])]).Select(tool => tool.Name));
+    }
+
     /// <summary>Builds a resolved <c>team-building</c> Skill granting exactly <paramref name="tools"/>.</summary>
     /// <param name="tools">The Skill's granted tool names.</param>
     private static Skill TeamBuildingSkill(IReadOnlyList<string> tools)

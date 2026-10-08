@@ -20,9 +20,12 @@ internal static class SkillGrants
     /// <summary>The name of the tool that proposes new Teammates to the Human (Spec §6.8).</summary>
     private const string ProposeTeammatesToolName = "propose_teammates";
 
+    /// <summary>The name of the tool that proposes a Sprint to the Human (Task 62).</summary>
+    private const string ProposeSprintToolName = "propose_sprint";
+
     /// <summary>Tools that exist only for Personas holding a Skill that lists them (Spec §6.5).</summary>
     internal static readonly FrozenSet<string> Grantable =
-        FrozenSet.ToFrozenSet([ValidateTeammateToolName, ProposeTeammatesToolName], StringComparer.Ordinal);
+        FrozenSet.ToFrozenSet([ValidateTeammateToolName, ProposeTeammatesToolName, ProposeSprintToolName], StringComparer.Ordinal);
 
     /// <summary>
     /// Filters <paramref name="all"/> down to the tools this session should be offered:

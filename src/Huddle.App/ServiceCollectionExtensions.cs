@@ -360,6 +360,9 @@ public static class ServiceCollectionExtensions
         services.AddSingleton<SprintStore>();
         services.AddSingleton<ISprintCatalog>(sp => sp.GetRequiredService<SprintStore>());
 
+        // Sprint proposals (Task 62): kept in memory and under _proposals/ in the Team folder until the Human decides.
+        services.AddSingleton<SprintProposalStore>();
+
         // Scoped (Task 13.2.i): one Library Pane open/closed state per circuit, shared by
         // LibraryNavLink, LibraryPaneHost and any ?library= navigation.
         services.AddScoped<LibraryPaneState>();

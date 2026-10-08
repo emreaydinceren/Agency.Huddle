@@ -30,6 +30,19 @@ public sealed class SkillCatalogTests
         Assert.Equal(expectedFiles, teamBuilding.Keys.ToHashSet(StringComparer.Ordinal));
     }
 
+    /// <summary>The catalog holds <c>team-management</c> (Task 62): valid, and its tools list is exactly <c>propose_sprint</c>.</summary>
+    [Fact]
+    public void All_ContainsTeamManagement_GrantingProposeSprint()
+    {
+        IReadOnlyDictionary<string, string> files = SkillCatalog.All["team-management"];
+
+        SkillValidation validation = SkillValidator.Validate("team-management", files);
+
+        Assert.Equal(["SKILL.md"], files.Keys.ToList());
+        Assert.Empty(validation.Issues);
+        Assert.Equal(["propose_sprint"], validation.Tools);
+    }
+
     /// <summary>
     /// Every embedded file's text has already been normalised to <c>\n</c> line endings: no value
     /// contains a carriage return.

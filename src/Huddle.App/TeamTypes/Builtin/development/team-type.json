@@ -25,6 +25,9 @@
       "required": true,
       "maxPerTeam": 1,
       "model": { "tier": "strongest" },
+      "skills": [
+        { "name": "team-management", "source": "builtin", "path": "team-management" }
+      ],
       "suggestedNames": [ "Joe", "Omar", "Rhea", "Sam" ]
     },
     {

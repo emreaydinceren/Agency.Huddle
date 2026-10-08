@@ -178,6 +178,7 @@ internal sealed class DotAcpAgentHostFactory : IAgentHostFactory
             readSkillTool,
             ActivatorUtilities.CreateInstance<ValidateTeammateTool>(this.serviceProvider),
             ActivatorUtilities.CreateInstance<ProposeTeammatesTool>(this.serviceProvider, agentId),
+            ActivatorUtilities.CreateInstance<ProposeSprintTool>(this.serviceProvider, agentId),
         ];
 
         // Spec §11.1: the six Task tools are not in SkillGrants.Grantable, so every Persona gets

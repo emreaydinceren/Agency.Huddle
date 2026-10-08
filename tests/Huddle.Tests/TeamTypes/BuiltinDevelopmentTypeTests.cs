@@ -76,6 +76,19 @@ public sealed class BuiltinDevelopmentTypeTests
         Assert.Equal(ExpectedRoles, manifest.Roles.Select(static r => r.Id).ToList());
     }
 
+    /// <summary>The manager role holds the built-in team-management skill (Task 62), so it is offered propose_sprint.</summary>
+    [Fact]
+    public void Manifest_Manager_HoldsTheBuiltinTeamManagementSkill()
+    {
+        TeamTypeManifest manifest = LoadManifest();
+
+        RoleSpec manager = Assert.Single(manifest.Roles, static r => r.Manager);
+
+        SkillRef skill = Assert.Single(manager.Skills);
+        Assert.Equal("team-management", skill.Name);
+        Assert.Equal("builtin", skill.Source);
+    }
+
     /// <summary>Exactly one role is the manager, and it is the Development Manager.</summary>
     [Fact]
     public void Manifest_Managers_ExactlyOneDevelopmentManager()
