@@ -115,4 +115,108 @@ public sealed class WorkDirPermissionHandlerTests
 
         Assert.IsType<CancelledDecision>(decision);
     }
+
+    /// <summary>Records the commands it is asked about and refuses every one with a fixed reason, or none.</summary>
+    /// <param name="reason">The refusal to return, or null to allow.</param>
+    private sealed class FakeMergeGate(string? reason) : IMergeGate
+    {
+        /// <summary>The persona and command of each call, in order.</summary>
+        public List<(string Persona, string Command)> Calls { get; } = [];
+
+        /// <inheritdoc />
+        public string? RefusalFor(string personaName, string command)
+        {
+            this.Calls.Add((personaName, command));
+            return reason;
+        }
+    }
+
+    /// <summary>Builds a Bash request whose input carries one command.</summary>
+    /// <param name="command">The shell command.</param>
+    /// <returns>The request.</returns>
+    private static PermissionRequestContext ShellRequest(string command) =>
+        Request($$"""{"command":{{System.Text.Json.JsonSerializer.Serialize(command)}}}""");
+
+    /// <summary>Decides a shell command through a handler wired to <paramref name="gate"/> and returns the chosen option id.</summary>
+    /// <param name="gate">The gate to consult.</param>
+    /// <param name="command">The shell command.</param>
+    /// <param name="ct">The cancellation token.</param>
+    /// <returns>The selected option id.</returns>
+    private static async Task<string> DecideShellAsync(FakeMergeGate gate, string command, CancellationToken ct)
+    {
+        WorkDirPermissionHandler handler = new(Path.Combine(Path.GetTempPath(), "huddle-protected"), NullLogger<WorkDirPermissionHandler>.Instance, gate, "Nova");
+        PermissionDecision decision = await handler.DecideAsync(ShellRequest(command), ct);
+        return Assert.IsType<SelectedDecision>(decision).OptionId;
+    }
+
+    /// <summary>Merges and pushes, in every spelling the parser claims to catch, are refused when the gate gives a reason.</summary>
+    /// <param name="command">The shell command.</param>
+    [Theory]
+    [InlineData("git push")]
+    [InlineData("git push --dry-run")]
+    [InlineData("git push origin main")]
+    [InlineData("git merge main")]
+    [InlineData("GIT MERGE main")]
+    [InlineData("  git   push  ")]
+    [InlineData("git -C ../repo push")]
+    [InlineData("git -c user.name=x merge main")]
+    [InlineData("cd x && git merge main")]
+    [InlineData("cd x; git push")]
+    [InlineData("git status && git push")]
+    [InlineData("git fetch || git merge origin/main")]
+    [InlineData("\"git\" push")]
+    [InlineData("git.exe push")]
+    public async Task ShellCommand_MergeOrPush_IsRefusedWhenGateRefuses(string command)
+    {
+        CancellationToken ct = TestContext.Current.CancellationToken;
+        FakeMergeGate gate = new("Gate checks-before-merge: needs evidence.");
+
+        string option = await DecideShellAsync(gate, command, ct);
+
+        Assert.Equal("reject-1", option);
+        Assert.Equal(("Nova", command), Assert.Single(gate.Calls));
+    }
+
+    /// <summary>Other git commands, and other tools entirely, never reach the gate and are approved.</summary>
+    /// <param name="command">The shell command.</param>
+    [Theory]
+    [InlineData("git status")]
+    [InlineData("git log --merges")]
+    [InlineData("git commit -m \"push the merge\"")]
+    [InlineData("echo git push")]
+    [InlineData("dotnet test")]
+    public async Task ShellCommand_NotMergeOrPush_IsApprovedWithoutAskingTheGate(string command)
+    {
+        CancellationToken ct = TestContext.Current.CancellationToken;
+        FakeMergeGate gate = new("refuse");
+
+        string option = await DecideShellAsync(gate, command, ct);
+
+        Assert.Equal("allow-1", option);
+        Assert.Empty(gate.Calls);
+    }
+
+    /// <summary>A gate with no reason (a Team without the gate, or checks met) lets the merge through.</summary>
+    [Fact]
+    public async Task ShellCommand_MergeWithGateAllowing_IsApproved()
+    {
+        CancellationToken ct = TestContext.Current.CancellationToken;
+        FakeMergeGate gate = new(null);
+
+        string option = await DecideShellAsync(gate, "git push", ct);
+
+        Assert.Equal("allow-1", option);
+        Assert.Single(gate.Calls);
+    }
+
+    /// <summary>With no gate wired, a push is approved as before.</summary>
+    [Fact]
+    public async Task ShellCommand_Push_WithoutGate_IsApproved()
+    {
+        CancellationToken ct = TestContext.Current.CancellationToken;
+
+        PermissionDecision decision = await Handler(Path.Combine(Path.GetTempPath(), "huddle-protected")).DecideAsync(ShellRequest("git push"), ct);
+
+        Assert.Equal("allow-1", Assert.IsType<SelectedDecision>(decision).OptionId);
+    }
 }

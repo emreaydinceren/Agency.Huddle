@@ -271,6 +271,9 @@ public static class ServiceCollectionExtensions
 
         // The Team's process gates; TaskService asks it before every Task status change (PR-7).
         services.AddSingleton<Agency.Huddle.App.Teams.ProcessGateService>();
+
+        // Asked by WorkDirPermissionHandler before an Agent's git merge or git push (PR-7).
+        services.AddSingleton<IMergeGate, Agency.Huddle.App.Teams.ProcessMergeGate>();
         services.AddSingleton<Agency.Huddle.App.Teams.TeamDuplicator>();
 
         // No interface: nothing needs to substitute this, and CSharpPrinciples.md says not to add

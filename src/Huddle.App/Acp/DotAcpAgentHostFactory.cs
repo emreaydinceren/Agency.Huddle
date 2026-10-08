@@ -309,6 +309,7 @@ internal sealed class DotAcpAgentHostFactory : IAgentHostFactory
             this.workModePolicy,
             () => parsed is null
                 ? null
-                : RoleBlockBuilder.Build(parsed, skillResolution.Skills, this.teamCatalog, personaStore.Get));
+                : RoleBlockBuilder.Build(parsed, skillResolution.Skills, this.teamCatalog, personaStore.Get),
+            this.serviceProvider.GetService<IMergeGate>());
     }
 }

@@ -44,6 +44,7 @@ internal sealed class DotAcpPersonaHost : IPersonaHost
     private readonly ILoggerFactory loggerFactory;
     private readonly WorkModePolicy workModePolicy;
     private readonly Func<RoleBlockInput?> roleBlock;
+    private readonly IMergeGate? mergeGate;
 
     /// <summary>Initializes a new instance of the <see cref="DotAcpPersonaHost"/> class.</summary>
     /// <param name="inner">The started ACP host, ready for <c>session/new</c> or <c>session/resume</c>.</param>
@@ -69,6 +70,7 @@ internal sealed class DotAcpPersonaHost : IPersonaHost
     /// <param name="loggerFactory">Creates the logger a fresh <see cref="WorkDirPermissionHandler"/> needs on every open or resume.</param>
     /// <param name="workModePolicy">Decides whether the Persona's Work Mode may be sent (ADR-0033).</param>
     /// <param name="roleBlock">Builds the Persona's role block at each session start, so a changed Team reaches the next session; returns <see langword="null"/> for a Persona with no role.</param>
+    /// <param name="mergeGate">Decides the Persona's <c>git merge</c> and <c>git push</c> requests (PR-7); <see langword="null"/> approves them.</param>
     public DotAcpPersonaHost(
         DotAcpAgentHost inner,
         AppToolServer toolServer,
@@ -92,8 +94,10 @@ internal sealed class DotAcpPersonaHost : IPersonaHost
         IReadOnlyDictionary<string, object>? meta,
         ILoggerFactory loggerFactory,
         WorkModePolicy workModePolicy,
-        Func<RoleBlockInput?> roleBlock)
+        Func<RoleBlockInput?> roleBlock,
+        IMergeGate? mergeGate = null)
     {
+        this.mergeGate = mergeGate;
         ArgumentNullException.ThrowIfNull(roleBlock);
         this.roleBlock = roleBlock;
         ArgumentNullException.ThrowIfNull(inner);
@@ -219,7 +223,7 @@ internal sealed class DotAcpPersonaHost : IPersonaHost
             // request to leave plan mode is refused (see PlanModePermissionHandler).
             DotAcpPersonaHost.GuardPermissions(
                 WorkDirPermissionHandler.DefaultProtectedDirectory() is { } protectedDirectory
-                    ? new WorkDirPermissionHandler(protectedDirectory, this.loggerFactory.CreateLogger<WorkDirPermissionHandler>())
+                    ? new WorkDirPermissionHandler(protectedDirectory, this.loggerFactory.CreateLogger<WorkDirPermissionHandler>(), this.mergeGate, this.persona.Name)
                     : new AutoApprovePermissionHandler(),
                 mode,
                 this.loggerFactory),
