@@ -125,14 +125,14 @@ public sealed class ServiceCollectionExtensionsTests
         Assert.NotNull(provider.GetRequiredService<Agency.Huddle.App.Teams.TeamDuplicator>());
     }
 
-    /// <summary>The skill installer resolves to the built-in installer.</summary>
+    /// <summary>The skill installer resolves to the importing installer.</summary>
     [Fact]
     public void AddTeamServices_ResolvesSkillInstaller()
     {
         using TempDataDir dataDir = new();
         using ServiceProvider provider = BuildTeamProvider(dataDir);
 
-        Assert.IsType<Agency.Huddle.App.Teams.BuiltinSkillInstaller>(provider.GetRequiredService<Agency.Huddle.App.Teams.ISkillInstaller>());
+        Assert.IsType<Agency.Huddle.App.Teams.ImportingSkillInstaller>(provider.GetRequiredService<Agency.Huddle.App.Teams.ISkillInstaller>());
     }
 
     /// <summary>The skill downloader and the skill importer resolve from the container.</summary>

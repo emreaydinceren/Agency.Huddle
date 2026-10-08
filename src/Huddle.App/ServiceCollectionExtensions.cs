@@ -263,7 +263,7 @@ public static class ServiceCollectionExtensions
         // Hiring a role-based Team. The start gate is the supervisor, resolved lazily through a factory
         // so HireService does not force PersonaSupervisor to construct before it is registered below;
         // CardResolver and TierModelPicker are static and need no registration.
-        services.AddSingleton<Agency.Huddle.App.Teams.ISkillInstaller, Agency.Huddle.App.Teams.BuiltinSkillInstaller>();
+        services.AddSingleton<Agency.Huddle.App.Teams.ISkillInstaller, Agency.Huddle.App.Teams.ImportingSkillInstaller>();
         services.AddSingleton<Agency.Huddle.App.Teams.IPersonaStartGate>(sp => sp.GetService<PersonaSupervisor>() as Agency.Huddle.App.Teams.IPersonaStartGate ?? new Agency.Huddle.App.Teams.NoHostStartGate());
         services.AddSingleton<Agency.Huddle.App.Teams.HireService>();
         services.AddSingleton<Agency.Huddle.App.Teams.IHireContext, Agency.Huddle.App.Teams.HireContext>();

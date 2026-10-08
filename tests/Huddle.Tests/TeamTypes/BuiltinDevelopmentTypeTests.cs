@@ -134,4 +134,18 @@ public sealed class BuiltinDevelopmentTypeTests
         Assert.All(manifest.Roles, static role => Assert.True(role.SuggestedNames.Count >= 4, $"Role '{role.Id}' has fewer than four suggested names."));
         Assert.Equal(names.Count, names.Distinct(StringComparer.Ordinal).Count());
     }
+
+    /// <summary>Developer, reviewer and tech lead carry the Addy Osmani skills that Start Team imports (HR-9).</summary>
+    [Fact]
+    public void Manifest_ImportedSkills_OnDeveloperReviewerAndTechLead()
+    {
+        TeamTypeManifest manifest = LoadManifest();
+
+        foreach (string roleId in new[] { "developer", "reviewer", "tech-lead" })
+        {
+            RoleSpec role = manifest.Roles.Single(r => string.Equals(r.Id, roleId, StringComparison.Ordinal));
+            Assert.NotEmpty(role.Skills);
+            Assert.All(role.Skills, static s => Assert.Equal(new SkillRef(s.Name, "addyosmani/agent-skills", $"skills/{s.Name}"), s));
+        }
+    }
 }

@@ -35,6 +35,10 @@
       "maxPerTeam": 1,
       "covers": [ "challenge" ],
       "model": { "tier": "strongest" },
+      "skills": [
+        { "name": "incremental-implementation", "source": "addyosmani/agent-skills", "path": "skills/incremental-implementation" },
+        { "name": "code-review-and-quality", "source": "addyosmani/agent-skills", "path": "skills/code-review-and-quality" }
+      ],
       "suggestedNames": [ "Kai", "Mei", "Dana", "Ravi" ]
     },
     {
@@ -46,6 +50,10 @@
       "covers": [ "generate" ],
       "model": { "tier": "balanced" },
       "packs": [ "msbuild-authoring" ],
+      "skills": [
+        { "name": "test-driven-development", "source": "addyosmani/agent-skills", "path": "skills/test-driven-development" },
+        { "name": "incremental-implementation", "source": "addyosmani/agent-skills", "path": "skills/incremental-implementation" }
+      ],
       "suggestedNames": [ "Jane", "Priya", "Leo", "Ana" ]
     },
     {
@@ -57,6 +65,9 @@
       "covers": [ "challenge" ],
       "model": { "tier": "balanced", "differentVendorFrom": [ "developer" ] },
       "packs": [ "code-review-and-quality" ],
+      "skills": [
+        { "name": "code-review-and-quality", "source": "addyosmani/agent-skills", "path": "skills/code-review-and-quality" }
+      ],
       "suggestedNames": [ "Nadia", "Tomas", "Ines", "Hugo" ]
     },
     {
