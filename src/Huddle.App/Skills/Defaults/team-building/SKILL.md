@@ -46,6 +46,12 @@ can name a pattern from `team-patterns.md`. You need to know:
 
 If the Human has already answered some of these, do not ask again.
 
+**Pick the team type.** Once you know the goal, ask which team type the Human
+wants. The built-in types are named by id: `development` is the Development
+Team, for software work. If a type fits the goal, propose its roles with
+`role: "development/<role-id>"` on each Candidate rather than inventing a role.
+If none fits, leave `role` out of every Candidate and write plain ones.
+
 If the Human does not know what they want, stop asking and offer two or three
 teams from the examples in `team-patterns.md` that fit what they have said.
 Describe each in one line. People choose from examples far more easily than they
@@ -99,6 +105,7 @@ points. Every Candidate has these fields:
 | `title` | Required. The job, in two or three words: `Researcher`, `Tech Lead`. |
 | `teams` | Optional list of Team labels, such as `['Business']`. A label must not contain `,` or `;`. A label is a view for the Human; it grants nothing. |
 | `consult_when` | Optional, one line. Other Teammates read it in `list_agents`, so say when to bring this Teammate in. For a character, write `Never. Only the Human addresses this Teammate.` |
+| `role` | Optional. `<type-id>/<role-id>` for a role of the team type the Human chose, such as `development/developer`. The role is hired from that type's template, so the Teammate gets the role's skills and model tier. A role needs a Team in `teams`, and a Team can have only one manager role. |
 | `body` | Required. The instructions. Must not start with `---`. See below. |
 
 **Write the body in the second person**, as a brief to a new colleague:

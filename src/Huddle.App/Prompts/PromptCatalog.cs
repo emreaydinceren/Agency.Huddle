@@ -759,7 +759,7 @@ internal static class PromptCatalog
                 "placeholders.",
             Default:
                 """
-                Asks the Human to approve new Teammates. Give the id of the Room you are talking in and one to four Candidates. Nothing is created until the Human approves; you will be told the outcome in that Room.
+                Asks the Human to approve new Teammates. Give the id of the Room you are talking in and one to four Candidates. Each Candidate may carry an optional role, written typeId/roleId, to hire a role of a team type the Human chose. Nothing is created until the Human approves; you will be told the outcome in that Room.
                 """,
             Placeholders: [],
             RequiredPlaceholders: [],

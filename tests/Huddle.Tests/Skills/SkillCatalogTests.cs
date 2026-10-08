@@ -164,6 +164,22 @@ public sealed class SkillCatalogTests
     }
 
     /// <summary>
+    /// The shipped <c>team-building</c> Skill teaches the team-building step (Task 25, HR-13): it asks
+    /// the Human which team type they want, names the built-in Development Team as <c>development</c>,
+    /// and proposes Candidates by role rather than inventing one. Asserts on short, stable phrases.
+    /// </summary>
+    [Fact]
+    public void TeamBuilding_ProposesCandidatesByRole()
+    {
+        string skill = SkillCatalog.All["team-building"]["SKILL.md"];
+
+        // contains-ok: shipped Skill prose, not markup
+        Assert.Contains("role:", skill, StringComparison.Ordinal);
+        // contains-ok: shipped Skill prose, not markup
+        Assert.Contains("development/", skill, StringComparison.Ordinal);
+    }
+
+    /// <summary>
     /// The content contract checks can fail when a Skill violates it. This test builds an in-memory
     /// copy of the shipped <c>team-building</c> files, mutates its <c>SKILL.md</c> frontmatter and
     /// body to violate the contract, and asserts the helper catches both violations.
