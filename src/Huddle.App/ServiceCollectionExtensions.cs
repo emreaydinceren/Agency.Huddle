@@ -132,6 +132,7 @@ public static class ServiceCollectionExtensions
 
         services.AddSingleton<TeammatePaths>();
         services.AddSingleton<SkillPackStore>();
+        services.AddSingleton<TeamTypeCatalog>();
 
         // Shared between PersonaRenameCascade (signals around a Teammate-folder move) and
         // DotAcpAgentHostFactory (waits on it before creating a Persona's Work Dir) - corrections-B2

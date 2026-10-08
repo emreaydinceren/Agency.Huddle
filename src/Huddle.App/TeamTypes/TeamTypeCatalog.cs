@@ -1,0 +1,324 @@
+using System.Reflection;
+using System.Text.Json;
+using Agency.Huddle.App.Teams;
+using Microsoft.Extensions.Options;
+
+namespace Agency.Huddle.App.TeamTypes;
+
+/// <summary>A team type that could not be offered.</summary>
+/// <param name="TypeId">The type id, taken from its folder name.</param>
+/// <param name="Path">Where the manifest came from.</param>
+/// <param name="Message">Why it was rejected.</param>
+internal sealed record TeamTypeFileProblem(string TypeId, string Path, string Message);
+
+/// <summary>Loads, validates and serves team types from built-ins and the user's TeamTypes folder (TT-1 to TT-6).</summary>
+/// <remarks>
+/// Built-ins are embedded resources <c>TeamTypes/Builtin/{id}/...</c>. A user folder <c>{DataDir}/TeamTypes/{id}/</c> with a
+/// manifest of the same id replaces the built-in manifest; candidate and process files resolve the user folder first, then
+/// the built-in, so a user can add a file without copying the type. A manifest value that is rooted or contains <c>..</c> is never
+/// resolved. Invalid types are excluded from <see cref="Types"/> and listed in <see cref="Problems"/>; loading never throws for bad content.
+/// </remarks>
+internal sealed class TeamTypeCatalog
+{
+    private const string ResourcePrefix = "TeamTypes/Builtin/";
+    private const string SkillPacksFolder = "SkillPacks/";
+    private const string ManifestFile = "team-type.json";
+
+    private readonly string userDir;
+    private readonly ILogger<TeamTypeCatalog> logger;
+    private readonly IReadOnlyDictionary<string, string> builtins;
+    private volatile Snapshot snapshot = new([], [], new Dictionary<string, TeamTypeManifest>(StringComparer.Ordinal));
+
+    /// <summary>Creates the catalog over the assembly's embedded built-in types.</summary>
+    /// <param name="options">Supplies <see cref="TeamOptions.DataDir"/>.</param>
+    /// <param name="logger">Receives a warning per rejected type.</param>
+    public TeamTypeCatalog(IOptions<TeamOptions> options, ILogger<TeamTypeCatalog> logger)
+        : this(options, logger, ReadEmbedded())
+    {
+    }
+
+    /// <summary>Creates the catalog over a given set of built-in files, for tests.</summary>
+    /// <param name="options">Supplies <see cref="TeamOptions.DataDir"/>.</param>
+    /// <param name="logger">Receives a warning per rejected type.</param>
+    /// <param name="builtins">Built-in path, such as <c>development/team-type.json</c>, to its text.</param>
+    internal TeamTypeCatalog(IOptions<TeamOptions> options, ILogger<TeamTypeCatalog> logger, IReadOnlyDictionary<string, string> builtins)
+    {
+        ArgumentNullException.ThrowIfNull(options);
+        ArgumentNullException.ThrowIfNull(logger);
+        ArgumentNullException.ThrowIfNull(builtins);
+        this.userDir = Path.Combine(options.Value.DataDir, TeamPaths.TeamTypesDir);
+        this.logger = logger;
+        this.builtins = builtins;
+        this.Reload();
+    }
+
+    /// <summary>Raised after <see cref="Reload"/> has replaced the loaded types.</summary>
+    public event Action? Changed;
+
+    /// <summary>The valid types, ordered by order then display name.</summary>
+    public IReadOnlyList<TeamTypeManifest> Types => this.snapshot.Types;
+
+    /// <summary>The types that were rejected, with the reason.</summary>
+    public IReadOnlyList<TeamTypeFileProblem> Problems => this.snapshot.Problems;
+
+    /// <summary>Finds a valid type by id.</summary>
+    /// <param name="id">The type id.</param>
+    /// <returns>The manifest, or null when no valid type has that id.</returns>
+    public TeamTypeManifest? Find(string id)
+    {
+        ArgumentNullException.ThrowIfNull(id);
+        return this.snapshot.ById.GetValueOrDefault(id);
+    }
+
+    /// <summary>Reads and parses the candidate file of a role.</summary>
+    /// <param name="typeId">The type id.</param>
+    /// <param name="roleId">The role id.</param>
+    /// <returns>The template, or null when the type or role is unknown or the file is missing or does not parse.</returns>
+    public CandidateTemplate? ReadCandidate(string typeId, string roleId)
+    {
+        ArgumentNullException.ThrowIfNull(typeId);
+        ArgumentNullException.ThrowIfNull(roleId);
+        RoleSpec? role = this.Find(typeId)?.Roles.FirstOrDefault(r => string.Equals(r.Id, roleId, StringComparison.Ordinal));
+        string? text = role is null ? null : this.ReadFile(typeId, role.Candidate);
+        if (text is null)
+        {
+            return null;
+        }
+
+        CandidateParseResult result = CandidateTemplateParser.Parse(text);
+        if (result.Template is null)
+        {
+            this.logger.LogWarning("Candidate {TypeId}/{RoleId} does not parse: {Problems}", typeId, roleId, string.Join(" ", result.Problems));
+        }
+
+        return result.Template;
+    }
+
+    /// <summary>Reads a process document.</summary>
+    /// <param name="typeId">The type id.</param>
+    /// <param name="processId">The process id.</param>
+    /// <returns>The Markdown text, or null when the type or process is unknown or the file is missing.</returns>
+    public string? ReadProcess(string typeId, string processId)
+    {
+        ArgumentNullException.ThrowIfNull(typeId);
+        ArgumentNullException.ThrowIfNull(processId);
+        ProcessRef? process = this.Find(typeId)?.Processes.FirstOrDefault(p => string.Equals(p.Id, processId, StringComparison.Ordinal));
+        return process is null ? null : this.ReadFile(typeId, process.File);
+    }
+
+    /// <summary>Rereads the built-ins and the user folder, replacing the loaded types and problems, then raises <see cref="Changed"/>.</summary>
+    public void Reload()
+    {
+        List<TeamTypeFileProblem> problems = [];
+        Dictionary<string, TeamTypeManifest> byId = new(StringComparer.Ordinal);
+
+        foreach (string id in this.ListTypeIds())
+        {
+            TeamTypeManifest? manifest = this.LoadUser(id, problems) ?? this.LoadBuiltin(id, problems);
+            if (manifest is not null)
+            {
+                byId[id] = manifest;
+            }
+        }
+
+        foreach (TeamTypeFileProblem problem in problems)
+        {
+            this.logger.LogWarning("Team type {TypeId} was not loaded from {Path}: {Message}", problem.TypeId, problem.Path, problem.Message);
+        }
+
+        List<TeamTypeManifest> types = [.. byId.Values.OrderBy(static t => t.Order).ThenBy(static t => t.DisplayName, StringComparer.Ordinal)];
+        this.snapshot = new Snapshot(types, problems, byId);
+        this.Changed?.Invoke();
+    }
+
+    /// <summary>Tells whether a type-relative path is a plain relative path with no parent segments.</summary>
+    /// <param name="relativePath">The value from a manifest.</param>
+    /// <returns>True when the path may be resolved.</returns>
+    private static bool IsSafe(string relativePath)
+    {
+        return !string.IsNullOrWhiteSpace(relativePath)
+            && !relativePath.Contains("..", StringComparison.Ordinal)
+            && !relativePath.Contains(':')
+            && !relativePath.StartsWith('/')
+            && !relativePath.StartsWith('\\')
+            && !Path.IsPathRooted(relativePath);
+    }
+
+    /// <summary>Reads every embedded built-in type file, keyed by path below the built-in prefix.</summary>
+    /// <returns>Path, such as <c>development/team-type.json</c>, to its text with <c>\n</c> line endings.</returns>
+    private static Dictionary<string, string> ReadEmbedded()
+    {
+        Assembly assembly = typeof(TeamTypeCatalog).Assembly;
+        Dictionary<string, string> files = new(StringComparer.Ordinal);
+        foreach (string resourceName in assembly.GetManifestResourceNames())
+        {
+            string name = resourceName.Replace('\\', '/');
+            if (!name.StartsWith(ResourcePrefix, StringComparison.Ordinal))
+            {
+                continue;
+            }
+
+            string relative = name[ResourcePrefix.Length..];
+            if (relative.StartsWith(SkillPacksFolder, StringComparison.Ordinal))
+            {
+                continue;
+            }
+
+            using Stream? stream = assembly.GetManifestResourceStream(resourceName);
+            if (stream is null)
+            {
+                continue;
+            }
+
+            using StreamReader reader = new(stream);
+            files[relative] = reader.ReadToEnd().ReplaceLineEndings("\n");
+        }
+
+        return files;
+    }
+
+    /// <summary>Lists the ids of the built-in types and the user folders, without duplicates.</summary>
+    /// <returns>The ids in ordinal order.</returns>
+    private List<string> ListTypeIds()
+    {
+        SortedSet<string> ids = new(StringComparer.Ordinal);
+        string suffix = "/" + ManifestFile;
+        foreach (string key in this.builtins.Keys.Where(k => k.EndsWith(suffix, StringComparison.Ordinal) && k.IndexOf('/') == k.Length - suffix.Length))
+        {
+            ids.Add(key[..^suffix.Length]);
+        }
+
+        if (Directory.Exists(this.userDir))
+        {
+            try
+            {
+                foreach (string folder in Directory.EnumerateDirectories(this.userDir))
+                {
+                    if (File.Exists(Path.Combine(folder, ManifestFile)))
+                    {
+                        ids.Add(Path.GetFileName(folder));
+                    }
+                }
+            }
+            catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+            {
+                this.logger.LogWarning(ex, "The team types folder {Path} could not be listed.", this.userDir);
+            }
+        }
+
+        return [.. ids];
+    }
+
+    /// <summary>Loads and validates the user manifest of a type, if there is one.</summary>
+    /// <param name="id">The type id (its folder name).</param>
+    /// <param name="problems">Receives the problem when the manifest is rejected.</param>
+    /// <returns>The manifest, or null when there is none or it was rejected.</returns>
+    private TeamTypeManifest? LoadUser(string id, List<TeamTypeFileProblem> problems)
+    {
+        string path = Path.Combine(this.userDir, id, ManifestFile);
+        if (!File.Exists(path))
+        {
+            return null;
+        }
+
+        string text;
+        try
+        {
+            text = File.ReadAllText(path);
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+        {
+            problems.Add(new TeamTypeFileProblem(id, path, "The manifest could not be read."));
+            return null;
+        }
+
+        return this.Parse(id, path, text, problems);
+    }
+
+    /// <summary>Loads and validates the built-in manifest of a type, if there is one.</summary>
+    /// <param name="id">The type id.</param>
+    /// <param name="problems">Receives the problem when the manifest is rejected.</param>
+    /// <returns>The manifest, or null when there is none or it was rejected.</returns>
+    private TeamTypeManifest? LoadBuiltin(string id, List<TeamTypeFileProblem> problems)
+    {
+        string key = id + "/" + ManifestFile;
+        return this.builtins.TryGetValue(key, out string? text) ? this.Parse(id, "builtin:" + key, text, problems) : null;
+    }
+
+    /// <summary>Deserialises a manifest and validates it against the files visible to its type.</summary>
+    /// <param name="id">The folder name of the type.</param>
+    /// <param name="source">The source label used in a problem.</param>
+    /// <param name="text">The manifest JSON.</param>
+    /// <param name="problems">Receives one problem per rejection, joining all reasons.</param>
+    /// <returns>The manifest, or null when rejected.</returns>
+    private TeamTypeManifest? Parse(string id, string source, string text, List<TeamTypeFileProblem> problems)
+    {
+        TeamTypeManifest? manifest;
+        try
+        {
+            manifest = JsonSerializer.Deserialize<TeamTypeManifest>(text, TeamTypeJson.Options);
+        }
+        catch (JsonException)
+        {
+            problems.Add(new TeamTypeFileProblem(id, source, "The manifest is not valid team-type JSON."));
+            return null;
+        }
+
+        if (manifest is null || manifest.Id is null || manifest.Version is null || manifest.DisplayName is null || manifest.Workspace is null)
+        {
+            problems.Add(new TeamTypeFileProblem(id, source, "The manifest lacks id, version, displayName or workspace."));
+            return null;
+        }
+
+        if (!string.Equals(manifest.Id, id, StringComparison.Ordinal))
+        {
+            problems.Add(new TeamTypeFileProblem(id, source, $"The manifest id '{manifest.Id}' does not match its folder '{id}'."));
+            return null;
+        }
+
+        IReadOnlyList<TeamTypeProblem> found = TeamTypeValidator.Validate(manifest, relative => this.ReadFile(id, relative) is not null);
+        if (found.Count > 0)
+        {
+            problems.Add(new TeamTypeFileProblem(id, source, string.Join(" ", found.Select(static p => p.Message))));
+            return null;
+        }
+
+        return manifest;
+    }
+
+    /// <summary>Reads a type file from the user folder first, then the built-ins.</summary>
+    /// <param name="typeId">The type id.</param>
+    /// <param name="relativePath">The path from the manifest, relative to the type folder.</param>
+    /// <returns>The text, or null when the path is unsafe or no file exists.</returns>
+    private string? ReadFile(string typeId, string relativePath)
+    {
+        if (!IsSafe(relativePath))
+        {
+            return null;
+        }
+
+        string typeDir = Path.GetFullPath(Path.Combine(this.userDir, typeId));
+        string full = Path.GetFullPath(Path.Combine(typeDir, relativePath));
+        if (full.StartsWith(typeDir + Path.DirectorySeparatorChar, StringComparison.OrdinalIgnoreCase) && File.Exists(full))
+        {
+            try
+            {
+                return File.ReadAllText(full);
+            }
+            catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+            {
+                this.logger.LogWarning(ex, "The team type file {Path} could not be read.", full);
+                return null;
+            }
+        }
+
+        string key = typeId + "/" + relativePath.Replace('\\', '/');
+        return this.builtins.GetValueOrDefault(key);
+    }
+
+    /// <summary>One consistent view of the loaded types.</summary>
+    /// <param name="Types">The valid types in display order.</param>
+    /// <param name="Problems">The rejected types.</param>
+    /// <param name="ById">The valid types by id.</param>
+    private sealed record Snapshot(IReadOnlyList<TeamTypeManifest> Types, IReadOnlyList<TeamTypeFileProblem> Problems, IReadOnlyDictionary<string, TeamTypeManifest> ById);
+}

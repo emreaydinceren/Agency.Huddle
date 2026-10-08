@@ -76,6 +76,24 @@ public sealed class ServiceCollectionExtensionsTests
         Assert.Equal($"'Team:Teams:Dir' ({teammatesRoot}) and 'Team:Acp:TeammatesDir' ({teammatesRoot}) must not overlap.", ex.Message);
     }
 
+    /// <summary>The team type catalog resolves from the container with the real embedded built-ins and no problems.</summary>
+    [Fact]
+    public void AddTeamServices_ResolvesTeamTypeCatalog()
+    {
+        using TempDataDir dataDir = new();
+        var configuration = new ConfigurationBuilder()
+            .AddInMemoryCollection(new Dictionary<string, string?> { ["Team:DataDir"] = dataDir.Path })
+            .Build();
+        var services = new ServiceCollection();
+        services.AddLogging();
+        services.AddTeamServices(configuration);
+        using var provider = services.BuildServiceProvider();
+
+        var catalog = provider.GetRequiredService<Agency.Huddle.App.TeamTypes.TeamTypeCatalog>();
+
+        Assert.Empty(catalog.Problems);
+    }
+
     /// <summary>The skill pack store resolves from the container with the real embedded built-ins.</summary>
     [Fact]
     public void AddTeamServices_ResolvesSkillPackStore()
