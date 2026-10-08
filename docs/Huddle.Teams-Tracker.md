@@ -2,7 +2,7 @@
 
 Status of the Teams delivery in [engineering/teams-plan.md](engineering/teams-plan.md). Each task is a `.t` (failing tests first) and `.i` (implementation) pair; a task's `.i` cannot be Done before its `.t`. Ids are `<phase>.<task>.<t|i>`, the form `agents/scripts/Set-Tracker.ps1` updates. `(H)` marks a Haiku task, `(B)` a boundary task that also gets an Opus architect review.
 
-**Status:** 144 of 170 tasks Done · 4 of 6 retrospectives done · last updated 2026-10-08.
+**Status:** 146 of 170 tasks Done · 4 of 6 retrospectives done · last updated 2026-10-08.
 
 | **Deliverable / Task** | **Active** | **In Progress** | **Done** |
 |---|---|---|---|
@@ -159,9 +159,9 @@ Status of the Teams delivery in [engineering/teams-plan.md](engineering/teams-pl
 | 4.71.i Task 71 Request wake-ups: implement (B) | | | ✔ |
 | 4.72.t Task 72 Request in the Task panel: write failing tests | | | ✔ |
 | 4.72.i Task 72 Request in the Task panel: implement | | | ✔ |
-| 4.73.t Task 73 RecordsBundle builder: write failing tests | | ✔ | |
-| 4.73.i Task 73 RecordsBundle builder: implement | | | |
-| 4.74.t Task 74 `read_records` tool: write failing tests (B) | | | |
+| 4.73.t Task 73 RecordsBundle builder: write failing tests | | | ✔ |
+| 4.73.i Task 73 RecordsBundle builder: implement | | | ✔ |
+| 4.74.t Task 74 `read_records` tool: write failing tests (B) | | ✔ | |
 | 4.74.i Task 74 `read_records` tool: implement (B) | | | |
 | 4.75.t Task 75 Retro report and register: write failing tests | | | |
 | 4.75.i Task 75 Retro report and register: implement | | | |
