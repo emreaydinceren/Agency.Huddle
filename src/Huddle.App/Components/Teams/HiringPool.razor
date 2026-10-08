@@ -1,0 +1,180 @@
+@using Agency.Huddle.App.Acp
+@using Agency.Huddle.App.Library
+@using Agency.Huddle.App.TeamTypes
+@inject ITeamFolders Folders
+@inject TeamTypeCatalog Types
+@inject SkillPackStore Packs
+@inject PersonaStore Personas
+@inject IHireContext HireContext
+
+@*
+    Task 32 (HR-3 to HR-6, Screen 1): the hiring pool. Left, one card per role of the Team's type with
+    its tier, what it covers and the name the next hire would get; a role at its limit is greyed and
+    its + is disabled. Right, the Team area: the manager first (it cannot be removed) and then the
+    cards staged here, each Ready or Needs setup with its reasons. The + button stages a card in
+    component state (Start Team, Task 33, hires them); CardResolver runs on every add, with the names
+    already staged counted as in use, so a name never repeats. A preset button stages its roles at
+    once and skips the full ones. Hiring is by + or preset only; drag-and-drop is not offered.
+*@
+
+<div class="hiring-pool">
+    <div class="hiring-pool-pool">
+        @if (this.Presets.Count > 0)
+        {
+            <MudStack Row="true" Class="hiring-pool-presets">
+                @foreach (PresetSpec preset in this.Presets)
+                {
+                    <MudButton Variant="Variant.Outlined" Size="Size.Small" Class="@($"hiring-pool-preset hiring-pool-preset-{preset.Id}")"
+                               OnClick="@(() => this.AddPreset(preset))">@preset.Label</MudButton>
+                }
+            </MudStack>
+        }
+        @foreach (RoleSpec role in this.Roles)
+        {
+            bool full = this.IsFull(role);
+            <MudPaper Outlined="true" Class="@PoolCardClass(role, full)">
+                <MudStack Row="true" AlignItems="AlignItems.Center">
+                    <MudStack Spacing="1" Class="flex-grow-1">
+                        <MudText Typo="Typo.subtitle1" Class="hiring-pool-title">@role.Title</MudText>
+                        <MudStack Row="true" Spacing="1">
+                            <MudChip T="string" Size="Size.Small" Class="hiring-pool-tier">@role.Model.Tier</MudChip>
+                            @foreach (string step in role.Covers)
+                            {
+                                <MudChip T="string" Size="Size.Small" Variant="Variant.Outlined" Class="hiring-pool-covers">@step</MudChip>
+                            }
+                        </MudStack>
+                        <MudText Typo="Typo.caption" Class="hiring-pool-suggested">@this.SuggestedName(role)</MudText>
+                        @if (full)
+                        {
+                            <MudText Typo="Typo.caption" Class="hiring-pool-limit">@LimitText</MudText>
+                        }
+                    </MudStack>
+                    <MudTooltip Text="@LimitText" Disabled="@(!full)">
+                        <MudIconButton Icon="@Icons.Material.Filled.Add" Size="Size.Small" Disabled="@full" aria-label="@($"Hire {role.Title}")"
+                                       Class="@($"hiring-pool-add hiring-pool-add-{role.Id}")" OnClick="@(() => this.Add(role))" />
+                    </MudTooltip>
+                </MudStack>
+            </MudPaper>
+        }
+    </div>
+
+    <div class="hiring-pool-team">
+        @foreach (HiredEntry entry in this.hired)
+        {
+            <MudPaper Outlined="true" Class="@($"hiring-pool-hired hiring-pool-hired-{entry.Card.RoleId}")">
+                <MudStack Row="true" AlignItems="AlignItems.Center">
+                    <MudStack Spacing="1" Class="flex-grow-1">
+                        <MudText Typo="Typo.subtitle1" Class="hiring-pool-name">@entry.Card.Name</MudText>
+                        <MudText Typo="Typo.caption">@this.RoleTitle(entry.Card.RoleId)</MudText>
+                        <MudText Typo="Typo.caption" Class="hiring-pool-status">@(entry.Card.Readiness == CardReadiness.Ready ? ReadyText : NeedsSetupText)</MudText>
+                        @foreach (string reason in entry.Card.Reasons)
+                        {
+                            <MudText Typo="Typo.caption" Color="Color.Warning" Class="hiring-pool-reason">@reason</MudText>
+                        }
+                    </MudStack>
+                    @if (!entry.Locked)
+                    {
+                        <MudIconButton Icon="@Icons.Material.Filled.Close" Size="Size.Small" aria-label="@($"Remove {entry.Card.Name}")"
+                                       Class="hiring-pool-remove" OnClick="@(() => this.Remove(entry))" />
+                    }
+                </MudStack>
+            </MudPaper>
+        }
+    </div>
+</div>
+
+@code {
+    private const string LimitText = "Limit reached";
+    private const string ReadyText = "Ready";
+    private const string NeedsSetupText = "Needs setup";
+
+    private readonly List<HiredEntry> hired = [];
+    private string? loadedKey;
+
+    /// <summary>The Team being set up.</summary>
+    [Parameter]
+    public string Team { get; set; } = string.Empty;
+
+    /// <summary>The id of the Team's type, whose roles fill the pool.</summary>
+    [Parameter]
+    public string TypeId { get; set; } = string.Empty;
+
+    private TeamTypeManifest? Type => this.Types.Find(this.TypeId);
+
+    private IReadOnlyList<RoleSpec> Roles => this.Type?.Roles ?? [];
+
+    private IReadOnlyList<PresetSpec> Presets => this.Type?.Presets ?? [];
+
+    /// <inheritdoc />
+    protected override void OnParametersSet()
+    {
+        string key = $"{this.Team}|{this.TypeId}";
+        if (string.Equals(key, this.loadedKey, StringComparison.Ordinal))
+        {
+            return;
+        }
+
+        this.loadedKey = key;
+        this.hired.Clear();
+        RoleSpec? managerRole = this.Roles.FirstOrDefault(static role => role.Manager);
+        if (managerRole is null)
+        {
+            return;
+        }
+
+        string? managerName = this.Folders.ReadTeamFile(this.Team)?.Manager;
+        CardState card = managerName is null
+            ? this.Resolve(managerRole, null)
+            : new CardState(managerRole.Id, managerName, null, [], [], CardReadiness.Ready, []);
+        this.hired.Add(new HiredEntry(card, Locked: true));
+    }
+
+    private static string PoolCardClass(RoleSpec role, bool full) =>
+        $"hiring-pool-card hiring-pool-card-{role.Id}{(full ? " hiring-pool-card-full" : string.Empty)}";
+
+    private bool IsFull(RoleSpec role) =>
+        TeamCheckBar.IsRoleFull(role, this.hired.Count(entry => string.Equals(entry.Card.RoleId, role.Id, StringComparison.Ordinal)));
+
+    private string RoleTitle(string roleId) =>
+        this.Roles.FirstOrDefault(role => string.Equals(role.Id, roleId, StringComparison.Ordinal))?.Title ?? roleId;
+
+    private List<string> NamesInUse() => [.. this.Personas.ListNames(), .. this.hired.Select(static entry => entry.Card.Name)];
+
+    private CardState Resolve(RoleSpec role, string? chosenName) =>
+        CardResolver.Resolve(role, this.NamesInUse(), this.HireContext.Answered, this.HireContext.TierMap, this.HireContext.AvoidAdapters,
+            this.Packs.All, this.HireContext.Connectors, chosenName);
+
+    private string SuggestedName(RoleSpec role) => this.Resolve(role, null).Name;
+
+    private void Add(RoleSpec role)
+    {
+        if (this.IsFull(role))
+        {
+            return;
+        }
+
+        this.hired.Add(new HiredEntry(this.Resolve(role, null), Locked: false));
+    }
+
+    private void AddPreset(PresetSpec preset)
+    {
+        foreach (string roleId in preset.Roles)
+        {
+            RoleSpec? role = this.Roles.FirstOrDefault(candidate => string.Equals(candidate.Id, roleId, StringComparison.Ordinal));
+            if (role is not null)
+            {
+                this.Add(role);
+            }
+        }
+    }
+
+    private void Remove(HiredEntry entry)
+    {
+        if (!entry.Locked)
+        {
+            this.hired.Remove(entry);
+        }
+    }
+
+    private sealed record HiredEntry(CardState Card, bool Locked);
+}
