@@ -1028,6 +1028,12 @@ public sealed class ChatPageTests
         ctx.Services.AddSingleton(factory.Services.GetRequiredService<ProposalService>());
         ctx.Services.AddSingleton(factory.Services.GetRequiredService<HireLimitGuard>());
 
+        // Chat.razor renders SprintProposalCard beside ProposalCard (Task 63), which injects these three even
+        // though these tests never propose a Sprint.
+        ctx.Services.AddSingleton(factory.Services.GetRequiredService<Agency.Huddle.App.Tasks.SprintProposalStore>());
+        ctx.Services.AddSingleton(factory.Services.GetRequiredService<Agency.Huddle.App.Tasks.SprintProposalService>());
+        ctx.Services.AddSingleton(factory.Services.GetRequiredService<Agency.Huddle.App.Tasks.TaskStore>());
+
         // Chat.razor renders QuestionCard beside ProposalCard (Questions spec §6.7), which injects these
         // two even though these tests never ask a Question - RoomEvents, Drafts and ITeamDirectory are
         // already registered above, for Chat.razor's own sake.

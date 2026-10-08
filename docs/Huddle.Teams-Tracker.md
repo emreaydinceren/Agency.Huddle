@@ -2,7 +2,7 @@
 
 Status of the Teams delivery in [engineering/teams-plan.md](engineering/teams-plan.md). Each task is a `.t` (failing tests first) and `.i` (implementation) pair; a task's `.i` cannot be Done before its `.t`. Ids are `<phase>.<task>.<t|i>`, the form `agents/scripts/Set-Tracker.ps1` updates. `(H)` marks a Haiku task, `(B)` a boundary task that also gets an Opus architect review.
 
-**Status:** 124 of 170 tasks Done · 4 of 6 retrospectives done · last updated 2026-10-08.
+**Status:** 126 of 170 tasks Done · 4 of 6 retrospectives done · last updated 2026-10-08.
 
 | **Deliverable / Task** | **Active** | **In Progress** | **Done** |
 |---|---|---|---|
@@ -138,9 +138,9 @@ Status of the Teams delivery in [engineering/teams-plan.md](engineering/teams-pl
 | 3.61.i Task 61 CadenceService: implement (B) | | | ✔ |
 | 3.62.t Task 62 `propose_sprint` tool and grant: write failing tests | | | ✔ |
 | 3.62.i Task 62 `propose_sprint` tool and grant: implement | | | ✔ |
-| 3.63.t Task 63 Sprint proposal card: write failing tests (B) | | ✔ | |
-| 3.63.i Task 63 Sprint proposal card: implement (B) | | | |
-| 3.64.t Task 64 Digest and retro prompts: write failing tests (H) | | | |
+| 3.63.t Task 63 Sprint proposal card: write failing tests (B) | | | ✔ |
+| 3.63.i Task 63 Sprint proposal card: implement (B) | | | ✔ |
+| 3.64.t Task 64 Digest and retro prompts: write failing tests (H) | | ✔ | |
 | 3.64.i Task 64 Digest and retro prompts: implement (H) | | | |
 | 3.65.t Task 65 Phase 3 functional end-to-end test: write failing tests (B) | | | |
 | 3.65.i Task 65 Phase 3 functional end-to-end test: implement (B) | | | |

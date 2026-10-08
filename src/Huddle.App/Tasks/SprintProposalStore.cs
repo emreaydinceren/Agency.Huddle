@@ -77,9 +77,14 @@ internal sealed class SprintProposalStore(ITeamFolders folders)
             }
 
             this.byId[proposal.Id] = proposal;
-            return true;
         }
+
+        this.Changed?.Invoke(proposal.Team);
+        return true;
     }
+
+    /// <summary>Raised, outside the lock, with the Team's name after a proposal was added or removed.</summary>
+    public event Action<string>? Changed;
 
     /// <summary>Removes a proposal from memory and disk.</summary>
     /// <param name="id">The proposal's id.</param>
@@ -88,9 +93,10 @@ internal sealed class SprintProposalStore(ITeamFolders folders)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(id);
 
+        SprintProposal? removed;
         lock (this.gate)
         {
-            if (!this.byId.Remove(id, out SprintProposal? removed))
+            if (!this.byId.Remove(id, out removed))
             {
                 return false;
             }
@@ -111,9 +117,10 @@ internal sealed class SprintProposalStore(ITeamFolders folders)
                     // Same as above: the leftover file only makes the proposal reappear, never creates a Sprint.
                 }
             }
-
-            return true;
         }
+
+        this.Changed?.Invoke(removed.Team);
+        return true;
     }
 
     /// <summary>Loads the Team's proposal files the first time the Team is touched.</summary>
