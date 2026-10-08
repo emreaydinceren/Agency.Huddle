@@ -79,6 +79,7 @@ public static class ServiceCollectionExtensions
         services.AddSingleton<IChatStore, FileChatStore>();
 
         services.AddSingleton<ChatService>();
+        services.TryAddSingleton<ToolCallLogWriter>();
         services.AddSingleton<Drafts>();
 
         // PersonaHealth takes a TimeProvider so a test can prove that a no-op report leaves a
@@ -313,7 +314,7 @@ public static class ServiceCollectionExtensions
         // aliased registrations elsewhere in this file exist to avoid.
         services.AddSingleton<ViewStore>();
 
-        // Sprints (spec §13): the store is the one instance; the read-only catalogue the tools and
+        // Sprints (spec ï¿½13): the store is the one instance; the read-only catalogue the tools and
         // TaskService see resolves to it, so there is one watcher on sprints.md. It needs TaskStore and
         // TaskEvents, registered earlier. Like ViewStore it is lazy, so nothing reads sprints.md
         // unless something that shows Sprints is resolved (Team:Tasks:Enabled=false hides all of it).

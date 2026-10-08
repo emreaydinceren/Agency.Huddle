@@ -39,6 +39,20 @@ internal sealed class Drafts
 
     private readonly Lock gate = new();
     private readonly Dictionary<string, DraftState> drafts = new(StringComparer.Ordinal);
+    private readonly ToolCallLogWriter? toolCallLog;
+    private readonly TimeProvider timeProvider;
+    private readonly ILogger<Drafts>? logger;
+
+    /// <summary>Creates the store; every dependency is optional so a test that does not care about the lasting log can use <c>new Drafts()</c>.</summary>
+    /// <param name="toolCallLog">Where each finished tool call is recorded, or <see langword="null"/> to record nothing.</param>
+    /// <param name="timeProvider">The clock for call durations; <see cref="TimeProvider.System"/> when omitted.</param>
+    /// <param name="logger">Receives the warning when a log write fails, or <see langword="null"/> for none.</param>
+    public Drafts(ToolCallLogWriter? toolCallLog = null, TimeProvider? timeProvider = null, ILogger<Drafts>? logger = null)
+    {
+        this.toolCallLog = toolCallLog;
+        this.timeProvider = timeProvider ?? TimeProvider.System;
+        this.logger = logger;
+    }
 
     /// <summary>
     /// Creates the Draft for <paramref name="messageId"/> on first call and appends to it thereafter.
@@ -113,9 +127,12 @@ internal sealed class Drafts
         lock (this.gate)
         {
             var state = this.GetOrCreate(messageId, roomId, agentId, senderName);
+            DateTimeOffset now = this.timeProvider.GetUtcNow();
+            _ = state.FirstSeen.TryAdd(toolCallId, now);
             int index = state.ToolCalls.FindIndex(call => string.Equals(call.ToolCallId, toolCallId, StringComparison.Ordinal));
             if (index < 0)
             {
+                this.LogIfFinished(state, toolCallId, title, status, path, line, now);
                 state.ToolCalls.Add(new ToolCallDetail(toolCallId, title, status, path, line, edit));
                 if (state.ToolCalls.Count > Drafts.MaxToolCalls)
                 {
@@ -126,6 +143,7 @@ internal sealed class Drafts
             }
 
             ToolCallDetail existing = state.ToolCalls[index];
+            this.LogIfFinished(state, toolCallId, title ?? existing.Title, status, path ?? existing.Path, line ?? existing.Line, now);
             state.ToolCalls[index] = new ToolCallDetail(
                 toolCallId,
                 title ?? existing.Title,
@@ -212,6 +230,47 @@ internal sealed class Drafts
         }
     }
 
+    /// <summary>
+    /// Appends the call to the lasting log the first time it reaches a final status. Called under
+    /// <see cref="gate"/> before the call can be trimmed, so a Turn's calls past
+    /// <see cref="MaxToolCalls"/> are still recorded. A write failure is warned about and swallowed:
+    /// the log must never break the Turn.
+    /// </summary>
+    private void LogIfFinished(DraftState state, string toolCallId, string? title, ToolActivityStatus status, string? path, int? line, DateTimeOffset now)
+    {
+        if (this.toolCallLog is null
+            || (status != ToolActivityStatus.Completed && status != ToolActivityStatus.Failed)
+            || !state.Logged.Add(toolCallId))
+        {
+            return;
+        }
+
+        long elapsedMs = (long)(now - state.FirstSeen[toolCallId]).TotalMilliseconds;
+        string arguments = path ?? string.Empty;
+        if (path is not null && line is not null)
+        {
+            arguments = $"{path}:{line}";
+        }
+
+        ToolCallLogEntry entry = new(
+            now,
+            state.RoomId,
+            null,
+            title ?? toolCallId,
+            arguments,
+            status == ToolActivityStatus.Failed ? "failed" : "completed",
+            Math.Max(0, elapsedMs));
+
+        try
+        {
+            _ = this.toolCallLog.Append(state.SenderName, entry);
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+        {
+            this.logger?.LogWarning(ex, "Could not write tool call {ToolCallId} to the tool-call log.", toolCallId);
+        }
+    }
+
     private static Draft ToDraft(string messageId, DraftState state)
     {
         return new Draft(
@@ -258,5 +317,11 @@ internal sealed class Drafts
         public StringBuilder Text { get; } = new();
 
         public List<ToolCallDetail> ToolCalls { get; } = [];
+
+        /// <summary>When each tool call id was first seen; kept past the <see cref="MaxToolCalls"/> trim so durations survive it.</summary>
+        public Dictionary<string, DateTimeOffset> FirstSeen { get; } = new(StringComparer.Ordinal);
+
+        /// <summary>The tool call ids already written to the lasting log.</summary>
+        public HashSet<string> Logged { get; } = new(StringComparer.Ordinal);
     }
 }
