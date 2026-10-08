@@ -110,6 +110,72 @@ internal sealed class ToolCallLogWriter(IOptions<TeamOptions> options)
         }
     }
 
+    /// <summary>
+    /// Finds the newest entry in the Persona's log whose tool name or arguments contain <paramref name="text"/>
+    /// (ordinal, ignoring case), so Evidence can cite it.
+    /// </summary>
+    /// <param name="personaName">The Persona whose log is searched.</param>
+    /// <param name="text">The text to look for.</param>
+    /// <returns>The file (relative, forward slashes) and 1-based line of the match, or <see langword="null"/> when nothing matches.</returns>
+    public ToolCallLogRef? FindLatest(string personaName, string text)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(personaName);
+        ArgumentException.ThrowIfNullOrWhiteSpace(text);
+
+        string folderName = SanitiseName(personaName);
+        string folder = Path.Combine(this.dataDir, "logs", "tool-calls", folderName);
+        if (!Directory.Exists(folder))
+        {
+            return null;
+        }
+
+        lock (this.gate)
+        {
+            foreach (string file in Directory.GetFiles(folder, "*.jsonl").OrderByDescending(static name => name, StringComparer.Ordinal))
+            {
+                using FileStream stream = new(file, FileMode.Open, FileAccess.Read, FileShare.ReadWrite);
+                using StreamReader reader = new(stream, Encoding.UTF8);
+                string[] lines = reader.ReadToEnd().Split('\n');
+                for (int index = lines.Length - 1; index >= 0; index--)
+                {
+                    if (IsMatch(lines[index], text))
+                    {
+                        return new ToolCallLogRef($"logs/tool-calls/{folderName}/{Path.GetFileName(file)}", index + 1);
+                    }
+                }
+            }
+        }
+
+        return null;
+    }
+
+    /// <summary>True when the JSON log line's tool or arguments contain <paramref name="text"/>; a line that is not JSON never matches.</summary>
+    private static bool IsMatch(string jsonLine, string text)
+    {
+        if (jsonLine.Length == 0)
+        {
+            return false;
+        }
+
+        try
+        {
+            using JsonDocument document = JsonDocument.Parse(jsonLine);
+            return IsMatch(document.RootElement, "tool", text) || IsMatch(document.RootElement, "arguments", text);
+        }
+        catch (JsonException)
+        {
+            // A torn or hand-edited line is skipped; the search carries on with the earlier lines.
+            return false;
+        }
+    }
+
+    /// <summary>True when the named string property of <paramref name="root"/> contains <paramref name="text"/>.</summary>
+    private static bool IsMatch(JsonElement root, string property, string text) =>
+        root.ValueKind == JsonValueKind.Object
+        && root.TryGetProperty(property, out JsonElement value)
+        && value.ValueKind == JsonValueKind.String
+        && (value.GetString()?.Contains(text, StringComparison.OrdinalIgnoreCase) ?? false);
+
     /// <summary>The shape of a log line; <see cref="DateTime"/> of kind UTC serialises as ISO-8601 with a <c>Z</c> suffix.</summary>
     private sealed record WireEntry(DateTime Time, string Room, string? Task, string Tool, string Arguments, string Status, long DurationMs);
 

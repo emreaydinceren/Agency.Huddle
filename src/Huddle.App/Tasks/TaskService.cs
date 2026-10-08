@@ -217,6 +217,59 @@ internal sealed class TaskService : IDisposable
     }
 
     /// <summary>
+    /// Appends <paramref name="line"/> to the Task's "## Evidence" section (creating it before the Change log when
+    /// absent), records "evidence added by {actor}" in the Change log, and never rewrites an earlier line. Like
+    /// <see cref="Close"/>, it has no base version: a concurrent change is reported as a <see cref="TaskResult.Conflict"/>.
+    /// </summary>
+    /// <param name="id">The Task to add Evidence to.</param>
+    /// <param name="line">The Evidence line to append.</param>
+    /// <param name="actor">Who adds it; becomes the Change log entry's actor.</param>
+    public TaskResult AddEvidence(TaskId id, EvidenceLine line, TaskActor actor)
+    {
+        ArgumentNullException.ThrowIfNull(line);
+        ArgumentNullException.ThrowIfNull(actor);
+
+        TaskChange? change;
+        TaskResult result;
+        lock (this.mutateGate)
+        {
+            (result, change) = this.AddEvidenceCore(id, line, actor);
+        }
+
+        if (change is not null)
+        {
+            this.events.RaiseTaskChanged(change);
+        }
+
+        return result;
+    }
+
+    /// <summary>The body of <see cref="AddEvidence"/>, run under <see cref="mutateGate"/>.</summary>
+    private (TaskResult Result, TaskChange? Change) AddEvidenceCore(TaskId id, EvidenceLine line, TaskActor actor)
+    {
+        TaskItem? current = this.store.Get(id);
+        string? currentText = current is null ? null : this.store.ReadText(id);
+        if (current is null || currentText is null)
+        {
+            return (new TaskResult.NotFound(id), null);
+        }
+
+        DateTimeOffset at = TruncateToSeconds(this.clock.GetUtcNow());
+        ChangeLogEntry entry = new(at, actor.Name, string.Create(CultureInfo.InvariantCulture, $"evidence added by {actor.Name}"));
+        string withEvidence = TaskFileFormat.AddEvidenceLine(currentText, line.Format().ReplaceLineEndings(" "));
+        string finalText = TaskFileFormat.AppendEntry(withEvidence, entry);
+
+        TaskItem? written = this.store.Write(current, current.Version, finalText);
+        if (written is null)
+        {
+            return (new TaskResult.Conflict(this.store.Get(id) ?? current, []), null);
+        }
+
+        TaskChange change = new(current, written, [], actor, entry);
+        return (new TaskResult.Saved(written, change), change);
+    }
+
+    /// <summary>
     /// Turns an edit made outside Huddle (Spec §9.4) into a Change log entry, subscribed to
     /// <see cref="TaskStore.OutsideEditDetected"/> in the constructor. Runs under
     /// <see cref="mutateGate"/> like every other mutation (Settled corrections-B2 D6 item 2), and
