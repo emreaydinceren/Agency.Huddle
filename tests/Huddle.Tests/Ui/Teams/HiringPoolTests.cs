@@ -3,6 +3,7 @@ using Bunit.Rendering;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging.Abstractions;
 using Agency.Huddle.App.Acp;
+using Agency.Huddle.App.Components.Teams;
 using Agency.Huddle.App.Library;
 using Agency.Huddle.App.TeamTypes;
 using Agency.Huddle.App.Teams;
@@ -145,6 +146,32 @@ public sealed class HiringPoolTests
 
         Assert.Equal(["Ada"], cut.FindAll(".hiring-pool-hired .hiring-pool-name").Select(item => item.TextContent.Trim()));
         Assert.False(cut.Find("button.hiring-pool-add-dev").HasAttribute("disabled"));
+    }
+
+    /// <summary>The pool ends with one Custom role card whose button is not counted among the role cards.</summary>
+    [Fact]
+    public async Task Pool_EndsWithCustomRoleCard()
+    {
+        using Fixture fixture = new();
+        await using MudBunitContext ctx = fixture.NewContext();
+
+        IRenderedComponent<ContainerFragment> cut = Render(ctx);
+
+        Assert.Equal("Custom role", cut.Find(".hiring-pool-custom .hiring-pool-custom-title").TextContent.Trim());
+        Assert.Equal("Hire a custom role", cut.Find("button.hiring-pool-custom-add").GetAttribute("aria-label"));
+        Assert.Equal(5, cut.FindAll(".hiring-pool-card").Count);
+    }
+
+    /// <summary>A custom role title becomes a lower-case hyphenated role id.</summary>
+    /// <param name="title">The title typed by the user.</param>
+    /// <param name="expected">The role id derived from it.</param>
+    [Theory]
+    [InlineData("Research Analyst", "research-analyst")]
+    [InlineData("  It's a  Role! ", "it-s-a-role")]
+    [InlineData("!!!", "")]
+    public void CustomRoleDialog_Slug_BuildsRoleId(string title, string expected)
+    {
+        Assert.Equal(expected, CustomRoleDialog.Slug(title));
     }
 
     private static IRenderedComponent<ContainerFragment> Render(MudBunitContext ctx)

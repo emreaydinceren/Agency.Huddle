@@ -6,6 +6,7 @@
 @inject SkillPackStore Packs
 @inject PersonaStore Personas
 @inject IHireContext HireContext
+@inject IDialogService Dialogs
 
 @*
     Task 32 (HR-3 to HR-6, Screen 1): the hiring pool. Left, one card per role of the Team's type with
@@ -56,6 +57,13 @@
                 </MudStack>
             </MudPaper>
         }
+        <MudPaper Outlined="true" Class="hiring-pool-custom">
+            <MudStack Row="true" AlignItems="AlignItems.Center">
+                <MudText Typo="Typo.subtitle1" Class="hiring-pool-custom-title flex-grow-1">Custom role</MudText>
+                <MudIconButton Icon="@Icons.Material.Filled.Add" Size="Size.Small" aria-label="Hire a custom role"
+                               Class="hiring-pool-custom-add" OnClick="this.AddCustomAsync" />
+            </MudStack>
+        </MudPaper>
     </div>
 
     <div class="hiring-pool-team">
@@ -178,6 +186,22 @@
 
         this.hired.Add(new HiredEntry(this.Resolve(role, null), Locked: false));
         return true;
+    }
+
+    private async Task AddCustomAsync()
+    {
+        DialogParameters<CustomRoleDialog> parameters = new() { { dialog => dialog.TypeId, this.TypeId } };
+        IDialogReference reference = await this.Dialogs.ShowAsync<CustomRoleDialog>("Custom role", parameters, CustomRoleDialog.Options);
+        DialogResult? result = await reference.Result;
+        if (result is { Canceled: false, Data: string roleId })
+        {
+            this.Types.Reload();
+            RoleSpec? role = this.Roles.FirstOrDefault(candidate => string.Equals(candidate.Id, roleId, StringComparison.Ordinal));
+            if (role is not null && this.Stage(role))
+            {
+                await this.PublishAsync();
+            }
+        }
     }
 
     private async Task AddPreset(PresetSpec preset)

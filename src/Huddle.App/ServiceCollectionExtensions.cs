@@ -133,6 +133,7 @@ public static class ServiceCollectionExtensions
         services.AddSingleton<TeammatePaths>();
         services.AddSingleton<SkillPackStore>();
         services.AddSingleton<TeamTypeCatalog>();
+        services.AddSingleton<UserCandidateWriter>();
         services.AddSingleton<IConnectorStatus, EmptyConnectorStatus>();
 
         // Shared between PersonaRenameCascade (signals around a Teammate-folder move) and
