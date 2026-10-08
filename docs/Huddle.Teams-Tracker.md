@@ -2,7 +2,7 @@
 
 Status of the Teams delivery in [engineering/teams-plan.md](engineering/teams-plan.md). Each task is a `.t` (failing tests first) and `.i` (implementation) pair; a task's `.i` cannot be Done before its `.t`. Ids are `<phase>.<task>.<t|i>`, the form `agents/scripts/Set-Tracker.ps1` updates. `(H)` marks a Haiku task, `(B)` a boundary task that also gets an Opus architect review.
 
-**Status:** 38 of 170 tasks Done · 1 of 6 retrospectives done · last updated 2026-10-07.
+**Status:** 40 of 170 tasks Done · 1 of 6 retrospectives done · last updated 2026-10-07.
 
 | **Deliverable / Task** | **Active** | **In Progress** | **Done** |
 |---|---|---|---|
@@ -47,9 +47,9 @@ Status of the Teams delivery in [engineering/teams-plan.md](engineering/teams-pl
 | 1.18.i Task 18 Provisioner creates the Team and its `_team.md`: implement (B) | | | ✔ |
 | 1.19.t Task 19 Team catalog exposes the team card: write failing tests | | | ✔ |
 | 1.19.i Task 19 Team catalog exposes the team card: implement | | | ✔ |
-| 1.20.t Task 20 Tier to model picker: write failing tests | | ✔ | |
-| 1.20.i Task 20 Tier to model picker: implement | | | |
-| 1.21.t Task 21 CardResolver (Ready or Needs setup): write failing tests | | | |
+| 1.20.t Task 20 Tier to model picker: write failing tests | | | ✔ |
+| 1.20.i Task 20 Tier to model picker: implement | | | ✔ |
+| 1.21.t Task 21 CardResolver (Ready or Needs setup): write failing tests | | ✔ | |
 | 1.21.i Task 21 CardResolver (Ready or Needs setup): implement | | | |
 | 1.22.t Task 22 HireService: write the Teammate: write failing tests (B) | | | |
 | 1.22.i Task 22 HireService: write the Teammate: implement (B) | | | |

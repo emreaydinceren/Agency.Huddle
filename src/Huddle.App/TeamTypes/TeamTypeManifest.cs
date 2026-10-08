@@ -17,7 +17,7 @@ internal enum WorkspaceKind
 }
 
 /// <summary>The model strength a role asks for.</summary>
-internal enum ModelTier
+public enum ModelTier
 {
     /// <summary>The strongest available model.</summary>
     Strongest,
