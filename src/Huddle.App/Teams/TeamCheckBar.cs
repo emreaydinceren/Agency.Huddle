@@ -8,7 +8,7 @@ namespace Agency.Huddle.App.Teams;
 /// <param name="ProcessCount">The hired members; each runs as one process.</param>
 /// <param name="CanStart">Whether every card is Ready and the manager and every required role are hired.</param>
 /// <param name="Blockers">Each reason Start Team is disabled, in plain words.</param>
-internal sealed record TeamCheck(IReadOnlyDictionary<string, bool> Coverage, int VendorCount, int ProcessCount, bool CanStart, IReadOnlyList<string> Blockers);
+public sealed record TeamCheck(IReadOnlyDictionary<string, bool> Coverage, int VendorCount, int ProcessCount, bool CanStart, IReadOnlyList<string> Blockers);
 
 /// <summary>Computes the team check bar and the pool limits (HR-4, HR-8, HR-9, NF-6).</summary>
 internal static class TeamCheckBar

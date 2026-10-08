@@ -12,7 +12,7 @@
     its tier, what it covers and the name the next hire would get; a role at its limit is greyed and
     its + is disabled. Right, the Team area: the manager first (it cannot be removed) and then the
     cards staged here, each Ready or Needs setup with its reasons. The + button stages a card in
-    component state (Start Team, Task 33, hires them); CardResolver runs on every add, with the names
+    component state and reported through Selection (Start Team, Task 33, hires them); CardResolver runs on every add, with the names
     already staged counted as in use, so a name never repeats. A preset button stages its roles at
     once and skips the full ones. Hiring is by + or preset only; drag-and-drop is not offered.
 *@
@@ -105,8 +105,16 @@
 
     private IReadOnlyList<PresetSpec> Presets => this.Type?.Presets ?? [];
 
+    /// <summary>Receives the cards staged here, so the hosting page can compute the check bar and start the Team.</summary>
+    [Parameter]
+    public HiringSelection? Selection { get; set; }
+
+    /// <summary>Raised after the staged cards changed and <see cref="Selection"/> holds the new list.</summary>
+    [Parameter]
+    public EventCallback SelectionChanged { get; set; }
+
     /// <inheritdoc />
-    protected override void OnParametersSet()
+    protected override async Task OnParametersSetAsync()
     {
         string key = $"{this.Team}|{this.TypeId}";
         if (string.Equals(key, this.loadedKey, StringComparison.Ordinal))
@@ -127,6 +135,13 @@
             ? this.Resolve(managerRole, null)
             : new CardState(managerRole.Id, managerName, null, [], [], CardReadiness.Ready, []);
         this.hired.Add(new HiredEntry(card, Locked: true));
+        await this.PublishAsync();
+    }
+
+    private async Task PublishAsync()
+    {
+        this.Selection?.Replace([.. this.hired.Select(static entry => entry.Card)]);
+        await this.SelectionChanged.InvokeAsync();
     }
 
     private static string PoolCardClass(RoleSpec role, bool full) =>
@@ -146,33 +161,48 @@
 
     private string SuggestedName(RoleSpec role) => this.Resolve(role, null).Name;
 
-    private void Add(RoleSpec role)
+    private async Task Add(RoleSpec role)
+    {
+        if (this.Stage(role))
+        {
+            await this.PublishAsync();
+        }
+    }
+
+    private bool Stage(RoleSpec role)
     {
         if (this.IsFull(role))
         {
-            return;
+            return false;
         }
 
         this.hired.Add(new HiredEntry(this.Resolve(role, null), Locked: false));
+        return true;
     }
 
-    private void AddPreset(PresetSpec preset)
+    private async Task AddPreset(PresetSpec preset)
     {
+        bool changed = false;
         foreach (string roleId in preset.Roles)
         {
             RoleSpec? role = this.Roles.FirstOrDefault(candidate => string.Equals(candidate.Id, roleId, StringComparison.Ordinal));
-            if (role is not null)
+            if (role is not null && this.Stage(role))
             {
-                this.Add(role);
+                changed = true;
             }
+        }
+
+        if (changed)
+        {
+            await this.PublishAsync();
         }
     }
 
-    private void Remove(HiredEntry entry)
+    private async Task Remove(HiredEntry entry)
     {
-        if (!entry.Locked)
+        if (!entry.Locked && this.hired.Remove(entry))
         {
-            this.hired.Remove(entry);
+            await this.PublishAsync();
         }
     }
 

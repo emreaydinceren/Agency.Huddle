@@ -400,6 +400,7 @@ public sealed class TeamPageTests
         ctx.ComponentFactories.AddStub<TeamMembers>();
         ctx.ComponentFactories.AddStub<TeamFilesTab>();
         ctx.ComponentFactories.AddStub<TeamTasksTab>();
+        ctx.ComponentFactories.AddStub<TeamSpend>();
         return ctx;
     }
 

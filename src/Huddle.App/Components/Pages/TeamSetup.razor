@@ -2,6 +2,7 @@
 @page "/teams/{Team}/setup"
 @using Agency.Huddle.App.Acp
 @using Agency.Huddle.App.Library
+@using Agency.Huddle.App.Components.Teams
 @using Agency.Huddle.App.TeamTypes
 @using Agency.Huddle.App.Teams
 @inject ITeamFolders Folders
@@ -12,6 +13,7 @@
 @inject HireService Hiring
 @inject IHireContext HireContext
 @inject NavigationManager Navigation
+@implements IDisposable
 
 @*
     Task 31 (HR-1, HR-2, TT-2): the Create Team screen and, on /teams/{Team}/setup, the setup screen
@@ -19,8 +21,11 @@
     workspace, the workspace folder. Create writes the Team folder and its _team.md with an empty
     manager, resolves the manager card with CardResolver, hires it, records its name in the file and
     goes to the setup route. A manager card that needs setup still creates the Team; the setup route
-    shows the card's reasons and hires the manager once they are fixed. Later tasks add the hiring pool
-    and Start Team to this page.
+    shows the card's reasons and hires the manager once they are fixed. Once the Team has its manager
+    the page hosts the hiring pool and, under it, the team check bar and Start Team (Task 33, HR-8,
+    HR-9): the button is enabled only when TeamCheck.CanStart, calls HireService.StartTeamAsync with
+    the staged cards, shows progress while it runs and then opens the Team page; a failed start shows
+    its error in an alert and the page stays.
 *@
 
 <MudContainer MaxWidth="MaxWidth.Medium" Class="team-setup py-4">
@@ -79,6 +84,22 @@
         {
             <MudText Typo="Typo.body2" Color="Color.Error" role="alert" Class="team-setup-problem">@this.hireError</MudText>
         }
+        @if (this.teamFile.Manager is not null && this.Types.Find(this.teamFile.TeamType.Id) is { } teamType)
+        {
+            TeamCheck check = TeamCheckBar.Compute(teamType, this.selection.Cards);
+            <HiringPool Team="@this.Team" TypeId="@teamType.Id" Selection="this.selection" SelectionChanged="@(() => this.StateHasChanged())" />
+            <TeamCheckBarView Check="check" />
+            @if (this.starting)
+            {
+                <MudProgressLinear Indeterminate="true" Class="team-setup-starting" />
+            }
+            @if (this.startError is not null)
+            {
+                <MudAlert Severity="Severity.Error" role="alert" Class="team-setup-start-error">@this.startError</MudAlert>
+            }
+            <MudButton Color="Color.Primary" Variant="Variant.Filled" Disabled="@(!check.CanStart || this.starting)"
+                       OnClick="@(() => this.StartAsync(teamType, check))" Class="team-setup-start">Start Team</MudButton>
+        }
     }
 </MudContainer>
 
@@ -91,6 +112,10 @@
     private TeamFile? teamFile;
     private CardState? managerCard;
     private string? hireError;
+    private readonly HiringSelection selection = new();
+    private readonly CancellationTokenSource disposed = new();
+    private bool starting;
+    private string? startError;
 
     /// <summary>The Team being set up; <see langword="null"/> on the new-Team route.</summary>
     [Parameter]
@@ -259,6 +284,41 @@
         if (role is not null)
         {
             this.managerCard = ResolveManager(role, this.Personas.ListNames(), this.Packs.All, this.HireContext);
+        }
+    }
+
+    /// <inheritdoc />
+    public void Dispose()
+    {
+        this.disposed.Cancel();
+        this.disposed.Dispose();
+    }
+
+    private async Task StartAsync(TeamTypeManifest type, TeamCheck check)
+    {
+        if (this.Team is null || this.starting || !check.CanStart)
+        {
+            return;
+        }
+
+        this.starting = true;
+        this.startError = null;
+        try
+        {
+            List<HireRequest> hires = [.. this.selection.Cards.Select(card => new HireRequest(this.Team, type.Id, card.RoleId, card))];
+            StartTeamResult result = await this.Hiring.StartTeamAsync(this.Team, hires, this.disposed.Token);
+            if (result.Ok)
+            {
+                this.Navigation.NavigateTo($"/teams/{Uri.EscapeDataString(this.Team)}");
+            }
+            else
+            {
+                this.startError = result.Error ?? string.Empty;
+            }
+        }
+        finally
+        {
+            this.starting = false;
         }
     }
 

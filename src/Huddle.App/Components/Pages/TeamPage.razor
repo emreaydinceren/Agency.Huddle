@@ -67,6 +67,7 @@
 
         <MudBreadcrumbs Items="@Crumbs(summary.Name, project)" Separator=" › " Class="team-page-breadcrumbs" />
         <MudText HtmlTag="h1" Typo="Typo.h5" Class="team-page-title">@(project ?? summary.Name)</MudText>
+        <TeamSpend Members="@summary.Members" />
 
         @if (available.Count == 0)
         {
