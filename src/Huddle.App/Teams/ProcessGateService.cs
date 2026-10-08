@@ -102,6 +102,16 @@ internal sealed class ProcessGateService(ITeamCatalog teams, ITeamFolders folder
         return this.Load(team)?.Gates ?? [];
     }
 
+    /// <summary>Looks up the coverage steps of a role in its team type.</summary>
+    /// <param name="role">The role a member was hired into.</param>
+    /// <returns>The role's coverage steps, comma-joined, the shape of the context's author coverage map; <see langword="null"/> when the type or role is unknown.</returns>
+    public string? CoverageOf(RoleRef role)
+    {
+        ArgumentNullException.ThrowIfNull(role);
+        RoleSpec? spec = types.Find(role.TypeId)?.Roles?.FirstOrDefault(r => string.Equals(r.Id, role.RoleId, StringComparison.Ordinal));
+        return spec is null ? null : string.Join(',', spec.Covers);
+    }
+
     private static bool HasVerifierEvidence(GateContext context) =>
         context.Evidence.Any(line =>
             line.Command.Length > 0

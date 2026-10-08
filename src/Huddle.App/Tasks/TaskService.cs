@@ -35,6 +35,8 @@ internal sealed class TaskService : IDisposable
     // Lock order: mutateGate -> TaskStore.writeGate, so this class never calls PersonaStore or
     // raises an event while a writeGate is held. Create and Update below hold this for their whole
     // "read current, validate, write" sequence and release it before TaskChanged is raised.
+    private const string ApprovedByHumanOnly = "Only the Human can set approved_by.";
+
     private readonly Lock mutateGate = new();
 
     private readonly TaskStore store;
@@ -45,6 +47,7 @@ internal sealed class TaskService : IDisposable
     private readonly TeamOptions options;
     private readonly TimeProvider clock;
     private readonly ILogger<TaskService> logger;
+    private readonly ProcessGateService? gates;
 
     /// <summary>
     /// Wires this service to the Task index and to the Change log's clock. Deliberately does not
@@ -60,6 +63,7 @@ internal sealed class TaskService : IDisposable
     /// <param name="options">Supplies <see cref="TeamOptions.HumanName"/>.</param>
     /// <param name="clock">Supplies the Change log entry's timestamp.</param>
     /// <param name="logger">Used for diagnostics; unused so far.</param>
+    /// <param name="gates">Decides whether the Team's process gates refuse a status change (PR-7); <see langword="null"/> enforces none.</param>
     public TaskService(
         TaskStore store,
         TaskIdAllocator ids,
@@ -68,7 +72,8 @@ internal sealed class TaskService : IDisposable
         ISprintCatalog sprints,
         IOptions<TeamOptions> options,
         TimeProvider clock,
-        ILogger<TaskService> logger)
+        ILogger<TaskService> logger,
+        ProcessGateService? gates = null)
     {
         ArgumentNullException.ThrowIfNull(store);
         ArgumentNullException.ThrowIfNull(ids);
@@ -87,6 +92,7 @@ internal sealed class TaskService : IDisposable
         this.options = options.Value;
         this.clock = clock;
         this.logger = logger;
+        this.gates = gates;
 
         // Settled corrections-B2 D6 item 13: TaskEvents is a plain hub; this is the one place that
         // turns TaskStore's own index-rebuild notification into the same event a Task mutation
@@ -493,6 +499,11 @@ internal sealed class TaskService : IDisposable
             return (new TaskResult.NotFound(id), null);
         }
 
+        if (patch.ApprovedBy.IsSet && actor.Kind != TaskActorKind.Human)
+        {
+            return (new TaskResult.Refused([ApprovedByHumanOnly]), null);
+        }
+
         TaskPatch resolvedPatch = this.ResolvePatch(patch, current.Location.Team);
         TaskItem candidate = resolvedPatch.ApplyTo(current);
 
@@ -518,6 +529,20 @@ internal sealed class TaskService : IDisposable
             return (new TaskResult.Unchanged(current), null);
         }
 
+        string? currentText = this.store.ReadText(id);
+        if (currentText is null)
+        {
+            return (new TaskResult.NotFound(id), null);
+        }
+
+        // Spec §Gates: runs after validation, the version check and the "nothing changed" exit, so a
+        // stale or no-op update never reports a gate, and before any write. The Human overrides.
+        GateRefusal? refusal = current.Status != candidate.Status ? this.CheckGates(current, candidate, currentText, actor) : null;
+        if (refusal is not null && actor.Kind != TaskActorKind.Human)
+        {
+            return (new TaskResult.GateRefused(refusal.Gate, refusal.Message), null);
+        }
+
         DateTimeOffset at = TruncateToSeconds(this.clock.GetUtcNow());
         string summary = TaskDiff.Summarise(diff);
         if (resolvedPatch.Reason is { Length: > 0 } reason)
@@ -525,13 +550,12 @@ internal sealed class TaskService : IDisposable
             summary = string.Create(CultureInfo.InvariantCulture, $"{summary} (reason: {reason})");
         }
 
-        ChangeLogEntry entry = new(at, actor.Name, summary);
-
-        string? currentText = this.store.ReadText(id);
-        if (currentText is null)
+        if (refusal is not null)
         {
-            return (new TaskResult.NotFound(id), null);
+            summary = string.Create(CultureInfo.InvariantCulture, $"{summary} (gate overridden by Human: {ProcessDocument.ToId(refusal.Gate)})");
         }
+
+        ChangeLogEntry entry = new(at, actor.Name, summary);
 
         string headReplaced = TaskFileFormat.ReplaceHead(currentText, candidate);
         string finalText = TaskFileFormat.AppendEntry(headReplaced, entry);
@@ -551,6 +575,69 @@ internal sealed class TaskService : IDisposable
         TaskChange change = new(current, written, diff, actor, entry);
         return (new TaskResult.Saved(written, change), change);
     }
+
+    /// <summary>
+    /// Asks the Team's process gates whether a status change is allowed (PR-7). Checks both the Task's
+    /// current Team and, when the same patch moves it, the destination Team, so a move cannot dodge a gate.
+    /// </summary>
+    /// <param name="current">The Task before the change.</param>
+    /// <param name="candidate">The Task as the patch would leave it.</param>
+    /// <param name="text">The Task's file text, for its Evidence section.</param>
+    /// <param name="actor">Who makes the change.</param>
+    /// <returns>The first refusal, or <see langword="null"/> when no gate refuses or none is configured.</returns>
+    private GateRefusal? CheckGates(TaskItem current, TaskItem candidate, string text, TaskActor actor)
+    {
+        if (this.gates is null)
+        {
+            return null;
+        }
+
+        IReadOnlyList<EvidenceLine> evidence = EvidenceLine.ParseSection(text);
+        Dictionary<string, string> covers = new(StringComparer.Ordinal);
+        foreach (string author in evidence.Select(static line => line.Author).Where(static name => name.Length > 0).Distinct(StringComparer.Ordinal))
+        {
+            if (this.personas.Get(author) is { } persona
+                && PersonaFrontmatter.TryReadIdentity(persona.Text, out PersonaIdentity? identity, out _)
+                && identity.Role is { } role
+                && this.gates.CoverageOf(role) is { } coverage)
+            {
+                covers[author] = coverage;
+            }
+        }
+
+        bool isBug = HasBugMarker(current) || HasBugMarker(candidate);
+        bool parentApproved = candidate.Parent is not { } parentId
+            || (this.store.Get(parentId) is { } parent && IsApproved(parent));
+
+        foreach (string team in new[] { current.Location.Team, candidate.Location.Team }.Distinct(StringComparer.Ordinal))
+        {
+            GateContext context = new(team, current.Id, current.Status.ToWire(), candidate.Status.ToWire(), isBug, parentApproved, evidence, covers, actor.Name);
+            if (this.gates.CheckTaskChange(context) is { } refusal)
+            {
+                return refusal;
+            }
+        }
+
+        return null;
+    }
+
+    /// <summary>Whether the Task is a bug: a <c>request: bug</c> field or a <c>bug</c> label.</summary>
+    /// <param name="task">The Task.</param>
+    private static bool HasBugMarker(TaskItem task) =>
+        task.Tags.Contains("bug", StringComparer.OrdinalIgnoreCase)
+        || string.Equals(UnknownValue(task, "request"), "bug", StringComparison.OrdinalIgnoreCase);
+
+    /// <summary>Whether the Task carries <c>approved: true</c> or a non-empty <c>approved_by</c> (Spec §Gates).</summary>
+    /// <param name="task">The parent spec Task.</param>
+    private static bool IsApproved(TaskItem task) =>
+        string.Equals(UnknownValue(task, "approved"), "true", StringComparison.OrdinalIgnoreCase)
+        || !string.IsNullOrWhiteSpace(UnknownValue(task, TaskPatch.ApprovedByKey));
+
+    /// <summary>The last value of an unknown frontmatter key, matched case-insensitively.</summary>
+    /// <param name="task">The Task.</param>
+    /// <param name="key">The key.</param>
+    private static string? UnknownValue(TaskItem task, string key) =>
+        task.UnknownFields.LastOrDefault(field => string.Equals(field.Key, key, StringComparison.OrdinalIgnoreCase)).Value;
 
     /// <summary>
     /// The shared body of <see cref="Close"/> and <see cref="Reopen"/>, run under

@@ -268,6 +268,9 @@ public static class ServiceCollectionExtensions
         services.AddSingleton<Agency.Huddle.App.Teams.HireService>();
         services.AddSingleton<Agency.Huddle.App.Teams.IHireContext, Agency.Huddle.App.Teams.HireContext>();
         services.AddSingleton<Agency.Huddle.App.Teams.RoleHirer>();
+
+        // The Team's process gates; TaskService asks it before every Task status change (PR-7).
+        services.AddSingleton<Agency.Huddle.App.Teams.ProcessGateService>();
         services.AddSingleton<Agency.Huddle.App.Teams.TeamDuplicator>();
 
         // No interface: nothing needs to substitute this, and CSharpPrinciples.md says not to add

@@ -23,6 +23,9 @@ internal readonly record struct Optional<T>(bool IsSet, T Value)
 /// </summary>
 internal sealed record TaskPatch
 {
+    /// <summary>The frontmatter key that records who approved a Task as a spec; an ordinary unknown field that only the Human may set.</summary>
+    internal const string ApprovedByKey = "approved_by";
+
     /// <summary>The Task's new title, or <see langword="null"/> to leave it unchanged.</summary>
     public string? Title { get; init; }
 
@@ -68,13 +71,16 @@ internal sealed record TaskPatch
     /// <summary>A reason recorded alongside a move to Cancelled or Rejected; logged only, never stored as a field.</summary>
     public string? Reason { get; init; }
 
+    /// <summary>Who approved the Task as a spec; written as the ordinary frontmatter key <c>approved_by</c>. <see cref="Optional{T}.Set(T)"/> with <see langword="null"/> clears it. Only the Human actor may set it.</summary>
+    public Optional<string?> ApprovedBy { get; init; }
+
     /// <summary><see langword="true"/> when this patch sets no field at all, including <see cref="Reason"/>.</summary>
     internal bool IsEmpty =>
         this.Title is null && this.Status is null && this.Priority is null &&
         !this.Assignee.IsSet && !this.Parent.IsSet && this.BlockedBy is null &&
         !this.DuplicateOf.IsSet && this.Tags is null && !this.StartDate.IsSet &&
         !this.DueDate.IsSet && !this.Sprint.IsSet && this.Description is null && this.Team is null &&
-        !this.Project.IsSet && this.Reason is null;
+        !this.Project.IsSet && this.Reason is null && !this.ApprovedBy.IsSet;
 
     /// <summary>
     /// The Task fields this patch actually sets (Settled corrections-B5 "Upstream additions" D6).
@@ -183,6 +189,21 @@ internal sealed record TaskPatch
             Sprint = this.Sprint.IsSet ? this.Sprint.Value : current.Sprint,
             Description = this.Description ?? current.Description,
             Location = current.Location with { Team = team, Project = project },
+            UnknownFields = this.ApprovedBy.IsSet ? WithApprovedBy(current.UnknownFields, this.ApprovedBy.Value) : current.UnknownFields,
         };
+    }
+
+    /// <summary>Replaces the <see cref="ApprovedByKey"/> entry of <paramref name="fields"/>, or removes it when <paramref name="approver"/> is blank.</summary>
+    /// <param name="fields">The Task's unknown frontmatter fields.</param>
+    /// <param name="approver">The approver's Name, or <see langword="null"/> to clear the approval.</param>
+    private static List<KeyValuePair<string, string>> WithApprovedBy(IReadOnlyList<KeyValuePair<string, string>> fields, string? approver)
+    {
+        List<KeyValuePair<string, string>> result = [.. fields.Where(static field => !string.Equals(field.Key, ApprovedByKey, StringComparison.Ordinal))];
+        if (!string.IsNullOrWhiteSpace(approver))
+        {
+            result.Add(new KeyValuePair<string, string>(ApprovedByKey, approver.Trim()));
+        }
+
+        return result;
     }
 }

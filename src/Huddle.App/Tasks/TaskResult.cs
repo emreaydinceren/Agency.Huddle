@@ -29,4 +29,9 @@ internal abstract record TaskResult
     /// <summary>No Task with the given id exists.</summary>
     /// <param name="Id">The id that wasn't found.</param>
     internal sealed record NotFound(TaskId Id) : TaskResult;
+
+    /// <summary>A process gate in the Team's <c>Process.md</c> refused the status change (PR-7, Spec §Gates); the Human can override it.</summary>
+    /// <param name="Gate">The gate that refused.</param>
+    /// <param name="Message">The refusal text, returned to the caller unchanged.</param>
+    internal sealed record GateRefused(Agency.Huddle.App.Teams.GateId Gate, string Message) : TaskResult;
 }

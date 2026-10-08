@@ -62,7 +62,8 @@ internal sealed class TaskToolHarness : IDisposable
     /// (the default) means an <see cref="Agency.Huddle.Tests.Tasks.EmptySprintCatalog"/>, so tests that don't use Sprints
     /// see no extra subscriber.
     /// </param>
-    public TaskToolHarness(TimeProvider? clock = null, string? sprintsText = null)
+    /// <param name="gates">The process gates the Task service enforces on a status change; <see langword="null"/> (the default) enforces none.</param>
+    public TaskToolHarness(TimeProvider? clock = null, string? sprintsText = null, Agency.Huddle.App.Teams.ProcessGateService? gates = null)
     {
         this.Options = this.dir.Options();
         if (sprintsText is not null)
@@ -97,7 +98,8 @@ internal sealed class TaskToolHarness : IDisposable
             this.Sprints,
             this.Options,
             this.Clock,
-            NullLogger<TaskService>.Instance);
+            NullLogger<TaskService>.Instance,
+            gates);
         this.Views = new ViewStore(this.Options, NullLogger<ViewStore>.Instance);
         this.TurnActivity = new TurnActivity();
         this.TaskActivity = new TaskActivity(this.Options);
@@ -149,10 +151,11 @@ internal sealed class TaskToolHarness : IDisposable
     /// <param name="ct">Cancels the seeding calls.</param>
     /// <param name="clock">Forwarded to the constructor; see its own parameter doc.</param>
     /// <param name="sprintsText">Forwarded to the constructor; see its own parameter doc.</param>
+    /// <param name="gates">Forwarded to the constructor; see its own parameter doc.</param>
     /// <returns>A harness whose <see cref="Directory"/> already knows the Human, Nova and Kai.</returns>
-    public static async Task<TaskToolHarness> CreateAsync(CancellationToken ct, TimeProvider? clock = null, string? sprintsText = null)
+    public static async Task<TaskToolHarness> CreateAsync(CancellationToken ct, TimeProvider? clock = null, string? sprintsText = null, Agency.Huddle.App.Teams.ProcessGateService? gates = null)
     {
-        TaskToolHarness harness = new(clock, sprintsText);
+        TaskToolHarness harness = new(clock, sprintsText, gates);
 
         await harness.Directory.InitializeAsync("You", ct);
         User nova = await harness.Directory.UpsertAgentUserAsync("Nova", null, ct)
