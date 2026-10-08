@@ -2,7 +2,7 @@
 
 Status of the Teams delivery in [engineering/teams-plan.md](engineering/teams-plan.md). Each task is a `.t` (failing tests first) and `.i` (implementation) pair; a task's `.i` cannot be Done before its `.t`. Ids are `<phase>.<task>.<t|i>`, the form `agents/scripts/Set-Tracker.ps1` updates. `(H)` marks a Haiku task, `(B)` a boundary task that also gets an Opus architect review.
 
-**Status:** 84 of 170 tasks Done · 2 of 6 retrospectives done · last updated 2026-10-08.
+**Status:** 86 of 170 tasks Done · 2 of 6 retrospectives done · last updated 2026-10-08.
 
 | **Deliverable / Task** | **Active** | **In Progress** | **Done** |
 |---|---|---|---|
@@ -93,9 +93,9 @@ Status of the Teams delivery in [engineering/teams-plan.md](engineering/teams-pl
 | 2.40.i Task 40 Folder hash: implement | | | ✔ |
 | 2.41.t Task 41 Review flags scanner: write failing tests | | | ✔ |
 | 2.41.i Task 41 Review flags scanner: implement | | | ✔ |
-| 2.42.t Task 42 SkillDownloader: write failing tests (B) | | ✔ | |
-| 2.42.i Task 42 SkillDownloader: implement (B) | | | |
-| 2.43.t Task 43 SkillImporter: write failing tests (B) | | | |
+| 2.42.t Task 42 SkillDownloader: write failing tests (B) | | | ✔ |
+| 2.42.i Task 42 SkillDownloader: implement (B) | | | ✔ |
+| 2.43.t Task 43 SkillImporter: write failing tests (B) | | ✔ | |
 | 2.43.i Task 43 SkillImporter: implement (B) | | | |
 | 2.44.t Task 44 SkillStore: folders, scripts, provenance: write failing tests (B) | | | |
 | 2.44.i Task 44 SkillStore: folders, scripts, provenance: implement (B) | | | |
