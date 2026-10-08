@@ -17,7 +17,63 @@ namespace Agency.Huddle.Tests.Tasks;
 public sealed class TaskTriggerBlockedTests
 {
     /// <summary>The change-log entry a Done transition leaves on the Task that was finished.</summary>
-    private static readonly ChangeLogEntry DoneEntry = TestTasks.Entry("2026-10-01T09:00:00Z", "Kai", "Status: In Progress → Done");
+    private static readonly ChangeLogEntry DoneEntry = TestTasks.Entry("2026-10-01T09:00:00Z", "Kai", "status: In Progress → Done");
+
+    /// <summary>A blocked Task that was Cancelled is closed, so its last blocker finishing wakes nobody (review fix item 4).</summary>
+    [Fact]
+    public async Task BlockedTaskCancelled_WakesNobody()
+    {
+        CancellationToken ct = TestContext.Current.CancellationToken;
+        using TempDataDir dir = new();
+        using Harness harness = await CreateHarnessAsync(dir, new TeamOptions { HumanName = "You" }, ct);
+        Cast cast = await StartWakingAsync(harness, ct);
+        harness.Prompts.SetOverride(WakeMessageKey, "{{assignee}}");
+        TaskItem blocker = SeedBlocker(harness, "OPS-0001", TaskState.Done);
+        _ = harness.Seed(TestTasks.Make(id: "PLAT-0007", status: TaskState.Cancelled, assignee: "Nova", originRoomId: cast.Room.Id, blockedBy: [blocker.Id]));
+
+        await RaiseAndFireAsync(harness, blocker, cast.KaiActor, "status: In Progress → Done");
+
+        Assert.Empty(harness.Posts);
+    }
+
+    /// <summary>Two blockers finishing together wake the blocked Task's assignee once, not twice.</summary>
+    [Fact]
+    public async Task TwoBlockersFinishTogether_WakesOnce()
+    {
+        CancellationToken ct = TestContext.Current.CancellationToken;
+        using TempDataDir dir = new();
+        using Harness harness = await CreateHarnessAsync(dir, new TeamOptions { HumanName = "You" }, ct);
+        Cast cast = await StartWakingAsync(harness, ct);
+        harness.Prompts.SetOverride(WakeMessageKey, "{{assignee}}");
+        TaskItem first = SeedBlocker(harness, "OPS-0001", TaskState.Done);
+        TaskItem second = SeedBlocker(harness, "OPS-0002", TaskState.Done);
+        _ = harness.Seed(TestTasks.Make(id: "PLAT-0007", assignee: "Nova", originRoomId: cast.Room.Id, blockedBy: [first.Id, second.Id]));
+
+        await RaiseAndFireAsync(harness, first, cast.KaiActor, "status: In Progress → Done");
+        await RaiseAndFireAsync(harness, second, cast.KaiActor, "status: In Progress → Done");
+
+        Assert.Single(harness.Posts);
+    }
+
+    /// <summary>A wake that is never delivered (the manager has no user row) leaves no dedupe marker, so a later Done event can still wake.</summary>
+    [Fact]
+    public async Task UndeliveredWake_LeavesNoMarker()
+    {
+        CancellationToken ct = TestContext.Current.CancellationToken;
+        using TempDataDir dir = new();
+        FakeTeamCatalog catalog = new() { Teams = [new TeamSummary("Platform", [], ["Nova", "Kai", "Mia"], true) { Manager = "Mia" }] };
+        using Harness harness = await CreateHarnessAsync(dir, new TeamOptions { HumanName = "You" }, ct, catalog);
+        Cast cast = await StartWakingAsync(harness, ct);
+        _ = harness.Personas.Add(new PersonaIdentity("Mia", "Mia", "mia", ["Platform"]), "You are Mia.");
+        harness.Prompts.SetOverride(WakeMessageKey, "{{assignee}}");
+        TaskItem blocker = SeedBlocker(harness, "OPS-0001", TaskState.Done);
+        _ = harness.Seed(TestTasks.Make(id: "PLAT-0007", originRoomId: cast.Room.Id, blockedBy: [blocker.Id]));
+
+        await RaiseAndFireAsync(harness, blocker, cast.KaiActor, "status: In Progress → Done");
+
+        Assert.Empty(harness.Posts);
+        Assert.DoesNotContain(harness.Store.All.Single(task => task.Id.ToString() == "PLAT-0007").ChangeLog, entry => entry.Summary.StartsWith("Unblocked:", StringComparison.Ordinal));
+    }
 
     /// <summary>Seeds a Task in the Ops Team, which has no manager, so finishing it wakes nobody by itself.</summary>
     /// <param name="harness">The harness.</param>
@@ -57,7 +113,7 @@ public sealed class TaskTriggerBlockedTests
         TaskItem second = SeedBlocker(harness, "OPS-0002", TaskState.InProgress);
         _ = harness.Seed(TestTasks.Make(id: "PLAT-0007", assignee: "Nova", originRoomId: cast.Room.Id, blockedBy: [first.Id, second.Id]));
 
-        await RaiseAndFireAsync(harness, first, cast.KaiActor, "Status: In Progress → Done");
+        await RaiseAndFireAsync(harness, first, cast.KaiActor, "status: In Progress → Done");
 
         Assert.Empty(harness.Posts);
     }
@@ -75,7 +131,7 @@ public sealed class TaskTriggerBlockedTests
         TaskItem last = SeedBlocker(harness, "OPS-0002", TaskState.Done);
         _ = harness.Seed(TestTasks.Make(id: "PLAT-0007", assignee: "Nova", originRoomId: cast.Room.Id, blockedBy: [earlier.Id, last.Id]));
 
-        await RaiseAndFireAsync(harness, last, cast.KaiActor, "Status: In Progress → Done");
+        await RaiseAndFireAsync(harness, last, cast.KaiActor, "status: In Progress → Done");
 
         MessagePostedEvent post = Assert.Single(harness.Posts);
         Assert.Equal("Nova", post.Message.Text);
@@ -95,7 +151,7 @@ public sealed class TaskTriggerBlockedTests
         TaskItem blocker = SeedBlocker(harness, "OPS-0001", TaskState.Done);
         _ = harness.Seed(TestTasks.Make(id: "PLAT-0007", originRoomId: room.Id, blockedBy: [blocker.Id]));
 
-        await RaiseAndFireAsync(harness, blocker, cast.KaiActor, "Status: In Progress → Done");
+        await RaiseAndFireAsync(harness, blocker, cast.KaiActor, "status: In Progress → Done");
 
         MessagePostedEvent post = Assert.Single(harness.Posts);
         Assert.Equal("Mia", post.Message.Text);
@@ -113,7 +169,7 @@ public sealed class TaskTriggerBlockedTests
         TaskItem blocker = SeedBlocker(harness, "OPS-0001", TaskState.Done);
         _ = harness.Seed(TestTasks.Make(id: "PLAT-0007", assignee: "Nova", originRoomId: cast.Room.Id, blockedBy: [blocker.Id]));
 
-        await RaiseAndFireAsync(harness, blocker, cast.KaiActor, "Status: In Progress → Done");
+        await RaiseAndFireAsync(harness, blocker, cast.KaiActor, "status: In Progress → Done");
 
         MessagePostedEvent post = Assert.Single(harness.Posts);
         Assert.Equal("Nova|PLAT-0007|Platform", post.Message.Text);
@@ -131,8 +187,8 @@ public sealed class TaskTriggerBlockedTests
         TaskItem blocker = SeedBlocker(harness, "OPS-0001", TaskState.Done);
         _ = harness.Seed(TestTasks.Make(id: "PLAT-0007", assignee: "Nova", originRoomId: cast.Room.Id, blockedBy: [blocker.Id]));
 
-        await RaiseAndFireAsync(harness, blocker, cast.KaiActor, "Status: In Progress → Done");
-        await RaiseAndFireAsync(harness, blocker, cast.KaiActor, "Status: In Progress → Done");
+        await RaiseAndFireAsync(harness, blocker, cast.KaiActor, "status: In Progress → Done");
+        await RaiseAndFireAsync(harness, blocker, cast.KaiActor, "status: In Progress → Done");
 
         MessagePostedEvent post = Assert.Single(harness.Posts);
         Assert.Equal("Nova", post.Message.Text);
@@ -149,12 +205,12 @@ public sealed class TaskTriggerBlockedTests
         harness.Prompts.SetOverride(WakeMessageKey, "{{assignee}}");
         TaskItem blocker = SeedBlocker(harness, "OPS-0001", TaskState.Done);
         _ = harness.Seed(TestTasks.Make(id: "PLAT-0007", assignee: "Nova", originRoomId: cast.Room.Id, blockedBy: [blocker.Id]));
-        await RaiseAndFireAsync(harness, blocker, cast.KaiActor, "Status: In Progress → Done");
-        ChangeLogEntry reopened = TestTasks.Entry("2026-10-02T09:00:00Z", "Kai", "Status: Done → In Progress");
-        ChangeLogEntry doneAgain = TestTasks.Entry("2026-10-03T09:00:00Z", "Kai", "Status: In Progress → Done");
+        await RaiseAndFireAsync(harness, blocker, cast.KaiActor, "status: In Progress → Done");
+        ChangeLogEntry reopened = TestTasks.Entry("2026-10-02T09:00:00Z", "Kai", "status: Done → In Progress");
+        ChangeLogEntry doneAgain = TestTasks.Entry("2026-10-03T09:00:00Z", "Kai", "status: In Progress → Done");
         TaskItem again = harness.Replace(blocker with { ChangeLog = [DoneEntry, reopened, doneAgain] });
 
-        await RaiseAndFireAsync(harness, again, cast.KaiActor, "Status: In Progress → Done");
+        await RaiseAndFireAsync(harness, again, cast.KaiActor, "status: In Progress → Done");
 
         Assert.Equal(["Nova", "Nova"], harness.Posts.Select(p => p.Message.Text).ToArray());
     }
@@ -171,7 +227,7 @@ public sealed class TaskTriggerBlockedTests
         TaskItem blocker = SeedBlocker(harness, "OPS-0001", TaskState.Done);
         _ = harness.Seed(TestTasks.Make(id: "PLAT-0007", status: TaskState.Done, assignee: "Nova", originRoomId: cast.Room.Id, blockedBy: [blocker.Id]));
 
-        await RaiseAndFireAsync(harness, blocker, cast.KaiActor, "Status: In Progress → Done");
+        await RaiseAndFireAsync(harness, blocker, cast.KaiActor, "status: In Progress → Done");
 
         Assert.Empty(harness.Posts);
     }

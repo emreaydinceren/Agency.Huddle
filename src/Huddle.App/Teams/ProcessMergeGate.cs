@@ -1,3 +1,4 @@
+using System.Globalization;
 using Agency.Huddle.App.Acp;
 using Agency.Huddle.App.Tasks;
 
@@ -23,7 +24,8 @@ internal sealed class ProcessMergeGate(PersonaStore personas, TaskStore tasks, P
         if (personas.Get(personaName) is not { } persona
             || !PersonaFrontmatter.TryReadIdentity(persona.Text, out PersonaIdentity? identity, out _))
         {
-            return null;
+            // Fail closed: a merge or push from a Persona the gate cannot resolve is not waved through.
+            return string.Create(CultureInfo.InvariantCulture, $"Cannot check the merge gate: the Persona '{personaName}' could not be resolved.");
         }
 
         foreach (string label in identity.Teams)
@@ -50,7 +52,9 @@ internal sealed class ProcessMergeGate(PersonaStore personas, TaskStore tasks, P
         List<EvidenceLine> evidence = [];
         foreach (TaskItem task in tasks.All)
         {
-            if (string.Equals(task.Location.Team, team, StringComparison.OrdinalIgnoreCase)
+            // Evidence on a finished Task is stale for a later merge; only open work counts.
+            if (!task.Status.IsTerminal()
+                && string.Equals(task.Location.Team, team, StringComparison.OrdinalIgnoreCase)
                 && tasks.ReadText(task.Id) is { } text)
             {
                 evidence.AddRange(EvidenceLine.ParseSection(text));

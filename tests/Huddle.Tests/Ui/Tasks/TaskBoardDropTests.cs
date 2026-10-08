@@ -9,6 +9,7 @@ using Agency.Huddle.App.Components.Tasks;
 using Agency.Huddle.App.Tasks;
 using Agency.Huddle.App.Tasks.Views;
 using Agency.Huddle.Tests.Acp.Tools;
+using Agency.Huddle.Tests.Tasks;
 
 /// <summary>
 /// Pins the Spec §13.4 <i>Dropping</i> and <i>Keyboard</i> paragraphs for <see cref="TaskBoard"/>
@@ -30,6 +31,25 @@ public sealed class TaskBoardDropTests
 {
     /// <summary>The ungrouped lane's key.</summary>
     private const string NoLane = "";
+
+    /// <summary>A drag into a column the process gate refuses shows the gate reason in a Snackbar and saves nothing (review fix item 3).</summary>
+    [Fact]
+    public async Task GateRefused_ShowsSnackbarWithReason_SavesNothing()
+    {
+        CancellationToken ct = Xunit.TestContext.Current.CancellationToken;
+        using TempDataDir gateDir = new();
+        using TaskToolHarness harness = await TaskToolHarness.CreateAsync(ct, gates: TaskServiceGateTests.BuildGates(gateDir, TaskServiceGateTests.Process(TaskServiceGateTests.QaGate)));
+        TaskItem moved = CreateTask(harness, "Ship it", TaskState.ToDo);
+
+        await using MudBunitContext ctx = new();
+        Rig rig = Render(ctx, harness, [moved]);
+        await rig.MoveAsync(moved, TaskState.Done, false);
+
+        Snackbar shown = Assert.Single(ctx.Services.GetRequiredService<ISnackbar>().ShownSnackbars);
+        Assert.Equal($"Could not move {moved.Id}: {TaskServiceGateTests.QaDone}", shown.Message);
+        Assert.Equal(Severity.Error, shown.Severity);
+        Assert.Equal(TaskState.ToDo, harness.Store.Get(moved.Id)?.Status);
+    }
 
     /// <summary>The ungrouped Won't do display zone's id.</summary>
     private const string WontDoZone = "lane:|col:5";

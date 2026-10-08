@@ -1,7 +1,7 @@
 namespace Agency.Huddle.App.Tasks;
 
 /// <summary>
-/// A new Task, as offered to <see cref="TaskService.Create(TaskDraft, TaskActor)"/> (Spec §9.1).
+/// A new Task, as offered to <see cref="TaskService.Create(TaskDraft, TaskActor, bool)"/> (Spec §9.1).
 /// <see cref="Team"/> is required; <see cref="Project"/> is optional; every other field defaults.
 /// Public (Settled corrections-B5 D6 decision A): a Razor component builds one directly as a
 /// <c>TaskDetail</c>/<c>TaskDetailDialog</c> parameter, so a flat positional record with no

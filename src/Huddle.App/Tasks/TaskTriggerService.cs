@@ -501,27 +501,46 @@ internal sealed partial class TaskTriggerService : IHostedService, IDisposable
         }
 
         TaskItem finished = change.After;
-        DateTimeOffset doneAt = change.Entry.At;
-        foreach (ChangeLogEntry entry in finished.ChangeLog)
+        List<TaskItem> candidates = [.. this.store.All.Where(task => task.BlockedBy.Contains(finished.Id))];
+        foreach (TaskItem blocked in candidates)
         {
-            if (entry.Summary.StartsWith("Status:", StringComparison.Ordinal) && entry.Summary.EndsWith("→ Done", StringComparison.Ordinal))
+            bool open = blocked.Status is not (TaskState.Done or TaskState.Cancelled or TaskState.Duplicate or TaskState.Rejected);
+            bool allDone = blocked.BlockedBy.All(blocker => blocker == finished.Id || this.store.Get(blocker)?.Status == TaskState.Done);
+            if (!open || !allDone)
+            {
+                continue;
+            }
+
+            // One marker per blocked Task and blocker set, stamped with the latest Done among the blockers: two
+            // blockers finishing together produce the same marker, a reopen followed by a new Done a new one.
+            DateTimeOffset latestDone = blocked.BlockedBy
+                .Select(blocker => DoneAt(blocker == finished.Id ? finished : this.store.Get(blocker), change.Entry.At))
+                .Max();
+            string blockers = string.Join(',', blocked.BlockedBy.Select(static blocker => blocker.ToString()).Order(StringComparer.Ordinal));
+            string marker = string.Create(CultureInfo.InvariantCulture, $"Unblocked: {blocked.Id} by {blockers} at {latestDone:O}");
+            if (!blocked.ChangeLog.Any(entry => string.Equals(entry.Summary, marker, StringComparison.Ordinal)))
+            {
+                await this.WakeUnblockedTaskAsync(blocked, change.Actor, marker, ct);
+            }
+        }
+    }
+
+    /// <summary>When the Task last reached Done, read from the <c>status: … → Done</c> summaries <see cref="TaskDiff"/> writes.</summary>
+    /// <param name="task">The blocker, or <see langword="null"/> when it no longer exists.</param>
+    /// <param name="fallback">Used when the change log holds no such entry.</param>
+    /// <returns>The time of the last Done entry, or <paramref name="fallback"/>.</returns>
+    private static DateTimeOffset DoneAt(TaskItem? task, DateTimeOffset fallback)
+    {
+        DateTimeOffset doneAt = fallback;
+        foreach (ChangeLogEntry entry in task?.ChangeLog ?? [])
+        {
+            if (entry.Summary.StartsWith("status:", StringComparison.Ordinal) && entry.Summary.Contains("→ Done", StringComparison.Ordinal))
             {
                 doneAt = entry.At;
             }
         }
 
-        string marker = string.Create(CultureInfo.InvariantCulture, $"Unblocked: {finished.Id} Done at {doneAt:O}");
-        List<TaskItem> candidates = [.. this.store.All.Where(task => task.BlockedBy.Contains(finished.Id))];
-        foreach (TaskItem blocked in candidates)
-        {
-            bool open = blocked.Status is not (TaskState.Done or TaskState.Rejected);
-            bool allDone = blocked.BlockedBy.All(blocker => blocker == finished.Id || this.store.Get(blocker)?.Status == TaskState.Done);
-            bool alreadyWoken = blocked.ChangeLog.Any(entry => string.Equals(entry.Summary, marker, StringComparison.Ordinal));
-            if (open && allDone && !alreadyWoken)
-            {
-                await this.WakeUnblockedTaskAsync(blocked, change.Actor, marker, ct);
-            }
-        }
+        return doneAt;
     }
 
     /// <summary>Picks the recipient for one unblocked Task, records the unblocking in its change log and delivers the wake.</summary>
@@ -555,16 +574,18 @@ internal sealed partial class TaskTriggerService : IHostedService, IDisposable
         }
 
         ChangeLogEntry unblocked = new(this.clock.GetUtcNow(), actor.Name, marker);
-        TaskItem? recorded = this.store.AppendEntry(blocked.Id, blocked.Version, unblocked);
-        if (recorded is null)
+        Batch batch = new(new BatchKey(blocked.Id, actor.Name)) { Actor = actor };
+        batch.Entries.Add(unblocked);
+        if (!await this.DeliverAsync(batch, blocked, recipient, ct))
         {
-            LogTaskGone(this.logger, blocked.Id);
             return;
         }
 
-        Batch batch = new(new BatchKey(blocked.Id, actor.Name)) { Actor = actor };
-        batch.Entries.Add(unblocked);
-        await this.DeliverAsync(batch, recorded, recipient, ct);
+        // The marker is written only after a delivered wake, so a failed delivery can be retried by the next Done event.
+        if (this.store.Get(blocked.Id) is not { } current || this.store.AppendEntry(blocked.Id, current.Version, unblocked) is null)
+        {
+            LogTaskGone(this.logger, blocked.Id);
+        }
     }
 
     /// <summary>
@@ -708,8 +729,8 @@ internal sealed partial class TaskTriggerService : IHostedService, IDisposable
     /// <param name="latest">The Task's latest state.</param>
     /// <param name="assigneeName">The Name to wake: the assignee, or the Team's manager.</param>
     /// <param name="ct">The service lifetime.</param>
-    /// <returns>A task that completes when the wake was posted or skipped.</returns>
-    private async Task DeliverAsync(Batch batch, TaskItem latest, string assigneeName, CancellationToken ct)
+    /// <returns><see langword="true"/> when the wake was posted; <see langword="false"/> when it was skipped or failed.</returns>
+    private async Task<bool> DeliverAsync(Batch batch, TaskItem latest, string assigneeName, CancellationToken ct)
     {
         TaskId id = latest.Id;
         TaskActor actor = batch.Actor;
@@ -717,7 +738,7 @@ internal sealed partial class TaskTriggerService : IHostedService, IDisposable
         if (assignee is null)
         {
             LogAssigneeNeverRegistered(this.logger, id, assigneeName);
-            return;
+            return false;
         }
 
         string? senderId = await this.ResolveSenderIdAsync(actor, ct);
@@ -725,7 +746,7 @@ internal sealed partial class TaskTriggerService : IHostedService, IDisposable
         {
             LogNoSender(this.logger, id, actor.Name);
             this.RecordOutcome(id, assigneeName, null, WakeOutcome.Failed);
-            return;
+            return false;
         }
 
         Room room;
@@ -737,7 +758,7 @@ internal sealed partial class TaskTriggerService : IHostedService, IDisposable
         {
             LogRoomRefused(this.logger, id, ex.Code, ex);
             this.RecordOutcome(id, assigneeName, null, WakeOutcome.Failed);
-            return;
+            return false;
         }
 
         bool isAgent = actor.Kind == TaskActorKind.Agent;
@@ -745,7 +766,7 @@ internal sealed partial class TaskTriggerService : IHostedService, IDisposable
         {
             LogBlocked(this.logger, id, WakeBlock.BudgetPaused);
             this.RecordOutcome(id, assigneeName, null, WakeOutcome.WakePaused);
-            return;
+            return false;
         }
 
         WakeOutcome outcome;
@@ -782,6 +803,7 @@ internal sealed partial class TaskTriggerService : IHostedService, IDisposable
         }
 
         this.RecordOutcome(id, assigneeName, room, outcome);
+        return outcome is WakeOutcome.Woken or WakeOutcome.Offline;
     }
 
     /// <summary>Records one wake outcome in <see cref="TaskActivity"/> (Spec §10.5, §10.7), stamped with the clock at fire time.</summary>

@@ -117,7 +117,8 @@ internal sealed class TaskService : IDisposable
     /// </summary>
     /// <param name="draft">The new Task.</param>
     /// <param name="actor">Who is creating it; becomes the Task's <see cref="TaskItem.Creator"/> and the Change log entry's actor.</param>
-    public TaskResult Create(TaskDraft draft, TaskActor actor)
+    /// <param name="humanOverridesGates">Whether a Human creation into a gated status passes a refusing process gate.</param>
+    public TaskResult Create(TaskDraft draft, TaskActor actor, bool humanOverridesGates = false)
     {
         ArgumentNullException.ThrowIfNull(draft);
         ArgumentNullException.ThrowIfNull(actor);
@@ -126,7 +127,7 @@ internal sealed class TaskService : IDisposable
         TaskResult result;
         lock (this.mutateGate)
         {
-            (result, change) = this.CreateCore(draft, actor);
+            (result, change) = this.CreateCore(draft, actor, humanOverridesGates);
         }
 
         if (change is not null)
@@ -151,11 +152,11 @@ internal sealed class TaskService : IDisposable
     /// </param>
     /// <param name="actor">Who is making the change.</param>
     /// <param name="humanOverridesGates">
-    /// When <see langword="true"/> (the default) the Human's status change passes a refusing process gate and the
-    /// override is logged; when <see langword="false"/> the Human gets the <see cref="TaskResult.GateRefused"/> like
+    /// When <see langword="true"/> the Human's status change passes a refusing process gate and the
+    /// override is logged; when <see langword="false"/> (the default) the Human gets the <see cref="TaskResult.GateRefused"/> like
     /// anyone else, so the Task panel can show it and offer "Move anyway" (PR-7).
     /// </param>
-    public TaskResult Update(TaskId id, TaskPatch patch, string? baseVersion, TaskActor actor, bool humanOverridesGates = true)
+    public TaskResult Update(TaskId id, TaskPatch patch, string? baseVersion, TaskActor actor, bool humanOverridesGates = false)
     {
         ArgumentNullException.ThrowIfNull(patch);
         ArgumentNullException.ThrowIfNull(actor);
@@ -332,6 +333,22 @@ internal sealed class TaskService : IDisposable
             return null;
         }
 
+        // An outside edit cannot dodge a gate: a move into a gated status that the gate refuses is reverted
+        // (head only; the body and Evidence stay as written) and logged. Evidence-only and approved edits are
+        // not reverted: they only matter when the status next moves, which runs the gate again.
+        string? afterText = edit.Before.Status != edit.After.Status && edit.After.Status is TaskState.InProgress or TaskState.Review or TaskState.Done
+            ? this.store.ReadText(edit.After.Id)
+            : null;
+        if (afterText is not null && this.CheckGates(edit.Before, edit.After, afterText, actor) is { } refusal)
+        {
+            ChangeLogEntry refused = new(at, actor.Name, string.Create(CultureInfo.InvariantCulture, $"outside edit refused by gate: {refusal.Message}"));
+            string reverted = TaskFileFormat.AppendEntry(TaskFileFormat.ReplaceHead(afterText, edit.Before), refused);
+            if (this.store.Write(edit.After, edit.After.Version, reverted) is { } restored)
+            {
+                return new TaskChange(edit.After, restored, TaskDiff.Compare(edit.After, restored), actor, refused);
+            }
+        }
+
         string summary = string.Create(CultureInfo.InvariantCulture, $"edited outside Huddle: {TaskDiff.Summarise(changes)}");
         ChangeLogEntry entry = new(at, actor.Name, summary);
         TaskItem? written = this.store.AppendEntry(edit.After.Id, edit.After.Version, entry);
@@ -430,7 +447,7 @@ internal sealed class TaskService : IDisposable
     }
 
     /// <summary>The body of <see cref="Create"/>, run under <see cref="mutateGate"/>. Returns the change to raise, or <see langword="null"/> when nothing was written.</summary>
-    private (TaskResult Result, TaskChange? Change) CreateCore(TaskDraft draft, TaskActor actor)
+    private (TaskResult Result, TaskChange? Change) CreateCore(TaskDraft draft, TaskActor actor, bool humanOverridesGates)
     {
         string team = this.CanonicalizeTeam(draft.Team);
         string? project = this.CanonicalizeProject(team, draft.Project);
@@ -464,12 +481,24 @@ internal sealed class TaskService : IDisposable
             return (new TaskResult.Refused(problems), null);
         }
 
+        // A Task may be created in a gated status only when no gate refuses it (the Human may override on request).
+        GateRefusal? refusal = candidate.Status is TaskState.InProgress or TaskState.Review or TaskState.Done
+            ? this.CheckGates(candidate with { Status = TaskState.Backlog }, candidate, string.Empty, actor)
+            : null;
+        if (refusal is not null && (actor.Kind != TaskActorKind.Human || !humanOverridesGates))
+        {
+            return (new TaskResult.GateRefused(refusal.Gate, refusal.Message), null);
+        }
+
         string prefix = this.ids.PrefixFor(team);
         int highestSeen = this.store.HighestNumber(prefix);
         TaskId id = this.ids.Next(team, highestSeen);
 
         DateTimeOffset at = TruncateToSeconds(this.clock.GetUtcNow());
-        ChangeLogEntry entry = new(at, actor.Name, "created");
+        string createdSummary = refusal is null
+            ? "created"
+            : string.Create(CultureInfo.InvariantCulture, $"created (gate overridden by Human: {ProcessDocument.ToId(refusal.Gate)})");
+        ChangeLogEntry entry = new(at, actor.Name, createdSummary);
 
         TaskItem toWrite = candidate with
         {

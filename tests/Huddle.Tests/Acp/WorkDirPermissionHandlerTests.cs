@@ -164,6 +164,11 @@ public sealed class WorkDirPermissionHandlerTests
     [InlineData("cd x; git push")]
     [InlineData("git status && git push")]
     [InlineData("git fetch || git merge origin/main")]
+    [InlineData("git -C \"../my repo\" push")]
+    [InlineData("\"C:\\Program Files\\Git\\bin\\git.exe\" push")]
+    [InlineData("git status & git push")]
+    [InlineData("(git push)")]
+    [InlineData("(cd x && git merge main)")]
     [InlineData("\"git\" push")]
     [InlineData("git.exe push")]
     public async Task ShellCommand_MergeOrPush_IsRefusedWhenGateRefuses(string command)
@@ -184,6 +189,8 @@ public sealed class WorkDirPermissionHandlerTests
     [InlineData("git log --merges")]
     [InlineData("git commit -m \"push the merge\"")]
     [InlineData("echo git push")]
+    [InlineData("echo \"done; git push\"")]
+    [InlineData("git commit -m \"a & b (c)\"")]
     [InlineData("dotnet test")]
     public async Task ShellCommand_NotMergeOrPush_IsApprovedWithoutAskingTheGate(string command)
     {

@@ -29,6 +29,95 @@ public sealed class TaskServiceGateTests
     private const string SpecGate = "'spec-approved-before-build'";
     private const string FailGate = "'failing-test-before-fix'";
 
+    /// <summary>The Human's plain Update, with no explicit override, gets the refusal like anyone else (review fix item 3).</summary>
+    [Fact]
+    public void Update_HumanDefault_IsGateRefused()
+    {
+        using TempDataDir gateDir = new();
+        using TaskToolHarness harness = new(gates: BuildGates(gateDir, Process(QaGate)));
+        TaskItem task = CreateTask(harness);
+
+        TaskResult result = harness.Service.Update(task.Id, MoveTo(TaskState.Done), null, HumanOf(harness));
+
+        Assert.Equal(QaDone, Assert.IsType<TaskResult.GateRefused>(result).Message);
+        Assert.Equal(TaskState.Backlog, harness.Store.Get(task.Id)?.Status);
+    }
+
+    /// <summary>Creating a Task straight into Done is refused by the QA gate and writes nothing (review fix item 1).</summary>
+    [Fact]
+    public void Create_DoneWithoutQaEvidence_IsGateRefused()
+    {
+        using TempDataDir gateDir = new();
+        using TaskToolHarness harness = new(gates: BuildGates(gateDir, Process(QaGate)));
+
+        TaskResult result = harness.Service.Create(new TaskDraft("Fix login", Team, null, TaskState.Done), Nova);
+
+        TaskResult.GateRefused refused = Assert.IsType<TaskResult.GateRefused>(result);
+        Assert.Equal(GateId.QaEvidenceBeforeDone, refused.Gate);
+        Assert.Equal(QaDone, refused.Message);
+        Assert.Empty(harness.Store.All);
+    }
+
+    /// <summary>Creating a Task in a status no gate covers saves as before.</summary>
+    [Fact]
+    public void Create_BacklogWithGatesOn_Saves()
+    {
+        using TempDataDir gateDir = new();
+        using TaskToolHarness harness = new(gates: BuildGates(gateDir, Process(QaGate)));
+
+        TaskResult result = harness.Service.Create(new TaskDraft("Fix login", Team, null), Nova);
+
+        Assert.IsType<TaskResult.Saved>(result);
+    }
+
+    /// <summary>The Human creating into Done is refused by default and passes only with the explicit override.</summary>
+    [Fact]
+    public void Create_HumanDone_RefusedUnlessOverrideIsPassed()
+    {
+        using TempDataDir gateDir = new();
+        using TaskToolHarness harness = new(gates: BuildGates(gateDir, Process(QaGate)));
+        TaskDraft draft = new("Fix login", Team, null, TaskState.Done);
+
+        TaskResult plain = harness.Service.Create(draft, HumanOf(harness));
+        TaskResult forced = harness.Service.Create(draft, HumanOf(harness), humanOverridesGates: true);
+
+        Assert.IsType<TaskResult.GateRefused>(plain);
+        TaskResult.Saved saved = Assert.IsType<TaskResult.Saved>(forced);
+        Assert.Equal(TaskState.Done, saved.Task.Status);
+        Assert.Equal("created (gate overridden by Human: qa-evidence-before-done)", saved.Change.Entry.Summary);
+    }
+
+    /// <summary>The create_task tool returns the gate message for a gated initial status.</summary>
+    [Fact]
+    public async Task CreateTaskTool_GatedStatus_ReturnsGateMessage()
+    {
+        CancellationToken ct = TestContext.Current.CancellationToken;
+        using TempDataDir gateDir = new();
+        using TaskToolHarness harness = await TaskToolHarness.CreateAsync(ct, gates: BuildGates(gateDir, Process(QaGate)));
+        CreateTaskTool tool = new(harness.Service, harness.Triggers, harness.Directory, harness.Sprints, new FakePromptSource(), harness.NovaId ?? string.Empty);
+        JsonObject arguments = new() { ["title"] = "Fix login", ["team"] = Team, ["status"] = TaskState.Done.ToWire() };
+
+        string result = await tool.InvokeAsync(arguments, ct);
+
+        Assert.Equal(QaDone, result);
+    }
+
+    /// <summary>An outside edit that moves a Task to a gated status the gate refuses is reverted and logged (review fix item 2).</summary>
+    [Fact]
+    public void OutsideEdit_GatedStatus_IsRestoredAndLogged()
+    {
+        using TempDataDir gateDir = new();
+        using TaskToolHarness harness = new(gates: BuildGates(gateDir, Process(QaGate)));
+        TaskItem task = CreateTask(harness);
+        File.WriteAllText(task.Path, TaskFileFormat.Compose(task with { Status = TaskState.Done }));
+
+        harness.Store.RebuildFromWatcher();
+
+        TaskItem? after = harness.Store.Get(task.Id);
+        Assert.Equal(TaskState.Backlog, after?.Status);
+        Assert.Equal($"outside edit refused by gate: {QaDone}", after?.ChangeLog[^1].Summary);
+    }
+
     private const string Manifest = """
         { "schemaVersion": 1, "id": "web", "version": "1.2.0", "displayName": "Web", "order": 1,
           "workspace": { "kind": "none", "label": "None", "required": false },
@@ -149,7 +238,7 @@ public sealed class TaskServiceGateTests
         using TaskToolHarness harness = new(gates: BuildGates(gateDir, Process(QaGate)));
         TaskItem task = CreateTask(harness);
 
-        TaskResult result = harness.Service.Update(task.Id, MoveTo(TaskState.Done), null, HumanOf(harness));
+        TaskResult result = harness.Service.Update(task.Id, MoveTo(TaskState.Done), null, HumanOf(harness), humanOverridesGates: true);
 
         TaskResult.Saved saved = Assert.IsType<TaskResult.Saved>(result);
         Assert.Equal(TaskState.Done, saved.Task.Status);

@@ -524,6 +524,7 @@
         {
             TaskResult.Refused refused => $"Could not move {item.Id}: {string.Join(' ', refused.Problems)}",
             TaskResult.NotFound => $"Could not move {item.Id}: it no longer exists.",
+            TaskResult.GateRefused gateRefused => $"Could not move {item.Id}: {gateRefused.Message}",
             _ => null,
         };
 

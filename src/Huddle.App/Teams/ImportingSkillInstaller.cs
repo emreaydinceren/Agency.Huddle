@@ -69,6 +69,12 @@ internal sealed class ImportingSkillInstaller(SkillStore store, SkillsCatalogInd
             return false;
         }
 
+        if (!string.Equals(preview.Name, skill.Name, StringComparison.OrdinalIgnoreCase))
+        {
+            logger.LogWarning("Skill {Skill} resolved to a different skill, {PreviewName}; not installing it.", skill.Name, preview.Name);
+            return false;
+        }
+
         if (!ImportingSkillInstaller.OnlyLicenseFlags(preview.Flags))
         {
             logger.LogWarning("Skill {Skill} needs review before it can be installed.", skill.Name);

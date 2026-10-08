@@ -1,3 +1,4 @@
+using System.Text;
 using System.Text.Json;
 using Agency.Huddle.Acp.Abstractions;
 
@@ -66,8 +67,79 @@ internal sealed class WorkDirPermissionHandler(
     /// <summary>Argument names that carry a shell command in the tool calls this application sees.</summary>
     private static readonly string[] CommandArgumentNames = ["command", "cmd"];
 
-    /// <summary>Separators between shell commands on one line.</summary>
-    private static readonly string[] CommandSeparators = ["&&", "||", ";", "|", "\r", "\n"];
+    /// <summary>
+    /// Splits one shell line into commands of words. A word may be wrapped in double or single quotes (so a quoted
+    /// path with spaces stays one word, and a separator inside quotes does not split); commands end at <c>;</c>,
+    /// <c>&amp;</c>, <c>|</c> (so also <c>&amp;&amp;</c> and <c>||</c>), parentheses and line breaks. Still not handled:
+    /// backslash escapes, <c>$(…)</c> or backtick substitution, here-documents and aliases, so a hostile spelling
+    /// can still pass; the gate is a guard against honest mistakes, not a sandbox.
+    /// </summary>
+    /// <param name="command">The shell command line.</param>
+    /// <returns>One word list per command, in order.</returns>
+    private static List<List<string>> SplitSegments(string command)
+    {
+        List<List<string>> segments = [];
+        List<string> words = [];
+        StringBuilder word = new();
+        bool inWord = false;
+        char quote = '\0';
+
+        void EndWord()
+        {
+            if (inWord)
+            {
+                words.Add(word.ToString());
+                word.Clear();
+                inWord = false;
+            }
+        }
+
+        void EndSegment()
+        {
+            EndWord();
+            if (words.Count > 0)
+            {
+                segments.Add(words);
+                words = [];
+            }
+        }
+
+        foreach (char c in command)
+        {
+            if (quote != '\0')
+            {
+                if (c == quote)
+                {
+                    quote = '\0';
+                }
+                else
+                {
+                    word.Append(c);
+                }
+            }
+            else if (c is '"' or '\'')
+            {
+                quote = c;
+                inWord = true;
+            }
+            else if (c is ' ' or '\t')
+            {
+                EndWord();
+            }
+            else if (c is ';' or '&' or '|' or '(' or ')' or '\r' or '\n')
+            {
+                EndSegment();
+            }
+            else
+            {
+                word.Append(c);
+                inWord = true;
+            }
+        }
+
+        EndSegment();
+        return segments;
+    }
 
     /// <summary>Git options that consume the next word.</summary>
     private static readonly string[] GitOptionsWithValue = ["-C", "-c", "--git-dir", "--work-tree", "--namespace"];
@@ -160,22 +232,21 @@ internal sealed class WorkDirPermissionHandler(
     /// <returns><see langword="true"/> when a segment runs git merge or git push.</returns>
     private static bool IsMergeOrPush(string command)
     {
-        foreach (string segment in command.Split(CommandSeparators, StringSplitOptions.RemoveEmptyEntries))
+        foreach (List<string> words in SplitSegments(command))
         {
-            string[] words = segment.Split([' ', '\t'], StringSplitOptions.RemoveEmptyEntries);
-            if (words.Length < 2 || !IsGit(Unquote(words[0])))
+            if (words.Count < 2 || !IsGit(Unquote(words[0])))
             {
                 continue;
             }
 
             int index = 1;
-            while (index < words.Length && Unquote(words[index]).StartsWith('-'))
+            while (index < words.Count && Unquote(words[index]).StartsWith('-'))
             {
                 string option = Unquote(words[index]);
                 index += GitOptionsWithValue.Contains(option, StringComparer.Ordinal) ? 2 : 1;
             }
 
-            if (index < words.Length)
+            if (index < words.Count)
             {
                 string subcommand = Unquote(words[index]);
                 if (string.Equals(subcommand, "merge", StringComparison.OrdinalIgnoreCase)

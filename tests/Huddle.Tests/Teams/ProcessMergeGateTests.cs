@@ -65,16 +65,31 @@ public sealed class ProcessMergeGateTests
         Assert.Null(gate.RefusalFor("Nova", "git push"));
     }
 
-    /// <summary>A Persona in no Team, and an unknown Persona, are not refused.</summary>
+    /// <summary>A Persona in no Team is not refused; a Persona that cannot be resolved fails closed (review fix item 5).</summary>
     [Fact]
-    public void RefusalFor_PersonaInNoTeamOrUnknown_IsAllowed()
+    public void RefusalFor_PersonaInNoTeamAllowedUnknownRefused()
     {
         using TaskToolHarness harness = new(new ManualTimeProvider(Noon));
         using TempDataDir dir = new();
         ProcessMergeGate gate = Build(harness, dir, "'checks-before-merge'");
 
         Assert.Null(gate.RefusalFor("Kai", "git push"));
-        Assert.Null(gate.RefusalFor("Ghost", "git push"));
+        Assert.Equal("Cannot check the merge gate: the Persona 'Ghost' could not be resolved.", gate.RefusalFor("Ghost", "git push"));
+    }
+
+    /// <summary>Passing Evidence on a Task that is already Done is stale and does not satisfy the merge gate (review fix item 6).</summary>
+    [Fact]
+    public void RefusalFor_EvidenceOnlyOnDoneTask_IsRefused()
+    {
+        using TaskToolHarness harness = new(new ManualTimeProvider(Noon));
+        using TempDataDir dir = new();
+        AddEvidence(harness, "dotnet test", 0);
+        TaskItem task = Assert.Single(harness.Store.All);
+        TaskResult moved = harness.Service.Update(task.Id, new TaskPatch { Status = TaskState.Done }, null, TaskActors.Human(harness.Options.Value));
+        Assert.IsType<TaskResult.Saved>(moved);
+        ProcessMergeGate gate = Build(harness, dir, "'checks-before-merge'");
+
+        Assert.Equal(ChecksFirst, gate.RefusalFor("Nova", "git push"));
     }
 
     private static void AddEvidence(TaskToolHarness harness, string command, int exitCode)

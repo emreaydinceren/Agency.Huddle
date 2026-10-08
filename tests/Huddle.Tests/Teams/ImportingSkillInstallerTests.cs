@@ -24,6 +24,24 @@ public sealed class ImportingSkillInstallerTests
         return new ImportingSkillInstaller(store, catalog, importer, NullLogger<ImportingSkillInstaller>.Instance);
     }
 
+    /// <summary>A preview whose name is not the skill asked for is never installed and the skill is reported missing (review fix item 7).</summary>
+    [Fact]
+    public async Task EnsureInstalledAsync_PreviewNameDiffers_NotInstalled()
+    {
+        CancellationToken ct = TestContext.Current.CancellationToken;
+        using TempDataDir dir = new();
+        FakeSkillImporter importer = new();
+        importer.ByCatalogId[TddId] = FakeSkillImporter.MakePreview("some-other-skill");
+        ImportingSkillInstaller installer = Create(dir, importer, out SkillStore store);
+        using (store)
+        {
+            IReadOnlyList<SkillRef> missing = await installer.EnsureInstalledAsync([Ref(Tdd)], ct);
+
+            Assert.Equal(Tdd, Assert.Single(missing).Name);
+            Assert.Empty(importer.Installs);
+        }
+    }
+
     /// <summary>A builtin skill and one the store already holds are not imported and are not reported missing.</summary>
     [Fact]
     public async Task EnsureInstalledAsync_BuiltinOrPresent_SkipsImport()
