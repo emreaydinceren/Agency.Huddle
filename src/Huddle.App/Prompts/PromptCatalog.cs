@@ -1182,5 +1182,38 @@ internal static class PromptCatalog
             Placeholders: [],
             RequiredPlaceholders: [],
             Timing: PromptTiming.Live),
+
+        new PromptDefinition(
+            Key: "prompt.digest",
+            Label: "Digest prompt",
+            HelperText:
+                "The status digest a manager is asked to post on the cadence in Process.md (OR-3). " +
+                "Takes the Team name and the date the digest covers from.",
+            Default:
+                """
+                Post the status digest for {{team}}, covering the work since {{since}}. Link every Task you mention by its id, for example PLAT-0042, and link the evidence behind each status line, instead of paraphrasing what a Task says. Then list the decisions the Human needs to make, and the risks, each in one line with its Task link. Keep the whole digest to at most 15 lines. The Chief of Staff rolls your digests up for the Human as decisions and risks, so make each decision and risk stand on its own.
+                """,
+            Placeholders: ["{{team}}", "{{since}}"],
+            RequiredPlaceholders: ["{{team}}", "{{since}}"],
+            Timing: PromptTiming.Live),
+
+        new PromptDefinition(
+            Key: "prompt.retro",
+            Label: "Retro prompt",
+            HelperText:
+                "The retro a Retro agent is asked to run, on demand or on the cadence in Process.md " +
+                "(RT-2). Takes the Team name and the date the retro covers from.",
+            Default:
+                """
+                Run a retro for {{team}} over the work since {{since}}. Follow these steps in order.
+                1. Gather: start with read_records for {{team}} since {{since}}. It returns Task change logs, Review bounces, Budget pauses, wake-up limits hit, escalations, persisted spend, Requests and tool-call log summaries. Read the evidence before you ask anyone anything.
+                2. Ask: open a Room with the members involved and ask each one about a specific moment in the evidence. Do not ask general questions.
+                3. Report: write the report to _retros/<date>.md with the top 3 issues, each linked to its evidence.
+                4. Propose: propose at most 3 changes as diffs to Process.md, a stance or a skill assignment. Removing a rule counts as a change. The Human sees each one as a proposal card with Accept and Reject; do not apply them yourself.
+                5. Register: add one row per finding to Retro register.md with ID, Finding, Action, Owner, Status (Open, Done, Partial, Verified or Changed) and Evidence / next check. At the next retro, check the Done rows against new evidence.
+                """,
+            Placeholders: ["{{team}}", "{{since}}"],
+            RequiredPlaceholders: ["{{team}}", "{{since}}"],
+            Timing: PromptTiming.Live),
     ];
 }
