@@ -1,5 +1,7 @@
 using System.Diagnostics.CodeAnalysis;
 using Agency.Huddle.App.Acp;
+using Agency.Huddle.App.Library;
+using Agency.Huddle.App.TeamTypes;
 using Agency.Huddle.App.Services;
 
 namespace Agency.Huddle.App.Teams;
@@ -10,10 +12,16 @@ namespace Agency.Huddle.App.Teams;
 /// stored Model and Effort and raises <c>PersonasChanged</c> once.
 /// </summary>
 /// <param name="personas">The store the definitions are read from and written through.</param>
-/// <param name="catalog">Supplies the display spelling of an existing Team.</param>
-internal sealed class TeamMembership(PersonaStore personas, ITeamCatalog catalog) : ITeamMembership
+/// <param name="catalog">Supplies the display spelling of an existing Team and its manager.</param>
+/// <param name="folders">Rewrites a Team's <c>_team.md</c> when its manager is replaced.</param>
+/// <param name="types">Resolves a Team's type so a role can be checked for being a manager role.</param>
+internal sealed class TeamMembership(PersonaStore personas, ITeamCatalog catalog, ITeamFolders folders, TeamTypeCatalog types) : ITeamMembership
 {
     private const string TeamsKey = "teams";
+
+    private const string NotManagerRole = "Only a Teammate hired into a manager role can manage this Team.";
+
+    private const string NoTeamFile = "This Team has no readable team file.";
 
     private const string UnwritableLabel = "This Team's name can't be written to a Teammate's definition.";
 
@@ -57,6 +65,11 @@ internal sealed class TeamMembership(PersonaStore personas, ITeamCatalog catalog
                 return failure;
             }
 
+            if (string.Equals(catalog.Find(team)?.Manager, personaName, StringComparison.OrdinalIgnoreCase))
+            {
+                return new MembershipResult(MembershipOutcome.IsManager);
+            }
+
             if (!TeamLabels.Contains(current, team))
             {
                 return new MembershipResult(MembershipOutcome.NotMember);
@@ -64,6 +77,50 @@ internal sealed class TeamMembership(PersonaStore personas, ITeamCatalog catalog
 
             return this.Save(persona, TeamLabels.Remove(current, team), MembershipOutcome.Removed);
         }
+    }
+
+    /// <inheritdoc />
+    public MembershipResult ReplaceManager(string team, string newManager)
+    {
+        lock (this.gate)
+        {
+            if (!this.TryRead(newManager, out Persona? persona, out IReadOnlyList<string> current, out MembershipResult? failure))
+            {
+                return failure;
+            }
+
+            if (!TeamLabels.Contains(current, team))
+            {
+                return new MembershipResult(MembershipOutcome.NotMember);
+            }
+
+            if (!this.HasManagerRole(team, persona))
+            {
+                return new MembershipResult(MembershipOutcome.Rejected, NotManagerRole);
+            }
+
+            bool updated = folders.UpdateTeamFile(team, file => file with { Manager = persona.Name });
+            return updated
+                ? new MembershipResult(MembershipOutcome.ManagerReplaced)
+                : new MembershipResult(MembershipOutcome.Rejected, NoTeamFile);
+        }
+    }
+
+    /// <summary>Whether the Persona's <c>_role</c> names a role with <c>Manager: true</c> in the Team's type.</summary>
+    /// <param name="team">The Team.</param>
+    /// <param name="persona">The Persona, already known to be a member.</param>
+    private bool HasManagerRole(string team, Persona persona)
+    {
+        if (!PersonaFrontmatter.TryReadIdentity(persona.Text, out PersonaIdentity? identity, out _)
+            || identity.Role is not { } role
+            || catalog.Find(team)?.TeamType is not { } teamType
+            || !string.Equals(role.TypeId, teamType.Id, StringComparison.Ordinal))
+        {
+            return false;
+        }
+
+        TeamTypeManifest? type = types.Find(teamType.Id);
+        return type?.Roles?.Any(r => r.Manager && string.Equals(r.Id, role.RoleId, StringComparison.Ordinal)) ?? false;
     }
 
     /// <summary>Whether a Team label survives a round trip through the <c>teams</c> line: not blank, not padded, no comma, semicolon or control character.</summary>

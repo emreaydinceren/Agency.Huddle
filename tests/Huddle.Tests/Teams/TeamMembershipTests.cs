@@ -3,8 +3,10 @@ using Microsoft.Extensions.Options;
 using Agency.Huddle.App;
 using Agency.Huddle.App.Acp;
 using Agency.Huddle.App.Data;
+using Agency.Huddle.App.Library;
 using Agency.Huddle.App.Teams;
 using Agency.Huddle.Tests.Acp;
+using Agency.Huddle.Tests.Teammates;
 
 namespace Agency.Huddle.Tests.Teams;
 
@@ -376,6 +378,88 @@ public sealed class TeamMembershipTests
         Assert.Equal(expected, actual);
     }
 
+    /// <summary>Removing the Team's manager is refused as <c>IsManager</c>, writes nothing and leaves every file as it was, even when the manager is spelled in another case.</summary>
+    [Fact]
+    public void Remove_Manager_IsRefusedAndNothingChanges()
+    {
+        using Fixture f = new([("ada", Definition("Ada", "\n", "teams: ['Web Team']", "_role: web/lead@1.2.0"))]);
+        f.SeedWebTeam("ADA");
+        (string Path, DateTime Written, string Text)[] before = f.Snapshot();
+
+        (MembershipResult result, int raised) = f.Observe(() => f.Membership.Remove("Web Team", "Ada"));
+
+        Assert.Equal(MembershipOutcome.IsManager, result.Outcome);
+        Assert.Equal(0, raised);
+        Assert.Equal(before, f.Snapshot());
+    }
+
+    /// <summary>Removing a member who is not the manager still works and takes only that Team's label.</summary>
+    [Fact]
+    public void Remove_NonManagerMember_IsRemoved()
+    {
+        using Fixture f = new([
+            ("ada", Definition("Ada", "\n", "teams: ['Web Team']", "_role: web/lead@1.2.0")),
+            ("bo", Definition("Bo", "\n", "teams: ['Web Team']", "_role: web/dev@1.2.0"))]);
+        f.SeedWebTeam("Ada");
+
+        MembershipResult result = f.Membership.Remove("Web Team", "Bo");
+
+        Assert.Equal(MembershipOutcome.Removed, result.Outcome);
+        Persona? stored = f.Personas.Get("Bo");
+        Assert.NotNull(stored);
+        Assert.True(PersonaFrontmatter.TryReadIdentity(stored.Text, out PersonaIdentity? identity, out _));
+        Assert.Empty(identity.Teams);
+    }
+
+    /// <summary>Replacing the manager with a member whose role is a manager role rewrites the team file's <c>manager</c> and nothing else.</summary>
+    [Fact]
+    public void ReplaceManager_ManagerRoleMember_SetsTheManager()
+    {
+        using Fixture f = new([
+            ("ada", Definition("Ada", "\n", "teams: ['Web Team']", "_role: web/lead@1.2.0")),
+            ("bo", Definition("Bo", "\n", "teams: ['Web Team']", "_role: web/lead@1.2.0"))]);
+        f.SeedWebTeam("Ada");
+
+        MembershipResult result = f.Membership.ReplaceManager("Web Team", "Bo");
+
+        Assert.Equal(MembershipOutcome.ManagerReplaced, result.Outcome);
+        Assert.Equal(["Web Team"], f.Folders.Updated);
+        Assert.Equal("Bo", f.Folders.Current.Manager);
+        Assert.Equal("flow", f.Folders.Current.Process);
+    }
+
+    /// <summary>A Persona that is not in the Team cannot become its manager, and the team file is not touched.</summary>
+    [Fact]
+    public void ReplaceManager_NonMember_IsRefused()
+    {
+        using Fixture f = new([
+            ("ada", Definition("Ada", "\n", "teams: ['Web Team']", "_role: web/lead@1.2.0")),
+            ("bo", Definition("Bo", "\n", "teams: [Other]", "_role: web/lead@1.2.0"))]);
+        f.SeedWebTeam("Ada");
+
+        MembershipResult result = f.Membership.ReplaceManager("Web Team", "Bo");
+
+        Assert.Equal(MembershipOutcome.NotMember, result.Outcome);
+        Assert.Empty(f.Folders.Updated);
+        Assert.Equal("Ada", f.Folders.Current.Manager);
+    }
+
+    /// <summary>A member whose role is not a manager role cannot become the manager, and the team file is not touched.</summary>
+    [Fact]
+    public void ReplaceManager_MemberWithNonManagerRole_IsRefused()
+    {
+        using Fixture f = new([
+            ("ada", Definition("Ada", "\n", "teams: ['Web Team']", "_role: web/lead@1.2.0")),
+            ("bo", Definition("Bo", "\n", "teams: ['Web Team']", "_role: web/dev@1.2.0"))]);
+        f.SeedWebTeam("Ada");
+
+        MembershipResult result = f.Membership.ReplaceManager("Web Team", "Bo");
+
+        Assert.Equal(MembershipOutcome.Rejected, result.Outcome);
+        Assert.Empty(f.Folders.Updated);
+        Assert.Equal("Ada", f.Folders.Current.Manager);
+    }
+
     /// <summary>Builds a Persona definition: <c>Name</c>, <c>Title</c>, <c>Alias</c> (lower-cased Name), then <paramref name="frontmatter"/> lines, then a one-line body.</summary>
     /// <param name="name">The Persona's Name.</param>
     /// <param name="eol">The line ending used between every line.</param>
@@ -391,6 +475,36 @@ public sealed class TeamMembershipTests
         lines.Add("---");
         lines.Add($"You are {name}.");
         return string.Join(eol, lines);
+    }
+
+    /// <summary>An <see cref="ITeamFolders"/> that holds one team file in memory and records which Teams were updated; the other members are not used by membership.</summary>
+    private sealed class RecordingFolders : ITeamFolders
+    {
+        /// <summary>The team file the next update maps.</summary>
+        public TeamFile Current { get; set; } = new(new VersionedRef("web", "1.2.0"), null, null, null, "flow", string.Empty);
+
+        /// <summary>The Team names passed to <see cref="UpdateTeamFile"/>, in order.</summary>
+        public List<string> Updated { get; } = [];
+
+        /// <inheritdoc />
+        public bool UpdateTeamFile(string team, Func<TeamFile, TeamFile> change)
+        {
+            this.Updated.Add(team);
+            this.Current = change(this.Current);
+            return true;
+        }
+
+        /// <inheritdoc />
+        public TeamFile? ReadTeamFile(string team) => this.Current;
+
+        /// <inheritdoc />
+        public LibraryResult<LibraryPath> EnsureTeam(string name) => throw new NotSupportedException();
+
+        /// <inheritdoc />
+        public LibraryResult<LibraryPath> EnsureProjectIn(string team, string project) => throw new NotSupportedException();
+
+        /// <inheritdoc />
+        public TeamCreateResult CreateTeam(string team, TeamFile file) => throw new NotSupportedException();
     }
 
     /// <summary>A temporary data directory, a real <see cref="PersonaStore"/> seeded before it starts, a <see cref="FakeTeamCatalog"/> and the service under test.</summary>
@@ -424,7 +538,26 @@ public sealed class TeamMembershipTests
             workModes.Set("Nova", workMode);
             this.Personas = new PersonaStore(this.paths, models, efforts, workModes, NullLogger<PersonaStore>.Instance);
             this.Catalog = new FakeTeamCatalog();
-            this.Membership = new TeamMembership(this.Personas, this.Catalog);
+            this.Folders = new RecordingFolders();
+            this.Membership = new TeamMembership(this.Personas, this.Catalog, this.Folders, RoleFixtures.Types(this.dir));
+        }
+
+        /// <summary>The team-file store the service writes the manager through.</summary>
+        public RecordingFolders Folders { get; }
+
+        /// <summary>Makes "Web Team" a Team of type <c>web</c> whose team file names <paramref name="manager"/>, in the catalog and in <see cref="Folders"/>.</summary>
+        /// <param name="manager">The manager's name as the team file spells it.</param>
+        public void SeedWebTeam(string manager)
+        {
+            this.Catalog.Teams =
+            [
+                new TeamSummary("Web Team", [], ["Ada", "Bo"], true)
+                {
+                    TeamType = new VersionedRef("web", "1.2.0"),
+                    Manager = manager,
+                },
+            ];
+            this.Folders.Current = new TeamFile(new VersionedRef("web", "1.2.0"), manager, null, null, "flow", string.Empty);
         }
 
         /// <summary>The real store the service writes through.</summary>

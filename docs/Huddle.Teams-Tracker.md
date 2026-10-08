@@ -2,7 +2,7 @@
 
 Status of the Teams delivery in [engineering/teams-plan.md](engineering/teams-plan.md). Each task is a `.t` (failing tests first) and `.i` (implementation) pair; a task's `.i` cannot be Done before its `.t`. Ids are `<phase>.<task>.<t|i>`, the form `agents/scripts/Set-Tracker.ps1` updates. `(H)` marks a Haiku task, `(B)` a boundary task that also gets an Opus architect review.
 
-**Status:** 52 of 170 tasks Done · 1 of 6 retrospectives done · last updated 2026-10-07.
+**Status:** 54 of 170 tasks Done · 1 of 6 retrospectives done · last updated 2026-10-07.
 
 | **Deliverable / Task** | **Active** | **In Progress** | **Done** |
 |---|---|---|---|
@@ -59,9 +59,9 @@ Status of the Teams delivery in [engineering/teams-plan.md](engineering/teams-pl
 | 1.24.i Task 24 Chief of Staff proposes by role: implement | | | ✔ |
 | 1.25.t Task 25 Chief of Staff prompts: team-building step: write failing tests (H) | | | ✔ |
 | 1.25.i Task 25 Chief of Staff prompts: team-building step: implement (H) | | | ✔ |
-| 1.26.t Task 26 Manager cannot be removed, can be replaced: write failing tests | | ✔ | |
-| 1.26.i Task 26 Manager cannot be removed, can be replaced: implement | | | |
-| 1.27.t Task 27 Team check bar and pool rules: write failing tests | | | |
+| 1.26.t Task 26 Manager cannot be removed, can be replaced: write failing tests | | | ✔ |
+| 1.26.i Task 26 Manager cannot be removed, can be replaced: implement | | | ✔ |
+| 1.27.t Task 27 Team check bar and pool rules: write failing tests | | ✔ | |
 | 1.27.i Task 27 Team check bar and pool rules: implement | | | |
 | 1.28.t Task 28 Member warnings: write failing tests | | | |
 | 1.28.i Task 28 Member warnings: implement | | | |

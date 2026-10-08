@@ -32,7 +32,7 @@ public sealed class TeamRecordsTests
     [Fact]
     public void MembershipOutcome_Members_MatchTypeMap()
     {
-        string[] expected = ["Added", "Removed", "AlreadyMember", "NotMember", "NotFound", "Rejected"];
+        string[] expected = ["Added", "Removed", "AlreadyMember", "NotMember", "NotFound", "Rejected", "IsManager", "ManagerReplaced"];
         string[] actual = Enum.GetNames<MembershipOutcome>();
 
         Assert.Equal(expected, actual);
