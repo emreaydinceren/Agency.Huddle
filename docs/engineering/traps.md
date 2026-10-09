@@ -223,7 +223,7 @@ legitimate empty result. Back to the hub: [Huddle.EngineeringGuide.md](../Huddle
   `core.autocrlf=true` (a *local* setting, not a repo one) converts that to
   CRLF on checkout, so the working tree shows 395 CRLF pairs and 0 bare LF; the
   Linux container CI checks the repo out in
-  (`mcr.microsoft.com/dotnet/sdk:10.0.401`, `.gitea/workflows/ci-pr.yaml:21`)
+  (`mcr.microsoft.com/dotnet/sdk:10.0.401`, `.gitea/workflows/ci-pr-local.yaml`)
   gets the LF git actually stored, with nothing to convert it. A `"""` literal
   in that file compiles with whichever line ending its checkout produced — so
   `PromptCatalog`'s defaults, and therefore every prompt sent to a model, used to
