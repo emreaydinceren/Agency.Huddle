@@ -24,6 +24,9 @@ internal static class TeamPaths
     /// <summary>Folder holding retrospective notes.</summary>
     public const string RetrosDir = "_retros";
 
+    /// <summary>File, under the data folder, listing the connected connectors.</summary>
+    public const string ConnectorsFileName = "connectors.json";
+
     /// <summary>Folder, under the data folder, holding the tool-call log.</summary>
     public const string ToolCallLogDir = "logs/tool-calls";
 }

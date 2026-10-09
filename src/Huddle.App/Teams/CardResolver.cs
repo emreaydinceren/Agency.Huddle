@@ -19,11 +19,17 @@ internal interface IConnectorStatus
     /// <param name="connector">The connector id from a role's <c>requires</c>.</param>
     /// <returns><see langword="true"/> when the connector is connected.</returns>
     bool IsConnected(string connector);
+
+    /// <summary>Where a user records a connected connector, or <see langword="null"/> when there is no such place.</summary>
+    string? Location => null;
 }
 
-/// <summary>A connector status that reports nothing connected; Task 82 replaces it.</summary>
+/// <summary>A connector status that reports nothing connected.</summary>
 internal sealed class EmptyConnectorStatus : IConnectorStatus
 {
+    /// <inheritdoc />
+    public string? Location => null;
+
     /// <inheritdoc />
     public bool IsConnected(string connector) => false;
 }
@@ -92,7 +98,7 @@ internal static class CardResolver
         {
             if (!connectors.IsConnected(connector))
             {
-                reasons.Add($"connector {connector} not connected");
+                reasons.Add(CardResolver.ConnectorReason(connector));
             }
         }
 
@@ -113,6 +119,14 @@ internal static class CardResolver
         IReadOnlyList<SkillRef> distinctSkills = [.. skills.DistinctBy(static skill => skill.Name, StringComparer.Ordinal)];
         CardReadiness readiness = reasons.Count == 0 ? CardReadiness.Ready : CardReadiness.NeedsSetup;
         return new CardState(role.Id, name, pick, distinctSkills, usedPacks, readiness, reasons);
+    }
+
+    /// <summary>The reason a card gives when <paramref name="connector"/> is not connected.</summary>
+    /// <param name="connector">The connector id from a role's <c>requires</c>.</param>
+    /// <returns>The reason text.</returns>
+    public static string ConnectorReason(string connector)
+    {
+        return $"connector {connector} not connected";
     }
 
     /// <summary>Tells whether <paramref name="name"/> is in <paramref name="namesInUse"/>, without regard to case.</summary>

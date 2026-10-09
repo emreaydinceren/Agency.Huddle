@@ -75,9 +75,25 @@
                         <MudText Typo="Typo.subtitle1" Class="hiring-pool-name">@entry.Card.Name</MudText>
                         <MudText Typo="Typo.caption">@this.RoleTitle(entry.Card.RoleId)</MudText>
                         <MudText Typo="Typo.caption" Class="hiring-pool-status">@(entry.Card.Readiness == CardReadiness.Ready ? ReadyText : NeedsSetupText)</MudText>
-                        @foreach (string reason in entry.Card.Reasons)
+                        @{
+                            IReadOnlyList<string> missing = this.MissingConnectors(entry);
+                        }
+                        @foreach (string reason in entry.Card.Reasons.Where(reason => !missing.Any(connector => string.Equals(reason, CardResolver.ConnectorReason(connector), StringComparison.Ordinal))))
                         {
                             <MudText Typo="Typo.caption" Color="Color.Warning" Class="hiring-pool-reason">@reason</MudText>
+                        }
+                        @foreach (string connector in missing)
+                        {
+                            <MudText Typo="Typo.caption" Color="Color.Warning" Class="hiring-pool-connect">@($"Connect {connector} to finish setup")</MudText>
+                            @if (this.HireContext.Connectors.Location is { } location)
+                            {
+                                <MudText Typo="Typo.caption" Class="hiring-pool-connect-hint">@($"Add \"{connector}\" to the \"connected\" list in {location}.")</MudText>
+                            }
+                        }
+                        @if (missing.Count > 0)
+                        {
+                            <MudButton Variant="Variant.Outlined" Size="Size.Small" Class="hiring-pool-connected"
+                                       OnClick="@(() => this.Recheck(entry))">I connected it</MudButton>
                         }
                     </MudStack>
                     @if (!entry.Locked)
@@ -228,6 +244,32 @@
         {
             await this.PublishAsync();
         }
+    }
+
+    private IReadOnlyList<string> MissingConnectors(HiredEntry entry)
+    {
+        RoleSpec? role = this.Roles.FirstOrDefault(candidate => string.Equals(candidate.Id, entry.Card.RoleId, StringComparison.Ordinal));
+        if (role is null)
+        {
+            return [];
+        }
+
+        return [.. role.Requires.Where(connector => entry.Card.Reasons.Contains(CardResolver.ConnectorReason(connector), StringComparer.Ordinal))];
+    }
+
+    private async Task Recheck(HiredEntry entry)
+    {
+        int index = this.hired.IndexOf(entry);
+        RoleSpec? role = this.Roles.FirstOrDefault(candidate => string.Equals(candidate.Id, entry.Card.RoleId, StringComparison.Ordinal));
+        if (index < 0 || role is null)
+        {
+            return;
+        }
+
+        this.hired.RemoveAt(index);
+        CardState card = this.Resolve(role, entry.Card.Name);
+        this.hired.Insert(index, entry with { Card = card });
+        await this.PublishAsync();
     }
 
     private sealed record HiredEntry(CardState Card, bool Locked);

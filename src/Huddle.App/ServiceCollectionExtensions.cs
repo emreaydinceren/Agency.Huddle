@@ -135,7 +135,7 @@ public static class ServiceCollectionExtensions
         services.AddSingleton<TeamTypeCatalog>();
         services.AddSingleton<SkillsCatalogIndex>();
         services.AddSingleton<UserCandidateWriter>();
-        services.AddSingleton<IConnectorStatus, EmptyConnectorStatus>();
+        services.AddSingleton<IConnectorStatus, FileConnectorStatus>();
 
         // Shared between PersonaRenameCascade (signals around a Teammate-folder move) and
         // DotAcpAgentHostFactory (waits on it before creating a Persona's Work Dir) - corrections-B2
