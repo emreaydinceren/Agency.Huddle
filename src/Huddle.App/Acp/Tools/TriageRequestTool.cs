@@ -2,6 +2,7 @@ using System.Globalization;
 using System.Text.Json.Nodes;
 using Agency.Huddle.Acp.Abstractions;
 using Agency.Huddle.App.Data;
+using Agency.Huddle.App.Prompts;
 using Agency.Huddle.App.Tasks;
 using Agency.Huddle.App.Teams;
 
@@ -18,15 +19,16 @@ internal sealed class TriageRequestTool(
     TaskStore store,
     IRequestNotifier notifier,
     ITeamDirectory directory,
-    string callerAgentId) : IAppTool
+    string callerAgentId,
+    IPromptSource prompts) : IAppTool
 {
+    private static readonly IReadOnlyDictionary<string, string> NoValues = new Dictionary<string, string>();
+
     /// <inheritdoc />
     public string Name => "triage_request";
 
     /// <inheritdoc />
-    public string Description =>
-        "Triages a Request filed with your Team. Decision 'accept' moves it to To Do (optionally name the assignee); 'decline' " +
-        "rejects it and needs a reason; 'needs_info' keeps it in Backlog and needs a reason saying what is missing.";
+    public string Description => prompts.Render("tool.triageRequest.description", NoValues);
 
     /// <inheritdoc />
     public JsonObject InputSchema => new()

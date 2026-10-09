@@ -4,14 +4,15 @@ This is the browser test script for **Agency.Huddle** — every check a person o
 make against the running app that the automated suite cannot make for you. Follow it cold: it
 assumes a terminal, a browser and no knowledge of the codebase.
 
-Applies to the repo as of 2026-09-13. Scope is the chat surface (`src/Huddle.App`) through a web
+Applies to the repo at the commit you are testing; it carries no date of its own. Scope is the chat surface (`src/Huddle.App`) through a web
 browser at `http://localhost:5100`. It does **not** cover the automated suite — you never run
 `dotnet test` from this script — and it does not cover `Huddle.Console` or the ACP library in
 isolation. For why a check is here rather than in code, see [Testing](testing.md); for the
 vocabulary every step uses, see [Language](language.md).
 
-**488 tests in 16 areas.** 426 are free. 62 spend real money and are marked 💰 everywhere they
-appear; [Planning](manual-tests/planning.md) lists them together.
+Tests that spend real money are marked 💰 everywhere they appear; [Planning](manual-tests/planning.md)
+lists them together. This page keeps no totals: run `pwsh agents/scripts/Check-ManualTests.ps1 -Summary`
+for the current count of tests, paid tests and hours per area.
 
 This page is the contract every run is held to: the cost guard, the Model and Effort convention,
 and the rules for concluding a result. It is short on purpose. Read it with
@@ -167,7 +168,7 @@ These are documented decisions in [Known limits](known-limits.md). Observing one
 
 | You will see | Why it is correct |
 | --- | --- |
-| An Agent answering in one Room seems to know about another Room | One session per Persona spans every Room it is in, so context bleeds. A session per Room would multiply processes and cost. |
+| An Agent answering in one Room does not know what was said in another Room | There is one session per Persona per Room ([ADR-0024](../adr/0024-an-agent-holds-one-session-per-room.md)), so context does not cross Rooms. A new session's first Turn carries the last 20 Messages of its Room. |
 | A restart un-pauses a Room that had spent its Budget | The Budget counter is in memory and per Room, by decision. |
 | A restart loses a Turn that was mid-stream | A Draft is in memory only and is never written to the Transcript. |
 | The application does not follow the OS switching to dark | Deliberate since 2026-09-21: a Theme *is* a light one or a dark one, and there is no System option any more. Pick a Theme from the Dark group. See [ADR-0017](../adr/0017-a-theme-is-a-palette-not-a-pair.md). |
@@ -176,7 +177,7 @@ These are documented decisions in [Known limits](known-limits.md). Observing one
 | `Dark High Contrast` does not look like VS Code's high contrast | VS Code draws HC borders everywhere from `contrastBorder`, which MudBlazor's palette has no equivalent for. It lands as a strong-contrast ordinary Theme. |
 | The same Theme appears in a second browser and a private window | The choice lives in `appearance.json`, per installation, not in `localStorage`. |
 | Renaming a Teammate leaves its old Rooms and Transcripts behind | Removing or renaming a Persona does not cascade into the chat surface. Only its Model and Effort follow. |
-| Stopping an Agent stops it in every Room | One session spans every Room, so there is nothing narrower to stop. |
+| Stopping an Agent stops it in one Room only | Stop ends that Persona's session in that Room (one session per Persona per Room, ADR-0024); its sessions in other Rooms keep running. |
 | Tool activity never appears in scrollback | It belongs to the Draft and goes when the Draft does. |
 | An editing Prompt does not restart a running Teammate | A `Next session` Prompt is deliberately inert until that Teammate restarts. The badge says so. |
 | The Model picker is stale after upgrading the Adapter | The catalog is probed once per app run and cached. Restart the app. |
@@ -185,7 +186,7 @@ These are documented decisions in [Known limits](known-limits.md). Observing one
 
 ### 0.7 Recording results
 
-Results go in the [Tracker](manual-tests/tracker.md) — one row per test, all 472 of them,
+Results go in the [Tracker](manual-tests/tracker.md) — one row per test,
 carrying a status and the issue number of anything that failed.
 
 Set a row to **Testing** when you pick a test up, so a second tester does not start the same
@@ -197,38 +198,46 @@ own header carries the full status vocabulary and how it maps onto the four outc
 
 ## 1. Choosing what to run
 
-The 488 tests live one file per area under [`manual-tests/`](manual-tests/) — a
-single file holding all of them would be too large for a git web UI to render. Each
-area file carries only what is true of that area alone and names
-[Common procedures](manual-tests/common.md) for the rest.
+The tests live one file per area under [`manual-tests/`](manual-tests/) — a single file holding
+all of them would be too large for a git web UI to render. Each area file carries only what is
+true of that area alone and names [Common procedures](manual-tests/common.md) for the rest.
+Counts, paid tests and hours are not kept on this page; run
+`pwsh agents/scripts/Check-ManualTests.ps1 -Summary` for the current figures. Run status lives in
+the [Tracker](manual-tests/tracker.md), never here.
 
-[**File Changes, Watched Folders and Memory**](manual-tests/file-changes.md) is a newer area, not
-yet folded into the counts and estimates below: 11 tests, all paid, covering FC §10's FM-0 through
-FM-8 plus RS Appendix B's V-1, V-2 and V-4. None of them has been run — the code shipped
-2026-09-23, and these paid checks are deferred to the Human's own user acceptance testing. See
-[Known limits](known-limits.md) for what stays unverified until they run.
+### Areas
 
-[**Room Sessions**](manual-tests/room-sessions.md) is also newer, and also not yet folded into the
-counts and estimates below: 12 tests, all paid, covering RS §10's RS-M1 through RS-M10 plus RS
-Appendix B's V-3 and V-5. None of them has been run — the code shipped 2026-09-23, and these paid
-checks are deferred the same way File Changes' are. See [Known limits](known-limits.md).
-
-[**Teams: Sidebar, Members, Files, Tasks and Shared Memory**](manual-tests/team-pages.md) is a newer area with 18 tests, 16 free and 2 paid 💰, covering Spec §2's T0–T15 (sidebar navigation, Members, Files, Tasks tabs, Team creation and Project creation) plus TP-REAL-01 and TP-REAL-02 (UI behavior that cannot be automated). None of them has been run — the code shipped 2026-09-23, and the two paid checks are deferred to the Human's own user acceptance testing. See [Known limits](known-limits.md) for what stays unverified until they run.
-
-[**Turn detail and Spend**](manual-tests/turn-detail.md) is a newer area with 5 tests, 1 free and 4 paid 💰, covering the Turn detail spec's TD-M1 to TD-M5 (an edit's live preview, Spend against the Adapter's own figure, an `agency-acp` Persona with no preview and no Spend, phone width and Themes, and a burst of fast calls). None of them has been run — the code shipped 2026-09-30, and the paid checks are deferred to the Human's own user acceptance testing. See [Known limits](known-limits.md).
-
-[**Adapter commands**](manual-tests/adapter-commands.md) is a newer area with 5 tests, 1 free and 4 paid 💰, covering the Adapter commands spec's C1, C5 to C7, C10, C13 and C15 (`@Nova /compact` end to end, a bare slash staying Huddle's own, a disallowed command falling through as text, the Teammate card's command line, and Stop during a compaction). None of them has been run — the code shipped 2026-09-30, and the paid checks, including the spec's V-2 and V-4, are deferred to the Human's own user acceptance testing. See [Known limits](known-limits.md).
-
-[**Prompt blocks**](manual-tests/prompt-blocks.md) is a newer area, registered in the [Tracker](manual-tests/tracker.md) and not yet in [Planning](manual-tests/planning.md): 5 tests, all paid 💰 and cheap (an image cost about 1,000 tokens), covering the Prompt blocks spec's P1, P5, P6, P11 and P18 (a named image seen without a tool call, six images and a cap of four, an image over the size limit falling back to its path, an image mentioned only in catch-up not being re-sent, and an Adapter Profile turning blocks off). PROMPTBLOCKS-01, 02, 03 and 05 passed in the app on 2026-10-01; PROMPTBLOCKS-04, which needs two Teammates in one Room, is deferred to the Human's own user acceptance testing. See [Known limits](known-limits.md).
-
-[**Work Mode**](manual-tests/work-mode.md) is a newer area, also not yet folded into the counts above (it is registered in [Planning](manual-tests/planning.md) and the [Tracker](manual-tests/tracker.md)): 9 tests, 5 free and 4 paid 💰, covering the Work Modes spec's MW-1 to MW-9 (the picker and its hidden list, an Adapter change clearing the mode, a hand-written hidden row being dropped, `Team:Acp:HiddenModes` lifting the block, an Adapter with no mode, `Accept edits` stopping the edit permission request, `Plan` refusing to leave plan mode, the `~/.claude` guard under `Accept edits`, and a mode re-applied after a restart). None of them has been run in the app — the code shipped 2026-09-30, and the paid checks are deferred to the Human's own user acceptance testing. The spec's OQ-2 and OQ-3 were answered outside the app on 2026-10-01 (the plan does not reach the Room, so `plan` is hidden by default; the `~/.claude` guard survives `Accept edits`). See [Known limits](known-limits.md).
-
-[**Questions**](manual-tests/questions.md) is a newer area, also not yet folded into the counts above (it is registered in [Planning](manual-tests/planning.md) and the [Tracker](manual-tests/tracker.md)): 10 tests, 1 free and 9 paid 💰, covering the Questions spec's QM-1 to QM-10 (a model framing its ask and calling `ask_human`, ending its Turn without guessing, leaving the tool alone for a fact or an opinion, the same on `agency-acp`, an answer waking only the asker in a Room of three, a Claude Teammate having no built-in `AskUserQuestion` when elicitation is switched off, and four for the elicitation bridge: a scripted Adapter's forms with typed fields, Claude's `AskUserQuestion` as a card that survives the idle bound, Skip and Stop, and the timeout). Run in the app on 2026-10-01 (Haiku): QM-2, QM-5 and QM-6 pass, QM-3 passes weakly, QM-1 **failed** (the Claude Adapter defers MCP tools, so the model never saw `ask_human`'s description) until a `systemPrompt.askHuman` paragraph was added, and then passed on a one-sample re-run, QM-4 was not run for want of an `agency-acp` Profile, and QM-7 to QM-10 pass (QM-7 found and fixed two layout defects, one of them pre-existing). See the [Tracker](manual-tests/tracker.md#questions) and [Known limits](known-limits.md).
+- [Adapter commands](manual-tests/adapter-commands.md): `@Nova /compact` end to end, a bare slash staying Huddle's own, a disallowed command, the Teammate card's command line.
+- [Adapters](manual-tests/adapters.md): choosing an Adapter per Persona and running two at once.
+- [App Tools](manual-tests/app-tools.md): the Tools a real model calls through progressive discovery.
+- [Appearance and Themes](manual-tests/appearance-theme.md): the Appearance tab, the Theme list and the Library pane side.
+- [Avatar library](manual-tests/avatar-library.md): choosing a face from the library, its picker and filters.
+- [File Changes, Watched Folders and Memory](manual-tests/file-changes.md): the paid File Changes checks.
+- [Creating Rooms and inviting Agents](manual-tests/invite-rooms.md): Room creation, invitations and Room naming.
+- [Library explorer and editor](manual-tests/library.md): the Library tree, document view and editor.
+- [Model and Effort](manual-tests/model-effort.md): the pickers, the catalog probe and the runner restart.
+- [Persona lifecycle](manual-tests/persona-lifecycle.md): supervisor, work folders, health and restarts.
+- [The named pipe](manual-tests/pipe-external.md): external agents and the wire.
+- [Prompt blocks](manual-tests/prompt-blocks.md): images in a Prompt, the cap, the size limit and Adapter Profiles.
+- [Settings Prompts](manual-tests/prompts-settings.md): editing, per-field reset and Save.
+- [Questions](manual-tests/questions.md): `ask_human`, the elicitation bridge and its cards.
+- [Reply Gate and Budget](manual-tests/reply-gate-budget.md): the Reply Gate, Mentions and the Room Budget.
+- [Room messaging](manual-tests/room-messaging.md): the Room view, posting Messages and Transcript rendering.
+- [Room Sessions](manual-tests/room-sessions.md): per-Room context, resume and Stop (ADR-0024).
+- [Shell and navigation](manual-tests/shell-nav.md): the application shell, navigation and layout.
+- [Skills](manual-tests/skills.md): the Chief of Staff, team-building and the Family Health Advisor.
+- [Startup and configuration](manual-tests/startup-config.md): start-up, configuration and first-run state.
+- [Turn streaming](manual-tests/streaming-turn.md): Drafts, Stop and failure surfacing.
+- [Tasks](manual-tests/tasks.md): creating, moving, viewing and referencing a Task.
+- [Teams](manual-tests/team-pages.md): the sidebar, Members, Files, Tasks and Shared Memory.
+- [Teammate card](manual-tests/teammate-card.md): view, edit, create and delete.
+- [Teammates page](manual-tests/teammates-library.md): tiles, Teams grouping, the filter and rejected files.
+- [Turn detail and Spend](manual-tests/turn-detail.md): the live preview, Spend and phone width.
+- [Work Mode](manual-tests/work-mode.md): the picker, hidden modes and the permission behaviour.
 
 Two pages exist for the run around the run, and neither is needed while executing:
-[**Planning**](manual-tests/planning.md) to pick what to run — the 16 areas with
-their counts and estimates, the 20-test smoke pass, the paid-test register, the
-corrections already applied and the known gaps — and the
+[**Planning**](manual-tests/planning.md) to pick what to run — the areas with their estimates,
+the smoke pass, the paid-test register and the known gaps — and the
 [**Tracker**](manual-tests/tracker.md) to record what came of it, one row per test
 with its status and any issue. Open them at either end of a run and close them in
 between; this page, Common procedures and one area file are what you keep open.

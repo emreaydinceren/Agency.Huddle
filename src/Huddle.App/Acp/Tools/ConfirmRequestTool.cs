@@ -2,6 +2,7 @@ using System.Globalization;
 using System.Text.Json.Nodes;
 using Agency.Huddle.Acp.Abstractions;
 using Agency.Huddle.App.Data;
+using Agency.Huddle.App.Prompts;
 using Agency.Huddle.App.Tasks;
 using Agency.Huddle.App.Teams;
 
@@ -20,18 +21,19 @@ internal sealed class ConfirmRequestTool(
     ProcessGateService gates,
     IRequestNotifier notifier,
     ITeamDirectory directory,
-    string callerAgentId) : IAppTool
+    string callerAgentId,
+    IPromptSource prompts) : IAppTool
 {
     /// <summary>The role coverage step a confirming member must have.</summary>
     private const string VerifyCoverage = "verify";
+
+    private static readonly IReadOnlyDictionary<string, string> NoValues = new Dictionary<string, string>();
 
     /// <inheritdoc />
     public string Name => "confirm_request";
 
     /// <inheritdoc />
-    public string Description =>
-        "Confirms that a Done Request you filed was delivered as asked, and closes it. Only your Team's QA may call it. " +
-        "Optionally add a note.";
+    public string Description => prompts.Render("tool.confirmRequest.description", NoValues);
 
     /// <inheritdoc />
     public JsonObject InputSchema => new()

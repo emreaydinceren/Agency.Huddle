@@ -1,8 +1,8 @@
 # Persona lifecycle: supervisor, work dirs, health and restarts
 
-Prove, in a real browser against a real `node` adapter, everything between "a Persona file exists on disk" and "an Agent is answering in a Room": that adding a Persona brings a teammate Online and mints a Room named after it, that the per-Persona Work Dir is keyed on the frontmatter Name, that the Offline / Starting / Online / Degraded badge tells the truth on every surface at once (tile, card, Room strip), that a failure carries a reason a human can act on, and that a Persona edit, a Model change, an Effort change and the Restart button each stop and restart exactly one session and no more. Almost none of this is reachable from the automated suite — the tests run through FakeAgentHostFactory — so every real-adapter failure (missing, unauthenticated, killed mid-session, a stale stored Model, a spent token Budget) and every timing-visible transition exists only here. The tests are ordered cheapest-first: PERSONALIFECYCLE-01 to -05 run with the adapter disabled, -06 to -25 start real adapter processes (free: starting a session spends nothing), and only -26 to -32 deliver Messages that cost money.
+Prove, in a real browser against a real `node` adapter, everything between "a Persona file exists on disk" and "an Agent is answering in a Room": that adding a Persona brings a teammate Online and mints a Room named after it, that the per-Persona Work Dir is keyed on the frontmatter Name, that the Offline / Starting / Online / Degraded badge tells the truth on every surface at once (tile, card, Room strip), that a failure carries a reason a human can act on, and that a Persona edit, a Model change, an Effort change and the Restart button each stop and restart exactly one session and no more. Almost none of this is reachable from the automated suite — the tests run through FakeAgentHostFactory — so every real-adapter failure (missing, unauthenticated, killed mid-session, a stale stored Model, a spent token Budget) and every timing-visible transition exists only here. The tests are ordered cheapest-first: PERSONALIFECYCLE-01 to -05 run with the adapter disabled, -06 to -25 start real adapter processes (free: starting a session spends nothing, apart from the built-in Chief of Staff's one Greeting Turn, Setup 8), and only -26 to -32 deliver Messages that cost money.
 
-**32 tests** · 25 free, 7 paid 💰 · about 6.5 hours.
+**32 tests** · 25 free, 7 paid 💰 · about 6.6 hours.
 
 Read [the manual test script](../manual-tests.md) first — the cost guard, the Model and Effort
 convention, and the rules for concluding a result — then [Common procedures](common.md), which
@@ -12,17 +12,18 @@ defines the terminals, states, procedures and oracles this page names. Both are 
 
 Run [`P-BUILD`](common.md#p-build) then the lane named below from
 [Common procedures](common.md), which also defines the terminals `T-A` and `T-B`, the
-oracles `O-LOG` / `O-ADAPTERS` / `O-TRANSCRIPT` / `O-DB` / `O-WIRE`, the four resets,
+oracles `O-LOG` / `O-ADAPTERS` / `O-TRANSCRIPT` / `O-DB` / `O-WIRE`, the five resets,
 `P-NEW-PERSONA`, `P-ECHO-BOT` and the standing conventions. This area adds:
 
-1. Confirm the Adapter is installed: `Test-Path 'E:\Repos\Huddle\tools\acp\node_modules\@agentclientprotocol\claude-agent-acp\dist\index.js'` must print `True`. If `False`, run `pwsh E:\Repos\Huddle\tools\acp\install.ps1` and check again. Confirm `node --version` prints a version. Without both, every test from PERSONALIFECYCLE-06 onward is inconclusive.
+1. Confirm the Adapter is installed: `Test-Path '<repo>\tools\acp\node_modules\@agentclientprotocol\claude-agent-acp\dist\index.js'` must print `True`. If `False`, run `pwsh <repo>\tools\acp\install.ps1` and check again. Confirm `node --version` prints a version. Without both, every test from PERSONALIFECYCLE-06 onward is inconclusive.
 2. Meet the Claude login requirement in [§0.1](../manual-tests.md#01-what-you-need) — the Adapter authenticates against that login, so nothing from PERSONALIFECYCLE-06 onward starts without it. If start failures later read "The Adapter needs authentication: …", stop and log in; do not report those as defects.
-3. Two lanes. WITHOUT Adapters is `P-LAUNCH-FREE`. WITH Adapters is a plain `dotnet run --project src\Huddle.App --urls http://localhost:5100`, since the Development profile already sets `Team:Acp:Enabled=true`. The overrides this area uses are `Team__Acp__Enabled`, `Team__Acp__TokenBudget`, `Team__AgentMessageBudget`, `Team__Acp__AdapterPath` and `Team__Acp__WorkDir`.
+3. Two lanes. WITHOUT Adapters is `P-LAUNCH-FREE`. WITH Adapters is a plain `dotnet run --project src/Huddle.App --urls http://localhost:5100` from a fresh `T-A`, since `appsettings.Development.json` already sets `Team:Acp:Enabled=true` (`src/Huddle.App/appsettings.Development.json:4`). The overrides this area uses are `Team__Acp__Enabled`, `Team__Acp__TokenBudget`, `Team__AgentMessageBudget`, `Team__Acp__AdapterPath` and `Team__Acp__WorkDir`.
 4. In `T-B`, wrap `O-ADAPTERS-LIST` in a function so the tests below can just say `Adapters`: `function Adapters { Get-CimInstance Win32_Process -Filter "Name='node.exe'" | Where-Object { $_.CommandLine -like '*claude-agent-acp*' } | Select-Object ProcessId, CreationDate, CommandLine | Format-Table -Wrap }`. `Stop-Process -Id <pid>` on a row simulates a crashed Adapter.
 5. `O-DB` is optional here and recorded as not-checked when absent — except PERSONALIFECYCLE-17, which cannot run at all without it.
-6. `work\<Persona>\` under `App_Data` is each Persona's Work Dir, keyed on the frontmatter Name. Several tests read it directly.
+6. A Persona lives at `<data>\Teammates\<Name>\<Name>.md` and its Work Dir is `<data>\Teammates\<Name>\work\` (`TeammatePaths.cs:15,57-60`). `<data>` is `<repo>\src\Huddle.App\App_Data`. Several tests read both directly.
 7. Use the browser you will test in, with two tabs available. Never test through a private window for the multi-tab test.
-8. MONEY. Starting a Persona's session is free — no prompt turn, no tokens. Only a Message that produces a reply costs. PERSONALIFECYCLE-01 to -25 are free; -26 to -32 are marked and each says how many Turns it costs.
+8. MONEY. Starting a Persona's session is free — no prompt turn, no tokens. Only a Message that produces a reply costs. PERSONALIFECYCLE-01 to -25 are free; -26 to -32 are marked and each says how many Turns it costs. One exception: the built-in **Chief of Staff** is seeded at every start, has no stored Model (the account default), and with ACP on and an empty direct Room it takes one Greeting Turn when it first comes Online (`PersonaRunner.cs:481-495`). Before the first WITH-Adapters launch of this area, do steps 1-3 of [`P-LAUNCH-PAID`](common.md#p-launch-paid-) (launch free, set the Chief of Staff to Haiku / `low` on its card, stop), so that Greeting is one small Haiku Turn, once. It is not a failure of a free test.
+9. The Chief of Staff is Online in every WITH-Adapters run, so `Adapters` always lists its row, and so does every Persona an earlier test left behind. Compare each listing with the one the test says to write down; never expect an absolute row count.
 
 ## Tests
 
@@ -35,12 +36,12 @@ oracles `O-LOG` / `O-ADAPTERS` / `O-TRANSCRIPT` / `O-DB` / `O-WIRE`, the four re
 **Before you start**
 
 - The solution builds.
-- No app is running on port 5100.
-- `App_Data\Teams\` is empty, or you accept the Personas already in it.
+- `E-STOPPED`: no app is running on port 5100.
+- `<data>\Teammates\` holds nothing but the built-in `Chief of Staff` folder (it is seeded at every start, whatever `Acp:Enabled` says), or you accept the Personas already in it.
 
 **Steps**
 
-1. In `T-A` run `$env:Team__Acp__Enabled='false'; dotnet run --project src\Huddle.App --urls http://localhost:5100` and wait for the line `Now listening on: http://localhost:5100`.
+1. In `T-A` run [`P-LAUNCH-FREE`](common.md#p-launch-free) and wait for the line `Now listening on: http://localhost:5100`.
 2. In `T-B` run `Adapters`. Note the row count (expected: none).
 3. In the browser open `http://localhost:5100/teammates`.
 4. Click **New teammate**.
@@ -52,21 +53,21 @@ oracles `O-LOG` / `O-ADAPTERS` / `O-TRANSCRIPT` / `O-DB` / `O-WIRE`, the four re
 10. In the **Model** select choose the entry whose label contains `Haiku`.
 11. In the **Effort** select choose `low`.
 12. Click **Add teammate**.
-13. Read the card that appears, then click the **×** in its header to close it.
+13. Read the card that appears, then click the close icon button in its header (`aria-label="Close"`, `TeammateCard.razor:74`) to close it.
 14. Hover the mouse over the status line under `Nova` in the tile list and hold it for three seconds.
 15. Look at the sidebar Room list.
 16. In `T-B` run `Adapters` again.
-17. In `T-B` run `Get-ChildItem 'E:\Repos\Huddle\src\Huddle.App\App_Data\work'`.
+17. In `T-B` run `Get-ChildItem '<data>\Teammates\Nova'`.
 
 **Pass if — all of these**
 
 - After **Add teammate**, the card header changes to `Teammate` and shows `Nova` with the status word **Offline**.
 - The tile list contains a tile `Nova` whose status line reads **Offline**.
 - Hovering that status line shows NO tooltip text at all (an empty tooltip, not a tooltip saying "Offline").
-- The card for `Nova` shows no reason line under the status, and its action row has **Edit**, **Open**, **Restart** and **Remove** but NO **Message** link.
+- The card for `Nova` shows no reason line under the status, and its action row has **Edit**, **Open**, **Restart** and the **Remove** icon button but NO **Message** link (Restart is offered in every state except Starting, `TeammateCard.razor:182`).
 - The sidebar Room list does NOT contain a Room named `Nova`.
 - `Adapters` lists no more `node.exe` rows than it did at step 2 (the picker probe processes from steps 10-11 are short-lived and may already be gone).
-- `App_Data\work` contains no folder named `Nova` (a bare `work` folder with nothing in it is expected — the Model picker creates it).
+- `<data>\Teammates\Nova` holds `Nova.md` and no `work` folder: nothing started this Persona, so its Work Dir was never created. (The picker probe runs in the `Teammates` root, not in `Nova`'s folder, `ModelCatalogProbe.cs:281`.)
 
 **Fail if — any of these**
 
@@ -79,10 +80,10 @@ oracles `O-LOG` / `O-ADAPTERS` / `O-TRANSCRIPT` / `O-DB` / `O-WIRE`, the four re
 
 **Inconclusive if**
 
-If the Model select shows only `Use the agent's default` with the hint "This agent advertises no models, so it will use its own default.", the adapter could not be probed — record steps 10-11 as not-performed, continue the test, and run PERSONALIFECYCLE-04 to find out why. If `App_Data\Teams\` already contained Personas from earlier work, their tiles are expected too; judge only the `Nova` tile. If the browser shows `An unhandled error has occurred.` at any point, reload once and note it; if it recurs, the test is a FAIL on that step, not inconclusive.
+If the Model select shows only `Use the agent's default` with the hint "This agent advertises no models, so it will use its own default.", the adapter could not be probed — record steps 10-11 as not-performed, continue the test, and run PERSONALIFECYCLE-04 to find out why. If `<data>\Teammates\` already contained Personas from earlier work, their tiles are expected too (the `Chief of Staff` tile always is); judge only the `Nova` tile. If the browser shows `An unhandled error has occurred.` at any point, reload once and note it; if it recurs, the test is a FAIL on that step, not inconclusive.
 
 > [!NOTE]
-> Leave the app running — PERSONALIFECYCLE-02 through -05 reuse this same ACP-disabled run and the `Nova` Persona it creates.
+> Leave the app running — PERSONALIFECYCLE-02 and -05 reuse this same ACP-disabled run, and -02 to -05 reuse the `Nova` Persona it creates (it stays on disk across the app restarts that -03 and -04 begin with).
 
 ### PERSONALIFECYCLE-02 — A Persona Name with a leading, trailing or doubled space is refused on the card and never written to disk
 
@@ -93,11 +94,11 @@ If the Model select shows only `Use the agent's default` with the hint "This age
 **Before you start**
 
 - The ACP-disabled app from PERSONALIFECYCLE-01 is still running.
-- You can list `E:\Repos\Huddle\src\Huddle.App\App_Data\Teams`.
+- You can list `<data>\Teammates`.
 
 **Steps**
 
-1. In `T-B` run `Get-ChildItem 'E:\Repos\Huddle\src\Huddle.App\App_Data\Teams' -Recurse -Filter *.md | Select-Object Name` and write down the list.
+1. In `T-B` run `Get-ChildItem '<data>\Teammates' -Recurse -Filter *.md | Select-Object FullName` and write down the list.
 2. In the browser go to `http://localhost:5100/teammates` and click **New teammate**.
 3. In **Name** type ` Nova Two` (one leading space before the N).
 4. In **Title** type `Test teammate`. In **Alias** type `novatwo`. In the **Persona body** textarea type `You are Nova Two.`
@@ -116,18 +117,18 @@ If the Model select shows only `Use the agent's default` with the hint "This age
 - Each of the three bad Names keeps the card open and shows a red message on the card reading `' Nova Two' is not a valid Persona name.` (and likewise for the trailing-space and doubled-space forms).
 - The typed Title, Alias and Persona body are still in their fields after each refusal — nothing the tester typed is thrown away.
 - The single-interior-space Name `Nova Two` is ACCEPTED: the card switches to the `Teammate` view showing `Nova Two`, and a tile `Nova Two` appears in the list.
-- After step 13 the Teams directory has gained exactly ONE new file, `Nova Two.md`, and no file whose name contains a leading, trailing or doubled space.
+- After step 13 `<data>\Teammates` has gained exactly ONE new definition, `Nova Two\Nova Two.md`, and no file or folder whose name contains a leading, trailing or doubled space.
 
 **Fail if — any of these**
 
 - Any of the three bad Names is accepted -> the filename guard is gone; Windows strips a trailing space, so `Nova Two ` and `Nova Two` would resolve to one file while presenting as two teammates, and Mention resolution becomes ambiguous.
 - A refusal writes a `.md` file anyway (step 13 shows extra files) -> validation runs after the write, leaving a file on disk that the UI claims was rejected.
-- `Nova Two` with one interior space is refused -> the rule has been over-tightened; a display Name like `Chief of Staff` is legitimate and this would make PERSONALIFECYCLE-08 impossible.
+- `Nova Two` with one interior space is refused -> the rule has been over-tightened; a display Name like `Head of Ops` is legitimate and this would make PERSONALIFECYCLE-08 impossible.
 - The refusal appears as a browser alert box or an `An unhandled error has occurred.` banner instead of an inline message on the card -> the error path is throwing rather than reporting.
 
 **Inconclusive if**
 
-If the browser or an input method silently trims the spaces you type (check by selecting the field text and looking at the selection), you cannot tell a refusal from a trim: switch to a different browser, or paste the value from a text editor, and re-run. If a file named `Nova Two.md` already existed before step 1, the error will instead read `Persona 'Nova Two' already exists.` — delete that file, restart the app and re-run.
+If the browser or an input method silently trims the spaces you type (check by selecting the field text and looking at the selection), you cannot tell a refusal from a trim: switch to a different browser, or paste the value from a text editor, and re-run. If the folder `<data>\Teammates\Nova Two` already existed before step 1, the error will instead read `Persona 'Nova Two' already exists.` (`PersonaStore.cs:370`) — delete that folder, restart the app and re-run.
 
 > [!NOTE]
 > Windows reserved device names (CON, NUL, COM1) pass this validation and then fail to become a real file, so such a teammate simply never appears. That is a pre-existing unguarded limit, recorded in the docs — do not test for it and do not file it.
@@ -140,13 +141,13 @@ If the browser or an input method silently trims the spaces you type (check by s
 
 **Before you start**
 
-- The ACP-disabled app from PERSONALIFECYCLE-01 is still running (the probe is deliberately NOT gated on `Team:Acp:Enabled`, so this test is free of adapters that stay alive).
 - The adapter is installed (setup step 1).
 - At least one Persona exists (`Nova` from PERSONALIFECYCLE-01).
+- The app is about to be restarted by step 1. The model list is cached for the life of an app run (`ModelCatalogProbe.cs:109-112`), and PERSONALIFECYCLE-01 and -02 already opened Create cards, so only a fresh run lets step 8 spawn a probe. The probe is deliberately NOT gated on `Team:Acp:Enabled`, so this test leaves no adapter alive.
 
 **Steps**
 
-1. In `T-B` run `Adapters` and write down the exact rows.
+1. Run [`P-STOP`](common.md#p-stop), then [`P-LAUNCH-FREE`](common.md#p-launch-free). In `T-B` run `Adapters` and write down the exact rows.
 2. In the browser navigate to `http://localhost:5100/teammates`.
 3. In `T-B` run `Adapters` immediately.
 4. In the browser press F5 to reload `/teammates`, twice.
@@ -171,7 +172,7 @@ If the browser or an input method silently trims the spaces you type (check by s
 **Fail if — any of these**
 
 - A `node.exe` appears on page load or reload (steps 3/5) -> the probe has moved to the page-load path; every visit to /teammates now costs a process, which was explicitly designed against.
-- Two or more extra `node.exe` rows appear on a single card-open -> the Effort ladder is spawning its own session instead of reusing the model probe's; the process cost per card-open has doubled.
+- Two or more extra `node.exe` rows appear on a single card-open -> the Effort ladder is spawning its own session instead of reusing the model probe's; the process cost per card-open has doubled. This test never chooses a Model, which is what keeps this Fail-if valid: choosing one (as PERSONALIFECYCLE-01 steps 10-11 do) starts a second, legitimate effort probe for the (claude, haiku) key (`ModelCatalogProbe.cs:184-209`).
 - A hint stays on `Reading the models this agent offers…` for more than 20 seconds -> the probe is hanging past its own timeout and the card will never become usable.
 - Step 13 spawns a fresh process -> the successful catalog is not being cached, so every card-open pays for a probe.
 
@@ -180,7 +181,7 @@ If the browser or an input method silently trims the spaces you type (check by s
 If another program on the machine runs `node.exe` (a dev server, an editor extension), you cannot attribute rows: close it, or read the `CommandLine` column and count only rows containing `claude-agent-acp`. If the pickers come back empty with the adapter installed, this test cannot judge the spawn counts — record it inconclusive and run PERSONALIFECYCLE-04, then treat an empty picker against a REAL installed adapter as a separate suspect (the `initialize` handshake, not the adapter).
 
 > [!NOTE]
-> The probe's working directory is `App_Data\work\`, never the repository root, so the throwaway adapter cannot pick up this repository's own CLAUDE.md. `App_Data\work\` itself being created by this probe is expected and proves nothing about any Persona.
+> The probe's working directory is the `Teammates` root (`<data>\Teammates`, `ModelCatalogProbe.cs:281`), never the repository root, so the throwaway adapter cannot pick up this repository's own CLAUDE.md. It is also not a Persona's Work Dir: a probe creates no `<data>\Teammates\<Name>\work` folder.
 
 ### PERSONALIFECYCLE-04 — A missing Adapter degrades the Model and Effort pickers with a plain-language hint, and restoring it works with no app restart
 
@@ -190,13 +191,13 @@ If another program on the machine runs `node.exe` (a dev server, an editor exten
 
 **Before you start**
 
-- The ACP-disabled app from PERSONALIFECYCLE-01 is still running.
-- You can rename folders under `E:\Repos\Huddle\tools\acp\`.
+- The app is about to be restarted by step 1: PERSONALIFECYCLE-01 to -03 already cached a successful model list for the life of that run, and the cache is checked before the adapter is located (`ModelCatalogProbe.cs:109` against `:286-291`), so with the adapter aside the pickers would still list real models and the empty-picker expectations below would fail against correct code.
+- You can rename folders under `<repo>\tools\acp\`.
 
 **Steps**
 
-1. In `T-B` run `Rename-Item 'E:\Repos\Huddle\tools\acp\node_modules' 'node_modules.off'`. If it fails with a file-in-use error, close any editor indexing that folder and retry.
-2. In the browser reload `http://localhost:5100/teammates` with F5.
+1. Run [`P-STOP`](common.md#p-stop). In `T-B` run `Rename-Item '<repo>\tools\acp\node_modules' 'node_modules.off'`; if it fails with a file-in-use error, close any editor indexing that folder and retry. Then run [`P-LAUNCH-FREE`](common.md#p-launch-free).
+2. In the browser open `http://localhost:5100/teammates`.
 3. Read the whole page: the heading, the tile list, the **Team** filter and the `Files that didn't load` block if present.
 4. Click **New teammate**.
 5. Read the grey hint under the **Model** select and the grey hint under the **Effort** select, word for word.
@@ -204,9 +205,9 @@ If another program on the machine runs `node.exe` (a dev server, an editor exten
 7. In **Name** type `Orphan`, in **Title** type `No adapter`, in **Alias** type `orphan`, in the **Persona body** textarea type `You are Orphan.`
 8. Click **Add teammate**.
 9. Read the card that results, in particular its **Model** and **Effort** sections.
-10. In `T-B` check the console in `T-A` for a line containing `No ACP adapter is installed; the model catalog is empty.`
+10. In `T-A` (`O-LOG`) look for a line containing `No ACP adapter is installed; the model catalog is empty.`
 11. In `T-B` run `Adapters` and confirm no probe process was spawned during steps 4-8.
-12. In `T-B` run `Rename-Item 'E:\Repos\Huddle\tools\acp\node_modules.off' 'node_modules'`.
+12. In `T-B` run `Rename-Item '<repo>\tools\acp\node_modules.off' 'node_modules'`.
 13. In the browser click the `Orphan` tile, then click **Edit**.
 14. Read the **Model** select and its hint again.
 
@@ -216,7 +217,7 @@ If another program on the machine runs `node.exe` (a dev server, an editor exten
 - The Model select contains exactly one option, `Use the agent's default`, and its hint reads exactly `This agent advertises no models, so it will use its own default.`
 - The Effort select contains exactly one option, `Use the agent's default`, and its hint reads exactly `This model offers no effort choice, so it will think as it normally does.`
 - Saving still works: the card switches to `Teammate` showing `Orphan`, its **Model** section reads `Agent default` and its **Effort** section reads `Model default`.
-- `T-A`'s console carries `No ACP adapter is installed; the model catalog is empty.` at Information level.
+- `T-A`'s console carries `No ACP adapter is installed; the model catalog is empty.` at Information level (`ModelCatalogProbe.cs:291`).
 - No `node.exe` was spawned while the folder was renamed aside.
 - After restoring the folder and reopening the card in step 13 — with NO app restart — the Model select lists real models again, including one labelled with `Haiku`.
 
@@ -235,16 +236,16 @@ If the rename in step 1 fails because a file is locked, the test cannot start �
 > [!NOTE]
 > In the picker a failed probe, a cancelled probe, a missing adapter and an unauthenticated adapter all read identically. That ambiguity is a recorded limit — only a Persona that FAILED TO START distinguishes them (PERSONALIFECYCLE-09 and -25).
 
-### PERSONALIFECYCLE-05 — Restart with Team:Acp:Enabled=false — record whether it starts a real adapter anyway
+### PERSONALIFECYCLE-05 — Restart with Team:Acp:Enabled=false starts nothing and says why on the card
 
 **Free** · about 8 min
 
-*Establishes, as a measurement rather than a guess, whether the Restart button is the one path that ignores the money flag the operator switched off.*
+*Proves the Restart button is not a path around the money flag the operator switched off: it reports Offline with a reason instead of starting an adapter.*
 
 **Before you start**
 
-- The ACP-disabled app from PERSONALIFECYCLE-01 is still running and the adapter folder has been restored (PERSONALIFECYCLE-04 step 12).
-- At least one Persona exists and reads Offline.
+- `E-FREE`: the app from PERSONALIFECYCLE-04 is running under `P-LAUNCH-FREE`, and the adapter folder has been restored (PERSONALIFECYCLE-04 step 12).
+- At least one Persona exists and reads Offline (`Nova` or `Orphan`).
 
 **Steps**
 
@@ -256,21 +257,23 @@ If the rename in step 1 fails because a file is locked, the test cannot start �
 6. Watch the card's status line for 30 seconds and write down every status word it shows, in order.
 7. In `T-B` run `Adapters` every two seconds for 30 seconds and write down the highest row count and whether any new row persists.
 8. Read `T-A`'s console for new lines mentioning `Nova`.
-9. Whatever happened, write it down verbatim — this test reports behaviour, it does not assume one.
-10. If an adapter did start, click the `Nova` tile again and check whether a **Message** link is now on the card and whether a Room named `Nova` has appeared in the sidebar.
+9. Read the line under the status on the card, word for word, and hover the `Nova` tile's status line for three seconds to read its tooltip.
+10. Check that the card still has no **Message** link and that no Room named `Nova` has appeared in the sidebar.
 11. Stop the app in `T-A` with Ctrl+C.
 12. In `T-B` run `Adapters` one final time.
 
 **Pass if — all of these**
 
-- Exactly one of these two outcomes is observed, recorded verbatim, and reported as the build's behaviour: (A) clicking Restart starts a real adapter — the button reads `Restarting…` while disabled, a new `node.exe` row appears and persists, and the status goes Starting then Online; or (B) the Restart is a no-op that reports something to the human on the card and no `node.exe` appears.
-- In BOTH outcomes: clicking Restart once produces AT MOST ONE new persistent `node.exe` row.
-- In BOTH outcomes: no `An unhandled error has occurred.` banner, and the button ends the test re-enabled (or gone, if the teammate came Online).
+- Clicking Restart starts nothing: `Adapters` never shows a persistent new `node.exe` row, and the tile and the card stay **Offline** throughout.
+- Both the card (as the full line under the status) and the tile's tooltip read exactly `Teammates are switched off in this configuration, so nothing was started.` (`PersonaSupervisor.cs:508-512`).
+- The card has no **Message** link and the sidebar has no `Nova` Room.
+- No `An unhandled error has occurred.` banner, and the button ends the test re-enabled and reading **Restart**.
 - After Ctrl+C in step 11, `Adapters` shows no rows containing `claude-agent-acp` — nothing was orphaned.
 
 **Fail if — any of these**
 
-- Two or more persistent `node.exe` rows appear from one click -> a duplicate start slipped past the supervisor's starting/stopping guard and two adapter processes now share one agent id.
+- A `node.exe` row containing `claude-agent-acp` persists after the click -> the Restart path bypasses the money flag: the teammate would be live in a configuration the operator switched off, and the next Message typed to it would spend real money.
+- The card shows no reason, or a different one -> Restart is a button that does nothing at all, the failure this area keeps producing.
 - The button stays stuck on `Restarting…` and never re-enables -> the busy flag is never cleared and the only recovery is a page reload.
 - The card shows `An unhandled error has occurred.` -> the restart path is throwing into the circuit instead of reporting on the card.
 - An adapter survives Ctrl+C in step 12 -> shutdown is orphaning processes; those keep a session open and can keep spending.
@@ -278,10 +281,10 @@ If the rename in step 1 fails because a file is locked, the test cannot start �
 
 **Inconclusive if**
 
-If the tile was already Online (because a previous test left ACP enabled in this window), the Restart button will not be offered — check `T-A`'s startup output for `Team:Acp:Enabled` and re-run in a fresh window with `$env:Team__Acp__Enabled='false'`. If outcome (A) occurs, note in the report that the teammate is now LIVE in a configuration the operator switched off, so the next Message typed in its Room would spend real money — this is the finding, not a bug to fix on the spot.
+If the tile was already Online or the reason line is absent because the app was started with ACP on, the Restart button will not behave as described — in `T-A` run `Get-ChildItem Env:Team__*` and `P-STOP`, then relaunch with `P-LAUNCH-FREE` and re-run.
 
 > [!NOTE]
-> Either outcome is defensible; the tester's job is to state which one this build does. `Team:Acp:Enabled` is consulted only where the supervisor starts everything at app startup, so the manual restart path plausibly never sees it.
+> The guard sits in the one place a host is ever created (`PersonaSupervisor.cs:496-512`), so startup, a Persona file changing and the Restart button all reach it. This test pins the Restart route.
 
 ### PERSONALIFECYCLE-06 — A Persona added while the app is running comes Online and gets a Room named after it, with no page refresh
 
@@ -291,14 +294,15 @@ If the tile was already Online (because a previous test left ACP enabled in this
 
 **Before you start**
 
-- No app is running.
+- `E-STOPPED`: no app is running (PERSONALIFECYCLE-05 ended with Ctrl+C).
 - The adapter is installed and the machine is logged in to Claude.
 - You have a fresh PowerShell `T-A` with no `Team__` environment variables set (open a new one to be sure).
+- The Chief of Staff is already set to Haiku / `low` (Setup 8).
 
 **Steps**
 
-1. In `T-A` run `dotnet run --project src\Huddle.App --urls http://localhost:5100` and wait for `Now listening on: http://localhost:5100`.
-2. In `T-B` run `Adapters` and write down the row count.
+1. Run [`P-RESET-TEAMS`](common.md#the-five-resets) in `<data>`. Nothing between PERSONALIFECYCLE-01 and here removes `Nova` (-01), `Nova Two` (-02) or `Orphan` (-04), and step 5 would be refused with `Persona 'Nova' already exists.` (`PersonaStore.cs:368-371`); their leftover folders would also start adapters and break the counts below. The Chief of Staff is re-seeded at the next start; if its card no longer reads Haiku / `low`, repeat Setup 8 first so the Greeting stays cheap. Then, in `T-A`, run `dotnet run --project src/Huddle.App --urls http://localhost:5100` and wait for `Now listening on: http://localhost:5100`.
+2. In `T-B` run `Adapters` and write down the rows (the Chief of Staff's, once Online).
 3. In the browser open `http://localhost:5100/teammates`.
 4. Click **New teammate**.
 5. In **Name** type `Nova`. In **Title** type `Test teammate`. In **Alias** type `nova`. Leave **Teams** empty.
@@ -307,9 +311,9 @@ If the tile was already Online (because a previous test left ACP enabled in this
 8. Click **Add teammate** and immediately start watching the status line on the card. Write down every status word it shows, in order, with rough timings.
 9. Without reloading the page, watch the sidebar Room list for 30 seconds.
 10. In `T-B` run `Adapters`.
-11. In `T-B` run `Get-Content 'E:\Repos\Huddle\src\Huddle.App\App_Data\Teams\Nova.md'`.
+11. In `T-B` run `Get-Content '<data>\Teammates\Nova\Nova.md'`.
 12. In `T-A`, read the console for a line containing `Created direct room` and for any line containing `failed to start`.
-13. OPTIONAL (needs sqlite3): in `T-B` run `sqlite3 'E:\Repos\Huddle\src\Huddle.App\App_Data\team.db' "select id,name,kind from users; select id,name from rooms; select * from persona_models;"`
+13. OPTIONAL (needs sqlite3): in `T-B` run `sqlite3 '<data>\team.db' "select id,name,kind from users; select id,name from rooms; select * from persona_models;"`
 
 **Pass if — all of these**
 
@@ -317,8 +321,8 @@ If the tile was already Online (because a previous test left ACP enabled in this
 - The status line shows **Offline** briefly, then **Starting**, then **Online** with a green dot, reaching Online within about 30 seconds.
 - A tile `Nova` is in the list and reads **Online**.
 - Within a few seconds and with NO page refresh, the sidebar gains a Room named exactly `Nova`.
-- `Adapters` has gained exactly ONE persistent `node.exe` row whose CommandLine contains `claude-agent-acp`.
-- `Nova.md` begins with `---`, then `name: 'Nova'`, `title: 'Test teammate'`, `alias: 'nova'`, then `---`, then the body text verbatim.
+- `Adapters` has gained exactly ONE persistent `node.exe` row, compared with step 2, whose CommandLine contains `claude-agent-acp`.
+- `Teammates\Nova\Nova.md` begins with `---`, then `name: 'Nova'`, `title: 'Test teammate'`, `alias: 'nova'`, then `---`, then the body text verbatim.
 - `T-A`'s console contains `Created direct room` naming `Nova`, and contains NO `Persona 'Nova' failed to start.` warning.
 - If sqlite3 was available: `users` has a row named `Nova`, `rooms` has a row named `Nova`, and `persona_models` holds a model ID string for `Nova` (an id such as `claude-haiku-…`, not a display label like `Haiku 4.5`).
 
@@ -337,13 +341,13 @@ If the tile was already Online (because a previous test left ACP enabled in this
 If the Model select is empty, you cannot honour the Haiku convention — record it, run PERSONALIFECYCLE-04 to find out why, and re-run this test afterwards. If sqlite3 is not installed, record the database checks as not-checked; the UI conditions alone still decide pass or fail. If the tile flips straight to Offline with an authentication reason, this test is inconclusive (not a FAIL) — fix the login first.
 
 > [!NOTE]
-> The Starting badge is only reachable once the pipe has connected, so seeing the word Starting on screen proves BOTH that the pipe registered and that health reported Starting. Keep this app run and the `Nova` Persona: tests -07 through -25 build on them.
+> The Starting badge is only reachable once the pipe has connected, so seeing the word Starting on screen proves BOTH that the pipe registered and that health reported Starting. Keep this app run and the `Nova` Persona: tests -07 through -25 build on them. `Chief of Staff` is also Online, and its Room `Chief of Staff` exists from the first start; it is not the Persona this test adds.
 
-### PERSONALIFECYCLE-07 — The Work Dir is named from the frontmatter Name and does not follow a renamed file
+### PERSONALIFECYCLE-07 — A definition that is renamed, or that sits outside its Teammate's folder, is rejected with a reason, and restoring it brings the Teammate back
 
-**Free** · about 10 min
+**Free** · about 12 min
 
-*Catches a path-derived key creeping back in — the regression the rules doc calls out — by renaming the .md file on disk and proving nothing about the teammate changes.*
+*Proves a Persona's identity is its folder plus the definition inside it: a renamed definition, an extra `.md` and a `.md` at the `Teammates` root are each refused in words, never loaded under a path-derived name.*
 
 **Before you start**
 
@@ -351,40 +355,43 @@ If the Model select is empty, you cannot honour the Haiku convention — record 
 
 **Steps**
 
-1. In `T-B` run `Get-ChildItem 'E:\Repos\Huddle\src\Huddle.App\App_Data\work' | Select-Object Name`.
-2. Confirm there is a folder named exactly `Nova`.
-3. In `T-B` run `Get-ChildItem 'E:\Repos\Huddle\src\Huddle.App\App_Data\work\Nova'` and note whether it is empty.
-4. In `T-B` run `Rename-Item 'E:\Repos\Huddle\src\Huddle.App\App_Data\Teams\Nova.md' 'nova-renamed.md'`.
+1. In `T-B` run `Get-ChildItem '<data>\Teammates\Nova'` and note the two entries: `Nova.md` and the `work` folder.
+2. In `T-B` run `Get-ChildItem '<data>\Teammates\Nova\work'`. A `memory` folder is always created there when the session starts (`DotAcpAgentHostFactory.cs:135-136`), so the Work Dir is not empty.
+3. In `T-B` run `Adapters` and write down the rows.
+4. In `T-B` run `Rename-Item '<data>\Teammates\Nova\Nova.md' 'nova-renamed.md'`.
 5. Wait 10 seconds and watch `T-A`'s console and the browser's `/teammates` page without reloading it.
-6. Read the tile list.
-7. Click the `Nova` tile and read the **Persona file** section at the bottom of the card.
-8. Close the card and look at the sidebar Room list.
-9. In `T-B` re-run `Get-ChildItem 'E:\Repos\Huddle\src\Huddle.App\App_Data\work' | Select-Object Name`.
-10. In `T-B` run `Get-Content 'E:\Repos\Huddle\src\Huddle.App\App_Data\Teams\nova-renamed.md' | Select-Object -First 3` and confirm `name: 'Nova'` is unchanged.
-11. In `T-B` run `Rename-Item 'E:\Repos\Huddle\src\Huddle.App\App_Data\Teams\nova-renamed.md' 'Nova.md'` to restore.
+6. Read the tile list and the `Files that didn't load` block at the top of the page.
+7. Close any card and look at the sidebar Room list.
+8. In `T-B` run `Adapters` and compare with step 3.
+9. In `T-B` run `Rename-Item '<data>\Teammates\Nova\nova-renamed.md' 'Nova.md'` to restore. Wait 15 seconds and confirm the `Nova` tile returns and reads **Online**.
+10. In `T-B` run `Set-Content '<data>\Teammates\Stray.md' 'not in a folder'`. Wait 10 seconds and read the `Files that didn't load` block again.
+11. In `T-B` run `Remove-Item '<data>\Teammates\Stray.md'`. Wait 10 seconds and confirm the entry is gone.
+12. In `T-B` run `Get-ChildItem '<data>\Teammates' -Directory | Select-Object Name`.
 
 **Pass if — all of these**
 
-- Before the rename, `App_Data\work` contains a folder named exactly `Nova`, and it is empty.
-- After renaming the file, the tile is still named `Nova` — the Name comes from the frontmatter, not the filename.
-- The card's **Persona file** section shows the NEW path ending in `nova-renamed.md`.
-- The Room named `Nova` is still in the sidebar.
-- `App_Data\work` still has exactly one folder for this teammate and it is still named `Nova` — no folder named `nova-renamed` appears, before or after the restart the rename triggers.
+- Before the rename, `Teammates\Nova` holds `Nova.md` and `work`, and `work` contains a `memory` folder.
+- After renaming the definition, the `Nova` tile disappears and `Files that didn't load` lists `<data>\Teammates\Nova\nova-renamed.md` with the reason `A teammate folder holds only its definition; use work/.` (`PersonaStore.cs:773`).
+- The Room named `Nova` stays in the sidebar, and opening it shows NO red alert strip.
+- `Nova`'s `node.exe` row is gone from `Adapters` — the rejected Persona's adapter is stopped.
+- Restoring `Nova.md` brings the tile back and it reaches **Online**.
+- A `Stray.md` written directly in `Teammates` is listed in `Files that didn't load` with the reason `A definition must be inside its teammate's folder.` (`PersonaStore.cs:719`), and no tile appears for it; removing the file clears the entry.
+- After step 12 no folder named `nova-renamed` or `Stray` exists, and `Nova` still has exactly one Work Dir, `Teammates\Nova\work`.
 
 **Fail if — any of these**
 
-- A work folder named `nova-renamed` appears -> the Work Dir key is derived from the file path; renaming a file would silently strand everything the previous session wrote.
-- The tile is renamed to `nova-renamed` -> identity has moved from the frontmatter to the filename, contradicting the Teams-are-a-field decision.
-- The tile disappears entirely and does not come back -> the recursive watcher missed the rename, and this Persona is now invisible with no error anywhere (a silent failure).
-- No work folder exists at all for `Nova` -> the host factory never ran; check whether the teammate is really Online.
-- The work folder is created at the repository root or beside the built binary rather than under `App_Data` -> the Work Dir is escaping DataDir.
+- A folder named `nova-renamed` appears, or the tile is renamed `nova-renamed` -> identity or the Work Dir has been derived from the file path again; renaming a file would silently strand everything the previous session wrote.
+- The renamed definition is loaded as a second Teammate or silently ignored with nothing on screen -> a file that is not a valid definition is neither accepted nor reported, the silent failure this rule exists to prevent.
+- The tile stays **Online** with its adapter running after the rename -> a Persona whose definition is rejected is still live and can still spend money.
+- `Stray.md` produces a tile -> a definition outside a Teammate folder is being loaded, so the ADR-0031 layout is no longer enforced.
+- The reason text names an exception type rather than the rule -> the diagnostic is not fit for the human reading it.
 
 **Inconclusive if**
 
-If the rename in step 4 is blocked because an editor holds the file open, close it and retry — do not conclude anything from a failed rename. If the app was started from a different working directory, `App_Data` may not be under `src\Huddle.App`; find it with `Get-ChildItem -Path E:\Repos\Huddle -Recurse -Filter team.db -Depth 4` and use that path throughout.
+If the rename in step 4 is blocked because an editor holds the file open, close it and retry — do not conclude anything from a failed rename. If the app was started from a different working directory, `App_Data` may not be under `src\Huddle.App`; find it with `Get-ChildItem -Path <repo> -Recurse -Filter team.db -Depth 4` and use that path as `<data>` throughout.
 
 > [!NOTE]
-> `App_Data\work\` itself (with no Persona subfolder) is created by the Model/Effort picker probe, so the parent folder existing proves nothing on its own — judge only the named subfolder. The Work Dir is not a jail: agent-side Bash and Write reach the real disk, which is a recorded limit, not a defect.
+> The Work Dir is not a jail: agent-side Bash and Write reach the real disk, which is a recorded limit, not a defect. The Room surviving the rejection is deliberate no-cascade behaviour.
 
 ### PERSONALIFECYCLE-08 — A Name containing spaces works for the monogram, the Room and the Work Dir
 
@@ -399,29 +406,29 @@ If the rename in step 4 is blocked because an editor holds the file open, close 
 **Steps**
 
 1. In the browser go to `http://localhost:5100/teammates` and click **New teammate**.
-2. In **Name** type `Chief of Staff`. In **Title** type `Keeps the team honest`. In **Alias** type `cos`. Leave **Teams** empty.
-3. In the **Persona body** textarea type `You are the Chief of Staff. Answer in one short sentence.`
+2. In **Name** type `Head of Ops`. In **Title** type `Keeps the team honest`. In **Alias** type `ho`. Leave **Teams** empty. (The built-in `Chief of Staff` is always seeded, so that Name is refused as already existing.)
+3. In the **Persona body** textarea type `You are Head of Ops. Answer in one short sentence.`
 4. In the **Model** select choose the entry labelled with `Haiku`. In the **Effort** select choose `low`.
 5. Click **Add teammate**.
 6. Read the round avatar badge (the monogram) on the card and on the new tile.
 7. Wait until the tile reads **Online**, then look at the sidebar Room list.
-8. In `T-B` run `Get-ChildItem 'E:\Repos\Huddle\src\Huddle.App\App_Data\work' | Select-Object Name`.
-9. In `T-B` run `Get-ChildItem 'E:\Repos\Huddle\src\Huddle.App\App_Data\Teams' | Select-Object Name`.
-10. OPTIONAL (sqlite3): run `sqlite3 'E:\Repos\Huddle\src\Huddle.App\App_Data\team.db' "select name from rooms;"`
+8. In `T-B` run `Get-ChildItem '<data>\Teammates\Head of Ops' | Select-Object Name`.
+9. In `T-B` run `Get-ChildItem '<data>\Teammates' -Directory | Select-Object Name`.
+10. OPTIONAL (sqlite3): run `sqlite3 '<data>\team.db' "select name from rooms;"`
 
 **Pass if — all of these**
 
-- The monogram reads `CS` — the first letter of the first word and of the LAST word, not the first two words.
-- A tile reads `Chief of Staff` in full and reaches **Online**.
-- The sidebar gains a Room named exactly `Chief of Staff`, spaces intact.
-- `App_Data\work` gains a folder named exactly `Chief of Staff`.
-- `App_Data\Teams` gains a file named exactly `Chief of Staff.md`.
-- If sqlite3 was available, the `rooms` table holds the full name `Chief of Staff`.
+- The monogram reads `HO` — the first letter of the first word and of the LAST word (`TeammateAvatar.razor:111`).
+- A tile reads `Head of Ops` in full and reaches **Online**.
+- The sidebar gains a Room named exactly `Head of Ops`, spaces intact.
+- `Teammates\Head of Ops` holds a file named exactly `Head of Ops.md` and a `work` folder.
+- `Teammates` gains a folder named exactly `Head of Ops`.
+- If sqlite3 was available, the `rooms` table holds the full name `Head of Ops`.
 
 **Fail if — any of these**
 
-- The Room, the folder or the file is named `Chief` -> something in the chain truncates at the first space; that teammate's work would land in the wrong place and its Room would be unfindable.
-- The monogram reads `CO` -> the monogram takes the first two words, giving the connective `of` a letter it does not deserve (cosmetic, but report it).
+- The Room, the folder or the file is named `Head` -> something in the chain truncates at the first space; that teammate's work would land in the wrong place and its Room would be unfindable.
+- The monogram reads `H` -> the monogram takes only the first word (cosmetic, but report it). This Name cannot tell first-and-last from the first two words, since both give `HO`; that distinction is covered by the automated avatar tests, not here.
 - The Name is refused as invalid -> single interior spaces have been over-restricted, which contradicts PERSONALIFECYCLE-02.
 - The tile appears but never reaches Online while `Nova` is fine -> suspect the spaces in the Work Dir path being passed unquoted to the adapter process.
 
@@ -430,7 +437,7 @@ If the rename in step 4 is blocked because an editor holds the file open, close 
 If the teammate reaches only **Starting** and stalls, wait a full 60 seconds before judging — a second adapter starting while others are running is slower. If it is still Starting, check `T-A` for a start failure and treat an authentication or missing-adapter reason as inconclusive for THIS test.
 
 > [!NOTE]
-> Whether a real model can write `@Chief of Staff` out in full to reach it in a group Room is a separate, money-spending concern and is deliberately not tested here.
+> Whether a real model can write `@Head of Ops` out in full to reach it in a group Room is a separate, money-spending concern and is deliberately not tested here.
 
 ### PERSONALIFECYCLE-09 — A missing Adapter reports the same actionable reason on the tile, the card and the Room strip, and harms no other teammate
 
@@ -441,11 +448,11 @@ If the teammate reaches only **Starting** and stalls, wait a full 60 seconds bef
 **Before you start**
 
 - The app from PERSONALIFECYCLE-06 is running with `Nova` and `Chief of Staff` Online.
-- You can rename folders under `E:\Repos\Huddle\tools\acp\`.
+- You can rename folders under `<repo>\tools\acp\`.
 
 **Steps**
 
-1. In `T-B` run `Rename-Item 'E:\Repos\Huddle\tools\acp\node_modules' 'node_modules.off'`.
+1. In `T-B` run `Rename-Item '<repo>\tools\acp\node_modules' 'node_modules.off'`.
 2. In the browser go to `http://localhost:5100/teammates` and click the `Nova` tile, then click **Restart**.
 3. Wait 15 seconds, then read the card's status line and the line directly under it.
 4. Close the card and hover the mouse over the `Nova` tile's status line for three seconds; read the tooltip.
@@ -453,19 +460,19 @@ If the teammate reaches only **Starting** and stalls, wait a full 60 seconds bef
 6. In the sidebar click the Room named `Nova` and read the area directly above the composer.
 7. In the sidebar click the Room named `Chief of Staff` and read the area directly above the composer.
 8. In `T-A` read the console for a warning containing `Persona 'Nova' failed to start.`
-9. In `T-B` run `Get-ChildItem 'E:\Repos\Huddle\src\Huddle.App\App_Data\work' | Select-Object Name`.
+9. In `T-B` run `Get-ChildItem '<data>\Teammates\Nova' | Select-Object Name`.
 10. In `T-B` run `Adapters` and count the rows containing `claude-agent-acp`.
-11. OPTIONAL (sqlite3): run `sqlite3 'E:\Repos\Huddle\src\Huddle.App\App_Data\team.db' "select name from users;"` and confirm `Nova` is still listed.
+11. OPTIONAL (sqlite3): run `sqlite3 '<data>\team.db' "select name from users;"` and confirm `Nova` is still listed.
 12. Leave the adapter folder renamed aside — PERSONALIFECYCLE-10 restores it.
 
 **Pass if — all of these**
 
-- The `Nova` card reads **Offline** and shows, as a full line under the status, exactly: `No ACP adapter is installed for Persona 'Nova'. Run tools/acp/install.ps1 (or set Team:Acp:AdapterPath / Team:Acp:Args) before enabling this Persona.`
+- The `Nova` card reads **Offline** and shows, as a full line under the status, exactly: `No ACP adapter is installed for Persona 'Nova' on Adapter 'claude'. Run tools/acp/install.ps1 (or set Team:Acp:AdapterPath / Team:Acp:Args) before enabling this Persona.` (`DotAcpAgentHostFactory.cs:138-141`)
 - The `Nova` tile reads **Offline** and its tooltip carries that same reason text.
-- The `Nova` Room shows a red alert strip above the composer reading `Nova is Offline: No ACP adapter is installed for Persona 'Nova'. …`.
+- The `Nova` Room shows a red alert strip above the composer reading `Nova is Offline: No ACP adapter is installed for Persona 'Nova' on Adapter 'claude'. …` (`Chat.razor:81`).
 - The `Chief of Staff` tile still reads **Online**, its Room shows NO alert strip, and its `node.exe` row is still in `Adapters`.
-- `App_Data\work\Nova` still exists — the Work Dir is created before the adapter is located, so its presence proves the start was entered and the adapter lookup is what failed.
-- `T-A`'s console carries a Warning `Persona 'Nova' failed to start.` naming one Persona only.
+- `Teammates\Nova\work` still exists — the Work Dir is created before the adapter is located (`DotAcpAgentHostFactory.cs:130-138`). It already existed from PERSONALIFECYCLE-06, so this only shows the failed start did not delete it; the Restart in step 2 is what enters the lookup.
+- `T-A`'s console carries a Warning `Persona 'Nova' failed to start.` naming one Persona only (`PersonaSupervisor.cs:617`).
 - If sqlite3 was available, `Nova` is still a row in `users` — registration happened; only the adapter launch did not.
 
 **Fail if — any of these**
@@ -475,7 +482,7 @@ If the teammate reaches only **Starting** and stalls, wait a full 60 seconds bef
 - `Chief of Staff` also goes Offline -> one Persona's failure is taking down others; a shared failure path or an aborting start loop.
 - An alert strip appears in a Room that `Nova` is not a member of -> the strip is listing agents by something other than membership.
 - `An unhandled error has occurred.` appears -> a start failure is escaping into the circuit rather than being reported as health.
-- `App_Data\work\Nova` is absent -> the directory is no longer created before the adapter lookup, so a tester can no longer tell "the adapter is missing" from "the Persona never started".
+- `Teammates\Nova\work` is absent -> the Work Dir was deleted by the failed start, so a tester can no longer tell "the adapter is missing" from "the Persona never started".
 
 **Inconclusive if**
 
@@ -496,9 +503,9 @@ If the rename in step 1 fails (file in use), the test cannot start. If `Nova` wa
 
 **Steps**
 
-1. In the browser open the `Nova` card and click **Restart** once, while the adapter is still missing.
+1. In the browser open the `Nova` card and click **Restart** once, while the adapter is still missing. (`<repo>\tools\acp\node_modules` is renamed to `node_modules.off`.)
 2. Read the card for 10 seconds: the button label, the status line and the reason line.
-3. In `T-B` run `Rename-Item 'E:\Repos\Huddle\tools\acp\node_modules.off' 'node_modules'`.
+3. In `T-B` run `Rename-Item '<repo>\tools\acp\node_modules.off' 'node_modules'`.
 4. In `T-B` run `Adapters` and write down the rows.
 5. In the browser, on the `Nova` card, click **Restart** ONCE. Do not click again.
 6. Watch the button label for the first two seconds and write down what it reads.
@@ -533,15 +540,15 @@ If step 3's rename fails, stop and fix it — everything after depends on the ad
 > [!NOTE]
 > A Degraded or Offline teammate is never restarted automatically by design — the human clicking this button is the whole recovery policy.
 
-### PERSONALIFECYCLE-11 — Restart is offered only for an unhealthy Teammate, and is accompanied by the memory-loss warning
+### PERSONALIFECYCLE-11 — Restart is offered in every state except Starting, and is accompanied by the memory-loss warning
 
-**Free** · about 6 min
+**Free** · about 8 min
 
-*Proves a healthy teammate cannot be restarted for nothing, and that a human is warned before throwing away conversation memory.*
+*Proves a Teammate can be restarted on purpose when it is Online, Offline or Degraded (a NextSession Prompt edit needs exactly that) but not while it is mid-start, and that a human is warned before throwing away conversation memory (`TeammateCard.razor:167-185,234-237`).*
 
 **Before you start**
 
-- The app is running with `Nova` Online (after PERSONALIFECYCLE-10) and at least one other teammate present.
+- The app is running with `Nova` Online (after PERSONALIFECYCLE-10) and at least one other teammate present (the `Chief of Staff` always is).
 
 **Steps**
 
@@ -554,23 +561,26 @@ If step 3's rename fails, stop and fix it — everything after depends on the ad
 7. In `T-B` run `Stop-Process -Id <pid>` for that adapter.
 8. In the browser, without reloading, wait up to 10 seconds and click the `Nova` tile again.
 9. Read every button in the action row again, and read the hint line under it, word for word.
+10. Click **Restart** and, within the first seconds, read the card again while the status word reads **Starting**. If the start is too quick to catch, record "Starting not observed" and judge only the earlier steps.
 
 **Pass if — all of these**
 
-- For the Online teammate the action row is exactly: **Message**, **Edit**, **Open**, **Remove** — with NO **Restart** button and NO hint line under the row.
-- After the adapter is killed, the same card shows **Message**, **Edit**, **Open**, **Restart**, **Remove**, with **Restart** between **Open** and **Remove**.
-- With Restart present, the line under the action row reads exactly: `Like saving an edit, this restarts the teammate, which clears what it remembers.`
+- For the Online teammate the action row is **Message**, **Edit**, **Open**, **Restart** and the **Remove** icon button (`aria-label="Remove"`), in that order, and the hint line is present.
+- After the adapter is killed, the same card shows the same row, with **Restart** between **Open** and **Remove**, and the same hint line.
+- The hint line under the action row reads exactly: `Like saving an edit, this restarts the teammate, which clears what it remembers.`
+- While the status word reads **Starting** (step 10, if observed) the **Restart** button and the hint line are both absent.
 
 **Fail if — any of these**
 
-- A **Restart** button is offered on a healthy teammate -> a human can now throw away a working session's memory for no reason, with no signal that there was nothing wrong.
+- No **Restart** button on an Online or Offline teammate -> a NextSession Prompt edit cannot be applied without editing the Persona text, which the button exists to avoid.
 - The hint line is missing when Restart is shown -> the human is not warned that recovery costs the teammate's memory.
+- **Restart** is shown while the status reads **Starting** -> a click races the start it would cancel.
 - A **Message** link is shown for a teammate that has never connected -> the card is offering a Room that does not exist.
-- The Restart button appears but the status still reads **Online** -> the gate and the badge are reading different state, so one of them is wrong.
+- The Restart button appears but the status still reads a state the row disagrees with -> the gate and the badge are reading different state, so one of them is wrong.
 
 **Inconclusive if**
 
-If you cannot attribute a `node.exe` row to `Nova` specifically, do not kill any process: instead reach an unhealthy state the safe way — rename `tools\acp\node_modules` aside and click Restart (PERSONALIFECYCLE-09) — then run steps 8-9. Record which route you used.
+If you cannot attribute a `node.exe` row to `Nova` specifically, do not kill any process: instead reach an unhealthy state the safe way — rename `<repo>\tools\acp\node_modules` aside and click Restart (PERSONALIFECYCLE-09) — then run steps 8-9 and restore the folder. Record which route you used.
 
 > [!NOTE]
 > The Starting dot (yellow) and the Degraded dot (orange) are nearly the same colour throughout this suite: always judge by the text label, never by the dot.
@@ -584,7 +594,7 @@ If you cannot attribute a `node.exe` row to `Nova` specifically, do not kill any
 **Before you start**
 
 - The app is running with `Nova` Online.
-- You can identify `Nova`'s adapter process (start the app with ONLY `Nova` in `App_Data\Teams\` if attribution is otherwise impossible — move other .md files out and back).
+- You can identify `Nova`'s adapter process (if attribution is otherwise impossible, stop the app, move the other Teammate folders except `Chief of Staff` out of `<data>\Teammates` and back, and relaunch).
 - `Nova`'s Room exists in the sidebar.
 
 **Steps**
@@ -604,8 +614,8 @@ If you cannot attribute a `node.exe` row to `Nova` specifically, do not kill any
 
 **Pass if — all of these**
 
-- Within a second or two of the kill and with NO interaction, the `Nova` tile changes to **Offline**.
-- The reason names which loop died — text of the shape `Its event reader ended unexpectedly.` or `Its read loop ended unexpectedly: …` or `The pipe 'team' broke: …` — on both the tooltip and the card.
+- Within 5 seconds of the kill (Blazor Server timing varies) and with NO interaction, the `Nova` tile changes to **Offline**.
+- The reason names which loop died — text of the shape `Its event reader ended unexpectedly.` or `Its read loop ended unexpectedly: …` or `The pipe '<pipe name>' broke: …` (`PersonaRunner.cs:822-824`) — on both the tooltip and the card.
 - The `Nova` Room grows a red alert strip reading `Nova is Offline: Its … ended unexpectedly…`.
 - `T-A`'s console carries `The agent process disconnected.` and a warning naming the loop.
 - The other teammate stays **Online** with no alert strip in its Room.
@@ -641,24 +651,24 @@ If you cannot attribute a `node.exe` row to `Nova`, do not kill anything — re-
 
 **Steps**
 
-1. In the browser at `/teammates` ensure three teammates exist and all read **Online**: `Nova`, `Chief of Staff`, and a third created via **New teammate** with Name `Ada`, Title `Third teammate`, Alias `ada`, body `You are Ada. Answer in one short sentence.`, Model containing `Haiku`, Effort `low`.
-2. In `T-B` run `Adapters` and confirm three `claude-agent-acp` rows.
+1. In the browser at `/teammates` ensure these teammates exist and all read **Online**: `Nova`, the built-in `Chief of Staff`, and `Ada`, created via **New teammate** with Name `Ada`, Title `Third teammate`, Alias `ada`, body `You are Ada. Answer in one short sentence.`, Model containing `Haiku`, Effort `low`. (`Head of Ops` from PERSONALIFECYCLE-08 is Online too.)
+2. In `T-B` run `Adapters` and write down the rows: one `claude-agent-acp` row per Online teammate.
 3. In `T-B` identify `Ada`'s row (newest CreationDate) and run `Stop-Process -Id <pid>` on it.
 4. Wait 10 seconds without touching the browser.
 5. Read all three tiles' status lines.
 6. Open the `Nova` Room and the `Chief of Staff` Room and look above each composer.
 7. In `T-A` count how many distinct Persona names appear in new warning lines.
 8. In `T-B` run `Adapters` and count rows.
-9. Now provoke a second, different failure: in `T-B` run `Rename-Item 'E:\Repos\Huddle\tools\acp\node_modules' 'node_modules.off'`, then in the browser click **New teammate** and add Name `Ghost`, Title `Fourth`, Alias `ghost`, body `You are Ghost.` and click **Add teammate**.
+9. Now provoke a second, different failure: in `T-B` run `Rename-Item '<repo>\tools\acp\node_modules' 'node_modules.off'`, then in the browser click **New teammate** and add Name `Ghost`, Title `Fourth`, Alias `ghost`, body `You are Ghost.` and click **Add teammate**.
 10. Read all four tiles' status lines and the two healthy Rooms again.
-11. In `T-B` run `Rename-Item 'E:\Repos\Huddle\tools\acp\node_modules.off' 'node_modules'` to restore.
+11. In `T-B` run `Rename-Item '<repo>\tools\acp\node_modules.off' 'node_modules'` to restore.
 
 **Pass if — all of these**
 
 - After `Ada`'s adapter is killed, only the `Ada` tile changes state; `Nova` and `Chief of Staff` still read **Online**.
 - `Nova`'s and `Chief of Staff`'s Rooms show no alert strip.
 - `T-A`'s warnings name exactly ONE Persona (`Ada`).
-- `Adapters` keeps exactly two `claude-agent-acp` rows.
+- Compared with step 2, `Adapters` has lost exactly `Ada`'s row and every other `claude-agent-acp` row is unchanged.
 - After `Ghost` fails to start with the adapter missing, `Nova` and `Chief of Staff` are STILL Online with no alert strips, and the app keeps responding.
 - Restoring the adapter folder leaves the healthy teammates untouched (no forced restart of anyone).
 
@@ -676,11 +686,11 @@ If you cannot attribute adapter rows to Personas, skip step 3 and use only the a
 > [!NOTE]
 > Sluggishness with four or more Personas is a recorded cost, not a defect — report it as an observation if you see it.
 
-### PERSONALIFECYCLE-14 — An external edit to a Persona nested in a Team sub-folder reloads and restarts it, once per save
+### PERSONALIFECYCLE-14 — An external edit to a Teammate's definition restarts it once per save, and a non-.md file restarts nobody
 
-**Free** · about 15 min
+**Free** · about 12 min
 
-*Hunts the highest-value silent failure in this area: a Persona in a sub-folder that is read once at startup and then never watched again — no error, no log, the file simply stops mattering.*
+*Hunts the highest-value silent failure in this area: a definition that is read once at startup and then never watched again — no error, no log, the file simply stops mattering.*
 
 **Before you start**
 
@@ -689,92 +699,76 @@ If you cannot attribute adapter rows to Personas, skip step 3 and use only the a
 
 **Steps**
 
-1. In `T-B` run `New-Item -ItemType Directory 'E:\Repos\Huddle\src\Huddle.App\App_Data\Teams\Business'`.
-2. In `T-B` run `Move-Item 'E:\Repos\Huddle\src\Huddle.App\App_Data\Teams\Nova.md' 'E:\Repos\Huddle\src\Huddle.App\App_Data\Teams\Business\Nova.md'`.
-3. In the browser at `/teammates`, WITHOUT reloading, wait 10 seconds and confirm the `Nova` tile is still present and still named `Nova`.
-4. Click the `Nova` tile and read its **Persona file** section; close the card.
-5. In `T-B` run `Adapters` and write down `Nova`'s row (CreationDate).
-6. Open `E:\Repos\Huddle\src\Huddle.App\App_Data\Teams\Business\Nova.md` in a text editor.
-7. Append a new line at the end of the body: `Always mention that you are Nova.` and save the file ONCE.
-8. Watch the `/teammates` page (no reload) for 30 seconds and write down every status word the `Nova` tile shows.
-9. In `T-B` run `Adapters` and compare `Nova`'s row with step 5.
-10. In the browser click the `Nova` tile and read the **Persona** section of the card.
-11. Now test the debounce: in the editor add a space at the end of the file, save, and within one second remove it and save again.
-12. Watch the tile for 30 seconds and count how many separate Offline/Starting/Online cycles occur, and count how many new `node.exe` rows appear in `Adapters`.
-13. In `T-B` run `Set-Content 'E:\Repos\Huddle\src\Huddle.App\App_Data\Teams\notes.txt' 'not a persona'` and watch every tile for 15 seconds.
-14. In `T-B` run `Remove-Item 'E:\Repos\Huddle\src\Huddle.App\App_Data\Teams\notes.txt'`.
+1. In `T-B` run `Adapters` and write down `Nova`'s row (CreationDate).
+2. Open `<data>\Teammates\Nova\Nova.md` in a text editor.
+3. Append a new line at the end of the body: `Always mention that you are Nova.` and save the file ONCE.
+4. Watch the `/teammates` page (no reload) for 30 seconds and write down every status word the `Nova` tile shows.
+5. In `T-B` run `Adapters` and compare `Nova`'s row with step 1.
+6. In the browser click the `Nova` tile and read the **Persona** section of the card.
+7. Now test the debounce (500 ms, `PersonaStore.cs:67`): in `T-B` run `Add-Content '<data>\Teammates\Nova\Nova.md' 'First marker.'; Add-Content '<data>\Teammates\Nova\Nova.md' 'Second marker.'`, which writes twice well inside the debounce window.
+8. Watch the tile for 30 seconds and count how many separate Offline/Starting/Online cycles occur, and count how many new `node.exe` rows appear in `Adapters`.
+9. In `T-B` run `Set-Content '<data>\Teammates\notes.txt' 'not a persona'` and watch every tile for 15 seconds.
+10. In `T-B` run `Remove-Item '<data>\Teammates\notes.txt'`.
 
 **Pass if — all of these**
 
-- Moving the file into `Teams\Business\` changes nothing visible: the tile is still `Nova`, still Online, the Room is still in the sidebar, and the card's **Persona file** path now ends in `Business\Nova.md`.
-- Saving an edit to the nested file restarts `Nova` within about a second: the tile flickers through Offline/Starting and returns to **Online** with no page reload.
+- Saving an edit to `Teammates\Nova\Nova.md` restarts `Nova` within a few seconds: the tile flickers through Offline/Starting and returns to **Online** with no page reload.
 - `Adapters` shows `Nova`'s old `node.exe` replaced by one with a newer CreationDate.
 - The card's **Persona** section shows the appended line `Always mention that you are Nova.`
-- Two saves within one second produce exactly ONE restart cycle and ONE new adapter process.
-- Creating and deleting `notes.txt` in the Teams directory restarts nobody — every tile stays **Online** with no flicker.
+- The two writes of step 7 produce exactly ONE restart cycle and ONE new adapter process, and the card then shows both markers.
+- Creating and deleting `notes.txt` in `Teammates` restarts nobody — every tile stays **Online** with no flicker.
 
 **Fail if — any of these**
 
-- The nested file's edit produces NO restart and NO change on the card -> the watcher is not recursive; a Persona in a sub-folder is read once at startup and then silently stops mattering, with no error anywhere. This is the single highest-value defect in this area.
-- Two quick saves produce two or more restarts -> the debounce is gone, so an editor that writes twice on save destroys the teammate's memory twice.
+- The edit produces NO restart and NO change on the card -> the watcher no longer sees the definition; a Persona is read once at startup and then silently stops mattering, with no error anywhere. This is the single highest-value defect in this area.
+- Two quick writes produce two or more restarts -> the debounce is gone, so an editor that writes twice on save destroys the teammate's memory twice.
 - Touching a non-.md file restarts Personas -> the watcher filter is gone and unrelated files now cost every teammate its memory.
-- The tile vanishes after the move and never returns -> the recursive scan is not finding sub-folders at all.
 - A burst of file changes leaves the page permanently stale (tiles never update again) -> the watcher's event buffer overflowed and the error-driven rebuild did not happen; look for a console line about a dropped-event buffer overflow.
 
 **Inconclusive if**
 
-Some editors write a temp file and rename, some write twice; if you cannot tell a debounce failure from your editor saving twice, repeat step 11 using `Add-Content` from `T-B`, which writes exactly once. If the app was started with `Team:Acp:Enabled=false`, you will see the card text reload but no restart — that half of the test is still valid; record that you ran the reload half only.
+Some editors write a temp file and rename, some write twice; if you cannot tell a debounce failure from your editor saving twice, use the `Add-Content` commands of step 7 for every edit. If the app was started with `Team:Acp:Enabled=false`, you will see the card text reload but no restart — that half of the test is still valid; record that you ran the reload half only.
 
 > [!NOTE]
-> Leave `Nova.md` in `Teams\Business\` — PERSONALIFECYCLE-15 needs it there.
+> The old version of this test moved `Nova.md` into a Team sub-folder. Organisational sub-folders went away with ADR-0031; a definition moved out of `Teammates\Nova\` is no longer scanned.
 
-### PERSONALIFECYCLE-15 — Renaming or moving a Team sub-folder keeps its teammates reachable, or takes them offline cleanly
+### PERSONALIFECYCLE-15 — A write under a Teammate's work folder restarts nothing
 
-**Free** · about 12 min
+**Free** · about 8 min
 
-*Hunts the second silent watcher failure: a filename filter of `*.md` never sees a DIRECTORY rename, because a directory name has no extension.*
+*Hunts the quiet loop: an Agent writes its own notes under `work\` (its `memory\` folder included), and if the watcher counted those writes as a definition change every write would restart the Teammate and wipe what it just wrote down (`PersonaStore.cs:1086-1092`).*
 
 **Before you start**
 
-- PERSONALIFECYCLE-14 has been run and `Nova.md` sits in `App_Data\Teams\Business\`.
-- The app is running with `Nova` Online.
+- The app is running with `Nova` Online (PERSONALIFECYCLE-14 left it so).
 
 **Steps**
 
-1. In the browser at `/teammates`, confirm `Nova` reads **Online** and note the sidebar has a Room named `Nova`.
-2. In `T-B` run `Rename-Item 'E:\Repos\Huddle\src\Huddle.App\App_Data\Teams\Business' 'BusinessOps'`.
-3. Wait 10 seconds. WITHOUT reloading the browser, read the `Nova` tile: its Name, its Title/Alias line and its status.
-4. Click the `Nova` tile and read the **Persona file** section, then the **Model** section.
-5. Close the card and check the sidebar for the `Nova` Room.
-6. Now prove the cached text is not stale: open `E:\Repos\Huddle\src\Huddle.App\App_Data\Teams\BusinessOps\Nova.md`, append the line `Renamed folder marker.` and save.
-7. Wait 10 seconds, open the `Nova` card and check whether the **Persona** section shows `Renamed folder marker.`
-8. In `T-B` run `Move-Item 'E:\Repos\Huddle\src\Huddle.App\App_Data\Teams\BusinessOps' 'E:\Repos\Huddle\src\Huddle.App\App_Data\BusinessOps'` (out of the Teams directory entirely).
-9. Wait 10 seconds and read the tile list and the sidebar.
-10. In `T-B` run `Adapters`.
-11. In `T-B` run `Move-Item 'E:\Repos\Huddle\src\Huddle.App\App_Data\BusinessOps\Nova.md' 'E:\Repos\Huddle\src\Huddle.App\App_Data\Teams\Nova.md'` and `Remove-Item 'E:\Repos\Huddle\src\Huddle.App\App_Data\BusinessOps' -Recurse` to restore.
+1. In `T-B` run `Adapters` and write down `Nova`'s row (CreationDate). In the browser at `/teammates`, confirm `Nova` reads **Online**.
+2. In `T-B` run `Set-Content '<data>\Teammates\Nova\work\scratch.md' 'agent output'`.
+3. In `T-B` run `Set-Content '<data>\Teammates\Nova\work\memory\note.md' 'agent memory'`.
+4. Watch every tile on `/teammates` (no reload) for 20 seconds.
+5. In `T-B` run `Adapters` and compare `Nova`'s row with step 1.
+6. Click the `Nova` tile and read its **Persona** section and status.
+7. In `T-B` run `Remove-Item '<data>\Teammates\Nova\work\scratch.md', '<data>\Teammates\Nova\work\memory\note.md'` and watch the tiles for another 10 seconds.
 
 **Pass if — all of these**
 
-- After the folder rename, `Nova` is still listed, still named `Nova`, keeps its Title/Alias, its Team grouping and its Model, and its Room is still in the sidebar.
-- The card's **Persona file** section shows the NEW path containing `BusinessOps`.
-- An edit made AFTER the folder rename reaches the card (step 7 shows `Renamed folder marker.`) — the watcher is still following the file at its new path.
-- After moving the folder out of `Teams\` entirely, the `Nova` tile disappears from the list, its adapter row leaves `Adapters`, and the Room named `Nova` REMAINS in the sidebar.
-- Opening that orphaned `Nova` Room shows NO red alert strip.
+- No tile changes state during steps 2-7: `Nova` stays **Online** with no flicker through Offline or Starting.
+- `Adapters` still shows `Nova`'s original row, with the same CreationDate, and no new `node.exe` row.
+- The `Files that didn't load` block does not appear or change: files under `work\` are not definitions.
 
 **Fail if — any of these**
 
-- The card's **Persona file** path still shows `Business` after the rename, and step 7's edit does not reach the card -> the watcher never saw a directory rename, so every Persona under the old path is now served from stale cached prompt text, forever, with no error. A silent failure.
-- The teammate keeps its tile but loses its Model -> the stored Model is being keyed off the path rather than the Name.
-- Moving the folder out leaves the tile behind and its adapter running -> a Persona whose file is gone is still live and still able to spend money.
-- The orphaned `Nova` Room shows a permanent alert strip -> a teammate that is merely not running is being reported as a failure; every removed teammate would leave a permanent alert behind.
-- The app shows `An unhandled error has occurred.` after a directory event -> a directory name (which has no extension) is not being accepted by the change handler.
+- `Nova` flickers or gets a newer `node.exe` row -> a write under `work\` is restarting the Teammate; an Agent that writes notes would restart itself on every write and silently lose its memory in a loop.
+- A `scratch.md` entry appears in `Files that didn't load` -> the scan is reading below the Teammate folder.
 
 **Inconclusive if**
 
-If the rename is blocked because a file in the folder is open in an editor, close it and retry. If the app was started before `Teams\Business\` existed AND the tile never appeared at all, run PERSONALIFECYCLE-14 first — this test assumes the nested Persona was visible to begin with.
+If `Nova` was not Online at step 1, bring it Online first. If another Teammate flickers for an unrelated reason (a Restart you clicked earlier), judge only `Nova`'s row and tile.
 
 > [!NOTE]
-> The Room and Transcript surviving the folder move is deliberate no-cascade behaviour, not a defect.
+> A `.md` written beside the definition, directly in `Teammates\Nova\`, is a different case: it is refused with `A teammate folder holds only its definition; use work/.` (PERSONALIFECYCLE-07). The Room and Transcript are unaffected either way.
 
 ### PERSONALIFECYCLE-16 — A Persona file that becomes malformed is named in "Files that didn't load", and an Alias collision names BOTH files
 
@@ -785,13 +779,13 @@ If the rename is blocked because a file in the folder is open in an editor, clos
 **Before you start**
 
 - The app is running.
-- At least two Personas exist on disk (`Nova` and `Chief of Staff`).
+- At least two Personas exist on disk (`Nova` and `Head of Ops`, from PERSONALIFECYCLE-06 and -08).
 - `Nova` is Online if adapters are enabled.
 
 **Steps**
 
 1. In the browser go to `http://localhost:5100/teammates` and note the tile list and whether a `Files that didn't load` block is present.
-2. In `T-B` open `E:\Repos\Huddle\src\Huddle.App\App_Data\Teams\Nova.md` in a text editor.
+2. Open `<data>\Teammates\Nova\Nova.md` in a text editor.
 3. Delete the whole `title: 'Test teammate'` line and save the file.
 4. Wait 10 seconds. WITHOUT reloading, read the top of the `/teammates` page and the tile list.
 5. Read the entry in the `Files that didn't load` block: its path and its reason.
@@ -799,18 +793,18 @@ If the rename is blocked because a file in the folder is open in an editor, clos
 7. In `T-B` run `Adapters` and check whether `Nova`'s adapter row is gone.
 8. Put the `title: 'Test teammate'` line back into the file exactly as it was and save.
 9. Wait 15 seconds and confirm the tile returns and (with adapters enabled) reaches **Online** again.
-10. Now the collision: edit `Chief of Staff.md` and change its `alias:` line to `alias: 'nova'` so it matches `Nova`'s alias exactly. Save.
+10. Now the collision: edit `<data>\Teammates\Head of Ops\Head of Ops.md` and change its `alias:` line to `alias: 'nova'` so it matches `Nova`'s alias exactly. Save.
 11. Wait 10 seconds and read the tile list and the `Files that didn't load` block.
-12. Restore `Chief of Staff.md`'s alias to `alias: 'cos'` and save; confirm both tiles return.
+12. Restore `Head of Ops.md`'s alias to `alias: 'ho'` and save; confirm both tiles return.
 
 **Pass if — all of these**
 
 - Removing `title:` makes the `Nova` tile disappear from the list within about a second, with no page reload.
-- A `Files that didn't load` block appears at the TOP of the page listing the file's path and the reason `Persona frontmatter is missing required field 'Title'.`
+- A `Files that didn't load` block appears at the TOP of the page listing the file's path (`Teammates\Nova\Nova.md`) and the reason `Persona frontmatter is missing required field 'Title'.` (`PersonaFrontmatter.cs:595`)
 - The Room named `Nova` stays in the sidebar, and opening it shows NO red alert strip.
 - With adapters enabled, `Nova`'s `node.exe` row disappears — the rejected Persona's adapter is stopped.
 - Restoring `title:` brings the tile back and (with adapters) restarts it to **Online**.
-- With a duplicated alias, BOTH `Nova` and `Chief of Staff` vanish from the tile list and BOTH are listed in `Files that didn't load`, each reason naming the other file's path.
+- With a duplicated alias, BOTH `Nova` and `Head of Ops` vanish from the tile list and BOTH are listed in `Files that didn't load`, each with a reason of the shape `Persona Alias 'nova' is also used by '<the other file's path>'.` (`PersonaIndex.cs:173`).
 - Restoring the alias brings both back.
 
 **Fail if — any of these**
@@ -826,7 +820,7 @@ If the rename is blocked because a file in the folder is open in an editor, clos
 If your editor rewrites line endings or reorders the file on save, the reason text may differ; check the file contents in `T-B` with `Get-Content` before concluding. If the `Files that didn't load` block already listed entries at step 1, judge only the entries that appear during the test.
 
 > [!NOTE]
-> Alias-versus-Name collisions are also rejected on both sides; you can extend step 10 by setting `Chief of Staff`'s alias to `Nova` (matching the other's Name) and expecting the same both-rejected result.
+> Alias-versus-Name collisions are also rejected on both sides; you can extend step 10 by setting `Head of Ops`'s alias to `Nova` (matching the other's Name) and expecting the same both-rejected result, with the reasons `Persona Alias 'Nova' matches the Name used by …` and `Persona Name 'Nova' matches the Alias used by …` (`PersonaIndex.cs:200,204`).
 
 ### PERSONALIFECYCLE-17 — A stored Model the Adapter no longer advertises is Degraded with a reason, never a failed start
 
@@ -843,17 +837,17 @@ If your editor rewrites line endings or reorders the file on save, the reason te
 **Steps**
 
 1. In `T-A` press Ctrl+C to stop the app and wait for the prompt.
-2. In `T-B` run `sqlite3 'E:\Repos\Huddle\src\Huddle.App\App_Data\team.db' "select * from persona_models;"` and write down the current row for `Nova`.
-3. In `T-B` run `sqlite3 'E:\Repos\Huddle\src\Huddle.App\App_Data\team.db' "update persona_models set model='claude-does-not-exist' where persona_name='Nova';"`.
+2. In `T-B` run `sqlite3 '<data>\team.db' "select * from persona_models;"` and write down the current row for `Nova`.
+3. In `T-B` run `sqlite3 '<data>\team.db' "update persona_models set model='claude-does-not-exist' where persona_name='Nova';"`.
 4. Re-run the select from step 2 and confirm the value changed.
-5. In `T-A` run `dotnet run --project src\Huddle.App --urls http://localhost:5100`.
+5. In `T-A`, from `<repo>`, run `dotnet run --project src\Huddle.App --urls http://localhost:5100`.
 6. In the browser open `http://localhost:5100/teammates` and watch the `Nova` tile until it settles (up to 60 seconds). Write down every status word.
 7. Hover the tile's status line and read the tooltip.
 8. Click the tile and read the reason line on the card, word for word.
 9. Open the Room named `Nova` and read the area above the composer.
 10. In `T-A` read the console for a Warning containing `not in the agent's advertised model catalog`.
 11. In `T-B` run `Adapters` and confirm `Nova` has a live adapter row.
-12. In `T-A` press Ctrl+C. In `T-B` run `sqlite3 'E:\Repos\Huddle\src\Huddle.App\App_Data\team.db' "update persona_models set model=NULL where persona_name='Nova';"` to clear the stale row, then restart the app and confirm `Nova` returns to **Online** with no reason.
+12. In `T-A` press Ctrl+C. In `T-B` run `sqlite3 '<data>\team.db' "update persona_models set model=NULL where persona_name='Nova';"` to clear the stale row, then restart the app and confirm `Nova` returns to **Online** with no reason.
 
 **Pass if — all of these**
 
@@ -886,21 +880,21 @@ If `sqlite3` is unavailable, record this test as NOT RUN — there is no UI path
 **Before you start**
 
 - The app is running with at least one teammate **Online**.
-- `App_Data\prompts.json` may or may not exist — either is fine.
+- `<data>\prompts.json` may or may not exist — either is fine (`PromptStore.cs:11`).
 
 **Steps**
 
 1. In the browser go to `http://localhost:5100/teammates` and confirm at least one tile reads **Online**.
 2. In `T-B` run `Adapters` and write down every row's ProcessId and CreationDate.
-3. In the sidebar click **Settings**.
-4. Confirm the **Prompts** tab is selected (it is the default).
+3. In the sidebar click the **Settings** gear (`MainLayout.razor:28`, link target `/settings`).
+4. Confirm the **Prompts** tab is selected. `/settings` with no tab falls back to Prompts (`Settings.razor:105-106`); if another tab is selected, click **Prompts**.
 5. Find the first prompt field. Note whether it carries a `Next session` badge.
 6. Click into that field's textarea and append the text ` (edited)` at the end.
 7. Confirm a `Unsaved` badge appears next to that field's label.
-8. Click **Save** at the bottom of the form.
+8. Click **Save** (enabled only while something is unsaved, `Settings.razor:58`).
 9. Switch back to `/teammates` and watch every tile for 30 seconds.
 10. In `T-B` run `Adapters` and compare every ProcessId and CreationDate with step 2.
-11. In `T-B` run `Test-Path 'E:\Repos\Huddle\src\Huddle.App\App_Data\prompts.json'`.
+11. In `T-B` run `Test-Path '<data>\prompts.json'`.
 12. Return to **Settings**, click the **Reset** button on the field you edited, and click **Save** to restore the shipped wording.
 13. In `T-B` run `Adapters` once more.
 
@@ -909,7 +903,7 @@ If `sqlite3` is unavailable, record this test as NOT RUN — there is no UI path
 - After saving the prompt, every tile stays **Online** with no flicker through Offline or Starting.
 - `Adapters` shows exactly the same ProcessIds and CreationDates as before the save — nothing restarted.
 - A `Modified` badge appears on the edited field after saving.
-- `App_Data\prompts.json` exists after the first save (it is absent before the first save, and that is expected).
+- `<data>\prompts.json` exists after the first save (if it was absent before, that is expected).
 - Resetting and saving again also restarts nothing.
 
 **Fail if — any of these**
@@ -928,30 +922,30 @@ If no teammate is Online (adapters disabled, or all failed), this test cannot di
 
 ### PERSONALIFECYCLE-19 — Removing a Persona takes it offline but leaves its Agent, Room and Transcript, and raises no alert
 
-**Free** · about 12 min
+**Free** · about 15 min
 
 *Proves removal is a deliberate no-cascade: history survives, the process does not, and the orphaned Room stays quiet.*
 
 **Before you start**
 
-- The app is running.
-- A teammate exists that has connected at least once and has a Room (for example `Chief of Staff`).
+- The app is running WITH Adapters.
+- The target is `Ada`, not the built-in Chief of Staff: the Chief of Staff has no **Remove**, only **Reset to default** (`TeammateCard.razor:198-209`). Create `Ada` through [`P-NEW-PERSONA`](common.md#p-new-persona) (Title `Test teammate`, Alias `ada`, body `You are Ada. Answer in one short sentence.`, Model containing `Haiku`, Effort `low`). Wait until the `Ada` tile reads **Online** and a Room named `Ada` is in the sidebar.
 - Optional: its Transcript has content — for this test a Room with even one Human Message is enough (typing a Message to a teammate that will then reply costs money; to stay free, type a Message and then immediately remove the teammate, or accept an empty Transcript).
 
 **Steps**
 
-1. In `T-B` run `Adapters` and identify the target teammate's `node.exe` row if you can.
-2. In `T-B` run `Get-ChildItem 'E:\Repos\Huddle\src\Huddle.App\App_Data\rooms'` and note the files.
-3. OPTIONAL (sqlite3): run `sqlite3 'E:\Repos\Huddle\src\Huddle.App\App_Data\team.db' "select name from users; select id,name from rooms; select * from persona_models; select * from persona_efforts;"` and save the output.
-4. In the browser at `/teammates`, click the `Chief of Staff` tile.
+1. In `T-B` run `Adapters` and identify `Ada`'s `node.exe` row if you can; otherwise write down the row count.
+2. In `T-B` run `Get-ChildItem '<data>\rooms'` and note the files.
+3. OPTIONAL (sqlite3): run `sqlite3 '<data>\team.db' "select name from users; select id,name from rooms; select * from persona_models; select * from persona_efforts;"` and save the output.
+4. In the browser at `/teammates`, click the `Ada` tile.
 5. Click **Remove**.
 6. Observe what happens to the action row — do NOT click anything yet.
 7. Click **Cancel** and confirm the row returns to normal.
 8. Click **Remove** again, then click **Confirm**.
 9. Read the page: the card, the tile list, and the sidebar.
-10. Click the Room named `Chief of Staff` in the sidebar and read the whole Room, especially above the composer.
+10. Click the Room named `Ada` in the sidebar and read the whole Room, especially above the composer.
 11. In `T-B` run `Adapters` and count rows.
-12. In `T-B` run `Get-ChildItem 'E:\Repos\Huddle\src\Huddle.App\App_Data\Teams' | Select-Object Name` and `Get-ChildItem 'E:\Repos\Huddle\src\Huddle.App\App_Data\work' | Select-Object Name`.
+12. In `T-B` run `Get-ChildItem '<data>\Teammates\Ada' -Force | Select-Object Name`.
 13. OPTIONAL (sqlite3): re-run the query from step 3 and compare.
 
 **Pass if — all of these**
@@ -959,12 +953,12 @@ If no teammate is Online (adapters disabled, or all failed), this test cannot di
 - Clicking **Remove** swaps the button row in place for **Confirm** and **Cancel** — no browser dialog appears.
 - **Cancel** returns the row to the normal actions with nothing removed.
 - **Confirm** closes the card and removes the tile from `/teammates`.
-- The Room named `Chief of Staff` STAYS in the sidebar with its full history and its member list intact.
+- The Room named `Ada` STAYS in the sidebar with its full history and its member list intact.
 - That Room shows NO red alert strip.
-- `App_Data\Teams\Chief of Staff.md` is gone.
+- `<data>\Teammates\Ada\Ada.md` is gone: step 12 lists no `Ada.md`. Remove deletes only the definition file (`PersonaStore.cs:477`).
 - The removed teammate's `node.exe` row is gone from `Adapters` (row count drops by one).
-- `App_Data\work\Chief of Staff` is LEFT BEHIND — nothing deletes it (expected).
-- `App_Data\rooms\*.jsonl` files are unchanged.
+- `<data>\Teammates\Ada\work` is LEFT BEHIND — nothing deletes it (expected); step 12 still lists `work`.
+- `<data>\rooms\*.jsonl` files are unchanged.
 - If sqlite3 was available: the `users` and `rooms` rows still exist, and the `persona_models` and `persona_efforts` rows for that Name are GONE.
 
 **Fail if — any of these**
@@ -981,29 +975,30 @@ If no teammate is Online (adapters disabled, or all failed), this test cannot di
 If sqlite3 is not installed, run PERSONALIFECYCLE-20 immediately after this test — it checks the same fact through the UI. If you could not attribute a `node.exe` row to the removed teammate, judge by the total row count dropping by exactly one.
 
 > [!NOTE]
-> Do NOT file the leftover Agent, Room, Transcript or Work Dir as bugs; all four are deliberate. What IS a bug is a leftover Model or Effort row.
+> Do NOT file the leftover Agent, Room, Transcript or Work Dir as bugs; all four are deliberate. What IS a bug is a leftover Model or Effort row. The removal also drops the Persona's Avatar entry, Spend, offered Commands and Room Session state (`PersonaRenameCascade.cs:244-262`); this test does not check those. Whether the leftover `Teammates\Ada` folder with no definition is listed anywhere is not asserted here; if you see it listed, copy the exact text into your notes.
 
 ### PERSONALIFECYCLE-20 — Re-creating a removed Persona under the same Name does not resurrect its old Model or Effort
 
-**Free** · about 8 min
+**Free** · about 10 min
 
 *Proves the stored Model and Effort really go with a removal, so a recreated teammate starts from the agent's defaults.*
 
 **Before you start**
 
-- PERSONALIFECYCLE-19 has just been run: a teammate that had Model = Haiku and Effort = low was removed.
+- PERSONALIFECYCLE-19 has just been run: `Ada`, which had Model = Haiku and Effort = low, was removed. Its `Teammates\Ada\work` folder is still on disk.
 - The app is still running.
 
 **Steps**
 
 1. In the browser at `/teammates` click **New teammate**.
-2. In **Name** type exactly the Name you removed: `Chief of Staff`.
-3. In **Title** type `Keeps the team honest`. In **Alias** type `cos`. In the **Persona body** textarea type `You are the Chief of Staff. Answer in one short sentence.`
+2. In **Name** type exactly the Name you removed: `Ada`.
+3. In **Title** type `Test teammate`. In **Alias** type `ada`. In the **Persona body** textarea type `You are Ada. Answer in one short sentence.`
 4. Do NOT touch the **Model** or **Effort** selects — leave both showing `Use the agent's default`.
 5. Click **Add teammate**.
 6. On the resulting `Teammate` card read the **Model** section and the **Effort** section.
 7. Close the card, click the tile again and read both sections once more.
-8. OPTIONAL (sqlite3): in `T-B` run `sqlite3 'E:\Repos\Huddle\src\Huddle.App\App_Data\team.db' "select * from persona_models where persona_name='Chief of Staff'; select * from persona_efforts where persona_name='Chief of Staff';"`
+8. OPTIONAL (sqlite3): in `T-B` run `sqlite3 '<data>\team.db' "select * from persona_models where persona_name='Ada'; select * from persona_efforts where persona_name='Ada';"`
+9. **Restore.** PERSONALIFECYCLE-31 and -32 expect `Ada` at Haiku / `low`. Open the `Ada` card, click **Edit**, set **Model** to the Haiku entry and **Effort** to `low`, click **Save**, and wait for the tile to read **Online**.
 
 **Pass if — all of these**
 
@@ -1025,56 +1020,57 @@ If PERSONALIFECYCLE-19 was not run immediately before this, the Name may never h
 > [!NOTE]
 > The mirror-image rule also matters and is covered by PERSONALIFECYCLE-21: a RENAME must MOVE these rows rather than drop them.
 
-### PERSONALIFECYCLE-21 — Editing the frontmatter name: renames the Teammate and moves its Model and Effort, leaving a documented ghost
+### PERSONALIFECYCLE-21 — Editing the frontmatter name renames the Teammate in place: its folder, file, Room, Model and Effort all follow
 
-**Free** · about 12 min
+**Free** · about 15 min
 
-*Proves the rename path carries the stored Model and Effort across, does not rename the file on disk, and restarts the teammate under its new identity — while confirming the leftover Room and Agent are the documented no-cascade limit.*
+*Proves the ADR-0011 rename: the Agent row and the direct Room are renamed in place (no second Agent, no second Room), the Teammate folder and its definition move to the new Name, the stored Model and Effort move with it, and the teammate restarts under the new identity.*
 
 **Before you start**
 
 - The app is running with adapters enabled.
-- A teammate `Nova` exists, is **Online**, has Model = Haiku and Effort = low, and has a Room named `Nova`.
+- A teammate `Nova` exists, is **Online**, has Model = Haiku and Effort = low, and has a direct Room named `Nova` that nobody renamed by hand.
 
 **Steps**
 
-1. In `T-B` run `Get-ChildItem 'E:\Repos\Huddle\src\Huddle.App\App_Data\Teams' -Recurse -Filter *.md | Select-Object FullName` and write down the exact filenames.
-2. OPTIONAL (sqlite3): run `sqlite3 'E:\Repos\Huddle\src\Huddle.App\App_Data\team.db' "select * from persona_models; select * from persona_efforts; select name from users;"` and save the output.
+1. In `T-B` run `Get-ChildItem '<data>\Teammates\Nova' -Force | Select-Object FullName` and write down the entries (`Nova.md`, `work`).
+2. OPTIONAL (sqlite3): run `sqlite3 '<data>\team.db' "select * from persona_models; select * from persona_efforts; select id,name from users; select id,name from rooms;"` and save the output, in particular the `users` id of `Nova` and the `rooms` id of the `Nova` Room.
 3. In the browser at `/teammates` click the `Nova` tile, read its **Model** and **Effort** sections, then click **Edit**.
 4. In the **Persona text** textarea, find the line `name: 'Nova'` and change it to `name: 'Nova Prime'`. Change nothing else.
 5. Click **Save**.
 6. Read the resulting card: its title, its Name, its **Model** section and its **Effort** section.
 7. Close the card and read the tile list.
 8. Watch the sidebar Room list for 30 seconds.
-9. In `T-B` re-run the `Get-ChildItem` from step 1.
-10. In `T-B` run `Get-ChildItem 'E:\Repos\Huddle\src\Huddle.App\App_Data\work' | Select-Object Name`.
-11. OPTIONAL (sqlite3): re-run the query from step 2 and compare.
-12. In `T-B` run `Adapters` and confirm a fresh adapter row exists.
+9. In `T-B` run `Get-ChildItem '<data>\Teammates' -Directory | Select-Object Name`, then `Get-ChildItem '<data>\Teammates\Nova Prime' -Force | Select-Object Name`.
+10. OPTIONAL (sqlite3): re-run the query from step 2 and compare.
+11. In `T-B` run `Adapters` and confirm a fresh adapter row exists.
+12. **Restore.** Open the `Nova Prime` card, click **Edit**, change `name: 'Nova Prime'` back to `name: 'Nova'`, click **Save**, and wait until the tile reads `Nova` and **Online**. Every later test expects `Nova`.
 
 **Pass if — all of these**
 
 - The tile `Nova` is replaced by a tile named `Nova Prime`, which reaches **Online**.
 - The card for `Nova Prime` shows the SAME Model (Haiku) and the SAME Effort (low) the old Name had.
-- A NEW Room named `Nova Prime` appears in the sidebar, and a NEW `App_Data\work\Nova Prime\` folder is created.
-- The `.md` file on disk KEEPS its original filename (`Nova.md`) — identity moved, storage did not.
+- Step 9: there is a folder `Nova Prime`, no folder `Nova` remains, and `Nova Prime` holds `Nova Prime.md` and `work` — the folder moved and the definition was renamed (`PersonaRenameCascade.cs:397-426`).
+- The sidebar shows ONE Room for it, and it is the same Room renamed to `Nova Prime` with its whole history: an auto-named Room follows the rename (`PersonaRenameCascade.cs:321-342`). There is no second Room and no Room still named `Nova`.
 - A fresh `node.exe` row exists — the teammate restarted under its new identity.
-- If sqlite3 was available: `persona_models` and `persona_efforts` are now keyed on `Nova Prime` with NO row left under `Nova`; `users` lists BOTH `Nova` and `Nova Prime`.
-- The OLD Room named `Nova` stays in the sidebar with its whole history, and opening it shows no red alert strip.
+- If sqlite3 was available: `persona_models` and `persona_efforts` are keyed on `Nova Prime` with NO row left under `Nova` (`PersonaStore.cs:436-448`), and `users` lists `Nova Prime` with the SAME id as `Nova` had and NO row named `Nova` (ADR-0011, `PersonaRenameCascade.cs:220`). The `rooms` row keeps its id.
+- After step 12 everything reads `Nova` again, with Haiku / `low`.
 
 **Fail if — any of these**
 
 - The Model or Effort is LOST by the rename (the card reads `Agent default` / `Model default`) -> those rows are being dropped rather than moved; a user renaming a teammate silently loses its model choice.
 - Rows exist under BOTH Names -> the old row was not removed, and removing/recreating `Nova` later would resurrect a setting.
-- The `.md` file is renamed on disk -> storage is being driven by identity; combined with PERSONALIFECYCLE-07 this means the two have been conflated.
+- A new Room `Nova Prime` appears while the Room `Nova` stays, or `users` lists BOTH `Nova` and `Nova Prime` -> the rename minted a second Agent instead of renaming the first (the ghost ADR-0011 exists to remove).
+- `Nova.md` stays in the renamed folder, or a folder `Nova` and a folder `Nova Prime` both exist -> the folder move or the file rename did not run.
 - The teammate does not restart under the new identity (no fresh process) -> the new system prompt never takes effect, because prompt, Model and Effort are all fixed when a session is created.
 - `An unhandled error has occurred.` on save -> the rename path is throwing.
 
 **Inconclusive if**
 
-If the save is refused with a message on the card, read it: a collision with an existing Name or Alias is a legitimate refusal, so pick an unused Name and retry. If sqlite3 is unavailable, judge the Model/Effort carry-over from the card alone and record the ghost checks as not-checked.
+If the save is refused with a message on the card, read it: a collision with an existing Name or Alias is a legitimate refusal, so pick an unused Name and retry. If sqlite3 is unavailable, judge the Model/Effort carry-over from the card alone and record the `users` and `rooms` checks as not-checked. If the Room `Nova` had been renamed by hand it keeps its name by design (`PersonaRenameCascade.cs:337-340`); that is not a failure, but this run then proves nothing about the Room.
 
 > [!NOTE]
-> The leftover Room named `Nova`, the leftover `users` row and the leftover Transcript are the DOCUMENTED no-cascade limit — do not file them. Rename `Nova Prime` back to `Nova` afterwards if later tests expect that Name.
+> The folder move runs detached and retries while the old adapter still holds the folder (`PersonaRenameCascade.cs:390-411`); allow up to 30 seconds before reading step 9. The Transcript, Tasks and saved Views follow the Name too, but this test does not check them. The restore in step 12 is mandatory.
 
 ### PERSONALIFECYCLE-22 — Health and presence repaint every open surface live, in every browser tab
 
@@ -1104,7 +1100,7 @@ If the save is refused with a message on the card, read it: a collision with an 
 
 **Pass if — all of these**
 
-- Within about a second of the kill, tab 1's tile reads **Offline** with a reason, and tab 3's Room grows the red alert strip — both without any reload or navigation.
+- Within 5 seconds of the kill, tab 1's tile reads **Offline** with a reason, and tab 3's Room grows the red alert strip — both without any reload or navigation.
 - Tab 2, brought forward without reloading, also reads **Offline** with the same reason.
 - During the restart from tab 1, tab 2's tile and tab 3's strip follow the same state changes (Starting, then Online with the strip gone) without being touched.
 - Navigating tab 3 away and back twice produces no error banner in any tab.
@@ -1137,11 +1133,11 @@ If the browser throttles background tabs (some do aggressively), bring each tab 
 **Steps**
 
 1. In `T-B` run `Adapters` and write down every row.
-2. In `T-B` run `Get-ChildItem 'E:\Repos\Huddle\src\Huddle.App\App_Data\rooms' | Select-Object Name, Length` and write the output down.
+2. In `T-B` run `Get-ChildItem '<data>\rooms' | Select-Object Name, Length` and write the output down.
 3. In the browser open one Room and note the last three visible Messages.
 4. In `T-A` press Ctrl+C and wait for the prompt to return.
 5. In `T-B` run `Adapters` immediately, then again 10 seconds later.
-6. In `T-A` run `dotnet run --project src\Huddle.App --urls http://localhost:5100`.
+6. In `T-A`, from `<repo>`, run `dotnet run --project src\Huddle.App --urls http://localhost:5100`.
 7. In the browser open `http://localhost:5100/teammates` and watch every tile until they settle (up to 90 seconds). Write down the status sequence for each.
 8. Check the sidebar Room list against what it held before the restart.
 9. Open the Room from step 3 and compare the last three Messages.
@@ -1154,7 +1150,7 @@ If the browser throttles background tabs (some do aggressively), bring each tab 
 - On restart every Persona starts automatically: each tile goes Offline, then Starting, then **Online**, with no human action.
 - The sidebar holds exactly the same Rooms as before, with no duplicates.
 - The Room's last three Messages are identical to before the restart.
-- `App_Data\rooms\*.jsonl` file sizes are unchanged across the restart.
+- `<data>\rooms\*.jsonl` file sizes are unchanged across the restart.
 - No `failed to start` warnings appear for teammates that were healthy before.
 
 **Fail if — any of these**
@@ -1172,48 +1168,48 @@ If Ctrl+C does not stop the app within 30 seconds, note it and use Ctrl+C again 
 > [!NOTE]
 > A paused Budget prompt, a streaming Draft and the per-Room Budget counter are all per-process and in memory, so they are GONE after a restart by design. Do not file those. If you have a paused Room from PERSONALIFECYCLE-31 or -32, confirm the prompt is gone and the Room shows a fresh Budget — that is the expected result.
 
-### PERSONALIFECYCLE-24 — Four Personas cost four adapter processes, all reach Online, and all exit on shutdown
+### PERSONALIFECYCLE-24 — Five Personas (the Chief of Staff and four more) cost five adapter processes, all reach Online, and all exit on shutdown
 
 **Free** · about 15 min
 
-*Measures the per-Persona process cost and proves the parallel start does not deadlock or leak.*
+*Measures the per-Persona process cost and proves the parallel start does not deadlock or leak. The built-in Chief of Staff is always one of the Personas, so four extra Personas make five.*
 
 **Before you start**
 
 - The adapter is installed and authenticated.
-- You are willing to create four Personas.
+- You are willing to create up to four Personas.
 - No app is running (start fresh so the startup path is what is measured).
 
 **Steps**
 
-1. In `T-B` confirm `App_Data\Teams\` holds exactly four `.md` files. If not, create the missing Personas through **New teammate** (Names `Nova`, `Ada`, `Bram`, `Cleo`; Title `Test teammate`; Aliases `nova`, `ada`, `bram`, `cleo`; body `You are <Name>. Answer in one short sentence.`; Model containing `Haiku`; Effort `low`), then stop the app with Ctrl+C.
-2. In `T-A` run `dotnet run --project src\Huddle.App --urls http://localhost:5100` and note the time.
-3. In the browser open `http://localhost:5100/teammates` and watch all four tiles until they settle, up to 120 seconds. Write down how long the last one takes.
+1. In `T-B` run `Get-ChildItem '<data>\Teammates' -Directory | Select-Object Name`. It must list exactly `Chief of Staff`, `Nova`, `Ada`, `Bram` and `Cleo`. Create the missing Personas through **New teammate** (Title `Test teammate`; Aliases `nova`, `ada`, `bram`, `cleo`; body `You are <Name>. Answer in one short sentence.`; Model containing `Haiku`; Effort `low`). Remove any other Persona an earlier test left (for example `Head of Ops`) from its card, then stop the app with Ctrl+C.
+2. In `T-A`, from `<repo>`, run `dotnet run --project src\Huddle.App --urls http://localhost:5100` and note the time.
+3. In the browser open `http://localhost:5100/teammates` and watch all five tiles until they settle, up to 120 seconds. Write down how long the last one takes. The Chief of Staff may take its one Greeting Turn only while its direct Room is still empty (Setup 8); that is not a failure.
 4. In `T-B` run `Adapters` and count rows containing `claude-agent-acp`.
-5. In `T-B` run `Get-ChildItem 'E:\Repos\Huddle\src\Huddle.App\App_Data\work' | Select-Object Name`.
+5. In `T-B` run `Get-Item '<data>\Teammates\*\work' | Select-Object FullName`.
 6. Click between two Rooms and back to `/teammates` and note whether the UI stays responsive (any click taking more than about two seconds to paint is worth recording).
 7. In `T-A` press Ctrl+C and wait for the prompt.
 8. In `T-B` run `Adapters` immediately and again 10 seconds later.
 
 **Pass if — all of these**
 
-- All four tiles reach **Online**.
-- `Adapters` shows exactly FOUR `claude-agent-acp` rows — one per Online Persona, no more.
-- `App_Data\work` has exactly four Persona subfolders, named after the four frontmatter Names.
+- All five tiles reach **Online**.
+- `Adapters` shows exactly FIVE `claude-agent-acp` rows — one per Online Persona (the Chief of Staff included), no more.
+- Step 5 lists exactly five `work` folders, one under each Teammate folder, named after the five Names.
 - The UI stays usable throughout; navigation paints without visible stalls.
 - After Ctrl+C, `Adapters` shows ZERO `claude-agent-acp` rows.
 
 **Fail if — any of these**
 
 - More adapter rows than Online Personas -> processes are leaking per start or restart; each one holds a session.
-- A tile stuck on **Starting** while the others are Online -> the parallel start is deadlocking or one adapter is hanging.
+- A tile stuck on **Starting** while the other four are Online -> the parallel start is deadlocking or one adapter is hanging.
 - Adapters survive shutdown -> orphaned processes that keep sessions open.
 - A start failure mentioning a port or a bind error -> each Persona gets its own loopback tool server, and exhausting ports would cap how many teammates can run at all; report the exact message.
-- Fewer work subfolders than Personas -> a host factory never ran for one of them.
+- Fewer `work` folders than Personas -> a host factory never ran for one of them.
 
 **Inconclusive if**
 
-If authentication fails for all four, this measures nothing — fix the login and re-run. If the machine has other `node.exe` processes, count only rows whose CommandLine contains `claude-agent-acp`. If the last tile takes longer than 120 seconds, record the timing as an observation and mark the test inconclusive rather than failed, then retry once.
+If authentication fails for all five, this measures nothing — fix the login and re-run. If the machine has other `node.exe` processes, count only rows whose CommandLine contains `claude-agent-acp`. If the last tile takes longer than 120 seconds, record the timing as an observation and mark the test inconclusive rather than failed, then retry once.
 
 > [!NOTE]
 > The design is documented as worth revisiting past roughly four Personas: slowness at five or six is a known cost, not a defect. Report timings as observations.
@@ -1330,7 +1326,7 @@ If the first reply does not acknowledge the word at all (the model answered some
 7. Click **Save**.
 8. Watch the tile's status line for 40 seconds and write down every word.
 9. In `T-B` run `Adapters` and compare `Nova`'s ProcessId with step 1.
-10. In `T-B` run `Get-Content 'E:\Repos\Huddle\src\Huddle.App\App_Data\Teams\Nova.md'` and check that the frontmatter block is intact AND the new line is present.
+10. In `T-B` run `Get-Content '<data>\Teammates\Nova\Nova.md'` and check that the frontmatter block is intact AND the new line is present.
 11. Once the tile reads **Online**, return to the Room, type `Say hello in one sentence.` and press Enter.
 12. Read the reply.
 
@@ -1385,13 +1381,13 @@ If the model ignores the PLUM instruction even after a confirmed restart (models
 12. Return to the Room and type `What word did I ask you to remember?`; press Enter and read the reply.
 13. Type `Which model are you? Answer in one short sentence.`; press Enter and compare with step 3.
 14. In `T-A` search the console for any line containing `not in the agent's advertised model catalog`.
-15. OPTIONAL (sqlite3): in `T-B` run `sqlite3 'E:\Repos\Huddle\src\Huddle.App\App_Data\team.db' "select * from persona_models;"`.
+15. OPTIONAL (sqlite3): in `T-B` run `sqlite3 '<data>\team.db' "select * from persona_models;"`.
 16. **Restore.** Open the Nova card, click **Edit**, set **Model** back to the Haiku entry, click **Save**, and wait for the tile to read Online. Every later test states Haiku as a precondition.
 
 **Pass if — all of these**
 
 - After Save the tile flickers through Offline/Starting and returns to **Online**, and `Nova` has exactly ONE new `node.exe` ProcessId (the old one is gone).
-- The card's **Model** section now names the Sonnet entry, and reopening Edit still shows Sonnet selected.
+- The card's **Model** section now shows a model id containing `sonnet` (View mode has no loaded catalog, so it shows the raw id, not the display name: `TeammateCard.razor:1196-1206`), and reopening Edit shows the Sonnet entry selected.
 - The reply to step 12 does NOT know `ZEBRA` — the session was genuinely replaced.
 - The answer to step 13 differs from step 3 — a different model is answering.
 - `T-A`'s console contains NO `not in the agent's advertised model catalog` warning.
@@ -1440,7 +1436,7 @@ If the model's answer to "Which model are you?" is vague or identical both times
 13. Immediately read the **Effort** select, its hint, and the note that appears above it, and watch all three for 20 seconds.
 14. Click **Cancel** (do not save).
 15. In `T-A` search the console for any line containing `not in the agent's advertised effort catalog`.
-16. OPTIONAL (sqlite3): run `sqlite3 'E:\Repos\Huddle\src\Huddle.App\App_Data\team.db' "select * from persona_efforts;"`.
+16. OPTIONAL (sqlite3): run `sqlite3 '<data>\team.db' "select * from persona_efforts;"`.
 17. **Restore.** Open the Nova card, click **Edit**, set **Effort** back to `low`, click **Save**, and wait for Online.
 
 **Pass if — all of these**
@@ -1471,11 +1467,11 @@ If the Model has no effort ladder at all, the select will show only `Use the age
 > [!NOTE]
 > The card always shows the STORED Effort, not the session's live value. If the adapter clamps a requested level back to its own default, the card will not say so — that is a recorded limit, not a defect. The restore step is mandatory, for the same reason as PERSONALIFECYCLE-28.
 
-### PERSONALIFECYCLE-30 — MONEY: context bleeds between Rooms — confirm the known limit, and that replies still land in the right Room
+### PERSONALIFECYCLE-30 — MONEY: what a Teammate was told in one Room does not leak into another, one process serves both, and replies land in the right Room
 
 **💰 Spends money** · about 12 min
 
-*Confirms the documented one-session-per-Persona limit is what you see, while proving the genuine defect it could mask (a reply landing in the wrong Room) does not happen.*
+*Proves the ADR-0024 design: a Persona holds one session per Room but only one adapter process, so context does not cross Rooms, a reply never lands in the wrong Room, and the process count does not grow with Rooms.*
 
 **Before you start**
 
@@ -1485,7 +1481,7 @@ If the Model has no effort ladder at all, the select will show only `Use the age
 
 **Steps**
 
-1. In the sidebar click **New chat**.
+1. In `T-B` run `Adapters` and write down every row. Then in the sidebar click **New chat**.
 2. In the panel tick the checkbox next to `Nova` AND the checkbox next to `Chief of Staff`.
 3. Click **Start chat** and note the new Room that appears in the sidebar; open it.
 4. Go back to the two-member Room named `Nova`.
@@ -1495,30 +1491,31 @@ If the Model has no effort ladder at all, the select will show only `Use the age
 8. Read the reply and note whether it says `quince`.
 9. Check WHICH Room the reply appeared in.
 10. Go back to the two-member `Nova` Room and confirm no stray reply appeared there.
-11. In `T-B` run `Adapters` and count rows for `Nova`.
-12. In `T-B` run `Get-ChildItem 'E:\Repos\Huddle\src\Huddle.App\App_Data\rooms'` and confirm each Room has its own `.jsonl` file.
+11. In `T-B` run `Adapters` and compare with the listing you wrote down before step 1.
+12. In `T-B` run `Get-ChildItem '<data>\rooms'` and confirm each Room has its own `.jsonl` file.
 
 **Pass if — all of these**
 
-- `Nova` very likely answers `quince` in the group Room — recorded and reported as the KNOWN LIMIT, not as a defect.
+- `Nova` does NOT know the fruit in the group Room: the group Room is a new session whose first Turn carries only that Room's own Messages (`RoomSessionPool.cs:195-210`; ADR-0024). It may ask what you mean, or guess. Judge by the Room's own text, not by prose style.
 - The reply appears in the group Room where the question was asked, and NOT in the two-member Room.
 - No reply appears in any Room `Nova` is not a member of.
-- `Adapters` shows exactly ONE `node.exe` for `Nova` regardless of how many Rooms it is in.
+- `Adapters` shows no new row after the group Room was created and used: one `node.exe` per Persona regardless of how many Rooms it is in.
 - Each Room has its own `.jsonl` Transcript and each reply is filed in the right one.
 
 **Fail if — any of these**
 
 - The reply appears in a DIFFERENT Room from the one asked in -> a real defect: Room routing is broken, and conversations will cross.
 - A reply appears in a Room the Agent is not a Member of -> membership is not gating delivery.
-- Two `node.exe` processes appear for one Persona in two Rooms -> the one-session-per-Persona design has been broken and the cost per teammate now scales with Rooms.
+- `Nova` answers `quince` in the group Room -> what it was told in one Room reached another. First rule out Memory: `Nova` may have saved the fruit itself, so run `Get-ChildItem '<data>\Teammates\Nova\work\memory' -Recurse` and read any new file; a fruit written there is the teammate's own note and not a leak.
+- A second `node.exe` appears for `Nova` when it is used in the second Room -> the one-process-per-Persona design has been broken and the cost per teammate now scales with Rooms.
 - A Message posts into the wrong `.jsonl` file -> the Transcript and the UI disagree about where a Message lives.
 
 **Inconclusive if**
 
-If `Nova` says it does not know the fruit, that is also acceptable — the memory is shared but the model may not use it, and the `[Room: …]` prefix on every prompt is a convention it may follow. Record what happened; only the routing conditions decide pass or fail. If **New chat** shows `No agents have connected yet`, nothing has connected — wait for `Nova` to go Online, or use **Add teammate** in the `Nova` Room header instead.
+If `Nova` answers `quince` and a Memory file explains it, record the Memory file's path and conclude nothing about leaks: only the routing conditions and the process count are then decisive. If **New chat** shows `No agents have connected yet`, nothing has connected — wait for `Nova` to go Online, or use **Add teammate** in the `Nova` Room header instead.
 
 > [!NOTE]
-> DO NOT FILE THE BLEED AS A BUG. One ACP session spans every Room its Agent is in; a session per (Persona, Room) was rejected on cost. In the same family: **Stop** stops that Agent in every Room at once, because there is nothing narrower to stop.
+> The old "context bleeds between Rooms" limit is lifted (ADR-0024; `known-limits.md:137`): an Agent holds one session per Room, and shares only its Persona text, Work Dir, Memory and adapter process across them. What is given up is implicit recall of other Rooms. **Stop** stops only that Room's session.
 
 ### PERSONALIFECYCLE-31 — MONEY: the per-Persona token Budget shows as Degraded with its reason, and any Human Message clears it
 
@@ -1528,7 +1525,7 @@ If `Nova` says it does not know the fruit, that is also acceptable — the memor
 
 **Before you start**
 
-- Two Personas exist (`Nova` and `Ada`), both Model = Haiku, Effort = low.
+- Two Personas exist (`Nova` and `Ada`), both Model = Haiku, Effort = low (PERSONALIFECYCLE-20 step 9 restores `Ada`).
 - No app is running (this test needs specific environment overrides at startup).
 - COST: roughly four to eight short Haiku Turns. The `Team__AgentMessageBudget='4'` override is what caps the spend — do not omit it.
 
@@ -1616,11 +1613,11 @@ IMPORTANT: this Degraded state is UNREACHABLE in a plain two-member Human-to-Per
 - NOTHING stops the exchange -> both caps are gone and an agent-to-agent loop will run until someone notices; this is real, unbounded spend.
 - A tile goes Offline during the exchange -> a normal pause is being reported as a fault.
 - The pause prompt vanishes on page reload -> the prompt is only reaching the live event path and not the initial render, so a refresh hides the fact that the Room is paused.
-- **Continue** does nothing, or the exchange resumes and never halts again -> the granted Budget is not being re-applied.
+- **Continue** does nothing while the last Message in the Room is a human's or another teammate's, or the exchange resumes and never halts again -> the granted Budget is not being re-applied. (When the last Message is a teammate's own, Continue wakes nobody and the prompt says so: see Inconclusive.)
 
 **Inconclusive if**
 
-If the two agents will not talk to each other, re-word the prompt as in PERSONALIFECYCLE-31's inconclusive note. If the Room pauses after fewer replies than the configured budget, check whether a Turn failed (read `T-A`) before concluding. If you cannot get four replies out of the pair within a few minutes, stop the test rather than spending more — record it inconclusive.
+If **Continue** does nothing and the Room's last Message is a teammate's own, that is correct behaviour, not a failure: the prompt itself warns `Continue will deliver the last message again, and it is a teammate's own — a teammate is never delivered its own message, so this will wake nobody. Say something instead.` (`Chat.razor:139-144`). Record steps 10-11 as inconclusive, type a Message and run the test's pause again. If the two agents will not talk to each other, re-word the prompt as in PERSONALIFECYCLE-31's inconclusive note. If the Room pauses after fewer replies than the configured budget, check whether a Turn failed (read `T-A`) before concluding. If you cannot get four replies out of the pair within a few minutes, stop the test rather than spending more — record it inconclusive.
 
 > [!NOTE]
 > A Turn a Human stopped is not a failure and a spent per-Room Budget is not either: neither may ever show as Degraded or Offline. The Budget pause belongs to the Continue prompt above the composer, and that is the only place it should appear.

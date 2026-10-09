@@ -1,7 +1,13 @@
 namespace Agency.Huddle.Tests.Prompts;
 
 using System.Text.RegularExpressions;
+using Agency.Huddle.App.Acp.Tools;
 using Agency.Huddle.App.Prompts;
+using Agency.Huddle.App.Services;
+using Agency.Huddle.Tests.Acp.Tools;
+using Agency.Huddle.Tests.Tasks;
+using Agency.Huddle.Tests.Teams;
+using Microsoft.Extensions.Logging.Abstractions;
 
 /// <summary>
 /// Self-consistency checks on <see cref="PromptCatalog"/>: that its 29 entries are well-formed on their
@@ -28,12 +34,15 @@ public sealed partial class PromptCatalogTests
     /// Spec §7.4 (Task 5.4 - method name kept), plus <c>tool.askHuman.description</c> added for Questions
     /// spec §6.6, plus <c>systemPrompt.askHuman</c> added for the same spec's D-11 amendment (count now 69),
     /// plus <c>turn.libraryDocIncluded</c> and <c>turn.libraryImageUnavailable</c> added for the Prompt
-    /// blocks design §6.5 (count now 71).
+    /// blocks design §6.5 (count now 71), plus <c>tool.fileRequest.description</c>, <c>tool.confirmRequest.description</c> and
+    /// <c>tool.triageRequest.description</c> added for the tool descriptions batch 2 (count now 84), plus
+    /// <c>tool.proposeSprint.description</c>, <c>tool.markRetroRow.description</c> and <c>tool.proposeRetroChanges.description</c>
+    /// added for the tool descriptions batch 3 (count now 87).
     /// </summary>
     [Fact]
-    public void All_HasExactlyThirtySevenPrompts()
+    public void All_HasExpectedPromptCount()
     {
-        Assert.Equal(78, PromptCatalog.All.Count);
+        Assert.Equal(87, PromptCatalog.All.Count);
     }
 
     /// <summary>Task 58 (PR-4, PR-5): the process blocks and the onboarding turn take and require their one placeholder and carry no tool prefix.</summary>
@@ -406,6 +415,188 @@ public sealed partial class PromptCatalogTests
         Assert.Equal(placeholders, prompt.Placeholders);
         Assert.Equal(requiredPlaceholders, prompt.RequiredPlaceholders);
         Assert.False(prompt.Default.Contains("mcp__team__", StringComparison.Ordinal));
+    }
+
+    /// <summary>
+    /// D5: each of the nine tool descriptions is a catalog prompt that is <see cref="PromptTiming.NextSession"/>,
+    /// takes no placeholders, and whose default is today's hard-coded literal, copied verbatim.
+    /// </summary>
+    [Theory]
+    [InlineData("tool.addEvidence.description", "Adds a line of evidence to a Task: the command you ran, its exit code and, when you ran it, a pointer to your tool-call log. Evidence is append-only; earlier lines are never changed.")]
+    [InlineData("tool.readRecords.description", "Reads a Team's evidence for a retro. With only 'team' (and optionally 'since', a date like 2026-10-01) it returns the compact records bundle. With 'taskId' it returns that Task's Change log and Evidence. With 'room' it returns the last 200 messages of that Room's transcript, each cut to 300 characters. Output is capped at 12000 characters.")]
+    [InlineData("tool.listTeams.description", "Lists every Team with its type, manager, what it owns and how many Requests are open in its backlog. Use it to choose the Team to file a Request with.")]
+    [InlineData("tool.fileRequest.description", "Files a Request in another Team's backlog. Give the Team, the kind (bug, feature, feedback or question), a title and a body whose '## ' headings cover what the kind needs. Optionally name one of your own Tasks that waits on the answer.")]
+    [InlineData("tool.confirmRequest.description", "Confirms that a Done Request you filed was delivered as asked, and closes it. Only your Team's QA may call it. Optionally add a note.")]
+    [InlineData("tool.triageRequest.description", "Triages a Request filed with your Team. Decision 'accept' moves it to To Do (optionally name the assignee); 'decline' rejects it and needs a reason; 'needs_info' keeps it in Backlog and needs a reason saying what is missing.")]
+    [InlineData("tool.proposeSprint.description", "Proposes a Sprint to the Human: a name and the Tasks to put in it. Nothing is created until the Human approves. Only the manager of the Team can propose, and every Task must belong to that Team and not be Done.")]
+    [InlineData("tool.markRetroRow.description", "Marks a Done or Partial row of the Team's Retro register as Verified, Partial or Changed after checking it against later evidence. Verified needs evidence that links a Task id, a logs/... line (logs/...#L12) or a _retros/ file.")]
+    [InlineData("tool.proposeRetroChanges.description", "Proposes up to 3 changes to the Human after a retro. Each change names a targetFile (Process.md, _team.md or a Team member's Name.md), the exact text to find (it must occur once in that file) and the text to replace it with. Huddle shows each as a diff; nothing is edited until the Human accepts it, and then Huddle makes the edit, not you.")]
+    public void ToolDescriptionPrompts_AreNextSessionWithTodaysDefault(string key, string expectedDefault)
+    {
+        var prompt = PromptCatalog.Get(key);
+
+        Assert.Equal(PromptTiming.NextSession, prompt.Timing);
+        Assert.Equal(expectedDefault, prompt.Default);
+        Assert.Empty(prompt.Placeholders);
+    }
+
+    /// <summary>
+    /// D5: an override saved for <c>tool.addEvidence.description</c> is the text the store renders for that key,
+    /// which is the text the tool's Description returns once Task 12 reads it from the catalog.
+    /// </summary>
+    [Fact]
+    public async Task AddEvidenceDescription_OverriddenValue_IsWhatTheToolReturns()
+    {
+        CancellationToken ct = TestContext.Current.CancellationToken;
+        using var dataDir = new TempDataDir();
+        var store = new PromptStore(dataDir.Options(), NullLogger<PromptStore>.Instance);
+        const string overriddenText = "Records one line of evidence for a Task.";
+
+        store.Save("tool.addEvidence.description", overriddenText);
+        using TaskToolHarness harness = await TaskToolHarness.CreateAsync(ct);
+        AddEvidenceTool tool = new(harness.Service, harness.Store, new ToolCallLogWriter(harness.Options), harness.Directory, harness.Clock, "caller-id", store);
+
+        Assert.Equal(overriddenText, tool.Description);
+    }
+
+    /// <summary>
+    /// D5: an override saved for <c>tool.readRecords.description</c> is the text the store renders for that key,
+    /// which is the text the tool's Description returns once Task 12 reads it from the catalog.
+    /// </summary>
+    [Fact]
+    public void ReadRecordsDescription_OverriddenValue_IsWhatTheStoreRenders()
+    {
+        using var dataDir = new TempDataDir();
+        var store = new PromptStore(dataDir.Options(), NullLogger<PromptStore>.Instance);
+        const string overriddenText = "Reads a Team's records for a retro.";
+
+        store.Save("tool.readRecords.description", overriddenText);
+
+        Assert.Equal(overriddenText, store.Render("tool.readRecords.description", new Dictionary<string, string>()));
+    }
+
+    /// <summary>
+    /// D5: an override saved for <c>tool.listTeams.description</c> is the text the store renders for that key,
+    /// which is the text the tool's Description returns once Task 12 reads it from the catalog.
+    /// </summary>
+    [Fact]
+    public async Task ListTeamsDescription_OverriddenValue_IsWhatTheToolReturns()
+    {
+        CancellationToken ct = TestContext.Current.CancellationToken;
+        using var dataDir = new TempDataDir();
+        var store = new PromptStore(dataDir.Options(), NullLogger<PromptStore>.Instance);
+        const string overriddenText = "Lists the Teams you can file a Request with.";
+
+        store.Save("tool.listTeams.description", overriddenText);
+        using TaskToolHarness harness = await TaskToolHarness.CreateAsync(ct);
+        ListTeamsTool tool = new(new FakeTeamCatalog(), harness.Store, harness.Personas, harness.Directory, "caller-id", store);
+
+        Assert.Equal(overriddenText, tool.Description);
+    }
+
+    /// <summary>
+    /// D5: an override saved for <c>tool.fileRequest.description</c> is the text the tool's Description returns, read from the
+    /// catalog through the store.
+    /// </summary>
+    [Fact]
+    public async Task FileRequestDescription_OverriddenValue_IsWhatTheToolReturns()
+    {
+        CancellationToken ct = TestContext.Current.CancellationToken;
+        using var dataDir = new TempDataDir();
+        var store = new PromptStore(dataDir.Options(), NullLogger<PromptStore>.Instance);
+        const string overriddenText = "Files a Request in another Team's backlog.";
+
+        store.Save("tool.fileRequest.description", overriddenText);
+        using TaskToolHarness harness = await TaskToolHarness.CreateAsync(ct);
+        FileRequestTool tool = new(new FakeTeamCatalog(), harness.Service, harness.Store, new FakeRequestNotifier(), harness.Directory, "caller-id", store);
+
+        Assert.Equal(overriddenText, tool.Description);
+    }
+
+    /// <summary>
+    /// D5: an override saved for <c>tool.confirmRequest.description</c> is the text the tool's Description returns, read from the
+    /// catalog through the store.
+    /// </summary>
+    [Fact]
+    public async Task ConfirmRequestDescription_OverriddenValue_IsWhatTheToolReturns()
+    {
+        CancellationToken ct = TestContext.Current.CancellationToken;
+        using var dataDir = new TempDataDir();
+        using var gateDir = new TempDataDir();
+        var store = new PromptStore(dataDir.Options(), NullLogger<PromptStore>.Instance);
+        const string overriddenText = "Confirms a Done Request you filed.";
+
+        store.Save("tool.confirmRequest.description", overriddenText);
+        using TaskToolHarness harness = await TaskToolHarness.CreateAsync(ct);
+        ConfirmRequestTool tool = new(
+            new FakeTeamCatalog(),
+            harness.Service,
+            harness.Store,
+            harness.Personas,
+            TaskServiceGateTests.BuildGates(gateDir, null),
+            new FakeRequestNotifier(),
+            harness.Directory,
+            "caller-id",
+            store);
+
+        Assert.Equal(overriddenText, tool.Description);
+    }
+
+    /// <summary>
+    /// D5: an override saved for <c>tool.triageRequest.description</c> is the text the tool's Description returns, read from the
+    /// catalog through the store.
+    /// </summary>
+    [Fact]
+    public async Task TriageRequestDescription_OverriddenValue_IsWhatTheToolReturns()
+    {
+        CancellationToken ct = TestContext.Current.CancellationToken;
+        using var dataDir = new TempDataDir();
+        var store = new PromptStore(dataDir.Options(), NullLogger<PromptStore>.Instance);
+        const string overriddenText = "Triages a Request filed with your Team.";
+
+        store.Save("tool.triageRequest.description", overriddenText);
+        using TaskToolHarness harness = await TaskToolHarness.CreateAsync(ct);
+        TriageRequestTool tool = new(new FakeTeamCatalog(), harness.Service, harness.Store, new FakeRequestNotifier(), harness.Directory, "caller-id", store);
+
+        Assert.Equal(overriddenText, tool.Description);
+    }
+
+    /// <summary>
+    /// D5: an override saved for <c>tool.proposeSprint.description</c> is the text the tool's Description returns, read from
+    /// the catalog through the store.
+    /// </summary>
+    [Fact]
+    public async Task ProposeSprintDescription_OverriddenValue_IsWhatTheToolReturns()
+    {
+        CancellationToken ct = TestContext.Current.CancellationToken;
+        using var dataDir = new TempDataDir();
+        var store = new PromptStore(dataDir.Options(), NullLogger<PromptStore>.Instance);
+        const string overriddenText = "Proposes a Sprint to the Human.";
+
+        store.Save("tool.proposeSprint.description", overriddenText);
+        using TaskToolHarness harness = await TaskToolHarness.CreateAsync(ct);
+        Agency.Huddle.App.Tasks.SprintProposalStore proposals = new(new DiskTeamFolders(Path.Combine(harness.Options.Value.DataDir, "platform-folder")));
+        ProposeSprintTool tool = new(harness.Store, harness.Sprints, proposals, new FakeTeamCatalog(), harness.Directory, "caller-id", store);
+
+        Assert.Equal(overriddenText, tool.Description);
+    }
+
+    /// <summary>
+    /// D5: an override saved for <c>tool.proposeRetroChanges.description</c> is the text the tool's Description returns, read from
+    /// the catalog through the store.
+    /// </summary>
+    [Fact]
+    public async Task ProposeRetroChangesDescription_OverriddenValue_IsWhatTheToolReturns()
+    {
+        CancellationToken ct = TestContext.Current.CancellationToken;
+        using var dataDir = new TempDataDir();
+        var store = new PromptStore(dataDir.Options(), NullLogger<PromptStore>.Instance);
+        const string overriddenText = "Proposes up to 3 retro changes to the Human.";
+
+        store.Save("tool.proposeRetroChanges.description", overriddenText);
+        using RetroProposalFixture fixture = await RetroProposalFixture.CreateAsync(ct);
+
+        Assert.Equal(overriddenText, fixture.Tool("Nova", store).Description);
     }
 
     /// <summary>No two prompts share a <see cref="PromptDefinition.Key"/>.</summary>

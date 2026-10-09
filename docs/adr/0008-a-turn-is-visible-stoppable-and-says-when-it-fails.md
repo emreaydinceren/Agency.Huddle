@@ -85,6 +85,10 @@ every Room its Agent is in, so stopping an Agent stops it everywhere; the id
 records where the Human asked. That is the one-session-per-Persona
 [Known limit](../engineering/known-limits.md) showing through.
 
+> **Note (2026-10-09):** Superseded for this point by [ADR-0024](0024-an-agent-holds-one-session-per-room.md).
+> An Agent now holds one session per Room, and a Stop is routed to that Room's session
+> (`src/Huddle.App/Acp/Sessions/RoomSessionPool.cs:195-210`). `RoomId` is now the selector as well as the label.
+
 **Two extension points are deliberate, so nobody re-invents them.** A future
 *"stop this conversation"* — every Agent in the Room — is the same `StopTurn`
 fanned out through the delivery loop `AgentGateway` already has: no wire change,

@@ -1,24 +1,22 @@
 # Application shell, navigation and layout
 
-Prove the Agency.Huddle shell holds together: that the five routes (`/`, `/rooms/{RoomId}`, `/teammates`, `/settings`, `/settings/{Tab}`) resolve, that the fixed 240px `MudDrawer` with **New chat**, the live room list, **Teammates** and **Settings** is identical on every one of them, and above all that the shell's own assets actually load. The last part is the reason this area is tested by hand: `@Assets["..."]` hands back an unresolved key verbatim instead of throwing, so a stale stylesheet or script name renders as an ordinary-looking href that 404s with no build warning, no startup error, no log line and no visual error. That exact failure shipped live for a month after the 2026-09-12 namespace rename. Nothing in this area needs a Claude turn, so every test below is free.
+Prove the Agency.Huddle shell holds together: that the five routes this page exercises (`/`, `/rooms/{RoomId}`, `/teammates`, `/settings`, `/settings/{Tab}`) resolve, that the fixed 240px `MudDrawer` is identical on every one of them, and above all that the shell's own assets actually load. The drawer holds the `Chats` group (the room list, with **New chat** inside it), the `Teams` group, **Teammates**, the `Tasks` and `Library` groups, and a bottom row of two icon-only links, Archived chats and **Settings**. The Tasks, Library and Teams pages (`/tasks…`, `/library`, `/teams/…`) have no shell-level test here. The asset check is the reason this area is tested by hand: `@Assets["..."]` hands back an unresolved key verbatim instead of throwing, so a stale stylesheet or script name renders as an ordinary-looking href that 404s with no build warning, no startup error, no log line and no visual error. That exact failure shipped live for a month after the 2026-09-12 namespace rename. Nothing in this area needs a Claude turn, so every test below is free.
 
-**27 active, 2 retired** · 27 free, none paid · about 2.7 hours.
+**28 tests** · 28 free, none paid · about 2.7 hours.
 
 Read [the manual test script](../manual-tests.md) first — the cost guard, the Model and Effort
 convention, and the rules for concluding a result — then [Common procedures](common.md), which
 defines the terminals, states, procedures and oracles this page names. Both are assumed below.
 
 > [!NOTE]
-> This area was updated on 2026-09-14 for the MudBlazor migration. The shell is now
-> `MudLayout`/`MudDrawer`/`MudMainContent` with `MudNavMenu` (Stage 5), and the theming system the
-> shell used to link as CSS files (`theme.css`, `themes/huddle-dark.css`, an inline per-token
-> `<style>` override) is gone — see [ADR-0010](../adr/0010-a-theme-is-a-mudblazor-theme.md) and
-> `appearance-theme.md`, which now owns every theme-application test. SHELLNAV-21 and SHELLNAV-22
-> tested that retired CSS cascade and are **retired in place**, not renumbered. The
-> `@Assets[...]` asset-loading checks this file leads with (SHELLNAV-01, -02) are unaffected in
-> kind, but the asset LIST changed: two MudBlazor static assets, `_content/MudBlazor/MudBlazor.min.css`
-> and `.min.js`, were added, unfingerprinted, and a new fingerprinted stylesheet, `app-vars.css`,
-> was added alongside `app.css`.
+> The shell is `MudLayout`/`MudDrawer`/`MudMainContent` with `MudNavMenu`, and the theming system
+> the shell used to link as CSS files (`theme.css`, `themes/huddle-dark.css`, an inline per-token
+> `<style>` override) is gone — see [ADR-0010](../../adr/0010-a-theme-is-a-mudblazor-theme.md) and
+> `appearance-theme.md`, which owns every theme-application test. The two tests that covered that
+> retired CSS cascade (SHELLNAV-21 and SHELLNAV-22) are removed; their ids are not reused. The
+> `@Assets[...]` asset-loading checks this file leads with (SHELLNAV-01, -02) cover the current
+> asset list: two MudBlazor static assets, `_content/MudBlazor/MudBlazor.min.css` and `.min.js`,
+> are unfingerprinted, and a fingerprinted `app-vars.css` sits alongside `app.css`.
 
 ## Setup
 
@@ -30,7 +28,7 @@ standing conventions. This area adds:
 1. Browse to `http://localhost:5100` in Chrome or Edge. Open DevTools (F12) and keep the Console, Network and Elements tabs available.
 2. In DevTools Network, tick **Disable cache** and leave the tab recording for the whole session. Several tests read its Status column.
 3. Every `curl.exe` oracle in this area runs in `T-B`, so it never disturbs the app.
-4. Confirm the baseline state: the sidebar lists the one-to-one Rooms `Ada` and `Bo`, and both Teammates are **Online** on `/teammates`. A different set means an earlier session left state behind — that is fine for most tests here, but note it, because tests that name `Ada` and `Bo` assume this pair. Re-run `P-LAUNCH-UAT` to return to it.
+4. Confirm the baseline state: the `Chats` group in the sidebar is expanded and lists the one-to-one Rooms `Ada` and `Bo` (the built-in Chief of Staff's Room may be listed too), and both Teammates are **Online** on `/teammates`. A different set means an earlier session left state behind — that is fine for most tests here, but note it, because tests that name `Ada` and `Bo` assume this pair. Re-run `P-LAUNCH-UAT` to return to it.
 5. No test in this area needs a Model or an Effort. If a step below appears to ask you to pick one, that step is in the wrong area — stop and report it rather than picking.
 6. Do NOT click **New teammate** on `/teammates` during this area. Opening that card probes the model catalog, which is another area's business and the one place on these pages that can reach an Adapter.
 
@@ -45,11 +43,11 @@ standing conventions. This area adds:
 **Before you start**
 
 - App running on http://localhost:5100.
-- `T-B` open at the repository root.
+- `T-B` open at `<repo>`.
 
 **Steps**
 
-1. In `T-B` run: `$html = curl.exe -s http://localhost:5100/ | Out-String`
+1. In `T-B` run: `$html = curl.exe -s http://localhost:5100/settings | Out-String` (`/settings`, not `/`: the bare `/` answers `302` with no page, see SHELLNAV-04).
 2. Run: `[regex]::Matches($html, '<link rel="stylesheet" href="([^"]+)"') | ForEach-Object { $_.Groups[1].Value }`
 3. Write down every href it printed, in order.
 4. For each href printed, run: `curl.exe -s -o NUL -w "%{http_code}" "http://localhost:5100/<paste the href here>"` and record the three-digit status it prints.
@@ -75,7 +73,7 @@ standing conventions. This area adds:
 
 **Inconclusive if**
 
-If `curl.exe` is not found, use the browser instead: View Source (Ctrl+U) on http://localhost:5100/, read the four `<link rel="stylesheet">` hrefs, and click each one - a 404 page rather than CSS text is a fail. If the app is not listening (connection refused), that is not a result for this test - fix the launch and re-run.
+If `curl.exe` is not found, use the browser instead: View Source (Ctrl+U) on http://localhost:5100/settings, read the four `<link rel="stylesheet">` hrefs, and click each one - a 404 page rather than CSS text is a fail. If the app is not listening (connection refused), that is not a result for this test - fix the launch and re-run.
 
 > [!NOTE]
 > `theme.css` is gone — the hand-built theming system it belonged to was replaced by `MudTheme`
@@ -101,7 +99,7 @@ If `curl.exe` is not found, use the browser instead: View Source (Ctrl+U) on htt
 
 **Steps**
 
-1. In `T-B` run: `$html = curl.exe -s http://localhost:5100/ | Out-String`
+1. In `T-B` run: `$html = curl.exe -s http://localhost:5100/settings | Out-String`
 2. Run: `[regex]::Matches($html, '<script[^>]*src="([^"]+)"') | ForEach-Object { $_.Groups[1].Value }`
 3. Write down every src printed, in order.
 4. For each src, run: `curl.exe -s -o NUL -w "%{http_code}" "http://localhost:5100/<paste the src here>"` and record the status.
@@ -109,23 +107,23 @@ If `curl.exe` is not found, use the browser instead: View Source (Ctrl+U) on htt
 6. Read the Status column for every row in the filtered JS list.
 7. In the DevTools Console, type `typeof window.teamComposer` and press Enter.
 8. Type `typeof window.teamScroll` and press Enter.
-9. Type `typeof window.Mud` (or `typeof MudBlazor`, whichever the console autocompletes) and press Enter, to confirm MudBlazor's own script executed.
+9. Type `typeof window.mudElementRef` and press Enter, to confirm MudBlazor's own script executed.
 
 **Pass if — all of these**
 
-- Step 2 printed, in this order: `_content/MudBlazor/MudBlazor.min.js` (no fingerprint — deliberate, see notes), then one ending `_framework/blazor.web.<hash>.js`, then one ending `app.<hash>.js`, and one ending `Components/Layout/ReconnectModal.razor.<hash>.js`.
-- The LAST two of those carry a fingerprint segment; neither is the bare key `app.js` or `_framework/blazor.web.js`.
+- Step 2 printed, in this order: `Components/Layout/ReconnectModal.<hash>.razor.js` (the reconnect modal's module comes first, because `<ReconnectModal />` sits above the other scripts in `App.razor`), then `_content/MudBlazor/MudBlazor.min.js` (no fingerprint — deliberate, see notes), then `_framework/blazor.web.<hash>.js`, then `app.<hash>.js`. A development host may append further scripts (for example browser-refresh); ignore any after `app.<hash>.js`.
+- The ReconnectModal, `blazor.web` and `app` entries carry a fingerprint segment (the hash sits before `.razor.js` in the first one); none is the bare key `app.js` or `_framework/blazor.web.js`.
 - Every status in step 4 is `200`.
 - No row in the DevTools JS list shows 404.
 - Step 7 and step 8 both printed `"object"`.
-- Step 9 confirms MudBlazor's own script object exists (does not print `"undefined"`).
+- Step 9 printed `"object"`.
 
 **Fail if — any of these**
 
 - `app.js`'s src has no hash, or 404s, or step 7 printed `"undefined"` -> the `@Assets["app.js"]` key did not resolve. Nothing on screen says so; the symptom is that pressing Enter in the composer inserts a newline instead of sending, and the transcript never auto-scrolls. Confirm with SHELLNAV-19 and report as a defect plus a test-coverage gap.
 - `blazor.web.js` 404s -> nothing on the page will be interactive and no `_blazor` websocket will open. Loud, but the same root cause.
-- `MudBlazor.min.js` 404s, or step 9 shows nothing loaded -> every MudBlazor interactive feature (dialogs, popovers, ripples) will silently fail to initialise.
-- `ReconnectModal.razor.js` never appears anywhere in the document -> the reconnect modal in SHELLNAV-26 will never appear at all.
+- `MudBlazor.min.js` 404s, or step 9 printed `"undefined"` -> every MudBlazor interactive feature (dialogs, popovers, ripples) will silently fail to initialise.
+- The `ReconnectModal.<hash>.razor.js` entry never appears anywhere in the document -> the reconnect modal in SHELLNAV-26 will never appear at all.
 - `MudBlazor.min.js`'s src carries a fingerprint -> it was routed through the fingerprinting pipeline by mistake; it is a static asset and should not need to be.
 
 **Inconclusive if**
@@ -155,7 +153,7 @@ If the Console shows a Content-Security-Policy or extension error rather than a 
 5. In the DevTools Console, type `getComputedStyle(document.getElementById('blazor-error-ui')).display` and press Enter.
 6. Type `getComputedStyle(document.getElementById('blazor-error-ui')).position` and press Enter.
 7. Type `document.getElementById('blazor-error-ui').getAttributeNames()` and press Enter.
-8. Click **Settings** in the sidebar and repeat steps 2 to 6 on that route.
+8. Click the gear icon (**Settings**, icon-only, bottom of the sidebar) and repeat steps 2 to 6 on that route.
 
 **Pass if — all of these**
 
@@ -214,7 +212,7 @@ If `document.getElementById('blazor-error-ui')` returns `null`, the markup itsel
 
 **Inconclusive if**
 
-If `sqlite3` is available you can confirm the target exactly with `sqlite3 src/Huddle.App/App_Data/team.db "SELECT id, name FROM rooms ORDER BY created, id LIMIT 1;"`. If `sqlite3` is NOT installed, do not treat that as a failure - compare the `<h1>` against the first sidebar entry instead, which reads from the same query. If the sidebar is empty, this test does not apply; run SHELLNAV-24 instead.
+If `sqlite3` is available you can confirm the target exactly with `sqlite3 <data>\team.db "SELECT id, name FROM rooms ORDER BY created, id LIMIT 1;"` (on `P-LAUNCH-UAT`, `<data>` is `C:\seeds\huddle\uat\data`). If `sqlite3` is NOT installed, do not treat that as a failure - compare the `<h1>` against the first sidebar entry instead, which reads from the same query. If the sidebar is empty, this test does not apply; run SHELLNAV-24 instead.
 
 > [!NOTE]
 > Rooms are ordered by creation time then id, never alphabetically and never by recent activity. `Ada` landing before `Bo` is correct because it is seeded first.
@@ -324,8 +322,8 @@ If a browser extension or a corporate proxy substitutes its own 404 page, the br
 **Pass if — all of these**
 
 - Both `curl.exe` calls printed `200`.
-- `/Settings` shows `<h1>Settings</h1>` with the two-button tab rail.
-- `/TEAMMATES` shows `<h1>Teammates</h1>`.
+- `/Settings` shows an `<h1>` reading `Settings` with the six-tab bar (SHELLNAV-11).
+- `/TEAMMATES` shows an `<h1>` reading `Teammates`.
 
 **Fail if — any of these**
 
@@ -352,19 +350,19 @@ None expected. If the app is not listening, fix the launch first.
 
 1. In the browser, navigate to `http://localhost:5100/` and let it redirect to a room.
 2. In the DevTools Console, type `getComputedStyle(document.querySelector('.mud-drawer')).width` and press Enter. Record the value.
-3. Type `[...document.querySelectorAll('.mud-drawer > *')].map(e => e.className || e.tagName)` and press Enter. Record the order (the drawer's own direct children — `NewChat`, `RoomList` and `MudNavMenu`, each rendering as a `<div>`).
-4. Type `[...document.querySelectorAll('.mud-drawer .mud-nav-link')].filter(a => a.getAttribute('href') === '/teammates' || a.getAttribute('href') === '/settings').map(a => a.textContent.trim() + ' -> ' + a.getAttribute('href'))` and press Enter. Record the result.
+3. Type `[...document.querySelectorAll('.mud-drawer-content > *')].map(e => e.className)` and press Enter. Record the list in order (the drawer's own content sections; `.mud-drawer > *` would list MudBlazor's wrapper elements instead).
+4. Type `[...document.querySelectorAll('.mud-drawer .mud-nav-link')].filter(a => ['/teammates', '/settings'].includes(a.getAttribute('href'))).map(a => (a.textContent.trim() || a.getAttribute('aria-label')) + ' -> ' + a.getAttribute('href'))` and press Enter. Record the result.
 5. Type `getComputedStyle(document.querySelector('.main-column')).overflow` and press Enter.
 6. Click **Teammates** in the sidebar and repeat steps 2 to 5.
-7. Click **Settings** in the sidebar and repeat steps 2 to 5.
+7. Click the gear icon (**Settings**) at the bottom of the sidebar and repeat steps 2 to 5.
 8. Navigate to `http://localhost:5100/settings/appearance` and repeat steps 2 to 5.
 9. On the Settings route, scroll the drawer with the mouse wheel while hovering over it, then scroll while hovering over the main column.
 
 **Pass if — all of these**
 
 - Step 2 printed `240px` on all four routes.
-- Step 3 shows exactly three direct children, in order, on all four routes.
-- Step 4 printed exactly `Teammates -> /teammates` and `Settings -> /settings`, in that order, on all four routes — MudBlazor renders the link text as typed (title case), not upper case, since `MudNavLink` is not a button or tab label.
+- Step 3 lists exactly six sections, in this order, on all four routes: `room-list`, `teams-nav-host`, a `mud-navmenu` (Teammates), then `mud-navmenu` entries whose class lists include `task-view-nav`, `library-nav` and `nav-settings` (`MainLayout.razor`: RoomList, TeamsNav, Teammates, TaskViewNav, LibraryNavLink, and the Archived chats and Settings menu).
+- Step 4 printed exactly `Teammates -> /teammates` and `Settings -> /settings`, in that order, on all four routes — MudBlazor renders the link text as typed (title case), and the Settings link has no text, so its label comes from `aria-label`.
 - Step 5 printed `"hidden"` on all four routes — `.main-column` is still the literal `Class` MudMainContent carries and its CSS rule is unchanged.
 - The drawer scrolls independently; the browser window itself never grows a page-level horizontal or vertical scrollbar.
 
@@ -372,6 +370,7 @@ None expected. If the app is not listening, fix the launch first.
 
 - The drawer is missing on one route -> that page declared its own layout instead of inheriting MainLayout. Defect, and the route is unreachable from anywhere else.
 - A link label reads anything other than `Teammates` or `Settings` -> the shell's navigation wording drifted.
+- Fewer or more than six sections -> a drawer entry was added or removed in `MainLayout.razor`; confirm that is intended and update this test.
 - `.mud-drawer`'s computed width is not `240px` -> the `Width="240px"` parameter on `MudDrawer` was changed or removed.
 - The whole page scrolls instead of only the drawer and the transcript -> `.main-column`'s `height: 100vh; overflow: hidden` was lost.
 
@@ -431,20 +430,20 @@ If only one room exists, the 'other room is plain' half cannot be judged - note 
 
 **Before you start**
 
-- App running with the cost guard set (`Team__Acp__Enabled = 'false'`).
-- `O-ADAPTERS` reads `0` (the `E-FREE` resting value).
+- App running on `P-LAUNCH-UAT` (the area lane: ACP on, free mock adapter). Nothing here may start a real adapter.
+- `O-ADAPTERS` reads `0` (no `node` process; the mock adapter is `mock-acp.exe`, which it does not count).
 
 **Steps**
 
-1. In `T-B` run `O-ADAPTERS`. Record the number.
+1. In `T-B` run `O-ADAPTERS` and `O-MOCK-ADAPTERS`. Record both numbers.
 2. In the browser, click **Teammates** in the sidebar.
 3. Read the `<h1>`.
-4. Read the text of the button at the top right of the main column.
+4. Read the text of the `New teammate` button, the first control in the toolbar under the intro paragraph.
 5. Read the first sentence of the intro paragraph below the heading.
 6. Confirm the sidebar is still present with the room list intact.
-7. In `T-B`, re-run the command from step 1 and compare the number.
+7. In `T-B`, re-run both commands from step 1 and compare the numbers.
 8. Scroll `T-A` and look for any new line mentioning probing an adapter or starting a model catalog.
-9. Press F5 to reload `/teammates`, then re-run step 1 one more time.
+9. Press F5 to reload `/teammates`, then re-run both commands one more time.
 
 **Pass if — all of these**
 
@@ -452,23 +451,23 @@ If only one room exists, the 'other room is plain' half cannot be judged - note 
 - The button reads exactly `New teammate`.
 - The intro paragraph begins `A Persona is a Markdown file describing how one teammate should behave, plus the model it thinks with.`
 - The sidebar is unchanged and still lists the rooms.
-- The `node` process count in steps 7 and 9 is identical to step 1.
+- Both counts in steps 7 and 9 are identical to step 1 (`O-ADAPTERS` `0`, `O-MOCK-ADAPTERS` unchanged).
 - `T-A` logged nothing about probing an adapter.
 
 **Fail if — any of these**
 
-- The `node` count rises on a bare page load -> the model catalog is being probed on render rather than when a card opens. This is a real regression AND it spends money whenever ACP is enabled. Report it as high severity.
+- Either count rises on a bare page load -> the model catalog is being probed on render rather than when a card opens. This is a real regression AND it spends money whenever a real adapter is configured. Report it as high severity.
 - The `<h1>` or the button label differs from the exact text above -> wording drift.
 - The page renders without the sidebar -> it escaped MainLayout; see SHELLNAV-08.
 
 **Inconclusive if**
 
-If a `node` process was already running before the app started (another tool on the machine), the count comparison is noisy - close that tool, restart the app with the cost guard, and re-run. If the Teammates list shows no personas, that is expected with ACP disabled and is not a result for this test.
+If a `node` process was already running before the app started (another tool on the machine), the count comparison is noisy - close that tool, relaunch with `P-LAUNCH-UAT`, and re-run. If a Teammate's session was still starting during step 1, the `mock-acp` count may rise for that reason alone; wait until Ada and Bo are **Online** and re-run. Ada, Bo and the Chief of Staff always list, so an empty Teammates list is a different defect, not a result for this test.
 
 > [!NOTE]
 > Do NOT click **New teammate** here. That card opens the model picker, which is the one control on this page that probes an adapter, and it belongs to the Teammates area's tests, not this one. No model or effort selection is needed anywhere in this area.
 
-### SHELLNAV-11 — /settings renders the two-button tab rail and defaults to Prompts
+### SHELLNAV-11 — /settings renders the six-tab bar and defaults to Prompts
 
 **Free** · about 4 min
 
@@ -481,10 +480,10 @@ If a `node` process was already running before the app started (another tool on 
 
 **Steps**
 
-1. In the browser, click **Settings** in the sidebar.
+1. In the browser, click the gear icon (**Settings**) at the bottom of the sidebar.
 2. Read the address bar.
 3. Read the `<h1>`.
-4. Read the labels of the buttons in the tab rail ABOVE the content — `MudTabs` renders horizontally at the top by default; it is no longer a column down the left. Read left to right.
+4. Read the labels of the tabs in the bar ABOVE the content — `MudTabs` renders horizontally at the top by default, not as a column down the left. Read left to right.
 5. In the DevTools Console, type `[...document.querySelectorAll('.mud-tabs .mud-tab')].map(b => b.textContent.trim() + ' | active=' + b.classList.contains('mud-tab-active'))` and press Enter.
 6. Read the pane below and confirm it describes prompts - it should contain the sentence beginning `A prompt is one piece of wording this application sends to a model`.
 7. In `T-B` run `O-ADAPTERS` and compare with the baseline.
@@ -493,23 +492,24 @@ If a `node` process was already running before the app started (another tool on 
 
 - The address bar reads exactly `http://localhost:5100/settings` with no segment appended on load.
 - The `<h1>` reads exactly `Settings`.
-- The tab rail holds exactly two buttons, reading `PROMPTS` then `APPEARANCE` (MudBlazor renders tab labels upper case; step 5's `textContent` still reads `Prompts` / `Appearance`), left to right, above the pane.
-- Step 5 printed `Prompts | active=true` and `Appearance | active=false`.
+- The tab bar holds exactly six tabs, reading `Prompts`, `Appearance`, `Personas`, `Skills`, `Team Types`, `Library` (title case as typed; MudBlazor does not upper-case them here), left to right, above the pane.
+- Step 5 printed six entries in that order: `Prompts | active=true` and the other five `active=false`.
 - The pane below is the Prompts pane.
-- A reset control is present in the page header beside the heading.
+- A `Reset all to defaults` button is present in the page header beside the heading.
 - The `node` count is unchanged from the baseline.
 
 **Fail if — any of these**
 
-- Both tabs report `active=true`, or neither does -> the active-tab computation broke; a reader cannot tell which pane they are on.
+- More than one tab reports `active=true`, or none does -> the active-tab computation broke; a reader cannot tell which pane they are on.
+- A tab is missing or the order differs -> `Settings.razor`'s `MudTabPanel` list changed; confirm that is intended and update this test.
 - The Appearance pane shows on a bare `/settings` -> the fallback picked the wrong tab.
 - The address bar gains `/prompts` on load -> the page is redirecting where it should not, which would put a spurious entry in the browser history on every visit.
 - The `node` count rises -> Settings is spawning an adapter, which it must never do.
-- The tab rail renders as a vertical column down the left rather than horizontally above the content -> `MudTabs.Position` was set away from its default; nothing in this area asks for that.
+- The tab bar renders as a vertical column down the left rather than horizontally above the content -> `MudTabs.Position` was set away from its default; nothing in this area asks for that.
 
 **Inconclusive if**
 
-If the Prompts pane shows an error line above the tab rail, read it and note it, but it does not invalidate the tab-rail observations - report both. If `App_Data/prompts.json` is absent, that is normal and the pane says so on screen.
+If the Prompts pane shows an error line above the tab bar, read it and note it, but it does not invalidate the tab-bar observations - report both. If `<data>\prompts.json` is absent, that is normal and the pane says so on screen.
 
 > [!NOTE]
 > `prompts.json` does not exist on a fresh install and the app never creates it just to read from it. Absent means 'nothing is overridden'. Do not file 'the settings file is missing' as a defect.
@@ -530,7 +530,7 @@ If the Prompts pane shows an error line above the tab rail, read it and note it,
 1. In the browser, navigate to `http://localhost:5100/settings`.
 2. Click the **Appearance** tab button.
 3. Read the address bar.
-4. Confirm the pane below now shows a `Theme` select, a second `Appearance`-labelled select, and a paragraph naming the selection-file path.
+4. Confirm the pane below now shows the theme list (rows under `Light`, `Dark` and `High contrast` headings), the `Library pane` Right/Left choice, a paragraph beginning `The selection is stored at` that names the file path, and the `Your avatar` section.
 5. Click the **Prompts** tab button.
 6. Read the address bar.
 7. Press the browser Back button once and read the address bar.
@@ -538,14 +538,14 @@ If the Prompts pane shows an error line above the tab rail, read it and note it,
 9. Press Back a third time and read the address bar.
 10. Open a brand-new browser tab and paste `http://localhost:5100/settings/appearance`, then press Enter.
 11. Read which tab is active in that new tab.
-12. In `T-B` run: `$s = curl.exe -s http://localhost:5100/settings/appearance | Out-String; [regex]::Match($s, 'mud-tab-active"[^>]*>([A-Za-z]+)').Groups[1].Value`
+12. In `T-B` run: `$s = curl.exe -s http://localhost:5100/settings/appearance | Out-String; [regex]::Match($s, 'mud-tab-active[^>]*>(?:\s*<[^>]+>)*\s*([A-Za-z ]+)').Groups[1].Value`
 
 **Pass if — all of these**
 
 - After step 2 the address bar reads `http://localhost:5100/settings/appearance`.
 - After step 5 the address bar reads `http://localhost:5100/settings/prompts`.
 - Back walks `…/settings/prompts` -> `…/settings/appearance` -> `…/settings`, one step at a time.
-- The fresh tab from step 10 opens directly with **Appearance** active and the `Theme` select showing.
+- The fresh tab from step 10 opens directly with **Appearance** active and the theme list showing.
 - Step 12 printed `Appearance`.
 
 **Fail if — any of these**
@@ -556,16 +556,16 @@ If the Prompts pane shows an error line above the tab rail, read it and note it,
 
 **Inconclusive if**
 
-If the browser was already deep in history from earlier tests, the Back sequence is polluted - open a fresh tab, navigate to `/settings`, and repeat steps 2 to 9 there. If `curl.exe` is unavailable, judge from the browser alone and note that the source-level oracle was skipped.
+If the browser was already deep in history from earlier tests, the Back sequence is polluted - open a fresh tab, navigate to `/settings`, and repeat steps 2 to 9 there. If `curl.exe` is unavailable, or step 12 prints nothing (the tab markup is not guaranteed to match the pattern), judge from the browser alone and note that the source-level oracle was skipped.
 
 > [!NOTE]
 > The tab segment is always emitted lowercase (`/settings/prompts`, `/settings/appearance`) regardless of the button's displayed capitalisation.
 
-### SHELLNAV-13 — An unrecognised or miscased {Tab} segment silently falls back to Prompts
+### SHELLNAV-13 — An unrecognised {Tab} segment silently falls back to Prompts, and the tab name is matched without regard to case
 
 **Free** · about 6 min
 
-*Proves the deliberate fallback holds, and that the parse is still case-insensitive in BOTH directions.*
+*Proves the deliberate fallback holds for an unknown segment, and that a known tab name in any case still selects that tab.*
 
 **Before you start**
 
@@ -574,7 +574,7 @@ If the browser was already deep in history from earlier tests, the Back sequence
 **Steps**
 
 1. In `T-B` run each of these and record the status and the active tab it reports:
-2. `$u='http://localhost:5100/settings/bogus'; curl.exe -s -o NUL -w "%{http_code} " $u; $s = curl.exe -s $u | Out-String; [regex]::Match($s,'mud-tab-active"[^>]*>([A-Za-z]+)').Groups[1].Value`
+2. `$u='http://localhost:5100/settings/bogus'; curl.exe -s -o NUL -w "%{http_code} " $u; $s = curl.exe -s $u | Out-String; [regex]::Match($s,'mud-tab-active[^>]*>(?:\s*<[^>]+>)*\s*([A-Za-z ]+)').Groups[1].Value`
 3. Repeat the previous command with `$u='http://localhost:5100/settings/PROMPTS'`.
 4. Repeat with `$u='http://localhost:5100/settings/Appearance'`.
 5. Repeat with `$u='http://localhost:5100/settings/APPEARANCE'`.
@@ -604,7 +604,7 @@ If the browser was already deep in history from earlier tests, the Back sequence
 If the regex oracle prints nothing at all, the markup shape changed - fall back to the browser and read which tab button is visibly highlighted, noting that the source-level check could not be applied.
 
 > [!NOTE]
-> This fallback exists specifically because `Routes.razor` has no `NotFound` branch, and `Settings.razor`'s own comment says so. A future third tab must inherit the same behaviour.
+> This fallback exists specifically because `Routes.razor` has no `NotFound` branch, and `Settings.razor`'s own comment says so. A seventh tab must inherit the same behaviour. This test checks the fallback and case-insensitivity on Prompts and Appearance only; the other four tabs (Personas, Skills, Team Types, Library) have no URL test in this area.
 
 ### SHELLNAV-14 — No route sets a browser tab title
 
@@ -618,19 +618,19 @@ If the regex oracle prints nothing at all, the markup shape changed - fall back 
 
 **Steps**
 
-1. In the browser, visit each of these in turn and after each one read the browser TAB label and run `document.querySelector('title')` in the DevTools Console: `http://localhost:5100/`, then a room via the sidebar, then `http://localhost:5100/teammates`, then `http://localhost:5100/settings`, then `http://localhost:5100/settings/appearance`.
+1. In the browser, visit each of these in turn and after each one read the browser TAB label and run `document.querySelector('title')` in the DevTools Console: `http://localhost:5100/` (which lands on a room), then a different room via the sidebar, then `http://localhost:5100/teammates`, then `http://localhost:5100/settings`, then `http://localhost:5100/settings/appearance`.
 2. Record the tab label and the console result for all five.
-3. In `T-B` run: `foreach ($p in '/','/teammates','/settings','/settings/appearance') { $h = curl.exe -s "http://localhost:5100$p" | Out-String; "$p -> " + ([regex]::Matches($h,'<title')).Count }`
+3. In `T-B` run: `foreach ($p in '/teammates','/settings','/settings/appearance') { $h = curl.exe -s "http://localhost:5100$p" | Out-String; "$p -> " + ([regex]::Matches($h,'<title')).Count }`
 
 **Pass if — all of these**
 
 - Every browser tab shows `localhost:5100/<path>` or just `localhost:5100` - never a human title such as `Settings` or `Huddle`.
 - `document.querySelector('title')` returns `null` on all five routes.
-- Step 3 printed `0` for every path.
+- Step 3 printed `0` for each of its three paths (`/` is left out: it redirects and has no page of its own to count).
 
 **Fail if — any of these**
 
-- A title appears on SOME routes but not others -> a `<PageTitle>` was added to one page only; the tab now lies about where the user is on every other page. Defect.
+- A title appears on SOME of the five routes but not others -> a `<PageTitle>` was added to one page only; the tab now lies about where the user is on every other page. Defect.
 - A title from the PREVIOUS route persists after an enhanced navigation -> a stale `<PageTitle>` is not being cleared. Defect.
 
 **Inconclusive if**
@@ -638,7 +638,7 @@ If the regex oracle prints nothing at all, the markup shape changed - fall back 
 If the browser tab is too narrow to read the label, hover it for the tooltip or widen the window. If a browser extension injects a title, use a private window.
 
 > [!NOTE]
-> KNOWN LIMIT, NOT A BUG: no page anywhere declares a `<PageTitle>`, so every tab reads as its URL. `<HeadOutlet />` is wired up in App.razor but nothing feeds it. Report this ONCE as a single finding about the whole shell - not once per route.
+> KNOWN LIMIT, NOT A BUG: none of the pages this test visits declares a `<PageTitle>`, so every tab reads as its URL. `<HeadOutlet />` is wired up in App.razor but nothing feeds these routes. One page does declare a title: the Team page (`/teams/{Team}`, `TeamPage.razor:49`), which this area does not visit; the tab there reads as that title, which is expected and is not the "title on some routes only" defect, as long as the five routes above stay title-free. Report the missing titles ONCE as a single finding about the whole shell - not once per route.
 
 ### SHELLNAV-15 — Focus moves to the page's <h1> after every navigation
 
@@ -657,7 +657,7 @@ If the browser tab is too narrow to read the label, hover it for the tooltip or 
 3. Click **Teammates** in the sidebar.
 4. In the Console, type `document.activeElement.tagName + ' | ' + document.activeElement.textContent.trim()` and press Enter. Record it.
 5. In the Elements panel, select the `<h1>` and read its attributes.
-6. Click **Settings** in the sidebar, then repeat step 4.
+6. Click the gear icon (**Settings**) at the bottom of the sidebar, then repeat step 4.
 7. Click `Ada` in the sidebar, then repeat step 4.
 8. Click into the page (not the console), then press Tab once and run `document.activeElement.tagName + ' | ' + (document.activeElement.className || document.activeElement.textContent.trim())`. Record where Tab landed.
 9. Navigate to `http://localhost:5100/rooms/does-not-exist` and repeat step 4.
@@ -704,7 +704,7 @@ If `document.activeElement` reports the DevTools console itself or an `<input>` 
 7. In the Console, type `window.__probe` and press Enter.
 8. In the Network WS filter, check whether the `_blazor` websocket row is the SAME one from step 3 or a new one.
 9. Look at the sidebar: is the **New chat** panel still open?
-10. Click **Settings** in the sidebar and repeat steps 7 and 8.
+10. Click the **Settings** gear icon at the bottom of the sidebar (it has no text; `aria-label` `Settings`, `MainLayout.razor:28`) and repeat steps 7 and 8.
 
 **Pass if — all of these**
 
@@ -739,7 +739,7 @@ If the Console was cleared by a DevTools setting rather than by a reload, `windo
 **Steps**
 
 1. In the browser, open any room page.
-2. Click **New chat** at the top of the sidebar.
+2. Click **New chat** in the sidebar. It sits inside the `Chats` group, below the Room list (`RoomList.razor:76`), not at the top of the sidebar.
 3. Confirm a panel opens below the button.
 4. In the DevTools Console, type `document.querySelector('.new-chat .mud-collapse-container').getBoundingClientRect().height > 0` and press Enter.
 5. Read the panel: confirm one checkbox per agent, each with a small coloured dot before the name.
@@ -759,7 +759,7 @@ If the Console was cleared by a DevTools setting rather than by a reload, `windo
 - Every agent has a checkbox and a coloured dot.
 - The tooltip text is exactly one of `online`, `offline`, `starting` or `degraded` - lowercase, single word.
 - Step 7's array contains only those four words.
-- Step 8 printed `true` - the button reads **Start chat** (MudBlazor renders it upper case, `START CHAT`; `textContent` still reads `Start chat`) and is disabled while nothing is ticked.
+- Step 8 printed `true` - the button reads **Start chat** (title case; buttons are not upper-cased here, `ThemeDefaults.cs:46`) and is disabled while nothing is ticked.
 - Step 10 printed `false` - ticking one agent enables it.
 - Step 12 printed `true` again after unticking.
 
@@ -772,7 +772,7 @@ If the Console was cleared by a DevTools setting rather than by a reload, `windo
 
 **Inconclusive if**
 
-`MudCollapse` keeps its content in the DOM at all times and animates height, so do not judge open/closed from View Source or a `curl.exe` fetch — use the `.mud-collapse-container` height (or the eye) as in step 4. If no agents are listed at all, this test cannot run; that is SHELLNAV-28's territory - confirm you launched with `P-LAUNCH-UAT` (the plain lanes have no Teammates beyond the Chief of Staff) and restart it.
+`MudCollapse` animates its height and the component renders the panel's content only while the panel is open (`NewChat.razor:15-16`), so do not judge open/closed from View Source or a `curl.exe` fetch — use the `.mud-collapse-container` height (or the eye) as in step 4, and wait a second after a toggle before reading it. If no agents are listed at all, this test cannot run; that is SHELLNAV-28's territory - confirm you launched with `P-LAUNCH-UAT` (the plain lanes have no Teammates beyond the Chief of Staff) and restart it.
 
 > [!NOTE]
 > Cross-check the dot colours against the health and presence lines in `T-A` for the same agent name; they must agree.
@@ -800,7 +800,7 @@ If the Console was cleared by a DevTools setting rather than by a reload, `windo
 8. Read the member line directly below the `<h1>`.
 9. Read the sidebar room list.
 10. Click **New chat** again and look at the checkboxes.
-11. In `T-B` run: `Get-ChildItem src/Huddle.App/App_Data` and confirm `team.db` is present.
+11. In `T-B` run: `Get-ChildItem C:\seeds\huddle\uat\data` and confirm `team.db` is present. That is `<data>` under `P-LAUNCH-UAT` (`common.md:325`), not `src\Huddle.App\App_Data`.
 
 **Pass if — all of these**
 
@@ -820,7 +820,7 @@ If the Console was cleared by a DevTools setting rather than by a reload, `windo
 
 **Inconclusive if**
 
-If `sqlite3` is installed you can confirm with `sqlite3 src/Huddle.App/App_Data/team.db "SELECT id, name FROM rooms ORDER BY created DESC LIMIT 1;"`. If it is NOT installed, judge from the sidebar entry and the `<h1>` alone and say the DB check was skipped - do not call the test inconclusive on that account. If **Start chat** shows an error line instead, read it and report it verbatim.
+If `sqlite3` is installed you can confirm with `sqlite3 C:\seeds\huddle\uat\data\team.db "SELECT id, name FROM rooms ORDER BY created DESC LIMIT 1;"`. If it is NOT installed, judge from the sidebar entry and the `<h1>` alone and say the DB check was skipped - do not call the test inconclusive on that account. If **Start chat** shows an error line instead, read it and report it verbatim.
 
 > [!NOTE]
 > Ticking a SINGLE agent reuses that agent's existing room rather than creating a new one - so if you tick only `Ada` you land back on the existing `Ada` room and the sidebar does not grow. That is correct, not a failure. Leaves a new room behind; it does no harm to later tests.
@@ -861,14 +861,14 @@ If `sqlite3` is installed you can confirm with `sqlite3 src/Huddle.App/App_Data/
 
 - Enter inserts a newline instead of sending, and the textarea keeps its text -> `window.teamComposer` never attached. Almost always a stale `@Assets["app.js"]` key that 404ed silently. Go back to SHELLNAV-02, confirm the 404, and report BOTH the asset failure and the coverage gap.
 - The message sends but the transcript does not auto-scroll -> `window.teamScroll` is missing; same root cause, milder symptom.
-- Nothing at all responds to clicks -> `blazar.web.js` failed and the whole page is non-interactive; SHELLNAV-02 will name it.
+- Nothing at all responds to clicks -> `blazor.web.js` failed and the whole page is non-interactive; SHELLNAV-02 will name it.
 
 **Inconclusive if**
 
 If the message sends but `Ada` never replies, the composer half still PASSED - record the reply timeout separately as a chat-area observation, not as an app.js failure. If the circuit has not connected yet, the textarea will not respond at all; wait for the `_blazor` websocket and retry once.
 
 > [!NOTE]
-> Leaves two messages in the `Ada` room. That is harmless and actively useful - SHELLNAV-22 needs at least one message body on screen to see a font override take effect.
+> Leaves two messages in the `Ada` room. That is harmless and actively useful - SHELLNAV-24 looks for the text `hi there` in the prerendered HTML of the `Ada` room, so it needs this message on screen first.
 
 ### SHELLNAV-20 — The room list updates live, with no refresh, when a room appears from outside the app
 
@@ -887,13 +887,13 @@ If the message sends but `Ada` never replies, the composer half still PASSED - r
 1. In the browser, open a room page in TAB 1.
 2. Open a SECOND browser tab (TAB 2) on `http://localhost:5100/teammates`.
 3. Return to TAB 1 and note the exact sidebar room list.
-4. Open a third PowerShell terminal at `E:\Repos\Huddle`. Call it TERMINAL C.
+4. Open a third PowerShell terminal at `<repo>`. Call it TERMINAL C.
 5. In TERMINAL C run: `pwsh tools/echo-bot.ps1 -Name mybot`
 6. Read TERMINAL C's output and wait for a line containing `"type":"welcome"`.
 7. Without touching the browser, watch TAB 1's sidebar for up to five seconds.
 8. Switch to TAB 2 and watch its sidebar too, again without refreshing.
 9. In TAB 1, click **New chat** and read the agent checkbox list.
-10. Now provoke the leak case: in TAB 1, click **Teammates**, then **Settings**, then a room, then **Teammates** again - six navigations in all.
+10. Now provoke the leak case: in TAB 1, click **Teammates**, then **Settings**, then a room, then **Teammates** again - four navigations in all (the **Settings** link is the gear icon at the bottom of the sidebar). Repeat the whole sequence once more so there are eight.
 11. Read TAB 1's sidebar carefully for duplicate or stale entries.
 12. Scroll `T-A` and look for repeated handler errors or exception stacks.
 13. Close TAB 2 entirely, wait ten seconds, and scroll `T-A` again.
@@ -903,7 +903,7 @@ If the message sends but `Ada` never replies, the composer half still PASSED - r
 - A new sidebar entry reading `mybot` appears in TAB 1 within about a second, with no page refresh and no navigation.
 - The same entry appears in TAB 2 without a refresh.
 - The **New chat** checkbox list gained `mybot` as well.
-- After the six navigations the sidebar shows each room exactly once - no duplicates, no rooms that no longer exist.
+- After the eight navigations the sidebar shows each room exactly once - no duplicates, no rooms that no longer exist.
 - `T-A` shows the pipe connection for `mybot` and no repeated handler errors, before or after closing TAB 2.
 
 **Fail if — any of these**
@@ -919,14 +919,6 @@ If TERMINAL C cannot connect to the pipe (`\\.\pipe\team`), the bot never regist
 > [!NOTE]
 > Leave TERMINAL C's bot running or press Ctrl+C in it when done - either is fine. The `mybot` room persists in `team.db` and will appear in later tests; that is expected.
 
-### SHELLNAV-21 — RETIRED: choosing a theme layering a fourth stylesheet after the base one, and reloading the page
-
-**Retired 2026-09-14.** This test proved the `<head>` layering order of a hand-built `themes/huddle-dark.css` stylesheet against the base `theme.css`, and that selecting a theme forced a full page reload. Neither exists any more: there is no `themes/` folder, and `appearance-theme.md`'s APPEARANCETHEME-04 now proves the opposite of the reload assertion — a Theme or dark-mode change applies immediately with NO page load, through `MudThemeProvider`. See [ADR-0010](../adr/0010-a-theme-is-a-mudblazor-theme.md). No successor test lives here; `appearance-theme.md` owns every theme-application test now.
-
-### SHELLNAV-22 — RETIRED: a hand-edited token override injected as an inline `<style>` after both stylesheet links
-
-**Retired 2026-09-14.** Per-token overrides (`--font-chat` and the other 37 custom properties `wwwroot/theme.css` used to declare) no longer exist, and nothing in this application emits a Human-supplied value into a `<style>` element any more. See `appearance-theme.md`'s APPEARANCETHEME-10 through -13 (also retired) and [known-limits.md](../known-limits.md). No successor test lives here.
-
 ### SHELLNAV-23 — A bad appearance.json does not break the shell: no theme link, no blank page, only a log warning
 
 **Free** · about 5 min
@@ -935,15 +927,15 @@ If TERMINAL C cannot connect to the pipe (`\\.\pipe\team`), the bot never regist
 
 **Before you start**
 
-- Write access to `src/Huddle.App/App_Data`.
+- Write access to `<data>`, which under `P-LAUNCH-UAT` is `C:\seeds\huddle\uat\data` (`common.md:325`). `AppearanceStore` watches `{DataDir}\appearance.json` (`AppearanceStore.cs:99`), so a file under `src\Huddle.App\App_Data` would be watched by nothing.
 - The app running - no restart is needed, the file is watched.
 
 **Steps**
 
-1. Open `E:\Repos\Huddle\src\Huddle.App\App_Data\appearance.json` in a text editor (create it if it does not exist).
+1. Open `C:\seeds\huddle\uat\data\appearance.json` in a text editor (create it if it does not exist).
 2. Replace its entire contents with exactly: `{"theme": "not-a-theme", "dark": "not-a-mode"}`. Only `theme` is validated — `dark` was retired on 2026-09-21 ([ADR-0017](../../adr/0017-a-theme-is-a-palette-not-a-pair.md)) and is now an unknown key, so it is kept without comment and warns about nothing.
 3. Save the file and wait five seconds.
-4. In `T-B` run: `Get-Content src/Huddle.App/App_Data/appearance.json`. Confirm it is byte-for-byte what you typed.
+4. In `T-B` run: `Get-Content C:\seeds\huddle\uat\data\appearance.json`. Confirm it is byte-for-byte what you typed.
 5. In the browser, press F5 on any page.
 6. Observe whether the page renders normally on the default Theme, `Huddle Light`, with the sidebar and all four stylesheets from SHELLNAV-01 still present. The operating system's own light/dark setting is ignored and must change nothing.
 7. Scroll `T-A` and find the warning lines logged when the file was read.
@@ -963,10 +955,10 @@ If TERMINAL C cannot connect to the pipe (`\\.\pipe\team`), the bot never regist
 
 **Inconclusive if**
 
-If the file watcher does not react within ten seconds, restart the app in `T-A` (remembering `$env:Team__Acp__Enabled = 'false'` first) and re-check - a watcher that needs a restart is itself worth noting, but judge the messages after the restart. If the JSON you pasted is malformed (a stray quote), the app may report a parse problem instead; retype it exactly and re-run.
+If the file watcher does not react within ten seconds, restart the app in `T-A` with the `dotnet run` command of `P-LAUNCH-UAT` (not the seeder line: it wipes the data folder, and the file with it) and re-check - a watcher that needs a restart is itself worth noting, but judge the messages after the restart. If the JSON you pasted is malformed (a stray quote), the app may report a parse problem instead; retype it exactly and re-run.
 
 > [!NOTE]
-> CLEANUP: delete `src/Huddle.App/App_Data/appearance.json` when finished. Absent is the correct fresh-install state. For the on-tab reporting question (there is none any more — see known-limits.md) and the exact log wording, run APPEARANCETHEME-14 in `appearance-theme.md` instead of trying to reconstruct it here.
+> CLEANUP: delete `C:\seeds\huddle\uat\data\appearance.json` when finished. Absent is the correct fresh-install state. For the on-tab reporting question (there is none any more — see known-limits.md) and the exact log wording, run APPEARANCETHEME-14 in `appearance-theme.md` instead of trying to reconstruct it here.
 
 ### SHELLNAV-24 — A deep link renders complete content on a cold first request, before any circuit attaches
 
@@ -983,8 +975,8 @@ If the file watcher does not react within ten seconds, restart the app in `T-A` 
 
 1. In the browser, open the `Ada` room and copy its full URL from the address bar.
 2. In `T-B` run: `$r = curl.exe -s "<paste the room URL>" | Out-String`
-3. Run: `([regex]::Matches($r, '<h1>')).Count`
-4. Run: `[regex]::Match($r, '<h1>([^<]*)</h1>').Groups[1].Value`
+3. Run: `([regex]::Matches($r, '<h1[\s>]')).Count` (the heading is `<h1 class="mud-typography …">`, `Chat.razor:37`, so a bare `'<h1>'` would count 0).
+4. Run: `[regex]::Match($r, '<h1[^>]*>([^<]*)</h1>').Groups[1].Value`
 5. Run: `$r.Contains('hi there')` - this checks the prerendered HTML already carries the transcript.
 6. Run: `$r.Contains('No rooms yet')`
 7. Open a NEW private/incognito window.
@@ -1035,10 +1027,10 @@ If your machine is fast enough that you cannot judge the first paint by eye, tru
 2. In TAB A, click **New chat**, tick `Ada` and `Bo`, and click **Start chat**.
 3. Without touching TAB B, switch to it and read its sidebar.
 4. Switch back to TAB A and navigate to `http://localhost:5100/settings/appearance`.
-5. Select `Dark` in the `Appearance` select.
+5. In the theme list, under the **Dark** heading, select `Huddle Dark` (there is no mode select since ADR-0017; the theme list is the only control, `Appearance.razor:66-80`).
 6. Confirm TAB A repaints dark IMMEDIATELY, with no page load.
 7. Switch to TAB B WITHOUT reloading or navigating it and note whether it is ALSO now dark.
-8. In TAB A, set the `Appearance` select back to `System`.
+8. In TAB A, select `Huddle Light` (the default, under the **Light** heading) again.
 
 **Pass if — all of these**
 
@@ -1063,7 +1055,7 @@ If TAB B was on a route with no visible theme difference, you cannot judge the t
 
 **Free** · about 8 min
 
-*Proves the scoped stylesheet for the modal reached the browser - an unstyled modal shows all six mutually exclusive paragraphs at once.*
+*Proves the scoped stylesheet for the modal reached the browser - an unstyled modal shows all five mutually exclusive paragraphs at once (`ReconnectModal.razor:9-26`).*
 
 **Before you start**
 
@@ -1073,7 +1065,7 @@ If TAB B was on a route with no visible theme difference, you cannot judge the t
 **Steps**
 
 1. In the browser, open a room page and wait for the `_blazor` websocket to appear in DevTools Network (filter WS).
-2. In `T-B` run: `$h = curl.exe -s http://localhost:5100/ | Out-String; [regex]::Matches($h, '[^"]*ReconnectModal[^"]*\.js') | ForEach-Object { $_.Value } | Select-Object -Unique`. Record the fingerprinted path from the import map - the one that carries a hash, e.g. `Components/Layout/ReconnectModal.abdmv1u4y3.razor.js`. The fingerprint sits BEFORE `.razor`, not after it.
+2. In `T-B` run: `$h = curl.exe -s http://localhost:5100/settings | Out-String; [regex]::Matches($h, '[^"]*ReconnectModal[^"]*\.js') | ForEach-Object { $_.Value } | Select-Object -Unique` (`/settings`, because `/` answers with a bodyless redirect, as in SHELLNAV-01). Record the fingerprinted path from the module `<script>` tag - the one that carries a hash, e.g. `Components/Layout/ReconnectModal.abdmv1u4y3.razor.js`. The fingerprint sits BEFORE `.razor`, not after it.
 3. Run: `curl.exe -s -o NUL -w "%{http_code}" "http://localhost:5100/<paste that path>"`
 4. Switch to `T-A` and press Ctrl+C to stop the app.
 5. Watch the browser for up to ten seconds.
@@ -1081,7 +1073,7 @@ If TAB B was on a route with no visible theme difference, you cannot judge the t
 7. In the DevTools Console, type `[...document.querySelectorAll('#components-reconnect-modal p')].filter(p => getComputedStyle(p).display !== 'none').map(p => p.textContent.trim())` and press Enter. Record the array.
 8. Wait about thirty seconds while the modal cycles through its states, re-running the step 7 command each time the wording changes.
 9. When the wording settles on the final state, read the button label.
-10. Restore the app: in `T-A` run `$env:Team__Acp__Enabled = 'false'` then `dotnet run --project src/Huddle.App --urls http://localhost:5100`.
+10. Restore the app: in `T-A` run the `dotnet run` command of `P-LAUNCH-UAT` again (not its seeder line, which wipes the data folder).
 11. Once it is listening, click the button in the modal or reload the browser.
 
 **Pass if — all of these**
@@ -1089,14 +1081,14 @@ If TAB B was on a route with no visible theme difference, you cannot judge the t
 - Step 3 printed `200`.
 - A modal dialog appears within a few seconds of stopping the app - a contained, centred box, not a full-width block of text.
 - Step 7's array has length 1 every time you run it.
-- The wording progresses: first `Rejoining the server...`, then `Rejoin failed... trying again in N seconds.`, and finally `Failed to rejoin. Please retry or reload the page.`
+- The wording progresses: first `Rejoining the server...`, then `Rejoin failed... trying again in N seconds.`, and finally `Failed to rejoin.` followed by `Please retry or reload the page.` (a `<br />` separates them, so `textContent` in step 7 reads `Failed to rejoin.Please retry or reload the page.` with no space, `ReconnectModal.razor:16`).
 - The final state offers a button reading `Retry`.
 - After restarting the app, the page recovers.
 
 **Fail if — any of these**
 
-- Step 7's array has length 5 or 6, showing `Rejoining the server...`, `Rejoin failed...`, `Failed to rejoin...`, `The session has been paused by the server.` and `Failed to resume the session.` all at once, plus both the `Retry` and `Resume` buttons -> the scoped-CSS bundle is not loading. This is the exact same defect as SHELLNAV-03, seen from the other side: none of the modal's scoped rules reached the browser. Go to SHELLNAV-01.
-- No modal appears at all when the server stops -> either the import map entry is missing or `ReconnectModal.razor.js` 404s; step 3 will say which.
+- Step 7's array has length 5 (there are five paragraphs), showing `Rejoining the server...`, `Rejoin failed...`, `Failed to rejoin...`, `The session has been paused by the server.` and `Failed to resume the session.` all at once, plus both the `Retry` and `Resume` buttons -> the scoped-CSS bundle is not loading. This is the exact same defect as SHELLNAV-03, seen from the other side: none of the modal's scoped rules reached the browser. Go to SHELLNAV-01.
+- No modal appears at all when the server stops -> either the module `<script>` tag is missing or the fingerprinted `ReconnectModal.<hash>.razor.js` 404s; step 3 will say which.
 - The modal appears unstyled and full-width -> same scoped-CSS failure as the six-paragraph case.
 
 **Inconclusive if**
@@ -1120,13 +1112,13 @@ If the browser simply shows a connection-refused error page instead of the modal
 **Steps**
 
 1. In `T-A` press Ctrl+C to stop the app.
-2. In `T-B` run: `Rename-Item src/Huddle.App/App_Data App_Data_backup` so the existing state is preserved rather than destroyed.
+2. In `T-B` run: `Remove-Item -Recurse -Force C:\seeds\huddle\empty -ErrorAction SilentlyContinue` so the empty data folder starts from nothing. The `P-LAUNCH-UAT` data under `C:\seeds\huddle\uat` is not touched.
 3. In `T-A` run: `$env:Team__Acp__Enabled = 'false'`
 4. In `T-A` run: `Get-ChildItem Env:\Team__*` and confirm the only variable printed is `Team__Acp__Enabled`, so this is a clean lane with no seeded Teammates.
-5. In `T-A` run: `dotnet run --project src/Huddle.App --urls http://localhost:5100` and wait for `Now listening on: http://localhost:5100`.
+5. In `T-A` run: `dotnet run --project src/Huddle.App --urls http://localhost:5100 --Team:DataDir=C:\seeds\huddle\empty\data` and wait for `Now listening on: http://localhost:5100`.
 6. In `T-B` run: `curl.exe -s -D - -o NUL http://localhost:5100/` and read the status line.
 7. In `T-B` run: `$h = curl.exe -s http://localhost:5100/ | Out-String; ([regex]::Matches($h, 'No rooms yet')).Count`
-8. Run: `([regex]::Matches($h, '<h1>')).Count`
+8. Run: `([regex]::Matches($h, '<h1[\s>]')).Count`
 9. In the browser, navigate to `http://localhost:5100/` and read the sidebar.
 10. Read the main column.
 11. In the DevTools Console, type `document.activeElement.tagName` and press Enter.
@@ -1149,7 +1141,7 @@ If the browser simply shows a connection-refused error page instead of the modal
 
 **Inconclusive if**
 
-If step 6 still returns a redirect, `team.db` was not actually removed - confirm `src/Huddle.App/App_Data` no longer exists (the rename in step 2 worked) and that the app recreated an EMPTY one on launch. If `Rename-Item` fails because the app still holds `team.db` open, wait for the process to exit fully and retry.
+If step 6 still returns a redirect, the app did not start on the empty data folder - confirm `C:\seeds\huddle\empty` was removed in step 2 and that step 5 carried `--Team:DataDir=C:\seeds\huddle\empty\data`. If `Remove-Item` fails because the app still holds `team.db` open, wait for the process to exit fully and retry.
 
 > [!NOTE]
 > The step-11 `BODY` result is the same accessibility observation as SHELLNAV-15's last step - report it once, not twice. This test leaves the app in the empty state, which SHELLNAV-28 needs next. Restore afterwards with the cleanup in SHELLNAV-28.
@@ -1162,7 +1154,7 @@ If step 6 still returns a redirect, `team.db` was not actually removed - confirm
 
 **Before you start**
 
-- SHELLNAV-27's setup is still in force: clean lane, App_Data removed, app running.
+- SHELLNAV-27's setup is still in force: clean lane, app running on the empty data folder `C:\seeds\huddle\empty\data`.
 - No `tools/echo-bot.ps1` connected - stop TERMINAL C's bot if it is running.
 
 **Steps**
@@ -1174,17 +1166,17 @@ If step 6 still returns a redirect, `team.db` was not actually removed - confirm
 5. In the Console, type `document.querySelector('.new-chat .new-chat-agents')` and press Enter.
 6. In the Console, type `[...document.querySelectorAll('.new-chat .empty-state code')].map(c => c.textContent)` and press Enter.
 7. CLEANUP: in `T-A` press Ctrl+C.
-8. In `T-B` run: `Remove-Item -Recurse -Force src/Huddle.App/App_Data` then `Rename-Item src/Huddle.App/App_Data_backup App_Data`.
-9. In `T-A` run: `$env:Team__Acp__Enabled = 'false'` then `dotnet run --project src/Huddle.App --urls http://localhost:5100`.
+8. In `T-B` run: `Remove-Item -Recurse -Force C:\seeds\huddle\empty`.
+9. In `T-A` relaunch with the `P-LAUNCH-UAT` run line (the `dotnet run` block in `common.md`), so the original rooms return.
 10. In the browser, reload and confirm the sidebar shows the original rooms again.
 
 **Pass if — all of these**
 
-- The panel shows a single sentence beginning `No agents have connected yet. Start one with tools/echo-bot.ps1` and ending with the app's own pointer to the configuration file (record its exact wording).
+- The panel shows exactly one sentence: `No agents have connected yet. Start one with tools/echo-bot.ps1, or enable the demo agent in appsettings.json.`
 - Each file name in that sentence is rendered in a monospace face.
-- Step 4 printed `null` - the **Start chat** button is not rendered at all in this state.
+- Step 4 printed `undefined` (`find` returns `undefined` when nothing matches) - the **Start chat** button is not rendered at all in this state.
 - Step 5 printed `null` - there is no agent list.
-- Step 6 printed an array whose first entry is `tools/echo-bot.ps1` and whose other entries are the file names in the sentence, each a real file.
+- Step 6 printed `['tools/echo-bot.ps1', 'appsettings.json']`, each a real file.
 - After cleanup, the original rooms are back in the sidebar.
 
 **Fail if — any of these**
@@ -1216,7 +1208,7 @@ If any agent is still listed, something is connected - stop any `echo-bot.ps1` i
 2. For each such moment, check whether `T-A` logged an unhandled exception at the same time. Write down the exception.
 3. If the band appeared at least once: click `Reload` and note where it takes you.
 4. If the band appeared at least once: reproduce the moment if you can, click the 🗙 instead, and note whether the band dismisses.
-5. If the band appeared while the Dark theme was selected, note whether it was still readable - pale yellow ground with dark text.
+5. If the band appeared while the Huddle Dark theme was selected, note whether it was still readable - pale yellow ground with dark text.
 
 **Pass if — all of these**
 
@@ -1250,21 +1242,21 @@ The expected result. A circuit-level exception cannot be provoked deterministica
 
 **Steps**
 
-1. Look at the drawer. Note where **Settings** sits relative to **Teammates** and relative to the bottom of the viewport.
+1. Look at the drawer. Note where **Settings** sits relative to the **Library** link and **Archived chats** and relative to the bottom of the viewport.
 2. Note whether **Settings** shows any text, and hover it. Note what the tooltip says.
 3. In DevTools, run `document.querySelector('[aria-label="Settings"]').getAttribute('href')`. Note the value.
 4. Note whether **Teammates** still shows its text, and whether an icon sits to its left.
-5. Note whether each Room in the list carries an icon to the left of its name.
+5. Note whether **Archived chats** shows any text, and hover it. Note what the tooltip says.
 6. Make the browser window SHORT (about 400px tall) so the drawer's content overflows, and scroll the drawer. Note where Settings is now.
-7. Repeat steps 1 and 5 with the Dark theme selected (`Settings -> Appearance -> Dark`).
+7. Repeat steps 1 and 5 with the Huddle Dark theme selected (`Settings -> Appearance`, then **Huddle Dark** in the theme list).
 
 **Pass if — all of these**
 
-- **Settings** sits at the BOTTOM of the drawer, separated from **Teammates** by empty space rather than immediately below it.
+- **Settings** sits at the BOTTOM of the drawer, separated from the **Library** link by empty space rather than immediately below it.
 - **Settings** shows no text, hovering it reveals a tooltip reading `Settings`, and step 3 returns `/settings`.
 - **Teammates** still reads "Teammates", with an icon to its left.
-- Every Room in the list carries an icon to the left of its name, subtle enough that the Room's name still reads as the primary content.
-- Both icons and the Room icons are legible under Dark as well as light.
+- **Archived chats** shows no text and hovering it reveals a tooltip reading `Archived chats`.
+- The Settings and Archived chats icons are legible under Huddle Dark as well as light.
 
 **Fail if — any of these**
 
@@ -1278,7 +1270,7 @@ The expected result. A circuit-level exception cannot be provoked deterministica
 The drawer content is shorter than the viewport in step 6 no matter how small you make the window - some browsers clamp minimum height. Record what you could see for steps 1-5 and mark step 6 INCONCLUSIVE.
 
 > [!NOTE]
-> Settings is deliberately the only drawer entry without text. Do not file that as an inconsistency with **Teammates**, which keeps its label on purpose.
+> Settings and Archived chats are the only icon-only drawer entries (`MainLayout.razor:27-28`, `ArchivedChats.razor:13-15`). Do not file that as an inconsistency with **Teammates**, which keeps its label on purpose. Rooms in the list have no leading icon (`RoomList.razor:53`).
 
 ---
 

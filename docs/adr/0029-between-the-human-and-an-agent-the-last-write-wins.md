@@ -49,3 +49,9 @@ editing a Team spec, needs no new mechanism.
   learns of the save on its next Turn, but may already have acted on the old text.
 - **The upgrade path is additive.** Detect-and-prompt needs only the file's modified time and
   length at load, which the Library already reads to decide whether to reload.
+
+> **Note (2026-10-09):** The save does check for a change now, so "does not check for a conflict
+> before saving" above is out of date. `src/Huddle.App/Components/Library/LibraryDocument.razor:357-364`
+> compares the file's length and last-write time with the copy loaded, and if either differs it asks
+> "Overwrite changes on disk?" (Overwrite / Cancel). Overwrite writes the editor's text, so the last
+> write still wins; Cancel keeps the disk version. The decision above stands.

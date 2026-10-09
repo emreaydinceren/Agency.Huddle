@@ -1,8 +1,8 @@
 # App Tools a real model calls (progressive discovery)
 
-Prove that the seven in-process App Tools (`mcp__team__get_help`, `mcp__team__list_agents`, `mcp__team__create_room`, `mcp__team__invite_agent`, `mcp__team__post_message`, `mcp__team__follow_room`, `mcp__team__unfollow_room`) are registered, discoverable and obeyed by a REAL model, and that the progressive-discovery design holds: the system prompt names only the help tool, and the help tool names the rest. The automated suite answers every one of these questions with a fake agent, so none of it is evidence here. The failures this area exists to catch are silent: a tool server that never receives traffic while the tile says Online; a model that recites the tool names from the system prompt and never calls a tool; a mis-resolved room id that comes back as ordinary prose and changes nothing on screen; a budget refusal that the model retries or routes around; a follow that outlives the reason it was set, or that quietly buys a Turn past the Budget. Tests APPTOOLS-01 to APPTOOLS-04 are free and cost no tokens. Everything from APPTOOLS-05 onward starts a real Claude session and bills the user's Claude subscription; each says how much.
+Prove that the in-process App Tools are registered, discoverable and obeyed by a REAL model, and that the progressive-discovery design holds: the system prompt names only the help tool, and the help tool names the rest. A default Persona is offered 17 tools (`DotAcpAgentHostFactory.cs:169-225`, `SkillGrants.cs:78-99`): the seven chat tools this area exercises (`mcp__team__get_help`, `mcp__team__list_agents`, `mcp__team__create_room`, `mcp__team__invite_agent`, `mcp__team__post_message`, `mcp__team__follow_room`, `mcp__team__unfollow_room`), plus `ask_human` (always), seven Task tools (`create_task`, `get_task`, `list_tasks`, `update_task`, `close_task`, `reopen_task`, `add_evidence`; offered while `Tasks.Enabled` is true, its default) and `watch_folder` / `unwatch_folder` (File Changes on and the Adapter reads files). The other ten catalog tools are offered only through a Skill. Wherever a test below says "the seven", it means the seven chat tools, as a subset of that list. The automated suite answers every one of these questions with a fake agent, so none of it is evidence here. The failures this area exists to catch are silent: a tool server that never receives traffic while the tile says Online; a model that recites the tool names from the system prompt and never calls a tool; a mis-resolved room id that comes back as ordinary prose and changes nothing on screen; a budget refusal that the model retries or routes around; a follow that outlives the reason it was set, or that quietly buys a Turn past the Budget. Tests APPTOOLS-01 to APPTOOLS-03 are free and cost no tokens. Everything from APPTOOLS-04 onward starts a real adapter, so it bills the user's Claude subscription (APPTOOLS-04 only for the Chief of Staff's Greeting Turn); each says how much. A test that sends no new Turn (APPTOOLS-09, -20, -21) is Free, as is APPTOOLS-28, which runs on the mock adapter.
 
-**26 tests** · 6 free, 20 paid 💰 · about 4.2 hours.
+**28 tests** · 7 free, 21 paid 💰 · about 4.3 hours.
 
 Read [the manual test script](../manual-tests.md) first — the cost guard, the Model and Effort
 convention, and the rules for concluding a result — then [Common procedures](common.md), which
@@ -12,74 +12,74 @@ defines the terminals, states, procedures and oracles this page names. Both are 
 
 Run [`P-BUILD`](common.md#p-build) then the lane named below from
 [Common procedures](common.md), which also defines the terminals `T-A` and `T-B`, the
-oracles `O-LOG` / `O-ADAPTERS` / `O-TRANSCRIPT` / `O-DB` / `O-WIRE`, the four resets,
+oracles `O-LOG` / `O-ADAPTERS` / `O-TRANSCRIPT` / `O-DB` / `O-TOOLCALLS`, the five resets,
 `P-NEW-PERSONA`, `P-ECHO-BOT` and the standing conventions. This area adds:
 
 1. ONE-TIME (adapter): from the repo root, run `pwsh tools/acp/install.ps1`. It must leave a `tools/acp/node_modules` folder behind. Without it, every paid test here is INCONCLUSIVE, not failed.
 2. ONE-TIME (auth): meet the Claude login requirement in [§0.1](../manual-tests.md#01-what-you-need), and clear `ANTHROPIC_API_KEY` as [§0.2](../manual-tests.md#02-the-cost-guard) requires. Without both, every paid test here is INCONCLUSIVE, not failed.
-3. ONE-TIME (safety): work from a throwaway checkout. `App_Data/work/<Persona>/` becomes the agent's working directory and is NOT a sandbox — agent-side `Bash`, `Read` and `Write` run against the real disk, and the Adapter auto-loads `CLAUDE.md` and `.claude/settings.json` from that folder.
-4. Free tests (APPTOOLS-01 to -04) use `P-LAUNCH-FREE`; everything from APPTOOLS-05 uses `P-LAUNCH-PAID`.
-5. LOG LEVEL: Development already gives `Agency.Huddle` at `Debug`, which prints `App tool server listening…` and `App tool server received {Method}.`. For any test whose oracle needs the tool's actual JSON output, set `${env:Logging__LogLevel__Agency.Huddle} = "Trace"` before starting — the double underscore replaces the colon and the dot in the category stays a dot, so the key is `Logging:LogLevel:Agency.Huddle`. The category must be spelled `Agency.Huddle` exactly; a key spelled `Team` matches nothing and silently disables the filter with no error.
+3. ONE-TIME (safety): work from a throwaway checkout. `<data>\Teammates\<Name>\work\` becomes the agent's working directory and is NOT a sandbox — agent-side `Bash`, `Read` and `Write` run against the real disk, and the Adapter auto-loads `CLAUDE.md` and `.claude/settings.json` from that folder.
+4. Free tests (APPTOOLS-01 to -03) use `P-LAUNCH-FREE`; everything from APPTOOLS-04 uses `P-LAUNCH-PAID`, whose first step makes the built-in Chief of Staff cheap (Haiku / low). Without it every paid launch on fresh data also spends an unbudgeted Greeting Turn on the account-default model.
+5. LOG LEVEL: Development already gives `Agency.Huddle` at `Debug`, which prints `App tool server listening…` and `App tool server received {Method}.` (so setting Debug yourself is redundant). Which tool a Persona ran comes from `O-TOOLCALLS`, not from this log: the `received` line names only the JSON-RPC method, and the `replied` line carries the response, never the tool called. For any test whose oracle needs the tool's actual JSON output, set `${env:Logging__LogLevel__Agency.Huddle} = "Trace"` before starting — the double underscore replaces the colon and the dot in the category stays a dot, so the key is `Logging:LogLevel:Agency.Huddle`. The category must be spelled `Agency.Huddle` exactly; a key spelled `Team` matches nothing and silently disables the filter with no error.
 6. PERSONAS YOU WILL NEED for the paid tests: `P-NEW-PERSONA` twice, both Haiku/low — `Nova` (Title `Coordinator`, Alias `nova`) and `Jarvis` (Title `Researcher`, Alias `jar`). The alias `jar` on `Jarvis` is load-bearing for APPTOOLS-10.
 7. Reset between scenarios with `P-RESET-ALL`. `team.db` is created with `CREATE TABLE IF NOT EXISTS`, so nothing ever migrates — a half-deleted `App_Data` produces confusing results.
-8. TEST ORDER: run APPTOOLS-01 through -04 first. They are free and they tell you whether the wiring is sound. Do not spend a single token until APPTOOLS-04 passes: `acp-agent-guide.md` §3.6 records two sessions lost to debugging 'the model cannot find the tool' when the tool server had never received a single request.
+8. TEST ORDER: run APPTOOLS-01 through -04 first. -01 to -03 are free and -04 spends only the Chief of Staff's one cheap Greeting Turn; together they tell you whether the wiring is sound. Do not send a prompt until APPTOOLS-04 passes: `acp-agent-guide.md` §3.6 records two sessions lost to debugging 'the model cannot find the tool' when the tool server had never received a single request.
 
 ## Tests
 
-### APPTOOLS-01 — Every model-facing prompt is readable in the browser and no default contains the literal mcp__team__
+### APPTOOLS-01 — The prompt groups are readable in the browser and no default contains the literal mcp__team__
 
 **Free** · about 8 min
 
-*Proves the 24 prompt defaults are all rendered and editable, and that the tool-name prefix is substituted from code at render time rather than typed into any default — the design that stops a human misspelling a tool into nonexistence. Each field's textarea is now a `MudTextField` (Stage 3 of the MudBlazor migration), which renders as a real `<textarea>` inside the unchanged `.prompts-field` wrapper — there is no `prompts-field-value` class on it any more.*
+*Proves the catalog's prompt defaults are all rendered and editable, in their groups, and that the tool-name prefix is substituted from code at render time rather than typed into any default — the design that stops a human misspelling a tool into nonexistence. Each field's textarea is now a `MudTextField` (Stage 3 of the MudBlazor migration), which renders as a real `<textarea>` inside the unchanged `.prompts-field` wrapper — there is no `prompts-field-value` class on it any more.*
 
 **Before you start**
 
-- App started with `$env:Team__Acp__Enabled = "false"` set in the same PowerShell window.
-- A fresh `App_Data`, or at least no `App_Data/prompts.json`. If it already exists, run `P-RESET-SETTINGS` and relaunch.
+- `P-LAUNCH-FREE` (`Team__Acp__Enabled=false`, confirmed with `O-ADAPTERS` printing `0`).
+- A fresh `<data>`, or at least no `<data>\prompts.json`. If it already exists, run `P-RESET-SETTINGS` and relaunch.
 
 **Steps**
 
 1. Open http://localhost:5100 in a browser.
 2. Click **Settings** in the left sidebar.
 3. Confirm the browser URL is `http://localhost:5100/settings` and the page heading reads `Settings`.
-4. Confirm the tab rail shows exactly two buttons, **Prompts** and **Appearance**, and that **Prompts** is the one currently shown (it is the default — you did not have to click it).
+4. Confirm the tab rail shows six tabs, in this order: **Prompts**, **Appearance**, **Personas**, **Skills**, **Team Types**, **Library** (`Settings.razor:36-76`), and that **Prompts** is the one currently shown (it is the default — you did not have to click it).
 5. Read the second intro paragraph and confirm it names a file path and says the file 'does not exist until the first time you save here, so it being absent is expected, not a bug'.
-6. Scroll the page and confirm there are exactly four group headings, in this order: **System prompt**, **Turn**, **Get help**, **Tool descriptions**.
-7. Confirm the fields under **System prompt** are, in order: **Orientation**, **Identity**, **Chat rules**, **Tools**.
-8. Confirm the fields under **Turn** are, in order: **Room label**, **Message**, **Catch-up header**, **Catch-up line**.
-9. Confirm the fields under **Get help** are, in order: **Help: introduction**, **Help: Rooms**, **Help: messages**, **Help: mentions**, **Help: replying**, **Help: budget**, **Help: tools heading**, **Help: tool entry**, **Help: footer**.
-10. Confirm the fields under **Tool descriptions** are, in order: **get_help description**, **list_agents description**, **create_room description**, **invite_agent description**, **post_message description**, **follow_room description**, **unfollow_room description**.
-11. Read the **Tools** field (under System prompt). Confirm its text contains the token `{{toolNames}}` on a line of its own and contains NO literal tool name.
+6. Scroll the page and confirm the group headings, in this order, start **System prompt**, **Turn**, **Get help**, **Tool descriptions**, and that **Tasks** and **Cadence** follow (`PromptFieldFactory.cs:32-40`). Do not count the groups' fields: the catalog grows, and the checks below name fields, not totals.
+7. Confirm **System prompt** contains these fields, in this relative order: **Orientation**, **Identity**, **Chat rules**, **Tools**.
+8. Confirm **Turn** contains these fields, in this relative order: **Room label**, **Message**, **Catch-up header**, **Catch-up line**.
+9. Confirm **Get help** contains these fields, in this relative order: **Help: introduction**, **Help: Rooms**, **Help: messages**, **Help: mentions**, **Help: replying**, **Help: budget**, **Help: tools heading**, **Help: tool entry**, **Help: footer**.
+10. Confirm **Tool descriptions** contains these fields, in this relative order: **get_help description**, **list_agents description**, **create_room description**, **invite_agent description**, **post_message description**, **follow_room description**, **unfollow_room description**. Other tools' descriptions may follow or interleave; the page does not promise one field for every offered tool.
+11. Read the **Tools** field (under System prompt). Confirm its text contains the token `{{toolNames}}` (followed by a full stop, at the end of the line that follows `These tools run inside the application process:`) and contains NO literal tool name.
 12. Read the **Orientation** field. Confirm it contains the token `{{helpTool}}`.
 13. Read the **Help: tool entry** field. Confirm it contains both `{{toolName}}` and `{{toolDescription}}`.
 14. Read the **Room label** field. Confirm its whole text is exactly `[Room: {{roomName}} (id: {{roomId}})]`.
-15. Count the grey **Next session** badges next to field labels. Confirm there are exactly eleven, and that they sit on: Orientation, Identity, Chat rules, Tools, and all seven `… description` fields under Tool descriptions. Confirm no field under **Turn** or **Get help** carries one.
-16. Open the browser developer tools (F12), go to the Console tab, and paste exactly: `document.querySelectorAll('.prompts-field textarea').length` then press Enter.
-17. Confirm the console prints `24`.
+15. Look at the **Next session** badges next to field labels. Confirm they sit on Orientation, Identity, Chat rules and Tools under System prompt, and on every `… description` field under Tool descriptions. Confirm no field under **Turn** carries one.
+16. Open the browser developer tools (F12), go to the Console tab, and paste exactly: `document.querySelectorAll('.prompts-field textarea').length === document.querySelectorAll('.prompts-field-label').length` then press Enter.
+17. Confirm the console prints `true`: every field label has exactly one textarea. Do not compare the count with a number.
 18. In the same console paste exactly: `[...document.querySelectorAll('.prompts-field textarea')].filter(t => t.value.includes('mcp__team__')).map(t => t.closest('.prompts-field').querySelector('.prompts-field-label').textContent)` then press Enter.
 19. Confirm the console prints an empty array `[]`.
-20. In File Explorer, open `E:\Repos\Huddle\src\Huddle.App\App_Data\` and confirm there is NO file named `prompts.json`.
+20. In File Explorer, open `<data>` (`<repo>\src\Huddle.App\App_Data\`) and confirm there is NO file named `prompts.json`.
 
 **Pass if — all of these**
 
-- Four group headings appear in the order System prompt, Turn, Get help, Tool descriptions.
-- The console reports exactly 24 textareas under `.prompts-field`.
+- The group headings start System prompt, Turn, Get help, Tool descriptions, in that order.
+- The console reports `true` for the textarea-per-label check.
 - The console reports an empty array for the `mcp__team__` search — no prompt default anywhere contains that literal string.
 - **Tools** contains `{{toolNames}}`; **Orientation** contains `{{helpTool}}`; **Help: tool entry** contains both `{{toolName}}` and `{{toolDescription}}`; **Room label** is exactly `[Room: {{roomName}} (id: {{roomId}})]`.
-- Exactly eleven **Next session** badges, on the four System prompt fields and the seven Tool descriptions fields.
-- `App_Data/prompts.json` does not exist.
+- **Next session** badges on the four named System prompt fields and on every Tool descriptions field; none on a Turn field.
+- `<data>\prompts.json` does not exist.
 
 **Fail if — any of these**
 
-- The console array is NOT empty — a prompt default has been hand-edited to hard-code a tool name such as `mcp__team__list_agents`. This reintroduces exactly the silent failure the design removed: the prefix is derived in code from the single constant `ToolServerName = "team"` in `src/Huddle.App/Acp/DotAcpAgentHostFactory.cs`, and a hard-coded copy can drift from it with no build error and no runtime error — the model simply reports the tool does not exist. Report the field names the console printed.
+- The console array is NOT empty — a prompt default has been hand-edited to hard-code a tool name such as `mcp__team__list_agents`. This reintroduces exactly the silent failure the design removed: the prefix is derived in code from the single constant `ToolServerName = "team"` and applied only when the resolved Adapter profile has `UsesToolNamePrefix` true (ADR-0014; `src/Huddle.App/Acp/DotAcpAgentHostFactory.cs:234`), and a hard-coded copy can drift from it, or be wrong for an Adapter that takes bare names, with no build error and no runtime error — the model simply reports the tool does not exist. Report the field names the console printed.
 - **Tools** shows seven literal tool names instead of `{{toolNames}}` -> the substitution token was replaced by its rendered output, so the tool list is now frozen text that will not follow a change to the tool roster.
 - **Room label** has lost `(id: {{roomId}})` -> every `invite_agent` and `post_message` call is silently reduced to rooms the agent created itself; the model can never learn a room id any other way.
-- The console prints a number other than 24 -> a prompt has been added to or removed from the catalog without the Settings page following, or a group prefix no longer matches.
-- A **Next session** badge appears on a Get help or Turn field, or is missing from a Tool descriptions field -> the timing metadata is wrong, and testers will later be told a live edit needs a restart (or worse, that a restart-only edit is live).
+- The console prints `false` -> a catalog entry has a label but no textarea (or the reverse), so a prompt is shown that cannot be edited.
+- A **Next session** badge appears on a Turn field, or is missing from a System prompt or Tool descriptions field -> the timing metadata is wrong, and testers will later be told a live edit needs a restart (or worse, that a restart-only edit is live).
 
 **Inconclusive if**
 
-If the Settings page shows a red `MudAlert` error banner (the old `composer-error` paragraph, converted in Stage 3 of the MudBlazor migration), or the tab rail is missing, the app did not start cleanly — read the console window for an unhandled startup exception and fix that before judging this test. If `App_Data/prompts.json` already existed before you started, the defaults you are reading may be overrides; that is INCONCLUSIVE, not a fail: run `P-RESET-SETTINGS`, relaunch and rerun. Do NOT file the absence of `prompts.json` as a bug — its absence is the documented normal state.
+If the Settings page shows a red `MudAlert` error banner (the old `composer-error` paragraph, converted in Stage 3 of the MudBlazor migration), or the tab rail is missing, the app did not start cleanly — read the console window for an unhandled startup exception and fix that before judging this test. If `<data>\prompts.json` already existed before you started, the defaults you are reading may be overrides; that is INCONCLUSIVE, not a fail: run `P-RESET-SETTINGS`, relaunch and rerun. Do NOT file the absence of `prompts.json` as a bug — its absence is the documented normal state.
 
 > [!NOTE]
 > This is the cheapest test in the area and the one most likely to catch a regression introduced by a well-meaning edit to prompt text. Run it first, every time.
@@ -93,20 +93,20 @@ If the Settings page shows a red `MudAlert` error banner (the old `composer-erro
 **Before you start**
 
 - APPTOOLS-01 has passed.
-- App running with `Team__Acp__Enabled=false`.
-- `App_Data/prompts.json` does not exist yet.
+- App running under `P-LAUNCH-FREE`.
+- `<data>\prompts.json` does not exist yet.
 
 **Steps**
 
 1. On http://localhost:5100/settings, Prompts tab, scroll to the **Turn** group and find the field labelled **Room label**.
 2. Click into its textarea, press Ctrl+A to select all, then type exactly: `[Room: {{roomName}}]`
 3. Look immediately below the textarea and its grey helper line. Confirm a red issue line appears naming the missing placeholder `{{roomId}}` and repeating the helper text about it being the only way an agent learns a Room's id.
-4. Look at the field's label row. Confirm a badge reading **Unsaved** has appeared next to `Room label`.
+4. Look at the field's label row. Confirm a badge reading **Unsaved** has appeared next to `Room label`, alongside **Modified** (the text now differs from the default; `PromptFieldFactory.cs:147-150`).
 5. Scroll to the bottom of the form and confirm the **Save** button is ENABLED (not greyed out).
 6. Click **Save**.
 7. Confirm no red error paragraph appears at the top of the page.
 8. Confirm the **Room label** field's badge row now reads **Modified** and no longer reads **Unsaved**.
-9. In File Explorer open `E:\Repos\Huddle\src\Huddle.App\App_Data\prompts.json` in a text editor. Confirm it exists and contains exactly one key, `turn.roomLabel`, and no other prompt key.
+9. In File Explorer open `<data>\prompts.json` (`<repo>\src\Huddle.App\App_Data\prompts.json`) in a text editor. Confirm it exists and contains exactly one key, `turn.roomLabel`, and no other prompt key.
 10. Back in the browser, click into the **Room label** textarea, press Ctrl+A, and type exactly: `[Room: {{roomName}} (id: {{roomID}})]` (note the capital D in roomID).
 11. Confirm TWO issue lines now appear under the field: one red line about the missing required `{{roomId}}`, and one amber line naming the token `{{roomID}}` and saying it is 'most likely a typo'.
 12. Click the **Reset** button in that field's action row.
@@ -146,17 +146,17 @@ If `App_Data/prompts.json` cannot be written (a permissions error paragraph appe
 
 **Before you start**
 
-- Two Personas exist (`Nova`, `Jarvis`), both Haiku/low. If they do not, create them now with **New teammate** — creating a Persona is free.
+- Two Personas exist (`Nova`, `Jarvis`), both Haiku/low, besides the built-in Chief of Staff (seeded at every start). If they do not, create them now with `P-NEW-PERSONA` — creating a Persona is free.
 - `pwsh` available and a THIRD terminal free (`T-C`) — the bot in step 11 is `P-ECHO-BOT`, a PowerShell pipe client, so this test stays free.
 
 **Steps**
 
-1. Stop the app with Ctrl+C in its console window.
-2. In the PowerShell window, run: `$env:Team__Acp__Enabled = "false"`
-3. Run: `dotnet run --project src/Huddle.App --urls http://localhost:5100`
-4. Open Windows Task Manager, Details tab, and sort by Name. Note whether any `node.exe` process is running.
+1. `P-STOP` the app.
+2. Relaunch with `P-LAUNCH-FREE`; confirm `O-ADAPTERS` prints `0`.
+3. Wait for `Now listening on: http://localhost:5100`.
+4. Run `O-ADAPTERS` and note the count (`0`). Do not count `node.exe` in Task Manager: on a development machine unrelated `node.exe` processes are normal.
 5. In the browser open http://localhost:5100/teammates.
-6. Confirm every Persona tile is listed, and that each tile's status line reads **Offline** with a red `offline` dot (`--status-offline`, red by design - never grey).
+6. Confirm every Persona tile is listed (Chief of Staff, Nova, Jarvis), and that each tile's status chip reads **Offline** with a red dot (`app.css:71-73`, `--mud-palette-error`; red by design, never grey).
 7. Hover each **Offline** tile's status text. Confirm no tooltip reason appears (an Agent that merely never started has no reason).
 8. Click the **Nova** tile to open its card. Confirm the card shows **Offline** and shows NO reason line beneath the status.
 9. Close the card with the × button.
@@ -165,81 +165,82 @@ If `App_Data/prompts.json` cannot be written (a permissions error paragraph appe
 12. In the browser, click **New chat** in the left sidebar, tick the checkbox next to `mybot`, then click **Start chat**.
 13. In the room that opens, type exactly `hello` and press Enter.
 14. Confirm `mybot` replies within a few seconds and its reply appears as a message row with sender `mybot`.
-15. Confirm no red `member-health-alert` strip appears anywhere between the transcript and the composer.
-16. Return to Task Manager and confirm no new `node.exe` process appeared during any of the above.
+15. Confirm no amber `member-health-alert` strip appears anywhere between the transcript and the composer (it is a `Severity.Warning` alert, `Chat.razor:76`).
+16. Run `O-ADAPTERS` again and confirm it still prints `0`: no adapter was started during any of the above.
 
 **Pass if — all of these**
 
 - Every Persona tile reads **Offline** with no reason, on the tile and on the card.
 - No `App tool server listening at` line anywhere in the console.
-- No `node.exe` process starts at any point.
+- `O-ADAPTERS` prints `0` before and after.
 - `mybot` connects and replies, proving the chat surface works with zero spend.
 - No `member-health-alert` strip appears in the room.
 
 **Fail if — any of these**
 
-- A permanent red alert strip appears in the room listing every offline Agent -> an always-on alert is one nobody reads; Offline-with-no-reason is deliberately not an alarm. This is a regression in `Chat.razor`'s `UnhealthyMembers` filter.
-- A `node.exe` process starts, or `App tool server listening at` appears in the log, while `Team__Acp__Enabled` is `false` -> code is turning ACP on by itself. This is the most serious possible finding in this area: the flag exists precisely because starting an adapter spends the user's money.
+- A permanent amber alert strip appears in the room listing every offline Agent -> an always-on alert is one nobody reads; Offline-with-no-reason is deliberately not an alarm. This is a regression in `Chat.razor`'s `UnhealthyMembers` filter.
+- `O-ADAPTERS` counts an adapter, or `App tool server listening at` appears in the log, while `Team__Acp__Enabled` is `false` -> code is turning ACP on by itself. This is the most serious possible finding in this area: the flag exists precisely because starting an adapter spends the user's money.
 - `mybot` does not reply -> the chat surface itself is broken, independent of App Tools. Stop and fix that first; every later test in this area will be unreadable.
 - A Persona tile reads **Online** with ACP disabled -> the status resolver is reading something other than real pipe liveness.
 
 **Inconclusive if**
 
-If a `node.exe` process was ALREADY running before you started the app (a leftover from an earlier run, or an unrelated tool), you cannot attribute it — kill every `node.exe`, restart the app, and rerun. If `mybot` does not appear in the **New chat** panel, the bot never registered; check `T-C` for the `welcome` line before judging. Do NOT file the fact that opening a Create/Edit teammate card spawns a `node` probe in this mode — that is a documented, deliberate and free behaviour (no Turn is started, so no tokens are spent).
+If `O-ADAPTERS` printed a non-zero count before the app took any action (a leftover adapter from an earlier run), you cannot attribute it — stop it with `Stop-Process -Id <ProcessId>`, restart the app, and rerun. If `mybot` does not appear in the **New chat** panel, the bot never registered; check `T-C` for the `welcome` line before judging. Do NOT file the fact that opening a Create/Edit teammate card spawns a `node` probe in this mode — that is a documented, deliberate and free behaviour (no Turn is started, so no tokens are spent).
 
 > [!NOTE]
-> Task Manager is the honest oracle here, not the log. A missing log line proves the server did not bind; only the process list proves no adapter was launched.
+> `O-ADAPTERS` is the honest oracle here, not the log. A missing log line proves the server did not bind; only the adapter count proves no adapter was launched.
 
 ### APPTOOLS-04 — The tool server binds and completes the MCP handshake before any model call — the wiring pre-flight
 
-**Free** · about 10 min
+**💰 Spends money** · about 12 min
 
-*Proves the App Tool server is actually reachable by the adapter and that the adapter registered the tools, WITHOUT sending a single prompt. This is the gate that separates a configuration fault from a discovery fault, and it costs nothing.*
+*Proves the App Tool server is actually reachable by the adapter and that the adapter registered the tools, WITHOUT sending a prompt of your own. This is the gate that separates a configuration fault from a discovery fault. It is not free: with ACP on, the built-in Chief of Staff takes one Greeting Turn into its empty direct Room (`PersonaRunner.cs:481-495`).*
 
 **Before you start**
 
 - `pwsh tools/acp/install.ps1` has been run and `tools/acp/node_modules` exists.
 - The `claude` CLI is logged in and `ANTHROPIC_API_KEY` is not set.
 - At least one Persona (`Nova`) exists, Haiku/low.
-- You are prepared for real `node` processes to start. No prompt is sent, so no tokens are spent.
+- COST: the Chief of Staff's Greeting Turn, on Haiku at effort low only because `P-LAUNCH-PAID` set it so first (a few hundred tokens). You send no prompt, so Nova spends nothing.
+- You are prepared for real `node` processes to start.
 
 **Steps**
 
-1. Stop the app with Ctrl+C.
-2. Open a NEW PowerShell window (so the `Team__Acp__Enabled=false` from the previous test is gone).
-3. In the new window run: `${env:Logging__LogLevel__Agency.Huddle} = "Debug"`
-4. Run: `dotnet run --project src/Huddle.App --urls http://localhost:5100`
+1. `P-STOP` the app.
+2. Open a NEW `T-A` PowerShell window (so the `Team__Acp__Enabled=false` from the previous test is gone).
+3. Launch with `P-LAUNCH-PAID`, including its Chief of Staff Haiku / low step. (Development already sets `Agency.Huddle` to `Debug`, so no log-level variable is needed.)
+4. Wait for `Now listening on: http://localhost:5100`.
 5. Open http://localhost:5100/teammates in the browser and leave it open. Do NOT open any room and do NOT type any message.
-6. Watch the **Nova** tile's status line. Confirm it reads **Starting** with an amber dot, then changes to **Online** with a green dot, within about 30 seconds.
+6. Watch the **Nova** tile's status line. Confirm it reads **Starting** with a light-amber dot, then changes to **Online** with a green dot, within about 30 seconds (`app.css:67-81`; Degraded is a darker amber, Offline red).
 7. Look at the left sidebar. Confirm a room named `Nova` has appeared in the room list.
 8. Read the app's console window. Find a line of the form `App tool server listening at http://127.0.0.1:<port>/mcp.` and note the port number.
 9. In the same console, find a line reading `App tool server received initialize.`
 10. In the same console, find a line reading `App tool server received tools/list.`
-11. In File Explorer confirm the folder `E:\Repos\Huddle\src\Huddle.App\App_Data\work\Nova\` exists.
-12. Confirm the transcript area of the `Nova` room contains no messages and no token spend has occurred (you have typed nothing).
+11. In File Explorer confirm the folder `<data>\Teammates\Nova\work\` (`<repo>\src\Huddle.App\App_Data\Teammates\Nova\work\`) exists (`TeammatePaths.cs:25-28`).
+12. Confirm the transcript area of the `Nova` room contains no messages (you have typed nothing, so Nova spent nothing; only the Chief of Staff's Greeting Turn was paid).
 
 **Pass if — all of these**
 
 - The Nova tile goes **Starting** then **Online**, and a room named `Nova` appears in the sidebar.
 - The console contains `App tool server listening at http://127.0.0.1:<port>/mcp.`
 - The console contains BOTH `App tool server received initialize.` AND `App tool server received tools/list.`
-- `App_Data/work/Nova/` exists on disk.
-- No message has been sent and no reply has streamed.
+- `<data>\Teammates\Nova\work\` exists on disk.
+- You have sent no message, and Nova's Room is empty.
 
 **Fail if — any of these**
 
 - The tile says **Online** but NEITHER `App tool server received initialize.` nor `App tool server received tools/list.` ever appears -> this is the high-value silent failure. The tool server bound but the adapter never talked to it, so the model has no tools at all. Every paid test after this one would fail in a way that looks like model stupidity. STOP HERE: do not spend money. This is a wiring fault in `DotAcpAgentHostFactory`, not a prompting problem.
-- The tile flips to **Degraded** with a reason line underneath, and/or the room shows a red `member-health-alert` strip reading `Nova is Degraded: <reason>` -> read the reason; it is usually the adapter path or the CLI login. This is a configuration fault and is the OPPOSITE fix from the case above; acp-agent-guide.md §3.6 is explicit that the two must be told apart before spending anything.
+- The tile flips to **Degraded** with a reason line underneath, and/or the room shows an amber `member-health-alert` strip (`Chat.razor:76`) reading `Nova is Degraded: <reason>` -> read the reason; it is usually the adapter path or the CLI login. This is a configuration fault and is the OPPOSITE fix from the case above; acp-agent-guide.md §3.6 is explicit that the two must be told apart before spending anything.
 - The tile stays **Offline** forever -> the supervisor never tried to start it. Confirm `Team__Acp__Enabled` is not still `false` in this shell.
 - `App tool server listening at` appears but the port is not on `127.0.0.1` -> the tool server is bound to a non-loopback address; report it, it is a security regression.
-- `App_Data/work/Nova/` is missing while the tile says Online -> the working directory was never created, and agent-side file tools will behave unpredictably.
+- `<data>\Teammates\Nova\work\` is missing while the tile says Online -> the working directory was never created, and agent-side file tools will behave unpredictably.
 
 **Inconclusive if**
 
 If `tools/acp/node_modules` is missing, this test is INCONCLUSIVE, not failed — run `pwsh tools/acp/install.ps1` and rerun. If the tile reaches **Degraded** with a reason mentioning authentication or login, the `claude` CLI is not logged in: this is INCONCLUSIVE — run `claude` once interactively, log in, and rerun. If several Personas exist you will see several `App tool server listening at` lines on different ports: that is the design (one server per Persona), not a leak.
 
 > [!NOTE]
-> Free, but it is the single most important test in this area. Do not begin any paid test until this one passes. Keep this app instance running — the next several tests reuse it.
+> Only the Chief of Staff's one cheap Greeting Turn is paid, but it is the single most important test in this area. Do not begin any paid test until this one passes. Keep this app instance running — the next several tests reuse it.
 
 ### APPTOOLS-05 — An Agent reads its own Room's id off the [Room: ...] label
 
@@ -302,25 +303,25 @@ If no streaming row ever appears and nothing arrives, the turn never reached the
 5. Wait for the reply to finish streaming.
 6. Read the reply and check it covers all four of these points about the budget: that the Room stops accepting agent messages; that the human is told and can allow more; that a refusal saying the budget is spent is FINAL and must not be retried; and that the agent must not work around it by posting to another Room.
 7. Check the reply also defines 'context only' as messages the agent was NOT addressed in, which it should read for background and not answer.
-8. Switch to the app's console window. If you are running at Trace, search it for a line beginning `App tool server replied to tools/call:` whose payload text contains `BUDGET` and `MESSAGES`.
-9. If you are running at Trace, compare that payload's prose against the file `E:\Repos\Huddle\tests\Huddle.Tests\Acp\Golden\getHelp.txt` — they should be the same text.
+8. Run `O-TOOLCALLS` for `Nova`: `Get-Content "<data>\logs\tool-calls\Nova\$((Get-Date).ToUniversalTime().ToString('yyyy-MM-dd')).jsonl" -Tail 1`. Confirm a line whose `tool` field names `get_help`. The `tool` value is the title the Adapter gave the call, so judge it by containing `get_help`, not by an exact string.
+9. If you are running at Trace, switch to the app's console window and find a line beginning `App tool server replied to tools/call:` whose payload is a JSON string. Decode it (newlines appear as `\n`, and apostrophes, quotes and em-dashes as `\uXXXX`), then confirm the decoded text contains a `BUDGET` section and a `MESSAGES` section. Do not compare the payload with `getHelp.txt`: that golden is built from a fixed roster (`GetHelpToolTests.cs:60-66`) and the live catalog differs from it.
 
 **Pass if — all of these**
 
 - The reply states that a budget refusal is final, must not be retried, and must not be worked around by posting to another Room.
 - The reply defines 'context only' as messages the agent was not addressed in, to be read but not answered.
-- At Trace level: a `App tool server replied to tools/call:` line exists whose payload contains the BUDGET and MESSAGES sections, and that payload matches `tests/Huddle.Tests/Acp/Golden/getHelp.txt`.
+- `O-TOOLCALLS` has a `get_help` line for Nova, and at Trace the decoded payload contains the BUDGET and MESSAGES sections.
 
 **Fail if — any of these**
 
 - The reply is vague, hedged, or invented — e.g. 'the room probably stops the agent' with no mention of not retrying and not rerouting -> `get_help` was not called. Progressive discovery is not working end to end, and the system prompt alone cannot supply this answer because it carries neither section.
 - The reply describes the budget correctly but says nothing about 'context only', or vice versa -> partial recall; check the Trace log. If there is no `tools/call` line, the model answered from the system prompt and guessed the rest.
-- At Trace level, the `tools/call` payload does NOT match `getHelp.txt` -> a prompt override is in force. Check `App_Data/prompts.json` and the **Help: budget** / **Help: messages** fields on /settings.
-- The console shows a `tools/call` for something other than `get_help` (for example a tool from an entirely different product) -> see the INCONCLUSIVE note; this is evidence about the model's tool index, not about registration.
+- At Trace level, the decoded payload lacks the BUDGET or MESSAGES section -> a prompt override is in force. Check `<data>\prompts.json` and the **Help: budget** / **Help: messages** fields on /settings.
+- `O-TOOLCALLS` shows no `get_help` line and the newest line names some other tool -> see the INCONCLUSIVE note. A call to another product's tool (`mcp__claude_ai_ms365__…`) never reaches this server at all, so the console cannot show it; `O-TOOLCALLS` can.
 
 **Inconclusive if**
 
-If the console shows the model calling a semantically adjacent tool from a different product (`mcp__claude_ai_ms365__teams_list_chats` is the recorded real-world example), that is INCONCLUSIVE — it is evidence about the model's tool search index, not proof that `mcp__team__get_help` is unregistered. Rerun with the tool named explicitly: `Call mcp__team__get_help, then answer: what happens when a Room's agent-message budget runs out?`. If the explicit call succeeds, record the original as an index miss, not a registration failure. If you are running at Debug rather than Trace, a `App tool server received tools/call.` line proves SOME tool ran but not WHICH — that is enough to rule out 'no tool was called' but not enough to confirm it was `get_help`; say so in your result rather than guessing.
+If the console shows the model calling a semantically adjacent tool from a different product (`mcp__claude_ai_ms365__teams_list_chats` is the recorded real-world example), that is INCONCLUSIVE — it is evidence about the model's tool search index, not proof that `mcp__team__get_help` is unregistered. Rerun with the tool named explicitly: `Call mcp__team__get_help, then answer: what happens when a Room's agent-message budget runs out?`. If the explicit call succeeds, record the original as an index miss, not a registration failure. If you are running at Debug rather than Trace, judge the call by `O-TOOLCALLS` and the reply text alone, and say which you used; the `received tools/call.` console line names no tool.
 
 > [!NOTE]
 > This is the cheapest probe that progressive discovery is live. Prefer it over APPTOOLS-07 when budget is tight — APPTOOLS-07 is more thorough but costs more and its failure mode (a) is harder to read.
@@ -343,24 +344,24 @@ If the console shows the model calling a semantically adjacent tool from a diffe
 2. Click into the composer.
 3. Type exactly: `What tools can you call in this application? For each one give its exact name and, in that tool's own words, what it is for.`
 4. Press Enter.
-5. While the turn runs, confirm a streaming message row appears showing `Nova`, a **Stop** button, and (at least briefly) a tool-activity line beneath the draft text.
+5. While the turn runs, confirm a streaming message row appears showing `Nova`, a **Stop** button, and (at least briefly) a `Tool calls` row beneath the draft text (`MessageList.razor:115-137`).
 6. Wait for the reply to finish.
-7. Confirm the reply names all seven tools with the full prefix: `mcp__team__get_help`, `mcp__team__list_agents`, `mcp__team__create_room`, `mcp__team__invite_agent`, `mcp__team__post_message`, `mcp__team__follow_room`, `mcp__team__unfollow_room`.
+7. Confirm the reply names at least these seven chat tools with the full prefix (the model is offered 17 tools in all, so it may name others too; extra names are not a failure): `mcp__team__get_help`, `mcp__team__list_agents`, `mcp__team__create_room`, `mcp__team__invite_agent`, `mcp__team__post_message`, `mcp__team__follow_room`, `mcp__team__unfollow_room`.
 8. Now check the DESCRIPTIONS, which is the part that matters. For `mcp__team__post_message`, confirm the reply reproduces or closely paraphrases the phrase `because your reply in the current turn is only ever delivered to that Room, never to another one`.
 9. For `mcp__team__invite_agent`, confirm the reply mentions that you give the Room's id, the id shown in the `[Room: ...]` line at the start of every message.
 10. For `mcp__team__list_agents`, confirm the reply mentions that entries include a job description drawn from the Persona's frontmatter.
-11. Switch to the console and, at Trace, find `App tool server replied to tools/call:` with a payload containing `TOOLS` and all seven tool names.
+11. Run `O-TOOLCALLS` for `Nova` and confirm a line whose `tool` field contains `get_help`. At Trace, also find `App tool server replied to tools/call:` and decode its payload (newlines appear as `\n`): confirm it contains a `TOOLS` section naming the seven chat tools. Do not compare it with `getHelp.txt`, which is built from a fixed roster (`GetHelpToolTests.cs:60-66`).
 
 **Pass if — all of these**
 
-- All seven tool names appear with the `mcp__team__` prefix and are spelled exactly.
+- All seven chat tool names appear with the `mcp__team__` prefix and are spelled exactly.
 - At least three of the seven carry a real description, not just a name — specifically including the post_message phrase about the reply only ever reaching the current Room.
-- At Trace: a `tools/call` reply payload matching `tests/Huddle.Tests/Acp/Golden/getHelp.txt`.
-- A streaming row with a **Stop** button and a tool-activity line was visible during the turn.
+- `O-TOOLCALLS` has a `get_help` line for Nova; at Trace the decoded `tools/call` payload carries the `TOOLS` section.
+- A streaming row with a **Stop** button and a `Tool calls` row was visible during the turn.
 
 **Fail if — any of these**
 
-- Seven correct names but NO per-tool descriptions, or one-line descriptions the tester invented plausible wording for -> failure mode (a): the model recited the system prompt's Tools block, which carries the names only. Progressive discovery did NOT happen. The names alone cannot distinguish this case, which is exactly why the description check is the pass condition.
+- Correct names but NO per-tool descriptions, or one-line descriptions the tester invented plausible wording for -> failure mode (a): the model recited the system prompt's Tools block, which carries the names only. Progressive discovery did NOT happen. The names alone cannot distinguish this case, which is exactly why the description check is the pass condition.
 - The reply says no such tools exist, or that it has no tools in this application -> failure mode (b): a name-lookup miss in deferred-tool mode. Cross-check against APPTOOLS-04's log lines: if `tools/list` arrived there, the tools ARE registered and this is a model-side lookup problem.
 - The reply names tools from a different product entirely -> failure mode (c). Evidence about the model's tool search index, not about registration. Record it as such.
 - The reply describes the tools by quoting file paths or source code -> failure mode (d): it read the repository instead of calling the tool. See APPTOOLS-18.
@@ -368,7 +369,7 @@ If the console shows the model calling a semantically adjacent tool from a diffe
 
 **Inconclusive if**
 
-If exactly the seven names appear with vague one-line summaries that could plausibly be either recited or retrieved, do NOT guess. Read the Trace log: a `App tool server replied to tools/call:` line with a get_help payload makes it a PASS; no `tools/call` line at all makes it failure mode (a). If you are running at Debug and see only `App tool server received tools/call.`, you know a tool ran but not which — rerun at Trace rather than deciding. If the streaming row never appeared but the reply did, judge the reply and record the missing streaming row separately against APPTOOLS-16.
+If the names appear with vague one-line summaries that could plausibly be either recited or retrieved, do NOT guess. Read `O-TOOLCALLS`: a `get_help` line for this turn makes it a PASS; no line makes it failure mode (a). The `received tools/call.` console line names no tool, so it cannot settle which one ran. If the streaming row never appeared but the reply did, judge the reply and record the missing streaming row separately against APPTOOLS-16.
 
 > [!NOTE]
 > Run APPTOOLS-06 first. If APPTOOLS-06 passed, a weak result here is about the prompt's phrasing rather than about registration.
@@ -377,7 +378,7 @@ If exactly the seven names appear with vague one-line summaries that could plaus
 
 **💰 Spends money** · about 5 min
 
-*Proves the ACP tool_call update reaches the UI. Cheap to observe: it can be watched during any other paid test at no extra cost.*
+*Proves the ACP tool_call update reaches the UI as rows in the Draft's "Tool calls" list. Cheap to observe: it can be watched during any other paid test at no extra cost.*
 
 **Before you start**
 
@@ -391,28 +392,28 @@ If exactly the seven names appear with vague one-line summaries that could plaus
 2. Click into the composer and type exactly: `Call mcp__team__list_agents and tell me how many agents it returned.`
 3. Press Enter and watch the transcript area continuously — do not switch windows.
 4. Confirm a streaming message row appears carrying the sender name `Nova` and a **Stop** button.
-5. Confirm that, while the turn runs, a tool-activity line appears beneath the draft text carrying a short title supplied by the adapter.
-6. Confirm that when a second call starts (if one does) the previous activity line is REPLACED, not appended to — you should never see a growing list of calls.
-7. Confirm the entire streaming row, tool-activity line included, disappears when the turn ends and is replaced by a single ordinary message row.
-8. In the console, confirm an `App tool server replied to tools/call:` line whose timestamp falls inside the window in which you saw the activity line on screen.
+5. Confirm that, while the turn runs, a list labelled `Tool calls` appears beneath the draft text with one row per call, each carrying a short title supplied by the adapter (`MessageList.razor:115-137`).
+6. Confirm that when a second call starts (if one does) it is added as a further row, oldest first. The list holds at most six rows (`Drafts.cs:38`); a seventh call pushes the oldest out.
+7. Confirm the entire streaming row, tool-call rows included, disappears when the turn ends and is replaced by a single ordinary message row.
+8. Run `O-TOOLCALLS` for `Nova` and confirm it has a line for this turn's call; the line's time falls inside the window in which you saw the row on screen. At Trace the console also shows an `App tool server replied to tools/call:` line in that window.
 
 **Pass if — all of these**
 
 - A streaming row with sender `Nova` and a **Stop** button appears while the turn runs.
-- A tool-activity line appears beneath the draft while a call is open.
-- At most one activity line is shown at a time.
-- The streaming row and its activity line vanish when the turn ends, leaving a single posted message.
+- At least one row appears in the `Tool calls` list beneath the draft while a call is open.
+- The list never shows more than six rows.
+- The streaming row and its tool-call rows vanish when the turn ends, leaving a single posted message.
 
 **Fail if — any of these**
 
-- No tool-activity line ever appears even though the console shows `App tool server replied to tools/call:` -> the ACP `tool_call` update is not reaching the draft's Activity field. The human loses all visibility into what an agent is doing mid-turn.
-- A LIST of activity lines accumulates -> only the current activity is meant to be kept; an accumulating list is the bug.
-- The tool-activity line is STILL on screen after the turn ended -> the final message delta terminator never arrived, and the draft was never properly closed. This is the more serious shape of failure here; report it.
+- No tool-call row ever appears even though `O-TOOLCALLS` shows a call for this turn -> the ACP `tool_call` update is not reaching the Draft's tool-call list. The human loses all visibility into what an agent is doing mid-turn.
+- More than six rows accumulate -> the list cap (`Drafts.MaxToolCalls`) is not applied.
+- A tool-call row is STILL on screen after the turn ended -> the final message delta terminator never arrived, and the draft was never properly closed. This is the more serious shape of failure here; report it.
 - The **Stop** button is missing from the streaming row -> the human has no way to halt a runaway turn.
 
 **Inconclusive if**
 
-Do NOT judge the exact wording of the activity title — it is supplied by the adapter, not by this application, and it will change between adapter versions. If the turn completes so fast that you cannot tell whether an activity line appeared, that is INCONCLUSIVE: rerun with a prompt that forces more than one call, e.g. `Call mcp__team__get_help and then mcp__team__list_agents, then summarise both in one sentence.` If the tool-activity line never appears AND the console shows no `tools/call` at all, this test is INCONCLUSIVE — the model never called a tool, so there was nothing to display; fix that first.
+Do NOT judge the exact wording of a row's title — it is supplied by the adapter, not by this application, and it will change between adapter versions. If the turn completes so fast that you cannot tell whether a row appeared, that is INCONCLUSIVE: rerun with a prompt that forces more than one call, e.g. `Call mcp__team__get_help and then mcp__team__list_agents, then summarise both in one sentence.` If no row ever appears AND `O-TOOLCALLS` shows no call for this turn, this test is INCONCLUSIVE — the model never called a tool, so there was nothing to display; fix that first.
 
 > [!NOTE]
 > Free if piggybacked on APPTOOLS-06 or APPTOOLS-07 — just watch the screen during those turns instead of running this one separately.
@@ -436,13 +437,13 @@ Do NOT judge the exact wording of the activity title — it is supplied by the a
 4. Confirm the transcript still shows only the message rows, with no tool-activity content.
 5. Stop the app with Ctrl+C, restart it with the same command, and reopen the `Nova` room.
 6. Confirm the transcript again shows only the message rows.
-7. Open the room's transcript file at `E:\Repos\Huddle\src\Huddle.App\App_Data\rooms\<roomId>.jsonl` in a text editor, using the id from the `/rooms/<id>` URL.
+7. Open the room's transcript file at `<data>\rooms\<roomId>.jsonl` in a text editor, using the id from the `/rooms/<id>` URL.
 8. Confirm every line in that file is a message record and none of them describes a tool call.
 
 **Pass if — all of these**
 
 - No tool-activity content survives the end of the turn, a page reload, or an application restart.
-- `App_Data/rooms/<roomId>.jsonl` contains only message lines.
+- `<data>\rooms\<roomId>.jsonl` contains only message lines.
 
 **Fail if — any of these**
 
@@ -469,26 +470,26 @@ If the transcript is empty after the restart, check you reopened the right room:
 
 **Steps**
 
-1. Open http://localhost:5100/teammates. On paper or in a text file, write down every tile's Name, its `Title · @alias` line, and its status word (Online / Starting / Degraded / Offline).
+1. Open http://localhost:5100/teammates. On paper or in a text file, write down every tile's Name, its title, its alias chip, and its status word (Online / Starting / Degraded / Offline).
 2. Click **New chat** in the left sidebar and write down every checkbox name in the panel and each one's dot colour. Click **New chat** again to close the panel without starting one.
 3. Open the room named `Nova` from the sidebar.
 4. Click into the composer and type exactly: `Who else is here? List every agent and every persona you can see, name for name, and say which are online.`
 5. Press Enter and wait for the reply.
 6. Compare the reply's list of names against the two lists you wrote down. Every name must appear, and no name may appear that is not on your lists.
-7. Confirm the reply distinguishes registered Agents (with an online/offline state each) from Personas that have never come online.
+7. Confirm the reply distinguishes registered Agents (with an online/offline state each) from the Personas list. `ListAgentsTool` lists every Persona by name, whether or not it has ever come online (`ListAgentsTool.cs:56-65`).
 8. Confirm the online/offline states in the reply match the dot colours you recorded.
-9. Switch to the console. At Trace, find the `App tool server replied to tools/call:` line whose payload begins with `Agents:` and confirm its shape: `- <Name> (online)` or `- <Name> (offline)` lines, each optionally followed by indented job-description lines, then a blank line and `Personas:`.
+9. Switch to the console. At Trace, find the `App tool server replied to tools/call:` line whose payload is a JSON-RPC response (it begins `{"jsonrpc"`) and whose `text` field begins `Agents:`. Decode it, then confirm its shape: `- <Name> (online)` or `- <Name> (offline)` lines, each optionally followed by indented job-description lines, then a blank line and `Personas:`.
 
 **Pass if — all of these**
 
 - Every name in the reply appears on the /teammates page or in the New chat panel, and every name on those surfaces appears in the reply.
-- Agents are separated from Personas, and each Agent carries an online/offline state.
+- Agents are separated from Personas, each Agent carries an online/offline state, and every Persona appears by name.
 - The online/offline states match the dot colours on screen.
-- At Trace: the tool payload has the documented `Agents:` / `Personas:` shape.
+- At Trace: the decoded tool text has the documented `Agents:` / `Personas:` shape.
 
 **Fail if — any of these**
 
-- The reply names `Alice`, `Bob`, `Chief of Staff`, a room called `bananas`, or any other name that is NOT on your two lists -> the agent read the repository's docs and test fixtures instead of calling the tool. This is the plausible-looking wrong answer this test exists to catch. Note which names it invented; they are traceable to `docs/` and `tests/`.
+- The reply names `Alice`, `Bob`, a room called `bananas`, or any other name that is NOT on your two lists -> the agent read the repository's docs and test fixtures instead of calling the tool. This is the plausible-looking wrong answer this test exists to catch. Note which names it invented; they are traceable to `docs/` and `tests/`.
 - A Persona that is visible on /teammates is missing from the reply -> the directory and the tool disagree.
 - Online and offline are inverted relative to the dot colours -> the gateway liveness check in `ListAgentsTool` is reading the wrong thing.
 - No job descriptions appear at all for Personas that have a Title and Alias -> `ComposeJobDescription` is returning empty, which will also break APPTOOLS-11.
@@ -502,7 +503,7 @@ If the reply lists the right names but gives no online/offline state, rerun once
 
 ### APPTOOLS-11 — An Alias is advertised by list_agents and then accepted by invite_agent
 
-**💰 Spends money** · about 15 min
+**💰 Spends money** · about 10 min
 
 *Catches the documented trap: a tool that rejects a handle it just advertised costs a turn and teaches the model not to trust the catalog. Also compares the tool path against the two free paths that do the same job.*
 
@@ -515,23 +516,23 @@ If the reply lists the right names but gives no online/offline state, rerun once
 
 **Steps**
 
-1. Open http://localhost:5100/teammates and confirm the `Jarvis` tile's second line reads `Researcher · @jar`.
+1. Open http://localhost:5100/teammates and confirm the `Jarvis` tile shows the title `Researcher` and an alias chip reading `@jar` (separate elements, `Teammates.razor:98-104`).
 2. FREE PATH FIRST — in the three-member room (`Nova, mybot`), click into the composer and type exactly `/invite @jar` then press Enter.
 3. Confirm the sidebar entry and the chat header `<h1>` both rename to include `Jarvis`, with no page refresh.
-4. Now undo it so the tool path can be tested: run `P-RESET-ALL`, relaunch, recreate `Nova` and `Jarvis` (Haiku/low), restart the `mybot` bot so it re-registers, and create a fresh three-member room with `Nova` and `mybot` via **New chat**.
+4. Now make a room Jarvis is genuinely not in so the tool path can be tested: click **New chat**, tick `Nova` and `mybot`, click **Start chat**. A multi-agent New chat always creates a fresh Room (`ChatService.cs:477-490`), so no reset is needed.
 5. In that fresh room, click into the composer and type exactly: `List the agents here with their handles, then use mcp__team__invite_agent to add jar to this room.`
 6. Press Enter and wait for the turn to finish.
 7. Confirm Nova's reply quotes `Alias: jar` (or clearly reports `jar` as Jarvis's handle) from the job description it read.
 8. Confirm the sidebar entry and the chat header `<h1>` have BOTH renamed to the comma-joined agent names including `Jarvis`, with no page refresh.
-9. Confirm the `.chat-members` line under the header now lists `Jarvis`.
+9. Confirm the member-names line under the header now lists `Jarvis`.
 10. In the console, find a line reading `Invited agent 'Jarvis' (<agentId>) into room '<roomId>'.`
 
 **Pass if — all of these**
 
-- The `Jarvis` tile reads `Researcher · @jar`.
+- The `Jarvis` tile shows the title `Researcher` and the alias chip `@jar`.
 - `/invite @jar` typed by the human works (the free comparison path).
 - Nova's reply shows it read `Alias: jar` out of `list_agents`' job description.
-- The tool call succeeds: the sidebar and the header `<h1>` rename to include `Jarvis` with no refresh, and `.chat-members` lists Jarvis.
+- The tool call succeeds: the sidebar and the header `<h1>` rename to include `Jarvis` with no refresh, and the member-names line lists Jarvis.
 - The console carries `Invited agent 'Jarvis' (<agentId>) into room '<roomId>'.`
 
 **Fail if — any of these**
@@ -539,14 +540,14 @@ If the reply lists the right names but gives no online/offline state, rerun once
 - The tool returns `Unknown agent 'jar'. Agents that do exist: …` -> this is the documented failure: the tool rejected a handle it had just advertised. Confirm it is specific to the tool path by checking that `/invite @jar` and the **Add teammate** button both still work; if only the tool path fails, that is the bug and it lives in `InviteAgentTool`'s alias resolution.
 - Nova's reply never mentions `jar` or an Alias at all -> `ComposeJobDescription` is not emitting the Alias line, so a reading agent can never learn that the handle works. Cross-check against APPTOOLS-10's Trace payload.
 - The rename only appears after you press F5 -> a `RoomEvents` subscription bug in `RoomList.razor` or `Chat.razor`; report it separately from the alias behaviour.
-- The header renames but `.chat-members` does not -> the member list and the room name are being recomputed from different sources.
+- The header renames but the member-names line does not -> the member list and the room name are being recomputed from different sources.
 
 **Inconclusive if**
 
 If Nova asks you which room to invite into rather than reading the id from its own label, run APPTOOLS-05 first — a broken Room label makes this test unreadable and the result is INCONCLUSIVE, not a failure of the alias path. If the model calls `create_room` instead of `invite_agent` (a second room appears in the sidebar), that is prompt-following, not alias resolution: record it and rerun once with `Use mcp__team__invite_agent, not create_room, to add jar to THIS room.`
 
 > [!NOTE]
-> The App_Data reset in step 4 is there so the tool path is tested against a room Jarvis is genuinely not in. Skipping it makes the tool return the 'already a member' text and proves nothing.
+> Step 4 makes a fresh room so the tool path is tested against a room Jarvis is genuinely not in. Reusing the room from step 2 makes the tool return the 'already a member' text and proves nothing.
 
 ### APPTOOLS-12 — invite_agent, called with the id from the agent's own label, renames the room live
 
@@ -565,12 +566,12 @@ If Nova asks you which room to invite into rather than reading the id from its o
 **Steps**
 
 1. Open the three-member room and write down its id from the `/rooms/<id>` URL.
-2. Confirm the chat header `<h1>` reads `Nova, mybot` and `.chat-members` lists `You`, `Nova` and `mybot`.
+2. Confirm the chat header `<h1>` reads `Nova, mybot` and the comma-joined member-names line under it (`Chat.razor:44`) lists `Nova` and `mybot` (the human's own name may also appear there; judge only the agents).
 3. Click into the composer and type exactly: `@Nova use mcp__team__invite_agent to add Jarvis to this room. Take the room id from the label at the start of this message. When you are done, tell me the exact id you used.`
 4. Press Enter and wait for the turn to finish.
 5. WITHOUT pressing F5, confirm the sidebar entry for this room has renamed to `Nova, mybot, Jarvis`.
 6. WITHOUT pressing F5, confirm the chat header `<h1>` has renamed to `Nova, mybot, Jarvis`.
-7. Confirm `.chat-members` under the header now includes `Jarvis`.
+7. Confirm the member-names line under the header now includes `Jarvis`.
 8. Compare the id Nova reported in its reply against the id you wrote down from the URL, character for character.
 9. In the console, find `Invited agent 'Jarvis' (<agentId>) into room '<roomId>'.` and confirm the `<roomId>` matches the URL id.
 10. Click into the composer and type exactly: `@Jarvis are you there?` then press Enter.
@@ -579,7 +580,7 @@ If Nova asks you which room to invite into rather than reading the id from its o
 **Pass if — all of these**
 
 - The sidebar entry and the header `<h1>` both change to `Nova, mybot, Jarvis` with NO page refresh.
-- `.chat-members` includes `Jarvis`.
+- The member-names line includes `Jarvis`.
 - The id Nova reports equals the id in the `/rooms/<id>` URL, character for character.
 - The console shows `Invited agent 'Jarvis' (<agentId>) into room '<roomId>'.` with the matching room id.
 - `@Jarvis are you there?` gets a reply from Jarvis, proving delivery reaches the newly invited member.
@@ -613,11 +614,11 @@ If `Jarvis` is **Offline** or **Degraded** on /teammates when you start, this te
 
 **Steps**
 
-1. Open the room named `Nova, mybot, Jarvis` and note the exact text of its `.chat-members` line and its header `<h1>`.
+1. Open the room named `Nova, mybot, Jarvis` and note the exact text of the comma-joined member-names line under the Room title (`Chat.razor:44`) and of its header `<h1>`.
 2. Click into the composer and type exactly: `@Nova add Jarvis to this room again with mcp__team__invite_agent, then tell me exactly what the tool said back.`
 3. Press Enter and wait for the reply.
 4. Confirm Nova quotes back text of the form `Jarvis is already a member of room '<id>'. Nothing to do.`
-5. Confirm the `.chat-members` line is unchanged from what you noted.
+5. Confirm the member-names line is unchanged from what you noted.
 6. Confirm the header `<h1>` still reads `Nova, mybot, Jarvis` and has not become `Nova, mybot, Jarvis, Jarvis`.
 7. Confirm the sidebar entry for the room is likewise unchanged.
 8. Confirm the console shows NO new `Invited agent 'Jarvis'` line for this attempt.
@@ -625,19 +626,19 @@ If `Jarvis` is **Offline** or **Degraded** on /teammates when you start, this te
 **Pass if — all of these**
 
 - Nova quotes the `is already a member of room '<id>'. Nothing to do.` text.
-- `.chat-members`, the header `<h1>` and the sidebar entry are all unchanged.
+- The member-names line, the header `<h1>` and the sidebar entry are all unchanged.
 - No new `Invited agent` line in the console.
 
 **Fail if — any of these**
 
-- `Jarvis` appears twice in `.chat-members` -> the membership write is not idempotent and a room can accumulate duplicate members.
+- `Jarvis` appears twice in the member-names line -> the membership write is not idempotent and a room can accumulate duplicate members.
 - The room renames to `Nova, mybot, Jarvis, Jarvis` -> the name is composed from a member list that now contains a duplicate.
 - The turn ends with an error or the persona flips to **Degraded** -> these tools are designed to return errors as TEXT the model can read and correct itself from; a thrown exception here breaks that contract.
 - A new `Invited agent 'Jarvis'` line appears in the console -> the already-a-member check ran after the write instead of before it.
 
 **Inconclusive if**
 
-If Nova paraphrases rather than quoting the tool result verbatim, that alone is not a failure — judge it on the three observable UI facts (members, header, sidebar) plus the absence of the log line. If Nova declines to call the tool at all ('Jarvis is already here'), the test is INCONCLUSIVE: rerun once with `Call mcp__team__invite_agent with agent Jarvis and this room's id even though Jarvis is already here, and paste the exact result text.`
+If Nova paraphrases rather than quoting the tool result verbatim, that alone is not a failure — judge it on the three observable UI facts (member-names line, header, sidebar) plus the absence of the log line. If Nova declines to call the tool at all ('Jarvis is already here'), the test is INCONCLUSIVE: rerun once with `Call mcp__team__invite_agent with agent Jarvis and this room's id even though Jarvis is already here, and paste the exact result text.`
 
 > [!NOTE]
 > Cheap. Run it immediately after APPTOOLS-12 while the room is in the right state.
@@ -684,7 +685,7 @@ If Nova paraphrases rather than quoting the tool result verbatim, that alone is 
 If an agent named `Zephyr` does exist in your environment (someone created one), this test is INCONCLUSIVE — pick a name you have confirmed is absent from BOTH /teammates and the **New chat** panel and rerun. If the model refuses to attempt the call at all ('there is no Zephyr, so I will not try'), that is INCONCLUSIVE for the tool's error text: rerun once with `Call mcp__team__invite_agent with agent "Zephyr" anyway and paste its exact result text.`
 
 > [!NOTE]
-> Free-ish and fast. It is the cheapest test of the error-as-text design that all seven tools share.
+> One short Haiku turn, so cheap and fast. It is the cheapest test of the error-as-text design that all seven chat tools share.
 
 ### APPTOOLS-15 — An agent's reply is delivered once — it must not also post the same text with post_message
 
@@ -703,13 +704,13 @@ If an agent named `Zephyr` does exist in your environment (someone created one),
 2. Click into the composer and type exactly: `In one sentence, what is this application for?`
 3. Press Enter and wait for the turn to finish completely — wait an extra ten seconds after the streaming row disappears.
 4. Count the message rows from `Nova`. Confirm exactly ONE new row was added.
-5. Open `E:\Repos\Huddle\src\Huddle.App\App_Data\rooms\<roomId>.jsonl` (id from the `/rooms/<id>` URL) and confirm exactly one new line was appended for this turn.
-6. Look below the transcript for the grey budget note line. Confirm it reads `1 of 40 agent replies since you last spoke` (or `1 of <your budget>`), not `2 of …`.
+5. Open `<data>\rooms\<roomId>.jsonl` (id from the `/rooms/<id>` URL) and confirm exactly one new line was appended for this turn, apart from your own question's line.
+6. Look below the transcript for the grey budget note line. Confirm it reads `1 of 4 agent replies since you last spoke` (`P-LAUNCH-PAID` sets the Budget to 4; use your own number if you changed it), not `2 of …` (`Chat.razor:162`).
 
 **Pass if — all of these**
 
 - Exactly one new message row from `Nova`.
-- Exactly one new line in the room's `.jsonl` file.
+- Exactly one new agent-authored line in the room's `.jsonl` file.
 - The budget note shows the reply was counted once.
 
 **Fail if — any of these**
@@ -747,7 +748,7 @@ If the model legitimately sends two DIFFERENT messages (an answer plus a follow-
 7. Confirm Nova's reply quotes a result of the form `Created room '<name>' (id <id>).`
 8. Click the new sidebar entry.
 9. Confirm the browser URL is `/rooms/<id>` with the same id Nova reported.
-10. Confirm `.chat-members` under the header lists `You`, `Nova` and `Jarvis` — three members, so the room is mention-gated.
+10. Read the member-names line under the Room title (a plain text line, `Chat.razor:44`). Confirm it lists `Nova` and `Jarvis` among three comma-separated names — the third is the Human — so the room is mention-gated. Judge only the agent names.
 11. In the console, find a line of the form `Created room '<roomId>' (<name>) with 3 members.`
 
 **Pass if — all of these**
@@ -755,7 +756,7 @@ If the model legitimately sends two DIFFERENT messages (an answer plus a follow-
 - Exactly one new sidebar entry appears with NO page refresh.
 - The new entry is named `Nova, Jarvis`.
 - Nova's reported id matches the `/rooms/<id>` URL of the new room.
-- `.chat-members` lists three members including `You`.
+- The member-names line lists three names: `Nova`, `Jarvis` and the Human.
 - The console shows `Created room '<roomId>' (<name>) with 3 members.`
 
 **Fail if — any of these**
@@ -763,7 +764,7 @@ If the model legitimately sends two DIFFERENT messages (an answer plus a follow-
 - Nothing appears in the sidebar until you press F5 -> `RoomEvents` is not publishing the change, or `RoomList.razor` is not subscribed. The human never sees a room an agent created.
 - The result is `Unknown agent(s): <name>. Agents that do exist: …` -> the model passed a name that does not exist. Note the name it used; check whether it invented one or used an alias that should have resolved.
 - The new room's name includes `You` or the human's name -> the naming rule (agents only) has regressed.
-- `.chat-members` shows only two members -> the human was not added, and mention-gating will behave unexpectedly.
+- The member-names line shows only two names -> the human was not added, and mention-gating will behave unexpectedly.
 - No `Created room` line in the console while the model claims success -> the model reported a room it did not create.
 
 **Inconclusive if**
@@ -782,9 +783,8 @@ If you ask an agent to create a room containing ONLY ITSELF, the call falls thro
 **Before you start**
 
 - `Nova` and `Jarvis` both **Online**, Haiku/low.
-- The room budget at its default (40). If a previous test lowered it, restart without `Team__AgentMessageBudget` set.
+- The room Budget is 2 for this test: `P-STOP`, then repeat the `P-LAUNCH-PAID` launch block with `$env:Team__AgentMessageBudget = '2'` (its Chief of Staff step is already done). The test deliberately hunts an echo loop, so the Budget is the only thing bounding the bill.
 - COST: one turn on Haiku at effort low. Combining create_room and post_message in one turn keeps this to a single turn.
-- Set `$env:Team__AgentMessageBudget = '2'` in the launch terminal BEFORE `dotnet run` for this test. It deliberately hunts an echo loop, so the Budget is the only thing bounding the bill.
 
 **Steps**
 
@@ -797,16 +797,16 @@ If you ask an agent to create a room containing ONLY ITSELF, the call falls thro
 7. Confirm its URL `/rooms/<id>` matches the id Nova reported.
 8. Confirm the new room contains a message row whose sender is `Nova` and whose body is exactly `kickoff`.
 9. Wait sixty seconds with this new room open. Confirm NO further messages appear — in particular, confirm Nova does not reply to its own `kickoff` post.
-10. Open `E:\Repos\Huddle\src\Huddle.App\App_Data\rooms\<newRoomId>.jsonl` and confirm it holds exactly one line, whose sender name is `Nova`.
+10. Open `<data>\rooms\<newRoomId>.jsonl` and confirm it holds exactly one line, whose sender name is `Nova`.
 11. Refresh that file after another minute and confirm the line count has not grown.
-12. In the console, at Trace, confirm `tools/call` entries for both `create_room` and `post_message`.
+12. Run `O-TOOLCALLS` for `Nova` and read the lines for this turn. Confirm one line whose `tool` field contains `create_room` and one whose `tool` field contains `post_message`. The console cannot show this: the Trace `replied to tools/call` line carries the response, never the tool called, and the `tool` value is the title the Adapter gave the call, so judge by containment.
 
 **Pass if — all of these**
 
 - `kickoff` appears in the NEW room, not in the room Nova was addressed in.
 - Nova's plain reply (the id) appears in the original room as a separate, ordinary message.
 - The reported id matches the `/rooms/<id>` URL of the new room.
-- `App_Data/rooms/<newRoomId>.jsonl` holds exactly one line, sender `Nova`, and does not grow.
+- `<data>\rooms\<newRoomId>.jsonl` holds exactly one line, sender `Nova`, and does not grow.
 - No second draft row, no echo, and no follow-up turn from Nova in the new room.
 
 **Fail if — any of these**
@@ -822,7 +822,7 @@ If you ask an agent to create a room containing ONLY ITSELF, the call falls thro
 If the model creates the room but stops before posting, the test is INCONCLUSIVE for post_message: the create half passed (record it against APPTOOLS-16) and you should rerun the post half alone with `Use mcp__team__post_message to post the exact text "kickoff" into room <id>.` using the id from the sidebar. If Jarvis happens to reply to `kickoff` in the new room, that is Jarvis, not Nova — it is a three-member room so Jarvis should only reply when mentioned; note it as a separate mention-gating observation, not as an echo loop.
 
 > [!NOTE]
-> This is the only test that proves the post_message capability at all, and it folds in the 'never receives its own Message' check at no extra cost. Run it before the budget tests, while the budget is still at its default. A loop caught at 2 agent Messages proves the same defect as one caught at 40, at a twentieth of the cost.
+> This is the only test that proves the post_message capability at all, and it folds in the 'never receives its own Message' check at no extra cost. Run it before the other budget tests. A loop caught at 2 agent Messages proves the same defect as one caught at the default 40, at a twentieth of the cost.
 
 ### APPTOOLS-18 — Tools are the source of truth — the agent must not answer about agents or Rooms from the codebase
 
@@ -833,8 +833,8 @@ If the model creates the room but stops before posting, the test is INCONCLUSIVE
 **Before you start**
 
 - `Nova` **Online**, Haiku/low.
-- The app is running from inside a checkout of this repository, so `App_Data/work/Nova/` sits under it — this is the realistic case the test is for.
-- Trace logging on.
+- The app is running from a checkout of this repository, and `<data>\Teammates\Nova\work\` is Nova's working folder, which is not a sandbox: `Bash`, `Grep` and `Read` can reach the repository's `docs/` and `tests/`, which hold fixture names. That is the realistic case the test is for.
+- No Trace logging is needed. `O-TOOLCALLS` for `Nova` is the oracle for which tool ran.
 - COST: two short turns on Haiku at effort low.
 
 **Steps**
@@ -843,28 +843,28 @@ If the model creates the room but stops before posting, the test is INCONCLUSIVE
 2. Open the room named `Nova`.
 3. Click into the composer and type exactly: `Do not read any files. Using only your tools, tell me who is in this room and what other agents exist.`
 4. Press Enter and wait for the reply. Write the answer down.
-5. In the console, confirm a `App tool server replied to tools/call:` line whose payload begins `Agents:` appeared during that turn.
+5. Run `O-TOOLCALLS` for `Nova` and confirm a line for this turn whose `tool` field contains `list_agents` (judge by containment; the value is the title the Adapter gave the call). The built-in Chief of Staff is a real Teammate on every install, so it belongs in the list you wrote down in step 1 and in both answers.
 6. Click into the composer again and type exactly: `Who is in this room, and what other agents exist?`
 7. Press Enter and wait for the reply.
 8. Compare both answers against the list you wrote down in step 1.
-9. In the console, confirm whether a `list_agents` `tools/call` occurred during the SECOND turn as well.
+9. Run `O-TOOLCALLS` for `Nova` again and confirm whether a line containing `list_agents` was added during the SECOND turn as well.
 
 **Pass if — all of these**
 
 - Both answers match the live UI exactly — every name present, no name absent, no extra name.
-- A `list_agents` tool call is visible in the Trace log for both turns.
+- `O-TOOLCALLS` has a `list_agents` line for both turns.
 - Neither answer mentions a file path, a source file, or a shell command.
 
 **Fail if — any of these**
 
-- Either answer names `Alice`, `Bob`, `Chief of Staff`, `Jarvis` when no such Persona exists in your run, or a room called `bananas` -> these are fixture names that live in `docs/` and `tests/`. The agent ran `Bash`, `Grep` or `Read` over the repository instead of calling the tool, and produced a plausible-looking wrong answer. Both the system prompt and get_help's footer forbid this, so this is a real finding about the wording, not about the tools.
+- Either answer names `Alice`, `Bob` or `Jarvis` when no such Persona exists in your run, or a room called `bananas` -> these are fixture names that live in `docs/` and `tests/`. The agent ran `Bash`, `Grep` or `Read` over the repository instead of calling the tool, and produced a plausible-looking wrong answer. Both the system prompt and get_help's footer forbid this, so this is a real finding about the wording, not about the tools.
 - The second answer differs from the first -> the agent used a different source of truth when not explicitly forbidden from reading files. Report both answers.
 - The model names files it read, or quotes source code -> the same failure, stated openly.
-- The Trace log shows no `list_agents` call at all while the model nevertheless produces names -> it answered from the codebase or from memory. This is the cleanest signal available.
+- `O-TOOLCALLS` shows no `list_agents` line for a turn while the model nevertheless produces names -> it answered from the codebase or from memory. This is the cleanest signal available.
 
 **Inconclusive if**
 
-If your Persona names genuinely ARE `Nova` and `Jarvis` (as the setup suggests), you cannot distinguish a fixture name from a real one by name alone — that is why the Trace log matters here. If you are running at Debug rather than Trace, this test is INCONCLUSIVE: `App tool server received tools/call.` names the method, not the tool, and cannot tell you whether `list_agents` was the one that ran. Restart at Trace and rerun. To make the test decisive, create one Persona with an unmistakably unique name (e.g. `Quillhaven`) before running it — no fixture anywhere in the repo carries that name.
+If your Persona names genuinely ARE `Nova` and `Jarvis` (as the setup suggests), you cannot distinguish a fixture name from a real one by name alone — that is why `O-TOOLCALLS` matters here. The console cannot settle it at any log level: `App tool server received tools/call.` names the method, not the tool, and the Trace `replied to` line carries the response, never the tool called. If `O-TOOLCALLS` has no log folder for `Nova` at all, the Persona made no tool call and the answer came from somewhere else; judge it as the Fail above. To make the test decisive, create one Persona with an unmistakably unique name (e.g. `Quillhaven`) before running it — no fixture anywhere in the repo carries that name.
 
 > [!NOTE]
 > The unique-name trick in the INCONCLUSIVE note turns this from a judgement call into a fact. Consider doing it as standard.
@@ -878,37 +878,36 @@ If your Persona names genuinely ARE `Nova` and `Jarvis` (as the setup suggests),
 **Before you start**
 
 - `Nova` **Online**, Haiku/low.
-- The app MUST be restarted with `$env:Team__AgentMessageBudget = "2"` set in the same PowerShell window. The default is 40, which would make this test cost twenty times as much.
+- The room Budget is 2 for this test: `P-STOP`, then repeat the `P-LAUNCH-PAID` launch block with `$env:Team__AgentMessageBudget = '2'` (its Chief of Staff step is already done). Without it the Budget is the `P-LAUNCH-PAID` value of 4, so the room would not stop at two messages.
 - Use Nova's own two-member direct room (`Nova`), so no mention is needed and the human is the only other member.
 - COST: one turn on Haiku at effort low, which deliberately spends the room's whole budget. Keeping the budget at 2 keeps this to a single turn's work.
 
 **Steps**
 
-1. Stop the app with Ctrl+C.
-2. In the PowerShell window run: `$env:Team__AgentMessageBudget = "2"`
-3. Run: `dotnet run --project src/Huddle.App --urls http://localhost:5100`
-4. Wait for the `Nova` tile on /teammates to read **Online**.
-5. Open the room named `Nova` and write down the sidebar room list.
-6. Click into the composer and type exactly: `Using mcp__team__post_message, post four separate short messages into this room, one at a time, with the texts "one", "two", "three" and "four". Stop and tell me if anything refuses you.`
-7. Press Enter and watch the transcript.
-8. Count the agent message rows that appear. Confirm exactly TWO appear, with bodies `one` and `two`.
-9. Confirm a red alert panel appears between the transcript and the composer reading `Agents have sent 2 replies since you last spoke, and are paused.` with two buttons, **Continue** and **Leave paused**.
-10. Confirm NO third or fourth message body (`three`, `four`) appears in this room.
-11. Compare the sidebar room list against what you wrote down. Confirm NO new room has appeared.
-12. In the console, find lines of the form `Room '<roomId>' refused a message from 'Nova': its budget of 2 agent messages since a human last spoke is spent.` Count them.
-13. Confirm you see ONE or TWO such lines, not a long run of them.
-14. In the console, also look for `Persona 'Nova' had a message refused: budgetExhausted - …` — this is Nova's own explanatory reply being dropped, and it is correct.
-15. Open `E:\Repos\Huddle\src\Huddle.App\App_Data\rooms\<roomId>.jsonl` and confirm it holds exactly two agent-authored lines for this turn.
-16. Return to /teammates and confirm the `Nova` tile still reads **Online** and has NOT gone **Degraded**.
+1. `P-STOP` the app.
+2. Repeat the `P-LAUNCH-PAID` launch block, adding `$env:Team__AgentMessageBudget = '2'` before the `dotnet run` line.
+3. Wait for the `Nova` tile on /teammates to read **Online**.
+4. Open the room named `Nova` and write down the sidebar room list.
+5. Click into the composer and type exactly: `Using mcp__team__post_message, post four separate short messages into this room, one at a time, with the texts "one", "two", "three" and "four". Stop and tell me if anything refuses you.`
+6. Press Enter and watch the transcript.
+7. Count the agent message rows that appear. Confirm exactly TWO appear, with bodies `one` and `two`.
+8. Confirm an amber warning panel (`Severity.Warning`, class `budget-prompt`, `Chat.razor:132`) appears between the transcript and the composer reading `Agents have sent 2 replies since you last spoke, and are paused.` (`Chat.razor:134`) with two buttons, **Continue** and **Leave paused**.
+9. Confirm NO third or fourth message body (`three`, `four`) appears in this room.
+10. Compare the sidebar room list against what you wrote down. Confirm NO new room has appeared.
+11. In the console, find lines of the form `Room '<roomId>' refused a message from 'Nova': its budget of 2 agent messages since a human last spoke is spent.` (Warning, `ChatService.cs:682`). Count them.
+12. Confirm you see ONE or TWO such lines, not a long run of them.
+13. In the console, also look for `Persona 'Nova' had a message refused: budgetExhausted - …` (Warning, `PersonaRunner.cs:690`) — this is Nova's own explanatory reply being dropped, and it is correct.
+14. Open `<data>\rooms\<roomId>.jsonl` and confirm it holds exactly two agent-authored lines for this turn (plus the Human's question line).
+15. Return to /teammates and confirm the `Nova` tile still reads **Online** and has NOT gone **Degraded**.
 
 **Pass if — all of these**
 
 - Exactly two agent messages land: `one` and `two`.
-- The alert panel reads `Agents have sent 2 replies since you last spoke, and are paused.` with **Continue** and **Leave paused** buttons.
+- The amber panel reads `Agents have sent 2 replies since you last spoke, and are paused.` with **Continue** and **Leave paused** buttons.
 - No third or fourth message lands anywhere.
 - No new room appears in the sidebar.
 - The console shows a small number of refusal warnings (one or two), not a run of them.
-- `App_Data/rooms/<roomId>.jsonl` holds exactly two agent lines for this turn.
+- `<data>\rooms\<roomId>.jsonl` holds exactly two agent-authored lines for this turn.
 - The `Nova` tile stays **Online** — a spent Budget is not a fault.
 
 **Fail if — any of these**
@@ -920,10 +919,10 @@ If your Persona names genuinely ARE `Nova` and `Jarvis` (as the setup suggests),
 
 **Inconclusive if**
 
-THE CONFUSING PART, and it is NOT a bug: after the refusal, Nova's own explanatory reply is ALSO an agent message and is also refused, so its answer never reaches the transcript. You will see a streaming draft row build up and then vanish leaving no message behind. That is correct — do not record it as a failure. If the model only posts once and then stops on its own, the budget was never actually reached: that is INCONCLUSIVE for this test (it proves nothing about the refusal wording); rerun with the same prompt. If the app was not restarted with `Team__AgentMessageBudget=2`, you will be running against the default of 40 and the test will cost twenty times as much for the same information — stop and restart instead.
+THE CONFUSING PART, and it is NOT a bug: after the refusal, Nova's own explanatory reply is ALSO an agent message and is also refused, so its answer never reaches the transcript. You will see a streaming draft row build up and then vanish leaving no message behind. That is correct — do not record it as a failure. If the model only posts once and then stops on its own, the budget was never actually reached: that is INCONCLUSIVE for this test (it proves nothing about the refusal wording); rerun with the same prompt. If the app was not relaunched with `Team__AgentMessageBudget` set to 2, you will be running against the `P-LAUNCH-PAID` value of 4 and the panel will say 4, not 2 — stop and relaunch instead.
 
 > [!NOTE]
-> Setting the budget to 2 before starting is not optional. Also, the Budget counter is in memory and per Room: restarting the app un-pauses every Room and shows a fresh Budget over a transcript that already spent one. Do not restart mid-test.
+> Setting the budget to 2 before launching is not optional. Also, the Budget counter is in memory and per Room: restarting the app un-pauses every Room and shows a fresh Budget over a transcript that already spent one. Do not restart mid-test.
 
 ### APPTOOLS-20 — A turn declined for Budget never reaches the model at all — the decline path is not the refusal path
 
@@ -933,85 +932,85 @@ THE CONFUSING PART, and it is NOT a bug: after the refusal, Nova's own explanato
 
 **Before you start**
 
-- The room from APPTOOLS-19 is currently paused (the red alert panel is showing).
-- `Team__AgentMessageBudget=2` still in force; do NOT restart the app, which would clear the pause.
-- Free: the decline happens before any prompt is sent, so nothing is spent.
+- This test relaunches the app on its own, so it does not depend on APPTOOLS-19 (a relaunch clears that test's in-memory pause). Run APPTOOLS-21 right after APPTOOLS-19, and this one separately.
+- `P-STOP`, then `P-LAUNCH-UAT` with `$env:Team__AgentMessageBudget = '1'` set first, so a single agent message spends the whole Budget.
+- `mybot` running (`P-ECHO-BOT`, `pwsh tools/echo-bot.ps1 -Name mybot`). Ada is the built-in mock agent from `P-LAUNCH-UAT`.
+- Free: the decline happens before any prompt is sent, and the mock and echo agents bill nothing.
 
 **Steps**
 
-1. In the paused room, click **Leave paused**.
-2. Confirm the red alert panel is replaced by a grey line reading `Paused — 2 of 2 agent replies since you last spoke.`
-3. Start the bot in a third terminal (`pwsh tools/echo-bot.ps1 -Name mybot`, `P-ECHO-BOT`), then open the **Add teammate** control on the room header and add `mybot` to this room so a second agent is present.
-4. Do NOT type anything into this room: a human message resets the budget and ends the pause.
-5. Instead, open a SECOND browser tab on the same room URL and simply watch the transcript.
-6. Back in the first tab, confirm no streaming draft row appears in the paused room and no tool-activity line appears.
-7. In the console, find a line of the form `Persona 'Nova' declined a turn in room <roomId>: the room has spent its budget of 2 agent messages.`
-8. Confirm that line is at Warning level and that NO corresponding prompt was sent (there is no streaming row and no `tools/call` in the log at that moment).
-9. Confirm the paused Persona does NOT post any message saying it is paused — it cannot, because it was never prompted.
+1. `P-STOP` the app, set `$env:Team__AgentMessageBudget = '1'`, then launch with `P-LAUNCH-UAT`. Start `mybot` in its own terminal (`P-ECHO-BOT`).
+2. Click **New chat**, choose `Ada` and `mybot` as members and create the room. It has three members, so an agent replies only when mentioned.
+3. Type `@mybot hello` and press Enter.
+4. Confirm `mybot` replies once. That is agent message 1 of 1, so the Budget is now spent.
+5. Confirm an amber warning panel (`Chat.razor:132`) appears reading `Agents have sent 1 replies since you last spoke, and are paused.` (`Chat.razor:134`).
+6. Click **Leave paused**. Confirm the panel is replaced by a grey line reading `Paused — 1 of 1 agent replies since you last spoke.` (`Chat.razor:158`).
+7. Confirm no streaming draft row appears and no tool-activity line appears, and that Ada posts nothing.
+8. In the console, find a line of the form `Persona 'Ada' declined a turn in room <roomId>: the room has spent its budget of 1 agent messages.` (Warning, `PersonaRunner.cs:648-652`). Ada was not mentioned, yet the line names her: `ReplyGate.Decide` checks the Budget first for every member (`ReplyGate.cs:73-82`), before the mention rule.
+9. Confirm that line is at Warning level and that NO prompt was sent for it (there is no streaming row and no `tools/call` in the log at that moment).
+10. Optionally, earlier in the log, find the Information line `Persona 'Ada' read a message in room <roomId> as context only: it was not mentioned and the room has 3 members.` for your `@mybot hello` message (`PersonaRunner.cs:634`).
 
 **Pass if — all of these**
 
-- **Leave paused** replaces the alert panel with `Paused — 2 of 2 agent replies since you last spoke.`
+- The amber panel reads `Agents have sent 1 replies since you last spoke, and are paused.`
+- **Leave paused** replaces it with `Paused — 1 of 1 agent replies since you last spoke.`
 - No draft row and no tool activity appear in the paused room.
-- The console carries `Persona 'Nova' declined a turn in room <roomId>: the room has spent its budget of 2 agent messages.` at Warning level.
-- No message from the paused agent saying it is paused.
+- The console carries `Persona 'Ada' declined a turn in room <roomId>: the room has spent its budget of 1 agent messages.` at Warning level.
+- No message from Ada saying it is paused, and none at all.
 
 **Fail if — any of these**
 
 - A streaming draft row appears in a paused room -> the Budget check is running AFTER the Room rule instead of before it. That ordering is the rule, because reversing it silently exempts every mentioned Agent from the cap. This costs real money every time it happens and produces no error.
-- The paused agent posts a message explaining that it is paused -> it WAS prompted, which contradicts the decline path entirely.
-- No `declined a turn` line appears in the console when a message arrives in the paused room -> the decline is happening silently, or not at all.
+- Ada posts a message explaining that it is paused -> it WAS prompted, which contradicts the decline path entirely.
+- No `declined a turn` line naming Ada appears after mybot's reply -> the decline is happening silently, or not at all.
 
 **Inconclusive if**
 
-Testers commonly expect the paused agent to 'say it is paused'. It cannot, and must not — it was never prompted. Do not record its silence as a defect. If no message ever arrives in the paused room during this test, there is nothing to decline and the test is INCONCLUSIVE: have a second agent (`mybot`, added via **Add teammate**) receive a message from another room, or simply note that you could not create the condition, rather than passing it by default. Note that typing a human message into the paused room RESETS the budget and ends the pause — do not do it while this test is running.
+Testers commonly expect the paused agent to 'say it is paused'. It cannot, and must not — it was never prompted. Do not record its silence as a defect. If `mybot` never replies to `@mybot hello`, no Budget was spent and there is nothing to decline: the test is INCONCLUSIVE (check the bot terminal), not passed. Typing another Human message into the room RESETS the Budget and ends the pause — do not do it while this test is running.
 
 > [!NOTE]
-> Free, but it depends entirely on APPTOOLS-19 having left the room paused. Run it immediately afterwards, before anything resets the budget.
+> A two-member room cannot reach this state: no Message is ever delivered to a paused two-member room, because the Budget gate runs on delivery (`PersonaRunner.cs:643-653`). The third member (Ada) is what receives mybot's reply.
 
 ### APPTOOLS-21 — Continue re-delivers the paused Message, and the prompt survives a page reload
 
-**💰 Spends money** · about 12 min
+**Free** · about 8 min
 
-*Proves the pause prompt is read from state rather than from an event (so it survives prerender), that the Continue button cannot be double-clicked into granting two budgets, and that the resumed prompt does not contain the message twice.*
+*Proves the pause prompt is read from state rather than from an event (so it survives prerender), that the Continue button cannot be double-clicked into granting two budgets, and that Continue on a room whose last Message is a teammate's own says so and wakes nobody.*
 
 **Before you start**
 
-- A paused room with at least one message in it and `Team__AgentMessageBudget=2` in force. If APPTOOLS-20 dismissed the panel with **Leave paused**, reload the page — the panel returns.
-- COST: one turn per **Continue** press, on Haiku at effort low.
+- Run this right after APPTOOLS-19, in the same app run: the room `Nova` is paused at Budget 2 and its last stored Message is Nova's own `two`. Do not relaunch (that clears the in-memory pause). If APPTOOLS-20 or anything else relaunched the app, redo APPTOOLS-19 first.
+- Free: the last Message is Nova's own, and a teammate is never delivered its own Message (`ChatService.cs:340-385`), so Continue grants Budget but wakes nobody and sends no prompt.
 
 **Steps**
 
-1. With the room paused and the red alert panel showing, press F5 FIRST, before clicking anything.
-2. Confirm the alert panel with `Agents have sent 2 replies since you last spoke, and are paused.` and the **Continue** / **Leave paused** buttons is STILL there after the reload.
-3. Click **Continue** once.
-4. Immediately confirm the button text changes to `Continuing…` and that the button is disabled while the request is in flight.
-5. Confirm you cannot click it a second time while it reads `Continuing…`.
-6. Wait. Confirm the Agent that was about to reply now does so, with NO human message having been typed.
-7. Read the agent's reply and confirm it does not answer the same thing twice or quote itself — that would mean the re-delivered Message reached the prompt twice, once as context-only catch-up and once live.
-8. Confirm the room halts again one budget later: another two agent messages at most, then the alert panel returns.
-9. In the console, find a line of the form `Room '<roomId>' was extended to 4 agent messages.`
-10. Confirm exactly ONE such line appeared for your single **Continue** press.
+1. With the room paused and the amber warning panel showing, press F5 FIRST, before clicking anything.
+2. Confirm the panel with `Agents have sent 2 replies since you last spoke, and are paused.` and the **Continue** / **Leave paused** buttons is STILL there after the reload.
+3. Confirm the panel also carries the warning `Continue will deliver the last message again, and it is a teammate's own — a teammate is never delivered its own message, so this will wake nobody. Say something instead.` BEFORE any click (`Chat.razor:140-145`, `ContinueWouldWakeNobody`).
+4. Click **Continue** once. The button may read `Continuing…` and be disabled, but only for a moment now that no agent runs; do not fail the test if you do not catch it. The single `extended to 4` line in step 8 is the guard against a double grant.
+5. Confirm the blue note `Budget granted, but there was nobody to wake. Say something to start the room again.` appears below the transcript (`Chat.razor:174-176`).
+6. Confirm the grey budget line now reads `2 of 4 agent replies since you last spoke.` (`Chat.razor:162`).
+7. Confirm no agent message, no streaming draft row and no tool activity appears: Nova was not woken.
+8. In the console, find a line of the form `Room '<roomId>' was extended to 4 agent messages.` (Information, `ChatService.cs:689`). Confirm exactly ONE such line appeared for your single **Continue** press.
 
 **Pass if — all of these**
 
-- The alert panel survives F5 — it is still on screen after the reload, before any click.
-- **Continue** changes to `Continuing…` and is disabled while in flight.
-- The agent replies with no human message typed.
-- The reply does not duplicate or quote itself.
-- The room halts again after one more budget's worth of messages.
+- The panel survives F5 — it is still on screen after the reload, before any click.
+- The wake-nobody warning shows before the click.
+- After **Continue**, the blue `Budget granted, but there was nobody to wake…` note and the grey `2 of 4 agent replies since you last spoke.` line appear.
+- No agent message, draft or tool activity appears.
 - Exactly one `Room '<roomId>' was extended to 4 agent messages.` line per Continue press.
 
 **Fail if — any of these**
 
 - The panel VANISHES after F5 -> the budget is being read from an event rather than from the room's stored state, so a reload loses the only control the human has for un-pausing. Report it against `Chat.razor`'s prerender path.
-- **Continue** can be clicked twice and two `was extended to` lines appear -> two budgets were granted from one intent. The button must be disabled while extending, because granting Budget is what lets real money be spent.
-- The resumed agent answers the same question twice, or quotes its own earlier message back -> the re-delivered Message reached the prompt twice. A Message declined for Budget is deliberately NOT buffered as catch-up for exactly this reason.
-- The room does not halt again after the extension -> the extension granted an unbounded budget rather than one more budget's worth.
+- The wake-nobody warning is absent before the click -> `ContinueWouldWakeNobody` is not seeing that the last Message is the teammate's own.
+- Two `was extended to` lines appear for one click -> two budgets were granted from one intent.
+- Any agent reply, draft row or tool activity appears -> a teammate was delivered its own Message.
 
 **Inconclusive if**
 
-If clicking **Continue** produces no reply at all, read the Room first: as of #40 a quiet blue note below the transcript names the reason whenever there was nobody to wake or the re-delivered Message named no Teammate, which resolves most instances of this paragraph without leaving the browser. Failing that, check the console for a `declined a turn` line: if the paused Message was cleared by something else (a human message typed into the room, or an app restart), there is nothing to re-deliver and the test is INCONCLUSIVE. Recreate the pause via APPTOOLS-19 and rerun. Note that a Message declined for Budget is NOT kept as catch-up: if you typed something into the paused room instead of clicking Continue, the agent's prompt will not carry the Message it was paused on — that is documented behaviour, not a defect, and it makes this test INCONCLUSIVE rather than failed.
+The room is not paused, or its last stored Message is not Nova's own (a Human message was typed since APPTOOLS-19, which resets the Budget and ends the pause). Redo APPTOOLS-19 and run this right after it. Waking an agent from a paused room is not reachable manually when the last Message is the teammate's own; do not try to force it.
 
 > [!NOTE]
 > The F5 must come BEFORE the first click. Clicking Continue and then reloading tests nothing.
@@ -1026,7 +1025,8 @@ If clicking **Continue** produces no reply at all, read the Room first: as of #4
 
 - `Nova` **Online**, Haiku/low, and has already had at least one exchange in its room so it has something to remember.
 - APPTOOLS-01 and APPTOOLS-02 have passed, so you know the Settings page and Reset work.
-- COST: two short turns on Haiku at effort low (one before the edit, one after).
+- The app was started with `${env:Logging__LogLevel__Agency.Huddle} = "Trace"` (a Trace launch of `P-LAUNCH-PAID`): the oracle for what `get_help` returned is the Trace line `App tool server replied to tools/call:` (`AppToolServer.cs:250`), because the Adapter defers tool descriptions and the model cannot be asked what one says.
+- COST: three or four short turns on Haiku at effort low (one before the edit, two or three after).
 
 **Steps**
 
@@ -1036,36 +1036,37 @@ If clicking **Continue** produces no reply at all, read the Room first: as of #4
 4. Find the **list_agents description** field (a **Next session** field). Click into it, press End, and append exactly ` The word of the day is marmalade.`
 5. Confirm both fields show an **Unsaved** badge, then click **Save**.
 6. Confirm both fields now show **Modified** and neither shows **Unsaved**.
-7. Open `App_Data/prompts.json` and confirm it contains exactly two keys: `getHelp.budget` and `tool.listAgents.description`, and no others.
+7. Open `<data>\prompts.json` and confirm it contains exactly two keys: `getHelp.budget` and `tool.listAgents.description`, and no others.
 8. Read the app's console window. Confirm NO restart of the `Nova` runner is logged, and that the `Nova` tile on /teammates still reads **Online**.
 9. Return to the `Nova` room and type exactly `What word did I ask you to remember?` then press Enter.
 10. Confirm Nova answers `pumpkin` — its conversation memory survived the prompt save.
 11. Now type exactly: `Call mcp__team__get_help and tell me the last line of its BUDGET section, word for word.` and press Enter.
-12. Confirm Nova reports `The word of the day is marmalade.` — the LIVE prompt took effect on the very next tool call, with no restart.
-13. Now type exactly: `Without calling anything, what does the description of mcp__team__list_agents say at the end?` and press Enter.
-14. Confirm Nova does NOT report `marmalade` for the list_agents description — that prompt is badged **Next session** and the running session was started before the edit.
-15. Go to /teammates, click the `Nova` tile, and click **Restart** on the card. Wait for the tile to return to **Online**.
-16. Back in the room, ask again: `Without calling anything, what does the description of mcp__team__list_agents say at the end?` and confirm it NOW reports `marmalade`.
+12. Run `O-TOOLCALLS` for `Nova` and confirm a new line whose `tool` field contains `get_help`. In the console, find the newest `App tool server replied to tools/call:` line, decode its payload (newlines appear as `\n`, apostrophes as `'`) and confirm the BUDGET section ends with `The word of the day is marmalade.` — the LIVE prompt took effect on the very next tool call, with no restart. (Nova's own quote of it is a bonus, not the oracle.)
+13. In that same decoded payload, find the TOOLS entry for `list_agents`. Confirm its description does NOT end with `marmalade`: that prompt is badged **Next session**, and `GetHelpTool` freezes the descriptions when the session is constructed, before your edit.
+14. Go to /teammates, click the `Nova` tile, and click **Restart** on the card. Wait for the tile to return to **Online**.
+15. Back in the room, type exactly `Call mcp__team__get_help again and list its TOOLS section.` and press Enter. Run `O-TOOLCALLS` and confirm another `get_help` line for this turn.
+16. Decode the newest `App tool server replied to tools/call:` payload and confirm the `list_agents` entry in its TOOLS section NOW ends with `The word of the day is marmalade.`
 17. Return to /settings, click **Reset** on both edited fields, and click **Save**. Confirm `prompts.json` returns to `{}`.
 
 **Pass if — all of these**
 
 - Saving the prompts does NOT restart the teammate: no restart in the log, tile stays **Online**, and Nova still remembers `pumpkin`.
 - `prompts.json` holds exactly the two changed keys.
-- The LIVE prompt (**Help: budget**) reaches the model on the very next `get_help` call, with no restart.
-- The **Next session** prompt (**list_agents description**) does NOT reach the running session, and DOES after a **Restart**.
+- The LIVE prompt (**Help: budget**) shows up in the decoded `get_help` payload on the very next call, with no restart.
+- The **Next session** prompt (**list_agents description**) is absent from the TOOLS entry before the restart, and present after a **Restart**.
 - Reset + Save returns `prompts.json` to `{}`.
 
 **Fail if — any of these**
 
 - Nova has forgotten `pumpkin` after the prompt save -> editing a Prompt restarted the session and destroyed its conversation memory. That is a defect: editing a Prompt must never restart a session. Editing a Persona, or changing its Model or Effort, is the only mechanism that legitimately does.
 - The LIVE prompt change does NOT appear in `get_help`'s output even after several calls -> live prompts are not live; the store is caching the session's copy.
-- The **Next session** prompt DOES change the running session's tool description immediately -> the badge is lying about the timing, which is the opposite error but equally misleading.
+- The **Next session** prompt DOES appear in the `list_agents` TOOLS entry before the restart -> the badge is lying about the timing, which is the opposite error but equally misleading.
+- It is STILL absent after the **Restart** -> the new session did not pick the edited description up.
 - `prompts.json` contains keys you did not change -> the save is writing every field rather than just the edited ones.
 
 **Inconclusive if**
 
-A **Next session** prompt silently having no effect on a running teammate is EXPECTED and is exactly why those fields are badged — do not record it as a failure. If Nova cannot quote the last line of the BUDGET section verbatim, that is a model-following weakness rather than a prompt failure: read the Trace log's `App tool server replied to tools/call:` payload instead, which shows the literal text the tool returned, and judge from that. If step 14 produces an answer that mentions `marmalade` because the model inferred it from the earlier turn in the same conversation, the test is INCONCLUSIVE — restart the teammate, ask about `list_agents` FIRST in a fresh session, then edit.
+A **Next session** prompt silently having no effect on a running teammate is EXPECTED and is exactly why those fields are badged — do not record it as a failure. If Nova cannot quote the last line of the BUDGET section verbatim, that is a model-following weakness rather than a prompt failure: the decoded Trace payload shows the literal text the tool returned, and you judge from that. If no `get_help` line appears in `O-TOOLCALLS` for a turn, Nova answered without the tool and that turn proves nothing: ask again naming the tool. If the app was not launched at Trace there is no payload to decode and steps 12, 13 and 16 are INCONCLUSIVE — relaunch at Trace, which clears nothing on disk but ends Nova's session, so repeat from step 1.
 
 > [!NOTE]
 > Always clean up with the final Reset + Save. A leftover prompt override silently changes the text every later test reads, and `prompts.json` is not obvious to the next tester.
@@ -1085,17 +1086,17 @@ A **Next session** prompt silently having no effect on a running teammate is EXP
 
 **Steps**
 
-1. Open the four-member room and confirm `.chat-members` lists `You`, `Nova`, `Jarvis` and `mybot`.
+1. Open the four-member room and confirm the member-names line above the transcript (`Chat.razor:44`) lists the Human, `Nova`, `Jarvis` and `mybot`.
 2. Write down the room id from the `/rooms/<id>` URL.
 3. Click into the composer and type exactly: `@Nova use mcp__team__follow_room to follow this room, using the room id from your own [Room: ...] label. Tell me exactly what it said back.` then press Enter.
-4. Wait for Nova's reply. Confirm it quotes `Now following room` and the id you wrote down.
+4. Wait for Nova's reply. Confirm it quotes `Now following room '<name>' (id <id>)` (`FollowRoomTool.cs:64`) with the id you wrote down.
 5. Note how many message rows the room currently holds.
 6. Click into the composer and type exactly: `@Jarvis, without calling any tool, reply with the single word "present".` then press Enter.
 7. Wait for every streaming row to finish, then wait an extra ten seconds.
 8. Confirm a message row from `Jarvis` appears containing `present`.
-9. Confirm a SEPARATE message row from `Nova` ALSO appears, even though step 6's message did not name Nova.
+9. Confirm a SEPARATE message row from `Nova` ALSO appears, even though step 6's message did not name Nova. A follower takes a Turn on EVERY Message (`ReplyGate.cs:82`), including Jarvis's own `present`, so Nova may reply twice (once to your message, once to Jarvis's); that is expected.
 10. Confirm NO message row from `mybot` appears anywhere in this room since step 6 — the control: `mybot` was not mentioned and holds no `follow_room` tool, so it must stay exactly as silent as it would have before roadmap item 8 shipped.
-11. Open `E:\Repos\Huddle\src\Huddle.App\App_Data\rooms\<roomId>.jsonl` and confirm it gained exactly two new lines for step 6's turn — one sender `Jarvis`, one sender `Nova` — and no line from `mybot`.
+11. Open `<data>\rooms\<roomId>.jsonl` and confirm that since step 6 it gained the Human line, at least one new line with sender `Nova` (likely two) and one with sender `Jarvis`, no line from `mybot`, and at most four agent-authored lines in total (the Budget is 4).
 
 **Pass if — all of these**
 
@@ -1103,14 +1104,14 @@ A **Next session** prompt silently having no effect on a running teammate is EXP
 - `Jarvis` replies to being mentioned (expected, and not what this test is about).
 - `Nova` ALSO replies to the same message, despite never being named in it.
 - `mybot` — the control — stays silent throughout.
-- The room's `.jsonl` file gained exactly the two agent lines above, none from `mybot`.
+- The room's `.jsonl` file gained at least one `Nova` line and one `Jarvis` line, none from `mybot`, and no more than four agent lines.
 
 **Fail if — any of these**
 
 - `Nova` stays silent on the un-mentioning message -> `follow_room` is not reaching `ReplyGate.Decide`'s `following` argument, or `RoomFollows` never recorded the follow. Roadmap item 8 is not wired end to end, and this is the one finding this test exists to catch.
 - `mybot` also replies -> the control itself is broken, or step 6's text accidentally mentioned it — re-read exactly what you sent. A failing control means this run proves nothing either way; do not record the Nova half as a pass.
 - Nova's reply is a duplicate of an earlier answer, or otherwise reads as though it silently reused a cached reply rather than actually taking a fresh Turn -> report the reply text verbatim.
-- The `.jsonl` file gains a THIRD line from `mybot` -> the same failure as the on-screen one, confirmed at the storage layer; report both facts together.
+- The `.jsonl` file gains any line from `mybot` -> the same failure as the on-screen one, confirmed at the storage layer; report both facts together.
 
 **Inconclusive if**
 
@@ -1133,22 +1134,22 @@ If Nova's `follow_room` call fails or Nova answers in prose without calling the 
 **Steps**
 
 1. In the same room, type exactly: `@Nova use mcp__team__unfollow_room to stop following this room, using the room id from your own label. Tell me exactly what it said back.` then press Enter.
-2. Wait for Nova's reply. Confirm it quotes `No longer following room` and the room id.
+2. Wait for Nova's reply. Confirm it quotes `No longer following room` (`UnfollowRoomTool.cs:53`) and the room id.
 3. Note how many message rows the room currently holds.
 4. Click into the composer and type exactly: `Just checking in here — no action needed from anyone in particular.` (a message that names nobody at all) and press Enter.
 5. Immediately look at the area between the transcript and the composer, without waiting for any reply.
 6. Wait thirty seconds, watching the transcript continuously.
 7. Confirm NO new message row appears from `Nova`, `Jarvis` or `mybot`.
 8. In the console (`T-A`), find the Information line `Persona 'Nova' read a message in room <roomId> as context only: it was not mentioned and the room has <n> members.`
-9. Open `App_Data/rooms/<roomId>.jsonl` and confirm no new line was appended for step 4's message.
+9. Open `<data>\rooms\<roomId>.jsonl` and confirm exactly ONE new line was appended since step 3: the Human's own message from step 4 (every Message is stored, `ChatService.cs:273`), with no new line from `Nova`, `Jarvis` or `mybot`.
 
 **Pass if — all of these**
 
 - `unfollow_room` succeeds and Nova's reply confirms it.
 - Step 4's unaddressed message produces no reply from anybody, including `Nova`.
 - The area below the transcript shows the quiet note `No teammate was @-mentioned — name one to ask for a reply.` immediately after step 4, with no reload — the issue #40 confirmation that the Message was delivered and every reachable Agent's Reply Gate declined, rather than nothing having happened at all.
-- `T-A` carries the context-only Information line for `Nova`.
-- No new `.jsonl` line appears for step 4.
+- `T-A` carries the context-only Information line for `Nova` (`PersonaRunner.cs:634`).
+- Exactly one new `.jsonl` line appears for step 4, sender the Human, and none from any agent.
 
 **Fail if — any of these**
 
@@ -1164,12 +1165,12 @@ If you cannot locate the quiet note, judge the reply-gate result (silence from e
 
 **💰 Spends money** · about 10 min
 
-*The ordering test, and the one that matters most: `ReplyGate.Decide` checks the Budget before it checks `following`, so a follower is capped exactly like a Mentioned Agent. Deterministic by construction — `ChatService` increments the count before it publishes, so the reply that spends the Budget is delivered to everyone else already carrying `Used == Granted`, and the gate has no choice left to make.*
+*The ordering test, and the one that matters most: `ReplyGate.Decide` checks the Budget before it checks `following`, so a follower is capped exactly like a Mentioned Agent. `ChatService` increments the count before it publishes, so the reply that spends the Budget is delivered to everyone else already carrying `Used == Granted`. Which agent's reply spends the single Budget is a race (see step 4), so only one half of the run is the oracle.*
 
 **Before you start**
 
 - APPTOOLS-23 has passed in this session. It is the control: it proves `Nova` DOES reply unmentioned while following, so the silence below can only be the cap.
-- Stop the app. Restart it with `$env:Team__AgentMessageBudget = "1"` set in the same window. A Budget of 1 makes this test two billed Turns instead of forty.
+- `P-STOP` the app. Repeat the `P-LAUNCH-PAID` launch block with `$env:Team__AgentMessageBudget = '1'` set before `dotnet run` (its Chief of Staff step is already done). A Budget of 1 keeps this test to two billed Turns.
 - `Nova` and `Jarvis` both **Online**, Haiku/low, in a three-member Room together (`You`, `Nova`, `Jarvis`).
 - COST: two short billed Turns — one for `Nova` to call the tool, one for `Jarvis` to say a single word. `Nova`'s decline costs nothing, which is the point.
 
@@ -1178,23 +1179,23 @@ If you cannot locate the quiet note, judge the reply-gate result (silence from e
 1. Wait for both tiles to read **Online** under the new Budget.
 2. Type exactly: `@Nova use mcp__team__follow_room to follow this room, using the room id from your own label.` and wait for the confirmation reply.
 3. The Room will pause immediately — `Nova`'s own confirmation is one agent Message and the Budget is 1. That is expected. Do NOT click **Continue**.
-4. Type exactly: `@Jarvis, without calling any tool, reply with the single word "go".` and press Enter. This Human Message resets the Budget to 0 of 1, which is what makes step 5 reachable.
-5. Wait for `Jarvis` to reply `go`. The Budget is now spent again, at 1 of 1.
-6. Watch the Room for sixty seconds. Type nothing — a Human Message would reset the counter and destroy the condition.
+4. Type exactly: `@Jarvis, without calling any tool, reply with the single word "go".` and press Enter. This Human Message resets the Budget to 0 of 1. Because Nova now follows the room, this one Message wakes BOTH Jarvis (mentioned) and Nova (following), and exactly one of their replies can land.
+5. Wait for the first agent reply to land; the Budget is then spent at 1 of 1. If it is Jarvis's `go`, Nova's half of the test is live. If Nova's reply landed first, Jarvis is the one declined and Nova's half is INCONCLUSIVE: repeat step 4 (each Human Message resets the Budget), up to three times.
+6. Watch the Room for sixty seconds. Type nothing once the Budget is spent — a Human Message would reset the counter and destroy the condition.
 7. In `T-A`, search for `declined a turn`.
 8. Click **Teammates** and read both tiles, then come back.
 
 **Pass if — all of these**
 
-- `Nova` does not reply to `Jarvis`'s `go`, and no third agent Message appears in the Room.
+- Exactly one agent Message lands after step 4 (Jarvis's `go`), `Nova` does not reply to it, and no further agent Message appears in the Room.
 - `T-A` contains `Persona 'Nova' declined a turn in room <roomId>: the room has spent its budget of 1 agent messages.` naming **Nova specifically**. This is the oracle. `Nova` was following, was delivered the Message, and was stopped by the Budget rather than by the Mention rule — APPTOOLS-23 is what rules the Mention rule out.
-- The red pause panel reads `Agents have sent 1 replies since you last spoke, and are paused.`
+- The amber pause panel reads `Agents have sent 1 replies since you last spoke, and are paused.`
 - Neither tile has gone **Degraded**. A spent Budget is not a fault.
 
 **Fail if — any of these**
 
-- `Nova` replies to `Jarvis`'s `go` -> **following is buying Turns past the cap.** This is the most serious failure available in this area: two mutual followers could then run unattended with nothing to stop them, which is the exact hazard the Budget exists to prevent and the reason `rules.md` makes the Budget-before-everything ordering binding. Report it against `ReplyGate.Decide`'s parameter ordering.
-- `T-A` shows the `declined a turn` line for `Jarvis` but never for `Nova` -> `Nova` was not following after all; re-check step 2's confirmation before filing anything, since the rest of the test proves nothing without it.
+- A SECOND agent Message lands after step 4 (for example `Nova` replying to `Jarvis`'s `go`) -> **following is buying Turns past the cap.** This is the most serious failure available in this area: two mutual followers could then run unattended with nothing to stop them, which is the exact hazard the Budget exists to prevent and the reason `rules.md` makes the Budget-before-everything ordering binding. Report it against `ReplyGate.Decide`'s parameter ordering.
+- `T-A` shows the `declined a turn` line for `Jarvis` (Nova's reply landed first) and never for `Nova` -> that run is INCONCLUSIVE, not a failure; repeat step 4. If Jarvis's `go` landed and there is still no line for `Nova`, `Nova` was not following after all; re-check step 2's confirmation before filing anything.
 - Either tile flips to **Degraded** -> a spent Budget is being reported as a fault, which it is not.
 
 **Inconclusive if**
@@ -1221,7 +1222,7 @@ If `Nova`'s tile shows **Starting** or the Persona restarted at any point betwee
 5. Confirm Nova's reply quotes a result of the form `Created room '<name>' (id <id>) and posted the seed message into it.`
 6. Click the new sidebar entry and confirm its `/rooms/<id>` URL matches the id Nova reported.
 7. Confirm the new Room's Transcript already contains a message row whose sender is `Nova` and whose body is exactly `Let's plan the launch.` — present the moment the Room first opens, with no further messages needed to produce it.
-8. Open `E:\Repos\Huddle\src\Huddle.App\App_Data\rooms\<newRoomId>.jsonl` and confirm its FIRST line is that seed message, sender `Nova`.
+8. Open `<data>\rooms\<newRoomId>.jsonl` and confirm its FIRST line is that seed message, sender `Nova`. There is no Human line in this new room; the seed is its opening line.
 
 **Pass if — all of these**
 
@@ -1238,6 +1239,69 @@ If `Nova`'s tile shows **Starting** or the Persona restarted at any point betwee
 **Inconclusive if**
 
 If Nova's reply reports `Created room '<name>' (id <id>), but could not post the seed message: <reason>`, that is the documented failure above, not a gap in this test — record it as a real `create_room` defect. If Nova omits `seed` entirely and creates the Room without an opening Message, that is not this test's failure mode either — that Room legitimately arrives empty by design; rerun with a prompt that names the `seed` argument more explicitly.
+
+### APPTOOLS-27 — get_help carries a TASKS section while the Task tools are offered
+
+**💰 Spends money** · about 6 min
+
+*The progressive-discovery design promises that `get_help` names the tools the system prompt does not. The TASKS section is how a model learns that Tasks exist at all; it is added between BUDGET and the TOOLS section only when `create_task` is in the catalog, so it can vanish without any test noticing.*
+
+**Before you start**
+
+- `Nova` **Online**, Haiku/low, in a `P-LAUNCH-PAID` launch at Trace (`${env:Logging__LogLevel__Agency.Huddle} = "Trace"`), with `Team:Tasks:Enabled` at its default (true).
+- COST: one short turn on Haiku at effort low.
+
+**Steps**
+
+1. In the room named `Nova`, type exactly `Call mcp__team__get_help and tell me which sections it has.` and press Enter. Wait for the reply.
+2. Run `O-TOOLCALLS` for `Nova` and confirm a new line whose `tool` field contains `get_help`.
+3. In the console, find the newest `App tool server replied to tools/call:` line and decode its payload (newlines appear as `\n`, apostrophes as `'`).
+4. Confirm the decoded text contains a `TASKS` section beginning `TASKS\nTasks track work outside this conversation.` (`PromptCatalog.cs:1216-1222`), placed after the BUDGET section and before the TOOLS section (`GetHelpTool.cs:127-130`).
+
+**Pass if — all of these**
+
+- `O-TOOLCALLS` has a `get_help` line for this turn.
+- The decoded payload carries the TASKS section between BUDGET and TOOLS.
+
+**Fail if — any of these**
+
+- The TASKS section is absent while Tasks are enabled -> the model is never told that Tasks exist, however many tools are offered.
+- The TASKS section sits outside the order BUDGET, TASKS, TOOLS.
+
+**Inconclusive if**
+
+`Team:Tasks:Enabled` is false in this install: then the TASKS section must be ABSENT, and its absence is the pass for that configuration. If `O-TOOLCALLS` shows no `get_help` line for the turn, Nova answered from the system prompt; ask again naming the tool. Without Trace there is no payload to decode.
+
+### APPTOOLS-28 — A prefix-less Adapter is told tool names bare (ADR-0014)
+
+**Free** · about 6 min
+
+*An Adapter whose profile sets `UsesToolNamePrefix=false` must never be told `mcp__team__` names, because it exposes tools bare and a prefixed name would send the model calling something that does not exist. The prefixed side for Claude is pinned by `ToolPrefixTests.cs:43-63`; only a real launch shows the bare side end to end.*
+
+**Before you start**
+
+- `P-LAUNCH-UAT`: the mock adapter is launched with `UsesToolNamePrefix=false` (`DotAcpAgentHostFactory.cs:234`). Ada is the Teammate; her room is the one named `Ada`.
+- Free: the mock adapter bills nothing.
+
+**Steps**
+
+1. Open the room named `Ada` and send `hello`.
+2. Read Ada's reply. The mock adapter replies with the whole prompt it received (`common.md`, Never set `TraceWire`).
+3. In that echoed prompt, find where the system prompt names the help tool. Confirm it names it bare, as `get_help`.
+4. Search the whole echoed prompt for `mcp__team__`. Confirm there is no occurrence.
+
+**Pass if — all of these**
+
+- The echoed prompt names the help tool as `get_help`.
+- The echoed prompt contains no `mcp__team__` anywhere.
+
+**Fail if — any of these**
+
+- `mcp__team__` appears in the echoed prompt -> a prefix-less Adapter is being told prefixed names (ADR-0014 regression).
+
+**Inconclusive if**
+
+The echo does not carry the appended system prompt, only the Message text. That is not verified for the mock adapter: if the reply shows no system-prompt text at all, record the check as unobservable manually (the automated prefix tests remain the evidence) rather than passing it.
 
 ---
 

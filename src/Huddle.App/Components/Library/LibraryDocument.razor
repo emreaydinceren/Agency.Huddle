@@ -42,8 +42,11 @@
             </HuddleSegmentedControl>
         }
         <MudIconButton Icon="@Icons.Material.Filled.ContentCopy" Size="Size.Small" aria-label="Copy" Class="library-document-copy" OnClick="@this.OnCopyAsync" />
-        <MudIconButton Icon="@Icons.Material.Filled.OpenInNew" Size="Size.Small" aria-label="Pop out" Class="library-document-pop-out" />
-        <MudIconButton Icon="@Icons.Material.Filled.Close" Size="Size.Small" aria-label="Close" Class="library-document-close" />
+        <MudIconButton Icon="@Icons.Material.Filled.OpenInNew" Size="Size.Small" aria-label="Pop out" Class="library-document-pop-out" OnClick="@this.PopOut" />
+        @if (this.OnClose.HasDelegate)
+        {
+            <MudIconButton Icon="@Icons.Material.Filled.Close" Size="Size.Small" aria-label="Close" Class="library-document-close" OnClick="@this.OnClose" />
+        }
     </MudToolBar>
     @if (this.Path.Root.Kind != LibraryRootKind.Teams)
     {
@@ -127,7 +130,7 @@
             <div class="library-document-other">
                 <div class="library-document-other-name">@this.FileName()</div>
                 <div class="library-document-other-size">@FormatSize(this.content.Length)</div>
-                <MudButton Class="library-document-open-default">Open in default app</MudButton>
+                <MudButton Class="library-document-open-default" OnClick="@this.OpenInDefaultAppAsync">Open in default app</MudButton>
             </div>
         }
     }
@@ -186,6 +189,17 @@
     /// <summary>Raised for a tree-style action originating from this document (e.g. offering to create a missing wikilink target, Task 12.2.i-b).</summary>
     [Parameter]
     public EventCallback<LibraryTreeAction> OnAction { get; set; }
+
+    /// <summary>Raised when the human clicks Close. The Close button is rendered only when a host listens, so a host with its own Close shows one.</summary>
+    [Parameter]
+    public EventCallback OnClose { get; set; }
+
+    /// <summary>Navigates to the full <c>/library</c> page on this document.</summary>
+    private void PopOut() => this.Navigation.NavigateTo(LibraryPane.BuildPopOutUri(this.Path));
+
+    /// <summary>Asks the host to open this document in the operating system's default application.</summary>
+    private Task OpenInDefaultAppAsync() =>
+        this.OnAction.InvokeAsync(new LibraryTreeAction(LibraryTreeActionKind.OpenInDefaultApp, this.Path, null));
 
     private LibraryDocumentContent? content;
     private bool missing;

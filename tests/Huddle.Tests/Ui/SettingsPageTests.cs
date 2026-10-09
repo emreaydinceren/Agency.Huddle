@@ -1,8 +1,11 @@
 using System.Text.Encodings.Web;
 using Bunit;
+using Microsoft.AspNetCore.Components;
 using Microsoft.Extensions.DependencyInjection;
 using Agency.Huddle.App.Appearance;
 using Agency.Huddle.App.Components.Pages;
+using Agency.Huddle.App.Components.Settings;
+using Agency.Huddle.App.Library;
 using Agency.Huddle.App.Prompts;
 using Agency.Huddle.App.Skills;
 using Agency.Huddle.App.Themes;
@@ -27,6 +30,7 @@ public sealed class SettingsPageTests
         ctx.Services.AddSingleton(factory.Services.GetRequiredService<PromptStore>());
         ctx.Services.AddSingleton(factory.Services.GetRequiredService<AppearanceStore>());
         ctx.Services.AddSingleton(factory.Services.GetRequiredService<SkillStore>());
+        ctx.Services.AddSingleton(factory.Services.GetRequiredService<LibraryRootStore>());
         return ctx;
     }
 
@@ -46,6 +50,33 @@ public sealed class SettingsPageTests
         Assert.Contains(">Turn<", cut.Markup, StringComparison.Ordinal);
         Assert.Contains(">Get help<", cut.Markup, StringComparison.Ordinal);
         Assert.Contains(">Tool descriptions<", cut.Markup, StringComparison.Ordinal);
+    }
+
+    /// <summary>The <c>/settings/library</c> route selects the sixth panel and renders the Library panel (D3: the tab was unreachable).</summary>
+    [Fact]
+    public async Task SettingsPage_LibraryRoute_RendersLibraryPanel()
+    {
+        await using var factory = new TeamWebApplicationFactory();
+        await using var ctx = NewContext(factory);
+
+        var cut = ctx.Render<Settings>(parameters => parameters.Add(page => page.Tab, "library"));
+
+        Assert.Single(cut.FindComponents<LibraryPanel>());
+        Assert.Equal(5, cut.FindAll(".mud-tab").ToList().FindIndex(tab => tab.ClassList.Contains("mud-tab-active")));
+    }
+
+    /// <summary>Activating the sixth tab header navigates to <c>/settings/library</c> rather than falling back to Prompts.</summary>
+    [Fact]
+    public async Task SettingsPage_LibraryTabClick_NavigatesToLibrary()
+    {
+        await using var factory = new TeamWebApplicationFactory();
+        await using var ctx = NewContext(factory);
+        var navigation = ctx.Services.GetRequiredService<NavigationManager>();
+        var cut = ctx.Render<Settings>();
+
+        cut.FindAll(".mud-tab")[5].Click();
+
+        Assert.Equal("settings/library", navigation.ToBaseRelativePath(navigation.Uri));
     }
 
     /// <summary>The default (Prompts) panel renders the Prompts panel's MudPaper-wrapped groups.</summary>

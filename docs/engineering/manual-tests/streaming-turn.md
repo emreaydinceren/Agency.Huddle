@@ -1,8 +1,8 @@
 # Turn streaming, Drafts, Stop and failure surfacing
 
-Prove, in a real browser, everything the Human sees while a Turn is happening and everything the Human is told when one fails: the live Draft row (in-memory only, keyed by Message id), the tool-activity line inside it, the per-Draft Stop button, the role="alert" member-health strip, and how all three survive - or deliberately do not survive - a reload, a Room switch, a dropped connection and an app restart. Nothing in the automated suite renders a browser (the page tests only ever see prerendered HTML), so the DraftChanged event path, the blinking caret, auto-scroll, the disabled-while-in-flight Stop button, two Drafts at once and every real-agent failure mode are unproven except by a person at http://localhost:5100. The tests are ordered so that every free test runs before any test that spends money, and the failure modes hunted hardest are the silent ones: a Draft that never renders, a Draft that freezes forever, an alert strip that is permanently on, and an Agent that goes deaf with a green dot.
+Prove, in a real browser, everything the Human sees while a Turn is happening and everything the Human is told when one fails: the live Draft row (in-memory only, keyed by Message id), the Turn detail (one row per tool call, at most six) inside it, the per-Draft Stop button, the role="alert" member-health strip, and how all three survive - or deliberately do not survive - a reload, a Room switch, a dropped connection and an app restart. Nothing in the automated suite renders a browser (the page tests only ever see prerendered HTML), so the DraftChanged event path, the blinking caret, auto-scroll, the disabled-while-in-flight Stop button, two Drafts at once and every real-agent failure mode are unproven except by a person at http://localhost:5100. The tests are ordered so that every free test runs before any test that spends money, and the failure modes hunted hardest are the silent ones: a Draft that never renders, a Draft that freezes forever, an alert strip that is permanently on, and an Agent that goes deaf with a green dot.
 
-**30 tests** · 22 free, 8 paid 💰 · about 4.4 hours.
+**30 tests** · 20 free, 10 paid 💰 · about 4.5 hours.
 
 Read [the manual test script](../manual-tests.md) first — the cost guard, the Model and Effort
 convention, and the rules for concluding a result — then [Common procedures](common.md), which
@@ -16,12 +16,12 @@ oracles `O-LOG` / `O-ADAPTERS` / `O-TRANSCRIPT` / `O-DB` / `O-WIRE`, the four re
 `P-NEW-PERSONA`, `P-ECHO-BOT` and the standing conventions. This area adds:
 
 1. Take the [§0.4](../manual-tests.md#04-rollback) rollback copy before touching anything. Several tests here edit config, Personas and the database.
-2. Free lane is `P-LAUNCH-FREE`. Tests STREAMINGTURN-21 onward additionally need the Adapter: run `pwsh tools/acp/install.ps1`, then confirm `tools\acp\node_modules` exists and `node --version` prints a version. Without both, every ACP test here is INCONCLUSIVE, not failed.
-3. Open a Chromium browser at `http://localhost:5100`. The free lane has no Teammates, so a fresh data folder has no Room yet: sidebar and main column read `No rooms yet. Start an agent to create one.` Start the slow-draft client (step 5) or `pwsh tools/echo-bot.ps1 -Name pipebot` in `T-C` to create one. Then confirm the page redirects to `/rooms/<some id>` and the sidebar shows, top to bottom: **New chat**, the Room list, **Teammates**, **Settings**. Write down the room id — tests call it ROOMID. Keep DevTools (F12) on the **Elements** tab; every "search the DOM" step below means Ctrl+F inside Elements, which searches the live DOM and not the page text.
+2. Free lane is `P-LAUNCH-FREE`. `<data>` is `<repo>\src\Huddle.App\App_Data` on that lane (see [common.md](common.md)), so a Room's Transcript is `<data>\rooms\<roomid>.jsonl`. Tests STREAMINGTURN-21 onward are all paid (21 and 22 send no prompt but start the real Adapter and the Chief of Staff's Greeting) and additionally need the Adapter: run `pwsh tools/acp/install.ps1`, then confirm `tools\acp\node_modules` exists and `node --version` prints a version. Without both, every ACP test here is INCONCLUSIVE, not failed. On any lane with ACP on, the built-in Chief of Staff also starts and takes a Greeting Turn in its empty Room (paid on the real adapter): `P-LAUNCH-PAID` handles that in its first step, so do not launch the paid lane any other way.
+3. Open a Chromium browser at `http://localhost:5100`. The free lane starts no Teammate (the built-in Chief of Staff is seeded but stays Offline, and no Room is created for it), so a fresh data folder has no Room yet: sidebar and main column read `No rooms yet. Start an agent to create one.` Start the slow-draft client (step 5) or `pwsh tools/echo-bot.ps1 -Name pipebot` in `T-C` to create one. Then confirm the page redirects to `/rooms/<some id>`. The drawer shows the Room list with **New chat** at its foot, then Teams, **Teammates**, Task views, Library, Archived chats and the **Settings** icon (`MainLayout.razor:17-30`). Write down the room id — tests call it ROOMID. Keep DevTools (F12) on the **Elements** tab; every "search the DOM" step below means Ctrl+F inside Elements, which searches the live DOM and not the page text.
 4. Open `T-C` for pipe clients and `T-D` for file and HTTP checks.
 5. SAVE THE SLOW-DRAFT CLIENT. It is the workhorse of this area: it holds a Draft open for as long as you like, costs nothing and needs no real agent. Create `$env:TEMP\drip.ps1` with exactly this content:
 
-``powershell
+```powershell
 param([string]$Name='drip',[string]$Pipe='team',[string]$RoomId='',[int]$DelaySeconds=3,[string[]]$Chunks=@('This ','reply ','arrives ','**slowly**. '))
 $ErrorActionPreference='Stop'
 $c=[System.IO.Pipes.NamedPipeClientStream]::new('.',$Pipe,'InOut','Asynchronous'); $c.Connect(5000)
@@ -40,9 +40,9 @@ Read-Host 'ENTER = post the Message and end the Draft'
 S @{type='postMessage';version=3;roomId=$roomId;messageId=$mid;text=$full}
 S @{type='messageDelta';version=3;roomId=$roomId;messageId=$mid;text='';isFinal=$true}
 Read-Host 'ENTER = disconnect'
-``
+```
 
-6. Understand three hard constraints of that client before using it: `version` MUST be 3 (the server compares for strict equality and answers `badMessage` otherwise, and nothing renders); `messageId` must match `[A-Za-z0-9_-]{1,64}`, which `[guid]::ToString('N')` satisfies; and the script only ever reads the welcome line, so it never drains envelopes the server sends it — keep each run short, and use the listening variant given inside STREAMINGTURN-17 when you need to see what the server sends.
+6. Understand three hard constraints of that client before using it: `version` MUST be 3 (a wrong `version` in `hello` is answered `expectedHello`, and a wrong one in a later envelope `badMessage`; nothing renders either way); `messageId` must match `[A-Za-z0-9_-]{1,64}`, which `[guid]::ToString('N')` satisfies; and the script only ever reads the welcome line, so it never drains envelopes the server sends it — keep each run short, and use the listening variant given inside STREAMINGTURN-17 when you need to see what the server sends.
 
 ## Tests
 
@@ -75,7 +75,7 @@ Read-Host 'ENTER = disconnect'
   unreachable Teammate is not a recipient and the Room has nothing to explain. A note standing
   permanently in every Room would be the same always-on failure by a different door.
 - The `Invoke-WebRequest` command prints nothing at all.
-- /teammates may show teammates as **Offline** with a grey dot - that alone is correct and is not a failure of this test.
+- /teammates shows the Chief of Staff as **Offline** with a red dot (`.agent-dot.offline`, `app.css:71-73`) - that alone is correct and is not a failure of this test. There is no grey dot.
 
 **Fail if — any of these**
 
@@ -110,17 +110,17 @@ If the sidebar shows `No rooms yet. Start an agent to create one.`, no Room exis
 5. While the text is still growing, right-click the growing row and choose **Inspect**, then read its classes in the Elements tab.
 6. Still in Elements, check inside that row for a `<span class="message-time">` element.
 7. Look at the end of the growing text for a small vertical bar that blinks roughly once a second.
-8. In `T-D` run `Get-Content "src\Huddle.App\App_Data\rooms\<DRIPROOM>.jsonl" | Measure-Object -Line` while the Draft is still on screen. Record the line count.
-9. Return to `T-C` and press ENTER at the `ENTER = post the Message and end the Draft` prompt, then re-run the line count command in `T-D`.
+8. In `T-D` run `Test-Path "<data>\rooms\<DRIPROOM>.jsonl"` while the Draft is still on screen. It prints `False` if the Room has no Message yet (the file does not exist before the first post); if it prints `True`, run `Get-Content "<data>\rooms\<DRIPROOM>.jsonl" | Measure-Object -Line` and record the line count.
+9. Return to `T-C` and press ENTER at the `ENTER = post the Message and end the Draft` prompt, then re-run both commands in `T-D`.
 
 **Pass if — all of these**
 
 - A new row appears below the last Message showing `drip` as the sender and the text growing chunk by chunk: `This `, then `This reply `, then `This reply arrives `, then `This reply arrives **slowly**. `.
-- The row's class attribute is `message-row streaming` and the text element inside it is `message-body streaming`.
+- The row's class attribute is `message-row streaming` and the text element inside it is `message-body message-card streaming` (`MessageList.razor:84,109`).
 - There is NO `message-time` element inside the streaming row.
 - A blinking vertical bar (`span.draft-caret`) sits at the end of the growing text.
 - A **Stop** button is present in the same meta line as the sender name.
-- The transcript line count is unchanged the whole time the Draft is on screen, and increases by exactly one after you press ENTER.
+- The transcript is unchanged the whole time the Draft is on screen (the file does not exist yet, or its line count does not move), and afterwards has gained exactly one line.
 
 **Fail if — any of these**
 
@@ -154,7 +154,7 @@ If the script throws on `Connect` the app is not running or the pipe name is not
 3. Read the streaming row carefully and write down exactly what characters you see around the word `slowly`.
 4. In `T-C` press ENTER at the `ENTER = post the Message and end the Draft` prompt.
 5. Read the same text again on the settled row.
-6. In `T-D` run: `Get-Content "src\Huddle.App\App_Data\rooms\<DRIPROOM>.jsonl" -Tail 1` and read the `text` field.
+6. In `T-D` run: `Get-Content "<data>\rooms\<DRIPROOM>.jsonl" -Tail 1` and read the `text` field.
 
 **Pass if — all of these**
 
@@ -192,14 +192,14 @@ If no Draft row ever appears, STREAMINGTURN-02 has already failed - record this 
 3. Press ENTER in `T-C` at the post prompt.
 4. Count how many rows on the page contain the text `This reply arrives`.
 5. In devtools Elements, search for `streaming` and record the match count.
-6. Confirm the remaining row has a sender name and an HH:mm timestamp beside it.
-7. In `T-D` run: `Select-String -Path "src\Huddle.App\App_Data\rooms\<DRIPROOM>.jsonl" -Pattern '<DRIPMSG>'` using the printed MESSAGEID.
+6. Read the remaining row's header. If this is the first Message `drip` has posted in the Room, or the last one was more than 5 minutes ago, the row shows the sender name and an HH:mm time. If `drip`'s previous Message (STREAMINGTURN-02 or -03) was posted within 5 minutes, the row is grouped with it (`message-row grouped`): it shows no name or time, only an empty `message-gutter` whose tooltip holds the time - hover it and read the HH:mm there (`MessageList.razor:59-75`, `MessageDisplay.cs:21,100`). To get the ungrouped form, wait 5 minutes or run the test under a fresh name (`-Name drip4`, whose Room is `drip4`).
+7. In `T-D` run: `Select-String -Path "<data>\rooms\<DRIPROOM>.jsonl" -Pattern '<DRIPMSG>'` using the printed MESSAGEID.
 
 **Pass if — all of these**
 
 - Exactly one row on the page contains `This reply arrives`.
 - The DOM search finds zero elements with the `streaming` class after the post.
-- The surviving row shows sender + HH:mm timestamp + rendered text.
+- The surviving row shows its rendered text, with the sender and HH:mm time beside it, or (grouped, per step 6) the time in the gutter tooltip.
 - `Select-String` returns exactly one matching line, and its `id` field equals the MESSAGEID the deltas carried.
 
 **Fail if — any of these**
@@ -281,7 +281,7 @@ If your browser theme makes red hard to judge, compare the computed `background-
 - The first painted row after the reload already contains ALL the text that had arrived before the reload.
 - The row carries on growing live after the reload without a second reload.
 - The `Invoke-WebRequest` output contains both `draft-stop` and the draft text - the Draft is in the server-rendered HTML.
-- The very first click on Stop immediately after a reload may do nothing; a click a moment later behaves normally.
+- The very first click on Stop immediately after a reload may do nothing. A click a moment later, once the circuit has connected, raises no error and no unhandled-error bar. With `drip.ps1`, which never reads what the server sends, the Stop write can block and leave the button disabled afterwards; that is the client (see setup note 6 and STREAMINGTURN-15's WHY) and is not a failure here. To see the button re-enable, repeat step 7 with the listening client from STREAMINGTURN-17.
 
 **Fail if — any of these**
 
@@ -301,7 +301,7 @@ If the chunks arrive too fast to reload in time, re-run with `-DelaySeconds 10`.
 
 **Free** · about 6 min
 
-*Proves the Draft store is a server-side singleton broadcast to every viewer, not per-circuit state. The Stop button in step 5 is a small outlined `MudButton` (Stage 6 of the MudBlazor migration converted the chat page chrome); its click semantics are unchanged.*
+*Proves the Draft store is a server-side singleton broadcast to every viewer, not per-circuit state. The Stop button in step 5 is a small `MudIconButton` with a stop-circle icon and `aria-label="Stop"` (`MessageList.razor:88-92`); its click semantics are unchanged.*
 
 **Before you start**
 
@@ -316,13 +316,13 @@ If the chunks arrive too fast to reload in time, re-run with `-DelaySeconds 10`.
 5. Click **Stop** in tab 1 (the drip client ignores it - this only confirms neither tab errors).
 6. Press ENTER in `T-C` to post the Message.
 7. Compare both tabs after the post.
-8. Check `T-A` for any line reading `A DraftChanged handler threw and was skipped.`
+8. Check `T-A` for any line reading `A DraftChanged handler threw and was skipped.` It is logged at Error (`RoomEvents.cs:199`), so it appears even though most lines this area reads are Information or Warning.
 
 **Pass if — all of these**
 
 - Both tabs show the same growing Draft text, updating within about a second of each other.
 - When the Message posts, both tabs replace the Draft with the settled Message.
-- `T-A` prints no `A DraftChanged handler threw and was skipped.` line.
+- `T-A` prints no `A DraftChanged handler threw and was skipped.` line (an Error line if present).
 
 **Fail if — any of these**
 
@@ -395,7 +395,7 @@ If the sidebar has only one room, the test cannot run - create a second Room fir
 4. Observe where your Message lands relative to the streaming row.
 5. Press ENTER in `T-C` to post drip's Message.
 6. Observe where drip's settled Message lands relative to yours.
-7. In `T-D` run: `Get-Content "src\Huddle.App\App_Data\rooms\<DRIPROOM>.jsonl" -Tail 2` and read the two lines in order.
+7. In `T-D` run: `Get-Content "<data>\rooms\<DRIPROOM>.jsonl" -Tail 2` and read the two lines in order.
 
 **Pass if — all of these**
 
@@ -410,7 +410,7 @@ If the sidebar has only one room, the test cannot run - create a second Room fir
 
 **Inconclusive if**
 
-If the composer shows a red error line instead of sending, read it: a spent Room Budget (`Agents have sent N replies since you last spoke, and are paused.`) means you are in the STREAMINGTURN-20 situation - clear it with **Continue** and retry.
+If your Message does not appear, the composer did not send it: read any text under the composer, reload and retry. A Room Budget is not the cause: only an Agent's Message is ever refused for it, a Human's never is (`ChatService.cs:262`, `isAgent && budget.Exhausted`), and the pause is a note in the Room, not a composer error (see STREAMINGTURN-20).
 
 > [!NOTE]
 > Draft rows rendering below Messages is deliberate layout, NOT an out-of-order defect. Do not file it.
@@ -450,7 +450,7 @@ If the composer shows a red error line instead of sending, read it: a spent Room
 If the list never becomes scrollable (a very tall window), shrink the browser window and repeat. If you cannot tell by eye, record a short screen capture and judge frame by frame.
 
 > [!NOTE]
-> Two by-design quirks that are NOT bugs: being yanked back to the bottom while reading scrollback, and a tool-activity change alone not scrolling (only Message count and Draft text length feed the signature).
+> A by-design quirk that is NOT a bug: being yanked back to the bottom while reading scrollback. The scroll signature folds in the Message count, each Draft's text length, and each Draft's tool-call count and statuses (`MessageList.razor:246-247`), so a new or finished tool-call row scrolls the list too.
 
 ### STREAMINGTURN-11 — A Draft dies with its Agent's connection - no frozen half-reply is left behind
 
@@ -470,7 +470,7 @@ If the list never becomes scrollable (a very tall window), shrink the browser wi
 4. Watch the browser without reloading for 10 seconds.
 5. In devtools Elements, search for `streaming` and record the match count.
 6. Check the `T-A` console for a line reading `Agent connection <id> ended.` It is NOT a pass condition and is often absent: `AgentConnection` logs it only from its `catch (IOException)`, so a client that dies in a way which ends the read loop cleanly leaves no line at all. Judge on the browser and the transcript.
-7. In `T-D` run: `Get-Content "src\Huddle.App\App_Data\rooms\<DRIPROOM>.jsonl" -Tail 1` and confirm the half-reply text is not there.
+7. In `T-D` run: `Get-Content "<data>\rooms\<DRIPROOM>.jsonl" -Tail 1` and confirm the half-reply text is not there. If the file does not exist, no Message was ever posted in this Room, which also passes.
 8. Reload the page and confirm the Room shows only real Messages.
 
 **Pass if — all of these**
@@ -493,11 +493,11 @@ If the row disappears but you never saw it streaming first, the chunks had alrea
 > [!NOTE]
 > The cross-check (killing one client must not clear another's Draft in the same Room) is covered by STREAMINGTURN-14.
 
-### STREAMINGTURN-12 — Tool activity shows as one muted italic line inside the Draft and is never persisted
+### STREAMINGTURN-12 — Tool calls show as rows under the Draft, at most six, and never reach the Transcript
 
-**Free** · about 10 min
+**Free** · about 12 min
 
-*Proves the tool-activity line replaces rather than accumulates, renders nothing when the Agent gives no title, and leaves no trace on the Transcript.*
+*Proves the Turn detail (ADR-0034) lists one row per tool call, oldest first, keeps only the six most recent, falls back to `Tool call` for an untitled call, and leaves no trace on the Transcript.*
 
 **Before you start**
 
@@ -507,6 +507,7 @@ If the row disappears but you never saw it streaming first, the chunks had alrea
 
 1. Create `$env:TEMP\drip-tool.ps1` with exactly this content:
 
+```powershell
 param([string]$Name='drip',[string]$Pipe='team',[string]$RoomId='')
 $ErrorActionPreference='Stop'
 $c=[System.IO.Pipes.NamedPipeClientStream]::new('.',$Pipe,'InOut','Asynchronous'); $c.Connect(5000)
@@ -525,35 +526,43 @@ Read-Host 'ENTER = second tool call'
 S @{type='toolActivity';version=3;roomId=$roomId;messageId=$mid;toolCallId='tc2';title='Writing notes.md';status='completed'}
 Read-Host 'ENTER = tool call with no title'
 S @{type='toolActivity';version=3;roomId=$roomId;messageId=$mid;toolCallId='tc3';status='inProgress'}
+Read-Host 'ENTER = four more tool calls (tc4 to tc7)'
+foreach($n in 4..7){ S @{type='toolActivity';version=3;roomId=$roomId;messageId=$mid;toolCallId="tc$n";title="Step $n";status='completed'} }
 Read-Host 'ENTER = post and finish'
 S @{type='postMessage';version=3;roomId=$roomId;messageId=$mid;text='Looking into it. '}
 S @{type='messageDelta';version=3;roomId=$roomId;messageId=$mid;text='';isFinal=$true}
 Read-Host 'ENTER = disconnect'
+```
+
 2. In `T-C` run: `pwsh $env:TEMP\drip-tool.ps1 -Name drip`. Note the ROOM it prints.
 3. Open the `drip` room and look at the message area BEFORE pressing any key in `T-C`.
-4. Record what the new row contains: sender name, any text, a caret, a Stop button, and the small line below.
+4. Record what the new row contains: sender name, any text, a caret, a Stop button, and the list of tool calls below the text. In the Console run `document.querySelectorAll('.turn-detail-row').length` and record the count.
 5. Press ENTER in `T-C` (sends the text) and read the row again.
-6. Press ENTER again (second tool call) and read the small line again.
-7. Press ENTER again (tool call with no title); check whether a small line is present at all and, in devtools Elements, search for `tool-activity` and record the count.
-8. Press ENTER again to post the Message, and check the settled Message row for any tool line.
-9. In `T-D` run: `Select-String -Path "src\Huddle.App\App_Data\rooms\<DRIPROOM>.jsonl" -Pattern 'Reading Persona.cs','Writing notes.md','toolCallId'`.
-10. Press ENTER once more in `T-C` to disconnect.
+6. Press ENTER again (second tool call). Read the list and re-run the Console count.
+7. Press ENTER again (tool call with no title). Read the list, re-run the Console count, and record the text of the third row.
+8. Press ENTER again (tool calls 4 to 7). Read the list, re-run the Console count and record the first and last row.
+9. Press ENTER again to post the Message, and check the settled Message row for any tool rows.
+10. In `T-D` run: `Select-String -Path "<data>\rooms\<DRIPROOM>.jsonl" -Pattern 'Reading Persona.cs','Writing notes.md','toolCallId'`.
+11. In `T-D` read the tool-call log with [`O-TOOLCALLS`](common.md#o-toolcalls) for `drip`: `Get-Content "<data>\logs\tool-calls\drip\$((Get-Date).ToUniversalTime().ToString('yyyy-MM-dd')).jsonl"`. Record which `tool` values appear.
+12. Press ENTER once more in `T-C` to disconnect.
 
 **Pass if — all of these**
 
-- Before any text arrives, a Draft row already exists with the sender name, a caret, a **Stop** button and the single line `Reading Persona.cs` beneath it.
-- The tool line shows only the title - no status word (`inProgress`, `completed`) and no JSON.
-- The line is small, muted in colour and italic (`div.tool-activity`).
-- After the second tool call the line reads `Writing notes.md` and `Reading Persona.cs` is GONE - exactly one `tool-activity` element exists at any time.
-- After the tool call with no title, zero `tool-activity` elements exist.
-- The settled Message row has no tool line, and `Select-String` finds no match for any of the three patterns in the transcript.
+- Before any text arrives, a Draft row already exists with the sender name, a caret, a **Stop** button and one tool row beneath it, in a list labelled `Tool calls` (`ul.turn-detail`): a spinner for the running call and the title `Reading Persona.cs` in small, muted italic text (`span.tool-activity`). The Console count is 1.
+- Each row shows the title and a status mark with a text label (`aria-label` `Running`, `Done`, `Failed` or `Waiting`); no raw status word such as `inProgress` and no JSON is rendered as text.
+- After the second tool call there are two rows, oldest first: `Reading Persona.cs` (Running) then `Writing notes.md` (Done). Nothing is replaced. The count is 2.
+- After the call with no title there are three rows and the third reads `Tool call` (`MessageList.razor:272`). The count is 3.
+- After tool calls 4 to 7 the count is 6 and the list is `Writing notes.md`, `Tool call`, `Step 4`, `Step 5`, `Step 6`, `Step 7`: the oldest row (`Reading Persona.cs`) was dropped first (`Drafts.cs:38`, `MaxToolCalls = 6`).
+- The settled Message row has no tool rows, and `Select-String` finds no match for any of the three patterns in the transcript.
+- The tool-call log may hold `Writing notes.md` and `Step 4` to `Step 7` under `drip` (only calls that reached Completed or Failed are logged, `Drafts.cs:239-267`); a Transcript line is never the place they go.
 
 **Fail if — any of these**
 
-- Tool lines accumulate into a list -> only the current activity is meant to be kept; a long Turn will grow an unbounded list inside the Draft.
-- A status word or raw JSON is rendered -> the line is showing protocol detail rather than the Agent's own title.
-- A `tool-activity` line appears for the no-title envelope -> a null title is being rendered as an empty or placeholder line rather than nothing.
-- A tool line survives onto the settled Message, or any pattern is found in the .jsonl -> tool activity is reaching the Transcript, so scrollback would start reporting what an Agent did rather than what it said.
+- A seventh row appears, or the list never drops its oldest row -> the cap is lost, so a long Turn grows an unbounded list inside the Draft.
+- The second call replaces the first instead of adding a row -> rows are keyed wrongly and earlier calls vanish from the Human's view.
+- A raw status word or JSON is rendered as the row text -> the row is showing protocol detail rather than the Agent's own title.
+- The no-title call renders an empty row, or no row, instead of `Tool call` -> the fallback is lost.
+- A tool row survives onto the settled Message, or any pattern is found in the .jsonl -> tool activity is reaching the Transcript, so scrollback would start reporting what an Agent did rather than what it said.
 - No Draft row appears until text arrives -> a tool call before any text cannot open a Draft, so the Human sees an idle Room while the Agent works.
 
 **Inconclusive if**
@@ -561,7 +570,7 @@ Read-Host 'ENTER = disconnect'
 If the row does not appear at step 3, check `T-C` for an `error` envelope - a `badMessage` there means the status string was rejected (valid values: `pending`, `inProgress`, `completed`, `failed`). Fix the script rather than filing.
 
 > [!NOTE]
-> The last title staying visible after that call completed, until the whole Draft goes, is documented behaviour and not a defect.
+> A row keeps showing after its call completed, until the whole Draft goes or the six-row cap pushes it out: that is documented behaviour and not a defect. The spinner is a MudBlazor indeterminate progress circle; judge the status by the row's text label, not its colour. Rows that carry an edit also have an expand toggle; this script sends none.
 
 ### STREAMINGTURN-13 — A Draft written for a Room the sender is not a Member of is refused and nothing renders
 
@@ -594,7 +603,7 @@ If the row does not appear at step 3, check `T-C` for an `error` envelope - a `b
 
 - A Draft appears in a Room the sender is not a Member of -> membership is not enforced on the delta path, and any pipe client can write into any Room's live view.
 - A Draft appears for the invalid message id -> the id format check has been lost, so ids that cannot correlate to a Message will open Drafts that can never be completed.
-- A file appears under `App_Data\rooms` named after the invalid id -> path safety has been lost; treat as urgent.
+- A file appears under `<data>\rooms` named after the invalid id -> path safety has been lost; treat as urgent.
 
 **Inconclusive if**
 
@@ -620,7 +629,7 @@ The drip client does not print the server's error replies, so a silent absence o
 2. Press ENTER twice in each window to let them finish and disconnect. Both agent names now exist.
 3. In the browser sidebar, click **New chat**.
 4. Tick the checkbox beside `drip` and the checkbox beside `drop`.
-5. Click **Start chat**. The browser navigates to a new Room named `drip, drop`. Copy its id from the address bar as GROUPROOM.
+5. Click **Start chat**. The browser navigates to a new Room named `drip, drop`. Copy its id from the address bar as GROUPROOM. Run `Test-Path "<data>\rooms\<GROUPROOM>.jsonl"`: if it prints `True`, run `Get-Content "<data>\rooms\<GROUPROOM>.jsonl" | Measure-Object -Line` and write the count down as BEFORE; if `False`, BEFORE is 0.
 6. In `T-C` run: `pwsh $env:TEMP\drip.ps1 -Name drip -RoomId <GROUPROOM> -DelaySeconds 6`.
 7. Within two seconds, in `T-D` run: `pwsh $env:TEMP\drip.ps1 -Name drop -RoomId <GROUPROOM> -DelaySeconds 6`.
 8. Watch the Group Room for about 25 seconds.
@@ -628,7 +637,7 @@ The drip client does not print the server's error replies, so a silent absence o
 10. Read the text in each streaming row and confirm neither contains the other's words interleaved.
 11. Press Ctrl+C in `T-C` only (kill drip without posting). Watch the browser for 10 seconds.
 12. Press ENTER twice in `T-D` to post drop's Message and disconnect.
-13. In a fourth window run: `Get-Content "src\Huddle.App\App_Data\rooms\<GROUPROOM>.jsonl" | Measure-Object -Line` and compare with the count before the run.
+13. In a fourth window run: `Get-Content "<data>\rooms\<GROUPROOM>.jsonl" | Measure-Object -Line` and compare with BEFORE (step 5).
 
 **Pass if — all of these**
 
@@ -678,13 +687,13 @@ The store returns a Room's Drafts in no particular order, so the two rows may sw
 4. Open the `drip, drop` Room and confirm both streaming rows are present with a Stop button each.
 5. Click **Stop** on drip's row once, and immediately watch both buttons.
 6. Immediately double-click drip's Stop button and note whether anything visibly changes.
-7. While drip's button is disabled, hover over drop's Stop button and confirm it still shows a pointer cursor and can be clicked.
+7. While drip's button is disabled, inspect drop's Stop button in Elements and confirm it has no `disabled` attribute and can be clicked.
 8. Wait five seconds and re-check drip's button.
 9. Set Network throttling back to **No throttling** and press ENTER twice in both `T-C` and `T-D` to finish.
 
 **Pass if — all of these**
 
-- Clicking drip's **Stop** visibly dims it (reduced opacity, no pointer cursor) while the request is in flight, and it re-enables afterwards.
+- Clicking drip's **Stop** disables it while the request is in flight (the button element carries the `disabled` attribute and MudBlazor's disabled styling, `MessageList.razor:90`) and it re-enables afterwards. Judge by the attribute in Elements, not by opacity or cursor alone.
 - drop's **Stop** button stays fully enabled and clickable throughout.
 - Double-clicking the disabled button produces no additional effect and no error.
 
@@ -725,8 +734,8 @@ On localhost without throttling the disabled window can be a single frame and ge
 **Pass if — all of these**
 
 - Nothing happens: no error banner on the page, no red text, no exception in the browser console.
-- The button either re-enables or disappears with the row.
-- `T-A` logs nothing beyond the ordinary `Agent connection <id> ended.`
+- The button either re-enables or disappears with the row. The silence is deliberate: `AgentGateway.StopTurnAsync` returns without sending anything when the Agent has no connection (`AgentGateway.cs:50-55`).
+- `T-A` logs nothing new beyond the Information line `Agent connection <id> for agent drip disconnected.` (`AgentConnection.cs:146`). The Warning `Agent connection <id> ended.` (`AgentConnection.cs:121`) appears only when the connection died with an IOException, as in STREAMINGTURN-11; either line is ordinary, and no other Warning or Error is.
 
 **Fail if — any of these**
 
@@ -754,20 +763,23 @@ If the Draft row clears too fast to click, re-run with a longer `-DelaySeconds` 
 
 1. Create `$env:TEMP\drip-listen.ps1` with exactly this content:
 
-param([string]$Name='drip',[string]$Pipe='team',[string]$RoomId='')
-$ErrorActionPreference='Stop'
-$c=[System.IO.Pipes.NamedPipeClientStream]::new('.',$Pipe,'InOut','Asynchronous'); $c.Connect(5000)
-$enc=[System.Text.UTF8Encoding]::new($false)
-$r=[System.IO.StreamReader]::new($c,$enc); $w=[System.IO.StreamWriter]::new($c,$enc); $w.AutoFlush=$true
-function S($o){ $w.WriteLine(($o|ConvertTo-Json -Compress)) }
-S @{type='hello';version=3;name=$Name;description='listening draft bot'}
-$welcome=$r.ReadLine()|ConvertFrom-Json
-if($RoomId -eq ''){ $roomId=$welcome.rooms[0].id } else { $roomId=$RoomId }
-$mid=[guid]::NewGuid().ToString('N')
-Write-Host "ROOM=$roomId MESSAGEID=$mid"
-foreach($t in 'This ','reply ','arrives ','slowly. '){ S @{type='messageDelta';version=3;roomId=$roomId;messageId=$mid;text=$t;isFinal=$false} }
-Write-Host 'Draft is open. Click Stop in the browser. Every envelope the server sends prints below. Ctrl+C to quit.'
-while($true){ $line=$r.ReadLine(); if($null -eq $line){ break }; Write-Host $line }
+   ```powershell
+   param([string]$Name='drip',[string]$Pipe='team',[string]$RoomId='')
+   $ErrorActionPreference='Stop'
+   $c=[System.IO.Pipes.NamedPipeClientStream]::new('.',$Pipe,'InOut','Asynchronous'); $c.Connect(5000)
+   $enc=[System.Text.UTF8Encoding]::new($false)
+   $r=[System.IO.StreamReader]::new($c,$enc); $w=[System.IO.StreamWriter]::new($c,$enc); $w.AutoFlush=$true
+   function S($o){ $w.WriteLine(($o|ConvertTo-Json -Compress)) }
+   S @{type='hello';version=3;name=$Name;description='listening draft bot'}
+   $welcome=$r.ReadLine()|ConvertFrom-Json
+   if($RoomId -eq ''){ $roomId=$welcome.rooms[0].id } else { $roomId=$RoomId }
+   $mid=[guid]::NewGuid().ToString('N')
+   Write-Host "ROOM=$roomId MESSAGEID=$mid"
+   foreach($t in 'This ','reply ','arrives ','slowly. '){ S @{type='messageDelta';version=3;roomId=$roomId;messageId=$mid;text=$t;isFinal=$false} }
+   Write-Host 'Draft is open. Click Stop in the browser. Every envelope the server sends prints below. Ctrl+C to quit.'
+   while($true){ $line=$r.ReadLine(); if($null -eq $line){ break }; Write-Host $line }
+   ```
+
 2. In `T-C` run: `pwsh $env:TEMP\drip-listen.ps1 -Name drip`. Note the ROOM it prints.
 3. Open the `drip` room in the browser; the full draft text is already on screen with a Stop button.
 4. Click **Stop** once.
@@ -777,7 +789,7 @@ while($true){ $line=$r.ReadLine(); if($null -eq $line){ break }; Write-Host $lin
 
 **Pass if — all of these**
 
-- Immediately after the click, `T-C` prints a line containing `"type":"stopTurn"` whose `roomId` equals the Room you clicked in.
+- Immediately after the click, `T-C` prints a line containing `"type":"stopTurn"` whose `roomId` equals the Room you clicked in (the page sends the Room it has loaded, `Chat.razor:672-677`; the gateway writes `StopTurn(roomId)`, `AgentGateway.cs:57`).
 - The Draft stays on screen afterwards, because this client ignores stopTurn - expected, not a failure.
 
 **Fail if — any of these**
@@ -807,31 +819,34 @@ If `T-C` prints nothing after the click AND the Draft row was not visible at tha
 
 1. Create `$env:TEMP\drip-big.ps1` with exactly this content:
 
-param([string]$Name='drip',[string]$Pipe='team',[string]$RoomId='',[int]$ChunkCount=300)
-$ErrorActionPreference='Stop'
-$c=[System.IO.Pipes.NamedPipeClientStream]::new('.',$Pipe,'InOut','Asynchronous'); $c.Connect(5000)
-$enc=[System.Text.UTF8Encoding]::new($false)
-$r=[System.IO.StreamReader]::new($c,$enc); $w=[System.IO.StreamWriter]::new($c,$enc); $w.AutoFlush=$true
-function S($o){ $w.WriteLine(($o|ConvertTo-Json -Compress)) }
-S @{type='hello';version=3;name=$Name;description='big draft bot'}
-$welcome=$r.ReadLine()|ConvertFrom-Json
-if($RoomId -eq ''){ $roomId=$welcome.rooms[0].id } else { $roomId=$RoomId }
-$mid=[guid]::NewGuid().ToString('N')
-Write-Host "ROOM=$roomId MESSAGEID=$mid"
-$chunk=('x'*1023)+"`n"
-$full=''
-for($i=1;$i -le $ChunkCount;$i++){ S @{type='messageDelta';version=3;roomId=$roomId;messageId=$mid;text=$chunk;isFinal=$false}; $full+=$chunk; Start-Sleep -Milliseconds 30 }
-Write-Host "sent $($full.Length) characters"
-Read-Host 'ENTER = post the full Message'
-S @{type='postMessage';version=3;roomId=$roomId;messageId=$mid;text=$full}
-S @{type='messageDelta';version=3;roomId=$roomId;messageId=$mid;text='';isFinal=$true}
-Read-Host 'ENTER = disconnect'
+   ```powershell
+   param([string]$Name='drip',[string]$Pipe='team',[string]$RoomId='',[int]$ChunkCount=300)
+   $ErrorActionPreference='Stop'
+   $c=[System.IO.Pipes.NamedPipeClientStream]::new('.',$Pipe,'InOut','Asynchronous'); $c.Connect(5000)
+   $enc=[System.Text.UTF8Encoding]::new($false)
+   $r=[System.IO.StreamReader]::new($c,$enc); $w=[System.IO.StreamWriter]::new($c,$enc); $w.AutoFlush=$true
+   function S($o){ $w.WriteLine(($o|ConvertTo-Json -Compress)) }
+   S @{type='hello';version=3;name=$Name;description='big draft bot'}
+   $welcome=$r.ReadLine()|ConvertFrom-Json
+   if($RoomId -eq ''){ $roomId=$welcome.rooms[0].id } else { $roomId=$RoomId }
+   $mid=[guid]::NewGuid().ToString('N')
+   Write-Host "ROOM=$roomId MESSAGEID=$mid"
+   $chunk=('x'*1023)+"`n"
+   $full=''
+   for($i=1;$i -le $ChunkCount;$i++){ S @{type='messageDelta';version=3;roomId=$roomId;messageId=$mid;text=$chunk;isFinal=$false}; $full+=$chunk; Start-Sleep -Milliseconds 30 }
+   Write-Host "sent $($full.Length) characters"
+   Read-Host 'ENTER = post the full Message'
+   S @{type='postMessage';version=3;roomId=$roomId;messageId=$mid;text=$full}
+   S @{type='messageDelta';version=3;roomId=$roomId;messageId=$mid;text='';isFinal=$true}
+   Read-Host 'ENTER = disconnect'
+   ```
+
 2. In `T-C` run: `pwsh $env:TEMP\drip-big.ps1 -Name drip`. Note the ROOM and MESSAGEID.
 3. Open the `drip` room and watch the streaming row grow for the ~15 seconds the loop takes.
 4. Confirm the browser stays responsive (you can still scroll and click the sidebar).
 5. When `T-C` prints `sent 307200 characters`, confirm the streaming row is still on screen and has not been emptied or shortened.
 6. Press ENTER in `T-C` to post the full Message.
-7. In `T-D` run: `$line = Get-Content "src\Huddle.App\App_Data\rooms\<DRIPROOM>.jsonl" -Tail 1; ($line | ConvertFrom-Json).text.Length` and record the number.
+7. In `T-D` run: `$line = Get-Content "<data>\rooms\<DRIPROOM>.jsonl" -Tail 1; ($line | ConvertFrom-Json).text.Length` and record the number.
 8. Press ENTER in `T-C` to disconnect.
 
 **Pass if — all of these**
@@ -867,12 +882,12 @@ If `T-C` errors with `line too long`, one envelope exceeded the 1 MB wire cap - 
 
 **Steps**
 
-1. In `T-D` run: `Get-Content "src\Huddle.App\App_Data\rooms\<DRIPROOM>.jsonl" | Measure-Object -Line` and write down the count as BEFORE.
+1. In `T-D` run: `Get-Content "<data>\rooms\<DRIPROOM>.jsonl" | Measure-Object -Line` and write down the count as BEFORE.
 2. In `T-C` run: `pwsh $env:TEMP\drip.ps1 -Name drip -DelaySeconds 10`.
 3. Open the `drip` room and wait for two chunks to appear.
 4. With the Draft still on screen, press Ctrl+C in `T-A` to stop the application.
 5. Press Ctrl+C in `T-C` as well to kill the client.
-6. In `T-A` run `dotnet run --project src/Huddle.App` again and wait for it to serve.
+6. In `T-A` run the `P-LAUNCH-FREE` launch command again (not a reset) and wait for it to serve.
 7. Reload http://localhost:5100 and open the `drip` room.
 8. Search the DOM for `streaming` and record the count.
 9. In `T-D` re-run the line count command and compare with BEFORE.
@@ -921,7 +936,7 @@ If the app fails to restart (port in use), wait for the old process to exit full
 6. In devtools Elements, search for `member-health-alert` and record the count; then search for `budget-prompt`.
 7. Click **Teammates** and read the status label and dot for `Ada`.
 8. The refusal needs its own configuration, because at a budget of 2 with two Agents both replies are accepted. Stop the app, relaunch with `$env:Team__AgentMessageBudget="1"` using the `P-LAUNCH-UAT` launch command only (do NOT re-run the seeder, which would wipe the Room), and send one `hello again @Ada and @Bo`: the first Agent to answer spends the budget and the second is refused. Check `T-A` for a Warning line reading `Room '<id>' refused a message from '<agent>': its budget of 1 agent messages since a human last spoke is spent.` - the number is the configured budget.
-9. Return to the Room and click **Continue**, then send `@Ada hello four` and confirm a reply from Ada arrives.
+9. Return to the Room and click **Continue**. BEFORE typing anything, confirm the `Agents have sent 1 replies…` prompt is gone and that either the refused Agent's reply now lands (the last Message is re-delivered to whoever it Mentions) or the blue note `Budget granted and the last message was delivered again, but it names no teammate. Mention one by name to get an answer.` appears (`Chat.razor:181`). Only then send `@Ada hello four` and confirm Ada replies; that last reply proves nothing about Continue, because any Human Message resets the counter (`ChatService.cs:280`).
 10. Press Ctrl+C in `T-A` and restart without the variable: `Remove-Item Env:Team__AgentMessageBudget`, then the `P-LAUNCH-UAT` launch command.
 
 **Pass if — all of these**
@@ -930,7 +945,7 @@ If the app fails to restart (port in use), wait for the old process to exit full
 - Zero `member-health-alert` elements exist in that Room.
 - /teammates does not show `Ada` or `Bo` as **Degraded** because of the pause.
 - `T-A` logs the refusal at Warning with no health report alongside it.
-- Clicking **Continue** lets the next reply through.
+- Clicking **Continue** clears the prompt and either lets a re-delivered reply through or shows the blue note, before you type anything.
 
 **Fail if — any of these**
 
@@ -947,7 +962,7 @@ This Room has three Members, so per ADR-0004 each Agent answers only a Mention; 
 
 ### STREAMINGTURN-21 — A failed Persona start surfaces as a role="alert" strip in every Room it is a Member of
 
-**Free** · about 15 min
+**💰 Spends money** · about 15 min
 
 *Closes the original defect this whole feature exists for: an Agent that has crashed and an Agent that is thinking used to look identical - both showed nothing. The strip is a `MudAlert` (Stage 6 of the MudBlazor migration) with `role="alert"` added explicitly, since `MudAlert` does not emit one on its own — verified against the rendered markup, per `docs/engineering/rules.md`. The New teammate card used in steps 2-7 is a real `MudDialog` and its Model/Effort dropdowns are `MudSelect`.*
 
@@ -955,10 +970,11 @@ This Room has three Members, so per ADR-0004 each Agent answers only a Mention; 
 
 - `pwsh tools/acp/install.ps1` has been run and `tools\acp\node_modules` exists.
 - `node --version` prints a version.
+- This test is paid although it sends no prompt: the Model dropdown in step 5 needs the real Adapter, and with ACP on the Chief of Staff takes a Greeting Turn at the account-default Model unless `P-LAUNCH-PAID`'s first step made it Haiku / low (F3: `PersonaRunner.cs:481-495`).
 
 **Steps**
 
-1. Press Ctrl+C in `T-A`, then run: `$env:Team__Acp__Enabled="true"; Remove-Item Env:Team__Acp__Command -ErrorAction SilentlyContinue; dotnet run --project src/Huddle.App`.
+1. Press Ctrl+C in `T-A`, then launch with `P-LAUNCH-PAID` (its first step makes the Chief of Staff cheap), with no `Team__Acp__Command` set.
 2. In the browser click **Teammates** in the sidebar, then click **New teammate**.
 3. In **Name** type `Nova`. In **Title** type `Test persona`. In **Alias** type `nova`. Leave **Teams** blank.
 4. In the **Persona body** textarea type `You are Nova. Answer briefly.`
@@ -966,10 +982,10 @@ This Room has three Members, so per ADR-0004 each Agent answers only a Mention; 
 6. In the **Effort** dropdown choose `low`.
 7. Click **Add teammate**. Wait until Nova's tile shows **Online** with a green dot (it may pass through **Starting** first).
 8. Open Nova's Room from the sidebar (or click her tile and then **Message**) and confirm the Room shows NO alert strip while she is healthy. Note the Room id as NOVAROOM.
-9. Press Ctrl+C in `T-A`. In the same window run: `$env:Team__Acp__Command="definitely-not-node"; dotnet run --project src/Huddle.App`.
+9. Press Ctrl+C in `T-A`. In the same window set `$env:Team__Acp__Command="definitely-not-node"`, then run the `P-LAUNCH-PAID` launch command (the last block of that procedure; do not repeat its first step).
 10. Wait for startup, then reload the browser and open Nova's Room.
 11. Read the area between the transcript and the composer, word for word.
-12. In devtools Elements, confirm the strip element has `class="member-health-alert"` and `role="alert"`, and that it sits BETWEEN the message list and the composer.
+12. In devtools Elements, confirm the strip element is a `MudAlert` whose class list includes `member-health-alert` (it also carries `mud-alert` classes) and has `role="alert"` (`Chat.razor:76`), and that it sits BETWEEN the message list and the composer.
 13. Check `T-A` for `Persona 'Nova' failed to start.` at Warning.
 14. Click **Teammates**, then Nova's tile; read her status label, dot colour and the reason line on the card.
 15. Confirm the card offers a **Restart** button and the hint `Like saving an edit, this restarts the teammate, which clears what it remembers.`
@@ -977,8 +993,8 @@ This Room has three Members, so per ADR-0004 each Agent answers only a Mention; 
 **Pass if — all of these**
 
 - The Room shows a bordered strip reading exactly `Nova is Offline: Failed to start 'definitely-not-node'.`
-- The strip's element carries `member-health-alert` and `role="alert"`, positioned between the transcript and the composer.
-- `T-A` logs `Persona 'Nova' failed to start.` at Warning with the exception.
+- The strip's element carries the class `member-health-alert` (among others) and `role="alert"`, positioned between the transcript and the composer.
+- `T-A` logs `Persona 'Nova' failed to start.` at Warning with the exception (`PersonaSupervisor.cs:617`); the reason text `Failed to start 'definitely-not-node'.` comes from `AgentProcessLauncher.cs:48`.
 - /teammates shows Nova as **Offline** with a red dot, the same reason line on the card, a **Restart** button and the quoted hint.
 
 **Fail if — any of these**
@@ -993,11 +1009,11 @@ This Room has three Members, so per ADR-0004 each Agent answers only a Mention; 
 If Nova never reaches **Online** in step 7 even with a working `node`, this test cannot distinguish a deliberate break from a pre-existing one: read the reason on her card and fix that first. If the Model dropdown says `This agent advertises no models, so it will use its own default.`, the adapter is not installed - run `pwsh tools/acp/install.ps1` and retry.
 
 > [!NOTE]
-> FREE: no prompt is ever sent, so no tokens are spent - starting a session costs nothing. A second variant of the same behaviour: rename `tools\acp\node_modules` aside and restart instead; the reason should then read `Nova is Offline: No ACP adapter is installed for Persona 'Nova'. Run tools/acp/install.ps1 (or set Team:Acp:AdapterPath / Team:Acp:Args) before enabling this Persona.` Rename it back afterwards.
+> COSTS MONEY only through the Chief of Staff's Greeting Turn at Haiku / low on a fresh data folder; Nova herself is never prompted, so starting her session takes no Turn. A second variant of the same behaviour: rename `tools\acp\node_modules` aside and restart instead; the reason should then read `Nova is Offline: No ACP adapter is installed for Persona 'Nova' on Adapter 'claude'. Run tools/acp/install.ps1 (or set Team:Acp:AdapterPath / Team:Acp:Args) before enabling this Persona.` Rename it back afterwards.
 
 ### STREAMINGTURN-22 — Restart from the Teammate card clears the failure and the Room's strip goes with it
 
-**Free** · about 8 min
+**💰 Spends money** · about 8 min
 
 *Proves the one manual recovery path works for a Persona that never started, and that the Room clears without a reload.*
 
@@ -1012,15 +1028,15 @@ If Nova never reaches **Online** in step 7 even with a working `node`, this test
 3. Confirm the card shows **Offline**, the reason line, and a **Restart** button.
 4. Click **Restart** and immediately read the button's label.
 5. Watch the card's status line until it settles, and read the reason line.
-6. Now fix the cause: press Ctrl+C in `T-A` and run `Remove-Item Env:Team__Acp__Command; dotnet run --project src/Huddle.App`.
+6. Now fix the cause: press Ctrl+C in `T-A`, run `Remove-Item Env:Team__Acp__Command`, then the `P-LAUNCH-PAID` launch command (not its first step).
 7. Reload the first tab, open Nova's card again, and click **Restart** if she is not already coming up.
 8. Watch the card's status line until it settles.
 9. Switch to the second Room tab WITHOUT reloading it and read the strip area.
-10. In `T-D` run: `Test-Path "src\Huddle.App\App_Data\work\Nova"`.
+10. In `T-D` run: `Test-Path "<data>\Teammates\Nova\work"` (the Work Dir, `TeammatePaths.cs:57-60`).
 
 **Pass if — all of these**
 
-- A **Restart** button is offered for a Persona that never started, not only for one that started and then failed.
+- A **Restart** button is offered for a Persona that never started, not only for one that started and then failed. (It is deliberately offered in every state except Starting, Online included: `TeammateCard.razor:182`.)
 - While the restart is in flight the button reads `Restarting…` and is disabled.
 - With the command still broken, the restart fails again and the card still shows **Offline** with the reason - correct behaviour, not a failure of this test.
 - Once the command is fixed, the card shows **Starting** and then **Online** with a green dot and NO reason line.
@@ -1030,7 +1046,7 @@ If Nova never reaches **Online** in step 7 even with a working `node`, this test
 **Fail if — any of these**
 
 - No **Restart** button is offered for a never-started Persona -> the one case the button exists for is unreachable, and the Human has no recovery short of restarting the app.
-- **Restart** is offered on a healthy **Online** teammate -> the control invites a needless session restart, which clears what the teammate remembers.
+- **Restart** is missing while the card reads **Offline** or **Degraded** -> the recovery path is hidden in a settled failure state. (Restart on an **Online** teammate is correct, not a failure; it is hidden only while **Starting**.)
 - The Room's strip only clears after a manual page reload -> health changes are not reaching open Rooms, so a fixed Agent still reads as broken.
 - The card jumps straight from Offline to Online with no **Starting** state -> a normally-launching Persona will flash red on every start, training the Human to ignore red dots.
 
@@ -1039,7 +1055,7 @@ If Nova never reaches **Online** in step 7 even with a working `node`, this test
 If clicking Restart shows an error line at the top of the card, record it verbatim - with a broken command a failure is correct. Confirm `Team__Acp__Command` is unset in `T-A`'s environment before judging the final Online result.
 
 > [!NOTE]
-> FREE: a restart creates a session but takes no Turn, so no tokens are spent.
+> COSTS MONEY only through the Chief of Staff's Greeting Turn at Haiku / low (see STREAMINGTURN-21): a restart creates a session but takes no Turn for Nova.
 
 ### STREAMINGTURN-23 — A stored Model the adapter does not advertise degrades the Persona but does not stop it
 
@@ -1055,15 +1071,15 @@ If clicking Restart shows an error line at the top of the card, record it verbat
 **Steps**
 
 1. Press Ctrl+C in `T-A` to stop the app - the database is open while it runs.
-2. In `T-D` run: `sqlite3 src/Huddle.App/App_Data/team.db "select * from persona_models;"` and write down the stored model id for Nova.
-3. Run: `sqlite3 src/Huddle.App/App_Data/team.db "update persona_models set model='claude-not-a-real-model' where persona_name='Nova';"`.
+2. In `T-D` run: `sqlite3 <data>\team.db "select * from persona_models;"` and write down the stored model id for Nova.
+3. Run: `sqlite3 <data>\team.db "update persona_models set model='claude-not-a-real-model' where persona_name='Nova';"`.
 4. Run the select again and confirm the stored id is now `claude-not-a-real-model`.
-5. In `T-A` run: `$env:Team__Acp__Enabled="true"; dotnet run --project src/Huddle.App`.
+5. In `T-A` run the `P-LAUNCH-PAID` launch command (not its first step).
 6. Reload the browser and open Nova's Room.
 7. Read the strip between the transcript and the composer, word for word.
 8. Click **Teammates**, click Nova's tile, and read the **Model** section and the status line.
 9. Optional (costs one very short Haiku turn): go back to Nova's Room, type `@Nova say ok` and press Enter, then wait up to 30 seconds for a Draft and a reply.
-10. Stop the app and restore the stored model: `sqlite3 src/Huddle.App/App_Data/team.db "update persona_models set model='<the id you wrote down>' where persona_name='Nova';"`, then restart the app.
+10. Stop the app and restore the stored model: `sqlite3 <data>\team.db "update persona_models set model='<the id you wrote down>' where persona_name='Nova';"`, then restart the app.
 
 **Pass if — all of these**
 
@@ -1099,7 +1115,7 @@ If `sqlite3` is not on PATH, do NOT improvise - record the test as inconclusive 
 
 1. Confirm on /teammates that Nova reads **Online** with a green dot and no reason line.
 2. Open Nova's Room and note its id as NOVAROOM.
-3. In `T-D` run: `Get-Content "src\Huddle.App\App_Data\rooms\<NOVAROOM>.jsonl" | Measure-Object -Line` and write down the count as BEFORE.
+3. In `T-D` run: `Get-Content "<data>\rooms\<NOVAROOM>.jsonl" | Measure-Object -Line` and write down the count as BEFORE.
 4. In the composer type exactly `@Nova count from 1 to 200, one number per line` and press Enter.
 5. Watch for the Draft row to appear and start streaming numbers.
 6. As soon as you can read a dozen or so numbers, click **Stop** on that Draft's row.
@@ -1149,7 +1165,7 @@ If no Draft ever appears, the Turn failed before streaming: read `T-A` for a war
 3. Immediately look at the area between the transcript and the composer.
 4. In devtools Elements, search for `member-health-alert` and record the count.
 5. Click **Teammates** and read Nova's tile: label and dot colour; open her card and check for a reason line.
-6. Confirm the card offers NO **Restart** button.
+6. Note that the card offers a **Restart** button; it is offered in every state except Starting, so its presence says nothing about health here (`TeammateCard.razor:182`).
 7. Return to the Room and repeat the prompt-and-Stop twice more, so three Turns in a row have been stopped.
 8. After the third Stop, re-check the Room strip, the /teammates tile and the card.
 9. Read `T-A` and count the `was stopped.` lines and any `failed to process a turn` warnings.
@@ -1159,7 +1175,6 @@ If no Draft ever appears, the Turn failed before streaming: read `T-A` for a war
 
 - After every Stop the Room shows NO `member-health-alert` strip, no red text and no budget prompt.
 - Nova's tile and card read **Online** with a green dot and no reason line throughout, including after three consecutive Stops.
-- No **Restart** button is offered, because nothing is wrong.
 - `T-A` shows exactly three `Persona 'Nova' turn in room <id> was stopped.` lines at Information and ZERO `failed to process a turn` warnings.
 - The follow-up message is answered normally.
 
@@ -1176,7 +1191,7 @@ If a strip appears whose reason is clearly about something else (a spent token B
 > [!NOTE]
 > COSTS MONEY: three partial Haiku turns at low effort plus one short confirmation turn. Stop each one quickly; total spend is a fraction of a cent.
 
-### STREAMINGTURN-26 — Stop means this Agent now: everything queued behind the live Turn is discarded too
+### STREAMINGTURN-26 — Stop ends this Room's live Turn and discards everything queued behind it in that Room
 
 **💰 Spends money** · about 10 min
 
@@ -1189,7 +1204,7 @@ If a strip appears whose reason is clearly about something else (a spent token B
 **Steps**
 
 1. Open Nova's Room and note its id as NOVAROOM.
-2. In `T-D` run the transcript line count and record it as BEFORE.
+2. In `T-D` run `Get-Content "<data>\rooms\<NOVAROOM>.jsonl" | Measure-Object -Line` and record the count as BEFORE.
 3. Type `@Nova count from 1 to 300, one number per line` and press Enter.
 4. Without waiting, type `@Nova what is 2 plus 2` and press Enter.
 5. Type `@Nova name three colours` and press Enter.
@@ -1220,46 +1235,47 @@ If the composer shows the budget pause prompt, the Room Budget intervened and th
 > [!NOTE]
 > COSTS MONEY: one partial Haiku turn only. The queued prompts are discarded WITHOUT being sent to the model, so they cost nothing - and that is exactly what this test proves.
 
-### STREAMINGTURN-27 — Stopping an Agent stops it in every Room, not just the one you clicked in
+### STREAMINGTURN-27 — Stopping an Agent in one Room does not touch its Turn in another Room
 
 **💰 Spends money** · about 12 min
 
-*Confirms the documented cross-Room reach of Stop so a tester does not file it, while catching the opposite real defect - a live Turn surviving because the stop was matched against a Room.*
+*Confirms the per-Room reach of Stop (ADR-0024: one session per Persona per Room; `RoomSessionPool.cs:195-210`), so a tester does not file the surviving Turn in the other Room, while catching the opposite defect - a Stop in one Room killing or discarding another Room's work.*
 
 **Before you start**
 
 - Nova **Online**, Model = Haiku, Effort = low.
-- Nova is a Member of two Rooms.
+- Nova is a Member of two Rooms (step 1 makes the second).
 
 **Steps**
 
 1. Click **New chat** in the sidebar, tick `Nova` and one other connected agent (e.g. a second Persona from `P-NEW-PERSONA`), and click **Start chat**. Call this ROOM B; Nova's own direct Room is ROOM A.
 2. Open ROOM B, type `@Nova count from 1 to 300, one number per line` and press Enter. Confirm a Draft starts streaming there.
-3. Switch to ROOM A and type `@Nova list ten countries` and press Enter.
+3. Switch to ROOM A and type `@Nova list ten countries` and press Enter. With `MaxConcurrentTurns` at its default of 1 this Turn waits behind the one in ROOM B.
 4. Switch back to ROOM B and click **Stop** on Nova's Draft.
 5. Watch ROOM B for 20 seconds.
 6. Switch to ROOM A and watch for 40 seconds.
 7. Read `T-A` and note which room id the `was stopped.` line names.
-8. In `T-D` check both rooms' .jsonl files for new agent lines.
+8. In `T-D` check both Rooms' `<data>\rooms\<id>.jsonl` files for new agent lines.
 
 **Pass if — all of these**
 
-- ROOM B's Draft ends immediately on the click.
-- ROOM A's queued Turn does NOT run - no Draft appears there either.
-- `T-A` prints one `Persona 'Nova' turn in room <id> was stopped.`, naming the Room you clicked in; that this is not necessarily the Room the Turn was running in is expected.
-- Neither room's transcript gains an agent reply.
+- ROOM B's Draft ends immediately on the click and no agent Message for it is posted there.
+- ROOM A's Turn DOES run: a Draft appears there and a reply to `list ten countries` lands in its transcript, because a Stop reaches only the Room it was clicked in (`RoomSession.cs:386-418`; `Chat.razor:672-677`).
+- `T-A` prints one `Persona 'Nova' turn in room <id> was stopped.`, and the id is ROOM B's, the Room of the Turn that was stopped (`RoomSession.cs:1112-1114` logs `item.RoomId`).
+- ROOM B's transcript gains no agent reply; ROOM A's gains exactly one.
 
 **Fail if — any of these**
 
-- The Turn in ROOM B survives the Stop because the Room ids did not match -> the stop envelope's roomId is being used as a selector rather than as a record of where the Human asked, so Stop will silently fail whenever the Turn is running in another Room.
-- An agent reply is persisted in either Room after the Stop -> cancelled work was completed and saved.
+- ROOM A's queued Turn never runs, or its Draft is discarded, after the Stop in ROOM B -> a Stop in one Room is reaching another Room's work, against ADR-0024.
+- The Turn in ROOM B survives the Stop -> the click never reached its Room's session, so Stop is decorative.
+- An agent reply is persisted in ROOM B after the Stop -> cancelled work was completed and saved.
 
 **Inconclusive if**
 
-If ROOM A's prompt never queued because Nova answered it before you clicked Stop, the test did not set up its condition - retry with a longer first prompt. If no second agent is offered in New chat, create one with `P-NEW-PERSONA`; the second agent only exists to make it a Group Room.
+If ROOM A's prompt never queued because Nova answered it before you clicked Stop (it would then have no wait behind ROOM B's Turn), the test did not set up its condition - retry with a longer first prompt in ROOM B. If no second agent is offered in New chat, create one with `P-NEW-PERSONA`; the second agent only exists to make it a Group Room.
 
 > [!NOTE]
-> COSTS MONEY: one partial Haiku turn. Stopping Nova in every Room at once is a documented limit - do NOT file 'Stop killed my other conversation'.
+> COSTS MONEY: one partial Haiku turn in ROOM B plus one short full turn in ROOM A. The old rule that Stop kills an Agent in every Room is gone (ADR-0024); `known-limits.md` and ADR-0008 still say it, and Phase 5 corrects them. Do NOT file ROOM A's reply as a defect.
 
 ### STREAMINGTURN-28 — A spent per-Persona token Budget reads as Degraded, and a Human Message clears it
 
@@ -1269,7 +1285,7 @@ If ROOM A's prompt never queued because Nova answered it before you clicked Stop
 
 **Before you start**
 
-- Nova exists with Model = Haiku, Effort = low.
+- Nova exists with Model = Haiku, Effort = low; Nova2 is created in step 1.
 
 > [!IMPORTANT]
 > This cap can only be reached by an **Agent-to-Agent** exchange, never by typing at it. Every
@@ -1282,31 +1298,22 @@ If ROOM A's prompt never queued because Nova answered it before you clicked Stop
 
 **Steps**
 
-1. Press Ctrl+C in `T-A`. Add a second Persona at `src\Huddle.App\App_Data\Teams\nova2.md`:
-```
----
-name: 'Nova2'
-title: 'Second test persona'
-alias: 'nova2'
----
-You are Nova2. Reply with one very short sentence that ends with @nova.
-```
-   and rewrite Nova's body in `src\Huddle.App\App_Data\Teams\Nova.md` to `You are Nova. Reply with one very short sentence that ends with @nova2.` Write both down so you can restore them in step 10.
-2. In the same window run: `$env:Team__Acp__Enabled="true"; $env:Team__Acp__TokenBudget="1"; $env:Team__AgentMessageBudget="4"; dotnet run --project src/Huddle.App`. The Room Budget bounds the ping-pong, and therefore the spend.
-3. Wait for BOTH Nova and Nova2 to reach **Online** on /teammates, and set Model = Haiku and Effort = low on Nova2.
+1. With the app running on `P-LAUNCH-PAID`, create a second Persona through the UI with `P-NEW-PERSONA`: **Name** `Nova2`, **Title** `Second test persona`, **Alias** `nova2`, **Persona body** `You are Nova2. Reply with one very short sentence that ends with @nova.`, **Model** the Haiku option, **Effort** `low`. Never write its file by hand: a `.md` at the `Teammates` root is rejected and a hand-written file has no Model row (F1). Then open Nova's card, choose **Edit**, and change her body to `You are Nova. Reply with one very short sentence that ends with @nova2.`, then **Save**. Write down her original body so you can restore it in step 10.
+2. Press Ctrl+C in `T-A`. In the same window run the `P-LAUNCH-PAID` launch block (not its first step) but with its two budget lines replaced by `$env:Team__AgentMessageBudget = '4'` and `$env:Team__Acp__TokenBudget = '1'`. The Room Budget bounds the ping-pong, and therefore the spend.
+3. Wait for BOTH Nova and Nova2 to reach **Online** on /teammates and confirm both cards show Model = Haiku and Effort = low.
 4. Click **New chat**, tick `Nova` and `Nova2` only, and click **Start chat**.
 5. Type exactly `Say hi @nova` and press Enter. Nova answers mentioning `@nova2`, then Nova2 answers mentioning `@nova`. That second reply is an AGENT Message, so it wakes Nova with no reset — and that is the Turn the cap refuses.
 6. Watch the Room for 15 seconds and note whether any third Draft appears.
 7. Read the strip between the transcript and the composer, word for word, and screenshot it before typing anything else.
 8. Check `T-A` for `Persona 'Nova' has spent its token budget of 1 and is taking no more turns until a human speaks to it.` at Warning.
 9. Type `@Nova one more time` and press Enter, then watch for a Draft and a reply.
-10. Press Ctrl+C in `T-A`. Restore Nova's original body, delete `src\Huddle.App\App_Data\Teams\nova2.md`, then restart without the variables: `Remove-Item Env:Team__Acp__TokenBudget, Env:Team__AgentMessageBudget; dotnet run --project src/Huddle.App`.
+10. Restore Nova's original body through her card's **Edit** and **Save**, and remove Nova2 with the **Remove** button on her card. Then press Ctrl+C in `T-A` and relaunch with the unmodified `P-LAUNCH-PAID` launch block, so both budget variables return to their lane values.
 
 **Pass if — all of these**
 
 - The Agent-to-Agent Turn produces NO Draft at all.
-- The Room shows the strip `Nova is Degraded: The per-Persona token Budget of 1 is spent; no more Turns until a Human speaks.`
-- `T-A` logs the quoted Warning line.
+- The Room shows the strip `Nova is Degraded: The per-Persona token Budget of 1 is spent; no more Turns until a Human speaks.` (`PersonaRunner.cs:265-269`).
+- `T-A` logs the quoted Warning line (`PersonaRunner.cs:261-264`).
 - The wording avoids vocabulary this product does not use - no 'rate limit', 'quota' or 'cap'.
 - The next Human Message resets the counter, so that message IS answered.
 
@@ -1319,7 +1326,7 @@ You are Nova2. Reply with one very short sentence that ends with @nova.
 
 **Inconclusive if**
 
-The window in which the strip is visible is short by design - if you missed it because you typed again too quickly, repeat from step 5 and screenshot before typing. If the first prompt produces no reply at all, the Budget was already spent by an earlier run; restart the app to reset the counter. If the exchange never reaches a second Agent reply, neither Persona is Mentioning the other - check both bodies and that both aliases resolve.
+The window in which the strip is visible is short by design - if you missed it because you typed again too quickly, repeat from step 5 and screenshot before typing. If the first prompt produces no reply at all, the Budget was already spent by an earlier run; restart the app to reset the counter. If the exchange never reaches a second Agent reply, neither Persona is Mentioning the other - check both bodies on their cards and that both aliases resolve.
 
 > [!NOTE]
 > COSTS MONEY: two short Haiku turns at low effort to set up the Agent-to-Agent exchange, plus one more to prove the reset - a few dozen tokens.
@@ -1387,7 +1394,7 @@ If pulling the network also kills the browser's connection to the app, do not ju
 **Steps**
 
 1. In `T-D` run `O-ADAPTERS-LIST` and note the process that started when Nova came online. (Or open Task Manager's **Details** tab and sort by **Name**.)
-2. Open Nova's Room and note its id as NOVAROOM. In `T-D` record the transcript line count as BEFORE.
+2. Open Nova's Room and note its id as NOVAROOM. In `T-D` run `Get-Content "<data>\rooms\<NOVAROOM>.jsonl" | Measure-Object -Line` and record the count as BEFORE.
 3. Type `@Nova count from 1 to 300, one number per line` and press Enter.
 4. As soon as the Draft is visibly streaming, end that `node` process (Task Manager **End task**, or `Stop-Process -Id <id> -Force`).
 5. Switch back to the browser immediately and watch the Room for 30 seconds WITHOUT reloading.
@@ -1398,12 +1405,12 @@ If pulling the network also kills the browser's connection to the app, do not ju
 10. Return to the Room, type `@Nova are you there` and press Enter, and watch for 30 seconds.
 11. Open Nova's card on /teammates and click **Restart**; wait for **Online**.
 12. Type `@Nova say ok` and confirm she answers.
-13. In `T-D` re-check the transcript line count against BEFORE plus your own prompt lines.
+13. In `T-D` re-run the line count and compare it with BEFORE plus your own prompt lines (three: steps 3, 10 and 12).
 
 **Pass if — all of these**
 
 - The Draft row DISAPPEARS rather than freezing, within a few seconds of the kill.
-- An alert strip appears in the Room. Any ONE of these reasons is correct: `Nova is Offline: The Adapter process disconnected.`, `Nova is Offline: Its event reader ended unexpectedly: <message>`, or `Nova is Degraded: A Turn in Room '<room name>' failed — <message>`.
+- An alert strip appears in the Room. Any ONE of these reasons is correct (`RoomSession.cs:737,1123`; `PersonaRunner.cs:820-825,302`): `Nova is Offline: The Adapter process disconnected.`, `Nova is Offline: Its event reader ended unexpectedly.` (with `: <message>` appended when an exception ended it), `Nova is Offline: The pipe 'team' broke: <message>`, or `Nova is Degraded: A Turn in Room '<room name>' failed — <message>`. Match the `Nova is Offline:` or `Nova is Degraded:` prefix, not the whole sentence.
 - Nova's tile is no longer green/Online.
 - `T-A` logs at Warning `Persona 'Nova' agent event stream ended unexpectedly.` and/or `Persona 'Nova' failed to process a turn in room <id>.`
 - The transcript gains no agent line for the killed Turn.
@@ -1422,7 +1429,7 @@ If pulling the network also kills the browser's connection to the app, do not ju
 If you cannot identify which `node.exe` belongs to Nova, do not kill one at random: close other Node applications, restart the app so only Nova's adapter is running, and try again. If the Draft had already finished before you killed the process, retry with a longer prompt.
 
 > [!NOTE]
-> COSTS MONEY: one partial Haiku turn plus one short confirmation turn. WHICH of the three reasons lands is a race between the Turn's own catch and the event reader's finally - all three are correct and none is a defect. Only a frozen Draft or a still-green tile is.
+> COSTS MONEY: one partial Haiku turn plus one short confirmation turn. WHICH of the reasons lands is a race between the Turn's own catch and the event reader's finally - all of them are correct and none is a defect. Only a frozen Draft or a still-green tile is.
 
 ---
 

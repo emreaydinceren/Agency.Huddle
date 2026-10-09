@@ -2,7 +2,7 @@
 
 Prove that the named pipe `\\.\pipe\team` — the one door every Agent enters through — behaves as documented end to end: a client connects and says hello, the server mints an Agent and a Room that appear in the browser with no refresh, every posted Message fans out to the right Members with the right per-recipient labels, and every malformed, unauthorised or over-budget request is refused in the one way the client can act on. Almost nothing on this wire has dedicated UI, so most failures here are silent in the browser and visible only as a single JSON line in the client's own console or a single line in the server log. These tests deliberately put those two consoles beside the browser and treat them as the oracle. Every test in this area is FREE: `tools/echo-bot.ps1` is an ordinary pipe client speaking exactly the envelopes a real Persona speaks, so no test here needs a model turn.
 
-**36 tests** · 36 free, none paid · about 3.9 hours.
+**33 tests** · 33 free, none paid · about 3.7 hours.
 
 Read [the manual test script](../manual-tests.md) first — the cost guard, the Model and Effort
 convention, and the rules for concluding a result — then [Common procedures](common.md), which
@@ -15,19 +15,19 @@ Run [`P-BUILD`](common.md#p-build) then the lane named below from
 oracles `O-LOG` / `O-ADAPTERS` / `O-TRANSCRIPT` / `O-DB` / `O-WIRE`, the four resets,
 `P-NEW-PERSONA`, `P-ECHO-BOT` and the standing conventions. This area adds:
 
-1. Lane is `P-LAUNCH-FREE`. ACP is the only thing in this whole area that could spend money, and nothing here needs a real model turn.
-2. `T-A` runs the app. Extra terminals are opened by individual tests as `T-C`, `T-D` and so on, each at `E:\Repos\Huddle`.
-3. Arrange the browser at `http://localhost:5100` and `T-A` so both are visible at once. Confirm the sidebar shows, top to bottom: **New chat**, a list of Rooms, **Teammates**, **Settings**. If it does not, STOP and report the app as not starting; every test below is INCONCLUSIVE.
-4. No test in this area configures a Persona and ACP stays off throughout, so nothing here spends money.
-5. A fresh install has NO in-process Agents: the sidebar starts with no Rooms, and a bot's own Room appears only when it connects. Tests that need an extra in-process Agent in a Room use Ada or Bo from [`P-LAUNCH-UAT`](common.md#p-launch-uat), and say so in **Before you start**. Do not run `P-ECHO-BOT` under the name `Ada` or `Bo` in such a test: an external client under an in-process Agent's name collides with it.
+1. Lane is `P-LAUNCH-FREE` (ACP off, data in `<repo>\src\Huddle.App\App_Data`), except PIPEEXTERNAL-03, -18, -19, -20, -21 and -31, which need an in-process Teammate and say in **Before you start** that they use [`P-LAUNCH-UAT`](common.md#p-launch-uat) instead (ACP on with the free mock adapter, data in `C:\seeds\huddle\uat\data`). Nothing in this area needs a real model turn, so nothing spends money. A Room or bot created under one lane does not exist under the other: switching lane means a different data folder.
+2. `T-A` runs the app. Extra terminals are opened by individual tests as `T-C`, `T-D` and so on, each at `<repo>`.
+3. Arrange the browser at `http://localhost:5100` and `T-A` so both are visible at once. Confirm the sidebar shows, top to bottom: the **Chats** group (the Rooms, then **New chat** below them), **Teams**, **Teammates**, **Tasks**, **Library**, **Archived** and the **Settings** icon. If it does not, STOP and report the app as not starting; every test below is INCONCLUSIVE.
+4. No test in this area configures a Persona. Under `P-LAUNCH-FREE` ACP stays off, so nothing here spends money; the six UAT tests use the free mock adapter.
+5. A fresh install has no pipe Agents: the sidebar starts with no Rooms of bots, and a bot's own Room appears only when it connects. The built-in Chief of Staff is seeded at every start and is an in-process Agent whatever `Acp:Enabled` is; ignore it wherever these tests read the New chat and Add teammate lists. Tests that need an extra in-process Agent in a Room use Ada or Bo from `P-LAUNCH-UAT`, and say so in **Before you start**. Do not run `P-ECHO-BOT` under the name `Ada` or `Bo` in such a test: an external client under an in-process Agent's name collides with it.
 6. **RAW-CLIENT** (used by PIPEEXTERNAL-28 through -32): a plain PowerShell pipe client, distinct from `P-ECHO-BOT`. In a new terminal, line by line:
 
-``powershell
+```powershell
 $c = [System.IO.Pipes.NamedPipeClientStream]::new('.', 'team', 'InOut')
 $c.Connect(5000)
 $w = [System.IO.StreamWriter]::new($c); $w.AutoFlush = $true
 $r = [System.IO.StreamReader]::new($c)
-``
+```
 
 Send one envelope with `$w.WriteLine('<json>')`, read one line back with `$r.ReadLine()`, close with `$c.Dispose()`. Single-quote the JSON so PowerShell leaves the double quotes alone.
 
@@ -47,8 +47,8 @@ Send one envelope with `$w.WriteLine('<json>')`, read one line back with `$r.Rea
 
 **Steps**
 
-1. Click **New chat** in the sidebar.
-2. Confirm the panel lists `Ada` and `Bo`, each as a checkbox with a small coloured dot and a name.
+1. Click **New chat** under the Rooms in the sidebar.
+2. Confirm the panel lists `Ada` and `Bo`, each as a checkbox with a small coloured dot, an avatar and a name.
 3. Tick the checkbox next to `Ada`.
 4. Tick the checkbox next to `Bo`.
 5. Click **Start chat**.
@@ -63,13 +63,12 @@ Send one envelope with `$w.WriteLine('<json>')`, read one line back with `$r.Rea
 - The browser navigates to a new Room whose heading reads exactly `Ada, Bo` and whose members line reads exactly `You, Ada, Bo`.
 - `T-A` logs `Created room '<id>' (Ada, Bo) with 3 members.`
 - After `hi @Ada`, exactly ONE new Message appears, from `Ada`, a long plain-text reply that contains `hi`. `Bo` posts nothing.
-- After the bare `hi`, NOTHING replies within 10 seconds.
+- After the bare `hi`, NOTHING replies within 10 seconds. An info strip reading `No teammate was @-mentioned — name one to ask for a reply.` may appear above the message box (`Chat.razor:100-101`); it is expected here, not a fail.
 
 **Fail if — any of these**
 
 - The Room heading is something other than the comma-joined Agent names -> the Room name is not being rebuilt from its Members.
 - Both `Ada` and `Bo` reply to `hi @Ada` -> the per-recipient `mentioned` label is wrong, or the Reply Gate is not applying it; cross-check with PIPEEXTERNAL-22.
-- Ticking a single agent and clicking Start chat creates a duplicate two-member Room instead of opening that agent's existing Room -> the single-agent path is no longer routed through the reuse check, and every New chat will mint a Room.
 - The **Start chat** button is clickable with nothing ticked -> the guard on an empty selection is gone.
 
 **Inconclusive if**
@@ -93,16 +92,16 @@ If a Room named `Ada, Bo` already exists from an earlier run, a NEW second Room 
 **Steps**
 
 1. Note the current contents of the sidebar Room list.
-2. Open `T-C` at `E:\Repos\Huddle` and run `pwsh tools/echo-bot.ps1 -Name mybot`.
+2. Open `T-C` at `<repo>` and run `pwsh tools/echo-bot.ps1 -Name mybot`.
 3. Do NOT touch the browser. Watch the sidebar for 5 seconds.
 4. Read `T-A`'s newest log line.
 5. Click the new sidebar entry `mybot`.
 6. Read the page heading and the line beneath it.
-7. Open `src\Huddle.App\App_Data\` and confirm `team.db` exists (its timestamp should be seconds old).
+7. Open `<data>\` and confirm `team.db` exists (its timestamp should be seconds old).
 
 **Pass if — all of these**
 
-- A new entry reading exactly `mybot` appears at the BOTTOM of the sidebar Room list without the page being refreshed or clicked.
+- A new entry reading exactly `mybot` appears at the BOTTOM of the sidebar Room list (just above **New chat**) without the page being refreshed or clicked.
 - `T-C` prints `Connecting to pipe '\\.\pipe\team' as agent 'mybot'...`, then `Sent hello. Listening for messages (Ctrl+C to exit)...`, then one long JSON line beginning `{"type":"welcome",`.
 - `T-A` logs `Created direct room '<id>' for agent 'mybot'.`
 - Clicking `mybot` opens a Room whose heading reads `mybot` and whose members line reads `You, mybot`.
@@ -139,7 +138,7 @@ If `T-C` throws `Exception calling "Connect" with "1" argument(s): "The operatio
 3. Confirm the line ends with the characters `,"version":3}`.
 4. Find the `agentId` value and count its characters.
 5. Find the `name` value.
-6. Find the `rooms` array and read its single entry: its `id`, its `name`, and its `members` array.
+6. Find the `rooms` array and read its single entry: its `id`, its `name`, its `members` array and its `isEmpty` flag.
 7. Read each entry of `members` — each is an object with `id`, `name` and `kind`.
 
 **Pass if — all of these**
@@ -147,7 +146,7 @@ If `T-C` throws `Exception calling "Connect" with "1" argument(s): "The operatio
 - The welcome line starts `{"type":"welcome",` and ends `,"version":3}`.
 - `agentId` is exactly 32 lowercase hexadecimal characters.
 - `name` is exactly `mybot` — the Name passed to `-Name`.
-- `rooms` holds exactly one entry, whose `name` is `mybot` and whose `id` matches the room id in the browser address bar when the `mybot` Room is open.
+- `rooms` holds exactly one entry, whose `name` is `mybot`, whose `id` matches the room id in the browser address bar when the `mybot` Room is open, and which carries `"isEmpty"` (`true` while the Room has no Messages, `false` once it has any; `Messages.cs:10-16`, `AgentConnection.cs:226-227`).
 - That room entry's `members` array holds exactly two objects: `{"id":"human","name":"You","kind":"human"}` and one whose `id` equals the `agentId` above, whose `name` is `mybot` and whose `kind` is `agent`.
 
 **Fail if — any of these**
@@ -162,7 +161,7 @@ If `T-C` throws `Exception calling "Connect" with "1" argument(s): "The operatio
 If `T-C`'s scrollback has been lost, do not reconstruct the line from memory: Ctrl+C the bot, re-run `pwsh tools/echo-bot.ps1 -Name mybot`, and read the fresh welcome (reconnecting is safe and is itself tested by PIPEEXTERNAL-09).
 
 > [!NOTE]
-> `docs/Huddle.EngineeringGuide.md` shows a sample welcome ending `"version":2`. That doc sample is stale; the app is right at 3. Do not file the doc's number as the expected value.
+> The Engineering Guide's sample welcome now shows `"version":3`. Only `README.md` still shows `"version":2`; that sample is stale and the app is right at 3. Do not file the README's number as the expected value.
 
 ### PIPEEXTERNAL-07 — An Agent never receives its own Message, and nothing loops
 
@@ -179,7 +178,7 @@ If `T-C`'s scrollback has been lost, do not reconstruct the line from memory: Ct
 1. Look at `T-C`'s console immediately after that reply.
 2. Count how many lines beginning `{"type":"messagePosted"` `T-C` has printed since you pressed Enter.
 3. Watch the browser transcript and `T-C` for a full 30 seconds without typing anything.
-4. Re-open the Room's `.jsonl` file in `src\Huddle.App\App_Data\rooms\` and count its lines.
+4. Re-open the Room's `.jsonl` file in `<data>\rooms\` and count its lines.
 5. Scan `T-A` for any line containing `refused a message`.
 
 **Pass if — all of these**
@@ -258,7 +257,7 @@ If any run times out on connect rather than returning a line, that run says noth
 5. Read the `agentId` in the NEW welcome line and compare it to the one you wrote down.
 6. Look at the sidebar without refreshing the page.
 7. Click the `mybot` Room and read the transcript.
-8. Open `src\Huddle.App\App_Data\rooms\` and count how many `.jsonl` files contain this conversation.
+8. Open `<data>\rooms\` and count how many `.jsonl` files contain this conversation.
 
 **Pass if — all of these**
 
@@ -335,7 +334,7 @@ If `mybot` was never registered (no such sidebar entry), this test has no baseli
 2. Press Ctrl+C in `T-C`.
 3. Do not touch the browser. Watch it for 10 seconds.
 4. Compare the page with your screenshot or notes.
-5. Press F12, open the Elements/Inspector tab, press Ctrl+F in the inspector and search the page HTML for `role="alert"`.
+5. Press F12, open the Elements/Inspector tab, press Ctrl+F in the inspector and search the page HTML for `role="alert"`. The Room page should contain none.
 6. Read `T-A`'s newest log lines.
 7. Click into the message box, type `hi @mybot` and press Enter.
 8. Wait 15 seconds and watch both the Room and any error strip above the message box.
@@ -345,16 +344,16 @@ If `mybot` was never registered (no such sidebar entry), this test has no baseli
 - The sidebar still lists `mybot`.
 - The page heading still reads `mybot` and the members line still reads `You, mybot`. Neither changed.
 - NO banner, alert strip or badge appears anywhere on the Room page. The inspector search finds no `role="alert"` element in the rendered page.
-- `T-A` logs `Agent connection <id> ended.` at Warning level (usually with an IOException beneath it).
+- `T-A` logs `Agent connection <id> for agent mybot disconnected.` at Information level (`AgentConnection.cs:146`). A clean Ctrl+C is read as end-of-stream, so the Warning line `Agent connection <id> ended.` (logged only on an `IOException`, `AgentConnection.cs:118-121`) is NOT expected and its absence is not a fail.
 - After Enter, your Message posts normally and appears in the transcript, and nothing ever answers. No error is shown to you.
 - The Message is present in the Room's `.jsonl` file with no agent line after it.
 
 **Fail if — any of these**
 
-- A permanent `role="alert"` strip appears naming `mybot` as Offline -> an always-on alert is exactly the failure that strip exists to prevent; a plain pipe client has no reported failure reason, so it must produce no banner at all.
+- A permanent `role="alert"` strip (the amber warning strip, class `member-health-alert`, `Chat.razor:76`) appears naming `mybot` as Offline -> an always-on alert is exactly the failure that strip exists to prevent; a plain pipe client has no reported failure reason, so it must produce no banner at all (`Chat.razor:543-553`).
 - The Room vanishes from the sidebar when the client disconnects -> presence is being confused with existence; Rooms and Agents are persistent and presence is in-memory only.
 - The Message fails to post, or an error strip appears above the message box -> posting is being gated on a recipient being online, which it must not be.
-- `T-A` logs nothing at all on disconnect -> the connection teardown path is not running, and the Agent may still be registered as online; cross-check with PIPEEXTERNAL-12.
+- `T-A` logs nothing at all on disconnect (with the log level at Information or lower) -> the connection teardown path is not running, and the Agent may still be registered as online; cross-check with PIPEEXTERNAL-12.
 
 **Inconclusive if**
 
@@ -365,7 +364,7 @@ If a banner DOES appear and the name it lists is a Persona (an entry that also a
 
 ### PIPEEXTERNAL-12 — Where a disconnect IS visible: the agent-dot in New chat and Add teammate
 
-**Free** · about 6 min
+**Free** · about 7 min
 
 *Proves the one surface that does show liveness reads it live, and pins the known staleness so a tester does not file it as a presence bug.*
 
@@ -373,6 +372,7 @@ If a banner DOES appear and the name it lists is a Persona (an entry that also a
 
 - The app is running.
 - `mybot` exists in the directory.
+- A second bot `otherbot` is connected in `T-D` (`pwsh tools/echo-bot.ps1 -Name otherbot`) so that its own Room is a Room `mybot` is NOT a Member of. The Add teammate panel lists only non-Members, so `mybot` can never be read from its own Room.
 
 **Steps**
 
@@ -383,22 +383,22 @@ If a banner DOES appear and the name it lists is a Persona (an entry that also a
 5. Click **New chat** again to close the panel.
 6. Press Ctrl+C in `T-C`.
 7. Click **New chat** again to reopen the panel and read `mybot`'s dot and tooltip again.
-8. Open any Room, click **Add teammate**, leave the Team filter on `All teams`, and read the dot beside `mybot` in that panel.
-9. Now test the known staleness: restart the bot in `T-C`, open the **New chat** panel and LEAVE IT OPEN, then press Ctrl+C in `T-C` and watch the open panel for 10 seconds.
+8. Open the `otherbot` Room, click **Add teammate**, leave the Team filter on `All teams`, and read the dot beside `mybot` in that panel (it is offline now). Close the panel, restart `mybot` in `T-C`, reopen the panel and read the dot again.
+9. Now test the known staleness: with `mybot` connected, open the **New chat** panel and LEAVE IT OPEN, then press Ctrl+C in `T-C` and watch the open panel for 10 seconds. Press Ctrl+C in `T-D` when done.
 
 **Pass if — all of these**
 
 - While the bot is connected, `mybot`'s dot in the New chat panel is green and its `title` / tooltip reads `online` (the element's class is `agent-dot online`).
-- After Ctrl+C and REOPENING the panel, `mybot`'s dot is grey and its `title` reads `offline` (class `agent-dot offline`).
-- The **Add teammate** panel shows the same dot and the same tooltip for `mybot`.
+- After Ctrl+C and REOPENING the panel, `mybot`'s dot is red (`--mud-palette-error`, `app.css:71-73`) and its `title` reads `offline` (class `agent-dot offline`).
+- The **Add teammate** panel in the `otherbot` Room shows the same dot and the same tooltip for `mybot`: red `offline` while `mybot` is stopped, green `online` once it is restarted.
 - The dot's colour and its tooltip text agree with each other in every case.
 
 **Fail if — any of these**
 
 - The dot stays green after the panel is closed and reopened -> liveness is not being read live; the panel is serving a cached or persisted presence value, which will show dead agents as available forever.
-- Every dot is grey while bots are demonstrably connected (their consoles are still running) -> the presence registry is not being consulted, or connections are not being registered at all.
+- Every dot is red while bots are demonstrably connected (their consoles are still running) -> the presence registry is not being consulted, or connections are not being registered at all.
 - The panel lists no agents at all when agents have connected -> the directory read is broken; nothing can then be invited or chatted with.
-- The tooltip says `online` on a grey dot, or `offline` on a green one -> colour and label are computed from different sources.
+- The tooltip says `online` on a red dot, or `offline` on a green one -> colour and label are computed from different sources.
 
 **Inconclusive if**
 
@@ -429,9 +429,9 @@ In step 9, a dot that does NOT repaint while the panel sits open is EXPECTED and
 
 - The Message posts normally while the Agent is offline and sits in the transcript unanswered.
 - On reconnect, `T-C` prints the welcome line and then NOTHING for 20 seconds.
-- The welcome line does NOT contain the Message text — it carries only `agentId`, `name` and `rooms` with their `members`.
+- The welcome line does NOT contain the Message text — apart from `type` and `version` it carries only `agentId`, `name` and `rooms`, and each room entry only `id`, `name`, `members` and `isEmpty` (here `false`, because the Room now holds Messages).
 - The browser transcript still shows your Message, still unanswered, and gains nothing on reconnect.
-- The Room's `.jsonl` file holds the human line with no agent line after it.
+- The Room's `.jsonl` file (`<data>\rooms\<roomId>.jsonl`) holds the human line with no agent line after it.
 
 **Fail if — any of these**
 
@@ -472,8 +472,8 @@ If the bot DOES reply immediately after reconnecting, check first whether you ty
 
 **Pass if — all of these**
 
-- Step 2 prints `{"type":"error","code":"invalidName","message":"'bad name!' is not a valid agent name.","version":3}` and then `Server closed the connection.`, and the script exits.
-- Each of steps 4-8 prints an `invalidName` error naming the exact Name you passed, then `Server closed the connection.`
+- Step 2 prints `{"type":"error","code":"invalidName","message":"\u0027bad name!\u0027 is not a valid agent name.","version":3}` (the wire escapes each apostrophe as `\u0027`, `ProtocolJson.cs:37-48`; the bot prints the raw line) and then `Server closed the connection.`, and the script exits.
+- Each of steps 4-8 prints an `invalidName` error naming the exact Name you passed, between two `\u0027` escapes, then `Server closed the connection.`
 - The sidebar gains NOTHING at any point, before or after the F5 refresh.
 - `team.db` gains no row for any of these Names — confirmed by clicking **New chat** and seeing none of them listed.
 
@@ -508,8 +508,8 @@ If PowerShell itself rejects the argument before connecting (a parameter-binding
 
 **Pass if — all of these**
 
-- Step 1 prints `{"type":"error","code":"nameReserved","message":"'You' is reserved.","version":3}` and then `Server closed the connection.`
-- Step 3 prints a `nameReserved` error too (the message quotes `'you'`, the spelling you passed).
+- Step 1 prints `{"type":"error","code":"nameReserved","message":"\u0027You\u0027 is reserved.","version":3}` (apostrophes are escaped as `\u0027` on the wire, `ProtocolJson.cs:37-48`) and then `Server closed the connection.`
+- Step 3 prints a `nameReserved` error too (the message quotes `you` between the same `\u0027` escapes, the spelling you passed).
 - No Room appears in the sidebar for either attempt.
 - The New chat panel does not list `You` or `you` as an agent.
 
@@ -543,15 +543,15 @@ If `Team__HumanName` is set to something other than `You` in this terminal, the 
 5. Type `hi @my bot` in the message box and press Enter.
 6. Read the line `T-C` prints and the rows the browser gains.
 7. Type `hi @my` (just `@my`, nothing after it) and press Enter.
-8. Read `T-C`'s new line and watch the browser for 10 seconds.
+8. Read `T-C`'s new line and judge only its `mentioned` and `mentions` fields. Ignore whether the bot answers: the Room has two Members, and the echo bot replies in any Room of two or fewer Members whether or not it is mentioned (`tools/echo-bot.ps1:78`).
 
 **Pass if — all of these**
 
 - The connection is accepted and the welcome line reads `"name":"my bot"`.
 - A sidebar entry reading exactly `my bot` appears with no refresh.
 - The Room heading reads `my bot` and the members line reads `You, my bot`.
-- After `hi @my bot`, `T-C`'s delivered line contains `"mentioned":true` and a `mentions` array holding one member whose `name` is `my bot`, and the bot replies `my bot: hi my bot` in bold.
-- After `hi @my`, `T-C`'s delivered line contains `"mentioned":false` and its `mentions` array is empty, and NOTHING replies within 10 seconds.
+- After `hi @my bot`, `T-C`'s delivered line contains `"mentioned":true` and a `mentions` array holding one member whose `name` is `my bot`, and the bot replies with `my bot:` in bold followed by `hi my bot` (the bot strips every `@` before quoting, `tools/echo-bot.ps1:81-84`).
+- After `hi @my`, `T-C`'s delivered line contains `"mentioned":false` and its `mentions` array is empty. A reply to `hi @my` is expected and is not a fail (two-Member Room).
 
 **Fail if — any of these**
 
@@ -580,7 +580,7 @@ If the composer strips or collapses the space before sending (check the human ro
 2. Wait up to 10 seconds and read what PowerShell prints.
 3. Look at the browser sidebar and at `T-A`.
 4. Press Ctrl+C in `T-A` to stop the app.
-5. In `T-A` run `$env:Team__PipeName = 'huddle'`, then `dotnet run --project src/Huddle.App --urls http://localhost:5100`.
+5. In `T-A` run `$env:Team__PipeName = 'huddle'`, then `dotnet run --project src/Huddle.App --urls http://localhost:5100` (`Team__Acp__Enabled` is still `false` in this window from `P-LAUNCH-FREE`; if you opened a new window, set it first).
 6. In `T-C`, run `pwsh tools/echo-bot.ps1 -Name pipecheck -Pipe team` and read what it prints.
 7. In `T-C`, run `pwsh tools/echo-bot.ps1 -Name pipecheck -Pipe huddle` and read what it prints.
 8. Look at the browser sidebar (refresh with F5 if needed).
@@ -596,7 +596,7 @@ If the composer strips or collapses the space before sending (check the human ro
 
 **Fail if — any of these**
 
-- The client connects to a pipe the app is not serving -> something else is listening on that name; check for a stray app instance with `Get-Process dotnet` before filing anything (see PIPEEXTERNAL-36).
+- The client connects to a pipe the app is not serving -> something else is listening on that name; check for a stray app instance with `Get-Process Huddle.App` (the apphost that `dotnet run` launches; `dotnet` processes are only the CLI and build servers) before filing anything (see PIPEEXTERNAL-36).
 - The client hangs forever instead of timing out after five seconds -> the client-side connect timeout is gone, and a misconfigured agent will sit silent with no diagnosis.
 - Changing `Team__PipeName` has no effect and `-Pipe team` still works -> the pipe name is not being read from configuration and is effectively hardcoded.
 
@@ -703,7 +703,8 @@ If `/invite @mybot` returns a red error strip reading `Unknown agent @mybot`, ch
 
 **Before you start**
 
-- PIPEEXTERNAL-18 has been run, so `mybot`'s original Room is now the three-member `mybot, Ada` (the app was launched with `P-LAUNCH-UAT`).
+- Lane: [`P-LAUNCH-UAT`](common.md#p-launch-uat) (ACP on with the free mock adapter, data in `C:\seeds\huddle\uat\data`), the same launch as PIPEEXTERNAL-18. Do not switch lane between -18 and this test: a Room made under the other lane's data folder does not exist here.
+- PIPEEXTERNAL-18 has been run, so `mybot`'s original Room is now the three-member `mybot, Ada`.
 - `mybot` is connected in `T-C`.
 
 **Steps**
@@ -748,7 +749,8 @@ If the sidebar shows only one `mybot`-prefixed entry, check whether PIPEEXTERNAL
 
 **Before you start**
 
-- A Room contains both `mybot` (the external bot, connected in `T-C`) and the in-process Teammate `Ada` (app launched with `P-LAUNCH-UAT`) — the `mybot, Ada` Room from PIPEEXTERNAL-18 is exactly this.
+- Lane: [`P-LAUNCH-UAT`](common.md#p-launch-uat) (ACP on with the free mock adapter, data in `C:\seeds\huddle\uat\data`), not the free lane.
+- A Room contains both `mybot` (the external bot, connected in `T-C`) and the in-process Teammate `Ada` (Online under that lane) — the `mybot, Ada` Room from PIPEEXTERNAL-18 is exactly this.
 
 **Steps**
 
@@ -784,7 +786,7 @@ If the browser showed NO streaming row for `Ada`, no deltas were produced at all
 
 **Before you start**
 
-- Three terminals are free (`T-A` runs the app; `T-C` and 3 run bots).
+- Three terminals are open (`T-A` runs the app; `T-C` and `T-D` run bots).
 - No sidebar entries read `bot1` or `bot2`.
 
 **Steps**
@@ -859,7 +861,7 @@ If either bot's console shows no line at all, confirm both are still running and
 If the Room reaches the pause prompt during this test, stop both bots immediately, note the transcript size, and record a FAIL with the storm evidence rather than an inconclusive. If neither bot replies at all, the setup did not hold (both must be Members and both mentioned) and the result is INCONCLUSIVE.
 
 > [!NOTE]
-> Press Ctrl+C in `T-C` and 3 when done unless the next test says otherwise.
+> Press Ctrl+C in `T-C` and `T-D` when done unless the next test says otherwise.
 
 ### PIPEEXTERNAL-24 — A second connection under the same name displaces the first, which is told by having its pipe closed
 
@@ -869,7 +871,7 @@ If the Room reaches the pause prompt during this test, stop both bots immediatel
 
 **Before you start**
 
-- `T-C` and 3 are free.
+- `T-C` and `T-D` are open and idle.
 - Use the Name `dup1`.
 
 **Steps**
@@ -912,12 +914,12 @@ If `T-C` exits without printing anything, scroll its console back one line — t
 
 **Before you start**
 
-- Three free terminals (`T-C`, 3 and 4).
+- Three idle terminals (`T-C`, `T-D` and a third bot terminal opened the same way).
 - No sidebar entries read `b1`, `b2` or `b3`.
 
 **Steps**
 
-1. Open `T-C`, 3 and 4 at `E:\Repos\Huddle` and type — but do not run — `pwsh tools/echo-bot.ps1 -Name b1`, `-Name b2` and `-Name b3` respectively.
+1. Open `T-C`, `T-D` and the third bot terminal at `<repo>` and type — but do not run — `pwsh tools/echo-bot.ps1 -Name b1`, `-Name b2` and `-Name b3` respectively.
 2. Press Enter in all three terminals as close to simultaneously as you can manage.
 3. Read the first line each terminal prints after `Sent hello...`.
 4. Look at the browser sidebar without refreshing.
@@ -951,7 +953,7 @@ Pressing Enter by hand is not truly simultaneous. If all three rounds pass, that
 
 **Before you start**
 
-- `T-C` and 3 are free.
+- `T-C` and `T-D` are open and idle.
 - You are willing to restart the app with a changed environment variable and restart it again afterwards.
 
 **Steps**
@@ -970,10 +972,10 @@ Pressing Enter by hand is not truly simultaneous. If all three rounds pass, that
 
 **Pass if — all of these**
 
-- The line delivered to both bots for YOUR Message ends `...,"agentMessagesSinceHuman":0,"budget":1}` — used 0, granted 1.
+- The line delivered to both bots for YOUR Message ends `...,"agentMessagesSinceHuman":0,"budget":1,"version":3}` — used 0, granted 1 (`version` is inherited and serialised last).
 - Exactly ONE of the two bots' replies lands and appears in the browser.
 - The OTHER bot's console prints `{"type":"error","code":"budgetExhausted","message":"This room has reached its budget of 1 agent messages since a human last spoke. Do not retry: further posts to this room will be refused until a human speaks here.",...}`.
-- The line delivered to the second bot for the FIRST bot's reply ends `...,"agentMessagesSinceHuman":1,"budget":1}` — used 1, granted 1.
+- The line delivered to the second bot for the FIRST bot's reply ends `...,"agentMessagesSinceHuman":1,"budget":1,"version":3}` — used 1, granted 1.
 - `T-A` logs a Warning: `Room '<id>' refused a message from '<name>': its budget of 1 agent messages since a human last spoke is spent.`
 - The browser shows, BETWEEN the transcript and the message box, a block reading `Agents have sent 1 replies since you last spoke, and are paused.` with two buttons: **Continue** and **Leave paused**.
 - The refused reply text is ABSENT from the `.jsonl` transcript.
@@ -1002,7 +1004,7 @@ Which of the two bots wins the race is not deterministic — either one landing 
 **Before you start**
 
 - PIPEEXTERNAL-26 has just been run and the Room is showing the pause prompt.
-- Both `bud1` and `bud2` are still connected in `T-C` and 3.
+- Both `bud1` and `bud2` are still connected in `T-C` and `T-D`.
 
 **Steps**
 
@@ -1022,7 +1024,7 @@ Which of the two bots wins the race is not deterministic — either one landing 
 
 - The **Continue** button reads `Continuing…` while the grant is in flight and is disabled during that time.
 - The previously refused bot's terminal prints a `messagePosted` line again for a Message it has already seen — same `message.id`, same `message.text`.
-- That line now ends `...,"budget":2}` — the granted figure went up.
+- That line now ends `...,"budget":2,"version":3}` — the granted figure went up.
 - The browser transcript row count is UNCHANGED: no Message is rendered a second time.
 - `T-A` logs `Room '<id>' was extended to 2 agent messages.`
 - The pause block is replaced by the plain note `1 of 2 agent replies since you last spoke.`
@@ -1037,7 +1039,7 @@ Which of the two bots wins the race is not deterministic — either one landing 
 
 **Inconclusive if**
 
-With `tools/echo-bot.ps1`, NO new reply follows the Continue, and that is correct: the re-delivered Message is the first bot's reply, which mentions nobody (the `@` was stripped), so a mention-gated client rightly stays silent. As of #40 the Room states this itself — a quiet blue note reads `Budget granted and the last message was delivered again, but it names no teammate. Mention one by name to get an answer.` — so the missing reply is explained on screen rather than only here. The evidence for this test is the re-delivered line plus the unchanged transcript — do not record a fail for the missing reply. If the previously refused bot's terminal prints nothing at all after Continue, THAT is a fail. Afterwards, reset: Ctrl+C in `T-A`, 2 and 3; run `Remove-Item Env:Team__AgentMessageBudget`; restart the app with `P-LAUNCH-FREE`.
+With `tools/echo-bot.ps1`, NO new reply follows the Continue, and that is correct: the re-delivered Message is the first bot's reply, which mentions nobody (the `@` was stripped), so a mention-gated client rightly stays silent. As of #40 the Room states this itself — a quiet blue note reads `Budget granted and the last message was delivered again, but it names no teammate. Mention one by name to get an answer.` — so the missing reply is explained on screen rather than only here. The evidence for this test is the re-delivered line plus the unchanged transcript — do not record a fail for the missing reply. If the previously refused bot's terminal prints nothing at all after Continue, THAT is a fail. Afterwards, reset: Ctrl+C in `T-A`, `T-C` and `T-D`; run `Remove-Item Env:Team__AgentMessageBudget`; restart the app with `P-LAUNCH-FREE`.
 
 ### PIPEEXTERNAL-28 — A wrong protocol version in hello is refused, and the browser never learns
 
@@ -1053,13 +1055,7 @@ With `tools/echo-bot.ps1`, NO new reply follows the Continue, and that is correc
 **Steps**
 
 1. Note the current sidebar Room list.
-2. Open a new terminal and run the `RAW-CLIENT` lines from setup:
-``powershell
-$c = [System.IO.Pipes.NamedPipeClientStream]::new('.', 'team', 'InOut')
-$c.Connect(5000)
-$w = [System.IO.StreamWriter]::new($c); $w.AutoFlush = $true
-$r = [System.IO.StreamReader]::new($c)
-``
+2. Open a new terminal (`T-C`) and run the `RAW-CLIENT` connect block from Setup item 6.
 3. Send a version-2 hello: `$w.WriteLine('{"type":"hello","version":2,"name":"vtest"}')`
 4. Read one line back: `$r.ReadLine()`
 5. Read another line: `$r.ReadLine()`
@@ -1070,7 +1066,7 @@ $r = [System.IO.StreamReader]::new($c)
 
 **Pass if — all of these**
 
-- Step 4 returns `{"type":"error","code":"expectedHello","message":"Unsupported protocol version '2'.","version":3}`.
+- Step 4 returns `{"type":"error","code":"expectedHello","message":"Unsupported protocol version \u00272\u0027.","version":3}`: the client prints the raw line, and the server writes `'` as `\u0027`.
 - Step 5 returns nothing (an empty result / `$null`) because the server closed the connection.
 - The browser sidebar gains NOTHING, before or after the refresh — no Room, no error, no visible trace.
 - `ProtocolVersion.cs` shows `Current = 3` and `tools/echo-bot.ps1` sends `version = 3` — the two agree.
@@ -1100,13 +1096,7 @@ If step 4 blocks and never returns, the server did not answer at all — press C
 
 **Steps**
 
-1. Open a new terminal and run the raw-client connect block:
-``powershell
-$c = [System.IO.Pipes.NamedPipeClientStream]::new('.', 'team', 'InOut')
-$c.Connect(5000)
-$w = [System.IO.StreamWriter]::new($c); $w.AutoFlush = $true
-$r = [System.IO.StreamReader]::new($c)
-``
+1. Open a new terminal (`T-C`) and run the `RAW-CLIENT` connect block from Setup item 6.
 2. Send a post instead of a hello: `$w.WriteLine('{"type":"postMessage","version":3,"roomId":"x","text":"hi"}')`
 3. Read one line: `$r.ReadLine()`
 4. Read another line: `$r.ReadLine()`
@@ -1119,9 +1109,9 @@ $r = [System.IO.StreamReader]::new($c)
 
 **Pass if — all of these**
 
-- Step 3 returns `{"type":"error","code":"expectedHello","message":"Expected 'hello' as the first message.","version":3}`.
+- Step 3 returns `{"type":"error","code":"expectedHello","message":"Expected \u0027hello\u0027 as the first message.","version":3}`. The client prints the raw line, and the server writes `'` as `\u0027`.
 - Step 4 returns nothing — the connection was closed.
-- Step 7 returns `{"type":"error","code":"expectedHello","message":"Timed out waiting for 'hello'.","version":3}` after roughly five seconds.
+- Step 7 returns `{"type":"error","code":"expectedHello","message":"Timed out waiting for \u0027hello\u0027.","version":3}` after roughly five seconds.
 - Step 8 returns nothing — the connection was closed.
 - The browser gains nothing from either attempt, before or after the refresh.
 - No Message was posted anywhere — no Room named `x` exists and no transcript grew.
@@ -1150,13 +1140,7 @@ If `$r.ReadLine()` in step 7 returns instantly with nothing, the connection was 
 
 **Steps**
 
-1. Open a new terminal and run the raw-client connect block:
-``powershell
-$c = [System.IO.Pipes.NamedPipeClientStream]::new('.', 'team', 'InOut')
-$c.Connect(5000)
-$w = [System.IO.StreamWriter]::new($c); $w.AutoFlush = $true
-$r = [System.IO.StreamReader]::new($c)
-``
+1. Open a new terminal (`T-C`) and run the `RAW-CLIENT` connect block from Setup item 6.
 2. Complete the handshake: `$w.WriteLine('{"type":"hello","version":3,"name":"raw1","description":"raw test client"}')`
 3. Read the welcome and capture the room id: `$wel = $r.ReadLine() | ConvertFrom-Json; $room = $wel.rooms[0].id; $room`
 4. Confirm a `raw1` Room appeared in the browser sidebar and open it.
@@ -1174,7 +1158,7 @@ $r = [System.IO.StreamReader]::new($c)
 
 - (a) returns a line with `"code":"badMessage"` whose `message` is a JSON parsing complaint (the exact wording comes from the JSON library — do not pin it).
 - (b) returns `{"type":"error","code":"badMessage","message":"already registered",...}`.
-- (c) returns `"code":"unknownRoom"` with `"message":"Unknown room 'nosuchroom'."` AND `"relatedMessageId":"m9"`.
+- (c) returns `"code":"unknownRoom"` with `"message":"Unknown room \u0027nosuchroom\u0027."` (the server writes `'` as `\u0027`) AND `"relatedMessageId":"m9"`.
 - (d) returns `"code":"badMessage"` with `"message":"empty message"` and `"relatedMessageId":"m10"`.
 - (e) returns `"code":"badMessage"` with `"message":"Invalid message id."` and `"relatedMessageId":"m.1"`.
 - After all five refusals, step 10's valid post SUCCEEDS: `still alive` appears in the `raw1` Room in the browser with no refresh.
@@ -1202,19 +1186,13 @@ If `$wel.rooms[0].id` is empty, the handshake did not complete and every case be
 
 **Before you start**
 
-- The app was launched with `P-LAUNCH-UAT` and Ada is Online, so an `Ada` Room exists that a new client is not a Member of.
+- Lane: [`P-LAUNCH-UAT`](common.md#p-launch-uat) (ACP on with the free mock adapter, data in `C:\seeds\huddle\uat\data`), not the free lane, with Ada Online, so an `Ada` Room exists that a new client is not a Member of.
 
 **Steps**
 
 1. In the browser, click the sidebar entry `Ada` and copy the room id from the address bar (`/rooms/{id}`). Call this ADAROOM.
 2. Keep the `Ada` Room open in the browser and visible.
-3. Open a new terminal and run the raw-client connect block:
-``powershell
-$c = [System.IO.Pipes.NamedPipeClientStream]::new('.', 'team', 'InOut')
-$c.Connect(5000)
-$w = [System.IO.StreamWriter]::new($c); $w.AutoFlush = $true
-$r = [System.IO.StreamReader]::new($c)
-``
+3. Open a new terminal (`T-C`) and run the `RAW-CLIENT` connect block from Setup item 6.
 4. Handshake as a client that is NOT in the Ada Room: `$w.WriteLine('{"type":"hello","version":3,"name":"raw2"}')` then `$wel = $r.ReadLine() | ConvertFrom-Json; $own = $wel.rooms[0].id; $own`
 5. Set the target: `$target = '<paste ADAROOM here>'`
 6. Attempt an intrusion: `$w.WriteLine('{"type":"messageDelta","version":3,"roomId":"' + $target + '","messageId":"m1","text":"intruder","isFinal":false}')` then `$r.ReadLine()`
@@ -1256,13 +1234,7 @@ If step 8 produces no streaming row in the browser, Drafts are not rendering at 
 
 **Steps**
 
-1. Open a new terminal and run the raw-client connect block:
-``powershell
-$c = [System.IO.Pipes.NamedPipeClientStream]::new('.', 'team', 'InOut')
-$c.Connect(5000)
-$w = [System.IO.StreamWriter]::new($c); $w.AutoFlush = $true
-$r = [System.IO.StreamReader]::new($c)
-``
+1. Open a new terminal (`T-C`) and run the `RAW-CLIENT` connect block from Setup item 6.
 2. Handshake: `$w.WriteLine('{"type":"hello","version":3,"name":"rawdraft"}')` then `$wel = $r.ReadLine() | ConvertFrom-Json; $own = $wel.rooms[0].id; $own`
 3. In the browser, click the new `rawdraft` sidebar entry and keep the Room visible.
 4. Start a Draft and do NOT terminate it: `$w.WriteLine('{"type":"messageDelta","version":3,"roomId":"' + $own + '","messageId":"d1","text":"half a sentence","isFinal":false}')`
@@ -1279,7 +1251,7 @@ $r = [System.IO.StreamReader]::new($c)
 - The same row is present in the second tab, confirming the Draft is server-side and not per-browser.
 - Within about a second of `$c.Dispose()`, the row DISAPPEARS from both tabs with no refresh, leaving the Room with no rows at all.
 - A freshly opened third tab also shows no streaming row.
-- `T-A` logs the connection ending (`Agent connection <id> ended.`).
+- `T-A` logs `Agent connection <id> for agent rawdraft disconnected.` at Information level (`AgentConnection.cs:146`). `$c.Dispose()` is read as end-of-stream, so the Warning line `Agent connection <id> ended.` (logged only on an `IOException`, `AgentConnection.cs:121`) is not expected.
 
 **Fail if — any of these**
 
@@ -1303,7 +1275,7 @@ If step 4 produces no streaming row at all, either the delta was refused (check 
 
 **Before you start**
 
-- The app is running and at least two external bots are connected (use `T-C` and 3 with names `shut1` and `shut2`).
+- The app is running and at least two external bots are connected (use `T-C` and `T-D` with names `shut1` and `shut2`).
 - The browser is open on a Room.
 
 **Steps**
@@ -1311,7 +1283,7 @@ If step 4 produces no streaming row at all, either the delta was refused (check 
 1. In `T-C` run `pwsh tools/echo-bot.ps1 -Name shut1`; in `T-D` run `pwsh tools/echo-bot.ps1 -Name shut2`. Confirm both got a welcome and both Rooms appeared.
 2. Note the full sidebar Room list and open one Room with Messages in it; note the transcript.
 3. Press Ctrl+C in `T-A`.
-4. Immediately read `T-C` and 3.
+4. Immediately read `T-C` and `T-D`.
 5. Watch the browser for 60 seconds and read the dialog that appears, in order.
 6. Take a screenshot of the dialog at each stage.
 7. Count how many paragraphs of text the dialog shows at once.
@@ -1355,7 +1327,7 @@ If the browser tab was already disconnected or backgrounded before step 3, the d
 **Steps**
 
 1. Press Ctrl+C in `T-A` and in every bot terminal. Wait for all prompts to return.
-2. Delete the whole folder `E:\Repos\Huddle\src\Huddle.App\App_Data`.
+2. Delete the whole folder `<repo>\src\Huddle.App\App_Data`.
 3. In `T-A` run `$env:Team__Acp__Enabled = 'false'`.
 4. In `T-A` run `dotnet run --project src/Huddle.App --urls http://localhost:5100`.
 5. Open a fresh browser tab at http://localhost:5100.
@@ -1381,7 +1353,7 @@ If the browser tab was already disconnected or backgrounded before step 3, the d
 **Fail if — any of these**
 
 - The empty-state sentences differ from the ones above -> user-facing copy drifted; report both the expected and the actual text.
-- The New chat panel lists ghost agents after `App_Data` was deleted -> it is reading a stale database; find where `Team:DataDir` actually resolved (`Get-ChildItem -Recurse -Filter team.db E:\Repos\Huddle`) before filing, because the likely cause is that you deleted the wrong folder.
+- The New chat panel lists ghost agents after `App_Data` was deleted -> it is reading a stale database; find where `Team:DataDir` actually resolved (`Get-ChildItem -Recurse -Filter team.db <repo>`) before filing, because the likely cause is that you deleted the wrong folder.
 - The main pane throws or shows a Blazor error instead of the empty state -> the Room view does not handle having no Room.
 - `App_Data` is not recreated at startup -> the data initialiser is not running, and nothing will persist.
 - Any Room already exists in the sidebar before the bot connects -> the fresh install is not empty, and every "empty install" test is then impossible; check that the right `App_Data` was deleted.
@@ -1402,34 +1374,35 @@ The main pane NOT picking up the first new Room is EXPECTED, not a fail — the 
 **Before you start**
 
 - The app is running normally in `T-A` on port 5100 with the default pipe name.
-- A free terminal (`T-E`) and a free port (5101).
+- A second idle terminal, `T-D` (`T-C` is kept for the bot), and a free port (5101).
+- Nothing exists at `<repo>\src\Huddle.App\App_Data2`; this test creates that second data folder (`dotnet run --project src/Huddle.App` resolves the relative `App_Data2` against the project folder, as it does for `App_Data`) and step 10 removes it.
 
 **Steps**
 
-1. In `T-E` run `$env:Team__DataDir = 'App_Data2'`, `$env:Team__Acp__Enabled = 'false'`, then `dotnet run --project src/Huddle.App --urls http://localhost:5101`. Do NOT set `Team__PipeName` — both instances must serve the same pipe name.
+1. In `T-D` run `$env:Team__DataDir = 'App_Data2'`, `$env:Team__Acp__Enabled = 'false'`, then `dotnet run --project src/Huddle.App --urls http://localhost:5101`. Do NOT set `Team__PipeName` — both instances must serve the same pipe name.
 2. Open a second browser window at http://localhost:5101 and place it beside the first (http://localhost:5100).
 3. In `T-C`, run `pwsh tools/echo-bot.ps1 -Name splitter`.
 4. Look at BOTH browser windows and note which one gained a `splitter` Room.
 5. Press Ctrl+C in `T-C` and re-run `pwsh tools/echo-bot.ps1 -Name splitter1`, then `-Name splitter2`, then `-Name splitter3`, noting which window each lands in.
 6. In whichever window does NOT hold `splitter`, look for any error or clue that the Agent went elsewhere.
 7. In the window that DOES hold it, type `hi @splitter` and confirm a reply.
-8. Run `Get-Process dotnet` and count the processes.
+8. Run `Get-Process Huddle.App` and count the processes (`dotnet run` starts the `Huddle.App.exe` apphost; the `dotnet` processes are the CLI and build servers and do not count instances).
 9. Look for both `src\Huddle.App\App_Data\team.db` and `src\Huddle.App\App_Data2\team.db`.
-10. Press Ctrl+C in `T-E`, run `Remove-Item Env:Team__DataDir` there, and close that browser window.
+10. Press Ctrl+C in `T-D` and in `T-C`, run `Remove-Item Env:Team__DataDir, Env:Team__Acp__Enabled` and then `Remove-Item -Recurse -Force src\Huddle.App\App_Data2` in `T-D`, and close that browser window.
 
 **Pass if — all of these**
 
 - The `splitter` Room appears in exactly ONE of the two browser windows, never both.
 - Across the four names, the landings are not all in the same window — repeating the experiment sends a client to the other instance.
 - The window that did not get the client shows NOTHING about it: no error, no warning, no clue.
-- `Get-Process dotnet` shows more than one host process.
+- `Get-Process Huddle.App` shows two processes.
 - Both `App_Data\team.db` and `App_Data2\team.db` exist, and only one of them has the Agent.
 
 **Fail if — any of these**
 
 - A client appears in BOTH windows -> that would be new behaviour and worth reporting, since a single instance per pipe name is the recorded assumption.
 - The second instance refuses to start with a pipe error -> also worth reporting; the documented consequence is unpredictable splitting, not a hard failure.
-- Neither window gets the client -> something else is serving the pipe; stop both instances, re-run `Get-Process dotnet`, and look for a stray host before filing anything.
+- Neither window gets the client -> something else is serving the pipe; stop both instances, re-run `Get-Process Huddle.App`, and look for a stray host before filing anything.
 
 **Inconclusive if**
 
@@ -1437,6 +1410,44 @@ If all four names land in the same window every time, the split is real but the 
 
 > [!NOTE]
 > THE POINT OF THIS TEST IS DIAGNOSTIC. A tester who leaves a stale `dotnet run` in another terminal will see agents arriving in the wrong browser and messages going unanswered, and will file it as a delivery bug. Always check the process list before filing anything in this area. Running one app instance per pipe name is the recorded consequence of choosing a named pipe, not a defect.
+
+### PIPEEXTERNAL-37 — Pressing Stop on an external agent's Draft sends it a stopTurn for that Room
+
+**Free** · about 8 min
+
+*Proves the Human's Stop reaches a pipe Agent as a `stopTurn` line carrying the Room id, so a client can end its live Turn; `tools/echo-bot.ps1` never streams and ignores `stopTurn`, so the raw client is the only way to see the line.*
+
+**Before you start**
+
+- The app is running under `P-LAUNCH-FREE`.
+- No sidebar entry reads `rawstop`.
+
+**Steps**
+
+1. Open a new terminal (`T-C`) and run the `RAW-CLIENT` connect block from Setup item 6.
+2. Handshake: `$w.WriteLine('{"type":"hello","version":3,"name":"rawstop"}')` then `$wel = $r.ReadLine() | ConvertFrom-Json; $own = $wel.rooms[0].id; $own`
+3. In the browser, click the new `rawstop` sidebar entry and keep the Room visible.
+4. Start a Draft and do NOT terminate it: `$w.WriteLine('{"type":"messageDelta","version":3,"roomId":"' + $own + '","messageId":"s1","text":"working on it","isFinal":false}')`
+5. Click **Stop** on the streaming row.
+6. Read one line: `$r.ReadLine()`
+7. Close the client: `$c.Dispose()`
+
+**Pass if — all of these**
+
+- Step 5 finds a **Stop** button on the `rawstop` streaming row.
+- Step 6 returns `{"type":"stopTurn","roomId":"<$own>","version":3}`, with `roomId` equal to the Room id printed in step 2 (`AgentGateway.cs:57`; `Messages.cs:114`).
+- No `error` line and no other line comes back before it.
+- `T-A` logs no warning for the click.
+
+**Fail if — any of these**
+
+- Step 6 returns nothing, and the read blocks -> Stop is not forwarded to pipe Agents, so the Human cannot end a runaway Turn on an external client.
+- The line names a different `roomId` -> a Stop in one Room would end the Agent's Turn in another.
+- The line arrives as an `error` -> the server treats its own outbound message as a request.
+
+**Inconclusive if**
+
+If step 4 produces no streaming row, the Draft did not render and there is nothing to stop; resolve PIPEEXTERNAL-32 first. Do not judge what the row does after the click: the Draft is cleared by the Agent's terminator or its disconnect, not by Stop itself.
 
 ---
 

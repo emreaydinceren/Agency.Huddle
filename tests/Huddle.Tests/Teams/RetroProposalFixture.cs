@@ -2,6 +2,7 @@ using Microsoft.Extensions.Logging.Abstractions;
 using Agency.Huddle.App.Acp;
 using Agency.Huddle.App.Acp.Tools;
 using Agency.Huddle.App.Data;
+using Agency.Huddle.App.Prompts;
 using Agency.Huddle.App.TeamTypes;
 using Agency.Huddle.App.Teams;
 using Agency.Huddle.Tests.Acp.Fakes;
@@ -107,7 +108,8 @@ internal sealed class RetroProposalFixture : IDisposable
 
     /// <summary>Builds the propose tool for a caller.</summary>
     /// <param name="caller">The caller's name, a key of <see cref="Ids"/>.</param>
-    public ProposeRetroChangesTool Tool(string caller)
+    /// <param name="prompts">The prompt source the tool reads its description from; the seeded default when omitted.</param>
+    public ProposeRetroChangesTool Tool(string caller, IPromptSource? prompts = null)
     {
         Dictionary<string, string> builtins = new(StringComparer.Ordinal)
         {
@@ -117,7 +119,7 @@ internal sealed class RetroProposalFixture : IDisposable
             ["web/processes/flow.md"] = "# Flow",
         };
         TeamTypeCatalog types = new(this.Harness.Options, NullLogger<TeamTypeCatalog>.Instance, builtins);
-        return new ProposeRetroChangesTool(this.Catalog, this.Proposals, this.Harness.Personas, types, this.Harness.Directory, this.Ids[caller]);
+        return new ProposeRetroChangesTool(this.Catalog, this.Proposals, this.Harness.Personas, types, this.Harness.Directory, this.Ids[caller], prompts ?? new FakePromptSource());
     }
 
     /// <summary>Builds the fixture.</summary>

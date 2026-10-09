@@ -1,6 +1,6 @@
 <#
 .SYNOPSIS
-    Runs Check-Eol, Check-Diff, Check-Visibility, Check-DocIndex and Check-TestDocs in sequence, plus
+    Runs Check-Eol, Check-Diff, Check-Visibility, Check-DocIndex, Check-ManualTests and Check-TestDocs in sequence, plus
     Check-Analyzers (only when the branch changes analyzer configuration) and a protected-file hash guard,
     and reports each script's exit code.
 
@@ -18,9 +18,9 @@
     path); an agent must never edit protected.sha256 itself.
 
     The very last output line is always
-        CHECK-ALL Eol=<n> Diff=<n> Visibility=<n> DocIndex=<n> TestDocs=<n> Analyzers=<n> Protected=<n>
-    where 0 means ok. Exits 0 only if all seven are 0, otherwise with the first non-zero value, in the
-    order Eol, Diff, Visibility, DocIndex, TestDocs, Analyzers, Protected.
+        CHECK-ALL Eol=<n> Diff=<n> Visibility=<n> DocIndex=<n> ManualTests=<n> TestDocs=<n> Analyzers=<n> Protected=<n>
+    where 0 means ok. Exits 0 only if all eight are 0, otherwise with the first non-zero value, in the
+    order Eol, Diff, Visibility, DocIndex, ManualTests, TestDocs, Analyzers, Protected.
 
 .EXAMPLE
     pwsh agents/scripts/Check-All.ps1
@@ -60,6 +60,13 @@ $exitCode = $LASTEXITCODE
 if ($null -eq $exitCode) { $exitCode = 0 }
 Write-Host "== Check-DocIndex exit $exitCode =="
 $exitCodes['DocIndex'] = $exitCode
+
+# Run Check-ManualTests
+& (Join-Path $PSScriptRoot 'Check-ManualTests.ps1') *>&1
+$exitCode = $LASTEXITCODE
+if ($null -eq $exitCode) { $exitCode = 0 }
+Write-Host "== Check-ManualTests exit $exitCode =="
+$exitCodes['ManualTests'] = $exitCode
 
 # Run Check-TestDocs
 & (Join-Path $PSScriptRoot 'Check-TestDocs.ps1') *>&1
@@ -120,7 +127,7 @@ $exitCodes['Protected'] = $protected
 
 $firstNonZero = $exitCodes.Values | Where-Object { $_ -ne 0 } | Select-Object -First 1
 
-Write-Host "CHECK-ALL Eol=$($exitCodes['Eol']) Diff=$($exitCodes['Diff']) Visibility=$($exitCodes['Visibility']) DocIndex=$($exitCodes['DocIndex']) TestDocs=$($exitCodes['TestDocs']) Analyzers=$($exitCodes['Analyzers']) Protected=$($exitCodes['Protected'])"
+Write-Host "CHECK-ALL Eol=$($exitCodes['Eol']) Diff=$($exitCodes['Diff']) Visibility=$($exitCodes['Visibility']) DocIndex=$($exitCodes['DocIndex']) ManualTests=$($exitCodes['ManualTests']) TestDocs=$($exitCodes['TestDocs']) Analyzers=$($exitCodes['Analyzers']) Protected=$($exitCodes['Protected'])"
 
 if ($null -ne $firstNonZero) {
     exit $firstNonZero

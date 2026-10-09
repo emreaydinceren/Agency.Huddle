@@ -2,7 +2,7 @@
 
 Prove, in a real browser, that the Room view at `/` and `/rooms/{RoomId}` posts, renders and durably stores Messages correctly — the Enter/Shift+Enter split that lives only in JavaScript, the Markdown pipeline's deliberately narrow extension set and its three safety behaviours (HTML disabled, link schemes rewritten, advanced extensions absent), Draft streaming settling into a rendered Message, the Budget pause, autoscroll, and the on-disk JSONL Transcript that is the only oracle able to settle a rendering question against what was actually stored. Almost none of this is reachable from the test suite: it is browser-resolved (DOM, CSS cascade, HTML parser), JS-driven, or a file on disk.
 
-**32 tests** · 31 free, 1 paid 💰 · about 3.5 hours.
+**29 tests** · 28 free, 1 paid 💰 · about 3.3 hours.
 
 Read [the manual test script](../manual-tests.md) first — the cost guard, the Model and Effort
 convention, and the rules for concluding a result — then [Common procedures](common.md), which
@@ -15,8 +15,8 @@ Run [`P-BUILD`](common.md#p-build) then [`P-LAUNCH-UAT`](common.md#p-launch-uat)
 oracles `O-LOG` / `O-ADAPTERS` / `O-TRANSCRIPT` / `O-DB`, the four resets, and the
 standing conventions. This area adds:
 
-1. Wait until **Ada** and **Bo** are both **Online** on `/teammates` before starting. Two empty one-to-one Rooms, `Ada` and `Bo`, and two free mock Teammates exist from that point. A reply from a mock Teammate is the whole prompt echoed back in three streamed chunks, so it is long, plain text, and contains the text you sent; judge "a reply from Ada appears and contains `<what you sent>`", never an exact body. To make that check reliable, send a single token with no spaces when you need to find it in a reply (a space can be lost where two streamed chunks join). If Ada never comes Online, every test needing an agent reply is INCONCLUSIVE — say so rather than failing it.
-2. Open a browser at `http://localhost:5100` with DevTools (F12) available. Several tests are settled only by inspecting the DOM in the Elements panel. Run ROOMMESSAGING-01 first, on the seeded `Ada` Room, then make the **quiet Room** for the rest: click **New chat**, tick `Ada` and `Bo`, click **Start chat**. It has three Members (You, Ada, Bo), so by the Reply Gate nobody answers a Message unless it Mentions them: `@Ada` is answered by Ada and `@Bo` by Bo. Every test below that says "a Room is open" means this quiet Room, so a Human Message adds exactly one line to its Transcript. A test that needs a reply sends `hi @Ada`; the tests that need Ada's two-Member `Ada` Room (where she answers every Message) say so.
+1. Wait until **Ada** and **Bo** are both **Online** on `/teammates` before starting. Two empty one-to-one Rooms, `Ada` and `Bo`, and two free mock Teammates exist from that point. The built-in Chief of Staff is seeded at every start and, with ACP on, connects on the mock adapter and gets its own `Chief of Staff` Room as well, so the sidebar lists three Rooms (`Ada`, `Bo`, then `Chief of Staff`); leave it alone. A reply from a mock Teammate is the whole prompt echoed back in three streamed chunks, so it is long, plain text, and contains the text you sent; judge "a reply from Ada appears and contains `<what you sent>`", never an exact body. To make that check reliable, send a single token with no spaces when you need to find it in a reply (a space can be lost where two streamed chunks join). If Ada never comes Online, every test needing an agent reply is INCONCLUSIVE — say so rather than failing it.
+2. Open a browser at `http://localhost:5100` with DevTools (F12) available. Several tests are settled only by inspecting the DOM in the Elements panel. Run ROOMMESSAGING-01 first, on the seeded `Ada` Room, then make the **quiet Room** for the rest: click **New chat**, tick `Ada` and `Bo`, click **Start chat**. It has three Members (You, Ada, Bo), so by the Reply Gate nobody answers a Message unless it Mentions them: `@Ada` is answered by Ada and `@Bo` by Bo. Every test below that says "a Room is open" means this quiet Room, so a Human Message adds exactly one line to its Transcript. Every unmentioned Message there also shows a blue info strip above the composer, `No teammate was @-mentioned — name one to ask for a reply.` (`Chat.razor:92-103`); it is expected, not an error. A test that needs a reply sends `hi @Ada`; the tests that need Ada's two-Member `Ada` Room (where she answers every Message) say so.
 3. In `T-B` set the data path once: `$data = 'C:\seeds\huddle\uat\data'` (the folder `P-LAUNCH-UAT` builds, not `App_Data`).
 4. Get the open quiet Room's id (step 2) — the 32 hex characters after `/rooms/` in the address bar — and set `$room = '<those characters>'`. Then define the two helpers this area reuses throughout: `function Lines { if (Test-Path "$data\rooms\$room.jsonl") { (Get-Content "$data\rooms\$room.jsonl").Count } else { 0 } }` and `function Tail { Get-Content "$data\rooms\$room.jsonl" -Tail 3 }`. Re-set `$room` every time you switch Rooms.
 5. To type a multi-line Message, Shift+Enter between the lines. Every step below that says Shift+Enter means exactly that and never means Enter.
@@ -42,9 +42,9 @@ standing conventions. This area adds:
 3. Read the `<h1>` at the top of the main column.
 4. Read the muted grey line directly beneath that `<h1>`.
 5. Look at the right-hand end of the header row for a button and read its label.
-6. Read the sidebar top to bottom and list every item you see.
+6. Read the sidebar top to bottom and list every item you see, including the `Chats` group (expand it if collapsed).
 7. Select the whole URL from the address bar, open a new browser tab, paste it, press Enter.
-8. In the new tab, look at the sidebar and note whether the entry for the currently open Room is visually distinguished from the other entry.
+8. In the new tab, look at the sidebar and note whether the entry for the currently open Room is visually distinguished from the other entries (`Bo`, `Chief of Staff`).
 9. Click `Bo` in the sidebar and confirm the `<h1>` and the address bar both change.
 
 **Pass if — all of these**
@@ -53,7 +53,7 @@ standing conventions. This area adds:
 - The `<h1>` reads `Ada` (a word, not 32 hex characters).
 - The muted line beneath it reads exactly `You, Ada`.
 - A button labelled `Add teammate` sits at the right of the header row.
-- The sidebar contains, in order: a `New chat` button, a room list containing `Ada` and `Bo`, a `Teammates` link and a `Settings` link.
+- The sidebar contains, in order (`MainLayout.razor:17-31`, `RoomList.razor`): a `Chats` group holding the Rooms `Ada`, `Bo` and `Chief of Staff` with a `New chat` link as the last item of that group; then a `Teams` group, a `Teammates` link, a `Tasks` group and a `Library` group; then two icon-only links at the bottom, Archived chats and Settings (a tooltip names Settings).
 - The pasted URL in the second tab opens the same Room with the same `<h1>` and the same transcript.
 - The sidebar entry for the open Room is visually distinguished (different colour or weight) from the other entry.
 - Clicking `Bo` changes the `<h1>` to `Bo` and changes the id in the address bar.
@@ -92,7 +92,7 @@ If BOTH the sidebar and the main column read `No rooms yet. Start an agent to cr
 3. Type exactly `hello there`.
 4. Press **Enter** (not Shift+Enter).
 5. Immediately look at the textarea and note whether it still contains text.
-6. Look at the bottom of the transcript area and read the new row: the sender name, the time beside it, and the body text.
+6. Look at the bottom of the transcript area and read the new row: its alignment, whether it shows a sender name, a time or an avatar, and its body text. Then hover the row for a second and read the tooltip.
 7. In `T-B` run `Lines` again and write down the number.
 8. In `T-B` run `Tail` and read the last line in full.
 
@@ -100,8 +100,9 @@ If BOTH the sidebar and the main column read `No rooms yet. Start an agent to cr
 
 - The textarea is empty the instant Enter is released — no text remains.
 - A new row appears at the bottom of the transcript without any page reload.
-- That row's meta line shows the sender `You` in a heavier weight and a time in `HH:mm` form beside it.
-- That row's body reads `hello there`.
+- The new row is a right-aligned bubble (`.message-row.human` holding a `.message-bubble`). It shows no sender name, no time and no avatar (`MessageList.razor:51-56`).
+- Hovering the row shows a tooltip (its `title`) holding the send time in `HH:mm` form.
+- The bubble's body reads `hello there`.
 - The transcript is scrolled so the new row is visible.
 - No reply appears — nobody was Mentioned.
 - `Lines` increased by exactly 1 (or the file was created and now holds 1 line).
@@ -121,7 +122,7 @@ If BOTH the sidebar and the main column read `No rooms yet. Start an agent to cr
 If `$data\rooms` does not exist AND no row appeared, you cannot tell a posting failure from a storage failure. Check `T-A` for an exception, then retry once in the seeded `Bo` Room. If it works there, record a FAIL scoped to the first Room; if it fails in both, record INCONCLUSIVE and report the console output verbatim.
 
 > [!NOTE]
-> The textarea is cleared by JavaScript BEFORE the server round-trip finishes. That is why a rejected send loses the typed text — tested deliberately in ROOMMESSAGING-22, not here.
+> The textarea is cleared by JavaScript right after the server call returns (`app.js:54-55` awaits `SendAsync`, then clears), whether or not the server accepted the text. That is why a rejected send still loses the typed text — tested deliberately in ROOMMESSAGING-22, not here.
 
 ### ROOMMESSAGING-03 — Shift+Enter inserts a newline and does not send
 
@@ -330,7 +331,7 @@ If devtools cannot be opened (locked-down browser), the first case cannot be dis
 If a fenced block cannot be typed because the keyboard layout makes backticks awkward, skip only that sub-case and mark the fenced-code line INCONCLUSIVE — do not fail the whole test.
 
 > [!NOTE]
-> Rendered Markdown inside a message is deliberately UNSTYLED: `<pre>`, `<code>`, `<blockquote>`, `<table>` and headings get only a monospace font where applicable, and no border, background or padding of their own. Unstyled-but-structurally-correct is the current, accepted state — do not file it as a rendering failure.
+> Rendered Markdown inside a message is mostly UNSTYLED: `<pre>`, `<code>`, `<table>` and headings get only a monospace font where applicable, and no border, background or padding of their own — do not file that as a rendering failure. Two things are styled on purpose: a `<blockquote>` has a left border and muted text (`app.css:489-498`), and a paragraph made only of `**bold**` gets the `message-heading` style (a divider above it and a 15px size, `app.css:518`), so `**bold**` in step 1 may look like a heading; it is still a `<strong>`.
 
 ### ROOMMESSAGING-08 — The four enabled Markdig extensions render: pipe tables, task lists, autolinks, emphasis extras
 
@@ -478,7 +479,7 @@ If the browser blocks `alert()` dialogs by configuration, the click and hover st
 If dialogs are suppressed by browser configuration, judge on the Elements panel alone and record the dialog checks as INCONCLUSIVE.
 
 > [!NOTE]
-> In the JSONL the stored text will additionally show `<` and `>` as `<` / `>` escapes. That is the wire encoder doing its job — see ROOMMESSAGING-12 — and must not be read as corruption.
+> In the JSONL the stored text will additionally show `<` and `>` as `\u003C` / `\u003E` escapes. That is the wire encoder doing its job — see ROOMMESSAGING-12 — and must not be read as corruption.
 
 ### ROOMMESSAGING-11 — Link schemes are rewritten: only http, https and mailto survive
 
@@ -548,13 +549,13 @@ If the Elements panel cannot be opened, clicking alone cannot distinguish "neutr
 **Pass if — all of these**
 
 - On screen, before and after the reload, the row reads exactly `He said "go" — A&B 😀 日本語` with real characters, not escapes.
-- In the JSONL line, EVERY one of those characters appears as a `\uXXXX` escape, not just the non-ASCII ones: `"` for each double quote around `go`, `&` for the ampersand, `—` for the em dash, `😀` for the emoji and `日本語` for the CJK. That is `System.Text.Json`'s default `JavaScriptEncoder`, which escapes `"`, `&`, `<`, `>`, `'` and `+` along with all non-ASCII — stricter than strictly necessary, and the safe direction. Do NOT expect a raw `"`, `&` or `—` in the file.
+- In the JSONL line, EVERY one of those characters appears as a `\uXXXX` escape, not just the non-ASCII ones: `\u0022` for each double quote around `go`, `\u0026` for the ampersand, `\u2014` for the em dash, `\uD83D\uDE00` for the emoji and `\u65E5\u672C\u8A9E` for the CJK. That is `System.Text.Json`'s default `JavaScriptEncoder`, which escapes `"`, `&`, `<`, `>`, `'` and `+` along with all non-ASCII — stricter than strictly necessary, and the safe direction. Do NOT expect a raw `"`, `&` or `—` in the file.
 - The `Select-String` search for the literal CJK text finds no match.
 - The reload proves the round trip is lossless — the screen is identical before and after.
 
 **Fail if — any of these**
 
-- The transcript on screen shows `—` or `&amp;` or similar escapes instead of the real characters -> the escaping is leaking into the rendered output, which IS a real bug.
+- The transcript on screen shows `\u2014`, `\u0026` or `&amp;` or similar escapes instead of the real characters -> the escaping is leaking into the rendered output, which IS a real bug.
 - After the reload the characters are mangled, replaced with question marks, or truncated -> the escaping is lossy and data is being destroyed.
 - The JSONL line contains a raw, unescaped `<` or `>` character in a text field -> the wire encoder is not applying its HTML-safe encoding, which weakens every downstream consumer that puts this text on a page.
 
@@ -607,7 +608,7 @@ If your terminal cannot display the emoji or CJK correctly when running `Tail`, 
 If the paste is silently truncated by the browser rather than by the app, the prose case proves nothing. Verify by checking the character count in the JSONL against the clipboard length (`(Get-Clipboard).Length`) before judging; if they differ by a browser-side limit, record INCONCLUSIVE.
 
 > [!NOTE]
-> KNOWN GAP, report as cosmetic/layout only: message bodies get no word-breaking rule and fenced code blocks get no horizontal-scroll container, so a 400-character unbroken token or a 300-character code line CAN overflow the message column sideways. Other parts of the stylesheet do set aggressive word-breaking; the transcript does not. Report it once, as a layout gap, at low severity — unless it pushes the sidebar or composer off screen, which is a real failure.
+> A Human `.message-bubble` and an agent `.message-card` both set `overflow-wrap: anywhere` (`app.css:351`, `:397`), so the 400-character unbroken token is expected to wrap. Fenced code blocks still get no horizontal-scroll container and no word-break of their own, so a 300-character code line CAN overflow the message column sideways. Report a code-block overflow once, as a layout gap, at low severity — unless it (or the long token) pushes the sidebar or composer off screen, which is a real failure.
 
 ### ROOMMESSAGING-14 — Messages render in post order, and the order on screen equals the order in the file
 
@@ -696,11 +697,11 @@ If `curl.exe` is unavailable, substitute the browser's View Source (Ctrl+U) and 
 > [!NOTE]
 > This is the test that catches the failure mode where a transcript renders correctly for an interactive user but is invisible to anything reading the initial HTML.
 
-### ROOMMESSAGING-16 — Sender name and timestamp in the message meta line
+### ROOMMESSAGING-16 — Sender name, avatar and time on an agent row; the Human bubble; grouping and the day separator
 
-**Free** · about 6 min
+**Free** · about 8 min
 
-*Proves each row is attributed to a Name (not an id) with a stable, correctly formatted time drawn from the stored timestamp.*
+*Proves an agent row that starts a group is attributed to a Name (not an id) with an avatar and a stable, correctly formatted time drawn from the stored timestamp; that the Human's own Message is a right-aligned bubble with no name, avatar or visible time; and that Messages from one sender within five minutes share one header.*
 
 **Before you start**
 
@@ -708,40 +709,46 @@ If `curl.exe` is unavailable, substitute the browser's View Source (Ctrl+U) and 
 
 **Steps**
 
-1. Read the meta line above a Human Message body.
-2. Read the meta line above an agent reply body.
-3. Note the exact format of the time: count the digits, look for seconds, look for AM/PM, look for a date.
-4. Send a Message, wait a full minute, send another, and compare the two times.
-5. Press F5 and check whether either time changed.
-6. Look at the avatar in the gutter of each transcript row, and check that the sender name and body line up against it rather than sitting under it.
-7. In `T-B` run `Tail` and read the `timestamp` field of the last line.
-8. Convert that UTC timestamp to your machine's local time by hand and compare with the time shown on screen.
+1. Look at a Human Message: note which side of the transcript it sits on, and whether it shows a name, an avatar or a time next to it. Hover it and read the tooltip (`MessageList.razor:51-56`).
+2. Read the meta line above an agent reply body (the first reply after one of your Messages).
+3. Note the exact format of the time on that meta line: count the digits, look for seconds, look for AM/PM, look for a date.
+4. Send `hi @Ada`, wait for Ada's reply, wait a full minute, send `hi @Ada` again, and compare the two Human tooltips and the two reply meta-line times.
+5. Press F5 and check whether any of those times changed.
+6. Look at the avatar in the gutter of each agent row that carries a meta line, and check that the sender name and body line up against it rather than sitting under it.
+7. Send `a` and `b` as two Messages in quick succession (no `@`), and look at how the second Human bubble sits against the first.
+8. In `T-B` run `Tail` and read the `timestamp` field of the last line.
+9. Convert that UTC timestamp to your machine's local time by hand and compare with the time shown on screen (the tooltip for a Human row, the meta line for an agent row).
+10. Scroll to the top of the transcript and look above the first Message of the day.
 
 **Pass if — all of these**
 
-- A Human Message's meta line shows the sender `You`.
-- An agent reply's meta line shows the agent's Name (`Ada` or `Bo`), not a 32-hex id.
+- A Human Message is a right-aligned bubble (`.message-row.human`, body in `.message-bubble`) with no sender name, no avatar and no visible time; its time is only in the row's tooltip (`title`).
+- An agent reply that starts a group has a meta line showing the agent's Name (`Ada` or `Bo`), not a 32-hex id, and an avatar in its own gutter, with the name and body aligned in the column beside it rather than beneath it. A Teammate that has chosen nothing shows the initials of its Name. The live Draft row carries an avatar too.
 - The time is 24-hour `HH:mm` — four digits and a colon, with no seconds, no AM/PM and no date.
 - The two Messages sent a minute apart show different times.
-- Neither time changes across a reload.
+- No time changes across a reload.
 - The screen time equals the stored UTC `timestamp` converted to the machine's local time.
-- Every row — a Message and a live Draft alike — carries an avatar in its own gutter, with the sender name and the body aligned in the column beside it rather than beneath it. A Teammate that has chosen nothing shows the initials of its Name; `You` shows yours.
+- Consecutive Messages from one sender less than five minutes apart (`MessageDisplay.GroupWindow`) are grouped: the second Human bubble sits tighter under the first, and a grouped agent row has no meta line and no avatar, only an empty gutter whose tooltip holds the time.
+- A day separator reading `Today` sits above the first Message of the day (`MessageList.razor:17-22`; an earlier day reads `Yesterday` or a date like `Mon 5 Oct`).
 
-> **Reversed 2026-09-22.** This step used to assert the opposite — *"No avatar, circle or monogram appears anywhere in the transcript"* — and the note at the end of this file used to send you to `/teammates` for the avatar half of the appearance check. Avatars are a Room-view concern now. See [ADR-0019](../../adr/0019-an-avatar-is-chosen-and-is-not-part-of-the-persona.md).
+> **Reversed 2026-09-22.** This step used to assert the opposite — *"No avatar, circle or monogram appears anywhere in the transcript"* — and the note at the end of this file used to send you to `/teammates` for the avatar half of the appearance check. Avatars are a Room-view concern now (agent rows only; the Human's bubble has none). See [ADR-0019](../../adr/0019-an-avatar-is-chosen-and-is-not-part-of-the-persona.md).
 
 **Fail if — any of these**
 
 - A 32-hex id appears where a Name should be -> the meta line is rendering the sender id.
+- A Human Message shows a `You` name, an avatar or a visible time beside the bubble -> the Human layout changed; check `MessageList.razor:51-56` before filing.
 - The time includes seconds, a date, or AM/PM -> the format is not `HH:mm`.
 - A time changes on reload -> the time is being computed at render from the clock rather than from the stored timestamp.
-- The stored `senderName` in the JSONL differs from the Name shown on screen for the same row -> the two disagree, and the file is the record.
+- Two agent replies within five minutes each carry a full header, or a reply after a gap of more than five minutes has none -> grouping is wrong.
+- No `Today` separator appears -> the day separator is not rendering.
+- The stored `senderName` in the JSONL differs from the Name shown on screen for the same agent row -> the two disagree, and the file is the record.
 
 **Inconclusive if**
 
-If no agent reply exists yet, judge only the Human half and record the agent-attribution checks as INCONCLUSIVE until `hi @Ada` has produced a reply.
+If no agent reply exists yet, judge only the Human half and record the agent-attribution checks as INCONCLUSIVE until `hi @Ada` has produced a reply. A `Yesterday` or dated separator cannot be judged on a fresh seed; record that sub-case as not observed.
 
 > [!NOTE]
-> Two documented NON-bugs: (a) the displayed time is converted to local time on the SERVER, so in a multi-machine deployment it would show the server's timezone, not the browser's — irrelevant when testing on one machine, and not to be filed from a single-machine run; (b) there is no date and no day separator, so a Message from last week shows only `HH:mm`. Optional extra: setting `$env:Team__HumanName='Emre'`, deleting `team.db` and restarting causes NEW Messages to be attributed to `Emre` — only run this if a full reset is acceptable.
+> Two documented NON-bugs: (a) the displayed time is converted to local time on the SERVER, so in a multi-machine deployment it would show the server's timezone, not the browser's — irrelevant when testing on one machine, and not to be filed from a single-machine run; (b) a Message from last week sits under a dated day separator, not a bare time. Optional extra: setting `$env:Team__HumanName='Emre'`, deleting `team.db` and restarting causes NEW Messages to be attributed to `Emre` — only run this if a full reset is acceptable.
 
 ### ROOMMESSAGING-17 — The transcript autoscrolls on a new Message and while a Draft grows
 
@@ -759,7 +766,7 @@ If no agent reply exists yet, judge only the Human half and record the agent-att
 
 1. Scroll the transcript area to the bottom.
 2. Send `bottom check` and watch whether the view moves to show it.
-3. In the devtools Console run: `const l=document.querySelector('.message-list'); l.scrollTop, l.scrollHeight - l.clientHeight` and compare the two numbers.
+3. In the devtools Console run: `const l=document.querySelector('.message-list'); [l.scrollTop, l.scrollHeight - l.clientHeight]` and compare the two numbers in the printed array.
 4. Send `hi @Ada` and watch the streaming Draft row appear and grow.
 5. While the text is still arriving, watch whether the view follows the growing text down, or only jumps once the reply settles.
 6. Scroll the transcript up so older messages fill the view.
@@ -798,7 +805,8 @@ If the transcript does not overflow its area, none of this is observable — sen
 - `P-LAUNCH-UAT` has been run and Ada and Bo are Online.
 - The seeded `Ada` Room (two Members) is open; `$room` is set to its id. Not the quiet Room.
 - `Bo` is NOT already a member of this Room.
-- If `Bo` is already a member, or a Room named `Ada, Bo` already exists from the quiet Room, do a full RESET (stop the app, re-run the seeder step of `P-LAUNCH-UAT`, relaunch) before running this.
+- The quiet Room from Setup step 2 is itself named `Ada, Bo` (derived from its Members), and the invite will also rename this Room to `Ada, Bo`, so two sidebar entries then share that name. That is not a failure (names need not be unique); tell them apart by the id in the address bar, and never reset to avoid it: a reset wipes the quiet Room that ROOMMESSAGING-22 to -30 need. Before you start, open the quiet Room and rename it to `Quiet` with the **Rename room** pencil beside its heading (`Chat.razor:38-40`), so the two entries stay distinguishable (re-set `$room` to its id afterwards for later tests).
+- If `Bo` is already a member of the `Ada` Room, do a full RESET (stop the app, re-run the seeder step of `P-LAUNCH-UAT`, relaunch), then recreate the quiet Room (Setup step 2) and rename it `Quiet`.
 
 **Steps**
 
@@ -835,7 +843,7 @@ If the transcript does not overflow its area, none of this is observable — sen
 
 **Inconclusive if**
 
-If `Bo` is already a member, the invite will behave differently and the rename will be a no-op — do the RESET named in the preconditions and re-run, rather than judging. If Bo never came Online on `/teammates`, record INCONCLUSIVE.
+If `Bo` is already a member of the `Ada` Room, the invite will behave differently and the rename will be a no-op — do the RESET named in the preconditions and re-run, rather than judging. If Bo never came Online on `/teammates`, record INCONCLUSIVE.
 
 > [!NOTE]
 > Optional cross-check with sqlite3: `sqlite3 "$data\team.db" "select name from rooms where id='<roomId>';"` must now return `Ada, Bo`, and `select count(*) from room_members where room_id='<roomId>';` must return 3.
@@ -887,7 +895,7 @@ If `Bo` is already a member, the invite will behave differently and the rename w
 If the composer shows no line at all AND nothing posts, you cannot tell a missing error line from a dead submit path. Send a valid Message first to confirm posting still works, then re-run — if valid sends work and errors are silent, that is a FAIL, not INCONCLUSIVE.
 
 > [!NOTE]
-> TWO FINDINGS TO RECORD (both current behaviour, so file as findings, not regressions): (1) the textarea is cleared by JavaScript immediately after the send is dispatched and before the server's answer arrives, so a rejected submit destroys what the Human typed with no way to recover or edit it; (2) a legitimate message that merely begins with a slash — a file path like `/usr/local/bin ...` — is rejected as `Unknown command` and can never be posted.
+> TWO FINDINGS TO RECORD (both current behaviour, so file as findings, not regressions): (1) the textarea is cleared by JavaScript once the send call returns (`app.js:54-55` awaits `SendAsync` and then clears it, whatever the result), so a rejected submit destroys what the Human typed with no way to recover or edit it; (2) a legitimate message that merely begins with a slash — a file path like `/usr/local/bin ...` — is rejected as `Unknown command` and can never be posted.
 
 ### ROOMMESSAGING-23 — Typed-but-unsent composer text carries over into the Room you switch to
 
@@ -897,7 +905,7 @@ If the composer shows no line at all AND nothing posts, you cannot tell a missin
 
 **Before you start**
 
-- At least two Rooms exist in the sidebar (the seeded `Ada` and `Bo` Rooms). Bo will answer the Message in step 6, because his Room has two Members; that reply is expected and does not affect the check.
+- At least two Rooms exist in the sidebar (the seeded `Ada` and `Bo` Rooms). If ROOMMESSAGING-21 has run, the seeded `Ada` Room is now named `Ada, Bo` (three Members); find it by the id you recorded there, not by name. Bo will answer the Message in step 6, because his Room has two Members; that reply is expected and does not affect the check.
 
 **Steps**
 
@@ -908,7 +916,7 @@ If the composer shows no line at all AND nothing posts, you cannot tell a missin
 5. Look at the composer and note whether it still contains the typed text.
 6. Press **Enter**.
 7. Read which Room's transcript the Message lands in.
-8. In `T-B` run `Select-String -Path "$data\rooms\$($idBo).jsonl" -Pattern 'meant for ada' -SimpleMatch` and the same against ID-ADA's file (substitute the real ids). Bo's reply echoes the prompt, so it contains the same text; the Human line is the one with `"senderName":"You"`.
+8. In `T-B` set `$idAda = '<ID-ADA>'` and `$idBo = '<ID-BO>'` (the ids you noted), then run `Select-String -Path "$data\rooms\$idBo.jsonl" -Pattern 'meant for ada' -SimpleMatch` and the same against `"$data\rooms\$idAda.jsonl"`. Bo's reply echoes the prompt, so it contains the same text; the Human line is the one with `"senderName":"You"`.
 9. Now the second half: open the `Ada` Room, type `second attempt` without pressing Enter, click `Teammates` in the sidebar, then click a Room in the sidebar to come back.
 10. Look at the composer.
 
@@ -953,7 +961,7 @@ If only one Room exists, this cannot be run — create a second Room (`pwsh tool
 6. Find a Human line and confirm it has `"senderId":"human"` and `"senderName":"You"`.
 7. Find an agent line and confirm its `senderId` is 32 hex characters and its `senderName` is the agent's Name.
 8. Copy the whole `Ada` file to a snapshot: `Copy-Item "$data\rooms\<adaId>.jsonl" "$env:TEMP\before.jsonl"`.
-9. In the browser, post three more Messages into the `Ada` Room, waiting for each reply to settle.
+9. In the browser, post three more Messages into the `Ada` Room, waiting for each reply to settle. If ROOMMESSAGING-21 has run, that Room is now named `Ada, Bo` with three Members and an unmentioned Message gets no reply, so post `hi @Ada` each time (open it by its id in `/rooms/<adaId>`).
 10. Run `Compare-Object (Get-Content "$env:TEMP\before.jsonl") (Get-Content "$data\rooms\<adaId>.jsonl")` and read the result.
 11. Record `Bo`'s file length, then post a Message in `Ada` and wait for the reply to settle, then re-check `Bo`'s file length.
 
@@ -995,7 +1003,7 @@ If `$data\rooms` does not exist at all, no Message has been posted anywhere yet 
 **Steps**
 
 1. With a Room open in the browser, look at the sidebar and note its contents.
-2. In `T-B` run `pwsh E:\Repos\Huddle\tools\echo-bot.ps1 -Name mybot`.
+2. In `T-B` run `pwsh <repo>\tools\echo-bot.ps1 -Name mybot`.
 3. Wait for the bot to print that it sent hello, then look at the browser sidebar WITHOUT refreshing.
 4. Click the new `mybot` entry in the sidebar.
 5. Note the 32-hex id in the address bar and set `$room` to it in a THIRD terminal (or reuse `T-B` after the bot exits — do not stop the bot yet).
@@ -1027,7 +1035,7 @@ If `$data\rooms` does not exist at all, no Message has been posted anywhere yet 
 If the bot script cannot connect (it prints a connection error), the pipe is not reachable — confirm the app is running and that no other process holds the pipe, then retry once. If it still cannot connect, record INCONCLUSIVE; do not fail the app for a script that never started.
 
 > [!NOTE]
-> Leave the bot running if you intend to run ROOMMESSAGING-26 next — that test uses the same script with a different name.
+> ROOMMESSAGING-26 uses the same script with a different name (`Night Owl`); stop `mybot` before you start it.
 
 ### ROOMMESSAGING-26 — A Mention of a Name containing spaces resolves against the Room's Members
 
@@ -1039,48 +1047,49 @@ If the bot script cannot connect (it prints a connection error), the pipe is not
 
 - The app is running.
 - PowerShell is available. Stop any previously started bot first.
+- `P-LAUNCH-UAT` is running, so Ada is Online. The built-in `Chief of Staff` Persona already exists and is connected, with its own Room, so this test does NOT use that name: a second client under the same name would evict the Persona's pipe connection (`AgentGateway.cs:66-79`). It uses `Night Owl`, a multi-word Name no Persona has.
 
 **Steps**
 
-1. In `T-B` run `pwsh E:\Repos\Huddle\tools\echo-bot.ps1 -Name "Chief of Staff"` (keep the quotes).
+1. In `T-B` run `pwsh <repo>\tools\echo-bot.ps1 -Name "Night Owl"` (keep the quotes).
 2. Wait for the bot to report that it sent hello.
-3. Look at the browser sidebar without refreshing and find a Room named `Chief of Staff`.
-4. Open that Room and read the members line beneath the `<h1>`.
-5. Type exactly `hello @Chief of Staff` and press **Enter**. Wait ten seconds.
-6. Note whether a reply arrived.
-7. Type exactly `hello @Chief` and press **Enter**. Wait ten seconds.
+3. Look at the browser sidebar without refreshing and find a Room named `Night Owl`.
+4. Open that Room. With only two Members the bot would answer every Message, so make it three: type `/invite @Ada` and press **Enter**. The Room is renamed `Night Owl, Ada`. Read the members line beneath the `<h1>`.
+5. Type exactly `hello @Night Owl` and press **Enter**. Wait ten seconds.
+6. Note whether a reply from Night Owl arrived.
+7. Type exactly `hello @Night` and press **Enter**. Wait ten seconds.
 8. Note whether a reply arrived.
-9. Type exactly `hello @Chief of Staffing` and press **Enter**. Wait ten seconds.
+9. Type exactly `hello @Night Owls` and press **Enter**. Wait ten seconds.
 10. Note whether a reply arrived.
-11. In `T-B` (a second one, or after stopping the bot) run `Tail` against this Room's JSONL and read the stored text of each of your three Messages.
+11. In `T-B` (a second one, or after stopping the bot) set `$room` to this Room's id and run `Tail`, reading the stored text of each of your three Messages.
 
 **Pass if — all of these**
 
-- A Room named `Chief of Staff` appears in the sidebar with no refresh.
-- The members line reads `You, Chief of Staff`.
-- `hello @Chief of Staff` produces a reply — the whole multi-word Name was treated as one Mention.
-- `hello @Chief` produces NO reply — `Chief` is not a Member Name.
-- `hello @Chief of Staffing` produces NO reply — the Mention must end at a word boundary.
+- A Room named `Night Owl` appears in the sidebar with no refresh.
+- After the invite, the members line lists `You`, `Night Owl` and `Ada`.
+- `hello @Night Owl` produces a reply from Night Owl — the whole multi-word Name was treated as one Mention.
+- `hello @Night` produces NO reply — `Night` is not a Member Name.
+- `hello @Night Owls` produces NO reply — the Mention must end at a word boundary.
 - The JSONL stores each Message's text verbatim, at-signs and spaces included.
 
 **Fail if — any of these**
 
-- `hello @Chief of Staff` produces no reply -> the Mention is being truncated at the first space; multi-word Names can never be mentioned, and any error message would name the wrong person.
-- `hello @Chief` produces a reply -> a prefix of a Member Name is matching, so unrelated words will wake agents.
-- `hello @Chief of Staffing` produces a reply -> the word-boundary check after a multi-word Name is missing.
+- `hello @Night Owl` produces no reply -> the Mention is being truncated at the first space; multi-word Names can never be mentioned, and any error message would name the wrong person.
+- `hello @Night` produces a reply -> a prefix of a Member Name is matching, so unrelated words will wake agents.
+- `hello @Night Owls` produces a reply -> the word-boundary check after a multi-word Name is missing.
 
 **Inconclusive if**
 
 If the bot does not connect or no Room appears, record INCONCLUSIVE — the Mention logic was never exercised. Do not substitute a single-word bot and claim the multi-word case passed.
 
 > [!NOTE]
-> Optional cross-check with sqlite3: `sqlite3 "$data\team.db" "select name from users;"` must show `Chief of Staff` with its interior spaces intact. Mentions themselves are never persisted — they are a property of delivery, not of the Message — so do not look for them in the JSONL.
+> Optional cross-check with sqlite3: `sqlite3 "$data\team.db" "select name from users;"` must show `Night Owl` with its interior space intact. Mentions themselves are never persisted — they are a property of delivery, not of the Message — so do not look for them in the JSONL.
 
 ### ROOMMESSAGING-27 — appearance.json no longer customises the Message font: the body just follows the Theme, and a legacy override key is silently inert
 
 **Free** · about 7 min
 
-*This test used to prove a `--font-chat` override was scoped to message bodies only. Stage 2 of the MudBlazor migration deleted the whole per-token override system — [ADR-0010](../adr/0010-a-theme-is-a-mudblazor-theme.md): "the safest thing that could happen to a sole defence is for the feature it defends to stop existing" — so there is no longer any way to give the chat transcript its own font short of editing `ThemeCatalog` in C# and rebuilding (`docs/engineering/known-limits.md`). What is left to prove: the Message body's font comes from the same Theme typography as the rest of the app (there is no separate "chat font" any more), and a hand-edited file still carrying the old `overrides` key is read, its unknown key preserved, and never rewritten.*
+*This test used to prove a `--font-chat` override was scoped to message bodies only. Stage 2 of the MudBlazor migration deleted the whole per-token override system — [ADR-0010](../../adr/0010-a-theme-is-a-mudblazor-theme.md): "the safest thing that could happen to a sole defence is for the feature it defends to stop existing" — so there is no longer any way to give the chat transcript its own font short of editing `ThemeCatalog` in C# and rebuilding (`docs/engineering/known-limits.md`). What is left to prove: the Message body's font comes from the same Theme typography as the rest of the app (there is no separate "chat font" any more), and a hand-edited file still carrying the old `overrides` key is read, its unknown key preserved, and never rewritten.*
 
 **Before you start**
 
@@ -1112,15 +1121,17 @@ If the bot does not connect or no Room appears, record INCONCLUSIVE — the Ment
 **Fail if — any of these**
 
 - Any text anywhere turns serif -> a per-token override path was reintroduced without the allowlist and validation ADR-0010 deliberately removed; treat this as a regression of a closed decision, not a missing feature.
-- `.message-body` and `.message-sender` resolve to DIFFERENT computed font families in the default (no-override) state -> there is a distinct chat-font mechanism after all and this test's premise needs re-checking against `ThemeCatalog.cs` before filing anything.
+- `.message-body` and `.message-sender` resolve to DIFFERENT computed font families in the default (no-override) state AND `ThemeDefaults.cs` now sets a Body1 family -> there is a distinct chat-font mechanism after all and this test's premise needs re-checking before filing anything. (Different families with `ThemeDefaults.cs` unchanged is the INCONCLUSIVE case in the note below.)
 - The file's checksum changed, or the `overrides` key vanished from the file -> the app rewrote a file a human hand-edited, destroying hand-typed content — `AppearanceStore.Save` is documented to leave every key it does not itself manage exactly as found.
 - The `Appearance` tab at `/settings` shows any UI for customising the message font -> the removed feature was partially reintroduced.
 
 **Inconclusive if**
 
-If `.message-body` and `.message-sender` already read different font families on a stock install, `ThemeCatalog.BuildHuddleTheme` has started setting `Typography.Body1` distinctly from `Typography.Default` — re-read that file before judging this test, since the "no scoped chat font" premise no longer holds and the test needs rewriting again, not a guess.
+If `.message-body` and `.message-sender` already read different font families on a stock install, either MudBlazor's Body1 keeps its own default or `ThemeDefaults.cs` has started setting `Typography.Body1` distinctly from `Typography.Default` — re-read that file before judging this test, since the "no scoped chat font" premise no longer holds and the test needs rewriting again, not a guess.
 
 > [!NOTE]
+> Unverified premise, check once: `.message-body` draws `--mud-typography-body1-family` (`app.css:384`), while `ThemeDefaults.cs:43` sets only `Typography.Default.FontFamily`, which `.message-sender` inherits through `body` (`app.css:13`). If MudBlazor keeps its own default for Body1, the two computed families differ on a stock install. That is not an app defect and not a PASS: record both values, mark the identical-font line INCONCLUSIVE, and judge the rest.
+>
 > Only the transcript half of the appearance check belongs here — but since 2026-09-22 that includes avatars, which the Room view now renders beside every Message and every Draft. Check here that each row has one, that it is the sender's, and that the gutter does not shift when a Draft settles into a Message. What still belongs on `/teammates` is *choosing* an avatar: the three-way selector, the upload and the colour picker are edited on a Teammate's card, and the Human's own on Settings → Appearance.
 
 ### ROOMMESSAGING-28 — A torn or corrupt line in the Transcript is skipped with a warning, not fatal
@@ -1193,7 +1204,7 @@ If you cannot tell which physical line numbers your edits produced (line endings
 7. Note whether any streaming Draft row, caret or `Stop` button is present.
 8. Note whether any budget panel or grey budget line is present.
 9. In `T-B` run `(Get-FileHash "$data\rooms\$room.jsonl").Hash` and compare with what you wrote down (it will differ only by whatever Messages actually completed before the stop).
-10. Now the inverse: stop the app, run `Remove-Item "$data\team.db*"`, relaunch, and look at the sidebar and at `$data\rooms`.
+10. Now the inverse: stop the app, run `Remove-Item "$data\team.db*"`, relaunch with the same `--Team:Acp:Enabled=false` change as step 4 (with ACP on, Ada, Bo and the Chief of Staff reconnect and `EnsureRoomForAsync` creates three NEW Rooms with new ids, which is not what this step checks), and look at the sidebar and at `$data\rooms`.
 
 **Pass if — all of these**
 
@@ -1201,7 +1212,7 @@ If you cannot tell which physical line numbers your edits produced (line endings
 - No Draft row survives the restart — the streaming reply is simply gone.
 - No budget pause or budget note survives the restart.
 - The transcript file itself is unchanged by the act of restarting (only completed Messages were ever written to it).
-- After deleting the database and relaunching, the Rooms vanish from the sidebar while the `.jsonl` files remain on disk.
+- After deleting the database and relaunching with ACP off, the Rooms vanish from the sidebar while the `.jsonl` files remain on disk.
 
 **Fail if — any of these**
 
@@ -1245,10 +1256,10 @@ If the Draft finishes before you manage to press Ctrl+C, the Draft-loss half was
 9. Confirm the panel sits BELOW the last transcript row and ABOVE the composer, not above the transcript.
 10. Press F5 and check whether the panel is still there.
 11. Provoke a REFUSAL, which needs its own configuration: stop the app, relaunch with `$env:Team__AgentMessageBudget = '1'` (same launch command, no re-seed), and send one `hi @Ada and @Bo`. The first Agent to answer spends the budget; the second is refused. (Typing a third Message instead would reset the counter and simply get a reply - see the note at step 7.) Watch `T-A`'s console.
-12. Click **Leave paused** and read what replaces the panel.
+12. Steps 12-16 now run under the budget of 1 set in step 11. Click **Leave paused** and read what replaces the panel.
 13. Now send an ordinary Message `resuming` and check whether the pause clears.
-14. Send `hi @Ada` and confirm Ada replies again.
-15. Reach the pause once more (two more mentions), then click **Continue** and immediately try to click it a second time; read its label while the grant is in flight.
+14. Send `hi @Ada` and confirm Ada replies again. With a budget of 1 that single reply spends it, so the panel appears again.
+15. With the panel showing, click **Continue** and immediately try to click it a second time; read its label while the grant is in flight. (If a line says Continue will wake nobody, `Chat.razor:140-145`, it is expected here: the last Message is Ada's own. Continue still grants the budget.)
 16. Read `T-A`'s console for the extension line.
 17. In `T-B` run `Get-Content "$data\rooms\$room.jsonl" | ForEach-Object { ($_ | ConvertFrom-Json).senderName }` and count the `Ada` and `Bo` entries between your Human Messages.
 
@@ -1258,11 +1269,11 @@ If the Draft finishes before you manage to press Ctrl+C, the Draft-loss half was
 - After the second reply, a panel appears reading exactly `Agents have sent 2 replies since you last spoke, and are paused.` with buttons labelled `Continue` and `Leave paused`.
 - The panel sits between the last transcript row and the composer.
 - The panel is still present after F5.
-- At the budget of 1, the second Agent's reply is refused: it never appears as a row, and `T-A` logs `Room '<roomId>' refused a message from '<agent>': its budget of 1 agent messages since a human last spoke is spent.` (The number in that line is the configured budget.) The refused Agent's Draft text stays on screen as unrendered plain text (the echoed prompt) because a Draft only clears when its Message posts; that is expected here, not a stuck Draft.
-- Clicking `Leave paused` replaces the panel with a grey line reading exactly `Paused — 2 of 2 agent replies since you last spoke.`
+- At the budget of 1, the second Agent's reply is refused: it never appears as a row, and `T-A` logs `Room '<roomId>' refused a message from '<agent>': its budget of 1 agent messages since a human last spoke is spent.` (The number in that line is the configured budget.) The refused Agent's Draft text stays on screen as unrendered plain text (the echoed prompt) because a Draft only clears when its Message posts; that is expected here, not a stuck Draft. This behaviour is plausible from the code but has not been observed; record exactly what the Draft shows.
+- Clicking `Leave paused` replaces the panel with a grey line reading exactly `Paused — 1 of 1 agent replies since you last spoke.` (the budget is 1 from step 11 on; `Chat.razor:158`)
 - Sending `resuming` clears the pause, and a following `@Ada` mention gets a reply.
 - While a `Continue` grant is in flight the button is disabled and reads `Continuing…`.
-- `T-A` logs `Room '<roomId>' was extended to 4 agent messages.` on Continue.
+- `T-A` logs `Room '<roomId>' was extended to 2 agent messages.` on Continue (the granted 1 plus the configured budget of 1, `ChatService.cs:368`).
 - The refused reply appears nowhere in the JSONL — only Messages that reached the Transcript count against the Budget.
 
 **Fail if — any of these**
@@ -1304,7 +1315,7 @@ If the agents never reply at all, no Budget can be spent and nothing here is tes
 8. Read the transcript and confirm it is intact.
 9. Send `back online` and confirm it posts.
 10. Look at the bottom of the page for a yellow banner.
-11. In `T-B` run `curl.exe http://localhost:5100/ -o "$env:TEMP\shell.html"`, then `Select-String -Path "$env:TEMP\shell.html" -Pattern 'styles.css' -SimpleMatch` and read every stylesheet link it emits.
+11. In `T-B` run `$html = curl.exe -s http://localhost:5100/settings | Out-String` (`/settings`, not `/`: with Rooms present the bare `/` answers a `302` redirect and there are no `<link>` tags to read; see SHELLNAV-04), then `[regex]::Matches($html, '<link rel="stylesheet" href="([^"]+)"') | ForEach-Object { $_.Groups[1].Value }` and write down every stylesheet href it prints, the fingerprinted component-styles bundle (the one ending in `.styles.css`) among them.
 12. For each stylesheet URL found, run `curl.exe -I "http://localhost:5100/<that path>"` and confirm the status line is 200, not 404.
 13. In `T-B` confirm `sent while down` is absent: `Select-String -Path "$data\rooms\$room.jsonl" -Pattern 'sent while down' -SimpleMatch`.
 
@@ -1320,7 +1331,7 @@ If the agents never reply at all, no Budget can be spent and nothing here is tes
 
 **Fail if — any of these**
 
-- SIX mutually exclusive state paragraphs are visible at once in the overlay -> the component-scoped CSS bundle is not loading. This is the highest-priority silent failure in the repo: it produces no build warning, no startup error and no log line, and it disables EVERY scoped stylesheet in the app at once. Confirm with the stylesheet 404 check at step 12 and report immediately.
+- FIVE mutually exclusive state paragraphs (`ReconnectModal.razor:9-26`) are visible at once in the overlay -> the component-scoped CSS bundle is not loading. This is the highest-priority silent failure in the repo: it produces no build warning, no startup error and no log line, and it disables EVERY scoped stylesheet in the app at once. Confirm with the stylesheet 404 check at step 12 and report immediately.
 - Any stylesheet URL the shell links returns 404 -> as above; name the exact URL in the report.
 - The yellow `An unhandled error has occurred.` banner is visible at any point -> an exception reached the browser's live connection; capture the console output before reloading.
 - `sent while down` is present in the JSONL after reconnect -> a Message sent to a dead server was replayed; the Human has no way to know when that will happen.
@@ -1342,25 +1353,25 @@ If the overlay never appears because the browser closed the connection instantly
 **Before you start**
 
 - `node` is on PATH (`node --version` succeeds).
-- The agent adapter is installed under `E:\Repos\Huddle\tools\acp\node_modules`.
-- You accept a small token charge: ONE prompt, ONE short turn — a few hundred tokens on Haiku at low effort. Roughly the cost of a single short chat message.
+- The agent adapter is installed under `<repo>\tools\acp\node_modules`.
+- You accept a small token charge: ONE prompt, ONE short turn — a few hundred tokens on Haiku at low effort. Roughly the cost of a single short chat message. This launch uses the default `App_Data`, where the built-in Chief of Staff (no stored Model, so the account default) takes an unprompted paid Greeting Turn into its empty Room (`PersonaRunner.cs:481-495`). [`P-LAUNCH-PAID`](common.md#p-launch-paid-) therefore starts by setting the Chief of Staff to Haiku / low on its card; do that first, and count that Greeting as part of this test's charge.
 - Every other test in this area has already been run for free; do NOT use this test to check Markdown cases the mock Teammates already proved.
 
 **Steps**
 
 1. In `T-A` press Ctrl+C to stop the app.
-2. In `T-A` clear the ACP override so Development config can turn it on: `Remove-Item Env:Team__Acp__Enabled -ErrorAction SilentlyContinue`. Also clear any budget override: `$env:Team__AgentMessageBudget = '4'`.
-3. In `T-A` relaunch: `dotnet run --project src/Huddle.App --urls http://localhost:5100`. This launch WILL start real agents and CAN spend money — keep the session short.
+2. Follow [`P-LAUNCH-PAID`](common.md#p-launch-paid-) from its first step: launch free, set the Chief of Staff to Haiku / low on its card, stop. That procedure's launch block sets `Team__AgentMessageBudget` to `4`, `Team__Acp__TokenBudget` to `200000` and `Team__Acp__Enabled` to `true`, and clears `ANTHROPIC_API_KEY` and `TEAM_E2E`.
+3. Launch with the `P-LAUNCH-PAID` launch block. This launch WILL start real agents and CAN spend money — keep the session short.
 4. In the browser click `Teammates` in the sidebar.
 5. Click the `New teammate` button.
 6. Fill in a Name, then in the `Model` dropdown select **Haiku**, and in the `Effort` dropdown select **low**. These two settings are the standing convention and keep the charge small — do not pick any other model or effort.
 7. Click `Add teammate` to save.
-8. Wait for the teammate to come online, then open its Room from the sidebar. This launch uses the default `App_Data`, not the seeded folder, so in `T-B` set `$data = 'E:\Repos\Huddle\src\Huddle.App\App_Data'`, set `$room` to that Room's id and run `Lines`.
+8. Wait for the teammate to come online, then open its Room from the sidebar. This launch uses the default `App_Data`, not the seeded folder, so in `T-B` set `$data = '<repo>\src\Huddle.App\App_Data'`, set `$room` to that Room's id and run `Lines`.
 9. Type ONE prompt and press Enter: `In under 80 words, reply with a short heading, a three-item bullet list, a fenced code block of one line, and a link to https://example.com`.
 10. Watch the reply arrive: note whether a streaming row appears with the sender's Name, a `Stop` button, a blinking caret, and plain (unrendered) text.
-11. Watch for a muted italic line beneath the streaming text describing tool activity, if any appears.
+11. Watch for a list of tool-call rows (`ul.turn-detail`, `aria-label="Tool calls"`, `MessageList.razor:115-160`) beneath the streaming text, if the reply uses any tool.
 12. When the reply settles, read the final row: check the heading, bullets, code block and link are all rendered as real formatting rather than literal Markdown characters.
-13. Confirm no tool-activity line remains beneath the settled Message.
+13. Confirm no tool-call list (`ul.turn-detail`) remains beneath the settled Message.
 14. In `T-B` run `Lines` and `Tail`.
 15. STOP THE APP (Ctrl+C in `T-A`) as soon as you have judged the result, so no further tokens can be spent.
 
@@ -1369,7 +1380,7 @@ If the overlay never appears because the browser closed the connection instantly
 - A streaming Draft row appears with the teammate's Name, a `Stop` button and a blinking caret.
 - The Draft text is plain during streaming — Markdown syntax is visible as literal characters.
 - The Draft is replaced by a settled Message row in which the heading, bullets, fenced code block and link are all rendered as real formatting.
-- No tool-activity line remains visible once the Message has settled.
+- No tool-call list (`ul.turn-detail`) remains visible once the Message has settled.
 - `Lines` grew by exactly 2 — your prompt and the reply.
 - The last JSONL line carries the teammate's Name as `senderName`, and the tool-activity text appears nowhere in the file.
 - `T-A` shows the agent starting with no warning about a model not being in the agent's catalog.
@@ -1379,7 +1390,7 @@ If the overlay never appears because the browser closed the connection instantly
 - No Draft ever appears and only the finished Message shows up -> the streaming delta path is dead for real agents even though it works for the mock Teammates.
 - The Draft appears but is never replaced by a settled Message -> the completion signal is not arriving; the caret will blink indefinitely.
 - The reply renders as literal Markdown characters -> the Markdown path is broken specifically for agent-authored text.
-- A tool-activity line persists after the Message settles, or appears in the JSONL -> activity lines are leaking into the durable Transcript, which must only ever record what an agent SAID.
+- A tool-call row persists after the Message settles, or appears in the JSONL -> tool-call rows are leaking into the durable Transcript, which must only ever record what an agent SAID.
 - `T-A` warns that the chosen model is not in the agent's catalog -> the Haiku selection did not reach the adapter and the turn may have run on a different, more expensive model; stop immediately and report.
 
 **Inconclusive if**

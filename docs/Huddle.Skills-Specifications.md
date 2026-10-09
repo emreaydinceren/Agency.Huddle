@@ -10,7 +10,7 @@ a goal in conversation and have a Teammate assemble a team for it:
 | Stream | Delivers | Depends on |
 | --- | --- | --- |
 | **S1 — Skills infrastructure** | Skill files, their resolution, the Skill Index in the system prompt, `read_skill`, tool grants by Skill, and the Skills UI | Nothing |
-| **S2 — Team-building tools** | `validate_teammate`, `propose_teammates`, the Proposal and its Approve / Decline, and `MaxTeammates` | The two contracts in §5.3 only; runs in parallel with S1 |
+| **S2 — Team-building tools** | `validate_teammate`, `propose_teammates`, the Proposal and its Approve / Decline, and `MaxTeammatesPerTeam` / `MaxLiveProcesses` | The two contracts in §5.3 only; runs in parallel with S1 |
 | **S3 — Content and the built-in Chief of Staff** | The `team-building` Skill's four files, the permanent Chief of Staff, and its unprompted Greeting | S1 and S2 |
 
 It is written for the engineers or agents building those streams, with no memory of the
@@ -62,7 +62,7 @@ Each row is a scenario the finished system must handle. §13 walks the first one
 | U2 | Clicks **Approve** on a Proposal of three Candidates | Three Persona files are written one at a time; a Message from the Human *"Approved. Created Vera, Quill and Iris. @Chief of Staff go ahead."* wakes the Chief of Staff, which opens a work Room with a `seed` |
 | U3 | *"Drop the Tester and make the Writer more concise."* | The Chief of Staff revises and calls `propose_teammates` again; the new Proposal **replaces** its own pending one |
 | U4 | Clicks **Decline** | *"Declined the proposed Teammates: Vera, Quill."* is posted as the Human, waking the proposer, which asks what to change |
-| U5 | Approves when 7 Teammates exist, the Proposal has 3, and `MaxTeammates` is 8 | Nothing is created; the posted Message says the limit would be exceeded and by how much |
+| U5 | Approves when the Team has 7 Teammates, the Proposal adds 3 to it, and `MaxTeammatesPerTeam` is 8 | Nothing is created; the posted Message says the Team's limit would be exceeded and by how much |
 | U6 | Another Agent calls `propose_teammates` in a Room where the Chief of Staff's Proposal waits | Refused: *"A Proposal from Chief of Staff is already waiting in this Room."* |
 | U7 | Assigns `team-building` to Nova on the Teammate card | Nova restarts with the Skill in its index and `validate_teammate` / `propose_teammates` in its tool list |
 | U8 | Writes `{DataDir}/Skills/meeting-notes/SKILL.md` by hand | The Skill appears on Settings › Skills as *Yours* within about half a second, and in the Teammate card's picker |
@@ -184,7 +184,8 @@ Each row is a scenario the finished system must handle. §13 walks the first one
     CandidateChecker, validate_teammate,  │      Reset to default, manual tests
     ProposalStore, propose_teammates,     │
     ProposalService, ProposalCard,        │
-    MaxTeammates                          │
+    MaxTeammatesPerTeam                   │
+    MaxLiveProcesses                      │
                                           │
   Shared contracts (§5.3) fixed first ────┘
 ```
@@ -684,7 +685,7 @@ outcome in this Room.
       → Room archived?                     yes → "That Room is Archived."
       → candidates 1..n, parse             bad → problems
       → CandidateChecker.CheckAsync        bad → problems, one per line
-      → count + n ≤ MaxTeammates?          no  → "5 Teammates exist and the limit is 8;
+      → Team count + n ≤ MaxTeammatesPerTeam, and live count + n ≤ MaxLiveProcesses? (HireLimitGuard)          no  → "Team <Team> has 5 Teammates and the limit is 8 per Team;
                                                   propose at most 3."
       → ProposalStore.TryPut
             Refused(existing) → "A Proposal from <name> is already waiting in this Room."
@@ -739,7 +740,7 @@ public sealed record ProposalOutcome(
 ```text
  p = proposals.TryTake(roomId, proposalId)       null → Gone (another tab won); post nothing
  count = personas.Entries.Count
- if max > 0 && count + p.Candidates.Count > max
+ if HireLimitGuard refuses the Team or the live count (see §8 limit check)
       → text = "Approved, but nothing was created: 7 Teammates exist, the limit is 8, and
                 this Proposal adds 3. @<proposer>"
  else
@@ -763,7 +764,7 @@ Outcome Message templates:
 | Created | `Approved. Created Vera, Quill and Iris. @Chief of Staff go ahead.` |
 | PartlyCreated | `Approved. Created Vera and Quill. Could not create Iris: Persona Alias 'iri' is also used by 'Teams/Iris.md'. @Chief of Staff` |
 | NoneCreated | `Approved, but nothing was created. Vera: …; Quill: …. @Chief of Staff` |
-| OverLimit | `Approved, but nothing was created: 7 Teammates exist, the limit is 8, and this Proposal adds 3. @Chief of Staff` |
+| OverLimit | `Approved, but nothing was created: Team <Team> has 7 Teammates, the limit is 8 per Team, and this Proposal adds 3. @Chief of Staff` (a live-process refusal reads "N live processes are running, the limit is M live processes, and this Proposal adds K.") |
 | Declined | `Declined the proposed Teammates: Vera, Quill. @Chief of Staff` |
 
 **Implementation notes.**
@@ -1057,7 +1058,8 @@ All under `Team:`, beside the existing keys in `TeamOptions` and `AcpOptions`.
 | Key | Type | Default | Note |
 | --- | --- | --- | --- |
 | `Acp:SkillsDir` | string | `Skills` | Relative to `DataDir`. Created at startup |
-| `Acp:MaxTeammates` | int | `8` | Loaded Personas, including the Human's own; rejected files excluded. Checked at propose and at Approve; never on the Teammate card. **Zero or less disables it** |
+| `Acp:MaxTeammatesPerTeam` | int | `8` | Most Teammates one Team may hold. Checked at propose and at Approve; never on the Teammate card. **Zero or less disables it** |
+| `Acp:MaxLiveProcesses` | int | `16` | Most live Teammate processes across every Team. Checked at propose and at Approve; never on the Teammate card. **Zero or less disables it** |
 
 Both are scalars, so the collection-initialiser rule (`rules.md` row 26) does not apply.
 
@@ -1198,12 +1200,12 @@ was told and what it can call in agreement.
 | The Greeting | One Turn per install: `SKILL.md` + `onboarding.md` reads plus one reply, ≈ 5–8k tokens | Counts against the per-Persona token Budget | Paid once; repeats only after `-Clean` or a failed Greeting |
 | `validate_teammate` | < 5 ms | 50 ms | Builds one candidate `PersonaIndex`, O(Personas) |
 | Approve, 3 Candidates | < 100 ms to write; Teammates Online in seconds | — | File writes are serial; Adapter start dominates and is existing behaviour |
-| Idle cost per created Teammate | One `node` process + one loopback Kestrel | `MaxTeammates` = 8 | Unmeasured past four ([Known limits](engineering/known-limits.md)); the ceiling bounds it |
+| Idle cost per created Teammate | One `node` process + one loopback Kestrel | `MaxLiveProcesses` = 16 | Unmeasured past four ([Known limits](engineering/known-limits.md)); the ceiling bounds it |
 
 **Scaling notes.**
 - **Tokens, not CPU, are the constraint.** Keep descriptions short. The Settings tab warns
   above 300 characters.
-- **Processes are the second constraint.** `MaxTeammates` exists because every Teammate is a
+- **Processes are the second constraint.** `MaxLiveProcesses` exists because every live Teammate is a
   process. Measure before raising the default.
 
 ---
@@ -1231,7 +1233,7 @@ was told and what it can call in agreement.
 | F-17 | Proposer's Persona deleted before Approve | Approve still creates; the text omits the Mention |
 | F-18 | Proposer's Persona restarted while waiting | No effect; the Proposal is keyed by Room, the proposer by Agent id |
 | F-19 | App restarts with a Proposal waiting | Lost. The proposer is not told; the Human asks again. Recorded in Known limits |
-| F-20 | `MaxTeammates` ≤ 0 | No ceiling |
+| F-20 | `MaxTeammatesPerTeam` or `MaxLiveProcesses` ≤ 0 | No ceiling for that limit |
 | F-21 | New Teammates Mentioned before they are Online | The Mention resolves (Team Directory row exists within ms of start); delivery skips a disconnected Agent, so the first Mention may go unanswered. Mitigated by `SKILL.md` step 6 |
 | F-22 | Approve while `Acp:Enabled` is false | Files are created; Teammates stay Offline with the existing *"Teammates are switched off"* reason |
 | F-23 | Human removes `team-building` from the Chief of Staff | Allowed; it is the Human's file. The Chief of Staff loses the tools at restart. Reset to default restores it |
@@ -1285,7 +1287,7 @@ Use case U1 → U2, on a fresh install with ACP enabled.
    cos (DM): "Work is under way in Launch. It may pause and ask you to continue."
 ```
 
-**Failure branch (U5).** At Approve, 7 Teammates exist: OverLimit, nothing created, Message
+**Failure branch (U5).** At Approve, the Team already has 7 Teammates: OverLimit, nothing created, Message
 posted, cos wakes and offers to reuse existing Teammates or shrink the team.
 
 ---
@@ -1297,7 +1299,7 @@ Every decision taken in the design review of 2026-09-22, with what it beat.
 | ID | Decision | Alternative rejected | Why |
 | --- | --- | --- | --- |
 | D-1 | **Agent proposes; the Human's Approve creates.** `propose_teammates` replaces ADR-0021's `create_teammate` | A `create_teammate` tool guarded by prompt text; a Teammate created in a pending state and started from its card | A prompt is not a guard. The pending-Teammate route puts the decision away from the conversation that motivated it. Reusing the Budget pattern needs no Envelope. Posting the outcome as a Human Message wakes the proposer with no new mechanism |
-| D-2 | **`MaxTeammates` = 8, counting every loaded Persona** | 4, the Known-limits figure; counting only Agent-proposed Teammates | 4 would be reached immediately by any real library. Counting all Personas bounds what actually costs: processes |
+| D-2 | **Limits per Team and per install: `MaxTeammatesPerTeam` = 8 and `MaxLiveProcesses` = 16** (this row's original single cap, `MaxTeammates` = 8 counting every loaded Persona, is retired; HR-10, decision D1) | 4, the Known-limits figure; counting only Agent-proposed Teammates | 4 would be reached immediately by any real library. Counting all Personas bounds what actually costs: processes |
 | D-3 | **The Chief of Staff is permanent**: re-written at startup when missing | Seed once and respect deletion | The Chief of Staff is how a Human builds everything else; losing it strands them |
 | D-4 | **Recognised by `_builtin: chief-of-staff`**; checked at startup only; the card offers Reset to default | Recognition by Name; recreation on deletion events | By-Name recognition duplicates on rename. Recreation on events races with file moves and gets both files rejected |
 | D-5 | **A Candidate carries only descriptive fields** | Letting it set Model, Effort, Adapter, Skills | Each grants tools or spends money; the Human sets them on the card, where the existing pickers and rules apply |

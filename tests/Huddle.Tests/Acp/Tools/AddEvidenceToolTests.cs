@@ -26,7 +26,7 @@ public sealed class AddEvidenceToolTests
     {
         string? novaId = harness.NovaId;
         Assert.NotNull(novaId);
-        return new AddEvidenceTool(harness.Service, harness.Store, log, harness.Directory, harness.Clock, novaId);
+        return new AddEvidenceTool(harness.Service, harness.Store, log, harness.Directory, harness.Clock, novaId, new FakePromptSource());
     }
 
     /// <summary>Appends one tool call to Nova's log at <paramref name="time"/>.</summary>

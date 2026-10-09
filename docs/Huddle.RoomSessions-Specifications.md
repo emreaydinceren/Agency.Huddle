@@ -1,6 +1,6 @@
 # Huddle.RoomSessions — Design Specification
 
-**Date:** 2026-09-22 · **Status:** Proposed · **Decision record:**
+**Date:** 2026-09-22 · **Status:** Built · **Decision record:**
 [ADR-0024](adr/0024-an-agent-holds-one-session-per-room.md) · **Vocabulary:**
 [language.md](engineering/language.md) (**Room Session**; amended **Catch-up**, **Stop**, **Budget**,
 **Turn**) · **Depends on:** [the File Changes spec](Huddle.FileChanges-Specifications.md), including

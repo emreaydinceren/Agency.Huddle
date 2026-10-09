@@ -1,8 +1,8 @@
 # Teammates page: tiles, Teams grouping, filter and rejected files
 
-Prove that the /teammates page is an honest, live mirror of the Persona files on disk: that a teammate's identity and Team come from its frontmatter and never from its filename or folder, that every file which fails to load is named out loud instead of silently vanishing, that the Team filter narrows without probing anything, that the status badge tells the truth (health outranking a live pipe), and that the file watcher keeps up with edits, creations, deletions, moves and folder renames at every depth. Almost every failure in this area is silent — a moved file that quietly changes identity, a nested file that stops reloading, a colliding file that disappears without a word — so these tests are written for a human driving a browser and a file explorer side by side.
+Prove that the /teammates page is an honest, live mirror of the Persona files on disk: that a teammate's identity and Team come from its frontmatter (its file sits at `Teammates\<Name>\<Name>.md`, and its Team never comes from the folder), that every file which fails to load is named out loud instead of silently vanishing, that the Team filter narrows without probing anything, that the status badge tells the truth (health outranking a live pipe), and that the file watcher keeps up with edits, creations, deletions, moves and folder renames. Almost every failure in this area is silent — a moved file that quietly changes identity, a Teammate folder that stops reloading, a colliding file that disappears without a word — so these tests are written for a human driving a browser and a file explorer side by side.
 
-**40 tests** · 39 free, 1 paid 💰 · about 4.2 hours.
+**42 tests** · 41 free, 1 paid 💰 · about 4.4 hours.
 
 Read [the manual test script](../manual-tests.md) first — the cost guard, the Model and Effort
 convention, and the rules for concluding a result — then [Common procedures](common.md), which
@@ -12,14 +12,14 @@ defines the terminals, states, procedures and oracles this page names. Both are 
 
 Run [`P-BUILD`](common.md#p-build) then the lane named below from
 [Common procedures](common.md), which also defines the terminals `T-A` and `T-B`, the
-oracles `O-LOG` / `O-ADAPTERS` / `O-TRANSCRIPT` / `O-DB` / `O-WIRE`, the four resets,
+oracles `O-LOG` / `O-ADAPTERS` / `O-TRANSCRIPT` / `O-DB` / `O-WIRE`, the five resets,
 `P-NEW-PERSONA`, `P-ECHO-BOT` and the standing conventions. This area adds:
 
-1. Lane is `P-LAUNCH-FREE`. A handful of tests need ACP on: stop the app and restart it as `dotnet run --project src/Huddle.App -- --Team:Acp:Enabled=true`, then drop the argument to turn it off again. Never edit `appsettings.json` to do this — leave the shipped defaults alone.
-2. Confirm the Persona library is empty before you start: `Get-ChildItem -Recurse src\Huddle.App\App_Data\Teams` should list nothing. If it lists files, move them to a scratch folder now and put them back when you are finished — TEAMMATESLIBRARY-01 and -02 require an empty library.
-3. Open a browser at `http://localhost:5100` and a File Explorer window (or a text editor) on `src\Huddle.App\App_Data\Teams\`, side by side. Many tests change a file on disk and then watch the browser WITHOUT touching it — do not press F5 unless a step says to.
-4. Learn the CORE FIXTURE SET but do NOT create it yet — TEAMMATESLIBRARY-03 creates it. Four files under `src\Huddle.App\App_Data\Teams\`: (1) `Nova.md` = frontmatter name 'Nova', title 'Research Lead', alias 'nov', teams ['Business']; (2) `Vale.md` = name 'Vale', title 'Ops Lead', alias 'val', teams ['Business', 'Household']; (3) `Household\Rune.md` = name 'Rune', title 'Home Steward', alias 'run', teams ['Household']; (4) `Quill.md` = name 'Quill', title 'Scribe', alias 'qui', and NO teams line at all. Exact text is given in TEAMMATESLIBRARY-03.
-5. Do NOT copy the repo-root `personas\*.md` files into the Teams folder. None has a `title:` or `alias:` field, so all twelve would land in the rejected block and drown every other observation. `tools/migrate-personas-to-teams.ps1` reshapes them if you want a realistic library later.
+1. Lane is `P-LAUNCH-FREE`. A handful of tests need ACP on: stop the app and launch them under [`P-LAUNCH-UAT`](common.md#p-launch-uat) (the mock adapter, free) instead, where `<data>` is `C:\seeds\huddle\uat\data`; relaunch under `P-LAUNCH-FREE` for the next test. Do not switch ACP on with `--Team:Acp:Enabled=true` against the real adapter: the Chief of Staff takes a paid Greeting Turn in its empty direct Room. Never edit `appsettings.json` — leave the shipped defaults alone.
+2. Start from a library that holds only the built-in Chief of Staff. Persona files live at `<data>\Teammates\<Name>\<Name>.md` ([`P-NEW-PERSONA`](common.md#p-new-persona) explains why a hand-written file skips the Model and Effort rows). Run [`P-RESET-TEAMS`](common.md#the-five-resets) before launching: it deletes every folder under `<data>\Teammates`, and the app re-seeds the Chief of Staff (alias `cos`, no Teams, no stored Model) at every start, whatever `Acp:Enabled` is. `<data>\Teams\` holds Team folders, notes and Tasks, never Personas; do not put Persona files there.
+3. Open a browser at `http://localhost:5100` and a File Explorer window (or a text editor) on `<data>\Teammates\`, side by side. Many tests change a file on disk and then watch the browser WITHOUT touching it — do not press F5 unless a step says to.
+4. Learn the CORE FIXTURE SET but do NOT create it yet — TEAMMATESLIBRARY-03 creates it. Five Teammates, each a folder named after the Teammate holding a file of the same name, under `<data>\Teammates\`: (1) `Nova\Nova.md` = frontmatter name 'Nova', title 'Research Lead', alias 'nov', teams ['Business']; (2) `Vale\Vale.md` = name 'Vale', title 'Ops Lead', alias 'val', teams ['Business', 'Household']; (3) `Rune\Rune.md` = name 'Rune', title 'Home Steward', alias 'run', teams ['Household']; (4) `Quill\Quill.md` = name 'Quill', title 'Scribe', alias 'qui', and NO teams line at all; (5) `Emily Lee\Emily Lee.md` = name 'Emily Lee', title 'Analyst', alias 'emi', teams ['Business']. With the built-in Chief of Staff that is six Teammates. Exact text is given in TEAMMATESLIBRARY-03.
+5. Never put a `.md` directly in `<data>\Teammates\` and never put a second `.md` in a Teammate's folder: the first is rejected with `A definition must be inside its teammate's folder.`, the second with `A teammate folder holds only its definition; use work/.`. Any such stray file would land in the rejected block and drown every other observation.
 6. All sorting on this page is ORDINAL, not case-insensitive: an upper-case letter sorts before a lower-case one, so a Team named `Zulu` legitimately appears above one named `admin`, and a Persona named `Zoe` above one named `ada`. This is deliberate and pinned by tests. Do not file it.
 
 ## Tests
@@ -33,7 +33,7 @@ oracles `O-LOG` / `O-ADAPTERS` / `O-TRANSCRIPT` / `O-DB` / `O-WIRE`, the four re
 **Before you start**
 
 - App running at http://localhost:5100.
-- Any state of the Teams folder (empty is fine).
+- Any state of `<data>\Teammates\` (only the Chief of Staff is fine).
 
 **Steps**
 
@@ -56,7 +56,7 @@ oracles `O-LOG` / `O-ADAPTERS` / `O-TRANSCRIPT` / `O-DB` / `O-WIRE`, the four re
 - 404, or no `Teammates` link in the sidebar -> the route or the nav entry was renamed or dropped.
 - The page renders as unstyled default-browser text -> a CSS class rename was missed and app.css no longer matches the markup; this is the exact regression this step exists to catch.
 - The intro paragraph is missing -> the only place the page tells a user that editing a file restarts a teammate and clears its memory is gone.
-- A `node` process appears purely from loading the page -> the model-catalog probe is running on page load; it must run only when a New teammate / Edit card is opened.
+- `O-ADAPTERS` prints anything above `0` after the page loads -> the model-catalog probe is running on page load; it must run only when a New teammate / Edit card is opened.
 
 **Inconclusive if**
 
@@ -65,41 +65,49 @@ Browser shows 'connection refused' or the page never finishes loading -> the app
 > [!NOTE]
 > This is the cheap sanity version of the no-probe rule. TEAMMATESLIBRARY-34 is the full version (filter changes and a View card as well).
 
-### TEAMMATESLIBRARY-02 — Empty library shows its sentence and no Team filter
+### TEAMMATESLIBRARY-02 — A library of only the Chief of Staff reads as one tile, then as empty
 
-**Free** · about 2 min
+**Free** · about 5 min
 
-*Proves an empty Persona library reads as empty rather than broken, and that the Team dropdown is not rendered when there is nothing to filter.*
+*Proves the least a library can hold is the built-in Chief of Staff, which shows as one tile under "No team" with a Team dropdown that offers only "All teams"; and that removing even that one folder while the page is open gives the empty-library sentence and hides the dropdown.*
 
 **Before you start**
 
-- `src\Huddle.App\App_Data\Teams\` contains no .md files.
+- `<data>\Teammates\` holds only the folder `Chief of Staff` (Setup step 2 — `P-RESET-TEAMS` then `P-LAUNCH-FREE`). The Chief of Staff is seeded at every start, so a library with nobody in it exists only after step 5 below.
 
 **Steps**
 
-1. In `T-B` run `Get-ChildItem -Recurse src\Huddle.App\App_Data\Teams -Filter *.md` and confirm it lists nothing.
+1. In `T-B` run `Get-ChildItem <data>\Teammates -Directory | Select-Object -ExpandProperty Name` and confirm it prints exactly `Chief of Staff`.
 2. In the browser, go to http://localhost:5100/teammates and press F5.
 3. Read the whole page from top to bottom.
+4. Open the **Team** dropdown, read every option, and close it again.
+5. Without touching the browser, delete the folder `<data>\Teammates\Chief of Staff` in File Explorer, wait about two seconds, and read the page again.
+6. Stop the app with `P-STOP` and launch it again with `P-LAUNCH-FREE`; press F5 on /teammates. This re-seeds the Chief of Staff and puts the library back.
 
 **Pass if — all of these**
 
-- The page shows exactly the sentence `No Personas yet. Choose New teammate to add one.`, with `New teammate` in bold.
-- No label reading `Team` and no dropdown appear anywhere on the page.
-- No group headings appear.
-- No `Files that didn't load` section appears.
-- The heading, the `New teammate` button and the intro paragraph are all still present.
+- After step 3 there is exactly one group heading, `No team`, holding one tile: `Chief of Staff`, title `Chief of Staff`, chips `@cos` and `Offline`.
+- The sentence `No Personas yet. Choose New teammate to add one.` is not on the page, and no `Files that didn't load` section appears.
+- A **Team** dropdown is present, and its only option is `All teams` (no Persona names a Team).
+- After step 5 the page shows exactly the sentence `No Personas yet. Choose New teammate to add one.`, with `New teammate` in bold; no group heading, no tile, and no label reading `Team` or dropdown.
+- After step 5 the heading, the `New teammate` button and the intro paragraph are all still present.
+- After step 6 the `Chief of Staff` tile is back under `No team`.
 
 **Fail if — any of these**
 
-- A `Team` dropdown is rendered over an empty library -> the filter is not gated on there being any loaded Persona.
+- A `Team` dropdown is still rendered after the last Persona is gone -> the filter is not gated on there being any loaded Persona.
 - The page body is blank — neither the empty-state sentence nor any tiles -> reads to a user as a load failure rather than an empty library.
 - The empty-state sentence appears but the `New teammate` button does not -> a user with an empty library has no way to create their first teammate.
+- Step 1 or step 2 finds no `Chief of Staff` -> the built-in seed did not run; that is a finding against the seeder, not against this page.
 
 **Inconclusive if**
 
-The folder is not empty (leftover files from an earlier run) -> move them to a scratch folder, press F5, and rerun. If the folder does not exist at all, that is fine: the app creates it at startup; restart the app and rerun.
+The folder holds more than the Chief of Staff (leftover Teammates from an earlier run) -> run `P-RESET-TEAMS`, relaunch, and rerun. If the page does not repaint after step 5 within 10 seconds, press F5 once, record that you had to, and judge the empty state from the refreshed page; the watcher is judged by TEAMMATESLIBRARY-20.
 
-### TEAMMATESLIBRARY-03 — The fixture library loads, and one tile shows monogram, Name, Title · @alias and status
+> [!NOTE]
+> The empty-library sentence is only reachable by removing the Chief of Staff's folder while the app runs. At every start the library holds at least the Chief of Staff, so no start-up state shows the sentence.
+
+### TEAMMATESLIBRARY-03 — The fixture library loads, and a tile shows monogram, Name, Title, an @alias chip and status
 
 **Free** · about 8 min
 
@@ -107,11 +115,11 @@ The folder is not empty (leftover files from an earlier run) -> move them to a s
 
 **Before you start**
 
-- Empty Teams folder at the start (TEAMMATESLIBRARY-02 just ran).
+- `<data>\Teammates\` holds only the Chief of Staff's folder (TEAMMATESLIBRARY-02 just ran and step 6 there restored it).
 
 **Steps**
 
-1. Create `src\Huddle.App\App_Data\Teams\Nova.md` containing exactly:
+1. Create the folder `<data>\Teammates\Nova\` and in it `Nova.md` containing exactly:
 ---
 name: 'Nova'
 title: 'Research Lead'
@@ -119,7 +127,7 @@ alias: 'nov'
 teams: ['Business']
 ---
 You are Nova. Answer in one short sentence.
-2. Create `src\Huddle.App\App_Data\Teams\Vale.md` containing exactly:
+2. Create the folder `<data>\Teammates\Vale\` and in it `Vale.md` containing exactly:
 ---
 name: 'Vale'
 title: 'Ops Lead'
@@ -127,7 +135,7 @@ alias: 'val'
 teams: ['Business', 'Household']
 ---
 You are Vale. Answer in one short sentence.
-3. Create the folder `src\Huddle.App\App_Data\Teams\Household\` and inside it create `Rune.md` containing exactly:
+3. Create the folder `<data>\Teammates\Rune\` and in it `Rune.md` containing exactly:
 ---
 name: 'Rune'
 title: 'Home Steward'
@@ -135,14 +143,14 @@ alias: 'run'
 teams: ['Household']
 ---
 You are Rune. Answer in one short sentence.
-4. Create `src\Huddle.App\App_Data\Teams\Quill.md` containing exactly (note: no teams line):
+4. Create the folder `<data>\Teammates\Quill\` and in it `Quill.md` containing exactly (note: no teams line):
 ---
 name: 'Quill'
 title: 'Scribe'
 alias: 'qui'
 ---
 You are Quill. Answer in one short sentence.
-5. Create `src\Huddle.App\App_Data\Teams\Emily Lee.md` containing exactly:
+5. Create the folder `<data>\Teammates\Emily Lee\` and in it `Emily Lee.md` containing exactly:
 ---
 name: 'Emily Lee'
 title: 'Analyst'
@@ -150,28 +158,20 @@ alias: 'emi'
 teams: ['Business']
 ---
 You are Emily Lee. Answer in one short sentence.
-6. Create `src\Huddle.App\App_Data\Teams\cos.md` containing exactly (note the filename `cos.md` deliberately does not match the Name):
----
-name: 'Chief of Staff'
-title: 'Chief of Staff'
-alias: 'cos'
-teams: ['Business']
----
-You are the Chief of Staff. Answer in one short sentence.
+6. Do not create a Chief of Staff file: the app already seeded one (alias `cos`, title `Chief of Staff`, no Teams). A second file named `Chief of Staff` or aliased `cos` would be rejected as a duplicate of it.
 7. Go to http://localhost:5100/teammates and press F5.
-8. Read the second line of the Nova tile character by character, including the separator between Title and alias.
+8. Read the Nova tile line by line: the Name, the line beneath it, and the two chips on the line beneath that.
 9. Read the coloured square at the left of each of the six tiles.
-10. Read the status line under each tile's second line.
+10. Read the status chip on each tile, and inspect its coloured dot in the browser's developer tools (F12).
 
 **Pass if — all of these**
 
-- Six tiles are on the page: Chief of Staff, Emily Lee, Nova, Quill, Rune, Vale.
-- Nova's tile shows `Nova` on its first line and `Research Lead · @nov` on its second — a real middle dot, and the alias carries a leading `@`.
-- Every tile's second line is `<Title> · @<alias>` with values matching that file's frontmatter (Vale: `Ops Lead · @val`; Rune: `Home Steward · @run`; Quill: `Scribe · @qui`).
+- Six Teammates are on the page: Chief of Staff, Emily Lee, Nova, Quill, Rune, Vale (Vale appears twice, under two headings; see TEAMMATESLIBRARY-05).
+- Nova's tile shows `Nova` on its first line and `Research Lead` on the line beneath it. Beneath those are two chips: `@nov` (with a leading `@`) and a status chip reading `Offline`. There is no `Research Lead · @nov` line with a middle dot.
+- Every tile has the same shape: Name, then Title, then an `@<alias>` chip and a status chip, with values matching that Persona's frontmatter (Vale: `Ops Lead`, `@val`; Rune: `Home Steward`, `@run`; Quill: `Scribe`, `@qui`; Chief of Staff: `Chief of Staff`, `@cos`).
 - Monograms read: Emily Lee -> `EL`; Chief of Staff -> `CS`; Nova -> `N`; Quill -> `Q`; Rune -> `R`; Vale -> `V`.
-- Each tile has a status line with a coloured dot and one of `Starting` / `Online` / `Degraded` / `Offline` — with ACP off, every one reads `Offline` with a RED dot (`agent-dot offline`, computed `rgb(224, 90, 90)` from `--status-offline`). There is no grey dot in the design.
+- With ACP off, every status chip reads `Offline`, and the dot inside it has the CSS class `agent-dot offline` (its red is the theme's error colour, so do not compare an RGB value). The labels the page can show are `Starting`, `Online`, `Degraded` and `Offline`. There is no grey dot in the design.
 - The tiles have rounded borders and a coloured monogram square — they are tiles, not bullet points.
-- The `Chief of Staff` tile exists even though its file is named `cos.md` — the heading text comes from frontmatter, not the filename.
 
 **Fail if — any of these**
 
@@ -179,14 +179,15 @@ You are the Chief of Staff. Answer in one short sentence.
 - The literal text `this.cardName`, `this.cardTitle` or similar appears anywhere on screen -> the documented leading-`@` binding bug has shipped again.
 - The alias appears without its leading `@` -> the handle no longer reads as a handle, and a user cannot tell it from a second name.
 - `Chief of Staff` shows the monogram `CO` -> the monogram is taking the first TWO words instead of first-and-last.
-- The `Chief of Staff` tile is missing or is headed `cos` -> identity is being taken from the filename rather than the frontmatter Name.
+- The `Chief of Staff` tile is missing -> the built-in seed did not run, or a fixture took its Name or alias and both were rejected.
+- A status dot has no `agent-dot offline` class while ACP is off -> the badge is not reading the app's real state.
 
 **Inconclusive if**
 
 A tile you expected is missing AND a `Files that didn't load` block names its path -> you mistyped that file's frontmatter; fix the file (watch for smart quotes inserted by your editor — the parser wants plain `'`) and rerun. If the page shows nothing at all after F5, restart the app and rerun before recording anything.
 
 > [!NOTE]
-> Keep all six fixture files in place — later tests depend on them and say so. Use a plain-text editor; a word processor that converts `'` into a curly quote will make files fail to parse.
+> Keep all five fixture folders in place — later tests depend on them and say so. Use a plain-text editor; a word processor that converts `'` into a curly quote will make files fail to parse.
 
 ### TEAMMATESLIBRARY-04 — One heading per Team, ordinal order, "No team" last, no empty groups
 
@@ -196,7 +197,7 @@ A tile you expected is missing AND a `Files that didn't load` block names its pa
 
 **Before you start**
 
-- The core fixture set from TEAMMATESLIBRARY-03 is in place.
+- The core fixture set from TEAMMATESLIBRARY-03 is in place (five fixtures plus the built-in Chief of Staff).
 - The Team filter is on `All teams` (its default).
 
 **Steps**
@@ -204,14 +205,14 @@ A tile you expected is missing AND a `Files that didn't load` block names its pa
 1. Go to http://localhost:5100/teammates and press F5.
 2. Read every group heading on the page, from top to bottom, in order.
 3. Under each heading, list the tiles it holds.
-4. In the file explorer, open `Quill.md` and confirm it still has no `teams:` line.
+4. In the file explorer, open `Teammates\Quill\Quill.md` and confirm it still has no `teams:` line.
 
 **Pass if — all of these**
 
 - Exactly three headings appear, in this order: `Business`, `Household`, `No team`.
-- `Business` holds Chief of Staff, Emily Lee, Nova and Vale.
+- `Business` holds Emily Lee, Nova and Vale.
 - `Household` holds Rune and Vale.
-- `No team` holds Quill, and is the LAST heading on the page.
+- `No team` holds Chief of Staff and Quill (the Chief of Staff has no Teams), and is the LAST heading on the page.
 - No heading appears with no tiles under it.
 
 **Fail if — any of these**
@@ -233,20 +234,20 @@ A tile is under the wrong heading AND you have edited a fixture since -03 -> re-
 
 **Before you start**
 
-- Core fixture set in place; `Vale.md` declares `teams: ['Business', 'Household']`.
+- Core fixture set in place; `Teammates\Vale\Vale.md` declares `teams: ['Business', 'Household']`.
 
 **Steps**
 
 1. Go to http://localhost:5100/teammates and press F5.
-2. Find the Vale tile under the `Business` heading and write down its Name, second line and status label.
-3. Find the Vale tile under the `Household` heading and write down the same three things.
+2. Find the Vale tile under the `Business` heading and write down its Name, Title, alias chip and status label.
+3. Find the Vale tile under the `Household` heading and write down the same four things.
 4. Click the Vale tile under `Business` and note the card's Name and `Teams:` line, then close the card with the × button.
 5. Click the Vale tile under `Household` and note the same two things.
 
 **Pass if — all of these**
 
 - A full Vale tile appears under BOTH `Business` and `Household`.
-- Both copies show the identical Name (`Vale`), second line (`Ops Lead · @val`), monogram (`V`) and status label.
+- Both copies show the identical Name (`Vale`), Title (`Ops Lead`), alias chip (`@val`), monogram (`V`) and status label.
 - Both clicks open the same card: Name `Vale`, and a line reading `Teams: Business, Household`.
 
 **Fail if — any of these**
@@ -257,21 +258,24 @@ A tile is under the wrong heading AND you have edited a fixture since -03 -> re-
 
 **Inconclusive if**
 
-Vale is absent from one heading and also absent from the Team dropdown -> re-read `Vale.md`; if its `teams:` line is malformed this test cannot judge. Fix and rerun.
+Vale is absent from one heading and also absent from the Team dropdown -> re-read `Teammates\Vale\Vale.md`; if its `teams:` line is malformed this test cannot judge. Fix and rerun.
 
-### TEAMMATESLIBRARY-06 — Folders are cosmetic: a nested file is grouped by its field, not its folder
+> [!NOTE]
+> This page groups only by the Persona's own `teams` field. A Team folder under `<data>\Teams\` (for instance one also called `Business`) is a different list; the two can disagree, and neither is wrong.
+
+### TEAMMATESLIBRARY-06 — A Persona's Team comes from its field, never from its folder
 
 **Free** · about 5 min
 
-*Proves the single most important rule in this area — a Persona's Team comes from frontmatter, never from the sub-folder its file happens to sit in, and never from its filename.*
+*Proves the single most important rule in this area — a Persona's Team comes from the `teams` frontmatter field, never from the name of its Teammate folder or file, so a Teammate is not grouped under a heading named after itself.*
 
 **Before you start**
 
-- Core fixture set in place, including the folder `App_Data\Teams\Household\`.
+- Core fixture set in place.
 
 **Steps**
 
-1. Create `src\Huddle.App\App_Data\Teams\Household\zzz-misfiled.md` containing exactly:
+1. Create the folder `<data>\Teammates\Orin\` and in it `Orin.md` containing exactly:
 ---
 name: 'Orin'
 title: 'Strategy Lead'
@@ -281,30 +285,28 @@ teams: ['Business']
 You are Orin. Answer in one short sentence.
 2. Wait about two seconds WITHOUT touching the browser, then look at the page. If nothing changed, press F5 once and note that you had to.
 3. Find the `Orin` tile and note which heading it sits under.
-4. Use the browser's find (Ctrl+F) and search the page for the word `Household`.
+4. Use the browser's find (Ctrl+F) and search the page for the word `Orin`.
 5. Click the Orin tile and read the `Persona file` section at the bottom of the card.
 6. Close the card.
 
 **Pass if — all of these**
 
 - An `Orin` tile appears, and it sits under the `Business` heading.
-- No `Orin` tile appears under `Household`.
-- Ctrl+F finds `Household` only as a group heading (for Rune and Vale) — never as anything attached to Orin.
-- The card's `Persona file` section prints an absolute path ending `...\App_Data\Teams\Household\zzz-misfiled.md`, while the tile's heading still reads `Business`.
-- The tile is headed `Orin`, not `zzz-misfiled`.
+- No `Orin` tile appears under `Household`, and no heading reads `Orin`.
+- Ctrl+F finds `Orin` only on the tile (its Name, and in the card when open) — never as a group heading or a Team option.
+- The card's `Persona file` section prints an absolute path ending `...\Teammates\Orin\Orin.md`, while the tile's heading still reads `Business`.
 
 **Fail if — any of these**
 
-- Orin appears under `Household` -> grouping is derived from the containing folder. This is the highest-value regression in the area: it compiles, it looks entirely reasonable on screen, and it silently reverses the Teams-as-a-field decision.
-- No Orin tile appears at all and no rejected entry names the file -> the directory scan is not recursive; every Persona in a sub-folder is invisible.
-- The tile reads `zzz-misfiled` -> identity is being taken from the filename.
+- Orin appears under a heading named `Orin` -> grouping is derived from the containing folder or file name, reversing the Teams-as-a-field decision. It compiles and looks reasonable on screen, which is why this test exists.
+- No Orin tile appears and no rejected entry names the file -> a Persona in its own folder is invisible, which breaks every other test on this page.
 
 **Inconclusive if**
 
 The tile only appears after you press F5 -> the grouping half of this test still passes/fails on its own merits, but record the refresh requirement and run TEAMMATESLIBRARY-19 and -20, which exist to judge the watcher properly.
 
 > [!NOTE]
-> Delete `zzz-misfiled.md` when finished with this test unless a later test says otherwise; TEAMMATESLIBRARY-07's expected dropdown list assumes only the core fixtures.
+> Delete the folder `<data>\Teammates\Orin` when finished with this test; TEAMMATESLIBRARY-07's expected dropdown list assumes only the core fixtures.
 
 ### TEAMMATESLIBRARY-07 — The Team filter's label, options, order and de-duplication
 
@@ -315,11 +317,11 @@ The tile only appears after you press F5 -> the grouping half of this test still
 **Before you start**
 
 - Core fixture set in place.
-- `zzz-misfiled.md` from TEAMMATESLIBRARY-06 deleted.
+- The `Orin` folder from TEAMMATESLIBRARY-06 deleted.
 
 **Steps**
 
-1. Create `src\Huddle.App\App_Data\Teams\Zed.md` containing exactly:
+1. Create the folder `<data>\Teammates\Zed\` and in it `Zed.md` containing exactly:
 ---
 name: 'Zed'
 title: 'Night Lead'
@@ -327,7 +329,7 @@ alias: 'zed'
 teams: ['Zulu']
 ---
 You are Zed. Answer in one short sentence.
-2. Create `src\Huddle.App\App_Data\Teams\Ada.md` containing exactly:
+2. Create the folder `<data>\Teammates\Ada\` and in it `Ada.md` containing exactly:
 ---
 name: 'Ada'
 title: 'Admin Lead'
@@ -344,7 +346,7 @@ You are Ada. Answer in one short sentence.
 - A label reading exactly `Team` wraps a dropdown, positioned above the first group heading.
 - The first option is `All teams`, and it is the one selected.
 - After it the options are, in this order: `Business`, `Household`, `Zulu`, `admin` — upper-case before lower-case, because sorting is ordinal.
-- `Business` appears exactly once even though four Personas name it.
+- `Business` appears exactly once even though three Personas (Emily Lee, Nova, Vale) name it.
 - No option appears for a Team no Persona names.
 
 **Fail if — any of these**
@@ -359,7 +361,7 @@ You are Ada. Answer in one short sentence.
 The dropdown does not render at all -> check that at least one tile is on the page; the filter is deliberately absent for an empty library (TEAMMATESLIBRARY-02). If tiles are present and the dropdown is not, that is a FAIL, not inconclusive.
 
 > [!NOTE]
-> Keep `Zed.md` and `Ada.md` until TEAMMATESLIBRARY-08 and -09 are done; they are the cheapest Teams to empty out.
+> Keep the `Zed` and `Ada` folders until TEAMMATESLIBRARY-08 and -09 are done; they are the cheapest Teams to empty out.
 
 ### TEAMMATESLIBRARY-08 — Choosing a Team narrows to one heading and drops the no-team Personas
 
@@ -369,7 +371,7 @@ The dropdown does not render at all -> check that at least one tile is on the pa
 
 **Before you start**
 
-- Core fixture set plus Zed.md and Ada.md from TEAMMATESLIBRARY-07.
+- Core fixture set plus the `Zed` and `Ada` folders from TEAMMATESLIBRARY-07.
 
 **Steps**
 
@@ -382,16 +384,16 @@ The dropdown does not render at all -> check that at least one tile is on the pa
 **Pass if — all of these**
 
 - Choosing `Business` changes the page immediately, with no page reload and without clicking anything else.
-- With `Business` chosen, exactly ONE heading is on the page, reading `Business`, holding Chief of Staff, Emily Lee, Nova and Vale.
-- No `Household` heading, no `Zulu`, no `admin` and no `No team` heading remains; Quill is not on the page.
+- With `Business` chosen, exactly ONE heading is on the page, reading `Business`, holding Emily Lee, Nova and Vale.
+- No `Household` heading, no `Zulu`, no `admin` and no `No team` heading remains; Quill and the Chief of Staff (both without a Team) are not on the page.
 - With `Household` chosen, exactly one heading reading `Household` holds Rune and Vale.
-- Choosing `All teams` restores the full grouped view from TEAMMATESLIBRARY-04 plus `Zulu` and `admin`.
+- Choosing `All teams` restores the full grouped view from TEAMMATESLIBRARY-04 plus `Zulu` and `admin`, with `No team` (Chief of Staff and Quill) still last.
 
 **Fail if — any of these**
 
 - Nothing happens when you pick an option -> the select is wired to the wrong DOM event (`oninput` rather than `change`); this is an explicitly documented hazard in this file, and the filter is simply dead.
 - Other headings remain visible alongside the chosen one -> narrowing is not applied, only highlighting.
-- Quill (the no-team Persona) survives under the chosen Team -> the no-team bucket is being appended after filtering instead of being filtered away.
+- Quill or the Chief of Staff (the no-team Personas) survive under the chosen Team -> the no-team bucket is being appended after filtering instead of being filtered away.
 - The narrowing only appears after F5 -> the page is not re-rendering on selection; a user will read the filter as broken.
 
 **Inconclusive if**
@@ -406,13 +408,13 @@ The browser shows a stale page and other interactions are also dead -> the Blazo
 
 **Before you start**
 
-- Core fixture set plus Zed.md (the only member of Team `Zulu`).
+- Core fixture set plus the `Zed` folder (Zed is the only member of Team `Zulu`).
 
 **Steps**
 
 1. Go to http://localhost:5100/teammates, press F5, and choose `Zulu` in the **Team** dropdown.
 2. Confirm the page shows one heading `Zulu` holding the Zed tile.
-3. Without touching the browser, open `src\Huddle.App\App_Data\Teams\Zed.md` in your editor and change the line `teams: ['Zulu']` to `teams: ['Business']`. Save.
+3. Without touching the browser, open `<data>\Teammates\Zed\Zed.md` in your editor and change the line `teams: ['Zulu']` to `teams: ['Business']`. Save.
 4. Wait about two seconds and watch the page WITHOUT refreshing.
 5. Read what the page now shows.
 6. Open the **Team** dropdown and choose `All teams`.
@@ -436,7 +438,7 @@ The browser shows a stale page and other interactions are also dead -> the Blazo
 Nothing repaints even after 10 seconds -> this may be the watcher rather than the filter; press F5, and if the correct `No teammates in this team.` sentence then appears, record this test as passing with a note and treat the watcher failure under TEAMMATESLIBRARY-19.
 
 > [!NOTE]
-> Afterwards, delete `Zed.md` and `Ada.md` to return to the core fixture set.
+> Afterwards, delete the `Zed` and `Ada` folders to return to the core fixture set.
 
 ### TEAMMATESLIBRARY-10 — Team names match case-insensitively and appear once
 
@@ -446,11 +448,11 @@ Nothing repaints even after 10 seconds -> this may be the watcher rather than th
 
 **Before you start**
 
-- Core fixture set in place; Zed.md and Ada.md deleted.
+- Core fixture set in place; the `Zed` and `Ada` folders deleted.
 
 **Steps**
 
-1. Create `src\Huddle.App\App_Data\Teams\Casey.md` containing exactly:
+1. Create the folder `<data>\Teammates\Casey\` and in it `Casey.md` containing exactly:
 ---
 name: 'Casey'
 title: 'Shift Lead'
@@ -458,7 +460,7 @@ alias: 'cas'
 teams: ['Nightshift']
 ---
 You are Casey. Answer in one short sentence.
-2. Create `src\Huddle.App\App_Data\Teams\Dana.md` containing exactly (note the lower-case team):
+2. Create the folder `<data>\Teammates\Dana\` and in it `Dana.md` containing exactly (note the lower-case team):
 ---
 name: 'Dana'
 title: 'Shift Second'
@@ -489,7 +491,7 @@ You are Dana. Answer in one short sentence.
 Neither Persona appears and the rejected block names them -> fix the frontmatter (check for smart quotes) and rerun.
 
 > [!NOTE]
-> Delete `Casey.md` and `Dana.md` when done.
+> Delete the `Casey` and `Dana` folders when done.
 
 ### TEAMMATESLIBRARY-11 — All three YAML shapes of `teams` group identically, and the documented comma cost
 
@@ -503,7 +505,7 @@ Neither Persona appears and the rejected block names them -> fix the frontmatter
 
 **Steps**
 
-1. Create `src\Huddle.App\App_Data\Teams\ShapeA.md` containing exactly (plain comma scalar):
+1. Create the folder `<data>\Teammates\ShapeA\` and in it `ShapeA.md` containing exactly (plain comma scalar):
 ---
 name: 'ShapeA'
 title: 'Scalar Form'
@@ -511,7 +513,7 @@ alias: 'sha'
 teams: Business, Household
 ---
 You are ShapeA. Answer in one short sentence.
-2. Create `src\Huddle.App\App_Data\Teams\ShapeB.md` containing exactly (flow list):
+2. Create the folder `<data>\Teammates\ShapeB\` and in it `ShapeB.md` containing exactly (flow list):
 ---
 name: 'ShapeB'
 title: 'Flow Form'
@@ -519,7 +521,7 @@ alias: 'shb'
 teams: ['Business', 'Household']
 ---
 You are ShapeB. Answer in one short sentence.
-3. Create `src\Huddle.App\App_Data\Teams\ShapeC.md` containing exactly (block list — two leading spaces before each dash):
+3. Create the folder `<data>\Teammates\ShapeC\` and in it `ShapeC.md` containing exactly (block list — two leading spaces before each dash):
 ---
 name: 'ShapeC'
 title: 'Block Form'
@@ -529,7 +531,7 @@ teams:
   - 'Household'
 ---
 You are ShapeC. Answer in one short sentence.
-4. Create `src\Huddle.App\App_Data\Teams\ShapeD.md` containing exactly (a Team name with a comma inside quotes, plus a quoted prose field that must NOT be split):
+4. Create the folder `<data>\Teammates\ShapeD\` and in it `ShapeD.md` containing exactly (a Team name with a comma inside quotes, plus a quoted prose field that must NOT be split):
 ---
 name: 'ShapeD'
 title: 'Comma Form'
@@ -538,7 +540,7 @@ teams: ['Sales, EMEA']
 role: 'Router, triage, and cross-workstation continuity'
 ---
 You are ShapeD. Answer in one short sentence.
-5. Create `src\Huddle.App\App_Data\Teams\ShapeE.md` containing exactly:
+5. Create the folder `<data>\Teammates\ShapeE\` and in it `ShapeE.md` containing exactly:
 ---
 name: 'ShapeE'
 title: 'Repeat Form'
@@ -572,7 +574,7 @@ You are ShapeE. Answer in one short sentence.
 Any Shape file lands in the rejected block -> your editor most likely rewrote the quoting or the indentation. Re-create the file with a plain-text editor (two spaces before each `-` in ShapeC) and rerun.
 
 > [!NOTE]
-> `teams: ['Sales, EMEA']` producing TWO Teams is a documented known limit, not a defect: a Team name can never contain a comma. It is the accepted price of splitting `teams` at the consumer so quoted prose fields elsewhere in the file are never split. Delete all five Shape files when done.
+> `teams: ['Sales, EMEA']` producing TWO Teams is a documented known limit, not a defect: a Team name can never contain a comma. It is the accepted price of splitting `teams` at the consumer so quoted prose fields elsewhere in the file are never split. Delete all five Shape folders when done.
 
 ### TEAMMATESLIBRARY-12 — A rejected file is named by path and reason, above the tiles, live
 
@@ -587,7 +589,7 @@ Any Shape file lands in the rejected block -> your editor most likely rewrote th
 **Steps**
 
 1. Go to http://localhost:5100/teammates and press F5. Confirm the Nova tile is present and there is no `Files that didn't load` section.
-2. Without touching the browser, open `src\Huddle.App\App_Data\Teams\Nova.md` and delete the whole line `title: 'Research Lead'`. Save.
+2. Without touching the browser, open `<data>\Teammates\Nova\Nova.md` and delete the whole line `title: 'Research Lead'`. Save.
 3. Wait about two seconds and watch the browser WITHOUT refreshing.
 4. Read the new section that appears, including its heading, the path line and the line under it.
 5. Scroll and note whether that section is above or below the tiles.
@@ -599,10 +601,10 @@ Any Shape file lands in the rejected block -> your editor most likely rewrote th
 
 - Within about a second of the save, and with no refresh, the Nova tile disappears and a new section appears.
 - That section is headed exactly `Files that didn't load` and sits ABOVE the tiles and above the Team filter.
-- It lists the absolute path of `Nova.md` on one line, and under it the reason `Persona frontmatter is missing required field 'Title'.`
+- It lists the absolute path of `Nova.md` (ending `...\Teammates\Nova\Nova.md`) on one line, and under it the reason `Persona frontmatter is missing required field 'Title'.`
 - The section is visually distinct (its own bordered block), not a plain sentence lost in the page.
 - No exception or stack trace appears in the `dotnet run` console.
-- After restoring the line, the section disappears on its own and the Nova tile returns with `Research Lead · @nov`.
+- After restoring the line, the section disappears on its own and the Nova tile returns with the Title `Research Lead` and the chip `@nov`.
 
 **Fail if — any of these**
 
@@ -628,25 +630,25 @@ Nothing changes until you press F5 -> the rejection wording still passes or fail
 
 **Steps**
 
-1. Create `src\Huddle.App\App_Data\Teams\bad1.md` containing exactly (no name field):
+1. Create the folder `<data>\Teammates\bad1\` and in it `bad1.md` containing exactly (no name field):
 ---
 title: 'Nameless'
 alias: 'nl1'
 ---
 You are nameless.
-2. Look at the page and record the reason shown under `bad1.md`. Then delete `bad1.md`.
-3. Create `src\Huddle.App\App_Data\Teams\bad2.md` containing exactly (no frontmatter at all — plain prose):
+2. Look at the page and record the reason shown under `bad1.md`. Then delete the `bad1` folder.
+3. Create the folder `<data>\Teammates\bad2\` and in it `bad2.md` containing exactly (no frontmatter at all — plain prose):
 You are a teammate with no front matter whatsoever.
-4. Record the reason shown under `bad2.md`. Then delete `bad2.md`.
-5. Create `src\Huddle.App\App_Data\Teams\bad3.md` containing exactly (blank title):
+4. Record the reason shown under `bad2.md`. Then delete the `bad2` folder.
+5. Create the folder `<data>\Teammates\bad3\` and in it `bad3.md` containing exactly (blank title):
 ---
 name: 'Blanky'
 title: ''
 alias: 'bla'
 ---
 You are Blanky.
-6. Record the reason shown under `bad3.md`. Then delete `bad3.md`.
-7. Create `src\Huddle.App\App_Data\Teams\bad4.md` containing exactly (name written twice):
+6. Record the reason shown under `bad3.md`. Then delete the `bad3` folder.
+7. Create the folder `<data>\Teammates\bad4\` and in it `bad4.md` containing exactly (name written twice):
 ---
 name: 'Twice'
 name: 'Twice'
@@ -654,23 +656,23 @@ title: 'Repeat'
 alias: 'twi'
 ---
 You are Twice.
-8. Record the reason shown under `bad4.md`. Then delete `bad4.md`.
-9. Create `src\Huddle.App\App_Data\Teams\bad5.md` containing exactly (two spaces inside the name):
+8. Record the reason shown under `bad4.md`. Then delete the `bad4` folder.
+9. Create the folder `<data>\Teammates\bad5\` and in it `bad5.md` containing exactly (two spaces inside the name):
 ---
 name: 'Emily  Lee'
 title: 'Analyst'
 alias: 'em2'
 ---
 You are Emily Lee.
-10. Record the reason shown under `bad5.md`. Then delete `bad5.md`.
-11. Create `src\Huddle.App\App_Data\Teams\bad6.md` containing exactly (alias starting with a hyphen):
+10. Record the reason shown under `bad5.md`. Then delete the `bad5` folder.
+11. Create the folder `<data>\Teammates\bad6\` and in it `bad6.md` containing exactly (alias starting with a hyphen):
 ---
 name: 'Hyphen'
 title: 'Tester'
 alias: '-nope'
 ---
 You are Hyphen.
-12. Record the reason shown under `bad6.md`. Then delete `bad6.md`.
+12. Record the reason shown under `bad6.md`. Then delete the `bad6` folder.
 13. Confirm the page has returned to the clean core fixture set with no rejected block, and check the `dotnet run` console for exceptions across the whole test.
 
 **Pass if — all of these**
@@ -682,7 +684,7 @@ You are Hyphen.
 - bad5.md -> `Persona frontmatter field 'Name' has an invalid value: 'Emily  Lee'.`
 - bad6.md -> `Persona frontmatter field 'Alias' has an invalid value: '-nope'.`
 - Every reason is shown under that file's own absolute path.
-- The four valid core fixtures keep rendering as tiles throughout — one bad file never takes the page down.
+- The five valid core fixtures and the Chief of Staff keep rendering as tiles throughout — one bad file never takes the page down.
 - No exception or stack trace appears in the console at any point.
 
 **Fail if — any of these**
@@ -694,7 +696,7 @@ You are Hyphen.
 
 **Inconclusive if**
 
-A `bad*.md` file produces no rejected entry at all AND no tile -> confirm the file is really under `App_Data\Teams` and ends in `.md`; if it is a `.md` and it is neither loaded nor rejected, that IS a fail (a file must always be accounted for as one or the other).
+A `bad*.md` file produces no rejected entry at all AND no tile -> confirm the file is really at `<data>\Teammates\<folder>\<folder>.md` (the file name must equal its folder's name) and ends in `.md`; if it is a `.md` and it is neither loaded nor rejected, that IS a fail (a file must always be accounted for as one or the other).
 
 > [!NOTE]
 > A file that trips two INDEX-level rules (e.g. two files sharing both Name and Alias) shows both reasons on one line separated by a space — that case is covered in TEAMMATESLIBRARY-14. Parser-level faults short-circuit, so a file missing both `name:` and `title:` correctly reports `Name` only.
@@ -707,11 +709,11 @@ A `bad*.md` file produces no rejected entry at all AND no tile -> confirm the fi
 
 **Before you start**
 
-- Core fixture set in place; Nova.md has `alias: 'nov'`.
+- Core fixture set in place; `Teammates\Nova\Nova.md` has `alias: 'nov'`.
 
 **Steps**
 
-1. Create `src\Huddle.App\App_Data\Teams\Twin.md` containing exactly (same alias as Nova, plus the same Name too, so both reason types appear):
+1. Create the folder `<data>\Teammates\Twin\` and in it `Twin.md` containing exactly (the same alias as Nova, a different Name, so only the Alias rule fires):
 ---
 name: 'Twin'
 title: 'Duplicate Alias'
@@ -723,6 +725,7 @@ You are Twin.
 4. Read every entry in the `Files that didn't load` block.
 5. Change `Twin.md`'s alias line to `alias: 'twi'` and save.
 6. Wait about two seconds and watch the page again.
+7. Delete the folder `<data>\Teammates\Twin\`.
 
 **Pass if — all of these**
 
@@ -758,14 +761,14 @@ Only one entry appears and the other file is also missing from disk -> you may h
 
 **Steps**
 
-1. Create `src\Huddle.App\App_Data\Teams\jarvis-a.md` containing exactly:
+1. Create the folder `<data>\Teammates\Jarvis-a\` and in it `Jarvis-a.md` containing exactly:
 ---
 name: 'Jarvis'
 title: 'Chief of Staff'
 alias: 'jva'
 ---
 You are Jarvis.
-2. Create `src\Huddle.App\App_Data\Teams\jarvis-b.md` containing exactly (same name, different case, different alias):
+2. Create the folder `<data>\Teammates\Jarvis-b\` and in it `Jarvis-b.md` containing exactly (same name, different case, different alias):
 ---
 name: 'jarvis'
 title: 'Deputy'
@@ -774,8 +777,8 @@ alias: 'jvb'
 You are jarvis.
 3. Wait about two seconds and read the page without refreshing.
 4. Read both entries in the `Files that didn't load` block.
-5. In `T-B` run `sqlite3 src/Huddle.App/App_Data/team.db "select * from persona_models;"` (skip if you have no sqlite3).
-6. Delete both files.
+5. In `T-B` run `sqlite3 <data>\team.db "select * from persona_models;"` ([`O-DB`](common.md#o-db); skip if you have no sqlite3).
+6. Delete both folders, `Jarvis-a` and `Jarvis-b`.
 
 **Pass if — all of these**
 
@@ -807,7 +810,7 @@ No sqlite3 available -> run the test without the database step and record that t
 
 **Steps**
 
-1. Create `src\Huddle.App\App_Data\Teams\shadow.md` containing exactly (alias equal to Nova's NAME):
+1. Create the folder `<data>\Teammates\Shadow\` and in it `Shadow.md` containing exactly (alias equal to Nova's NAME):
 ---
 name: 'Shadow'
 title: 'Shadow Lead'
@@ -816,8 +819,8 @@ alias: 'Nova'
 You are Shadow.
 2. Wait about two seconds and read the page without refreshing.
 3. Read both entries in the `Files that didn't load` block, word for word.
-4. Delete `shadow.md` and confirm the Nova tile returns.
-5. Create `src\Huddle.App\App_Data\Teams\selfsame.md` containing exactly (alias equals its OWN name):
+4. Delete the folder `<data>\Teammates\Shadow\` and confirm the Nova tile returns.
+5. Create the folder `<data>\Teammates\Echoic\` and in it `Echoic.md` containing exactly (alias equals its OWN name):
 ---
 name: 'Echoic'
 title: 'Self Named'
@@ -825,26 +828,26 @@ alias: 'Echoic'
 ---
 You are Echoic.
 6. Wait about two seconds and read the page.
-7. Delete `selfsame.md`.
+7. Delete the folder `<data>\Teammates\Echoic\`.
 
 **Pass if — all of these**
 
-- With `shadow.md` present, BOTH the Nova tile and any Shadow tile are gone, and both paths are listed in the rejected block.
-- `shadow.md`'s reason reads `Persona Alias 'Nova' matches the Name used by '<absolute path of Nova.md>'.`
-- `Nova.md`'s reason reads `Persona Name 'Nova' matches the Alias used by '<absolute path of shadow.md>'.`
+- With `Shadow.md` present, BOTH the Nova tile and any Shadow tile are gone, and both paths are listed in the rejected block.
+- `Shadow.md`'s reason reads `Persona Alias 'Nova' matches the Name used by '<absolute path of Nova.md>'.`
+- `Nova.md`'s reason reads `Persona Name 'Nova' matches the Alias used by '<absolute path of Shadow.md>'.`
 - The two sentences are DIFFERENT and each points at the other file, so the direction of the clash is readable.
-- With `selfsame.md` present, an `Echoic` tile appears and its second line reads `Self Named · @Echoic`; it is NOT in the rejected block.
+- With `Echoic.md` present, an `Echoic` tile appears with the title `Self Named` and the chip `@Echoic`; it is NOT in the rejected block.
 
 **Fail if — any of these**
 
-- `selfsame.md` is rejected -> a file whose alias equals its own name is being refused; that is a plausible authoring choice and is explicitly legal.
-- Only one side of the `shadow.md` clash is rejected -> the other file's owner gets no feedback at all.
+- `Echoic.md` is rejected -> a file whose alias equals its own name is being refused; that is a plausible authoring choice and is explicitly legal.
+- Only one side of the `Shadow.md` clash is rejected -> the other file's owner gets no feedback at all.
 - Both sides show identical wording -> which file holds the Name and which holds the Alias is unreadable, so the user cannot tell which one to change.
 - Neither file is rejected and both tiles appear -> an Alias can now shadow another teammate's Name, and mentions become ambiguous.
 
 **Inconclusive if**
 
-Nova's reason is missing but shadow.md's is present -> re-read the block carefully (entries are sorted by path, so Nova's may be far from shadow's). Only record a fail once you have checked the whole list.
+Nova's reason is missing but Shadow.md's is present -> re-read the block carefully (entries are sorted by path, so Nova's may be far from shadow's). Only record a fail once you have checked the whole list.
 
 ### TEAMMATESLIBRARY-17 — The rejected block is ordered, survives the filter, and coexists with the empty-library sentence
 
@@ -858,20 +861,20 @@ Nova's reason is missing but shadow.md's is present -> re-read the block careful
 
 **Steps**
 
-1. Create three broken files with these exact contents:
-`src\Huddle.App\App_Data\Teams\aaa-broken.md`:
+1. Create three broken Teammate folders, each holding a file of the same name with these exact contents:
+`<data>\Teammates\AAA\AAA.md`:
 ---
 name: 'AAA'
 alias: 'aaa'
 ---
 No title here.
-`src\Huddle.App\App_Data\Teams\mmm-broken.md`:
+`<data>\Teammates\MMM\MMM.md`:
 ---
 name: 'MMM'
 alias: 'mmm'
 ---
 No title here.
-`src\Huddle.App\App_Data\Teams\zzz-broken.md`:
+`<data>\Teammates\ZZZ\ZZZ.md`:
 ---
 name: 'ZZZ'
 alias: 'zzz'
@@ -880,18 +883,18 @@ No title here.
 2. Reload http://localhost:5100/teammates and read the order of the three paths in the `Files that didn't load` block.
 3. Choose `Business` in the **Team** dropdown and check whether the rejected block is still on screen and still lists all three.
 4. Choose `All teams` again.
-5. Now break the whole library: in the file explorer, delete the `title:` line from `Nova.md`, `Vale.md`, `Quill.md`, `Household\Rune.md`, `Emily Lee.md` and `cos.md`, saving each.
+5. Now break the whole library: in the file explorer, delete the `title:` line from `Nova\Nova.md`, `Vale\Vale.md`, `Quill\Quill.md`, `Rune\Rune.md`, `Emily Lee\Emily Lee.md` and `Chief of Staff\Chief of Staff.md`, saving each.
 6. Wait two seconds, read the whole page.
-7. In `T-B` run `Get-ChildItem -Recurse src\Huddle.App\App_Data\Teams -Filter *.md | Measure-Object` and compare the count with the number of entries in the rejected block plus the number of tiles.
-8. Restore all six `title:` lines and delete the three `*-broken.md` files.
+7. In `T-B` run `Get-ChildItem <data>\Teammates -Directory | ForEach-Object { Get-ChildItem $_.FullName -Filter *.md } | Measure-Object` (one level only, so a `.md` note inside a `work\` folder is not counted) and compare the count with the number of entries in the rejected block plus the number of tiles (Vale's tile appears under two headings but is one file).
+8. Restore all six `title:` lines (the Chief of Staff's is `title: 'Chief of Staff'`) and delete the folders `AAA`, `MMM` and `ZZZ`.
 
 **Pass if — all of these**
 
-- The three broken paths are listed sorted by path: `aaa-broken.md`, `mmm-broken.md`, `zzz-broken.md`.
+- The three broken paths are listed sorted by path (ordinal): `...\AAA\AAA.md`, `...\MMM\MMM.md`, `...\ZZZ\ZZZ.md`.
 - With `Business` selected, the rejected block is still fully visible and still lists all three — the filter does not touch it.
 - With every file broken, the page shows BOTH the `Files that didn't load` block AND the sentence `No Personas yet. Choose New teammate to add one.`
 - In that all-broken state, no `Team` dropdown is rendered.
-- The .md file count on disk equals (tiles on screen + entries in the rejected block) at every point in this test — every file is accounted for by exactly one of the two.
+- The definition-file count on disk equals (distinct tiles on screen + entries in the rejected block) at every point in this test — every file is accounted for by exactly one of the two.
 
 **Fail if — any of these**
 
@@ -902,13 +905,13 @@ No title here.
 
 **Inconclusive if**
 
-A `.md` file elsewhere in the tree (a README, a scratch note) makes the count not line up -> remove or account for it explicitly before judging the count criterion; the other criteria still stand.
+A stray `.md` file in a Teammate folder (a note that should have gone under `work\`) makes the count not line up, or adds its own `A teammate folder holds only its definition; use work/.` entry -> move it into `work\` before judging the count criterion; the other criteria still stand.
 
 ### TEAMMATESLIBRARY-18 — Non-markdown files are ignored entirely — not loaded, not rejected
 
 **Free** · about 4 min
 
-*Proves stray files in the Teams tree cause neither a rejected entry nor a reload burst.*
+*Proves stray non-markdown files in the Teammates tree cause neither a rejected entry nor a reload burst (the scan reads only `*.md`, PersonaStore.cs:717,741; the watcher ignores other extensions, PersonaStore.cs:1102-1107).*
 
 **Before you start**
 
@@ -917,9 +920,9 @@ A `.md` file elsewhere in the tree (a README, a scratch note) makes the count no
 **Steps**
 
 1. Note the exact contents of the page: tiles present, and no `Files that didn't load` block.
-2. Create `src\Huddle.App\App_Data\Teams\notes.txt` with the text `scratch notes, not a persona`.
-3. Create an empty file `src\Huddle.App\App_Data\Teams\.gitkeep`.
-4. Create `src\Huddle.App\App_Data\Teams\Household\readme.rst` with the text `this is not markdown`.
+2. Create `<data>\Teammates\notes.txt` with the text `scratch notes, not a persona` (directly in the `Teammates` root).
+3. Create an empty file `<data>\Teammates\.gitkeep`.
+4. Create `<data>\Teammates\Rune\readme.rst` with the text `this is not markdown` (inside Rune's folder, beside `Rune.md`).
 5. Watch the page for about five seconds WITHOUT refreshing.
 6. Check the `dotnet run` console for any new lines.
 7. Delete the three files you just created.
@@ -941,40 +944,43 @@ A `.md` file elsewhere in the tree (a README, a scratch note) makes the count no
 
 You cannot tell whether a repaint happened -> repeat with the browser devtools open on the Elements panel, where a re-render highlights, or repeat this test in the `P-LAUNCH-UAT` lane, where Ada is Online and its badge gives you a visible marker of a page reload.
 
-### TEAMMATESLIBRARY-19 — The watcher is live and recursive: a NESTED Persona reloads on edit
+### TEAMMATESLIBRARY-19 — The watcher is live: an edit to a Teammate's definition reloads it, and a write under work\ does not
 
 **Free** · about 8 min
 
-*Catches the headline silent failure of this area — a file in a Team sub-folder that is found once at startup and then never reloads, with no error anywhere.*
+*Catches the headline silent failure of this area — a definition file inside a Teammate folder that is found once at startup and then never reloads, with no error anywhere — and checks the opposite: files a Teammate writes into its own `work\` folder must not reload anyone.*
 
 **Before you start**
 
-- Core fixture set in place, including the NESTED `Household\Rune.md`.
+- Core fixture set in place, including `Teammates\Rune\Rune.md`.
 - The browser is on /teammates and you will not press F5 during the test.
 
 **Steps**
 
-1. Go to http://localhost:5100/teammates, press F5 once, and confirm the Rune tile reads `Home Steward · @run` under the `Household` heading.
-2. In your editor, open `src\Huddle.App\App_Data\Teams\Household\Rune.md` and change `title: 'Home Steward'` to `title: 'House Captain'`. Save. Do not touch the browser.
+1. Go to http://localhost:5100/teammates, press F5 once, and confirm the Rune tile reads `Rune`, then `Home Steward`, then the chips `@run` and `Offline`, under the `Household` heading.
+2. In your editor, open `<data>\Teammates\Rune\Rune.md` and change `title: 'Home Steward'` to `title: 'House Captain'`. Save. Do not touch the browser.
 3. Wait up to about two seconds and read the Rune tile.
-4. In the same NESTED file, change `alias: 'run'` to `alias: 'rn'`. Save, wait, and read the tile again.
-5. In the same NESTED file, change `teams: ['Household']` to `teams: ['Business']`. Save, wait, and read which heading Rune now sits under.
+4. In the same file, change `alias: 'run'` to `alias: 'rn'`. Save, wait, and read the tile again.
+5. In the same file, change `teams: ['Household']` to `teams: ['Business']`. Save, wait, and read which heading Rune now sits under.
 6. Click the Rune tile and compare the text in the card's `Persona` block with your editor's buffer, then close the card.
-7. Now repeat the first edit on a ROOT file: open `src\Huddle.App\App_Data\Teams\Nova.md`, change `title: 'Research Lead'` to `title: 'Research Chief'`, save, wait, and read the Nova tile.
-8. Restore all four edited values (`House Captain` -> `Home Steward`, `rn` -> `run`, `Business` -> `Household`, `Research Chief` -> `Research Lead`).
+7. Now repeat the first edit on another Teammate: open `<data>\Teammates\Nova\Nova.md`, change `title: 'Research Lead'` to `title: 'Research Chief'`, save, wait, and read the Nova tile.
+8. Create the folder `<data>\Teammates\Rune\work\` and in it a file `notes.md` containing `scratch notes`. Wait about five seconds WITHOUT refreshing and read the page, including the `Files that didn't load` area.
+9. Restore all four edited values (`House Captain` -> `Home Steward`, `rn` -> `run`, `Business` -> `Household`, `Research Chief` -> `Research Lead`) and delete the folder `<data>\Teammates\Rune\work\`.
 
 **Pass if — all of these**
 
 - Within about a second of each save, and with NO page refresh and NO app restart, the tile shows the new value.
-- The nested Rune tile's second line becomes `House Captain · @run`, then `House Captain · @rn`.
+- The Rune tile's title line becomes `House Captain`, then its chip reads `@rn`.
 - After the `teams:` edit, the Rune tile moves from under `Household` to under `Business` on its own.
 - The card's `Persona` block shows the whole raw file text, matching the editor buffer exactly (frontmatter included).
-- The root-level Nova tile reloads on edit in exactly the same way.
+- Nova's tile reloads on edit in exactly the same way.
+- After `work\notes.md` is created, the page does not change: no new tile, no `Files that didn't load` entry (a `.md` under `work\` is neither a second definition nor scanned), and Rune keeps its tile.
 
 **Fail if — any of these**
 
-- The ROOT file reloads but the NESTED file does not -> `IncludeSubdirectories` is off; every Persona in a sub-folder is frozen at whatever it said when the app started, forever, with no error, no log and nothing on screen. This is the headline silent failure of the area and the reason the nested file must be tested explicitly.
+- The watcher is dead for the Teammate folders -> the watcher must see one level below `Teammates` (`IncludeSubdirectories`); every Persona is frozen at whatever it said when the app started, forever, with no error, no log and nothing on screen. This is the headline silent failure of the area.
 - Neither reloads -> the watcher is dead altogether; every edit needs an app restart.
+- `work\notes.md` is listed as rejected, or the page repaints for it -> the scan or the watcher reaches into `work\`; with ACP on, every file a Teammate writes there would restart it and clear its memory.
 - The tile updates but the card's `Persona` text stays stale -> cached file text is not being refreshed with the index; a teammate's system prompt and its displayed prompt now disagree.
 - The change appears only after several seconds and several saves -> the debounce has been set far too long; judge against TEAMMATESLIBRARY-22 before filing.
 
@@ -983,13 +989,13 @@ You cannot tell whether a repaint happened -> repeat with the browser devtools o
 Your editor saves via a temp-file-and-rename dance and you see two repaints -> that is expected editor behaviour, not a defect; judge only whether the final state is correct. If nothing at all repaints AND the app console shows an exception, restart the app and rerun before recording.
 
 > [!NOTE]
-> Testing only the root-level file passes a broken build. The nested edit is the test.
+> Every definition now sits one folder below the watched root, so the Rune edit is the test; there is no root-level file to compare against. Only events one or two segments below `Teammates` count (`PersonaStore.cs:1102-1107`), which is what keeps a write under a Teammate's `work\` quiet.
 
 ### TEAMMATESLIBRARY-20 — The watcher notices creations and deletions while the page is open
 
 **Free** · about 5 min
 
-*Proves a file added or removed from outside the app appears or disappears — including its heading and its dropdown option — with no refresh.*
+*Proves a Teammate folder added or removed from outside the app appears or disappears — including its heading and its dropdown option — with no refresh.*
 
 **Before you start**
 
@@ -998,7 +1004,7 @@ Your editor saves via a temp-file-and-rename dance and you see two repaints -> t
 **Steps**
 
 1. Note the current headings and the current contents of the **Team** dropdown.
-2. From outside the app, copy a new file `src\Huddle.App\App_Data\Teams\Pike.md` containing exactly:
+2. From outside the app, create the folder `<data>\Teammates\Pike\` and in it a new file `Pike.md` containing exactly:
 ---
 name: 'Pike'
 title: 'Field Lead'
@@ -1008,7 +1014,7 @@ teams: ['Logistics']
 You are Pike. Answer in one short sentence.
 3. Wait about two seconds and watch the page WITHOUT refreshing.
 4. Open the **Team** dropdown and read the options.
-5. Delete `src\Huddle.App\App_Data\Teams\Pike.md`.
+5. Delete the folder `<data>\Teammates\Pike\`.
 6. Wait about two seconds and watch the page again, and reopen the dropdown.
 
 **Pass if — all of these**
@@ -1029,20 +1035,20 @@ You are Pike. Answer in one short sentence.
 
 Nothing happens at all for either step -> run TEAMMATESLIBRARY-19 first; if edits also do not reload, the watcher is dead and this test adds nothing new. Record it as blocked by -19.
 
-### TEAMMATESLIBRARY-21 — Renaming or deleting a Team sub-folder keeps everyone inside reachable
+### TEAMMATESLIBRARY-21 — Renaming or deleting a Teammate folder from outside is noticed, and the card follows the file
 
 **Free** · about 8 min
 
-*Catches two documented watcher traps: a directory event's name is the directory, which never matches a *.md filter, so a folder rename can leave every nested Persona's path stale forever and a folder delete can leave their tiles on screen forever.*
+*Catches two documented watcher traps: a directory event's name is the directory, which never matches a *.md filter, so a folder rename can leave a Persona's path stale forever and a folder delete can leave its tile on screen forever. A Teammate's definition must be named after its folder, so a folder rename alone rejects the file until the file is renamed too.*
 
 **Before you start**
 
 - Core fixture set in place.
-- At least two Personas inside `App_Data\Teams\Household\`.
+- `Rune` and a second Household member (`Bram`, created below) are the two Teammates the steps move around. Vale also declares `Household`, so that heading survives.
 
 **Steps**
 
-1. Create a second nested file `src\Huddle.App\App_Data\Teams\Household\Bram.md` containing exactly:
+1. Create the folder `<data>\Teammates\Bram\` and in it `Bram.md` containing exactly:
 ---
 name: 'Bram'
 title: 'Home Second'
@@ -1051,37 +1057,43 @@ teams: ['Household']
 ---
 You are Bram. Answer in one short sentence.
 2. Go to /teammates, press F5, and confirm both `Rune` and `Bram` tiles are on the page. Click each and write down the absolute path shown in its card's `Persona file` section. Close the card.
-3. PART A — RENAME. In File Explorer, rename the folder `App_Data\Teams\Household` to `App_Data\Teams\HouseholdOps`. Do not touch the browser.
-4. Wait about two seconds and confirm both tiles are still on the page and still read `Home Steward · @run` and `Home Second · @bra`.
-5. Click the Rune tile and read the `Persona file` path.
-6. With that card open, click **Open** and note whether the correct file opens in your Markdown editor. Close the editor window.
-7. Click **Edit**, add a space to the end of the body line, click **Save**, and note whether it succeeds or shows an error line on the card. Close the card.
-8. PART B — DELETE. Move the whole `App_Data\Teams\HouseholdOps` folder OUT of `App_Data\Teams` (to your Desktop, say). Do not touch the browser.
-9. Wait about two seconds and read the page.
-10. Move the folder back in, rename it to `Household`, delete `Bram.md`, and confirm the core fixture set is restored.
+3. PART A — RENAME THE FOLDER ONLY. In File Explorer, rename the folder `<data>\Teammates\Rune` to `<data>\Teammates\Rune2`. Do not touch the browser.
+4. Wait about two seconds and read the page: the Rune tile and the `Files that didn't load` block.
+5. PART B — RENAME THE FILE TO MATCH. Rename `<data>\Teammates\Rune2\Rune.md` to `Rune2.md`. Wait about two seconds and read the page again.
+6. Click the Rune tile and read the `Persona file` path.
+7. With that card open, click **Open** and note whether the correct file opens in your Markdown editor. Close the editor window.
+8. Click **Edit**, add a space to the end of the body line, click **Save**, and note whether it succeeds or shows an error line on the card. Close the card.
+9. PART C — DELETE. Move the two folders `<data>\Teammates\Rune2` and `<data>\Teammates\Bram` OUT of `<data>\Teammates` (to your Desktop, say). Do not touch the browser.
+10. Wait about two seconds and read the page.
+11. Move `Bram` back in only to finish: delete it. Move `Rune2` back in, rename `Rune2\Rune2.md` to `Rune.md` FIRST, then rename the folder to `Rune`, and confirm the core fixture set is restored.
 
 **Pass if — all of these**
 
-- PART A: both tiles stay on the page and keep their Name, Title and alias after the folder rename.
-- PART A: the card's `Persona file` path now shows the NEW folder (`...\Teams\HouseholdOps\Rune.md`), not the old one.
-- PART A: **Open** launches the correct, existing file.
-- PART A: **Edit** -> **Save** succeeds with no error line on the card, and the change is on disk at the new path.
-- PART B: within about a second of moving the folder away, BOTH tiles disappear on their own.
+- PART A: within about a second the Rune tile is gone and Bram is untouched. The `Files that didn't load` block lists `...\Teammates\Rune2\Rune.md` with the reason `A teammate folder holds only its definition; use work/.` (the file is no longer named after its folder, so it is not Rune2's definition).
+- PART B: after the file is renamed, the Rune tile is back under `Household`, still reading `Home Steward` with `@run`, and the rejected entry is gone.
+- PART B: the card's `Persona file` path shows the NEW location (`...\Teammates\Rune2\Rune2.md`), not the old one.
+- PART B: **Open** launches the correct, existing file.
+- PART B: **Edit** -> **Save** succeeds with no error line on the card, and the change is on disk at the new path.
+- PART C: within about a second of moving the folders away, BOTH tiles disappear on their own.
   The `Household` heading REMAINS, now holding only Vale: the core fixture set gives `Vale.md`
   `teams: ['Business', 'Household']`, so Household still has a member and an empty group is not
   what should be produced. The heading only goes if you also remove Vale from that Team.
-- PART B: no exception appears in the `dotnet run` console.
+- PART C: no exception appears in the `dotnet run` console.
 
 **Fail if — any of these**
 
-- After the rename the card still prints the OLD path -> the directory event was dropped; **Open** will fail and **Edit** -> **Save** will write to a path that no longer exists. Silent until a user tries to save.
+- After the folder rename the Rune tile stays and the rejected block stays empty -> the directory event was dropped; the page serves a file that is no longer where it says. Silent until a user tries to save.
+- After the file rename the card still prints the OLD path -> the card is not reading the rediscovered location; **Open** will fail and **Edit** -> **Save** will write to a path that no longer exists.
 - **Edit** -> **Save** shows an error, or appears to succeed but the file on disk is unchanged -> the same stale-path trap, now losing a user's edit.
-- After the folder is moved away, the tiles linger indefinitely -> a deleted directory raises an event named after the directory, which has no extension; missing it means the app serves stale prompt text for every Persona that was inside, forever.
-- The app throws when the folder disappears -> a removed directory is an ordinary event, not an error.
+- After the folders are moved away, the tiles linger indefinitely -> a deleted directory raises an event named after the directory, which has no extension; missing it means the app serves stale prompt text for every Persona that was inside, forever.
+- The app throws when a folder disappears -> a removed directory is an ordinary event, not an error.
 
 **Inconclusive if**
 
 Windows refuses the folder rename because a file inside is open in your editor -> close the editor and retry; a rename that never happened proves nothing. If **Open** does nothing at all on your machine, check TEAMMATESLIBRARY-33 first — you may have no application registered for .md.
+
+> [!NOTE]
+> The folder-name-differs warning (`Its folder is named 'Rune2', not 'Rune'.`, PersonaStore.cs:801) is computed but this page reads only the rejected files, so it shows nothing for Part B. That is not a failure here.
 
 ### TEAMMATESLIBRARY-22 — A burst of file writes becomes one update, not five
 
@@ -1096,7 +1108,7 @@ Windows refuses the folder rename because a file inside is open in your editor -
 
 **Steps**
 
-1. Prepare five valid Persona files in a scratch folder OUTSIDE `App_Data`, named `Burst1.md` … `Burst5.md`, each like this with the digit changed:
+1. Prepare five Teammate folders in a scratch folder OUTSIDE `<data>`, named `Burst1` … `Burst5`, each holding a file of the same name (`Burst1\Burst1.md` … `Burst5\Burst5.md`), each like this with the digit changed:
 ---
 name: 'Burst1'
 title: 'Load Tester'
@@ -1105,14 +1117,15 @@ teams: ['Business']
 ---
 You are Burst1. Answer in one short sentence.
 2. Go to /teammates and press F5.
-3. Select all five files in the scratch folder and copy them into `src\Huddle.App\App_Data\Teams\` in ONE paste operation. Watch the page closely while it happens.
+3. Select all five folders in the scratch folder and copy them into `<data>\Teammates\` in ONE paste operation. Watch the page closely while it happens.
 4. Count how many distinct repaints you see (a repaint is the tile grid visibly changing).
 5. Check the `dotnet run` console and count the lines it logged for this burst.
-6. Delete the five Burst files from `App_Data\Teams`.
+6. Confirm that the Burst1 to Burst5 tiles are all on the page and that no `Files that didn't load` block appeared: this test is about a reload, so five rejected files would be a failed setup, not a pass.
+7. Delete the five Burst folders from `<data>\Teammates`.
 
 **Pass if — all of these**
 
-- All five tiles appear together, roughly half a second after the copy settles.
+- All five tiles appear together, roughly half a second after the copy settles, under the `Business` heading.
 - You see ONE update, not five separate flickering repaints.
 - The console shows no repeated per-file churn for the same Persona.
 
@@ -1143,21 +1156,23 @@ Your copy is slow enough that the five files land more than half a second apart 
 **Steps**
 
 1. Go to /teammates and press F5.
-2. In the second PowerShell window, run this to write 50 valid Personas at once:
-1..50 | ForEach-Object { "---`nname: 'Storm$_'`ntitle: 'Storm Tester'`nalias: 'st$_'`nteams: ['Storm']`n---`nYou are Storm$_." | Set-Content -Encoding utf8 "src\Huddle.App\App_Data\Teams\Storm$_.md" }
-3. Wait about five seconds, then WITHOUT refreshing count the tiles under the `Storm` heading.
+2. In the second PowerShell window, run this to write 50 valid Personas at once, each in its own folder (replace `<data>` with the real path):
+1..50 | ForEach-Object { $dir = "<data>\Teammates\Storm$_"; New-Item -ItemType Directory -Force $dir | Out-Null; "---`nname: 'Storm$_'`ntitle: 'Storm Tester'`nalias: 'st$_'`nteams: ['Storm']`n---`nYou are Storm$_." | Set-Content -Encoding utf8 "$dir\Storm$_.md" }
+3. Wait about five seconds, then WITHOUT refreshing count the tiles under the `Storm` heading, and check that no `Files that didn't load` block appeared.
 4. Check the `dotnet run` console for a warning mentioning a FileSystemWatcher error.
-5. Now delete them all at once: `Remove-Item src\Huddle.App\App_Data\Teams\Storm*.md`
+5. Now delete them all at once: `Remove-Item -Recurse <data>\Teammates\Storm*`
 6. Wait about five seconds and, without refreshing, confirm the `Storm` heading is gone.
-7. Run `Get-ChildItem -Recurse src\Huddle.App\App_Data\Teams -Filter *.md` and compare it against the tiles plus rejected entries on screen.
+7. Run `Get-ChildItem <data>\Teammates -Directory | ForEach-Object { Get-ChildItem $_.FullName -Filter *.md }` and compare it against the tiles plus rejected entries on screen.
 
 **Pass if — all of these**
 
-- After the storm settles, the page agrees exactly with the disk: every .md file on disk is either a tile or a rejected entry, and nothing on screen has no file.
+- Step 3 shows 50 tiles under `Storm` and no rejected entries: the page converged by LOADING the Personas, which is the thing this test observes. A page that shows 50 rejections would also agree with the disk, and proves nothing about the reload.
+- After the storm settles, the page agrees exactly with the disk: every definition file on disk is either a tile or a rejected entry, and nothing on screen has no file.
 - If the OS dropped events, the console carries the warning `PersonaStore's FileSystemWatcher reported an error (likely a dropped-event buffer overflow); scheduling a refresh.` AND the page still converges.
 
 **Fail if — any of these**
 
+- Fewer than 50 tiles stay under `Storm`, or any `Storm` file sits in the rejected block -> events were lost or a folder was scanned before its file landed, and nothing rescanned.
 - The page permanently disagrees with the disk — a missing tile or a lingering one that never resolves, even after a minute -> a silent, permanent desync; it clears only when something unrelated touches a file, so a user can be looking at a library that does not exist.
 - The overflow warning appears and the page does NOT converge -> the error backstop is not scheduling a refresh.
 
@@ -1172,11 +1187,11 @@ No overflow warning ever appears (likely — the watcher buffer is raised to 64 
 
 **Free** · about 7 min
 
-*Proves the whole tile is the click target, the card shows every View-mode field including the discovered path, and it closes the way a real dialog should. The card is now a `MudDialog` opened through `IDialogService` (Stage 4 of the MudBlazor migration), not a hand-rolled overlay `<div>` — this test is a good place to also confirm the dialog behaviour that migration bought: a focus trap on open, Escape-to-close, and focus returning to the tile that opened it.*
+*Proves the whole tile is the click target, the card shows every View-mode field (including Work mode) and the discovered path, and it closes the way a real dialog should. The card is now a `MudDialog` opened through `IDialogService` (Stage 4 of the MudBlazor migration), not a hand-rolled overlay `<div>` — this test is a good place to also confirm the dialog behaviour that migration bought: a focus trap on open, Escape-to-close, and focus returning to the tile that opened it.*
 
 **Before you start**
 
-- Core fixture set in place, including the nested `Household\Rune.md`.
+- Core fixture set in place, including `Teammates\Rune\Rune.md`.
 
 **Steps**
 
@@ -1190,7 +1205,7 @@ No overflow warning ever appears (likely — the watcher buffer is raised to 64 
 8. Click the dimmed backdrop outside the card. Note whether it closes, and read `document.activeElement`.
 9. Reopen the Nova card and press the Escape key. Note whether it closes, and where focus lands afterwards.
 10. Click the Quill tile (the Persona with no Teams) and check whether a `Teams:` line appears.
-11. Close the card, then click the nested Rune tile and read its `Persona file` path.
+11. Close the card, then click the Rune tile and read its `Persona file` path.
 12. In the second PowerShell window, run `Test-Path '<paste the exact path the card printed>'`.
 
 **Pass if — all of these**
@@ -1199,19 +1214,19 @@ No overflow warning ever appears (likely — the watcher buffer is raised to 64 
 - Tab never lets focus escape to the page behind while the dialog is open.
 - The card header reads exactly `Teammate` in View mode.
 - The card shows: Name `Nova`; Title `Research Lead`; a status line with a dot and `Offline`; `Alias: nov`; `Teams: Business`.
-- Section headings, in order, read `Persona`, `Model`, `Effort`, `Persona file`.
-- Under `Persona` is the whole raw file text including the `---` frontmatter; `Model` reads `Agent default`; `Effort` reads `Model default`.
+- Section headings, in order, read `Persona`, `Model`, `Effort`, `Work mode`, `Persona file` (TeammateCard.razor:239-262).
+- Under `Persona` is the whole raw file text including the `---` frontmatter; `Model` reads `Agent default`; `Effort` reads `Model default`; `Work mode` reads `Agent default` (TeammateCard.razor:1309).
 - Clicking inside the card does NOT close it; clicking the dimmed backdrop DOES; Escape DOES.
 - After EVERY way of closing the dialog (× icon, backdrop, Escape), focus returns to the Nova tile.
 - Quill's card has NO `Teams:` line at all (not an empty one).
-- Rune's card prints a path ending `...\App_Data\Teams\Household\Rune.md`, and `Test-Path` on it returns `True`.
+- Rune's card prints a path ending `...\Teammates\Rune\Rune.md`, and `Test-Path` on it returns `True`.
 
 **Fail if — any of these**
 
 - Only the name is clickable -> the tile stops behaving like a directory entry.
 - Focus is not moved into the dialog on open, or Tab lets it leak onto the page behind -> the focus trap is not working, which for a keyboard or screen-reader user means the dialog might as well not be modal.
 - Escape does not close the dialog, or closing it by any route does not return focus to the tile -> a MudBlazor default (`CloseOnEscapeKey`, focus restore) has been turned off or broken, and a keyboard user is dropped at the top of the page.
-- Rune's card prints a root path (`...\Teams\Rune.md`) -> the path is being reconstructed as `{Name}.md` at the root instead of reporting where the file was actually discovered; **Open** and **Edit** will then work on the wrong file.
+- Rune's card prints a path that is not the Teammate's own folder file (a stale `...\Teams\...` path, or the file at the `Teammates` root) -> the path is being reconstructed instead of reporting where the file was actually discovered; **Open** and **Edit** will then work on the wrong file.
 - `Test-Path` returns `False` -> the card is printing a path that does not exist.
 - Quill shows an empty `Teams:` line -> a teammate with no Teams reads as having a blank Team rather than none.
 - After switching from one tile to another, the previous teammate's Persona text is still shown -> card state is not being cleared between opens.
@@ -1228,7 +1243,7 @@ The card does not open at all and other clicks on the page are also dead -> the 
 
 **Free** · about 4 min
 
-*Proves that with ACP off every teammate reads Offline with no tooltip, and that Restart (with its warning) is offered exactly there.*
+*Proves that with ACP off every teammate reads Offline with no invented reason, and that Restart (with its warning) is offered on an Offline card, as it is in every state except Starting.*
 
 **Before you start**
 
@@ -1239,31 +1254,34 @@ The card does not open at all and other clicks on the page are also dead -> the 
 
 1. Go to /teammates and press F5.
 2. Read the status label and dot colour on every tile.
-3. Hover the mouse over a tile's status line for three seconds and note whether a tooltip appears.
+3. Hover the mouse over the word `Offline` in a tile's status chip for three seconds and note whether a tooltip appears; then hover the small dot beside it and note what appears.
 4. Click the Nova tile and read the lines under the Name.
-5. Note which buttons are in the card's action row, and read any hint sentence below it.
-6. In `T-B` run `O-ADAPTERS` and, if you have sqlite3, `sqlite3 src/Huddle.App/App_Data/team.db "select id,name,kind from users;"`.
+5. Note which buttons are in the card's action row, and read any hint sentence below it. Then close the card, open the Chief of Staff's card and read its action row.
+6. In `T-B` run `O-ADAPTERS` and, if you have sqlite3, `sqlite3 <data>\team.db "select id,name,kind from users;"` ([`O-DB`](common.md#o-db)).
 
 **Pass if — all of these**
 
 - Every tile reads `Offline` with a red dot (`agent-dot offline`).
-- Hovering a tile's status line shows NO tooltip — no reason is known, so none is invented.
-- The card shows the same `Offline` status line and NO reason paragraph under it.
-- The card's action row contains `Edit`, `Open`, `Restart` and `Remove` (a `Message` link appears only if that teammate already has a Room).
+- Hovering the label text in a tile's status chip shows NO tooltip — no reason is known, so none is invented. (The dot inside the chip always carries its own tooltip, the class name `offline`; that is the dot's label, not a reason: StatusDot.razor:11.)
+- The card shows the same `Offline` status line and NO red reason paragraph under it.
+- Nova's action row contains `Edit`, `Open`, `Restart` and a red Remove icon button (tooltip `Remove`); a `Message` link appears only if that teammate already has a Room. The Chief of Staff's row has `Reset to default` where the others have Remove (TeammateCard.razor:198-224).
 - A hint below the action row reads `Like saving an edit, this restarts the teammate, which clears what it remembers.`
 - `O-ADAPTERS` prints `0`.
-- In `users`, there are no `agent` rows (nothing has connected).
+- In `users`, there is no `agent` row for Nova, Vale, Rune, Quill or Emily Lee (nothing has connected). A row for the Chief of Staff, if any, is not judged here.
 
 **Fail if — any of these**
 
 - A tile reads `Online` when nothing is running -> the badge is not derived from real presence; a user will message a teammate that cannot answer.
-- A tooltip appears with a reason although nothing has ever started -> a reason is being fabricated.
+- A tooltip with a reason appears on the label although nothing has ever started -> a reason is being fabricated.
 - No `Restart` button appears on an Offline teammate -> the user can see the failure but cannot act on it.
-- A `Restart` button appears on a HEALTHY teammate (check again in the `P-LAUNCH-UAT` lane, where Ada is Online) -> Restart is meant to be offered only for Offline or Degraded.
+- The card has a red reason paragraph under `Offline` -> a reason is being fabricated.
 
 **Inconclusive if**
 
-Some tiles read Online -> check whether you left ACP enabled from a later test, or whether you launched with `P-LAUNCH-UAT` (Ada and Bo go Online there); restart the app without the flag and rerun.
+Some tiles read Online -> check whether you left ACP enabled from a later test, or whether you launched with `P-LAUNCH-UAT` (the mock adapter brings Teammates Online there); relaunch under `P-LAUNCH-FREE` and rerun.
+
+> [!NOTE]
+> Restart is offered in every state except Starting, Online included (F4: TeammateCard.razor:182). A Restart button on a healthy card is correct, not a defect.
 
 > [!NOTE]
 > Every tile reading Offline on a stock install is CORRECT and is listed as a known limit. Do not file it.
@@ -1282,7 +1300,7 @@ Some tiles read Online -> check whether you left ACP enabled from a later test, 
 
 **Steps**
 
-1. Create `src\Huddle.App\App_Data\Teams\Scout.md` containing exactly:
+1. Create the folder `<data>\Teammates\Scout\` and in it `Scout.md` containing exactly:
 ---
 name: 'Scout'
 title: 'Pipe Tester'
@@ -1292,13 +1310,13 @@ teams: ['Business']
 You are Scout. Answer in one short sentence.
 2. In a third PowerShell window at the repo root, run `pwsh tools/echo-bot.ps1 -Name Scout` and confirm it prints that it connected.
 3. Go to /teammates and press F5 ONCE (this is the only refresh in this test; it lets the page learn the new agent's id).
-4. Confirm the `Scout` tile reads `Online` with a green dot.
+4. Confirm the `Scout` tile reads `Online` with a green dot (an external bot connected under the Name of a Teammate that has a Persona file).
 5. Click the Scout tile so its card is open, and leave it open.
 6. In the third PowerShell window, press Ctrl+C to stop the echo bot.
 7. Watch the page for up to five seconds WITHOUT refreshing: read the tile's dot and label, and the open card's status line.
 8. Run `pwsh tools/echo-bot.ps1 -Name Scout` again and watch the same two places, again without refreshing.
 9. Close the card, click another page in the sidebar (e.g. **Settings**), then come back to **Teammates**. Check the `dotnet run` console for exceptions.
-10. Stop the echo bot and delete `Scout.md`.
+10. Stop the echo bot and delete the folder `<data>\Teammates\Scout\`.
 
 **Pass if — all of these**
 
@@ -1320,20 +1338,128 @@ The echo bot cannot connect (`Connecting to pipe...` then an error) -> the pipe 
 > [!NOTE]
 > The very FIRST connection of a brand-new agent name may not flip the tile without one refresh, because the page learns the agent's id when it loads its data. That is why step 3 refreshes once; judge only the disconnect and reconnect that follow.
 
-### TEAMMATESLIBRARY-28 — Moving a Persona file between Team sub-folders is a complete no-op
+### TEAMMATESLIBRARY-41 — A definition file at the Teammates root is rejected, naming its path
+
+**Free** · about 4 min
+
+*Proves the layout rule from the outside: a `.md` placed directly in `<data>\Teammates\` is not a Persona, and the page says so instead of ignoring it.*
+
+**Before you start**
+
+- Core fixture set in place and loading cleanly (no rejected block on screen).
+
+**Steps**
+
+1. Create `<data>\Teammates\Stray.md` (directly in the `Teammates` folder, no sub-folder) containing exactly:
+---
+name: 'Stray'
+title: 'Misplaced'
+alias: 'str'
+---
+You are Stray.
+2. Wait about two seconds and read the page without refreshing.
+3. Create the folder `<data>\Teammates\Stray\` and move `Stray.md` into it.
+4. Wait about two seconds and read the page again.
+5. Delete the folder `<data>\Teammates\Stray\`.
+
+**Pass if — all of these**
+
+- After step 2 no `Stray` tile exists, and the `Files that didn't load` block lists the absolute path `<data>\Teammates\Stray.md` with the reason `A definition must be inside its teammate's folder.` (PersonaStore.cs:717-720).
+- The six core tiles are unchanged.
+- After step 4 a `Stray` tile appears (title `Misplaced`, chip `@str`) and the rejected block is gone.
+
+**Fail if — any of these**
+
+- The root file is silently ignored -> a user who drops a Persona in the wrong place sees nothing happen.
+- A `Stray` tile appears for the root file -> the one-level layout rule is not enforced.
+- The rejected entry stays after the move -> the watcher missed the move or the block is stale.
+
+**Inconclusive if**
+
+The block lists other files too -> a leftover from an earlier test; delete it and rerun.
+
+### TEAMMATESLIBRARY-42 — A second .md in a Teammate folder is rejected, and work\ is the place for notes
+
+**Free** · about 5 min
+
+*Proves a Teammate folder holds only its own definition: an extra markdown file is named in the rejected block while the real definition keeps loading, and moving the extra file under `work\` clears it.*
+
+**Before you start**
+
+- Core fixture set in place and loading cleanly (no rejected block on screen).
+
+**Steps**
+
+1. Create `<data>\Teammates\Nova\Nova-notes.md` containing `Some notes.`
+2. Wait about two seconds and read the page without refreshing.
+3. Create the folder `<data>\Teammates\Nova\work\` and move `Nova-notes.md` into it.
+4. Wait about two seconds and read the page again.
+5. Delete the `work` folder you created.
+
+**Pass if — all of these**
+
+- After step 2 the `Files that didn't load` block lists `<data>\Teammates\Nova\Nova-notes.md` with the reason `A teammate folder holds only its definition; use work/.` (PersonaStore.cs:771-774).
+- The Nova tile is still on the page, unchanged: the extra file does not take the real definition down.
+- After step 4 the rejected block is gone and Nova is unchanged.
+
+**Fail if — any of these**
+
+- Nova disappears while the extra file is present -> one stray note takes a working Teammate offline.
+- The extra file is silently ignored -> the user is never told that their note is not part of the Persona.
+- The file under `work\` is still reported -> the scan reaches into `work\`.
+
+**Inconclusive if**
+
+Windows refuses the move because the file is open in an editor -> close the editor and retry.
+
+### TEAMMATESLIBRARY-43 — Files in _unsorted are rejected as migrated leftovers; other underscore folders are skipped
+
+**Free** · about 4 min
+
+*Proves the layout-migration quarantine folder is visible rather than silent, and that an ordinary folder starting with an underscore is not scanned at all.*
+
+**Before you start**
+
+- Core fixture set in place and loading cleanly (no rejected block on screen).
+
+**Steps**
+
+1. Create `<data>\Teammates\_unsorted\old-persona.md` containing `---` on the first line and any text after it.
+2. Create `<data>\Teammates\_unsorted\deeper\readme.txt` containing `leftover`.
+3. Create `<data>\Teammates\_scratch\ignored.md` containing `not scanned`.
+4. Wait about two seconds and read the page without refreshing.
+5. Delete the folders `_unsorted` and `_scratch`.
+
+**Pass if — all of these**
+
+- The `Files that didn't load` block lists BOTH `_unsorted\old-persona.md` and `_unsorted\deeper\readme.txt` (every file at any depth, any extension), each with the reason `Moved here by the layout migration.` (PersonaStore.cs:726-731).
+- Nothing is listed for `_scratch\ignored.md`, and no tile appears for any of the three files (PersonaStore.cs:736-739).
+- After step 5 the block is gone again.
+
+**Fail if — any of these**
+
+- The `_unsorted` files are not listed -> leftovers from a layout migration vanish without explanation.
+- `_scratch\ignored.md` is listed or loads -> the underscore-folder skip has regressed.
+
+**Inconclusive if**
+
+The block lists other files too -> a leftover from an earlier test; delete it and rerun.
+
+
+### TEAMMATESLIBRARY-28 — An edit to a Teammate's file from outside changes only what the file says; the stored Model and Effort stay
 
 **Free** · about 10 min
 
-*The highest-value identity test in the area: proves a file's location is storage only, so moving it cannot change its Name, its Team, its Model or its Effort. The card is a `MudDialog` and its Model/Effort dropdowns are `MudSelect` (Stages 3-4 of the MudBlazor migration) — neither changes what this test is checking.*
+*The identity test of the area: a Teammate's Model and Effort are keyed by its frontmatter Name, so editing the Title, Teams or body of its file from outside must never reset them. (The old form of this test moved a file between Team sub-folders; the scan now reads one folder level only, so there is no such move.) The card is a `MudDialog` and its Model/Effort dropdowns are `MudSelect` — neither changes what this test checks.*
 
 **Before you start**
 
 - Core fixture set in place.
-- A Model and an Effort stored for the Persona under test. If an ACP adapter is installed (`tools\acp\node_modules` exists), set them through the card as in step 2. If not, use the sqlite3 fallback in the notes.
+- A Model and an Effort stored for the Persona under test. If the Model dropdown offers real models, set them through the card as in step 2. If it offers only the agent's default, use the sqlite3 fallback in the notes ([`O-DB`](common.md#o-db)).
 
 **Steps**
 
-1. Create `src\Huddle.App\App_Data\Teams\Business\Mira.md` (creating the `Business` folder) containing exactly:
+1. Create the folder `<data>\Teammates\Mira\` and in it `Mira.md` containing exactly:
 ---
 name: 'Mira'
 title: 'Field Analyst'
@@ -1342,46 +1468,43 @@ teams: ['Business']
 ---
 You are Mira. Answer in one short sentence.
 2. Go to /teammates, press F5, click the Mira tile, click **Edit**, choose the **Haiku** entry in the **Model** dropdown and **low** in the **Effort** dropdown, then click **Save**.
-3. Reopen the Mira card in View mode and write down all six facts: Name, Title, alias, group heading, the `Model` line, the `Effort` line, and the `Persona file` path. Close the card.
-4. If you have sqlite3, run `sqlite3 src/Huddle.App/App_Data/team.db "select * from persona_models; select * from persona_efforts;"` and note the rows for Mira.
-5. With the browser open on /teammates and untouched, MOVE the file `Business\Mira.md` to `src\Huddle.App\App_Data\Teams\` (drag in Explorer, or `Move-Item src\Huddle.App\App_Data\Teams\Business\Mira.md src\Huddle.App\App_Data\Teams\`).
+3. Reopen the Mira card in View mode and write down: Name, Title, alias, group heading, the `Model` line, the `Effort` line and the `Persona file` path. Close the card.
+4. If you have sqlite3, run `sqlite3 <data>\team.db "select * from persona_models; select * from persona_efforts;"` and note the rows for Mira.
+5. With the browser open on /teammates and untouched, open `<data>\Teammates\Mira\Mira.md` in a text editor, change `title: 'Field Analyst'` to `title: 'Senior Analyst'` and `teams: ['Business']` to `teams: ['Household']`, and save. Change nothing else.
 6. Wait about two seconds and read the page WITHOUT refreshing.
-7. Click the Mira tile and compare all six facts with what you wrote down.
-8. MOVE the file again, this time into `src\Huddle.App\App_Data\Teams\Household\`. Wait two seconds, reopen the card, and compare the six facts again.
-9. If you have sqlite3, re-run the query and compare the rows.
-10. Move the file back out and delete it, and delete the now-empty `Business` folder.
+7. Click the Mira tile and compare the seven facts with what you wrote down.
+8. If you have sqlite3, re-run the query and compare the rows.
+9. Delete the folder `<data>\Teammates\Mira\`.
 
 **Pass if — all of these**
 
-- After each move the page repaints on its own within about a second.
-- Name, Title, alias, group heading (`Business`), `Model` and `Effort` are IDENTICAL before and after each move.
-- The ONLY thing that differs is the `Persona file` path, which shows the new location.
-- The `persona_models` and `persona_efforts` rows are still keyed by the frontmatter Name `Mira` and still hold the same values after both moves.
-- Mira stays under the `Business` heading even while its file sits in the `Household` folder.
+- The page repaints on its own within about a second of the save.
+- The tile now reads Title `Senior Analyst` and sits under the `Household` heading, not `Business`.
+- Name, alias, `Model`, `Effort` and the `Persona file` path are IDENTICAL before and after.
+- The `persona_models` and `persona_efforts` rows are still keyed by the frontmatter Name `Mira` and hold the same values.
 
 **Fail if — any of these**
 
-- The `Model` reverts to `Agent default` or the `Effort` to `Model default` after a move -> a path-derived database key has been reintroduced; this is the exact silent identity change that Teams-as-a-field exists to prevent, and nothing on screen announces it.
-- The group heading follows the folder -> grouping is folder-derived (see also TEAMMATESLIBRARY-06).
-- The tile disappears and reappears as a different teammate -> identity is being rebuilt from the path.
-- The tile vanishes permanently after a move INTO a sub-folder -> the watcher is missing moves into nested folders.
+- The `Model` reverts to `Agent default` or the `Effort` to `Model default` after the edit -> a path- or content-derived database key has been reintroduced; this is the exact silent identity change that Teams-as-a-field exists to prevent, and nothing on screen announces it.
+- The tile disappears and reappears as a different teammate -> identity is being rebuilt from the file content or path.
+- The page needs F5 to show the edit -> the watcher missed the write (see TEAMMATESLIBRARY-19).
 
 **Inconclusive if**
 
-No adapter is installed, so the Model dropdown offers only `Use the agent's default` and no Model can be stored through the UI -> use the sqlite3 fallback: stop the app, run `sqlite3 src/Huddle.App/App_Data/team.db "insert into persona_models(persona_name,model) values('Mira','claude-haiku-4-5'); insert into persona_efforts(persona_name,effort) values('Mira','low');"`, restart the app, and read the values off the card before moving. If you have no sqlite3 either, run the test without the Model/Effort half and say so — but note that the Model/Effort half is the part that catches the silent failure.
+The Model dropdown offers only `Use the agent's default`, so no Model can be stored through the UI -> use the sqlite3 fallback: stop the app, run `sqlite3 <data>\team.db "insert into persona_models(persona_name,model) values('Mira','claude-haiku-4-5'); insert into persona_efforts(persona_name,effort) values('Mira','low');"`, restart the app, and read the values off the card before editing the file. If you have no sqlite3 either, run the test without the Model/Effort half and say so — but that half is the part that catches the silent failure.
 
 > [!NOTE]
-> This is manual checklist step 20 and the test most likely to regress if someone reintroduces a path-derived key. Honour the standing convention: Model = Haiku, Effort = low.
+> Rows left behind when the folder is deleted from disk (step 9) are not judged here. Honour the standing convention: Model = Haiku, Effort = low.
 
-### TEAMMATESLIBRARY-29 — New teammate writes to the Teams root, with the Teams field it was given
+### TEAMMATESLIBRARY-29 — New teammate writes its own folder and file under Teammates, with the Teams field it was given
 
 **Free** · about 6 min
 
-*Proves the create path composes a file that round-trips through the parser, at the root, never guessing a sub-folder. The New teammate card is a real `MudDialog` (Stage 4 of the MudBlazor migration); its fields are unaffected.*
+*Proves the create path composes a file that round-trips through the parser, in `Teammates\<Name>\<Name>.md`, and never files the Teammate under a Team. The New teammate card is a real `MudDialog`; its fields are unaffected.*
 
 **Before you start**
 
-- Core fixture set in place, INCLUDING at least one Team sub-folder (`Household\`), so "never guesses a sub-folder" is actually exercised.
+- Core fixture set in place, so the `Business` and `Household` Teams already exist.
 - No Persona named `Wren` exists.
 
 **Steps**
@@ -1394,7 +1517,7 @@ No adapter is installed, so the Model dropdown offers only `Use the agent's defa
 6. Click **Add teammate**.
 7. Read the card that is now on screen: its header, Name, and `Teams:` line. Close it.
 8. Read where the Wren tile appears on the page.
-9. In `T-B` run `Get-ChildItem -Recurse src\Huddle.App\App_Data\Teams -Filter Wren.md` and then `Get-Content src\Huddle.App\App_Data\Teams\Wren.md`.
+9. In `T-B` run `Get-ChildItem -Recurse <data>\Teammates -Filter Wren.md` and then `Get-Content <data>\Teammates\Wren\Wren.md`.
 10. Confirm there is no `Files that didn't load` block on the page.
 
 **Pass if — all of these**
@@ -1402,13 +1525,13 @@ No adapter is installed, so the Model dropdown offers only `Use the agent's defa
 - The Teams field's hint reads `Comma-separated. Leave blank for no team.`
 - After **Add teammate** the card switches to View mode: header `Teammate`, Name `Wren`, and a line reading `Teams: Business, Household`.
 - A Wren tile appears under BOTH the `Business` and the `Household` headings.
-- The file is at `src\Huddle.App\App_Data\Teams\Wren.md` — at the ROOT, not inside `Household\` or any other sub-folder, and it is the only Wren.md anywhere in the tree.
+- The file is at `<data>\Teammates\Wren\Wren.md` (the app created the `Wren` folder; PersonaStore.cs:338-390), and it is the only Wren.md anywhere in the tree.
 - Its contents are lowercase, single-quoted frontmatter: `name: 'Wren'`, `title: 'Ops Lead'`, `alias: 'wre'`, `teams: ['Business', 'Household']`, then `---`, then the body.
 - No `Files that didn't load` entry appears for the file just created.
 
 **Fail if — any of these**
 
-- The file lands inside a sub-folder -> the app is choosing a user's filing location for them.
+- The file lands anywhere else (at the `Teammates` root, or under `<data>\Teams\`) -> the app is writing a layout the scan rejects or never reads.
 - `teams:` reads `['Business, Household']` (one Team) -> the comma list typed by the user is not being split; the user gets one nonsense Team.
 - A `teams:` line is written even when the Teams field was left blank (test this separately by creating one with Teams empty) -> an empty field is not how a person writes 'no Teams'.
 - The newly created file appears in the `Files that didn't load` block -> what the writer composes does not parse with what the reader requires; loud, but a real round-trip break.
@@ -1419,7 +1542,7 @@ No adapter is installed, so the Model dropdown offers only `Use the agent's defa
 The Model dropdown is empty of real models -> that means no adapter is installed; the rest of this test still stands. Record that the Model/Effort half was skipped.
 
 > [!NOTE]
-> Delete `Wren.md` afterwards unless TEAMMATESLIBRARY-30 or -32 uses it.
+> Delete the `Wren` folder afterwards unless TEAMMATESLIBRARY-30 or -32 uses it.
 
 ### TEAMMATESLIBRARY-30 — A save that would create a rejected file is refused before anything is written
 
@@ -1429,80 +1552,81 @@ The Model dropdown is empty of real models -> that means no adapter is installed
 
 **Before you start**
 
-- Core fixture set in place: `Nova.md` at the root (alias `nov`) and `Household\Rune.md` nested.
+- Core fixture set in place: `Nova\Nova.md` (alias `nov`) and `Rune\Rune.md`.
 
 **Steps**
 
-1. In `T-B` run `Get-ChildItem -Recurse src\Huddle.App\App_Data\Teams -Filter *.md | Measure-Object` and write down the Count.
+1. In `T-B` run `(Get-ChildItem <data>\Teammates -Directory | Get-ChildItem -Filter *.md | Measure-Object).Count` and write down the Count (one folder level deep, so notes under `work\` do not count). Also write down the number of folders: `(Get-ChildItem <data>\Teammates -Directory).Count`.
 2. Click **New teammate**. Type Name `Nova`, Title `Clash`, Alias `cl1`, Teams `Business`, body `You are a clash test.` Click **Add teammate**. Record the message shown and whether your typed text is still in the fields.
-3. Change only the Name to `Rune` (a Persona that lives in a SUB-FOLDER) and click **Add teammate** again. Record the message.
+3. Change only the Name to `Rune` and click **Add teammate** again. Record the message.
 4. Change only the Name to `rune` (lower case) and click **Add teammate**. Record the message.
 5. Change the Name to `Clash1` and the Alias to `nov` (Nova's alias) and click **Add teammate**. Record the message.
 6. Change the Alias to `cl1`, clear the **Persona body** textarea completely, and click **Add teammate**. Record the message.
 7. Type `You are a clash test.` back into the body, change the Name to `Emily  Lee` (TWO spaces), and click **Add teammate**. Record the message.
 8. Change the Name to `Clash1` and the Alias to `-nope`, and click **Add teammate**. Record the message.
 9. Click **Cancel** to close the card.
-10. Re-run the file count command and compare with the number you wrote down. Confirm no new entry appeared in a `Files that didn't load` block.
+10. Re-run both count commands and compare with what you wrote down. Confirm no new entry appeared in a `Files that didn't load` block.
 
 **Pass if — all of these**
 
 - Every attempt keeps the card OPEN and shows a message in red at the top of the card body; nothing you typed is lost.
 - Name `Nova` -> `Persona 'Nova' already exists.`
-- Name `Rune` -> `Persona Name 'Rune' is also used by '<absolute path of Household\Rune.md>'.` — the sub-folder collision is caught even though no `Rune.md` exists at the root.
-- Name `rune` -> `Persona Name 'rune' is also used by '<absolute path of Household\Rune.md>'.` — a case-only difference still collides.
-- Alias `nov` -> `Persona Alias 'nov' is also used by '<absolute path of Nova.md>'.`
+- Name `Rune` -> `Persona 'Rune' already exists.` — the create path checks first whether `Teammates\Rune\Rune.md` exists (PersonaStore.cs:366-369).
+- Name `rune` -> `Persona 'rune' already exists.` — on Windows `rune` resolves to the same `Teammates\Rune\Rune.md`, so a case-only difference still collides.
+- Alias `nov` -> `Persona Alias 'nov' is also used by '<absolute path of Nova\Nova.md>'.`
 - Blank body -> `Persona text must not be blank.`
 - Name `Emily  Lee` -> `'Emily  Lee' is not a valid Persona name.`
 - Alias `-nope` -> `'-nope' is not a valid Persona alias.`
-- The .md file count is UNCHANGED across every failed attempt, and the rejected block gained no entry.
+- The .md count AND the folder count are UNCHANGED across every failed attempt (a refused save creates no folder either), and the rejected block gained no entry.
 
 **Fail if — any of these**
 
-- The file count goes up after any refusal -> the file was written and then explained; the write path is validating after the fact.
+- The file or folder count goes up after any refusal -> the file was written and then explained; the write path is validating after the fact.
 - A new entry appears in `Files that didn't load` immediately after a save -> same thing, the loud version.
 - The card closes on error and discards everything typed -> the user retypes their Persona body from scratch.
-- The `Rune` or `rune` attempt succeeds -> only the root path was checked for existence; two teammates now share one Name (and one database row) and one of them silently loses its Model.
+- The `Rune` or `rune` attempt succeeds -> two teammates now share one Name (and one database row) and one of them silently loses its Model.
 
 **Inconclusive if**
 
 A message appears but its wording differs slightly from the text above -> record the exact wording you saw and flag it as a wording drift rather than a functional failure, unless the message fails to name the offending field or the colliding file, which IS a failure.
 
-### TEAMMATESLIBRARY-31 — Renaming through the frontmatter: the tile renames, Model and Effort follow, the file does not
+### TEAMMATESLIBRARY-31 — Renaming through the frontmatter: the tile renames, Model and Effort follow, and the folder and file are renamed with it
 
 **Free** · about 10 min
 
-*Proves a Name change through the card's textarea carries the stored Model and Effort with it and does not rename the file — and documents the ghost it leaves behind.*
+*Proves a Name change through the card's textarea carries the stored Model and Effort with it and moves the Teammate's folder and file to the new Name (ADR-0011), leaving no ghost behind.*
 
 **Before you start**
 
-- A Persona with a stored Model and Effort. Reuse `Mira` from TEAMMATESLIBRARY-28, or set Model = Haiku and Effort = low on a fresh Persona through the card (or via the sqlite3 fallback in -28's notes).
+- A Persona with a stored Model and Effort. Reuse `Mira` from TEAMMATESLIBRARY-28 (recreate its folder and file, then set Haiku / low through the card or the sqlite3 fallback in -28), or set Model = Haiku and Effort = low on a fresh Persona.
 
 **Steps**
 
 1. Go to /teammates, press F5, click the Mira tile and write down its `Model` line, its `Effort` line and its `Persona file` path. Close the card.
 2. Click the Mira tile again and click **Edit**.
-3. Read the hint under the textarea.
+3. Read the hint under the textarea, and any note about renaming.
 4. In the textarea (which holds the WHOLE file, frontmatter included), change `name: 'Mira'` to `name: 'Mira Prime'`. Change nothing else. Click **Save**.
-5. Close whatever card is on screen, then look at the tile grid: find the renamed tile and read its Name and monogram.
+5. Wait about five seconds (the folder move runs after the save). Close whatever card is on screen, then look at the tile grid: find the renamed tile and read its Name and monogram.
 6. Click the renamed tile and read its `Model`, `Effort` and `Persona file` lines.
-7. In `T-B` run `Get-ChildItem -Recurse src\Huddle.App\App_Data\Teams -Filter Mira*.md`.
-8. If you have sqlite3, run `sqlite3 src/Huddle.App/App_Data/team.db "select * from persona_models; select * from persona_efforts;"`.
-9. Look at the left sidebar and note whether a Room named after the OLD name is still listed.
+7. In `T-B` run `Get-ChildItem -Recurse <data>\Teammates | Where-Object Name -like 'Mira*'`.
+8. If you have sqlite3, run `sqlite3 <data>\team.db "select * from persona_models; select * from persona_efforts; select id,name,kind from users;"` ([`O-DB`](common.md#o-db)).
+9. Look at the left sidebar and note whether any Room is still named after the OLD name.
 
 **Pass if — all of these**
 
 - The Edit hint reads `Markdown. This is the whole Persona file, front matter included, and becomes the teammate's system prompt. Saving restarts it, which clears what it remembers.`
+- A note in Edit mode says `Renaming brings this teammate's chats, its history and its work folder with it.` (TeammateCard.razor:290).
 - A tile now reads `Mira Prime` with monogram `MP`, and no tile reads `Mira`.
 - The renamed teammate's card shows the SAME `Model` and the SAME `Effort` as before the rename.
-- On disk the file is STILL called `Mira.md` — identity is frontmatter, not filename — and the card's `Persona file` path still ends `Mira.md`.
+- On disk the folder is now `<data>\Teammates\Mira Prime\` holding `Mira Prime.md`, no `Mira` folder is left, and the card's `Persona file` path ends `Mira Prime\Mira Prime.md` (PersonaRenameCascade.cs:363-426).
 - `persona_models` and `persona_efforts` hold a row keyed `Mira Prime` and NO row keyed `Mira`.
-- Any Room or transcript that existed under the old name is still in the sidebar under the old name (this is the documented ghost, and is expected).
+- If the Teammate had an Agent row in `users` or a direct Room, the row is renamed in place and no Room named after the old name remains (ADR-0011). A fresh Mira has neither, so that half is then not observable: say so.
 
 **Fail if — any of these**
 
 - The `Model` or `Effort` reverts to `Agent default` / `Model default` after the rename -> the stored rows were not moved, and a user's settings vanished silently.
 - A row keyed under the OLD name is left behind -> recreating a teammate with the old name later would silently resurrect a setting nobody chose.
-- The file is renamed on disk -> identity is being written back to the filename.
+- The file keeps the old name inside a renamed folder, or the folder keeps the old name -> the move half-completed, and the next scan rejects the file as `A teammate folder holds only its definition; use work/.` or names a mismatch.
 - Both an old and a new tile appear -> the index is not replacing the old entry.
 
 **Inconclusive if**
@@ -1510,41 +1634,41 @@ A message appears but its wording differs slightly from the text above -> record
 After Save, the card on screen looks empty (no Title, no Persona text, no `Persona file` section) with the OLD name in it -> that is the page reopening the card by the name it was opened with, and is a known rough edge, not the failure this test is judging. Close it and click the renamed TILE instead; judge from the tile and the reopened card. Record the empty-card observation as a note.
 
 > [!NOTE]
-> The ghost — the old Agent, its Room and its transcript remaining — is a documented known limit, not a bug. Only Model and Effort follow a rename.
+> The folder move follows the code (ADR-0011, `PersonaRenameCascade`), not a run. Delete the `Mira Prime` folder afterwards unless TEAMMATESLIBRARY-32 uses it.
 
-### TEAMMATESLIBRARY-32 — Remove takes the file, the Model and the Effort — and nothing else
+### TEAMMATESLIBRARY-32 — Remove takes the file, the Model and the Effort — and not the chats
 
 **Free** · about 8 min
 
-*Proves removal is confirm-gated, deliberately non-cascading, and leaves no setting behind to resurrect.*
+*Proves removal is confirm-gated, deliberately non-cascading for Rooms and transcripts, and leaves no setting behind to resurrect.*
 
 **Before you start**
 
-- A Persona with a stored Model = Haiku and Effort = low (reuse Mira/Mira Prime from -31, or set them on a fresh one).
-- Ideally the app is running in the `P-LAUNCH-UAT` lane, so Ada (a real Persona with a real Room) can be the one removed and the non-cascade half observed. Ada's own file is `C:\seeds\huddle\uat\data\Teammates\Ada\Ada.md`, so use that path in the file check in step 6.
+- A Persona with a stored Model = Haiku and Effort = low (reuse Mira Prime from -31, or set them on a fresh one). The Chief of Staff cannot be used: its card has **Reset to default**, not Remove.
+- Ideally the app is running in the `P-LAUNCH-UAT` lane, so Ada (a real Persona with a real Room) can be the one removed and the non-cascade half observed. There `<data>` is `C:\seeds\huddle\uat\data` and Ada's own file is `<data>\Teammates\Ada\Ada.md`.
 
 **Steps**
 
 1. Go to /teammates, press F5, click the teammate's tile and note its group heading and whether its Team has any other member.
-2. In the card, click **Remove**. Read the button row that appears.
+2. In the card, click the red Remove icon button (tooltip `Remove`). Read the button row that appears.
 3. Click **Cancel**. Confirm the row returns to its previous buttons and nothing was deleted.
-4. Click **Remove** again, then click **Confirm**.
+4. Click Remove again, then click **Confirm**.
 5. Read the page: is the card closed, is the tile gone, is its group heading gone (if it was the last member), and is its Team still in the **Team** dropdown?
-6. In the second PowerShell window confirm the file is gone: `Get-ChildItem -Recurse src\Huddle.App\App_Data\Teams -Filter '<that name>.md'`.
-7. If you have sqlite3: `sqlite3 src/Huddle.App/App_Data/team.db "select * from persona_models; select * from persona_efforts; select id,name,kind from users;"` and also check the `rooms` table.
+6. In `T-B` run `Get-ChildItem -Recurse <data>\Teammates\<that name>` and note what is left.
+7. If you have sqlite3: `sqlite3 <data>\team.db "select * from persona_models; select * from persona_efforts; select id,name,kind from users;"` and also check the `rooms` table.
 8. Look at the left sidebar: is the removed teammate's Room (if it had one) still listed, with its messages intact?
 9. Now click **New teammate** and recreate a Persona with the SAME Name, Title and Alias, leaving Model and Effort untouched. Click **Add teammate**.
 10. Read the recreated teammate's `Model` and `Effort` lines on the card.
 
 **Pass if — all of these**
 
-- **Remove** does not delete on the first click: the row swaps to `Confirm` and `Cancel`.
+- Remove does not delete on the first click: the row swaps to `Confirm` and `Cancel`.
 - `Cancel` restores the previous button row and deletes nothing.
 - `Confirm` closes the card, removes the tile, removes the group heading if it was that Team's last member, and removes that Team from the **Team** dropdown if nobody else names it.
-- The `.md` file is gone from disk.
+- `<that name>.md` is gone from disk. The Teammate's folder and its `work\` notes remain: Remove deletes the definition file only (PersonaStore.cs:472-480).
 - `persona_models` and `persona_efforts` hold NO row for that name.
-- Any Room and transcript the teammate had are STILL in the sidebar and still readable — removal is deliberately non-cascading.
-- The recreated Persona of the same Name reads `Model: Agent default` and `Effort: Model default`.
+- Any Room and transcript the teammate had are STILL in the sidebar and still readable — removal is deliberately non-cascading for chats. (Its Avatar entry and image are deleted with it: PersonaRenameCascade removal handler.)
+- The recreated Persona of the same Name reads `Model: Agent default` and `Effort: Model default`, and is created in the surviving folder.
 
 **Fail if — any of these**
 
@@ -1557,7 +1681,7 @@ After Save, the card on screen looks empty (no Title, no Persona text, no `Perso
 
 The teammate never had a Room (nothing ever connected as it), so the non-cascade half cannot be observed -> run this against Ada instead in the `P-LAUNCH-UAT` lane: open its card, click **Message**, send `hi`, then rerun. Messaging Ada is free.
 
-### TEAMMATESLIBRARY-33 — Open launches the Persona file on the SERVER, including for a nested file
+### TEAMMATESLIBRARY-33 — Open launches the Persona file on the SERVER, from its Teammate folder
 
 **Free** · about 4 min
 
@@ -1566,29 +1690,29 @@ The teammate never had a Room (nothing ever connected as it), so the non-cascade
 **Before you start**
 
 - The app and the browser are on the same machine (the expected single-user setup).
-- Core fixture set in place, including the nested `Household\Rune.md`.
+- Core fixture set in place.
 
 **Steps**
 
 1. Go to /teammates, press F5, click the Nova tile, and click **Open**.
 2. Note whether an editor opens, and read the path in its title bar.
 3. Close the editor. Close the card.
-4. Click the NESTED Rune tile and click **Open**.
+4. Click the Rune tile and click **Open**.
 5. Read the path in the editor's title bar and compare it with the card's `Persona file` line.
 6. Close the editor and the card, and check the `dotnet run` console and the page for errors.
 
 **Pass if — all of these**
 
 - **Open** launches whatever the machine has registered for `.md`, showing the real file.
-- For the nested Rune, the file opened is `...\App_Data\Teams\Household\Rune.md` — the nested file, not a root path.
-- The path in the editor matches the card's `Persona file` line exactly.
+- For Rune, the file opened is `<data>\Teammates\Rune\Rune.md`.
+- The path in the editor matches the card's `Persona file` line exactly (the card reads the path from the index: PersonaStore.cs:483-489).
 - No yellow `An unhandled error has occurred.` banner appears, and the page stays usable.
 
 **Fail if — any of these**
 
 - Nothing happens and no message appears anywhere -> the user cannot tell whether the click registered.
-- The wrong file opens for the nested Persona -> the path is being reconstructed rather than read from the index.
-- The yellow `An unhandled error has occurred.` banner appears -> an unhandled exception is taking down the circuit; a failed launch must show a line like `Could not open 'Nova': ...` on the card instead.
+- The wrong file opens -> the path is being reconstructed rather than read from the index.
+- The yellow `An unhandled error has occurred.` banner appears -> an unhandled exception is taking down the circuit; a failed launch must show a line like `Could not open 'Nova': ...` on the card instead (TeammateCard.razor:2044,2053).
 
 **Inconclusive if**
 
@@ -1606,7 +1730,8 @@ Nothing opens AND the card shows an error line beginning `Could not open '...'` 
 **Before you start**
 
 - An ACP adapter is installed: `tools\acp\node_modules` exists. (If it does not, run `pwsh tools/acp/install.ps1` or record this test as inconclusive.)
-- Core fixture set in place. Works with `Team:Acp:Enabled` either true or false — the probe is deliberately not gated by that flag.
+- Launch the app fresh just before this test: the model list is probed once and then cached for the life of the app, so a probe an earlier test already made leaves nothing to observe in step 7 (F13: ModelCatalogProbe.cs:109-112).
+- Core fixture set in place. Works with ACP on or off — the probe is deliberately not gated by that flag.
 
 **Steps**
 
@@ -1635,94 +1760,89 @@ Nothing opens AND the card shows an error line beginning `Could not open '...'` 
 
 **Inconclusive if**
 
-No adapter is installed, so no probe could ever spawn -> this test cannot distinguish 'correctly never probes' from 'has nothing to probe'. Install the adapter (`pwsh tools/acp/install.ps1`) or record the test as inconclusive; do not record a pass.
+No adapter is installed, so no probe could ever spawn -> this test cannot distinguish 'correctly never probes' from 'has nothing to probe'. Install the adapter (`pwsh tools/acp/install.ps1`) or record the test as inconclusive; do not record a pass. Likewise if nothing changes even at step 7, the model list was already cached: relaunch the app and rerun.
 
-### TEAMMATESLIBRARY-35 — Restart from the card is NOT gated by Team:Acp:Enabled — judge and record
+### TEAMMATESLIBRARY-35 — Restart with ACP switched off reports why and starts nothing
 
 **Free** · about 5 min
 
-*Establishes what the Restart button actually does when ACP is configured off, since only the supervisor's startup path checks that flag.*
+*Restart on a card is a direct call, not the startup path, so it needs its own guard: with ACP off it must say so on screen and bring nothing Online (PersonaSupervisor.cs:508-512). This test pins that guard.*
 
 **Before you start**
 
-- App started WITHOUT `--Team:Acp:Enabled=true` (ACP off).
-- An ACP adapter IS installed (`tools\acp\node_modules` exists).
-- Core fixture set in place; at least one tile reading `Offline`.
+- App started under `P-LAUNCH-FREE` (ACP off, the ship default). Do not pass `--Team:Acp:Enabled=true`.
+- Core fixture set in place; every tile reads `Offline`.
 
 **Steps**
 
-1. In `T-B` run `O-ADAPTERS-LIST` and note the PIDs.
-2. Confirm the app was started with no `--Team:Acp:Enabled` argument (check the `dotnet run` command line you used).
-3. Go to /teammates, press F5, click an Offline teammate's tile (e.g. Nova) and read the hint under the action row.
-4. Click **Restart**. Start watching `O-ADAPTERS-LIST` and the `dotnet run` console immediately.
-5. Within ten seconds, run `O-ADAPTERS-LIST` again and check `Get-ChildItem src\Huddle.App\App_Data\work`.
-6. Read the tile's and the card's status labels.
-7. Do NOT send the teammate a message. Close the card.
+1. In `T-B` run `O-ADAPTERS` and note the count.
+2. Go to /teammates, press F5, click the Nova tile and read the hint under the action row.
+3. Click **Restart**.
+4. Read the card's status line and any red paragraph under it. Then close the card and hover the word `Offline` in the Nova tile's status chip.
+5. Run `O-ADAPTERS` again and `Get-ChildItem <data>\Teammates\Nova`.
+6. Do NOT send the teammate a message.
 
 **Pass if — all of these**
 
-- Record what actually happened, precisely: whether a new `node` process appeared, whether `App_Data\work\<Persona>\` was created, and whether the badge moved (`Offline` -> `Starting` -> `Online`).
-- Whatever happens, the page does not crash and the card shows any failure as a message line rather than a yellow error banner.
 - The hint under the action row reads `Like saving an edit, this restarts the teammate, which clears what it remembers.`
+- After **Restart** the card still reads `Offline` and shows the reason `Teammates are switched off in this configuration, so nothing was started.`; the tile's status chip carries the same text as its tooltip.
+- `O-ADAPTERS` is unchanged (still `0`) and `Nova` holds only `Nova.md`: nothing was started and no `work\` folder was created (the Work Dir is `Teammates\Nova\work`, F1).
+- The page does not crash and no yellow `An unhandled error has occurred.` banner appears.
 
 **Fail if — any of these**
 
-- The page throws, or the yellow `An unhandled error has occurred.` banner appears -> a restart failure is crashing the circuit instead of reporting itself on the card.
-- The button does nothing at all and no message appears -> the user has a control that silently does nothing.
+- The badge moves to `Starting` or `Online`, or an adapter process appears -> the Restart door ignores `Acp:Enabled` and brings a Persona fully Online with ACP configured off; every later Message to it is billable and nothing on screen said so.
+- The button does nothing at all and no reason appears -> the user has a control that silently does nothing.
 
 **Inconclusive if**
 
-No adapter installed -> the Restart will simply fail with a reason (see TEAMMATESLIBRARY-37); that is a different test. Record this one as not-applicable on this machine.
-
-> [!NOTE]
-> Judge this carefully rather than filing it blind. Starting a session spends no tokens, but it genuinely brings a teammate online, and any message sent to it afterwards spends real money. The docs say `Team:Acp:Enabled` exists because ACP spends money, and nothing documents this door — so report exactly what you observed and flag the gap. Do NOT message the teammate as part of this test.
+The app was launched with ACP on -> the guard is not in play; relaunch under `P-LAUNCH-FREE` and rerun.
 
 ### TEAMMATESLIBRARY-36 — Restart is busy-flagged and cannot be double-fired
 
 **Free** · about 5 min
 
-*Proves one teammate cannot be handed two adapter processes by an impatient double click.*
+*Proves one teammate cannot be handed two adapter processes by an impatient double click. It runs on the free mock adapter, where Restart actually starts something.*
 
 **Before you start**
 
-- An ACP adapter installed, and a teammate currently reading `Offline` or `Degraded`.
-- Ideally follows straight on from TEAMMATESLIBRARY-35 so a restart is slow enough to watch (a real adapter start takes a second or two).
+- App launched with [`P-LAUNCH-UAT`](common.md#p-launch-uat) (the mock adapter, ACP on, free); Ada reads `Online` on /teammates. Restart is offered in every state except Starting (F4: TeammateCard.razor:182), so an Online card is a valid subject.
 
 **Steps**
 
-1. In `T-B` run `O-ADAPTERS` and count the processes.
-2. Open an Offline teammate's card.
+1. In `T-B` run `O-MOCK-ADAPTERS` and note the count.
+2. Open Ada's card.
 3. Click **Restart** and immediately click it two more times as fast as you can.
 4. Watch the button's label and whether it responds to the extra clicks.
-5. When it settles, read the button row again.
-6. Run `O-ADAPTERS` and compare the count with step 1.
+5. When it settles, read the button row and the status badge again.
+6. Run `O-MOCK-ADAPTERS` and compare the count with step 1.
 
 **Pass if — all of these**
 
 - While the restart is in flight the button reads `Restarting…` and is disabled — the extra clicks do nothing.
-- When it finishes, the button returns to `Restart`, or disappears entirely if the teammate is now `Online`.
-- The `node` process count rises by at most ONE, not by two or three.
+- When it finishes, the button returns to `Restart` (it is shown in every state except Starting; it does not disappear when the teammate is Online) and Ada settles back to `Online`.
+- The mock process count is at most ONE higher than in step 1 at any moment, not two or three.
 
 **Fail if — any of these**
 
-- Two or three new `node` processes appear for one teammate -> the busy flag is gone; a double click doubles a teammate's adapter processes.
-- The button stays disabled forever after a failed restart -> the user can never retry.
+- Two or three new mock processes appear for one teammate -> the busy flag is gone; a double click doubles a teammate's adapter processes.
+- The button stays disabled forever after a restart -> the user can never retry.
 - A restart failure crashes the circuit instead of showing its message on the card -> an expected failure is being treated as fatal.
 
 **Inconclusive if**
 
-The restart completes too fast to see the `Restarting…` label -> judge on the `node` process count alone and say that the label transition was too fast to observe. If no adapter is installed, the restart fails instantly and this test cannot be judged.
+The restart completes too fast to see the `Restarting…` label -> judge on the process count alone and say that the label transition was too fast to observe.
 
 ### TEAMMATESLIBRARY-37 — Offline WITH a reason, in both of its homes
 
 **Free** · about 5 min
 
-*Proves that when a start genuinely fails, the exact reason reaches the user twice — as a tile tooltip and as a full line on the card — and clears when the cause is fixed.*
+*Proves that when a start genuinely fails, the exact reason reaches the user twice — as a tooltip on the tile's status chip and as a full line on the card — and clears when the cause is fixed.*
 
 **Before you start**
 
 - Core fixture set in place.
-- You are willing to rename `tools\acp\node_modules` aside and back. No adapter process ever starts in this configuration, so nothing is spent.
+- You are willing to rename `tools\acp\node_modules` aside and back. With the adapter missing, no adapter process ever starts in this configuration, so nothing is spent even though ACP is switched on (the Chief of Staff cannot take its paid Greeting without an adapter).
 
 **Steps**
 
@@ -1731,8 +1851,8 @@ The restart completes too fast to see the `Restarting…` label -> judge on the 
 3. Restart the app with ACP ON: `dotnet run --project src/Huddle.App -- --Team:Acp:Enabled=true`
 4. Go to http://localhost:5100/teammates and press F5.
 5. Read the status label on every tile.
-6. HOVER the mouse over the Nova tile's status line for three seconds and read the tooltip.
-7. Click the Nova tile and read the line directly under its status line.
+6. HOVER the mouse over the word `Offline` in the Nova tile's status chip for three seconds and read the tooltip.
+7. Click the Nova tile and read the red line directly under its status line.
 8. Check the `dotnet run` console for a warning naming Nova.
 9. Restore the adapter: `Rename-Item tools\acp\node_modules.off node_modules`
 10. On the still-open Nova card, click **Restart** and watch the badge on both the tile and the card.
@@ -1740,9 +1860,9 @@ The restart completes too fast to see the `Restarting…` label -> judge on the 
 **Pass if — all of these**
 
 - Every tile reads `Offline`.
-- Hovering a tile's status line shows a tooltip carrying exactly: `No ACP adapter is installed for Persona 'Nova'. Run tools/acp/install.ps1 (or set Team:Acp:AdapterPath / Team:Acp:Args) before enabling this Persona.`
+- Hovering the status chip shows a tooltip carrying exactly: `No ACP adapter is installed for Persona 'Nova' on Adapter '<id>'. Run tools/acp/install.ps1 (or set Team:Acp:AdapterPath / Team:Acp:Args) before enabling this Persona.`, with `<id>` the Persona's Adapter id (DotAcpAgentHostFactory.cs:138-141).
 - The card shows that SAME text as a full paragraph line under the status — not as a tooltip.
-- The console logs a warning `Persona 'Nova' failed to start.`
+- The console logs a warning `Persona 'Nova' failed to start.` (PersonaSupervisor.cs:617).
 - After restoring node_modules and clicking **Restart**, the badge moves `Offline` -> (briefly `Starting`) -> `Online`, and the reason disappears from both the tooltip and the card.
 - No `node` process runs while the adapter is renamed aside — no tokens, no money.
 
@@ -1758,7 +1878,7 @@ The restart completes too fast to see the `Restarting…` label -> judge on the 
 You cannot rename `node_modules` because a process has it open -> stop the app first (step 1), and close any editor with files open under it. If the app fails to start with the `--Team:Acp:Enabled=true` argument, check the argument spelling — it must be exactly `--Team:Acp:Enabled=true` after a bare `--`.
 
 > [!NOTE]
-> Put `node_modules` back before moving on; TEAMMATESLIBRARY-38 needs it renamed aside again, so you may prefer to run -38 immediately after this one.
+> Put `node_modules` back before moving on; TEAMMATESLIBRARY-38 needs it renamed aside again, so you may prefer to run -38 immediately after this one. Step 10 starts Nova on the real adapter, which spends nothing until a Message is sent: send none.
 
 ### TEAMMATESLIBRARY-38 — Health outranks pipe liveness: a live pipe with a failed start must read Offline
 
@@ -1769,13 +1889,13 @@ You cannot rename `node_modules` because a process has it open -> stop the app f
 **Before you start**
 
 - PowerShell available to run `tools/echo-bot.ps1` (`P-ECHO-BOT`); it stands in for a live pipe client.
-- `tools\acp\node_modules` renamed aside so no adapter can be found.
+- `tools\acp\node_modules` renamed aside so no adapter can be found (nothing is spent, as in TEAMMATESLIBRARY-37).
 
 **Steps**
 
 1. Stop the app with Ctrl+C.
 2. Confirm the adapter is unfindable: `Test-Path tools\acp\node_modules` must return `False` (rename it aside if not: `Rename-Item tools\acp\node_modules node_modules.off`).
-3. Create `src\Huddle.App\App_Data\Teams\Scout.md` containing exactly:
+3. Create the folder `<data>\Teammates\Scout\` and in it `Scout.md` containing exactly:
 ---
 name: 'Scout'
 title: 'Pipe Tester'
@@ -1787,15 +1907,15 @@ You are Scout. Answer in one short sentence.
 6. In a third PowerShell window at the repo root, run `pwsh tools/echo-bot.ps1 -Name Scout` and confirm it prints `Sent hello. Listening for messages (Ctrl+C to exit)...`.
 7. Go to http://localhost:5100/teammates and press F5.
 8. Read the `Scout` tile's status label and dot colour.
-9. Hover its status line and read the tooltip.
-10. If you have sqlite3, run `sqlite3 src/Huddle.App/App_Data/team.db "select id,name,kind from users;"` and confirm the `Scout` agent row is there.
-11. Stop the echo bot, delete `Scout.md`, restore the adapter (`Rename-Item tools\acp\node_modules.off node_modules`) and restart the app without the ACP flag when you are finished.
+9. Hover the word `Offline` in its status chip and read the tooltip.
+10. If you have sqlite3, run `sqlite3 <data>\team.db "select id,name,kind from users;"` and confirm the `Scout` agent row is there.
+11. Stop the echo bot, delete the folder `<data>\Teammates\Scout\`, restore the adapter (`Rename-Item tools\acp\node_modules.off node_modules`) and restart the app without the ACP flag when you are finished.
 
 **Pass if — all of these**
 
 - Both facts are true at once: the echo bot is connected (the pipe is live) AND the console shows `Persona 'Scout' failed to start.` (health says Offline).
 - The `Scout` tile reads `Offline`, not `Online`.
-- Hovering it shows the start-failure reason in its tooltip.
+- Hovering the chip shows the start-failure reason in its tooltip.
 - The `users` table still holds the connected `Scout` agent row — the pipe really is up, which is the whole point.
 
 **Fail if — any of these**
@@ -1805,7 +1925,7 @@ You are Scout. Answer in one short sentence.
 
 **Inconclusive if**
 
-Only one of the two facts holds -> the setup is not in the state this test needs. The echo bot not connecting means the pipe name differs (pass `-Pipe <name>`); no `Persona 'Scout' failed to start.` means ACP is not actually enabled or the adapter is still findable. Fix the setup and rerun; do not judge the badge until both are present.
+Only one of the two facts holds -> the setup is not in the state this test needs. The echo bot not connecting means the pipe name differs (the key is `PipeName` in appsettings.json; pass `-Pipe <name>`); no `Persona 'Scout' failed to start.` means ACP is not actually enabled or the adapter is still findable. Fix the setup and rerun; do not judge the badge until both are present.
 
 > [!NOTE]
 > This is the only combination that can prove the ordering through a browser, and it is entirely free.
@@ -1823,14 +1943,14 @@ Only one of the two facts holds -> the setup is not in the state this test needs
 
 **Steps**
 
-1. Break one file so the red block is on screen: open `src\Huddle.App\App_Data\Teams\Quill.md` and delete its `title: 'Scribe'` line. Save.
-2. Click **Settings** in the left sidebar, then the **Appearance** tab.
-3. Leave the **Theme** dropdown alone (it offers only `Huddle` today) and, in the separate **Appearance** dropdown, choose `Dark`. Since Stage 2 of the MudBlazor migration this applies immediately through `MudThemeProvider`'s own parameters — no page reload, no `<head>` to rewrite — so do not wait for one; watch the page repaint in place instead.
+1. Break one file so the red block is on screen: open `<data>\Teammates\Quill\Quill.md` and delete its `title: 'Scribe'` line. Save.
+2. Click **Settings** in the left sidebar, then the **Appearance** tab. Note which theme is currently selected.
+3. In the theme list choose **Huddle Dark**. The theme applies immediately through `MudThemeProvider` — no page reload — so do not wait for one; watch the page repaint in place instead. (A theme is one palette, not a pair, so there is no separate Light/Dark selector: ADR-0017.)
 4. Click **Teammates** in the sidebar.
 5. Inspect, one at a time, and note any element that is still light: the page background; the `Files that didn't load` block's background, border and text; the `Team` filter's label and dropdown; each group heading and its underline; each tile's background; a tile's hover state (move the mouse over it); the monogram square; the status dot.
-6. Click a tile to open the card (a `MudDialog`, Stage 4 of the MudBlazor migration) over the page and inspect: the dialog's background, the dimmed backdrop, the header, the `<pre>` block holding the Persona text, and the `Persona file` path line.
+6. Click a tile to open the card (a `MudDialog`) over the page and inspect: the dialog's background, the dimmed backdrop, the header, the `<pre>` block holding the Persona text, and the `Persona file` path line.
 7. Click **Edit** on the card and inspect the textarea, the **Model** dropdown and the **Effort** dropdown.
-8. Close the card. Return to Settings -> Appearance and set the **Appearance** dropdown back to `Light` (or `System`), then restore Quill's `title:` line.
+8. Close the card. Return to Settings -> Appearance and select the theme you noted in step 2, then restore Quill's `title:` line.
 
 **Pass if — all of these**
 
@@ -1843,62 +1963,62 @@ Only one of the two facts holds -> the setup is not in the state this test needs
 
 - Any element stays light -> a colour literal survived tokenisation in that rule. The rejected block (its own danger palette) and the card dialog are the likeliest stragglers precisely because no automated test in this repo renders a browser.
 - Text becomes unreadable anywhere -> a foreground token was changed without its background, or vice versa.
-- The dark preference does not apply at all -> `MudThemeProvider`'s `IsDarkMode` parameter is not tracking `AppearanceStore.Current.Dark`.
+- The chosen theme does not apply at all -> `MudThemeProvider` is not tracking `AppearanceStore.Current`.
 
 **Inconclusive if**
 
-The theme does not change and the page looks identical -> confirm `src\Huddle.App\App_Data\appearance.json` was written with your choice; if it was not, the failure is in Settings -> Appearance, not on this page, and belongs to that area. Note that the Theme is per installation (a file), not per browser — a second browser or a private window will show the same theme, which is expected.
+The theme does not change and the page looks identical -> confirm `<data>\appearance.json` was written with your choice (key `theme`); if it was not, the failure is in Settings -> Appearance, not on this page, and belongs to that area. Note that the Theme is per installation (a file), not per browser — a second browser or a private window will show the same theme, which is expected.
 
 > [!NOTE]
-> `theme.css` and the rest of the hand-built token system are gone (Stage 2 of the MudBlazor migration — see [ADR-0010](../adr/0010-a-theme-is-a-mudblazor-theme.md)). Colour now lives in `ThemeCatalog.BuiltIn`'s `MudTheme` objects, applied through `MudThemeProvider` — there is no stylesheet to grep for a literal any more. The one remaining exception is `app-vars.css`, which declares `--font-mono`, the single token MudBlazor's own theme has no equivalent for; a colour literal found anywhere else is the defect.
+> `theme.css` and the rest of the hand-built token system are gone (Stage 2 of the MudBlazor migration — see [ADR-0010](../../adr/0010-a-theme-is-a-mudblazor-theme.md)). Colour now lives in `ThemeCatalog.BuiltIn`'s `MudTheme` objects, applied through `MudThemeProvider` — there is no stylesheet to grep for a literal any more. The one remaining exception is `app-vars.css`, which declares `--font-mono`, the single token MudBlazor's own theme has no equivalent for; a colour literal found anywhere else is the defect.
 
-### TEAMMATESLIBRARY-40 — Degraded, with the persistence reason — and the two things that must NOT badge
+### TEAMMATESLIBRARY-40 — Degraded, with the reason — and the two things that must NOT badge
 
 **💰 Spends money** · about 20 min
 
-*Proves three consecutive failed Turns move a teammate to Degraded with a reason, while a Human-stopped Turn and a spent Room Budget deliberately do not.*
+*Proves a failed Turn moves a teammate to Degraded with a reason that grows from one failure to a streak of three, while a Human-stopped Turn and a spent Room Budget deliberately do not.*
 
 **Before you start**
 
-- `Team:Acp:Enabled=true`, a working installed adapter, and working provider credentials.
+- Lane is [`P-LAUNCH-PAID`](common.md#p-launch-paid-), including its first step (set the Chief of Staff to Haiku / low). It sets `Team__AgentMessageBudget` to `4`; for this test set `$env:Team__AgentMessageBudget = '2'` before `dotnet run` so the Budget half is reachable cheaply.
+- A working installed adapter and working provider credentials.
 - One Persona configured Model = **Haiku** and Effort = **low** (the standing convention — do not use a larger model for this).
-- `Team:AgentMessageBudget` set low (say 2) before you start, so the Budget half is reachable cheaply.
 - The ability to interrupt the provider mid-Turn (disable the network adapter, or invalidate credentials briefly).
 
 **Steps**
 
-1. Start the app with ACP on and confirm the teammate under test reads `Online` on /teammates.
+1. Start the app and confirm the teammate under test reads `Online` on /teammates.
 2. Open its Room from the card's **Message** link (or via **New chat** in the sidebar) and send `Say hello in five words.`
-3. While that Turn is running, cut the network (disable the adapter) so the Turn fails. Restore the network.
-4. Repeat the previous two steps twice more, so THREE Turns in a row have failed.
-5. Go to /teammates and read the teammate's tile: its dot colour, its label and its tooltip.
-6. Open its card and read the line under the status and the action row.
-7. Now prove a stopped Turn does not badge: restore normal operation, restart the teammate, send `Write a very long story.` and click **Stop** while it is replying. Read the tile.
-8. Now prove a spent Budget does not badge: with `Team:AgentMessageBudget` low, let the teammate post until the Room refuses further agent messages. Read the tile again.
-9. Read the reason strings you collected and check them against the banned vocabulary list.
+3. While that Turn is running, cut the network (disable the adapter) so the Turn fails. Restore the network. Go to /teammates and read the tile and card now (one failed Turn).
+4. Repeat the previous two steps twice more, so THREE Turns in a row have failed. Read the tile's dot colour, label and tooltip, and open its card and read the line under the status and the action row.
+5. Restore normal operation and let one ordinary Turn complete. Read the tile.
+6. Now prove a stopped Turn does not badge: send `Write a very long story.` and click **Stop** while it is replying. Read the tile.
+7. Now prove a spent Budget does not badge: with `Team__AgentMessageBudget` low, let the teammate post until the Room refuses further agent messages. Read the tile again.
+8. Read the reason strings you collected and check them against the banned vocabulary list.
 
 **Pass if — all of these**
 
-- After the third consecutive failed Turn, and not before, the tile moves to `Degraded` with an amber dot.
-- The tile's tooltip carries a reason, and the card shows that same reason as a full line, plus a **Restart** button.
-- A single failed Turn does NOT produce `Degraded` — one failure is noise, three in a row is a pattern.
-- After a Human clicks **Stop** on a live Turn, the tile does NOT read `Degraded` and no reason appears — a stopped Turn is not a failure and does not break the failure streak.
-- After a Room hits its Budget and refuses further agent messages, the tile is unchanged — a spent Budget is not a fault.
-- No reason string contains `bot`, `backend`, `LLM`, `rate limit` or `quota`.
+- After one failed Turn the tile moves to `Degraded` with an amber dot and the reason `A Turn in Room '<room>' failed — <detail>` (PersonaRunner.cs:289-303). A single failure is reported, not hidden.
+- After the third consecutive failed Turn the reason reads `3 consecutive Turns have failed; this is unlikely to be transient — the last, in Room '<room>': <detail>`.
+- The tile's tooltip carries the reason, and the card shows that same reason as a full line, plus a **Restart** button.
+- After one ordinary Turn completes, the tile returns to `Online` with no reason, and the streak restarts from zero (PersonaRunner.cs:272-277).
+- After a Human clicks **Stop** on a live Turn, the tile does NOT read `Degraded` and no new reason appears — a stopped Turn is not a failure (RoomSession.cs:1078-1079).
+- After a Room hits its Budget and refuses further agent messages, the tile is unchanged — a spent Room Budget is not a fault.
+- No reason string we write contains `bot`, `backend`, `LLM`, `rate limit` or `quota`. (`<detail>` is the adapter's own error text; judge only the sentence around it.)
 
 **Fail if — any of these**
 
-- One failed Turn escalates straight to `Degraded` -> ordinary noise is being reported as a fault and users will learn to ignore the badge.
+- The second failure's reason still reads as the first, or the third does not switch to the `consecutive Turns` wording -> the streak is not being counted.
 - A Human-stopped Turn marks the teammate `Degraded` -> the app is badging a teammate that did exactly what it was told.
 - A spent Room Budget marks the teammate `Degraded` -> the app is badging its own working safety cap as a fault.
-- `Degraded` never appears after three consecutive genuine failures -> the health signal is not reaching the badge, and a broken teammate looks fine.
+- `Degraded` never appears after genuine failures -> the health signal is not reaching the badge, and a broken teammate looks fine.
 
 **Inconclusive if**
 
 You cannot interrupt the provider reliably mid-Turn, so the failures do not land as failures -> record the test as not-executed rather than passing it. Likewise if the teammate never comes Online at all, the whole test is blocked: fix that first (TEAMMATESLIBRARY-37 diagnoses it).
 
 > [!NOTE]
-> COSTS MONEY. Budget: a handful of short Haiku/low Turns, each a few hundred tokens — well under a cent in total. Do NOT attempt the token-Budget route to Degraded; that needs roughly a million tokens and is not worth buying. Quota, network and credential failures are indistinguishable to the app by design and are all reported by persistence — do not file that as a wording bug.
+> COSTS MONEY. Budget: a handful of short Haiku/low Turns, each a few hundred tokens — well under a cent in total. Do NOT attempt the per-Persona token-Budget route to Degraded (`Team__Acp__TokenBudget`, PersonaRunner.cs:258-270); it is a different cause and not worth buying. Quota, network and credential failures are indistinguishable to the app by design and are all reported the same way — do not file that as a wording bug.
 
 ---
 

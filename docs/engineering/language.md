@@ -706,7 +706,8 @@ See
 **Prompt**
 : One named piece of text this application sends to a model — a system-prompt
   block, a Turn's framing, a `get_help` section, a tool's own description.
-  Twenty-two exist. `PromptCatalog` holds every default in code; `prompts.json`
+  They are listed, with their defaults, on the Prompts tab of Settings (`/settings`).
+  `PromptCatalog` holds every default in code; `prompts.json`
   holds overrides only; `IPromptSource` resolves one over the other per key.
   Named **Hook** until 2026-09-22 — that word read as an executable extension
   point, which is exactly the wrong idea; see
@@ -748,9 +749,10 @@ See
   `ThemeDescriptor.Mode` naming which — so a Theme *is* a light one or a dark one rather
   than spanning both, and choosing it chooses the mode
   ([ADR-0017](../adr/0017-a-theme-is-a-palette-not-a-pair.md)). It fills only that slot;
-  the other keeps MudBlazor's defaults and is never rendered. Nineteen ship built in:
-  this application's own `huddle` (labelled "Huddle Light") and `huddle-dark`, and
-  seventeen of the colour Themes bundled with Visual Studio Code, converted once at
+  the other keeps MudBlazor's defaults and is never rendered. Twenty-one ship built in:
+  this application's own `huddle` (labelled "Huddle Light") and `huddle-dark`, the two
+  Custom Accent Themes (`custom-accent` and `custom-accent-dark`, whose accent colour the
+  Appearance tab sets), and seventeen of the colour Themes bundled with Visual Studio Code, converted once at
   authoring time into `MudTheme` objects under `Themes/VsCode/` — see
   [ADR-0016](../adr/0016-vs-codes-bundled-themes-are-converted-once-not-imported.md).
   A Theme also carries a **`ThemeGroup`** — Light, Dark or High contrast — which is the
@@ -778,7 +780,8 @@ See
 
 **Appearance**
 : The Appearance tab of `/settings`, and `{DataDir}/appearance.json` behind it: the
-  selected Theme id, and nothing else. Per installation, hand-editable and watched,
+  selected Theme id (`theme`), the accent colour (`accentColor`) and the Library pane side
+  (`libraryPaneSide`), and nothing else. Per installation, hand-editable and watched,
   exactly like `hooks.json`. There are no per-property overrides — that layer was removed
   with the Tokens — and since 2026-09-21 there is no light/dark preference either: a
   Theme carries its own palette, so selecting one selects the mode
@@ -788,6 +791,6 @@ See
 : **The tab is not the file.** Since 2026-09-22 the tab has a second section — the
   Human's own **Avatar** — because the Human has no Persona file and so no Teammate
   card to edit one on. That Avatar is stored in `avatars.json`, a different file with a
-  different owner; `appearance.json` still holds the selected Theme id and nothing else.
+  different owner; `appearance.json` still holds the selected Theme id, the accent colour and the Library pane side, and nothing else.
 : *Avoid*: dark mode and light/dark preference (there is no such setting any more — say
   *a dark Theme*), display settings.

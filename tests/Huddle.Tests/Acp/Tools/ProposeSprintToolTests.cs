@@ -3,6 +3,7 @@ using Agency.Huddle.App.Acp.Tools;
 using Agency.Huddle.App.Library;
 using Agency.Huddle.App.Tasks;
 using Agency.Huddle.App.Teams;
+using Agency.Huddle.Tests.Acp.Fakes;
 using Agency.Huddle.Tests.Tasks;
 using Agency.Huddle.Tests.Teams;
 using Agency.Huddle.Tests.Ui.Teams;
@@ -33,7 +34,7 @@ public sealed class ProposeSprintToolTests
 
     /// <summary>Builds the tool over the harness, calling as the given caller.</summary>
     private static ProposeSprintTool CreateTool(TaskToolHarness harness, SprintProposalStore store, string? callerId) =>
-        new(harness.Store, harness.Sprints, store, PlatformCatalog(), harness.Directory, callerId ?? throw new InvalidOperationException("Harness not seeded."));
+        new(harness.Store, harness.Sprints, store, PlatformCatalog(), harness.Directory, callerId ?? throw new InvalidOperationException("Harness not seeded."), new FakePromptSource());
 
     /// <summary>Builds the proposal store over a folder inside the harness's data folder.</summary>
     private static SprintProposalStore CreateStore(TaskToolHarness harness) =>

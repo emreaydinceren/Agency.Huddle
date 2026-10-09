@@ -219,6 +219,7 @@ internal sealed class PromptStore : IPromptSource, IDisposable
         {
             var overrides = this.ReadOverridesFromDisk();
             ApplyEdit(overrides, definition, text);
+            DropIgnoredOverrides(overrides);
             this.WriteOverridesToDisk(overrides);
             this.resolved = this.ApplyResolved(overrides);
         }
@@ -260,6 +261,7 @@ internal sealed class PromptStore : IPromptSource, IDisposable
                 ApplyEdit(overrides, definition, text);
             }
 
+            DropIgnoredOverrides(overrides);
             this.WriteOverridesToDisk(overrides);
             this.resolved = this.ApplyResolved(overrides);
         }
@@ -307,6 +309,7 @@ internal sealed class PromptStore : IPromptSource, IDisposable
         {
             var overrides = this.ReadOverridesFromDisk();
             overrides.Remove(key);
+            DropIgnoredOverrides(overrides);
 
             this.WriteOverridesToDisk(overrides);
             this.resolved = this.ApplyResolved(overrides);
@@ -335,6 +338,18 @@ internal sealed class PromptStore : IPromptSource, IDisposable
                         "Prompt overrides file '{Path}' contains key '{Key}', which is not a prompt this application knows about; it is kept in the file but ignored when resolving prompt text.",
                         this.path,
                         key);
+                }
+            }
+
+            foreach (var prompt in PromptCatalog.All)
+            {
+                if (overrides.TryGetValue(prompt.Key, out var text)
+                    && !string.Equals(text, prompt.Default, StringComparison.Ordinal)
+                    && EqualsDefaultApartFromLineEndings(prompt, text))
+                {
+                    this.logger.LogInformation(
+                        "Prompt override '{Key}' equals the default apart from line endings and is ignored.",
+                        prompt.Key);
                 }
             }
         }
@@ -372,10 +387,39 @@ internal sealed class PromptStore : IPromptSource, IDisposable
 
         foreach (var prompt in PromptCatalog.All)
         {
-            result[prompt.Key] = overrides.TryGetValue(prompt.Key, out var text) ? text : prompt.Default;
+            result[prompt.Key] = overrides.TryGetValue(prompt.Key, out var text) && !EqualsDefaultApartFromLineEndings(prompt, text)
+                ? text
+                : prompt.Default;
         }
 
         return result.ToFrozenDictionary(StringComparer.Ordinal);
+    }
+
+    /// <summary>
+    /// Whether <paramref name="text"/> equals <paramref name="definition"/>'s default once both sides
+    /// have their line endings normalised to <c>\n</c> by <see cref="string.ReplaceLineEndings(string)"/>,
+    /// which also normalises a lone CR, NEL, LS, PS and FF. Such a stored value is a redundant override
+    /// and is ignored when resolving, whatever its line endings.
+    /// </summary>
+    /// <param name="definition">The prompt definition whose default is compared.</param>
+    /// <param name="text">The stored override text.</param>
+    private static bool EqualsDefaultApartFromLineEndings(PromptDefinition definition, string text) =>
+        string.Equals(text.ReplaceLineEndings("\n"), definition.Default.ReplaceLineEndings("\n"), StringComparison.Ordinal);
+
+    /// <summary>
+    /// Removes from <paramref name="overrides"/> every value equal to its prompt's default apart from
+    /// line endings, so the next write drops what <see cref="BuildResolved"/> already ignores.
+    /// </summary>
+    /// <param name="overrides">The mutable overrides dictionary about to be written to disk.</param>
+    private static void DropIgnoredOverrides(Dictionary<string, string> overrides)
+    {
+        foreach (var prompt in PromptCatalog.All)
+        {
+            if (overrides.TryGetValue(prompt.Key, out var text) && EqualsDefaultApartFromLineEndings(prompt, text))
+            {
+                overrides.Remove(prompt.Key);
+            }
+        }
     }
 
     /// <summary>

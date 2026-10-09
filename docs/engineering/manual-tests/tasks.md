@@ -1,5 +1,7 @@
 # Tasks: creating, moving, viewing and referencing a unit of work
 
+**19 tests** · 14 free, 5 paid 💰 · about 3.6 hours.
+
 Prove, in a real browser against a real `node` adapter where a test says so, everything between "a
 Task file exists on disk" and "an Agent reacts to it": that the UI writes the exact frontmatter the
 spec defines, that a hand edit to the file is picked up within a second, that the Board and the
@@ -10,10 +12,8 @@ becomes a link and a wake-up. Almost none of this is reachable from the automate
 cannot drag, cannot press real keys through the browser, and answers only through
 `FakeAgentHostFactory` — so every drag, every keyboard-only path and every live-Agent reaction
 exists only here. The tests are ordered cheapest-first: TASKS-01 to TASKS-09 need no Agent at all,
-TASKS-13 and TASKS-14 need only a chat surface already covered elsewhere, and TASKS-10, -11, -12
-and -15 are the only ones that spend money.
-
-**19 tests** · 14 free, 5 paid 💰 · about 4.5 hours.
+TASKS-13 and TASKS-14 need only a chat surface already covered elsewhere, and TASKS-10, -11, -12,
+-15 and -19 are the only ones that spend money.
 
 Read [the manual test script](../manual-tests.md) first — the cost guard, the Model and Effort
 convention, and the rules for concluding a result — then [Common procedures](common.md), which
@@ -27,10 +27,13 @@ Run [`P-BUILD`](common.md#p-build) then the lane named below from
 1. `Team:Tasks:Enabled` defaults to `true`; the free tests below need only `P-LAUNCH-FREE`.
    TASKS-10, -11, -12, -15 and -19 need `P-LAUNCH-PAID` and a Persona already Online — create one
    Haiku/low Persona named `Rae` before starting the paid half, alias `rae`.
-2. Tasks live under `App_Data\Tasks\<Team>\[<Project>\]<ID>.md`, and a Closed Task sits in a
-   `_closed\` folder at the same level. `App_Data\Tasks\` does not exist until the first Task is
-   created — its absence on a fresh install is normal, matching `App_Data\rooms\`.
-3. `App_Data\team.db`'s `task_id_allocators` table holds each Team's next id number; read it with
+2. Tasks live under `<data>\Teams\<Team>\[<Project>\]_tasks\<ID>.md`, and a Closed Task sits in
+   `_tasks\_closed\` beside them (ADR-0030; `TaskStore.cs:1002-1031`). A Team is a folder under
+   `<data>\Teams\`, and `_tasks` does not exist until the first Task is created — its absence on
+   a fresh install is normal. `views.json` and `sprints.md` sit at `<data>\` itself, not under
+   `Teams\` (`ViewStore.cs:96`, `SprintStore.cs:47`).
+3. `<data>\team.db`'s `task_prefixes` table holds each Team's next id number
+   (`TaskIdAllocator.cs:19`); read it with
    `O-DB` if you need to predict the next id, but every test below reads the id off the UI instead.
 4. The page is `/tasks` (the last-opened View, or the built-in **All Tasks**), `/tasks/{ViewId}`
    for a specific View, `/tasks/new` for **+ New View**, and `/tasks/item/{id}` for a Task opened
@@ -40,8 +43,8 @@ Run [`P-BUILD`](common.md#p-build) then the lane named below from
 6. **Firefox will not start a drag from a `<button>` inside a draggable card.** TASKS-03 is written
    for Chrome/Edge; if you must use Firefox, drag from the card body, never from its ⋮ menu button,
    and record which browser you used.
-7. MONEY. TASKS-01 to -09, -13/-14 and -16 to -18 are free. TASKS-10, -11, -12, -15 and -19 are marked and each
-   spends the Persona's Budget the same way any Room does.
+7. MONEY. TASKS-01 to -09, -13/-14 and -16 to -18 are free. TASKS-10, -11, -12, -15 and -19 are
+   marked and each spends the Persona's Budget the same way any Room does.
 
 ## Tests
 
@@ -55,6 +58,10 @@ layout table names, with the frontmatter fields in the canonical order and nothi
 **Before you start**
 
 - `E-FREE` app running, `Team:Tasks:Enabled` at its default `true`.
+- A Team named `Platform` exists. On fresh data the only Teams are those the built-in Teammate
+  labels, and the Task **Team** field is a pick list, not free text (`TaskDetail.razor:334`), so
+  create it first: in the sidebar choose **New team**, name it `Platform`, click **Create**
+  (`TeamsNav.razor:76`, `NewTeamDialog.razor:24`). Its folder is `<data>\Teams\Platform`.
 - No Task named `PLAT-` exists yet, or you accept whatever id the allocator gives next.
 
 **Steps**
@@ -62,18 +69,19 @@ layout table names, with the frontmatter fields in the canonical order and nothi
 1. In the browser open `http://localhost:5100/tasks`.
 2. Click **+ New task**.
 3. In the panel that opens, type a Title: `Ship the manual tests`.
-4. Choose a **Team** — pick or type `Platform`.
+4. Open the **Team** list and pick `Platform`.
 5. Leave Project, Priority, Assignee, dates and Description at their defaults.
 6. Click **Save**.
 7. Read the card's header for the new Task's id.
-8. In `T-B` run `Get-ChildItem 'E:\Repos\Huddle\src\Huddle.App\App_Data\Tasks\Platform' -Filter *.md`.
+8. In `T-B` run `Get-ChildItem '<data>\Teams\Platform\_tasks' -Filter *.md` (with `<data>`
+   written out).
 9. In `T-B` run `Get-Content` on that file and read it top to bottom.
 10. Back in the browser, confirm the Task now appears in the List/Board under **All Tasks**.
 
 **Pass if — all of these**
 
-- Exactly one new file exists, at `App_Data\Tasks\Platform\<id>.md`, matching the case-insensitive
-  Team-folder rule (§7, §8).
+- Exactly one new file exists, at `<data>\Teams\Platform\_tasks\<id>.md`, matching the
+  case-insensitive Team-folder rule (§7, §8).
 - The frontmatter opens with `---`, then `id:`, `title:`, `status:`, `priority:` in that order,
   then the remaining fields the spec's §7.1 example carries, then `---`, then the body.
 - `status:` reads `Backlog` (the default state) and `priority:` reads the default priority.
@@ -82,8 +90,8 @@ layout table names, with the frontmatter fields in the canonical order and nothi
 
 **Fail if — any of these**
 
-- The file lands anywhere other than `Tasks\<Team>\<id>.md` -> the layout mapping (§8) is not
-  being followed.
+- The file lands anywhere other than `Teams\<Team>\_tasks\<id>.md` -> the layout mapping (§8) is
+  not being followed.
 - A field is missing, duplicated, or the frontmatter order does not match §7.1 -> `TaskFileFormat`
   has drifted from its own spec example.
 - Two files are written from one Save -> a double-submit guard is missing.
@@ -92,8 +100,9 @@ layout table names, with the frontmatter fields in the canonical order and nothi
 
 **Inconclusive if**
 
-If **Team** offers no options because no Persona or prior Task has ever named one, type a new Team
-name directly — the field accepts free text (a Team is a folder by convention, not a closed list).
+If the **Team** list does not offer `Platform`, the Team was not created: `TaskService` refuses an
+unknown Team (`Unknown team 'Platform'. Known teams: ...`, `TaskService.cs:1010-1014`). Create it
+with **New team** in the sidebar and repeat from step 2.
 
 > [!NOTE]
 > Leave `Rae` unassigned to this Task for now — TASKS-08 needs an assigned Task under a Persona
@@ -125,8 +134,10 @@ have, and that an outside edit is logged rather than silently overwritten.*
 - The Priority shown on the card/row updates within about a second, with no page reload.
 - The Change log's newest entry is attributed to the Human, with a summary naming the Priority
   change, and reads as an "edited outside Huddle" entry per §9.
-- No file was rewritten by the app in a way that lost the hand edit — reopen the `.md` file and
-  confirm the priority line is exactly what you typed.
+- The hand edit is kept. The app does append the Change log entry to the file
+  (`TaskService.cs:315-322`), so the file changes after your save — reopen the `.md` file and
+  confirm the `priority:` line is exactly what you typed and that the only addition is the new
+  Change log entry.
 
 **Fail if — any of these**
 
@@ -166,9 +177,12 @@ dragging, a drop on Duplicate opens a picker, and a cancelled drag leaves nothin
 5. Start a second drag and drop the same card onto the **Duplicate** ghost bucket / column.
 6. In the dialog that opens (**Duplicate of**), pick another Task and confirm.
 7. Read the moved card's Status and its **Duplicate of** field.
-8. Start a third drag, drop it on **Cancelled** or **Rejected**, and in the reason prompt click
-   **Skip** (or Escape) instead of confirming.
+8. Start a third drag, drop it on **Cancelled** or **Rejected**, and in the reason prompt press
+   Escape (or click the dialog's close button) instead of confirming. Do not click **Skip**:
+   Skip commits the move with no reason (`ReasonDialog.razor:3-4,13,33`; `TaskBoard.razor:511-521`).
 9. Read the card's column immediately after cancelling.
+10. Start a fourth drag onto **Cancelled** and click **Skip**. Read the card's column and its
+    Change log.
 
 **Pass if — all of these**
 
@@ -178,8 +192,10 @@ dragging, a drop on Duplicate opens a picker, and a cancelled drag leaves nothin
   new column.
 - Dropping on Duplicate opens the **Duplicate of** picker before saving; picking a Task sets
   `Duplicate of` on the moved card.
-- Cancelling a Cancelled/Rejected drop (Skip/Escape) leaves the card in its original column with
-  no Reason recorded.
+- Cancelling a Cancelled/Rejected drop (Escape or the close button) leaves the card in its
+  original column with no Reason recorded.
+- **Skip** is not a cancel: the card moves to Cancelled and the Change log records the move with
+  no Reason.
 - Dropping a card back onto its own current state is a no-op — no Change log entry is added.
 
 **Fail if — any of these**
@@ -255,12 +271,13 @@ being silently rewritten, mirroring `PersonaStore`'s and `ViewStore`'s shared co
 **Before you start**
 
 - `E-FREE` app running, at least one saved View.
-- You can edit `App_Data\Tasks\views.json` (or wherever `Team:Tasks:Dir` places it) directly.
+- You can edit `<data>\views.json` directly. The file sits at the data folder root
+  (`ViewStore.cs:96`).
 
 **Steps**
 
 1. Stop the app (`P-STOP`).
-2. In `T-B`, compute the file's hash: `Get-FileHash 'E:\Repos\Huddle\src\Huddle.App\App_Data\Tasks\views.json'`.
+2. In `T-B`, compute the file's hash: `Get-FileHash '<data>\views.json'` (with `<data>` written out).
 3. Open `views.json` in a text editor and break its JSON (delete a closing brace) and save.
 4. Restart the app (`P-LAUNCH-FREE`) and open `/tasks`.
 5. Read the alert shown.
@@ -436,8 +453,9 @@ drive a real drag and this is the only place that path is exercised at all.*
 **Steps**
 
 1. Tab to a Task card's ⋮ menu and open it with Enter.
-2. Read the menu: a **Move to** heading, then every state as its own item, then a divider, then
-   **Copy id**.
+2. Read the menu: a **Move to** heading, then all eight states as plain items (Backlog and the
+   Won't-do states included; there are no ghost buckets here, `TaskCard.razor:9-10,85-91`), then
+   a divider, then **Copy id**.
 3. Arrow down to a different state and press Enter.
 4. Confirm (via Tab/Enter, no mouse) that the card moved, the same way the drag path would have.
 5. Tab into **Edit View**, and using only the keyboard, change one Field's switch and Save.
@@ -507,6 +525,10 @@ otherwise sustain, and that the Human's Allow N more resumes it.*
 **Before you start**
 
 - `E-PAID` app running, two Personas Online (Haiku/low), for example `Rae` and a second, `Kit`.
+- Launch with the Room Budget raised: in `P-LAUNCH-PAID` replace the `$env:Team__AgentMessageBudget = '4'`
+  line with `$env:Team__AgentMessageBudget = '40'`. Wake Messages and replies pass the Reply Gate
+  (ADR-0026), so at `4` the Room Budget would stop the loop before the per-Task wake budget of 10
+  (`TasksOptions.cs:16`) is reached and the test would pass without proving D-14.
 - A Task each can reassign to the other via `update_task` (their Persona text should say to do
   this on request — a short one-line instruction added for this test is fine and is not a
   defect).
@@ -524,7 +546,8 @@ otherwise sustain, and that the Human's Allow N more resumes it.*
 **Pass if — all of these**
 
 - Reassignment activity stops at or before 10 Agent-made wake-ups on this Task (D-14), not
-  indefinitely.
+  indefinitely, and the Room did not hit its own Budget first (the banner below is what stopped
+  it).
 - The TaskDetail banner reads exactly `Wake-ups for this task are paused after 10 changes by
   Teammates.` with a button reading `Allow 10 more`.
 - Clicking **Allow 10 more** resumes wake-ups (visible as further Change log entries / Turns), and
@@ -556,8 +579,9 @@ rule, ahead of {Human, creator, assignee}.*
 
 1. In a chosen Room, ask an Agent to create a Task assigned to `Rae`, from that same Room (so the
    Agent's tool call carries this Room's id as `originRoomId`, whether by explicit instruction or
-   by the tool defaulting to the calling Room — read `Huddle.Tasks-Specifications.md` §11 for the
-   parameter's exact behaviour before judging).
+   by the tool defaulting to the calling Room — it does not default: the tool description tells the
+   Agent to pass `originRoomId` with the id of the Room it is acting in, and a missing one falls
+   through to D-7's next rule, so say the Room id in your Message if `Rae` does not pass it).
 2. Note the Task's id once created.
 3. Watch for the wake-up Message.
 4. Read which Room it lands in.
@@ -568,6 +592,9 @@ rule, ahead of {Human, creator, assignee}.*
   origin), not in a freshly created Room and not in {Human, creator, assignee}'s Room unless that
   happens to be the same Room.
 - The Task's frontmatter/Change log records an origin consistent with that Room.
+- If `Rae` created the Task without passing `originRoomId`, the wake-up follows D-7's next rule
+  instead; that is a model-behaviour note, not a defect, once the tool description has said to
+  pass it.
 
 **Fail if — any of these**
 
@@ -594,7 +621,8 @@ link.*
 1. On `localhost:5100`, open the Task and click the copy icon in its header.
 2. Paste the clipboard contents somewhere visible (a Message composer, a text editor) and confirm
    it is exactly the Task's plain id, nothing more.
-3. From the ⋮ menu, click **Copy link** and paste that; confirm it is a full URL ending in
+3. In the Task panel header, open the **More actions** (⋮) menu — not a card's menu —
+   (`TaskDetail.razor:219-227`), click **Copy link** and paste that; confirm it is a full URL ending in
    `/tasks/item/<id>`.
 4. From the same machine's IP address (not `localhost`), open `http://<ip>:5100` in a second
    browser or device and repeat the copy-id action there.
@@ -732,8 +760,8 @@ paid TASKS-15; TASKS-19 is the paid one.
 
 **Before you start**
 
-- `E-FREE` app running, two Tasks `T-1` and `T-2` in one Team.
-- `App_Data\sprints.md` holding a heading, a prose note of your own and one Sprint:
+- `E-FREE` app running, two Tasks, Task A and Task B, in one Team.
+- `<data>\sprints.md` holding a heading, a prose note of your own and one Sprint:
 
   ```markdown
   # Sprints
@@ -745,14 +773,14 @@ paid TASKS-15; TASKS-19 is the paid one.
 
 **Steps**
 
-1. Open `T-1`. In the **Sprint** field (after Team / Project), type `Auth hardening`, and look at
+1. Open Task A. In the **Sprint** field (after Team / Project), type `Auth hardening`, and look at
    the helper text under the field. Do not save yet.
 2. Open `sprints.md` in an editor. Then click **Revert**, and look at the file and the field again.
-3. Type `Auth hardening` again and click **Save**. Read `sprints.md` and `T-1`'s file.
-4. Open `T-2`, and set its Sprint to `Auth hardening` (pick it from the list); **Save**.
-5. Back on `T-1`, change its Sprint to `Sprint 1`; **Save**. Read `sprints.md` and open the Sprint
-   field's list on `T-2`.
-6. On `T-2`, change its Sprint to `Sprint 1`; **Save**. Read `sprints.md` and open the list on
+3. Type `Auth hardening` again and click **Save**. Read `sprints.md` and Task A's file.
+4. Open Task B, and set its Sprint to `Auth hardening` (pick it from the list); **Save**.
+5. Back on Task A, change its Sprint to `Sprint 1`; **Save**. Read `sprints.md` and open the Sprint
+   field's list on Task B.
+6. On Task B, change its Sprint to `Sprint 1`; **Save**. Read `sprints.md` and open the list on
    either Task.
 7. Type `S3` into a Sprint field and look at the field and at **Save**.
 
@@ -763,9 +791,9 @@ paid TASKS-15; TASKS-19 is the paid one.
 - Step 2: `sprints.md` is unchanged after typing and after **Revert**, and **Revert** restores the
   field.
 - Step 3: `sprints.md` gains exactly one line, `- S2 | Auth hardening`, after `- S1 | Sprint 1`,
-  with the heading and your note untouched. `T-1`'s file has `sprint: S2` after `due_date:` (or
+  with the heading and your note untouched. Task A's file has `sprint: S2` after `due_date:` (or
   after the last field before it).
-- Step 5: with `T-2` still in `Auth hardening`, the line `- S2 | Auth hardening` **stays**.
+- Step 5: with Task B still in `Auth hardening`, the line `- S2 | Auth hardening` **stays**.
 - Step 6: now the last Task has left, so the line `- S2 | Auth hardening` is **gone**, the heading,
   the note and `- S1 | Sprint 1` are byte-for-byte as before, and `Auth hardening` has left the
   field's list.
@@ -775,7 +803,7 @@ paid TASKS-15; TASKS-19 is the paid one.
 **Fail if — any of these**
 - The file changes while you are only typing, or after **Revert** -> the panel created the Sprint
   on typing instead of on Save (D-S7).
-- Step 5 removes the line while `T-2` still holds it -> `RemoveIfUnused` is not counting Tasks.
+- Step 5 removes the line while Task B still holds it -> `RemoveIfUnused` is not counting Tasks.
 - Your note or the heading is rewritten -> `SprintFileFormat.RemoveLine` is touching more than the
   one line.
 
@@ -783,7 +811,7 @@ paid TASKS-15; TASKS-19 is the paid one.
 
 **Free** · about 12 min
 
-*Proves §6, §8 and E-S4 to E-S7 and E-S22: the file is the list, a rename, a delete and a reorder
+*Proves Sprints spec §6 and §8 (the file-is-the-list rule, spec E-4 to E-7 and E-22): the file is the list, a rename, a delete and a reorder
 reach the UI with no Task file rewritten, a deleted Sprint reads as missing, and the app never
 removes a Sprint because a Task file went away.*
 
@@ -812,7 +840,8 @@ removes a Sprint because a Task file went away.*
 - Step 4: an alert headed **sprints.md has lines that were ignored** appears on the Tasks page, with
   the line number and the problem.
 - Step 6: **no Task file's hash changed**, and `sprints.md` still lists `S2 | Auth rework` although
-  its only Task file is gone (E-S22: the app never removes a Sprint on a vanished file).
+  its only Task file is gone (Sprints spec E-22: the app never removes a Sprint on a vanished
+  file).
 
 **Fail if — any of these**
 - A Task file's hash changes after a rename, reorder or delete -> the app rewrote a Task for a
@@ -862,7 +891,7 @@ that follows the current Sprint, and Sprint lanes ordered newest first with No s
 - Lanes are in label order (`Auth hardening` before `Sprint 1` by accident) rather than by number
   -> the rank rule (D-S13) is not applied in `BoardLayout`.
 - The View does not follow step 4 without a reload -> the page does not re-query on
-  `SprintsChanged` (E-S17).
+  `SprintsChanged` (Sprints spec E-17).
 
 ### TASKS-19 — An Agent given a Sprint name sets it with `update_task`, a typo is refused with the known list, and the assignee is woken
 
@@ -875,19 +904,19 @@ any other field (D-S8).*
 **Before you start**
 
 - `E-PAID` app running, `Rae` Online (Haiku/low), `sprints.md` with `S1 | Sprint 1` and
-  `S2 | Auth hardening`, and a Task `T-1` assigned to `Rae`.
+  `S2 | Auth hardening`, and a Task A assigned to `Rae`.
 
 **Steps**
 
-1. In a Room with `Rae`, send: `Put <T-1's id> in the Auth hardening sprint.`
-2. Wait for `Rae`'s Turn. Open `T-1` and read its **Sprint** and Change log.
-3. Send: `Now move <T-1's id> to the Auth hardning sprint.` (misspelled on purpose).
+1. In a Room with `Rae`, send: `Put <Task A's id> in the Auth hardening sprint.`
+2. Wait for `Rae`'s Turn. Open Task A and read its **Sprint** and Change log.
+3. Send: `Now move <Task A's id> to the Auth hardning sprint.` (misspelled on purpose).
 4. Read `Rae`'s reply and `sprints.md`.
-5. From the panel, move `T-1` to `Sprint 1`; **Save & Notify Rae**. Watch for a wake-up Message.
+5. From the panel, move Task A to `Sprint 1`; **Save & Notify Rae**. Watch for a wake-up Message.
 
 **Pass if — all of these**
 
-- Step 2: `T-1` has `sprint: S2`, the Change log reads `sprint: — → S2 (Auth hardening)`, attributed
+- Step 2: Task A has `sprint: S2`, the Change log reads `sprint: — → S2 (Auth hardening)`, attributed
   to `Rae`.
 - Step 4: the call is refused with a message listing `S1 Sprint 1, S2 Auth hardening`; `Rae` says
   so or retries correctly, and `sprints.md` has **no new line**.

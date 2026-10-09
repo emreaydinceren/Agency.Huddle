@@ -735,6 +735,132 @@ internal static class PromptCatalog
             Timing: PromptTiming.NextSession),
 
         new PromptDefinition(
+            Key: "tool.addEvidence.description",
+            Label: "add_evidence description",
+            HelperText:
+                "The one-line job description a model reads for the add_evidence tool. Takes no " +
+                "placeholders.",
+            Default:
+                """
+                Adds a line of evidence to a Task: the command you ran, its exit code and, when you ran it, a pointer to your tool-call log. Evidence is append-only; earlier lines are never changed.
+                """,
+            Placeholders: [],
+            RequiredPlaceholders: [],
+            Timing: PromptTiming.NextSession),
+
+        new PromptDefinition(
+            Key: "tool.readRecords.description",
+            Label: "read_records description",
+            HelperText:
+                "The one-line job description a model reads for the read_records tool. Takes no " +
+                "placeholders.",
+            Default:
+                """
+                Reads a Team's evidence for a retro. With only 'team' (and optionally 'since', a date like 2026-10-01) it returns the compact records bundle. With 'taskId' it returns that Task's Change log and Evidence. With 'room' it returns the last 200 messages of that Room's transcript, each cut to 300 characters. Output is capped at 12000 characters.
+                """,
+            Placeholders: [],
+            RequiredPlaceholders: [],
+            Timing: PromptTiming.NextSession),
+
+        new PromptDefinition(
+            Key: "tool.listTeams.description",
+            Label: "list_teams description",
+            HelperText:
+                "The one-line job description a model reads for the list_teams tool. Takes no " +
+                "placeholders.",
+            Default:
+                """
+                Lists every Team with its type, manager, what it owns and how many Requests are open in its backlog. Use it to choose the Team to file a Request with.
+                """,
+            Placeholders: [],
+            RequiredPlaceholders: [],
+            Timing: PromptTiming.NextSession),
+
+        new PromptDefinition(
+            Key: "tool.fileRequest.description",
+            Label: "file_request description",
+            HelperText:
+                "The one-line job description a model reads for the file_request tool. Takes no " +
+                "placeholders.",
+            Default:
+                """
+                Files a Request in another Team's backlog. Give the Team, the kind (bug, feature, feedback or question), a title and a body whose '## ' headings cover what the kind needs. Optionally name one of your own Tasks that waits on the answer.
+                """,
+            Placeholders: [],
+            RequiredPlaceholders: [],
+            Timing: PromptTiming.NextSession),
+
+        new PromptDefinition(
+            Key: "tool.confirmRequest.description",
+            Label: "confirm_request description",
+            HelperText:
+                "The one-line job description a model reads for the confirm_request tool. Takes no " +
+                "placeholders.",
+            Default:
+                """
+                Confirms that a Done Request you filed was delivered as asked, and closes it. Only your Team's QA may call it. Optionally add a note.
+                """,
+            Placeholders: [],
+            RequiredPlaceholders: [],
+            Timing: PromptTiming.NextSession),
+
+        new PromptDefinition(
+            Key: "tool.triageRequest.description",
+            Label: "triage_request description",
+            HelperText:
+                "The one-line job description a model reads for the triage_request tool. Takes no " +
+                "placeholders.",
+            Default:
+                """
+                Triages a Request filed with your Team. Decision 'accept' moves it to To Do (optionally name the assignee); 'decline' rejects it and needs a reason; 'needs_info' keeps it in Backlog and needs a reason saying what is missing.
+                """,
+            Placeholders: [],
+            RequiredPlaceholders: [],
+            Timing: PromptTiming.NextSession),
+
+        new PromptDefinition(
+            Key: "tool.proposeSprint.description",
+            Label: "propose_sprint description",
+            HelperText:
+                "The one-line job description a model reads for the propose_sprint tool. Takes no " +
+                "placeholders.",
+            Default:
+                """
+                Proposes a Sprint to the Human: a name and the Tasks to put in it. Nothing is created until the Human approves. Only the manager of the Team can propose, and every Task must belong to that Team and not be Done.
+                """,
+            Placeholders: [],
+            RequiredPlaceholders: [],
+            Timing: PromptTiming.NextSession),
+
+        new PromptDefinition(
+            Key: "tool.markRetroRow.description",
+            Label: "mark_retro_row description",
+            HelperText:
+                "The one-line job description a model reads for the mark_retro_row tool. Takes no " +
+                "placeholders.",
+            Default:
+                """
+                Marks a Done or Partial row of the Team's Retro register as Verified, Partial or Changed after checking it against later evidence. Verified needs evidence that links a Task id, a logs/... line (logs/...#L12) or a _retros/ file.
+                """,
+            Placeholders: [],
+            RequiredPlaceholders: [],
+            Timing: PromptTiming.NextSession),
+
+        new PromptDefinition(
+            Key: "tool.proposeRetroChanges.description",
+            Label: "propose_retro_changes description",
+            HelperText:
+                "The one-line job description a model reads for the propose_retro_changes tool. Takes no " +
+                "placeholders.",
+            Default:
+                """
+                Proposes up to 3 changes to the Human after a retro. Each change names a targetFile (Process.md, _team.md or a Team member's Name.md), the exact text to find (it must occur once in that file) and the text to replace it with. Huddle shows each as a diff; nothing is edited until the Human accepts it, and then Huddle makes the edit, not you.
+                """,
+            Placeholders: [],
+            RequiredPlaceholders: [],
+            Timing: PromptTiming.NextSession),
+
+        new PromptDefinition(
             Key: "tool.inviteAgent.description",
             Label: "invite_agent description",
             HelperText:

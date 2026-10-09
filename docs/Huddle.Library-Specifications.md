@@ -1,6 +1,6 @@
 # Huddle.Library — Design Specification
 
-**Date:** 2026-09-24 · **Status:** Proposed · **Decision records:**
+**Date:** 2026-09-24 · **Status:** Built · **Decision records:**
 [ADR-0027](adr/0027-the-library-sees-only-configured-roots.md) (roots),
 [ADR-0028](adr/0028-the-library-edits-markdown-as-source-and-never-rewrites-it.md) (editing),
 [ADR-0029](adr/0029-between-the-human-and-an-agent-the-last-write-wins.md) (concurrency),

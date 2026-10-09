@@ -3,6 +3,7 @@ using System.Globalization;
 using System.Text.Json.Nodes;
 using Agency.Huddle.Acp.Abstractions;
 using Agency.Huddle.App.Data;
+using Agency.Huddle.App.Prompts;
 using Agency.Huddle.App.Tasks;
 using Agency.Huddle.App.Teams;
 
@@ -19,17 +20,18 @@ internal sealed class FileRequestTool(
     TaskStore store,
     IRequestNotifier notifier,
     ITeamDirectory directory,
-    string callerAgentId) : IAppTool
+    string callerAgentId,
+    IPromptSource prompts) : IAppTool
 {
     private static readonly string[] Kinds = ["bug", "feature", "feedback", "question"];
+
+    private static readonly IReadOnlyDictionary<string, string> NoValues = new Dictionary<string, string>();
 
     /// <inheritdoc />
     public string Name => "file_request";
 
     /// <inheritdoc />
-    public string Description =>
-        "Files a Request in another Team's backlog. Give the Team, the kind (bug, feature, feedback or question), a title and a body " +
-        "whose '## ' headings cover what the kind needs. Optionally name one of your own Tasks that waits on the answer.";
+    public string Description => prompts.Render("tool.fileRequest.description", NoValues);
 
     /// <inheritdoc />
     public JsonObject InputSchema => new()

@@ -3,6 +3,7 @@ namespace Agency.Huddle.App.Acp.Tools;
 using System.Text.Json.Nodes;
 using Agency.Huddle.Acp.Abstractions;
 using Agency.Huddle.App.Data;
+using Agency.Huddle.App.Prompts;
 using Agency.Huddle.App.Tasks;
 using Agency.Huddle.App.Teams;
 
@@ -18,15 +19,16 @@ internal sealed class ProposeSprintTool(
     SprintProposalStore proposals,
     ITeamCatalog teams,
     ITeamDirectory directory,
-    string callerAgentId) : IAppTool
+    string callerAgentId,
+    IPromptSource prompts) : IAppTool
 {
+    private static readonly IReadOnlyDictionary<string, string> NoValues = new Dictionary<string, string>();
+
     /// <inheritdoc />
     public string Name => "propose_sprint";
 
     /// <inheritdoc />
-    public string Description =>
-        "Proposes a Sprint to the Human: a name and the Tasks to put in it. Nothing is created until the Human approves. " +
-        "Only the manager of the Team can propose, and every Task must belong to that Team and not be Done.";
+    public string Description => prompts.Render("tool.proposeSprint.description", NoValues);
 
     /// <inheritdoc />
     public JsonObject InputSchema => new JsonObject

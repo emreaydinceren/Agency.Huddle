@@ -10,7 +10,7 @@ public enum SettingsTab
     /// <summary>The read-only view of every model-facing prompt, grouped by area.</summary>
     Prompts,
 
-    /// <summary>Choosing a theme, and where to override its tokens.</summary>
+    /// <summary>Choosing a theme, the accent colour and the Library pane side.</summary>
     Appearance,
 
     /// <summary>Where the Persona files and the SQLite database live on disk.</summary>
@@ -21,4 +21,7 @@ public enum SettingsTab
 
     /// <summary>Every team type the catalog serves, and the ones it rejected with the reason.</summary>
     TeamTypes,
+
+    /// <summary>The Library settings: pinned roots and the pane side.</summary>
+    Library,
 }

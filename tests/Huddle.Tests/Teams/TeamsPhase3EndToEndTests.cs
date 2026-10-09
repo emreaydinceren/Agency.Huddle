@@ -166,7 +166,7 @@ public sealed class TeamsPhase3EndToEndTests
         TaskActor manager = await cast.ActorAsync(run, "development-manager", ct);
         Room room = await directory.CreateRoomAsync("Planning", [KnownIds.Human, manager.UserId ?? string.Empty], ct);
         TaskItem task = Assert.IsType<TaskResult.Saved>(service.Create(new TaskDraft("Plan me", TeamName, null), human)).Task;
-        ProposeSprintTool tool = new(store, sprints, proposals, run.Services.GetRequiredService<ITeamCatalog>(), directory, manager.UserId ?? string.Empty);
+        ProposeSprintTool tool = new(store, sprints, proposals, run.Services.GetRequiredService<ITeamCatalog>(), directory, manager.UserId ?? string.Empty, run.Services.GetRequiredService<Agency.Huddle.App.Prompts.IPromptSource>());
 
         string reply = await tool.InvokeAsync(new JsonObject { ["name"] = SprintName, ["taskIds"] = new JsonArray(task.Id.ToString()) }, ct);
         Assert.Equal("Proposal sent to the Human.", reply);

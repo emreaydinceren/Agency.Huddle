@@ -3,6 +3,7 @@ using Agency.Huddle.App.Acp;
 using Agency.Huddle.App.Acp.Tools;
 using Agency.Huddle.App.Tasks;
 using Agency.Huddle.App.Teams;
+using Agency.Huddle.Tests.Acp.Fakes;
 using Agency.Huddle.Tests.Tasks;
 using Agency.Huddle.Tests.Teams;
 
@@ -82,12 +83,12 @@ public sealed class RequestTriageToolsTests
         /// <summary>Builds the triage tool for a caller.</summary>
         /// <param name="caller">The caller's name.</param>
         public TriageRequestTool TriageTool(string caller) =>
-            new(Catalog(), this.Harness.Service, this.Harness.Store, this.Notifier, this.Harness.Directory, this.Ids[caller]);
+            new(Catalog(), this.Harness.Service, this.Harness.Store, this.Notifier, this.Harness.Directory, this.Ids[caller], new FakePromptSource());
 
         /// <summary>Builds the confirm tool for a caller.</summary>
         /// <param name="caller">The caller's name.</param>
         public ConfirmRequestTool ConfirmTool(string caller) =>
-            new(Catalog(), this.Harness.Service, this.Harness.Store, this.Harness.Personas, this.Gates, this.Notifier, this.Harness.Directory, this.Ids[caller]);
+            new(Catalog(), this.Harness.Service, this.Harness.Store, this.Harness.Personas, this.Gates, this.Notifier, this.Harness.Directory, this.Ids[caller], new FakePromptSource());
 
         /// <summary>The seeded Request as the store holds it now.</summary>
         public TaskItem Current() => this.Harness.Store.All.Single(task => task.Id.ToString() == TaskId);
@@ -365,10 +366,10 @@ public sealed class RequestTriageToolsTests
         using Scene scene = await CreateSceneAsync(ct);
         string quinn = scene.Ids["Quinn"];
         JsonObject fileArguments = new() { ["toTeam"] = "Platform", ["kind"] = "bug", ["title"] = "Broken", ["body"] = "Body" };
-        FileRequestTool fileTool = new(Catalog(), scene.Harness.Service, scene.Harness.Store, scene.Notifier, scene.Harness.Directory, quinn);
-        ListTeamsTool listTool = new(Catalog(), scene.Harness.Store, scene.Harness.Personas, scene.Harness.Directory, quinn);
+        FileRequestTool fileTool = new(Catalog(), scene.Harness.Service, scene.Harness.Store, scene.Notifier, scene.Harness.Directory, quinn, new FakePromptSource());
+        ListTeamsTool listTool = new(Catalog(), scene.Harness.Store, scene.Harness.Personas, scene.Harness.Directory, quinn, new FakePromptSource());
         SprintProposalStore proposals = new(new DiskTeamFolders(Path.Combine(scene.Harness.Options.Value.DataDir, "design-folder")));
-        ProposeSprintTool proposeTool = new(scene.Harness.Store, scene.Harness.Sprints, proposals, Catalog(), scene.Harness.Directory, quinn);
+        ProposeSprintTool proposeTool = new(scene.Harness.Store, scene.Harness.Sprints, proposals, Catalog(), scene.Harness.Directory, quinn, new FakePromptSource());
 
         string filed = await fileTool.InvokeAsync(fileArguments, ct);
         string triaged = await scene.TriageTool("Quinn").InvokeAsync(Triage("accept"), ct);

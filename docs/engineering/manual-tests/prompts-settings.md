@@ -1,8 +1,8 @@
-# Settings: the 29 Prompts, editing, per-field reset and Save
+# Settings: the Prompts, editing, per-field reset and Save
 
-Prove that the /settings Prompts editor renders all 29 model-facing prompts correctly, that its three-state badge logic (Next session / Modified / Unsaved) and per-field Reset behave, that Save is the one and only thing that ever writes {DataDir}\prompts.json, that the validator reports without ever refusing, and — most importantly — that this area's documented SILENT behaviours (a malformed hand-edit that says nothing on screen, a NextSession edit that is inert on a running teammate, a "Reset all" that stages but never commits, a destructive Reset-all button shown on the Appearance tab) actually behave as documented rather than as data loss. None of this is reachable by CI: the repo's component tests cannot dispatch a click, so every interaction here is unproven until a human or agent drives a browser.
+Prove that the /settings Prompts editor renders every model-facing prompt in the catalog correctly, that its three-state badge logic (Next session / Modified / Unsaved) and per-field Reset behave, that Save is the one and only thing that ever writes {DataDir}\prompts.json, that the validator reports without ever refusing, and — most importantly — that this area's documented SILENT behaviours (a malformed hand-edit that says nothing on screen, a NextSession edit that is inert on a running teammate, a "Reset all" that stages but never commits, a destructive Reset-all button shown on the Appearance tab) actually behave as documented rather than as data loss. None of this is reachable by CI: the repo's component tests cannot dispatch a click, so every interaction here is unproven until a human or agent drives a browser.
 
-**40 tests** · 37 free, 3 paid 💰 · about 4.7 hours.
+**41 tests** · 38 free, 3 paid 💰 · about 4.7 hours.
 
 Read [the manual test script](../manual-tests.md) first — the cost guard, the Model and Effort
 convention, and the rules for concluding a result — then [Common procedures](common.md), which
@@ -15,17 +15,17 @@ Run [`P-BUILD`](common.md#p-build) then [`P-LAUNCH-FREE`](common.md#p-launch-fre
 oracles `O-LOG` / `O-ADAPTERS` / `O-TRANSCRIPT` / `O-DB`, the four resets, and the
 standing conventions. This area adds:
 
-1. Confirm the clean starting state before the first test: `App_Data` should hold `Teams`, `personas`, `work` and `team.db` (plus `team.db-shm` / `team.db-wal`) and NO `prompts.json` and NO `appearance.json`. That absence is correct, not a fault.
+1. Confirm the clean starting state before the first test: `App_Data` should hold `Teammates` (one folder per Teammate, each holding `<Name>.md` and `work`), `Teams` and `team.db` (plus `team.db-shm` / `team.db-wal`) and NO `prompts.json` and NO `appearance.json`. That absence is correct, not a fault.
 2. Browse to `http://localhost:5100/settings`.
 3. Keep a File Explorer window on `App_Data` beside the browser with the view set to Details, so the Date modified column is visible. Several tests turn on 'the file did not change'.
 4. Keep a plain-text editor that does not reformat files (VS Code, Notepad++, Notepad) ready — many tests hand-edit `App_Data\prompts.json` while the app is running.
-5. Open `E:\Repos\Huddle\src\Huddle.App\prompts.default.json` in that editor and leave it open. It is the 29 shipped defaults, pretty-printed, and is the diff source for every 'did Reset restore the exact shipped wording?' check. Nothing in the running app ever reads it.
-6. Reset between tests with `P-RESET-SETTINGS` unless a test says otherwise. Tests PROMPTSSETTINGS-01 to -36 run on `P-LAUNCH-FREE` and cost nothing; only -37 to -40 use `P-LAUNCH-PAID`.
+5. Open `<repo>\src\Huddle.App\prompts.default.json` in that editor and leave it open. It holds every shipped default, one key per prompt, pretty-printed, and is the diff source for every 'did Reset restore the exact shipped wording?' check. Nothing in the running app ever reads it.
+6. Reset between tests with `P-RESET-SETTINGS` unless a test says otherwise. Tests PROMPTSSETTINGS-01 to -36 and -41 run on `P-LAUNCH-FREE` and cost nothing. PROMPTSSETTINGS-37 runs on `P-LAUNCH-UAT` (the mock adapter, ACP on, free); only -38 to -40 use `P-LAUNCH-PAID`.
 7. MudBlazor renders every button and tab-panel LABEL in upper case via CSS (`text-transform: uppercase`) — this is a rendering style, not a change to the underlying text. A step below that says to look for `Reset` or `Prompts` means the control whose text (and `textContent` in DevTools) is `Reset` or `Prompts`; what you will actually SEE on screen is `RESET` / `PROMPTS`. Steps keep the title-case spelling throughout this document because that is what a DOM/`textContent` check reads and what this document's own prose uses — read every button and tab label below as its upper-case rendering, not as a mismatch to report.
 
 ## Tests
 
-### PROMPTSSETTINGS-01 — /settings opens on the Prompts tab with a two-button tab rail
+### PROMPTSSETTINGS-01 — /settings opens on the Prompts tab with a six-tab rail
 
 **Free** · about 2 min
 
@@ -42,15 +42,15 @@ standing conventions. This area adds:
 2. Click **Settings** in the left sidebar.
 3. Read the page heading.
 4. Look at the top of the content area, ABOVE the form, for the tab rail — `MudTabs` renders horizontally across the top by default; it is no longer a vertical rail down the left.
-5. Count the buttons in the tab rail.
+5. Count the buttons in the tab rail and read their labels, left to right.
 6. Note which button looks selected (a coloured underline/indicator beneath it, and heavier text).
 7. Look at the browser address bar.
 
 **Pass if — all of these**
 
 - An `<h1>` reading exactly `Settings` is at the top of the page.
-- The tab rail contains exactly two buttons, reading `PROMPTS` and `APPEARANCE` (MudBlazor renders tab labels in upper case; the underlying text is `Prompts` and `Appearance`), laid out horizontally ABOVE the content, not down its left edge.
-- `PROMPTS` is the visually selected tab and `APPEARANCE` is not.
+- The tab rail contains exactly six buttons, in this order: `PROMPTS`, `APPEARANCE`, `PERSONAS`, `SKILLS`, `TEAM TYPES`, `LIBRARY` (MudBlazor renders tab labels in upper case; the underlying text is `Prompts`, `Appearance`, `Personas`, `Skills`, `Team Types`, `Library`), laid out horizontally ABOVE the content, not down its left edge.
+- `PROMPTS` is the visually selected tab and the other five are not.
 - The content pane below shows prompt fields (bold field labels with textareas), not a theme picker.
 - The address bar still reads `http://localhost:5100/settings` with no tab segment appended.
 
@@ -58,7 +58,7 @@ standing conventions. This area adds:
 
 - A 404 page or a yellow/ASP.NET exception page -> the route `/settings` with no `{Tab}` segment no longer resolves.
 - A blank content pane -> the `default:` fallback arm of the tab switch has broken; landing with no tab must still render Prompts.
-- Neither tab looks active, or both do -> `MudTabs`' `ActivePanelIndex` is being computed from a stale or duplicated comparison.
+- No tab looks active, or more than one does -> `MudTabs`' `ActivePanelIndex` is being computed from a stale or duplicated comparison.
 - The rail renders as a vertical column down the left, or anywhere other than horizontally above the content -> `MudTabs.Position` was set away from its default (`Position.Top`), which nothing in this area asked for.
 
 **Inconclusive if**
@@ -94,8 +94,8 @@ If the browser shows a connection error, the app is not running — redo `P-LAUN
 
 **Pass if — all of these**
 
-- After step 1 the URL is `http://localhost:5100/settings/appearance` and the pane shows the sentence `Pick a theme, and choose whether it always uses its light or dark palette, or follows your device's own setting.` and a `Theme` select plus a second, `Appearance`-labelled select.
-- After step 3 the URL is `http://localhost:5100/settings/prompts` and the 29 prompt textareas are back.
+- After step 1 the URL is `http://localhost:5100/settings/appearance` and the pane shows the sentence `Pick a theme. Each theme is either a light or a dark one, so choosing it sets the application's light or dark colours too.`, then one list of themes (a single `MudList`, labelled `Theme`, with group sub-headings; Custom Accent Light and Custom Accent Dark are among its items), a `Library pane` radio pair (`Right`, `Left`), a theme-credit paragraph, a note giving the path of `appearance.json`, and a `Your avatar` section. There is NO select control and no light/dark `Appearance` select, and no accent colour picker unless a Custom Accent theme is selected (ADR-0017).
+- After step 3 the URL is `http://localhost:5100/settings/prompts` and the prompt textareas are back.
 - Step 5 renders the Prompts pane.
 - Step 6 (`/settings/PROMPTS`) renders the Prompts pane — the parse is case-insensitive.
 - Step 7 (`/settings/Appearance`) renders the Appearance pane.
@@ -136,7 +136,7 @@ If step 9 (`/settings/` with a trailing slash) gives a 404 while every other ste
 
 - The first paragraph reads: `A prompt is one piece of wording this application sends to a model — part of a system prompt, a turn, get_help's output, or a tool's own description. Editing one changes what every teammate is told, not how the application itself behaves, and a prompt you have changed can always be restored to the wording it shipped with.`
 - The second paragraph reads: `Overrides are stored at <path>, which holds only the prompts you have changed — hand-edit it for fast prototyping if you like. The file does not exist until the first time you save here, so it being absent is expected, not a bug.`
-- The `<path>` is a full absolute Windows path ending in `\App_Data\prompts.json` — for a default checkout, `E:\Repos\Huddle\src\Huddle.App\App_Data\prompts.json`.
+- The `<path>` is a full absolute Windows path ending in `\App_Data\prompts.json` — for a default checkout, `<repo>\src\Huddle.App\App_Data\prompts.json`.
 - Explorer opens (or reports 'file not found' for) that exact folder, and that folder is the one containing `team.db`.
 
 **Fail if — any of these**
@@ -152,7 +152,7 @@ If Explorer says the FILE does not exist but opens the right FOLDER, that is a P
 > [!NOTE]
 > Use the path the page prints in every later test in this suite. Do not use the path written in these notes if the two disagree — the page is the authority.
 
-### PROMPTSSETTINGS-04 — Exactly 29 prompt fields, in four named groups, in a fixed order
+### PROMPTSSETTINGS-04 — Every prompt is reachable, in six named groups, in a fixed order
 
 **Free** · about 5 min
 
@@ -169,33 +169,35 @@ If Explorer says the FILE does not exist but opens the right FOLDER, that is a P
 1. Scroll to the top of the form and find the first group heading.
 2. Write down every group heading, top to bottom.
 3. Under each heading, write down every bold field label, top to bottom.
-4. Count the total number of field labels.
+4. Compare your list with the keys of `<repo>\src\Huddle.App\prompts.default.json`: every key must appear exactly once on the page, under the heading its prefix names (`systemPrompt.` System prompt, `turn.` Turn, `getHelp.` Get help, `tool.` Tool descriptions, `task.` Tasks, `prompt.` Cadence).
 5. Confirm each field has a textarea and a small grey sentence of helper text beneath it.
 
 **Pass if — all of these**
 
-- There are exactly four group headings, in this order: `System prompt`, `Turn`, `Get help`, `Tool descriptions`.
-- `System prompt` holds exactly 5 fields in this order: `Orientation`, `Identity`, `Chat rules`, `Tools`, `Skills block`.
-- `Turn` holds exactly 5 fields in this order: `Room label`, `Message`, `Catch-up header`, `Catch-up line`, `Greeting`.
-- `Get help` holds exactly 9 fields in this order: `Help: introduction`, `Help: Rooms`, `Help: messages`, `Help: mentions`, `Help: replying`, `Help: budget`, `Help: tools heading`, `Help: tool entry`, `Help: footer`.
-- `Tool descriptions` holds exactly 10 fields in this order: `get_help description`, `list_agents description`, `create_room description`, `invite_agent description`, `post_message description`, `follow_room description`, `unfollow_room description`, `read_skill description`, `validate_teammate description`, `propose_teammates description`.
-- The total is exactly 29.
-- Every one of the 29 has a bold label, an editable textarea, and one muted helper sentence.
+- There are exactly six group headings, in this order: `System prompt`, `Turn`, `Get help`, `Tool descriptions`, `Tasks`, `Cadence`.
+- Within `System prompt` these fields appear in this relative order: `Orientation`, `Identity`, `Chat rules`, `Tools`, `Asking the Human`, `Role block`, `Skills block`, `Memory block`.
+- Within `Turn` these fields appear in this relative order: `Onboarding turn`, `Room label`, `Message`, `Catch-up header`, `Catch-up line`, `Transcript header`, `Greeting`.
+- Within `Get help` these fields appear in this relative order: `Help: introduction`, `Help: Rooms`, `Help: messages`, `Help: mentions`, `Help: replying`, `Help: budget`, `Help: tools heading`, `Help: tool entry`, `Help: footer`, `Help: tasks`.
+- Within `Tool descriptions` these fields appear in this relative order: `get_help description`, `list_agents description`, `create_room description`, `add_evidence description`, `read_records description`, `list_teams description`, `file_request description`, `confirm_request description`, `triage_request description`, `propose_sprint description`, `mark_retro_row description`, `propose_retro_changes description`, `invite_agent description`, `post_message description`, `follow_room description`, `unfollow_room description`, `read_skill description`, `validate_teammate description`, `propose_teammates description`. The nine added by the prompt-catalog change (`add_evidence`, `read_records`, `list_teams`, `file_request`, `confirm_request`, `triage_request`, `propose_sprint`, `mark_retro_row`, `propose_retro_changes`) are all present.
+- `Tasks` holds `Task wake-up message`; `Cadence` holds `Digest prompt`, `Roll-up prompt`, `Retro prompt`.
+- Every key in `prompts.default.json` has exactly one field, and no field lacks a key.
+- Every field has a bold label, an editable textarea, and one muted helper sentence.
 
 **Fail if — any of these**
 
-- A total other than 29 -> a prompt key exists that matches none of the four group prefixes, so it renders nowhere and can never be edited or reset from the UI; there is NO error for this, only a missing field.
+- A key of `prompts.default.json` with no field on the page -> a prompt key exists that matches none of the group prefixes, so it renders nowhere and can never be edited or reset from the UI; there is NO error for this, only a missing field.
 - A field under the wrong heading, or two fields swapped -> the grouping/ordering logic has changed and a user following documentation will look in the wrong place.
+- One of the nine added `Tool descriptions` fields missing -> its description is hard-coded again and can no longer be edited here (ADR-0007).
 - A missing group heading with its fields still present -> the group builder is dropping empty-label groups incorrectly.
 
 **Inconclusive if**
 
-If you cannot tell where one group ends and the next begins because headings are unstyled, open devtools and count the `MudPaper` elements wrapping each group (each renders as a `.mud-paper` carrying the `pa-4 mb-4` classes and one `h2.prompts-group-heading`) and the `prompts-field` divs inside each. If that count matches, pass the test and separately report the styling problem. (The old hand-rolled `<section class="prompts-group">` wrapper no longer exists — Stage 3 of the MudBlazor migration replaced it with `MudPaper`, but `prompts-group-heading` and `prompts-field` are unchanged.)
+If you cannot tell where one group ends and the next begins because headings are unstyled, open devtools and count the `MudPaper` elements wrapping each group (each renders as a `.mud-paper` carrying the `pa-4 mb-4` classes and one `h2.prompts-group-heading`; there must be six) and the `prompts-field` divs inside each (each group's count must equal the number of keys in `prompts.default.json` with that group's prefix). If both match, pass the test and separately report the styling problem. (The old hand-rolled `<section class="prompts-group">` wrapper no longer exists — Stage 3 of the MudBlazor migration replaced it with `MudPaper`, but `prompts-group-heading` and `prompts-field` are unchanged.)
 
 > [!NOTE]
-> Cross-check against `E:\Repos\Huddle\src\Huddle.App\prompts.default.json`, which holds exactly 29 keys. Every label on screen must correspond to one of them. Count, do not skim — this test's entire value is the count.
+> Cross-check against `<repo>\src\Huddle.App\prompts.default.json`. Every label on screen must correspond to one of its keys and every key to one label. Do not skim — this test's entire value is that nothing is missing. The group list and order come from `PromptFieldFactory.cs:32-40`; the field order within a group is the order of `PromptCatalog.All`, so the lists above name only the fields the test relies on, in relative order, and the page may hold more between them. No total is asserted because the catalog grows.
 
-### PROMPTSSETTINGS-05 — The "Next session" badge appears on exactly the 15 prompts whose edits cannot reach a running teammate
+### PROMPTSSETTINGS-05 — The "Next session" badge appears on exactly the prompts whose edits cannot reach a running teammate
 
 **Free** · about 5 min
 
@@ -208,24 +210,24 @@ If you cannot tell where one group ends and the next begins because headings are
 
 **Steps**
 
-1. Walk every one of the 29 field headers from top to bottom.
+1. Walk every field header, group by group, from top to bottom.
 2. For each, note whether a small grey pill reading `Next session` sits beside the field label.
-3. List the fields that carry it.
+3. List the fields that carry it, group by group.
 4. Hover the mouse over one `Next session` pill and wait for the tooltip.
 5. Confirm that no field anywhere carries a pill reading `Live`.
 
 **Pass if — all of these**
 
-- Exactly fifteen fields carry a `Next session` pill.
-- Those fifteen are: `Orientation`, `Identity`, `Chat rules`, `Tools`, `Skills block` (all five under System prompt) and `get_help description`, `list_agents description`, `create_room description`, `invite_agent description`, `post_message description`, `follow_room description`, `unfollow_room description`, `read_skill description`, `validate_teammate description`, `propose_teammates description` (all ten under Tool descriptions).
-- The fourteen fields under `Turn` and `Get help` carry NO timing pill at all.
+- Every field under `System prompt` carries a `Next session` pill, including `Orientation`, `Identity`, `Chat rules`, `Tools`, `Skills block` and `Memory block`.
+- Every field under `Tool descriptions` carries a `Next session` pill, including `get_help description`, `list_agents description`, `create_room description`, `invite_agent description`, `post_message description` and the nine added by the prompt-catalog change: `add_evidence description`, `read_records description`, `list_teams description`, `file_request description`, `confirm_request description`, `triage_request description`, `propose_sprint description`, `mark_retro_row description`, `propose_retro_changes description`.
+- No field under `Turn`, `Get help`, `Tasks` or `Cadence` carries a timing pill at all (spot-check `Onboarding turn`, `Room label`, `Greeting`, `Help: Rooms`, `Help: tasks`, `Task wake-up message` and `Digest prompt`).
 - Hovering a `Next session` pill shows the tooltip `Applies to teammates started after the change`.
 - No field shows a `Live` pill — there is deliberately no such badge.
 
 **Fail if — any of these**
 
-- A missing badge on any of the fifteen -> the only warning a user ever gets that their system-prompt edit will not reach a running teammate is gone; the failure that follows is completely silent, at runtime and in the logs.
-- A badge on any of the fourteen Turn/Get help fields -> a user is told a restart is needed when it is not, and will pointlessly destroy a teammate's conversation memory to apply an edit that was already live.
+- A missing badge on any System prompt or Tool descriptions field -> the only warning a user ever gets that their system-prompt or tool-description edit will not reach a running teammate is gone; the failure that follows is completely silent, at runtime and in the logs.
+- A badge on any Turn, Get help, Tasks or Cadence field -> a user is told a restart is needed when it is not, and will pointlessly destroy a teammate's conversation memory to apply an edit that was already live.
 - Hovering shows no tooltip -> the `title` attribute has been dropped, which is a silent loss of the explanation.
 
 **Inconclusive if**
@@ -233,9 +235,9 @@ If you cannot tell where one group ends and the next begins because headings are
 If tooltips do not appear at all in your browser (some kiosk/remote setups suppress them), inspect the pill in devtools and read its `title` attribute directly. If the attribute is present with the correct text, pass the tooltip step.
 
 > [!NOTE]
-> The authoritative count is 15 — the number of `Timing: PromptTiming.NextSession` entries in `src\Huddle.App\Prompts\PromptCatalog.cs`.
+> The authority is the `Timing:` argument of each entry in `src\Huddle.App\Prompts\PromptCatalog.cs`: `NextSession` for every `systemPrompt.*` and `tool.*` key, `Live` for every `turn.*`, `getHelp.*`, `task.*` and `prompt.*` key. No total is asserted; compare the badge to the entry's `Timing:`.
 
-### PROMPTSSETTINGS-06 — Placeholder chips are listed on exactly the 8 prompts that take placeholders, with full braces
+### PROMPTSSETTINGS-06 — Placeholder chips are listed on exactly the prompts that take placeholders, with full braces
 
 **Free** · about 5 min
 
@@ -248,13 +250,13 @@ If tooltips do not appear at all in your browser (some kiosk/remote setups suppr
 
 **Steps**
 
-1. Walk every one of the 29 fields from top to bottom.
+1. Walk the fields named below.
 2. For each, look below the textarea for a line beginning `Placeholders:` followed by monospace chips.
-3. Write down which fields have that line and exactly which chips each shows.
+3. Write down which of them have that line and exactly which chips each shows.
+4. Scroll through the rest of the form and note any further field that shows a `Placeholders:` line; compare each with the `Placeholders:` argument of its entry in `src\Huddle.App\Prompts\PromptCatalog.cs`.
 
 **Pass if — all of these**
 
-- Exactly eight fields show a `Placeholders:` line.
 - `Orientation` shows `{{helpTool}}`.
 - `Identity` shows `{{personaName}}`.
 - `Tools` shows `{{toolNames}}`.
@@ -263,7 +265,10 @@ If tooltips do not appear at all in your browser (some kiosk/remote setups suppr
 - `Catch-up header` shows `{{roomLabel}}`.
 - `Catch-up line` shows `{{sender}}` and `{{text}}`, in that order.
 - `Help: tool entry` shows `{{toolName}}` and `{{toolDescription}}`, in that order.
-- The other 16 fields show no `Placeholders:` line at all.
+- `Task wake-up message` shows `{{assignee}}`, `{{taskId}}`, `{{title}}`, `{{actor}}`, `{{changes}}`, `{{status}}`, `{{team}}`, in that order.
+- `Digest prompt` and `Retro prompt` each show `{{team}}` and `{{since}}`, in that order.
+- These fields show no `Placeholders:` line at all: `Chat rules`, `Help: introduction`, `Help: Rooms`, `Help: footer`, `Roll-up prompt`, and every field under `Tool descriptions` (including the nine added by the prompt-catalog change).
+- Every other field's chips equal its catalog entry's `Placeholders:` list, in that order.
 - Every chip includes both pairs of braces.
 
 **Fail if — any of these**
@@ -289,28 +294,27 @@ If chips render but are visually indistinguishable from the surrounding text, re
 
 **Steps**
 
-1. Scroll through all 29 textareas and read their contents, scrolling inside any box that has its own scrollbar.
+1. Scroll through every textarea, group by group, and read its contents, scrolling inside any box that has its own scrollbar. Read the nine `Tool descriptions` fields added by the prompt-catalog change (`add_evidence description` through `propose_retro_changes description`) with particular care: they were hard-coded before and now carry their text in the catalog.
 2. Specifically read `Orientation`, `Tools`, and `Help: tool entry` in full.
 3. Confirm those three show the placeholders `{{helpTool}}`, `{{toolNames}}` and `{{toolName}}` respectively, rather than a literal tool name.
-4. Now run this in a terminal at the repo root and read the number it prints: `grep -c mcp__team__ src/Huddle.App/prompts.default.json`
-5. Separately, click into the `Orientation` textarea, type `mcp__team__get_help` at the end of the text, and watch the field for any warning or refusal.
+4. Now run this in `T-B` at the repo root and read the number it prints: `(Select-String -Path src/Huddle.App/prompts.default.json -Pattern 'mcp__team__').Count`.5. Separately, click into the `Orientation` textarea, type `mcp__team__get_help` at the end of the text, and watch the field for any warning or refusal.
 
 **Pass if — all of these**
 
 - No textarea's CONTENT contains the string `mcp__team__`.
 - `Orientation` contains `{{helpTool}}`; `Tools` contains `{{toolNames}}`; `Help: tool entry` contains `{{toolName}}`.
-- The grep in step 4 prints `0`.
+- The command in step 4 prints `0`.
 - Step 5 types freely: the app does NOT block, warn about, or refuse the typed `mcp__team__` string. (This is correct — it is deliberately unvalidated.)
 
 **Fail if — any of these**
 
 - Any textarea's default content containing `mcp__team__` -> a binding-rule violation. It looks fine on screen; the damage appears much later as a model reporting the tool does not exist, with nothing in any log explaining why.
-- The grep printing anything other than 0 -> same defect, caught at the reference file.
+- The command printing anything other than 0 -> same defect, caught at the reference file.
 - Step 5 being blocked or warned about -> a new validation rule was added that the rules file does not call for; report it, but as a separate finding from the above.
 
 **Inconclusive if**
 
-Browser Ctrl+F does NOT reliably search inside textarea values, so a 'no hits' result from Ctrl+F proves nothing — read the boxes, or use the grep. Also expect ONE legitimate on-page hit if you do use Ctrl+F: the grey helper sentence under `Help: tool entry` reads `{{toolName}} arrives already prefixed (e.g. mcp__team__get_help)`. That is helper text explaining the rule, not prompt text, and it is NOT a failure.
+Browser Ctrl+F does NOT reliably search inside textarea values, so a 'no hits' result from Ctrl+F proves nothing — read the boxes, or use the command in step 4. Also expect ONE legitimate on-page hit if you do use Ctrl+F: the grey helper sentence under `Help: tool entry` reads `{{toolName}} arrives already prefixed (e.g. mcp__team__get_help)`. That is helper text explaining the rule, not prompt text, and it is NOT a failure.
 
 > [!NOTE]
 > Undo your step-5 typing (Ctrl+Z) or reset the field before moving on, and do not save it.
@@ -331,7 +335,7 @@ Browser Ctrl+F does NOT reliably search inside textarea values, so a 'no hits' r
 1. Find the `Room label` field, whose shipped default is a single line.
 2. Note how tall its box is compared to a single line of text.
 3. Click at the end of its text and press Enter once. Observe the box height.
-4. Press Enter twelve more times (thirteen newlines in total), watching the height after each press.
+4. Press Enter eleven more times (twelve newlines in total), watching the height after each press.
 5. Press Enter five more times, watching the height.
 6. Open devtools (F12), inspect the `Room label` field's `<textarea>` element, and read its `rows` attribute.
 7. Look at the bottom-right corner of the box for a manual resize grip, and try to drag it.
@@ -340,8 +344,8 @@ Browser Ctrl+F does NOT reliably search inside textarea values, so a 'no hits' r
 **Pass if — all of these**
 
 - Before any typing, the `Room label` box is about two text rows tall — a box, not a one-line slot.
-- Each of the first thirteen Enter presses makes the box one row taller, immediately, without leaving the field.
-- After the thirteenth newline the box stops growing; the five further Enter presses add no height and the box scrolls internally instead.
+- Each of the first twelve Enter presses makes the box one row taller, immediately, without leaving the field (rows are the newline count plus two, so 12 newlines give 14 rows).
+- After the twelfth newline the box stops growing; the five further Enter presses add no height and the box scrolls internally instead.
 - At that point the inspected `rows` attribute reads `14`.
 - There is NO manual resize grip, and dragging the bottom-right corner does nothing — `MudTextField` sets `resize: none` on its `<textarea>` and grows it itself by recomputing `Lines`, so a manual drag handle would only fight that.
 
@@ -353,7 +357,7 @@ Browser Ctrl+F does NOT reliably search inside textarea values, so a 'no hits' r
 
 **Inconclusive if**
 
-A very long SINGLE line with no newlines correctly stays at 2 rows and scrolls sideways — that is not a failure, so do not test the clamp by pasting one long line. NOTE: none of the 29 shipped defaults is long enough to hit the 14-row cap on its own (the tallest, `Tools`, is 7 lines), so the cap can only be reached by typing newlines as above. If you find a shipped default already rendering at 14 rows, that is a change worth reporting separately.
+A very long SINGLE line with no newlines correctly stays at 2 rows and scrolls sideways — that is not a failure, so do not test the clamp by pasting one long line. NOTE: `Room label` is a single line, which is why this test uses it; the longer shipped defaults (for example `Memory block`) already render at the 14-row cap and scroll inside the box, which is correct. The row count is the newline count plus two, clamped to 2-14 (`PromptFieldFactory.cs:104-121`).
 
 ### PROMPTSSETTINGS-09 — Typing raises "Modified" and "Unsaved" together and enables Save, Reset and Reset all — while writing nothing
 
@@ -445,7 +449,7 @@ If you cannot distinguish the amber `Modified` pill from the blue `Unsaved` pill
 
 **Inconclusive if**
 
-Step 7 depends on retyping the default byte-for-byte. If `Modified` refuses to clear, suspect a trailing space, a smart-quote substitution by your editor, or CRLF vs LF line endings rather than a defect — click that field's `Reset` button instead (which stages the exact default) and re-read the badges. If `Modified` clears after Reset but not after your paste, this test is INCONCLUSIVE on step 7 and you have instead reproduced PROMPTSSETTINGS-35; note it there.
+Step 7 depends on retyping the default byte-for-byte. If `Modified` refuses to clear, suspect a trailing space or a smart-quote substitution by your editor rather than a defect (line endings do not matter: both comparisons ignore CRLF versus LF, `PromptFieldFactory.cs:147-150`) — click that field's `Reset` button instead (which stages the exact default) and re-read the badges. If `Modified` clears after Reset but not after your paste, this test is INCONCLUSIVE on step 7: your pasted text differs from the default in some character.
 
 > [!NOTE]
 > Run `P-RESET-SETTINGS` and relaunch before the next test.
@@ -498,7 +502,7 @@ If the Date modified column shows only minutes and both operations happen inside
 
 **Free** · about 6 min
 
-*Proves the binding rule that an absent overrides file is normal and that the app never writes a file of 29 defaults it would then have to keep in step with the code forever.*
+*Proves the binding rule that an absent overrides file is normal and that the app never writes a file of every default it would then have to keep in step with the code forever.*
 
 **Before you start**
 
@@ -522,13 +526,13 @@ If the Date modified column shows only minutes and both operations happen inside
 - `prompts.json` appears only after step 5.
 - Its content is pretty-printed (indented, one key per line block) JSON.
 - It contains exactly two top-level keys: `turn.roomLabel` and `getHelp.budget`.
-- It does NOT contain `systemPrompt.identity` (you reset that one before saving) and does not contain any of the other 21 keys.
+- It does NOT contain `systemPrompt.identity` (you reset that one before saving) and does not contain any other key.
 
 **Fail if — any of these**
 
 - The file existing at step 1 or appearing at step 2 -> the app is creating an overrides file at startup or on a page load; the rules file makes this binding, and a file of defaults would silently pin today's wording forever, so a future change to a shipped default would never reach that installation.
 - The file appearing at step 3 or 4 -> a write happened without a Save, so Save is no longer the single commit point.
-- The file containing all 29 keys after two edits -> the same defect in a different form: every untouched prompt has just been frozen at today's text.
+- The file containing every catalog key after two edits -> the same defect in a different form: every untouched prompt has just been frozen at today's text.
 - `systemPrompt.identity` being present -> a key whose pending value equals the default is being stored as a redundant copy.
 
 **Inconclusive if**
@@ -552,7 +556,7 @@ If the file was already present at step 1, you did not reset state — run `P-RE
 **Steps**
 
 1. Find the `Help: messages` field. Its default contains the literal text `"[Room: <name> (id: <id>)]"`. Type ` EDITED` at the end of its text.
-2. Find the `Tools` field. Its default contains an em-dash in `Your reply to the current message is just your answer text — do not also post it with a tool.` Type ` EDITED` at the end of its text.
+2. Find the `Help: replying` field. Its default contains an em-dash in `with a tool — that would deliver it twice.` Type ` EDITED` at the end of its text.
 3. Click `Save`.
 4. Open `App_Data\prompts.json` in a plain-text editor.
 5. Search the file for `<name>`.
@@ -698,14 +702,14 @@ If the timestamp granularity is too coarse to distinguish, use content compariso
 **Fail if — any of these**
 
 - A JavaScript `confirm()` dialog or a modal -> the repo deliberately uses the same inline-confirm pattern as Remove on /teammates; a dialog is a different interaction model and is blocked by some browsers.
-- The button being enabled with nothing modified -> a user can 'reset' from an already-default state, which stages 29 no-op edits and makes Save look actionable for nothing.
+- The button being enabled with nothing modified -> a user can 'reset' from an already-default state, which stages one no-op edit per prompt and makes Save look actionable for nothing.
 - The destructive action firing on the FIRST click with no confirm step -> one stray click discards every customisation on the page.
 
 **Inconclusive if**
 
 If you cannot tell whether the button is disabled, inspect it in devtools and check for the `disabled` attribute. Judge from the attribute, not the shade of grey.
 
-### PROMPTSSETTINGS-17 — "Yes, reset everything" stages all 29 defaults but writes nothing — and the reset is silently lost if you navigate away
+### PROMPTSSETTINGS-17 — "Yes, reset everything" stages every default but writes nothing — and the reset is silently lost if you navigate away
 
 **Free** · about 8 min
 
@@ -721,7 +725,7 @@ If you cannot tell whether the button is disabled, inspect it in devtools and ch
 1. Type ` ONE` into `Room label`, ` TWO` into `Help: budget`, and ` THREE` into `Identity`. Click `Save`.
 2. Confirm `prompts.json` holds exactly three keys; note its Date modified and copy its content to a scratch file.
 3. Click `Reset all to defaults`, then click `Yes, reset everything`.
-4. Scan all 29 field headers and note every badge you can see.
+4. Scan every field header, group by group, and note every badge you can see.
 5. Look at the `Save` button and at the header's `Reset all to defaults` button.
 6. Refresh Explorer, compare `prompts.json`'s timestamp and content with the scratch copy.
 7. WITHOUT clicking Save, click `Teammates` in the left sidebar.
@@ -730,9 +734,9 @@ If you cannot tell whether the button is disabled, inspect it in devtools and ch
 
 **Pass if — all of these**
 
-- After step 3 every `Modified` badge across all 29 fields has disappeared.
+- After step 3 every `Modified` badge across all fields has disappeared.
 - The three previously-overridden fields (`Room label`, `Help: budget`, `Identity`) each show an `Unsaved` badge.
-- The other 21 fields show NO badge at all.
+- Every other field (spot-check `Orientation`, `Chat rules`, `Message`, `Greeting`, `Help: Rooms`, `list_agents description`, `Digest prompt`) shows NO `Modified` or `Unsaved` badge. The `Next session` pill on the System prompt and Tool descriptions fields is a timing pill, not a state badge, and stays.
 - `Save` is ENABLED and `Reset all to defaults` is now DISABLED (nothing is modified any more).
 - The confirm pair has collapsed back to the single `Reset all to defaults` button.
 - At step 6 `prompts.json` is unchanged — same timestamp, same three keys, same content.
@@ -741,7 +745,7 @@ If you cannot tell whether the button is disabled, inspect it in devtools and ch
 **Fail if — any of these**
 
 - `prompts.json` being rewritten at step 6 -> the confirm commits directly, so Save is no longer the single commit point and a confirm-then-think-again is unrecoverable.
-- All 29 fields showing `Unsaved` at step 4 -> a field whose stored value already equals the default has nothing to commit, so a badge there means the save would write 29 no-op keys.
+- Every field showing `Unsaved` at step 4 -> a field whose stored value already equals the default has nothing to commit, so a badge there means the save would write a no-op key for every prompt.
 - The confirm pair not collapsing back to the single button -> the confirm state is not being cleared and a second reset could fire unexpectedly.
 
 **Inconclusive if**
@@ -775,12 +779,12 @@ If step 9 shows the overrides gone rather than restored, check `prompts.json` fi
 - After step 4 no field carries any badge and `Save` is disabled.
 - `prompts.json` still EXISTS on disk.
 - Its entire content is exactly `{}` (possibly with surrounding whitespace or a newline).
-- All 29 textareas show their shipped defaults.
+- Every textarea shows its shipped default (spot-check `Room label`, `Help: footer`, `Orientation`, `propose_sprint description`).
 
 **Fail if — any of these**
 
 - The file still holding keys -> the reset did not reach disk and the user's 'back to factory' did nothing.
-- The file holding all 29 keys with default text -> the reset wrote a snapshot of today's defaults, which silently pins this installation's wording forever.
+- The file holding every key with default text -> the reset wrote a snapshot of today's defaults, which silently pins this installation's wording forever.
 
 **Inconclusive if**
 
@@ -800,14 +804,14 @@ The file NOT being deleted is correct — the app never deletes it, it only ever
 **Steps**
 
 1. Type ` SEED` into `Room label` and click `Save`, so `prompts.json` exists. Copy its content to a scratch file.
-2. In `T-B` run: `Set-ItemProperty -Path 'E:\Repos\Huddle\src\Huddle.App\App_Data\prompts.json' -Name IsReadOnly -Value $true` (substitute the path the Settings page prints if it differs).
+2. In `T-B` run: `Set-ItemProperty -Path '<repo>\src\Huddle.App\App_Data\prompts.json' -Name IsReadOnly -Value $true` (substitute the path the Settings page prints if it differs).
 3. Back in the browser, type ` WILLFAIL` into `Help: budget` and into `Identity`.
 4. Click `Save`.
 5. Read the area directly under the `Settings` heading.
 6. Read the `Help: budget` and `Identity` textareas and their badges.
 7. Look at the bottom of the browser window for the yellow Blazor error strip.
 8. Compare `prompts.json`'s content with the scratch copy.
-9. Run: `Set-ItemProperty -Path 'E:\Repos\Huddle\src\Huddle.App\App_Data\prompts.json' -Name IsReadOnly -Value $false`
+9. Run: `Set-ItemProperty -Path '<repo>\src\Huddle.App\App_Data\prompts.json' -Name IsReadOnly -Value $false`
 10. Click `Save` again.
 11. Read the area under the `Settings` heading, and the field badges.
 
@@ -1049,7 +1053,7 @@ If your browser blocks alert() dialogs by policy, do not conclude the payload wa
 
 **Free** · about 6 min
 
-*Every keystroke round-trips to the server and rebuilds the whole 29-field form, which makes this the most likely place in the app for a Blazor Server input regression.*
+*Every keystroke round-trips to the server and rebuilds the whole form (one field per prompt), which makes this the most likely place in the app for a Blazor Server input regression.*
 
 **Before you start**
 
@@ -1108,7 +1112,7 @@ If you are testing over a slow or remote connection, latency is expected and is 
 5. Press the browser Back button, then Forward. Read both fields again.
 6. Now press F5. Read both fields and their badges.
 7. Type ` LOSEME` into `Room label` (no save). Click `Teammates` in the sidebar, then click `Settings`. Read the field.
-8. Type ` LOSEME2` into `Room label` (no save). Click the `Appearance` tab. In the `Appearance` select, choose `Dark`.
+8. Type ` LOSEME2` into `Room label` (no save). Click the `Appearance` tab. In the `Theme` list, click `Huddle Dark`.
 9. Watch what the browser does — in particular, whether it performs a full page load.
 10. Click the `Prompts` tab and read `Room label`.
 11. Look for any 'you have unsaved changes' prompt at any point in steps 6, 7 or 8.
@@ -1131,7 +1135,7 @@ If you are testing over a slow or remote connection, latency is expected and is 
 
 **Inconclusive if**
 
-The absence of an unsaved-changes prompt is documented designed behaviour, not a defect. If you believe there should be one, file it as a UX suggestion, not a bug. If the `Appearance` select is missing or empty, the Appearance tab has its own problem — report that against the Appearance area and mark step 8 inconclusive here.
+The absence of an unsaved-changes prompt is documented designed behaviour, not a defect. If you believe there should be one, file it as a UX suggestion, not a bug. If the `Theme` list is missing or empty, the Appearance tab has its own problem — report that against the Appearance area and mark step 8 inconclusive here.
 
 > [!NOTE]
 > Clean up afterwards with `P-RESET-SETTINGS`, which removes both the `appearance.json` this test created and any `prompts.json`, then relaunch.
@@ -1237,7 +1241,7 @@ If the repaint takes longer than about five seconds but does arrive, note the de
 **Steps**
 
 1. Arrange the browser and a text editor side by side so you can see the `Room label` field and the editor at the same time.
-2. In the editor, create a new file at `E:\Repos\Huddle\src\Huddle.App\App_Data\prompts.json` (use the path the Settings page prints) with exactly this content: `{"turn.roomLabel": "[R {{roomId}}]"}`
+2. In the editor, create a new file at `<repo>\src\Huddle.App\App_Data\prompts.json` (use the path the Settings page prints) with exactly this content: `{"turn.roomLabel": "[R {{roomId}}]"}`
 3. Save the file and DO NOT touch the browser.
 4. Watch the `Room label` textarea for the next five seconds.
 5. Read the `Room label` header badges and the header's `Reset all to defaults` button.
@@ -1292,7 +1296,7 @@ If nothing updates, before failing, check the server console for the line `Promp
 **Pass if — all of these**
 
 - Within about a second of the delete, both textareas revert to their shipped wording, with no reload and no restart.
-- Every `Modified` badge disappears across all 29 fields.
+- Every `Modified` badge disappears, on every field in every group.
 - `Reset all to defaults` goes DISABLED.
 - `prompts.json` stays ABSENT — the app does not recreate it, then or thirty seconds later.
 - No exception page or yellow Blazor error strip appears.
@@ -1368,7 +1372,7 @@ The total absence of on-screen feedback is DOCUMENTED DESIGN, not a bug — do n
 3. Start the app: `dotnet run --project src/Huddle.App` from the repo root.
 4. Watch the console output during startup.
 5. Browse to `http://localhost:5100/settings`.
-6. Read all 29 fields and their badges.
+6. Read every field in every group, and their badges (spot-check at least `Room label`, `Help: footer` and one field from the `Tasks` group).
 7. Read the whole page for any error, banner or mention of an unreadable file.
 8. Open `App_Data\prompts.json` and compare its content to the scratch copy.
 9. Repeat steps 1-8 with a second kind of corruption: replace the file contents with `{"turn.roomLabel": ` (truncated, no closing brace or value).
@@ -1377,7 +1381,7 @@ The total absence of on-screen feedback is DOCUMENTED DESIGN, not a bug — do n
 
 - The app STARTS normally both times — no crash, no startup exception.
 - The console prints a Warning containing: `Could not parse prompt overrides file '<path>'; falling back to defaults for every prompt.`
-- All 29 fields show their shipped defaults and NO `Modified` badge — exactly as if the file were absent.
+- Every field shows its shipped default and NO `Modified` badge — exactly as if the file were absent.
 - The page shows no error, no banner and no mention of the file being unreadable.
 - `prompts.json` is still on disk with its corrupt content, byte-identical to the scratch copy — the app neither overwrote nor deleted it.
 
@@ -1389,12 +1393,12 @@ The total absence of on-screen feedback is DOCUMENTED DESIGN, not a bug — do n
 
 **Inconclusive if**
 
-No on-screen warning is DOCUMENTED DESIGN — do not file it. If the console scrolled past the startup warning, stop the app, redirect output to a file (`dotnet run --project src/Huddle.App > C:\Users\user\AppData\Local\Temp\huddle.log 2>&1`) and search the log rather than guessing.
+No on-screen warning is DOCUMENTED DESIGN — do not file it. If the console scrolled past the startup warning, stop the app, redirect output to a file (`dotnet run --project src/Huddle.App > $env:TEMP\huddle.log 2>&1`) and search the log (`Select-String -Path $env:TEMP\huddle.log -Pattern 'Could not parse'`) rather than guessing.
 
 > [!NOTE]
 > Beware a follow-on hazard worth reporting if you see it: with a corrupt file in place, a subsequent Save from the browser reads the file as empty and will write only your new edits — the corrupt content is then gone. That is a consequence of the fallback, not a separate bug, but say so in your report if a tester might lose data that way.
 
-### PROMPTSSETTINGS-33 — An unknown key in prompts.json is kept forever, ignored for resolution, and logged once
+### PROMPTSSETTINGS-33 — An unknown key in prompts.json is kept forever, ignored for resolution, and logged whenever the file is read or saved
 
 **Free** · about 6 min
 
@@ -1419,7 +1423,7 @@ No on-screen warning is DOCUMENTED DESIGN — do not file it. If the console scr
 
 - `Room label` picks up `[R {{roomId}}]` normally and shows a `Modified` badge.
 - No field appears for `my.experiment`, and no error about it appears anywhere on the page.
-- The server console shows an Information line containing: `Prompt overrides file '<path>' contains key 'my.experiment', which is not a prompt this application knows about; it is kept in the file but ignored when resolving prompt text.`
+- The server console shows an Information line (logged on every resolve and save, so the Save at step 6 logs it again; do not fail on a second occurrence) containing: `Prompt overrides file '<path>' contains key 'my.experiment', which is not a prompt this application knows about; it is kept in the file but ignored when resolving prompt text.`
 - After the save at step 6, `prompts.json` still contains `"my.experiment": "hello"`, untouched, alongside `turn.roomLabel` and the new `getHelp.footer` key.
 
 **Fail if — any of these**
@@ -1474,11 +1478,11 @@ If neither field updates at step 3, re-run PROMPTSSETTINGS-29 first — if the w
 > [!NOTE]
 > The silent loss of the hand-edit to turn.roomLabel is designed behaviour. Report it as a UX observation if you like ('a concurrent hand-edit is discarded with no conflict notice'), not as a defect.
 
-### PROMPTSSETTINGS-35 — A CRLF hand-edit makes a field show "Modified" while looking identical — and Reset fixes it
+### PROMPTSSETTINGS-35 — A stored prompt equal to its default apart from CRLF is ignored (no badge) and dropped by the next Save
 
 **Free** · about 8 min
 
-*Pre-empts a misreport ('a field says Modified but nothing is different') and checks that the recovery path works and leaves the file clean.*
+*Pins decision D6: a prompt pinned in prompts.json that differs from its default only in line endings is not an override. It resolves to the default, shows no badge, is logged, and the next Save removes it from the file, so the installation is never silently pinned to a copy of today's wording.*
 
 **Before you start**
 
@@ -1491,31 +1495,31 @@ If neither field updates at step 3, re-run PROMPTSSETTINGS-29 first — if the w
 1. Open `src\Huddle.App\prompts.default.json` and copy the exact value of `getHelp.rooms` (a multi-line prompt).
 2. In your editor, create `App_Data\prompts.json` containing just that one key and value, but set the editor's line endings to CRLF (Windows) before saving.
 3. Save the file and switch to the browser.
-4. Wait a second, then read the `Help: Rooms` field: its text and its badges.
+4. Wait a second, then read the `Help: Rooms` field: its text, its badges and its `Reset` button.
 5. Compare the text on screen, line by line, with the shipped default in `prompts.default.json`.
-6. Click the `Reset` button on the `Help: Rooms` field.
-7. Read the badges again.
-8. Click `Save`.
-9. Open `App_Data\prompts.json` and list its keys.
+6. Read the server console, and the header's `Reset all to defaults` button.
+7. Type ` X` at the end of `Room label` (so Save is enabled) and click `Save`.
+8. Open `App_Data\prompts.json` and list its keys.
+9. Read the badges on `Help: Rooms` again.
 
 **Pass if — all of these**
 
-- `Help: Rooms` gains a `Modified` badge.
-- The textarea text looks character-for-character identical to the shipped wording — you cannot see any difference.
-- Clicking `Reset` clears the `Modified` badge and raises `Unsaved`.
-- After `Save`, `prompts.json` no longer contains `getHelp.rooms` — it is removed, not re-stored with the CRLF text.
+- At step 4 `Help: Rooms` shows NO `Modified` badge, its `Reset` button is disabled, and the text looks character-for-character identical to the shipped wording.
+- At step 6 the server console shows an Information line `Prompt override 'getHelp.rooms' equals the default apart from line endings and is ignored.` (written when the file is read), and `Reset all to defaults` is disabled.
+- After the Save at step 7, `prompts.json` holds `turn.roomLabel` only: `getHelp.rooms` is gone, not re-stored with the CRLF text.
+- At step 9 `Help: Rooms` still shows no badge.
 
 **Fail if — any of these**
 
-- After Reset + Save, the file STILL containing `getHelp.rooms` -> the reset-to-default rule is not removing the key, so the installation stays pinned to a copy of today's wording forever and a future change to the shipped default would never reach it.
-- Reset not clearing the `Modified` badge -> the recovery path from this situation does not exist, and a user has no way to get the field back to 'unmodified' except by hand-editing the file with the right line endings.
+- After the Save at step 7, the file STILL containing `getHelp.rooms` -> the next Save is not dropping an ignored override, so the installation stays pinned to a copy of today's wording forever and a future change to the shipped default would never reach it.
+- A `Modified` badge on `Help: Rooms` at step 4 -> the CRLF copy is pinning the prompt again, with no visible difference and no way out from the UI.
 
 **Inconclusive if**
 
-A `Modified` badge with no visible difference is NOT a defect in itself — the comparison is deliberately ordinal, so a CRLF/LF difference counts. Do not file it as 'Modified badge is wrong'. If you cannot make your editor write CRLF, run this instead in PowerShell to build the file and then re-judge from step 3: read the default value, replace `\n` with `\r\n`, and write the JSON. If you cannot produce the CRLF file at all, mark this test INCONCLUSIVE.
+The comparison ignores line endings by design (decision D6; `PromptStore.cs:406`, `PromptFieldFactory.cs:147-150`), so a missing badge is correct, not a defect. If the Information line is missing but the badge and file behave as above, report the log line as a minor finding and still pass. If you cannot make your editor write CRLF, run this instead in PowerShell to build the file and then re-judge from step 3: read the default value, replace `\n` with `\r\n`, and write the JSON. If you cannot produce the CRLF file at all, mark this test INCONCLUSIVE.
 
 > [!NOTE]
-> Verify the line endings you actually wrote with a hex-capable editor, or in PowerShell: `(Get-Content -Raw 'E:\Repos\Huddle\src\Huddle.App\App_Data\prompts.json') -match "`r`n"`.
+> Verify the line endings you actually wrote with a hex-capable editor, or in PowerShell: `(Get-Content -Raw '<repo>\src\Huddle.App\App_Data\prompts.json') -match "`r`n"`.
 
 ### PROMPTSSETTINGS-36 — Loading /settings never starts an adapter (node) process
 
@@ -1525,7 +1529,7 @@ A `Modified` badge with no visible difference is NOT a defect in itself — the 
 
 **Before you start**
 
-- `Team:Acp:Enabled` is false (the default).
+- The app was launched with `P-LAUNCH-FREE`, which forces `Team:Acp:Enabled` to false (in Development the setting alone would be true).
 - The app is running.
 
 **Steps**
@@ -1562,50 +1566,50 @@ If you already have `node` processes running for unrelated reasons (an editor's 
 
 **Before you start**
 
-- `Team:Acp:Enabled=true` with a working `Team:Acp:AdapterPath`.
-- At least one Persona markdown file under `App_Data\Teams\`, configured on /teammates with Model = Haiku and Effort = low.
-- The app has been restarted since enabling ACP and the teammate shows Online on /teammates.
+- Launched with `P-LAUNCH-UAT`: ACP on, the free mock adapter, and the Teammates Ada and Bo (the stock install finds its adapter by itself, so no `Team:Acp:AdapterPath` is needed).
+- Ada shows Online on /teammates.
 
 **Steps**
 
-1. Open `http://localhost:5100/teammates` in browser tab A and confirm your teammate's status badge reads Online.
+1. Open `http://localhost:5100/teammates` in browser tab A and confirm Ada's status badge reads Online.
 2. Open `http://localhost:5100/settings` in browser tab B.
-3. Clear or note the current end of the server console output.
+3. Clear or note the current end of the server console output. In `T-B` run `Get-Process mock-acp | Select-Object Id, StartTime` and note the rows (`O-MOCK-ADAPTERS` counts them).
 4. In tab B, type ` EDIT1` into `Room label` (a Live prompt) and click `Save`.
 5. Switch to tab A and watch the status badge for ten seconds.
 6. In tab B, type ` EDIT2` into `Identity` (a `Next session` prompt) and click `Save`.
 7. Switch to tab A and watch the status badge for ten seconds.
 8. In tab B, type into `Tools`, `Chat rules` and `get_help description` and click `Save` once for all three.
 9. Switch to tab A and watch the status badge for ten seconds.
-10. Read everything the server console printed since step 3.
+10. Read everything the server console printed since step 3, then re-run the `Get-Process mock-acp` command from step 3.
 
 **Pass if — all of these**
 
-- The teammate's status badge stays `Online` throughout — it never flickers to `Starting`, never goes `Offline`, and the card never shows a `Restart` button (which only appears when Offline or Degraded).
+- The teammate's status badge stays `Online` throughout — it never flickers to `Starting` and never goes `Offline`. (The card shows a `Restart` button in every state except Starting, Online included, so the button proves nothing either way.)
 - The server console shows NO start, stop or restart log lines for any Persona across steps 4-9.
+- The `mock-acp` rows after step 10 have the same `Id` and `StartTime` values as before step 4 — no adapter process was replaced.
 - Each Save otherwise behaves normally (badges clear, Save goes disabled).
 
 **Fail if — any of these**
 
 - Any status change or restart log line after a prompt Save -> binding rule violated. A restart silently destroys the agent's conversation memory, and the only symptom a user ever sees is a teammate that suddenly forgot what was being discussed. Saving five edits as one save must produce at most one store event and zero restarts.
-- The `Restart` button appearing on the card after a prompt save -> the teammate went Offline or Degraded as a consequence of the save.
+- A different `Id` or `StartTime` on a `mock-acp` row after the saves -> the adapter process was replaced even though the badge may have flipped too fast to see.
 
 **Inconclusive if**
 
-If the teammate is not Online before you start (Offline or Degraded), this test cannot distinguish 'a save restarted it' from 'it was already broken'. Fix the teammate first — restart the app and confirm Online — or mark INCONCLUSIVE. If ACP cannot be enabled in your environment (no adapter path), mark the test INCONCLUSIVE and say so; do NOT pass it from the ACP-off configuration, where no session exists to restart.
+If Ada is not Online before you start (Offline or Degraded), this test cannot distinguish 'a save restarted it' from 'it was already broken'. Fix it first — relaunch with `P-LAUNCH-UAT` and confirm Online — or mark INCONCLUSIVE. If `P-LAUNCH-UAT` cannot be run in your environment, mark the test INCONCLUSIVE and say so; do NOT pass it from the ACP-off configuration, where no session exists to restart.
 
 > [!NOTE]
-> This test enables ACP but prompts no Turn, so NO tokens are billed. The only cost is starting the node adapter processes, which happens at boot anyway.
+> This test prompts no Turn and uses the mock adapter, so it costs nothing. Ada's Online status comes from the mock adapter process that `P-LAUNCH-UAT` starts at boot.
 
 ### PROMPTSSETTINGS-38 — COSTS MONEY: a Live prompt edit reaches the very next Turn with no restart
 
 **💰 Spends money** · about 15 min
 
-*Proves the fourteen unbadged prompts really are live — a Live prompt that needed a restart would defeat the whole feature.*
+*Proves the prompts that carry no `Next session` badge really are live — a Live prompt that needed a restart would defeat the whole feature.*
 
 **Before you start**
 
-- `Team:Acp:Enabled=true` with a working `Team:Acp:AdapterPath`.
+- Launched with `P-LAUNCH-PAID` (ACP on, the real adapter; no `Team:Acp:AdapterPath` is set by hand).
 - One Persona configured on /teammates with Model = Haiku and Effort = low.
 - A Room containing that teammate and you.
 - The teammate shows Online.
@@ -1632,10 +1636,10 @@ If the teammate is not Online before you start (Offline or Degraded), this test 
 
 **Inconclusive if**
 
-A model may paraphrase rather than quote verbatim, which makes the chat reply a weak oracle. If the reply is ambiguous, do NOT guess — use the wire oracle instead: set `Team:Acp:TraceWire=true` and `Logging:LogLevel:Agency.Huddle=Trace`, restart, redo the edit, send one message, and read the `session/prompt` text in the console. If ACP cannot be enabled at all, mark INCONCLUSIVE.
+A model may paraphrase rather than quote verbatim, which makes the chat reply a weak oracle. If the reply is ambiguous, do NOT guess — use the free oracle instead: relaunch with `P-LAUNCH-UAT`, redo the edit, send one message to Ada, and read the first line of her reply, which echoes the whole prompt she received (the `((ROOM <name> :: <id>))` form must be there, not the old `[Room: ...]` form). The mock proves what was delivered, not that a model obeys it. Never set `Team:Acp:TraceWire`. If ACP cannot be enabled at all, mark INCONCLUSIVE.
 
 > [!NOTE]
-> COST: two short Turns on Haiku at low effort — a few seconds of model time each, cents at most. Keep both messages to a single line. WARNING: wire tracing dumps the tool-server bearer token to the console; only use it in a throwaway debugging session, and turn it off afterwards.
+> COST: two short Turns on Haiku at low effort — a few seconds of model time each, cents at most. Keep both messages to a single line.
 
 ### PROMPTSSETTINGS-39 — COSTS MONEY: a "Next session" prompt edit is silently inert on a running teammate until it restarts
 
@@ -1645,7 +1649,7 @@ A model may paraphrase rather than quote verbatim, which makes the chat reply a 
 
 **Before you start**
 
-- `Team:Acp:Enabled=true` with a working `Team:Acp:AdapterPath`.
+- Launched with `P-LAUNCH-PAID` (ACP on, the real adapter; no `Team:Acp:AdapterPath` is set by hand).
 - One Persona configured on /teammates with Model = Haiku and Effort = low.
 - A Room with that teammate; the teammate shows Online.
 
@@ -1656,7 +1660,7 @@ A model may paraphrase rather than quote verbatim, which makes the chat reply a 
 3. Click `Save`. Confirm the `Unsaved` badge clears.
 4. Watch the page and the server console for ten seconds for any message saying the edit will not apply.
 5. Return to the Room and send exactly: `In one short sentence, what is your name and role?` Read the reply. (Turn 2.)
-6. Now force a new session: go to /teammates, click `Edit` on that teammate, add a space to the end of its Persona text, and click `Save`. Wait for the status to return to Online. (If the card shows Offline or Degraded, the `Restart` button is available and does the same thing.)
+6. Now force a new session: go to /teammates, click `Restart` on that teammate's card (it is offered in every state except Starting), and wait for the status to return to Online.
 7. Return to the Room and send exactly: `In one short sentence, what is your name and role?` Read the reply. (Turn 3.)
 
 **Pass if — all of these**
@@ -1668,16 +1672,16 @@ A model may paraphrase rather than quote verbatim, which makes the chat reply a 
 **Fail if — any of these**
 
 - Turn 2 already beginning with `BANANA` -> sessions are being restarted on a prompt edit, which the rules file forbids: it throws away the agent's conversation memory every time someone rewords a sentence.
-- Turn 3 still not showing the new wording -> the edit never reaches a new session at all, so the NextSession prompts are effectively uneditable.
+- Turn 3 still not showing the new wording, after one retry -> the edit never reaches a new session, so the NextSession prompts are effectively uneditable. Unless the Inconclusive note below applies.
 
 **Inconclusive if**
 
-A model may decline or forget a formatting instruction, so one non-BANANA reply is not conclusive on its own. If Turn 3 does not show BANANA, retry Turn 3 once before failing. For a definitive, model-independent oracle, enable `Team:Acp:TraceWire=true` with `Logging:LogLevel:Agency.Huddle=Trace` and compare the `_meta.systemPrompt` in the `session/new` message before and after the restart — the system prompt is sent once per session and never re-sent. If ACP cannot be enabled, mark INCONCLUSIVE.
+A model may decline or forget a formatting instruction, so one non-BANANA reply is not conclusive on its own. If Turn 3 does not show BANANA, retry Turn 3 once before failing. There is no free oracle for the system prompt (the mock adapter does not echo `_meta.systemPrompt`), and `Team:Acp:TraceWire` is never set. A Restart resumes the Room's session with `session/resume`, not `session/new`, and whether a resume re-applies the new `_meta.systemPrompt` is unverified (known-limits V-3, `../known-limits.md:157-158`; within one adapter process a resume ignores it, `DotAcpPersonaHost.cs:155-161`). So a Turn 3 without BANANA after the retry is INCONCLUSIVE with V-3 cited, not a Fail; a Turn 3 with BANANA is a Pass. If ACP cannot be enabled, mark INCONCLUSIVE.
 
 > [!NOTE]
-> COST: about three short Turns on Haiku at low effort — cents at most. The 'no on-screen warning' half is documented design, not a defect: report it only as context. WARNING: wire tracing dumps the tool-server bearer token; throwaway sessions only.
+> COST: about three short Turns on Haiku at low effort — cents at most. The 'no on-screen warning' half is documented design, not a defect: report it only as context.
 
-### PROMPTSSETTINGS-40 — COSTS MONEY: get_help re-renders on every call, so its nine prompts land on the next call — while a tool DESCRIPTION does not
+### PROMPTSSETTINGS-40 — COSTS MONEY: get_help re-renders on every call, so its Get help prompts land on the next call — while a tool DESCRIPTION does not
 
 **💰 Spends money** · about 20 min
 
@@ -1685,7 +1689,7 @@ A model may decline or forget a formatting instruction, so one non-BANANA reply 
 
 **Before you start**
 
-- `Team:Acp:Enabled=true` with a working `Team:Acp:AdapterPath`.
+- Launched with `P-LAUNCH-PAID` (ACP on, the real adapter; no `Team:Acp:AdapterPath` is set by hand).
 - One Persona configured on /teammates with Model = Haiku and Effort = low.
 - A Room with that teammate; the teammate shows Online.
 - The teammate has been running for at least one Turn.
@@ -1710,14 +1714,52 @@ A model may decline or forget a formatting instruction, so one non-BANANA reply 
 **Fail if — any of these**
 
 - The get_help body coming back without `PINEAPPLE` -> it is being cached rather than rebuilt per call, so every `Get help` prompt edit silently does nothing until a restart, while the field carries no `Next session` badge to warn anyone.
-- The tool description showing `MANGO` without a restart -> tool descriptions are being re-read somewhere they cannot be, which contradicts the `Next session` badge on those seven fields and means the badge is now misleading in the opposite direction.
+- The tool description showing `MANGO` without a restart -> tool descriptions are being re-read somewhere they cannot be, which contradicts the `Next session` badge on every field in the `Tool descriptions` group and means the badge is now misleading in the opposite direction.
 
 **Inconclusive if**
 
-Models are unreliable at quoting tool descriptions back, so step 9 is the weaker half. If the step-9 reply is evasive or the model claims it cannot see its tool descriptions, do NOT fail — mark that half INCONCLUSIVE and, if you need certainty, read the wire instead: enable `Team:Acp:TraceWire=true` with `Logging:LogLevel:Agency.Huddle=Trace` and inspect the tool list sent at `session/new` and the tool result text for the help call. If ACP cannot be enabled, mark the whole test INCONCLUSIVE.
+Models are unreliable at quoting tool descriptions back, so step 9 is the weaker half. If the step-9 reply is evasive or the model claims it cannot see its tool descriptions, do NOT fail — mark that half INCONCLUSIVE and, if you need certainty, use `O-TOOLCALLS`: the newest line in the Persona's tool-call log must show `tool` = `get_help` for step 4, which proves the call was made (the log holds a cut-down argument summary, not the result text, so the `PINEAPPLE` half still rests on the reply). `Team:Acp:TraceWire` is never set. If ACP cannot be enabled, mark the whole test INCONCLUSIVE.
 
 > [!NOTE]
-> COST: two to three short Turns on Haiku at low effort — cents at most. A get_help call returns a long block, so keep the request scoped to one section as written above, or the reply will be needlessly long. Remember the mock Teammates Ada and Bo (`P-LAUNCH-UAT`) only echo the prompt back and never act on prompt-rendered text — never use them to test whether a prompt took effect. WARNING: wire tracing dumps the tool-server bearer token; throwaway sessions only.
+> COST: two to three short Turns on Haiku at low effort — cents at most. A get_help call returns a long block, so keep the request scoped to one section as written above, or the reply will be needlessly long. Remember the mock Teammates Ada and Bo (`P-LAUNCH-UAT`) only echo the prompt back and never act on prompt-rendered text — never use them to test whether a prompt took effect.
+
+### PROMPTSSETTINGS-41 — The Library tab opens its own pane and does not fall back to Prompts
+
+**Free** · about 4 min
+
+*Guards decision D3: the sixth tab used to be unreachable (a click on it, or `/settings/library`, showed Prompts). Proves the tab, the address and the pane agree.*
+
+**Before you start**
+
+- The app is running, on /settings (Prompts tab).
+
+**Steps**
+
+1. Click the sixth tab, `Library`, in the tab rail.
+2. Read the address bar and the pane under the tabs.
+3. Look at the table's rows and the control in the last column of each row.
+4. Press F5 and read the address bar and the pane again.
+5. Click the `Prompts` tab, then browse straight to `http://localhost:5100/settings/library`.
+6. Read the active tab and the pane.
+
+**Pass if — all of these**
+
+- Step 2: the address is `/settings/library`, the `Library` tab is the active one, and the pane starts with the sentence `A Library Root is a folder the Library can read and change. Teams and Teammates are always here; pin any other folder to add it.` (`LibraryPanel.razor:18-21`).
+- Step 3: a table with the columns `Name`, `Path` and an unlabelled last column lists at least the two built-in roots, `Teams` and `Teammates`, each with a `Hide` switch and no `Remove` button (`LibraryPanel.razor:23-47`).
+- Step 4 and step 6: the same tab and pane are shown after a reload and after a direct visit to the address.
+- The Prompts form, `Save` and the field list are not shown in the Library pane.
+
+**Fail if — any of these**
+
+- Clicking `Library` or visiting `/settings/library` shows the Prompts pane -> the tab is unreachable again (the defect decision D3 fixed).
+- The address stays `/settings/prompts` after the click -> the tab rail is not routing for the sixth tab.
+
+**Inconclusive if**
+
+If the page shows an error strip instead of the table, report it against the Library area and mark this test INCONCLUSIVE; the routing half (address and active tab) can still be judged.
+
+> [!NOTE]
+> Read-only: do not click `Hide` or `Remove` here. Adding, hiding and removing Library Roots belongs to the Library area's tests.
 
 ---
 

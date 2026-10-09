@@ -402,14 +402,15 @@ so, and names its [Roadmap](roadmap.md) item or its ADR. Back to the hub: [Huddl
   now sits in the system prompt, which a model always reads. One live re-run on Haiku (2026-10-01) called
   ToolSearch and then the tool unprompted. That is one sample, so expect a model to still sometimes
   write a list, and treat the paragraph's wording as the thing to tune.
-- **Stopping an Agent stops it in every Room.** One ACP session spans every Room
-  its Agent is in, so there is nothing narrower to stop. `StopTurn` carries the
-  Room the Human asked from as a label, not as a selector — the same
-  one-session-per-Persona limit that makes context bleed between Rooms. **Worse
-  than it reads:** the drain is per Persona, so a Stop in one Room also discards
-  work queued for that Agent from its other Rooms. That is a bug to fix now, ahead of
-  [roadmap item 18](roadmap.md#18-one-session-per-room--designed-2026-09-22-not-built),
-  which makes Stop per Room.
+- **Stop is per Room.** Stopping an Agent in one Room stops only that Room's session
+  ([ADR-0024](../adr/0024-an-agent-holds-one-session-per-room.md)): `StopAsync` routes the
+  Stop to that Room's session, and a Room with no session yet is a no-op
+  (`src/Huddle.App/Acp/Sessions/RoomSessionPool.cs:195-210`). The queue drain is per session
+  too, so a Stop does not discard work queued for the Agent in its other Rooms
+  (`src/Huddle.App/Acp/Sessions/RoomSession.cs:695`). The Persona text, Work Dir, Memory, App
+  Tools and Adapter process are still shared across Rooms. An Adapter profile with
+  `SessionPerRoom` false keeps one shared session for all of them; the default is true
+  (`src/Huddle.App/Acp/AdapterProfileOptions.cs:74`).
 - **Tool activity is never written to the Transcript.** It belongs to the Draft
   and goes when the Draft does, so scrollback shows what an Agent said and not
   what it did.
@@ -434,12 +435,13 @@ so, and names its [Roadmap](roadmap.md) item or its ADR. Back to the hub: [Huddl
     one, and the one you pick is the one you get, on every device, until you pick
     another. Doing this honestly needs a **pair** of authored Themes and a rule for
     resolving between them, the way VS Code's *Preferred Light* / *Preferred Dark* and
-    "Sync with OS" work. Six of the nineteen Themes already have a real counterpart, so
+    "Sync with OS" work. Several of the twenty-one Themes already have a real counterpart in the other mode, so
     the door is open; it is not built. This replaced a worse limit — until 2026-09-21 the
     preference could contradict the Theme, and selecting `Solarized Dark` with `Light`
     showed Huddle's palette under Solarized Dark's name.
-  - **There is no per-Token customisation at all.** `appearance.json` holds a Theme id
-    and nothing else. The override map, its allowlist and the inline `<style>` are gone.
+  - **There is no per-Token customisation at all.** `appearance.json` holds the Theme id
+    (`theme`), the accent colour (`accentColor`) and the Library pane side
+    (`libraryPaneSide`), and nothing else. The override map, its allowlist and the inline `<style>` are gone.
     Changing one colour means editing `ThemeCatalog` in C# and rebuilding, or waiting for
     item 7's Theme import.
   - **A bad Theme id is logged, not shown.** `AppearanceStore` warns, names the unknown

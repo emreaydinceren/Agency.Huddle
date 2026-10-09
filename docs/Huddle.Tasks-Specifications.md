@@ -1,6 +1,6 @@
 # Huddle.Tasks — Design Specification
 
-**Date:** 2026-09-24 · **Status:** Proposed · **Decision records:**
+**Date:** 2026-09-24 · **Status:** Built · **Decision records:**
 [ADR-0025](adr/0025-in-tasks-a-team-is-a-folder-by-convention.md) (*In Tasks, a Team is a folder
 by convention*) and [ADR-0026](adr/0026-a-change-to-a-task-wakes-its-assignee.md) (*A change to
 a Task wakes its assignee*) · **Vocabulary:** [language.md](engineering/language.md) → *Tasks*

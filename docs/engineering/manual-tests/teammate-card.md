@@ -1,6 +1,6 @@
 # Teammate card: view, edit, create, delete
 
-Prove that the one Teammate card (`TeammateCard.razor`, rendered over `/teammates` in View, Edit and Create modes) is the only safe way to create, edit and delete a Persona file on disk — and that it fails loudly, not silently. Almost nothing here is provable by the compiler or the test suite: the create-card open path is untested and calls a helper that throws on a blank name; validation messages arrive from three layers in a fixed precedence; a save rewrites YAML frontmatter in a file whose NAME never changes; and delete-then-recreate is only provable by reading `App_Data\Teams\*.md` and `App_Data\team.db` alongside the screen. Every test below is free unless it says otherwise; exactly one test spends money.
+Prove that the one Teammate card (`TeammateCard.razor`, rendered over `/teammates` in View, Edit and Create modes) is the only safe way to create, edit and delete a Persona file on disk — and that it fails loudly, not silently. Almost nothing here is provable by the compiler or the test suite: the create-card open path is untested and calls a helper that throws on a blank name; validation messages arrive from three layers in a fixed precedence; a save rewrites YAML frontmatter in the Persona's own file, and a changed Name moves the whole folder (ADR-0011); and delete-then-recreate is only provable by reading `<data>\Teammates\<Name>\<Name>.md` and `<data>\team.db` alongside the screen. Every test below is free unless it says otherwise; exactly one test spends money.
 
 > [!NOTE]
 > Stage 4 of the MudBlazor migration (2026-09-14) replaced the card's hand-rolled overlay `<div>`
@@ -12,7 +12,7 @@ Prove that the one Teammate card (`TeammateCard.razor`, rendered over `/teammate
 > logic and file I/O this area exists to prove are exactly as they were; only the "card" wording is
 > now sometimes "dialog" to match what it actually is.
 
-**50 tests** · 49 free, 1 paid 💰 · about 6.3 hours.
+**53 tests** · 52 free, 1 paid 💰 · about 6.9 hours.
 
 Read [the manual test script](../manual-tests.md) first — the cost guard, the Model and Effort
 convention, and the rules for concluding a result — then [Common procedures](common.md), which
@@ -26,37 +26,39 @@ oracles `O-LOG` / `O-ADAPTERS` / `O-TRANSCRIPT` / `O-DB` / `O-WIRE`, the four re
 `P-NEW-PERSONA`, `P-ECHO-BOT` and the standing conventions. This area adds:
 
 1. Start from `E-STOPPED`, and take the [§0.4](../manual-tests.md#04-rollback) backup before anything else — tests in this area delete Persona files and rows from `team.db`, and that copy is the only undo.
-2. Run `P-RESET-TEAMS` so the area starts from the shipped empty library. Do NOT delete `team.db`.
-3. Lane is `P-LAUNCH-FREE`, or equivalently `dotnet run --project E:\Repos\Huddle\src\Huddle.App -- --Team:Acp:Enabled=false`.
+2. Run `P-RESET-TEAMS`, which deletes every folder under `<data>\Teammates`. Do NOT delete `team.db`. The area still never starts from an empty library: the built-in **Chief of Staff** (alias `cos`, no Team) is re-seeded at every start, whatever `Acp:Enabled` is, so "empty" below means "holds only the Chief of Staff". TEAMMATECARD-01 is the one test that removes it.
+3. Lane is `P-LAUNCH-FREE`, or equivalently `dotnet run --project src/Huddle.App -- --Team:Acp:Enabled=false`. Every Teammate then reads Offline and nothing is spawned for it. Part of this page (TEAMMATECARD-43 onward) leaves that lane and names `P-LAUNCH-UAT` in its own steps.
 4. `O-DB` is REQUIRED from TEAMMATECARD-35 onward, not optional: install `sqlite3` and confirm `sqlite3 -version` in a fresh `T-B`. (DB Browser for SQLite is an acceptable substitute.)
 5. Confirm `node --version` prints a version. TEAMMATECARD-37 onward need a node process spawn to be observable.
-6. Open `http://localhost:5100/teammates`. Keep a File Explorer window on `App_Data\Teams` and a text editor able to show line endings (VS Code, Notepad++).
-7. After each test, delete any Persona file it created from `App_Data\Teams` and its sub-folders, unless the next test says to keep it, so tests do not leak state into one another.
+6. Open `http://localhost:5100/teammates`. Keep a File Explorer window on `<data>\Teammates` and a text editor able to show line endings (VS Code, Notepad++). A Persona lives at `<data>\Teammates\<Name>\<Name>.md`; a `.md` directly under `Teammates` is rejected.
+7. **Clean-up.** After each test, remove every Persona it created, unless the next test says to keep it: open its card and use **Remove** (the person-with-a-minus icon, then **Confirm**), then delete the leftover `<data>\Teammates\<Name>` folder in File Explorer. Never remove the Chief of Staff (its card offers **Reset to default**, not Remove). This keeps tests from leaking state into one another.
 
 ## Tests
 
 ### TEAMMATECARD-01 — Empty Teammates page and the New teammate entry point
 
-**Free** · about 3 min
+**Free** · about 5 min
 
-*Proves the page's zero-Persona state renders the empty message, and hides the Team filter entirely.*
+*Proves the page's zero-Persona state renders the empty message, and hides the Team filter entirely. The Chief of Staff is seeded at every start (`BuiltinTeammateSeeder`), so the empty state is only reachable by deleting its file while the app runs.*
 
 **Before you start**
 
-- The app is running with `--Team:Acp:Enabled=false`.
-- `E:\Repos\Huddle\src\Huddle.App\App_Data\Teams` contains no `.md` file anywhere, including sub-folders.
+- The app is running with `--Team:Acp:Enabled=false`, freshly started after `P-RESET-TEAMS`.
+- `<data>\Teammates` holds one folder, `Chief of Staff`, and no other Persona.
 
 **Steps**
 
-1. Confirm in File Explorer that `E:\Repos\Huddle\src\Huddle.App\App_Data\Teams` holds no `.md` file at any depth.
-2. Navigate to http://localhost:5100/teammates .
-3. Read the top of the page.
-4. Look for a `<select>` labelled **Team** anywhere on the page.
-5. Read the body text below the intro paragraph.
+1. Navigate to http://localhost:5100/teammates and confirm one tile, `Chief of Staff`, and a **Team** select in the toolbar.
+2. In File Explorer delete the file `<data>\Teammates\Chief of Staff\Chief of Staff.md` while the app keeps running. Do not delete `team.db`.
+3. Wait about one second for the page to repaint.
+4. Read the top of the page.
+5. Look for a `<select>` labelled **Team** anywhere on the page.
+6. Read the body text below the intro paragraph.
+7. Restore the Chief of Staff: `P-STOP`, then `P-LAUNCH-FREE` again. The seeder writes it back at the start.
 
 **Pass if — all of these**
 
-- A heading reads exactly `Teammates`, with a button labelled `New teammate` at the top right.
+- A heading reads exactly `Teammates`, with a text button labelled `New teammate` (an `Add` icon beside it) first in the toolbar, on the left.
 - An intro paragraph begins `A Persona is a Markdown file describing how one teammate should behave, plus the model it thinks with.`
 - The body reads `No Personas yet. Choose New teammate to add one.` with `New teammate` in bold.
 - No **Team** filter select is rendered at all.
@@ -64,20 +66,20 @@ oracles `O-LOG` / `O-ADAPTERS` / `O-TRANSCRIPT` / `O-DB` / `O-WIRE`, the four re
 **Fail if — any of these**
 
 - A **Team** filter select is rendered while the list is empty -> the filter is no longer inside the non-empty branch and will offer an empty choice list.
-- The empty-state sentence is missing or replaced by a blank area -> a user with a genuinely empty Teams folder is given no next action and no explanation.
+- The empty-state sentence is missing or replaced by a blank area -> a user with a genuinely empty Teammates folder is given no next action and no explanation.
 
 **Inconclusive if**
 
-If the page shows tiles, a Persona file still exists somewhere under `Teams` (check sub-folders). Delete them, wait ~1 second for the page to repaint, and repeat. If the page shows a `Files that didn't load` section, a non-Persona `.md` is present — remove it and repeat. If the browser shows nothing at all, the app is not running: restart it with the setup command and retry.
+If the page shows tiles, a Persona file still exists under `Teammates` (check each folder; the Chief of Staff may have been re-seeded if the app restarted). Delete them, wait ~1 second for the page to repaint, and repeat. If the page shows a `Files that didn't load` section, a non-Persona `.md` is present — remove it and repeat. If the browser shows nothing at all, the app is not running: restart it with the setup command and retry.
 
 > [!NOTE]
-> Run this first; it is the baseline every later test assumes.
+> Run this first. Step 7 matters: every later test assumes the Chief of Staff is back, and it only returns at the next start.
 
 ### TEAMMATECARD-02 — Clicking New teammate opens a card at all (blank-name crash probe)
 
 **Free** · about 6 min
 
-*Proves the Create card can be opened with an empty Name — the page passes the card a status resolved from the current name, and the resolver throws on a blank one.*
+*A smoke test: the Create card opens with an empty Name and survives the Name being cleared. Opening it passes no status (`BuildCreateParameters`, `Teammates.razor:264-267`), and `ResolveStatus` guards a blank name (`Teammates.razor:204-207`), so it can only fail on a regression.*
 
 **Before you start**
 
@@ -91,8 +93,8 @@ If the page shows tiles, a Persona file still exists somewhere under `Teams` (ch
 3. Observe immediately whether a dialog headed `New teammate` appears, or whether a pale-yellow bar appears at the bottom of the page reading `An unhandled error has occurred.` with a `Reload` link.
 4. Read the app console and copy any exception text printed in the last few seconds.
 5. Reload the browser page and click `New teammate` a second time to confirm the outcome reproduces.
-6. If the card DID open: type `Nova` into the **Name** field, then select all of it and delete it so the field is empty again. Observe the card and the console.
-7. If the card is still alive: type a single space into the **Name** field. Observe the card and the console again.
+6. If the card DID open: type `Nova` into the **Name** field, press Tab, then select all of it, delete it and press Tab again so the field is empty again. Observe the card and the console.
+7. If the card is still alive: type a single space into the **Name** field and press Tab. Observe the card and the console again.
 
 **Pass if — all of these**
 
@@ -103,26 +105,26 @@ If the page shows tiles, a Persona file still exists somewhere under `Teams` (ch
 
 **Fail if — any of these**
 
-- No card appears and the yellow bar `An unhandled error has occurred.` with a `Reload` link is shown -> the Blazor circuit was killed during render; the page passes `ResolveStatus(cardName)` to the card unconditionally, and with an empty name that reaches a guard that throws `ArgumentException` on `personaName`. Creating a teammate is impossible at all.
-- The card opens but dies the moment the Name is cleared or set to a single space -> the same unguarded call, reached mid-typing; a user who backspaces over their typo loses the whole form.
-- The console shows `ArgumentException` naming `personaName` raised through `Agency.Huddle.App.Acp.PersonaHealth.Get` and `Agency.Huddle.App.Components.Pages.Teammates.ResolveStatus` -> confirms the above diagnosis; record the stack verbatim.
+- No card appears and the yellow bar `An unhandled error has occurred.` with a `Reload` link is shown -> the Blazor circuit was killed while the card rendered. Record the console's exception text verbatim; creating a teammate is impossible.
+- The card opens but dies the moment the Name is cleared or set to a single space -> a user who backspaces over their typo loses the whole form. Record the console's exception text verbatim.
 
 **Inconclusive if**
 
-If the yellow bar appears but the console shows an unrelated exception (a database lock, a disposed object), this test says nothing about the blank-name path — record the real exception and mark inconclusive. If the browser had a stale circuit from before an app restart, reload the page once and retry before judging.
+If the yellow bar appears but the console shows an unrelated exception (a database lock, a disposed object), record the real exception and mark inconclusive. If the browser had a stale circuit from before an app restart, reload the page once and retry before judging.
 
 > [!NOTE]
-> This is the highest-value test in the area and the cheapest. If it fails, every Create test (05-11, 18-21, 27, 28, 33) is blocked; run the Edit/View/Remove tests against hand-placed Persona files instead and report the block explicitly.
+> Cheap, and every Create test (05-11, 18-21, 27, 28, 33) depends on the card opening. If it fails, report the block explicitly and run only the tests that need no new teammate.
 
 ### TEAMMATECARD-03 — Create card: every label, placeholder and hint
 
 **Free** · about 6 min
 
-*Proves the Create card shows the create-specific wording and no status line, so a user is never told to type frontmatter they must not type.*
+*Proves the Create card shows the create-specific wording and no status line, and lists every control it renders in its real order, so a user is never told to type frontmatter they must not type.*
 
 **Before you start**
 
 - TEAMMATECARD-02 passed, so the Create card can be opened.
+- Wait a few seconds after the card opens before judging the Model, Effort and Work mode controls: the model probe fills them in.
 
 **Steps**
 
@@ -130,8 +132,8 @@ If the yellow bar appears but the console shows an unrelated exception (a databa
 2. Read the card's header text and hover the small button on its right.
 3. Read the four text inputs from top to bottom, noting each label, each placeholder, and the small hint under each.
 4. Read the label and placeholder on the large multi-line box below them, and the hint under it.
-5. Read the labels of the two `<select>` controls below that.
-6. Read the two buttons at the bottom of the card.
+5. Read every control below the multi-line box, from top to bottom, noting each label and hint. Include the **Avatar** panel at the bottom.
+6. Read the two buttons at the bottom of the card, left to right.
 7. Scan the whole card for a coloured status dot, or any of the words `Online`, `Offline`, `Starting`, `Degraded`.
 
 **Pass if — all of these**
@@ -140,8 +142,13 @@ If the yellow bar appears but the console shows an unrelated exception (a databa
 - A circular avatar showing a monogram is present at the top left of the card body.
 - The four inputs are, in order: **Name** (placeholder `Chief of Staff`, hint `Letters, digits, spaces, - and _. Spaces are fine.`), **Title** (placeholder `Chief of Staff`, hint `A short role description, shown alongside the Name.`), **Alias** (placeholder `coo`, hint `A short working handle, for mentions and quick reference.`), **Teams** (placeholder `Business, Household`, hint `Comma-separated. Leave blank for no team.`).
 - The multi-line box is labelled `Persona body`, has placeholder `You are the Chief of Staff. You keep the team honest.`, and its hint reads `Markdown. Becomes the teammate's system prompt, placed after the Name, Title, Alias and Teams above — no front matter needed here.`
-- The two selects are labelled `Model` and `Effort`, in that order.
-- The buttons read `Add teammate` (styled as the primary action) and `Cancel`.
+- Below the multi-line box the controls are, in this order (`TeammateCard.razor:296-554`):
+  1. a multi-select labelled `Skills` with the hint `Changing Skills restarts this Teammate.` (always rendered, `:340`);
+  2. a select labelled `Model` whose blank option reads `Use the agent's default`, then a select labelled `Effort` with the same blank option;
+  3. a select labelled `Work mode`, only while the probe runs or once the adapter advertises modes (`:471`, `ShowWorkModePicker`); it may disappear when the probe finishes with no modes, which is not a failure;
+  4. an **Avatar** panel: radios `Initials of the name`, `A short label`, `An image`, a colour field labelled `Background`, and a `Use the theme colour` button.
+  A select labelled `Adapter` appears between the multi-line box and `Skills` only when more than one adapter profile is configured; on a stock install it is absent.
+- The buttons read `Cancel` then `Add teammate` (the primary, filled action), left to right.
 - No status dot and no status word appears anywhere on the card.
 
 **Fail if — any of these**
@@ -161,7 +168,7 @@ If the card does not open at all, this test is blocked by TEAMMATECARD-02 — re
 
 **Free** · about 3 min
 
-*Proves the Name input round-trips to the page and back, and that the monogram takes first-and-last word rather than the first two.*
+*Proves the Name input round-trips to the page and back, and that the monogram takes first-and-last word rather than the first two. The Name box commits on blur, not on every keystroke (`TeammateCard.razor:89`, plain `@bind-Value`), so each step leaves the field with Tab before reading the avatar.*
 
 **Before you start**
 
@@ -170,9 +177,9 @@ If the card does not open at all, this test is blocked by TEAMMATECARD-02 — re
 **Steps**
 
 1. Click `New teammate` and look at the circular avatar with the **Name** field empty.
-2. Type `ada` into **Name** and read the avatar.
-3. Clear the field, type `Emily Lee`, and read the avatar.
-4. Clear the field, type `Chief of Staff`, and read the avatar.
+2. Type `ada` into **Name**, press Tab, and read the avatar.
+3. Clear the field, type `Emily Lee`, press Tab, and read the avatar.
+4. Clear the field, type `Chief of Staff`, press Tab, and read the avatar.
 
 **Pass if — all of these**
 
@@ -183,7 +190,7 @@ If the card does not open at all, this test is blocked by TEAMMATECARD-02 — re
 
 **Fail if — any of these**
 
-- The avatar stays on `?` however much you type -> the Name binding no longer round-trips from the card to the page; every field on the card is bound the same way, so a save would write the wrong (or empty) identity.
+- The avatar stays on `?` after you press Tab out of a non-empty Name -> the Name binding no longer round-trips from the card to the page; every field on the card is bound the same way, so a save would write the wrong (or empty) identity. (An avatar that has not changed before you press Tab is expected, not a failure.)
 - `Chief of Staff` shows `CO` -> the monogram takes the first two words instead of the first and last, giving a middle word like `of` a letter it does not deserve.
 
 **Inconclusive if**
@@ -194,38 +201,38 @@ If clearing the Name kills the card (see TEAMMATECARD-02), do the three positive
 
 **Free** · about 15 min
 
-*Proves the Name validation still rejects everything that would produce two teammates a reader cannot tell apart, or a filename that escapes the Teams folder.*
+*Proves the Name validation still rejects everything that would produce two teammates a reader cannot tell apart, or a folder or filename that escapes the Teammates folder.*
 
 **Before you start**
 
 - The Create card can be opened.
-- `App_Data\Teams` is empty.
+- `<data>\Teammates` holds only the Chief of Staff's folder.
 
 **Steps**
 
 1. Click `New teammate`. Fill **Title** with `T`, **Alias** with `a1`, and the **Persona body** with `x`. Leave **Model** and **Effort** on their blank option.
 2. Set **Name** to each of the following in turn and click `Add teammate` after each, reading the red error line at the top of the card body and then correcting the Name for the next attempt. REJECT SET, in order: (1) leave empty, (2) ` Nova` (one leading space), (3) `Nova ` (one trailing space), (4) `Emily  Lee` (two spaces between the words), (5) `Nova.1`, (6) `-nova`, (7) `_nova`, (8) `Nova!`, (9) `Ünal`, (10) `AAAAAAAAAABBBBBBBBBBCCCCCCCCCCDDDDDDDDDDEEEEEEEEEEFFFFFFFFFFGGGGG` (65 characters).
-3. After all ten rejects, check File Explorer: `App_Data\Teams` must still contain no `.md` file.
-4. Now the ACCEPT set. For each of these, set **Name** to the value, set **Alias** to the matching unique handle, click `Add teammate`, confirm the card switches to View mode, close the card, delete the created `.md` file from `App_Data\Teams`, and click `New teammate` again for the next one: `Nova` (alias `nv1`), `Emily Lee` (alias `nv2`), `1Nova` (alias `nv3`), `nova-2` (alias `nv4`), `nova_2` (alias `nv5`), `AAAAAAAAAABBBBBBBBBBCCCCCCCCCCDDDDDDDDDDEEEEEEEEEEFFFFFFFFFFGGGG` (64 characters, alias `nv6`).
-5. Confirm `App_Data\Teams` is empty again when you finish.
+3. After all ten rejects, check File Explorer: `<data>\Teammates` must still hold only the `Chief of Staff` folder.
+4. Now the ACCEPT set. For each of these, set **Name** to the value, set **Alias** to the matching unique handle, click `Add teammate`, confirm the card switches to View mode, close the card, run the Clean-up from Setup step 7 for it, and click `New teammate` again for the next one: `Nova` (alias `nv1`), `Emily Lee` (alias `nv2`), `1Nova` (alias `nv3`), `nova-2` (alias `nv4`), `nova_2` (alias `nv5`), `AAAAAAAAAABBBBBBBBBBCCCCCCCCCCDDDDDDDDDDEEEEEEEEEEFFFFFFFFFFGGGG` (64 characters, alias `nv6`).
+5. Confirm `<data>\Teammates` holds only the `Chief of Staff` folder again when you finish.
 
 **Pass if — all of these**
 
 - Every one of the ten reject values produces the single red line `'<exactly what you typed>' is not a valid Persona name.` and the card stays open.
-- No `.md` file appears under `App_Data\Teams` for any rejected attempt.
-- Every one of the six accept values saves successfully and creates one `.md` file named after it.
+- No folder and no `.md` file appears under `<data>\Teammates` for any rejected attempt.
+- Every one of the six accept values saves successfully and creates a folder named after it holding one `<Name>.md`.
 
 **Fail if — any of these**
 
 - ` Nova`, `Nova ` or `Emily  Lee` is accepted -> a leading, trailing or doubled space now produces two teammates a reader cannot visually distinguish, and Windows silently strips a trailing space from a filename so two names would resolve to one file.
-- `Nova.1` is accepted -> a dot reached the Name, which becomes the filename `{Name}.md`; this rule is the path-traversal guard, so its loss is a security regression, not a cosmetic one.
+- `Nova.1` is accepted -> a dot reached the Name, which becomes the folder name and the filename `{Name}.md`; this rule is the path-traversal guard, so its loss is a security regression, not a cosmetic one.
 - `Ünal` or `Nova!` is accepted -> the Name character set widened beyond what Mention matching and filenames can carry.
 - The 65-character name is accepted -> the length cap is gone.
 - Any accepted value in step 4 is rejected -> the rule tightened; `Emily Lee` in particular must stay legal, a Name is a display name.
 
 **Inconclusive if**
 
-If the card dies on the empty-Name case (TEAMMATECARD-02), skip reject case (1), record it as blocked, and run the other nine. If an accept case fails with `Persona 'X' already exists.` you did not delete the previous file — delete it and retry that one value.
+If the card dies on the empty-Name case (TEAMMATECARD-02), skip reject case (1), record it as blocked, and run the other nine. If an accept case fails with `Persona 'X' already exists.` you did not remove the previous Persona — run the Clean-up for it and retry that one value.
 
 > [!NOTE]
 > Do the whole reject set before the accept set: rejects write nothing, so they need no cleanup between attempts.
@@ -239,20 +246,20 @@ If the card dies on the empty-Name case (TEAMMATECARD-02), skip reject case (1),
 **Before you start**
 
 - The Create card can be opened.
-- `App_Data\Teams` is empty.
+- `<data>\Teammates` holds only the Chief of Staff's folder.
 
 **Steps**
 
 1. Click `New teammate`. Set **Name** to `Nova`, **Title** to `T`, **Persona body** to `x`.
 2. Set **Alias** to each of these in turn and click `Add teammate` after each, reading the red line: leave empty, then ` jar` (leading space), then `jar jar ` (trailing space), then `jar.1`, then `-jar`.
-3. Confirm `App_Data\Teams` still contains no `.md` file.
-4. Set **Alias** to `jar` and click `Add teammate`. Confirm it saves, then close the card and delete the created file.
-5. Repeat step 4 for **Alias** `Jar Jar`, then for **Alias** `jar-1`, deleting the created file each time.
+3. Confirm `<data>\Teammates` still holds only the `Chief of Staff` folder.
+4. Set **Alias** to `jar` and click `Add teammate`. Confirm it saves, then close the card and run the Clean-up (Setup step 7).
+5. Repeat step 4 for **Alias** `Jar Jar`, then for **Alias** `jar-1`, running the Clean-up each time.
 
 **Pass if — all of these**
 
 - Each of the five invalid aliases produces the single red line `'<exactly what you typed>' is not a valid Persona alias.` — the word is `alias`, not `name`.
-- No `.md` file appears for any rejected attempt.
+- No folder or `.md` file appears under `<data>\Teammates` for any rejected attempt.
 - `jar`, `Jar Jar` and `jar-1` each save successfully.
 
 **Fail if — any of these**
@@ -274,7 +281,7 @@ If the empty-Alias case shows the Name error instead, first re-read the Name fie
 **Before you start**
 
 - The Create card can be opened.
-- `App_Data\Teams` is empty.
+- `<data>\Teammates` holds only the Chief of Staff's folder.
 
 **Steps**
 
@@ -283,7 +290,7 @@ If the empty-Alias case shows the Name error instead, first re-read the Name fie
 3. Set **Name** to `Nova`. Click `Add teammate` and read the red line.
 4. Set **Alias** to `nov`. Click `Add teammate` and read the red line.
 5. Set **Persona body** to `You are Nova.`, leave **Title** still empty. Click `Add teammate` and read the red line.
-6. Confirm at every step that only ONE red line is visible at a time, and that `App_Data\Teams` is still empty.
+6. Confirm at every step that only ONE red line is visible at a time, and that `<data>\Teammates` still holds only the `Chief of Staff` folder.
 
 **Pass if — all of these**
 
@@ -315,7 +322,7 @@ If step 2 kills the circuit rather than showing an error, that is TEAMMATECARD-0
 **Before you start**
 
 - The Create card can be opened.
-- `App_Data\Teams` is empty.
+- `<data>\Teammates` holds only the Chief of Staff's folder.
 
 **Steps**
 
@@ -324,8 +331,8 @@ If step 2 kills the circuit rather than showing an error, that is TEAMMATECARD-0
 3. Set **Title** to three spaces and click `Add teammate` again. Read the red line.
 4. Set **Title** to exactly `Router, triage, and cross-workstation continuity` and click `Add teammate`.
 5. Read the second line of the resulting View card (immediately under the name heading).
-6. Open `E:\Repos\Huddle\src\Huddle.App\App_Data\Teams\Nova.md` in a text editor and read line 3.
-7. Close the card and delete `Nova.md`.
+6. Open `<data>\Teammates\Nova\Nova.md` in a text editor and read line 3.
+7. Close the card and run the Clean-up for `Nova` (Setup step 7).
 
 **Pass if — all of these**
 
@@ -365,7 +372,7 @@ If the save is refused with a Name or Alias error, the precedence rule is maskin
 7. Without touching anything else, read every field on the card and note the selected option in both selects.
 8. Change **Alias** to `atl` and click `Add teammate`.
 9. Read the resulting View card's `Persona` block.
-10. Close the card and delete the created file.
+10. Close the card and run the Clean-up for `Atlas` (Setup step 7).
 
 **Pass if — all of these**
 
@@ -387,7 +394,7 @@ If the Model/Effort selects offer no options at all (no node, or an unauthentica
 
 **Free** · about 4 min
 
-*Proves the identity inputs sit outside the form and that saving is a Blazor event, not a page navigation.*
+*Proves the identity inputs do not submit on Enter and that saving is a Blazor event, not a page navigation. The card is a `MudDialog` with no `<form>` or `EditForm` in it (`TeammateCard.razor:70-564`), so there is nothing for Enter to submit.*
 
 **Before you start**
 
@@ -400,7 +407,7 @@ If the Model/Effort selects offer no options at all (no node, or an unauthentica
 3. Repeat in the **Title**, **Alias** and **Teams** inputs.
 4. Click into the **Persona body** box, press Enter, and observe.
 5. Watch the browser's tab spinner / reload indicator, then click `Add teammate`.
-6. Close the card and delete the created file.
+6. Close the card and run the Clean-up for `Nova` (Setup step 7).
 
 **Pass if — all of these**
 
@@ -418,7 +425,7 @@ If the Model/Effort selects offer no options at all (no node, or an unauthentica
 If the browser reload indicator is too fast to see, open DevTools > Network, check `Preserve log`, and confirm no document-type request appears when you click `Add teammate`.
 
 > [!NOTE]
-> Enter not submitting is expected: the four identity inputs genuinely sit above and outside the `<form>` element. Record it as an ergonomic gap if you like, but it is not a defect.
+> Enter not submitting is expected: the card has no form element at all, so Enter in an identity input has nothing to submit. Record it as an ergonomic gap if you like, but it is not a defect.
 
 ### TEAMMATECARD-11 — A successful create lands on the new teammate's View card
 
@@ -429,7 +436,7 @@ If the browser reload indicator is too fast to see, open DevTools > Network, che
 **Before you start**
 
 - The Create card can be opened.
-- `App_Data\Teams` is empty.
+- `<data>\Teammates` holds only the Chief of Staff's folder.
 
 **Steps**
 
@@ -437,15 +444,15 @@ If the browser reload indicator is too fast to see, open DevTools > Network, che
 2. Click `Add teammate`.
 3. Read the card header, the identity block and every section heading in the card body.
 4. Look behind the dialog at the list on the page.
-5. Confirm `App_Data\Teams\Nova.md` exists in File Explorer.
+5. Confirm `<data>\Teammates\Nova\Nova.md` exists in File Explorer.
 6. Leave the card and the file in place — TEAMMATECARD-12 continues from here.
 
 **Pass if — all of these**
 
 - The card stays open and its header now reads `Teammate`.
-- The card body shows `Nova` as a heading, `Ops Lead` beneath it, a status dot with a status word, `Alias: nov`, `Teams: Business`, and the sections `Persona`, `Model`, `Effort`, `Persona file`.
+- The card body shows `Nova` as a heading, `Ops Lead` beneath it, a status dot with a status word, `Alias: nov`, `Teams: Business`, and the sections `Persona`, `Model`, `Effort`, `Work mode`, `Persona file`, in that order (`TeammateCard.razor:239-264`).
 - Behind the dialog a new tile for `Nova` has appeared under a `Business` heading.
-- `App_Data\Teams\Nova.md` exists.
+- `<data>\Teammates\Nova\Nova.md` exists.
 
 **Fail if — any of these**
 
@@ -475,19 +482,19 @@ If the tile appears but the Teams heading reads `No team`, check the Teams input
 3. Read the identity block top to bottom: monogram, name, title, status dot and word, any reason line, `Alias:` line, `Teams:` line.
 4. Read the row of actions under the identity block, left to right.
 5. Read any hint text directly under that row.
-6. Read the four section headings and their contents, especially the block under `Persona`.
-7. Compare the text under `Persona` character for character with the contents of `App_Data\Teams\Nova.md` opened in a text editor.
+6. Read the five section headings and their contents, especially the block under `Persona` and the paragraph under `Work mode`.
+7. Compare the text under `Persona` character for character with the contents of `<data>\Teammates\Nova\Nova.md` opened in a text editor.
 8. Read the path shown under `Persona file`.
 
 **Pass if — all of these**
 
 - The header reads exactly `Teammate` — not the teammate's name.
 - The identity block shows `Nova`, `Ops Lead`, a dot plus the word `Offline`, `Alias: nov`, `Teams: Business`.
-- The actions are, in order: `Edit`, `Open`, `Restart`, `Remove`. (`Message` is absent — see TEAMMATECARD-44.)
+- The actions are, in order: `Edit`, `Open`, `Restart`, and **Remove**, which is an icon button (a person with a minus sign, red) with the tooltip and accessible name `Remove`, not a text button. (`Message` is absent — see TEAMMATECARD-44.)
 - Under the actions the hint reads `Like saving an edit, this restarts the teammate, which clears what it remembers.`
-- The sections are `Persona`, `Model`, `Effort`, `Persona file`, in that order.
+- The sections are `Persona`, `Model`, `Effort`, `Work mode`, `Persona file`, in that order; `Work mode` reads `Agent default`.
 - The `Persona` block contains the WHOLE file including both `---` delimiter lines and the `name:`/`title:`/`alias:`/`teams:` lines.
-- `Persona file` shows the absolute path `E:\Repos\Huddle\src\Huddle.App\App_Data\Teams\Nova.md`.
+- `Persona file` shows the absolute path `<data>\Teammates\Nova\Nova.md`, with `<data>` written out in full.
 
 **Fail if — any of these**
 
@@ -498,7 +505,7 @@ If the tile appears but the Teams heading reads `No team`, check the Teams input
 
 **Inconclusive if**
 
-If the status reads `Online` or `Starting`, the app was started without `--Team:Acp:Enabled=false`; restart it with the setup command and repeat, because the `Restart` button and its hint are correctly hidden when healthy (TEAMMATECARD-45).
+If the status reads `Online`, `Degraded` or `Starting`, the app was started without `--Team:Acp:Enabled=false`; restart it with the setup command and repeat. `Restart` and its hint are shown in every state except `Starting` (`TeammateCard.razor:182,234`; TEAMMATECARD-45), so an `Online` card still lists them, but a `Starting` card legitimately lacks both.
 
 ### TEAMMATECARD-13 — View card: 'Agent default' and 'Model default' when nothing is stored
 
@@ -515,12 +522,14 @@ If the status reads `Online` or `Starting`, the app was started without `--Team:
 1. Open `Nova`'s card by clicking its tile.
 2. Read the paragraph under the `Model` heading.
 3. Read the paragraph under the `Effort` heading.
+4. Read the paragraph under the `Work mode` heading.
 
 **Pass if — all of these**
 
 - `Model` reads exactly `Agent default`.
 - `Effort` reads exactly `Model default`.
 - Neither paragraph is blank.
+- `Work mode`, the section below `Effort`, also reads `Agent default`.
 
 **Fail if — any of these**
 
@@ -598,7 +607,7 @@ If your browser or OS has a screen-magnifier or accessibility tool intercepting 
 1. Click `New teammate`. Fill **Name** `Atlas`, **Title** `Ops`, **Alias** `atl`, **Teams** `Business`, **Persona body** `You are Atlas.`; if the selects offer options, choose Haiku and low.
 2. Click `Cancel`.
 3. Click `New teammate` again and inspect all four inputs, the body box, both selects and the top of the card body.
-4. Close the card. Click the `Nova` tile, then click `Remove` so the buttons `Confirm` and `Cancel` are showing.
+4. Close the card. Click the `Nova` tile, then click the red `Remove` icon button so the buttons `Confirm` and `Cancel` are showing.
 5. Close the card by clicking the dimmed backdrop — do NOT click `Confirm` or `Cancel`.
 6. Click the `Nova` tile again and read the action row.
 7. With `Nova`'s card open, click `Edit`, clear the whole text box, click `Save` so a red error appears, then close the card with `×`.
@@ -607,7 +616,7 @@ If your browser or OS has a screen-magnifier or accessibility tool intercepting 
 **Pass if — all of these**
 
 - On reopening Create, all four inputs and the body box are empty, both selects show `Use the agent's default`, and no red error line is showing.
-- After reopening `Nova`, the action row shows a single `Remove` button — not `Confirm`.
+- After reopening `Nova`, the action row shows the single `Remove` icon button — not `Confirm` and `Cancel`.
 - After reopening `Nova` following the errored Edit, no red error line is showing.
 
 **Fail if — any of these**
@@ -628,29 +637,29 @@ If step 7's Save succeeds instead of erroring, you did not fully clear the text 
 
 **Before you start**
 
-- `Nova` exists at `App_Data\Teams\Nova.md`.
+- `Nova` exists at `<data>\Teammates\Nova\Nova.md`.
 
 **Steps**
 
 1. Click the `Nova` tile.
-2. Click `Remove` and read the action row.
+2. Click the red `Remove` icon button (tooltip `Remove`) and read the action row.
 3. Click `Cancel` and read the action row again.
 4. Confirm in File Explorer that `Nova.md` is still present and its modified time is unchanged.
-5. Click `Remove`, then click `Confirm`.
+5. Click the `Remove` icon button, then click `Confirm`.
 6. Observe the card and the list behind it.
-7. Confirm in File Explorer that `Nova.md` is gone.
+7. Confirm in File Explorer that `Nova.md` is gone. The `Nova` folder itself may remain; it is not a Persona and the page ignores it.
 
 **Pass if — all of these**
 
-- Clicking `Remove` replaces it with two buttons, `Confirm` (styled as the danger action) and `Cancel`.
-- Clicking `Cancel` collapses them back to a single `Remove` and the card stays open.
+- Clicking the `Remove` icon replaces it with two text buttons, `Confirm` (styled as the danger action) and `Cancel`.
+- Clicking `Cancel` collapses them back to the single `Remove` icon and the card stays open.
 - `Nova.md` is untouched after the Cancel.
 - Clicking `Confirm` closes the card and the `Nova` tile disappears from the list.
 - `Nova.md` no longer exists.
 
 **Fail if — any of these**
 
-- `Remove` deletes on a single click -> there is no confirmation step at all on the only destructive action in the app.
+- The `Remove` icon deletes on a single click -> there is no confirmation step at all on the only destructive action in the app.
 - `Cancel` closes the card instead of only cancelling the removal -> a user loses their place and may not realise nothing was deleted.
 - The file is gone after the Cancel -> the delete ran before the confirmation.
 
@@ -670,7 +679,7 @@ If `Confirm` produces a red line `Persona 'Nova' does not exist.`, the file was 
 **Before you start**
 
 - The Create card can be opened.
-- `App_Data\Teams` is empty.
+- `<data>\Teammates` holds only the Chief of Staff's folder. It has no Team, so it sits under `No team` throughout.
 - `T-B` is open for `O-ADAPTERS`.
 
 **Steps**
@@ -681,41 +690,44 @@ If `Confirm` produces a red line `Persona 'Nova' does not exist.`, the file was 
 4. Open the **Team** select and read its options.
 5. Select `Business`, then run `O-ADAPTERS` again.
 6. Select `Household`, then `All teams`, reading the list after each.
-7. In File Explorer create the folder `App_Data\Teams\Household` and MOVE `Nova.md` into it, without editing the file.
+7. In a text editor open `<data>\Teammates\Nova\Nova.md`, change the line `teams: ['Business']` to `teams: ['Household']`, and save. Leave the folder and the filename alone.
 8. Wait about one second, then read the group headings again.
+9. Change the line back to `teams: ['Business']` and save. Then, in File Explorer, create the folder `<data>\Teammates\Household` and MOVE `Nova.md` into it. Wait about one second and read the page, including any `Files that didn't load` section.
 
 **Pass if — all of these**
 
-- Headings show `Business` containing `Nova` and `Iris`, `Household` containing `Iris`, and `No team` containing `Atlas`. `Iris` appears once under each of its two teams.
+- Headings show `Business` containing `Nova` and `Iris`, `Household` containing `Iris`, and `No team` containing `Atlas` and `Chief of Staff`. `Iris` appears once under each of its two teams.
 - The **Team** select lists `All teams` plus `Business` and `Household`.
 - Selecting a team narrows the page to that one heading; `All teams` restores all of them.
 - `O-ADAPTERS` prints the same count before and after changing the filter — no Adapter was spawned.
-- After moving `Nova.md` into the `Household` folder, `Nova` is STILL under the `Business` heading.
+- After step 7, `Nova` sits under `Household` (with `Iris`) and no longer under `Business`, although its folder is still `Nova`: the heading follows the `teams:` line, nothing else.
+- After step 9 (the move), `Nova` disappears from every heading and `Files that didn't load` lists `<data>\Teammates\Household\Nova.md` with the reason `A teammate folder holds only its definition; use work/.` The file's stem no longer matches its folder, so it is no longer a Persona (`PersonaStore.cs:686-693`, `:773`).
 
 **Fail if — any of these**
 
-- Moving the file changed which heading `Nova` sits under -> grouping is following the sub-folder instead of the `teams:` frontmatter; sub-folders are the human's filing system and the code must never read meaning into them.
+- Editing `teams:` in step 7 did not move `Nova` -> the page is not reading Team membership from the frontmatter.
+- `Nova` stays on the page after the move in step 9, or is filed under a heading named after its new folder -> grouping is following the folder instead of the `teams:` frontmatter, and a file in the wrong folder is loading when it must be rejected.
 - `Iris` appears under only one of its two teams -> a multi-team Persona is being collapsed.
 - `Atlas` is missing entirely rather than under `No team` -> a teammate with no team has become invisible.
 - A node process appears when you change the filter -> the filter is touching the model catalog, spawning an adapter for a pure display change.
 
 **Inconclusive if**
 
-If a team with members shows `No teammates in this team.`, first confirm the frontmatter really carries that team (open the `.md`); a typo in the Teams input produces a genuinely empty team. `O-ADAPTERS` prints `0` when nothing is running; it does not error the way `O-ADAPTERS` does.
+If a team with members shows `No teammates in this team.`, first confirm the frontmatter really carries that team (open the `.md`); a typo in the Teams input produces a genuinely empty team. `O-ADAPTERS` prints `0` when nothing is running. The Create card's model probe may start a short-lived adapter while the card is open; read `O-ADAPTERS` with every card closed.
 
 > [!NOTE]
-> Leave `Nova`, `Atlas` and `Iris` in place if you are running TEAMMATECARD-18 next; otherwise delete all three files and the `Household` folder.
+> Move `Nova.md` back to `<data>\Teammates\Nova\` and delete the `Household` folder before going on. Then run the Clean-up (Setup step 7) for `Nova`, `Atlas` and `Iris`: TEAMMATECARD-18 creates `Nova` itself and would fail with `Persona 'Nova' already exists.` if the teammate were still there.
 
 ### TEAMMATECARD-18 — Create: exactly what lands on disk
 
 **Free** · about 8 min
 
-*Proves a created file is written at the Teams ROOT as `{Name}.md`, with canonical lowercase single-quoted frontmatter and the body unchanged — and that the Model and Effort never reach the file.*
+*Proves a created file is written inside its own teammate folder as `Teammates\{Name}\{Name}.md`, with canonical lowercase single-quoted frontmatter and the body unchanged — and that the Model and Effort never reach the file.*
 
 **Before you start**
 
 - The Create card can be opened.
-- `App_Data\Teams` is empty and writable.
+- `<data>\Teammates` holds only the Chief of Staff's folder (no `Nova` folder).
 
 **Steps**
 
@@ -724,14 +736,14 @@ If a team with members shows `No teammates in this team.`, first confirm the fro
 3. Type into **Persona body** exactly: `You are Nova.` then a newline then `You keep the team honest.`
 4. If the **Model** select offers options, choose Haiku and set **Effort** to low. If it offers only the blank option, leave both blank and note it.
 5. Click `Add teammate`.
-6. In File Explorer, confirm the new file is at `App_Data\Teams\Nova.md` — at the Teams root, NOT inside any sub-folder.
+6. In File Explorer, confirm the new file is at `<data>\Teammates\Nova\Nova.md` — inside a folder named `Nova`, NOT directly under `Teammates`.
 7. Open `Nova.md` in a text editor configured to show line endings (in VS Code, the indicator at the bottom right).
-8. Read all seven lines and the line-ending indicator.
+8. Read all eight lines and the line-ending indicator.
 9. Search the file for the words `haiku`, `model` and `effort`.
 
 **Pass if — all of these**
 
-- The file is at `App_Data\Teams\Nova.md`, at the Teams root.
+- The file is at `<data>\Teammates\Nova\Nova.md`, and no `Nova.md` sits directly under `Teammates` (`TeammatePaths.cs:44,57`; `PersonaStore.cs:367,377`).
 - Its contents are exactly, in order: `---`, `name: 'Nova'`, `title: 'Ops Lead'`, `alias: 'nov'`, `teams: ['Business']`, `---`, `You are Nova.`, `You keep the team honest.`
 - Every frontmatter key is lowercase; every scalar is single-quoted; `teams` is a bracketed flow list.
 - The editor reports LF line endings.
@@ -739,9 +751,9 @@ If a team with members shows `No teammates in this team.`, first confirm the fro
 
 **Fail if — any of these**
 
-- The file is named anything other than `Nova.md`, or sits inside a Team sub-folder -> the app guessed a folder for a new file, which it must never do; the filename must always be `{Name}.md` at the root.
+- The file is named anything other than `Nova.md`, or sits anywhere but `Teammates\Nova\` -> the app guessed a location for a new file; the path must always be `Teammates\{Name}\{Name}.md`.
 - A frontmatter key is capitalised or a scalar is unquoted -> the composed file no longer matches the shape the reader accepts; the next edit may fail to reload it.
-- The chosen Model or Effort appears in the file -> those belong only in `team.db`; a file carrying them will drift from the database and the two will disagree.
+- The chosen Model or Effort appears in the file -> those belong only in `team.db` (`persona_models`, `persona_efforts`); a file carrying them will drift from the database and the two will disagree.
 - The body is reordered, re-indented or missing a line -> the body is supposed to be written back verbatim.
 
 **Inconclusive if**
@@ -749,7 +761,7 @@ If a team with members shows `No teammates in this team.`, first confirm the fro
 If the Model select offers no options (no node, or the adapter needs authentication), the model-not-in-the-file assertion is untestable this run — record it as unverified and check TEAMMATECARD-40 instead once a catalog is available.
 
 > [!NOTE]
-> CRLF here would be a real difference: the create path joins its lines with LF.
+> CRLF here would be a real difference: the create path joins its lines with LF (`PersonaFrontmatter.cs:246`). Remove `Nova` (Setup step 7) before TEAMMATECARD-19.
 
 ### TEAMMATECARD-19 — Create: an apostrophe in the Title round-trips through YAML quoting
 
@@ -760,7 +772,7 @@ If the Model select offers no options (no node, or the adapter needs authenticat
 **Before you start**
 
 - The Create card can be opened.
-- `App_Data\Teams` contains no `Nova.md`.
+- `<data>\Teammates` has no `Nova` folder.
 
 **Steps**
 
@@ -769,9 +781,9 @@ If the Model select offers no options (no node, or the adapter needs authenticat
 3. Set **Title** to exactly `Chief of Staff's deputy` (one apostrophe).
 4. Click `Add teammate`.
 5. Read the line directly under the name heading on the resulting View card.
-6. Open `App_Data\Teams\Nova.md` and read line 3 exactly.
+6. Open `<data>\Teammates\Nova\Nova.md` and read line 3 exactly.
 7. Reload the browser page, click the `Nova` tile and re-read the title line.
-8. Close the card and delete `Nova.md`.
+8. Close the card and remove `Nova` (Setup step 7).
 
 **Pass if — all of these**
 
@@ -799,17 +811,17 @@ If your text editor auto-converts the apostrophe to a typographic quote (’), t
 **Before you start**
 
 - The Create card can be opened.
-- `App_Data\Teams` is empty.
+- `<data>\Teammates` has no `Nova`, `Atlas` or `Iris` folder.
 
 **Steps**
 
 1. Create a teammate: Name `Nova`, Title `T`, Alias `nov`, body `x`, **Teams** set to exactly ` Business ,, Household , ` (note leading, doubled and trailing commas and spaces).
-2. Read the `Teams:` line on the resulting View card, then open `App_Data\Teams\Nova.md` and read its `teams:` line.
+2. Read the `Teams:` line on the resulting View card, then open `<data>\Teammates\Nova\Nova.md` and read its `teams:` line.
 3. Close the card. Create a second teammate: Name `Atlas`, Title `T`, Alias `atl`, body `x`, **Teams** set to exactly `Ops, ops`.
-4. Read the `Teams:` line on Atlas's View card, then read `Atlas.md`'s `teams:` line.
+4. Read the `Teams:` line on Atlas's View card, then read `Atlas\Atlas.md`'s `teams:` line.
 5. Close the card. Create a third teammate: Name `Iris`, Title `T`, Alias `iri`, body `x`, **Teams** left EMPTY.
-6. Read Iris's View card and look for a `Teams:` line, then open `Iris.md` and look for a `teams:` line.
-7. Delete all three files.
+6. Read Iris's View card and look for a `Teams:` line, then open `Iris\Iris.md` and look for a `teams:` line.
+7. Remove all three teammates and delete their three folders (Setup step 7).
 
 **Pass if — all of these**
 
@@ -838,7 +850,7 @@ If a team name you typed contains a comma, this test cannot judge it — a Team 
 
 **Before you start**
 
-- `App_Data\Teams\Nova.md` exists (create it if needed: Name `Nova`, Title `Ops Lead`, Alias `nov`, body `You are Nova.`).
+- `<data>\Teammates\Nova\Nova.md` exists (create it if needed: Name `Nova`, Title `Ops Lead`, Alias `nov`, body `You are Nova.`).
 
 **Steps**
 
@@ -848,58 +860,65 @@ If a team name you typed contains a comma, this test cannot judge it — a Team 
 4. Without closing the card, change **Name** to `nova` (all lowercase) and click `Add teammate` again. Read the red line.
 5. Confirm the card is still open and every field still holds what you typed.
 6. Check `Nova.md`'s modified timestamp and contents again.
-7. Check whether any second file (`nova.md`) appeared in `App_Data\Teams`.
+7. Check whether any second Persona appeared under `<data>\Teammates` (a `nova` folder or a second `Nova.md`).
 
 **Pass if — all of these**
 
-- Both attempts show `Persona 'Nova' already exists.` / `Persona 'nova' already exists.` naming exactly the name you typed.
+- Both attempts show `Persona 'Nova' already exists.` / `Persona 'nova' already exists.` naming exactly the name you typed (`PersonaStore.cs:367-370`).
 - The card stays open with all fields intact.
 - `Nova.md`'s modified timestamp and contents are unchanged.
-- No second file appeared.
+- No second folder or file appeared.
 
 **Fail if — any of these**
 
 - `Nova.md`'s contents changed -> an existing teammate's Persona was silently overwritten; this is catastrophic, unrecoverable data loss with no warning.
-- The lowercase `nova` attempt succeeds and a second file appears -> on Windows those two filenames are the same file, so one of them will win non-deterministically.
+- The lowercase `nova` attempt succeeds and a second file appears -> on Windows those two paths are the same file, so one of them will win non-deterministically.
 - The message names a different name than you typed -> the error is reporting the wrong thing and a user cannot tell which attempt collided.
 
 **Inconclusive if**
 
 On a case-sensitive filesystem the lowercase attempt would legitimately produce the collision message from the index instead (`Persona Name 'nova' is also used by ...`). This test runs on Windows, so treat any non-`already exists` message as a finding and record the exact text.
 
-### TEAMMATECARD-22 — Edit card: what is editable and what deliberately is not
+### TEAMMATECARD-22 — Edit card: what is editable, and what a rename announces
 
 **Free** · about 6 min
 
-*Proves the Edit textarea is a raw whole-file editor, correctly labelled and pre-filled, with no redundant identity inputs and no rename control.*
+*Proves the Edit card pre-fills a raw whole-file editor, correctly labelled, beside Name, Title and Alias boxes that write through to it, and that changing the Name announces what a rename carries.*
 
 **Before you start**
 
-- `Nova` exists at `App_Data\Teams\Nova.md`.
+- `Nova` exists at `<data>\Teammates\Nova\Nova.md`, with Title `Ops Lead` and Alias `nov`.
 
 **Steps**
 
 1. Click the `Nova` tile, note the path under `Persona file`, then click `Edit`.
 2. Read the card header.
-3. Read the identity area: what is a heading, what is text, and what (if anything) is an input.
+3. Read the identity area: which boxes there are, their labels and their helper text.
 4. Read the label of the large text box, and the hint under it.
-5. Select all the text in the box and compare it character for character with the file at the noted path (paste into a diff tool if needed).
-6. Read the buttons at the bottom.
-7. Look for any control that renames the teammate.
+5. Select all the text in the large box and compare it character for character with the file at the noted path (paste into a diff tool if needed).
+6. Scroll down and read every control below the large box, in order, and the buttons at the bottom.
+7. Change the **Title** box to `Ops Chief` and press Tab. Read the `title:` line in the large box.
+8. Change the **Name** box to `Aria` and press Tab. Read the header, the large box's `name:` line, and whether a note appears under the identity boxes.
+9. Change the **Name** box back to `Nova` and press Tab. Read whether the note is still there.
+10. Click `Cancel`, and check that `Nova.md` on disk is unchanged.
 
 **Pass if — all of these**
 
 - The header reads `Edit Nova`.
-- The identity area shows `Nova` as a read-only heading plus a status dot and word — no Title, Alias or Teams inputs, and no `Alias:` / `Teams:` lines.
-- The text box is labelled `Persona text`.
-- Its hint reads `Markdown. This is the whole Persona file, front matter included, and becomes the teammate's system prompt. Saving restarts it, which clears what it remembers.`
+- The identity area shows three text boxes labelled `Name`, `Title` and `Alias`, holding `Nova`, `Ops Lead` and `nov`, with the helper texts `Letters, digits, spaces, - and _. Spaces are fine.`, `A short role description, shown alongside the Name.` and `A short working handle, for mentions and quick reference.`
+- The large box is labelled `Persona text`, and its hint reads `Markdown. This is the whole Persona file, front matter included, and becomes the teammate's system prompt. Saving restarts it, which clears what it remembers.`
 - The box contains the WHOLE file — both `---` lines and every frontmatter key — identical to the file on disk.
-- The buttons are `Save` and `Cancel`.
+- Below the large box, in order: **Skills**, **Model**, **Effort**, **Work mode** (once its list has loaded), the avatar panel, then the buttons `Cancel` and `Save`. An **Adapter** select sits between the large box and Skills only when more than one adapter profile exists.
+- After step 7 the large box's `title:` line reads `Ops Chief`.
+- After step 8 the header reads `Edit Aria`, the large box's `name:` line reads `Aria`, and a note appears reading `Renaming brings this teammate's chats, its history and its work folder with it. Messages already posted keep the old name — the transcript records what was said at the time.`
+- After step 9 the note is gone.
+- After Cancel, `Nova.md` on disk is unchanged.
 
 **Fail if — any of these**
 
 - The text box contains only the body without the `---` block -> saving would strip the frontmatter and the teammate would immediately drop into `Files that didn't load`, recoverable only in a text editor.
-- Title / Alias / Teams inputs appear in Edit mode -> they can now disagree with the raw text in the same card, and one of the two has to lose silently.
+- Editing a box leaves the large box unchanged -> the two can disagree, and one of them has to lose silently on Save.
+- The rename note is missing after step 8, or says the Agent, Rooms or Transcripts stay behind -> the card is describing the pre-ADR-0011 behaviour.
 - The box is labelled `Persona body` with the Create hint -> the user is told not to include front matter while editing a file that consists largely of it.
 
 **Inconclusive if**
@@ -907,49 +926,49 @@ On a case-sensitive filesystem the lowercase attempt would legitimately produce 
 If the text box is empty, check the teammate still exists on disk — a file deleted underneath an open card produces an empty Edit (see TEAMMATECARD-31). Recreate it and repeat.
 
 > [!NOTE]
-> There is deliberately NO rename control. The only way to rename is editing the `name:` line inside this textarea (TEAMMATECARD-26). Do not file its absence as a defect.
+> The Name box is a rename control (ADR-0011); TEAMMATECARD-26 saves one. A box shows only a helper line saying it "can only be edited in the Persona text below" when its value is a multi-line YAML block; that is deliberate and does not arise for a card created here.
 
 ### TEAMMATECARD-23 — Edit save writes back to the SAME file path — never a rename, never a move
 
 **Free** · about 10 min
 
-*Proves an edit rewrites the file at the path it was discovered at, even when the filename and folder do not match the Name — and records the LF normalisation.*
+*Proves an edit rewrites the file at the path it was discovered at, even when the Name inside does not match the folder it sits in — and records the LF normalisation.*
 
 **Before you start**
 
-- `App_Data\Teams` contains no other Persona named `Nova`.
-- You can create files and folders under `App_Data\Teams`.
+- `<data>\Teammates` holds no `Nova` or `Ops` folder.
+- You can create files and folders under `<data>\Teammates`.
 
 **Steps**
 
-1. Stop nothing — the app stays running. In File Explorer create `App_Data\Teams\Business` and, inside it, a file `ops-lead.md`.
-2. Put exactly this in `ops-lead.md`, saved with CRLF line endings: `---`, `name: 'Nova'`, `title: 'Ops Lead'`, `alias: 'nov'`, `teams: ['Business']`, `---`, `You are Nova. ORIGINALWORD.`
-3. Wait about one second, then confirm a `Nova` tile appears under the `Business` heading at http://localhost:5100/teammates .
-4. Click the tile and confirm `Persona file` shows `...\App_Data\Teams\Business\ops-lead.md`.
+1. Stop nothing — the app stays running. In File Explorer create the folder `<data>\Teammates\Ops` and, inside it, a file `Ops.md`.
+2. Put exactly this in `Ops.md`, saved with CRLF line endings: `---`, `name: 'Nova'`, `title: 'Ops Lead'`, `alias: 'nov'`, `teams: ['Business']`, `---`, `You are Nova. ORIGINALWORD.`
+3. Wait about one second, then confirm a `Nova` tile appears under the `Business` heading at http://localhost:5100/teammates , and that `Files that didn't load` does not list `Ops.md`.
+4. Click the tile and confirm `Persona file` shows `...\Teammates\Ops\Ops.md`.
 5. Click `Edit`, change `ORIGINALWORD` to `CHANGEDWORD`, and click `Save`.
 6. Confirm the card lands in View mode showing `CHANGEDWORD` in the `Persona` block.
-7. In File Explorer, list every `.md` file under `App_Data\Teams` at every depth.
-8. Open `Business\ops-lead.md` and confirm the new word and the file's line endings.
+7. In File Explorer, list every `.md` file under `<data>\Teammates` at every depth, and every folder directly under it.
+8. Open `Ops\Ops.md` and confirm the new word and the file's line endings.
 
 **Pass if — all of these**
 
-- `Business\ops-lead.md` now contains `CHANGEDWORD` and has a fresh modified time.
-- No file named `Nova.md` was created anywhere.
-- `ops-lead.md` was not renamed, moved, or duplicated — the total set of `.md` files is exactly what it was before the save.
-- The card's `Persona file` still shows the `Business\ops-lead.md` path.
+- `Ops\Ops.md` now contains `CHANGEDWORD` and has a fresh modified time.
+- No `Nova` folder and no file named `Nova.md` was created anywhere (`PersonaStore.cs:436-438` writes to the discovered path).
+- The set of folders and `.md` files is exactly what it was before the save: the Chief of Staff's, and `Ops\Ops.md`. Nothing was renamed, moved or duplicated, because the Name did not change.
+- The card's `Persona file` still shows the `Teammates\Ops\Ops.md` path.
 
 **Fail if — any of these**
 
-- A new `App_Data\Teams\Nova.md` appeared -> the save reconstructed a path from the Name instead of using the discovered one; the original file is now an orphan and the two will collide on the next scan, sending BOTH into `Files that didn't load`.
-- The original file was moved or renamed -> a user's own filing system was rearranged by an edit.
+- A new `<data>\Teammates\Nova\Nova.md` appeared -> the save reconstructed a path from the Name instead of using the discovered one; the original file is now an orphan and the two will collide on the next scan, sending BOTH into `Files that didn't load`.
+- The `Ops` folder or `Ops.md` was moved or renamed -> an edit that did not change the Name rearranged a user's own filing system.
 - Both the original and a new file exist with the same `name:` -> the next index rebuild rejects both and the teammate disappears from the list entirely.
 
 **Inconclusive if**
 
-If the tile never appears in step 3, the watcher may not be seeing sub-folders — that is TEAMMATECARD-30's subject; record it there and hand-place the file at the Teams root instead so this test can still run (it then proves less).
+If the tile never appears in step 3, read `Files that didn't load` for the reason and recheck that the file is named `Ops.md` inside `Ops` (the stem must match the folder); the watcher itself is TEAMMATECARD-30's subject.
 
 > [!NOTE]
-> EXPECTED, NOT A DEFECT: after the save the file's line endings are LF, not the CRLF you wrote. The browser hands the textarea back with LF and the save writes it verbatim. Record it so nobody files it. Content loss or doubled blank lines WOULD be a defect.
+> EXPECTED, NOT A DEFECT: after the save the file's line endings are LF, not the CRLF you wrote. The browser hands the textarea back with LF and the save writes it verbatim. Record it so nobody files it. Content loss or doubled blank lines WOULD be a defect. A Persona whose folder is named differently from its `name:` loads silently — nothing on the page flags it (`PersonaStore.FolderWarnings` has no reader in `Huddle.App`). Remove `Nova`, then delete the `Ops` folder, before going on.
 
 ### TEAMMATECARD-24 — Edit: breaking the frontmatter is refused with the file untouched
 
@@ -959,7 +978,7 @@ If the tile never appears in step 3, the watcher may not be seeing sub-folders �
 
 **Before you start**
 
-- A teammate exists (for example `Nova` at `App_Data\Teams\Nova.md`).
+- A teammate exists (for example `Nova` at `<data>\Teammates\Nova\Nova.md`).
 - You can see the file's modified timestamp.
 
 **Steps**
@@ -1005,8 +1024,8 @@ If the modified timestamp changes but the contents are identical, your editor or
 
 **Before you start**
 
-- Two teammates exist: `Nova` (alias `nov`) and `Atlas` (alias `atl`). Create them from the card if needed.
-- You know both files' paths and modified timestamps.
+- Two teammates exist besides the Chief of Staff: `Nova` (alias `nov`) and `Atlas` (alias `atl`). Create them from the card if needed.
+- You know both files' paths (`<data>\Teammates\Nova\Nova.md`, `<data>\Teammates\Atlas\Atlas.md`) and modified timestamps.
 
 **Steps**
 
@@ -1021,10 +1040,10 @@ If the modified timestamp changes but the contents are identical, your editor or
 
 **Pass if — all of these**
 
-- Steps 3 and 4 both show `Persona Name 'Nova' is also used by '<full path to Nova.md>'.` / `Persona Name 'nova' is also used by '<path>'.` — the comparison is case-insensitive.
-- Step 5 shows `Persona Alias 'nov' is also used by '<path to Nova.md>'.`
-- Step 6 shows `Persona Alias 'Nova' matches the Name used by '<path to Nova.md>'.`
-- `Atlas.md` is unchanged on disk and both tiles remain in the list.
+- Steps 3 and 4 both show `Persona Name 'Nova' is also used by '<data>\Teammates\Nova\Nova.md'.` / `Persona Name 'nova' is also used by '<same path>'.` — the comparison is case-insensitive.
+- Step 5 shows `Persona Alias 'nov' is also used by '<data>\Teammates\Nova\Nova.md'.`
+- Step 6 shows `Persona Alias 'Nova' matches the Name used by '<data>\Teammates\Nova\Nova.md'.`
+- `Atlas.md` is unchanged on disk, no folder was renamed, and both tiles remain in the list.
 
 **Fail if — any of these**
 
@@ -1034,90 +1053,94 @@ If the modified timestamp changes but the contents are identical, your editor or
 
 **Inconclusive if**
 
-If the red line names a path you do not recognise, a third Persona file exists somewhere under `Teams` — list every `.md` at every depth before judging.
+If the red line names a path you do not recognise, a third Persona file exists somewhere under `Teammates` — list every `.md` at every depth before judging.
 
-### TEAMMATECARD-26 — Edit: renaming via the name: field leaves a ghost card
+### TEAMMATECARD-26 — Edit: renaming moves the folder and keeps the teammate whole (ADR-0011)
 
 **Free** · about 12 min
 
-*Characterises what the user actually sees after a rename — the save takes, but the card left behind shows the OLD name with everything blanked, which reads like the teammate was wiped.*
+*Proves a rename saved from the card carries the whole teammate with it: the card lands on the new Name, the folder, the file and the Work Dir move, the stored Model and Effort follow the Name, and the `users` row keeps its id.*
 
 **Before you start**
 
-- A teammate `Nova` exists with a stored Model and Effort. If no catalog is available, seed them directly: `sqlite3 "E:\Repos\Huddle\src\Huddle.App\App_Data\team.db" "INSERT OR REPLACE INTO persona_models(persona_name,model) VALUES('Nova','claude-haiku-test'); INSERT OR REPLACE INTO persona_efforts(persona_name,effort) VALUES('Nova','low');"
-- `sqlite3` is available.
+- A teammate `Nova` exists with a stored Model and Effort. If no catalog is available, seed them directly: `sqlite3 "<data>\team.db" "INSERT OR REPLACE INTO persona_models(persona_name,model) VALUES('Nova','claude-haiku-test'); INSERT OR REPLACE INTO persona_efforts(persona_name,effort) VALUES('Nova','low');"`
+- `sqlite3` is available (`O-DB`).
+- `<data>\Teammates` has no `Aria` folder.
 
 **Steps**
 
-1. Run `sqlite3 "E:\Repos\Huddle\src\Huddle.App\App_Data\team.db" "SELECT * FROM persona_models; SELECT * FROM persona_efforts;"` and record the rows.
-2. Note `Nova`'s file path and filename.
-3. Open `Nova`'s card, click `Edit`, change the `name:` line to `name: 'Aria'`, and click `Save`.
-4. WITHOUT closing the card, write down exactly what the card now shows: its header, whether the `Persona` block has content, the Title, whether an `Alias:` line is present, what `Model` and `Effort` read, and whether a `Persona file` section exists.
-5. Note whether a `Message` action is present on this card.
-6. Look behind the dialog at the list.
-7. Close the card and click the `Aria` tile. Read every section.
-8. Check the file on disk: its filename, and its `name:` line.
-9. Re-run the sqlite query from step 1.
+1. Run `sqlite3 "<data>\team.db" "SELECT id,name FROM users WHERE kind='agent'; SELECT * FROM persona_models; SELECT * FROM persona_efforts;"` and record the rows, in particular `Nova`'s `users` id.
+2. Note `Nova`'s file path. In File Explorer create the file `<data>\Teammates\Nova\work\marker.txt` (create `work` if it is missing) with any text.
+3. Open `Nova`'s card, click `Edit`, change the **Name** box to `Aria`, press Tab, and click `Save`.
+4. WITHOUT closing the card, write down what it now shows: its header, whether the `Persona` block has content, the Title, whether an `Alias:` line is present, what `Model` and `Effort` read, and the `Persona file` path.
+5. Wait about five seconds. Close the card and look at the list behind it.
+6. Click the `Aria` tile. Read every section, including the `Persona file` path.
+7. In File Explorer, list the folders under `<data>\Teammates`, then open `Aria\Aria.md` and read its `name:` line, and check `Aria\work\marker.txt`.
+8. Re-run the sqlite query from step 1.
 
 **Pass if — all of these**
 
-- The list behind the dialog shows a tile named `Aria` (and no `Nova`).
-- The file keeps its ORIGINAL filename but now contains `name: 'Aria'`.
-- Opening the `Aria` tile shows a complete, correct card.
-- The `persona_models` and `persona_efforts` rows have MOVED from `Nova` to `Aria` — same values, new key, and no row left under `Nova`.
+- Right after the save the card is in View mode with the header `Aria`, the full `Persona` block, the Title and Alias, and the same `Model` and `Effort` as before — a complete card, not a blanked one (`TeammateCard.razor:1864-1885`).
+- The list shows a tile named `Aria` and no `Nova`, and no `Files that didn't load` section.
+- The folder is `<data>\Teammates\Aria`, there is no `Nova` folder, the file inside is `Aria.md` and its `name:` line reads `'Aria'` (`PersonaRenameCascade.cs:353-402`).
+- `Aria\work\marker.txt` exists: the Work Dir moved with the folder.
+- The `users` row keeps its id and now has the name `Aria`.
+- The `persona_models` and `persona_efforts` rows have MOVED from `Nova` to `Aria` — same values, new key, and no row left under `Nova` (`PersonaStore.cs:440-449`).
+- The reopened `Aria` card shows the path `...\Teammates\Aria\Aria.md`.
 
 **Fail if — any of these**
 
 - The `persona_models` or `persona_efforts` row for `Nova` is gone with nothing written under `Aria` -> the rename silently DROPPED the teammate's Model and Effort; next start it thinks with a model nobody chose.
 - A row survives under `Nova` as well as `Aria` -> a future teammate named `Nova` would silently inherit a setting nobody chose for it.
-- The file was renamed on disk -> the save is reconstructing paths from the Name (see TEAMMATECARD-23).
+- The `users` row has a new id, or a second agent row named `Aria` exists -> the Rooms and Transcripts were left with a stranger.
+- The folder is still `Nova`, or the file is still `Nova.md` -> the cascade did not run, and the next scan files `Aria` under a mismatched folder.
 - No `Aria` tile appears at all -> the save did not take; check the file before concluding.
 
 **Inconclusive if**
 
-If `sqlite3` is unavailable, the Model/Effort half cannot be judged — run only the on-screen half and record the database half as unverified. Note that `team.db` is in WAL mode, so read it while the app runs rather than copying the file.
+If `sqlite3` is unavailable, the Model/Effort/`users` half cannot be judged — run only the on-screen and folder half and record the database half as unverified. Note that `team.db` is in WAL mode, so read it while the app runs rather than copying the file. If `<data>\Teammates\Aria` already existed, the move is skipped and the log reads `Did not move the Teammate folder for 'Nova' to 'Aria': a directory already exists at the target. Both were left in place.` (`PersonaRenameCascade.cs:451`); delete the stray folder and repeat.
 
 > [!NOTE]
-> THE KNOWN ROUGH EDGE, to be recorded rather than filed as new: after the save the card re-opens on the OLD name, so it shows `Nova` with an empty `Persona` block, no Title, no `Alias:`, `Agent default`, `Model default` and no `Persona file`. Judge and report whether that reads to a user as 'my save wiped the teammate'. The Agent, Rooms and Transcripts staying behind under the old Name is DELIBERATE and must not be filed.
+> The folder move runs after the save, detached, and retries while the old session still holds the folder (`PersonaRenameCascade.cs:209-210,390-410`). So the `Persona file` line on the card the save lands on may still show the old `Nova` path for a moment; judge the path after reopening. If `Nova` had a direct Room, its auto-derived name follows the rename too (`PersonaRenameCascade.cs:342`). Messages already posted keep the old name by design, so do NOT file the old name in an old Transcript. Remove `Aria` afterwards.
 
-### TEAMMATECARD-27 — Create: a Name colliding with a Persona in a sub-folder
+### TEAMMATECARD-27 — Create: a Name colliding with a Persona whose folder has another name
 
 **Free** · about 8 min
 
-*Proves the collision check sees Personas nested in Team sub-folders and reports the colliding path, instead of writing a second file that would knock both out.*
+*Proves the collision check compares the `name:` inside every loaded file, not folder names, and reports the colliding file's real path, instead of writing a second file that would knock both out.*
 
 **Before you start**
 
-- `App_Data\Teams` contains no `Nova.md` at the root.
-- You can create folders under `App_Data\Teams`.
+- `<data>\Teammates` holds no `Nova` or `Ops` folder.
+- You can create folders under `<data>\Teammates`.
 
 **Steps**
 
-1. Create `App_Data\Teams\Business\anything.md` containing: `---`, `name: 'Nova'`, `title: 'Ops Lead'`, `alias: 'nov'`, `teams: ['Business']`, `---`, `You are Nova.`
+1. Create `<data>\Teammates\Ops\Ops.md` containing: `---`, `name: 'Nova'`, `title: 'Ops Lead'`, `alias: 'nov'`, `teams: ['Business']`, `---`, `You are Nova.`
 2. Wait about one second and confirm a `Nova` tile appears under the `Business` heading.
 3. Click `New teammate`. Set **Name** `Nova`, **Title** `T`, **Alias** `zzz`, body `x`. Click `Add teammate` and read the red line.
 4. Change **Name** to `nova` (lowercase) and click `Add teammate` again. Read the red line.
-5. Check whether `App_Data\Teams\Nova.md` or `nova.md` exists at the Teams root.
+5. Check whether a `Nova` or `nova` folder exists under `<data>\Teammates`.
 6. Close the card and confirm exactly one `Nova` tile is in the list, with no `Files that didn't load` section.
 
 **Pass if — all of these**
 
-- Both attempts show `Persona Name 'Nova' is also used by 'E:\Repos\Huddle\src\Huddle.App\App_Data\Teams\Business\anything.md'.` (or the same message with `'nova'`), naming the real absolute path.
-- No file was created at the Teams root.
+- Both attempts show `Persona Name 'Nova' is also used by '<data>\Teammates\Ops\Ops.md'.` (or the same message with `'nova'`), naming the real absolute path.
+- No `Nova` folder or file was created (the file-exists check at `PersonaStore.cs:367-370` does not fire, because `Teammates\Nova\Nova.md` is absent; the index check does).
 - Exactly one `Nova` tile remains and no rejected-files section appears.
 
 **Fail if — any of these**
 
-- No error and the save succeeds -> the pre-write validation is no longer scanning sub-folders; two files now claim `Nova`, so the next index rebuild rejects BOTH and the teammate disappears entirely.
+- No error and the save succeeds -> the pre-write validation compares only folder names; two files now claim `Nova`, so the next index rebuild rejects BOTH and the teammate disappears entirely.
 - The lowercase `nova` attempt succeeds -> the comparison became case-sensitive; `Jarvis` and `jarvis` must collide, matching the case-insensitive key the Model/Effort tables use.
-- The message names a reconstructed path such as `...\Teams\Nova.md` rather than the real discovered one -> the user is sent to a file that does not exist.
+- The message names a reconstructed path such as `...\Teammates\Nova\Nova.md` rather than the real discovered one -> the user is sent to a file that does not exist.
 
 **Inconclusive if**
 
-If no `Nova` tile appears in step 2, the sub-folder file did not load — check its frontmatter and check TEAMMATECARD-30 (sub-folder watching) before judging this test; without the existing Persona there is nothing to collide with.
+If no `Nova` tile appears in step 2, the file did not load — read `Files that didn't load` for the reason and check that the file is `Ops\Ops.md` before judging this test; without the existing Persona there is nothing to collide with.
 
 > [!NOTE]
-> Delete `App_Data\Teams\Business\anything.md` afterwards unless TEAMMATECARD-28 reuses it.
+> Delete the `Ops` folder afterwards (remove `Nova` from its card first) unless TEAMMATECARD-28 reuses it.
 
 ### TEAMMATECARD-28 — Create: Alias collisions, and the one that is legal
 
@@ -1127,7 +1150,7 @@ If no `Nova` tile appears in step 2, the sub-folder file did not load — check 
 
 **Before you start**
 
-- Exactly one teammate exists: `Nova`, alias `nov`.
+- `Nova` (alias `nov`) exists besides the Chief of Staff (alias `cos`), at `<data>\Teammates\Nova\Nova.md`. No other teammate exists.
 
 **Steps**
 
@@ -1135,16 +1158,16 @@ If no `Nova` tile appears in step 2, the sub-folder file did not load — check 
 2. Change **Alias** to `NOV` (uppercase) and click `Add teammate` again. Read the red line.
 3. Change **Alias** to `Nova` (the other file's NAME) and click `Add teammate`. Read the red line.
 4. Change **Alias** to `Atlas` (its own Name) and click `Add teammate`.
-5. Confirm what happened, then open `App_Data\Teams\Atlas.md` and read its `alias:` line.
+5. Confirm what happened, then open `<data>\Teammates\Atlas\Atlas.md` and read its `alias:` line.
 6. Confirm `Nova.md` is untouched throughout.
-7. Delete `Atlas.md` afterwards.
+7. Remove `Atlas` afterwards (Setup step 7).
 
 **Pass if — all of these**
 
-- Steps 1 and 2 both show `Persona Alias 'nov' is also used by '<path to Nova's file>'.` / `... 'NOV' ...` — case-insensitive.
-- Step 3 shows `Persona Alias 'Nova' matches the Name used by '<path to Nova's file>'.`
+- Steps 1 and 2 both show `Persona Alias 'nov' is also used by '<data>\Teammates\Nova\Nova.md'.` / `... 'NOV' ...` — case-insensitive.
+- Step 3 shows `Persona Alias 'Nova' matches the Name used by '<data>\Teammates\Nova\Nova.md'.`
 - Step 4 SUCCEEDS with no error, and `Atlas.md` contains `alias: 'Atlas'`.
-- `Nova`'s file is unchanged after steps 1-3 and no file was written for them.
+- `Nova`'s file is unchanged after steps 1-3 and no folder was created for them.
 
 **Fail if — any of these**
 
@@ -1154,7 +1177,7 @@ If no `Nova` tile appears in step 2, the sub-folder file did not load — check 
 
 **Inconclusive if**
 
-If more than one teammate exists at the start, the error may name a different file than expected — reduce to exactly one (`Nova`) and repeat.
+If a teammate other than `Nova` and the Chief of Staff exists at the start, the error may name a different file than expected — remove the extra teammates and repeat.
 
 ### TEAMMATECARD-29 — 'Files that didn't load' names the path and the reason, above the list
 
@@ -1164,24 +1187,26 @@ If more than one teammate exists at the start, the error may name a different fi
 
 **Before you start**
 
-- `App_Data\Teams` is otherwise empty.
+- `<data>\Teammates` holds only the Chief of Staff's folder.
 - The Teammates page is open.
 
 **Steps**
 
-1. Create `App_Data\Teams\broken.md` containing exactly: `---`, `name: 'X'`, `---`, `Some body text.` (no title, no alias).
+1. Create `<data>\Teammates\Broken\Broken.md` containing exactly: `---`, `name: 'X'`, `---`, `Some body text.` (no title, no alias).
 2. Wait about one second and read the top of the Teammates page.
-3. Note whether the failing section appears ABOVE or BELOW the teammate list, and whether any tile was rendered for `broken.md`.
-4. Now create TWO files, `App_Data\Teams\twin-a.md` and `App_Data\Teams\twin-b.md`, each containing: `---`, `name: 'Twin'`, `title: 'T'`, plus a DIFFERENT alias line (`alias: 'ta'` in one, `alias: 'tb'` in the other), `---`, `body`.
+3. Note whether the failing section appears ABOVE or BELOW the teammate list, and whether any tile was rendered for `Broken.md`.
+4. Now create TWO files, `<data>\Teammates\TwinA\TwinA.md` and `<data>\Teammates\TwinB\TwinB.md`, each containing: `---`, `name: 'Twin'`, `title: 'T'`, plus a DIFFERENT alias line (`alias: 'ta'` in one, `alias: 'tb'` in the other), `---`, `body`.
 5. Wait about one second and read the page again.
-6. Delete all three files.
+6. Create `<data>\Teammates\stray.md` (any text) directly under `Teammates`, and `<data>\Teammates\Broken\second.md` (any text). Wait about one second and read the page again.
+7. Delete the `Broken`, `TwinA` and `TwinB` folders and `stray.md`.
 
 **Pass if — all of these**
 
 - A section headed `Files that didn't load` appears ABOVE the teammate list.
-- It lists `broken.md`'s real absolute path with the reason `Persona frontmatter is missing required field 'Title'.`
-- No tile is rendered for `broken.md`.
-- Both `twin-a.md` and `twin-b.md` appear in the section, each naming the OTHER's absolute path, and NEITHER gets a tile.
+- It lists `Broken\Broken.md`'s real absolute path with the reason `Persona frontmatter is missing required field 'Title'.`
+- No tile is rendered for `Broken.md`.
+- Both `TwinA\TwinA.md` and `TwinB\TwinB.md` appear in the section, each naming the OTHER's absolute path (`Persona Name 'Twin' is also used by '<other path>'.`), and NEITHER gets a tile.
+- After step 6, `stray.md` is listed with the reason `A definition must be inside its teammate's folder.` and `Broken\second.md` with `A teammate folder holds only its definition; use work/.` (`PersonaStore.cs:719,773`).
 
 **Fail if — any of these**
 
@@ -1194,41 +1219,41 @@ If more than one teammate exists at the start, the error may name a different fi
 
 If nothing appears after about two seconds, press F5 once. If the section only appears after a manual reload, that is a watcher finding — record it under TEAMMATECARD-30, and judge this test on the post-reload content.
 
-### TEAMMATECARD-30 — An external file edit repaints the page — including inside sub-folders
+### TEAMMATECARD-30 — An external file edit repaints the page — including inside teammate folders
 
 **Free** · about 12 min
 
-*Proves the file watcher sees the whole tree, including sub-folder edits, renames and deletes, which fail silently when broken; and records that an open View card does not follow.*
+*Proves the file watcher sees the whole tree, including edits, folder renames, moves and deletes one level down, which fail silently when broken; and records that an open View card does not follow.*
 
 **Before you start**
 
 - The Teammates page is open with NO card open.
-- At least one Persona exists at the Teams root and one inside `App_Data\Teams\Business\`.
+- `Nova` (`<data>\Teammates\Nova\Nova.md`) and `Atlas` (`<data>\Teammates\Atlas\Atlas.md`) exist, besides the Chief of Staff.
 
 **Steps**
 
-1. With no card open, edit the root Persona's `title:` line in a text editor to `title: 'Root Changed'` and save. Watch the tile's second line, without touching the browser. Time roughly how long it takes.
-2. Edit the sub-folder Persona's `title:` line to `title: 'Nested Changed'` and save. Watch its tile.
-3. Rename the folder `App_Data\Teams\Business` to `App_Data\Teams\BusinessOps`. Watch the page.
-4. Rename it back to `Business`. Watch the page.
-5. Move a Persona file from the Teams root into `App_Data\Teams\Business\`. Watch the page: which heading does its tile sit under now?
-6. Delete the sub-folder Persona's file outright. Watch the page.
+1. With no card open, edit `Nova.md`'s `title:` line in a text editor to `title: 'Nova Changed'` and save. Watch the tile's second line, without touching the browser. Time roughly how long it takes.
+2. Edit the Chief of Staff's file the same way (`<data>\Teammates\Chief of Staff\Chief of Staff.md`, `title: 'CoS Changed'`). Watch its tile, then change it back.
+3. Rename the folder `<data>\Teammates\Atlas` to `<data>\Teammates\AtlasOps`. Watch the page.
+4. Rename it back to `Atlas`. Watch the page.
+5. Move `Nova.md` out of its folder into `<data>\Teammates` itself. Watch the page, then move it back.
+6. Delete the `Atlas` folder outright. Watch the page.
 7. Now open a teammate's View card and LEAVE IT OPEN. In the editor, change that same teammate's `title:` and save. Watch both the tile behind the dialog and the card itself.
 8. Read the app console for any line mentioning `FileSystemWatcher`.
 
 **Pass if — all of these**
 
-- Root and sub-folder title edits both repaint the tile within roughly half a second to a second, with no browser reload.
-- Renaming a sub-folder, and renaming it back, both cause a repaint with no error and no teammate lost.
-- Moving a file between folders repaints but does NOT change which Team heading the tile sits under.
-- Deleting a file removes its tile within about a second.
+- Both title edits repaint the tile within roughly half a second to a second (the debounce is 500 ms, `PersonaStore.cs:67`), with no browser reload.
+- Step 3: the `Atlas` tile disappears and `Files that didn't load` lists `...\AtlasOps\Atlas.md` with the reason `A teammate folder holds only its definition; use work/.` Step 4: the tile returns and the section goes. No teammate is lost.
+- Step 5: `Nova` disappears and `Files that didn't load` lists the file under `Teammates` with the reason `A definition must be inside its teammate's folder.`; moving it back restores the tile.
+- Deleting the folder removes the `Atlas` tile within about a second.
 - With a card open, the TILE behind updates.
 
 **Fail if — any of these**
 
-- A sub-folder file edit produces no repaint at all while the root one does -> the watcher is not including subdirectories; this fails silently, with no error and no log line, and every nested Persona serves stale prompt text forever.
-- A sub-folder rename or delete produces no repaint -> the watcher event is named after the directory and never matches `*.md`; every Persona path under it is now stale.
-- Moving a file changed its Team heading -> grouping followed the folder instead of the frontmatter.
+- A title edit inside a teammate folder produces no repaint at all -> the watcher is not including subdirectories (`PersonaStore.cs:164-173`); this fails silently, with no error and no log line, and every Persona serves stale prompt text forever.
+- A folder rename, move or delete produces no repaint -> the watcher event is named after the directory and never matches `*.md`; every Persona path under it is now stale.
+- Renaming the folder leaves the `Atlas` tile on the page -> the old index is still being served after the file's stem stopped matching its folder.
 - A `PersonaStore's FileSystemWatcher reported an error` line appears with NO repaint following it -> the overflow backstop did not schedule its refresh.
 
 **Inconclusive if**
@@ -1236,7 +1261,7 @@ If nothing appears after about two seconds, press F5 once. If the section only a
 Some editors write via a temp file plus a rename, which can produce a different event shape. If a repaint does not happen, repeat the edit with a plain `Add-Content` from PowerShell before concluding the watcher is broken.
 
 > [!NOTE]
-> EXPECTED ROUGH EDGE, record don't file: with a View card open, the card's own `Persona` block, Title, Alias and Teams keep showing the OLD values until you close and reopen it — only the Room link is refreshed in the background. Judge it as a quirk, not data loss.
+> EXPECTED ROUGH EDGE, record don't file: with a View card open, the card shows the OLD Persona block, Title, Alias, Teams and Room link until you close and reopen it. It never subscribes to the store's change event, and it reads the Room once when it opens (`TeammateCard.razor:785`). Judge it as a quirk, not data loss.
 
 ### TEAMMATECARD-31 — A card whose file vanished underneath it reports it instead of crashing
 
@@ -1246,22 +1271,22 @@ Some editors write via a temp file plus a rename, which can produce a different 
 
 **Before you start**
 
-- A teammate `Nova` exists.
+- A teammate `Nova` exists, at `<data>\Teammates\Nova\Nova.md`.
 - The app console is visible.
 
 **Steps**
 
 1. Click the `Nova` tile to open its View card. Leave it open.
-2. In File Explorer, delete `Nova`'s `.md` file.
+2. In File Explorer, delete `Nova`'s `.md` file (the `Nova` folder may stay).
 3. Wait about one second (the list behind will repaint) but do NOT close the card.
-4. On the still-open card, click `Remove`, then `Confirm`. Read the card and the action row.
+4. On the still-open card, click the `Remove` icon button, then `Confirm`. Read the card and the action row.
 5. Click `Open`. Read the card.
 6. Click `Edit`, change a word, then click `Save`. Read the card.
 7. Read the app console for any unhandled exception.
 
 **Pass if — all of these**
 
-- Confirm produces the red line `Persona 'Nova' does not exist.` and the button pair collapses back to a single `Remove`.
+- Confirm produces the red line `Persona 'Nova' does not exist.` and the button pair collapses back to the single `Remove` icon (`TeammateCard.razor:1936-1947`).
 - `Open` produces the same message.
 - Edit-then-Save produces the same message.
 - The console shows no unhandled exception and the page never shows the yellow `An unhandled error has occurred.` bar.
@@ -1275,6 +1300,9 @@ Some editors write via a temp file plus a rename, which can produce a different 
 **Inconclusive if**
 
 If the card auto-closed when the file was deleted, this scenario cannot be produced through the UI — record that the card closes on external delete (a behaviour change) and mark the rest unverified.
+
+> [!NOTE]
+> Delete the leftover `Nova` folder afterwards.
 
 ### TEAMMATECARD-32 — 'Open' launches the OS editor on the server
 
@@ -1296,7 +1324,7 @@ If the card auto-closed when the file was deleted, this scenario cannot be produ
 
 **Pass if — all of these**
 
-- The Persona file opens in whatever the machine has registered for `.md`, OR a red line reads `Could not open '<Name>': <message>` when no handler exists.
+- The Persona file opens in whatever the machine has registered for `.md`, OR a red line reads `Could not open '<Name>': <message>` (or `Could not open '<Name>': no application is registered for .md on this machine.`) when no handler exists (`TeammateCard.razor:2043-2054`).
 - One of those two things always happens — never neither.
 
 **Fail if — any of these**
@@ -1315,7 +1343,7 @@ If the file opens but in an unexpected application, that is the OS file associat
 
 **Free** · about 5 min
 
-*Determines WHICH of two known outcomes a reserved device name produces, because an unhandled exception that kills the page is materially worse than a silent no-op and the docs do not say which happens.*
+*Determines WHICH of the known outcomes a reserved device name produces, because an unhandled exception that kills the page is materially worse than a silent no-op and the docs do not say which happens.*
 
 **Before you start**
 
@@ -1325,12 +1353,12 @@ If the file opens but in an unexpected application, that is the OS file associat
 
 **Steps**
 
-1. Note the current contents of `App_Data\Teams`.
+1. Note the current contents of `<data>\Teammates`.
 2. Click `New teammate`. Set **Name** `CON`, **Title** `T`, **Alias** `cn1`, body `x`.
 3. Click `Add teammate`.
 4. Record precisely what happens: does a red validation line appear, does the card switch to View mode as if saved, or does the yellow `An unhandled error has occurred.` bar appear?
 5. Read the app console and copy any exception verbatim.
-6. List `App_Data\Teams` again and note whether any new file exists.
+6. List `<data>\Teammates` again and note whether any new folder (`CON`) or file (`CON\CON.md`) exists.
 7. Repeat the whole test with **Name** `NUL` (alias `nl1`), then `COM1` (alias `cm1`).
 
 **Pass if — all of these**
@@ -1348,7 +1376,7 @@ If the file opens but in an unexpected application, that is the OS file associat
 If the Name is rejected with `'CON' is not a valid Persona name.`, the rule has been tightened since the limit was recorded — that is an improvement, not a failure. Record it as a documentation update and move on.
 
 > [!NOTE]
-> THIS IS A RECORDED KNOWN LIMIT: reserved device names pass the Name rules and become `CON.md`, which Windows will not create. Do NOT file it as a new defect. The whole value of this test is deciding WHICH outcome occurs — an unhandled exception that kills the circuit, or an apparently successful save with no file — and reporting that precisely.
+> THIS IS A RECORDED KNOWN LIMIT: reserved device names pass the Name rules, and Create would write `Teammates\CON\CON.md` after `Directory.CreateDirectory` (`PersonaStore.cs:377-378`), which Windows may refuse. The card's save catches only `ChatException` (`TeammateCard.razor:1851`), so an `IOException` or access error from that write is not caught there. The whole value of this test is deciding WHICH outcome occurs — an unhandled exception that kills the circuit, a red line, or an apparently successful save — and reporting that precisely. If File Explorer cannot delete a `CON` folder it created, remove it from PowerShell with a `\\?\` path.
 
 ### TEAMMATECARD-34 — Two browser tabs on /teammates stay in step
 
@@ -1367,12 +1395,12 @@ If the Name is rejected with `'CON' is not a valid Persona name.`, the rule has 
 1. Open http://localhost:5100/teammates in tab A and again in tab B. Arrange them so both are visible.
 2. In tab A, create a teammate: Name `Sync`, Title `T`, Alias `syn`, body `x`. Do not touch tab B.
 3. Look at tab B's list without reloading it.
-4. In tab A, close the card, click the `Sync` tile, click `Remove`, then `Confirm`.
+4. In tab A, close the card, click the `Sync` tile, click the `Remove` icon button, then `Confirm`.
 5. Look at tab B's list again without reloading it.
 6. Recreate `Sync`. In tab A click its tile then `Edit`; in tab B click the same tile then `Edit`, so both cards are open at once.
 7. Run `O-ADAPTERS` in `T-B` and count the node processes.
 8. Close tab B while its Edit card is still open. Read the app console.
-9. Delete `Sync`'s file afterwards.
+9. Remove `Sync` and delete the leftover `<data>\Teammates\Sync` folder.
 
 **Pass if — all of these**
 
@@ -1391,41 +1419,81 @@ If the Name is rejected with `'CON' is not a valid Persona name.`, the rule has 
 
 If no node process ever appears, the adapter is missing or unauthenticated — the concurrency half of this test is unverifiable; record it as unverified and judge only the list-sync half.
 
-### TEAMMATECARD-35 — Remove deletes the file and BOTH stored settings
+### TEAMMATECARD-52 — The Chief of Staff offers Reset to default and no Remove
 
-**Free** · about 8 min
+**Free** · about 6 min
 
-*Proves the Model and Effort rows go with the Persona file, so a later teammate of the same name cannot silently inherit a setting nobody chose.*
+*Proves the built-in teammate cannot be removed from its card, and that Reset to default confirms first, restores the shipped Title and keeps the card open.*
+
+**Before you start**
+
+- Lane is `P-LAUNCH-FREE`; the Chief of Staff's tile is on the Teammates page.
+- You know the Chief of Staff's file: `<data>\Teammates\Chief of Staff\Chief of Staff.md`.
+
+**Steps**
+
+1. Click the `Chief of Staff` tile. Note its Title (the line under the name) and read the action row; hover over each icon button there.
+2. Click `Reset to default`. Read the action row and any caption or sentence that appears.
+3. Click `Cancel`. Read the action row, and confirm the file is untouched.
+4. Click `Edit`, change the **Title** box to `Edited title`, press Tab, and click `Save`. Confirm the View card shows `Edited title`.
+5. Click `Reset to default`, then `Confirm`. Read the card.
+6. Open the Chief of Staff's file and read the `name:`, `alias:` and `title:` lines.
+
+**Pass if — all of these**
+
+- The action row holds `Edit`, `Open`, `Restart` and an outlined red button `Reset to default` (a `Message` button leads the row when a direct Room exists). There is NO `Remove` icon button and no `Remove` tooltip (`TeammateCard.razor:198-209`).
+- Clicking `Reset to default` replaces it with `Confirm` and `Cancel`, and shows the sentence `Restore the Chief of Staff's instructions, Title, Teams, Skills, Model and Effort to their defaults? Its Name, Alias, Rooms and history are kept.` (`TeammateCard.razor:229-232`).
+- `Cancel` brings back the single `Reset to default` button and changes nothing.
+- `Confirm` does NOT close the card: it stays in View mode, and the Title is back to the value noted in step 1, not `Edited title` (`TeammateCard.razor:1963-1994`).
+- Afterwards `name:` still reads the Chief of Staff's Name and `alias:` reads `cos`; the card's `Model` reads `Agent default`, `Effort` reads `Model default` and `Work mode` reads `Agent default`.
+
+**Fail if — any of these**
+
+- A `Remove` icon appears on this card -> the built-in teammate can be deleted from the UI, and the next start silently re-creates a fresh one.
+- `Reset to default` acts on the first click -> a destructive overwrite of the Persona text has no confirmation.
+- `Confirm` closes the card, or the Title is still `Edited title` -> the reset did not write the defaults back.
+- The Name or Alias changed -> Reset overwrote an identity it promises to keep.
+
+**Inconclusive if**
+
+If the Chief of Staff's tile is missing, run TEAMMATECARD-01's restore (`P-STOP`, then `P-LAUNCH-FREE`) and repeat. If a previous test renamed the Chief of Staff, the Name in step 6 is that new Name; the Alias is still the one it had.
+
+### TEAMMATECARD-35 — Remove deletes the file and ALL THREE stored settings
+
+**Free** · about 9 min
+
+*Proves the Model, Effort and Work mode rows go with the Persona file, so a later teammate of the same name cannot silently inherit a setting nobody chose.*
 
 **Before you start**
 
 - `sqlite3` is on PATH.
-- A teammate `Nova` exists at `App_Data\Teams\Nova.md`.
+- A teammate `Nova` exists at `<data>\Teammates\Nova\Nova.md`.
 
 **Steps**
 
-1. Seed both settings directly so this test needs no model catalog: run `sqlite3 "E:\Repos\Huddle\src\Huddle.App\App_Data\team.db" "INSERT OR REPLACE INTO persona_models(persona_name,model) VALUES('Nova','claude-haiku-test'); INSERT OR REPLACE INTO persona_efforts(persona_name,effort) VALUES('Nova','low');"
-2. Verify: `sqlite3 "E:\Repos\Huddle\src\Huddle.App\App_Data\team.db" "SELECT * FROM persona_models WHERE persona_name='Nova'; SELECT * FROM persona_efforts WHERE persona_name='Nova';"` — both must return a row.
+1. Seed all three settings directly so this test needs no model catalog: run `sqlite3 "<data>\team.db" "INSERT OR REPLACE INTO persona_models(persona_name,model) VALUES('Nova','claude-haiku-test'); INSERT OR REPLACE INTO persona_efforts(persona_name,effort) VALUES('Nova','low'); INSERT OR REPLACE INTO persona_work_modes(persona_name,work_mode) VALUES('Nova','ghost-mode');"`
+2. Verify: `sqlite3 "<data>\team.db" "SELECT * FROM persona_models WHERE persona_name='Nova'; SELECT * FROM persona_efforts WHERE persona_name='Nova'; SELECT * FROM persona_work_modes WHERE persona_name='Nova';"` — all three must return a row.
 3. In the browser, click the `Nova` tile and confirm `Model` shows `claude-haiku-test` and `Effort` shows `low`.
-4. Click `Remove`, then `Confirm`.
-5. Confirm `App_Data\Teams\Nova.md` is gone.
+4. Click the `Remove` icon button (the person-with-a-minus icon), then `Confirm`.
+5. Confirm `<data>\Teammates\Nova\Nova.md` is gone. The `Nova` folder itself stays behind (`Remove` deletes only the file and the rows, `PersonaStore.cs:472-483`).
 6. Re-run the sqlite query from step 2.
+7. Delete the leftover `<data>\Teammates\Nova` folder.
 
 **Pass if — all of these**
 
-- Before the remove, both tables hold a row for `Nova` and the card shows both values.
-- After the remove, `Nova.md` no longer exists.
-- Both queries return nothing at all — no row, not a blank row.
+- Before the remove, the three tables hold a row for `Nova` and the card shows the Model and the Effort.
+- After the remove, `Nova.md` no longer exists and the tile is gone.
+- The query returns nothing at all for all three tables — no row, not a blank row.
 
 **Fail if — any of these**
 
-- A `persona_models` or `persona_efforts` row survives -> a teammate created later under the same Name silently inherits a Model or Effort nobody chose for it, and there is no UI anywhere that would show why.
+- A `persona_models`, `persona_efforts` or `persona_work_modes` row survives -> a teammate created later under the same Name silently inherits a Model, Effort or Work mode nobody chose for it, and there is no UI anywhere that would show why (`PersonaStore.cs:477-479` deletes all three).
 - A row survives holding an empty string -> worse than a stale value: a row that exists but never resolves warns on every single session start, forever.
 - The file is deleted but the card reports success while the rows remain -> the two halves of the delete are no longer one operation.
 
 **Inconclusive if**
 
-If `sqlite3` is missing, seed the values through the UI instead (pick Haiku and low in an Edit card — requires node and an authenticated adapter) and read them back from the View card; that proves less but is not nothing. Record which route you used.
+If `sqlite3` is missing, seed the values through the UI instead (pick Haiku and low in an Edit card — requires node and an authenticated adapter) and read them back from the View card; that proves less but is not nothing, and the Work mode half is then unverified. Record which route you used.
 
 > [!NOTE]
 > `team.db` is in WAL mode, so `sqlite3` can read it while the app is running. Do not copy `team.db` on its own — recent writes live in `team.db-wal`.
@@ -1443,13 +1511,13 @@ If `sqlite3` is missing, seed the values through the UI instead (pick Haiku and 
 
 **Steps**
 
-1. Run `sqlite3 "E:\Repos\Huddle\src\Huddle.App\App_Data\team.db" "INSERT OR REPLACE INTO persona_models(persona_name,model) VALUES('Nova','claude-ghost-9'); INSERT OR REPLACE INTO persona_efforts(persona_name,effort) VALUES('Nova','ghost-effort');"
+1. Run `sqlite3 "<data>\team.db" "INSERT OR REPLACE INTO persona_models(persona_name,model) VALUES('Nova','claude-ghost-9'); INSERT OR REPLACE INTO persona_efforts(persona_name,effort) VALUES('Nova','ghost-effort');"`
 2. In the browser, reload the page, then click the `Nova` tile.
 3. Read the `Model` and `Effort` sections of the View card.
 4. Click `Edit`. Read the selected option in the **Model** select and in the **Effort** select, and check whether each list also contains the real catalog options (when a catalog is available).
 5. Without touching either select, change one word of the body text and click `Save`.
-6. Re-run `sqlite3 "E:\Repos\Huddle\src\Huddle.App\App_Data\team.db" "SELECT * FROM persona_models WHERE persona_name='Nova'; SELECT * FROM persona_efforts WHERE persona_name='Nova';"`
-7. Clean up: delete both rows with `sqlite3 "...team.db" "DELETE FROM persona_models WHERE persona_name='Nova'; DELETE FROM persona_efforts WHERE persona_name='Nova';"`
+6. Re-run `sqlite3 "<data>\team.db" "SELECT * FROM persona_models WHERE persona_name='Nova'; SELECT * FROM persona_efforts WHERE persona_name='Nova';"`
+7. Clean up: delete both rows with `sqlite3 "<data>\team.db" "DELETE FROM persona_models WHERE persona_name='Nova'; DELETE FROM persona_efforts WHERE persona_name='Nova';"`
 
 **Pass if — all of these**
 
@@ -1478,14 +1546,14 @@ If the app was started before the rows were inserted, reload the browser page an
 
 **Before you start**
 
+- Lane is `P-LAUNCH-FREE`, freshly launched: the model list is cached for the life of the app after the first probe (`ModelCatalogProbe.cs:109-112`), so the `Edit` half below only shows a spawn on the first Edit or Create after a launch.
 - `node` is on PATH so a spawn would be visible.
-- The app is running with `--Team:Acp:Enabled=false`.
-- At least two teammates exist, in at least two different Teams.
+- At least two teammates exist, in at least two different Teams. Create them from the Create card with the **Teams** field (for example `Nova` in `Business` and `Iris` in `Household`).
 - A PowerShell window is available.
 
 **Steps**
 
-1. In `T-B` run `O-ADAPTERS` and record the count (an error saying no process was found counts as zero).
+1. In `T-B` run `O-ADAPTERS` and record the count (it prints `0` when nothing is running).
 2. In the browser, load http://localhost:5100/teammates and reload it three more times.
 3. Run `O-ADAPTERS` again and read the app console for any line containing `Model catalog probe`.
 4. Change the **Team** filter to a team, then back to `All teams`.
@@ -1522,6 +1590,7 @@ If node never appears even after `Edit`, the adapter is missing or needs authent
 
 **Before you start**
 
+- Lane is `P-LAUNCH-FREE`, freshly launched, and this is the first Edit or Create of the run: the model list is cached after the first probe (`ModelCatalogProbe.cs:109-112`), so a later open skips the loading text.
 - `node` is on PATH.
 - At least one teammate exists.
 - The app console is visible.
@@ -1554,10 +1623,7 @@ If node never appears even after `Edit`, the adapter is missing or needs authent
 An empty catalog is a LEGITIMATE result when node is missing, the adapter is not installed, or its authentication has lapsed. The picker cannot tell you which; the console can. Read it and record the cause rather than calling the test failed.
 
 > [!NOTE]
-> Record once, as a wording inconsistency rather than a bug: the Effort select's blank option says `Use the agent's default` while the View card calls the same state `Model default`. Effort is genuinely resolved by the model, not the agent.
-
-> [!NOTE]
-> Steps 3 and 4 open the selects only AFTER step 2 has waited for both hints to settle, which is why this test is unaffected by issue #39's fix. What each select does DURING its loading window - refuse to open, visibly dimmed - is [MODELEFFORT-28](model-effort.md#modeleffort-28-both-pickers-are-inert-while-their-own-catalog-is-being-probed-and-the-model-list-lands-without-waiting-on-the-effort-one)'s job, not this one's.
+> Steps 3 and 4 open the selects only AFTER step 2 has waited for both hints to settle, which is why this test is unaffected by issue #39's fix. What each select does DURING its loading window - refuse to open, visibly dimmed - is [MODELEFFORT-28](model-effort.md#modeleffort-28--both-pickers-are-inert-while-their-own-catalog-is-being-probed-and-the-model-list-lands-without-waiting-on-the-effort-one)'s job, not this one's.
 
 ### TEAMMATECARD-39 — Changing the Model clears the Effort and re-probes the ladder (Haiku -> Sonnet)
 
@@ -1622,9 +1688,9 @@ If the catalog offers only one model, this test cannot run — record it as bloc
 2. Set **Model** to Haiku. Leave **Effort** blank.
 3. Click `Add teammate`.
 4. Read the `Model` section of the resulting View card and write down exactly what it says.
-5. Run `sqlite3 "E:\Repos\Huddle\src\Huddle.App\App_Data\team.db" "SELECT * FROM persona_models WHERE persona_name='Modelcheck';"` and write down the stored value.
-6. Open `App_Data\Teams\Modelcheck.md` and search it for the stored value, for the display name, and for the word `model`.
-7. Delete the teammate through the card afterwards.
+5. Run `sqlite3 "<data>\team.db" "SELECT * FROM persona_models WHERE persona_name='Modelcheck';"` and write down the stored value.
+6. Open `<data>\Teammates\Modelcheck\Modelcheck.md` and search it for the stored value, for the display name, and for the word `model`.
+7. Delete the teammate through the card afterwards (Setup step 7, including the leftover `Modelcheck` folder).
 
 **Pass if — all of these**
 
@@ -1658,10 +1724,10 @@ If the Model select offers no options, the test cannot run — record it as bloc
 
 1. Open the teammate's card, click `Edit`, wait for the hints to settle, set **Effort** to low, and click `Save`.
 2. Read the `Effort` section on the resulting View card.
-3. Run `sqlite3 "E:\Repos\Huddle\src\Huddle.App\App_Data\team.db" "SELECT * FROM persona_efforts WHERE persona_name='<Name>';"` and record the value.
+3. Run `sqlite3 "<data>\team.db" "SELECT * FROM persona_efforts WHERE persona_name='<Name>';"` and record the value.
 4. Click `Edit` again, change **Effort** from low to medium, and click `Save`.
 5. Read the `Effort` section again and re-run the sqlite query.
-6. Open the Persona `.md` file and search it for `effort`, `low` and `medium`.
+6. Open the Persona file (`<data>\Teammates\<Name>\<Name>.md`, or the card's `Open` button) and search it for `effort`, `low` and `medium`.
 7. Click `Edit` once more, set **Effort** back to the blank `Use the agent's default` option, and click `Save`.
 8. Re-run the sqlite query one last time.
 
@@ -1685,50 +1751,48 @@ If the Effort select offers only the blank option for Haiku, this model advertis
 > [!NOTE]
 > low -> medium is the only effort switch any test in this area asks for.
 
-### TEAMMATECARD-42 — Restart starts an adapter even with Team:Acp:Enabled=false
+### TEAMMATECARD-42 — Restart with Team:Acp:Enabled=false reports Offline and starts nothing
 
-**Free** · about 10 min
+**Free** · about 8 min
 
-*Characterises whether the card's Restart button bypasses the flag that exists to stop the app spending money — the single most important thing to establish in this area.*
+*Proves the card's Restart button cannot route around the flag that exists to stop the app spending money: with the flag off it reports a fixed reason and spawns no adapter.*
 
 **Before you start**
 
-- The app is running with `--Team:Acp:Enabled=false`.
+- Lane is `P-LAUNCH-FREE` (`Acp:Enabled=false`).
 - `node` is on PATH and the adapter is installed.
-- At least one teammate exists and reads `Offline`.
+- At least one teammate exists and reads `Offline`. The Chief of Staff is enough.
 - A PowerShell window and the app console are both visible.
 
 **Steps**
 
 1. Confirm every tile on /teammates reads `Offline`.
-2. Run `O-ADAPTERS` and record the count.
-3. Click a teammate tile and confirm the card offers a `Restart` button.
+2. Run `O-ADAPTERS` and record the count (it must be `0`).
+3. Click a teammate tile and confirm the card offers a `Restart` button, with the caption `Like saving an edit, this restarts the teammate, which clears what it remembers.` beneath the row.
 4. Click `Restart` once and immediately read the button's label.
 5. Within five seconds run `O-ADAPTERS` again and record the count.
-6. Watch the card's status line and the tile behind it for up to 30 seconds; record every state it passes through.
+6. Read the card's status line and the red line under it, and the tile behind the dialog, for 30 seconds; record every state they pass through.
 7. Read the app console for any line naming this Persona.
-8. Run `sqlite3 "E:\Repos\Huddle\src\Huddle.App\App_Data\team.db" "SELECT name, kind FROM users;"` and note whether a row now exists for this teammate's Name.
-9. Reopen the card, click `Restart` and then immediately click it again (double-click). Confirm the node process count does not jump by two.
 
 **Pass if — all of these**
 
-- The button label changes to `Restarting…` and the button is disabled while the restart is in flight.
-- Whatever the outcome, it is reported: either the badge reaches `Starting`/`Online`, or a red line naming the failure appears on the card.
-- A double-click never produces two adapter processes for one teammate.
+- The button label changes to `Restarting…` and the button is disabled while the restart is in flight, then returns to `Restart`.
+- The status stays `Offline` and the card shows the red reason `Teammates are switched off in this configuration, so nothing was started.` (`PersonaSupervisor.cs:508-512`; the card shows `status.Reason`, `TeammateCard.razor:114-116`).
+- `O-ADAPTERS` prints `0` both before and after the click: no adapter was started.
 - The page never shows the yellow unhandled-error bar.
 
 **Fail if — any of these**
 
-- A double-click spawns two node processes -> two hosts under one agent id; the teammate will answer twice or fight itself.
-- The badge stays `Offline` with NO reason line and nothing in the console -> the failure is invisible; a reason line is the whole feature here.
+- The badge reaches `Starting` or `Online`, or `O-ADAPTERS` is above `0` -> Restart bypasses the money guard; the teammate would take billed Turns the moment anyone messaged it. Headline defect.
+- The badge stays `Offline` with a different reason, or none, and nothing in the console -> the failure is invisible; the exact reason line is the whole feature here.
 - The yellow error bar appears -> the restart path let an exception reach the circuit instead of surfacing it on the card.
 
 **Inconclusive if**
 
-If no node process spawns and the console says the adapter is missing or needs authentication, the money-guard question cannot be answered this run — record the console line and mark inconclusive rather than concluding the guard holds.
+If `O-ADAPTERS` was above `0` before the click, an earlier test left an adapter running; stop it, relaunch the lane and repeat.
 
 > [!NOTE]
-> REPORT EXACTLY WHAT YOU OBSERVE, do not assume. The concern being tested: the supervisor's Restart path does not check `Team:Acp:Enabled`, only its background start loop does, and the agent host factory is registered unconditionally. If the teammate genuinely reaches `Online` with the flag off, then Restart is a route around the money guard and the teammate will take real, billed Turns the moment anyone messages it — that is a headline finding. Also note: with the flag off nothing is subscribed to persona changes, so an edit will NOT auto-restart it afterwards.
+> The guard is in `StartHostIfMissingAsync` (`PersonaSupervisor.cs:496-512`), the one place a host is created, so startup, a file change and the Restart button all reach it. With the flag off nothing is subscribed to persona changes either, so an edit does not auto-restart the teammate afterwards.
 
 ### TEAMMATECARD-43 — A newly created teammate comes online by itself when ACP is on
 
@@ -1738,116 +1802,117 @@ If no node process spawns and the console says the adapter is missing or needs a
 
 **Before you start**
 
-- Stop the app and restart it WITHOUT the flag: `dotnet run --project E:\Repos\Huddle\src\Huddle.App` (Development turns ACP on).
-- `node` is on PATH and the adapter is authenticated.
-- `App_Data\Teams` is empty at the start.
+- Lane is `P-LAUNCH-UAT`: ACP is on and the adapter is the free mock, so nothing here spends money. The Chief of Staff, Ada and Bo are already running. This test does not set a Model or an Effort: the mock advertises no models.
+- The mock adapter is counted by `O-MOCK-ADAPTERS`, never by `O-ADAPTERS`.
+- In this lane `<data>` is `C:\seeds\huddle\uat\data`.
 
 **Steps**
 
-1. Run `O-ADAPTERS` and record the count.
-2. Create a teammate from the card: Name `Live`, Title `T`, Alias `lvo`, body `You are Live.`, Model Haiku, Effort low.
+1. Run `O-MOCK-ADAPTERS` and record the count.
+2. Create a teammate from the card: Name `Live`, Title `T`, Alias `lvo`, body `You are Live.`. Leave Model and Effort blank.
 3. Leave the resulting View card OPEN and watch its status line, without reloading, for up to 60 seconds. Record every state it shows.
 4. Watch the tile behind the dialog at the same time.
-5. Run `O-ADAPTERS` again and count how many NEW processes appeared for this one teammate.
+5. Run `O-MOCK-ADAPTERS` again and count how many NEW processes appeared for this one teammate.
 6. Read the app console for any line naming `Live`.
-7. Close the card, click `Remove` then `Confirm`, and run `O-ADAPTERS` once more after 10 seconds.
+7. Close the card, click the `Remove` icon button then `Confirm`, and run `O-MOCK-ADAPTERS` once more after 10 seconds. Then delete the leftover `<data>\Teammates\Live` folder.
 
 **Pass if — all of these**
 
 - The status moves `Offline` (or `Starting`) -> `Starting` -> `Online` within a few seconds, on both the open card and the tile, with no page reload.
-- Exactly ONE new node process appears for the one teammate.
-- After the remove, that node process goes away.
+- Exactly ONE new mock adapter process appears for the one teammate.
+- After the remove, that process goes away.
 
 **Fail if — any of these**
 
-- Two or three node processes appear for a single save -> one save is raising several change events, so one teammate spawns several adapters, each spending independently.
+- Two or three processes appear for a single save -> one save is raising several change events, so one teammate spawns several adapters.
 - The badge sticks on `Offline` with NO reason line and nothing in the console -> a start failure with no diagnosis anywhere; a reason line IS the feature.
 - The open card's status never moves while the tile's does -> the card is not following live health, so a user watching the card sees a permanently starting teammate.
-- The node process survives the remove -> an orphaned adapter keeps running with no teammate attached.
+- The process survives the remove -> an orphaned adapter keeps running with no teammate attached.
 
 **Inconclusive if**
 
-If the badge sticks on `Offline` WITH a reason line naming a missing adapter or lapsed authentication, that is correct behaviour for an unauthenticated machine — record the reason text and mark the online path unverified. Starting a session sends no prompt, so this costs nothing either way.
+If the badge sticks on `Offline` WITH a reason line, record the reason text and mark the online path unverified; it usually means the mock adapter path in `P-LAUNCH-UAT` is wrong.
 
 > [!NOTE]
-> Starting a session spends no tokens by itself — no prompt is sent. Leave the app in ACP-on mode for TEAMMATECARD-44 through 50, then switch it back.
+> Starting a session spends no tokens by itself — no prompt is sent — and the mock never bills. Stay in this lane for TEAMMATECARD-44 through 49 and 53.
 
-### TEAMMATECARD-44 — The Message action appears only once a Room exists
+### TEAMMATECARD-44 — The Message action is read once, when the card opens
 
 **Free** · about 8 min
 
-*Proves the Message link is absent rather than broken for a teammate that has never connected, and that it appears on an already-open card when the teammate connects.*
+*Proves the Message link is absent rather than broken on a card opened before the teammate has a Room, and that the card reads the Room once: a card that is already open does not grow the link, but the next open does.*
 
 **Before you start**
 
-- The app is running with ACP ON (see TEAMMATECARD-43).
-- A teammate name that has never connected before (use a fresh name such as `Freshone`).
+- Lane is `P-LAUNCH-UAT` (see TEAMMATECARD-43). `<data>` is `C:\seeds\huddle\uat\data`.
+- A name that has never connected: `Freshone`.
+- `sqlite3` is on PATH.
 
 **Steps**
 
-1. Stop the app (Ctrl+C) and restart it WITH ACP OFF: `dotnet run --project E:\Repos\Huddle\src\Huddle.App -- --Team:Acp:Enabled=false`.
-2. Create a teammate: Name `Freshone`, Title `T`, Alias `frn`, body `x`.
-3. On the resulting View card, read the action row.
-4. Confirm with `sqlite3 "E:\Repos\Huddle\src\Huddle.App\App_Data\team.db" "SELECT name FROM users WHERE name='Freshone';"` that no Agent row exists.
-5. Leave the card OPEN. Click `Restart` (or, alternatively, restart the app with ACP on and reopen the page) and wait for the teammate to reach `Online`.
-6. Without closing or reopening the card, read the action row again.
-7. If a `Message` link appeared, hover it and read its target, then click it.
-8. Re-run the sqlite query, plus `sqlite3 "...team.db" "SELECT id, name FROM rooms;"`.
+1. Click `New teammate`. Set **Name** `Freshone`, **Title** `T`, **Alias** `frn`, body `x`, and click `Add teammate`.
+2. On the resulting View card, read the action row.
+3. Leave the card OPEN and wait until its status reads `Online`.
+4. Without closing or reopening the card, read the action row again.
+5. Run `sqlite3 "<data>\team.db" "SELECT name FROM users WHERE name='Freshone'; SELECT id, name FROM rooms;"`.
+6. Close the card and click the `Freshone` tile again. Read the action row.
+7. If a `Message` button is there, hover it and read its target, then click it.
 
 **Pass if — all of these**
 
-- Before the teammate ever connects, the action row is exactly `Edit`, `Open`, `Restart`, `Remove` — NO `Message`.
-- After it connects, a `Message` link appears whose href is `/rooms/<id>`, and it appears WITHOUT closing and reopening the card.
-- Clicking `Message` navigates to that Room and the Room opens.
-- A `users` row for `Freshone` and a two-member Room containing it and the Human now exist.
+- Right after the create, the action row is `Edit`, `Open`, `Restart` and the `Remove` icon — NO `Message` (the card's Room is null at that point).
+- Step 4: the action row is unchanged. The open card read its Room once, when it opened (`TeammateCard.razor:785`), and `RefreshFromStore` does not re-read it (`:1903-1917`).
+- Step 5: a `users` row for `Freshone` and a Room that contains it now exist.
+- Step 6: a `Message` button leads the row, its target is `/rooms/<id>` with the id from step 5, and clicking it opens that Room.
 
 **Fail if — any of these**
 
-- A `Message` link is offered before the teammate has ever connected -> it leads to a Room that does not exist; the link 404s or lands on an empty page.
-- The link never appears even after the teammate is `Online` and the Room row exists -> the open card is not refreshing its Room link in the background, so the user must close and reopen the card to reach a chat that already exists.
+- A `Message` button is offered on the card before any Room exists -> it leads to a Room that does not exist; the link 404s or lands on an empty page.
+- After a reopen the button is still absent although step 5 shows the Room -> the card is not reading the Room at all.
 - Clicking `Message` lands on an empty or missing Room -> the id being rendered is not the Room's.
+- The button DOES appear on the still-open card in step 4 -> the card now refreshes its Room link; that is a behaviour change to record against this test's wording, not a defect in the link.
 
 **Inconclusive if**
 
-If the teammate never reaches `Online` (no adapter, no authentication), the second half of the test cannot run — record the first half (Message correctly absent) as passed and the rest as unverified.
+If the teammate never reaches `Online`, or step 5 shows no Room, the second half cannot run — record the first half (Message correctly absent) as passed and the rest as unverified.
 
 > [!NOTE]
-> A teammate that has never connected having no Message action is DELIBERATE — absent rather than broken. Do not file the absence itself.
+> A teammate card opened before the teammate has a Room having no Message action is DELIBERATE — absent rather than broken. Do not file the absence itself, and do not file "I had to close and reopen the card".
 
-### TEAMMATECARD-45 — Restart is hidden for a healthy or starting teammate
+### TEAMMATECARD-45 — Restart is offered in every state except Starting
 
-**Free** · about 5 min
+**Free** · about 8 min
 
-*Proves the Restart button and its warning appear only when there is something to fix, so a healthy session's memory is never thrown away for nothing.*
+*Proves the Restart button and its caption are shown for Online, Offline and Degraded teammates and hidden only while a session is mid-creation, so a manual restart (the only way to apply a next-session Prompt) is always reachable without racing a start.*
 
 **Before you start**
 
-- The app is running with ACP ON.
-- A teammate is `Online`.
+- Lane is `P-LAUNCH-UAT`; Ada is `Online`.
+- A PowerShell window is available.
 
 **Steps**
 
-1. Open the `Online` teammate's card.
-2. Read the whole action row and the area directly beneath it.
-3. Watch a teammate while it is in the `Starting` state (restart the app and open a card quickly, or click Restart on another teammate and open its card immediately). Read its action row.
-4. Force the teammate offline: stop the app, restart it with `--Team:Acp:Enabled=false`, reload the page, and open the same card.
+1. Open Ada's card (Online). Read the whole action row and the area directly beneath it.
+2. Click `Restart` and open the card again at once, or open Bo's card straight after clicking `Restart` on it, to catch the `Starting` state. Read its action row and the area beneath it. If you miss it, say so.
+3. Wait for `Online` and read the row again.
+4. `P-STOP`, then launch `P-LAUNCH-FREE`, reload the page and open the Chief of Staff's card, which now reads `Offline`.
 5. Read the action row and the area beneath it again.
 
 **Pass if — all of these**
 
-- While `Online`, the actions are `Message`, `Edit`, `Open`, `Remove` — NO `Restart` — and no `Like saving an edit…` hint is shown.
-- While `Starting`, `Restart` is likewise absent.
-- Once `Offline`, both `Restart` and the hint `Like saving an edit, this restarts the teammate, which clears what it remembers.` reappear.
+- While `Online`, the actions are `Message`, `Edit`, `Open`, `Restart` and the `Remove` icon, and the caption `Like saving an edit, this restarts the teammate, which clears what it remembers.` is shown (`TeammateCard.razor:182-185, 234-237`).
+- While `Starting`, `Restart` and the caption are both absent.
+- Once `Offline`, both `Restart` and the caption are present.
 
 **Fail if — any of these**
 
-- `Restart` is offered for an `Online` teammate -> clicking it destroys that agent's conversation memory for no benefit, and nothing on screen warns that is the trade.
-- `Restart` is offered while `Starting` -> a Persona launching for the first time reads as a fault and invites a user to interrupt it.
-- The hint appears without the button, or vice versa -> the two are supposed to move together.
+- `Restart` is missing for an `Online` or `Offline` teammate -> the only way to apply a next-session Prompt to a healthy teammate is gone (the code comment at `TeammateCard.razor:167-181` records that this was fixed).
+- `Restart` is offered while `Starting` -> a Restart there races the start it would cancel.
+- The caption appears without the button, or vice versa -> the two are supposed to move together.
 
 **Inconclusive if**
 
-If you cannot get a teammate to `Online` at all, only the Offline half is testable — record the rest as unverified. Catching the `Starting` state is timing-dependent; if you miss it, say so rather than guessing.
+Catching `Starting` is timing-dependent; if you miss it, record the Online and Offline halves and say the Starting half is unverified rather than guessing.
 
 ### TEAMMATECARD-46 — A save that changes nothing does not restart the teammate
 
@@ -1857,106 +1922,103 @@ If you cannot get a teammate to `Online` at all, only the Offline half is testab
 
 **Before you start**
 
-- The app is running with ACP ON.
-- One teammate is `Online`.
+- Lane is `P-LAUNCH-UAT`; Ada is `Online`.
 - The app console and a PowerShell window are visible.
 
 **Steps**
 
-1. Run `O-ADAPTERS-LIST` and note the process id of the teammate's adapter.
-2. Open the teammate's card and confirm the badge reads `Online`.
+1. Snapshot the adapter processes: `Get-CimInstance Win32_Process -Filter "Name='mock-acp.exe'" | Select-Object ProcessId, CreationDate | Sort-Object ProcessId`. Write down every ProcessId.
+2. Open Ada's card and confirm the badge reads `Online`.
 3. Click `Edit`, touch nothing at all, and click `Save`.
 4. Watch the badge continuously for 15 seconds and record every state it shows.
-5. Run `O-ADAPTERS-LIST` again and compare the process id.
+5. Take the snapshot again and compare the set of ProcessIds.
 6. Read the console for a fresh adapter launch sequence.
-7. Now click `Edit` again, add a single space to the END of the body text, and click `Save`.
-8. Watch the badge again for 15 seconds, and compare the node process id once more.
+7. Now click `Edit` again, change one word of the Persona body, and click `Save`.
+8. Watch the badge again for 15 seconds, and take the snapshot once more.
 
 **Pass if — all of these**
 
 - After the no-op save the badge stays `Online` and never shows `Starting`.
-- The node process id is unchanged after the no-op save.
-- After the whitespace change the badge DOES pass through `Starting` and back to `Online`, and the node process id changes.
+- The set of ProcessIds is identical after the no-op save.
+- After the word change the badge DOES pass through `Starting` and back to `Online`, and exactly one ProcessId is replaced by a new one.
 
 **Fail if — any of these**
 
 - The badge flickers `Starting` -> `Online` after the no-op save -> the session was restarted and that agent's entire conversation memory was destroyed for nothing; the comparison that should have short-circuited is whole-record equality over text, Model and Effort.
-- The whitespace change does NOT restart -> a real edit did not take effect, and the card claims otherwise; the teammate keeps thinking with the old prompt.
-- The node process id changes but the badge never moves -> the status is not following the actual session.
+- The word change does NOT restart -> a real edit did not take effect, and the card claims otherwise; the teammate keeps thinking with the old prompt.
+- A ProcessId changes but the badge never moves -> the status is not following the actual session.
 
 **Inconclusive if**
 
-If the badge is never `Online` to begin with, this test cannot distinguish a restart from a failed start — get one teammate genuinely `Online` first or mark blocked.
+If the badge is never `Online` to begin with, this test cannot distinguish a restart from a failed start — get Ada genuinely `Online` first or mark blocked.
 
 > [!NOTE]
-> Free: a restart sends no prompt. Only the later memory test (TEAMMATECARD-50) spends anything.
+> Free: a restart sends no prompt, and the mock never bills. Only the later memory test (TEAMMATECARD-50) spends anything.
 
 ### TEAMMATECARD-47 — Changing only the Model or only the Effort restarts the session
 
-**Free** · about 8 min
+**Free** · about 12 min
 
-*Proves a Model or Effort change actually takes effect, which is only possible by stopping and restarting the session.*
+*Proves a Model or Effort change actually takes effect, which is only possible by stopping and restarting the session. The mock adapter advertises no models, so the change is from a seeded stored value to the blank default; that is still a Model-only (then Effort-only) change.*
 
 **Before you start**
 
-- The app is running with ACP ON.
-- A teammate is `Online` with Model Haiku and Effort low.
+- Lane is `P-LAUNCH-UAT`; Ada is `Online`. `<data>` is `C:\seeds\huddle\uat\data`.
 - `sqlite3` is on PATH.
 - A PowerShell window is visible.
 
 **Steps**
 
-1. Note the teammate's node process id with `O-ADAPTERS-LIST`.
-2. Open the card, click `Edit`, change ONLY the **Model** from Haiku to Sonnet (do not touch the text), and click `Save`.
-3. Watch the badge for 20 seconds and record the states.
-4. Run `O-ADAPTERS-LIST` and compare process ids.
-5. Run `sqlite3 "E:\Repos\Huddle\src\Huddle.App\App_Data\team.db" "SELECT * FROM persona_models WHERE persona_name='<Name>';"`.
-6. Wait for `Online`, then click `Edit` and change ONLY the **Effort** from the blank option to low (the model change cleared it), and click `Save`.
-7. Watch the badge for 20 seconds and compare node process ids again.
-8. Run `sqlite3 "...team.db" "SELECT * FROM persona_efforts WHERE persona_name='<Name>';"`.
-9. Set the Model back to Haiku and the Effort back to low when finished.
+1. Snapshot the adapter processes with the command from TEAMMATECARD-46 step 1.
+2. Seed a Model: `sqlite3 "<data>\team.db" "INSERT OR REPLACE INTO persona_models(persona_name,model) VALUES('Ada','ghost-model-1');"`
+3. Open Ada's card and click `Restart`, so the running session starts with the seeded Model. Wait for `Online` and take the snapshot again (one ProcessId is replaced).
+4. Click `Edit`. Confirm the **Model** select shows `ghost-model-1` selected. Change ONLY the **Model** to `Use the agent's default` (do not touch the text) and click `Save`.
+5. Watch the badge for 20 seconds, take the snapshot again, and run `sqlite3 "<data>\team.db" "SELECT * FROM persona_models WHERE persona_name='Ada';"`.
+6. Seed an Effort: `sqlite3 "<data>\team.db" "INSERT OR REPLACE INTO persona_efforts(persona_name,effort) VALUES('Ada','ghost-effort-1');"`, click `Restart` on the card, wait for `Online` and snapshot.
+7. Click `Edit`, confirm **Effort** shows `ghost-effort-1`, change ONLY the **Effort** to `Use the agent's default` and click `Save`.
+8. Watch the badge for 20 seconds, snapshot, and run `sqlite3 "<data>\team.db" "SELECT * FROM persona_efforts WHERE persona_name='Ada';"`.
 
 **Pass if — all of these**
 
-- Each change makes the badge pass through `Starting` and back to `Online`.
-- The node process is replaced each time (a new process id).
-- `persona_models` holds the Sonnet id after step 2; `persona_efforts` holds `low` after step 6.
+- After step 4 and again after step 7 the badge passes through `Starting` and back to `Online`.
+- Exactly one ProcessId is replaced by a new one each time.
+- `persona_models` returns nothing after step 5 and `persona_efforts` returns nothing after step 8 (the blank option deletes the row).
 
 **Fail if — any of these**
 
-- No restart happens after a Model or Effort change -> a model and an effort are both fixed when a session is created and cannot be swapped into a running one, so the teammate keeps thinking with the OLD model while the card claims the new one. This is silent and permanent until something else restarts it.
+- No restart happens after a Model or Effort change -> a model and an effort are both fixed when a session is created and cannot be swapped into a running one, so the teammate keeps thinking with the OLD value while the card claims the new one. This is silent and permanent until something else restarts it.
 - The database updates but the session does not restart -> the card and the running session now disagree with no way to tell from the UI.
 - The session restarts but the database is unchanged -> the change is lost at the next app start.
 
 **Inconclusive if**
 
-If the model catalog offers only one model, the Model half cannot run; record it as blocked and run the Effort half alone. Never select Opus to obtain a second model — if Sonnet is unavailable, mark blocked.
+If Ada does not reach `Online` after a `Restart` with a seeded ghost value, record the red reason line and mark this test blocked: the mock rejected the value, so the "running session started with it" precondition does not hold. A real Haiku -> Sonnet restart is then covered only by the paid lane and is not asked for here.
 
 > [!NOTE]
-> Free: no prompt is sent by a restart.
+> Free: no prompt is sent by a restart. Seeded values are cleaned up by the test itself; re-running `P-LAUNCH-UAT` resets the whole data folder anyway.
 
 ### TEAMMATECARD-48 — Remove does NOT cascade: the Agent and its Room survive
 
-**Free** · about 8 min
+**Free** · about 9 min
 
 *Proves that removing a Persona takes it offline without deleting the chat facts it created — a deliberate decision that a tester must not file as a bug.*
 
 **Before you start**
 
-- The app is running with ACP ON.
-- A teammate has connected at least once, so it has an Agent row and a Room.
+- Lane is `P-LAUNCH-UAT`; Ada has her one-to-one Room. `<data>` is `C:\seeds\huddle\uat\data`.
 - `sqlite3` is on PATH.
 
 **Steps**
 
-1. Open the teammate's card and click `Message`. Note the full `/rooms/<id>` URL from the address bar.
-2. Run `sqlite3 "E:\Repos\Huddle\src\Huddle.App\App_Data\team.db" "SELECT id,name FROM users WHERE name='<Name>'; SELECT id,name FROM rooms;"` and record the rows.
-3. Go back to /teammates, open the teammate's card, click `Remove`, then `Confirm`.
-4. Confirm the tile is gone from /teammates and the `.md` file is gone from disk.
-5. Look at the Rooms list in the left sidebar.
-6. Navigate to the `/rooms/<id>` URL you noted and read the page.
-7. Re-run the sqlite query from step 2.
-8. Check the transcript files under `App_Data` for that Room and confirm they still exist.
+1. Open Ada's card, click `Message`, send `Hello Ada` and wait for the mock's echo. Note the full `/rooms/<id>` URL from the address bar, and Ada's **Title** and **Alias** from her card.
+2. Seed her settings: `sqlite3 "<data>\team.db" "INSERT OR REPLACE INTO persona_models(persona_name,model) VALUES('Ada','ghost-model-1'); INSERT OR REPLACE INTO persona_efforts(persona_name,effort) VALUES('Ada','ghost-effort-1');"`
+3. Run `sqlite3 "<data>\team.db" "SELECT id,name FROM users WHERE name='Ada'; SELECT id,name FROM rooms;"` and record the rows.
+4. Go back to /teammates, open Ada's card, click the `Remove` icon button, then `Confirm`.
+5. Confirm the tile is gone from /teammates and `<data>\Teammates\Ada\Ada.md` is gone from disk (the `Ada` folder stays).
+6. Look at the Rooms list in the left sidebar.
+7. Navigate to the `/rooms/<id>` URL you noted and read the page.
+8. Re-run the sqlite query from step 3.
+9. Confirm the transcript `<data>\rooms\<id>.jsonl` still exists (`O-TRANSCRIPT`).
 
 **Pass if — all of these**
 
@@ -1964,7 +2026,8 @@ If the model catalog offers only one model, the Model half cannot run; record it
 - The Room is STILL listed in the sidebar and STILL opens at its URL.
 - Every message that was already in that Room is still shown.
 - The `users` row and the `rooms` row are both still present.
-- The removed teammate shows as permanently `Offline` inside the Room.
+- The removed teammate shows as `Offline` inside the Room.
+- The transcript file still exists.
 
 **Fail if — any of these**
 
@@ -1974,10 +2037,10 @@ If the model catalog offers only one model, the Model half cannot run; record it
 
 **Inconclusive if**
 
-If the teammate never connected, there is no Room to survive and this test proves nothing — bring it online first (TEAMMATECARD-43) and repeat. A Room with no messages still proves the Room survives; whether the TRANSCRIPT survives needs at least one exchange, which costs a Turn (see TEAMMATECARD-50).
+If the Room never opened or Ada never answered, there is no content for the Room to keep and this test proves less — bring the mock adapter up (`P-LAUNCH-UAT`) and repeat.
 
 > [!NOTE]
-> THIS IS A RECORDED REPO-OWNER DECISION. A tester expecting a full cleanup will want to file it — do not. Only the Model and Effort rows go with the file; Agents, Rooms and Transcripts stay.
+> THIS IS A RECORDED REPO-OWNER DECISION. A tester expecting a full cleanup will want to file it — do not. Only the Model, Effort and Work mode rows go with the file (`PersonaStore.cs:472-483`); Agents, Rooms and Transcripts stay. Leave the app running: TEAMMATECARD-49 follows.
 
 ### TEAMMATECARD-49 — Delete then recreate under the same Name: fresh settings, old Room
 
@@ -1987,22 +2050,22 @@ If the teammate never connected, there is no Room to survive and this test prove
 
 **Before you start**
 
-- TEAMMATECARD-48 has just completed, so a teammate Name was removed but its Agent row and Room remain.
-- `sqlite3` is on PATH.
+- TEAMMATECARD-48 has just completed, so Ada was removed but her Agent row and Room remain. You noted her Title and Alias and the Room URL there.
+- Lane is `P-LAUNCH-UAT`. `sqlite3` is on PATH.
 
 **Steps**
 
-1. Run `sqlite3 "E:\Repos\Huddle\src\Huddle.App\App_Data\team.db" "SELECT * FROM persona_models WHERE persona_name='<Name>'; SELECT * FROM persona_efforts WHERE persona_name='<Name>'; SELECT id,name FROM users WHERE name='<Name>';"` and record all three results.
-2. Click `New teammate` and recreate the SAME Name, with the same Title and Alias, body `x`, but leave BOTH **Model** and **Effort** on their blank option.
+1. Run `sqlite3 "<data>\team.db" "SELECT * FROM persona_models WHERE persona_name='Ada'; SELECT * FROM persona_efforts WHERE persona_name='Ada'; SELECT id,name FROM users WHERE name='Ada';"` and record all three results.
+2. Click `New teammate` and recreate the SAME Name `Ada`, with the same Title and Alias, body `x`, leaving the Model and Effort selects on their blank option.
 3. Click `Add teammate` and read the `Model` and `Effort` sections on the resulting View card.
 4. Re-run the two settings queries.
-5. Wait for the teammate to come `Online`, then read its card's action row and click `Message`.
+5. Wait for the teammate to come `Online`, close the card, reopen it and click `Message`.
 6. Compare the `/rooms/<id>` URL with the one recorded in TEAMMATECARD-48, and read what is already in the Room.
 
 **Pass if — all of these**
 
-- Before the recreate, `persona_models` and `persona_efforts` hold NO row for that Name, while the `users` row is still present.
-- The recreated teammate's card reads `Agent default` and `Model default` — the Haiku/low chosen before has NOT come back.
+- Before the recreate, `persona_models` and `persona_efforts` hold NO row for `Ada`, while the `users` row is still present.
+- The recreated teammate's card reads `Agent default` and `Model default` — the `ghost-model-1` and `ghost-effort-1` seeded before the delete have NOT come back.
 - Both settings queries still return nothing.
 - `Message` leads to the SAME Room id as before, with its earlier content intact.
 
@@ -2017,7 +2080,7 @@ If the teammate never connected, there is no Room to survive and this test prove
 If the teammate cannot come online, the Room half is unverifiable — the settings half is still decisive on its own. Record which half you verified.
 
 > [!NOTE]
-> Settings must not survive; chat facts must. Either direction being wrong is a defect, and they are opposite regressions.
+> Settings must not survive; chat facts must. Either direction being wrong is a defect, and they are opposite regressions. Re-run `P-LAUNCH-UAT` afterwards to restore the cast.
 
 ### TEAMMATECARD-50 — Editing a teammate really does lose its conversation memory (COSTS MONEY)
 
@@ -2027,7 +2090,7 @@ If the teammate cannot come online, the Room half is unverifiable — the settin
 
 **Before you start**
 
-- The app is running with ACP ON and the adapter is authenticated.
+- Lane is `P-LAUNCH-PAID`, including its first step: the Chief of Staff set to Haiku / low on its card before the paid launch, so its Greeting Turn is cheap. The adapter is authenticated.
 - A teammate is `Online` with Model = Haiku and Effort = low. Verify BOTH on its card before starting.
 - The app console is visible.
 
@@ -2038,7 +2101,7 @@ If the teammate cannot come online, the Room half is unverifiable — the settin
 3. Type exactly `Remember the codeword is PELICAN.` and send it. Wait for the reply and confirm the teammate acknowledged.
 4. Type exactly `What is the codeword?` and send it. Confirm it answers `PELICAN` — this proves the session remembers before the edit.
 5. Go to /teammates, open the teammate's card, click `Edit`, change ONE word of the Persona body, and click `Save`.
-6. Watch the badge until it returns to `Online`, and confirm in the console that the adapter process was replaced.
+6. Watch the badge until it returns to `Online`, and confirm with `O-ADAPTERS-LIST` that the adapter process id was replaced.
 7. Return to the Room and send exactly `What is the codeword?` again.
 8. Read the reply.
 
@@ -2046,7 +2109,7 @@ If the teammate cannot come online, the Room half is unverifiable — the settin
 
 - Before the edit, the teammate answers `PELICAN`.
 - After the edit and restart, the teammate does NOT know the codeword (it says it does not know, or asks what codeword).
-- The console shows the adapter process being replaced between the two questions.
+- The adapter process id is replaced between the two questions.
 
 **Fail if — any of these**
 
@@ -2066,12 +2129,12 @@ If the teammate never reaches `Online`, or the adapter reports an authentication
 
 **Free** · about 10 min
 
-*The boxes are helpers over the raw text, not a second source of truth. The field they must not damage is any OTHER frontmatter key: `PersonaFrontmatter.Compose` emits only the four identity keys, so a rewrite built on it would silently delete the `role:` and `consult_when:` lines that `mcp__team__list_agents` sends to the model. Only a file with extra keys can catch that.*
+*The boxes are helpers over the raw text, not a second source of truth. The field they must not damage is any OTHER frontmatter key: `PersonaFrontmatter.Compose` rebuilds the frontmatter from the keys it knows (identity, teams, adapter, skills, watches, consult_when and the underscore-prefixed built-in keys), so a rewrite built on it would silently delete a plain `role:` line, which `mcp__team__list_agents` sends to the model. Only a file with extra keys can catch that.*
 
 **Before you start**
 
 - `P-LAUNCH-FREE`.
-- Create a Persona file by hand at `src\Huddle.App\App_Data\Teams\Probe.md` with extra frontmatter keys, so there is something to destroy:
+- Create a Persona file by hand at `<data>\Teammates\Probe\Probe.md` (create the `Probe` folder first) with extra frontmatter keys, so there is something to destroy:
 
 ```markdown
 ---
@@ -2087,14 +2150,14 @@ You are Probe. Answer in one short sentence.
 **Steps**
 
 1. Open `/teammates`, click the `Probe` tile, then **Edit**. Note whether Name, Title and Alias appear as separate boxes above the Persona text.
-2. Change **Title** to `Changed Title`. WITHOUT saving, read the Persona text field below. Note the `title:` line and note whether `role:` and `consult_when:` are still there.
-3. Change **Alias** to `prb2`. Note the `alias:` line in the text below.
+2. Change **Title** to `Changed Title` and press Tab. WITHOUT saving, read the Persona text field below. Note the `title:` line and note whether `role:` and `consult_when:` are still there.
+3. Change **Alias** to `prb2` and press Tab. Note the `alias:` line in the text below.
 4. In the Persona text field, hand-edit `title:` to `'Edited By Hand'` and click outside the field. Note what the Title box now shows.
-5. Change **Name** to `Probe2`. Note whether a warning appears, and write down its wording.
-6. Change **Name** back to `Probe`. Note whether the warning disappears.
+5. Change **Name** to `Probe2` and press Tab. Note whether a note appears, and write down its wording.
+6. Change **Name** back to `Probe` and press Tab. Note whether the note disappears.
 7. Change **Name** to `Probe2` again and click **Save**. Note the name the card now shows, the Persona file path it reports, and whether the card is on the details view.
-8. Open `src\Huddle.App\App_Data\Teams\Probe.md` in an editor. Note every frontmatter key present and the body.
-9. Type an apostrophe into **Title**: `Emre's Probe`. Save, then re-open the file and note the `title:` line.
+8. Open `<data>\Teammates\Probe2\Probe2.md` in an editor. Note every frontmatter key present and the body.
+9. Click **Edit**, type an apostrophe into **Title**: `Emre's Probe`, press Tab and save, then re-open the file and note the `title:` line.
 
 **Pass if — all of these**
 
@@ -2102,9 +2165,9 @@ You are Probe. Answer in one short sentence.
 - Step 2: the `title:` line in the text below changed to match, and `role:` AND `consult_when:` are both still present and unchanged. This is the assertion that matters most in this test.
 - Step 3: the `alias:` line changed to match.
 - Step 4: the Title box re-seeded itself to `Edited By Hand` — the sync runs both ways.
-- Step 5: a warning appears saying the Agent, the Rooms and the Transcripts stay behind under the old name. It does NOT block editing or saving.
-- Step 6: the warning disappears when the Name matches again.
-- Step 7: the card lands on the details view for `Probe2`, not on an error and not on a blank card.
+- Step 5: a note appears reading `Renaming brings this teammate's chats, its history and its work folder with it. Messages already posted keep the old name — the transcript records what was said at the time.` (`TeammateCard.razor:290-292`). It does NOT block editing or saving.
+- Step 6: the note disappears when the Name matches again.
+- Step 7: the card lands on the details view for `Probe2`, not on an error and not on a blank card, and the file path reads `<data>\Teammates\Probe2\Probe2.md` (the folder and file both moved, ADR-0011).
 - Step 8: the file still holds `role:` and `consult_when:` with their original values, and the body is unchanged.
 - Step 9: the apostrophe round-trips — the file reads `title: 'Emre''s Probe'` and the card shows `Emre's Probe` when reopened.
 
@@ -2113,19 +2176,60 @@ You are Probe. Answer in one short sentence.
 - Step 2 or step 8 shows `role:` or `consult_when:` MISSING -> the rewrite is recomposing the frontmatter instead of editing one line. This is the exact failure the design exists to prevent. Defect, and a serious one: it silently removes what the model is told about a Teammate.
 - Step 7 shows an error like `Persona 'Probe2' does not exist.` -> the save is passing the newly typed Name as the lookup key instead of the Name the Persona is currently filed under. Defect.
 - Step 7 leaves the card on the OLD name or on a blank card -> the post-save re-read is using the stale name. Defect.
-- Step 5 shows no warning -> the rename consequence is now invisible at exactly the moment it is one keystroke away. Defect.
+- Step 5 shows no note -> the rename consequence is now invisible at exactly the moment it is one keystroke away. Defect.
+- Step 5 shows wording saying the chats or history "stay behind" -> the note describes the pre-ADR-0011 behaviour and contradicts what the rename now does.
 - Step 9 corrupts the file or the Persona vanishes from `/teammates` into the rejected-file list -> the value is not being YAML-escaped. Defect.
 
 **Inconclusive if**
 
-`Probe` does not appear on `/teammates` at all after you create the file — check the rejected-files block first; a typo in the frontmatter makes it a rejected file rather than a Persona, and that is a fixture problem, not a result.
+`Probe` does not appear on `/teammates` at all after you create the file — check the rejected-files block first; a typo in the frontmatter, or the file sitting directly under `Teammates` instead of in `Teammates\Probe`, makes it a rejected file rather than a Persona, and that is a fixture problem, not a result.
 
 **Afterwards**
 
-Delete `src\Huddle.App\App_Data\Teams\Probe.md` and `Probe2.md` if either remains.
+Delete the `<data>\Teammates\Probe` and `<data>\Teammates\Probe2` folders if either remains.
 
 > [!NOTE]
 > Nothing in this test writes to disk until **Save**. That is deliberate and worth not "fixing": `PersonaStore.Update` raises `PersonasChanged`, which restarts that Teammate's session and loses its conversation memory, so a save-as-you-type box would be a session restart per keystroke.
+
+### TEAMMATECARD-53 — An avatar-only Save does not restart the teammate
+
+**Free** · about 8 min
+
+*Proves a Save that changed only the avatar is written to the avatar store, not the Persona, so the running session (and its memory) is left alone (ADR-0019).*
+
+**Before you start**
+
+- Lane is `P-LAUNCH-UAT`; Ada is `Online`.
+- A PowerShell window is available.
+
+**Steps**
+
+1. Snapshot the adapter processes with the command from TEAMMATECARD-46 step 1. Write down every ProcessId.
+2. Open Ada's card and click `Edit`. In the **Avatar** panel choose `A short label`, type `AB` into the **Label** box, and touch nothing else.
+3. Click `Save`.
+4. Watch the badge for 15 seconds, record every state, and read the console for a fresh adapter launch sequence.
+5. Take the snapshot again and compare the set of ProcessIds.
+6. Close the card and read Ada's tile avatar.
+7. Reopen the card, click `Edit`, choose `Initials of the name` and click `Save` to put the avatar back.
+
+**Pass if — all of these**
+
+- After the save the card is on its View mode (`TeammateCard.razor:1885`) and the badge stays `Online`, never `Starting`.
+- The set of ProcessIds is identical before and after.
+- Ada's tile avatar shows `AB` after step 3.
+
+**Fail if — any of these**
+
+- The badge flickers `Starting` -> `Online`, or a ProcessId changes -> an avatar change restarted the session and wiped that teammate's conversation memory; Avatar is kept off the Persona record exactly so this cannot happen (`TeammateCard.razor:1841-1848`).
+- The tile still shows the monogram after the save -> the avatar was not stored.
+- An error appears on the card -> an avatar-only save is being treated as a failed update.
+
+**Inconclusive if**
+
+If the badge is never `Online` to begin with, this test cannot distinguish a restart from a failed start — get Ada genuinely `Online` first or mark blocked.
+
+> [!NOTE]
+> Free: a restart sends no prompt, and the mock never bills. TEAMMATECARD-46 covers the text no-op; this one covers the avatar half.
 
 ---
 

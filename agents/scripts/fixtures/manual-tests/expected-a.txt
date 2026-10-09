@@ -1,0 +1,8 @@
+HEADER-COUNT beta.md header says 3 tests, found 2
+HEADER-HOURS alpha.md header says 1.0 hours, tests sum to 0.7
+HUB-MISSING gamma.md not linked from docs/engineering/manual-tests.md
+PLANNING-MISSING gamma.md not linked from docs/engineering/manual-tests/planning.md
+TRACKER-MISSING alpha.md ALPHA-02 has no tracker row
+TRACKER-ORPHAN tracker.md ALPHA-09 has no heading
+DUPLICATE-ID gamma.md BETA-01 is also a heading in beta.md
+CHECK-MANUALTESTS Errors=7

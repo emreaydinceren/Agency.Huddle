@@ -268,6 +268,57 @@ public sealed class PromptStoreTests
         Assert.Equal("A brand new introduction.", onDisk["getHelp.intro"]);
     }
 
+    /// <summary>
+    /// A stored value equal to the default apart from <c>\r\n</c> line endings is not an override: the
+    /// default resolves, so the Settings field shows no "Modified" badge for it (decision D6).
+    /// </summary>
+    [Fact]
+    public void Load_OverrideEqualToDefaultButCrlf_ResolvesDefaultAndIsNotOverridden()
+    {
+        using var dataDir = new TempDataDir();
+        PromptDefinition multiLine = MultiLinePrompt();
+        WritePromptsJson(dataDir.Path, new Dictionary<string, string> { [multiLine.Key] = multiLine.Default.ReplaceLineEndings("\r\n") });
+
+        var store = new PromptStore(dataDir.Options(), NullLogger<PromptStore>.Instance);
+
+        Assert.Equal(multiLine.Default, store.Raw(multiLine.Key));
+    }
+
+    /// <summary>
+    /// After a load that ignored a CRLF-only override, the next save drops that key from the file
+    /// instead of keeping the redundant copy, and keeps the edit that was saved.
+    /// </summary>
+    [Fact]
+    public void SaveMany_AfterCrlfOverride_RemovesKeyFromFile()
+    {
+        using var dataDir = new TempDataDir();
+        PromptDefinition multiLine = MultiLinePrompt();
+        WritePromptsJson(dataDir.Path, new Dictionary<string, string> { [multiLine.Key] = multiLine.Default.ReplaceLineEndings("\r\n") });
+        var store = new PromptStore(dataDir.Options(), NullLogger<PromptStore>.Instance);
+
+        store.SaveMany(new Dictionary<string, string> { ["getHelp.intro"] = "A brand new introduction." });
+
+        var onDisk = ReadPromptsJson(dataDir.Path);
+        Assert.False(onDisk.ContainsKey(multiLine.Key));
+        Assert.Equal("A brand new introduction.", onDisk["getHelp.intro"]);
+    }
+
+    /// <summary>
+    /// Resetting an unrelated key rewrites the file without a CRLF-only override, the same as a save does.
+    /// </summary>
+    [Fact]
+    public void Reset_OfAnotherKey_RemovesCrlfOnlyOverrideFromFile()
+    {
+        using var dataDir = new TempDataDir();
+        PromptDefinition multiLine = MultiLinePrompt();
+        WritePromptsJson(dataDir.Path, new Dictionary<string, string> { [multiLine.Key] = multiLine.Default.ReplaceLineEndings("\r\n") });
+        var store = new PromptStore(dataDir.Options(), NullLogger<PromptStore>.Instance);
+
+        store.Reset("getHelp.intro");
+
+        Assert.False(ReadPromptsJson(dataDir.Path).ContainsKey(multiLine.Key));
+    }
+
     /// <summary>An empty edit set is a no-op: no file write and no <see cref="PromptStore.PromptsChanged"/>.</summary>
     [Fact]
     public void SaveMany_EmptyEditSet_RaisesNothingAndWritesNoFile()
@@ -496,6 +547,10 @@ public sealed class PromptStoreTests
             await Task.Delay(TimeSpan.FromMilliseconds(50), cancellationToken);
         }
     }
+
+    /// <summary>The first catalog prompt whose default spans several lines, so a CRLF copy of it differs from the default byte for byte.</summary>
+    private static PromptDefinition MultiLinePrompt() =>
+        PromptCatalog.All.First(p => p.Default.Contains('\n') && !string.Equals(p.Key, "getHelp.intro", StringComparison.Ordinal));
 
     /// <summary>Writes a flat override JSON object directly, as a human editing the file by hand would.</summary>
     /// <param name="dataDir">The temp data directory a <see cref="PromptStore"/> will be pointed at.</param>

@@ -1,0 +1,4 @@
+LINK-BROKEN beta.md ../adr/0001-x.md does not exist
+ANCHOR-BROKEN tracker.md alpha.md#alpha-01-old-title has no matching heading
+PROC-UNDEFINED gamma.md O-NOPE is not declared in common.md
+CHECK-MANUALTESTS Errors=10

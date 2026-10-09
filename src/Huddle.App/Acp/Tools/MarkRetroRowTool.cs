@@ -1,6 +1,7 @@
 using System.Text.Json.Nodes;
 using Agency.Huddle.Acp.Abstractions;
 using Agency.Huddle.App.Data;
+using Agency.Huddle.App.Prompts;
 using Agency.Huddle.App.Tasks;
 using Agency.Huddle.App.TeamTypes;
 using Agency.Huddle.App.Teams;
@@ -18,15 +19,16 @@ internal sealed class MarkRetroRowTool(
     TeamTypeCatalog types,
     RetroFileStore register,
     ITeamDirectory directory,
-    string callerAgentId) : IAppTool
+    string callerAgentId,
+    IPromptSource prompts) : IAppTool
 {
+    private static readonly IReadOnlyDictionary<string, string> NoValues = new Dictionary<string, string>();
+
     /// <inheritdoc />
     public string Name => "mark_retro_row";
 
     /// <inheritdoc />
-    public string Description =>
-        "Marks a Done or Partial row of the Team's Retro register as Verified, Partial or Changed after checking it against later evidence. " +
-        "Verified needs evidence that links a Task id, a logs/... line (logs/...#L12) or a _retros/ file.";
+    public string Description => prompts.Render("tool.markRetroRow.description", NoValues);
 
     /// <inheritdoc />
     public JsonObject InputSchema => new()

@@ -2,13 +2,34 @@
 
 Reading, writing, navigating and copying documents from any folder — [Spec §2 use cases](../../Huddle.Library-Specifications.md#2-use-cases)
 
-**16 cases: L0–L13 (Spec), plus L14–L16 (UAT and migration)** · All free except L12 · about 3 hours
+**19 tests** · 18 free, 1 paid 💰 · about 2.9 hours.
+
+Cases L0–L13 come from the Spec; L14–L18 are UAT and migration cases.
 
 Read [the manual test script](../manual-tests.md) first — the cost guard, the Model and Effort convention, and the rules for concluding a result — then [Common procedures](common.md), which defines the terminals, states, procedures and oracles this page names. Both are assumed below.
 
 ## Setup
 
-Run [`P-BUILD`](common.md#p-build) then [`P-LAUNCH-FREE`](common.md#p-launch-free) from [Common procedures](common.md). This area adds: Pin one root in Settings → Library, pointing to `E:\Repos\Huddle\docs`, which holds both `.md` files and images for testing.
+Unless a test says otherwise, run [`P-BUILD`](common.md#p-build) then [`P-LAUNCH-UAT`](common.md#p-launch-uat) from [Common procedures](common.md). The lane gives you **Ada** and **Bo** on the free mock adapter, each with an empty one-to-one Room, and `<data>` is `C:\seeds\huddle\uat\data`. Tests that need no Teammate (L2, L4, L6, L8, L11, L14, L15, L17) also run there. L16 and L18 say which lane and data folder they use.
+
+This area adds one scratch folder and two pinned roots. Create the folder in `T-B` before you start, so nothing below edits a real repository file:
+
+```powershell
+$vault = 'C:\seeds\huddle\uat\vault'
+New-Item -ItemType Directory -Force "$vault\specs" | Out-Null
+Set-Content "$vault\specs\auth.md" "# Auth`n`nHow sign-in works.`n"
+Set-Content "$vault\index.md" "# Index`n`nSee [[auth]] for sign-in and [[auth]] again.`n"
+Set-Content "$vault\plan.md" "# Plan`n`nLaunch in Q4.`n"
+Set-Content "$vault\draft-old.md" "Delete me.`n"
+Set-Content "$vault\data.json" '{ "name": "huddle", "ok": true }'
+```
+
+Also copy any `.png` to `$vault\report.png` and any `.pptx` to `$vault\deck.pptx`. Then in the app open **Settings → Library** (the sixth tab). In the **Name** and **Path** fields add two roots, pressing **Add** after each:
+
+- Name `Vault`, Path `C:\seeds\huddle\uat\vault`.
+- Name `Docs`, Path `<repo>\docs`. L0 only reads from it; no test edits it.
+
+Each pinned root appears in the table with a **Remove** button and in the sidebar's **Library** group, which links to the full `/library` page for that root. The built-in **Teams** and **Teammates** roots have a **Hide** switch instead of **Remove**.
 
 ---
 
@@ -22,25 +43,24 @@ Run [`P-BUILD`](common.md#p-build) then [`P-LAUNCH-FREE`](common.md#p-launch-fre
 
 **Before you start**
 
-- The application is running.
-- At least one Room exists.
+- `P-LAUNCH-UAT` is running (Ada and Bo online) and `Docs` is pinned as in Setup.
 
 **Steps**
 
-1. Go to http://localhost:5100/ and open a Room.
-2. In the composer, type the absolute path to a Markdown file in the pinned root, e.g. `E:\Repos\Huddle\docs\Huddle.Library-Specifications.md`.
+1. Go to http://localhost:5100/ and open Ada's Room.
+2. In the composer, type the absolute path to a Markdown file in the pinned root, `<repo>\docs\Huddle.Library-Specifications.md` written out in full (for example `E:\Repos\Huddle2\docs\Huddle.Library-Specifications.md`).
 3. Press Enter to send the message.
-4. In the message list, look at the rendered path. Does it appear as a clickable link (typically blue and underlined)?
+4. In the message list, look at the rendered path. Does it appear as a link (blue, underlined, or otherwise styled as a link)?
 5. Click the link.
-6. Confirm the Library pane opened on the left or right side showing the file contents.
-7. Go back to the Room (it should still be there). Type a new message and send it.
-8. Confirm the previous path link is still clickable and the chat did not navigate away.
+6. Confirm the Library pane opened beside the chat, on the side Appearance names (Right by default), showing the file.
+7. Type a second message in the same Room and send it.
+8. Confirm the first message's path link is still clickable and the page did not navigate away.
 
 **Pass if — all of these**
 
-- The absolute path in the message appears as a `library-ref` link (blue, underlined, or otherwise styled as a link).
-- Clicking the link opens the Library pane with the file's contents, without leaving the Room.
-- The Room and chat history remain visible and active after the link click.
+- The absolute path in the message is a link of class `library-ref`.
+- Clicking the link opens the Library pane on that file without leaving the Room.
+- Ada's Room and its history stay visible and usable after the click.
 
 **Fail if — any of these**
 
@@ -48,44 +68,38 @@ Run [`P-BUILD`](common.md#p-build) then [`P-LAUNCH-FREE`](common.md#p-launch-fre
 - Clicking the link navigates away from the chat or closes it.
 - The pane does not open or shows the wrong file.
 
-**Status: not yet run (deferred to UAT, 2026-09-28)**
-
 ---
 
-### L1 — Human edits a file in the Library and saves it; other Rooms see "changed …" on the Agent's next Turn
+### L1 — Human edits a file in the Library and saves it; the Agent's next Turn lists `changed …`
 
-**💰 Spends money: yes** (one Agent Turn to see `changed …`) · about 10 min
+**Free** · about 10 min
 
-*Spec §2 L1: The Human corrects `memory\launch-date.md` in Nova's Work Dir. Saved byte-exact. Nova's other Rooms list `changed …` on its next Turn.*
+*Spec §2 L1: The Human corrects `memory\launch-date.md` in Nova's Work Dir. Saved byte-exact. The Agent's next Turn lists `changed …` for it (ADR-0023).*
 
 **Before you start**
 
-- The application is running with at least one Persona (Nova) and at least two Rooms with that Persona.
-- One Room has the Persona assigned; a second Room also has it assigned, so both see the same session context.
+- `P-LAUNCH-UAT` is running. The mock adapter echoes the whole prompt, and the File Changes block rides on the prompt (ADR-0023), so the echo is how you see it. Whether the File Changes block is switched on for the mock profile is not confirmed: if no `added` or `changed` line ever appears, conclude Inconclusive.
 
 **Steps**
 
-1. In the first Room, create and send a message mentioning a file (any file in the Teammates' Work Dir, e.g. `Teammates/Nova/work/notes.md`).
-2. Open the Library pane and navigate to the file (or create it if it doesn't exist).
-3. Click Edit and make a small, deliberate change (e.g. add a word or a line).
-4. Press Ctrl+S to save.
-5. Go to the second Room with the same Persona.
-6. Send a message that would trigger the Persona to reply (e.g. mention the Persona and ask a question).
-7. Watch the Persona's reply when it arrives.
-8. Look for a *File Changes* block or *changed …* entry in the Transcript, indicating the file was detected as changed.
+1. In `T-B`, create the file: `New-Item -ItemType Directory -Force C:\seeds\huddle\uat\data\Teammates\Ada\work\memory | Out-Null; Set-Content C:\seeds\huddle\uat\data\Teammates\Ada\work\memory\launch-date.md "Launch: 1 Oct"`.
+2. Open Ada's Room and send `hello`. Wait for the reply. This is the baseline Turn; the reply may list the file as `added`.
+3. In the sidebar's **Library** group click **Teammates**. Open `Ada`, then `work`, then `memory`, then `launch-date.md`.
+4. Switch the mode toggle to **Edit**, change `1 Oct` to `15 Oct`, and press Ctrl+S. (The file is not Ada's definition, so no confirmation dialog appears.)
+5. In `T-B`, check the bytes: `Get-Content -Raw C:\seeds\huddle\uat\data\Teammates\Ada\work\memory\launch-date.md`. The text is exactly `Launch: 15 Oct` plus the original line ending, with no BOM and no other change.
+6. Back in Ada's Room send `anything new?`. Wait for the reply.
+7. Read the echoed reply for a line `changed ` followed by a path ending `launch-date.md`.
 
 **Pass if — all of these**
 
-- The file saves without error in the Library editor.
-- The Persona detects the file change on its next Turn and reports it as `changed …` in the File Changes block.
+- The file saves without an error message in the editor.
+- The file's bytes on disk are your edit and nothing else.
+- Ada's next reply contains a `changed …launch-date.md` line.
 
 **Fail if — any of these**
 
-- The file does not save.
-- The Persona does not detect the change on its next Turn.
-- The save modifies the file in any way other than the exact edit (e.g. adds BOM, changes line endings, reformats).
-
-**Status: not yet run (deferred to UAT, 2026-09-28)**
+- The save fails or modifies the file beyond your edit (BOM, line endings, reformatting).
+- The reply lists no change for a file you saved between the two Turns, while step 2's reply did show the File Changes block.
 
 ---
 
@@ -93,41 +107,36 @@ Run [`P-BUILD`](common.md#p-build) then [`P-LAUNCH-FREE`](common.md#p-launch-fre
 
 **Free** · about 8 min
 
-*Spec §2 L2: The Human creates Project *Launch Q4* in Marketing from the Library. `Teams/Marketing/Launch Q4/` is created. Tasks shows it as a Project with no Tasks yet.*
+*Spec §2 L2: The Human creates Project *Launch Q4* in Marketing from the Library. `Teams/Marketing/Launch Q4/` is created. The Team shows it as a Project with no Tasks yet.*
 
 **Before you start**
 
-- The application is running.
-- At least one Team label exists (e.g. `Marketing`) and is visible in the Library pane under Teams.
+- `P-LAUNCH-UAT` is running. The lane has no Team, so make one: `P-NEW-PERSONA` with **Name** `Mia`, **Alias** `mia`, **Teams** `Marketing`, any one-sentence body, Model Haiku and Effort low (the free mock adapter ignores both, but the convention holds). The app creates `<data>\Teams\Marketing` on its own once the Persona is saved.
 
 **Steps**
 
-1. Open the Library pane.
-2. Navigate to the Teams root and find the Team folder for your test Team.
-3. Right-click the Team folder node in the tree (or click a menu button on its row).
-4. Look for a "New Project" or "New Folder" option.
-5. Click it and enter a project name (e.g. `Q4 Planning`).
-6. Confirm the creation.
-7. In the file system or the Tasks view, verify that `Teams/{TeamName}/{ProjectName}/` now exists.
-8. Go to the Tasks page and look for the Team; under it, the Project should appear with no Tasks.
+1. In the sidebar's **Library** group click **Teams**.
+2. Right-click the `Marketing` node in the tree.
+3. In the menu, click **New Project**.
+4. In the dialog titled **New project**, type `Launch Q4` in **Name** and confirm.
+5. In `T-B`, run `Test-Path "C:\seeds\huddle\uat\data\Teams\Marketing\Launch Q4"`.
+6. In the sidebar, open the **Teams** group. Under `Marketing`, look for `Launch Q4`.
 
 **Pass if — all of these**
 
-- A "New Project" or "New Folder" option is available on the Team node.
-- Entering a name creates the folder at `Teams/{TeamName}/{ProjectName}/`.
-- The Tasks view lists the Project under the Team with zero Tasks.
+- The Team node's menu offers **New Project**.
+- The folder `Teams\Marketing\Launch Q4` exists on disk (`True`).
+- The sidebar's **Teams** group lists `Launch Q4` under `Marketing`, with no Tasks.
 
 **Fail if — any of these**
 
-- No "New Project" option is offered.
-- The folder is created in the wrong location.
-- The Tasks view does not reflect the new Project.
-
-**Status: not yet run (deferred to UAT, 2026-09-28)**
+- No **New Project** item on the Team node.
+- The folder is created in the wrong place.
+- The Project folder exists but the Team's sidebar entry does not list it.
 
 ---
 
-### L3 — A Persona gains a Team label; the Team folder is created on the next reload
+### L3 — A Persona gains a Team label; the Team folder is created when the Persona is saved
 
 **Free** · about 8 min
 
@@ -135,31 +144,27 @@ Run [`P-BUILD`](common.md#p-build) then [`P-LAUNCH-FREE`](common.md#p-launch-fre
 
 **Before you start**
 
-- The application is running.
-- At least one Persona file exists (edit it by hand or through the UI).
-- The Team folder for that label does not yet exist (or delete it first).
+- `P-LAUNCH-UAT` is running with Ada. `<data>\Teams\Sales` does not exist: `Test-Path C:\seeds\huddle\uat\data\Teams\Sales` prints `False`. (This test uses `Sales` so it does not depend on L2.)
 
 **Steps**
 
-1. Open the Library pane and navigate to the Teammates root, then to a Persona's definition file (e.g. `Teammates/Nova/Nova.md`).
-2. Open the file in Edit mode.
-3. Find the frontmatter section (the block between the `---` lines at the top).
-4. Add or edit the `teams` field to include a Team label that has no folder yet, e.g. `teams: [Marketing]`.
-5. Press Ctrl+S to save.
-6. In the app, trigger a Persona reload (e.g. go to Teammates card and click Restart, or stop and restart the app).
-7. Check the Library pane or the file system: does the Team folder now exist at `Teams/Marketing/`?
+1. In the sidebar's **Library** group click **Teammates**, then open `Ada`, then `Ada.md`.
+2. Switch the mode toggle to **Edit**.
+3. In the frontmatter (the block between the `---` lines at the top) add the line `teams: [Sales]`. If a `teams:` line exists, change it.
+4. Press Ctrl+S. A dialog titled **Save this definition?** says `Saving restarts Ada and clears its conversation memory.`. Click **Save**.
+5. Wait for Ada's card on Teammates to settle (Online again).
+6. In `T-B`, run `Test-Path C:\seeds\huddle\uat\data\Teams\Sales`.
+7. In the Library, open **Teams** and confirm a `Sales` folder is listed.
 
 **Pass if — all of these**
 
-- The frontmatter saves with the new `teams` field.
-- After the Persona reloads, the Team folder `Teams/{TeamName}/` is created.
+- The frontmatter saves with `teams: [Sales]`.
+- `<data>\Teams\Sales` exists after the save, with no Restart or relaunch needed. The folder is created on every Persona change, not at the next start.
 
 **Fail if — any of these**
 
 - The save does not take effect.
-- The Team folder is not created after reload.
-
-**Status: not yet run (deferred to UAT, 2026-09-28)**
+- The Team folder is not created after Ada comes back Online.
 
 ---
 
@@ -167,40 +172,32 @@ Run [`P-BUILD`](common.md#p-build) then [`P-LAUNCH-FREE`](common.md#p-launch-fre
 
 **Free** · about 10 min
 
-*Spec §2 L4: The Human pins `E:\Repos\Huddle\docs`, an Obsidian vault, and renames `specs/auth.md` to `specs/login.md`. The dialog says *Rename and update X links in Y notes*. On confirm, the file moves and each `[[auth]]` becomes `[[login]]`; nothing else in those files changes.*
+*Spec §2 L4: The Human pins an Obsidian vault and renames `specs/auth.md` to `specs/login.md`. The dialog says *Rename and update X links in Y notes*. On confirm, the file moves and each `[[auth]]` becomes `[[login]]`; nothing else in those files changes.*
 
 **Before you start**
 
-- The application is running.
-- A pinned root containing Markdown files with wikilinks exists (e.g. the Huddle repo's `docs/` folder, which has files linking to each other like `[[Huddle.Library-Specifications]]`).
+- The app is running and `Vault` is pinned as in Setup. `index.md` contains two `[[auth]]` links and `specs\auth.md` exists.
 
 **Steps**
 
-1. Open the Library pane and navigate to the pinned root.
-2. Find a `.md` file that is referenced by other files in the same root (or create a test file and add wikilinks to it).
-3. Right-click the file node and select Rename (or click a rename menu item).
-4. A rename dialog should appear saying "Rename and update X links in Y notes" or similar.
-5. Read the numbers: X is the link count, Y is the file count.
-6. Change the filename (e.g. from `auth.md` to `login.md`).
-7. Confirm the rename.
-8. Check the files that referenced the old name: do they now reference the new name, e.g. `[[login]]` instead of `[[auth]]`?
-9. Open one of the updated files in the editor and confirm no other text changed.
+1. In the sidebar's **Library** group click **Vault**.
+2. Expand `specs`. Right-click `auth.md` and click **Rename**.
+3. Read the dialog. The name field is prefilled `auth.md`. A line reads `<X> links in <Y> notes point here and will be updated.` and the primary button reads **Rename and update**.
+4. Replace the name with `login.md` and click **Rename and update**.
+5. In `T-B`, run `Get-Content -Raw C:\seeds\huddle\uat\vault\index.md`.
+6. Open `index.md` in the Library and read it.
 
 **Pass if — all of these**
 
-- The rename dialog shows the link count and file count before confirming.
-- The file is renamed in the file system.
-- Every wikilink to the old file is rewritten to the new name.
-- No other text in the linking files is changed.
+- The dialog shows `2 links in 1 notes point here and will be updated.`
+- `specs\login.md` exists and `specs\auth.md` does not.
+- `index.md` now reads `See [[login]] for sign-in and [[login]] again.` and nothing else in it changed.
 
 **Fail if — any of these**
 
-- The rename dialog does not appear or does not show link counts.
+- The dialog does not appear or shows no link count.
 - The file is not renamed.
-- Wikilinks are not rewritten.
-- Other text in the files is modified.
-
-**Status: not yet run (deferred to UAT, 2026-09-28)**
+- A wikilink is not rewritten, or other text in `index.md` changed.
 
 ---
 
@@ -212,105 +209,97 @@ Run [`P-BUILD`](common.md#p-build) then [`P-LAUNCH-FREE`](common.md#p-launch-fre
 
 **Before you start**
 
-- The application is running with at least one Persona (e.g. Ada).
-- The Persona's definition file is accessible in the Library pane (under `Teammates/{Name}/{Name}.md`).
+- `P-LAUNCH-UAT` is running with Ada Online.
 
 **Steps**
 
-1. Open the Library pane and navigate to the Teammates root.
-2. Find and open the definition file for a Persona (e.g. `Teammates/Ada/Ada.md`).
-3. Read the banner or alert above the file. It should say "This is Ada's definition."
-4. Click Edit to enter edit mode.
-5. Make a small change (e.g. add a space to the Persona's instructions).
-6. Press Ctrl+S to save.
-7. A dialog should appear with the message *Saving restarts Ada and clears its conversation memory* (or similar).
-8. Click OK or Confirm to proceed with the save.
-9. Check that the file is saved and the Persona is restarted (the badge on the Persona's tile may briefly show "Offline" or similar).
+1. In the sidebar's **Library** group click **Teammates**, then open `Ada` and `Ada.md`.
+2. Read the banner above the document. It says `This is Ada's definition.`
+3. Switch the mode toggle to **Edit**.
+4. Add a space at the end of the Persona body (below the second `---`).
+5. Press Ctrl+S.
+6. A dialog titled **Save this definition?** opens with `Saving restarts Ada and clears its conversation memory.`. First click **Cancel** and check that the file is unchanged on disk (`O-FILE`). Press Ctrl+S again and click **Save**.
+7. Open **Teammates** in the sidebar and watch Ada's card. It leaves Online and comes back.
 
 **Pass if — all of these**
 
-- A banner identifies the file as a Persona definition.
-- The save confirmation dialog warns that saving will restart the Persona and clear memory.
-- After confirming, the file is saved and the Persona restarts.
+- The banner `This is Ada's definition.` is shown.
+- The dialog warns about the restart and the cleared memory; **Cancel** saves nothing.
+- After **Save**, the file is written and Ada restarts.
 
 **Fail if — any of these**
 
-- No warning banner or dialog appears.
-- The file is saved without the restart/memory-clear warning.
-- The Persona does not restart after the save.
-
-**Status: not yet run (deferred to UAT, 2026-09-28)**
+- No banner or dialog appears.
+- The file is saved without the warning, or **Cancel** still saves.
+- Ada does not restart after the save.
 
 ---
 
-### L6 — Team and Project folders are protected: rename and delete are not offered
+### L6 — Team and Project folders are protected: rename, move and delete are shown disabled with a reason
 
 **Free** · about 8 min
 
-*Spec §2 L6: The Human tries to rename or delete `Teams/Marketing/` or `…/Launch Q4/`. The action is not offered. The tooltip says Team and Project folders are managed from Tasks and Teammates.*
+*Spec §2 L6: The Human tries to rename or delete `Teams/Marketing/` or `…/Launch Q4/`. The action is not allowed, and the reason says Team and Project folders are managed elsewhere.*
 
 **Before you start**
 
-- The application is running.
-- At least one Team folder exists in the Library pane (under Teams).
-- At least one Project folder exists under a Team (or create one).
+- `P-LAUNCH-UAT` is running and L2 has created `Teams\Marketing\Launch Q4` (otherwise do L2 first).
 
 **Steps**
 
-1. Open the Library pane and navigate to the Teams root.
-2. Right-click a Team folder node (depth 1 under Teams).
-3. Observe the context menu. Are Rename, Move and Delete options present?
-4. Hover over the Team folder node to see if a tooltip appears; it should explain that Team management is in Tasks and Teammates.
-5. Right-click a Project folder (depth 2, e.g. `Teams/Marketing/Q4 Planning`).
-6. Observe the context menu. Are Rename, Move and Delete options present?
-7. Hover over the Project folder to check for a similar tooltip.
+1. In the sidebar's **Library** group click **Teams**.
+2. Right-click the `Marketing` node (a Team folder).
+3. Read the menu. Note which items are greyed out and what small text sits under them.
+4. Press Escape. Right-click `Launch Q4` (a Project folder) and read the menu again.
+5. In the sidebar click **Teammates**, right-click the `Ada` folder, and read the menu.
+6. Hover the `Marketing` node for two seconds and check for a tooltip.
 
 **Pass if — all of these**
 
-- Rename, Move and Delete are NOT offered in the context menu for Team (depth 1) folders.
-- Rename, Move and Delete are NOT offered in the context menu for Project (depth 2) folders.
-- A tooltip or label explains that these folders are managed from Tasks and Teammates.
+- The Team and Project menus list **New note**, **New folder**, **Copy path**, **Open in default app**. **New Project** appears on the Team menu only.
+- **Rename**, **Move** and **Delete** are shown disabled on the Team and the Project, with the reason `Team and Project folders can't be renamed, moved or deleted here.` as secondary text under each.
+- On the `Ada` folder the three are disabled with `Teammate folders can't be renamed, moved or deleted here.`
+- Clicking a disabled item does nothing.
 
 **Fail if — any of these**
 
-- Rename, Move or Delete options are available for Team or Project folders.
-- No tooltip explains why the actions are blocked.
+- Rename, Move or Delete is enabled on a Team, Project or Teammate folder.
+- The disabled items show no reason.
 
-**Status: not yet run (deferred to UAT, 2026-09-28)**
+**Note:** there is no hover tooltip on the node; the reason is the secondary text in the menu. Do not fail the test for a missing tooltip.
 
 ---
 
-### L7 — Crafted paths like `..\..\Windows` are refused by the resolver
+### L7 — Crafted paths and junctions that leave the root are refused by the resolver
 
 **Free** · about 8 min
 
-*Spec §2 L7: A crafted path such as `..\..\Windows\win.ini`, or a junction inside a root pointing out of it. Refused by `LibraryPathResolver`; nothing is read or written.*
+*Spec §2 L7: A junction inside a root pointing out of it is refused by `LibraryPathResolver`; nothing is read or written.*
 
 **Before you start**
 
-- The application is running.
-- You can edit files in the file system.
+- The app is running and `Vault` is pinned.
 
 **Steps**
 
-1. Create a junction or symlink inside a Library root that points outside it (e.g. inside the Teams folder, create a junction pointing to `C:\Windows`).
-2. Or edit a Persona's frontmatter to include a relative path with `..` that escapes the root (if the app allows it to be set).
-3. Open the Library pane and try to navigate through that junction or path.
-4. Observe: does the app refuse to enter it, show an error, or block access?
-5. Check the app's log for any security-related warnings.
+1. In `T-B`, create a junction that leaves the root: `New-Item -ItemType Junction -Path C:\seeds\huddle\uat\vault\escape -Target C:\Windows`.
+2. Open **Vault** in the Library tree. Try to expand `escape`, if it is listed.
+3. In the browser address bar open `http://localhost:5100/library?root=vault&path=escape%2Fwin.ini`.
+4. In `T-A`, read the log around that moment (`O-LOG`).
+5. Clean up with `cmd /c rmdir C:\seeds\huddle\uat\vault\escape`. That removes the junction only; never use `Remove-Item -Recurse` on it.
 
 **Pass if — all of these**
 
-- Traversal attempts that escape the root (via `..`, a junction, or a symlink) are refused.
-- No error is thrown; the app handles the refusal gracefully (e.g. the path is not shown or a message says it cannot be accessed).
-- The app's log shows no unexpected access attempts.
+- The contents of `C:\Windows` are not listed under `escape`, and `win.ini`'s text is never shown.
+- The app handles the refusal without an unhandled-exception page or a crash.
+- `O-LOG` shows no unhandled exception.
 
 **Fail if — any of these**
 
-- A path escaping the root is allowed or accessible in the app.
+- Anything under `C:\Windows` is listed or readable in the Library.
 - An unhandled exception is thrown.
 
-**Status: not yet run (deferred to UAT, 2026-09-28)**
+**Inconclusive if** the app lists `escape` as an ordinary empty folder: note what you saw, since the code settles refusal at access time rather than at listing time.
 
 ---
 
@@ -322,108 +311,103 @@ Run [`P-BUILD`](common.md#p-build) then [`P-LAUNCH-FREE`](common.md#p-launch-fre
 
 **Before you start**
 
-- The application is running.
-- A test file exists in the Library (e.g. `Teammates/Test/work/draft.md` or any writable location).
+- The app is running and `Vault` is pinned. `draft-old.md` is in the vault root.
 
 **Steps**
 
-1. Open the Library pane and navigate to the test file.
-2. Right-click the file node and select Delete (or click a delete menu item).
-3. A confirmation dialog should appear, showing the file name and asking "Delete {FileName}?" with buttons Delete and Cancel.
-4. Click Delete to confirm.
-5. Check the file system or the Recycle Bin: the file should no longer exist in its original location.
-6. Open the Recycle Bin on Windows and verify the file is there.
-7. Check the Library pane: the tree should refresh and the file should no longer appear.
+1. In the sidebar's **Library** group click **Vault**.
+2. Right-click `draft-old.md` and click **Delete**.
+3. A dialog titled `Delete draft-old.md?` says `It goes to the Recycle Bin.`. Check its buttons, then click **Cancel**. The file stays.
+4. Delete it again and click **Delete**.
+5. In `T-B`, run `Test-Path C:\seeds\huddle\uat\vault\draft-old.md`.
+6. Open the Recycle Bin in Windows and look for `draft-old.md`.
+7. Check the Library tree.
 
 **Pass if — all of these**
 
-- A delete confirmation dialog appears with the file name and "Delete" / "Cancel" buttons.
-- The file is moved to the Windows Recycle Bin (not permanently deleted).
-- The Library tree refreshes and no longer shows the deleted file.
+- The dialog title is `Delete draft-old.md?` with buttons **Delete** and **Cancel**.
+- **Cancel** leaves the file in place.
+- After **Delete**, the file is gone from disk (`False`) and present in the Recycle Bin.
+- The tree no longer lists it.
 
 **Fail if — any of these**
 
 - No confirmation dialog appears.
 - The file is permanently deleted instead of sent to the Recycle Bin.
-- The tree does not refresh.
-- The confirm dialog shows different button text or order.
-
-**Status: not yet run (deferred to UAT, 2026-09-28)**
+- The tree still lists the file.
 
 ---
 
-### L9 — When a file is rewritten by an Agent with no unsaved edits, the new text is shown on focus
+### L9 — When a file changes on disk and the Human has no unsaved edits, the new text is shown on focus
 
-**💰 Spends money: yes** (an Agent rewrites the file) · about 10 min
+**Free** · about 8 min
 
-*Spec §2 L9: Nova rewrites `plan.md` while the Human has it open with no unsaved edits. When the pane regains focus, the new text is shown. Also tests freshness detection: the app notices the file changed on disk.*
+*Spec §2 L9: The file is rewritten while the Human has it open with no unsaved edits. When the pane regains focus, the new text is shown. No Agent is needed for this check.*
 
 **Before you start**
 
-- The application is running with at least one Persona (Nova) and a Room where it is assigned.
-- A file exists that Nova can write to (e.g. in `Teams/Marketing/Launch Q4/plan.md` or similar).
-- The file is open and being viewed in the Library pane with no unsaved edits (no `●` in the title).
+- The app is running and `Vault` is pinned.
+- `plan.md` is open in Read mode in the Library (**Vault** → `plan.md`) showing `Launch in Q4.`, with no `●` in its title.
 
 **Steps**
 
-1. Open a file in the Library pane in Read mode.
-2. Note the file's contents (or take a screenshot).
-3. In another terminal or application, edit the file directly (use `Set-Content` in PowerShell or a text editor) to change its content.
-4. In the Huddle app, click away from the Library pane (e.g. click into the Room chat area) to blur it.
-5. Click back into the Library pane to refocus it.
-6. Within 1–2 seconds, the file should re-read and display the new contents.
-7. Confirm the displayed text matches the file on disk.
+1. Note the text shown.
+2. In `T-B`, rewrite the file: `Set-Content C:\seeds\huddle\uat\vault\plan.md "# Plan`n`nLaunch in Q1."`.
+3. In the Huddle page, click outside the Library document (for example the sidebar), then click inside the Library document again to focus it.
+4. Wait a few seconds. No manual refresh.
+5. Compare the displayed text with `Get-Content C:\seeds\huddle\uat\vault\plan.md`.
 
 **Pass if — all of these**
 
-- The file has no unsaved edits (no `●` marker).
-- After focus returns to the pane, the displayed text changes to match the file on disk.
-- The update happens within a few seconds, with no manual refresh needed.
+- The file has no unsaved edits (no `●`).
+- After focus returns, the displayed text becomes `Launch in Q1.`, matching the disk, and no freshness notice is shown.
 
 **Fail if — any of these**
 
-- The file is not re-read when the pane regains focus.
-- The displayed text does not match the file on disk.
-
-**Status: not yet run (deferred to UAT, 2026-09-28)**
+- The text is not re-read when the pane regains focus.
+- The displayed text differs from the disk.
+- A freshness notice or an Overwrite dialog appears although nothing was edited.
 
 ---
 
-### L10 — When a file is rewritten by an Agent while the Human has unsaved edits and the Human saves, the Human's text wins
+### L10 — When a file changes on disk while the Human has unsaved edits, the Human is warned and the Human's text wins
 
-**💰 Spends money: yes** (an Agent rewrites the file, then takes a Turn) · about 10 min
+**Free** · about 10 min
 
-*Spec §2 L10: Nova rewrites `plan.md` while the Human has **unsaved** edits, and the Human saves. The Human's text wins. Nova sees `changed …` on its next Turn (ADR-0029).*
+*Spec §2 L10: The file is rewritten while the Human has unsaved edits, and the Human saves. The Human's text wins. The Agent sees `changed …` on its next Turn (ADR-0029).*
 
 **Before you start**
 
-- The application is running with at least one Persona and a Room.
-- A file is open in the Library editor in Edit mode.
+- `P-LAUNCH-UAT` is running. The mock adapter echoes the prompt, so the `changed` line is visible. If no `added` or `changed` line ever appears, conclude Inconclusive for step 11 (the File Changes block may be off for the mock profile).
+- Create `C:\seeds\huddle\uat\data\Teammates\Ada\work\plan.md` containing `Launch in Q4.` and send `hello` in Ada's Room first, so a baseline Turn exists.
 
 **Steps**
 
-1. Open a file in Edit mode in the Library pane.
-2. Make a local edit but do NOT save (the title should show `●` indicating unsaved edits).
-3. In another terminal, rewrite the file on disk with different content.
-4. In the Huddle app, press Ctrl+S to save your local edits.
-5. A freshness notice should appear (per UAT, the editor should warn that the file changed on disk before you saved).
-6. Confirm or proceed with the save.
-7. The file should be saved with your local edits (the Agent's rewrite is overwritten).
-8. Trigger the Agent to check File Changes on its next Turn. It should see `changed …` for that file.
+1. In the Library open **Teammates** → `Ada` → `work` → `plan.md` and switch to **Edit**.
+2. Type ` (mine)` at the end of the first line. Do not save. The title shows `●`.
+3. In `T-B`, rewrite the file: `Set-Content C:\seeds\huddle\uat\data\Teammates\Ada\work\plan.md "Launch in Q1."`.
+4. Click back into the document. A warning alert reads `This file changed on disk since you opened it.` with **Reload** and **Keep mine** buttons. Your text is not replaced.
+5. Click **Keep mine**. The alert disappears.
+6. Press Ctrl+S.
+7. A dialog titled **Overwrite changes on disk?** says `This file changed since you opened it. Saving replaces those changes.`. Click **Cancel**, check the disk still has `Launch in Q1.`, press Ctrl+S again and click **Overwrite**.
+8. In `T-B`, read the file. It holds your edit, not the rewrite.
+9. In Ada's Room send `what changed?` and wait for the reply.
+10. Read the echoed reply for `changed ` followed by a path ending `plan.md`.
 
 **Pass if — all of these**
 
-- A freshness notice appears when saving over a modified file.
-- The save completes and your local edits become the file's content.
-- The Agent's next Turn reports the file as `changed …`.
+- Returning to a dirty document shows the freshness alert and leaves your text alone.
+- The Overwrite dialog appears when saving over a changed file; **Cancel** writes nothing.
+- After **Overwrite**, the file on disk is your edit.
+- Ada's next reply contains a `changed …plan.md` line.
 
 **Fail if — any of these**
 
-- No freshness notice appears.
-- The save is aborted or prompts for a choice without clear guidance.
-- The Agent's rewrite overwrites your edits instead of vice versa.
+- No alert and no Overwrite dialog, and the save silently replaces the disk text.
+- The disk rewrite replaces your unsaved text.
+- The save is blocked with no way forward.
 
-**Status: not yet run (deferred to UAT, 2026-09-28)**
+**Note:** ADR-0029 rejects detect-and-prompt and Spec §3 lists conflict detection as not in v1. Both are stale: the code prompts, and this test follows the code.
 
 ---
 
@@ -431,90 +415,73 @@ Run [`P-BUILD`](common.md#p-build) then [`P-LAUNCH-FREE`](common.md#p-launch-fre
 
 **Free** · about 10 min
 
-*Spec §2 L11: The Human opens `report.png`, `data.json` and `deck.pptx`. The image is previewed, the JSON is shown read-only with highlighting, and the deck offers *Open in default app*. Images are served via `/library-files/` endpoint.*
+*Spec §2 L11: The Human opens `report.png`, `data.json` and `deck.pptx`. The image is previewed, the JSON is shown read-only with highlighting, and the deck offers *Open in default app*. Images are served via `/library-files/`.*
 
 **Before you start**
 
-- The application is running.
-- The pinned root contains or can access a `.png`, `.jpg`, `.json` and `.pptx` file (or equivalent).
+- The app is running and `Vault` is pinned. `report.png`, `data.json` and `deck.pptx` are in the vault (Setup). A program that opens `.pptx` is installed.
 
 **Steps**
 
-1. Open the Library pane and navigate to a pinned root.
-2. Find and click an image file (`.png` or `.jpg`).
-3. Observe: is the image previewed in the document viewer?
-4. Check the `<img>` tag's `src` attribute in DevTools (F12 → Elements). It should point to `/library-files/{rootId}/{escaped path}`, not a direct file path.
-5. Find and click a `.json` file.
-6. Observe: is the JSON displayed with syntax highlighting? Can you edit it (look for an Edit button/mode)?
-7. Click into the JSON content area and try typing. Does it refuse or show as read-only?
-8. Find and click a `.pptx` file (or other non-Markdown binary).
-9. Observe: does a button or option to "Open in default app" appear?
-10. Confirm the button launches the file in the system's default application (PowerPoint, Excel, etc.).
+1. In the sidebar's **Library** group click **Vault**, then click `report.png`.
+2. Is the image previewed in the document view?
+3. Right-click the image, choose Inspect (or F12 → Elements) and read the `src` of the `<img class="library-document-image">`.
+4. Click `data.json`. Is the JSON shown with syntax highlighting? Click into it and type a character.
+5. Click `deck.pptx`. The view shows the file name, its size and an **Open in default app** button.
+6. Click **Open in default app**.
+7. Right-click `deck.pptx` in the tree, click **Open in default app** there, and compare.
 
 **Pass if — all of these**
 
-- Images are previewed in the Library document viewer.
-- Image `<img src>` attributes point to `/library-files/` URLs, not raw file paths.
-- JSON files display with syntax highlighting in a read-only viewer.
-- Non-editable files (JSON, images) do not offer an Edit mode.
-- PowerPoint, Excel and other binary files offer an "Open in default app" button or action.
-- Clicking "Open in default app" launches the file in the system application.
+- The image is previewed, and its `src` begins `/library-files/vault/`, not a drive path.
+- The JSON is highlighted and read-only: typing changes nothing, and no Edit mode is offered.
+- The deck's view offers **Open in default app**, and clicking it launches the file in its default application (PowerPoint).
+- The tree menu's **Open in default app** does the same.
 
 **Fail if — any of these**
 
-- Images do not display or show as broken.
-- Image URLs point directly to the file path instead of `/library-files/`.
-- JSON files are editable or lack syntax highlighting.
-- Binary files do not offer "Open in default app".
-
-**Status: not yet run (deferred to UAT, 2026-09-28)**
+- The image is broken, or its `src` is a raw file path.
+- The JSON can be edited.
+- Either **Open in default app** control does nothing, or `O-LOG` shows an exception such as `NotSupportedException`.
 
 ---
 
 ### L12 — Copy a document and paste it into a chat; Agents receive the Library document block
 
-**Free (copying) / 💰 (pasting and Agent reply)** · about 15 min
+**Free** · about 12 min
 
-**Spends money: yes**
-
-*Spec §2 L12: The Human clicks Copy on `plan.md` and pastes it into a Room with Nova and Ada. The clipboard holds the absolute path. The Message shows it as a Library link. Nova's and Ada's prompts gain *Library document: …\plan.md (Team Marketing, Project Launch Q4, 3 KB)*. Ada, on an Adapter with no file tools, gets the text inlined.*
+*Spec §2 L12: The Human clicks Copy on `plan.md` and pastes it into a Room with Nova and Ada. The clipboard holds the absolute path. The Message shows it as a Library link. Their prompts gain a Library document line. An Agent on an Adapter with no file tools gets the text inlined.*
 
 **Before you start**
 
-- The application is running with at least two Personas (Nova and Ada), both online.
-- A Room exists with both Personas.
-- A `.md` file exists in a Library root (e.g. `Teams/Marketing/Launch Q4/plan.md`).
-- Model = Haiku, Effort = low for both Personas (standing convention).
+- `P-LAUNCH-UAT` is running (Ada and Bo online; the mock adapter spends nothing) and `Vault` is pinned.
+- A Room with Ada and Bo exists: New chat with both. It has three Members, so only a Mention wakes an Agent.
 
 **Steps**
 
-1. Open the Library pane and navigate to the file.
-2. In the file's toolbar, click the Copy button (a copy-to-clipboard icon).
-3. A toast or message should confirm "Path copied" or similar.
-4. Go to the Room and click in the composer textarea.
-5. Paste the path (Ctrl+V). The message should show the absolute path.
-6. Press Enter to send the message.
-7. Observe the rendered message: does the path appear as a Library link (blue, underlined)?
-8. Wait for both Nova and Ada to reply.
-9. Look at the Transcript or the app's prompt view (if available): do the Agents' prompts include a "Library documents mentioned in these messages" block with the file's details (path, Team, Project, size)?
-10. If Ada's Adapter has no file tools, check that the file text is inlined under the Library document line (fenced and truncated if over the size limit).
+1. In the Library open **Vault** → `plan.md`.
+2. In the document toolbar click the **Copy** icon button.
+3. A toast reads exactly `Path copied`.
+4. Open the Ada and Bo Room, click the composer, type `@Ada @Bo please read ` and paste with Ctrl+V. The text now ends with `C:\seeds\huddle\uat\vault\plan.md`.
+5. Press Enter to send.
+6. Check how the sent Message renders the path.
+7. Wait for both replies. The mock echoes the whole prompt back.
+8. Read an echoed reply for the line `Library documents mentioned in these messages:` and the line under it, `- <path> (<location>, <size>)`.
+9. Look for the file's text under that line.
 
 **Pass if — all of these**
 
-- The Copy button puts the absolute path on the clipboard.
-- The pasted path renders as a Library link in the message.
-- Both Agents' replies indicate they received the file (they reference it or use its content).
-- The Transcript or prompt shows the Library document block with the path, metadata and file size.
-- For Adapters without file tools, the text is inlined in the prompt.
+- The Copy button puts the absolute path on the clipboard and the toast reads `Path copied`.
+- The pasted path renders as a Library link.
+- Both replies contain the `Library documents mentioned in these messages:` block with the path, the location and the size.
 
 **Fail if — any of these**
 
-- The Copy button does not work or puts something other than the path on the clipboard.
-- The path does not render as a link in the message.
-- The Agents do not receive or reference the file.
-- The Library document block is missing from the Agents' prompts.
+- Copy does nothing, or puts something other than the path on the clipboard.
+- The path does not render as a link.
+- The block is missing from an echoed prompt.
 
-**Status: not yet run (deferred to UAT, 2026-09-28)**
+**Inconclusive if** the file text is not inlined: the mock may count as an Adapter with file tools, in which case the document line alone is correct.
 
 ---
 
@@ -526,175 +493,142 @@ Run [`P-BUILD`](common.md#p-build) then [`P-LAUNCH-FREE`](common.md#p-launch-fre
 
 **Before you start**
 
-- The Library Copy path is still on your clipboard from L12, or you can re-copy it.
-- Claude Code or another tool (VSCode with Claude extension, etc.) is available for testing.
+- The path from L12's Copy is on your clipboard, or you can re-copy it from the Library document toolbar.
+- Claude Code (or another tool with an Agent) is available. Its tokens are your own, not Huddle's.
 
 **Steps**
 
-1. From the Library pane, copy an absolute path (using the Copy button on a file).
-2. Open Claude Code (or another IDE with Claude support).
-3. Paste the path into a chat or prompt.
-4. The Agent should see it as a regular absolute path and can read it with its file tools.
-5. The Agent should successfully open and read the file.
+1. Open Claude Code outside Huddle.
+2. Paste the path into a prompt and ask it to read the file.
+3. Watch which tool it uses.
 
 **Pass if — all of these**
 
-- The path is pasted verbatim as an absolute path (not wrapped in any Huddle-specific syntax).
-- The Agent outside Huddle can read the file using standard tools (Claude Code's Read tool, etc.).
+- The pasted text is a plain absolute path with no Huddle-specific wrapper.
+- The outside agent reads the file with its own tools.
 
 **Fail if — any of these**
 
 - The path is wrapped in special syntax or marked as a Huddle-only reference.
-- The external Agent cannot read the file.
-
-**Status: not yet run (deferred to UAT, 2026-09-28)**
+- The outside agent cannot read the file.
 
 ---
 
-### L14 — Library Pane side setting persists, and divider position is remembered across sessions
+### L14 — The Library pane side persists, and the divider position is remembered
 
 **Free** · about 10 min
 
-*UAT: The Library pane opens on the left or right side per the Appearance setting. The divider's pixel position is saved when the pane closes and restored when it re-opens.*
+*UAT: The Library pane opens on the left or right side per the Appearance setting. The divider's position is saved and restored when the pane re-opens.*
 
 **Before you start**
 
-- The application is running.
-- The Library pane is closed or can be toggled open.
+- `P-LAUNCH-UAT` is running and `Docs` is pinned. Open Ada's Room and send the absolute path of `<repo>\docs\Huddle.Library-Specifications.md` (as in L0) so there is a link to click. The sidebar's Library rows open the full `/library` page, not the pane; the pane opens from such a link.
 
 **Steps**
 
-1. Go to Settings → Appearance and look for a "Library Pane side" or "Pane position" setting.
-2. Set it to "Left" and confirm. The pane should move to the left side of the page if open, or open on the left when toggled.
-3. Open a file in the Library and resize the divider by dragging it to a specific width (e.g. make the pane narrower or wider). Note the approximate pixel width.
-4. Close the pane (click the Close button or toggle it off from the sidebar).
-5. Toggle the pane open again (click the Library link in the sidebar).
-6. Confirm the divider is at approximately the same width you set in step 3.
-7. Go back to Settings → Appearance and change the side to "Right".
-8. The pane should move to the right side. Open a file and resize the divider again.
-9. Close and re-open the pane. Confirm the divider position is remembered for the right side.
-10. Close the app entirely (close the browser tab or restart the application).
-11. Reopen the app and toggle the Library pane open.
-12. Confirm the divider is still at the position you set, and the pane is on the correct side.
+1. Go to **Settings → Appearance**. In the **Library pane** radio group choose **Left**.
+2. Go back to Ada's Room and click the path link. The pane opens on the left.
+3. Drag the divider between the pane and the chat to a clearly different width. Note it.
+4. In the pane toolbar click **Close**, then click the path link again. The pane reopens at about the width you set.
+5. In Settings → Appearance choose **Right**, then return to Ada's Room and click the link. The pane is on the right. Resize it again.
+6. Close and reopen the pane. Confirm the width.
+7. Reload the browser tab (F5), open Ada's Room and click the link. Confirm the side and width.
+8. Stop the app with `P-STOP`, relaunch with `P-LAUNCH-UAT` without resetting `<data>`, and repeat step 7.
 
 **Pass if — all of these**
 
-- The Appearance setting controls which side (left or right) the pane appears on.
-- Dragging the divider resizes the pane to a custom width.
-- Closing and re-opening the pane in the same session restores the divider position.
-- Restarting the app restores the divider position and the selected side.
+- The Appearance choice decides which side the pane opens on.
+- Dragging the divider sets a custom width, restored after Close and reopen.
+- After a reload and after an app restart the pane opens on the chosen side at the remembered width.
 
 **Fail if — any of these**
 
-- The pane side setting does not affect the pane's placement.
-- The divider position is not remembered.
-- Restarting the app resets the divider to a default size.
+- The side setting does not change where the pane opens.
+- The divider width is not remembered.
+- A restart resets the side or the width.
 
-**Status: not yet run (deferred to UAT, 2026-09-28)**
+**Note:** the width is kept in the browser's own storage, so use the same browser profile for step 8.
 
 ---
 
-### L15 — Clicking the Pop Out button opens the `/library` page at full width, with tree and document side by side
+### L15 — Pop out opens the `/library` page with tree and document side by side
 
 **Free** · about 8 min
 
-*UAT: The pane has a Pop Out button. Clicking it opens `/library` with the tree on the left and the document on the right, at full page width.*
+*UAT: Pop out opens `/library` with the tree on the left and the document on the right, at full page width.*
 
 **Before you start**
 
-- The application is running.
-- A file is open in the Library pane.
+- `P-LAUNCH-UAT` is running, `Vault` is pinned and the Library pane is open on `plan.md`. Open it by sending `C:\seeds\huddle\uat\vault\plan.md` in Ada's Room and clicking the link (as in L0).
 
 **Steps**
 
-1. Open the Library pane and navigate to a file.
-2. In the file's toolbar (in the header above the document), look for a Pop Out button (typically an icon indicating "open in new window" or "expand").
-3. Click the Pop Out button.
-4. A new page (or the same page in a pop-out view) should load at `/library` with query parameters (e.g. `?root=teams&path=...`).
-5. Observe the layout: the tree should be on the left (or in a pane), and the document on the right, with both visible at full width.
-6. Click a different file in the tree. The document on the right should update.
-7. Go back to the main pane (close the pop-out or click back in the browser). The pane should still be open on its original side, and you should be back at your original file.
+1. In the pane's own toolbar (the strip above the pane, not the document's) click **Pop out**.
+2. Read the address bar. It is `/library?root=<id>&path=<escaped path>`, here `root=vault&path=plan.md`.
+3. Look at the layout: tree on the left, `plan.md` on the right, full width.
+4. Click another file in the tree. The document updates.
+5. Look at the document toolbar. It has **Copy** and **Pop out**, but no **Close** button.
+6. Click the document toolbar's **Pop out**. The same `/library` URL loads for the open file.
+7. Press the browser's Back button until you return to Ada's Room.
 
 **Pass if — all of these**
 
-- A Pop Out button is visible in the file's toolbar.
-- Clicking it opens the `/library` page at full width.
-- The tree and document are displayed side by side (or in a clear, expanded layout).
-- The URL includes root and path query parameters.
-- Navigation in the pop-out works correctly.
+- The pane toolbar's **Pop out** opens `/library` with `root` and `path` in the URL and the right file open.
+- The tree and the document are side by side at full width, and navigating the tree works.
+- The document toolbar's **Pop out** reaches the same URL.
+- The document toolbar shows no **Close** button (no host passes one); closing the docked pane is the pane toolbar's **Close**.
 
 **Fail if — any of these**
 
-- No Pop Out button is present.
-- Clicking Pop Out opens a broken page or the wrong view.
-- The tree and document are not visible together at full width.
-
-**Status: not yet run (deferred to UAT, 2026-09-28)**
+- No Pop out button in the pane toolbar or in the document toolbar.
+- Pop out opens a broken page or the wrong file.
+- The tree and document are not visible together.
 
 ---
 
-### L16 — Old Teams/.md + work/ install is migrated to Teammates/ folder layout on startup
+### L16 — Old Teams/*.md + work/ install is migrated to the Teammates/ folder layout on startup
 
 **Free** · about 15 min
 
-*Migration: A Huddle installation with Personas stored in `Teams/*.md` files and work directories at `work/` is upgraded to the new `Teammates/{Name}/{Name}.md` layout. The migration runs once at startup and leaves no artifacts.*
+*Migration: a data folder with Personas stored in `Teams/*.md` and Work Dirs at `work/<Name>` is upgraded to `Teammates/<Name>/<Name>.md` with `Teammates/<Name>/work/`. It runs only when `Teammates\.layout-migrated` is absent.*
 
 **Before you start**
 
-- You have a backup of the app's data directory or can recreate it.
-- You can edit the app's configuration or have manual control over the folder structure.
+- `E-FRESH`: `P-STOP`, then `P-RESET-ALL` on the default data folder. This test runs on [`P-LAUNCH-FREE`](common.md#p-launch-free) and that default folder is `<data>` below, not the UAT folder. Migration runs only when `Teammates\.layout-migrated` is absent, and any earlier run has written it.
 
 **Steps**
 
-1. Stop the running application.
-2. Restore or create an old-style data directory structure:
+1. Run `P-LAUNCH-FREE`. With `P-NEW-PERSONA` create two Teammates, `Nova` and `Ada`, any body, Model Haiku, Effort low. Create a file in each Work Dir: `Set-Content <data>\Teammates\Nova\work\notes.md "n"` and `Set-Content <data>\Teammates\Ada\work\memory.md "m"`.
+2. `P-STOP`.
+3. Turn the install into the old layout in `T-B`:
+
+   ```powershell
+   New-Item -ItemType Directory -Force <data>\work | Out-Null
+   foreach ($n in 'Nova','Ada') {
+     Move-Item <data>\Teammates\$n\$n.md <data>\Teams\$n.md
+     Move-Item <data>\Teammates\$n\work <data>\work\$n
+   }
+   Remove-Item -Recurse -Force <data>\Teammates
    ```
-   App_Data/
-   ├── Teams/
-   │   ├── Nova.md  (a Persona file with frontmatter)
-   │   └── Ada.md
-   ├── work/
-   │   ├── Nova/
-   │   │   └── notes.md
-   │   └── Ada/
-   │       └── memory.md
-   ```
-3. Start the application.
-4. Observe the logs or any startup messages. The app should detect the old layout and migrate.
-5. After startup, check the folder structure. It should now be:
-   ```
-   App_Data/
-   ├── Teammates/
-   │   ├── Nova/
-   │   │   ├── Nova.md
-   │   │   └── work/
-   │   │       └── notes.md
-   │   └── Ada/
-   │       ├── Ada.md
-   │       └── work/
-   │           └── memory.md
-   ├── Teams/  (empty or removed)
-   ├── work/   (empty or removed)
-   ```
-6. Open the Teammates page in the app. Both Personas should appear and be online.
-7. Open the Library pane. The Teammates root should list both with their work files intact.
+
+   The marker `Teammates\.layout-migrated` goes with the folder. Check: `Test-Path <data>\Teams\Nova.md` is `True`, `Test-Path <data>\Teammates` is `False`.
+4. Run `P-LAUNCH-FREE` again.
+5. In `T-A` look for a line starting `Teammate layout migration` (`O-LOG`).
+6. In `T-B`, list the layout: `Get-ChildItem -Recurse <data>\Teammates | Select-Object FullName`.
+7. Open **Teammates** in the sidebar and then the Library's **Teammates** root.
 
 **Pass if — all of these**
 
-- The old `Teams/*.md` and `work/` structure is detected on startup.
-- Folders and files are moved to the new `Teammates/{Name}/` layout.
-- Old Persona files are now at `Teammates/{Name}/{Name}.md`.
-- Work directories are now at `Teammates/{Name}/work/`.
-- Both Personas appear online and functional in the app.
-- The Library pane shows the new structure.
+- The log reports the migration at startup.
+- `Teammates\Nova\Nova.md`, `Teammates\Nova\work\notes.md`, `Teammates\Ada\Ada.md` and `Teammates\Ada\work\memory.md` exist, and `Teammates\.layout-migrated` exists.
+- `Teams\Nova.md` and `Teams\Ada.md` are gone. `Teams\` itself stays: it is the live Team-folder root. `work\` is empty or removed.
+- Both Teammates have cards on the Teammates page (they read **Offline** under the free lane; Offline is correct there) and the Library's Teammates root lists both with their work files.
 
 **Fail if — any of these**
 
-- The old structure is not recognized or migrated.
-- Personas or their data are lost.
+- The old layout is not recognised.
+- A Persona or its data is lost.
 - The app crashes during migration.
-
-**Status: not yet run (deferred to UAT, 2026-09-28)**
 
 ---
 
@@ -702,76 +636,66 @@ Run [`P-BUILD`](common.md#p-build) then [`P-LAUNCH-FREE`](common.md#p-launch-fre
 
 **Free** · about 15 min
 
-*UAT: Pin a real Obsidian vault (e.g. your own, or a test clone). Edit a Markdown file, save it in the Library editor, and open it in Obsidian. The file is byte-exact: no reformatting, no metadata added.*
+*UAT: Pin a real Obsidian vault (your own, or a test clone). Edit a Markdown file, save it in the Library editor, and open it in Obsidian. The file is byte-exact: no reformatting, no metadata added.*
 
 **Before you start**
 
-- The application is running.
-- You have access to a real Obsidian vault (your personal one, or a test clone).
-- Obsidian is installed on your machine.
+- The app is running. You have a real Obsidian vault, or a clone of one, and Obsidian is installed.
 
 **Steps**
 
-1. Go to Settings → Library and add a new pinned root pointing to your Obsidian vault's root folder.
-2. Open the Library pane and confirm the vault's structure appears (folders and notes).
-3. Select a Markdown note that you can safely edit.
-4. Open it in Read mode first and note the contents.
-5. Click Edit to enter edit mode.
-6. Make a deliberate change (e.g. add a line or change a word).
-7. Press Ctrl+S to save.
-8. Close Huddle or open the file in a text editor to check the raw content. The file should be saved with your exact edit.
-9. Open the same file in Obsidian. It should appear with your edit, with no reformatting or metadata changes.
-10. Confirm the file is byte-exact (no added frontmatter, no changed line endings or BOM, etc.).
+1. In **Settings → Library**, add a root: **Name** `Obsidian`, **Path** the vault's folder, then **Add**.
+2. In the sidebar's **Library** group click **Obsidian**. Confirm the vault's folders and notes appear.
+3. Pick a note you can safely edit. In `T-B` copy it aside: `Copy-Item <note> $env:TEMP\note-before.md`.
+4. Open the note in the Library, read it, then switch to **Edit**.
+5. Add one word at the end of a line and press Ctrl+S.
+6. In `T-B` compare: `fc.exe /b <note> $env:TEMP\note-before.md`. The only differences are the bytes of your word.
+7. Open the same note in Obsidian.
 
 **Pass if — all of these**
 
-- The Obsidian vault is accessible as a pinned root in the Library.
-- Files can be edited and saved without error.
-- The saved file is byte-exact to what you typed (no reformatting, no metadata added).
-- Obsidian opens the edited file with no warnings or conflicts.
+- The vault is listed as a root and its notes open.
+- The save succeeds and the file differs from the copy only by what you typed (no added frontmatter, line-ending change or BOM).
+- Obsidian opens the edited note with no warning or conflict.
 
 **Fail if — any of these**
 
-- The vault cannot be pinned or accessed.
+- The vault cannot be pinned (the **Path** must exist on disk) or is not browsable.
 - Saving reformats the file or adds metadata.
-- Obsidian shows conflicts or rejects the edited file.
-
-**Status: not yet run (deferred to UAT, 2026-09-28)**
+- Obsidian reports a conflict.
 
 ---
 
-### L18 — run.ps1 -Clean keeps Teams/ and work/ folders intact
+### L18 — run.ps1 -CleanOnly deletes the database and Teammate definitions, and keeps everything else
 
 **Free** · about 8 min
 
-*UAT: Running the cleanup script with `-Clean` flag removes app state but preserves user data. Teams/ and work/ folders are not deleted.*
+*UAT: `run.ps1 -CleanOnly` deletes the previous run's SQLite database and every Teammate definition file, then exits without building or starting anything. Work Dirs, `Teams/`, prompts and appearance are left alone.*
 
 **Before you start**
 
-- The application is running or has been run.
-- `run.ps1` script is available at the repository root or the test directory.
+- `E-STOPPED`. Use the UAT data folder: `P-LAUNCH-UAT` once, then `P-STOP`, with Ada and Bo present. Do not use `-Clean`: that also builds and starts the app.
+- Put a marker in each place: a file in `C:\seeds\huddle\uat\data\Teams\Marketing\` (or any Team folder), `C:\seeds\huddle\uat\data\Teammates\Ada\work\notes.md`, and make sure `prompts.json` and `appearance.json` exist in `<data>` (change a Prompt and the Theme in Settings once before stopping).
 
 **Steps**
 
-1. Create or confirm test files exist in `App_Data/Teams/` and `App_Data/work/`.
-2. Run the `run.ps1 -Clean` command in PowerShell from the repository root.
-3. Wait for the cleanup to complete.
-4. Check that `App_Data/Teams/` and `App_Data/work/` still exist and contain your test files.
-5. Confirm that transient state (cache, temp files, sessions) has been cleaned.
+1. In `T-B`, list before: `Get-ChildItem -Recurse C:\seeds\huddle\uat\data -File | Select-Object -ExpandProperty FullName > $env:TEMP\before.txt`.
+2. Run `.\run.ps1 -CleanOnly -DataDir C:\seeds\huddle\uat\data` from `<repo>`.
+3. Wait for it to exit. It prints the files it deleted and starts nothing.
+4. List after and compare with `$env:TEMP\before.txt`.
 
 **Pass if — all of these**
 
-- The `-Clean` flag successfully runs without error.
-- `Teams/` folder and all its contents remain after cleanup.
-- `work/` folder and all its contents remain after cleanup.
-- Other temporary or cache data is removed (e.g. `*.db`, `prompts.json`, `appearance.json` if applicable).
+- The script exits without building or starting the app (nothing answers on `http://localhost:5100`).
+- `team.db` (with `team.db-wal` and `team.db-shm` if present) is gone.
+- `Teammates\Ada\Ada.md` and `Teammates\Bo\Bo.md` are gone.
+- `Teammates\Ada\work\notes.md`, everything under `Teams\`, `prompts.json` and `appearance.json` are still there, as are `Teammates\.layout-migrated` and `Teammates\_unsorted`.
 
 **Fail if — any of these**
 
-- The cleanup deletes `Teams/` or `work/` folders.
-- The cleanup throws an error or leaves the app in a broken state.
-
-**Status: not yet run (deferred to UAT, 2026-09-28)**
+- The script builds or starts the app.
+- Anything beyond the database and the definition files is deleted.
+- A definition file is left behind.
 
 ---
 

@@ -670,7 +670,7 @@ route matching prefers the more specific template, so `/teams/X/projects/Y` neve
 `/teams/{Team}/{Tab}`.
 
 **Tab resolution** is a pure function, `TeamPageTabs.Resolve(bool isProject, string? tab,
-TeamPageFeatures features) → TeamPageTab`, which is unit-tested (TP-T5). Beside it,
+TeamPageFeatures features) → TeamPageTab`, which is unit-tested (TP-U1). Beside it,
 `TeamPageTabs.Available(isProject, features)` lists the tabs in order, and
 `TeamPageTabs.Segment(tab)` gives the URL segment (`members`, `files`, `tasks`). `Resolve` matches
 the `{Tab}` segment, ignoring case, against the `Segment` of each **available** tab; it does not
@@ -742,7 +742,7 @@ Team usually holds 2–8 Teammates. Each row, left to right:
 
 - `StatusDot State=…`, resolved exactly as `Teammates.razor` does:
   `PersonaStatusResolver.Resolve(Gateway.IsOnline(id), Health.Get(name))`;
-- `TeammateAvatar Name=… Avatar=… Size=Size.Medium`;
+- `TeammateAvatar Name=… Avatar=… Size=Size.Small`;
 - Name, as `Typo.body1`;
 - `Title · Alias`, as `Typo.body2`, muted;
 - at the end, a `MudMenu` `⋯` with **Open card** (opens `TeammateCard` through

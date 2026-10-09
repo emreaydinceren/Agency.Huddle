@@ -5,6 +5,7 @@ using Agency.Huddle.App.Tasks;
 using Agency.Huddle.App.Teammates;
 using Agency.Huddle.App.Teams;
 using Agency.Huddle.App.Data;
+using Agency.Huddle.Tests.Acp.Fakes;
 using Agency.Huddle.Tests.Tasks;
 using Agency.Huddle.Tests.Teams;
 
@@ -38,7 +39,7 @@ public sealed class RequestToolsTests
 
     /// <summary>Builds the file_request tool over the harness, calling as the given caller.</summary>
     private static FileRequestTool CreateFileTool(TaskToolHarness harness, FakeRequestNotifier notifier, string? callerId) =>
-        new(Catalog(), harness.Service, harness.Store, notifier, harness.Directory, callerId ?? throw new InvalidOperationException("Harness not seeded."));
+        new(Catalog(), harness.Service, harness.Store, notifier, harness.Directory, callerId ?? throw new InvalidOperationException("Harness not seeded."), new FakePromptSource());
 
     /// <summary>Builds the call arguments of a bug Request to Design.</summary>
     private static JsonObject BugArguments(string toTeam = "Design", string body = BugBody) => new()
@@ -73,7 +74,7 @@ public sealed class RequestToolsTests
         Put(harness, TestTasks.Make(id: "DES-0001", location: design, unknownFields: RequestPairs()));
         Put(harness, TestTasks.Make(id: "DES-0002", status: TaskState.Rejected, location: design, unknownFields: RequestPairs()));
         Put(harness, TestTasks.Make(id: "DES-0003", location: design));
-        ListTeamsTool tool = new(Catalog(), harness.Store, harness.Personas, harness.Directory, harness.NovaId ?? throw new InvalidOperationException("Harness not seeded."));
+        ListTeamsTool tool = new(Catalog(), harness.Store, harness.Personas, harness.Directory, harness.NovaId ?? throw new InvalidOperationException("Harness not seeded."), new FakePromptSource());
 
         string result = await tool.InvokeAsync([], ct);
 
@@ -251,7 +252,7 @@ public sealed class RequestToolsTests
     {
         CancellationToken ct = TestContext.Current.CancellationToken;
         using TaskToolHarness harness = await CreateHarnessAsync(ct);
-        ListTeamsTool tool = new(Catalog(), harness.Store, harness.Personas, harness.Directory, harness.KaiId ?? throw new InvalidOperationException("Harness not seeded."));
+        ListTeamsTool tool = new(Catalog(), harness.Store, harness.Personas, harness.Directory, harness.KaiId ?? throw new InvalidOperationException("Harness not seeded."), new FakePromptSource());
 
         string result = await tool.InvokeAsync([], ct);
 
@@ -266,7 +267,7 @@ public sealed class RequestToolsTests
         using TaskToolHarness harness = await CreateHarnessAsync(ct);
         _ = harness.Personas.Add(new PersonaIdentity("Jarvis", "Chief of Staff", "jar", [], Builtin: BuiltinTeammate.ChiefOfStaffMarker), "You are Jarvis.");
         User cos = await harness.Directory.UpsertAgentUserAsync("Jarvis", null, ct) ?? throw new InvalidOperationException("Directory refused a user.");
-        ListTeamsTool tool = new(Catalog(), harness.Store, harness.Personas, harness.Directory, cos.Id);
+        ListTeamsTool tool = new(Catalog(), harness.Store, harness.Personas, harness.Directory, cos.Id, new FakePromptSource());
 
         string result = await tool.InvokeAsync([], ct);
 
@@ -291,7 +292,7 @@ public sealed class RequestToolsTests
     {
         CancellationToken ct = TestContext.Current.CancellationToken;
         using TaskToolHarness harness = await CreateHarnessAsync(ct);
-        FileRequestTool tool = new(TwoTeamCatalog(), harness.Service, harness.Store, new FakeRequestNotifier(), harness.Directory, harness.NovaId ?? throw new InvalidOperationException("Harness not seeded."));
+        FileRequestTool tool = new(TwoTeamCatalog(), harness.Service, harness.Store, new FakeRequestNotifier(), harness.Directory, harness.NovaId ?? throw new InvalidOperationException("Harness not seeded."), new FakePromptSource());
 
         string result = await tool.InvokeAsync(BugArguments(), ct);
 
@@ -305,7 +306,7 @@ public sealed class RequestToolsTests
     {
         CancellationToken ct = TestContext.Current.CancellationToken;
         using TaskToolHarness harness = await CreateHarnessAsync(ct);
-        FileRequestTool tool = new(TwoTeamCatalog(), harness.Service, harness.Store, new FakeRequestNotifier(), harness.Directory, harness.NovaId ?? throw new InvalidOperationException("Harness not seeded."));
+        FileRequestTool tool = new(TwoTeamCatalog(), harness.Service, harness.Store, new FakeRequestNotifier(), harness.Directory, harness.NovaId ?? throw new InvalidOperationException("Harness not seeded."), new FakePromptSource());
         JsonObject foreign = BugArguments();
         foreign["fromTeam"] = "Design";
         JsonObject own = BugArguments();

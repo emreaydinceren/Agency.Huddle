@@ -16,13 +16,13 @@ oracles `O-LOG` / `O-ADAPTERS` / `O-TRANSCRIPT` / `O-DB` / `O-WIRE`, the four re
 `P-NEW-PERSONA`, `P-ECHO-BOT` and the standing conventions. This area adds:
 
 1. RESET under PROFILE B and PROFILE C always means `P-RESET-ROOMS` — it clears every Room, Member list and Transcript while leaving the Persona library alone. Under `P-LAUNCH-UAT` RESET means `P-STOP` and then re-running its seeder line, which wipes and rebuilds the data folder back to Ada, Bo and their two empty Rooms. Budget counters are in memory; a restart clears them.
-2. **`P-LAUNCH-UAT` — free, the mock Teammates Ada and Bo.** Run [`P-LAUNCH-UAT`](common.md#p-launch-uat) as written; Ada and Bo go **Online** and each has a two-Member Room named after itself. The Budget defaults to `40`. Where a test names another Budget, add `--Team:AgentMessageBudget=<N>` as one more argument on the `dotnet run --project src/Huddle.App` line of that procedure (a backtick-continued line like the others), or set `$env:Team__AgentMessageBudget = '<N>'` in `T-A` before that line; the seeder line is unchanged. Both only take effect at startup, so changing the value means `P-STOP` and a relaunch. `<DataDir>` in a path below is `C:\seeds\huddle\uat\data` under this lane and `E:\Repos\Huddle\src\Huddle.App\App_Data` under the others, so `O-TRANSCRIPT` is `<DataDir>\rooms\<RoomId>.jsonl` and `O-DB` is `<DataDir>\team.db`.
+2. **`P-LAUNCH-UAT` — free, the mock Teammates Ada and Bo.** Run [`P-LAUNCH-UAT`](common.md#p-launch-uat) as written; Ada and Bo go **Online** and each has a two-Member Room named after itself. The Budget defaults to `40`. Where a test names another Budget, add `--Team:AgentMessageBudget=<N>` as one more argument on the `dotnet run --project src/Huddle.App` line of that procedure (a backtick-continued line like the others), or set `$env:Team__AgentMessageBudget = '<N>'` in `T-A` before that line; the seeder line is unchanged. Both only take effect at startup, so changing the value means `P-STOP` and a relaunch. `<DataDir>` in a path below is `<data>` as [Common procedures](common.md) defines it: `C:\seeds\huddle\uat\data` under this lane and `<repo>\src\Huddle.App\App_Data` under the others, so `O-TRANSCRIPT` is `<data>\rooms\<RoomId>.jsonl` and `O-DB` is `<data>\team.db`.
 3. **PROFILE B — free, scripted pipe clients you control.** Needed wherever a test names a wire envelope as its oracle. `P-LAUNCH-FREE` plus `$env:Team__AgentMessageBudget = '40'` (or whatever budget the test names) set before `dotnet run`, then one `P-ECHO-BOT` terminal per Agent the test names. `O-WIRE` is the primary oracle for this whole area.
 4. **PROFILE C — paid, real Personas.** `P-LAUNCH-PAID` with `$env:Team__AgentMessageBudget` set to the small number the test names. Every Persona must already be Haiku / low.
 5. Learn the `O-LOG` lines you will read all day, verbatim: `Room '{RoomId}' refused a message from '{AgentName}': its budget of {N} agent messages since a human last spoke is spent.` (warning) / `Room '{RoomId}' was extended to {N} agent messages.` / `Persona '{PersonaName}' declined a turn in room {RoomId}: the room has spent its budget of {N} agent messages.` (warning) / `Persona '{PersonaName}' has spent its token budget of {N} and is taking no more turns until a human speaks to it.` / `Invited agent '{AgentName}' ({AgentId}) into room '{RoomId}'.` / `Created direct room '{RoomId}' for agent '{AgentName}'.`
 6. In `O-DB`, `SELECT COUNT(*) FROM room_members WHERE room_id='…'` is what makes a Room two-Member or group — that count and nothing else. The Room's grey member line in the browser is an acceptable substitute.
 7. READ THIS BEFORE FILING ANYTHING. Both free kinds of Agent implement the Reply Gate. The mock Teammates of `P-LAUNCH-UAT` are real Personas on the free mock adapter, so they go through the real Reply Gate and the real Budget checks. `tools/echo-bot.ps1` is a raw pipe client that mirrors the same decision (budget check first, then member-count-or-mention) from the fields already on the `messagePosted` envelope; following never enters into it, because a pipe client has no `mcp__team__follow_room` tool to call and can never be following a Room. So a two-Member Room answers an un-mentioned Message under `P-LAUNCH-UAT` or PROFILE B — that is the correct behaviour per ADR-0004, not silence to expect. The free tests below can therefore observe the Reply Gate's own decisions directly — answer-without-mention in a two-Member Room, Mention-gating once a third Member joins, and decline-before-Turn once the Budget is spent — without needing a real model. Following (roadmap item 8) is invisible to both by construction and is exercised only by real Personas in `app-tools.md`'s APPTOOLS-23 to -25. (Catch-up buffering is still not something a free test observes reliably, so that piece remains a paid-tests concern.)
-8. THE MOCK RE-QUOTES MENTIONS. A mock Teammate's reply is the whole prompt echoed back, so a reply to a Message that names `@Ada @Bo` itself names both of them. In a Room of three or more Members that Mentions the other Teammate, so Ada and Bo can keep answering each other until the Budget is spent, and in a Room with no cap they never stop. Every `P-LAUNCH-UAT` test below therefore either names ONE Teammate per Message or says what to expect from a Message that names two; none of them sends a two-Mention Message to an uncapped Room. A reply that arrives only because the mock re-quoted a Mention is the echo, not a Reply Gate defect. The pipe bot `tools/echo-bot.ps1` strips `@` from what it quotes and never has this effect.
+8. THE MOCK RE-QUOTES MENTIONS. A mock Teammate's reply is the whole prompt echoed back, so a reply to a Message that names `@Ada @Bo` itself names both of them. In a Room of three or more Members that Mentions the other Teammate, so Ada and Bo can keep answering each other until the Budget is spent, and in a Room with no cap they never stop. Every `P-LAUNCH-UAT` test below therefore either names ONE Teammate per Message or says what to expect from a Message that names two; none of them sends a two-Mention Message to an uncapped Room. The echo also carries Catch-up and Transcript lines (a Teammate's first Turn in a Room includes up to 20 earlier Messages), so a reply can name a Teammate that your own Message did not: an earlier Message in the Room that names `@Bo` can wake Bo again. A test that needs Bo to stay silent therefore runs in a Room whose Transcript never named Bo. A reply that arrives only because the mock re-quoted a Mention is the echo, not a Reply Gate defect. The pipe bot `tools/echo-bot.ps1` strips `@` from what it quotes and never has this effect.
 
 ## Tests
 
@@ -41,7 +41,7 @@ oracles `O-LOG` / `O-ADAPTERS` / `O-TRANSCRIPT` / `O-DB` / `O-WIRE`, the four re
 
 1. Click **Add teammate** at the right of the Room header.
 2. In the panel that opens, click `Bo`.
-3. Read the green strip at the top of the panel.
+3. Read the blue strip at the top of the panel.
 4. Click **Add teammate** again to close the panel.
 5. Read the sidebar entry, the Room heading and the grey member line, WITHOUT reloading the page.
 6. Type `good morning everyone` and press Enter.
@@ -51,10 +51,10 @@ oracles `O-LOG` / `O-ADAPTERS` / `O-TRANSCRIPT` / `O-DB` / `O-WIRE`, the four re
 
 **Pass if — all of these**
 
-- The green strip reads exactly `Invited Bo. Room is now "Ada, Bo".`
+- The blue strip (an Info alert, `InviteTeammate.razor:23`) reads exactly `Invited Bo. Room is now "Ada, Bo".`
 - With no page refresh, the sidebar entry and the Room heading both change to `Ada, Bo` and the member line becomes `You, Ada, Bo`.
 - Step 6 produces no reply at all from either Agent, AND a quiet blue note appears above the
-  composer reading `No teammate was @-mentioned - name one to ask for a reply.` That note is the
+  composer reading `No teammate was @-mentioned — name one to ask for a reply.` That note is the
   point of the silence being legible at all; before #40 step 6 looked identical to a broken app.
 - The note disappears the moment step 8's Message posts, because that one names somebody.
 - Step 8 produces exactly one reply, from `Ada`, and it contains the text you sent.
@@ -70,7 +70,7 @@ oracles `O-LOG` / `O-ADAPTERS` / `O-TRANSCRIPT` / `O-DB` / `O-WIRE`, the four re
 
 **Inconclusive if**
 
-If `Bo` does not appear in the **Add teammate** list, it is either already a Member or not Online — check the sidebar for a Room named `Bo` and the Teammates page for `Bo` reading Online, then restart from RESET. If the dot beside `Bo` in the panel is red rather than green, `Bo` is offline and its silence proves nothing about the gate: fix the agent first. If the strip is red instead of green, read its text and treat the test as inconclusive.
+If `Bo` does not appear in the **Add teammate** list, it is either already a Member or not Online — check the sidebar for a Room named `Bo` and the Teammates page for `Bo` reading Online, then restart from RESET. If the dot beside `Bo` in the panel is red rather than green, `Bo` is offline and its silence proves nothing about the gate: fix the agent first. If the strip is a red error alert instead of the blue note, read its text and treat the test as inconclusive.
 
 > [!NOTE]
 > A Room has no stored kind anywhere: the member count is the whole of this rule. That is why this test changes nothing but membership.
@@ -95,7 +95,7 @@ If `Bo` does not appear in the **Add teammate** list, it is either already a Mem
 5. Type `/invite @nobody` and press Enter, then read the strip.
 6. Type `/shout hello` and press Enter, then read the strip.
 7. Scroll the transcript and count the Messages in it.
-8. In a second PowerShell window run `Get-Content C:\seeds\huddle\uat\data\rooms\<RoomId>.jsonl`.
+8. In a second PowerShell window run `Get-Content <data>\rooms\<RoomId>.jsonl`.
 9. In `T-A`, look for the invite log line.
 
 **Pass if — all of these**
@@ -106,7 +106,7 @@ If `Bo` does not appear in the **Add teammate** list, it is either already a Mem
 - Step 6 shows a RED strip reading exactly `Unknown command`.
 - The transcript shows no Message at all for any of the three commands.
 - The `.jsonl` file gained no line from any of the three commands (it may still be absent entirely if nothing was ever posted in this Room).
-- `T-A` shows `Invited agent 'Ada' ('…') into room '…'.` exactly once.
+- `T-A` shows `Invited agent 'Ada' (<AgentId>) into room '<RoomId>'.` exactly once (the agent id is not quoted, `ChatService.cs:674`).
 
 **Fail if — any of these**
 
@@ -131,7 +131,7 @@ If `Ada` is already a Member of the `Bo` Room from an earlier test, step 2 will 
 **Before you start**
 
 - `P-LAUNCH-UAT` has been run and Ada and Bo are Online.
-- You are in a Room with three or more Members that contains `Ada` — the `Ada, Bo` Room from REPLYGATEBUDGET-02 is exactly right.
+- You are in a Room with three or more Members that contains `Ada` — the `Ada, Bo` Room from REPLYGATEBUDGET-02 is the right shape, but only if its Transcript has never named `@Bo`. After -02 step 9 it has, and the mock's Catch-up echo could then wake Bo (Setup item 8): RESET, then repeat -02 steps 1-5 only (add Bo, send nothing naming Bo).
 
 **Steps**
 
@@ -157,7 +157,7 @@ If `Ada` is already a Member of the `Bo` Room from an earlier test, step 2 will 
 
 **Inconclusive if**
 
-If `Ada` is offline (red dot in the **Add teammate** panel, or the Teammate tile reads Offline), every line of this test is inconclusive — no Mention can be observed through an Agent that receives nothing. If the Room has only two Members, a reply proves nothing about Mention resolution because a two-Member Room would be answered anyway: add a second Agent first. If `Bo` does reply, read its text: a reply that merely re-quotes an earlier Message naming `Bo` is the mock echoing a Mention (Setup item 8), not a gate failure — re-run from a fresh seeder.
+If `Ada` is offline (a red dot beside Ada on the Teammates page, or the tile reads Offline — the **Add teammate** panel lists only non-Members, so Ada is not in it), every line of this test is inconclusive — no Mention can be observed through an Agent that receives nothing. If the Room has only two Members, a reply proves nothing about Mention resolution because a two-Member Room would be answered anyway: add a second Agent first. If `Bo` does reply, read its text: a reply that merely re-quotes an earlier Message naming `Bo` is the mock echoing a Mention (Setup item 8), not a gate failure — re-run from a fresh seeder.
 
 > [!NOTE]
 > A space is deliberately NOT a boundary character, which is what makes multi-word Names possible; that is covered in REPLYGATEBUDGET-19 and -21.
@@ -171,7 +171,7 @@ If `Ada` is offline (red dot in the **Add teammate** panel, or the Teammate tile
 **Before you start**
 
 - `P-LAUNCH-UAT` has been run and Ada and Bo are Online.
-- You are in a Room of three or more Members containing `Ada` — the `Ada, Bo` Room from REPLYGATEBUDGET-02.
+- You are in a Room of three or more Members containing `Ada` whose Transcript has never named `@Bo` — the `Ada, Bo` Room as in the precondition of REPLYGATEBUDGET-04 (after RESET and adding Bo only).
 
 **Steps**
 
@@ -179,7 +179,7 @@ If `Ada` is offline (red dot in the **Add teammate** panel, or the Teammate tile
 2. Wait 8 seconds and count the replies.
 3. Type `@You are needed` and press Enter.
 4. Wait 10 seconds and watch the whole page.
-5. In a second PowerShell window run `Get-Content C:\seeds\huddle\uat\data\rooms\<RoomId>.jsonl | Select-Object -Last 4`.
+5. In a second PowerShell window run `Get-Content <data>\rooms\<RoomId>.jsonl | Select-Object -Last 4`.
 
 **Pass if — all of these**
 
@@ -187,7 +187,7 @@ If `Ada` is offline (red dot in the **Add teammate** panel, or the Teammate tile
 - Step 3's Message posts normally and appears in the transcript with sender `You`.
 - Nothing at all follows step 3 by way of a reply, a red strip, an error banner, or an entry in
   `T-A` at Warning level. What DOES appear is the quiet blue note above the composer reading
-  `No teammate was @-mentioned - name one to ask for a reply.` Read its wording closely: it says
+  `No teammate was @-mentioned — name one to ask for a reply.` Read its wording closely: it says
   *no teammate*, not *nobody*, precisely because `@You` IS a Mention - of the Human, who is not a
   Teammate and is never delivered to. A note here reading "nobody was mentioned" would be false,
   and this test is the case that proves it.
@@ -223,9 +223,9 @@ If the Human's display name is not `You` (it is configurable), step 3 names nobo
 1. Type `starting fresh` and press Enter, then look at the gap between the transcript and the composer.
 2. Type `@Ada hi` and press Enter, then wait 8 seconds and read the grey line above the composer.
 3. Type `@Ada @Bo go` and press Enter, then watch the grey line while the replies arrive.
-4. Wait until the grey line has stopped changing for 10 seconds and read it again. The mock re-quotes the Mentions it was sent (Setup item 8), so Ada and Bo may keep answering each other for a while; if the Room reaches its Budget the line is replaced by the red pause block, in which case read the figure in its sentence instead.
+4. Wait until the grey line has stopped changing for 10 seconds and read it again. The mock re-quotes the Mentions it was sent (Setup item 8), so Ada and Bo may keep answering each other for a while; if the Room reaches its Budget the line is replaced by the pause block, in which case read the figure in its sentence instead.
 5. Type `.` and press Enter and read the same area again.
-6. Count the agent-authored lines after the last `"senderId":"human"` line in `C:\seeds\huddle\uat\data\rooms\<RoomId>.jsonl` — do this BEFORE step 5 if you can, since the `.` starts a new count; otherwise count the agent lines between your `@Ada @Bo go` line and your `.` line.
+6. Count the agent-authored lines after the last `"senderId":"human"` line in `<data>\rooms\<RoomId>.jsonl` — do this BEFORE step 5 if you can, since the `.` starts a new count; otherwise count the agent lines between your `@Ada @Bo go` line and your `.` line.
 
 **Pass if — all of these**
 
@@ -245,7 +245,7 @@ If the Human's display name is not `You` (it is configurable), step 3 names nobo
 
 **Inconclusive if**
 
-If one of the two Agents is offline at step 3 only one reply arrives and the line will read `1 of 40`, which is correct for what happened — check both dots are green in **Add teammate** before judging. If the app was launched with a different `Team__AgentMessageBudget` from a previous test, substitute that number for 40 throughout rather than failing the test.
+If one of the two Agents is offline at step 3 only one reply arrives and the line will read `1 of 40`, which is correct for what happened — check on the Teammates page that both `Ada` and `Bo` read Online before judging (the **Add teammate** panel lists only non-Members, so neither is in it). If the app was launched with a different `Team__AgentMessageBudget` from a previous test, substitute that number for 40 throughout rather than failing the test.
 
 > [!NOTE]
 > The line is deliberately suppressed when the Room is uncapped; that case is REPLYGATEBUDGET-16.
@@ -276,8 +276,8 @@ If one of the two Agents is offline at step 3 only one reply arrives and the lin
 - `Ada`'s reply lands (it contains `hi`), and then a `budget-prompt` block appears between the transcript and the composer, separated from the transcript by a plain rule, whose `budget-prompt-text` paragraph is in the danger colour and reads exactly `Agents have sent 1 replies since you last spoke, and are paused.`
 - That block carries exactly two buttons, labelled **Continue** and **Leave paused**, and above
   them a second, grey `budget-prompt-warning` paragraph reading
-  `Continue will deliver the last message again, and it is a teammate's own - a teammate is
-  never delivered its own message, so this will wake nobody. Say something instead.` It is there because the
+  `Continue will deliver the last message again, and it is a teammate's own — a teammate is
+  never delivered its own message, so this will wake nobody. Say something instead.` (the em dash is the UI's, `Chat.razor:143`) It is there because the
   Room's last Message is `Ada`'s own reply, and an Agent is never delivered its own Message.
 - No context-only note appears. This is a two-Member Room, so a Message is answered without a
   Mention and there is nothing to explain — the note is for Rooms of three or more.
@@ -322,12 +322,12 @@ If no reply arrives at all, you have a dead agent rather than a pause — confir
 6. Type `@Ada @Bo go` and press Enter.
 7. Wait 10 seconds and count the agent Messages that appear.
 8. Read `T-A`.
-9. Run `Get-Content C:\seeds\huddle\uat\data\rooms\<RoomId>.jsonl`.
+9. Run `Get-Content <data>\rooms\<RoomId>.jsonl`.
 
 **Pass if — all of these**
 
 - Exactly ONE agent Message appears in the Room (from either `Ada` or `Bo` — which one wins is a race and either is correct), and it contains the text you sent.
-- The red pause block appears with **Continue** and **Leave paused**.
+- The pause block appears with **Continue** and **Leave paused**.
 - `T-A` shows exactly ONE `Room '…' refused a message from '…': its budget of 1 agent messages since a human last spoke is spent.` warning.
 - The `.jsonl` file holds exactly one agent line after your `@Ada @Bo go` line.
 
@@ -339,7 +339,7 @@ If no reply arrives at all, you have a dead agent rather than a pause — confir
 
 **Inconclusive if**
 
-If only one of the two Agents is online, only one post is ever attempted and the test proves nothing about the race: check both dots are green in **Add teammate** first. If `T-A` shows a `declined a turn in room` warning for the second Teammate and NO `refused a message from` line, the second Teammate started its Turn after the first had already posted, so the cheap layer (REPLYGATEBUDGET-33) caught it and the write path was never reached: that is correct behaviour but not what this test is for — re-run from the seeder (a few attempts may be needed to hit the race). If the timing is such that the second Agent's post arrives after you have already typed something else, the Budget will have reset — do not type anything between step 6 and step 9.
+If only one of the two Agents is online, only one post is ever attempted and the test proves nothing about the race: check on the Teammates page that both read Online first (the **Add teammate** panel lists only non-Members). If `T-A` shows a `declined a turn in room` warning for the second Teammate and NO `refused a message from` line, the second Teammate started its Turn after the first had already posted, so the cheap layer (REPLYGATEBUDGET-33) caught it and the write path was never reached: that is correct behaviour but not what this test is for — re-run from the seeder (a few attempts may be needed to hit the race). If the timing is such that the second Agent's post arrives after you have already typed something else, the Budget will have reset — do not type anything between step 6 and step 9.
 
 > [!NOTE]
 > This layer refuses AFTER the Turn that produced the Message has already happened. With a real Persona the model has thought and the text is thrown away. That is the documented price of putting the authority on the write path, not a defect; the layer that avoids the spend is covered in REPLYGATEBUDGET-33.
@@ -360,7 +360,7 @@ If only one of the two Agents is online, only one post is ever attempted and the
 1. Click **Leave paused**.
 2. Read whatever now sits between the transcript and the composer.
 3. Read `T-A` and count the `was extended to` lines.
-4. Run `Get-Content C:\seeds\huddle\uat\data\rooms\<RoomId>.jsonl` and count the lines.
+4. Run `Get-Content <data>\rooms\<RoomId>.jsonl` and count the lines.
 
 **Pass if — all of these**
 
@@ -404,15 +404,15 @@ Because Ada and Bo never post spontaneously, you cannot make a fresh post get re
 
 **Pass if — all of these**
 
-- After step 2 the red block with **Continue** and **Leave paused** is back.
-- After the F5 at step 5 the red block is back again.
+- After step 2 the pause block with **Continue** and **Leave paused** is back.
+- After the F5 at step 5 the pause block is back again.
 - After step 7 the pause area is empty (your Message reset the Room).
-- After step 8 the red block appears again, rather than staying suppressed from the earlier dismissal.
+- After step 8 the pause block appears again, rather than staying suppressed from the earlier dismissal.
 
 **Fail if — any of these**
 
 - The muted `Paused —` line survives navigating away and back, or survives an F5 -> the dismissal is being stored beyond the view, so the next pause in this Room will never be announced to this Human.
-- After step 8 nothing appears where the red block should be -> a dismissal from the previous pause is suppressing a NEW pause: the Room is capped and silent, the exact failure the prompt exists to prevent.
+- After step 8 nothing appears where the pause block should be -> a dismissal from the previous pause is suppressing a NEW pause: the Room is capped and silent, the exact failure the prompt exists to prevent.
 
 **Inconclusive if**
 
@@ -429,7 +429,7 @@ If clicking `Bo` in the sidebar shows a Room you do not recognise, you are in th
 
 **Before you start**
 
-- A Room is paused and the red block is showing (reach that state by re-running REPLYGATEBUDGET-07 if needed).
+- A Room is paused and the pause block is showing (reach that state by re-running REPLYGATEBUDGET-07 if needed).
 - Do NOT click **Leave paused** during this test.
 
 **Steps**
@@ -443,8 +443,8 @@ If clicking `Bo` in the sidebar shows a Room you do not recognise, you are in th
 
 **Pass if — all of these**
 
-- After the reload the red block is present with the same figures and both buttons.
-- In the brand-new tab, which never witnessed the Message that caused the pause, the red block is also present with the same figures.
+- After the reload the pause block is present with the same figures and both buttons.
+- In the brand-new tab, which never witnessed the Message that caused the pause, the pause block is also present with the same figures.
 - `T-A` gained NO new `was extended to` line — reloading only re-read the state, it changed nothing.
 
 **Fail if — any of these**
@@ -468,14 +468,14 @@ If the whole page fails to load after F5, the server has stopped — check `T-A`
 
 **Before you start**
 
-- The two-Member `Ada` Room from REPLYGATEBUDGET-07 is paused with the red block showing, under a run whose `Team__AgentMessageBudget` is `1`. Use that Room, not the `Ada, Bo` Room of REPLYGATEBUDGET-08: there the last Message may name another Teammate, and Continue would then genuinely wake it and add a Message, which this test does not expect.
+- The two-Member `Ada` Room from REPLYGATEBUDGET-07 is paused with the pause block showing, under a run whose `Team__AgentMessageBudget` is `1`. Use that Room, not the `Ada, Bo` Room of REPLYGATEBUDGET-08: there the last Message may name another Teammate, and Continue would then genuinely wake it and add a Message, which this test does not expect.
 - You know the Room id and the current line count of its `.jsonl`.
 
 **Steps**
 
 1. Count the Messages currently visible in the transcript and write the number down.
-2. Run `(Get-Content C:\seeds\huddle\uat\data\rooms\<RoomId>.jsonl).Count` and write the number down.
-3. Click **Continue** and watch the two buttons closely as you do.
+2. Run `(Get-Content <data>\rooms\<RoomId>.jsonl).Count` and write the number down.
+3. Click **Continue** once. (The `Continuing…` label and the disabled buttons last about one frame on localhost, because the grant is in memory — do not try to catch them, and do not file their absence.)
 4. Wait 10 seconds.
 5. Read the area between the transcript and the composer.
 6. Count the Messages visible in the transcript again and compare with step 1.
@@ -485,8 +485,7 @@ If the whole page fails to load after F5, the server has stopped — check `T-A`
 
 **Pass if — all of these**
 
-- During step 3 the first button's label changes to `Continuing…` and both buttons are disabled while the grant is in flight.
-- The red block then disappears and is replaced by a grey line reading exactly `1 of 2 agent replies since you last spoke.`
+- The pause block then disappears and is replaced by a grey line reading exactly `1 of 2 agent replies since you last spoke.`
 - The visible Message count is unchanged from step 1 — nothing is rendered twice and the view does not jump to a repeated row.
 - The `.jsonl` line count is unchanged from step 2 — a re-delivery is not a post.
 - `T-A` shows exactly ONE `Room '…' was extended to 2 agent messages.` line for the click.
@@ -501,7 +500,7 @@ If the whole page fails to load after F5, the server has stopped — check `T-A`
 
 **Inconclusive if**
 
-If nothing at all changes after the click — no label change, no log line — the click did not reach the server; check `T-A` for an error and retry once. Whether any Agent actually wakes up and replies here is NOT part of this test: in the two-Member Room it will not, for the reason set out in REPLYGATEBUDGET-26. Judge this test only on the button behaviour, the note, the log line and the two counts.
+If nothing at all changes after the click — the pause block stays, no log line — the click did not reach the server; check `T-A` for an error and retry once. Whether any Agent actually wakes up and replies here is NOT part of this test: in the two-Member Room it will not, for the reason set out in REPLYGATEBUDGET-26. Judge this test only on the button behaviour, the note, the log line and the two counts.
 
 > [!NOTE]
 > Under a budget of 1 the note after a single grant must read `1 of 2`. If your run used a different budget N, expect `N of 2N`.
@@ -514,37 +513,40 @@ If nothing at all changes after the click — no label change, no log line — t
 
 **Before you start**
 
-- REPLYGATEBUDGET-12 has just passed: the Room shows `1 of 2 agent replies since you last spoke.` under a run whose configured budget is `1`.
+- `P-LAUNCH-UAT` has been run with a Budget of `1` (Setup item 2) and Bo has been added to the `Ada` Room, so you are in the three-Member `Ada, Bo` Room. This test does not use the two-Member Room: there a `.` is answered by Ada and the Room re-pauses within seconds, which hides the reset.
+- The Room's Transcript has never named `@Bo` (see the precondition of REPLYGATEBUDGET-04).
 
 **Steps**
 
-1. Type a single full stop `.` and press Enter.
-2. Read the transcript and the area between it and the composer.
-3. Type `@Ada hi` and press Enter and wait 8 seconds.
-4. Read the area above the composer. Under a configured budget of `1` that one reply spends the
+1. Type `@Ada hi` and press Enter, wait 8 seconds, and confirm the pause block is showing.
+2. Click **Continue** once and confirm the grey line reads `1 of 2 agent replies since you last spoke.` (the same grant as REPLYGATEBUDGET-12).
+3. Type a single full stop `.` and press Enter.
+4. Read the transcript and the area between it and the composer.
+5. Type `@Ada hi` and press Enter and wait 8 seconds.
+6. Read the area above the composer. Under a configured budget of `1` that one reply spends the
    whole allowance, so what you see is the pause block again, which does not print the Granted
    figure. Click **Leave paused** to read it: that only hides the question (REPLYGATEBUDGET-09) and
    grants nothing.
-5. Run `Get-Content C:\seeds\huddle\uat\data\rooms\<RoomId>.jsonl | Select-Object -Last 3`.
-6. Read `T-A` for any warning produced by your own two Messages.
+7. Run `Get-Content <data>\rooms\<RoomId>.jsonl | Select-Object -Last 3`.
+8. Read `T-A` for any warning produced by your own two Messages.
 
 **Pass if — all of these**
 
 - The `.` posts normally, appears in the transcript with sender `You`, and is never refused.
-- Immediately after step 1 the pause block and the grey budget line are both gone.
-- After `Ada` replies at step 3, the line read at step 4 reads `Paused — 1 of 1 agent replies since you last spoke.` — the allowance is back to the configured default, NOT `1 of 2`.
-- The tail of the `.jsonl` shows your `.` line with `"senderId":"human"`.
+- Immediately after step 3 the pause block and the grey budget line are both gone, and no Agent answers the `.` (three Members and no Mention): the quiet blue note `No teammate was @-mentioned — name one to ask for a reply.` appears instead.
+- After `Ada` replies at step 5, the line read at step 6 reads `Paused — 1 of 1 agent replies since you last spoke.` — the allowance is back to the configured default, NOT `1 of 2`.
+- The tail of the `.jsonl` shows your `.` line with `"senderId":"human"`, then `@Ada hi`, then Ada's reply.
 - `T-A` shows no refusal warning naming the Human.
 
 **Fail if — any of these**
 
 - The Human's Message is refused, or shows an error strip -> the cap is being applied to Human Messages, which locks the Human out of their own Room with no way back in.
 - The pause block survives the Human's Message -> the reset is not clearing the pause, so the Room stays visibly paused while actually accepting replies (or worse, stays paused in fact).
-- The grey line reads `1 of 2` after step 3 -> a Budget the Human granted for one pause is persisting past the conversation it was granted for, so each Continue permanently raises the Room's ceiling.
+- The grey line reads `1 of 2` after step 5 -> a Budget the Human granted for one pause is persisting past the conversation it was granted for, so each Continue permanently raises the Room's ceiling.
 
 **Inconclusive if**
 
-If no reply arrives at step 3, you cannot read the Granted figure at all: confirm `Ada` is online and repeat. If the configured budget for this run is not `1`, substitute it: the pass condition is that Granted returns to the CONFIGURED value, whatever that is.
+If no reply arrives at step 5, you cannot read the Granted figure at all: confirm `Ada` is online and repeat. If the configured budget for this run is not `1`, substitute it: the pass condition is that Granted returns to the CONFIGURED value, whatever that is.
 
 > [!NOTE]
 > This is the escape hatch for every pause: anything the Human says, even a full stop, resumes the Room.
@@ -564,7 +566,7 @@ If no reply arrives at step 3, you cannot read the Granted figure at all: confir
 1. Run `P-LAUNCH-UAT` with a Budget of `1` (Setup item 2). Re-running its seeder line is the reset.
 2. Wait for Ada and Bo to go **Online**.
 3. Open `http://localhost:5100` and click the Room named `Ada`.
-4. Type `@Ada hi` and press Enter, then wait until the red pause block appears.
+4. Type `@Ada hi` and press Enter, then wait until the pause block appears.
 5. Click the Room named `Bo` in the sidebar.
 6. Read the area between the transcript and the composer in this Room.
 7. Type `@Bo hi` and press Enter and wait 8 seconds.
@@ -575,7 +577,7 @@ If no reply arrives at step 3, you cannot read the Granted figure at all: confir
 
 - In the `Bo` Room at step 6 there is no pause block and no budget line at all.
 - `Bo` replies promptly at step 7 (the reply contains `hi`), and only afterwards does that Room show its own `1 of 1 …` state.
-- Back in the `Ada` Room at step 9, the red pause block is still there with its own figures.
+- Back in the `Ada` Room at step 9, the pause block is still there with its own figures.
 
 **Fail if — any of these**
 
@@ -598,13 +600,13 @@ If `Bo` is not Online there is no working `Bo` Room to switch to — check the T
 
 **Before you start**
 
-- A Room is paused with the red block showing.
+- A Room is paused with the pause block showing.
 - You know the Room id.
 
 **Steps**
 
 1. Note the exact text of the pause block and the number of Messages in the transcript.
-2. Run `Get-Content C:\seeds\huddle\uat\data\rooms\<RoomId>.jsonl` and count the agent lines after the last `"senderId":"human"` line.
+2. Run `Get-Content <data>\rooms\<RoomId>.jsonl` and count the agent lines after the last `"senderId":"human"` line.
 3. In `T-A` press Ctrl+C to stop the app.
 4. Start the app again with exactly the same `dotnet run` lines of `P-LAUNCH-UAT`, including the same Budget argument, but WITHOUT the seeder line — the seeder wipes the data folder, and that is RESET. Do NOT run RESET.
 5. Open `http://localhost:5100` and navigate to the same Room (its id is unchanged).
@@ -641,19 +643,21 @@ If the Room id changes after the restart you ran RESET by mistake, or an Agent r
 
 **Steps**
 
-1. Run `P-LAUNCH-UAT` with a Budget of `0` (Setup item 2). Re-running its seeder line is the reset.
-2. Wait for Ada and Bo to go **Online**.
-3. Open `http://localhost:5100`, click the Room named `Ada`, click **Add teammate**, click `Bo`, then close the panel.
-4. One round is two Messages. Type `@Ada hi` and press Enter, wait 8 seconds, then type `@Bo hi` and press Enter and wait 8 seconds. Never name both Teammates in one Message in this test: the mock re-quotes the Mentions (Setup item 8), so the two would answer each other with no cap to stop them.
+This test uses two pipe bots (PROFILE B), not the mock Teammates: with the cap removed, the mock pair re-quotes Catch-up lines that name each other and answers itself forever (Setup item 8), whereas `tools/echo-bot.ps1` strips `@` from what it quotes and cannot loop.
+
+1. Run `P-RESET-ROOMS`, then start the app under PROFILE B with the Budget set before `dotnet run`: `$env:Team__Acp__Enabled = 'false'`, `$env:Team__AgentMessageBudget = '0'`, then `dotnet run --project src/Huddle.App --urls http://localhost:5100`.
+2. In `T-B` run `pwsh <repo>\tools\echo-bot.ps1 -Name Ada`; in a third terminal run `pwsh <repo>\tools\echo-bot.ps1 -Name Bo`. Confirm each prints `Sent hello. Listening for messages (Ctrl+C to exit)...`.
+3. Open `http://localhost:5100`; the Rooms `Ada` and `Bo` appear. Click the Room named `Ada`, type `/invite @Bo` and press Enter, and confirm the heading becomes `Ada, Bo`.
+4. One round is two Messages. Type `@Ada hi` and press Enter, wait 5 seconds, then type `@Bo hi` and press Enter and wait 5 seconds.
 5. Repeat step 4 five more times.
 6. Read the area between the transcript and the composer after every round.
 7. Read `T-A` for the whole run.
-8. Stop the app, and restart it with a Budget of `-1` including the seeder line, so Bo is no longer a Member of the `Ada` Room, then repeat steps 3 to 7.
+8. Stop the app and both bots, run `P-RESET-ROOMS` again so Bo is no longer a Member of the `Ada` Room, restart under PROFILE B with `$env:Team__AgentMessageBudget = '-1'`, start both bots again, and repeat steps 3 to 7.
 
 **Pass if — all of these**
 
-- Every round produces two agent replies, one from `Ada` and one from `Bo`, each containing the text you sent.
-- No grey budget line and no red pause block ever appears, at any point, in either run.
+- Every round produces two agent replies, one from `Ada` and one from `Bo`, each of the form `**Ada:** hi` / `**Bo:** hi` (the bot strips `@`), and nothing else arrives.
+- No grey budget line and no pause block ever appears, at any point, in either run.
 - `T-A` contains no `refused a message from` line and no `was extended to` line, in either run.
 - The negative value behaves identically to zero.
 
@@ -665,7 +669,7 @@ If the Room id changes after the restart you ran RESET by mistake, or an Agent r
 
 **Inconclusive if**
 
-If replies stop arriving mid-run, check the Agents are still connected in **Add teammate** before concluding anything: a disconnected Teammate produces the same silence as a refusal but leaves no warning in `T-A`.
+If replies stop arriving mid-run, check that each bot terminal is still running (a disconnected bot prints `Server closed the connection.`) and still printing an envelope per Message before concluding anything: a disconnected bot produces the same silence as a refusal but leaves no warning in `T-A`.
 
 > [!NOTE]
 > This setting exists only as configuration — there is no control for it on /settings or in any Room, and it is bound at startup, so a change needs a restart. Never leave it at 0 for a paid run: with real Personas it restores unbounded spend.
@@ -679,11 +683,11 @@ If replies stop arriving mid-run, check the Agents are still connected in **Add 
 **Before you start**
 
 - The app is running under `P-LAUNCH-FREE` (no Teammate is needed for this test).
-- No `prompts.json` exists yet: confirm with `Test-Path E:\Repos\Huddle\src\Huddle.App\App_Data\prompts.json` — it should print `False` on a fresh install.
+- No `prompts.json` exists yet: confirm with `Test-Path <data>\prompts.json` — it should print `False` on a fresh install.
 
 **Steps**
 
-1. Run `Test-Path E:\Repos\Huddle\src\Huddle.App\App_Data\prompts.json` and note the result.
+1. Run `Test-Path <data>\prompts.json` and note the result.
 2. Click **Settings** in the sidebar.
 3. Confirm the **Prompts** tab is the one already selected, then find the field labelled **Chat rules**.
 4. Read its default text.
@@ -692,16 +696,16 @@ If replies stop arriving mid-run, check the Agents are still connected in **Add 
 7. Look for the same badge beside **Help: budget**.
 8. Append the word ` TESTEDIT` to the end of the **Chat rules** text.
 9. Note the badge that appears beside the field once it is edited, then click **Save**.
-10. Run `Get-Content E:\Repos\Huddle\src\Huddle.App\App_Data\prompts.json`.
+10. Run `Get-Content <data>\prompts.json`.
 11. Remove ` TESTEDIT` again and click **Save**.
 
 **Pass if — all of these**
 
 - Step 1 prints `False` — no override file exists until a save.
-- **Chat rules** default text begins `A Room with two members is a private conversation with the human: answer every message. A Room with three or more members is a group: answer only when you are @-mentioned.`
+- **Chat rules** default text (hard line breaks in the editor are not part of the match; read it as running prose, `PromptCatalog.cs:86-92`) begins `A Room with two members is a private conversation with the human: answer every message. A Room with three or more members is a group: answer only when you are @-mentioned.`
 - **Help: budget** default text contains the sentence `A refusal that says the budget is spent is final: do not retry it, and do not work around it by posting to another Room.`
 - **Chat rules** carries a badge reading `Next session`, whose tooltip says it applies to teammates started after the change.
-- **Help: budget** carries no `Next session` badge.
+- **Help: budget** carries no `Next session` badge (its Timing is Live, `PromptCatalog.cs:633-650`).
 - After the edit and before saving, the field shows an `Unsaved` badge; the **Save** button is enabled only while there is something to save.
 - After saving, `prompts.json` exists and contains ONLY the one changed key — not the full set of defaults.
 
@@ -734,35 +738,36 @@ If the Prompts tab shows no fields at all, the prompt catalog failed to load —
 
 1. Run `P-RESET-ROOMS`.
 2. Start the app with PROFILE B: `$env:Team__Acp__Enabled = 'false'`, `$env:Team__AgentMessageBudget = '40'`, then `dotnet run --project src/Huddle.App --urls http://localhost:5100`.
-3. Open a second PowerShell terminal — call it `T-B` — and run `pwsh E:\Repos\Huddle\tools\echo-bot.ps1 -Name Ada`.
-4. Confirm `T-B` prints `Sent hello. Listening for messages…`.
-5. Open `http://localhost:5100`; a Room named `Ada` appears in the sidebar with no refresh. Click it.
-6. Type `hello` and press Enter.
-7. Read the newest JSON line printed in `T-B`.
-8. Type `hello @Ada` and press Enter.
-9. Read the newest JSON line printed in `T-B` and the Room view.
+3. Open a second PowerShell terminal — call it `T-B` — and run `pwsh <repo>\tools\echo-bot.ps1 -Name Ada`. Open a third terminal, `T-C`, and run `pwsh <repo>\tools\echo-bot.ps1 -Name Bo`.
+4. Confirm each terminal prints `Sent hello. Listening for messages (Ctrl+C to exit)...`.
+5. Open `http://localhost:5100`; Rooms named `Ada` and `Bo` appear in the sidebar with no refresh. Click `Ada`.
+6. Type `/invite @Bo` and press Enter, and confirm the heading becomes `Ada, Bo`. The bot replies in a Room of two Members or fewer even without a Mention (`tools/echo-bot.ps1:78`), so a second Member is what makes `Ada` Mention-gated.
+7. Type `hello` and press Enter.
+8. Read the newest JSON line printed in `T-B` and in `T-C`, and the Room view.
+9. Type `hello @Ada` and press Enter.
+10. Read the newest JSON line printed in `T-B` and in `T-C`, and the Room view.
 
 **Pass if — all of these**
 
 - A Room named `Ada` appears in the sidebar within a few seconds of starting the bot, without a page refresh.
-- The envelope from step 7 has `"type":"messagePosted"`, `"mentioned":false`, a `"members"` array of exactly two entries, `"agentMessagesSinceHuman":0` and `"budget":40`.
-- Nothing appears in the Room after step 6 — the bot received a correct label and chose not to act.
-- The envelope from step 9 has `"mentioned":true` and a `"mentions"` array of exactly one entry naming `Ada`.
-- A reply from `Ada` appears in the Room after step 9.
+- The envelope from step 8, in both `T-B` and `T-C`, has `"type":"messagePosted"`, `"mentioned":false`, a `"members"` array of exactly three entries, `"agentMessagesSinceHuman":0` and `"budget":40`.
+- Nothing appears in the Room after step 7 — both bots received a correct label and chose not to act.
+- The envelope from step 10 in `T-B` has `"mentioned":true` and a `"mentions"` array of exactly one entry naming `Ada`; the copy in `T-C` has `"mentioned":false` and the same `"mentions"` array.
+- A reply from `Ada`, and none from `Bo`, appears in the Room after step 10.
 
 **Fail if — any of these**
 
-- The step-7 envelope carries `"mentioned":true` -> the server is labelling an un-named recipient as Mentioned; every Agent in every group Room would be woken by every Message.
+- The step-8 envelope carries `"mentioned":true`, or either bot replies to `hello` -> the server is labelling an un-named recipient as Mentioned; every Agent in every group Room would be woken by every Message.
 - The `"members"` array is shorter or longer than the Room's actual membership -> the Reply Gate's Room rule is being fed the wrong count, so a group Room can behave as a private one or vice versa.
 - `"budget"` does not match the configured value -> clients are being told the wrong allowance, and an Agent that implements the gate will stop too early or too late.
-- No envelope at all is printed at step 7 -> the bot is not a Member or not connected; that is an infrastructure failure, not a labelling one.
+- No envelope at all is printed at step 8 -> the bot is not a Member or not connected; that is an infrastructure failure, not a labelling one.
 
 **Inconclusive if**
 
 If `T-B` prints a line containing `"code":"invalidName"`, the Name was rejected — check for a leading or trailing space in what you typed. If the bot exits with a connection error, the app is not running or its pipe name differs: confirm the app started before the bot. If a Room named `Ada` was already there before the bot started, it is left over from an earlier test: stop everything, RESET and start again.
 
 > [!NOTE]
-> Keep `T-B` open; the next several tests reuse this exact oracle. The silence at step 6 is correct client behaviour, not a gate defect.
+> Keep `T-B` open; the next several tests reuse this exact oracle. The silence at step 7 is correct client behaviour in a Room of three, not a gate defect; in a Room of two the same bot would have answered `hello` (`tools/echo-bot.ps1:78`).
 
 ### REPLYGATEBUDGET-19 — The longest handle wins: @Emily Lee reaches Emily Lee, never Emily
 
@@ -779,8 +784,8 @@ If `T-B` prints a line containing `"code":"invalidName"`, the Name was rejected 
 
 1. Run `P-RESET-ROOMS`.
 2. Start the app with PROFILE B (budget `40`).
-3. In `T-B` run `pwsh E:\Repos\Huddle\tools\echo-bot.ps1 -Name Emily`.
-4. In a third terminal — TERMINAL C — run `pwsh E:\Repos\Huddle\tools\echo-bot.ps1 -Name "Emily Lee"` (the quotes matter).
+3. In `T-B` run `pwsh <repo>\tools\echo-bot.ps1 -Name Emily`.
+4. In a third terminal — TERMINAL C — run `pwsh <repo>\tools\echo-bot.ps1 -Name "Emily Lee"` (the quotes matter).
 5. Open `http://localhost:5100`. Confirm the sidebar shows two Rooms, `Emily` and `Emily Lee`.
 6. Click the Room named `Emily`.
 7. Type `/invite @Emily Lee` and press Enter.
@@ -825,8 +830,8 @@ If either terminal prints `"code":"invalidName"`, the Name was rejected (a doubl
 
 1. Run `P-RESET-ROOMS`.
 2. Start the app with PROFILE B (budget `40`).
-3. In `T-B` run `pwsh E:\Repos\Huddle\tools\echo-bot.ps1 -Name Emily`.
-4. In TERMINAL C run `pwsh E:\Repos\Huddle\tools\echo-bot.ps1 -Name Ada`.
+3. In `T-B` run `pwsh <repo>\tools\echo-bot.ps1 -Name Emily`.
+4. In TERMINAL C run `pwsh <repo>\tools\echo-bot.ps1 -Name Ada`.
 5. Open `http://localhost:5100` and click the Room named `Emily`.
 6. Type `/invite @Ada` and press Enter; confirm the heading becomes `Emily, Ada` so the Room is Mention-gated.
 7. Confirm the member line names three people and that `Emily Lee` is NOT one of them.
@@ -867,8 +872,8 @@ If an `Emily Lee` bot from REPLYGATEBUDGET-19 is still running, it may have been
 
 1. Run `P-RESET-ROOMS`.
 2. Start the app with PROFILE B (budget `40`).
-3. In `T-B` run `pwsh E:\Repos\Huddle\tools\echo-bot.ps1 -Name "Chief of Staff"`.
-4. In TERMINAL C run `pwsh E:\Repos\Huddle\tools\echo-bot.ps1 -Name Ada`.
+3. In `T-B` run `pwsh <repo>\tools\echo-bot.ps1 -Name "Chief of Staff"`.
+4. In TERMINAL C run `pwsh <repo>\tools\echo-bot.ps1 -Name Ada`.
 5. Open `http://localhost:5100`, click the Room named `Chief of Staff`, type `/invite @Ada` and press Enter.
 6. Confirm the heading is now `Chief of Staff, Ada` and the member line names three people.
 7. Type `@Chief of Staff and @Ada` and press Enter, then wait 6 seconds.
@@ -910,9 +915,9 @@ If `T-B` prints `"code":"invalidName"`, the quoted Name was mistyped — it must
 
 1. Run `P-RESET-ROOMS`.
 2. Start the app with PROFILE B (budget `40`).
-3. In `T-B` run `pwsh E:\Repos\Huddle\tools\echo-bot.ps1 -Name Ad`.
-4. In TERMINAL C run `pwsh E:\Repos\Huddle\tools\echo-bot.ps1 -Name example`.
-5. In a fourth terminal — TERMINAL D — run `pwsh E:\Repos\Huddle\tools\echo-bot.ps1 -Name Ada`.
+3. In `T-B` run `pwsh <repo>\tools\echo-bot.ps1 -Name Ad`.
+4. In TERMINAL C run `pwsh <repo>\tools\echo-bot.ps1 -Name example`.
+5. In a fourth terminal — TERMINAL D — run `pwsh <repo>\tools\echo-bot.ps1 -Name Ada`.
 6. Open `http://localhost:5100`, click the Room named `Ad`, type `/invite @example` and press Enter, then type `/invite @Ada` and press Enter.
 7. Confirm the heading reads `Ad, example, Ada` and the member line names four people.
 8. Type `@Ada` and press Enter, wait 5 seconds, then read all three terminals and the Room.
@@ -955,14 +960,14 @@ If any of the three bots failed to connect (no Room appears for it, or its termi
 
 1. Run `P-RESET-ROOMS`.
 2. Start the app with PROFILE B (budget `40`).
-3. In `T-B` run `pwsh E:\Repos\Huddle\tools\echo-bot.ps1 -Name Ada`.
-4. In TERMINAL C run `pwsh E:\Repos\Huddle\tools\echo-bot.ps1 -Name Bo`.
+3. In `T-B` run `pwsh <repo>\tools\echo-bot.ps1 -Name Ada`.
+4. In TERMINAL C run `pwsh <repo>\tools\echo-bot.ps1 -Name Bo`.
 5. Open `http://localhost:5100`, click the Room named `Ada`, type `/invite @Bo` and press Enter, and note the Room id from the URL.
 6. Type `@Ada hi` and press Enter.
 7. Wait 30 seconds without touching anything.
 8. Read `T-B` carefully: find the envelope for your own Message, and look for any envelope carrying `Ada`'s own reply text.
 9. Read TERMINAL C.
-10. Run `(Get-Content E:\Repos\Huddle\src\Huddle.App\App_Data\rooms\<RoomId>.jsonl).Count`, wait 20 seconds, and run it again.
+10. Run `(Get-Content <data>\rooms\<RoomId>.jsonl).Count`, wait 20 seconds, and run it again.
 
 **Pass if — all of these**
 
@@ -999,8 +1004,8 @@ If neither bot replies, nothing is being exercised — get a reply working (REPL
 
 1. Run `P-RESET-ROOMS`.
 2. Start the app with PROFILE B but set `$env:Team__AgentMessageBudget = '1'` before `dotnet run`.
-3. In `T-B` run `pwsh E:\Repos\Huddle\tools\echo-bot.ps1 -Name Ada`.
-4. In TERMINAL C run `pwsh E:\Repos\Huddle\tools\echo-bot.ps1 -Name Bo`.
+3. In `T-B` run `pwsh <repo>\tools\echo-bot.ps1 -Name Ada`.
+4. In TERMINAL C run `pwsh <repo>\tools\echo-bot.ps1 -Name Bo`.
 5. Open `http://localhost:5100`, click the Room named `Ada`, type `/invite @Bo` and press Enter.
 6. Type `@Ada @Bo go` and press Enter.
 7. Wait 10 seconds.
@@ -1010,7 +1015,7 @@ If neither bot replies, nothing is being exercised — get a reply working (REPL
 
 **Pass if — all of these**
 
-- Exactly one of the two bot terminals prints a `protocolError` envelope; the other prints none.
+- Exactly one of the two bot terminals prints an envelope with `"type":"error"`; the other prints none.
 - That envelope carries `"code":"budgetExhausted"`.
 - Its `"message"` reads exactly: `This room has reached its budget of 1 agent messages since a human last spoke. Do not retry: further posts to this room will be refused until a human speaks here.`
 - `T-A` shows exactly one `refused a message from` warning naming the same Agent.
@@ -1020,7 +1025,7 @@ If neither bot replies, nothing is being exercised — get a reply working (REPL
 
 - The message says anything like 'try again later', 'temporarily', or names a wait -> a model will read it as transient and retry, spending the Turn the refusal exists to save, and may route around it into another Room which has a full Budget of its own.
 - No `"code"` field, or a different code -> a client cannot distinguish a Budget refusal from an unknown Room or a malformed Message, so it cannot stop for the right reason.
-- Both terminals print a `protocolError` -> neither post was accepted, meaning the Room was already at its cap before your Message reset it.
+- Both terminals print a `"type":"error"` envelope -> neither post was accepted, meaning the Room was already at its cap before your Message reset it.
 - Neither prints one, yet only one Message landed -> the second Agent never attempted a post, so nothing was actually refused (see INCONCLUSIVE).
 
 **Inconclusive if**
@@ -1038,12 +1043,12 @@ If only one bot is connected, only one post is attempted and no refusal can occu
 
 **Before you start**
 
-- REPLYGATEBUDGET-24 has just been run: the app is on PROFILE B with budget `1`, bots `Ada` and `Bo` are connected, and the Room `Ada, Bo` shows the red pause block.
+- REPLYGATEBUDGET-24 has just been run: the app is on PROFILE B with budget `1`, bots `Ada` and `Bo` are connected, and the Room `Ada, Bo` shows the pause block.
 
 **Steps**
 
 1. In the Room, note the exact text of the last Message and which Agent sent it.
-2. Note the Room id from the URL and run `(Get-Content E:\Repos\Huddle\src\Huddle.App\App_Data\rooms\<RoomId>.jsonl).Count`.
+2. Note the Room id from the URL and run `(Get-Content <data>\rooms\<RoomId>.jsonl).Count`.
 3. Count the Messages visible in the transcript.
 4. Click **Continue**.
 5. Wait 10 seconds.
@@ -1059,6 +1064,7 @@ If only one bot is connected, only one post is attempted and no refusal can occu
 - The sender's terminal prints no envelope for its own Message at any point.
 - `T-A` shows exactly one `Room '…' was extended to 2 agent messages.` line.
 - Neither the `.jsonl` line count nor the visible Message count changed.
+- If the re-delivered Message names nobody (the usual case with the echo bots), a quiet blue note above the composer reads `Budget granted and the last message was delivered again, but it names no teammate. Mention one by name to get an answer.` (`Chat.razor:181`). Its absence is not a failure when the Message did name an Agent; it is the observation, not the oracle.
 
 **Fail if — any of these**
 
@@ -1088,23 +1094,23 @@ Whether the woken Agent actually replies depends on the re-parsed Mentions in th
 
 1. Run `P-RESET-ROOMS`.
 2. Start the app with PROFILE B and `$env:Team__AgentMessageBudget = '1'`.
-3. In `T-B` run `pwsh E:\Repos\Huddle\tools\echo-bot.ps1 -Name Ada`.
+3. In `T-B` run `pwsh <repo>\tools\echo-bot.ps1 -Name Ada`.
 4. Open `http://localhost:5100` and click the Room named `Ada`. Confirm the member line reads `You, Ada` — two Members only.
-5. Type `@Ada hi` and press Enter and wait for the reply and the red pause block.
+5. Type `@Ada hi` and press Enter and wait for the reply and the pause block.
 6. Note the Message count in the transcript.
 7. Click **Continue** and wait 15 seconds.
 8. Read the Room, `T-B` and `T-A`.
 
 **Pass if — all of these**
 
-- BEFORE clicking at step 7, the red pause block carries an extra grey line reading `Continue will
-  deliver the last message again, and it is a teammate's own - a teammate is never delivered its
+- BEFORE clicking at step 7, the pause block carries an extra grey line reading `Continue will
+  deliver the last message again, and it is a teammate's own — a teammate is never delivered its
   own message, so this will wake nobody. Say something instead.` The Human is told the button
   cannot work BEFORE pressing it, which is the whole of product observation 5.
 - `T-A` shows exactly one `Room '…' was extended to 2 agent messages.` line — the grant definitely happened.
 - AFTER the click, a quiet blue note reads `Budget granted, but there was nobody to wake. Say
   something to start the room again.`
-- The red block is replaced by a grey line reading `1 of 2 agent replies since you last spoke.`
+- The pause block is replaced by a grey line reading `1 of 2 agent replies since you last spoke.`
 - `T-B` prints NO new envelope: the last Message in the Room was `Ada`'s own, and an Agent is never delivered its own Message.
 - No new Message appears in the Room and the transcript count is unchanged.
 
@@ -1133,7 +1139,7 @@ If the grey line does not update to `1 of 2` but the log line is present, the vi
 **Before you start**
 
 - No app running.
-- No Persona files that would clash: `E:\Repos\Huddle\src\Huddle.App\App_Data\Teams\` should be empty or contain no `Jarvis.md`.
+- No Persona that would clash: `<data>\Teammates\` has no `Jarvis` folder. A Persona lives at `<data>\Teammates\<Name>\<Name>.md` (`TeammatePaths.cs`); `<data>\Teams\` holds Team folders and Tasks, never Personas. The built-in `Chief of Staff` folder is always there and is not a clash.
 
 **Steps**
 
@@ -1142,9 +1148,9 @@ If the grey line does not update to `1 of 2` but the log line is present, the vi
 3. Open `http://localhost:5100`, click **Teammates** in the sidebar, and click **New teammate**.
 4. Fill in Name `Jarvis`, Title `Butler`, Alias `jar`, leave Teams blank, and type `You are Jarvis.` into the Persona body.
 5. Leave Model and Effort at `Use the agent's default` and click **Add teammate**.
-6. Confirm a tile named `Jarvis` now appears on the Teammates page and that the **Files that didn't load** section either is absent or does not list `Jarvis.md`.
-7. In `T-B` run `pwsh E:\Repos\Huddle\tools\echo-bot.ps1 -Name Jarvis`.
-8. In TERMINAL C run `pwsh E:\Repos\Huddle\tools\echo-bot.ps1 -Name Ada`.
+6. Confirm a tile named `Jarvis` now appears on the Teammates page and that the **Files that didn't load** section either is absent or does not list `Jarvis.md`, and that `<data>\Teammates\Jarvis\Jarvis.md` now exists.
+7. In `T-B` run `pwsh <repo>\tools\echo-bot.ps1 -Name Jarvis`.
+8. In TERMINAL C run `pwsh <repo>\tools\echo-bot.ps1 -Name Ada`.
 9. Click the Room named `Jarvis` in the sidebar, type `/invite @Ada` and press Enter so the Room has three Members.
 10. Type `@jar do the thing` and press Enter, wait 5 seconds, then read `T-B` and the Room.
 11. Type `@Jarvis do the thing` and press Enter, wait 5 seconds, then read `T-B` and the Room.
@@ -1171,7 +1177,7 @@ If the grey line does not update to `1 of 2` but the log line is present, the vi
 If `Jarvis.md` appears under **Files that didn't load**, read the reason there and fix it — the Alias cannot resolve from a file that did not load, and the test proves nothing. If the pipe client's Name and the Persona Name do not match exactly (`Jarvis`), the Alias has no Member to point at and its silence is CORRECT, not a defect: Aliases are library-wide but resolve only against the Members of the Room. If a real model process starts, `Team__Acp__Enabled` was not `false` — Ctrl+C immediately.
 
 > [!NOTE]
-> Delete `E:\Repos\Huddle\src\Huddle.App\App_Data\Teams\Jarvis.md` when finished, or later tests will see an extra Persona.
+> Delete the folder `<data>\Teammates\Jarvis\` when finished (or run `P-RESET-TEAMS`), or later tests will see an extra Persona. Do not delete anything under `<data>\Teams\`.
 
 ### REPLYGATEBUDGET-28 — A longer Alias beats a shorter Name, and an equal-length Name beats an Alias
 
@@ -1182,19 +1188,19 @@ If `Jarvis.md` appears under **Files that didn't load**, read the reason there a
 **Before you start**
 
 - No app running.
-- `App_Data\Teams\` contains no files from earlier tests.
+- `<data>\Teammates\` has no `Other` or `Jarvis` folder left by an earlier test. The built-in `Chief of Staff` folder stays.
 
 **Steps**
 
-1. Run `P-RESET-ROOMS` and delete any leftover files in `E:\Repos\Huddle\src\Huddle.App\App_Data\Teams\`.
+1. Run `P-RESET-ROOMS`, then delete any leftover `Other` and `Jarvis` folders under `<data>\Teammates\`. Do not touch `<data>\Teams\` (Team folders and Tasks) or the `Chief of Staff` folder.
 2. Start the app with PROFILE B (`Team__Acp__Enabled` MUST be `false`).
 3. CASE A. On **Teammates**, click **New teammate** and create Name `Other`, Title `Someone else`, Alias `Emily Lee`, body `You are Other.`, then click **Add teammate**.
 4. Confirm `Other.md` is not listed under **Files that didn't load**.
-5. In `T-B` run `pwsh E:\Repos\Huddle\tools\echo-bot.ps1 -Name Emily`; in TERMINAL C run `pwsh E:\Repos\Huddle\tools\echo-bot.ps1 -Name Other`.
+5. In `T-B` run `pwsh <repo>\tools\echo-bot.ps1 -Name Emily`; in TERMINAL C run `pwsh <repo>\tools\echo-bot.ps1 -Name Other`.
 6. Click the Room named `Emily`, type `/invite @Other` and press Enter, and confirm three Members.
 7. Type `@Emily Lee any news?` and press Enter, wait 5 seconds, then read both terminals and the Room.
 8. CASE B. On **Teammates**, click **New teammate** and create Name `Jarvis`, Title `Butler`, Alias `Jar`, body `You are Jarvis.`, then click **Add teammate**.
-9. In a fourth terminal — TERMINAL D — run `pwsh E:\Repos\Huddle\tools\echo-bot.ps1 -Name Jar`; in a fifth — TERMINAL E — run `pwsh E:\Repos\Huddle\tools\echo-bot.ps1 -Name Jarvis`.
+9. In a fourth terminal — TERMINAL D — run `pwsh <repo>\tools\echo-bot.ps1 -Name Jar`; in a fifth — TERMINAL E — run `pwsh <repo>\tools\echo-bot.ps1 -Name Jarvis`.
 10. Click the Room named `Jar`, type `/invite @Jarvis` and press Enter, and confirm three Members.
 11. Type `@Jar are you there?` and press Enter, wait 5 seconds, then read TERMINAL D and TERMINAL E and the Room.
 
@@ -1214,7 +1220,7 @@ If `Jarvis.md` appears under **Files that didn't load**, read the reason there a
 If either Persona file is listed under **Files that didn't load**, read the reason: an Alias that duplicates another Persona's Name is rejected by design, so Case B cannot be built from two Persona files — it needs a pipe client named `Jar` (as written) alongside a Persona `Jarvis`. If the bot Names do not exactly match the Persona Names, the Aliases resolve to nobody and both cases are inconclusive. If a Room already contains an unexpected fourth Member from an earlier invite, RESET and rebuild.
 
 > [!NOTE]
-> Delete both Persona files from `App_Data\Teams\` when finished. These two orderings are decided by a stable sort over one combined candidate list; there is no compiler or analyser signal if that ordering is ever swapped, which is why they are tested by hand.
+> Delete the `Other` and `Jarvis` folders from `<data>\Teammates\` when finished. These two orderings are decided by a stable sort over one combined candidate list; there is no compiler or analyser signal if that ordering is ever swapped, which is why they are tested by hand.
 
 ### REPLYGATEBUDGET-29 — Reconnecting re-attaches to the same Room, but after an invite a fresh two-Member Room appears
 
@@ -1230,11 +1236,11 @@ If either Persona file is listed under **Files that didn't load**, read the reas
 
 1. Run `P-RESET-ROOMS`.
 2. Start the app with PROFILE B (budget `40`).
-3. In `T-B` run `pwsh E:\Repos\Huddle\tools\echo-bot.ps1 -Name Ada` and wait for a Room named `Ada` to appear in the sidebar.
+3. In `T-B` run `pwsh <repo>\tools\echo-bot.ps1 -Name Ada` and wait for a Room named `Ada` to appear in the sidebar.
 4. Count the Rooms in the sidebar and write the number down.
 5. In `T-B` press Ctrl+C, then run the same command again and wait 10 seconds.
 6. Count the Rooms in the sidebar again.
-7. In TERMINAL C run `pwsh E:\Repos\Huddle\tools\echo-bot.ps1 -Name Bo`.
+7. In TERMINAL C run `pwsh <repo>\tools\echo-bot.ps1 -Name Bo`.
 8. Click the Room named `Ada`, type `/invite @Bo` and press Enter, and confirm the heading becomes `Ada, Bo`.
 9. In `T-B` press Ctrl+C, then run the `Ada` bot command again and wait 10 seconds.
 10. Read the sidebar and `T-A`.
@@ -1273,9 +1279,9 @@ If the bot fails to reconnect (the terminal shows a connection error), nothing i
 
 1. Type `@nobodyhere hello` and press Enter, then wait 10 seconds and watch the whole page.
 2. Read both bot terminals for that Message.
-3. Click **Add teammate** and note the colour of the dot beside each Agent, then close the panel.
+3. In the sidebar click **New chat** and note the colour of the dot beside each Agent, then click **New chat** again to close the panel. (This panel lists every Agent, Members or not, with its presence dot. The Room's **Add teammate** panel lists only Agents who are not yet Members, so Ada and Bo are not in it.)
 4. In `T-B` press Ctrl+C to take `Ada` offline, and wait 5 seconds.
-5. Click **Add teammate** again and note the colour of the dot beside `Ada`, then close the panel.
+5. Click **New chat** again and note the colour of the dot beside `Ada`, then close the panel.
 6. Type `@Ada are you there?` and press Enter, then wait 10 seconds.
 7. Read `T-B` (now stopped) and TERMINAL C.
 8. Restart the `Ada` bot in `T-B` and repeat step 6.
@@ -1284,7 +1290,7 @@ If the bot fails to reconnect (the terminal shows a connection error), nothing i
 
 - Step 1's Message posts normally and produces no composer error, no highlight, and no indication
   that the `@` in particular matched nobody. It DOES produce the quiet blue note above the
-  composer reading `No teammate was @-mentioned - name one to ask for a reply.` — which is
+  composer reading `No teammate was @-mentioned — name one to ask for a reply.` — which is
   correct and is not about the unresolvable handle: the same note appears for a plain
   `hello` in this Room. The product still never reports an unresolvable Mention as a failure.
 - At step 6, with `Ada` offline and `Bo` online, there is NO note at all. A Teammate WAS
@@ -1292,7 +1298,8 @@ If the bot fails to reconnect (the terminal shows a connection error), nothing i
   something untrue. Explaining that `Ada` is offline is deliberately not built - see
   `docs/engineering/known-limits.md`.
 - Both terminals show that envelope with `"mentioned":false`.
-- At step 5 the dot beside `Ada` is red — `agent-dot offline`, which `theme.css` paints with `--status-offline` (computed `rgb(224, 90, 90)` on the dark theme). There is no grey dot in the design.
+- At step 3 both dots are green (`agent-dot online`, `var(--mud-palette-success)`, `app.css:67-69`).
+- At step 5 the dot beside `Ada` is red — `agent-dot offline`, painted with `var(--mud-palette-error)` (`app.css:71-73`; its hover title reads `offline`). There is no grey dot in the design.
 - At step 6, with `Ada` offline, TERMINAL C still receives the envelope (with `"mentioned":false`) while `T-B` receives nothing at all — the Agent is a Member but not connected, so no Envelope is queued for it.
 - After restarting at step 8, the same Message produces a reply.
 
@@ -1322,14 +1329,15 @@ This test is itself the disambiguation procedure, so it cannot be inconclusive i
 **Before you start**
 
 - No app running.
-- You are willing to spend ONE real, billed model Turn.
-- `App_Data\Teams\` is empty or contains only the Persona this test creates.
+- You are willing to spend ONE real, billed model Turn for Ada, plus the Chief of Staff's Greeting Turn (Haiku / low once step 3 is done).
+- `<data>\Teammates\` holds no `Ada` folder (a Persona lives at `<data>\Teammates\<Name>\<Name>.md`) and nothing but the built-in `Chief of Staff` besides.
+- The built-in Chief of Staff is made cheap before the paid launch (step 3). It is seeded at every start with no stored Model, and with ACP on and an empty direct Room it takes a Greeting Turn at the account-default Model, which is billed (`PersonaRunner.cs:481-495`). `P-RESET-ROOMS` deletes `team.db`, which holds the stored Models, so this has to be redone after every reset. The same applies to REPLYGATEBUDGET-32 to -36.
 
 **Steps**
 
 1. Run `P-RESET-ROOMS`.
 2. Start the app with `P-LAUNCH-FREE` (`$env:Team__Acp__Enabled = 'false'`), only so you can create the Persona without starting a model.
-3. Open `http://localhost:5100`, click **Teammates**, click **New teammate**, and create Name `Ada`, Title `Analyst`, Alias `ada1`, body `You are Ada, a concise analyst. Answer in one short sentence.` Click **Add teammate**.
+3. Open `http://localhost:5100`, click **Teammates**, click **New teammate**, and create Name `Ada`, Title `Analyst`, Alias `ada1`, body `You are Ada, a concise analyst. Answer in one short sentence.` Click **Add teammate**. Then, still on **Teammates**, open the **Chief of Staff** card, choose **Edit**, set **Model** to the Haiku entry and **Effort** to `low`, and **Save**.
 4. Stop the app with Ctrl+C.
 5. Start the app with PROFILE C: `$env:Team__Acp__Enabled = 'true'`, `$env:Team__AgentMessageBudget = '4'`, then `dotnet run --project src/Huddle.App --urls http://localhost:5100`.
 6. Open `http://localhost:5100`, click **Teammates**, and wait until the `Ada` tile reads **Online**.
@@ -1357,7 +1365,7 @@ This test is itself the disambiguation procedure, so it cannot be inconclusive i
 If the `Ada` tile reads **Offline** or **Degraded**, read the reason line on its card and fix that first — an offline Persona is silent for a reason that has nothing to do with the gate. If the tile never leaves **Starting**, the agent process is failing to launch; check `T-A`. If the Model dropdown offers no Haiku entry, stop and ask before selecting anything else: this test must not run on a larger model.
 
 > [!NOTE]
-> COST: one short billed Turn at Haiku/low — a few seconds of model time. Leave the app running if you intend to do REPLYGATEBUDGET-32 next; it reuses this exact setup.
+> COST: one short billed Turn at Haiku/low — a few seconds of model time — plus the Chief of Staff's Greeting Turn, which is also Haiku/low once step 3 has been done. Leave the app running if you intend to do REPLYGATEBUDGET-32 next; it reuses this exact setup.
 
 ### REPLYGATEBUDGET-32 — PAID: an un-mentioned Message is not answered but rides along as context on the next Mention
 
@@ -1372,7 +1380,7 @@ If the `Ada` tile reads **Offline** or **Degraded**, read the reason line on its
 
 **Steps**
 
-1. In a spare terminal run `pwsh E:\Repos\Huddle\tools\echo-bot.ps1 -Name filler` so there is a second Agent to make a Room Mention-gated.
+1. In a spare terminal run `pwsh <repo>\tools\echo-bot.ps1 -Name filler` so there is a second Agent to make a Room Mention-gated.
 2. In the browser, click the Room named `Ada`, type `/invite @filler` and press Enter, and confirm the member line names three people.
 3. Type `the deadline moved to Friday` and press Enter. Wait 20 seconds.
 4. Type `the budget was cut 10 percent` and press Enter. Wait 20 seconds.
@@ -1389,7 +1397,7 @@ If the `Ada` tile reads **Offline** or **Degraded**, read the reason line on its
 
 - Neither of the two un-mentioned Messages produces a reply, a streaming row, or any model activity in `T-A`.
 - Each of them DOES produce the quiet blue note above the composer reading
-  `No teammate was @-mentioned - name one to ask for a reply.` It is replaced by nothing once step 6's
+  `No teammate was @-mentioned — name one to ask for a reply.` It is replaced by nothing once step 6's
   Mention lands. This is the cheapest confirmation that the Catch-up path was taken deliberately
   rather than the delivery having failed.
 - The reply to step 6 names BOTH earlier facts — the Friday deadline and the 10 percent cut.
@@ -1403,10 +1411,10 @@ If the `Ada` tile reads **Offline** or **Degraded**, read the reason line on its
 
 **Inconclusive if**
 
-If the app or the Persona restarted between step 4 and step 6, the buffer is empty by design and the reply SHOULD know nothing — check `T-A` for Persona start lines before judging, and repeat the test without a restart. The same applies if `Ada` was Offline when you posted the un-mentioned Messages: the buffer is filled only from deliveries she actually received. Neither is a defect.
+If the app or the Persona restarted, or her session in this Room was stopped, between step 4 and step 6, the Catch-up buffer is gone but a new Room session's first Turn carries the last 20 Transcript Messages (`Acp:TranscriptCatchUpMessages`, `AcpOptions.cs:173`; `RoomSession.cs:909`). The reply will then usually know both facts without Catch-up, so that run says nothing about the buffer — check `T-A` for Persona start lines before judging, and repeat the test without a restart. The same applies if `Ada` was Offline when you posted the un-mentioned Messages: the buffer is filled only from deliveries she actually received. Neither is a defect.
 
 > [!NOTE]
-> COST: one short billed Turn. The two un-mentioned Messages cost nothing, which is itself part of what this test proves. The buffer holds at most 20 Messages per Room, oldest discarded first, and is emptied silently by any restart.
+> COST: one short billed Turn. The two un-mentioned Messages cost nothing, which is itself part of what this test proves. The buffer holds at most 20 Messages per Room, oldest discarded first, and is emptied silently by any restart (after which a new session's first Turn is seeded from the Transcript instead — see Inconclusive). One session exists per Persona per Room, so this test is about the `Ada` Room's session only.
 
 ### REPLYGATEBUDGET-33 — PAID: a two-Agent exchange halts at the Budget, and the last Agent declines BEFORE taking a Turn
 
@@ -1417,13 +1425,14 @@ If the app or the Persona restarted between step 4 and step 6, the buffer is emp
 **Before you start**
 
 - No app running.
-- You are willing to spend roughly SIX short billed Turns.
+- You are willing to spend roughly SIX short billed Turns, plus the Chief of Staff's Greeting Turn.
+- The Chief of Staff is Haiku / low before the paid launch (step 2 below), because `P-RESET-ROOMS` cleared its stored Model and its Greeting would otherwise bill at the account default.
 - You will stay at the keyboard for the whole run.
 
 **Steps**
 
 1. Run `P-RESET-ROOMS`.
-2. Start the app with `$env:Team__Acp__Enabled = 'false'` temporarily and create two Personas on **Teammates**: Name `Ana`, Title `Planner`, Alias `ana1`, body `You are Ana. Keep the conversation going with @Ben. Always end your message by asking @Ben one short question. One or two sentences only.` and Name `Ben`, Title `Builder`, Alias `ben1`, body `You are Ben. Keep the conversation going with @Ana. Always end your message by asking @Ana one short question. One or two sentences only.`
+2. Start the app with `$env:Team__Acp__Enabled = 'false'` temporarily and create two Personas on **Teammates**: Name `Ana`, Title `Planner`, Alias `ana1`, body `You are Ana. Keep the conversation going with @Ben. Always end your message by asking @Ben one short question. One or two sentences only.` and Name `Ben`, Title `Builder`, Alias `ben1`, body `You are Ben. Keep the conversation going with @Ana. Always end your message by asking @Ana one short question. One or two sentences only.` Then open the **Chief of Staff** card, choose **Edit**, set **Model** to the Haiku entry and **Effort** to `low`, and **Save**.
 3. Stop the app with Ctrl+C.
 4. Start the app with PROFILE C and `$env:Team__AgentMessageBudget = '6'` — set this BEFORE `dotnet run`.
 5. On **Teammates**, wait until both tiles read **Online**, then set each one's **Model** to the Haiku entry and **Effort** to `low` via **Edit** and **Save**.
@@ -1433,12 +1442,12 @@ If the app or the Persona restarted between step 4 and step 6, the buffer is emp
 9. Watch the Room continuously. Count every agent Message as it lands and keep your hand near Ctrl+C in `T-A`.
 10. When the exchange stops, read the area between the transcript and the composer.
 11. Read `T-A` in full.
-12. Note the Room id and run `Get-Content E:\Repos\Huddle\src\Huddle.App\App_Data\rooms\<RoomId>.jsonl` and count the agent lines after your Message.
+12. Note the Room id and run `Get-Content <data>\rooms\<RoomId>.jsonl` and count the agent lines after your Message.
 
 **Pass if — all of these**
 
 - The exchange halts after exactly SIX agent Messages — never seven.
-- The red pause block appears reading `Agents have sent 6 replies since you last spoke, and are paused.` with **Continue** and **Leave paused**.
+- The pause block appears reading `Agents have sent 6 replies since you last spoke, and are paused.` with **Continue** and **Leave paused**.
 - The last Agent to be delivered a Message does NOT show a streaming row or a **Stop** button: no Draft is started at all after the cap is reached.
 - `T-A` contains at least one `Persona '…' declined a turn in room …: the room has spent its budget of 6 agent messages.` warning, and NO `refused a message from` warning for that same Persona.
 - The `.jsonl` holds exactly six agent lines after your Message.
@@ -1466,18 +1475,21 @@ If the models simply stop talking to each other before six (they may not obey th
 **Before you start**
 
 - Two Personas `Ana` and `Ben` exist and are Online at Haiku/low (as built in REPLYGATEBUDGET-33).
-- You are willing to spend roughly FOUR short billed Turns.
+- You are willing to spend roughly FOUR short billed Turns, plus the Chief of Staff's Greeting Turn (it is billed at the account default unless it is set to Haiku / low, as step 2 does).
 
 **Steps**
 
-1. Run `P-RESET-ROOMS`, then start the app with PROFILE C and `$env:Team__AgentMessageBudget = '2'` set BEFORE `dotnet run`.
-2. On **Teammates**, wait for both tiles to read **Online**, then set each one's **Model** to the
-   Haiku entry and **Effort** to `low` again. `P-RESET-ROOMS` deletes `team.db`, which is where the
-   stored Model and Effort live, so both cards come back reading `Agent default` / `Model default`
-   however they were left in REPLYGATEBUDGET-33.
+1. Run `P-RESET-ROOMS`, then start the app with `P-LAUNCH-FREE` (`Team__Acp__Enabled` `false`).
+2. On **Teammates**, set the **Chief of Staff**, `Ana` and `Ben` each to the Haiku entry for **Model**
+   and `low` for **Effort** via **Edit** and **Save**. `P-RESET-ROOMS` deletes `team.db`, which is where
+   the stored Model and Effort live, so all three cards come back reading `Agent default` /
+   `Model default` however they were left in REPLYGATEBUDGET-33, and the Chief of Staff's Greeting
+   Turn would otherwise bill at the account default. Stop the app with Ctrl+C, then start it with
+   PROFILE C and `$env:Team__AgentMessageBudget = '2'` set BEFORE `dotnet run`, and wait for both
+   tiles to read **Online**.
 3. Click **New chat**, tick `Ana` and `Ben`, and click **Start chat**.
 4. Type `@Ana start a short conversation with @Ben about picking a meeting time.` and press Enter.
-5. Wait until the Room halts and the red pause block appears.
+5. Wait until the Room halts and the pause block appears.
 6. Read `T-A` and find the `declined a turn in room` warning; note which Persona it names.
 7. Note the exact text of the last Message in the Room.
 8. PATH ONE. Do NOT click Continue. Instead type `@<the declined Persona> summarise everything you have been told in this room so far, listing each message.` and press Enter.
@@ -1521,23 +1533,23 @@ Model replies are not deterministic, and 'does the reply account for that Messag
 
 - One Persona `Ada` (or `Ana`) exists and is Online at Haiku/low.
 - REPLYGATEBUDGET-24 has been run, so you have the exact pipe-door sentence written down.
-- You are willing to spend roughly TWO to FOUR short billed Turns.
+- You are willing to spend roughly TWO to FOUR short billed Turns, plus the Chief of Staff's Greeting Turn.
 
 **Steps**
 
-1. Run `P-RESET-ROOMS`, then start the app with PROFILE C and `$env:Team__AgentMessageBudget = '1'` set BEFORE `dotnet run`.
+1. Run `P-RESET-ROOMS`, then start the app with `P-LAUNCH-FREE`. On **Teammates** set the **Chief of Staff** and the Persona to Haiku / `low` via **Edit** and **Save** (`P-RESET-ROOMS` cleared the stored Models; the Greeting Turn would otherwise bill at the account default). Stop the app with Ctrl+C, then start it with PROFILE C and `$env:Team__AgentMessageBudget = '1'` set BEFORE `dotnet run`.
 2. Wait for the Persona tile to read **Online** and confirm Haiku and low on its card.
 3. Click the Room named after the Persona and note the Room id.
 4. Type `@<Persona> reply once, then immediately post a second short message into this same room.` and press Enter.
 5. Wait up to 120 seconds and watch the Room.
 6. Read `T-A` in full.
 7. Read the sidebar and note whether any new Room has appeared.
-8. Run `Get-Content E:\Repos\Huddle\src\Huddle.App\App_Data\rooms\<RoomId>.jsonl` and count the agent lines after your Message.
+8. Run `Get-Content <data>\rooms\<RoomId>.jsonl` and count the agent lines after your Message.
 9. If any other Room exists, check its `.jsonl` too.
 
 **Pass if — all of these**
 
-- Exactly ONE agent Message lands in the Room; the red pause block appears.
+- Exactly ONE agent Message lands in the Room; the pause block appears.
 - `T-A` shows exactly one `refused a message from` warning for the second attempt (or, if the Persona declined before trying, a `declined a turn` warning and no refusal at all — either is correct).
 - If a refusal happened, it carries the same wording as the pipe door: the model is told the budget is spent and not to retry.
 - The model does not keep retrying: `T-A` does NOT fill with repeated `refused a message from` warnings for the same Persona.
@@ -1569,7 +1581,7 @@ A model may simply choose not to attempt a second post, in which case nothing is
   One is not enough: `ChatService.CreateRoomForAsync` short-circuits a single-agent request to
   `EnsureRoomForAsync`, which returns that Agent's EXISTING direct Room, so a lone Persona asked to
   create a Room can only ever be handed the one it already has and no Budget is ever minted.
-- You are willing to spend a handful of short billed Turns.
+- You are willing to spend a handful of short billed Turns, plus the Chief of Staff's Greeting Turn.
 - You will stay at the keyboard.
 
 > [!IMPORTANT]
@@ -1582,13 +1594,13 @@ A model may simply choose not to attempt a second post, in which case nothing is
 
 **Steps**
 
-1. Run `P-RESET-ROOMS`.
+1. Run `P-RESET-ROOMS`, then start the app with `P-LAUNCH-FREE`. On **Teammates** set the **Chief of Staff**, `Ana` and `Ben` to Haiku / `low` via **Edit** and **Save** (`P-RESET-ROOMS` cleared the stored Models), and stop the app with Ctrl+C.
 2. Start the app with PROFILE C plus `$env:Team__AgentMessageBudget = '6'` and
    `$env:Team__Acp__TokenBudget = '2000'`, both set BEFORE `dotnet run`. The Room Budget has to be
    comfortably larger than 2: the token Budget is only ever reached on an Agent-to-Agent Turn (see
    the box above), and a Room that hits its own cap first declines in the read loop, before
    `ProcessWorkItemAsync` ever runs the token check.
-3. Wait for the Persona tile to read **Online** and confirm Haiku and low on its card.
+3. Wait for both Persona tiles (`Ana` and `Ben`) to read **Online** and confirm Haiku and low on each card.
 4. Click the Room named after the Persona and note the Room id.
 5. Type `@<Persona> create a new room containing yourself and <the other Persona>, then post a short message in it.` and press Enter.
 6. Wait up to 120 seconds, then read the sidebar.
@@ -1605,7 +1617,7 @@ A model may simply choose not to attempt a second post, in which case nothing is
 - A new Room appears in the sidebar, and it has its own untouched Budget: no pause block, no budget line, until an agent Message lands there.
 - `T-A` shows a `rooms` entry being created for it (and `team.db`'s `rooms` table gains a row).
 - Once the token budget is spent, `T-A` prints `Persona '…' has spent its token budget of 2000 and is taking no more turns until a human speaks to it.`
-- At that moment the Persona's tile reads **Degraded**, and its card shows a reason line saying the per-Persona token Budget is spent and no more Turns will be taken until a Human speaks.
+- At that moment the Persona's tile reads **Degraded**, and its card shows, in red, the reason line `The per-Persona token Budget of 2000 is spent; no more Turns until a Human speaks.` (`PersonaRunner.cs:266-269`, `TeammateCard.razor:114-116`).
 - After the Human speaks to it again, the Persona takes Turns again and the tile returns to **Online**.
 
 **Fail if — any of these**
@@ -1620,6 +1632,44 @@ If the Persona never creates the Room (models do not always use the tool when as
 
 > [!NOTE]
 > COST: a handful of short billed Turns; stop as soon as you have seen the Degraded state. DO NOT FILE the minted Room having a full Budget of its own — that is a documented gap in the per-Room cap, and the per-Persona token Budget is the guard that exists to catch it. What IS a defect is the token budget being enforced silently.
+
+### REPLYGATEBUDGET-37 — Continue on a paused Room whose Transcript is empty says there is nothing to re-deliver
+
+**Free** · about 8 min
+
+*Pins the one Continue outcome no other test reaches: a grant needs a Message to deliver again, and when the Room holds none the Human is told so instead of seeing a button that does nothing.*
+
+**Before you start**
+
+- No app running.
+
+**Steps**
+
+1. Run `P-RESET-ROOMS`.
+2. Start the app with PROFILE B and `$env:Team__AgentMessageBudget = '1'`.
+3. In `T-B` run `pwsh <repo>\tools\echo-bot.ps1 -Name Ada`.
+4. Open `http://localhost:5100`, click the Room named `Ada`, note the Room id from the URL, type `@Ada hi` and press Enter, and wait for the reply and the pause block.
+5. Without reloading the page, delete the Transcript file `<data>\rooms\<RoomId>.jsonl` in a spare terminal (`Remove-Item <data>\rooms\<RoomId>.jsonl`). The open page keeps showing the pause block.
+6. Click **Continue** and wait 5 seconds.
+7. Read the Room and `T-A`.
+
+**Pass if — all of these**
+
+- A quiet blue note above the composer reads `There is nothing to re-deliver in this room yet.` (`Chat.razor:190-194`).
+- `T-A` shows no `was extended to` line for this click: nothing was granted (`ChatService.cs:346-352` returns before the Budget is touched).
+- `T-B` prints no new envelope.
+
+**Fail if — any of these**
+
+- A `was extended to` line appears -> Continue granted Budget over an empty Transcript, so a grant can be spent on nothing.
+- No note appears and nothing else changes -> the Human is left pressing a button that does nothing, with no explanation.
+
+**Inconclusive if**
+
+If the page was reloaded after step 5, the empty Room no longer shows the pause block and there is nothing to click: repeat from step 1. If a `was extended to` line appears and the Room re-delivers its last Message, the Transcript file was not the one deleted: check the path and the Room id.
+
+> [!NOTE]
+> Deleting a Transcript file by hand is a test device, not a supported operation. Written from `ChatService.cs:346-352` and `FileChatStore.cs:51-61` (an absent file reads as an empty Room); not yet run in a browser.
 
 ---
 

@@ -1,6 +1,6 @@
 # Huddle.FileChanges — Design Specification
 
-**Date:** 2026-09-22 · **Status:** Proposed · **Decision record:**
+**Date:** 2026-09-22 · **Status:** Built; paid live checks not run · **Decision record:**
 [ADR-0023](adr/0023-an-agent-learns-of-file-changes-on-its-next-turn.md) · **Vocabulary:**
 [language.md](engineering/language.md) (**Watched Folder**, **File Changes**, **Memory**) · **Replaces:** the
 delivery plan in [roadmap item 11](engineering/roadmap.md#11-notifying-an-agent-when-a-file-it-depends-on-changes)

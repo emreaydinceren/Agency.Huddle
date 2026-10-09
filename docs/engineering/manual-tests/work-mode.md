@@ -1,8 +1,8 @@
 # Work Mode
 
-Prove, in a real browser against a real Adapter, that a Teammate's **Work Mode** is offered from what its Adapter advertises (with `Plan`, `Auto` and `Bypass permissions` hidden), is cleared by an Adapter change, is never sent when it is hidden, is lifted by `Team:Acp:HiddenModes`, and is absent for an Adapter that advertises none; and that the paid checks hold: `Accept edits` stops the permission request for an edit, `Plan` (once an operator offers it) writes nothing and its request to leave plan mode is refused, `Accept edits` still lets the `~/.claude` guard stop a write outside the Work Dir, and a mode survives an app restart. The automated suite proves the parts; this page proves they hold together on a screen, against an Adapter that really has modes. **Written 2026-09-30, none of these has been run in the app**: four of the nine tests spend money, because only a Turn shows what a mode changes. On 2026-10-01 a script drove the real adapter outside the app and measured the wire facts behind WORKMODE-06 to -08 (see each test); those runs answered OQ-2 and OQ-3 and made `plan` hidden by default, but this page is still the acceptance run.
+Prove, in a real browser against a real Adapter, that a Teammate's **Work Mode** is offered from what its Adapter advertises (with `Plan`, `Auto` and `Bypass permissions` hidden), is cleared by an Adapter change, is never sent when it is hidden, is lifted by `Team:Acp:HiddenModes`, and is absent for an Adapter that advertises none; and that the paid checks hold: `Accept edits` stops the permission request for an edit, `Plan` (once an operator offers it) writes nothing and its request to leave plan mode is refused, `Accept edits` still lets the `~/.claude` guard stop a write outside the Work Dir, and a mode survives an app restart. The automated suite proves the parts; this page proves they hold together on a screen, against an Adapter that really has modes. **Written 2026-09-30.** WORKMODE-06 to -09 passed in the app on 2026-10-01 (see the [tracker](tracker.md#work-mode)); WORKMODE-01 to -05 have no recorded run. Four of the nine tests spend money, because only a Turn shows what a mode changes. On 2026-10-01 a script also drove the real adapter outside the app and measured the wire facts behind WORKMODE-06 to -08 (see each test); those runs answered OQ-2 and OQ-3 and made `plan` hidden by default.
 
-**9 tests** · 5 free, 4 paid 💰 · about 2 hours.
+**9 tests** · 5 free, 4 paid 💰 · about 1.8 hours.
 
 Read [the manual test script](../manual-tests.md) first — the cost guard, the Model and Effort
 convention, and the rules for concluding a result — then [Common procedures](common.md), which
@@ -30,18 +30,25 @@ does.
 Run [`P-BUILD`](common.md#p-build) then the lane named in each test from
 [Common procedures](common.md). This area adds:
 
-1. Use a **scratch** Teammate on the stock Claude Adapter, Haiku, never one that matters. Haiku
-   advertises no effort levels (the card says so), so Effort stays on `Model default`; "low" is not
-   available for it. A mode
-   change restarts it and forgets its Room Sessions, as a Model change does.
-2. WORKMODE-02 and WORKMODE-05 need an Adapter Profile beyond the stock one: WORKMODE-02 needs two
-   Adapters so the Adapter select renders, and WORKMODE-05 needs one that advertises **no** mode
-   (`agency-acp` is the candidate). Without them each is *Inconclusive*, not a defect; see
-   [adapters.md](adapters.md) for setting a second Profile up.
+1. Use a **scratch** Teammate on the stock Claude Adapter, Haiku / `low` as
+   [§0.3](../manual-tests.md#03-the-model-and-effort-convention) says, never one that matters.
+   Whether Haiku advertises an effort ladder is a runtime fact of the installed Adapter that
+   [MODELEFFORT-02](model-effort.md) records. If the card offers `low` for Haiku, set it. If it offers
+   no ladder, leave Effort on `Model default` and note that in the result; this is not a defect and does
+   not change what these tests prove. A mode change restarts the Teammate and forgets its Room
+   Sessions, as a Model change does.
+2. WORKMODE-02 needs an Adapter Profile beyond the stock one, so the Adapter select renders
+   (*Inconclusive*, not a defect, without it; see [adapters.md](adapters.md) for setting a second
+   Profile up). WORKMODE-05 needs an Adapter that advertises **no** mode: the free mock adapter does,
+   because its `session/new` result carries only `sessionId`
+   (`tests/Huddle.Acp.Tests/Fakes/FakeAcpAgent.cs:262-266`), so WORKMODE-05 runs on `P-LAUNCH-UAT`.
 3. WORKMODE-03 writes to `persona_work_modes` by hand. If `sqlite3` is not on PATH, use the `Set-TeamDb`
    and `Get-TeamDb` helpers from [model-effort.md](model-effort.md) setup step 3.
 4. The paid tests (WORKMODE-06 to -09) need **`Team__Acp__TraceWire`**, because the pass condition is
-   the wire trace and not only the reply. Follow the
+   the wire trace and not only the reply: neither [`O-TOOLCALLS`](common.md#o-toolcalls) nor the mock
+   adapter's echo shows a `session/request_permission` or a `set_config_option`. This area is therefore the
+   one stated exception to the "never set `Team__Acp__TraceWire`" convention in
+   [Common procedures](common.md#standing-conventions). Follow the
    [§0.2](../manual-tests.md#02-the-cost-guard) warning as [file-changes.md](file-changes.md) does: a
    throwaway terminal, `$env:Team__Acp__TraceWire = 'true'` set before the `dotnet run` line of
    `P-LAUNCH-PAID`, closed afterwards, never set for any other test. **That alone prints nothing:** the
@@ -49,7 +56,8 @@ Run [`P-BUILD`](common.md#p-build) then the lane named in each test from
    `[Environment]::SetEnvironmentVariable('Logging__LogLevel__Agency.Huddle.Acp.Wire', 'Trace', 'Process')`
    (found on the 2026-10-01 run; without it `O-LOG` has no `session/*` lines at all). It prints the tool
    server's bearer token into `O-LOG`. To search it, redirect the app's output to a file and use
-   `Select-String`; a request is `"method": "session/..."` on its own line, with its body after it.
+   `Select-String`; a request is `"method": "session/..."` on its own line, with its body after it. That file
+   holds the token: delete it when the area is done and never paste its contents into a result.
 5. "A scratch file" in the paid tests means a file under the Teammate's Work Dir
    (`src\Huddle.App\App_Data\Teammates\<Name>\work\` by default; the Persona's own file sits one
    level up), so the test never touches anything that matters.
@@ -65,7 +73,7 @@ Run [`P-BUILD`](common.md#p-build) then the lane named in each test from
 
 **Before you start**
 
-- Free lane (`P-LAUNCH-FREE`). The scratch Teammate exists on the stock Claude Adapter. `Team__Acp__HiddenModes` is not set (`Get-ChildItem Env:Team__*`).
+- Free lane (`P-LAUNCH-FREE`), freshly launched. The scratch Teammate exists on the stock Claude Adapter. `Team__Acp__HiddenModes` is not set (`Get-ChildItem Env:Team__*`). **Do not open any Teammate card in Edit before step 1:** the model catalog is read once and cached for the life of the app, so only the first card open after a launch shows the disabled state in step 2. If a card was already opened, `P-STOP` and launch again.
 
 **Steps**
 
@@ -76,7 +84,7 @@ Run [`P-BUILD`](common.md#p-build) then the lane named in each test from
 
 **Pass if — all of these**
 
-- Step 2 shows the select disabled (not merely hinted) while the probe is out, then enabled.
+- Step 2 shows the select disabled (not merely hinted) while the probe is out, then enabled. If the probe answers too fast to see the disabled state, record that half as not-observed and judge the rest.
 - Step 3 lists the blank option **Use the agent's default**, then **Manual** and **Accept edits**, in the Adapter's names. **Plan**, **Auto** and **Bypass permissions** are absent.
 - Step 4's helper text is the Adapter's own description of Accept edits, not a Huddle sentence.
 
@@ -130,13 +138,14 @@ Run [`P-BUILD`](common.md#p-build) then the lane named in each test from
 
 1. Run `Set-TeamDb "INSERT OR REPLACE INTO persona_work_modes(persona_name, work_mode) VALUES('scratch','bypassPermissions')"`, using the Teammate's real Name (or the same statement through `sqlite3`).
 2. Start the app in the restart lane and wait for the scratch Teammate to read Online.
-3. Search `O-LOG` for `bypassPermissions`.
+3. Search `O-LOG` for `bypassPermissions` and count the warnings.
 4. Open the Teammate's card in View and read the **Work mode** row.
 
 **Pass if — all of these**
 
-- Step 3 finds one warning of the form `Persona 'scratch' has Work Mode 'bypassPermissions', which is hidden; starting in the Adapter's own mode.`
+- Step 3 finds **at least one** warning of the form `Persona 'scratch' has Work Mode 'bypassPermissions', which is hidden; starting in the Adapter's own mode.` The warning is logged each time a session opens (`WorkModePolicy.cs:71`), so a second Room or a restart adds one; it is not a failure.
 - Step 2 reaches Online: the stale row does not brick the Teammate.
+- Step 4 reads `bypassPermissions`: the card shows the stored id as written, because a hidden mode is not in the offered list to give it a name (`TeammateCard.razor:1296-1307`). The session itself runs on the Adapter's own mode; the card showing the stored id is expected, not a defect (spec E-11).
 - If `Team__Acp__TraceWire` was set for this run, the trace holds no `session/set_config_option` for `mode`. Without it, record that half as not-checked; the warning settles the test.
 
 **Fail if — any of these**
@@ -175,15 +184,15 @@ Delete the row afterwards: `Set-TeamDb "DELETE FROM persona_work_modes"`.
 
 **Free** · about 5 min
 
-*Proves the select is hidden when there is nothing to choose and nothing stored, rather than rendered empty. Needs an Adapter that advertises no `mode` (setup step 2). Spec MW-9.*
+*Proves the select is hidden when there is nothing to choose and nothing stored, rather than rendered empty. Needs an Adapter that advertises no `mode` (setup step 2): the free mock adapter. Spec MW-9.*
 
 **Before you start**
 
-- Free lane. A scratch Teammate on that Adapter, with no `persona_work_modes` row.
+- `P-LAUNCH-UAT` (free). **Ada**, on the mock adapter, has no `persona_work_modes` row. That the mock advertises no mode is read from the code (`FakeAcpAgent.cs:262-266`) and not yet seen on screen; if the select does appear, record the options it lists and mark the test *Inconclusive*.
 
 **Steps**
 
-1. Open the scratch Teammate's card in Edit and wait for the catalog to be read.
+1. Open Ada's card in Edit and wait for the catalog to be read.
 2. Look for a **Work mode** select, and for a **Work mode** row in View.
 
 **Pass if — all of these**
@@ -223,7 +232,7 @@ Delete the row afterwards: `Set-TeamDb "DELETE FROM persona_work_modes"`.
 - A `session/request_permission` appears for either call -> the mode was not applied or was clamped; read the `set_config_option` response's `currentValue` and the log for a clamp warning.
 - No `set_config_option` for the mode -> the Work Mode never left the app; check `persona_work_modes` and the effective mode.
 
-**Measured outside the app, 2026-10-01.** A script drove the real `claude-agent-acp` 0.75.1 over stdio on Haiku (one run, Windows, Claude subscription). Under `acceptEdits`, an edit inside the Work Dir produced **no** `session/request_permission`, the file was written and the Turn ended `end_turn`. The in-app run above is still to do.
+**Measured outside the app, 2026-10-01.** A script drove the real `claude-agent-acp` 0.75.1 over stdio on Haiku (one run, Windows, Claude subscription). Under `acceptEdits`, an edit inside the Work Dir produced **no** `session/request_permission`, the file was written and the Turn ended `end_turn`. The in-app run passed on 2026-10-01 (see the [tracker](tracker.md#work-mode)), on a resumed session and with a second file name.
 
 ### WORKMODE-07 — Plan: nothing is written, and the request to leave plan mode is refused
 
@@ -256,7 +265,7 @@ Delete the row afterwards: `Set-TeamDb "DELETE FROM persona_work_modes"`.
 - The file exists, or the `switch_mode` request was answered `allow_once` / `allow_always` -> the Persona left plan mode; the guard did not wrap the handler.
 - The Room shows the plan in words -> not a guard failure, but it differs from the 2026-10-01 measurement; record it verbatim, because it changes the OQ-2 answer in the spec.
 
-**Measured outside the app, 2026-10-01.** A script drove the real adapter on Haiku (one run, Windows, Claude subscription). The model used `Find` and `ToolSearch`, then the Adapter sent a `switch_mode` request titled "Approve Plan" with the whole plan in `rawInput.plan`. The guard refused with `reject_once`, no file was written, the Turn ended `cancelled`, and the only assistant text was 126 characters of preamble, not the plan. The in-app run above is still to do.
+**Measured outside the app, 2026-10-01.** A script drove the real adapter on Haiku (one run, Windows, Claude subscription). The model used `Find` and `ToolSearch`, then the Adapter sent a `switch_mode` request titled "Approve Plan" with the whole plan in `rawInput.plan`. The guard refused with `reject_once`, no file was written, the Turn ended `cancelled`, and the only assistant text was 126 characters of preamble, not the plan. The in-app run passed on 2026-10-01 with the same outcome (see the [tracker](tracker.md#work-mode)).
 
 ### WORKMODE-08 — Accept edits: a write into `~/.claude` is still refused
 
@@ -279,13 +288,17 @@ Delete the row afterwards: `Set-TeamDb "DELETE FROM persona_work_modes"`.
 **Pass if — all of these**
 
 - Step 3 prints False. **This is OQ-3.**
-- Step 4 shows a `session/request_permission` for the path answered with a reject, and the handler's refusal in `O-LOG`.
+- Step 4 shows a `session/request_permission` for the path answered with a reject, and the handler's refusal in `O-LOG`: `Refused a tool call writing to '<path>': it is inside the agent's own configuration directory '<directory>'.` (`WorkDirPermissionHandler.cs:169-172`).
 
 **Fail if — any of these**
 
-- Step 3 prints True -> the guard was bypassed. **Delete that file by hand**, then record the trace: either no request arrived (the Adapter wrote it under `acceptEdits`) or the handler approved it.
+- Step 3 prints True **and** step 4 shows a `session/request_permission` for the path that was approved, or no request at all -> the guard was bypassed. **Delete that file by hand**, then record the trace: either no request arrived (the Adapter wrote it under `acceptEdits`) or the handler approved it.
 
-**Measured outside the app, 2026-10-01.** A script drove the real adapter on Haiku (one run, Windows, Claude subscription). Under `acceptEdits`, a write to a path **outside** the Work Dir still produced a `session/request_permission` (kind `edit`, title "Write <path>", `rawInput` `{file_path, content}`, options `allow_once`, `allow_always`, `reject_once`). Refused, the file was not written. `WorkDirPermissionHandler` reads `rawInput.file_path`, so its refusal still sees such writes. Caveats: the path was a temp directory, not `~/.claude` itself, and `allow_always` was never chosen. The in-app run above, against `~/.claude`, is still to do.
+**Inconclusive if**
+
+- Step 3 prints True but step 4 shows **no** write-tool request for the path and the tool-call row (`O-TOOLCALLS`) names `Bash`: the model wrote the file through a shell command. The guard reads only the path arguments of a write tool (`WorkDirPermissionHandler.cs:318-350`), so a shell write is outside it. This is the known limit that the Work Dir is not a jail, not a Work Mode bypass. **Delete the file by hand**, and run the test again with the instruction "Use the Write tool".
+
+**Measured outside the app, 2026-10-01.** A script drove the real adapter on Haiku (one run, Windows, Claude subscription). Under `acceptEdits`, a write to a path **outside** the Work Dir still produced a `session/request_permission` (kind `edit`, title "Write <path>", `rawInput` `{file_path, content}`, options `allow_once`, `allow_always`, `reject_once`). Refused, the file was not written. `WorkDirPermissionHandler` reads `rawInput.file_path`, so its refusal still sees such writes. Caveats: the path was a temp directory, not `~/.claude` itself, and `allow_always` was never chosen. The in-app run against `~/.claude` passed on 2026-10-01 (see the [tracker](tracker.md#work-mode)); its first two runs failed because `SerializeRaw` turned `rawInput` into `{"file_path":[]}`, so the guard never saw a path (a bug that predates Work Modes, fixed since). If this test fails with the file created, check that fix first.
 
 ### WORKMODE-09 — A mode is applied again after an app restart
 

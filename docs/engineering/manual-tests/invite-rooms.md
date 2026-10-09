@@ -2,7 +2,7 @@
 
 Prove that every path by which a Room is born or changes membership behaves as specified, and that the four live surfaces (sidebar, Room header h1, members line, invite candidate list) repaint over SignalR without a page reload. Covers: the automatic Direct Room an Agent gets on registration, the sidebar "New chat" panel, the "Add teammate" control on the Room header, the `/invite @name` composer command, and the two Agent-facing tools `mcp__team__create_room` and `mcp__team__invite_agent`. The suite exists because a page GET only returns the Blazor prerender, so automated tests literally cannot see these panels, and because the load-bearing rule "an Agent belongs to at most one two-Member Room" only becomes visible as a second sidebar entry after a real re-registration. Tests INVITEROOMS-08 and INVITEROOMS-16 target this repo's two documented SILENT failures and are the highest-value tests in the set.
 
-**32 tests** · 28 free, 4 paid 💰 · about 3.5 hours.
+**38 tests** · 34 free, 4 paid 💰 · about 4.2 hours.
 
 Read [the manual test script](../manual-tests.md) first — the cost guard, the Model and Effort
 convention, and the rules for concluding a result — then [Common procedures](common.md), which
@@ -15,12 +15,12 @@ Run [`P-BUILD`](common.md#p-build) then the lane named below from
 oracles `O-LOG` / `O-ADAPTERS` / `O-TRANSCRIPT` / `O-DB` / `O-WIRE`, the four resets,
 `P-NEW-PERSONA`, `P-ECHO-BOT` and the standing conventions. This area adds:
 
-1. Lane is `P-LAUNCH-UAT`. Wait until Ada and Bo are Online and the sidebar reads Ada, Bo (the built-in Chief of Staff is also present, as a Teammate like any other; it is not part of the cast). Its data folder is `C:\seeds\huddle\uat\data`, so wherever this page says `App_Data` for INVITEROOMS-02 to 25 and 32 to 39, read that folder. INVITEROOMS-26 to 31 need the real adapter and say explicitly when to leave and when to come back.
+1. Lane is `P-LAUNCH-UAT`. Wait until Ada and Bo are Online and the sidebar reads Ada, Bo, Chief of Staff. The built-in Chief of Staff is a Teammate like any other, not part of the cast: under this lane it runs on the mock adapter, and registering gives it a Direct Room, so it has its own sidebar entry (`AgentConnection.cs:109`). Its Room is not empty for long: with ACP on, an empty Direct Room takes a Greeting Turn, free on the mock adapter. Its data folder is `C:\seeds\huddle\uat\data`; that is `<data>` for INVITEROOMS-02 to 25 and 32 to 39. INVITEROOMS-26 to 31 need the real adapter and say explicitly when to leave and when to come back.
 2. Open `http://localhost:5100` in Chrome or Edge with DevTools (F12) available — several tests need the Elements pane to read a CSS class such as `invite-panel` or `agent-dot`.
 3. Learn the three `O-LOG` lines you will read all day, logged at Information by `ChatService`: `Created direct room '<id>' for agent '<name>'.` / `Created room '<id>' (<name>) with <n> members.` / `Invited agent '<name>' (<id>) into room '<roomId>'.` The ABSENCE of one of these is the oracle in several tests, so do not filter the console. Ada's and Bo's Rooms are seeded in advance, so launching the app logs no `Created direct room` line for them.
-4. Ada, Bo and the Chief of Staff belong to no Team, so the **Team** dropdown starts with only `All teams`.
+4. Ada, Bo and the Chief of Staff belong to no Team, so the **Team** select in the invite panel (a MudBlazor `MudSelect`, not an HTML `<select>`; its popover opens on click) offers only `All teams`.
 5. Return to the starting point by re-running the seeder line of `P-LAUNCH-UAT` (it wipes the folder and rebuilds Ada, Bo and their two empty Rooms), then relaunch the app. Several tests tell you to do exactly this. A plain restart that keeps the data is the app command of `P-LAUNCH-UAT` WITHOUT the seeder line.
-6. Each extra Agent is its own `P-ECHO-BOT` terminal. This area uses: `T-C` = `mybot`, `T-D` = short-lived scratch bots, `T-E` = `Emily Lee`, `T-F` = `gamma`, `T-G` = `delta`.
+6. Each extra Agent is its own `P-ECHO-BOT` terminal. This area uses: `T-C` = `mybot`, `T-D` = short-lived scratch bots, and one further terminal per long-running bot, called by its bot's name: the `Emily Lee` terminal, the `gamma` terminal, the `delta` terminal.
 7. RUN THE TESTS IN ID ORDER. Several deliberately set up the next one — INVITEROOMS-12 converts mybot's Direct Room, which is exactly what INVITEROOMS-21 needs to observe. Each test still states its own precondition and how to recover if the state is wrong.
 
 ## Tests
@@ -33,7 +33,7 @@ oracles `O-LOG` / `O-ADAPTERS` / `O-TRANSCRIPT` / `O-DB` / `O-WIRE`, the four re
 
 **Before you start**
 
-- `P-LAUNCH-UAT` has been run, Ada and Bo are Online and the sidebar reads Ada, Bo.
+- `P-LAUNCH-UAT` has been run, Ada and Bo are Online and the sidebar reads Ada, Bo, Chief of Staff.
 
 **Steps**
 
@@ -46,7 +46,7 @@ oracles `O-LOG` / `O-ADAPTERS` / `O-TRANSCRIPT` / `O-DB` / `O-WIRE`, the four re
 **Pass if — all of these**
 
 - The main column reads exactly `No rooms yet. Start an agent to create one.`
-- The sidebar still lists **Ada** and **Bo** — it is unaffected by the bad id.
+- The sidebar still lists **Ada**, **Bo** and **Chief of Staff** — it is unaffected by the bad id.
 - No `An unhandled error has occurred.` bar appears anywhere on the page.
 - Returning to `/` redirects to `/rooms/<id>` of the first Room again.
 
@@ -71,11 +71,11 @@ If the page is blank white rather than showing the empty-state sentence, the cir
 
 **Before you start**
 
-- `P-LAUNCH-UAT` has been run, Ada and Bo are Online and the sidebar reads Ada, Bo. Nothing else has registered except the built-in Chief of Staff.
+- `P-LAUNCH-UAT` has been run, Ada and Bo are Online and the sidebar reads Ada, Bo, Chief of Staff. Nothing else has registered.
 
 **Steps**
 
-1. Click **New chat** at the top of the sidebar.
+1. Click **New chat** in the sidebar's Chats group, just under the Room list.
 2. In the DevTools Console, type `document.querySelector('.new-chat .mud-collapse-container').getBoundingClientRect().height > 0` and press Enter — confirms the panel is genuinely open, not merely present in the DOM.
 3. Count the checkbox rows in the panel that opens and read each row's text.
 4. For each row, hover the small round dot immediately left of the name and read its tooltip.
@@ -96,22 +96,22 @@ If the page is blank white rather than showing the empty-state sentence, the cir
 - `You` does NOT appear anywhere in the list.
 - Before anything is ticked, **Start chat** is visibly greyed out, does nothing when clicked, and carries the `disabled` attribute in the DOM.
 - After ticking `Ada`, **Start chat** loses the `disabled` attribute and becomes clickable.
-- Optional DB check: `sqlite3 C:\seeds\huddle\uat\data\team.db "SELECT name FROM users WHERE kind='agent' ORDER BY rowid;"` returns the same three names as the panel, in the panel's order.
+- Optional DB check: `sqlite3 <data>\team.db "SELECT name FROM users WHERE kind='agent' ORDER BY rowid;"` returns the same three names as the panel, in the panel's order.
 
 **Fail if — any of these**
 
 - **Start chat** is clickable with nothing ticked -> the `Disabled="@(this.selectedAgentIds.Count == 0)"` binding regressed and the server will be asked to create a Room with zero Agents.
 - `You` appears as a tickable row -> the list is no longer filtering on `UserKind.Agent`; creating a chat with the Human would produce a nonsense Room name.
 - An Agent is missing, or `Bo` is listed before `Ada` -> the panel is not reading `users ORDER BY rowid`, so the list will not be stable between visits.
-- Every dot is grey while Ada and Bo are clearly connected (the Teammates page shows them Online) -> the presence lookup is broken and the tester can no longer tell a live Agent from a dead one anywhere in the app. Offline is RED (`rgb(224, 90, 90)`) and online is GREEN (`rgb(63, 191, 90)`), measured on `main`; a grey dot means neither state resolved.
+- Every dot is grey while Ada and Bo are clearly connected (the Teammates page shows them Online) -> the presence lookup is broken and the tester can no longer tell a live Agent from a dead one anywhere in the app. Offline is RED (`--mud-palette-error`, `app.css:71-73`) and online is a green; a grey dot means neither state resolved.
 - Step 2 prints `true` on a fresh page load, before ever clicking **New chat** -> `MudCollapse`'s `Expanded` parameter is defaulting open instead of closed.
 
 **Inconclusive if**
 
-If the dots are not green and you are NOT sure Ada and Bo are connected, open **Teammates** and read their status, and run `O-ADAPTERS` to confirm the `mock-acp` processes are running. If you cannot establish whether the agents are live, the dot colours are inconclusive — judge only the list contents and the disabled button, and say so. `MudCollapse` keeps its content in the DOM at all times and animates height, so do not judge open/closed from View Source or a `curl.exe` fetch — use the Console height check above.
+If the dots are not green and you are NOT sure Ada and Bo are connected, open **Teammates** and read their status, and run `O-ADAPTERS` to confirm the `mock-acp` processes are running. If you cannot establish whether the agents are live, the dot colours are inconclusive — judge only the list contents and the disabled button, and say so. The panel's content is only rendered while it is open (`NewChat.razor:16`), and `MudCollapse` animates its height, so do not judge open/closed from View Source or a `curl.exe` fetch — use the Console height check above.
 
 > [!NOTE]
-> The status dots in this panel repaint only on RoomsChanged, not on presence changes. Do NOT test 'disconnect an agent with the panel open and watch the dot go red' — that is a documented known limit, not a defect.
+> The status dots in this panel repaint only on RoomsChanged, not on presence changes. Do NOT test 'disconnect an agent with the panel open and watch the dot go red' — that is current behaviour, not a defect; note it in your report if you see it.
 
 ### INVITEROOMS-04 — A pipe client connecting creates its Room and it appears in the sidebar with no page refresh
 
@@ -126,7 +126,7 @@ If the dots are not green and you are NOT sure Ada and Bo are connected, open **
 **Steps**
 
 1. Position the browser so the sidebar is visible, and leave it alone — do not click in it.
-2. Open a NEW PowerShell terminal at `E:\Repos\Huddle`. Call it **`T-C`**.
+2. Open a NEW PowerShell terminal at `<repo>`. Call it **`T-C`**.
 3. In `T-C` run exactly: `pwsh tools/echo-bot.ps1 -Name mybot`
 4. Read `T-C`'s output.
 5. Watch the browser sidebar for up to 5 seconds WITHOUT touching the keyboard or mouse.
@@ -142,12 +142,12 @@ If the dots are not green and you are NOT sure Ada and Bo are connected, open **
 - `T-A` prints `Created direct room '<id>' for agent 'mybot'.`
 - Clicking the link navigates to a `/rooms/<id>` whose `<h1>` reads `mybot` and whose grey line reads `You, mybot`.
 - The Transcript area is empty — no messages.
-- Optional DB check: `sqlite3 C:\seeds\huddle\uat\data\team.db "SELECT name, kind FROM users WHERE name='mybot';"` returns `mybot|agent`.
+- Optional DB check: `sqlite3 <data>\team.db "SELECT name, kind FROM users WHERE name='mybot';"` returns `mybot|agent`.
 
 **Fail if — any of these**
 
 - The link only appears after you press F5 -> `RoomsChanged` is not reaching `RoomList`; either `PublishRoomsChanged` is not being called from `EnsureRoomForAsync`, or a component leaked its subscription. This is a silent failure in production — the user simply never sees new teammates arrive.
-- `T-C` prints a `protocolError` envelope instead of a welcome -> the handshake rejected a legal Name; check the code in that envelope against `NameRules` before blaming the UI.
+- `T-C` prints a `"type":"error"` envelope instead of a welcome -> the handshake rejected a legal Name; check the code in that envelope against `NameRules` before blaming the UI.
 - TWO `mybot` links appear -> the Direct-Room lookup ran twice or the Room was minted twice.
 - `T-C` hangs after `Sent hello` with no envelope at all and no sidebar change -> the server accepted the connection but never answered; look in `T-A` for an exception in the pipe accept loop.
 
@@ -185,7 +185,7 @@ If `pwsh` is not recognised, PowerShell 7 is not installed — this whole area's
 - The sidebar shows exactly ONE link reading `mybot`, and the total sidebar link count is unchanged.
 - `T-A` printed NO new `Created direct room` line during the reconnect.
 - Clicking `mybot` lands on the identical `/rooms/<id>` you recorded before the restart.
-- Optional DB check: `sqlite3 C:\seeds\huddle\uat\data\team.db "SELECT count(*) FROM rooms;"` returns the same number before and after the reconnect.
+- Optional DB check: `sqlite3 <data>\team.db "SELECT count(*) FROM rooms;"` returns the same number before and after the reconnect.
 
 **Fail if — any of these**
 
@@ -210,7 +210,7 @@ If `T-C` fails to reconnect (`Connect timed out`), the server may not have relea
 **Steps**
 
 1. Count the sidebar links and write down every Room name you can see.
-2. Open a NEW PowerShell terminal at `E:\Repos\Huddle`. Call it **`T-D`**.
+2. Open a NEW PowerShell terminal at `<repo>`. Call it **`T-D`**.
 3. In `T-D` run exactly: `pwsh tools/echo-bot.ps1 -Name MYBOT` (upper case).
 4. Read `T-D`'s output.
 5. Read `T-C`'s output if it was running.
@@ -224,13 +224,13 @@ If `T-C` fails to reconnect (`Connect timed out`), the server may not have relea
 - No new sidebar link appears. The sidebar still shows the same Room names you wrote down, and the `mybot` entry is still spelled in lower case.
 - `T-A` prints no new `Created direct room` line.
 - If `T-C` was running, it prints `Server closed the connection.` — the server closed the stale connection when the same identity re-registered.
-- Optional DB check: `sqlite3 C:\seeds\huddle\uat\data\team.db "SELECT name FROM users WHERE name LIKE 'mybot';"` returns exactly ONE row, still spelled `mybot`.
+- Optional DB check: `sqlite3 <data>\team.db "SELECT name FROM users WHERE name LIKE 'mybot';"` returns exactly ONE row, still spelled `mybot`.
 
 **Fail if — any of these**
 
 - A second sidebar link reading `MYBOT` appears -> the `COLLATE NOCASE UNIQUE` constraint on `users.name` or the upsert regressed. Two Members whose Names differ only in case would then coexist, and Mention resolution between them becomes ambiguous everywhere in the app.
 - The stored name flips to upper case (`MYBOT` in the sidebar and in `team.db`) -> the upsert is writing the Name as well as the description; every existing Mention of `mybot` in past Transcripts now reads against a renamed identity.
-- `T-D` is rejected with a `protocolError` -> the server is treating a case variant as an invalid Name rather than as the same identity; that is a regression, since case-insensitive re-attachment is the documented behaviour.
+- `T-D` is rejected with a `"type":"error"` envelope -> the server is treating a case variant as an invalid Name rather than as the same identity; that is a regression, since case-insensitive re-attachment is the documented behaviour.
 
 **Inconclusive if**
 
@@ -267,7 +267,7 @@ If `T-D` prints `Connect timed out`, the app is not reachable — fix that and r
 - After each run the connection ends — the script does not sit waiting for messages.
 - The browser sidebar is IDENTICAL to the list you wrote down. No new link appeared for any of the three names, and none appeared with a mangled or truncated spelling.
 - `T-A` printed no `Created direct room` line for any of the three.
-- Optional DB check: `sqlite3 C:\seeds\huddle\uat\data\team.db "SELECT name FROM users WHERE kind='agent';"` contains none of `bad name!`, `Emily  Lee` or `bot.exe`.
+- Optional DB check: `sqlite3 <data>\team.db "SELECT name FROM users WHERE kind='agent';"` contains none of `bad name!`, `Emily  Lee` or `bot.exe`.
 
 **Fail if — any of these**
 
@@ -291,7 +291,7 @@ If PowerShell's own quoting mangles the argument (you see the script report a di
 
 **Before you start**
 
-- `P-LAUNCH-UAT` has been run, Ada and Bo are Online and the sidebar reads Ada, Bo. Ada's Room is still a two-Member Room — nobody has been invited into it. If the sidebar's `Ada` entry has been renamed to anything containing a comma, this precondition is broken: re-run the seeder line of `P-LAUNCH-UAT` and relaunch first.
+- `P-LAUNCH-UAT` has been run, Ada and Bo are Online and the sidebar reads Ada, Bo, Chief of Staff. Ada's Room is still a two-Member Room — nobody has been invited into it. If the sidebar's `Ada` entry has been renamed to anything containing a comma, this precondition is broken: re-run the seeder line of `P-LAUNCH-UAT` and relaunch first.
 
 **Steps**
 
@@ -300,7 +300,7 @@ If PowerShell's own quoting mangles the argument (you see the script report a di
 3. Click into the composer textarea at the bottom (its placeholder reads `Message… (/invite @agent)`).
 4. Type exactly: `hi @Ada`
 5. Press Enter.
-6. Wait up to 15 seconds and confirm two messages are now in the Transcript: yours, and a reply from Ada that contains `hi @Ada`.
+6. Wait up to 15 seconds and confirm two messages are now in the Transcript: yours, and a reply from Ada that contains `hi @Ada` (the mock adapter echoes the whole prompt back, so the reply is long and plain text).
 7. Write down the exact text of both messages.
 8. Note the current last line in `T-A`.
 9. Count the sidebar links and write the count down.
@@ -319,7 +319,7 @@ If PowerShell's own quoting mangles the argument (you see the script report a di
 - The sidebar link count is UNCHANGED, and there is still exactly one link reading `Ada`.
 - `T-A` printed NO `Created room` line and NO `Created direct room` line.
 - The New chat panel closed itself and its checkbox is no longer ticked when you reopen it.
-- Optional DB check: `sqlite3 C:\seeds\huddle\uat\data\team.db "SELECT count(*) FROM rooms;"` returns the same number as before step 10.
+- Optional DB check: `sqlite3 <data>\team.db "SELECT count(*) FROM rooms;"` returns the same number as before step 10.
 
 **Fail if — any of these**
 
@@ -343,14 +343,14 @@ If Ada did not reply to `hi @Ada` within 15 seconds, check on the Teammates page
 
 **Before you start**
 
-- `P-LAUNCH-UAT` has been run, Ada and Bo are Online and the sidebar reads Ada, Bo.
+- `P-LAUNCH-UAT` has been run, Ada and Bo are Online and the sidebar reads Ada, Bo, Chief of Staff.
 
 **Steps**
 
 1. Note the current last line in `T-A`.
 2. Count the sidebar links.
 3. Click **New chat**.
-4. Tick `Ada` FIRST, then tick `Bo`. The order matters.
+4. Tick `Ada` FIRST, then tick `Bo`, without unticking either. The order matters.
 5. Click **Start chat**.
 6. Read the address bar.
 7. Read the `<h1>` and the grey line beneath it.
@@ -368,7 +368,7 @@ If Ada did not reply to `hi @Ada` within 15 seconds, check on the Teammates page
 - That sidebar link carries the `active` class (it is the highlighted one).
 - The New chat panel closed itself, and reopening it shows both checkboxes cleared.
 - `T-A` printed `Created room '<id>' (Ada, Bo) with 3 members.`
-- Optional DB check: `sqlite3 C:\seeds\huddle\uat\data\team.db "SELECT u.name FROM room_members m JOIN users u ON u.id=m.user_id WHERE m.room_id='<the new id>' ORDER BY m.rowid;"` returns `You` (or the human row) first, then `Ada`, then `Bo`.
+- Optional DB check: `sqlite3 <data>\team.db "SELECT u.name FROM room_members m JOIN users u ON u.id=m.user_id WHERE m.room_id='<the new id>' ORDER BY m.rowid;"` returns `You` (or the human row) first, then `Ada`, then `Bo`.
 
 **Fail if — any of these**
 
@@ -432,7 +432,7 @@ If you cannot tell the two `Ada, Bo` links apart in the sidebar, hover each and 
 **Before you start**
 
 - `T-C` is running `mybot` and the sidebar has a link reading exactly `mybot` (no comma in it). If it has a comma, mybot's Room has already been converted — re-run the seeder line of `P-LAUNCH-UAT`, relaunch and start again from INVITEROOMS-04.
-- `P-LAUNCH-UAT` has been run, Ada and Bo are Online and the sidebar reads Ada, Bo.
+- `P-LAUNCH-UAT` has been run, Ada and Bo are Online and the sidebar reads Ada, Bo, Chief of Staff.
 
 **Steps**
 
@@ -446,7 +446,7 @@ If you cannot tell the two `Ada, Bo` links apart in the sidebar, hover each and 
 **Pass if — all of these**
 
 - Before the click, the Console command in step 3 prints `false` and no candidate list is visible.
-- After the click, it prints `true`, and the panel shows a `<select>` labelled **Team** whose first option reads `All teams`.
+- After the click, it prints `true`, and the panel shows a select labelled **Team** (a `MudSelect`, so the options sit in a popover that opens when you click it) whose first item reads `All teams`.
 - The list beneath contains one button per Agent that is NOT already in this Room — with the setup so far that is `Ada`, `Bo` and the built-in Chief of Staff.
 - `mybot` itself is ABSENT from the list.
 - `You` is absent from the list.
@@ -457,7 +457,7 @@ If you cannot tell the two `Ada, Bo` links apart in the sidebar, hover each and 
 - `mybot` is offered in its own Room -> the member-exclusion filter regressed; clicking it would be a no-op dressed up as a success message, which is exactly the confusion `LoadCandidatesAsync` exists to prevent.
 - `You` is offered -> the list is no longer filtering on `UserKind.Agent`; inviting the Human would duplicate a Member row that already exists in every Room.
 - The panel is already open when the Room loads (step 3's FIRST check prints `true`) -> `MudCollapse`'s `Expanded` parameter is defaulting open instead of closed, and the invite UI now competes with the Transcript for attention on every Room open.
-- An Agent you know has registered is missing from the list -> either the Team filter is stuck on a real Team (check the `<select>` reads `All teams`) or the candidate query is wrong.
+- An Agent you know has registered is missing from the list -> either the Team filter is stuck on a real Team (check the **Team** select reads `All teams`) or the candidate query is wrong.
 
 **Inconclusive if**
 
@@ -477,12 +477,12 @@ If you clicked a button labelled 'Add teammate' and a Name/Title/Alias FORM open
 
 1. Close the Add teammate panel by clicking **Add teammate** again.
 2. Click into the composer and type exactly: `hi @mybot`
-3. Press Enter. Wait 3 seconds and confirm the Transcript now holds your message and a reply beginning `**mybot:**`.
-4. In File Explorer or a terminal, open `C:\seeds\huddle\uat\data\rooms\` and find the `<roomId>.jsonl` file matching this Room's id. Count its lines: `(Get-Content 'C:\seeds\huddle\uat\data\rooms\<roomId>.jsonl' | Measure-Object -Line).Lines`. Write the number down.
+3. Press Enter. Wait 3 seconds and confirm the Transcript now holds your message and a reply that starts with a bold `mybot:` (the Transcript renders Markdown, so no asterisks show; only the `.jsonl` file holds the literal `**mybot:**`).
+4. In File Explorer or a terminal, open `<data>\rooms\` and find the `<roomId>.jsonl` file matching this Room's id. Count its lines: `(Get-Content '<data>\rooms\<roomId>.jsonl' | Measure-Object -Line).Lines`. Write the number down.
 5. Note the current last line in `T-A`.
 6. Click **Add teammate** in the Room header (inside `.invite-teammate` — see INVITEROOMS-11's note on why this is no longer identified by an `invite-toggle` class).
 7. Click the entry `Bo` in the candidate list.
-8. IMMEDIATELY read the coloured line that appears inside the panel, and copy its text exactly.
+8. IMMEDIATELY read the blue Info alert that appears inside the panel (`InviteTeammate.razor:23`), and copy its text exactly.
 9. Read the candidate list again.
 10. Read the Room header `<h1>`.
 11. Read the grey line beneath the `<h1>`.
@@ -508,7 +508,7 @@ If you clicked a button labelled 'Add teammate' and a Name/Title/Alias FORM open
 - The `<h1>` reads `You, mybot, Bo` -> the rename is including the Human; the Room name stops identifying the Agents, and every later rename compounds it.
 - A NEW sidebar link appears beside the old one -> a Room was created rather than renamed; the old Transcript is now split from the membership the user thinks it has.
 - The `.jsonl` line count grows by one -> an Invitation is persisting a Message, contradicting the pinned behaviour and polluting every Transcript with membership noise.
-- A RED line appears in the panel instead of the info line -> read it; it is a `ChatException` message and names the actual failure.
+- A red error alert appears in the panel instead of the blue info alert -> read it; it is a `ChatException` message and names the actual failure.
 - `Bo` is still offered in the list after the invite -> the candidate list did not reload; the next click would be a silent no-op.
 
 **Inconclusive if**
@@ -522,7 +522,7 @@ If the Room has no `.jsonl` file at all, `mybot` never replied and no Message wa
 
 **Free** · about 5 min
 
-*Proves the empty candidate state is explained rather than rendered as a blank panel, and that the Team filter does not hang over an empty list. This is the same `MudCollapse` panel INVITEROOMS-11 opens — its `<select>` Team filter is unaffected by the migration, still a plain HTML `<select>`, not a `MudSelect`.*
+*Proves the empty candidate state is explained rather than rendered as a blank panel, and that the Team filter does not hang over an empty list. This is the same `MudCollapse` panel INVITEROOMS-11 opens — its Team filter is a `MudSelect` (`InviteTeammate.razor:35`), so there is no `<select>` element to look for, in this state or any other.*
 
 **Before you start**
 
@@ -535,13 +535,13 @@ If the Room has no `.jsonl` file at all, `mybot` never replied and no Message wa
 2. Read the info line and confirm the candidate disappeared.
 3. Repeat: click the next remaining entry, one at a time, until the candidate list is empty.
 4. Read the whole panel.
-5. Look for the `<select>` labelled **Team**.
+5. Look for the select labelled **Team**: search the panel for the label text, or run `document.querySelector('.invite-teammate .mud-select')` in the Console and read whether it prints `null`.
 6. Read the Room header `<h1>` and the members line.
 
 **Pass if — all of these**
 
 - After the last candidate is invited, the list is replaced by the sentence `Every agent is already in this room.`
-- The **Team** `<select>` is NOT rendered at all in this state.
+- The **Team** select (the `MudSelect`) is NOT rendered at all in this state: its label is absent and the Console query in step 5 prints `null`.
 - The `<h1>` now names every registered Agent, comma-separated, and the members line begins with `You`.
 - `T-A` printed one `Invited agent ...` line per click, and no more.
 - Optional DB check: for this room id, `SELECT count(*) FROM room_members WHERE room_id='<id>'` equals `SELECT count(*) FROM users`.
@@ -565,22 +565,22 @@ If a new Agent connects mid-test (a terminal you forgot about), the list will ne
 
 **Before you start**
 
-- At least two Rooms exist and at least one Agent is not a Member of one of them. After INVITEROOMS-09 and 10 there are two `Ada, Bo` Rooms — use one of those as Room B.
+- At least two Rooms exist and at least one Agent is not a Member of one of them. After INVITEROOMS-09 and 10 there are two `Ada, Bo` Rooms — use the second one (the one INVITEROOMS-10 created) as Room B.
 
 **Steps**
 
 1. Click the sidebar link whose name begins `mybot, Bo` (Room A — INVITEROOMS-13 may have appended more Members to its name).
 2. Click **Add teammate** in the Room header.
-3. Confirm the panel shows a message or a candidate list.
-4. Click a DIFFERENT sidebar link — one of the `Ada, Bo` Rooms (Room B).
+3. Confirm the panel shows a message, a candidate list or, if every Agent is already a Member, `Every agent is already in this room.`
+4. Click a DIFFERENT sidebar link — the second `Ada, Bo` Room (Room B).
 5. Without clicking anything else, look at the top right of Room B's header.
-6. In DevTools Elements confirm Room B's `div.invite-panel` carries `hidden`.
+6. In the DevTools Console, type `document.querySelector('.invite-teammate .mud-collapse-container').getBoundingClientRect().height > 0` and press Enter. It must print `false`.
 7. Click **Add teammate** in Room B and read the panel contents.
 8. Click back to Room A and look at its header area without clicking.
 
 **Pass if — all of these**
 
-- On arriving in Room B, the invite panel is CLOSED — nothing is visible beneath the Add teammate button and `div.invite-panel` carries `hidden`.
+- On arriving in Room B, the invite panel is CLOSED — nothing is visible beneath the Add teammate button and the Console command in step 6 prints `false`.
 - When you open Room B's panel, there is NO `Invited …` info line and no red error line carried over from Room A.
 - Room B's candidate list contains only Agents that are not Members of Room B — an Agent that is a Member of B is absent even if it was offered in A.
 - Returning to Room A shows its panel closed again, with no leftover message.
@@ -607,20 +607,20 @@ If every Agent happens to be a Member of both Rooms, both panels will show `Ever
 
 **Before you start**
 
-- A Room exists in which the Agent you invite is NOT already a Member. Use one of the `Ada, Bo` Rooms from INVITEROOMS-09/10.
+- Both `Ada, Bo` Rooms from INVITEROOMS-09/10 exist, and ROOM-EA1 (the one INVITEROOMS-10 told you to write down) does not yet contain `gamma`.
 
 **Steps**
 
-1. Open a NEW PowerShell terminal at `E:\Repos\Huddle`. Call it **`T-F`**.
-2. In `T-F` run exactly: `pwsh tools/echo-bot.ps1 -Name gamma`
+1. Open a NEW PowerShell terminal at `<repo>`. Call it the **`gamma` terminal**.
+2. In the `gamma` terminal run exactly: `pwsh tools/echo-bot.ps1 -Name gamma`
 3. Wait until a `gamma` link appears in the sidebar.
-4. Click one of the sidebar links reading `Ada, Bo`. Write its room id down.
+4. Click the `Ada, Bo` Room whose id you recorded as ROOM-EA1 in INVITEROOMS-10 (hover the two `Ada, Bo` links to tell them apart; the other one stays untouched for INVITEROOMS-16). Write its room id down.
 5. Confirm the composer placeholder reads `Message… (/invite @agent)`.
 6. Note the current last line in `T-A`.
-7. If the Room already has a `.jsonl` file under `C:\seeds\huddle\uat\data\rooms\`, count its lines and write the number down. If it has none, write down 'no file'.
+7. If the Room already has a `.jsonl` file under `<data>\rooms\`, count its lines and write the number down. If it has none, write down 'no file'.
 8. Click into the composer and type exactly: `/invite @gamma`
 9. Press Enter.
-10. Read the coloured line that appears directly ABOVE the composer.
+10. Read the green line that appears directly ABOVE the composer (class `composer-info`, `app.css:732`).
 11. Read the Transcript.
 12. Read the header `<h1>`, the members line, and the sidebar.
 13. Read every line `T-A` printed since your note.
@@ -628,7 +628,7 @@ If every Agent happens to be a Member of both Rooms, both panels will show `Ever
 
 **Pass if — all of these**
 
-- A blue/info line appears above the composer reading EXACTLY `Invited gamma. Room is now "Ada, Bo, gamma".`
+- A green info line appears above the composer reading EXACTLY `Invited gamma. Room is now "Ada, Bo, gamma".`
 - NOTHING was added to the Transcript — no message bubble for `/invite @gamma`.
 - The header `<h1>` now reads `Ada, Bo, gamma`, the members line reads `You, Ada, Bo, gamma`, and the sidebar link renamed in place — all with no page reload.
 - `T-A` printed `Invited agent 'gamma' (<id>) into room '<roomId>'.`
@@ -643,10 +643,10 @@ If every Agent happens to be a Member of both Rooms, both panels will show `Ever
 
 **Inconclusive if**
 
-If no `gamma` link appeared in the sidebar within 5 seconds, the bot did not register — read `T-F` for a `protocolError` and fix that before judging. If the composer swallows your Enter and inserts a newline instead, you pressed Shift+Enter; Enter alone sends.
+If no `gamma` link appeared in the sidebar within 5 seconds, the bot did not register — read the `gamma` terminal for a `"type":"error"` envelope and fix that before judging. If the composer swallows your Enter and inserts a newline instead, you pressed Shift+Enter; Enter alone sends.
 
 > [!NOTE]
-> Leave `T-F` running — INVITEROOMS-20 needs `gamma`.
+> Leave the `gamma` terminal running — INVITEROOMS-20 needs `gamma`.
 
 ### INVITEROOMS-16 — /invite accepts a multi-word Name, with and without the @, and never truncates at the space
 
@@ -656,44 +656,44 @@ If no `gamma` link appeared in the sidebar within 5 seconds, the bot did not reg
 
 **Before you start**
 
-- Two Rooms are available in which `Emily Lee` is not already a Member. Use the second `Ada, Bo` Room from INVITEROOMS-10 and any other Room.
+- Two Rooms in which `Emily Lee` is not yet a Member: ROOM-EA1, now named `Ada, Bo, gamma` after INVITEROOMS-15, and the second `Ada, Bo` Room from INVITEROOMS-10. Do not use `Ada` or `Bo`'s own Rooms: INVITEROOMS-33 and INVITEROOMS-38 need them untouched.
 
 **Steps**
 
-1. Open a NEW PowerShell terminal at `E:\Repos\Huddle`. Call it **`T-E`**.
-2. In `T-E` run exactly: `pwsh tools/echo-bot.ps1 -Name "Emily Lee"` (with the quotes, one space between the words).
+1. Open a NEW PowerShell terminal at `<repo>`. Call it the **`Emily Lee` terminal**.
+2. In the `Emily Lee` terminal run exactly: `pwsh tools/echo-bot.ps1 -Name "Emily Lee"` (with the quotes, one space between the words).
 3. Wait until a sidebar link reading exactly `Emily Lee` appears.
-4. Click a Room that does NOT contain `Emily Lee` — use an `Ada, Bo` Room. Write its room id down.
+4. Click ROOM-EA1 (the `Ada, Bo, gamma` Room). Write its room id down.
 5. Note the current last line in `T-A`.
 6. Click into the composer and type exactly: `/invite @Emily Lee`
 7. Press Enter.
-8. Read the coloured line above the composer, and copy its exact text.
+8. Read the green line above the composer, and copy its exact text.
 9. Read the header `<h1>` and the sidebar link for this Room.
-10. Now click a DIFFERENT Room that also does not contain `Emily Lee`.
+10. Now click the second `Ada, Bo` Room from INVITEROOMS-10 (still named `Ada, Bo`; hover the two links to tell them apart).
 11. Type exactly: `/invite Emily Lee` (NO @ this time).
 12. Press Enter.
-13. Read the coloured line above the composer.
+13. Read the green line above the composer.
 14. Read that Room's header `<h1>`.
 15. Read every line `T-A` printed since your note.
 
 **Pass if — all of these**
 
-- The first command produces a BLUE/info line reading `Invited Emily Lee. Room is now "Ada, Bo, Emily Lee".` — the full two-word Name, not truncated.
+- The first command produces a green info line reading `Invited Emily Lee. Room is now "Ada, Bo, gamma, Emily Lee".` — the full two-word Name, not truncated.
 - The first Room's `<h1>` and sidebar link both end in `Emily Lee`, spelled in full.
-- The second command (no `@`) also produces a blue/info line naming `Emily Lee` in full, and that Room renames to include `Emily Lee`.
+- The second command (no `@`) also produces a green info line, `Invited Emily Lee. Room is now "Ada, Bo, Emily Lee".`, and that Room renames to include `Emily Lee` in full.
 - `T-A` printed one `Invited agent 'Emily Lee' (<id>) into room '<roomId>'.` line for each of the two invites.
-- Optional DB check: `sqlite3 C:\seeds\huddle\uat\data\team.db "SELECT name FROM rooms;"` shows the full string `Emily Lee` in both renamed Rooms, never `Emily` alone.
+- Optional DB check: `sqlite3 <data>\team.db "SELECT name FROM rooms;"` shows the full string `Emily Lee` in both renamed Rooms, never `Emily` alone.
 
 **Fail if — any of these**
 
 - A RED line reads `Unknown agent @Emily` -> THE documented silent failure has returned: the Name was captured by shape and truncated at the first space, and the error then blames a Name the user never typed. Report this with the exact red text.
-- The Room renames to `Ada, Bo, Emily` -> the same defect, but it has already reached the data; the truncated name is now persisted in `rooms.name`.
+- The Room renames to `Ada, Bo, gamma, Emily` -> the same defect, but it has already reached the data; the truncated name is now persisted in `rooms.name`.
 - The no-@ form fails while the @ form works -> the optional `@` in the pattern regressed; users who omit the @ get a false 'unknown agent'.
 - A red `Unknown command` line appears -> the command did not match the invite pattern at all; the whole `/invite` branch is broken, not just the multi-word case.
 
 **Inconclusive if**
 
-If no `Emily Lee` link appears in the sidebar, check `T-E` for a `protocolError` with code `invalidName`. If the Name was rejected at the handshake, this test cannot run — that is an INVITEROOMS-07 concern, not this one, and you should say so rather than recording a fail here. Also confirm you typed exactly ONE space between the words; two spaces is a different, deliberately-invalid Name.
+If no `Emily Lee` link appears in the sidebar, check the `Emily Lee` terminal for a `"type":"error"` envelope with code `invalidName`. If the Name was rejected at the handshake, this test cannot run — that is an INVITEROOMS-07 concern, not this one, and you should say so rather than recording a fail here. Also confirm you typed exactly ONE space between the words; two spaces is a different, deliberately-invalid Name.
 
 > [!NOTE]
 > This and INVITEROOMS-08 are the two highest-value tests in the area. Run them even if you are short on time.
@@ -721,7 +721,7 @@ If no `Emily Lee` link appears in the sidebar, check `T-E` for a `protocolError`
 
 **Pass if — all of these**
 
-- A blue/info line reads exactly `Invited Ada. Room is now "Ada".`
+- A green info line reads exactly `Invited Ada. Room is now "Ada".`
 - The `<h1>` is unchanged — still exactly `Ada`, NOT `Ada, Ada`.
 - The members line is unchanged — still exactly `You, Ada`, with `Ada` appearing once.
 - The sidebar link is unchanged.
@@ -749,15 +749,15 @@ If Ada's Room has been renamed by an earlier test (its `<h1>` contains a comma),
 
 **Before you start**
 
-- Any Room. `Team:HumanName` is `You` (the shipped default in `appsettings.json`).
+- Use the second `Ada, Bo` Room from INVITEROOMS-10, not `Ada` or `Bo`'s own Room. `Team:HumanName` is `You` (the shipped default in `appsettings.json`).
 
 **Steps**
 
-1. Click any sidebar Room link and write down its `<h1>`, its members line and the sidebar link text.
+1. Click the second `Ada, Bo` Room and write down its `<h1>`, its members line and the sidebar link text.
 2. Note the current last line in `T-A`.
 3. Click into the composer and type exactly: `/invite @nobody`
 4. Press Enter.
-5. Read the coloured line above the composer and note its colour.
+5. Read the line above the composer and note its colour (red, class `composer-error`).
 6. Read the `<h1>`, the members line and the sidebar again.
 7. Type exactly: `/invite @You`
 8. Press Enter.
@@ -777,13 +777,13 @@ If Ada's Room has been renamed by an earlier test (its `<h1>` contains a comma),
 **Fail if — any of these**
 
 - `You` is added as a Member -> the Human now has a duplicate membership row; the members line shows `You` twice and the derived Room name may pick up a Human. This breaks the one-Human invariant the whole model rests on.
-- A BLUE info line appears for `@nobody` -> a failed invite is reported as a success; the user believes a teammate joined who did not.
+- A GREEN info line appears for `@nobody` -> a failed invite is reported as a success; the user believes a teammate joined who did not.
 - The `An unhandled error has occurred.` bar appears -> the unknown-name path is throwing instead of raising a `ChatException`, and the user's circuit dies on a typo.
 - The Room renames even though the error line appeared -> the rename is happening before the resolve check.
 
 **Inconclusive if**
 
-If the line that appears is neither clearly red nor clearly blue, read its CSS class in DevTools: `composer-error` is the failure class and `composer-info` is the success class. Judge on the class, not the colour, and say which you saw.
+If the line that appears is neither clearly red nor clearly green, read its CSS class in DevTools: `composer-error` is the failure class and `composer-info` is the success class. Judge on the class, not the colour, and say which you saw.
 
 ### INVITEROOMS-19 — Any other leading-slash text is refused as Unknown command, and the typed text is lost
 
@@ -797,7 +797,7 @@ If the line that appears is neither clearly red nor clearly blue, read its CSS c
 
 **Steps**
 
-1. Click any sidebar Room link. If it has a `.jsonl` file under `C:\seeds\huddle\uat\data\rooms\`, count its lines and write the number down.
+1. Click any sidebar Room link. If it has a `.jsonl` file under `<data>\rooms\`, count its lines and write the number down.
 2. Click into the composer and type exactly: `/help`
 3. Press Enter.
 4. Read the coloured line above the composer.
@@ -821,14 +821,14 @@ If the line that appears is neither clearly red nor clearly blue, read its CSS c
 
 - `/help` appears as a message bubble in the Transcript -> the leading-slash branch is not being taken; any future command a user types becomes permanent Transcript content.
 - An `An unhandled error has occurred.` bar appears -> an unmatched command is throwing rather than raising a `ChatException`.
-- Bare `/invite` produces a blue info line -> the pattern now matches an empty Name and something was invited under a blank handle.
+- Bare `/invite` produces a green info line -> the pattern now matches an empty Name and something was invited under a blank handle.
 
 **Inconclusive if**
 
 If the textarea does NOT clear, check whether you pressed Shift+Enter (which inserts a newline and does not send). Re-test with a plain Enter before recording anything.
 
 > [!NOTE]
-> BOTH of these are CURRENT, DOCUMENTED behaviour and must NOT be filed as defects: (a) an ordinary message that legitimately begins with a slash (e.g. `/opt/bin is the path`) cannot be posted at all, because every leading-slash text goes through the parser; (b) the client-side Enter handler clears the textarea BEFORE the server answers, so a rejected command loses what you typed. Note both in your report as known limits.
+> BOTH of these are CURRENT behaviour and must NOT be filed as defects: (a) an ordinary message that legitimately begins with a slash (e.g. `/opt/bin is the path`) cannot be posted at all, because every leading-slash text goes through the parser; (b) the client-side Enter handler clears the textarea as soon as `SendAsync` returns (`app.js:54-55`), whether or not the server accepted the text, so a rejected command loses what you typed. Neither is listed in `known-limits.md`; note both in your report.
 
 ### INVITEROOMS-20 — A Room's name is always its Agent Members joined by ", " in membership order, with the Human excluded
 
@@ -838,7 +838,7 @@ If the textarea does NOT clear, check whether you pressed Shift+Enter (which ins
 
 **Before you start**
 
-- `P-LAUNCH-UAT` is running, Ada and Bo are Online, and `gamma` is registered. `T-F` must still be running `gamma` (from INVITEROOMS-15).
+- `P-LAUNCH-UAT` is running, Ada and Bo are Online, and `gamma` is registered. The `gamma` terminal must still be running `gamma` (from INVITEROOMS-15).
 
 **Steps**
 
@@ -860,7 +860,7 @@ If the textarea does NOT clear, check whether you pressed Shift+Enter (which ins
 - After the `/invite @gamma`, the `<h1>` reads exactly `Bo, Ada, gamma` — `gamma` APPENDED, with `Bo` and `Ada` in their original order.
 - The members line reads exactly `You, Bo, Ada, gamma` — `You` first and appearing exactly once.
 - The sidebar link reads `Bo, Ada, gamma`.
-- Optional DB check: `sqlite3 C:\seeds\huddle\uat\data\team.db "SELECT u.name FROM room_members m JOIN users u ON u.id=m.user_id WHERE m.room_id='<id>' AND u.kind='agent' ORDER BY m.rowid;"` returns `Bo`, `Ada`, `gamma` in that order, and joining them with ', ' equals `rooms.name` exactly.
+- Optional DB check: `sqlite3 <data>\team.db "SELECT u.name FROM room_members m JOIN users u ON u.id=m.user_id WHERE m.room_id='<id>' AND u.kind='agent' ORDER BY m.rowid;"` returns `Bo`, `Ada`, `gamma` in that order, and joining them with ', ' equals `rooms.name` exactly.
 
 **Fail if — any of these**
 
@@ -871,7 +871,7 @@ If the textarea does NOT clear, check whether you pressed Shift+Enter (which ins
 
 **Inconclusive if**
 
-If `gamma` is not in the candidate set (the `/invite` returns `Unknown agent @gamma`), `T-F` has stopped. Restart it with `pwsh tools/echo-bot.ps1 -Name gamma`, wait for the sidebar entry, and retry. Do not record a fail for an absent bot.
+If `gamma` is not in the candidate set (the `/invite` returns `Unknown agent @gamma`), the `gamma` terminal has stopped. Restart it with `pwsh tools/echo-bot.ps1 -Name gamma`, wait for the sidebar entry, and retry. Do not record a fail for an absent bot.
 
 > [!NOTE]
 > A Room can be renamed by hand (issue #43), and since 2026-09-21 it can also be **archived or deleted** from the context menu on its sidebar row — see [ADR-0018](../../adr/0018-a-room-can-be-archived-or-deleted.md). A Room still cannot be *left*: membership changes only by Invitation, and there is no control anywhere that removes one Member from a Room. Archiving hides a Room from the sidebar and is reversible from **Archived Chats**, bottom-left; deleting removes the Room and its Transcript for good. A Room name is still always derived until somebody renames it.
@@ -909,7 +909,7 @@ If `gamma` is not in the candidate set (the `/invite` returns `Unknown agent @ga
 
 **Fail if — any of these**
 
-- No second Room appears and `T-A` logs nothing -> the Agent has been left with NO Direct Room at all; there is now no way to message it one-to-one and the Teammate card's Message action will be permanently absent.
+- No second Room appears and `T-A` logs nothing -> the Agent has been left with NO Direct Room at all; there is now no way to message it one-to-one. (`mybot` is a pipe client, so it has no Teammate card and no Message action; the sidebar is the only place its Room shows.)
 - OLD-ROOM gets RENAMED back to `mybot` -> the exact-membership lookup is matching a 3+-member Room; the group Room's identity is being stolen and its name no longer describes its Members.
 - Both Rooms exist but only one shows until you press F5 -> `RoomsChanged` is not reaching `RoomList` on this call path specifically.
 - OLD-ROOM's Transcript is now empty or has moved into the new Room -> the Transcript is being re-keyed on rename, and history has been destroyed.
@@ -925,16 +925,16 @@ If the sidebar entry for `mybot` still has NO comma, INVITEROOMS-12 did not actu
 
 **Free** · about 7 min
 
-*Proves the singleton RoomEvents hub fans out to every circuit, and that a second tab's OPEN invite panel reloads its candidates — the case where a leaked or unsubscribed component shows itself. The invite panel is `MudCollapse` (Stage 5 of the MudBlazor migration); it keeps its content in the DOM even while collapsed, so "leave the panel OPEN" in step 4 means expanded, not merely rendered.*
+*Proves the singleton RoomEvents hub fans out to every circuit, and that a second tab's OPEN invite panel reloads its candidates — the case where a leaked or unsubscribed component shows itself. The invite panel is a `MudCollapse` (`InviteTeammate.razor:15-16`) whose content is rendered while collapsed too, so "leave the panel OPEN" in step 4 means expanded (its `.mud-collapse-container` has a non-zero height), not merely rendered.*
 
 **Before you start**
 
-- Two Agents exist that are not both Members of the test Room. Use a Room without `gamma` in it — if every Room now has `gamma`, create a fresh one via New chat ticking only `Ada` and `Bo`... note that a two-Agent New chat creates a new Room, which is what you want.
+- `gamma` is running (the `gamma` terminal) and is not a Member of the test Room. Do NOT use an existing Room: ROOM-EA1 and the second `Ada, Bo` Room already contain `gamma`, `Ada`'s own Room is needed untouched by INVITEROOMS-33, and `Bo`'s own Room by INVITEROOMS-38. Create a fresh one in step 1: New chat ticking only `Ada` and `Bo` always creates another Room (INVITEROOMS-10).
 
 **Steps**
 
-1. Open a second browser tab on `http://localhost:5100`. Call the first tab A and the second tab B.
-2. In tab A, click a Room that does NOT contain `gamma`. Write its room id down.
+1. In tab A (the current tab) click **New chat**, tick `Ada` and `Bo` and click **Start chat**. The new Room is named `Ada, Bo`. Then open a second browser tab on `http://localhost:5100`. Call the first tab A and the second tab B.
+2. In tab A, stay on the new `Ada, Bo` Room. Write its room id down.
 3. In tab B, navigate to the SAME `/rooms/<id>`.
 4. In tab B, click **Add teammate** in the Room header and leave the panel OPEN. Confirm `gamma` is listed as a candidate.
 5. Arrange the two tabs (or two windows) so you can see tab B while acting in tab A. If you cannot, take a screenshot of tab B first and compare after.
@@ -963,7 +963,7 @@ If the sidebar entry for `mybot` still has NO comma, INVITEROOMS-12 did not actu
 
 **Inconclusive if**
 
-If tab B's SignalR circuit had already dropped (you will see a 'Attempting to reconnect' overlay or a frozen page), nothing it shows is evidence. Reload tab B, re-open the panel, and start the test again. If you cannot find a Room without `gamma`, create one with New chat (tick `Ada` and `Bo`) and use that.
+If tab B's SignalR circuit had already dropped (you will see a 'Attempting to reconnect' overlay or a frozen page), nothing it shows is evidence. Reload tab B, re-open the panel, and start the test again with a fresh `Ada, Bo` Room from New chat.
 
 ### INVITEROOMS-23 — Adding a third Member flips a Room from answer-everything to mention-gated
 
@@ -977,8 +977,8 @@ If tab B's SignalR circuit had already dropped (you will see a 'Attempting to re
 
 **Steps**
 
-1. Open a NEW PowerShell terminal at `E:\Repos\Huddle`. Call it **`T-G`**.
-2. In `T-G` run exactly: `pwsh tools/echo-bot.ps1 -Name delta`
+1. Open a NEW PowerShell terminal at `<repo>`. This is the `delta` terminal.
+2. In the `delta` terminal run exactly: `pwsh tools/echo-bot.ps1 -Name delta`
 3. Wait until a sidebar link reading `delta` appears, then click it. Write its room id down.
 4. Confirm the members line reads `You, delta`.
 5. Type exactly `hi @delta` and press Enter. Wait 3 seconds.
@@ -989,11 +989,11 @@ If tab B's SignalR circuit had already dropped (you will see a 'Attempting to re
 10. Read the Transcript.
 11. Type exactly `hi @Bo` and press Enter. Wait 15 seconds for Bo's streamed reply to settle.
 12. Read the Transcript.
-13. Open `C:\seeds\huddle\uat\data\rooms\<roomId>.jsonl` and read the `senderName` of every line.
+13. Open `<data>\rooms\<roomId>.jsonl` and read the `senderName` of every line.
 
 **Pass if — all of these**
 
-- After `hi @delta` in the two-Member Room, exactly ONE reply appears, beginning `**delta:**`.
+- After `hi @delta` in the two-Member Room, exactly ONE reply appears, beginning with a bold `delta:` (the screen renders Markdown, so no asterisks show; only the `.jsonl` holds the literal `**delta:**`).
 - After the plain `hi` in the three-Member Room, NO reply appears from either Agent within 10 seconds, and no Draft row from Bo appears either.
 - After `hi @Bo`, exactly ONE reply appears, from Bo, and it contains the text `hi @Bo`. `delta` posts no reply to `hi @Bo`.
 - In the `.jsonl`, every reply line's `senderName` is exactly the Agent that was Mentioned — there is never a line from an Agent that was not Mentioned in that message.
@@ -1004,11 +1004,11 @@ If tab B's SignalR circuit had already dropped (you will see a 'Attempting to re
 - BOTH Agents reply to `hi @Bo` -> the per-Agent `mentioned` flag is not being carried in the fan-out; every Mention now wakes the whole Room and cost scales with membership.
 - The Transcript keeps growing on its own after you stop typing -> a reply loop; an Agent is replying to its own or another Agent's Message. A failing version of this once recorded 4299 messages in two seconds. STOP the app immediately (Ctrl+C in `T-A`) and report it as the highest-severity finding in the area.
 - A reply's `senderName` names an Agent that was not Mentioned -> the gate is passing the wrong flag to the wrong Agent.
-- `hi @delta` in the two-Member Room draws NO reply -> the bot is not receiving the Mention at all; check the `mentioned` field in the envelope printed in `T-G` before blaming the gate.
+- `hi @delta` in the two-Member Room draws NO reply -> the bot is not receiving the Mention at all; check the `mentioned` field in the envelope printed in the `delta` terminal before blaming the gate.
 
 **Inconclusive if**
 
-If neither `hi @delta` nor `hi @Bo` draws a reply, the Agents may be disconnected: check `T-G` for `Server closed the connection.` and the Teammates page for Bo's status before recording anything. Bo's reply repeats the whole prompt, which can quote earlier Messages such as `hi @delta`; if `delta` answers only because its Name appears inside Bo's reply text, say so and record that part as inconclusive rather than as a Reply Gate defect.
+If neither `hi @delta` nor `hi @Bo` draws a reply, the Agents may be disconnected: check the `delta` terminal for `Server closed the connection.` and the Teammates page for Bo's status before recording anything. Bo's reply repeats the whole prompt, which can quote earlier Messages such as `hi @delta`; if `delta` answers only because its Name appears inside Bo's reply text, say so and record that part as inconclusive rather than as a Reply Gate defect.
 
 > [!NOTE]
 > IMPORTANT: `tools/echo-bot.ps1` and the mock Teammates (Ada and Bo) both implement ADR-0004 — the bot mirrors `ReplyGate.Decide` and the mock Teammates go through the real Reply Gate — so in a two-Member Room they reply to every Message, Mentioned or not, and only become Mention-gated once a third Member joins. That is exactly the boundary this test exercises: `hi @delta` works in the two-Member Room (step 5) because `delta` is Mentioned, and it would answer a plain `hi` there too, for the same reason `hi` draws nothing once `Bo` makes it a three-Member Room in step 9. This free test can therefore observe the 'answer everything when memberCount <= 2' rule directly, without needing a real Persona.
@@ -1029,7 +1029,7 @@ If neither `hi @delta` nor `hi @Bo` draws a reply, the Agents may be disconnecte
 2. Click three different Rooms and for each write down the room id, the `<h1>`, the members line, and the first and last message in its Transcript (or 'empty').
 3. If any Room shows a line reading `Paused — N of M agent replies since you last spoke.` or a box reading `Agents have sent N replies since you last spoke, and are paused.`, write down which Room and the numbers.
 4. Press Ctrl+C in `T-A` and wait for the process to exit.
-5. Press Ctrl+C in each of the bot terminals (`T-C`, `T-D`, `T-E`, `T-F` and `T-G`) to stop the pipe bots.
+5. Press Ctrl+C in each of the bot terminals (`T-C`, `T-D`, and the `Emily Lee`, `gamma` and `delta` terminals) to stop the pipe bots.
 6. In `T-A` run the app command of `P-LAUNCH-UAT` again, WITHOUT the seeder line — the seeder would wipe the folder you are trying to prove survives.
 7. Wait for `Now listening on: http://localhost:5100` and for Ada and Bo to go Online, then reload the browser at `http://localhost:5100`.
 8. Read the sidebar top to bottom and compare it to your list.
@@ -1063,48 +1063,51 @@ If Ada or Bo does not return to Online after the restart, its Rooms will still b
 
 **Free** · about 9 min
 
-*Proves the Team dropdown is populated from the Persona library, that filtering is pure display narrowing over already-loaded candidates, and that it never triggers a model probe or a node spawn. This dropdown (inside the Room header's Add teammate panel) is unaffected by the MudBlazor migration — it is still a plain HTML `<select>`, not a `MudSelect`, so no popover needs opening to read its options.*
+*Proves the Team dropdown is populated from the Persona library, that filtering is pure display narrowing over already-loaded candidates, and that it never triggers a model probe or a node spawn. This dropdown (inside the Room header's Add teammate panel) is a `MudSelect` labelled **Team** (`InviteTeammate.razor:35`), so its options are read by opening its popover, and it is only rendered while the Room has at least one candidate.*
 
 **Before you start**
 
-- Stop the app (`P-STOP`) and relaunch it with the app command of `P-LAUNCH-UAT`, WITHOUT the seeder line and with `--Team:Acp:Enabled=true` changed to `--Team:Acp:Enabled=false`. Ada and Bo then show Offline, which is fine here: the test reads the candidate list, not presence. Acp must be off so the `coo` Persona written in step 3 never registers as an Agent.
-- No Persona in `C:\seeds\huddle\uat\data\Teams\` carries a `Teams:` value — Ada, Bo and the Chief of Staff belong to no Team. That is the seeded state.
+- `P-LAUNCH-UAT` is still running on `C:\seeds\huddle\uat\data` (no relaunch). The `coo` Teammate is created in step 3 on the free mock adapter, so it registers as an Agent and costs nothing.
+- No Persona carries a Team — Ada, Bo and the Chief of Staff belong to no Team. That is the seeded state.
+- Run `O-MOCK-ADAPTERS` in `T-B` and write the number down before step 2; it is the number a Team selection must not change.
 
 **Steps**
 
-1. Click any Room, click **Add teammate**, and read the **Team** `<select>`. Confirm its only option is `All teams`. This is the no-Persona baseline.
-2. Open Task Manager (Ctrl+Shift+Esc), go to the Details tab, sort by Name, and write down how many `node.exe` processes are running. If none, write 0.
-3. Create a Persona file. In a terminal run: `New-Item -ItemType Directory -Force 'C:\seeds\huddle\uat\data\Teams'` then create `C:\seeds\huddle\uat\data\Teams\coo.md` containing exactly these six lines: `---` / `Name: coo` / `Title: Chief of Staff` / `Alias: coo` / `Teams: Business` / `---` followed by a seventh line `You are the Chief of Staff.`
-4. Reload the browser (F5) so the Persona library is re-read.
-5. Click any Room and click **Add teammate**.
-6. Open the **Team** `<select>` and read every option.
+1. Click the Room `Ada` (or any Room that still has a candidate), click **Add teammate**, and open the **Team** select. Confirm its only option is `All teams`. This is the no-Persona baseline. Close the popover.
+2. Run `O-MOCK-ADAPTERS` in `T-B` and write the count down.
+3. Create the Teammate through `P-NEW-PERSONA`: **Name** = `coo`, **Title** = `Chief of Staff`, **Alias** = `coo`, **Teams** = `Business`, body = `You are the Chief of Staff.`; leave **Model** and **Effort** at whatever the mock adapter offers (it spends nothing). Wait until the `coo` tile reads Online and a sidebar link reading `coo` appears.
+4. Run `O-MOCK-ADAPTERS` again and write the new count down (one more than step 2). This is the count to hold steady below.
+5. Click the Room `Ada` and click **Add teammate**.
+6. Open the **Team** select and read every option.
 7. Select `Business`.
 8. Read the candidate list.
 9. Select `All teams` again.
 10. Read the candidate list.
-11. Check Task Manager's `node.exe` count again.
+11. Click the `coo` Room, click **Add teammate**, open the **Team** select and select `Business`. Read the panel.
+12. Run `O-MOCK-ADAPTERS` a last time.
 
 **Pass if — all of these**
 
-- Before the `coo` Persona file existed, the **Team** select offered only `All teams`.
-- After the Persona file exists and the page is reloaded, the select offers `All teams` AND `Business`.
-- Selecting `Business` replaces the candidate list with the sentence `No agents in this team.` — because `Ada`, `Bo` and the Chief of Staff belong to no Team, `mybot`, `gamma` and `delta` are raw pipe clients with no Persona and therefore no Teams, and `coo` has never registered as an Agent (Acp is off).
+- Before `coo` existed, the **Team** select offered only `All teams`.
+- After `coo` exists, the select offers `All teams` AND `Business`.
+- In the `Ada` Room, selecting `Business` narrows the candidate list to `coo` alone: `Bo`, the Chief of Staff and the pipe clients `mybot`, `gamma` and `delta` (raw clients with no Persona, therefore no Teams) all disappear.
 - Selecting `All teams` again brings the full candidate list back, unchanged.
-- The `node.exe` count in Task Manager is the SAME before and after changing the select — selecting a Team spawned nothing.
+- In the `coo` Room (where `coo` is already a Member, so no candidate is in `Business`), selecting `Business` shows the sentence `No agents in this team.` (`InviteTeammate.razor:47`) and the **Team** select stays on screen.
+- The `O-MOCK-ADAPTERS` count in step 12 equals step 4 — selecting a Team spawned nothing.
 
 **Fail if — any of these**
 
-- Selecting `Business` blanks the whole panel with no sentence, or throws an `An unhandled error has occurred.` bar -> the filter is not degrading to the empty-state message and reads as a broken panel.
-- `Ada` or any other Agent without that Team (a raw pipe client, say) is still listed under `Business` -> the Persona-to-Agent match by Name is broken, so the filter is meaningless and a user would invite the wrong teammate.
-- The `node.exe` count rises when you change the select -> the filter is reaching the Persona start path; it must be pure display narrowing over already-loaded candidates, and a spawn here means selecting a dropdown can cost money.
-- `Business` never appears in the dropdown after the reload -> the Persona library is not being re-read, or the `Teams:` frontmatter field is not being parsed.
+- Selecting `Business` in the `coo` Room blanks the whole panel with no sentence, or throws an `An unhandled error has occurred.` bar -> the filter is not degrading to the empty-state message and reads as a broken panel.
+- `Bo` or any other Agent without that Team (a raw pipe client, say) is still listed under `Business` -> the Persona-to-Agent match by Name is broken, so the filter is meaningless and a user would invite the wrong teammate.
+- The `O-MOCK-ADAPTERS` count rises when you change the select -> the filter is reaching the Persona start path; it must be pure display narrowing over already-loaded candidates, and a spawn here means selecting a dropdown can cost money.
+- `Business` never appears in the dropdown after `coo` was created -> the Persona library did not pick the new Teammate up, or the **Teams** field was not saved.
 
 **Inconclusive if**
 
-If `Business` does not appear, first confirm the file is at exactly `C:\seeds\huddle\uat\data\Teams\coo.md` with the `---` fences on their own lines and no BOM, and that you reloaded the page. If it still does not appear, the test is inconclusive on file discovery — say so and do not judge the filter. To see a real Persona actually MATCH a Team you would need `Team:Acp:Enabled=true` so `coo` registers as an Agent; that path is covered by INVITEROOMS-26 and 27.
+If `coo` does not reach Online, or `Business` does not appear, check the `coo` card for its reason text and `Files that didn't load` on the Teammates page; if the Teammate never registered, the test cannot judge the filter — say so. Do not write the file by hand to work around it: that skips the stored Model and Effort rows (`P-NEW-PERSONA`).
 
 > [!NOTE]
-> An Agent with no Persona behind it has no Teams and therefore vanishes under any real Team filter, reachable only under `All teams`. That is DOCUMENTED behaviour, not a defect. Delete `C:\seeds\huddle\uat\data\Teams\coo.md` afterwards (it is mandatory before INVITEROOMS-32 onward, which relaunch the same folder with Acp on) to return to the baseline.
+> An Agent with no Persona behind it has no Teams and therefore vanishes under any real Team filter, reachable only under `All teams`. That behaviour is by design, not a defect; it is not recorded in known-limits.md. Afterwards open the `coo` card on **Teammates**, click its Remove icon (`aria-label="Remove"`, `TeammateCard.razor:220`) and then **Confirm**, so INVITEROOMS-32 onward start without it. Its Direct Room may remain in the sidebar; leave it.
 
 ### INVITEROOMS-26 — /invite accepts a Persona's Alias wherever it accepts its Name
 
@@ -1116,12 +1119,13 @@ If `Business` does not appear, first confirm the file is at exactly `C:\seeds\hu
 
 - `node` must be on PATH — run `node --version` and confirm it answers. Without it no Persona can start and this test cannot run.
 - This test requires `Team:Acp:Enabled=true` with the REAL adapter, which spawns one `node` adapter per Persona. Starting a Persona opens a session and never prompts a model, so NO tokens are spent — but it is heavier setup than every test above.
-- INVITEROOMS-26 to 31 leave the UAT data folder: a Haiku Persona needs the real adapter rather than the mock one, so they run on the default data folder (`src\Huddle.App\App_Data`), and Ada and Bo are not present there. Pipe bots stand in as the other Members. Start `pwsh tools/echo-bot.ps1 -Name mybot` in `T-C` and `pwsh tools/echo-bot.ps1 -Name gamma` in `T-F` once the app is up, and wait for a sidebar link for each.
+- INVITEROOMS-26 to 31 leave the UAT data folder: a Haiku Persona needs the real adapter rather than the mock one, so they run on the default data folder (`src\Huddle.App\App_Data`), and Ada and Bo are not present there. Pipe bots stand in as the other Members. Start `pwsh tools/echo-bot.ps1 -Name mybot` in `T-C` and `pwsh tools/echo-bot.ps1 -Name gamma` in the `gamma` terminal once the app is up, and wait for a sidebar link for each.
+- COST: the default data folder also holds the built-in Chief of Staff, which has no stored Model, and with ACP on and an empty Direct Room it takes a Greeting Turn that is paid on the real adapter (`PersonaRunner.cs:481-495`). Before relaunching in step 2, make it cheap as `P-LAUNCH-PAID` describes (Edit on its card, Model Haiku, Effort `low`, Save), or accept one short unplanned Turn.
 
 **Steps**
 
-1. Press Ctrl+C in `T-A`, and in `T-C` and `T-F` and every other bot terminal still running.
-2. In `T-A` run `$env:Team__Acp__Enabled = 'true'` then `dotnet run --project src/Huddle.App --urls http://localhost:5100` (no `--Team:DataDir`, so the default data folder is used). Then start `mybot` in `T-C` and `gamma` in `T-F` as the precondition says.
+1. Press Ctrl+C in `T-A`, and in `T-C`, the `gamma` terminal and every other bot terminal still running.
+2. In `T-A` run `$env:Team__Acp__Enabled = 'true'` then `dotnet run --project src/Huddle.App --urls http://localhost:5100` (no `--Team:DataDir`, so the default data folder is used). Then start `mybot` in `T-C` and `gamma` in the `gamma` terminal as the precondition says.
 3. Reload the browser and click **Teammates** in the sidebar.
 4. Click **New teammate**.
 5. In the card, fill **Name** with exactly `Jarvis`.
@@ -1145,7 +1149,7 @@ If `Business` does not appear, first confirm the file is at exactly `C:\seeds\hu
 
 **Pass if — all of these**
 
-- Both commands produce a BLUE/info line, not a red one.
+- Both commands produce a GREEN info line (class `composer-info`), not a red one.
 - The Room name in BOTH cases resolves to the owning Name: the `<h1>` and the sidebar link end in `Jarvis`, never `jar` and never `JAR`.
 - The info line's first half repeats the handle you typed (`Invited jar. …` and `Invited JAR. …`) while its second half quotes the real Room name containing `Jarvis`. BOTH halves must be as described — repeating your typed handle is correct and is not a defect.
 - `T-A` printed `Invited agent 'Jarvis' (<id>) into room '<roomId>'.` — naming `Jarvis`, not the alias — for each of the two invites.
@@ -1164,7 +1168,7 @@ If `Business` does not appear, first confirm the file is at exactly `C:\seeds\hu
 If `node --version` fails, or the `Jarvis` tile stays Offline with a reason in the Room's member-health strip, the Persona never registered and this test cannot be judged — report it inconclusive with the reason text from the tile. A HAND-WRITTEN Persona file is NOT enough for this test: an Alias resolves against the Team Directory, which only has a row once the Persona has actually registered.
 
 > [!NOTE]
-> No model turn is taken here — creating and starting a Persona opens a session and never prompts — so this test spends no tokens despite needing Acp enabled. Keep `Jarvis` running: INVITEROOMS-27 through 31 all use it.
+> No model turn is taken for `Jarvis` here — creating and starting a Persona opens a session and never prompts — so the test itself spends no tokens despite needing Acp enabled; only the Chief of Staff's Greeting Turn (see the COST line above) can. Keep `Jarvis` running: INVITEROOMS-27 through 31 all use it.
 
 ### INVITEROOMS-27 — The Teammate card's Message action disappears once that Persona's Direct Room has been invited into
 
@@ -1205,7 +1209,7 @@ If `node --version` fails, or the `Jarvis` tile stays Offline with a reason in t
 
 **Inconclusive if**
 
-If `Jarvis`'s sidebar entry already contained a comma before you started, its Direct Room was already converted and the 'before' half cannot be observed. Restart `Jarvis` (click **Restart** on its card once it reads Offline or Degraded, or edit and save its file) to mint a fresh Direct Room, then start the test over. If the tile shows no actions at all, the card may not have finished loading — reopen it once before judging.
+If `Jarvis`'s sidebar entry already contained a comma before you started, its Direct Room was already converted and the 'before' half cannot be observed. Restart `Jarvis` (click **Restart** on its card, which is offered in every state except Starting, `TeammateCard.razor:182-185`, or edit and save its file) to mint a fresh Direct Room, then start the test over. If the tile shows no actions at all, the card may not have finished loading — reopen it once before judging.
 
 > [!NOTE]
 > The disappearance is the DESIGNED consequence of membership-defined Direct Rooms and the source comment says the action is 'absent rather than broken'. A tester is quite likely to file this as a bug. Do NOT. Restarting the Persona brings the link back, pointing at a newly minted Direct Room — optionally confirm that as a bonus observation.
@@ -1260,7 +1264,7 @@ If `Jarvis`'s sidebar entry already contained a comma before you started, its Di
 If `Jarvis` simply answers in prose without calling any tool, that is a model-behaviour outcome, not a product failure — retry ONCE with a more explicit prompt (`@Jarvis use your create_room tool to make a room with Friday`). If it still does not call the tool after two attempts, report INCONCLUSIVE and say how many Turns were spent. Do not spend more than four Turns on this test. If a budget pause box appears reading `Agents have sent N replies since you last spoke, and are paused.`, that is the cap working — read the Transcript, then click **Continue** only if you still need more Turns and are willing to spend them.
 
 > [!NOTE]
-> `seed` shipped with roadmap item 8: `create_room` now takes an optional `seed` argument, the opening Message posted into the new Room as part of creating it (see APPTOOLS-26). A Room created WITHOUT `seed` still legitimately arrives with no opening Message — that half of ADR-0005's original gap stands, because `seed` is optional and nothing forces a caller to pass it. But a `create_room` call that DID pass `seed` and produced a Room with no opening Message is no longer a documented gap — it is a `create_room` defect: the seed post silently failed. Tell the two apart by what the model actually passed: if step 8's call named no `seed` argument, an empty Room is correct; if it did, check Nova's exact reply text for `Created room '<name>' (id <id>), but could not post the seed message: <reason>`, which is the tool's own report of that failure. An Agent naming ONLY itself gets its own existing Direct Room id back and no new Room appears — also correct, and unaffected by `seed`.
+> `seed` shipped with roadmap item 8: `create_room` now takes an optional `seed` argument, the opening Message posted into the new Room as part of creating it (see APPTOOLS-26). A Room created WITHOUT `seed` still legitimately arrives with no opening Message — that half of ADR-0005's original gap stands, because `seed` is optional and nothing forces a caller to pass it. But a `create_room` call that DID pass `seed` and produced a Room with no opening Message is no longer a documented gap — it is a `create_room` defect: the seed post silently failed. Tell the two apart by what the model actually passed: if step 8's call named no `seed` argument, an empty Room is correct; if it did, check Jarvis's exact reply text for `Created room '<name>' (id <id>), but could not post the seed message: <reason>`, which is the tool's own report of that failure. An Agent naming ONLY itself gets its own existing Direct Room id back and no new Room appears — also correct, and unaffected by `seed`.
 
 ### INVITEROOMS-29 — An Agent invites another with mcp__team__invite_agent, using the room id from its own [Room: …] label
 
@@ -1271,7 +1275,7 @@ If `Jarvis` simply answers in prose without calling any tool, that is a model-be
 **Before you start**
 
 - INVITEROOMS-28 passed: `Team:Acp:Enabled=true`, `Team:AgentMessageBudget=6`, and `Jarvis` and `Friday` are both online (Haiku / low).
-- A Room with three or more Members that `Friday` is NOT in. Create one via New chat ticking `Jarvis`, `mybot` and `gamma` (pipe bots from `T-C` and `T-F`) if you do not have one.
+- A Room with three or more Members that `Friday` is NOT in. Create one via New chat ticking `Jarvis`, `mybot` and `gamma` (pipe bots from `T-C` and the `gamma` terminal) if you do not have one.
 - COST: roughly two to four short Haiku Turns.
 
 **Steps**
@@ -1425,7 +1429,7 @@ If no Agent-created Room exists (INVITEROOMS-28 was inconclusive), this test has
 
 **Pass if — all of these**
 
-- Step 6 shows a GREEN/info line reading exactly `Invited scratch15. Room is now "<Room A's current name>, scratch15".`, where Room A's current name begins `mybot, Bo`.
+- Step 6 shows a GREEN info line (class `composer-info`) reading exactly `Invited scratch15. Room is now "<Room A's current name>, scratch15".`, where Room A's current name begins `mybot, Bo`.
 - On arriving in Room B (steps 7-9), NOTHING is shown above the composer — no leftover green line from Room A, and no `composer-info`/`composer-error` element anywhere in the DOM.
 - Step 12 shows a RED line reading exactly `Unknown agent @nobody` — Room B's own error, not Room A's leftover confirmation.
 - Returning to Room A (step 13) shows nothing above its composer — Room A's own confirmation is gone, cleared by the Room switch that carried it away from Room B, not merely by the next Send.
@@ -1438,7 +1442,7 @@ If no Agent-created Room exists (INVITEROOMS-28 was inconclusive), this test has
 
 **Inconclusive if**
 
-If `scratch15` fails to register within 5 seconds, read `T-D` for a `protocolError` and fix that before judging — do not substitute an Agent already offered in Room A, since a failed invite (already-a-Member) produces the SAME wording either way and would not prove the state actually reset. If `pwsh` is not recognised, use `powershell.exe -File tools\echo-bot.ps1 -Name scratch15` and note the substitution in your report.
+If `scratch15` fails to register within 5 seconds, read `T-D` for a line containing `"type":"error"` and fix that before judging — do not substitute an Agent already offered in Room A, since a failed invite (already-a-Member) produces the SAME wording either way and would not prove the state actually reset. If `pwsh` is not recognised, use `powershell.exe -File tools\echo-bot.ps1 -Name scratch15` and note the substitution in your report.
 
 > [!NOTE]
 > This test and INVITEROOMS-14 are two halves of one bug report: the same stale Room-switch failure, on two different components that both render around the composer.
@@ -1508,7 +1512,7 @@ If `scratch15` fails to register within 5 seconds, read `T-D` for a `protocolErr
 3. Right-click the row.
 4. Click **Archive**.
 5. Watch the sidebar for up to 3 seconds WITHOUT reloading.
-6. Click the **Archived chats** button, directly above the Settings button at the bottom-left.
+6. Click the **Archived chats** icon (`aria-label="Archived chats"`, `ArchivedChats.razor:14`), directly above the Settings button at the bottom-left.
 
 **Pass if — all of these**
 
@@ -1566,24 +1570,24 @@ If the app was started on a freshly seeded folder and only one Room is visible, 
 
 **Before you start**
 
-- A Room with at least two Messages in it, whose room id you have written down (call it DOOMED).
-- A file explorer or terminal open at `C:\seeds\huddle\uat\data\rooms\`.
+- A Room with at least two Messages in it, whose room id you have written down (call it DOOMED). Do not use the `Bo` Room: INVITEROOMS-38 needs it.
+- A file explorer or terminal open at `<data>\rooms\`.
 
 **Steps**
 
-1. Confirm `C:\seeds\huddle\uat\data\rooms\DOOMED.jsonl` exists and is non-empty.
+1. Confirm `<data>\rooms\DOOMED.jsonl` exists and is non-empty.
 2. Right-click the Room's sidebar row and click **Delete**.
 3. Read the row WITHOUT clicking anything else.
 4. Click **Cancel**.
 5. Right-click the row, click **Delete** again, then click **Confirm**.
-6. Look at `C:\seeds\huddle\uat\data\rooms\` again.
+6. Look at `<data>\rooms\` again.
 
 **Pass if — all of these**
 
 - Step 3 shows the row swapped in place to `Delete "<name>"? [Confirm] [Cancel]`, naming the Room. No dialog opens, and no browser `confirm()` box appears.
 - Cancel restores the row unchanged and the Room is still in the sidebar.
 - After Confirm the Room leaves the sidebar without a reload.
-- `DOOMED.jsonl` is GONE from `C:\seeds\huddle\uat\data\rooms\`.
+- `DOOMED.jsonl` is GONE from `<data>\rooms\`.
 - Optional DB check: `SELECT COUNT(*) FROM rooms WHERE id='DOOMED'` and `SELECT COUNT(*) FROM room_members WHERE room_id='DOOMED'` both return 0.
 
 **Fail if — any of these**
@@ -1613,7 +1617,7 @@ If `Team:DataDir` has been pointed somewhere else, look there instead — do not
 2. Right-click ITS row and Archive it.
 3. Read the address bar and the `<h1>`.
 4. Click a different Room, then click back. Confirm nothing ejects you while simply switching.
-5. Archive every remaining Room one at a time.
+5. Archive every remaining Room one at a time. This includes the `Bo` Room and the Chief of Staff's Room; INVITEROOMS-38 starts by unarchiving `Bo`.
 6. Read the address bar and the page.
 
 **Pass if — all of these**
@@ -1638,30 +1642,34 @@ If `Team:DataDir` has been pointed somewhere else, look there instead — do not
 
 **Before you start**
 
-- Bo's own two-Member Room (`Bo`), which nothing earlier has touched — Ada's Room was converted by INVITEROOMS-33. Open it and send `hi`; wait for Bo's reply so it holds at least one Message. If it was archived or deleted by an earlier test, re-run the seeder line of `P-LAUNCH-UAT` and relaunch.
+- Bo's own two-Member Room (`Bo`), which nothing before INVITEROOMS-37 has touched; INVITEROOMS-37 step 5 archived it along with every other Room, so it now sits under **Archived chats**. Do NOT re-run the seeder line to get it back: that wipes the archived and deleted Rooms INVITEROOMS-39 needs. Instead open **Archived chats** and click **Unarchive** beside `Bo`, then open it. If you have not run INVITEROOMS-37 it is simply in the sidebar.
+- The `Bo` Room holds at least one Message. If it is empty, send `hi` and wait for Bo's reply.
 
 **Steps**
 
 1. Archive the `Bo` Room. Write its room id down (call it OLD).
-2. Start a new chat with `Bo` (New chat, tick `Bo`, Start chat) — or open its Teammate card and use Message.
-3. Read the new Room's id, `<h1>` and Transcript.
-4. Open **Archived chats** and Unarchive OLD.
-5. Read the sidebar.
+2. Open **Teammates**, click the `Bo` tile, and read its actions. Close the card.
+3. Start a new chat with `Bo` (New chat, tick `Bo`, Start chat).
+4. Read the new Room's id, `<h1>` and Transcript.
+5. Open **Archived chats** and Unarchive OLD.
+6. Read the sidebar.
 
 **Pass if — all of these**
 
-- Step 2 creates a NEW Room with a new id. Its Transcript is EMPTY and its `<h1>` reads `Bo`.
-- OLD is not resurrected by step 2 and stays archived until step 4.
-- After step 4 the sidebar shows TWO entries both reading `Bo`, the older one holding the original Messages.
+- Step 2: the card shows **Edit** and **Open** but NO **Message** action, because the Message link resolves through the exact-two-Member lookup, which excludes archived Rooms (`Teammates.razor:328`; `SqliteTeamDirectory.cs:393`).
+- Step 3 creates a NEW Room with a new id. Its Transcript is EMPTY and its `<h1>` reads `Bo`.
+- OLD is not resurrected by step 3 and stays archived until step 5.
+- After step 5 the sidebar shows TWO entries both reading `Bo`, the older one holding the original Messages.
 
 **Fail if — any of these**
 
-- Step 2 unarchives and reopens OLD -> `FindRoomWithExactMembersAsync` is not excluding archived Rooms; this is the behaviour that was explicitly NOT chosen.
-- Step 2 opens OLD while leaving it archived -> you are posting into a Room that is not in the sidebar and cannot be found again.
+- Step 2 shows **Message** -> the card still finds the archived Room, so its link would open a Room that is not in the sidebar.
+- Step 3 unarchives and reopens OLD -> `FindRoomWithExactMembersAsync` is not excluding archived Rooms; this is the behaviour that was explicitly NOT chosen.
+- Step 3 opens OLD while leaving it archived -> you are posting into a Room that is not in the sidebar and cannot be found again.
 - No new Room appears at all -> the lookup matched the archived Room and returned it, and `Bo` now has no reachable Direct Room.
 
 > [!NOTE]
-> TWO sidebar entries reading `Bo` after step 4 is the DESIGNED outcome, recorded in [Known limits](../known-limits.md) and [ADR-0018](../../adr/0018-a-room-can-be-archived-or-deleted.md). Do NOT file it as a duplicate-Room bug. This is a *different* route to two same-named Rooms than INVITEROOMS-21's, which comes from re-registration.
+> TWO sidebar entries reading `Bo` after step 5 is the DESIGNED outcome, recorded in [Known limits](../known-limits.md) and [ADR-0018](../../adr/0018-a-room-can-be-archived-or-deleted.md). Do NOT file it as a duplicate-Room bug. This is a *different* route to two same-named Rooms than INVITEROOMS-21's, which comes from re-registration.
 
 ### INVITEROOMS-39 — Archived and deleted Rooms survive a restart
 

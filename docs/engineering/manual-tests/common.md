@@ -19,7 +19,10 @@ Areas used to name these four different ways. One naming, everywhere:
 | **T-B** | Oracle window — processes, files, database, `curl.exe`. Never start the app from it. |
 | **T-C**, **T-D**, … | One per external bot a test connects. The test says which name each carries. |
 
-All are PowerShell 7 (`pwsh`) opened at `E:\Repos\Huddle`. A `$env:` variable set
+`<repo>` is the clone root, the folder that holds `Huddle.slnx` (on this machine
+`E:\Repos\Huddle2`). Every path in the manual tests is written `<repo>\…`.
+
+All are PowerShell 7 (`pwsh`) opened at `<repo>`. A `$env:` variable set
 in one window is invisible to the others and gone when it closes — set it in the
 window you will launch from, and re-set it after reopening.
 
@@ -33,7 +36,7 @@ What a test's **Before you start** means by each name.
 | **E-FREE** | App running, adapters off at rest — started by `P-LAUNCH-FREE`. A picker probe can still start one short-lived Adapter (`O-ADAPTERS`). Spends nothing. |
 | **E-PAID** | App running, adapters on with budget caps — started by `P-LAUNCH-PAID`. 💰 |
 | **E-STOPPED** | No app running; nothing answers on `http://localhost:5100`. |
-| **E-FRESH** | `E-STOPPED` plus `P-RESET-ALL` since, so `App_Data` is what a first run creates. |
+| **E-FRESH** | `E-STOPPED` plus `P-RESET-ALL` since, so `<data>` is what a first run creates. |
 
 ## Procedures
 
@@ -66,6 +69,17 @@ carry the variable, is `dotnet run --project src/Huddle.App -- --Team:Acp:Enable
 The paid lane. Only for tests marked 💰, and read
 [§0.2](../manual-tests.md#02-the-cost-guard) and
 [§0.3](../manual-tests.md#03-the-model-and-effort-convention) first.
+
+First, make the built-in Chief of Staff cheap. It is seeded at every start, has no
+stored Model (the account default), and with ACP on and an empty direct Room it takes
+a Greeting Turn, which is paid
+(`PersonaRunner.cs:481-495`, `BuiltinTeammateSeeder.cs`):
+
+1. Launch with `P-LAUNCH-FREE` and open **Teammates** in the sidebar.
+2. On the **Chief of Staff** card choose **Edit** (`TeammateCard.razor:165`), set **Model** to
+   Haiku and **Effort** to `low`, then **Save** (`TeammateCard.razor:561`).
+3. `P-STOP`.
+4. Launch paid, below.
 
 ```powershell
 Remove-Item Env:ANTHROPIC_API_KEY -ErrorAction SilentlyContinue   # clears an inherited key; no test sets one
@@ -131,19 +145,21 @@ that is known, not a finding.
 Changing any `Team__*` variable requires `P-STOP` and a relaunch. It is read at
 startup only.
 
-### The four resets
+### The five resets
 
 These are **not interchangeable**. Each says exactly what it destroys; a test
-names the one it means.
+names the one it means. `<data>` is the data folder of the lane in use — see
+[The data directory](#the-data-directory).
 
 | Id | Do | Destroys | Keeps |
 | --- | --- | --- | --- |
-| **P-RESET-ALL** | `P-STOP`, then `Remove-Item -Recurse -Force src\Huddle.App\App_Data` | Everything — Rooms, Transcripts, Personas, settings | Nothing |
-| **P-RESET-ROOMS** | `P-STOP`, then delete `App_Data\rooms` and `App_Data\team.db`, `team.db-wal`, `team.db-shm` | Rooms, Member lists, Transcripts | Personas, settings |
-| **P-RESET-TEAMS** | `P-STOP`, then delete every `.md` under `App_Data\Teams`, sub-folders included | The Persona library | `team.db`, Rooms, settings |
-| **P-RESET-SETTINGS** | `P-STOP`, then delete `App_Data\prompts.json` and `App_Data\appearance.json` if present | Prompt and Theme overrides | Everything else |
+| **P-RESET-ALL** | `P-STOP`, then `Remove-Item -Recurse -Force <data>` | Everything — Rooms, Transcripts, Personas, Teams, settings | Nothing |
+| **P-RESET-ROOMS** | `P-STOP`, then delete `<data>\rooms` and `<data>\team.db`, `team.db-wal`, `team.db-shm` | Rooms, Member lists, Transcripts | Personas, Teams, settings |
+| **P-RESET-TEAMS** | `P-STOP`, then delete every folder under `<data>\Teammates` | Every Persona and its Work Dir. The Chief of Staff is re-seeded at the next start | `team.db`, Rooms, Teams, settings |
+| **P-RESET-TEAM-FOLDERS** | `P-STOP`, then delete `<data>\Teams` | Team folders, their notes and Tasks | Personas, `team.db`, Rooms, settings |
+| **P-RESET-SETTINGS** | `P-STOP`, then delete `<data>\prompts.json` and `<data>\appearance.json` if present | Prompt and Theme overrides | Everything else |
 
-Relaunch with the lane the test names. `App_Data` is gitignored, so nothing you
+Relaunch with the lane the test names. The data folder is gitignored, so nothing you
 delete here is recoverable from the repository — take the
 [§0.4](../manual-tests.md#04-rollback) copy first.
 
@@ -156,9 +172,10 @@ Always through the UI, never by writing the file: **Teammates** in the sidebar �
 test says otherwise), one sentence in **Persona body**, choose **Model** and
 **Effort**, then the card's **Add teammate** submit button.
 
-Writing `App_Data\Teams\<Name>.md` by hand skips the `team.db` rows that store
-Model and Effort, so the Teammate runs on the account default — which may be far
-more expensive than Haiku. Leaving **Model** on `Use the agent's default` does the
+Writing `<data>\Teammates\<Name>\<Name>.md` by hand (the definition must sit in the
+Teammate's own folder; a `.md` at the `Teammates` root is rejected) still skips the
+`team.db` rows that store Model and Effort, so the Teammate runs on the account
+default — which may be far more expensive than Haiku. Leaving **Model** on `Use the agent's default` does the
 same thing and is not equivalent to choosing Haiku.
 
 A file that fails to load appears on `/teammates` under **Files that didn't load**
@@ -171,8 +188,9 @@ the repo root (keep the quotes for a Name containing a space). It prints every
 envelope it receives verbatim, one JSON line each — that console is `O-WIRE`.
 Ctrl+C disconnects it; re-running re-registers it.
 
-It replies **only** when the envelope says `"mentioned":true`, and it never
-streams. Names allow letters, digits, `_`, `-` and single interior spaces, up to
+It replies when the Room has two or fewer Members **or** the envelope says
+`"mentioned":true` (`tools/echo-bot.ps1:78`), and it never streams. Its console
+is the only `O-WIRE`. Names allow letters, digits, `_`, `-` and single interior spaces, up to
 64 characters; a leading, trailing or doubled space is refused with
 `"code":"invalidName"` and no Room appears.
 
@@ -192,7 +210,9 @@ oracle in several tests.
 ### O-ADAPTERS
 
 Counts **Adapter** processes, not every `node.exe` — a developer machine normally
-has a dozen unrelated ones, so a bare `Get-Process node` is not a valid count.
+has a dozen unrelated ones, so a bare `Get-Process node` is not a valid count. It
+counts `node.exe` processes running `claude-agent-acp` only; the free mock adapter
+(`mock-acp`, `P-LAUNCH-UAT`) is invisible to it and is counted by `O-MOCK-ADAPTERS`.
 
 ```powershell
 Get-CimInstance Win32_Process -Filter "Name='node.exe'" |
@@ -229,7 +249,7 @@ tell which Adapter belongs to which Teammate.
 
 ### O-TRANSCRIPT
 
-`App_Data\rooms\{RoomId}.jsonl` — one JSON Message per line, appended only when a
+`<data>\rooms\{RoomId}.jsonl` — one JSON Message per line, appended only when a
 Message is **accepted**. A refused Message is absent from it, which makes this the
 definitive "did it persist" oracle. `{RoomId}` is the 32 hex characters after
 `/rooms/` in the address bar.
@@ -239,7 +259,7 @@ absence on a fresh install is normal.
 
 ### O-DB
 
-`App_Data\team.db` — SQLite, tables `users(id,name,kind)`, `rooms(id,name,created)`,
+`<data>\team.db` — SQLite, tables `users(id,name,kind)`, `rooms(id,name,created)`,
 `room_members(room_id,user_id)`, `persona_models`, `persona_efforts`. It is in WAL
 mode, so it reads fine while the app runs.
 
@@ -260,22 +280,62 @@ No envelope at all means the Agent is not a Member or is not connected. An envel
 with `"mentioned":false` means it **is** a Member and the parser decided against it.
 Those are different diagnoses.
 
+`O-WIRE` is the echo-bot console only. It never sees an in-process Teammate, so it
+cannot observe a Persona's prompt or tool calls; use `O-TOOLCALLS` or the mock
+adapter's echo for those (see [Never set TraceWire](#standing-conventions)).
+
+### O-TOOLCALLS
+
+`<data>\logs\tool-calls\<Name>\<yyyy-MM-dd>.jsonl` — one JSON line per tool call a
+Persona made, one file per UTC day (`<Name>` has characters invalid in a file name
+replaced by `_`). Read the newest line:
+
+```powershell
+Get-Content "<data>\logs\tool-calls\<Name>\$((Get-Date).ToUniversalTime().ToString('yyyy-MM-dd')).jsonl" -Tail 1
+```
+
+Fields, camelCase: `time` (UTC, ISO-8601 with a `Z`), `room`, `task` (`null` when
+unknown), `tool`, `arguments` (a summary, cut to 200 characters with a trailing
+ellipsis), `status`, `durationMs`
+(`src/Huddle.App/Services/ToolCallLogWriter.cs:179`, `:39`, `:73-75`). The folder does not exist until the
+Persona's first tool call.
+
+### O-FILE
+
+Open the named file in an editor and read it. Used where a test must confirm what is
+stored on disk (a Persona's frontmatter, a file a Candidate produced) and the
+database has no row for it.
+
+### O-MOCK-ADAPTERS
+
+Counts the free mock adapter processes started by `P-LAUNCH-UAT`:
+
+```powershell
+Get-Process mock-acp -ErrorAction SilentlyContinue | Measure-Object | Select-Object -ExpandProperty Count
+```
+
+It prints `0` when none is running. `O-ADAPTERS` never counts these.
+
 ## The data directory
 
-`E:\Repos\Huddle\src\Huddle.App\App_Data` — note `src\Huddle.App\`, never the repo
-root. `Team:DataDir` defaults to the relative path `App_Data`, resolved against the
-process working directory, and `dotnet run --project src/Huddle.App` sets that to
-the project folder.
+`<data>` is `<repo>\src\Huddle.App\App_Data` on the free and paid lanes — note
+`src\Huddle.App\`, never the repo root. `Team:DataDir` defaults to the relative path
+`App_Data`, resolved against the process working directory, and
+`dotnet run --project src/Huddle.App` sets that to the project folder. Under
+`P-LAUNCH-UAT` the data folder is `C:\seeds\huddle\uat\data`, and that is `<data>`.
 
 | Path | Holds |
 | --- | --- |
-| `Teams\` | The Persona library, `.md` files, scanned recursively |
-| `work\<Persona>\` | That Persona's Work Dir |
+| `Teammates\<Name>\<Name>.md` | One Persona's definition. Nothing else but `work\` may sit in the folder |
+| `Teammates\<Name>\work\` | That Persona's Work Dir |
+| `Teams\` | Team folders, their notes and Tasks (`Teams\<Team>\[<Project>\]_tasks\[_closed]`) — never Personas |
+| `views.json` | Saved Task Views — **absent until first save** |
 | `rooms\<RoomId>.jsonl` | One Room's Transcript |
 | `team.db` (+ `-wal`, `-shm`) | The directory database |
+| `logs\tool-calls\<Name>\<yyyy-MM-dd>.jsonl` | One Persona's tool-call log, one file per UTC day |
 | `prompts.json`, `appearance.json` | Settings overrides — **absent until first save**, which is correct |
 
-If the folder is not there, `Get-ChildItem -Recurse -Filter team.db E:\Repos\Huddle`
+If the folder is not there, `Get-ChildItem -Recurse -Filter team.db <repo>`
 finds where `Team:DataDir` actually resolved.
 
 ## Standing conventions
@@ -286,24 +346,27 @@ finds where `Team:DataDir` actually resolved.
 - **Never set `TEAM_E2E`.** It gates eight money-spending tests in
   `tests/Huddle.Acp.Tests` and has nothing to do with the app.
 - **Never set `Team__Acp__TraceWire`.** It prints the tool server's bearer token
-  into `O-LOG`.
+  into `O-LOG`. It stays forbidden; use the oracle that replaces what you wanted
+  from it: tool calls and the file-changes block through `O-TOOLCALLS`; the prompt
+  text a Persona received through the mock adapter's echo under `P-LAUNCH-UAT`
+  (the reply is the whole prompt); a Persona's stored definition through `O-FILE`.
 - **Clear every variable a test set** before the next one, or it inherits and
   reports a false result. `Get-ChildItem Env:Team__*` lists what is set.
 - **"Add teammate" is two different buttons.** The invite toggle in a Room header
   and the submit button of the Create card on `/teammates`. Both are `MudButton`s
   now, so neither carries a distinguishing class of its own — disambiguate by
   **page**, or by container (`.invite-teammate` wraps the Room-header one), never by
-  text alone. Note MudBlazor renders button labels upper-case, so both read
-  "ADD TEAMMATE".
-- **Four controls are icon buttons with no visible text.** **New teammate** on
-  `/teammates` (`PersonAddAlt1`), **Remove** on the Teammate card (`PersonRemove`),
-  **Stop** on a streaming Draft (`StopCircle`) and **Settings** in the drawer
-  (`Settings`, pinned to the bottom). Each carries a `MudTooltip` and an
-  `aria-label` spelling the name this script uses, so **find them by
+  text alone. Buttons are not upper-cased in this app, so both read "Add teammate".
+- **Four controls are icon buttons with no visible text.** **Remove** on the
+  Teammate card (`PersonRemove`), **Stop** on a streaming Draft (`StopCircle`),
+  **Settings** in the drawer (`Settings`, pinned to the bottom) and **Archived chats**
+  in the drawer (`Archive`, directly above Settings). Each carries a `MudTooltip` and
+  an `aria-label` spelling the name this script uses, so **find them by
   `aria-label`, never by button text** — in DevTools,
   `document.querySelector('[aria-label="Stop"]')`. Steps written before this change
-  still name them in words; that is the same control. **Teammates** in the drawer
-  and both **Add teammate** buttons still show their text.
+  still name them in words; that is the same control. **New teammate** on
+  `/teammates` is a text button (first in the toolbar), and **Teammates** in the
+  drawer and both **Add teammate** buttons also show their text.
 - **A Room can be renamed, and a renamed Room stops auto-renaming.** The Edit icon
   beside a Room's title puts it into edit mode; Enter or blur commits, Escape
   cancels. Until somebody renames it, a Room is still named after its Agent Members

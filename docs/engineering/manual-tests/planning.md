@@ -1,6 +1,7 @@
 # Manual test script — planning
 
-Which of the 493 tests to run, what each area covers, and which ones spend money.
+Which tests to run, what each area covers, and which ones spend money. Counts and hours per area
+come from each area's header; `pwsh agents/scripts/Check-ManualTests.ps1 -Summary` prints the totals.
 Read this to **choose** a run. You do not need it while executing one: the rules
 that bind a run live in [the script](../manual-tests.md), which is the page to
 have open instead.
@@ -19,52 +20,77 @@ is done. Within an area, tests run top to bottom — free tests first, paid test
 
 | # | Area | Tests | 💰 | Est. |
 | --- | --- | --- | --- | --- |
-| 1 | [Application shell, navigation and layout](shell-nav.md) | 29 | — | 2.9h |
-| 2 | [Startup, configuration and first-run state](startup-config.md) | 34 | 2 | 3.9h |
-| 3 | [Room view, posting Messages and Transcript rendering](room-messaging.md) | 32 | 1 | 3.5h |
-| 4 | [Turn streaming, Drafts, Stop and failure surfacing](streaming-turn.md) | 30 | 8 | 4.4h |
+| 1 | [Application shell, navigation and layout](shell-nav.md) | 28 | — | 2.7h |
+| 2 | [Startup, configuration and first-run state](startup-config.md) | 27 | 4 | 3.1h |
+| 3 | [Room view, posting Messages and Transcript rendering](room-messaging.md) | 29 | 1 | 3.3h |
+| 4 | [Turn streaming, Drafts, Stop and failure surfacing](streaming-turn.md) | 30 | 10 | 4.5h |
 | 5 | [Reply Gate, Mentions and Room Budget](reply-gate-budget.md) | 36 | 6 | 5.9h |
-| 6 | [Teammates page: tiles, Teams grouping, filter and rejected files](teammates-library.md) | 40 | 1 | 4.2h |
-| 7 | [Teammate card: view, edit, create, delete](teammate-card.md) | 50 | 1 | 6.3h |
-| 8 | [Model and Effort pickers, catalog probe and runner restart](model-effort.md) | 27 | 1 | 3.6h |
-| 9 | [Creating Rooms, inviting Agents, Room naming](invite-rooms.md) | 39 | 4 | 4h |
-| 10 | [Settings: the 24 Prompts, editing, per-field reset and Save](prompts-settings.md) | 40 | 3 | 4.7h |
-| 11 | [Appearance tab and Themes](appearance-theme.md) | 27 | — | 2.3h |
-| 12 | [The named pipe: external agents and the wire](pipe-external.md) | 36 | — | 3.9h |
-| 13 | [App Tools a real model calls (progressive discovery)](app-tools.md) | 26 | 20 | 4.2h |
-| 14 | [Persona lifecycle: supervisor, work dirs, health and restarts](persona-lifecycle.md) | 32 | 7 | 6.5h |
-| 15 | [Adapters: choosing one per Persona, and running two at once](adapters.md) | 4 | 2 | 1.4h |
-| 16 | [Skills: the Chief of Staff, team-building, and the Family Health Advisor](skills.md) | 6 | 6 | 1.8h |
-| 17 | [Work Mode: how much an Agent may do before it asks](work-mode.md) | 9 | 4 | 2h |
-| 18 | [Questions: an Agent asks the Human by tapping, not typing](questions.md) | 10 | 9 | 3h |
+| 6 | [Teammates page: tiles, Teams grouping, filter and rejected files](teammates-library.md) | 42 | 1 | 4.4h |
+| 7 | [Teammate card: view, edit, create, delete](teammate-card.md) | 53 | 1 | 6.9h |
+| 8 | [Model and Effort pickers, catalog probe and runner restart](model-effort.md) | 28 | 1 | 3.8h |
+| 9 | [Creating Rooms, inviting Agents, Room naming](invite-rooms.md) | 38 | 4 | 4.2h |
+| 10 | [Settings: the Prompts, editing, per-field reset and Save](prompts-settings.md) | 41 | 3 | 4.7h |
+| 11 | [Appearance tab and Themes](appearance-theme.md) | 21 | — | 2.4h |
+| 12 | [The named pipe: external agents and the wire](pipe-external.md) | 33 | — | 3.7h |
+| 13 | [App Tools a real model calls (progressive discovery)](app-tools.md) | 28 | 21 | 4.3h |
+| 14 | [Persona lifecycle: supervisor, work dirs, health and restarts](persona-lifecycle.md) | 32 | 7 | 6.6h |
+| 15 | [Adapters: choosing one per Persona, and running two at once](adapters.md) | 4 | 1 | 1.5h |
+| 16 | [Skills: the Chief of Staff, team-building, and the Family Health Advisor](skills.md) | 6 | — | 1.8h |
+| 17 | [Work Mode: how much an Agent may do before it asks](work-mode.md) | 9 | 4 | 1.8h |
+| 18 | [Questions: an Agent asks the Human by tapping, not typing](questions.md) | 10 | 9 | 3.1h |
+| 19 | [Adapter commands](adapter-commands.md) | 7 | 6 | 1.8h |
+| 20 | [Avatar library: choosing a face from the library](avatar-library.md) | 26 | — | 2.9h |
+| 21 | [File Changes, Watched Folders and Memory](file-changes.md) | 12 | 10 | 3.2h |
+| 22 | [Library explorer and editor](library.md) | 19 | 1 | 2.9h |
+| 23 | [Prompt blocks](prompt-blocks.md) | 6 | 5 | 1.4h |
+| 24 | [Room Sessions: per-Room context, resume and Stop](room-sessions.md) | 12 | — | 5.8h |
+| 25 | [Tasks: creating, moving, viewing and referencing a unit of work](tasks.md) | 19 | 5 | 3.6h |
+| 26 | [Teams: Sidebar, Members, Files, Tasks and Shared Memory](team-pages.md) | 17 | — | 0.6h |
+| 27 | [Turn detail and Spend](turn-detail.md) | 5 | 4 | 1.8h |
 
 💰 marks a test that spends real money. Estimates assume you already know the app; first time
 through, roughly double them.
 
 ### 1.1 Smoke pass
 
-Twenty free tests, about 1.7 hours, covering every area at least once. Run these after any
-change, and before committing to a full area. A failure here means stop and fix, not continue.
+One free test from every area in the table above, so each area is touched at least once. Run these
+after any change, and before committing to a full area. A failure here means stop and fix, not
+continue. For the totals, run `pwsh agents/scripts/Check-ManualTests.ps1 -Summary`.
 
 | Test id | What it proves |
 | --- | --- |
 | [SHELLNAV-01](shell-nav.md#shellnav-01--every-stylesheet-the-shell-links-is-fingerprinted-except-the-one-that-is-deliberately-static-and-actually-serves) | Every stylesheet the shell links is fingerprinted and actually serves |
 | [SHELLNAV-02](shell-nav.md#shellnav-02--every-shell-script-is-fingerprinted-except-mudblazors-own-and-serves---the-gap-the-automated-guard-does-not-cover) | Both shell scripts are fingerprinted and serve - the gap the automated guard does not cover |
 | [SHELLNAV-03](shell-nav.md#shellnav-03--the-scoped-css-bundle-is-applied-the-error-banner-stays-hidden-below-the-fold) | The scoped-CSS bundle is applied: the error banner stays hidden below the fold |
-| [STARTUPCONFIG-01](startup-config.md#startupconfig-01-the-documented-launch-command-serves-the-styled-app-shell-on-httplocalhost5100) | The documented launch command serves the styled app shell on http://localhost:5100 |
-| [ROOMMESSAGING-02](room-messaging.md#roommessaging-02-enter-sends-the-message-clears-the-textarea-and-appends-exactly-one-jsonl-line) | Enter sends the Message, clears the textarea, and appends exactly one JSONL line |
-| [ROOMMESSAGING-03](room-messaging.md#roommessaging-03-shiftenter-inserts-a-newline-and-does-not-send) | Shift+Enter inserts a newline and does not send |
-| [STREAMINGTURN-02](streaming-turn.md#streamingturn-02-a-draft-appears-as-a-distinct-live-row-while-a-turn-is-being-written) | A Draft appears as a distinct live row while a Turn is being written |
-| [REPLYGATEBUDGET-02](reply-gate-budget.md#replygatebudget-02-three-or-more-members-makes-the-same-room-mention-gated) | Three or more Members makes the same Room Mention-gated |
-| [TEAMMATESLIBRARY-01](teammates-library.md#teammateslibrary-01-the-page-loads-is-styled-and-spawns-nothing) | The page loads, is styled, and spawns nothing |
+| [STARTUPCONFIG-01](startup-config.md#startupconfig-01--the-documented-launch-command-serves-the-styled-app-shell-on-httplocalhost5100) | The documented launch command serves the styled app shell on http://localhost:5100 |
+| [ROOMMESSAGING-02](room-messaging.md#roommessaging-02--enter-sends-the-message-clears-the-textarea-and-appends-exactly-one-jsonl-line) | Enter sends the Message, clears the textarea, and appends exactly one JSONL line |
+| [ROOMMESSAGING-03](room-messaging.md#roommessaging-03--shiftenter-inserts-a-newline-and-does-not-send) | Shift+Enter inserts a newline and does not send |
+| [STREAMINGTURN-02](streaming-turn.md#streamingturn-02--a-draft-appears-as-a-distinct-live-row-while-a-turn-is-being-written) | A Draft appears as a distinct live row while a Turn is being written |
+| [REPLYGATEBUDGET-02](reply-gate-budget.md#replygatebudget-02--three-or-more-members-makes-the-same-room-mention-gated) | Three or more Members makes the same Room Mention-gated |
+| [TEAMMATESLIBRARY-01](teammates-library.md#teammateslibrary-01--the-page-loads-is-styled-and-spawns-nothing) | The page loads, is styled, and spawns nothing |
 | [TEAMMATECARD-02](teammate-card.md#teammatecard-02--clicking-new-teammate-opens-a-card-at-all-blank-name-crash-probe) | Clicking New teammate opens a card at all (blank-name crash probe) |
-| [INVITEROOMS-03](invite-rooms.md#inviterooms-03-the-new-chat-panel-toggles-lists-every-agent-with-a-status-dot-and-keeps-start-chat-disabled-until-something-is-ticked) | The New chat panel toggles, lists every Agent with a status dot, and keeps Start chat disabled until something is ticked |
-| [PROMPTSSETTINGS-01](prompts-settings.md#promptssettings-01--settings-opens-on-the-prompts-tab-with-a-two-button-tab-rail) | /settings opens on the Prompts tab with a two-button tab rail |
-| [PROMPTSSETTINGS-04](prompts-settings.md#promptssettings-04--exactly-24-prompt-fields-in-four-named-groups-in-a-fixed-order) | Exactly 24 prompt fields, in four named groups, in a fixed order |
-| [APPEARANCETHEME-03](appearance-theme.md#appearancetheme-03--the-theme-select-offers-the-built-in-catalog-and-the-appearance-select-offers-exactly-system-light-and-dark-in-that-order) | The Theme dropdown offers exactly System, Light and Dark, in that order |
-| [APPEARANCETHEME-04](appearance-theme.md#appearancetheme-04--choosing-a-value-in-either-select-stores-its-id-and-applies-immediately-with-no-page-reload) | Choosing a Theme stores its id and forces a full document load, not an in-place repaint |
-| [PIPEEXTERNAL-04](pipe-external.md#pipeexternal-04-a-room-appears-in-the-sidebar-the-moment-an-external-agent-says-hello-with-no-refresh) | A Room appears in the sidebar the moment an external agent says hello, with no refresh |
-| [PERSONALIFECYCLE-01](persona-lifecycle.md#personalifecycle-01-with-acp-disabled-every-teammate-reads-offline-with-an-empty-tooltip-and-no-room-raises-an-alert) | With ACP disabled every teammate reads Offline with an empty tooltip and no Room raises an alert |
+| [INVITEROOMS-03](invite-rooms.md#inviterooms-03--the-new-chat-panel-toggles-lists-every-agent-with-a-status-dot-and-keeps-start-chat-disabled-until-something-is-ticked) | The New chat panel toggles, lists every Agent with a status dot, and keeps Start chat disabled until something is ticked |
+| [PROMPTSSETTINGS-01](prompts-settings.md#promptssettings-01--settings-opens-on-the-prompts-tab-with-a-six-tab-rail) | /settings opens on the Prompts tab |
+| [PROMPTSSETTINGS-04](prompts-settings.md#promptssettings-04--every-prompt-is-reachable-in-six-named-groups-in-a-fixed-order) | Every prompt is reachable, in six named groups in a fixed order |
+| [APPEARANCETHEME-03](appearance-theme.md#appearancetheme-03--the-theme-picker-offers-the-whole-built-in-catalog-grouped-and-is-the-tabs-only-control) | The Theme list offers all 21 built-in Themes under Light, Dark and High contrast, and no light/dark/system control exists |
+| [APPEARANCETHEME-04](appearance-theme.md#appearancetheme-04--choosing-a-theme-stores-its-id-and-applies-immediately-with-no-page-reload) | Choosing a Theme stores its id as `theme` in appearance.json and applies it in place, with no page load |
+| [PIPEEXTERNAL-04](pipe-external.md#pipeexternal-04--a-room-appears-in-the-sidebar-the-moment-an-external-agent-says-hello-with-no-refresh) | A Room appears in the sidebar the moment an external agent says hello, with no refresh |
+| [PERSONALIFECYCLE-01](persona-lifecycle.md#personalifecycle-01--with-acp-disabled-every-teammate-reads-offline-with-an-empty-tooltip-and-no-room-raises-an-alert) | With ACP disabled every teammate reads Offline with an empty tooltip and no Room raises an alert |
+| [MODELEFFORT-01](model-effort.md#modeleffort-01--first-card-open-the-model-list-comes-from-the-adapter-and-one-adapter-spawn-fills-both-lists) | The Model list comes from the Adapter, and one spawn fills both lists |
+| [APPTOOLS-01](app-tools.md#apptools-01--the-prompt-groups-are-readable-in-the-browser-and-no-default-contains-the-literal-mcp__team__) | The prompt groups are readable, and no default names the literal `mcp__team__` tool |
+| [ADAPTERS-02](adapters.md#adapters-02--a-mock-adapters-reply-lands-whole-in-the-room-and-the-transcript-and-the-other-teammate-is-unaffected) | A mock Adapter's reply lands whole in the Room, and the other Teammate is unaffected |
+| [SKILLS-01](skills.md#skills-01--the-chief-of-staff-reads-team-building-unprompted-when-asked-for-a-team) | The Chief of Staff calls `read_skill` on `team-building` unprompted when asked for a team |
+| [WORKMODE-01](work-mode.md#workmode-01--the-picker-lists-what-the-adapter-advertises-minus-plan-auto-and-bypass-permissions) | The Work Mode picker lists what the Adapter advertises, minus Plan, Auto and Bypass |
+| [QUESTIONS-07](questions.md#questions-07--a-scripted-adapters-forms-reach-the-human-as-cards-with-the-right-types) | A scripted Adapter's forms reach the Human as cards, with the right types |
+| [COMMANDS-03](adapter-commands.md#commands-03--a-command-the-profile-does-not-allow-is-an-ordinary-message) | A command the profile does not allow is an ordinary Message |
+| [AVATARLIB-01](avatar-library.md#avatarlib-01--no-library-configured-no-button-anywhere) | With no library configured, there is no avatar-library button anywhere |
+| [FM-0](file-changes.md#fm-0--an-agents-own-memory-edit-in-one-room-is-news-in-its-other-rooms) | An Agent's own memory edit in one Room is news in its other Rooms |
+| [L0](library.md#l0--chat-message-with-absolute-path-becomes-a-library-link-and-opens-the-pane) | A chat Message with an absolute path becomes a Library link and opens the pane |
+| [PROMPTBLOCKS-01](prompt-blocks.md#promptblocks-01--a-named-image-is-seen-without-a-tool-call) | A named image is seen, without a tool call |
+| [RS-M1](room-sessions.md#rs-m1--the-two-trip-stress-test) | Per-Room session context across the two-trip stress test |
+| [TASKS-01](tasks.md#tasks-01--creating-a-task-in-the-ui-writes-the-file-at-the-right-path-with-the-canonical-frontmatter) | Creating a Task in the UI writes its file at the right path, with canonical frontmatter |
+| [TP-T0](team-pages.md#tp-t0--click-business-team-and-open-members-tab) | Clicking Business team opens its Members tab |
+| [TURNDETAIL-01](turn-detail.md#turndetail-01--an-edit-shows-a-live-expandable-preview-in-a-room) | An edit shows a live, expandable preview in a Room |
 
 > [!TIP]
 > Run `SHELLNAV-01` first, always. It catches the one defect in this application that produces no
@@ -76,66 +102,67 @@ change, and before committing to a full area. A failure here means stop and fix,
 
 ## Appendix A. Paid test register
 
-Every test that spends money, in one place. 66 tests, about 15.8 hours of
-wall clock. Read [section 0.2](../manual-tests.md#02-the-cost-guard) and [section 0.3](../manual-tests.md#03-the-model-and-effort-convention) before running any of them.
+The tests that spend money, with an estimate for each. This register is not yet complete:
+`Check-ManualTests.ps1 -Summary` gives the paid count per area, and the register lists fewer. Read
+[section 0.2](../manual-tests.md#02-the-cost-guard) and [section 0.3](../manual-tests.md#03-the-model-and-effort-convention) before running any of them.
 
 | Test id | Area | What it proves | Est. |
 | --- | --- | --- | --- |
-| [STARTUPCONFIG-33](startup-config.md#startupconfig-33-a-spent-per-persona-token-budget-reads-as-degraded-on-the-teammate-tile-and-in-the-room-banner) | `startup-config` | A spent per-Persona token Budget reads as Degraded on the Teammate tile and in the Room banner | 12 min |
-| [STARTUPCONFIG-34](startup-config.md#startupconfig-34-a-human-message-clears-a-token-budget-degraded-state-and-lets-the-persona-work-again) | `startup-config` | A Human Message clears a token-Budget Degraded state and lets the Persona work again | 6 min |
-| [ROOMMESSAGING-32](room-messaging.md#roommessaging-32-a-real-claude-agents-reply-streams-and-renders-through-the-same-path-costs-money) | `room-messaging` | A real Claude Agent's reply streams and renders through the same path (COSTS MONEY) | 15 min |
-| [STREAMINGTURN-23](streaming-turn.md#streamingturn-23-a-stored-model-the-adapter-does-not-advertise-degrades-the-persona-but-does-not-stop-it) | `streaming-turn` | A stored Model the adapter does not advertise degrades the Persona but does not stop it | 12 min |
-| [STREAMINGTURN-24](streaming-turn.md#streamingturn-24-stop-actually-ends-a-real-turn-the-draft-goes-no-message-is-posted-nothing-is-written) | `streaming-turn` | Stop actually ends a real Turn: the Draft goes, no Message is posted, nothing is written | 10 min |
-| [STREAMINGTURN-25](streaming-turn.md#streamingturn-25-a-stopped-turn-is-not-a-failure-no-alert-strip-no-degraded-badge-no-broken-streak) | `streaming-turn` | A stopped Turn is not a failure: no alert strip, no Degraded badge, no broken streak | 12 min |
-| [STREAMINGTURN-26](streaming-turn.md#streamingturn-26-stop-means-this-agent-now-everything-queued-behind-the-live-turn-is-discarded-too) | `streaming-turn` | Stop means this Agent now: everything queued behind the live Turn is discarded too | 10 min |
-| [STREAMINGTURN-27](streaming-turn.md#streamingturn-27-stopping-an-agent-stops-it-in-every-room-not-just-the-one-you-clicked-in) | `streaming-turn` | Stopping an Agent stops it in every Room, not just the one you clicked in | 12 min |
-| [STREAMINGTURN-28](streaming-turn.md#streamingturn-28-a-spent-per-persona-token-budget-reads-as-degraded-and-a-human-message-clears-it) | `streaming-turn` | A spent per-Persona token Budget reads as Degraded, and a Human Message clears it | 10 min |
-| [STREAMINGTURN-29](streaming-turn.md#streamingturn-29-a-turn-that-fails-mid-flight-reports-degraded-in-the-adapters-own-words-and-escalates-on-the-third-failure-in-a-row) | `streaming-turn` | A Turn that fails mid-flight reports Degraded in the Adapter's own words, and escalates on the third failure in a row | 15 min |
-| [STREAMINGTURN-30](streaming-turn.md#streamingturn-30-killing-the-adapter-process-mid-turn-clears-the-draft-and-says-so-instead-of-deafening-the-agent-forever) | `streaming-turn` | Killing the adapter process mid-Turn clears the Draft and says so, instead of deafening the Agent forever | 15 min |
-| [REPLYGATEBUDGET-31](reply-gate-budget.md#replygatebudget-31-paid-a-real-persona-answers-a-two-member-room-with-no-mention-at-all) | `reply-gate-budget` | PAID: a real Persona answers a two-Member Room with no Mention at all | 15 min |
-| [REPLYGATEBUDGET-32](reply-gate-budget.md#replygatebudget-32-paid-an-un-mentioned-message-is-not-answered-but-rides-along-as-context-on-the-next-mention) | `reply-gate-budget` | PAID: an un-mentioned Message is not answered but rides along as context on the next Mention | 15 min |
-| [REPLYGATEBUDGET-33](reply-gate-budget.md#replygatebudget-33-paid-a-two-agent-exchange-halts-at-the-budget-and-the-last-agent-declines-before-taking-a-turn) | `reply-gate-budget` | PAID: a two-Agent exchange halts at the Budget, and the last Agent declines BEFORE taking a Turn | 25 min |
-| [REPLYGATEBUDGET-34](reply-gate-budget.md#replygatebudget-34-paid-a-message-declined-for-budget-is-held-for-re-delivery-not-kept-as-catch-up) | `reply-gate-budget` | PAID: a Message declined for Budget is held for re-delivery, not kept as Catch-up | 25 min |
-| [REPLYGATEBUDGET-35](reply-gate-budget.md#replygatebudget-35-paid-the-agent-facing-post-tool-returns-the-same-terminal-refusal-and-the-model-obeys-it) | `reply-gate-budget` | PAID: the Agent-facing post tool returns the same terminal refusal, and the model obeys it | 20 min |
-| [REPLYGATEBUDGET-36](reply-gate-budget.md#replygatebudget-36-paid-an-agent-can-mint-a-fresh-budget-by-creating-a-room-and-only-the-token-budget-catches-it) | `reply-gate-budget` | PAID: an Agent can mint a fresh Budget by creating a Room, and only the token Budget catches it | 25 min |
-| [TEAMMATESLIBRARY-40](teammates-library.md#teammateslibrary-40-degraded-with-the-persistence-reason-and-the-two-things-that-must-not-badge) | `teammates-library` | Degraded, with the persistence reason — and the two things that must NOT badge | 20 min |
+| [STARTUPCONFIG-33](startup-config.md#startupconfig-33--a-spent-per-persona-token-budget-reads-as-degraded-on-the-teammate-tile-and-in-the-room-banner) | `startup-config` | A spent per-Persona token Budget reads as Degraded on the Teammate tile and in the Room banner | 12 min |
+| [STARTUPCONFIG-34](startup-config.md#startupconfig-34--a-human-message-clears-a-token-budget-degraded-state-and-lets-the-persona-work-again) | `startup-config` | A Human Message clears a token-Budget Degraded state and lets the Persona work again | 6 min |
+| [ROOMMESSAGING-32](room-messaging.md#roommessaging-32--a-real-claude-agents-reply-streams-and-renders-through-the-same-path-costs-money) | `room-messaging` | A real Claude Agent's reply streams and renders through the same path (COSTS MONEY) | 15 min |
+| [STREAMINGTURN-23](streaming-turn.md#streamingturn-23--a-stored-model-the-adapter-does-not-advertise-degrades-the-persona-but-does-not-stop-it) | `streaming-turn` | A stored Model the adapter does not advertise degrades the Persona but does not stop it | 12 min |
+| [STREAMINGTURN-24](streaming-turn.md#streamingturn-24--stop-actually-ends-a-real-turn-the-draft-goes-no-message-is-posted-nothing-is-written) | `streaming-turn` | Stop actually ends a real Turn: the Draft goes, no Message is posted, nothing is written | 10 min |
+| [STREAMINGTURN-25](streaming-turn.md#streamingturn-25--a-stopped-turn-is-not-a-failure-no-alert-strip-no-degraded-badge-no-broken-streak) | `streaming-turn` | A stopped Turn is not a failure: no alert strip, no Degraded badge, no broken streak | 12 min |
+| [STREAMINGTURN-26](streaming-turn.md#streamingturn-26--stop-ends-this-rooms-live-turn-and-discards-everything-queued-behind-it-in-that-room) | `streaming-turn` | Stop ends this Room's live Turn and discards everything queued behind it in that Room | 10 min |
+| [STREAMINGTURN-27](streaming-turn.md#streamingturn-27--stopping-an-agent-in-one-room-does-not-touch-its-turn-in-another-room) | `streaming-turn` | Stopping an Agent in one Room does not touch its Turn in another Room | 12 min |
+| [STREAMINGTURN-28](streaming-turn.md#streamingturn-28--a-spent-per-persona-token-budget-reads-as-degraded-and-a-human-message-clears-it) | `streaming-turn` | A spent per-Persona token Budget reads as Degraded, and a Human Message clears it | 10 min |
+| [STREAMINGTURN-29](streaming-turn.md#streamingturn-29--a-turn-that-fails-mid-flight-reports-degraded-in-the-adapters-own-words-and-escalates-on-the-third-failure-in-a-row) | `streaming-turn` | A Turn that fails mid-flight reports Degraded in the Adapter's own words, and escalates on the third failure in a row | 15 min |
+| [STREAMINGTURN-30](streaming-turn.md#streamingturn-30--killing-the-adapter-process-mid-turn-clears-the-draft-and-says-so-instead-of-deafening-the-agent-forever) | `streaming-turn` | Killing the adapter process mid-Turn clears the Draft and says so, instead of deafening the Agent forever | 15 min |
+| [REPLYGATEBUDGET-31](reply-gate-budget.md#replygatebudget-31--paid-a-real-persona-answers-a-two-member-room-with-no-mention-at-all) | `reply-gate-budget` | PAID: a real Persona answers a two-Member Room with no Mention at all | 15 min |
+| [REPLYGATEBUDGET-32](reply-gate-budget.md#replygatebudget-32--paid-an-un-mentioned-message-is-not-answered-but-rides-along-as-context-on-the-next-mention) | `reply-gate-budget` | PAID: an un-mentioned Message is not answered but rides along as context on the next Mention | 15 min |
+| [REPLYGATEBUDGET-33](reply-gate-budget.md#replygatebudget-33--paid-a-two-agent-exchange-halts-at-the-budget-and-the-last-agent-declines-before-taking-a-turn) | `reply-gate-budget` | PAID: a two-Agent exchange halts at the Budget, and the last Agent declines BEFORE taking a Turn | 25 min |
+| [REPLYGATEBUDGET-34](reply-gate-budget.md#replygatebudget-34--paid-a-message-declined-for-budget-is-held-for-re-delivery-not-kept-as-catch-up) | `reply-gate-budget` | PAID: a Message declined for Budget is held for re-delivery, not kept as Catch-up | 25 min |
+| [REPLYGATEBUDGET-35](reply-gate-budget.md#replygatebudget-35--paid-the-agent-facing-post-tool-returns-the-same-terminal-refusal-and-the-model-obeys-it) | `reply-gate-budget` | PAID: the Agent-facing post tool returns the same terminal refusal, and the model obeys it | 20 min |
+| [REPLYGATEBUDGET-36](reply-gate-budget.md#replygatebudget-36--paid-an-agent-can-mint-a-fresh-budget-by-creating-a-room-and-only-the-token-budget-catches-it) | `reply-gate-budget` | PAID: an Agent can mint a fresh Budget by creating a Room, and only the token Budget catches it | 25 min |
+| [TEAMMATESLIBRARY-40](teammates-library.md#teammateslibrary-40--degraded-with-the-reason--and-the-two-things-that-must-not-badge) | `teammates-library` | Degraded, with the persistence reason — and the two things that must NOT badge | 20 min |
 | [TEAMMATECARD-50](teammate-card.md#teammatecard-50--editing-a-teammate-really-does-lose-its-conversation-memory-costs-money) | `teammate-card` | Editing a teammate really does lose its conversation memory (COSTS MONEY) | 12 min |
-| [MODELEFFORT-27](model-effort.md#modeleffort-27-money-the-chosen-model-and-effort-actually-reach-the-model---ask-it) | `model-effort` | MONEY: the chosen Model and Effort actually reach the model - ask it | 15 min |
-| [INVITEROOMS-28](invite-rooms.md#inviterooms-28-an-agent-creates-a-room-with-mcp__team__create_room-and-it-appears-live-in-the-sidebar) | `invite-rooms` | An Agent creates a Room with mcp__team__create_room and it appears live in the sidebar | 15 min |
-| [INVITEROOMS-29](invite-rooms.md#inviterooms-29-an-agent-invites-another-with-mcp__team__invite_agent-using-the-room-id-from-its-own-room-label) | `invite-rooms` | An Agent invites another with mcp__team__invite_agent, using the room id from its own [Room: …] label | 15 min |
-| [INVITEROOMS-30](invite-rooms.md#inviterooms-30-an-agent-can-invite-into-a-room-it-is-not-a-member-of) | `invite-rooms` | An Agent can invite into a Room it is not a Member of | 10 min |
-| [INVITEROOMS-31](invite-rooms.md#inviterooms-31-every-agent-created-room-contains-the-human-so-none-is-hidden) | `invite-rooms` | Every Agent-created Room contains the Human, so none is hidden | 6 min |
+| [MODELEFFORT-27](model-effort.md#modeleffort-27--money-the-chosen-model-and-effort-actually-reach-the-model---ask-it) | `model-effort` | MONEY: the chosen Model and Effort actually reach the model - ask it | 15 min |
+| [INVITEROOMS-28](invite-rooms.md#inviterooms-28--an-agent-creates-a-room-with-mcp__team__create_room-and-it-appears-live-in-the-sidebar) | `invite-rooms` | An Agent creates a Room with mcp__team__create_room and it appears live in the sidebar | 15 min |
+| [INVITEROOMS-29](invite-rooms.md#inviterooms-29--an-agent-invites-another-with-mcp__team__invite_agent-using-the-room-id-from-its-own-room--label) | `invite-rooms` | An Agent invites another with mcp__team__invite_agent, using the room id from its own [Room: …] label | 15 min |
+| [INVITEROOMS-30](invite-rooms.md#inviterooms-30--an-agent-can-invite-into-a-room-it-is-not-a-member-of) | `invite-rooms` | An Agent can invite into a Room it is not a Member of | 10 min |
+| [INVITEROOMS-31](invite-rooms.md#inviterooms-31--every-agent-created-room-contains-the-human-so-none-is-hidden) | `invite-rooms` | Every Agent-created Room contains the Human, so none is hidden | 6 min |
 | [PROMPTSSETTINGS-38](prompts-settings.md#promptssettings-38--costs-money-a-live-prompt-edit-reaches-the-very-next-turn-with-no-restart) | `prompts-settings` | COSTS MONEY: a Live prompt edit reaches the very next Turn with no restart | 15 min |
 | [PROMPTSSETTINGS-39](prompts-settings.md#promptssettings-39--costs-money-a-next-session-prompt-edit-is-silently-inert-on-a-running-teammate-until-it-restarts) | `prompts-settings` | COSTS MONEY: a "Next session" prompt edit is silently inert on a running teammate until it restarts | 20 min |
-| [PROMPTSSETTINGS-40](prompts-settings.md#promptssettings-40-costs-money-get_help-re-renders-on-every-call-so-its-nine-prompts-land-on-the-next-call-while-a-tool-description-does-not) | `prompts-settings` | COSTS MONEY: get_help re-renders on every call, so its nine prompts land on the next call — while a tool DESCRIPTION does not | 20 min |
-| [APPTOOLS-05](app-tools.md#apptools-05-an-agent-reads-its-own-rooms-id-off-the-room-label) | `app-tools` | An Agent reads its own Room's id off the [Room: ...] label | 5 min |
-| [APPTOOLS-06](app-tools.md#apptools-06-get_helps-budget-and-messages-sections-prove-progressive-discovery-is-live) | `app-tools` | get_help's BUDGET and MESSAGES sections prove progressive discovery is live | 8 min |
-| [APPTOOLS-07](app-tools.md#apptools-07-asked-what-tools-it-has-a-teammate-calls-get_help-and-reports-the-real-catalog-with-descriptions) | `app-tools` | Asked what tools it has, a teammate calls get_help and reports the real catalog with descriptions | 10 min |
-| [APPTOOLS-08](app-tools.md#apptools-08-tool-activity-is-visible-under-the-draft-while-a-call-is-in-flight) | `app-tools` | Tool activity is visible under the Draft while a call is in flight | 5 min |
-| [APPTOOLS-10](app-tools.md#apptools-10-list_agents-reports-real-names-real-online-state-and-real-job-descriptions) | `app-tools` | list_agents reports real names, real online state, and real job descriptions | 12 min |
-| [APPTOOLS-11](app-tools.md#apptools-11-an-alias-is-advertised-by-list_agents-and-then-accepted-by-invite_agent) | `app-tools` | An Alias is advertised by list_agents and then accepted by invite_agent | 15 min |
-| [APPTOOLS-12](app-tools.md#apptools-12-invite_agent-called-with-the-id-from-the-agents-own-label-renames-the-room-live) | `app-tools` | invite_agent, called with the id from the agent's own label, renames the room live | 12 min |
-| [APPTOOLS-13](app-tools.md#apptools-13-invite_agent-is-idempotent-and-says-so-rather-than-duplicating-a-member) | `app-tools` | invite_agent is idempotent and says so rather than duplicating a member | 6 min |
-| [APPTOOLS-14](app-tools.md#apptools-14-invite_agent-with-an-unknown-name-comes-back-with-the-names-that-do-exist) | `app-tools` | invite_agent with an unknown name comes back with the names that do exist | 6 min |
-| [APPTOOLS-15](app-tools.md#apptools-15-an-agents-reply-is-delivered-once-it-must-not-also-post-the-same-text-with-post_message) | `app-tools` | An agent's reply is delivered once — it must not also post the same text with post_message | 6 min |
-| [APPTOOLS-16](app-tools.md#apptools-16-create_room-makes-a-new-room-that-appears-in-the-sidebar-live-named-after-its-agents) | `app-tools` | create_room makes a new Room that appears in the sidebar live, named after its Agents | 10 min |
-| [APPTOOLS-17](app-tools.md#apptools-17-post_message-delivers-into-a-room-other-than-the-one-the-agent-was-addressed-in-and-the-agent-does-not-answer-its-own-post) | `app-tools` | post_message delivers into a Room other than the one the agent was addressed in, and the agent does not answer its own post | 12 min |
-| [APPTOOLS-18](app-tools.md#apptools-18-tools-are-the-source-of-truth-the-agent-must-not-answer-about-agents-or-rooms-from-the-codebase) | `app-tools` | Tools are the source of truth — the agent must not answer about agents or Rooms from the codebase | 10 min |
-| [APPTOOLS-19](app-tools.md#apptools-19-a-budgetexhausted-refusal-from-post_message-is-terminal-the-agent-stops-does-not-retry-and-does-not-reroute) | `app-tools` | A budgetExhausted refusal from post_message is terminal: the agent stops, does not retry and does not reroute | 15 min |
-| [APPTOOLS-21](app-tools.md#apptools-21-continue-re-delivers-the-paused-message-and-the-prompt-survives-a-page-reload) | `app-tools` | Continue re-delivers the paused Message, and the prompt survives a page reload | 12 min |
-| [APPTOOLS-22](app-tools.md#apptools-22-editing-a-prompt-changes-model-facing-text-without-restarting-the-session-and-next-session-prompts-wait-for-a-restart) | `app-tools` | Editing a prompt changes model-facing text without restarting the session, and Next session prompts wait for a restart | 15 min |
-| [APPTOOLS-23](app-tools.md#apptools-23-follow_room-wakes-an-agent-that-was-not-mentioned-and-a-non-follower-in-the-same-room-is-the-control) | `app-tools` | follow_room wakes an agent that was not mentioned, and a non-follower in the same Room is the control | 15 min |
-| [APPTOOLS-24](app-tools.md#apptools-24-unfollow_room-restores-the-ordinary-mention-only-rule-and-the-room-confirms-the-decline-was-not-a-silent-drop) | `app-tools` | unfollow_room restores the ordinary mention-only rule, and the Room confirms the decline was not a silent drop | 10 min |
-| [APPTOOLS-25](app-tools.md#apptools-25-following-does-not-buy-a-turn-past-the-budget-even-when-two-followers-would-otherwise-keep-each-other-going) | `app-tools` | Following does not buy a Turn past the Budget, even when two followers would otherwise keep each other going | 15 min |
-| [APPTOOLS-26](app-tools.md#apptools-26-create_room-with-seed-posts-the-opening-message-as-part-of-creation) | `app-tools` | create_room with seed posts the opening Message as part of creation | 10 min |
-| [PERSONALIFECYCLE-26](persona-lifecycle.md#personalifecycle-26-money-saving-the-edit-card-with-nothing-changed-does-not-restart-the-teammate) | `persona-lifecycle` | MONEY: saving the Edit card with nothing changed does NOT restart the Teammate | 12 min |
-| [PERSONALIFECYCLE-27](persona-lifecycle.md#personalifecycle-27-money-editing-the-persona-body-restarts-the-session-and-the-new-instruction-takes-effect) | `persona-lifecycle` | MONEY: editing the Persona body restarts the session and the new instruction takes effect | 12 min |
-| [PERSONALIFECYCLE-28](persona-lifecycle.md#personalifecycle-28-money-changing-the-model-from-haiku-to-sonnet-restarts-the-session-and-clears-what-the-teammate-remembers) | `persona-lifecycle` | MONEY: changing the Model from Haiku to Sonnet restarts the session and clears what the Teammate remembers | 18 min |
-| [PERSONALIFECYCLE-29](persona-lifecycle.md#personalifecycle-29-money-changing-the-effort-from-low-to-medium-restarts-the-session-and-a-model-change-clears-the-effort-selection) | `persona-lifecycle` | MONEY: changing the Effort from low to medium restarts the session, and a Model change clears the Effort selection | 15 min |
-| [PERSONALIFECYCLE-30](persona-lifecycle.md#personalifecycle-30-money-context-bleeds-between-rooms-confirm-the-known-limit-and-that-replies-still-land-in-the-right-room) | `persona-lifecycle` | MONEY: context bleeds between Rooms — confirm the known limit, and that replies still land in the right Room | 12 min |
-| [PERSONALIFECYCLE-31](persona-lifecycle.md#personalifecycle-31-money-the-per-persona-token-budget-shows-as-degraded-with-its-reason-and-any-human-message-clears-it) | `persona-lifecycle` | MONEY: the per-Persona token Budget shows as Degraded with its reason, and any Human Message clears it | 25 min |
-| [PERSONALIFECYCLE-32](persona-lifecycle.md#personalifecycle-32-money-a-token-budget-of-zero-disables-the-per-persona-cap-and-the-per-room-budget-still-stops-the-exchange) | `persona-lifecycle` | MONEY: a token Budget of zero disables the per-Persona cap, and the per-Room Budget still stops the exchange | 20 min |
-| [ADAPTERS-03](adapters.md#adapters-03--changing-a-teammates-adapter-resets-model-and-effort-says-so-and-restarts-the-session-) | `adapters` | MONEY: changing a Teammate's Adapter resets Model and Effort with a status note, and the restart loses the conversation memory | 15 min |
+| [PROMPTSSETTINGS-40](prompts-settings.md#promptssettings-40--costs-money-get_help-re-renders-on-every-call-so-its-get-help-prompts-land-on-the-next-call--while-a-tool-description-does-not) | `prompts-settings` | COSTS MONEY: get_help re-renders on every call, so its nine prompts land on the next call — while a tool DESCRIPTION does not | 20 min |
+| [APPTOOLS-05](app-tools.md#apptools-05--an-agent-reads-its-own-rooms-id-off-the-room--label) | `app-tools` | An Agent reads its own Room's id off the [Room: ...] label | 5 min |
+| [APPTOOLS-06](app-tools.md#apptools-06--get_helps-budget-and-messages-sections-prove-progressive-discovery-is-live) | `app-tools` | get_help's BUDGET and MESSAGES sections prove progressive discovery is live | 8 min |
+| [APPTOOLS-07](app-tools.md#apptools-07--asked-what-tools-it-has-a-teammate-calls-get_help-and-reports-the-real-catalog-with-descriptions) | `app-tools` | Asked what tools it has, a teammate calls get_help and reports the real catalog with descriptions | 10 min |
+| [APPTOOLS-08](app-tools.md#apptools-08--tool-activity-is-visible-under-the-draft-while-a-call-is-in-flight) | `app-tools` | Tool activity is visible under the Draft while a call is in flight | 5 min |
+| [APPTOOLS-10](app-tools.md#apptools-10--list_agents-reports-real-names-real-online-state-and-real-job-descriptions) | `app-tools` | list_agents reports real names, real online state, and real job descriptions | 12 min |
+| [APPTOOLS-11](app-tools.md#apptools-11--an-alias-is-advertised-by-list_agents-and-then-accepted-by-invite_agent) | `app-tools` | An Alias is advertised by list_agents and then accepted by invite_agent | 15 min |
+| [APPTOOLS-12](app-tools.md#apptools-12--invite_agent-called-with-the-id-from-the-agents-own-label-renames-the-room-live) | `app-tools` | invite_agent, called with the id from the agent's own label, renames the room live | 12 min |
+| [APPTOOLS-13](app-tools.md#apptools-13--invite_agent-is-idempotent-and-says-so-rather-than-duplicating-a-member) | `app-tools` | invite_agent is idempotent and says so rather than duplicating a member | 6 min |
+| [APPTOOLS-14](app-tools.md#apptools-14--invite_agent-with-an-unknown-name-comes-back-with-the-names-that-do-exist) | `app-tools` | invite_agent with an unknown name comes back with the names that do exist | 6 min |
+| [APPTOOLS-15](app-tools.md#apptools-15--an-agents-reply-is-delivered-once--it-must-not-also-post-the-same-text-with-post_message) | `app-tools` | An agent's reply is delivered once — it must not also post the same text with post_message | 6 min |
+| [APPTOOLS-16](app-tools.md#apptools-16--create_room-makes-a-new-room-that-appears-in-the-sidebar-live-named-after-its-agents) | `app-tools` | create_room makes a new Room that appears in the sidebar live, named after its Agents | 10 min |
+| [APPTOOLS-17](app-tools.md#apptools-17--post_message-delivers-into-a-room-other-than-the-one-the-agent-was-addressed-in-and-the-agent-does-not-answer-its-own-post) | `app-tools` | post_message delivers into a Room other than the one the agent was addressed in, and the agent does not answer its own post | 12 min |
+| [APPTOOLS-18](app-tools.md#apptools-18--tools-are-the-source-of-truth--the-agent-must-not-answer-about-agents-or-rooms-from-the-codebase) | `app-tools` | Tools are the source of truth — the agent must not answer about agents or Rooms from the codebase | 10 min |
+| [APPTOOLS-19](app-tools.md#apptools-19--a-budgetexhausted-refusal-from-post_message-is-terminal-the-agent-stops-does-not-retry-and-does-not-reroute) | `app-tools` | A budgetExhausted refusal from post_message is terminal: the agent stops, does not retry and does not reroute | 15 min |
+| [APPTOOLS-21](app-tools.md#apptools-21--continue-re-delivers-the-paused-message-and-the-prompt-survives-a-page-reload) | `app-tools` | Continue re-delivers the paused Message, and the prompt survives a page reload | 12 min |
+| [APPTOOLS-22](app-tools.md#apptools-22--editing-a-prompt-changes-model-facing-text-without-restarting-the-session-and-next-session-prompts-wait-for-a-restart) | `app-tools` | Editing a prompt changes model-facing text without restarting the session, and Next session prompts wait for a restart | 15 min |
+| [APPTOOLS-23](app-tools.md#apptools-23--follow_room-wakes-an-agent-that-was-not-mentioned-and-a-non-follower-in-the-same-room-is-the-control) | `app-tools` | follow_room wakes an agent that was not mentioned, and a non-follower in the same Room is the control | 15 min |
+| [APPTOOLS-24](app-tools.md#apptools-24--unfollow_room-restores-the-ordinary-mention-only-rule-and-the-room-confirms-the-decline-was-not-a-silent-drop) | `app-tools` | unfollow_room restores the ordinary mention-only rule, and the Room confirms the decline was not a silent drop | 10 min |
+| [APPTOOLS-25](app-tools.md#apptools-25--following-does-not-buy-a-turn-past-the-budget) | `app-tools` | Following does not buy a Turn past the Budget, even when two followers would otherwise keep each other going | 15 min |
+| [APPTOOLS-26](app-tools.md#apptools-26--create_room-with-seed-posts-the-opening-message-as-part-of-creation) | `app-tools` | create_room with seed posts the opening Message as part of creation | 10 min |
+| [PERSONALIFECYCLE-26](persona-lifecycle.md#personalifecycle-26--money-saving-the-edit-card-with-nothing-changed-does-not-restart-the-teammate) | `persona-lifecycle` | MONEY: saving the Edit card with nothing changed does NOT restart the Teammate | 12 min |
+| [PERSONALIFECYCLE-27](persona-lifecycle.md#personalifecycle-27--money-editing-the-persona-body-restarts-the-session-and-the-new-instruction-takes-effect) | `persona-lifecycle` | MONEY: editing the Persona body restarts the session and the new instruction takes effect | 12 min |
+| [PERSONALIFECYCLE-28](persona-lifecycle.md#personalifecycle-28--money-changing-the-model-from-haiku-to-sonnet-restarts-the-session-and-clears-what-the-teammate-remembers) | `persona-lifecycle` | MONEY: changing the Model from Haiku to Sonnet restarts the session and clears what the Teammate remembers | 18 min |
+| [PERSONALIFECYCLE-29](persona-lifecycle.md#personalifecycle-29--money-changing-the-effort-from-low-to-medium-restarts-the-session-and-a-model-change-clears-the-effort-selection) | `persona-lifecycle` | MONEY: changing the Effort from low to medium restarts the session, and a Model change clears the Effort selection | 15 min |
+| [PERSONALIFECYCLE-30](persona-lifecycle.md#personalifecycle-30--money-what-a-teammate-was-told-in-one-room-does-not-leak-into-another-one-process-serves-both-and-replies-land-in-the-right-room) | `persona-lifecycle` | MONEY: what a Teammate was told in one Room does not leak into another; replies still land in the right Room | 12 min |
+| [PERSONALIFECYCLE-31](persona-lifecycle.md#personalifecycle-31--money-the-per-persona-token-budget-shows-as-degraded-with-its-reason-and-any-human-message-clears-it) | `persona-lifecycle` | MONEY: the per-Persona token Budget shows as Degraded with its reason, and any Human Message clears it | 25 min |
+| [PERSONALIFECYCLE-32](persona-lifecycle.md#personalifecycle-32--money-a-token-budget-of-zero-disables-the-per-persona-cap-and-the-per-room-budget-still-stops-the-exchange) | `persona-lifecycle` | MONEY: a token Budget of zero disables the per-Persona cap, and the per-Room Budget still stops the exchange | 20 min |
+| [ADAPTERS-03](adapters.md#adapters-03--changing-a-teammates-adapter-resets-model-and-effort-says-so-and-restarts-the-session) | `adapters` | MONEY: changing a Teammate's Adapter resets Model and Effort with a status note, and the restart loses the conversation memory | 15 min |
 | [ADAPTERS-04](adapters.md#adapters-04--does-a-real-local-model-call-get_help-unprompted-) | `adapters` | Whether a real local Model calls `get_help` unprompted — the question no automated test can settle | 45 min |
 | [SKILLS-01](skills.md#skills-01--the-chief-of-staff-reads-team-building-unprompted-when-asked-for-a-team) | `skills` | The Chief of Staff calls `read_skill` on `team-building` unprompted, then interviews per its step 1 | 10 min |
 | [SKILLS-02](skills.md#skills-02--approve-creates-the-teammates-wakes-the-chief-of-staff-and-it-opens-a-seeded-room) | `skills` | Approve creates the Candidates, wakes the Chief of Staff through the ordinary Reply Gate, and a pipeline opens a seeded Room | 20 min |
@@ -153,7 +180,6 @@ wall clock. Read [section 0.2](../manual-tests.md#02-the-cost-guard) and [sectio
 | [QUESTIONS-04](questions.md#questions-04--the-same-on-a-teammate-running-on-agency-acp) | `questions` | The same on a Teammate running on `agency-acp` | 20 min |
 | [QUESTIONS-05](questions.md#questions-05--in-a-room-of-three-an-answer-wakes-only-the-asker) | `questions` | In a Room of three, an answer wakes only the asker | 20 min |
 | [QUESTIONS-06](questions.md#questions-06--a-claude-teammate-has-no-built-in-askuserquestion) | `questions` | A Claude Teammate has no built-in `AskUserQuestion` (with `Acp:AdvertiseElicitation` off) | 20 min |
-| [QUESTIONS-07](questions.md#questions-07--a-scripted-adapters-forms-reach-the-human-as-cards-with-the-right-types) | `questions` | A scripted Adapter's forms reach the Human as cards, with the right types | 25 min |
 | [QUESTIONS-08](questions.md#questions-08--claudes-askuserquestion-reaches-the-human-and-the-turn-survives-the-wait) | `questions` | Claude's `AskUserQuestion` reaches the Human, and the Turn survives the wait | 20 min |
 | [QUESTIONS-09](questions.md#questions-09--skip-and-stop-end-a-waiting-form-cleanly) | `questions` | Skip and Stop end a waiting form cleanly | 20 min |
 | [QUESTIONS-10](questions.md#questions-10--an-unanswered-form-is-dropped-after-acpuserinputtimeoutseconds) | `questions` | An unanswered form is dropped after `Acp:UserInputTimeoutSeconds` | 15 min |

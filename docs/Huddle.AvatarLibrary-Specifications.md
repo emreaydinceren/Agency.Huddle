@@ -1,7 +1,7 @@
 # Huddle.AvatarLibrary — Design Specification
 
-**Date:** 2026-10-08 · **Status:** Proposed · **Decision record:** ADR-0044 (to be written with the
-build; this page's §10 holds the decisions until then) · **Builds on:**
+**Date:** 2026-10-08 · **Status:** Built 2026-10-08 · **Decision record:** ADR-0044 (Accepted) ·
+**Builds on:**
 [ADR-0019](adr/0019-an-avatar-is-chosen-and-is-not-part-of-the-persona.md) (the Avatar, its store and
 its image rules) · **Vocabulary:** [language.md](engineering/language.md) (**Avatar**, **Teammate**,
 **Human**)
@@ -48,7 +48,7 @@ They open a dialog, narrow 324 pictures to a handful, and click one.
 | L2 | They press **Tan** | Only avatars whose `skin_tone` is `tan` or `brown` remain |
 | L3 | They type `headset` | Only avatars with a profession or tag word starting `headset` remain |
 | L4 | They press the **Butler** profession chip | The chip moves to the far left and shows an X. Only butlers remain |
-| L5 | They also press **Chef** | Butlers **or** chefs remain. Both chips sit at the left |
+| L5 | They also press **Cook** | Butlers **or** cooks remain. Both chips sit at the left |
 | L6 | They press the tags `glasses` and `bow tie` | Only avatars with **both** tags remain |
 | L7 | They press the X on `Butler` | The chip returns to its normal place; the grid widens again |
 | L8 | They press **Clear all** | Every filter resets to All, empty text, no chips |
@@ -271,7 +271,8 @@ does the same and writes at once, as it does for an upload. **`AvatarStore`, `Av
 
 | Condition | Behaviour |
 | --- | --- |
-| `Dir` unset, folder or `master.json` missing | `IsConfigured` is false; no button; no mount |
+| `Dir` unset, or the folder missing | `IsConfigured` is false; no button; no mount |
+| Folder present, `master.json` missing | `IsConfigured` is false, so no button; the `/avatar-library` mount is still added and serves the folder's pictures, because the mount follows the folder, not the index (§6.3). `master.json` itself returns 404 |
 | `master.json` unreadable, malformed or over 4 MB | Dialog shows the unreadable message; one warning logged; nothing thrown |
 | A record with an empty or unsafe `file` (separator, `..`) | Skipped |
 | A record whose file is missing, not a real PNG/JPEG/WebP, or over the cap | Skipped; counted |
@@ -308,8 +309,8 @@ upload button. It appears only in the **An image** choice, and only when a libra
 |                                                                  |
 |  Professions                                                     |
 |  (Accountant) (Architect) (Artist) (Athlete) (Banker) (Barista)  |
-|  (Blue-Collar Worker) (Butler) (Chemist) (Chef) (Chief of Staff) |
-|  (Cook) (Copywriter) (Customer Support) (DJ) (Data Analyst) ...  |
+|  (Blue-Collar Worker) (Butler) (Chemist) (Chief of Staff)        |
+|  (Cook) (Copywriter) (Customer Support) (Data Analyst) ...       |
 |                                                                  |
 |  Tags                                                            |
 |  (glasses) (no-glasses) (laptop) (headset) (hair bun) (cap) ...  |
@@ -325,7 +326,7 @@ upload button. It appears only in the **An image** choice, and only when a libra
 +------------------------------------------------------------------+
 ```
 
-**M3 — Narrowed.** Tan, the text `gl`, professions Butler and Chef, tags `glasses` and `vest`. The
+**M3 — Narrowed.** Tan, the text `gl`, professions Butler and Cook, tags `glasses` and `vest`. The
 selected chips have floated to the left of their cloud, in the order they were pressed, each with
 an X. The unselected chips follow and have not moved, hidden or changed (D-5).
 
@@ -335,7 +336,7 @@ an X. The unselected chips follow and have not moved, hidden or changed (D-5).
 |  Search      [ gl ........................................... ]   |
 |                                                                  |
 |  Professions                                                     |
-|  [Butler x] [Chef x] (Accountant) (Architect) (Artist) ...       |
+|  [Butler x] [Cook x] (Accountant) (Architect) (Artist) ...       |
 |                                                                  |
 |  Tags                                                            |
 |  [glasses x] [vest x] (no-glasses) (laptop) (headset) ...        |

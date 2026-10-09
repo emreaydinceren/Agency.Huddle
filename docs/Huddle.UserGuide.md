@@ -257,7 +257,7 @@ App_Data/
 
 Open **Teammates** in the sidebar. The page lists every Teammate, grouped by
 Team, with a **Team** filter at the top. A Teammate in two Teams is listed under
-both. Each card shows a status of online, awake, asleep or offline.
+both. Each card shows a status of Offline, Starting, Online or Degraded.
 
 Each Teammate has its own card with **Message**, **Edit**, **Open**,
 **Restart** and **Remove**.

@@ -4,8 +4,10 @@ using Agency.Huddle.App.Acp;
 using Agency.Huddle.App.Acp.Tools;
 using Agency.Huddle.App.Data;
 using Agency.Huddle.App.Library;
+using Agency.Huddle.App.Prompts;
 using Agency.Huddle.App.TeamTypes;
 using Agency.Huddle.App.Teams;
+using Agency.Huddle.Tests.Acp.Fakes;
 using Agency.Huddle.Tests.Acp.Tools;
 using Agency.Huddle.Tests.Ui.Teams;
 
@@ -57,7 +59,8 @@ public sealed class RetroVerifierTests
 
         /// <summary>Builds the tool for a caller over a register holding <see cref="FiveRows"/>.</summary>
         /// <param name="caller">The caller's name.</param>
-        public MarkRetroRowTool Tool(string caller)
+        /// <param name="prompts">The prompt source the tool reads its description from; the seeded default when omitted.</param>
+        public MarkRetroRowTool Tool(string caller, IPromptSource? prompts = null)
         {
             _ = Directory.CreateDirectory(this.TeamFolder);
             if (!File.Exists(this.RegisterPath))
@@ -82,7 +85,7 @@ public sealed class RetroVerifierTests
             {
                 TeamResult = LibraryResult<LibraryPath>.Ok(new LibraryPath(root, Team, this.TeamFolder, LibraryNodeRole.TeamFolder)),
             };
-            return new MarkRetroRowTool(catalog, this.Harness.Personas, types, new RetroFileStore(folders), this.Harness.Directory, this.Ids[caller]);
+            return new MarkRetroRowTool(catalog, this.Harness.Personas, types, new RetroFileStore(folders), this.Harness.Directory, this.Ids[caller], prompts ?? new FakePromptSource());
         }
 
         /// <summary>Reads the status of a register row.</summary>
@@ -112,6 +115,24 @@ public sealed class RetroVerifierTests
         }
 
         return scene;
+    }
+
+    /// <summary>
+    /// D5: an override saved for <c>tool.markRetroRow.description</c> is the text the tool's Description returns, read from the
+    /// catalog through the store.
+    /// </summary>
+    [Fact]
+    public async Task MarkRetroRowDescription_OverriddenValue_IsWhatTheToolReturns()
+    {
+        CancellationToken ct = TestContext.Current.CancellationToken;
+        using var dataDir = new TempDataDir();
+        var store = new PromptStore(dataDir.Options(), NullLogger<PromptStore>.Instance);
+        const string overriddenText = "Marks a retro row as Verified, Partial or Changed.";
+
+        store.Save("tool.markRetroRow.description", overriddenText);
+        using Scene scene = await CreateSceneAsync(ct);
+
+        Assert.Equal(overriddenText, scene.Tool("Mia", store).Description);
     }
 
     private static JsonObject Args(string rowId, string status, string evidence) =>

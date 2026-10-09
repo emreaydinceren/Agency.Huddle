@@ -2,6 +2,7 @@ using System.Globalization;
 using System.Text.Json.Nodes;
 using Agency.Huddle.Acp.Abstractions;
 using Agency.Huddle.App.Data;
+using Agency.Huddle.App.Prompts;
 using Agency.Huddle.App.Tasks;
 using Agency.Huddle.App.TeamTypes;
 using Agency.Huddle.App.Teams;
@@ -19,19 +20,19 @@ internal sealed class ProposeRetroChangesTool(
     PersonaStore personas,
     TeamTypeCatalog types,
     ITeamDirectory directory,
-    string callerAgentId) : IAppTool
+    string callerAgentId,
+    IPromptSource prompts) : IAppTool
 {
     /// <summary>The most changes one proposal carries.</summary>
     private const int MaxChanges = 3;
+
+    private static readonly IReadOnlyDictionary<string, string> NoValues = new Dictionary<string, string>();
 
     /// <inheritdoc />
     public string Name => "propose_retro_changes";
 
     /// <inheritdoc />
-    public string Description =>
-        "Proposes up to 3 changes to the Human after a retro. Each change names a targetFile (Process.md, _team.md or a Team member's Name.md), " +
-        "the exact text to find (it must occur once in that file) and the text to replace it with. Huddle shows each as a diff; " +
-        "nothing is edited until the Human accepts it, and then Huddle makes the edit, not you.";
+    public string Description => prompts.Render("tool.proposeRetroChanges.description", NoValues);
 
     /// <inheritdoc />
     public JsonObject InputSchema => new()

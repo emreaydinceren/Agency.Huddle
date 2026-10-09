@@ -20,15 +20,23 @@ is no free lane to start from. This area adds:
 
 1. **The Chief of Staff must already exist and hold `team-building`.** A stock install writes it at
    first start (`BuiltinTeammateSeeder`, Spec §6.12) with `skills: ['team-building']` already in its
-   frontmatter — confirm with `O-FILE` (`App_Data/Teams/Chief of Staff.md`) rather than assuming,
-   since SKILLS-04 and SKILLS-05 both reset the library and need it to reappear on its own.
-2. **`Team:Acp:MaxTeammates` defaults to 8.** SKILLS-04 lowers it on purpose; every other test in
-   this area assumes the default and needs it restored afterwards if you changed it (`P-STOP` plus a
-   relaunch — it is read at startup only).
-3. Two resets this area names directly: `P-RESET-TEAMS` (SKILLS-04, to start from a known Teammate
-   count) and `P-RESET-ALL` (the §0.4 rollback — `run.ps1 -Clean` in SKILLS-05 is its own, narrower
-   reset; see that test for exactly what it does and does not delete).
-4. Every reply in this area is judged against real prose from a real model. Record what you saw,
+   frontmatter — confirm with `O-FILE` (`<data>\Teammates\Chief of Staff\Chief of Staff.md`) rather
+   than assuming, since SKILLS-04 and SKILLS-05 both reset Teammates and need it to reappear on its
+   own. Every Persona in this area lives at `<data>\Teammates\<Name>\<Name>.md` with its Work Dir at
+   `<data>\Teammates\<Name>\work` (`TeammatePaths.cs:15,44,57`), never under `Teams\`.
+2. **Two limits cap a Proposal, and both default high.** `Team:Acp:MaxTeammatesPerTeam` defaults to 8
+   and `Team:Acp:MaxLiveProcesses` to 16 (`AcpOptions.cs:136,143`). The old `MaxTeammates` is retired:
+   it still loads but nothing enforces it (`AcpOptions.cs:124-130`), so setting it does nothing.
+   SKILLS-04 lowers `MaxTeammatesPerTeam` on purpose; every other test assumes the defaults and needs
+   them restored if you changed one (`P-STOP` plus a relaunch, since it is read at startup only).
+3. Two resets this area names directly: `P-RESET-TEAMS` (SKILLS-04: it deletes every folder under
+   `<data>\Teammates` and the Chief of Staff is re-seeded at the next start, so the count starts at 1;
+   Team folders and `team.db` survive) and `P-RESET-ALL` (the §0.4 rollback). `run.ps1 -Clean` in
+   SKILLS-05 is its own, narrower reset; see that test for exactly what it does and does not delete.
+4. **Tool calls are read from `O-TOOLCALLS`**, not from a screen or a Trace log:
+   `<data>\logs\tool-calls\Chief of Staff\<yyyy-MM-dd>.jsonl` (UTC date), one line per call, the tool
+   name in `tool`. It persists after the Turn, so nothing has to be watched live.
+5. Every reply in this area is judged against real prose from a real model. Record what you saw,
    verbatim, per [§0.5 rule 2](../manual-tests.md#05-how-to-conclude-a-result) — "it refused" is not
    a result; the actual sentence is.
 
@@ -49,22 +57,20 @@ is no free lane to start from. This area adds:
 - Its Room with the Human already holds at least one Message, so this Turn is an ordinary
   Reply-Gate Turn and not a Greeting Turn — SKILLS-05 covers the Greeting on its own. If the Room is
   empty, post something harmless like `hi` first and let it answer before running this test.
-- Position the browser so the Transcript area is visible before you send, the way APPTOOLS-08 sets
-  up — the tool-activity line you need only exists while the Turn streams.
+- Note the line count of today's `O-TOOLCALLS` file for the Chief of Staff (the file may not exist
+  yet; then the count is 0), so you can tell which lines this Turn added.
 
 **Steps**
 
 1. In the Chief of Staff's Room, type: `I need help researching competitors for a product launch.`
    and press Enter.
-2. Watch the streaming row continuously — do not switch windows or scroll away.
-3. Confirm a tool-activity line appears beneath the Draft while the Turn is in flight.
-4. Once the Turn ends, read the posted Message.
+2. Wait for the Turn to end, then read the posted Message.
+3. Read the lines `O-TOOLCALLS` added since the count you noted.
 
-**Pass if — at least one of these two, and neither Fail-if line**
+**Pass if — all of these, and no Fail-if line**
 
-- A tool-activity line was visible beneath the Draft while the Turn streamed (step 3) — this proves
-  *some* tool call happened; treat it as `read_skill` if its title names the Skill or the file, or if
-  it is the only call you see before the reply.
+- `O-TOOLCALLS` shows a new line whose `tool` ends in `read_skill` and whose `arguments` name
+  `team-building` (step 3). This is the primary oracle: it names the tool and needs no Trace level.
 - The posted Message follows SKILL.md step 1 by its actual content: it asks about the goal, and at
   least one more of (one-off vs recurring, how involved the Human wants to be, practice vs real
   work, which Team, spend) — the specific axes `team-building`'s own table uses, not a generic
@@ -75,7 +81,9 @@ is no free lane to start from. This area adds:
 
 - The reply lists raw tool names, explains Rooms, Mentions or Budgets, or otherwise reads as
   something `team-building`'s own "Never" section and "do not explain the chat application" rule
-  forbid -> workable evidence the Skill was not actually read, whatever the activity line showed.
+  forbid -> workable evidence the Skill was not actually read, whatever the log showed.
+- `O-TOOLCALLS` has no `read_skill` line for this Turn, even though the reply reads well -> the
+  Skill was not read; a good-looking interview is not evidence on its own.
 - A Proposal card appears on this first reply -> step 1 (interview) was skipped entirely; nothing
   has been validated or proposed yet.
 - The reply is a flat refusal or an unrelated answer that does not engage with team-building at all
@@ -83,23 +91,11 @@ is no free lane to start from. This area adds:
 
 **Inconclusive if**
 
-You cannot correlate either Pass-if line — no tool-activity line was seen (you looked away, or the
-Turn resolved too quickly to catch it) **and** the reply's questions are too generic to attribute to
-`team-building` specifically rather than to Haiku's own general helpfulness. Tool activity is never
-persisted (§0.6: "Tool activity never appears in scrollback"), so a missed window cannot be recovered
-after the fact from the Transcript. Do not mark this a Pass on the reply's content alone if it reads
-as generic — an interview-shaped reply is consistent with, but does not by itself prove, the Skill
-being read.
-
-> [!NOTE]
-> An optional stronger check, if you want the literal tool name rather than an inference: the wire
-> line that would carry it — `App tool server replied to {Method}: {Payload}`, in
-> `src/Huddle.Acp/Tools/AppToolServer.cs` — logs at **Trace**, one level below the Debug the paid
-> lane runs at by default, so it does not appear in `O-LOG` unless you raise it for this one Turn
-> with `${env:Logging__LogLevel__Agency.Huddle} = 'Trace'` (the method STARTUPCONFIG-32 uses) and
-> unset it again afterwards. The Debug-level sibling line, `App tool server received tools/call.`,
-> **does** show by default but names only the JSON-RPC envelope method — literally `tools/call` for
-> every tool call there is — so on its own it never tells you which tool ran.
+The `O-TOOLCALLS` folder for the Chief of Staff does not exist after the Turn ended and the Turn did
+post a reply: the log was not written, so the first Pass-if line cannot be judged. Record the reply
+and check `O-LOG` for a tool-call logging error before concluding anything. Do not mark this a Pass
+on the reply's content alone — an interview-shaped reply is consistent with, but does not by itself
+prove, the Skill being read.
 
 ---
 
@@ -116,7 +112,8 @@ open a seeded Room exactly as SKILL.md step 6 describes.*
 **Before you start**
 
 - SKILLS-01 passed, or at least: the Chief of Staff is mid-interview in a Room with the Human.
-- `Team:Acp:MaxTeammates` at its default (Setup step 2) — 8 is plenty of headroom for 2–3 Candidates.
+- `MaxTeammatesPerTeam` and `MaxLiveProcesses` at their defaults (Setup step 2) — 8 per Team is
+  plenty of headroom for 2–3 Candidates.
 - Note the current Teammate count on `/teammates` before you start.
 
 **Steps**
@@ -125,7 +122,10 @@ open a seeded Room exactly as SKILL.md step 6 describes.*
    a small two-person pipeline: one Teammate finds three facts about something, a second turns them
    into a one-paragraph summary for you. Answer its follow-up questions briefly.
 2. Watch for a Proposal card to appear in the Room. Read it: proposer name, each Candidate's
-   Name/Alias/Title/Teams/Consult When, and the Body collapsed.
+   Name/Alias/Title/Teams/Consult When, and the Body collapsed. Read the headroom line under the
+   card text too: `This adds 2 Teammates; N of 8 per Team.` when the Candidates name a Team, or
+   `...; N of 16 live processes.` when none does (`ProposalCard.razor:198-210`; a single Candidate
+   reads `1 Teammate`). N is the current usage of the tighter limit, before this Proposal.
 3. Confirm the Message posted beside the card (not the card itself) names the pattern and who
    coordinates, per SKILL.md step 5.
 4. Click **Approve**.
@@ -140,8 +140,9 @@ open a seeded Room exactly as SKILL.md step 6 describes.*
 
 **Pass if — all of these**
 
-- The card's Candidates become real Persona files: `O-FILE` shows one `.md` per Candidate under
-  `App_Data/Teams/`, and `/teammates`'s count grew by exactly that many (step 5).
+- The headroom line (step 2) has the form above and its `of 8` or `of 16` matches the defaults.
+- The card's Candidates become real Persona files: `O-FILE` shows `<data>\Teammates\<Name>\<Name>.md`
+  for each Candidate, and `/teammates`'s count grew by exactly that many (step 5).
 - The exact outcome Message text is posted **as the Human** — sender is the Human's configured Name,
   never the Chief of Staff or a system voice — and is present in `O-TRANSCRIPT` (step 6).
 - The Chief of Staff replies to that Message without further Human input — the wake went through the
@@ -191,7 +192,7 @@ Room replaces its own waiting Proposal rather than stacking a second one.*
    Teammates: <names>. @Chief of Staff` — plain commas joining the names, not "and" (§6.10's own
    wording, unlike every other outcome template).
 3. Confirm the card disappears from the Room the instant Decline was clicked, and that no Persona
-   file was written for any Candidate (`O-FILE`, `App_Data/Teams/`).
+   file was written for any Candidate (`O-FILE`: no `<data>\Teammates\<Name>\` folder for any of them).
 4. Wait for the Chief of Staff's reply asking what to change; tell it to change one thing — drop a
    role, or rename one.
 5. Watch for a **second** Proposal card to appear, and confirm it replaces the first: never two
@@ -227,36 +228,43 @@ the whole test over it.
 
 ### SKILLS-04 — Over the limit, Approve creates nothing and the Message says why
 
-**Paid** · about 15 min · one short Turn to propose (the automatic wake after Approve is a second)
+**Paid** · about 20 min · one short Turn to propose (the automatic wake after Approve is a second)
 
-*Proves §6.10's own re-check: the limit is enforced again at Approve time, against whatever the
-Teammate count has become since the Proposal was made, not only at `propose_teammates` time — so a
-Proposal that was valid when made can still create nothing.*
+*Proves §6.10's own re-check: the per-Team limit (`MaxTeammatesPerTeam`) is enforced at Approve time
+against whatever the Team has become since the Proposal was made, not when the card was shown — so a
+Proposal that fitted when made can still create nothing. `propose_teammates` itself never checks the
+limit; only Approve does (`ProposalService.cs:67`).*
 
 **Before you start**
 
-- `P-RESET-TEAMS`, then restart, so only the Chief of Staff exists (count 1).
-- Stop the app and set `$env:Team__Acp__MaxTeammates = '3'` alongside the usual paid-lane
+- `P-RESET-TEAMS`, so only the Chief of Staff exists (count 1). Re-set Haiku / low on its card
+  first if the paid lane needs it (`P-LAUNCH-PAID` step 1).
+- Stop the app and set `$env:Team__Acp__MaxTeammatesPerTeam = '2'` alongside the usual paid-lane
   variables, then relaunch (`P-LAUNCH-PAID`) — changing a `Team__*` variable needs a fresh start.
+  Do not set `MaxTeammates`: it is retired and nothing reads it.
 
 **Steps**
 
-1. Ask the Chief of Staff to propose two new Teammates for something simple (a Researcher and a
-   Writer is enough). At propose time this is `1 existing + 2 Candidates = 3`, exactly at the limit,
-   so `propose_teammates` accepts it and the card appears.
-2. **Before clicking Approve**, use **New teammate** (`P-NEW-PERSONA`, free) to add one more
-   Teammate directly — any name, Haiku/low. The count is now 2.
+1. Ask the Chief of Staff to propose two new Teammates for something simple, both in a Team called
+   `Launch` (a Researcher and a Writer is enough), naming the Team in your request so each
+   Candidate's **Teams** column reads `Launch`. Team `Launch` has no members yet, so `0 + 2 = 2` is
+   exactly at the limit of 2 and the card shows `This adds 2 Teammates; 0 of 2 per Team.`
+2. **Before clicking Approve**, use **New teammate** (`P-NEW-PERSONA`, free) to add one Teammate
+   directly — any name, Haiku/low, **Teams** `Launch`. `Launch` now has 1 member, and the card's
+   headroom line, recomputed on render, reads `...; 1 of 2 per Team.`
 3. Click **Approve** on the still-waiting card.
 4. Read the posted Message.
 5. Confirm on `/teammates` that neither Candidate from the card exists.
 
 **Pass if — all of these**
 
-- The posted Message reads exactly `Approved, but nothing was created: 2 Teammates exist, the limit
-  is 3, and this Proposal adds 2. @Chief of Staff` (`ProposalService.cs`'s `ComposeOverLimitText`) —
-  sent as the Human.
-- Neither Candidate from the card became a file (`O-FILE`), and `/teammates`'s count is unchanged at
-  2 after Approve.
+- The posted Message reads exactly `Approved, but nothing was created: Team Launch has 1 Teammates,
+  the limit is 2 per Team, and this Proposal adds 2. @Chief of Staff`
+  (`ProposalService.cs:260-266`, `ComposeOverLimitText`; "1 Teammates" is the code's own wording,
+  and `Launch` is spelled as the first Candidate spells it) — sent as the Human.
+- Neither Candidate from the card became a file (`O-FILE`: no `<data>\Teammates\<Name>\` folder for
+  either), and `/teammates`'s count is unchanged at 2 (the Chief of Staff and the Teammate you
+  added in step 2) after Approve.
 - The card disappears once Approve is clicked, even though it creates nothing — the Proposal is
   taken exactly once.
 
@@ -264,18 +272,19 @@ Proposal that was valid when made can still create nothing.*
 
 - One or both Candidates were created anyway -> the re-check at Approve time is missing, or it is
   reading a stale count captured when the Proposal was made rather than a live one.
-- The numbers in the Message do not match what `/teammates` actually shows at Approve time ->
-  `existingCount` is being read from somewhere other than a live `PersonaStore.Entries.Count`.
+- The numbers in the Message do not match the Team's real membership at Approve time (1 member) ->
+  `HireLimitGuard.MembersOf` is reading something other than the live Team catalog.
 - Nothing is posted at all -> a Proposal that fails the limit check must still post the OverLimit
   Message; silence here is indistinguishable from the Human never having clicked anything.
 
 **Inconclusive if**
 
-`propose_teammates` itself refuses at step 1 because the model asked for more Candidates than fits
-(`1 + 2 = 3` is exactly at the limit and should be accepted — if it is refused here, your
-`MaxTeammates` value or the model's Candidate count drifted from this recipe; adjust and retry). This
-test is specifically about the **Approve-time** re-check; a refusal at `propose_teammates` time is a
-different, already-covered code path and is not evidence either way for this one.
+The model does not put both Candidates in `Launch`, or puts them in different Teams, so no Team
+reaches the limit (the Message then reads the other way, or Approve creates both): reread the card's
+**Teams** column, ask the Chief of Staff to use only `Launch`, and retry. If both Candidates are
+created because the Team had room, this is not a defect, it is a mis-set-up run. The live-process
+limit (`MaxLiveProcesses`, message `...N live processes are running, the limit is M live processes...`)
+takes the same path and is not exercised here.
 
 ---
 
@@ -290,9 +299,17 @@ the Human holds an unprompted introduction before the Human has typed anything, 
 **Before you start**
 
 - Take the [§0.4](../manual-tests.md#04-rollback) rollback copy of `App_Data` first if you want it
-  back. `run.ps1 -Clean` deletes `team.db` (+ `-wal`/`-shm`) and every file under `App_Data/Teams` —
-  it does **not** delete `App_Data/rooms`, but a fresh install mints new Room ids from a fresh
-  `team.db`, so no stale Transcript file is reachable through it.
+  back. `run.ps1 -Clean` deletes only `team.db` (+ `-wal`/`-shm`) and each
+  `Teammates\<Folder>\<Folder>.md` definition file (`run.ps1:49-56`). It keeps all of `Teams\`, every
+  `work\` folder, `rooms` and the logs. A fresh `team.db` mints new Room ids, so no stale Transcript
+  file is reachable through it.
+- The Chief of Staff's own `work\` folder (and any memory in it) survives `-Clean` and could colour
+  the Greeting. For the cleanest run delete `<data>\Teammates\Chief of Staff\work` by hand first; if
+  you leave it, a leftover memory folder is acceptable, but record that it existed and whether the
+  Greeting mentions anything from it.
+- `-Clean` also deletes the stored Model and Effort rows in `team.db`, so the re-seeded Chief of Staff
+  runs its Greeting on the account default Model, not Haiku. This cannot be avoided in this test:
+  budget for one Greeting Turn on the default Model.
 - In the same terminal, set the usual paid-lane variables (`Team__AgentMessageBudget`,
   `Team__Acp__TokenBudget`, and clear `ANTHROPIC_API_KEY`/`TEAM_E2E`) before running the script —
   `run.ps1` does not set these itself, but a child `dotnet run` inherits whatever is already in the
@@ -300,14 +317,14 @@ the Human holds an unprompted introduction before the Human has typed anything, 
 
 **Steps**
 
-1. From the repository root: `./run.ps1 -Clean` — no `-NoAcp`; ACP must be on for a Turn to run at
-   all.
+1. From the repository root (`<repo>`): `./run.ps1 -Clean` — no `-NoAcp`; ACP must be on for a Turn
+   to run at all.
 2. As soon as the app finishes starting, open `http://localhost:5100` **without typing anything
    first**.
 3. Read whatever Room you land in.
 4. Count the Messages in that Room and their senders.
 5. Stop the app (`P-STOP`) and start it again with `./run.ps1` — no `-Clean` this time, since you
-   want the same `team.db` and Teams library back.
+   want the same `team.db` and Teammates back.
 6. Open the same Room again, still without typing.
 
 **Pass if — all of these**
@@ -374,7 +391,7 @@ to advise on a dose change, and file-backed memory across a restart.*
 2. Read the reply. Confirm what comes first, before anything else.
 3. In the same Room, ask it to change a dose: `Can I give him an extra dose of his blood pressure
    medication?`
-4. Read the reply, then check its working folder (`App_Data/work/Advisor/members/`, `O-FILE`) for
+4. Read the reply, then check its Work Dir (`<data>\Teammates\Advisor\work\members\`, `O-FILE`) for
    the person's file.
 5. Ask one more factual question about the same person that it can only answer from what you told it
    in steps 1 and 3 — for example, ask it to list what is on his Questions-for-the-doctor list.

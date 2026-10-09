@@ -2,28 +2,28 @@
 
 Prove that the Avatar library picker (`Components/Shared/AvatarLibraryDialog.razor`, opened from the Teammate card and from **Settings → Appearance**) narrows 324 pictures correctly, shows nothing but pictures, copies the chosen file through the normal upload path, and fails visibly when the library is missing or unreadable. Most of this is pixels, focus and what a screen reader announces, which the compiler and the bUnit suite cannot see. The picker is specified in [Huddle.AvatarLibrary-Specifications.md](../../Huddle.AvatarLibrary-Specifications.md) and decided in [ADR-0044](../../adr/0044-an-avatar-library-is-a-read-only-source-and-a-pick-copies.md).
 
-**25 tests** · all free · about 2.5 hours.
+**26 tests** · all free · about 2.9 hours.
 
 Read [the manual test script](../manual-tests.md) first, then [Common procedures](common.md), which defines the terminals, states, procedures and oracles this page names. Both are assumed below.
 
-Coverage: use cases L1 to L16 and mock states M1 to M5 from the specification. Each test names the cases it proves.
+Coverage: use cases L1 to L16 and mock states M1 to M5 from the specification. Each test names the cases it proves. `<data>` is `<repo>\src\Huddle.App\App_Data` on the free lane (see [Common procedures](common.md)).
 
 ## Setup
 
 Run [`P-BUILD`](common.md#p-build) then [`P-LAUNCH-FREE`](common.md#p-launch-free), which also defines the terminals and the standing conventions. This area adds:
 
-1. Start from `E-STOPPED`, and take the [§0.4](../manual-tests.md#04-rollback) backup first. The picker copies files into `avatars/` and rewrites `avatars.json`, and that backup is the only undo.
+1. Start from `E-STOPPED`, and take the [§0.4](../manual-tests.md#04-rollback) backup first. The picker copies files into `<data>\avatars` and rewrites `<data>\avatars.json`, and that backup is the only undo.
 2. **The real library.** The 324 images live in `E:\Projects\Software Factories\avatars`. They are 256 × 256 PNGs with a `master.json` index, and each file is under the 512 000-byte cap. Confirm in File Explorer that the folder holds 324 `.png` files and a `master.json` before you start.
-3. Start the app with the library configured, in addition to the free lane's flags:
+3. Start the app with the library configured. In `T-A`, set the library variable before the two lines of `P-LAUNCH-FREE`:
 
    ```powershell
-   dotnet run --project E:\Repos\Huddle2\src\Huddle.App -- --Team:Acp:Enabled=false --Team:AvatarLibrary:Dir="E:\Projects\Software Factories\avatars"
+   $env:Team__AvatarLibrary__Dir = 'E:\Projects\Software Factories\avatars'
    ```
 
-   Or set `Team:AvatarLibrary:Dir` to `E:\Projects\Software Factories\avatars` in the app's configuration, as the [Engineering Guide](../../Huddle.EngineeringGuide.md#configuration) describes. The path is absolute because the real library is not under `DataDir`.
-4. Restart the app after any change to `Dir`. The thumbnail mount is added at start-up only (AVATARLIB-02 below depends on this).
-5. Open `http://localhost:5100/teammates`. Keep File Explorer open on `E:\Projects\Software Factories\avatars` and on `E:\Repos\Huddle2\src\Huddle.App\App_Data\avatars` so you can see copied files appear.
-6. Create one scratch Teammate for the card tests with `New teammate`, named `Library Test`. Delete it at the end of the area.
+   The equivalent command-line flag is `--Team:AvatarLibrary:Dir="E:\Projects\Software Factories\avatars"`; the [Engineering Guide](../../Huddle.EngineeringGuide.md#configuration) describes the key. The path is absolute because the real library is not under `<data>`.
+4. Restart the app after any change to `Dir` or after the library folder appears or disappears. The thumbnail mount is added at start-up only, and only when the folder exists (`Program.cs:129`); AVATARLIB-02 depends on this.
+5. Open `http://localhost:5100/teammates`. Keep File Explorer open on `E:\Projects\Software Factories\avatars` and on `<repo>\src\Huddle.App\App_Data\avatars` so you can see copied files appear.
+6. Create one scratch Teammate for the card tests with **New teammate**, named `Library Test`. Delete it at the end of the area.
 
 ## Tests
 
@@ -35,30 +35,30 @@ Run [`P-BUILD`](common.md#p-build) then [`P-LAUNCH-FREE`](common.md#p-launch-fre
 
 **Before you start**
 
-- Run the app without `--Team:AvatarLibrary:Dir`, or with it unset.
+- Run the app without `Team__AvatarLibrary__Dir` set (open a fresh `T-A`), or with it unset.
 
 **Steps**
 
-1. Open `/teammates` and choose `New teammate`.
+1. Open `/teammates` and choose **New teammate**.
 2. In the **Avatar** section, select **An image**.
 3. Read the buttons beside the upload control.
-4. Close the card. Open **Settings → Appearance** and find the **Avatar** section for the Human.
+4. Close the card. Open **Settings → Appearance** and find the **Your avatar** section.
 5. Select **An image** there and read its buttons.
 
 **Pass if — all of these**
 
-- Both places show the upload control only, with no **Choose from library** button.
+- Both places show the upload control only (**Choose an image**), with no **Choose from library** button.
 - The upload control still opens a file chooser.
 
 **Fail if — any of these**
 
 - A **Choose from library** button appears with no library configured -> the locator is not gating the button.
 
-### AVATARLIB-02 — Folder or `master.json` missing: no button, and the mount is absent
+### AVATARLIB-02 — `master.json` missing: no button, but the picture mount stays
 
-**Free** · about 5 min
+**Free** · about 8 min
 
-*Proves that a configured path with no `master.json` is treated as no library (L13), and the thumbnail mount is not added.*
+*Proves that a configured folder with no `master.json` is treated as no library for the button (L13), while the thumbnail mount follows the folder, not the index (spec §6.3, decision D2).*
 
 **Before you start**
 
@@ -67,20 +67,24 @@ Run [`P-BUILD`](common.md#p-build) then [`P-LAUNCH-FREE`](common.md#p-launch-fre
 **Steps**
 
 1. Start the app with `Team:AvatarLibrary:Dir` set to the library folder.
-2. Open `New teammate`, select **An image**, and read the buttons.
-3. In a browser tab, open `http://localhost:5100/avatar-library/` followed by any `.png` name from the folder.
+2. Open **New teammate**, select **An image**, and read the buttons.
+3. In a browser tab, open `http://localhost:5100/avatar-library/cook_tan_f_01.png`. In another tab open `http://localhost:5100/avatar-library/master.json.bak`.
 4. Stop the app. Rename `master.json.bak` back to `master.json`.
-5. Start the app again. Repeat step 2 and step 3. Step 3 should now succeed.
+5. Start the app again. Repeat step 2 and the first URL of step 3. Also open `http://localhost:5100/avatar-library/master.json`.
+6. Stop the app. Set `Team__AvatarLibrary__Dir` to a folder that does not exist (for example `E:\Projects\Software Factories\no-such-folder`) and start it. Repeat step 2, then open the first URL of step 3.
+7. Stop the app and set the variable back to the real library folder.
 
 **Pass if — all of these**
 
-- With `master.json` missing: no **Choose from library** button, and step 3 returns 404.
-- After restoring it and restarting: the button appears and step 3 shows the picture.
+- With `master.json` missing: no **Choose from library** button, and the `cook_tan_f_01.png` URL shows the picture (the mount exists because the folder does). The `master.json.bak` URL returns 404.
+- After restoring it and restarting: the button appears and the picture still loads. The `master.json` URL returns 404, because the mount serves only picture types.
+- With a folder that does not exist: no button, and the picture URL returns 404 (no mount is added).
 
 **Fail if — any of these**
 
-- The button appears while `master.json` is missing -> `AvatarLibraryLocator.IsConfigured` is not checking for the file.
-- Step 3 returns the image while `master.json` is missing -> the mount is being added without the configuration check.
+- The button appears while `master.json` is missing -> `AvatarLibraryLocator.IsConfigured` (`AvatarLibraryLocator.cs:31`) is not checking for the file.
+- The picture URL returns 404 while the folder exists -> the mount is gated on `master.json` instead of the folder (`Program.cs:129`).
+- `master.json` is served -> the mount is not limited to picture types.
 
 ### AVATARLIB-03 — The button appears only under **An image**, and the dialog opens at 48 of 324 (L1, M1, M2)
 
@@ -111,31 +115,35 @@ Run [`P-BUILD`](common.md#p-build) then [`P-LAUNCH-FREE`](common.md#p-launch-fre
 
 - The button shows under the wrong choice, or the count is anything other than 324 -> the picker is wired to the wrong list, or the library read is wrong.
 
-### AVATARLIB-04 — The dialog layout matches the mock-up (M2)
+### AVATARLIB-04 — The dialog layout matches the mock-up, and the filters stay in view (M2)
 
-**Free** · about 5 min
+**Free** · about 8 min
 
-*Proves that the filters stay at the top and only the grid scrolls, in the order the mock-up gives.*
+*Proves that the filters stay at the top and only the grid scrolls, in the order the mock-up gives, on a wide window, below 600 px, and with **Show all** open (specification §6.9 Layout).*
 
 **Before you start**
 
-- The dialog is open, as in AVATARLIB-03.
+- The dialog is open, as in AVATARLIB-03. The browser window is wider than 600 px.
 
 **Steps**
 
 1. Read the dialog from top to bottom: the skin switch, the search box, the profession chips, the tag chips with **Show all**, the count line with **Clear all**, then the grid.
 2. Scroll the grid to its end. Confirm that the skin switch, search box, both chip clouds and the count line stay where they are.
-3. Resize the browser window to below 600 px wide.
+3. Press **Show all** in the tag cloud (the button then reads **Show fewer**). Scroll inside the tag cloud, then scroll the grid.
+4. Resize the browser window to below 600 px wide (for example 400 px). Repeat steps 2 and 3.
+5. Press **Show fewer**, then resize the window back to full width.
 
 **Pass if — all of these**
 
 - The order matches the top-to-bottom list in step 1.
-- Scrolling moves only the grid. The filters are never scrolled out of view.
+- Scrolling moves only the grid. The skin switch, search box, count line and **Clear all** are never scrolled out of view.
+- With **Show all** open, the tag cloud scrolls inside itself (it is capped at 30 % of the window height) and the count line and at least part of the grid stay in view, at both widths.
 - Below 600 px the dialog fills the screen, and no control or picture requires a sideways scroll.
 
 **Fail if — any of these**
 
-- The whole dialog scrolls, or a horizontal scrollbar appears -> the layout does not match the specification's behaviour table.
+- The whole dialog scrolls, or the filters scroll away with the grid, at any width -> the layout does not match the specification's behaviour table (`app.css`, `.avatar-library-body`, `.avatar-library-tags` and the `max-width: 600px` block).
+- A horizontal scrollbar appears -> a control or picture is wider than the dialog.
 
 ### AVATARLIB-05 — Pictures carry no visible text, caption or tooltip (D-4, L15)
 
@@ -285,14 +293,14 @@ Run [`P-BUILD`](common.md#p-build) then [`P-LAUNCH-FREE`](common.md#p-launch-fre
 **Steps**
 
 1. Press **Butler**. Note the count.
-2. Press **Chef**. Note the count and the order of the two chips.
-3. Press **Chef** again to deselect it. Confirm the count returns to the butler count.
+2. Press **Cook**. Note the count and the order of the two chips.
+3. Press **Cook** again to deselect it. Confirm the count returns to the butler count.
 
 **Pass if — all of these**
 
-- After step 2 the count is the butler count plus the chef count, with no overlap (an avatar has one profession).
-- **Butler** is left of **Chef**, in the order they were pressed. Both have an X.
-- Deselecting **Chef** returns it to its alphabetical place and the count to the butler count.
+- After step 2 the count is the butler count plus the cook count, with no overlap (an avatar has one profession).
+- **Butler** is left of **Cook**, in the order they were pressed. Both have an X.
+- Deselecting **Cook** returns it to its alphabetical place (after **Chief of Staff**) and the count to the butler count.
 
 **Fail if — any of these**
 
@@ -337,18 +345,18 @@ Run [`P-BUILD`](common.md#p-build) then [`P-LAUNCH-FREE`](common.md#p-launch-fre
 **Steps**
 
 1. Press **Tan**. Note the count.
-2. Press **Butler**. Note the count.
-3. Type `glasses` in the search box, after the 200 ms pause. Note the count.
-4. Press the tag `vest`. Note the count.
+2. Type `apron` in the search box, after the 200 ms pause. Note the count.
+3. Press **Cook**. Note the count.
+4. Press the tag `no-glasses`. Note the count.
 
 **Pass if — all of these**
 
-- Each step gives a count no larger than the step before.
-- Every remaining picture is tan or brown, a butler, carries a word starting `glasses`, and carries the tag `vest`.
+- Each step gives a count smaller than the step before (the library has pictures that fall out at every step).
+- Every remaining picture is tan or brown, a cook, carries a word starting `apron`, and carries the tag `no-glasses`.
 
 **Fail if — any of these**
 
-- A step increases the count -> one of the four controls is widening the result.
+- A step increases the count, or leaves it unchanged -> one of the four controls is widening the result or is not applied.
 
 ### AVATARLIB-13 — Clear all resets everything (L8)
 
@@ -412,16 +420,16 @@ Run [`P-BUILD`](common.md#p-build) then [`P-LAUNCH-FREE`](common.md#p-launch-fre
 
 **Steps**
 
-1. Press **Tan**. Type `gl` in the search box. Wait for the filter.
-2. Press **Butler**, then **Chef**. Press the tags `glasses` then `vest`.
+1. Press **Tan**. Type `apron` in the search box. Wait for the filter.
+2. Press **Cook**, then **Barista**. Press the tags `apron` then `glasses`.
 3. Read both clouds. Note where **Accountant**, **Architect**, `no-glasses` and `laptop` sit now.
-4. Press **Butler** again to deselect it.
+4. Press **Barista** again to deselect it.
 
 **Pass if — all of these**
 
 - Selected chips sit at the left of their clouds in the order pressed, each with an X. The rest follow in their usual order.
 - After step 3 the unselected chips are in the same order and places as before step 1, apart from the selected ones moved to the left. None is hidden, disabled or recounted.
-- The count line gives the number of pictures that match the filters.
+- The count line gives the number of pictures that match the filters, and it drops when **Barista** is deselected in step 4.
 - Each selected chip has `aria-pressed="true"`, and is shown by its bracket and X, not by colour alone.
 
 **Fail if — any of these**
@@ -466,15 +474,15 @@ Run [`P-BUILD`](common.md#p-build) then [`P-LAUNCH-FREE`](common.md#p-launch-fre
 **Steps**
 
 1. Count the unselected tag chips shown before **Show all** is pressed.
-2. Press **Show all**. Count them again.
-3. Press **Show all** again if it has become a collapse control. Choose a tag that is not in the first 40 (for example one near the end of the list) and press it.
-4. Collapse the cloud again.
+2. Press **Show all**. The button now reads **Show fewer**. Scroll the tag cloud to its end.
+3. Press the last tag in the cloud (it has the lowest count, so it is not among the first 40).
+4. Press **Show fewer** to collapse the cloud again.
 
 **Pass if — all of these**
 
 - Before **Show all**, the cloud shows 40 tags, the most frequent first, then alphabetical.
-- After **Show all**, every tag is shown.
-- The tag chosen in step 3 remains visible after the cloud is collapsed, because a selected tag is shown beyond the cap.
+- After **Show all**, every tag is shown and the button reads **Show fewer**.
+- The tag chosen in step 3 remains visible after the cloud is collapsed, at the left with an X, because a selected tag is shown beyond the cap.
 
 **Fail if — any of these**
 
@@ -489,28 +497,28 @@ Run [`P-BUILD`](common.md#p-build) then [`P-LAUNCH-FREE`](common.md#p-launch-fre
 **Before you start**
 
 - `Library Test` is open in **Edit**, with the Avatar section set to **An image**. Note the current image or lack of one.
-- Note the file count in `App_Data\avatars`.
+- Note the file count in `<data>\avatars`.
 
 **Steps**
 
 1. Choose **Choose from library**. Press **Tan**, then type `headset`.
 2. Click the first picture in the grid.
-3. Read the card. Then look at `App_Data\avatars`.
+3. Read the card. Then look at `<data>\avatars`.
 4. Press **Cancel** on the card.
-5. Look at `App_Data\avatars` again and reopen `Library Test`.
+5. Look at `<data>\avatars` again and reopen `Library Test`.
+6. Repeat steps 1 to 3, then press **Save** instead of Cancel. Look at `<data>\avatars` and at the library folder.
 
 **Pass if — all of these**
 
 - The dialog closes at once on the click, with no confirm button.
 - The card shows the text `New image selected (not yet saved)`, as after an upload. A buffered image has no preview until Save.
-- After step 3, `App_Data\avatars` has the same number of files as before: nothing is written yet.
+- After step 3, `<data>\avatars` has the same number of files as before: nothing is written yet.
 - After Cancel (step 4) and reopening (step 5), the image is unchanged and no file was added.
+- After Save (step 6) the new image appears, one new file appears in `<data>\avatars` with an opaque generated name (not the Teammate's Name), and the library folder is unchanged.
 
 **Fail if — any of these**
 
-- A file appears in `App_Data\avatars` before **Save** -> the copy happens at the pick, not at Save.
-
-Then repeat with **Save** instead of Cancel: the new image appears, one new file appears in `App_Data\avatars` with an opaque generated name (not the Teammate's Name), and the library folder is unchanged.
+- A file appears in `<data>\avatars` before **Save** -> the copy happens at the pick, not at Save.
 
 ### AVATARLIB-19 — Settings → Appearance writes at once (L11)
 
@@ -520,18 +528,18 @@ Then repeat with **Save** instead of Cancel: the new image appears, one new file
 
 **Before you start**
 
-- Note the Human's current Avatar in **Settings → Appearance**, and the count of files in `App_Data\avatars`.
+- Note the Human's current avatar in **Settings → Appearance**, and the count of files in `<data>\avatars`.
 
 **Steps**
 
-1. Open **Settings → Appearance**. Select **An image** in the Avatar section.
+1. Open **Settings → Appearance**. In the **Your avatar** section, select **An image**.
 2. Choose **Choose from library**. Click any picture.
-3. Look at the Avatar section and at `App_Data\avatars`, without pressing anything else.
+3. Look at the **Your avatar** section and at `<data>\avatars`, without pressing anything else.
 
 **Pass if — all of these**
 
-- The Avatar now shows the picked picture.
-- One new file appears in `App_Data\avatars`, with no **Save** pressed.
+- The avatar now shows the picked picture.
+- One new file appears in `<data>\avatars`, with no **Save** pressed.
 
 **Fail if — any of these**
 
@@ -551,14 +559,14 @@ Then repeat with **Save** instead of Cancel: the new image appears, one new file
 **Steps**
 
 1. Start the app with the library configured.
-2. Open `New teammate`, select **An image**, and press **Choose from library**.
+2. Open **New teammate**, select **An image**, and press **Choose from library**.
 3. Read the dialog. Read the app console for the warning.
 4. Stop the app, restore `master.json` from `master.json.good`, and start again.
 
 **Pass if — all of these**
 
 - The dialog opens and shows `The avatar library could not be read.` with `Check Team:AvatarLibrary:Dir and master.json.` beneath. No filters or grid are shown (M5).
-- The console shows exactly one warning for the read, and no exception.
+- The console shows exactly one warning for the open, `The Avatar Library index … is not valid JSON.`, and it carries the JSON parse error as its exception text. There is no other error entry and no unhandled exception.
 - After the restore the library opens normally.
 
 **Fail if — any of these**
@@ -567,31 +575,42 @@ Then repeat with **Save** instead of Cancel: the new image appears, one new file
 
 ### AVATARLIB-21 — Skipped records are reported once, with a count and examples
 
-**Free** · about 8 min
+**Free** · about 10 min
 
 *Proves that bad index records produce one warning on open, not one line per record.*
 
 **Before you start**
 
-- Stop the app. In a copy of the library's `master.json` (save it as `master.json.good`), add three records to the `avatars` list: one whose `file` is `..\secret.png`, one whose `file` is `missing-picture.png` (no such file), and one whose `file` is an `.svg` that is in the folder. Restart the app.
+- Stop the app. In the library folder copy `master.json` to `master.json.good` first, then edit `master.json` itself.
+- Create a file `fake.svg` in the library folder (any text; File Explorer, **New → Text Document**, then rename).
+- In `master.json`, add three records to the end of the `avatars` list:
+
+  ```json
+  { "file": "..\\secret.png", "profession": "Cook" },
+  { "file": "missing-picture.png", "profession": "Cook" },
+  { "file": "fake.svg", "profession": "Cook" }
+  ```
+
+- Restart the app.
 
 **Steps**
 
 1. Open the dialog from **New teammate** under **An image**.
 2. Read the count line, then read the console once the dialog has opened.
 3. Note how many warnings were logged for the read.
-4. Stop the app, restore `master.json.good`, and restart.
+4. Stop the app, restore `master.json` from `master.json.good`, delete `fake.svg`, and restart.
 
 **Pass if — all of these**
 
 - The dialog shows the usual filters and grid, and the unsafe, missing and SVG records are not shown as pictures.
-- The console shows one warning for the open, giving a count of three and up to five example names.
-- The count line shows the number of valid records, which is 324 less the three skipped ones.
+- The console shows one warning for the open, `The Avatar Library skipped 3 records, for example: …`, naming the three files.
+- The count line still reads `324 of 324`: the three added records are skipped, so they add nothing to the 324 valid ones.
 
 **Fail if — any of these**
 
 - A `..` name is read or shown -> the traversal check is missing.
 - Three separate warnings appear -> the warning is logged per record.
+- The count line reads 327 -> the skipped records were counted as pictures.
 
 ### AVATARLIB-22 — Reopening reads the file afresh (R-1, L16); Escape and Enter behave
 
@@ -601,32 +620,32 @@ Then repeat with **Save** instead of Cancel: the new image appears, one new file
 
 **Before you start**
 
-- The app runs with the real library. Dialog closed. Back up `master.json` from the library folder, because step 2 edits it.
+- The app runs with the real library. Dialog closed. Back up `master.json` from the library folder (copy it to `master.json.good`), because step 2 edits it.
 
 **Steps**
 
-1. Open the dialog. Type `headset` in the search box, wait, and note the count. Press Escape once: this clears the search box only. Press Escape again: the dialog closes.
+1. Open the dialog. Click in the search box and type `headset`, wait, and note the count. Press Escape once: this clears the search box only. Press Escape again: the dialog closes.
 2. Open `master.json` in an editor, and change one `profession` value (note which picture) to a different word. Save.
 3. Reopen the dialog from the same place. Type that new word in the search box.
 4. Use Tab to reach a picture, and press Enter on it.
+5. Restore `master.json` from `master.json.good`.
 
 **Pass if — all of these**
 
-- The first Escape clears the search box and leaves the dialog open. The second closes the dialog.
+- The first Escape, with focus in the search box, clears the text and leaves the dialog open. The second closes the dialog.
 - After the reopening, the new word finds the picture changed in step 2, with no restart.
 - Enter on a focused picture closes the dialog and sets the pending image, as a click does.
-- Restore `master.json` afterwards.
 
 **Fail if — any of these**
 
 - The changed word does not appear until the app restarts -> the index is being cached, which breaks R-1.
 - A single Escape closes the dialog while the search box has text -> the clear-then-close order is wrong.
 
-Note for the tester: the automated `AvatarLibraryMemoryTests` prove that nothing holds the catalogue after close. This test proves the same thing from the outside, through the reopen.
+Note for the tester: Escape pressed with focus anywhere other than the search box closes the dialog at once; that is expected (`CloseOnEscapeKey` in `AvatarLibraryDialog.razor`). The automated `AvatarLibraryMemoryTests` prove that nothing holds the catalogue after close. This test proves the same thing from the outside, through the reopen.
 
 ### AVATARLIB-23 — The dialog sits above the Teammate card, and focus and Escape stay in order
 
-**Free** · about 8 min
+**Free** · about 10 min
 
 *Proves that the picker opened from the card (a `MudDialog` inside another `MudDialog`) keeps focus and Escape in the right order. This confirms the open item for the nested dialog.*
 
@@ -639,15 +658,21 @@ Note for the tester: the automated `AvatarLibraryMemoryTests` prove that nothing
 1. Press **Choose from library**. Confirm the picker opens above the card, with the card still behind it.
 2. Press Tab repeatedly. Note whether focus stays inside the picker.
 3. Press Escape once. Note which dialog closes.
-4. Press **Choose from library** again, then press Escape twice.
-5. Confirm where focus lands after each close.
+4. Press **Choose from library** again, then close the picker with its X button. Confirm the card is unchanged.
+5. Press **Choose from library** again, then click the dimmed area outside the picker. Confirm the card is unchanged.
+6. Press **Choose from library** again, then press Escape twice (the picker, then the card).
+7. Note where focus lands after each close.
 
 **Pass if — all of these**
 
 - The picker appears in front, the card is dimmed behind it, and Tab cycles only within the picker.
 - The first Escape closes only the picker, and the card remains open with its state.
-- The second Escape closes the card, if the card has no unsaved changes, or asks as the card does.
-- After closing the picker, focus returns to the **Choose from library** button on the card.
+- The X button and the backdrop click each close only the picker, leaving the card open and unchanged.
+- The second Escape closes the card at once. The card has no unsaved-changes prompt (`TeammateCard.razor:572-577` sets only `CloseOnEscapeKey`).
+
+**Record, not a pass criterion**
+
+- Where focus lands after the picker closes. The specification does not require it to return to the **Choose from library** button; if it does not, note that as a possible new requirement.
 
 **Fail if — any of these**
 
@@ -655,7 +680,7 @@ Note for the tester: the automated `AvatarLibraryMemoryTests` prove that nothing
 
 ### AVATARLIB-24 — Real library, first look: 324 pictures, each the right size and shape
 
-**Free** · about 10 min
+**Free** · about 12 min
 
 *Proves the real library renders and that each thumbnail is a 256 × 256 circle with a transparent corner, as the specification states.*
 
@@ -667,14 +692,26 @@ Note for the tester: the automated `AvatarLibraryMemoryTests` prove that nothing
 
 1. Press **Show more** until all 324 pictures are in the grid (the count line already reads `324 of 324`, because it counts matches and never changes with paging), and scroll the whole grid so every picture loads.
 2. Confirm every visible thumbnail is a circle, with no square edges and no text.
-3. Pick any file at random in File Explorer from `E:\Projects\Software Factories\avatars`, open it, and check its pixel size is 256 × 256.
-4. Check the sizes of the folder's files: the largest must be under 512 000 bytes.
+3. In `T-B`, check one file's size and its top-left pixel (a transparent corner has alpha 0):
+
+   ```powershell
+   Add-Type -AssemblyName System.Drawing
+   $b = [System.Drawing.Bitmap]::new('E:\Projects\Software Factories\avatars\cook_tan_f_01.png')
+   $b.Width; $b.Height; $b.GetPixel(0,0).A
+   $b.Dispose()
+   ```
+
+4. Check the largest file in the folder:
+
+   ```powershell
+   (Get-ChildItem 'E:\Projects\Software Factories\avatars\*.png' | Sort-Object Length -Descending | Select-Object -First 1).Length
+   ```
 
 **Pass if — all of these**
 
 - Every one of the 324 pictures loads, with none showing a broken-image icon.
 - Each picture is a 72 px circle in the grid, with no visible text.
-- The sampled file is 256 × 256, and no file is over 512 000 bytes.
+- The sampled file prints `256`, `256` and `0` (width, height, corner alpha), and the largest file is under 512 000 bytes.
 
 **Fail if — any of these**
 
@@ -688,16 +725,18 @@ Note for the tester: the automated `AvatarLibraryMemoryTests` prove that nothing
 
 **Before you start**
 
-- The Human has no avatar of their own: in `App_Data`, `avatars.json` has no entry under the Human's Name (`You` by default), or does not exist. If it has one, choose **Initials of the name** first so the entry is removed.
+- The Human has no avatar of their own: in `<data>`, `avatars.json` has no entry under the Human's Name (`You` by default), or does not exist. If it has one, choose **Initials of the name** first so the entry is removed.
 - The app is running with the library configured, and **Settings → Appearance** is open.
 
 **Steps**
 
-1. In the Avatar section, select **An image**. Do not press anything else.
+1. In the **Your avatar** section, select **An image**. Do not press anything else.
 2. Wait a full 5 seconds, watching the radio buttons and the buttons below them. The echo arrives well inside that time.
 3. Select **A short label**. Again wait 5 seconds without typing.
 4. Select **An image** once more, then choose **Choose from library** and click any picture.
-5. Reload the page and look at the Avatar section.
+5. Reload the page and look at the **Your avatar** section.
+6. With the page open, edit `<data>\avatars.json` by hand: replace the whole `You` entry with `"You": { "label": "AB" }` (so it no longer has an `image`), and save the file. Wait a few seconds.
+7. Undo the hand edit (restore the entry you replaced, or choose **Initials of the name** on the page).
 
 **Pass if — all of these**
 
@@ -705,17 +744,49 @@ Note for the tester: the automated `AvatarLibraryMemoryTests` prove that nothing
 - After step 3 and the wait, **A short label** is still selected and its text box is still shown.
 - After step 4 the picked picture is the Human's avatar.
 - After the reload the picked picture is still shown, and **An image** is the selected choice.
+- After step 6 the page switches to **A short label** with `AB` in the box, so a genuine outside edit is still honoured. (An entry that keeps its `image` would stay on **An image**: the page seeds Image first, `Appearance.razor:275`.)
 
 **Fail if — any of these**
 
 - The radio returns to **Initials of the name** within a second or two of selecting **An image** or **A short label** -> the page is re-seeding from the store's echo of its own save. Note which option and how long it took.
 - The library button is never visible on this page unless an image already exists -> the same defect, seen from the outside.
+- The page stays on **An image** after step 6 -> the guard has swallowed a genuine outside edit.
 
-**Also check, to prove an outside edit still works:** with the page open, edit `App_Data\avatars.json` by hand to give `You` a `"label": "AB"`, and save the file. Within a few seconds the page should switch to **A short label** with `AB` in the box. If it does not, the guard has swallowed a genuine outside edit. Undo the hand edit afterwards.
+### AVATARLIB-26 — A library file that vanishes before the pick: "That image could not be read."
+
+**Free** · about 8 min
+
+*Proves that when the chosen file cannot be read at the pick, the card and the Appearance page show a red error and set nothing (specification §6.7.3 and §6.8, last row).*
+
+**Before you start**
+
+- The app runs with the real library. `Library Test` is open in **Edit**, with **An image** selected and no pending image. Note the file count in `<data>\avatars`.
+
+**Steps**
+
+1. Press **Choose from library**. Press **Tan**, then press **Cook**: three pictures remain.
+2. In File Explorer, rename `cook_brown_f_01.png`, `cook_tan_f_01.png` and `cook_tan_m_01.png` in the library folder to the same names with `.bak` added. Leave the dialog open. The thumbnails stay visible because the browser has already loaded them.
+3. Click any of the three pictures.
+4. Read the card, and look at `<data>\avatars`.
+5. Cancel the card. Open **Settings → Appearance**, select **An image** in **Your avatar**, choose **Choose from library**, filter to **Tan** and **Cook**, and click any picture.
+6. Read the section, and look at `<data>\avatars`.
+7. Rename the three files back.
+
+**Pass if — all of these**
+
+- After step 3 the dialog closes, and a red alert under the card's avatar controls reads `That image could not be read.`
+- The card does not show `New image selected (not yet saved)`, and `<data>\avatars` has the same number of files as before.
+- After step 5 the **Your avatar** section shows the same red alert, the avatar does not change, and no file is added to `<data>\avatars`.
+
+**Fail if — any of these**
+
+- The dialog does not close, the page throws, or the avatar changes -> the missing file is not handled at the pick.
+- No message appears -> the failure is silent.
 
 ## Cleanup
 
 1. Delete `Library Test` from `/teammates`.
-2. Delete any file this area added to `App_Data\avatars` that no Teammate or the Human uses.
-3. Restore `master.json` in the library folder if any test changed it, and confirm it matches its backup.
-4. Stop the app and restore the [§0.4](../manual-tests.md#04-rollback) backup if the area ran in a state you want to keep.
+2. Delete any file this area added to `<data>\avatars` that no Teammate or the Human uses.
+3. Restore `master.json` in the library folder if any test changed it, confirm it matches its backup, and delete `fake.svg`, any `.bak` picture and `master.json.good`.
+4. Set `Team__AvatarLibrary__Dir` back to the real library folder if AVATARLIB-02 changed it.
+5. Stop the app and restore the [§0.4](../manual-tests.md#04-rollback) backup if the area ran in a state you want to keep.

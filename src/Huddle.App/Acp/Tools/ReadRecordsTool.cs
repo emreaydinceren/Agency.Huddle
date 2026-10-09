@@ -3,6 +3,7 @@ using System.Text;
 using System.Text.Json.Nodes;
 using Agency.Huddle.Acp.Abstractions;
 using Agency.Huddle.App.Data;
+using Agency.Huddle.App.Prompts;
 using Agency.Huddle.App.Library;
 using Agency.Huddle.App.Tasks;
 using Agency.Huddle.App.TeamTypes;
@@ -28,7 +29,8 @@ internal sealed class ReadRecordsTool(
     ITeamFolders folders,
     ITeamDirectory directory,
     TimeProvider clock,
-    string callerAgentId) : IAppTool
+    string callerAgentId,
+    IPromptSource prompts) : IAppTool
 {
     /// <summary>The most characters one call returns.</summary>
     private const int MaxCharacters = 12000;
@@ -51,11 +53,11 @@ internal sealed class ReadRecordsTool(
     /// <inheritdoc />
     public string Name => "read_records";
 
+    /// <summary>The placeholder values a prompt renders with; the tool descriptions take none.</summary>
+    private static readonly IReadOnlyDictionary<string, string> NoValues = new Dictionary<string, string>();
+
     /// <inheritdoc />
-    public string Description =>
-        "Reads a Team's evidence for a retro. With only 'team' (and optionally 'since', a date like 2026-10-01) it returns the " +
-        "compact records bundle. With 'taskId' it returns that Task's Change log and Evidence. With 'room' it returns the last " +
-        "200 messages of that Room's transcript, each cut to 300 characters. Output is capped at 12000 characters.";
+    public string Description => prompts.Render("tool.readRecords.description", NoValues);
 
     /// <inheritdoc />
     public JsonObject InputSchema => new()

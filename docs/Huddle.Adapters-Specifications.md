@@ -908,6 +908,7 @@ from the parsed identity.
         "DisplayName": "Mock",
         "Description": "a scripted adapter for development - no model",
         "Command": "C:/repos/Huddle/artifacts/mock-acp/mock-acp.exe",
+        "Args": ["--mock"],
         "UsesToolNamePrefix": false
       },
       {

@@ -1,6 +1,7 @@
 using System.Text.Json.Nodes;
 using Agency.Huddle.Acp.Abstractions;
 using Agency.Huddle.App.Data;
+using Agency.Huddle.App.Prompts;
 using Agency.Huddle.App.Tasks;
 using Agency.Huddle.App.Teammates;
 using Agency.Huddle.App.Teams;
@@ -12,15 +13,16 @@ namespace Agency.Huddle.App.Acp.Tools;
 /// manager knows where a Request belongs. The built-in Chief of Staff, which manages no Team, may also list them for its roll-up (OR-3).
 /// Offered only to a Persona holding a Skill that lists it.
 /// </summary>
-internal sealed class ListTeamsTool(ITeamCatalog teams, TaskStore store, PersonaStore personas, ITeamDirectory directory, string callerAgentId) : IAppTool
+internal sealed class ListTeamsTool(ITeamCatalog teams, TaskStore store, PersonaStore personas, ITeamDirectory directory, string callerAgentId, IPromptSource prompts) : IAppTool
 {
     /// <inheritdoc />
     public string Name => "list_teams";
 
+    /// <summary>The placeholder values a prompt renders with; the tool descriptions take none.</summary>
+    private static readonly IReadOnlyDictionary<string, string> NoValues = new Dictionary<string, string>();
+
     /// <inheritdoc />
-    public string Description =>
-        "Lists every Team with its type, manager, what it owns and how many Requests are open in its backlog. " +
-        "Use it to choose the Team to file a Request with.";
+    public string Description => prompts.Render("tool.listTeams.description", NoValues);
 
     /// <inheritdoc />
     public JsonObject InputSchema => new()

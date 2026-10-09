@@ -80,7 +80,7 @@ public sealed class ReadRecordsToolTests
                 TeamResult = LibraryResult<LibraryPath>.Ok(new LibraryPath(root, Team, this.TeamFolder, LibraryNodeRole.TeamFolder)),
             };
             RecordsBundleBuilder builder = new(this.Harness.Store, catalog, new PersonaSpendStore(this.Harness.Options), this.Harness.Options);
-            return new ReadRecordsTool(catalog, this.Harness.Store, this.Harness.Personas, types, builder, this.Chat, folders, this.Harness.Directory, this.Clock, this.Ids[caller]);
+            return new ReadRecordsTool(catalog, this.Harness.Store, this.Harness.Personas, types, builder, this.Chat, folders, this.Harness.Directory, this.Clock, this.Ids[caller], new FakePromptSource());
         }
 
         /// <summary>Writes a Platform Task whose Change log has one entry at <paramref name="at"/>.</summary>

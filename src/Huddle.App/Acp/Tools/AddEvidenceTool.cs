@@ -5,6 +5,7 @@ using System.Globalization;
 using System.Text.Json.Nodes;
 using Agency.Huddle.Acp.Abstractions;
 using Agency.Huddle.App.Data;
+using Agency.Huddle.App.Prompts;
 using Agency.Huddle.App.Services;
 using Agency.Huddle.App.Tasks;
 
@@ -18,7 +19,8 @@ internal sealed class AddEvidenceTool(
     ToolCallLogWriter log,
     ITeamDirectory directory,
     TimeProvider clock,
-    string callerAgentId) : IAppTool
+    string callerAgentId,
+    IPromptSource prompts) : IAppTool
 {
     private const string FieldSeparator = " | ";
     private const string LogMarker = "#L";
@@ -26,10 +28,11 @@ internal sealed class AddEvidenceTool(
     /// <inheritdoc />
     public string Name => "add_evidence";
 
+    /// <summary>The placeholder values a prompt renders with; the tool descriptions take none.</summary>
+    private static readonly IReadOnlyDictionary<string, string> NoValues = new Dictionary<string, string>();
+
     /// <inheritdoc />
-    public string Description =>
-        "Adds a line of evidence to a Task: the command you ran, its exit code and, when you ran it, a pointer to your tool-call log. " +
-        "Evidence is append-only; earlier lines are never changed.";
+    public string Description => prompts.Render("tool.addEvidence.description", NoValues);
 
     /// <inheritdoc />
     public JsonObject InputSchema => new JsonObject

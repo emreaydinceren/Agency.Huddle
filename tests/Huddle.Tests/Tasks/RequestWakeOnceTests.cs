@@ -59,8 +59,8 @@ public sealed class RequestWakeOnceTests
 
         TaskService tasks = new(harness.Store, new TaskIdAllocator(dir.Options()), harness.Events, harness.Personas, new EmptySprintCatalog(), dir.Options(), harness.Clock, NullLogger<TaskService>.Instance);
         RequestNotifier notifier = new(harness.Trigger, catalog, harness.Personas, NullLogger<RequestNotifier>.Instance);
-        FileRequestTool fileTool = new(catalog, tasks, harness.Store, notifier, harness.Directory, mia.Id);
-        TriageRequestTool triageTool = new(catalog, tasks, harness.Store, notifier, harness.Directory, cast.Nova.Id);
+        FileRequestTool fileTool = new(catalog, tasks, harness.Store, notifier, harness.Directory, mia.Id, harness.Prompts);
+        TriageRequestTool triageTool = new(catalog, tasks, harness.Store, notifier, harness.Directory, cast.Nova.Id, harness.Prompts);
         return new Scene(harness, tasks, fileTool, triageTool, cast.KaiActor);
     }
 

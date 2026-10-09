@@ -159,6 +159,80 @@ public sealed class LibraryDocumentReadTests : IDisposable
         Assert.Equal("Open in default app", cut.Find(".library-document-open-default").TextContent.Trim());
     }
 
+    /// <summary>The header's Pop out button navigates to the full Library page on the open file, using the same URI the pane's Pop out builds (D4).</summary>
+    [Fact]
+    public async Task PopOut_NavigatesToPopOutUri()
+    {
+        string root = this.fixture.LibraryFixture.CreatePinnedRoot("Notes");
+        File.WriteAllText(Path.Combine(root, "a.md"), "hi");
+        LibraryPath path = this.fixture.LibraryFixture.Resolve(root, "a.md");
+
+        await using MudBunitContext ctx = this.fixture.NewContext();
+        IRenderedComponent<ContainerFragment> cut = RenderDoc(ctx, path);
+        NavigationManager navigation = ctx.Services.GetRequiredService<NavigationManager>();
+
+        cut.WaitForAssertion(() => Assert.NotEmpty(cut.FindAll("button.library-document-pop-out")));
+        await cut.InvokeAsync(() => cut.Find("button.library-document-pop-out").Click());
+
+        Assert.Equal(navigation.ToAbsoluteUri(LibraryPane.BuildPopOutUri(path)).AbsoluteUri, navigation.Uri);
+    }
+
+    /// <summary>The header's Close button invokes the host's <c>OnClose</c> callback (D4).</summary>
+    [Fact]
+    public async Task Close_InvokesOnClose()
+    {
+        string root = this.fixture.LibraryFixture.CreatePinnedRoot("Notes");
+        File.WriteAllText(Path.Combine(root, "a.md"), "hi");
+        LibraryPath path = this.fixture.LibraryFixture.Resolve(root, "a.md");
+
+        int closed = 0;
+        await using MudBunitContext ctx = this.fixture.NewContext();
+        IRenderedComponent<ContainerFragment> cut = RenderDoc(
+            ctx, path, onClose: EventCallback.Factory.Create(this, () => closed++));
+
+        cut.WaitForAssertion(() => Assert.NotEmpty(cut.FindAll("button.library-document-close")));
+        await cut.InvokeAsync(() => cut.Find("button.library-document-close").Click());
+
+        Assert.Equal(1, closed);
+    }
+
+    /// <summary>With no <c>OnClose</c> listener the header renders no Close button, so a host with its own Close shows only one (D4).</summary>
+    [Fact]
+    public async Task Close_HiddenWhenNoOnClose()
+    {
+        string root = this.fixture.LibraryFixture.CreatePinnedRoot("Notes");
+        File.WriteAllText(Path.Combine(root, "a.md"), "hi");
+        LibraryPath path = this.fixture.LibraryFixture.Resolve(root, "a.md");
+
+        await using MudBunitContext ctx = this.fixture.NewContext();
+        IRenderedComponent<ContainerFragment> cut = RenderDoc(ctx, path);
+
+        cut.WaitForAssertion(() => Assert.NotEmpty(cut.FindAll("button.library-document-copy")));
+        Assert.Empty(cut.FindAll(".library-document-close"));
+    }
+
+    /// <summary>The "Open in default app" button on an unrecognised file raises <c>OnAction</c> with <see cref="LibraryTreeActionKind.OpenInDefaultApp"/> and the open file (D4).</summary>
+    [Fact]
+    public async Task OpenInDefaultApp_RaisesOnActionWithOpenInDefaultApp()
+    {
+        string root = this.fixture.LibraryFixture.CreatePinnedRoot("Notes");
+        File.WriteAllBytes(Path.Combine(root, "a.bin"), new byte[1024]);
+        LibraryPath path = this.fixture.LibraryFixture.Resolve(root, "a.bin");
+
+        LibraryTreeAction? received = null;
+        await using MudBunitContext ctx = this.fixture.NewContext();
+        IRenderedComponent<ContainerFragment> cut = RenderDoc(
+            ctx, path, onAction: EventCallback.Factory.Create<LibraryTreeAction>(this, action => received = action));
+
+        cut.WaitForAssertion(() => Assert.NotEmpty(cut.FindAll("button.library-document-open-default")));
+        await cut.InvokeAsync(() => cut.Find("button.library-document-open-default").Click());
+
+        Assert.NotNull(received);
+        Assert.Equal(LibraryTreeActionKind.OpenInDefaultApp, received.Kind);
+        Assert.Equal(path.RelativePath, received.Path.RelativePath);
+        Assert.Equal(path.Root.Id, received.Path.Root.Id);
+    }
+
     /// <summary>[12.2a] A Markdown file over <c>MaxEditableBytes</c> shows the settled too-large reason and no mode toggle (Spec §6.4/§8).</summary>
     [Fact]
     public async Task TooLarge_ShowsReason()
@@ -436,7 +510,8 @@ public sealed class LibraryDocumentReadTests : IDisposable
         LibraryPath? scope = null,
         EventCallback<LibraryPath> onNavigate = default,
         EventCallback<LibraryPath> onOpenInLibrary = default,
-        EventCallback<LibraryTreeAction> onAction = default) => ctx.RenderWithPopovers(builder =>
+        EventCallback<LibraryTreeAction> onAction = default,
+        EventCallback onClose = default) => ctx.RenderWithPopovers(builder =>
     {
         builder.OpenComponent<LibraryDocument>(0);
         builder.AddAttribute(1, nameof(LibraryDocument.Path), path);
@@ -444,6 +519,11 @@ public sealed class LibraryDocumentReadTests : IDisposable
         builder.AddAttribute(3, nameof(LibraryDocument.OnNavigate), onNavigate);
         builder.AddAttribute(4, nameof(LibraryDocument.OnOpenInLibrary), onOpenInLibrary);
         builder.AddAttribute(5, nameof(LibraryDocument.OnAction), onAction);
+        if (onClose.HasDelegate)
+        {
+            builder.AddAttribute(6, nameof(LibraryDocument.OnClose), onClose);
+        }
+
         builder.CloseComponent();
     });
 
