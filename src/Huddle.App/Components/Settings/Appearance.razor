@@ -54,6 +54,9 @@
 @inject AppearanceStore AppearanceStore
 @inject AvatarStore Avatars
 @inject IOptions<TeamOptions> Options
+@inject IDialogService DialogService
+@inject AvatarLibraryLocator LibraryLocator
+@inject IAvatarLibraryLoader LibraryLoader
 
 <p class="teammates-intro">
     Pick a theme. Each theme is either a light or a dark one, so choosing it sets the application's
@@ -139,13 +142,22 @@
 
     @if (this.avatarChoice == AvatarChoice.Image)
     {
-        <MudFileUpload T="IBrowserFile" Accept=".png,.jpg,.jpeg,.webp" MaximumFileCount="1" FilesChanged="this.OnAvatarFileChangedAsync">
-            <CustomContent Context="fileUpload">
-                <MudButton Variant="Variant.Outlined" StartIcon="@Icons.Material.Filled.Upload" OnClick="@(() => fileUpload.OpenFilePickerAsync())">
-                    Choose an image
+        <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2">
+            <MudFileUpload T="IBrowserFile" Accept=".png,.jpg,.jpeg,.webp" MaximumFileCount="1" FilesChanged="this.OnAvatarFileChangedAsync">
+                <CustomContent Context="fileUpload">
+                    <MudButton Variant="Variant.Outlined" StartIcon="@Icons.Material.Filled.Upload" OnClick="@(() => fileUpload.OpenFilePickerAsync())">
+                        Choose an image
+                    </MudButton>
+                </CustomContent>
+            </MudFileUpload>
+
+            @if (this.LibraryLocator.IsConfigured)
+            {
+                <MudButton Variant="Variant.Outlined" StartIcon="@Icons.Material.Filled.PhotoLibrary" OnClick="this.ChooseFromLibraryAsync">
+                    Choose from library
                 </MudButton>
-            </CustomContent>
-        </MudFileUpload>
+            }
+        </MudStack>
 
         @if (this.avatarImage is not null)
         {
@@ -342,8 +354,42 @@
             return;
         }
 
+        this.StoreAvatarImage(bytes, extension);
+    }
+
+    /// <summary>Writes a chosen avatar image, from an upload or from the library, through <see cref="AvatarStore.WriteImage(ReadOnlySpan{byte}, string)"/>, saves it at once and clears any earlier avatar error.</summary>
+    /// <param name="bytes">The image bytes, already validated as a PNG, JPEG or WebP.</param>
+    /// <param name="extension">The extension <see cref="AvatarImage.SniffExtension"/> found, with its dot.</param>
+    private void StoreAvatarImage(byte[] bytes, string extension)
+    {
         this.avatarImage = this.Avatars.WriteImage(bytes, extension);
+        this.avatarError = null;
         this.SaveAvatar();
+    }
+
+    /// <summary>
+    /// Opens the Avatar Library picker and, when a thumbnail is chosen, reads that file and stores it as an upload is
+    /// stored. A file that cannot be read shows the avatar error line; cancelling changes nothing.
+    /// </summary>
+    private async Task ChooseFromLibraryAsync()
+    {
+        this.avatarError = null;
+
+        IDialogReference reference = await this.DialogService.ShowAsync<AvatarLibraryDialog>(null, new DialogParameters(), AvatarLibraryDialog.Options);
+        DialogResult? result = await reference.Result;
+        if (result is null || result.Canceled || result.Data is not string fileName)
+        {
+            return;
+        }
+
+        AvatarLibraryImage? image = await this.LibraryLoader.ReadImageAsync(fileName, CancellationToken.None);
+        if (image is null)
+        {
+            this.avatarError = "That image could not be read.";
+            return;
+        }
+
+        this.StoreAvatarImage(image.Bytes, image.Extension);
     }
 
     /// <summary>Clears the chosen image and saves immediately, so <see cref="CurrentAvatar"/> falls back to initials until a new file is chosen.</summary>

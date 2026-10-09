@@ -29,6 +29,7 @@ public sealed class AppearanceAvatarTests
         ctx.Services.AddSingleton(factory.Services.GetRequiredService<AppearanceStore>());
         ctx.Services.AddSingleton(factory.Services.GetRequiredService<AvatarStore>());
         ctx.Services.AddSingleton(factory.Services.GetRequiredService<IOptions<TeamOptions>>());
+        AvatarLibraryPickSupport.RegisterUnconfigured(ctx.Services);
         return ctx;
     }
 
