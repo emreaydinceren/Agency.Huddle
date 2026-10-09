@@ -502,7 +502,7 @@ Run [`P-BUILD`](common.md#p-build) then [`P-LAUNCH-FREE`](common.md#p-launch-fre
 **Pass if — all of these**
 
 - The dialog closes at once on the click, with no confirm button.
-- The card shows the text `New image selected (not yet saved)` and a live preview of the picked picture.
+- The card shows the text `New image selected (not yet saved)`, as after an upload. A buffered image has no preview until Save.
 - After step 3, `App_Data\avatars` has the same number of files as before: nothing is written yet.
 - After Cancel (step 4) and reopening (step 5), the image is unchanged and no file was added.
 

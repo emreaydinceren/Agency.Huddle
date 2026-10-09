@@ -440,6 +440,14 @@
             return;
         }
 
+        // The file watcher raises a second change for our own write, after savedLocally is spent. When the
+        // store already holds what the editor shows there is nothing to re-seed, and re-seeding would snap
+        // a half-made choice (An image / A short label, nothing stored yet) back to Initials.
+        if (this.Avatars.Get(this.HumanName) == this.CurrentAvatar)
+        {
+            return;
+        }
+
         _ = this.DispatchAsync(() =>
         {
             this.SeedAvatarEditorState();

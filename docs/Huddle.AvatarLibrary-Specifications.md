@@ -52,7 +52,7 @@ They open a dialog, narrow 324 pictures to a handful, and click one.
 | L6 | They press the tags `glasses` and `bow tie` | Only avatars with **both** tags remain |
 | L7 | They press the X on `Butler` | The chip returns to its normal place; the grid widens again |
 | L8 | They press **Clear all** | Every filter resets to All, empty text, no chips |
-| L9 | They click a picture | The dialog closes. The card shows **New image selected (not yet saved)** and the live preview; **Save** writes it |
+| L9 | They click a picture | The dialog closes. The card shows **New image selected (not yet saved)**, exactly as after an upload (a buffered image has no preview until it is saved); **Save** writes it |
 | L10 | They press **Cancel** on the card after picking | Nothing is written. The copy happens at Save, as for an upload |
 | L11 | The Human opens **Settings → Appearance** and picks one for themselves | The same dialog; the image is written at once, as an upload is on that page |
 | L12 | Filters leave nothing | The grid says **No avatars match** and the Clear all button stays |
@@ -261,7 +261,7 @@ all**; then the grid.
    error line an upload uses.
 
 `TeammateCard` feeds the result into `avatarPendingBytes` and `avatarPendingExtension` — exactly the
-state `OnAvatarFileChangedAsync` sets — so the existing preview, **Save**, `WriteImage` (which makes
+state `OnAvatarFileChangedAsync` sets — so the existing pending-image notice, **Save**, `WriteImage` (which makes
 the opaque generated id), replacement cleanup and Cancel behave as for an upload. `Appearance.razor`
 does the same and writes at once, as it does for an upload. **`AvatarStore`, `Avatar` and
 `avatars.json` do not change.**
