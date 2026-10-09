@@ -77,6 +77,10 @@ contexts](../Huddle.EngineeringGuide.md#two-bounded-contexts). Back to the hub:
   **Monogram** is the narrower word and stays: it is the initials *rendering*, not the
   choice.
 
+**Avatar Library**
+: A folder of ready-made Avatar images the Human maintains, configured by `Team:AvatarLibrary:Dir` and read through its `master.json` index. The Human chooses an image from it with the picker. Read-only from Huddle's side: a pick **copies** the image into the Avatar store, so a Teammate keeps its face if the library moves or is deleted ([ADR-0044](../adr/0044-an-avatar-library-is-a-read-only-source-and-a-pick-copies.md)).
+: *Avoid*: gallery, stock images, catalogue (as the name of the folder; the parsed index in memory is the catalogue).
+
 **Team**
 : A label naming a group of Teammates, listed in a Persona's `teams` frontmatter
   field. A Teammate may belong to several, or to none. A Team is a **view** —

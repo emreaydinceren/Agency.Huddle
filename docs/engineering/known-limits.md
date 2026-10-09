@@ -501,6 +501,22 @@ so, and names its [Roadmap](roadmap.md) item or its ADR. Back to the hub: [Huddl
     rewritten, and `ChatMessage.SenderName` is denormalised — so their avatars fall back
     to the old monogram while the Teammate's current Name carries the chosen one. The
     Transcript records what was said at the time, faces included.
+- **The avatar library has three limits of its own**
+  ([ADR-0044](../adr/0044-an-avatar-library-is-a-read-only-source-and-a-pick-copies.md)).
+  - **A library created after start-up needs a restart to be served.** The
+    `/avatar-library` static mount is added at start-up, and only when the folder
+    exists then, because a `PhysicalFileProvider` throws on a missing root. A library
+    folder created while Huddle runs is not served until the next start. The picker's
+    button follows `master.json` and appears at once, but its thumbnails stay broken
+    until then.
+  - **Library images are served unauthenticated, as other avatars are.** The mount is
+    same-origin with no sign-in, the same as `/teammate-avatars`. The library holds
+    illustrations, and nothing in it is personal, but a file placed in the folder is
+    visible to anyone who can reach the app.
+  - **The app does not resize library images.** Each file must be prepared beforehand
+    to 256 × 256 and at most 512 000 bytes. The app checks the byte count and the file's
+    magic bytes, and skips anything else with one warning on open. It never decodes an
+    image, so a file that is the right size but the wrong shape is shown as it is.
 - **Threads, reactions, message edits, message deletes, attachments, search,
   notifications.** *Room* archive and delete arrived 2026-09-21
   ([ADR-0018](../adr/0018-a-room-can-be-archived-or-deleted.md)); nothing here
