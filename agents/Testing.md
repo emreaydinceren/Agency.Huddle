@@ -27,6 +27,16 @@ dotnet test Huddle.slnx --
   build was the mutated one.
 - A full run that ends `error: 1` with **0 failed tests**, fewer tests counted and a short
   duration is the test host stopping early under heavy machine load, not a test failure. Rerun once.
+- **`HUDDLE_TEST_TEMP` moves the test run's temp folder.** Every test builds its data directory from
+  `Path.GetTempPath()`, and the SQLite-backed ones flush to disk thousands of times, so a native run
+  on a machine whose temp folder is a slow or busy disk is slow and hard on that disk. Set
+  `HUDDLE_TEST_TEMP` to a rooted folder, for example one on a RAM disk, and `TestTempRedirect` points
+  `TEMP`, `TMP` and `TMPDIR` at it for that test process only. Unset, or naming a folder that cannot be
+  created (an unmounted drive, a relative path), it does nothing and the system temp folder is used,
+  which is how CI runs. It never changes the user or machine environment, so set it for the one shell
+  (`$env:HUDDLE_TEST_TEMP = 'R:\t'`) or wherever suits you. The test folders a run leaves behind are
+  in that folder, so do not empty it while another run is using it. Measured on Windows, the
+  `PersonaSpendTests` class took 227 s with the temp folder on the system drive and 26 s on a RAM disk.
 
 ## Deciding what a test must pin
 
