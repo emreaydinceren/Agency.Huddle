@@ -35,7 +35,7 @@ public sealed class BuiltinTeammateSeederTests
         Assert.NotNull(entry);
         Assert.Equal("cos", entry.Alias);
         Assert.Equal("chief-of-staff", entry.Builtin);
-        Assert.Equal(["team-building"], entry.Skills);
+        Assert.Equal(["team-building", "team-rollup"], entry.Skills);
     }
 
     /// <summary>

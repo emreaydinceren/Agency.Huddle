@@ -43,6 +43,20 @@ public sealed class SkillCatalogTests
         Assert.Equal(["list_teams", "file_request", "triage_request", "confirm_request", "propose_sprint"], validation.Tools);
     }
 
+    /// <summary>The catalog holds <c>team-rollup</c> (Task 79): valid, one file, and its tools list is exactly <c>list_teams</c>.</summary>
+    [Fact]
+    public void All_ContainsTeamRollup_GrantingListTeamsOnly()
+    {
+        Assert.Contains("team-rollup", SkillCatalog.All.Keys);
+        IReadOnlyDictionary<string, string> files = SkillCatalog.All["team-rollup"];
+
+        SkillValidation validation = SkillValidator.Validate("team-rollup", files);
+
+        Assert.Equal(["SKILL.md"], files.Keys.ToList());
+        Assert.Empty(validation.Issues);
+        Assert.Equal(["list_teams"], validation.Tools);
+    }
+
     /// <summary>The catalog holds <c>retrospective</c> (Task 68): valid, one file, and its tools list is exactly <c>read_records</c>.</summary>
     [Fact]
     public void All_ContainsRetrospective_GrantingReadRecords()

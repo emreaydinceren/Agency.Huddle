@@ -2,15 +2,17 @@ using System.Text.Json.Nodes;
 using Agency.Huddle.Acp.Abstractions;
 using Agency.Huddle.App.Data;
 using Agency.Huddle.App.Tasks;
+using Agency.Huddle.App.Teammates;
 using Agency.Huddle.App.Teams;
 
 namespace Agency.Huddle.App.Acp.Tools;
 
 /// <summary>
 /// Lists every Team's card - name, type, manager, what it owns - and how many Requests are open in its backlog (RQ-8), so a
-/// manager knows where a Request belongs. Offered only to a Persona holding a Skill that lists it.
+/// manager knows where a Request belongs. The built-in Chief of Staff, which manages no Team, may also list them for its roll-up (OR-3).
+/// Offered only to a Persona holding a Skill that lists it.
 /// </summary>
-internal sealed class ListTeamsTool(ITeamCatalog teams, TaskStore store, ITeamDirectory directory, string callerAgentId) : IAppTool
+internal sealed class ListTeamsTool(ITeamCatalog teams, TaskStore store, PersonaStore personas, ITeamDirectory directory, string callerAgentId) : IAppTool
 {
     /// <inheritdoc />
     public string Name => "list_teams";
@@ -38,7 +40,11 @@ internal sealed class ListTeamsTool(ITeamCatalog teams, TaskStore store, ITeamDi
             return actorRefusal;
         }
 
-        if (!teams.Teams.Any(team => string.Equals(team.Manager, actor.Name, StringComparison.OrdinalIgnoreCase)))
+        bool isManager = teams.Teams.Any(team => string.Equals(team.Manager, actor.Name, StringComparison.OrdinalIgnoreCase));
+        bool isChiefOfStaff = personas.Entries.Any(entry =>
+            string.Equals(entry.Builtin, BuiltinTeammate.ChiefOfStaffMarker, StringComparison.Ordinal)
+            && string.Equals(entry.Name, actor.Name, StringComparison.OrdinalIgnoreCase));
+        if (!isManager && !isChiefOfStaff)
         {
             return "Only managers list Teams; ask your own manager.";
         }

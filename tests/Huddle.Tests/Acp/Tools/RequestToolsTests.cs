@@ -2,7 +2,9 @@ using System.Text.Json.Nodes;
 using Agency.Huddle.App.Acp;
 using Agency.Huddle.App.Acp.Tools;
 using Agency.Huddle.App.Tasks;
+using Agency.Huddle.App.Teammates;
 using Agency.Huddle.App.Teams;
+using Agency.Huddle.App.Data;
 using Agency.Huddle.Tests.Tasks;
 using Agency.Huddle.Tests.Teams;
 
@@ -71,7 +73,7 @@ public sealed class RequestToolsTests
         Put(harness, TestTasks.Make(id: "DES-0001", location: design, unknownFields: RequestPairs()));
         Put(harness, TestTasks.Make(id: "DES-0002", status: TaskState.Rejected, location: design, unknownFields: RequestPairs()));
         Put(harness, TestTasks.Make(id: "DES-0003", location: design));
-        ListTeamsTool tool = new(Catalog(), harness.Store, harness.Directory, harness.NovaId ?? throw new InvalidOperationException("Harness not seeded."));
+        ListTeamsTool tool = new(Catalog(), harness.Store, harness.Personas, harness.Directory, harness.NovaId ?? throw new InvalidOperationException("Harness not seeded."));
 
         string result = await tool.InvokeAsync([], ct);
 
@@ -249,11 +251,27 @@ public sealed class RequestToolsTests
     {
         CancellationToken ct = TestContext.Current.CancellationToken;
         using TaskToolHarness harness = await CreateHarnessAsync(ct);
-        ListTeamsTool tool = new(Catalog(), harness.Store, harness.Directory, harness.KaiId ?? throw new InvalidOperationException("Harness not seeded."));
+        ListTeamsTool tool = new(Catalog(), harness.Store, harness.Personas, harness.Directory, harness.KaiId ?? throw new InvalidOperationException("Harness not seeded."));
 
         string result = await tool.InvokeAsync([], ct);
 
         Assert.Equal("Only managers list Teams; ask your own manager.", result);
+    }
+
+    /// <summary>Task 79 (OR-3): the built-in Chief of Staff manages no Team and may still list every Team to roll them up.</summary>
+    [Fact]
+    public async Task ListTeams_ChiefOfStaff_ListsEveryTeam()
+    {
+        CancellationToken ct = TestContext.Current.CancellationToken;
+        using TaskToolHarness harness = await CreateHarnessAsync(ct);
+        _ = harness.Personas.Add(new PersonaIdentity("Jarvis", "Chief of Staff", "jar", [], Builtin: BuiltinTeammate.ChiefOfStaffMarker), "You are Jarvis.");
+        User cos = await harness.Directory.UpsertAgentUserAsync("Jarvis", null, ct) ?? throw new InvalidOperationException("Directory refused a user.");
+        ListTeamsTool tool = new(Catalog(), harness.Store, harness.Personas, harness.Directory, cos.Id);
+
+        string result = await tool.InvokeAsync([], ct);
+
+        JsonArray teams = Assert.IsType<JsonArray>(JsonNode.Parse(result));
+        Assert.Equal(2, teams.Count);
     }
 
     /// <summary>Builds a catalog where Nova manages Platform and Ops, and Dana manages Design.</summary>

@@ -3,6 +3,7 @@ using System.Text.Json.Nodes;
 using Agency.Huddle.Acp.Abstractions;
 using Agency.Huddle.App.Data;
 using Agency.Huddle.App.Tasks;
+using Agency.Huddle.App.TeamTypes;
 using Agency.Huddle.App.Teams;
 
 namespace Agency.Huddle.App.Acp.Tools;
@@ -15,6 +16,8 @@ namespace Agency.Huddle.App.Acp.Tools;
 internal sealed class ProposeRetroChangesTool(
     ITeamCatalog teams,
     RetroProposalStore proposals,
+    PersonaStore personas,
+    TeamTypeCatalog types,
     ITeamDirectory directory,
     string callerAgentId) : IAppTool
 {
@@ -85,9 +88,10 @@ internal sealed class ProposeRetroChangesTool(
             return $"There is no Team named {teamText}.";
         }
 
-        if (!team.Members.Contains(actor.Name, StringComparer.OrdinalIgnoreCase))
+        string? refusal = RetroCaller.Check(personas, types, team, actor.Name, "Only the Team's manager or its Retro agent may propose retro changes.");
+        if (refusal is not null)
         {
-            return $"You are not a member of Team {team.Name}.";
+            return refusal;
         }
 
         JsonArray items = arguments["proposals"] as JsonArray ?? [];

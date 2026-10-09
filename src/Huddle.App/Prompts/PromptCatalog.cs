@@ -1198,6 +1198,20 @@ internal static class PromptCatalog
             Timing: PromptTiming.Live),
 
         new PromptDefinition(
+            Key: "prompt.rollup",
+            Label: "Roll-up prompt",
+            HelperText:
+                "The shape of the message the Chief of Staff sends the Human after the managers' digests (OR-3). " +
+                "Takes no placeholders.",
+            Default:
+                """
+                Roll the Teams up for the Human in this shape. First, Decisions: one line per decision the Human needs to make, with the Team and the Task link. Second, Risks: one line per risk, with the Team and the Task link. Third, open Requests per Team, from list_teams: one line per Team with its count. Quote each decision and risk as its manager wrote it and keep the manager's links; never paraphrase a digest. Leave out a Team with nothing to report, and keep the whole message to at most 15 lines.
+                """,
+            Placeholders: [],
+            RequiredPlaceholders: [],
+            Timing: PromptTiming.Live),
+
+        new PromptDefinition(
             Key: "prompt.retro",
             Label: "Retro prompt",
             HelperText:

@@ -233,7 +233,7 @@ public sealed class RetroProposalTests
     {
         CancellationToken ct = TestContext.Current.CancellationToken;
         using RetroProposalFixture fixture = await RetroProposalFixture.CreateAsync(ct);
-        ProposeRetroChangesTool tool = new(fixture.Catalog, fixture.Proposals, fixture.Harness.Directory, fixture.Harness.NovaId ?? "");
+        ProposeRetroChangesTool tool = fixture.Tool("Nova");
 
         string result = await tool.InvokeAsync(Arguments("Platform", Edit(), Edit("_team.md"), Edit("Kai.md")), ct);
 
@@ -244,13 +244,66 @@ public sealed class RetroProposalTests
         Assert.Equal(["1", "2", "3"], set.Changes.Select(static each => each.Id));
     }
 
+    /// <summary>The Team's Retro agent may propose, as the manager does.</summary>
+    [Fact]
+    public async Task Tool_RetroAgent_StoresSet()
+    {
+        CancellationToken ct = TestContext.Current.CancellationToken;
+        using RetroProposalFixture fixture = await RetroProposalFixture.CreateAsync(ct);
+
+        string result = await fixture.Tool("Rae").InvokeAsync(Arguments("Platform", Edit()), ct);
+
+        Assert.Equal("Proposal sent to the Human.", result);
+        RetroProposalSet set = Assert.Single(fixture.Proposals.Pending("Platform"));
+        Assert.Equal("Rae", set.Proposer);
+    }
+
+    /// <summary>A member holding the Skill who is neither the manager nor the Retro agent is refused and nothing is stored.</summary>
+    [Fact]
+    public async Task Tool_MemberWithSkillButNoRole_IsRefused()
+    {
+        CancellationToken ct = TestContext.Current.CancellationToken;
+        using RetroProposalFixture fixture = await RetroProposalFixture.CreateAsync(ct);
+
+        string result = await fixture.Tool("Sam").InvokeAsync(Arguments("Platform", Edit()), ct);
+
+        Assert.Equal("Only the Team's manager or its Retro agent may propose retro changes.", result);
+        Assert.Empty(fixture.Proposals.Pending("Platform"));
+    }
+
+    /// <summary>A member without the retrospective Skill is refused and nothing is stored.</summary>
+    [Fact]
+    public async Task Tool_MemberWithoutSkill_IsRefused()
+    {
+        CancellationToken ct = TestContext.Current.CancellationToken;
+        using RetroProposalFixture fixture = await RetroProposalFixture.CreateAsync(ct);
+
+        string result = await fixture.Tool("Kai").InvokeAsync(Arguments("Platform", Edit()), ct);
+
+        Assert.Equal("You do not hold the retrospective Skill.", result);
+        Assert.Empty(fixture.Proposals.Pending("Platform"));
+    }
+
+    /// <summary>A Retro agent of another Team is refused as a non-member and nothing is stored.</summary>
+    [Fact]
+    public async Task Tool_NonMember_IsRefused()
+    {
+        CancellationToken ct = TestContext.Current.CancellationToken;
+        using RetroProposalFixture fixture = await RetroProposalFixture.CreateAsync(ct);
+
+        string result = await fixture.Tool("Ola").InvokeAsync(Arguments("Platform", Edit()), ct);
+
+        Assert.Equal("You are not a member of Team Platform.", result);
+        Assert.Empty(fixture.Proposals.Pending("Platform"));
+    }
+
     /// <summary>Four proposals are refused and nothing is stored.</summary>
     [Fact]
     public async Task Tool_FourProposals_Refused()
     {
         CancellationToken ct = TestContext.Current.CancellationToken;
         using RetroProposalFixture fixture = await RetroProposalFixture.CreateAsync(ct);
-        ProposeRetroChangesTool tool = new(fixture.Catalog, fixture.Proposals, fixture.Harness.Directory, fixture.Harness.NovaId ?? "");
+        ProposeRetroChangesTool tool = fixture.Tool("Nova");
 
         string result = await tool.InvokeAsync(Arguments("Platform", Edit(), Edit(), Edit(), Edit()), ct);
 
@@ -264,7 +317,7 @@ public sealed class RetroProposalTests
     {
         CancellationToken ct = TestContext.Current.CancellationToken;
         using RetroProposalFixture fixture = await RetroProposalFixture.CreateAsync(ct);
-        ProposeRetroChangesTool tool = new(fixture.Catalog, fixture.Proposals, fixture.Harness.Directory, fixture.Harness.NovaId ?? "");
+        ProposeRetroChangesTool tool = fixture.Tool("Nova");
 
         string result = await tool.InvokeAsync(Arguments("Platform"), ct);
 
@@ -282,7 +335,7 @@ public sealed class RetroProposalTests
     {
         CancellationToken ct = TestContext.Current.CancellationToken;
         using RetroProposalFixture fixture = await RetroProposalFixture.CreateAsync(ct);
-        ProposeRetroChangesTool tool = new(fixture.Catalog, fixture.Proposals, fixture.Harness.Directory, fixture.Harness.NovaId ?? "");
+        ProposeRetroChangesTool tool = fixture.Tool("Nova");
 
         string result = await tool.InvokeAsync(Arguments("Platform", Edit(), Edit(file)), ct);
 
@@ -296,7 +349,7 @@ public sealed class RetroProposalTests
     {
         CancellationToken ct = TestContext.Current.CancellationToken;
         using RetroProposalFixture fixture = await RetroProposalFixture.CreateAsync(ct);
-        ProposeRetroChangesTool tool = new(fixture.Catalog, fixture.Proposals, fixture.Harness.Directory, fixture.Harness.NovaId ?? "");
+        ProposeRetroChangesTool tool = fixture.Tool("Nova");
 
         string result = await tool.InvokeAsync(Arguments("Platform", ("", "Process.md", "a", "b")), ct);
 
@@ -309,7 +362,7 @@ public sealed class RetroProposalTests
     {
         CancellationToken ct = TestContext.Current.CancellationToken;
         using RetroProposalFixture fixture = await RetroProposalFixture.CreateAsync(ct);
-        ProposeRetroChangesTool tool = new(fixture.Catalog, fixture.Proposals, fixture.Harness.Directory, fixture.Harness.NovaId ?? "");
+        ProposeRetroChangesTool tool = fixture.Tool("Nova");
 
         string notMember = await tool.InvokeAsync(Arguments("Other", Edit()), ct);
         string noTeam = await tool.InvokeAsync(Arguments("Ghost", Edit()), ct);
@@ -324,7 +377,7 @@ public sealed class RetroProposalTests
     {
         CancellationToken ct = TestContext.Current.CancellationToken;
         using RetroProposalFixture fixture = await RetroProposalFixture.CreateAsync(ct);
-        ProposeRetroChangesTool tool = new(fixture.Catalog, fixture.Proposals, fixture.Harness.Directory, fixture.Harness.NovaId ?? "");
+        ProposeRetroChangesTool tool = fixture.Tool("Nova");
 
         Assert.Equal("propose_retro_changes", tool.Name);
         Assert.Equal(

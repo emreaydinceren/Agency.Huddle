@@ -188,6 +188,28 @@ public sealed class SkillGrantsTests
         Assert.Equal(["post_message", "read_records"], SkillGrants.Offer(all, [TeamBuildingSkill(["read_records"])]).Select(tool => tool.Name));
     }
 
+    /// <summary>Task 79 (OR-3, RQ-2): the Chief of Staff holding team-building and the shipped team-rollup Skill is offered list_teams and no other Request, sprint or records tool.</summary>
+    [Fact]
+    public void Offer_ChiefOfStaffWithTeamRollup_GetsListTeamsOnly()
+    {
+        IReadOnlyList<IAppTool> all =
+        [
+            new StubTool("post_message"),
+            new StubTool("list_teams"),
+            new StubTool("file_request"),
+            new StubTool("triage_request"),
+            new StubTool("confirm_request"),
+            new StubTool("propose_sprint"),
+            new StubTool("read_records"),
+        ];
+        IReadOnlyList<string> rollupTools = SkillValidator.Validate("team-rollup", SkillCatalog.All["team-rollup"]).Tools;
+        Skill rollup = new("team-rollup", "Use when you roll up the Teams for the Human.", rollupTools, ["SKILL.md"], SkillSource.Default, null);
+
+        IReadOnlyList<IAppTool> offered = SkillGrants.Offer(all, [TeamBuildingSkill([]), rollup]);
+
+        Assert.Equal(["post_message", "list_teams"], offered.Select(tool => tool.Name));
+    }
+
     /// <summary>Builds a resolved <c>team-building</c> Skill granting exactly <paramref name="tools"/>.</summary>
     /// <param name="tools">The Skill's granted tool names.</param>
     private static Skill TeamBuildingSkill(IReadOnlyList<string> tools)

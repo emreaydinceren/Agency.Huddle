@@ -33,7 +33,7 @@ public sealed partial class PromptCatalogTests
     [Fact]
     public void All_HasExactlyThirtySevenPrompts()
     {
-        Assert.Equal(77, PromptCatalog.All.Count);
+        Assert.Equal(78, PromptCatalog.All.Count);
     }
 
     /// <summary>Task 58 (PR-4, PR-5): the process blocks and the onboarding turn take and require their one placeholder and carry no tool prefix.</summary>
@@ -76,6 +76,22 @@ public sealed partial class PromptCatalogTests
         Assert.True(text.Contains("risks", StringComparison.Ordinal));
         Assert.True(text.Contains("15 lines", StringComparison.Ordinal));
         Assert.True(text.Contains("Chief of Staff", StringComparison.Ordinal));
+    }
+
+    /// <summary>Task 79 (OR-3): the roll-up prompt is Live, takes no placeholders, carries no tool prefix and asks for decisions and risks with links.</summary>
+    [Fact]
+    public void RollupPrompt_IsLiveWithNoPlaceholders()
+    {
+        var prompt = PromptCatalog.Get("prompt.rollup");
+        string text = prompt.Default;
+
+        Assert.Equal(PromptTiming.Live, prompt.Timing);
+        Assert.Empty(prompt.Placeholders);
+        Assert.Empty(prompt.RequiredPlaceholders);
+        Assert.False(text.Contains("mcp__team__", StringComparison.Ordinal));
+        Assert.True(text.Contains("Decisions:", StringComparison.Ordinal));
+        Assert.True(text.Contains("Risks:", StringComparison.Ordinal));
+        Assert.True(text.Contains("open Requests per Team", StringComparison.Ordinal));
     }
 
     /// <summary>Task 64 (RT-3, Spec §Retro): the retro prompt starts with read_records and then follows the gather, ask, report, propose, register order.</summary>

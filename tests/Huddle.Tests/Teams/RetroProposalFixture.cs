@@ -1,5 +1,8 @@
 using Microsoft.Extensions.Logging.Abstractions;
+using Agency.Huddle.App.Acp;
+using Agency.Huddle.App.Acp.Tools;
 using Agency.Huddle.App.Data;
+using Agency.Huddle.App.TeamTypes;
 using Agency.Huddle.App.Teams;
 using Agency.Huddle.Tests.Acp.Fakes;
 using Agency.Huddle.Tests.Acp.Tools;
@@ -18,6 +21,17 @@ internal sealed class RetroProposalFixture : IDisposable
     /// <summary>The text of <c>_team.md</c> the fixture starts with.</summary>
     public const string TeamText = "Team notes: keep it small.\n";
 
+    private const string TypeManifest = """
+        { "schemaVersion": 1, "id": "web", "version": "1.2.0", "displayName": "Web", "order": 1,
+          "workspace": { "kind": "none", "label": "None", "required": false },
+          "processes": [{ "id": "flow", "file": "processes/flow.md", "default": true }],
+          "retroRole": "retro",
+          "roles": [
+            { "id": "lead", "title": "Lead", "candidate": "candidates/lead.md", "manager": true, "required": true },
+            { "id": "retro", "title": "Retro", "candidate": "candidates/retro.md", "maxPerTeam": 1 }
+          ] }
+        """;
+
     private RetroProposalFixture(TaskToolHarness harness, string roomId, string otherRoomId)
     {
         this.Harness = harness;
@@ -31,7 +45,7 @@ internal sealed class RetroProposalFixture : IDisposable
         {
             Teams =
             [
-                new TeamSummary("Platform", [], ["Nova", "Kai"], true) { Manager = "Nova" },
+                new TeamSummary("Platform", [], ["Nova", "Kai", "Rae", "Sam"], true) { Manager = "Nova", TeamType = new VersionedRef("web", "1.2.0") },
                 new TeamSummary("Other", [], ["Kai"], true),
             ],
         };
@@ -87,14 +101,47 @@ internal sealed class RetroProposalFixture : IDisposable
     /// <summary>The text of Platform's <c>_team.md</c> now.</summary>
     public string TeamNow => File.ReadAllText(Path.Combine(this.TeamFolder, TeamPaths.TeamFileName));
 
+    /// <summary>The caller ids by name: Nova (manager), Rae (Retro agent), Sam (member, no role), Kai (member without the Skill) and Ola (not a member).</summary>
+    public Dictionary<string, string> Ids { get; } = new(StringComparer.Ordinal);
+
+    /// <summary>Builds the propose tool for a caller.</summary>
+    /// <param name="caller">The caller's name, a key of <see cref="Ids"/>.</param>
+    public ProposeRetroChangesTool Tool(string caller)
+    {
+        Dictionary<string, string> builtins = new(StringComparer.Ordinal)
+        {
+            ["web/team-type.json"] = TypeManifest,
+            ["web/candidates/lead.md"] = "---\ntitle: Lead\nconsult_when: planning\n---\nYou lead.",
+            ["web/candidates/retro.md"] = "---\ntitle: Retro\nconsult_when: retros\n---\nYou review.",
+            ["web/processes/flow.md"] = "# Flow",
+        };
+        TeamTypeCatalog types = new(this.Harness.Options, NullLogger<TeamTypeCatalog>.Instance, builtins);
+        return new ProposeRetroChangesTool(this.Catalog, this.Proposals, this.Harness.Personas, types, this.Harness.Directory, this.Ids[caller]);
+    }
+
     /// <summary>Builds the fixture.</summary>
     /// <param name="ct">Cancels the seeding.</param>
     public static async Task<RetroProposalFixture> CreateAsync(CancellationToken ct)
     {
         TaskToolHarness harness = await TaskToolHarness.CreateAsync(ct);
+        Persona nova = harness.Personas.Get("Nova") ?? throw new InvalidOperationException("Harness not seeded.");
+        _ = harness.Personas.Update("Nova", PersonaFrontmatter.WriteListField(nova.Text, "skills", ["retrospective"]), null, null, null);
+        string[] skill = ["retrospective"];
+        _ = harness.Personas.Add(new PersonaIdentity("Rae", "Retro", "rae", ["Platform"], Skills: skill, Role: new RoleRef("web", "retro", "1.2.0")), "You are Rae.");
+        _ = harness.Personas.Add(new PersonaIdentity("Sam", "Dev", "sam", ["Platform"], Skills: skill), "You are Sam.");
+        _ = harness.Personas.Add(new PersonaIdentity("Ola", "Retro", "ola", ["Design"], Skills: skill, Role: new RoleRef("web", "retro", "1.2.0")), "You are Ola.");
         Room room = await harness.Directory.CreateRoomAsync("Retro", [KnownIds.Human, harness.NovaId ?? ""], ct);
         Room other = await harness.Directory.CreateRoomAsync("Chat", [KnownIds.Human, harness.KaiId ?? ""], ct);
-        return new RetroProposalFixture(harness, room.Id, other.Id);
+        RetroProposalFixture fixture = new(harness, room.Id, other.Id);
+        fixture.Ids["Nova"] = harness.NovaId ?? "";
+        fixture.Ids["Kai"] = harness.KaiId ?? "";
+        foreach (string name in new[] { "Rae", "Sam", "Ola" })
+        {
+            User? user = await harness.Directory.UpsertAgentUserAsync(name, null, ct);
+            fixture.Ids[name] = user?.Id ?? throw new InvalidOperationException("Directory refused a user.");
+        }
+
+        return fixture;
     }
 
     /// <summary>Stores a proposal set from Nova for Platform and returns it.</summary>

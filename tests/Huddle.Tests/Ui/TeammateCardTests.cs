@@ -582,7 +582,7 @@ public sealed class TeammateCardTests
         Assert.Equal(seeded.Alias, identity.Alias);
         Assert.Equal("Chief of Staff", identity.Title);
         Assert.Empty(identity.Teams);
-        Assert.Equal(["team-building"], identity.Skills);
+        Assert.Equal(["team-building", "team-rollup"], identity.Skills);
         Assert.Equal(BuiltinTeammate.ChiefOfStaffMarker, identity.Builtin);
 
         var (_, defaultBody) = PersonaFrontmatter.Parse(BuiltinTeammate.DefaultText);
