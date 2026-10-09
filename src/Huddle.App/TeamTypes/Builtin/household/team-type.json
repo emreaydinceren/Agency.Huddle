@@ -1,0 +1,42 @@
+{
+  "schemaVersion": 1,
+  "id": "household",
+  "version": "1.0.0",
+  "displayName": "Household",
+  "order": 20,
+  "workspace": { "kind": "none", "label": "Home folder", "required": false },
+  "coverage": [ "generate", "verify" ],
+  "presets": [
+    { "id": "basic", "label": "Basic", "roles": [ "household-manager", "school-liaison" ] }
+  ],
+  "processes": [
+    { "id": "household-basics", "file": "processes/household-basics.md", "default": true }
+  ],
+  "roles": [
+    {
+      "id": "household-manager",
+      "title": "Household Manager",
+      "candidate": "candidates/household-manager.md",
+      "manager": true,
+      "required": true,
+      "maxPerTeam": 1,
+      "covers": [ "verify" ],
+      "model": { "tier": "strongest" },
+      "skills": [
+        { "name": "team-management", "source": "builtin", "path": "team-management" }
+      ],
+      "suggestedNames": [ "Nora", "Ben", "Maya" ]
+    },
+    {
+      "id": "school-liaison",
+      "title": "School Liaison",
+      "candidate": "candidates/school-liaison.md",
+      "required": false,
+      "maxPerTeam": 1,
+      "covers": [ "generate" ],
+      "model": { "tier": "balanced" },
+      "requires": [ "email:read" ],
+      "suggestedNames": [ "Ellie", "Theo" ]
+    }
+  ]
+}
