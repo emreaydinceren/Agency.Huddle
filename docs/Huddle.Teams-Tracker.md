@@ -2,7 +2,7 @@
 
 Status of the Teams delivery in [engineering/teams-plan.md](engineering/teams-plan.md). Each task is a `.t` (failing tests first) and `.i` (implementation) pair; a task's `.i` cannot be Done before its `.t`. Ids are `<phase>.<task>.<t|i>`, the form `agents/scripts/Set-Tracker.ps1` updates. `(H)` marks a Haiku task, `(B)` a boundary task that also gets an Opus architect review.
 
-**Status:** 158 of 170 tasks Done · 5 of 6 retrospectives done · last updated 2026-10-08.
+**Status:** 160 of 170 tasks Done · 5 of 6 retrospectives done · last updated 2026-10-08.
 
 | **Deliverable / Task** | **Active** | **In Progress** | **Done** |
 |---|---|---|---|
@@ -174,10 +174,10 @@ Status of the Teams delivery in [engineering/teams-plan.md](engineering/teams-pl
 | 4.78.i Task 78 Retro verification: implement | | | ✔ |
 | 4.79.t Task 79 Chief of Staff rollup: write failing tests | | | ✔ |
 | 4.79.i Task 79 Chief of Staff rollup: implement | | | ✔ |
-| 4.80.t Task 80 Phase 4 functional end-to-end test: write failing tests (B) | | ✔ | |
-| 4.80.i Task 80 Phase 4 functional end-to-end test: implement (B) | | | |
+| 4.80.t Task 80 Phase 4 functional end-to-end test: write failing tests (B) | | | ✔ |
+| 4.80.i Task 80 Phase 4 functional end-to-end test: implement (B) | | | ✔ |
 | **5. Household** | | | |
-| 5.81.t Task 81 Household team type: write failing tests (H) | | | |
+| 5.81.t Task 81 Household team type: write failing tests (H) | | ✔ | |
 | 5.81.i Task 81 Household team type: implement (H) | | | |
 | 5.82.t Task 82 Connector status and Needs setup: write failing tests | | | |
 | 5.82.i Task 82 Connector status and Needs setup: implement | | | |

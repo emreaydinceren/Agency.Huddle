@@ -368,7 +368,7 @@ internal sealed partial class TaskTriggerService : IHostedService, IDisposable
 
             if (!this.batches.TryGetValue(key, out Batch? batch))
             {
-                batch = new Batch(key);
+                batch = new Batch(key) { FirstChangeAt = this.clock.GetUtcNow() };
                 if (!fireNow)
                 {
                     batch.Timer = this.clock.CreateTimer(this.OnTimerFired, key, TimeSpan.FromSeconds(seconds), Timeout.InfiniteTimeSpan);
@@ -792,7 +792,7 @@ internal sealed partial class TaskTriggerService : IHostedService, IDisposable
             return false;
         }
 
-        DateTimeOffset batchStart = batch.Entries.Min(static entry => entry.At);
+        DateTimeOffset batchStart = batch.FirstChangeAt;
         lock (this.gate)
         {
             return this.requestWakes.TryGetValue(RequestWakeKey(id, name), out DateTimeOffset woken) && woken >= batchStart;
@@ -1167,6 +1167,12 @@ internal sealed partial class TaskTriggerService : IHostedService, IDisposable
 
         /// <summary>The actor of the latest change: the Message is posted as them.</summary>
         public TaskActor Actor { get; set; } = new(TaskActorKind.Human, key.ActorName, null);
+
+        /// <summary>
+        /// When the batch's first change arrived, at full clock precision. Change log entries are cut to whole seconds, so a
+        /// Request wake posted in the same second as a later, unrelated change would otherwise look as if it covered that change.
+        /// </summary>
+        public DateTimeOffset FirstChangeAt { get; init; }
 
         /// <summary>Every batched change's Change log entry, in arrival order.</summary>
         public List<ChangeLogEntry> Entries { get; } = [];
