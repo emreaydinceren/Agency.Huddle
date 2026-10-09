@@ -243,6 +243,12 @@ internal sealed class TeamFolderProvisioner : IHostedService, IDisposable, ITeam
             return new TeamCreateResult(TeamCreateOutcome.InvalidName, null);
         }
 
+        // A case-sensitive file system would otherwise let "alpha" sit beside "Alpha"; refuse it the way Windows does.
+        if (this.TeamFolderDiffersOnlyByCase(team))
+        {
+            return new TeamCreateResult(TeamCreateOutcome.AlreadyExists, null);
+        }
+
         LibraryResult<LibraryPath> folder = this.CreateTeamFolder(team);
         if (folder.Value is null)
         {
@@ -402,6 +408,33 @@ internal sealed class TeamFolderProvisioner : IHostedService, IDisposable, ITeam
         {
             return Directory.EnumerateDirectories(teamsRoot.FullPath)
                 .Any(d => string.Equals(Path.GetFileName(d), name, StringComparison.OrdinalIgnoreCase));
+        }
+        catch (IOException ex)
+        {
+            this.LogSyncFailed(ex);
+            return false;
+        }
+        catch (UnauthorizedAccessException ex)
+        {
+            this.LogSyncFailed(ex);
+            return false;
+        }
+    }
+
+    /// <summary>Whether a directory directly under the Teams root matches <paramref name="name"/> ignoring case but not exactly.</summary>
+    private bool TeamFolderDiffersOnlyByCase(string name)
+    {
+        LibraryRoot? teamsRoot = this.roots.Roots.FirstOrDefault(r => string.Equals(r.Id, TeamsRootId, StringComparison.Ordinal));
+        if (teamsRoot is null || !Directory.Exists(teamsRoot.FullPath))
+        {
+            return false;
+        }
+
+        try
+        {
+            return Directory.EnumerateDirectories(teamsRoot.FullPath)
+                .Select(Path.GetFileName)
+                .Any(f => string.Equals(f, name, StringComparison.OrdinalIgnoreCase) && !string.Equals(f, name, StringComparison.Ordinal));
         }
         catch (IOException ex)
         {

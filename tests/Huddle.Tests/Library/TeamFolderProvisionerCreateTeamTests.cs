@@ -58,6 +58,27 @@ public sealed class TeamFolderProvisionerCreateTeamTests
         Assert.Equal(before, File.ReadAllBytes(path));
     }
 
+    /// <summary>Names differing from an existing Team folder only by case are refused as <c>AlreadyExists</c> on any file system, leaving the first file byte-identical.</summary>
+    [Theory]
+    [InlineData("ALPHA")]
+    [InlineData("alpha")]
+    [InlineData("aLPha")]
+    public void CreateTeam_CaseVariantOfExistingFolder_AlreadyExistsOnAnyOs(string variant)
+    {
+        using Fixture fixture = new();
+        using TeamFolderProvisioner provisioner = fixture.CreateProvisioner();
+        provisioner.CreateTeam("Alpha", Sample());
+        string path = Path.Combine(fixture.TeamsRoot, "Alpha", TeamPaths.TeamFileName);
+        byte[] before = File.ReadAllBytes(path);
+
+        TeamCreateResult result = provisioner.CreateTeam(variant, Sample("Someone Else"));
+
+        Assert.Equal(TeamCreateOutcome.AlreadyExists, result.Outcome);
+        Assert.Null(result.Path);
+        Assert.Equal(before, File.ReadAllBytes(path));
+        Assert.Equal(["Alpha"], Directory.GetDirectories(fixture.TeamsRoot).Select(Path.GetFileName));
+    }
+
     /// <summary>A name that differs from an existing Team only by case is refused as invalid and writes nothing.</summary>
     [Fact]
     public void CreateTeam_NameDiffersByCaseFromExistingTeam_InvalidNameAndNothingWritten()
