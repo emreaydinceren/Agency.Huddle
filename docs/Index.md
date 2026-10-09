@@ -142,6 +142,9 @@ One row per decision. Open the ADR only when its row is your question.
 | [0035](adr/0035-an-adapter-command-is-a-message-the-human-addresses-by-mention.md) | A command is a Message like `@Nova /compact`; an allowlist sits on the Adapter Profile. | Accepted |
 | [0036](adr/0036-a-prompt-block-is-sent-only-when-the-adapter-advertised-it.md) | A Prompt block (an image, or a document's text) is sent only when the Adapter advertised it, and only from the Message that started the Turn. | Accepted |
 | [0037](adr/0037-a-sprint-is-a-named-group-of-tasks-in-one-markdown-file.md) | A Sprint is an id and a name in one `sprints.md`; a Task holds the id; the line is removed when no Task holds it; no dates, state or screen. | Accepted |
+| [0038](adr/0038-team-types-are-data-in-json-and-markdown-files.md) | A team type is a folder of JSON and Markdown files; built-ins are embedded, and a user folder replaces by id. Code knows no role name. | Accepted |
+| [0039](adr/0039-process-gates-live-in-process-md-and-are-enforced-in-taskservice-and-the-permission-handler.md) | A Team's gates are listed in `Process.md` and enforced in `TaskService` and the permission handler; only the Human overrides, on record. | Accepted |
+| [0040](adr/0040-a-request-is-a-task-in-the-receiving-teams-backlog.md) | A Request is a Task with six extra keys in the receiving Team's backlog; a state machine and its tools decide who may move it. | Accepted |
 
 ## 5. Manual tests
 

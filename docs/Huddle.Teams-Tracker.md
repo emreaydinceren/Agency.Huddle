@@ -2,7 +2,7 @@
 
 Status of the Teams delivery in [engineering/teams-plan.md](engineering/teams-plan.md). Each task is a `.t` (failing tests first) and `.i` (implementation) pair; a task's `.i` cannot be Done before its `.t`. Ids are `<phase>.<task>.<t|i>`, the form `agents/scripts/Set-Tracker.ps1` updates. `(H)` marks a Haiku task, `(B)` a boundary task that also gets an Opus architect review.
 
-**Status:** 166 of 170 tasks Done · 5 of 6 retrospectives done · last updated 2026-10-08.
+**Status:** 168 of 170 tasks Done · 5 of 6 retrospectives done · last updated 2026-10-08.
 
 | **Deliverable / Task** | **Active** | **In Progress** | **Done** |
 |---|---|---|---|
@@ -184,8 +184,8 @@ Status of the Teams delivery in [engineering/teams-plan.md](engineering/teams-pl
 | 5.83.t Task 83 Neutrality guard and Household end-to-end: write failing tests | | | ✔ |
 | 5.83.i Task 83 Neutrality guard and Household end-to-end: implement | | | ✔ |
 | **6. Docs** | | | |
-| 6.84.t Task 84 Three ADRs: write failing tests (H) | | ✔ | |
-| 6.84.i Task 84 Three ADRs: implement (H) | | | |
-| 6.85.t Task 85 Guides, code map and index: write failing tests (H) | | | |
+| 6.84.t Task 84 Three ADRs: write failing tests (H) | | | ✔ |
+| 6.84.i Task 84 Three ADRs: implement (H) | | | ✔ |
+| 6.85.t Task 85 Guides, code map and index: write failing tests (H) | | ✔ | |
 | 6.85.i Task 85 Guides, code map and index: implement (H) | | | |
 | 🔁 R6 Opus retrospective after Task 85: token tally, repeated reads, cost fixes, update the plan | | | |
