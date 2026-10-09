@@ -2,7 +2,7 @@
 
 Prove that the Avatar library picker (`Components/Shared/AvatarLibraryDialog.razor`, opened from the Teammate card and from **Settings → Appearance**) narrows 324 pictures correctly, shows nothing but pictures, copies the chosen file through the normal upload path, and fails visibly when the library is missing or unreadable. Most of this is pixels, focus and what a screen reader announces, which the compiler and the bUnit suite cannot see. The picker is specified in [Huddle.AvatarLibrary-Specifications.md](../../Huddle.AvatarLibrary-Specifications.md) and decided in [ADR-0044](../../adr/0044-an-avatar-library-is-a-read-only-source-and-a-pick-copies.md).
 
-**24 tests** · all free · about 2.5 hours.
+**25 tests** · all free · about 2.5 hours.
 
 Read [the manual test script](../manual-tests.md) first, then [Common procedures](common.md), which defines the terminals, states, procedures and oracles this page names. Both are assumed below.
 
@@ -665,7 +665,7 @@ Note for the tester: the automated `AvatarLibraryMemoryTests` prove that nothing
 
 **Steps**
 
-1. Press **Show more** until the count line reads 324 pictures shown, or scroll the whole grid.
+1. Press **Show more** until all 324 pictures are in the grid (the count line already reads `324 of 324`, because it counts matches and never changes with paging), and scroll the whole grid so every picture loads.
 2. Confirm every visible thumbnail is a circle, with no square edges and no text.
 3. Pick any file at random in File Explorer from `E:\Projects\Software Factories\avatars`, open it, and check its pixel size is 256 × 256.
 4. Check the sizes of the folder's files: the largest must be under 512 000 bytes.
@@ -679,6 +679,39 @@ Note for the tester: the automated `AvatarLibraryMemoryTests` prove that nothing
 **Fail if — any of these**
 
 - A broken picture appears for a file that exists in the folder -> the mount, the file name or the `master.json` entry for it is wrong. Record the file name.
+
+### AVATARLIB-25 — On Settings → Appearance, a half-made choice is not undone by the avatar store's own file-watcher echo
+
+**Free** · about 5 min
+
+*Proves that choosing **An image** or **A short label** on the Appearance page, before any image or text exists, stays chosen. The avatar store watches `avatars.json` and raises a second change event a moment after the page's own save; the page used to treat that echo as an outside edit and snap the choice back to **Initials of the name**, which hid the library button.*
+
+**Before you start**
+
+- The Human has no avatar of their own: in `App_Data`, `avatars.json` has no entry under the Human's Name (`You` by default), or does not exist. If it has one, choose **Initials of the name** first so the entry is removed.
+- The app is running with the library configured, and **Settings → Appearance** is open.
+
+**Steps**
+
+1. In the Avatar section, select **An image**. Do not press anything else.
+2. Wait a full 5 seconds, watching the radio buttons and the buttons below them. The echo arrives well inside that time.
+3. Select **A short label**. Again wait 5 seconds without typing.
+4. Select **An image** once more, then choose **Choose from library** and click any picture.
+5. Reload the page and look at the Avatar section.
+
+**Pass if — all of these**
+
+- After step 1 and the wait, **An image** is still selected, and both **Choose an image** and **Choose from library** are still shown.
+- After step 3 and the wait, **A short label** is still selected and its text box is still shown.
+- After step 4 the picked picture is the Human's avatar.
+- After the reload the picked picture is still shown, and **An image** is the selected choice.
+
+**Fail if — any of these**
+
+- The radio returns to **Initials of the name** within a second or two of selecting **An image** or **A short label** -> the page is re-seeding from the store's echo of its own save. Note which option and how long it took.
+- The library button is never visible on this page unless an image already exists -> the same defect, seen from the outside.
+
+**Also check, to prove an outside edit still works:** with the page open, edit `App_Data\avatars.json` by hand to give `You` a `"label": "AB"`, and save the file. Within a few seconds the page should switch to **A short label** with `AB` in the box. If it does not, the guard has swallowed a genuine outside edit. Undo the hand edit afterwards.
 
 ## Cleanup
 
