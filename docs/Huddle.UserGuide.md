@@ -309,6 +309,28 @@ or Teams. Changing the avatar does not restart anything.
 > creating it, use the Team page's **Members** tab, or edit the `teams:` line in
 > the text.
 
+### Choosing an avatar from the library
+
+If your Huddle has an avatar library, an **An image** avatar has a second button,
+**Choose from library**, beside the upload button. Press it to open a window of
+pictures to pick from.
+
+- **Narrow the pictures.** Press a skin tone (**All**, **Light**, **Tan** or
+  **Dark**). Type a word in the search box, such as a profession or a tag like
+  `glasses`. Press a profession or a tag to select it. Selections combine: two
+  professions show either one, and two tags show only pictures with both.
+- **Selected chips move to the left.** Each one has an **X**. Press the X to
+  turn it off, and it returns to its place. **Clear all** turns everything off.
+- **Pick a picture.** Click it, and the window closes. The picture appears on
+  the card as **New image selected (not yet saved)**. Press **Save** to keep it,
+  or **Cancel** to keep your old avatar. On your own avatar in **Settings →
+  Appearance** the picture is saved at once.
+
+The library is optional. Whoever runs Huddle sets its folder with
+`Team:AvatarLibrary:Dir`. Without that setting there is no button, and uploading
+an image works as before. A picked picture is copied, so the Teammate keeps it
+even if the library is later moved or deleted.
+
 ### Choosing a Work mode
 
 A **Work mode** is how much the Teammate's agent may do before it must ask first.

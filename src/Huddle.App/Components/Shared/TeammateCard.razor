@@ -58,6 +58,10 @@
 @inject AvatarStore Avatars
 @inject SkillStore Skills
 @inject BuiltinTeammateReset Reset
+@* The Avatar Library picker (Spec 6.6) opens over this card as a second dialog. Its locator and loader are
+   resolved by hand (see LibraryConfigured), like the team-type catalog below, so a host that registers
+   neither keeps rendering the card exactly as before. *@
+@inject IDialogService DialogService
 @* Resolved by hand, not injected: the team-type catalog and pack store only matter to a Teammate hired
    from a role, and a card opened in a host that registers neither (a Teammates page without Teams) must
    keep rendering exactly as before. *@
@@ -507,13 +511,22 @@
 
                 @if (this.avatarChoice == AvatarChoice.Image)
                 {
-                    <MudFileUpload T="IBrowserFile" Accept=".png,.jpg,.jpeg,.webp" MaximumFileCount="1" FilesChanged="this.OnAvatarFileChangedAsync">
-                        <CustomContent Context="fileUpload">
-                            <MudButton Variant="Variant.Outlined" StartIcon="@Icons.Material.Filled.Upload" OnClick="@(() => fileUpload.OpenFilePickerAsync())">
-                                Choose an image
+                    <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2">
+                        <MudFileUpload T="IBrowserFile" Accept=".png,.jpg,.jpeg,.webp" MaximumFileCount="1" FilesChanged="this.OnAvatarFileChangedAsync">
+                            <CustomContent Context="fileUpload">
+                                <MudButton Variant="Variant.Outlined" StartIcon="@Icons.Material.Filled.Upload" OnClick="@(() => fileUpload.OpenFilePickerAsync())">
+                                    Choose an image
+                                </MudButton>
+                            </CustomContent>
+                        </MudFileUpload>
+
+                        @if (this.LibraryConfigured)
+                        {
+                            <MudButton Variant="Variant.Outlined" StartIcon="@Icons.Material.Filled.PhotoLibrary" OnClick="this.ChooseFromLibraryAsync">
+                                Choose from library
                             </MudButton>
-                        </CustomContent>
-                    </MudFileUpload>
+                        }
+                    </MudStack>
 
                     @if (this.avatarPendingBytes is not null || this.avatarImage is not null)
                     {
@@ -1040,8 +1053,46 @@
             return;
         }
 
+        this.BufferAvatarImage(bytes, extension);
+    }
+
+    /// <summary>Whether an Avatar Library is configured and so the "Choose from library" button shows; false when the host registers no locator.</summary>
+    private bool LibraryConfigured => this.Services.GetService<AvatarLibraryLocator>() is { IsConfigured: true };
+
+    /// <summary>Buffers a chosen avatar image, from an upload or from the library, exactly as <see cref="SaveAsync"/> later expects it, and clears any earlier avatar error.</summary>
+    /// <param name="bytes">The image bytes, already validated as a PNG, JPEG or WebP.</param>
+    /// <param name="extension">The extension <see cref="AvatarImage.SniffExtension"/> found, with its dot.</param>
+    private void BufferAvatarImage(byte[] bytes, string extension)
+    {
         this.avatarPendingBytes = bytes;
         this.avatarPendingExtension = extension;
+        this.avatarError = null;
+    }
+
+    /// <summary>
+    /// Opens the Avatar Library picker above this card and, when a thumbnail is chosen, reads that file and buffers it
+    /// the way an upload is buffered. A file that cannot be read shows the avatar error line; cancelling changes nothing.
+    /// </summary>
+    private async Task ChooseFromLibraryAsync()
+    {
+        this.avatarError = null;
+
+        IDialogReference reference = await this.DialogService.ShowAsync<AvatarLibraryDialog>(null, new DialogParameters(), AvatarLibraryDialog.Options);
+        DialogResult? result = await reference.Result;
+        if (result is null || result.Canceled || result.Data is not string fileName)
+        {
+            return;
+        }
+
+        IAvatarLibraryLoader? loader = this.Services.GetService<IAvatarLibraryLoader>();
+        AvatarLibraryImage? image = loader is null ? null : await loader.ReadImageAsync(fileName, CancellationToken.None);
+        if (image is null)
+        {
+            this.avatarError = "That image could not be read.";
+            return;
+        }
+
+        this.BufferAvatarImage(image.Bytes, image.Extension);
     }
 
     /// <summary>Clears a chosen image - whether already saved (<see cref="avatarImage"/>) or only buffered (<see cref="avatarPendingBytes"/>) - so <see cref="CurrentAvatar"/> falls back to initials until a new file is chosen.</summary>

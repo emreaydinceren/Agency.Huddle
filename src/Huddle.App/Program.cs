@@ -1,5 +1,6 @@
 using Agency.Huddle.App;
 using Agency.Huddle.App.Acp;
+using Agency.Huddle.App.Avatars;
 using Agency.Huddle.App.Components;
 using Agency.Huddle.App.Desktop;
 using Agency.Huddle.App.Library;
@@ -100,8 +101,7 @@ var avatarContentTypes = new FileExtensionContentTypeProvider(
     {
         [".png"] = "image/png",
         [".jpg"] = "image/jpeg",
-        [".webp"] = "image/webp",
-    });
+        [".webp"] = "image/webp",    });
 
 app.UseStaticFiles(new StaticFileOptions
 {
@@ -117,6 +117,30 @@ app.UseStaticFiles(new StaticFileOptions
         context.Context.Response.Headers.XContentTypeOptions = "nosniff";
     },
 });
+
+// The Avatar Library is the Human's own folder, so it is mounted read-only where it lives rather than
+// copied under {DataDir}; a chosen image is copied into the Teammate's avatar by AvatarStore, never
+// referenced, so deleting the library later breaks nothing. The folder may be unset or absent, and a
+// PhysicalFileProvider throws on a missing root, so the mount is added only when the folder exists and
+// is never created here. It reuses the enumerated three-type provider above, so master.json and any
+// .svg answer 404. The cache is an hour and not immutable: unlike the opaque avatar ids, a library file
+// name can be reused with different bytes.
+AvatarLibraryLocator avatarLibrary = app.Services.GetRequiredService<AvatarLibraryLocator>();
+if (avatarLibrary.Dir is { } avatarLibraryDir && Directory.Exists(avatarLibraryDir))
+{
+    app.UseStaticFiles(new StaticFileOptions
+    {
+        FileProvider = new PhysicalFileProvider(avatarLibraryDir),
+        RequestPath = "/avatar-library",
+        ContentTypeProvider = avatarContentTypes,
+        ServeUnknownFileTypes = false,
+        OnPrepareResponse = static context =>
+        {
+            context.Context.Response.Headers.CacheControl = "public,max-age=3600";
+            context.Context.Response.Headers.XContentTypeOptions = "nosniff";
+        },
+    });
+}
 
 // Not UseStaticFiles: see LibraryFilesEndpoint's summary for why a pinned Library root (which can
 // point anywhere on disk, and can change while the app is running) rules out a single

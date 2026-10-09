@@ -1,4 +1,5 @@
 using Agency.Huddle.App.Acp;
+using Agency.Huddle.App.Avatars;
 using Agency.Huddle.App.FileChanges;
 using Agency.Huddle.App.Library;
 using Agency.Huddle.App.Tasks;
@@ -43,6 +44,9 @@ public sealed class TeamOptions
 
     /// <summary>Configuration for the Tasks feature.</summary>
     public TasksOptions Tasks { get; set; } = new();
+
+    /// <summary>Configuration for the Avatar Library, per Spec §6.1. Unset means no library.</summary>
+    public AvatarLibraryOptions AvatarLibrary { get; set; } = new();
 }
 
 public sealed class DemoAgentOptions

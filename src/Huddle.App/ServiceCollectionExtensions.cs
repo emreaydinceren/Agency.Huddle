@@ -298,6 +298,13 @@ public static class ServiceCollectionExtensions
         // hazard the aliased registrations elsewhere in this file exist to avoid.
         services.AddSingleton<AvatarStore>();
 
+        // Avatar Library: both stateless. The locator only answers "is a library configured, and where",
+        // and the loader reads master.json and one image per call, so neither holds a catalogue between
+        // requests (requirement R-1). The interface exists because the picker dialog is tested against a
+        // fake loader, and a sealed class cannot be mocked.
+        services.AddSingleton<AvatarLibraryLocator>();
+        services.AddSingleton<IAvatarLibraryLoader, AvatarLibraryLoader>();
+
         // No interface, same reasoning as AvatarStore just above: nothing needs to substitute
         // this, and a plain registration cannot produce the two-watchers-on-one-path hazard the
         // aliased registrations elsewhere in this file exist to avoid. Registered unconditionally

@@ -1,0 +1,262 @@
+@*
+    Spec §6.5 and §6.6 (Avatar Library picker): a modal MudDialog, never a drawer. It loads the catalogue once on
+    open through IAvatarLibraryLoader, keeps it in the single `catalog` field and nulls that field (and the cached
+    result list) in Dispose, so closing the dialog frees the whole library (R-1). Nothing else keeps it: no static
+    field, no event subscription. Filter state is a skin, a text and two ordered selection lists; AvatarCatalog.Search
+    does the filtering. The chip clouds are static (D-5): only AvatarChipCloud.Arrange reorders them, so pressing a
+    chip moves that chip and no other. Thumbnails are text-free buttons whose accessible name is the aria-label only.
+    A filter change swaps the grid element (@key) so the browser starts a fresh scroll position at the top without JS.
+    The search box sits in a wrapper that stops keydown bubbling, so Escape clears the text first and only a second
+    Escape (with the text already empty) cancels the dialog.
+*@
+
+@implements IDisposable
+@using Agency.Huddle.App.Avatars
+@using Microsoft.AspNetCore.Components.Web
+@inject IAvatarLibraryLoader Loader
+
+<MudDialog Class="avatar-library-dialog">
+    <TitleContent>
+        <MudText Typo="Typo.h6">Choose an avatar</MudText>
+    </TitleContent>
+    <DialogContent>
+        @if (this.unreadable)
+        {
+            <div class="avatar-library-message">
+                <p class="avatar-library-error" role="alert">The avatar library could not be read.</p>
+                <p class="avatar-library-error-hint">Check Team:AvatarLibrary:Dir and master.json.</p>
+            </div>
+        }
+        else if (this.catalog is not null && this.results is not null)
+        {
+            <div class="avatar-library-body">
+                <div class="avatar-library-filters">
+                    <div class="avatar-library-skins" role="group" aria-label="Skin tone">
+                        @foreach ((string label, SkinGroup? group) in SkinChoices)
+                        {
+                            <button type="button" class="avatar-library-skin" aria-pressed="@(this.skin == group ? "true" : "false")" @onclick="() => this.SetSkin(group)">@label</button>
+                        }
+                    </div>
+                    <div class="avatar-library-search-wrap" @onkeydown:stopPropagation="true">
+                        <MudTextField T="string" Class="avatar-library-search" Label="Search" Placeholder="type a profession or a tag"
+                                      Value="@this.text" ValueChanged="this.SetText" Immediate="true" DebounceInterval="200"
+                                      OnKeyDown="this.OnSearchKeyDown" Variant="Variant.Outlined" Margin="Margin.Dense" />
+                    </div>
+                    <div class="avatar-library-cloud-title">Professions</div>
+                    <div class="avatar-library-professions avatar-library-cloud">
+                        @foreach (ChipItem chip in AvatarChipCloud.Arrange(this.catalog.Professions, this.selectedProfessions, null))
+                        {
+                            <button type="button" class="@ChipClass(chip)" aria-pressed="@(chip.Selected ? "true" : "false")" @onclick="() => this.ToggleProfession(chip.Text)">
+                                @if (chip.Selected)
+                                {
+                                    <span class="avatar-library-chip-bracket" aria-hidden="true">[</span>
+                                }
+                                <span class="avatar-library-chip-text">@chip.Text</span>
+                                @if (chip.Selected)
+                                {
+                                    <span class="avatar-library-chip-close" aria-hidden="true">X</span>
+                                    <span class="avatar-library-chip-bracket" aria-hidden="true">]</span>
+                                }
+                            </button>
+                        }
+                    </div>
+                    <div class="avatar-library-cloud-title">Tags</div>
+                    <div class="avatar-library-tags avatar-library-cloud">
+                        @foreach (ChipItem chip in AvatarChipCloud.Arrange(this.TagPool(), this.selectedTags, this.tagsExpanded ? null : TagCap))
+                        {
+                            <button type="button" class="@ChipClass(chip)" aria-pressed="@(chip.Selected ? "true" : "false")" @onclick="() => this.ToggleTag(chip.Text)">
+                                @if (chip.Selected)
+                                {
+                                    <span class="avatar-library-chip-bracket" aria-hidden="true">[</span>
+                                }
+                                <span class="avatar-library-chip-text">@chip.Text</span>
+                                @if (chip.Selected)
+                                {
+                                    <span class="avatar-library-chip-close" aria-hidden="true">X</span>
+                                    <span class="avatar-library-chip-bracket" aria-hidden="true">]</span>
+                                }
+                            </button>
+                        }
+                        @if (this.catalog.Tags.Count > TagCap)
+                        {
+                            <button type="button" class="avatar-library-tags-all" aria-expanded="@(this.tagsExpanded ? "true" : "false")" @onclick="this.ToggleTagsExpanded">@(this.tagsExpanded ? "Show fewer" : "Show all")</button>
+                        }
+                    </div>
+                    <div class="avatar-library-status">
+                        <span class="avatar-library-count" aria-live="polite">@this.results.Count of @this.catalog.Count</span>
+                        <button type="button" class="avatar-library-clear" @onclick="this.ClearAll">Clear all</button>
+                    </div>
+                </div>
+                <div class="avatar-library-grid" @key="this.gridVersion">
+                    @if (this.results.Count == 0)
+                    {
+                        <div class="avatar-library-message">
+                            <p class="avatar-library-empty">No avatars match.</p>
+                            <p class="avatar-library-empty-hint">Remove a chip or press Clear all.</p>
+                        </div>
+                    }
+                    else
+                    {
+                        <div class="avatar-library-thumbs">
+                            @foreach (LibraryAvatar avatar in this.results.Take(this.shown))
+                            {
+                                <button type="button" class="avatar-library-thumb" aria-label="@avatar.AccessibleName" @onclick="() => this.Pick(avatar.File)">
+                                    <img src="@("/avatar-library/" + Uri.EscapeDataString(avatar.File))" alt="" loading="lazy" />
+                                </button>
+                            }
+                        </div>
+                        @if (this.results.Count > this.shown)
+                        {
+                            <button type="button" class="avatar-library-more" @onclick="this.ShowMore">Show more</button>
+                        }
+                    }
+                </div>
+            </div>
+        }
+    </DialogContent>
+</MudDialog>
+
+@code {
+    private const int PageSize = 48;
+
+    private const int TagCap = 40;
+
+    private static readonly (string Label, SkinGroup? Group)[] SkinChoices =
+    [
+        ("All", null),
+        ("Light", SkinGroup.Light),
+        ("Tan", SkinGroup.Tan),
+        ("Dark", SkinGroup.Dark),
+    ];
+
+    /// <summary>How the picker is shown: large, full-width, with a close button, closing on Escape and on a backdrop click.</summary>
+    internal static readonly DialogOptions Options = new()
+    {
+        FullWidth = true,
+        MaxWidth = MaxWidth.Large,
+        CloseButton = true,
+        CloseOnEscapeKey = true,
+        BackdropClick = true,
+    };
+
+    [CascadingParameter]
+    private IMudDialogInstance? Dialog { get; set; }
+
+    private AvatarCatalog? catalog;
+    private IReadOnlyList<LibraryAvatar>? results;
+    private bool unreadable;
+    private SkinGroup? skin;
+    private string text = string.Empty;
+    private readonly List<string> selectedProfessions = [];
+    private readonly List<string> selectedTags = [];
+    private bool tagsExpanded;
+    private int shown = PageSize;
+    private int gridVersion;
+
+    /// <summary>Loads the catalogue once; an unreadable library shows the message instead of the filters.</summary>
+    protected override async Task OnInitializedAsync()
+    {
+        AvatarLibraryLoadResult loaded = await this.Loader.LoadAsync(CancellationToken.None);
+        if (loaded.Unreadable || loaded.Catalog is null)
+        {
+            this.unreadable = true;
+            return;
+        }
+
+        this.catalog = loaded.Catalog;
+        this.Refilter();
+    }
+
+    /// <summary>Drops the catalogue and its result list so the library does not outlive the dialog (R-1).</summary>
+    public void Dispose()
+    {
+        this.catalog = null;
+        this.results = null;
+    }
+
+    private static string ChipClass(ChipItem chip) =>
+        chip.Selected ? "avatar-library-chip avatar-library-chip-selected" : "avatar-library-chip";
+
+    private IReadOnlyList<string> TagPool() => this.catalog is null ? [] : [.. this.catalog.Tags.Select(static t => t.Tag)];
+
+    private void Refilter()
+    {
+        if (this.catalog is null)
+        {
+            return;
+        }
+
+        AvatarLibraryQuery query = new(
+            this.skin,
+            this.text,
+            new HashSet<string>(this.selectedProfessions, StringComparer.OrdinalIgnoreCase),
+            new HashSet<string>(this.selectedTags, StringComparer.OrdinalIgnoreCase));
+        this.results = this.catalog.Search(query);
+        this.shown = PageSize;
+        this.gridVersion++;
+    }
+
+    private void SetSkin(SkinGroup? group)
+    {
+        this.skin = group;
+        this.Refilter();
+    }
+
+    private void SetText(string? value)
+    {
+        this.text = value ?? string.Empty;
+        this.Refilter();
+    }
+
+    private void OnSearchKeyDown(KeyboardEventArgs args)
+    {
+        if (!string.Equals(args.Key, "Escape", StringComparison.Ordinal))
+        {
+            return;
+        }
+
+        if (this.text.Length > 0)
+        {
+            this.SetText(string.Empty);
+        }
+        else
+        {
+            this.Dialog?.Cancel();
+        }
+    }
+
+    private void ToggleProfession(string name)
+    {
+        Toggle(this.selectedProfessions, name);
+        this.Refilter();
+    }
+
+    private void ToggleTag(string name)
+    {
+        Toggle(this.selectedTags, name);
+        this.Refilter();
+    }
+
+    private static void Toggle(List<string> list, string value)
+    {
+        if (!list.Remove(value))
+        {
+            list.Add(value);
+        }
+    }
+
+    private void ToggleTagsExpanded() => this.tagsExpanded = !this.tagsExpanded;
+
+    private void ClearAll()
+    {
+        this.skin = null;
+        this.text = string.Empty;
+        this.selectedProfessions.Clear();
+        this.selectedTags.Clear();
+        this.Refilter();
+    }
+
+    private void ShowMore() => this.shown += PageSize;
+
+    private void Pick(string fileName) => this.Dialog?.Close(DialogResult.Ok(fileName));
+}

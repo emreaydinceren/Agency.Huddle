@@ -304,6 +304,7 @@ All under the `Team:` section — `TeamOptions.cs`, `Acp/AcpOptions.cs`, `FileCh
 | `Team:Teams:Tiers:<adapterId>:<tier>` | none | The model id for each model tier (`strongest`, `balanced` or `fast`) on each Adapter, such as `Team:Teams:Tiers:agency-local:strongest`. An Adapter with no entry for a tier uses its default model. With no `Tiers` key at all, every hire card shows **Needs setup**. |
 | `Team:Acp:MaxTeammatesPerTeam` | `8` | The most Teammates one Team may hold. A hire that would take the Team past it is refused. Zero or less disables the limit. (HR-10, decision D1.) |
 | `Team:Acp:MaxLiveProcesses` | `16` | The most live Teammate processes this installation runs across every Team. A hire that would take the live count past it is refused. Zero or less disables the limit. (HR-10, decision D1.) |
+| `Team:AvatarLibrary:Dir` | unset (no library) | An **absolute** path to the avatar library folder, holding `master.json` and the images. Unset, or a folder without `master.json`, means no library: no **Choose from library** button and no `/avatar-library` mount. Absolute because the library is not under `DataDir`. ([ADR-0044](adr/0044-an-avatar-library-is-a-read-only-source-and-a-pick-copies.md).) |
 | `Tasks:WakeEnabled` | `true` | `false` keeps Tasks but never wakes anyone. |
 | `Tasks:WakeCoalesceSeconds` | `5` | How long a Task's changes are coalesced before one wake-up is sent. `0` wakes on every change. |
 | `Tasks:AgentWakeBudget` | `10` | The most Agent-made wakes one Task allows before pausing. `0` or less disables the per-Task budget. |

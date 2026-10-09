@@ -897,6 +897,149 @@ button:focus-visible {
     letter-spacing: 0.02em;
 }
 
+/* The Avatar Library picker (Spec 6.6). The filters block stays put and the grid is the
+   only scroller, so the filters are never scrolled out of reach. Selected state is shown
+   by the brackets and the X (markup) as well as the primary colour, never colour alone. */
+.avatar-library-body {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+}
+
+.avatar-library-filters {
+    flex: 0 0 auto;
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+}
+
+.avatar-library-skins {
+    display: flex;
+    gap: 0.25rem;
+}
+
+.avatar-library-skin,
+.avatar-library-chip,
+.avatar-library-tags-all,
+.avatar-library-clear,
+.avatar-library-more {
+    font: inherit;
+    font-size: 0.8125rem;
+    color: var(--mud-palette-text-primary);
+    background: var(--mud-palette-background-gray);
+    border: 1px solid var(--mud-palette-divider);
+    border-radius: 999px;
+    padding: 0.2rem 0.7rem;
+    cursor: pointer;
+}
+
+.avatar-library-skin[aria-pressed="true"],
+.avatar-library-chip-selected {
+    font-weight: 700;
+    border: 2px solid var(--mud-palette-primary);
+    color: var(--mud-palette-primary);
+}
+
+.avatar-library-skin:focus-visible,
+.avatar-library-chip:focus-visible,
+.avatar-library-tags-all:focus-visible,
+.avatar-library-clear:focus-visible,
+.avatar-library-more:focus-visible,
+.avatar-library-thumb:focus-visible {
+    outline: 3px solid var(--mud-palette-primary);
+    outline-offset: 2px;
+}
+
+.avatar-library-cloud-title {
+    font-size: 0.75rem;
+    color: var(--mud-palette-text-secondary);
+}
+
+.avatar-library-cloud {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.35rem;
+}
+
+.avatar-library-chip-close {
+    margin-left: 0.35rem;
+    font-weight: 700;
+}
+
+.avatar-library-chip-bracket {
+    opacity: 0.7;
+}
+
+.avatar-library-status {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    font-size: 0.875rem;
+}
+
+.avatar-library-grid {
+    flex: 1 1 auto;
+    max-height: 55vh;
+    overflow: auto;
+    padding: 0.5rem 0.25rem;
+    border-top: 1px solid var(--mud-palette-divider);
+}
+
+.avatar-library-thumbs {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 12px;
+}
+
+.avatar-library-thumb {
+    flex: 0 0 auto;
+    width: 72px;
+    height: 72px;
+    padding: 0;
+    border: 0;
+    border-radius: 50%;
+    overflow: hidden;
+    background: var(--mud-palette-background-gray);
+    cursor: pointer;
+}
+
+.avatar-library-thumb img {
+    display: block;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+.avatar-library-thumb:hover {
+    outline: 3px solid var(--mud-palette-primary);
+    outline-offset: 2px;
+}
+
+.avatar-library-more {
+    display: block;
+    margin: 0.75rem auto 0;
+}
+
+.avatar-library-message {
+    text-align: center;
+    padding: 1.5rem 0;
+}
+
+@media (max-width: 600px) {
+    .mud-dialog.avatar-library-dialog {
+        width: 100vw;
+        max-width: 100vw;
+        height: 100vh;
+        max-height: 100vh;
+        margin: 0;
+        border-radius: 0;
+    }
+
+    .avatar-library-grid {
+        max-height: none;
+    }
+}
+
 .teammate-card-name {
     margin: 0;
     font-size: 1.25rem;
