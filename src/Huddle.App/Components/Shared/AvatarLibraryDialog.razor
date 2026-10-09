@@ -83,7 +83,7 @@
                         }
                     </div>
                     <div class="avatar-library-status">
-                        <span class="avatar-library-count" aria-live="polite">@this.ShownCount of @this.catalog.Count</span>
+                        <span class="avatar-library-count" aria-live="polite">@this.results.Count of @this.catalog.Count</span>
                         <button type="button" class="avatar-library-clear" @onclick="this.ClearAll">Clear all</button>
                     </div>
                 </div>
@@ -152,8 +152,6 @@
     private bool tagsExpanded;
     private int shown = PageSize;
     private int gridVersion;
-
-    private int ShownCount => Math.Min(this.shown, this.results?.Count ?? 0);
 
     /// <summary>Loads the catalogue once; an unreadable library shows the message instead of the filters.</summary>
     protected override async Task OnInitializedAsync()

@@ -64,19 +64,19 @@ public sealed class AvatarLibraryDialogTests
         Assert.True(options.BackdropClick);
     }
 
-    /// <summary>It shows the first 48 of 120, Show more adds 48 each press until it vanishes at 120.</summary>
+    /// <summary>It shows the first 48 results (count line "120 of 120"), Show more adds 48 each press until it vanishes at 120, and the count never changes.</summary>
     [Fact]
     public async Task ShowsFirst48_AndShowMoreAdds48()
     {
         await using Harness harness = await Harness.OpenAsync();
 
         Assert.Equal(48, harness.Thumbs.Count);
-        Assert.Equal("48 of 120", harness.CountText);
+        Assert.Equal("120 of 120", harness.CountText);
         Assert.Equal("Show more", harness.Cut.Find(More).TextContent.Trim());
 
         await harness.ClickAsync(More);
         Assert.Equal(96, harness.Thumbs.Count);
-        Assert.Equal("96 of 120", harness.CountText);
+        Assert.Equal("120 of 120", harness.CountText);
 
         await harness.ClickAsync(More);
         Assert.Equal(120, harness.Thumbs.Count);
@@ -108,7 +108,29 @@ public sealed class AvatarLibraryDialogTests
 
         await harness.Cut.InvokeAsync(() => harness.SkinButton("All").ClickAsync());
         Assert.Equal(48, harness.Thumbs.Count);
-        Assert.Equal("48 of 120", harness.CountText);
+        Assert.Equal("120 of 120", harness.CountText);
+    }
+
+    /// <summary>The count line reports how many avatars match (four professions OR-ed match 80 of 120 while 48 thumbnails show), not how many are shown, and Show more leaves it unchanged.</summary>
+    [Fact]
+    public async Task Count_ShowsMatches_NotShown()
+    {
+        await using Harness harness = await Harness.OpenAsync();
+        Assert.Equal("120 of 120", harness.CountText);
+        Assert.Equal(48, harness.Thumbs.Count);
+
+        await harness.PressChipAsync(Professions, "Chef");
+        await harness.PressChipAsync(Professions, "Pilot");
+        await harness.PressChipAsync(Professions, "Nurse");
+        await harness.PressChipAsync(Professions, "Artist");
+
+        Assert.Equal("80 of 120", harness.CountText);
+        Assert.Equal(48, harness.Thumbs.Count);
+
+        await harness.ClickAsync(More);
+
+        Assert.Equal("80 of 120", harness.CountText);
+        Assert.Equal(80, harness.Thumbs.Count);
     }
 
     /// <summary>Typing "butl" narrows the grid to the 20 Butlers.</summary>
@@ -141,7 +163,7 @@ public sealed class AvatarLibraryDialogTests
         Assert.Single(harness.Chips(Professions), static c => c.QuerySelector(".avatar-library-chip-close") is not null);
     }
 
-    /// <summary>Pressing the selected chip's X deselects it: the cloud returns to alphabetical order and the grid to 48 of 120.</summary>
+    /// <summary>Pressing the selected chip's X deselects it: the cloud returns to alphabetical order and the count to 120 of 120.</summary>
     [Fact]
     public async Task ProfessionChip_Close_RestoresOrder()
     {
@@ -152,7 +174,7 @@ public sealed class AvatarLibraryDialogTests
         await harness.Cut.InvokeAsync(() => close.ClickAsync());
 
         Assert.Equal(AlphabeticalProfessions, harness.ChipTexts(Professions));
-        Assert.Equal("48 of 120", harness.CountText);
+        Assert.Equal("120 of 120", harness.CountText);
         Assert.Empty(harness.Cut.FindAll(Professions + " .avatar-library-chip-close"));
     }
 
@@ -222,7 +244,7 @@ public sealed class AvatarLibraryDialogTests
 
         await harness.ClickAsync(Clear);
 
-        harness.Cut.WaitForAssertion(() => Assert.Equal("48 of 120", harness.CountText), TimeSpan.FromSeconds(5));
+        harness.Cut.WaitForAssertion(() => Assert.Equal("120 of 120", harness.CountText), TimeSpan.FromSeconds(5));
         Assert.Equal("true", harness.SkinButton("All").GetAttribute("aria-pressed"));
         Assert.Equal(string.Empty, harness.Cut.Find(SearchInput).GetAttribute("value") ?? string.Empty);
         Assert.Empty(harness.Cut.FindAll("button.avatar-library-chip[aria-pressed=true]"));
@@ -328,7 +350,7 @@ public sealed class AvatarLibraryDialogTests
             () =>
             {
                 Assert.Equal(string.Empty, harness.Cut.Find(SearchInput).GetAttribute("value") ?? string.Empty);
-                Assert.Equal("48 of 120", harness.CountText);
+                Assert.Equal("120 of 120", harness.CountText);
             },
             TimeSpan.FromSeconds(5));
         Assert.False(harness.Reference.Result.IsCompleted);
@@ -424,7 +446,7 @@ public sealed class AvatarLibraryDialogTests
 
         await harness.ClickAsync(Clear);
 
-        harness.Cut.WaitForAssertion(() => Assert.Equal("48 of 120", harness.CountText), TimeSpan.FromSeconds(5));
+        harness.Cut.WaitForAssertion(() => Assert.Equal("120 of 120", harness.CountText), TimeSpan.FromSeconds(5));
         Assert.Empty(harness.Cut.FindAll(".avatar-library-empty"));
     }
 

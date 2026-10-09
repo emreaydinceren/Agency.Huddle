@@ -104,7 +104,7 @@ Run [`P-BUILD`](common.md#p-build) then [`P-LAUNCH-FREE`](common.md#p-launch-fre
 **Pass if — all of these**
 
 - The **Choose from library** button is absent under **Initials** and **A short label**, and present under **An image**, beside the upload button.
-- The dialog is headed `Choose an avatar`. The count line reads `48 of 324`, and 48 pictures are shown with a **Show more** control.
+- The dialog is headed `Choose an avatar`. The count line reads `324 of 324`, and the first 48 pictures are shown with a **Show more** control.
 - The Avatar section layout matches the first mock-up in the specification (M1).
 
 **Fail if — any of these**
@@ -197,7 +197,7 @@ Run [`P-BUILD`](common.md#p-build) then [`P-LAUNCH-FREE`](common.md#p-launch-fre
 
 **Before you start**
 
-- The dialog is open at `48 of 324`.
+- The dialog is open at `324 of 324`.
 
 **Steps**
 

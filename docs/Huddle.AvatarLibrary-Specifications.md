@@ -235,7 +235,8 @@ Selecting a chip never hides or disables another chip, and counts do not change 
 backdrop click, with focus trapped. It is not a `MudDrawer` or any sliding panel.
 
 Top to bottom: the title **Choose an avatar**; the skin switch `[All | Light | Tan | Dark]`; the
-text box; the profession chips; the tag chips and **Show all**; a line **N of 324** with **Clear
+text box; the profession chips; the tag chips and **Show all**; a line **{matches} of 324** (how
+many avatars satisfy the filters, out of the whole library; paging never changes it) with **Clear
 all**; then the grid.
 
 - **The grid** shows the first 48 results with **Show more** (48 at a time). Any change to a filter
@@ -314,7 +315,7 @@ upload button. It appears only in the **An image** choice, and only when a libra
 |  (glasses) (no-glasses) (laptop) (headset) (hair bun) (cap) ...  |
 |  (blazer) (cardigan) (vest) (bow tie) (headphones)   Show all    |
 |                                                                  |
-|  48 of 324                                         [ Clear all ] |
+|  324 of 324                                        [ Clear all ] |
 | ---------------------------------------------------------------- |
 |  (o) (o) (o) (o) (o) (o) (o) (o) (o) (o) (o) (o)                 |
 |  (o) (o) (o) (o) (o) (o) (o) (o) (o) (o) (o) (o)                 |
