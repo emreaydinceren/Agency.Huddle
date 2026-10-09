@@ -257,7 +257,7 @@ public sealed class LibraryPathResolverTests
     [Fact]
     public void TryResolve_JunctionInsideSameRoot_Resolves()
     {
-        using Fixture fixture = BuildFixture();
+        using Fixture fixture = BuildFixture(supportsReparsePoints: true);
         string link = Path.Combine(fixture.DataDir, "Teams", "Marketing", "inRootLink");
         string target = Path.Combine(fixture.DataDir, "Teams", "Marketing", "Launch Q4");
 
@@ -281,7 +281,7 @@ public sealed class LibraryPathResolverTests
     [Fact]
     public void TryResolve_JunctionOutsideRoot_Refused()
     {
-        using Fixture fixture = BuildFixture();
+        using Fixture fixture = BuildFixture(supportsReparsePoints: true);
         string link = Path.Combine(fixture.DataDir, "Teams", "Marketing", "outLink");
 
         try
@@ -304,7 +304,7 @@ public sealed class LibraryPathResolverTests
     [Fact]
     public void TryResolve_JunctionIntoReservedFolder_Refused()
     {
-        using Fixture fixture = BuildFixture(new PinnedRootOption { Name = "Parent", Path = "PLACEHOLDER" });
+        using Fixture fixture = BuildFixture(supportsReparsePoints: true, new PinnedRootOption { Name = "Parent", Path = "PLACEHOLDER" });
         fixture.SetParentRootPath();
         string link = Path.Combine(fixture.Temp.Path, "link");
         string target = Path.Combine(fixture.DataDir, "rooms");
@@ -347,7 +347,7 @@ public sealed class LibraryPathResolverTests
     [Fact]
     public void TryResolveChild_JunctionOutOfRoot_Refused()
     {
-        using Fixture fixture = BuildFixture();
+        using Fixture fixture = BuildFixture(supportsReparsePoints: true);
         Assert.True(fixture.Resolver.TryResolve("teams", "Marketing", out LibraryPath? parent, out _));
         Assert.NotNull(parent);
         string link = Path.Combine(fixture.DataDir, "Teams", "Marketing", "childLink");
@@ -710,9 +710,14 @@ public sealed class LibraryPathResolverTests
     }
 
     /// <summary>Builds the shared fixture folder layout (corrections-B3 4.2.t item 15) plus any additional pinned roots the test needs.</summary>
-    private static Fixture BuildFixture(params PinnedRootOption[] extraRoots)
+    private static Fixture BuildFixture(params PinnedRootOption[] extraRoots) => BuildFixture(supportsReparsePoints: false, extraRoots);
+
+    /// <summary>Builds the fixture, optionally on the system temp folder for a test that creates directory links.</summary>
+    /// <param name="supportsReparsePoints"><see langword="true"/> when the test creates links and resolves them.</param>
+    /// <param name="extraRoots">Additional pinned roots the test needs.</param>
+    private static Fixture BuildFixture(bool supportsReparsePoints, params PinnedRootOption[] extraRoots)
     {
-        TempDataDir temp = new();
+        TempDataDir temp = new(supportsReparsePoints);
         string dataDir = Path.Combine(temp.Path, "App_Data");
         Directory.CreateDirectory(dataDir);
 

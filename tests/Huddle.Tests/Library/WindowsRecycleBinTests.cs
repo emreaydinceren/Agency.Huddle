@@ -113,7 +113,7 @@ public sealed class WindowsRecycleBinTests
     [Fact]
     public void RealPath_PathUnderDirectoryLink_ResolvesFinalTarget()
     {
-        using TempDataDir dir = new();
+        using TempDataDir dir = new(supportsReparsePoints: true);
         string targetDir = Path.Combine(dir.Path, "target");
         Directory.CreateDirectory(targetDir);
         string filePath = Path.Combine(targetDir, "note.md");

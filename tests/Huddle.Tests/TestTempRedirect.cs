@@ -27,14 +27,26 @@ internal static class TestTempRedirect
     /// <summary>The environment variable that names the temp folder for the test run.</summary>
     internal const string VariableName = "HUDDLE_TEST_TEMP";
 
+    /// <summary>
+    /// The environment variable that keeps the system temp folder as it was before <see cref="Apply"/> redirected
+    /// <c>TEMP</c>. It is set only when a redirect happens, and <see cref="TestPaths.GetTempPath"/> reads it.
+    /// </summary>
+    internal const string SystemTempVariableName = "HUDDLE_TEST_SYSTEM_TEMP";
+
     /// <summary>Runs once when the test assembly loads, before the first test touches the temp folder.</summary>
     [ModuleInitializer]
     internal static void Apply()
     {
+
         string? folder = Resolve(Environment.GetEnvironmentVariable(VariableName));
         if (folder is null)
         {
             return;
+        }
+
+        if (string.IsNullOrEmpty(Environment.GetEnvironmentVariable(SystemTempVariableName)))
+        {
+            Environment.SetEnvironmentVariable(SystemTempVariableName, Path.GetTempPath());
         }
 
         Environment.SetEnvironmentVariable("TEMP", folder);

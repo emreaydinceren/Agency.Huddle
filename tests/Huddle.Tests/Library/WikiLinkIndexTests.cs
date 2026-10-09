@@ -247,7 +247,7 @@ public sealed class WikiLinkIndexTests
     [Fact]
     public void Walk_JunctionLoop_DoesNotHangOrDoubleCount()
     {
-        using LibraryFileServiceFixture fixture = LibraryFileServiceFixture.Build();
+        using LibraryFileServiceFixture fixture = LibraryFileServiceFixture.Build(supportsReparsePoints: true);
         string root = fixture.CreatePinnedRoot("root");
         string sub = Path.Combine(root, "sub");
         Directory.CreateDirectory(sub);

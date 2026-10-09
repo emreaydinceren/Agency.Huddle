@@ -73,9 +73,10 @@ internal sealed class LibraryFileServiceFixture : IDisposable
 
     /// <summary>Builds a fixture with the standard Teams/Teammates layout, optionally customising <see cref="TeamOptions"/> first.</summary>
     /// <param name="configure">An optional callback to customise the bound <see cref="TeamOptions"/> before use.</param>
-    public static LibraryFileServiceFixture Build(Action<TeamOptions>? configure = null)
+    /// <param name="supportsReparsePoints"><see langword="true"/> for a test that creates directory links, so the data directory sits on the system temp folder.</param>
+    public static LibraryFileServiceFixture Build(Action<TeamOptions>? configure = null, bool supportsReparsePoints = false)
     {
-        TempDataDir temp = new();
+        TempDataDir temp = new(supportsReparsePoints);
         Directory.CreateDirectory(Path.Combine(temp.Path, "Teams"));
         Directory.CreateDirectory(Path.Combine(temp.Path, "Teammates"));
 
