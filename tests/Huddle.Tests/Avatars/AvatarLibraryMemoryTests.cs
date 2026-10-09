@@ -1,6 +1,11 @@
 using System.Reflection;
+using System.Runtime.CompilerServices;
 using Agency.Huddle.App;
 using Agency.Huddle.App.Avatars;
+using Agency.Huddle.Tests.Ui;
+using Bunit;
+using Bunit.Rendering;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Options;
 
@@ -73,7 +78,7 @@ public sealed class AvatarLibraryMemoryTests : IDisposable
     [Fact]
     public async Task Reopen_ReadsFreshFile()
     {
-        CancellationToken ct = TestContext.Current.CancellationToken;
+        CancellationToken ct = Xunit.TestContext.Current.CancellationToken;
         File.WriteAllBytes(Path.Combine(this.root, "a.png"), PngBytes);
         File.WriteAllBytes(Path.Combine(this.root, "b.png"), PngBytes);
         string master = Path.Combine(this.root, "master.json");
@@ -90,6 +95,43 @@ public sealed class AvatarLibraryMemoryTests : IDisposable
         Assert.NotNull(second.Catalog);
         Assert.Equal(2, second.Catalog.Count);
         Assert.NotSame(first.Catalog, second.Catalog);
+    }
+
+    /// <summary>After the picker is opened and its components are disposed, nothing keeps the catalogue it loaded alive.</summary>
+    [Fact]
+    public async Task Dialog_Closed_ReleasesCatalog()
+    {
+        CancellationToken ct = Xunit.TestContext.Current.CancellationToken;
+
+        WeakReference catalog = await OpenAndDisposeDialogAsync(ct);
+
+#pragma warning disable S1215 // The test's whole point (R-1) is to force a collection and observe the weak reference die.
+        GC.Collect();
+        GC.WaitForPendingFinalizers();
+        GC.Collect();
+#pragma warning restore S1215
+        Assert.False(catalog.IsAlive);
+    }
+
+    /// <summary>Opens the picker over a fake loader, waits for the grid, disposes the components and returns only a weak reference to the catalogue.</summary>
+    /// <param name="ct">Cancels the wait.</param>
+    /// <returns>A weak reference to the catalogue the dialog loaded.</returns>
+    [MethodImpl(MethodImplOptions.NoInlining)]
+    private static async Task<WeakReference> OpenAndDisposeDialogAsync(CancellationToken ct)
+    {
+        FakeAvatarLibraryLoader loader = new();
+        await using (MudBunitContext ctx = new())
+        {
+            ctx.Services.AddSingleton<IAvatarLibraryLoader>(loader);
+            IRenderedComponent<ContainerFragment> cut = ctx.RenderWithPopovers(static _ => { });
+            MudBlazor.IDialogService dialogService = ctx.Services.GetRequiredService<MudBlazor.IDialogService>();
+            _ = await cut.InvokeAsync(() => dialogService.ShowAsync<Agency.Huddle.App.Components.Shared.AvatarLibraryDialog>(null, new MudBlazor.DialogParameters(), Agency.Huddle.App.Components.Shared.AvatarLibraryDialog.Options));
+            cut.WaitForAssertion(() => Assert.NotEmpty(cut.FindAll("button.avatar-library-thumb")), TimeSpan.FromSeconds(5));
+            ct.ThrowIfCancellationRequested();
+            await ctx.DisposeComponentsAsync();
+        }
+
+        return loader.LastCatalog ?? throw new InvalidOperationException("The dialog never asked the loader for the catalogue.");
     }
 
     private static bool HoldsCatalogueData(Type type)
