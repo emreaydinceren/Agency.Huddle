@@ -92,6 +92,9 @@
       "maxPerTeam": 1,
       "covers": [ "verify" ],
       "model": { "tier": "balanced", "differentVendorFrom": [ "developer" ] },
+      "skills": [
+        { "name": "team-management", "source": "builtin", "path": "team-management" }
+      ],
       "suggestedNames": [ "Zoe", "Felix", "Amara", "Otto" ]
     },
     {

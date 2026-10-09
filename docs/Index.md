@@ -153,6 +153,9 @@ One row per decision. Open the ADR only when its row is your question.
 | [0038](adr/0038-team-types-are-data-in-json-and-markdown-files.md) | A team type is a folder of JSON and Markdown files; built-ins are embedded, and a user folder replaces by id. Code knows no role name. | Accepted |
 | [0039](adr/0039-process-gates-live-in-process-md-and-are-enforced-in-taskservice-and-the-permission-handler.md) | A Team's gates are listed in `Process.md` and enforced in `TaskService` and the permission handler; only the Human overrides, on record. | Accepted |
 | [0040](adr/0040-a-request-is-a-task-in-the-receiving-teams-backlog.md) | A Request is a Task with six extra keys in the receiving Team's backlog; a state machine and its tools decide who may move it. | Accepted |
+| [0041](adr/0041-retro-proposals-are-applied-only-by-the-humans-click.md) | A retro agent only proposes; Huddle edits `Process.md`, `_team.md` or a Teammate file when the Human clicks Accept, and the register row is Huddle's. | Accepted |
+| [0042](adr/0042-cadence-state-is-persisted-so-a-restart-does-not-double-fire.md) | The last digest and retro firing is stored in `team.db`, written before the post and restored if it is refused, so a restart fires nothing twice. | Accepted |
+| [0043](adr/0043-imported-skills-are-pinned-by-commit-and-hash.md) | An imported Skill is pinned to a commit, recorded with a SHA-256 in `.source.json`, and reviewed before install; a missing licence warns but never blocks. | Accepted |
 
 ## 5. Manual tests
 

@@ -101,6 +101,19 @@ public sealed class BuiltinDevelopmentTypeTests
         Assert.Equal("builtin", skill.Source);
     }
 
+    /// <summary>The QA role covers verify and holds the built-in team-management skill, so it is offered confirm_request.</summary>
+    [Fact]
+    public void Manifest_QaEngineer_HoldsTheBuiltinTeamManagementSkill()
+    {
+        TeamTypeManifest manifest = LoadManifest();
+
+        RoleSpec qa = Assert.Single(manifest.Roles, static r => r.Id == "qa-engineer");
+
+        Assert.Equal(["verify"], qa.Covers);
+        SkillRef skill = Assert.Single(qa.Skills);
+        Assert.Equal(new SkillRef("team-management", "builtin", "team-management"), skill);
+    }
+
     /// <summary>Exactly one role is the manager, and it is the Development Manager.</summary>
     [Fact]
     public void Manifest_Managers_ExactlyOneDevelopmentManager()

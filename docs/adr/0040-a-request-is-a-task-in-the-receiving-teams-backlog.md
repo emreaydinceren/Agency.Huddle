@@ -65,10 +65,28 @@ it, so a specialist does not hold them.
 - `confirm_request` works only for a member of `from_team` whose role covers `verify`, and only
   when the Request is Done. It then closes the Task through `TaskService.Close`.
 
-**An Agent cannot leave Backlog by editing the Task.** `TaskService` refuses a move out of
-Backlog that is not a triage, with a message that names `triage_request`. A Human's change can
-pass this refusal only through the same confirmed override as a gate
+- `file_request` takes a `fromTeam` argument. A Persona who manages one Team needs no
+  argument; one who manages several is told to name the Team filing, and a name it does not
+  manage is refused.
+- `list_teams` works only for a Team manager or the built-in Chief of Staff, which manages no
+  Team and lists Teams for its roll-up.
+
+**The lifecycle is enforced in `TaskService`, not only in the Request tools.** `close_task`,
+`update_task` and every other path to a Task go through `TaskService`. It refuses an Agent a
+move out of Backlog that is not a triage, with a message that names `triage_request`, and it
+refuses an Agent closing a Request that is neither declined nor confirmed (`confirmed_by`
+empty), with a message that names `confirm_request`. A Human's change can pass the Backlog
+refusal only through the same confirmed override as a gate
 ([ADR-0039](0039-process-gates-live-in-process-md-and-are-enforced-in-taskservice-and-the-permission-handler.md)).
+
+**A Request event wakes each recipient once.** `RequestNotifier` wakes the Persona each target
+resolves to, and skips a name it has already woken for the event, so a manager who is both
+recipients is woken once. `TaskTriggerService` remembers the Request wake it sent and skips the
+ordinary status-change wake for the same Task and recipient in the same change batch.
+
+**`read_records` is scoped to the caller's Team.** A Task id must belong to the named Team. A
+Room is shown only when a member of the Team posted in it and every sender is a member of the
+Team or the Human, so a Room shared with another Team's Persona is refused.
 
 ## Rejected
 

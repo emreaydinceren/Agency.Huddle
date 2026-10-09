@@ -45,6 +45,25 @@ TeamTypes/<type>/
   listed in `TeamTypeCatalog.Problems` with its reason, and loading never throws for bad
   content. The rule codes include `no-manager`, `many-managers`, `duplicate-role`,
   `candidate-missing`, `coverage-uncovered`, `process-missing` and `retro-role-unknown`.
+- **A user type cannot reach outside its folder.** A candidate or process file is read only
+  when its path stays under the type folder, and a junction or symbolic link on the way that
+  resolves elsewhere (or cannot be inspected) is refused, because the string check on the path
+  cannot see a link.
+- **A Custom Role is written under one lock.** `UserCandidateWriter` saves the candidate file
+  and extends the user's copy of the manifest inside a single `saveGate`, so two saves cannot
+  interleave their manifest writes. It writes only the user's `TeamTypes` folder, never a
+  built-in.
+- **Hiring checks everything before it writes anything.** `HireService.StartTeamAsync` checks
+  every card, name, role limit and required role, then installs the missing Skills, and only
+  then hires the manager and the rest. A failed check or install leaves no Teammate behind.
+  A member who already exists in the same Team and role of the same type, from an earlier start
+  that timed out waiting for the manager, counts as started, so a retry does not collide with it.
+- **`FindTeam` reads, `EnsureTeam` creates.** `ITeamFolders.EnsureTeam` creates a Team folder
+  and refuses a Team that already exists. `FindTeam` only locates an existing folder on disk
+  and never creates one. It reads the disk, so it also finds a Team folder the catalog has not
+  noticed yet. The services that work on a Team that already exists (the process gates, the
+  cadence, the retro files and proposals, onboarding) use `FindTeam`; only the "new Team"
+  action in the Teams navigation calls `EnsureTeam`.
 - **The code stays neutral.** `RoleNeutralityTests` scans every `.cs` and `.razor` file under
   `src/Huddle.App` for the role titles and ids of the built-in manifests. A file that
   legitimately names a role is listed in `neutrality-allow.txt`, which may shrink but never

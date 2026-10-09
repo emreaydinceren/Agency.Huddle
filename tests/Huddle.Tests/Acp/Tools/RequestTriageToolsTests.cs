@@ -356,4 +356,32 @@ public sealed class RequestTriageToolsTests
         Assert.Equal(string.Empty, Field(scene.Current(), "confirmed_by"));
         Assert.Empty(scene.Notifier.Calls);
     }
+
+    /// <summary>A QA holding the team-management Skill can confirm, but file_request, triage_request, propose_sprint and list_teams still refuse her because she manages no Team.</summary>
+    [Fact]
+    public async Task Confirm_QaWithSkill_OtherRequestToolsRefuseNonManager()
+    {
+        CancellationToken ct = TestContext.Current.CancellationToken;
+        using Scene scene = await CreateSceneAsync(ct);
+        string quinn = scene.Ids["Quinn"];
+        JsonObject fileArguments = new() { ["toTeam"] = "Platform", ["kind"] = "bug", ["title"] = "Broken", ["body"] = "Body" };
+        FileRequestTool fileTool = new(Catalog(), scene.Harness.Service, scene.Harness.Store, scene.Notifier, scene.Harness.Directory, quinn);
+        ListTeamsTool listTool = new(Catalog(), scene.Harness.Store, scene.Harness.Personas, scene.Harness.Directory, quinn);
+        SprintProposalStore proposals = new(new DiskTeamFolders(Path.Combine(scene.Harness.Options.Value.DataDir, "design-folder")));
+        ProposeSprintTool proposeTool = new(scene.Harness.Store, scene.Harness.Sprints, proposals, Catalog(), scene.Harness.Directory, quinn);
+
+        string filed = await fileTool.InvokeAsync(fileArguments, ct);
+        string triaged = await scene.TriageTool("Quinn").InvokeAsync(Triage("accept"), ct);
+        string listed = await listTool.InvokeAsync(new JsonObject(), ct);
+        string proposed = await proposeTool.InvokeAsync(new JsonObject { ["name"] = "Launch", ["taskIds"] = new JsonArray(TaskId) }, ct);
+
+        Assert.Equal("Only managers file Requests; ask your own manager.", filed);
+        Assert.Equal("Only the manager of Platform can triage its Requests.", triaged);
+        Assert.Equal("Only managers list Teams; ask your own manager.", listed);
+        Assert.Equal("Only the manager of a Team can propose a Sprint.", proposed);
+        Assert.Single(scene.Harness.Store.All);
+        Assert.Equal(TaskState.Backlog, scene.Current().Status);
+        Assert.Empty(proposals.Pending("Design"));
+        Assert.Empty(scene.Notifier.Calls);
+    }
 }

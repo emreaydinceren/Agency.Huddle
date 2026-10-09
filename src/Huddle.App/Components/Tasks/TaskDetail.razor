@@ -1411,7 +1411,7 @@ else if (this.loaded is { } task)
             }
 
             TaskResult result = this.createMode
-                ? this.Service.Create(TaskDetail.BuildDraft(patch.ApplyTo(current)), actor)
+                ? this.Service.Create(TaskDetail.BuildDraft(patch.ApplyTo(current)), actor, humanOverridesGates)
                 : this.Service.Update(current.Id, patch, this.baseVersion, actor, humanOverridesGates);
             outcome = result;
             switch (result)

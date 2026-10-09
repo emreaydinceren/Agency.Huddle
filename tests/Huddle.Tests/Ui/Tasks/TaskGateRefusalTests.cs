@@ -58,6 +58,36 @@ public sealed class TaskGateRefusalTests
         Assert.Empty(cut.FindAll(".task-detail-gate-refusal"));
     }
 
+    /// <summary>Creating a Task straight into Done that the QA gate refuses shows the refusal, and a confirmed Move anyway creates it as the Human.</summary>
+    [Fact]
+    public async Task Create_InGatedStatus_MoveAnywayConfirmed_CreatesTheTask()
+    {
+        using TempDataDir gateDir = new();
+        using TaskToolHarness harness = new(gates: TaskServiceGateTests.BuildGates(gateDir, TaskServiceGateTests.Process(TaskServiceGateTests.QaGate)));
+        await using MudBunitContext ctx = NewContext(harness);
+        TaskDraft draft = new("Brand new", "Platform", null, Status: TaskState.Done);
+        IRenderedComponent<ContainerFragment> cut = ctx.RenderWithPopovers(builder =>
+        {
+            builder.OpenComponent<TaskDetail>(0);
+            builder.AddAttribute(1, nameof(TaskDetail.Draft), draft);
+            builder.AddAttribute(2, nameof(TaskDetail.Mode), TaskDetailMode.Panel);
+            builder.CloseComponent();
+        });
+        await cut.InvokeAsync(() => FindButton(cut, "Save").ClickAsync());
+        Assert.Equal(TaskServiceGateTests.QaDone, cut.Find(".task-detail-gate-refusal .task-detail-gate-refusal-text").TextContent.Trim());
+        Assert.Empty(harness.Store.All);
+
+        _ = cut.InvokeAsync(() => cut.Find(".task-detail-gate-override").ClickAsync());
+        cut.WaitForAssertion(() => Assert.NotEmpty(cut.FindAll(".mud-dialog-actions button")));
+        await cut.InvokeAsync(() => DialogButton(cut, "Move anyway").ClickAsync());
+
+        cut.WaitForAssertion(() => Assert.Single(harness.Store.All));
+        TaskItem created = Assert.Single(harness.Store.All);
+        Assert.Equal("Brand new", created.Title);
+        Assert.Equal(TaskState.Done, created.Status);
+        Assert.EndsWith("(gate overridden by Human: qa-evidence-before-done)", created.ChangeLog[^1].Summary);
+    }
+
     /// <summary>Cancelling the confirm changes nothing: the Task stays put and the refusal stays on screen.</summary>
     [Fact]
     public async Task MoveAnyway_Cancelled_DoesNothing()

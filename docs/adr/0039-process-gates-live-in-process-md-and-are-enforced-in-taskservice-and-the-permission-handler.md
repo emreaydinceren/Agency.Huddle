@@ -51,11 +51,32 @@ the proposed status change, for the Team of both the current and the candidate l
 first refusal is returned to the caller as `TaskResult.GateRefused`, and the message names the
 gate. Every Task tool and the caller gets the refusal back, so a tool result or the Task panel shows the same gate and message.
 
+**A Task can be created into a gated status only past the gate.** `TaskService.Create` runs the
+same gates when the initial status is In Progress, Review or Done. `Update` and `Create` take
+`humanOverridesGates`, which defaults to `false`.
+
+**The board shows the refusal and never overrides.** Dragging a card calls `Update` with the
+default, so a refusing gate leaves the card where it was and the board shows
+`Could not move <id>: <message>`. Only the confirmed "Move anyway" in the Task panel passes
+`true`. An outside edit (a file changed on disk) cannot dodge a gate either: when it moves the
+status into In Progress, Review or Done and a gate refuses, `TaskService` writes the old head
+back, keeping the body and the Evidence as written, and logs
+`outside edit refused by gate: <message>` in the Change log. Evidence-only edits are not
+reverted; the gate runs again at the next status move.
+
 **The merge gate is checked in `WorkDirPermissionHandler`.** It asks `IMergeGate`, which
 `ProcessMergeGate` implements, whether the Persona's Team allows the command. The handler reads
-only `git [options] merge` and `git [options] push`. The remarks say what it does not catch: a
-shell or git alias, a command run by an IDE or by `gh`, and a command in an Adapter Work Mode
-that never asks for permission. The UI says the gate works only in work modes that ask.
+only `git [options] merge` and `git [options] push`. Each Team of the Persona is checked. The
+command is split into segments at `;`, `&`, `|`, parentheses and newlines, quoted words are
+accepted, and git's own `-C`, `-c` and `--option` flags are skipped. The remarks say what it
+does not catch: a shell or git alias, an environment-variable prefix, `bash -c "..."`, `$(...)`,
+a script that runs the push, a command run by an IDE or by `gh`, and a command in an Adapter
+Work Mode that never asks for permission. The UI says the gate works only in work modes that
+ask. The refusal reason is logged as a warning; the Agent only sees its permission request
+declined. The gate fails closed in one case, a Persona that cannot be resolved; an unknown Team
+label is skipped. The gate counts Evidence only from Tasks that are not finished (not Done, Cancelled,
+Duplicate or Rejected), so a green check recorded on a finished Task does not clear a later
+merge.
 
 **The Human may override a Task gate, on purpose and on record.** `TaskService` lets a Human
 change pass a refusing gate only when the caller says so, and the only such caller is a
