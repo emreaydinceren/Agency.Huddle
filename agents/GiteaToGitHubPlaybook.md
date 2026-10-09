@@ -29,12 +29,12 @@ slipped through review.
 
 | File | Runs | Job |
 | --- | --- | --- |
-| `.gitea/workflows/ci-pr.yaml`, `ci-main.yaml` | PR into `main`, push to `main` | The strict private gate. Unchanged by the mirror. |
+| `.gitea/workflows/ci-pr-local.yaml`, `ci-main-local.yaml` | PR into `main`, push to `main` | The strict private gate. Unchanged by the mirror. |
 | `.gitea/workflows/sync-github.yaml` | Manual only | Scrub, verify, scan, force-push. Any failing step sends nothing. |
 | `.github/workflows/ci.yaml` | PR and push on GitHub | Restore, vulnerable-package check, build, test, health smoke. Proves a clean clone builds from public inputs. |
 
 `ci.yaml` mirrors the Gitea `validate` job step for step. Keep them in lockstep: the SDK image
-tag lives in **three** places (`ci-pr.yaml`, `ci-main.yaml`, `ci.yaml`, plus `sync-github.yaml`,
+tag lives in **three** places (`ci-pr-local.yaml`, `ci-main-local.yaml`, `ci.yaml`, plus `sync-github.yaml`,
 which only borrows the tag to reuse the cached image), and the two `--filter-not-method`
 quarantines must match what `docs/engineering/known-limits.md` records.
 
@@ -87,7 +87,7 @@ messages, and old revisions of docs.
 | --- | --- |
 | GitHub | An empty `Agency.Huddle` repo and the fine-grained PAT above |
 | Gitea repo secrets | `SYNC_GITHUB_TOKEN`, `SYNC_MAILMAP`, `SYNC_REPLACEMENTS` |
-| Gitea runner | The `dotnet-10` label, already used by `ci-pr.yaml` |
+| Gitea runner | The `dotnet-10` label (the Mac mini runner). Only `sync-github.yaml` still uses it; CI moved to `dotnet-10-local` |
 | Local clone | `git remote add github https://github.com/emreaydinceren/Agency.Huddle.git` |
 
 ## Dry-running a rule change locally

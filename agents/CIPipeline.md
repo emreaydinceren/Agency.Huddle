@@ -18,7 +18,7 @@ before the Teams change added 91 tests. Treat a changed total as something to *c
 not something to fear; see [Known failure modes](#known-failure-modes).
 
 This page covers validation only. There is no packaging, publishing, or release step yet;
-when one arrives it belongs in a new job in `ci-main.yaml`, not inside `validate`.
+when one arrives it belongs in a new job in `ci-main-local.yaml`, not inside `validate`.
 
 ## Topology
 
@@ -27,13 +27,16 @@ when one arrives it belongs in a new job in `ci-main.yaml`, not inside `validate
 > internal hostname is kept out of this file because the `secret-scan` job fails the build
 > on an `internal-mdns-host` finding. Read the real one from `git remote -v`.
 
-Both workflows run on a self-hosted runner labelled `dotnet-10`, inside the
+Both workflows run on a self-hosted runner labelled `dotnet-10-local`, on the Windows development
+desktop (see [Local runner](#local-runner)), inside the
 `mcr.microsoft.com/dotnet/sdk:10.0.401` container (Ubuntu 24.04), with `shell: bash`.
 
-**The runner is `arm64`.** Test output reads `net10.0|arm64`, where a Windows development box
-here is `x64`. That is a second axis, alongside line endings and the SDK patch below, on which a
-green local run does not imply a green CI run — and it is the axis timing races are most
-sensitive to, since core count and memory ordering both differ.
+**The runner is `x64`.** Test output reads `net10.0|x64`. Until 2026-10-09 CI ran on a Mac mini
+runner labelled `dotnet-10`, which is `arm64`, so any run number or timing recorded in this file
+from before that date was measured on `arm64`. Timing races are sensitive to core count and memory
+ordering, which differ between the two; a flake that only ever showed on the old runner may not
+reproduce here, and the reverse. A green run on the Windows desktop still does not imply a green run
+on other hardware or other line endings.
 
 The image is pinned to an **exact SDK patch**, not the floating `:10.0` tag, and that pin is
 half of a pair: `global.json` requires `10.0.400` with `rollForward: latestPatch`, so only a
@@ -44,8 +47,8 @@ together, or not at all.
 
 | Workflow | Trigger | Jobs |
 | --- | --- | --- |
-| `.gitea/workflows/ci-pr.yaml` | `pull_request` into `main` | `secret-scan`, `validate` |
-| `.gitea/workflows/ci-main.yaml` | `push` to `main` | `secret-scan`, `validate` |
+| `.gitea/workflows/ci-pr-local.yaml` | `pull_request` into `main` | `secret-scan`, `validate` |
+| `.gitea/workflows/ci-main-local.yaml` | `push` to `main` | `secret-scan`, `validate` |
 
 Both skip runs whose changes are confined to `docs/**`. A docs-only PR therefore produces
 **no run at all** — if you make these checks required in branch protection, such a PR will
@@ -54,8 +57,8 @@ sit with a permanently pending check.
 The two files' job definitions are byte-identical by construction. Keep them that way:
 
 ```bash
-diff <(sed -n '/^jobs:/,$p' .gitea/workflows/ci-pr.yaml) \
-     <(sed -n '/^jobs:/,$p' .gitea/workflows/ci-main.yaml)
+diff <(sed -n '/^jobs:/,$p' .gitea/workflows/ci-pr-local.yaml) \
+     <(sed -n '/^jobs:/,$p' .gitea/workflows/ci-main-local.yaml)
 ```
 
 ```text
@@ -214,21 +217,16 @@ endings to LF first — see [Line endings](#line-endings) for why that can matte
 
 ## Local runner
 
-`ci-pr-local.yaml` and `ci-main-local.yaml` are copies of `ci-pr.yaml` and `ci-main.yaml` that
-differ only in `runs-on: dotnet-10-local`. They run on a second Gitea Actions runner on the Windows
-desktop, in Docker Desktop, alongside the Mac mini's `dotnet-10` runner. Both pairs fire on the same
-events, so a PR gets two independent validations. Keep each pair's `jobs:` block identical apart from
-the label:
+CI runs on one Gitea Actions runner on the Windows desktop, in Docker Desktop, with the label
+`dotnet-10-local`. It replaced the Mac mini's `dotnet-10` runner on 2026-10-09: the workflows were
+first run side by side for a PR, and the Mac mini copies (`ci-pr.yaml`, `ci-main.yaml`) were then
+deleted. Only `sync-github.yaml` still names `dotnet-10`.
 
-```bash
-diff <(sed -n '/^jobs:/,$p' .gitea/workflows/ci-pr.yaml) \
-     <(sed -n '/^jobs:/,$p' .gitea/workflows/ci-pr-local.yaml)
-```
+The consequence is that **CI is only as available as that desktop.** With the PC off, or Docker Desktop
+stopped, `validate` stays queued and the required check never reports. See the failure-mode table.
 
-```text
-<     runs-on: dotnet-10
->     runs-on: dotnet-10-local
-```
+The required status check on `main` is `CI (Pull Request) / validate (pull_request)`. Its text is
+the workflow `name:` plus the job name, so renaming either strands every PR.
 
 The runner is not in the repo. It is a `gitea/act_runner` container (`huddle-local-runner`) defined
 by a `compose.yaml` and a `config.yaml` in `C:\Users\user\gitea-runner\`, registered to this repo only
@@ -238,10 +236,11 @@ with a token from `POST /actions/runners/registration-token`. Labels and options
 **The runner config must give job containers a RAM-backed `/tmp`:** `container.options:
 "--tmpfs /tmp:exec"`. Without it the suite takes about 7 minutes instead of 40 seconds.
 `PersonaSpendTests.ConcurrentAdds_SumExactly` makes 48,000 SQLite writes, each flushed to disk, and a
-flush through Docker Desktop's WSL2 disk costs 3-10 ms, against 0.001 ms in RAM. The Mac mini does not
+flush through Docker Desktop's WSL2 disk costs 3-10 ms, against 0.001 ms in RAM. The Mac mini did not
 pay that cost: macOS acknowledges a flush without waiting for the SSD (unverified). Measured on
-2026-10-09, `validate` took 112 s locally against 254 s on the Mac mini, with the tests at 38 s against
-159 s.
+2026-10-09, `validate` took 112 s on this runner against 254 s on the Mac mini, with the tests at 38 s
+against 159 s. If you recreate the runner, set the option first and confirm the test step takes
+well under a minute.
 
 ## Known failure modes
 
@@ -256,6 +255,8 @@ Check these before reading the code.
 | `secret-scan` fails on `internal-mdns-host` | A real `*.local` hostname reached a tracked file — most often a doc or a workflow comment | Replace it with a `*.example` placeholder, or allowlist the path in `.gitleaks.toml` |
 | The test total is not the figure at the top of this file | A test was added or removed, or a `--filter-not-method` line no longer matches anything | Expected after real work; confirm the delta is yours. A quarantine line that matches nothing fails silently — it does not error. Update the figure when you confirm it |
 | A diagnostic appears only in CI, with an identical clean local build | The container's SDK is **ahead** of the local one. `global.json` pins `10.0.400` with `rollForward: latestPatch`, so the `10.0.401` image satisfies it and compiles with a newer Roslyn. `TreatWarningsAsErrors` turns any diagnostic that version added into a failed build | Do not chase it by loosening `global.json`. Reproduce it with the Docker command below, which uses the same image, or install the image's SDK locally. Seen 2026-09-15: `CS1574` on a `cref` to an internal framework type, which 10.0.400 accepted |
+| `validate` sits queued and never starts | The runner is offline: the desktop is off or asleep, Docker Desktop is stopped, or the `huddle-local-runner` container is not running. Gitea shows it under Settings → Actions → Runners | Start Docker Desktop and run `docker compose up -d` in `C:\Users\user\gitea-runner\`. The container restarts on its own once Docker is up |
+| The test step takes about 7 minutes and `PersonaSpendTests.ConcurrentAdds_SumExactly` dominates it | The runner lost its RAM-backed `/tmp`: `config.yaml` was regenerated or not mounted, so jobs write SQLite to Docker's disk | Restore `container.options: "--tmpfs /tmp:exec"` in `config.yaml` and the `labels:` entry beside it, then restart the container |
 | A docs-only PR shows a check that never completes | Both workflows set `paths-ignore: docs/**`, so no run is queued at all | Push a non-docs change, or drop the required check for such PRs |
 | `pwsh: command not found` at the Health endpoint smoke test step | The SDK image stopped shipping PowerShell. `10.0.401` installs it as a global tool and symlinks `/usr/bin/pwsh` (`PowerShell.Linux.arm64` on this runner), but that is the image's choice, not a guarantee across bumps | Add a step before it — `dotnet tool install --global PowerShell` and put `$HOME/.dotnet/tools` on `PATH` — in **both** workflows. Confirm with `command -v pwsh && pwsh --version` |
 | The smoke test FAILs while the whole test suite is green | Read the stderr and stdout tails the script prints; that is what they are for. `AddressInUseException`, a missing `libe_sqlite3.so`, or a timeout waiting for `Now listening on:` are environmental — the app never bound. A `404 - the endpoint is not mapped` is **not** environmental | For 404, `app.MapHealthChecks("/health")` was removed from `Program.cs` and this step caught a real regression the suite cannot see. For the rest, re-run; if it persists, reproduce with the Docker command above |
@@ -325,7 +326,7 @@ rather than inherited from whatever the host last cached.
   breaks CI, and the error names `global.json` — the file that is *correct* — which points
   debugging at the wrong half.
 - Everything upstream of the failing step is still evidence. This run confirmed the
-  `dotnet-10` runner label, the hand-rolled clone, and Gitea's `GITHUB_SHA` handling on
+  `dotnet-10` runner label (the Mac mini, since replaced by `dotnet-10-local`), the hand-rolled clone, and Gitea's `GITHUB_SHA` handling on
   `pull_request` all work, because `secret-scan` passed end to end and Node installed cleanly.
 
 ## Reading CI results from a session

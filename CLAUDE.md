@@ -68,8 +68,9 @@ dotnet test  Huddle.slnx --
 
 Gitea Actions validates every PR into `main` and every push to `main`: restore,
 build and test `Huddle.slnx` (trailing `--` included), plus a gitleaks secret scan
-and a vulnerable-dependency check. The workflows are `.gitea/workflows/ci-pr.yaml`
-and `ci-main.yaml`; their `validate` jobs are byte-identical on purpose, so change
+and a vulnerable-dependency check. The workflows are `.gitea/workflows/ci-pr-local.yaml`
+and `ci-main-local.yaml`, run by a runner on the Windows desktop (label `dotnet-10-local`, see
+`agents/CIPipeline.md`); their `validate` jobs are byte-identical on purpose, so change
 both or neither. `.gitea/**` and `.gitleaks.toml` are shared root-level files —
 announce changes the same way as any other.
 

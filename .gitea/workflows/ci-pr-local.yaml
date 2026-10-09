@@ -1,13 +1,14 @@
-name: CI (Pull Request, local runner)
-
-# Same pipeline as ci-pr.yaml, run on the Windows desktop's Docker runner (label dotnet-10-local)
-# instead of the Mac mini's. Only `runs-on` differs: keep the `jobs:` block identical to ci-pr.yaml's
-# apart from that label. The runner's setup, and why it needs a RAM-backed /tmp, is in
-# agents/CIPipeline.md ("Local runner").
+name: CI (Pull Request)
 
 # Validation gate for every PR into main. The `validate` job here and the one in
-# ci-main.yaml are deliberately identical — diff the two files whenever you change
+# ci-main-local.yaml are deliberately identical — diff the two files whenever you change
 # either, so a PR can never be greener than the merge that follows it.
+#
+# Runs on the Windows desktop's Docker runner (label dotnet-10-local). That runner must give job
+# containers a RAM-backed /tmp or the suite takes 7 minutes instead of 40 seconds; see
+# agents/CIPipeline.md ("Local runner"). The workflow `name` is part of the required status check
+# ("CI (Pull Request) / validate (pull_request)") that branch protection waits for: renaming it
+# strands every PR on a check that never reports.
 
 on:
   pull_request:

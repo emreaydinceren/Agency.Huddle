@@ -579,8 +579,8 @@ so, and names its [Roadmap](roadmap.md) item or its ADR. Back to the hub: [Huddl
   guarantee. The real fix is to build the `JsonRpc` ourselves with that context. The
   Tier 3 quarantine (`ChunkedReplyFirstOrderer`) is gone. The two CI filter lines for
   `PromptAsync_StreamsChunksInOrder_ThenTurnCompleted` and
-  `PromptAsync_ThoughtAndToolCallEvents_ArePublished` in `.gitea/workflows/ci-main.yaml` and
-  `ci-pr.yaml` can now be dropped. They are shared root files and were left for their owner.
+  `PromptAsync_ThoughtAndToolCallEvents_ArePublished` in `.gitea/workflows/ci-main-local.yaml` and
+  `ci-pr-local.yaml` can now be dropped. They are shared root files and were left for their owner.
 - **Third known flake, pre-existing — DIAGNOSED 2026-09-17.** A full
   `dotnet test Huddle.slnx --` occasionally crashes the test host *after* every
   assertion has passed, with an `ObjectDisposedException` raised from
