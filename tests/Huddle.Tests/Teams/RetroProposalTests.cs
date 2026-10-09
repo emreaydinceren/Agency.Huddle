@@ -144,7 +144,7 @@ public sealed class RetroProposalTests
         RetroChangeOutcome outcome = await fixture.Service.AcceptAsync(fixture.RoomId, set.Id, "1", ct);
 
         Assert.Equal(RetroChangeOutcomeKind.Applied, outcome.Kind);
-        Assert.Equal("Team notes: keep it tiny.\n", fixture.TeamNow);
+        Assert.Equal("---\nteamType: 'web@1.2.0'\nprocess: 'Process.md'\n---\nTeam notes: keep it tiny.\n", fixture.TeamNow);
     }
 
     /// <summary>A Team member's file is edited through the Persona store.</summary>
@@ -180,6 +180,64 @@ public sealed class RetroProposalTests
         Assert.Equal(before.Text, after.Text);
         Assert.Empty(fixture.Retro.ReadRegister("Platform"));
         Assert.Single(fixture.Proposals.Pending("Platform"));
+    }
+
+    /// <summary>An edit that leaves <c>_team.md</c> unparseable is refused before anything is written, and the change stays pending.</summary>
+    [Fact]
+    public async Task AcceptAsync_TeamFileEditNotParseable_IsRefusedAndLeavesFile()
+    {
+        CancellationToken ct = TestContext.Current.CancellationToken;
+        using RetroProposalFixture fixture = await RetroProposalFixture.CreateAsync(ct);
+        RetroProposalSet set = fixture.Propose(RetroProposalFixture.Change("1", "_team.md", "teamType: 'web@1.2.0'", "teamType: 'not a ref'"));
+
+        RetroChangeOutcome outcome = await fixture.Service.AcceptAsync(fixture.RoomId, set.Id, "1", ct);
+
+        Assert.Equal(RetroChangeOutcomeKind.Refused, outcome.Kind);
+        Assert.Equal("The edit would leave _team.md unreadable; nothing changed.", outcome.Text);
+        Assert.Equal(RetroProposalFixture.TeamText, fixture.TeamNow);
+        Assert.Empty(fixture.Retro.ReadRegister("Platform"));
+        Assert.Single(fixture.Proposals.Pending("Platform"));
+    }
+
+    /// <summary>A Teammate-file edit that changes <c>name:</c> is refused: a retro change cannot rename a Teammate.</summary>
+    [Fact]
+    public async Task AcceptAsync_MemberFileRename_IsRefused()
+    {
+        CancellationToken ct = TestContext.Current.CancellationToken;
+        using RetroProposalFixture fixture = await RetroProposalFixture.CreateAsync(ct);
+        Persona before = fixture.Harness.Personas.Get("Kai") ?? throw new InvalidOperationException("Kai vanished.");
+        string nameLine = before.Text.Split('\n').Select(static line => line.TrimEnd('\r')).First(static line => line.StartsWith("name:", StringComparison.Ordinal));
+        RetroProposalSet set = fixture.Propose(RetroProposalFixture.Change("1", "Kai.md", nameLine, "name: Kay"));
+
+        RetroChangeOutcome outcome = await fixture.Service.AcceptAsync(fixture.RoomId, set.Id, "1", ct);
+
+        Persona after = fixture.Harness.Personas.Get("Kai") ?? throw new InvalidOperationException("Kai vanished.");
+        Assert.Equal(RetroChangeOutcomeKind.Refused, outcome.Kind);
+        Assert.Equal("A retro change cannot rename a Teammate; Kai.md was not changed.", outcome.Text);
+        Assert.Equal(before.Text, after.Text);
+        Assert.Null(fixture.Harness.Personas.Get("Kay"));
+        Assert.Empty(fixture.Retro.ReadRegister("Platform"));
+    }
+
+    /// <summary>A stored proposal file whose id differs from its file name, or whose Team differs from its folder, is not loaded.</summary>
+    [Fact]
+    public async Task Pending_FileWithWrongIdOrTeam_IsIgnored()
+    {
+        CancellationToken ct = TestContext.Current.CancellationToken;
+        using RetroProposalFixture fixture = await RetroProposalFixture.CreateAsync(ct);
+        string directory = Path.Combine(fixture.TeamFolder, "_proposals", "retro");
+        _ = Directory.CreateDirectory(directory);
+        RetroChange[] changes = [RetroProposalFixture.Change("1", "Process.md", "Review before done.", "Review twice.")];
+        File.WriteAllText(Path.Combine(directory, "good.json"), System.Text.Json.JsonSerializer.Serialize(new RetroProposalSet("good", "Platform", "Nova", changes)));
+        File.WriteAllText(Path.Combine(directory, "renamed.json"), System.Text.Json.JsonSerializer.Serialize(new RetroProposalSet("other-id", "Platform", "Nova", changes)));
+        File.WriteAllText(Path.Combine(directory, "foreign.json"), System.Text.Json.JsonSerializer.Serialize(new RetroProposalSet("foreign", "Other", "Nova", changes)));
+        RetroProposalStore store = new(fixture.Folders);
+
+        IReadOnlyList<RetroProposalSet> pending = store.Pending("Platform");
+
+        Assert.Equal(["good"], pending.Select(static each => each.Id));
+        Assert.Null(store.Get("other-id"));
+        Assert.Null(store.Get("foreign"));
     }
 
     /// <summary>Reject writes nothing to the files or the register and removes the change.</summary>

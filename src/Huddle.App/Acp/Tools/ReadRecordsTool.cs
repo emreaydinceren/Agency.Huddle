@@ -143,7 +143,16 @@ internal sealed class ReadRecordsTool(
             return "since must be a date like 2026-10-01.";
         }
 
-        IReadOnlyList<RegisterRow> register = new RetroFileStore(folders).ReadRegister(team.Name);
+        IReadOnlyList<RegisterRow> register;
+        try
+        {
+            register = new RetroFileStore(folders).ReadRegister(team.Name);
+        }
+        catch (IOException)
+        {
+            return "The retro register could not be read right now; try again.";
+        }
+
         return RecordsBundleBuilder.RenderText(builder.Build(team.Name, since), MaxCharacters, register.Count > 0 ? RetroVerifier.Due(register) : null);
     }
 

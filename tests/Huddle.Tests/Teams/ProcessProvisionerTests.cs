@@ -172,6 +172,9 @@ internal sealed class DiskTeamFolders(string folder) : ITeamFolders
     /// <inheritdoc />
     public TeamCreateResult CreateTeam(string team, TeamFile file) => new(TeamCreateOutcome.AlreadyExists, null);
 
+    /// <summary>Gets or sets a path the composed Team file is also written to on every update; <see langword="null"/> keeps it in memory only.</summary>
+    public string? TeamFilePath { get; set; }
+
     /// <inheritdoc />
     public bool UpdateTeamFile(string team, Func<TeamFile, TeamFile> change)
     {
@@ -181,6 +184,11 @@ internal sealed class DiskTeamFolders(string folder) : ITeamFolders
         }
 
         this.File = change(this.File);
+        if (this.TeamFilePath is not null)
+        {
+            System.IO.File.WriteAllText(this.TeamFilePath, this.File.Compose());
+        }
+
         return true;
     }
 

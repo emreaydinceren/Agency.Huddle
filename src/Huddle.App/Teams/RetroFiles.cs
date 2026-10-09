@@ -238,6 +238,9 @@ internal sealed class RetroFileStore(ITeamFolders folders)
 {
     private const int MaxListed = 3;
 
+    /// <summary>Serialises every register write in the process, whichever store instance makes it.</summary>
+    private static readonly Lock RegisterGate = new();
+
     /// <summary>Writes a report to <c>_retros/&lt;date&gt;.md</c>, or <c>&lt;date&gt;-2.md</c> and so on when that name is taken. An existing report is never overwritten.</summary>
     /// <param name="team">The Team's name.</param>
     /// <param name="report">The report.</param>
@@ -292,25 +295,28 @@ internal sealed class RetroFileStore(ITeamFolders folders)
     {
         ArgumentNullException.ThrowIfNull(rows);
         string path = this.RegisterPath(team);
-        if (!File.Exists(path))
+        lock (RegisterGate)
         {
-            WriteAtomic(path, "# Retro register\n\n" + RetroRegister.Render(rows));
-            return;
-        }
+            if (!File.Exists(path))
+            {
+                WriteAtomic(path, "# Retro register\n\n" + RetroRegister.Render(rows));
+                return;
+            }
 
-        string text = File.ReadAllText(path);
-        string newline = text.Contains("\r\n", StringComparison.Ordinal) ? "\r\n" : "\n";
-        List<string> lines = [.. text.Split(newline)];
-        int last = lines.FindLastIndex(static line => RetroRegister.IsTableLine(line));
-        if (last < 0)
-        {
-            string body = RetroRegister.Render(rows).Replace("\n", newline, StringComparison.Ordinal);
-            WriteAtomic(path, text.TrimEnd('\r', '\n') + newline + newline + body);
-            return;
-        }
+            string text = File.ReadAllText(path);
+            string newline = text.Contains("\r\n", StringComparison.Ordinal) ? "\r\n" : "\n";
+            List<string> lines = [.. text.Split(newline)];
+            int last = lines.FindLastIndex(static line => RetroRegister.IsTableLine(line));
+            if (last < 0)
+            {
+                string body = RetroRegister.Render(rows).Replace("\n", newline, StringComparison.Ordinal);
+                WriteAtomic(path, text.TrimEnd('\r', '\n') + newline + newline + body);
+                return;
+            }
 
-        lines.InsertRange(last + 1, rows.Select(static row => RetroRegister.RenderRow(row)));
-        WriteAtomic(path, string.Join(newline, lines));
+            lines.InsertRange(last + 1, rows.Select(static row => RetroRegister.RenderRow(row)));
+            WriteAtomic(path, string.Join(newline, lines));
+        }
     }
 
     /// <summary>Sets one row's status and evidence; every other line of the file stays as it was.</summary>
@@ -324,16 +330,19 @@ internal sealed class RetroFileStore(ITeamFolders folders)
         ArgumentNullException.ThrowIfNull(rowId);
         ArgumentNullException.ThrowIfNull(evidence);
         string path = this.RegisterPath(team);
-        string text = File.Exists(path) ? File.ReadAllText(path) : string.Empty;
-        string newline = text.Contains("\r\n", StringComparison.Ordinal) ? "\r\n" : "\n";
-        string[] lines = text.Split(newline);
-        for (int i = 0; i < lines.Length; i++)
+        lock (RegisterGate)
         {
-            if (RetroRegister.TryParseRow(lines[i], out RegisterRow? row) && string.Equals(row.Id, rowId, StringComparison.Ordinal))
+            string text = File.Exists(path) ? File.ReadAllText(path) : string.Empty;
+            string newline = text.Contains("\r\n", StringComparison.Ordinal) ? "\r\n" : "\n";
+            string[] lines = text.Split(newline);
+            for (int i = 0; i < lines.Length; i++)
             {
-                lines[i] = RetroRegister.RenderRow(row with { Status = status, EvidenceNextCheck = evidence });
-                WriteAtomic(path, string.Join(newline, lines));
-                return;
+                if (RetroRegister.TryParseRow(lines[i], out RegisterRow? row) && string.Equals(row.Id, rowId, StringComparison.Ordinal))
+                {
+                    lines[i] = RetroRegister.RenderRow(row with { Status = status, EvidenceNextCheck = evidence });
+                    WriteAtomic(path, string.Join(newline, lines));
+                    return;
+                }
             }
         }
 
@@ -376,9 +385,16 @@ internal sealed class RetroFileStore(ITeamFolders folders)
 
     private static void WriteAtomic(string path, string text)
     {
-        string temp = path + ".tmp";
-        File.WriteAllText(temp, text, new UTF8Encoding(false));
-        File.Move(temp, path, overwrite: true);
+        string temp = $"{path}.{Guid.NewGuid():N}.tmp";
+        try
+        {
+            File.WriteAllText(temp, text, new UTF8Encoding(false));
+            File.Move(temp, path, overwrite: true);
+        }
+        finally
+        {
+            File.Delete(temp);
+        }
     }
 
     private string TeamFolder(string team)

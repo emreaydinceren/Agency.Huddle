@@ -9,7 +9,7 @@ A **team type** describes a kind of Team: its roles, the candidates that fill th
 process and its skill packs. Every team type is a set of files. The built-in types ship
 embedded in the app, and the user's own types live in a folder beside the data. Code knows
 managers, roles, packs, gates and Requests, but never a role name. The full design is in the
-Teams specification, under *Data formats* and *Architecture*.
+[Teams specification](../engineering/teams-spec.md), under *Data formats* and *Architecture*.
 
 ## The problem
 

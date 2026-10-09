@@ -123,6 +123,68 @@ public sealed class RetroFilesTests
         Assert.Equal(3, store.ReadRegister(Team).Count);
     }
 
+    /// <summary>Two stores appending to the same register at once lose no row and fail no write.</summary>
+    [Fact]
+    public async Task AppendRows_TwoStoresConcurrently_KeepEveryRow()
+    {
+        CancellationToken ct = TestContext.Current.CancellationToken;
+        using TempDataDir dir = new();
+        File.WriteAllText(RegisterPath(dir), Seed());
+        DiskTeamFolders folders = new(dir.Path);
+        RetroFileStore first = new(folders);
+        RetroFileStore second = new(folders);
+
+        Task Writer(RetroFileStore store, string owner) => Task.Run(
+            () =>
+            {
+                for (int i = 0; i < 25; i++)
+                {
+                    store.AppendRows(Team, [new RegisterRow(owner + i, "F", "A", owner, RetroStatus.Open, "e")]);
+                }
+            },
+            ct);
+
+        await Task.WhenAll(Writer(first, "a"), Writer(second, "b"));
+
+        Assert.Equal(52, first.ReadRegister(Team).Count);
+    }
+
+    /// <summary>A status change racing with appends from another store keeps both.</summary>
+    [Fact]
+    public async Task SetStatus_RacingAppendRows_KeepsBoth()
+    {
+        CancellationToken ct = TestContext.Current.CancellationToken;
+        using TempDataDir dir = new();
+        File.WriteAllText(RegisterPath(dir), Seed());
+        DiskTeamFolders folders = new(dir.Path);
+        RetroFileStore appender = new(folders);
+        RetroFileStore marker = new(folders);
+
+        Task append = Task.Run(
+            () =>
+            {
+                for (int i = 0; i < 25; i++)
+                {
+                    appender.AppendRows(Team, [new RegisterRow("n" + i, "F", "A", "o", RetroStatus.Open, "e")]);
+                }
+            },
+            ct);
+        Task mark = Task.Run(
+            () =>
+            {
+                for (int i = 0; i < 25; i++)
+                {
+                    marker.SetStatus(Team, "R-002", i % 2 == 0 ? RetroStatus.Verified : RetroStatus.Partial, "evidence " + i);
+                }
+            },
+            ct);
+        await Task.WhenAll(append, mark);
+
+        IReadOnlyList<RegisterRow> rows = marker.ReadRegister(Team);
+        Assert.Equal(27, rows.Count);
+        Assert.Equal("evidence 24", rows.Single(static row => row.Id == "R-002").EvidenceNextCheck);
+    }
+
     /// <summary>A Team with no register gets one created by the first append.</summary>
     [Fact]
     public void AppendRows_NoFile_CreatesRegister()

@@ -184,7 +184,21 @@ internal sealed class RetroProposalService(
         }
 
         string edited = text.Replace(find, RetroDiff.FitLineEndings(text, change.Replace), StringComparison.Ordinal);
-        if (!this.TryWrite(set.Team, file, path, edited))
+        TeamFile? teamFile = null;
+        if (string.Equals(file, TeamPaths.TeamFileName, StringComparison.Ordinal) && !TeamFile.TryParse(edited, out teamFile))
+        {
+            return Refused($"The edit would leave {file} unreadable; nothing changed.");
+        }
+
+        if (path is null
+            && this.MemberPersona(set.Team, file) is { } member
+            && PersonaFrontmatter.TryReadIdentity(edited, out PersonaIdentity? identity, out _)
+            && !string.Equals(identity.Name, member.Name, StringComparison.Ordinal))
+        {
+            return Refused($"A retro change cannot rename a Teammate; {file} was not changed.");
+        }
+
+        if (!this.TryWrite(set.Team, file, path, edited, teamFile))
         {
             return Refused(failed);
         }
@@ -250,11 +264,27 @@ internal sealed class RetroProposalService(
         return false;
     }
 
-    private bool TryWrite(string team, string file, string? path, string edited)
+    private bool TryWrite(string team, string file, string? path, string edited, TeamFile? teamFile)
     {
+        if (teamFile is not null)
+        {
+            try
+            {
+                return folders.UpdateTeamFile(team, _ => teamFile);
+            }
+            catch (IOException)
+            {
+                return false;
+            }
+            catch (UnauthorizedAccessException)
+            {
+                return false;
+            }
+        }
+
         if (path is not null)
         {
-            string temporary = path + ".tmp";
+            string temporary = $"{path}.{Guid.NewGuid():N}.tmp";
             try
             {
                 File.WriteAllText(temporary, edited);
@@ -268,6 +298,10 @@ internal sealed class RetroProposalService(
             catch (UnauthorizedAccessException)
             {
                 return false;
+            }
+            finally
+            {
+                File.Delete(temporary);
             }
         }
 

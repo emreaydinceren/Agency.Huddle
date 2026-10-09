@@ -19,7 +19,7 @@ internal sealed class RetroProposalFixture : IDisposable
     public const string ProcessText = "# Process\n\nReview before done.\nOne PR per Task.\n";
 
     /// <summary>The text of <c>_team.md</c> the fixture starts with.</summary>
-    public const string TeamText = "Team notes: keep it small.\n";
+    public const string TeamText = "---\nteamType: 'web@1.2.0'\nprocess: 'Process.md'\n---\nTeam notes: keep it small.\n";
 
     private const string TypeManifest = """
         { "schemaVersion": 1, "id": "web", "version": "1.2.0", "displayName": "Web", "order": 1,
@@ -49,7 +49,8 @@ internal sealed class RetroProposalFixture : IDisposable
                 new TeamSummary("Other", [], ["Kai"], true),
             ],
         };
-        DiskTeamFolders folders = new(this.TeamFolder);
+        Assert.True(TeamFile.TryParse(TeamText, out TeamFile? teamFile));
+        DiskTeamFolders folders = new(this.TeamFolder) { File = teamFile, TeamFilePath = Path.Combine(this.TeamFolder, TeamPaths.TeamFileName) };
         this.Folders = folders;
         this.Proposals = new RetroProposalStore(folders);
         this.Retro = new RetroFileStore(folders);

@@ -326,7 +326,10 @@ internal sealed class RetroProposalStore(ITeamFolders folders)
             try
             {
                 RetroProposalSet? set = JsonSerializer.Deserialize<RetroProposalSet>(File.ReadAllText(file), JsonOptions);
-                if (set is not null && !string.IsNullOrWhiteSpace(set.Id))
+                if (set is not null
+                    && !string.IsNullOrWhiteSpace(set.Id)
+                    && string.Equals(set.Id, Path.GetFileNameWithoutExtension(file), StringComparison.Ordinal)
+                    && string.Equals(set.Team, team, StringComparison.OrdinalIgnoreCase))
                 {
                     this.byId[set.Id] = set;
                 }
@@ -338,6 +341,10 @@ internal sealed class RetroProposalStore(ITeamFolders folders)
             catch (IOException)
             {
                 // An unreadable file is skipped for the same reason.
+            }
+            catch (UnauthorizedAccessException)
+            {
+                // A file this process may not read is skipped for the same reason.
             }
         }
     }

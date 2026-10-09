@@ -48,7 +48,7 @@ public sealed class RetroProposalCardTests
         Assert.Equal(
             [
                 "--- Process.md\n+++ Process.md\n@@\n Review before done.\n-One PR per Task.\n+One PR per Task, squash merged.",
-                "--- _team.md\n+++ _team.md\n@@\n-Team notes: keep it small.\n+Team notes: keep it tiny.",
+                "--- _team.md\n+++ _team.md\n@@\n ---\n-Team notes: keep it small.\n+Team notes: keep it tiny.",
             ],
             cut.FindAll(".retro-change-diff").Select(static each => each.TextContent));
         Assert.Equal(2, cut.FindAll(".retro-change-accept").Count);

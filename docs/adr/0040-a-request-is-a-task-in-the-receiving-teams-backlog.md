@@ -9,7 +9,7 @@ When one Team needs something from another, such as a bug, a feature, feedback o
 that need is a **Request**. A Request is an ordinary Task file in the receiving Team's
 `_tasks/` folder, with six extra frontmatter keys. Its lifecycle is a small state machine in
 code, and only the managers and the QA of the right Team can move it. The full design is in
-the Teams specification, under *Request (a Task with extra fields)* and *Request lifecycle*.
+the [Teams specification](../engineering/teams-spec.md), under *Request (a Task with extra fields)* and *Request lifecycle*.
 
 ## The problem
 

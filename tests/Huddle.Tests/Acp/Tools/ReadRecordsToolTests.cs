@@ -193,6 +193,22 @@ public sealed class ReadRecordsToolTests
         Assert.Equal("Records for Platform since 2026-09-08", lines[2]);
     }
 
+    /// <summary>A register that cannot be read (another process holds it) gives a normal refusal, not an exception.</summary>
+    [Fact]
+    public async Task Invoke_RegisterLocked_ReturnsRefusal()
+    {
+        CancellationToken ct = TestContext.Current.CancellationToken;
+        using Scene scene = await CreateSceneAsync(ct);
+        _ = Directory.CreateDirectory(scene.TeamFolder);
+        string path = Path.Combine(scene.TeamFolder, TeamPaths.RetroRegisterFileName);
+        File.WriteAllText(path, RetroRegister.Render([]));
+        using FileStream held = new(path, FileMode.Open, FileAccess.ReadWrite, FileShare.None);
+
+        string result = await scene.Tool("Rae").InvokeAsync(Args(), ct);
+
+        Assert.Equal("The retro register could not be read right now; try again.", result);
+    }
+
     /// <summary>The Team's manager may read too.</summary>
     [Fact]
     public async Task Invoke_Manager_ReturnsTheBundle()
