@@ -249,7 +249,7 @@ Owned by the Tasks effort, and requested in the Conversation note:
 - The Team and Project scan lists a Project for every non-`_` sub-folder of a Team, whether or not
   it holds a `_tasks/`.
 - Start-up refuses a `Teams/` root that overlaps `Acp:TeammatesDir`, as it refuses `Tasks/`
-  inside `Acp:TeamsDir` today.
+  inside `Acp:TeammatesDir`.
 - A one-time migration moves `Tasks/<Team>/[<Project>/][_closed/]<ID>.md` to the new layout, if
   any install holds Tasks. It is step 4 of `TeammateLayoutMigration` (§6.15), or a Tasks-owned
   step that runs after it.

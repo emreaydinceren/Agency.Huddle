@@ -547,7 +547,7 @@ public sealed record OutsideEdit(TaskItem? Before, TaskItem After);
   other paths. This is the Persona rule (rules.md L21).
 - The **filename isn't identity.** New files are named `{Id}.md`. A file whose name doesn't match
   its id still loads.
-- **`Tasks.Dir` must not resolve inside `Acp.TeamsDir`.** Throw at startup if it does, because the
+- **`Tasks.Dir` must not resolve inside `Acp.TeammatesDir`.** Throw at startup if it does, because the
   Persona scanner would read every Task as a rejected Persona. Follow the startup throw for the
   old `PersonaDir` key (`ServiceCollectionExtensions.cs:121-127`).
 
