@@ -323,7 +323,7 @@ public sealed class LibraryFileServiceFindTests
     public async Task FindAsync_LinkLoopInsideTheRoot_ReturnsEachFileOnce()
     {
         CancellationToken ct = TestContext.Current.CancellationToken;
-        using LibraryFileServiceFixture fixture = LibraryFileServiceFixture.Build(o => o.Library.MaxIndexedFiles = 50);
+        using LibraryFileServiceFixture fixture = LibraryFileServiceFixture.Build(o => o.Library.MaxIndexedFiles = 50, supportsReparsePoints: true);
         string vault = fixture.CreatePinnedRoot("Vault");
         Touch(vault, "Business/brief.md");
         Touch(vault, "Business/notes/brief-2.md");
@@ -354,7 +354,7 @@ public sealed class LibraryFileServiceFindTests
     public async Task FindAsync_Link_IsMatchedByItsOwnName_NotItsTargets()
     {
         CancellationToken ct = TestContext.Current.CancellationToken;
-        using LibraryFileServiceFixture fixture = LibraryFileServiceFixture.Build();
+        using LibraryFileServiceFixture fixture = LibraryFileServiceFixture.Build(supportsReparsePoints: true);
         string vault = fixture.CreatePinnedRoot("Vault");
         Touch(vault, "target-folder/inner.md");
         string link = Path.Combine(vault, "brief-link");

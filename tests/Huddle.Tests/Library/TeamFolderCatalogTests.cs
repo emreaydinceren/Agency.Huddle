@@ -122,8 +122,8 @@ public sealed class TeamFolderCatalogTests
     [Fact]
     public void List_JunctionOutsideRoot_IsSkipped()
     {
-        using Fixture fixture = Fixture.Build();
-        string outside = Path.Combine(Path.GetTempPath(), $"team-folder-catalog-outside-{Guid.NewGuid():N}");
+        using Fixture fixture = Fixture.Build(supportsReparsePoints: true);
+        string outside = Path.Combine(TestPaths.GetTempPath(supportsReparsePoints: true), $"team-folder-catalog-outside-{Guid.NewGuid():N}");
         Directory.CreateDirectory(outside);
         string link = Path.Combine(fixture.TeamsPath, "Escaped");
 
@@ -201,9 +201,10 @@ public sealed class TeamFolderCatalogTests
         public string TeamsPath => this.TeamsRoot.FullPath;
 
         /// <summary>Builds a fixture with an empty <c>Teams/</c> and <c>Teammates/</c> layout under a fresh temp <c>DataDir</c>.</summary>
-        public static Fixture Build()
+        /// <param name="supportsReparsePoints"><see langword="true"/> for a test that creates directory links, so the data directory sits on the system temp folder.</param>
+        public static Fixture Build(bool supportsReparsePoints = false)
         {
-            TempDataDir dir = new();
+            TempDataDir dir = new(supportsReparsePoints);
             Directory.CreateDirectory(Path.Combine(dir.Path, "Teams"));
             Directory.CreateDirectory(Path.Combine(dir.Path, "Teammates"));
 

@@ -37,6 +37,10 @@ dotnet test Huddle.slnx --
   (`$env:HUDDLE_TEST_TEMP = 'R:\t'`) or wherever suits you. The test folders a run leaves behind are
   in that folder, so do not empty it while another run is using it. Measured on Windows, the
   `PersonaSpendTests` class took 227 s with the temp folder on the system drive and 26 s on a RAM disk.
+  A test that creates a directory link (junction or symlink) and resolves it must not use the redirected folder: a
+  RAM-disk driver can create links yet fail to read them (`Incorrect function`). Such a test builds its folder with
+  `new TempDataDir(supportsReparsePoints: true)` or `TestPaths.GetTempPath(supportsReparsePoints: true)`, which use
+  the system temp folder that the redirect saved in `HUDDLE_TEST_SYSTEM_TEMP`.
 
 ## Deciding what a test must pin
 

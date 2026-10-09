@@ -11,9 +11,11 @@ namespace Agency.Huddle.Tests;
 /// </summary>
 public sealed class TempDataDir : IDisposable
 {
-    public TempDataDir()
+    /// <summary>Creates the directory under <see cref="TestPaths.GetTempPath"/>.</summary>
+    /// <param name="supportsReparsePoints"><see langword="true"/> for a test that creates directory links and resolves them, so the directory sits on the system temp folder, not a redirected one.</param>
+    public TempDataDir(bool supportsReparsePoints = false)
     {
-        this.Path = System.IO.Path.Combine(System.IO.Path.GetTempPath(), "team-tests", Guid.NewGuid().ToString("N"));
+        this.Path = System.IO.Path.Combine(TestPaths.GetTempPath(supportsReparsePoints), "team-tests", Guid.NewGuid().ToString("N"));
         Directory.CreateDirectory(this.Path);
     }
 
