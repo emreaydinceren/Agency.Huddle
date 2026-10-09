@@ -76,6 +76,125 @@ public sealed class ServiceCollectionExtensionsTests
         Assert.Equal($"'Team:Teams:Dir' ({teammatesRoot}) and 'Team:Acp:TeammatesDir' ({teammatesRoot}) must not overlap.", ex.Message);
     }
 
+    /// <summary>The team type catalog resolves from the container with the real embedded built-ins and no problems.</summary>
+    [Fact]
+    public void AddTeamServices_ResolvesTeamTypeCatalog()
+    {
+        using TempDataDir dataDir = new();
+        var configuration = new ConfigurationBuilder()
+            .AddInMemoryCollection(new Dictionary<string, string?> { ["Team:DataDir"] = dataDir.Path })
+            .Build();
+        var services = new ServiceCollection();
+        services.AddLogging();
+        services.AddTeamServices(configuration);
+        using var provider = services.BuildServiceProvider();
+
+        var catalog = provider.GetRequiredService<Agency.Huddle.App.TeamTypes.TeamTypeCatalog>();
+
+        Assert.Empty(catalog.Problems);
+    }
+
+    private static ServiceProvider BuildTeamProvider(TempDataDir dataDir)
+    {
+        var configuration = new ConfigurationBuilder()
+            .AddInMemoryCollection(new Dictionary<string, string?> { ["Team:DataDir"] = dataDir.Path })
+            .Build();
+        var services = new ServiceCollection();
+        services.AddLogging();
+        services.AddTeamServices(configuration);
+        return services.BuildServiceProvider();
+    }
+
+    /// <summary>The hire service resolves from the container.</summary>
+    [Fact]
+    public void AddTeamServices_ResolvesHireService()
+    {
+        using TempDataDir dataDir = new();
+        using ServiceProvider provider = BuildTeamProvider(dataDir);
+
+        Assert.NotNull(provider.GetRequiredService<Agency.Huddle.App.Teams.HireService>());
+    }
+
+    /// <summary>The merge gate the permission handler consults resolves to the process-backed implementation.</summary>
+    [Fact]
+    public void AddTeamServices_ResolvesMergeGate()
+    {
+        using TempDataDir dataDir = new();
+        using ServiceProvider provider = BuildTeamProvider(dataDir);
+
+        Assert.IsType<Agency.Huddle.App.Teams.ProcessMergeGate>(provider.GetRequiredService<IMergeGate>());
+    }
+
+    /// <summary>The team duplicator resolves from the container.</summary>
+    [Fact]
+    public void AddTeamServices_ResolvesTeamDuplicator()
+    {
+        using TempDataDir dataDir = new();
+        using ServiceProvider provider = BuildTeamProvider(dataDir);
+
+        Assert.NotNull(provider.GetRequiredService<Agency.Huddle.App.Teams.TeamDuplicator>());
+    }
+
+    /// <summary>The skill installer resolves to the importing installer.</summary>
+    [Fact]
+    public void AddTeamServices_ResolvesSkillInstaller()
+    {
+        using TempDataDir dataDir = new();
+        using ServiceProvider provider = BuildTeamProvider(dataDir);
+
+        Assert.IsType<Agency.Huddle.App.Teams.ImportingSkillInstaller>(provider.GetRequiredService<Agency.Huddle.App.Teams.ISkillInstaller>());
+    }
+
+    /// <summary>The skill downloader and the skill importer resolve from the container.</summary>
+    [Fact]
+    public void AddTeamServices_ResolvesSkillDownloaderAndImporter()
+    {
+        using TempDataDir dataDir = new();
+        using ServiceProvider provider = BuildTeamProvider(dataDir);
+
+        Assert.NotNull(provider.GetRequiredService<Agency.Huddle.App.Skills.SkillDownloader>());
+        Assert.NotNull(provider.GetRequiredService<Agency.Huddle.App.Skills.SkillImporter>());
+    }
+
+    /// <summary>The start gate resolves to the one persona supervisor.</summary>
+    [Fact]
+    public void AddTeamServices_ResolvesStartGateAsTheSupervisor()
+    {
+        using TempDataDir dataDir = new();
+        using ServiceProvider provider = BuildTeamProvider(dataDir);
+
+        Assert.Same(provider.GetRequiredService<PersonaSupervisor>(), provider.GetRequiredService<Agency.Huddle.App.Teams.IPersonaStartGate>());
+    }
+
+    /// <summary>The role hirer and the hire context it needs resolve from the container.</summary>
+    [Fact]
+    public void AddTeamServices_ResolvesRoleHirerAndHireContext()
+    {
+        using TempDataDir dataDir = new();
+        using ServiceProvider provider = BuildTeamProvider(dataDir);
+
+        Assert.NotNull(provider.GetRequiredService<Agency.Huddle.App.Teams.IHireContext>());
+        Assert.NotNull(provider.GetRequiredService<Agency.Huddle.App.Teams.RoleHirer>());
+    }
+
+    /// <summary>The skill pack store resolves from the container with the real embedded built-ins.</summary>
+    [Fact]
+    public void AddTeamServices_ResolvesSkillPackStore()
+    {
+        using TempDataDir dataDir = new();
+        var configuration = new ConfigurationBuilder()
+            .AddInMemoryCollection(new Dictionary<string, string?> { ["Team:DataDir"] = dataDir.Path })
+            .Build();
+        var services = new ServiceCollection();
+        services.AddLogging();
+        services.AddTeamServices(configuration);
+        using var provider = services.BuildServiceProvider();
+
+        var store = provider.GetRequiredService<Agency.Huddle.App.TeamTypes.SkillPackStore>();
+
+        Assert.Empty(store.Problems);
+    }
+
     /// <summary>
     /// The negative case: a configuration that never mentions the old key must compose normally,
     /// so the guard above cannot be a false positive for every other test in the suite that calls

@@ -178,6 +178,14 @@ internal sealed class DotAcpAgentHostFactory : IAgentHostFactory
             readSkillTool,
             ActivatorUtilities.CreateInstance<ValidateTeammateTool>(this.serviceProvider),
             ActivatorUtilities.CreateInstance<ProposeTeammatesTool>(this.serviceProvider, agentId),
+            ActivatorUtilities.CreateInstance<ProposeSprintTool>(this.serviceProvider, agentId),
+            ActivatorUtilities.CreateInstance<ListTeamsTool>(this.serviceProvider, agentId),
+            ActivatorUtilities.CreateInstance<FileRequestTool>(this.serviceProvider, agentId),
+            ActivatorUtilities.CreateInstance<TriageRequestTool>(this.serviceProvider, agentId),
+            ActivatorUtilities.CreateInstance<ConfirmRequestTool>(this.serviceProvider, agentId),
+            ActivatorUtilities.CreateInstance<ReadRecordsTool>(this.serviceProvider, agentId),
+            ActivatorUtilities.CreateInstance<ProposeRetroChangesTool>(this.serviceProvider, agentId),
+            ActivatorUtilities.CreateInstance<MarkRetroRowTool>(this.serviceProvider, agentId),
         ];
 
         // Spec §11.1: the six Task tools are not in SkillGrants.Grantable, so every Persona gets
@@ -195,6 +203,7 @@ internal sealed class DotAcpAgentHostFactory : IAgentHostFactory
                 ActivatorUtilities.CreateInstance<UpdateTaskTool>(this.serviceProvider, agentId),
                 ActivatorUtilities.CreateInstance<CloseTaskTool>(this.serviceProvider, agentId),
                 ActivatorUtilities.CreateInstance<ReopenTaskTool>(this.serviceProvider, agentId),
+                ActivatorUtilities.CreateInstance<AddEvidenceTool>(this.serviceProvider, agentId),
             ];
         }
 
@@ -281,6 +290,8 @@ internal sealed class DotAcpAgentHostFactory : IAgentHostFactory
             }
             : null;
 
+        PersonaStore personaStore = this.serviceProvider.GetRequiredService<PersonaStore>();
+
         return new DotAcpPersonaHost(
             innerHost,
             toolServer,
@@ -303,6 +314,15 @@ internal sealed class DotAcpAgentHostFactory : IAgentHostFactory
             toolServer.Endpoint,
             meta,
             this.loggerFactory,
-            this.workModePolicy);
+            this.workModePolicy,
+            () => parsed is null
+                ? null
+                : RoleBlockBuilder.Build(
+                    parsed,
+                    skillResolution.Skills,
+                    this.teamCatalog,
+                    personaStore.Get,
+                    Path.GetFullPath(Path.Combine(this.options.DataDir, this.options.Teams.Dir))),
+            this.serviceProvider.GetService<IMergeGate>());
     }
 }

@@ -186,6 +186,47 @@ public sealed class TeamCatalogBuildTests
         Assert.Equal(Business_A_B_True, Describe(result));
     }
 
+    /// <summary>A Team with a parsed team file exposes its type, manager, workspace and owns; the file is matched to the Team ignoring case.</summary>
+    [Fact]
+    public void Build_TeamWithTeamFile_ExposesTheTeamCard()
+    {
+        IReadOnlyList<TeamFolder> folders = [new("Business", (IReadOnlyList<string>)[], false)];
+        Dictionary<string, TeamFile> teamFiles = new(StringComparer.Ordinal)
+        {
+            ["business"] = new TeamFile(new VersionedRef("development", "1"), "Ada", "work/biz", "Invoices", "Process.md", string.Empty)
+        };
+
+        IReadOnlyList<TeamSummary> result = TeamCatalog.Build([], [], folders, teamFiles);
+
+        TeamSummary summary = Assert.Single(result);
+        Assert.Equal(new VersionedRef("development", "1"), summary.TeamType);
+        Assert.Equal("Ada", summary.Manager);
+        Assert.Equal("work/biz", summary.Workspace);
+        Assert.Equal("Invoices", summary.Owns);
+    }
+
+    /// <summary>A Team with no team file has null for all four card fields.</summary>
+    [Fact]
+    public void Build_TeamWithoutTeamFile_HasNullCardFields()
+    {
+        IReadOnlyList<TeamFolder> folders = [new("Business", (IReadOnlyList<string>)[], false), new("Ops", (IReadOnlyList<string>)[], false)];
+        Dictionary<string, TeamFile> teamFiles = new(StringComparer.OrdinalIgnoreCase)
+        {
+            ["Ops"] = new TeamFile(new VersionedRef("development", "1"), null, null, null, "Process.md", string.Empty)
+        };
+
+        IReadOnlyList<TeamSummary> result = TeamCatalog.Build([], [], folders, teamFiles);
+
+        TeamSummary business = result[0];
+        Assert.Equal("Business", business.Name);
+        Assert.Null(business.TeamType);
+        Assert.Null(business.Manager);
+        Assert.Null(business.Workspace);
+        Assert.Null(business.Owns);
+        Assert.Equal(new VersionedRef("development", "1"), result[1].TeamType);
+        Assert.Null(result[1].Manager);
+    }
+
     private static string[] Describe(IReadOnlyList<TeamSummary> teams)
     {
         return teams.Select(

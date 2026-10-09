@@ -54,6 +54,17 @@ namespace Agency.Huddle.App.Acp;
 /// <see langword="null"/> default exists only so every existing positional construction of this
 /// record keeps compiling.
 /// </param>
+/// <param name="Role">
+/// The team-type role this Persona was hired as, from the reserved <c>_role</c> key, or
+/// <see langword="null"/> when absent or unparseable (a hand-edited file stays loadable).
+/// </param>
+/// <param name="Packs">
+/// The skill packs this Persona was hired with, from the reserved <c>_packs</c> key. Never
+/// <see langword="null"/> once read through <see cref="PersonaFrontmatter.TryReadIdentity(string, out PersonaIdentity?, out string)"/>.
+/// </param>
+/// <param name="ConsultWhen">
+/// The <c>consult_when</c> job-description line to write when composing a new file, or <see langword="null"/> to omit it. Write-side only: reading a file leaves it <see langword="null"/>, because the line is an ordinary job-description field there.
+/// </param>
 public sealed record PersonaIdentity(
     string Name,
     string Title,
@@ -62,4 +73,7 @@ public sealed record PersonaIdentity(
     string? Adapter = null,
     IReadOnlyList<string>? Skills = null,
     string? Builtin = null,
-    IReadOnlyList<string>? Watches = null);
+    IReadOnlyList<string>? Watches = null,
+    Agency.Huddle.App.Teams.RoleRef? Role = null,
+    IReadOnlyList<Agency.Huddle.App.Teams.VersionedRef>? Packs = null,
+    string? ConsultWhen = null);

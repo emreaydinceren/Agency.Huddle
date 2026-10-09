@@ -16,4 +16,9 @@ namespace Agency.Huddle.App.Teammates;
 /// A single line saying when to bring this Teammate in, or <see langword="null"/> when the
 /// Candidate left it out or left it blank.
 /// </param>
-public sealed record Candidate(string Name, string Alias, string Title, string Body, IReadOnlyList<string> Teams, string? ConsultWhen);
+/// <param name="Role">
+/// A team type role as <c>&lt;typeId&gt;/&lt;roleId&gt;</c>, or <see langword="null"/> for a plain
+/// Candidate. A Candidate with a role is hired from the role's template, so it carries the role's
+/// skills, packs and model tier (HR-13); the role is a reference, not a way to set those fields.
+/// </param>
+public sealed record Candidate(string Name, string Alias, string Title, string Body, IReadOnlyList<string> Teams, string? ConsultWhen, string? Role = null);

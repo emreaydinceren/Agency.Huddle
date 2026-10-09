@@ -250,8 +250,9 @@ internal sealed class CreateTaskTool(
         {
             TaskResult.Saved saved => this.BuildSuccessText(saved, actor),
             TaskResult.Refused refused => string.Join('\n', refused.Problems),
+            TaskResult.GateRefused gateRefused => gateRefused.Message,
 
-            // CreateCore (TaskService.cs) returns only Refused or Saved - or throws, caught above by
+            // CreateCore (TaskService.cs) returns only Refused, GateRefused or Saved - or throws, caught above by
             // TryRun - so Unchanged, Conflict and NotFound are all impossible from Create.
             _ => throw new UnreachableException("create_task's TaskService.Create returns only Refused or Saved; every other TaskResult case is impossible here."),
         };

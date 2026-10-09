@@ -1,0 +1,33 @@
+@using System.Globalization
+@using Agency.Huddle.App.Data
+@inject PersonaSpendStore Store
+
+@*
+    Task 33 (NF-6): the Team's persisted spend, the sum over its members of what the spend store holds,
+    one amount per currency. Nothing is drawn when nothing was spent.
+*@
+
+@if (this.totals.Count > 0)
+{
+    <MudStack Row="true" Spacing="1" Class="team-spend">
+        <MudText Typo="Typo.caption">Spent</MudText>
+        @foreach (StoredSpend amount in this.totals)
+        {
+            <MudText Typo="Typo.caption" Class="team-spend-amount">@($"{amount.Amount.ToString("N3", CultureInfo.InvariantCulture)} {amount.Currency}")</MudText>
+        }
+    </MudStack>
+}
+
+@code {
+    private IReadOnlyList<StoredSpend> totals = [];
+
+    /// <summary>The names of the Team's members.</summary>
+    [Parameter]
+    public IReadOnlyList<string> Members { get; set; } = [];
+
+    /// <inheritdoc />
+    protected override void OnParametersSet()
+    {
+        this.totals = this.Store.ForPersonas(this.Members);
+    }
+}

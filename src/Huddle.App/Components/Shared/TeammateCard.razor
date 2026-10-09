@@ -39,6 +39,7 @@
 @using Agency.Huddle.App.Avatars
 @using Agency.Huddle.App.Pipes
 @using Agency.Huddle.App.Skills
+@using Agency.Huddle.App.TeamTypes
 @using Agency.Huddle.App.Teammates
 @using System.Diagnostics
 @using System.Diagnostics.CodeAnalysis
@@ -57,6 +58,10 @@
 @inject AvatarStore Avatars
 @inject SkillStore Skills
 @inject BuiltinTeammateReset Reset
+@* Resolved by hand, not injected: the team-type catalog and pack store only matter to a Teammate hired
+   from a role, and a card opened in a host that registers neither (a Teammates page without Teams) must
+   keep rendering exactly as before. *@
+@inject IServiceProvider Services
 
 <MudDialog>
     <TitleContent>
@@ -115,6 +120,14 @@
                         {
                             <MudText Typo="Typo.body2" Class="mud-text-secondary teammate-card-spend">Spent since start: @amount.Amount.ToString("N3", CultureInfo.CurrentCulture) @amount.Currency</MudText>
                         }
+                        @* NF-6: the lasting total, kept across restarts, for a Teammate hired from a role. *@
+                        @if (this.roleRef is not null)
+                        {
+                            @foreach (var persisted in this.Spend.GetPersisted(this.name))
+                            {
+                                <MudText Typo="Typo.body2" Class="mud-text-secondary teammate-card-spend-total">Total spent: @persisted.Amount.ToString("N3", CultureInfo.CurrentCulture) @persisted.Currency</MudText>
+                            }
+                        }
                         @* What this Teammate's Adapter lets a Human run, one line each, in the Adapter's own words.
                            Razor encodes the description, so it is shown as text, never as Markdown or markup. Absent
                            (no heading either) when it offers nothing, which is every Teammate on a stock install. *@
@@ -131,6 +144,12 @@
                 </div>
             }
         </MudStack>
+
+        @* NF-1: the role and version this Teammate was hired from. Absent for a Teammate with no _role. *@
+        @if (this.roleRef is not null)
+        {
+            <MudText Typo="Typo.body2" Class="mud-text-secondary mb-2 teammate-card-role">Role: @this.roleRef</MudText>
+        }
 
         @if (this.mode == TeammateCardMode.View)
         {
@@ -322,6 +341,7 @@
                     <MudSelectItem T="string" Value="@skill.Name">
                         <MudText>@skill.Name</MudText>
                         <MudText Typo="Typo.caption" Class="mud-text-secondary">@skill.Description</MudText>
+                        <SkillProvenanceLine Skill="@skill" />
                     </MudSelectItem>
                 }
             </MudSelect>
@@ -338,6 +358,34 @@
                         <MudChip T="string" Color="Color.Warning" OnClose="@(() => this.RemoveSkill(missing))">@missing</MudChip>
                     }
                 </MudStack>
+            }
+
+            @* MS-4: the packs this role offers. Clicking one adds or removes its skills and its consultWhenAdds
+               clause, so the manager who reads the public job description knows to route that work here. *@
+            @if (this.rolePacks.Count > 0)
+            {
+                <MudText Typo="Typo.overline">Packs</MudText>
+                <MudStack Row="true" Spacing="1" Wrap="Wrap.Wrap" Class="mb-4">
+                    @foreach (var pack in this.rolePacks)
+                    {
+                        var active = this.IsPackActive(pack);
+                        <MudChip T="string" Class="teammate-card-pack" Color="@(active ? Color.Primary : Color.Default)"
+                                 Variant="@(active ? Variant.Filled : Variant.Outlined)" aria-pressed="@(active ? "true" : "false")"
+                                 OnClick="@(() => this.TogglePack(pack))">@pack.Title</MudChip>
+                    }
+                </MudStack>
+            }
+
+            @* PR-2: a manager's Complete Setup panel adds the Process step. *@
+            @if (this.managedTeam is { } processTeam)
+            {
+                <ProcessStep Team="@processTeam" />
+            }
+
+            @* MS-5: too many skills, or two sharing a catalog Sub Category. *@
+            @foreach (var warning in this.SetupWarnings.Skills)
+            {
+                <MudAlert Severity="Severity.Warning" Dense="true" Class="mb-4 teammate-card-warning" role="status">@warning</MudAlert>
             }
 
             @* @bind-Value, not @oninput: MudSelect raises its ValueChanged on selection, the same
@@ -391,6 +439,12 @@
                     <MudSelectItem T="string" Value="@choice.Id">@choice.Name</MudSelectItem>
                 }
             </MudSelect>
+
+            @* MS-3: a vendor shared with a role this one must differ from. *@
+            @foreach (var warning in this.SetupWarnings.Model)
+            {
+                <MudAlert Severity="Severity.Warning" Dense="true" Class="mt-4 teammate-card-warning" role="status">@warning</MudAlert>
+            }
 
             @* ADR-0033. Same role="status" reasoning as the notes above: a consequence of what the Human
                just did, never role="alert". Its own note, rather than a third clause in the Model/Effort
@@ -713,6 +767,7 @@
         this.workMode = this.WorkMode;
         this.adapter = this.Adapter;
         this.skills = ReadSkills(this.text);
+        this.ResolveRole();
         this.SeedAvatarEditorState();
         this.roomId = this.RoomId;
         this.filePath = this.FilePath;
@@ -1484,6 +1539,139 @@
     {
         this.skills = [.. this.skills.Where(existing => !string.Equals(existing, name, StringComparison.Ordinal))];
         this.text = PersonaFrontmatter.WriteListField(this.text, "skills", this.skills);
+    }
+
+    /// <summary>The role this Teammate was hired as (<c>_role</c>), or <see langword="null"/> for a Teammate hired by hand.</summary>
+    private Agency.Huddle.App.Teams.RoleRef? roleRef;
+
+    /// <summary>The team-type role <see cref="roleRef"/> names, or <see langword="null"/> when the catalog is absent or no longer defines it.</summary>
+    private RoleSpec? roleSpec;
+
+    /// <summary>The packs the catalog offers this role; empty without a <see cref="roleSpec"/>.</summary>
+    private IReadOnlyList<SkillPack> rolePacks = [];
+
+    /// <summary>Reads <c>_role</c> from <see cref="text"/> and looks up its role and packs once, at open.</summary>
+    private void ResolveRole()
+    {
+        if (!PersonaFrontmatter.TryReadIdentity(this.text, out var identity, out _) || identity.Role is not { } role)
+        {
+            return;
+        }
+
+        this.roleRef = role;
+        this.roleSpec = this.Services.GetService<TeamTypeCatalog>()?.Find(role.TypeId)?.Roles
+            .FirstOrDefault(spec => string.Equals(spec.Id, role.RoleId, StringComparison.Ordinal));
+        if (this.roleSpec is not null)
+        {
+            this.rolePacks = this.Services.GetService<SkillPackStore>()?.ForRole(role.RoleId) ?? [];
+        }
+
+        if (this.roleSpec is { Manager: true } && this.Services.GetService<Agency.Huddle.App.Library.ITeamFolders>() is { } folders)
+        {
+            this.managedTeam = this.Teams
+                .Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
+                .FirstOrDefault(team => string.Equals(folders.ReadTeamFile(team)?.Manager, this.Name, StringComparison.OrdinalIgnoreCase));
+        }
+    }
+
+    /// <summary>The Team this member manages, or <see langword="null"/> when the member's role is not the manager role (PR-2).</summary>
+    private string? managedTeam;
+
+    /// <summary>The packs recorded in <see cref="text"/> (<c>_packs</c>).</summary>
+    private IReadOnlyList<Agency.Huddle.App.Teams.VersionedRef> ActivePacks =>
+        PersonaFrontmatter.TryReadIdentity(this.text, out var identity, out _) ? identity.Packs ?? [] : [];
+
+    /// <summary>Whether <paramref name="pack"/> is recorded in <see cref="text"/>.</summary>
+    /// <param name="pack">The pack to look for.</param>
+    private bool IsPackActive(SkillPack pack) =>
+        this.ActivePacks.Any(active => string.Equals(active.Id, pack.Id, StringComparison.Ordinal));
+
+    /// <summary>
+    /// Adds or removes <paramref name="pack"/>: its skills, its <c>consultWhenAdds</c> clause in the
+    /// <c>consult_when</c> line, and its <c>_packs</c> entry (MS-4, MS-6). A skill the role itself carries,
+    /// or another active pack provides, stays when this pack is removed.
+    /// </summary>
+    /// <param name="pack">The pack to toggle.</param>
+    private void TogglePack(SkillPack pack)
+    {
+        bool removing = this.IsPackActive(pack);
+        List<Agency.Huddle.App.Teams.VersionedRef> active = [.. this.ActivePacks.Where(entry => !string.Equals(entry.Id, pack.Id, StringComparison.Ordinal))];
+        List<string> skillNames = [.. this.skills];
+        if (removing)
+        {
+            HashSet<string> kept = new(this.roleSpec?.Skills.Select(static skill => skill.Name) ?? [], StringComparer.Ordinal);
+            foreach (SkillPack other in active.Select(entry => this.rolePacks.FirstOrDefault(candidate => string.Equals(candidate.Id, entry.Id, StringComparison.Ordinal))).OfType<SkillPack>())
+            {
+                kept.UnionWith(other.Skills.Select(static skill => skill.Name));
+            }
+
+            skillNames.RemoveAll(name => !kept.Contains(name) && pack.Skills.Any(skill => string.Equals(skill.Name, name, StringComparison.Ordinal)));
+        }
+        else
+        {
+            active.Add(new Agency.Huddle.App.Teams.VersionedRef(pack.Id, pack.Version));
+            skillNames.AddRange(pack.Skills.Select(static skill => skill.Name).Where(name => !skillNames.Contains(name, StringComparer.Ordinal)));
+        }
+
+        string? existing = PersonaFrontmatter.Parse(this.text).Fields
+            .FirstOrDefault(static field => string.Equals(field.Key, "consult_when", StringComparison.OrdinalIgnoreCase))?.Value;
+        List<string> clauses = [.. (existing ?? string.Empty).Split("; ", StringSplitOptions.TrimEntries | StringSplitOptions.RemoveEmptyEntries)];
+        string clause = pack.ConsultWhenAdds.Trim();
+        if (removing)
+        {
+            clauses.RemoveAll(entry => string.Equals(entry, clause, StringComparison.Ordinal));
+        }
+        else if (clause.Length > 0 && !clauses.Contains(clause, StringComparer.Ordinal))
+        {
+            clauses.Add(clause);
+        }
+
+        this.skills = skillNames;
+        string updated = PersonaFrontmatter.WriteListField(this.text, "skills", this.skills);
+        updated = PersonaFrontmatter.WriteListField(updated, "_packs", [.. active.Select(static entry => entry.ToString())]);
+        if (existing is not null || clauses.Count > 0)
+        {
+            updated = PersonaFrontmatter.WriteScalarField(updated, "consult_when", string.Join("; ", clauses));
+        }
+
+        this.text = updated;
+    }
+
+    /// <summary>
+    /// The MS-3 and MS-5 warnings for this Teammate against the rest of its Team: <c>Model</c> holds the
+    /// shared-vendor ones, <c>Skills</c> the skill-count and Sub Category ones. The Sub Category of a skill
+    /// comes from the skills catalog index; without one registered no two skills are reported as sharing one.
+    /// </summary>
+    private (IReadOnlyList<string> Model, IReadOnlyList<string> Skills) SetupWarnings
+    {
+        get
+        {
+            if (this.roleRef is null || this.roleSpec is null)
+            {
+                return ([], []);
+            }
+
+            IReadOnlyList<string> teamNames = TeammateCard.ParseTeams(this.teams);
+            List<Agency.Huddle.App.Teams.MemberView> members = [];
+            foreach (PersonaEntry entry in this.Personas.Entries)
+            {
+                if (!string.Equals(entry.Name, this.persistedName, StringComparison.Ordinal)
+                    && entry.Teams.Any(team => teamNames.Contains(team, StringComparer.OrdinalIgnoreCase))
+                    && PersonaFrontmatter.TryReadIdentity(entry.Text, out var other, out _)
+                    && other.Role is { } otherRole)
+                {
+                    members.Add(new Agency.Huddle.App.Teams.MemberView(entry.Name, otherRole.RoleId, entry.Adapter, entry.Skills ?? []));
+                }
+            }
+
+            Agency.Huddle.App.Teams.MemberView self = new(this.name, this.roleRef.RoleId, this.adapter, this.skills);
+            Func<string, string?> subCategoryOf = this.Services.GetService<Agency.Huddle.App.Skills.SkillsCatalogIndex>() is { } catalog
+                ? catalog.SubCategoryOf
+                : static _ => null;
+            IReadOnlyList<string> vendorOnly = Agency.Huddle.App.Teams.MemberWarnings.For(self with { Skills = [] }, this.roleSpec, members, subCategoryOf);
+            IReadOnlyList<string> all = Agency.Huddle.App.Teams.MemberWarnings.For(self, this.roleSpec, members, subCategoryOf);
+            return (vendorOnly, [.. all.Where(warning => !vendorOnly.Contains(warning, StringComparer.Ordinal))]);
+        }
     }
 
     private async Task OnModelChangedAsync(string value)

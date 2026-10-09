@@ -1,3 +1,4 @@
+using System.Text;
 using System.Text.Json;
 using Agency.Huddle.Acp.Abstractions;
 
@@ -36,15 +37,113 @@ namespace Agency.Huddle.App.Acp;
 /// that redirects into the same directory is not caught, and pretending otherwise by pattern-matching
 /// shell text would give a false sense of a boundary that is not there.
 /// </para>
+/// <para>
+/// The one shell command it does read is <c>git merge</c> / <c>git push</c>, and only to ask the optional
+/// <see cref="IMergeGate"/> whether the Team's <c>checks-before-merge</c> gate lets it run (PR-7). The
+/// match is a convenience guard for an Agent that follows the process, not a boundary. It catches the
+/// command at the start of a segment split on <c>&amp;&amp;</c>, <c>||</c>, <c>;</c>, <c>|</c> and newlines,
+/// after git's own <c>-C</c>/<c>-c</c>/<c>--option</c> flags, case-insensitively, with <c>git.exe</c> and
+/// quoted words accepted. It does NOT catch: a shell alias or git alias for push or merge, an
+/// environment-variable prefix (<c>FOO=1 git push</c>), <c>command git push</c>, <c>sudo</c>, a command
+/// wrapped in <c>bash -c "..."</c>, <c>$(...)</c> or backticks, a script that runs the push, a push made
+/// by another tool (an IDE, <c>gh</c>), or a command in an Adapter work mode that never asks permission.
+/// The Human's own approval of a prompt is never intercepted: only the Agent's requests are answered here.
+/// </para>
 /// </remarks>
 /// <param name="protectedDirectory">
 /// The directory to refuse writes into, already absolute. Passed in rather than read from the
 /// environment here so a test can point it somewhere harmless.
 /// </param>
 /// <param name="logger">Records each refusal; without a line here the refusal is as invisible as the write was.</param>
-internal sealed class WorkDirPermissionHandler(string protectedDirectory, ILogger<WorkDirPermissionHandler> logger)
+/// <param name="mergeGate">Decides <c>git merge</c> and <c>git push</c>; <see langword="null"/> leaves them approved.</param>
+/// <param name="personaName">The Persona this handler answers for, passed to <paramref name="mergeGate"/>.</param>
+internal sealed class WorkDirPermissionHandler(
+    string protectedDirectory,
+    ILogger<WorkDirPermissionHandler> logger,
+    IMergeGate? mergeGate = null,
+    string personaName = "")
     : IPermissionHandler
 {
+    /// <summary>Argument names that carry a shell command in the tool calls this application sees.</summary>
+    private static readonly string[] CommandArgumentNames = ["command", "cmd"];
+
+    /// <summary>
+    /// Splits one shell line into commands of words. A word may be wrapped in double or single quotes (so a quoted
+    /// path with spaces stays one word, and a separator inside quotes does not split); commands end at <c>;</c>,
+    /// <c>&amp;</c>, <c>|</c> (so also <c>&amp;&amp;</c> and <c>||</c>), parentheses and line breaks. Still not handled:
+    /// backslash escapes, <c>$(…)</c> or backtick substitution, here-documents and aliases, so a hostile spelling
+    /// can still pass; the gate is a guard against honest mistakes, not a sandbox.
+    /// </summary>
+    /// <param name="command">The shell command line.</param>
+    /// <returns>One word list per command, in order.</returns>
+    private static List<List<string>> SplitSegments(string command)
+    {
+        List<List<string>> segments = [];
+        List<string> words = [];
+        StringBuilder word = new();
+        bool inWord = false;
+        char quote = '\0';
+
+        void EndWord()
+        {
+            if (inWord)
+            {
+                words.Add(word.ToString());
+                word.Clear();
+                inWord = false;
+            }
+        }
+
+        void EndSegment()
+        {
+            EndWord();
+            if (words.Count > 0)
+            {
+                segments.Add(words);
+                words = [];
+            }
+        }
+
+        foreach (char c in command)
+        {
+            if (quote != '\0')
+            {
+                if (c == quote)
+                {
+                    quote = '\0';
+                }
+                else
+                {
+                    word.Append(c);
+                }
+            }
+            else if (c is '"' or '\'')
+            {
+                quote = c;
+                inWord = true;
+            }
+            else if (c is ' ' or '\t')
+            {
+                EndWord();
+            }
+            else if (c is ';' or '&' or '|' or '(' or ')' or '\r' or '\n')
+            {
+                EndSegment();
+            }
+            else
+            {
+                word.Append(c);
+                inWord = true;
+            }
+        }
+
+        EndSegment();
+        return segments;
+    }
+
+    /// <summary>Git options that consume the next word.</summary>
+    private static readonly string[] GitOptionsWithValue = ["-C", "-c", "--git-dir", "--work-tree", "--namespace"];
+
     /// <summary>
     /// Argument names that carry a filesystem path in the tool calls this application sees. Matched
     /// case-insensitively against the tool call's raw input.
@@ -75,8 +174,104 @@ internal sealed class WorkDirPermissionHandler(string protectedDirectory, ILogge
             return Task.FromResult(Refuse(context.Options));
         }
 
+        if (mergeGate is not null
+            && ReadCommand(context.ToolCall) is { } command
+            && IsMergeOrPush(command)
+            && mergeGate.RefusalFor(personaName, command) is { } reason)
+        {
+            logger.LogWarning(
+                "Refused '{Command}' for '{PersonaName}': {Reason}",
+                command,
+                personaName,
+                reason);
+
+            return Task.FromResult(Refuse(context.Options));
+        }
+
         return Task.FromResult(Approve(context.Options));
     }
+
+    /// <summary>Reads the shell command out of a tool call's raw input.</summary>
+    /// <param name="toolCall">The call the Agent is asking permission for.</param>
+    /// <returns>The command text, or <see langword="null"/> when the input carries none or is not JSON.</returns>
+    private static string? ReadCommand(ToolCallInfo toolCall)
+    {
+        if (toolCall.RawInputJson is not { Length: > 0 } json)
+        {
+            return null;
+        }
+
+        try
+        {
+            using JsonDocument document = JsonDocument.Parse(json);
+            if (document.RootElement.ValueKind != JsonValueKind.Object)
+            {
+                return null;
+            }
+
+            foreach (string name in CommandArgumentNames)
+            {
+                if (document.RootElement.TryGetProperty(name, out JsonElement value)
+                    && value.ValueKind == JsonValueKind.String
+                    && value.GetString() is { Length: > 0 } command)
+                {
+                    return command;
+                }
+            }
+        }
+        catch (JsonException)
+        {
+            // Not something this type can judge; approving matches the "identify positively" rule above.
+        }
+
+        return null;
+    }
+
+    /// <summary>Whether any segment of the shell line is <c>git [options] merge|push</c>. See the remarks for what this misses.</summary>
+    /// <param name="command">The whole shell line.</param>
+    /// <returns><see langword="true"/> when a segment runs git merge or git push.</returns>
+    private static bool IsMergeOrPush(string command)
+    {
+        foreach (List<string> words in SplitSegments(command))
+        {
+            if (words.Count < 2 || !IsGit(Unquote(words[0])))
+            {
+                continue;
+            }
+
+            int index = 1;
+            while (index < words.Count && Unquote(words[index]).StartsWith('-'))
+            {
+                string option = Unquote(words[index]);
+                index += GitOptionsWithValue.Contains(option, StringComparer.Ordinal) ? 2 : 1;
+            }
+
+            if (index < words.Count)
+            {
+                string subcommand = Unquote(words[index]);
+                if (string.Equals(subcommand, "merge", StringComparison.OrdinalIgnoreCase)
+                    || string.Equals(subcommand, "push", StringComparison.OrdinalIgnoreCase))
+                {
+                    return true;
+                }
+            }
+        }
+
+        return false;
+    }
+
+    /// <summary>Whether the word names the git executable, with or without a directory or <c>.exe</c>.</summary>
+    /// <param name="word">The first word of a segment, unquoted.</param>
+    private static bool IsGit(string word)
+    {
+        string name = word[(word.LastIndexOfAny(['/', '\\']) + 1)..];
+        return string.Equals(name, "git", StringComparison.OrdinalIgnoreCase)
+            || string.Equals(name, "git.exe", StringComparison.OrdinalIgnoreCase);
+    }
+
+    /// <summary>Strips surrounding quote characters from a shell word.</summary>
+    /// <param name="word">The word.</param>
+    private static string Unquote(string word) => word.Trim('"', '\'');
 
     /// <summary>Picks a refusal option, preferring a one-time refusal, and cancels when none is offered.</summary>
     /// <param name="options">The options the Agent offered.</param>

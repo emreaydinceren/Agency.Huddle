@@ -1,3 +1,5 @@
+using Microsoft.Extensions.Configuration;
+using Agency.Huddle.App;
 using Agency.Huddle.App.Acp;
 
 namespace Agency.Huddle.Tests.Acp;
@@ -52,5 +54,51 @@ public sealed class AcpOptionsTests
         var options = new AcpOptions();
 
         Assert.True(options.AdvertiseElicitation);
+    }
+
+    /// <summary>
+    /// With no <c>Team:Acp</c> hire-limit keys configured, <see cref="AcpOptions.MaxTeammatesPerTeam"/>
+    /// is 8 and <see cref="AcpOptions.MaxLiveProcesses"/> is 16 (HR-10, decision D1).
+    /// </summary>
+    [Fact]
+    public void HireLimits_WhenAbsent_DefaultTo8And16()
+    {
+        TeamOptions teamOptions = BindTeamOptions(new Dictionary<string, string?>());
+
+        Assert.Equal(8, teamOptions.Acp.MaxTeammatesPerTeam);
+        Assert.Equal(16, teamOptions.Acp.MaxLiveProcesses);
+    }
+
+    /// <summary>
+    /// <c>Team:Acp:MaxTeammatesPerTeam</c> and <c>Team:Acp:MaxLiveProcesses</c> bind through
+    /// <c>ConfigurationBinder</c> onto <see cref="AcpOptions"/> as written (HR-10, decision D1).
+    /// </summary>
+    [Fact]
+    public void HireLimits_BoundFromConfiguration_ReadsConfiguredValues()
+    {
+        TeamOptions teamOptions = BindTeamOptions(new Dictionary<string, string?>
+        {
+            ["Team:Acp:MaxTeammatesPerTeam"] = "3",
+            ["Team:Acp:MaxLiveProcesses"] = "5",
+        });
+
+        Assert.Equal(3, teamOptions.Acp.MaxTeammatesPerTeam);
+        Assert.Equal(5, teamOptions.Acp.MaxLiveProcesses);
+    }
+
+    /// <summary>
+    /// Binds the given in-memory values onto a fresh <see cref="TeamOptions"/> the way the host does, under
+    /// the <c>Team</c> section.
+    /// </summary>
+    /// <param name="values">The configuration keys and values to bind.</param>
+    /// <returns>The bound options.</returns>
+    private static TeamOptions BindTeamOptions(IReadOnlyDictionary<string, string?> values)
+    {
+        IConfiguration configuration = new ConfigurationBuilder()
+            .AddInMemoryCollection(values)
+            .Build();
+        TeamOptions teamOptions = new();
+        configuration.GetSection(TeamOptions.SectionName).Bind(teamOptions);
+        return teamOptions;
     }
 }

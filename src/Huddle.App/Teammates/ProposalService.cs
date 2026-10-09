@@ -1,7 +1,7 @@
-using Microsoft.Extensions.Options;
 using Agency.Huddle.App.Acp;
 using Agency.Huddle.App.Data;
 using Agency.Huddle.App.Services;
+using Agency.Huddle.App.Teams;
 
 namespace Agency.Huddle.App.Teammates;
 
@@ -24,16 +24,18 @@ namespace Agency.Huddle.App.Teammates;
 /// ordinary Reply Gate - no bespoke delivery of this class's own.
 /// </param>
 /// <param name="directory">Resolves the Human's User, and the proposer's current Name, at post time.</param>
-/// <param name="options">Supplies <see cref="AcpOptions.MaxTeammates"/>.</param>
+/// <param name="hireLimits">Checks the Proposal against the per-Team and live-process hire limits.</param>
 /// <param name="logger">Used to log what an Approve did.</param>
+/// <param name="roleHirer">Hires a Candidate that carries a role from its team type; <see langword="null"/> when team types are not available, and such a Candidate is written as a plain one.</param>
 internal sealed partial class ProposalService(
     ProposalStore proposals,
     CandidateChecker checker,
     PersonaStore personas,
     ChatService chat,
     ITeamDirectory directory,
-    IOptions<TeamOptions> options,
-    ILogger<ProposalService> logger)
+    HireLimitGuard hireLimits,
+    ILogger<ProposalService> logger,
+    RoleHirer? roleHirer = null)
 {
     // Serialises Persona creation across every Proposal in the app - the same race
     // PersonaStore.Add's own writeGate closes for the Teammate card (Spec §6.10's implementation
@@ -62,14 +64,13 @@ internal sealed partial class ProposalService(
         }
 
         var mention = await this.ResolveMentionAsync(proposal.ProposerAgentId, ct);
-        var maxTeammates = options.Value.Acp.MaxTeammates;
-        var existingCount = personas.Entries.Count;
+        var refusal = hireLimits.Check(proposal.Candidates);
 
-        if (maxTeammates > 0 && existingCount + proposal.Candidates.Count > maxTeammates)
+        if (refusal is not null)
         {
-            var overLimitText = ProposalService.ComposeOverLimitText(existingCount, maxTeammates, proposal.Candidates.Count, mention);
+            var overLimitText = ProposalService.ComposeOverLimitText(refusal, proposal.Candidates.Count, mention);
             await this.PostOutcomeAsync(roomId, overLimitText, ct);
-            ProposalService.LogOverLimit(logger, roomId, proposal.Id, existingCount, maxTeammates, proposal.Candidates.Count);
+            ProposalService.LogOverLimit(logger, roomId, proposal.Id, refusal.Kind, refusal.Used, refusal.Limit, proposal.Candidates.Count);
             return new ProposalOutcome(ProposalOutcomeKind.OverLimit, [], [], overLimitText);
         }
 
@@ -85,6 +86,21 @@ internal sealed partial class ProposalService(
                 if (!check.IsValid)
                 {
                     failed.Add(new CandidateFailure(candidate.Name, check.Problems[0]));
+                    continue;
+                }
+
+                if (candidate.Role is not null && roleHirer is not null)
+                {
+                    HireResult hired = roleHirer.Hire(candidate);
+                    if (hired.PersonaName is not null)
+                    {
+                        created.Add(candidate.Name);
+                    }
+                    else
+                    {
+                        failed.Add(new CandidateFailure(candidate.Name, hired.Error ?? string.Empty));
+                    }
+
                     continue;
                 }
 
@@ -238,13 +254,14 @@ internal sealed partial class ProposalService(
     }
 
     /// <summary>Composes the OverLimit outcome text: nothing was attempted because the Proposal would have exceeded the limit.</summary>
-    /// <param name="existingCount">How many Teammates already exist.</param>
-    /// <param name="maxTeammates">The configured limit.</param>
+    /// <param name="refusal">The limit that refused, naming its kind, Team, usage and value.</param>
     /// <param name="addCount">How many Candidates this Proposal would have added.</param>
     /// <param name="mention">The proposer's Mention token, or <see langword="null"/> to omit it.</param>
-    private static string ComposeOverLimitText(int existingCount, int maxTeammates, int addCount, string? mention)
+    private static string ComposeOverLimitText(HireRefusal refusal, int addCount, string? mention)
     {
-        var body = $"Approved, but nothing was created: {existingCount} Teammates exist, the limit is {maxTeammates}, and this Proposal adds {addCount}.";
+        var body = refusal.Kind == HireLimitKind.PerTeam
+            ? $"Approved, but nothing was created: Team {refusal.Team} has {refusal.Used} Teammates, the limit is {refusal.Limit} per Team, and this Proposal adds {addCount}."
+            : $"Approved, but nothing was created: {refusal.Used} live processes are running, the limit is {refusal.Limit} live processes, and this Proposal adds {addCount}.";
         return mention is null ? body : $"{body} {mention}";
     }
 
@@ -273,11 +290,12 @@ internal sealed partial class ProposalService(
     /// <param name="logger">The logger to write to.</param>
     /// <param name="roomId">The Room the Proposal was approved in.</param>
     /// <param name="proposalId">The approved Proposal's id.</param>
-    /// <param name="existingCount">How many Teammates already existed.</param>
-    /// <param name="maxTeammates">The configured limit.</param>
+    /// <param name="kind">Which hire limit refused.</param>
+    /// <param name="used">How many members of the Team, or live processes, were already counted.</param>
+    /// <param name="limit">The limit that refused.</param>
     /// <param name="addCount">How many Candidates the Proposal would have added.</param>
-    [LoggerMessage(Level = LogLevel.Information, Message = "Approve for proposal {ProposalId} in room {RoomId} created nothing: {ExistingCount} teammate(s) exist, the limit is {MaxTeammates}, and the proposal adds {AddCount}.")]
-    private static partial void LogOverLimit(ILogger logger, string roomId, string proposalId, int existingCount, int maxTeammates, int addCount);
+    [LoggerMessage(Level = LogLevel.Information, Message = "Approve for proposal {ProposalId} in room {RoomId} created nothing: the {Kind} limit of {Limit} is reached at {Used}, and the proposal adds {AddCount}.")]
+    private static partial void LogOverLimit(ILogger logger, string roomId, string proposalId, HireLimitKind kind, int used, int limit, int addCount);
 
     /// <summary>Logs the result of a completed Approve.</summary>
     /// <param name="logger">The logger to write to.</param>

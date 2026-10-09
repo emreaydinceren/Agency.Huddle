@@ -273,7 +273,7 @@ All under the `Team:` section — `TeamOptions.cs`, `Acp/AcpOptions.cs`, `FileCh
 | `Acp:TeammatesDir` | `Teammates` | Relative to `DataDir`. One definition file per Teammate folder, scanned one level; the old `Acp:TeamsDir` key throws at startup rather than silently scanning nothing. |
 | `Acp:WorkDir` | `work` | The Work Dir sub-folder inside each Teammate folder. **It is a Teammate's durable memory**: Keepers and Specialists with a library store their notes there, so the app never deletes it, `-Clean` leaves it alone, and a removed Persona's folder is orphaned rather than deleted. Keep it that way. See [What a team is for](#what-a-team-is-for). |
 | `Acp:SkillsDir` | `Skills` | Relative to `DataDir`. Holds Skill folders: an override of a shipped Skill, file by file, or a Skill written by hand. Created at startup. See [ADR-0021](adr/0021-a-skill-is-know-how-an-agent-reads-on-demand.md). |
-| `Acp:MaxTeammates` | `8` | The most Personas the library may hold before `propose_teammates` refuses a Proposal and Approve creates nothing. Counts every loaded Persona, not only proposed ones; rejected files do not count. Checked when an Agent proposes and again at Approve, never on the Teammate card. Zero or less disables it. Exists because every Teammate is a process. |
+| `Acp:MaxTeammates` | `8` | **Retired.** Still bound so an old configuration loads, but no code enforces it. The caps are now per Team (`Team:Acp:MaxTeammatesPerTeam`) and per installation (`Team:Acp:MaxLiveProcesses`). |
 | `Acp:TraceWire` | `false` | **Dumps the bearer token.** Debugging only. |
 | `Acp:CatchUpMessages` | `20` | Per-Room catch-up buffer size, used on every Turn after a Room Session's first. |
 | `Acp:TokenBudget` | `1000000` | Per-Persona token Budget, summed from the rises in `UsageUpdated.Used` across every Room Session, and reset by any Human Message. Catches a loop that mints fresh Rooms, which the per-Room Budget cannot. Zero or less disables it. |
@@ -299,8 +299,11 @@ All under the `Team:` section — `TeamOptions.cs`, `Acp/AcpOptions.cs`, `FileCh
 | `FileChanges:MaxListed` | `50` | The most File Changes lines listed per Turn, across every Watched Folder. |
 | `FileChanges:MaxMemoryEntries` | `100` | The most Memory lines shown in a new session's system prompt; the rest are counted rather than listed. |
 | `Tasks:Enabled` | `true` | `false` hides the UI, offers no tools and wakes no one. The Task files stay where they are. |
-| `Teams:Dir` | `Teams` | Team folders, relative to `DataDir`. Shared with Tasks, and replaces `Tasks:Dir`. |
+| `Team:Teams:Dir` | `Teams` | Team folders, relative to `DataDir`. Shared with Tasks, and replaces `Tasks:Dir`. Must not overlap `Team:Acp:TeammatesDir`; start-up refuses it otherwise (`LayoutGuard`). |
 | `Team:Teams:MaxMemoryEntries` | `50` | The cap on Team Memory entries indexed into a member's system prompt at session start, across all of a Persona's Teams; the rest are counted rather than listed. Spec §7.3. |
+| `Team:Teams:Tiers:<adapterId>:<tier>` | none | The model id for each model tier (`strongest`, `balanced` or `fast`) on each Adapter, such as `Team:Teams:Tiers:agency-local:strongest`. An Adapter with no entry for a tier uses its default model. With no `Tiers` key at all, every hire card shows **Needs setup**. |
+| `Team:Acp:MaxTeammatesPerTeam` | `8` | The most Teammates one Team may hold. A hire that would take the Team past it is refused. Zero or less disables the limit. (HR-10, decision D1.) |
+| `Team:Acp:MaxLiveProcesses` | `16` | The most live Teammate processes this installation runs across every Team. A hire that would take the live count past it is refused. Zero or less disables the limit. (HR-10, decision D1.) |
 | `Tasks:WakeEnabled` | `true` | `false` keeps Tasks but never wakes anyone. |
 | `Tasks:WakeCoalesceSeconds` | `5` | How long a Task's changes are coalesced before one wake-up is sent. `0` wakes on every change. |
 | `Tasks:AgentWakeBudget` | `10` | The most Agent-made wakes one Task allows before pausing. `0` or less disables the per-Task budget. |
@@ -327,7 +330,7 @@ An installation running `agency-acp`, unverified for resume or for several sessi
 ```
 
 Four runtime files and two runtime directories sit outside that section, because none of
-them is a setting: the Persona library under `{DataDir}/{Acp:TeamsDir}`,
+them is a setting: the Persona library under `{DataDir}/{Acp:TeammatesDir}`,
 `{DataDir}/prompts.json`, `{DataDir}/appearance.json`, `{DataDir}/avatars.json`,
 `{DataDir}/sprints.md`, the uploaded avatar images under `{DataDir}/avatars/`, and
 Skill folders under `{DataDir}/Skills/`.
@@ -339,6 +342,9 @@ Skill folders under `{DataDir}/Skills/`.
 | `{DataDir}/avatars.json` | One entry per Teammate that has chosen an **Avatar**, keyed by Name — the Human included, since the Human has a Name but no Persona file. **Overrides only**, exactly like `prompts.json`: an absent file is normal, the app does not create it, and a Teammate with no entry renders the initials it always did. Hand-editable and watched. Deliberately not part of the Persona, so changing an avatar never restarts a session ([ADR-0019](adr/0019-an-avatar-is-chosen-and-is-not-part-of-the-persona.md)). |
 | `{DataDir}/sprints.md` | The list of Sprints: one line per Sprint with id and name, created when a Task is assigned to a new Sprint and removed when the last Task leaves it. Hand-editable; a rename is propagated to every Task without rewriting the file. See [Huddle.Sprints-Specifications.md](Huddle.Sprints-Specifications.md) (Spec §6, §8). |
 | `{DataDir}/avatars/` | The uploaded avatar images themselves, each named by a generated id rather than by a Teammate's Name. Served at `/teammate-avatars` by a `PhysicalFileProvider` — `MapStaticAssets` is manifest-driven and cannot see a file written at run time. Created at startup, unlike the JSON files, because a `PhysicalFileProvider` throws when its root is missing. |
+| `{DataDir}/TeamTypes/` | **Overrides and additions only**, one folder per team type id. A folder here with the id of a built-in type replaces it. Created by the Custom role's "Save for next time". See [ADR-0038](adr/0038-team-types-are-data-in-json-and-markdown-files.md). |
+| `{DataDir}/SkillPacks/` | Team Skill packs the user adds, as `*.json` files beside the built-in ones. |
+| `{DataDir}/connectors.json` | The connectors that are connected, such as `{"connected": ["email:read"]}`. Read on every check; a missing or malformed file means none is connected. |
 | `{DataDir}/Skills/` | **Overrides and additions only.** A shipped Skill such as `team-building` lives in code as embedded resources; a folder here with the same name overrides it file by file (Source *Overridden*), and a folder with a new name is a Skill of the Human's own (*Yours*). An override whose `SKILL.md` is invalid falls back to the shipped one with a Warning; an invalid new Skill is left out. Watched: an edited file is what the next `read_skill` returns, while a changed name or description reaches a Teammate's system prompt only at its next session. Created at startup, because its watcher throws when the root is missing. Settings › Skills lists it and restores a default by deleting the override folder. |
 | `prompts.default.json` (beside the binary) | Every Prompt's shipped wording, **generated** from `PromptCatalog` and copied to the output folder. The restore source, and readable as a reference. It is not the authority: delete both files and the app still runs on exactly the text it shipped with. |
 

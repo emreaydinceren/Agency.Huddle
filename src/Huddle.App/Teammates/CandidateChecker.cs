@@ -3,6 +3,8 @@ using Agency.Huddle.App.Acp;
 using Agency.Huddle.App.Data;
 using Agency.Huddle.App.Pipes;
 using Agency.Huddle.App.Services;
+using Agency.Huddle.App.TeamTypes;
+using Agency.Huddle.App.Teams;
 using Agency.Huddle.Contracts;
 
 namespace Agency.Huddle.App.Teammates;
@@ -23,7 +25,12 @@ namespace Agency.Huddle.App.Teammates;
 /// §6.8's "Each text gets a synthetic path"), rewritten to name that Candidate instead. Neither a
 /// synthetic path nor an absolute one is ever model-facing text on its own.
 /// </remarks>
-internal sealed partial class CandidateChecker(PersonaStore personas, ITeamDirectory directory, IAgentGateway gateway)
+internal sealed partial class CandidateChecker(
+    PersonaStore personas,
+    ITeamDirectory directory,
+    IAgentGateway gateway,
+    TeamTypeCatalog? types = null,
+    ITeamCatalog? teams = null)
 {
     private const string FrontmatterDelimiter = "---";
 
@@ -73,6 +80,7 @@ internal sealed partial class CandidateChecker(PersonaStore personas, ITeamDirec
         {
             await this.AddReservedNameProblemsAsync(candidate, human, problems, ct);
             this.AddFileExistsProblem(candidate, problems);
+            this.AddRoleProblems(candidate, problems);
         }
 
         // Spec §6.8's own note: "If one collision produces the same message for several
@@ -171,6 +179,59 @@ internal sealed partial class CandidateChecker(PersonaStore personas, ITeamDirec
         catch (ChatException ex)
         {
             problems.Add(ex.Message);
+        }
+    }
+
+    /// <summary>
+    /// Adds a problem if <paramref name="candidate"/>'s role is not <c>typeId/roleId</c>, names an
+    /// unknown type or role, names no Team to join, or is the manager role of a Team that already
+    /// has a manager (HR-13). A Candidate without a role has nothing to check here.
+    /// </summary>
+    private void AddRoleProblems(Candidate candidate, List<string> problems)
+    {
+        if (candidate.Role is null)
+        {
+            return;
+        }
+
+        string[] parts = candidate.Role.Split('/');
+        if (parts.Length != 2 || parts[0].Length == 0 || parts[1].Length == 0)
+        {
+            problems.Add($"{candidate.Name}'s role '{candidate.Role}' must look like <typeId>/<roleId>.");
+            return;
+        }
+
+        TeamTypeManifest? type = types?.Find(parts[0]);
+        if (type is null)
+        {
+            problems.Add($"{candidate.Name}'s role '{candidate.Role}' names a team type that does not exist.");
+            return;
+        }
+
+        RoleSpec? role = type.Roles.FirstOrDefault(r => string.Equals(r.Id, parts[1], StringComparison.Ordinal));
+        if (role is null)
+        {
+            problems.Add($"{candidate.Name}'s role '{candidate.Role}' is not a role of team type '{type.Id}'.");
+            return;
+        }
+
+        if (candidate.Teams.Count == 0)
+        {
+            problems.Add($"{candidate.Name} has a role but no Team; name the Team the role joins.");
+            return;
+        }
+
+        if (!role.Manager)
+        {
+            return;
+        }
+
+        foreach (string team in candidate.Teams)
+        {
+            if (teams?.Find(team)?.Manager is not null)
+            {
+                problems.Add($"{candidate.Name}'s role '{candidate.Role}' is the manager role, and Team '{team}' already has a manager.");
+            }
         }
     }
 

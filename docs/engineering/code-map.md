@@ -117,7 +117,7 @@ order decides per Token, independently.
 | --- | --- |
 | `ReplyGate.cs` | The reply rule, entire. Budget first, then `memberCount <= 2` or `mentioned`, returning `Reply`, `CatchUp` or `BudgetExhausted`. Still a pure function over labels the server put on the Envelope, so the rule is provable without a pipe or an agent. |
 | `RoomReplyResolver.cs` | What one delivery amounted to for the Room **as a whole**, where `ReplyGate` only ever speaks for one Agent: `Expected`, `ContextOnly`, `Paused` or `NoRecipients`. Owns the fan-out and **no part of the rule** - every decision inside it comes from `ReplyGate.Decide`, so the Budget-before-Mention ordering stays unreorderable. An unreachable Agent is filtered out of the recipients rather than folded into the decision; the caller derives reachability through `PersonaStatusResolver`, never from `IsOnline` alone. See [ADR-0012](../adr/0012-a-room-says-why-it-stayed-quiet.md) and [Rules](rules.md). |
-| `Persona.cs`, `PersonaStore.cs` | The Persona library. One `.md` per Persona, anywhere under `{DataDir}/{Acp:TeamsDir}`. Holds an immutable `PersonaIndex`, swapped as one reference and rebuilt before `PersonasChanged` is raised. A recursive, debounced (500 ms) `FileSystemWatcher` drives it; see [Traps](traps.md) for the four ways that watcher fails silently. |
+| `Persona.cs`, `PersonaStore.cs` | The Persona library. One `.md` per Persona, in its own folder `{DataDir}/{Acp:TeammatesDir}/<Name>/`, found by a one-level scan (`Acp:TeamsDir` retired, ADR-0031). Holds an immutable `PersonaIndex`, swapped as one reference and rebuilt before `PersonasChanged` is raised. A recursive, debounced (500 ms) `FileSystemWatcher` drives it; see [Traps](traps.md) for the four ways that watcher fails silently. |
 | `PersonaIndex.cs`, `PersonaEntry.cs`, `RejectedPersonaFile.cs` | The pure parse/validate/collision engine, built from `(path, text)` pairs with no I/O — so the write path validates a candidate edit through the very same code the read path uses. |
 | `PersonaIdentity.cs` | The four structural frontmatter fields: `Name`, `Title`, `Alias` (all required) and `Teams` (optional). |
 | `PersonaFrontmatter.cs`, `PersonaFrontmatterField.cs` | Parses a Persona's leading YAML frontmatter into ordered fields, reads the structural identity out of it, composes the job description `list_agents` shows (holding `name` back, since the bullet above already prints it), and composes the frontmatter `Add` writes. Ported from a sibling repo, not referenced across it — see [Decision record](decisions.md). It now has a **second** write path: `WriteScalarField` rewrites one key's value line in place, preserving every other field and the file's line endings. `Compose` could not be reused for this — it emits only the four identity keys, so recomposing a real Persona through it drops exactly the fields `ComposeJobDescription` sends to the model, and `Parse` is not round-trip safe either (it flattens block scalars and joins lists with `"; "`). A block scalar or block list is refused rather than flattened. |
@@ -275,6 +275,58 @@ order decides per Token, independently.
 | `Teams/TeamNames.cs` | Validation rules for Team and Project names, and the reserved `memory` folder name. |
 | `Teams/TeamMemoryGroup.cs` | One Team's Memory snapshot, holding the Team-wide Memory and each Project's Memory separately (Spec §6.2, §7.2). |
 | `Teams/TeamMemorySnapshot.cs` | A Persona's Team Memory snapshot, holding each Team's Memory grouped by Project (Spec §7.2). |
+| `TeamTypes/TeamTypeCatalog.cs` | Loads, validates and serves team types from the embedded `TeamTypes/Builtin/` folder and `{DataDir}/TeamTypes/`; a user folder with the same id replaces the built-in one. A type that fails validation is listed in `Problems`, never thrown. ADR-0038. |
+| `TeamTypes/TeamTypeManifest.cs` | The records a `team-type.json` reads into (roles, coverage, presets, processes, workspace), and `ModelTier` (`Strongest`, `Balanced`, `Fast`). |
+| `TeamTypes/TeamTypeValidator.cs` | Checks a manifest and reports each problem with a code (`TeamTypeProblem`). |
+| `TeamTypes/CandidateTemplate.cs` | One Candidate: a Teammate template read from a type's `candidates/*.md`. |
+| `TeamTypes/SkillPackStore.cs` | Loads Skill packs from the embedded `SkillPacks/*.json` and `{DataDir}/SkillPacks/`. |
+| `TeamTypes/UserCandidateWriter.cs` | Writes a custom role the Human chose to keep ("Save for next time") into `{DataDir}/TeamTypes/`. |
+| `TeamTypes/Builtin/` | The embedded built-in types: `development/` and `household/` (a manifest, `candidates/` and `processes/` each), and `SkillPacks/`. Picked up by the csproj glob, so a new built-in file needs no csproj change. |
+| `Teams/HireService.cs` | Writes one hire as a Teammate of a Team, enforces the hire limits, installs its Skills and starts it; `StartTeamAsync` starts the hired members in order. |
+| `Teams/RoleHirer.cs` | Turns a type's roles into hire cards for `HireService`. `IHireContext` says which adapters answered and which connectors are connected. |
+| `Teams/HireContext.cs` | The production `IHireContext`: every Adapter profile counts as answered, and models come from `Team:Teams:Tiers`. |
+| `Teams/CardResolver.cs` | Resolves one role's defaults into a hire card: `Ready` when all resolve, `NeedsSetup` otherwise. |
+| `Teams/TierModelPicker.cs` | Picks a card's model from `Team:Teams:Tiers:<adapterId>:<tier>`; an adapter with no entry for a tier uses its default model. |
+| `Teams/FileConnectorStatus.cs` | Reads the connected connectors from `connectors.json` in the data folder on every call; a missing or malformed file means none. |
+| `Teams/TeamCheckBar.cs` | What the team check bar shows (one entry per coverage step of the type) and whether Start Team is enabled. |
+| `Teams/MemberWarnings.cs` | The setup warnings for one member: a shared vendor, too many Skills, and Skills sharing a catalog sub-category. |
+| `Teams/TeamDuplicator.cs` | Copies a Team's members into a new Team for Duplicate, and reports each member it did not copy, with the reason. |
+| `Teams/ProcessDocument.cs` | Parses and writes `Process.md`: the `gates`, `wip`, `checkCommand`, `retro` and `digest` keys, and the four `GateId`s. |
+| `Teams/ProcessProvisioner.cs` | Copies a process template into the Team folder as `Process.md`. It never overwrites one; `ProvisionResult` says how the call ended. |
+| `Teams/ProcessGateService.cs` | Judges a proposed Task status change against the enabled gates (`CheckTaskChange`, `CheckMerge`); the first refusal wins. `TaskService` calls it. ADR-0039. |
+| `Teams/ProcessMergeGate.cs` | Backs `IMergeGate` with the Team's process, so checks-before-merge applies to `git merge` and `git push` from its workspace. |
+| `Teams/CadenceService.cs` | Hosted service: each minute, wakes a Team's manager for a digest and its retro role for a retro, on time or after N Done Tasks. Its last firings are kept in `team.db`. |
+| `Teams/RecordsBundle.cs` | The evidence bundle for a retro: `RecordsBundleBuilder` builds it from the Tasks changed since a cutoff, and `RenderText` renders it. |
+| `Teams/RetroFiles.cs` | Reads and writes a Team's `Retro register.md` and its reports in `_retros/`. |
+| `Teams/RetroProposalService.cs` | Shows a retro's proposed changes to the Human and applies the ones the Human accepts. |
+| `Teams/RetroVerifier.cs` | The register rows the next retro must check against later evidence (RT-7), and which are due. |
+| `Teams/ImportingSkillInstaller.cs` | Before a Team's members start, installs any Skill the Team needs that the `SkillStore` lacks (HR-9). |
+| `Teams/TeamOnboarding.cs`, `Teams/ChatOnboardingPoster.cs` | Posts the manager's onboarding prompt into the manager's direct Room as the Human, once: the Team card then records `onboarded: true`. |
+| `Skills/SkillImporter.cs` | Previews and installs a Skill from the catalog or a GitHub tree URL (`PreviewFromCatalogAsync`, `PreviewFromUrlAsync`, `Install`). Nothing is written before `Install`. |
+| `Skills/SkillDownloader.cs` | Downloads one Skill folder's files, pinned to a commit. |
+| `Skills/SkillsCatalogIndex.cs` | The catalog of offered Skills (`SkillsCatalog.json`), found by id, name or repo path. |
+| `Skills/SkillProvenance.cs` | The `.source.json` record written at import (repo, path, commit, folder hash, publisher, licence, time), read back for provenance and local-edit detection. |
+| `Skills/SkillReviewScanner.cs` | Flags what an imported Skill does (network, shell, paths outside the Work Dir, no licence) for the review step. |
+| `Tasks/RequestFields.cs` | The Request keys of an ordinary Task file, and the `RequestKind` (bug, feature, feedback, question) and `TriageState` enums. ADR-0040. |
+| `Tasks/RequestLifecycle.cs` | The Request state machine: `Apply` decides each transition from the current state and an event, and is pure. |
+| `Acp/Tools/FileRequestTool.cs` (`file_request`) | Files a Request into another Team's backlog. Offered only to a Persona whose Skill lists the tool. |
+| `Acp/Tools/TriageRequestTool.cs` (`triage_request`) | Lets the receiving manager accept, decline or ask for more on a Request. |
+| `Acp/Tools/ConfirmRequestTool.cs` (`confirm_request`) | Lets the requester-side QA confirm a Request is done, which closes it. |
+| `Acp/Tools/ListTeamsTool.cs` (`list_teams`) | Lists every Team's card and how many Requests are open in each backlog. |
+| `Acp/Tools/AddEvidenceTool.cs` (`add_evidence`) | Adds an Evidence line to a Task, the input the gates read. |
+| `Acp/Tools/ReadRecordsTool.cs` (`read_records`) | Gives the retro role a Team's evidence bundle, or one Task's change log and Evidence. |
+| `Acp/Tools/ProposeRetroChangesTool.cs` (`propose_retro_changes`) | Lets a member holding the `retrospective` Skill propose up to three exact-text changes to the Human. |
+| `Acp/Tools/MarkRetroRowTool.cs` (`mark_retro_row`) | Updates one `Retro register.md` row's status. |
+| `Components/Pages/TeamSetup.razor` | `/teams/new` and `/teams/{Team}/setup`: the New Team from a type form, then the setup screen with the hiring pool, the team check bar and Start Team. |
+| `Components/Teams/HiringPool.razor` | The hiring pool: one card per Candidate, the presets, Custom role and the staged hires. |
+| `Components/Teams/CustomRoleDialog.razor` | The dialog for a custom role: title, stance, consult-when and start-from. |
+| `Components/Teams/ProcessStep.razor` | The Process step on a manager's Teammate card: Use this process, or Start blank. |
+| `Components/Teams/ProcessTab.razor` | The Process tab of a Team page: `Process.md`, with Edit. |
+| `Components/Teams/DuplicateTeamDialog.razor` | The Duplicate dialog: the new Team's title and an optional workspace folder. |
+| `Components/Teams/TeamCheckBarView.razor` | Renders the team check bar. |
+| `Components/Settings/SkillImportDialog.razor` | The Import skill dialog: catalog search or a URL, Review, then Install. |
+| `Components/Shared/SkillProvenanceLine.razor` | The provenance line shown wherever a Skill appears, with a "modified locally" chip. |
+| `Components/Shared/RetroProposalCard.razor` | A Room's pending retro changes, with Accept and Reject. |
 | `Teams/TeamMemoryIndex.cs` | Builds one Persona's Team Memory snapshot: the Team-wide and per-Project Memory of every Team the Persona carries a label for, capped across all of them (Spec §6.4, §8.4). |
 
 The Library — the explorer, viewer and editor, Spec §6. Paths are relative to `src/Huddle.App`:

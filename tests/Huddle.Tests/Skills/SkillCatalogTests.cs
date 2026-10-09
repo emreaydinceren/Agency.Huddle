@@ -30,6 +30,55 @@ public sealed class SkillCatalogTests
         Assert.Equal(expectedFiles, teamBuilding.Keys.ToHashSet(StringComparer.Ordinal));
     }
 
+    /// <summary>The catalog holds <c>team-management</c> (Tasks 62, 68): valid, and it lists the four Request tools and <c>propose_sprint</c>.</summary>
+    [Fact]
+    public void All_ContainsTeamManagement_GrantingRequestToolsAndProposeSprint()
+    {
+        IReadOnlyDictionary<string, string> files = SkillCatalog.All["team-management"];
+
+        SkillValidation validation = SkillValidator.Validate("team-management", files);
+
+        Assert.Equal(["SKILL.md"], files.Keys.ToList());
+        Assert.Empty(validation.Issues);
+        Assert.Equal(["list_teams", "file_request", "triage_request", "confirm_request", "propose_sprint"], validation.Tools);
+    }
+
+    /// <summary>The catalog holds <c>team-rollup</c> (Task 79): valid, one file, and its tools list is exactly <c>list_teams</c>.</summary>
+    [Fact]
+    public void All_ContainsTeamRollup_GrantingListTeamsOnly()
+    {
+        Assert.Contains("team-rollup", SkillCatalog.All.Keys);
+        IReadOnlyDictionary<string, string> files = SkillCatalog.All["team-rollup"];
+
+        SkillValidation validation = SkillValidator.Validate("team-rollup", files);
+
+        Assert.Equal(["SKILL.md"], files.Keys.ToList());
+        Assert.Empty(validation.Issues);
+        Assert.Equal(["list_teams"], validation.Tools);
+    }
+
+    /// <summary>The catalog holds <c>retrospective</c> (Task 68): valid, one file, and its tools list is exactly <c>read_records</c>.</summary>
+    [Fact]
+    public void All_ContainsRetrospective_GrantingReadRecords()
+    {
+        IReadOnlyDictionary<string, string> files = SkillCatalog.All["retrospective"];
+
+        SkillValidation validation = SkillValidator.Validate("retrospective", files);
+
+        Assert.Equal(["SKILL.md"], files.Keys.ToList());
+        Assert.Empty(validation.Issues);
+        Assert.Equal(["read_records", "propose_retro_changes", "mark_retro_row"], validation.Tools);
+    }
+
+    /// <summary>The catalog lists both team skills by name next to <c>team-building</c> (Task 68).</summary>
+    [Fact]
+    public void All_ListsTeamBuildingTeamManagementAndRetrospective()
+    {
+        Assert.Contains("team-building", SkillCatalog.All.Keys);
+        Assert.Contains("team-management", SkillCatalog.All.Keys);
+        Assert.Contains("retrospective", SkillCatalog.All.Keys);
+    }
+
     /// <summary>
     /// Every embedded file's text has already been normalised to <c>\n</c> line endings: no value
     /// contains a carriage return.
@@ -161,6 +210,22 @@ public sealed class SkillCatalogTests
         Assert.Contains("memory folder", teamPatterns, StringComparison.Ordinal);
         Assert.Contains("Mention you", teamPatterns, StringComparison.Ordinal);
         Assert.Contains("seed", teamPatterns, StringComparison.Ordinal);
+    }
+
+    /// <summary>
+    /// The shipped <c>team-building</c> Skill teaches the team-building step (Task 25, HR-13): it asks
+    /// the Human which team type they want, names the built-in Development Team as <c>development</c>,
+    /// and proposes Candidates by role rather than inventing one. Asserts on short, stable phrases.
+    /// </summary>
+    [Fact]
+    public void TeamBuilding_ProposesCandidatesByRole()
+    {
+        string skill = SkillCatalog.All["team-building"]["SKILL.md"];
+
+        // contains-ok: shipped Skill prose, not markup
+        Assert.Contains("role:", skill, StringComparison.Ordinal);
+        // contains-ok: shipped Skill prose, not markup
+        Assert.Contains("development/", skill, StringComparison.Ordinal);
     }
 
     /// <summary>

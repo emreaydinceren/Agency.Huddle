@@ -33,7 +33,100 @@ public sealed partial class PromptCatalogTests
     [Fact]
     public void All_HasExactlyThirtySevenPrompts()
     {
-        Assert.Equal(71, PromptCatalog.All.Count);
+        Assert.Equal(78, PromptCatalog.All.Count);
+    }
+
+    /// <summary>Task 58 (PR-4, PR-5): the process blocks and the onboarding turn take and require their one placeholder and carry no tool prefix.</summary>
+    [Theory]
+    [InlineData("systemPrompt.processBlockManager", "{{process}}", PromptTiming.NextSession)]
+    [InlineData("systemPrompt.processBlockMember", "{{path}}", PromptTiming.NextSession)]
+    [InlineData("turn.onboarding", "{{steps}}", PromptTiming.Live)]
+    public void ProcessPrompts_TakeTheirPlaceholder(string key, string placeholder, PromptTiming timing)
+    {
+        var prompt = PromptCatalog.Get(key);
+
+        Assert.Equal(timing, prompt.Timing);
+        Assert.Equal([placeholder], prompt.Placeholders);
+        Assert.Equal([placeholder], prompt.RequiredPlaceholders);
+        Assert.False(prompt.Default.Contains("mcp__team__", StringComparison.Ordinal));
+    }
+
+    /// <summary>Task 64 (OR-3, RT-2): the digest and retro prompts are Live, take and require the team and since placeholders, and carry no tool prefix.</summary>
+    [Theory]
+    [InlineData("prompt.digest")]
+    [InlineData("prompt.retro")]
+    public void CadencePrompts_TakeTeamAndSince(string key)
+    {
+        var prompt = PromptCatalog.Get(key);
+
+        Assert.Equal(PromptTiming.Live, prompt.Timing);
+        Assert.Equal(["{{team}}", "{{since}}"], prompt.Placeholders);
+        Assert.Equal(["{{team}}", "{{since}}"], prompt.RequiredPlaceholders);
+        Assert.False(prompt.Default.Contains("mcp__team__", StringComparison.Ordinal));
+    }
+
+    /// <summary>Task 64 (OR-3): the digest asks for links to Tasks and evidence, a decisions and risks list, at most 15 lines, and names the Chief of Staff roll-up.</summary>
+    [Fact]
+    public void DigestPrompt_LinksEvidenceAndNamesTheChiefOfStaffRollUp()
+    {
+        string text = PromptCatalog.Get("prompt.digest").Default;
+
+        Assert.True(text.Contains("link", StringComparison.Ordinal));
+        Assert.True(text.Contains("decisions", StringComparison.Ordinal));
+        Assert.True(text.Contains("risks", StringComparison.Ordinal));
+        Assert.True(text.Contains("15 lines", StringComparison.Ordinal));
+        Assert.True(text.Contains("Chief of Staff", StringComparison.Ordinal));
+    }
+
+    /// <summary>Task 79 (OR-3): the roll-up prompt is Live, takes no placeholders, carries no tool prefix and asks for decisions and risks with links.</summary>
+    [Fact]
+    public void RollupPrompt_IsLiveWithNoPlaceholders()
+    {
+        var prompt = PromptCatalog.Get("prompt.rollup");
+        string text = prompt.Default;
+
+        Assert.Equal(PromptTiming.Live, prompt.Timing);
+        Assert.Empty(prompt.Placeholders);
+        Assert.Empty(prompt.RequiredPlaceholders);
+        Assert.False(text.Contains("mcp__team__", StringComparison.Ordinal));
+        Assert.True(text.Contains("Decisions:", StringComparison.Ordinal));
+        Assert.True(text.Contains("Risks:", StringComparison.Ordinal));
+        Assert.True(text.Contains("open Requests per Team", StringComparison.Ordinal));
+    }
+
+    /// <summary>Task 64 (RT-3, Spec §Retro): the retro prompt starts with read_records and then follows the gather, ask, report, propose, register order.</summary>
+    [Fact]
+    public void RetroPrompt_StartsWithReadRecordsThenFollowsTheSpecOrder()
+    {
+        string text = PromptCatalog.Get("prompt.retro").Default;
+        int readRecords = text.IndexOf("read_records", StringComparison.Ordinal);
+        int gather = text.IndexOf("1. Gather", StringComparison.Ordinal);
+        int ask = text.IndexOf("2. Ask", StringComparison.Ordinal);
+        int report = text.IndexOf("3. Report", StringComparison.Ordinal);
+        int propose = text.IndexOf("4. Propose", StringComparison.Ordinal);
+        int register = text.IndexOf("5. Register", StringComparison.Ordinal);
+
+        Assert.True(gather >= 0 && readRecords > gather);
+        Assert.True(gather < ask && ask < report && report < propose && propose < register);
+    }
+
+    /// <summary>
+    /// Task 29 (MS-7): <c>systemPrompt.roleBlock</c> is <see cref="PromptTiming.NextSession"/>, takes and requires the five
+    /// role placeholders, reads in the order identity, colleagues, skills, and never contains the tool prefix.
+    /// </summary>
+    [Fact]
+    public void RoleBlockSystemPrompt_TakesTheFivePlaceholdersInOrder()
+    {
+        var prompt = PromptCatalog.Get("systemPrompt.roleBlock");
+        string[] placeholders = ["{{name}}", "{{role}}", "{{team}}", "{{consult}}", "{{skills}}"];
+
+        Assert.Equal(PromptTiming.NextSession, prompt.Timing);
+        Assert.Equal(placeholders, prompt.Placeholders);
+        Assert.Equal(placeholders, prompt.RequiredPlaceholders);
+        Assert.False(prompt.Default.Contains("mcp__team__", StringComparison.Ordinal));
+        Assert.True(prompt.Default.IndexOf("{{name}}", StringComparison.Ordinal) < prompt.Default.IndexOf("Consult these colleagues when", StringComparison.Ordinal));
+        Assert.True(prompt.Default.IndexOf("{{consult}}", StringComparison.Ordinal) < prompt.Default.IndexOf("Your skills, read one with read_skill when its trigger applies:", StringComparison.Ordinal));
+        Assert.True(prompt.Default.IndexOf("Your skills, read one with read_skill when its trigger applies:", StringComparison.Ordinal) < prompt.Default.IndexOf("{{skills}}", StringComparison.Ordinal));
     }
 
     /// <summary>

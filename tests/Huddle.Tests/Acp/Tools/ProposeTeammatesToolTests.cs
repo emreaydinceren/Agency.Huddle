@@ -10,6 +10,7 @@ using Agency.Huddle.App.Data;
 using Agency.Huddle.App.Services;
 using Agency.Huddle.App.Teammates;
 using Agency.Huddle.Tests.Acp.Fakes;
+using Agency.Huddle.Tests.Teammates;
 
 /// <summary>
 /// Pins <see cref="ProposeTeammatesTool"/> against Spec §6.9's internal flow, Spec §5.3
@@ -132,48 +133,63 @@ public sealed class ProposeTeammatesToolTests
     }
 
     /// <summary>
-    /// Spec §6.9 internal flow: five Personas already exist, the limit is 8, and four more
-    /// Candidates are proposed - 5 + 4 exceeds 8, worded exactly as the Spec's own example, naming
-    /// how many more would actually fit (3).
+    /// A Team that cannot hold the Candidates refuses the call naming "per Team": Alpha holds 6 of 8
+    /// and three Candidates name it, so at most 2 fit.
     /// </summary>
     [Fact]
-    public async Task InvokeAsync_OverLimit_ReturnsLimitText()
+    public async Task InvokeAsync_TeamFull_ReturnsPerTeamText()
     {
         CancellationToken ct = TestContext.Current.CancellationToken;
-        using Fixture fixture = await Fixture.CreateAsync(ct, maxTeammates: 8);
-        for (var i = 1; i <= 5; i++)
-        {
-            fixture.Personas.Add(new PersonaIdentity($"Existing{i}", "Role", $"existing{i}", []), "Body text.");
-        }
-
+        using Fixture fixture = await Fixture.CreateAsync(ct);
+        fixture.Limits.SetTeam("Alpha", 6);
         var caller = await fixture.Directory.UpsertAgentUserAsync("Nova", null, ct);
         Assert.NotNull(caller);
         var room = await fixture.Directory.CreateRoomAsync("Launch", [KnownIds.Human, caller.Id], ct);
         var tool = fixture.CreateTool(caller.Id);
-        var arguments = MakeArguments(room.Id, MakeCandidates(4));
+        var arguments = MakeArguments(room.Id, MakeCandidates(3, "Alpha"));
 
         var result = await tool.InvokeAsync(arguments, ct);
 
-        Assert.Equal("5 Teammates exist and the limit is 8; propose at most 3.", result);
+        Assert.Equal("Team Alpha has 6 Teammates and the limit is 8 per Team; propose at most 2.", result);
         Assert.Null(fixture.Proposals.Get(room.Id));
     }
 
-    /// <summary>Spec §7.3: <c>MaxTeammates</c> of zero or less disables the limit entirely.</summary>
+    /// <summary>
+    /// The live-process limit refuses the call naming "live processes": 14 run, the limit is 16 and
+    /// three Candidates with no Team are proposed, so at most 2 fit - while a full Team elsewhere is irrelevant.
+    /// </summary>
     [Fact]
-    public async Task InvokeAsync_MaxTeammatesZero_DisablesTheLimit()
+    public async Task InvokeAsync_LiveProcessesExceeded_ReturnsLiveProcessText()
     {
         CancellationToken ct = TestContext.Current.CancellationToken;
-        using Fixture fixture = await Fixture.CreateAsync(ct, maxTeammates: 0);
-        for (var i = 1; i <= 10; i++)
-        {
-            fixture.Personas.Add(new PersonaIdentity($"Existing{i}", "Role", $"existing{i}", []), "Body text.");
-        }
-
+        using Fixture fixture = await Fixture.CreateAsync(ct);
+        fixture.Limits.SetTeam("Alpha", 8);
+        fixture.Limits.LiveProcesses = 14;
         var caller = await fixture.Directory.UpsertAgentUserAsync("Nova", null, ct);
         Assert.NotNull(caller);
         var room = await fixture.Directory.CreateRoomAsync("Launch", [KnownIds.Human, caller.Id], ct);
         var tool = fixture.CreateTool(caller.Id);
-        var arguments = MakeArguments(room.Id, MakeCandidates(4));
+        var arguments = MakeArguments(room.Id, MakeCandidates(3));
+
+        var result = await tool.InvokeAsync(arguments, ct);
+
+        Assert.Equal("14 live processes are running and the limit is 16 live processes; propose at most 2.", result);
+        Assert.Null(fixture.Proposals.Get(room.Id));
+    }
+
+    /// <summary>A limit of zero or less disables it: both limits off lets a large roster through.</summary>
+    [Fact]
+    public async Task InvokeAsync_LimitsZero_DisableTheLimits()
+    {
+        CancellationToken ct = TestContext.Current.CancellationToken;
+        using Fixture fixture = await Fixture.CreateAsync(ct, maxPerTeam: 0, maxLive: 0);
+        fixture.Limits.SetTeam("Alpha", 10);
+        fixture.Limits.LiveProcesses = 50;
+        var caller = await fixture.Directory.UpsertAgentUserAsync("Nova", null, ct);
+        Assert.NotNull(caller);
+        var room = await fixture.Directory.CreateRoomAsync("Launch", [KnownIds.Human, caller.Id], ct);
+        var tool = fixture.CreateTool(caller.Id);
+        var arguments = MakeArguments(room.Id, MakeCandidates(4, "Alpha"));
 
         var result = await tool.InvokeAsync(arguments, ct);
 
@@ -264,25 +280,33 @@ public sealed class ProposeTeammatesToolTests
     /// <summary>Builds one valid Candidate JSON object with the given Name and Alias.</summary>
     /// <param name="name">The Candidate's Name.</param>
     /// <param name="alias">The Candidate's Alias.</param>
-    private static JsonObject MakeCandidateJson(string name, string alias)
+    /// <param name="team">The Team the Candidate names, or <see langword="null"/> for none.</param>
+    private static JsonObject MakeCandidateJson(string name, string alias, string? team = null)
     {
-        return new JsonObject
+        JsonObject candidate = new()
         {
             ["name"] = name,
             ["alias"] = alias,
             ["title"] = "Researcher",
             ["body"] = "You research things.",
         };
+        if (team is not null)
+        {
+            candidate["teams"] = new JsonArray(team);
+        }
+
+        return candidate;
     }
 
     /// <summary>Builds <paramref name="count"/> valid, mutually distinct Candidate JSON objects.</summary>
     /// <param name="count">How many Candidates to build.</param>
-    private static JsonArray MakeCandidates(int count)
+    /// <param name="team">The Team every Candidate names, or <see langword="null"/> for none.</param>
+    private static JsonArray MakeCandidates(int count, string? team = null)
     {
         var array = new JsonArray();
         for (var i = 1; i <= count; i++)
         {
-            array.Add(MakeCandidateJson($"Cand{i}", $"cand{i}"));
+            array.Add(MakeCandidateJson($"Cand{i}", $"cand{i}", team));
         }
 
         return array;
@@ -305,7 +329,7 @@ public sealed class ProposeTeammatesToolTests
     /// a <see cref="SqliteTeamDirectory"/>, a <see cref="PersonaStore"/>, a
     /// <see cref="CandidateChecker"/> built on both, and a fresh <see cref="ProposalStore"/> - all
     /// sharing one <see cref="TempDataDir"/> and one configured <see cref="TeamOptions.Acp"/>'s
-    /// <see cref="AcpOptions.MaxTeammates"/>, torn down together.
+    /// <see cref="AcpOptions.MaxLiveProcesses"/>, torn down together.
     /// </summary>
     private sealed class Fixture : IDisposable
     {
@@ -315,7 +339,8 @@ public sealed class ProposeTeammatesToolTests
             PersonaStore personas,
             CandidateChecker checker,
             ProposalStore proposals,
-            IOptions<TeamOptions> options)
+            IOptions<TeamOptions> options,
+            HireLimitHarness limits)
         {
             this.DataDir = dataDir;
             this.Directory = directory;
@@ -323,7 +348,11 @@ public sealed class ProposeTeammatesToolTests
             this.Checker = checker;
             this.Proposals = proposals;
             this.Options = options;
+            this.Limits = limits;
         }
+
+        /// <summary>The Team catalog and live-process count the hire-limit guard reads.</summary>
+        public HireLimitHarness Limits { get; }
 
         /// <summary>The temp directory backing this fixture's <see cref="TeamOptions.DataDir"/>.</summary>
         public TempDataDir DataDir { get; }
@@ -348,8 +377,9 @@ public sealed class ProposeTeammatesToolTests
         /// <c>"You"</c>) and no Personas yet loaded.
         /// </summary>
         /// <param name="ct">Cancels Team Directory initialisation.</param>
-        /// <param name="maxTeammates"><see cref="AcpOptions.MaxTeammates"/> for this fixture; defaults to the Spec §7.3 default of 8.</param>
-        public static async Task<Fixture> CreateAsync(CancellationToken ct, int maxTeammates = 8)
+        /// <param name="maxPerTeam"><see cref="AcpOptions.MaxTeammatesPerTeam"/> for this fixture.</param>
+        /// <param name="maxLive"><see cref="AcpOptions.MaxLiveProcesses"/> for this fixture.</param>
+        public static async Task<Fixture> CreateAsync(CancellationToken ct, int maxPerTeam = 8, int maxLive = 16)
         {
             var dataDir = new TempDataDir();
 
@@ -360,7 +390,7 @@ public sealed class ProposeTeammatesToolTests
             IOptions<TeamOptions> options = Microsoft.Extensions.Options.Options.Create(new TeamOptions
             {
                 DataDir = dataDir.Path,
-                Acp = new AcpOptions { MaxTeammates = maxTeammates },
+                Acp = new AcpOptions { MaxTeammatesPerTeam = maxPerTeam, MaxLiveProcesses = maxLive },
             });
 
             var directory = new SqliteTeamDirectory(options);
@@ -373,7 +403,7 @@ public sealed class ProposeTeammatesToolTests
             var events = new RoomEvents(NullLogger<RoomEvents>.Instance);
             var proposals = new ProposalStore(events);
 
-            return new Fixture(dataDir, directory, personas, checker, proposals, options);
+            return new Fixture(dataDir, directory, personas, checker, proposals, options, new HireLimitHarness(options));
         }
 
         /// <summary>Builds a <see cref="ProposeTeammatesTool"/> calling as <paramref name="callerAgentId"/>, wired to this fixture's collaborators.</summary>
@@ -381,7 +411,7 @@ public sealed class ProposeTeammatesToolTests
         public ProposeTeammatesTool CreateTool(string callerAgentId)
         {
             return new ProposeTeammatesTool(
-                this.Proposals, this.Checker, this.Personas, this.Directory, this.Options, TimeProvider.System, callerAgentId, new FakePromptSource());
+                this.Proposals, this.Checker, this.Directory, this.Limits.Guard, TimeProvider.System, callerAgentId, new FakePromptSource());
         }
 
         /// <summary>Disposes the real <see cref="PersonaStore"/> and the underlying temp directory.</summary>

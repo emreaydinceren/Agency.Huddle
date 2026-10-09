@@ -1,0 +1,40 @@
+@using Agency.Huddle.App.Teams
+
+@*
+    Task 33 (HR-8, NF-6, Screen 1): the team check bar. One chip per coverage step of the Team's type,
+    filled when a hired role covers it and outlined when none does; then how many vendors and processes
+    the Team would run, and each reason Start Team is disabled as a list.
+*@
+
+<div class="team-check-bar">
+    <MudStack Row="true" Spacing="1" AlignItems="AlignItems.Center">
+        @foreach (KeyValuePair<string, bool> step in this.Check.Coverage)
+        {
+            <MudChip T="string" Size="Size.Small" Variant="@(step.Value ? Variant.Filled : Variant.Outlined)"
+                     Class="@ChipClass(step.Key, step.Value)">@Label(step.Key)</MudChip>
+        }
+        <MudText Typo="Typo.caption" Class="team-check-vendors">@($"{this.Check.VendorCount} vendors")</MudText>
+        <MudText Typo="Typo.caption" Class="team-check-processes">@($"{this.Check.ProcessCount} processes")</MudText>
+    </MudStack>
+    @if (this.Check.Blockers.Count > 0)
+    {
+        <ul class="team-check-blockers">
+            @foreach (string blocker in this.Check.Blockers)
+            {
+                <li>@blocker</li>
+            }
+        </ul>
+    }
+</div>
+
+@code {
+    /// <summary>The check bar state to show.</summary>
+    [Parameter]
+    public required TeamCheck Check { get; set; }
+
+    private static string ChipClass(string step, bool covered) =>
+        $"team-check-chip team-check-chip-{step} team-check-chip-{(covered ? "filled" : "empty")}";
+
+    private static string Label(string step) =>
+        step.Length == 0 ? step : string.Concat(char.ToUpperInvariant(step[0]).ToString(), step.AsSpan(1));
+}

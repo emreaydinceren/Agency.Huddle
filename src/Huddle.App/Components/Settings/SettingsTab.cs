@@ -18,4 +18,7 @@ public enum SettingsTab
 
     /// <summary>Every Skill this installation currently resolves - what it is, where it came from, and any problems found reading it.</summary>
     Skills,
+
+    /// <summary>Every team type the catalog serves, and the ones it rejected with the reason.</summary>
+    TeamTypes,
 }

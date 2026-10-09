@@ -33,6 +33,26 @@ public sealed class CandidateJsonTests
         Assert.Equal("needs data", candidate.ConsultWhen);
     }
 
+    /// <summary>The optional 'role' field is parsed, trimmed, onto the Candidate; an absent or blank one is null.</summary>
+    [Fact]
+    public void TryParse_RoleField_ParsedTrimmedOrNull()
+    {
+        JsonNode? withRole = JsonNode.Parse("""{"name":"Vera","alias":"vee","title":"Dev","body":"You build.","role":" development/developer "}""");
+        JsonNode? blank = JsonNode.Parse("""{"name":"Vera","alias":"vee","title":"Dev","body":"You build.","role":"  "}""");
+        JsonNode? absent = JsonNode.Parse("""{"name":"Vera","alias":"vee","title":"Dev","body":"You build."}""");
+        List<string> problems = [];
+
+        bool first = CandidateJson.TryParse(withRole, 1, out Candidate? roleCandidate, problems);
+        bool second = CandidateJson.TryParse(blank, 1, out Candidate? blankCandidate, problems);
+        bool third = CandidateJson.TryParse(absent, 1, out Candidate? plainCandidate, problems);
+
+        Assert.True(first && second && third);
+        Assert.Empty(problems);
+        Assert.Equal("development/developer", roleCandidate?.Role);
+        Assert.Null(blankCandidate?.Role);
+        Assert.Null(plainCandidate?.Role);
+    }
+
     /// <summary>A Candidate missing the required 'alias' field is reported by field name and 1-based index.</summary>
     [Fact]
     public void TryParse_MissingAlias_ReportsProblem()

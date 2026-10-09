@@ -32,6 +32,8 @@
     here; it appears within a second.
 </p>
 
+<MudButton Variant="Variant.Outlined" Class="skills-import-button mb-2" OnClick="this.ImportSkillAsync">Import skill</MudButton>
+
 <MudSimpleTable Hover="true" Dense="true">
     <thead>
         <tr>
@@ -50,7 +52,7 @@
             <tr>
                 <td>@skill.Name</td>
                 <td>@skill.Description</td>
-                <td>@skill.Source</td>
+                <td>@skill.Source<br /><SkillProvenanceLine Skill="@skill" /></td>
                 <td>@skill.FolderPath</td>
                 <td>@string.Join(", ", skill.Files)</td>
                 <td>
@@ -96,6 +98,12 @@
     protected override void OnInitialized()
     {
         this.Skills.SkillsChanged += this.OnSkillsChanged;
+    }
+
+    /// <summary>Opens the import review dialog (Task 45); the Skills watcher repaints this tab when an install lands.</summary>
+    private async Task ImportSkillAsync()
+    {
+        _ = await this.DialogService.ShowAsync<SkillImportDialog>("Import skill", SkillImportDialog.Options);
     }
 
     /// <summary>The chip colour for one Issue's severity (Spec §6.7): Error red, Warning amber, Info plain.</summary>

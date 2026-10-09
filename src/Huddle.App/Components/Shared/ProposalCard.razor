@@ -17,14 +17,12 @@
 @implements IDisposable
 @using Agency.Huddle.App.Acp
 @using Agency.Huddle.App.Teammates
-@using Microsoft.Extensions.Options
 
 @inject RoomEvents Events
 @inject ProposalStore Proposals
 @inject ProposalService Service
-@inject PersonaStore Personas
+@inject HireLimitGuard HireLimits
 @inject ITeamDirectory TeamDirectory
-@inject IOptions<TeamOptions> Options
 @inject ISnackbar Snackbar
 
 @if (this.proposal is { } current && this.room is { Archived: false })
@@ -191,25 +189,25 @@
     }
 
     /// <summary>
-    /// The headroom line (Spec §6.11): "This adds 2 Teammates; 5 of 8 exist.", singular for one
-    /// Candidate, and with the "of 8 exist" clause dropped entirely when
-    /// <see cref="Acp.AcpOptions.MaxTeammates"/> is zero or negative (no limit). Recomputed on every
-    /// render from the live <see cref="PersonaStore.Entries"/> count, never cached.
+    /// The headroom line (Spec §6.11): "This adds 2 Teammates; 5 of 8 per Team." or "...; 14 of 16
+    /// live processes.", singular for one Candidate, naming whichever of the two hire limits has the
+    /// least room (<see cref="HireLimitGuard.Tightest"/>) and dropping the clause entirely when both are
+    /// off. Recomputed on every render from the live Team catalog and process count, never cached.
     /// </summary>
     /// <param name="current">The Proposal whose Candidate count is being added.</param>
     private string HeadroomText(Proposal current)
     {
         var count = current.Candidates.Count;
         var noun = count == 1 ? "Teammate" : "Teammates";
-        var max = this.Options.Value.Acp.MaxTeammates;
+        var tightest = this.HireLimits.Tightest(current.Candidates);
 
-        if (max <= 0)
+        if (tightest is null)
         {
             return $"This adds {count} {noun}.";
         }
 
-        var existing = this.Personas.Entries.Count;
-        return $"This adds {count} {noun}; {existing} of {max} exist.";
+        var unit = tightest.Kind == HireLimitKind.PerTeam ? "per Team" : "live processes";
+        return $"This adds {count} {noun}; {tightest.Used} of {tightest.Limit} {unit}.";
     }
 
     /// <summary>

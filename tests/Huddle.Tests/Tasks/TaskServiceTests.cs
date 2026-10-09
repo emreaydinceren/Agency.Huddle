@@ -1326,6 +1326,44 @@ public sealed class TaskServiceTests
         Assert.Equal("memory-notes", saved.Task.Location.Project);
     }
 
+    /// <summary>The six Request keys of an ordinary Task file (RQ-1, Spec §RequestFile) survive an unrelated Update untouched, in file order, as unknown frontmatter.</summary>
+    [Fact]
+    public void Update_RequestKeys_SurviveUnrelatedUpdate()
+    {
+        using TempDataDir dir = new();
+        using PersonaStore personas = CreatePersonaStore(dir);
+        using TaskStore store = CreateTaskStore(dir, personas);
+        TaskService service = CreateTaskService(dir, store, personas);
+        TaskItem task = SeedTask(service, new TaskDraft("T", "Platform", null));
+
+        string original = File.ReadAllText(task.Path);
+        string requestLines = string.Join(
+            "\n",
+            "request: 'bug'",
+            "from_team: 'Web Team'",
+            "requester: 'Joe'",
+            "triage: 'needs-info'",
+            "decline_reason: ''",
+            "confirmed_by: ''") + "\n";
+        string withRequest = original.Replace("\n---\n", "\n" + requestLines + "---\n", StringComparison.Ordinal);
+        TaskItem? requested = store.Write(task, task.Version, withRequest);
+        Assert.NotNull(requested);
+
+        TaskResult result = service.Update(task.Id, new TaskPatch { Priority = TaskPriority.High }, null, HumanActor);
+
+        TaskResult.Saved saved = Assert.IsType<TaskResult.Saved>(result);
+        KeyValuePair<string, string>[] expected =
+        [
+            new("request", "bug"),
+            new("from_team", "Web Team"),
+            new("requester", "Joe"),
+            new("triage", "needs-info"),
+            new("decline_reason", ""),
+            new("confirmed_by", ""),
+        ];
+        Assert.Equal(expected, saved.Task.UnknownFields);
+    }
+
     /// <summary>Creates a Task through <see cref="TaskService.Create"/> for a test to update, asserting it saved.</summary>
     private static TaskItem SeedTask(TaskService service, TaskDraft draft) =>
         Assert.IsType<TaskResult.Saved>(service.Create(draft, HumanActor)).Task;

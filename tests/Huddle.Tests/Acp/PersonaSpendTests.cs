@@ -1,5 +1,6 @@
 using Microsoft.Extensions.Logging.Abstractions;
 using Agency.Huddle.App.Acp;
+using Agency.Huddle.App.Data;
 
 namespace Agency.Huddle.Tests.Acp;
 
@@ -8,10 +9,19 @@ namespace Agency.Huddle.Tests.Acp;
 /// right through session re-opens and Adapter restarts. Spend is display-only, so no test here reads
 /// it as a verdict.
 /// </summary>
-public sealed class PersonaSpendTests
+public sealed class PersonaSpendTests : IDisposable
 {
-    /// <summary>Builds an empty <see cref="PersonaSpend"/> that logs nowhere.</summary>
-    private static PersonaSpend NewSpend() => new(NullLogger<PersonaSpend>.Instance);
+    private readonly TempDataDir dir = new();
+    private readonly PersonaSpendStore store;
+
+    /// <summary>Creates the temp data folder and the <see cref="PersonaSpendStore"/> every test's <see cref="PersonaSpend"/> writes through to.</summary>
+    public PersonaSpendTests() => this.store = new PersonaSpendStore(this.dir.Options());
+
+    /// <summary>Deletes the temp data folder.</summary>
+    public void Dispose() => this.dir.Dispose();
+
+    /// <summary>Builds an empty <see cref="PersonaSpend"/> over this test's store that logs nowhere.</summary>
+    private PersonaSpend NewSpend() => new(NullLogger<PersonaSpend>.Instance, this.store);
 
     /// <summary>The first running total a session reports is all new spend.</summary>
     [Fact]
@@ -243,5 +253,93 @@ public sealed class PersonaSpendTests
 
             Assert.Equal([new SpendAmount(Sessions * Steps, "USD")], spend.Get("nova"));
         }
+    }
+
+    /// <summary>An increase is written through to the store, so the persisted total equals the in-memory one.</summary>
+    [Fact]
+    public void Add_Increase_IsWrittenToTheStore()
+    {
+        PersonaSpend spend = this.NewSpend();
+
+        spend.Add("nova", "s1", 0.05m, "USD");
+        spend.Add("nova", "s1", 0.08m, "USD");
+
+        StoredSpend stored = Assert.Single(this.store.ForPersona("nova"));
+        Assert.Equal(new StoredSpend("USD", 0.08m), stored);
+    }
+
+    /// <summary>A repeated running total adds nothing to the store.</summary>
+    [Fact]
+    public void Add_RepeatedTotal_AddsNothingToTheStore()
+    {
+        PersonaSpend spend = this.NewSpend();
+        spend.Add("nova", "s1", 0.05m, "USD");
+
+        spend.Add("nova", "s1", 0.05m, "USD");
+
+        Assert.Equal([new StoredSpend("USD", 0.05m)], this.store.ForPersona("nova"));
+    }
+
+    /// <summary>A lower total after an Adapter restart is new spend and is added to the store on top of the earlier total.</summary>
+    [Fact]
+    public void Add_LowerTotal_AddsTheNewSpendToTheStore()
+    {
+        PersonaSpend spend = this.NewSpend();
+        spend.Add("nova", "s1", 0.30m, "USD");
+
+        spend.Add("nova", "s1", 0.05m, "USD");
+
+        Assert.Equal([new StoredSpend("USD", 0.35m)], this.store.ForPersona("nova"));
+    }
+
+    /// <summary>Rename forwards to the store, so the persisted rows follow the Persona's new Name.</summary>
+    [Fact]
+    public void Rename_ForwardsToTheStore()
+    {
+        PersonaSpend spend = this.NewSpend();
+        spend.Add("nova", "s1", 0.10m, "USD");
+
+        spend.Rename("nova", "astra");
+
+        Assert.Empty(this.store.ForPersona("nova"));
+        Assert.Equal([new StoredSpend("USD", 0.10m)], this.store.ForPersona("astra"));
+    }
+
+    /// <summary>Forget forwards to the store, so a removed Persona's persisted Spend is deleted.</summary>
+    [Fact]
+    public void Forget_ForwardsToTheStore()
+    {
+        PersonaSpend spend = this.NewSpend();
+        this.store.Add("nova", null, "USD", 0.10m);
+
+        spend.Forget("nova");
+
+        Assert.Empty(this.store.ForPersona("nova"));
+    }
+
+    /// <summary>A new <see cref="PersonaSpend"/> over the same store reports the earlier total as persisted, while its this-run figure starts empty.</summary>
+    [Fact]
+    public void GetPersisted_NewInstanceOverSameStore_ReportsEarlierTotal()
+    {
+        PersonaSpend first = this.NewSpend();
+        first.Add("nova", "s1", 0.0908m, "USD");
+
+        PersonaSpend second = this.NewSpend();
+
+        Assert.Equal([new SpendAmount(0.0908m, "USD")], second.GetPersisted("nova"));
+        Assert.Empty(second.Get("nova"));
+    }
+
+    /// <summary>Spend added for a Task is attributed to it in the store and reported by <see cref="PersonaSpend.GetPersistedForTask"/>.</summary>
+    [Fact]
+    public void Add_WithTaskId_IsAttributedToTheTask()
+    {
+        PersonaSpend spend = this.NewSpend();
+
+        spend.Add("nova", "s1", 0.20m, "USD", "T-1");
+        spend.Add("nova", "s2", 0.05m, "USD");
+
+        Assert.Equal([new SpendAmount(0.20m, "USD")], spend.GetPersistedForTask("T-1"));
+        Assert.Equal([new SpendAmount(0.25m, "USD")], spend.GetPersisted("nova"));
     }
 }

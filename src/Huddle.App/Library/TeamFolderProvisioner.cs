@@ -1,4 +1,5 @@
 using System.Globalization;
+using System.Text;
 using Agency.Huddle.App.Acp;
 using Agency.Huddle.App.Tasks;
 using Agency.Huddle.App.Teams;
@@ -23,6 +24,15 @@ internal sealed class TeamFolderProvisioner : IHostedService, IDisposable, ITeam
 {
     private const string TeamsRootId = "teams";
 
+    /// <summary>How many times <see cref="MoveOver"/> tries before it lets the failure through.</summary>
+    private const int MoveAttempts = 10;
+
+    /// <summary>How long <see cref="MoveOver"/> waits between tries.</summary>
+    private static readonly TimeSpan MoveRetryDelay = TimeSpan.FromMilliseconds(30);
+
+    private static readonly UTF8Encoding TeamFileEncoding = new(encoderShouldEmitUTF8Identifier: false);
+
+    private readonly Lock teamFileGate = new();
     private readonly PersonaStore personas;
     private readonly LibraryRootStore roots;
     private readonly LibraryPathResolver resolver;
@@ -158,6 +168,24 @@ internal sealed class TeamFolderProvisioner : IHostedService, IDisposable, ITeam
     }
 
     /// <inheritdoc/>
+    /// <remarks>Reads the disk only: a Team folder the catalog has not noticed yet is still found.</remarks>
+    public LibraryResult<LibraryPath> FindTeam(string name)
+    {
+        ArgumentNullException.ThrowIfNull(name);
+
+        if (LibraryNames.Validate(name) is not null
+            || TaskLayout.IsReservedFolderName(name)
+            || !this.resolver.TryResolve(TeamsRootId, name, out LibraryPath? teamPath, out _)
+            || teamPath.Role != LibraryNodeRole.TeamFolder
+            || !Directory.Exists(teamPath.FullPath))
+        {
+            return new LibraryResult<LibraryPath>(null, $"There is no Team named \"{name}\".");
+        }
+
+        return new LibraryResult<LibraryPath>(teamPath, null);
+    }
+
+    /// <inheritdoc/>
     /// <remarks>A Team that exists only as a Persona label first gets its folder, after the same name
     /// checks the start-up sync applies to a label; then <see cref="EnsureProject"/> creates the Project.</remarks>
     public LibraryResult<LibraryPath> EnsureProjectIn(string team, string project)
@@ -198,6 +226,175 @@ internal sealed class TeamFolderProvisioner : IHostedService, IDisposable, ITeam
         return this.EnsureProject(teamFolder.Value, project);
     }
 
+    /// <inheritdoc/>
+    /// <remarks>Reuses the folder creation of <see cref="EnsureTeam"/> but, unlike it, accepts a folder that
+    /// already exists without a <c>_team.md</c>. The file is written to a temporary name beside the target and
+    /// moved into place without overwriting, so a concurrent writer can never be clobbered. An I/O failure while
+    /// writing propagates to the caller.</remarks>
+    public TeamCreateResult CreateTeam(string team, TeamFile file)
+    {
+        ArgumentNullException.ThrowIfNull(team);
+        ArgumentNullException.ThrowIfNull(file);
+
+        // A Team with exactly this name keeps its AlreadyExists path below; only a name that differs by case is refused here.
+        IReadOnlyList<TeamSummary> others = [.. this.catalog.Teams.Where(t => !string.Equals(t.Name, team, StringComparison.Ordinal))];
+        if (TeamNames.ValidateTeamName(team, others) is not null)
+        {
+            return new TeamCreateResult(TeamCreateOutcome.InvalidName, null);
+        }
+
+        // A case-sensitive file system would otherwise let "alpha" sit beside "Alpha"; refuse it the way Windows does.
+        if (this.TeamFolderDiffersOnlyByCase(team))
+        {
+            return new TeamCreateResult(TeamCreateOutcome.AlreadyExists, null);
+        }
+
+        LibraryResult<LibraryPath> folder = this.CreateTeamFolder(team);
+        if (folder.Value is null)
+        {
+            return new TeamCreateResult(TeamCreateOutcome.InvalidName, null);
+        }
+
+        string target = Path.Combine(folder.Value.FullPath, TeamPaths.TeamFileName);
+        if (File.Exists(target))
+        {
+            return new TeamCreateResult(TeamCreateOutcome.AlreadyExists, null);
+        }
+
+        string temp = $"{target}.{Guid.NewGuid():N}.tmp";
+        try
+        {
+            File.WriteAllText(temp, file.Compose(), TeamFileEncoding);
+            File.Move(temp, target, overwrite: false);
+        }
+        catch (IOException) when (File.Exists(target))
+        {
+            return new TeamCreateResult(TeamCreateOutcome.AlreadyExists, null);
+        }
+        finally
+        {
+            DeleteQuietly(temp);
+        }
+
+        return new TeamCreateResult(TeamCreateOutcome.Created, target);
+    }
+
+    /// <summary>Deletes a leftover temporary file; a failure must not hide the outcome of the write that preceded it.</summary>
+    private static void DeleteQuietly(string path)
+    {
+        try
+        {
+            File.Delete(path);
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+        {
+            // The temporary file is harmless debris; the Team file's outcome is already decided.
+        }
+    }
+
+    /// <inheritdoc/>
+    /// <remarks>Updates in this process are serialised; the new text is written to a temporary file and moved over
+    /// the old one, so a reader sees either the old or the new file, never a partial one.</remarks>
+    public bool UpdateTeamFile(string team, Func<TeamFile, TeamFile> change)
+    {
+        ArgumentNullException.ThrowIfNull(team);
+        ArgumentNullException.ThrowIfNull(change);
+
+        lock (this.teamFileGate)
+        {
+            string? path = this.TeamFilePath(team);
+            if (path is null || !TryReadTeamFile(path, out TeamFile? current))
+            {
+                return false;
+            }
+
+            TeamFile updated = change(current);
+            ArgumentNullException.ThrowIfNull(updated);
+
+            string temp = $"{path}.{Guid.NewGuid():N}.tmp";
+            try
+            {
+                File.WriteAllText(temp, updated.Compose(), TeamFileEncoding);
+                MoveOver(temp, path);
+            }
+            finally
+            {
+                File.Delete(temp);
+            }
+
+            return true;
+        }
+    }
+
+    /// <summary>Moves <paramref name="temp"/> over <paramref name="path"/>, retrying briefly while a reader (the catalog's watcher) still holds the target open.</summary>
+    /// <param name="temp">The finished temporary file.</param>
+    /// <param name="path">The file to replace.</param>
+    private static void MoveOver(string temp, string path)
+    {
+        for (int attempt = 1; ; attempt++)
+        {
+            try
+            {
+                File.Move(temp, path, overwrite: true);
+                return;
+            }
+            catch (IOException) when (attempt < MoveAttempts)
+            {
+                // The target is open in a reader for a moment: wait and try again.
+                Thread.Sleep(MoveRetryDelay);
+            }
+            catch (UnauthorizedAccessException) when (attempt < MoveAttempts)
+            {
+                // Windows reports a file open in a reader as access denied: wait and try again.
+                Thread.Sleep(MoveRetryDelay);
+            }
+        }
+    }
+
+    /// <inheritdoc/>
+    public TeamFile? ReadTeamFile(string team)
+    {
+        ArgumentNullException.ThrowIfNull(team);
+
+        string? path = this.TeamFilePath(team);
+        return path is not null && TryReadTeamFile(path, out TeamFile? file) ? file : null;
+    }
+
+    /// <summary>The path of an existing Team's <c>_team.md</c>, or <see langword="null"/> when the name is invalid, the Team folder is missing or the file is absent.</summary>
+    private string? TeamFilePath(string team)
+    {
+        if (LibraryNames.Validate(team) is not null || TaskLayout.IsReservedFolderName(team))
+        {
+            return null;
+        }
+
+        if (!this.resolver.TryResolve(TeamsRootId, team, out LibraryPath? teamPath, out _) || teamPath.Role != LibraryNodeRole.TeamFolder)
+        {
+            return null;
+        }
+
+        string path = Path.Combine(teamPath.FullPath, TeamPaths.TeamFileName);
+        return File.Exists(path) ? path : null;
+    }
+
+    /// <summary>Reads and parses <paramref name="path"/>; an unreadable or malformed file is a miss.</summary>
+    private static bool TryReadTeamFile(string path, [System.Diagnostics.CodeAnalysis.NotNullWhen(true)] out TeamFile? file)
+    {
+        file = null;
+        try
+        {
+            return TeamFile.TryParse(File.ReadAllText(path, TeamFileEncoding), out file);
+        }
+        catch (IOException)
+        {
+            return false;
+        }
+        catch (UnauthorizedAccessException)
+        {
+            return false;
+        }
+    }
+
     /// <summary>Whether a directory directly under the Teams root already carries <paramref name="name"/>, ignoring case (the <see cref="SyncFolders"/> pattern).</summary>
     private bool TeamFolderExistsOnDisk(string name)
     {
@@ -211,6 +408,33 @@ internal sealed class TeamFolderProvisioner : IHostedService, IDisposable, ITeam
         {
             return Directory.EnumerateDirectories(teamsRoot.FullPath)
                 .Any(d => string.Equals(Path.GetFileName(d), name, StringComparison.OrdinalIgnoreCase));
+        }
+        catch (IOException ex)
+        {
+            this.LogSyncFailed(ex);
+            return false;
+        }
+        catch (UnauthorizedAccessException ex)
+        {
+            this.LogSyncFailed(ex);
+            return false;
+        }
+    }
+
+    /// <summary>Whether a directory directly under the Teams root matches <paramref name="name"/> ignoring case but not exactly.</summary>
+    private bool TeamFolderDiffersOnlyByCase(string name)
+    {
+        LibraryRoot? teamsRoot = this.roots.Roots.FirstOrDefault(r => string.Equals(r.Id, TeamsRootId, StringComparison.Ordinal));
+        if (teamsRoot is null || !Directory.Exists(teamsRoot.FullPath))
+        {
+            return false;
+        }
+
+        try
+        {
+            return Directory.EnumerateDirectories(teamsRoot.FullPath)
+                .Select(Path.GetFileName)
+                .Any(f => string.Equals(f, name, StringComparison.OrdinalIgnoreCase) && !string.Equals(f, name, StringComparison.Ordinal));
         }
         catch (IOException ex)
         {

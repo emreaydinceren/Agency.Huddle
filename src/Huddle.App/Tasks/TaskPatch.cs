@@ -19,10 +19,13 @@ internal readonly record struct Optional<T>(bool IsSet, T Value)
 /// <summary>
 /// Only the fields being changed are non-null (or, for a field whose "clear" state is itself
 /// <see langword="null"/>, set through an <see cref="Optional{T}"/>) - Spec §9.1. Passed to
-/// <see cref="TaskService.Update(TaskId, TaskPatch, string?, TaskActor)"/>.
+/// <see cref="TaskService.Update(TaskId, TaskPatch, string?, TaskActor, bool)"/>.
 /// </summary>
 internal sealed record TaskPatch
 {
+    /// <summary>The frontmatter key that records who approved a Task as a spec; an ordinary unknown field that only the Human may set.</summary>
+    internal const string ApprovedByKey = "approved_by";
+
     /// <summary>The Task's new title, or <see langword="null"/> to leave it unchanged.</summary>
     public string? Title { get; init; }
 
@@ -68,13 +71,22 @@ internal sealed record TaskPatch
     /// <summary>A reason recorded alongside a move to Cancelled or Rejected; logged only, never stored as a field.</summary>
     public string? Reason { get; init; }
 
+    /// <summary>Who approved the Task as a spec; written as the ordinary frontmatter key <c>approved_by</c>. <see cref="Optional{T}.Set(T)"/> with <see langword="null"/> clears it. Only the Human actor may set it.</summary>
+    public Optional<string?> ApprovedBy { get; init; }
+
+    /// <summary>
+    /// Frontmatter keys to set (or replace) among the Task's non-column fields, such as the Request triage keys. A key in <see cref="ApprovedByKey"/>
+    /// is ignored: only <see cref="ApprovedBy"/> sets that. <see langword="null"/> leaves every extra field unchanged.
+    /// </summary>
+    public IReadOnlyList<KeyValuePair<string, string>>? ExtraFields { get; init; }
+
     /// <summary><see langword="true"/> when this patch sets no field at all, including <see cref="Reason"/>.</summary>
     internal bool IsEmpty =>
         this.Title is null && this.Status is null && this.Priority is null &&
         !this.Assignee.IsSet && !this.Parent.IsSet && this.BlockedBy is null &&
         !this.DuplicateOf.IsSet && this.Tags is null && !this.StartDate.IsSet &&
         !this.DueDate.IsSet && !this.Sprint.IsSet && this.Description is null && this.Team is null &&
-        !this.Project.IsSet && this.Reason is null;
+        !this.Project.IsSet && this.Reason is null && !this.ApprovedBy.IsSet && this.ExtraFields is null;
 
     /// <summary>
     /// The Task fields this patch actually sets (Settled corrections-B5 "Upstream additions" D6).
@@ -167,6 +179,11 @@ internal sealed record TaskPatch
 
         string team = this.Team ?? current.Location.Team;
         string? project = this.Project.IsSet ? this.Project.Value : current.Location.Project;
+        IReadOnlyList<KeyValuePair<string, string>> unknownFields = this.ApprovedBy.IsSet ? WithApprovedBy(current.UnknownFields, this.ApprovedBy.Value) : current.UnknownFields;
+        if (this.ExtraFields is not null)
+        {
+            unknownFields = WithExtras(unknownFields, this.ExtraFields);
+        }
 
         return current with
         {
@@ -183,6 +200,43 @@ internal sealed record TaskPatch
             Sprint = this.Sprint.IsSet ? this.Sprint.Value : current.Sprint,
             Description = this.Description ?? current.Description,
             Location = current.Location with { Team = team, Project = project },
+            UnknownFields = unknownFields,
         };
+    }
+
+    /// <summary>Replaces the entry of each key in <paramref name="extras"/> in <paramref name="fields"/>, keeping field order and appending new keys.</summary>
+    /// <param name="fields">The Task's unknown frontmatter fields.</param>
+    /// <param name="extras">The keys and values to set.</param>
+    private static List<KeyValuePair<string, string>> WithExtras(IReadOnlyList<KeyValuePair<string, string>> fields, IReadOnlyList<KeyValuePair<string, string>> extras)
+    {
+        List<KeyValuePair<string, string>> result = [.. fields];
+        foreach (KeyValuePair<string, string> extra in extras.Where(static extra => !string.Equals(extra.Key, ApprovedByKey, StringComparison.Ordinal)))
+        {
+            int index = result.FindIndex(field => string.Equals(field.Key, extra.Key, StringComparison.Ordinal));
+            if (index >= 0)
+            {
+                result[index] = extra;
+            }
+            else
+            {
+                result.Add(extra);
+            }
+        }
+
+        return result;
+    }
+
+    /// <summary>Replaces the <see cref="ApprovedByKey"/> entry of <paramref name="fields"/>, or removes it when <paramref name="approver"/> is blank.</summary>
+    /// <param name="fields">The Task's unknown frontmatter fields.</param>
+    /// <param name="approver">The approver's Name, or <see langword="null"/> to clear the approval.</param>
+    private static List<KeyValuePair<string, string>> WithApprovedBy(IReadOnlyList<KeyValuePair<string, string>> fields, string? approver)
+    {
+        List<KeyValuePair<string, string>> result = [.. fields.Where(static field => !string.Equals(field.Key, ApprovedByKey, StringComparison.Ordinal))];
+        if (!string.IsNullOrWhiteSpace(approver))
+        {
+            result.Add(new KeyValuePair<string, string>(ApprovedByKey, approver.Trim()));
+        }
+
+        return result;
     }
 }

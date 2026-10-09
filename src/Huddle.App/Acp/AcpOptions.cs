@@ -122,12 +122,25 @@ public sealed class AcpOptions
     public bool AdvertiseElicitation { get; set; } = true;
 
     /// <summary>
-    /// The most Teammates this installation allows - every loaded <see cref="PersonaStore"/> entry,
-    /// rejected files excluded (Spec §7.3). Checked by <c>propose_teammates</c> and again at Approve,
-    /// never on the Teammate card, which has no count of its own to enforce against. Zero or less
-    /// disables the limit entirely.
+    /// The install-wide Teammate cap of the single-Team era. Bound so an existing configuration still
+    /// loads, but it is no longer enforced anywhere: <see cref="MaxTeammatesPerTeam"/> and
+    /// <see cref="MaxLiveProcesses"/> (HR-10, decision D1) limit each Team and the live processes
+    /// separately.
     /// </summary>
     public int MaxTeammates { get; set; } = 8;
+
+    /// <summary>
+    /// The most Teammates one Team may hold (HR-10, decision D1). A hire that would take the Team past
+    /// this is refused. Zero or less disables the limit entirely.
+    /// </summary>
+    public int MaxTeammatesPerTeam { get; set; } = 8;
+
+    /// <summary>
+    /// The most live Teammate processes this installation runs at once across every Team (HR-10,
+    /// decision D1). A hire that would take the live count past this is refused. Zero or less disables
+    /// the limit entirely.
+    /// </summary>
+    public int MaxLiveProcesses { get; set; } = 16;
 
     /// <summary>
     /// How many minutes an <c>Idle</c> Room Session with an empty queue may sit open before

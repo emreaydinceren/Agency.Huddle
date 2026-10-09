@@ -266,6 +266,35 @@ public sealed class PersonaSupervisorHealthTests
         Assert.Contains("tools/acp/install.ps1", status.Reason, StringComparison.Ordinal);
     }
 
+    /// <summary>A host that failed to start reports not-running to the start gate at once, instead of the gate waiting out its whole timeout.</summary>
+    [Fact]
+    public async Task WaitUntilRunningAsync_HostFailedToStart_ReturnsFalseBeforeTheTimeout()
+    {
+        using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(20));
+        var ct = cts.Token;
+
+        await using var fixture = await PipeHostFixture.StartAsync(
+            new Dictionary<string, string?> { ["Team:Acp:Enabled"] = "true" }, ct);
+        var options = fixture.Services.GetRequiredService<IOptions<TeamOptions>>();
+        WritePersonaFile(options, "nova");
+
+        var personaStore = fixture.Services.GetRequiredService<PersonaStore>();
+        var factory = new FailingForOneAgentHostFactory("nova", new InvalidOperationException("No ACP adapter is installed."), new FakeAgentHostFactory());
+        var health = NewHealth();
+        var resolver = fixture.Services.GetRequiredService<AdapterProfileResolver>();
+        using var skillStore = NewSkillStore(options);
+        using var supervisor = new PersonaSupervisor(options, personaStore, factory, resolver, health, new FakePromptSource(), new RoomFollows(), NullLoggerFactory.Instance, NullLogger<PersonaSupervisor>.Instance, skillStore);
+        await supervisor.StartAsync(ct);
+        var started = System.Diagnostics.Stopwatch.StartNew();
+
+        bool running = await ((Agency.Huddle.App.Teams.IPersonaStartGate)supervisor).WaitUntilRunningAsync("nova", TimeSpan.FromSeconds(15), ct);
+        started.Stop();
+        await supervisor.StopAsync(ct);
+
+        Assert.False(running);
+        Assert.True(started.Elapsed < TimeSpan.FromSeconds(10));
+    }
+
     /// <summary>An <see cref="AgentAuthenticationRequiredException"/> is recorded as Offline, and when it carries auth methods their names are the actionable text in the reason.</summary>
     [Fact]
     public async Task AuthenticationRequired_IsRecordedAsOfflineAndNamesTheAuthMethods()

@@ -17,6 +17,9 @@ internal static partial class TaskFileFormat
     /// <summary>The Markdown heading, matched case-insensitively, that starts a Task file's Change log section.</summary>
     public const string ChangeLogHeading = "## Change log";
 
+    /// <summary>The Markdown heading, matched case-insensitively, that starts a Task file's append-only Evidence section.</summary>
+    public const string EvidenceHeading = "## Evidence";
+
     /// <summary>The Spec §7.2 frontmatter keys this parser recognises, compared case-insensitively.</summary>
     private static readonly HashSet<string> KnownKeys = new(StringComparer.OrdinalIgnoreCase)
     {
@@ -412,6 +415,62 @@ internal static partial class TaskFileFormat
         return headingIndex < 0
             ? trimmed + "\n\n" + ChangeLogHeading + "\n" + formatted + "\n"
             : trimmed + "\n" + formatted + "\n";
+    }
+
+    /// <summary>
+    /// Adds one line at the end of the "## Evidence" section of <paramref name="fileText"/>, creating the section
+    /// just before the Change log heading (or at the end when there is none) when it is absent. Every other line is
+    /// left exactly as it was.
+    /// </summary>
+    /// <param name="fileText">The Task file's raw text.</param>
+    /// <param name="evidenceLine">The formatted Evidence line, without a line break.</param>
+    public static string AddEvidenceLine(string fileText, string evidenceLine)
+    {
+        ArgumentNullException.ThrowIfNull(fileText);
+        ArgumentException.ThrowIfNullOrWhiteSpace(evidenceLine);
+
+        string normalized = fileText.Replace("\r\n", "\n", StringComparison.Ordinal).Replace("\r", "\n", StringComparison.Ordinal);
+        List<string> lines = [.. normalized.Split('\n')];
+        int changeLog = FindChangeLogHeadingLineIndex([.. lines]);
+        int limit = changeLog < 0 ? lines.Count : changeLog;
+
+        int heading = -1;
+        bool inFence = false;
+        for (int i = 0; i < limit && heading < 0; i++)
+        {
+            string trimmed = lines[i].Trim();
+            if (trimmed.StartsWith("```", StringComparison.Ordinal) || trimmed.StartsWith("~~~", StringComparison.Ordinal))
+            {
+                inFence = !inFence;
+            }
+            else if (!inFence && string.Equals(trimmed, EvidenceHeading, StringComparison.OrdinalIgnoreCase))
+            {
+                heading = i;
+            }
+        }
+
+        if (heading >= 0)
+        {
+            int last = heading;
+            for (int i = heading + 1; i < limit && !lines[i].StartsWith('#'); i++)
+            {
+                if (lines[i].Trim().Length > 0)
+                {
+                    last = i;
+                }
+            }
+
+            lines.Insert(last + 1, evidenceLine);
+            return string.Join('\n', lines);
+        }
+
+        if (changeLog < 0)
+        {
+            return normalized.TrimEnd('\n') + "\n\n" + EvidenceHeading + "\n" + evidenceLine + "\n";
+        }
+
+        lines.InsertRange(changeLog, [EvidenceHeading, evidenceLine, string.Empty]);
+        return string.Join('\n', lines);
     }
 
     /// <summary>

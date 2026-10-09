@@ -40,6 +40,11 @@ subtree a page is in: **chat** is the chat surface, **acp** is the ACP effort
 | Build a test data folder | [../agents/DataSeeding.md](../agents/DataSeeding.md) |
 | Change anything a Human sees | [Huddle.UserGuide.md](Huddle.UserGuide.md): update it in the same change |
 | "Fix" something that looks missing | [known-limits.md](engineering/known-limits.md) first |
+| Team types and hiring: a team type, a role, a Candidate, a hire card, Start Team | [Huddle.UserGuide.md](Huddle.UserGuide.md) (Hiring a Team from a type), [adr/0038](adr/0038-team-types-are-data-in-json-and-markdown-files.md), then [code-map.md](engineering/code-map.md) (`TeamTypes/`, `Teams/HireService`) |
+| Skill import, provenance, or a Skill's "modified locally" chip | [Huddle.UserGuide.md](Huddle.UserGuide.md) (Importing a Skill), then [code-map.md](engineering/code-map.md) (`Skills/SkillImporter`, `SkillProvenance`) |
+| Process gates: `Process.md`, a gate's refusal, the checks command | [adr/0039](adr/0039-process-gates-live-in-process-md-and-are-enforced-in-taskservice-and-the-permission-handler.md), [Huddle.UserGuide.md](Huddle.UserGuide.md) (Process and gates), then [code-map.md](engineering/code-map.md) (`Teams/ProcessGateService`) |
+| Requests between Teams: filing, triage, confirming | [adr/0040](adr/0040-a-request-is-a-task-in-the-receiving-teams-backlog.md), [Huddle.UserGuide.md](Huddle.UserGuide.md) (Requests between Teams), then [code-map.md](engineering/code-map.md) (`Tasks/RequestLifecycle`, `Acp/Tools/*RequestTool`) |
+| Retrospectives: the cadence, retro proposals, the register | [Huddle.UserGuide.md](Huddle.UserGuide.md) (Retrospectives), then [code-map.md](engineering/code-map.md) (`Teams/CadenceService`, `RetroProposalService`, `RetroFiles`) |
 | Revisit a decision | [decisions.md](engineering/decisions.md), then the ADR in §4 |
 | Enable, disable or suppress an analyzer rule | [analyzer-decisions.md](engineering/analyzer-decisions.md) first |
 | Add to the product plan | [roadmap.md](engineering/roadmap.md) |
@@ -69,6 +74,7 @@ that exercise it. All are **chat** unless stated.
 | Sprints: a named group of Tasks, listed in `sprints.md` | [Huddle.Sprints-Specifications.md](Huddle.Sprints-Specifications.md) | [0037](adr/0037-a-sprint-is-a-named-group-of-tasks-in-one-markdown-file.md) | none yet; TASKS-16 to TASKS-19 are planned in the spec | Implemented 2026-10-05 |
 | Library | [Huddle.Library-Specifications.md](Huddle.Library-Specifications.md) | [0027](adr/0027-the-library-sees-only-configured-roots.md), [0028](adr/0028-the-library-edits-markdown-as-source-and-never-rewrites-it.md), [0029](adr/0029-between-the-human-and-an-agent-the-last-write-wins.md) | [library](engineering/manual-tests/library.md), [teammates-library](engineering/manual-tests/teammates-library.md) | Built |
 | Teams, Projects, Team Memory | [Huddle.TeamPages-Specifications.md](Huddle.TeamPages-Specifications.md), [Huddle.TeamPages-RetroActions.md](Huddle.TeamPages-RetroActions.md) | [0030](adr/0030-a-team-folder-is-its-library-and-holds-its-tasks.md), [0031](adr/0031-teammates-and-teams-are-sibling-folders.md), [0032](adr/0032-a-team-and-each-project-share-a-memory-folder.md) | [team-pages](engineering/manual-tests/team-pages.md) | Built 2026-09-29 |
+| Team types, hiring, Skill import, process gates, Requests and retrospectives | [Huddle.UserGuide.md](Huddle.UserGuide.md), [code-map.md](engineering/code-map.md), and the delivery record in [teams-plan.md](engineering/teams-plan.md) | [0038](adr/0038-team-types-are-data-in-json-and-markdown-files.md), [0039](adr/0039-process-gates-live-in-process-md-and-are-enforced-in-taskservice-and-the-permission-handler.md), [0040](adr/0040-a-request-is-a-task-in-the-receiving-teams-backlog.md) | none yet | Built 2026-10-08 |
 | Themes and Appearance | [language.md](engineering/language.md) (Theme, Appearance) | [0009](adr/0009-a-theme-is-a-stylesheet-layered-over-the-tokens.md) (superseded), [0010](adr/0010-a-theme-is-a-mudblazor-theme.md), [0016](adr/0016-vs-codes-bundled-themes-are-converted-once-not-imported.md), [0017](adr/0017-a-theme-is-a-palette-not-a-pair.md) | [appearance-theme](engineering/manual-tests/appearance-theme.md) | Built |
 | Prompts and Settings | [language.md](engineering/language.md) (Prompt) | [0007](adr/0007-model-facing-text-is-configuration.md) | [prompts-settings](engineering/manual-tests/prompts-settings.md) | Built |
 | App shell, navigation and startup | [Huddle.EngineeringGuide.md](Huddle.EngineeringGuide.md) | none | [shell-nav](engineering/manual-tests/shell-nav.md), [startup-config](engineering/manual-tests/startup-config.md) | Built |
@@ -89,6 +95,10 @@ that exercise it. All are **chat** unless stated.
 | [known-limits.md](engineering/known-limits.md) | What is deliberately absent, before you "fix" it | chat | ~1.9k |
 | [roadmap.md](engineering/roadmap.md) | The numbered plan, and what exists before work in `PersonaRunner`, `ReplyGate`, `app.css` or `Themes/` | chat | ~10.7k |
 | [analysis-hardening-plan.md](engineering/analysis-hardening-plan.md) | The ranked plan for hardening automated code analysis against agent shortcuts, with each item's state | chat | ~5k |
+| [teams-plan.md](engineering/teams-plan.md) | The 85-task, test-first delivery plan for Teams: team types, hiring, skills with provenance, process gates, Requests, retrospectives and Household | chat | ~40k, read by task range only |
+| [teams-spec.md](engineering/teams-spec.md) | The Teams specification: data formats, hiring, gates, Requests, retrospectives, skill import | chat, read by section |
+| [teams-requirements.md](engineering/teams-requirements.md) | The Teams requirements: team types, hiring, skills, process, Requests, retrospectives, open questions | chat, read by section |
+| [Huddle.Teams-Tracker.md](Huddle.Teams-Tracker.md) | The Kanban tracker for the Teams delivery: 170 `.t`/`.i` rows and 6 retrospectives, updated with `Set-Tracker.ps1` | chat | ~9k |
 | [installer.md](engineering/installer.md) | How to install Agency.Huddle on Windows or macOS, what the installer checks and why it stays idempotent, release process, integrity verification | chat | ~4k |
 | [decisions.md](engineering/decisions.md) | The decision record and the old-to-new vocabulary mapping | chat | ~6.3k |
 | [analyzer-decisions.md](engineering/analyzer-decisions.md) | Which compiler and Sonar rules are off or on, what each group rests on, and which are proven to fire | chat | ~4.5k |
@@ -140,6 +150,12 @@ One row per decision. Open the ADR only when its row is your question.
 | [0035](adr/0035-an-adapter-command-is-a-message-the-human-addresses-by-mention.md) | A command is a Message like `@Nova /compact`; an allowlist sits on the Adapter Profile. | Accepted |
 | [0036](adr/0036-a-prompt-block-is-sent-only-when-the-adapter-advertised-it.md) | A Prompt block (an image, or a document's text) is sent only when the Adapter advertised it, and only from the Message that started the Turn. | Accepted |
 | [0037](adr/0037-a-sprint-is-a-named-group-of-tasks-in-one-markdown-file.md) | A Sprint is an id and a name in one `sprints.md`; a Task holds the id; the line is removed when no Task holds it; no dates, state or screen. | Accepted |
+| [0038](adr/0038-team-types-are-data-in-json-and-markdown-files.md) | A team type is a folder of JSON and Markdown files; built-ins are embedded, and a user folder replaces by id. Code knows no role name. | Accepted |
+| [0039](adr/0039-process-gates-live-in-process-md-and-are-enforced-in-taskservice-and-the-permission-handler.md) | A Team's gates are listed in `Process.md` and enforced in `TaskService` and the permission handler; only the Human overrides, on record. | Accepted |
+| [0040](adr/0040-a-request-is-a-task-in-the-receiving-teams-backlog.md) | A Request is a Task with six extra keys in the receiving Team's backlog; a state machine and its tools decide who may move it. | Accepted |
+| [0041](adr/0041-retro-proposals-are-applied-only-by-the-humans-click.md) | A retro agent only proposes; Huddle edits `Process.md`, `_team.md` or a Teammate file when the Human clicks Accept, and the register row is Huddle's. | Accepted |
+| [0042](adr/0042-cadence-state-is-persisted-so-a-restart-does-not-double-fire.md) | The last digest and retro firing is stored in `team.db`, written before the post and restored if it is refused, so a restart fires nothing twice. | Accepted |
+| [0043](adr/0043-imported-skills-are-pinned-by-commit-and-hash.md) | An imported Skill is pinned to a commit, recorded with a SHA-256 in `.source.json`, and reviewed before install; a missing licence warns but never blocks. | Accepted |
 
 ## 5. Manual tests
 

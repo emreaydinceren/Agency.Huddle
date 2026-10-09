@@ -26,16 +26,16 @@ public sealed class PromptFieldFactoryTests
         }
     }
 
-    /// <summary>The five groups appear in the documented order, with the labels the Settings page shows.</summary>
+    /// <summary>The six groups appear in the documented order, with the labels the Settings page shows; the Cadence group (Task 64) holds the digest and retro prompts.</summary>
     [Fact]
-    public void Build_GroupsInOrder_SystemPromptTurnGetHelpToolTasks()
+    public void Build_GroupsInOrder_SystemPromptTurnGetHelpToolTasksCadence()
     {
         var prompts = new FakePromptSource();
 
         var groups = PromptFieldFactory.Build(prompts, NoPendingEdits);
 
         Assert.Equal(
-            ["System prompt", "Turn", "Get help", "Tool descriptions", "Tasks"],
+            ["System prompt", "Turn", "Get help", "Tool descriptions", "Tasks", "Cadence"],
             groups.Select(group => group.Label).ToList());
     }
 

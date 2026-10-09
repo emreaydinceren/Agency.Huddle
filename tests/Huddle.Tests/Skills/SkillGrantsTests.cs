@@ -124,6 +124,92 @@ public sealed class SkillGrantsTests
         Assert.Equal(["ask_human"], SkillGrants.Offer(all, [TeamBuildingSkill(["ask_human"])]).Select(tool => tool.Name));
     }
 
+    /// <summary>propose_sprint is offered to a Persona holding a Skill that lists it, and withheld from one without (Task 62).</summary>
+    [Fact]
+    public void Offer_ProposeSprint_IsOfferedOnlyToAHolderOfTheSkill()
+    {
+        IReadOnlyList<IAppTool> all = [new StubTool("post_message"), new StubTool("propose_sprint")];
+
+        Assert.Contains("propose_sprint", (IEnumerable<string>)SkillGrants.Grantable);
+        Assert.Equal(["post_message"], SkillGrants.Offer(all, [TeamBuildingSkill([])]).Select(tool => tool.Name));
+        Assert.Equal(["post_message", "propose_sprint"], SkillGrants.Offer(all, [TeamBuildingSkill(["propose_sprint"])]).Select(tool => tool.Name));
+    }
+
+    /// <summary>Every Request tool and <c>read_records</c> is grantable (Task 68).</summary>
+    /// <param name="tool">The tool name.</param>
+    [Theory]
+    [InlineData("list_teams")]
+    [InlineData("file_request")]
+    [InlineData("triage_request")]
+    [InlineData("confirm_request")]
+    [InlineData("read_records")]
+    [InlineData("propose_retro_changes")]
+    [InlineData("mark_retro_row")]
+    public void Grantable_RequestAndRecordsTools_AreListed(string tool)
+    {
+        Assert.Contains(tool, (IEnumerable<string>)SkillGrants.Grantable);
+        Assert.Contains("propose_sprint", (IEnumerable<string>)SkillGrants.Grantable);
+    }
+
+    /// <summary>A Persona without the Skill is not offered a Request tool or read_records; a holder is (Task 68).</summary>
+    [Fact]
+    public void Offer_RequestTools_AreWithheldFromAPersonaWithoutTheSkill()
+    {
+        IReadOnlyList<IAppTool> all =
+        [
+            new StubTool("post_message"),
+            new StubTool("list_teams"),
+            new StubTool("file_request"),
+            new StubTool("triage_request"),
+            new StubTool("confirm_request"),
+            new StubTool("read_records"),
+        ];
+
+        Assert.Equal(["post_message"], SkillGrants.Offer(all, [TeamBuildingSkill([])]).Select(tool => tool.Name));
+        Assert.Equal(
+            ["post_message", "list_teams", "file_request", "triage_request", "confirm_request"],
+            SkillGrants.Offer(all, [TeamBuildingSkill(["list_teams", "file_request", "triage_request", "confirm_request"])]).Select(tool => tool.Name));
+    }
+
+    /// <summary>A specialist holding only the retrospective Skill gets read_records and none of the Request tools (Task 68).</summary>
+    [Fact]
+    public void Offer_RetrospectiveOnly_GetsReadRecordsAndNoRequestTools()
+    {
+        IReadOnlyList<IAppTool> all =
+        [
+            new StubTool("post_message"),
+            new StubTool("list_teams"),
+            new StubTool("file_request"),
+            new StubTool("triage_request"),
+            new StubTool("confirm_request"),
+            new StubTool("read_records"),
+        ];
+
+        Assert.Equal(["post_message", "read_records"], SkillGrants.Offer(all, [TeamBuildingSkill(["read_records"])]).Select(tool => tool.Name));
+    }
+
+    /// <summary>Task 79 (OR-3, RQ-2): the Chief of Staff holding team-building and the shipped team-rollup Skill is offered list_teams and no other Request, sprint or records tool.</summary>
+    [Fact]
+    public void Offer_ChiefOfStaffWithTeamRollup_GetsListTeamsOnly()
+    {
+        IReadOnlyList<IAppTool> all =
+        [
+            new StubTool("post_message"),
+            new StubTool("list_teams"),
+            new StubTool("file_request"),
+            new StubTool("triage_request"),
+            new StubTool("confirm_request"),
+            new StubTool("propose_sprint"),
+            new StubTool("read_records"),
+        ];
+        IReadOnlyList<string> rollupTools = SkillValidator.Validate("team-rollup", SkillCatalog.All["team-rollup"]).Tools;
+        Skill rollup = new("team-rollup", "Use when you roll up the Teams for the Human.", rollupTools, ["SKILL.md"], SkillSource.Default, null);
+
+        IReadOnlyList<IAppTool> offered = SkillGrants.Offer(all, [TeamBuildingSkill([]), rollup]);
+
+        Assert.Equal(["post_message", "list_teams"], offered.Select(tool => tool.Name));
+    }
+
     /// <summary>Builds a resolved <c>team-building</c> Skill granting exactly <paramref name="tools"/>.</summary>
     /// <param name="tools">The Skill's granted tool names.</param>
     private static Skill TeamBuildingSkill(IReadOnlyList<string> tools)

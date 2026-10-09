@@ -101,6 +101,7 @@ internal sealed class UpdateTaskTool(
             TaskResult.Unchanged unchanged => $"{unchanged.Task.Id} already has those values; nothing changed.",
             TaskResult.Refused refused => string.Join('\n', refused.Problems),
             TaskResult.NotFound notFound => $"Unknown task '{notFound.Id}'.",
+            TaskResult.GateRefused gateRefused => gateRefused.Message,
 
             // Spec §11.1: "A Conflict can't happen here, because tools pass baseVersion: null" - this
             // tool always does (above), so TaskService.Update's only remaining Conflict route (a

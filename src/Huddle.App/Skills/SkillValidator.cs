@@ -19,6 +19,9 @@ internal static partial class SkillValidator
     /// <summary>The length, in characters, above which a <c>description</c> is a Warning (Spec §7.2).</summary>
     private const int DescriptionWarningLength = 300;
 
+    /// <summary>The most files an imported Skill's folder may hold before it is an Error.</summary>
+    private const int MaxImportedFiles = 200;
+
     private const string SkillMdFileName = "SKILL.md";
     private const string NameKey = "name";
     private const string DescriptionKey = "description";
@@ -26,9 +29,10 @@ internal static partial class SkillValidator
 
     /// <summary>Validates one candidate Skill's files against Spec §8.1 rules 1–7.</summary>
     /// <param name="folderName">The Skill's folder name; a valid <c>name</c> field must equal this, ordinally.</param>
-    /// <param name="files">Every file found in the Skill's folder, keyed by file name.</param>
+    /// <param name="files">Every file found in the Skill's folder, keyed by file name (a relative path with <c>/</c> separators for an imported Skill's sub-folder files).</param>
+    /// <param name="allowSupportingFiles"><see langword="true"/> only when the folder has a valid <c>.source.json</c>: sub-folder and non-<c>.md</c> files are then accepted, up to 200 files.</param>
     /// <returns>What parsed, what survived, and every problem found.</returns>
-    internal static SkillValidation Validate(string folderName, IReadOnlyDictionary<string, string> files)
+    internal static SkillValidation Validate(string folderName, IReadOnlyDictionary<string, string> files, bool allowSupportingFiles = false)
     {
         List<SkillIssue> issues = [];
 
@@ -122,6 +126,11 @@ internal static partial class SkillValidator
             {
                 issues.Add(Info($"SKILL.md has an unknown key '{field.Key}'; it is ignored."));
             }
+        }
+
+        if (allowSupportingFiles && files.Count > MaxImportedFiles)
+        {
+            issues.Add(Error($"'{folderName}' has {files.Count} files; an imported Skill may have no more than {MaxImportedFiles} files."));
         }
 
         // Rule 7: files are flat *.md <= 65,536 UTF-8 bytes. SKILL.md first, then ordinal order.

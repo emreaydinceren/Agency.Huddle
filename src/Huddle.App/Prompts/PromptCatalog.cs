@@ -135,6 +135,73 @@ internal static class PromptCatalog
             Timing: PromptTiming.NextSession),
 
         new PromptDefinition(
+            Key: "systemPrompt.roleBlock",
+            Label: "Role block",
+            HelperText:
+                "Primes a hired Team member with who it is in its Team, which colleagues to consult and " +
+                "which skills it holds, appended only for a Persona hired into a role. Must keep {{name}}, " +
+                "{{role}}, {{team}}, {{consult}} and {{skills}}: the last two are where the colleague list " +
+                "and the skill list with their triggers are substituted in.",
+            Default:
+                """
+                You are {{name}}, the {{role}} in the {{team}} Team.
+
+                Consult these colleagues when their job description says their work bears on yours:
+
+                {{consult}}
+
+                Your skills, read one with read_skill when its trigger applies:
+
+                {{skills}}
+                """,
+            Placeholders: ["{{name}}", "{{role}}", "{{team}}", "{{consult}}", "{{skills}}"],
+            RequiredPlaceholders: ["{{name}}", "{{role}}", "{{team}}", "{{consult}}", "{{skills}}"],
+            Timing: PromptTiming.NextSession),
+
+        new PromptDefinition(
+            Key: "systemPrompt.processBlockManager",
+            Label: "Process block (manager)",
+            HelperText:
+                "Gives a Team's manager the Team's whole Process.md, read afresh at each session start. " +
+                "Must keep {{process}}, where the document text is substituted in.",
+            Default:
+                """
+                This is your Team's process. Follow it and keep it current.
+
+                {{process}}
+                """,
+            Placeholders: ["{{process}}"],
+            RequiredPlaceholders: ["{{process}}"],
+            Timing: PromptTiming.NextSession),
+
+        new PromptDefinition(
+            Key: "systemPrompt.processBlockMember",
+            Label: "Process block (member)",
+            HelperText:
+                "Points every other member of a Team that has a Process.md at it. Must keep {{path}}, " +
+                "where the document's Library path is substituted in.",
+            Default: "Your Team follows a written process. Read it before you start work: {{path}}",
+            Placeholders: ["{{path}}"],
+            RequiredPlaceholders: ["{{path}}"],
+            Timing: PromptTiming.NextSession),
+
+        new PromptDefinition(
+            Key: "turn.onboarding",
+            Label: "Onboarding turn",
+            HelperText:
+                "Posted to the manager as its first Turn after the Team first starts. Must keep {{steps}}, " +
+                "where the steps of the process's Onboarding section are substituted in.",
+            Default:
+                """
+                Your Team has just started. Work through these onboarding steps, then tell the Human what you found and propose a starter Task:
+
+                {{steps}}
+                """,
+            Placeholders: ["{{steps}}"],
+            RequiredPlaceholders: ["{{steps}}"],
+            Timing: PromptTiming.Live),
+
+        new PromptDefinition(
             Key: "systemPrompt.skills",
             Label: "Skills block",
             HelperText:
@@ -759,7 +826,7 @@ internal static class PromptCatalog
                 "placeholders.",
             Default:
                 """
-                Asks the Human to approve new Teammates. Give the id of the Room you are talking in and one to four Candidates. Nothing is created until the Human approves; you will be told the outcome in that Room.
+                Asks the Human to approve new Teammates. Give the id of the Room you are talking in and one to four Candidates. Each Candidate may carry an optional role, written typeId/roleId, to hire a role of a team type the Human chose. Nothing is created until the Human approves; you will be told the outcome in that Room.
                 """,
             Placeholders: [],
             RequiredPlaceholders: [],
@@ -1114,6 +1181,53 @@ internal static class PromptCatalog
                 """,
             Placeholders: [],
             RequiredPlaceholders: [],
+            Timing: PromptTiming.Live),
+
+        new PromptDefinition(
+            Key: "prompt.digest",
+            Label: "Digest prompt",
+            HelperText:
+                "The status digest a manager is asked to post on the cadence in Process.md (OR-3). " +
+                "Takes the Team name and the date the digest covers from.",
+            Default:
+                """
+                Post the status digest for {{team}}, covering the work since {{since}}. Link every Task you mention by its id, for example PLAT-0042, and link the evidence behind each status line, instead of paraphrasing what a Task says. Then list the decisions the Human needs to make, and the risks, each in one line with its Task link. Keep the whole digest to at most 15 lines. The Chief of Staff rolls your digests up for the Human as decisions and risks, so make each decision and risk stand on its own.
+                """,
+            Placeholders: ["{{team}}", "{{since}}"],
+            RequiredPlaceholders: ["{{team}}", "{{since}}"],
+            Timing: PromptTiming.Live),
+
+        new PromptDefinition(
+            Key: "prompt.rollup",
+            Label: "Roll-up prompt",
+            HelperText:
+                "The shape of the message the Chief of Staff sends the Human after the managers' digests (OR-3). " +
+                "Takes no placeholders.",
+            Default:
+                """
+                Roll the Teams up for the Human in this shape. First, Decisions: one line per decision the Human needs to make, with the Team and the Task link. Second, Risks: one line per risk, with the Team and the Task link. Third, open Requests per Team, from list_teams: one line per Team with its count. Quote each decision and risk as its manager wrote it and keep the manager's links; never paraphrase a digest. Leave out a Team with nothing to report, and keep the whole message to at most 15 lines.
+                """,
+            Placeholders: [],
+            RequiredPlaceholders: [],
+            Timing: PromptTiming.Live),
+
+        new PromptDefinition(
+            Key: "prompt.retro",
+            Label: "Retro prompt",
+            HelperText:
+                "The retro a Retro agent is asked to run, on demand or on the cadence in Process.md " +
+                "(RT-2). Takes the Team name and the date the retro covers from.",
+            Default:
+                """
+                Run a retro for {{team}} over the work since {{since}}. Follow these steps in order.
+                1. Gather: start with read_records for {{team}} since {{since}}. It returns Task change logs, Review bounces, Budget pauses, wake-up limits hit, escalations, persisted spend, Requests and tool-call log summaries. Read the evidence before you ask anyone anything.
+                2. Ask: open a Room with the members involved and ask each one about a specific moment in the evidence. Do not ask general questions.
+                3. Report: write the report to _retros/<date>.md with the top 3 issues, each linked to its evidence.
+                4. Propose: propose at most 3 changes as diffs to Process.md, a stance or a skill assignment. Removing a rule counts as a change. The Human sees each one as a proposal card with Accept and Reject; do not apply them yourself.
+                5. Register: add one row per finding to Retro register.md with ID, Finding, Action, Owner, Status (Open, Done, Partial, Verified or Changed) and Evidence / next check. At the next retro, check the Done rows against new evidence.
+                """,
+            Placeholders: ["{{team}}", "{{since}}"],
+            RequiredPlaceholders: ["{{team}}", "{{since}}"],
             Timing: PromptTiming.Live),
     ];
 }

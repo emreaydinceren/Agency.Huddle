@@ -18,6 +18,7 @@ using Agency.Huddle.App.Tasks.Views;
 using Agency.Huddle.App.Questions;
 using Agency.Huddle.App.Teammates;
 using Agency.Huddle.App.Teams;
+using Agency.Huddle.App.TeamTypes;
 
 namespace Agency.Huddle.App;
 
@@ -79,6 +80,7 @@ public static class ServiceCollectionExtensions
         services.AddSingleton<IChatStore, FileChatStore>();
 
         services.AddSingleton<ChatService>();
+        services.TryAddSingleton<ToolCallLogWriter>();
         services.AddSingleton<Drafts>();
 
         // PersonaHealth takes a TimeProvider so a test can prove that a no-op report leaves a
@@ -129,6 +131,11 @@ public static class ServiceCollectionExtensions
         services.AddSingleton<IAgentGateway>(sp => sp.GetRequiredService<AgentGateway>());
 
         services.AddSingleton<TeammatePaths>();
+        services.AddSingleton<SkillPackStore>();
+        services.AddSingleton<TeamTypeCatalog>();
+        services.AddSingleton<SkillsCatalogIndex>();
+        services.AddSingleton<UserCandidateWriter>();
+        services.AddSingleton<IConnectorStatus, FileConnectorStatus>();
 
         // Shared between PersonaRenameCascade (signals around a Teammate-folder move) and
         // DotAcpAgentHostFactory (waits on it before creating a Persona's Work Dir) - corrections-B2
@@ -159,8 +166,16 @@ public static class ServiceCollectionExtensions
         services.AddSingleton<AdapterCatalog>();
         services.AddSingleton<AdapterProfileResolver>();
         services.AddSingleton<PersonaModelStore>();
+        services.AddSingleton<CadenceStateStore>();
         services.AddSingleton<PersonaEffortStore>();
         services.AddSingleton<PersonaWorkModeStore>();
+        services.AddSingleton<PersonaSpendStore>();
+        services.AddSingleton<Agency.Huddle.App.Teams.RecordsBundleBuilder>();
+        services.AddSingleton<Agency.Huddle.App.Teams.RetroFileStore>();
+
+        // Retro proposals (Task 76): held under _proposals/retro/ in the Team folder; Huddle applies an accepted edit.
+        services.AddSingleton<Agency.Huddle.App.Teams.RetroProposalStore>();
+        services.AddSingleton<Agency.Huddle.App.Teams.RetroProposalService>();
         services.AddSingleton<TaskIdAllocator>();
 
         // No interface, same reasoning as AvatarStore/PromptStore above: a second, independently
@@ -189,6 +204,19 @@ public static class ServiceCollectionExtensions
         // constructed stores each creating {DataDir}/Skills and (once a later task adds one) each
         // running their own FileSystemWatcher over it.
         services.AddSingleton<SkillStore>();
+
+        // Skill import (SK-2 to SK-7): the downloader gets its own client with a long timeout for the archive; the importer's client only
+        // resolves a branch to a commit, so it times out sooner. Both are plain singletons - nothing here is shared with other HTTP users.
+        services.AddSingleton(static sp => new SkillDownloader(
+            new HttpClient { Timeout = TimeSpan.FromMinutes(2) },
+            sp.GetRequiredService<ILogger<SkillDownloader>>()));
+        services.AddSingleton(static sp => new SkillImporter(
+            sp.GetRequiredService<SkillsCatalogIndex>(),
+            sp.GetRequiredService<SkillDownloader>(),
+            sp.GetRequiredService<SkillStore>(),
+            new HttpClient { Timeout = TimeSpan.FromSeconds(15) },
+            sp.GetService<TimeProvider>()));
+        services.AddSingleton<ISkillImporter>(static sp => sp.GetRequiredService<SkillImporter>());
 
         // No interface, same reasoning as PromptStore/SkillStore above: nothing needs to
         // substitute this, and it is built entirely from other singletons already registered
@@ -230,6 +258,34 @@ public static class ServiceCollectionExtensions
         // ITeamDirectory) is already a singleton registered above, and none of them takes a
         // ProposalService back - construction order is safe and there is no cycle.
         services.AddSingleton<ProposalService>();
+
+        // The one hire-limit check ProposalService, ProposeTeammatesTool and ProposalCard share. The
+        // live-process count reads PersonaSupervisor lazily, per call, so registering it here (before
+        // the supervisor) creates no construction cycle.
+        services.AddSingleton(sp => new HireLimitGuard(
+            sp.GetRequiredService<ITeamCatalog>(),
+            sp.GetRequiredService<Microsoft.Extensions.Options.IOptions<TeamOptions>>(),
+            () => sp.GetService<PersonaSupervisor>()?.RunningHostCount ?? 0));
+
+        // Hiring a role-based Team. The start gate is the supervisor, resolved lazily through a factory
+        // so HireService does not force PersonaSupervisor to construct before it is registered below;
+        // CardResolver and TierModelPicker are static and need no registration.
+        services.AddSingleton<Agency.Huddle.App.Teams.ISkillInstaller, Agency.Huddle.App.Teams.ImportingSkillInstaller>();
+        services.AddSingleton<Agency.Huddle.App.Teams.IPersonaStartGate>(sp => sp.GetService<PersonaSupervisor>() as Agency.Huddle.App.Teams.IPersonaStartGate ?? new Agency.Huddle.App.Teams.NoHostStartGate());
+        services.AddSingleton<Agency.Huddle.App.Teams.ProcessProvisioner>();
+        services.AddSingleton<Agency.Huddle.App.Teams.IOnboardingPoster, Agency.Huddle.App.Teams.ChatOnboardingPoster>();
+        services.AddSingleton<Agency.Huddle.App.Acp.Tools.IRequestNotifier, Agency.Huddle.App.Acp.Tools.RequestNotifier>();
+        services.AddSingleton<Agency.Huddle.App.Teams.TeamOnboarding>();
+        services.AddSingleton<Agency.Huddle.App.Teams.HireService>();
+        services.AddSingleton<Agency.Huddle.App.Teams.IHireContext, Agency.Huddle.App.Teams.HireContext>();
+        services.AddSingleton<Agency.Huddle.App.Teams.RoleHirer>();
+
+        // The Team's process gates; TaskService asks it before every Task status change (PR-7).
+        services.AddSingleton<Agency.Huddle.App.Teams.ProcessGateService>();
+
+        // Asked by WorkDirPermissionHandler before an Agent's git merge or git push (PR-7).
+        services.AddSingleton<IMergeGate, Agency.Huddle.App.Teams.ProcessMergeGate>();
+        services.AddSingleton<Agency.Huddle.App.Teams.TeamDuplicator>();
 
         // No interface: nothing needs to substitute this, and CSharpPrinciples.md says not to add
         // abstraction a feature has not asked for. This is state the app writes (a chosen theme, a
@@ -304,12 +360,18 @@ public static class ServiceCollectionExtensions
         // aliased registrations elsewhere in this file exist to avoid.
         services.AddSingleton<ViewStore>();
 
-        // Sprints (spec §13): the store is the one instance; the read-only catalogue the tools and
+        // Sprints (spec ï¿½13): the store is the one instance; the read-only catalogue the tools and
         // TaskService see resolves to it, so there is one watcher on sprints.md. It needs TaskStore and
         // TaskEvents, registered earlier. Like ViewStore it is lazy, so nothing reads sprints.md
         // unless something that shows Sprints is resolved (Team:Tasks:Enabled=false hides all of it).
         services.AddSingleton<SprintStore>();
         services.AddSingleton<ISprintCatalog>(sp => sp.GetRequiredService<SprintStore>());
+
+        // Sprint proposals (Task 62): kept in memory and under _proposals/ in the Team folder until the Human decides.
+        services.AddSingleton<SprintProposalStore>();
+
+        // Answers a Sprint proposal (Task 63): Approve is the only path that creates a Sprint.
+        services.AddSingleton<SprintProposalService>();
 
         // Scoped (Task 13.2.i): one Library Pane open/closed state per circuit, shared by
         // LibraryNavLink, LibraryPaneHost and any ?library= navigation.
@@ -364,6 +426,10 @@ public static class ServiceCollectionExtensions
         // item 2).
         services.AddSingleton<TaskTriggerService>();
         services.AddHostedService(sp => sp.GetRequiredService<TaskTriggerService>());
+
+        // Digest and retro wake-ups on schedule or count (OR-3, RT-2); singleton plus hosted, like the service above.
+        services.AddSingleton<Agency.Huddle.App.Teams.CadenceService>();
+        services.AddHostedService(sp => sp.GetRequiredService<Agency.Huddle.App.Teams.CadenceService>());
 
         // Unconditional, unlike PersonaSupervisor's hosted service above: the Agent row a rename
         // cascades from may exist from an earlier session or a raw pipe client, so a Persona rename

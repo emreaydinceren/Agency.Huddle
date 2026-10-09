@@ -8,7 +8,8 @@ each part of the app does, how the parts relate, and **what Huddle writes to
 disk** every time you change something.
 
 Applies to `main` as of 2026-09-29, which includes Room Sessions, Tasks, Skills,
-the Library and Team Pages. This guide does not cover installing adapters or
+the Library and Team Pages, plus the Teams work on the `feat/teams` branch (team
+types, hiring, processes and gates, Requests and retrospectives). This guide does not cover installing adapters or
 configuring models. See [the chat-surface hub](Huddle.EngineeringGuide.md) for that.
 
 ## Contents at a glance
@@ -21,6 +22,8 @@ configuring models. See [the chat-surface hub](Huddle.EngineeringGuide.md) for t
 | Know which file a change lands in | [Where your data lives](#where-your-data-lives) and [What happens when…](#what-happens-when-reference) |
 | Add or change a Teammate | [Working with Teammates](#working-with-teammates) |
 | Set up Teams and Projects | [Organising Teams and Projects](#organising-teams-and-projects) |
+| Hire a Team from a type, or set its process and gates | [Hiring a Team from a type](#hiring-a-team-from-a-type) and [Process and gates](#process-and-gates) |
+| Handle asks between Teams, or Team retrospectives | [Requests between Teams](#requests-between-teams) and [Retrospectives](#retrospectives) |
 | Chat with one or several Teammates | [Chatting in Rooms](#chatting-in-rooms) |
 | Track work | [Tracking work with Tasks](#tracking-work-with-tasks) |
 | Share notes and documents | [Keeping notes in the Library](#keeping-notes-in-the-library) |
@@ -119,7 +122,7 @@ connect. Later sections explain how to work with them.
 | **You (the Human)** | The person using the app. Your display name is `Team:HumanName` (default `You`). You are in every Room. | Config, and a row in `team.db` |
 | **Teammate** (also called a **Persona**) | One AI Teammate: its name, job title, @alias, Teams, Skills, and its instructions. | `Teammates/<Name>/<Name>.md` |
 | **Agent** | A Teammate that is running and online in chat. There is one Agent per Teammate file. | A row in `team.db`, plus a running adapter process |
-| **Team** | A named group of Teammates. It has no file of its own. | A label in each member's `teams:` list, plus a folder `Teams/<Team>/` |
+| **Team** | A named group of Teammates. Its membership is a label in each member's `teams:` list; a Team set up from a type also has a manager, a workspace and a process. | A label in each member's `teams:` list, plus a folder `Teams/<Team>/` holding `_team.md` (and `Process.md`, once set) |
 | **Project** | A piece of work inside one Team. | A sub-folder `Teams/<Team>/<Project>/` |
 | **Room** | A chat conversation between you and one or more Agents. | Rows in `team.db` |
 | **Message** | One chat message, in one Room. | One line in `rooms/<roomId>.jsonl` |
@@ -161,7 +164,8 @@ The relationships that matter most:
 - **A Team is a label plus a folder.** The list of Teams is every label used by
   any Teammate, plus every folder directly under `Teams/`. A folder with no
   members still shows, as **No members**. A label with no folder gets one
-  created automatically.
+  created automatically. A Team's folder may also hold `_team.md`, which names its
+  team type, manager and workspace, and `Process.md`, which says how it works.
 - **A Project belongs to exactly one Team** and has no members of its own. The
   Team's members work on it. Any ordinary sub-folder of a Team folder is a
   Project, except `memory` and names starting with `_` or `.`.
@@ -279,8 +283,8 @@ Each Teammate has its own card with **Message**, **Edit**, **Open**,
 
 Names and aliases are at most 64 characters, start with a letter or digit, and
 may contain letters, digits, `_`, `-` and single spaces. No dots. Names and
-aliases must be unique across all Teammates. `Team:Acp:MaxTeammates` limits how
-many Teammates can load (default 8).
+aliases must be unique across all Teammates. How many Teammates a Team may hold,
+and how many run at once, is limited; see [Hire limits](#hire-limits).
 
 The built-in **Chief of Staff** is the first Teammate you meet. It helps you put
 a team together: it proposes Teammates, and nothing is created until you select
@@ -387,12 +391,54 @@ within half a second. It behaves exactly like an in-app edit, including the
 restart. A file that fails validation is listed under **Files that didn't load**
 on the Teammates page, with the reason.
 
+### Packs, setup warnings and the Process step
+
+A Teammate who was hired from a team type's role has a **Complete Setup** panel on
+its card. It shows:
+
+- **Role:** the role and version the Teammate was hired as.
+- **Total spent:** the lasting cost of the Teammate, one line per currency, kept
+  across restarts. This is different from **Spent since start**, which counts
+  only the current run.
+- **Packs:** named groups of Skills, such as **MSBuild Authoring**. Select a
+  pack's chip to add its Skills to that Teammate, or select it again to take
+  them off. A Skill the role itself carries stays when you remove a pack. Adding
+  a pack also adds a short phrase to the Teammate's `consult_when` line, so the
+  manager knows to route that kind of work to it.
+- Each Skill's provenance line (see [Importing a Skill](#importing-a-skill)).
+
+The panel shows a warning, as a full sentence, in two places:
+
+- beside the **Model** choice, when the Teammate runs on the same vendor as a
+  member whose role it must differ from (the Reviewer and QA, for example, against
+  the Developer), such as "Reviewer Jane runs on the same vendor as Developer
+  Joe.";
+- beneath the packs, when the Teammate has more Skills than is advised, or when
+  two or more of its Skills come from the same catalog sub-category, such as
+  "msbuild-a and msbuild-b are both in Build tooling.".
+
+A warning does not stop anything. It tells you where the Team's setup may be
+weaker than you meant. A Teammate you added by hand, with no role, shows none of
+this.
+
+A manager's card also has a **Process** step, with **Use this process** for the
+process its team type offers, or **Start blank**. Either one writes the Team's
+`Process.md` once. An existing `Process.md` is never overwritten: the step says
+"This Team already has a process. Edit it on the Process tab." See
+[Process and gates](#process-and-gates).
+
+> **Example (Scenario 2).** Emre hires a second Developer, Jane, and selects the
+> MSBuild Authoring chip on her card. Her card now lists the pack's Skills, and
+> if two of them share a sub-category, the card says so.
+
 ## Organising Teams and Projects
 
 ### Creating a Team
 
 Select **New team** at the bottom of the Teams group, type a name, and select
-**Create**.
+**Create**. This makes an empty Team folder. To start a Team with a team type and
+its hired members, use **New Team from a type** instead; see
+[Hiring a Team from a type](#hiring-a-team-from-a-type).
 
 **In the background:** Huddle creates the folder `Teams/<Team>/`. Nothing else
 is written and no Teammate restarts. The new Team shows **No members** until you
@@ -455,6 +501,361 @@ the current visit only, and always stay inside the Team or Project.
 
 The Files tab is hidden when the Library is turned off (`Team:Library:Enabled`).
 The Tasks tab is hidden when Tasks are turned off (`Team:Tasks:Enabled`).
+
+A Team whose `_team.md` names a process also has a **Process** tab, which shows its
+`Process.md` with an **Edit** button and a switch for each gate. See
+[Process and gates](#process-and-gates).
+
+Under a Team's title (not a Project's), the header has two more things:
+
+- **Duplicate** copies the Team's roster into a new Team. A small dialog asks for
+  the **New Team title** and a **Workspace folder** (left blank, it means none,
+  which is refused when the type requires one). The new Team has
+  the same team type, and each member is hired afresh under a new name; no
+  memory, Library file or Task is copied. A member whose role no longer exists
+  in the type, or who was added without a role, is listed as skipped before you
+  select **Open Team**. A title that is taken, or a workspace folder that does
+  not exist, is refused in the dialog.
+- **Spent** shows what the Team's members have cost in total, one amount per
+  currency. It stays blank until something was spent, and it survives restarts.
+
+### Hiring a Team from a type
+
+A team type is a template for a kind of Team: its roles, the Teammates that fill
+them, its process and its workspace. The built-in types are **Development Team**
+and **Household**. Your own types live in the `TeamTypes` folder under your data
+folder, and a folder there with the same id replaces the built-in one.
+
+The **Settings** page's **Team Types** tab lists every type Huddle can serve: its
+name, id, version, whether it is **Built-in** or **Yours**, and how many roles it
+has. **Reload** rereads the built-in types and your `TeamTypes` folder. Under
+**Problems**, each type Huddle rejected is listed with its file and the reason,
+so you can see why a folder you wrote never reached the Team type list.
+
+To make a Team from a type:
+
+1. Select **New Team from a type** at the bottom of the Teams group. This opens
+   the **New Team** screen (`/teams/new`).
+2. Choose a **Team type** and type a **Team title**. If the type has a workspace,
+   fill in its folder: a Development Team's workspace is a repository and is
+   required; a Household's is a home folder and is optional. A title that is
+   taken, or a folder that does not exist, is refused on the spot.
+3. Select **Create**. Huddle creates `Teams/<Team>/`, writes its `_team.md`
+   (which names the type, the manager and the workspace), and hires the type's
+   manager at once if its card is Ready. The Team's setup screen
+   (`/teams/<Team>/setup`) then opens. If the manager's card needs setup, the
+   Team is still created; the setup screen lists the reasons and offers **Hire
+   manager** once they are fixed. If hiring the manager is refused, the Team is
+   kept and **Open setup** takes you to it.
+4. In the **hiring pool**, the left side has one card per role: its tier, what it
+   covers and the name the next hire would get. Select a card's **+** to add that
+   role to the Team on the right, or choose a **preset** (a Development Team
+   offers **Small** and **Full**; a Household offers **Basic**) to add several
+   roles at once. There is no drag and drop. The manager is already there and is
+   locked: it cannot be removed. A role that has reached its limit is greyed and
+   says **Limit reached**. **Custom role** adds a role of your own; see
+   [Custom roles](#custom-roles).
+5. Each card on the right shows **Ready** when every default resolves, or **Needs
+   setup** with the reasons, such as "no logged-in adapter for tier balanced" or
+   "connector email:read not connected". A card that needs a connector says
+   "Connect <connector> to finish setup" and where to list it; see
+   [Household teams](#household-teams). Select **I connected it** to check
+   again. Select the **x** on a card to take it off.
+6. The **team check bar** shows one chip per coverage step of the type (filled
+   when a hired role covers it), how many vendors and processes the Team would
+   run, and each reason **Start Team** is disabled: a card that needs setup, a
+   missing manager, or a required role that is not hired.
+7. The **Process** step on the same screen lets you pick the process the team
+   type offers and preview it, then **Use this process** or **Start blank**. If
+   you skip it, **Start Team** gives the Team the type's default process when
+   it has none.
+8. Select **Start Team** once the bar has no blockers. Huddle installs the
+   Skills the members need, hires and starts the manager first, waits until it is
+   running, then hires the rest in order. The manager's first Turn arrives as a
+   message from you in its direct Room, with the onboarding steps of the Team's
+   process. That message is posted once per Team, never again after a restart. A
+   failure stops the start with an error on the screen and tells you who already
+   started; nobody is removed.
+
+If a Team you open on the setup screen has no `_team.md`, the screen says
+**This Team has no setup file.**
+
+**Skills during a hire.** Hiring installs any Skill a member needs that is not
+already on disk, by importing it from the catalog. If a Skill's review shows more
+than a missing licence (scripts, shell commands, network calls), Huddle does not
+install it on its own and the start stops with "Skills not installed: ...". Import
+it yourself from **Settings › Skills**; see [Importing a Skill](#importing-a-skill).
+
+### Custom roles
+
+**Custom role** in the hiring pool opens a small dialog. **Start from** is
+**Blank** or one of the type's roles, which pre-fills the **Title**,
+**Consult when** and **Stance**. **Save** stores the role as a candidate in your
+copy of the team type and stages it for the Team. A custom role is always saved
+for next time: the **Save for next time** box is shown ticked and cannot be
+cleared, and the role appears in the pool of every later Team of that type.
+
+### Hire limits
+
+Two limits apply whenever Teammates are hired, whether from the setup screen or by
+approving a Chief of Staff proposal:
+
+| Setting | Default | What it limits |
+| --- | --- | --- |
+| `Team:Acp:MaxTeammatesPerTeam` | `8` | Teammates in one Team. |
+| `Team:Acp:MaxLiveProcesses` | `16` | Agent processes running at once, across every Team. |
+
+A hire that would pass either is refused with a plain sentence, such as "Team
+'Web Team' is full: 8 of 8 Teammates." or "16 of 16 agent processes are running, so
+no more Teammates can be hired." A value of zero turns a limit off. The old
+`Team:Acp:MaxTeammates` is retired: it is still read, so an old configuration
+loads, but nothing enforces it.
+
+### Models for a role
+
+A role names a **tier** (strongest, balanced or fast), never a model. Huddle picks
+an adapter that is available, preferring one that keeps a role on a different
+vendor from the role it must differ from, and then looks for the model with
+`Team:Teams:Tiers:<adapter>:<tier>` in your configuration. With no entry for that adapter and tier, the adapter's default model is used. A
+mapped model the adapter does not list is ignored in the same way.
+
+> **Example (Scenario 1).** Emre picks **Development Team**, names it **Web Team**,
+> points it at his repository, and chooses the **Small** preset. Joe, the
+> Development Manager, is hired first. Emre adds a Developer, a Reviewer and QA,
+> with the Reviewer and QA on a different vendor from the Developer, and selects
+> **Start Team**.
+
+### Process and gates
+
+A Team's **process** says how its work is done. It is the file `Process.md` in the
+Team folder, which the Team's manager and members read. Its frontmatter names the
+process's settings:
+
+- `gates:` lists the gates the Team enforces, from the four below.
+- `checkCommand:` names the command whose passing Evidence the merge gate looks for.
+- `wip:` sets a limit on work in progress.
+- `retro:` and `digest:` set when a retrospective and a digest run, such as
+  `retro: { every: 10, unit: 'done-tasks' }`. See
+  [Digests and retrospectives on a schedule](#digests-and-retrospectives-on-a-schedule).
+
+A Team gets its `Process.md` from the **Process** step (on the setup screen, or on
+the manager's card), from **Start Team**, or by writing the file yourself.
+**Start blank** writes an empty outline; **Use this process** copies the type's
+template. Neither overwrites an existing `Process.md`. The team types ship several
+templates, such as a lightweight flow, spec-driven, sprints and maintenance for a
+Development Team, and household basics for a Household.
+
+### The Process tab
+
+A Team whose `_team.md` names a process has a **Process** tab on its page. It shows
+`Process.md` as a document, with an **Edit** button that opens the file in the
+Library. Above the document there is one switch for each gate the process turns
+on. Turning a switch off asks first, naming the gate and its risk (for example,
+"A Task can then be marked Done with no verified Evidence."). Only **Turn off**
+rewrites the `gates:` line; **Cancel** leaves the file alone and the switch on.
+The tab only lists gates that are on; to turn one on, edit the file. A Team with
+no `Process.md` says "This Team has no process yet."
+
+### The four gates
+
+| Gate | Refuses |
+| --- | --- |
+| `qa-evidence-before-done` | A Task moving to **Done** until a member whose role verifies (for example QA) has added an Evidence line with a command. |
+| `checks-before-merge` | A `git merge` or `git push` by a Teammate in the Team until an Evidence line shows the Team's `checkCommand` ending with exit code 0. |
+| `spec-approved-before-build` | A Task moving to **In Progress** until its parent spec Task is approved. |
+| `failing-test-before-fix` | A bug Task moving to **Review** until its Evidence shows a failing run followed by a passing one. A Task is a bug when it has the `bug` label or is a bug Request. |
+
+A Task in a Team with gates shows a line such as `Gates: qa-evidence-before-done`
+in its panel.
+
+**What you see when a move is refused.**
+
+- In the **Task panel**, saving a status change that a gate refuses shows a
+  warning that names the gate, with a **Move anyway** button. It asks you to
+  confirm ("This skips the ... gate and is logged in the Change log"). Only you
+  can override a gate, and the override is written to the Change log as `gate
+  overridden by Human: <gate>`.
+- On the **board**, a card you drag into a refused column snaps back and a message
+  says "Could not move <Task>: " and the gate's reason. The card does not move,
+  and there is no override on the board; open the Task panel instead.
+- **Creating** a Task directly in **In Progress**, **Review** or **Done** is
+  refused in the same way when a gate would refuse it. In the Task panel you get the
+  same warning with a **Move anyway** button, and confirming it creates the Task and
+  logs the override. A Teammate's `file_request` or create call cannot override.
+- When a **Teammate** is refused, the refusal comes back to it as the result of its
+  `update_task` or `close_task` call, and it cannot override.
+- When a Teammate or you **edit a Task file by hand** to jump to a gated status,
+  Huddle puts the status back, keeps the rest of your edit, and adds `outside edit
+  refused by gate: <reason>` to the Change log. Evidence-only edits are kept.
+
+**Evidence.** A Task file can have an `## Evidence` section above its Change log.
+Each line is the time, the author, the command, and optionally the exit code and a
+pointer to the tool-call log, separated by ` | `; a plain line of text is a note.
+Teammates add lines with the `add_evidence` tool, and lines are only ever appended.
+The Task panel does not have a separate Evidence view; you read it in the Task file
+in the Library.
+
+**Tool-call log.** Huddle keeps a lasting record of every tool call a Teammate
+makes, one JSON line each, in `logs/tool-calls/<Teammate>/<date>.jsonl` in your data
+folder. An Evidence line can point to a line of it, such as
+`logs/tool-calls/Joe/2026-10-08.jsonl#L12`, so you can check that the command was run.
+
+**How the merge gate works, and its limits.** When a Teammate asks to run a shell
+command, Huddle reads it. If it is a `git merge` or `git push` and the Team has
+`checks-before-merge` and a `checkCommand`, Huddle refuses it until Evidence on one
+of the Team's open Tasks shows the latest run of that exact command passing. The
+Teammate is told only that the request was denied; the reason is written to the log,
+not shown to it. This is a guard against honest mistakes, not a sandbox. It only
+works in work modes where the Adapter asks before running a command, and it does not
+catch a git alias, `FOO=1 git push`, `sudo`, a command wrapped in `bash -c`, a script
+that pushes, or a push from an IDE or another tool. Your own approval of a prompt is
+never intercepted.
+
+> **Example (Scenario 4).** The Team's process lists `failing-test-before-fix`, so a
+> bug Task cannot move to Review until its Evidence shows the test failing and then
+> passing. The retrospective in a later section is where a rule like this is
+> proposed.
+
+### Digests and retrospectives on a schedule
+
+If `Process.md` has a `digest:` or `retro:` line, Huddle checks each Team once a
+minute. A **digest** is time-based (`digest: { every: 1, unit: 'days' }`): when the
+time is up, the Team's manager gets a message in its Room asking it to post the
+digest. A **retro** runs after so many Done Tasks (`unit: 'done-tasks'`) or so many
+days (`unit: 'days'`) and goes to the Team's Retro agent, or to the manager with a
+note that no Retro agent is hired. The first time Huddle sees a Team it only starts
+the count, so nothing fires at once. The last run is remembered across restarts.
+
+### Wake-ups for managers
+
+Besides the assignee, Huddle wakes the Team's **manager** about a Task change, unless
+the manager made the change, is the assignee, or is you. When the last Task that was
+blocking another is finished, Huddle wakes the blocked Task's assignee (or the
+manager when it has none) once, however many blockers finished together. These wake-ups
+use the same per-Task wake budget as any other.
+
+### Sprint proposals
+
+A manager who holds the `team-management` Skill can propose a Sprint with `propose_sprint`: a name and the
+Team's Tasks that are not yet Done. A card appears in the manager's Room with the name and each
+Task's id, title and assignee. **Approve** creates the Sprint and adds the Tasks;
+**Decline** sends your typed reason back to the manager. Nothing is created until you
+approve. Tasks that cannot be added are listed as skipped in the reply the manager
+sees.
+
+### The Chief of Staff roll-up
+
+The Chief of Staff holds the `team-rollup` Skill. When a manager posts a digest or
+a Team declines a Request, it is woken, summarises the Teams for you as decisions and
+risks with links, and uses `list_teams` to include each Team's open Requests.
+
+### Requests between Teams
+
+One Team can ask another for a **bug**, a **feature**, **feedback** or a
+**question**. Such an ask is a **Request**: a Task in the receiving Team's own
+Tasks, which names the Team that filed it. The receiving Team's Tasks have a
+**Requests** filter, and a Request's Task shows a chip such as
+**Request · bug · from Web Team**.
+
+- In the **Task panel**, a Request shows a chip such as **Request · bug · from Web
+  Team**, a second chip with its triage state (**Needs triage**, **Needs info**,
+  **Accepted** or **Declined**), and, once they exist, **Requested by**, **Decline
+  reason** and **Confirmed by**.
+- In the Task toolbar, the **Requests** chip filters the view to Requests only.
+- A new Request lands in the receiving Team's **Backlog** as **Needs triage**.
+  Its manager **accepts** it (it moves to **To Do**, optionally assigned),
+  **declines** it with a reason (it moves to **Rejected**), or asks the requester
+  for more information (**Needs info**, still in Backlog). A Request cannot leave
+  Backlog any other way: an agent that tries is refused, and only you can move it
+  from the Task panel with the usual override.
+- Work then follows the Task statuses: To Do, In Progress, Review. When the
+  receiving QA attaches evidence in Review the Request moves to **Done**.
+- **Done is not closed.** The Request closes only when the requesting Team's QA
+  confirms it was delivered as asked. An agent that tries to close a Request nobody
+  confirmed, with `close_task` or `update_task`, is refused. You can still close one
+  yourself.
+- Four tools do this, each granted by a Skill the Teammate holds. The built-in
+  `team-management` Skill grants all of them, and the manager of a Development Team
+  or a Household carries it, as does the Development QA Engineer, so the QA can
+  confirm a Request without any setup. Holding the Skill does not make the QA a
+  manager: `file_request`, `triage_request` and `list_teams` still refuse a caller
+  who is not the right manager, and so does `propose_sprint`. The tools are
+  `file_request` (a manager files a bug, feature, feedback or question into another
+  Team; the body needs the sections the kind asks for, such as **Steps to
+  reproduce** and **Expected and actual** for a bug), `triage_request` (the
+  receiving manager), `confirm_request` (the requesting Team's QA) and `list_teams`
+  (every Team with its type, manager, what it owns and its open Requests).
+- **Who is woken.** Filing a Request wakes the receiving manager. A needs-info,
+  accept or decline wakes the requesting manager; a decline also wakes the Chief of
+  Staff. Work and the QA's evidence wake the requesting manager; the
+  confirmation wakes the receiving manager. One event wakes each person once, not
+  once as the Request's assignee and again as a manager.
+
+> **Example (Scenario 3).** The Web Developer hits a 500 from the API. Joe files a
+> bug Request into the API Team's backlog with the steps and logs. The API Team's
+> manager accepts it. The Request closes only after the Web Team's QA confirms the
+> fix.
+
+### Retrospectives
+
+A retrospective runs on the cadence in `Process.md`: after every so many Done Tasks,
+or every so many days (see
+[Digests and retrospectives on a schedule](#digests-and-retrospectives-on-a-schedule)).
+The Team's retro role, the Development Team's **Retro agent**, reads the Team's
+records and proposes up to three changes. The Retro agent is in the hiring pool but
+not in the **Small** or **Full** preset, so add it with its **+**. It needs the
+built-in `retrospective` Skill, which the role carries.
+
+**What it may read.** With `read_records` the Retro agent (or the Team's manager)
+reads only its own Team: a compact bundle of the Team's records, one Task's Change
+log and Evidence, or the last 200 messages of a Room. A Room is readable only if
+the Team's members posted in it and everyone who posted there is a member of that
+Team or you. A Room with an outsider in it is refused. A Teammate who is not a
+member of the Team, or who lacks the Skill, is refused.
+
+**What it proposes.** The proposals arrive as a card in the Retro agent's Room.
+Each change shows its title, the file it targets and a diff Huddle computes from the
+file as it is now. A change is an exact-text replacement in one file: `Process.md`,
+`_team.md`, or one member's file. Select **Accept** to apply a change, or **Reject**
+(type the reason in **Reason if you reject** first). Huddle refuses an Accept, and
+changes nothing, when:
+
+- the text to replace is not in the file exactly once;
+- the edit would leave `_team.md` unreadable (it is checked before it is written);
+- the edit would change a member's name (a retro change cannot rename a Teammate).
+
+A refusal appears as a notice and the change stays on the card. An applied or
+rejected change shows as a message in the Room, which also wakes the proposer.
+
+**The register.** Each Team keeps a `Retro register.md` in its folder, and its
+retrospective reports in `_retros/`. Every accepted change adds a row to the
+register with the status **Done** and a note to verify it at the next retro. A row's
+status is one of **Open** (found, nothing changed), **Done** (changed, not yet
+checked), **Partial** (only partly worked), **Verified** (later evidence shows it
+worked) or **Changed** (replaced by another change). At the next retro the Retro
+agent checks Done and Partial rows with `mark_retro_row`; **Verified** needs
+evidence from after the change, linking a Task, a `logs/...#L12` line or a
+`_retros/` file.
+
+> **Example (Scenario 4).** After a sprint, the Retro agent finds three Tasks sent
+> back from Review for missing tests. It proposes one change to `Process.md`: write
+> the failing test before the fix. You accept it.
+
+### Household teams
+
+Household is a second team type, with a Household Manager and a School Liaison.
+A card whose connector is not yet connected shows **Needs setup** and "Connect
+<connector> to finish setup", with the path of the file to edit. A connector counts
+as connected when it is listed in `connectors.json` in your data folder, such as
+`{"connected": ["email:read"]}`. Huddle rereads the file each time, so an edit
+shows at once; a missing or malformed file means nothing is connected. Once the
+connector is listed there, select **I connected it** on the card to check again.
+Huddle does not connect anything itself. A Household has no workspace requirement,
+and its default process runs a retro every 14 days.
+
+> **Example (Scenario 5).** Emre picks **Household** and hires a School Liaison. The
+> card shows **Needs setup** until he connects email. After that the liaison's card
+> is Ready.
 
 ## Chatting in Rooms
 
@@ -668,7 +1069,9 @@ Draft the October invoice run and check it against last month.
 | `origin` | The Room the Task was created from, if any. |
 | `parent`, `blocked_by`, `duplicate_of` | Links to other Tasks. |
 | `tags`, `start_date`, `due_date` | Dates are `yyyy-MM-dd`. |
+| `request`, `from_team`, `requester`, `triage`, `decline_reason`, `confirmed_by` | Present on a Request from another Team; see [Requests between Teams](#requests-between-teams). |
 | Body | The description, in Markdown. |
+| `## Evidence` | Optional, only where a Team's gates look for it. Lines of evidence a Teammate added; append-only. See [The four gates](#the-four-gates). |
 | `## Change log` | An append-only history. Huddle adds lines and never edits old ones. |
 
 The Team and Project are not fields. They come from the folder the file is in.
@@ -736,8 +1139,10 @@ The panel tells you what will happen before you save, for example "Nova is
 offline, so this change won't reach them."
 
 Teammates use the tools `create_task`, `get_task`, `list_tasks`, `update_task`,
-`close_task` and `reopen_task`. Their changes follow the same rules and write the
-same files.
+`close_task`, `reopen_task` and `add_evidence`. Their changes follow the same rules
+and write the same files, and they are also subject to a Team's
+[gates](#the-four-gates) and to the [Request](#requests-between-teams) rules, which
+you can override from the Task panel and they cannot.
 
 ### Views: lists and boards
 
@@ -894,12 +1299,51 @@ invalid Skill is listed under **Problems** with the reason.
 
 ### Changing a built-in Skill
 
-Huddle ships one Skill, `team-building`, used by the Chief of Staff. To change it,
-create `Skills/team-building/` and put a file of the same name in it, for
-example `onboarding.md`. Your file replaces that one file; the others still come
-from the built-in version. **Settings › Skills** marks the Skill as
-**Overridden**. **Restore default** deletes your whole
-`Skills/team-building/` folder, including any extra files you added.
+Huddle ships four Skills: `team-building` and `team-rollup`, used by the Chief of
+Staff, `team-management`, used by Team managers to see other Teams, handle Requests
+and propose Sprints, and `retrospective`, used by the Retro agent. To change one,
+create `Skills/<name>/` (for example `Skills/team-building/`) and put a file of the
+same name in it, for example `onboarding.md`. Your file replaces that one file; the
+others still come from the built-in version. **Settings › Skills** marks the Skill
+as **Overridden**. **Restore default** deletes your whole `Skills/<name>/` folder,
+including any extra files you added.
+
+### Importing a Skill
+
+On the **Settings** page's **Skills** tab, select **Import skill**. The dialog
+takes either an entry from the catalog, found by name, publisher or category, or
+a GitHub tree URL you paste in.
+
+Select **Review** to fetch a preview. The URL must be an `https://github.com/<owner>/<repo>/tree/...`
+folder; Huddle pins it to a commit. The preview lists the publisher, the repository,
+the commit, the licence, and any flags, grouped under **Scripts**, **Shell
+commands**, **Network calls**, **Paths outside the Work Dir** or **No license**.
+A flag is a warning for you to read, not a block. A skill is refused, with the
+reason, when its folder is over 5 MB or 200 files, holds a symbolic link or an unsafe
+path, has no valid `SKILL.md`, or is larger than the download limit. Nothing is
+written until you select **Install**. **Back** and **Cancel** write nothing. After an
+install the dialog links to the Skills tab.
+
+Two cases are safe to repeat or refused:
+
+- Importing the **same** skill again, from the same source and commit, is a no-op:
+  it reports success and changes nothing.
+- A name that clashes with a built-in Skill, or with a Skill you wrote yourself or
+  imported from somewhere else, is refused, and the existing one is left alone.
+
+An installed Skill keeps a `.source.json` file in its folder, which records where
+it came from. Wherever the Skill appears (the Skills tab, a Teammate's card), its
+provenance line shows the publisher, repository, commit and licence. If the folder
+has changed since the import, the line also shows a **modified locally** chip. A
+Skill you wrote yourself shows **Yours**, and a shipped one shows **Built in**.
+
+Hiring a Team installs any Skill its members need that is missing, by the same
+import, without this dialog; see [Hiring a Team from a type](#hiring-a-team-from-a-type).
+
+> **Example (Scenario 2).** Emre adds the MSBuild Authoring pack to Jane's card. The
+> pack's Skills join hers, and the card's warnings, described under
+> [Packs, setup warnings and the Process step](#packs-setup-warnings-and-the-process-step),
+> show whether the set now crowds or overlaps.
 
 ## Settings
 
@@ -908,7 +1352,8 @@ from the built-in version. **Settings › Skills** marks the Skill as
 | **Prompts** | The text Huddle sends to Teammates, such as the wake-up message. | `prompts.json` |
 | **Appearance** | Theme, light/dark, accent colour, which side the Library pane opens on. | `appearance.json` |
 | **Personas** | The Teammate definitions. | `Teammates/…` |
-| **Skills** | Read-only list of Skills and their problems; **Restore default**. | `Skills/…` |
+| **Skills** | List of Skills with where each came from, and their problems; **Import skill**; **Restore default**. | `Skills/…` |
+| **Team Types** | Read-only list of team types, built-in or yours, with **Reload** and a **Problems** list. | `TeamTypes/…` |
 | **Library** | Pinned folders; hide the built-in roots. | `library-roots.json` |
 
 ## What happens when… (reference)
@@ -921,6 +1366,14 @@ from the built-in version. **Settings › Skills** marks the Skill as
 | Remove a Teammate | Deletes `<Name>.md` only | Goes offline; Rooms, transcripts and `work/` stay |
 | Restart a Teammate | Deletes `room-sessions/<Name>.json` | Every Room starts fresh, with catch-up |
 | Create a Team | `Teams/<Team>/` | None |
+| Create a Team from a type | `Teams/<Team>/_team.md`, then the manager's Teammate file | The manager starts; **Start Team** hires and starts the rest and posts the onboarding message to the manager once |
+| Duplicate a Team | A new `Teams/<Team>/` and new Teammate files; no memory, notes or Tasks | New Teammates start |
+| Use a process | `Teams/<Team>/Process.md`, never over an existing one | Members read it |
+| Import a Skill | `Skills/<name>/` with `.source.json` | Read on next `read_skill` |
+| Turn a gate off | The `gates:` line of `Process.md` | None |
+| Approve or decline a Sprint proposal | Approve creates the Sprint and adds the Tasks | The manager reads the outcome |
+| Accept or reject a retro change | Accept edits the target file and adds a row to `Retro register.md` | The proposer reads the outcome; an edited Teammate file restarts that Teammate |
+| Override a gate | The Task, with `gate overridden by Human` in its Change log | Assignee woken |
 | Add or remove a Team member | The `teams:` line in `<Name>.md` | That Teammate restarts |
 | Create a Project | `Teams/<Team>/<Project>/` | Members see it as a file change |
 | Start a chat | `team.db` | None until you post |
@@ -953,3 +1406,11 @@ from the built-in version. **Settings › Skills** marks the Skill as
 | A membership change was undone | A Teammate Edit card that was open during the change saved its old text. Re-add the member. |
 | Delete in the Library says the Recycle Bin isn't available | The file is on a network or removable drive. Delete it in your file manager. |
 | A new Skill doesn't show | Check **Settings › Skills › Problems**. The `name` must match the folder name. |
+| A Team type I wrote is missing from the Team type list | Check **Settings › Team Types › Problems** for the file and reason, fix it, then select **Reload**. |
+| **Start Team** is disabled | The team check bar lists why: a card that needs setup, no manager, or a required role not hired. |
+| A hire says a Team is full, or that agent processes are running | A hire limit was reached; see [Hire limits](#hire-limits). |
+| A Task would not move, with a message naming a gate | The Team's process has that gate on. Add the Evidence it asks for, or use **Move anyway** in the Task panel. |
+| A Teammate's `git push` was denied | The Team's `checks-before-merge` gate wants an Evidence line showing the `checkCommand` passing. The reason is in the log, not shown to the Teammate. |
+| A Task I edited by hand went back to its old status | A gate refused the new status; the Change log says `outside edit refused by gate`. |
+| An imported Skill says it already exists | The name belongs to a built-in Skill or to one from another source. Nothing was changed. |
+| A card says **Needs setup** for a connector | List it in `connectors.json` in the data folder, then select **I connected it**. |

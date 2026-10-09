@@ -145,7 +145,7 @@ internal sealed class SkillStore : IDisposable
     /// because no path is ever built from it.
     /// </remarks>
     /// <param name="skill">The Skill's name.</param>
-    /// <param name="file">The file name, exactly as it appears in that Skill's <see cref="Skill.Files"/>.</param>
+    /// <param name="file">The file name or <c>/</c>-separated relative path, exactly as it appears in that Skill's <see cref="Skill.Files"/>; a path with a <c>..</c> segment is rejected.</param>
     /// <returns>
     /// The file's resolved text; or <see langword="null"/> when no such Skill exists, the Skill has
     /// no file of that name, or the file was dropped for failing validation (Spec §8.1 rule 7, e.g.
@@ -155,6 +155,11 @@ internal sealed class SkillStore : IDisposable
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(skill);
         ArgumentException.ThrowIfNullOrWhiteSpace(file);
+
+        if (file.Split('/').Contains("..", StringComparer.Ordinal))
+        {
+            return null;
+        }
 
         return this.snapshot.ResolvedFiles.TryGetValue(skill, out FrozenDictionary<string, string>? files)
             && files.TryGetValue(file, out string? text)
@@ -265,7 +270,7 @@ internal sealed class SkillStore : IDisposable
     private SkillSnapshot Rebuild()
     {
         IReadOnlyDictionary<string, IReadOnlyDictionary<string, string>> defaults = SkillCatalog.All;
-        (Dictionary<string, Dictionary<string, string>> onDisk, List<SkillIssue> issues) = this.ScanDisk();
+        (Dictionary<string, Dictionary<string, string>> onDisk, List<SkillIssue> issues, Dictionary<string, (SkillProvenance Provenance, bool Modified)> imported) = this.ScanDisk();
 
         HashSet<string> names = new(StringComparer.Ordinal);
         names.UnionWith(defaults.Keys);
@@ -288,7 +293,8 @@ internal sealed class SkillStore : IDisposable
             };
             string? folderPath = diskFiles is not null ? Path.Combine(this.skillsDir, name) : null;
 
-            SkillValidation validation = SkillValidator.Validate(name, merged);
+            bool isImported = imported.TryGetValue(name, out (SkillProvenance Provenance, bool Modified) importedInfo);
+            SkillValidation validation = SkillValidator.Validate(name, merged, allowSupportingFiles: isImported);
 
             if (validation.HasErrors && defaultFiles is not null)
             {
@@ -307,7 +313,7 @@ internal sealed class SkillStore : IDisposable
                 {
                     ["SKILL.md"] = defaultFiles["SKILL.md"],
                 };
-                validation = SkillValidator.Validate(name, merged);
+                validation = SkillValidator.Validate(name, merged, allowSupportingFiles: isImported);
             }
 
             issues.AddRange(validation.Issues);
@@ -323,7 +329,15 @@ internal sealed class SkillStore : IDisposable
                 continue;
             }
 
-            all.Add(new Skill(name, description, validation.Tools, validation.Files, source, folderPath));
+            all.Add(new Skill(
+                name,
+                description,
+                validation.Tools,
+                validation.Files,
+                source,
+                folderPath,
+                isImported ? importedInfo.Provenance : null,
+                isImported && importedInfo.Modified));
             resolvedFiles[name] = BuildResolvedFiles(merged, validation.Files);
         }
 
@@ -420,15 +434,35 @@ internal sealed class SkillStore : IDisposable
     /// sub-directory found, naming it, so it does not simply vanish with no trace.
     /// </summary>
     /// <returns>Skill name → (file name → text), both levels keyed ordinally, plus every sub-directory Issue found.</returns>
-    private (Dictionary<string, Dictionary<string, string>> BySkill, List<SkillIssue> Issues) ScanDisk()
+    private (Dictionary<string, Dictionary<string, string>> BySkill, List<SkillIssue> Issues, Dictionary<string, (SkillProvenance Provenance, bool Modified)> Imported) ScanDisk()
     {
         Dictionary<string, Dictionary<string, string>> bySkill = new(StringComparer.Ordinal);
+        Dictionary<string, (SkillProvenance Provenance, bool Modified)> imported = new(StringComparer.Ordinal);
         List<SkillIssue> issues = [];
 
         foreach (string folder in Directory.EnumerateDirectories(this.skillsDir))
         {
             string skillName = Path.GetFileName(folder);
             Dictionary<string, string> files = new(StringComparer.Ordinal);
+
+            if (SkillProvenance.TryRead(folder, out SkillProvenance? provenance) && provenance is not null)
+            {
+                // A valid .source.json marks an imported Skill: every file under the folder is kept, keyed by
+                // its '/'-separated relative path, and the folder hash decides ModifiedLocally.
+                foreach (string filePath in Directory.EnumerateFiles(folder, "*", SearchOption.AllDirectories))
+                {
+                    string relative = Path.GetRelativePath(folder, filePath).Replace('\\', '/');
+                    if (!string.Equals(relative, SkillProvenance.FileName, StringComparison.Ordinal))
+                    {
+                        files[relative] = File.ReadAllText(filePath).ReplaceLineEndings("\n");
+                    }
+                }
+
+                bool modified = !string.Equals(SkillFolderHash.ComputeFolder(folder), provenance.Sha256, StringComparison.Ordinal);
+                imported[skillName] = (provenance, modified);
+                bySkill[skillName] = files;
+                continue;
+            }
 
             foreach (string filePath in Directory.EnumerateFiles(folder, "*.md", SearchOption.TopDirectoryOnly))
             {
@@ -448,7 +482,7 @@ internal sealed class SkillStore : IDisposable
             bySkill[skillName] = files;
         }
 
-        return (bySkill, issues);
+        return (bySkill, issues, imported);
     }
 
     // Every FileSystemWatcher event - Changed, Created, Deleted, Renamed - is handled identically:
@@ -538,7 +572,7 @@ internal sealed class SkillStore : IDisposable
     /// thread, so <see cref="OnDebounceElapsed"/> can leave the previous snapshot in place.
     /// </summary>
     /// <returns>The freshly built snapshot, or <see langword="null"/> if every attempt failed.</returns>
-    private SkillSnapshot? TryRebuildWithRetries()
+    internal SkillSnapshot? TryRebuildWithRetries()
     {
         for (int attempt = 1; attempt <= RebuildRetryAttempts; attempt++)
         {
@@ -546,11 +580,11 @@ internal sealed class SkillStore : IDisposable
             {
                 return this.Rebuild();
             }
-            catch (IOException) when (attempt < RebuildRetryAttempts)
+            catch (Exception ex) when (ex is IOException or UnauthorizedAccessException && attempt < RebuildRetryAttempts)
             {
                 Thread.Sleep(RebuildRetryDelayMilliseconds);
             }
-            catch (IOException ex)
+            catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
             {
                 this.logger.LogWarning(
                     ex,
@@ -600,7 +634,7 @@ internal sealed class SkillStore : IDisposable
     /// looks up.
     /// </param>
     /// <param name="Issues">Every problem found while resolving this snapshot's Skills.</param>
-    private sealed record SkillSnapshot(
+    internal sealed record SkillSnapshot(
         IReadOnlyList<Skill> All,
         FrozenDictionary<string, Skill> ByName,
         FrozenDictionary<string, FrozenDictionary<string, string>> ResolvedFiles,

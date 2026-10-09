@@ -1,0 +1,78 @@
+using System.Security.Cryptography;
+using System.Text;
+
+namespace Agency.Huddle.App.Skills;
+
+/// <summary>
+/// Computes the stable SHA-256 of a skill folder recorded in <c>.source.json</c> and compared to detect
+/// "modified locally" (SK-7, SK-9, NF-4).
+/// </summary>
+internal static class SkillFolderHash
+{
+    private const string SourceFileName = ".source.json";
+
+    private static readonly string[] TextExtensions = [".md", ".txt", ".json", ".yml", ".yaml"];
+
+    /// <summary>
+    /// Hashes the given files. <c>.source.json</c> is skipped; files are ordered by relative path
+    /// (ordinal); each contributes its path, NUL, decimal length, NUL and bytes. CRLF is normalised to LF
+    /// for known text extensions before hashing.
+    /// </summary>
+    /// <param name="files">File bytes keyed by path relative to the skill folder, using <c>/</c> separators.</param>
+    /// <returns>The lowercase hex SHA-256.</returns>
+    public static string Compute(IReadOnlyDictionary<string, byte[]> files)
+    {
+        ArgumentNullException.ThrowIfNull(files);
+
+        using IncrementalHash hash = IncrementalHash.CreateHash(HashAlgorithmName.SHA256);
+        foreach (string path in files.Keys.Where(static key => !string.Equals(key, SourceFileName, StringComparison.Ordinal)).Order(StringComparer.Ordinal))
+        {
+            byte[] content = Normalize(path, files[path]);
+            hash.AppendData(Encoding.UTF8.GetBytes(path));
+            hash.AppendData([0]);
+            hash.AppendData(Encoding.UTF8.GetBytes(content.Length.ToString(System.Globalization.CultureInfo.InvariantCulture)));
+            hash.AppendData([0]);
+            hash.AppendData(content);
+        }
+
+        return Convert.ToHexStringLower(hash.GetHashAndReset());
+    }
+
+    /// <summary>Reads every file under <paramref name="folder"/> recursively and hashes it with <see cref="Compute"/>.</summary>
+    /// <param name="folder">The skill folder on disk.</param>
+    /// <returns>The lowercase hex SHA-256.</returns>
+    public static string ComputeFolder(string folder)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(folder);
+
+        Dictionary<string, byte[]> files = new(StringComparer.Ordinal);
+        foreach (string file in Directory.EnumerateFiles(folder, "*", SearchOption.AllDirectories))
+        {
+            string relative = Path.GetRelativePath(folder, file).Replace('\\', '/');
+            files[relative] = File.ReadAllBytes(file);
+        }
+
+        return Compute(files);
+    }
+
+    private static byte[] Normalize(string path, byte[] content)
+    {
+        string extension = Path.GetExtension(path);
+        if (!TextExtensions.Contains(extension, StringComparer.OrdinalIgnoreCase))
+        {
+            return content;
+        }
+
+        List<byte> result = new(content.Length);
+        for (int index = 0; index < content.Length; index++)
+        {
+            bool crlf = content[index] == (byte)'\r' && index + 1 < content.Length && content[index + 1] == (byte)'\n';
+            if (!crlf)
+            {
+                result.Add(content[index]);
+            }
+        }
+
+        return [.. result];
+    }
+}

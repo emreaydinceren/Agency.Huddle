@@ -42,6 +42,9 @@ internal sealed class FakeTeamMembership : ITeamMembership
     }
 
     /// <inheritdoc />
+    public MembershipResult ReplaceManager(string team, string newManager) => this.MembershipResult;
+
+    /// <inheritdoc />
     public MembershipResult Remove(string team, string personaName)
     {
         lock (this.gate)

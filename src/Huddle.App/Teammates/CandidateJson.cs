@@ -12,7 +12,7 @@ namespace Agency.Huddle.App.Teammates;
 internal static class CandidateJson
 {
     /// <summary>The fields a Candidate is allowed to carry.</summary>
-    private static readonly HashSet<string> KnownFields = new(StringComparer.Ordinal) { "name", "alias", "title", "body", "teams", "consult_when" };
+    private static readonly HashSet<string> KnownFields = new(StringComparer.Ordinal) { "name", "alias", "title", "body", "teams", "consult_when", "role" };
 
     /// <summary>
     /// Fields only the Human sets, on the Teammate card, once a Candidate is approved (Spec §14
@@ -70,7 +70,7 @@ internal static class CandidateJson
             return false;
         }
 
-        candidate = new Candidate(name, alias, title, body, teams, consultWhen);
+        candidate = new Candidate(name, alias, title, body, teams, consultWhen, ReadOptionalString(fields, "role"));
         return true;
     }
 

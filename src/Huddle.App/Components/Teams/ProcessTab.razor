@@ -1,0 +1,133 @@
+@using System.Text
+@using Agency.Huddle.App.Acp
+@using Agency.Huddle.App.Library
+@inject ITeamFolders Folders
+@inject IDialogService Dialogs
+@inject NavigationManager Navigation
+
+@*
+    Task 57 (PR-2, PR-8, NF-5): the Process tab of a Team page. Process.md rendered as Markdown, Edit
+    (opens the file in the Library page), and one switch per enabled hard gate. Turning a gate off asks
+    first, naming the gate and its risk; only Turn off rewrites the gates line of the frontmatter
+    (ProcessDocument.WithGates keeps every other line). Cancel leaves the file alone and the switch on.
+*@
+
+<div class="process-tab">
+    @if (this.text is null)
+    {
+        <MudText Class="process-tab-empty">This Team has no process yet.</MudText>
+    }
+    else
+    {
+        <MudButton Variant="Variant.Outlined" Size="Size.Small" OnClick="this.Edit" Class="process-tab-edit">Edit</MudButton>
+        @if (this.error is not null)
+        {
+            <MudAlert Severity="Severity.Error" role="alert" Class="process-tab-error">@this.error</MudAlert>
+        }
+        @if (this.document is not null)
+        {
+            <MudStack Spacing="1" Class="my-2">
+                @foreach (GateId gate in this.document.Gates)
+                {
+                    GateId current = gate;
+                    string id = ProcessDocument.ToId(current);
+                    <div class="process-tab-gate" data-gate="@id">
+                        <MudSwitch T="bool" @key="@($"{id}:{this.version}")" Value="true" Color="Color.Primary" Label="@id"
+                                   ValueChanged="@(on => this.OnGateChanged(current, on))" />
+                        @if (current == GateId.ChecksBeforeMerge)
+                        {
+                            <MudText Typo="Typo.caption" Class="process-tab-gate-note">Checks before merge only works in work modes where the adapter asks before running shell commands.</MudText>
+                        }
+                    </div>
+                }
+            </MudStack>
+        }
+        <div class="process-tab-document">@((MarkupString)MarkdownRenderer.ToHtml(PersonaFrontmatter.Parse(this.text).Body))</div>
+    }
+</div>
+
+@code {
+    private static readonly UTF8Encoding Utf8 = new(encoderShouldEmitUTF8Identifier: false);
+
+    private string? text;
+    private ProcessDocument? document;
+    private string? error;
+    private int version;
+
+    /// <summary>The Team whose <c>Process.md</c> is shown.</summary>
+    [Parameter]
+    [EditorRequired]
+    public string Team { get; set; } = string.Empty;
+
+    /// <inheritdoc />
+    protected override void OnParametersSet() => this.Load();
+
+    private LibraryPath? Folder => this.Folders.FindTeam(this.Team).Value;
+
+    private string? FilePath => this.Folder is { } folder ? Path.Combine(folder.FullPath, TeamPaths.ProcessFileName) : null;
+
+    private void Load()
+    {
+        string? path = this.FilePath;
+        this.text = path is not null && File.Exists(path) ? File.ReadAllText(path) : null;
+        this.document = this.text is not null && ProcessDocument.TryParse(this.text, out ProcessDocument? parsed) ? parsed : null;
+    }
+
+    private void Edit()
+    {
+        if (this.Folder is { } folder)
+        {
+            string relative = $"{folder.RelativePath}/{TeamPaths.ProcessFileName}";
+            this.Navigation.NavigateTo($"/library?root={Uri.EscapeDataString(folder.Root.Id)}&path={Uri.EscapeDataString(relative)}");
+        }
+    }
+
+    private async Task OnGateChanged(GateId gate, bool on)
+    {
+        if (on)
+        {
+            return;
+        }
+
+        bool? confirmed = await this.Dialogs.ShowMessageBoxAsync(
+            $"Turn off {ProcessDocument.ToId(gate)}?",
+            ProcessGateService.GateRisk(gate),
+            yesText: "Turn off",
+            cancelText: "Cancel");
+        this.version++;
+        if (confirmed != true)
+        {
+            return;
+        }
+
+        this.Load();
+        string? path = this.FilePath;
+        if (path is null || this.text is null || this.document is null)
+        {
+            return;
+        }
+
+        string updated = ProcessDocument.WithGates(this.text, [.. this.document.Gates.Where(existing => existing != gate)]);
+        string temp = $"{path}.{Guid.NewGuid():N}.tmp";
+        try
+        {
+            File.WriteAllText(temp, updated, Utf8);
+            File.Move(temp, path, overwrite: true);
+            this.error = null;
+        }
+        catch (IOException)
+        {
+            this.error = "Process.md could not be saved.";
+        }
+        catch (UnauthorizedAccessException)
+        {
+            this.error = "Process.md could not be saved.";
+        }
+        finally
+        {
+            File.Delete(temp);
+        }
+
+        this.Load();
+    }
+}

@@ -38,12 +38,14 @@ internal static class Program
         string repoRoot = args.Length > 0 ? args[0] : FindRepoRoot(AppContext.BaseDirectory);
         string outputPath = Path.Combine(repoRoot, "src", "Huddle.App", "prompts.default.json");
 
-        Assembly appAssembly = Assembly.LoadFrom(Path.Combine(AppContext.BaseDirectory, "Huddle.App.dll"));
+        Assembly appAssembly = Assembly.Load(new AssemblyName("Huddle.App"));
         Type catalogType = appAssembly.GetType("Agency.Huddle.App.Prompts.PromptCatalog", throwOnError: true)
             ?? throw new InvalidOperationException("PromptCatalog type was not found via reflection.");
 
+#pragma warning disable S3011 // PromptCatalog is internal by design (C4); this helper reads its All property on purpose.
         PropertyInfo allProperty = catalogType.GetProperty("All", BindingFlags.Static | BindingFlags.NonPublic | BindingFlags.Public)
             ?? throw new InvalidOperationException("PromptCatalog.All was not found via reflection.");
+#pragma warning restore S3011
 
         object allValue = allProperty.GetValue(null)
             ?? throw new InvalidOperationException("PromptCatalog.All returned null.");

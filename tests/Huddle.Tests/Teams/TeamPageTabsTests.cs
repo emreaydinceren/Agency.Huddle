@@ -209,4 +209,45 @@ public sealed class TeamPageTabsTests
         string actual = TeamPageTabs.Segment(TeamPageTab.Tasks);
         Assert.Equal("tasks", actual);
     }
+
+    /// <summary>Segment(Process) returns "process".</summary>
+    [Fact]
+    public void Segment_Process_ReturnsProcess()
+    {
+        string actual = TeamPageTabs.Segment(TeamPageTab.Process);
+        Assert.Equal("process", actual);
+    }
+
+    /// <summary>A Team with a process file gets the Process tab last; without one it does not.</summary>
+    [Fact]
+    public void Available_Team_WithProcess_AddsProcessLast()
+    {
+        TeamPageFeatures withProcess = new(Library: true, Tasks: true, Process: true);
+        TeamPageFeatures libraryAndProcess = new(Library: true, Tasks: false, Process: true);
+        TeamPageFeatures onlyProcess = new(Library: false, Tasks: false, Process: true);
+
+        Assert.Equal([TeamPageTab.Members, TeamPageTab.Files, TeamPageTab.Tasks, TeamPageTab.Process], TeamPageTabs.Available(isProject: false, withProcess));
+        Assert.Equal([TeamPageTab.Members, TeamPageTab.Files, TeamPageTab.Process], TeamPageTabs.Available(isProject: false, libraryAndProcess));
+        Assert.Equal([TeamPageTab.Members, TeamPageTab.Process], TeamPageTabs.Available(isProject: false, onlyProcess));
+        Assert.Equal([TeamPageTab.Members, TeamPageTab.Files, TeamPageTab.Tasks], TeamPageTabs.Available(isProject: false, Both));
+    }
+
+    /// <summary>A Project never has a Process tab.</summary>
+    [Fact]
+    public void Available_Project_WithProcess_HasNoProcessTab()
+    {
+        TeamPageFeatures withProcess = new(Library: true, Tasks: true, Process: true);
+
+        Assert.Equal([TeamPageTab.Files, TeamPageTab.Tasks], TeamPageTabs.Available(isProject: true, withProcess));
+    }
+
+    /// <summary>The "process" segment resolves to the Process tab when it exists and falls back to Members when it does not.</summary>
+    [Fact]
+    public void Resolve_Team_ProcessSegment_DependsOnTheFeature()
+    {
+        TeamPageFeatures withProcess = new(Library: true, Tasks: true, Process: true);
+
+        Assert.Equal(TeamPageTab.Process, TeamPageTabs.Resolve(isProject: false, "Process", withProcess));
+        Assert.Equal(TeamPageTab.Members, TeamPageTabs.Resolve(isProject: false, "process", Both));
+    }
 }

@@ -83,7 +83,9 @@ contexts](../Huddle.EngineeringGuide.md#two-bounded-contexts). Back to the hub:
   it groups and filters the Teammates page and the invite dialog, and nothing
   more. It is never a permission: every Agent still sees every other Agent
   through `mcp__team__list_agents`, and any Agent can be invited to any Room.
-  A Team has a page at `/teams/<Team>` with Members, Files and Tasks tabs.
+  A Team has a page at `/teams/<Team>` with Members, Files and Tasks tabs, and a
+  Process tab once it has a **Process**. A Team set up from a **Team type** also
+  has a **Team card** (`_team.md`) that names its type, manager and workspace.
 : A Persona's Team is **not a folder**: its Team membership is its frontmatter
   alone, and where the Persona's Teammate folder sits changes nothing.
   On disk, a Team has a folder under `Teams/` (ADR-0030) for its notes, Projects
@@ -93,6 +95,66 @@ contexts](../Huddle.EngineeringGuide.md#two-bounded-contexts). Back to the hub:
   That rule applies to Tasks only and never to Personas; see
   [ADR-0025](../adr/0025-in-tasks-a-team-is-a-folder-by-convention.md).
 : *Avoid*: group, squad, workspace, tenant.
+
+**Team type**
+: A kind of Team, defined as data: a folder with a `team-type.json` manifest, its
+  **Roles**, **Candidates**, **Packs**, **Processes** and presets. The built-in types
+  are *Development Team* and *Household*; a user folder with the same id replaces a
+  built-in one. Code knows no role name (ADR-0038).
+: *Avoid*: template, kind, blueprint.
+
+**Role**
+: A job slot a **Team type** defines, such as Developer or Reviewer. A Teammate has
+  one Role, named by its `_role` frontmatter key; a Team type's **coverage** says which steps its
+  hired Roles cover.
+: *Avoid*: position, seat, job.
+
+**Candidate**
+: A Teammate template for one Role, read from a Team type's `candidates/*.md`. The
+  hiring pool shows one card per Candidate; hiring a card writes a Teammate.
+: *Avoid*: template, profile, persona file.
+
+**Pack**
+: A named set of Skills, from the `SkillPacks` folder beside the Team types, that a Teammate's card adds
+  or removes as one chip. A pack can also say when to consult the Teammate, such as
+  build failures.
+: *Avoid*: bundle, plugin.
+
+**Process**
+: How a Team's work is done: its `Process.md`, copied from a Team type's process
+  template into the Team folder and never overwritten. It holds the **Gates**, the
+  cadence of **Retros** and digests, and the check command.
+: *Avoid*: workflow, pipeline, methodology.
+
+**Gate**
+: A rule in a Team's **Process** that refuses one change until a condition is met,
+  such as a Task moving to Done. Only the Human can override one, and the override is
+  recorded on the Task (ADR-0039).
+: *Avoid*: check, approval, guard.
+
+**Evidence**
+: A line added to a Task that records what was checked, and by whom. Gates read
+  Evidence: a Task's move to Done needs it, and a merge needs one whose check command
+  passed.
+: *Avoid*: proof, log, result.
+
+**Request**
+: A Task in a receiving Team's backlog, asking for a bug, feature, feedback or
+  question from another Team. It is an ordinary Task file with extra keys (ADR-0040),
+  and it moves through **Triage** and then the receiving Team's work.
+: *Avoid*: ticket, issue, ask.
+
+**Retro**
+: A retrospective: the Team's retro role reads its records and proposes up to three
+  exact-text changes, each to `Process.md`, the Team card or one member's file. The
+  Human accepts or rejects each.
+  Results go in `Retro register.md` and `_retros/`.
+: *Avoid*: postmortem, review, lessons.
+
+**Team card**
+: The `_team.md` summary of one Team: its name, type, manager and what it owns. Other
+  managers read it, and `list_teams` returns it.
+: *Avoid*: profile, page, tile.
 
 **Adapter**
 : An ACP agent one Persona's session runs on — a process this solution launches
@@ -164,8 +226,8 @@ contexts](../Huddle.EngineeringGuide.md#two-bounded-contexts). Back to the hub:
 
 **Persona**
 : The Markdown instructions defining one Agent's character, stored as one file
-  anywhere under `{DataDir}/{Acp:TeamsDir}` — enumerated recursively, so Team
-  sub-folders are free to exist and mean nothing — together with the **Model**,
+  in its own folder, `{DataDir}/{Acp:TeammatesDir}/<Name>/<Name>.md`, found by a
+  one-level scan (ADR-0031) — together with the **Model**,
   the **Effort** and the **Work Mode** it runs on, stored in the `persona_models`,
   `persona_efforts` and `persona_work_modes` tables. The file body *becomes* part of a system prompt; it
   is not one.

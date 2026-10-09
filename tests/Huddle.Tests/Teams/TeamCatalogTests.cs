@@ -131,6 +131,64 @@ public sealed class TeamCatalogTests
         Assert.Equal(0, Volatile.Read(ref raised));
     }
 
+    /// <summary>A Team folder that already holds a <c>_team.md</c> exposes the four card fields in the first snapshot; a Team folder without one has nulls.</summary>
+    [Fact]
+    public void Teams_AtStart_ExposeTheTeamCardFromTeamFile()
+    {
+        using TempDataDir dir = new();
+        CreateFolder(dir, "Ops");
+        CreateFolder(dir, "Research");
+        WriteTeamFile(dir, "Ops", new TeamFile(new VersionedRef("development", "1"), "Ada", "work/ops", "Deploys", "Process.md", string.Empty));
+        using PersonaStore personas = TestTaskStore.CreatePersonaStore(dir);
+        using TaskStore tasks = TestTaskStore.CreateTaskStore(dir, personas);
+        using TeamCatalog catalog = new(personas, tasks);
+
+        TeamSummary? ops = catalog.Find("Ops");
+        TeamSummary? research = catalog.Find("Research");
+
+        Assert.NotNull(ops);
+        Assert.Equal(new VersionedRef("development", "1"), ops.TeamType);
+        Assert.Equal("Ada", ops.Manager);
+        Assert.Equal("work/ops", ops.Workspace);
+        Assert.Equal("Deploys", ops.Owns);
+        Assert.NotNull(research);
+        Assert.Null(research.TeamType);
+        Assert.Null(research.Owns);
+    }
+
+    /// <summary>Editing a Team's <c>_team.md</c> raises <c>Changed</c> and the snapshot carries the new card.</summary>
+    [Fact]
+    public async Task Changed_WhenATeamFileIsEdited_FiresAndRefreshesTheCard()
+    {
+        CancellationToken ct = TestContext.Current.CancellationToken;
+        using TempDataDir dir = new();
+        CreateFolder(dir, "Ops");
+        WriteTeamFile(dir, "Ops", new TeamFile(new VersionedRef("development", "1"), "Ada", null, "Deploys", "Process.md", string.Empty));
+        using PersonaStore personas = TestTaskStore.CreatePersonaStore(dir);
+        using TaskStore tasks = TestTaskStore.CreateTaskStore(dir, personas);
+        using TeamCatalog catalog = new(personas, tasks);
+        int raised = 0;
+        void Count() => Interlocked.Increment(ref raised);
+        catalog.Changed += Count;
+
+        WriteTeamFile(dir, "Ops", new TeamFile(new VersionedRef("development", "1"), "Nova", null, "Releases", "Process.md", string.Empty));
+
+        await WaitForAsync(() => Volatile.Read(ref raised) > 0, ct);
+        catalog.Changed -= Count;
+
+        TeamSummary? ops = catalog.Find("Ops");
+        Assert.NotNull(ops);
+        Assert.Equal("Nova", ops.Manager);
+        Assert.Equal("Releases", ops.Owns);
+    }
+
+    /// <summary>Writes a Team's <c>_team.md</c> under the Teams root.</summary>
+    /// <param name="dir">The temporary data directory.</param>
+    /// <param name="team">The Team folder name.</param>
+    /// <param name="file">The team file to write.</param>
+    private static void WriteTeamFile(TempDataDir dir, string team, TeamFile file) =>
+        File.WriteAllText(Path.Combine(TestTaskStore.Root(dir), team, TeamPaths.TeamFileName), file.Compose());
+
     /// <summary><see cref="ITeamCatalog.Find"/> matches a Team name ignoring case, returns the display spelling, and returns null for an unknown Team.</summary>
     [Fact]
     public void Find_IgnoresCase_AndReturnsNullForUnknown()

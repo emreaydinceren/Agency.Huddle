@@ -1,4 +1,5 @@
 using Agency.Huddle.App.Library;
+using Agency.Huddle.App.Teams;
 
 namespace Agency.Huddle.Tests.Ui.Teams;
 
@@ -44,6 +45,9 @@ internal sealed class FakeTeamFolders : ITeamFolders
     }
 
     /// <inheritdoc />
+    public LibraryResult<LibraryPath> FindTeam(string name) => this.TeamResult;
+
+    /// <inheritdoc />
     public LibraryResult<LibraryPath> EnsureProjectIn(string team, string project)
     {
         lock (this.gate)
@@ -52,5 +56,47 @@ internal sealed class FakeTeamFolders : ITeamFolders
         }
 
         return this.ProjectResult;
+    }
+
+    /// <summary>What <see cref="CreateTeam"/> returns. Set it before the code under test calls.</summary>
+    public TeamCreateResult CreateTeamResult { get; set; } = new(TeamCreateOutcome.Created, null);
+
+    /// <summary>What <see cref="UpdateTeamFile"/> returns. Set it before the code under test calls.</summary>
+    public bool UpdateResult { get; set; }
+
+    /// <summary>What <see cref="ReadTeamFile"/> returns. Set it before the code under test calls.</summary>
+    public TeamFile? ReadResult { get; set; }
+
+    /// <inheritdoc />
+    public TeamCreateResult CreateTeam(string team, TeamFile file)
+    {
+        lock (this.gate)
+        {
+            this.calls.Add($"CreateTeam:{team}");
+        }
+
+        return this.CreateTeamResult;
+    }
+
+    /// <inheritdoc />
+    public bool UpdateTeamFile(string team, Func<TeamFile, TeamFile> change)
+    {
+        lock (this.gate)
+        {
+            this.calls.Add($"UpdateTeamFile:{team}");
+        }
+
+        return this.UpdateResult;
+    }
+
+    /// <inheritdoc />
+    public TeamFile? ReadTeamFile(string team)
+    {
+        lock (this.gate)
+        {
+            this.calls.Add($"ReadTeamFile:{team}");
+        }
+
+        return this.ReadResult;
     }
 }

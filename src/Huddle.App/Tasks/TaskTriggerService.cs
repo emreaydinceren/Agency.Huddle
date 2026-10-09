@@ -1,3 +1,4 @@
+using System.Globalization;
 using Microsoft.Extensions.Options;
 using Agency.Huddle.App.Acp;
 using Agency.Huddle.App.Acp.Sessions;
@@ -5,6 +6,7 @@ using Agency.Huddle.App.Data;
 using Agency.Huddle.App.Pipes;
 using Agency.Huddle.App.Prompts;
 using Agency.Huddle.App.Services;
+using Agency.Huddle.App.Teams;
 using Agency.Huddle.Contracts;
 
 namespace Agency.Huddle.App.Tasks;
@@ -81,6 +83,7 @@ internal sealed partial class TaskTriggerService : IHostedService, IDisposable
     private readonly TimeProvider clock;
     private readonly ILogger<TaskTriggerService> logger;
     private readonly OwnPosts ownPosts;
+    private readonly ITeamCatalog? teams;
 
     /// <summary>Guards <see cref="batches"/>, <see cref="inFlight"/>, <see cref="outsideWindow"/>, <see cref="subscribed"/> and <see cref="stopped"/>. Never held across an await.</summary>
     private readonly Lock gate = new();
@@ -92,6 +95,10 @@ internal sealed partial class TaskTriggerService : IHostedService, IDisposable
     private readonly CancellationTokenSource lifetime = new();
 
     private readonly Dictionary<BatchKey, Batch> batches = [];
+
+    /// <summary>When a Request lifecycle wake last reached a recipient for a Task, keyed by Task and Name; a status-change wake for the same event is then skipped.</summary>
+    private readonly Dictionary<string, DateTimeOffset> requestWakes = new(StringComparer.OrdinalIgnoreCase);
+
     private readonly HashSet<Task> inFlight = [];
     private OutsideWindow? outsideWindow;
     private bool subscribed;
@@ -113,6 +120,7 @@ internal sealed partial class TaskTriggerService : IHostedService, IDisposable
     /// <param name="clock">Creates the coalescing timers.</param>
     /// <param name="logger">Records skipped and failed wakes.</param>
     /// <param name="ownPosts">Records a wake posted as an Agent as that Agent's own post, so its session in the Room gets the catch-up line (corrections-B3 D9 item 17).</param>
+    /// <param name="teams">Names a Team's manager, who is woken alongside the assignee (OR-2); <see langword="null"/> wakes the assignee only.</param>
     public TaskTriggerService(
         TaskEvents events,
         TaskStore store,
@@ -127,7 +135,8 @@ internal sealed partial class TaskTriggerService : IHostedService, IDisposable
         IOptions<TeamOptions> options,
         TimeProvider clock,
         ILogger<TaskTriggerService> logger,
-        OwnPosts ownPosts)
+        OwnPosts ownPosts,
+        ITeamCatalog? teams = null)
     {
         ArgumentNullException.ThrowIfNull(events);
         ArgumentNullException.ThrowIfNull(store);
@@ -158,6 +167,7 @@ internal sealed partial class TaskTriggerService : IHostedService, IDisposable
         this.clock = clock;
         this.logger = logger;
         this.ownPosts = ownPosts;
+        this.teams = teams;
     }
 
     /// <summary>
@@ -339,6 +349,11 @@ internal sealed partial class TaskTriggerService : IHostedService, IDisposable
             this.activity.ResetForHuman(change.After.Id);
         }
 
+        if (change.After.Status == TaskState.Done && change.Before?.Status != TaskState.Done)
+        {
+            this.StartUnblock(change);
+        }
+
         BatchKey key = new(change.After.Id, change.Actor.Name);
         int seconds = this.teamOptions.Tasks.WakeCoalesceSeconds;
         bool fireNow = seconds <= 0;
@@ -353,7 +368,7 @@ internal sealed partial class TaskTriggerService : IHostedService, IDisposable
 
             if (!this.batches.TryGetValue(key, out Batch? batch))
             {
-                batch = new Batch(key);
+                batch = new Batch(key) { FirstChangeAt = this.clock.GetUtcNow() };
                 if (!fireNow)
                 {
                     batch.Timer = this.clock.CreateTimer(this.OnTimerFired, key, TimeSpan.FromSeconds(seconds), Timeout.InfiniteTimeSpan);
@@ -364,6 +379,10 @@ internal sealed partial class TaskTriggerService : IHostedService, IDisposable
 
             batch.Actor = change.Actor;
             batch.Entries.Add(change.Entry);
+            if (change.Changes.Any(static field => field.Field == TaskField.Status))
+            {
+                batch.StatusChanged = true;
+            }
 
             if (change.Actor.Kind == TaskActorKind.OutsideHuddle)
             {
@@ -409,6 +428,171 @@ internal sealed partial class TaskTriggerService : IHostedService, IDisposable
         {
             this.inFlight.RemoveWhere(static done => done.IsCompleted);
             this.inFlight.Add(fire);
+        }
+    }
+
+    /// <summary>Starts the unblock pass for a Task that reached Done and tracks it for <see cref="WhenIdleAsync"/>.</summary>
+    /// <param name="change">The change that finished the Task.</param>
+    private void StartUnblock(TaskChange change)
+    {
+        lock (this.gate)
+        {
+            if (this.stopped)
+            {
+                return;
+            }
+        }
+
+        Task pass = this.UnblockAsync(change);
+        lock (this.gate)
+        {
+            this.inFlight.RemoveWhere(static done => done.IsCompleted);
+            this.inFlight.Add(pass);
+        }
+    }
+
+    /// <summary>Runs one unblock pass behind the fire gate. Catches and logs everything, like <see cref="FireAsync"/>.</summary>
+    /// <param name="change">The change that finished the Task.</param>
+    /// <returns>A task that completes when the pass is done; it never faults.</returns>
+    private async Task UnblockAsync(TaskChange change)
+    {
+        TaskId id = change.After.Id;
+        try
+        {
+            CancellationToken ct;
+            lock (this.gate)
+            {
+                if (this.stopped)
+                {
+                    return;
+                }
+
+                ct = this.lifetime.Token;
+            }
+
+            await this.fireGate.WaitAsync(ct);
+            try
+            {
+                await this.WakeUnblockedAsync(change, ct);
+            }
+            finally
+            {
+                this.fireGate.Release();
+            }
+        }
+        catch (OperationCanceledException ex) when (this.stopped)
+        {
+            LogFireCancelled(this.logger, id, ex);
+        }
+        catch (Exception ex)
+        {
+            // Detached like a fire: log, so the next Done event still gets its pass (corrections-B3 D9 item 7).
+            LogFireFailed(this.logger, id, ex);
+        }
+    }
+
+    /// <summary>
+    /// RQ-6: for every Task (in any Team) whose <c>blocked_by</c> lists the Task that just reached
+    /// Done, that is neither Done nor Rejected, and whose blockers are now all Done, wakes its
+    /// assignee - or the Team's manager when it has none. Each unblocking is recorded as an entry in
+    /// the blocked Task's own change log, keyed by when the blocker last reached Done, so a duplicate
+    /// event wakes nobody again while a reopen followed by a new Done does.
+    /// </summary>
+    /// <param name="change">The change that finished the Task.</param>
+    /// <param name="ct">The service lifetime.</param>
+    /// <returns>A task that completes when every unblocked Task was handled.</returns>
+    private async Task WakeUnblockedAsync(TaskChange change, CancellationToken ct)
+    {
+        if (!this.teamOptions.Tasks.Enabled || !this.teamOptions.Tasks.WakeEnabled)
+        {
+            return;
+        }
+
+        TaskItem finished = change.After;
+        List<TaskItem> candidates = [.. this.store.All.Where(task => task.BlockedBy.Contains(finished.Id))];
+        foreach (TaskItem blocked in candidates)
+        {
+            bool open = blocked.Status is not (TaskState.Done or TaskState.Cancelled or TaskState.Duplicate or TaskState.Rejected);
+            bool allDone = blocked.BlockedBy.All(blocker => blocker == finished.Id || this.store.Get(blocker)?.Status == TaskState.Done);
+            if (!open || !allDone)
+            {
+                continue;
+            }
+
+            // One marker per blocked Task and blocker set, stamped with the latest Done among the blockers: two
+            // blockers finishing together produce the same marker, a reopen followed by a new Done a new one.
+            DateTimeOffset latestDone = blocked.BlockedBy
+                .Select(blocker => DoneAt(blocker == finished.Id ? finished : this.store.Get(blocker), change.Entry.At))
+                .Max();
+            string blockers = string.Join(',', blocked.BlockedBy.Select(static blocker => blocker.ToString()).Order(StringComparer.Ordinal));
+            string marker = string.Create(CultureInfo.InvariantCulture, $"Unblocked: {blocked.Id} by {blockers} at {latestDone:O}");
+            if (!blocked.ChangeLog.Any(entry => string.Equals(entry.Summary, marker, StringComparison.Ordinal)))
+            {
+                await this.WakeUnblockedTaskAsync(blocked, change.Actor, marker, ct);
+            }
+        }
+    }
+
+    /// <summary>When the Task last reached Done, read from the <c>status: … → Done</c> summaries <see cref="TaskDiff"/> writes.</summary>
+    /// <param name="task">The blocker, or <see langword="null"/> when it no longer exists.</param>
+    /// <param name="fallback">Used when the change log holds no such entry.</param>
+    /// <returns>The time of the last Done entry, or <paramref name="fallback"/>.</returns>
+    private static DateTimeOffset DoneAt(TaskItem? task, DateTimeOffset fallback)
+    {
+        DateTimeOffset doneAt = fallback;
+        foreach (ChangeLogEntry entry in task?.ChangeLog ?? [])
+        {
+            if (entry.Summary.StartsWith("status:", StringComparison.Ordinal) && entry.Summary.Contains("→ Done", StringComparison.Ordinal))
+            {
+                doneAt = entry.At;
+            }
+        }
+
+        return doneAt;
+    }
+
+    /// <summary>Picks the recipient for one unblocked Task, records the unblocking in its change log and delivers the wake.</summary>
+    /// <param name="blocked">The Task that is no longer blocked.</param>
+    /// <param name="actor">Who finished the last blocker.</param>
+    /// <param name="marker">The change-log summary that records this unblocking.</param>
+    /// <param name="ct">The service lifetime.</param>
+    /// <returns>A task that completes when the wake was posted or skipped.</returns>
+    private async Task WakeUnblockedTaskAsync(TaskItem blocked, TaskActor actor, string marker, CancellationToken ct)
+    {
+        string? recipient;
+        if (string.IsNullOrEmpty(blocked.Assignee))
+        {
+            string? manager = this.teams?.Find(blocked.Location.Team)?.Manager;
+            bool usable = !string.IsNullOrEmpty(manager)
+                && !string.Equals(manager, actor.Name, StringComparison.OrdinalIgnoreCase)
+                && !string.Equals(manager, this.teamOptions.HumanName, StringComparison.OrdinalIgnoreCase)
+                && this.personas.Get(manager) is not null;
+            recipient = usable ? manager : null;
+        }
+        else
+        {
+            WakePreview preview = this.Preview(null, blocked, actor);
+            recipient = preview.Block == WakeBlock.None ? preview.AssigneeName : null;
+        }
+
+        if (recipient is null)
+        {
+            LogBlocked(this.logger, blocked.Id, WakeBlock.NoAssignee);
+            return;
+        }
+
+        ChangeLogEntry unblocked = new(this.clock.GetUtcNow(), actor.Name, marker);
+        Batch batch = new(new BatchKey(blocked.Id, actor.Name)) { Actor = actor };
+        batch.Entries.Add(unblocked);
+        if (!await this.DeliverAsync(batch, blocked, recipient, ct))
+        {
+            return;
+        }
+
+        // The marker is written only after a delivered wake, so a failed delivery can be retried by the next Done event.
+        if (this.store.Get(blocked.Id) is not { } current || this.store.AppendEntry(blocked.Id, current.Version, unblocked) is null)
+        {
+            LogTaskGone(this.logger, blocked.Id);
         }
     }
 
@@ -488,8 +672,142 @@ internal sealed partial class TaskTriggerService : IHostedService, IDisposable
             return;
         }
 
-        TaskActor actor = batch.Actor;
-        WakePreview preview = this.Preview(null, latest, actor);
+        await this.WakeAssigneeAsync(batch, latest, ct);
+        await this.WakeManagerAsync(batch, latest, ct);
+        await this.WakeRequestingManagerAsync(batch, latest, ct);
+    }
+
+    /// <summary>
+    /// RQ-4: wakes the manager of the Team that filed a Request on every status change of that Request,
+    /// unless that manager made the change, is the assignee or the receiving Team's manager (both woken
+    /// above), is the Human, or is no known Persona. A Request whose requesting Team has no manager wakes
+    /// nobody and is logged. Goes through <see cref="DeliverAsync"/>, so it shares the per-Task wake budget.
+    /// </summary>
+    /// <param name="batch">The batch, already removed from <see cref="batches"/>.</param>
+    /// <param name="latest">The Task's latest state.</param>
+    /// <param name="ct">The service lifetime.</param>
+    /// <returns>A task that completes when the wake was posted or skipped.</returns>
+    private async Task WakeRequestingManagerAsync(Batch batch, TaskItem latest, CancellationToken ct)
+    {
+        if (!batch.StatusChanged || !this.teamOptions.Tasks.Enabled || !this.teamOptions.Tasks.WakeEnabled)
+        {
+            return;
+        }
+
+        Dictionary<string, string> frontmatter = new(StringComparer.Ordinal);
+        foreach (KeyValuePair<string, string> field in latest.UnknownFields)
+        {
+            frontmatter[field.Key] = field.Value;
+        }
+
+        if (!RequestFields.TryRead(frontmatter, out RequestFields? request) || request is null)
+        {
+            return;
+        }
+
+        string? manager = this.teams?.Find(request.FromTeam)?.Manager;
+        if (string.IsNullOrEmpty(manager))
+        {
+            LogNoRequestingManager(this.logger, latest.Id, request.FromTeam);
+            return;
+        }
+
+        if (string.Equals(manager, batch.Actor.Name, StringComparison.OrdinalIgnoreCase)
+            || string.Equals(manager, latest.Assignee, StringComparison.OrdinalIgnoreCase)
+            || string.Equals(manager, this.teams?.Find(latest.Location.Team)?.Manager, StringComparison.OrdinalIgnoreCase)
+            || string.Equals(manager, this.teamOptions.HumanName, StringComparison.OrdinalIgnoreCase)
+            || this.personas.Get(manager) is null)
+        {
+            return;
+        }
+
+        await this.DeliverAsync(batch, latest, manager, ct);
+    }
+
+    /// <summary>
+    /// Wakes <paramref name="recipient"/> about a Request lifecycle event (RQ-7), through the same delivery
+    /// and per-Task wake budget as a Task change. Nobody is woken when wake-ups are off, the recipient made
+    /// the change, is the Human, or is no known Persona.
+    /// </summary>
+    /// <param name="request">The Request Task the event happened to.</param>
+    /// <param name="recipient">The Persona to wake.</param>
+    /// <param name="actor">Who caused the event.</param>
+    /// <param name="summary">The line the wake message lists as the change.</param>
+    /// <param name="ct">Cancels the wake.</param>
+    /// <returns><see langword="true"/> when the wake was posted; <see langword="false"/> when it was skipped or failed.</returns>
+    internal async Task<bool> WakeForRequestAsync(TaskItem request, string recipient, TaskActor actor, string summary, CancellationToken ct)
+    {
+        ArgumentNullException.ThrowIfNull(request);
+        ArgumentException.ThrowIfNullOrWhiteSpace(recipient);
+        ArgumentNullException.ThrowIfNull(actor);
+        ArgumentNullException.ThrowIfNull(summary);
+
+        if (!this.teamOptions.Tasks.Enabled
+            || !this.teamOptions.Tasks.WakeEnabled
+            || string.Equals(recipient, actor.Name, StringComparison.OrdinalIgnoreCase)
+            || string.Equals(recipient, this.teamOptions.HumanName, StringComparison.OrdinalIgnoreCase)
+            || this.personas.Get(recipient) is null)
+        {
+            return false;
+        }
+
+        Batch batch = new(new BatchKey(request.Id, actor.Name)) { Actor = actor };
+        batch.Entries.Add(new ChangeLogEntry(this.clock.GetUtcNow(), actor.Name, summary));
+        await this.fireGate.WaitAsync(ct);
+        try
+        {
+            bool posted = await this.DeliverAsync(batch, request, recipient, ct, viaRequest: true);
+            if (posted)
+            {
+                lock (this.gate)
+                {
+                    this.requestWakes[RequestWakeKey(request.Id, recipient)] = this.clock.GetUtcNow();
+                }
+            }
+
+            return posted;
+        }
+        finally
+        {
+            this.fireGate.Release();
+        }
+    }
+
+    /// <summary>The key of <see cref="requestWakes"/>.</summary>
+    /// <param name="id">The Task.</param>
+    /// <param name="name">The recipient's Name.</param>
+    private static string RequestWakeKey(TaskId id, string name) => string.Concat(id.ToString(), "|", name);
+
+    /// <summary>
+    /// Whether a Request lifecycle wake already reached <paramref name="name"/> for this Task since the batch's first change, so the
+    /// status-change wake for the same event is not a second one.
+    /// </summary>
+    /// <param name="id">The Task.</param>
+    /// <param name="name">The recipient's Name.</param>
+    /// <param name="batch">The batch about to wake the recipient.</param>
+    private bool WokenForRequest(TaskId id, string name, Batch batch)
+    {
+        if (batch.Entries.Count == 0)
+        {
+            return false;
+        }
+
+        DateTimeOffset batchStart = batch.FirstChangeAt;
+        lock (this.gate)
+        {
+            return this.requestWakes.TryGetValue(RequestWakeKey(id, name), out DateTimeOffset woken) && woken >= batchStart;
+        }
+    }
+
+    /// <summary>Applies the Spec §10.2 guards to the Task's assignee and, when none stops it, delivers the assignee's wake.</summary>
+    /// <param name="batch">The batch, already removed from <see cref="batches"/>.</param>
+    /// <param name="latest">The Task's latest state.</param>
+    /// <param name="ct">The service lifetime.</param>
+    /// <returns>A task that completes when the wake was posted or skipped.</returns>
+    private async Task WakeAssigneeAsync(Batch batch, TaskItem latest, CancellationToken ct)
+    {
+        TaskId id = latest.Id;
+        WakePreview preview = this.Preview(null, latest, batch.Actor);
         if (preview.Block == WakeBlock.BudgetPaused && preview.AssigneeName is { } pausedAssignee)
         {
             LogBlocked(this.logger, id, preview.Block);
@@ -503,11 +821,61 @@ internal sealed partial class TaskTriggerService : IHostedService, IDisposable
             return;
         }
 
+        await this.DeliverAsync(batch, latest, assigneeName, ct);
+    }
+
+    /// <summary>
+    /// OR-2: wakes the Team's manager (from <c>_team.md</c>) about the same change, unless wake-ups
+    /// are off, the manager made the change, already is the assignee (so was woken above), is the
+    /// Human, or is no known Persona. The wake goes through <see cref="DeliverAsync"/>, so it consumes
+    /// the same per-Task Teammate-made wake budget as the assignee's. A Team with no manager, or no
+    /// catalog, behaves as before.
+    /// </summary>
+    /// <param name="batch">The batch, already removed from <see cref="batches"/>.</param>
+    /// <param name="latest">The Task's latest state.</param>
+    /// <param name="ct">The service lifetime.</param>
+    /// <returns>A task that completes when the wake was posted or skipped.</returns>
+    private async Task WakeManagerAsync(Batch batch, TaskItem latest, CancellationToken ct)
+    {
+        if (this.teams?.Find(latest.Location.Team)?.Manager is not { Length: > 0 } manager
+            || !this.teamOptions.Tasks.Enabled
+            || !this.teamOptions.Tasks.WakeEnabled)
+        {
+            return;
+        }
+
+        if (string.Equals(manager, batch.Actor.Name, StringComparison.OrdinalIgnoreCase)
+            || string.Equals(manager, latest.Assignee, StringComparison.OrdinalIgnoreCase)
+            || string.Equals(manager, this.teamOptions.HumanName, StringComparison.OrdinalIgnoreCase)
+            || this.personas.Get(manager) is null)
+        {
+            return;
+        }
+
+        await this.DeliverAsync(batch, latest, manager, ct);
+    }
+
+    /// <summary>Resolves the recipient, the sender and the Room, consumes the Agent wake budget, posts the wake and records its outcome.</summary>
+    /// <param name="batch">The batch, already removed from <see cref="batches"/>.</param>
+    /// <param name="latest">The Task's latest state.</param>
+    /// <param name="assigneeName">The Name to wake: the assignee, or the Team's manager.</param>
+    /// <param name="ct">The service lifetime.</param>
+    /// <param name="viaRequest">Whether this is a Request lifecycle wake, which is never skipped for an earlier one.</param>
+    /// <returns><see langword="true"/> when the wake was posted; <see langword="false"/> when it was skipped or failed.</returns>
+    private async Task<bool> DeliverAsync(Batch batch, TaskItem latest, string assigneeName, CancellationToken ct, bool viaRequest = false)
+    {
+        TaskId id = latest.Id;
+        if (!viaRequest && this.WokenForRequest(id, assigneeName, batch))
+        {
+            return false;
+        }
+
+        TaskActor actor = batch.Actor;
         User? assignee = await this.directory.FindUserByNameAsync(assigneeName, ct);
         if (assignee is null)
         {
             LogAssigneeNeverRegistered(this.logger, id, assigneeName);
-            return;
+            return false;
         }
 
         string? senderId = await this.ResolveSenderIdAsync(actor, ct);
@@ -515,7 +883,7 @@ internal sealed partial class TaskTriggerService : IHostedService, IDisposable
         {
             LogNoSender(this.logger, id, actor.Name);
             this.RecordOutcome(id, assigneeName, null, WakeOutcome.Failed);
-            return;
+            return false;
         }
 
         Room room;
@@ -527,7 +895,7 @@ internal sealed partial class TaskTriggerService : IHostedService, IDisposable
         {
             LogRoomRefused(this.logger, id, ex.Code, ex);
             this.RecordOutcome(id, assigneeName, null, WakeOutcome.Failed);
-            return;
+            return false;
         }
 
         bool isAgent = actor.Kind == TaskActorKind.Agent;
@@ -535,7 +903,7 @@ internal sealed partial class TaskTriggerService : IHostedService, IDisposable
         {
             LogBlocked(this.logger, id, WakeBlock.BudgetPaused);
             this.RecordOutcome(id, assigneeName, null, WakeOutcome.WakePaused);
-            return;
+            return false;
         }
 
         WakeOutcome outcome;
@@ -572,6 +940,7 @@ internal sealed partial class TaskTriggerService : IHostedService, IDisposable
         }
 
         this.RecordOutcome(id, assigneeName, room, outcome);
+        return outcome is WakeOutcome.Woken or WakeOutcome.Offline;
     }
 
     /// <summary>Records one wake outcome in <see cref="TaskActivity"/> (Spec §10.5, §10.7), stamped with the clock at fire time.</summary>
@@ -746,6 +1115,13 @@ internal sealed partial class TaskTriggerService : IHostedService, IDisposable
     [LoggerMessage(Level = LogLevel.Warning, Message = "Not waking the assignee of Task {TaskId}: the actor '{Actor}' has no user to post as.")]
     private static partial void LogNoSender(ILogger logger, TaskId taskId, string actor);
 
+    /// <summary>Logs that a Request's requesting Team has no manager to wake.</summary>
+    /// <param name="logger">The logger to write to.</param>
+    /// <param name="taskId">The Request.</param>
+    /// <param name="team">The requesting Team.</param>
+    [LoggerMessage(Level = LogLevel.Information, Message = "Not waking the requesting manager of Request {TaskId}: team '{Team}' has no manager.")]
+    private static partial void LogNoRequestingManager(ILogger logger, TaskId taskId, string team);
+
     /// <summary>Logs that the Room refused the wake-up Message.</summary>
     /// <param name="logger">The logger to write to.</param>
     /// <param name="taskId">The Task.</param>
@@ -792,11 +1168,20 @@ internal sealed partial class TaskTriggerService : IHostedService, IDisposable
         /// <summary>The actor of the latest change: the Message is posted as them.</summary>
         public TaskActor Actor { get; set; } = new(TaskActorKind.Human, key.ActorName, null);
 
+        /// <summary>
+        /// When the batch's first change arrived, at full clock precision. Change log entries are cut to whole seconds, so a
+        /// Request wake posted in the same second as a later, unrelated change would otherwise look as if it covered that change.
+        /// </summary>
+        public DateTimeOffset FirstChangeAt { get; init; }
+
         /// <summary>Every batched change's Change log entry, in arrival order.</summary>
         public List<ChangeLogEntry> Entries { get; } = [];
 
         /// <summary>The coalescing timer, or <see langword="null"/> when the batch fires directly.</summary>
         public ITimer? Timer { get; set; }
+
+        /// <summary>Whether any batched change moved the Task's status (RQ-4 wakes the requesting manager on those).</summary>
+        public bool StatusChanged { get; set; }
 
         /// <summary>The outside-edit window of this batch's latest outside-Huddle change, if any.</summary>
         public OutsideWindow? OutsideWindow { get; set; }

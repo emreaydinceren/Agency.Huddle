@@ -45,6 +45,7 @@ namespace Agency.Huddle.Tests.Acp.Tools;
 internal sealed class TaskToolHarness : IDisposable
 {
     private readonly TempDataDir dir = new();
+    private readonly Agency.Huddle.App.Teams.ProcessGateService? gates;
 
     /// <summary>
     /// Builds the whole stack: a fresh <see cref="TempDataDir"/>, a real <see cref="PersonaStore"/>
@@ -62,9 +63,11 @@ internal sealed class TaskToolHarness : IDisposable
     /// (the default) means an <see cref="Agency.Huddle.Tests.Tasks.EmptySprintCatalog"/>, so tests that don't use Sprints
     /// see no extra subscriber.
     /// </param>
-    public TaskToolHarness(TimeProvider? clock = null, string? sprintsText = null)
+    /// <param name="gates">The process gates the Task service enforces on a status change; <see langword="null"/> (the default) enforces none.</param>
+    public TaskToolHarness(TimeProvider? clock = null, string? sprintsText = null, Agency.Huddle.App.Teams.ProcessGateService? gates = null)
     {
         this.Options = this.dir.Options();
+        this.gates = gates;
         if (sprintsText is not null)
         {
             File.WriteAllText(this.SprintsFilePath, sprintsText);
@@ -97,7 +100,8 @@ internal sealed class TaskToolHarness : IDisposable
             this.Sprints,
             this.Options,
             this.Clock,
-            NullLogger<TaskService>.Instance);
+            NullLogger<TaskService>.Instance,
+            gates);
         this.Views = new ViewStore(this.Options, NullLogger<ViewStore>.Instance);
         this.TurnActivity = new TurnActivity();
         this.TaskActivity = new TaskActivity(this.Options);
@@ -149,10 +153,11 @@ internal sealed class TaskToolHarness : IDisposable
     /// <param name="ct">Cancels the seeding calls.</param>
     /// <param name="clock">Forwarded to the constructor; see its own parameter doc.</param>
     /// <param name="sprintsText">Forwarded to the constructor; see its own parameter doc.</param>
+    /// <param name="gates">Forwarded to the constructor; see its own parameter doc.</param>
     /// <returns>A harness whose <see cref="Directory"/> already knows the Human, Nova and Kai.</returns>
-    public static async Task<TaskToolHarness> CreateAsync(CancellationToken ct, TimeProvider? clock = null, string? sprintsText = null)
+    public static async Task<TaskToolHarness> CreateAsync(CancellationToken ct, TimeProvider? clock = null, string? sprintsText = null, Agency.Huddle.App.Teams.ProcessGateService? gates = null)
     {
-        TaskToolHarness harness = new(clock, sprintsText);
+        TaskToolHarness harness = new(clock, sprintsText, gates);
 
         await harness.Directory.InitializeAsync("You", ct);
         User nova = await harness.Directory.UpsertAgentUserAsync("Nova", null, ct)
@@ -310,6 +315,11 @@ internal sealed class TaskToolHarness : IDisposable
         }
 
         services.AddSingleton(this.Service);
+        if (this.gates is not null)
+        {
+            services.AddSingleton(this.gates);
+        }
+
         services.AddSingleton(this.Views);
         services.AddSingleton(this.TurnActivity);
         services.AddSingleton(this.TaskActivity);
