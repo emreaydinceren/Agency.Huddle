@@ -212,6 +212,37 @@ broken; substituting the Windows-style path also works.
 To reproduce the CI checkout faithfully rather than approximately, convert the copy's line
 endings to LF first — see [Line endings](#line-endings) for why that can matter.
 
+## Local runner
+
+`ci-pr-local.yaml` and `ci-main-local.yaml` are copies of `ci-pr.yaml` and `ci-main.yaml` that
+differ only in `runs-on: dotnet-10-local`. They run on a second Gitea Actions runner on the Windows
+desktop, in Docker Desktop, alongside the Mac mini's `dotnet-10` runner. Both pairs fire on the same
+events, so a PR gets two independent validations. Keep each pair's `jobs:` block identical apart from
+the label:
+
+```bash
+diff <(sed -n '/^jobs:/,$p' .gitea/workflows/ci-pr.yaml) \
+     <(sed -n '/^jobs:/,$p' .gitea/workflows/ci-pr-local.yaml)
+```
+
+```text
+<     runs-on: dotnet-10
+>     runs-on: dotnet-10-local
+```
+
+The runner is not in the repo. It is a `gitea/act_runner` container (`huddle-local-runner`) defined
+by a `compose.yaml` and a `config.yaml` in `C:\Users\user\gitea-runner\`, registered to this repo only
+with a token from `POST /actions/runners/registration-token`. Labels and options live in
+`config.yaml`, which overrides the label environment variable on `compose.yaml`.
+
+**The runner config must give job containers a RAM-backed `/tmp`:** `container.options:
+"--tmpfs /tmp:exec"`. Without it the suite takes about 7 minutes instead of 40 seconds.
+`PersonaSpendTests.ConcurrentAdds_SumExactly` makes 48,000 SQLite writes, each flushed to disk, and a
+flush through Docker Desktop's WSL2 disk costs 3-10 ms, against 0.001 ms in RAM. The Mac mini does not
+pay that cost: macOS acknowledges a flush without waiting for the SSD (unverified). Measured on
+2026-10-09, `validate` took 112 s locally against 254 s on the Mac mini, with the tests at 38 s against
+159 s.
+
 ## Known failure modes
 
 Check these before reading the code.
