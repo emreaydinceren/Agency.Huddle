@@ -34,6 +34,13 @@ page of its active Tab itself. The browser URL names the focused group's active 
 | 8 | **Format version 2 stores a lone group as before and two or more as a `split` node with the focused index; version 1 is still read.** | A flat list per group with no tree. Stacked groups would need a migration. |
 | 9 | **No `ITabNavigator`.** Pages still call `NavigationManager`, which acts on the focused group. | One navigator per group, as ADR-0045 planned. It only pays once a page in the unfocused pane must navigate its own group; no page needs that yet, and the limit below is the price. |
 
+## Addendum: the breadcrumb bar
+
+Because each group mounts its own `TabPageHost`, the shared breadcrumb bar lives there too: one bar
+per pane, showing the trail of that pane's active Tab. A crumb acts on the Tab it sits in
+(`TabService.Navigate`), not on whichever pane has focus, then the router is pointed at the Tab so the
+URL still names the focused pane's page.
+
 ## What this costs
 
 - A page in the unfocused pane that navigates itself (a Room redirecting when it is archived) moves

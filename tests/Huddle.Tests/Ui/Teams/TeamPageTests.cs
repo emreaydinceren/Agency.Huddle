@@ -26,8 +26,6 @@ public sealed class TeamPageTests
 
     private const string AlertSelector = ".team-page-notice[role='alert']";
 
-    private static readonly char[] WhitespaceChars = [' ', '\r', '\n', '\t'];
-
     /// <summary>The page declares exactly the four route templates of Spec §6.6, with <c>projects</c> a literal segment.</summary>
     [Fact]
     public void Routes_AreTheFourTemplatesOfTheSpec()
@@ -150,7 +148,7 @@ public sealed class TeamPageTests
         Assert.Equal(project, actualProject);
     }
 
-    /// <summary>A lower-case route spelling reaches the tabs, the breadcrumbs and the Members stub as the catalog's own spelling.</summary>
+    /// <summary>A lower-case route spelling reaches the tabs and the Members stub as the catalog's own spelling.</summary>
     [Fact]
     public async Task Route_InAnotherCase_FeedsTheDisplaySpellingToTheTabs()
     {
@@ -158,30 +156,27 @@ public sealed class TeamPageTests
 
         IRenderedComponent<TeamPage> members = RenderPage(ctx, "business");
         Assert.Equal("Business", members.FindComponent<Stub<TeamMembers>>().Instance.Parameters.Get(p => p.Team)?.Name);
-        Assert.Equal("Business", Words(members.Find(".team-page-breadcrumbs").TextContent));
 
         IRenderedComponent<TeamPage> files = RenderPage(ctx, "business", "marketing PROJECT", "files");
         Assert.Equal("Business", FilesParameters(files).Get(p => p.Team));
         Assert.Equal("Marketing Project", FilesParameters(files).Get(p => p.Project));
-        Assert.Equal("Business › Marketing Project", Words(files.Find(".team-page-breadcrumbs").TextContent));
 
         IRenderedComponent<TeamPage> tasks = RenderPage(ctx, "BUSINESS", "marketing project", "tasks");
         Assert.Equal("Business", TasksParameters(tasks).Get(p => p.Team));
         Assert.Equal("Marketing Project", TasksParameters(tasks).Get(p => p.Project));
     }
 
-    /// <summary>The Team page's breadcrumbs name the Team; the Project page's read "Team › Project" with the Team a link to its page.</summary>
+    /// <summary>The Team page and the Project page draw no breadcrumbs of their own: the shell's bar above every Tab page owns the trail.</summary>
     [Fact]
-    public async Task Breadcrumbs_NameTheTeamAndProject()
+    public async Task Pages_DrawNoBreadcrumbsOfTheirOwn()
     {
         await using MudBunitContext ctx = NewContext(Catalog());
 
         IRenderedComponent<TeamPage> team = RenderPage(ctx, "Business");
         IRenderedComponent<TeamPage> project = RenderPage(ctx, "Business", "Marketing Project");
 
-        Assert.Equal("Business", Words(team.Find(".team-page-breadcrumbs").TextContent));
-        Assert.Equal("Business › Marketing Project", Words(project.Find(".team-page-breadcrumbs").TextContent));
-        Assert.Equal("Business", project.Find(".team-page-breadcrumbs a[href='/teams/Business']").TextContent.Trim());
+        Assert.Empty(team.FindAll(".mud-breadcrumbs"));
+        Assert.Empty(project.FindAll(".mud-breadcrumbs"));
     }
 
     /// <summary>Clicking a tab header navigates to the tab's route with escaped segments and never changes the page's own <c>Tab</c> parameter.</summary>
@@ -458,8 +453,4 @@ public sealed class TeamPageTests
     /// <summary>The parameters the Tasks stub last received.</summary>
     private static CapturedParameterView<TeamTasksTab> TasksParameters(IRenderedComponent<TeamPage> cut) =>
         cut.FindComponent<Stub<TeamTasksTab>>().Instance.Parameters;
-
-    /// <summary>The text with every run of whitespace collapsed to one space.</summary>
-    private static string Words(string text) =>
-        string.Join(' ', text.Split(WhitespaceChars, StringSplitOptions.RemoveEmptyEntries));
 }

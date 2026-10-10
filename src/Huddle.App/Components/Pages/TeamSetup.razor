@@ -31,7 +31,6 @@
 <MudContainer MaxWidth="MaxWidth.Medium" Class="team-setup py-4">
     @if (this.Team is null)
     {
-        <MudText Typo="Typo.h5" Class="mb-4">New Team</MudText>
         <MudStack Spacing="3">
             <MudSelect T="string" Label="Team type" Value="this.typeId" ValueChanged="this.OnTypeChanged" Class="team-setup-type">
                 @foreach (TeamTypeManifest type in this.Types.Types)
@@ -66,7 +65,6 @@
     }
     else
     {
-        <MudText Typo="Typo.h5" Class="mb-4">@this.Team</MudText>
         @if (this.teamFile.Manager is not null)
         {
             <MudText Class="team-setup-manager">@this.teamFile.Manager</MudText>

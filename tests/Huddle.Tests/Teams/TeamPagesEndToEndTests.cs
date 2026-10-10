@@ -160,7 +160,7 @@ public sealed class TeamPagesEndToEndTests
         Assert.Equal(["Marketing Project"], catalog.Find("Business")?.Projects);
     }
 
-    /// <summary>Step 5: the Team page and the Project page each answer 200 and their breadcrumb reads the Team, then the Team and Project.</summary>
+    /// <summary>Step 5: the Team page and the Project page each answer 200 and the shell's breadcrumb reads Teams then the Team, and Teams then the Team and Project.</summary>
     [Fact]
     public async Task TeamAndProjectPages_Return200_WithTheirBreadcrumbs()
     {
@@ -172,9 +172,9 @@ public sealed class TeamPagesEndToEndTests
         IHtmlDocument teamPage = await GetPageAsync(client, "/teams/Business", ct);
         IHtmlDocument projectPage = await GetPageAsync(client, "/teams/Business/projects/Marketing%20Project", ct);
 
-        Assert.Equal("Business", TextOf(teamPage, ".team-page-breadcrumbs"));
-        Assert.Equal("Business › Marketing Project", NormalisedTextOf(projectPage, ".team-page-breadcrumbs"));
-        Assert.Equal("/teams/Business", projectPage.QuerySelector(".team-page-breadcrumbs a[href]")?.GetAttribute("href"));
+        Assert.Equal("Teams › Business", NormalisedTextOf(teamPage, ".page-breadcrumbs"));
+        Assert.Equal("Teams › Business › Marketing Project", NormalisedTextOf(projectPage, ".page-breadcrumbs"));
+        Assert.Equal("/teams/Business", projectPage.QuerySelector(".page-breadcrumbs a[href]")?.GetAttribute("href"));
     }
 
     /// <summary>Step 6 (T14, T15): a folder <c>Legal</c> nobody carries has no members; a label the folder provisioner cannot turn into a folder has no folder.</summary>

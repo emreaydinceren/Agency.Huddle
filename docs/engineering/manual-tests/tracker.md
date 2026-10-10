@@ -188,6 +188,8 @@ Application shell, navigation and layout — [area file](shell-nav.md)
 | [SHELLNAV-41](shell-nav.md#shellnav-41--opening-a-page-that-is-already-open-in-the-other-pane-takes-you-to-it-and-new-pages-open-in-the-focused-pane) |  | Active |  |  |
 | [SHELLNAV-42](shell-nav.md#shellnav-42--both-panes-pins-and-the-focused-pane-come-back-after-a-reload) |  | Active |  |  |
 | [SHELLNAV-43](shell-nav.md#shellnav-43--two-rooms-side-by-side-keep-their-own-unsent-text) |  | Active |  |  |
+| [SHELLNAV-44](shell-nav.md#shellnav-44--every-page-in-a-tab-has-a-breadcrumb-bar-and-an-ancestor-crumb-navigates-that-tab-in-place) |  | Active |  |  |
+| [SHELLNAV-45](shell-nav.md#shellnav-45--with-two-panes-each-has-its-own-bar-and-a-crumb-acts-on-its-own-pane) |  | Active |  |  |
 
 ## startup-config
 

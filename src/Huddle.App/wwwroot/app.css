@@ -160,6 +160,49 @@ button:focus-visible {
     color: var(--mud-palette-text-secondary);
 }
 
+/* The breadcrumb bar TabPageHost draws above every page. It is a flex item of .tab-body, sticky so it
+   stays in view when a long page scrolls the pane, and it takes its own height so a page that fills
+   the pane (.tab-body > .room-column) still gets the rest. */
+.page-breadcrumbs {
+    position: sticky;
+    top: 0;
+    z-index: 1;
+    flex: 0 0 auto;
+    padding: 0.25rem 1rem;
+    font-size: 0.75rem;
+    color: var(--mud-palette-text-secondary);
+    background-color: var(--mud-palette-background);
+    border-bottom: 1px solid var(--mud-palette-lines-default);
+}
+
+.page-breadcrumbs .page-breadcrumbs-list.mud-breadcrumbs {
+    padding: 0;
+}
+
+.page-crumb {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.25rem;
+}
+
+.page-crumb .mud-icon-root {
+    font-size: 1rem;
+}
+
+.page-crumb-link {
+    color: inherit;
+    text-decoration: none;
+}
+
+.page-crumb-link:hover {
+    color: var(--mud-palette-text-primary);
+    text-decoration: underline;
+}
+
+.page-crumb[aria-current="page"] {
+    color: var(--mud-palette-text-primary);
+}
+
 /* NavTabLink's wrapper takes no part in layout, so a link keeps the box it had as a direct child of
    its row. Clicks still bubble through a display: contents element. */
 .nav-tab-link {
@@ -1759,10 +1802,6 @@ button:focus-visible {
     padding: 0;
 }
 
-.team-page-wide .team-page-breadcrumbs {
-    padding: 8px 16px;
-}
-
 .team-page-wide .team-page-tabs,
 .team-page-wide .mud-tabs-panels,
 .team-page-wide .team-files-tab,
@@ -2138,17 +2177,6 @@ button:focus-visible {
 
 @media (max-width: 1200px) {
     .task-col-low-3 { display: none; }
-}
-
-/* ---- Page titles: breadcrumb small above, a real title below ------------------------------- */
-.team-page-title {
-    margin: 0 0 0.75rem;
-    padding: 0 16px;
-}
-
-.team-page-breadcrumbs.mud-breadcrumbs {
-    font-size: 0.75rem;
-    padding-bottom: 0;
 }
 
 .task-detail-actions {

@@ -18,8 +18,8 @@
     is off, so only the active tab's component is built. The Team and Project are looked up in the
     catalog on every render rather than cached in OnParametersSet, so a Team that appears later shows
     up as soon as the catalog raises Changed; the catalog's own spelling (never the route's) is what the
-    breadcrumbs, the title and the tabs receive. Neither an unknown Team nor an unknown Project creates
-    anything.
+    page title and the tabs receive (the shell draws the breadcrumbs from the Tab's own title).
+    Neither an unknown Team nor an unknown Project creates anything.
 *@
 
 @{
@@ -68,8 +68,6 @@
         IReadOnlyList<TeamPageTab> available = TeamPageTabs.Available(isProject, this.Features());
         int activeIndex = Math.Max(0, available.ToList().IndexOf(TeamPageTabs.Resolve(isProject, this.Tab, this.Features())));
 
-        <MudBreadcrumbs Items="@Crumbs(summary.Name, project)" Separator=" › " Class="team-page-breadcrumbs" />
-        <MudText HtmlTag="h1" Typo="Typo.h5" Class="team-page-title">@(project ?? summary.Name)</MudText>
         @if (!isProject)
         {
             string sourceTeam = summary.Name;
@@ -175,13 +173,6 @@
     }
 
     private static string TeamHref(string team) => $"/teams/{Uri.EscapeDataString(team)}";
-
-    private static List<BreadcrumbItem> Crumbs(string team, string? project) => project is null
-        ? [new BreadcrumbItem(team, href: null, disabled: true, icon: Icons.Material.Outlined.Groups)]
-        : [
-            new BreadcrumbItem(team, TeamHref(team), icon: Icons.Material.Outlined.Groups),
-            new BreadcrumbItem(project, href: null, disabled: true, icon: Icons.Material.Filled.LibraryBooks),
-        ];
 
     /// <summary>The installation's features plus whether this Team has a process (its <c>_team.md</c> names one), which adds the Process tab.</summary>
     private TeamPageFeatures Features() => new(
