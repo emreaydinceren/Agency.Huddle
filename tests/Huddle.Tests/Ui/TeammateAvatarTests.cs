@@ -76,6 +76,84 @@ public sealed class TeammateAvatarTests
         Assert.StartsWith("/teammate-avatars/", image.GetAttribute("src"), StringComparison.Ordinal);
     }
 
+    /// <summary>A pending image that has not been saved yet beats the stored image and renders inline, as a data URL of its own bytes.</summary>
+    [Fact]
+    public async Task Render_PendingImageSet_BeatsTheStoredImage_AndRendersInline()
+    {
+        await using MudBunitContext ctx = new();
+        Avatar avatar = new(Label: null, Image: "abc123.png", Background: null);
+        byte[] bytes = [1, 2, 3, 4];
+
+        var cut = ctx.Render<TeammateAvatar>(parameters => parameters
+            .Add(p => p.Name, "echo")
+            .Add(p => p.Avatar, avatar)
+            .Add(p => p.PendingImage, bytes)
+            .Add(p => p.PendingImageExtension, ".png"));
+
+        var image = cut.Find(".mud-avatar img");
+        Assert.Equal("data:image/png;base64,AQIDBA==", image.GetAttribute("src"));
+    }
+
+    /// <summary>A pending image shows even when the avatar has no stored image at all, which is the Create card's case.</summary>
+    [Fact]
+    public async Task Render_PendingImageSet_WithNoStoredImage_StillRenders()
+    {
+        await using MudBunitContext ctx = new();
+
+        var cut = ctx.Render<TeammateAvatar>(parameters => parameters
+            .Add(p => p.Name, "echo")
+            .Add(p => p.Avatar, Avatar.None)
+            .Add(p => p.PendingImage, [1, 2, 3, 4])
+            .Add(p => p.PendingImageExtension, ".jpg"));
+
+        Assert.Equal("data:image/jpeg;base64,AQIDBA==", cut.Find(".mud-avatar img").GetAttribute("src"));
+    }
+
+    /// <summary>Each extension <see cref="Agency.Huddle.App.Avatars.AvatarImage.SniffExtension"/> can return maps to its own media type in the data URL.</summary>
+    [Theory]
+    [InlineData(".png", "image/png")]
+    [InlineData(".jpg", "image/jpeg")]
+    [InlineData(".webp", "image/webp")]
+    public async Task Render_PendingImage_UsesTheMediaTypeOfItsExtension(string extension, string mediaType)
+    {
+        await using MudBunitContext ctx = new();
+
+        var cut = ctx.Render<TeammateAvatar>(parameters => parameters
+            .Add(p => p.Name, "echo")
+            .Add(p => p.PendingImage, [1])
+            .Add(p => p.PendingImageExtension, extension));
+
+        Assert.Equal("data:" + mediaType + ";base64,AQ==", cut.Find(".mud-avatar img").GetAttribute("src"));
+    }
+
+    /// <summary>A pending image whose extension is not one the editor can produce is not previewed at all: the stored image shows, by its route.</summary>
+    [Fact]
+    public async Task Render_PendingImage_WithAnUnrecognisedExtension_FallsBackToTheStoredImage()
+    {
+        await using MudBunitContext ctx = new();
+
+        var cut = ctx.Render<TeammateAvatar>(parameters => parameters
+            .Add(p => p.Name, "echo")
+            .Add(p => p.Avatar, new Avatar(Label: null, Image: "abc123.png", Background: null))
+            .Add(p => p.PendingImage, [1])
+            .Add(p => p.PendingImageExtension, ".gif"));
+
+        Assert.Equal("/teammate-avatars/abc123.png", cut.Find(".mud-avatar img").GetAttribute("src"));
+    }
+
+    /// <summary>Without a pending image the avatar renders exactly as before: the stored image, by its route.</summary>
+    [Fact]
+    public async Task Render_NoPendingImage_RendersTheStoredImageByRoute()
+    {
+        await using MudBunitContext ctx = new();
+
+        var cut = ctx.Render<TeammateAvatar>(parameters => parameters
+            .Add(p => p.Name, "echo")
+            .Add(p => p.Avatar, new Avatar(Label: null, Image: "abc123.png", Background: null)));
+
+        Assert.Equal("/teammate-avatars/abc123.png", cut.Find(".mud-avatar img").GetAttribute("src"));
+    }
+
     /// <summary>A <see cref="Avatar.Background"/> emits an inline style carrying both a <c>background</c> and a <c>color</c> declaration.</summary>
     [Fact]
     public async Task Render_BackgroundSet_EmitsInlineStyleWithBackgroundAndColor()

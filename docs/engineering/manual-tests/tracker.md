@@ -861,7 +861,7 @@ Avatar library: choosing a face from the library — [area file](avatar-library.
 
 | Test | 💰 | Status | Issue | Notes |
 | --- | --- | --- | --- | --- |
-| [AVATARLIB-01](avatar-library.md#avatarlib-01--no-library-configured-no-button-anywhere) |  | Active | |  |
+| [AVATARLIB-01](avatar-library.md#avatarlib-01--a-library-switched-off-no-button-anywhere) |  | Active | |  |
 | [AVATARLIB-02](avatar-library.md#avatarlib-02--masterjson-missing-no-button-but-the-picture-mount-stays) |  | Active | |  |
 | [AVATARLIB-03](avatar-library.md#avatarlib-03--the-button-appears-only-under-an-image-and-the-dialog-opens-at-48-of-324-l1-m1-m2) |  | Active | |  |
 | [AVATARLIB-04](avatar-library.md#avatarlib-04--the-dialog-layout-matches-the-mock-up-and-the-filters-stay-in-view-m2) |  | Active | |  |
@@ -883,10 +883,12 @@ Avatar library: choosing a face from the library — [area file](avatar-library.
 | [AVATARLIB-20](avatar-library.md#avatarlib-20--a-malformed-masterjson-shows-the-unreadable-message-and-one-warning-l14-m5) |  | Active | |  |
 | [AVATARLIB-21](avatar-library.md#avatarlib-21--skipped-records-are-reported-once-with-a-count-and-examples) |  | Active | |  |
 | [AVATARLIB-22](avatar-library.md#avatarlib-22--reopening-reads-the-file-afresh-r-1-l16-escape-and-enter-behave) |  | Active | |  |
-| [AVATARLIB-23](avatar-library.md#avatarlib-23--the-dialog-sits-above-the-teammate-card-and-focus-and-escape-stay-in-order) |  | Active | |  |
+| [AVATARLIB-23](avatar-library.md#avatarlib-23--the-picker-sits-above-the-avatar-window-and-the-card-and-focus-and-escape-stay-in-order) |  | Active | |  |
 | [AVATARLIB-24](avatar-library.md#avatarlib-24--real-library-first-look-324-pictures-each-the-right-size-and-shape) |  | Active | |  |
 | [AVATARLIB-25](avatar-library.md#avatarlib-25--on-settings--appearance-a-half-made-choice-is-not-undone-by-the-avatar-stores-own-file-watcher-echo) |  | Active | |  |
 | [AVATARLIB-26](avatar-library.md#avatarlib-26--a-library-file-that-vanishes-before-the-pick-that-image-could-not-be-read) |  | Active | |  |
+| [AVATARLIB-27](avatar-library.md#avatarlib-27--the-avatar-window-opens-from-the-avatar-in-every-card-mode-and-applies-or-saves-as-the-mode-says) |  | Active | |  |
+| [AVATARLIB-28](avatar-library.md#avatarlib-28--nothing-configured-the-bundled-library-is-offered) |  | Active | |  |
 
 ## file-changes
 

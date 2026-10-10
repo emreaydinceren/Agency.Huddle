@@ -995,6 +995,14 @@ button:focus-visible {
     letter-spacing: 0.02em;
 }
 
+/* An image avatar fills its circle and is cropped to it. TeammateAvatar renders a bare <img> and MudBlazor
+   sizes only its own MudImage, so without this a 256 px picture sat at full size inside a 56 px avatar. */
+.mud-avatar img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
 /* The Avatar Library picker (Spec 6.6). The filters block stays put and the grid is the
    only scroller, so the filters are never scrolled out of reach. Selected state is shown
    by the brackets and the X (markup) as well as the primary colour, never colour alone. */
@@ -1179,6 +1187,61 @@ button:focus-visible {
     /* A Name may now contain spaces, so a long one wraps inside the card rather
        than pushing the avatar or the close button out of it. */
     overflow-wrap: anywhere;
+}
+
+/* The Teammate card's avatar is a button that opens the avatar editor, in every mode. It wraps the
+   avatar without restyling it; the pencil in its corner is the only cue, shown on hover and on keyboard
+   focus (the ring itself is the global button:focus-visible rule), and always on a device with no hover. */
+.teammate-card-avatar {
+    position: relative;
+    flex: none;
+    align-self: flex-start;
+    padding: 0;
+    border: 0;
+    border-radius: 50%;
+    background: none;
+    line-height: 0;
+    cursor: pointer;
+}
+
+.teammate-card-avatar-edit {
+    position: absolute;
+    right: -2px;
+    bottom: -2px;
+    padding: 2px;
+    border: 1px solid var(--mud-palette-divider);
+    border-radius: 50%;
+    background: var(--mud-palette-surface);
+    color: var(--mud-palette-text-primary);
+    opacity: 0;
+    transition: opacity 120ms ease;
+}
+
+.teammate-card-avatar:hover .teammate-card-avatar-edit,
+.teammate-card-avatar:focus-visible .teammate-card-avatar-edit {
+    opacity: 1;
+}
+
+@media (hover: none) {
+    .teammate-card-avatar-edit {
+        opacity: 1;
+    }
+}
+
+/* The avatar editor's Background palette. MudBlazor gives the static picker's content area a fixed 250 px and
+   positions the swatches inside it, which left a blank band under a palette that needs about 160 px. Putting
+   the swatch view back in flow lets that area be as tall as the swatches; the picker's own shadow goes, since
+   the dialog around it already has one. */
+.avatar-editor-background .mud-picker-color-picker {
+    height: auto;
+}
+
+.avatar-editor-background .mud-picker-color-view {
+    position: static;
+}
+
+.avatar-editor-background .mud-picker-static .mud-paper {
+    box-shadow: none;
 }
 
 /* The Persona is Markdown the user wrote, so it is shown as written. It is NOT

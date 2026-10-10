@@ -48,6 +48,54 @@ internal static class TeammateCardTestSupport
             return radio.QuerySelector("input.mud-radio-input") ?? throw new InvalidOperationException($"No radio input under '{choiceLabel}'.");
         });
 
+    /// <summary>The CSS selector of the card's avatar, a button that opens the avatar editor dialog.</summary>
+    internal const string AvatarButton = "button.teammate-card-avatar";
+
+    /// <summary>The CSS selector of the avatar editor dialog's root, which scopes every lookup that must not reach the card behind it (both dialogs have a Cancel button).</summary>
+    internal const string EditorDialog = ".avatar-editor-dialog";
+
+    /// <summary>
+    /// Clicks the card's avatar and waits for the avatar editor dialog to paint.
+    /// </summary>
+    /// <param name="cut">The rendered page holding the card.</param>
+    internal static async Task OpenAvatarEditorAsync(IRenderedComponent<ContainerFragment> cut)
+    {
+        await ClickAsync(cut, () => cut.Find(AvatarButton));
+        cut.WaitForElement(EditorDialog);
+    }
+
+    /// <summary>The CSS selector of the avatar editor's Background palette, the wrapper around the swatches and the label above them.</summary>
+    internal const string BackgroundPicker = EditorDialog + " .avatar-editor-background";
+
+    /// <summary>The CSS selector of one swatch in the Background palette.</summary>
+    internal const string Swatch = BackgroundPicker + " .mud-picker-color-dot";
+
+    /// <summary>The first button inside the avatar editor dialog whose trimmed text, or <c>aria-label</c>, equals <paramref name="text"/>.</summary>
+    /// <param name="cut">The rendered page holding the card.</param>
+    /// <param name="text">The button's trimmed text or <c>aria-label</c>.</param>
+    internal static IElement FindEditorButton(IRenderedComponent<ContainerFragment> cut, string text) =>
+        cut.Find(EditorDialog).QuerySelectorAll("button").First(button => MatchesButtonLabel(button, text));
+
+    /// <summary>Whether the avatar editor dialog holds a button named <paramref name="text"/>; false when the dialog is closed.</summary>
+    /// <param name="cut">The rendered page holding the card.</param>
+    /// <param name="text">The button's trimmed text or <c>aria-label</c>.</param>
+    internal static bool HasEditorButton(IRenderedComponent<ContainerFragment> cut, string text) =>
+        cut.FindAll(EditorDialog).Any(dialog => dialog.QuerySelectorAll("button").Any(button => MatchesButtonLabel(button, text)));
+
+    /// <summary>
+    /// The trimmed text of the editor dialog's image status line: the stored image's file name, or the pending-image notice.
+    /// It is the only <c>body2</c> text in the editor, and exists only under the Image choice once an image is set.
+    /// </summary>
+    /// <param name="cut">The rendered page holding the card.</param>
+    internal static string EditorImageStatus(IRenderedComponent<ContainerFragment> cut) =>
+        cut.Find(EditorDialog + " .mud-typography-body2").TextContent.Trim();
+
+    /// <summary>Clicks the editor dialog's button <see cref="FindEditorButton"/> names, through <see cref="ClickAsync"/>.</summary>
+    /// <param name="cut">The rendered page holding the card.</param>
+    /// <param name="text">The button's trimmed text or <c>aria-label</c>.</param>
+    internal static Task ClickEditorButtonAsync(IRenderedComponent<ContainerFragment> cut, string text) =>
+        ClickAsync(cut, () => FindEditorButton(cut, text));
+
     /// <summary>
     /// The <c>Immediate="true"</c> counterpart of <see cref="SetTextValueAsync"/>: raises <c>@oninput</c>
     /// rather than <c>@onchange</c>, matching the Label box's own binding (see the markup comment on

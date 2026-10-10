@@ -139,14 +139,14 @@ If the yellow bar appears but the console shows an unrelated exception (a databa
 **Pass if — all of these**
 
 - The header reads `New teammate`; the button on its right is a close icon (an ×-shaped Material icon, not a text glyph) and has the tooltip/aria-label `Close`.
-- A circular avatar showing a monogram is present at the top left of the card body.
+- A circular avatar showing a monogram on a randomly coloured background is present at the top left of the card body. It is a button named `Change avatar` (pressing it opens the **Avatar** window), and a small pencil appears on it when you point at it.
 - The four inputs are, in order: **Name** (placeholder `Chief of Staff`, hint `Letters, digits, spaces, - and _. Spaces are fine.`), **Title** (placeholder `Chief of Staff`, hint `A short role description, shown alongside the Name.`), **Alias** (placeholder `coo`, hint `A short working handle, for mentions and quick reference.`), **Teams** (placeholder `Business, Household`, hint `Comma-separated. Leave blank for no team.`).
 - The multi-line box is labelled `Persona body`, has placeholder `You are the Chief of Staff. You keep the team honest.`, and its hint reads `Markdown. Becomes the teammate's system prompt, placed after the Name, Title, Alias and Teams above — no front matter needed here.`
-- Below the multi-line box the controls are, in this order (`TeammateCard.razor:296-554`):
+- Below the multi-line box the controls are, in this order (`TeammateCard.razor`):
   1. a multi-select labelled `Skills` with the hint `Changing Skills restarts this Teammate.` (always rendered, `:340`);
   2. a select labelled `Model` whose blank option reads `Use the agent's default`, then a select labelled `Effort` with the same blank option;
   3. a select labelled `Work mode`, only while the probe runs or once the adapter advertises modes (`:471`, `ShowWorkModePicker`); it may disappear when the probe finishes with no modes, which is not a failure;
-  4. an **Avatar** panel: radios `Initials of the name`, `A short label`, `An image`, a colour field labelled `Background`, and a `Use the theme colour` button.
+  No avatar controls appear on the card itself: the radios `Initials of the name`, `A short label` and `An image`, the `Background` palette lives in the **Avatar** window that the avatar button opens, and none of those words is on the card.
   A select labelled `Adapter` appears between the multi-line box and `Skills` only when more than one adapter profile is configured; on a stock install it is absent.
 - The buttons read `Cancel` then `Add teammate` (the primary, filled action), left to right.
 - No status dot and no status word appears anywhere on the card.
@@ -2205,12 +2205,12 @@ Delete the `<data>\Teammates\Probe` and `<data>\Teammates\Probe2` folders if eit
 **Steps**
 
 1. Snapshot the adapter processes with the command from TEAMMATECARD-46 step 1. Write down every ProcessId.
-2. Open Ada's card and click `Edit`. In the **Avatar** panel choose `A short label`, type `AB` into the **Label** box, and touch nothing else.
+2. Open Ada's card and click `Edit`. Click the avatar to open the **Avatar** window, choose `A short label`, type `AB` into the **Label** box, click `Apply`, and touch nothing else.
 3. Click `Save`.
 4. Watch the badge for 15 seconds, record every state, and read the console for a fresh adapter launch sequence.
 5. Take the snapshot again and compare the set of ProcessIds.
 6. Close the card and read Ada's tile avatar.
-7. Reopen the card, click `Edit`, choose `Initials of the name` and click `Save` to put the avatar back.
+7. Reopen the card, click `Edit`, click the avatar, choose `Initials of the name`, click `Apply`, then click `Save` on the card to put the avatar back.
 
 **Pass if — all of these**
 

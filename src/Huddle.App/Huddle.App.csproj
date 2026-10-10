@@ -25,6 +25,15 @@
     <None Update="prompts.default.json" CopyToOutputDirectory="PreserveNewest" />
   </ItemGroup>
 
+  <!-- The Avatar Library ships with the app: master.json, its schema note and the 324 pictures. They are read from disk at
+       run time (see AvatarLibraryLocator.BundledDir), never embedded, so the pictures can be served as static files and
+       the catalogue is read only while the picker is open. Content, not None, so a publish carries them too. -->
+  <ItemGroup>
+    <None Remove="AvatarLibrary\**" />
+    <Content Remove="AvatarLibrary\**" />
+    <Content Include="AvatarLibrary\**" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" />
+  </ItemGroup>
+
   <ItemGroup>
     <EmbeddedResource Include="Skills\Defaults\**\*.md" LogicalName="Skills/Defaults/%(RecursiveDir)%(Filename)%(Extension)" />
     <EmbeddedResource Include="Skills\SkillsCatalog.json" LogicalName="Skills/SkillsCatalog.json" />

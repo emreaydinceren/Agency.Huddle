@@ -92,12 +92,83 @@ public sealed class AvatarLibraryLocatorTests : IDisposable
         Assert.Equal(library, locator.Dir);
     }
 
-    private static AvatarLibraryLocator Create(string? dir)
+    /// <summary>The bundled library is the folder named <c>AvatarLibrary</c> beside the app, where the build copies it.</summary>
+    [Fact]
+    public void BundledDir_IsTheAvatarLibraryFolderBesideTheApp()
+    {
+        Assert.Equal(Path.Combine(AppContext.BaseDirectory, "AvatarLibrary"), AvatarLibraryLocator.BundledDir);
+    }
+
+    /// <summary>With no <c>Dir</c> configured, the bundled folder is the library.</summary>
+    [Fact]
+    public void Dir_Unset_UsesTheBundledFolder()
+    {
+        string bundled = this.MakeLibrary("bundled");
+        AvatarLibraryLocator locator = Create(null, bundled);
+
+        Assert.Equal(bundled, locator.Dir);
+        Assert.True(locator.IsConfigured);
+    }
+
+    /// <summary>A blank <c>Dir</c> counts as unset, so the bundled folder is the library.</summary>
+    [Fact]
+    public void Dir_Blank_UsesTheBundledFolder()
+    {
+        string bundled = this.MakeLibrary("bundled");
+        AvatarLibraryLocator locator = Create("   ", bundled);
+
+        Assert.Equal(bundled, locator.Dir);
+    }
+
+    /// <summary>A configured <c>Dir</c> wins over the bundled folder: the operator's library replaces the shipped one.</summary>
+    [Fact]
+    public void Dir_Configured_WinsOverTheBundledFolder()
+    {
+        string bundled = this.MakeLibrary("bundled");
+        string custom = this.MakeLibrary("custom");
+        AvatarLibraryLocator locator = Create(custom, bundled);
+
+        Assert.Equal(custom, locator.Dir);
+    }
+
+    /// <summary>
+    /// A configured <c>Dir</c> that is not a library turns the picker off, and the bundled folder is not a fallback for it.
+    /// This is how an operator who does not want the shipped library switches it off.
+    /// </summary>
+    [Fact]
+    public void IsConfigured_ConfiguredFolderMissing_DoesNotFallBackToTheBundledFolder()
+    {
+        string bundled = this.MakeLibrary("bundled");
+        AvatarLibraryLocator locator = Create(Path.Combine(this.root, "no-such-folder"), bundled);
+
+        Assert.False(locator.IsConfigured);
+    }
+
+    /// <summary>With neither a <c>Dir</c> nor a bundled folder there is no library.</summary>
+    [Fact]
+    public void Dir_UnsetAndNoBundledFolder_IsNull()
+    {
+        AvatarLibraryLocator locator = Create(null, null);
+
+        Assert.Null(locator.Dir);
+        Assert.False(locator.IsConfigured);
+    }
+
+    /// <summary>Makes a folder under the per-test root holding a <c>master.json</c>, and returns its path.</summary>
+    private string MakeLibrary(string name)
+    {
+        string library = Path.Combine(this.root, name);
+        Directory.CreateDirectory(library);
+        File.WriteAllText(Path.Combine(library, "master.json"), "{}");
+        return library;
+    }
+
+    private static AvatarLibraryLocator Create(string? dir, string? bundledDir = null)
     {
         TeamOptions options = new()
         {
             AvatarLibrary = new AvatarLibraryOptions { Dir = dir },
         };
-        return new AvatarLibraryLocator(Options.Create(options));
+        return new AvatarLibraryLocator(Options.Create(options), bundledDir);
     }
 }

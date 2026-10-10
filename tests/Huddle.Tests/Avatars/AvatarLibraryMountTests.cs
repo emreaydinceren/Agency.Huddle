@@ -84,15 +84,29 @@ public sealed class AvatarLibraryMountTests : IDisposable
         Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
     }
 
-    /// <summary>With no library folder configured the app still starts and the URL space answers 404.</summary>
+    /// <summary>With no library folder configured, the library that ships with the app is mounted and its pictures are served.</summary>
     [Fact]
-    public async Task Mount_NotAdded_WhenDirUnset()
+    public async Task Mount_DefaultsToTheBundledLibrary_WhenDirUnset()
     {
         CancellationToken ct = TestContext.Current.CancellationToken;
 
         await using WebApplicationFactoryHandle handle = Host(null);
         using HttpClient client = handle.Factory.CreateClient();
-        using HttpResponseMessage response = await client.GetAsync("/avatar-library/x.png", ct);
+        using HttpResponseMessage response = await client.GetAsync("/avatar-library/cook_tan_f_01.png", ct);
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        Assert.Equal("image/png", response.Content.Headers.ContentType?.MediaType);
+    }
+
+    /// <summary>The bundled library's <c>master.json</c> is not served either, so the shipped index stays as private as a configured one.</summary>
+    [Fact]
+    public async Task Mount_BundledMasterJson_Returns404()
+    {
+        CancellationToken ct = TestContext.Current.CancellationToken;
+
+        await using WebApplicationFactoryHandle handle = Host(null);
+        using HttpClient client = handle.Factory.CreateClient();
+        using HttpResponseMessage response = await client.GetAsync("/avatar-library/master.json", ct);
 
         Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
     }

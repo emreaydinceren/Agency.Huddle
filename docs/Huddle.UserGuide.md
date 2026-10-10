@@ -348,9 +348,46 @@ or Teams. Changing the avatar does not restart anything.
 > creating it, use the Team page's **Members** tab, or edit the `teams:` line in
 > the text.
 
+### Changing an avatar
+
+Select the avatar at the top of a Teammate's card. It does this in every mode:
+viewing, editing and creating. A small pencil appears on it when you point at it
+or tab to it. A window titled **Avatar** opens with three choices:
+
+- **Initials of the name** shows the letters Huddle makes from the Name.
+- **A short label** shows up to three characters you type instead.
+- **An image** shows a picture. **Choose an image** uploads a PNG, JPEG or WebP
+  file of up to 512 KB, and **Choose from library** (see the next section) picks
+  one of the ready-made pictures.
+
+The round picture at the top of the window previews your choice as you make it.
+Initials and a label sit on a **Background** colour. Choose it by pressing a swatch
+in the palette in the window; the swatch for the current colour is highlighted. A
+colour can be changed to another swatch but not cleared, so once a Teammate has a
+colour it keeps one. An image covers the background, so the palette is hidden while
+**An image** is selected. A colour you chose earlier is kept, and is there again if
+you go back to initials or a label.
+
+A new Teammate starts with a colour of its own: when you open **New teammate**,
+Huddle picks a random swatch from the same palette, so a new card is not a row of
+identical circles. It is written with the Teammate when you select **Add
+teammate**, and you can change it in the window like any other. Teammates that
+already exist, and any created some other way, keep the theme's colour until you
+press a swatch.
+
+What the window's last button does depends on where you opened it:
+
+- **Creating or editing a Teammate:** it reads **Apply**. The new avatar shows on
+  the card at once, but nothing is written until you select **Add teammate** or
+  **Save** on the card. **Cancel** on the card throws it away.
+- **Viewing a Teammate:** the card has no Save of its own, so the button reads
+  **Save** and the avatar is written as soon as you select it.
+
+**Cancel**, the close button and the **Esc** key leave the avatar as it was.
+
 ### Choosing an avatar from the library
 
-If your Huddle has an avatar library, an **An image** avatar has a second button,
+Choosing **An image** in the **Avatar** window shows a second button,
 **Choose from library**, beside the upload button. Press it to open a window of
 pictures to pick from.
 
@@ -360,15 +397,20 @@ pictures to pick from.
   professions show either one, and two tags show only pictures with both.
 - **Selected chips move to the left.** Each one has an **X**. Press the X to
   turn it off, and it returns to its place. **Clear all** turns everything off.
-- **Pick a picture.** Click it, and the window closes. The picture appears on
-  the card as **New image selected (not yet saved)**. Press **Save** to keep it,
-  or **Cancel** to keep your old avatar. On your own avatar in **Settings →
-  Appearance** the picture is saved at once.
+- **Pick a picture.** Click it, and the library window closes. The **Avatar**
+  window shows the picture and says **New image selected (not yet saved)**.
+  Select **Apply** (or **Save**, when you opened it from a viewed Teammate) to
+  keep it, or **Cancel** to keep your old avatar. On your own avatar in
+  **Settings → Appearance** the picture is saved at once.
 
-The library is optional. Whoever runs Huddle sets its folder with
-`Team:AvatarLibrary:Dir`. Without that setting there is no button, and uploading
-an image works as before. A picked picture is copied, so the Teammate keeps it
-even if the library is later moved or deleted.
+The library comes with Huddle: its 324 pictures are in the repository, in
+`src/Huddle.App/AvatarLibrary`, and are used as they are, with nothing to set up.
+To use a library of your own instead, set `Team:AvatarLibrary:Dir` to its folder
+(it needs a `master.json` and the pictures, like the bundled one). If you set it
+to a folder that does not exist there is no library at all and no button, which
+is how to switch the library off; uploading an image works either way. A
+picked picture is copied, so the Teammate keeps it even if the library is later
+moved or deleted.
 
 ### Choosing a Work mode
 

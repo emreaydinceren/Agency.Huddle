@@ -2,7 +2,7 @@
 
 Prove that the Avatar library picker (`Components/Shared/AvatarLibraryDialog.razor`, opened from the Teammate card and from **Settings → Appearance**) narrows 324 pictures correctly, shows nothing but pictures, copies the chosen file through the normal upload path, and fails visibly when the library is missing or unreadable. Most of this is pixels, focus and what a screen reader announces, which the compiler and the bUnit suite cannot see. The picker is specified in [Huddle.AvatarLibrary-Specifications.md](../../Huddle.AvatarLibrary-Specifications.md) and decided in [ADR-0044](../../adr/0044-an-avatar-library-is-a-read-only-source-and-a-pick-copies.md).
 
-**26 tests** · all free · about 2.9 hours.
+**28 tests** · all free · about 3.3 hours.
 
 Read [the manual test script](../manual-tests.md) first, then [Common procedures](common.md), which defines the terminals, states, procedures and oracles this page names. Both are assumed below.
 
@@ -13,36 +13,37 @@ Coverage: use cases L1 to L16 and mock states M1 to M5 from the specification. E
 Run [`P-BUILD`](common.md#p-build) then [`P-LAUNCH-FREE`](common.md#p-launch-free), which also defines the terminals and the standing conventions. This area adds:
 
 1. Start from `E-STOPPED`, and take the [§0.4](../manual-tests.md#04-rollback) backup first. The picker copies files into `<data>\avatars` and rewrites `<data>\avatars.json`, and that backup is the only undo.
-2. **The real library.** The 324 images live in `E:\Projects\Software Factories\avatars`. They are 256 × 256 PNGs with a `master.json` index, and each file is under the 512 000-byte cap. Confirm in File Explorer that the folder holds 324 `.png` files and a `master.json` before you start.
-3. Start the app with the library configured. In `T-A`, set the library variable before the two lines of `P-LAUNCH-FREE`:
+2. **The library.** The app ships with its library: 324 PNGs, each 256 × 256 and under the 512 000-byte cap, and a `master.json` index, in `<repo>\src\Huddle.App\AvatarLibrary`, copied beside the app by the build. With `Team:AvatarLibrary:Dir` unset the app uses it, so most tests need no configuration. On this page `<lib>` is the library folder the app is using: that repo folder, or your copy when `Dir` is set.
+3. **A copy to edit.** AVATARLIB-02, -20, -21, -22 and -26 rename, edit or delete library files. Never do that to the repo's folder. Copy it first and point the app at the copy. In `T-A`, before the two lines of `P-LAUNCH-FREE`:
 
    ```powershell
-   $env:Team__AvatarLibrary__Dir = 'E:\Projects\Software Factories\avatars'
+   Copy-Item <repo>\src\Huddle.App\AvatarLibrary E:\tmp\avatar-library -Recurse
+   $env:Team__AvatarLibrary__Dir = 'E:\tmp\avatar-library'
    ```
 
-   The equivalent command-line flag is `--Team:AvatarLibrary:Dir="E:\Projects\Software Factories\avatars"`; the [Engineering Guide](../../Huddle.EngineeringGuide.md#configuration) describes the key. The path is absolute because the real library is not under `<data>`.
+   The equivalent command-line flag is `--Team:AvatarLibrary:Dir="E:\tmp\avatar-library"`; the [Engineering Guide](../../Huddle.EngineeringGuide.md#configuration) describes the key. The path is absolute because a library of your own is not under `<data>`. Those tests call the copy "the library folder". To go back to the bundled library, clear the variable (`Remove-Item Env:Team__AvatarLibrary__Dir`) and restart.
 4. Restart the app after any change to `Dir` or after the library folder appears or disappears. The thumbnail mount is added at start-up only, and only when the folder exists (`Program.cs:129`); AVATARLIB-02 depends on this.
-5. Open `http://localhost:5100/teammates`. Keep File Explorer open on `E:\Projects\Software Factories\avatars` and on `<repo>\src\Huddle.App\App_Data\avatars` so you can see copied files appear.
-6. Create one scratch Teammate for the card tests with **New teammate**, named `Library Test`. Delete it at the end of the area.
+5. Open `http://localhost:5100/teammates`. Keep File Explorer open on `<lib>` and on `<repo>\src\Huddle.App\App_Data\avatars` so you can see copied files appear.
+6. Create one scratch Teammate for the card tests with **New teammate**, named `Library Test`. Delete it at the end of the area. The picker is reached from the card by clicking the avatar at the top of the card, which opens the **Avatar** window, and selecting **An image** there; the tests below call that "open the **Avatar** window".
 
 ## Tests
 
-### AVATARLIB-01 — No library configured: no button anywhere
+### AVATARLIB-01 — A library switched off: no button anywhere
 
 **Free** · about 5 min
 
-*Proves that with `Team:AvatarLibrary:Dir` unset the picker is absent, and that upload is unchanged (L13).*
+*Proves that when `Team:AvatarLibrary:Dir` names a folder that is not a library, the picker is absent everywhere and the bundled library is not a fallback, and that upload is unchanged (L13).*
 
 **Before you start**
 
-- Run the app without `Team__AvatarLibrary__Dir` set (open a fresh `T-A`), or with it unset.
+- Stop the app. In a fresh `T-A`, set `Team__AvatarLibrary__Dir` to a folder that does not exist (for example `E:\tmp\no-such-library`) and start it.
 
 **Steps**
 
 1. Open `/teammates` and choose **New teammate**.
-2. In the **Avatar** section, select **An image**.
+2. Click the avatar at the top of the card to open the **Avatar** window, then select **An image**.
 3. Read the buttons beside the upload control.
-4. Close the card. Open **Settings → Appearance** and find the **Your avatar** section.
+4. Close the **Avatar** window and the card. Open **Settings → Appearance** and find the **Your avatar** section.
 5. Select **An image** there and read its buttons.
 
 **Pass if — all of these**
@@ -52,7 +53,7 @@ Run [`P-BUILD`](common.md#p-build) then [`P-LAUNCH-FREE`](common.md#p-launch-fre
 
 **Fail if — any of these**
 
-- A **Choose from library** button appears with no library configured -> the locator is not gating the button.
+- A **Choose from library** button appears although `Dir` names a folder that is not a library -> the locator is falling back to the bundled library, or is not gating the button.
 
 ### AVATARLIB-02 — `master.json` missing: no button, but the picture mount stays
 
@@ -62,17 +63,17 @@ Run [`P-BUILD`](common.md#p-build) then [`P-LAUNCH-FREE`](common.md#p-launch-fre
 
 **Before you start**
 
-- Stop the app. Rename `master.json` in the library folder to `master.json.bak`. Keep the other files.
+- Stop the app. Rename `master.json` in your copy of the library (never the repo's folder) to `master.json.bak`. Keep the other files.
 
 **Steps**
 
-1. Start the app with `Team:AvatarLibrary:Dir` set to the library folder.
-2. Open **New teammate**, select **An image**, and read the buttons.
+1. Start the app with `Team:AvatarLibrary:Dir` set to your copy of the library (Setup step 3).
+2. Open **New teammate**, click the avatar to open the **Avatar** window, select **An image**, and read the buttons.
 3. In a browser tab, open `http://localhost:5100/avatar-library/cook_tan_f_01.png`. In another tab open `http://localhost:5100/avatar-library/master.json.bak`.
 4. Stop the app. Rename `master.json.bak` back to `master.json`.
 5. Start the app again. Repeat step 2 and the first URL of step 3. Also open `http://localhost:5100/avatar-library/master.json`.
-6. Stop the app. Set `Team__AvatarLibrary__Dir` to a folder that does not exist (for example `E:\Projects\Software Factories\no-such-folder`) and start it. Repeat step 2, then open the first URL of step 3.
-7. Stop the app and set the variable back to the real library folder.
+6. Stop the app. Set `Team__AvatarLibrary__Dir` to a folder that does not exist (for example `E:\tmp\no-such-library`) and start it. Repeat step 2, then open the first URL of step 3.
+7. Stop the app and set the variable back to your copy of the library.
 
 **Pass if — all of these**
 
@@ -98,10 +99,10 @@ Run [`P-BUILD`](common.md#p-build) then [`P-LAUNCH-FREE`](common.md#p-launch-fre
 
 **Steps**
 
-1. Open `/teammates` and choose **Edit** on `Library Test`.
-2. Select **Initials of the name**. Read the Avatar section.
-3. Select **A short label**. Read the Avatar section.
-4. Select **An image**. Read the Avatar section.
+1. Open `/teammates` and choose **Edit** on `Library Test`, then click the avatar to open the **Avatar** window.
+2. Select **Initials of the name**. Read the **Avatar** window.
+3. Select **A short label**. Read the **Avatar** window.
+4. Select **An image**. Read the **Avatar** window.
 5. Select **Choose from library**.
 6. Read the dialog's title, the count line and the number of pictures in the grid.
 
@@ -109,7 +110,7 @@ Run [`P-BUILD`](common.md#p-build) then [`P-LAUNCH-FREE`](common.md#p-launch-fre
 
 - The **Choose from library** button is absent under **Initials** and **A short label**, and present under **An image**, beside the upload button.
 - The dialog is headed `Choose an avatar`. The count line reads `324 of 324`, and the first 48 pictures are shown with a **Show more** control.
-- The Avatar section layout matches the first mock-up in the specification (M1).
+- The **Avatar** window matches the first mock-up in the specification (M1).
 
 **Fail if — any of these**
 
@@ -492,18 +493,18 @@ Run [`P-BUILD`](common.md#p-build) then [`P-LAUNCH-FREE`](common.md#p-launch-fre
 
 **Free** · about 10 min
 
-*Proves that a click on a picture closes the dialog and sets the pending image through the upload path, and that Cancel after the pick writes nothing.*
+*Proves that a click on a picture closes the picker and sets the pending image in the **Avatar** window through the upload path, that **Apply** puts it on the card, and that Cancel after that writes nothing.*
 
 **Before you start**
 
-- `Library Test` is open in **Edit**, with the Avatar section set to **An image**. Note the current image or lack of one.
+- `Library Test` is open in **Edit**, with its **Avatar** window open and set to **An image**. Note the current image or lack of one.
 - Note the file count in `<data>\avatars`.
 
 **Steps**
 
 1. Choose **Choose from library**. Press **Tan**, then type `headset`.
 2. Click the first picture in the grid.
-3. Read the card. Then look at `<data>\avatars`.
+3. Read the **Avatar** window. Press **Apply**, then read the card's avatar. Then look at `<data>\avatars`.
 4. Press **Cancel** on the card.
 5. Look at `<data>\avatars` again and reopen `Library Test`.
 6. Repeat steps 1 to 3, then press **Save** instead of Cancel. Look at `<data>\avatars` and at the library folder.
@@ -511,7 +512,7 @@ Run [`P-BUILD`](common.md#p-build) then [`P-LAUNCH-FREE`](common.md#p-launch-fre
 **Pass if — all of these**
 
 - The dialog closes at once on the click, with no confirm button.
-- The card shows the text `New image selected (not yet saved)`, as after an upload. A buffered image has no preview until Save.
+- The **Avatar** window shows the picture in its preview and the text `New image selected (not yet saved)`, as after an upload. After **Apply** the card's own avatar shows the picture, still before any save.
 - After step 3, `<data>\avatars` has the same number of files as before: nothing is written yet.
 - After Cancel (step 4) and reopening (step 5), the image is unchanged and no file was added.
 - After Save (step 6) the new image appears, one new file appears in `<data>\avatars` with an opaque generated name (not the Teammate's Name), and the library folder is unchanged.
@@ -559,7 +560,7 @@ Run [`P-BUILD`](common.md#p-build) then [`P-LAUNCH-FREE`](common.md#p-launch-fre
 **Steps**
 
 1. Start the app with the library configured.
-2. Open **New teammate**, select **An image**, and press **Choose from library**.
+2. Open **New teammate**, click the avatar, select **An image**, and press **Choose from library**.
 3. Read the dialog. Read the app console for the warning.
 4. Stop the app, restore `master.json` from `master.json.good`, and start again.
 
@@ -595,7 +596,7 @@ Run [`P-BUILD`](common.md#p-build) then [`P-LAUNCH-FREE`](common.md#p-launch-fre
 
 **Steps**
 
-1. Open the dialog from **New teammate** under **An image**.
+1. Open the picker from **New teammate**: click the avatar, select **An image**, and press **Choose from library**.
 2. Read the count line, then read the console once the dialog has opened.
 3. Note how many warnings were logged for the read.
 4. Stop the app, restore `master.json` from `master.json.good`, delete `fake.svg`, and restart.
@@ -643,32 +644,32 @@ Run [`P-BUILD`](common.md#p-build) then [`P-LAUNCH-FREE`](common.md#p-launch-fre
 
 Note for the tester: Escape pressed with focus anywhere other than the search box closes the dialog at once; that is expected (`CloseOnEscapeKey` in `AvatarLibraryDialog.razor`). The automated `AvatarLibraryMemoryTests` prove that nothing holds the catalogue after close. This test proves the same thing from the outside, through the reopen.
 
-### AVATARLIB-23 — The dialog sits above the Teammate card, and focus and Escape stay in order
+### AVATARLIB-23 — The picker sits above the Avatar window and the card, and focus and Escape stay in order
 
 **Free** · about 10 min
 
-*Proves that the picker opened from the card (a `MudDialog` inside another `MudDialog`) keeps focus and Escape in the right order. This confirms the open item for the nested dialog.*
+*Proves that the picker opened from the **Avatar** window, itself opened from the card (three `MudDialog`s, one inside the next), keeps focus and Escape in the right order. This confirms the open item for the nested dialog.*
 
 **Before you start**
 
-- `Library Test` is open in **Edit**, as the card, with **An image** selected.
+- `Library Test` is open in **Edit**, with its **Avatar** window open and **An image** selected.
 
 **Steps**
 
-1. Press **Choose from library**. Confirm the picker opens above the card, with the card still behind it.
+1. Press **Choose from library**. Confirm the picker opens above the **Avatar** window, with the window and the card still behind it.
 2. Press Tab repeatedly. Note whether focus stays inside the picker.
 3. Press Escape once. Note which dialog closes.
-4. Press **Choose from library** again, then close the picker with its X button. Confirm the card is unchanged.
-5. Press **Choose from library** again, then click the dimmed area outside the picker. Confirm the card is unchanged.
-6. Press **Choose from library** again, then press Escape twice (the picker, then the card).
+4. Press **Choose from library** again, then close the picker with its X button. Confirm the **Avatar** window is unchanged.
+5. Press **Choose from library** again, then click the dimmed area outside the picker. Confirm the **Avatar** window is unchanged.
+6. Press **Choose from library** again, then press Escape three times (the picker, the **Avatar** window, then the card).
 7. Note where focus lands after each close.
 
 **Pass if — all of these**
 
-- The picker appears in front, the card is dimmed behind it, and Tab cycles only within the picker.
-- The first Escape closes only the picker, and the card remains open with its state.
-- The X button and the backdrop click each close only the picker, leaving the card open and unchanged.
-- The second Escape closes the card at once. The card has no unsaved-changes prompt (`TeammateCard.razor:572-577` sets only `CloseOnEscapeKey`).
+- The picker appears in front, the **Avatar** window and the card are dimmed behind it, and Tab cycles only within the picker.
+- The first Escape closes only the picker, and the **Avatar** window remains open with its state.
+- The X button and the backdrop click each close only the picker, leaving the **Avatar** window open and unchanged.
+- The second Escape closes only the **Avatar** window, and the third closes the card at once. Neither has an unsaved-changes prompt (`TeammateCard.Options` and `AvatarEditorDialog.Options` set only `CloseOnEscapeKey`).
 
 **Record, not a pass criterion**
 
@@ -676,7 +677,7 @@ Note for the tester: Escape pressed with focus anywhere other than the search bo
 
 **Fail if — any of these**
 
-- Focus leaves the picker while it is open, or the first Escape closes the card too -> record the exact behaviour; this is the nested-dialog stack that the specification asks to confirm.
+- Focus leaves the picker while it is open, or the first Escape closes the **Avatar** window or the card too -> record the exact behaviour; this is the nested-dialog stack that the specification asks to confirm.
 
 ### AVATARLIB-24 — Real library, first look: 324 pictures, each the right size and shape
 
@@ -696,7 +697,7 @@ Note for the tester: Escape pressed with focus anywhere other than the search bo
 
    ```powershell
    Add-Type -AssemblyName System.Drawing
-   $b = [System.Drawing.Bitmap]::new('E:\Projects\Software Factories\avatars\cook_tan_f_01.png')
+   $b = [System.Drawing.Bitmap]::new('<lib>\cook_tan_f_01.png')
    $b.Width; $b.Height; $b.GetPixel(0,0).A
    $b.Dispose()
    ```
@@ -704,7 +705,7 @@ Note for the tester: Escape pressed with focus anywhere other than the search bo
 4. Check the largest file in the folder:
 
    ```powershell
-   (Get-ChildItem 'E:\Projects\Software Factories\avatars\*.png' | Sort-Object Length -Descending | Select-Object -First 1).Length
+   (Get-ChildItem '<lib>\*.png' | Sort-Object Length -Descending | Select-Object -First 1).Length
    ```
 
 **Pass if — all of these**
@@ -760,22 +761,22 @@ Note for the tester: Escape pressed with focus anywhere other than the search bo
 
 **Before you start**
 
-- The app runs with the real library. `Library Test` is open in **Edit**, with **An image** selected and no pending image. Note the file count in `<data>\avatars`.
+- The app runs with the real library. `Library Test` is open in **Edit**, with its **Avatar** window open and **An image** selected and no pending image. Note the file count in `<data>\avatars`.
 
 **Steps**
 
 1. Press **Choose from library**. Press **Tan**, then press **Cook**: three pictures remain.
 2. In File Explorer, rename `cook_brown_f_01.png`, `cook_tan_f_01.png` and `cook_tan_m_01.png` in the library folder to the same names with `.bak` added. Leave the dialog open. The thumbnails stay visible because the browser has already loaded them.
 3. Click any of the three pictures.
-4. Read the card, and look at `<data>\avatars`.
-5. Cancel the card. Open **Settings → Appearance**, select **An image** in **Your avatar**, choose **Choose from library**, filter to **Tan** and **Cook**, and click any picture.
+4. Read the **Avatar** window, and look at `<data>\avatars`.
+5. Cancel the **Avatar** window and the card. Open **Settings → Appearance**, select **An image** in **Your avatar**, choose **Choose from library**, filter to **Tan** and **Cook**, and click any picture.
 6. Read the section, and look at `<data>\avatars`.
 7. Rename the three files back.
 
 **Pass if — all of these**
 
-- After step 3 the dialog closes, and a red alert under the card's avatar controls reads `That image could not be read.`
-- The card does not show `New image selected (not yet saved)`, and `<data>\avatars` has the same number of files as before.
+- After step 3 the dialog closes, and a red alert in the **Avatar** window reads `That image could not be read.`
+- The **Avatar** window does not show `New image selected (not yet saved)`, and `<data>\avatars` has the same number of files as before.
 - After step 5 the **Your avatar** section shows the same red alert, the avatar does not change, and no file is added to `<data>\avatars`.
 
 **Fail if — any of these**
@@ -783,10 +784,74 @@ Note for the tester: Escape pressed with focus anywhere other than the search bo
 - The dialog does not close, the page throws, or the avatar changes -> the missing file is not handled at the pick.
 - No message appears -> the failure is silent.
 
+### AVATARLIB-27 — The Avatar window opens from the avatar in every card mode, and applies or saves as the mode says
+
+**Free** · about 12 min
+
+*Proves that the avatar on the card is a button that opens the **Avatar** window in View, Edit and Create; that Create and Edit hold the result until the card is saved while View writes at once; and that the Background controls are hidden under **An image**.*
+
+**Before you start**
+
+- The app runs with the real library. `Library Test` exists with the default avatar (initials). Note the file count in `<data>\avatars`.
+
+**Steps**
+
+1. Open `Library Test` (View). Point at its avatar and read the pencil. Press Tab until the avatar has focus and read the ring.
+2. Click the avatar. Read the window's title, its three choices, the **Background** palette and its last button.
+3. Select **A short label**, type `AB`, and read the preview. Select **An image** and read the **Background** controls. Select **Initials of the name** and read them again. Press a swatch and read the preview.
+4. Select **A short label** and `AB` again, then press **Save**. Read the card's avatar and `<data>\avatars.json`.
+5. Press **Edit**, then click the avatar. Read the last button and the line under the preview. Select **A short label**, type `CD`, and press **Apply**. Read the card's avatar and `<data>\avatars.json`.
+6. Press **Cancel** on the card. Reopen `Library Test` and read its avatar.
+7. Press **Edit**, click the avatar, press **Cancel** in the window and read the card's avatar. Click the avatar again and press Esc. Click it again and click the dimmed area outside the window.
+8. Close the card. Choose **New teammate** and read the card's avatar before touching anything. Close the card and choose **New teammate** twice more, reading the avatar each time. Then click the avatar, select **An image**, press **Choose from library**, click a picture and press **Apply**. Read the card's avatar. Press **Cancel** on the card and look at `<data>\avatars`.
+9. Put `Library Test` back: open it, click the avatar, select **Initials of the name** and press **Save**.
+
+**Pass if — all of these**
+
+- The avatar shows a pencil when pointed at and a visible focus ring on Tab, and its accessible name is `Change avatar`.
+- The window is titled `Avatar` and offers `Initials of the name`, `A short label` and `An image`. The **Background** palette of swatches (no text field, no dropdown, and no **Use the theme colour** button) shows under Initials and under Label, and not under **An image**. The preview follows what you type and the swatch you press.
+- In View the last button reads **Save**, and `avatars.json` holds `AB` for `Library Test` as soon as you press it, with no Save on the card.
+- In Edit the last button reads **Apply**, with `Written when you save the teammate.` under the preview. After Apply the card's avatar shows `CD` while `avatars.json` still holds `AB`. After Cancel on the card and a reopen the avatar is `AB` again.
+- **Cancel** and Esc leave the card's avatar unchanged. A click on the dimmed area outside the **Avatar** window does nothing.
+- In Create, the avatar opens already showing initials on a coloured background, and the three openings do not all show the same colour. Open the **Avatar** window on one of them and the matching swatch is highlighted. After Apply the card's avatar shows the picked picture, scaled to fill the circle, and after Cancel on the card `<data>\avatars` holds the same number of files as before.
+
+**Fail if — any of these**
+
+- The avatar cannot be pressed, or the window opens in some modes only -> the avatar is not a button in every mode.
+- In View the avatar is lost on reopening, or in Edit `avatars.json` changes before the card's Save -> the mode is not deciding when the write happens.
+- The **Background** palette shows under **An image** -> the colour controls are not hidden for images.
+- The picture is cropped to a corner of the face or shown at full size -> the image is not scaled to its circle (`app.css`, `.mud-avatar img`).
+
+### AVATARLIB-28 — Nothing configured: the bundled library is offered
+
+**Free** · about 6 min
+
+*Proves that with `Team:AvatarLibrary:Dir` unset the library that ships with the app is the one the picker offers, with no setup, and that its index is not served.*
+
+**Before you start**
+
+- Stop the app. In a fresh `T-A`, make sure `Team__AvatarLibrary__Dir` is not set (`Remove-Item Env:Team__AvatarLibrary__Dir -ErrorAction SilentlyContinue`), and start the app.
+
+**Steps**
+
+1. Open **New teammate**, click the avatar to open the **Avatar** window, and select **An image**.
+2. Read the buttons, then press **Choose from library** and read the count line.
+3. In a browser tab, open `http://localhost:5100/avatar-library/cook_tan_f_01.png`. In another tab open `http://localhost:5100/avatar-library/master.json`.
+4. Close the windows and the card without saving.
+
+**Pass if — all of these**
+
+- **Choose from library** is present beside **Choose an image**, with no configuration.
+- The picker reads `324 of 324` and every picture loads.
+- The `cook_tan_f_01.png` URL shows a picture, and the `master.json` URL returns 404.
+
+**Fail if — any of these**
+
+- No library button appears with `Dir` unset -> the bundled library is not found beside the app (`AvatarLibraryLocator.BundledDir`), or the build did not copy it (`Huddle.App.csproj`, the `AvatarLibrary` content item).
 ## Cleanup
 
 1. Delete `Library Test` from `/teammates`.
 2. Delete any file this area added to `<data>\avatars` that no Teammate or the Human uses.
-3. Restore `master.json` in the library folder if any test changed it, confirm it matches its backup, and delete `fake.svg`, any `.bak` picture and `master.json.good`.
-4. Set `Team__AvatarLibrary__Dir` back to the real library folder if AVATARLIB-02 changed it.
+3. In your copy of the library, restore `master.json` if any test changed it, confirm it matches its backup, and delete `fake.svg`, any `.bak` picture and `master.json.good`. Then delete the copy (`E:\tmp\avatar-library`). Confirm `git status` shows nothing changed under `src\Huddle.App\AvatarLibrary`.
+4. Clear `Team__AvatarLibrary__Dir` in the shell you used, so the next run uses the bundled library.
 5. Stop the app and restore the [§0.4](../manual-tests.md#04-rollback) backup if the area ran in a state you want to keep.
