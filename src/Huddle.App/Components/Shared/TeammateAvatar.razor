@@ -19,7 +19,7 @@
 @using MudBlazor.Utilities
 
 <MudAvatar Color="Color.Primary" Size="this.Size" Class="@this.Class" Style="@this.InlineStyle">
-    @if (this.Resolved.Image is not null)
+    @if (this.ImageSource is not null)
     {
         <img src="@this.ImageSource" alt="" />
     }
@@ -82,8 +82,51 @@
     /// </summary>
     private string? TrimmedLabel => Agency.Huddle.App.Avatars.Avatar.TrimLabel(this.Resolved.Label);
 
-    /// <summary>The uploaded image's <c>src</c>, or <see langword="null"/> when <see cref="Resolved"/> has no <see cref="Avatars.Avatar.Image"/>.</summary>
-    private string? ImageSource => this.Resolved.Image is null ? null : ImageBasePath + this.Resolved.Image;
+    /// <summary>
+    /// The bytes of an image the Human has chosen but not saved yet, shown inline in place of
+    /// <see cref="Avatars.Avatar.Image"/> so the avatar editor and the Teammate card can preview a choice
+    /// that is still only in memory. Ignored unless <see cref="PendingImageExtension"/> is also set.
+    /// </summary>
+    [Parameter]
+    public byte[]? PendingImage { get; set; }
+
+    /// <summary>The extension, with its dot, that <see cref="Avatars.AvatarImage.SniffExtension(ReadOnlySpan{byte})"/> found for <see cref="PendingImage"/>: <c>.png</c>, <c>.jpg</c> or <c>.webp</c>.</summary>
+    [Parameter]
+    public string? PendingImageExtension { get; set; }
+
+    /// <summary>
+    /// The image's <c>src</c>: the pending image as a data URL when one is set, else the stored image's route,
+    /// or <see langword="null"/> when there is neither. A pending image can never be served by route because
+    /// nothing is written to <c>{DataDir}/avatars</c> until a save.
+    /// </summary>
+    private string? ImageSource
+    {
+        get
+        {
+            if (this.PendingImage is not null
+                && this.PendingImageExtension is not null
+                && MediaTypeOf(this.PendingImageExtension) is { } mediaType)
+            {
+                return string.Concat("data:", mediaType, ";base64,", Convert.ToBase64String(this.PendingImage));
+            }
+
+            return this.Resolved.Image is null ? null : ImageBasePath + this.Resolved.Image;
+        }
+    }
+
+    /// <summary>
+    /// The media type of an image <paramref name="extension"/> that <see cref="Avatars.AvatarImage.SniffExtension(ReadOnlySpan{byte})"/>
+    /// can return, or <see langword="null"/> for any other, so an extension nobody produces is not previewed rather than sent to the
+    /// browser under a guessed type.
+    /// </summary>
+    /// <param name="extension">The extension, with its dot.</param>
+    private static string? MediaTypeOf(string extension) => extension switch
+    {
+        ".png" => "image/png",
+        ".jpg" => "image/jpeg",
+        ".webp" => "image/webp",
+        _ => null,
+    };
 
     /// <summary>
     /// The inline <c>style</c> carrying both <see cref="Avatars.Avatar.Background"/> and its

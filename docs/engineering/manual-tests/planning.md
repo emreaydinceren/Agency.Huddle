@@ -39,7 +39,7 @@ is done. Within an area, tests run top to bottom — free tests first, paid test
 | 17 | [Work Mode: how much an Agent may do before it asks](work-mode.md) | 9 | 4 | 1.8h |
 | 18 | [Questions: an Agent asks the Human by tapping, not typing](questions.md) | 10 | 9 | 3.1h |
 | 19 | [Adapter commands](adapter-commands.md) | 7 | 6 | 1.8h |
-| 20 | [Avatar library: choosing a face from the library](avatar-library.md) | 26 | — | 2.9h |
+| 20 | [Avatar library: choosing a face from the library](avatar-library.md) | 28 | — | 3.3h |
 | 21 | [File Changes, Watched Folders and Memory](file-changes.md) | 12 | 10 | 3.2h |
 | 22 | [Library explorer and editor](library.md) | 19 | 1 | 2.9h |
 | 23 | [Prompt blocks](prompt-blocks.md) | 6 | 5 | 1.4h |
@@ -83,7 +83,7 @@ continue. For the totals, run `pwsh agents/scripts/Check-ManualTests.ps1 -Summar
 | [WORKMODE-01](work-mode.md#workmode-01--the-picker-lists-what-the-adapter-advertises-minus-plan-auto-and-bypass-permissions) | The Work Mode picker lists what the Adapter advertises, minus Plan, Auto and Bypass |
 | [QUESTIONS-07](questions.md#questions-07--a-scripted-adapters-forms-reach-the-human-as-cards-with-the-right-types) | A scripted Adapter's forms reach the Human as cards, with the right types |
 | [COMMANDS-03](adapter-commands.md#commands-03--a-command-the-profile-does-not-allow-is-an-ordinary-message) | A command the profile does not allow is an ordinary Message |
-| [AVATARLIB-01](avatar-library.md#avatarlib-01--no-library-configured-no-button-anywhere) | With no library configured, there is no avatar-library button anywhere |
+| [AVATARLIB-01](avatar-library.md#avatarlib-01--a-library-switched-off-no-button-anywhere) | With `Dir` naming a folder that is not a library, there is no avatar-library button anywhere |
 | [FM-0](file-changes.md#fm-0--an-agents-own-memory-edit-in-one-room-is-news-in-its-other-rooms) | An Agent's own memory edit in one Room is news in its other Rooms |
 | [L0](library.md#l0--chat-message-with-absolute-path-becomes-a-library-link-and-opens-the-library-tab-on-that-file) | A chat Message with an absolute path becomes a Library link and opens the Library tab on that file |
 | [PROMPTBLOCKS-01](prompt-blocks.md#promptblocks-01--a-named-image-is-seen-without-a-tool-call) | A named image is seen, without a tool call |

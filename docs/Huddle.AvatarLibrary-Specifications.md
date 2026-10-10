@@ -37,14 +37,16 @@ They open a dialog, narrow 324 pictures to a handful, and click one.
    The library can be moved or deleted afterwards and every Teammate keeps its face.
 4. **Nothing stays in memory.** The library's index is read when the dialog opens and is released
    when it closes (§6.2, R-1). Nothing caches it between openings.
-5. **Optional.** With no library configured, the picker button is absent and upload works exactly
-   as it does today.
+5. **Ships with the app, and replaceable.** The library is part of the repository and is the default, so
+   the picker works with no configuration ([ADR-0048](adr/0048-the-avatar-library-ships-with-the-app-and-is-the-default.md)).
+   A configured folder replaces it, and a configured folder that is not a library switches the picker
+   off. Upload works exactly as it does today either way.
 
 ## 2. Use cases
 
 | # | Situation | What happens |
 | --- | --- | --- |
-| L1 | The Human edits a Teammate, chooses **An image**, and presses **Choose from library** | A dialog opens over the card showing the first 48 of 324 pictures and the filters |
+| L1 | The Human clicks a Teammate's avatar to open the **Avatar** window, chooses **An image**, and presses **Choose from library** | A dialog opens over the Avatar window showing the first 48 of 324 pictures and the filters |
 | L2 | They press **Tan** | Only avatars whose `skin_tone` is `tan` or `brown` remain |
 | L3 | They type `headset` | Only avatars with a profession or tag word starting `headset` remain |
 | L4 | They press the **Butler** profession chip | The chip moves to the far left and shows an X. Only butlers remain |
@@ -52,19 +54,19 @@ They open a dialog, narrow 324 pictures to a handful, and click one.
 | L6 | They press the tags `glasses` and `bow tie` | Only avatars with **both** tags remain |
 | L7 | They press the X on `Butler` | The chip returns to its normal place; the grid widens again |
 | L8 | They press **Clear all** | Every filter resets to All, empty text, no chips |
-| L9 | They click a picture | The dialog closes. The card shows **New image selected (not yet saved)**, exactly as after an upload (a buffered image has no preview until it is saved); **Save** writes it |
-| L10 | They press **Cancel** on the card after picking | Nothing is written. The copy happens at Save, as for an upload |
+| L9 | They click a picture | The picker closes. The **Avatar** window previews the picture and shows **New image selected (not yet saved)**, exactly as after an upload; **Apply** puts it on the card, and the card's **Save** writes it (from a viewed Teammate the window's own **Save** does) |
+| L10 | They press **Cancel** in the window, or on the card after **Apply** | Nothing is written. The copy happens at Save, as for an upload |
 | L11 | The Human opens **Settings → Appearance** and picks one for themselves | The same dialog; the image is written at once, as an upload is on that page |
 | L12 | Filters leave nothing | The grid says **No avatars match** and the Clear all button stays |
-| L13 | `Team:AvatarLibrary:Dir` is unset, or the folder or `master.json` is missing | No **Choose from library** button anywhere |
+| L13 | `Team:AvatarLibrary:Dir` is set to a folder that is missing or has no `master.json` | No **Choose from library** button anywhere. (Unset uses the bundled library.) |
 | L14 | `master.json` is malformed | The dialog opens, shows **The avatar library could not be read**, and a warning is logged |
 | L15 | A screen-reader user tabs to a picture | It announces, for example, *fair woman Podcaster* |
 | L16 | The dialog is closed | The parsed catalogue is no longer reachable (R-1) |
 
 ## 3. Non-goals
 
-- **Editing, adding or uploading library images from inside Huddle.** The library is a folder the
-  Human maintains.
+- **Editing, adding or uploading library images from inside Huddle.** The library is a folder in the
+  repository, `src/Huddle.App/AvatarLibrary`, changed by changing its files.
 - **Resizing or decoding an image.** ADR-0019 refuses an image decoder. The library's files are
   prepared to 256 × 256 beforehand (§5.3). The app only checks them.
 - **Referencing library files from `avatars.json`.** Rejected in D-1.
@@ -81,7 +83,7 @@ They open a dialog, narrow 324 pictures to a handful, and click one.
 Team:AvatarLibrary:Dir ──► folder ├─ master.json            read when the dialog opens, then dropped
                                   └─ <name>.png × 324       served as-is, never held in memory
 
- TeammateCard / Appearance.razor
+ AvatarEditorDialog (from TeammateCard) / Appearance.razor
         │  "Choose from library"   (only if AvatarLibraryLocator.IsConfigured)
         ▼
  AvatarLibraryDialog.razor   (MudDialog, modal; owns the catalogue as a field)
@@ -101,7 +103,7 @@ directly and the server never holds them.
 
 ### 5.1 `master.json`
 
-The folder and its `master.schema.md` are the Human's. Huddle reads only this much; every other
+The folder and its `master.schema.md` were brought into the repository unchanged (§6.1). Huddle reads only this much; every other
 field (grid, crop box, hair, outfit, colours, counts, notes) is ignored and may change freely.
 
 | Path | Used for |
@@ -127,7 +129,9 @@ The mapping lives in code (`SkinGroups`), not in `master.json`. An unrecognised 
 
 PNG, 256 × 256, with a transparent corner outside the avatar circle, each well under
 `AvatarImage.MaxBytes` (512 000). The library was resized from about 600 px on 2026-10-08 (173 MB →
-35 MB) with the originals kept in a sibling `avatars-originals` folder outside the library folder.
+35 MB) with the originals kept in a sibling `avatars-originals` folder outside the library folder. The
+324 pictures, `master.json` and `master.schema.md` were copied into `src/Huddle.App/AvatarLibrary` on 2026-10-10 (35 MB)
+from the external folder they were made in; that folder, `avatars-originals` and `avatars-grids` stay outside the repository.
 
 ## 6. Subsystems
 
@@ -142,15 +146,19 @@ public sealed class AvatarLibraryOptions
 ```
 
 `TeamOptions.AvatarLibrary` (`Team:AvatarLibrary:Dir`), following `Library`, `Teams` and `Tasks`.
-An absolute path, because the real library is not under `DataDir`. Unset means no library. The key
-joins the configuration table in `docs/Huddle.EngineeringGuide.md`.
+An absolute path, because a library of your own is not under `DataDir`. **Unset means the bundled library**
+(`src/Huddle.App/AvatarLibrary`, copied beside the app by the build and by a publish, and found from the
+application's base directory, never the working directory). A set path that is not a library means no
+library. The key joins the configuration table in `docs/Huddle.EngineeringGuide.md`.
 
 ```json
 { "Team": { "AvatarLibrary": { "Dir": "E:\\Projects\\Software Factories\\avatars" } } }
 ```
 
-`AvatarLibraryLocator.IsConfigured` is true when `Dir` is set **and** `master.json` exists: one
-`File.Exists`, no parse. It is what shows or hides the **Choose from library** button, so deciding
+`AvatarLibraryLocator.Dir` is the configured folder, else `AvatarLibraryLocator.BundledDir`. A configured
+`Dir` is **never** replaced by the bundled folder, even when it is not a library: that is how an operator
+switches the shipped library off. `AvatarLibraryLocator.IsConfigured` is true when that folder has a
+`master.json`: one `File.Exists`, no parse. It is what shows or hides the **Choose from library** button, so deciding
 to show the button never loads the index.
 
 ### 6.2 Load on open, drop on close (R-1)
@@ -184,7 +192,7 @@ A second `UseStaticFiles` mount at `/avatar-library` with a `PhysicalFileProvide
   `master.json` and any `.svg` therefore return 404.
 - `nosniff`. A short cache (`public,max-age=3600`), **not** the `immutable` one avatars use:
   library file names are meant to be stable, but a Human may replace an image in place.
-- The mount is added only when `Dir` is set **and** the folder exists, because a
+- The mount is added only when the library folder (the configured `Dir`, else the bundled one) exists, because a
   `PhysicalFileProvider` throws on a missing root. A library created after start-up needs a restart
   to be served, recorded in `known-limits.md`.
 
@@ -271,7 +279,8 @@ does the same and writes at once, as it does for an upload. **`AvatarStore`, `Av
 
 | Condition | Behaviour |
 | --- | --- |
-| `Dir` unset, or the folder missing | `IsConfigured` is false; no button; no mount |
+| `Dir` set to a folder that is missing | `IsConfigured` is false; no button; no mount; the bundled library is **not** used instead |
+| `Dir` unset | The bundled library is used: the button shows and the mount serves it |
 | Folder present, `master.json` missing | `IsConfigured` is false, so no button; the `/avatar-library` mount is still added and serves the folder's pictures, because the mount follows the folder, not the index (§6.3). `master.json` itself returns 404 |
 | `master.json` unreadable, malformed or over 4 MB | Dialog shows the unreadable message; one warning logged; nothing thrown |
 | A record with an empty or unsafe `file` (separator, `..`) | Skipped |
@@ -286,9 +295,9 @@ Legend for every mock below: `(Chip)` is an unselected chip; `[Chip x]` is a sel
 has floated to the left and carries an X; `(o)` is a thumbnail, a 72 px circular picture with no
 text; `{o}` is the thumbnail under the pointer or keyboard focus, drawn with a visible ring.
 
-**M1 — Where it starts.** The Avatar section of the Teammate card, with the new button beside the
+**M1 — Where it starts.** The **Avatar** window that the Teammate card's avatar opens, with the new button beside the
 upload button. It appears only in the **An image** choice, and only when a library is configured
-(L13).
+(L13). Under **Initials of the name** and **A short label** the window shows the **Background** palette, a grid of swatches with no text field and no button to clear the colour; it is not offered under **An image**, because the image covers it.
 
 ```text
 +- Avatar --------------------------------------------------------+
@@ -296,7 +305,6 @@ upload button. It appears only in the **An image** choice, and only when a libra
 |                                                                  |
 |  [ Choose an image ]  [ Choose from library ]                    |
 |  New image selected (not yet saved)               [ Remove image ]|
-|  Background  [ #4a154b ......... ]  Use the theme colour         |
 +------------------------------------------------------------------+
 ```
 
@@ -415,7 +423,12 @@ under `Avatars/` declares a `static` field of the catalogue type. `Reopen_ReadsF
 
 **`AvatarLibraryMountTests`** (the `/teammate-avatars` tests as a model)
 `Mount_ServesPng`, `Mount_MasterJson_Returns404_WhileFileExists`,
-`Mount_Svg_Returns404_WhileFileExists`, `Mount_NotAdded_WhenDirUnset`.
+`Mount_Svg_Returns404_WhileFileExists`, `Mount_DefaultsToTheBundledLibrary_WhenDirUnset`,
+`Mount_BundledMasterJson_Returns404`, `Mount_NotAdded_WhenDirMissing`.
+
+**`BundledAvatarLibraryTests`** (the real shipped folder, through the real loader)
+`BundledFolder_IsAConfiguredLibrary`, `BundledIndex_LoadsEveryRecordWithNoneSkipped`,
+`BundledPictures_AreSmall256PixelPngs`, `BundledFolder_HoldsExactlyTheIndexedPictures`.
 
 **`AvatarLibraryDialogTests`** (bUnit)
 `Opens_AsDialog_NotDrawer` (asserts `.mud-dialog` and no `.mud-drawer`),

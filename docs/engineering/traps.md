@@ -289,9 +289,14 @@ legitimate empty result. Back to the hub: [Huddle.EngineeringGuide.md](../Huddle
   Nothing fails: the build is clean, the control looks right, and the wrong value is
   the one the user is shown. `Text` is a `string?` and is exactly the value that goes
   to `avatars.json`, so binding it keeps "no background chosen" expressible; a blank
-  maps to `null`, never to `""`. Both avatar editors carry the reasoning inline, and
-  both pair the picker with an explicit **Use the theme colour** action, because a
-  picker alone gives a user no way back to *unset*.
+  maps to `null`, never to `""`. The Appearance editor carries the reasoning inline and
+  pairs the picker with an explicit **Use the theme colour** action, because a
+  picker alone gives a user no way back to *unset*. **The Teammate card's avatar
+  editor (`AvatarEditorDialog`) no longer uses a text field**: it shows the static
+  palette of `AvatarPalette.Colours`, hands the picker a *transparent* colour while
+  nothing is chosen (it matches no swatch), and changes the background only in the
+  `ValueChanged` handler a press on a swatch reaches. A test opens the editor,
+  saves a label and asserts the background is still `null`.
 
 - **`System.Text.Json` escapes astral-plane characters whatever encoder you give
   it.** `JavaScriptEncoder.UnsafeRelaxedJsonEscaping` is the usual fix for

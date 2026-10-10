@@ -58,9 +58,8 @@
 @inject AvatarStore Avatars
 @inject SkillStore Skills
 @inject BuiltinTeammateReset Reset
-@* The Avatar Library picker (Spec 6.6) opens over this card as a second dialog. Its locator and loader are
-   resolved by hand (see LibraryConfigured), like the team-type catalog below, so a host that registers
-   neither keeps rendering the card exactly as before. *@
+@* The avatar editor (AvatarEditorDialog) opens over this card as a second dialog when the avatar is pressed;
+   the Avatar Library picker opens over that, from the editor itself. *@
 @inject IDialogService DialogService
 @* Resolved by hand, not injected: the team-type catalog and pack store only matter to a Teammate hired
    from a role, and a card opened in a host that registers neither (a Teammates page without Teams) must
@@ -81,7 +80,14 @@
         }
 
         <MudStack Row="true" Spacing="3" Class="mb-4">
-            <TeammateAvatar Name="@this.name" Avatar="this.CurrentAvatar" Size="Size.Large" />
+            @* The avatar is the way into the avatar editor in every mode, so it is a real button: focusable,
+               announced, and carrying the one hover/focus cue (the pencil, app.css .teammate-card-avatar). The
+               avatar itself keeps its own single root element; the button wraps it rather than replacing it. *@
+            <button type="button" class="teammate-card-avatar" aria-label="Change avatar" title="Change avatar" @onclick="this.EditAvatarAsync">
+                <TeammateAvatar Name="@this.name" Avatar="this.avatar" Size="Size.Large"
+                                PendingImage="this.avatarPendingBytes" PendingImageExtension="@this.avatarPendingExtension" />
+                <MudIcon Icon="@Icons.Material.Filled.Edit" Size="Size.Small" Class="teammate-card-avatar-edit" />
+            </button>
 
             @if (this.mode == TeammateCardMode.Create)
             {
@@ -480,78 +486,6 @@
                     }
                 </MudSelect>
             }
-
-            @* View mode shows none of this - consistent with Model and Effort rendering as plain text
-               there (see the "mode == View" branch above). Styled the same Outlined MudPaper as the
-               Model/Effort papers, above, even though it only ever appears in Create/Edit. *@
-            <MudPaper Outlined="true" Class="pa-3 mt-4">
-                <MudText Typo="Typo.overline">Avatar</MudText>
-                <MudRadioGroup T="AvatarChoice" Value="this.avatarChoice" ValueChanged="this.OnAvatarChoiceChanged" Class="mb-2">
-                    <MudRadio T="AvatarChoice" Value="AvatarChoice.Initials">Initials of the name</MudRadio>
-                    <MudRadio T="AvatarChoice" Value="AvatarChoice.Label">A short label</MudRadio>
-                    <MudRadio T="AvatarChoice" Value="AvatarChoice.Image">An image</MudRadio>
-                </MudRadioGroup>
-
-                @if (this.avatarChoice == AvatarChoice.Label)
-                {
-                    @* Immediate="true" here is correct and deliberately UNLIKE the Name/Title/Alias boxes
-                       above, which are blur-only because they fight the frontmatter round-trip (see
-                       OnNameChanged and friends). The label has no such counterparty, and a preview that
-                       only updated on blur would not be a preview. Trimming itself happens once, inside
-                       CurrentAvatar's Avatar.TrimLabel call - not here - so every keystroke that reaches
-                       avatarLabel is reflected in the live preview through the ordinary render that
-                       follows ValueChanged. No MaxLength: it truncates by UTF-16 index, which can cut a
-                       surrogate pair in half (Avatar.TrimLabel's own remarks). Counter gives the same
-                       affordance without that defect, sized from Avatar.MaxLabelTextElements so the two
-                       can never drift apart. *@
-                    <MudTextField T="string" Label="Label" Value="@this.avatarLabel" ValueChanged="this.OnAvatarLabelChanged"
-                                  Immediate="true" Counter="@Avatar.MaxLabelTextElements"
-                                  HelperText="Shown instead of initials." />
-                }
-
-                @if (this.avatarChoice == AvatarChoice.Image)
-                {
-                    <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2">
-                        <MudFileUpload T="IBrowserFile" Accept=".png,.jpg,.jpeg,.webp" MaximumFileCount="1" FilesChanged="this.OnAvatarFileChangedAsync">
-                            <CustomContent Context="fileUpload">
-                                <MudButton Variant="Variant.Outlined" StartIcon="@Icons.Material.Filled.Upload" OnClick="@(() => fileUpload.OpenFilePickerAsync())">
-                                    Choose an image
-                                </MudButton>
-                            </CustomContent>
-                        </MudFileUpload>
-
-                        @if (this.LibraryConfigured)
-                        {
-                            <MudButton Variant="Variant.Outlined" StartIcon="@Icons.Material.Filled.PhotoLibrary" OnClick="this.ChooseFromLibraryAsync">
-                                Choose from library
-                            </MudButton>
-                        }
-                    </MudStack>
-
-                    @if (this.avatarPendingBytes is not null || this.avatarImage is not null)
-                    {
-                        <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2" Class="mt-2">
-                            <MudText Typo="Typo.body2">@(this.avatarPendingBytes is not null ? "New image selected (not yet saved)" : this.avatarImage)</MudText>
-                            <MudButton Variant="Variant.Text" Size="Size.Small" OnClick="this.RemoveAvatarImage">Remove image</MudButton>
-                        </MudStack>
-                    }
-                }
-
-                @if (this.avatarError is not null)
-                {
-                    <MudAlert Severity="Severity.Error" Dense="true" Class="mt-2">@this.avatarError</MudAlert>
-                }
-
-                @* THE TRAP: MudColorPicker.Value is a non-null MudColor - binding it would materialise a
-                   hard-coded hex colour the moment this card first renders, permanently divorced from the
-                   Theme, just from opening Edit on a Teammate nobody ever gave a background to. Text is a
-                   string? and is exactly the value this card reads and writes to avatars.json, so binding
-                   IT instead keeps "no background chosen" (null) expressible - see avatarBackground's own
-                   remarks and docs/engineering/traps.md. *@
-                <MudColorPicker Label="Background" ColorPickerMode="ColorPickerMode.HEX" ShowAlpha="false"
-                                 Text="@this.avatarBackground" TextChanged="this.OnAvatarBackgroundTextChanged" Class="mt-2" />
-                <MudButton Variant="Variant.Text" Size="Size.Small" OnClick="this.UseThemeColour">Use the theme colour</MudButton>
-            </MudPaper>
         }
     </DialogContent>
     <DialogActions>
@@ -653,22 +587,19 @@
     // assignment lives only in this.text's frontmatter (Spec §6.7), never on the Persona record, so
     // ReadSkills(this.text) is the only source - see its own remarks.
     private IReadOnlyList<string> skills = [];
+
+    // The avatar this card shows: what the store holds, until the avatar editor applies something, and
+    // then what it applied. In Create and Edit that is only in memory until SaveAsync; in View it is
+    // written at once (EditAvatarAsync). Seeded in OnInitializedAsync and re-seeded in BeginEditAsync,
+    // exactly like every other local field on this card - see the file-level comment on why nothing
+    // here may come from a re-pushed parameter once the dialog is open.
     private Avatar avatar = Avatar.None;
 
-    // Editor-only working state for the avatar editor (Part A of the avatar-editor task). None of
-    // these is ever read back from disk - avatarChoice is DERIVED from "avatar" (see
-    // SeedAvatarEditorState) rather than stored, and CurrentAvatar below is the single place that
-    // projects them back into an Avatar for both the live preview and Save. Seeded once in
-    // OnInitializedAsync and re-seeded in BeginEditAsync, exactly like every other local field on
-    // this card - see the file-level comment on why nothing here may come from a re-pushed
-    // parameter once the dialog is open.
-    private AvatarChoice avatarChoice;
-    private string avatarLabel = string.Empty;
-    private string? avatarImage;
+    // An image the editor applied that has not been written yet. Nothing reaches {DataDir}/avatars
+    // until SaveAvatar, because only then is there a Name to file it under (a Create has none until
+    // it is saved) and a Cancel must be able to throw it away.
     private byte[]? avatarPendingBytes;
     private string? avatarPendingExtension;
-    private string? avatarBackground;
-    private string? avatarError;
 
     private string? roomId;
     private string? filePath;
@@ -786,7 +717,16 @@
         this.adapter = this.Adapter;
         this.skills = ReadSkills(this.text);
         this.ResolveRole();
-        this.SeedAvatarEditorState();
+        this.SeedAvatarState();
+
+        // Only a card that is creating draws a colour: an existing Teammate with no avatar keeps showing the
+        // Theme's own colour, and opening it must not change that. The colour is held like any applied avatar
+        // and written by SaveAsync, so a card that is cancelled leaves nothing behind.
+        if (this.mode == TeammateCardMode.Create)
+        {
+            this.avatar = Avatar.None with { Background = AvatarPalette.Pick(Random.Shared) };
+        }
+
         this.roomId = this.RoomId;
         this.filePath = this.FilePath;
         this.status = this.Status;
@@ -988,181 +928,71 @@
     }
 
     /// <summary>
-    /// The single place <see cref="avatarChoice"/>, <see cref="avatarLabel"/>, <see cref="avatarImage"/>
-    /// and <see cref="avatarBackground"/> are projected back into an <see cref="Avatars.Avatar"/> - both
-    /// for the live preview <see cref="TeammateAvatar"/> renders as a child of this same open dialog, and
-    /// for what <see cref="SaveAsync"/> persists. Reads <see cref="avatarChoice"/> but stores no
-    /// discriminator of its own: switching to <see cref="AvatarChoice.Initials"/> nulls both payloads
-    /// only in THIS projection, while <see cref="avatarLabel"/> keeps whatever text was typed - so
-    /// switching back to <see cref="AvatarChoice.Label"/> restores it without the user retyping anything.
+    /// (Re-)seeds the avatar this card shows from <see cref="AvatarStore.Get(string)"/> and drops any image
+    /// that was applied but not written. Called once from <see cref="OnInitializedAsync"/> and again from
+    /// <see cref="BeginEditAsync"/> - see the field group's own remarks for why nothing here may instead
+    /// come from a re-pushed parameter.
     /// </summary>
-    private Avatar CurrentAvatar => new(
-        this.avatarChoice == AvatarChoice.Label ? Avatar.TrimLabel(this.avatarLabel) : null,
-        this.avatarChoice == AvatarChoice.Image ? this.avatarImage : null,
-        this.avatarBackground);
-
-    /// <summary>
-    /// (Re-)seeds every avatar-editor local field from <see cref="AvatarStore.Get(string)"/>, called
-    /// once from <see cref="OnInitializedAsync"/> and again from <see cref="BeginEditAsync"/> - see the
-    /// field group's own remarks for why nothing here may instead come from a re-pushed parameter.
-    /// <see cref="avatarChoice"/> is derived from which of <see cref="Avatars.Avatar.Image"/> and
-    /// <see cref="Avatars.Avatar.Label"/> is set - the same Image-then-Label-then-initials precedence
-    /// <see cref="TeammateAvatar"/> renders by - rather than read from any stored discriminator, because
-    /// none is ever written to disk.
-    /// </summary>
-    private void SeedAvatarEditorState()
+    private void SeedAvatarState()
     {
         this.avatar = this.Avatars.Get(this.name);
-        this.avatarChoice = this.avatar switch
+        this.avatarPendingBytes = null;
+        this.avatarPendingExtension = null;
+    }
+
+    /// <summary>
+    /// Opens <see cref="AvatarEditorDialog"/> over this card, from the avatar in every mode, and takes back what the
+    /// Human committed. A cancelled editor changes nothing. In Create and Edit the result is only held (the editor
+    /// says "Apply") and <see cref="SaveAsync"/> writes it, so the card's own Cancel can still throw it away; View has
+    /// no Save of its own, so there the result is written at once (the editor says "Save").
+    /// </summary>
+    private async Task EditAvatarAsync()
+    {
+        bool deferred = this.mode != TeammateCardMode.View;
+        DialogParameters<AvatarEditorDialog> parameters = new()
         {
-            { Image: not null } => AvatarChoice.Image,
-            { Label: not null } => AvatarChoice.Label,
-            _ => AvatarChoice.Initials,
+            { dialog => dialog.Name, this.name },
+            { dialog => dialog.Current, this.avatar },
+            { dialog => dialog.PendingImage, this.avatarPendingBytes },
+            { dialog => dialog.PendingImageExtension, this.avatarPendingExtension },
+            { dialog => dialog.Deferred, deferred },
         };
-        this.avatarLabel = this.avatar.Label ?? string.Empty;
-        this.avatarImage = this.avatar.Image;
-        this.avatarBackground = this.avatar.Background;
-        this.avatarPendingBytes = null;
-        this.avatarPendingExtension = null;
-        this.avatarError = null;
-    }
 
-    /// <summary>Switches the three-way avatar choice, the same "handler clears avatarError" shape every other handler on this card uses.</summary>
-    /// <param name="value">The radio button just selected.</param>
-    private void OnAvatarChoiceChanged(AvatarChoice value)
-    {
-        this.avatarChoice = value;
-        this.avatarError = null;
-    }
-
-    /// <summary>
-    /// Stores the Label box's newly typed text verbatim - trimming to <see cref="Avatar.MaxLabelTextElements"/>
-    /// happens once, inside <see cref="CurrentAvatar"/>'s own <see cref="Avatar.TrimLabel(string?)"/> call, not
-    /// here, so the box never fights the user by silently shortening what they are still typing.
-    /// </summary>
-    /// <param name="value">The Label box's newly typed value.</param>
-    private void OnAvatarLabelChanged(string value)
-    {
-        this.avatarLabel = value;
-        this.avatarError = null;
-    }
-
-    /// <summary>
-    /// Validates an uploaded avatar image and, on success, buffers it in <see cref="avatarPendingBytes"/>
-    /// and <see cref="avatarPendingExtension"/> - it deliberately never writes to disk itself; only
-    /// <see cref="SaveAsync"/> does that, through <see cref="AvatarStore.WriteImage(ReadOnlySpan{byte}, string)"/>,
-    /// once a Name to file it under is actually known (Part C of the avatar-editor task).
-    /// </summary>
-    /// <param name="file">The single file <see cref="MudFileUpload{T}"/> just selected.</param>
-    private async Task OnAvatarFileChangedAsync(IBrowserFile file)
-    {
-        ArgumentNullException.ThrowIfNull(file);
-
-        this.avatarError = null;
-
-        // Checked before opening the stream at all - fast, and gives a better message than the
-        // IOException OpenReadStream's own maxAllowedSize guard would throw for the same file.
-        if (file.Size > AvatarImage.MaxBytes)
-        {
-            this.avatarError = string.Create(CultureInfo.InvariantCulture, $"That file is larger than {AvatarImage.MaxBytes / 1000} KB.");
-            return;
-        }
-
-        byte[] bytes;
-        try
-        {
-            await using var stream = file.OpenReadStream(AvatarImage.MaxBytes, CancellationToken.None);
-            using MemoryStream buffer = new();
-            await stream.CopyToAsync(buffer, CancellationToken.None);
-            bytes = buffer.ToArray();
-        }
-        catch (IOException)
-        {
-            // A lying Size (or a stream that grew mid-read) still trips OpenReadStream's own
-            // maxAllowedSize guard - same message as the fast check above, since it is the same
-            // fact from the user's point of view.
-            this.avatarError = string.Create(CultureInfo.InvariantCulture, $"That file is larger than {AvatarImage.MaxBytes / 1000} KB.");
-            return;
-        }
-
-        var extension = AvatarImage.SniffExtension(bytes);
-        if (extension is null)
-        {
-            this.avatarError = "That file is not a PNG, JPEG or WebP image.";
-            return;
-        }
-
-        this.BufferAvatarImage(bytes, extension);
-    }
-
-    /// <summary>Whether an Avatar Library is configured and so the "Choose from library" button shows; false when the host registers no locator.</summary>
-    private bool LibraryConfigured => this.Services.GetService<AvatarLibraryLocator>() is { IsConfigured: true };
-
-    /// <summary>Buffers a chosen avatar image, from an upload or from the library, exactly as <see cref="SaveAsync"/> later expects it, and clears any earlier avatar error.</summary>
-    /// <param name="bytes">The image bytes, already validated as a PNG, JPEG or WebP.</param>
-    /// <param name="extension">The extension <see cref="AvatarImage.SniffExtension"/> found, with its dot.</param>
-    private void BufferAvatarImage(byte[] bytes, string extension)
-    {
-        this.avatarPendingBytes = bytes;
-        this.avatarPendingExtension = extension;
-        this.avatarError = null;
-    }
-
-    /// <summary>
-    /// Opens the Avatar Library picker above this card and, when a thumbnail is chosen, reads that file and buffers it
-    /// the way an upload is buffered. A file that cannot be read shows the avatar error line; cancelling changes nothing.
-    /// </summary>
-    private async Task ChooseFromLibraryAsync()
-    {
-        this.avatarError = null;
-
-        IDialogReference reference = await this.DialogService.ShowAsync<AvatarLibraryDialog>(null, new DialogParameters(), AvatarLibraryDialog.Options);
+        IDialogReference reference = await this.DialogService.ShowAsync<AvatarEditorDialog>(null, parameters, AvatarEditorDialog.Options);
         DialogResult? result = await reference.Result;
-        if (result is null || result.Canceled || result.Data is not string fileName)
+        if (result is null || result.Canceled || result.Data is not AvatarEditorResult edited)
         {
             return;
         }
 
-        IAvatarLibraryLoader? loader = this.Services.GetService<IAvatarLibraryLoader>();
-        AvatarLibraryImage? image = loader is null ? null : await loader.ReadImageAsync(fileName, CancellationToken.None);
-        if (image is null)
+        this.avatar = edited.Avatar;
+        this.avatarPendingBytes = edited.PendingImage;
+        this.avatarPendingExtension = edited.PendingImageExtension;
+
+        if (!deferred)
         {
-            this.avatarError = "That image could not be read.";
-            return;
+            this.SaveAvatar();
         }
-
-        this.BufferAvatarImage(image.Bytes, image.Extension);
-    }
-
-    /// <summary>Clears a chosen image - whether already saved (<see cref="avatarImage"/>) or only buffered (<see cref="avatarPendingBytes"/>) - so <see cref="CurrentAvatar"/> falls back to initials until a new file is chosen.</summary>
-    private void RemoveAvatarImage()
-    {
-        this.avatarImage = null;
-        this.avatarPendingBytes = null;
-        this.avatarPendingExtension = null;
-        this.avatarError = null;
     }
 
     /// <summary>
-    /// THE TRAP: bound to <see cref="MudColorPicker.Text"/>, never <see cref="MudColorPicker.Value"/> -
-    /// see the markup comment beside the control for why. Blank input (the Clear action, or a user who
-    /// deletes the hex text) maps to <see langword="null"/>, meaning "the surface's own default", never
-    /// the empty string - <see cref="Avatar.Background"/>'s own contract.
+    /// Writes the avatar this card shows under the current <see cref="name"/>: first an image applied but not yet
+    /// written, through <see cref="AvatarStore.WriteImage(ReadOnlySpan{byte}, string)"/>, then the avatar itself. Only
+    /// here, with a Name known (a Create mints one when it is saved), can an image be filed under the right key.
     /// </summary>
-    /// <param name="value">The colour picker's newly typed or picked text, or <see langword="null"/>/blank.</param>
-    private void OnAvatarBackgroundTextChanged(string? value)
+    private void SaveAvatar()
     {
-        this.avatarBackground = string.IsNullOrWhiteSpace(value) ? null : value;
-        this.avatarError = null;
-    }
+        Avatar toSave = this.avatar;
+        if (this.avatarPendingBytes is not null && this.avatarPendingExtension is not null)
+        {
+            toSave = toSave with { Image = this.Avatars.WriteImage(this.avatarPendingBytes, this.avatarPendingExtension) };
+        }
 
-    /// <summary>Explicitly clears <see cref="avatarBackground"/> back to <see langword="null"/> - the Theme's own colour - distinct from the picker's own Clear action, which targets <see cref="MudColorPicker.Value"/> rather than the <see cref="MudColorPicker.Text"/> this card actually reads.</summary>
-    private void UseThemeColour()
-    {
-        this.avatarBackground = null;
-        this.avatarError = null;
+        this.Avatars.Save(this.name, toSave);
+        this.avatar = toSave;
+        this.avatarPendingBytes = null;
+        this.avatarPendingExtension = null;
     }
-
     private string CardTitle => this.mode switch
     {
         TeammateCardMode.Create => "New teammate",
@@ -1399,7 +1229,7 @@
         this.workMode = persona?.WorkMode;
         this.adapter = persona?.Adapter ?? this.adapter;
         this.skills = ReadSkills(this.text);
-        this.SeedAvatarEditorState();
+        this.SeedAvatarState();
         this.error = null;
         this.confirmingRemove = false;
         this.confirmingReset = false;
@@ -1905,18 +1735,9 @@
 
         // Nothing before this point ever touched disk for the avatar - see the field group's own
         // remarks. Only now, with persona.Name (mirrored into this.name above) known - a Create mints
-        // a brand new one - can a pending upload be filed under the right key. WriteImage happens
-        // before Save, and only when there IS a pending upload: an Edit that touched no image keeps
-        // avatarImage exactly as SeedAvatarEditorState last set it. CurrentAvatar is used, not a
-        // hand-built Avatar, so this is the exact same projection the live preview has been showing.
-        if (this.avatarPendingBytes is not null && this.avatarPendingExtension is not null)
-        {
-            this.avatarImage = this.Avatars.WriteImage(this.avatarPendingBytes, this.avatarPendingExtension);
-        }
-
-        this.Avatars.Save(this.name, this.CurrentAvatar);
-        this.avatarPendingBytes = null;
-        this.avatarPendingExtension = null;
+        // a brand new one - can the avatar the editor applied, and any image it carries, be filed
+        // under the right key. SaveAvatar writes exactly what the card has been showing.
+        this.SaveAvatar();
 
         // Land on the saved Teammate's details rather than closing outright, so a new teammate can be
         // read back immediately and an edit visibly took.

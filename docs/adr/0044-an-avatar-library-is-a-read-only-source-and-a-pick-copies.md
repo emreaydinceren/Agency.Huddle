@@ -9,6 +9,10 @@ date: 2026-10-08
 > that ADR decided changes. `Avatar`, `AvatarStore` and `avatars.json` are untouched, and a picked
 > face goes through the same path an upload does. The full design, with the use cases and the
 > mock-ups, is in the [Avatar library specification](../Huddle.AvatarLibrary-Specifications.md).
+>
+> **Amended by [ADR-0048](0048-the-avatar-library-ships-with-the-app-and-is-the-default.md).** The library now
+> ships in the repository and is used when `Dir` is unset; an unset `Dir` no longer means no library.
+> Where this ADR says the library is a folder the Human maintains outside the repository, read it with that change.
 
 ## The defect
 

@@ -89,6 +89,42 @@ public sealed partial class AppStylesheetTests
     }
 
     /// <summary>
+    /// An image inside any <c>.mud-avatar</c> is scaled to fill the circle and cropped to it, never shown at its natural
+    /// size. <c>TeammateAvatar</c> renders a bare <c>&lt;img&gt;</c> and MudBlazor styles only its own <c>MudImage</c>, so
+    /// without this rule a 256 px library picture sat at full size inside a 56 px avatar, clipped to a corner of the face.
+    /// </summary>
+    [Fact]
+    public void AppCss_ScalesAnAvatarImageToItsCircle()
+    {
+        string text = File.ReadAllText(CssSource.RepoPath("src", "Huddle.App", "wwwroot", "app.css"));
+
+        Match rule = Regex.Match(text, @"\.mud-avatar img\s*\{(?<body>[^}]*)\}", RegexOptions.CultureInvariant, TimeSpan.FromSeconds(2));
+
+        Assert.True(rule.Success, "app.css has no '.mud-avatar img' rule.");
+        string body = Regex.Replace(rule.Groups["body"].Value.Trim(), @"\s+", " ", RegexOptions.CultureInvariant, TimeSpan.FromSeconds(2));
+        Assert.Equal("width: 100%; height: 100%; object-fit: cover;", body);
+    }
+
+    /// <summary>
+    /// The avatar editor's Background palette lets MudBlazor's swatch view flow instead of sitting in a fixed-height box.
+    /// MudBlazor gives the static picker's content area a fixed 250 px and positions the swatches inside it, which left a
+    /// blank band under a palette that needs about 160 px; the rule puts the view back in flow and lets that area follow it.
+    /// </summary>
+    [Fact]
+    public void AppCss_LetsTheAvatarEditorPaletteFlow()
+    {
+        string text = File.ReadAllText(CssSource.RepoPath("src", "Huddle.App", "wwwroot", "app.css"));
+
+        Match view = Regex.Match(text, @"\.avatar-editor-background \.mud-picker-color-view\s*\{(?<body>[^}]*)\}", RegexOptions.CultureInvariant, TimeSpan.FromSeconds(2));
+        Match box = Regex.Match(text, @"\.avatar-editor-background \.mud-picker-color-picker\s*\{(?<body>[^}]*)\}", RegexOptions.CultureInvariant, TimeSpan.FromSeconds(2));
+
+        Assert.True(view.Success, "app.css has no '.avatar-editor-background .mud-picker-color-view' rule.");
+        Assert.True(box.Success, "app.css has no '.avatar-editor-background .mud-picker-color-picker' rule.");
+        Assert.Equal("position: static;", Regex.Replace(view.Groups["body"].Value.Trim(), @"\s+", " ", RegexOptions.CultureInvariant, TimeSpan.FromSeconds(2)));
+        Assert.Equal("height: auto;", Regex.Replace(box.Groups["body"].Value.Trim(), @"\s+", " ", RegexOptions.CultureInvariant, TimeSpan.FromSeconds(2)));
+    }
+
+    /// <summary>
     /// <c>.teammates-danger</c> was a dead rule: every destructive button is now a
     /// <c>MudButton Color="Color.Error"</c> (<c>ResetAllControl.razor</c>, <c>TeammateCard.razor</c>),
     /// so nothing in the app referenced the class any more. Asserts it stays deleted rather than

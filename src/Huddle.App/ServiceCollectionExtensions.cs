@@ -1,4 +1,5 @@
 using Microsoft.Extensions.DependencyInjection.Extensions;
+using Microsoft.Extensions.Options;
 using Agency.Huddle.Acp.Hosting;
 using Agency.Huddle.App.Acp;
 using Agency.Huddle.App.Acp.Sessions;
@@ -301,8 +302,9 @@ public static class ServiceCollectionExtensions
         // Avatar Library: both stateless. The locator only answers "is a library configured, and where",
         // and the loader reads master.json and one image per call, so neither holds a catalogue between
         // requests (requirement R-1). The interface exists because the picker dialog is tested against a
-        // fake loader, and a sealed class cannot be mocked.
-        services.AddSingleton<AvatarLibraryLocator>();
+        // fake loader, and a sealed class cannot be mocked. The library that ships with the app is the default
+        // when Team:AvatarLibrary:Dir is unset; a configured Dir replaces it.
+        services.AddSingleton(static provider => new AvatarLibraryLocator(provider.GetRequiredService<IOptions<TeamOptions>>(), AvatarLibraryLocator.BundledDir));
         services.AddSingleton<IAvatarLibraryLoader, AvatarLibraryLoader>();
 
         // No interface, same reasoning as AvatarStore just above: nothing needs to substitute
