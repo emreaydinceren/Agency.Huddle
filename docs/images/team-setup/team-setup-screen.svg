@@ -1,0 +1,154 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 900 560" width="900" role="img" aria-labelledby="t d">
+<title id="t">Team setup and hiring pool</title>
+<desc id="d">The setup screen of a Development Team. Left, the hiring pool with one card per role and a greyed card at its limit. Right, the Team area with the locked manager, a Ready Developer and a QA Engineer that needs setup. Below, the team check bar and a disabled Start Team button.</desc>
+<style>
+.bg{fill:#ffffff}.panel{fill:#f6f7f9;stroke:#d5d9e0}.card{fill:#ffffff;stroke:#d5d9e0}.full{fill:#eceef1;stroke:#d5d9e0}
+.ink{fill:#1f2328}.mut{fill:#6a737d}.ok{fill:#1a7f37}.warn{fill:#9a6700}.fail{fill:#cf222e}
+.chip{fill:#ddf4ff;stroke:#0969da}.chipo{fill:none;stroke:#6a737d}.chipf{fill:#0969da}
+.btn{fill:#ffffff;stroke:#0969da}.btnp{fill:#0969da}.btnd{fill:#d5d9e0}.white{fill:#ffffff}
+.rule{stroke:#d5d9e0;fill:none}.note{fill:none;stroke:#0969da;stroke-dasharray:4 3}
+.wbg{fill:#fff8c5;stroke:#9a6700}.link{fill:#0969da}
+text{font-family:system-ui,-apple-system,"Segoe UI",sans-serif;font-size:14px}
+.mono{font-family:ui-monospace,Consolas,monospace;font-size:13px}.s{font-size:12px}.b{font-weight:600}.h{font-size:15px;font-weight:600}
+@media (prefers-color-scheme:dark){
+.bg{fill:#0d1117}.panel{fill:#161b22;stroke:#30363d}.card{fill:#0d1117;stroke:#30363d}.full{fill:#161b22;stroke:#30363d}
+.ink{fill:#e6edf3}.mut{fill:#8b949e}.ok{fill:#3fb950}.warn{fill:#d29922}.fail{fill:#ff7b72}
+.chip{fill:#0c2d6b;stroke:#58a6ff}.chipo{stroke:#8b949e}.chipf{fill:#1f6feb}
+.btn{fill:#0d1117;stroke:#58a6ff}.btnp{fill:#1f6feb}.btnd{fill:#30363d}
+.rule{stroke:#30363d}.note{stroke:#58a6ff}.wbg{fill:#272115;stroke:#d29922}.link{fill:#58a6ff}}
+</style>
+<rect class="bg" width="900" height="560"/>
+
+<text class="mut s b" x="20" y="26">SCREEN 1 · TEAM SETUP AND HIRING POOL · /teams/{Team}/setup · NAMES AND VALUES ARE ILLUSTRATIVE</text>
+
+<!-- ============ hiring pool (left) ============ -->
+<rect class="panel" x="20" y="40" width="410" height="364" rx="8"/>
+<text class="mut s b" x="36" y="64">HIRING POOL</text>
+
+<!-- presets -->
+<rect class="btn" x="36" y="74" width="64" height="24" rx="12"/>
+<text class="link s b" x="68" y="90" text-anchor="middle">Small</text>
+<rect class="btn" x="108" y="74" width="64" height="24" rx="12"/>
+<text class="link s b" x="140" y="90" text-anchor="middle">Full</text>
+<text class="mut s" x="184" y="90">Presets hire a set of roles at once</text>
+
+<!-- Tech Lead -->
+<rect class="card" x="36" y="108" width="378" height="58" rx="6"/>
+<text class="ink h" x="50" y="130">Tech Lead</text>
+<rect class="chip" x="50" y="138" width="44" height="18" rx="9"/>
+<text class="ink s" x="72" y="151" text-anchor="middle">high</text>
+<rect class="chipo" x="100" y="138" width="68" height="18" rx="9"/>
+<text class="mut s" x="134" y="151" text-anchor="middle">Challenge</text>
+<text class="mut s" x="262" y="151">Next name: Mara</text>
+<circle class="btn" cx="390" cy="137" r="14"/>
+<text class="link b" x="390" y="143" text-anchor="middle" style="font-size:18px">+</text>
+
+<!-- Developer -->
+<rect class="card" x="36" y="174" width="378" height="58" rx="6"/>
+<text class="ink h" x="50" y="196">Developer</text>
+<rect class="chip" x="50" y="204" width="44" height="18" rx="9"/>
+<text class="ink s" x="72" y="217" text-anchor="middle">mid</text>
+<rect class="chipo" x="100" y="204" width="68" height="18" rx="9"/>
+<text class="mut s" x="134" y="217" text-anchor="middle">Generate</text>
+<text class="mut s" x="262" y="217">Next name: Theo</text>
+<circle class="btn" cx="390" cy="203" r="14"/>
+<text class="link b" x="390" y="209" text-anchor="middle" style="font-size:18px">+</text>
+
+<!-- Reviewer -->
+<rect class="card" x="36" y="240" width="378" height="58" rx="6"/>
+<text class="ink h" x="50" y="262">Reviewer</text>
+<rect class="chip" x="50" y="270" width="44" height="18" rx="9"/>
+<text class="ink s" x="72" y="283" text-anchor="middle">high</text>
+<rect class="chipo" x="100" y="270" width="68" height="18" rx="9"/>
+<text class="mut s" x="134" y="283" text-anchor="middle">Challenge</text>
+<text class="mut s" x="262" y="283">Next name: Ines</text>
+<circle class="btn" cx="390" cy="269" r="14"/>
+<text class="link b" x="390" y="275" text-anchor="middle" style="font-size:18px">+</text>
+
+<!-- QA Engineer: at its limit, greyed -->
+<rect class="full" x="36" y="306" width="378" height="58" rx="6"/>
+<text class="mut h" x="50" y="328">QA Engineer</text>
+<rect class="chipo" x="50" y="336" width="44" height="18" rx="9"/>
+<text class="mut s" x="72" y="349" text-anchor="middle">mid</text>
+<rect class="chipo" x="100" y="336" width="52" height="18" rx="9"/>
+<text class="mut s" x="126" y="349" text-anchor="middle">Verify</text>
+<text class="mut s b" x="262" y="349">Limit reached</text>
+<circle class="btnd" cx="390" cy="335" r="14"/>
+<text class="mut b" x="390" y="341" text-anchor="middle" style="font-size:18px">+</text>
+
+<!-- Custom role -->
+<rect class="card" x="36" y="372" width="378" height="22" rx="6" style="stroke-dasharray:4 3"/>
+<text class="ink s b" x="50" y="387">Custom role</text>
+<text class="link b" x="390" y="388" text-anchor="middle" style="font-size:16px">+</text>
+
+<!-- arrow pool to team -->
+<path class="rule" d="M434 222 L456 222"/>
+<path class="rule" d="M450 216 L456 222 L450 228"/>
+
+<!-- ============ team area (right) ============ -->
+<rect class="panel" x="460" y="40" width="420" height="364" rx="8"/>
+<text class="mut s b" x="476" y="64">TEAM · WEB TEAM</text>
+
+<!-- Joe: manager, locked -->
+<rect class="card" x="476" y="76" width="388" height="62" rx="6"/>
+<circle class="chipf" cx="502" cy="107" r="14"/>
+<text class="white s b" x="502" y="111" text-anchor="middle">J</text>
+<text class="ink h" x="528" y="98">Joe</text>
+<text class="mut s" x="528" y="115">Development Manager</text>
+<text class="ok s b" x="528" y="130">Ready</text>
+<text class="mut s" x="780" y="107" text-anchor="middle">Replace only, no remove</text>
+<text class="mut s b" x="848" y="128" text-anchor="end">LOCKED</text>
+
+<!-- Jane: developer, ready -->
+<rect class="card" x="476" y="146" width="388" height="62" rx="6"/>
+<circle class="chipf" cx="502" cy="177" r="14"/>
+<text class="white s b" x="502" y="181" text-anchor="middle">J</text>
+<text class="ink h" x="528" y="168">Jane</text>
+<text class="mut s" x="528" y="185">Developer</text>
+<text class="ok s b" x="528" y="200">Ready</text>
+<circle class="rule" cx="846" cy="177" r="12"/>
+<text class="mut b" x="846" y="182" text-anchor="middle">×</text>
+
+<!-- Ravi: QA, needs setup -->
+<rect class="card" x="476" y="216" width="388" height="100" rx="6" style="stroke:#9a6700"/>
+<circle class="chipf" cx="502" cy="247" r="14"/>
+<text class="white s b" x="502" y="251" text-anchor="middle">R</text>
+<text class="ink h" x="528" y="238">Ravi</text>
+<text class="mut s" x="528" y="255">QA Engineer</text>
+<text class="warn s b" x="528" y="270">Needs setup</text>
+<text class="warn s" x="528" y="286">No logged-in adapter for the mid tier</text>
+<rect class="btn" x="528" y="293" width="122" height="18" rx="9"/>
+<text class="link s b" x="589" y="306" text-anchor="middle">Complete setup</text>
+<circle class="rule" cx="846" cy="247" r="12"/>
+<text class="mut b" x="846" y="252" text-anchor="middle">×</text>
+
+<!-- process step -->
+<rect class="card" x="476" y="326" width="388" height="68" rx="6" style="stroke-dasharray:4 3"/>
+<text class="mut s b" x="490" y="346">PROCESS STEP</text>
+<text class="ink s" x="490" y="366">Template: Plan, build, review, verify</text>
+<text class="mut s" x="490" y="384">Preview and edit before the Team starts</text>
+
+<!-- ============ check bar ============ -->
+<rect class="panel" x="20" y="418" width="860" height="84" rx="8"/>
+<text class="mut s b" x="36" y="440">TEAM CHECK</text>
+
+<rect class="chipf" x="36" y="450" width="82" height="22" rx="11"/>
+<text class="white s b" x="77" y="465" text-anchor="middle">Generate</text>
+<rect class="chipf" x="126" y="450" width="84" height="22" rx="11"/>
+<text class="white s b" x="168" y="465" text-anchor="middle">Challenge</text>
+<rect class="chipf" x="218" y="450" width="64" height="22" rx="11"/>
+<text class="white s b" x="250" y="465" text-anchor="middle">Verify</text>
+<text class="mut s" x="302" y="465">2 vendors</text>
+<text class="mut s" x="372" y="465">1 process</text>
+
+<text class="warn s" x="36" y="490">• Ravi needs setup</text>
+
+<!-- Start Team, disabled -->
+<rect class="btnd" x="724" y="448" width="140" height="36" rx="6"/>
+<text class="mut b" x="794" y="471" text-anchor="middle">Start Team</text>
+<text class="mut s" x="794" y="498" text-anchor="middle">Waits until every card is Ready</text>
+
+<!-- legend -->
+<text class="mut s" x="20" y="530">Filled chip: a hired role covers the step. Outlined chip: none does. Greyed pool card: the role is at its limit.</text>
+<text class="mut s" x="20" y="548">Start Team starts members in order, manager first.</text>
+</svg>
