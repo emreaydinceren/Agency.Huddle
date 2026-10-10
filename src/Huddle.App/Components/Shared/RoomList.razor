@@ -50,7 +50,7 @@
                         }
                         else
                         {
-                            <MudNavLink Href="@($"/rooms/{room.Id}")" Class="hover-reveal-link">@room.Name</MudNavLink>
+                            <NavTabLink Href="@($"/rooms/{room.Id}")" TabTitle="@room.Name" Class="hover-reveal-link">@room.Name</NavTabLink>
                             <MudMenu @ref="@this.menuRefs[room.Id]" Class="hover-reveal-menu">
                                 @* ActivatorContent replaces MudMenu's own built-in activator entirely, so
                                    MudMenu does not wire a click listener around it automatically - the

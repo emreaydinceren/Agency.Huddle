@@ -1,0 +1,75 @@
+@*
+    Wraps the page body in the tab strip (docs/Huddle.Tabs-Specifications.md). Owns the one rule that
+    keeps the strip honest: every location the router reaches - a menu click, Back, a link in a
+    Message, a page redirecting itself - is offered to TabService.Open, which either reuses a Tab
+    with the same key or opens a preview. With no Tab open the page is not rendered at all, so the
+    empty state is real rather than a page standing behind a blank strip.
+*@
+@using Agency.Huddle.App.Tabs
+@implements IDisposable
+@inject TabService Tabs
+@inject NavigationManager Navigation
+
+<TabStrip />
+<div class="tab-body">
+    @if (this.Tabs.Tabs.Count == 0)
+    {
+        <MudText Typo="Typo.body1" Class="tab-empty" role="status">No pages are open. Choose one from the menu.</MudText>
+    }
+    else
+    {
+        @this.ChildContent
+    }
+</div>
+
+@code {
+    /// <summary>The page body this host wraps.</summary>
+    [Parameter, EditorRequired]
+    public required RenderFragment ChildContent { get; set; }
+
+    /// <summary>Opens the Tab for the location the circuit started on, then follows every later navigation.</summary>
+    protected override void OnInitialized()
+    {
+        this.Tabs.Open(this.Navigation.Uri);
+        this.Tabs.Changed += this.OnTabsChanged;
+        this.Navigation.LocationChanged += this.OnLocationChanged;
+    }
+
+    /// <summary>Unsubscribes from <see cref="TabService.Changed"/> and navigation.</summary>
+    public void Dispose()
+    {
+        this.Tabs.Changed -= this.OnTabsChanged;
+        this.Navigation.LocationChanged -= this.OnLocationChanged;
+    }
+
+    private void OnLocationChanged(object? sender, LocationChangedEventArgs e)
+    {
+        this.Tabs.Open(e.Location);
+    }
+
+    private void OnTabsChanged()
+    {
+        _ = this.DispatchAsync(() =>
+        {
+            this.StateHasChanged();
+            return Task.CompletedTask;
+        });
+    }
+
+    // Mirrors MainLayout.razor's DispatchAsync: a store event can fire while the circuit winds down.
+    private async Task DispatchAsync(Func<Task> action)
+    {
+        try
+        {
+            await this.InvokeAsync(action);
+        }
+        catch (ObjectDisposedException)
+        {
+            // Circuit gone; nothing to render.
+        }
+        catch (InvalidOperationException)
+        {
+            // Renderer disposed mid-dispatch.
+        }
+    }
+}

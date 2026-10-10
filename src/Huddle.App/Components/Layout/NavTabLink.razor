@@ -1,0 +1,59 @@
+@*
+    A left-menu link that opens its page in a Tab. It is MudNavLink plus two handlers on a wrapper
+    that takes no part in layout (display: contents, in app.css): a click offers the page to
+    TabService.Open together with the title the menu shows, and a double-click makes the Tab
+    permanent. The link still navigates by itself, so the router, the active highlight and Back are
+    exactly what they were. Open runs in addition to, not instead of, the location sync in TabHost:
+    the sync cannot see a click on the link whose page is already showing, because that raises no
+    location change - which is how the last Tab gets reopened from the menu.
+*@
+@using Agency.Huddle.App.Tabs
+@inject TabService Tabs
+
+<div class="nav-tab-link" @onclick="this.OnClick" @ondblclick="this.OnDoubleClick">
+    <MudNavLink Href="@this.Href" Match="this.Match" Icon="@this.Icon" IconColor="this.IconColor" Class="@this.Class" @attributes="this.AdditionalAttributes">@this.ChildContent</MudNavLink>
+</div>
+
+@code {
+    /// <summary>The page the link opens.</summary>
+    [Parameter, EditorRequired]
+    public required string Href { get; set; }
+
+    /// <summary>The Tab's title, such as a Room's name, or <see langword="null"/> to use the one the address implies.</summary>
+    [Parameter]
+    public string? TabTitle { get; set; }
+
+    /// <summary>How the active highlight matches <see cref="Href"/>.</summary>
+    [Parameter]
+    public NavLinkMatch Match { get; set; } = NavLinkMatch.Prefix;
+
+    /// <summary>The link's icon, if any.</summary>
+    [Parameter]
+    public string? Icon { get; set; }
+
+    /// <summary>The icon's colour.</summary>
+    [Parameter]
+    public Color IconColor { get; set; } = Color.Default;
+
+    /// <summary>CSS classes for the link.</summary>
+    [Parameter]
+    public string? Class { get; set; }
+
+    /// <summary>The link's label.</summary>
+    [Parameter]
+    public RenderFragment? ChildContent { get; set; }
+
+    /// <summary>Anything else, such as <c>aria-label</c>, passed to the link.</summary>
+    [Parameter(CaptureUnmatchedValues = true)]
+    public Dictionary<string, object>? AdditionalAttributes { get; set; }
+
+    private void OnClick()
+    {
+        this.Tabs.Open(this.Href, this.TabTitle);
+    }
+
+    private void OnDoubleClick()
+    {
+        this.Tabs.PinByKey(TabKeys.Describe(this.Href).Key);
+    }
+}

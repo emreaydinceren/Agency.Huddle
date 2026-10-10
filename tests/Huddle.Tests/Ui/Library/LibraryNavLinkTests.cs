@@ -188,6 +188,7 @@ public sealed class LibraryNavLinkTests
             MudBunitContext ctx = new();
             ctx.Services.AddSingleton(this.Options);
             ctx.Services.AddSingleton(this.Store);
+            ctx.Services.AddSingleton<Agency.Huddle.App.Tabs.TabService>();
             return ctx;
         }
 

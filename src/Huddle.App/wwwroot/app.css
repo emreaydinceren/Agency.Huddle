@@ -111,6 +111,36 @@ button:focus-visible {
     min-height: 0;
 }
 
+/* The page under the tab strip. .main-column is a fixed-height column, so the strip takes its own
+   height and this fills the rest; min-height: 0 lets a page's own scrolling regions shrink, as
+   .room-column does above. */
+.tab-body {
+    flex: 1 1 auto;
+    min-height: 0;
+    display: flex;
+    flex-direction: column;
+    overflow: auto;
+}
+
+/* h-100 on the Room's column no longer resolves: its parent is now a flex item, not .main-column
+   itself, and a percentage height against an auto-sized flex item falls back to the content height
+   (the column stopped at 400 px of 840 with the composer floating mid-page). Flexing it explicitly
+   gives the same full-height column. */
+.tab-body > .room-column {
+    flex: 1 1 0;
+}
+
+.tab-empty {
+    padding: 2rem;
+    color: var(--mud-palette-text-secondary);
+}
+
+/* NavTabLink's wrapper takes no part in layout, so a link keeps the box it had as a direct child of
+   its row. Clicks still bubble through a display: contents element. */
+.nav-tab-link {
+    display: contents;
+}
+
 
 
 /* ---- The drawer, and pinning Settings to the bottom of it ------------------------------------

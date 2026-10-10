@@ -855,6 +855,7 @@ public sealed class TeamsNavTests
         teamOptions.Library.Enabled = libraryEnabled;
         teamOptions.Tasks.Enabled = tasksEnabled;
         ctx.Services.AddSingleton(Options.Create(teamOptions));
+        ctx.Services.AddSingleton<Agency.Huddle.App.Tabs.TabService>();
         if (storageThrows)
         {
             ctx.JSInterop.Setup<string?>("huddleStorage.get", _ => true).SetException(new JSException("blocked"));

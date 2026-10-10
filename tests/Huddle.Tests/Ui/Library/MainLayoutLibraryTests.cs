@@ -376,6 +376,7 @@ public sealed class MainLayoutLibraryTests : IDisposable
             ctx.Services.AddSingleton(this.tasks);
             ctx.Services.AddSingleton(this.Appearance);
             ctx.Services.AddSingleton<LibraryPaneState>();
+            ctx.Services.AddSingleton<Agency.Huddle.App.Tabs.TabService>();
             return ctx;
         }
 
