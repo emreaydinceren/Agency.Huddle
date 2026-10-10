@@ -1,0 +1,70 @@
+@*
+    Renders nothing. Sends a ?library= link to the Library page (Spec §6.9, docs/Huddle.Tabs-Specifications.md
+    section 6): a wikilink or chat link that no open LibraryDocument already intercepted (judgement 45)
+    is resolved here, and when it names a real file the router navigates to /library?root=&path= - the
+    Library's one Tab, opened on that file. The ?library= query is replaced either way, so a refused or
+    forged value never lingers in the address bar. This is what the docked Library pane's host used
+    to do by opening a split pane. The Library disabled leaves ?library= alone entirely.
+
+    Navigating once, straight to the page address, is enough: the target carries no library= query, so
+    this handler cannot see its own navigation again.
+*@
+@using Microsoft.Extensions.Options
+@using Agency.Huddle.App.Library
+@implements IDisposable
+@inject IOptions<TeamOptions> Options
+@inject NavigationManager Navigation
+@inject LibraryPathResolver Resolver
+
+@code {
+    private bool Enabled => this.Options.Value.Library.Enabled;
+
+    /// <summary>Subscribes to navigation when the Library is enabled.</summary>
+    protected override void OnInitialized()
+    {
+        if (this.Enabled)
+        {
+            this.Navigation.LocationChanged += this.OnLocationChanged;
+        }
+    }
+
+    /// <summary>
+    /// A navigation this router actually sees (never prevented by an open document): parses
+    /// <c>library</c>, checks it with the same syntactic rule as
+    /// <see cref="MarkdownRenderer.IsSafeLibraryHref(string)"/>, resolves it, and replaces the address
+    /// with the Library page on the file - or just without the query when it resolves to nothing.
+    /// </summary>
+    private void OnLocationChanged(object? sender, LocationChangedEventArgs e)
+    {
+        string? rawValue = LibraryLinkQuery.ExtractRawValue(e.Location);
+        if (rawValue is null)
+        {
+            return;
+        }
+
+        LibraryPath? resolved = null;
+        if (MarkdownRenderer.IsSafeLibraryHref(rawValue))
+        {
+            string decoded = Uri.UnescapeDataString(rawValue);
+            int slash = decoded.IndexOf('/', StringComparison.Ordinal);
+            if (slash > 0)
+            {
+                _ = this.Resolver.TryResolve(decoded[..slash], decoded[(slash + 1)..], out resolved, out _);
+            }
+        }
+
+        string target = resolved is not null
+            ? LibraryLinkQuery.BuildPageUri(resolved)
+            : LibraryLinkQuery.Strip(this.Navigation.Uri);
+        this.Navigation.NavigateTo(target, replace: true);
+    }
+
+    /// <summary>Unsubscribes from navigation.</summary>
+    public void Dispose()
+    {
+        if (this.Enabled)
+        {
+            this.Navigation.LocationChanged -= this.OnLocationChanged;
+        }
+    }
+}

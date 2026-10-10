@@ -37,8 +37,8 @@
                                    aria-label="@(isExpanded ? $"Collapse {team.Name}" : $"Expand {team.Name}")"
                                    aria-expanded="@(isExpanded ? "true" : "false")"
                                    OnClick="@(() => this.ToggleAsync(team.Name))" />
-                    <MudNavLink Href="@($"/teams/{Uri.EscapeDataString(team.Name)}")" Match="NavLinkMatch.Prefix"
-                                Class="hover-reveal-link">@team.Name</MudNavLink>
+                    <NavTabLink Href="@($"/teams/{Uri.EscapeDataString(team.Name)}")" TabTitle="@team.Name" Match="NavLinkMatch.Prefix"
+                                Class="hover-reveal-link">@team.Name</NavTabLink>
                     @if (!team.HasMembers)
                     {
                         <MudText Typo="Typo.caption" Class="teams-nav-nomembers">No members</MudText>
@@ -67,14 +67,15 @@
                 {
                     @foreach (string project in team.Projects)
                     {
-                        <MudNavLink Href="@($"/teams/{Uri.EscapeDataString(team.Name)}/projects/{Uri.EscapeDataString(project)}")"
+                        <NavTabLink Href="@($"/teams/{Uri.EscapeDataString(team.Name)}/projects/{Uri.EscapeDataString(project)}")"
+                                    TabTitle="@project"
                                     Icon="@Icons.Material.Filled.LibraryBooks"
-                                    Class="nav-project-link">@project</MudNavLink>
+                                    Class="nav-project-link">@project</NavTabLink>
                     }
                 }
             }
             <MudNavLink Icon="@Icons.Material.Filled.Add" IconColor="Color.Primary" Class="nav-action-link" OnClick="this.NewTeamAsync">New team</MudNavLink>
-            <MudNavLink Href="/teams/new" Icon="@Icons.Material.Filled.Add" IconColor="Color.Primary" Class="nav-action-link">New Team from a type</MudNavLink>
+            <NavTabLink Href="/teams/new" TabTitle="New team" Icon="@Icons.Material.Filled.Add" IconColor="Color.Primary" Class="nav-action-link">New Team from a type</NavTabLink>
         </MudNavGroup>
     </MudNavMenu>
 </div>

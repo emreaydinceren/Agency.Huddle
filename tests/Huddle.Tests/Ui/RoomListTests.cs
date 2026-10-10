@@ -267,6 +267,7 @@ public sealed class RoomListTests
         ctx.Services.AddSingleton<IAgentGateway>(new FakeAgentGateway());
         ctx.Services.AddSingleton(new PersonaHealth(TimeProvider.System, NullLogger<PersonaHealth>.Instance));
         ctx.Services.AddSingleton(new AvatarStore(dir?.Options() ?? Options.Create(new TeamOptions()), NullLogger<AvatarStore>.Instance));
+        ctx.Services.AddSingleton<Agency.Huddle.App.Tabs.TabService>();
         return ctx;
     }
 

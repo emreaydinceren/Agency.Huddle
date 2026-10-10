@@ -276,6 +276,7 @@ public sealed class TaskViewNavTests
     {
         MudBunitContext ctx = new();
         harness.AddTo(ctx.Services);
+        ctx.Services.AddSingleton<Agency.Huddle.App.Tabs.TabService>();
         if (views is not null)
         {
             ctx.Services.AddSingleton(views);

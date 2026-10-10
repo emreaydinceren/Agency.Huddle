@@ -18,21 +18,24 @@
         <RoomList />
         <TeamsNav />
         <MudNavMenu>
-            <MudNavLink Href="/teammates" Icon="@Icons.Material.Filled.Group">Teammates</MudNavLink>
+            <NavTabLink Href="/teammates" TabTitle="Teammates" Icon="@Icons.Material.Filled.Group">Teammates</NavTabLink>
         </MudNavMenu>
         <TaskViewNav />
         <LibraryNavLink />
         <MudNavMenu Class="nav-settings">
             <ArchivedChats />
             <MudTooltip Text="Settings">
-                <MudNavLink Href="/settings" Icon="@Icons.Material.Filled.Settings" aria-label="Settings" />
+                <NavTabLink Href="/settings" TabTitle="Settings" Icon="@Icons.Material.Filled.Settings" aria-label="Settings" />
             </MudTooltip>
         </MudNavMenu>
     </MudDrawer>
     <MudMainContent Class="main-column">
-        <LibraryPaneHost>
+        <TabSync />
+        <TabPersistence />
+        <LibraryLinkRouter />
+        <TabHost>
             @Body
-        </LibraryPaneHost>
+        </TabHost>
     </MudMainContent>
 </MudLayout>
 

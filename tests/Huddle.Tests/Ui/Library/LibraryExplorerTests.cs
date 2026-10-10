@@ -463,7 +463,7 @@ public sealed class LibraryExplorerTests : IDisposable
     }
 
     /// <summary>
-    /// <c>ShowScopeRoot="false"</c> (LibraryPane's own scoped rows): no folder-name title, but a
+    /// <c>ShowScopeRoot="false"</c> (the /library page's scoped rows): no folder-name title, but a
     /// header showing the root's full path, and the tree skips the scope's own wrapper row too - its
     /// own "..." menu button never exists at all - showing that folder's children directly as the
     /// tree's top-level nodes instead (LibraryTreeTests pins the tree's own end of this).

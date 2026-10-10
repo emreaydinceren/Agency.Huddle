@@ -163,11 +163,23 @@ if (-not (Test-Path $solution)) {
 
 # -Seed only swaps the data folder. The app otherwise runs exactly as it does without it.
 $seedArgs = @()
+$seederProject = Join-Path $scriptDir 'src/Huddle.Seeder'
+$seedCommand = $null
 if ($Seed) {
     if (-not (Test-Path -LiteralPath (Join-Path $dataDir 'team.db'))) {
-        Write-Host "No seed found at $dataDir." -ForegroundColor Yellow
-        Write-Host '   Build it first: dotnet run --project src/Huddle.Seeder' -ForegroundColor Gray
-        exit 1
+        # A missing seed is built, not refused. That is only safe when the data folder is the one the
+        # seeder writes (<SeedRoot>\data): the seeder wipes its root, so it must never be pointed at
+        # a folder the Human chose with -DataDir.
+        $seederDataDir = Join-Path $SeedRoot 'data'
+        $separators = [char[]]@([System.IO.Path]::DirectorySeparatorChar, [System.IO.Path]::AltDirectorySeparatorChar)
+        if ([System.IO.Path]::GetFullPath($dataDir).TrimEnd($separators) -ine [System.IO.Path]::GetFullPath($seederDataDir).TrimEnd($separators)) {
+            Write-Host "No seed found at $dataDir." -ForegroundColor Yellow
+            Write-Host '   -DataDir points outside the seed root, so it will not be built for you.' -ForegroundColor Gray
+            Write-Host "   Build the seed yourself: dotnet run --project src/Huddle.Seeder -- --root <folder above data>" -ForegroundColor Gray
+            exit 1
+        }
+
+        $seedCommand = "dotnet run --project `"$seederProject`" -- --root `"$SeedRoot`""
     }
 
     $seedArgs = @("--Team:DataDir=$dataDir")
@@ -239,6 +251,9 @@ if ($Seed) {
 if ($DryRun) {
     Write-Host ''
     Write-Host 'Dry run - here is what I would do' -ForegroundColor Cyan
+    if ($seedCommand) {
+        Write-Host "   Seed  : $seedCommand (no seed at $dataDir)" -ForegroundColor Gray
+    }
     if ($NoBuild) {
         Write-Host '   Build : skipped (-NoBuild)' -ForegroundColor Gray
     } else {
@@ -343,6 +358,31 @@ if ($Clean) {
     if (-not $dbFiles -and $definitionFiles.Count -eq 0) {
         Write-Host '   Nothing to delete.' -ForegroundColor Gray
     }
+}
+
+# -- Seed data ----------------------------------------------------------------
+
+# Only reached when -Seed found no seed at the seeder's own data folder: build it first, so
+# `./run.ps1 -Seed` does everything the Human would otherwise have to type.
+if ($seedCommand) {
+    Write-Host ''
+    Write-Host "No seed at $dataDir - building it with the seeder..." -ForegroundColor Cyan
+
+    Push-Location $scriptDir
+    try {
+        dotnet run --project $seederProject -- --root $SeedRoot
+        $seedExitCode = $LASTEXITCODE
+    } finally {
+        Pop-Location
+    }
+
+    if ($seedExitCode -ne 0) {
+        Write-Host ''
+        Write-Host "Building the seed failed (exit code $seedExitCode). See the output above." -ForegroundColor Yellow
+        exit $seedExitCode
+    }
+
+    Write-Host 'Seed built.' -ForegroundColor Green
 }
 
 # -- Build --------------------------------------------------------------------

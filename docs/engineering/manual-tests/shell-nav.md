@@ -2,7 +2,7 @@
 
 Prove the Agency.Huddle shell holds together: that the five routes this page exercises (`/`, `/rooms/{RoomId}`, `/teammates`, `/settings`, `/settings/{Tab}`) resolve, that the fixed 240px `MudDrawer` is identical on every one of them, and above all that the shell's own assets actually load. The drawer holds the `Chats` group (the room list, with **New chat** inside it), the `Teams` group, **Teammates**, the `Tasks` and `Library` groups, and a bottom row of two icon-only links, Archived chats and **Settings**. The Tasks, Library and Teams pages (`/tasks…`, `/library`, `/teams/…`) have no shell-level test here. The asset check is the reason this area is tested by hand: `@Assets["..."]` hands back an unresolved key verbatim instead of throwing, so a stale stylesheet or script name renders as an ordinary-looking href that 404s with no build warning, no startup error, no log line and no visual error. That exact failure shipped live for a month after the 2026-09-12 namespace rename. Nothing in this area needs a Claude turn, so every test below is free.
 
-**28 tests** · 28 free, none paid · about 2.7 hours.
+**36 tests** · 36 free, none paid · about 3.4 hours.
 
 Read [the manual test script](../manual-tests.md) first — the cost guard, the Model and Effort
 convention, and the rules for concluding a result — then [Common procedures](common.md), which
@@ -530,7 +530,7 @@ If the Prompts pane shows an error line above the tab bar, read it and note it, 
 1. In the browser, navigate to `http://localhost:5100/settings`.
 2. Click the **Appearance** tab button.
 3. Read the address bar.
-4. Confirm the pane below now shows the theme list (rows under `Light`, `Dark` and `High contrast` headings), the `Library pane` Right/Left choice, a paragraph beginning `The selection is stored at` that names the file path, and the `Your avatar` section.
+4. Confirm the pane below now shows the theme list (rows under `Light`, `Dark` and `High contrast` headings), the a paragraph beginning `The selection is stored at` that names the file path, and the `Your avatar` section.
 5. Click the **Prompts** tab button.
 6. Read the address bar.
 7. Press the browser Back button once and read the address bar.
@@ -1271,6 +1271,249 @@ The drawer content is shorter than the viewport in step 6 no matter how small yo
 
 > [!NOTE]
 > Settings and Archived chats are the only icon-only drawer entries (`MainLayout.razor:27-28`, `ArchivedChats.razor:13-15`). Do not file that as an inconsistency with **Teammates**, which keeps its label on purpose. Rooms in the list have no leading icon (`RoomList.razor:53`).
+
+---
+
+### SHELLNAV-31 — One click on a left-menu item opens an italic preview tab, and a click on a different item replaces it
+
+**Free** · about 5 min
+
+*Tabs ([spec](../../Huddle.Tabs-Specifications.md) §3): browsing from the menu must not pile up tabs. The italic title and the replacement are rendering and click behaviour that only a browser shows.*
+
+**Before you start**
+
+- `P-LAUNCH-UAT` (Ada and Bo online, each with a Room). Open http://localhost:5100/ in a fresh browser tab, so no tab is open yet.
+
+**Steps**
+
+1. Click **Teammates** in the sidebar once. Look at the strip above the page: note how many tabs there are, the title of the one that opened, and whether the title is in italics.
+2. Click Ada's Room in the sidebar once. Note the tab count, the tab titles, and which is italic.
+3. Click **Teammates** once more, then Bo's Room once. Note the tab count each time.
+
+**Pass if — all of these**
+
+- Step 1 shows exactly one tab, `Teammates`, with an italic title, and the page shows the Teammates list.
+- Step 2 shows exactly one tab: Ada's Room, in italics, in place of `Teammates`.
+- Step 3 ends with exactly one tab, Bo's Room, in italics. The strip never holds more than one tab.
+
+**Fail if — any of these**
+
+- Each click adds another tab -> the preview tab is not being replaced.
+- The tab title is upright on a single click -> a preview tab is being made permanent too early.
+- The page does not change to match the clicked item.
+
+---
+
+### SHELLNAV-32 — Double-clicking a menu item keeps its tab, and the next click opens beside it
+
+**Free** · about 5 min
+
+*Tabs spec §3: a double-click on the menu item or on the tab itself makes a tab permanent. A permanent tab is not replaced by the next single click.*
+
+**Before you start**
+
+- `P-LAUNCH-UAT`. Open http://localhost:5100/ in a fresh browser tab so no tab is open.
+
+**Steps**
+
+1. Double-click **Teammates** in the sidebar. Note the tab count and whether the title is in italics.
+2. Click Ada's Room in the sidebar once. Note the tab count and which tab is italic.
+3. Double-click the italic Ada tab in the strip. Note whether the title is still in italics.
+4. Click Bo's Room once. Note the tab count and titles.
+
+**Pass if — all of these**
+
+- Step 1 shows one tab, `Teammates`, with an upright (non-italic) title.
+- Step 2 shows two tabs: `Teammates` upright and Ada's Room in italics, with Ada's active.
+- Step 3 makes Ada's title upright.
+- Step 4 shows three tabs, `Teammates`, Ada and Bo, with Bo's in italics. Nothing was replaced.
+
+**Fail if — any of these**
+
+- Step 2 replaces `Teammates` -> the double-click did not keep it.
+- Double-clicking the tab itself does not remove the italics.
+
+---
+
+### SHELLNAV-33 — Clicking a tab switches the page and the address
+
+**Free** · about 4 min
+
+*Tabs spec §3: the active tab and the address bar always agree, so a tab can be bookmarked and the Back button keeps working.*
+
+**Before you start**
+
+- `P-LAUNCH-UAT`. Open http://localhost:5100/ and double-click **Teammates**, then double-click Ada's Room in the sidebar, so two permanent tabs are open.
+
+**Steps**
+
+1. Read the address bar. It names Ada's Room (`/rooms/<id>`).
+2. Click the `Teammates` tab in the strip. Read the address bar and the page.
+3. Click Ada's tab again. Read the address bar and the page.
+
+**Pass if — all of these**
+
+- Step 2 shows `/teammates` in the address bar, the Teammates page, and the `Teammates` tab marked active.
+- Step 3 shows Ada's Room address and page again, with Ada's tab marked active.
+- The page is not reloaded by a tab click (Ada's Room history is still visible at once).
+
+**Fail if — any of these**
+
+- The address and the page disagree with the active tab -> the location sync is stale.
+
+---
+
+### SHELLNAV-34 — Closing the active tab activates its neighbour, and closing the last one shows "No pages are open"
+
+**Free** · about 5 min
+
+*Tabs spec §3: closing is by the tab's **×** or a middle-click. The empty state is a real page, not a blank area.*
+
+**Before you start**
+
+- `P-LAUNCH-UAT`. Open http://localhost:5100/ and double-click `Teammates`, Ada's Room and Bo's Room in turn, so three permanent tabs are open with Bo's active.
+
+**Steps**
+
+1. Click the **×** on the active Bo tab. Note which tab becomes active and the address bar.
+2. Middle-click the `Teammates` tab. Note which tabs are left.
+3. Click the **×** on the last tab. Read the page.
+
+**Pass if — all of these**
+
+- Step 1 leaves two tabs, and the neighbour (Ada's Room) becomes active, with its page and address showing.
+- Step 2 closes `Teammates`, leaving Ada's Room only.
+- Step 3 leaves no tab, and the page reads `No pages are open`.
+
+**Fail if — any of these**
+
+- Closing leaves a blank page or an error, or activates a tab that is not the neighbour.
+- A middle-click does not close the tab.
+- A closed tab reappears after a click elsewhere.
+
+---
+
+### SHELLNAV-35 — Typing in a Room's message box keeps its tab, and the unsent text survives a tab switch and a page reload
+
+**Free** · about 8 min
+
+*Tabs spec §3 and §4: typing is a sign the Human is using the tab, so it stops being a preview; the half-written message belongs to the Room, not to the page, so it survives both a switch and a reload.*
+
+**Before you start**
+
+- `P-LAUNCH-UAT`. Open http://localhost:5100/ with no tab open.
+
+**Steps**
+
+1. Click Ada's Room once, so an italic preview tab opens. Click in the message box and type `draft for Ada` without sending.
+2. Look at the Ada tab's title.
+3. Click **Teammates** once. Note that a new tab opens beside Ada's instead of replacing it.
+4. Click Ada's tab. Read the message box.
+5. Press F5 to reload the page. Open Ada's Room again if the strip is empty and read the message box.
+
+**Pass if — all of these**
+
+- Step 2 shows Ada's title upright: typing made it permanent.
+- Step 3 leaves two tabs, Ada and `Teammates`.
+- Step 4 shows `draft for Ada` still in the box.
+- Step 5 shows `draft for Ada` still in Ada's message box.
+
+**Fail if — any of these**
+
+- Ada's tab is replaced by the next click -> typing did not keep it.
+- The draft text is gone after switching tabs or after the reload.
+- The draft shows up in another Room's box -> drafts are not kept per Room.
+
+**Note:** tabs are restored after a reload, so step 5 may start with the tabs from earlier in this test already open; that is expected and is not a failure.
+
+---
+
+### SHELLNAV-36 — A Room tab opened by pasting its URL gets the Room's name as its title within a moment
+
+**Free** · about 4 min
+
+*Tabs spec §3: a Room tab is titled from the Room, not from the address, and is renamed with the Room.*
+
+**Before you start**
+
+- `P-LAUNCH-UAT`. Click Ada's Room once and copy its URL from the address bar. Then close every tab.
+
+**Steps**
+
+1. Paste the copied Room URL into the address bar of a new browser tab and press Enter.
+2. Read the tab strip straight away, then again after about two seconds.
+3. Rename that Room from the sidebar and read the tab title again.
+
+**Pass if — all of these**
+
+- One tab is open for the Room.
+- Within about two seconds its title is the Room's name, not a raw id or the word `Room`.
+- After the rename the tab shows the new name.
+
+**Fail if — any of these**
+
+- The title stays as an id or a placeholder -> the title refresh is not running.
+- No tab opens for a pasted URL.
+
+---
+
+### SHELLNAV-37 — Open tabs come back after a reload, with the tab for the current page active
+
+**Free** · about 4 min
+
+*Tabs spec §3 and §5: the tabs are stored in the browser and restored after the first render; the address in the bar decides which one is active.*
+
+**Before you start**
+
+- `P-LAUNCH-UAT`. Close every tab. Double-click `Teammates` and `Settings` in the menu so both are kept, then click Ada's Room once so it is a preview tab.
+
+**Steps**
+
+1. Read the tab strip: three tabs, `Teammates`, `Settings`, and Ada's Room in italics.
+2. Navigate the browser to the `Teammates` address and press Enter, so the page reloads on a different tab from the one active before.
+3. Read the strip again after about two seconds.
+4. Stop the app and start it again with `P-LAUNCH-UAT`, open the app, and read the strip once more.
+
+**Pass if — all of these**
+
+- Step 3 shows the same three tabs in the same order, `Teammates` active, Ada's Room still in italics.
+- Step 4 shows the same tabs again.
+
+**Fail if — any of these**
+
+- The strip starts with only the current page -> the stored tabs were not restored.
+- The tab that was active before the reload is active instead of the one in the address bar.
+
+---
+
+### SHELLNAV-38 — Alt+W, Alt+Page Down and Alt+Page Up close and move between tabs
+
+**Free** · about 3 min
+
+*Tabs spec §3: the keyboard shortcuts use Alt because the browser keeps Ctrl+W and Ctrl+Tab.*
+
+**Before you start**
+
+- `P-LAUNCH-UAT`. Close every tab, then keep three: double-click `Teammates`, `Settings` and Ada's Room in the menu.
+
+**Steps**
+
+1. With Ada's Room active, press Alt+Page Down.
+2. Press Alt+Page Up twice.
+3. Press Alt+W.
+4. Press Alt+W until no tab is left.
+
+**Pass if — all of these**
+
+- Step 1 moves to `Teammates` (the strip wraps round) and the page changes with it.
+- Step 2 moves back through Ada's Room to `Settings`.
+- Step 3 closes `Settings` and the page switches to its neighbour.
+- Step 4 ends with "No pages are open".
+
+**Fail if — any of these**
+
+- The browser closes its own tab or switches its own tab -> the page did not take the shortcut.
+- The page and the active tab disagree after a shortcut.
 
 ---
 

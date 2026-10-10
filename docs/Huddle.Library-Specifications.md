@@ -10,6 +10,8 @@
 **Team folder**, **Project**, **Teammate folder**, **Work Dir**, **Watched Folder**) ·
 **Depends on:** [Tasks](Huddle.Tasks-Specifications.md) accepting ADR-0030
 
+> **Superseded 2026-10-10 (docked pane):** the docked Library Pane described in §6.9 and below was retired when Tabs arrived. The `/library` page is the only Library surface and is one Tab; a `?library=` link opens that Tab on the file through `LibraryLinkRouter`. See [Huddle.Tabs-Specifications.md](Huddle.Tabs-Specifications.md) §6.
+
 ```text
 {DataDir}/
   Teammates/<Name>/<Name>.md      a Teammate's definition (a Persona in code)
@@ -156,7 +158,7 @@ These go into [language.md](engineering/language.md) under a new *Library* secti
 | `LibraryLocation.cs` | The **public** record a host passes to say which folder the explorer starts from | §6.16 |
 | `Components/Library/LibraryExplorer.razor` | **The reusable control:** tree + document, scoped by its `Scopes` parameter. Every host embeds this | §6.16 |
 | `Components/Library/LibraryTree`, `LibraryDocument`, `LibraryEditor`, `BacklinksPanel` | The explorer's parts | §6.7, §6.16 |
-| `Components/Library/LibraryPane.razor` | The docked pane: one host of `LibraryExplorer`, with every root | §6.9 |
+| `Components/Library/LibraryPane.razor` (retired) | The docked pane: one host of `LibraryExplorer`, with every root | §6.9 |
 | `Components/Pages/Library.razor` | The `/library` pop-out page | §6.9 |
 | `Components/Settings/LibraryPanel.razor` | Pinned roots | §6.10 |
 | `wwwroot/lib/codemirror/` and `wwwroot/library-editor.js` | Vendored CodeMirror 6 and its interop module | §6.7 |
@@ -374,7 +376,7 @@ As ADR-0029 decided:
 
 ### 6.9 The pane and the page
 
-- **The pane is a `MudSplitPanel`, not a second drawer.** `mudblazor.md` sends *two resizable
+- **(Retired.) The pane is a `MudSplitPanel`, not a second drawer.** `mudblazor.md` sends *two resizable
   panes* to Split Panel, and 9.10.0's `MudDrawer` has a fixed `Width` with no resize. Inside
   `MudMainContent`, when the pane is open, `MainLayout` renders a `MudSplitPanel` whose two panels
   are the page body and the `LibraryPane`, in the order the **Library Pane side** setting gives

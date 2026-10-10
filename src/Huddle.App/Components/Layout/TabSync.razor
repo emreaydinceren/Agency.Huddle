@@ -1,0 +1,111 @@
+@*
+    Renders nothing. Keeps Tabs honest (docs/Huddle.Tabs-Specifications.md section 3): reads the
+    Rooms whenever they change or a Tab opens, retitles a Tab to its Room's current Name, and closes
+    the Tab of a Room that is archived or gone. When the Team catalog changes it also closes the Tab
+    of a Team or Project that no longer exists (never on the first pass - see
+    TabReconciler.ReconcileTeams for why). A Tab opened from a URL, a reload or a link in a
+    Message has only the fallback title "Chat" until this runs - a menu click already carries the Name.
+    When closing moves the active Tab, the router follows it.
+
+    Passes are serialised: a pass that finds more work asks for one more rather than overlapping.
+*@
+@using Agency.Huddle.App.Tabs
+@implements IDisposable
+@inject TabService Tabs
+@inject ITeamDirectory TeamDirectory
+@inject ITeamCatalog Catalog
+@inject RoomEvents Events
+@inject NavigationManager Navigation
+
+@code {
+    private bool running;
+    private bool pending;
+
+    /// <summary>Subscribes to Room and Tab changes and runs the first pass.</summary>
+    protected override async Task OnInitializedAsync()
+    {
+        this.Events.RoomsChanged += this.OnChanged;
+        this.Tabs.Changed += this.OnChanged;
+        this.Catalog.Changed += this.OnCatalogChanged;
+        await this.ReconcileAsync();
+    }
+
+    /// <summary>Unsubscribes; both sources are singletons or circuit-scoped services that outlive this component.</summary>
+    public void Dispose()
+    {
+        this.Events.RoomsChanged -= this.OnChanged;
+        this.Tabs.Changed -= this.OnChanged;
+        this.Catalog.Changed -= this.OnCatalogChanged;
+    }
+
+    private void OnCatalogChanged()
+    {
+        _ = this.DispatchAsync(() =>
+        {
+            this.CloseMissingTeams();
+            return Task.CompletedTask;
+        });
+    }
+
+    private void CloseMissingTeams()
+    {
+        string? activeBefore = this.Tabs.Active?.Id;
+        TabReconciler.ReconcileTeams(this.Tabs, this.Catalog);
+        if (activeBefore is not null && this.Tabs.Active is { } now && !string.Equals(now.Id, activeBefore, StringComparison.Ordinal))
+        {
+            this.Navigation.NavigateTo(now.Url);
+        }
+    }
+
+    private void OnChanged()
+    {
+        _ = this.DispatchAsync(this.ReconcileAsync);
+    }
+
+    private async Task ReconcileAsync()
+    {
+        if (this.running)
+        {
+            this.pending = true;
+            return;
+        }
+
+        this.running = true;
+        try
+        {
+            do
+            {
+                this.pending = false;
+                IReadOnlyList<Room> rooms = await this.TeamDirectory.GetRoomsAsync();
+                string? activeBefore = this.Tabs.Active?.Id;
+                TabReconciler.ReconcileRooms(this.Tabs, rooms);
+                if (activeBefore is not null && this.Tabs.Active is { } now && !string.Equals(now.Id, activeBefore, StringComparison.Ordinal))
+                {
+                    this.Navigation.NavigateTo(now.Url);
+                }
+            }
+            while (this.pending);
+        }
+        finally
+        {
+            this.running = false;
+        }
+    }
+
+    // Mirrors MainLayout.razor's DispatchAsync: an event can fire while the circuit winds down.
+    private async Task DispatchAsync(Func<Task> action)
+    {
+        try
+        {
+            await this.InvokeAsync(action);
+        }
+        catch (ObjectDisposedException)
+        {
+            // Circuit gone; nothing to do.
+        }
+        catch (InvalidOperationException)
+        {
+            // Renderer disposed mid-dispatch.
+        }
+    }
+}

@@ -1,0 +1,130 @@
+@*
+    Wraps the page body in the tab strip (docs/Huddle.Tabs-Specifications.md). Owns the one rule that
+    keeps the strip honest: every location the router reaches - a menu click, Back, a link in a
+    Message, a page redirecting itself - is offered to TabService.Open, which either reuses a Tab
+    with the same key or opens a preview. With no Tab open the page is not rendered at all, so the
+    empty state is real rather than a page standing behind a blank strip.
+*@
+@using Agency.Huddle.App.Tabs
+@implements IDisposable
+@inject TabService Tabs
+@inject NavigationManager Navigation
+@inject IJSRuntime JS
+
+<TabStrip />
+<div class="tab-body">
+    @if (this.Tabs.Tabs.Count == 0)
+    {
+        <MudText Typo="Typo.body1" Class="tab-empty" role="status">No pages are open. Choose one from the menu.</MudText>
+    }
+    else
+    {
+        @this.ChildContent
+    }
+</div>
+
+@code {
+    private DotNetObjectReference<TabHost>? self;
+
+    /// <summary>The page body this host wraps.</summary>
+    [Parameter, EditorRequired]
+    public required RenderFragment ChildContent { get; set; }
+
+    /// <summary>Opens the Tab for the location the circuit started on, then follows every later navigation.</summary>
+    protected override void OnInitialized()
+    {
+        this.Tabs.Open(this.Navigation.Uri);
+        this.Tabs.Changed += this.OnTabsChanged;
+        this.Navigation.LocationChanged += this.OnLocationChanged;
+    }
+
+    /// <summary>Registers the keyboard shortcuts once the page can run script.</summary>
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (!firstRender)
+        {
+            return;
+        }
+
+        this.self = DotNetObjectReference.Create(this);
+        try
+        {
+            await this.JS.InvokeVoidAsync("huddleTabs.attach", this.self);
+        }
+        catch (JSDisconnectedException)
+        {
+            // The circuit is gone; there is nothing to register shortcuts on.
+        }
+    }
+
+    /// <summary>
+    /// Called by the page's script for Alt+W (<c>close</c>), Alt+PageDown (<c>next</c>) and Alt+PageUp
+    /// (<c>previous</c>). The router follows whichever Tab ends up active.
+    /// </summary>
+    /// <param name="action">The shortcut: <c>close</c>, <c>next</c> or <c>previous</c>.</param>
+    [JSInvokable]
+    public Task ShortcutAsync(string action)
+    {
+        string? activeBefore = this.Tabs.Active?.Id;
+        switch (action)
+        {
+            case "close" when this.Tabs.Active is { } active:
+                this.Tabs.Close(active.Id);
+                break;
+            case "next":
+                this.Tabs.ActivateRelative(1);
+                break;
+            case "previous":
+                this.Tabs.ActivateRelative(-1);
+                break;
+            default:
+                return Task.CompletedTask;
+        }
+
+        if (this.Tabs.Active is { } now && !string.Equals(now.Id, activeBefore, StringComparison.Ordinal))
+        {
+            this.Navigation.NavigateTo(now.Url);
+        }
+
+        return Task.CompletedTask;
+    }
+
+    /// <summary>Unsubscribes from <see cref="TabService.Changed"/> and navigation, and removes the shortcuts.</summary>
+    public void Dispose()
+    {
+        this.self?.Dispose();
+        this.Tabs.Changed -= this.OnTabsChanged;
+        this.Navigation.LocationChanged -= this.OnLocationChanged;
+    }
+
+    private void OnLocationChanged(object? sender, LocationChangedEventArgs e)
+    {
+        this.Tabs.Open(e.Location);
+    }
+
+    private void OnTabsChanged()
+    {
+        _ = this.DispatchAsync(() =>
+        {
+            this.StateHasChanged();
+            return Task.CompletedTask;
+        });
+    }
+
+    // Mirrors MainLayout.razor's DispatchAsync: a store event can fire while the circuit winds down.
+    private async Task DispatchAsync(Func<Task> action)
+    {
+        try
+        {
+            await this.InvokeAsync(action);
+        }
+        catch (ObjectDisposedException)
+        {
+            // Circuit gone; nothing to render.
+        }
+        catch (InvalidOperationException)
+        {
+            // Renderer disposed mid-dispatch.
+        }
+    }
+}

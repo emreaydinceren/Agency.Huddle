@@ -462,7 +462,7 @@ That is `avatars.json`: initials and a colour per name. Pictures need an upload
 through the Teammate card, so leave them out unless the user agrees.
 
 ```json
-{ "theme": "huddle", "accentColor": "#e2762d", "libraryPaneSide": "right" }
+{ "theme": "huddle", "accentColor": "#e2762d" }
 ```
 
 That is `appearance.json`.

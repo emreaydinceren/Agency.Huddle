@@ -5,7 +5,7 @@
     LibraryPath's own record equality, so a refresh that changes a file's size/timestamp - or a pinned
     root rename - never drops selection or expansion (corrections-B6 item 22).
 
-    ShowScopeRoot=false (LibraryPane's own scoped sidebar rows, where the scope is already named
+    ShowScopeRoot=false (the /library page when scoped by a sidebar row, where the scope is already named
     outside this tree) skips the scope's own wrapper row entirely rather than merely blanking its
     name: with only one Scope and nothing else in the tree, a collapsed folder row that exists only
     to be expanded adds nothing a Human would act on, so topItems becomes that scope's own children,
@@ -117,7 +117,7 @@
     /// Whether a lone scope shows as its own top-level node at all. Defaults to
     /// <see langword="true"/>. A caller sets this <see langword="false"/> only when it has exactly
     /// one <see cref="Scopes"/> entry and already names that folder somewhere else outside this tree
-    /// (<see cref="LibraryPane"/>'s per-root sidebar rows, whose own selected row already names it):
+    /// (the /library page scoped by a per-root sidebar row, whose own selected row already names it):
     /// <see cref="topItems"/> then becomes that scope's own children directly, loaded eagerly rather
     /// than through a row someone has to expand first. Losing the wrapper also loses reaching New
     /// note/New folder AT the scope's own root through this tree - a deliberate, accepted trade for a

@@ -12,11 +12,9 @@
    carries an Href to the full /library page (Spec §6.9 "Pop out"), scoped to that root through
    ?scopeRoot=&scopePath= - the same TaskViewNav-style route link Teammates and Settings use for
    their own sidebar entries, so Library opens as its own primary panel rather than splitting next
-   to whatever page the Human was already on. The docked LibraryPaneState pane and its own
-   OpenRoot/Scope narrowing are unchanged and still reachable through their other entry points
-   (wikilinks, chat's ?library= links) - only this sidebar row stopped driving them, and
-   MainLayoutLibraryTests pins that pane behaviour directly against LibraryPaneState now that this
-   component no longer exercises it. Add Folder opens AddFolderDialog, the same pin flow
+   to whatever page the Human was already on. The docked pane this used to sit beside is gone: the
+   page is the Library's one Tab, and a wikilink or chat ?library= link opens it too
+   (LibraryLinkRouter). Add Folder opens AddFolderDialog, the same pin flow
    Settings > Library's own Add row drives; this component repaints on LibraryRootStore.RootsChanged
    rather than waiting for a manual refresh, so a folder pinned here or in Settings shows up in both
    places live. *@
@@ -26,7 +24,7 @@
         <MudNavGroup Title="Library" Icon="@Icons.Material.Filled.MenuBook" @bind-Expanded="this.expanded">
             @foreach (LibraryRoot root in this.Roots.VisibleRoots)
             {
-                <MudNavLink Href="@BuildRootHref(root)" Icon="@Icons.Material.Filled.LibraryBooks" Class="library-nav-root-link">@root.DisplayName</MudNavLink>
+                <NavTabLink Href="@BuildRootHref(root)" TabTitle="Library" Icon="@Icons.Material.Filled.LibraryBooks" Class="library-nav-root-link">@root.DisplayName</NavTabLink>
             }
             <MudNavLink Icon="@Icons.Material.Filled.Add" IconColor="Color.Primary" Class="nav-action-link" OnClick="this.OpenAddFolderAsync">Add Folder</MudNavLink>
         </MudNavGroup>

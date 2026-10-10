@@ -109,6 +109,31 @@ Every page has its own address, so you can bookmark it:
 | `/library?scopeRoot=teams&scopePath=` | The Library, scoped to a root |
 | `/settings/{tab}` | Settings: Prompts, Appearance, Personas, Skills, Library |
 
+### Tabs
+
+Everything you open from the left menu opens in a tab, in a strip above the page.
+The Library is one tab like any other.
+
+- **One click** on a menu item opens a *preview* tab. Its title is in italics, and
+  the next menu item you click replaces it, so browsing does not pile up tabs.
+- **Keep a tab** by double-clicking its menu item or the tab itself, or by typing in
+  a message box on that tab. The title is no longer in italics, and the next click
+  opens beside it.
+- **Close a tab** with its **×**, by middle-clicking it, or with **Alt+W**. If you
+  close the last tab, the page shows "No pages are open". **Alt+Page Down** and
+  **Alt+Page Up** move to the next and previous tab. (Ctrl+W and Ctrl+Tab belong to
+  the browser, which does not let a page take them.)
+- **Rooms, Teams and Projects:** a Room's tab takes the Room's name when you rename
+  the Room, and closes when the Room is archived or deleted. A Team's or Project's
+  tab closes when that Team or Project is removed.
+- **Half-written messages:** the text you have typed but not sent is kept for each
+  Room while you switch between tabs, and it is still there after you reload the page.
+
+Your open tabs come back after you reload the page or restart the app, in the same
+order, with the tab for the page you are on active. They are remembered by the
+browser, so another browser starts with its own. With many tabs open, each one gets
+narrow.
+
 ## The data model
 
 Huddle has a small number of things, and almost all of them are plain files you
@@ -948,7 +973,7 @@ its adapter reports a cost. It is a figure for this run, not a ledger.
 - Type `#` at the start of a word to pick a Task. A Task ID such as `BUSI-0001`
   in a message becomes a link to the Task.
 - An absolute path to a Library file becomes a link that opens the file in the
-  Library pane. The Teammates who answer are also given the list of those files,
+  Library, in its own tab. The Teammates who answer are also given the list of those files,
   or, for adapters that cannot read files, the text of small ones.
 
 ### Freeing a Teammate's memory with `/compact`
@@ -1372,7 +1397,7 @@ import, without this dialog; see [Hiring a Team from a type](#hiring-a-team-from
 | Tab | What it changes | Saved to |
 | --- | --- | --- |
 | **Prompts** | The text Huddle sends to Teammates, such as the wake-up message. | `prompts.json` |
-| **Appearance** | Theme, light/dark, accent colour, which side the Library pane opens on. | `appearance.json` |
+| **Appearance** | Theme, light/dark and accent colour. | `appearance.json` |
 | **Personas** | The Teammate definitions. | `Teammates/…` |
 | **Skills** | List of Skills with where each came from, and their problems; **Import skill**; **Restore default**. | `Skills/…` |
 | **Team Types** | Read-only list of team types, built-in or yours, with **Reload** and a **Problems** list. | `TeamTypes/…` |

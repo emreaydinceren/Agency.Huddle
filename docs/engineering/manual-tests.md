@@ -210,7 +210,7 @@ the [Tracker](manual-tests/tracker.md), never here.
 - [Adapter commands](manual-tests/adapter-commands.md): `@Nova /compact` end to end, a bare slash staying Huddle's own, a disallowed command, the Teammate card's command line.
 - [Adapters](manual-tests/adapters.md): choosing an Adapter per Persona and running two at once.
 - [App Tools](manual-tests/app-tools.md): the Tools a real model calls through progressive discovery.
-- [Appearance and Themes](manual-tests/appearance-theme.md): the Appearance tab, the Theme list and the Library pane side.
+- [Appearance and Themes](manual-tests/appearance-theme.md): the Appearance tab, the Theme list and the accent colour.
 - [Avatar library](manual-tests/avatar-library.md): choosing a face from the library, its picker and filters.
 - [File Changes, Watched Folders and Memory](manual-tests/file-changes.md): the paid File Changes checks.
 - [Creating Rooms and inviting Agents](manual-tests/invite-rooms.md): Room creation, invitations and Room naming.
