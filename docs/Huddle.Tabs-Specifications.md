@@ -103,4 +103,14 @@ and then open the Library Tab on the file.
 
 ## 8. Not in version 1
 
-Drag to reorder, side-by-side and stacked groups, tab overflow menu, per-Tab history.
+Drag to reorder, side-by-side and stacked groups, per-Tab history, and everything about a crowded
+strip (decided 2026-10-10 to leave for version 2):
+
+- **Overflow.** Either wrap to further rows (an Appearance option; cheap, but the strip height changes
+  as Tabs open and close, and narrow groups would wrap to many rows) or one row with a minimum Tab
+  width of about 7rem, scrolling, and an "all Tabs" list at the right edge. Version 2 should pick one
+  default when groups exist, since overflow behaves differently at narrow widths.
+- **Scroll the active Tab into view** when it is activated off-screen.
+
+Known limit until then: the strip is one row that scrolls sideways, and Tabs shrink with no lower
+width, so with many open each shows little more than its icon.
