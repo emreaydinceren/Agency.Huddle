@@ -66,7 +66,7 @@ public sealed class TeamPageRouteTests
         Assert.Equal("Members", TextOf(page, ActiveTabSelector));
     }
 
-    /// <summary>E-11: on a Project page the Team crumb's href carries the escaped label, <c>/teams/Sales%20%26%20Ops</c>.</summary>
+    /// <summary>E-11: on a Project page the shell's Team crumb carries the escaped label in its href, <c>/teams/Sales%20%26%20Ops</c>.</summary>
     [Fact]
     public async Task EscapedProjectRoute_BreadcrumbLinksToTheEscapedTeamHref()
     {
@@ -76,7 +76,7 @@ public sealed class TeamPageRouteTests
 
         IHtmlDocument page = await GetPageAsync(client, "/teams/Sales%20%26%20Ops/projects/Launch", ct);
 
-        IElement? crumb = page.QuerySelector(".team-page-breadcrumbs a[href]");
+        IElement? crumb = page.QuerySelector(".page-breadcrumbs a[href]");
         Assert.NotNull(crumb);
         Assert.Equal("/teams/Sales%20%26%20Ops", crumb.GetAttribute("href"));
         Assert.Equal("Sales & Ops", crumb.TextContent.Trim());
@@ -97,7 +97,7 @@ public sealed class TeamPageRouteTests
         Assert.False(Directory.Exists(Path.Combine(factory.TasksDirPath, "Nope")));
     }
 
-    /// <summary>A lowercase route <c>/teams/business</c> shows the catalog's display spelling <c>Business</c> in the title and the breadcrumb.</summary>
+    /// <summary>A lowercase route <c>/teams/business</c> shows the catalog's display spelling <c>Business</c> in the page title.</summary>
     [Fact]
     public async Task LowercaseTeamRoute_ShowsTheDisplaySpelling()
     {
@@ -108,7 +108,6 @@ public sealed class TeamPageRouteTests
         IHtmlDocument page = await GetPageAsync(client, "/teams/business", ct);
 
         Assert.Equal("Business — Huddle", TitleOf(page));
-        Assert.Equal("Business", TextOf(page, ".team-page-breadcrumbs"));
     }
 
     /// <summary>Seeds the Persona and the Project folders, creates the client, and waits until the host's catalog lists all three Projects.</summary>

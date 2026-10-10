@@ -1,0 +1,54 @@
+@*
+    The breadcrumb bar every tab page wears: the area the page belongs to, then the page. TabPageHost
+    mounts one above each page, so the trail is the shell's and no page draws its own. A crumb with an
+    address is a link that raises OnNavigate instead of navigating: a plain href would open the address
+    through the router, which opens it in whichever pane has focus, and a crumb must act on the Tab it
+    sits in, side by side with another. The last crumb, and an area with no page of its own, is plain
+    text. Collapse trades the middle of a long trail for an ellipsis, for the narrow panes of a split.
+*@
+@using Agency.Huddle.App.Tabs
+
+<nav class="page-breadcrumbs" aria-label="Breadcrumb">
+    <MudBreadcrumbs Items="this.items" Separator=" › " MaxItems="this.MaxItems" Class="page-breadcrumbs-list">
+        <ItemTemplate Context="item">
+            @if (item.Href is { } href)
+            {
+                <a class="page-crumb page-crumb-link" href="@href" @onclick="() => this.OnNavigate.InvokeAsync(href)" @onclick:preventDefault>
+                    <MudIcon Icon="@item.Icon" Size="Size.Small" />
+                    <span>@item.Text</span>
+                </a>
+            }
+            else
+            {
+                <span class="page-crumb" aria-current="@(ReferenceEquals(item, this.items[^1]) ? "page" : null)">
+                    <MudIcon Icon="@item.Icon" Size="Size.Small" />
+                    <span>@item.Text</span>
+                </span>
+            }
+        </ItemTemplate>
+    </MudBreadcrumbs>
+</nav>
+
+@code {
+    private List<BreadcrumbItem> items = [];
+
+    /// <summary>The trail to draw, first crumb to last. Never empty.</summary>
+    [Parameter, EditorRequired]
+    public required IReadOnlyList<TrailCrumb> Crumbs { get; set; }
+
+    /// <summary>Raised with a crumb's address when its link is followed.</summary>
+    [Parameter]
+    public EventCallback<string> OnNavigate { get; set; }
+
+    /// <summary>Whether to collapse the middle of a trail longer than two crumbs behind an ellipsis.</summary>
+    [Parameter]
+    public bool Collapse { get; set; }
+
+    private byte? MaxItems => this.Collapse ? (byte)2 : null;
+
+    /// <summary>Maps the trail to the items MudBreadcrumbs draws.</summary>
+    protected override void OnParametersSet()
+    {
+        this.items = [.. this.Crumbs.Select(static crumb => new BreadcrumbItem(crumb.Text, crumb.Href, disabled: false, icon: TabIcons.For(crumb.Icon)))];
+    }
+}

@@ -2,7 +2,7 @@
 
 Prove the Agency.Huddle shell holds together: that the five routes this page exercises (`/`, `/rooms/{RoomId}`, `/teammates`, `/settings`, `/settings/{Tab}`) resolve, that the fixed 240px `MudDrawer` is identical on every one of them, and above all that the shell's own assets actually load. The drawer holds the `Chats` group (the room list, with **New chat** inside it), the `Teams` group, **Teammates**, the `Tasks` and `Library` groups, and a bottom row of two icon-only links, Archived chats and **Settings**. The Tasks, Library and Teams pages (`/tasks…`, `/library`, `/teams/…`) have no shell-level test here. The asset check is the reason this area is tested by hand: `@Assets["..."]` hands back an unresolved key verbatim instead of throwing, so a stale stylesheet or script name renders as an ordinary-looking href that 404s with no build warning, no startup error, no log line and no visual error. That exact failure shipped live for a month after the 2026-09-12 namespace rename. Nothing in this area needs a Claude turn, so every test below is free.
 
-**36 tests** · 36 free, none paid · about 3.4 hours.
+**43 tests** · 43 free, none paid · about 3.5 hours.
 
 Read [the manual test script](../manual-tests.md) first — the cost guard, the Model and Effort
 convention, and the rules for concluding a result — then [Common procedures](common.md), which
@@ -1666,6 +1666,67 @@ The drawer content is shorter than the viewport in step 6 no matter how small yo
 
 - Text appears in the wrong pane's box, or a send goes to the wrong Room.
 - Streaming output or scrolling in one Room moves the other.
+
+---
+
+### SHELLNAV-44 — Every page in a tab has a breadcrumb bar, and an ancestor crumb navigates that tab in place
+
+**Free** · about 5 min
+
+*Tabs spec, Breadcrumb bar.*
+
+**Before you start**
+
+- `P-LAUNCH-UAT`. Open a Room from the `Chats` group in the sidebar.
+
+**Steps**
+
+1. Look at the top of the Room's pane, between the tab strip and the Room.
+2. Open **Teammates**, **Settings**, a Team and one of its Projects from the sidebar, and look at the top of each page.
+3. On the Project page, click the Team's name in the bar.
+4. Rename the Room, then switch to its tab.
+
+**Pass if — all of these**
+
+- Every page has a slim bar above it: *Chats › the Room's name* on a Room, *Teams › Team › Project* on a Project, a single crumb on Teammates and Settings.
+- The page title text under the bar is not repeated on Teammates, Settings, Library, Team and Project pages.
+- Step 3 changes the same tab to the Team page, leaves the tab count unchanged, and the Team's name in the bar is plain text afterwards.
+- Step 4 shows the new name in the tab and in the last crumb.
+
+**Fail if — any of these**
+
+- A page has no bar, or two (a second trail inside the page).
+- Step 3 opens a new tab or leaves the bar showing the Project.
+- The Room fills less of the pane than before, or the bar scrolls out of view with a long page.
+
+---
+
+### SHELLNAV-45 — With two panes each has its own bar, and a crumb acts on its own pane
+
+**Free** · about 4 min
+
+*Tabs spec §9 and the Breadcrumb bar.*
+
+**Before you start**
+
+- `P-LAUNCH-UAT`. Keep a Room tab and a Project tab, and move the Project tab to the right pane.
+
+**Steps**
+
+1. Look at the top of each pane.
+2. Focus the right pane, then click the Team's name in the left pane's bar if it has one, otherwise click *Chats* in the left Room's bar.
+3. Look at both panes and the sidebar's highlight.
+
+**Pass if — all of these**
+
+- Each pane has its own bar showing its own page's trail.
+- Step 2 changes only the left pane's tab, the left pane takes focus, and the right pane keeps its page.
+- In a narrow pane a three-crumb trail shows the first and last crumb with an ellipsis between them.
+
+**Fail if — any of these**
+
+- Both panes show the same trail, or the click changes the right pane's tab.
+- The browser URL does not name the left pane's page after the click.
 
 ---
 

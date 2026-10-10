@@ -35,6 +35,32 @@ and more than two groups are still to come; the model and the persisted format a
 | A Room is renamed | Its Tab title follows. |
 | A Room is archived or deleted | Its Tab closes (`TabSync`). A removed Team's or Project's Tab closes too, but only when the catalog announces a change and still lists at least one Team: an empty catalog is read as "not loaded yet", so removing the very last Team leaves its Tab open. |
 | Reload or restart | Tabs, their order, the active Tab and the preview flags are restored. |
+| Any page opens in a Tab | A breadcrumb bar sits above it (below). One bar per pane; no page draws its own. |
+| Click an ancestor crumb | Navigates that Tab in place (`TabService.Navigate`): same slot and group, key, title and icon re-derived, a preview becomes permanent. If another Tab already has the target's key, that Tab is focused instead. |
+
+### Breadcrumb bar
+
+`TabPageHost` mounts `PageBreadcrumbs` above the page of every Tab, so the trail is the shell's.
+`TabTrail.Build(url, tabTitle)` derives it from the URL, following the same table as the keys. The
+last crumb is the Tab's own title (so a renamed Room follows), is plain text, and carries
+`aria-current="page"`. An ancestor with a page of its own is a link; an area with none (*Teams*) is
+plain text.
+
+| URL | Trail |
+| --- | --- |
+| `/`, `/tasks`, `/teammates`, `/library`, `/settings` | the title alone |
+| `/rooms/{id}` | Chats (link to `/`), the Room's name |
+| `/teams/new` | Teams, New team |
+| `/teams/{team}` | Teams, the Team |
+| `/teams/{team}/setup` | Teams, the Team (link), Setup |
+| `/teams/{team}/projects/{project}` | Teams, the Team (link), the Project |
+| `/tasks/{view}`, `/tasks/new`, `/tasks/item/{id}` | Tasks (link), the Tab's title |
+| `/settings/{tab}` | Settings (link), the tab's name |
+
+The bar is sticky inside `.tab-body`, so it stays in view while a long page scrolls and a page that
+fills the pane (the Room) still does. With two panes the bar collapses the middle of a longer trail to
+an ellipsis. Pages drop a title that only repeats the last crumb; Tasks and Chat keep theirs, because
+the Task view's Tab title is its id and the Room's title row carries rename and members.
 
 ### Tab keys
 

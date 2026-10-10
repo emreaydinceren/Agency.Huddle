@@ -247,7 +247,7 @@ The new code goes in folder `src/Huddle.App/Teams/`, namespace `Agency.Huddle.Ap
 | `Library/ITeamFolders.cs` | `internal interface ITeamFolders` (`EnsureTeam`, `EnsureProjectIn`), implemented by `TeamFolderProvisioner`; `TeamsNav` creates Teams and Projects through it | §6.5 |
 | `Library/LibrarySearchResult.cs` | `internal sealed record LibrarySearchResult(Hits, Truncated)` | §6.8 |
 | `Components/Teams/TeamsNav.razor` | The sidebar group | §6.5 |
-| `Components/Pages/TeamPage.razor` | Both routes, the breadcrumbs, the tab strip, and each tab's search text | §6.6 |
+| `Components/Pages/TeamPage.razor` | Both routes, the tab strip, and each tab's search text (the shell draws the breadcrumbs: Tabs spec) | §6.6 |
 | `Components/Teams/TeamTabToolbar.razor` | The action button and the search field, used by each tab component. It owns no state | §6.6 |
 | `Components/Teams/TeamMembers.razor` | Members tab | §6.7 |
 | `Components/Teams/AddMemberDialog.razor` | Pick a Teammate, show the restart warning | §6.7 |
@@ -689,7 +689,7 @@ shows a `MudAlert Severity.Info` *Files and Tasks are turned off in this install
 
 ```text
 ┌──────────────────────────────────────────────────────────────────────────────┐
-│ Business › Marketing Project                              (MudBreadcrumbs)   │
+│ Teams › Business › Marketing Project        (shell bar, PageBreadcrumbs)    │
 │ ┌─────────┬───────┬───────┐                                                  │
 │ │ Members │ Files │ Tasks │                       MudTabs, driven by route   │
 │ └─────────┴───────┴───────┘                                                  │
@@ -717,10 +717,11 @@ shows a `MudAlert Severity.Info` *Files and Tasks are turned off in this install
 - `MudTabs ActivePanelIndex` is computed from the route. `ActivePanelIndexChanged` calls
   `NavigationManager.NavigateTo(...)`. The page never flips a local field (the `Settings.razor`
   rule). The tab headers have no `href`: the route drives the tab, and a click only navigates.
-- **Breadcrumbs.** A `MudBreadcrumbs` with the separator ` › `. On a Team page it holds one
-  disabled item, the Team's name. On a Project page it holds the Team's name as a link to
-  `/teams/<Team>`, then the Project's name as a disabled item. Both use the catalog's spelling,
-  never the route's. There is no *Teams* root item.
+- **Breadcrumbs.** The page draws none. The shell's bar above every Tab page (`PageBreadcrumbs`,
+  see the Tabs specification) reads *Teams › Team* on a Team page and *Teams › Team › Project* on
+  a Project page, with the Team a link to `/teams/<Team>`. The labels are the Tab's title, which is
+  the route's spelling until the Tab is retitled; the page's own title still takes the catalog's.
+  The page no longer draws a title of its own.
 - `KeepPanelsAlive` is **off**. Only the active tab is rendered, so a Team with 5,000 files
   doesn't build its tree while the Human reads Members.
 

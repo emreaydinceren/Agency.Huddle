@@ -131,6 +131,51 @@ internal sealed class TabService
         this.Publish();
     }
 
+    /// <summary>
+    /// Points the Tab with <paramref name="id"/> at <paramref name="url"/> in place, such as when a
+    /// breadcrumb link is followed: the Tab keeps its group and position, takes the key, title and icon
+    /// the new URL implies, becomes permanent (the navigation was deliberate), is made active and gives
+    /// its group focus. When another Tab already has the new URL's key, that Tab is reused instead, as
+    /// <see cref="Open(string, string?, string?)"/> reuses it, so two Tabs never share a key.
+    /// </summary>
+    /// <param name="id">The Tab to navigate.</param>
+    /// <param name="url">An absolute URI or a site-relative address.</param>
+    /// <returns>The Tab now showing <paramref name="url"/>, or <see langword="null"/> when no Tab has <paramref name="id"/>.</returns>
+    public Tab? Navigate(string id, string url)
+    {
+        if (this.Find(tab => string.Equals(tab.Id, id, StringComparison.Ordinal)) is not var (group, index))
+        {
+            return null;
+        }
+
+        string relative = TabKeys.ToRelative(url);
+        TabDescriptor descriptor = TabKeys.Describe(relative);
+        Tab current = group.Tabs[index];
+
+        if (!string.Equals(current.Key, descriptor.Key, StringComparison.Ordinal)
+            && this.Find(tab => string.Equals(tab.Key, descriptor.Key, StringComparison.Ordinal)) is not null)
+        {
+            return this.Open(relative);
+        }
+
+        Tab updated = string.Equals(current.Key, descriptor.Key, StringComparison.Ordinal)
+            ? current with { Url = relative, IsPreview = false }
+            : current with { Key = descriptor.Key, Url = relative, Title = descriptor.Title, Icon = descriptor.Icon, IsPreview = false };
+
+        bool unchanged = updated == current
+            && string.Equals(group.ActiveId, current.Id, StringComparison.Ordinal)
+            && string.Equals(this.focusedId, group.Id, StringComparison.Ordinal);
+        group.Tabs[index] = updated;
+        group.ActiveId = updated.Id;
+        this.focusedId = group.Id;
+        if (!unchanged)
+        {
+            this.Publish();
+        }
+
+        return updated;
+    }
+
     /// <summary>Gives the group with <paramref name="groupId"/> focus without changing its active Tab. Does nothing when it already has focus, or is unknown.</summary>
     /// <param name="groupId">The group to focus.</param>
     public void FocusGroup(string groupId)
