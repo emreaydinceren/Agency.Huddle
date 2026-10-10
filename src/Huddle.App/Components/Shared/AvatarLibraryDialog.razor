@@ -7,13 +7,16 @@
     chip moves that chip and no other. Thumbnails are text-free buttons whose accessible name is the aria-label only.
     A filter change swaps the grid element (@key) so the browser starts a fresh scroll position at the top without JS.
     The search box sits in a wrapper that stops keydown bubbling, so Escape clears the text first and only a second
-    Escape (with the text already empty) cancels the dialog.
+    Escape (with the text already empty) cancels the dialog. Blazor's stopPropagation only stops Blazor's own event
+    dispatch: MudBlazor closes the dialog on Escape through a DOM key interceptor on the dialog element, so the
+    wrapper is also handed to huddleAvatarLibrary.guardSearchEscape (app.js), which stops the DOM event itself.
 *@
 
 @implements IDisposable
 @using Agency.Huddle.App.Avatars
 @using Microsoft.AspNetCore.Components.Web
 @inject IAvatarLibraryLoader Loader
+@inject IJSRuntime JS
 
 <MudDialog Class="avatar-library-dialog">
     <TitleContent>
@@ -37,7 +40,7 @@
                             <button type="button" class="avatar-library-skin" aria-pressed="@(this.skin == group ? "true" : "false")" @onclick="() => this.SetSkin(group)">@label</button>
                         }
                     </div>
-                    <div class="avatar-library-search-wrap" @onkeydown:stopPropagation="true">
+                    <div class="avatar-library-search-wrap" @ref="this.searchWrap" @onkeydown:stopPropagation="true">
                         <MudTextField T="string" Class="avatar-library-search" Label="Search" Placeholder="type a profession or a tag"
                                       Value="@this.text" ValueChanged="this.SetText" Immediate="true" DebounceInterval="200"
                                       OnKeyDown="this.OnSearchKeyDown" Variant="Variant.Outlined" Margin="Margin.Dense" />
@@ -152,6 +155,20 @@
     private bool tagsExpanded;
     private int shown = PageSize;
     private int gridVersion;
+    private ElementReference searchWrap;
+    private bool searchGuarded;
+
+    /// <summary>Once the search box exists, attaches the DOM-level Escape guard to its wrapper (once per dialog).</summary>
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (this.searchGuarded || this.catalog is null)
+        {
+            return;
+        }
+
+        this.searchGuarded = true;
+        await this.JS.InvokeVoidAsync("huddleAvatarLibrary.guardSearchEscape", this.searchWrap);
+    }
 
     /// <summary>Loads the catalogue once; an unreadable library shows the message instead of the filters.</summary>
     protected override async Task OnInitializedAsync()
