@@ -20,9 +20,11 @@
 
 <div class="hiring-pool">
     <div class="hiring-pool-pool">
+        <MudText Typo="Typo.overline" Class="hiring-pool-heading">Hiring pool</MudText>
         @if (this.Presets.Count > 0)
         {
-            <MudStack Row="true" Class="hiring-pool-presets">
+            <MudStack Row="true" AlignItems="AlignItems.Center" Class="hiring-pool-presets">
+                <MudText Typo="Typo.caption" Class="hiring-pool-presets-label">Presets</MudText>
                 @foreach (PresetSpec preset in this.Presets)
                 {
                     <MudButton Variant="Variant.Outlined" Size="Size.Small" Class="@($"hiring-pool-preset hiring-pool-preset-{preset.Id}")"
@@ -44,7 +46,10 @@
                                 <MudChip T="string" Size="Size.Small" Variant="Variant.Outlined" Class="hiring-pool-covers">@step</MudChip>
                             }
                         </MudStack>
-                        <MudText Typo="Typo.caption" Class="hiring-pool-suggested">@this.SuggestedName(role)</MudText>
+                        <div class="hiring-pool-next">
+                            <MudText Typo="Typo.caption" Class="hiring-pool-next-label">Next hire</MudText>
+                            <MudText Typo="Typo.caption" Class="hiring-pool-suggested">@this.SuggestedName(role)</MudText>
+                        </div>
                         @if (full)
                         {
                             <MudText Typo="Typo.caption" Class="hiring-pool-limit">@LimitText</MudText>
@@ -67,10 +72,12 @@
     </div>
 
     <div class="hiring-pool-team">
+        <MudText Typo="Typo.overline" Class="hiring-pool-heading">Team</MudText>
         @foreach (HiredEntry entry in this.hired)
         {
-            <MudPaper Outlined="true" Class="@($"hiring-pool-hired hiring-pool-hired-{entry.Card.RoleId}")">
+            <MudPaper Outlined="true" Class="@HiredCardClass(entry)">
                 <MudStack Row="true" AlignItems="AlignItems.Center">
+                    <MudAvatar Color="Color.Primary" Size="Size.Medium" Class="hiring-pool-avatar">@Monogram(entry.Card.Name)</MudAvatar>
                     <MudStack Spacing="1" Class="flex-grow-1">
                         <MudText Typo="Typo.subtitle1" Class="hiring-pool-name">@entry.Card.Name</MudText>
                         <MudText Typo="Typo.caption">@this.RoleTitle(entry.Card.RoleId)</MudText>
@@ -96,7 +103,11 @@
                                        OnClick="@(() => this.Recheck(entry))">I connected it</MudButton>
                         }
                     </MudStack>
-                    @if (!entry.Locked)
+                    @if (entry.Locked)
+                    {
+                        <MudChip T="string" Size="Size.Small" Variant="Variant.Outlined" Class="hiring-pool-locked">Manager</MudChip>
+                    }
+                    else
                     {
                         <MudIconButton Icon="@Icons.Material.Filled.Close" Size="Size.Small" aria-label="@($"Remove {entry.Card.Name}")"
                                        Class="hiring-pool-remove" OnClick="@(() => this.Remove(entry))" />
@@ -170,6 +181,12 @@
 
     private static string PoolCardClass(RoleSpec role, bool full) =>
         $"hiring-pool-card hiring-pool-card-{role.Id}{(full ? " hiring-pool-card-full" : string.Empty)}";
+
+    private static string HiredCardClass(HiredEntry entry) =>
+        $"hiring-pool-hired hiring-pool-hired-{entry.Card.RoleId}{(entry.Card.Readiness == CardReadiness.Ready ? string.Empty : " hiring-pool-hired-needs-setup")}";
+
+    private static string Monogram(string name) =>
+        name.Length == 0 ? string.Empty : char.ToUpperInvariant(name[0]).ToString();
 
     private bool IsFull(RoleSpec role) =>
         TeamCheckBar.IsRoleFull(role, this.hired.Count(entry => string.Equals(entry.Card.RoleId, role.Id, StringComparison.Ordinal)));

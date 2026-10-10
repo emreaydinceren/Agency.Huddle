@@ -130,6 +130,22 @@ public sealed class HiringPoolTests
         Assert.Equal(expected.Reasons, cut.FindAll(".hiring-pool-hired-dev .hiring-pool-reason").Select(item => item.TextContent.Trim()));
     }
 
+    /// <summary>The pool and Team columns are headed, only the locked manager card carries the Manager cue, and a card that needs setup is marked so its border can say so.</summary>
+    [Fact]
+    public async Task Layout_HeadsBothColumnsMarksManagerAndNeedsSetup()
+    {
+        using Fixture fixture = new(new NoAdapterContext());
+        await using MudBunitContext ctx = fixture.NewContext();
+        IRenderedComponent<ContainerFragment> cut = Render(ctx);
+
+        await AddAsync(cut, "dev");
+
+        Assert.Equal(["Hiring pool", "Team"], cut.FindAll(".hiring-pool-heading").Select(item => item.TextContent.Trim()));
+        Assert.Equal(["Manager"], cut.FindAll(".hiring-pool-locked").Select(item => item.TextContent.Trim()));
+        Assert.Empty(cut.FindAll(".hiring-pool-hired-dev .hiring-pool-locked"));
+        Assert.Single(cut.FindAll(".hiring-pool-hired-dev.hiring-pool-hired-needs-setup"));
+    }
+
     /// <summary>A staged card can be removed before Start; the manager card has no remove button.</summary>
     [Fact]
     public async Task Remove_StagedCardOnly_ManagerHasNoRemoveButton()

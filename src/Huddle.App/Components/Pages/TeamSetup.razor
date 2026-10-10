@@ -28,7 +28,7 @@
     its error in an alert and the page stays.
 *@
 
-<MudContainer MaxWidth="MaxWidth.Medium" Class="team-setup py-4">
+<MudContainer MaxWidth="MaxWidth.Large" Class="team-setup py-4">
     @if (this.Team is null)
     {
         <MudStack Spacing="3">
@@ -65,18 +65,26 @@
     }
     else
     {
-        @if (this.teamFile.Manager is not null)
-        {
-            <MudText Class="team-setup-manager">@this.teamFile.Manager</MudText>
-        }
-        else if (this.managerCard is not null)
-        {
-            @foreach (string reason in this.managerCard.Reasons)
+        <div class="team-setup-header">
+            <MudText Typo="Typo.h5" Class="team-setup-heading">Set up @this.Team</MudText>
+            @if (this.teamFile.Manager is not null)
             {
-                <MudText Typo="Typo.body2" Class="team-setup-reason">@reason</MudText>
+                <div class="team-setup-manager-line">
+                    <MudText Typo="Typo.caption" Class="team-setup-manager-label">Manager</MudText>
+                    <MudText Class="team-setup-manager">@this.teamFile.Manager</MudText>
+                </div>
             }
-            <MudButton Color="Color.Primary" Variant="Variant.Filled" Disabled="@(this.managerCard.Readiness != CardReadiness.Ready)"
-                       OnClick="this.HireManager" Class="team-setup-hire">Hire manager</MudButton>
+        </div>
+        @if (this.teamFile.Manager is null && this.managerCard is not null)
+        {
+            <MudPaper Outlined="true" Class="team-setup-manager-card">
+                @foreach (string reason in this.managerCard.Reasons)
+                {
+                    <MudText Typo="Typo.body2" Class="team-setup-reason">@reason</MudText>
+                }
+                <MudButton Color="Color.Primary" Variant="Variant.Filled" Disabled="@(this.managerCard.Readiness != CardReadiness.Ready)"
+                           OnClick="this.HireManager" Class="team-setup-hire">Hire manager</MudButton>
+            </MudPaper>
         }
         @if (this.hireError is not null)
         {
@@ -87,17 +95,21 @@
             TeamCheck check = TeamCheckBar.Compute(teamType, this.selection.Cards);
             <HiringPool Team="@this.Team" TypeId="@teamType.Id" Selection="this.selection" SelectionChanged="@(() => this.StateHasChanged())" />
             <ProcessStep Team="@this.Team" />
-            <TeamCheckBarView Check="check" />
-            @if (this.starting)
-            {
-                <MudProgressLinear Indeterminate="true" Class="team-setup-starting" />
-            }
-            @if (this.startError is not null)
-            {
-                <MudAlert Severity="Severity.Error" role="alert" Class="team-setup-start-error">@this.startError</MudAlert>
-            }
-            <MudButton Color="Color.Primary" Variant="Variant.Filled" Disabled="@(!check.CanStart || this.starting)"
-                       OnClick="@(() => this.StartAsync(teamType, check))" Class="team-setup-start">Start Team</MudButton>
+            <div class="team-setup-footer">
+                <div class="team-setup-footer-status">
+                    <TeamCheckBarView Check="check" />
+                    @if (this.starting)
+                    {
+                        <MudProgressLinear Indeterminate="true" Class="team-setup-starting" />
+                    }
+                    @if (this.startError is not null)
+                    {
+                        <MudAlert Severity="Severity.Error" role="alert" Class="team-setup-start-error">@this.startError</MudAlert>
+                    }
+                </div>
+                <MudButton Color="Color.Primary" Variant="Variant.Filled" Disabled="@(!check.CanStart || this.starting)"
+                           OnClick="@(() => this.StartAsync(teamType, check))" Class="team-setup-start">Start Team</MudButton>
+            </div>
         }
     }
 </MudContainer>

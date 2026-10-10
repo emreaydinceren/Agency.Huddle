@@ -2217,3 +2217,217 @@ button:focus-visible {
         padding-inline: 8px;
     }
 }
+
+/* Team setup (/teams/new, /teams/{Team}/setup): the hiring pool on the left, the Team being built on the
+   right, the Process step under them and a footer that keeps the team check and Start Team in view. */
+.team-setup {
+    display: flex;
+    flex-direction: column;
+    gap: 1.5rem;
+}
+
+.team-setup-header {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 0.5rem 1rem;
+}
+
+.team-setup-manager-line {
+    display: flex;
+    align-items: baseline;
+    gap: 0.5rem;
+}
+
+.team-setup-manager-label {
+    color: var(--mud-palette-text-secondary);
+}
+
+.team-setup-manager {
+    font-weight: 600;
+}
+
+.team-setup-manager-card {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0.5rem;
+    padding: 1rem;
+}
+
+.hiring-pool {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+    gap: 1.5rem;
+    align-items: start;
+}
+
+.hiring-pool-pool,
+.hiring-pool-team {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+    min-width: 0;
+    padding: 1rem;
+    background: var(--mud-palette-background-gray);
+    border: 1px solid var(--mud-palette-divider);
+    border-radius: 8px;
+}
+
+.hiring-pool-heading,
+.hiring-pool-presets-label,
+.hiring-pool-next-label {
+    color: var(--mud-palette-text-secondary);
+}
+
+.hiring-pool-presets {
+    flex-wrap: wrap;
+    gap: 0.5rem;
+}
+
+.hiring-pool-card,
+.hiring-pool-hired,
+.hiring-pool-custom {
+    padding: 0.75rem 1rem;
+    background: var(--mud-palette-surface);
+}
+
+.hiring-pool-custom {
+    border-style: dashed;
+}
+
+.hiring-pool-card-full {
+    background: var(--mud-palette-background-gray);
+}
+
+.hiring-pool-card-full .hiring-pool-title,
+.hiring-pool-card-full .hiring-pool-tier,
+.hiring-pool-card-full .hiring-pool-covers {
+    color: var(--mud-palette-text-disabled);
+}
+
+.hiring-pool-limit {
+    font-weight: 600;
+    color: var(--mud-palette-text-secondary);
+}
+
+.hiring-pool-next {
+    display: flex;
+    gap: 0.375rem;
+}
+
+.hiring-pool-hired-needs-setup {
+    border-color: var(--mud-palette-warning);
+}
+
+.hiring-pool-avatar {
+    flex: 0 0 auto;
+}
+
+.hiring-pool-name {
+    font-weight: 600;
+}
+
+.hiring-pool-status {
+    font-weight: 600;
+}
+
+.hiring-pool-hired:not(.hiring-pool-hired-needs-setup) .hiring-pool-status {
+    color: var(--mud-palette-success);
+}
+
+.hiring-pool-hired-needs-setup .hiring-pool-status {
+    color: var(--mud-palette-warning);
+}
+
+.hiring-pool-connected {
+    align-self: flex-start;
+}
+
+.process-step {
+    padding: 1rem;
+    background: var(--mud-palette-surface);
+    border: 1px solid var(--mud-palette-divider);
+    border-radius: 8px;
+}
+
+.process-step-preview {
+    max-height: 16rem;
+    margin: 0.5rem 0 0;
+    padding: 0.75rem;
+    overflow: auto;
+    font-family: var(--font-mono);
+    font-size: 0.8125rem;
+    white-space: pre-wrap;
+    background: var(--mud-palette-background-gray);
+    border-radius: 6px;
+}
+
+.team-setup-footer {
+    position: sticky;
+    bottom: 0;
+    z-index: 1;
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.75rem 1.5rem;
+    padding: 0.75rem 1rem;
+    background: var(--mud-palette-surface);
+    border: 1px solid var(--mud-palette-divider);
+    border-radius: 8px;
+}
+
+.team-setup-footer-status {
+    flex: 1 1 20rem;
+    min-width: 0;
+}
+
+.team-check-bar > .mud-stack {
+    flex-wrap: wrap;
+}
+
+.team-check-vendors,
+.team-check-processes {
+    color: var(--mud-palette-text-secondary);
+}
+
+.team-check-blockers {
+    margin: 0.5rem 0 0;
+    padding-inline-start: 1.25rem;
+    font-size: 0.8125rem;
+    color: var(--mud-palette-warning);
+}
+
+@media (max-width: 900px) {
+    .hiring-pool {
+        grid-template-columns: minmax(0, 1fr);
+    }
+}
+@media (max-width: 600px) {
+    .hiring-pool-pool,
+    .hiring-pool-team {
+        padding: 0.5rem;
+    }
+
+    .hiring-pool-card,
+    .hiring-pool-hired,
+    .hiring-pool-custom {
+        padding: 0.5rem 0.75rem;
+    }
+
+    .hiring-pool-card .mud-stack,
+    .hiring-pool-hired .mud-stack {
+        min-width: 0;
+    }
+
+    .hiring-pool-title,
+    .hiring-pool-name {
+        overflow-wrap: anywhere;
+    }
+
+    .team-setup-footer {
+        position: static;
+    }
+}
