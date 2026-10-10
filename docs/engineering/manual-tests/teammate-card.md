@@ -79,7 +79,7 @@ If the page shows tiles, a Persona file still exists under `Teammates` (check ea
 
 **Free** · about 6 min
 
-*A smoke test: the Create card opens with an empty Name and survives the Name being cleared. Opening it passes no status (`BuildCreateParameters`, `Teammates.razor:264-267`), and `ResolveStatus` guards a blank name (`Teammates.razor:204-207`), so it can only fail on a regression.*
+*A smoke test: the Create card opens with a random suggested Name, survives the Name being cleared, and the reset button beside the Name (`New random name`) draws a different one. Opening it passes no status (`BuildCreateParameters`, `Teammates.razor:264-267`), and `ResolveStatus` guards a blank name (`Teammates.razor:204-207`), so it can only fail on a regression.*
 
 **Before you start**
 
@@ -95,10 +95,12 @@ If the page shows tiles, a Persona file still exists under `Teammates` (check ea
 5. Reload the browser page and click `New teammate` a second time to confirm the outcome reproduces.
 6. If the card DID open: type `Nova` into the **Name** field, press Tab, then select all of it, delete it and press Tab again so the field is empty again. Observe the card and the console.
 7. If the card is still alive: type a single space into the **Name** field and press Tab. Observe the card and the console again.
+8. Click the circular-arrow reset button at the right end of the **Name** field three times, noting the name after each click.
 
 **Pass if — all of these**
 
-- A dialog headed `New teammate` appears on both attempts.
+- A dialog headed `New teammate` appears on both attempts, with the **Name** field already holding a first name such as `Emily`.
+- Each reset click shows a different first name from the one before.
 - Clearing the **Name** field back to empty leaves the card on screen and working.
 - Typing a single space as the whole **Name** leaves the card on screen and working.
 - The console prints no exception during any of the above.
