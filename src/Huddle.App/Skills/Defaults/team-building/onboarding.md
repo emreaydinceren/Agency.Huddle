@@ -29,7 +29,9 @@ One Message. The introduction, parts 1 to 4, stays short: about 170 words. The
 menu in part 5 is long on purpose, because it shows the Human how much Huddle
 can do; it is fine for the Message to scroll. It ends with exactly one
 question, so the Human knows it is their turn. It has five parts, in this
-order:
+order, and it is a template, not a suggestion: a short welcome followed by a
+question is wrong. Write all five parts every time, and check them off before you
+post:
 
 1. **Who you are.** Your Name and Title as `list_agents` shows them, because the
    Human may have renamed you, and one sentence on what you do for them.
