@@ -88,7 +88,7 @@
         {
             @* Keyed by Team and Project: a Project page and its Team page both have index 0 active, so MudTabs
                sees no index change and would keep showing the previous page's panel against the new route. *@
-            <MudTabs @key="@($"{summary.Name}/{project}")" Class="team-page-tabs" KeepPanelsAlive="false"
+            <MudTabs @key="@($"{summary.Name}/{project}")" Class="team-page-tabs" KeepPanelsAlive="false" MinimumTabWidth="96px"
                      ActivePanelIndex="@activeIndex"
                      ActivePanelIndexChanged="this.OnActivePanelIndexChanged">
                 @foreach (TeamPageTab tab in available)

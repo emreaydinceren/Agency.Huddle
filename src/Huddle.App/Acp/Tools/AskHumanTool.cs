@@ -186,8 +186,20 @@ internal sealed class AskHumanTool(
         {
             for (int index = 0; index < optionsArray.Count; index++)
             {
-                string option = (ReadString(optionsArray[index]) ?? string.Empty).Trim();
+                JsonNode? rawOption = optionsArray[index];
                 string optionPrefix = $"{prefix}, option {index + 1}:";
+                string? optionText = ReadOption(rawOption);
+                if (optionText is null)
+                {
+                    problems.Add(
+                        $"{optionPrefix} must be a plain string (or an object with a string 'label'), not {DescribeKind(rawOption)}; send [\"Yes\", \"No\"].");
+
+                    // Keeps the option count honest so the count check does not add a second, misleading problem.
+                    options.Add(string.Empty);
+                    continue;
+                }
+
+                string option = optionText.Trim();
                 int optionProblems = problems.Count;
                 CheckText(option, MaxOptionLength, optionPrefix, problems, keepShort: true);
 
@@ -264,6 +276,31 @@ internal sealed class AskHumanTool(
             "multi_select" => QuestionKind.MultiSelect,
             "rank_priorities" => QuestionKind.RankPriorities,
             _ => null,
+        };
+    }
+
+    /// <summary>
+    /// Reads one option: a JSON string, or the <c>label</c> of an object as Claude Code's
+    /// <c>AskUserQuestion</c> sends it (any <c>description</c> is ignored). Returns
+    /// <see langword="null"/> for anything else.
+    /// </summary>
+    /// <param name="node">The option element the model sent.</param>
+    private static string? ReadOption(JsonNode? node)
+    {
+        return node is JsonObject obj ? ReadString(obj["label"]) : ReadString(node);
+    }
+
+    /// <summary>Names the JSON kind of <paramref name="node"/> for a refusal message.</summary>
+    /// <param name="node">The element to describe.</param>
+    private static string DescribeKind(JsonNode? node)
+    {
+        return node switch
+        {
+            null => "null",
+            JsonObject => "an object without a string 'label'",
+            JsonArray => "an array",
+            JsonValue value when value.TryGetValue(out bool _) => "a boolean",
+            _ => "a number",
         };
     }
 

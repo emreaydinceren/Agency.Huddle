@@ -853,4 +853,44 @@ public sealed class TeammateCardTests
         Assert.DoesNotContain("Offline", dialogMarkup, StringComparison.Ordinal);
         Assert.False(HasButton(cut, "Restart"));
     }
+
+    /// <summary>Pressing Edit in an open View card retitles the dialog to "Edit {Name}" at once; the title is not left at the View wording until the card is reopened.</summary>
+    [Fact]
+    public async Task EditMode_RetitlesTheOpenDialog()
+    {
+        await using var factory = new TeamWebApplicationFactory();
+        await SeedPersonaAsync(factory, "coo", "x");
+        await using var ctx = NewContext(factory);
+
+        var cut = await OpenViewCardAsync(ctx, factory, "coo");
+        Assert.Equal("Teammate", cut.Find(".mud-dialog-title h6").TextContent.Trim());
+        await ClickButtonAsync(cut, "Edit");
+
+        cut.WaitForAssertion(() => Assert.Equal("Edit coo", cut.Find(".mud-dialog-title h6").TextContent.Trim()));
+    }
+
+    /// <summary>After Add teammate the same open card is retitled "Teammate" and follows the new Teammate's status once its pipe connects, instead of keeping "New teammate" and "Offline".</summary>
+    [Fact]
+    public async Task CreateThenSave_RetitlesTheCardAndFollowsTheNewTeammatesStatus()
+    {
+        await using var factory = new TeamWebApplicationFactory();
+        await using var ctx = NewContext(factory);
+
+        var cut = RenderPage(ctx, factory);
+        await ClickButtonAsync(cut, "New teammate");
+        Assert.Equal("New teammate", cut.Find(".mud-dialog-title h6").TextContent.Trim());
+
+        await SetTextValueAsync(cut, "Name", "zzstatus");
+        await SetTextValueAsync(cut, "Title", "Probe");
+        await SetTextValueAsync(cut, "Alias", "zzs");
+        await SetTextValueAsync(cut, "Persona body", "a body");
+        await ClickButtonAsync(cut, "Add teammate");
+
+        cut.WaitForAssertion(() => Assert.Equal("Teammate", cut.Find(".mud-dialog-title h6").TextContent.Trim()));
+        Assert.Contains("Offline", cut.Find(".mud-dialog-container").OuterHtml, StringComparison.Ordinal);
+
+        await MakeOnlineAsync(factory, "zzstatus");
+
+        cut.WaitForAssertion(() => Assert.Contains("Online", cut.Find(".mud-dialog-container").OuterHtml, StringComparison.Ordinal));
+    }
 }

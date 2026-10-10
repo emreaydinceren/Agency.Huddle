@@ -230,7 +230,13 @@ else
     // cleared in OnAfterRenderAsync), so a burst of Draft updates collapses into the single
     // re-render the circuit's own round-trip allows - self-throttling to the connection's real
     // speed rather than to a guessed interval.
+    //
+    // A delta that arrives after a render was requested but before OnAfterRenderAsync clears the flag
+    // changes drafts yet asks for no render of its own; drawPending remembers it so the trailing edge
+    // of a burst is rendered once the in-flight render is acknowledged (otherwise the live row froze
+    // on a partial text until the next event).
     private bool renderQueued;
+    private bool drawPending;
 
     protected override void OnInitialized()
     {
@@ -255,6 +261,14 @@ else
     protected override Task OnAfterRenderAsync(bool firstRender)
     {
         this.renderQueued = false;
+
+        if (this.drawPending)
+        {
+            this.drawPending = false;
+            this.renderQueued = true;
+            this.StateHasChanged();
+        }
+
         return Task.CompletedTask;
     }
 
@@ -632,6 +646,10 @@ else
             {
                 this.renderQueued = true;
                 this.StateHasChanged();
+            }
+            else
+            {
+                this.drawPending = true;
             }
         });
     }

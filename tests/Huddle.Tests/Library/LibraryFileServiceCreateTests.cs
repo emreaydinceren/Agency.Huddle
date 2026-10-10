@@ -328,6 +328,34 @@ public sealed class LibraryFileServiceCreateTests
         Assert.False(File.Exists(Path.Combine(fixture.DataDir, "Teammates", "ada", "notes.md")));
     }
 
+    /// <summary>A scope that names an existing Teammate definition file is refused like any non-folder scope (it used to resolve and then throw in the tree).</summary>
+    [Fact]
+    public void TryResolveScope_TeammateDefinitionFile_Refused()
+    {
+        using LibraryFileServiceFixture fixture = LibraryFileServiceFixture.Build();
+        _ = fixture.CreateTeammate("ben", "Ben", "ben");
+
+        bool resolved = fixture.Resolver.TryResolveScope(new LibraryLocation("teammates", "ben/ben.md"), out LibraryPath? folder, out string? error);
+
+        Assert.False(resolved);
+        Assert.Null(folder);
+        Assert.Equal("This folder isn't available in the Library.", error);
+    }
+
+    /// <summary>A scope that names a Teammate folder still resolves.</summary>
+    [Fact]
+    public void TryResolveScope_TeammateFolder_Resolves()
+    {
+        using LibraryFileServiceFixture fixture = LibraryFileServiceFixture.Build();
+        _ = fixture.CreateTeammate("ben", "Ben", "ben");
+
+        bool resolved = fixture.Resolver.TryResolveScope(new LibraryLocation("teammates", "ben"), out LibraryPath? folder, out string? error);
+
+        Assert.True(resolved);
+        Assert.NotNull(folder);
+        Assert.Null(error);
+    }
+
     /// <summary>Creating a file inside a Teammate's <c>work/</c> folder succeeds (corrections-B4 item 21: the
     /// refusal is only for the Teammate folder itself, not its Work Dir).</summary>
     [Fact]

@@ -136,6 +136,38 @@ public sealed class LibraryFileServiceListTests
         Assert.Empty(entries);
     }
 
+    /// <summary>Listing a path that is an existing FILE does not throw (it used to surface an IOException as an HTTP 500) and yields nothing.</summary>
+    [Fact]
+    public async Task ListAsync_FilePath_ReturnsEmptyWithoutThrowing()
+    {
+        CancellationToken ct = TestContext.Current.CancellationToken;
+        using Fixture fixture = Fixture.Build();
+        string vault = fixture.CreatePinnedRoot("Vault");
+        File.WriteAllText(Path.Combine(vault, "note.md"), "x");
+        LibraryFileService service = fixture.CreateService();
+        LibraryPath file = fixture.Resolve(fixture.ResolveRoot("Vault").Root.Id, "note.md");
+
+        IReadOnlyList<LibraryEntry> entries = await service.ListAsync(file, ct);
+
+        Assert.Empty(entries);
+    }
+
+    /// <summary>Listing a normal folder still returns its children after the file guard.</summary>
+    [Fact]
+    public async Task ListAsync_NormalFolder_StillReturnsChildren()
+    {
+        CancellationToken ct = TestContext.Current.CancellationToken;
+        using Fixture fixture = Fixture.Build();
+        string vault = fixture.CreatePinnedRoot("Vault");
+        Directory.CreateDirectory(Path.Combine(vault, "Sub"));
+        File.WriteAllText(Path.Combine(vault, "note.md"), "x");
+        LibraryFileService service = fixture.CreateService();
+
+        IReadOnlyList<LibraryEntry> entries = await service.ListAsync(fixture.ResolveRoot("Vault"), ct);
+
+        Assert.Equal(["Sub", "note.md"], [.. entries.Select(e => Path.GetFileName(e.Path.FullPath))]);
+    }
+
     /// <summary>A minimal <see cref="IRecycleBin"/> fake: this task never calls it, only satisfies the constructor (6.8.i implements the real behaviour).</summary>
     private sealed class RecordingRecycleBin : IRecycleBin
     {
