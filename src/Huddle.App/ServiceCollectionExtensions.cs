@@ -384,6 +384,9 @@ public static class ServiceCollectionExtensions
         // LibraryNavLink, LibraryPaneHost and any ?library= navigation.
         services.AddScoped<LibraryPaneState>();
 
+        // Scoped: the open Tabs of one circuit (docs/Huddle.Tabs-Specifications.md).
+        services.AddScoped<Tabs.TabService>();
+
         // Unconditional too, and for the same reason: the probe spends nothing on its own (it never
         // calls PromptAsync), so registering it costs nothing when Team:Acp:Enabled is off. What
         // keeps it honest is WHEN it runs — the /teammates page only calls it on card-open, never on
