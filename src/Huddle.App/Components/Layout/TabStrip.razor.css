@@ -36,7 +36,8 @@
 }
 
 .tab-title {
-    padding-inline-end: 3ch;
+    flex: 1 1 auto;
+    min-width: 0;
     overflow: hidden;
     text-overflow: ellipsis;
 }
