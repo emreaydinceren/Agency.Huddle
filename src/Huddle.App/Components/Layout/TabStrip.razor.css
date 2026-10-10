@@ -62,3 +62,17 @@
 .tab-close:hover {
     background-color: var(--mud-palette-action-default-hover);
 }
+
+/* A pinned Tab is its icon alone: the title stays for assistive technology, and there is no x. */
+.tab-item.pinned {
+    padding: 0.25rem 0.625rem;
+}
+
+.visually-hidden {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip: rect(0 0 0 0);
+    white-space: nowrap;
+}

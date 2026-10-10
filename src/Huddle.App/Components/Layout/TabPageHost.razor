@@ -1,0 +1,47 @@
+@*
+    Mounts the page of one Tab, resolved from the Tab's URL rather than by the Router: two groups show
+    two pages at once, and the Router can mount only the one the browser URL names. The group mounts
+    this under @key="tab.Id", so switching Tabs re-mounts the page (only the active Tab of each group
+    is ever mounted) while a change of the same Tab's URL, such as a Library link to another file,
+    only updates the page's parameters.
+
+    The resolved page and its TabPageContext are cached per URL. Both are handed down by reference,
+    and a new instance on every render would make Blazor treat the page's parameters as changed every
+    time a Tab was retitled or another group was clicked.
+*@
+@using Agency.Huddle.App.Tabs
+@inject TabPageRoutes Routes
+
+@if (this.page is null)
+{
+    <MudText Typo="Typo.body1" Class="tab-empty" role="status">There is no page at @this.Tab.Url.</MudText>
+}
+else
+{
+    <CascadingValue Value="this.context">
+        <DynamicComponent Type="this.page.Component" Parameters="this.page.Parameters" />
+    </CascadingValue>
+}
+
+@code {
+    private string? resolvedUrl;
+    private TabPage? page;
+    private TabPageContext? context;
+
+    /// <summary>The Tab whose page to mount.</summary>
+    [Parameter, EditorRequired]
+    public required Tab Tab { get; set; }
+
+    /// <summary>Resolves the page again only when the Tab's URL differs from the one last resolved.</summary>
+    protected override void OnParametersSet()
+    {
+        if (string.Equals(this.resolvedUrl, this.Tab.Url, StringComparison.Ordinal))
+        {
+            return;
+        }
+
+        this.resolvedUrl = this.Tab.Url;
+        this.page = this.Routes.Resolve(this.Tab.Url);
+        this.context = new TabPageContext(this.Tab.Url);
+    }
+}

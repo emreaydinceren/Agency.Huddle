@@ -372,14 +372,18 @@ Tabs — the open pages in the strip above the content, `docs/Huddle.Tabs-Specif
 
 | Path | Responsibility |
 | --- | --- |
-| `Tabs/Tab.cs` | The `Tab` and `TabDescriptor` records. |
+| `Tabs/Tab.cs` | The `Tab` (with its pinned flag), `TabGroup` and `TabDescriptor` records. |
 | `Tabs/TabKeys.cs` | Turns a URL into a tab key, title and icon. |
-| `Tabs/TabService.cs` | The open Tabs: preview and permanent, close, and the snapshot. |
+| `Tabs/TabService.cs` | The open Tabs in up to `MaxGroups` groups: preview, permanent and pinned Tabs, focus, move between groups, close, and the snapshot. |
 | `Tabs/TabSnapshot.cs` | The stored JSON form of the open Tabs. |
 | `Tabs/TabReconciler.cs` | Retitles a Room's Tab with the Room and closes it when the Room is archived or deleted. |
-| `Tabs/TabIcons.cs` | The icon for each kind of Tab. |
-| `Components/Layout/TabHost.razor` | Hosts the strip and the page of the active Tab. |
-| `Components/Layout/TabStrip.razor` | The strip of Tabs. |
+| `Tabs/TabIcons.cs` | The icon for each kind of Tab, and the two move icons of the Tab menu. |
+| `Tabs/MaterialSymbols.cs` | Material Symbols that MudBlazor's icon set lacks, rescaled to its 24dp grid. |
+| `Tabs/TabPageRoutes.cs` | Resolves a Tab's URL to its page and parameters from the `@page` templates, without the router; also `TabPage` and the cascaded `TabPageContext`. |
+| `Components/Layout/TabHost.razor` | Draws the groups side by side, follows every location the router reaches, and takes the keyboard shortcuts. |
+| `Components/Layout/TabGroupPane.razor` | One group: its strip over the page of its active Tab; focuses itself when pressed. |
+| `Components/Layout/TabPageHost.razor` | Mounts one Tab's page (a `DynamicComponent`) from its URL. |
+| `Components/Layout/TabStrip.razor` | One group's strip of Tabs, with the right-click Tab menu (pin, move left, move right, close). |
 | `Components/Layout/NavTabLink.razor` | A left-menu link that opens a Tab (single click previews, double click keeps). |
 | `Components/Layout/TabSync.razor` | Keeps a Room's Tab title and lifetime in step with the Room, and closes the Tab of a removed Team or Project. |
 | `Components/Layout/TabPersistence.razor` | Restores the stored Tabs after the first render and saves every change (`huddle:tabs`). |

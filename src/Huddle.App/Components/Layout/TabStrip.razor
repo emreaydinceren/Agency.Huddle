@@ -1,55 +1,87 @@
 @*
-    The row of open Tabs above the page (docs/Huddle.Tabs-Specifications.md). A preview Tab's title is
-    italic; a double-click on any Tab makes it permanent; the x and a middle-click close it. A Tab is
-    a remembered URL, so activating or closing one navigates the router to the Tab that ends up
-    active - TabService itself never touches NavigationManager.
+    The row of one group's Tabs above its page (docs/Huddle.Tabs-Specifications.md). A preview Tab's
+    title is italic; a double-click on any Tab makes it permanent; the x and a middle-click close it;
+    a right-click opens the Tab's menu (pin, move to the neighbouring group, close). A pinned Tab is
+    drawn as its icon alone and has no x. A Tab is a remembered URL, so activating, moving or closing
+    one navigates the router to the Tab that ends up active in the focused group - TabService itself
+    never touches NavigationManager.
 
     The close control is a plain <button> and not a MudIconButton: it sits inside the Tab's own
     click target, and a plain element is the only one whose stopPropagation is not a guess about
     MudBlazor's ClickPropagation default.
+
+    The menu is one MudMenu for the whole strip, opened at the pointer with no activator of its own
+    (the same OpenMenuAsync approach RoomList uses for its rows), and filled for whichever Tab was
+    right-clicked.
 *@
 @using Agency.Huddle.App.Tabs
-@implements IDisposable
 @inject TabService Tabs
 @inject NavigationManager Navigation
 
 <div class="tab-strip" role="tablist" aria-label="Open pages">
-    @foreach (Tab tab in this.Tabs.Tabs)
+    @foreach (Tab tab in this.Group.Tabs)
     {
-        bool active = string.Equals(tab.Id, this.Tabs.Active?.Id, StringComparison.Ordinal);
+        bool active = string.Equals(tab.Id, this.Group.ActiveId, StringComparison.Ordinal);
         <div class="@TabClass(tab, active)" role="tab" tabindex="0" aria-selected="@(active ? "true" : "false")"
              title="@tab.Title"
              @key="tab.Id"
              @onclick="@(() => this.Activate(tab))"
-             @ondblclick="@(() => this.Tabs.Pin(tab.Id))"
+             @ondblclick="@(() => this.Tabs.Keep(tab.Id))"
              @onmouseup="@(e => this.OnMouseUp(tab, e))"
+             @oncontextmenu="@(e => this.OnContextMenuAsync(tab, e))"
+             @oncontextmenu:preventDefault="true"
              @onkeydown="@(e => this.OnKeyDown(tab, e))">
             <MudIcon Icon="@TabIcons.For(tab.Icon)" Size="Size.Small" />
-            <span class="tab-title">@tab.Title</span>
-            <button type="button" class="tab-close" aria-label="@($"Close {tab.Title}")"
-                    @onclick="@(() => this.Close(tab))" @onclick:stopPropagation="true"
-                    @ondblclick:stopPropagation="true">
-                <MudIcon Icon="@Icons.Material.Filled.Close" Size="Size.Small" />
-            </button>
+            @if (tab.IsPinned)
+            {
+                <span class="tab-title visually-hidden">@tab.Title</span>
+            }
+            else
+            {
+                <span class="tab-title">@tab.Title</span>
+                <button type="button" class="tab-close" aria-label="@($"Close {tab.Title}")"
+                        @onclick="@(() => this.Close(tab))" @onclick:stopPropagation="true"
+                        @ondblclick:stopPropagation="true">
+                    <MudIcon Icon="@Icons.Material.Filled.Close" Size="Size.Small" />
+                </button>
+            }
         </div>
     }
+    <MudMenu @ref="this.menu" PositionAtCursor="true" Class="tab-menu">
+        <ChildContent>
+            @if (this.menuTab is { } target)
+            {
+                @if (target.IsPinned)
+                {
+                    <MudMenuItem Icon="@Icons.Material.Filled.PushPin" OnClick="@(() => this.Tabs.Unpin(target.Id))">Unpin Tab</MudMenuItem>
+                }
+                else
+                {
+                    <MudMenuItem Icon="@Icons.Material.Filled.PushPin" OnClick="@(() => this.Tabs.Pin(target.Id))">Pin Tab</MudMenuItem>
+                }
+                <MudMenuItem Icon="@TabIcons.MoveSelectionLeft" Disabled="@(!this.Tabs.CanMoveLeft(target.Id))"
+                             OnClick="@(() => this.Move(target, left: true))">Move Left</MudMenuItem>
+                <MudMenuItem Icon="@TabIcons.MoveSelectionRight" Disabled="@(!this.Tabs.CanMoveRight(target.Id))"
+                             OnClick="@(() => this.Move(target, left: false))">Move Right</MudMenuItem>
+                <MudMenuItem Icon="@Icons.Material.Filled.Close" OnClick="@(() => this.Close(target))">Close</MudMenuItem>
+            }
+        </ChildContent>
+    </MudMenu>
 </div>
 
 @code {
-    /// <summary>Repaints when the Tabs change.</summary>
-    protected override void OnInitialized()
-    {
-        this.Tabs.Changed += this.OnTabsChanged;
-    }
+    private MudMenu? menu;
+    private Tab? menuTab;
 
-    /// <summary>Unsubscribes from <see cref="TabService.Changed"/>; the service is circuit-scoped but outlives this component.</summary>
-    public void Dispose()
-    {
-        this.Tabs.Changed -= this.OnTabsChanged;
-    }
+    /// <summary>The group whose Tabs this strip draws.</summary>
+    [Parameter, EditorRequired]
+    public required TabGroup Group { get; set; }
 
     private static string TabClass(Tab tab, bool active) =>
-        "tab-item" + (active ? " active" : string.Empty) + (tab.IsPreview ? " preview" : string.Empty);
+        "tab-item"
+        + (active ? " active" : string.Empty)
+        + (tab.IsPreview ? " preview" : string.Empty)
+        + (tab.IsPinned ? " pinned" : string.Empty);
 
     private void Activate(Tab tab)
     {
@@ -59,19 +91,42 @@
 
     private void Close(Tab tab)
     {
-        bool wasActive = string.Equals(tab.Id, this.Tabs.Active?.Id, StringComparison.Ordinal);
+        string? before = this.Tabs.Active?.Id;
         this.Tabs.Close(tab.Id);
-        if (wasActive && this.Tabs.Active is { } next)
+        this.FollowFocus(before);
+    }
+
+    private void Move(Tab tab, bool left)
+    {
+        string? before = this.Tabs.Active?.Id;
+        _ = left ? this.Tabs.MoveLeft(tab.Id) : this.Tabs.MoveRight(tab.Id);
+        this.FollowFocus(before);
+    }
+
+    // The URL names the focused group's active Tab, so whenever an action changes which Tab that is,
+    // the router follows.
+    private void FollowFocus(string? activeBefore)
+    {
+        if (this.Tabs.Active is { } now && !string.Equals(now.Id, activeBefore, StringComparison.Ordinal))
         {
-            this.Navigation.NavigateTo(next.Url);
+            this.Navigation.NavigateTo(now.Url);
         }
     }
 
     private void OnMouseUp(Tab tab, MouseEventArgs e)
     {
-        if (e.Button == 1)
+        if (e.Button == 1 && !tab.IsPinned)
         {
             this.Close(tab);
+        }
+    }
+
+    private async Task OnContextMenuAsync(Tab tab, MouseEventArgs e)
+    {
+        this.menuTab = tab;
+        if (this.menu is not null)
+        {
+            await this.menu.OpenMenuAsync(e);
         }
     }
 
@@ -80,32 +135,6 @@
         if (e.Key is "Enter" or " ")
         {
             this.Activate(tab);
-        }
-    }
-
-    private void OnTabsChanged()
-    {
-        _ = this.DispatchAsync(() =>
-        {
-            this.StateHasChanged();
-            return Task.CompletedTask;
-        });
-    }
-
-    // Mirrors MainLayout.razor's DispatchAsync: a store event can fire while the circuit winds down.
-    private async Task DispatchAsync(Func<Task> action)
-    {
-        try
-        {
-            await this.InvokeAsync(action);
-        }
-        catch (ObjectDisposedException)
-        {
-            // Circuit gone; nothing to render.
-        }
-        catch (InvalidOperationException)
-        {
-            // Renderer disposed mid-dispatch.
         }
     }
 }

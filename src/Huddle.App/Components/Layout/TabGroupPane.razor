@@ -1,0 +1,54 @@
+@*
+    One group: its Tab strip over the page of its active Tab. Exactly one group has focus, and the
+    browser URL names that group's active Tab; pressing or tabbing into another group focuses it and
+    navigates the router to its active Tab, so everything that follows the URL (the menu's highlight,
+    the shortcuts, a link opened from a Message) follows the pane the person is working in. Only the
+    unfocused pane listens for the press, so a focused pane costs no round trip per click.
+*@
+@using Agency.Huddle.App.Tabs
+@inject TabService Tabs
+@inject NavigationManager Navigation
+
+<section class="@this.PaneClass()" aria-label="@this.Label()"
+         @onpointerdown="this.PointerDown"
+         @onfocusin="this.FocusIn">
+    <TabStrip Group="this.Group" />
+    <div class="tab-body">
+        @if (this.Group.Active is { } active)
+        {
+            <TabPageHost @key="active.Id" Tab="active" />
+        }
+        else
+        {
+            <MudText Typo="Typo.body1" Class="tab-empty" role="status">No pages are open. Choose one from the menu.</MudText>
+        }
+    </div>
+</section>
+
+@code {
+    /// <summary>The group this pane draws.</summary>
+    [Parameter, EditorRequired]
+    public required TabGroup Group { get; set; }
+
+    private bool IsFocused => string.Equals(this.Tabs.FocusedGroupId, this.Group.Id, StringComparison.Ordinal);
+
+    // A default EventCallback renders no handler, so the focused pane pays no round trip per press.
+    private EventCallback<PointerEventArgs> PointerDown => this.IsFocused ? default : EventCallback.Factory.Create<PointerEventArgs>(this, this.FocusAsync);
+
+    private EventCallback<FocusEventArgs> FocusIn => this.IsFocused ? default : EventCallback.Factory.Create<FocusEventArgs>(this, this.FocusAsync);
+
+    private string PaneClass() => "tab-group" + (this.IsFocused ? " focused" : string.Empty);
+
+    private string Label() => this.Group.Active is { } active ? $"{active.Title} pane" : "Empty pane";
+
+    private Task FocusAsync()
+    {
+        this.Tabs.FocusGroup(this.Group.Id);
+        if (this.Tabs.Active is { } active)
+        {
+            this.Navigation.NavigateTo(active.Url);
+        }
+
+        return Task.CompletedTask;
+    }
+}

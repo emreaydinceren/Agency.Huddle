@@ -50,6 +50,7 @@
 @implements IDisposable
 @using System.Text.Json
 @using Microsoft.Extensions.Options
+@using Agency.Huddle.App.Tabs
 @inject TaskStore Store
 @inject TaskEvents Events
 @inject ViewStore Views
@@ -351,7 +352,11 @@
 
     /// <summary>Whether the current URL is the literal <c>/tasks/new</c> route, which carries no <see cref="ViewId"/> of its own to tell it apart from the bare <c>/tasks</c> route.</summary>
     private bool IsTasksNewRoute() =>
-        this.Navigation.ToAbsoluteUri(this.Navigation.Uri).AbsolutePath.EndsWith("/tasks/new", StringComparison.OrdinalIgnoreCase);
+        (this.Page?.Path ?? this.Navigation.ToAbsoluteUri(this.Navigation.Uri).AbsolutePath).EndsWith("/tasks/new", StringComparison.OrdinalIgnoreCase);
+
+    /// <summary>The Tab showing this page, which knows its own address; the browser URL names only the focused groups Tab, so it is not read when this is present.</summary>
+    [CascadingParameter]
+    public TabPageContext? Page { get; set; }
 
     /// <summary>Opens the View editor drawer for <paramref name="id"/> (the invalid-View route's Edit View button).</summary>
     private void OpenEditorFor(string id)

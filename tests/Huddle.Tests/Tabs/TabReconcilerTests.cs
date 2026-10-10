@@ -35,7 +35,7 @@ public sealed class TabReconcilerTests
     {
         TabService tabs = new();
         Tab keep = tabs.Open("/teammates");
-        tabs.Pin(keep.Id);
+        tabs.Keep(keep.Id);
         tabs.Open("/rooms/gone");
 
         TabReconciler.ReconcileRooms(tabs, []);
@@ -64,11 +64,11 @@ public sealed class TabReconcilerTests
     {
         TabService tabs = new();
         Tab keep = tabs.Open("/teams/Core");
-        tabs.Pin(keep.Id);
+        tabs.Keep(keep.Id);
         Tab project = tabs.Open("/teams/Core/projects/Gone");
-        tabs.Pin(project.Id);
+        tabs.Keep(project.Id);
         Tab removed = tabs.Open("/teams/Removed");
-        tabs.Pin(removed.Id);
+        tabs.Keep(removed.Id);
 
         TabReconciler.ReconcileTeams(tabs, new Agency.Huddle.Tests.Teams.FakeTeamCatalog { Teams = [Team("Core", "Alpha")] });
 

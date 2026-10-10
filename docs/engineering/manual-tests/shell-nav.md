@@ -1517,4 +1517,156 @@ The drawer content is shorter than the viewport in step 6 no matter how small yo
 
 ---
 
+### SHELLNAV-39 — Right-clicking a tab offers Pin, Move Left, Move Right and Close, and Pin keeps the tab at the front as an icon
+
+**Free** · about 3 min
+
+*Tabs spec §9: the Tab menu.*
+
+**Before you start**
+
+- `P-LAUNCH-UAT`. Close every tab, then keep three: double-click `Teammates`, `Settings` and Ada's Room in the menu.
+
+**Steps**
+
+1. Right-click the `Settings` tab.
+2. Choose **Pin Tab**.
+3. Right-click the pinned tab and read the first item, then close the menu with Escape.
+4. Open `Tasks` with one click in the menu.
+5. Right-click the pinned tab, choose **Unpin Tab**.
+
+**Pass if — all of these**
+
+- Step 1 shows a menu at the pointer with, in order, Pin Tab, Move Left, Move Right and Close, each with an icon.
+- Step 2 moves `Settings` to the start of the strip as its gear icon alone, with no × and no title text; hovering shows "Settings".
+- Step 3's first item reads **Unpin Tab**.
+- Step 4's new italic tab opens after the pinned tab and the others, never in front of it.
+- Step 5 puts `Settings` back as a titled tab just after any pinned tabs, and it stays upright (not italic).
+
+**Fail if — any of these**
+
+- The browser's own context menu appears instead of the tab menu.
+- A pinned tab can be closed by middle-clicking it.
+- A pinned tab ends up behind an unpinned one.
+
+---
+
+### SHELLNAV-40 — Move Right opens a second pane beside the first, and both pages stay live
+
+**Free** · about 4 min
+
+*Tabs spec §9: groups and focus.*
+
+**Before you start**
+
+- `P-LAUNCH-UAT`. Close every tab, then keep two: double-click `Teammates` and `Settings`.
+
+**Steps**
+
+1. Right-click the `Settings` tab, choose **Move Right**.
+2. Look at the page and at the address bar.
+3. Right-click the `Settings` tab again and read **Move Right**.
+4. Click anywhere in the `Teammates` pane.
+5. Look at the address bar and at the `Settings` pane.
+6. Right-click the only tab in the right pane, choose **Move Left**.
+
+**Pass if — all of these**
+
+- Step 1 shows two panes side by side, `Teammates` on the left and `Settings` on the right, each with its own strip.
+- Step 2's address bar reads `/settings`, and the right pane's active tab has the accent line while the left one's is dimmed.
+- Step 3 shows **Move Right** greyed out (no third pane is allowed).
+- Step 4 makes the address bar read `/teammates` and moves the accent to the left pane. The `Settings` pane still shows its page, unchanged.
+- Step 6 closes the right pane and leaves one pane holding both tabs.
+
+**Fail if — any of these**
+
+- Either page reloads or loses what was typed in it when the other pane is clicked.
+- The address bar names the pane you did not click.
+- A page opens in both panes at once.
+
+---
+
+### SHELLNAV-41 — Opening a page that is already open in the other pane takes you to it, and new pages open in the focused pane
+
+**Free** · about 3 min
+
+*Tabs spec §9: one Tab per key across groups.*
+
+**Before you start**
+
+- `P-LAUNCH-UAT`. Two panes as left by `SHELLNAV-40` step 1: `Teammates` on the left, `Settings` on the right, the right pane focused.
+
+**Steps**
+
+1. In the menu, click `Teammates`.
+2. Click in the right pane, then in the menu click `Tasks` > `All Tasks`.
+
+**Pass if — all of these**
+
+- Step 1 focuses the left pane's existing `Teammates` tab; no second `Teammates` tab appears.
+- Step 2 opens an italic `All Tasks` preview tab in the right pane, beside `Settings`, and not in the left pane.
+
+**Fail if — any of these**
+
+- A page is open twice.
+- The new tab opens in the pane you did not click.
+
+---
+
+### SHELLNAV-42 — Both panes, pins and the focused pane come back after a reload
+
+**Free** · about 2 min
+
+*Tabs spec §9: persistence.*
+
+**Before you start**
+
+- `P-LAUNCH-UAT`. Two panes as in `SHELLNAV-40`, with `Settings` pinned and the left pane focused.
+
+**Steps**
+
+1. Reload the page.
+
+**Pass if — all of these**
+
+- Two panes come back, the same tabs in each, `Settings` still pinned, and the left pane focused with the address bar naming its tab.
+- Each pane shows its own page.
+
+**Fail if — any of these**
+
+- Everything collapses into one pane.
+- The pin is lost, or a pinned tab is no longer at the front.
+
+---
+
+### SHELLNAV-43 — Two Rooms side by side keep their own unsent text
+
+**Free** · about 4 min
+
+*Tabs spec §9: the audit of one-open-Room assumptions. Unproven live when this was written.*
+
+**Before you start**
+
+- `P-LAUNCH-UAT`. Keep Ada's Room and a second Room as tabs, and move the second to the right pane.
+
+**Steps**
+
+1. Type `left draft` into the left pane's message box without sending.
+2. Click in the right pane and type `right draft` into its message box.
+3. Click back in the left pane.
+4. Send a message from the right pane.
+
+**Pass if — all of these**
+
+- Steps 1 to 3 leave `left draft` in the left box and `right draft` in the right box, each untouched by the other.
+- Step 4 posts only in the right Room and clears only the right box.
+- Each pane's Room name tab keeps showing its own Room.
+
+**Fail if — any of these**
+
+- Text appears in the wrong pane's box, or a send goes to the wrong Room.
+- Streaming output or scrolling in one Room moves the other.
+
+---
+
 Back to [the manual test script](../manual-tests.md).
