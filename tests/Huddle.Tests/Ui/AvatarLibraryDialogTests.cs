@@ -362,6 +362,70 @@ public sealed class AvatarLibraryDialogTests
         Assert.True(result.Canceled);
     }
 
+    /// <summary>
+    /// MudBlazor closes a dialog on Escape through a DOM key interceptor on the dialog element, which a Blazor
+    /// <c>stopPropagation</c> cannot stop, so the picker hands its search box wrapper to a DOM-level guard that
+    /// keeps a first Escape (with text in the box) from reaching the dialog.
+    /// </summary>
+    [Fact]
+    public async Task SearchBox_HasDomEscapeGuardAttached()
+    {
+        await using Harness harness = await Harness.OpenAsync();
+
+        harness.Cut.WaitForAssertion(
+            () =>
+            {
+                IReadOnlyList<JSRuntimeInvocation> invocations = harness.Context.JSInterop.VerifyInvoke("huddleAvatarLibrary.guardSearchEscape", 1);
+                Assert.Single(invocations[0].Arguments);
+            },
+            TimeSpan.FromSeconds(5));
+        Assert.NotNull(harness.Cut.Find(".avatar-library-search-wrap"));
+    }
+
+    /// <summary>Escape in an empty search box closes the dialog with Cancel at once.</summary>
+    [Fact]
+    public async Task SearchEscape_EmptyBox_ClosesAtOnce()
+    {
+        CancellationToken ct = Xunit.TestContext.Current.CancellationToken;
+        await using Harness harness = await Harness.OpenAsync();
+
+        await harness.Cut.InvokeAsync(() => harness.Cut.Find(SearchInput).KeyDownAsync(new KeyboardEventArgs { Key = "Escape" }));
+
+        DialogResult? result = await harness.Reference.Result.WaitAsync(TimeSpan.FromSeconds(5), ct);
+        Assert.NotNull(result);
+        Assert.True(result.Canceled);
+    }
+
+    /// <summary>
+    /// Below 600 px the filters block is a height-capped scroller, and a flex child that scrolls on its own (the tag
+    /// cloud) has a zero automatic minimum height, so it collapsed to 0 px. The filters' children must not shrink.
+    /// </summary>
+    [Fact]
+    public void AppCss_NarrowViewport_FilterChildrenDoNotShrink()
+    {
+        string css = File.ReadAllText(CssSource.RepoPath("src", "Huddle.App", "wwwroot", "app.css"));
+
+        int block = css.IndexOf(".mud-dialog.avatar-library-dialog", StringComparison.Ordinal);
+        Assert.True(block >= 0);
+        int rule = css.IndexOf(".avatar-library-filters > *", block, StringComparison.Ordinal);
+        Assert.True(rule > block);
+        int declaration = css.IndexOf("flex-shrink: 0", rule, StringComparison.Ordinal);
+        int close = css.IndexOf('}', rule);
+        Assert.InRange(declaration, rule, close);
+    }
+
+    /// <summary><c>app.js</c> defines the search box Escape guard, which stops a first Escape with text in the box at the DOM level.</summary>
+    [Fact]
+    public void AppJs_DefinesSearchEscapeGuard()
+    {
+        string js = File.ReadAllText(CssSource.RepoPath("src", "Huddle.App", "wwwroot", "app.js"));
+
+        int guard = js.IndexOf("window.huddleAvatarLibrary", StringComparison.Ordinal);
+        Assert.True(guard >= 0);
+        int stop = js.IndexOf("stopPropagation()", guard, StringComparison.Ordinal);
+        Assert.True(stop > guard);
+    }
+
     /// <summary>All the filter controls live in the non-scrolling filters block; only thumbnails and Show more live in the scrolling grid.</summary>
     [Fact]
     public async Task Filters_AreOutsideTheScrollingGrid()
@@ -460,6 +524,9 @@ public sealed class AvatarLibraryDialogTests
             this.Cut = cut;
             this.Reference = reference;
         }
+
+        /// <summary>The bUnit context, for reading the recorded JS interop calls.</summary>
+        public MudBunitContext Context => this.ctx;
 
         /// <summary>The rendered dialog provider fragment.</summary>
         public IRenderedComponent<ContainerFragment> Cut { get; }
