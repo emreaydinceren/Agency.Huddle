@@ -129,7 +129,7 @@ The Library is one tab like any other.
 - **Half-written messages:** the text you have typed but not sent is kept for each
   Room while you switch between tabs, and it is still there after you reload the page.
 
-**Right-click a tab** for its menu:
+**Right-click a tab**, or hover it and press the small chevron that appears beside its **Ã—**, for its menu (hovering also shows quick Move Left and Move Right buttons when those apply):
 
 - **Pin Tab** keeps the tab at the start of the strip as just its icon, with no ×
   (hover for its name). **Unpin Tab** puts it back.

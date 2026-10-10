@@ -377,6 +377,64 @@ public sealed class TabHostTests
         Assert.Empty(tabs.Tabs);
     }
 
+    /// <summary>The hover toolbar offers the chevron always, and each move button only when that move is possible.</summary>
+    [Fact]
+    public async Task HoverToolbar_DrawsOnlyThePossibleMoves()
+    {
+        await using MudBunitContext ctx = NewContext();
+        var nav = ctx.Services.GetRequiredService<NavigationManager>();
+        var tabs = ctx.Services.GetRequiredService<TabService>();
+        nav.NavigateTo("/teammates");
+        var cut = RenderHost(ctx);
+
+        Assert.Equal(["Menu for Teammates"], cut.FindAll(".tab-action").Select(static button => button.GetAttribute("aria-label")));
+
+        cut.Find(".tab-item").DoubleClick();
+        nav.NavigateTo("/settings");
+        cut.WaitForAssertion(() => Assert.Equal(2, cut.FindAll(".tab-item").Count));
+        await cut.InvokeAsync(() => tabs.MoveRight(ActiveId(tabs)));
+
+        cut.WaitForAssertion(() => Assert.Equal(
+            ["Menu for Teammates", "Move Teammates right", "Menu for Settings", "Move Settings left"],
+            cut.FindAll(".tab-action").Select(static button => button.GetAttribute("aria-label"))));
+    }
+
+    /// <summary>A move button on the toolbar moves its Tab without activating anything else.</summary>
+    [Fact]
+    public async Task HoverToolbar_MoveRight_MovesTheTab()
+    {
+        await using MudBunitContext ctx = NewContext();
+        var nav = ctx.Services.GetRequiredService<NavigationManager>();
+        var tabs = ctx.Services.GetRequiredService<TabService>();
+        nav.NavigateTo("/teammates");
+        var cut = RenderHost(ctx);
+        cut.Find(".tab-item").DoubleClick();
+        nav.NavigateTo("/settings");
+        cut.WaitForAssertion(() => Assert.Equal(2, cut.FindAll(".tab-item").Count));
+
+        cut.Find("button[aria-label='Move Settings right']").Click();
+
+        Assert.Equal(2, tabs.Groups.Count);
+        Assert.Equal("settings", tabs.Groups[1].Active?.Key);
+    }
+
+    /// <summary>The chevron opens the same menu as a right-click, and a pinned Tab has no toolbar.</summary>
+    [Fact]
+    public async Task HoverToolbar_Chevron_OpensTheMenu_AndPinnedTabsHaveNone()
+    {
+        await using MudBunitContext ctx = NewContext();
+        var tabs = ctx.Services.GetRequiredService<TabService>();
+        ctx.Services.GetRequiredService<NavigationManager>().NavigateTo("/teammates");
+        var cut = RenderHostWithMenus(ctx);
+
+        await cut.InvokeAsync(() => cut.Find("button[aria-label='Menu for Teammates']").ClickAsync());
+
+        Assert.Equal(["Pin Tab", "Move Left", "Move Right", "Close"], MenuItems(cut).Select(Label));
+        await cut.InvokeAsync(() => MenuItems(cut).First(item => Label(item) == "Pin Tab").ClickAsync());
+        Assert.True(Assert.Single(tabs.Tabs).IsPinned);
+        cut.WaitForAssertion(() => Assert.Empty(cut.FindAll(".tab-actions")));
+    }
+
     /// <summary>A page learns its own address from the cascaded context, not from the browser URL.</summary>
     [Fact]
     public async Task Page_ReceivesItsTabsAddressAsContext()

@@ -1,10 +1,14 @@
 @*
     The row of one group's Tabs above its page (docs/Huddle.Tabs-Specifications.md). A preview Tab's
     title is italic; a double-click on any Tab makes it permanent; the x and a middle-click close it;
-    a right-click opens the Tab's menu (pin, move to the neighbouring group, close). A pinned Tab is
+    a right-click, or the chevron of the hover toolbar, opens the Tab's menu (pin, move to the neighbouring group, close). A pinned Tab is
     drawn as its icon alone and has no x. A Tab is a remembered URL, so activating, moving or closing
     one navigates the router to the Tab that ends up active in the focused group - TabService itself
     never touches NavigationManager.
+
+    The hover toolbar (chevron, move left, move right) sits over the right end of the title, between it
+    and the x, and is invisible until the Tab is hovered or has focus. A move button is drawn only when
+    that move is possible for the Tab. A pinned Tab has no toolbar: it is an icon alone.
 
     The close control is a plain <button> and not a MudIconButton: it sits inside the Tab's own
     click target, and a plain element is the only one whose stopPropagation is not a guess about
@@ -39,6 +43,29 @@
             else
             {
                 <span class="tab-title">@tab.Title</span>
+                <span class="tab-actions">
+                    <button type="button" class="tab-action" aria-label="@($"Menu for {tab.Title}")"
+                            @onclick="@(e => this.OnContextMenuAsync(tab, e))" @onclick:stopPropagation="true"
+                            @ondblclick:stopPropagation="true">
+                        <MudIcon Icon="@Icons.Material.Filled.ExpandMore" Size="Size.Small" />
+                    </button>
+                    @if (this.Tabs.CanMoveLeft(tab.Id))
+                    {
+                        <button type="button" class="tab-action" aria-label="@($"Move {tab.Title} left")"
+                                @onclick="@(() => this.Move(tab, left: true))" @onclick:stopPropagation="true"
+                                @ondblclick:stopPropagation="true">
+                            <MudIcon Icon="@TabIcons.MoveSelectionLeft" Size="Size.Small" />
+                        </button>
+                    }
+                    @if (this.Tabs.CanMoveRight(tab.Id))
+                    {
+                        <button type="button" class="tab-action" aria-label="@($"Move {tab.Title} right")"
+                                @onclick="@(() => this.Move(tab, left: false))" @onclick:stopPropagation="true"
+                                @ondblclick:stopPropagation="true">
+                            <MudIcon Icon="@TabIcons.MoveSelectionRight" Size="Size.Small" />
+                        </button>
+                    }
+                </span>
                 <button type="button" class="tab-close" aria-label="@($"Close {tab.Title}")"
                         @onclick="@(() => this.Close(tab))" @onclick:stopPropagation="true"
                         @ondblclick:stopPropagation="true">

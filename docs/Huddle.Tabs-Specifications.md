@@ -140,7 +140,9 @@ so the work in it is not lost; its active Tab's top accent is dimmed. A key is o
 across both: opening a page already open in the other group focuses it there instead of duplicating it
 (this is what keeps one open Room per Room).
 
-**The Tab menu** (right-click a Tab):
+**The hover toolbar.** Hovering (or focusing into) an unpinned Tab fades in a toolbar over the right end of its title, just left of the x: a chevron that opens the Tab menu, then Move Left and Move Right, each drawn only when that move is possible for the Tab. Tabs are 3 characters wider by default so the title is not hidden before the pointer arrives.
+
+**The Tab menu** (right-click a Tab, or the chevron):
 
 | Item | Does |
 | --- | --- |
