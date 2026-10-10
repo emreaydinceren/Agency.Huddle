@@ -1,7 +1,9 @@
 @*
-    Renders nothing. Keeps Room Tabs honest (docs/Huddle.Tabs-Specifications.md section 3): reads the
+    Renders nothing. Keeps Tabs honest (docs/Huddle.Tabs-Specifications.md section 3): reads the
     Rooms whenever they change or a Tab opens, retitles a Tab to its Room's current Name, and closes
-    the Tab of a Room that is archived or gone. A Tab opened from a URL, a reload or a link in a
+    the Tab of a Room that is archived or gone. When the Team catalog changes it also closes the Tab
+    of a Team or Project that no longer exists (never on the first pass - see
+    TabReconciler.ReconcileTeams for why). A Tab opened from a URL, a reload or a link in a
     Message has only the fallback title "Chat" until this runs - a menu click already carries the Name.
     When closing moves the active Tab, the router follows it.
 
@@ -11,6 +13,7 @@
 @implements IDisposable
 @inject TabService Tabs
 @inject ITeamDirectory TeamDirectory
+@inject ITeamCatalog Catalog
 @inject RoomEvents Events
 @inject NavigationManager Navigation
 
@@ -23,6 +26,7 @@
     {
         this.Events.RoomsChanged += this.OnChanged;
         this.Tabs.Changed += this.OnChanged;
+        this.Catalog.Changed += this.OnCatalogChanged;
         await this.ReconcileAsync();
     }
 
@@ -31,6 +35,26 @@
     {
         this.Events.RoomsChanged -= this.OnChanged;
         this.Tabs.Changed -= this.OnChanged;
+        this.Catalog.Changed -= this.OnCatalogChanged;
+    }
+
+    private void OnCatalogChanged()
+    {
+        _ = this.DispatchAsync(() =>
+        {
+            this.CloseMissingTeams();
+            return Task.CompletedTask;
+        });
+    }
+
+    private void CloseMissingTeams()
+    {
+        string? activeBefore = this.Tabs.Active?.Id;
+        TabReconciler.ReconcileTeams(this.Tabs, this.Catalog);
+        if (activeBefore is not null && this.Tabs.Active is { } now && !string.Equals(now.Id, activeBefore, StringComparison.Ordinal))
+        {
+            this.Navigation.NavigateTo(now.Url);
+        }
     }
 
     private void OnChanged()

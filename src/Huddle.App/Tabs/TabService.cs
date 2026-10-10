@@ -97,6 +97,23 @@ internal sealed class TabService
         this.Publish();
     }
 
+    /// <summary>Moves the active Tab by <paramref name="offset"/> places, wrapping at either end. Does nothing when fewer than two Tabs are open.</summary>
+    /// <param name="offset">Positive moves right, negative moves left.</param>
+    /// <returns>The Tab that is now active, or <see langword="null"/> when nothing changed.</returns>
+    public Tab? ActivateRelative(int offset)
+    {
+        int current = this.tabs.FindIndex(tab => string.Equals(tab.Id, this.activeId, StringComparison.Ordinal));
+        if (this.tabs.Count < 2 || current < 0)
+        {
+            return null;
+        }
+
+        int target = (((current + offset) % this.tabs.Count) + this.tabs.Count) % this.tabs.Count;
+        this.activeId = this.tabs[target].Id;
+        this.Publish();
+        return this.tabs[target];
+    }
+
     /// <summary>Makes the Tab with <paramref name="id"/> permanent. Does nothing when it already is or is unknown.</summary>
     /// <param name="id">The Tab to keep.</param>
     public void Pin(string id)

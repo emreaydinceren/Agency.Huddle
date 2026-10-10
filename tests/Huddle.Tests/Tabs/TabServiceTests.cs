@@ -271,4 +271,21 @@ public sealed class TabServiceTests
 
         Assert.False(service.Restore(snapshot));
     }
+
+    /// <summary>Moving by one wraps at both ends, and with fewer than two Tabs nothing moves.</summary>
+    [Fact]
+    public void ActivateRelative_WrapsAtBothEnds()
+    {
+        TabService service = new();
+        Tab a = service.Open("/teammates");
+        service.Pin(a.Id);
+        Assert.Null(service.ActivateRelative(1));
+        Tab b = service.Open("/settings");
+        service.Pin(b.Id);
+        Tab c = service.Open("/library");
+
+        Assert.Equal(a.Id, service.ActivateRelative(1)?.Id);
+        Assert.Equal(c.Id, service.ActivateRelative(-1)?.Id);
+        Assert.Equal(c.Id, service.Active?.Id);
+    }
 }

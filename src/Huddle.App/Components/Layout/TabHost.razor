@@ -9,6 +9,7 @@
 @implements IDisposable
 @inject TabService Tabs
 @inject NavigationManager Navigation
+@inject IJSRuntime JS
 
 <TabStrip />
 <div class="tab-body">
@@ -23,6 +24,8 @@
 </div>
 
 @code {
+    private DotNetObjectReference<TabHost>? self;
+
     /// <summary>The page body this host wraps.</summary>
     [Parameter, EditorRequired]
     public required RenderFragment ChildContent { get; set; }
@@ -35,9 +38,61 @@
         this.Navigation.LocationChanged += this.OnLocationChanged;
     }
 
-    /// <summary>Unsubscribes from <see cref="TabService.Changed"/> and navigation.</summary>
+    /// <summary>Registers the keyboard shortcuts once the page can run script.</summary>
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (!firstRender)
+        {
+            return;
+        }
+
+        this.self = DotNetObjectReference.Create(this);
+        try
+        {
+            await this.JS.InvokeVoidAsync("huddleTabs.attach", this.self);
+        }
+        catch (JSDisconnectedException)
+        {
+            // The circuit is gone; there is nothing to register shortcuts on.
+        }
+    }
+
+    /// <summary>
+    /// Called by the page's script for Alt+W (<c>close</c>), Alt+PageDown (<c>next</c>) and Alt+PageUp
+    /// (<c>previous</c>). The router follows whichever Tab ends up active.
+    /// </summary>
+    /// <param name="action">The shortcut: <c>close</c>, <c>next</c> or <c>previous</c>.</param>
+    [JSInvokable]
+    public Task ShortcutAsync(string action)
+    {
+        string? activeBefore = this.Tabs.Active?.Id;
+        switch (action)
+        {
+            case "close" when this.Tabs.Active is { } active:
+                this.Tabs.Close(active.Id);
+                break;
+            case "next":
+                this.Tabs.ActivateRelative(1);
+                break;
+            case "previous":
+                this.Tabs.ActivateRelative(-1);
+                break;
+            default:
+                return Task.CompletedTask;
+        }
+
+        if (this.Tabs.Active is { } now && !string.Equals(now.Id, activeBefore, StringComparison.Ordinal))
+        {
+            this.Navigation.NavigateTo(now.Url);
+        }
+
+        return Task.CompletedTask;
+    }
+
+    /// <summary>Unsubscribes from <see cref="TabService.Changed"/> and navigation, and removes the shortcuts.</summary>
     public void Dispose()
     {
+        this.self?.Dispose();
         this.Tabs.Changed -= this.OnTabsChanged;
         this.Navigation.LocationChanged -= this.OnLocationChanged;
     }

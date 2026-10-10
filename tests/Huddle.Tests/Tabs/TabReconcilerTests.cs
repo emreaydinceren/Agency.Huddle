@@ -55,4 +55,35 @@ public sealed class TabReconcilerTests
 
         Assert.Equal("Settings", Assert.Single(tabs.Tabs).Title);
     }
+
+    private static Teams.TeamSummary Team(string name, params string[] projects) => new(name, projects, [], true);
+
+    /// <summary>A Team or Project that is no longer in the catalog loses its Tab; one that is stays.</summary>
+    [Fact]
+    public void ReconcileTeams_RemovedTeamAndProject_CloseTheirTabs()
+    {
+        TabService tabs = new();
+        Tab keep = tabs.Open("/teams/Core");
+        tabs.Pin(keep.Id);
+        Tab project = tabs.Open("/teams/Core/projects/Gone");
+        tabs.Pin(project.Id);
+        Tab removed = tabs.Open("/teams/Removed");
+        tabs.Pin(removed.Id);
+
+        TabReconciler.ReconcileTeams(tabs, new Agency.Huddle.Tests.Teams.FakeTeamCatalog { Teams = [Team("Core", "Alpha")] });
+
+        Assert.Equal(["team:core"], tabs.Tabs.Select(static t => t.Key));
+    }
+
+    /// <summary>An empty catalog means "not loaded yet", so nothing is closed.</summary>
+    [Fact]
+    public void ReconcileTeams_EmptyCatalog_ClosesNothing()
+    {
+        TabService tabs = new();
+        tabs.Open("/teams/Core");
+
+        TabReconciler.ReconcileTeams(tabs, new Agency.Huddle.Tests.Teams.FakeTeamCatalog());
+
+        Assert.Single(tabs.Tabs);
+    }
 }

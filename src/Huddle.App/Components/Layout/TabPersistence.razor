@@ -1,0 +1,91 @@
+@*
+    Renders nothing. Remembers the open Tabs across a reload or restart (docs/Huddle.Tabs-Specifications.md
+    section 5): after the first render - there is no JavaScript while prerendering - it reads
+    huddle:tabs from the browser's local storage, restores it when TabSnapshot accepts it, and then
+    offers the current address to TabService.Open so the URL, which is the truth for the active Tab,
+    wins over whatever was active when the page was last closed. Only after that does it start
+    writing, so a fresh start can never overwrite what was stored with its own empty state.
+
+    Storage is per browser: two browser tabs on the app share one list and the last to change wins.
+    A storage that throws or is unavailable means "start with no stored Tabs", never an error.
+*@
+@using Agency.Huddle.App.Tabs
+@implements IDisposable
+@inject TabService Tabs
+@inject IJSRuntime JS
+@inject NavigationManager Navigation
+
+@code {
+    private const string StorageKey = "huddle:tabs";
+
+    private bool subscribed;
+
+    /// <summary>Restores the stored Tabs once, then keeps the stored copy current.</summary>
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (!firstRender)
+        {
+            return;
+        }
+
+        try
+        {
+            string? stored = await this.JS.InvokeAsync<string?>("huddleStorage.get", StorageKey);
+            if (this.Tabs.Restore(TabSnapshot.TryParse(stored)))
+            {
+                this.Tabs.Open(this.Navigation.Uri);
+            }
+
+            this.Tabs.Changed += this.OnTabsChanged;
+            this.subscribed = true;
+            await this.SaveAsync();
+        }
+        catch (JSDisconnectedException)
+        {
+            // The circuit is gone before storage answered; nothing to restore or save.
+        }
+    }
+
+    /// <summary>Stops saving.</summary>
+    public void Dispose()
+    {
+        if (this.subscribed)
+        {
+            this.Tabs.Changed -= this.OnTabsChanged;
+        }
+    }
+
+    private void OnTabsChanged()
+    {
+        _ = this.DispatchAsync(this.SaveAsync);
+    }
+
+    private async Task SaveAsync()
+    {
+        try
+        {
+            await this.JS.InvokeVoidAsync("huddleStorage.set", StorageKey, this.Tabs.Export().ToJson());
+        }
+        catch (JSDisconnectedException)
+        {
+            // The circuit is gone; the last save before it is what the next load restores.
+        }
+    }
+
+    // Mirrors MainLayout.razor's DispatchAsync: an event can fire while the circuit winds down.
+    private async Task DispatchAsync(Func<Task> action)
+    {
+        try
+        {
+            await this.InvokeAsync(action);
+        }
+        catch (ObjectDisposedException)
+        {
+            // Circuit gone; nothing to save.
+        }
+        catch (InvalidOperationException)
+        {
+            // Renderer disposed mid-dispatch.
+        }
+    }
+}

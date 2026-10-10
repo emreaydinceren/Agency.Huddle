@@ -138,4 +138,53 @@ public sealed class TabHostTests
 
         Assert.False(Assert.Single(tabs.Tabs).IsPreview);
     }
+
+    /// <summary>The shortcut script's Alt+W closes the active Tab and the router follows the neighbour.</summary>
+    [Fact]
+    public async Task Shortcut_Close_ClosesTheActiveTabAndNavigates()
+    {
+        await using MudBunitContext ctx = NewContext();
+        var nav = ctx.Services.GetRequiredService<NavigationManager>();
+        var tabs = ctx.Services.GetRequiredService<TabService>();
+        nav.NavigateTo("/teammates");
+        var cut = RenderHost(ctx);
+        cut.Find(".tab-item").DoubleClick();
+        nav.NavigateTo("/settings");
+        cut.WaitForAssertion(() => Assert.Equal(2, cut.FindAll(".tab-item").Count));
+
+        await cut.InvokeAsync(() => cut.Instance.ShortcutAsync("close"));
+
+        Assert.EndsWith("/teammates", nav.Uri, StringComparison.Ordinal);
+        Assert.Equal("teammates", tabs.Active?.Key);
+    }
+
+    /// <summary>The shortcut script's next and previous move the active Tab and the router follows.</summary>
+    [Fact]
+    public async Task Shortcut_NextAndPrevious_MoveBetweenTabs()
+    {
+        await using MudBunitContext ctx = NewContext();
+        var nav = ctx.Services.GetRequiredService<NavigationManager>();
+        nav.NavigateTo("/teammates");
+        var cut = RenderHost(ctx);
+        cut.Find(".tab-item").DoubleClick();
+        nav.NavigateTo("/settings");
+        cut.WaitForAssertion(() => Assert.Equal(2, cut.FindAll(".tab-item").Count));
+
+        await cut.InvokeAsync(() => cut.Instance.ShortcutAsync("next"));
+        Assert.EndsWith("/teammates", nav.Uri, StringComparison.Ordinal);
+
+        await cut.InvokeAsync(() => cut.Instance.ShortcutAsync("previous"));
+        Assert.EndsWith("/settings", nav.Uri, StringComparison.Ordinal);
+    }
+
+    /// <summary>The script is attached once the host has rendered.</summary>
+    [Fact]
+    public async Task FirstRender_AttachesTheShortcutScript()
+    {
+        await using MudBunitContext ctx = NewContext();
+
+        _ = RenderHost(ctx);
+
+        ctx.JSInterop.VerifyInvoke("huddleTabs.attach");
+    }
 }

@@ -9,6 +9,46 @@ namespace Agency.Huddle.App.Tabs;
 internal static class TabReconciler
 {
     private const string RoomKeyPrefix = "room:";
+    private const string TeamKeyPrefix = "team:";
+    private const string ProjectKeyPrefix = "project:";
+
+    /// <summary>
+    /// Closes Team and Project Tabs whose Team or Project is gone. Does nothing while the catalog lists
+    /// no Team at all: the catalog is built from stores that may still be scanning when a stored Tab is
+    /// restored, and an empty list then means "not loaded yet" far more often than "everything was
+    /// removed". The accepted cost is that removing the very last Team leaves its Tab open.
+    /// </summary>
+    /// <param name="tabs">The Tabs to bring in step.</param>
+    /// <param name="catalog">The Teams and Projects that exist now.</param>
+    internal static void ReconcileTeams(TabService tabs, Teams.ITeamCatalog catalog)
+    {
+        ArgumentNullException.ThrowIfNull(tabs);
+        ArgumentNullException.ThrowIfNull(catalog);
+
+        if (catalog.Teams.Count == 0)
+        {
+            return;
+        }
+
+        foreach (Tab tab in tabs.Tabs)
+        {
+            if (tab.Key.StartsWith(TeamKeyPrefix, StringComparison.Ordinal))
+            {
+                if (catalog.Find(tab.Key[TeamKeyPrefix.Length..]) is null)
+                {
+                    tabs.CloseByKey(tab.Key);
+                }
+            }
+            else if (tab.Key.StartsWith(ProjectKeyPrefix, StringComparison.Ordinal))
+            {
+                string[] parts = tab.Key[ProjectKeyPrefix.Length..].Split('/', 2);
+                if (parts.Length != 2 || !catalog.ProjectExists(parts[0], parts[1]))
+                {
+                    tabs.CloseByKey(tab.Key);
+                }
+            }
+        }
+    }
 
     /// <summary>Retitles and closes Room Tabs against <paramref name="rooms"/>; Tabs for other pages are left alone.</summary>
     /// <param name="tabs">The Tabs to bring in step.</param>
