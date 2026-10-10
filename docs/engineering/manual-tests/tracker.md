@@ -181,6 +181,8 @@ Application shell, navigation and layout — [area file](shell-nav.md)
 | [SHELLNAV-34](shell-nav.md#shellnav-34--closing-the-active-tab-activates-its-neighbour-and-closing-the-last-one-shows-no-pages-are-open) |  | Active |  |  |
 | [SHELLNAV-35](shell-nav.md#shellnav-35--typing-in-a-rooms-message-box-keeps-its-tab-and-the-unsent-text-survives-a-tab-switch-and-a-page-reload) |  | Active |  |  |
 | [SHELLNAV-36](shell-nav.md#shellnav-36--a-room-tab-opened-by-pasting-its-url-gets-the-rooms-name-as-its-title-within-a-moment) |  | Active |  |  |
+| [SHELLNAV-37](shell-nav.md#shellnav-37--open-tabs-come-back-after-a-reload-with-the-tab-for-the-current-page-active) |  | Active |  |  |
+| [SHELLNAV-38](shell-nav.md#shellnav-38--altw-altpage-down-and-altpage-up-close-and-move-between-tabs) |  | Active |  |  |
 
 ## startup-config
 

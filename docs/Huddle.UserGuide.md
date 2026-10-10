@@ -119,15 +119,20 @@ The Library is one tab like any other.
 - **Keep a tab** by double-clicking its menu item or the tab itself, or by typing in
   a message box on that tab. The title is no longer in italics, and the next click
   opens beside it.
-- **Close a tab** with its **×** or by middle-clicking it. If you close the last tab,
-  the page shows "No pages are open".
-- **Rooms:** a Room's tab takes the Room's name when you rename the Room, and closes
-  when the Room is archived or deleted.
+- **Close a tab** with its **×**, by middle-clicking it, or with **Alt+W**. If you
+  close the last tab, the page shows "No pages are open". **Alt+Page Down** and
+  **Alt+Page Up** move to the next and previous tab. (Ctrl+W and Ctrl+Tab belong to
+  the browser, which does not let a page take them.)
+- **Rooms, Teams and Projects:** a Room's tab takes the Room's name when you rename
+  the Room, and closes when the Room is archived or deleted. A Team's or Project's
+  tab closes when that Team or Project is removed.
 - **Half-written messages:** the text you have typed but not sent is kept for each
   Room while you switch between tabs, and it is still there after you reload the page.
 
-Open tabs are not yet restored after you reload the page; that arrives later. With
-many tabs open, each one gets narrow.
+Your open tabs come back after you reload the page or restart the app, in the same
+order, with the tab for the page you are on active. They are remembered by the
+browser, so another browser starts with its own. With many tabs open, each one gets
+narrow.
 
 ## The data model
 

@@ -1,6 +1,6 @@
 # Tabs: specification
 
-Status: **designed 2026-10-10**, delivery on `feat/tabs`. Owner: chat surface.
+Status: **built 2026-10-10** on `feat/tabs` ([ADR-0045](adr/0045-a-tab-is-a-remembered-url-and-only-the-active-one-is-mounted.md)). Owner: chat surface.
 
 ## 1. The idea
 
@@ -32,7 +32,7 @@ persisted format already allow it (section 5).
 | The page navigates itself to the same key | The Tab's URL and title update. No new Tab. |
 | The URL changes to a different key (browser Back, a link in a message, a typed URL) | Treated like a menu click: preview Tab, or activate. |
 | A Room is renamed | Its Tab title follows. |
-| A Room is archived or deleted | Its Tab closes (`TabRoomSync`). A removed Team's or Project's Tab does not yet: the Team catalog may not be loaded when a stored Tab is restored, and closing on an empty catalog would lose good Tabs. |
+| A Room is archived or deleted | Its Tab closes (`TabSync`). A removed Team's or Project's Tab closes too, but only when the catalog announces a change and still lists at least one Team: an empty catalog is read as "not loaded yet", so removing the very last Team leaves its Tab open. |
 | Reload or restart | Tabs, their order, the active Tab and the preview flags are restored. |
 
 ### Tab keys
@@ -103,8 +103,13 @@ and then open the Library Tab on the file. This is done: `LibraryLinkRouter` doe
 2. `TabStrip`, `NavTabLink`; wire `MainLayout` and the left-menu components; bUnit tests.
 3. Title refresh, close on archive and delete, the per-Room draft, pin on typing. (Done.)
 4. Retire the Library pane and the pane-side setting; reroute links to the Tab. (Done.)
-5. Persistence, keyboard shortcuts (`Ctrl+W`, `Ctrl+Tab`).
-6. User guide, manual tests in `shell-nav.md`, ADR.
+5. Persistence, keyboard shortcuts, close removed Team and Project Tabs. (Done.)
+
+   Shortcuts are **Alt+W** (close), **Alt+Page Down** and **Alt+Page Up** (next, previous). The
+   obvious Ctrl+W, Ctrl+Tab and Ctrl+Page Up/Down are the browser's own and a page cannot take
+   them. Storage is `localStorage`, so two browser tabs on the app share one list and the last to
+   change wins.
+6. User guide, manual tests in `shell-nav.md`, ADR. (Done.)
 
 ## 8. Not in version 1
 

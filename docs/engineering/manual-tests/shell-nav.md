@@ -2,7 +2,7 @@
 
 Prove the Agency.Huddle shell holds together: that the five routes this page exercises (`/`, `/rooms/{RoomId}`, `/teammates`, `/settings`, `/settings/{Tab}`) resolve, that the fixed 240px `MudDrawer` is identical on every one of them, and above all that the shell's own assets actually load. The drawer holds the `Chats` group (the room list, with **New chat** inside it), the `Teams` group, **Teammates**, the `Tasks` and `Library` groups, and a bottom row of two icon-only links, Archived chats and **Settings**. The Tasks, Library and Teams pages (`/tasks…`, `/library`, `/teams/…`) have no shell-level test here. The asset check is the reason this area is tested by hand: `@Assets["..."]` hands back an unresolved key verbatim instead of throwing, so a stale stylesheet or script name renders as an ordinary-looking href that 404s with no build warning, no startup error, no log line and no visual error. That exact failure shipped live for a month after the 2026-09-12 namespace rename. Nothing in this area needs a Claude turn, so every test below is free.
 
-**34 tests** · 34 free, none paid · about 3.2 hours.
+**36 tests** · 36 free, none paid · about 3.4 hours.
 
 Read [the manual test script](../manual-tests.md) first — the cost guard, the Model and Effort
 convention, and the rules for concluding a result — then [Common procedures](common.md), which
@@ -1424,7 +1424,7 @@ The drawer content is shorter than the viewport in step 6 no matter how small yo
 - The draft text is gone after switching tabs or after the reload.
 - The draft shows up in another Room's box -> drafts are not kept per Room.
 
-**Note:** tabs are not restored after a reload yet, so step 5 may start with no tab open; that is expected and is not a failure.
+**Note:** tabs are restored after a reload, so step 5 may start with the tabs from earlier in this test already open; that is expected and is not a failure.
 
 ---
 
@@ -1454,6 +1454,66 @@ The drawer content is shorter than the viewport in step 6 no matter how small yo
 
 - The title stays as an id or a placeholder -> the title refresh is not running.
 - No tab opens for a pasted URL.
+
+---
+
+### SHELLNAV-37 — Open tabs come back after a reload, with the tab for the current page active
+
+**Free** · about 4 min
+
+*Tabs spec §3 and §5: the tabs are stored in the browser and restored after the first render; the address in the bar decides which one is active.*
+
+**Before you start**
+
+- `P-LAUNCH-UAT`. Close every tab. Double-click `Teammates` and `Settings` in the menu so both are kept, then click Ada's Room once so it is a preview tab.
+
+**Steps**
+
+1. Read the tab strip: three tabs, `Teammates`, `Settings`, and Ada's Room in italics.
+2. Navigate the browser to the `Teammates` address and press Enter, so the page reloads on a different tab from the one active before.
+3. Read the strip again after about two seconds.
+4. Stop the app and start it again with `P-LAUNCH-UAT`, open the app, and read the strip once more.
+
+**Pass if — all of these**
+
+- Step 3 shows the same three tabs in the same order, `Teammates` active, Ada's Room still in italics.
+- Step 4 shows the same tabs again.
+
+**Fail if — any of these**
+
+- The strip starts with only the current page -> the stored tabs were not restored.
+- The tab that was active before the reload is active instead of the one in the address bar.
+
+---
+
+### SHELLNAV-38 — Alt+W, Alt+Page Down and Alt+Page Up close and move between tabs
+
+**Free** · about 3 min
+
+*Tabs spec §3: the keyboard shortcuts use Alt because the browser keeps Ctrl+W and Ctrl+Tab.*
+
+**Before you start**
+
+- `P-LAUNCH-UAT`. Close every tab, then keep three: double-click `Teammates`, `Settings` and Ada's Room in the menu.
+
+**Steps**
+
+1. With Ada's Room active, press Alt+Page Down.
+2. Press Alt+Page Up twice.
+3. Press Alt+W.
+4. Press Alt+W until no tab is left.
+
+**Pass if — all of these**
+
+- Step 1 moves to `Teammates` (the strip wraps round) and the page changes with it.
+- Step 2 moves back through Ada's Room to `Settings`.
+- Step 3 closes `Settings` and the page switches to its neighbour.
+- Step 4 ends with "No pages are open".
+
+**Fail if — any of these**
+
+- The browser closes its own tab or switches its own tab -> the page did not take the shortcut.
+- The page and the active tab disagree after a shortcut.
 
 ---
 
