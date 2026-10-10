@@ -146,8 +146,7 @@ other: opening it takes you to it. Closing the last tab in a pane closes the pan
 
 Your open tabs and panes come back after you reload the page or restart the app, in the
 same order, with the tab for the page you are on active. They are remembered by the
-browser, so another browser starts with its own. With many tabs open, each one gets
-narrow.
+browser, so another browser starts with its own. Each tab is at least a fixed width, so with many open the strip scrolls sideways.
 
 ## The data model
 

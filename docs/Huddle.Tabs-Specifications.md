@@ -124,8 +124,9 @@ strip (decided 2026-10-10 to leave for version 2):
   default when groups exist, since overflow behaves differently at narrow widths.
 - **Scroll the active Tab into view** when it is activated off-screen.
 
-Known limit until then: the strip is one row that scrolls sideways, and Tabs shrink with no lower
-width, so with many open each shows little more than its icon.
+Known limit until then: the strip is one row that scrolls sideways. A Tab is never narrower than 10rem
+(a pinned Tab, an icon alone, is the exception), so with many open the strip scrolls rather than shrinking
+the titles away; the active Tab is not yet scrolled into view.
 
 ## 9. Version 2: split, pinned Tabs and the Tab menu
 
