@@ -674,6 +674,11 @@
     private string? filePath;
     private PersonaStatus status = new(PersonaState.Offline, null, DateTimeOffset.MinValue);
 
+    // The title the dialog's title bar was last told to show. MudBlazor's dialog instance renders
+    // TitleContent itself and does not repaint it when this component re-renders, so OnAfterRender
+    // compares CardTitle with this and asks the instance to repaint when they differ.
+    private string? paintedTitle;
+
     // What this Persona's Adapter has reported spending since the app started, one entry per
     // currency, re-read on PersonaSpend.SpendChanged. Empty when nothing was reported.
     private IReadOnlyList<SpendAmount> spendAmounts = [];
@@ -840,7 +845,26 @@
         }
     }
 
-    /// <summary>Unsubscribes from <see cref="PersonaHealth.Changed"/>, <see cref="IAgentGateway.PresenceChanged"/> and <see cref="SkillStore.SkillsChanged"/> - see the file-level comment for why this card, alone among components showing a snapshot-at-open parameter, keeps live subscriptions.</summary>
+    /// <summary>
+    /// Repaints the dialog's title bar when <see cref="CardTitle"/> changed since it was last painted
+    /// (Create to View after Add teammate, View to Edit, a rename saved in Edit). The dialog instance
+    /// owns the title bar and ignores this component's own re-renders, so without this the header
+    /// keeps the wording the card opened with.
+    /// </summary>
+    protected override void OnAfterRender(bool firstRender)
+    {
+        var cardTitle = this.CardTitle;
+        if (!string.Equals(cardTitle, this.paintedTitle, StringComparison.Ordinal))
+        {
+            this.paintedTitle = cardTitle;
+            if (!firstRender)
+            {
+                this.MudDialog.StateHasChanged();
+            }
+        }
+    }
+
+    /// <summary>Unsubscribes from <see cref="PersonaHealth.Changed"/>,<see cref="IAgentGateway.PresenceChanged"/> and <see cref="SkillStore.SkillsChanged"/> - see the file-level comment for why this card, alone among components showing a snapshot-at-open parameter, keeps live subscriptions.</summary>
     public void Dispose()
     {
         this.Health.Changed -= this.OnHealthOrPresenceChanged;
@@ -908,12 +932,27 @@
     /// </summary>
     private void OnHealthOrPresenceChanged()
     {
-        _ = this.DispatchAsync(() =>
+        _ = this.DispatchAsync(async () =>
         {
+            await this.ResolveAgentIdAsync();
             this.RefreshStatus();
             this.StateHasChanged();
-            return Task.CompletedTask;
         });
+    }
+
+    /// <summary>
+    /// Looks the Teammate's Agent user up when <see cref="agentId"/> is still unknown. A card opened in
+    /// Create mode has none, and the user row for a Teammate that was just added may only appear after
+    /// the card saved, so the lookup is retried on each health or presence report until it succeeds;
+    /// without it the card would resolve "not connected" for the whole life of the dialog.
+    /// </summary>
+    private async Task ResolveAgentIdAsync()
+    {
+        if (this.agentId is null && this.mode != TeammateCardMode.Create)
+        {
+            var agent = await this.TeamDirectory.FindUserByNameAsync(this.name);
+            this.agentId = agent?.Id;
+        }
     }
 
     private async Task DispatchAsync(Func<Task> action)
@@ -1883,6 +1922,12 @@
         // read back immediately and an edit visibly took.
         this.RefreshFromStore();
         this.mode = TeammateCardMode.View;
+
+        // A Create has no Agent user or status yet, and a rename moves both to the new name: resolve
+        // them for the Teammate this card now shows instead of leaving the status the card opened with.
+        this.agentId = null;
+        await this.ResolveAgentIdAsync();
+        this.RefreshStatus();
         this.confirmingRemove = false;
         this.confirmingReset = false;
         this.effortResetByModelChange = false;

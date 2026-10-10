@@ -1063,6 +1063,15 @@ button:focus-visible {
     .avatar-library-filters > * {
         flex-shrink: 0;
     }
+
+    /* The count line and Clear all stay pinned to the bottom edge of the scrolling filters, so they are
+       in view without a scroll however tall the chips above them are. */
+    .avatar-library-filters > .avatar-library-status {
+        position: sticky;
+        bottom: 0;
+        background: var(--mud-palette-surface);
+        padding-block: 0.25rem;
+    }
 }
 
 .teammate-card-name {
@@ -2098,4 +2107,30 @@ button:focus-visible {
    work are told apart at a glance. */
 .mud-drawer {
     border-inline-end: 1px solid var(--mud-palette-divider);
+}
+
+/* The Team page toolbar (action button and search box) sits in a column that the persistent 240px
+   drawer leaves very narrow on a phone: let the two wrap onto their own lines and let the search box
+   shrink, so neither is clipped by the column. */
+.team-tab-toolbar {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 8px 16px;
+}
+
+.team-tab-toolbar-action {
+    max-width: 100%;
+}
+
+.team-tab-toolbar-search {
+    flex: 1 1 160px;
+    min-width: 0;
+}
+
+@media (max-width: 600px) {
+    .team-page-wide .team-members,
+    .team-page-wide .team-tasks-tab {
+        padding-inline: 8px;
+    }
 }
