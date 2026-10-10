@@ -27,12 +27,12 @@ persisted format already allow it (section 5).
 | --- | --- |
 | Click a left-menu item | Opens a preview Tab, inserted right of the active Tab. An existing preview Tab is replaced in place. |
 | Click an item whose key is open | Activates that Tab and updates its URL. It is never duplicated, and a permanent Tab stays permanent. |
-| Double-click a menu item or a Tab; type in the composer; edit a Task; save a setting | The Tab becomes permanent. |
+| Double-click a menu item or a Tab; type in the composer | The Tab becomes permanent. Editing a Task and saving a setting should too, and do not yet. |
 | Close (x, middle-click) | The right neighbour becomes active, else the left. Closing the last Tab shows an empty state. |
 | The page navigates itself to the same key | The Tab's URL and title update. No new Tab. |
 | The URL changes to a different key (browser Back, a link in a message, a typed URL) | Treated like a menu click: preview Tab, or activate. |
 | A Room is renamed | Its Tab title follows. |
-| A Room is archived or deleted, a Team removed | Its Tab closes. |
+| A Room is archived or deleted | Its Tab closes (`TabRoomSync`). A removed Team's or Project's Tab does not yet: the Team catalog may not be loaded when a stored Tab is restored, and closing on an empty catalog would lose good Tabs. |
 | Reload or restart | Tabs, their order, the active Tab and the preview flags are restored. |
 
 ### Tab keys
@@ -55,9 +55,12 @@ Keys compare ordinally and case-sensitively, except Team and Project names, whic
 ## 4. Where state lives
 
 Only the active Tab is a live component (the router mounts one page). A Tab keeps nothing alive
-while hidden. What survives a switch is persisted per Tab in a `TabState` bag: the composer draft
-and the scroll offset. Everything else a page needs is already in its stores and is read again on
-activation, exactly as when the Human navigates today.
+while hidden. What survives a switch is the Composer's unsent text, kept by the Composer's script in
+`sessionStorage` under `huddle:draft:{roomId}` (it survives a reload but not an app restart, and is
+cleared on send). It follows the Room, so it also fixes text leaking from one Room into the next.
+Everything else a page needs is already in its stores and is read again on activation, exactly as
+when the Human navigates today. A scroll offset is not kept: the Chat list sticks to the bottom, and
+no other page needs it yet.
 
 The URL stays the source of truth for the active Tab. A Tab is a remembered URL.
 
@@ -79,11 +82,13 @@ after the first render (no JavaScript during prerender), then reconciles with th
 
 ### Navigation
 
-Pages that navigate themselves call `ITabNavigator`, not `NavigationManager`. In version 1 it
-delegates to `NavigationManager`. In version 2 each group gets its own navigator and its own page
-host (`DynamicComponent`, resolved from the Tab's URL), because two groups show two pages at once
-and the browser URL names only the focused one. Version 2 must also audit anything page-global that
-assumes one open Room (render coalescing, `Drafts`, focus).
+Version 1 pages keep calling `NavigationManager`. An `ITabNavigator` abstraction was planned for
+version 1 and dropped (2026-10-10): with one implementation that only delegates, it would add
+nothing and force every page's test fixture to register it. Version 2 introduces it when it has
+a second implementation: each group gets its own navigator and its own page host
+(`DynamicComponent`, resolved from the Tab's URL), because two groups show two pages at once and the
+browser URL names only the focused one. Version 2 must also audit anything page-global that assumes
+one open Room (render coalescing, `Drafts`, focus).
 
 ## 6. Library
 
@@ -96,7 +101,7 @@ and then open the Library Tab on the file.
 
 1. `Tabs/` domain: `Tab`, `TabKeys`, `TabService`, `TabSnapshot`; unit tests.
 2. `TabStrip`, `NavTabLink`; wire `MainLayout` and the left-menu components; bUnit tests.
-3. Location sync, title refresh, close on archive and delete, `TabState` (draft, scroll).
+3. Title refresh, close on archive and delete, the per-Room draft, pin on typing. (Done.)
 4. Retire the Library pane and the pane-side setting; reroute links to the Tab.
 5. Persistence, keyboard shortcuts (`Ctrl+W`, `Ctrl+Tab`).
 6. User guide, manual tests in `shell-nav.md`, ADR.

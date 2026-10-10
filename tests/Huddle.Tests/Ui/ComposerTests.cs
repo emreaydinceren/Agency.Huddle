@@ -21,6 +21,36 @@ namespace Agency.Huddle.Tests.Ui;
 /// </summary>
 public sealed class ComposerTests
 {
+    /// <summary>The script is attached with a draft key naming the Room, so unsent text follows its Room across Tabs.</summary>
+    [Fact]
+    public async Task Attach_PassesTheRoomsDraftKey()
+    {
+        using TaskToolHarness harness = new();
+        await using MudBunitContext ctx = ComposerTests.NewContext(harness);
+
+        _ = ComposerTests.RenderComposer(ctx);
+
+        var invocation = ctx.JSInterop.VerifyInvoke("teamComposer.attach");
+        Assert.Equal("huddle:draft:any-room", invocation.Arguments[2]);
+    }
+
+    /// <summary>The first typing in a Composer makes the Room's Tab permanent.</summary>
+    [Fact]
+    public async Task TypedAsync_PinsTheRoomsTab()
+    {
+        using TaskToolHarness harness = new();
+        await using MudBunitContext ctx = ComposerTests.NewContext(harness);
+        var tabs = new Agency.Huddle.App.Tabs.TabService();
+        ctx.Services.AddSingleton(tabs);
+        tabs.Open("/rooms/any-room");
+        IRenderedComponent<ContainerFragment> cut = ComposerTests.RenderComposer(ctx);
+        IRenderedComponent<Composer> composer = cut.FindComponent<Composer>();
+
+        await cut.InvokeAsync(() => composer.Instance.TypedAsync());
+
+        Assert.False(Assert.Single(tabs.Tabs).IsPreview);
+    }
+
     /// <summary>A query that matches a Task by title opens the popover and renders only the matching row (Spec §13.13.4 "the search").</summary>
     [Fact]
     public async Task TaskQueryAsync_MatchingQuery_OpensListboxWithTheMatchingRow()

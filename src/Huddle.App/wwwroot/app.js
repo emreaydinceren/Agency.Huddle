@@ -2,8 +2,44 @@ window.teamComposer = {
     // The `#` picker (Spec §13.13.4) lives in this same keydown handler rather than a second one,
     // with its open/query state kept on the element itself (el._picker) so several Composer
     // instances on the page never share state.
-    attach(el, dotnetRef) {
+    //
+    // A draft is the unsent text, kept per key (the Composer passes its Room) in sessionStorage, so
+    // switching Tabs or Rooms and coming back finds what was typed. It is cleared on send.
+    // sessionStorage and not localStorage: a half-written message should survive a reload, not an
+    // app restart.
+    draftGet(key) {
+        try { return window.sessionStorage.getItem(key); } catch { return null; }
+    },
+
+    draftSet(key, value) {
+        try {
+            if (value) {
+                window.sessionStorage.setItem(key, value);
+            } else {
+                window.sessionStorage.removeItem(key);
+            }
+        } catch { }
+    },
+
+    // Points the textarea at another draft: what is typed stays under the old key (it was saved on
+    // input) and the new key's text, if any, replaces it.
+    setDraftKey(el, key) {
+        el._draftKey = key;
+        el.value = (key && window.teamComposer.draftGet(key)) || "";
+        el._picker.open = false;
+        el._typedNotified = false;
+    },
+
+    attach(el, dotnetRef, draftKey) {
         el._picker = { open: false };
+        el._draftKey = draftKey || null;
+        el._typedNotified = false;
+        if (el._draftKey) {
+            const saved = window.teamComposer.draftGet(el._draftKey);
+            if (saved) {
+                el.value = saved;
+            }
+        }
 
         el.addEventListener("keydown", async (e) => {
             const picker = el._picker;
@@ -54,10 +90,25 @@ window.teamComposer = {
                 await dotnetRef.invokeMethodAsync("SendAsync", el.value);
                 el.value = "";
                 el._picker.open = false;
+                if (el._draftKey) {
+                    window.teamComposer.draftSet(el._draftKey, "");
+                }
             }
         });
 
         el.addEventListener("input", async () => {
+            if (el._draftKey) {
+                window.teamComposer.draftSet(el._draftKey, el.value);
+            }
+
+            // Typing keeps the Tab (docs/Huddle.Tabs-Specifications.md): told once per Composer, not per keystroke.
+            if (!el._typedNotified && el.value) {
+                el._typedNotified = true;
+                try {
+                    await dotnetRef.invokeMethodAsync("TypedAsync");
+                } catch { }
+            }
+
             const beforeCaret = el.value.substring(0, el.selectionStart);
             const match = beforeCaret.match(/(?:^|\s)#([A-Za-z0-9-]{0,40})$/);
             if (match) {

@@ -5,6 +5,7 @@
 @inject IJSRuntime JS
 @inject TaskStore Tasks
 @inject IOptions<TeamOptions> TeamOptions
+@inject IServiceProvider Services
 
 <div class="composer" style="position: relative;">
     @if (this.errorText is not null)
@@ -54,6 +55,7 @@
     private ElementReference textarea;
     private DotNetObjectReference<Composer>? selfReference;
     private string? loadedRoomId;
+    private string? attachedRoomId;
     private string? errorText;
     private string? infoText;
 
@@ -94,12 +96,34 @@
     {
         if (!firstRender)
         {
+            // A Room switch on the same Composer points the textarea at that Room's own unsent text.
+            if (this.selfReference is not null && !string.Equals(this.attachedRoomId, this.RoomId, StringComparison.Ordinal))
+            {
+                this.attachedRoomId = this.RoomId;
+                await this.JS.InvokeVoidAsync("teamComposer.setDraftKey", this.textarea, DraftKey(this.RoomId));
+            }
+
             return;
         }
 
         this.selfReference = DotNetObjectReference.Create(this);
-        await this.JS.InvokeVoidAsync("teamComposer.attach", this.textarea, this.selfReference);
+        this.attachedRoomId = this.RoomId;
+        await this.JS.InvokeVoidAsync("teamComposer.attach", this.textarea, this.selfReference, DraftKey(this.RoomId));
     }
+
+    /// <summary>
+    /// Called by the Composer's script the first time the Human types here: typing is working in the
+    /// page, so its Tab stops being a preview. <see cref="Agency.Huddle.App.Tabs.TabService"/> is looked up rather than
+    /// injected so a Composer rendered outside the app shell (a test) needs no Tab service.
+    /// </summary>
+    [JSInvokable]
+    public Task TypedAsync()
+    {
+        this.Services.GetService<Agency.Huddle.App.Tabs.TabService>()?.PinByKey($"room:{this.RoomId}");
+        return Task.CompletedTask;
+    }
+
+    private static string DraftKey(string roomId) => $"huddle:draft:{roomId}";
 
     [JSInvokable]
     public async Task SendAsync(string text)
