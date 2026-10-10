@@ -105,12 +105,39 @@
 .tab-action {
     display: inline-flex;
     align-items: center;
-    padding: 0.125rem;
+    justify-content: center;
+    width: 1.5rem;
+    height: 1.5rem;
+    margin-inline-start: 0.125rem;
+    padding: 0;
     border: 0;
     border-radius: var(--mud-default-borderradius);
     background: transparent;
     color: inherit;
     cursor: pointer;
+}
+
+/* A divider before the move pair sets it apart from the chevron, and the toolbar's
+   own right edge is a divider against the x. */
+.tab-action:not(.tab-action-move) + .tab-action-move {
+    position: relative;
+    margin-inline-start: 0.375rem;
+}
+
+.tab-action:not(.tab-action-move) + .tab-action-move::before {
+    content: '';
+    position: absolute;
+    inset-block: 0.25rem;
+    inset-inline-start: -0.25rem;
+    border-inline-start: 1px solid var(--mud-palette-lines-default);
+}
+
+.tab-actions::after {
+    content: '';
+    align-self: stretch;
+    margin-block: 0.25rem;
+    margin-inline: 0.25rem 0.125rem;
+    border-inline-start: 1px solid var(--mud-palette-lines-default);
 }
 
 .tab-action:hover {

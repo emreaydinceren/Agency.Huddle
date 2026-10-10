@@ -44,14 +44,14 @@
             {
                 <span class="tab-title">@tab.Title</span>
                 <span class="tab-actions">
-                    <button type="button" class="tab-action" aria-label="@($"Menu for {tab.Title}")"
+                    <button type="button" class="tab-action" aria-label="@($"Menu for {tab.Title}")" title="Tab menu"
                             @onclick="@(e => this.OnContextMenuAsync(tab, e))" @onclick:stopPropagation="true"
                             @ondblclick:stopPropagation="true">
                         <MudIcon Icon="@Icons.Material.Filled.ExpandMore" Size="Size.Small" />
                     </button>
                     @if (this.Tabs.CanMoveLeft(tab.Id))
                     {
-                        <button type="button" class="tab-action" aria-label="@($"Move {tab.Title} left")"
+                        <button type="button" class="tab-action tab-action-move" aria-label="@($"Move {tab.Title} left")" title="Move left"
                                 @onclick="@(() => this.Move(tab, left: true))" @onclick:stopPropagation="true"
                                 @ondblclick:stopPropagation="true">
                             <MudIcon Icon="@TabIcons.MoveSelectionLeft" Size="Size.Small" />
@@ -59,7 +59,7 @@
                     }
                     @if (this.Tabs.CanMoveRight(tab.Id))
                     {
-                        <button type="button" class="tab-action" aria-label="@($"Move {tab.Title} right")"
+                        <button type="button" class="tab-action tab-action-move" aria-label="@($"Move {tab.Title} right")" title="Move right"
                                 @onclick="@(() => this.Move(tab, left: false))" @onclick:stopPropagation="true"
                                 @ondblclick:stopPropagation="true">
                             <MudIcon Icon="@TabIcons.MoveSelectionRight" Size="Size.Small" />
