@@ -14,8 +14,8 @@ defines the terminals, states, procedures and oracles this page names. Both are 
 > There is **no light/dark control** on this tab: choosing a Theme chooses light or dark, and the
 > application ignores the device's colour setting entirely. The per-token override layer
 > (`wwwroot/theme.css`, `themes/*.css`, `ThemeOverrides`) no longer exists.
-> `appearance.json` holds the keys `theme`, `accentColor` (Custom Accent only) and `libraryPaneSide`;
-> a retired `dark` key left in an old file is kept as an unknown key and ignored.
+> `appearance.json` holds the keys `theme`, and `accentColor` (Custom Accent only);
+> a retired `dark` key, or a retired `libraryPaneSide` key, left in an old file is kept as an unknown key and ignored.
 >
 > [`docs/engineering/known-limits.md`](../known-limits.md) is the source of truth for what a Theme
 > can no longer do — read it before filing anything here as a defect.
@@ -33,7 +33,7 @@ standing conventions. This area adds:
 4. Go to `http://localhost:5100/settings/appearance` and read the path in the paragraph that begins `The selection is stored at` (the first of the two file paths on the tab; the second, under `Your avatar`, is `avatars.json` and is not this file). It should read `<data>\appearance.json`. THE ON-SCREEN PATH IS THE AUTHORITY — if it differs, edit the file the page names, not the one in these steps. Every `<data>\appearance.json` below means that file.
 5. Have a plain text editor (Notepad, VS Code) ready to create and save that file. A save is picked up by a filesystem watcher about 0.5 seconds later.
 6. Selecting a Theme on this tab does not force a page reload — it applies immediately through MudBlazor's `MudThemeProvider`. No test below needs F5 to see a colour change; where a test does still want a full load (to prove one is no longer required, or to check first-paint) it says so explicitly.
-7. The Theme picker is a **list**, not a dropdown: every Theme is on screen under a `Light`, `Dark` or `High contrast` heading, and "select a Theme" below means clicking its row. Nothing needs opening first. Below the picker the tab also holds a `Library pane` Right/Left choice and a `Your avatar` section; no test in this part touches them.
+7. The Theme picker is a **list**, not a dropdown: every Theme is on screen under a `Light`, `Dark` or `High contrast` heading, and "select a Theme" below means clicking its row. Nothing needs opening first. Below the picker the tab also holds a `Your avatar` section; no test in this part touches it.
 8. No test in this area needs a Model, and none spends money.
 
 ## Tests
@@ -100,7 +100,7 @@ If the page will not load at all (connection refused, or an ASP.NET error page),
 
 1. Go to http://localhost:5100/settings/appearance.
 2. Read the paragraph above the Theme picker. Compare it word for word with: `Pick a theme. Each theme is either a light or a dark one, so choosing it sets the application's light or dark colours too.`
-3. Read the credit line: the paragraph below the picker and the `Library pane` Right/Left choice (and, only while a Custom Accent theme is selected, below the `Accent colour` picker too). Compare it word for word with: `Custom Accent lets you pick your own accent colour, adjusted if needed so it stays readable. Every other theme except Huddle Light and Huddle Dark is one of the colour themes bundled with Visual Studio Code, mapped onto this application's palette. Visual Studio Code and its default themes are Microsoft's, under the MIT licence; Solarized is Ethan Schoonover's and Monokai is Wimer Hazenberg's.`
+3. Read the credit line: the paragraph below the picker (and, only while a Custom Accent theme is selected, below the `Accent colour` picker too). Compare it word for word with: `Custom Accent lets you pick your own accent colour, adjusted if needed so it stays readable. Every other theme except Huddle Light and Huddle Dark is one of the colour themes bundled with Visual Studio Code, mapped onto this application's palette. Visual Studio Code and its default themes are Microsoft's, under the MIT licence; Solarized is Ethan Schoonover's and Monokai is Wimer Hazenberg's.`
 4. Read the paragraph directly after the credit line. Compare it word for word with: `The selection is stored at <path>. The file does not exist until you save a choice here, so it being absent is expected, not a bug.` (It is not the last paragraph: the `Your avatar` section and its own `Your avatar is stored at` paragraph follow it.)
 5. Read the path rendered in monospace in the selection paragraph. Write it down. It must be an absolute path, e.g. `<repo>\src\Huddle.App\App_Data\appearance.json` written out in full.
 6. Scan the whole Appearance panel for the sentence `A prompt is one piece of wording this application sends to a model` and for any mention of `prompts.json`, and for any mention of a token name such as `--font-chat` or an "Overrides" heading.
@@ -114,7 +114,7 @@ If the page will not load at all (connection refused, or an ASP.NET error page),
 - The path shown is absolute and ends in `\appearance.json`.
 - Neither the Prompts intro sentence nor any mention of `prompts.json` appears anywhere on the Appearance panel, and there is no token name and no "Overrides" section — that whole layer is gone, not merely hidden.
 - Both of the Prompts paragraphs DO appear on the Prompts panel.
-- The credit line sits below the picker (after the Library pane choice), names Visual Studio Code, excepts both `Huddle Light` and `Huddle Dark`, and attributes only Solarized and Monokai. It must not attribute Abyss, Kimbie Dark, Red, Quiet Light, Monokai Dimmed or Tomorrow Night Blue to anyone — those ship in VS Code with no third-party attribution on disk, so naming an author would be inventing one.
+- The credit line sits directly below the Theme picker (and the Accent colour picker, when shown), names Visual Studio Code, excepts both `Huddle Light` and `Huddle Dark`, and attributes only Solarized and Monokai. It must not attribute Abyss, Kimbie Dark, Red, Quiet Light, Monokai Dimmed or Tomorrow Night Blue to anyone — those ship in VS Code with no third-party attribution on disk, so naming an author would be inventing one.
 
 **Fail if — any of these**
 
@@ -144,7 +144,7 @@ If the path shown differs from `<repo>\src\Huddle.App\App_Data\appearance.json`,
 
 1. Find the Theme picker on the Appearance panel. It is a list, already showing its entries — nothing to open.
 2. Read every heading and every row top to bottom and write the list down. Scroll the list if it does not all fit.
-3. Look over the whole panel for any control offering light, dark or system, a select or a toggle. Note the other controls that are there: the `Library pane` Right/Left choice and the `Your avatar` section. Click `Custom Accent Light` and note that an `Accent colour` picker appears below the list, then click `Huddle Light` and note that it goes away. Both clicks write `<data>\appearance.json`; delete it afterwards (`P-RESET-SETTINGS`).
+3. Look over the whole panel for any control offering light, dark or system, a select or a toggle. Note the other control that is there: the `Your avatar` section. Click `Custom Accent Light` and note that an `Accent colour` picker appears below the list, then click `Huddle Light` and note that it goes away. Both clicks write `<data>\appearance.json`; delete it afterwards (`P-RESET-SETTINGS`).
 
 **Pass if — all of these**
 
@@ -155,7 +155,7 @@ If the path shown differs from `<repo>\src\Huddle.App\App_Data\appearance.json`,
 - `Huddle Light` is **first** under `Light`, and `Light` is the first heading. Three call sites read `BuiltIn[0]` to mean "the default Theme", so a Theme appearing above it is a real defect, not a cosmetic one.
 - The two High Contrast Themes are under their **own** heading, not under `Dark` and `Light`. `ThemeGroup` is deliberately not `ThemeMode`.
 - There is no `Dark (Visual Studio)` and no `Light (Visual Studio)`. Those two were deliberately not imported: their palettes resolve byte-identically to `Dark+` and `Light+`, because upstream they differ only in `tokenColors` — syntax highlighting, which this application does not render.
-- **There is no light/dark/system control.** Besides the intro paragraph, the picker and the credit line, the panel holds only: the `Accent colour` picker (shown only while `Custom Accent Light` or `Custom Accent Dark` is selected), the `Library pane` Right/Left choice, the selection-file path, the `Your avatar` section and its file path.
+- **There is no light/dark/system control.** Besides the intro paragraph, the picker and the credit line, the panel holds only: the `Accent colour` picker (shown only while `Custom Accent Light` or `Custom Accent Dark` is selected), the selection-file path, the `Your avatar` section and its file path.
 
 **Fail if — any of these**
 
@@ -807,14 +807,14 @@ If the dialog never appears when you stop the server, reload the page, interact 
 
 **Steps**
 
-1. Find the paragraph that begins `Custom Accent lets you pick your own accent colour`. It sits after the Theme picker, the Accent colour picker (shown only for Custom Accent) and the `Library pane` Right/Left radios, and above the paragraph that begins `The selection is stored at` (`Appearance.razor:101-111`).
+1. Find the paragraph that begins `Custom Accent lets you pick your own accent colour`. It sits after the Theme picker, the Accent colour picker (shown only for Custom Accent), and above the paragraph that begins `The selection is stored at` (`Appearance.razor:101-111`).
 2. Read it word for word.
 3. Click `Huddle Dark` in the picker. Read the same paragraph again.
 4. Scan the paragraph for the names `Abyss`, `Kimbie`, `Red`, `Quiet Light`, `Monokai Dimmed` and `Tomorrow Night Blue`.
 
 **Pass if — all of these**
 
-- The paragraph sits BETWEEN the `Library pane` radios and the `The selection is stored at` line, not above the picker.
+- The paragraph sits BETWEEN the Theme picker (and the Accent colour picker, when shown) and the `The selection is stored at` line, not above the picker.
 - It names Visual Studio Code, states the themes are Microsoft's under the MIT licence, and credits Solarized to Ethan Schoonover and Monokai to Wimer Hazenberg.
 - It excepts **both** `Huddle Light` and `Huddle Dark` from the Visual Studio Code claim — they are this application's own, and since 2026-09-21 there are two of them.
 - It attributes **no other** theme to any person or organisation.
@@ -919,47 +919,41 @@ If the Blazor circuit drops mid-walk (the reconnect modal appears), reload and s
 
 If you cannot read `--mud-palette-primary` in DevTools, compare the `New chat` button against a colour picker instead and record the two values you measured.
 
-### APPEARANCETHEME-29 — The Library pane side is a Right/Left radio stored as `libraryPaneSide`, and a bad value is logged and ignored
+### APPEARANCETHEME-29 — There is no Library pane setting, and a leftover `libraryPaneSide` key is ignored without a warning and kept in the file
 
-**Free** · about 8 min
+**Free** · about 6 min
 
-*The `Library pane` setting moves the docked Library pane to the left or right of the content (`LibraryPaneHost.razor:33`). This proves the radio, the key it writes, that the write keeps the other keys, and the warning for an invalid value (`AppearanceStore.cs:322-330`).*
+*The docked Library pane and its Right/Left side setting were retired on 2026-10-10: the `/library` page is the only Library surface. This proves the Appearance tab no longer offers the choice, and that an old `appearance.json` still carrying `libraryPaneSide` loads quietly and keeps the key when another setting is saved.*
 
 **Before you start**
 
 - The application is running and you can see the console in `T-A`.
-- `<data>\appearance.json` reads `{ "theme": "huddle-dark" }`, and http://localhost:5100/settings/appearance is open.
-- To see the pane itself, the Library must be enabled and the sidebar must show a `Library` group. If it does not, only steps 1 to 4 and 7 to 9 apply; record the pane check as INCONCLUSIVE.
+- `<data>\appearance.json` is absent (`P-RESET-SETTINGS`), and http://localhost:5100/settings/appearance is open.
 
 **Steps**
 
-1. Find the `Library pane` radio group under the Theme picker. Confirm `Right` is marked.
-2. Click `Left`. Run `type <data>\appearance.json` and confirm `"libraryPaneSide": "left"` was added and `"theme": "huddle-dark"` is untouched.
-3. Open a Library entry from the sidebar `Library` group so the pane opens. Confirm the pane sits on the LEFT of the content.
-4. Return to the Appearance tab and click `Right`. Confirm the file now reads `"libraryPaneSide": "right"` and the pane, when opened again, sits on the RIGHT.
-5. Close the pane.
-6. Hand-edit the file to `{ "theme": "huddle-dark", "libraryPaneSide": "centre" }` and save. Wait 2 seconds and read the console in `T-A`.
-7. Confirm the `Library pane` radios mark `Right` and the file is exactly what you wrote.
-8. Hand-edit the file to `{ "theme": "huddle-dark", "libraryPaneSide": "left" }`, save, and wait 2 seconds. Confirm the radios move to `Left` without a click or a reload.
-9. Delete `<data>\appearance.json`; confirm the radios return to `Right`.
+1. Read the whole Appearance tab top to bottom. Look for any control or label mentioning `Library pane`, `Right`, `Left` or a side.
+2. Hand-edit `<data>\appearance.json` to `{ "theme": "huddle-dark", "libraryPaneSide": "left" }` and save. Wait 2 seconds and read the console in `T-A`.
+3. Confirm the page still renders `Huddle Dark` as the marked Theme, and the console carries no warning that mentions `Appearance file`, `libraryPaneSide` or `side`.
+4. Select `Custom Accent Dark`, enter `#3366cc` in the `Accent colour` field and press Tab.
+5. Run `type <data>\appearance.json`. Confirm it now holds `"theme": "custom-accent"` and `"accentColor": "#3366cc"`, and that `"libraryPaneSide": "left"` is still in the file, unchanged.
+6. Delete `<data>\appearance.json` when you are done.
 
 **Pass if — all of these**
 
-- The radio group offers exactly `Right` and `Left`, with `Right` marked by default.
-- Each click writes `libraryPaneSide` in lower case and leaves `theme` and any other key alone.
-- The pane follows the setting.
-- For `centre` the console carries `Appearance file '<path>' sets libraryPaneSide 'centre', which is not a valid side value (left or right); the default (right) is used instead and the file is left unchanged.`, the radios mark `Right`, and the file is unchanged.
-- A hand-edit to `left` updates the radios live.
+- The Appearance tab has no `Library pane` control, no Right/Left choice and no mention of a pane side.
+- Step 2 produces no warning in the console, and the page renders normally.
+- After the accent colour change, the file still contains `"libraryPaneSide": "left"` exactly as written, beside the new `theme` and `accentColor`.
 
 **Fail if — any of these**
 
-- A click rewrites the file without `theme` -> the save is not re-reading the document.
-- The bad value is repaired, or nothing is logged, or the page throws -> a bad value must be ignored loudly in the log and silently on the page.
-- The pane stays on the wrong side after a change -> the host is reading a stale value.
+- A `Library pane` radio group is still on the tab -> the retired setting was not fully removed.
+- The console warns about `libraryPaneSide` -> the retired key is still being validated.
+- The key disappears from the file after a save -> the store is dropping unknown keys it should preserve.
 
 **Inconclusive if**
 
-If the sidebar has no `Library` group, the pane check (steps 3 and 4) is INCONCLUSIVE; the radio and file checks still count.
+If the Appearance tab will not render, this is INCONCLUSIVE, not a failure; re-run APPEARANCETHEME-01 first.
 
 ---
 

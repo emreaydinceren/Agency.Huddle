@@ -27,9 +27,8 @@
     The inversion is also why FirstPanelInitialSize matters here where MudBlazor examples often omit
     it: without one, resetSizes() never calls _setPanelSizes at all, leaving the size axis to
     flex-grow's own even split - fine for two roughly-equal panes, but a tree wants to start narrower
-    (width) or shorter (height) than the document view next to or below it. LibraryPaneHost's own
-    outer split panel sets one (FirstPanelInitialSize="420") for the same reason, on the correct axis
-    because Horizontal is left at its default (false: side-by-side, pane beside the page body) there.
+    (width) or shorter (height) than the document view next to or below it. the /library page's own
+    SideBySide split sets one (FirstPanelInitialSize="300") for the same reason.
 
     MudSplitPanel sizes BOTH panels in fixed pixels, measured once against the container at init or
     on SetDividerPositionAsync, and never re-measures - no resize observer, no clamping of a restored
@@ -174,7 +173,7 @@
     /// Whether this explorer announces the single folder it shows: <see cref="ResolvedTitle"/> above
     /// the tree, and (forwarded to <see cref="LibraryTree.ShowScopeRoot"/>) that scope's own row as
     /// the tree's top node at all. Defaults to <see langword="true"/> - every host names the folder
-    /// nowhere else, EXCEPT <see cref="LibraryPane"/>'s per-root sidebar rows, which pass
+    /// nowhere else, EXCEPT the /library page when scoped by the sidebar's per-root rows, which passes
     /// <see langword="false"/> because the sidebar's own selected row already names it: the title
     /// would repeat that name, and the scope's own top node (Spec §6.16 "Inside a scope") would be a
     /// folder row that exists only to be expanded, so <see cref="LibraryTree"/> flattens it away and

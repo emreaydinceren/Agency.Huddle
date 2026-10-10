@@ -85,7 +85,7 @@ continue. For the totals, run `pwsh agents/scripts/Check-ManualTests.ps1 -Summar
 | [COMMANDS-03](adapter-commands.md#commands-03--a-command-the-profile-does-not-allow-is-an-ordinary-message) | A command the profile does not allow is an ordinary Message |
 | [AVATARLIB-01](avatar-library.md#avatarlib-01--no-library-configured-no-button-anywhere) | With no library configured, there is no avatar-library button anywhere |
 | [FM-0](file-changes.md#fm-0--an-agents-own-memory-edit-in-one-room-is-news-in-its-other-rooms) | An Agent's own memory edit in one Room is news in its other Rooms |
-| [L0](library.md#l0--chat-message-with-absolute-path-becomes-a-library-link-and-opens-the-pane) | A chat Message with an absolute path becomes a Library link and opens the pane |
+| [L0](library.md#l0--chat-message-with-absolute-path-becomes-a-library-link-and-opens-the-library-tab-on-that-file) | A chat Message with an absolute path becomes a Library link and opens the Library tab on that file |
 | [PROMPTBLOCKS-01](prompt-blocks.md#promptblocks-01--a-named-image-is-seen-without-a-tool-call) | A named image is seen, without a tool call |
 | [RS-M1](room-sessions.md#rs-m1--the-two-trip-stress-test) | Per-Room session context across the two-trip stress test |
 | [TASKS-01](tasks.md#tasks-01--creating-a-task-in-the-ui-writes-the-file-at-the-right-path-with-the-canonical-frontmatter) | Creating a Task in the UI writes its file at the right path, with canonical frontmatter |

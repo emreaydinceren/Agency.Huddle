@@ -20,8 +20,8 @@ namespace Agency.Huddle.Tests.Ui.Library;
 /// pins for Settings > Library's own Add row. The group re-renders on
 /// <see cref="LibraryRootStore.RootsChanged"/> from anywhere - this dialog, Settings, or a reset -
 /// and renders nothing when <c>Library.Enabled</c> is <see langword="false"/>. The docked
-/// <see cref="LibraryPaneState"/> pane this row used to open is pinned separately, directly against
-/// that state, in <c>MainLayoutLibraryTests</c>.
+/// pane this row once sat beside is gone; a <c>?library=</c> link reaches the page through
+/// <c>LibraryLinkRouter</c>, pinned in <c>LibraryLinkRouterTests</c>.
 /// </summary>
 public sealed class LibraryNavLinkTests
 {

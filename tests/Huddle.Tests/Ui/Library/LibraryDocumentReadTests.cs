@@ -174,7 +174,7 @@ public sealed class LibraryDocumentReadTests : IDisposable
         cut.WaitForAssertion(() => Assert.NotEmpty(cut.FindAll("button.library-document-pop-out")));
         await cut.InvokeAsync(() => cut.Find("button.library-document-pop-out").Click());
 
-        Assert.Equal(navigation.ToAbsoluteUri(LibraryPane.BuildPopOutUri(path)).AbsoluteUri, navigation.Uri);
+        Assert.Equal(navigation.ToAbsoluteUri(LibraryLinkQuery.BuildPageUri(path)).AbsoluteUri, navigation.Uri);
     }
 
     /// <summary>The header's Close button invokes the host's <c>OnClose</c> callback (D4).</summary>

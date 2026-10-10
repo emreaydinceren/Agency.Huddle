@@ -380,10 +380,6 @@ public static class ServiceCollectionExtensions
         // Answers a Sprint proposal (Task 63): Approve is the only path that creates a Sprint.
         services.AddSingleton<SprintProposalService>();
 
-        // Scoped (Task 13.2.i): one Library Pane open/closed state per circuit, shared by
-        // LibraryNavLink, LibraryPaneHost and any ?library= navigation.
-        services.AddScoped<LibraryPaneState>();
-
         // Scoped: the open Tabs of one circuit (docs/Huddle.Tabs-Specifications.md).
         services.AddScoped<Tabs.TabService>();
 

@@ -440,8 +440,9 @@ so, and names its [Roadmap](roadmap.md) item or its ADR. Back to the hub: [Huddl
     preference could contradict the Theme, and selecting `Solarized Dark` with `Light`
     showed Huddle's palette under Solarized Dark's name.
   - **There is no per-Token customisation at all.** `appearance.json` holds the Theme id
-    (`theme`), the accent colour (`accentColor`) and the Library pane side
-    (`libraryPaneSide`), and nothing else. The override map, its allowlist and the inline `<style>` are gone.
+    (`theme`) and the accent colour (`accentColor`), and nothing else. The Library pane side
+    setting was retired 2026-10-10 with the docked pane; a leftover `libraryPaneSide` key in an
+    existing file is ignored without a warning and left untouched. The override map, its allowlist and the inline `<style>` are gone.
     Changing one colour means editing `ThemeCatalog` in C# and rebuilding, or waiting for
     item 7's Theme import.
   - **A bad Theme id is logged, not shown.** `AppearanceStore` warns, names the unknown
@@ -752,3 +753,4 @@ so, and names its [Roadmap](roadmap.md) item or its ADR. Back to the hub: [Huddl
   - **macOS below 15 is refused.** .NET 10 supports macOS 15, 26 and 27; macOS 14 reached end
     of life on 2026-09-14. Lower `MIN_MACOS_MAJOR` in `install.sh` if that proves too strict.
   - **Linux is not supported.**
+- **Tabs is built, and here is what it does not cover.** Open Tabs are not restored after a reload yet; the strip scrolls sideways with no minimum Tab width and does not scroll the active Tab into view; a removed Team's or Project's Tab does not close; and editing a Task or saving a setting does not make a preview Tab permanent. See [the Tabs spec](../Huddle.Tabs-Specifications.md) section 8.

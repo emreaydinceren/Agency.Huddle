@@ -195,7 +195,7 @@
     public EventCallback OnClose { get; set; }
 
     /// <summary>Navigates to the full <c>/library</c> page on this document.</summary>
-    private void PopOut() => this.Navigation.NavigateTo(LibraryPane.BuildPopOutUri(this.Path));
+    private void PopOut() => this.Navigation.NavigateTo(LibraryLinkQuery.BuildPageUri(this.Path));
 
     /// <summary>Asks the host to open this document in the operating system's default application.</summary>
     private Task OpenInDefaultAppAsync() =>

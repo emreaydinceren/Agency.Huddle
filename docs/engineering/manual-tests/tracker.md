@@ -175,6 +175,12 @@ Application shell, navigation and layout — [area file](shell-nav.md)
 | [SHELLNAV-28](shell-nav.md#shellnav-28--the-new-chat-panel-with-no-agents-shows-its-own-guidance-instead-of-an-empty-list) |  | Active |  |  |
 | [SHELLNAV-29](shell-nav.md#shellnav-29--record-whether-the-yellow-error-band-ever-appears-during-a-genuine-circuit-fault) |  | Active |  |  |
 | [SHELLNAV-30](shell-nav.md#shellnav-30--the-drawers-icons-and-settings-pinned-to-the-bottom) |  | Active |  |  |
+| [SHELLNAV-31](shell-nav.md#shellnav-31--one-click-on-a-left-menu-item-opens-an-italic-preview-tab-and-a-click-on-a-different-item-replaces-it) |  | Active |  |  |
+| [SHELLNAV-32](shell-nav.md#shellnav-32--double-clicking-a-menu-item-keeps-its-tab-and-the-next-click-opens-beside-it) |  | Active |  |  |
+| [SHELLNAV-33](shell-nav.md#shellnav-33--clicking-a-tab-switches-the-page-and-the-address) |  | Active |  |  |
+| [SHELLNAV-34](shell-nav.md#shellnav-34--closing-the-active-tab-activates-its-neighbour-and-closing-the-last-one-shows-no-pages-are-open) |  | Active |  |  |
+| [SHELLNAV-35](shell-nav.md#shellnav-35--typing-in-a-rooms-message-box-keeps-its-tab-and-the-unsent-text-survives-a-tab-switch-and-a-page-reload) |  | Active |  |  |
+| [SHELLNAV-36](shell-nav.md#shellnav-36--a-room-tab-opened-by-pasting-its-url-gets-the-rooms-name-as-its-title-within-a-moment) |  | Active |  |  |
 
 ## startup-config
 
@@ -441,7 +447,7 @@ Library explorer and editor — [area file](library.md)
 
 | Test | 💰 | Status | Issue | Notes |
 | --- | --- | --- | --- | --- |
-| [L0](library.md#l0--chat-message-with-absolute-path-becomes-a-library-link-and-opens-the-pane) |  | Active |  |  |
+| [L0](library.md#l0--chat-message-with-absolute-path-becomes-a-library-link-and-opens-the-library-tab-on-that-file) |  | Active |  |  |
 | [L1](library.md#l1--human-edits-a-file-in-the-library-and-saves-it-the-agents-next-turn-lists-changed-) |  | Active |  |  |
 | [L2](library.md#l2--human-creates-a-project-folder-in-the-library-from-the-team-node) |  | Active |  |  |
 | [L3](library.md#l3--a-persona-gains-a-team-label-the-team-folder-is-created-when-the-persona-is-saved) |  | Active |  |  |
@@ -455,7 +461,7 @@ Library explorer and editor — [area file](library.md)
 | [L11](library.md#l11--opening-different-file-types-images-preview-json-displays-read-only-powerpoint-offers-open-in-default-app) |  | Active |  |  |
 | [L12](library.md#l12--copy-a-document-and-paste-it-into-a-chat-agents-receive-the-library-document-block) |  | Active |  |  |
 | [L13](library.md#l13--pasting-a-library-path-outside-huddle-eg-in-claude-code-is-an-ordinary-absolute-path) | 💰 | Active |  |  |
-| [L14](library.md#l14--the-library-pane-side-persists-and-the-divider-position-is-remembered) |  | Active |  |  |
+| [L14](library.md#l14--the-divider-position-of-the-library-pages-explorer-is-remembered) |  | Active |  |  |
 | [L15](library.md#l15--pop-out-opens-the-library-page-with-tree-and-document-side-by-side) |  | Active |  |  |
 | [L16](library.md#l16--old-teamsmd--work-install-is-migrated-to-the-teammates-folder-layout-on-startup) |  | Active |  |  |
 | [L17](library.md#l17--a-real-obsidian-vault-is-pinned-as-a-library-root-and-can-be-edited-without-reformatting) |  | Active |  |  |
@@ -615,7 +621,7 @@ Appearance tab, Themes, Tokens and overrides — [area file](appearance-theme.md
 | [APPEARANCETHEME-26](appearance-theme.md#appearancetheme-26--the-credit-line-names-visual-studio-code-and-attributes-nobody-it-should-not) |  | Active |  | Added 2026-09-16 with the VS Code theme import (ADR-0016). |
 | [APPEARANCETHEME-27](appearance-theme.md#appearancetheme-27--every-imported-theme-paints-its-own-palette-across-the-whole-application) |  | Active |  | Added 2026-09-16 with the VS Code theme import (ADR-0016). The acceptance walk for the imported catalog. |
 | [APPEARANCETHEME-28](appearance-theme.md#appearancetheme-28--custom-accent-stores-the-picked-colour-clamps-it-for-contrast-and-shows-its-picker-only-for-the-two-accent-themes) |  | Active |  |  |
-| [APPEARANCETHEME-29](appearance-theme.md#appearancetheme-29--the-library-pane-side-is-a-rightleft-radio-stored-as-librarypaneside-and-a-bad-value-is-logged-and-ignored) |  | Active |  |  |
+| [APPEARANCETHEME-29](appearance-theme.md#appearancetheme-29--there-is-no-library-pane-setting-and-a-leftover-librarypaneside-key-is-ignored-without-a-warning-and-kept-in-the-file) |  | Active |  |  |
 
 ## pipe-external
 

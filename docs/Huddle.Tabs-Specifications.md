@@ -95,14 +95,14 @@ one open Room (render coalescing, `Drafts`, focus).
 The docked Library pane (`LibraryPaneHost`, `LibraryPane`, `LibraryPaneState`) and the Appearance
 setting `LibraryPaneSide` are retired in this delivery. The full `/library` page is the only Library
 surface. Wikilinks and `?library=` links keep their validation (`IsSafeLibraryHref`, the resolver)
-and then open the Library Tab on the file.
+and then open the Library Tab on the file. This is done: `LibraryLinkRouter` does the `?library=` routing.
 
 ## 7. Delivery plan
 
 1. `Tabs/` domain: `Tab`, `TabKeys`, `TabService`, `TabSnapshot`; unit tests.
 2. `TabStrip`, `NavTabLink`; wire `MainLayout` and the left-menu components; bUnit tests.
 3. Title refresh, close on archive and delete, the per-Room draft, pin on typing. (Done.)
-4. Retire the Library pane and the pane-side setting; reroute links to the Tab.
+4. Retire the Library pane and the pane-side setting; reroute links to the Tab. (Done.)
 5. Persistence, keyboard shortcuts (`Ctrl+W`, `Ctrl+Tab`).
 6. User guide, manual tests in `shell-nav.md`, ADR.
 

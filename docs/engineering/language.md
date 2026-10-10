@@ -780,8 +780,7 @@ See
 
 **Appearance**
 : The Appearance tab of `/settings`, and `{DataDir}/appearance.json` behind it: the
-  selected Theme id (`theme`), the accent colour (`accentColor`) and the Library pane side
-  (`libraryPaneSide`), and nothing else. Per installation, hand-editable and watched,
+  selected Theme id (`theme`), and the accent colour (`accentColor`), and nothing else (a retired `libraryPaneSide` key is ignored). Per installation, hand-editable and watched,
   exactly like `hooks.json`. There are no per-property overrides — that layer was removed
   with the Tokens — and since 2026-09-21 there is no light/dark preference either: a
   Theme carries its own palette, so selecting one selects the mode
@@ -791,6 +790,6 @@ See
 : **The tab is not the file.** Since 2026-09-22 the tab has a second section — the
   Human's own **Avatar** — because the Human has no Persona file and so no Teammate
   card to edit one on. That Avatar is stored in `avatars.json`, a different file with a
-  different owner; `appearance.json` still holds the selected Theme id, the accent colour and the Library pane side, and nothing else.
+  different owner; `appearance.json` still holds the selected Theme id and the accent colour, and nothing else.
 : *Avoid*: dark mode and light/dark preference (there is no such setting any more — say
   *a dark Theme*), display settings.

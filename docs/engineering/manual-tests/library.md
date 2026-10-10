@@ -35,11 +35,11 @@ Each pinned root appears in the table with a **Remove** button and in the sideba
 
 ## Tests
 
-### L0 — Chat message with absolute path becomes a Library link and opens the pane
+### L0 — Chat message with absolute path becomes a Library link and opens the Library tab on that file
 
 **Free** · about 5 min
 
-*Spec §2 L0: The path in a Message is a link. A click opens the file in the Library pane; the chat stays where it was. Also tests that ?library= links open the pane.*
+*Spec §2 L0: The path in a Message is a link. A click opens the Library tab on that file on the full `/library` page (the docked pane was retired 2026-10-10); the Room's own tab stays open in the strip. Also tests that `?library=` links route the same way (`LibraryLinkRouter`).*
 
 **Before you start**
 
@@ -52,21 +52,21 @@ Each pinned root appears in the table with a **Remove** button and in the sideba
 3. Press Enter to send the message.
 4. In the message list, look at the rendered path. Does it appear as a link (blue, underlined, or otherwise styled as a link)?
 5. Click the link.
-6. Confirm the Library pane opened beside the chat, on the side Appearance names (Right by default), showing the file.
-7. Type a second message in the same Room and send it.
-8. Confirm the first message's path link is still clickable and the page did not navigate away.
+6. Confirm the page is now `/library` with `root` and `path` in the address (for example `/library?root=…&path=…`), the strip shows a `Library` tab marked active, and the file is open in the document area. No pane opened beside the chat.
+7. Confirm Ada's Room tab is still in the strip. Click it.
+8. Confirm you are back in Ada's Room with its history, type a second message and send it, and confirm the first message's path link is still clickable.
 
 **Pass if — all of these**
 
 - The absolute path in the message is a link of class `library-ref`.
-- Clicking the link opens the Library pane on that file without leaving the Room.
-- Ada's Room and its history stay visible and usable after the click.
+- Clicking the link opens (or activates) the `Library` tab on that file, on the full `/library` page.
+- Ada's Room tab stays open in the strip, and clicking it returns to the Room with its history intact and usable.
 
 **Fail if — any of these**
 
 - The path appears as plain text, not a link.
-- Clicking the link navigates away from the chat or closes it.
-- The pane does not open or shows the wrong file.
+- Clicking the link leaves you on the Room, or opens something beside the chat -> the retired pane is still wired in.
+- The Library tab shows the wrong file, or the Room's tab disappears from the strip.
 
 ---
 
@@ -342,7 +342,7 @@ Each pinned root appears in the table with a **Remove** button and in the sideba
 
 **Free** · about 8 min
 
-*Spec §2 L9: The file is rewritten while the Human has it open with no unsaved edits. When the pane regains focus, the new text is shown. No Agent is needed for this check.*
+*Spec §2 L9: The file is rewritten while the Human has it open with no unsaved edits. When the document regains focus, the new text is shown. No Agent is needed for this check.*
 
 **Before you start**
 
@@ -364,7 +364,7 @@ Each pinned root appears in the table with a **Remove** button and in the sideba
 
 **Fail if — any of these**
 
-- The text is not re-read when the pane regains focus.
+- The text is not re-read when the document regains focus.
 - The displayed text differs from the disk.
 - A freshness notice or an Overwrite dialog appears although nothing was edited.
 
@@ -514,40 +514,34 @@ Each pinned root appears in the table with a **Remove** button and in the sideba
 
 ---
 
-### L14 — The Library pane side persists, and the divider position is remembered
+### L14 — The divider position of the Library page's explorer is remembered
 
-**Free** · about 10 min
+**Free** · about 8 min
 
-*UAT: The Library pane opens on the left or right side per the Appearance setting. The divider's position is saved and restored when the pane re-opens.*
+*UAT: The divider between the tree and the document on the `/library` page is saved and restored when you come back to it. (The docked pane and its Left/Right side setting were retired 2026-10-10 and are no longer tested.)*
 
 **Before you start**
 
-- `P-LAUNCH-UAT` is running and `Docs` is pinned. Open Ada's Room and send the absolute path of `<repo>\docs\Huddle.Library-Specifications.md` (as in L0) so there is a link to click. The sidebar's Library rows open the full `/library` page, not the pane; the pane opens from such a link.
+- `P-LAUNCH-UAT` is running and `Vault` is pinned.
 
 **Steps**
 
-1. Go to **Settings → Appearance**. In the **Library pane** radio group choose **Left**.
-2. Go back to Ada's Room and click the path link. The pane opens on the left.
-3. Drag the divider between the pane and the chat to a clearly different width. Note it.
-4. In the pane toolbar click **Close**, then click the path link again. The pane reopens at about the width you set.
-5. In Settings → Appearance choose **Right**, then return to Ada's Room and click the link. The pane is on the right. Resize it again.
-6. Close and reopen the pane. Confirm the width.
-7. Reload the browser tab (F5), open Ada's Room and click the link. Confirm the side and width.
-8. Stop the app with `P-STOP`, relaunch with `P-LAUNCH-UAT` without resetting `<data>`, and repeat step 7.
+1. Click the `Vault` row in the sidebar's **Library** group. The `Library` tab opens on `/library` with the tree beside the document area.
+2. Drag the divider between the tree and the document to a clearly different width. Note it.
+3. Click another tab (for example Ada's Room), then click the `Library` tab again. Confirm the divider is where you left it.
+4. Reload the browser tab (F5) on `/library` and confirm the width again.
+5. Stop the app with `P-STOP`, relaunch with `P-LAUNCH-UAT` without resetting `<data>`, open the `Library` tab and repeat step 4.
 
 **Pass if — all of these**
 
-- The Appearance choice decides which side the pane opens on.
-- Dragging the divider sets a custom width, restored after Close and reopen.
-- After a reload and after an app restart the pane opens on the chosen side at the remembered width.
+- Dragging the divider sets a custom width.
+- The width is restored after switching to another tab and back, after a reload, and after an app restart.
 
 **Fail if — any of these**
 
-- The side setting does not change where the pane opens.
-- The divider width is not remembered.
-- A restart resets the side or the width.
+- The divider returns to its default width after any of those.
 
-**Note:** the width is kept in the browser's own storage, so use the same browser profile for step 8.
+**Note:** the width is kept in the browser's own storage, so use the same browser profile for step 5.
 
 ---
 
@@ -555,32 +549,31 @@ Each pinned root appears in the table with a **Remove** button and in the sideba
 
 **Free** · about 8 min
 
-*UAT: Pop out opens `/library` with the tree on the left and the document on the right, at full page width.*
+*UAT: Pop out opens `/library` with the tree on the left and the document on the right, at full page width. The docked pane's own Pop out button was retired 2026-10-10; the document toolbar's remains.*
 
 **Before you start**
 
-- `P-LAUNCH-UAT` is running, `Vault` is pinned and the Library pane is open on `plan.md`. Open it by sending `C:\seeds\huddle\uat\vault\plan.md` in Ada's Room and clicking the link (as in L0).
+- `P-LAUNCH-UAT` is running and `Vault` is pinned. Send `C:\seeds\huddle\uat\vault\plan.md` in Ada's Room and click the link (as in L0), so the `Library` tab opens on `plan.md`.
 
 **Steps**
 
-1. In the pane's own toolbar (the strip above the pane, not the document's) click **Pop out**.
-2. Read the address bar. It is `/library?root=<id>&path=<escaped path>`, here `root=vault&path=plan.md`.
-3. Look at the layout: tree on the left, `plan.md` on the right, full width.
-4. Click another file in the tree. The document updates.
-5. Look at the document toolbar. It has **Copy** and **Pop out**, but no **Close** button.
-6. Click the document toolbar's **Pop out**. The same `/library` URL loads for the open file.
-7. Press the browser's Back button until you return to Ada's Room.
+1. Read the address bar. It is `/library?root=<id>&path=<escaped path>`, here `root=vault&path=plan.md`.
+2. Look at the layout: tree on the left, `plan.md` on the right, full width.
+3. Click another file in the tree. The document updates.
+4. Look at the document toolbar. It has **Copy** and **Pop out**, but no **Close** button.
+5. Click the document toolbar's **Pop out**. The same `/library` URL loads for the open file.
+6. Press the browser's Back button until you return to Ada's Room.
 
 **Pass if — all of these**
 
-- The pane toolbar's **Pop out** opens `/library` with `root` and `path` in the URL and the right file open.
+- The address is `/library` with `root` and `path` in the URL and the right file open.
 - The tree and the document are side by side at full width, and navigating the tree works.
 - The document toolbar's **Pop out** reaches the same URL.
-- The document toolbar shows no **Close** button (no host passes one); closing the docked pane is the pane toolbar's **Close**.
+- The document toolbar shows no **Close** button (no host passes one).
 
 **Fail if — any of these**
 
-- No Pop out button in the pane toolbar or in the document toolbar.
+- No Pop out button in the document toolbar.
 - Pop out opens a broken page or the wrong file.
 - The tree and document are not visible together.
 

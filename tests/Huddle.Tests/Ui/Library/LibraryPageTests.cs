@@ -60,7 +60,7 @@ public sealed class LibraryPageTests : IDisposable
         cut.WaitForAssertion(() => Assert.NotEmpty(cut.FindAll(".library-rendered")));
     }
 
-    /// <summary>The Pop out URL built by <see cref="LibraryPane"/>, parsed back into query parameters and fed
+    /// <summary>The Pop out URL built by <see cref="LibraryLinkQuery"/>, parsed back into query parameters and fed
     /// to the page, opens the same file (Spec §6.9 "Pop out").</summary>
     [Fact]
     public async Task Page_PopOutUrl_RoundTrips()
@@ -70,7 +70,7 @@ public sealed class LibraryPageTests : IDisposable
         File.WriteAllText(Path.Combine(root, "My Folder", "Test.md"), "test body");
         LibraryPath filePath = this.fixture.LibraryFixture.Resolve(root, "My Folder/Test.md");
 
-        string popOutUri = LibraryPane.BuildPopOutUri(filePath);
+        string popOutUri = LibraryLinkQuery.BuildPageUri(filePath);
         string rawQuery = popOutUri[popOutUri.IndexOf('?', StringComparison.Ordinal)..];
         Dictionary<string, Microsoft.Extensions.Primitives.StringValues> query =
             Microsoft.AspNetCore.WebUtilities.QueryHelpers.ParseQuery(rawQuery);
