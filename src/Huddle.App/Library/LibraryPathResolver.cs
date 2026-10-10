@@ -222,7 +222,8 @@ internal sealed class LibraryPathResolver(LibraryRootStore roots, IOptions<TeamO
             return false;
         }
 
-        if (resolved.Role == LibraryNodeRole.File)
+        // Role alone is not enough: a Teammate definition (Ben/Ben.md) is a file with a non-File role.
+        if (resolved.Role == LibraryNodeRole.File || File.Exists(resolved.FullPath))
         {
             if (this.logger.IsEnabled(LogLevel.Debug))
             {

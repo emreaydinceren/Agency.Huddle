@@ -151,6 +151,11 @@ internal sealed class LibraryFileService(
         IReadOnlyList<string> ignoredFolders = this.options.Value.FileChanges.EffectiveIgnore;
         bool hideUnderscoreFolders = folder.Root.Kind == LibraryRootKind.Teams;
 
+        if (File.Exists(folder.FullPath))
+        {
+            return Task.FromResult<IReadOnlyList<LibraryEntry>>([]);
+        }
+
         List<FileSystemInfo> children;
         try
         {
