@@ -3,31 +3,56 @@ using System.Globalization;
 namespace Agency.Huddle.App.Tabs;
 
 /// <summary>
-/// The open Tabs of one circuit, in one group (version 1 has exactly one; see section 5 of
-/// <c>docs/Huddle.Tabs-Specifications.md</c>). Scoped per circuit. Holds no UI and no
-/// <c>NavigationManager</c>: components that call it navigate to <see cref="Active"/> themselves, so
-/// the same rules can be tested without a renderer.
+/// The open Tabs of one circuit, arranged in up to <see cref="MaxGroups"/> groups drawn side by side
+/// (section 5 of <c>docs/Huddle.Tabs-Specifications.md</c>). Exactly one group has focus; its active
+/// Tab is <see cref="Active"/>, and the browser URL always names that Tab. Scoped per circuit. Holds
+/// no UI and no <c>NavigationManager</c>: components that call it navigate to <see cref="Active"/>
+/// themselves, so the same rules can be tested without a renderer.
 /// </summary>
 internal sealed class TabService
 {
-    private readonly List<Tab> tabs = [];
-    private IReadOnlyList<Tab> snapshot = [];
-    private string? activeId;
-    private int lastId;
+    /// <summary>
+    /// The most groups that can be open at once: 2 is one split, two Tabs side by side. Raise it to allow
+    /// more; nothing else assumes the number, and a stored layout with more groups than this is refused.
+    /// </summary>
+    public const int MaxGroups = 2;
 
-    /// <summary>Raised after every change to <see cref="Tabs"/> or <see cref="Active"/>, and not for a call that changed nothing.</summary>
+    private readonly List<GroupState> groups = [];
+    private IReadOnlyList<TabGroup> groupSnapshot = [];
+    private IReadOnlyList<Tab> tabSnapshot = [];
+    private string focusedId;
+    private int lastId;
+    private int lastGroupId;
+
+    /// <summary>Starts with one empty group, which has focus.</summary>
+    public TabService()
+    {
+        GroupState first = this.NewGroup();
+        this.groups.Add(first);
+        this.focusedId = first.Id;
+        this.RefreshSnapshots();
+    }
+
+    /// <summary>Raised after every change to <see cref="Groups"/>, <see cref="Tabs"/> or <see cref="Active"/>, and not for a call that changed nothing.</summary>
     public event Action? Changed;
 
-    /// <summary>The open Tabs, left to right. Each read returns one immutable snapshot.</summary>
-    public IReadOnlyList<Tab> Tabs => this.snapshot;
+    /// <summary>The groups, left to right. There is always at least one; each read returns one immutable snapshot.</summary>
+    public IReadOnlyList<TabGroup> Groups => this.groupSnapshot;
 
-    /// <summary>The active Tab, or <see langword="null"/> when none is open.</summary>
-    public Tab? Active => this.activeId is null ? null : this.tabs.Find(tab => string.Equals(tab.Id, this.activeId, StringComparison.Ordinal));
+    /// <summary>The id of the group that has focus.</summary>
+    public string FocusedGroupId => this.focusedId;
+
+    /// <summary>Every open Tab across every group, left to right. Each read returns one immutable snapshot.</summary>
+    public IReadOnlyList<Tab> Tabs => this.tabSnapshot;
+
+    /// <summary>The active Tab of the focused group, or <see langword="null"/> when that group is empty.</summary>
+    public Tab? Active => this.Focused().ActiveTab();
 
     /// <summary>
-    /// Opens <paramref name="url"/> and makes it active. A Tab with the same key is reused (its URL is
-    /// updated, a permanent Tab stays permanent); otherwise a preview Tab replaces the existing preview
-    /// in place, or is inserted right of the active Tab when there is none.
+    /// Opens <paramref name="url"/> and makes it active. A Tab with the same key is reused wherever it is
+    /// (its URL is updated, a permanent Tab stays permanent, and its group takes focus); otherwise a
+    /// preview Tab replaces the focused group's preview in place, or is inserted right of its active Tab
+    /// when there is none.
     /// </summary>
     /// <param name="url">An absolute URI or a site-relative address.</param>
     /// <param name="title">A better title than the fallback, such as a Room's name, or <see langword="null"/> to keep the existing or fallback one.</param>
@@ -38,10 +63,9 @@ internal sealed class TabService
         string relative = TabKeys.ToRelative(url);
         TabDescriptor descriptor = TabKeys.Describe(relative);
 
-        int existing = this.tabs.FindIndex(tab => string.Equals(tab.Key, descriptor.Key, StringComparison.Ordinal));
-        if (existing >= 0)
+        if (this.Find(tab => string.Equals(tab.Key, descriptor.Key, StringComparison.Ordinal)) is var (group, index))
         {
-            Tab current = this.tabs[existing];
+            Tab current = group.Tabs[index];
             Tab updated = current with
             {
                 Url = relative,
@@ -49,9 +73,12 @@ internal sealed class TabService
                 Icon = icon ?? current.Icon,
             };
 
-            bool unchanged = updated == current && string.Equals(this.activeId, current.Id, StringComparison.Ordinal);
-            this.tabs[existing] = updated;
-            this.activeId = updated.Id;
+            bool unchanged = updated == current
+                && string.Equals(group.ActiveId, current.Id, StringComparison.Ordinal)
+                && string.Equals(this.focusedId, group.Id, StringComparison.Ordinal);
+            group.Tabs[index] = updated;
+            group.ActiveId = updated.Id;
+            this.focusedId = group.Id;
             if (!unchanged)
             {
                 this.Publish();
@@ -60,6 +87,7 @@ internal sealed class TabService
             return updated;
         }
 
+        GroupState focused = this.Focused();
         Tab created = new(
             this.NextId(),
             descriptor.Key,
@@ -68,64 +96,114 @@ internal sealed class TabService
             icon ?? descriptor.Icon,
             IsPreview: true);
 
-        int preview = this.tabs.FindIndex(tab => tab.IsPreview);
+        int preview = focused.Tabs.FindIndex(tab => tab.IsPreview);
         if (preview >= 0)
         {
-            this.tabs[preview] = created;
+            focused.Tabs[preview] = created;
         }
         else
         {
-            int activeIndex = this.tabs.FindIndex(tab => string.Equals(tab.Id, this.activeId, StringComparison.Ordinal));
-            this.tabs.Insert(activeIndex + 1, created);
+            int activeIndex = focused.Tabs.FindIndex(tab => string.Equals(tab.Id, focused.ActiveId, StringComparison.Ordinal));
+            focused.Tabs.Insert(Math.Max(activeIndex + 1, focused.PinnedCount()), created);
         }
 
-        this.activeId = created.Id;
+        focused.ActiveId = created.Id;
         this.Publish();
         return created;
     }
 
-    /// <summary>Makes the Tab with <paramref name="id"/> active. Does nothing when it is already active or unknown.</summary>
+    /// <summary>Makes the Tab with <paramref name="id"/> active in its group and gives that group focus. Does nothing when it already is, or is unknown.</summary>
     /// <param name="id">The Tab to activate.</param>
     public void Activate(string id)
     {
-        if (string.Equals(this.activeId, id, StringComparison.Ordinal) || !this.tabs.Exists(tab => string.Equals(tab.Id, id, StringComparison.Ordinal)))
+        if (this.Find(tab => string.Equals(tab.Id, id, StringComparison.Ordinal)) is not var (group, _))
         {
             return;
         }
 
-        this.activeId = id;
+        if (string.Equals(group.ActiveId, id, StringComparison.Ordinal) && string.Equals(this.focusedId, group.Id, StringComparison.Ordinal))
+        {
+            return;
+        }
+
+        group.ActiveId = id;
+        this.focusedId = group.Id;
         this.Publish();
     }
 
-    /// <summary>Moves the active Tab by <paramref name="offset"/> places, wrapping at either end. Does nothing when fewer than two Tabs are open.</summary>
+    /// <summary>Gives the group with <paramref name="groupId"/> focus without changing its active Tab. Does nothing when it already has focus, or is unknown.</summary>
+    /// <param name="groupId">The group to focus.</param>
+    public void FocusGroup(string groupId)
+    {
+        if (string.Equals(this.focusedId, groupId, StringComparison.Ordinal) || !this.groups.Exists(group => string.Equals(group.Id, groupId, StringComparison.Ordinal)))
+        {
+            return;
+        }
+
+        this.focusedId = groupId;
+        this.Publish();
+    }
+
+    /// <summary>Moves the active Tab of the focused group by <paramref name="offset"/> places, wrapping at either end. Does nothing when that group holds fewer than two Tabs.</summary>
     /// <param name="offset">Positive moves right, negative moves left.</param>
     /// <returns>The Tab that is now active, or <see langword="null"/> when nothing changed.</returns>
     public Tab? ActivateRelative(int offset)
     {
-        int current = this.tabs.FindIndex(tab => string.Equals(tab.Id, this.activeId, StringComparison.Ordinal));
-        if (this.tabs.Count < 2 || current < 0)
+        GroupState focused = this.Focused();
+        int current = focused.Tabs.FindIndex(tab => string.Equals(tab.Id, focused.ActiveId, StringComparison.Ordinal));
+        if (focused.Tabs.Count < 2 || current < 0)
         {
             return null;
         }
 
-        int target = (((current + offset) % this.tabs.Count) + this.tabs.Count) % this.tabs.Count;
-        this.activeId = this.tabs[target].Id;
+        int target = (((current + offset) % focused.Tabs.Count) + focused.Tabs.Count) % focused.Tabs.Count;
+        focused.ActiveId = focused.Tabs[target].Id;
         this.Publish();
-        return this.tabs[target];
+        return focused.Tabs[target];
     }
 
     /// <summary>Makes the Tab with <paramref name="id"/> permanent. Does nothing when it already is or is unknown.</summary>
     /// <param name="id">The Tab to keep.</param>
-    public void Pin(string id)
+    public void Keep(string id)
     {
         this.Replace(tab => string.Equals(tab.Id, id, StringComparison.Ordinal), tab => tab with { IsPreview = false });
     }
 
     /// <summary>Makes the Tab with <paramref name="key"/> permanent. Does nothing when it already is or none has that key.</summary>
     /// <param name="key">The key of the Tab to keep, as <see cref="TabKeys.Describe(string)"/> gives it.</param>
-    public void PinByKey(string key)
+    public void KeepByKey(string key)
     {
         this.Replace(tab => string.Equals(tab.Key, key, StringComparison.Ordinal), tab => tab with { IsPreview = false });
+    }
+
+    /// <summary>Pins the Tab with <paramref name="id"/>: it becomes permanent and moves to the end of its group's pinned Tabs. Does nothing when it is pinned or unknown.</summary>
+    /// <param name="id">The Tab to pin.</param>
+    public void Pin(string id)
+    {
+        if (this.Find(tab => string.Equals(tab.Id, id, StringComparison.Ordinal)) is not var (group, index) || group.Tabs[index].IsPinned)
+        {
+            return;
+        }
+
+        Tab pinned = group.Tabs[index] with { IsPinned = true, IsPreview = false };
+        group.Tabs.RemoveAt(index);
+        group.Tabs.Insert(group.PinnedCount(), pinned);
+        this.Publish();
+    }
+
+    /// <summary>Unpins the Tab with <paramref name="id"/>: it stays permanent and moves to just after its group's pinned Tabs. Does nothing when it is not pinned or unknown.</summary>
+    /// <param name="id">The Tab to unpin.</param>
+    public void Unpin(string id)
+    {
+        if (this.Find(tab => string.Equals(tab.Id, id, StringComparison.Ordinal)) is not var (group, index) || !group.Tabs[index].IsPinned)
+        {
+            return;
+        }
+
+        Tab unpinned = group.Tabs[index] with { IsPinned = false };
+        group.Tabs.RemoveAt(index);
+        group.Tabs.Insert(group.PinnedCount(), unpinned);
+        this.Publish();
     }
 
     /// <summary>Changes the title of the Tab with <paramref name="key"/>, such as when a Room is renamed. Does nothing when none has that key.</summary>
@@ -137,26 +215,42 @@ internal sealed class TabService
         this.Replace(tab => string.Equals(tab.Key, key, StringComparison.Ordinal), tab => tab with { Title = title });
     }
 
+    /// <summary>Whether <see cref="MoveLeft(string)"/> would do something for the Tab with <paramref name="id"/>.</summary>
+    /// <param name="id">The Tab to ask about.</param>
+    public bool CanMoveLeft(string id) => this.CanMove(id, -1);
+
+    /// <summary>Whether <see cref="MoveRight(string)"/> would do something for the Tab with <paramref name="id"/>.</summary>
+    /// <param name="id">The Tab to ask about.</param>
+    public bool CanMoveRight(string id) => this.CanMove(id, 1);
+
     /// <summary>
-    /// Closes the Tab with <paramref name="id"/>. When it was active, its right neighbour becomes
-    /// active, else its left one, else nothing is.
+    /// Moves the Tab with <paramref name="id"/> into the group on its left, which then has focus with the
+    /// Tab active. From the leftmost group it opens a new group on the left, if fewer than
+    /// <see cref="MaxGroups"/> exist and the Tab has company. A moved Tab is made permanent.
+    /// </summary>
+    /// <param name="id">The Tab to move.</param>
+    /// <returns><see langword="true"/> when the Tab moved.</returns>
+    public bool MoveLeft(string id) => this.Move(id, -1);
+
+    /// <summary>The mirror of <see cref="MoveLeft(string)"/>: into the group on the right, or a new one past the rightmost.</summary>
+    /// <param name="id">The Tab to move.</param>
+    /// <returns><see langword="true"/> when the Tab moved.</returns>
+    public bool MoveRight(string id) => this.Move(id, 1);
+
+    /// <summary>
+    /// Closes the Tab with <paramref name="id"/>. When it was active, its right neighbour in the group
+    /// becomes active, else its left one, else the group is empty. An emptied group goes away unless it
+    /// is the only one, and focus then moves to a group that remains.
     /// </summary>
     /// <param name="id">The Tab to close.</param>
     public void Close(string id)
     {
-        int index = this.tabs.FindIndex(tab => string.Equals(tab.Id, id, StringComparison.Ordinal));
-        if (index < 0)
+        if (this.Find(tab => string.Equals(tab.Id, id, StringComparison.Ordinal)) is not var (group, index))
         {
             return;
         }
 
-        bool wasActive = string.Equals(this.activeId, id, StringComparison.Ordinal);
-        this.tabs.RemoveAt(index);
-        if (wasActive)
-        {
-            this.activeId = this.tabs.Count == 0 ? null : this.tabs[Math.Min(index, this.tabs.Count - 1)].Id;
-        }
-
+        this.RemoveFrom(group, index);
         this.Publish();
     }
 
@@ -164,38 +258,98 @@ internal sealed class TabService
     /// <param name="key">The key of the Tab to close.</param>
     public void CloseByKey(string key)
     {
-        Tab? tab = this.tabs.Find(candidate => string.Equals(candidate.Key, key, StringComparison.Ordinal));
-        if (tab is not null)
+        if (this.Find(tab => string.Equals(tab.Key, key, StringComparison.Ordinal)) is var (group, index))
         {
-            this.Close(tab.Id);
+            this.Close(group.Tabs[index].Id);
         }
     }
 
-    /// <summary>Captures the Tabs for storage.</summary>
-    public TabSnapshot Export() => new(
-        TabSnapshot.CurrentVersion,
-        new TabGroupSnapshot(
+    /// <summary>Captures the layout and the Tabs for storage.</summary>
+    public TabSnapshot Export()
+    {
+        List<TabGroupSnapshot> exported = [.. this.groups.Select(static group => new TabGroupSnapshot(
             TabGroupSnapshot.GroupKind,
-            this.activeId,
-            [.. this.tabs.Select(static tab => new TabSnapshotEntry(tab.Id, tab.Url, tab.Title, tab.Icon, tab.IsPreview))]));
+            group.ActiveId,
+            [.. group.Tabs.Select(static tab => new TabSnapshotEntry(tab.Id, tab.Url, tab.Title, tab.Icon, tab.IsPreview, tab.IsPinned))]))];
+
+        TabGroupSnapshot root = exported.Count == 1
+            ? exported[0]
+            : new TabGroupSnapshot(
+                TabGroupSnapshot.SplitKind,
+                null,
+                [],
+                exported,
+                this.groups.FindIndex(group => string.Equals(group.Id, this.focusedId, StringComparison.Ordinal)));
+
+        return new TabSnapshot(TabSnapshot.CurrentVersion, root);
+    }
 
     /// <summary>
-    /// Replaces every Tab with those in <paramref name="stored"/>, after checking them. A snapshot that
-    /// is missing, of another version, or holds an unsafe URL, a duplicate, or more than one preview is
-    /// refused whole and leaves the Tabs as they were.
+    /// Replaces every Tab and group with those in <paramref name="stored"/>, after checking them. A
+    /// snapshot that is missing, of an unknown version, or holds an unsafe URL, a duplicate id or key, a
+    /// pinned Tab after an unpinned one, more than one preview in a group, an empty group in a split, or
+    /// more groups than <see cref="MaxGroups"/> is refused whole and leaves the Tabs as they were.
     /// </summary>
     /// <param name="stored">A snapshot read back from storage, or <see langword="null"/>.</param>
     /// <returns><see langword="true"/> when the snapshot was accepted.</returns>
     public bool Restore(TabSnapshot? stored)
     {
-        if (stored is not { Version: TabSnapshot.CurrentVersion, Root: { Kind: TabGroupSnapshot.GroupKind, Tabs: { } entries } root })
+        if (stored is not { Root: { } root } || !TabSnapshot.ReadableVersions.Contains(stored.Version))
         {
             return false;
         }
 
-        List<Tab> restored = [];
+        IReadOnlyList<TabGroupSnapshot> nodes;
+        if (string.Equals(root.Kind, TabGroupSnapshot.GroupKind, StringComparison.Ordinal))
+        {
+            nodes = [root];
+        }
+        else if (string.Equals(root.Kind, TabGroupSnapshot.SplitKind, StringComparison.Ordinal)
+            && root.Children is { Count: >= 2 } children
+            && children.Count <= MaxGroups
+            && children.All(static child => string.Equals(child.Kind, TabGroupSnapshot.GroupKind, StringComparison.Ordinal) && child.Tabs.Count > 0))
+        {
+            nodes = children;
+        }
+        else
+        {
+            return false;
+        }
+
+        List<(string? ActiveId, List<Tab> Tabs)> restored = [];
         HashSet<string> ids = new(StringComparer.Ordinal);
         HashSet<string> keys = new(StringComparer.Ordinal);
+        foreach (TabGroupSnapshot node in nodes)
+        {
+            if (node.Tabs is not { } entries || !TryRestoreGroup(entries, ids, keys, out List<Tab>? tabs))
+            {
+                return false;
+            }
+
+            restored.Add((node.ActiveId, tabs));
+        }
+
+        this.groups.Clear();
+        this.lastGroupId = 0;
+        foreach ((string? activeId, List<Tab> tabs) in restored)
+        {
+            GroupState group = this.NewGroup();
+            group.Tabs.AddRange(tabs);
+            group.ActiveId = tabs.Exists(tab => string.Equals(tab.Id, activeId, StringComparison.Ordinal)) ? activeId : tabs.FirstOrDefault()?.Id;
+            this.groups.Add(group);
+        }
+
+        int focused = nodes.Count == 1 ? 0 : Math.Clamp(root.Focused, 0, this.groups.Count - 1);
+        this.focusedId = this.groups[focused].Id;
+        this.lastId = this.groups.SelectMany(static group => group.Tabs).Select(static tab => ParseIdNumber(tab.Id)).DefaultIfEmpty(0).Max();
+        this.Publish();
+        return true;
+    }
+
+    private static bool TryRestoreGroup(IReadOnlyList<TabSnapshotEntry> entries, HashSet<string> ids, HashSet<string> keys, out List<Tab> tabs)
+    {
+        tabs = [];
+        bool sawUnpinned = false;
         foreach (TabSnapshotEntry entry in entries)
         {
             if (string.IsNullOrWhiteSpace(entry.Id)
@@ -206,45 +360,132 @@ internal sealed class TabService
             }
 
             string key = TabKeys.Describe(entry.Url).Key;
-            if (!ids.Add(entry.Id) || !keys.Add(key))
+            if (!ids.Add(entry.Id) || !keys.Add(key) || (entry.Pinned && (entry.Preview || sawUnpinned)))
             {
                 return false;
             }
 
-            restored.Add(new Tab(entry.Id, key, entry.Url, entry.Title, string.IsNullOrWhiteSpace(entry.Icon) ? "page" : entry.Icon, entry.Preview));
+            sawUnpinned |= !entry.Pinned;
+            tabs.Add(new Tab(entry.Id, key, entry.Url, entry.Title, string.IsNullOrWhiteSpace(entry.Icon) ? "page" : entry.Icon, entry.Preview, entry.Pinned));
         }
 
-        if (restored.Count(static tab => tab.IsPreview) > 1)
+        return tabs.Count(static tab => tab.IsPreview) <= 1;
+    }
+
+    private static int ParseIdNumber(string id) =>
+        id.Length > 1 && id[0] == 't' && int.TryParse(id.AsSpan(1), NumberStyles.None, CultureInfo.InvariantCulture, out int number)
+            ? number
+            : 0;
+
+    private GroupState Focused() => this.groups.Find(group => string.Equals(group.Id, this.focusedId, StringComparison.Ordinal)) ?? this.groups[0];
+
+    private (GroupState Group, int Index)? Find(Predicate<Tab> match)
+    {
+        foreach (GroupState group in this.groups)
+        {
+            int index = group.Tabs.FindIndex(match);
+            if (index >= 0)
+            {
+                return (group, index);
+            }
+        }
+
+        return null;
+    }
+
+    private void Replace(Predicate<Tab> match, Func<Tab, Tab> change)
+    {
+        if (this.Find(match) is not var (group, index))
+        {
+            return;
+        }
+
+        Tab updated = change(group.Tabs[index]);
+        if (updated == group.Tabs[index])
+        {
+            return;
+        }
+
+        group.Tabs[index] = updated;
+        this.Publish();
+    }
+
+    private bool CanMove(string id, int direction)
+    {
+        if (this.Find(tab => string.Equals(tab.Id, id, StringComparison.Ordinal)) is not var (group, _))
         {
             return false;
         }
 
-        this.tabs.Clear();
-        this.tabs.AddRange(restored);
-        this.activeId = restored.Exists(tab => string.Equals(tab.Id, root.ActiveId, StringComparison.Ordinal))
-            ? root.ActiveId
-            : restored.FirstOrDefault()?.Id;
-        this.lastId = restored.Select(static tab => ParseIdNumber(tab.Id)).DefaultIfEmpty(0).Max();
+        int target = this.groups.IndexOf(group) + direction;
+        return (target >= 0 && target < this.groups.Count)
+            || (this.groups.Count < MaxGroups && group.Tabs.Count > 1);
+    }
+
+    private bool Move(string id, int direction)
+    {
+        if (!this.CanMove(id, direction) || this.Find(tab => string.Equals(tab.Id, id, StringComparison.Ordinal)) is not var (source, index))
+        {
+            return false;
+        }
+
+        Tab moved = source.Tabs[index] with { IsPreview = false };
+        int targetIndex = this.groups.IndexOf(source) + direction;
+        GroupState target;
+        if (targetIndex >= 0 && targetIndex < this.groups.Count)
+        {
+            target = this.groups[targetIndex];
+        }
+        else
+        {
+            target = this.NewGroup();
+            this.groups.Insert(direction < 0 ? 0 : this.groups.Count, target);
+        }
+
+        source.Tabs.RemoveAt(index);
+        if (string.Equals(source.ActiveId, id, StringComparison.Ordinal))
+        {
+            source.ActiveId = source.Tabs.Count == 0 ? null : source.Tabs[Math.Min(index, source.Tabs.Count - 1)].Id;
+        }
+
+        target.Tabs.Insert(moved.IsPinned ? target.PinnedCount() : target.Tabs.Count, moved);
+        target.ActiveId = moved.Id;
+        this.focusedId = target.Id;
+        if (source.Tabs.Count == 0)
+        {
+            this.groups.Remove(source);
+        }
+
         this.Publish();
         return true;
     }
 
-    private void Replace(Func<Tab, bool> match, Func<Tab, Tab> change)
+    private void RemoveFrom(GroupState group, int index)
     {
-        int index = this.tabs.FindIndex(tab => match(tab));
-        if (index < 0)
+        bool wasActive = string.Equals(group.ActiveId, group.Tabs[index].Id, StringComparison.Ordinal);
+        group.Tabs.RemoveAt(index);
+        if (wasActive)
+        {
+            group.ActiveId = group.Tabs.Count == 0 ? null : group.Tabs[Math.Min(index, group.Tabs.Count - 1)].Id;
+        }
+
+        if (group.Tabs.Count > 0 || this.groups.Count == 1)
         {
             return;
         }
 
-        Tab updated = change(this.tabs[index]);
-        if (updated == this.tabs[index])
+        int position = this.groups.IndexOf(group);
+        this.groups.RemoveAt(position);
+        if (string.Equals(this.focusedId, group.Id, StringComparison.Ordinal))
         {
-            return;
+            this.focusedId = this.groups[Math.Min(position, this.groups.Count - 1)].Id;
         }
+    }
 
-        this.tabs[index] = updated;
-        this.Publish();
+    private GroupState NewGroup()
+    {
+        this.lastGroupId++;
+        return new GroupState(string.Create(CultureInfo.InvariantCulture, $"g{this.lastGroupId}"));
     }
 
     private string NextId()
@@ -253,14 +494,38 @@ internal sealed class TabService
         return string.Create(CultureInfo.InvariantCulture, $"t{this.lastId}");
     }
 
-    private static int ParseIdNumber(string id) =>
-        id.Length > 1 && id[0] == 't' && int.TryParse(id.AsSpan(1), NumberStyles.None, CultureInfo.InvariantCulture, out int number)
-            ? number
-            : 0;
+    private void RefreshSnapshots()
+    {
+        this.groupSnapshot = [.. this.groups.Select(static group => new TabGroup(group.Id, [.. group.Tabs], group.ActiveId))];
+        this.tabSnapshot = [.. this.groups.SelectMany(static group => group.Tabs)];
+    }
 
     private void Publish()
     {
-        this.snapshot = [.. this.tabs];
+        this.RefreshSnapshots();
         this.Changed?.Invoke();
+    }
+
+    /// <summary>The mutable state of one group; every outside view is an immutable <see cref="TabGroup"/>.</summary>
+    private sealed class GroupState(string id)
+    {
+        public string Id { get; } = id;
+
+        public List<Tab> Tabs { get; } = [];
+
+        public string? ActiveId { get; set; }
+
+        public Tab? ActiveTab() => this.ActiveId is null ? null : this.Tabs.Find(tab => string.Equals(tab.Id, this.ActiveId, StringComparison.Ordinal));
+
+        public int PinnedCount()
+        {
+            int count = 0;
+            while (count < this.Tabs.Count && this.Tabs[count].IsPinned)
+            {
+                count++;
+            }
+
+            return count;
+        }
     }
 }

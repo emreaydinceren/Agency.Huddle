@@ -35,9 +35,9 @@ public sealed class TabServiceTests
     {
         TabService service = new();
         Tab first = service.Open("/teammates");
-        service.Pin(first.Id);
+        service.Keep(first.Id);
         Tab second = service.Open("/settings");
-        service.Pin(second.Id);
+        service.Keep(second.Id);
         service.Activate(first.Id);
 
         Tab third = service.Open("/library");
@@ -52,7 +52,7 @@ public sealed class TabServiceTests
     {
         TabService service = new();
         Tab library = service.Open("/library?scopeRoot=a&scopePath=");
-        service.Pin(library.Id);
+        service.Keep(library.Id);
         service.Open("/teammates");
 
         Tab again = service.Open("/library?scopeRoot=b&scopePath=");
@@ -109,11 +109,11 @@ public sealed class TabServiceTests
     {
         TabService service = new();
         Tab a = service.Open("/teammates");
-        service.Pin(a.Id);
+        service.Keep(a.Id);
         Tab b = service.Open("/settings");
-        service.Pin(b.Id);
+        service.Keep(b.Id);
         Tab c = service.Open("/library");
-        service.Pin(c.Id);
+        service.Keep(c.Id);
         service.Activate(b.Id);
 
         service.Close(b.Id);
@@ -127,7 +127,7 @@ public sealed class TabServiceTests
     {
         TabService service = new();
         Tab a = service.Open("/teammates");
-        service.Pin(a.Id);
+        service.Keep(a.Id);
         Tab b = service.Open("/settings");
 
         service.Close(b.Id);
@@ -144,7 +144,7 @@ public sealed class TabServiceTests
     {
         TabService service = new();
         Tab a = service.Open("/teammates");
-        service.Pin(a.Id);
+        service.Keep(a.Id);
         Tab b = service.Open("/settings");
 
         service.Close(a.Id);
@@ -178,12 +178,12 @@ public sealed class TabServiceTests
 
     /// <summary>Pinning by key makes the Tab permanent, so a double-click on a menu item keeps it.</summary>
     [Fact]
-    public void PinByKey_MakesPermanent()
+    public void KeepByKey_MakesPermanent()
     {
         TabService service = new();
         service.Open("/settings");
 
-        service.PinByKey("settings");
+        service.KeepByKey("settings");
 
         Assert.False(Assert.Single(service.Tabs).IsPreview);
     }
@@ -194,7 +194,7 @@ public sealed class TabServiceTests
     {
         TabService source = new();
         Tab a = source.Open("/rooms/ab", "Design");
-        source.Pin(a.Id);
+        source.Keep(a.Id);
         source.Open("/settings");
         TabSnapshot? parsed = TabSnapshot.TryParse(source.Export().ToJson());
 
@@ -212,7 +212,7 @@ public sealed class TabServiceTests
     {
         TabService source = new();
         Tab a = source.Open("/teammates");
-        source.Pin(a.Id);
+        source.Keep(a.Id);
         TabService target = new();
         target.Restore(source.Export());
 
@@ -226,7 +226,7 @@ public sealed class TabServiceTests
     [InlineData(null)]
     [InlineData("")]
     [InlineData("not json")]
-    [InlineData("{\"version\":2,\"root\":{\"kind\":\"group\",\"tabs\":[]}}")]
+    [InlineData("{\"version\":3,\"root\":{\"kind\":\"group\",\"tabs\":[]}}")]
     [InlineData("{\"version\":1,\"root\":{\"kind\":\"split\",\"tabs\":[]}}")]
     public void Restore_UnusableStorage_IsRefusedAndKeepsTabs(string? json)
     {
@@ -278,10 +278,10 @@ public sealed class TabServiceTests
     {
         TabService service = new();
         Tab a = service.Open("/teammates");
-        service.Pin(a.Id);
+        service.Keep(a.Id);
         Assert.Null(service.ActivateRelative(1));
         Tab b = service.Open("/settings");
-        service.Pin(b.Id);
+        service.Keep(b.Id);
         Tab c = service.Open("/library");
 
         Assert.Equal(a.Id, service.ActivateRelative(1)?.Id);

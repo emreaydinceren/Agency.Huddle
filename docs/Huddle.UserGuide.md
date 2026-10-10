@@ -129,10 +129,24 @@ The Library is one tab like any other.
 - **Half-written messages:** the text you have typed but not sent is kept for each
   Room while you switch between tabs, and it is still there after you reload the page.
 
-Your open tabs come back after you reload the page or restart the app, in the same
-order, with the tab for the page you are on active. They are remembered by the
-browser, so another browser starts with its own. With many tabs open, each one gets
-narrow.
+**Right-click a tab**, or hover it and press the small chevron that appears beside its **Ã—**, for its menu (hovering also shows quick Move Left and Move Right buttons when those apply):
+
+- **Pin Tab** keeps the tab at the start of the strip as just its icon, with no ×
+  (hover for its name). **Unpin Tab** puts it back.
+- **Move Right** and **Move Left** move the tab to the other side of a split. The first
+  time, they open a second pane beside the first, so you can see two pages at once. The
+  item is greyed out when there is nowhere to move the tab, for example when it is the
+  only tab or the window already holds two panes. A moved tab is kept.
+- **Close** closes the tab.
+
+With two panes, the one you last clicked or tabbed into is the one the address bar shows,
+and what you open from the menu opens there. The other pane keeps its page exactly as you
+left it. A page that is already open in one pane is never opened a second time in the
+other: opening it takes you to it. Closing the last tab in a pane closes the pane.
+
+Your open tabs and panes come back after you reload the page or restart the app, in the
+same order, with the tab for the page you are on active. They are remembered by the
+browser, so another browser starts with its own. Each tab is at least a fixed width, so with many open the strip scrolls sideways.
 
 ## The data model
 

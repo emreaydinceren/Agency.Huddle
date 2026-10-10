@@ -56,6 +56,10 @@ not taken.
 
 ## Version 2
 
+> Built: see [ADR-0046](0046-a-group-mounts-its-own-page-and-the-url-names-the-focused-one.md). It
+> keeps a page host per group and drops the navigator per group. The paragraph below is the plan as
+> written for version 1.
+
 Side-by-side and stacked groups need two live pages at once, so they need a page host per group
 (`DynamicComponent`, resolved from the Tab's URL), a navigator per group, and an audit of anything
 page-global that assumes one open Room. The stored layout is already a tree for that reason.

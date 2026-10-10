@@ -1,6 +1,6 @@
 # Tabs: specification
 
-Status: **built 2026-10-10** on `feat/tabs` ([ADR-0045](adr/0045-a-tab-is-a-remembered-url-and-only-the-active-one-is-mounted.md)). Owner: chat surface.
+Status: version 1 **built 2026-10-10** on `feat/tabs` ([ADR-0045](adr/0045-a-tab-is-a-remembered-url-and-only-the-active-one-is-mounted.md)); version 2 (split, pinned Tabs, the Tab menu; section 9) **built 2026-10-10** on `feat/tabs-v2` ([ADR-0046](adr/0046-a-group-mounts-its-own-page-and-the-url-names-the-focused-one.md)). Owner: chat surface.
 
 ## 1. The idea
 
@@ -8,8 +8,8 @@ Everything the Human opens from the left menu opens in a **Tab**, as in VS Code.
 **preview Tab** (its title in italics); it is replaced by the next preview. A double-click, or
 working in the Tab, makes it **permanent** (upright title). The Library is one page and so one Tab.
 
-Version 2 adds Tabs side by side and stacked. Version 1 does not draw that, but its model and its
-persisted format already allow it (section 5).
+Version 2 adds a split: two Tabs side by side, a Tab menu, and pinned Tabs (section 9). Stacked groups
+and more than two groups are still to come; the model and the persisted format already allow them.
 
 ## 2. Terms
 
@@ -19,7 +19,8 @@ persisted format already allow it (section 5).
 | Preview Tab | A Tab not yet made permanent. At most one exists per group. Shown in italics. |
 | Permanent Tab | A Tab the Human kept. Never replaced by opening something else. |
 | Tab key | What makes two URLs the same Tab (section 3). Opening an item whose key is open activates it. |
-| Group | An ordered row of Tabs with one active. Version 1 has exactly one. |
+| Group | An ordered row of Tabs with one active, drawn as one pane. Version 1 has exactly one; version 2 allows up to `TabService.MaxGroups` (2). Exactly one group has focus. |
+| Pinned Tab | A Tab kept at the start of its group, drawn as its icon alone, with no x. Pinning also makes it permanent. |
 
 ## 3. Behaviour
 
@@ -85,10 +86,11 @@ after the first render (no JavaScript during prerender), then reconciles with th
 Version 1 pages keep calling `NavigationManager`. An `ITabNavigator` abstraction was planned for
 version 1 and dropped (2026-10-10): with one implementation that only delegates, it would add
 nothing and force every page's test fixture to register it. Version 2 introduces it when it has
-a second implementation: each group gets its own navigator and its own page host
-(`DynamicComponent`, resolved from the Tab's URL), because two groups show two pages at once and the
-browser URL names only the focused one. Version 2 must also audit anything page-global that assumes
-one open Room (render coalescing, `Drafts`, focus).
+a second implementation. Version 2 has two groups but still did not need it: each group gets its own
+page host (`DynamicComponent`, resolved from the Tab's URL), and the browser URL names the focused
+group's Tab, so the router's one location is enough (section 9, ADR-0046). The audit of anything
+page-global that assumes one open Room found the composer script keyed per element and the draft keyed
+per Room; render coalescing was not touched.
 
 ## 6. Library
 
@@ -111,9 +113,9 @@ and then open the Library Tab on the file. This is done: `LibraryLinkRouter` doe
    change wins.
 6. User guide, manual tests in `shell-nav.md`, ADR. (Done.)
 
-## 8. Not in version 1
+## 8. Not in version 1 (and what version 2 did not take)
 
-Drag to reorder, side-by-side and stacked groups, per-Tab history, and everything about a crowded
+Drag to reorder, stacked groups, three or more groups, per-Tab history, and everything about a crowded
 strip (decided 2026-10-10 to leave for version 2):
 
 - **Overflow.** Either wrap to further rows (an Appearance option; cheap, but the strip height changes
@@ -122,5 +124,50 @@ strip (decided 2026-10-10 to leave for version 2):
   default when groups exist, since overflow behaves differently at narrow widths.
 - **Scroll the active Tab into view** when it is activated off-screen.
 
-Known limit until then: the strip is one row that scrolls sideways, and Tabs shrink with no lower
-width, so with many open each shows little more than its icon.
+Known limit until then: the strip is one row that scrolls sideways. A Tab is never narrower than 14rem, the width a long title is cut to
+(a pinned Tab, an icon alone, is the exception), so with many open the strip scrolls rather than shrinking
+the titles away; the active Tab is not yet scrolled into view.
+
+## 9. Version 2: split, pinned Tabs and the Tab menu
+
+**Groups.** The strip becomes one strip per group, each over its own page, side by side. The most groups at
+once is `TabService.MaxGroups`, set in source to 2 (one split); raising it is the only change a third
+group needs in the service. A new group opens only from the menu below, never by itself.
+
+**Focus and the URL.** Exactly one group has focus, and the browser URL always names that group's active Tab.
+Pressing or tabbing into the other pane focuses it and navigates to its active Tab; opening anything
+(a menu item, a link in a Message) opens in the focused group. The other pane keeps its page mounted,
+so the work in it is not lost; its active Tab's top accent is dimmed. A key is open in at most one group
+across both: opening a page already open in the other group focuses it there instead of duplicating it
+(this is what keeps one open Room per Room).
+
+**The hover toolbar.** Hovering (or focusing into) an unpinned Tab fades in a toolbar over the right end of its title, just left of the x: a chevron that opens the Tab menu, then Move Left and Move Right, each drawn only when that move is possible for the Tab. Tabs are at least 14rem wide, so most of the title is visible before the toolbar appears.
+
+**The Tab menu** (right-click a Tab, or the chevron):
+
+| Item | Does |
+| --- | --- |
+| Pin Tab / Unpin Tab | Pins: permanent, moves to the end of the group's pinned Tabs, drawn as its icon alone (the title stays for screen readers and as a tooltip). Unpin keeps it permanent and puts it just after the pinned Tabs. Pinned Tabs always stay at the front of their group; a new preview opens after them. |
+| Move Left / Move Right | Moves the Tab into the neighbouring group on that side, where it becomes the active Tab and the group takes focus. From the outermost group it opens a new group on that side, if fewer than `MaxGroups` exist and the Tab has company. A lone Tab, or one at the outer edge at the limit, has the item disabled. A moved Tab becomes permanent. Emptying a group closes it. |
+| Close | Closes the Tab. |
+
+Moving is between groups only; reordering within a strip (drag) is still to come.
+
+**Rendering.** The router can mount only the page the URL names, so each group mounts its active Tab's
+page itself (`TabPageHost`, a `DynamicComponent`) resolved from the Tab's URL by `TabPageRoutes` over the
+same `@page` templates (most literal segments wins; route and query values fill the page's `[Parameter]`s).
+The router still runs but its page is never rendered. A page that needs its own address reads the cascaded
+`TabPageContext`, not `NavigationManager.Uri`: the Tasks page does, and the Library page's four query
+values are now plain parameters.
+
+**Persistence.** Format version 2 stores a lone group as before, or a `split` node with the groups and the
+focused index; every entry gains `pinned`. Version 1 is still read. A snapshot with a pinned Tab after
+an unpinned one, a pinned preview, an empty group in a split, or more groups than `MaxGroups` is refused
+whole.
+
+**Navigation.** The planned `ITabNavigator` was not needed: pages keep calling `NavigationManager`, and
+that always acts on the focused group. See the limit below.
+
+**Still to come.** Stacked groups, drag to reorder and to move between groups, three or more groups, overflow
+(section 8). Known limit: a page that navigates itself while it is in the unfocused pane (a Room redirecting
+after it is archived) moves the focused pane, because the router has one location. See `known-limits.md`.

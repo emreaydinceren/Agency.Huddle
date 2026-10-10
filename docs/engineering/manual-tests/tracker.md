@@ -183,6 +183,11 @@ Application shell, navigation and layout — [area file](shell-nav.md)
 | [SHELLNAV-36](shell-nav.md#shellnav-36--a-room-tab-opened-by-pasting-its-url-gets-the-rooms-name-as-its-title-within-a-moment) |  | Active |  |  |
 | [SHELLNAV-37](shell-nav.md#shellnav-37--open-tabs-come-back-after-a-reload-with-the-tab-for-the-current-page-active) |  | Active |  |  |
 | [SHELLNAV-38](shell-nav.md#shellnav-38--altw-altpage-down-and-altpage-up-close-and-move-between-tabs) |  | Active |  |  |
+| [SHELLNAV-39](shell-nav.md#shellnav-39--right-clicking-a-tab-offers-pin-move-left-move-right-and-close-and-pin-keeps-the-tab-at-the-front-as-an-icon) |  | Active |  |  |
+| [SHELLNAV-40](shell-nav.md#shellnav-40--move-right-opens-a-second-pane-beside-the-first-and-both-pages-stay-live) |  | Active |  |  |
+| [SHELLNAV-41](shell-nav.md#shellnav-41--opening-a-page-that-is-already-open-in-the-other-pane-takes-you-to-it-and-new-pages-open-in-the-focused-pane) |  | Active |  |  |
+| [SHELLNAV-42](shell-nav.md#shellnav-42--both-panes-pins-and-the-focused-pane-come-back-after-a-reload) |  | Active |  |  |
+| [SHELLNAV-43](shell-nav.md#shellnav-43--two-rooms-side-by-side-keep-their-own-unsent-text) |  | Active |  |  |
 
 ## startup-config
 

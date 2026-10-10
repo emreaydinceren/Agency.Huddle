@@ -78,7 +78,7 @@ that exercise it. All are **chat** unless stated.
 | Team types, hiring, Skill import, process gates, Requests and retrospectives | [Huddle.UserGuide.md](Huddle.UserGuide.md), [code-map.md](engineering/code-map.md), and the delivery record in [teams-plan.md](engineering/teams-plan.md) | [0038](adr/0038-team-types-are-data-in-json-and-markdown-files.md), [0039](adr/0039-process-gates-live-in-process-md-and-are-enforced-in-taskservice-and-the-permission-handler.md), [0040](adr/0040-a-request-is-a-task-in-the-receiving-teams-backlog.md) | none yet | Built 2026-10-08 |
 | Themes and Appearance | [language.md](engineering/language.md) (Theme, Appearance) | [0009](adr/0009-a-theme-is-a-stylesheet-layered-over-the-tokens.md) (superseded), [0010](adr/0010-a-theme-is-a-mudblazor-theme.md), [0016](adr/0016-vs-codes-bundled-themes-are-converted-once-not-imported.md), [0017](adr/0017-a-theme-is-a-palette-not-a-pair.md) | [appearance-theme](engineering/manual-tests/appearance-theme.md) | Built |
 | Prompts and Settings | [language.md](engineering/language.md) (Prompt) | [0007](adr/0007-model-facing-text-is-configuration.md) | [prompts-settings](engineering/manual-tests/prompts-settings.md) | Built |
-| Tabs: left-menu items open in preview and permanent Tabs | [Huddle.Tabs-Specifications.md](Huddle.Tabs-Specifications.md) | [0045](adr/0045-a-tab-is-a-remembered-url-and-only-the-active-one-is-mounted.md) | [shell-nav](engineering/manual-tests/shell-nav.md) | Built 2026-10-10 |
+| Tabs: left-menu items open in preview and permanent Tabs | [Huddle.Tabs-Specifications.md](Huddle.Tabs-Specifications.md) | [0045](adr/0045-a-tab-is-a-remembered-url-and-only-the-active-one-is-mounted.md) | [shell-nav](engineering/manual-tests/shell-nav.md) | Built 2026-10-10; version 2 (split, pinned Tabs, Tab menu): [0046](adr/0046-a-group-mounts-its-own-page-and-the-url-names-the-focused-one.md) |
 | App shell, navigation and startup | [Huddle.EngineeringGuide.md](Huddle.EngineeringGuide.md) | none | [shell-nav](engineering/manual-tests/shell-nav.md), [startup-config](engineering/manual-tests/startup-config.md) | Built |
 | Agent topologies (mesh or tree) | [why-agency-huddle.md](why-agency-huddle.md) | [0005](adr/0005-agent-topologies-are-emergent.md) | none | Built |
 
@@ -160,6 +160,7 @@ One row per decision. Open the ADR only when its row is your question.
 | [0043](adr/0043-imported-skills-are-pinned-by-commit-and-hash.md) | An imported Skill is pinned to a commit, recorded with a SHA-256 in `.source.json`, and reviewed before install; a missing licence warns but never blocks. | Accepted |
 | [0044](adr/0044-an-avatar-library-is-a-read-only-source-and-a-pick-copies.md) | An avatar library is a read-only folder read on open and dropped on close; a pick copies the image into the Avatar store through the upload path. | Accepted |
 | [0045](adr/0045-a-tab-is-a-remembered-url-and-only-the-active-one-is-mounted.md) | A Tab is a remembered URL; only the active Tab is mounted; tabs persist in browser storage and the address decides which is active. | Accepted |
+| [0046](adr/0046-a-group-mounts-its-own-page-and-the-url-names-the-focused-one.md) | Each Tab group mounts its own page; the URL names the focused group; a Tab moves between up to two groups and can be pinned. | Accepted |
 
 ## 5. Manual tests
 

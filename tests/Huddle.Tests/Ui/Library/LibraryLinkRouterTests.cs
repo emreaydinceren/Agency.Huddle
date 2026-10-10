@@ -98,7 +98,7 @@ public sealed class LibraryLinkRouterTests : IDisposable
         Assert.Equal(nav.ToAbsoluteUri("rooms/x?library=notes%2Fa.md").ToString(), nav.Uri);
     }
 
-    /// <summary>Source-text pin (the repo's idiom, copied from <c>ProcessModeTests.FindRepoRoot</c>): <c>MainLayout.razor</c> mounts <c>&lt;LibraryLinkRouter&gt;</c> after the Library link, puts <c>@Body</c> in the tab host, and no longer names the retired pane host.</summary>
+    /// <summary>Source-text pin (the repo's idiom, copied from <c>ProcessModeTests.FindRepoRoot</c>): <c>MainLayout.razor</c> mounts <c>&lt;LibraryLinkRouter&gt;</c> after the Library link, mounts the tab host (which draws the pages itself, so no <c>@Body</c> is rendered), and no longer names the retired pane host.</summary>
     [Fact]
     public void MainLayoutSource_MountsTheRouter_AndHasNoPaneHost()
     {
@@ -107,13 +107,13 @@ public sealed class LibraryLinkRouterTests : IDisposable
 
         int taskViewNavIndex = text.IndexOf("<TaskViewNav", StringComparison.Ordinal);
         int libraryNavLinkIndex = text.IndexOf("<LibraryNavLink", StringComparison.Ordinal);
-        int tabHostOpenIndex = text.IndexOf("<TabHost>", StringComparison.Ordinal);
-        int bodyIndex = text.IndexOf("@Body", StringComparison.Ordinal);
+        int tabHostIndex = text.IndexOf("<TabHost", StringComparison.Ordinal);
 
         Assert.True(taskViewNavIndex > 0);
         Assert.True(libraryNavLinkIndex > taskViewNavIndex);
         Assert.Contains("<LibraryLinkRouter", text, StringComparison.Ordinal);
-        Assert.True(tabHostOpenIndex > 0 && bodyIndex > tabHostOpenIndex);
+        Assert.True(tabHostIndex > 0);
+        Assert.DoesNotContain("@Body", text, StringComparison.Ordinal);
         Assert.DoesNotContain("LibraryPaneHost", text, StringComparison.Ordinal);
     }
 

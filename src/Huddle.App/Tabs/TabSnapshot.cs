@@ -4,14 +4,18 @@ namespace Agency.Huddle.App.Tabs;
 
 /// <summary>
 /// The stored form of the Tabs (section 5 of <c>docs/Huddle.Tabs-Specifications.md</c>). The root is
-/// a layout node so version 2 can add splits without a migration; version 1 writes one group.
+/// a layout node: one group, or a split of groups side by side. Version 1 stored a lone group and is
+/// still read; version 2 adds the split and the pinned flag.
 /// </summary>
-/// <param name="Version">The format version. A snapshot of any other version is ignored.</param>
-/// <param name="Root">The layout node. Only a group is understood.</param>
+/// <param name="Version">The format version. A snapshot of a version not in <see cref="ReadableVersions"/> is ignored.</param>
+/// <param name="Root">The layout node: a group, or a split whose children are groups.</param>
 internal sealed record TabSnapshot(int Version, TabGroupSnapshot Root)
 {
-    /// <summary>The only version this build reads and writes.</summary>
-    public const int CurrentVersion = 1;
+    /// <summary>The version this build writes.</summary>
+    public const int CurrentVersion = 2;
+
+    /// <summary>The versions this build reads: version 1 is a lone group with no pinned Tabs.</summary>
+    public static readonly IReadOnlyList<int> ReadableVersions = [1, CurrentVersion];
 
     private static readonly JsonSerializerOptions Options = new(JsonSerializerDefaults.Web);
 
@@ -39,14 +43,24 @@ internal sealed record TabSnapshot(int Version, TabGroupSnapshot Root)
     }
 }
 
-/// <summary>A group of Tabs in a <see cref="TabSnapshot"/>.</summary>
-/// <param name="Kind">The node kind; <see cref="GroupKind"/> in version 1.</param>
-/// <param name="ActiveId">The id of the active Tab, or <see langword="null"/>.</param>
-/// <param name="Tabs">The Tabs, left to right.</param>
-internal sealed record TabGroupSnapshot(string Kind, string? ActiveId, IReadOnlyList<TabSnapshotEntry> Tabs)
+/// <summary>A layout node in a <see cref="TabSnapshot"/>: a group of Tabs, or a split of groups drawn side by side.</summary>
+/// <param name="Kind">The node kind: <see cref="GroupKind"/> or <see cref="SplitKind"/>.</param>
+/// <param name="ActiveId">For a group, the id of its active Tab, or <see langword="null"/>.</param>
+/// <param name="Tabs">For a group, the Tabs, left to right. Empty for a split.</param>
+/// <param name="Children">For a split, the groups left to right; <see langword="null"/> for a group.</param>
+/// <param name="Focused">For a split, the index of the child that has focus.</param>
+internal sealed record TabGroupSnapshot(
+    string Kind,
+    string? ActiveId,
+    IReadOnlyList<TabSnapshotEntry> Tabs,
+    IReadOnlyList<TabGroupSnapshot>? Children = null,
+    int Focused = 0)
 {
     /// <summary>The <see cref="Kind"/> of a group node.</summary>
     public const string GroupKind = "group";
+
+    /// <summary>The <see cref="Kind"/> of a split node: its children sit side by side.</summary>
+    public const string SplitKind = "split";
 }
 
 /// <summary>One Tab in a <see cref="TabGroupSnapshot"/>. The key is not stored: it is derived from the URL on restore.</summary>
@@ -55,4 +69,5 @@ internal sealed record TabGroupSnapshot(string Kind, string? ActiveId, IReadOnly
 /// <param name="Title">The label.</param>
 /// <param name="Icon">The symbolic icon name.</param>
 /// <param name="Preview">Whether the Tab is still a preview.</param>
-internal sealed record TabSnapshotEntry(string Id, string Url, string Title, string Icon, bool Preview);
+/// <param name="Pinned">Whether the Tab is pinned; absent in a version 1 snapshot.</param>
+internal sealed record TabSnapshotEntry(string Id, string Url, string Title, string Icon, bool Preview, bool Pinned = false);

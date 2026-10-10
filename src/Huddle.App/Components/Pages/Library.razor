@@ -49,20 +49,20 @@
 @code {
     private bool Enabled => this.Options.Value.Library.Enabled;
 
-    /// <summary>The pinned root id of the file to open, from <c>?root=</c>.</summary>
-    [Parameter, SupplyParameterFromQuery]
+    /// <summary>The pinned root id of the file to open, from <c>?root=</c>. The four query parameters are plain parameters, filled from the URL of the Tab that shows this page by <c>TabPageRoutes</c>: <c>SupplyParameterFromQuery</c> would read the browser URL, which names only the focused group's Tab.</summary>
+    [Parameter]
     public string? Root { get; set; }
 
     /// <summary>The file's path relative to <see cref="Root"/>, from <c>?path=</c>.</summary>
-    [Parameter, SupplyParameterFromQuery]
+    [Parameter]
     public string? Path { get; set; }
 
     /// <summary>The scope's root id, from <c>?scopeRoot=</c>. Only takes effect together with <see cref="ScopePath"/>.</summary>
-    [Parameter, SupplyParameterFromQuery]
+    [Parameter]
     public string? ScopeRoot { get; set; }
 
     /// <summary>The scope's path relative to <see cref="ScopeRoot"/>, from <c>?scopePath=</c>. Only takes effect together with <see cref="ScopeRoot"/>.</summary>
-    [Parameter, SupplyParameterFromQuery]
+    [Parameter]
     public string? ScopePath { get; set; }
 
     private IReadOnlyList<LibraryLocation>? Scopes() =>

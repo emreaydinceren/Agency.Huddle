@@ -119,7 +119,7 @@
     [JSInvokable]
     public Task TypedAsync()
     {
-        this.Services.GetService<Agency.Huddle.App.Tabs.TabService>()?.PinByKey($"room:{this.RoomId}");
+        this.Services.GetService<Agency.Huddle.App.Tabs.TabService>()?.KeepByKey($"room:{this.RoomId}");
         return Task.CompletedTask;
     }
 

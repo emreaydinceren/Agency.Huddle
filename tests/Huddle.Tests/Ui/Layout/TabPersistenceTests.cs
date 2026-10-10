@@ -13,9 +13,9 @@ public sealed class TabPersistenceTests
     {
         TabService source = new();
         Tab a = source.Open("/rooms/ab", "Design");
-        source.Pin(a.Id);
+        source.Keep(a.Id);
         Tab b = source.Open("/teammates");
-        source.Pin(b.Id);
+        source.Keep(b.Id);
         return source.Export().ToJson();
     }
 
