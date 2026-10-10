@@ -327,6 +327,166 @@ public sealed class AskHumanToolTests
         Assert.Null(fixture.Questions.Get(room.Id));
     }
 
+    /// <summary>
+    /// Models send options in Claude Code's <c>AskUserQuestion</c> shape, <c>{label, description}</c>
+    /// objects. Such a card is accepted and stores the same Question that plain strings would.
+    /// </summary>
+    [Fact]
+    public async Task InvokeAsync_ObjectOptionsWithLabelAndDescription_AcceptedLikeStrings()
+    {
+        CancellationToken ct = TestContext.Current.CancellationToken;
+        using Fixture fixture = await Fixture.CreateAsync(ct);
+        User coach = await fixture.AddAgentAsync("Coach", ct);
+        Room room = await fixture.Directory.CreateRoomAsync("Workout", [KnownIds.Human, coach.Id], ct);
+        JsonObject question = RawQuestion(
+            "What is your main goal?",
+            LabelOption("Strength", "Lift heavier things"),
+            LabelOption("Cardio", "Run further"));
+
+        string result = await fixture.CreateTool(coach.Id).InvokeAsync(
+            new JsonObject { ["roomId"] = room.Id, ["questions"] = new JsonArray { question } }, ct);
+
+        Assert.Equal(Asked(1, room), result);
+        PendingQuestions? stored = fixture.Questions.Get(room.Id);
+        Assert.NotNull(stored);
+        Question parsed = Assert.Single(stored.Questions);
+        Assert.Equal("What is your main goal?", parsed.Text);
+        Assert.Equal(["Strength", "Cardio"], parsed.Options.ToArray());
+        Assert.Equal(QuestionKind.SingleSelect, parsed.Kind);
+    }
+
+    /// <summary>An object option that carries only a <c>label</c> is accepted, and the label is trimmed like a string option.</summary>
+    [Fact]
+    public async Task InvokeAsync_ObjectOptionsWithLabelOnly_AreAccepted()
+    {
+        CancellationToken ct = TestContext.Current.CancellationToken;
+        using Fixture fixture = await Fixture.CreateAsync(ct);
+        User coach = await fixture.AddAgentAsync("Coach", ct);
+        Room room = await fixture.Directory.CreateRoomAsync("Workout", [KnownIds.Human, coach.Id], ct);
+        JsonObject question = RawQuestion(
+            "Days?",
+            new JsonObject { ["label"] = "  Mon " },
+            new JsonObject { ["label"] = "Wed" });
+
+        string result = await fixture.CreateTool(coach.Id).InvokeAsync(
+            new JsonObject { ["roomId"] = room.Id, ["questions"] = new JsonArray { question } }, ct);
+
+        Assert.Equal(Asked(1, room), result);
+        PendingQuestions? stored = fixture.Questions.Get(room.Id);
+        Assert.NotNull(stored);
+        Assert.Equal(["Mon", "Wed"], Assert.Single(stored.Questions).Options.ToArray());
+    }
+
+    /// <summary>A question can mix plain string options and object options with a <c>label</c>.</summary>
+    [Fact]
+    public async Task InvokeAsync_MixedStringAndObjectOptions_AreAccepted()
+    {
+        CancellationToken ct = TestContext.Current.CancellationToken;
+        using Fixture fixture = await Fixture.CreateAsync(ct);
+        User coach = await fixture.AddAgentAsync("Coach", ct);
+        Room room = await fixture.Directory.CreateRoomAsync("Workout", [KnownIds.Human, coach.Id], ct);
+        JsonObject question = RawQuestion(
+            "Goal?",
+            JsonValue.Create("Strength"),
+            LabelOption("Cardio", "Run further"),
+            JsonValue.Create("Weight loss"));
+
+        string result = await fixture.CreateTool(coach.Id).InvokeAsync(
+            new JsonObject { ["roomId"] = room.Id, ["questions"] = new JsonArray { question } }, ct);
+
+        Assert.Equal(Asked(1, room), result);
+        PendingQuestions? stored = fixture.Questions.Get(room.Id);
+        Assert.NotNull(stored);
+        Assert.Equal(["Strength", "Cardio", "Weight loss"], Assert.Single(stored.Questions).Options.ToArray());
+    }
+
+    /// <summary>
+    /// An option that is not a string and not an object with a string <c>label</c> is refused with a
+    /// message that names the real problem and the fix, not the misleading "is empty".
+    /// </summary>
+    [Fact]
+    public async Task InvokeAsync_OptionOfUnusableKind_IsRefusedWithClearMessage()
+    {
+        CancellationToken ct = TestContext.Current.CancellationToken;
+        using Fixture fixture = await Fixture.CreateAsync(ct);
+        User coach = await fixture.AddAgentAsync("Coach", ct);
+        Room room = await fixture.Directory.CreateRoomAsync("Workout", [KnownIds.Human, coach.Id], ct);
+        JsonObject question = RawQuestion(
+            "Goal?",
+            new JsonObject { ["description"] = "no label here" },
+            JsonValue.Create(42),
+            null,
+            new JsonArray { "nested" });
+
+        string result = await fixture.CreateTool(coach.Id).InvokeAsync(
+            new JsonObject { ["roomId"] = room.Id, ["questions"] = new JsonArray { question } }, ct);
+
+        const string Fix = "must be a plain string (or an object with a string 'label'), not";
+        string[] expected =
+        [
+            $"Question 1, option 1: {Fix} an object without a string 'label'; send [\"Yes\", \"No\"].",
+            $"Question 1, option 2: {Fix} a number; send [\"Yes\", \"No\"].",
+            $"Question 1, option 3: {Fix} null; send [\"Yes\", \"No\"].",
+            $"Question 1, option 4: {Fix} an array; send [\"Yes\", \"No\"].",
+        ];
+        Assert.Equal(expected, result.Split('\n'));
+        Assert.Null(fixture.Questions.Get(room.Id));
+    }
+
+    /// <summary>An object option whose <c>label</c> is empty is a genuinely empty option and keeps the existing "is empty" message.</summary>
+    [Fact]
+    public async Task InvokeAsync_ObjectOptionWithEmptyLabel_ReportsIsEmpty()
+    {
+        CancellationToken ct = TestContext.Current.CancellationToken;
+        using Fixture fixture = await Fixture.CreateAsync(ct);
+        User coach = await fixture.AddAgentAsync("Coach", ct);
+        Room room = await fixture.Directory.CreateRoomAsync("Workout", [KnownIds.Human, coach.Id], ct);
+        JsonObject question = RawQuestion("Goal?", new JsonObject { ["label"] = "  " }, JsonValue.Create("Cardio"));
+
+        string result = await fixture.CreateTool(coach.Id).InvokeAsync(
+            new JsonObject { ["roomId"] = room.Id, ["questions"] = new JsonArray { question } }, ct);
+
+        Assert.Equal("Question 1, option 1: is empty.", result);
+    }
+
+    /// <summary>A genuinely empty string option still yields the existing "is empty" message.</summary>
+    [Fact]
+    public async Task InvokeAsync_EmptyStringOption_StillReportsIsEmpty()
+    {
+        CancellationToken ct = TestContext.Current.CancellationToken;
+        using Fixture fixture = await Fixture.CreateAsync(ct);
+        User coach = await fixture.AddAgentAsync("Coach", ct);
+        Room room = await fixture.Directory.CreateRoomAsync("Workout", [KnownIds.Human, coach.Id], ct);
+
+        string result = await fixture.CreateTool(coach.Id).InvokeAsync(
+            Arguments(room.Id, Question("Goal?", ["", "Cardio"])), ct);
+
+        Assert.Equal("Question 1, option 1: is empty.", result);
+        Assert.Null(fixture.Questions.Get(room.Id));
+    }
+
+    /// <summary>Builds an option object in Claude Code's <c>AskUserQuestion</c> shape.</summary>
+    /// <param name="label">The option text.</param>
+    /// <param name="description">The explanation the tool ignores.</param>
+    private static JsonObject LabelOption(string label, string description)
+    {
+        return new JsonObject { ["label"] = label, ["description"] = description };
+    }
+
+    /// <summary>Builds one question whose options are arbitrary JSON, as a model might send them.</summary>
+    /// <param name="text">The question text.</param>
+    /// <param name="options">The raw option nodes, kept as given (<see langword="null"/> stays JSON null).</param>
+    private static JsonObject RawQuestion(string text, params JsonNode?[] options)
+    {
+        JsonArray optionArray = [];
+        foreach (JsonNode? option in options)
+        {
+            optionArray.Add(option);
+        }
+
+        return new JsonObject { ["question"] = text, ["options"] = optionArray };
+    }
+
     /// <summary>The success text for <paramref name="count"/> questions asked in <paramref name="room"/>, as §6.2 words it.</summary>
     /// <param name="count">How many questions were asked.</param>
     /// <param name="room">The Room they were asked in.</param>
