@@ -75,6 +75,7 @@ public sealed class TeamsPhase3EndToEndTests
         MessagePostedEvent posted = Assert.Single(onboarding);
         string[] memberNames = [.. posted.Members.Select(static member => member.Name).Order(StringComparer.Ordinal)];
         Assert.Equal([cast.Manager.Name, "You"], memberNames);
+        await WaitForAsync(() => run.Launcher.Launches >= cast.Cards.Count, ct);
         Assert.True(run.Launcher.Launches >= cast.Cards.Count);
     }
 
