@@ -331,7 +331,7 @@ public sealed class TaskStoreTests
         TaskItem? result = store.Write(original, original.Version, text);
 
         Assert.NotNull(result);
-        Assert.False(File.Exists(path + ".tmp"));
+        Assert.Empty(Directory.GetFiles(Path.GetDirectoryName(path)!, "*.tmp"));
     }
 
     /// <summary>A successful Write republishes the index with the new content and raises <see cref="TaskStore.IndexChanged"/> exactly once.</summary>

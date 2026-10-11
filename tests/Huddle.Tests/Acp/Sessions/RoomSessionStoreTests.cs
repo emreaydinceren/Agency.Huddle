@@ -109,7 +109,7 @@ public sealed class RoomSessionStoreTests
         store.Put("Nova", "room-porto", new RoomSessionEntry("sess-1", "claude", null, null, null, DateTimeOffset.UtcNow));
 
         string folder = Path.Combine(dataDir.Path, "room-sessions");
-        Assert.False(File.Exists(Path.Combine(folder, "Nova.json.tmp")));
+        Assert.Empty(Directory.GetFiles(folder, "*.tmp"));
     }
 
     /// <summary>A stored Work Mode round-trips through the file.</summary>

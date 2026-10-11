@@ -267,7 +267,7 @@ internal sealed partial class TaskStore : IDisposable, ITaskReferenceResolver
                 return null;
             }
 
-            WriteAtomic(task.Path, text);
+            AtomicFile.WriteText(task.Path, text);
             written = ReparseWritten(task.Path, task.Location, task.Id, "written");
             this.RecordVersion(written);
             this.index = ReplaceInIndex(this.index, written);
@@ -371,7 +371,7 @@ internal sealed partial class TaskStore : IDisposable, ITaskReferenceResolver
 
             try
             {
-                WriteAtomic(targetPath, text);
+                AtomicFile.WriteText(targetPath, text);
             }
             catch (IOException)
             {
@@ -435,7 +435,7 @@ internal sealed partial class TaskStore : IDisposable, ITaskReferenceResolver
                         continue;
                     }
 
-                    WriteAtomic(task.Path, text);
+                    AtomicFile.WriteText(task.Path, text);
                     TaskItem written = ReparseWritten(task.Path, task.Location, task.Id, "written");
                     this.RecordVersion(written);
                     snapshot = ReplaceInIndex(snapshot, written);
@@ -497,7 +497,7 @@ internal sealed partial class TaskStore : IDisposable, ITaskReferenceResolver
                     string.Create(CultureInfo.InvariantCulture, $"Task '{id}' could not be written: {parseError}"));
             }
 
-            WriteAtomic(current.Path, appended);
+            AtomicFile.WriteText(current.Path, appended);
             written = ReparseWritten(current.Path, current.Location, id, "written");
             this.RecordVersion(written);
             this.index = ReplaceInIndex(this.index, written);
@@ -833,7 +833,7 @@ internal sealed partial class TaskStore : IDisposable, ITaskReferenceResolver
                     string.Create(CultureInfo.InvariantCulture, $"Task '{task.Id}' could not be reconciled at startup: {parseError}"));
             }
 
-            WriteAtomic(task.Path, appended);
+            AtomicFile.WriteText(task.Path, appended);
             TaskItem written = ReparseWritten(task.Path, task.Location, task.Id, "reconciled");
             this.RecordVersion(written);
             this.index = ReplaceInIndex(this.index, written);
@@ -859,13 +859,6 @@ internal sealed partial class TaskStore : IDisposable, ITaskReferenceResolver
     private static DateTimeOffset TruncateToSeconds(DateTimeOffset value) =>
         new(value.Year, value.Month, value.Day, value.Hour, value.Minute, value.Second, value.Offset);
 
-    /// <summary>Writes <paramref name="text"/> to <paramref name="path"/> atomically: a ".tmp" file, then an overwriting <see cref="File.Move(string, string, bool)"/> (Spec §8.3; the precedent is <c>FileStateStore.cs:173-176</c>).</summary>
-    private static void WriteAtomic(string path, string text)
-    {
-        string tmpPath = path + ".tmp";
-        File.WriteAllText(tmpPath, text);
-        File.Move(tmpPath, path, overwrite: true);
-    }
 
     /// <summary>
     /// Re-reads and re-parses <paramref name="path"/> right after this class wrote it. A failure here

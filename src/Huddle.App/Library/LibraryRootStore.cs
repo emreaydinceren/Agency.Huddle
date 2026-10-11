@@ -394,9 +394,7 @@ internal sealed class LibraryRootStore(IOptions<TeamOptions> options, TeammatePa
 
         string json = document.ToJsonString(IndentedJsonOptions);
         string filePath = this.FilePath;
-        string tmpPath = filePath + ".tmp";
-        File.WriteAllText(tmpPath, json);
-        File.Move(tmpPath, filePath, overwrite: true);
+        AtomicFile.WriteText(filePath, json);
     }
 
     /// <summary>Re-derives <see cref="Roots"/> from <paramref name="pinnedFromFile"/> (or configuration, when <see langword="null"/>).</summary>

@@ -1,6 +1,7 @@
 using System.Text.Json;
 using System.Text.Json.Nodes;
 using Microsoft.Extensions.Options;
+using Agency.Huddle.App.Library;
 
 namespace Agency.Huddle.App.Tasks.Views;
 
@@ -374,9 +375,7 @@ internal sealed partial class ViewStore : IDisposable
     {
         JsonObject document = new() { ["version"] = 1, ["views"] = entries.DeepClone() };
         string json = document.ToJsonString(ViewJson.Options);
-        string tmpPath = path + ".tmp";
-        File.WriteAllText(tmpPath, json);
-        File.Move(tmpPath, path, overwrite: true);
+        AtomicFile.WriteText(path, json);
     }
 
     /// <summary>

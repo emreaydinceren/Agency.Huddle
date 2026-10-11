@@ -1,6 +1,7 @@
 using System.Text.Encodings.Web;
 using System.Text.Json;
 using Microsoft.Extensions.Options;
+using Agency.Huddle.App.Library;
 using Agency.Huddle.Contracts;
 
 namespace Agency.Huddle.App.FileChanges;
@@ -170,10 +171,8 @@ internal sealed class FileStateStore(IOptions<TeamOptions> options, ILogger<File
         Directory.CreateDirectory(this.Folder);
 
         string path = this.PathFor(name);
-        string tmpPath = path + ".tmp";
         string json = JsonSerializer.Serialize(ToDocument(state), IndentedJsonOptions);
-        File.WriteAllText(tmpPath, json);
-        File.Move(tmpPath, path, overwrite: true);
+        AtomicFile.WriteText(path, json);
     }
 
     /// <summary>The full path of <paramref name="name"/>'s file, <c>{Folder}/&lt;Name&gt;.json</c>.</summary>
@@ -241,9 +240,7 @@ internal sealed class FileStateStore(IOptions<TeamOptions> options, ILogger<File
         }
 
         string outputJson = JsonSerializer.Serialize(ToDocument(new FileState(subscribed, rooms, writers)), IndentedJsonOptions);
-        string tmpPath = filePath + ".tmp";
-        File.WriteAllText(tmpPath, outputJson);
-        File.Move(tmpPath, filePath, overwrite: true);
+        AtomicFile.WriteText(filePath, outputJson);
     }
 
     /// <summary>Comparer used to key entry-named dictionaries (Room folders, Writers), matching <see cref="FileState.Empty"/>.</summary>

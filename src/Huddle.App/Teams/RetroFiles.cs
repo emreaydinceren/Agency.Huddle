@@ -299,7 +299,7 @@ internal sealed class RetroFileStore(ITeamFolders folders)
         {
             if (!File.Exists(path))
             {
-                WriteAtomic(path, "# Retro register\n\n" + RetroRegister.Render(rows));
+                AtomicFile.WriteText(path, "# Retro register\n\n" + RetroRegister.Render(rows));
                 return;
             }
 
@@ -310,12 +310,12 @@ internal sealed class RetroFileStore(ITeamFolders folders)
             if (last < 0)
             {
                 string body = RetroRegister.Render(rows).Replace("\n", newline, StringComparison.Ordinal);
-                WriteAtomic(path, text.TrimEnd('\r', '\n') + newline + newline + body);
+                AtomicFile.WriteText(path, text.TrimEnd('\r', '\n') + newline + newline + body);
                 return;
             }
 
             lines.InsertRange(last + 1, rows.Select(static row => RetroRegister.RenderRow(row)));
-            WriteAtomic(path, string.Join(newline, lines));
+            AtomicFile.WriteText(path, string.Join(newline, lines));
         }
     }
 
@@ -340,7 +340,7 @@ internal sealed class RetroFileStore(ITeamFolders folders)
                 if (RetroRegister.TryParseRow(lines[i], out RegisterRow? row) && string.Equals(row.Id, rowId, StringComparison.Ordinal))
                 {
                     lines[i] = RetroRegister.RenderRow(row with { Status = status, EvidenceNextCheck = evidence });
-                    WriteAtomic(path, string.Join(newline, lines));
+                    AtomicFile.WriteText(path, string.Join(newline, lines));
                     return;
                 }
             }
@@ -383,19 +383,6 @@ internal sealed class RetroFileStore(ITeamFolders folders)
         return text.ToString().TrimEnd('\n') + "\n";
     }
 
-    private static void WriteAtomic(string path, string text)
-    {
-        string temp = $"{path}.{Guid.NewGuid():N}.tmp";
-        try
-        {
-            File.WriteAllText(temp, text, new UTF8Encoding(false));
-            File.Move(temp, path, overwrite: true);
-        }
-        finally
-        {
-            File.Delete(temp);
-        }
-    }
 
     private string TeamFolder(string team)
     {

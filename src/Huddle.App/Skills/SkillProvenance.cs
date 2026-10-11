@@ -1,6 +1,6 @@
 using System.Globalization;
-using System.Text;
 using System.Text.Json;
+using Agency.Huddle.App.Library;
 
 namespace Agency.Huddle.App.Skills;
 
@@ -101,9 +101,7 @@ public sealed record SkillProvenance(
         string json = JsonSerializer.Serialize(wire, SkillProvenance.JsonOptions).Replace("\r\n", "\n", StringComparison.Ordinal) + "\n";
 
         string target = System.IO.Path.Combine(skillFolder, SkillProvenance.FileName);
-        string temp = target + ".tmp";
-        File.WriteAllText(temp, json, new UTF8Encoding(encoderShouldEmitUTF8Identifier: false));
-        File.Move(temp, target, overwrite: true);
+        AtomicFile.WriteText(target, json);
     }
 
     /// <summary>The JSON shape of the record: every value as text, with <c>importedAt</c> as a UTC ISO-8601 string.</summary>
