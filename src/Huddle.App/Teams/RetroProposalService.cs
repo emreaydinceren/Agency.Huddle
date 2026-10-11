@@ -284,11 +284,9 @@ internal sealed class RetroProposalService(
 
         if (path is not null)
         {
-            string temporary = $"{path}.{Guid.NewGuid():N}.tmp";
             try
             {
-                File.WriteAllText(temporary, edited);
-                File.Move(temporary, path, true);
+                AtomicFile.WriteText(path, edited);
                 return true;
             }
             catch (IOException)
@@ -298,10 +296,6 @@ internal sealed class RetroProposalService(
             catch (UnauthorizedAccessException)
             {
                 return false;
-            }
-            finally
-            {
-                File.Delete(temporary);
             }
         }
 

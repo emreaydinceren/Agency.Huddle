@@ -1,4 +1,5 @@
 using Microsoft.Extensions.Options;
+using Agency.Huddle.App.Library;
 
 namespace Agency.Huddle.App.Tasks;
 
@@ -209,7 +210,7 @@ internal sealed class SprintStore : ISprintCatalog, IDisposable
 
                     created = new Sprint(new SprintId(next), trimmed);
                     string newText = SprintFileFormat.AppendLine(text, created.Id, trimmed);
-                    WriteAtomically(this.path, newText);
+                    AtomicFile.WriteText(this.path, newText);
                     this.snapshot = SprintFileFormat.ParseFile(newText);
                     raise = true;
                 }
@@ -273,7 +274,7 @@ internal sealed class SprintStore : ISprintCatalog, IDisposable
                     return false;
                 }
 
-                WriteAtomically(this.path, newText);
+                AtomicFile.WriteText(this.path, newText);
                 this.snapshot = SprintFileFormat.ParseFile(newText);
             }
             catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
@@ -311,13 +312,6 @@ internal sealed class SprintStore : ISprintCatalog, IDisposable
         this.debounceTimer.Dispose();
     }
 
-    /// <summary>Writes <paramref name="text"/> through a temporary file and an atomic move, so a crash mid-write cannot truncate the target.</summary>
-    private static void WriteAtomically(string path, string text)
-    {
-        string tmpPath = path + ".tmp";
-        File.WriteAllText(tmpPath, text);
-        File.Move(tmpPath, path, overwrite: true);
-    }
 
     /// <summary>Whether two parses of the file are the same Sprints and the same problems.</summary>
     private static bool SameContent(SprintFile left, SprintFile right) =>

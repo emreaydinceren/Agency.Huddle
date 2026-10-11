@@ -1,6 +1,7 @@
 using System.Text.Encodings.Web;
 using System.Text.Json;
 using Microsoft.Extensions.Options;
+using Agency.Huddle.App.Library;
 using Agency.Huddle.Contracts;
 
 namespace Agency.Huddle.App.Acp.Sessions;
@@ -215,10 +216,8 @@ internal sealed class RoomSessionStore(IOptions<TeamOptions> options, ILogger<Ro
         Directory.CreateDirectory(this.Folder);
 
         string path = this.PathFor(name);
-        string tmpPath = path + ".tmp";
         string json = JsonSerializer.Serialize(document, RoomSessionStore.IndentedJsonOptions);
-        File.WriteAllText(tmpPath, json);
-        File.Move(tmpPath, path, overwrite: true);
+        AtomicFile.WriteText(path, json);
     }
 
     /// <summary>The full path of <paramref name="name"/>'s file, <c>{Folder}/&lt;Name&gt;.json</c>.</summary>

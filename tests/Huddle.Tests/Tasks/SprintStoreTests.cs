@@ -47,7 +47,7 @@ public sealed class SprintStoreTests
         Assert.Equal("# Sprints\n\n- S1 | Sprint 1\n", File.ReadAllText(h.Sprints.Path));
         Assert.Equal(created.Sprint, h.Sprints.Current);
         Assert.Equal(created.Sprint, h.Sprints.Get(S1));
-        Assert.False(File.Exists(h.Sprints.Path + ".tmp"));
+        Assert.Empty(Directory.GetFiles(System.IO.Path.GetDirectoryName(h.Sprints.Path)!, "*.tmp"));
     }
 
     /// <summary>A second create of the same name, ignoring case, returns the existing Sprint and writes nothing.</summary>

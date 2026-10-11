@@ -123,7 +123,7 @@ public sealed class FileStateStoreTests
         store.Save("Nova", FileState.Empty);
 
         string folder = Path.Combine(dataDir.Path, "file-state");
-        Assert.False(File.Exists(Path.Combine(folder, "Nova.json.tmp")));
+        Assert.Empty(Directory.GetFiles(folder, "*.tmp"));
     }
 
     /// <summary>A save writes under <c>{DataDir}/file-state/</c>, keyed by the Agent's Name.</summary>
