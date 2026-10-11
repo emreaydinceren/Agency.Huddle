@@ -39,7 +39,11 @@ internal sealed class WatchFolderTool(FileChangeTracker tracker, string agentNam
     {
         ArgumentNullException.ThrowIfNull(arguments);
 
-        var folder = (string?)arguments["folder"];
+        if (!TaskToolText.TryGetString(arguments, "folder", out string? folder, out string folderRefusal))
+        {
+            return Task.FromResult(folderRefusal);
+        }
+
         if (string.IsNullOrWhiteSpace(folder))
         {
             return Task.FromResult("'folder' is a required argument.");

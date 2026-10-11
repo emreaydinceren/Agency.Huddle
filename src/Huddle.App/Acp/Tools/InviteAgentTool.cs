@@ -40,8 +40,16 @@ internal sealed class InviteAgentTool(ChatService chat, ITeamDirectory teamDirec
     {
         ArgumentNullException.ThrowIfNull(arguments);
 
-        var roomId = (string?)arguments["roomId"];
-        var agentName = (string?)arguments["agent"];
+        if (!TaskToolText.TryGetString(arguments, "roomId", out string? roomId, out string roomIdRefusal))
+        {
+            return roomIdRefusal;
+        }
+
+        if (!TaskToolText.TryGetString(arguments, "agent", out string? agentName, out string agentNameRefusal))
+        {
+            return agentNameRefusal;
+        }
+
         if (string.IsNullOrWhiteSpace(roomId) || string.IsNullOrWhiteSpace(agentName))
         {
             return "Both 'roomId' and 'agent' are required arguments.";

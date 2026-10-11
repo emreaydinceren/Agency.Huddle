@@ -199,4 +199,25 @@ public sealed class ReadSkillToolTests
     {
         return $"---\nName: {name}\nTitle: {name}\nAlias: {name}\n---\n{body}";
     }
+
+    /// <summary>An argument that is not JSON text is refused with the <c>'x' must be text.</c> refusal, naming it, rather than throwing an <see cref="InvalidCastException"/>.</summary>
+    /// <param name="wrongArgument">The argument sent as a number.</param>
+    [Theory]
+    [InlineData("name")]
+    [InlineData("file")]
+    public async Task InvokeAsync_NonStringArgument_RefusesAsText(string wrongArgument)
+    {
+        var ct = TestContext.Current.CancellationToken;
+        using var dir = new TempDataDir();
+        using var personas = CreatePersonaStore(dir);
+        using var skills = CreateSkillStore(dir);
+        SeedNova(personas, ["team-building"]);
+        var tool = new ReadSkillTool(skills, personas, "Nova", new FakePromptSource());
+        var arguments = new JsonObject { ["name"] = "team-building" };
+        arguments[wrongArgument] = 42;
+
+        var result = await tool.InvokeAsync(arguments, ct);
+
+        Assert.Equal($"'{wrongArgument}' must be text.", result);
+    }
 }

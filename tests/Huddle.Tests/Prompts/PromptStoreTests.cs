@@ -615,4 +615,26 @@ public sealed class PromptStoreTests
             this.Entries.Add((logLevel, formatter(state, exception)));
         }
     }
+
+    /// <summary>
+    /// A watcher rebuild that cannot read <c>prompts.json</c> on any attempt (an editor holds it exclusively) logs a
+    /// warning and keeps the previously resolved prompt text instead of letting the <see cref="IOException"/> escape the timer thread.
+    /// </summary>
+    [Fact]
+    public async Task Raw_FileLockedForEveryRetry_KeepsThePreviousText()
+    {
+        CancellationToken ct = TestContext.Current.CancellationToken;
+        using TempDataDir dataDir = new();
+        Elicitation.RecordingLogger<PromptStore> logger = new();
+        using PromptStore store = new(dataDir.Options(), logger);
+        store.Save("getHelp.intro", "Saved before the lock.");
+        string path = Path.Combine(dataDir.Path, "prompts.json");
+
+        using (FileStream held = LockedWatcherFileSupport.WriteAndHold(path, """{ "getHelp.intro": "Written while locked." }"""))
+        {
+            await LockedWatcherFileSupport.WaitForWarningAsync(logger, ct);
+
+            Assert.Equal("Saved before the lock.", store.Raw("getHelp.intro"));
+        }
+    }
 }

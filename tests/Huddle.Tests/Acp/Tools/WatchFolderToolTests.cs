@@ -158,4 +158,17 @@ public sealed class WatchFolderToolTests
             dataDir.Dispose();
         }
     }
+
+    /// <summary>A <c>folder</c> that is not JSON text is refused with the <c>'folder' must be text.</c> refusal rather than throwing an <see cref="InvalidCastException"/>.</summary>
+    [Fact]
+    public async Task Invoke_NonStringFolder_RefusesAsText()
+    {
+        var ct = TestContext.Current.CancellationToken;
+        using var fixture = await Fixture.CreateAsync(ct);
+        var tool = new WatchFolderTool(fixture.Tracker, "Nova", new FakePromptSource());
+
+        var result = await tool.InvokeAsync(new JsonObject { ["folder"] = 42 }, ct);
+
+        Assert.Equal("'folder' must be text.", result);
+    }
 }

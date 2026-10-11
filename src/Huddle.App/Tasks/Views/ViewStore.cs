@@ -565,16 +565,25 @@ internal sealed partial class ViewStore : IDisposable
                     : [];
                 return BuildSnapshot(entries);
             }
-            catch (Exception ex) when (attempt < WatcherReadRetryAttempts && (ex is JsonException or IOException))
+            catch (Exception ex) when (attempt < WatcherReadRetryAttempts && (ex is JsonException or IOException or UnauthorizedAccessException))
             {
                 // JsonException: caught mid-write, the partial text does not parse yet.
-                // IOException: an editor can hold the file open with a sharing lock while it writes.
+                // IOException / UnauthorizedAccessException: an editor can hold the file open with a sharing lock while it writes.
                 Thread.Sleep(WatcherReadRetryDelayMilliseconds);
             }
             catch (JsonException ex)
             {
                 this.logger.LogWarning(ex, "Could not parse '{Path}' after a filesystem change, even after retrying; keeping the previously resolved Views.", this.path);
                 return Snapshot.WithLoadError(ToLoadError(this.path, ex));
+            }
+            catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+            {
+                this.logger.LogWarning(
+                    ex,
+                    "Could not read '{Path}' after {Attempts} attempts; keeping the previously resolved Views.",
+                    this.path,
+                    WatcherReadRetryAttempts);
+                return null;
             }
         }
 

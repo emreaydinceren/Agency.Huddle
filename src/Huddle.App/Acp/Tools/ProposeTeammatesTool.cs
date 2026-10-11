@@ -72,7 +72,11 @@ internal sealed class ProposeTeammatesTool(
     {
         ArgumentNullException.ThrowIfNull(arguments);
 
-        var roomId = (string?)arguments["roomId"];
+        if (!TaskToolText.TryGetString(arguments, "roomId", out string? roomId, out string roomIdRefusal))
+        {
+            return roomIdRefusal;
+        }
+
         if (string.IsNullOrWhiteSpace(roomId))
         {
             return "The 'roomId' argument is required.";

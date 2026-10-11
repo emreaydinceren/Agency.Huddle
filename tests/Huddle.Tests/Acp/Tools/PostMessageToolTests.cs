@@ -147,4 +147,28 @@ public sealed class PostMessageToolTests
         Assert.Equal(room.Id, published.Room.Id);
         Assert.Equal("from a threadpool thread", published.Message.Text);
     }
+
+    /// <summary>An argument that is not JSON text is refused with the <c>'x' must be text.</c> refusal, naming it, rather than throwing an <see cref="InvalidCastException"/>.</summary>
+    /// <param name="wrongArgument">The argument sent as a number.</param>
+    [Theory]
+    [InlineData("roomId")]
+    [InlineData("text")]
+    public async Task PostMessage_NonStringArgument_RefusesAsText(string wrongArgument)
+    {
+        var ct = TestContext.Current.CancellationToken;
+        using var dir = new TempDataDir();
+        var directory = new SqliteTeamDirectory(dir.Options());
+        await directory.InitializeAsync("You", ct);
+        var store = new FileChatStore(dir.Options(), NullLogger<FileChatStore>.Instance);
+        var events = new RoomEvents(NullLogger<RoomEvents>.Instance);
+        var proposals = new ProposalStore(events);
+        var chat = new ChatService(directory, store, events, new FakeMentionAliasSource(), Options.Create(new TeamOptions()), proposals, new QuestionStore(events), NullLogger<ChatService>.Instance);
+        var tool = new PostMessageTool(chat, "echo-id", new FakePromptSource(), new OwnPosts(Options.Create(new TeamOptions())));
+        var arguments = new JsonObject { ["roomId"] = "some-room", ["text"] = "hello" };
+        arguments[wrongArgument] = 42;
+
+        var result = await tool.InvokeAsync(arguments, ct);
+
+        Assert.Equal($"'{wrongArgument}' must be text.", result);
+    }
 }

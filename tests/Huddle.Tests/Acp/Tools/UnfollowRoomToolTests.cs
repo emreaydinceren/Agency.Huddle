@@ -104,4 +104,19 @@ public sealed class UnfollowRoomToolTests
         var proposals = new ProposalStore(events);
         return new ChatService(directory, store, events, aliasSource, Options.Create(new TeamOptions()), proposals, new QuestionStore(events), NullLogger<ChatService>.Instance);
     }
+
+    /// <summary>A <c>roomId</c> that is not JSON text is refused with the <c>'roomId' must be text.</c> refusal rather than throwing an <see cref="InvalidCastException"/>.</summary>
+    [Fact]
+    public async Task UnfollowRoom_NonStringRoomId_RefusesAsText()
+    {
+        var ct = TestContext.Current.CancellationToken;
+        using var dir = new TempDataDir();
+        var directory = new SqliteTeamDirectory(dir.Options());
+        await directory.InitializeAsync("You", ct);
+        var tool = new UnfollowRoomTool(new RoomFollows(), directory, "caller-id", new FakePromptSource());
+
+        var result = await tool.InvokeAsync(new JsonObject { ["roomId"] = 42 }, ct);
+
+        Assert.Equal("'roomId' must be text.", result);
+    }
 }

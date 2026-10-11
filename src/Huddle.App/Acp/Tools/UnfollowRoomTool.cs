@@ -37,7 +37,11 @@ internal sealed class UnfollowRoomTool(RoomFollows roomFollows, ITeamDirectory t
     {
         ArgumentNullException.ThrowIfNull(arguments);
 
-        var roomId = (string?)arguments["roomId"];
+        if (!TaskToolText.TryGetString(arguments, "roomId", out string? roomId, out string roomIdRefusal))
+        {
+            return roomIdRefusal;
+        }
+
         if (string.IsNullOrWhiteSpace(roomId))
         {
             return "'roomId' is a required argument.";

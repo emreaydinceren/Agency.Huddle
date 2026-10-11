@@ -208,4 +208,26 @@ public sealed class InviteAgentToolTests
         var proposals = new ProposalStore(events);
         return new ChatService(directory, store, events, aliasSource, Options.Create(new TeamOptions()), proposals, new QuestionStore(events), NullLogger<ChatService>.Instance);
     }
+
+    /// <summary>An argument that is not JSON text is refused with the <c>'x' must be text.</c> refusal, naming it, rather than throwing an <see cref="InvalidCastException"/>.</summary>
+    /// <param name="wrongArgument">The argument sent as a number.</param>
+    [Theory]
+    [InlineData("roomId")]
+    [InlineData("agent")]
+    public async Task InviteAgent_NonStringArgument_RefusesAsText(string wrongArgument)
+    {
+        var ct = TestContext.Current.CancellationToken;
+        using var dir = new TempDataDir();
+        var directory = new SqliteTeamDirectory(dir.Options());
+        await directory.InitializeAsync("You", ct);
+        var aliasSource = new FakeMentionAliasSource();
+        var chat = CreateChatService(dir, directory, aliasSource);
+        var tool = new InviteAgentTool(chat, directory, aliasSource, new FakePromptSource());
+        var arguments = new JsonObject { ["roomId"] = "some-room", ["agent"] = "someone" };
+        arguments[wrongArgument] = 42;
+
+        var result = await tool.InvokeAsync(arguments, ct);
+
+        Assert.Equal($"'{wrongArgument}' must be text.", result);
+    }
 }

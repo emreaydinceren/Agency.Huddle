@@ -30,8 +30,16 @@ internal sealed class PostMessageTool(ChatService chat, string callerAgentId, IP
     {
         ArgumentNullException.ThrowIfNull(arguments);
 
-        var roomId = (string?)arguments["roomId"];
-        var text = (string?)arguments["text"];
+        if (!TaskToolText.TryGetString(arguments, "roomId", out string? roomId, out string roomIdRefusal))
+        {
+            return roomIdRefusal;
+        }
+
+        if (!TaskToolText.TryGetString(arguments, "text", out string? text, out string textRefusal))
+        {
+            return textRefusal;
+        }
+
         if (string.IsNullOrWhiteSpace(roomId) || string.IsNullOrWhiteSpace(text))
         {
             return "Both 'roomId' and 'text' are required arguments.";
