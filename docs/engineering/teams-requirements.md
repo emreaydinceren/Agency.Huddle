@@ -54,7 +54,7 @@ The primary user is one person running Huddle on their own machine: a developer 
 | Specialist | Every other hired member | Its role's job, from its stance and skills |
 | Retro agent | Optional hire | Reviewing records and proposing process changes |
 **Scenario 1: hire a Development Team (v1)**
-Emre picks Development Team, names it Web Team, points it at his repo and chooses the Small preset. Joe (Development Manager) is hired automatically; he adds a Developer, Reviewer and QA from the pool. Every card is Ready with defaults, the Reviewer and QA land on a different vendor than the Developer, and he clicks Start Team. Joe reads the repo, runs the build and tests, writes the stack notes to Team Memory, and proposes a small starter Task.
+Emre picks Development Team, names it Web Team, points it at his repo. Joe (Development Manager) is hired automatically; he adds a Developer, Reviewer and QA from the pool. Every card is Ready with defaults, the Reviewer and QA land on a different vendor than the Developer, and he clicks Start Team. Joe reads the repo, runs the build and tests, writes the stack notes to Team Memory, and proposes a small starter Task.
 **Scenario 2: specialize two Developers (v1)**
 The Web Team needs both front-end and build work. Emre hires a second Developer, Jane, and adds the MSBuild Authoring pack. Her job description now says to consult her on .csproj and build failures, so Joe routes build Tasks to her without anyone tagging her.
 **Scenario 3: one Team asks another (v1)**
@@ -70,7 +70,7 @@ v1 ships the Development Team end to end and Household as the second team type, 
 | Area | v1 | v2 | Out of scope |
 |---|---|---|---|
 | Team types | Development Team; Household with Household Manager and School Liaison | Small Business; remaining Household roles | A pipeline engine |
-| Hiring | Setup screen, hiring pool, presets, Ready / Needs setup, Start Team | Specialized postings in the pool; lending a specialist to another Team |  |
+| Hiring | Setup screen, hiring pool with two filter clouds, Ready / Needs setup, Start Team | Specialized postings in the pool; lending a specialist to another Team |  |
 | Members | Model, Adapter, Effort, skills and packs carried by the hire; Complete Setup panel | Product Manager and Design Reviewer roles; "update available" for role templates |  |
 | Skills | JSON catalog, import from the owner pinned to a commit, .source.json, visible provenance | "Update available" with a diff; whole-repo pick list | Pulling skills live on every run; a marketplace |
 | Orchestration | One manager per Team; manager wake-ups; Chief of Staff digests |  |  |
@@ -92,10 +92,10 @@ Each requirement has an ID for traceability and a release. "Must" is implied for
 | TT-3 | Built-in types ship with Huddle; a user folder with the same id replaces or extends one. | v1 |
 | TT-4 | An invalid manifest is not offered and is listed under Settings › Team Types › Problems with the reason. | v1 |
 | TT-5 | Each type declares exactly one manager role. | v1 |
-| TT-6 | A manifest declares workspace kind, coverage, presets, processes, and per role: limits, required, model tier, vendor diversity, skills, packs, required connectors and suggested names. | v1 |
+| TT-6 | A manifest declares workspace kind, coverage, processes and its roles. A role names a hiring-pool job (the job owns the title, persona, skills, model tier, connectors and suggested names, see the [Hiring Pool specification](../Huddle.HiringPool-Specifications.md)) and carries only what is true of the role in this type: manager, required, limit, coverage and vendor diversity. | v1 |
 | TT-7 | The Development Team type ships Development Manager, Tech Lead, Developer, Reviewer, Security Engineer, QA Engineer and Release Engineer. | v1 |
 | TT-8 | The Household type ships Household Manager and School Liaison. | v1 |
-| TT-9 | Small Business type; remaining Household roles. | v2 |
+| TT-9 | Small Business type, and 23 more built-in types (Content, Research, Data, Product, Ops, Legal, Life Admin, Learning, Events, Job Search, Sales Outreach, Docs, Open Source Maintainers, Grant Proposal, Tax Season, Support Desk, Founder's Office, Home Project, Book Project, Caregiving, Community Org, Relocation, Home Lab), all data in the hiring pool. Remaining Household roles stay v2. | v1 |
 
 ### Hiring and team setup (HR)
 
@@ -103,7 +103,7 @@ Each requirement has an ID for traceability and a release. "Must" is implied for
 |---|---|---|
 | HR-1 | Creating a Team asks for team type, Team Title, and a workspace when the type needs one. | v1 |
 | HR-2 | The manager is hired automatically when a Team is created. It can be replaced but not removed. | v1 |
-| HR-3 | The hiring pool shows one card per role. Drag a card into the Team or click + to hire; a preset hires a set of roles in one step. | v1 |
+| HR-3 | The hiring pool shows one card per job, filtered by two tag clouds (team types; tags and skill names). Click + to hire; a job the open type does not list can still be hired with default settings. There are no presets and no drag and drop. | v1 |
 | HR-4 | A pool card greys out when its role reaches maxPerTeam. | v1 |
 | HR-5 | Every hire is a new member of exactly one Team, except you and the Chief of Staff. The same role can be hired into many Teams under different names. | v1 |
 | HR-6 | A hire arrives Ready: suggested name, generated avatar, default skills, stance, and a model chosen from its tier. | v1 |

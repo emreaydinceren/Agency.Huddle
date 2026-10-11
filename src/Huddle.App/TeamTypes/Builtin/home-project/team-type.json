@@ -1,0 +1,70 @@
+{
+  "schemaVersion": 1,
+  "id": "home-project",
+  "version": "1.0.0",
+  "order": 210,
+  "workspace": {
+    "kind": "folder",
+    "label": "Project folder",
+    "required": false
+  },
+  "coverage": [
+    "gather",
+    "verify"
+  ],
+  "processes": [
+    {
+      "id": "home-project-basics",
+      "file": "processes/home-project-basics.md",
+      "default": true
+    }
+  ],
+  "roles": [
+    {
+      "id": "renovation-planner",
+      "job": "renovation-planner",
+      "manager": true,
+      "required": true,
+      "maxPerTeam": 1,
+      "covers": [
+        "verify"
+      ]
+    },
+    {
+      "id": "cost-estimator",
+      "job": "cost-estimator",
+      "required": false,
+      "maxPerTeam": 1,
+      "covers": [
+        "gather"
+      ]
+    },
+    {
+      "id": "permit-researcher",
+      "job": "permit-researcher",
+      "required": false,
+      "maxPerTeam": 1,
+      "covers": [
+        "gather"
+      ]
+    },
+    {
+      "id": "contractor-liaison",
+      "job": "contractor-liaison",
+      "required": false,
+      "maxPerTeam": 1,
+      "covers": [
+        "gather"
+      ]
+    },
+    {
+      "id": "schedule-keeper",
+      "job": "schedule-keeper",
+      "required": false,
+      "maxPerTeam": 1,
+      "covers": [
+        "gather"
+      ]
+    }
+  ]
+}

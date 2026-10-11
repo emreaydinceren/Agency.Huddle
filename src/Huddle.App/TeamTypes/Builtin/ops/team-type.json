@@ -1,0 +1,15 @@
+{
+  "schemaVersion": 1,
+  "id": "ops",
+  "version": "1.0.0",
+  "order": 80,
+  "workspace": { "kind": "folder", "label": "Runbooks folder", "required": true },
+  "coverage": [ "mitigate", "verify" ],
+  "processes": [ { "id": "ops-basics", "file": "processes/ops-basics.md", "default": true } ],
+  "roles": [
+    { "id": "incident-commander", "job": "incident-commander", "manager": true, "required": true, "maxPerTeam": 1, "covers": [ "verify" ] },
+    { "id": "sre", "job": "sre", "required": false, "maxPerTeam": 2, "covers": [ "mitigate" ] },
+    { "id": "scribe", "job": "scribe", "required": false, "maxPerTeam": 1, "covers": [] },
+    { "id": "comms-lead", "job": "comms-lead", "required": false, "maxPerTeam": 1, "covers": [] }
+  ]
+}

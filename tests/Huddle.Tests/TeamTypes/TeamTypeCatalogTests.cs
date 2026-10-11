@@ -194,7 +194,7 @@ public sealed class TeamTypeCatalogTests
         TeamTypeCatalog catalog = Create(dir);
 
         TeamTypeFileProblem problem = Assert.Single(catalog.Problems);
-        Assert.Equal("The manifest lacks id, version, displayName or workspace.", problem.Message);
+        Assert.Equal("The manifest lacks id, version or workspace.", problem.Message);
     }
 
     /// <summary>A manifest that cannot be opened is a problem, not an exception.</summary>

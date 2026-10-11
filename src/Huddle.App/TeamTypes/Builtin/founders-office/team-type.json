@@ -1,0 +1,76 @@
+{
+  "schemaVersion": 1,
+  "id": "founders-office",
+  "version": "1.0.0",
+  "order": 200,
+  "workspace": {
+    "kind": "folder",
+    "label": "Founder folder",
+    "required": false
+  },
+  "coverage": [
+    "draft",
+    "verify"
+  ],
+  "processes": [
+    {
+      "id": "founders-office-basics",
+      "file": "processes/founders-office-basics.md",
+      "default": true
+    }
+  ],
+  "roles": [
+    {
+      "id": "chief-of-staff",
+      "job": "chief-of-staff",
+      "manager": true,
+      "required": true,
+      "maxPerTeam": 1,
+      "covers": [
+        "verify"
+      ]
+    },
+    {
+      "id": "investor-researcher",
+      "job": "investor-researcher",
+      "required": false,
+      "maxPerTeam": 1,
+      "covers": [
+        "draft"
+      ]
+    },
+    {
+      "id": "pitch-writer",
+      "job": "pitch-writer",
+      "required": false,
+      "maxPerTeam": 1,
+      "covers": [
+        "draft"
+      ]
+    },
+    {
+      "id": "financial-modeler",
+      "job": "financial-modeler",
+      "required": false,
+      "maxPerTeam": 1,
+      "covers": [
+        "draft"
+      ]
+    },
+    {
+      "id": "skeptic-reviewer",
+      "job": "skeptic-reviewer",
+      "required": false,
+      "maxPerTeam": 1,
+      "covers": [
+        "verify"
+      ],
+      "model": {
+        "differentVendorFrom": [
+          "pitch-writer",
+          "financial-modeler"
+        ]
+      }
+    }
+  ]
+}

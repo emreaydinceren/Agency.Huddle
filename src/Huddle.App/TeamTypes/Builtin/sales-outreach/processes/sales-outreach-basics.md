@@ -1,0 +1,53 @@
+---
+title: 'Sales outreach basics'
+template: 'sales-outreach-basics@1.0.0'
+gates: []
+retro: { every: 14, unit: 'days' }
+---
+# Sales outreach basics
+
+## When it applies
+
+- Finding and contacting prospects, following up and writing proposals for a small sales effort.
+- The Task states its acceptance in one line, so the Sales Lead can check it without a meeting.
+
+## Stages
+
+1. **Ready**: the Task names the prospect or list and states its acceptance in one line. Done when the Sales Lead assigns it.
+2. **In progress**: the Prospect Researcher gathers the brief, then a writer drafts the email or proposal and the CRM Steward updates the record. Done when the draft and the record are in the Task.
+3. **Verify**: the Sales Lead checks the draft against the brief and the offer and posts an Evidence line. Done when that line exists.
+4. **Done**: the Human sends, prices or approves and marks the Task Done.
+
+## Who does what
+
+- `sales-lead` picks the prospects, writes acceptance lines, checks every draft and posts the Evidence line.
+- `prospect-researcher` writes a sourced brief on each prospect.
+- `outreach-writer` drafts first emails and follow-ups for the Human to send.
+- `crm-steward` keeps stages, next steps and dates current.
+- `proposal-writer` drafts proposals with every price left for the Human to confirm.
+
+## If a role is not hired
+
+- Any missing role: the Sales Lead does that work itself and says so on the Task.
+- The manager always verifies, so a Task with no draft goes to the Human with the brief quoted.
+
+## Gates
+
+- This process declares no hard gate. The Sales Lead's Evidence line is the check, and the Human closes each Task.
+
+## Cadence
+
+- Work the open Tasks by next-step date, nearest first.
+- The Sales Lead posts a weekly pipeline review.
+- A retro runs every 14 days.
+
+## Escalation
+
+- A price, a discount, a contract term or an opt-out request goes to the Human.
+- A disagreement between teammates goes to the Human with both views written on the Task.
+
+## Onboarding
+
+- Note the Sales folder, the offer, the price list and the customer profile.
+- Write Team Memory notes on the Human's voice, past wins and companies not to contact.
+- Propose a starter Task to the Sales Lead.

@@ -1,0 +1,15 @@
+{
+  "schemaVersion": 1,
+  "id": "content",
+  "version": "1.0.0",
+  "order": 40,
+  "workspace": { "kind": "folder", "label": "Content folder", "required": true },
+  "coverage": [ "draft", "verify" ],
+  "processes": [ { "id": "content-basics", "file": "processes/content-basics.md", "default": true } ],
+  "roles": [
+    { "id": "editor-in-chief", "job": "editor-in-chief", "manager": true, "required": true, "maxPerTeam": 1, "covers": [ "verify" ] },
+    { "id": "writer", "job": "writer", "required": true, "maxPerTeam": 2, "covers": [ "draft" ] },
+    { "id": "fact-checker", "job": "fact-checker", "required": false, "maxPerTeam": 1, "covers": [ "verify" ], "model": { "differentVendorFrom": [ "writer" ] } },
+    { "id": "copy-editor", "job": "copy-editor", "required": false, "maxPerTeam": 1, "covers": [ "verify" ], "model": { "differentVendorFrom": [ "writer" ] } }
+  ]
+}

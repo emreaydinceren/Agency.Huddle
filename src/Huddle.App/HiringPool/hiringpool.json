@@ -1,0 +1,3982 @@
+{
+  "schemaVersion": 1,
+  "teamTypes": [
+    {
+      "id": "development",
+      "name": "Development Team",
+      "description": "Builds and changes software in your repository. You set the goal; the team plans, writes, reviews and tests the change, and you accept it."
+    },
+    {
+      "id": "household",
+      "name": "Household",
+      "description": "Keeps family and school admin moving. The team reads school mail, tracks to-dos and events, and drafts replies for a parent to send."
+    },
+    {
+      "id": "small-business",
+      "name": "Small Business",
+      "description": "Helps you run a small business day to day. The team keeps the books, drafts customer replies and writes marketing copy for you to approve and send."
+    },
+    {
+      "id": "content",
+      "name": "Content Team",
+      "description": "Turns your ideas into finished articles, posts and newsletters. The team drafts, checks the facts and edits, and you publish."
+    },
+    {
+      "id": "research",
+      "name": "Research Team",
+      "description": "Answers a question with sources. The team finds and reads the material, analyses it and challenges the conclusion before you see it."
+    },
+    {
+      "id": "data",
+      "name": "Data Team",
+      "description": "Turns your data into answers you can trust. The team cleans and shapes the data, builds the analysis and checks the numbers."
+    },
+    {
+      "id": "product",
+      "name": "Product Team",
+      "description": "Shapes what to build next. The team defines the problem, designs the flow and writes a spec your engineers can pick up."
+    },
+    {
+      "id": "ops",
+      "name": "Ops Team",
+      "description": "Helps you handle incidents and learn from them. The team coordinates the response, keeps the timeline and drafts updates, and you run every change."
+    },
+    {
+      "id": "legal",
+      "name": "Legal Review",
+      "description": "Reads your contracts, policies and notices, drafts text for a lawyer to review, and flags the clauses and duties that need your attention. It never tells you a document is safe to sign."
+    },
+    {
+      "id": "life-admin",
+      "name": "Life Admin",
+      "description": "Keeps your personal admin moving: trips, bills and spending, appointments and forms, and the inbox they arrive in. It drafts and tracks; you book, pay and send."
+    },
+    {
+      "id": "learning",
+      "name": "Learning",
+      "description": "Plans what you want to learn, writes practice quizzes and gives feedback on your answers so you can see where you stand. A person you trust gives any final grade."
+    },
+    {
+      "id": "events",
+      "name": "Events",
+      "description": "Plans a party, trip or gathering from guest list to day-of schedule. It compares venues and vendors, keeps the timeline and drafts the messages you send."
+    },
+    {
+      "id": "job-search",
+      "name": "Job Search",
+      "description": "Finds openings that fit you, tailors your resume and cover letters, prepares you for interviews and tracks every application. You submit each application yourself."
+    },
+    {
+      "id": "sales-outreach",
+      "name": "Sales Outreach",
+      "description": "Researches prospects, drafts outreach and proposals, and keeps your pipeline current. You send every message and agree every price."
+    },
+    {
+      "id": "docs-team",
+      "name": "Docs Team",
+      "description": "Writes and maintains the documentation in your repository, then tests each page against the product so the steps actually work."
+    },
+    {
+      "id": "oss-maintainers",
+      "name": "Open Source Maintainers",
+      "description": "Helps you run an open-source project: triages issues, builds and reviews changes, cuts releases and keeps contributors informed."
+    },
+    {
+      "id": "grant-proposal",
+      "name": "Grant Proposal",
+      "description": "Finds funders that fit your cause and turns your plan into a complete, on-time proposal. You review every section and submit it yourself."
+    },
+    {
+      "id": "tax-season",
+      "name": "Tax Season",
+      "description": "Gathers your receipts, statements and possible deductions into one cited worksheet. You or your accountant decide what to claim and file."
+    },
+    {
+      "id": "support-desk",
+      "name": "Support Desk",
+      "description": "Drafts replies to customer questions, keeps the help articles current and spots recurring problems. You approve and send what goes out."
+    },
+    {
+      "id": "founders-office",
+      "name": "Founder's Office",
+      "description": "Keeps a founder's week in order: investor research, pitch drafts, a working financial model and prepared meetings."
+    },
+    {
+      "id": "home-project",
+      "name": "Home Project",
+      "description": "Plans a renovation or repair from scope to schedule, with cost ranges, permit research and drafted messages to contractors. You agree every price and date."
+    },
+    {
+      "id": "book-project",
+      "name": "Book Project",
+      "description": "Helps you shape a manuscript chapter by chapter, with structural notes, continuity checks and a reader's reaction."
+    },
+    {
+      "id": "caregiving",
+      "name": "Caregiving",
+      "description": "Keeps a loved one's appointments, forms, benefits and messages in one place, so the family carer is not holding it all in their head."
+    },
+    {
+      "id": "community-org",
+      "name": "Community Org",
+      "description": "Runs the paperwork of a club or volunteer group: agendas, minutes, rotas, newsletters and the books."
+    },
+    {
+      "id": "relocation",
+      "name": "Relocation",
+      "description": "Plans a move from the first housing search to the first week in the new place, with every deadline and address change tracked."
+    },
+    {
+      "id": "home-lab",
+      "name": "Home Lab",
+      "description": "Keeps your home servers and network written down as code: configuration, automation and the runbook to rebuild them."
+    }
+  ],
+  "jobs": [
+    {
+      "id": "development-manager",
+      "title": "Development Manager",
+      "description": "Plans, assigns and tracks development work, and gets each Task to the Human with its evidence in place.",
+      "tags": [
+        "planning",
+        "tracking",
+        "code"
+      ],
+      "skills": [
+        "scope-definition",
+        "status-reporting",
+        "deadline-tracking"
+      ],
+      "skillRefs": [
+        {
+          "name": "team-management",
+          "source": "builtin",
+          "path": "team-management"
+        }
+      ],
+      "teamTypes": [
+        "development",
+        "oss-maintainers",
+        "home-lab"
+      ],
+      "model": {
+        "tier": "strongest"
+      },
+      "suggestedNames": [
+        "Joe",
+        "Omar",
+        "Rhea",
+        "Sam"
+      ],
+      "avatars": [
+        "software-development-manager_fair_m_01.png",
+        "software-development-manager_fair_f_01.png",
+        "software-development-manager_tan_f_01.png",
+        "software-development-manager_tan_m_01.png",
+        "software-development-manager_light_m_01.png",
+        "software-development-manager_light_f_01.png",
+        "software-development-manager_tan_f_02.png",
+        "software-development-manager_brown_f_01.png"
+      ]
+    },
+    {
+      "id": "tech-lead",
+      "title": "Tech Lead",
+      "description": "Turns an approved spec into day-sized build Tasks and owns the technical design.",
+      "tags": [
+        "planning",
+        "code",
+        "design"
+      ],
+      "skills": [
+        "scope-definition",
+        "code-review"
+      ],
+      "skillRefs": [
+        {
+          "name": "incremental-implementation",
+          "source": "addyosmani/agent-skills",
+          "path": "skills/incremental-implementation"
+        },
+        {
+          "name": "code-review-and-quality",
+          "source": "addyosmani/agent-skills",
+          "path": "skills/code-review-and-quality"
+        }
+      ],
+      "teamTypes": [
+        "development",
+        "product",
+        "oss-maintainers",
+        "home-lab"
+      ],
+      "model": {
+        "tier": "strongest"
+      },
+      "suggestedNames": [
+        "Kai",
+        "Mei",
+        "Dana",
+        "Ravi"
+      ],
+      "avatars": [
+        "software-developer_tan_m_01.png",
+        "software-developer_tan_f_01.png",
+        "software-development-manager_fair_f_01.png",
+        "software-developer_fair_m_01.png",
+        "software-developer_dark_m_01.png",
+        "software-development-manager_light_m_01.png",
+        "software-development-manager_light_f_01.png",
+        "software-development-manager_brown_f_01.png"
+      ]
+    },
+    {
+      "id": "developer",
+      "title": "Developer",
+      "description": "Builds the assigned change and its tests in the Team's repository, one Task at a time.",
+      "tags": [
+        "code",
+        "verification"
+      ],
+      "skills": [
+        "repro-steps",
+        "root-cause-analysis"
+      ],
+      "skillRefs": [
+        {
+          "name": "test-driven-development",
+          "source": "addyosmani/agent-skills",
+          "path": "skills/test-driven-development"
+        },
+        {
+          "name": "incremental-implementation",
+          "source": "addyosmani/agent-skills",
+          "path": "skills/incremental-implementation"
+        }
+      ],
+      "teamTypes": [
+        "development",
+        "oss-maintainers",
+        "home-lab",
+        "docs-team"
+      ],
+      "model": {
+        "tier": "balanced"
+      },
+      "suggestedNames": [
+        "Jane",
+        "Priya",
+        "Leo",
+        "Ana"
+      ],
+      "packs": [
+        "msbuild-authoring"
+      ],
+      "avatars": [
+        "software-developer_tan_m_01.png",
+        "software-developer_tan_f_01.png",
+        "developer_fair_m_01.png",
+        "software-developer_fair_m_01.png",
+        "software-developer_dark_m_01.png",
+        "software-developer_light_m_01.png",
+        "software-developer_brown_f_01.png",
+        "software-developer_dark_f_01.png"
+      ]
+    },
+    {
+      "id": "reviewer",
+      "title": "Reviewer",
+      "description": "Reads a change in Review and reports on it without editing files.",
+      "tags": [
+        "code",
+        "verification"
+      ],
+      "skills": [
+        "code-review",
+        "root-cause-analysis"
+      ],
+      "skillRefs": [
+        {
+          "name": "code-review-and-quality",
+          "source": "addyosmani/agent-skills",
+          "path": "skills/code-review-and-quality"
+        }
+      ],
+      "teamTypes": [
+        "development",
+        "oss-maintainers",
+        "home-lab"
+      ],
+      "model": {
+        "tier": "balanced"
+      },
+      "suggestedNames": [
+        "Nadia",
+        "Tomas",
+        "Ines",
+        "Hugo"
+      ],
+      "packs": [
+        "code-review-and-quality"
+      ],
+      "avatars": [
+        "software-developer_fair_m_01.png",
+        "software-developer_tan_m_01.png",
+        "software-developer_dark_m_01.png",
+        "software-developer_fair_f_01.png",
+        "software-developer_tan_f_01.png",
+        "detective_brown_f_01.png",
+        "detective_dark_f_01.png",
+        "software-developer_light_m_01.png"
+      ]
+    },
+    {
+      "id": "security-engineer",
+      "title": "Security Engineer",
+      "description": "Reviews changes that touch secrets, input handling, authentication or dependencies, read-only.",
+      "tags": [
+        "security",
+        "code",
+        "verification"
+      ],
+      "skills": [
+        "code-review",
+        "root-cause-analysis"
+      ],
+      "teamTypes": [
+        "development",
+        "oss-maintainers",
+        "home-lab",
+        "ops"
+      ],
+      "model": {
+        "tier": "balanced"
+      },
+      "suggestedNames": [
+        "Vera",
+        "Idris",
+        "Lena",
+        "Marco"
+      ],
+      "avatars": [
+        "software-developer_tan_f_01.png",
+        "software-developer_tan_m_01.png",
+        "police_fair_m_01.png",
+        "software-developer_fair_m_01.png",
+        "software-developer_light_m_01.png",
+        "software-developer_dark_m_01.png",
+        "software-developer_brown_f_01.png",
+        "police_brown_f_01.png"
+      ]
+    },
+    {
+      "id": "qa-engineer",
+      "title": "QA Engineer",
+      "description": "Runs the Team's checks against each acceptance line and records the result as evidence.",
+      "tags": [
+        "verification",
+        "code",
+        "tracking"
+      ],
+      "skills": [
+        "repro-steps",
+        "status-reporting"
+      ],
+      "skillRefs": [
+        {
+          "name": "team-management",
+          "source": "builtin",
+          "path": "team-management"
+        }
+      ],
+      "teamTypes": [
+        "development",
+        "oss-maintainers",
+        "docs-team"
+      ],
+      "model": {
+        "tier": "balanced"
+      },
+      "suggestedNames": [
+        "Zoe",
+        "Felix",
+        "Amara",
+        "Otto"
+      ],
+      "avatars": [
+        "software-developer_tan_m_01.png",
+        "software-developer_tan_f_01.png",
+        "detective_fair_m_01.png",
+        "detective_fair_f_01.png",
+        "software-developer_light_m_01.png",
+        "software-developer_dark_m_01.png",
+        "software-developer_brown_f_01.png",
+        "software-developer_dark_f_01.png"
+      ]
+    },
+    {
+      "id": "release-engineer",
+      "title": "Release Engineer",
+      "description": "Merges and pushes a reviewed change only after its checks pass.",
+      "tags": [
+        "code",
+        "operations"
+      ],
+      "skills": [
+        "status-reporting",
+        "deadline-tracking"
+      ],
+      "teamTypes": [
+        "development",
+        "oss-maintainers"
+      ],
+      "model": {
+        "tier": "fast"
+      },
+      "suggestedNames": [
+        "Eli",
+        "Yara",
+        "Bruno",
+        "Mina"
+      ],
+      "packs": [
+        "msbuild-authoring"
+      ],
+      "avatars": [
+        "software-development-manager_tan_m_01.png",
+        "software-development-manager_fair_m_01.png",
+        "software-development-manager_tan_f_01.png",
+        "software-development-manager_light_m_01.png",
+        "software-development-manager_light_f_01.png",
+        "software-development-manager_fair_f_01.png",
+        "software-development-manager_brown_f_01.png",
+        "software-developer_dark_m_01.png"
+      ]
+    },
+    {
+      "id": "retro-agent",
+      "title": "Retro Agent",
+      "description": "Runs the Team's retrospective and proposes the smallest changes that would have prevented its problems.",
+      "tags": [
+        "analysis",
+        "planning"
+      ],
+      "skills": [
+        "root-cause-analysis",
+        "minute-taking"
+      ],
+      "skillRefs": [
+        {
+          "name": "retrospective",
+          "source": "builtin",
+          "path": "retrospective"
+        }
+      ],
+      "teamTypes": [
+        "development",
+        "product",
+        "ops",
+        "data",
+        "content",
+        "research",
+        "oss-maintainers"
+      ],
+      "model": {
+        "tier": "strongest"
+      },
+      "suggestedNames": [
+        "Wren",
+        "Ada",
+        "Iris",
+        "Cal"
+      ],
+      "avatars": [
+        "software-development-manager_fair_f_01.png",
+        "software-development-manager_tan_f_01.png",
+        "chief-of-staff_light_m_01.png",
+        "chief-of-staff_tan_f_01.png",
+        "chief-of-staff_brown_f_01.png",
+        "chief-of-staff_fair_f_02.png",
+        "software-development-manager_light_m_01.png",
+        "student_dark_m_01.png"
+      ]
+    },
+    {
+      "id": "household-manager",
+      "title": "Household Manager",
+      "description": "Runs the household's Tasks, checks each draft against its source and posts the Evidence line.",
+      "tags": [
+        "home",
+        "family",
+        "planning",
+        "tracking"
+      ],
+      "skills": [
+        "status-reporting",
+        "deadline-tracking"
+      ],
+      "skillRefs": [
+        {
+          "name": "team-management",
+          "source": "builtin",
+          "path": "team-management"
+        }
+      ],
+      "teamTypes": [
+        "household",
+        "life-admin",
+        "caregiving",
+        "relocation",
+        "home-project"
+      ],
+      "model": {
+        "tier": "strongest"
+      },
+      "suggestedNames": [
+        "Nora",
+        "Ben",
+        "Maya"
+      ],
+      "avatars": [
+        "butler_fair_f_02.png",
+        "chief-of-staff_fair_m_01.png",
+        "chief-of-staff_light_m_01.png",
+        "chief-of-staff_brown_f_01.png",
+        "butler_tan_m_01.png",
+        "butler_light_m_01.png",
+        "butler_dark_m_01.png",
+        "butler_tan_f_01.png"
+      ]
+    },
+    {
+      "id": "school-liaison",
+      "title": "School Liaison",
+      "description": "Turns school emails into parent to-dos, family events, a weekly digest and draft replies.",
+      "tags": [
+        "education",
+        "family",
+        "email",
+        "scheduling"
+      ],
+      "skills": [
+        "inbox-triage",
+        "reply-drafting",
+        "deadline-tracking"
+      ],
+      "teamTypes": [
+        "household",
+        "caregiving"
+      ],
+      "model": {
+        "tier": "balanced"
+      },
+      "requires": [
+        "email:read"
+      ],
+      "suggestedNames": [
+        "Ellie",
+        "Theo"
+      ],
+      "avatars": [
+        "teacher_fair_m_01.png",
+        "teacher_dark_m_01.png",
+        "teacher_fair_f_01.png",
+        "teacher_tan_f_01.png",
+        "teacher_tan_f_02.png",
+        "teacher_dark_f_01.png",
+        "teacher_light_m_01.png",
+        "nanny_light_m_01.png"
+      ]
+    },
+    {
+      "id": "business-manager",
+      "title": "Business Manager",
+      "description": "Runs a small business's Tasks, checks every draft against its source and leaves each decision to the owner.",
+      "tags": [
+        "operations",
+        "planning",
+        "tracking"
+      ],
+      "skills": [
+        "scope-definition",
+        "status-reporting",
+        "deadline-tracking"
+      ],
+      "teamTypes": [
+        "small-business",
+        "founders-office",
+        "sales-outreach",
+        "support-desk"
+      ],
+      "model": {
+        "tier": "strongest"
+      },
+      "suggestedNames": [
+        "Rosa",
+        "Grant",
+        "Lina"
+      ],
+      "avatars": [
+        "banker_fair_m_01.png",
+        "banker_fair_f_01.png",
+        "chief-of-staff_tan_m_01.png",
+        "banker_tan_m_01.png",
+        "banker_light_m_01.png",
+        "banker_dark_m_01.png",
+        "banker_dark_f_01.png",
+        "chief-of-staff_brown_f_01.png"
+      ]
+    },
+    {
+      "id": "bookkeeper",
+      "title": "Bookkeeper",
+      "description": "Sorts and reconciles receipts, invoices and bank exports, and drafts invoices and figures for the owner.",
+      "tags": [
+        "accounting",
+        "finance",
+        "budgeting",
+        "tax"
+      ],
+      "skills": [
+        "spreadsheet-modeling",
+        "data-cleaning",
+        "budget-modeling"
+      ],
+      "teamTypes": [
+        "small-business",
+        "tax-season",
+        "founders-office",
+        "life-admin",
+        "community-org"
+      ],
+      "model": {
+        "tier": "balanced"
+      },
+      "suggestedNames": [
+        "Martin",
+        "June",
+        "Ola"
+      ],
+      "avatars": [
+        "accountant_fair_m_01.png",
+        "accountant_fair_m_02.png",
+        "accountant_tan_m_02.png",
+        "accountant_light_m_02.png",
+        "accountant_tan_f_03.png",
+        "accountant_brown_f_04.png",
+        "accountant_light_m_01.png",
+        "accountant_brown_f_01.png"
+      ]
+    },
+    {
+      "id": "customer-support",
+      "title": "Customer Support",
+      "description": "Sorts customer emails and drafts a reply to each one for the owner to send.",
+      "tags": [
+        "support",
+        "email",
+        "triage",
+        "writing"
+      ],
+      "skills": [
+        "inbox-triage",
+        "reply-drafting",
+        "how-to-writing"
+      ],
+      "teamTypes": [
+        "small-business",
+        "support-desk",
+        "oss-maintainers",
+        "community-org"
+      ],
+      "model": {
+        "tier": "balanced"
+      },
+      "requires": [
+        "email:read"
+      ],
+      "suggestedNames": [
+        "Sofia",
+        "Dev",
+        "Clara"
+      ],
+      "avatars": [
+        "customer-support_fair_m_01.png",
+        "customer-support_tan_m_01.png",
+        "customer-support_dark_m_01.png",
+        "customer-support_dark_m_02.png",
+        "customer-support_fair_f_01.png",
+        "customer-support_tan_f_01.png",
+        "customer-support_brown_f_01.png",
+        "software-development-manager_light_m_01.png"
+      ]
+    },
+    {
+      "id": "marketing-writer",
+      "title": "Marketing Writer",
+      "description": "Drafts posts, newsletters, product descriptions and ads in the business's voice.",
+      "tags": [
+        "marketing",
+        "writing",
+        "sales"
+      ],
+      "skills": [
+        "outlining",
+        "copy-editing",
+        "web-research"
+      ],
+      "teamTypes": [
+        "small-business",
+        "sales-outreach",
+        "founders-office",
+        "content",
+        "events",
+        "community-org"
+      ],
+      "model": {
+        "tier": "balanced"
+      },
+      "suggestedNames": [
+        "Jules",
+        "Nina",
+        "Rafael"
+      ],
+      "avatars": [
+        "copywriter_fair_m_01.png",
+        "marketing-manager_fair_f_01.png",
+        "podcaster_tan_m_01.png",
+        "podcaster_dark_m_01.png",
+        "podcaster_dark_m_02.png",
+        "podcaster_tan_f_01.png",
+        "podcaster_brown_f_01.png",
+        "chief-of-staff_light_m_01.png"
+      ]
+    },
+    {
+      "id": "editor-in-chief",
+      "title": "Editor-in-Chief",
+      "description": "Commissions pieces with a brief, keeps them moving and gives each one a final read before the Human publishes.",
+      "tags": [
+        "editing",
+        "planning",
+        "tracking"
+      ],
+      "skills": [
+        "structural-editing",
+        "scope-definition",
+        "deadline-tracking"
+      ],
+      "teamTypes": [
+        "content",
+        "book-project",
+        "docs-team",
+        "grant-proposal"
+      ],
+      "model": {
+        "tier": "strongest"
+      },
+      "suggestedNames": [
+        "Helen",
+        "Victor",
+        "Asha"
+      ],
+      "avatars": [
+        "copywriter_fair_m_01.png",
+        "professor_dark_m_01.png",
+        "professor_dark_f_01.png",
+        "professor_fair_m_01.png",
+        "professor_light_m_01.png",
+        "professor_tan_f_02.png",
+        "librarian_tan_m_01.png",
+        "librarian_brown_f_01.png"
+      ]
+    },
+    {
+      "id": "writer",
+      "title": "Writer",
+      "description": "Drafts and revises pieces from a brief, with a source beside every fact.",
+      "tags": [
+        "writing",
+        "research"
+      ],
+      "skills": [
+        "outlining",
+        "web-research",
+        "how-to-writing"
+      ],
+      "teamTypes": [
+        "content",
+        "book-project",
+        "docs-team",
+        "grant-proposal",
+        "small-business",
+        "community-org"
+      ],
+      "model": {
+        "tier": "balanced"
+      },
+      "suggestedNames": [
+        "Elena",
+        "Noah",
+        "Aisha"
+      ],
+      "avatars": [
+        "copywriter_fair_m_01.png",
+        "podcaster_fair_f_01.png",
+        "librarian_tan_f_01.png",
+        "podcaster_tan_m_01.png",
+        "podcaster_dark_m_01.png",
+        "podcaster_dark_m_02.png",
+        "podcaster_brown_f_01.png",
+        "librarian_light_m_01.png"
+      ]
+    },
+    {
+      "id": "fact-checker",
+      "title": "Fact-Checker",
+      "description": "Checks every fact, figure, quote and source in a draft and reports, read-only.",
+      "tags": [
+        "verification",
+        "research"
+      ],
+      "skills": [
+        "fact-checking",
+        "source-citing",
+        "web-research"
+      ],
+      "teamTypes": [
+        "content",
+        "research",
+        "book-project",
+        "grant-proposal",
+        "docs-team"
+      ],
+      "model": {
+        "tier": "balanced"
+      },
+      "suggestedNames": [
+        "Ruth",
+        "Pavel",
+        "Esme"
+      ],
+      "avatars": [
+        "librarian_fair_m_01.png",
+        "librarian_tan_m_01.png",
+        "librarian_light_m_01.png",
+        "librarian_dark_m_01.png",
+        "librarian_fair_f_01.png",
+        "librarian_tan_f_01.png",
+        "librarian_brown_f_01.png",
+        "librarian_dark_f_01.png"
+      ]
+    },
+    {
+      "id": "copy-editor",
+      "title": "Copy Editor",
+      "description": "Proposes line-level fixes for grammar, clarity, consistency and house style as suggestions.",
+      "tags": [
+        "editing",
+        "writing",
+        "verification"
+      ],
+      "skills": [
+        "copy-editing",
+        "structural-editing"
+      ],
+      "teamTypes": [
+        "content",
+        "book-project",
+        "docs-team",
+        "grant-proposal",
+        "job-search"
+      ],
+      "model": {
+        "tier": "balanced"
+      },
+      "suggestedNames": [
+        "Ivy",
+        "Simon",
+        "Greta"
+      ],
+      "avatars": [
+        "copywriter_fair_m_01.png",
+        "teacher_dark_m_01.png",
+        "teacher_tan_f_01.png",
+        "teacher_fair_m_01.png",
+        "teacher_dark_f_01.png",
+        "librarian_tan_m_01.png",
+        "librarian_light_m_01.png",
+        "librarian_brown_f_01.png"
+      ]
+    },
+    {
+      "id": "research-lead",
+      "title": "Research Lead",
+      "description": "Scopes a research question, plans the work and checks the answer against its sources.",
+      "tags": [
+        "research",
+        "planning",
+        "verification"
+      ],
+      "skills": [
+        "scope-definition",
+        "outlining",
+        "status-reporting"
+      ],
+      "teamTypes": [
+        "research",
+        "grant-proposal",
+        "learning",
+        "founders-office"
+      ],
+      "model": {
+        "tier": "strongest"
+      },
+      "suggestedNames": [
+        "Miriam",
+        "Arjun",
+        "Claire"
+      ],
+      "avatars": [
+        "professor_fair_m_01.png",
+        "professor_light_m_01.png",
+        "professor_dark_m_01.png",
+        "professor_dark_f_01.png",
+        "scientist_tan_f_01.png",
+        "genius-professor_brown_m_01.png",
+        "genius-professor_fair_f_01.png",
+        "genius-professor_tan_f_02.png"
+      ]
+    },
+    {
+      "id": "literature-scout",
+      "title": "Literature Scout",
+      "description": "Finds, reads and notes the sources a research question needs, with full citations.",
+      "tags": [
+        "research",
+        "education",
+        "docs"
+      ],
+      "skills": [
+        "web-research",
+        "source-citing"
+      ],
+      "teamTypes": [
+        "research",
+        "learning",
+        "grant-proposal",
+        "content",
+        "book-project"
+      ],
+      "model": {
+        "tier": "balanced"
+      },
+      "suggestedNames": [
+        "Tobias",
+        "Hana",
+        "Lucas"
+      ],
+      "avatars": [
+        "librarian_fair_m_01.png",
+        "librarian_tan_f_01.png",
+        "librarian_tan_m_01.png",
+        "librarian_light_m_01.png",
+        "librarian_dark_m_01.png",
+        "librarian_fair_f_01.png",
+        "librarian_brown_f_01.png",
+        "librarian_dark_f_01.png"
+      ]
+    },
+    {
+      "id": "analyst",
+      "title": "Analyst",
+      "description": "Turns sources and data into findings, comparisons and models, with the method written down.",
+      "tags": [
+        "analysis",
+        "data",
+        "research"
+      ],
+      "skills": [
+        "trend-analysis",
+        "spreadsheet-modeling",
+        "data-cleaning"
+      ],
+      "teamTypes": [
+        "research",
+        "data",
+        "product",
+        "founders-office",
+        "sales-outreach",
+        "small-business"
+      ],
+      "model": {
+        "tier": "balanced"
+      },
+      "suggestedNames": [
+        "Mira",
+        "Ethan",
+        "Yusuf"
+      ],
+      "avatars": [
+        "data-analyst_fair_m_01.png",
+        "data-analyst_tan_m_01.png",
+        "data-analyst_brown_f_01.png",
+        "data-analyst_fair_f_01.png",
+        "data-analyst_light_m_01.png",
+        "data-analyst_tan_f_01.png",
+        "data-analyst_brown_f_02.png",
+        "accountant_light_m_01.png"
+      ]
+    },
+    {
+      "id": "skeptic-reviewer",
+      "title": "Skeptic Reviewer",
+      "description": "Argues against a finding before the Human sees it, read-only, and says what evidence would settle each objection.",
+      "tags": [
+        "verification",
+        "analysis",
+        "research"
+      ],
+      "skills": [
+        "fact-checking",
+        "root-cause-analysis",
+        "source-citing"
+      ],
+      "teamTypes": [
+        "research",
+        "data",
+        "product",
+        "grant-proposal",
+        "founders-office",
+        "tax-season"
+      ],
+      "model": {
+        "tier": "strongest"
+      },
+      "suggestedNames": [
+        "Quinn",
+        "Bertrand",
+        "Ilse"
+      ],
+      "avatars": [
+        "detective_fair_m_01.png",
+        "detective_fair_f_01.png",
+        "professor_tan_m_01.png",
+        "professor_dark_m_01.png",
+        "professor_tan_f_01.png",
+        "professor_dark_f_01.png",
+        "detective_brown_f_01.png",
+        "professor_light_m_01.png"
+      ]
+    },
+    {
+      "id": "analytics-lead",
+      "title": "Analytics Lead",
+      "description": "Defines the metrics for a data question, plans the work and reproduces the key numbers before the Human sees them.",
+      "tags": [
+        "analysis",
+        "data",
+        "planning"
+      ],
+      "skills": [
+        "scope-definition",
+        "trend-analysis",
+        "status-reporting"
+      ],
+      "teamTypes": [
+        "data",
+        "founders-office",
+        "product"
+      ],
+      "model": {
+        "tier": "strongest"
+      },
+      "suggestedNames": [
+        "Hiro",
+        "Talia",
+        "Owen"
+      ],
+      "avatars": [
+        "data-analyst_fair_m_01.png",
+        "data-analyst_tan_m_01.png",
+        "data-analyst_brown_f_01.png",
+        "data-analyst_fair_f_01.png",
+        "data-analyst_light_m_01.png",
+        "data-analyst_tan_f_01.png",
+        "data-analyst_brown_f_02.png",
+        "accountant_light_m_01.png"
+      ]
+    },
+    {
+      "id": "data-engineer",
+      "title": "Data Engineer",
+      "description": "Loads, cleans, joins and reshapes raw data into documented tables, with repeatable steps.",
+      "tags": [
+        "data",
+        "code",
+        "operations"
+      ],
+      "skills": [
+        "data-cleaning",
+        "spreadsheet-modeling",
+        "repro-steps"
+      ],
+      "teamTypes": [
+        "data",
+        "research",
+        "home-lab"
+      ],
+      "model": {
+        "tier": "balanced"
+      },
+      "suggestedNames": [
+        "Rohan",
+        "Kira",
+        "Stefan"
+      ],
+      "avatars": [
+        "software-developer_tan_m_01.png",
+        "software-developer_tan_f_01.png",
+        "software-developer_fair_m_01.png",
+        "software-developer_dark_m_01.png",
+        "software-developer_fair_f_01.png",
+        "software-developer_light_m_01.png",
+        "software-developer_brown_f_01.png",
+        "software-developer_dark_f_01.png"
+      ]
+    },
+    {
+      "id": "data-qa",
+      "title": "Data QA",
+      "description": "Checks datasets and results for the errors that quietly break analyses, read-only.",
+      "tags": [
+        "verification",
+        "data",
+        "analysis"
+      ],
+      "skills": [
+        "data-cleaning",
+        "fact-checking",
+        "repro-steps"
+      ],
+      "teamTypes": [
+        "data",
+        "research",
+        "tax-season",
+        "founders-office"
+      ],
+      "model": {
+        "tier": "balanced"
+      },
+      "suggestedNames": [
+        "Agnes",
+        "Milo",
+        "Sana"
+      ],
+      "avatars": [
+        "data-analyst_brown_f_01.png",
+        "data-analyst_fair_f_01.png",
+        "data-analyst_fair_m_01.png",
+        "data-analyst_tan_m_01.png",
+        "data-analyst_light_m_01.png",
+        "data-analyst_tan_f_01.png",
+        "data-analyst_brown_f_02.png",
+        "detective_dark_m_01.png"
+      ]
+    },
+    {
+      "id": "product-manager",
+      "title": "Product Manager",
+      "description": "Defines the problem, orders the work and checks each spec before the Human decides what ships.",
+      "tags": [
+        "planning",
+        "research",
+        "tracking"
+      ],
+      "skills": [
+        "scope-definition",
+        "meeting-prep",
+        "status-reporting"
+      ],
+      "teamTypes": [
+        "product",
+        "founders-office",
+        "oss-maintainers"
+      ],
+      "model": {
+        "tier": "strongest"
+      },
+      "suggestedNames": [
+        "Laura",
+        "Diego",
+        "Ama"
+      ],
+      "avatars": [
+        "software-development-manager_fair_m_01.png",
+        "software-development-manager_fair_f_01.png",
+        "software-development-manager_tan_f_01.png",
+        "designer_tan_m_01.png",
+        "designer_brown_f_01.png",
+        "chief-of-staff_light_m_01.png",
+        "software-development-manager_light_m_01.png",
+        "software-development-manager_brown_f_01.png"
+      ]
+    },
+    {
+      "id": "designer",
+      "title": "Designer",
+      "description": "Writes user flows, screen layouts and states as text and simple wireframes beside the spec.",
+      "tags": [
+        "design",
+        "planning",
+        "docs"
+      ],
+      "skills": [
+        "outlining",
+        "scope-definition",
+        "how-to-writing"
+      ],
+      "teamTypes": [
+        "product",
+        "content",
+        "events",
+        "home-project",
+        "small-business"
+      ],
+      "model": {
+        "tier": "balanced"
+      },
+      "suggestedNames": [
+        "Freya",
+        "Nico",
+        "Imani"
+      ],
+      "avatars": [
+        "designer_fair_m_01.png",
+        "designer_fair_f_01.png",
+        "designer_brown_f_01.png",
+        "designer_tan_m_01.png",
+        "designer_light_m_01.png",
+        "designer_tan_f_01.png",
+        "artist_brown_m_01.png",
+        "accountant_light_m_01.png"
+      ]
+    },
+    {
+      "id": "ux-researcher",
+      "title": "UX Researcher",
+      "description": "Plans user research for the Human to run and turns the notes into findings with quotes and counts.",
+      "tags": [
+        "research",
+        "design",
+        "analysis"
+      ],
+      "skills": [
+        "meeting-prep",
+        "minute-taking",
+        "trend-analysis"
+      ],
+      "teamTypes": [
+        "product",
+        "research",
+        "support-desk"
+      ],
+      "model": {
+        "tier": "balanced"
+      },
+      "suggestedNames": [
+        "Leah",
+        "Kofi",
+        "Marta"
+      ],
+      "avatars": [
+        "designer_fair_m_01.png",
+        "designer_tan_m_01.png",
+        "designer_fair_f_01.png",
+        "designer_brown_f_01.png",
+        "data-analyst_brown_f_01.png",
+        "designer_light_m_01.png",
+        "designer_tan_f_01.png",
+        "data-analyst_light_m_01.png"
+      ]
+    },
+    {
+      "id": "incident-commander",
+      "title": "Incident Commander",
+      "description": "Runs the incident response, sets severity and next steps, and checks the fix before the Human closes it.",
+      "tags": [
+        "operations",
+        "triage",
+        "planning"
+      ],
+      "skills": [
+        "status-reporting",
+        "root-cause-analysis",
+        "deadline-tracking"
+      ],
+      "teamTypes": [
+        "ops",
+        "home-lab",
+        "support-desk"
+      ],
+      "model": {
+        "tier": "strongest"
+      },
+      "suggestedNames": [
+        "Morgan",
+        "Viktor",
+        "Selin"
+      ],
+      "avatars": [
+        "software-development-manager_tan_m_01.png",
+        "software-development-manager_light_m_01.png",
+        "software-development-manager_light_f_01.png",
+        "software-development-manager_tan_f_01.png",
+        "software-development-manager_brown_f_01.png",
+        "police_fair_m_01.png",
+        "police_dark_m_01.png",
+        "software-development-manager_fair_m_01.png"
+      ]
+    },
+    {
+      "id": "sre",
+      "title": "SRE",
+      "description": "Diagnoses incidents from logs and metrics and writes exact, reversible steps for the Human to run.",
+      "tags": [
+        "operations",
+        "code",
+        "triage"
+      ],
+      "skills": [
+        "root-cause-analysis",
+        "repro-steps",
+        "how-to-writing"
+      ],
+      "teamTypes": [
+        "ops",
+        "home-lab",
+        "development"
+      ],
+      "model": {
+        "tier": "balanced"
+      },
+      "suggestedNames": [
+        "Anton",
+        "Keiko",
+        "Malik"
+      ],
+      "avatars": [
+        "software-developer_tan_f_01.png",
+        "software-developer_tan_m_01.png",
+        "software-developer_fair_m_01.png",
+        "software-developer_light_m_01.png",
+        "software-developer_dark_m_01.png",
+        "software-developer_fair_f_01.png",
+        "software-developer_brown_f_01.png",
+        "software-developer_dark_f_01.png"
+      ]
+    },
+    {
+      "id": "scribe",
+      "title": "Scribe",
+      "description": "Keeps a factual timeline during an incident or meeting and drafts the blameless review afterwards.",
+      "tags": [
+        "writing",
+        "tracking",
+        "docs"
+      ],
+      "skills": [
+        "minute-taking",
+        "status-reporting"
+      ],
+      "teamTypes": [
+        "ops",
+        "community-org",
+        "events",
+        "founders-office",
+        "product",
+        "caregiving"
+      ],
+      "model": {
+        "tier": "fast"
+      },
+      "suggestedNames": [
+        "Bea",
+        "Arlo",
+        "Tess"
+      ],
+      "avatars": [
+        "copywriter_fair_m_01.png",
+        "chief-of-staff_light_m_01.png",
+        "chief-of-staff_brown_f_01.png",
+        "chief-of-staff_fair_m_01.png",
+        "librarian_tan_m_01.png",
+        "librarian_light_m_01.png",
+        "librarian_tan_f_01.png",
+        "librarian_brown_f_01.png"
+      ]
+    },
+    {
+      "id": "comms-lead",
+      "title": "Comms Lead",
+      "description": "Drafts status-page updates, customer emails and stakeholder notes for the Human to send.",
+      "tags": [
+        "writing",
+        "support",
+        "community"
+      ],
+      "skills": [
+        "reply-drafting",
+        "status-reporting",
+        "copy-editing"
+      ],
+      "teamTypes": [
+        "ops",
+        "support-desk",
+        "community-org",
+        "events",
+        "small-business"
+      ],
+      "model": {
+        "tier": "balanced"
+      },
+      "suggestedNames": [
+        "Harper",
+        "Joel",
+        "Amina"
+      ],
+      "avatars": [
+        "marketing-manager_fair_f_01.png",
+        "tv-reporter_fair_m_01.png",
+        "tv-reporter_dark_m_01.png",
+        "tv-reporter_brown_f_01.png",
+        "tv-reporter_tan_m_01.png",
+        "tv-reporter_light_m_01.png",
+        "tv-reporter_tan_f_01.png",
+        "tv-reporter_dark_f_01.png"
+      ]
+    },
+    {
+      "id": "compliance-lead",
+      "title": "Compliance Lead",
+      "description": "Runs the legal review team, checks every flagged clause against its source and lists what the Human must take to a lawyer.",
+      "tags": [
+        "legal",
+        "compliance",
+        "verification",
+        "planning"
+      ],
+      "skills": [
+        "scope-definition",
+        "fact-checking",
+        "status-reporting"
+      ],
+      "teamTypes": [
+        "legal",
+        "small-business",
+        "founders-office",
+        "grant-proposal"
+      ],
+      "model": {
+        "tier": "strongest"
+      },
+      "suggestedNames": [
+        "Helena",
+        "Marcus",
+        "Asha"
+      ],
+      "avatars": [
+        "accountant_brown_f_01.png",
+        "accountant_fair_f_01.png",
+        "accountant_tan_f_02.png",
+        "accountant_light_m_02.png",
+        "accountant_brown_f_03.png",
+        "accountant_fair_f_02.png",
+        "banker_dark_m_01.png",
+        "accountant_tan_m_01.png"
+      ]
+    },
+    {
+      "id": "legal-drafter",
+      "title": "Legal Drafter",
+      "description": "Drafts clause language, policies, notices and memos for a lawyer to review; it never gives legal advice.",
+      "tags": [
+        "legal",
+        "writing",
+        "compliance",
+        "editing"
+      ],
+      "skills": [
+        "outlining",
+        "structural-editing",
+        "copy-editing",
+        "source-citing"
+      ],
+      "teamTypes": [
+        "legal",
+        "small-business",
+        "founders-office",
+        "community-org"
+      ],
+      "model": {
+        "tier": "balanced"
+      },
+      "suggestedNames": [
+        "Beatrix",
+        "Jonas",
+        "Leah"
+      ],
+      "avatars": [
+        "accountant_fair_f_01.png",
+        "detective_fair_m_01.png",
+        "detective_tan_m_01.png",
+        "detective_brown_f_01.png",
+        "accountant_tan_m_01.png",
+        "accountant_light_m_01.png",
+        "accountant_brown_f_01.png",
+        "accountant_light_m_02.png"
+      ]
+    },
+    {
+      "id": "contract-reviewer",
+      "title": "Contract Reviewer",
+      "description": "Reads a contract or draft clause by clause and flags obligations, deadlines, renewals and risks for a human to decide on.",
+      "tags": [
+        "legal",
+        "verification",
+        "analysis"
+      ],
+      "skills": [
+        "fact-checking",
+        "deadline-tracking",
+        "source-citing"
+      ],
+      "teamTypes": [
+        "legal",
+        "small-business",
+        "founders-office",
+        "relocation",
+        "sales-outreach"
+      ],
+      "model": {
+        "tier": "balanced"
+      },
+      "suggestedNames": [
+        "Clara",
+        "Tobias",
+        "Nia"
+      ],
+      "avatars": [
+        "accountant_fair_f_01.png",
+        "detective_fair_m_01.png",
+        "detective_tan_m_01.png",
+        "detective_brown_f_01.png",
+        "accountant_tan_m_01.png",
+        "accountant_light_m_01.png",
+        "accountant_brown_f_01.png",
+        "accountant_light_m_02.png"
+      ]
+    },
+    {
+      "id": "policy-researcher",
+      "title": "Policy Researcher",
+      "description": "Finds the rules, regulations and official guidance that apply to a question and summarises them with sources.",
+      "tags": [
+        "research",
+        "legal",
+        "compliance",
+        "writing"
+      ],
+      "skills": [
+        "web-research",
+        "source-citing",
+        "fact-checking"
+      ],
+      "teamTypes": [
+        "legal",
+        "research",
+        "small-business",
+        "community-org",
+        "grant-proposal",
+        "relocation"
+      ],
+      "model": {
+        "tier": "balanced"
+      },
+      "suggestedNames": [
+        "Simone",
+        "Arjun",
+        "Elena"
+      ],
+      "avatars": [
+        "professor_fair_m_01.png",
+        "professor_light_m_01.png",
+        "professor_dark_m_01.png",
+        "professor_dark_f_01.png",
+        "librarian_fair_m_01.png",
+        "librarian_tan_m_01.png",
+        "librarian_tan_f_01.png",
+        "librarian_brown_f_01.png"
+      ]
+    },
+    {
+      "id": "chief-of-household",
+      "title": "Chief of Household",
+      "description": "Runs your personal admin team, sets the order of work and checks every draft before it reaches you.",
+      "tags": [
+        "planning",
+        "operations",
+        "home",
+        "verification"
+      ],
+      "skills": [
+        "status-reporting",
+        "deadline-tracking",
+        "scope-definition"
+      ],
+      "teamTypes": [
+        "life-admin",
+        "relocation",
+        "caregiving",
+        "home-project"
+      ],
+      "model": {
+        "tier": "strongest"
+      },
+      "suggestedNames": [
+        "Julia",
+        "Grant",
+        "Sofia"
+      ],
+      "avatars": [
+        "chief-of-staff_fair_m_01.png",
+        "butler_fair_f_02.png",
+        "butler_tan_m_01.png",
+        "butler_light_m_01.png",
+        "butler_dark_m_01.png",
+        "butler_tan_f_01.png",
+        "butler_brown_f_01.png",
+        "butler_light_m_02.png"
+      ]
+    },
+    {
+      "id": "travel-planner",
+      "title": "Travel Planner",
+      "description": "Researches routes, stays and prices and drafts an itinerary for you to book.",
+      "tags": [
+        "travel",
+        "planning",
+        "research",
+        "scheduling"
+      ],
+      "skills": [
+        "web-research",
+        "quote-comparison",
+        "deadline-tracking"
+      ],
+      "teamTypes": [
+        "life-admin",
+        "events",
+        "relocation",
+        "household"
+      ],
+      "model": {
+        "tier": "balanced"
+      },
+      "suggestedNames": [
+        "Luca",
+        "Amelie",
+        "Rohan"
+      ],
+      "avatars": [
+        "explorer_fair_m_01.png",
+        "explorer_tan_m_01.png",
+        "explorer_dark_m_01.png",
+        "explorer_tan_f_01.png",
+        "explorer_brown_f_01.png",
+        "explorer_dark_f_01.png",
+        "explorer_dark_m_02.png",
+        "explorer_fair_f_01.png"
+      ]
+    },
+    {
+      "id": "finance-tracker",
+      "title": "Finance Tracker",
+      "description": "Tracks bills, subscriptions and spending against your budget and reminds you what is due.",
+      "tags": [
+        "finance",
+        "budgeting",
+        "tracking",
+        "data"
+      ],
+      "skills": [
+        "budget-modeling",
+        "spreadsheet-modeling",
+        "deadline-tracking",
+        "data-cleaning"
+      ],
+      "teamTypes": [
+        "life-admin",
+        "household",
+        "tax-season",
+        "relocation",
+        "caregiving"
+      ],
+      "model": {
+        "tier": "fast"
+      },
+      "suggestedNames": [
+        "Ivy",
+        "Owen",
+        "Hana"
+      ],
+      "avatars": [
+        "accountant_fair_m_01.png",
+        "accountant_light_m_02.png",
+        "accountant_light_m_01.png",
+        "accountant_brown_f_01.png",
+        "accountant_brown_f_02.png",
+        "accountant_fair_m_02.png",
+        "accountant_tan_m_02.png",
+        "accountant_tan_f_03.png"
+      ]
+    },
+    {
+      "id": "health-admin",
+      "title": "Health Admin",
+      "description": "Keeps appointments, referrals, claims and health forms organised; it never interprets symptoms.",
+      "tags": [
+        "health",
+        "scheduling",
+        "forms",
+        "tracking"
+      ],
+      "skills": [
+        "form-filling",
+        "deadline-tracking",
+        "reply-drafting"
+      ],
+      "teamTypes": [
+        "life-admin",
+        "caregiving",
+        "household"
+      ],
+      "model": {
+        "tier": "balanced"
+      },
+      "requires": [
+        "email:read"
+      ],
+      "suggestedNames": [
+        "Rosa",
+        "Daniel",
+        "Mira"
+      ],
+      "avatars": [
+        "nutrition-yoga-coach_light_m_01.png",
+        "nutrition-yoga-coach_tan_m_01.png",
+        "nutrition-yoga-coach_fair_f_01.png",
+        "nutrition-yoga-coach_brown_f_01.png",
+        "nanny_light_m_01.png",
+        "nanny_dark_m_01.png",
+        "nanny_brown_f_01.png",
+        "customer-support_fair_m_01.png"
+      ]
+    },
+    {
+      "id": "inbox-triager",
+      "title": "Inbox Triager",
+      "description": "Sorts the inbox into act, reply, read and ignore, and drafts the short replies.",
+      "tags": [
+        "email",
+        "triage",
+        "writing"
+      ],
+      "skills": [
+        "inbox-triage",
+        "reply-drafting",
+        "deadline-tracking"
+      ],
+      "teamTypes": [
+        "life-admin",
+        "founders-office",
+        "support-desk",
+        "small-business",
+        "household",
+        "job-search",
+        "caregiving",
+        "relocation"
+      ],
+      "model": {
+        "tier": "fast"
+      },
+      "requires": [
+        "email:read"
+      ],
+      "suggestedNames": [
+        "Quinn",
+        "Lara",
+        "Milo"
+      ],
+      "avatars": [
+        "chief-of-staff_fair_f_01.png",
+        "chief-of-staff_tan_f_01.png",
+        "customer-support_fair_m_01.png",
+        "customer-support_tan_m_01.png",
+        "customer-support_dark_m_02.png",
+        "customer-support_dark_f_01.png",
+        "chief-of-staff_light_m_01.png",
+        "chief-of-staff_brown_f_01.png"
+      ]
+    },
+    {
+      "id": "tutor-lead",
+      "title": "Tutor Lead",
+      "description": "Runs the learning team, sets the learner's goals and checks every lesson, quiz and piece of feedback.",
+      "tags": [
+        "education",
+        "planning",
+        "verification"
+      ],
+      "skills": [
+        "scope-definition",
+        "status-reporting",
+        "outlining"
+      ],
+      "teamTypes": [
+        "learning",
+        "household"
+      ],
+      "model": {
+        "tier": "strongest"
+      },
+      "suggestedNames": [
+        "Miriam",
+        "Paul",
+        "Aiko"
+      ],
+      "avatars": [
+        "teacher_fair_m_01.png",
+        "teacher_light_m_01.png",
+        "teacher_dark_m_01.png",
+        "teacher_fair_f_01.png",
+        "teacher_tan_f_01.png",
+        "teacher_dark_f_01.png",
+        "professor_tan_m_01.png",
+        "professor_light_m_01.png"
+      ]
+    },
+    {
+      "id": "curriculum-planner",
+      "title": "Curriculum Planner",
+      "description": "Turns a learning goal into an ordered plan of topics, sessions and resources.",
+      "tags": [
+        "education",
+        "planning",
+        "research"
+      ],
+      "skills": [
+        "outlining",
+        "web-research",
+        "scope-definition",
+        "deadline-tracking"
+      ],
+      "teamTypes": [
+        "learning",
+        "household",
+        "community-org"
+      ],
+      "model": {
+        "tier": "balanced"
+      },
+      "suggestedNames": [
+        "Greta",
+        "Samir",
+        "Lucy"
+      ],
+      "avatars": [
+        "teacher_tan_m_01.png",
+        "teacher_light_m_01.png",
+        "teacher_fair_f_01.png",
+        "teacher_tan_f_02.png",
+        "teacher_fair_m_01.png",
+        "teacher_dark_m_01.png",
+        "teacher_dark_f_01.png",
+        "professor_light_m_01.png"
+      ]
+    },
+    {
+      "id": "quiz-writer",
+      "title": "Quiz Writer",
+      "description": "Writes practice questions and answer keys that test the topics in the learning plan.",
+      "tags": [
+        "education",
+        "writing"
+      ],
+      "skills": [
+        "outlining",
+        "fact-checking",
+        "copy-editing"
+      ],
+      "teamTypes": [
+        "learning",
+        "household",
+        "community-org"
+      ],
+      "model": {
+        "tier": "balanced"
+      },
+      "suggestedNames": [
+        "Finn",
+        "Leila",
+        "Oscar"
+      ],
+      "avatars": [
+        "teacher_fair_f_01.png",
+        "teacher_dark_m_01.png",
+        "teacher_tan_f_01.png",
+        "professor_tan_m_01.png",
+        "professor_dark_m_01.png",
+        "copywriter_fair_m_01.png",
+        "teacher_light_m_01.png",
+        "chief-of-staff_brown_f_01.png"
+      ]
+    },
+    {
+      "id": "grader",
+      "title": "Grader",
+      "description": "Marks practice answers against the answer key and writes feedback; a human gives any final grade.",
+      "tags": [
+        "education",
+        "verification",
+        "analysis"
+      ],
+      "skills": [
+        "fact-checking",
+        "trend-analysis",
+        "structural-editing"
+      ],
+      "teamTypes": [
+        "learning",
+        "household"
+      ],
+      "model": {
+        "tier": "balanced"
+      },
+      "suggestedNames": [
+        "Ruth",
+        "Victor",
+        "Noor"
+      ],
+      "avatars": [
+        "teacher_dark_m_01.png",
+        "teacher_fair_f_01.png",
+        "teacher_tan_f_01.png",
+        "teacher_fair_m_01.png",
+        "teacher_tan_m_01.png",
+        "teacher_light_m_01.png",
+        "teacher_dark_f_01.png",
+        "professor_light_m_01.png"
+      ]
+    },
+    {
+      "id": "event-lead",
+      "title": "Event Lead",
+      "description": "Runs the event team, owns the plan and the budget line, and checks every draft before it reaches you.",
+      "tags": [
+        "events",
+        "planning",
+        "verification"
+      ],
+      "skills": [
+        "scope-definition",
+        "status-reporting",
+        "deadline-tracking",
+        "meeting-prep"
+      ],
+      "teamTypes": [
+        "events",
+        "community-org",
+        "small-business"
+      ],
+      "model": {
+        "tier": "strongest"
+      },
+      "suggestedNames": [
+        "Bianca",
+        "Hugh",
+        "Selin"
+      ],
+      "avatars": [
+        "chief-of-staff_fair_f_01.png",
+        "chief-of-staff_fair_m_01.png",
+        "chief-of-staff_light_m_01.png",
+        "chief-of-staff_tan_f_01.png",
+        "chief-of-staff_brown_f_01.png",
+        "chief-of-staff_tan_m_01.png",
+        "software-developer_brown_f_01.png",
+        "banker_dark_m_01.png"
+      ]
+    },
+    {
+      "id": "vendor-coordinator",
+      "title": "Vendor Coordinator",
+      "description": "Reads vendor emails, tracks quotes and confirmations, and drafts replies for you to send.",
+      "tags": [
+        "events",
+        "email",
+        "purchasing",
+        "tracking"
+      ],
+      "skills": [
+        "reply-drafting",
+        "inbox-triage",
+        "quote-comparison",
+        "deadline-tracking"
+      ],
+      "teamTypes": [
+        "events",
+        "home-project",
+        "small-business",
+        "community-org"
+      ],
+      "model": {
+        "tier": "balanced"
+      },
+      "requires": [
+        "email:read"
+      ],
+      "suggestedNames": [
+        "Dario",
+        "Fatima",
+        "Kirsten"
+      ],
+      "avatars": [
+        "chief-of-staff_fair_m_01.png",
+        "chief-of-staff_fair_f_01.png",
+        "butler_light_m_02.png",
+        "chief-of-staff_light_m_01.png",
+        "butler_tan_m_01.png",
+        "butler_dark_m_01.png",
+        "butler_tan_f_01.png",
+        "butler_brown_f_01.png"
+      ]
+    },
+    {
+      "id": "schedule-keeper",
+      "title": "Schedule Keeper",
+      "description": "Keeps the timeline, run-of-show and reminders so every deadline has an owner.",
+      "tags": [
+        "scheduling",
+        "tracking",
+        "planning"
+      ],
+      "skills": [
+        "deadline-tracking",
+        "status-reporting",
+        "minute-taking"
+      ],
+      "teamTypes": [
+        "events",
+        "life-admin",
+        "home-project",
+        "community-org",
+        "book-project",
+        "caregiving",
+        "relocation"
+      ],
+      "model": {
+        "tier": "fast"
+      },
+      "suggestedNames": [
+        "Penny",
+        "Jonah",
+        "Elif"
+      ],
+      "avatars": [
+        "chief-of-staff_light_m_01.png",
+        "chief-of-staff_fair_m_01.png",
+        "chief-of-staff_fair_f_01.png",
+        "chief-of-staff_brown_f_01.png",
+        "chief-of-staff_tan_m_01.png",
+        "chief-of-staff_tan_f_01.png",
+        "butler_dark_m_02.png",
+        "butler_brown_f_02.png"
+      ]
+    },
+    {
+      "id": "comparison-shopper",
+      "title": "Comparison Shopper",
+      "description": "Compares products, venues and services on price, terms and fit, and recommends a short list.",
+      "tags": [
+        "purchasing",
+        "research",
+        "analysis"
+      ],
+      "skills": [
+        "quote-comparison",
+        "web-research",
+        "cost-estimation"
+      ],
+      "teamTypes": [
+        "events",
+        "life-admin",
+        "home-project",
+        "home-lab",
+        "relocation",
+        "small-business"
+      ],
+      "model": {
+        "tier": "fast"
+      },
+      "suggestedNames": [
+        "Max",
+        "Imani",
+        "Tess"
+      ],
+      "avatars": [
+        "accountant_light_m_01.png",
+        "accountant_brown_f_02.png",
+        "accountant_light_m_02.png",
+        "accountant_fair_f_02.png",
+        "data-analyst_fair_m_01.png",
+        "accountant_brown_f_01.png",
+        "accountant_tan_m_02.png",
+        "accountant_tan_f_03.png"
+      ]
+    },
+    {
+      "id": "career-coach",
+      "title": "Career Coach",
+      "description": "Runs the job search team, keeps the search focused on your goals and checks every draft before you use it.",
+      "tags": [
+        "career",
+        "planning",
+        "verification"
+      ],
+      "skills": [
+        "scope-definition",
+        "status-reporting",
+        "pipeline-tracking"
+      ],
+      "teamTypes": [
+        "job-search"
+      ],
+      "model": {
+        "tier": "strongest"
+      },
+      "suggestedNames": [
+        "Diane",
+        "Kofi",
+        "Marta"
+      ],
+      "avatars": [
+        "teacher_fair_f_01.png",
+        "teacher_tan_f_02.png",
+        "nutrition-yoga-coach_tan_m_01.png",
+        "nutrition-yoga-coach_fair_f_01.png",
+        "teacher_light_m_01.png",
+        "teacher_dark_m_01.png",
+        "teacher_dark_f_01.png",
+        "nutrition-yoga-coach_light_m_01.png"
+      ]
+    },
+    {
+      "id": "job-scout",
+      "title": "Job Scout",
+      "description": "Finds openings that match your criteria and summarises each one with its fit and its deadline.",
+      "tags": [
+        "career",
+        "research",
+        "triage"
+      ],
+      "skills": [
+        "web-research",
+        "deadline-tracking",
+        "source-citing"
+      ],
+      "teamTypes": [
+        "job-search"
+      ],
+      "model": {
+        "tier": "fast"
+      },
+      "suggestedNames": [
+        "Rory",
+        "Zara",
+        "Benji"
+      ],
+      "avatars": [
+        "explorer_dark_m_01.png",
+        "explorer_dark_m_02.png",
+        "detective_fair_m_01.png",
+        "detective_fair_f_01.png",
+        "student_tan_m_01.png",
+        "student_light_m_01.png",
+        "student_tan_f_01.png",
+        "student_brown_f_01.png"
+      ]
+    },
+    {
+      "id": "resume-writer",
+      "title": "Resume Writer",
+      "description": "Tailors your resume and drafts cover letters for each opening, using only facts you have given.",
+      "tags": [
+        "career",
+        "writing",
+        "editing"
+      ],
+      "skills": [
+        "structural-editing",
+        "copy-editing",
+        "outlining"
+      ],
+      "teamTypes": [
+        "job-search",
+        "grant-proposal"
+      ],
+      "model": {
+        "tier": "balanced"
+      },
+      "suggestedNames": [
+        "Audrey",
+        "Nikhil",
+        "Freya"
+      ],
+      "avatars": [
+        "copywriter_fair_m_01.png",
+        "teacher_dark_m_01.png",
+        "teacher_tan_f_01.png",
+        "teacher_fair_m_01.png",
+        "teacher_tan_m_01.png",
+        "teacher_light_m_01.png",
+        "teacher_dark_f_01.png",
+        "librarian_brown_f_01.png"
+      ]
+    },
+    {
+      "id": "interview-coach",
+      "title": "Interview Coach",
+      "description": "Runs practice interviews and gives feedback on your answers; you decide what to change.",
+      "tags": [
+        "career",
+        "education",
+        "verification"
+      ],
+      "skills": [
+        "meeting-prep",
+        "web-research",
+        "structural-editing"
+      ],
+      "teamTypes": [
+        "job-search",
+        "learning"
+      ],
+      "model": {
+        "tier": "balanced"
+      },
+      "suggestedNames": [
+        "Gabriel",
+        "Yasmin",
+        "Petra"
+      ],
+      "avatars": [
+        "teacher_fair_f_01.png",
+        "teacher_tan_f_02.png",
+        "tv-reporter_fair_m_01.png",
+        "tv-reporter_tan_m_01.png",
+        "tv-reporter_light_m_01.png",
+        "tv-reporter_dark_m_01.png",
+        "tv-reporter_brown_f_01.png",
+        "tv-reporter_dark_f_01.png"
+      ]
+    },
+    {
+      "id": "application-tracker",
+      "title": "Application Tracker",
+      "description": "Keeps every application, contact and follow-up date in one tracker and flags what is due.",
+      "tags": [
+        "career",
+        "tracking",
+        "data"
+      ],
+      "skills": [
+        "pipeline-tracking",
+        "deadline-tracking",
+        "spreadsheet-modeling"
+      ],
+      "teamTypes": [
+        "job-search",
+        "grant-proposal"
+      ],
+      "model": {
+        "tier": "fast"
+      },
+      "suggestedNames": [
+        "Molly",
+        "Ezra",
+        "Ines"
+      ],
+      "avatars": [
+        "chief-of-staff_fair_f_01.png",
+        "chief-of-staff_fair_m_01.png",
+        "chief-of-staff_tan_m_01.png",
+        "chief-of-staff_tan_f_01.png",
+        "data-analyst_light_m_01.png",
+        "data-analyst_brown_f_01.png",
+        "chief-of-staff_light_m_01.png",
+        "chief-of-staff_brown_f_01.png"
+      ]
+    },
+    {
+      "id": "sales-lead",
+      "title": "Sales Lead",
+      "description": "Runs the sales team, picks which prospects to pursue and checks every draft before it reaches you.",
+      "tags": [
+        "sales",
+        "planning",
+        "verification"
+      ],
+      "skills": [
+        "pipeline-tracking",
+        "status-reporting",
+        "scope-definition"
+      ],
+      "teamTypes": [
+        "sales-outreach",
+        "small-business",
+        "founders-office"
+      ],
+      "model": {
+        "tier": "strongest"
+      },
+      "suggestedNames": [
+        "Victoria",
+        "Andre",
+        "Keiko"
+      ],
+      "avatars": [
+        "banker_fair_m_01.png",
+        "banker_dark_m_01.png",
+        "banker_fair_f_01.png",
+        "banker_brown_f_01.png",
+        "customer-support_tan_m_01.png",
+        "customer-support_dark_m_01.png",
+        "customer-support_tan_f_01.png",
+        "customer-support_brown_f_01.png"
+      ]
+    },
+    {
+      "id": "prospect-researcher",
+      "title": "Prospect Researcher",
+      "description": "Researches companies and contacts that fit your customer profile and writes a short brief on each.",
+      "tags": [
+        "sales",
+        "research",
+        "data"
+      ],
+      "skills": [
+        "web-research",
+        "source-citing",
+        "data-cleaning"
+      ],
+      "teamTypes": [
+        "sales-outreach",
+        "small-business",
+        "founders-office",
+        "grant-proposal"
+      ],
+      "model": {
+        "tier": "balanced"
+      },
+      "suggestedNames": [
+        "Callum",
+        "Dina",
+        "Rafael"
+      ],
+      "avatars": [
+        "librarian_tan_f_01.png",
+        "data-analyst_fair_m_01.png",
+        "data-analyst_tan_m_01.png",
+        "data-analyst_brown_f_01.png",
+        "data-analyst_fair_f_01.png",
+        "librarian_light_m_01.png",
+        "librarian_dark_m_01.png",
+        "librarian_brown_f_01.png"
+      ]
+    },
+    {
+      "id": "outreach-writer",
+      "title": "Outreach Writer",
+      "description": "Drafts first emails and follow-ups for each prospect for you to send.",
+      "tags": [
+        "sales",
+        "writing",
+        "marketing",
+        "email"
+      ],
+      "skills": [
+        "reply-drafting",
+        "copy-editing"
+      ],
+      "teamTypes": [
+        "sales-outreach",
+        "small-business",
+        "community-org",
+        "founders-office"
+      ],
+      "model": {
+        "tier": "balanced"
+      },
+      "suggestedNames": [
+        "Harriet",
+        "Jamal",
+        "Sienna"
+      ],
+      "avatars": [
+        "marketing-manager_fair_f_01.png",
+        "copywriter_fair_m_01.png",
+        "customer-support_tan_m_01.png",
+        "customer-support_dark_m_02.png",
+        "customer-support_tan_f_01.png",
+        "customer-support_dark_f_01.png",
+        "customer-support_brown_f_01.png",
+        "dj_brown_f_01.png"
+      ]
+    },
+    {
+      "id": "crm-steward",
+      "title": "CRM Steward",
+      "description": "Keeps the pipeline record clean: stages, next steps and follow-up dates for every deal.",
+      "tags": [
+        "sales",
+        "tracking",
+        "data"
+      ],
+      "skills": [
+        "pipeline-tracking",
+        "data-cleaning",
+        "deadline-tracking"
+      ],
+      "teamTypes": [
+        "sales-outreach",
+        "small-business",
+        "founders-office"
+      ],
+      "model": {
+        "tier": "fast"
+      },
+      "suggestedNames": [
+        "Toby",
+        "Ana",
+        "Linus"
+      ],
+      "avatars": [
+        "customer-support_dark_m_01.png",
+        "customer-support_brown_f_01.png",
+        "data-analyst_fair_m_01.png",
+        "data-analyst_tan_m_01.png",
+        "data-analyst_light_m_01.png",
+        "data-analyst_brown_f_01.png",
+        "data-analyst_fair_f_01.png",
+        "data-analyst_tan_f_02.png"
+      ]
+    },
+    {
+      "id": "proposal-writer",
+      "title": "Proposal Writer",
+      "description": "Drafts proposals and quotes from the deal notes for you to price, approve and send.",
+      "tags": [
+        "sales",
+        "writing",
+        "editing"
+      ],
+      "skills": [
+        "outlining",
+        "structural-editing",
+        "cost-estimation"
+      ],
+      "teamTypes": [
+        "sales-outreach",
+        "small-business",
+        "grant-proposal",
+        "founders-office"
+      ],
+      "model": {
+        "tier": "balanced"
+      },
+      "suggestedNames": [
+        "Eleanor",
+        "Malik",
+        "Bea"
+      ],
+      "avatars": [
+        "copywriter_fair_m_01.png",
+        "chief-of-staff_fair_m_01.png",
+        "chief-of-staff_light_m_01.png",
+        "chief-of-staff_tan_f_01.png",
+        "chief-of-staff_brown_f_01.png",
+        "banker_tan_f_01.png",
+        "banker_light_m_01.png",
+        "banker_dark_m_01.png"
+      ]
+    },
+    {
+      "id": "docs-lead",
+      "title": "Docs Lead",
+      "description": "Runs the docs team, decides which pages to write or fix and checks each one before it merges.",
+      "tags": [
+        "docs",
+        "planning",
+        "verification"
+      ],
+      "skills": [
+        "scope-definition",
+        "structural-editing",
+        "status-reporting"
+      ],
+      "teamTypes": [
+        "docs-team",
+        "oss-maintainers",
+        "product"
+      ],
+      "model": {
+        "tier": "strongest"
+      },
+      "suggestedNames": [
+        "Ingrid",
+        "Ravi",
+        "Celia"
+      ],
+      "avatars": [
+        "copywriter_fair_m_01.png",
+        "librarian_tan_f_01.png",
+        "software-development-manager_tan_m_01.png",
+        "librarian_fair_m_01.png",
+        "librarian_light_m_01.png",
+        "librarian_dark_m_01.png",
+        "librarian_brown_f_01.png",
+        "librarian_dark_f_01.png"
+      ]
+    },
+    {
+      "id": "technical-writer",
+      "title": "Technical Writer",
+      "description": "Writes and updates guides, references and how-to pages from the code and the team's notes.",
+      "tags": [
+        "docs",
+        "writing",
+        "code"
+      ],
+      "skills": [
+        "how-to-writing",
+        "outlining",
+        "structural-editing"
+      ],
+      "teamTypes": [
+        "docs-team",
+        "oss-maintainers",
+        "development",
+        "product",
+        "home-lab"
+      ],
+      "model": {
+        "tier": "balanced"
+      },
+      "suggestedNames": [
+        "Martin",
+        "Esme",
+        "Kenji"
+      ],
+      "avatars": [
+        "copywriter_fair_m_01.png",
+        "software-developer_tan_m_01.png",
+        "software-developer_tan_f_01.png",
+        "librarian_fair_m_01.png",
+        "software-developer_dark_m_01.png",
+        "librarian_light_m_01.png",
+        "librarian_brown_f_01.png",
+        "librarian_dark_f_01.png"
+      ]
+    },
+    {
+      "id": "docs-tester",
+      "title": "Docs Tester",
+      "description": "Follows each docs page step by step against the product and reports every step that fails.",
+      "tags": [
+        "docs",
+        "verification",
+        "code"
+      ],
+      "skills": [
+        "repro-steps",
+        "fact-checking",
+        "how-to-writing"
+      ],
+      "teamTypes": [
+        "docs-team",
+        "oss-maintainers",
+        "development",
+        "home-lab"
+      ],
+      "model": {
+        "tier": "balanced"
+      },
+      "suggestedNames": [
+        "Nell",
+        "Abel",
+        "Sana"
+      ],
+      "avatars": [
+        "software-developer_tan_m_01.png",
+        "software-developer_tan_f_01.png",
+        "detective_fair_m_01.png",
+        "detective_fair_f_01.png",
+        "student_light_m_01.png",
+        "student_dark_m_01.png",
+        "student_brown_f_01.png",
+        "student_dark_f_01.png"
+      ]
+    },
+    {
+      "id": "maintainer",
+      "title": "Maintainer",
+      "description": "Runs the open-source project team, builds or assigns the changes it accepts and decides what goes into each release.",
+      "tags": [
+        "code",
+        "community",
+        "planning"
+      ],
+      "skills": [
+        "scope-definition",
+        "code-review",
+        "status-reporting"
+      ],
+      "teamTypes": [
+        "oss-maintainers",
+        "development",
+        "home-lab"
+      ],
+      "model": {
+        "tier": "strongest"
+      },
+      "suggestedNames": [
+        "Dmitri",
+        "Holly",
+        "Tariq"
+      ],
+      "avatars": [
+        "software-developer_tan_m_01.png",
+        "software-developer_tan_f_01.png",
+        "developer_fair_m_01.png",
+        "software-developer_fair_m_01.png",
+        "software-developer_dark_m_01.png",
+        "software-developer_light_m_01.png",
+        "software-developer_brown_f_01.png",
+        "software-developer_dark_f_01.png"
+      ]
+    },
+    {
+      "id": "issue-triager",
+      "title": "Issue Triager",
+      "description": "Labels new issues, asks for missing repro steps and finds duplicates.",
+      "tags": [
+        "triage",
+        "code",
+        "support"
+      ],
+      "skills": [
+        "repro-steps",
+        "root-cause-analysis",
+        "reply-drafting"
+      ],
+      "teamTypes": [
+        "oss-maintainers",
+        "development",
+        "support-desk"
+      ],
+      "model": {
+        "tier": "fast"
+      },
+      "suggestedNames": [
+        "Pia",
+        "Lorenzo",
+        "Ayla"
+      ],
+      "avatars": [
+        "software-developer_tan_f_01.png",
+        "customer-support_fair_m_01.png",
+        "customer-support_tan_m_01.png",
+        "customer-support_dark_m_02.png",
+        "customer-support_fair_f_01.png",
+        "customer-support_dark_f_01.png",
+        "software-developer_light_m_01.png",
+        "software-developer_brown_f_01.png"
+      ]
+    },
+    {
+      "id": "community-manager",
+      "title": "Community Manager",
+      "description": "Drafts announcements, release notes and replies to contributors for a maintainer to post.",
+      "tags": [
+        "community",
+        "writing",
+        "support"
+      ],
+      "skills": [
+        "reply-drafting",
+        "status-reporting",
+        "copy-editing"
+      ],
+      "teamTypes": [
+        "oss-maintainers",
+        "community-org",
+        "content",
+        "product"
+      ],
+      "model": {
+        "tier": "balanced"
+      },
+      "suggestedNames": [
+        "Josie",
+        "Andrea",
+        "Kwame"
+      ],
+      "avatars": [
+        "marketing-manager_fair_f_01.png",
+        "customer-support_fair_m_01.png",
+        "podcaster_tan_m_01.png",
+        "podcaster_dark_m_01.png",
+        "podcaster_dark_m_02.png",
+        "podcaster_tan_f_01.png",
+        "podcaster_brown_f_01.png",
+        "customer-support_brown_f_01.png"
+      ]
+    },
+    {
+      "id": "proposal-lead",
+      "title": "Proposal Lead",
+      "description": "Runs a grant proposal from the funder's call to a submission-ready draft and checks every section against it.",
+      "tags": [
+        "planning",
+        "writing",
+        "verification",
+        "tracking"
+      ],
+      "skills": [
+        "scope-definition",
+        "deadline-tracking",
+        "status-reporting"
+      ],
+      "teamTypes": [
+        "grant-proposal",
+        "research",
+        "community-org"
+      ],
+      "model": {
+        "tier": "strongest"
+      },
+      "suggestedNames": [
+        "Ingrid",
+        "Marcus",
+        "Priya"
+      ],
+      "avatars": [
+        "chief-of-staff_fair_f_01.png",
+        "software-development-manager_fair_m_01.png",
+        "chief-of-staff_light_m_01.png",
+        "software-development-manager_tan_m_01.png",
+        "software-development-manager_light_m_01.png",
+        "software-development-manager_tan_f_01.png",
+        "software-development-manager_brown_f_01.png",
+        "chief-of-staff_brown_f_01.png"
+      ]
+    },
+    {
+      "id": "funder-researcher",
+      "title": "Funder Researcher",
+      "description": "Finds funders and calls that match the cause, with eligibility, amounts and deadlines cited from the source.",
+      "tags": [
+        "research",
+        "analysis",
+        "tracking"
+      ],
+      "skills": [
+        "web-research",
+        "source-citing",
+        "pipeline-tracking"
+      ],
+      "teamTypes": [
+        "grant-proposal",
+        "research",
+        "community-org",
+        "founders-office"
+      ],
+      "model": {
+        "tier": "balanced"
+      },
+      "suggestedNames": [
+        "Lena",
+        "Oscar",
+        "Ruth"
+      ],
+      "avatars": [
+        "librarian_fair_m_01.png",
+        "librarian_tan_m_01.png",
+        "librarian_light_m_01.png",
+        "librarian_dark_m_01.png",
+        "librarian_fair_f_01.png",
+        "librarian_tan_f_01.png",
+        "librarian_brown_f_01.png",
+        "librarian_dark_f_01.png"
+      ]
+    },
+    {
+      "id": "grant-writer",
+      "title": "Grant Writer",
+      "description": "Drafts the narrative sections of a proposal to the funder's questions and word limits, for a human to submit.",
+      "tags": [
+        "writing",
+        "editing",
+        "research"
+      ],
+      "skills": [
+        "outlining",
+        "structural-editing",
+        "source-citing"
+      ],
+      "teamTypes": [
+        "grant-proposal",
+        "community-org",
+        "content"
+      ],
+      "model": {
+        "tier": "balanced"
+      },
+      "suggestedNames": [
+        "Clara",
+        "Felix",
+        "Amara"
+      ],
+      "avatars": [
+        "copywriter_fair_m_01.png",
+        "professor_dark_m_01.png",
+        "professor_tan_f_02.png",
+        "professor_dark_f_01.png",
+        "professor_fair_m_01.png",
+        "professor_tan_m_01.png",
+        "professor_light_m_01.png",
+        "librarian_brown_f_01.png"
+      ]
+    },
+    {
+      "id": "budget-analyst",
+      "title": "Budget Analyst",
+      "description": "Builds the project budget and its justification from the costs the human supplies, with every figure traceable.",
+      "tags": [
+        "budgeting",
+        "finance",
+        "analysis"
+      ],
+      "skills": [
+        "budget-modeling",
+        "spreadsheet-modeling",
+        "cost-estimation"
+      ],
+      "teamTypes": [
+        "grant-proposal",
+        "community-org",
+        "small-business",
+        "events"
+      ],
+      "model": {
+        "tier": "balanced"
+      },
+      "suggestedNames": [
+        "Hugo",
+        "Nadia",
+        "Sven"
+      ],
+      "avatars": [
+        "accountant_light_m_02.png",
+        "accountant_fair_m_01.png",
+        "accountant_light_m_01.png",
+        "accountant_brown_f_01.png",
+        "accountant_tan_f_02.png",
+        "accountant_brown_f_02.png",
+        "accountant_tan_m_02.png",
+        "accountant_fair_f_02.png"
+      ]
+    },
+    {
+      "id": "compliance-checker",
+      "title": "Compliance Checker",
+      "description": "Reads a draft against the funder's rules and lists every gap, without editing the draft.",
+      "tags": [
+        "compliance",
+        "verification",
+        "forms"
+      ],
+      "skills": [
+        "fact-checking",
+        "deadline-tracking"
+      ],
+      "teamTypes": [
+        "grant-proposal",
+        "legal",
+        "community-org"
+      ],
+      "model": {
+        "tier": "balanced"
+      },
+      "suggestedNames": [
+        "Greta",
+        "Idris",
+        "June"
+      ],
+      "avatars": [
+        "accountant_tan_f_02.png",
+        "accountant_fair_f_02.png",
+        "detective_fair_m_01.png",
+        "accountant_tan_m_01.png",
+        "accountant_light_m_01.png",
+        "accountant_brown_f_01.png",
+        "accountant_brown_f_02.png",
+        "accountant_light_m_02.png"
+      ]
+    },
+    {
+      "id": "tax-organizer",
+      "title": "Tax Organizer",
+      "description": "Runs tax season from the document checklist to a cited worksheet ready for the accountant.",
+      "tags": [
+        "tax",
+        "planning",
+        "tracking",
+        "verification"
+      ],
+      "skills": [
+        "deadline-tracking",
+        "status-reporting",
+        "scope-definition"
+      ],
+      "teamTypes": [
+        "tax-season",
+        "life-admin",
+        "small-business"
+      ],
+      "model": {
+        "tier": "strongest"
+      },
+      "suggestedNames": [
+        "Walter",
+        "Elena",
+        "Sam"
+      ],
+      "avatars": [
+        "accountant_fair_m_01.png",
+        "accountant_fair_m_02.png",
+        "accountant_tan_m_02.png",
+        "accountant_light_m_02.png",
+        "accountant_tan_f_03.png",
+        "accountant_brown_f_04.png",
+        "accountant_light_m_01.png",
+        "accountant_brown_f_01.png"
+      ]
+    },
+    {
+      "id": "receipt-clerk",
+      "title": "Receipt Clerk",
+      "description": "Turns receipts and statements into a clean, categorised ledger with a link to each source.",
+      "tags": [
+        "accounting",
+        "data",
+        "tracking"
+      ],
+      "skills": [
+        "data-cleaning",
+        "spreadsheet-modeling",
+        "form-filling"
+      ],
+      "teamTypes": [
+        "tax-season",
+        "small-business",
+        "life-admin",
+        "home-project"
+      ],
+      "model": {
+        "tier": "fast"
+      },
+      "suggestedNames": [
+        "Pip",
+        "Rosa",
+        "Dev"
+      ],
+      "avatars": [
+        "accountant_fair_m_01.png",
+        "accountant_fair_m_02.png",
+        "accountant_tan_m_02.png",
+        "accountant_light_m_02.png",
+        "accountant_tan_f_03.png",
+        "accountant_brown_f_04.png",
+        "accountant_light_m_01.png",
+        "accountant_brown_f_01.png"
+      ]
+    },
+    {
+      "id": "deduction-researcher",
+      "title": "Deduction Researcher",
+      "description": "Finds the deductions and credits that may apply and cites the official rule for each, for an accountant to decide.",
+      "tags": [
+        "tax",
+        "research",
+        "analysis"
+      ],
+      "skills": [
+        "web-research",
+        "source-citing",
+        "fact-checking"
+      ],
+      "teamTypes": [
+        "tax-season",
+        "small-business"
+      ],
+      "model": {
+        "tier": "balanced"
+      },
+      "suggestedNames": [
+        "Miriam",
+        "Arjun",
+        "Tobias"
+      ],
+      "avatars": [
+        "accountant_fair_m_01.png",
+        "accountant_tan_m_02.png",
+        "accountant_light_m_02.png",
+        "accountant_fair_f_02.png",
+        "accountant_tan_f_03.png",
+        "accountant_brown_f_04.png",
+        "accountant_light_m_01.png",
+        "accountant_brown_f_01.png"
+      ]
+    },
+    {
+      "id": "support-lead",
+      "title": "Support Lead",
+      "description": "Runs the support queue, sets priorities and checks every drafted reply before a human sends it.",
+      "tags": [
+        "support",
+        "triage",
+        "verification",
+        "operations"
+      ],
+      "skills": [
+        "inbox-triage",
+        "status-reporting",
+        "root-cause-analysis"
+      ],
+      "teamTypes": [
+        "support-desk",
+        "small-business",
+        "oss-maintainers"
+      ],
+      "model": {
+        "tier": "strongest"
+      },
+      "suggestedNames": [
+        "Dana",
+        "Kofi",
+        "Hanna"
+      ],
+      "avatars": [
+        "customer-support_dark_m_01.png",
+        "customer-support_fair_m_01.png",
+        "customer-support_tan_m_01.png",
+        "customer-support_dark_m_02.png",
+        "customer-support_fair_f_01.png",
+        "customer-support_tan_f_01.png",
+        "customer-support_brown_f_01.png",
+        "software-development-manager_light_m_01.png"
+      ]
+    },
+    {
+      "id": "knowledge-base-writer",
+      "title": "Knowledge Base Writer",
+      "description": "Writes and updates help articles from real customer questions and resolved tickets.",
+      "tags": [
+        "docs",
+        "writing",
+        "support"
+      ],
+      "skills": [
+        "how-to-writing",
+        "copy-editing",
+        "outlining"
+      ],
+      "teamTypes": [
+        "support-desk",
+        "docs-team",
+        "oss-maintainers",
+        "small-business"
+      ],
+      "model": {
+        "tier": "balanced"
+      },
+      "suggestedNames": [
+        "Iris",
+        "Leo",
+        "Mina"
+      ],
+      "avatars": [
+        "customer-support_tan_f_01.png",
+        "librarian_light_m_01.png",
+        "librarian_tan_f_01.png",
+        "customer-support_fair_m_01.png",
+        "customer-support_dark_m_02.png",
+        "customer-support_fair_f_01.png",
+        "customer-support_dark_f_01.png",
+        "librarian_brown_f_01.png"
+      ]
+    },
+    {
+      "id": "escalation-analyst",
+      "title": "Escalation Analyst",
+      "description": "Digs into hard or repeated tickets, writes repro steps and finds the likely root cause for the product owner.",
+      "tags": [
+        "support",
+        "analysis",
+        "triage"
+      ],
+      "skills": [
+        "root-cause-analysis",
+        "repro-steps",
+        "trend-analysis"
+      ],
+      "teamTypes": [
+        "support-desk",
+        "oss-maintainers",
+        "product"
+      ],
+      "model": {
+        "tier": "balanced"
+      },
+      "suggestedNames": [
+        "Victor",
+        "Sana",
+        "Joel"
+      ],
+      "avatars": [
+        "data-analyst_brown_f_01.png",
+        "data-analyst_fair_f_01.png",
+        "customer-support_dark_m_01.png",
+        "data-analyst_fair_m_01.png",
+        "data-analyst_tan_m_01.png",
+        "data-analyst_brown_f_02.png",
+        "customer-support_tan_m_01.png",
+        "customer-support_dark_m_02.png"
+      ]
+    },
+    {
+      "id": "tone-reviewer",
+      "title": "Tone Reviewer",
+      "description": "Reads drafted replies for tone, clarity and promises the team cannot keep, and reports without rewriting.",
+      "tags": [
+        "editing",
+        "support",
+        "verification"
+      ],
+      "skills": [
+        "copy-editing",
+        "fact-checking"
+      ],
+      "teamTypes": [
+        "support-desk",
+        "sales-outreach",
+        "community-org"
+      ],
+      "model": {
+        "tier": "balanced"
+      },
+      "suggestedNames": [
+        "Wren",
+        "Paloma",
+        "Eli"
+      ],
+      "avatars": [
+        "customer-support_fair_m_01.png",
+        "customer-support_tan_m_01.png",
+        "customer-support_fair_f_01.png",
+        "customer-support_dark_f_01.png",
+        "librarian_light_m_01.png",
+        "customer-support_dark_m_01.png",
+        "customer-support_tan_f_01.png",
+        "customer-support_brown_f_01.png"
+      ]
+    },
+    {
+      "id": "chief-of-staff",
+      "title": "Chief of Staff",
+      "description": "Runs a founder's priorities, meetings and follow-ups, and checks the team's work before it reaches the founder.",
+      "tags": [
+        "planning",
+        "operations",
+        "tracking",
+        "scheduling"
+      ],
+      "skills": [
+        "meeting-prep",
+        "status-reporting",
+        "deadline-tracking",
+        "scope-definition"
+      ],
+      "teamTypes": [
+        "founders-office",
+        "small-business",
+        "ops"
+      ],
+      "model": {
+        "tier": "strongest"
+      },
+      "suggestedNames": [
+        "Margot",
+        "Rafael",
+        "Yuki"
+      ],
+      "avatars": [
+        "chief-of-staff_fair_f_01.png",
+        "chief-of-staff_fair_m_01.png",
+        "chief-of-staff_light_m_01.png",
+        "chief-of-staff_tan_m_01.png",
+        "chief-of-staff_tan_f_01.png",
+        "chief-of-staff_brown_f_01.png",
+        "police_dark_m_02.png",
+        "police_dark_f_01.png"
+      ]
+    },
+    {
+      "id": "investor-researcher",
+      "title": "Investor Researcher",
+      "description": "Builds a cited list of investors who fit the company's stage and sector, and tracks where each conversation stands.",
+      "tags": [
+        "research",
+        "finance",
+        "tracking"
+      ],
+      "skills": [
+        "web-research",
+        "source-citing",
+        "pipeline-tracking"
+      ],
+      "teamTypes": [
+        "founders-office",
+        "sales-outreach"
+      ],
+      "model": {
+        "tier": "balanced"
+      },
+      "suggestedNames": [
+        "Anika",
+        "Dmitri",
+        "Cole"
+      ],
+      "avatars": [
+        "data-analyst_fair_m_01.png",
+        "data-analyst_brown_f_01.png",
+        "data-analyst_fair_f_01.png",
+        "banker_dark_m_01.png",
+        "data-analyst_tan_m_01.png",
+        "data-analyst_light_m_01.png",
+        "data-analyst_tan_f_01.png",
+        "data-analyst_brown_f_02.png"
+      ]
+    },
+    {
+      "id": "pitch-writer",
+      "title": "Pitch Writer",
+      "description": "Drafts the pitch narrative, deck text and investor updates for the founder to edit and send.",
+      "tags": [
+        "writing",
+        "editing",
+        "marketing"
+      ],
+      "skills": [
+        "outlining",
+        "structural-editing",
+        "copy-editing"
+      ],
+      "teamTypes": [
+        "founders-office",
+        "sales-outreach",
+        "content"
+      ],
+      "model": {
+        "tier": "balanced"
+      },
+      "suggestedNames": [
+        "Bea",
+        "Rohan",
+        "Stella"
+      ],
+      "avatars": [
+        "copywriter_fair_m_01.png",
+        "podcaster_fair_f_01.png",
+        "tv-reporter_tan_m_01.png",
+        "tv-reporter_light_m_01.png",
+        "tv-reporter_dark_m_01.png",
+        "tv-reporter_tan_f_01.png",
+        "tv-reporter_brown_f_01.png",
+        "tv-reporter_dark_f_01.png"
+      ]
+    },
+    {
+      "id": "financial-modeler",
+      "title": "Financial Modeler",
+      "description": "Keeps the operating model and its scenarios current, with every assumption written down.",
+      "tags": [
+        "finance",
+        "analysis",
+        "data"
+      ],
+      "skills": [
+        "spreadsheet-modeling",
+        "budget-modeling",
+        "trend-analysis"
+      ],
+      "teamTypes": [
+        "founders-office",
+        "small-business",
+        "data"
+      ],
+      "model": {
+        "tier": "strongest"
+      },
+      "suggestedNames": [
+        "Quentin",
+        "Lara",
+        "Mateo"
+      ],
+      "avatars": [
+        "data-analyst_fair_m_01.png",
+        "data-analyst_brown_f_01.png",
+        "data-analyst_fair_f_01.png",
+        "accountant_light_m_02.png",
+        "data-analyst_tan_m_01.png",
+        "data-analyst_light_m_01.png",
+        "data-analyst_tan_f_01.png",
+        "data-analyst_brown_f_02.png"
+      ]
+    },
+    {
+      "id": "renovation-planner",
+      "title": "Renovation Planner",
+      "description": "Turns a home project into a scope, a budget range and a sequence of steps, and checks the team's work against them.",
+      "tags": [
+        "home",
+        "planning",
+        "tracking"
+      ],
+      "skills": [
+        "scope-definition",
+        "deadline-tracking",
+        "status-reporting"
+      ],
+      "teamTypes": [
+        "home-project",
+        "household"
+      ],
+      "model": {
+        "tier": "strongest"
+      },
+      "suggestedNames": [
+        "Gus",
+        "Holly",
+        "Ana"
+      ],
+      "avatars": [
+        "architect_tan_m_01.png",
+        "architect_fair_m_01.png",
+        "architect_brown_m_01.png",
+        "architect_fair_f_01.png",
+        "architect_tan_f_01.png",
+        "architect_dark_f_01.png",
+        "architect_light_m_01.png",
+        "architect_brown_f_01.png"
+      ]
+    },
+    {
+      "id": "cost-estimator",
+      "title": "Cost Estimator",
+      "description": "Gives cost ranges for a home project with the assumptions stated, and compares the quotes that come in.",
+      "tags": [
+        "budgeting",
+        "home",
+        "analysis"
+      ],
+      "skills": [
+        "cost-estimation",
+        "quote-comparison",
+        "spreadsheet-modeling"
+      ],
+      "teamTypes": [
+        "home-project",
+        "events",
+        "small-business"
+      ],
+      "model": {
+        "tier": "balanced"
+      },
+      "suggestedNames": [
+        "Frank",
+        "Lucia",
+        "Omar"
+      ],
+      "avatars": [
+        "architect_fair_m_01.png",
+        "architect_tan_m_01.png",
+        "architect_brown_m_01.png",
+        "architect_fair_f_01.png",
+        "architect_dark_f_01.png",
+        "accountant_tan_m_02.png",
+        "accountant_light_m_02.png",
+        "accountant_brown_f_04.png"
+      ]
+    },
+    {
+      "id": "permit-researcher",
+      "title": "Permit Researcher",
+      "description": "Finds which permits and rules may apply to a project and cites the local authority's own pages.",
+      "tags": [
+        "research",
+        "compliance",
+        "home",
+        "forms"
+      ],
+      "skills": [
+        "web-research",
+        "source-citing",
+        "form-filling"
+      ],
+      "teamTypes": [
+        "home-project",
+        "small-business",
+        "events"
+      ],
+      "model": {
+        "tier": "balanced"
+      },
+      "suggestedNames": [
+        "Edith",
+        "Ravi",
+        "Nell"
+      ],
+      "avatars": [
+        "architect_brown_m_01.png",
+        "architect_fair_m_01.png",
+        "architect_tan_m_01.png",
+        "architect_fair_f_01.png",
+        "architect_dark_f_01.png",
+        "librarian_brown_f_01.png",
+        "architect_light_m_01.png",
+        "architect_tan_f_01.png"
+      ]
+    },
+    {
+      "id": "contractor-liaison",
+      "title": "Contractor Liaison",
+      "description": "Drafts quote requests and follow-ups to contractors and tracks their replies, for a human to send and agree.",
+      "tags": [
+        "home",
+        "email",
+        "scheduling"
+      ],
+      "skills": [
+        "reply-drafting",
+        "quote-comparison",
+        "deadline-tracking"
+      ],
+      "teamTypes": [
+        "home-project",
+        "household"
+      ],
+      "model": {
+        "tier": "balanced"
+      },
+      "requires": [
+        "email:read"
+      ],
+      "suggestedNames": [
+        "Moe",
+        "Tess",
+        "Ivan"
+      ],
+      "avatars": [
+        "blue-collar-worker_fair_f_01.png",
+        "blue-collar-worker_fair_m_01.png",
+        "blue-collar-worker_dark_m_02.png",
+        "blue-collar-worker_tan_f_01.png",
+        "blue-collar-worker_tan_m_01.png",
+        "blue-collar-worker_dark_m_01.png",
+        "blue-collar-worker_brown_f_01.png",
+        "architect_brown_m_01.png"
+      ]
+    },
+    {
+      "id": "developmental-editor",
+      "title": "Developmental Editor",
+      "description": "Shapes a manuscript's structure, arc and pacing, and decides which notes the writer works on next.",
+      "tags": [
+        "editing",
+        "writing",
+        "planning"
+      ],
+      "skills": [
+        "structural-editing",
+        "outlining",
+        "scope-definition"
+      ],
+      "teamTypes": [
+        "book-project",
+        "content"
+      ],
+      "model": {
+        "tier": "strongest"
+      },
+      "suggestedNames": [
+        "Agnes",
+        "Julian",
+        "Noor"
+      ],
+      "avatars": [
+        "copywriter_fair_m_01.png",
+        "professor_dark_m_01.png",
+        "professor_dark_f_01.png",
+        "professor_fair_m_01.png",
+        "professor_light_m_01.png",
+        "professor_tan_f_02.png",
+        "librarian_tan_m_01.png",
+        "librarian_brown_f_01.png"
+      ]
+    },
+    {
+      "id": "continuity-checker",
+      "title": "Continuity Checker",
+      "description": "Keeps the story bible and flags every name, date or fact that contradicts an earlier chapter.",
+      "tags": [
+        "editing",
+        "verification",
+        "tracking"
+      ],
+      "skills": [
+        "fact-checking",
+        "structural-editing"
+      ],
+      "teamTypes": [
+        "book-project",
+        "content",
+        "docs-team"
+      ],
+      "model": {
+        "tier": "balanced"
+      },
+      "suggestedNames": [
+        "Pim",
+        "Della",
+        "Kurt"
+      ],
+      "avatars": [
+        "detective_tan_m_01.png",
+        "librarian_fair_m_01.png",
+        "librarian_tan_m_01.png",
+        "librarian_light_m_01.png",
+        "librarian_dark_m_01.png",
+        "librarian_fair_f_01.png",
+        "librarian_brown_f_01.png",
+        "librarian_dark_f_01.png"
+      ]
+    },
+    {
+      "id": "beta-reader",
+      "title": "Beta Reader",
+      "description": "Reads chapters as the intended reader would and reports where interest, clarity or belief drops.",
+      "tags": [
+        "editing",
+        "verification",
+        "analysis"
+      ],
+      "skills": [
+        "structural-editing",
+        "fact-checking"
+      ],
+      "teamTypes": [
+        "book-project",
+        "content",
+        "learning"
+      ],
+      "model": {
+        "tier": "balanced"
+      },
+      "suggestedNames": [
+        "Ivy",
+        "Bram",
+        "Celeste"
+      ],
+      "avatars": [
+        "grandmother_brown_f_02.png",
+        "grandmother_brown_f_03.png",
+        "student_fair_m_01.png",
+        "student_light_m_01.png",
+        "student_dark_m_01.png",
+        "student_tan_f_01.png",
+        "librarian_fair_m_01.png",
+        "librarian_tan_m_01.png"
+      ]
+    },
+    {
+      "id": "care-coordinator",
+      "title": "Care Coordinator",
+      "description": "Keeps a loved one's care plan, appointments and paperwork in order and checks the team's work for the family carer.",
+      "tags": [
+        "care",
+        "health",
+        "scheduling",
+        "tracking"
+      ],
+      "skills": [
+        "deadline-tracking",
+        "status-reporting",
+        "meeting-prep"
+      ],
+      "teamTypes": [
+        "caregiving",
+        "household",
+        "life-admin"
+      ],
+      "model": {
+        "tier": "strongest"
+      },
+      "suggestedNames": [
+        "Grace",
+        "Tomas",
+        "Lin"
+      ],
+      "avatars": [
+        "nanny_light_m_01.png",
+        "nanny_dark_m_01.png",
+        "nanny_tan_f_01.png",
+        "nanny_dark_f_01.png",
+        "butler_fair_f_02.png",
+        "nanny_fair_m_01.png",
+        "nanny_tan_m_01.png",
+        "nanny_brown_f_01.png"
+      ]
+    },
+    {
+      "id": "benefits-navigator",
+      "title": "Benefits Navigator",
+      "description": "Finds the benefits and support schemes that may apply and prepares the forms for a human to sign and submit.",
+      "tags": [
+        "care",
+        "forms",
+        "research"
+      ],
+      "skills": [
+        "form-filling",
+        "web-research",
+        "source-citing",
+        "deadline-tracking"
+      ],
+      "teamTypes": [
+        "caregiving",
+        "life-admin",
+        "relocation",
+        "job-search"
+      ],
+      "model": {
+        "tier": "balanced"
+      },
+      "suggestedNames": [
+        "Mabel",
+        "Desmond",
+        "Asha"
+      ],
+      "avatars": [
+        "banker_dark_m_01.png",
+        "accountant_tan_f_02.png",
+        "accountant_fair_f_02.png",
+        "banker_fair_m_01.png",
+        "banker_brown_f_01.png",
+        "customer-support_tan_m_01.png",
+        "customer-support_dark_m_01.png",
+        "customer-support_brown_f_01.png"
+      ]
+    },
+    {
+      "id": "board-secretary",
+      "title": "Board Secretary",
+      "description": "Runs a club's meetings on paper: agendas, minutes, action lists and the records the members rely on.",
+      "tags": [
+        "community",
+        "writing",
+        "scheduling",
+        "verification"
+      ],
+      "skills": [
+        "minute-taking",
+        "meeting-prep",
+        "status-reporting"
+      ],
+      "teamTypes": [
+        "community-org",
+        "small-business"
+      ],
+      "model": {
+        "tier": "strongest"
+      },
+      "suggestedNames": [
+        "Harriet",
+        "Olu",
+        "Petra"
+      ],
+      "avatars": [
+        "chief-of-staff_fair_m_01.png",
+        "chief-of-staff_light_m_01.png",
+        "chief-of-staff_brown_f_01.png",
+        "chief-of-staff_fair_f_02.png",
+        "chief-of-staff_tan_m_01.png",
+        "chief-of-staff_tan_f_01.png",
+        "librarian_light_m_01.png",
+        "librarian_dark_m_01.png"
+      ]
+    },
+    {
+      "id": "volunteer-coordinator",
+      "title": "Volunteer Coordinator",
+      "description": "Keeps the volunteer list and rota and drafts the sign-up and reminder messages a human sends.",
+      "tags": [
+        "community",
+        "scheduling",
+        "tracking",
+        "events"
+      ],
+      "skills": [
+        "pipeline-tracking",
+        "deadline-tracking",
+        "reply-drafting"
+      ],
+      "teamTypes": [
+        "community-org",
+        "events"
+      ],
+      "model": {
+        "tier": "balanced"
+      },
+      "suggestedNames": [
+        "Molly",
+        "Andre",
+        "Kiri"
+      ],
+      "avatars": [
+        "teacher_fair_f_01.png",
+        "teacher_tan_f_02.png",
+        "chief-of-staff_fair_m_01.png",
+        "teacher_tan_m_01.png",
+        "teacher_light_m_01.png",
+        "teacher_dark_m_01.png",
+        "teacher_dark_f_01.png",
+        "hippie_light_m_01.png"
+      ]
+    },
+    {
+      "id": "newsletter-writer",
+      "title": "Newsletter Writer",
+      "description": "Drafts a regular newsletter from the group's news, dates and asks, for a human to approve and send.",
+      "tags": [
+        "writing",
+        "community",
+        "marketing"
+      ],
+      "skills": [
+        "outlining",
+        "copy-editing"
+      ],
+      "teamTypes": [
+        "community-org",
+        "content",
+        "small-business",
+        "oss-maintainers"
+      ],
+      "model": {
+        "tier": "balanced"
+      },
+      "suggestedNames": [
+        "Poppy",
+        "Ezra",
+        "Lise"
+      ],
+      "avatars": [
+        "copywriter_fair_m_01.png",
+        "podcaster_fair_f_01.png",
+        "tv-reporter_tan_m_01.png",
+        "tv-reporter_light_m_01.png",
+        "tv-reporter_dark_m_01.png",
+        "tv-reporter_tan_f_01.png",
+        "tv-reporter_brown_f_01.png",
+        "tv-reporter_dark_f_01.png"
+      ]
+    },
+    {
+      "id": "move-coordinator",
+      "title": "Move Coordinator",
+      "description": "Plans a move as one dated checklist, from the housing search to the last address change, and checks each step.",
+      "tags": [
+        "planning",
+        "tracking",
+        "scheduling",
+        "home"
+      ],
+      "skills": [
+        "deadline-tracking",
+        "scope-definition",
+        "status-reporting"
+      ],
+      "teamTypes": [
+        "relocation",
+        "household",
+        "life-admin"
+      ],
+      "model": {
+        "tier": "strongest"
+      },
+      "suggestedNames": [
+        "Carmen",
+        "Niels",
+        "Ada"
+      ],
+      "avatars": [
+        "chief-of-staff_fair_f_01.png",
+        "blue-collar-worker_fair_f_01.png",
+        "chief-of-staff_tan_m_01.png",
+        "chief-of-staff_light_m_01.png",
+        "chief-of-staff_tan_f_01.png",
+        "chief-of-staff_brown_f_01.png",
+        "blue-collar-worker_dark_m_01.png",
+        "blue-collar-worker_dark_m_02.png"
+      ]
+    },
+    {
+      "id": "housing-scout",
+      "title": "Housing Scout",
+      "description": "Searches listings against your must-haves and budget and keeps a cited shortlist with the trade-offs written down.",
+      "tags": [
+        "home",
+        "research",
+        "analysis"
+      ],
+      "skills": [
+        "web-research",
+        "quote-comparison",
+        "source-citing"
+      ],
+      "teamTypes": [
+        "relocation",
+        "household"
+      ],
+      "model": {
+        "tier": "balanced"
+      },
+      "suggestedNames": [
+        "Rory",
+        "Selma",
+        "Kai"
+      ],
+      "avatars": [
+        "architect_tan_m_01.png",
+        "architect_tan_f_01.png",
+        "explorer_fair_m_01.png",
+        "explorer_dark_m_01.png",
+        "explorer_brown_f_01.png",
+        "explorer_dark_f_01.png",
+        "architect_fair_m_01.png",
+        "architect_light_m_01.png"
+      ]
+    },
+    {
+      "id": "it-admin",
+      "title": "IT Admin",
+      "description": "Keeps a home lab's inventory, configuration and runbook in the repository, and checks every change before it is applied.",
+      "tags": [
+        "operations",
+        "security",
+        "docs",
+        "verification"
+      ],
+      "skills": [
+        "scope-definition",
+        "status-reporting",
+        "root-cause-analysis"
+      ],
+      "teamTypes": [
+        "home-lab",
+        "small-business",
+        "ops"
+      ],
+      "model": {
+        "tier": "strongest"
+      },
+      "suggestedNames": [
+        "Linus",
+        "Freya",
+        "Malik"
+      ],
+      "avatars": [
+        "software-developer_tan_f_01.png",
+        "customer-support_fair_m_01.png",
+        "customer-support_tan_m_01.png",
+        "customer-support_dark_m_02.png",
+        "customer-support_fair_f_01.png",
+        "customer-support_dark_f_01.png",
+        "software-developer_light_m_01.png",
+        "software-developer_brown_f_01.png"
+      ]
+    },
+    {
+      "id": "automation-engineer",
+      "title": "Automation Engineer",
+      "description": "Writes the scripts and configuration that set up and maintain the lab, with the steps to run and undo them.",
+      "tags": [
+        "code",
+        "operations",
+        "docs"
+      ],
+      "skills": [
+        "code-review",
+        "repro-steps",
+        "how-to-writing"
+      ],
+      "teamTypes": [
+        "home-lab",
+        "ops",
+        "development",
+        "data"
+      ],
+      "model": {
+        "tier": "balanced"
+      },
+      "suggestedNames": [
+        "Otto",
+        "Zara",
+        "Finn"
+      ],
+      "avatars": [
+        "software-developer_tan_m_01.png",
+        "software-developer_tan_f_01.png",
+        "software-developer_fair_m_01.png",
+        "software-developer_dark_m_01.png",
+        "software-developer_fair_f_01.png",
+        "software-developer_light_m_01.png",
+        "software-developer_brown_f_01.png",
+        "software-developer_dark_f_01.png"
+      ]
+    }
+  ]
+}

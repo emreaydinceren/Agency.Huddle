@@ -1,0 +1,15 @@
+{
+  "schemaVersion": 1,
+  "id": "data",
+  "version": "1.0.0",
+  "order": 60,
+  "workspace": { "kind": "folder", "label": "Data folder", "required": false },
+  "coverage": [ "build", "verify" ],
+  "processes": [ { "id": "data-basics", "file": "processes/data-basics.md", "default": true } ],
+  "roles": [
+    { "id": "analytics-lead", "job": "analytics-lead", "manager": true, "required": true, "maxPerTeam": 1, "covers": [ "verify" ] },
+    { "id": "data-engineer", "job": "data-engineer", "required": false, "maxPerTeam": 1, "covers": [ "build" ] },
+    { "id": "analyst", "job": "analyst", "required": false, "maxPerTeam": 2, "covers": [ "build" ] },
+    { "id": "data-qa", "job": "data-qa", "required": false, "maxPerTeam": 1, "covers": [ "verify" ], "model": { "differentVendorFrom": [ "data-engineer", "analyst" ] } }
+  ]
+}

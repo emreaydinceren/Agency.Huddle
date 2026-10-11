@@ -1,0 +1,85 @@
+{
+  "schemaVersion": 1,
+  "id": "book-project",
+  "version": "1.0.0",
+  "order": 220,
+  "workspace": {
+    "kind": "folder",
+    "label": "Manuscript folder",
+    "required": false
+  },
+  "coverage": [
+    "draft",
+    "verify"
+  ],
+  "processes": [
+    {
+      "id": "book-project-basics",
+      "file": "processes/book-project-basics.md",
+      "default": true
+    }
+  ],
+  "roles": [
+    {
+      "id": "developmental-editor",
+      "job": "developmental-editor",
+      "manager": true,
+      "required": true,
+      "maxPerTeam": 1,
+      "covers": [
+        "verify"
+      ]
+    },
+    {
+      "id": "writer",
+      "job": "writer",
+      "required": false,
+      "maxPerTeam": 1,
+      "covers": [
+        "draft"
+      ]
+    },
+    {
+      "id": "continuity-checker",
+      "job": "continuity-checker",
+      "required": false,
+      "maxPerTeam": 1,
+      "covers": [
+        "verify"
+      ],
+      "model": {
+        "differentVendorFrom": [
+          "writer"
+        ]
+      }
+    },
+    {
+      "id": "beta-reader",
+      "job": "beta-reader",
+      "required": false,
+      "maxPerTeam": 1,
+      "covers": [
+        "verify"
+      ],
+      "model": {
+        "differentVendorFrom": [
+          "writer"
+        ]
+      }
+    },
+    {
+      "id": "copy-editor",
+      "job": "copy-editor",
+      "required": false,
+      "maxPerTeam": 1,
+      "covers": [
+        "verify"
+      ],
+      "model": {
+        "differentVendorFrom": [
+          "writer"
+        ]
+      }
+    }
+  ]
+}

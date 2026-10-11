@@ -9,6 +9,7 @@ using Agency.Huddle.App.Data;
 using Agency.Huddle.App.Demo;
 using Agency.Huddle.App.Elicitation;
 using Agency.Huddle.App.FileChanges;
+using Agency.Huddle.App.HiringPool;
 using Agency.Huddle.App.Library;
 using Agency.Huddle.App.Prompts;
 using Agency.Huddle.App.Pipes;
@@ -133,6 +134,7 @@ public static class ServiceCollectionExtensions
 
         services.AddSingleton<TeammatePaths>();
         services.AddSingleton<SkillPackStore>();
+        services.AddSingleton<HiringPoolCatalog>();
         services.AddSingleton<TeamTypeCatalog>();
         services.AddSingleton<SkillsCatalogIndex>();
         services.AddSingleton<UserCandidateWriter>();

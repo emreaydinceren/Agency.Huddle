@@ -35,16 +35,6 @@ public enum ModelTier
 /// <param name="Required">Whether a Team must have a workspace before it starts.</param>
 internal sealed record WorkspaceSpec(WorkspaceKind Kind, string Label, bool Required);
 
-/// <summary>A named preset: a set of roles hired together.</summary>
-/// <param name="Id">The preset id.</param>
-/// <param name="Label">The label shown to the user.</param>
-/// <param name="Roles">The role ids in the preset, or null when the manifest omits them.</param>
-internal sealed record PresetSpec(string Id, string Label, IReadOnlyList<string>? Roles = null)
-{
-    /// <summary>The role ids in the preset; empty when the manifest omits them.</summary>
-    public IReadOnlyList<string> Roles { get; init; } = Roles ?? [];
-}
-
 /// <summary>A process document a team type offers.</summary>
 /// <param name="Id">The process id.</param>
 /// <param name="File">The file under the type's processes folder.</param>
@@ -79,6 +69,8 @@ internal sealed record SkillRef(string Name, string Source, string? Path);
 /// <param name="Packs">The suggested skill pack ids, or null when omitted.</param>
 /// <param name="Requires">The connectors the role needs, such as <c>email:read</c>, or null when omitted.</param>
 /// <param name="SuggestedNames">The names offered when the role is hired, or null when omitted.</param>
+/// <param name="Job">The id of the hiring-pool job this role is; when set, title, persona, skills, model tier, connectors and names come from the pool job.</param>
+/// <param name="Pooled">True for a role the catalog adds from the pool that the type does not list: hireable with defaults, never required.</param>
 internal sealed record RoleSpec(
     string Id,
     string Title,
@@ -91,7 +83,9 @@ internal sealed record RoleSpec(
     IReadOnlyList<SkillRef>? Skills = null,
     IReadOnlyList<string>? Packs = null,
     IReadOnlyList<string>? Requires = null,
-    IReadOnlyList<string>? SuggestedNames = null)
+    IReadOnlyList<string>? SuggestedNames = null,
+    string? Job = null,
+    bool Pooled = false)
 {
     /// <summary>The coverage steps this role provides; empty when omitted.</summary>
     public IReadOnlyList<string> Covers { get; init; } = Covers ?? [];
@@ -120,7 +114,6 @@ internal sealed record RoleSpec(
 /// <param name="Order">The position in the dropdown.</param>
 /// <param name="Workspace">The workspace the type needs.</param>
 /// <param name="Coverage">The steps the team check bar requires, or null when omitted.</param>
-/// <param name="Presets">The presets the type offers, or null when omitted.</param>
 /// <param name="Processes">The process documents the type offers, or null when omitted.</param>
 /// <param name="Roles">The roles the type defines, or null when omitted.</param>
 /// <param name="RetroRole">The role id a Retro agent is hired as, or null.</param>
@@ -132,16 +125,15 @@ internal sealed record TeamTypeManifest(
     int Order,
     WorkspaceSpec Workspace,
     IReadOnlyList<string>? Coverage = null,
-    IReadOnlyList<PresetSpec>? Presets = null,
     IReadOnlyList<ProcessRef>? Processes = null,
     IReadOnlyList<RoleSpec>? Roles = null,
     string? RetroRole = null)
 {
+    /// <summary>The one-line description of the type, filled from the hiring pool; null when the pool has none.</summary>
+    public string? Description { get; init; }
+
     /// <summary>The steps the team check bar requires; empty when omitted.</summary>
     public IReadOnlyList<string> Coverage { get; init; } = Coverage ?? [];
-
-    /// <summary>The presets the type offers; empty when omitted.</summary>
-    public IReadOnlyList<PresetSpec> Presets { get; init; } = Presets ?? [];
 
     /// <summary>The process documents the type offers; empty when omitted.</summary>
     public IReadOnlyList<ProcessRef> Processes { get; init; } = Processes ?? [];

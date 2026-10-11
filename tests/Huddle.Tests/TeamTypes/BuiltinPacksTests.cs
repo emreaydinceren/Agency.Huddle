@@ -1,5 +1,3 @@
-using System.Reflection;
-using System.Text.Json;
 using Agency.Huddle.App.TeamTypes;
 using Microsoft.Extensions.Logging.Abstractions;
 
@@ -8,22 +6,9 @@ namespace Agency.Huddle.Tests.TeamTypes;
 /// <summary>Tests for the starter skill packs the Development manifest names (Spec §Pack, Scenario 2).</summary>
 public sealed class BuiltinPacksTests
 {
-    private const string ManifestResource = "TeamTypes/Builtin/development/team-type.json";
-
-    /// <summary>Reads the embedded Development manifest directly, because the catalog hides that type until its process files ship.</summary>
-    /// <returns>The parsed manifest.</returns>
-    private static TeamTypeManifest LoadDevelopmentManifest()
-    {
-        Assembly assembly = typeof(TeamTypeCatalog).Assembly;
-        string? resource = assembly.GetManifestResourceNames().SingleOrDefault(static name => name.Replace('\\', '/') == ManifestResource);
-        Assert.NotNull(resource);
-        using Stream? stream = assembly.GetManifestResourceStream(resource);
-        Assert.NotNull(stream);
-        using StreamReader reader = new(stream);
-        TeamTypeManifest? manifest = JsonSerializer.Deserialize<TeamTypeManifest>(reader.ReadToEnd(), TeamTypeJson.Options);
-        Assert.NotNull(manifest);
-        return manifest;
-    }
+    /// <summary>Loads the shipped Development type through the catalog, so each role carries the packs of its hiring-pool job.</summary>
+    /// <returns>The type with the roles it lists itself.</returns>
+    private static TeamTypeManifest LoadDevelopmentManifest() => BuiltinManifests.Load("development");
 
     /// <summary>Over an empty data folder the embedded store lists both starter packs, in id order, with no problems.</summary>
     [Fact]

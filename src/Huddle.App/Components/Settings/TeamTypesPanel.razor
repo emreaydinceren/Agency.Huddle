@@ -34,7 +34,7 @@
             <MudTd Class="teamtypes-id">@context.Id</MudTd>
             <MudTd Class="teamtypes-version">@context.Version</MudTd>
             <MudTd Class="teamtypes-source">@(this.Catalog.IsUserDefined(context.Id) ? "Yours" : "Built-in")</MudTd>
-            <MudTd Class="teamtypes-roles">@context.Roles.Count</MudTd>
+            <MudTd Class="teamtypes-roles">@context.Roles.Count(static role => !role.Pooled)</MudTd>
         </RowTemplate>
         <NoRecordsContent>
             <span class="teamtypes-empty">No team types found.</span>

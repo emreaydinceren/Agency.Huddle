@@ -1,4 +1,3 @@
-using System.Reflection;
 using Agency.Huddle.App.Teams;
 using Agency.Huddle.App.TeamTypes;
 using Microsoft.Extensions.Logging.Abstractions;
@@ -8,39 +7,9 @@ namespace Agency.Huddle.Tests.TeamTypes;
 /// <summary>Tests for the built-in Household team type (TT-8, Scenario 5): its manifest and two roles, its one default process, the catalog order, and the rule that only the type folder names the type id.</summary>
 public sealed class BuiltinHouseholdTypeTests
 {
-    private const string TypeFolder = "TeamTypes/Builtin/household/";
-
-    /// <summary>Reads the embedded manifest and parses it with the one set of team-type JSON options.</summary>
-    /// <returns>The parsed manifest.</returns>
-    private static TeamTypeManifest LoadManifest()
-    {
-        Assembly assembly = typeof(TeamTypeCatalog).Assembly;
-        string? resource = assembly.GetManifestResourceNames().SingleOrDefault(static n => n.Replace('\\', '/') == TypeFolder + "team-type.json");
-        Assert.NotNull(resource);
-        using Stream? stream = assembly.GetManifestResourceStream(resource);
-        Assert.NotNull(stream);
-        using StreamReader reader = new(stream);
-        TeamTypeManifest? manifest = System.Text.Json.JsonSerializer.Deserialize<TeamTypeManifest>(reader.ReadToEnd(), TeamTypeJson.Options);
-        Assert.NotNull(manifest);
-        return manifest;
-    }
-
-    /// <summary>Lists the embedded resource names of the Household type, relative to its folder, so validation sees the files that ship.</summary>
-    /// <returns>The relative paths, such as <c>candidates/school-liaison.md</c>.</returns>
-    private static HashSet<string> EmbeddedTypeFiles()
-    {
-        HashSet<string> files = new(StringComparer.Ordinal);
-        foreach (string name in typeof(TeamTypeCatalog).Assembly.GetManifestResourceNames())
-        {
-            string normalised = name.Replace('\\', '/');
-            if (normalised.StartsWith(TypeFolder, StringComparison.Ordinal))
-            {
-                files.Add(normalised[TypeFolder.Length..]);
-            }
-        }
-
-        return files;
-    }
+    /// <summary>Loads the shipped Household type through the catalog, so its roles are composed from their hiring-pool jobs.</summary>
+    /// <returns>The type with the roles it lists itself.</returns>
+    private static TeamTypeManifest LoadManifest() => BuiltinManifests.Load("household");
 
     /// <summary>Walks up from the test binary until the directory holding <c>Huddle.slnx</c> is found.</summary>
     /// <returns>The repository root directory.</returns>
@@ -115,38 +84,32 @@ public sealed class BuiltinHouseholdTypeTests
         Assert.Equal(["Ellie", "Theo"], liaison.SuggestedNames);
     }
 
-    /// <summary>The one preset, Basic, hires both roles, and the one process is household-basics and the default.</summary>
+    /// <summary>The one process is household-basics and it is the default.</summary>
     [Fact]
-    public void Manifest_PresetAndProcesses_BasicAndHouseholdBasicsDefault()
+    public void Manifest_Processes_HouseholdBasicsIsTheOneDefault()
     {
         TeamTypeManifest manifest = LoadManifest();
 
-        PresetSpec basic = Assert.Single(manifest.Presets);
-        Assert.Equal("basic", basic.Id);
-        Assert.Equal(["household-manager", "school-liaison"], basic.Roles);
         ProcessRef process = Assert.Single(manifest.Processes);
         Assert.Equal("household-basics", process.Id);
         Assert.True(process.Default);
     }
 
-    /// <summary>The validator reports no problems over the shipped files: both candidates and the process are present.</summary>
+    /// <summary>The catalog loads the shipped type with no problems: both roles name pool jobs that hold a persona, and the process is present.</summary>
     [Fact]
     public void Validate_ShippedFiles_ReportsNoProblems()
     {
-        TeamTypeManifest manifest = LoadManifest();
-        HashSet<string> files = EmbeddedTypeFiles();
-
-        Assert.Empty(TeamTypeValidator.Validate(manifest, files.Contains));
+        Assert.DoesNotContain(BuiltinManifests.Problems(), static problem => string.Equals(problem.TypeId, "household", StringComparison.Ordinal));
     }
 
-    /// <summary>The catalog lists both built-in types with no problems, Development first (order 10) and Household second (order 20).</summary>
+    /// <summary>The catalog lists every built-in type with no problems, Development first (order 10) and Household second (order 20).</summary>
     [Fact]
-    public void Catalog_Types_DevelopmentThenHousehold()
+    public void Catalog_Types_DevelopmentThenHouseholdThenTheRest()
     {
         using TempDataDir dir = new();
         TeamTypeCatalog catalog = new(dir.Options(), NullLogger<TeamTypeCatalog>.Instance);
 
-        Assert.Equal(["development", "household"], catalog.Types.Select(static t => t.Id).ToList());
+        Assert.Equal(["development", "household"], catalog.Types.Take(2).Select(static t => t.Id).ToList());
         Assert.Empty(catalog.Problems);
     }
 

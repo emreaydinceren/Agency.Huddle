@@ -83,11 +83,18 @@ public sealed class RoleNeutralityTests
         return directory?.FullName ?? throw new InvalidOperationException("Huddle.slnx was not found above the test folder.");
     }
 
-    /// <summary>Reads every role title and role id from the built-in manifests.</summary>
+    /// <summary>Reads every role id from the built-in manifests and the title of the hiring-pool job each role names.</summary>
     /// <param name="root">The repository root.</param>
     /// <returns>The names to look for.</returns>
     private static List<string> RoleNames(string root)
     {
+        string poolPath = Path.Combine(root, "src", "Huddle.App", "HiringPool", "hiringpool.json");
+        using JsonDocument pool = JsonDocument.Parse(File.ReadAllText(poolPath));
+        Dictionary<string, string> titles = pool.RootElement.GetProperty("jobs").EnumerateArray()
+            .ToDictionary(
+                static job => job.GetProperty("id").GetString() ?? string.Empty,
+                static job => job.GetProperty("title").GetString() ?? string.Empty,
+                StringComparer.Ordinal);
         List<string> names = [];
         foreach (string typeId in BuiltinTypeIds)
         {
@@ -95,8 +102,10 @@ public sealed class RoleNeutralityTests
             using JsonDocument document = JsonDocument.Parse(File.ReadAllText(path));
             foreach (JsonElement role in document.RootElement.GetProperty("roles").EnumerateArray())
             {
-                names.Add(role.GetProperty("title").GetString() ?? string.Empty);
-                names.Add(role.GetProperty("id").GetString() ?? string.Empty);
+                string id = role.GetProperty("id").GetString() ?? string.Empty;
+                string job = role.TryGetProperty("job", out JsonElement named) ? named.GetString() ?? id : id;
+                names.Add(titles.GetValueOrDefault(job, string.Empty));
+                names.Add(id);
             }
         }
 

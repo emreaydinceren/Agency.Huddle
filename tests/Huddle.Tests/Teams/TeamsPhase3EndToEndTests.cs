@@ -23,7 +23,7 @@ namespace Agency.Huddle.Tests.Teams;
 /// <summary>
 /// Task 65 (Phase 3 end-to-end, Gate 3): hire, start, gate, sprint, wake and restart flows walked together
 /// through the real host (<see cref="TeamWebApplicationFactory"/>) with a mock ACP adapter as the only adapter.
-/// Each test builds its own host on a fresh factory, creates a Development Team with the <c>Small</c> preset and
+/// Each test builds its own host on a fresh factory, creates a Development Team with its manager, developer, reviewer and QA engineer and
 /// starts it through <see cref="HireService"/>, then follows one flow. The mock adapter is the in-memory
 /// <see cref="FakeAgentProcessLauncher"/>, one per launched host; <c>Team:Teams:Tiers:claude</c> is set because
 /// <see cref="HireContext"/> counts every adapter profile as answered with only the models configured there.
@@ -34,7 +34,7 @@ public sealed class TeamsPhase3EndToEndTests
 
     private const string TypeId = "development";
 
-    private const string PresetId = "small";
+    private static readonly string[] StartRoles = ["development-manager", "developer", "reviewer", "qa-engineer"];
 
     private const string QaGateId = "qa-evidence-before-done";
 
@@ -291,7 +291,7 @@ public sealed class TeamsPhase3EndToEndTests
         }
     }
 
-    /// <summary>Creates the Development Team with the Small preset, hires the manager the way Team setup does, and starts everyone.</summary>
+    /// <summary>Creates the Development Team with its four starting roles, hires the manager the way Team setup does, and starts everyone.</summary>
     /// <param name="run">The running host.</param>
     /// <param name="workspace">The repository folder.</param>
     /// <param name="ct">Cancels the work.</param>
@@ -307,10 +307,9 @@ public sealed class TeamsPhase3EndToEndTests
         TeamFile file = new(new VersionedRef(type.Id, type.Version), null, workspace, null, TeamPaths.ProcessFileName, string.Empty);
         Assert.Equal(TeamCreateOutcome.Created, folders.CreateTeam(TeamName, file).Outcome);
 
-        PresetSpec preset = type.Presets.First(static each => string.Equals(each.Id, PresetId, StringComparison.Ordinal));
         List<string> used = [.. personas.ListNames()];
         List<CardState> cards = [];
-        foreach (string roleId in preset.Roles)
+        foreach (string roleId in StartRoles)
         {
             RoleSpec role = type.Roles.First(each => string.Equals(each.Id, roleId, StringComparison.Ordinal));
             CardState card = CardResolver.Resolve(role, used, context.Answered, context.TierMap, context.AvoidAdapters, services.GetRequiredService<SkillPackStore>().All, context.Connectors);

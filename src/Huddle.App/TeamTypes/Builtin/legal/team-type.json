@@ -1,0 +1,12 @@
+{
+  "schemaVersion": 1, "id": "legal", "version": "1.0.0", "order": 90,
+  "workspace": { "kind": "folder", "label": "Documents folder", "required": true },
+  "coverage": ["review", "verify"],
+  "processes": [{ "id": "legal-basics", "file": "processes/legal-basics.md", "default": true }],
+  "roles": [
+    { "id": "compliance-lead", "job": "compliance-lead", "manager": true, "required": true, "maxPerTeam": 1, "covers": ["verify"] },
+    { "id": "legal-drafter", "job": "legal-drafter", "manager": false, "required": false, "maxPerTeam": 1, "covers": ["review"] },
+    { "id": "contract-reviewer", "job": "contract-reviewer", "manager": false, "required": true, "maxPerTeam": 2, "covers": ["verify"], "model": { "differentVendorFrom": ["legal-drafter", "policy-researcher"] } },
+    { "id": "policy-researcher", "job": "policy-researcher", "manager": false, "required": false, "maxPerTeam": 1, "covers": ["review"] }
+  ]
+}

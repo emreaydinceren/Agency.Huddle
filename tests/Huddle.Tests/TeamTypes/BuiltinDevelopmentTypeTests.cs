@@ -1,4 +1,3 @@
-using System.Reflection;
 using Agency.Huddle.App.TeamTypes;
 
 namespace Agency.Huddle.Tests.TeamTypes;
@@ -6,19 +5,6 @@ namespace Agency.Huddle.Tests.TeamTypes;
 /// <summary>Tests for the built-in Development team type manifest (TT-7, TT-3, PR-1): it parses, validates, has one manager, and its presets and suggested names are sound.</summary>
 public sealed class BuiltinDevelopmentTypeTests
 {
-    private const string TypeFolder = "TeamTypes/Builtin/development/";
-
-    private static readonly string[] FullPresetRoles =
-    [
-        "development-manager",
-        "tech-lead",
-        "developer",
-        "reviewer",
-        "security-engineer",
-        "qa-engineer",
-        "release-engineer",
-    ];
-
     private static readonly string[] ExpectedRoles =
     [
         "development-manager",
@@ -31,37 +17,9 @@ public sealed class BuiltinDevelopmentTypeTests
         "retro-agent",
     ];
 
-    /// <summary>Reads the embedded manifest and parses it with the one set of team-type JSON options.</summary>
-    /// <returns>The parsed manifest.</returns>
-    private static TeamTypeManifest LoadManifest()
-    {
-        Assembly assembly = typeof(TeamTypeCatalog).Assembly;
-        string? resource = assembly.GetManifestResourceNames().SingleOrDefault(static n => n.Replace('\\', '/') == TypeFolder + "team-type.json");
-        Assert.NotNull(resource);
-        using Stream? stream = assembly.GetManifestResourceStream(resource);
-        Assert.NotNull(stream);
-        using StreamReader reader = new(stream);
-        TeamTypeManifest? manifest = System.Text.Json.JsonSerializer.Deserialize<TeamTypeManifest>(reader.ReadToEnd(), TeamTypeJson.Options);
-        Assert.NotNull(manifest);
-        return manifest;
-    }
-
-    /// <summary>Lists the embedded resource names of the Development type, relative to its folder, so validation sees the files that ship.</summary>
-    /// <returns>The relative paths, such as <c>candidates/developer.md</c>.</returns>
-    private static HashSet<string> EmbeddedTypeFiles()
-    {
-        HashSet<string> files = new(StringComparer.Ordinal);
-        foreach (string name in typeof(TeamTypeCatalog).Assembly.GetManifestResourceNames())
-        {
-            string normalised = name.Replace('\\', '/');
-            if (normalised.StartsWith(TypeFolder, StringComparison.Ordinal))
-            {
-                files.Add(normalised[TypeFolder.Length..]);
-            }
-        }
-
-        return files;
-    }
+    /// <summary>Loads the shipped Development type through the catalog, so its roles are composed from their hiring-pool jobs.</summary>
+    /// <returns>The type with the roles it lists itself.</returns>
+    private static TeamTypeManifest LoadManifest() => BuiltinManifests.Load("development");
 
     /// <summary>The manifest's identity, workspace and order match the plan: Development Team, repository workspace, dropdown position 10.</summary>
     [Fact]
@@ -125,14 +83,11 @@ public sealed class BuiltinDevelopmentTypeTests
         Assert.Equal(ModelTier.Strongest, manager.Model.Tier);
     }
 
-    /// <summary>The validator reports no problems over the shipped files: the candidates and the four process templates are all present.</summary>
+    /// <summary>The catalog loads the shipped type with no problems: every role names a pool job that holds a persona, and the four process templates are present.</summary>
     [Fact]
     public void Validate_ShippedFiles_ReportsNoProblems()
     {
-        TeamTypeManifest manifest = LoadManifest();
-        HashSet<string> files = EmbeddedTypeFiles();
-
-        Assert.Empty(TeamTypeValidator.Validate(manifest, files.Contains));
+        Assert.DoesNotContain(BuiltinManifests.Problems(), static problem => string.Equals(problem.TypeId, "development", StringComparison.Ordinal));
     }
 
     /// <summary>The default process is lightweight-flow, and the four processes are declared in the plan's order.</summary>
@@ -144,21 +99,6 @@ public sealed class BuiltinDevelopmentTypeTests
         Assert.Equal(["lightweight-flow", "spec-driven", "sprints", "maintenance"], manifest.Processes.Select(static p => p.Id).ToList());
         ProcessRef defaultProcess = Assert.Single(manifest.Processes, static p => p.Default);
         Assert.Equal("lightweight-flow", defaultProcess.Id);
-    }
-
-    /// <summary>Both presets name only real roles: Small has four roles and Full has all seven.</summary>
-    [Fact]
-    public void Manifest_Presets_NameRealRoles()
-    {
-        TeamTypeManifest manifest = LoadManifest();
-
-        PresetSpec small = Assert.Single(manifest.Presets, static p => p.Id == "small");
-        PresetSpec full = Assert.Single(manifest.Presets, static p => p.Id == "full");
-        Assert.Equal("Small", small.Label);
-        Assert.Equal(["development-manager", "developer", "reviewer", "qa-engineer"], small.Roles);
-        Assert.Equal("Full", full.Label);
-        Assert.Equal(FullPresetRoles, full.Roles);
-        Assert.All(manifest.Presets.SelectMany(static p => p.Roles), role => Assert.Contains(role, ExpectedRoles));
     }
 
     /// <summary>Every role has at least four suggested names, and no name is used by more than one role.</summary>

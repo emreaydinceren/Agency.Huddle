@@ -44,10 +44,9 @@ App_Data/
 |---|---|---|
 | schemaVersion | int | Manifest format version |
 | id, version | string | Type id (folder name) and semver; hires record both |
-| displayName, order | string, int | Dropdown label and position |
+| displayName, order | string, int | Dropdown position and a fallback label; the hiring pool's `teamTypes` entry gives the name and description |
 | workspace | object | kind: repo, folder or none; label; required |
 | coverage | string[] | Steps the team check bar requires, e.g. generate, challenge, verify |
-| presets | object[] | id, label, roles[] |
 | processes | object[] | id, file (under processes/), default |
 | roles | object[] | One per role; fields below |
 

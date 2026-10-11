@@ -1,0 +1,12 @@
+{
+  "schemaVersion": 1, "id": "learning", "version": "1.0.0", "order": 110,
+  "workspace": { "kind": "none", "label": "Study folder", "required": false },
+  "coverage": ["generate", "verify"],
+  "processes": [{ "id": "learning-basics", "file": "processes/learning-basics.md", "default": true }],
+  "roles": [
+    { "id": "tutor-lead", "job": "tutor-lead", "manager": true, "required": true, "maxPerTeam": 1, "covers": ["verify"] },
+    { "id": "curriculum-planner", "job": "curriculum-planner", "manager": false, "required": false, "maxPerTeam": 1, "covers": ["generate"] },
+    { "id": "quiz-writer", "job": "quiz-writer", "manager": false, "required": false, "maxPerTeam": 1, "covers": ["generate"] },
+    { "id": "grader", "job": "grader", "manager": false, "required": false, "maxPerTeam": 1, "covers": ["verify"], "model": { "differentVendorFrom": ["quiz-writer"] } }
+  ]
+}

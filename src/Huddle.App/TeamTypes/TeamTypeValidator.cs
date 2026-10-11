@@ -18,6 +18,17 @@ internal static partial class TeamTypeValidator
     /// <returns>Every problem found; empty when the manifest is valid.</returns>
     public static IReadOnlyList<TeamTypeProblem> Validate(TeamTypeManifest manifest, Func<string, bool> fileExists)
     {
+        return Validate(manifest, fileExists, static _ => false);
+    }
+
+    /// <summary>Validates a manifest whose roles may refer to hiring-pool jobs.</summary>
+    /// <param name="manifest">The manifest to check.</param>
+    /// <param name="fileExists">Tells whether a path relative to the type folder, such as <c>candidates/developer.md</c>, exists.</param>
+    /// <param name="jobExists">Tells whether the hiring pool holds a job with the given id.</param>
+    /// <returns>Every problem found; empty when the manifest is valid.</returns>
+    public static IReadOnlyList<TeamTypeProblem> Validate(TeamTypeManifest manifest, Func<string, bool> fileExists, Func<string, bool> jobExists)
+    {
+        ArgumentNullException.ThrowIfNull(jobExists);
         ArgumentNullException.ThrowIfNull(manifest);
         ArgumentNullException.ThrowIfNull(fileExists);
 
@@ -40,9 +51,8 @@ internal static partial class TeamTypeValidator
         }
 
         ValidateManagers(manifest, problems);
-        ValidateRoles(manifest, roleIds, fileExists, problems);
+        ValidateRoles(manifest, roleIds, fileExists, jobExists, problems);
         ValidateCoverage(manifest, problems);
-        ValidatePresets(manifest, roleIds, problems);
         ValidateProcesses(manifest, fileExists, problems);
 
         if (manifest.RetroRole is not null && !roleIds.Contains(manifest.RetroRole))
@@ -84,8 +94,9 @@ internal static partial class TeamTypeValidator
     /// <param name="manifest">The manifest.</param>
     /// <param name="roleIds">The role ids of the manifest.</param>
     /// <param name="fileExists">Tells whether a type-relative path exists.</param>
+    /// <param name="jobExists">Tells whether the hiring pool holds a job with the given id.</param>
     /// <param name="problems">Receives the problems.</param>
-    private static void ValidateRoles(TeamTypeManifest manifest, HashSet<string> roleIds, Func<string, bool> fileExists, List<TeamTypeProblem> problems)
+    private static void ValidateRoles(TeamTypeManifest manifest, HashSet<string> roleIds, Func<string, bool> fileExists, Func<string, bool> jobExists, List<TeamTypeProblem> problems)
     {
         HashSet<string> seen = new(StringComparer.Ordinal);
         HashSet<string> reported = new(StringComparer.Ordinal);
@@ -96,7 +107,14 @@ internal static partial class TeamTypeValidator
                 problems.Add(new("duplicate-role", $"The role id '{role.Id}' is used more than once."));
             }
 
-            if (!fileExists(role.Candidate))
+            if (role.Job is not null)
+            {
+                if (!jobExists(role.Job))
+                {
+                    problems.Add(new("job-unknown", $"The role '{role.Id}' names the hiring-pool job '{role.Job}', which the pool does not hold."));
+                }
+            }
+            else if (!fileExists(role.Candidate))
             {
                 problems.Add(new("candidate-missing", $"The role '{role.Id}' has no candidate file at '{role.Candidate}'."));
             }
@@ -122,21 +140,6 @@ internal static partial class TeamTypeValidator
         foreach (string step in manifest.Coverage.Where(step => !covered.Contains(step)))
         {
             problems.Add(new("coverage-uncovered", $"No role covers the coverage step '{step}'."));
-        }
-    }
-
-    /// <summary>Requires every preset role to exist.</summary>
-    /// <param name="manifest">The manifest.</param>
-    /// <param name="roleIds">The role ids of the manifest.</param>
-    /// <param name="problems">Receives the problems.</param>
-    private static void ValidatePresets(TeamTypeManifest manifest, HashSet<string> roleIds, List<TeamTypeProblem> problems)
-    {
-        foreach (PresetSpec preset in manifest.Presets)
-        {
-            foreach (string role in preset.Roles.Where(id => !roleIds.Contains(id)))
-            {
-                problems.Add(new("preset-unknown-role", $"The preset '{preset.Id}' names the role '{role}', which is not a role of this type."));
-            }
         }
     }
 

@@ -1,0 +1,14 @@
+{
+  "schemaVersion": 1, "id": "oss-maintainers", "version": "1.0.0", "order": 160,
+  "workspace": { "kind": "repo", "label": "Repository", "required": true },
+  "coverage": ["build", "verify"],
+  "processes": [{ "id": "oss-maintainers-basics", "file": "processes/oss-maintainers-basics.md", "default": true }],
+  "roles": [
+    { "id": "maintainer", "job": "maintainer", "manager": true, "required": true, "maxPerTeam": 1, "covers": ["build"] },
+    { "id": "developer", "job": "developer", "manager": false, "required": false, "maxPerTeam": 2, "covers": ["build"] },
+    { "id": "issue-triager", "job": "issue-triager", "manager": false, "required": false, "maxPerTeam": 1, "covers": [] },
+    { "id": "reviewer", "job": "reviewer", "manager": false, "required": true, "maxPerTeam": 2, "covers": ["verify"], "model": { "differentVendorFrom": ["maintainer", "developer"] } },
+    { "id": "release-engineer", "job": "release-engineer", "manager": false, "required": false, "maxPerTeam": 1, "covers": [] },
+    { "id": "community-manager", "job": "community-manager", "manager": false, "required": false, "maxPerTeam": 1, "covers": [] }
+  ]
+}

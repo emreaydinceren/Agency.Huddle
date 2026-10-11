@@ -1,0 +1,13 @@
+{
+  "schemaVersion": 1, "id": "life-admin", "version": "1.0.0", "order": 100,
+  "workspace": { "kind": "none", "label": "Home folder", "required": false },
+  "coverage": ["generate", "verify"],
+  "processes": [{ "id": "life-admin-basics", "file": "processes/life-admin-basics.md", "default": true }],
+  "roles": [
+    { "id": "chief-of-household", "job": "chief-of-household", "manager": true, "required": true, "maxPerTeam": 1, "covers": ["verify"] },
+    { "id": "travel-planner", "job": "travel-planner", "manager": false, "required": false, "maxPerTeam": 1, "covers": ["generate"] },
+    { "id": "finance-tracker", "job": "finance-tracker", "manager": false, "required": false, "maxPerTeam": 1, "covers": ["generate"] },
+    { "id": "health-admin", "job": "health-admin", "manager": false, "required": false, "maxPerTeam": 1, "covers": ["generate"] },
+    { "id": "inbox-triager", "job": "inbox-triager", "manager": false, "required": false, "maxPerTeam": 1, "covers": ["generate"] }
+  ]
+}

@@ -1,4 +1,6 @@
 @using Agency.Huddle.App.Acp
+@using Agency.Huddle.App.Components.Shared
+@using Agency.Huddle.App.HiringPool
 @using Agency.Huddle.App.Library
 @using Agency.Huddle.App.TeamTypes
 @inject ITeamFolders Folders
@@ -9,31 +11,37 @@
 @inject IDialogService Dialogs
 
 @*
-    Task 32 (HR-3 to HR-6, Screen 1): the hiring pool. Left, one card per role of the Team's type with
-    its tier, what it covers and the name the next hire would get; a role at its limit is greyed and
-    its + is disabled. Right, the Team area: the manager first (it cannot be removed) and then the
-    cards staged here, each Ready or Needs setup with its reasons. The + button stages a card in
+    Task 32 (HR-3 to HR-6, Screen 1): the hiring pool. Left, one card per job with its tier, what it covers
+    and the name the next hire would get; a job at its limit is greyed and its + is disabled. Two tag clouds
+    filter the cards: team types (any selected type) and tags plus skill names (every selected one). The cloud
+    opens on the Team's own type; clear it to browse every job in the pool, and a job the type does not list can
+    still be hired with default settings. Right, the Team area: the manager first (it cannot be removed) and then
+    the cards staged here, each Ready or Needs setup with its reasons. The + button stages a card in
     component state and reported through Selection (Start Team, Task 33, hires them); CardResolver runs on every add, with the names
-    already staged counted as in use, so a name never repeats. A preset button stages its roles at
-    once and skips the full ones. Hiring is by + or preset only; drag-and-drop is not offered.
+    already staged counted as in use, so a name never repeats. Hiring is by + only; drag-and-drop is not offered.
 *@
 
 <div class="hiring-pool">
     <div class="hiring-pool-pool">
         <MudText Typo="Typo.overline" Class="hiring-pool-heading">Hiring pool</MudText>
-        @if (this.Presets.Count > 0)
+        <div class="hiring-pool-filters">
+            <ChipCloud Title="Team types" CssClass="hiring-pool-type-cloud" Pool="@this.TypeChips" Selected="@this.selectedTypes" OnToggle="this.ToggleType" />
+            <ChipCloud Title="Tags and skills" CssClass="hiring-pool-term-cloud" Pool="@this.TermChips" Selected="@this.selectedTerms" Cap="TermCap" OnToggle="this.ToggleTerm" />
+            @if (this.TypeChips.Count > 0 || this.TermChips.Count > 0)
+            {
+                <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2">
+                    <MudText Typo="Typo.caption" Class="hiring-pool-count" aria-live="polite">@this.Visible.Count of @this.Entries.Count jobs</MudText>
+                    <button type="button" class="hiring-pool-clear" @onclick="this.ClearFilters">Clear all</button>
+                </MudStack>
+            }
+        </div>
+        @if (this.Visible.Count == 0)
         {
-            <MudStack Row="true" AlignItems="AlignItems.Center" Class="hiring-pool-presets">
-                <MudText Typo="Typo.caption" Class="hiring-pool-presets-label">Presets</MudText>
-                @foreach (PresetSpec preset in this.Presets)
-                {
-                    <MudButton Variant="Variant.Outlined" Size="Size.Small" Class="@($"hiring-pool-preset hiring-pool-preset-{preset.Id}")"
-                               OnClick="@(() => this.AddPreset(preset))">@preset.Label</MudButton>
-                }
-            </MudStack>
+            <MudText Typo="Typo.caption" Class="hiring-pool-empty">No jobs match. Remove a chip or press Clear all.</MudText>
         }
-        @foreach (RoleSpec role in this.Roles)
+        @foreach (PoolEntry entry in this.Visible)
         {
+            RoleSpec role = entry.Role;
             bool full = this.IsFull(role);
             <MudPaper Outlined="true" Class="@PoolCardClass(role, full)">
                 <MudStack Row="true" AlignItems="AlignItems.Center">
@@ -46,6 +54,15 @@
                                 <MudChip T="string" Size="Size.Small" Variant="Variant.Outlined" Class="hiring-pool-covers">@step</MudChip>
                             }
                         </MudStack>
+                        @if (entry.Terms.Count > 0)
+                        {
+                            <MudStack Row="true" Spacing="1" Class="hiring-pool-tags">
+                                @foreach (string term in entry.Terms.Take(CardTermCap))
+                                {
+                                    <MudText Typo="Typo.caption" Class="hiring-pool-tag">@term</MudText>
+                                }
+                            </MudStack>
+                        }
                         <div class="hiring-pool-next">
                             <MudText Typo="Typo.caption" Class="hiring-pool-next-label">Next hire</MudText>
                             <MudText Typo="Typo.caption" Class="hiring-pool-suggested">@this.SuggestedName(role)</MudText>
@@ -123,7 +140,12 @@
     private const string ReadyText = "Ready";
     private const string NeedsSetupText = "Needs setup";
 
+    private const int TermCap = 40;
+    private const int CardTermCap = 4;
+
     private readonly List<HiredEntry> hired = [];
+    private List<string> selectedTypes = [];
+    private List<string> selectedTerms = [];
     private string? loadedKey;
 
     /// <summary>The Team being set up.</summary>
@@ -134,11 +156,19 @@
     [Parameter]
     public string TypeId { get; set; } = string.Empty;
 
+    private HiringPoolCatalog Pool => this.Types.Pool;
+
     private TeamTypeManifest? Type => this.Types.Find(this.TypeId);
 
     private IReadOnlyList<RoleSpec> Roles => this.Type?.Roles ?? [];
 
-    private IReadOnlyList<PresetSpec> Presets => this.Type?.Presets ?? [];
+    private IReadOnlyList<PoolEntry> Entries => HiringPoolSearch.Entries(this.Roles, this.TypeId, this.Pool);
+
+    private IReadOnlyList<PoolEntry> Visible => [.. this.Entries.Where(entry => HiringPoolSearch.Matches(entry, this.SelectedTypeIds(), this.selectedTerms, this.TypeId))];
+
+    private IReadOnlyList<string> TypeChips => this.Pool.TeamTypes.Count == 0 ? [] : [.. this.Types.Types.Select(static type => type.DisplayName)];
+
+    private IReadOnlyList<string> TermChips => HiringPoolSearch.TermPool(this.Entries);
 
     /// <summary>Receives the cards staged here, so the hosting page can compute the check bar and start the Team.</summary>
     [Parameter]
@@ -158,6 +188,8 @@
         }
 
         this.loadedKey = key;
+        this.selectedTerms = [];
+        this.selectedTypes = this.Type is { } openType && this.TypeChips.Contains(openType.DisplayName, StringComparer.Ordinal) ? [openType.DisplayName] : [];
         this.hired.Clear();
         RoleSpec? managerRole = this.Roles.FirstOrDefault(static role => role.Manager);
         if (managerRole is null)
@@ -237,21 +269,24 @@
         }
     }
 
-    private async Task AddPreset(PresetSpec preset)
-    {
-        bool changed = false;
-        foreach (string roleId in preset.Roles)
-        {
-            RoleSpec? role = this.Roles.FirstOrDefault(candidate => string.Equals(candidate.Id, roleId, StringComparison.Ordinal));
-            if (role is not null && this.Stage(role))
-            {
-                changed = true;
-            }
-        }
+    private List<string> SelectedTypeIds() =>
+        [.. this.selectedTypes.Select(name => this.Types.Types.FirstOrDefault(type => string.Equals(type.DisplayName, name, StringComparison.Ordinal))?.Id).OfType<string>()];
 
-        if (changed)
+    private void ToggleType(string name) => Toggle(this.selectedTypes, name);
+
+    private void ToggleTerm(string term) => Toggle(this.selectedTerms, term);
+
+    private void ClearFilters()
+    {
+        this.selectedTypes.Clear();
+        this.selectedTerms.Clear();
+    }
+
+    private static void Toggle(List<string> selection, string text)
+    {
+        if (!selection.Remove(text))
         {
-            await this.PublishAsync();
+            selection.Add(text);
         }
     }
 

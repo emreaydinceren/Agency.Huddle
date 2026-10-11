@@ -7,7 +7,7 @@ namespace Agency.Huddle.Tests.TeamTypes;
 /// <summary>Tests for the seven built-in Development candidate files (TT-7, OR-4, PL-1 to PL-5, RQ-10): each parses as a candidate, carries its job description, and states the stance the plan requires.</summary>
 public sealed class CandidateFilesTests
 {
-    private const string CandidateFolder = "TeamTypes/Builtin/development/candidates/";
+    private const string CandidateFolder = "HiringPool/personas/";
 
     private static readonly string[] RoleIds =
     [

@@ -6,6 +6,9 @@ internal static class TeamPaths
     /// <summary>Folder holding the data-defined team types.</summary>
     public const string TeamTypesDir = "TeamTypes";
 
+    /// <summary>Folder holding the user's hiring pool (<c>hiringpool.json</c> and its personas).</summary>
+    public const string HiringPoolDir = "HiringPool";
+
     /// <summary>Folder holding the skill packs.</summary>
     public const string SkillPacksDir = "SkillPacks";
 

@@ -1,0 +1,15 @@
+{
+  "schemaVersion": 1,
+  "id": "product",
+  "version": "1.0.0",
+  "order": 70,
+  "workspace": { "kind": "repo", "label": "Repository", "required": true },
+  "coverage": [ "define", "verify" ],
+  "processes": [ { "id": "product-basics", "file": "processes/product-basics.md", "default": true } ],
+  "roles": [
+    { "id": "product-manager", "job": "product-manager", "manager": true, "required": true, "maxPerTeam": 1, "covers": [ "verify" ] },
+    { "id": "designer", "job": "designer", "required": false, "maxPerTeam": 1, "covers": [ "define" ] },
+    { "id": "ux-researcher", "job": "ux-researcher", "required": false, "maxPerTeam": 1, "covers": [ "define" ] },
+    { "id": "tech-lead", "job": "tech-lead", "required": false, "maxPerTeam": 1, "covers": [ "verify" ] }
+  ]
+}

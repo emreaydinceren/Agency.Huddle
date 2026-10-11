@@ -21,9 +21,6 @@ public sealed class TeamTypeManifestTests
         Assert.Equal("Repository", manifest.Workspace.Label);
         Assert.True(manifest.Workspace.Required);
         Assert.Equal("generate,challenge,verify", string.Join(",", manifest.Coverage));
-        Assert.Equal("small", manifest.Presets[0].Id);
-        Assert.Equal("Small", manifest.Presets[0].Label);
-        Assert.Equal("manager,developer", string.Join(",", manifest.Presets[0].Roles));
         Assert.Equal("default", manifest.Processes[0].Id);
         Assert.Equal("processes/default.md", manifest.Processes[0].File);
         Assert.True(manifest.Processes[0].Default);
@@ -65,8 +62,10 @@ public sealed class TeamTypeManifestTests
         RoleSpec role = manifest.Roles[0];
 
         Assert.Empty(manifest.Coverage);
-        Assert.Empty(manifest.Presets);
         Assert.Empty(manifest.Processes);
+        Assert.Null(manifest.Description);
+        Assert.Null(role.Job);
+        Assert.False(role.Pooled);
         Assert.Null(manifest.RetroRole);
         Assert.False(manifest.Workspace.Required);
         Assert.False(role.Manager);
@@ -81,15 +80,14 @@ public sealed class TeamTypeManifestTests
         Assert.Empty(role.SuggestedNames);
     }
 
-    /// <summary>A preset without roles has an empty role list, and a process without <c>default</c> is not the default.</summary>
+    /// <summary>A process without <c>default</c> is not the default.</summary>
     [Fact]
-    public void Parse_PresetAndProcessWithoutOptionalFields_TakeDefaults()
+    public void Parse_ProcessWithoutDefault_IsNotTheDefault()
     {
         const string json = """
             {
               "schemaVersion": 1, "id": "x", "version": "1.0.0", "displayName": "X", "order": 1,
               "workspace": { "kind": "none", "label": "None" },
-              "presets": [ { "id": "p", "label": "P" } ],
               "processes": [ { "id": "d", "file": "processes/d.md" } ],
               "roles": [ { "id": "r", "title": "R", "candidate": "c.md" } ]
             }
@@ -97,8 +95,31 @@ public sealed class TeamTypeManifestTests
 
         TeamTypeManifest manifest = Parse(json);
 
-        Assert.Empty(manifest.Presets[0].Roles);
         Assert.False(manifest.Processes[0].Default);
+    }
+
+    /// <summary>A role that refers to a hiring-pool job carries only its id, its job and its type-specific settings; the catalog fills the rest from the job.</summary>
+    [Fact]
+    public void Parse_JobReferenceRole_KeepsTheJobAndLeavesTitleAndCandidateEmpty()
+    {
+        const string json = """
+            {
+              "schemaVersion": 1, "id": "x", "version": "1.0.0", "order": 1,
+              "workspace": { "kind": "none", "label": "None" },
+              "roles": [ { "id": "r", "job": "bookkeeper", "required": true, "maxPerTeam": 2, "covers": [ "generate" ] } ]
+            }
+            """;
+
+        TeamTypeManifest manifest = Parse(json);
+        RoleSpec role = manifest.Roles[0];
+
+        Assert.Equal("bookkeeper", role.Job);
+        Assert.Null(role.Title);
+        Assert.Null(role.Candidate);
+        Assert.Null(manifest.DisplayName);
+        Assert.True(role.Required);
+        Assert.Equal(2, role.MaxPerTeam);
+        Assert.False(role.Pooled);
     }
 
     /// <summary>A model tier written in each lower-case form maps to its enum value.</summary>
@@ -174,7 +195,6 @@ public sealed class TeamTypeManifestTests
           "order": 1,
           "workspace": { "kind": "repo", "label": "Repository", "required": true },
           "coverage": [ "generate", "challenge", "verify" ],
-          "presets": [ { "id": "small", "label": "Small", "roles": [ "manager", "developer" ] } ],
           "processes": [ { "id": "default", "file": "processes/default.md", "default": true } ],
           "roles": [
             {

@@ -1,0 +1,70 @@
+{
+  "schemaVersion": 1,
+  "id": "relocation",
+  "version": "1.0.0",
+  "order": 250,
+  "workspace": {
+    "kind": "none",
+    "label": "Move notes",
+    "required": false
+  },
+  "coverage": [
+    "gather",
+    "verify"
+  ],
+  "processes": [
+    {
+      "id": "relocation-basics",
+      "file": "processes/relocation-basics.md",
+      "default": true
+    }
+  ],
+  "roles": [
+    {
+      "id": "move-coordinator",
+      "job": "move-coordinator",
+      "manager": true,
+      "required": true,
+      "maxPerTeam": 1,
+      "covers": [
+        "verify"
+      ]
+    },
+    {
+      "id": "housing-scout",
+      "job": "housing-scout",
+      "required": false,
+      "maxPerTeam": 1,
+      "covers": [
+        "gather"
+      ]
+    },
+    {
+      "id": "comparison-shopper",
+      "job": "comparison-shopper",
+      "required": false,
+      "maxPerTeam": 1,
+      "covers": [
+        "gather"
+      ]
+    },
+    {
+      "id": "inbox-triager",
+      "job": "inbox-triager",
+      "required": false,
+      "maxPerTeam": 1,
+      "covers": [
+        "gather"
+      ]
+    },
+    {
+      "id": "schedule-keeper",
+      "job": "schedule-keeper",
+      "required": false,
+      "maxPerTeam": 1,
+      "covers": [
+        "gather"
+      ]
+    }
+  ]
+}
