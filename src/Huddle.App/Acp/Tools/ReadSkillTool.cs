@@ -31,7 +31,11 @@ internal sealed class ReadSkillTool(SkillStore skills, PersonaStore personas, st
     {
         ArgumentNullException.ThrowIfNull(arguments);
 
-        var name = (string?)arguments["name"];
+        if (!TaskToolText.TryGetString(arguments, "name", out string? name, out string nameRefusal))
+        {
+            return Task.FromResult(nameRefusal);
+        }
+
         if (string.IsNullOrWhiteSpace(name))
         {
             return Task.FromResult("The 'name' argument is required and must be the Skill's name.");
@@ -55,7 +59,11 @@ internal sealed class ReadSkillTool(SkillStore skills, PersonaStore personas, st
             return Task.FromResult($"The Skill '{name}' does not exist.");
         }
 
-        var file = (string?)arguments["file"];
+        if (!TaskToolText.TryGetString(arguments, "file", out string? file, out string fileRefusal))
+        {
+            return Task.FromResult(fileRefusal);
+        }
+
         if (string.IsNullOrWhiteSpace(file))
         {
             file = SkillMdFileName;

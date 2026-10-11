@@ -421,4 +421,19 @@ public sealed class ProposeTeammatesToolTests
             this.DataDir.Dispose();
         }
     }
+
+    /// <summary>A <c>roomId</c> that is not JSON text is refused with the <c>'roomId' must be text.</c> refusal rather than throwing an <see cref="InvalidCastException"/>.</summary>
+    [Fact]
+    public async Task InvokeAsync_NonStringRoomId_RefusesAsText()
+    {
+        CancellationToken ct = TestContext.Current.CancellationToken;
+        using Fixture fixture = await Fixture.CreateAsync(ct);
+        var caller = await fixture.Directory.UpsertAgentUserAsync("Nova", null, ct);
+        Assert.NotNull(caller);
+        var tool = fixture.CreateTool(caller.Id);
+
+        var result = await tool.InvokeAsync(new JsonObject { ["roomId"] = 42 }, ct);
+
+        Assert.Equal("'roomId' must be text.", result);
+    }
 }

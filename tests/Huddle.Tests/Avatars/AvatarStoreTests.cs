@@ -1,6 +1,7 @@
 using System.Globalization;
 using Microsoft.Extensions.Logging.Abstractions;
 using Agency.Huddle.App.Avatars;
+using Agency.Huddle.Tests.Elicitation;
 
 namespace Agency.Huddle.Tests.Avatars;
 
@@ -210,5 +211,27 @@ public sealed class AvatarStoreTests
         using var store = new AvatarStore(dataDir.Options(), NullLogger<AvatarStore>.Instance);
 
         Assert.Equal("#4a154b", store.Get("Jarvis").Background);
+    }
+
+    /// <summary>
+    /// A watcher rebuild that cannot read <c>avatars.json</c> on any attempt (an editor holds it exclusively) logs a
+    /// warning and keeps the previously resolved avatars instead of letting the <see cref="IOException"/> escape the timer thread.
+    /// </summary>
+    [Fact]
+    public async Task Get_FileLockedForEveryRetry_KeepsThePreviousAvatars()
+    {
+        CancellationToken ct = TestContext.Current.CancellationToken;
+        using TempDataDir dataDir = new();
+        string path = Path.Combine(dataDir.Path, "avatars.json");
+        File.WriteAllText(path, """{ "Ghost": { "background": "#000000" } }""");
+        RecordingLogger<AvatarStore> logger = new();
+        using AvatarStore store = new(dataDir.Options(), logger);
+
+        using (FileStream held = LockedWatcherFileSupport.WriteAndHold(path, """{ "Ghost": { "background": "#ffffff" } }"""))
+        {
+            await LockedWatcherFileSupport.WaitForWarningAsync(logger, ct);
+
+            Assert.Equal("#000000", store.Get("Ghost").Background);
+        }
     }
 }

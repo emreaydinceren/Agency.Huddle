@@ -519,10 +519,10 @@ internal sealed class PromptStore : IPromptSource, IDisposable
             {
                 return ParseOverridesFile(this.path);
             }
-            catch (Exception ex) when (attempt < WatcherReadRetryAttempts && (ex is JsonException or IOException))
+            catch (Exception ex) when (attempt < WatcherReadRetryAttempts && (ex is JsonException or IOException or UnauthorizedAccessException))
             {
                 // JsonException: caught mid-write, the partial text does not parse yet.
-                // IOException: an editor can hold the file open with a sharing lock while it writes.
+                // IOException / UnauthorizedAccessException: an editor can hold the file open with a sharing lock while it writes.
                 // Both are plausible transient states for a file a human is actively saving; a short
                 // pause gives the write time to finish before the next attempt.
                 Thread.Sleep(WatcherReadRetryDelayMilliseconds);
@@ -533,6 +533,15 @@ internal sealed class PromptStore : IPromptSource, IDisposable
                     ex,
                     "Could not parse prompt overrides file '{Path}' after a filesystem change, even after retrying; keeping the previously resolved prompt text rather than reverting every prompt to its catalog default over what may be a mid-write race.",
                     this.path);
+                return null;
+            }
+            catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+            {
+                this.logger.LogWarning(
+                    ex,
+                    "Could not read prompt overrides file '{Path}' after {Attempts} attempts; keeping the previously resolved prompt text.",
+                    this.path,
+                    WatcherReadRetryAttempts);
                 return null;
             }
         }

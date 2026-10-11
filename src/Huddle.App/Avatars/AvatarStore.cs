@@ -516,10 +516,10 @@ internal sealed partial class AvatarStore : IDisposable
             {
                 return ParseDocumentFile(this.path);
             }
-            catch (Exception ex) when (attempt < WatcherReadRetryAttempts && (ex is JsonException or IOException))
+            catch (Exception ex) when (attempt < WatcherReadRetryAttempts && (ex is JsonException or IOException or UnauthorizedAccessException))
             {
                 // JsonException: caught mid-write, the partial text does not parse yet.
-                // IOException: an editor can hold the file open with a sharing lock while it writes.
+                // IOException / UnauthorizedAccessException: an editor can hold the file open with a sharing lock while it writes.
                 Thread.Sleep(WatcherReadRetryDelayMilliseconds);
             }
             catch (JsonException ex)
@@ -528,6 +528,15 @@ internal sealed partial class AvatarStore : IDisposable
                     ex,
                     "Could not parse avatar overrides file '{Path}' after a filesystem change, even after retrying; keeping the previously resolved avatars rather than reverting to empty over what may be a mid-write race.",
                     this.path);
+                return null;
+            }
+            catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+            {
+                this.logger.LogWarning(
+                    ex,
+                    "Could not read avatar overrides file '{Path}' after {Attempts} attempts; keeping the previously resolved avatars.",
+                    this.path,
+                    WatcherReadRetryAttempts);
                 return null;
             }
         }

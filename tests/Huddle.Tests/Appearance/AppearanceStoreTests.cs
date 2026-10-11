@@ -1,5 +1,6 @@
 using Microsoft.Extensions.Logging.Abstractions;
 using Agency.Huddle.App.Appearance;
+using Agency.Huddle.Tests.Elicitation;
 
 namespace Agency.Huddle.Tests.Appearance;
 
@@ -245,6 +246,28 @@ public sealed class AppearanceStoreTests
             }
 
             await Task.Delay(TimeSpan.FromMilliseconds(50), cancellationToken);
+        }
+    }
+
+    /// <summary>
+    /// A watcher rebuild that cannot read the file on any attempt (an editor holds it exclusively) logs a
+    /// warning and keeps the previously resolved appearance instead of letting the <see cref="IOException"/> escape the timer thread.
+    /// </summary>
+    [Fact]
+    public async Task Current_FileLockedForEveryRetry_KeepsThePreviousAppearance()
+    {
+        CancellationToken ct = TestContext.Current.CancellationToken;
+        using TempDataDir dataDir = new();
+        string path = Path.Combine(dataDir.Path, "appearance.json");
+        File.WriteAllText(path, """{ "theme": "huddle" }""");
+        RecordingLogger<AppearanceStore> logger = new();
+        using AppearanceStore store = new(dataDir.Options(), logger);
+
+        using (FileStream held = LockedWatcherFileSupport.WriteAndHold(path, """{ "theme": "huddle-dark" }"""))
+        {
+            await LockedWatcherFileSupport.WaitForWarningAsync(logger, ct);
+
+            Assert.Equal("huddle", store.Current.ThemeId);
         }
     }
 }

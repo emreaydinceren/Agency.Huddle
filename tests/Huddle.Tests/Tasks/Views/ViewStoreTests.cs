@@ -2,6 +2,7 @@ using System.Text.Json;
 using System.Text.Json.Nodes;
 using Microsoft.Extensions.Logging.Abstractions;
 using Agency.Huddle.App.Tasks.Views;
+using Agency.Huddle.Tests.Elicitation;
 
 namespace Agency.Huddle.Tests.Tasks.Views;
 
@@ -432,5 +433,30 @@ public sealed class ViewStoreTests
         Assert.Contains("NovaPrime", updated.Filter.Assignees);
         Assert.DoesNotContain("Nova", updated.Filter.Assignees);
         Assert.Contains("@unassigned", updated.Filter.Assignees);
+    }
+
+    /// <summary>
+    /// A watcher rebuild that cannot read <c>views.json</c> on any attempt (an editor holds it exclusively) logs a
+    /// warning and keeps the previously resolved Views, with no <see cref="ViewStore.LoadError"/>, instead of letting the <see cref="IOException"/> escape the timer thread.
+    /// </summary>
+    [Fact]
+    public async Task ExternalEdit_FileLockedForEveryRetry_KeepsThePreviousViews()
+    {
+        CancellationToken ct = TestContext.Current.CancellationToken;
+        using TempDataDir dataDir = new();
+        string path = Path.Combine(dataDir.Path, "views.json");
+        File.WriteAllText(path, """{ "version": 1, "views": [ { "id": "before-1", "name": "Before", "kind": "list" } ] }""");
+        RecordingLogger<ViewStore> logger = new();
+        using ViewStore store = new(dataDir.Options(), logger);
+        Assert.Contains(store.Views, v => v.Id == "before-1");
+
+        using (FileStream held = LockedWatcherFileSupport.WriteAndHold(path, """{ "version": 1, "views": [ { "id": "after-1", "name": "After", "kind": "list" } ] }"""))
+        {
+            await LockedWatcherFileSupport.WaitForWarningAsync(logger, ct);
+
+            Assert.Contains(store.Views, v => v.Id == "before-1");
+            Assert.DoesNotContain(store.Views, v => v.Id == "after-1");
+            Assert.Null(store.LoadError);
+        }
     }
 }

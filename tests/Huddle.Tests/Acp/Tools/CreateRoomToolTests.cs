@@ -181,4 +181,27 @@ public sealed class CreateRoomToolTests
         var proposals = new ProposalStore(events);
         return new ChatService(directory, store, events, aliasSource, Options.Create(new TeamOptions()), proposals, new QuestionStore(events), NullLogger<ChatService>.Instance);
     }
+
+    /// <summary>A <c>seed</c> that is not JSON text is refused with the <c>'seed' must be text.</c> refusal, and no Room is half-created first.</summary>
+    [Fact]
+    public async Task CreateRoom_NonStringSeed_RefusesAsTextAndCreatesNoRoom()
+    {
+        var ct = TestContext.Current.CancellationToken;
+        using var dir = new TempDataDir();
+        var directory = new SqliteTeamDirectory(dir.Options());
+        await directory.InitializeAsync("You", ct);
+        var caller = await directory.UpsertAgentUserAsync("caller", null, ct);
+        var alpha = await directory.UpsertAgentUserAsync("alpha", null, ct);
+        Assert.NotNull(caller);
+        Assert.NotNull(alpha);
+        var aliasSource = new FakeMentionAliasSource();
+        var chat = CreateChatService(dir, directory, aliasSource);
+        var tool = new CreateRoomTool(chat, directory, caller.Id, aliasSource, new FakePromptSource());
+        var arguments = new JsonObject { ["agents"] = new JsonArray { "alpha" }, ["seed"] = 42 };
+
+        var result = await tool.InvokeAsync(arguments, ct);
+
+        Assert.Equal("'seed' must be text.", result);
+        Assert.Empty(await directory.GetRoomsAsync(ct));
+    }
 }

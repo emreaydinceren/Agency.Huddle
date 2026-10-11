@@ -87,6 +87,12 @@ internal sealed class CreateRoomTool(ChatService chat, ITeamDirectory teamDirect
             return $"Unknown agent(s): {string.Join(", ", unknown)}. Agents that do exist: {existingText}.";
         }
 
+        // Read before the Room exists, so a wrongly-typed seed is refused without half-creating one.
+        if (!TaskToolText.TryGetString(arguments, "seed", out string? seed, out string seedRefusal))
+        {
+            return seedRefusal;
+        }
+
         Room room;
         try
         {
@@ -102,7 +108,6 @@ internal sealed class CreateRoomTool(ChatService chat, ITeamDirectory teamDirect
         // Agents in it and no way for them to learn why." A failed seed post must not un-create the
         // Room - the Room already exists and is worth keeping even if the very next step fails - so
         // this is its own try/catch rather than folding into the one above.
-        var seed = (string?)arguments["seed"];
         if (string.IsNullOrWhiteSpace(seed))
         {
             return $"Created room '{room.Name}' (id {room.Id}).";
