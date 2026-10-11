@@ -80,14 +80,14 @@ public sealed class TasksPageViewMenuTests
         await using MudBunitContext ctx = NewContext(harness);
         IRenderedComponent<ContainerFragment> cut = RenderPage(ctx, "custom1");
 
-        _ = cut.InvokeAsync(() => ItemFor(cut, DeleteLabel).Click());
-        cut.WaitForAssertion(() => Assert.NotEmpty(cut.FindAll(".mud-dialog-actions button")));
+        Task deleting = await OpenDeleteDialogAsync(cut);
 
         Assert.Equal("Delete View", cut.Find(".mud-dialog-title").TextContent.Trim());
         Assert.Equal("Delete 'Sprint Board'? Tasks are not affected.", cut.Find(".mud-dialog-content").TextContent.Trim());
         Assert.Equal(["Cancel", "Delete"], cut.FindAll(".mud-dialog-actions button").Select(b => b.TextContent.Trim()).ToList());
 
         await cut.InvokeAsync(() => DialogButton(cut, "Cancel").ClickAsync());
+        await deleting;
     }
 
     /// <summary>Cancelling the confirm keeps the View in <see cref="ViewStore"/> and leaves the URL alone.</summary>
@@ -103,9 +103,9 @@ public sealed class TasksPageViewMenuTests
         string before = navigation.Uri;
         IRenderedComponent<ContainerFragment> cut = RenderPage(ctx, "custom1");
 
-        _ = cut.InvokeAsync(() => ItemFor(cut, DeleteLabel).Click());
-        cut.WaitForAssertion(() => Assert.NotEmpty(cut.FindAll(".mud-dialog-actions button")));
+        Task deleting = await OpenDeleteDialogAsync(cut);
         await cut.InvokeAsync(() => DialogButton(cut, "Cancel").ClickAsync());
+        await deleting;
 
         Assert.NotNull(harness.Views.Get("custom1"));
         Assert.Equal(before, navigation.Uri);
@@ -124,9 +124,9 @@ public sealed class TasksPageViewMenuTests
         navigation.NavigateTo("/tasks/custom1");
         IRenderedComponent<ContainerFragment> cut = RenderPage(ctx, "custom1");
 
-        _ = cut.InvokeAsync(() => ItemFor(cut, DeleteLabel).Click());
-        cut.WaitForAssertion(() => Assert.NotEmpty(cut.FindAll(".mud-dialog-actions button")));
+        Task deleting = await OpenDeleteDialogAsync(cut);
         await cut.InvokeAsync(() => DialogButton(cut, "Delete").ClickAsync());
+        await deleting;
 
         Assert.Null(harness.Views.Get("custom1"));
         Assert.EndsWith("/tasks", navigation.Uri, StringComparison.Ordinal); // contains-ok: a full URI, whose scheme/host prefix bUnit's FakeNavigationManager owns; only the path is this test's concern.
@@ -157,6 +157,26 @@ public sealed class TasksPageViewMenuTests
         MudBunitContext ctx = new();
         harness.AddTo(ctx.Services);
         return ctx;
+    }
+
+    /// <summary>
+    /// Fires the <c>Delete task view</c> item and returns once the confirm dialog's buttons are rendered. The handler
+    /// awaits the dialog's result, so the click is started rather than awaited, and the returned task completes only
+    /// when the handler has finished (after the dialog is answered and, on Delete, the View is removed and the URL replaced).
+    /// Waiting asynchronously, rather than blocking in <c>WaitForAssertion</c>, leaves the pool thread the handler and the
+    /// dialog render need free; a blocked test thread starved them on a busy runner and the wait saw no render at all.
+    /// </summary>
+    /// <param name="cut">The rendered page and its dialog provider.</param>
+    /// <returns>The click's task, for the test to await once it has answered the dialog.</returns>
+    private static async Task<Task> OpenDeleteDialogAsync(IRenderedComponent<ContainerFragment> cut)
+    {
+        Task deleting = cut.InvokeAsync(() => ItemFor(cut, DeleteLabel).ClickAsync());
+        Task shown = cut.WaitForAssertionAsync(() => Assert.NotEmpty(cut.FindAll(".mud-dialog-actions button")));
+
+        // A click that fails (no such item, a stale handler) completes first; awaiting it surfaces that error instead of a bare wait timeout.
+        await await Task.WhenAny(deleting, shown);
+        await shown;
+        return deleting;
     }
 
     private static IRenderedComponent<ContainerFragment> RenderPage(MudBunitContext ctx, string viewId) =>
