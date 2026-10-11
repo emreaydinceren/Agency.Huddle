@@ -17,7 +17,8 @@ internal sealed record TeamTypeFileProblem(string TypeId, string Path, string Me
 /// <remarks>
 /// Built-ins are embedded resources <c>TeamTypes/Builtin/{id}/...</c>. A user folder <c>{DataDir}/TeamTypes/{id}/</c> with a
 /// manifest of the same id replaces the built-in manifest; candidate and process files resolve the user folder first, then
-/// the built-in, so a user can add a file without copying the type. A manifest value that is rooted or contains <c>..</c> is never
+/// the built-in, so a user can add a file without copying the type. A role that names a hiring-pool job takes its persona from the
+/// pool (whose own user folder overrides a shipped persona), not from a <c>candidates</c> folder of the type. A manifest value that is rooted or contains <c>..</c> is never
 /// resolved. Invalid types are excluded from <see cref="Types"/> and listed in <see cref="Problems"/>; loading never throws for bad content.
 /// </remarks>
 internal sealed class TeamTypeCatalog
@@ -182,7 +183,7 @@ internal sealed class TeamTypeCatalog
     /// <summary>Tells whether a type-relative path is a plain relative path with no parent segments.</summary>
     /// <param name="relativePath">The value from a manifest.</param>
     /// <returns>True when the path may be resolved.</returns>
-    private static bool IsSafe(string relativePath)
+    internal static bool IsSafe(string relativePath)
     {
         return !string.IsNullOrWhiteSpace(relativePath)
             && !relativePath.Contains("..", StringComparison.Ordinal)
@@ -352,7 +353,7 @@ internal sealed class TeamTypeCatalog
         List<RoleSpec> roles = [];
         foreach (RoleSpec role in manifest.Roles)
         {
-            string? jobId = role.Job ?? (role.Candidate is null ? role.Id : null);
+            string? jobId = role.Job ?? (role.Candidate is null ? role.Id : this.MovedJobId(manifest.Id, role));
             if (jobId is null)
             {
                 roles.Add(role);
@@ -376,6 +377,19 @@ internal sealed class TeamTypeCatalog
         }
 
         return manifest with { Roles = roles };
+    }
+
+    /// <summary>
+    /// Finds the pool job of a role that an earlier version saved with a candidate file, such as the copy of a built-in type that
+    /// Custom role writes into the user's folder. The built-in candidates moved into the pool, so when the file is gone and the
+    /// pool holds a job of the role's id, the role is that job.
+    /// </summary>
+    /// <param name="typeId">The type id.</param>
+    /// <param name="role">A role with a candidate path and no job.</param>
+    /// <returns>The job id, or null when the candidate file exists or the pool has no such job (the role stays as written).</returns>
+    private string? MovedJobId(string typeId, RoleSpec role)
+    {
+        return this.ReadFile(typeId, role.Candidate) is null && this.pool.FindJob(role.Id) is not null ? role.Id : null;
     }
 
     /// <summary>Appends every pool job the type does not list as an optional role, so a Human can hire it with default settings.</summary>
@@ -441,7 +455,7 @@ internal sealed class TeamTypeCatalog
     /// <param name="typeDir">The full path of the type folder.</param>
     /// <param name="full">The full path of the file, already checked to sit under <paramref name="typeDir"/>.</param>
     /// <returns><see langword="true"/> when the file must not be read.</returns>
-    private static bool LeavesTypeFolder(string typeDir, string full)
+    internal static bool LeavesTypeFolder(string typeDir, string full)
     {
         string prefix = typeDir + Path.DirectorySeparatorChar;
         string? current = full;

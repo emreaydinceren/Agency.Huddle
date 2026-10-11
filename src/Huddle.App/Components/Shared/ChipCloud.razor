@@ -7,7 +7,7 @@
 @if (this.Pool.Count > 0)
 {
     <div class="chip-cloud-title">@this.Title</div>
-    <div class="@($"chip-cloud {this.CssClass}")">
+    <div class="@($"chip-cloud {this.CssClass}")" role="group" aria-label="@this.Title">
         @foreach (ChipItem chip in AvatarChipCloud.Arrange(this.Pool, this.Selected, this.Expanded ? null : this.Cap))
         {
             <button type="button" class="@ChipClass(chip)" aria-pressed="@(chip.Selected ? "true" : "false")" @onclick="() => this.OnToggle.InvokeAsync(chip.Text)">

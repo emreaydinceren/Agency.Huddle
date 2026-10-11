@@ -18,9 +18,10 @@ internal sealed record HiringPoolProblem(string Id, string Source, string Messag
 /// </summary>
 /// <remarks>
 /// The built-in pool is the embedded <c>HiringPool/hiringpool.json</c> and its <c>personas/*.md</c>. A user pool,
-/// <c>{DataDir}/HiringPool/hiringpool.json</c>, is merged by id on top (a user job replaces a shipped job of the same id and
-/// never hides the rest), and a persona resolves the user folder first. A bad job is excluded and listed in
-/// <see cref="Problems"/>; loading never throws for bad content.
+/// <c>{DataDir}/HiringPool/hiringpool.json</c>, is merged by id on top: a user job replaces a shipped job of the same id and
+/// never hides the rest, and a user job that is rejected leaves the shipped job in place. A persona resolves the user folder
+/// first, then the shipped file, and a user persona that does not parse falls back to the shipped one. A bad entry is excluded
+/// and listed in <see cref="Problems"/>; loading never throws for bad content.
 /// </remarks>
 internal sealed partial class HiringPoolCatalog
 {
@@ -92,42 +93,19 @@ internal sealed partial class HiringPoolCatalog
     {
         ArgumentNullException.ThrowIfNull(jobId);
         PoolJob? job = this.FindJob(jobId);
-        string? text = job is null ? null : this.ReadFile(job.Persona);
-        return text is null ? null : CandidateTemplateParser.Parse(text).Template;
+        return job is null ? null : this.ParsePersona(job.Persona).Result.Template;
     }
 
     /// <summary>Rereads the built-in pool and the user pool, replacing what is loaded, then raises <see cref="Changed"/>.</summary>
     public void Reload()
     {
         List<HiringPoolProblem> problems = [];
-        HiringPoolFile? builtin = ParseFile("builtin:" + PoolFile, this.builtins.GetValueOrDefault(PoolFile), problems);
-        HiringPoolFile? user = this.LoadUser(problems);
-
-        Dictionary<string, PoolJob> merged = new(StringComparer.Ordinal);
-        foreach (PoolJob job in (builtin?.Jobs ?? []).Concat(user?.Jobs ?? []))
-        {
-            merged[job.Id] = job;
-        }
-
-        Dictionary<string, PoolTeamType> types = new(StringComparer.Ordinal);
-        foreach (PoolTeamType type in (builtin?.TeamTypes ?? []).Concat(user?.TeamTypes ?? []))
-        {
-            types[type.Id] = type;
-        }
-
+        string builtinSource = "builtin:" + PoolFile;
+        string userSource = Path.Combine(this.userDir, PoolFile);
         Dictionary<string, PoolJob> valid = new(StringComparer.Ordinal);
-        foreach (PoolJob job in merged.Values)
-        {
-            string? why = this.Reject(job);
-            if (why is null)
-            {
-                valid[job.Id] = job;
-            }
-            else
-            {
-                problems.Add(new HiringPoolProblem(job.Id, PoolFile, why));
-            }
-        }
+        Dictionary<string, PoolTeamType> types = new(StringComparer.Ordinal);
+        this.Accept(ParseFile(builtinSource, this.builtins.GetValueOrDefault(PoolFile), problems), builtinSource, valid, types, problems);
+        this.Accept(LoadUser(userSource, problems), userSource, valid, types, problems);
 
         foreach (HiringPoolProblem problem in problems)
         {
@@ -138,19 +116,6 @@ internal sealed partial class HiringPoolCatalog
         List<PoolTeamType> typeList = [.. types.Values.OrderBy(static t => t.Name, StringComparer.Ordinal)];
         this.snapshot = new Snapshot(jobs, typeList, problems, valid);
         this.Changed?.Invoke();
-    }
-
-    /// <summary>Tells whether a pool-relative path is a plain relative path with no parent segments.</summary>
-    /// <param name="relativePath">The value from a job.</param>
-    /// <returns>True when the path may be resolved.</returns>
-    private static bool IsSafe(string relativePath)
-    {
-        return !string.IsNullOrWhiteSpace(relativePath)
-            && !relativePath.Contains("..", StringComparison.Ordinal)
-            && !relativePath.Contains(':')
-            && !relativePath.StartsWith('/')
-            && !relativePath.StartsWith('\\')
-            && !Path.IsPathRooted(relativePath);
     }
 
     /// <summary>Reads every embedded built-in pool file, keyed by path below the pool prefix.</summary>
@@ -185,28 +150,6 @@ internal sealed partial class HiringPoolCatalog
     [GeneratedRegex("^[a-z0-9][a-z0-9-]*$", RegexOptions.CultureInvariant)]
     private static partial Regex IdPattern();
 
-    /// <summary>Loads the user pool file, if there is one.</summary>
-    /// <param name="problems">Receives the problem when the file is rejected.</param>
-    /// <returns>The parsed file, or null when there is none or it was rejected.</returns>
-    private HiringPoolFile? LoadUser(List<HiringPoolProblem> problems)
-    {
-        string path = Path.Combine(this.userDir, PoolFile);
-        if (!File.Exists(path))
-        {
-            return null;
-        }
-
-        try
-        {
-            return ParseFile(path, File.ReadAllText(path), problems);
-        }
-        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
-        {
-            problems.Add(new HiringPoolProblem(PoolFile, path, "The user pool file could not be read."));
-            return null;
-        }
-    }
-
     /// <summary>Deserialises a pool file.</summary>
     /// <param name="source">The source label used in a problem.</param>
     /// <param name="text">The file text, or null when there is none.</param>
@@ -239,12 +182,78 @@ internal sealed partial class HiringPoolCatalog
         return file;
     }
 
+    /// <summary>Adds the sound entries of a pool file on top of what is already accepted; a rejected job leaves an accepted job of the same id in place.</summary>
+    /// <param name="file">The parsed file, or null when there is none.</param>
+    /// <param name="source">The source label used in a problem.</param>
+    /// <param name="valid">The accepted jobs by id.</param>
+    /// <param name="types">The named team types by id.</param>
+    /// <param name="problems">Receives one problem per rejected entry.</param>
+    private void Accept(HiringPoolFile? file, string source, Dictionary<string, PoolJob> valid, Dictionary<string, PoolTeamType> types, List<HiringPoolProblem> problems)
+    {
+        if (file is null)
+        {
+            return;
+        }
+
+        foreach (PoolTeamType? type in file.TeamTypes)
+        {
+            if (type?.Id is null)
+            {
+                problems.Add(new HiringPoolProblem(PoolFile, source, "A team type entry has no id."));
+                continue;
+            }
+
+            types[type.Id] = type;
+        }
+
+        foreach (PoolJob? job in file.Jobs)
+        {
+            if (job?.Id is null)
+            {
+                problems.Add(new HiringPoolProblem(PoolFile, source, "A job entry has no id."));
+                continue;
+            }
+
+            string? why = this.Reject(job);
+            if (why is null)
+            {
+                valid[job.Id] = job;
+            }
+            else
+            {
+                problems.Add(new HiringPoolProblem(job.Id, source, why));
+            }
+        }
+    }
+
+    /// <summary>Loads the user pool file, if there is one.</summary>
+    /// <param name="path">The user pool file.</param>
+    /// <param name="problems">Receives the problem when the file is rejected.</param>
+    /// <returns>The parsed file, or null when there is none or it was rejected.</returns>
+    private static HiringPoolFile? LoadUser(string path, List<HiringPoolProblem> problems)
+    {
+        if (!File.Exists(path))
+        {
+            return null;
+        }
+
+        try
+        {
+            return ParseFile(path, File.ReadAllText(path), problems);
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+        {
+            problems.Add(new HiringPoolProblem(PoolFile, path, "The user pool file could not be read."));
+            return null;
+        }
+    }
+
     /// <summary>Says why a job cannot be offered.</summary>
     /// <param name="job">The job to check.</param>
     /// <returns>The reason, or null when the job is sound.</returns>
     private string? Reject(PoolJob job)
     {
-        if (job.Id is null || !IdPattern().IsMatch(job.Id))
+        if (!IdPattern().IsMatch(job.Id))
         {
             return "The job id must be lower-case letters, digits and hyphens, and start with a letter or digit.";
         }
@@ -254,42 +263,64 @@ internal sealed partial class HiringPoolCatalog
             return "The job has no title.";
         }
 
-        string? text = this.ReadFile(job.Persona);
-        if (text is null)
+        (bool found, CandidateParseResult result) = this.ParsePersona(job.Persona);
+        if (!found)
         {
             return $"The job has no persona file at '{job.Persona}'.";
         }
 
-        CandidateParseResult parsed = CandidateTemplateParser.Parse(text);
-        return parsed.Template is null ? "The persona does not parse: " + string.Join(" ", parsed.Problems) : null;
+        return result.Template is null ? "The persona does not parse: " + string.Join(" ", result.Problems) : null;
     }
 
-    /// <summary>Reads a pool file from the user folder first, then the built-ins.</summary>
+    /// <summary>Parses a persona from the user folder, falling back to the shipped file when the user's does not parse.</summary>
     /// <param name="relativePath">The path from a job, relative to the pool folder.</param>
-    /// <returns>The text, or null when the path is unsafe or no file exists.</returns>
-    private string? ReadFile(string relativePath)
+    /// <returns>Whether any file was found, and the first parse that produced a template (or the first failure when none did).</returns>
+    private (bool Found, CandidateParseResult Result) ParsePersona(string relativePath)
     {
-        if (!IsSafe(relativePath))
+        CandidateParseResult? failure = null;
+        if (TeamTypeCatalog.IsSafe(relativePath))
+        {
+            foreach (string? text in new[] { this.ReadUserFile(relativePath), this.builtins.GetValueOrDefault(relativePath.Replace('\\', '/')) })
+            {
+                if (text is null)
+                {
+                    continue;
+                }
+
+                CandidateParseResult parsed = CandidateTemplateParser.Parse(text);
+                if (parsed.Template is not null)
+                {
+                    return (true, parsed);
+                }
+
+                failure ??= parsed;
+            }
+        }
+
+        return failure is null ? (false, new CandidateParseResult(null, [])) : (true, failure);
+    }
+
+    /// <summary>Reads a file from the user pool folder, refusing a path that a junction or link takes outside it.</summary>
+    /// <param name="relativePath">A path already checked as plain and relative.</param>
+    /// <returns>The text, or null when there is no such file or it may not be read.</returns>
+    private string? ReadUserFile(string relativePath)
+    {
+        string root = Path.GetFullPath(this.userDir);
+        string full = Path.GetFullPath(Path.Combine(root, relativePath));
+        if (!full.StartsWith(root + Path.DirectorySeparatorChar, StringComparison.OrdinalIgnoreCase) || !File.Exists(full) || TeamTypeCatalog.LeavesTypeFolder(root, full))
         {
             return null;
         }
 
-        string root = Path.GetFullPath(this.userDir);
-        string full = Path.GetFullPath(Path.Combine(root, relativePath));
-        if (full.StartsWith(root + Path.DirectorySeparatorChar, StringComparison.OrdinalIgnoreCase) && File.Exists(full))
+        try
         {
-            try
-            {
-                return File.ReadAllText(full);
-            }
-            catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
-            {
-                this.logger.LogWarning(ex, "The hiring pool file {Path} could not be read.", full);
-                return null;
-            }
+            return File.ReadAllText(full);
         }
-
-        return this.builtins.GetValueOrDefault(relativePath.Replace('\\', '/'));
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+        {
+            this.logger.LogWarning(ex, "The hiring pool file {Path} could not be read.", full);
+            return null;
+        }
     }
 
     /// <summary>One consistent view of the loaded pool.</summary>

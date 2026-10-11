@@ -171,6 +171,66 @@ public sealed class TeamTypeCatalogPoolTests
         Assert.Contains(catalog.Find("alpha")?.Roles ?? [], static role => role.Id == "newbie" && role.Pooled);
     }
 
+    /// <summary>
+    /// A copy of a built-in type that Custom role saved before the pool existed names candidate files that no longer exist; each such
+    /// role whose id is a pool job is composed from that job, and the user's own custom role keeps its candidate file.
+    /// </summary>
+    [Fact]
+    public void Find_OldUserCopyWithMovedCandidates_LoadsFromThePool()
+    {
+        using TempDataDir dir = new();
+        string typeDir = Path.Combine(dir.Path, "TeamTypes", "alpha");
+        Directory.CreateDirectory(Path.Combine(typeDir, "candidates"));
+        File.WriteAllText(Path.Combine(typeDir, "candidates", "extra.md"), "---\ntitle: 'Extra'\n---\nYou do extra.");
+        File.WriteAllText(Path.Combine(typeDir, "team-type.json"), """
+            { "schemaVersion": 1, "id": "alpha", "version": "1.2.0", "displayName": "Alpha", "order": 5,
+              "workspace": { "kind": "none", "label": "None", "required": false },
+              "coverage": [ "check" ],
+              "processes": [ { "id": "flow", "file": "processes/flow.md", "default": true } ],
+              "roles": [
+                { "id": "lead", "title": "Lead", "candidate": "candidates/lead.md", "manager": true, "required": true, "covers": [ "check" ] },
+                { "id": "extra", "title": "Extra", "candidate": "candidates/extra.md" } ] }
+            """);
+
+        TeamTypeCatalog catalog = Create(dir);
+
+        TeamTypeManifest type = Assert.IsType<TeamTypeManifest>(catalog.Find("alpha"));
+        Assert.True(catalog.IsUserDefined("alpha"));
+        RoleSpec lead = type.Roles.Single(static role => role.Id == "lead");
+        Assert.Equal("lead", lead.Job);
+        Assert.Equal("Team Lead", lead.Title);
+        Assert.Equal("Team Lead", catalog.ReadCandidate("alpha", "lead")?.Title);
+        RoleSpec extra = type.Roles.Single(static role => role.Id == "extra");
+        Assert.Null(extra.Job);
+        Assert.Equal("Extra", catalog.ReadCandidate("alpha", "extra")?.Title);
+        Assert.Empty(catalog.Problems);
+    }
+
+    /// <summary>
+    /// Saving a custom role against a type backed by a pool writes only the type's own roles and the new one, never the pooled extras,
+    /// and after a reload the type lists the new role and still offers the pool jobs as pooled roles.
+    /// </summary>
+    [Fact]
+    public void Save_CustomRoleOnAPoolBackedType_WritesNoPooledRolesAndRoundTrips()
+    {
+        using TempDataDir dir = new();
+        TeamTypeCatalog catalog = Create(dir);
+        UserCandidateWriter writer = new(dir.Options(), catalog);
+
+        WriteResult result = writer.Save("alpha", "scout", "Scout", "A lead is needed", "You scout.");
+
+        Assert.True(result.Success);
+        string saved = File.ReadAllText(Path.Combine(dir.Path, "TeamTypes", "alpha", "team-type.json"));
+        TeamTypeManifest written = Assert.IsType<TeamTypeManifest>(System.Text.Json.JsonSerializer.Deserialize<TeamTypeManifest>(saved, TeamTypeJson.Options));
+        Assert.Equal(["lead", "maker", "scout"], written.Roles.Select(static role => role.Id));
+        catalog.Reload();
+        TeamTypeManifest type = Assert.IsType<TeamTypeManifest>(catalog.Find("alpha"));
+        Assert.Empty(catalog.Problems);
+        Assert.Equal("Scout", type.Roles.Single(static role => role.Id == "scout").Title);
+        Assert.Contains(type.Roles, static role => role.Id == "tutor" && role.Pooled);
+        Assert.Equal("Team Lead", type.Roles.Single(static role => role.Id == "lead").Title);
+    }
+
     /// <summary>A manifest with inline roles and no pool job keeps working: its roles are not pool roles and its candidate file is read from the type folder.</summary>
     [Fact]
     public void Find_InlineRoleWithCandidateFile_StaysLegacy()

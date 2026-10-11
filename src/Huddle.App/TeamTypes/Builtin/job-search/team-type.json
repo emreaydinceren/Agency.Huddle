@@ -1,13 +1,90 @@
 {
-  "schemaVersion": 1, "id": "job-search", "version": "1.0.0", "order": 130,
-  "workspace": { "kind": "folder", "label": "Job search folder", "required": false },
-  "coverage": ["draft", "verify"],
-  "processes": [{ "id": "job-search-basics", "file": "processes/job-search-basics.md", "default": true }],
+  "schemaVersion": 1,
+  "id": "job-search",
+  "version": "1.0.0",
+  "order": 130,
+  "workspace": {
+    "kind": "folder",
+    "label": "Job search folder",
+    "required": false
+  },
+  "coverage": [
+    "draft",
+    "verify"
+  ],
+  "processes": [
+    {
+      "id": "job-search-basics",
+      "file": "processes/job-search-basics.md",
+      "default": true
+    }
+  ],
   "roles": [
-    { "id": "career-coach", "job": "career-coach", "manager": true, "required": true, "maxPerTeam": 1, "covers": ["verify"] },
-    { "id": "job-scout", "job": "job-scout", "manager": false, "required": false, "maxPerTeam": 1, "covers": ["draft"] },
-    { "id": "resume-writer", "job": "resume-writer", "manager": false, "required": false, "maxPerTeam": 1, "covers": ["draft"] },
-    { "id": "interview-coach", "job": "interview-coach", "manager": false, "required": false, "maxPerTeam": 1, "covers": ["verify"], "model": { "differentVendorFrom": ["resume-writer"] } },
-    { "id": "application-tracker", "job": "application-tracker", "manager": false, "required": false, "maxPerTeam": 1, "covers": ["draft"] }
-  ]
+    {
+      "id": "career-coach",
+      "job": "career-coach",
+      "manager": true,
+      "required": true,
+      "maxPerTeam": 1,
+      "covers": [
+        "verify"
+      ]
+    },
+    {
+      "id": "job-scout",
+      "job": "job-scout",
+      "manager": false,
+      "required": false,
+      "maxPerTeam": 1,
+      "covers": [
+        "draft"
+      ]
+    },
+    {
+      "id": "resume-writer",
+      "job": "resume-writer",
+      "manager": false,
+      "required": false,
+      "maxPerTeam": 1,
+      "covers": [
+        "draft"
+      ]
+    },
+    {
+      "id": "interview-coach",
+      "job": "interview-coach",
+      "manager": false,
+      "required": false,
+      "maxPerTeam": 1,
+      "covers": [
+        "verify"
+      ],
+      "model": {
+        "differentVendorFrom": [
+          "resume-writer"
+        ]
+      }
+    },
+    {
+      "id": "application-tracker",
+      "job": "application-tracker",
+      "manager": false,
+      "required": false,
+      "maxPerTeam": 1,
+      "covers": [
+        "draft"
+      ]
+    },
+    {
+      "id": "retro-agent",
+      "job": "retro-agent",
+      "maxPerTeam": 1,
+      "model": {
+        "differentVendorFrom": [
+          "career-coach"
+        ]
+      }
+    }
+  ],
+  "retroRole": "retro-agent"
 }

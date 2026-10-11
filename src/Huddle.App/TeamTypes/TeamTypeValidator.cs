@@ -12,7 +12,7 @@ internal static partial class TeamTypeValidator
 {
     private const string ProcessesFolder = "processes/";
 
-    /// <summary>Validates a manifest.</summary>
+    /// <summary>Validates a manifest that has no hiring pool behind it, so a role that names a job is reported as <c>job-unknown</c>.</summary>
     /// <param name="manifest">The manifest to check.</param>
     /// <param name="fileExists">Tells whether a path relative to the type folder, such as <c>candidates/developer.md</c>, exists.</param>
     /// <returns>Every problem found; empty when the manifest is valid.</returns>
@@ -28,9 +28,9 @@ internal static partial class TeamTypeValidator
     /// <returns>Every problem found; empty when the manifest is valid.</returns>
     public static IReadOnlyList<TeamTypeProblem> Validate(TeamTypeManifest manifest, Func<string, bool> fileExists, Func<string, bool> jobExists)
     {
-        ArgumentNullException.ThrowIfNull(jobExists);
         ArgumentNullException.ThrowIfNull(manifest);
         ArgumentNullException.ThrowIfNull(fileExists);
+        ArgumentNullException.ThrowIfNull(jobExists);
 
         List<TeamTypeProblem> problems = [];
         HashSet<string> roleIds = new(manifest.Roles.Select(static r => r.Id), StringComparer.Ordinal);

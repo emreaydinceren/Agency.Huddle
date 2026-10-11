@@ -70,6 +70,17 @@
           "grant-writer"
         ]
       }
+    },
+    {
+      "id": "retro-agent",
+      "job": "retro-agent",
+      "maxPerTeam": 1,
+      "model": {
+        "differentVendorFrom": [
+          "proposal-lead"
+        ]
+      }
     }
-  ]
+  ],
+  "retroRole": "retro-agent"
 }

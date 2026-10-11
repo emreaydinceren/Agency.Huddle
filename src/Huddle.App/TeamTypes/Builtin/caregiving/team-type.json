@@ -65,6 +65,17 @@
       "covers": [
         "gather"
       ]
+    },
+    {
+      "id": "retro-agent",
+      "job": "retro-agent",
+      "maxPerTeam": 1,
+      "model": {
+        "differentVendorFrom": [
+          "care-coordinator"
+        ]
+      }
     }
-  ]
+  ],
+  "retroRole": "retro-agent"
 }

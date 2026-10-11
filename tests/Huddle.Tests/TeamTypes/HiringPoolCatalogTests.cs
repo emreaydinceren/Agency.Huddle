@@ -244,4 +244,99 @@ public sealed class HiringPoolCatalogTests
         Assert.NotNull(catalog.FindJob("tutor"));
         Assert.Equal(1, raised);
     }
+
+    /// <summary>Entries with no id, a null job and a team type with no id are reported and skipped, and the app still starts: loading never throws for bad content.</summary>
+    [Fact]
+    public void Jobs_EntriesWithoutAnId_AreReportedAndSkippedWithoutThrowing()
+    {
+        using TempDataDir dir = new();
+        Dictionary<string, string> builtins = Builtins();
+        builtins["hiringpool.json"] = """
+            { "schemaVersion": 1, "teamTypes": [ { "name": "No id" } ],
+              "jobs": [ null, { "title": "No id" }, { "id": "bookkeeper", "title": "Bookkeeper" } ] }
+            """;
+
+        HiringPoolCatalog catalog = Create(dir, builtins);
+
+        Assert.Equal(["bookkeeper"], catalog.Jobs.Select(static job => job.Id));
+        Assert.Empty(catalog.TeamTypes);
+        Assert.Equal(
+            ["A team type entry has no id.", "A job entry has no id.", "A job entry has no id."],
+            catalog.Problems.Select(static problem => problem.Message));
+    }
+
+    /// <summary>A user job that is rejected leaves the shipped job of the same id in place, so a typo cannot take a shipped job away.</summary>
+    [Fact]
+    public void Jobs_UserOverrideRejected_KeepsTheShippedJob()
+    {
+        using TempDataDir dir = new();
+        WriteUser(dir, "hiringpool.json", """
+            { "schemaVersion": 1, "jobs": [ { "id": "bookkeeper", "title": "Broken", "persona": "personas/gone.md" } ] }
+            """);
+
+        HiringPoolCatalog catalog = Create(dir);
+
+        Assert.Equal("Bookkeeper", catalog.FindJob("bookkeeper")?.Title);
+        Assert.Contains(catalog.Problems, static problem => problem.Id == "bookkeeper" && problem.Message == "The job has no persona file at 'personas/gone.md'.");
+    }
+
+    /// <summary>A user persona file replaces the shipped persona of the same path.</summary>
+    [Fact]
+    public void ReadPersona_UserFileExists_ReplacesTheShippedPersona()
+    {
+        using TempDataDir dir = new();
+        WriteUser(dir, "personas/bookkeeper.md", "---\ntitle: 'My Bookkeeper'\n---\nYou keep my books.");
+
+        HiringPoolCatalog catalog = Create(dir);
+
+        Assert.Equal("My Bookkeeper", catalog.ReadPersona("bookkeeper")?.Title);
+        Assert.DoesNotContain(catalog.Problems, static problem => problem.Id == "bookkeeper");
+    }
+
+    /// <summary>A user persona that does not parse falls back to the shipped persona, and the job stays valid.</summary>
+    [Fact]
+    public void ReadPersona_UserFileDoesNotParse_FallsBackToTheShippedPersona()
+    {
+        using TempDataDir dir = new();
+        WriteUser(dir, "personas/bookkeeper.md", "---\ntitle: 'My Bookkeeper'\n---\n");
+
+        HiringPoolCatalog catalog = Create(dir);
+
+        Assert.Equal("Bookkeeper", catalog.ReadPersona("bookkeeper")?.Title);
+        Assert.NotNull(catalog.FindJob("bookkeeper"));
+    }
+
+    /// <summary>A junction in the user personas folder that points outside the pool folder is not followed; the shipped persona is used.</summary>
+    [Fact]
+    public void ReadPersona_UserFolderIsJunctionToOutside_IgnoredAndShippedUsed()
+    {
+        if (!OperatingSystem.IsWindows())
+        {
+            Assert.True(OperatingSystem.IsLinux() || OperatingSystem.IsMacOS());
+            return;
+        }
+
+        using TempDataDir dir = new();
+        using TempDataDir outside = new();
+        File.WriteAllText(Path.Combine(outside.Path, "bookkeeper.md"), "---\ntitle: 'Outside'\n---\nYou are outside.");
+        string poolDir = Path.Combine(dir.Path, "HiringPool");
+        Directory.CreateDirectory(poolDir);
+        string link = Path.Combine(poolDir, "personas");
+        System.Diagnostics.ProcessStartInfo start = new("cmd.exe", $"/c mklink /J \"{link}\" \"{outside.Path}\"")
+        {
+            CreateNoWindow = true,
+            RedirectStandardOutput = true,
+        };
+        using (System.Diagnostics.Process? mk = System.Diagnostics.Process.Start(start))
+        {
+            Assert.NotNull(mk);
+            mk.WaitForExit();
+            Assert.Equal(0, mk.ExitCode);
+        }
+
+        HiringPoolCatalog catalog = Create(dir);
+
+        Assert.Equal("Bookkeeper", catalog.ReadPersona("bookkeeper")?.Title);
+        Directory.Delete(link);
+    }
 }

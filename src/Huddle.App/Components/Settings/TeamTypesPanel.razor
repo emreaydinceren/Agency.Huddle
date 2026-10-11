@@ -13,7 +13,7 @@
 
 <div class="teamtypes-panel">
     <p class="teammates-intro">
-        A team type is the set of roles, processes and presets a Team starts from. Built-in types ship with the
+        A team type is the set of roles and processes a Team starts from; each role is a job of the hiring pool. Built-in types ship with the
         application; a folder of the same id in your TeamTypes folder replaces one, and a new id adds one.
     </p>
 
@@ -42,7 +42,7 @@
     </MudTable>
 
     <MudText Typo="Typo.overline" Class="mt-4 d-block">Problems</MudText>
-    @if (this.Catalog.Problems.Count == 0)
+    @if (this.Catalog.Problems.Count == 0 && this.Catalog.Pool.Problems.Count == 0)
     {
         <MudText Class="teamtypes-no-problems">No problems.</MudText>
     }
@@ -53,6 +53,15 @@
             <MudPaper Outlined="true" Class="pa-3 mb-2 teamtypes-problem">
                 <MudText Typo="Typo.subtitle2" Class="teamtypes-problem-id">@problem.TypeId</MudText>
                 <MudText Typo="Typo.caption" Class="teamtypes-problem-file d-block">@problem.Path</MudText>
+                <MudText Class="teamtypes-problem-message">@problem.Message</MudText>
+            </MudPaper>
+        }
+
+        @foreach (var problem in this.Catalog.Pool.Problems)
+        {
+            <MudPaper Outlined="true" Class="pa-3 mb-2 teamtypes-pool-problem">
+                <MudText Typo="Typo.subtitle2" Class="teamtypes-problem-id">@problem.Id</MudText>
+                <MudText Typo="Typo.caption" Class="teamtypes-problem-file d-block">@problem.Source</MudText>
                 <MudText Class="teamtypes-problem-message">@problem.Message</MudText>
             </MudPaper>
         }
@@ -72,10 +81,10 @@
         this.Catalog.Changed -= this.OnCatalogChanged;
     }
 
-    /// <summary>Rereads the built-ins and the user's TeamTypes folder.</summary>
+    /// <summary>Rereads the hiring pool, which makes the catalog reread the built-ins and the user's TeamTypes folder.</summary>
     private void Reload()
     {
-        this.Catalog.Reload();
+        this.Catalog.Pool.Reload();
     }
 
     /// <summary>Repaints when the catalog has replaced its types.</summary>

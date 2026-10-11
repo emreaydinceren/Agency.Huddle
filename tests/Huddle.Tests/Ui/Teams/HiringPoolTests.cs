@@ -125,9 +125,9 @@ public sealed class HiringPoolTests
         Assert.True(cut.Find("button.hiring-pool-add-lead").HasAttribute("disabled"));
     }
 
-    /// <summary>A type with no hiring pool offers no filter clouds and no presets: the cards are simply the type's roles.</summary>
+    /// <summary>A type with no hiring pool offers no filter clouds and no count: the cards are simply the type's roles.</summary>
     [Fact]
-    public async Task NoPool_ShowsNoCloudsAndNoPresetButtons()
+    public async Task NoPool_ShowsNoCloudsAndOneCardPerRole()
     {
         using Fixture fixture = new();
         await using MudBunitContext ctx = fixture.NewContext();
@@ -135,7 +135,7 @@ public sealed class HiringPoolTests
         IRenderedComponent<ContainerFragment> cut = Render(ctx);
 
         Assert.Empty(cut.FindAll(".hiring-pool-filters .chip-cloud"));
-        Assert.Empty(cut.FindAll("button.hiring-pool-preset-crew"));
+        Assert.Empty(cut.FindAll(".hiring-pool-count"));
         Assert.Equal(5, cut.FindAll(".hiring-pool-card").Count);
     }
 

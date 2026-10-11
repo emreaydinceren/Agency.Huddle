@@ -45,14 +45,18 @@ chip clouds, **team types** (any) and **tags plus skill names** (all), as the av
 | D-3 | **Every pool job the type does not list is offered as an optional, pooled role** (not manager, not required, limit one, covers nothing). | Hiring only the type's own jobs. It would make the pool a menu of one, and Custom role the only way out. |
 | D-4 | **The persona is a Markdown file per job**, in the candidate shape. | Prose inside the JSON, which ADR-0038 already rejected. |
 | D-5 | **No presets.** Two clouds find a job; a preset hid the list behind a name. | Keeping Small and Full for the two original types only. Two ways to hire is worse than one. |
-| D-6 | **A user pool is merged by id on top of the shipped one.** | Replacing the file as the skills catalog does, which would let one user job hide the shipped pool. |
+| D-6 | **A user pool is merged by id on top of the shipped one.** A user job that is rejected leaves the shipped job in place, and a user persona that does not parse falls back to the shipped persona. Entries with no id are reported and skipped; loading never throws. | Replacing the file as the skills catalog does, which would let one user job hide the shipped pool. Validating after the merge, which let one bad override take a shipped job, and every type that used it, away. |
 | D-7 | **Tags and skill names come from a controlled vocabulary**, pinned by a test. | Free text, which turns the second cloud into a thousand near-duplicate chips. |
 
 ## What does not change
 
 - A type is a folder with a `team-type.json`, processes and, for a user type, its own files.
   A manifest with inline `title` and `candidate` and no `job` still loads, so a user's type keeps
-  working.
+  working. A copy of a built-in type that Custom role saved before the pool existed names candidate
+  files that moved into the pool; a role in it whose candidate file is gone and whose id is a pool
+  job is composed from that job, and the user's own custom roles keep their candidate files.
+- A role that names a job reads its persona from the pool (whose user folder overrides a shipped
+  persona), not from a `candidates` folder of the type.
 - Code names no role. `RoleNeutralityTests` now reads job titles from the pool.
 - A role whose output leaves the team (an email, a filing, a payment, a signature) is a drafting
   role, and its persona names the Human who sends or approves.

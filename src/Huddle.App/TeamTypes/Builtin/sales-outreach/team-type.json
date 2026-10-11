@@ -1,13 +1,81 @@
 {
-  "schemaVersion": 1, "id": "sales-outreach", "version": "1.0.0", "order": 140,
-  "workspace": { "kind": "folder", "label": "Sales folder", "required": false },
-  "coverage": ["gather", "verify"],
-  "processes": [{ "id": "sales-outreach-basics", "file": "processes/sales-outreach-basics.md", "default": true }],
+  "schemaVersion": 1,
+  "id": "sales-outreach",
+  "version": "1.0.0",
+  "order": 140,
+  "workspace": {
+    "kind": "folder",
+    "label": "Sales folder",
+    "required": false
+  },
+  "coverage": [
+    "gather",
+    "verify"
+  ],
+  "processes": [
+    {
+      "id": "sales-outreach-basics",
+      "file": "processes/sales-outreach-basics.md",
+      "default": true
+    }
+  ],
   "roles": [
-    { "id": "sales-lead", "job": "sales-lead", "manager": true, "required": true, "maxPerTeam": 1, "covers": ["verify"] },
-    { "id": "prospect-researcher", "job": "prospect-researcher", "manager": false, "required": false, "maxPerTeam": 2, "covers": ["gather"] },
-    { "id": "outreach-writer", "job": "outreach-writer", "manager": false, "required": false, "maxPerTeam": 1, "covers": [] },
-    { "id": "crm-steward", "job": "crm-steward", "manager": false, "required": false, "maxPerTeam": 1, "covers": ["gather"] },
-    { "id": "proposal-writer", "job": "proposal-writer", "manager": false, "required": false, "maxPerTeam": 1, "covers": [] }
-  ]
+    {
+      "id": "sales-lead",
+      "job": "sales-lead",
+      "manager": true,
+      "required": true,
+      "maxPerTeam": 1,
+      "covers": [
+        "verify"
+      ]
+    },
+    {
+      "id": "prospect-researcher",
+      "job": "prospect-researcher",
+      "manager": false,
+      "required": false,
+      "maxPerTeam": 2,
+      "covers": [
+        "gather"
+      ]
+    },
+    {
+      "id": "outreach-writer",
+      "job": "outreach-writer",
+      "manager": false,
+      "required": false,
+      "maxPerTeam": 1,
+      "covers": []
+    },
+    {
+      "id": "crm-steward",
+      "job": "crm-steward",
+      "manager": false,
+      "required": false,
+      "maxPerTeam": 1,
+      "covers": [
+        "gather"
+      ]
+    },
+    {
+      "id": "proposal-writer",
+      "job": "proposal-writer",
+      "manager": false,
+      "required": false,
+      "maxPerTeam": 1,
+      "covers": []
+    },
+    {
+      "id": "retro-agent",
+      "job": "retro-agent",
+      "maxPerTeam": 1,
+      "model": {
+        "differentVendorFrom": [
+          "sales-lead"
+        ]
+      }
+    }
+  ],
+  "retroRole": "retro-agent"
 }

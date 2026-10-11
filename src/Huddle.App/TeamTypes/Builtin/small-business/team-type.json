@@ -3,13 +3,70 @@
   "id": "small-business",
   "version": "1.0.0",
   "order": 30,
-  "workspace": { "kind": "none", "label": "Business folder", "required": false },
-  "coverage": [ "generate", "verify" ],
-  "processes": [ { "id": "small-business-basics", "file": "processes/small-business-basics.md", "default": true } ],
+  "workspace": {
+    "kind": "none",
+    "label": "Business folder",
+    "required": false
+  },
+  "coverage": [
+    "generate",
+    "verify"
+  ],
+  "processes": [
+    {
+      "id": "small-business-basics",
+      "file": "processes/small-business-basics.md",
+      "default": true
+    }
+  ],
   "roles": [
-    { "id": "business-manager", "job": "business-manager", "manager": true, "required": true, "maxPerTeam": 1, "covers": [ "verify" ] },
-    { "id": "bookkeeper", "job": "bookkeeper", "required": false, "maxPerTeam": 1, "covers": [ "generate" ] },
-    { "id": "customer-support", "job": "customer-support", "required": false, "maxPerTeam": 2, "covers": [ "generate" ] },
-    { "id": "marketing-writer", "job": "marketing-writer", "required": false, "maxPerTeam": 1, "covers": [ "generate" ] }
-  ]
+    {
+      "id": "business-manager",
+      "job": "business-manager",
+      "manager": true,
+      "required": true,
+      "maxPerTeam": 1,
+      "covers": [
+        "verify"
+      ]
+    },
+    {
+      "id": "bookkeeper",
+      "job": "bookkeeper",
+      "required": false,
+      "maxPerTeam": 1,
+      "covers": [
+        "generate"
+      ]
+    },
+    {
+      "id": "customer-support",
+      "job": "customer-support",
+      "required": false,
+      "maxPerTeam": 2,
+      "covers": [
+        "generate"
+      ]
+    },
+    {
+      "id": "marketing-writer",
+      "job": "marketing-writer",
+      "required": false,
+      "maxPerTeam": 1,
+      "covers": [
+        "generate"
+      ]
+    },
+    {
+      "id": "retro-agent",
+      "job": "retro-agent",
+      "maxPerTeam": 1,
+      "model": {
+        "differentVendorFrom": [
+          "business-manager"
+        ]
+      }
+    }
+  ],
+  "retroRole": "retro-agent"
 }

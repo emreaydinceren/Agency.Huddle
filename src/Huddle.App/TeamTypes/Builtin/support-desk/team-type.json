@@ -70,6 +70,17 @@
           "customer-support"
         ]
       }
+    },
+    {
+      "id": "retro-agent",
+      "job": "retro-agent",
+      "maxPerTeam": 1,
+      "model": {
+        "differentVendorFrom": [
+          "support-lead"
+        ]
+      }
     }
-  ]
+  ],
+  "retroRole": "retro-agent"
 }

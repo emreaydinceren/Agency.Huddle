@@ -4,6 +4,7 @@ using Bunit.Rendering;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging.Abstractions;
 using Agency.Huddle.App.Components.Pages;
+using Agency.Huddle.App.HiringPool;
 using Agency.Huddle.App.TeamTypes;
 
 namespace Agency.Huddle.Tests.Ui;
@@ -67,6 +68,47 @@ public sealed class TeamTypesPanelTests
             builder.OpenComponent<Agency.Huddle.App.Components.Settings.TeamTypesPanel>(0);
             builder.CloseComponent();
         });
+    }
+
+    /// <summary>A job the hiring pool rejected is listed with its reason beside the type problems, so a bad pool entry is not silent.</summary>
+    [Fact]
+    public async Task Panel_PoolProblem_IsListedWithItsReason()
+    {
+        using TempDataDir dir = new();
+        Dictionary<string, string> poolFiles = new(StringComparer.Ordinal)
+        {
+            ["hiringpool.json"] = """{ "schemaVersion": 1, "jobs": [ { "id": "ghost", "title": "Ghost", "persona": "personas/missing.md" } ] }""",
+        };
+        HiringPoolCatalog pool = new(dir.Options(), NullLogger<HiringPoolCatalog>.Instance, poolFiles);
+        TeamTypeCatalog catalog = new(dir.Options(), NullLogger<TeamTypeCatalog>.Instance, Builtins(), pool);
+        await using MudBunitContext ctx = new();
+
+        IRenderedComponent<ContainerFragment> cut = RenderPanel(ctx, catalog);
+
+        IElement problem = cut.Find(".teamtypes-pool-problem");
+        Assert.Equal("ghost", problem.QuerySelector(".teamtypes-problem-id")?.TextContent.Trim());
+        Assert.Equal("The job has no persona file at 'personas/missing.md'.", problem.QuerySelector(".teamtypes-problem-message")?.TextContent.Trim());
+    }
+
+    /// <summary>Reload rereads the hiring pool, not only the types, so a job added to the user pool shows without a restart.</summary>
+    [Fact]
+    public async Task Reload_RereadsTheHiringPool()
+    {
+        using TempDataDir dir = new();
+        HiringPoolCatalog pool = new(dir.Options(), NullLogger<HiringPoolCatalog>.Instance, new Dictionary<string, string>(StringComparer.Ordinal));
+        TeamTypeCatalog catalog = new(dir.Options(), NullLogger<TeamTypeCatalog>.Instance, Builtins(), pool);
+        await using MudBunitContext ctx = new();
+        IRenderedComponent<ContainerFragment> cut = RenderPanel(ctx, catalog);
+        string poolDir = Path.Combine(dir.Path, "HiringPool");
+        Directory.CreateDirectory(Path.Combine(poolDir, "personas"));
+        File.WriteAllText(Path.Combine(poolDir, "hiringpool.json"), """{ "schemaVersion": 1, "jobs": [ { "id": "tutor", "title": "Tutor" } ] }""");
+        File.WriteAllText(Path.Combine(poolDir, "personas", "tutor.md"), "---\ntitle: 'Tutor'\n---\nYou teach.");
+        Assert.Null(pool.FindJob("tutor"));
+
+        await cut.InvokeAsync(() => cut.Find("button.teamtypes-reload").ClickAsync());
+
+        Assert.Equal("Tutor", pool.FindJob("tutor")?.Title);
+        Assert.Contains(catalog.Find("alpha")?.Roles ?? [], static role => role.Id == "tutor" && role.Pooled);
     }
 
     private static string CellText(IElement row, string cellClass)

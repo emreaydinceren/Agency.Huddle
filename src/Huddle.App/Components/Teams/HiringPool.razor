@@ -21,25 +21,32 @@
     already staged counted as in use, so a name never repeats. Hiring is by + only; drag-and-drop is not offered.
 *@
 
+@{
+    IReadOnlyList<PoolEntry> entries = this.Entries;
+    IReadOnlyList<PoolEntry> visible = this.VisibleOf(entries);
+    IReadOnlyList<string> typeChips = this.TypeChips;
+    IReadOnlyList<string> termChips = HiringPoolSearch.TermPool(entries);
+}
+
 <div class="hiring-pool">
     <div class="hiring-pool-pool">
         <MudText Typo="Typo.overline" Class="hiring-pool-heading">Hiring pool</MudText>
         <div class="hiring-pool-filters">
-            <ChipCloud Title="Team types" CssClass="hiring-pool-type-cloud" Pool="@this.TypeChips" Selected="@this.selectedTypes" OnToggle="this.ToggleType" />
-            <ChipCloud Title="Tags and skills" CssClass="hiring-pool-term-cloud" Pool="@this.TermChips" Selected="@this.selectedTerms" Cap="TermCap" OnToggle="this.ToggleTerm" />
-            @if (this.TypeChips.Count > 0 || this.TermChips.Count > 0)
+            <ChipCloud Title="Team types" CssClass="hiring-pool-type-cloud" Pool="@typeChips" Selected="@this.selectedTypes" OnToggle="this.ToggleType" />
+            <ChipCloud Title="Tags and skills" CssClass="hiring-pool-term-cloud" Pool="@termChips" Selected="@this.selectedTerms" Cap="TermCap" OnToggle="this.ToggleTerm" />
+            @if (typeChips.Count > 0 || termChips.Count > 0)
             {
                 <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2">
-                    <MudText Typo="Typo.caption" Class="hiring-pool-count" aria-live="polite">@this.Visible.Count of @this.Entries.Count jobs</MudText>
+                    <MudText Typo="Typo.caption" Class="hiring-pool-count" aria-live="polite">@visible.Count of @entries.Count jobs</MudText>
                     <button type="button" class="hiring-pool-clear" @onclick="this.ClearFilters">Clear all</button>
                 </MudStack>
             }
         </div>
-        @if (this.Visible.Count == 0)
+        @if (visible.Count == 0)
         {
             <MudText Typo="Typo.caption" Class="hiring-pool-empty">No jobs match. Remove a chip or press Clear all.</MudText>
         }
-        @foreach (PoolEntry entry in this.Visible)
+        @foreach (PoolEntry entry in visible)
         {
             RoleSpec role = entry.Role;
             bool full = this.IsFull(role);
@@ -164,11 +171,13 @@
 
     private IReadOnlyList<PoolEntry> Entries => HiringPoolSearch.Entries(this.Roles, this.TypeId, this.Pool);
 
-    private IReadOnlyList<PoolEntry> Visible => [.. this.Entries.Where(entry => HiringPoolSearch.Matches(entry, this.SelectedTypeIds(), this.selectedTerms, this.TypeId))];
-
     private IReadOnlyList<string> TypeChips => this.Pool.TeamTypes.Count == 0 ? [] : [.. this.Types.Types.Select(static type => type.DisplayName)];
 
-    private IReadOnlyList<string> TermChips => HiringPoolSearch.TermPool(this.Entries);
+    private List<PoolEntry> VisibleOf(IReadOnlyList<PoolEntry> entries)
+    {
+        List<string> typeIds = this.SelectedTypeIds();
+        return [.. entries.Where(entry => HiringPoolSearch.Matches(entry, typeIds, this.selectedTerms, this.TypeId))];
+    }
 
     /// <summary>Receives the cards staged here, so the hosting page can compute the check bar and start the Team.</summary>
     [Parameter]
@@ -189,7 +198,8 @@
 
         this.loadedKey = key;
         this.selectedTerms = [];
-        this.selectedTypes = this.Type is { } openType && this.TypeChips.Contains(openType.DisplayName, StringComparer.Ordinal) ? [openType.DisplayName] : [];
+        IReadOnlyList<string> typeChips = this.TypeChips;
+        this.selectedTypes = this.Type is { } openType && typeChips.Contains(openType.DisplayName, StringComparer.Ordinal) ? [openType.DisplayName] : [];
         this.hired.Clear();
         RoleSpec? managerRole = this.Roles.FirstOrDefault(static role => role.Manager);
         if (managerRole is null)

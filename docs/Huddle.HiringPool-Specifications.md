@@ -131,6 +131,10 @@ Human to act on.
 
 ## 7. Built-in types
 
+Settings, Team Types, **Reload** rereads the pool and then the types, and lists the pool's problems
+beside the types'. Every new type lists the Retro Agent as an optional role and names it as its
+`retroRole`, as Development does, so a hired Retro Agent runs the retrospective in any of them.
+
 26 types ship: Development Team, Household, Small Business, Content, Research, Data, Product, Ops,
 Legal, Life Admin, Learning, Events, Job Search, Sales Outreach, Docs, Open Source Maintainers,
 Grant Proposal, Tax Season, Support Desk, Founder's Office, Home Project, Book Project, Caregiving,
