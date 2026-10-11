@@ -1,0 +1,72 @@
+@namespace Agency.Huddle.App.Components.Shared
+
+@* The Confirm/Cancel row that swaps in for a list row while a destructive action awaits a yes or a
+   no. One copy so the sites cannot drift: Confirm takes focus when the row first appears, Escape
+   cancels, and while Busy both buttons are disabled and Confirm shows a spinner. The buttons carry
+   the fixed classes inline-confirm-confirm and inline-confirm-cancel; a caller that needs its own
+   styling or test hook puts a class on the group through Class. *@
+<div role="group" aria-label="@(this.Prompt ?? "Confirm")" class="@this.GroupClass"
+     @onkeydown="this.OnKeyDownAsync" @onkeydown:stopPropagation="true">
+    @if (!string.IsNullOrEmpty(this.Prompt))
+    {
+        <MudText Typo="Typo.body2" Class="inline-confirm-prompt">@this.Prompt</MudText>
+    }
+    @if (this.Busy)
+    {
+        <MudProgressCircular Size="Size.Small" Indeterminate="true" />
+    }
+    <MudButton @ref="this.confirmButton" Size="Size.Small" Variant="Variant.Outlined" Color="Color.Error"
+               Class="inline-confirm-confirm" Disabled="this.Busy" OnClick="this.OnConfirm">@this.ConfirmText</MudButton>
+    <MudButton Size="Size.Small" Variant="Variant.Outlined" Class="inline-confirm-cancel"
+               Disabled="this.Busy" OnClick="this.OnCancel">Cancel</MudButton>
+</div>
+
+@code {
+    private MudButton? confirmButton;
+
+    /// <summary>The question shown before the buttons, and the group's accessible name; omit for buttons only.</summary>
+    [Parameter]
+    public string? Prompt { get; set; }
+
+    /// <summary>The Confirm button's label.</summary>
+    [Parameter]
+    public string ConfirmText { get; set; } = "Confirm";
+
+    /// <summary>True while the confirmed action runs: both buttons are disabled and Confirm shows a spinner.</summary>
+    [Parameter]
+    public bool Busy { get; set; }
+
+    /// <summary>Raised when Confirm is clicked.</summary>
+    [Parameter]
+    public EventCallback OnConfirm { get; set; }
+
+    /// <summary>Raised when Cancel is clicked or Escape is pressed (never while <see cref="Busy"/>).</summary>
+    [Parameter]
+    public EventCallback OnCancel { get; set; }
+
+    /// <summary>An extra class for the group, for the caller's own layout or test hook.</summary>
+    [Parameter]
+    public string? Class { get; set; }
+
+    /// <summary>The group's classes: the component's own <c>inline-confirm</c> plus the caller's <see cref="Class"/>.</summary>
+    private string GroupClass =>string.IsNullOrEmpty(this.Class) ? "inline-confirm" : $"inline-confirm {this.Class}";
+
+    /// <summary>Moves focus to Confirm the first time the row appears, so a keyboard user lands on the choice they were just asked.</summary>
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender && this.confirmButton is not null)
+        {
+            await this.confirmButton.FocusAsync();
+        }
+    }
+
+    /// <summary>Treats Escape as Cancel, unless the confirmed action is already running.</summary>
+    /// <param name="e">The key pressed inside the group.</param>
+    private async Task OnKeyDownAsync(KeyboardEventArgs e)
+    {
+        if (!this.Busy && string.Equals(e.Key, "Escape", StringComparison.Ordinal))
+        {
+            await this.OnCancel.InvokeAsync();
+        }
+    }
+}

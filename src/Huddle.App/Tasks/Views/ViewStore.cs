@@ -2,6 +2,7 @@ using System.Text.Json;
 using System.Text.Json.Nodes;
 using Microsoft.Extensions.Options;
 using Agency.Huddle.App.Library;
+using Agency.Huddle.App.Watching;
 
 namespace Agency.Huddle.App.Tasks.Views;
 
@@ -51,7 +52,7 @@ public sealed record ViewLoadError(string Message, long? Line, long? Column);
 /// <see cref="Lock"/> around writes, a <see langword="volatile"/> snapshot, a debounced
 /// <see cref="FileSystemWatcher"/> with no own-write suppression (a <see cref="Save(TaskView)"/>
 /// raises <see cref="ViewsChanged"/> once synchronously, and the watcher's redundant refresh of the
-/// same write raises it again roughly <see cref="WatcherDebounceMilliseconds"/> later), and a
+/// same write raises it again roughly <see cref="DebouncedFileWatcher.DebounceMilliseconds"/> later), and a
 /// 3&#215;20&#160;ms retry on <see cref="IOException"/> when a watcher-triggered rebuild races an
 /// editor mid-save.
 /// </para>
@@ -64,21 +65,10 @@ internal sealed partial class ViewStore : IDisposable
     /// <summary>The id of the built-in View showing the signed-in Human's own Tasks.</summary>
     internal const string MyTasksId = "my-tasks";
 
-    // Same reasoning and the same value as AvatarStore.WatcherDebounceMilliseconds.
-    private const int WatcherDebounceMilliseconds = 500;
-
-    // Same reasoning and the same value as AvatarStore.WatcherInternalBufferSize.
-    private const int WatcherInternalBufferSize = 64 * 1024;
-
-    // Same reasoning and the same values as AvatarStore.WatcherReadRetryAttempts/Delay.
-    private const int WatcherReadRetryAttempts = 3;
-    private const int WatcherReadRetryDelayMilliseconds = 20;
-
     private readonly string path;
     private readonly ILogger<ViewStore> logger;
     private readonly Lock writeGate = new();
-    private readonly FileSystemWatcher watcher;
-    private readonly Timer debounceTimer;
+    private readonly DebouncedFileWatcher watcher;
     private bool disposed;
 
     // The whole resolved state, swapped in as one immutable reference so a reader never takes a
@@ -109,19 +99,7 @@ internal sealed partial class ViewStore : IDisposable
 
         this.snapshot = LoadInitialSnapshot(this.path);
 
-        this.debounceTimer = new Timer(this.OnDebounceElapsed, null, Timeout.Infinite, Timeout.Infinite);
-
-        this.watcher = new FileSystemWatcher(directory, "views.json")
-        {
-            InternalBufferSize = WatcherInternalBufferSize,
-            NotifyFilter = NotifyFilters.LastWrite | NotifyFilters.FileName,
-        };
-        this.watcher.Changed += this.OnWatcherEvent;
-        this.watcher.Created += this.OnWatcherEvent;
-        this.watcher.Deleted += this.OnWatcherEvent;
-        this.watcher.Renamed += this.OnWatcherEvent;
-        this.watcher.Error += this.OnWatcherError;
-        this.watcher.EnableRaisingEvents = true;
+        this.watcher = new DebouncedFileWatcher(directory, "views.json", this.OnWatcherSettled, this.logger, nameof(ViewStore));
     }
 
     /// <summary>
@@ -130,7 +108,7 @@ internal sealed partial class ViewStore : IDisposable
     /// snapshot, and after an external edit to <see cref="FilePath"/> is picked up by the
     /// filesystem watcher and its debounce settles. There is no own-write suppression - see the
     /// class remarks - so one call to <see cref="Save(TaskView)"/> raises this event twice: once
-    /// synchronously before it returns, and once more roughly <see cref="WatcherDebounceMilliseconds"/>
+    /// synchronously before it returns, and once more roughly <see cref="DebouncedFileWatcher.DebounceMilliseconds"/>
     /// later from the watcher's own, redundant rebuild of the same write.
     /// </summary>
     public event Action? ViewsChanged;
@@ -482,39 +460,60 @@ internal sealed partial class ViewStore : IDisposable
         return new ViewLoadError($"'{path}' could not be parsed: {ex.Message}", line, column);
     }
 
-    private void OnWatcherEvent(object sender, FileSystemEventArgs e)
+    /// <summary>
+    /// Rebuilds the resolved snapshot for an external edit, once the watcher's debounce settles,
+    /// retrying through <see cref="RetryingFileRead"/> so an in-place write caught mid-save does not
+    /// flicker into a spurious <see cref="LoadError"/>. If every attempt still fails to parse,
+    /// <see cref="OnReadGaveUp"/> yields a snapshot carrying the <see cref="LoadError"/> - see the class
+    /// remarks' first difference from <see cref="Agency.Huddle.App.Avatars.AvatarStore"/> - and an
+    /// unreadable file yields <see langword="null"/>, keeping the previously resolved Views.
+    /// </summary>
+    private Snapshot? ReadForWatcherRebuild()
     {
-        lock (this.writeGate)
-        {
-            if (this.disposed)
-            {
-                return;
-            }
-
-            this.debounceTimer.Change(WatcherDebounceMilliseconds, Timeout.Infinite);
-        }
+        return RetryingFileRead.Run(this.ReadSnapshotFromDisk, this.OnReadGaveUp);
     }
 
-    // See AvatarStore.OnWatcherError's remarks: there is no way to know which change was dropped,
-    // so the only correct response is the same one a normal change takes.
-    private void OnWatcherError(object sender, ErrorEventArgs e)
+    /// <summary>Reads and parses the file once. Throws on a parse or I/O failure for <see cref="RetryingFileRead"/> to retry.</summary>
+    private Snapshot ReadSnapshotFromDisk()
     {
+        if (!File.Exists(this.path))
+        {
+            return BuildSnapshot([]);
+        }
+
+        string json = File.ReadAllText(this.path);
+        JsonNode? root = JsonNode.Parse(json);
+        JsonArray entries = root is JsonObject topLevel && topLevel.TryGetPropertyValue("views", out JsonNode? viewsNode) && viewsNode is JsonArray array
+            ? array
+            : [];
+        return BuildSnapshot(entries);
+    }
+
+    /// <summary>Logs why <see cref="ReadForWatcherRebuild"/> gave up; a parse failure becomes a <see cref="LoadError"/> snapshot, an I/O failure keeps the previous one.</summary>
+    /// <param name="ex">The last failure.</param>
+    private Snapshot? OnReadGaveUp(Exception ex)
+    {
+        if (ex is JsonException parseFailure)
+        {
+            this.logger.LogWarning(ex, "Could not parse '{Path}' after a filesystem change, even after retrying; keeping the previously resolved Views.", this.path);
+            return Snapshot.WithLoadError(ToLoadError(this.path, parseFailure));
+        }
+
         this.logger.LogWarning(
-            e.GetException(),
-            "ViewStore's FileSystemWatcher reported an error (likely a dropped-event buffer overflow); scheduling a refresh.");
-
-        lock (this.writeGate)
-        {
-            if (this.disposed)
-            {
-                return;
-            }
-
-            this.debounceTimer.Change(WatcherDebounceMilliseconds, Timeout.Infinite);
-        }
+            ex,
+            "Could not read '{Path}' after {Attempts} attempts; keeping the previously resolved Views.",
+            this.path,
+            RetryingFileRead.Attempts);
+        return null;
     }
 
-    private void OnDebounceElapsed(object? state)
+    /// <summary>
+    /// Runs once the <see cref="DebouncedFileWatcher"/> settles on an external edit: rebuilds the
+    /// snapshot and raises <see cref="ViewsChanged"/>. The lock and ordering rules this follows (rebuild
+    /// and capture the delegate under <see cref="writeGate"/>, raise outside it) are the callback
+    /// contract documented in <see cref="DebouncedFileWatcher"/>'s remarks.
+    /// </summary>
+    private void OnWatcherSettled()
     {
         Action? changed;
         lock (this.writeGate)
@@ -524,69 +523,17 @@ internal sealed partial class ViewStore : IDisposable
                 return;
             }
 
-            Snapshot? rebuilt = this.ReadForWatcherRebuild();
+            var rebuilt = this.ReadForWatcherRebuild();
             if (rebuilt is null)
             {
                 return;
             }
 
-            // Rebuilt under the same lock, and BEFORE the delegate capture below - see
-            // AvatarStore.OnDebounceElapsed's remarks for why this ordering matters.
             this.snapshot = rebuilt;
             changed = this.ViewsChanged;
         }
 
         changed?.Invoke();
-    }
-
-    /// <summary>
-    /// Rebuilds the resolved snapshot for an external edit, once the watcher's debounce settles.
-    /// Retries a few times first (see <see cref="WatcherReadRetryAttempts"/>) so an in-place write
-    /// caught mid-save does not flicker into a spurious <see cref="LoadError"/>; if every attempt
-    /// still fails to parse, sets <see cref="LoadError"/> and keeps the previously resolved Views -
-    /// see the class remarks' first difference from <see cref="Agency.Huddle.App.Avatars.AvatarStore"/>.
-    /// </summary>
-    private Snapshot? ReadForWatcherRebuild()
-    {
-        for (int attempt = 1; attempt <= WatcherReadRetryAttempts; attempt++)
-        {
-            if (!File.Exists(this.path))
-            {
-                return BuildSnapshot([]);
-            }
-
-            try
-            {
-                string json = File.ReadAllText(this.path);
-                JsonNode? root = JsonNode.Parse(json);
-                JsonArray entries = root is JsonObject topLevel && topLevel.TryGetPropertyValue("views", out JsonNode? viewsNode) && viewsNode is JsonArray array
-                    ? array
-                    : [];
-                return BuildSnapshot(entries);
-            }
-            catch (Exception ex) when (attempt < WatcherReadRetryAttempts && (ex is JsonException or IOException or UnauthorizedAccessException))
-            {
-                // JsonException: caught mid-write, the partial text does not parse yet.
-                // IOException / UnauthorizedAccessException: an editor can hold the file open with a sharing lock while it writes.
-                Thread.Sleep(WatcherReadRetryDelayMilliseconds);
-            }
-            catch (JsonException ex)
-            {
-                this.logger.LogWarning(ex, "Could not parse '{Path}' after a filesystem change, even after retrying; keeping the previously resolved Views.", this.path);
-                return Snapshot.WithLoadError(ToLoadError(this.path, ex));
-            }
-            catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
-            {
-                this.logger.LogWarning(
-                    ex,
-                    "Could not read '{Path}' after {Attempts} attempts; keeping the previously resolved Views.",
-                    this.path,
-                    WatcherReadRetryAttempts);
-                return null;
-            }
-        }
-
-        return null;
     }
 
     /// <summary>Stops watching <see cref="path"/> and releases the debounce timer.</summary>
@@ -602,14 +549,7 @@ internal sealed partial class ViewStore : IDisposable
             this.disposed = true;
         }
 
-        this.watcher.EnableRaisingEvents = false;
-        this.watcher.Changed -= this.OnWatcherEvent;
-        this.watcher.Created -= this.OnWatcherEvent;
-        this.watcher.Deleted -= this.OnWatcherEvent;
-        this.watcher.Renamed -= this.OnWatcherEvent;
-        this.watcher.Error -= this.OnWatcherError;
         this.watcher.Dispose();
-        this.debounceTimer.Dispose();
     }
 
     /// <summary>The result of one attempt to read and parse <c>views.json</c>'s <c>views</c> array.</summary>

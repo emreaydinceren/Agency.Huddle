@@ -1,5 +1,6 @@
 using System.Collections.Frozen;
 using Microsoft.Extensions.Options;
+using Agency.Huddle.App.Watching;
 
 namespace Agency.Huddle.App.Skills;
 
@@ -29,19 +30,6 @@ namespace Agency.Huddle.App.Skills;
 /// </remarks>
 internal sealed class SkillStore : IDisposable
 {
-    // A watcher event can fire several times for one logical change (a temp-file write plus a
-    // rename, several partial writes), so raising SkillsChanged straight off FileSystemWatcher would
-    // thrash every observer. Coalesce a burst of events into one rebuild per pause in activity - the
-    // same reasoning and the same value PromptStore.WatcherDebounceMilliseconds documents.
-    private const int WatcherDebounceMilliseconds = 500;
-
-    // FileSystemWatcher buffers events in a fixed-size kernel window and the OS drops events outright
-    // - no exception, no log, nothing - when it overflows; it raises the Error event instead. See
-    // PromptStore.WatcherInternalBufferSize's remarks. A Skills directory can hold several Skill
-    // folders each with several files, so this is sized the same as PersonaStore's Teams watcher
-    // rather than PromptStore's single-file one.
-    private const int WatcherInternalBufferSize = 64 * 1024;
-
     // A watcher event can fire while a file is still mid-write, which surfaces here as an IOException
     // from Rebuild()'s own file reads (a sharing violation, or a directory enumerated mid-rename).
     // Retrying a few times with a short pause lets a same-process, in-place write settle before this
@@ -53,8 +41,7 @@ internal sealed class SkillStore : IDisposable
     private readonly string skillsDir;
     private readonly ILogger<SkillStore> logger;
     private readonly Lock writeGate = new();
-    private readonly FileSystemWatcher watcher;
-    private readonly Timer debounceTimer;
+    private readonly DebouncedFileWatcher watcher;
     private bool disposed;
 
     // The whole resolved state - every Skill plus every Issue found building it - swapped in as one
@@ -83,20 +70,14 @@ internal sealed class SkillStore : IDisposable
 
         this.snapshot = this.Rebuild();
 
-        this.debounceTimer = new Timer(this.OnDebounceElapsed, null, Timeout.Infinite, Timeout.Infinite);
-
-        this.watcher = new FileSystemWatcher(this.skillsDir, "*")
-        {
-            IncludeSubdirectories = true,
-            InternalBufferSize = WatcherInternalBufferSize,
-            NotifyFilter = NotifyFilters.LastWrite | NotifyFilters.FileName | NotifyFilters.DirectoryName,
-        };
-        this.watcher.Changed += this.OnWatcherEvent;
-        this.watcher.Created += this.OnWatcherEvent;
-        this.watcher.Deleted += this.OnWatcherEvent;
-        this.watcher.Renamed += this.OnWatcherEvent;
-        this.watcher.Error += this.OnWatcherError;
-        this.watcher.EnableRaisingEvents = true;
+        this.watcher = new DebouncedFileWatcher(
+            this.skillsDir,
+            "*",
+            this.OnWatcherSettled,
+            this.logger,
+            nameof(SkillStore),
+            includeSubdirectories: true,
+            notifyFilter: NotifyFilters.LastWrite | NotifyFilters.FileName | NotifyFilters.DirectoryName);
     }
 
     /// <summary>
@@ -485,51 +466,13 @@ internal sealed class SkillStore : IDisposable
         return (bySkill, issues, imported);
     }
 
-    // Every FileSystemWatcher event - Changed, Created, Deleted, Renamed - is handled identically:
-    // (re)start the debounce timer. Which exact path or change fired is irrelevant, because Rebuild()
-    // always does a full rescan of skillsDir rather than trying to apply one incremental delta.
-    private void OnWatcherEvent(object sender, FileSystemEventArgs e)
-    {
-        lock (this.writeGate)
-        {
-            // Checked BEFORE logging or touching the timer - see the class remarks and
-            // docs/engineering/known-limits.md's PersonaStore.OnWatcherError entry: logging first and
-            // checking disposed second means a watcher event that fires during host teardown, after
-            // this store (and possibly the logger it holds) has been disposed, crashes the test host
-            // instead of harmlessly no-op'ing.
-            if (this.disposed)
-            {
-                return;
-            }
-
-            this.debounceTimer.Change(WatcherDebounceMilliseconds, Timeout.Infinite);
-        }
-    }
-
-    // FileSystemWatcher raises this instead of a normal change event when its internal buffer
-    // overflows and the OS drops events - see WatcherInternalBufferSize's remarks. There is no way to
-    // know which change was dropped, so the only correct response is the same one a normal change
-    // takes: schedule a refresh on the existing debounce path rather than trust whatever the
-    // watcher's view of the world now is.
-    private void OnWatcherError(object sender, ErrorEventArgs e)
-    {
-        lock (this.writeGate)
-        {
-            // Same ordering as OnWatcherEvent, and for the same reason: disposed is checked before
-            // this ever calls into the logger.
-            if (this.disposed)
-            {
-                return;
-            }
-
-            this.logger.LogWarning(
-                e.GetException(),
-                "SkillStore's FileSystemWatcher reported an error (likely a dropped-event buffer overflow); scheduling a refresh.");
-            this.debounceTimer.Change(WatcherDebounceMilliseconds, Timeout.Infinite);
-        }
-    }
-
-    private void OnDebounceElapsed(object? state)
+    /// <summary>
+    /// Runs once the <see cref="DebouncedFileWatcher"/> settles on an external edit: does a full rescan of
+    /// <see cref="skillsDir"/> (never an incremental delta, so which path or change fired is irrelevant) and
+    /// raises <see cref="SkillsChanged"/>. The lock and ordering rules this follows are the callback
+    /// contract documented in <see cref="DebouncedFileWatcher"/>'s remarks.
+    /// </summary>
+    private void OnWatcherSettled()
     {
         Action? changed;
 
@@ -554,7 +497,7 @@ internal sealed class SkillStore : IDisposable
 
             // Published BEFORE the delegate capture below: a subscriber reading this store from
             // inside its own SkillsChanged handler must see the state this rebuild just produced, not
-            // whatever was true before it - the same ordering PromptStore.OnDebounceElapsed documents
+            // whatever was true before it - the ordering DebouncedFileWatcher's remarks document
             // and depends on.
             this.snapshot = rebuilt;
             changed = this.SkillsChanged;
@@ -569,7 +512,7 @@ internal sealed class SkillStore : IDisposable
     /// watcher event can fire while a file is still mid-write, which surfaces as a transient sharing
     /// violation or a directory enumerated mid-rename. If every attempt fails, this logs a Warning and
     /// returns <see langword="null"/> rather than letting the exception propagate onto the timer
-    /// thread, so <see cref="OnDebounceElapsed"/> can leave the previous snapshot in place.
+    /// thread, so <see cref="OnWatcherSettled"/> can leave the previous snapshot in place.
     /// </summary>
     /// <returns>The freshly built snapshot, or <see langword="null"/> if every attempt failed.</returns>
     internal SkillSnapshot? TryRebuildWithRetries()
@@ -611,14 +554,7 @@ internal sealed class SkillStore : IDisposable
             this.disposed = true;
         }
 
-        this.watcher.EnableRaisingEvents = false;
-        this.watcher.Changed -= this.OnWatcherEvent;
-        this.watcher.Created -= this.OnWatcherEvent;
-        this.watcher.Deleted -= this.OnWatcherEvent;
-        this.watcher.Renamed -= this.OnWatcherEvent;
-        this.watcher.Error -= this.OnWatcherError;
         this.watcher.Dispose();
-        this.debounceTimer.Dispose();
     }
 
     /// <summary>
