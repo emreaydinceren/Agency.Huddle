@@ -197,15 +197,15 @@ public sealed class TaskViewNavTests
         IRenderedComponent<ContainerFragment> cut = RenderNav(ctx);
 
         await OpenRowMenuAsync(cut, "Sprint Board");
-        _ = cut.InvokeAsync(() => ClickMenuItem(cut, "Delete view"));
-        cut.WaitForAssertion(() => Assert.NotEmpty(cut.FindAll(".mud-dialog-actions button")));
+        Task deleting = await OpenDeleteDialogAsync(cut);
 
         Assert.Equal("Delete View", cut.Find(".mud-dialog-title").TextContent.Trim());
         Assert.Equal("Delete 'Sprint Board'? Tasks are not affected.", cut.Find(".mud-dialog-content").TextContent.Trim());
         var buttons = cut.FindAll(".mud-dialog-actions button").Select(b => b.TextContent.Trim()).ToList();
         Assert.Equal(["Cancel", "Delete"], buttons);
 
-        await cut.InvokeAsync(() => cut.FindAll(".mud-dialog-actions button").Single(b => string.Equals(b.TextContent.Trim(), "Cancel", StringComparison.Ordinal)).Click());
+        await cut.InvokeAsync(() => cut.FindAll(".mud-dialog-actions button").Single(b => string.Equals(b.TextContent.Trim(), "Cancel", StringComparison.Ordinal)).ClickAsync());
+        await deleting;
     }
 
     /// <summary>Cancelling Delete View keeps the View in <see cref="ViewStore"/> and in the list.</summary>
@@ -220,9 +220,9 @@ public sealed class TaskViewNavTests
         IRenderedComponent<ContainerFragment> cut = RenderNav(ctx);
 
         await OpenRowMenuAsync(cut, "Sprint Board");
-        _ = cut.InvokeAsync(() => ClickMenuItem(cut, "Delete view"));
-        cut.WaitForAssertion(() => Assert.NotEmpty(cut.FindAll(".mud-dialog-actions button")));
-        await cut.InvokeAsync(() => cut.FindAll(".mud-dialog-actions button").Single(b => string.Equals(b.TextContent.Trim(), "Cancel", StringComparison.Ordinal)).Click());
+        Task deleting = await OpenDeleteDialogAsync(cut);
+        await cut.InvokeAsync(() => cut.FindAll(".mud-dialog-actions button").Single(b => string.Equals(b.TextContent.Trim(), "Cancel", StringComparison.Ordinal)).ClickAsync());
+        await deleting;
 
         Assert.NotNull(harness.Views.Get("custom1"));
         Assert.Contains("Sprint Board", cut.Markup, StringComparison.Ordinal);
@@ -242,9 +242,9 @@ public sealed class TaskViewNavTests
         IRenderedComponent<ContainerFragment> cut = RenderNav(ctx);
 
         await OpenRowMenuAsync(cut, "Sprint Board");
-        _ = cut.InvokeAsync(() => ClickMenuItem(cut, "Delete view"));
-        cut.WaitForAssertion(() => Assert.NotEmpty(cut.FindAll(".mud-dialog-actions button")));
-        await cut.InvokeAsync(() => cut.FindAll(".mud-dialog-actions button").Single(b => string.Equals(b.TextContent.Trim(), "Delete", StringComparison.Ordinal)).Click());
+        Task deleting = await OpenDeleteDialogAsync(cut);
+        await cut.InvokeAsync(() => cut.FindAll(".mud-dialog-actions button").Single(b => string.Equals(b.TextContent.Trim(), "Delete", StringComparison.Ordinal)).ClickAsync());
+        await deleting;
 
         Assert.Null(harness.Views.Get("custom1"));
         Assert.Equal(before, navigation.Uri);
@@ -264,9 +264,9 @@ public sealed class TaskViewNavTests
         IRenderedComponent<ContainerFragment> cut = RenderNav(ctx);
 
         await OpenRowMenuAsync(cut, "Sprint Board");
-        _ = cut.InvokeAsync(() => ClickMenuItem(cut, "Delete view"));
-        cut.WaitForAssertion(() => Assert.NotEmpty(cut.FindAll(".mud-dialog-actions button")));
-        await cut.InvokeAsync(() => cut.FindAll(".mud-dialog-actions button").Single(b => string.Equals(b.TextContent.Trim(), "Delete", StringComparison.Ordinal)).Click());
+        Task deleting = await OpenDeleteDialogAsync(cut);
+        await cut.InvokeAsync(() => cut.FindAll(".mud-dialog-actions button").Single(b => string.Equals(b.TextContent.Trim(), "Delete", StringComparison.Ordinal)).ClickAsync());
+        await deleting;
 
         Assert.EndsWith("/tasks", navigation.Uri, StringComparison.Ordinal); // contains-ok: a full URI, whose scheme/host prefix bUnit's FakeNavigationManager owns; only the path is this test's concern.
     }
@@ -319,9 +319,24 @@ public sealed class TaskViewNavTests
     private static IReadOnlyList<AngleSharp.Dom.IElement> MenuItems(IRenderedComponent<ContainerFragment> cut) =>
         cut.FindAll("div.mud-menu-item");
 
-    private static void ClickMenuItem(IRenderedComponent<ContainerFragment> cut, string text)
+    /// <summary>
+    /// Clicks the open menu's <c>Delete view</c> item and returns once the confirm dialog's buttons are rendered. The handler
+    /// awaits the dialog's result, so the click is started rather than awaited, and the returned task completes only when the
+    /// handler has finished (after the dialog is answered and, on Delete, the View is removed). Waiting asynchronously, rather than
+    /// blocking in <c>WaitForAssertion</c>, leaves the pool thread the handler and the dialog render need free; a blocked test
+    /// thread starved them on a busy runner and the wait saw no render at all.
+    /// </summary>
+    /// <param name="cut">The rendered nav and its dialog provider.</param>
+    /// <returns>The click's task, for the test to await once it has answered the dialog.</returns>
+    private static async Task<Task> OpenDeleteDialogAsync(IRenderedComponent<ContainerFragment> cut)
     {
-        MenuItems(cut).First(item => string.Equals(item.TextContent.Trim(), text, StringComparison.Ordinal)).Click();
+        Task deleting = cut.InvokeAsync(() => MenuItems(cut).First(item => string.Equals(item.TextContent.Trim(), "Delete view", StringComparison.Ordinal)).ClickAsync());
+        Task shown = cut.WaitForAssertionAsync(() => Assert.NotEmpty(cut.FindAll(".mud-dialog-actions button")));
+
+        // A click that fails (no such item, a stale handler) completes first; awaiting it surfaces that error instead of a bare wait timeout.
+        await await Task.WhenAny(deleting, shown);
+        await shown;
+        return deleting;
     }
 
     /// <summary>Clicks the open menu's item labelled <paramref name="text"/> and waits for its handler to finish - only for an item whose handler completes on its own (not one that opens a dialog and awaits the answer).</summary>
