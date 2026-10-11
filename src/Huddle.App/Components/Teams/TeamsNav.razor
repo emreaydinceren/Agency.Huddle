@@ -228,20 +228,9 @@
     });
 
     /// <summary>Invokes <paramref name="action"/> on the renderer's synchronization context, swallowing the two exceptions a catalog event racing component teardown can throw.</summary>
-    private async Task DispatchAsync(Func<Task> action)
+    private Task DispatchAsync(Func<Task> action)
     {
-        try
-        {
-            await this.InvokeAsync(action);
-        }
-        catch (ObjectDisposedException)
-        {
-            // Circuit gone; nothing to render.
-        }
-        catch (InvalidOperationException)
-        {
-            // Renderer disposed mid-dispatch.
-        }
+        return RendererDispatch.RunAsync(this.InvokeAsync, action);
     }
 
     /// <summary>How long a create action waits for the catalog to list the new Team or Project before navigating anyway.</summary>

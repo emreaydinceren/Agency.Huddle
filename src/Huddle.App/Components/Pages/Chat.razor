@@ -695,35 +695,17 @@ else
         await Task.WhenAll(agentIds.Select(agentId => this.Gateway.StopTurnAsync(agentId, roomId)));
     }
 
-    private async Task DispatchAsync(Action action)
+    private Task DispatchAsync(Action action)
     {
-        try
+        return RendererDispatch.RunAsync(this.InvokeAsync, () =>
         {
-            await this.InvokeAsync(action);
-        }
-        catch (ObjectDisposedException)
-        {
-            // Circuit gone; nothing to render.
-        }
-        catch (InvalidOperationException)
-        {
-            // Renderer disposed mid-dispatch.
-        }
+            action();
+            return Task.CompletedTask;
+        });
     }
 
-    private async Task DispatchAsync(Func<Task> action)
+    private Task DispatchAsync(Func<Task> action)
     {
-        try
-        {
-            await this.InvokeAsync(action);
-        }
-        catch (ObjectDisposedException)
-        {
-            // Circuit gone; nothing to render.
-        }
-        catch (InvalidOperationException)
-        {
-            // Renderer disposed mid-dispatch.
-        }
+        return RendererDispatch.RunAsync(this.InvokeAsync, action);
     }
 }

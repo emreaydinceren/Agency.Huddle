@@ -314,20 +314,9 @@
 
     private void OnRootsChanged() => _ = this.DispatchAsync(this.RefreshAsync);
 
-    private async Task DispatchAsync(Func<Task> action)
+    private Task DispatchAsync(Func<Task> action)
     {
-        try
-        {
-            await this.InvokeAsync(action);
-        }
-        catch (ObjectDisposedException)
-        {
-            // Circuit gone; nothing to render.
-        }
-        catch (InvalidOperationException)
-        {
-            // Renderer disposed mid-dispatch.
-        }
+        return RendererDispatch.RunAsync(this.InvokeAsync, action);
     }
 
     private async Task OnSelectedValueChangedAsync(LibraryPath value) => await this.SelectedPathChanged.InvokeAsync(value);
