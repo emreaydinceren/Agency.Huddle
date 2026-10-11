@@ -304,9 +304,11 @@ Each Teammate has its own card with **Message**, **Edit**, **Open**,
 ### Adding a Teammate
 
 1. Select **New teammate**.
-2. Fill in **Name**, **Title** and **Alias**. Optionally add **Teams** as a
-   comma-separated list, choose **Skills**, **Model**, **Effort**, **Work mode**
-   and an avatar.
+2. **Name** starts with a random first name that no Teammate has yet. Keep it,
+   edit it, or select the reset button (the circular arrow at the right of the
+   box) for another one. Then fill in **Title** and **Alias**. Optionally add
+   **Teams** as a comma-separated list, choose **Skills**, **Model**,
+   **Effort**, **Work mode** and an avatar.
 3. Write the Teammate's instructions in the text area.
 4. Select **Add teammate**.
 

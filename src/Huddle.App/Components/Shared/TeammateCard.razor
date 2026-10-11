@@ -93,6 +93,8 @@
             {
                 <MudStack Spacing="2" Class="flex-grow-1">
                     <MudTextField T="string" Label="Name" Placeholder="Chief of Staff" @bind-Value="this.name"
+                                  Adornment="Adornment.End" AdornmentIcon="@Icons.Material.Filled.RestartAlt"
+                                  AdornmentAriaLabel="New random name" OnAdornmentClick="this.PickAnotherName"
                                   HelperText="Letters, digits, spaces, - and _. Spaces are fine." />
                     <MudTextField T="string" Label="Title" Placeholder="Chief of Staff" @bind-Value="this.title"
                                   HelperText="A short role description, shown alongside the Name." />
@@ -702,6 +704,15 @@
         _ => "Offline",
     };
 
+    /// <summary>Draws a Teammate name from the pool that no existing Teammate has.</summary>
+    /// <param name="current">The name now showing, which is not drawn again, or <see langword="null"/>.</param>
+    /// <returns>The drawn name.</returns>
+    private string PickName(string? current) =>
+        TeammateNamePool.Pick(Random.Shared, this.Personas.Entries.Select(static entry => entry.Name), current);
+
+    /// <summary>Replaces the Name box with another random name from the pool.</summary>
+    private void PickAnotherName() => this.name = this.PickName(this.name);
+
     protected override async Task OnInitializedAsync()
     {
         this.mode = this.Mode;
@@ -725,6 +736,7 @@
         if (this.mode == TeammateCardMode.Create)
         {
             this.avatar = Avatar.None with { Background = AvatarPalette.Pick(Random.Shared) };
+            this.name = this.PickName(null);
         }
 
         this.roomId = this.RoomId;
