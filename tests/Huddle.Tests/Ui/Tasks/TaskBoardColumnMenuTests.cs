@@ -423,11 +423,17 @@ public sealed partial class TaskBoardColumnMenuTests
         await using MudBunitContext ctx = new();
         IRenderedComponent<ContainerFragment> cut = RenderPage(ctx, harness, viewId: BoardId);
 
-        IElement empty = Assert.Single(cut.FindAll(".tasks-empty"));
-        Assert.Equal("No tasks yet.", empty.QuerySelector(".tasks-empty-message")?.TextContent.Trim());
-        Assert.Single(cut.FindComponents<TaskBoard>());
-        IElement board = cut.Find(".task-board");
-        Assert.True(board.CompareDocumentPosition(empty).HasFlag(AngleSharp.Dom.DocumentPositions.Following));
+        // SaveBoard's write wakes ViewStore's own watcher, which re-renders the page about half a second
+        // later; an element found before that re-render is detached after it. Find both in one pass and
+        // retry on render, so the position check never compares a stale node with a live one.
+        cut.WaitForAssertion(() =>
+        {
+            IElement empty = Assert.Single(cut.FindAll(".tasks-empty"));
+            Assert.Equal("No tasks yet.", empty.QuerySelector(".tasks-empty-message")?.TextContent.Trim());
+            Assert.Single(cut.FindComponents<TaskBoard>());
+            IElement board = cut.Find(".task-board");
+            Assert.True(board.CompareDocumentPosition(empty).HasFlag(AngleSharp.Dom.DocumentPositions.Following));
+        });
     }
 
     /// <summary>corrections-B7 12.4 item 8 and 14.5.i item 4: a Board View renders <see cref="TaskBoard"/> in the page, and opening a card puts a real <see cref="TaskDetail"/> (Panel mode) in the detail drawer for that Task - the 14.5.i replacement for the placeholder this test used to pin.</summary>
