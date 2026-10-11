@@ -380,19 +380,8 @@
     /// already been disposed (a Room switch, a closed circuit) must not throw.
     /// </summary>
     /// <param name="action">The state update and repaint to run on the renderer.</param>
-    private async Task DispatchAsync(Func<Task> action)
+    private Task DispatchAsync(Func<Task> action)
     {
-        try
-        {
-            await this.InvokeAsync(action);
-        }
-        catch (ObjectDisposedException)
-        {
-            // Circuit gone; nothing to render.
-        }
-        catch (InvalidOperationException)
-        {
-            // Renderer disposed mid-dispatch.
-        }
+        return RendererDispatch.RunAsync(this.InvokeAsync, action);
     }
 }

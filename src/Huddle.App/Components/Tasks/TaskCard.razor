@@ -139,20 +139,13 @@
     private void OnSprintsChanged() => _ = this.RerenderAsync();
 
     /// <summary>Marshals a re-render onto the renderer's context, tolerating a card already disposed.</summary>
-    private async Task RerenderAsync()
+    private Task RerenderAsync()
     {
-        try
+        return RendererDispatch.RunAsync(this.InvokeAsync, () =>
         {
-            await this.InvokeAsync(this.StateHasChanged);
-        }
-        catch (ObjectDisposedException)
-        {
-            // The renderer was disposed before this dispatched re-render ran: nothing left to draw.
-        }
-        catch (InvalidOperationException)
-        {
-            // The render handle is gone (the circuit ended): same as above.
-        }
+            this.StateHasChanged();
+            return System.Threading.Tasks.Task.CompletedTask;
+        });
     }
 
     /// <summary>The root <c>class</c>: <c>task-card</c>, plus <c>task-col-edge-{colour}</c> (Spec §13.10) and <c>task-overdue</c> when it applies.</summary>

@@ -130,22 +130,9 @@
         });
     }
 
-    // Mirrors Appearance.razor's DispatchAsync exactly: a store event can still fire while this
-    // component's circuit is winding down, and both exceptions mean there is nothing left to repaint.
-    private async Task DispatchAsync(Func<Task> action)
+    private Task DispatchAsync(Func<Task> action)
     {
-        try
-        {
-            await this.InvokeAsync(action);
-        }
-        catch (ObjectDisposedException)
-        {
-            // Circuit gone; nothing to render.
-        }
-        catch (InvalidOperationException)
-        {
-            // Renderer disposed mid-dispatch.
-        }
+        return RendererDispatch.RunAsync(this.InvokeAsync, action);
     }
 
     /// <summary>Unsubscribes from <see cref="AppearanceStore.AppearanceChanged"/> - rules.md is explicit that a leaked subscription to a singleton never dies.</summary>

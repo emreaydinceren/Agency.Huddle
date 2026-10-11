@@ -790,20 +790,9 @@ else if (this.loaded is { } task)
     /// running - a race inherent to any hub subscription outliving a component's own lifetime, not a bug
     /// to surface, and there is nothing left to notify since nothing is listening any more (Spec §13.11).
     /// </summary>
-    private async Task DispatchAsync(Func<Task> action)
+    private Task DispatchAsync(Func<Task> action)
     {
-        try
-        {
-            await this.InvokeAsync(action);
-        }
-        catch (ObjectDisposedException)
-        {
-            // The component (or its Renderer) was disposed before this dispatched requery ran - nothing left to update.
-        }
-        catch (InvalidOperationException)
-        {
-            // The component's render handle is gone (e.g. the circuit ended) - same as above, safe to drop.
-        }
+        return RendererDispatch.RunAsync(this.InvokeAsync, action);
     }
 
     private void BeginEditTitle() => this.titleEditing = true;

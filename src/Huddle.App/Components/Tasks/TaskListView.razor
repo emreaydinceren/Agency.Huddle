@@ -260,20 +260,13 @@
     /// <summary>Marshals a re-render onto the renderer's context, tolerating a component already disposed (the same rule as the page's hub handlers).</summary>
     private void OnSprintsChanged() => _ = this.RerenderAsync();
 
-    private async Task RerenderAsync()
+    private Task RerenderAsync()
     {
-        try
+        return RendererDispatch.RunAsync(this.InvokeAsync, () =>
         {
-            await this.InvokeAsync(this.StateHasChanged);
-        }
-        catch (ObjectDisposedException)
-        {
-            // The renderer was disposed before this dispatched re-render ran: nothing left to draw.
-        }
-        catch (InvalidOperationException)
-        {
-            // The render handle is gone (the circuit ended): same as above.
-        }
+            this.StateHasChanged();
+            return Task.CompletedTask;
+        });
     }
 
     /// <summary>Resolves a Sprint id to its name for a group label, or <see langword="null"/> when it is not in the file.</summary>
