@@ -1,6 +1,8 @@
 using System.Reflection;
 using System.Text.Json;
+using Agency.Huddle.App.HiringPool;
 using Agency.Huddle.App.Teams;
+using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Options;
 
 namespace Agency.Huddle.App.TeamTypes;
@@ -15,7 +17,8 @@ internal sealed record TeamTypeFileProblem(string TypeId, string Path, string Me
 /// <remarks>
 /// Built-ins are embedded resources <c>TeamTypes/Builtin/{id}/...</c>. A user folder <c>{DataDir}/TeamTypes/{id}/</c> with a
 /// manifest of the same id replaces the built-in manifest; candidate and process files resolve the user folder first, then
-/// the built-in, so a user can add a file without copying the type. A manifest value that is rooted or contains <c>..</c> is never
+/// the built-in, so a user can add a file without copying the type. A role that names a hiring-pool job takes its persona from the
+/// pool (whose own user folder overrides a shipped persona), not from a <c>candidates</c> folder of the type. A manifest value that is rooted or contains <c>..</c> is never
 /// resolved. Invalid types are excluded from <see cref="Types"/> and listed in <see cref="Problems"/>; loading never throws for bad content.
 /// </remarks>
 internal sealed class TeamTypeCatalog
@@ -27,33 +30,59 @@ internal sealed class TeamTypeCatalog
     private readonly string userDir;
     private readonly ILogger<TeamTypeCatalog> logger;
     private readonly IReadOnlyDictionary<string, string> builtins;
+    private readonly HiringPoolCatalog pool;
     private volatile Snapshot snapshot = new([], [], new Dictionary<string, TeamTypeManifest>(StringComparer.Ordinal), new HashSet<string>(StringComparer.Ordinal));
 
-    /// <summary>Creates the catalog over the assembly's embedded built-in types.</summary>
+    /// <summary>Creates the catalog over the assembly's embedded built-in types and the embedded hiring pool.</summary>
     /// <param name="options">Supplies <see cref="TeamOptions.DataDir"/>.</param>
     /// <param name="logger">Receives a warning per rejected type.</param>
     public TeamTypeCatalog(IOptions<TeamOptions> options, ILogger<TeamTypeCatalog> logger)
-        : this(options, logger, ReadEmbedded())
+        : this(options, logger, ReadEmbedded(), new HiringPoolCatalog(options, NullLogger<HiringPoolCatalog>.Instance))
     {
     }
 
-    /// <summary>Creates the catalog over a given set of built-in files, for tests.</summary>
+    /// <summary>Creates the catalog over the assembly's embedded built-in types and a shared hiring pool.</summary>
+    /// <param name="options">Supplies <see cref="TeamOptions.DataDir"/>.</param>
+    /// <param name="logger">Receives a warning per rejected type.</param>
+    /// <param name="pool">The hiring pool the roles of a type refer to.</param>
+    public TeamTypeCatalog(IOptions<TeamOptions> options, ILogger<TeamTypeCatalog> logger, HiringPoolCatalog pool)
+        : this(options, logger, ReadEmbedded(), pool)
+    {
+    }
+
+    /// <summary>Creates the catalog over a given set of built-in files and no hiring pool, for tests.</summary>
     /// <param name="options">Supplies <see cref="TeamOptions.DataDir"/>.</param>
     /// <param name="logger">Receives a warning per rejected type.</param>
     /// <param name="builtins">Built-in path, such as <c>development/team-type.json</c>, to its text.</param>
     internal TeamTypeCatalog(IOptions<TeamOptions> options, ILogger<TeamTypeCatalog> logger, IReadOnlyDictionary<string, string> builtins)
+        : this(options, logger, builtins, new HiringPoolCatalog(options, NullLogger<HiringPoolCatalog>.Instance, new Dictionary<string, string>(StringComparer.Ordinal)))
+    {
+    }
+
+    /// <summary>Creates the catalog over a given set of built-in files and a given hiring pool.</summary>
+    /// <param name="options">Supplies <see cref="TeamOptions.DataDir"/>.</param>
+    /// <param name="logger">Receives a warning per rejected type.</param>
+    /// <param name="builtins">Built-in path, such as <c>development/team-type.json</c>, to its text.</param>
+    /// <param name="pool">The hiring pool the roles of a type refer to.</param>
+    internal TeamTypeCatalog(IOptions<TeamOptions> options, ILogger<TeamTypeCatalog> logger, IReadOnlyDictionary<string, string> builtins, HiringPoolCatalog pool)
     {
         ArgumentNullException.ThrowIfNull(options);
         ArgumentNullException.ThrowIfNull(logger);
         ArgumentNullException.ThrowIfNull(builtins);
+        ArgumentNullException.ThrowIfNull(pool);
         this.userDir = Path.Combine(options.Value.DataDir, TeamPaths.TeamTypesDir);
         this.logger = logger;
         this.builtins = builtins;
+        this.pool = pool;
         this.Reload();
+        pool.Changed += this.Reload;
     }
 
     /// <summary>Raised after <see cref="Reload"/> has replaced the loaded types.</summary>
     public event Action? Changed;
+
+    /// <summary>The hiring pool the roles of the types refer to, so a picker can browse its jobs.</summary>
+    public HiringPoolCatalog Pool => this.pool;
 
     /// <summary>The valid types, ordered by order then display name.</summary>
     public IReadOnlyList<TeamTypeManifest> Types => this.snapshot.Types;
@@ -88,6 +117,11 @@ internal sealed class TeamTypeCatalog
         ArgumentNullException.ThrowIfNull(typeId);
         ArgumentNullException.ThrowIfNull(roleId);
         RoleSpec? role = this.Find(typeId)?.Roles.FirstOrDefault(r => string.Equals(r.Id, roleId, StringComparison.Ordinal));
+        if (role?.Job is not null)
+        {
+            return this.pool.ReadPersona(role.Job);
+        }
+
         string? text = role is null ? null : this.ReadFile(typeId, role.Candidate);
         if (text is null)
         {
@@ -149,7 +183,7 @@ internal sealed class TeamTypeCatalog
     /// <summary>Tells whether a type-relative path is a plain relative path with no parent segments.</summary>
     /// <param name="relativePath">The value from a manifest.</param>
     /// <returns>True when the path may be resolved.</returns>
-    private static bool IsSafe(string relativePath)
+    internal static bool IsSafe(string relativePath)
     {
         return !string.IsNullOrWhiteSpace(relativePath)
             && !relativePath.Contains("..", StringComparison.Ordinal)
@@ -279,9 +313,17 @@ internal sealed class TeamTypeCatalog
             return null;
         }
 
-        if (manifest is null || manifest.Id is null || manifest.Version is null || manifest.DisplayName is null || manifest.Workspace is null)
+        if (manifest is null || manifest.Id is null || manifest.Version is null || manifest.Workspace is null)
         {
-            problems.Add(new TeamTypeFileProblem(id, source, "The manifest lacks id, version, displayName or workspace."));
+            problems.Add(new TeamTypeFileProblem(id, source, "The manifest lacks id, version or workspace."));
+            return null;
+        }
+
+        PoolTeamType? named = this.pool.FindTeamType(id);
+        string? displayName = named?.Name ?? manifest.DisplayName;
+        if (displayName is null)
+        {
+            problems.Add(new TeamTypeFileProblem(id, source, "The manifest has no displayName and the hiring pool does not name the type."));
             return null;
         }
 
@@ -291,14 +333,89 @@ internal sealed class TeamTypeCatalog
             return null;
         }
 
-        IReadOnlyList<TeamTypeProblem> found = TeamTypeValidator.Validate(manifest, relative => this.ReadFile(id, relative) is not null);
+        manifest = this.ComposeRoles(manifest with { DisplayName = displayName, Description = named?.Description });
+        IReadOnlyList<TeamTypeProblem> found = TeamTypeValidator.Validate(
+            manifest, relative => this.ReadFile(id, relative) is not null, jobId => this.pool.FindJob(jobId) is not null);
         if (found.Count > 0)
         {
             problems.Add(new TeamTypeFileProblem(id, source, string.Join(" ", found.Select(static p => p.Message))));
             return null;
         }
 
-        return manifest;
+        return this.AddPooledRoles(manifest);
+    }
+
+    /// <summary>Fills each role that is a hiring-pool job from its job, so every consumer keeps reading plain roles.</summary>
+    /// <param name="manifest">The deserialised manifest.</param>
+    /// <returns>The manifest with its job roles composed; a role naming an unknown job keeps its id and job so the validator can report it.</returns>
+    private TeamTypeManifest ComposeRoles(TeamTypeManifest manifest)
+    {
+        List<RoleSpec> roles = [];
+        foreach (RoleSpec role in manifest.Roles)
+        {
+            string? jobId = role.Job ?? (role.Candidate is null ? role.Id : this.MovedJobId(manifest.Id, role));
+            if (jobId is null)
+            {
+                roles.Add(role);
+                continue;
+            }
+
+            PoolJob? job = this.pool.FindJob(jobId);
+            roles.Add(job is null
+                ? role with { Job = jobId }
+                : role with
+                {
+                    Job = jobId,
+                    Title = job.Title,
+                    Candidate = job.Persona,
+                    Skills = job.SkillRefs,
+                    Packs = job.Packs,
+                    Requires = job.Requires,
+                    SuggestedNames = job.SuggestedNames,
+                    Model = new ModelSpec(job.Model.Tier, role.Model.DifferentVendorFrom),
+                });
+        }
+
+        return manifest with { Roles = roles };
+    }
+
+    /// <summary>
+    /// Finds the pool job of a role that an earlier version saved with a candidate file, such as the copy of a built-in type that
+    /// Custom role writes into the user's folder. The built-in candidates moved into the pool, so when the file is gone and the
+    /// pool holds a job of the role's id, the role is that job.
+    /// </summary>
+    /// <param name="typeId">The type id.</param>
+    /// <param name="role">A role with a candidate path and no job.</param>
+    /// <returns>The job id, or null when the candidate file exists or the pool has no such job (the role stays as written).</returns>
+    private string? MovedJobId(string typeId, RoleSpec role)
+    {
+        return this.ReadFile(typeId, role.Candidate) is null && this.pool.FindJob(role.Id) is not null ? role.Id : null;
+    }
+
+    /// <summary>Appends every pool job the type does not list as an optional role, so a Human can hire it with default settings.</summary>
+    /// <param name="manifest">A validated manifest with its job roles composed.</param>
+    /// <returns>The manifest with the extra roles, each marked <see cref="RoleSpec.Pooled"/>.</returns>
+    private TeamTypeManifest AddPooledRoles(TeamTypeManifest manifest)
+    {
+        HashSet<string> listedJobs = new(manifest.Roles.Select(static role => role.Job ?? string.Empty), StringComparer.Ordinal);
+        HashSet<string> roleIds = new(manifest.Roles.Select(static role => role.Id), StringComparer.Ordinal);
+        List<RoleSpec> roles = [.. manifest.Roles];
+        foreach (PoolJob job in this.pool.Jobs.Where(job => !listedJobs.Contains(job.Id) && !roleIds.Contains(job.Id)))
+        {
+            roles.Add(new RoleSpec(
+                job.Id,
+                job.Title,
+                job.Persona,
+                Model: job.Model,
+                Skills: job.SkillRefs,
+                Packs: job.Packs,
+                Requires: job.Requires,
+                SuggestedNames: job.SuggestedNames,
+                Job: job.Id,
+                Pooled: true));
+        }
+
+        return manifest with { Roles = roles };
     }
 
     /// <summary>Reads a type file from the user folder first, then the built-ins.</summary>
@@ -338,7 +455,7 @@ internal sealed class TeamTypeCatalog
     /// <param name="typeDir">The full path of the type folder.</param>
     /// <param name="full">The full path of the file, already checked to sit under <paramref name="typeDir"/>.</param>
     /// <returns><see langword="true"/> when the file must not be read.</returns>
-    private static bool LeavesTypeFolder(string typeDir, string full)
+    internal static bool LeavesTypeFolder(string typeDir, string full)
     {
         string prefix = typeDir + Path.DirectorySeparatorChar;
         string? current = full;

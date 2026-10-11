@@ -1,0 +1,82 @@
+{
+  "schemaVersion": 1,
+  "id": "home-lab",
+  "version": "1.0.0",
+  "order": 260,
+  "workspace": {
+    "kind": "repo",
+    "label": "Lab repository",
+    "required": true
+  },
+  "coverage": [
+    "build",
+    "verify"
+  ],
+  "processes": [
+    {
+      "id": "home-lab-basics",
+      "file": "processes/home-lab-basics.md",
+      "default": true
+    }
+  ],
+  "roles": [
+    {
+      "id": "it-admin",
+      "job": "it-admin",
+      "manager": true,
+      "required": true,
+      "maxPerTeam": 1,
+      "covers": [
+        "verify"
+      ]
+    },
+    {
+      "id": "automation-engineer",
+      "job": "automation-engineer",
+      "required": false,
+      "maxPerTeam": 1,
+      "covers": [
+        "build"
+      ]
+    },
+    {
+      "id": "security-engineer",
+      "job": "security-engineer",
+      "required": false,
+      "maxPerTeam": 1,
+      "covers": [
+        "verify"
+      ],
+      "model": {
+        "differentVendorFrom": [
+          "automation-engineer"
+        ]
+      }
+    },
+    {
+      "id": "docs-tester",
+      "job": "docs-tester",
+      "required": false,
+      "maxPerTeam": 1,
+      "covers": [
+        "verify"
+      ],
+      "model": {
+        "differentVendorFrom": [
+          "automation-engineer"
+        ]
+      }
+    },
+    {
+      "id": "retro-agent",
+      "job": "retro-agent",
+      "maxPerTeam": 1,
+      "model": {
+        "differentVendorFrom": [
+          "it-admin"
+        ]
+      }
+    }
+  ],
+  "retroRole": "retro-agent"
+}

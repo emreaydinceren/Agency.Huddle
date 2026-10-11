@@ -102,9 +102,15 @@ contexts](../Huddle.EngineeringGuide.md#two-bounded-contexts). Back to the hub:
 
 **Team type**
 : A kind of Team, defined as data: a folder with a `team-type.json` manifest, its
-  **Roles**, **Candidates**, **Packs**, **Processes** and presets. The built-in types
-  are *Development Team* and *Household*; a user folder with the same id replaces a
-  built-in one. Code knows no role name (ADR-0038).
+  **Roles** (each naming a **Job** of the **Hiring pool**), **Packs** and **Processes**.
+  Twenty-six types are built in, from *Development Team* and *Household* to *Home Lab*; a
+  user folder with the same id replaces a built-in one. Code knows no role name (ADR-0038, ADR-0049).
+
+**Hiring pool**
+: The one global catalog of **Jobs** (`hiringpool.json` and a persona file per job) that
+  team types draw their roles from. A job has a title, description, tags, suggested
+  skills, the team types it suits and a persona; the pool browses by two tag clouds.
+  See the [Hiring Pool specification](../Huddle.HiringPool-Specifications.md).
 : *Avoid*: template, kind, blueprint.
 
 **Role**

@@ -89,8 +89,8 @@ internal sealed partial class UserCandidateWriter(IOptions<TeamOptions> options,
             }
 
             RoleSpec role = new(roleId, CollapseLines(title), CandidatesFolder + "/" + roleId + ".md", Manager: false, Required: false, MaxPerTeam: 1);
-            TeamTypeManifest extended = type with { Roles = [.. type.Roles, role] };
-            if (TeamTypeValidator.Validate(extended, static _ => true).Count > 0)
+            TeamTypeManifest extended = type with { Roles = [.. type.Roles.Where(static r => !r.Pooled), role] };
+            if (TeamTypeValidator.Validate(extended, static _ => true, static _ => true).Count > 0)
             {
                 return WriteResult.Refused("The role could not be saved.");
             }

@@ -1,0 +1,86 @@
+{
+  "schemaVersion": 1,
+  "id": "grant-proposal",
+  "version": "1.0.0",
+  "order": 170,
+  "workspace": {
+    "kind": "folder",
+    "label": "Proposals folder",
+    "required": false
+  },
+  "coverage": [
+    "draft",
+    "verify"
+  ],
+  "processes": [
+    {
+      "id": "grant-proposal-basics",
+      "file": "processes/grant-proposal-basics.md",
+      "default": true
+    }
+  ],
+  "roles": [
+    {
+      "id": "proposal-lead",
+      "job": "proposal-lead",
+      "manager": true,
+      "required": true,
+      "maxPerTeam": 1,
+      "covers": [
+        "verify"
+      ]
+    },
+    {
+      "id": "funder-researcher",
+      "job": "funder-researcher",
+      "required": false,
+      "maxPerTeam": 1,
+      "covers": [
+        "draft"
+      ]
+    },
+    {
+      "id": "grant-writer",
+      "job": "grant-writer",
+      "required": false,
+      "maxPerTeam": 1,
+      "covers": [
+        "draft"
+      ]
+    },
+    {
+      "id": "budget-analyst",
+      "job": "budget-analyst",
+      "required": false,
+      "maxPerTeam": 1,
+      "covers": [
+        "draft"
+      ]
+    },
+    {
+      "id": "compliance-checker",
+      "job": "compliance-checker",
+      "required": false,
+      "maxPerTeam": 1,
+      "covers": [
+        "verify"
+      ],
+      "model": {
+        "differentVendorFrom": [
+          "grant-writer"
+        ]
+      }
+    },
+    {
+      "id": "retro-agent",
+      "job": "retro-agent",
+      "maxPerTeam": 1,
+      "model": {
+        "differentVendorFrom": [
+          "proposal-lead"
+        ]
+      }
+    }
+  ],
+  "retroRole": "retro-agent"
+}

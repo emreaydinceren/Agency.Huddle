@@ -5,6 +5,10 @@ date: 2026-10-08
 
 # Team types are data in JSON and Markdown files
 
+> **Amended by [ADR-0049](0049-a-hiring-pool-holds-the-jobs-and-a-team-type-lists-them.md).** Roles
+> and their candidates now live in a global hiring pool; a type's `roles` name the jobs it uses,
+> and presets are gone. Everything else here stands.
+
 A **team type** describes a kind of Team: its roles, the candidates that fill them, its
 process and its skill packs. Every team type is a set of files. The built-in types ship
 embedded in the app, and the user's own types live in a folder beside the data. Code knows
@@ -25,7 +29,7 @@ research group, by writing files, not by changing the app.
 
 ```text
 TeamTypes/<type>/
-  team-type.json            the manifest: roles, manager, retro role, presets, skill packs
+  team-type.json            the manifest: roles, manager, retro role, skill packs
   candidates/<role>.md      one candidate per role: who the Teammate is and what it does
   processes/<process>.md    a process template a Team copies into its Process.md
 ```

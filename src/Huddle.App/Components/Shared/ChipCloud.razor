@@ -1,0 +1,66 @@
+@*
+    A cloud of filter chips: the selected ones first in the order they were pressed, then the pool, optionally capped
+    with a "Show all" toggle. It is the avatar picker's cloud (AvatarChipCloud.Arrange) as a component, so any picker can
+    reuse it; selection reads as [ text X ] and aria-pressed, never by colour alone. The caller owns the selection.
+*@
+
+@if (this.Pool.Count > 0)
+{
+    <div class="chip-cloud-title">@this.Title</div>
+    <div class="@($"chip-cloud {this.CssClass}")" role="group" aria-label="@this.Title">
+        @foreach (ChipItem chip in AvatarChipCloud.Arrange(this.Pool, this.Selected, this.Expanded ? null : this.Cap))
+        {
+            <button type="button" class="@ChipClass(chip)" aria-pressed="@(chip.Selected ? "true" : "false")" @onclick="() => this.OnToggle.InvokeAsync(chip.Text)">
+                @if (chip.Selected)
+                {
+                    <span class="chip-cloud-bracket" aria-hidden="true">[</span>
+                }
+                <span class="chip-cloud-chip-text">@chip.Text</span>
+                @if (chip.Selected)
+                {
+                    <span class="chip-cloud-close" aria-hidden="true">X</span>
+                    <span class="chip-cloud-bracket" aria-hidden="true">]</span>
+                }
+            </button>
+        }
+        @if (this.Cap is int cap && this.Pool.Count > cap)
+        {
+            <button type="button" class="chip-cloud-all" aria-expanded="@(this.Expanded ? "true" : "false")" @onclick="this.ToggleExpanded">@(this.Expanded ? "Show fewer" : "Show all")</button>
+        }
+    </div>
+}
+
+@code {
+    private bool expanded;
+
+    /// <summary>The label above the cloud.</summary>
+    [Parameter]
+    public string Title { get; set; } = string.Empty;
+
+    /// <summary>Every chip of the cloud in its fixed order.</summary>
+    [Parameter]
+    public IReadOnlyList<string> Pool { get; set; } = [];
+
+    /// <summary>The selected chips, oldest press first.</summary>
+    [Parameter]
+    public IReadOnlyList<string> Selected { get; set; } = [];
+
+    /// <summary>How many pool chips to show before "Show all"; null shows them all.</summary>
+    [Parameter]
+    public int? Cap { get; set; }
+
+    /// <summary>Extra CSS classes for the chip container.</summary>
+    [Parameter]
+    public string CssClass { get; set; } = string.Empty;
+
+    /// <summary>Raised with a chip's text when it is pressed.</summary>
+    [Parameter]
+    public EventCallback<string> OnToggle { get; set; }
+
+    private bool Expanded => this.expanded;
+
+    private static string ChipClass(ChipItem chip) =>
+        chip.Selected ? "chip-cloud-chip chip-cloud-chip-selected" : "chip-cloud-chip";
+
+    private void ToggleExpanded() => this.expanded = !this.expanded;
+}

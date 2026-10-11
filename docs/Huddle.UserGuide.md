@@ -652,9 +652,12 @@ To make a Team from a type:
    kept and **Open setup** takes you to it.
 4. In the **hiring pool**, the left side has one card per role: its tier, what it
    covers and the name the next hire would get. Select a card's **+** to add that
-   role to the Team on the right, or choose a **preset** (a Development Team
-   offers **Small** and **Full**; a Household offers **Basic**) to add several
-   roles at once. There is no drag and drop. The manager is already there and is
+   role to the Team on the right. Two chip clouds above the cards narrow them:
+   **Team types** (a job shows if it suits any selected type; it opens on this
+   Team's own type) and **Tags and skills** (a job must carry every selected chip).
+   Clear the type chip to browse every job in the pool; a job this type does not
+   list can still be hired, with default settings. **Clear all** resets both clouds.
+   There are no presets and no drag and drop. The manager is already there and is
    locked: it cannot be removed. A role that has reached its limit is greyed and
    says **Limit reached**. **Custom role** adds a role of your own; see
    [Custom roles](#custom-roles).
@@ -723,7 +726,7 @@ vendor from the role it must differ from, and then looks for the model with
 mapped model the adapter does not list is ignored in the same way.
 
 > **Example (Scenario 1).** Emre picks **Development Team**, names it **Web Team**,
-> points it at his repository, and chooses the **Small** preset. Joe, the
+> points it at his repository. Joe, the
 > Development Manager, is hired first. Emre adds a Developer, a Reviewer and QA,
 > with the Reviewer and QA on a different vendor from the Developer, and selects
 > **Start Team**.
@@ -906,7 +909,7 @@ or every so many days (see
 [Digests and retrospectives on a schedule](#digests-and-retrospectives-on-a-schedule)).
 The Team's retro role, the Development Team's **Retro agent**, reads the Team's
 records and proposes up to three changes. The Retro agent is in the hiring pool but
-not in the **Small** or **Full** preset, so add it with its **+**. It needs the
+is not hired for you, so add it with its **+**. It needs the
 built-in `retrospective` Skill, which the role carries.
 
 **What it may read.** With `read_records` the Retro agent (or the Team's manager)

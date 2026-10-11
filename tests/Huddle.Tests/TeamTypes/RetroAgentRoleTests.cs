@@ -7,38 +7,16 @@ namespace Agency.Huddle.Tests.TeamTypes;
 /// <summary>Tests for the optional Retro agent role in the built-in Development type (RT-1, RT-4, RT-5): the manifest declares it as the retro role, its candidate states the stance, and the retrospective skill carries the procedure.</summary>
 public sealed class RetroAgentRoleTests
 {
-    private const string TypeFolder = "TeamTypes/Builtin/development/";
+    private const string PersonaFolder = "HiringPool/personas/";
     private const string RoleId = "retro-agent";
 
     private static readonly string[] RequiredStanceNames = ["read_records", "propose_retro_changes"];
 
     private static readonly string[] RetroStages = ["Gather", "Ask", "Report", "Propose", "Register", "Verify"];
 
-    /// <summary>Reads the embedded manifest and parses it with the one set of team-type JSON options.</summary>
-    /// <returns>The parsed manifest.</returns>
-    private static TeamTypeManifest LoadManifest()
-    {
-        TeamTypeManifest? manifest = System.Text.Json.JsonSerializer.Deserialize<TeamTypeManifest>(ReadEmbedded(TypeFolder + "team-type.json"), TeamTypeJson.Options);
-        Assert.NotNull(manifest);
-        return manifest;
-    }
-
-    /// <summary>Lists the embedded resource names of the Development type, relative to its folder, so validation sees the files that ship.</summary>
-    /// <returns>The relative paths, such as <c>candidates/developer.md</c>.</returns>
-    private static HashSet<string> EmbeddedTypeFiles()
-    {
-        HashSet<string> files = new(StringComparer.Ordinal);
-        foreach (string name in typeof(TeamTypeCatalog).Assembly.GetManifestResourceNames())
-        {
-            string normalised = name.Replace('\\', '/');
-            if (normalised.StartsWith(TypeFolder, StringComparison.Ordinal))
-            {
-                files.Add(normalised[TypeFolder.Length..]);
-            }
-        }
-
-        return files;
-    }
+    /// <summary>Loads the shipped Development type through the catalog, so its roles are composed from their hiring-pool jobs.</summary>
+    /// <returns>The type with the roles it lists itself.</returns>
+    private static TeamTypeManifest LoadManifest() => BuiltinManifests.Load("development");
 
     /// <summary>Reads one embedded text resource by its forward-slash path.</summary>
     /// <param name="relativePath">The resource path, such as <c>TeamTypes/Builtin/development/team-type.json</c>.</param>
@@ -58,7 +36,7 @@ public sealed class RetroAgentRoleTests
     /// <returns>The parsed candidate template.</returns>
     private static CandidateTemplate ParseRetroCandidate()
     {
-        CandidateParseResult result = CandidateTemplateParser.Parse(ReadEmbedded(TypeFolder + "candidates/" + RoleId + ".md"));
+        CandidateParseResult result = CandidateTemplateParser.Parse(ReadEmbedded(PersonaFolder + RoleId + ".md"));
         Assert.Empty(result.Problems);
         Assert.NotNull(result.Template);
         return result.Template;
@@ -79,13 +57,11 @@ public sealed class RetroAgentRoleTests
         Assert.Equal(RoleId, manifest.RetroRole);
     }
 
-    /// <summary>The Development manifest with the retro role still passes every validator check against the shipped files.</summary>
+    /// <summary>The Development type with the retro role loads through the catalog with no problems.</summary>
     [Fact]
     public void Manifest_ShippedFiles_ValidateWithNoProblems()
     {
-        TeamTypeManifest manifest = LoadManifest();
-
-        Assert.Empty(TeamTypeValidator.Validate(manifest, EmbeddedTypeFiles().Contains));
+        Assert.DoesNotContain(BuiltinManifests.Problems(), static problem => string.Equals(problem.TypeId, "development", StringComparison.Ordinal));
     }
 
     /// <summary>A retro role that names no role of the type is reported as retro-role-unknown, and nothing else is.</summary>
@@ -94,7 +70,7 @@ public sealed class RetroAgentRoleTests
     {
         TeamTypeManifest manifest = LoadManifest() with { RetroRole = "ghost" };
 
-        IReadOnlyList<TeamTypeProblem> problems = TeamTypeValidator.Validate(manifest, EmbeddedTypeFiles().Contains);
+        IReadOnlyList<TeamTypeProblem> problems = TeamTypeValidator.Validate(manifest, static _ => true, static _ => true);
 
         Assert.Equal(["retro-role-unknown"], problems.Select(static p => p.Code).ToList());
     }
@@ -114,15 +90,6 @@ public sealed class RetroAgentRoleTests
         Assert.Equal(ModelTier.Strongest, role.Model?.Tier);
         Assert.Equal(["development-manager"], vendors);
         Assert.Equal([new SkillRef("retrospective", "builtin", "retrospective")], skills);
-    }
-
-    /// <summary>Neither preset hires the Retro agent: it is optional and added by the Human (RT-1).</summary>
-    [Fact]
-    public void RetroAgentRole_IsInNoPreset()
-    {
-        TeamTypeManifest manifest = LoadManifest();
-
-        Assert.All(manifest.Presets, static p => Assert.DoesNotContain(RoleId, p.Roles));
     }
 
     /// <summary>The Retro agent candidate parses with no problems and carries the title Retro Agent.</summary>

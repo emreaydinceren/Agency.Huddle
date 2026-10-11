@@ -36,7 +36,7 @@ public sealed class TeamsPhase4EndToEndTests
 
     private const string TypeId = "development";
 
-    private const string PresetId = "small";
+    private static readonly string[] StartRoles = ["development-manager", "developer", "reviewer", "qa-engineer"];
 
     private const string ManagerRole = "development-manager";
 
@@ -448,10 +448,9 @@ public sealed class TeamsPhase4EndToEndTests
         TeamFile file = new(new VersionedRef(type.Id, type.Version), null, workspace, null, TeamPaths.ProcessFileName, string.Empty);
         Assert.Equal(TeamCreateOutcome.Created, folders.CreateTeam(teamName, file).Outcome);
 
-        PresetSpec preset = type.Presets.First(static each => string.Equals(each.Id, PresetId, StringComparison.Ordinal));
         List<string> used = [.. personas.ListNames()];
         List<CardState> cards = [];
-        foreach (string roleId in preset.Roles.Concat(extraRoles))
+        foreach (string roleId in StartRoles.Concat(extraRoles))
         {
             RoleSpec role = type.Roles.First(each => string.Equals(each.Id, roleId, StringComparison.Ordinal));
             CardState card = CardResolver.Resolve(role, used, context.Answered, context.TierMap, context.AvoidAdapters, services.GetRequiredService<SkillPackStore>().All, context.Connectors);

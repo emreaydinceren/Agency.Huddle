@@ -288,7 +288,7 @@ order decides per Token, independently.
 | `Teams/TeamMemoryGroup.cs` | One Team's Memory snapshot, holding the Team-wide Memory and each Project's Memory separately (Spec §6.2, §7.2). |
 | `Teams/TeamMemorySnapshot.cs` | A Persona's Team Memory snapshot, holding each Team's Memory grouped by Project (Spec §7.2). |
 | `TeamTypes/TeamTypeCatalog.cs` | Loads, validates and serves team types from the embedded `TeamTypes/Builtin/` folder and `{DataDir}/TeamTypes/`; a user folder with the same id replaces the built-in one. A type that fails validation is listed in `Problems`, never thrown. ADR-0038. |
-| `TeamTypes/TeamTypeManifest.cs` | The records a `team-type.json` reads into (roles, coverage, presets, processes, workspace), and `ModelTier` (`Strongest`, `Balanced`, `Fast`). |
+| `TeamTypes/TeamTypeManifest.cs` | The records a `team-type.json` reads into (roles that name a hiring-pool job, coverage, processes, workspace), and `ModelTier` (`Strongest`, `Balanced`, `Fast`). |
 | `TeamTypes/TeamTypeValidator.cs` | Checks a manifest and reports each problem with a code (`TeamTypeProblem`). |
 | `TeamTypes/CandidateTemplate.cs` | One Candidate: a Teammate template read from a type's `candidates/*.md`. |
 | `TeamTypes/SkillPackStore.cs` | Loads Skill packs from the embedded `SkillPacks/*.json` and `{DataDir}/SkillPacks/`. |
@@ -330,7 +330,11 @@ order decides per Token, independently.
 | `Acp/Tools/ProposeRetroChangesTool.cs` (`propose_retro_changes`) | Lets a member holding the `retrospective` Skill propose up to three exact-text changes to the Human. |
 | `Acp/Tools/MarkRetroRowTool.cs` (`mark_retro_row`) | Updates one `Retro register.md` row's status. |
 | `Components/Pages/TeamSetup.razor` | `/teams/new` and `/teams/{Team}/setup`: the New Team from a type form, then the setup screen with the hiring pool, the team check bar and Start Team. |
-| `Components/Teams/HiringPool.razor` | The hiring pool: one card per Candidate, the presets, Custom role and the staged hires. |
+| `Components/Teams/HiringPool.razor` | The hiring pool: one card per job, the two filter clouds, Custom role and the staged hires. |
+| `Components/Shared/ChipCloud.razor` | A cloud of toggle chips (selected first, optional cap with "Show all"), the avatar picker's cloud as a component. |
+| `HiringPool/HiringPoolFile.cs` | The records `hiringpool.json` reads into: `PoolTeamType`, `PoolJob`, `HiringPoolFile`. |
+| `HiringPool/HiringPoolCatalog.cs` | Loads the embedded pool and the user pool (merged by id), serves jobs, team type names and personas; never throws for bad content. |
+| `HiringPool/HiringPoolSearch.cs` | Builds the pool's cards and filters them by the two clouds (types any, tags and skills all). |
 | `Components/Teams/CustomRoleDialog.razor` | The dialog for a custom role: title, stance, consult-when and start-from. |
 | `Components/Teams/ProcessStep.razor` | The Process step on a manager's Teammate card: Use this process, or Start blank. |
 | `Components/Teams/ProcessTab.razor` | The Process tab of a Team page: `Process.md`, with Edit. |

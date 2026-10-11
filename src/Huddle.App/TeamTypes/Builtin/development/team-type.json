@@ -2,122 +2,115 @@
   "schemaVersion": 1,
   "id": "development",
   "version": "1.0.0",
-  "displayName": "Development Team",
   "order": 10,
   "retroRole": "retro-agent",
-  "workspace": { "kind": "repo", "label": "Repository", "required": true },
-  "coverage": [ "generate", "challenge", "verify" ],
-  "presets": [
-    { "id": "small", "label": "Small", "roles": [ "development-manager", "developer", "reviewer", "qa-engineer" ] },
-    { "id": "full", "label": "Full", "roles": [ "development-manager", "tech-lead", "developer", "reviewer", "security-engineer", "qa-engineer", "release-engineer" ] }
+  "workspace": {
+    "kind": "repo",
+    "label": "Repository",
+    "required": true
+  },
+  "coverage": [
+    "generate",
+    "challenge",
+    "verify"
   ],
   "processes": [
-    { "id": "lightweight-flow", "file": "processes/lightweight-flow.md", "default": true },
-    { "id": "spec-driven", "file": "processes/spec-driven.md" },
-    { "id": "sprints", "file": "processes/sprints.md" },
-    { "id": "maintenance", "file": "processes/maintenance.md" }
+    {
+      "id": "lightweight-flow",
+      "file": "processes/lightweight-flow.md",
+      "default": true
+    },
+    {
+      "id": "spec-driven",
+      "file": "processes/spec-driven.md"
+    },
+    {
+      "id": "sprints",
+      "file": "processes/sprints.md"
+    },
+    {
+      "id": "maintenance",
+      "file": "processes/maintenance.md"
+    }
   ],
   "roles": [
     {
       "id": "development-manager",
-      "title": "Development Manager",
-      "candidate": "candidates/development-manager.md",
+      "job": "development-manager",
       "manager": true,
       "required": true,
-      "maxPerTeam": 1,
-      "model": { "tier": "strongest" },
-      "skills": [
-        { "name": "team-management", "source": "builtin", "path": "team-management" }
-      ],
-      "suggestedNames": [ "Joe", "Omar", "Rhea", "Sam" ]
+      "maxPerTeam": 1
     },
     {
       "id": "tech-lead",
-      "title": "Tech Lead",
-      "candidate": "candidates/tech-lead.md",
-      "required": false,
+      "job": "tech-lead",
       "maxPerTeam": 1,
-      "covers": [ "challenge" ],
-      "model": { "tier": "strongest" },
-      "skills": [
-        { "name": "incremental-implementation", "source": "addyosmani/agent-skills", "path": "skills/incremental-implementation" },
-        { "name": "code-review-and-quality", "source": "addyosmani/agent-skills", "path": "skills/code-review-and-quality" }
-      ],
-      "suggestedNames": [ "Kai", "Mei", "Dana", "Ravi" ]
+      "covers": [
+        "challenge"
+      ]
     },
     {
       "id": "developer",
-      "title": "Developer",
-      "candidate": "candidates/developer.md",
+      "job": "developer",
       "required": true,
       "maxPerTeam": 4,
-      "covers": [ "generate" ],
-      "model": { "tier": "balanced" },
-      "packs": [ "msbuild-authoring" ],
-      "skills": [
-        { "name": "test-driven-development", "source": "addyosmani/agent-skills", "path": "skills/test-driven-development" },
-        { "name": "incremental-implementation", "source": "addyosmani/agent-skills", "path": "skills/incremental-implementation" }
-      ],
-      "suggestedNames": [ "Jane", "Priya", "Leo", "Ana" ]
+      "covers": [
+        "generate"
+      ]
     },
     {
       "id": "reviewer",
-      "title": "Reviewer",
-      "candidate": "candidates/reviewer.md",
-      "required": false,
+      "job": "reviewer",
       "maxPerTeam": 2,
-      "covers": [ "challenge" ],
-      "model": { "tier": "balanced", "differentVendorFrom": [ "developer" ] },
-      "packs": [ "code-review-and-quality" ],
-      "skills": [
-        { "name": "code-review-and-quality", "source": "addyosmani/agent-skills", "path": "skills/code-review-and-quality" }
+      "covers": [
+        "challenge"
       ],
-      "suggestedNames": [ "Nadia", "Tomas", "Ines", "Hugo" ]
+      "model": {
+        "differentVendorFrom": [
+          "developer"
+        ]
+      }
     },
     {
       "id": "security-engineer",
-      "title": "Security Engineer",
-      "candidate": "candidates/security-engineer.md",
-      "required": false,
+      "job": "security-engineer",
       "maxPerTeam": 1,
-      "covers": [ "challenge" ],
-      "model": { "tier": "balanced", "differentVendorFrom": [ "developer" ] },
-      "suggestedNames": [ "Vera", "Idris", "Lena", "Marco" ]
+      "covers": [
+        "challenge"
+      ],
+      "model": {
+        "differentVendorFrom": [
+          "developer"
+        ]
+      }
     },
     {
       "id": "qa-engineer",
-      "title": "QA Engineer",
-      "candidate": "candidates/qa-engineer.md",
-      "required": false,
+      "job": "qa-engineer",
       "maxPerTeam": 1,
-      "covers": [ "verify" ],
-      "model": { "tier": "balanced", "differentVendorFrom": [ "developer" ] },
-      "skills": [
-        { "name": "team-management", "source": "builtin", "path": "team-management" }
+      "covers": [
+        "verify"
       ],
-      "suggestedNames": [ "Zoe", "Felix", "Amara", "Otto" ]
+      "model": {
+        "differentVendorFrom": [
+          "developer"
+        ]
+      }
     },
     {
       "id": "release-engineer",
-      "title": "Release Engineer",
-      "candidate": "candidates/release-engineer.md",
-      "required": false,
-      "maxPerTeam": 1,
-      "model": { "tier": "fast" },
-      "packs": [ "msbuild-authoring" ],
-      "suggestedNames": [ "Eli", "Yara", "Bruno", "Mina" ]
+      "job": "release-engineer",
+      "maxPerTeam": 1
     },
     {
       "id": "retro-agent",
-      "title": "Retro Agent",
-      "candidate": "candidates/retro-agent.md",
-      "required": false,
+      "job": "retro-agent",
       "maxPerTeam": 1,
-      "model": { "tier": "strongest", "differentVendorFrom": [ "development-manager" ] },
-      "skills": [
-        { "name": "retrospective", "source": "builtin", "path": "retrospective" }
-      ],
-      "suggestedNames": [ "Wren", "Ada", "Iris", "Cal" ]
+      "model": {
+        "differentVendorFrom": [
+          "development-manager"
+        ]
+      }
     }
   ]
 }

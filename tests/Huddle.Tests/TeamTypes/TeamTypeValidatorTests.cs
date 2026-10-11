@@ -101,15 +101,31 @@ public sealed class TeamTypeValidatorTests
         Assert.Contains("ship", problem.Message);
     }
 
-    /// <summary>A preset that names an unknown role is reported.</summary>
+    /// <summary>A role that names a hiring-pool job the pool does not hold is reported with the job id, and its candidate file is not asked for.</summary>
     [Fact]
-    public void Validate_PresetUnknownRole_ReportsPresetUnknownRole()
+    public void Validate_RoleNamesUnknownJob_ReportsJobUnknown()
     {
-        TeamTypeManifest manifest = Valid() with { Presets = [new PresetSpec("small", "Small", ["lead", "ghost"])] };
+        RoleSpec ghost = new("ghost", "Ghost", "personas/ghost.md", Job: "ghost");
+        TeamTypeManifest manifest = Valid() with { Roles = [Lead(), ghost] };
 
-        TeamTypeProblem problem = Assert.Single(Validate(manifest));
-        Assert.Equal("preset-unknown-role", problem.Code);
-        Assert.Contains("ghost", problem.Message);
+        IReadOnlyList<TeamTypeProblem> problems = TeamTypeValidator.Validate(manifest, static _ => false, static job => job != "ghost");
+
+        Assert.Equal(
+            "The role 'ghost' names the hiring-pool job 'ghost', which the pool does not hold.",
+            Assert.Single(problems, static problem => problem.Code == "job-unknown").Message);
+        Assert.DoesNotContain(problems, static problem => problem.Code == "candidate-missing" && problem.Message.Contains("'ghost'", StringComparison.Ordinal));
+    }
+
+    /// <summary>A role that names a job the pool holds is valid even though the type folder has no candidate file for it.</summary>
+    [Fact]
+    public void Validate_RoleNamesKnownJob_NeedsNoCandidateFile()
+    {
+        RoleSpec dev = new("dev", "Dev", "personas/dev.md", Job: "dev");
+        TeamTypeManifest manifest = Valid() with { Roles = [Lead(), dev] };
+
+        IReadOnlyList<TeamTypeProblem> problems = TeamTypeValidator.Validate(manifest, static path => !path.StartsWith("candidates/", StringComparison.Ordinal), static _ => true);
+
+        Assert.DoesNotContain(problems, static problem => problem.Code is "job-unknown" or "candidate-missing" && problem.Message.Contains("'dev'", StringComparison.Ordinal));
     }
 
     /// <summary>Processes with no default are reported.</summary>
@@ -228,9 +244,6 @@ public sealed class TeamTypeValidatorTests
             MessageOf(Valid() with { Roles = [Lead(), Role("dev") with { Model = new ModelSpec(ModelTier.Fast, ["ghost"]) }] }, "vendor-unknown-role"));
         Assert.Equal("No role covers the coverage step 'ship'.", MessageOf(Valid() with { Coverage = ["ship"] }, "coverage-uncovered"));
         Assert.Equal(
-            "The preset 'small' names the role 'ghost', which is not a role of this type.",
-            MessageOf(Valid() with { Presets = [new PresetSpec("small", "Small", ["ghost"])] }, "preset-unknown-role"));
-        Assert.Equal(
             "Exactly one process must be the default; 0 are.",
             MessageOf(Valid() with { Processes = [new ProcessRef("p", "processes/p.md")] }, "process-default"));
         Assert.Equal(
@@ -277,7 +290,6 @@ public sealed class TeamTypeValidatorTests
         1,
         new WorkspaceSpec(WorkspaceKind.Repo, "Repository", true),
         Coverage: ["generate", "challenge", "verify"],
-        Presets: [new PresetSpec("small", "Small", ["lead", "dev"])],
         Processes: [new ProcessRef("default", "processes/default.md", true)],
         Roles: [Lead(), Role("dev")],
         RetroRole: "lead");

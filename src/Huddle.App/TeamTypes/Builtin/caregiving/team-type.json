@@ -1,0 +1,81 @@
+{
+  "schemaVersion": 1,
+  "id": "caregiving",
+  "version": "1.0.0",
+  "order": 230,
+  "workspace": {
+    "kind": "none",
+    "label": "Care notes",
+    "required": false
+  },
+  "coverage": [
+    "gather",
+    "verify"
+  ],
+  "processes": [
+    {
+      "id": "caregiving-basics",
+      "file": "processes/caregiving-basics.md",
+      "default": true
+    }
+  ],
+  "roles": [
+    {
+      "id": "care-coordinator",
+      "job": "care-coordinator",
+      "manager": true,
+      "required": true,
+      "maxPerTeam": 1,
+      "covers": [
+        "verify"
+      ]
+    },
+    {
+      "id": "health-admin",
+      "job": "health-admin",
+      "required": false,
+      "maxPerTeam": 1,
+      "covers": [
+        "gather"
+      ]
+    },
+    {
+      "id": "benefits-navigator",
+      "job": "benefits-navigator",
+      "required": false,
+      "maxPerTeam": 1,
+      "covers": [
+        "gather"
+      ]
+    },
+    {
+      "id": "schedule-keeper",
+      "job": "schedule-keeper",
+      "required": false,
+      "maxPerTeam": 1,
+      "covers": [
+        "gather"
+      ]
+    },
+    {
+      "id": "inbox-triager",
+      "job": "inbox-triager",
+      "required": false,
+      "maxPerTeam": 1,
+      "covers": [
+        "gather"
+      ]
+    },
+    {
+      "id": "retro-agent",
+      "job": "retro-agent",
+      "maxPerTeam": 1,
+      "model": {
+        "differentVendorFrom": [
+          "care-coordinator"
+        ]
+      }
+    }
+  ],
+  "retroRole": "retro-agent"
+}

@@ -1,0 +1,86 @@
+{
+  "schemaVersion": 1,
+  "id": "support-desk",
+  "version": "1.0.0",
+  "order": 190,
+  "workspace": {
+    "kind": "folder",
+    "label": "Support folder",
+    "required": false
+  },
+  "coverage": [
+    "draft",
+    "verify"
+  ],
+  "processes": [
+    {
+      "id": "support-desk-basics",
+      "file": "processes/support-desk-basics.md",
+      "default": true
+    }
+  ],
+  "roles": [
+    {
+      "id": "support-lead",
+      "job": "support-lead",
+      "manager": true,
+      "required": true,
+      "maxPerTeam": 1,
+      "covers": [
+        "verify"
+      ]
+    },
+    {
+      "id": "customer-support",
+      "job": "customer-support",
+      "required": false,
+      "maxPerTeam": 2,
+      "covers": [
+        "draft"
+      ]
+    },
+    {
+      "id": "knowledge-base-writer",
+      "job": "knowledge-base-writer",
+      "required": false,
+      "maxPerTeam": 1,
+      "covers": [
+        "draft"
+      ]
+    },
+    {
+      "id": "escalation-analyst",
+      "job": "escalation-analyst",
+      "required": false,
+      "maxPerTeam": 1,
+      "covers": [
+        "draft"
+      ]
+    },
+    {
+      "id": "tone-reviewer",
+      "job": "tone-reviewer",
+      "required": false,
+      "maxPerTeam": 1,
+      "covers": [
+        "verify"
+      ],
+      "model": {
+        "differentVendorFrom": [
+          "customer-support"
+        ]
+      }
+    },
+    {
+      "id": "retro-agent",
+      "job": "retro-agent",
+      "maxPerTeam": 1,
+      "model": {
+        "differentVendorFrom": [
+          "support-lead"
+        ]
+      }
+    }
+  ],
+  "retroRole": "retro-agent"
+}

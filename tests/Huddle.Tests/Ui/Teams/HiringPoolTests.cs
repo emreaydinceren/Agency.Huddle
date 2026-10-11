@@ -4,6 +4,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging.Abstractions;
 using Agency.Huddle.App.Acp;
 using Agency.Huddle.App.Components.Teams;
+using Agency.Huddle.App.HiringPool;
 using Agency.Huddle.App.Library;
 using Agency.Huddle.App.TeamTypes;
 using Agency.Huddle.App.Teams;
@@ -15,7 +16,7 @@ namespace Agency.Huddle.Tests.Ui.Teams;
 /// <summary>
 /// Pins Task 32 (HR-3 to HR-6, Screen 1) for <c>HiringPool</c>: one pool card per role with its
 /// suggested name, a click on <c>+</c> staging a hire whose name never repeats, a role at its limit
-/// greyed and disabled, a preset adding its roles in one step while skipping full ones, each staged
+/// greyed and disabled, the type and tag-and-skill clouds filtering the cards, each staged
 /// card showing Ready or Needs setup with its reasons, and the manager card having no remove button.
 /// Drag-and-drop is not offered; the <c>+</c> button is the only way to hire.
 /// </summary>
@@ -33,6 +34,36 @@ public sealed class HiringPoolTests
             { "id": "ops", "title": "Operator", "candidate": "candidates/ops.md", "suggestedNames": ["Orla"] },
             { "id": "writer", "title": "Writer", "candidate": "candidates/writer.md", "suggestedNames": ["Wren"] }
           ] }
+        """;
+
+    private const string PooledAlpha = """
+        { "schemaVersion": 1, "id": "alpha", "version": "1.0.0", "order": 1,
+          "workspace": { "kind": "none", "label": "None", "required": false },
+          "processes": [{ "id": "flow", "file": "processes/flow.md", "default": true }],
+          "roles": [
+            { "id": "lead", "job": "lead", "manager": true, "required": true, "covers": ["plan"] },
+            { "id": "dev", "job": "dev", "maxPerTeam": 2, "covers": ["build"] },
+            { "id": "qa", "job": "qa" }
+          ] }
+        """;
+
+    private const string PooledBeta = """
+        { "schemaVersion": 1, "id": "beta", "version": "1.0.0", "order": 2,
+          "workspace": { "kind": "none", "label": "None", "required": false },
+          "processes": [{ "id": "flow", "file": "processes/flow.md", "default": true }],
+          "roles": [ { "id": "tutor", "job": "tutor", "manager": true, "required": true } ] }
+        """;
+
+    private const string PoolJson = """
+        { "schemaVersion": 1,
+          "teamTypes": [
+            { "id": "alpha", "name": "Alpha", "description": "The first team." },
+            { "id": "beta", "name": "Beta", "description": "The second team." } ],
+          "jobs": [
+            { "id": "lead", "title": "Lead", "tags": [ "planning" ], "teamTypes": [ "alpha" ] },
+            { "id": "dev", "title": "Developer", "tags": [ "code" ], "skills": [ "code-review" ], "teamTypes": [ "alpha" ] },
+            { "id": "qa", "title": "Tester", "tags": [ "verification" ], "teamTypes": [ "alpha" ] },
+            { "id": "tutor", "title": "Tutor", "tags": [ "education" ], "teamTypes": [ "beta" ] } ] }
         """;
 
     private static readonly string[] RoleIds = ["lead", "dev", "qa", "ops", "writer"];
@@ -94,19 +125,58 @@ public sealed class HiringPoolTests
         Assert.True(cut.Find("button.hiring-pool-add-lead").HasAttribute("disabled"));
     }
 
-    /// <summary>A preset adds its roles at once: the four open ones, skipping the manager role that is already hired.</summary>
+    /// <summary>A type with no hiring pool offers no filter clouds and no count: the cards are simply the type's roles.</summary>
     [Fact]
-    public async Task Preset_AddsFourCardsSkippingFullRoles()
+    public async Task NoPool_ShowsNoCloudsAndOneCardPerRole()
     {
         using Fixture fixture = new();
         await using MudBunitContext ctx = fixture.NewContext();
+
         IRenderedComponent<ContainerFragment> cut = Render(ctx);
 
-        await cut.InvokeAsync(() => cut.Find("button.hiring-pool-preset-crew").ClickAsync());
+        Assert.Empty(cut.FindAll(".hiring-pool-filters .chip-cloud"));
+        Assert.Empty(cut.FindAll(".hiring-pool-count"));
+        Assert.Equal(5, cut.FindAll(".hiring-pool-card").Count);
+    }
 
-        Assert.Equal("Full crew", cut.Find("button.hiring-pool-preset-crew").TextContent.Trim());
-        Assert.Equal(["Ada", "Dana", "Quinn", "Orla", "Wren"], cut.FindAll(".hiring-pool-hired .hiring-pool-name").Select(item => item.TextContent.Trim()));
-        Assert.Equal(5, cut.FindAll(".hiring-pool-hired .hiring-pool-name").Count);
+    /// <summary>With a hiring pool the type cloud opens on the Team's own type, and selecting another type shows that type's jobs as well, hireable though the open type does not list them.</summary>
+    [Fact]
+    public async Task TypeCloud_OpensOnOwnType_AndBrowsesOtherTypes()
+    {
+        using Fixture fixture = new(withPool: true);
+        await using MudBunitContext ctx = fixture.NewContext();
+        IRenderedComponent<ContainerFragment> cut = Render(ctx);
+
+        Assert.Equal(["Alpha"], cut.FindAll(".hiring-pool-type-cloud .chip-cloud-chip-selected .chip-cloud-chip-text").Select(item => item.TextContent.Trim()));
+        Assert.Equal(["Lead", "Developer", "Tester"], CardTitles(cut));
+
+        await ClickChipAsync(cut, "hiring-pool-type-cloud", "Beta");
+        Assert.Equal(["Lead", "Developer", "Tester", "Tutor"], CardTitles(cut));
+
+        await ClickChipAsync(cut, "hiring-pool-type-cloud", "Alpha");
+        Assert.Equal(["Tutor"], CardTitles(cut));
+
+        await AddAsync(cut, "tutor");
+        Assert.Equal(2, cut.FindAll(".hiring-pool-hired .hiring-pool-name").Count);
+    }
+
+    /// <summary>The tag and skill cloud keeps only the cards that carry every selected chip, says so when none do, and Clear all brings every job back.</summary>
+    [Fact]
+    public async Task TermCloud_NeedsEverySelectedChip_AndClearAllResets()
+    {
+        using Fixture fixture = new(withPool: true);
+        await using MudBunitContext ctx = fixture.NewContext();
+        IRenderedComponent<ContainerFragment> cut = Render(ctx);
+
+        await ClickChipAsync(cut, "hiring-pool-term-cloud", "code-review");
+        Assert.Equal(["Developer"], CardTitles(cut));
+
+        await ClickChipAsync(cut, "hiring-pool-term-cloud", "verification");
+        Assert.Empty(CardTitles(cut));
+        Assert.Contains("No jobs match", cut.Find(".hiring-pool-empty").TextContent, StringComparison.Ordinal);
+
+        await cut.InvokeAsync(() => cut.Find("button.hiring-pool-clear").ClickAsync());
+        Assert.Equal(["Lead", "Developer", "Tester", "Tutor"], CardTitles(cut));
     }
 
     /// <summary>A staged card that needs setup shows its status and every reason; a Ready card shows Ready.</summary>
@@ -206,6 +276,16 @@ public sealed class HiringPoolTests
         await cut.InvokeAsync(() => cut.Find($"button.hiring-pool-add-{roleId}").ClickAsync());
     }
 
+    private static List<string> CardTitles(IRenderedComponent<ContainerFragment> cut) =>
+        [.. cut.FindAll(".hiring-pool-card .hiring-pool-title").Select(item => item.TextContent.Trim())];
+
+    private static async Task ClickChipAsync(IRenderedComponent<ContainerFragment> cut, string cloud, string text)
+    {
+        AngleSharp.Dom.IElement chip = cut.FindAll($".{cloud} .chip-cloud-chip")
+            .First(item => string.Equals(item.QuerySelector(".chip-cloud-chip-text")?.TextContent.Trim(), text, StringComparison.Ordinal));
+        await cut.InvokeAsync(() => chip.ClickAsync());
+    }
+
     /// <summary>A hire context in which no adapter answered, so every card needs setup.</summary>
     private sealed class NoAdapterContext : IHireContext
     {
@@ -224,14 +304,14 @@ public sealed class HiringPoolTests
     {
         private readonly IHireContext hireContext;
 
-        public Fixture(IHireContext? hireContext = null)
+        public Fixture(IHireContext? hireContext = null, bool withPool = false)
         {
             this.hireContext = hireContext ?? new RoleFixtures.Context();
             this.Dir = new TempDataDir();
             this.Personas = TestTaskStore.CreatePersonaStore(this.Dir);
             Dictionary<string, string> builtins = new(StringComparer.Ordinal)
             {
-                ["alpha/team-type.json"] = Manifest,
+                ["alpha/team-type.json"] = withPool ? PooledAlpha : Manifest,
                 ["alpha/processes/flow.md"] = "# Flow",
             };
             foreach (string id in RoleIds)
@@ -239,7 +319,24 @@ public sealed class HiringPoolTests
                 builtins[$"alpha/candidates/{id}.md"] = "---\ntitle: Role\nconsult_when: work\n---\nYou work.";
             }
 
-            this.Types = new TeamTypeCatalog(this.Dir.Options(), NullLogger<TeamTypeCatalog>.Instance, builtins);
+            if (withPool)
+            {
+                builtins["beta/team-type.json"] = PooledBeta;
+                builtins["beta/processes/flow.md"] = "# Flow";
+                Dictionary<string, string> poolFiles = new(StringComparer.Ordinal) { ["hiringpool.json"] = PoolJson };
+                foreach (string id in new[] { "lead", "dev", "qa", "tutor" })
+                {
+                    poolFiles[$"personas/{id}.md"] = "---\ntitle: 'Role'\n---\nYou work.";
+                }
+
+                HiringPoolCatalog pool = new(this.Dir.Options(), NullLogger<HiringPoolCatalog>.Instance, poolFiles);
+                this.Types = new TeamTypeCatalog(this.Dir.Options(), NullLogger<TeamTypeCatalog>.Instance, builtins, pool);
+            }
+            else
+            {
+                this.Types = new TeamTypeCatalog(this.Dir.Options(), NullLogger<TeamTypeCatalog>.Instance, builtins);
+            }
+
             this.Packs = new SkillPackStore(this.Dir.Options(), NullLogger<SkillPackStore>.Instance, new Dictionary<string, string>(StringComparer.Ordinal));
             this.Folders = new FakeTeamFolders
             {
