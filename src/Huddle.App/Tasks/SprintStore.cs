@@ -1,5 +1,6 @@
 using Microsoft.Extensions.Options;
 using Agency.Huddle.App.Library;
+using Agency.Huddle.App.Watching;
 
 namespace Agency.Huddle.App.Tasks;
 
@@ -40,8 +41,6 @@ internal abstract record SprintCreateResult
 /// </remarks>
 internal sealed class SprintStore : ISprintCatalog, IDisposable
 {
-    private const int WatcherDebounceMilliseconds = 500;
-    private const int WatcherInternalBufferSize = 64 * 1024;
     private const int WatcherReadRetryAttempts = 3;
     private const int WatcherReadRetryDelayMilliseconds = 20;
     private const int MaxSprintNumber = 999_999_999;
@@ -52,8 +51,7 @@ internal sealed class SprintStore : ISprintCatalog, IDisposable
     private readonly TaskEvents events;
     private readonly ILogger<SprintStore> logger;
     private readonly Lock writeGate = new();
-    private readonly FileSystemWatcher watcher;
-    private readonly Timer debounceTimer;
+    private readonly DebouncedFileWatcher watcher;
     private bool disposed;
 
     // The whole parsed file, swapped in as one immutable reference so a reader never takes a lock.
@@ -86,19 +84,7 @@ internal sealed class SprintStore : ISprintCatalog, IDisposable
 
         this.snapshot = this.LoadInitialSnapshot();
 
-        this.debounceTimer = new Timer(this.OnDebounceElapsed, null, Timeout.Infinite, Timeout.Infinite);
-
-        this.watcher = new FileSystemWatcher(directory, FileName)
-        {
-            InternalBufferSize = WatcherInternalBufferSize,
-            NotifyFilter = NotifyFilters.LastWrite | NotifyFilters.FileName,
-        };
-        this.watcher.Changed += this.OnWatcherEvent;
-        this.watcher.Created += this.OnWatcherEvent;
-        this.watcher.Deleted += this.OnWatcherEvent;
-        this.watcher.Renamed += this.OnWatcherEvent;
-        this.watcher.Error += this.OnWatcherError;
-        this.watcher.EnableRaisingEvents = true;
+        this.watcher = new DebouncedFileWatcher(directory, FileName, this.OnWatcherSettled, this.logger, nameof(SprintStore));
 
         this.events.TaskChanged += this.OnTaskChanged;
     }
@@ -302,14 +288,7 @@ internal sealed class SprintStore : ISprintCatalog, IDisposable
         }
 
         this.events.TaskChanged -= this.OnTaskChanged;
-        this.watcher.EnableRaisingEvents = false;
-        this.watcher.Changed -= this.OnWatcherEvent;
-        this.watcher.Created -= this.OnWatcherEvent;
-        this.watcher.Deleted -= this.OnWatcherEvent;
-        this.watcher.Renamed -= this.OnWatcherEvent;
-        this.watcher.Error -= this.OnWatcherError;
         this.watcher.Dispose();
-        this.debounceTimer.Dispose();
     }
 
 
@@ -365,38 +344,12 @@ internal sealed class SprintStore : ISprintCatalog, IDisposable
         }
     }
 
-    private void OnWatcherEvent(object sender, FileSystemEventArgs e) => this.ScheduleRefresh();
-
-    private void OnWatcherError(object sender, ErrorEventArgs e)
-    {
-        lock (this.writeGate)
-        {
-            if (this.disposed)
-            {
-                return;
-            }
-
-            this.logger.LogWarning(
-                e.GetException(),
-                "SprintStore's FileSystemWatcher reported an error (likely a dropped-event buffer overflow); scheduling a refresh.");
-            this.debounceTimer.Change(WatcherDebounceMilliseconds, Timeout.Infinite);
-        }
-    }
-
-    private void ScheduleRefresh()
-    {
-        lock (this.writeGate)
-        {
-            if (this.disposed)
-            {
-                return;
-            }
-
-            this.debounceTimer.Change(WatcherDebounceMilliseconds, Timeout.Infinite);
-        }
-    }
-
-    private void OnDebounceElapsed(object? state)
+    /// <summary>
+    /// Runs once the <see cref="DebouncedFileWatcher"/> settles on an external edit: re-parses the file and
+    /// raises <see cref="SprintsChanged"/> when the content differs. The lock and ordering rules this
+    /// follows are the callback contract documented in <see cref="DebouncedFileWatcher"/>'s remarks.
+    /// </summary>
+    private void OnWatcherSettled()
     {
         bool changed;
         lock (this.writeGate)

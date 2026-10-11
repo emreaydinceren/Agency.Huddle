@@ -43,17 +43,9 @@
                     PersonaEntry? entry = this.FindEntry(member);
                     @if (string.Equals(this.confirmingRemoval, member, StringComparison.Ordinal))
                     {
-                        <div class="team-members-confirm">
-                            <MudText Typo="Typo.body2" Class="team-members-confirm-text">Remove @member from @(this.Team.Name)? @member restarts and loses its conversation memory.</MudText>
-                            @if (this.busy)
-                            {
-                                <MudProgressCircular Size="Size.Small" Indeterminate="true" />
-                            }
-                            <MudButton Size="Size.Small" Variant="Variant.Outlined" Color="Color.Error" Class="team-members-confirm-button"
-                                       Disabled="this.busy" OnClick="@(() => this.ConfirmRemovalAsync(member))">Confirm</MudButton>
-                            <MudButton Size="Size.Small" Variant="Variant.Outlined" Class="team-members-cancel-button"
-                                       Disabled="this.busy" OnClick="this.CancelRemoval">Cancel</MudButton>
-                        </div>
+                        <InlineConfirm Class="team-members-confirm" Busy="this.busy"
+                                       Prompt="@($"Remove {member} from {this.Team.Name}? {member} restarts and loses its conversation memory.")"
+                                       OnConfirm="@(() => this.ConfirmRemovalAsync(member))" OnCancel="this.CancelRemoval" />
                         continue;
                     }
 

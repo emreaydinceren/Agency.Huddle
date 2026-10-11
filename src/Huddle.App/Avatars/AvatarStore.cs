@@ -3,6 +3,7 @@ using System.Text.Json;
 using System.Text.Json.Nodes;
 using Microsoft.Extensions.Options;
 using MudBlazor.Utilities;
+using Agency.Huddle.App.Watching;
 using Agency.Huddle.Contracts;
 
 namespace Agency.Huddle.App.Avatars;
@@ -51,24 +52,6 @@ namespace Agency.Huddle.App.Avatars;
 /// </remarks>
 internal sealed partial class AvatarStore : IDisposable
 {
-    // Same reasoning and the same value as AppearanceStore.WatcherDebounceMilliseconds: an editor's
-    // save commonly fires several filesystem events in a burst, so this coalesces a burst into one
-    // AvatarsChanged per pause in activity rather than thrashing every observer.
-    private const int WatcherDebounceMilliseconds = 500;
-
-    // Same reasoning as AppearanceStore.WatcherInternalBufferSize: FileSystemWatcher drops events
-    // with no exception and no log when its kernel buffer overflows, raising Error instead - see
-    // OnWatcherError. This file is a single small document, so an overflow here is rarer still, but
-    // the fix costs nothing.
-    private const int WatcherInternalBufferSize = 64 * 1024;
-
-    // Same reasoning as AppearanceStore.WatcherReadRetryAttempts/Delay: a watcher event can fire
-    // while a human's editor is still mid-write, so a rebuild retries a few times with a short pause
-    // before giving up and keeping the previous snapshot, rather than flickering back to empty for
-    // the width of a save.
-    private const int WatcherReadRetryAttempts = 3;
-    private const int WatcherReadRetryDelayMilliseconds = 20;
-
     // See AppearanceStore.IndentedJsonOptions's remarks for why this derives from ProtocolJson.Options
     // rather than using it directly - and it matters MORE here than it does for themes. ProtocolJson.Options
     // sets no Encoder, so it inherits JavaScriptEncoder.Default, which escapes every non-ASCII character
@@ -100,8 +83,7 @@ internal sealed partial class AvatarStore : IDisposable
     private readonly string imageDirectory;
     private readonly ILogger<AvatarStore> logger;
     private readonly Lock writeGate = new();
-    private readonly FileSystemWatcher watcher;
-    private readonly Timer debounceTimer;
+    private readonly DebouncedFileWatcher watcher;
     private bool disposed;
 
     // The whole resolved state, swapped in as one immutable reference. Readers never take a lock -
@@ -136,19 +118,7 @@ internal sealed partial class AvatarStore : IDisposable
 
         this.avatars = this.BuildAvatars(this.ReadDocumentFromDisk());
 
-        this.debounceTimer = new Timer(this.OnDebounceElapsed, null, Timeout.Infinite, Timeout.Infinite);
-
-        this.watcher = new FileSystemWatcher(directory, "avatars.json")
-        {
-            InternalBufferSize = WatcherInternalBufferSize,
-            NotifyFilter = NotifyFilters.LastWrite | NotifyFilters.FileName,
-        };
-        this.watcher.Changed += this.OnWatcherEvent;
-        this.watcher.Created += this.OnWatcherEvent;
-        this.watcher.Deleted += this.OnWatcherEvent;
-        this.watcher.Renamed += this.OnWatcherEvent;
-        this.watcher.Error += this.OnWatcherError;
-        this.watcher.EnableRaisingEvents = true;
+        this.watcher = new DebouncedFileWatcher(directory, "avatars.json", this.OnWatcherSettled, this.logger, nameof(AvatarStore));
     }
 
     /// <summary>
@@ -493,15 +463,13 @@ internal sealed partial class AvatarStore : IDisposable
 
     /// <summary>
     /// Rebuilds the resolved snapshot for an external edit to <see cref="path"/>, once the watcher's
-    /// debounce settles. Retries a few times first (see <see cref="WatcherReadRetryAttempts"/>) so an
-    /// in-place write caught mid-save does not flicker back to empty for the width of a save; if every
-    /// attempt still fails to parse, returns <see langword="null"/> so the caller
-    /// (<see cref="OnDebounceElapsed"/>) keeps the previous resolved snapshot untouched. Mirrors
-    /// <c>AppearanceStore.ReadDocumentForWatcherRebuild</c>'s reasoning exactly.
+    /// debounce settles, retrying through <see cref="RetryingFileRead"/> so an in-place write caught
+    /// mid-save does not flicker back to empty for the width of a save. If every attempt fails it keeps
+    /// the previous snapshot by returning <see langword="null"/>.
     /// </summary>
     /// <returns>
     /// The freshly parsed document; an empty object if <see cref="path"/> no longer exists (a
-    /// legitimate delete); or <see langword="null"/> if every parse attempt failed.
+    /// legitimate delete); or <see langword="null"/> if every attempt failed.
     /// </returns>
     private JsonObject? ReadDocumentForWatcherRebuild()
     {
@@ -510,73 +478,39 @@ internal sealed partial class AvatarStore : IDisposable
             return new JsonObject(CaseInsensitiveNodeOptions);
         }
 
-        for (var attempt = 1; attempt <= WatcherReadRetryAttempts; attempt++)
+        return RetryingFileRead.Run(() => ParseDocumentFile(this.path), this.OnReadGaveUp);
+    }
+
+    /// <summary>Logs why <see cref="ReadDocumentForWatcherRebuild"/> gave up and keeps the previous snapshot.</summary>
+    /// <param name="ex">The last failure.</param>
+    private JsonObject? OnReadGaveUp(Exception ex)
+    {
+        if (ex is JsonException)
         {
-            try
-            {
-                return ParseDocumentFile(this.path);
-            }
-            catch (Exception ex) when (attempt < WatcherReadRetryAttempts && (ex is JsonException or IOException or UnauthorizedAccessException))
-            {
-                // JsonException: caught mid-write, the partial text does not parse yet.
-                // IOException / UnauthorizedAccessException: an editor can hold the file open with a sharing lock while it writes.
-                Thread.Sleep(WatcherReadRetryDelayMilliseconds);
-            }
-            catch (JsonException ex)
-            {
-                this.logger.LogWarning(
-                    ex,
-                    "Could not parse avatar overrides file '{Path}' after a filesystem change, even after retrying; keeping the previously resolved avatars rather than reverting to empty over what may be a mid-write race.",
-                    this.path);
-                return null;
-            }
-            catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
-            {
-                this.logger.LogWarning(
-                    ex,
-                    "Could not read avatar overrides file '{Path}' after {Attempts} attempts; keeping the previously resolved avatars.",
-                    this.path,
-                    WatcherReadRetryAttempts);
-                return null;
-            }
+            this.logger.LogWarning(
+                ex,
+                "Could not parse avatar overrides file '{Path}' after a filesystem change, even after retrying; keeping the previously resolved avatars rather than reverting to empty over what may be a mid-write race.",
+                this.path);
+        }
+        else
+        {
+            this.logger.LogWarning(
+                ex,
+                "Could not read avatar overrides file '{Path}' after {Attempts} attempts; keeping the previously resolved avatars.",
+                this.path,
+                RetryingFileRead.Attempts);
         }
 
         return null;
     }
 
-    private void OnWatcherEvent(object sender, FileSystemEventArgs e)
-    {
-        lock (this.writeGate)
-        {
-            if (this.disposed)
-            {
-                return;
-            }
-
-            this.debounceTimer.Change(WatcherDebounceMilliseconds, Timeout.Infinite);
-        }
-    }
-
-    // See AppearanceStore.OnWatcherError's remarks: there is no way to know which change was
-    // dropped, so the only correct response is the same one a normal change takes.
-    private void OnWatcherError(object sender, ErrorEventArgs e)
-    {
-        this.logger.LogWarning(
-            e.GetException(),
-            "AvatarStore's FileSystemWatcher reported an error (likely a dropped-event buffer overflow); scheduling a refresh.");
-
-        lock (this.writeGate)
-        {
-            if (this.disposed)
-            {
-                return;
-            }
-
-            this.debounceTimer.Change(WatcherDebounceMilliseconds, Timeout.Infinite);
-        }
-    }
-
-    private void OnDebounceElapsed(object? state)
+    /// <summary>
+    /// Runs once the <see cref="DebouncedFileWatcher"/> settles on an external edit: rebuilds the
+    /// snapshot and raises <see cref="AvatarsChanged"/>. The lock and ordering rules this follows (rebuild
+    /// and capture the delegate under <see cref="writeGate"/>, raise outside it) are the callback
+    /// contract documented in <see cref="DebouncedFileWatcher"/>'s remarks.
+    /// </summary>
+    private void OnWatcherSettled()
     {
         Action? changed;
         lock (this.writeGate)
@@ -592,8 +526,6 @@ internal sealed partial class AvatarStore : IDisposable
                 return;
             }
 
-            // Rebuilt under the same lock, and BEFORE the delegate capture below - see
-            // AppearanceStore.OnDebounceElapsed's remarks for why this ordering matters.
             this.avatars = this.BuildAvatars(document);
             changed = this.AvatarsChanged;
         }
@@ -614,13 +546,6 @@ internal sealed partial class AvatarStore : IDisposable
             this.disposed = true;
         }
 
-        this.watcher.EnableRaisingEvents = false;
-        this.watcher.Changed -= this.OnWatcherEvent;
-        this.watcher.Created -= this.OnWatcherEvent;
-        this.watcher.Deleted -= this.OnWatcherEvent;
-        this.watcher.Renamed -= this.OnWatcherEvent;
-        this.watcher.Error -= this.OnWatcherError;
         this.watcher.Dispose();
-        this.debounceTimer.Dispose();
     }
 }

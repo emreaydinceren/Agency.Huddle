@@ -41,12 +41,8 @@
                          @oncontextmenu:preventDefault="true">
                         @if (string.Equals(this.confirmingDeleteRoomId, room.Id, StringComparison.Ordinal))
                         {
-                            <div class="room-list-confirm">
-                                <MudText Typo="Typo.body2" Class="flex-1-truncate">Delete "@room.Name"?</MudText>
-                                <MudButton Size="Size.Small" Variant="Variant.Outlined" Color="Color.Error"
-                                           Disabled="this.busy" OnClick="@(() => this.ConfirmDeleteAsync(room.Id))">Confirm</MudButton>
-                                <MudButton Size="Size.Small" Variant="Variant.Outlined" OnClick="this.CancelDelete">Cancel</MudButton>
-                            </div>
+                            <InlineConfirm Class="room-list-confirm" Prompt="@($"Delete \"{room.Name}\"?")" Busy="this.busy"
+                                           OnConfirm="@(() => this.ConfirmDeleteAsync(room.Id))" OnCancel="this.CancelDelete" />
                         }
                         else
                         {

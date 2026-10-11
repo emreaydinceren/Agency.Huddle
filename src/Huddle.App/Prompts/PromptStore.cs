@@ -2,6 +2,7 @@ using System.Collections.Frozen;
 using System.Text.Encodings.Web;
 using System.Text.Json;
 using Microsoft.Extensions.Options;
+using Agency.Huddle.App.Watching;
 using Agency.Huddle.Contracts;
 
 namespace Agency.Huddle.App.Prompts;
@@ -22,7 +23,7 @@ namespace Agency.Huddle.App.Prompts;
 /// stray in-place mutation that silently broke the read side's lock-free assumption. Readers take no lock — a
 /// <see langword="volatile"/> field is all a single-writer/many-readers publish of an immutable
 /// object needs. <see cref="Save"/> and <see cref="Reset"/> are the only writers, and both follow
-/// the same order <see cref="Agency.Huddle.App.Acp.PersonaStore.OnDebounceElapsed"/> documents:
+/// the order <see cref="DebouncedFileWatcher"/>'s remarks document:
 /// write the file, rebuild the snapshot, THEN raise <see cref="PromptsChanged"/> — never the other
 /// order, or an observer that reads this store from inside its own handler would see stale state.
 /// </para>
@@ -43,29 +44,6 @@ namespace Agency.Huddle.App.Prompts;
 /// </remarks>
 internal sealed class PromptStore : IPromptSource, IDisposable
 {
-    // Editors commonly fire several filesystem events per save (a temp-file write plus a rename,
-    // or several partial writes), so raising PromptsChanged straight off FileSystemWatcher would
-    // thrash every observer. Coalesce a burst of events into one PromptsChanged per pause in
-    // activity - the same reasoning and the same value PersonaStore's WatcherDebounceMilliseconds
-    // documents.
-    private const int WatcherDebounceMilliseconds = 500;
-
-    // FileSystemWatcher buffers events in a fixed-size kernel window (8 KB by default) and the OS
-    // drops events outright - no exception, no log, nothing - when it overflows; it raises the
-    // Error event instead. See PersonaStore.WatcherInternalBufferSize's remarks; this file is a
-    // single small document rather than a whole directory tree, so an overflow here is rarer
-    // still, but the fix costs nothing and OnWatcherError is the real backstop either way.
-    private const int WatcherInternalBufferSize = 64 * 1024;
-
-    // A watcher event can fire while an editor is still mid-write (a partial line, an unterminated
-    // object). Retrying a few times with a short pause lets a same-process, in-place write settle
-    // before this gives up - most editors finish writing well within this window. This is deliberately
-    // separate from the constructor's ReadOverridesFromDisk, whose failure has no earlier snapshot to
-    // fall back to and so must default; see ReadOverridesForWatcherRebuild's remarks for why a
-    // watcher-triggered failure is handled differently.
-    private const int WatcherReadRetryAttempts = 3;
-    private const int WatcherReadRetryDelayMilliseconds = 20;
-
     // ProtocolJson.Options writes compact (non-indented) JSON, appropriate for the line-delimited wire
     // protocol it was built for. prompts.json is a file a human is expected to hand-edit, so writing
     // through it here (rather than an unrelated fresh JsonSerializerOptions) keeps every other
@@ -92,8 +70,7 @@ internal sealed class PromptStore : IPromptSource, IDisposable
     private readonly string path;
     private readonly ILogger<PromptStore> logger;
     private readonly Lock writeGate = new();
-    private readonly FileSystemWatcher watcher;
-    private readonly Timer debounceTimer;
+    private readonly DebouncedFileWatcher watcher;
     private bool disposed;
 
     /// <summary>
@@ -137,26 +114,12 @@ internal sealed class PromptStore : IPromptSource, IDisposable
 
         this.resolved = this.ApplyResolved(this.ReadOverridesFromDisk());
 
-        this.debounceTimer = new Timer(this.OnDebounceElapsed, null, Timeout.Infinite, Timeout.Infinite);
-
         // FileSystemWatcher cannot watch a single file directly - it watches a directory and
         // matches Filter against the names inside it. A rename-over save (a temp file written
-        // then File.Move'd/File.Replace'd into place - common in editors and the exact idiom
-        // WriteOverridesToDisk itself could adopt later) arrives as a Renamed event whose Filter
-        // match is against the NEW name, which is "prompts.json" again, so the plain Filter below
-        // is enough to catch it without PersonaStore's extra directory-rename logic - there are no
-        // subdirectories here to worry about.
-        this.watcher = new FileSystemWatcher(directory, "prompts.json")
-        {
-            InternalBufferSize = WatcherInternalBufferSize,
-            NotifyFilter = NotifyFilters.LastWrite | NotifyFilters.FileName,
-        };
-        this.watcher.Changed += this.OnWatcherEvent;
-        this.watcher.Created += this.OnWatcherEvent;
-        this.watcher.Deleted += this.OnWatcherEvent;
-        this.watcher.Renamed += this.OnWatcherEvent;
-        this.watcher.Error += this.OnWatcherError;
-        this.watcher.EnableRaisingEvents = true;
+        // then File.Move'd/File.Replace'd into place - common in editors) arrives as a Renamed
+        // event whose Filter match is against the NEW name, which is "prompts.json" again, so the
+        // plain filter below is enough to catch it - there are no subdirectories here to worry about.
+        this.watcher = new DebouncedFileWatcher(directory, "prompts.json", this.OnWatcherSettled, this.logger, nameof(PromptStore));
     }
 
     /// <summary>
@@ -169,7 +132,7 @@ internal sealed class PromptStore : IPromptSource, IDisposable
     /// <remarks>
     /// An external edit made while <see cref="Save"/>/<see cref="SaveMany"/>/<see cref="Reset"/> is
     /// also writing will make the watcher fire a second time roughly
-    /// <see cref="WatcherDebounceMilliseconds"/> later, raising this event again for what looks
+    /// <see cref="DebouncedFileWatcher.DebounceMilliseconds"/> later, raising this event again for what looks
     /// like the same change. That second raise is deliberately NOT suppressed: a rebuild is
     /// idempotent (it reads the same bytes just written) and the Settings page rebuilds its view
     /// from this store plus its own pending edits, so the redundant raise costs nothing. A
@@ -491,10 +454,10 @@ internal sealed class PromptStore : IPromptSource, IDisposable
     /// for every observer of <see cref="PromptsChanged"/>, not a real edit.
     /// </para>
     /// <para>
-    /// So this retries a few times with a short pause first (see <see cref="WatcherReadRetryAttempts"/>),
+    /// So this retries a few times with a short pause first (see <see cref="RetryingFileRead.Attempts"/>),
     /// which is enough for an in-place write to settle in practice. If the file still will not parse
     /// after every attempt, this returns <see langword="null"/> rather than an empty dictionary: the
-    /// caller (<see cref="OnDebounceElapsed"/>) then keeps the PREVIOUS resolved snapshot untouched
+    /// caller (<see cref="OnWatcherSettled"/>) then keeps the PREVIOUS resolved snapshot untouched
     /// instead of wiping every override - a genuinely malformed hand-edit is a real possibility, but the
     /// user's last-good overrides staying live until they fix it (or until a later event, such as the
     /// file finally settling, retries this again) is a far better failure mode than an editing session's
@@ -513,85 +476,43 @@ internal sealed class PromptStore : IPromptSource, IDisposable
             return new Dictionary<string, string>(StringComparer.Ordinal);
         }
 
-        for (var attempt = 1; attempt <= WatcherReadRetryAttempts; attempt++)
+        return RetryingFileRead.Run(() => ParseOverridesFile(this.path), this.OnReadGaveUp);
+    }
+
+    /// <summary>Logs why <see cref="ReadOverridesForWatcherRebuild"/> gave up and keeps the previous snapshot.</summary>
+    /// <param name="ex">The last failure.</param>
+    private Dictionary<string, string>? OnReadGaveUp(Exception ex)
+    {
+        if (ex is JsonException)
         {
-            try
-            {
-                return ParseOverridesFile(this.path);
-            }
-            catch (Exception ex) when (attempt < WatcherReadRetryAttempts && (ex is JsonException or IOException or UnauthorizedAccessException))
-            {
-                // JsonException: caught mid-write, the partial text does not parse yet.
-                // IOException / UnauthorizedAccessException: an editor can hold the file open with a sharing lock while it writes.
-                // Both are plausible transient states for a file a human is actively saving; a short
-                // pause gives the write time to finish before the next attempt.
-                Thread.Sleep(WatcherReadRetryDelayMilliseconds);
-            }
-            catch (JsonException ex)
-            {
-                this.logger.LogWarning(
-                    ex,
-                    "Could not parse prompt overrides file '{Path}' after a filesystem change, even after retrying; keeping the previously resolved prompt text rather than reverting every prompt to its catalog default over what may be a mid-write race.",
-                    this.path);
-                return null;
-            }
-            catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
-            {
-                this.logger.LogWarning(
-                    ex,
-                    "Could not read prompt overrides file '{Path}' after {Attempts} attempts; keeping the previously resolved prompt text.",
-                    this.path,
-                    WatcherReadRetryAttempts);
-                return null;
-            }
+            this.logger.LogWarning(
+                ex,
+                "Could not parse prompt overrides file '{Path}' after a filesystem change, even after retrying; keeping the previously resolved prompt text rather than reverting every prompt to its catalog default over what may be a mid-write race.",
+                this.path);
+        }
+        else
+        {
+            this.logger.LogWarning(
+                ex,
+                "Could not read prompt overrides file '{Path}' after {Attempts} attempts; keeping the previously resolved prompt text.",
+                this.path,
+                RetryingFileRead.Attempts);
         }
 
         return null;
     }
 
-    private void OnWatcherEvent(object sender, FileSystemEventArgs e)
-    {
-        lock (this.writeGate)
-        {
-            if (this.disposed)
-            {
-                return;
-            }
-
-            this.debounceTimer.Change(WatcherDebounceMilliseconds, Timeout.Infinite);
-        }
-    }
-
-    // FileSystemWatcher raises this instead of a normal change event when its internal buffer
-    // overflows and the OS drops events - see WatcherInternalBufferSize's remarks. There is no way
-    // to know which change was dropped, so the only correct response is the same one a normal
-    // change takes: schedule a refresh on the existing debounce path rather than trust whatever the
-    // watcher's view of the world now is.
-    private void OnWatcherError(object sender, ErrorEventArgs e)
-    {
-        this.logger.LogWarning(
-            e.GetException(),
-            "PromptStore's FileSystemWatcher reported an error (likely a dropped-event buffer overflow); scheduling a refresh.");
-
-        lock (this.writeGate)
-        {
-            if (this.disposed)
-            {
-                return;
-            }
-
-            this.debounceTimer.Change(WatcherDebounceMilliseconds, Timeout.Infinite);
-        }
-    }
-
-    private void OnDebounceElapsed(object? state)
+    /// <summary>
+    /// Runs once the <see cref="DebouncedFileWatcher"/> settles on an external edit: rebuilds the
+    /// snapshot and raises <see cref="PromptsChanged"/>. The lock and ordering rules this follows (rebuild
+    /// and capture the delegate under <see cref="writeGate"/>, raise outside it) are the callback
+    /// contract documented in <see cref="DebouncedFileWatcher"/>'s remarks.
+    /// </summary>
+    private void OnWatcherSettled()
     {
         Action? changed;
         lock (this.writeGate)
         {
-            // Checked and captured under the same lock Dispose() takes, so a Dispose() racing this
-            // callback either finishes first (this returns without capturing anything) or this
-            // captures the delegate before Dispose() can flip the flag - never both.
             if (this.disposed)
             {
                 return;
@@ -600,16 +521,9 @@ internal sealed class PromptStore : IPromptSource, IDisposable
             var overrides = this.ReadOverridesForWatcherRebuild();
             if (overrides is null)
             {
-                // See ReadOverridesForWatcherRebuild's remarks: every parse attempt failed, so the
-                // existing resolved snapshot is left exactly as it was and nothing is raised - there
-                // is nothing new to tell an observer about.
                 return;
             }
 
-            // Rebuilt under the same lock, and BEFORE the delegate capture below: an observer reading
-            // this store from inside its own PromptsChanged handler must see the state the filesystem
-            // change just produced, not whatever was true before it - the same ordering
-            // PersonaStore.OnDebounceElapsed documents and depends on.
             this.resolved = this.ApplyResolved(overrides);
             changed = this.PromptsChanged;
         }
@@ -630,13 +544,6 @@ internal sealed class PromptStore : IPromptSource, IDisposable
             this.disposed = true;
         }
 
-        this.watcher.EnableRaisingEvents = false;
-        this.watcher.Changed -= this.OnWatcherEvent;
-        this.watcher.Created -= this.OnWatcherEvent;
-        this.watcher.Deleted -= this.OnWatcherEvent;
-        this.watcher.Renamed -= this.OnWatcherEvent;
-        this.watcher.Error -= this.OnWatcherError;
         this.watcher.Dispose();
-        this.debounceTimer.Dispose();
     }
 }

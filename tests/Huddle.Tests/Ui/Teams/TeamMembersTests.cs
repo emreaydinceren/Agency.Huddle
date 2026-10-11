@@ -51,16 +51,16 @@ public sealed class TeamMembersTests
     private const string ConfirmBox = ".team-members-confirm";
 
     /// <summary>The sentence inside the inline confirm.</summary>
-    private const string ConfirmText = ".team-members-confirm .team-members-confirm-text";
+    private const string ConfirmText = ".team-members-confirm .inline-confirm-prompt";
 
     /// <summary>Both buttons of the inline confirm.</summary>
     private const string ConfirmButtons = ".team-members-confirm button";
 
     /// <summary>The inline confirm's Confirm button.</summary>
-    private const string ConfirmButton = ".team-members-confirm button.team-members-confirm-button";
+    private const string ConfirmButton = ".team-members-confirm button.inline-confirm-confirm";
 
     /// <summary>The inline confirm's Cancel button.</summary>
-    private const string CancelButton = ".team-members-confirm button.team-members-cancel-button";
+    private const string CancelButton = ".team-members-confirm button.inline-confirm-cancel";
 
     /// <summary>The progress indicator inside the inline confirm.</summary>
     private const string ConfirmProgress = ".team-members-confirm .mud-progress-circular";
