@@ -44,7 +44,7 @@ implements, so an implementer never re-decides a settled point.
 
 | Deliverable | Model | Spec sections | Tests it owns |
 | --- | --- | --- | --- |
-| D0 ADR-0050: search keeps no index of its own | Sonnet | §13 D-21, §15 OP-2, OP-12 | none |
+| D0 ADR-0051: search keeps no index of its own | Sonnet | §13 D-21, §15 OP-2, OP-12 | none |
 | D1 Contracts, options and text helpers | Haiku | §7.1, §7.2 (constants), §8.3 (content gate), §10 | GS-T3, helper tests |
 | D2 Parser, ranker, open Team and hit links | Haiku | §6.2, §7.2, §7.4, §9 table | GS-T1, GS-T2 |
 | D3 In-memory providers: Teams, Teammates, Tasks | Haiku | §8 (intro), §8.1, §8.2, §8.4, §7.5 | GS-T5, GS-T7 |
@@ -324,7 +324,7 @@ the decisions; none is marked to revisit except OP-2.
 | OP-9 | A Teammate hit opens the card dialog directly; no `?name=` | T2.4, T13.5, T11.5 |
 | OP-10 | Persona files excluded from the Library group | T6.2 |
 | OP-11 | Enter navigates the focused Tab in place; Ctrl+Enter opens a permanent Tab or focuses it when open | T11.5 |
-| OP-12 | Write ADR-0050 only; ADR-0046's addendum already records the Top Bar | D0 |
+| OP-12 | Write ADR-0051 only; ADR-0046's addendum already records the Top Bar | D0 |
 | OP-13 | Glossary entries for Global Search, Top Bar, Filter, Card | T14.4 |
 | OP-14 | `?` out of V1; `>` reserved | T2.1 |
 | OP-15 | The strings of spec §6.3 and §6.6, decided, used verbatim | T8.3, T9.2, T11.1 |
@@ -345,7 +345,7 @@ tasks, pitfalls and size. Each task names the pattern file to copy, the test nam
 `///` summary is the sentence after the name) and how to verify it. The handoff template in
 [§6](#6-handoff-prompt-template) wraps one deliverable into a prompt.
 
-### D0 ADR-0050: search keeps no index of its own
+### D0 ADR-0051: search keeps no index of its own
 
 - **Model:** Sonnet. An ADR states a trade and its consequences in the repo's voice; that is
   judgement.
@@ -357,10 +357,10 @@ tasks, pitfalls and size. Each task names the pattern file to copy, the test nam
 - **Read:** `docs/adr/0049-a-hiring-pool-holds-the-jobs-and-a-team-type-lists-them.md` (the
   template: front matter, *The defect*, *The decision*); spec §4 (the index row), §8.3, §10, §13
   D-21, §15 OP-2, OP-18; `src/Huddle.App/Library/WikiLinkIndex.cs:1-30`.
-- **Touch:** create `docs/adr/0050-search-keeps-no-index-of-its-own.md`; edit `docs/Index.md` §4;
+- **Touch:** create `docs/adr/0051-search-keeps-no-index-of-its-own.md`; edit `docs/Index.md` §4;
   edit the spec's header line.
 
-#### T0.1 Write ADR-0050
+#### T0.1 Write ADR-0051
 
 Say what is rejected (an index of names or text, and its build and invalidation), why re-reading is
 acceptable at Huddle's sizes (D-21), and what bounds it: `Search:MaxVisitedEntries` per root walk,
@@ -373,7 +373,7 @@ trailing whitespace.
 #### T0.2 Index and spec header
 
 Add the row to `docs/Index.md` §4 in the existing style (one sentence, status). Change the spec
-header's "ADR-0050 … (approved, to be written by the plan's D0)" to a link to the file. Run
+header's "ADR-0051 … (approved, to be written by the plan's D0)" to a link to the file. Run
 `pwsh -NoProfile -File agents/scripts/Check-DocIndex.ps1`; it must exit 0.
 
 - **Pitfalls:** do not touch ADR-0046 or the Tabs spec; they are current.
@@ -1445,7 +1445,7 @@ and bar, and `Components/Shared/TeammateCardOpener.cs`. `Huddle.EngineeringGuide
 *Designed, not built.* from the four `Search:` rows (§10); keep the OP-2 note on `MaxVisitedEntries`
 until the owner confirms. `known-limits.md`: the jump needs the whole Transcript in the DOM (§9.1
 last paragraph); the `Ctrl+K` result in Edge (§5.2 warning), from D12's report. Spec header:
-`**Status:** Built <date>`. `docs/Index.md` §2 row: status *Built*, ADR-0050, manual tests
+`**Status:** Built <date>`. `docs/Index.md` §2 row: status *Built*, ADR-0051, manual tests
 `global-search`.
 
 #### T14.4 Glossary entries (OP-13)
@@ -1608,8 +1608,8 @@ Ids are `<deliverable>.<task>`, the form `Set-Tracker.ps1` updates:
 
 | **Deliverable / Task** | **Model** | **Depends on** | **Active** | **In Progress** | **Done** |
 | --- | --- | --- | --- | --- | --- |
-| **D0 ADR-0050: search keeps no index of its own** | Sonnet | none | | | |
-| 0.1 Write ADR-0050 (S) | Sonnet | none | | | |
+| **D0 ADR-0051: search keeps no index of its own** | Sonnet | none | | | |
+| 0.1 Write ADR-0051 (S) | Sonnet | none | | | |
 | 0.2 Index and spec header (S) | Sonnet | 0.1 | | | |
 | **D1 Contracts, options and text helpers** | Haiku | none | | | |
 | 1.1 Enums and records (H) | Haiku | none | | | |
@@ -1704,7 +1704,7 @@ Ids are `<deliverable>.<task>`, the form `Set-Tracker.ps1` updates:
 - [ ] GLOBALSEARCH-01 to 10 run in Chrome and Edge at 90%, results in `tracker.md`; GS-M10's height
   measured at 80% of the window.
 - [ ] `Ctrl+K` in Edge recorded (GS-M2); `known-limits.md` updated if it fails (D-4).
-- [ ] ADR-0050 written; glossary entries added; user guide, code map, engineering guide (*designed*
+- [ ] ADR-0051 written; glossary entries added; user guide, code map, engineering guide (*designed*
   marks removed), known limits and Index updated; `Check-DocIndex.ps1` and `Check-ManualTests.ps1`
   exit 0.
 - [ ] OP-2 confirmed by the owner, or listed in the PR body as the one assumption.

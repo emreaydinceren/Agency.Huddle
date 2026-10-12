@@ -414,6 +414,17 @@ Global Search — the search box in the Top Bar, its dropdown and the providers 
 | `Components/Search/RoomSearchCard.razor` | The card for a Room hit, one per Room. |
 | `Components/Shared/TeammateCardOpener.cs` | Opens the Teammate card the same way from search and from the Teammates page. |
 
+Needs You — the sidebar card of Rooms waiting on the Human, `docs/Huddle.NeedsYou-Specifications.md`. Paths are relative to `src/Huddle.App`:
+
+| Path | Responsibility |
+| --- | --- |
+| `NeedsYou/NeedsYouReason.cs`, `NeedsYouEntry.cs` | The four reasons (`Mention`, `Question`, `Form`, `Budget`) as flags, and the record the tracker reports per Room. |
+| `NeedsYou/NeedsYouRule.cs` | The pure rule for an unanswered Mention, shared by the live tracker and the startup scan. |
+| `NeedsYou/NeedsYouTracker.cs` | Singleton, in memory, keyed by Room id. Observes `RoomEvents` and the Question and Form stores; owns the Mention and Budget reasons, mirrors the other two, and holds Dismiss. |
+| `NeedsYou/NeedsYouStartupScan.cs` | Hosted service that reads the last 50 Messages of every Room once at start and seeds the tracker's Mention reason. |
+| `Components/NeedsYou/NeedsYouList.razor` | The rows, with no chrome and no idea where it is placed; reports its count through `CountChanged`. |
+| `Components/NeedsYou/NeedsYouCard.razor` | The left sidebar's card around the list; hidden while the count is 0. Placed in `MainLayout.razor` above `RoomList`. |
+| `Data/IChatStore.cs`, `FileChatStore.cs` | `ReadTailAsync`: the last N Messages, read from the end of the Transcript file. |
 Tabs — the open pages in the strip above the content, `docs/Huddle.Tabs-Specifications.md`. Paths are relative to `src/Huddle.App`:
 
 | Path | Responsibility |

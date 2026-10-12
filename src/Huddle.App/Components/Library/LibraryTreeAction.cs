@@ -11,4 +11,8 @@ namespace Agency.Huddle.App.Components.Library;
 /// For <see cref="LibraryTreeActionKind.NewNote"/> raised from a missing wikilink's create offer,
 /// the note name to create; <see langword="null"/> otherwise.
 /// </param>
-public sealed record LibraryTreeAction(LibraryTreeActionKind Kind, LibraryPath Path, string? Name);
+/// <param name="Destination">
+/// For <see cref="LibraryTreeActionKind.MoveInto"/>, the folder <paramref name="Path"/> was dropped onto;
+/// <see langword="null"/> otherwise.
+/// </param>
+public sealed record LibraryTreeAction(LibraryTreeActionKind Kind, LibraryPath Path, string? Name, LibraryPath? Destination = null);

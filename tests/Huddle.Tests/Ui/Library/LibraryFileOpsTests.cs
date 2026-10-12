@@ -297,6 +297,98 @@ public sealed class LibraryFileOpsTests : IDisposable
         Assert.Empty(changes);
     }
 
+    /// <summary>A drop (<see cref="LibraryTreeActionKind.MoveInto"/>) moves the item into the folder with no dialog and raises <c>OnChanged</c> with the old and new paths.</summary>
+    [Fact]
+    public async Task MoveInto_MovesTheItemAndRaisesOnChanged()
+    {
+        string root = this.fixture.LibraryFixture.CreatePinnedRoot("Notes");
+        Directory.CreateDirectory(Path.Combine(root, "Sub"));
+        File.WriteAllText(Path.Combine(root, "A.md"), "a");
+        LibraryPath item = this.fixture.LibraryFixture.Resolve(root, "A.md");
+        LibraryPath destination = this.fixture.LibraryFixture.Resolve(root, "Sub");
+        List<LibraryChange> changes = [];
+
+        await using MudBunitContext ctx = this.fixture.NewContext();
+        IRenderedComponent<ContainerFragment> cut = RenderOps(ctx, onChanged: EventCallback.Factory.Create<LibraryChange>(this, c => changes.Add(c)));
+        LibraryFileOps ops = cut.FindComponent<LibraryFileOps>().Instance;
+
+        await cut.InvokeAsync(() => ops.HandleAsync(new LibraryTreeAction(LibraryTreeActionKind.MoveInto, item, null, destination)));
+
+        Assert.False(File.Exists(Path.Combine(root, "A.md")));
+        Assert.True(File.Exists(Path.Combine(root, "Sub", "A.md")));
+        LibraryChange change = Assert.Single(changes);
+        Assert.Equal("A.md", change.OldPath?.RelativePath);
+        Assert.Equal("Sub/A.md", change.NewPath?.RelativePath);
+    }
+
+    /// <summary>A drop whose <c>BeforeChangeAsync</c> answers <see langword="false"/> touches nothing and raises no <c>OnChanged</c>.</summary>
+    [Fact]
+    public async Task MoveInto_BeforeChangeAsyncReturnsFalse_AbortsNothingTouched()
+    {
+        string root = this.fixture.LibraryFixture.CreatePinnedRoot("Notes");
+        Directory.CreateDirectory(Path.Combine(root, "Sub"));
+        File.WriteAllText(Path.Combine(root, "A.md"), "a");
+        LibraryPath item = this.fixture.LibraryFixture.Resolve(root, "A.md");
+        LibraryPath destination = this.fixture.LibraryFixture.Resolve(root, "Sub");
+        List<LibraryChange> changes = [];
+
+        await using MudBunitContext ctx = this.fixture.NewContext();
+        IRenderedComponent<ContainerFragment> cut = RenderOps(
+            ctx,
+            onChanged: EventCallback.Factory.Create<LibraryChange>(this, c => changes.Add(c)),
+            beforeChangeAsync: _ => Task.FromResult(false));
+        LibraryFileOps ops = cut.FindComponent<LibraryFileOps>().Instance;
+
+        await cut.InvokeAsync(() => ops.HandleAsync(new LibraryTreeAction(LibraryTreeActionKind.MoveInto, item, null, destination)));
+
+        Assert.True(File.Exists(Path.Combine(root, "A.md")));
+        Assert.Empty(changes);
+    }
+
+    /// <summary>A drop the service refuses (the name is already taken in the folder) changes nothing on disk and raises no <c>OnChanged</c>.</summary>
+    [Fact]
+    public async Task MoveInto_NameAlreadyTaken_ChangesNothing()
+    {
+        string root = this.fixture.LibraryFixture.CreatePinnedRoot("Notes");
+        Directory.CreateDirectory(Path.Combine(root, "Sub"));
+        File.WriteAllText(Path.Combine(root, "A.md"), "outer");
+        File.WriteAllText(Path.Combine(root, "Sub", "A.md"), "inner");
+        LibraryPath item = this.fixture.LibraryFixture.Resolve(root, "A.md");
+        LibraryPath destination = this.fixture.LibraryFixture.Resolve(root, "Sub");
+        List<LibraryChange> changes = [];
+
+        await using MudBunitContext ctx = this.fixture.NewContext();
+        IRenderedComponent<ContainerFragment> cut = RenderOps(ctx, onChanged: EventCallback.Factory.Create<LibraryChange>(this, c => changes.Add(c)));
+        LibraryFileOps ops = cut.FindComponent<LibraryFileOps>().Instance;
+
+        await cut.InvokeAsync(() => ops.HandleAsync(new LibraryTreeAction(LibraryTreeActionKind.MoveInto, item, null, destination)));
+
+        Assert.Equal("outer", File.ReadAllText(Path.Combine(root, "A.md")));
+        Assert.Equal("inner", File.ReadAllText(Path.Combine(root, "Sub", "A.md")));
+        Assert.Empty(changes);
+    }
+
+    /// <summary>New Document raised on a FILE row creates the note beside it, in the file's own folder.</summary>
+    [Fact]
+    public async Task NewNote_OnAFile_CreatesBesideIt()
+    {
+        string root = this.fixture.LibraryFixture.CreatePinnedRoot("Notes");
+        Directory.CreateDirectory(Path.Combine(root, "Sub"));
+        File.WriteAllText(Path.Combine(root, "Sub", "A.md"), "a");
+        LibraryPath file = this.fixture.LibraryFixture.Resolve(root, "Sub/A.md");
+
+        await using MudBunitContext ctx = this.fixture.NewContext();
+        IRenderedComponent<ContainerFragment> cut = RenderOps(ctx);
+        LibraryFileOps ops = cut.FindComponent<LibraryFileOps>().Instance;
+
+        _ = cut.InvokeAsync(() => ops.HandleAsync(new LibraryTreeAction(LibraryTreeActionKind.NewNote, file, null)));
+        cut.WaitForAssertion(() => Assert.NotEmpty(cut.FindAll(".mud-dialog-title")));
+        await cut.InvokeAsync(() => cut.Find(".library-file-ops-name-field input").ChangeAsync("B"));
+        await cut.InvokeAsync(() => cut.FindAll(".mud-dialog-actions button")[0].ClickAsync());
+
+        cut.WaitForAssertion(() => Assert.True(File.Exists(Path.Combine(root, "Sub", "B.md"))), TimeSpan.FromSeconds(5));
+    }
+
     /// <summary>[12.5b] Delete asks the settled confirm text through <c>ShowMessageBoxAsync</c>, and confirming
     /// sends the item to the Recycle Bin through the real service (Spec §6.4 <c>RecycleAsync</c>; Settled texts).</summary>
     [Fact]
@@ -322,6 +414,26 @@ public sealed class LibraryFileOpsTests : IDisposable
         await cut.InvokeAsync(() => cut.FindAll(".mud-dialog-actions button").Single(b => string.Equals(b.TextContent.Trim(), "Delete", StringComparison.Ordinal)).ClickAsync());
         cut.WaitForAssertion(() => Assert.NotEmpty(this.fixture.LibraryFixture.RecycleBin.Sent), TimeSpan.FromSeconds(5));
         Assert.Equal([item.FullPath], this.fixture.LibraryFixture.RecycleBin.Sent);
+    }
+
+    /// <summary>The Delete confirm button is the theme's filled error button (red); Cancel is not.</summary>
+    [Fact]
+    public async Task Delete_ConfirmButton_IsTheDestructiveButton()
+    {
+        string root = this.fixture.LibraryFixture.CreatePinnedRoot("Notes");
+        File.WriteAllText(Path.Combine(root, "Gone.md"), "body");
+        LibraryPath item = this.fixture.LibraryFixture.Resolve(root, "Gone.md");
+
+        await using MudBunitContext ctx = this.fixture.NewContext();
+        IRenderedComponent<ContainerFragment> cut = RenderOps(ctx);
+        LibraryFileOps ops = cut.FindComponent<LibraryFileOps>().Instance;
+
+        _ = cut.InvokeAsync(() => ops.HandleAsync(new LibraryTreeAction(LibraryTreeActionKind.Delete, item, null)));
+        cut.WaitForAssertion(() => Assert.NotEmpty(cut.FindAll(".mud-dialog-actions button")));
+
+        IReadOnlyList<AngleSharp.Dom.IElement> buttons = cut.FindAll(".mud-dialog-actions button");
+        Assert.False(buttons.Single(b => b.TextContent.Trim() == "Cancel").ClassList.Contains("mud-button-filled-error"));
+        Assert.True(buttons.Single(b => b.TextContent.Trim() == "Delete").ClassList.Contains("mud-button-filled-error"));
     }
 
     /// <summary>[12.5b] When the Recycle Bin is unavailable, the refusal shows through <c>ISnackbar</c> with the

@@ -61,7 +61,9 @@ public sealed class LibraryTreeTests : IDisposable
         Assert.Equal(
             ["Sub", "a.md"],
             cut.FindAll("span.library-tree-node-name").Select(e => e.TextContent.Trim()));
-        Assert.Empty(cut.FindAll($"button[aria-label='Actions for {notesScope.Root.DisplayName}']"));
+        Assert.DoesNotContain(
+            cut.FindAll("span.library-tree-node-name"),
+            e => string.Equals(e.TextContent.Trim(), notesScope.Root.DisplayName, StringComparison.Ordinal));
     }
 
     /// <summary>Flattened, a Refresh (RootsChanged) reloads the scope's own children as the new top-level nodes and keeps a still-expanded child's own children loaded.</summary>
@@ -108,9 +110,9 @@ public sealed class LibraryTreeTests : IDisposable
             cut.FindAll("span.library-tree-node-name").Select(e => e.TextContent.Trim()));
     }
 
-    /// <summary>A file's context menu lists every <see cref="LibraryTreeActionKind"/>, none of them disabled.</summary>
+    /// <summary>A file's context menu is New Document, New Folder, Copy Path, Rename, Delete, in that order, with an icon on each and a divider ahead of Copy Path and Rename.</summary>
     [Fact]
-    public async Task Menu_OnFile_HasEveryAction()
+    public async Task Menu_OnFile_HasTheSettledActions()
     {
         string notesPath = this.fixture.LibraryFixture.CreatePinnedRoot("Notes");
         File.WriteAllText(Path.Combine(notesPath, "a.md"), "hello");
@@ -122,12 +124,110 @@ public sealed class LibraryTreeTests : IDisposable
         await cut.InvokeAsync(() => cut.Find("div.mud-treeview-item-arrow button").ClickAsync());
         cut.WaitForAssertion(() => Assert.Equal(2, cut.FindAll("span.library-tree-node-name").Count));
 
-        await cut.InvokeAsync(() => cut.Find($"button.library-tree-actions-button[aria-label='Actions for {filePath.RelativePath}']").ClickAsync());
+        await cut.InvokeAsync(() => NodeRow(cut, filePath.RelativePath).ContextMenuAsync());
 
         Assert.Equal(
-            ["New note", "New folder", "Rename", "Move", "Copy path", "Open in default app", "Delete"],
+            ["New Document", "New Folder", "Copy Path", "Rename", "Delete"],
             cut.FindAll("div.mud-menu-item div.library-tree-menu-label").Select(e => e.TextContent.Trim()));
+        Assert.Equal(5, cut.FindAll("div.mud-menu-item svg").Count);
+        Assert.Equal(2, cut.FindAll("div.mud-popover-open hr.mud-divider").Count);
     }
+
+    /// <summary>Dropping a file on a folder row raises <see cref="LibraryTreeActionKind.MoveInto"/> carrying the file and the folder.</summary>
+    [Fact]
+    public async Task Drop_FileOnFolder_RaisesMoveInto()
+    {
+        string notesPath = this.fixture.LibraryFixture.CreatePinnedRoot("Notes");
+        Directory.CreateDirectory(Path.Combine(notesPath, "Sub"));
+        File.WriteAllText(Path.Combine(notesPath, "a.md"), "hello");
+        LibraryPath notesScope = this.fixture.LibraryFixture.Resolve(notesPath, string.Empty);
+        List<LibraryTreeAction> actions = [];
+
+        await using MudBunitContext ctx = this.fixture.NewContext();
+        IRenderedComponent<ContainerFragment> cut = RenderTree(
+            ctx, [notesScope], onAction: EventCallback.Factory.Create<LibraryTreeAction>(this, actions.Add), showScopeRoot: false);
+        cut.WaitForAssertion(() => Assert.Equal(2, cut.FindAll("span.library-tree-node-name").Count));
+
+        await cut.InvokeAsync(() => NodeRow(cut, "a.md").DragStartAsync());
+        await cut.InvokeAsync(() => NodeRow(cut, "Sub").DropAsync());
+
+        LibraryTreeAction action = Assert.Single(actions);
+        Assert.Equal(LibraryTreeActionKind.MoveInto, action.Kind);
+        Assert.Equal("a.md", action.Path.RelativePath);
+        Assert.Equal("Sub", action.Destination?.RelativePath);
+    }
+
+    /// <summary>A folder dropped on the strip under a flattened tree moves to the scope's own folder.</summary>
+    [Fact]
+    public async Task Drop_OnEmptySpace_WhenFlattened_TargetsTheScope()
+    {
+        string notesPath = this.fixture.LibraryFixture.CreatePinnedRoot("Notes");
+        Directory.CreateDirectory(Path.Combine(notesPath, "Sub", "Inner"));
+        LibraryPath notesScope = this.fixture.LibraryFixture.Resolve(notesPath, string.Empty);
+        List<LibraryTreeAction> actions = [];
+
+        await using MudBunitContext ctx = this.fixture.NewContext();
+        IRenderedComponent<ContainerFragment> cut = RenderTree(
+            ctx, [notesScope], onAction: EventCallback.Factory.Create<LibraryTreeAction>(this, actions.Add), showScopeRoot: false);
+        cut.WaitForAssertion(() => Assert.Single(cut.FindAll("span.library-tree-node-name")));
+        await cut.InvokeAsync(() => cut.Find("div.mud-treeview-item-arrow button").ClickAsync());
+        cut.WaitForAssertion(() => Assert.Equal(2, cut.FindAll("span.library-tree-node-name").Count));
+
+        await cut.InvokeAsync(() => NodeRow(cut, "Inner").DragStartAsync());
+        await cut.InvokeAsync(() => cut.Find("div.library-tree-drop-area").DropAsync());
+
+        LibraryTreeAction action = Assert.Single(actions);
+        Assert.Equal("Inner", action.Path.RelativePath.Split('/')[^1]);
+        Assert.Equal(string.Empty, action.Destination?.RelativePath);
+    }
+
+    /// <summary>Dropping onto the folder an item already sits in, onto the item itself, or into its own subtree raises nothing.</summary>
+    [Fact]
+    public async Task Drop_ThatWouldChangeNothing_RaisesNothing()
+    {
+        string notesPath = this.fixture.LibraryFixture.CreatePinnedRoot("Notes");
+        Directory.CreateDirectory(Path.Combine(notesPath, "Sub", "Inner"));
+        LibraryPath notesScope = this.fixture.LibraryFixture.Resolve(notesPath, string.Empty);
+        List<LibraryTreeAction> actions = [];
+
+        await using MudBunitContext ctx = this.fixture.NewContext();
+        IRenderedComponent<ContainerFragment> cut = RenderTree(
+            ctx, [notesScope], onAction: EventCallback.Factory.Create<LibraryTreeAction>(this, actions.Add), showScopeRoot: false);
+        cut.WaitForAssertion(() => Assert.Single(cut.FindAll("span.library-tree-node-name")));
+        await cut.InvokeAsync(() => cut.Find("div.mud-treeview-item-arrow button").ClickAsync());
+        cut.WaitForAssertion(() => Assert.Equal(2, cut.FindAll("span.library-tree-node-name").Count));
+
+        await cut.InvokeAsync(() => NodeRow(cut, "Sub").DragStartAsync());
+        await cut.InvokeAsync(() => NodeRow(cut, "Sub").DropAsync());
+        await cut.InvokeAsync(() => NodeRow(cut, "Inner").DragStartAsync());
+        await cut.InvokeAsync(() => NodeRow(cut, "Sub").DropAsync());
+        await cut.InvokeAsync(() => NodeRow(cut, "Sub").DragStartAsync());
+        await cut.InvokeAsync(() => NodeRow(cut, "Inner").DropAsync());
+
+        Assert.Empty(actions);
+    }
+
+    /// <summary>A protected node (a Team folder) is not draggable; an ordinary file is.</summary>
+    [Fact]
+    public async Task Draggable_OnlyWhereTheNodeMayMove()
+    {
+        Directory.CreateDirectory(Path.Combine(this.fixture.LibraryFixture.DataDir, "Teams", "Engineering"));
+        this.fixture.LibraryFixture.Reload();
+        this.fixture.RescanTasks();
+        LibraryPath teamsScope = this.fixture.LibraryFixture.ResolveTeams(string.Empty);
+
+        await using MudBunitContext ctx = this.fixture.NewContext();
+        IRenderedComponent<ContainerFragment> cut = RenderTree(ctx, [teamsScope]);
+        await cut.InvokeAsync(() => cut.Find("div.mud-treeview-item-arrow button").ClickAsync());
+        cut.WaitForAssertion(() => Assert.Equal(2, cut.FindAll("span.library-tree-node-name").Count));
+
+        Assert.Equal("false", NodeRow(cut, "Engineering").GetAttribute("draggable"));
+        Assert.Equal("false", NodeRow(cut, teamsScope.Root.DisplayName).GetAttribute("draggable"));
+    }
+
+    private static AngleSharp.Dom.IElement NodeRow(IRenderedComponent<ContainerFragment> cut, string name) =>
+        cut.FindAll("div.library-tree-node").Single(
+            row => string.Equals(row.QuerySelector("span.library-tree-node-name")?.TextContent.Trim(), name, StringComparison.Ordinal));
 
     /// <summary>A Team folder's menu offers New Project, and Rename/Move/Delete are disabled with the settled protected text.</summary>
     [Fact]
@@ -145,7 +245,7 @@ public sealed class LibraryTreeTests : IDisposable
         await cut.InvokeAsync(() => cut.Find("div.mud-treeview-item-arrow button").ClickAsync());
         cut.WaitForAssertion(() => Assert.Equal(2, cut.FindAll("span.library-tree-node-name").Count));
 
-        await cut.InvokeAsync(() => cut.Find($"button.library-tree-actions-button[aria-label='Actions for {teamFolder.RelativePath}']").ClickAsync());
+        await cut.InvokeAsync(() => NodeRow(cut, teamFolder.RelativePath).ContextMenuAsync());
 
         Assert.Contains(
             cut.FindAll("div.mud-menu-item div.library-tree-menu-label"),
@@ -172,7 +272,7 @@ public sealed class LibraryTreeTests : IDisposable
         await cut.InvokeAsync(() => cut.Find("div.mud-treeview-item-arrow button").ClickAsync());
         cut.WaitForAssertion(() => Assert.Equal(2, cut.FindAll("span.library-tree-node-name").Count));
 
-        await cut.InvokeAsync(() => cut.Find($"button.library-tree-actions-button[aria-label='Actions for {teammateFolder.RelativePath}']").ClickAsync());
+        await cut.InvokeAsync(() => NodeRow(cut, teammateFolder.RelativePath).ContextMenuAsync());
 
         var renameItem = cut.FindAll("div.mud-menu-item").Single(e =>
             e.QuerySelector("div.library-tree-menu-label")?.TextContent.Trim() == "Rename");
@@ -316,9 +416,9 @@ public sealed class LibraryTreeTests : IDisposable
         Assert.Equal("Jarvis/Jarvis.md", opened.RelativePath);
     }
 
-    /// <summary>The "..." actions button is always in the DOM, not revealed only on hover, and carries the settled <c>aria-label</c> (item 27).</summary>
+    /// <summary>A row has no "..." button: the context menu opens by right-click only.</summary>
     [Fact]
-    public async Task Render_ActionsButton_AlwaysVisible_WithAriaLabel()
+    public async Task Render_RowHasNoActionsButton()
     {
         string notesPath = this.fixture.LibraryFixture.CreatePinnedRoot("Notes");
         LibraryPath notesScope = this.fixture.LibraryFixture.Resolve(notesPath, string.Empty);
@@ -326,8 +426,8 @@ public sealed class LibraryTreeTests : IDisposable
         await using MudBunitContext ctx = this.fixture.NewContext();
         IRenderedComponent<ContainerFragment> cut = RenderTree(ctx, [notesScope]);
 
-        var button = cut.Find($"button.library-tree-actions-button[aria-label='Actions for {notesScope.Root.DisplayName}']");
-        Assert.False(button.ClassList.Contains("library-tree-actions-hidden"));
+        Assert.NotEmpty(cut.FindAll("div.library-tree-node"));
+        Assert.Empty(cut.FindAll("div.library-tree-node button"));
     }
 
     /// <summary>A disabled menu item's reason is rendered as SECONDARY TEXT on the item, never tooltip-only (item 26).</summary>
@@ -344,9 +444,9 @@ public sealed class LibraryTreeTests : IDisposable
         IRenderedComponent<ContainerFragment> cut = RenderTree(ctx, [teamsScope]);
         await cut.InvokeAsync(() => cut.Find("div.mud-treeview-item-arrow button").ClickAsync());
         cut.WaitForAssertion(() => Assert.Equal(2, cut.FindAll("span.library-tree-node-name").Count));
-        await cut.InvokeAsync(() => cut.Find($"button.library-tree-actions-button[aria-label='Actions for {teamFolder.RelativePath}']").ClickAsync());
+        await cut.InvokeAsync(() => NodeRow(cut, teamFolder.RelativePath).ContextMenuAsync());
 
-        foreach (string label in new[] { "Rename", "Move", "Delete" })
+        foreach (string label in new[] { "Rename", "Delete" })
         {
             var item = cut.FindAll("div.mud-menu-item").Single(e =>
                 e.QuerySelector("div.library-tree-menu-label")?.TextContent.Trim() == label);

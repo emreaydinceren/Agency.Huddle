@@ -477,6 +477,17 @@ contexts](../Huddle.EngineeringGuide.md#two-bounded-contexts). Back to the hub:
   `ask_human`'s tappable options, and its asker has already ended its Turn.
 : *Avoid*: Question (the other thing), survey, dialog, popup.
 
+**Needs You**
+: The sidebar card listing every Room that waits on the Human, and the in-memory
+  tracker behind it. A Room is listed when an Agent Mentions the Human, a
+  **Question** or **Form** waits there, or its **Budget** is spent; it stays
+  listed until the Human posts in it or dismisses it. Opening the Room does not
+  clear it. In interface copy the card reads "Needs you". See
+  [ADR-0050](../adr/0050-needs-you-is-derived-from-room-events-and-held-in-memory.md).
+: *Avoid*: inbox, notifications, unread, alerts, pending. **Unread** in
+  particular is a different idea: Needs You is about who is blocked on the Human,
+  not what the Human has read.
+
 **Greeting**
 : The first Message the built-in Chief of Staff posts to a new Human, unprompted,
   when its Room with the Human has no Messages. The one Turn that no delivered

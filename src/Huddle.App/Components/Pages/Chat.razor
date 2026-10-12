@@ -24,8 +24,8 @@
 else
 {
     <MudStack Class="h-100 room-column" Spacing="0">
-        <MudStack Class="pa-4 border-b-1 mud-border-lines-default" Spacing="2">
-            <MudStack Row="true" AlignItems="AlignItems.Start" Justify="Justify.SpaceBetween">
+        <MudStack Class="room-header px-4" Spacing="2">
+            <MudStack Row="true" AlignItems="AlignItems.Center" Justify="Justify.SpaceBetween">
                 <MudStack Spacing="1">
                     <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2">
                         @if (this.isRenaming)
@@ -43,10 +43,21 @@ else
                             </MudTooltip>
                         }
                     </MudStack>
-                    <MudText Typo="Typo.body2" Class="mud-text-secondary mb-0">@string.Join(", ", this.members.Select(m => m.Name))</MudText>
                 </MudStack>
-                @* The leading @ is load-bearing: RoomId="this.room.Id" would pass that literal text. *@
-                <InviteTeammate RoomId="@this.room.Id" />
+                <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2" Class="room-members">
+                    @{
+                        var agentMembers = this.members.Where(m => m.Kind == UserKind.Agent).ToList();
+                    }
+                    <MudAvatarGroup Max="4" Spacing="2" MaxSize="Size.Small" MaxColor="Color.Default">
+                        @foreach (var agent in agentMembers)
+                        {
+                            <TeammateAvatar Name="@agent.Name" Avatar="this.Avatars.Get(agent.Name)" Size="Size.Small" />
+                        }
+                    </MudAvatarGroup>
+                    <MudText Typo="Typo.subtitle1" Class="room-members-label">@agentMembers.Count Members + you</MudText>
+                    @* The leading @ is load-bearing: RoomId="this.room.Id" would pass that literal text. *@
+                    <InviteTeammate RoomId="@this.room.Id" />
+                </MudStack>
             </MudStack>
             @if (this.renameError is not null)
             {

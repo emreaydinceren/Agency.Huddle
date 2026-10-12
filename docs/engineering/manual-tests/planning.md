@@ -48,6 +48,7 @@ is done. Within an area, tests run top to bottom — free tests first, paid test
 | 25 | [Tasks: creating, moving, viewing and referencing a unit of work](tasks.md) | 19 | 5 | 3.6h |
 | 26 | [Teams: Sidebar, Members, Files, Tasks and Shared Memory](team-pages.md) | 17 | — | 0.6h |
 | 27 | [Turn detail and Spend](turn-detail.md) | 5 | 4 | 1.8h |
+| 28 | [Needs You: the sidebar card of Rooms waiting on the Human](needs-you.md) | 4 | — | 0.4h |
 
 💰 marks a test that spends real money. Estimates assume you already know the app; first time
 through, roughly double them.

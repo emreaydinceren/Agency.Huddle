@@ -125,6 +125,14 @@ button:focus-visible {
     min-height: 0;
 }
 
+/* The Room header (title, members, invite). A solid rule under it separates it from the Transcript,
+   drawn like the TopBar's bottom border. The vertical padding is 0.22rem rather than the 1rem of
+   MudBlazor's pa-4, which takes about 35% off the bar's height (about 72px down to about 47px). */
+.room-header {
+    padding-block: 0.22rem;
+    border-bottom: 2px solid var(--mud-palette-lines-default);
+}
+
 /* The groups of Tabs side by side. Each takes an equal share of the width; min-width: 0 lets a pane
    shrink below its content so a wide page scrolls inside its own pane. The unfocused pane
    dims its active Tabs accent so it is plain which pane keyboard shortcuts and links act on. */
@@ -198,6 +206,20 @@ button:focus-visible {
 .top-bar-start {
     min-width: 0;
     overflow: hidden;
+}
+
+/* With nothing in the middle cell (no search box yet) the trail gets that space instead of the 32rem
+   the cell would otherwise reserve, so a crumb wraps only when the whole window is out of room. */
+.top-bar-grid:has(.top-bar-center:empty) {
+    grid-template-columns: minmax(0, 1fr) 0 auto;
+}
+
+.top-bar-start .page-breadcrumbs {
+    white-space: nowrap;
+}
+
+.top-bar-start .mud-breadcrumbs {
+    flex-wrap: nowrap;
 }
 
 .top-bar-end {
@@ -434,6 +456,11 @@ button:focus-visible {
     border: none;
     border-radius: var(--mud-default-borderradius);
     cursor: pointer;
+}
+
+/* MudButton centres its label; the list reads better flush left. */
+.invite-agent .mud-button-label {
+    justify-content: flex-start;
 }
 
 .invite-agent:hover {
@@ -819,7 +846,19 @@ button:focus-visible {
     padding: 1rem 1.5rem;
 }
 
+.composer-box {
+    position: relative;
+}
+
+/* Sits inside the box's bottom-right corner; the input's right padding keeps text out from under it. */
+.composer-send {
+    position: absolute;
+    right: 0.5rem;
+    bottom: 0.5rem;
+}
+
 .composer-input {
+    box-sizing: border-box;
     width: 100%;
     min-height: 2.5rem;
     max-height: 8rem;
@@ -831,7 +870,7 @@ button:focus-visible {
     font-size: 14px;
     font-weight: 400;
     line-height: 18px;
-    padding: 0.75rem 1rem;
+    padding: 0.75rem 3rem 0.75rem 1rem;
     color: var(--mud-palette-text-primary);
     background: var(--mud-palette-surface);
     border: 1px solid var(--mud-palette-lines-inputs);
@@ -2019,6 +2058,22 @@ button:focus-visible {
     display: none;
 }
 
+/* Drag and drop: when the tree is flattened this strip under the list stands for the scope's own folder. */
+.library-tree-drop-area {
+    min-height: 4rem;
+}
+
+/* While a drag is live the row's children stop taking pointer events, so dragenter targets the row itself and the highlight does not flicker. */
+.library-tree-dragging .library-tree-node > * {
+    pointer-events: none;
+}
+
+.library-tree-node.library-tree-drop-target {
+    background: var(--mud-palette-action-default-hover);
+    outline: 1px dashed var(--mud-palette-primary);
+    outline-offset: -1px;
+}
+
 .library-search-results {
     display: flex;
     flex-direction: column;
@@ -2591,6 +2646,56 @@ button:focus-visible {
     .team-setup-footer {
         position: static;
     }
+}
+
+/* ---- Needs You: the sidebar card of Rooms waiting on the Human ---------------------------------
+   Rows reuse .hover-reveal-row for the dismiss button. Every colour comes from a MudBlazor variable. */
+
+.needs-you-card {
+    margin: 0.5rem;
+    padding: 0.25rem 0;
+}
+
+.needs-you-card[hidden] {
+    display: none;
+}
+
+.needs-you-title {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0.25rem 1rem;
+}
+
+.needs-you-row .mud-nav-link-text {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    min-width: 0;
+}
+
+.needs-you-icons {
+    display: inline-flex;
+    gap: 0.125rem;
+    flex: 0 0 auto;
+}
+
+.needs-you-text {
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+}
+
+.needs-you-name,
+.needs-you-detail {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.needs-you-detail {
+    font-size: 0.75rem;
+    color: var(--mud-palette-text-secondary);
 }
 
 /* Global search */

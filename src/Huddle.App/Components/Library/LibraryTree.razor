@@ -13,9 +13,8 @@
     tree and any future multi-scope host keep every scope as its own named top node, since names are
     the only way to tell those roots apart.
 
-    Each row's own "..." MudIconButton and a right-click on the row both open the SAME MudMenu, the
-    same two-door pattern RoomList.razor uses for its own row menu. The menu lists every
-    LibraryTreeActionKind; Rename/Move/Delete are disabled by LibraryProtection.For, with a settled,
+    A right-click on a row opens that row's MudMenu at the pointer; there is no "..." button. The menu
+    lists New Document, New Folder, Copy Path, Rename and Delete; Rename/Delete are disabled by LibraryProtection.For, with a settled,
     locally-owned reason text as the item's SECONDARY text (never tooltip-only, item 26) - the wording
     is duplicated here on purpose rather than read from LibraryProtection.Reason, per item 26.
 
@@ -34,17 +33,25 @@
 <MudTreeView T="LibraryPath" Items="@this.topItems" Comparer="LibraryPathComparer.Instance"
              ServerData="@this.LoadChildrenAsync"
              SelectedValue="@this.SelectedPath" SelectedValueChanged="@this.OnSelectedValueChangedAsync"
-             Class="library-tree">
+             Class="@(this.dragged is null ? "library-tree" : "library-tree library-tree-dragging")">
     <ItemTemplate Context="item">
         @if (item.Value is LibraryPath value)
         {
-            MudMenu? rowMenu = null;
             bool missing = IsMissingPinnedRoot(value);
             <MudTreeViewItem T="LibraryPath" Value="@value" @bind-Items="item.Children" @bind-Expanded="item.Expanded"
                               @bind-Selected="item.Selected" CanExpand="@item.Expandable" Icon="@item.Icon" Text="@item.Text">
                 <BodyContent>
-                    <div class="library-tree-node"
-                         @oncontextmenu="@(e => this.OnRowContextMenuAsync(rowMenu, e))"
+                    <div class="@this.NodeClass(value)"
+                         draggable="@(this.CanDrag(value) ? "true" : "false")"
+                         @ondragstart="@(() => this.OnDragStart(value))"
+                         @ondragend="@this.OnDragEnd"
+                         @ondragenter="@(() => this.OnDragEnter(value))"
+                         @ondragover:preventDefault="@(!value.IsFile)"
+                         @ondragover:stopPropagation="true"
+                         @ondrop="@(() => this.OnDropAsync(value))"
+                         @ondrop:preventDefault="true"
+                         @ondrop:stopPropagation="true"
+                         @oncontextmenu="@(e => this.OnRowContextMenuAsync(value, e))"
                          @oncontextmenu:preventDefault="true">
                         <span class="library-tree-node-name" @onclick="@(() => this.OnNameClickAsync(value))">@item.Text</span>
                         @if (this.orphanFlags.TryGetValue(value, out bool isOrphan) && isOrphan)
@@ -53,17 +60,20 @@
                                 <MudIcon Icon="@Icons.Material.Outlined.Warning" Size="Size.Small" Color="Color.Warning" />
                             </span>
                         }
-                        <MudMenu @ref="rowMenu" PositionAtCursor="true" Class="library-tree-menu">
+                        <MudMenu @ref="this.rowMenus[value]" PositionAtCursor="true" Class="library-tree-menu">
                             <ActivatorContent Context="menuContext">
-                                <MudIconButton Icon="@Icons.Material.Filled.MoreVert" Size="Size.Small"
-                                               aria-label="@($"Actions for {item.Text}")"
-                                               Class="library-tree-actions-button"
-                                               OnClick="menuContext.ToggleAsync" />
+                                @* Right-click is the only door; MudMenu needs an activator, so this one has no size. *@
+                                <span class="library-tree-menu-anchor"></span>
                             </ActivatorContent>
                             <ChildContent>
                                 @foreach (MenuAction action in MenuActionsFor(value, this.ScopeFor(value)))
                                 {
-                                    <MudMenuItem Disabled="@action.Disabled" OnClick="@(() => this.RaiseActionAsync(action.Kind, value))">
+                                    @if (action.DividerBefore)
+                                    {
+                                        <MudDivider />
+                                    }
+
+                                    <MudMenuItem Disabled="@action.Disabled" Icon="@action.Icon" OnClick="@(() => this.RaiseActionAsync(action.Kind, value))">
                                         <div class="library-tree-menu-label">@action.Label</div>
                                         @if (action.Reason is not null)
                                         {
@@ -100,6 +110,14 @@
         }
     </ItemTemplate>
 </MudTreeView>
+@if (this.Flattened)
+{
+    @* No scope row to drop on, so the strip under the list stands for the scope's own folder. *@
+    <div class="library-tree-drop-area"
+         @ondragover:preventDefault="true"
+         @ondrop="@(() => this.OnDropAsync(null))"
+         @ondrop:preventDefault="true"></div>
+}
 
 @code {
     private const string TeamProtectedReason = "Team and Project folders can't be renamed, moved or deleted here.";
@@ -108,6 +126,9 @@
 
     private readonly Dictionary<LibraryPath, bool> orphanFlags = new(LibraryPathComparer.Instance);
     private IReadOnlyList<TreeItemData<LibraryPath>> topItems = [];
+    private readonly Dictionary<LibraryPath, MudMenu> rowMenus = new(LibraryPathComparer.Instance);
+    private LibraryPath? dragged;
+    private LibraryPath? dropTarget;
 
     /// <summary>The Library scopes shown as top-level nodes, in order.</summary>
     [Parameter, EditorRequired]
@@ -332,12 +353,78 @@
     private async Task RaiseActionAsync(LibraryTreeActionKind kind, LibraryPath path) =>
         await this.OnAction.InvokeAsync(new LibraryTreeAction(kind, path, null));
 
-    /// <summary>Opens the row's own <see cref="MudMenu"/> at the pointer, so a right-click reaches the same menu the "..." button does.</summary>
-    /// <param name="menu">The row's menu, or <see langword="null"/> if it has not rendered yet.</param>
-    /// <param name="e">The right-click's mouse event args.</param>
-    private async Task OnRowContextMenuAsync(MudMenu? menu, MouseEventArgs e)
+    private string NodeClass(LibraryPath path) =>
+        this.dropTarget is not null && LibraryPathComparer.Instance.Equals(this.dropTarget, path)
+            ? "library-tree-node library-tree-drop-target"
+            : "library-tree-node";
+
+    /// <summary>Whether a row may be picked up: only what <see cref="LibraryProtection"/> lets move, so a root,
+    /// Team, Project or Teammate node never starts a drag.</summary>
+    private bool CanDrag(LibraryPath path) => LibraryProtection.For(path, this.ScopeFor(path)).CanMove;
+
+    private void OnDragStart(LibraryPath path)
     {
-        if (menu is not null)
+        this.dragged = path;
+        this.dropTarget = null;
+    }
+
+    private void OnDragEnd()
+    {
+        this.dragged = null;
+        this.dropTarget = null;
+    }
+
+    /// <summary>Highlights a folder row as the drop target, but only when dropping there would change something.</summary>
+    private void OnDragEnter(LibraryPath path)
+    {
+        LibraryPath? candidate = this.dragged is not null && !path.IsFile && IsUsefulDrop(this.dragged, path) ? path : null;
+        if (!LibraryPathComparer.Instance.Equals(candidate, this.dropTarget))
+        {
+            this.dropTarget = candidate;
+        }
+    }
+
+    /// <summary>
+    /// Raises <see cref="LibraryTreeActionKind.MoveInto"/> for the dragged node and <paramref name="target"/>.
+    /// A <see langword="null"/> target is the tree's empty space, which means the scope's own folder when the tree
+    /// is flattened and nothing otherwise. A file row is not a target. Whether the move is allowed beyond that
+    /// (same root, protected nodes, name clashes) is the file service's call, so its refusal text reaches the user.
+    /// </summary>
+    private async Task OnDropAsync(LibraryPath? target)
+    {
+        LibraryPath? item = this.dragged;
+        this.dragged = null;
+        this.dropTarget = null;
+
+        LibraryPath? destination = target ?? (this.Flattened ? this.Scopes[0] : null);
+        if (item is null || destination is null || destination.IsFile || !IsUsefulDrop(item, destination))
+        {
+            return;
+        }
+
+        await this.OnAction.InvokeAsync(new LibraryTreeAction(LibraryTreeActionKind.MoveInto, item, null, destination));
+    }
+
+    /// <summary>False for a drop on the node itself, inside its own subtree, or into the folder it already sits in.</summary>
+    private static bool IsUsefulDrop(LibraryPath item, LibraryPath destination)
+    {
+        if (!string.Equals(item.Root.Id, destination.Root.Id, StringComparison.Ordinal)
+            || IsAncestorOrSelf(item, destination))
+        {
+            return false;
+        }
+
+        int slash = item.RelativePath.LastIndexOf('/');
+        string parent = slash < 0 ? string.Empty : item.RelativePath[..slash];
+        return !string.Equals(parent, destination.RelativePath, StringComparison.Ordinal);
+    }
+
+    /// <summary>Opens the row's own <see cref="MudMenu"/> at the pointer, so a right-click reaches the same menu the "..." button does.</summary>
+    /// <param name="path">The row that was right-clicked; its menu is looked up by path, since the row's template re-runs on every render.</param>
+    /// <param name="e">The right-click's mouse event args.</param>
+    private async Task OnRowContextMenuAsync(LibraryPath path, MouseEventArgs e)
+    {
+        if (this.rowMenus.TryGetValue(path, out MudMenu? menu))
         {
             await menu.OpenMenuAsync(e);
         }
@@ -446,20 +533,18 @@
 
         List<MenuAction> actions =
         [
-            new(LibraryTreeActionKind.NewNote, "New note", false, null),
-            new(LibraryTreeActionKind.NewFolder, "New folder", false, null),
+            new(LibraryTreeActionKind.NewNote, "New Document", Icons.Material.Outlined.NoteAdd, false, null, false),
+            new(LibraryTreeActionKind.NewFolder, "New Folder", Icons.Material.Outlined.CreateNewFolder, false, null, false),
         ];
 
         if (path.Role == LibraryNodeRole.TeamFolder)
         {
-            actions.Add(new MenuAction(LibraryTreeActionKind.NewProject, "New Project", false, null));
+            actions.Add(new MenuAction(LibraryTreeActionKind.NewProject, "New Project", Icons.Material.Outlined.FolderSpecial, false, null, false));
         }
 
-        actions.Add(new MenuAction(LibraryTreeActionKind.Rename, "Rename", !protection.CanRename, protection.CanRename ? null : reason));
-        actions.Add(new MenuAction(LibraryTreeActionKind.Move, "Move", !protection.CanMove, protection.CanMove ? null : reason));
-        actions.Add(new MenuAction(LibraryTreeActionKind.CopyPath, "Copy path", false, null));
-        actions.Add(new MenuAction(LibraryTreeActionKind.OpenInDefaultApp, "Open in default app", false, null));
-        actions.Add(new MenuAction(LibraryTreeActionKind.Delete, "Delete", !protection.CanDelete, protection.CanDelete ? null : reason));
+        actions.Add(new MenuAction(LibraryTreeActionKind.CopyPath, "Copy Path", Icons.Material.Outlined.ContentPaste, false, null, true));
+        actions.Add(new MenuAction(LibraryTreeActionKind.Rename, "Rename", Icons.Material.Outlined.DriveFileRenameOutline, !protection.CanRename, protection.CanRename ? null : reason, true));
+        actions.Add(new MenuAction(LibraryTreeActionKind.Delete, "Delete", Icons.Material.Outlined.Delete, !protection.CanDelete, protection.CanDelete ? null : reason, false));
 
         return actions;
     }
@@ -467,7 +552,9 @@
     /// <summary>One row of a node's context menu.</summary>
     /// <param name="Kind">Which action this row raises.</param>
     /// <param name="Label">The visible menu text.</param>
+    /// <param name="Icon">The Material icon drawn before the label.</param>
     /// <param name="Disabled">Whether the action is disabled for this node.</param>
     /// <param name="Reason">When disabled, the settled reason shown as secondary text.</param>
-    private readonly record struct MenuAction(LibraryTreeActionKind Kind, string Label, bool Disabled, string? Reason);
+    /// <param name="DividerBefore">Whether a divider separates this row from the one above.</param>
+    private readonly record struct MenuAction(LibraryTreeActionKind Kind, string Label, string Icon, bool Disabled, string? Reason, bool DividerBefore);
 }

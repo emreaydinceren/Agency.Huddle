@@ -62,6 +62,10 @@ internal sealed class LibraryFileService(
 
     /// <summary>Settled text (corrections-B4 item 21) refusing a create directly at the Teammates root.</summary>
     private const string CreateAtTeammatesRootReason = "Add teammates on the Teammates page.";
+    private const string PlaceAtTeammatesRootReason = "Files can't be renamed or moved directly in the Teammates folder. Teammates are managed on the Teammates page.";
+
+    /// <summary>The app's own "layout already migrated" marker in the Teammates root; internal state, so never listed.</summary>
+    private const string TeammateLayoutMarker = ".layout-migrated";
 
     /// <summary>Settled text (corrections-B4 item 21) refusing a <c>.md</c> file created directly in a
     /// Teammate folder.</summary>
@@ -173,6 +177,14 @@ internal sealed class LibraryFileService(
             ct.ThrowIfCancellationRequested();
             bool isFolder = child is DirectoryInfo;
             if (isFolder && LibraryHiddenFolders.IsHidden(child.Name, ignoredFolders, hideUnderscoreFolders))
+            {
+                continue;
+            }
+
+            if (!isFolder
+                && folder.Root.Kind == LibraryRootKind.Teammates
+                && folder.RelativePath.Length == 0
+                && string.Equals(child.Name, TeammateLayoutMarker, StringComparison.Ordinal))
             {
                 continue;
             }
@@ -824,7 +836,7 @@ internal sealed class LibraryFileService(
             return new LibraryResult<LibraryMoveResult>(null, protection.Reason);
         }
 
-        string? teammatesError = TeammatesDestinationRefusal(parent, newName);
+        string? teammatesError = TeammatesDestinationRefusal(parent, newName, PlaceAtTeammatesRootReason);
         if (teammatesError is not null)
         {
             return new LibraryResult<LibraryMoveResult>(null, teammatesError);
@@ -956,7 +968,7 @@ internal sealed class LibraryFileService(
 
         string name = Path.GetFileName(itemFullPath);
 
-        string? teammatesError = TeammatesDestinationRefusal(freshTarget, name);
+        string? teammatesError = TeammatesDestinationRefusal(freshTarget, name, PlaceAtTeammatesRootReason);
         if (teammatesError is not null)
         {
             return new LibraryResult<LibraryMoveResult>(null, teammatesError);
@@ -1061,11 +1073,13 @@ internal sealed class LibraryFileService(
     /// <param name="destinationFolder">The already-resolved destination folder.</param>
     /// <param name="finalName">The final file name being placed in <paramref name="destinationFolder"/>, or
     /// <see langword="null"/> when creating a folder (the <c>.md</c> check does not apply).</param>
-    private static string? TeammatesDestinationRefusal(LibraryPath destinationFolder, string? finalName)
+    /// <param name="rootReason">What to say when the destination is the Teammates root itself: the create wording
+    /// by default, or <see cref="PlaceAtTeammatesRootReason"/> for a rename or move.</param>
+    private static string? TeammatesDestinationRefusal(LibraryPath destinationFolder, string? finalName, string rootReason = CreateAtTeammatesRootReason)
     {
         if (destinationFolder.Root.Kind == LibraryRootKind.Teammates && destinationFolder.RelativePath.Length == 0)
         {
-            return CreateAtTeammatesRootReason;
+            return rootReason;
         }
 
         if (finalName is not null

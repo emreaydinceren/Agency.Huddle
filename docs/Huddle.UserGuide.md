@@ -89,6 +89,7 @@ The left sidebar is the whole app. From top to bottom:
 
 | Sidebar group | What it holds |
 | --- | --- |
+| **Needs you** | A card above Chats, drawn only while a Room is waiting on you. See [Needs you](#needs-you). |
 | **Chats** | Every Room you are in, plus **New chat**. |
 | **Teams** | One row per Team. Expand it to see its Projects. **New team** sits at the bottom. The `⋯` menu on a Team row has **New project**. |
 | **Teammates** | The page listing every Teammate, grouped by Team. |
@@ -108,6 +109,20 @@ Every page has its own address, so you can bookmark it:
 | `/tasks/item/{TaskId}` | One Task, opened over your last View, for example `/tasks/item/BUSI-0001` |
 | `/library?scopeRoot=teams&scopePath=` | The Library, scoped to a root |
 | `/settings/{tab}` | Settings: Prompts, Appearance, Personas, Skills, Library |
+
+### Needs you
+
+When several Rooms are running, **Needs you** at the top of the sidebar lists the ones waiting on you, longest wait first. A Room is listed when:
+
+- a Teammate **mentions you** in a Message you have not answered (the row shows who and when);
+- a Teammate has asked you a **Question** or opened a **Form** that is still waiting;
+- the Room has used up its **Budget** and is paused until you speak.
+
+Each row shows an icon for every reason, the Room's name, and who asked and when. Click it to open the Room.
+
+A Room leaves the list when you **post in it**, or when you press the ✕ on its row. Opening a Room does not clear it, so you can read a Room and come back to it later. ✕ hides the Room until something new makes it wait again; it does not answer the Question or Form behind it. Pressing **Continue** on a paused Room clears only the paused reason. When nothing is waiting, the card is not drawn.
+
+The list lives in memory. After a restart, Rooms with an unanswered mention (within the last 50 Messages) are listed again; a Question or Form that was waiting is gone, and so is any dismissal.
 
 ### Tabs
 

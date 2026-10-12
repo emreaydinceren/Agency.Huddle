@@ -3,7 +3,7 @@
 **Date:** 2026-10-12 · **Status:** Built 2026-10-12; the Top Bar it lives in is built (PR #162,
 `4864ef6`) · **Owner:** chat surface · **Decision records:**
 [ADR-0046](adr/0046-a-group-mounts-its-own-page-and-the-url-names-the-focused-one.md) (its addendum
-records the Top Bar) and [ADR-0050](adr/0050-search-keeps-no-index-of-its-own.md) for *search keeps no index of its own*
+records the Top Bar) and [ADR-0051](adr/0051-search-keeps-no-index-of-its-own.md) for *search keeps no index of its own*
 (written) · **Vocabulary:** [language.md](engineering/language.md) (**Team**, **Teammate**,
 **Persona**, **Title**, **Alias**, **Library**, **Library Root**, **Task**, **Closed**, **Room**,
 **Archived**, **Message**, **Transcript**, **Turn**) · **Builds on:**
@@ -877,7 +877,7 @@ same day; their record is §15.
 | D-18 | **No streaming inside a provider in V1** | One batch per provider is simpler to rank, cancel and test; streaming is V2 |
 | D-19 | **Archived and Closed are a second pass, after every active call, in a dimmed group** | Live work is what is usually wanted, and it arrives first |
 | D-20 | **A provider failing empties only its own group** | A locked folder must not hide every other result |
-| D-21 | **Search keeps no index of its own: every search re-reads** | Nothing to build, invalidate or keep in step; acceptable at Huddle's sizes. ADR-0050 records it |
+| D-21 | **Search keeps no index of its own: every search re-reads** | Nothing to build, invalidate or keep in step; acceptable at Huddle's sizes. ADR-0051 records it |
 | D-22 | **`SearchResultRanker` is pure and separate from the providers** | What a provider cannot know (the open Team) is ranked in one tested place |
 | D-23 | **Library roots are searched in parallel, default 4, configurable** | Disk-bound walks overlap; the setting caps load on a slow drive |
 | D-24 | **The 3-character minimum, the caps of 5 and 50 and the 200 ms debounce are constants** | Nobody needs to tune them yet |
@@ -928,7 +928,7 @@ record "as decided".
 | OP-9 | Opening a Teammate card from search | **Open the card's dialog directly**; no `?name=` parameter on `/teammates` (§9) |
 | OP-10 | Excluding Persona files from the Library group | **Confirmed** |
 | OP-11 | Enter and Ctrl+Enter in Tab terms | **Confirmed** as §9: Enter navigates the focused Tab in place; Ctrl+Enter opens a permanent Tab, or only focuses it when already open |
-| OP-12 | ADRs | **Approved**: write ADR-0050 for *search keeps no index of its own*. The breadcrumb's move is already recorded in ADR-0046's addendum |
+| OP-12 | ADRs | **Approved**: write ADR-0051 for *search keeps no index of its own*. The breadcrumb's move is already recorded in ADR-0046's addendum |
 | OP-13 | Glossary entries | **Approved**: *Global Search*, *Top Bar*, *Filter* and *Card* (search sense) go into [language.md](engineering/language.md), the Card entry noting that *card* already means a Board's drawing of a Task and the Teammate card |
 | OP-14 | `?` lists the prefixes | **Out of V1**; moved to §14. `>` stays reserved for V2 |
 | OP-15 | Interface strings | **Decided** in §6.3 and §6.6 by the spec's best judgement, as the owner asked, with the four owner strings kept verbatim; tests use them exactly |
@@ -962,7 +962,7 @@ as they need to be (PR #162) and do not change.
 | `src/Huddle.App/ServiceCollectionExtensions.cs` | Registers the orchestrator (scoped) and the five providers |
 | `docs/Huddle.EngineeringGuide.md` | The four `Team:Search` keys (added now, marked designed) |
 | `docs/engineering/language.md` | Global Search, Top Bar, Filter, Card (OP-13) |
-| `docs/adr/0050-…` | Search keeps no index of its own (OP-12) |
+| `docs/adr/0051-…` | Search keeps no index of its own (OP-12) |
 | `docs/Huddle.UserGuide.md` | Global Search, from the Human's side, in the same change as the build |
 | `docs/engineering/manual-tests/shell-nav.md`, new `global-search.md`, `tracker.md` | Manual tests (§12.5) |
 | `docs/engineering/code-map.md` | The `Search/` folder |
@@ -981,7 +981,7 @@ already delivered (PR #162).
 | Wave | Deliverables | Model |
 | --- | --- | --- |
 | 0 | D1 contracts, options and text helpers | Haiku |
-| 0 | D0 ADR-0050 | Sonnet |
+| 0 | D0 ADR-0051 | Sonnet |
 | 1 | D2 parser, ranker, open Team and hit links; D3 Teams, Teammates and Tasks providers; D4 Rooms provider; D8 cards and the zoom-aware stylesheet; D9 dropdown view model | Haiku |
 | 1 | D5 Library walk with the content test; D13 the Room jump and the Teammate card opener | Sonnet |
 | 2 | D6 Library provider | Haiku |

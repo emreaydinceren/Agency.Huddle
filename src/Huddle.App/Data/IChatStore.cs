@@ -23,4 +23,19 @@ public interface IChatStore
     /// <param name="roomId">The Room to check.</param>
     /// <param name="ct">Cancels the check.</param>
     Task<bool> HasMessagesAsync(string roomId, CancellationToken ct = default);
+
+    /// <summary>
+    /// Reads the last <paramref name="count"/> Messages of a Room's Transcript, oldest first. The default
+    /// reads everything and keeps the end; <see cref="FileChatStore"/> overrides it to read only the end of
+    /// the file, so a startup scan of many Rooms does not grow with their history.
+    /// </summary>
+    /// <param name="roomId">The Room to read.</param>
+    /// <param name="count">How many Messages to keep at most.</param>
+    /// <param name="ct">Cancels the read.</param>
+    /// <returns>At most <paramref name="count"/> Messages; empty for a Room with no Transcript.</returns>
+    async Task<IReadOnlyList<ChatMessage>> ReadTailAsync(string roomId, int count, CancellationToken ct = default)
+    {
+        IReadOnlyList<ChatMessage> all = await this.ReadAllAsync(roomId, ct);
+        return all.Count <= count ? all : [.. all.Skip(all.Count - count)];
+    }
 }

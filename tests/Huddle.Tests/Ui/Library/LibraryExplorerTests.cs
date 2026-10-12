@@ -64,7 +64,7 @@ public sealed class LibraryExplorerTests : IDisposable
         cut.WaitForAssertion(() => Assert.Single(cut.FindAll(".library-tree > ul > li")));
         Assert.Equal("Sub", cut.Find(".library-tree-node-name").TextContent.Trim());
 
-        await cut.InvokeAsync(() => cut.Find(".library-tree-actions-button").ClickAsync());
+        await cut.InvokeAsync(() => cut.Find("div.library-tree-node").ContextMenuAsync());
         cut.WaitForAssertion(() => Assert.NotEmpty(cut.FindAll(".mud-menu-item")));
         IReadOnlyList<string> renameLabels = [.. cut.FindAll(".library-tree-menu-label").Select(el => el.TextContent.Trim())];
         int renameIndex = renameLabels.ToList().IndexOf("Rename");
@@ -109,9 +109,9 @@ public sealed class LibraryExplorerTests : IDisposable
         IRenderedComponent<ContainerFragment> cut = RenderExplorer(ctx, scopes: [new LibraryLocation(scopePath.Root.Id, "Sub")]);
         cut.WaitForAssertion(() => Assert.Single(cut.FindAll(".library-tree > ul > li")));
 
-        await cut.InvokeAsync(() => cut.Find(".library-tree-actions-button").ClickAsync());
+        await cut.InvokeAsync(() => cut.Find("div.library-tree-node").ContextMenuAsync());
         cut.WaitForAssertion(() => Assert.NotEmpty(cut.FindAll(".mud-menu-item")));
-        int newNoteIndex = cut.FindAll(".library-tree-menu-label").Select(el => el.TextContent.Trim()).ToList().IndexOf("New note");
+        int newNoteIndex = cut.FindAll(".library-tree-menu-label").Select(el => el.TextContent.Trim()).ToList().IndexOf("New Document");
         _ = cut.InvokeAsync(() => cut.FindAll(".mud-menu-item")[newNoteIndex].Click());
 
         cut.WaitForAssertion(() => Assert.NotEmpty(cut.FindAll(".library-file-ops-name-field input")));
@@ -479,10 +479,10 @@ public sealed class LibraryExplorerTests : IDisposable
         IRenderedComponent<ContainerFragment> cut = RenderExplorer(
             ctx, scopes: [new LibraryLocation(scopePath.Root.Id, string.Empty)], showScopeRoot: false);
 
-        cut.WaitForAssertion(() => Assert.NotEmpty(cut.FindAll("button[aria-label='Actions for Sub']")));
+        cut.WaitForAssertion(() => Assert.Equal(
+            ["Sub"], cut.FindAll("span.library-tree-node-name").Select(e => e.TextContent.Trim())));
         Assert.Empty(cut.FindAll(".library-explorer-title"));
         Assert.Equal(scopePath.FullPath, cut.Find(".library-explorer-root-path").TextContent.Trim());
-        Assert.Empty(cut.FindAll("button[aria-label='Actions for Notes']"));
     }
 
     /// <summary>
@@ -616,8 +616,8 @@ public sealed class LibraryExplorerTests : IDisposable
         await cut.InvokeAsync(() => cut.FindComponent<LibraryEditor>().Instance.DirtyChanged.InvokeAsync(true));
 
         await cut.InvokeAsync(() => cut.Find("div.mud-treeview-item-arrow button").ClickAsync());
-        cut.WaitForAssertion(() => Assert.NotEmpty(cut.FindAll("button.library-tree-actions-button[aria-label='Actions for Old.md']")));
-        await cut.InvokeAsync(() => cut.Find("button.library-tree-actions-button[aria-label='Actions for Old.md']").ClickAsync());
+        cut.WaitForAssertion(() => Assert.NotEmpty(NodeRows(cut, "Old.md")));
+        await cut.InvokeAsync(() => NodeRows(cut, "Old.md").Single().ContextMenuAsync());
         int renameIndex = cut.FindAll(".library-tree-menu-label").Select(el => el.TextContent.Trim()).ToList().IndexOf("Rename");
         _ = cut.InvokeAsync(() => cut.FindAll(".mud-menu-item")[renameIndex].Click());
         cut.WaitForAssertion(() => Assert.NotEmpty(cut.FindAll(".library-file-ops-name-field input")));
@@ -648,8 +648,8 @@ public sealed class LibraryExplorerTests : IDisposable
         cut.WaitForAssertion(() => Assert.NotEmpty(cut.FindAll(".library-rendered")));
 
         await cut.InvokeAsync(() => cut.Find("div.mud-treeview-item-arrow button").ClickAsync());
-        cut.WaitForAssertion(() => Assert.NotEmpty(cut.FindAll("button.library-tree-actions-button[aria-label='Actions for Sub']")));
-        await cut.InvokeAsync(() => cut.Find("button.library-tree-actions-button[aria-label='Actions for Sub']").ClickAsync());
+        cut.WaitForAssertion(() => Assert.NotEmpty(NodeRows(cut, "Sub")));
+        await cut.InvokeAsync(() => NodeRows(cut, "Sub").Single().ContextMenuAsync());
         int deleteIndex = cut.FindAll(".library-tree-menu-label").Select(el => el.TextContent.Trim()).ToList().IndexOf("Delete");
         _ = cut.InvokeAsync(() => cut.FindAll(".mud-menu-item")[deleteIndex].Click());
         cut.WaitForAssertion(() => Assert.NotEmpty(cut.FindAll(".mud-dialog-actions button")));
@@ -1246,6 +1246,11 @@ public sealed class LibraryExplorerTests : IDisposable
         await cut.InvokeAsync(() => cut.FindAll(".mud-dialog-actions button")[0].ClickAsync());
         await pending.WaitAsync(TimeSpan.FromSeconds(5), ct);
     }
+
+    /// <summary>The tree rows (<c>div.library-tree-node</c>) whose visible name is <paramref name="name"/>; a right-click on one opens its menu.</summary>
+    private static IReadOnlyList<AngleSharp.Dom.IElement> NodeRows(IRenderedComponent<ContainerFragment> cut, string name) =>
+        [.. cut.FindAll("div.library-tree-node").Where(
+            row => string.Equals(row.QuerySelector("span.library-tree-node-name")?.TextContent.Trim(), name, StringComparison.Ordinal))];
 
     private static IRenderedComponent<ContainerFragment> RenderExplorer(
         MudBunitContext ctx,
