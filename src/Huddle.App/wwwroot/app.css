@@ -125,6 +125,14 @@ button:focus-visible {
     min-height: 0;
 }
 
+/* The Room header (title, members, invite). A solid rule under it separates it from the Transcript,
+   drawn like the TopBar's bottom border. The vertical padding is 0.22rem rather than the 1rem of
+   MudBlazor's pa-4, which takes about 35% off the bar's height (about 72px down to about 47px). */
+.room-header {
+    padding-block: 0.22rem;
+    border-bottom: 2px solid var(--mud-palette-lines-default);
+}
+
 /* The groups of Tabs side by side. Each takes an equal share of the width; min-width: 0 lets a pane
    shrink below its content so a wide page scrolls inside its own pane. The unfocused pane
    dims its active Tabs accent so it is plain which pane keyboard shortcuts and links act on. */
@@ -198,6 +206,20 @@ button:focus-visible {
 .top-bar-start {
     min-width: 0;
     overflow: hidden;
+}
+
+/* With nothing in the middle cell (no search box yet) the trail gets that space instead of the 32rem
+   the cell would otherwise reserve, so a crumb wraps only when the whole window is out of room. */
+.top-bar-grid:has(.top-bar-center:empty) {
+    grid-template-columns: minmax(0, 1fr) 0 auto;
+}
+
+.top-bar-start .page-breadcrumbs {
+    white-space: nowrap;
+}
+
+.top-bar-start .mud-breadcrumbs {
+    flex-wrap: nowrap;
 }
 
 .top-bar-end {
