@@ -1,4 +1,5 @@
 using Microsoft.Extensions.Options;
+using Agency.Huddle.App.Acp;
 using Agency.Huddle.App.Tasks;
 
 namespace Agency.Huddle.App.Search;
@@ -7,7 +8,7 @@ namespace Agency.Huddle.App.Search;
 /// Searches the Tasks in memory (spec §8.4). The Active pass holds the open Tasks and the Archived
 /// pass holds the Closed ones. An empty phrase finds nothing, and a disabled feature finds nothing.
 /// </summary>
-internal sealed class TaskSearchProvider(TaskStore store, IOptions<TeamOptions> options) : ISearchProvider
+internal sealed class TaskSearchProvider(TaskStore store, PersonaStore personas, IOptions<TeamOptions> options) : ISearchProvider
 {
     /// <summary>The group this provider fills.</summary>
     public SearchFilter Group => SearchFilter.Tasks;
@@ -47,10 +48,14 @@ internal sealed class TaskSearchProvider(TaskStore store, IOptions<TeamOptions> 
 
             if (tier is { } matched)
             {
-                hits.Add(new TaskHit(task.Id, task.Title, task.Status, task.Assignee, task.Location.Team, task.Location.Closed, matched));
+                hits.Add(new TaskHit(task.Id, task.Title, task.Status, task.Assignee, task.Location.Team, task.Location.Closed, matched, TitleOf(task.Assignee)));
             }
         }
 
         return Task.FromResult(new SearchResult(hits, false));
+
+        string? TitleOf(string? assignee) => assignee is null
+            ? null
+            : personas.Entries.FirstOrDefault(entry => string.Equals(entry.Name, assignee, StringComparison.OrdinalIgnoreCase))?.Title;
     }
 }

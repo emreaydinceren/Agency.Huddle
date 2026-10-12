@@ -198,10 +198,13 @@ The dropdown follows VS Code's model exactly (D-7):
  │ (All) (Teams) (Teammates) (Library) [Tasks] (Rooms)               │
  │ Search results for: 'login'                     (after a reopen)  │
  │ TASKS                                                             │
- │ ☐ Support SAML login        [In Progress]  Nova · Platform  [   ] │
- │ ☐ Login page copy           [To Do]        Kai  · Marketing [   ] │
+ │ SUP-0012 · Support SAML login               [In Progress] [   ]   │
+ │ Nova · Staff Engineer                          Platform Team      │
+ │ SUP-0013 · Login page copy                  [To Do]       [   ]   │
+ │ Kai · Designer                                 Marketing Team     │
  │ CLOSED TASKS  (dimmed)                                            │
- │ ☐ Old login spike           [Done]         Nova · Platform  [   ] │
+ │ SUP-0009 · Old login spike                  [Done]        [   ]   │
+ │ Nova · Staff Engineer                          Platform Team      │
  └──────────────────────────────────────────────────────────────────┘
 ```
 
@@ -299,7 +302,7 @@ there, such as closing an Ask.
 | **Team** | Team icon, Name, team type, Teammate count (`Development Team · 4 teammates`, `1 teammate`; no type: `4 teammates`) | Name, team type |
 | **Teammate** | Avatar (`TeammateAvatar`), Name, Title, Teams (`Product Manager · Marketing, Platform`; no Team: `Product Manager · No team`, OP-8) | Name, Alias, Title |
 | **Library** | File-type icon, name, folder path within its root (the root's name at the root); for a content hit, a one-line snippet with the match in **bold** | Name, then contents |
-| **Task** | Title, status chip (the Board's status `Color`), assignee and Team (`Nova · Platform`; unassigned: `Platform`) | Title, id, assignee Name |
+| **Task** | Line 1: `SUP-0012 · Support SAML login` at the left and the status chip (the Board's status `Color`) at the right. Line 2: `Nova · Staff Engineer` at the left (the Persona's title is de-emphasised; no title: name only; unassigned: nothing at the left) and `Platform Team` at the right under the chip (" Team" is appended only when the name does not already end in "Team", ordinal ignoring case) | Title, id, assignee Name |
 | **Room** | Room name, then count, sender and time (`14 matches · Kai · 14:02`, `1 match · Kai · 14:02`; a name-only hit has no meta line), then the snippet with the match in bold; **one card per Room**, collapsing many matches | Message text, Room name |
 
 ```text
@@ -307,7 +310,8 @@ there, such as closing an Ask.
  Teammate  (NV) Nova                          Product Manager · Marketing      [   ]
  Library   [📄] plan.md                        Marketing/Launch Q4              [   ]
                …the **login** flow moves to SSO in Q4…
- Task      Support SAML login   [In Progress] Nova · Platform                  [   ]
+ Task      SUP-0012 · Support SAML login            [In Progress]               [   ]
+           Nova · Staff Engineer                        Platform Team
  Room      #findings                          14 matches · Kai · 14:02         [   ]
                …we should drop the **login** cookie…
 ```
