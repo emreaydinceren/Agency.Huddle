@@ -18,6 +18,9 @@ public enum LibraryTreeActionKind
     /// <summary>Move the node.</summary>
     Move,
 
+    /// <summary>Move the node into the folder it was dragged onto (<see cref="LibraryTreeAction.Destination"/>).</summary>
+    MoveInto,
+
     /// <summary>Copy the node's path to the clipboard.</summary>
     CopyPath,
 

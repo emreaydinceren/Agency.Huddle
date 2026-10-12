@@ -256,8 +256,8 @@ Each pinned root appears in the table with a **Remove** button and in the sideba
 
 **Pass if — all of these**
 
-- The Team and Project menus list **New note**, **New folder**, **Copy path**, **Open in default app**. **New Project** appears on the Team menu only.
-- **Rename**, **Move** and **Delete** are shown disabled on the Team and the Project, with the reason `Team and Project folders can't be renamed, moved or deleted here.` as secondary text under each.
+- The Team and Project menus list **New Document**, **New Folder**, **Copy Path**, **Rename**, **Delete**, each with an icon and a divider ahead of **Copy Path** and **Rename**. **New Project** appears on the Team menu only.
+- **Rename** and **Delete** are shown disabled on the Team and the Project, with the reason `Team and Project folders can't be renamed, moved or deleted here.` as secondary text under each.
 - On the `Ada` folder the three are disabled with `Teammate folders can't be renamed, moved or deleted here.`
 - Clicking a disabled item does nothing.
 
@@ -429,20 +429,18 @@ Each pinned root appears in the table with a **Remove** button and in the sideba
 4. Click `data.json`. Is the JSON shown with syntax highlighting? Click into it and type a character.
 5. Click `deck.pptx`. The view shows the file name, its size and an **Open in default app** button.
 6. Click **Open in default app**.
-7. Right-click `deck.pptx` in the tree, click **Open in default app** there, and compare.
 
 **Pass if — all of these**
 
 - The image is previewed, and its `src` begins `/library-files/vault/`, not a drive path.
 - The JSON is highlighted and read-only: typing changes nothing, and no Edit mode is offered.
 - The deck's view offers **Open in default app**, and clicking it launches the file in its default application (PowerPoint).
-- The tree menu's **Open in default app** does the same.
 
 **Fail if — any of these**
 
 - The image is broken, or its `src` is a raw file path.
 - The JSON can be edited.
-- Either **Open in default app** control does nothing, or `O-LOG` shows an exception such as `NotSupportedException`.
+- **Open in default app** does nothing, or `O-LOG` shows an exception such as `NotSupportedException`.
 
 ---
 

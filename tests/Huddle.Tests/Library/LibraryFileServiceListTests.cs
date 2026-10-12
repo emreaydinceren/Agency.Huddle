@@ -99,6 +99,21 @@ public sealed class LibraryFileServiceListTests
         Assert.Equal(["memory", "_x"], [.. teammateEntries.Select(e => Path.GetFileName(e.Path.FullPath))]);
     }
 
+    /// <summary>The app's own <c>.layout-migrated</c> marker in the Teammates root is internal state and is not listed, so nobody can try to rename or delete it.</summary>
+    [Fact]
+    public async Task ListAsync_TeammatesRoot_HidesTheLayoutMarker()
+    {
+        CancellationToken ct = TestContext.Current.CancellationToken;
+        using Fixture fixture = Fixture.Build();
+        Directory.CreateDirectory(Path.Combine(fixture.DataDir, "Teammates", "Nova"));
+        File.WriteAllText(Path.Combine(fixture.DataDir, "Teammates", ".layout-migrated"), string.Empty);
+        LibraryFileService service = fixture.CreateService();
+
+        IReadOnlyList<LibraryEntry> entries = await service.ListAsync(fixture.Resolve("teammates", string.Empty), ct);
+
+        Assert.Equal(["Nova"], [.. entries.Select(e => Path.GetFileName(e.Path.FullPath))]);
+    }
+
     /// <summary>An entry carries the resolved role, the file's length and its last-write time.</summary>
     [Fact]
     public async Task ListAsync_Entries_CarryRoleLengthAndTime()

@@ -65,6 +65,9 @@
             case LibraryTreeActionKind.Move:
                 await this.HandleMoveAsync(action.Path);
                 return;
+            case LibraryTreeActionKind.MoveInto when action.Destination is not null:
+                await this.HandleMoveIntoAsync(action.Path, action.Destination);
+                return;
             case LibraryTreeActionKind.Delete:
                 await this.HandleDeleteAsync(action.Path);
                 return;
@@ -84,7 +87,7 @@
     }
 
     /// <summary>Asks <see cref="BeforeChangeAsync"/>, then the settled Delete confirm text through
-    /// <see cref="IDialogService.ShowMessageBoxAsync(string, string, string, string?, string?, DialogOptions?)"/>;
+    /// <see cref="DeleteDialog"/>;
     /// confirming sends the item to the Recycle Bin, a refusal shows through <see cref="ISnackbar"/>, and
     /// success raises <see cref="OnChanged"/> with only <see cref="LibraryChange.OldPath"/> set.</summary>
     private async Task HandleDeleteAsync(LibraryPath item)
@@ -95,12 +98,11 @@
         }
 
         string fileName = Path.GetFileName(item.FullPath);
-        bool? confirmed = await this.Dialogs.ShowMessageBoxAsync(
-            string.Create(CultureInfo.InvariantCulture, $"Delete {fileName}?"),
-            "It goes to the Recycle Bin.",
-            yesText: "Delete",
-            cancelText: "Cancel");
-        if (confirmed != true)
+        DialogParameters<DeleteDialog> parameters = new() { { dialog => dialog.Message, "It goes to the Recycle Bin." } };
+        IDialogReference reference = await this.Dialogs.ShowAsync<DeleteDialog>(
+            string.Create(CultureInfo.InvariantCulture, $"Delete {fileName}?"), parameters, DeleteDialog.Options);
+        DialogResult? answer = await reference.Result;
+        if (answer is null || answer.Canceled)
         {
             return;
         }
@@ -120,6 +122,19 @@
     /// directly; otherwise opens the settled name prompt and creates on confirm.</summary>
     private async Task HandleCreateAsync(LibraryTreeActionKind kind, LibraryPath folder, string? name)
     {
+        // A row's menu on a file means "beside it": create in the file's own folder.
+        if (folder.IsFile)
+        {
+            int slash = folder.RelativePath.LastIndexOf('/');
+            string parentRelative = slash < 0 ? string.Empty : folder.RelativePath[..slash];
+            if (!this.Resolver.TryResolve(folder.Root.Id, parentRelative, out LibraryPath? parent, out _))
+            {
+                return;
+            }
+
+            folder = parent;
+        }
+
         if (kind == LibraryTreeActionKind.NewNote && name is not null)
         {
             LibraryResult<LibraryPath> direct = await this.FileService.CreateFileAsync(folder, name, CancellationToken.None);
@@ -220,6 +235,30 @@
         IDialogReference reference = await this.Dialogs.ShowAsync<MoveDialog>(title, parameters, MoveDialog.Options);
         DialogResult? result = await reference.Result;
         this.ApplyMoveResult(result, item, "Moved");
+    }
+
+    /// <summary>Moves <paramref name="item"/> into <paramref name="destination"/> after a drag and drop: no dialog,
+    /// so the guard (<see cref="BeforeChangeAsync"/>) runs here, a refusal from the service shows through
+    /// <see cref="ISnackbar"/>, and success raises <see cref="OnChanged"/> like a dialog move does.</summary>
+    private async Task HandleMoveIntoAsync(LibraryPath item, LibraryPath destination)
+    {
+        this.failedNotes = [];
+        if (this.BeforeChangeAsync is not null && !await this.BeforeChangeAsync(item))
+        {
+            return;
+        }
+
+        LibraryResult<LibraryMoveResult> result = await this.FileService.MoveAsync(item, destination, CancellationToken.None);
+        if (result.Value is null)
+        {
+            this.Snackbar.Add(result.Error ?? string.Empty, Severity.Error);
+            return;
+        }
+
+        this.actionVerb = "Moved";
+        this.failedNotes = [.. result.Value.FailedNotes.Select(failure => failure.RelativePath)];
+        this.StateHasChanged();
+        _ = this.OnChanged.InvokeAsync(new LibraryChange(item, result.Value.NewPath, result.Value.RewrittenNotes));
     }
 
     /// <summary>Interprets a rename/move dialog's <see cref="DialogResult"/>: cancelled or an aborted
