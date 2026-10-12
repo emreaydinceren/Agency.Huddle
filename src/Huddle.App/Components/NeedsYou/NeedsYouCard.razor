@@ -1,0 +1,23 @@
+@*
+    The left sidebar's chrome around NeedsYouList: an outlined paper with the title "Needs you" and a
+    count. It is not drawn while the list is empty, but the list stays mounted inside it, because the list
+    is what reports the count and a hidden list must still hear the tracker. A right-hand sidebar would use
+    NeedsYouList directly with chrome of its own.
+*@
+
+<MudPaper Outlined="true" Class="needs-you-card" hidden="@(this.count == 0)" role="region" aria-label="Needs you">
+    <div class="needs-you-title">
+        <MudText Typo="Typo.subtitle2">Needs you</MudText>
+        <MudChip T="string" Size="Size.Small" Color="Color.Warning" Class="needs-you-count">@this.count</MudChip>
+    </div>
+    <NeedsYouList CountChanged="this.OnCountChanged" />
+</MudPaper>
+
+@code {
+    private int count;
+
+    private void OnCountChanged(int value)
+    {
+        this.count = value;
+    }
+}

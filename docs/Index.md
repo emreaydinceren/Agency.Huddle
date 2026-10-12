@@ -70,6 +70,7 @@ that exercise it. All are **chat** unless stated.
 | Skills, Proposals and the Chief of Staff | [Huddle.Skills-Specifications.md](Huddle.Skills-Specifications.md) | [0020](adr/0020-a-hook-is-a-prompt.md), [0021](adr/0021-a-skill-is-know-how-an-agent-reads-on-demand.md) | [skills](engineering/manual-tests/skills.md) | Built |
 | Agent tools (`mcp__team__*`) | [code-map.md](engineering/code-map.md) | none | [app-tools](engineering/manual-tests/app-tools.md) | Built |
 | Questions (`ask_human`) | [Huddle.Questions-Specifications.md](Huddle.Questions-Specifications.md) | [0022](adr/0022-an-agent-asks-the-human-with-a-question.md) | [questions](engineering/manual-tests/questions.md) | Built 2026-10-01 |
+| Needs You: the sidebar card of Rooms waiting on the Human | [Huddle.NeedsYou-Specifications.md](Huddle.NeedsYou-Specifications.md) | [0050](adr/0050-needs-you-is-derived-from-room-events-and-held-in-memory.md) | [needs-you](engineering/manual-tests/needs-you.md) | Built 2026-10-12 |
 | Prompt blocks: a Library image reaches the Agent as an image | [Huddle.PromptBlocks-Specifications.md](Huddle.PromptBlocks-Specifications.md) | [0036](adr/0036-a-prompt-block-is-sent-only-when-the-adapter-advertised-it.md) | [prompt-blocks](engineering/manual-tests/prompt-blocks.md) | Built 2026-10-01 |
 | Tasks, Views, Board and List | [Huddle.Tasks-Specifications.md](Huddle.Tasks-Specifications.md) | [0025](adr/0025-in-tasks-a-team-is-a-folder-by-convention.md), [0026](adr/0026-a-change-to-a-task-wakes-its-assignee.md) | [tasks](engineering/manual-tests/tasks.md) | Built |
 | Sprints: a named group of Tasks, listed in `sprints.md` | [Huddle.Sprints-Specifications.md](Huddle.Sprints-Specifications.md) | [0037](adr/0037-a-sprint-is-a-named-group-of-tasks-in-one-markdown-file.md) | [tasks](engineering/manual-tests/tasks.md) (TASKS-16 to TASKS-19 cover Sprints) | Implemented 2026-10-05 |
@@ -165,6 +166,7 @@ One row per decision. Open the ADR only when its row is your question.
 | [0047](adr/0047-a-teammates-avatar-is-edited-in-its-own-dialog-opened-from-the-avatar.md) | A Teammate's avatar is edited in its own dialog, opened by pressing the avatar in every card mode; Apply holds the result in Create and Edit, Save writes it at once in View; the colour controls are hidden under An image. | Accepted |
 | [0048](adr/0048-the-avatar-library-ships-with-the-app-and-is-the-default.md) | The avatar library ships in the repository and is the default when `Team:AvatarLibrary:Dir` is unset; a configured `Dir` replaces it and is never backed by it. | Accepted |
 | [0049](adr/0049-a-hiring-pool-holds-the-jobs-and-a-team-type-lists-them.md) | Jobs live once in a global hiring pool (`hiringpool.json` plus a persona file each); a team type lists the jobs it uses and keeps only its manager, limit, coverage and vendor rule; presets are gone; the pool is browsed by a type cloud and a tags-and-skills cloud. Amends 0038. | Accepted |
+| [0050](adr/0050-needs-you-is-derived-from-room-events-and-held-in-memory.md) | Needs You is one in-memory singleton keyed by Room id that observes existing `RoomEvents`; four reasons (Mention, Question, Form, Budget); only a Human post or a dismissal clears a Room, never opening it; the Mention reason is rebuilt from the end of each Transcript at startup; tracker, list and card are separate so the list can move to a right-hand sidebar. | Accepted |
 
 ## 5. Manual tests
 
@@ -184,6 +186,7 @@ One page per feature area, run by hand in a browser. Start with `common.md`.
 | [invite-rooms.md](engineering/manual-tests/invite-rooms.md) | Room creation, membership, sidebar updates, invite paths |
 | [library.md](engineering/manual-tests/library.md) | Library explorer, reading, writing, navigation, copying |
 | [model-effort.md](engineering/manual-tests/model-effort.md) | Model and Effort selection, catalog probe, persistence |
+| [needs-you.md](engineering/manual-tests/needs-you.md) | Needs You card: Mention rebuilt at startup, Dismiss, Archive |
 | [persona-lifecycle.md](engineering/manual-tests/persona-lifecycle.md) | Persona lifecycle, Work Dirs, health badges, session restart |
 | [pipe-external.md](engineering/manual-tests/pipe-external.md) | Named pipe protocol, external agent clients, message routing |
 | [prompt-blocks.md](engineering/manual-tests/prompt-blocks.md) | Library images and document text sent to an Adapter as prompt blocks |

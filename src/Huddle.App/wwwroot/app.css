@@ -2647,3 +2647,52 @@ button:focus-visible {
         position: static;
     }
 }
+/* ---- Needs You: the sidebar card of Rooms waiting on the Human ---------------------------------
+   Rows reuse .hover-reveal-row for the dismiss button. Every colour comes from a MudBlazor variable. */
+
+.needs-you-card {
+    margin: 0.5rem;
+    padding: 0.25rem 0;
+}
+
+.needs-you-card[hidden] {
+    display: none;
+}
+
+.needs-you-title {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0.25rem 1rem;
+}
+
+.needs-you-row .mud-nav-link-text {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    min-width: 0;
+}
+
+.needs-you-icons {
+    display: inline-flex;
+    gap: 0.125rem;
+    flex: 0 0 auto;
+}
+
+.needs-you-text {
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+}
+
+.needs-you-name,
+.needs-you-detail {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.needs-you-detail {
+    font-size: 0.75rem;
+    color: var(--mud-palette-text-secondary);
+}

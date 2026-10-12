@@ -11,6 +11,7 @@ using Agency.Huddle.App.Elicitation;
 using Agency.Huddle.App.FileChanges;
 using Agency.Huddle.App.HiringPool;
 using Agency.Huddle.App.Library;
+using Agency.Huddle.App.NeedsYou;
 using Agency.Huddle.App.Prompts;
 using Agency.Huddle.App.Pipes;
 using Agency.Huddle.App.Services;
@@ -456,6 +457,13 @@ public static class ServiceCollectionExtensions
         // in sync here, and it stays out of PipeHostFixture.RemovePersonaSupervisorHostedService's
         // factory-based search entirely.
         services.AddHostedService<PersonaRenameCascade>();
+
+        // Needs You (ADR-0050). The tracker is a singleton that observes RoomEvents and the Question and
+        // Form stores, so it must exist before the first event, not on first use: the startup scan takes
+        // it as a dependency, and AddHostedService constructs that at host start. Registered after
+        // DataInitializer so the Team Directory is initialised before the scan reads it.
+        services.AddSingleton<NeedsYouTracker>();
+        services.AddHostedService<NeedsYouStartupScan>();
 
         return services;
     }
