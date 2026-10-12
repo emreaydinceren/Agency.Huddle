@@ -386,6 +386,7 @@ public static class ServiceCollectionExtensions
 
         // Scoped: the open Tabs of one circuit (docs/Huddle.Tabs-Specifications.md).
         services.AddScoped<Tabs.TabService>();
+        services.AddScoped<Components.Shared.TeammateCardOpener>();
         services.AddSingleton(new Tabs.TabPageRoutes(typeof(ServiceCollectionExtensions).Assembly));
 
         // Unconditional too, and for the same reason: the probe spends nothing on its own (it never

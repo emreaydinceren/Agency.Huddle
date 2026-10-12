@@ -156,6 +156,29 @@ window.teamScroll = {
     toBottom(el) {
         el.scrollTop = el.scrollHeight;
     },
+    // Scrolls the Message row with this id to the middle of the list, moves focus to it without
+    // scrolling again, and flashes it (Global Search spec 9.1). Returns false when no row has the id.
+    // scrollIntoView works in the zoomed page's own coordinates, so the 90% zoom needs no correction.
+    toMessage(el, id) {
+        const row = el.querySelector('[data-message-id="' + CSS.escape(id) + '"]');
+        if (!row) {
+            return false;
+        }
+
+        row.scrollIntoView({ block: "center" });
+        row.focus({ preventScroll: true });
+        row.classList.remove("search-hit-flash");
+        void row.offsetWidth;
+        row.classList.add("search-hit-flash");
+        const clear = () => row.classList.remove("search-hit-flash");
+        row.addEventListener("animationend", clear, { once: true });
+        setTimeout(clear, 2000);
+        return true;
+    },
+    // True when the list is scrolled to within 4 px of its bottom, in its own (zoomed) coordinates.
+    isAtBottom(el) {
+        return el.scrollHeight - el.scrollTop - el.clientHeight <= 4;
+    },
 };
 
 // Tab shortcuts (docs/Huddle.Tabs-Specifications.md). The browser keeps Ctrl+W, Ctrl+Tab and
