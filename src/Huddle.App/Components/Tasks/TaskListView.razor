@@ -42,7 +42,7 @@
                 case "title":
                     <TemplateColumn @key="key" T="TaskItem" Title="Title" Sortable="true" SortBy="@(t => (object)t.Title)" CellClass="task-list-title-cell">
                         <CellTemplate>
-                            <span class="task-list-title" title="@context.Item.Title"><MudHighlighter Text="@context.Item.Title" HighlightedText="@this.Search" /></span>
+                            <span class="task-list-title" title="@context.Item.Title" aria-current="@(this.IsSelected(context.Item) ? "true" : null)"><MudHighlighter Text="@context.Item.Title" HighlightedText="@this.Search" /></span>
                         </CellTemplate>
                     </TemplateColumn>
                     break;
@@ -233,6 +233,10 @@
     [Parameter]
     public string? Search { get; set; }
 
+    /// <summary>The Task open in the detail panel, or <see langword="null"/> when none is: its row is marked selected (<c>task-row-selected</c>, and <c>aria-current</c> on its title, since MudDataGrid takes no attributes on a row).</summary>
+    [Parameter]
+    public TaskId? SelectedId { get; set; }
+
     /// <summary>Raised with the clicked row's id when the Human clicks a row, to open the detail panel (Spec §13.6).</summary>
     [Parameter]
     public EventCallback<TaskId> OnOpenTask { get; set; }
@@ -404,7 +408,24 @@
     }
 
     /// <summary>The CSS class for a row: <c>task-overdue</c> when overdue, nothing otherwise. The row index is unused; the shape is fixed by RowClassFunc.</summary>
-    private string RowClass(TaskItem task, int _) => this.IsOverdue(task) ? "task-overdue" : string.Empty;
+    private string RowClass(TaskItem task, int _)
+    {
+        List<string> classes = [];
+        if (this.IsOverdue(task))
+        {
+            classes.Add("task-overdue");
+        }
+
+        if (this.IsSelected(task))
+        {
+            classes.Add("task-row-selected");
+        }
+
+        return string.Join(' ', classes);
+    }
+
+    /// <summary>Whether <paramref name="task"/> is the one open in the detail panel.</summary>
+    private bool IsSelected(TaskItem task) => this.SelectedId is { } id && id == task.Id;
 
     /// <summary>Raises <see cref="OnOpenTask"/> with the clicked row's id.</summary>
     private Task OnRowClickAsync(DataGridRowClickEventArgs<TaskItem> args) => this.OnOpenTask.InvokeAsync(args.Item.Id);
