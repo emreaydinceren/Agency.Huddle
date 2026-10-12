@@ -1,6 +1,6 @@
 # Huddle.GlobalSearch — Design Specification
 
-**Date:** 2026-10-12 · **Status:** Designed, not built; the Top Bar it lives in is built (PR #162,
+**Date:** 2026-10-12 · **Status:** Built 2026-10-12; the Top Bar it lives in is built (PR #162,
 `4864ef6`) · **Owner:** chat surface · **Decision records:**
 [ADR-0046](adr/0046-a-group-mounts-its-own-page-and-the-url-names-the-focused-one.md) (its addendum
 records the Top Bar) and [ADR-0050](adr/0050-search-keeps-no-index-of-its-own.md) for *search keeps no index of its own*

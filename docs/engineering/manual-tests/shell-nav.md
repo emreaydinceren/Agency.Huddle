@@ -32,6 +32,9 @@ standing conventions. This area adds:
 5. No test in this area needs a Model or an Effort. If a step below appears to ask you to pick one, that step is in the wrong area — stop and report it rather than picking.
 6. Do NOT click **New teammate** on `/teammates` during this area. Opening that card probes the model catalog, which is another area's business and the one place on these pages that can reach an Adapter.
 
+Top Bar search (the box in the middle of the Top Bar) is not tested here. Its placement is
+GLOBALSEARCH-09 in [global-search.md](global-search.md).
+
 ## Tests
 
 ### SHELLNAV-01 — Every stylesheet the shell links is fingerprinted (except the one that is deliberately static) and actually serves
