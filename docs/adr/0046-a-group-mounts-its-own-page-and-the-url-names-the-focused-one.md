@@ -36,10 +36,13 @@ page of its active Tab itself. The browser URL names the focused group's active 
 
 ## Addendum: the breadcrumb bar
 
-Because each group mounts its own `TabPageHost`, the shared breadcrumb bar lives there too: one bar
-per pane, showing the trail of that pane's active Tab. A crumb acts on the Tab it sits in
-(`TabService.Navigate`), not on whichever pane has focus, then the router is pointed at the Tab so the
-URL still names the focused pane's page.
+Superseded: the breadcrumb trail no longer lives in `TabPageHost`. It was one bar per pane, so a split
+drew two and collapsed long trails to fit. The shell's `TopBar` (a fixed `MudAppBar` across the whole
+window, above the menu and every pane) now draws one trail, for the focused pane's active Tab
+(`TabService.Active`), so it follows focus. A crumb navigates that Tab in place
+(`TabService.Navigate`), then the router is pointed at the Tab so the URL still names the focused
+pane's page. The bar is laid out as three cells (trail, a middle cell for search, an end cell for
+toolbar buttons) so those later features fill slots rather than reshape it.
 
 ## What this costs
 

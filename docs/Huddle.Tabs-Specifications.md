@@ -35,12 +35,15 @@ and more than two groups are still to come; the model and the persisted format a
 | A Room is renamed | Its Tab title follows. |
 | A Room is archived or deleted | Its Tab closes (`TabSync`). A removed Team's or Project's Tab closes too, but only when the catalog announces a change and still lists at least one Team: an empty catalog is read as "not loaded yet", so removing the very last Team leaves its Tab open. |
 | Reload or restart | Tabs, their order, the active Tab and the preview flags are restored. |
-| Any page opens in a Tab | A breadcrumb bar sits above it (below). One bar per pane; no page draws its own. |
+| Any page opens in a Tab | The Top Bar shows its breadcrumb trail (below). One trail for the window, following the focused pane; no page draws its own. |
 | Click an ancestor crumb | Navigates that Tab in place (`TabService.Navigate`): same slot and group, key, title and icon re-derived, a preview becomes permanent. If another Tab already has the target's key, that Tab is focused instead. |
 
-### Breadcrumb bar
+### Top Bar and breadcrumbs
 
-`TabPageHost` mounts `PageBreadcrumbs` above the page of every Tab, so the trail is the shell's.
+`TopBar` is a fixed `MudAppBar` across the whole window, above the menu and every pane, and draws
+`PageBreadcrumbs` for the focused pane's active Tab (`TabService.Active`), so the trail is the shell's
+and moves when focus moves. It is laid out as three cells: the trail, then reserved room for a search
+box (`Search`) and for toolbar buttons (`Actions`), which later features fill.
 `TabTrail.Build(url, tabTitle)` derives it from the URL, following the same table as the keys. The
 last crumb is the Tab's own title (so a renamed Room follows), is plain text, and carries
 `aria-current="page"`. An ancestor with a page of its own is a link; an area with none (*Teams*) is
@@ -57,9 +60,8 @@ plain text.
 | `/tasks/{view}`, `/tasks/new`, `/tasks/item/{id}` | Tasks (link), the Tab's title |
 | `/settings/{tab}` | Settings (link), the tab's name |
 
-The bar is sticky inside `.tab-body`, so it stays in view while a long page scrolls and a page that
-fills the pane (the Room) still does. With two panes the bar collapses the middle of a longer trail to
-an ellipsis. Pages drop a title that only repeats the last crumb; Tasks and Chat keep theirs, because
+The bar is fixed, so it stays in view while a long page scrolls, and it spans the window, so a trail is
+never collapsed. Pages drop a title that only repeats the last crumb; Tasks and Chat keep theirs, because
 the Task view's Tab title is its id and the Room's title row carries rename and members.
 
 ### Tab keys
