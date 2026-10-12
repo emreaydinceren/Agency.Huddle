@@ -228,7 +228,7 @@ If there are no archived items, archive a Room and close a Task first, then reru
 
 **Pass if — all of these**
 
-- The Library group shows `Couldn't search Library.`, or skips the locked folder and shows the rest of the files, and the other groups render as normal.
+- The Library group shows `Couldn't search Library.`, or skips the locked folder silently (no `Results may be incomplete.`, spec §8.3) and shows the rest of the files, and the other groups render as normal.
 - Once the folder is unlocked, the Library group shows its files again.
 
 **Fail if — any of these**

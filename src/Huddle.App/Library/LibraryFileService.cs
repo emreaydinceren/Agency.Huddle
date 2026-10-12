@@ -170,6 +170,7 @@ internal sealed class LibraryFileService(
         List<LibraryEntry> entries = [];
         foreach (FileSystemInfo child in children)
         {
+            ct.ThrowIfCancellationRequested();
             bool isFolder = child is DirectoryInfo;
             if (isFolder && LibraryHiddenFolders.IsHidden(child.Name, ignoredFolders, hideUnderscoreFolders))
             {
@@ -371,6 +372,7 @@ internal sealed class LibraryFileService(
                     return new LibraryTextSearchResult(hits, true);
                 }
 
+                ct.ThrowIfCancellationRequested();
                 visited++;
                 if (await test(entry, ct) is { } hit)
                 {

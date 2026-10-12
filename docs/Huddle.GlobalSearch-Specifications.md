@@ -604,7 +604,8 @@ A provider whose feature is switched off (`Team:Library:Enabled` or `Team:Tasks:
   nothing is kept after the search. **Assumed, the owner has not confirmed (OP-2).** `FindAsync`
   keeps using `Library:MaxIndexedFiles`.
 - **Truncated:** when the visit budget, the hit cap or a skipped over-size file cuts a root short,
-  the group's result is `Truncated` and shows `Results may be incomplete.`
+  the group's result is `Truncated` and shows `Results may be incomplete.` A folder that cannot be
+  listed, like a file that cannot be read, is skipped silently and does not set `Truncated`.
 - **Excluded:** see §8.6.
 - **Hit:** root id and name, relative path, the folder path within the root, the snippet for a
   content hit, `TeamName` when the path is in a Team folder under the Teams root.

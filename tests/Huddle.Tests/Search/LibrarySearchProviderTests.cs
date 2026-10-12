@@ -215,6 +215,39 @@ public sealed class LibrarySearchProviderTests
         Assert.Empty(result.Hits);
     }
 
+    /// <summary>Two roots finish in the opposite order to the root list; the hits still come back in root order, so equal-ranked hits never swap between runs (D3, spec §7.4).</summary>
+    [Fact]
+    public async Task Hits_MergedInRootOrder_NotCompletionOrder()
+    {
+        CancellationToken ct = TestContext.Current.CancellationToken;
+        using LibraryFileServiceFixture fixture = LibraryFileServiceFixture.Build();
+        string alpha = fixture.CreatePinnedRoot("Alpha");
+        string beta = fixture.CreatePinnedRoot("Beta");
+        WriteFile(Path.Combine(alpha, "login.md"), "x");
+        WriteFile(Path.Combine(beta, "login.md"), "x");
+        TaskCompletionSource betaDone = new(TaskCreationOptions.RunContinuationsAsynchronously);
+        TeamOptions options = OptionsFor(fixture);
+        options.Search.LibraryParallelism = 2;
+
+        async Task Hook(LibraryRoot root, CancellationToken token)
+        {
+            if (root.Id == "beta")
+            {
+                betaDone.TrySetResult();
+            }
+            else if (root.Id == "alpha")
+            {
+                await betaDone.Task.WaitAsync(token);
+                await Task.Delay(TimeSpan.FromMilliseconds(100), token);
+            }
+        }
+
+        SearchResult result = await Provider(fixture, options, Hook).SearchAsync(Query("login"), ct);
+
+        string[] rootIds = [.. result.Hits.OfType<LibraryHit>().Select(hit => hit.RootId)];
+        Assert.Equal(["alpha", "beta"], rootIds);
+    }
+
     /// <summary>Builds the Library query for <paramref name="text"/> in <paramref name="scope"/>, with the Library filter and the 50-hit cap (OP-5).</summary>
     private static SearchQuery Query(string text, SearchScope scope = SearchScope.Active) =>
         new(text, SearchFilter.Library, null, scope, 50);

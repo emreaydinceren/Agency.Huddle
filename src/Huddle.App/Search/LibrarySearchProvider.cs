@@ -47,17 +47,17 @@ internal sealed class LibrarySearchProvider(
 
         string teamsRoot = Path.GetFullPath(Path.Combine(this.options.Value.DataDir, this.options.Value.Teams.Dir));
         Predicate<LibraryEntry> isExcluded = entry => IsExcluded(entry, teamsRoot);
-        List<LibraryHit> hits = [];
-        Lock gate = new();
-        bool truncated = false;
+        List<LibraryRoot> visible = [.. this.roots.VisibleRoots];
+        LibraryTextSearchResult?[] perRoot = new LibraryTextSearchResult?[visible.Count];
         ParallelOptions parallel = new()
         {
             MaxDegreeOfParallelism = this.options.Value.Search.EffectiveLibraryParallelism,
             CancellationToken = ct,
         };
 
-        await Parallel.ForEachAsync(this.roots.VisibleRoots, parallel, async (root, token) =>
+        await Parallel.ForEachAsync(Enumerable.Range(0, visible.Count), parallel, async (index, token) =>
         {
+            LibraryRoot root = visible[index];
             if (this.beforeRootForTests is { } hook)
             {
                 await hook(root, token);
@@ -68,13 +68,20 @@ internal sealed class LibrarySearchProvider(
                 return;
             }
 
-            LibraryTextSearchResult found = await this.files.SearchTextAsync(scope, query.Text, query.MaxHits, this.options.Value.Search, isExcluded, token);
-            lock (gate)
+            perRoot[index] = await this.files.SearchTextAsync(scope, query.Text, query.MaxHits, this.options.Value.Search, isExcluded, token);
+        });
+
+        // Merge in root order, never in completion order, so equal-ranked hits keep one order from run to run (§7.4).
+        List<LibraryHit> hits = [];
+        bool truncated = false;
+        for (int index = 0; index < perRoot.Length; index++)
+        {
+            if (perRoot[index] is { } found)
             {
                 truncated |= found.Truncated;
-                hits.AddRange(found.Hits.Select(hit => ToHit(root, hit)));
+                hits.AddRange(found.Hits.Select(hit => ToHit(visible[index], hit)));
             }
-        });
+        }
 
         return new SearchResult([.. hits], truncated);
     }

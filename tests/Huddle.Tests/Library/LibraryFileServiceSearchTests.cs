@@ -116,6 +116,35 @@ public sealed class LibraryFileServiceSearchTests
         Assert.True(result.Truncated);
     }
 
+    /// <summary>A cancelled search stops at the next entry, not at the next file read: entries the exclusion rule skips never reach a read, yet the walk still ends at once (D1).</summary>
+    [Fact]
+    public async Task Cancelled_StopsAtTheNextEntry()
+    {
+        using LibraryFileServiceFixture fixture = LibraryFileServiceFixture.Build();
+        for (int i = 0; i < 200; i++)
+        {
+            Write(Business(fixture), $"file{i}.md", "nothing");
+        }
+
+        LibraryFileService service = fixture.CreateService();
+        using CancellationTokenSource cts = CancellationTokenSource.CreateLinkedTokenSource(TestContext.Current.CancellationToken);
+        int visited = 0;
+        Predicate<LibraryEntry> cancelAfterFive = _ =>
+        {
+            if (++visited == 5)
+            {
+                cts.Cancel();
+            }
+
+            return true;
+        };
+
+        _ = await Assert.ThrowsAnyAsync<OperationCanceledException>(
+            () => service.SearchTextAsync(fixture.ResolveTeams("Business"), "zzz", 10, new SearchOptions(), cancelAfterFive, cts.Token));
+
+        Assert.True(visited <= 6, $"The walk visited {visited} entries after cancellation.");
+    }
+
     /// <summary>The walk applies the tree's hiding rules: <c>.git</c>, <c>.obsidian</c> and <c>_tasks</c> are never walked, so their text never hits.</summary>
     [Fact]
     public async Task HiddenFolders_NeverWalked()
