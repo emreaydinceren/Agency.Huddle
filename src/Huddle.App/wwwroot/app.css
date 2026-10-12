@@ -2604,6 +2604,11 @@ button:focus-visible {
     padding: 0.375rem 0.5rem;
 }
 
+/* MudHighlighter draws the match as a mark; make it bold as well as coloured. */
+.search-card mark {
+    font-weight: 600;
+}
+
 .search-card-icon {
     flex: none;
     display: inline-flex;
@@ -2659,7 +2664,7 @@ button:focus-visible {
 /* The dropdown is the popover's direct child, so it is drawn inside the provider's 0.9 (see the zoom
    rules at the top of this file). Viewport units are not zoomed, so 80% of the window is 80vh / 0.9. */
 .search-dropdown {
-    width: min(720px, calc(100vw / 0.9));
+    width: min(720px, calc((100vw - 48px) / 0.9));
     max-height: calc(80vh / 0.9);
     overflow-y: auto;
 }
