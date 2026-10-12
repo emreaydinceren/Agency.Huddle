@@ -126,8 +126,12 @@ public static class SearchDropdownModel
         {
             if (hitCount == 0)
             {
-                emptyLine = $"No results for '{input.Parse.Phrase}'.";
-                announcement = emptyLine;
+                if (input.Parse.Phrase.Length > 0)
+                {
+                    emptyLine = $"No results for '{input.Parse.Phrase}'.";
+                }
+
+                announcement = emptyLine ?? "0 results";
             }
             else
             {

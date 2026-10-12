@@ -241,6 +241,15 @@ public sealed class SearchDropdownModelTests
         Assert.Equal(expected, Lines(view));
     }
 
+    /// <summary>Browsing with an empty phrase and no hit draws no "No results for ''." line, only the group's own notice.</summary>
+    [Fact]
+    public void Browse_EmptyPhraseNoHits_HasNoEmptyTermLine()
+    {
+        SearchDropdownView view = SearchDropdownModel.Build(Input(Parse(SearchFilter.Teams, string.Empty), AllArrived()));
+
+        Assert.Null(view.EmptyLine);
+    }
+
     /// <summary>One filter with an empty archived side draws only the active group.</summary>
     [Fact]
     public void SingleFilter_EmptyArchivedGroupNotDrawn()
