@@ -1,7 +1,7 @@
 @*
     The Library's Delete confirmation: what ShowMessageBoxAsync gave (a title, one line of text, Cancel
-    then Delete), except the Delete button is the destructive red rgb(184, 35, 43), which a message box
-    cannot style on one button. LibraryFileOps opens it; it closes with DialogResult.Ok(true) on Delete.
+    then Delete), except the Delete button is the theme's error red (Color.Error), which a message box
+    cannot set on one button. LibraryFileOps opens it; it closes with DialogResult.Ok(true) on Delete.
 *@
 <MudDialog>
     <DialogContent>
@@ -9,7 +9,8 @@
     </DialogContent>
     <DialogActions>
         <MudButton OnClick="this.Cancel">Cancel</MudButton>
-        <MudButton Class="library-delete-confirm" Variant="Variant.Filled" OnClick="this.Confirm">Delete</MudButton>
+        <MudButton Class="library-delete-confirm" Variant="Variant.Filled" Color="Color.Error"
+                   OnClick="this.Confirm">Delete</MudButton>
     </DialogActions>
 </MudDialog>
 

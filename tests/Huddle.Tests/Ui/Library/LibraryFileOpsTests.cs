@@ -416,7 +416,7 @@ public sealed class LibraryFileOpsTests : IDisposable
         Assert.Equal([item.FullPath], this.fixture.LibraryFixture.RecycleBin.Sent);
     }
 
-    /// <summary>The Delete confirm button carries the class that paints it the destructive red (<c>rgb(184, 35, 43)</c>); Cancel does not.</summary>
+    /// <summary>The Delete confirm button is the theme's filled error button (red); Cancel is not.</summary>
     [Fact]
     public async Task Delete_ConfirmButton_IsTheDestructiveButton()
     {
@@ -432,8 +432,8 @@ public sealed class LibraryFileOpsTests : IDisposable
         cut.WaitForAssertion(() => Assert.NotEmpty(cut.FindAll(".mud-dialog-actions button")));
 
         IReadOnlyList<AngleSharp.Dom.IElement> buttons = cut.FindAll(".mud-dialog-actions button");
-        Assert.DoesNotContain("library-delete-confirm", buttons.Single(b => b.TextContent.Trim() == "Cancel").ClassName, StringComparison.Ordinal);
-        Assert.Contains("library-delete-confirm", buttons.Single(b => b.TextContent.Trim() == "Delete").ClassName, StringComparison.Ordinal);
+        Assert.False(buttons.Single(b => b.TextContent.Trim() == "Cancel").ClassList.Contains("mud-button-filled-error"));
+        Assert.True(buttons.Single(b => b.TextContent.Trim() == "Delete").ClassList.Contains("mud-button-filled-error"));
     }
 
     /// <summary>[12.5b] When the Recycle Bin is unavailable, the refusal shows through <c>ISnackbar</c> with the

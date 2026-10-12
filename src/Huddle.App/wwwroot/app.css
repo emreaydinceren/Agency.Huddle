@@ -2036,16 +2036,6 @@ button:focus-visible {
     display: none;
 }
 
-/* The Library's Delete confirmation: the destructive button is red. */
-.library-delete-confirm.mud-button-filled {
-    background-color: rgb(184, 35, 43);
-    color: #fff;
-}
-
-.library-delete-confirm.mud-button-filled:hover {
-    background-color: rgb(160, 28, 36);
-}
-
 /* Drag and drop: when the tree is flattened this strip under the list stands for the scope's own folder. */
 .library-tree-drop-area {
     min-height: 4rem;
