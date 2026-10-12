@@ -1,0 +1,387 @@
+@*
+    The search box that fills the Top Bar's Search slot, and the dropdown under it (Global Search spec §5.1,
+    §6, §9, §11). Typing stays in the box: the dropdown has no second input, the highlighted card is named by
+    aria-activedescendant and focus never leaves the box. The dropdown is a MudPopover, so it lives in the
+    popover provider, which cancels the page's 90% zoom for placement; its single direct child,
+    .search-dropdown, re-applies it and carries the size rules (spec §6.8, app.css). Nothing here sets a zoom.
+
+    Sticky state (spec §6.4) lives in this component for the life of the circuit: closing keeps the last
+    filter and phrase, and reopening shows an empty box, that filter, a header, and runs the phrase again.
+*@
+
+@using Agency.Huddle.App.Components.Shared
+@using Agency.Huddle.App.Search
+@using Agency.Huddle.App.Tabs
+@using Microsoft.JSInterop
+@implements IDisposable
+@inject SearchOrchestrator Orchestrator
+@inject TabService Tabs
+@inject NavigationManager Navigation
+@inject TeammateCardOpener CardOpener
+
+<div class="search-bar" style="position: relative;" @onclick="this.OpenAsync" @onfocusin="this.OpenAsync" @onfocusout="this.CloseAsync">
+    <MudTextField T="string"
+                  Value="@this.text"
+                  ValueChanged="this.OnInputAsync"
+                  Immediate="true"
+                  Variant="Variant.Outlined"
+                  Margin="Margin.Dense"
+                  Placeholder="Search teams, teammates, library, tasks, rooms…"
+                  Adornment="Adornment.Start"
+                  AdornmentIcon="@Icons.Material.Filled.Search"
+                  OnKeyDown="this.OnKeyDownAsync"
+                  UserAttributes="@this.InputAttributes" />
+    <span aria-hidden="true"
+          class="mud-text-secondary"
+          style="position: absolute; right: 0.75rem; top: 50%; transform: translateY(-50%); pointer-events: none; font-size: 0.75rem;">Ctrl K</span>
+    <div aria-live="polite"
+         role="status"
+         style="position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap;">@(this.open ? this.view.Announcement : null)</div>
+    <MudPopover Open="@this.open" AnchorOrigin="Origin.BottomLeft" TransformOrigin="Origin.TopLeft">
+        <div class="search-dropdown" @onmousedown:preventDefault="true">
+            <div role="radiogroup" aria-label="Filter" class="d-flex flex-wrap gap-1 pa-2">
+                <MudChipSet T="SearchFilter"
+                            SelectionMode="SelectionMode.SingleSelection"
+                            SelectedValue="@this.chip"
+                            SelectedValueChanged="this.OnChipChangedAsync">
+                    @foreach (SearchFilter filter in ChipOrder)
+                    {
+                        <MudChip T="SearchFilter"
+                                 Value="@filter"
+                                 Text="@filter.ToString()"
+                                 Size="Size.Small"
+                                 role="radio"
+                                 aria-checked="@(filter == this.chip ? "true" : "false")" />
+                    }
+                </MudChipSet>
+            </div>
+            @if (this.view.Header is { } header)
+            {
+                <MudText Typo="Typo.caption" Class="search-header px-3 py-1">@header</MudText>
+            }
+            @if (this.view.QuietLine is { } quiet)
+            {
+                <MudText Typo="Typo.body2" Class="search-quiet px-3 py-2">@quiet</MudText>
+            }
+            @if (this.groups.Count > 0)
+            {
+                <div id="search-listbox" role="listbox" aria-label="Search results">
+                    @foreach (SearchGroupView group in this.groups)
+                    {
+                        <div role="group" aria-labelledby="@group.Heading.Id">
+                            <div id="@group.Heading.Id" class="@(group.Heading.IsArchived ? "search-group-heading search-card-archived" : "search-group-heading")">
+                                @group.Heading.Text
+                                @if (group.Heading.IsSearching)
+                                {
+                                    <MudProgressCircular Indeterminate="true" Size="Size.Small" Class="ml-2" aria-label="Searching" />
+                                }
+                            </div>
+                            @foreach (SearchDropdownRow item in group.Items)
+                            {
+                                @switch (item)
+                                {
+                                    case SearchCardRow card:
+                                        SearchHit hit = card.Hit;
+                                        bool selected = this.IsHighlighted(card);
+                                        <div id="@card.OptionId"
+                                             role="option"
+                                             aria-selected="@(selected ? "true" : "false")"
+                                             class="search-option"
+                                             style="@(selected ? "cursor: pointer; background: var(--mud-palette-action-default-hover);" : "cursor: pointer;")"
+                                             @onclick="@(e => this.OpenHitAsync(hit, e.CtrlKey))">
+                                            <SearchCard Hit="@hit" Phrase="@this.phrase" />
+                                        </div>
+                                        break;
+                                    case SearchNoticeRow notice:
+                                        <MudText Typo="Typo.body2"
+                                                 Color="@(notice.Kind == SearchNoticeKind.NoMatch ? Color.Default : Color.Warning)"
+                                                 Class="search-notice px-3 py-1">
+                                            @if (notice.Kind != SearchNoticeKind.NoMatch)
+                                            {
+                                                <MudIcon Icon="@Icons.Material.Filled.WarningAmber" Size="Size.Small" Class="mr-1" aria-hidden="true" />
+                                            }
+                                            @notice.Text
+                                        </MudText>
+                                        break;
+                                }
+                            }
+                        </div>
+                    }
+                </div>
+            }
+            @if (this.view.EmptyLine is { } empty)
+            {
+                <MudText Typo="Typo.body2" Class="search-empty px-3 py-2">@empty</MudText>
+            }
+        </div>
+    </MudPopover>
+</div>
+
+@code {
+    /// <summary>The element id of the listbox the box controls.</summary>
+    private const string ListboxId = "search-listbox";
+
+    /// <summary>The chips, in the order spec §6.2 gives them. Alt+1 to Alt+6 index this list.</summary>
+    private static readonly SearchFilter[] ChipOrder =
+    [
+        SearchFilter.All,
+        SearchFilter.Teams,
+        SearchFilter.Teammates,
+        SearchFilter.Library,
+        SearchFilter.Tasks,
+        SearchFilter.Rooms,
+    ];
+
+    private readonly CancellationTokenSource disposed = new();
+    private Dictionary<(SearchFilter Group, SearchScope Scope), SearchGroupState> states = [];
+    private List<SearchGroupView> groups = [];
+    private List<SearchCardRow> cards = [];
+    private SearchDropdownView view = new([], null, null, null, null);
+    private SearchParse activeParse = new(SearchFilter.All, string.Empty, false);
+    private string text = string.Empty;
+    private string phrase = string.Empty;
+    private string? stickyTerm;
+    private SearchFilter chip = SearchFilter.All;
+    private bool open;
+    private int highlighted = -1;
+
+    /// <summary>The attributes of the box's input element: the ARIA combobox wiring of spec §11.</summary>
+    private Dictionary<string, object> InputAttributes
+    {
+        get
+        {
+            Dictionary<string, object> attributes = new(StringComparer.Ordinal)
+            {
+                ["role"] = "combobox",
+                ["aria-label"] = "Search",
+                ["aria-expanded"] = this.open ? "true" : "false",
+                ["aria-controls"] = ListboxId,
+                ["aria-autocomplete"] = "list",
+                ["aria-keyshortcuts"] = "Control+K /",
+                ["autocomplete"] = "off",
+            };
+            if (this.open && this.highlighted >= 0 && this.highlighted < this.cards.Count)
+            {
+                attributes["aria-activedescendant"] = this.cards[this.highlighted].OptionId;
+            }
+
+            return attributes;
+        }
+    }
+
+    /// <summary>Subscribes to the orchestrator and builds the first (quiet) view.</summary>
+    protected override void OnInitialized()
+    {
+        this.Orchestrator.GroupUpdated += this.OnGroupUpdated;
+        this.Rebuild();
+    }
+
+    /// <summary>Unsubscribes from the orchestrator and cancels the search in flight.</summary>
+    public void Dispose()
+    {
+        this.Orchestrator.GroupUpdated -= this.OnGroupUpdated;
+        this.Orchestrator.Cancel();
+        this.disposed.Cancel();
+        this.disposed.Dispose();
+    }
+
+    /// <summary>
+    /// Opens the dropdown: clears the box, keeps the last filter and runs the last phrase again (spec §6.4).
+    /// Does nothing when it is already open. The global key script calls this after it focuses the box.
+    /// </summary>
+    /// <returns>A completed task.</returns>
+    [JSInvokable]
+    public Task OpenAsync()
+    {
+        if (!this.open)
+        {
+            this.open = true;
+            this.text = string.Empty;
+            this.RunSearch();
+        }
+
+        return Task.CompletedTask;
+    }
+
+    private Task CloseAsync()
+    {
+        if (this.open)
+        {
+            this.open = false;
+            this.highlighted = -1;
+            this.Orchestrator.Cancel();
+        }
+
+        return Task.CompletedTask;
+    }
+
+    private Task OnInputAsync(string? value)
+    {
+        this.text = value ?? string.Empty;
+        this.open = true;
+        this.RunSearch();
+        return Task.CompletedTask;
+    }
+
+    private Task OnChipChangedAsync(SearchFilter filter)
+    {
+        if (filter != this.chip)
+        {
+            this.text = SearchQueryParser.ApplyChip(this.text, filter);
+            this.chip = filter;
+            this.RunSearch();
+        }
+
+        return Task.CompletedTask;
+    }
+
+    private async Task OnKeyDownAsync(KeyboardEventArgs e)
+    {
+        switch (e.Key)
+        {
+            case "ArrowDown":
+                await this.OpenAsync();
+                this.MoveHighlight(1);
+                break;
+            case "ArrowUp":
+                await this.OpenAsync();
+                this.MoveHighlight(-1);
+                break;
+            case "Enter" when this.open && this.cards.Count > 0:
+                await this.OpenHitAsync(this.cards[Math.Max(this.highlighted, 0)].Hit, e.CtrlKey);
+                break;
+            case "Escape":
+                await this.CloseAsync();
+                break;
+        }
+    }
+
+    private void MoveHighlight(int step)
+    {
+        if (this.cards.Count == 0)
+        {
+            this.highlighted = -1;
+            return;
+        }
+
+        if (step > 0)
+        {
+            this.highlighted = (this.highlighted + 1) % this.cards.Count;
+        }
+        else if (this.highlighted <= 0)
+        {
+            this.highlighted = this.cards.Count - 1;
+        }
+        else
+        {
+            this.highlighted--;
+        }
+    }
+
+    private bool IsHighlighted(SearchCardRow card)
+    {
+        return this.highlighted >= 0 && this.highlighted < this.cards.Count
+            && string.Equals(this.cards[this.highlighted].OptionId, card.OptionId, StringComparison.Ordinal);
+    }
+
+    /// <summary>
+    /// Opens a hit (spec §9, OP-11). A Teammate opens its card dialog and changes no Tab. Enter navigates the
+    /// focused Tab in place; Ctrl+Enter opens a permanent Tab, or only focuses it when it is already open.
+    /// </summary>
+    private async Task OpenHitAsync(SearchHit hit, bool inNewTab)
+    {
+        if (hit is TeammateHit teammate)
+        {
+            await this.CloseAsync();
+            _ = await this.CardOpener.OpenAsync(teammate.Name, this.disposed.Token);
+            return;
+        }
+
+        string? url = SearchHitLinks.UrlFor(hit);
+        if (url is null)
+        {
+            return;
+        }
+
+        Tab? target;
+        if (inNewTab)
+        {
+            target = this.Tabs.Open(url);
+            this.Tabs.Keep(target.Id);
+        }
+        else
+        {
+            target = this.Tabs.Active is { } active ? this.Tabs.Navigate(active.Id, url) : this.Tabs.Open(url);
+        }
+
+        await this.CloseAsync();
+        if (target is not null)
+        {
+            this.Navigation.NavigateTo(target.Url);
+        }
+    }
+
+    /// <summary>Reads the box, resets the group states and starts the search it asks for (or cancels the last one).</summary>
+    private void RunSearch()
+    {
+        SearchParse parse = this.text.Length == 0 && this.stickyTerm is not null
+            ? new SearchParse(this.chip, this.stickyTerm, true)
+            : SearchQueryParser.Parse(this.text, this.chip);
+        this.chip = parse.Filter;
+        if (parse.IsSearchable && parse.Phrase.Length > 0)
+        {
+            this.stickyTerm = parse.Phrase;
+        }
+
+        this.states = [];
+        this.highlighted = -1;
+        this.phrase = parse.Phrase;
+        this.activeParse = parse;
+        _ = this.Orchestrator.SearchAsync(parse, SearchOpenTeam.FromUrl(this.Tabs.Active?.Url));
+        this.Rebuild();
+    }
+
+    /// <summary>Raised from a pool thread; marshals to the renderer and drops an update of an older search.</summary>
+    private void OnGroupUpdated(SearchGroupUpdate update)
+    {
+        _ = RendererDispatch.RunAsync(this.InvokeAsync, () =>
+        {
+            if (this.open && update.SearchId == this.Orchestrator.CurrentSearchId)
+            {
+                this.states[(update.Group, update.Scope)] = update.State;
+                this.Rebuild();
+                this.StateHasChanged();
+            }
+
+            return Task.CompletedTask;
+        });
+    }
+
+    /// <summary>Rebuilds the view, its groups and its card list from the current state.</summary>
+    private void Rebuild()
+    {
+        this.view = SearchDropdownModel.Build(new SearchDropdownInput(this.activeParse,this.states, this.stickyTerm, this.text.Length == 0));
+        List<SearchGroupView> built = [];
+        foreach (SearchDropdownRow row in this.view.Rows)
+        {
+            if (row is SearchHeadingRow heading)
+            {
+                built.Add(new SearchGroupView(heading, []));
+            }
+            else if (built.Count > 0)
+            {
+                built[^1].Items.Add(row);
+            }
+        }
+
+        this.groups = built;
+        this.cards = [.. this.view.Rows.OfType<SearchCardRow>()];
+        if (this.highlighted >= this.cards.Count)
+        {
+            this.highlighted = -1;
+        }
+    }
+
+    /// <summary>A group heading and the cards and notices drawn under it.</summary>
+    private sealed record SearchGroupView(SearchHeadingRow Heading, List<SearchDropdownRow> Items);
+}

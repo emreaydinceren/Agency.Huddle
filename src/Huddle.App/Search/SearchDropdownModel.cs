@@ -214,7 +214,11 @@ public static class SearchDropdownModel
         rows.Add(new SearchHeadingRow(slot.Id, slot.Heading, slot.Scope == SearchScope.Archived, false));
         if (noMatchLine)
         {
-            rows.Add(new SearchNoticeRow($"Nothing in {slot.Heading} matches '{parse.Phrase}'.", SearchNoticeKind.NoMatch));
+            // Browsing Teams or Teammates with an empty box has no term to name.
+            string noMatch = parse.Phrase.Length == 0
+                ? $"Nothing in {slot.Heading}."
+                : $"Nothing in {slot.Heading} matches '{parse.Phrase}'.";
+            rows.Add(new SearchNoticeRow(noMatch, SearchNoticeKind.NoMatch));
         }
 
         foreach (SearchHit hit in shown)

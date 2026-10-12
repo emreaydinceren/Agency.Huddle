@@ -1,6 +1,7 @@
 @inherits LayoutComponentBase
 @implements IDisposable
 @using Agency.Huddle.App.Appearance
+@using Agency.Huddle.App.Components.Search
 @using Agency.Huddle.App.Themes
 @inject AppearanceStore AppearanceStore
 
@@ -14,7 +15,11 @@
 <MudSnackbarProvider />
 
 <MudLayout>
-    <TopBar />
+    <TopBar>
+        <Search>
+            <SearchBar />
+        </Search>
+    </TopBar>
     <MudDrawer Open="true" Variant="DrawerVariant.Persistent" Width="240px" Elevation="0" ClipMode="DrawerClipMode.Always">
         <RoomList />
         <TeamsNav />

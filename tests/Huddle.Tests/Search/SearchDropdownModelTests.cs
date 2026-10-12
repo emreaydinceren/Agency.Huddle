@@ -230,6 +230,17 @@ public sealed class SearchDropdownModelTests
         Assert.Equal("No results for 'login'.", view.Announcement);
     }
 
+    /// <summary>Browsing Teams with an empty box and no Team says "Nothing in Teams." with no empty term in it.</summary>
+    [Fact]
+    public void Browse_EmptyPhrase_EmptyGroupSaysNothingInGroupWithoutATerm()
+    {
+        string[] expected = ["Teams", "Nothing in Teams."];
+
+        SearchDropdownView view = SearchDropdownModel.Build(Input(Parse(SearchFilter.Teams, string.Empty), AllArrived()));
+
+        Assert.Equal(expected, Lines(view));
+    }
+
     /// <summary>One filter with an empty archived side draws only the active group.</summary>
     [Fact]
     public void SingleFilter_EmptyArchivedGroupNotDrawn()
