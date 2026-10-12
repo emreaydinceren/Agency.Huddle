@@ -168,6 +168,7 @@ One row per decision. Open the ADR only when its row is your question.
 | [0047](adr/0047-a-teammates-avatar-is-edited-in-its-own-dialog-opened-from-the-avatar.md) | A Teammate's avatar is edited in its own dialog, opened by pressing the avatar in every card mode; Apply holds the result in Create and Edit, Save writes it at once in View; the colour controls are hidden under An image. | Accepted |
 | [0048](adr/0048-the-avatar-library-ships-with-the-app-and-is-the-default.md) | The avatar library ships in the repository and is the default when `Team:AvatarLibrary:Dir` is unset; a configured `Dir` replaces it and is never backed by it. | Accepted |
 | [0049](adr/0049-a-hiring-pool-holds-the-jobs-and-a-team-type-lists-them.md) | Jobs live once in a global hiring pool (`hiringpool.json` plus a persona file each); a team type lists the jobs it uses and keeps only its manager, limit, coverage and vendor rule; presets are gone; the pool is browsed by a type cloud and a tags-and-skills cloud. Amends 0038. | Accepted |
+| [0050](adr/0050-search-keeps-no-index-of-its-own.md) | Global Search keeps no index of its own: every search re-reads from memory or disk, bounded by a per-root visit budget, a per-file size cap, the debounce and cancellation; `WikiLinkIndex` is not used. | Accepted |
 
 ## 5. Manual tests
 

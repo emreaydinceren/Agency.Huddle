@@ -3,8 +3,8 @@
 **Date:** 2026-10-12 · **Status:** Designed, not built; the Top Bar it lives in is built (PR #162,
 `4864ef6`) · **Owner:** chat surface · **Decision records:**
 [ADR-0046](adr/0046-a-group-mounts-its-own-page-and-the-url-names-the-focused-one.md) (its addendum
-records the Top Bar) and ADR-0050 for *search keeps no index of its own* (approved, to be written by
-the plan's D0) · **Vocabulary:** [language.md](engineering/language.md) (**Team**, **Teammate**,
+records the Top Bar) and [ADR-0050](adr/0050-search-keeps-no-index-of-its-own.md) for *search keeps no index of its own*
+(written) · **Vocabulary:** [language.md](engineering/language.md) (**Team**, **Teammate**,
 **Persona**, **Title**, **Alias**, **Library**, **Library Root**, **Task**, **Closed**, **Room**,
 **Archived**, **Message**, **Transcript**, **Turn**) · **Builds on:**
 [Tabs](Huddle.Tabs-Specifications.md) (the Top Bar and its breadcrumb),
