@@ -47,6 +47,166 @@ public sealed class AppJsSourceTests
         Assert.Contains("window.teamScroll", text, StringComparison.Ordinal);
     }
 
+    /// <summary><c>teamScroll.toMessage</c> finds the row by <c>data-message-id</c> with <c>CSS.escape</c>, centres it, focuses it without scrolling, flashes it and clears the flash on <c>animationend</c> or after two seconds (Global Search spec §9.1 step 3).</summary>
+    [Fact]
+    public void AppJs_TeamScroll_ToMessage_CentresFocusesAndFlashesTheRow()
+    {
+        string block = AppJsSourceTests.TeamScrollBlock();
+
+        // contains-ok: source-fact test, no JS runner - app.js's own text is what's pinned.
+        Assert.Contains("toMessage(el, id)", block, StringComparison.Ordinal);
+        // contains-ok: source-fact test, no JS runner - app.js's own text is what's pinned.
+        Assert.Contains("[data-message-id=\"", block, StringComparison.Ordinal);
+        // contains-ok: source-fact test, no JS runner - app.js's own text is what's pinned.
+        Assert.Contains("CSS.escape(id)", block, StringComparison.Ordinal);
+        // contains-ok: source-fact test, no JS runner - app.js's own text is what's pinned.
+        Assert.Contains("scrollIntoView({ block: \"center\" })", block, StringComparison.Ordinal);
+        // contains-ok: source-fact test, no JS runner - app.js's own text is what's pinned.
+        Assert.Contains("focus({ preventScroll: true })", block, StringComparison.Ordinal);
+        // contains-ok: source-fact test, no JS runner - app.js's own text is what's pinned.
+        Assert.Contains("classList.add(\"search-hit-flash\")", block, StringComparison.Ordinal);
+        // contains-ok: source-fact test, no JS runner - app.js's own text is what's pinned.
+        Assert.Contains("animationend", block, StringComparison.Ordinal);
+        // contains-ok: source-fact test, no JS runner - app.js's own text is what's pinned.
+        Assert.Contains("2000", block, StringComparison.Ordinal);
+        // contains-ok: source-fact test, no JS runner - app.js's own text is what's pinned.
+        Assert.Contains("return false", block, StringComparison.Ordinal);
+    }
+
+    /// <summary><c>teamScroll.isAtBottom</c> is true within 4 px of the bottom, in the element's own (zoomed) scroll coordinates.</summary>
+    [Fact]
+    public void AppJs_TeamScroll_IsAtBottom_UsesFourPixelsInTheElementsOwnCoordinates()
+    {
+        string block = AppJsSourceTests.TeamScrollBlock();
+
+        // contains-ok: source-fact test, no JS runner - app.js's own text is what's pinned.
+        Assert.Contains("isAtBottom(el)", block, StringComparison.Ordinal);
+        // contains-ok: source-fact test, no JS runner - app.js's own text is what's pinned.
+        Assert.Contains("el.scrollHeight - el.scrollTop - el.clientHeight <= 4", block, StringComparison.Ordinal);
+    }
+
+    /// <summary>The flash rules (from the <c>/* The Room jump */</c> comment inside the <c>/* Global search */</c> block to the end of app.css) fade from a MudBlazor palette variable, have a reduced-motion outline, and use neither <c>zoom</c> nor viewport units; the dropdown rules above them legitimately use <c>vh</c> (plan §3.6).</summary>
+    [Fact]
+    public void AppCss_SearchHitFlash_IsInTheGlobalSearchBlockAndHonoursReducedMotion()
+    {
+        string css = File.ReadAllText(CssSource.RepoPath("src", "Huddle.App", "wwwroot", "app.css"));
+        int blockStart = css.IndexOf("/* Global search */", StringComparison.Ordinal);
+        Assert.True(blockStart >= 0, "Expected a /* Global search */ block in app.css.");
+        int flashStart = css.IndexOf("/* The Room jump", blockStart, StringComparison.Ordinal);
+        Assert.True(flashStart >= 0, "Expected the /* The Room jump */ flash rules inside the Global search block.");
+        string block = css[flashStart..];
+
+        // contains-ok: source-fact test, no stylesheet runner - app.css's own text is what's pinned.
+        Assert.Contains(".search-hit-flash", block, StringComparison.Ordinal);
+        // contains-ok: source-fact test, no stylesheet runner - app.css's own text is what's pinned.
+        Assert.Contains("var(--mud-palette-", block, StringComparison.Ordinal);
+        // contains-ok: source-fact test, no stylesheet runner - app.css's own text is what's pinned.
+        Assert.Contains("@media (prefers-reduced-motion: reduce)", block, StringComparison.Ordinal);
+        Assert.DoesNotContain("zoom", block, StringComparison.Ordinal);
+        Assert.DoesNotContain("vh", block, StringComparison.Ordinal);
+    }
+
+    /// <summary>The text of the <c>window.teamScroll</c> object, up to the next top-level comment.</summary>
+    private static string TeamScrollBlock()
+    {
+        string text = File.ReadAllText(CssSource.RepoPath("src", "Huddle.App", "wwwroot", "app.js"));
+        int start = text.IndexOf("window.teamScroll", StringComparison.Ordinal);
+        int end = text.IndexOf("// Tab shortcuts", start, StringComparison.Ordinal);
+        Assert.True(start >= 0 && end > start, "Expected window.teamScroll to be followed by the Tab shortcuts comment.");
+        return text[start..end];
+    }
+
+    /// <summary><c>window.huddleSearch</c> adds its one <c>keydown</c> listener on <c>window</c> in the capture phase, so the composer and CodeMirror cannot swallow the key, and removes it in <c>detach</c> (Global Search spec §5.2).</summary>
+    [Fact]
+    public void HuddleSearch_ListensInCapturePhase()
+    {
+        string block = AppJsSourceTests.HuddleSearchBlock();
+
+        AppJsSourceTests.AssertInOrder(
+            block,
+            "attach(dotnetRef, host)",
+            "window.addEventListener(\"keydown\", window.huddleSearch._handler, true)",
+            "detach()",
+            "window.removeEventListener(\"keydown\", window.huddleSearch._handler, true)");
+        Assert.Equal(1, AppJsSourceTests.CountOccurrences(block, "addEventListener("));
+    }
+
+    /// <summary><c>Ctrl+K</c> (no Shift, either letter case) calls <c>preventDefault</c>, remembers the focused element, focuses the box and tells C# to open (Global Search spec §5.2, D-3).</summary>
+    [Fact]
+    public void HuddleSearch_CtrlK_PreventsDefault()
+    {
+        string block = AppJsSourceTests.HuddleSearchBlock();
+
+        AppJsSourceTests.AssertInOrder(
+            block,
+            "e.ctrlKey",
+            "e.shiftKey === window.huddleSearch.shortcutNeedsShift",
+            "\"k\"",
+            "e.preventDefault()",
+            "document.activeElement",
+            ".focus()",
+            "invokeMethodAsync(\"OpenAsync\")");
+        AppJsSourceTests.AssertInOrder(block, "e.key.toLowerCase()");
+    }
+
+    /// <summary><c>/</c> opens the box only when the target is not an <c>input</c>, a <c>textarea</c>, a <c>[contenteditable]</c> element or inside <c>.cm-editor</c>, so a slash typed in the composer is never stolen (Global Search spec §5.2).</summary>
+    [Fact]
+    public void HuddleSearch_Slash_SkipsTextFieldsAndCodeMirror()
+    {
+        string block = AppJsSourceTests.HuddleSearchBlock();
+
+        AppJsSourceTests.AssertInOrder(
+            block,
+            "e.key === \"/\"",
+            "INPUT",
+            "TEXTAREA",
+            "[contenteditable]",
+            ".cm-editor",
+            "e.preventDefault()");
+    }
+
+    /// <summary><c>Alt+1</c> to <c>Alt+6</c> and <c>Ctrl+Left/Right</c> are handled only after a check of the open flag that <c>setOpen</c> sets, so they never collide with the Tab shortcuts (Global Search spec §6.5).</summary>
+    [Fact]
+    public void HuddleSearch_AltDigits_OnlyWhileOpen()
+    {
+        string block = AppJsSourceTests.HuddleSearchBlock();
+
+        AppJsSourceTests.AssertInOrder(
+            block,
+            "if (!window.huddleSearch._open)",
+            "e.altKey",
+            "invokeMethodAsync(\"SelectChipAsync\"",
+            "\"ArrowLeft\"",
+            "invokeMethodAsync(\"MoveChipAsync\"");
+        AppJsSourceTests.AssertInOrder(block, "setOpen(open)", "window.huddleSearch._open = open");
+        AppJsSourceTests.AssertInOrder(block, "restoreFocus()", "window.huddleSearch._previous", ".focus()");
+    }
+
+    /// <summary>The text of the <c>window.huddleSearch</c> object, up to the closing <c>};</c> at the start of a line.</summary>
+    private static string HuddleSearchBlock()
+    {
+        string text = File.ReadAllText(CssSource.RepoPath("src", "Huddle.App", "wwwroot", "app.js"));
+        int start = text.IndexOf("window.huddleSearch = {", StringComparison.Ordinal);
+        Assert.True(start >= 0, "Expected window.huddleSearch in app.js.");
+        int end = text.IndexOf("\n};", start, StringComparison.Ordinal);
+        Assert.True(end > start, "Expected the huddleSearch object literal to end with a line holding only };.");
+        return text[start..(end + 3)];
+    }
+
+    /// <summary>Asserts that each needle occurs in <paramref name="text"/> after the one before it.</summary>
+    /// <param name="text">The source text.</param>
+    /// <param name="needles">The fragments, in the order they must appear.</param>
+    private static void AssertInOrder(string text, params string[] needles)
+    {
+        int from = 0;
+        foreach (string needle in needles)
+        {
+            int found = text.IndexOf(needle, from, StringComparison.Ordinal);
+            Assert.True(found >= 0, $"Expected '{needle}' after offset {from} in the huddleSearch block.");
+            from = found + needle.Length;
+        }
+    }
+
     /// <summary>The <c>#</c> picker (Spec §13.13.4, corrections-B6 "D15.3" item 3) lives in <c>teamComposer</c>'s single <c>keydown</c> handler, tracking its state per element on <c>el._picker</c> rather than in a module-level variable.</summary>
     [Fact]
     public void AppJs_TeamComposerKeydownHandler_IsSingleAndTracksPerElementPickerState()

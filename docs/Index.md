@@ -45,6 +45,7 @@ subtree a page is in: **chat** is the chat surface, **acp** is the ACP effort
 | Process gates: `Process.md`, a gate's refusal, the checks command | [adr/0039](adr/0039-process-gates-live-in-process-md-and-are-enforced-in-taskservice-and-the-permission-handler.md), [Huddle.UserGuide.md](Huddle.UserGuide.md) (Process and gates), then [code-map.md](engineering/code-map.md) (`Teams/ProcessGateService`) |
 | Requests between Teams: filing, triage, confirming | [adr/0040](adr/0040-a-request-is-a-task-in-the-receiving-teams-backlog.md), [Huddle.UserGuide.md](Huddle.UserGuide.md) (Requests between Teams), then [code-map.md](engineering/code-map.md) (`Tasks/RequestLifecycle`, `Acp/Tools/*RequestTool`) |
 | Retrospectives: the cadence, retro proposals, the register | [Huddle.UserGuide.md](Huddle.UserGuide.md) (Retrospectives), then [code-map.md](engineering/code-map.md) (`Teams/CadenceService`, `RetroProposalService`, `RetroFiles`) |
+| Global Search: the top bar, the dropdown, a search provider or the jump to a Message | [Huddle.GlobalSearch-Specifications.md](Huddle.GlobalSearch-Specifications.md), then [Huddle.Tabs-Specifications.md](Huddle.Tabs-Specifications.md) for the breadcrumb it moves; to build it, [global-search-plan.md](engineering/global-search-plan.md) |
 | Revisit a decision | [decisions.md](engineering/decisions.md), then the ADR in §4 |
 | Enable, disable or suppress an analyzer rule | [analyzer-decisions.md](engineering/analyzer-decisions.md) first |
 | Add to the product plan | [roadmap.md](engineering/roadmap.md) |
@@ -81,6 +82,7 @@ that exercise it. All are **chat** unless stated.
 | Themes and Appearance | [language.md](engineering/language.md) (Theme, Appearance) | [0009](adr/0009-a-theme-is-a-stylesheet-layered-over-the-tokens.md) (superseded), [0010](adr/0010-a-theme-is-a-mudblazor-theme.md), [0016](adr/0016-vs-codes-bundled-themes-are-converted-once-not-imported.md), [0017](adr/0017-a-theme-is-a-palette-not-a-pair.md) | [appearance-theme](engineering/manual-tests/appearance-theme.md) | Built |
 | Prompts and Settings | [language.md](engineering/language.md) (Prompt) | [0007](adr/0007-model-facing-text-is-configuration.md) | [prompts-settings](engineering/manual-tests/prompts-settings.md) | Built |
 | Tabs: left-menu items open in preview and permanent Tabs | [Huddle.Tabs-Specifications.md](Huddle.Tabs-Specifications.md) | [0045](adr/0045-a-tab-is-a-remembered-url-and-only-the-active-one-is-mounted.md) | [shell-nav](engineering/manual-tests/shell-nav.md) | Built 2026-10-10; version 2 (split, pinned Tabs, Tab menu): [0046](adr/0046-a-group-mounts-its-own-page-and-the-url-names-the-focused-one.md) |
+| Global Search: one box in the Top Bar finds Teams, Teammates, Library entries, Tasks and Rooms | [Huddle.GlobalSearch-Specifications.md](Huddle.GlobalSearch-Specifications.md), [global-search-plan.md](engineering/global-search-plan.md) | [0046](adr/0046-a-group-mounts-its-own-page-and-the-url-names-the-focused-one.md) (the Top Bar); [0051](adr/0051-search-keeps-no-index-of-its-own.md) | [global-search](engineering/manual-tests/global-search.md) | Built 2026-10-12; the Top Bar is built (PR #162); OP-2 is still assumed |
 | App shell, navigation and startup | [Huddle.EngineeringGuide.md](Huddle.EngineeringGuide.md) | none | [shell-nav](engineering/manual-tests/shell-nav.md), [startup-config](engineering/manual-tests/startup-config.md) | Built |
 | Agent topologies (mesh or tree) | [why-agency-huddle.md](why-agency-huddle.md) | [0005](adr/0005-agent-topologies-are-emergent.md) | none | Built |
 
@@ -100,6 +102,7 @@ that exercise it. All are **chat** unless stated.
 | [roadmap.md](engineering/roadmap.md) | The numbered plan, and what exists before work in `PersonaRunner`, `ReplyGate`, `app.css` or `Themes/` | chat | ~10.7k |
 | [analysis-hardening-plan.md](engineering/analysis-hardening-plan.md) | The ranked plan for hardening automated code analysis against agent shortcuts, with each item's state | chat | ~5k |
 | [teams-plan.md](engineering/teams-plan.md) | The 85-task, test-first delivery plan for Teams: team types, hiring, skills with provenance, process gates, Requests, retrospectives and Household | chat | ~40k, read by task range only |
+| [global-search-plan.md](engineering/global-search-plan.md) | The delivery plan for Global Search: 15 open deliverables and 59 tasks (the Top Bar, D10, already delivered), waves, the Haiku and Sonnet split, the open points as decided, the 90% zoom rules, the handoff prompt and the tracker | chat | ~30k, read by deliverable only |
 | [teams-spec.md](engineering/teams-spec.md) | The Teams specification: data formats, hiring, gates, Requests, retrospectives, skill import | chat, read by section |
 | [teams-requirements.md](engineering/teams-requirements.md) | The Teams requirements: team types, hiring, skills, process, Requests, retrospectives, open questions | chat, read by section |
 | [Huddle.Teams-Tracker.md](Huddle.Teams-Tracker.md) | The Kanban tracker for the Teams delivery: 170 `.t`/`.i` rows and 6 retrospectives, updated with `Set-Tracker.ps1` | chat | ~9k |
@@ -167,7 +170,7 @@ One row per decision. Open the ADR only when its row is your question.
 | [0048](adr/0048-the-avatar-library-ships-with-the-app-and-is-the-default.md) | The avatar library ships in the repository and is the default when `Team:AvatarLibrary:Dir` is unset; a configured `Dir` replaces it and is never backed by it. | Accepted |
 | [0049](adr/0049-a-hiring-pool-holds-the-jobs-and-a-team-type-lists-them.md) | Jobs live once in a global hiring pool (`hiringpool.json` plus a persona file each); a team type lists the jobs it uses and keeps only its manager, limit, coverage and vendor rule; presets are gone; the pool is browsed by a type cloud and a tags-and-skills cloud. Amends 0038. | Accepted |
 | [0050](adr/0050-needs-you-is-derived-from-room-events-and-held-in-memory.md) | Needs You is one in-memory singleton keyed by Room id that observes existing `RoomEvents`; four reasons (Mention, Question, Form, Budget); only a Human post or a dismissal clears a Room, never opening it; the Mention reason is rebuilt from the end of each Transcript at startup; tracker, list and card are separate so the list can move to a right-hand sidebar. | Accepted |
-
+| [0051](adr/0051-search-keeps-no-index-of-its-own.md) | Global Search keeps no index of its own: every search re-reads from memory or disk, bounded by a per-root visit budget, a per-file size cap, the debounce and cancellation; `WikiLinkIndex` is not used. | Accepted |
 ## 5. Manual tests
 
 One page per feature area, run by hand in a browser. Start with `common.md`.
@@ -183,6 +186,7 @@ One page per feature area, run by hand in a browser. Start with `common.md`.
 | [appearance-theme.md](engineering/manual-tests/appearance-theme.md) | Theme selection, palette switching, the Appearance tab |
 | [avatar-library.md](engineering/manual-tests/avatar-library.md) | Avatar library picker: narrowing the 324 pictures, picking one, the thumbnail mount, a missing or unreadable library |
 | [file-changes.md](engineering/manual-tests/file-changes.md) | File changes, Watched Folders, agent isolation, Memory |
+| [global-search.md](engineering/manual-tests/global-search.md) | Global Search: the box, the dropdown, filters, the jump to a Message, the Top Bar placement |
 | [invite-rooms.md](engineering/manual-tests/invite-rooms.md) | Room creation, membership, sidebar updates, invite paths |
 | [library.md](engineering/manual-tests/library.md) | Library explorer, reading, writing, navigation, copying |
 | [model-effort.md](engineering/manual-tests/model-effort.md) | Model and Effort selection, catalog probe, persistence |

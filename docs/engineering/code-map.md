@@ -377,6 +377,43 @@ The Library — the explorer, viewer and editor, Spec §6. Paths are relative to
 | `Acp/TeammateLayoutMigration.cs` | The one-time move from `Teams/` + `work/` to `Teammates/`. |
 | `wwwroot/library-editor.js` | CodeMirror 6 interop module. |
 
+Global Search — the search box in the Top Bar, its dropdown and the providers behind it, `docs/Huddle.GlobalSearch-Specifications.md`. Paths are relative to `src/Huddle.App`:
+
+| Path | Responsibility |
+| --- | --- |
+| `Search/SearchQuery.cs` | The parsed query: its filter, the trimmed text and whether it is long enough to search. |
+| `Search/SearchQueryParser.cs` | Reads a leading prefix (`team:`, `teammate:`, `lib:`, `task:`, `room:`) from the text. Pure. |
+| `Search/SearchFilter.cs` | The filters: All, Teams, Teammates, Library, Tasks and Rooms. |
+| `Search/SearchScope.cs` | The Active or Archived pass of one search. |
+| `Search/SearchOptions.cs` | The `Search:` configuration keys, read once. |
+| `Search/SearchLimits.cs` | The constants: 5 cards per group under All, 50 for one filter. |
+| `Search/SearchContentPolicy.cs` | Which Library entries have their contents read: the extension list and the 1 MB limit. |
+| `Search/SearchHit.cs` | A hit as data: the base record and one subtype per kind of hit. |
+| `Search/SearchHitLinks.cs` | The address each kind of hit opens. |
+| `Search/SearchMatch.cs` | What a hit matched on, and where, for the bold text. |
+| `Search/SearchSnippet.cs` | The one-line snippet around a content match. |
+| `Search/SearchOpenTeam.cs` | The Team a hit belongs to, when it has one. |
+| `Search/MatchTier.cs` | The provider's coarse judgement of how well a hit matches. |
+| `Search/SearchResult.cs` | One provider's result: its hits, and whether it was truncated or failed. |
+| `Search/ISearchProvider.cs` | The contract every provider implements. |
+| `Search/SearchResultRanker.cs` | Orders hits by tier, then by name. Pure. |
+| `Search/SearchOrchestrator.cs` | Runs the providers for the Active pass, then the Archived pass, and reports each group as it arrives. |
+| `Search/SearchGroupState.cs` | One group while a search runs: searching, with its result, or failed. |
+| `Search/SearchDropdownModel.cs` | The dropdown's view of the groups, their headings and the result count. |
+| `Search/TeamSearchProvider.cs` | Searches Teams. |
+| `Search/TeammateSearchProvider.cs` | Searches Teammates. |
+| `Search/LibrarySearchProvider.cs` | Searches the Library by name, then by contents. |
+| `Search/TaskSearchProvider.cs` | Searches Tasks, Closed Tasks included on the Archived pass. |
+| `Search/RoomSearchProvider.cs` | Searches Rooms by name and Message text, Archived Rooms on the Archived pass. |
+| `Components/Search/SearchBar.razor` | The box, the chips, the dropdown and the keyboard for them. |
+| `Components/Search/SearchCard.razor` | Picks the card for a hit by its kind. |
+| `Components/Search/TeamSearchCard.razor` | The card for a Team hit. |
+| `Components/Search/TeammateSearchCard.razor` | The card for a Teammate hit. |
+| `Components/Search/LibrarySearchCard.razor` | The card for a Library hit, with its snippet. |
+| `Components/Search/TaskSearchCard.razor` | The card for a Task hit. |
+| `Components/Search/RoomSearchCard.razor` | The card for a Room hit, one per Room. |
+| `Components/Shared/TeammateCardOpener.cs` | Opens the Teammate card the same way from search and from the Teammates page. |
+
 Needs You — the sidebar card of Rooms waiting on the Human, `docs/Huddle.NeedsYou-Specifications.md`. Paths are relative to `src/Huddle.App`:
 
 | Path | Responsibility |
@@ -388,7 +425,6 @@ Needs You — the sidebar card of Rooms waiting on the Human, `docs/Huddle.Needs
 | `Components/NeedsYou/NeedsYouList.razor` | The rows, with no chrome and no idea where it is placed; reports its count through `CountChanged`. |
 | `Components/NeedsYou/NeedsYouCard.razor` | The left sidebar's card around the list; hidden while the count is 0. Placed in `MainLayout.razor` above `RoomList`. |
 | `Data/IChatStore.cs`, `FileChatStore.cs` | `ReadTailAsync`: the last N Messages, read from the end of the Transcript file. |
-
 Tabs — the open pages in the strip above the content, `docs/Huddle.Tabs-Specifications.md`. Paths are relative to `src/Huddle.App`:
 
 | Path | Responsibility |

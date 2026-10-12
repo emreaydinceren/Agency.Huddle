@@ -387,6 +387,17 @@ public static class ServiceCollectionExtensions
 
         // Scoped: the open Tabs of one circuit (docs/Huddle.Tabs-Specifications.md).
         services.AddScoped<Tabs.TabService>();
+        services.AddScoped<Components.Shared.TeammateCardOpener>();
+
+        // Global Search (spec §7.3): the five providers are stateless readers, one each per category.
+        services.AddSingleton<Search.ISearchProvider, Search.TeamSearchProvider>();
+        services.AddSingleton<Search.ISearchProvider, Search.TeammateSearchProvider>();
+        services.AddSingleton<Search.ISearchProvider, Search.LibrarySearchProvider>();
+        services.AddSingleton<Search.ISearchProvider, Search.TaskSearchProvider>();
+        services.AddSingleton<Search.ISearchProvider, Search.RoomSearchProvider>();
+
+        // Scoped, not singleton: it owns the one search in flight, and every circuit has its own (spec §7.3).
+        services.AddScoped<Search.SearchOrchestrator>();
         services.AddSingleton(new Tabs.TabPageRoutes(typeof(ServiceCollectionExtensions).Assembly));
 
         // Unconditional too, and for the same reason: the probe spends nothing on its own (it never

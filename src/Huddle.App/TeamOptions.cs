@@ -2,6 +2,7 @@ using Agency.Huddle.App.Acp;
 using Agency.Huddle.App.Avatars;
 using Agency.Huddle.App.FileChanges;
 using Agency.Huddle.App.Library;
+using Agency.Huddle.App.Search;
 using Agency.Huddle.App.Tasks;
 
 namespace Agency.Huddle.App;
@@ -47,6 +48,9 @@ public sealed class TeamOptions
 
     /// <summary>Configuration for the Avatar Library, per Spec §6.1. Unset means no library.</summary>
     public AvatarLibraryOptions AvatarLibrary { get; set; } = new();
+
+    /// <summary>Configuration for Global Search, bound from <c>Team:Search</c> per spec §10. Search reads nothing from <c>Team:Library:MaxIndexedFiles</c>.</summary>
+    public SearchOptions Search { get; set; } = new();
 }
 
 public sealed class DemoAgentOptions

@@ -138,9 +138,26 @@ the per-area tables below.
 | [Room Sessions: per-Room context, resume and Stop](room-sessions.md) | [below](#room-sessions) |
 | [Teams: Sidebar, Members, Files, Tasks and Shared Memory](team-pages.md) | [below](#team-pages) |
 | [Turn detail and Spend](turn-detail.md) | [below](#turn-detail) |
+| [Global Search: the box, the dropdown and the jump](global-search.md) | [below](#global-search) |
 | [Needs You: the sidebar card of Rooms waiting on the Human](needs-you.md) | [below](#needs-you) |
-
 ---
+
+## global-search
+
+Global Search: the box, the dropdown and the jump to a Message — [area file](global-search.md)
+
+| Test | 💰 | Status | Issue | Notes |
+| --- | --- | --- | --- | --- |
+| [GLOBALSEARCH-01](global-search.md#globalsearch-01--ctrl-k-slash-and-a-click-open-the-box-gs-m1) |  | Active |  |  |
+| [GLOBALSEARCH-02](global-search.md#globalsearch-02--ctrl-k-reaches-the-app-in-edge-and-not-the-address-bar-gs-m2) |  | Active |  |  |
+| [GLOBALSEARCH-03](global-search.md#globalsearch-03--groups-fill-one-by-one-on-a-large-pinned-root-and-stale-results-never-show-gs-m3) |  | Active |  |  |
+| [GLOBALSEARCH-04](global-search.md#globalsearch-04--content-hits-show-the-bold-match-the-1-mb-cut-off-and-the-incomplete-note-gs-m4) |  | Active |  |  |
+| [GLOBALSEARCH-05](global-search.md#globalsearch-05--a-room-hit-jumps-to-its-message-at-90-percent-zoom-gs-m5) |  | Active |  |  |
+| [GLOBALSEARCH-06](global-search.md#globalsearch-06--archived-rooms-and-closed-tasks-come-last-and-dimmed-gs-m6) |  | Active |  |  |
+| [GLOBALSEARCH-07](global-search.md#globalsearch-07--a-locked-folder-in-a-pinned-root-does-not-hide-the-other-groups-gs-m7) |  | Active |  |  |
+| [GLOBALSEARCH-08](global-search.md#globalsearch-08--the-keyboard-alone-reaches-every-chip-and-card-gs-m8) |  | Active |  |  |
+| [GLOBALSEARCH-09](global-search.md#globalsearch-09--the-search-box-sits-in-the-top-bar-beside-the-breadcrumb-gs-m9) |  | Active |  |  |
+| [GLOBALSEARCH-10](global-search.md#globalsearch-10--the-dropdown-height-under-90-percent-zoom-gs-m10) |  | Active |  |  |
 
 ## shell-nav
 

@@ -152,7 +152,6 @@
     }
 
     private readonly Dictionary<string, string?> agentIdByPersona = new(StringComparer.Ordinal);
-    private readonly Dictionary<string, string?> roomIdByPersona = new(StringComparer.Ordinal);
 
     protected override async Task OnInitializedAsync()
     {
@@ -267,19 +266,13 @@
     // Stays synchronous up to the ShowAsync call, and deliberately does not probe anything itself:
     // TeammateCard's own OnInitializedAsync is what reads the model/effort catalogs, once the dialog
     // is actually open.
+    // The inputs are gathered by TeammateCardOpener, the one door Global Search opens the card through too, so
+    // the page and search cannot drift. Built from the services this page already injects rather than resolved
+    // from DI, so the page needs nothing new to render.
     private async Task OpenCard(string personaName)
     {
-        var entry = this.entries.FirstOrDefault(candidate => string.Equals(candidate.Name, personaName, StringComparison.Ordinal));
-        var persona = this.Personas.Get(personaName);
-        var parameters = Teammates.BuildViewParameters(
-            personaName,
-            entry,
-            persona,
-            this.ResolveStatus(personaName),
-            this.roomIdByPersona.GetValueOrDefault(personaName),
-            this.TryPathFor(personaName));
-
-        await this.DialogService.ShowAsync<TeammateCard>(personaName, parameters, TeammateCard.Options);
+        TeammateCardOpener opener = new(this.Personas, this.TeamDirectory, this.Gateway, this.Health, this.DialogService);
+        await opener.OpenAsync(personaName, CancellationToken.None);
     }
 
     private async Task BeginCreate()
@@ -294,18 +287,6 @@
         this.selectedTeam = value;
     }
 
-    private string? TryPathFor(string personaName)
-    {
-        try
-        {
-            return this.Personas.PathFor(personaName);
-        }
-        catch (ChatException)
-        {
-            return null;
-        }
-    }
-
     private async Task LoadAsync()
     {
         this.entries = this.Personas.Entries;
@@ -313,17 +294,10 @@
         this.teams = this.Personas.Teams;
 
         this.agentIdByPersona.Clear();
-        this.roomIdByPersona.Clear();
         foreach (var entry in this.entries)
         {
             var agent = await this.TeamDirectory.FindUserByNameAsync(entry.Name);
             this.agentIdByPersona[entry.Name] = agent?.Id;
-
-            // Only a Teammate that has actually connected has a Room to be messaged in, so the
-            // card's Message action is absent rather than broken for one that never has.
-            this.roomIdByPersona[entry.Name] = agent is null
-                ? null
-                : (await this.TeamDirectory.FindRoomWithExactMembersAsync(KnownIds.Human, agent.Id))?.Id;
         }
     }
 

@@ -163,6 +163,29 @@ Your open tabs and panes come back after you reload the page or restart the app,
 same order, with the tab for the page you are on active. They are remembered by the
 browser, so another browser starts with its own. Each tab is at least a fixed width, so with many open the strip scrolls sideways.
 
+### Global Search
+
+The search box sits in the Top Bar, above the left menu and every page.
+
+- **Open the box** with `Ctrl+K` from anywhere, with `/` when no text field has focus, or by
+  clicking it. `Esc` closes it and returns you to where you were.
+- **Narrow the search** with the chips under the box: **All**, **Teams**, **Teammates**,
+  **Library**, **Tasks** and **Rooms**. Picking a chip is the same as typing its prefix at the
+  start of the box: `team:`, `teammate:`, `lib:`, `task:` or `room:`. `Alt+1` to `Alt+6` pick
+  them from the keyboard, and `Ctrl+Left` and `Ctrl+Right` move between them.
+- **A search starts at 3 characters**, after any prefix. `task:fi` waits; `task:fix` searches.
+  Matching ignores case and looks for the exact phrase you typed.
+- **Results come in groups:** Teams, Teammates, Library, Tasks and Rooms. With All, each group
+  shows up to five results. With one chip picked, that group shows up to 50. Library matches
+  its contents as well as its names, for entries up to 1 MB. Closed Tasks and Archived Rooms come
+  last, dimmed.
+- **Open a result** with `Enter` in the current Tab, or `Ctrl+Enter` to open it in a new Tab that
+  stays. A Teammate opens its card. A Room opens at the matching Message, which is highlighted for
+  a moment.
+- **Every search reads again.** Global Search keeps no index of its own, so a new Message or file
+  shows up on your next search, and nothing is kept after it. `Results may be incomplete.` means a
+  limit was reached: narrow the search or pick one chip.
+
 ## The data model
 
 Huddle has a small number of things, and almost all of them are plain files you

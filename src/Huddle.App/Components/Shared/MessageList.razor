@@ -28,7 +28,7 @@
                muted system row. The agent-facing "Call get_task ..." line is dropped from view. *@
             @if (MessageDisplay.TryParseTaskWake(message.Text, out var wake))
             {
-                <details class="system-row">
+                <details class="system-row" data-message-id="@message.Id" tabindex="-1">
                     <summary>
                         <MudIcon Icon="@Icons.Material.Outlined.TaskAlt" Size="Size.Small" />
                         <span class="system-row-text"><strong class="task-id">@wake.TaskId</strong> changed by @wake.Actor@(wake.Changes.Count > 0 ? " · " + wake.Changes[0] : string.Empty)</span>
@@ -51,12 +51,12 @@
             @* The Human's own Message needs no avatar or name to say who wrote it: its side of the
                transcript says that, as in any chat app. Consecutive ones are tighter, and the time
                stays in the tooltip. *@
-            <div class="@(continues ? "message-row human grouped" : "message-row human")" title="@time">
+            <div class="@(continues ? "message-row human grouped" : "message-row human")" title="@time" data-message-id="@message.Id" tabindex="-1">
                 <div class="message-bubble message-body">@((MarkupString)MarkdownRenderer.ToHtml(message.Text, this.TaskResolver, this.ChatLibraryResolver))</div>
             </div>
             continue;
         }
-        <div class="@(continues ? "message-row grouped" : "message-row")">
+        <div class="@(continues ? "message-row grouped" : "message-row")" data-message-id="@message.Id" tabindex="-1">
             @if (continues)
             {
                 <span class="message-gutter" title="@time"></span>
@@ -199,8 +199,35 @@
     [Parameter]
     public EventCallback<Draft> OnStop { get; set; }
 
+    /// <summary>
+    /// The id of the Message to scroll to and flash (Global Search spec §9.1), or <see langword="null"/> for none.
+    /// A target is jumped to once; a different target jumps again, and the same one jumps again only after
+    /// the parameter has been cleared.
+    /// </summary>
+    [Parameter]
+    public string? TargetMessageId { get; set; }
+
+    /// <summary>Raised once per target, after the list has scrolled to it (or fallen back to the bottom because it is not in the Transcript).</summary>
+    [Parameter]
+    public EventCallback OnJumped { get; set; }
+
     private ElementReference container;
     private int lastRenderedSignature;
+
+    /// <summary>The target already jumped to, so a re-render with the same <see cref="TargetMessageId"/> does not jump again.</summary>
+    private string? handledTarget;
+
+    /// <summary>
+    /// True from a jump until the Human scrolls back to the bottom or sends a Message: while it is set a growing
+    /// Transcript does not move the view (spec §9.1 step 4).
+    /// </summary>
+    private bool holdBottom;
+
+    /// <summary>True when the last parameter update appended a Message from the Human.</summary>
+    private bool humanSent;
+
+    private int lastMessageCount;
+    private bool parametersSeen;
 
     /// <summary>
     /// The rows the Human has opened, by Message id and tool call id. View state only: a row stays
@@ -221,6 +248,22 @@
 
     protected override void OnParametersSet()
     {
+        if (this.TargetMessageId is null)
+        {
+            this.handledTarget = null;
+        }
+
+        // A Message the Human sent ends the hold. The first parameter update is the Room loading, not a send.
+        if (this.parametersSeen
+            && this.Messages.Count > this.lastMessageCount
+            && this.HumanIds.Contains(this.Messages[^1].SenderId))
+        {
+            this.humanSent = true;
+        }
+
+        this.lastMessageCount = this.Messages.Count;
+        this.parametersSeen = true;
+
         // A finished Turn leaves nothing behind: drop the open state of every row whose call is gone.
         this.expanded.RemoveWhere(key => !this.Drafts.Any(draft =>
             string.Equals(draft.MessageId, key.MessageId, StringComparison.Ordinal)
@@ -290,12 +333,43 @@
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
         var renderedSignature = MessageList.RenderedSignature(this.Messages, this.Drafts);
+
+        // The jump replaces the scroll-to-bottom of this render. A signature that changes on every load
+        // would otherwise win over it, so the first render with a target scrolls to the target only.
+        if (this.TargetMessageId is { } target && !string.Equals(target, this.handledTarget, StringComparison.Ordinal))
+        {
+            this.handledTarget = target;
+            this.lastRenderedSignature = renderedSignature;
+            this.humanSent = false;
+            this.holdBottom = await this.JS.InvokeAsync<bool>("teamScroll.toMessage", this.container, target);
+            if (!this.holdBottom)
+            {
+                // Not in the Transcript (a stale hit): open at the bottom, as without a target.
+                await this.JS.InvokeVoidAsync("teamScroll.toBottom", this.container);
+            }
+
+            await this.OnJumped.InvokeAsync();
+            return;
+        }
+
+        var sentSinceLastRender = this.humanSent;
+        this.humanSent = false;
+        if (this.holdBottom && (sentSinceLastRender ||await this.JS.InvokeAsync<bool>("teamScroll.isAtBottom", this.container)))
+        {
+            this.holdBottom = false;
+        }
+
         if (renderedSignature == this.lastRenderedSignature)
         {
             return;
         }
 
         this.lastRenderedSignature = renderedSignature;
+        if (this.holdBottom)
+        {
+            return;
+        }
+
         await this.JS.InvokeVoidAsync("teamScroll.toBottom", this.container);
     }
 }

@@ -1,0 +1,61 @@
+@*
+    The Task card (spec §6.6). The first line leads with "{Task Id} · {Task Title}" and ends with a status
+    chip in the Board's colour (TaskColors.For, the one mapping). The second line is "{Assignee} · {Title}"
+    at the left (title de-emphasised) and "{Team} Team" at the right, under the chip. A Closed Task is dimmed and its accessible
+    name ends with ", closed" (spec §11). The action slot is empty in V1 (D-12).
+*@
+
+@using Agency.Huddle.App.Components.Tasks
+@using Agency.Huddle.App.Search
+@using Agency.Huddle.App.Tasks
+
+<div class="search-card @(this.Hit.IsArchived ? "search-card-archived" : null)" aria-label="@this.AccessibleName">
+    <span class="search-card-text">
+        <span class="search-card-head">
+            <span class="search-card-title"><MudHighlighter Text="@this.Heading" HighlightedText="@this.Phrase" /></span>
+            <MudChip T="string" Size="Size.Small" Color="@TaskColors.For(this.Hit.Status)" Class="search-card-chip">@this.Hit.Status.ToWire()</MudChip>
+        </span>
+        <span class="search-card-foot">
+            @if (this.Hit.Assignee is { } assignee)
+            {
+                <span class="search-card-meta">@assignee@if (!string.IsNullOrWhiteSpace(this.Hit.AssigneeTitle)){<span class="search-card-subtitle">@(" · ")@this.Hit.AssigneeTitle</span>}</span>
+            }
+            <span class="search-card-team">@this.TeamLabel</span>
+        </span>
+    </span>
+    <span class="search-card-action" aria-hidden="true"></span>
+</div>
+
+@code {
+    /// <summary>The Task hit this card shows.</summary>
+    [Parameter, EditorRequired]
+    public required TaskHit Hit { get; set; }
+
+    /// <summary>The phrase the match is bolded for.</summary>
+    [Parameter]
+    public string Phrase { get; set; } = string.Empty;
+
+    /// <summary>The first line's text: the Task id, a middle dot, then the title.</summary>
+    private string Heading => $"{this.Hit.Id} · {this.Hit.Title}";
+
+    /// <summary>The Team name with " Team" appended unless the name already ends in "Team" (ordinal, ignoring case).</summary>
+    private string TeamLabel => this.Hit.Team.EndsWith("Team", StringComparison.OrdinalIgnoreCase) ? this.Hit.Team : $"{this.Hit.Team} Team";
+
+    /// <summary>The second line as plain text, for the accessible name.</summary>
+    private string Meta
+    {
+        get
+        {
+            if (this.Hit.Assignee is not { } assignee)
+            {
+                return this.TeamLabel;
+            }
+
+            string title = string.IsNullOrWhiteSpace(this.Hit.AssigneeTitle) ? string.Empty : $" · {this.Hit.AssigneeTitle}";
+            return $"{assignee}{title}, {this.TeamLabel}";
+        }
+    }
+
+    /// <summary>The accessible name: the first line, the second line, and ", closed" for a Closed Task (spec §11).</summary>
+    private string AccessibleName => this.Hit.IsArchived ? $"{this.Heading}, {this.Meta}, closed" : $"{this.Heading}, {this.Meta}";
+}
