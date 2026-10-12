@@ -220,6 +220,9 @@ else
     /// </summary>
     private Task OnJumpedAsync()
     {
+        // The Tab's page host leaves a parameter its new URL no longer carries out of the dictionary, so this
+        // page would keep the old id and a later hit on the same Message would read as already handled.
+        this.Message = null;
         TabService? tabs = this.Services.GetService(typeof(TabService)) as TabService;
         Tab? tab = tabs?.Tabs.FirstOrDefault(candidate => string.Equals(candidate.Key, $"room:{this.RoomId}", StringComparison.Ordinal));
         if (tabs is not null && tab is not null && tabs.Navigate(tab.Id, $"/rooms/{this.RoomId}") is { } navigated)

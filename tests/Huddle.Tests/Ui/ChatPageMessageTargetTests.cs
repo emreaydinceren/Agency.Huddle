@@ -47,7 +47,8 @@ public sealed class ChatPageMessageTargetTests
             .Add(host => host.RoomId, room.Id)
             .Add(host => host.Message, "m-1"));
 
-        cut.WaitForAssertion(() => Assert.Equal("m-1", cut.FindComponent<MessageList>().Instance.TargetMessageId));
+        // The target is cleared once the jump has happened, so the jump itself is what proves it arrived.
+        cut.WaitForAssertion(() => Assert.Equal(["m-1"], ChatPageMessageTargetTests.JumpTargets(ctx)));
     }
 
     /// <summary>After the jump the Tab's URL loses <c>?message=</c>, so a reload or a return to the Tab does not jump again (OP-16).</summary>
@@ -90,6 +91,26 @@ public sealed class ChatPageMessageTargetTests
         Assert.Same(list.Instance, cut.FindComponent<MessageList>().Instance);
         string[] expected = ["m-1", "m-2"];
         Assert.Equal(expected, ChatPageMessageTargetTests.JumpTargets(ctx));
+    }
+
+    /// <summary>A hit on the Message the open Room was already jumped to is a new jump: the first one dropped <c>?message=</c>, so the same id arriving again must scroll again.</summary>
+    [Fact]
+    public async Task ChatPage_SameRoom_SameTarget_AfterJump_JumpsAgain()
+    {
+        CancellationToken ct = Xunit.TestContext.Current.CancellationToken;
+        await using TeamWebApplicationFactory factory = new();
+        await using MudBunitContext ctx = ChatPageMessageTargetTests.NewContext(factory);
+        ctx.JSInterop.Setup<bool>(ChatPageMessageTargetTests.ToMessage, static _ => true).SetResult(true);
+        Room room = await ChatPageMessageTargetTests.SeedRoomAsync(factory, ct);
+        IRenderedComponent<Host> cut = ctx.Render<Host>(parameters => parameters
+            .Add(host => host.RoomId, room.Id)
+            .Add(host => host.Message, "m-1"));
+        cut.WaitForAssertion(() => Assert.Equal(1, ChatPageMessageTargetTests.Jumps(ctx)));
+
+        cut.Render(parameters => parameters.Add(host => host.Message, null));
+        cut.Render(parameters => parameters.Add(host => host.Message, "m-1"));
+
+        cut.WaitForAssertion(() => Assert.Equal(2, ChatPageMessageTargetTests.Jumps(ctx)));
     }
 
     /// <summary>How many times <c>teamScroll.toMessage</c> was invoked.</summary>
@@ -176,7 +197,13 @@ public sealed class ChatPageMessageTargetTests
             builder.CloseComponent();
             builder.OpenComponent<Chat>(2);
             builder.AddComponentParameter(3, nameof(Chat.RoomId), this.RoomId);
-            builder.AddComponentParameter(4, nameof(Chat.Message), this.Message);
+            if (this.Message is not null)
+            {
+                // Omitted, not passed as null, when there is no target: TabPageHost's DynamicComponent leaves a
+                // parameter its URL no longer carries out of the dictionary, so the page keeps its old value.
+                builder.AddComponentParameter(4, nameof(Chat.Message), this.Message);
+            }
+
             builder.CloseComponent();
         }
     }
