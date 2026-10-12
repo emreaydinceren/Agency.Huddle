@@ -316,8 +316,27 @@ public sealed class LibraryFileServiceMoveTests
         Assert.DoesNotContain(onDisk, entry => Path.GetFileName(entry).Contains(".renaming-", StringComparison.Ordinal));
     }
 
-    /// <summary>Moving a file directly into the Teammates root is refused with item 21's settled text, applied
-    /// to move destinations (corrections-B4 item 26).</summary>
+    /// <summary>Renaming a file that sits directly in the Teammates root is refused with wording that fits a rename, not the create wording ("Add teammates on the Teammates page.").</summary>
+    [Fact]
+    public async Task Rename_File_InTeammatesRoot_Refused_WithRenameWording()
+    {
+        CancellationToken ct = TestContext.Current.CancellationToken;
+        using LibraryFileServiceFixture fixture = LibraryFileServiceFixture.Build();
+        string strayPath = Path.Combine(fixture.DataDir, "Teammates", "stray.txt");
+        Directory.CreateDirectory(Path.GetDirectoryName(strayPath)!);
+        File.WriteAllText(strayPath, "x");
+        fixture.Reload();
+        LibraryFileService service = fixture.CreateService();
+
+        LibraryResult<LibraryMoveResult> result = await service.RenameAsync(fixture.ResolveTeammatesFolder("stray.txt"), "other.txt", ct);
+
+        Assert.Null(result.Value);
+        Assert.Equal("Files can't be renamed or moved directly in the Teammates folder. Teammates are managed on the Teammates page.", result.Error);
+        Assert.True(File.Exists(strayPath));
+    }
+
+    /// <summary>Moving a file directly into the Teammates root is refused (item 21, applied to move destinations by
+    /// corrections-B4 item 26) with wording that fits a move, not the create wording.</summary>
     [Fact]
     public async Task Move_File_IntoTeammatesRoot_Refused()
     {
@@ -337,7 +356,7 @@ public sealed class LibraryFileServiceMoveTests
         LibraryResult<LibraryMoveResult> result = await service.MoveAsync(file, teammatesRootPath, ct);
 
         Assert.Null(result.Value);
-        Assert.Equal("Add teammates on the Teammates page.", result.Error);
+        Assert.Equal("Files can't be renamed or moved directly in the Teammates folder. Teammates are managed on the Teammates page.", result.Error);
         Assert.True(File.Exists(sourcePath));
         Assert.False(File.Exists(Path.Combine(teammatesRoot, "note.md")));
     }

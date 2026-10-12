@@ -1,0 +1,30 @@
+@*
+    The Library's Delete confirmation: what ShowMessageBoxAsync gave (a title, one line of text, Cancel
+    then Delete), except the Delete button is the destructive red rgb(184, 35, 43), which a message box
+    cannot style on one button. LibraryFileOps opens it; it closes with DialogResult.Ok(true) on Delete.
+*@
+<MudDialog>
+    <DialogContent>
+        <MudText>@this.Message</MudText>
+    </DialogContent>
+    <DialogActions>
+        <MudButton OnClick="this.Cancel">Cancel</MudButton>
+        <MudButton Class="library-delete-confirm" Variant="Variant.Filled" OnClick="this.Confirm">Delete</MudButton>
+    </DialogActions>
+</MudDialog>
+
+@code {
+    /// <summary>How LibraryFileOps shows this dialog: small, with no close button, like the message box it replaces.</summary>
+    public static readonly DialogOptions Options = new() { MaxWidth = MaxWidth.ExtraSmall, FullWidth = true };
+
+    [CascadingParameter]
+    private IMudDialogInstance? Dialog { get; set; }
+
+    /// <summary>The line shown under the title.</summary>
+    [Parameter]
+    public string Message { get; set; } = string.Empty;
+
+    private void Confirm() => this.Dialog?.Close(DialogResult.Ok(true));
+
+    private void Cancel() => this.Dialog?.Cancel();
+}
