@@ -35,7 +35,7 @@ public sealed class ChatPageTests
     [Fact]
     public async Task ChatPage_RendersADraft()
     {
-        using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(10));
+        using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(60));
         var ct = cts.Token;
 
         await using var factory = new TeamWebApplicationFactory();
@@ -61,7 +61,7 @@ public sealed class ChatPageTests
     [Fact]
     public async Task ChatPage_ReplacesTheDraftWhenTheMessageArrives()
     {
-        using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(10));
+        using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(60));
         var ct = cts.Token;
 
         await using var factory = new TeamWebApplicationFactory();
@@ -90,7 +90,7 @@ public sealed class ChatPageTests
     [Fact]
     public async Task ChatPage_ShowsStopWhileADraftIsLive_AndNotOtherwise()
     {
-        using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(10));
+        using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(60));
         var ct = cts.Token;
 
         await using var factory = new TeamWebApplicationFactory();
@@ -124,7 +124,7 @@ public sealed class ChatPageTests
     [Fact]
     public async Task ChatPage_RoomHeader_OffersARenameControlSeededFromTheRoomName()
     {
-        using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(10));
+        using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(60));
         var ct = cts.Token;
 
         await using var factory = new TeamWebApplicationFactory();
@@ -149,7 +149,7 @@ public sealed class ChatPageTests
     [Fact]
     public async Task ChatPage_Rename_EnterCommitsTheTypedNameThroughChatService()
     {
-        using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(10));
+        using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(60));
         var ct = cts.Token;
 
         await using var factory = new TeamWebApplicationFactory();
@@ -188,7 +188,7 @@ public sealed class ChatPageTests
     [Fact]
     public async Task ChatPage_Rename_EscapeLeavesTheNameUntouched()
     {
-        using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(10));
+        using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(60));
         var ct = cts.Token;
 
         await using var factory = new TeamWebApplicationFactory();
@@ -218,7 +218,7 @@ public sealed class ChatPageTests
     [Fact]
     public async Task ChatPage_Rename_AChatExceptionSurfacesAsAVisibleAlert()
     {
-        using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(10));
+        using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(60));
         var ct = cts.Token;
 
         await using var factory = new TeamWebApplicationFactory();
@@ -260,7 +260,7 @@ public sealed class ChatPageTests
     [Fact]
     public async Task ChatPage_LoadsDraftsThatWereAlreadyInFlight()
     {
-        using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(10));
+        using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(60));
         var ct = cts.Token;
 
         await using var factory = new TeamWebApplicationFactory();
@@ -285,7 +285,7 @@ public sealed class ChatPageTests
     [Fact]
     public async Task ChatPage_ShowsNoAlertAfterAStop()
     {
-        using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(10));
+        using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(60));
         var ct = cts.Token;
 
         await using var factory = new TeamWebApplicationFactory();
@@ -330,7 +330,7 @@ public sealed class ChatPageTests
     [Fact]
     public async Task ChatPage_RendersEachToolCallAsARow()
     {
-        using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(10));
+        using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(60));
         var ct = cts.Token;
 
         await using var factory = new TeamWebApplicationFactory();
@@ -356,7 +356,7 @@ public sealed class ChatPageTests
     [Fact]
     public async Task ChatPage_LoadsInFlightToolCallsOnEntry()
     {
-        using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(10));
+        using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(60));
         var ct = cts.Token;
 
         await using var factory = new TeamWebApplicationFactory();
@@ -382,7 +382,7 @@ public sealed class ChatPageTests
     [Fact]
     public async Task ChatPage_RendersToolActivity()
     {
-        using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(10));
+        using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(60));
         var ct = cts.Token;
 
         await using var factory = new TeamWebApplicationFactory();
@@ -415,7 +415,7 @@ public sealed class ChatPageTests
     [Fact]
     public async Task ChatPage_ShowsNoStripForAnAgentThatSimplyNeverStarted()
     {
-        using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(10));
+        using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(60));
         var ct = cts.Token;
 
         await using var factory = new TeamWebApplicationFactory();
@@ -437,7 +437,7 @@ public sealed class ChatPageTests
     [Fact]
     public async Task ChatPage_ShowsAStripForAnOfflineMember()
     {
-        using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(10));
+        using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(60));
         var ct = cts.Token;
 
         await using var factory = new TeamWebApplicationFactory();
@@ -465,7 +465,7 @@ public sealed class ChatPageTests
     [Fact]
     public async Task ChatPage_ShowsNoStripWhenEveryMemberIsHealthy()
     {
-        using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(10));
+        using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(60));
         var ct = cts.Token;
 
         await using var factory = new TeamWebApplicationFactory();
@@ -495,7 +495,7 @@ public sealed class ChatPageTests
     [Fact]
     public async Task ChatPage_WhenNoTeammateIsMentionedInAGroupRoom_SaysTheMessageWasContextOnly()
     {
-        using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(10));
+        using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(60));
         var ct = cts.Token;
 
         await using var factory = new TeamWebApplicationFactory();
@@ -519,7 +519,7 @@ public sealed class ChatPageTests
     [Fact]
     public async Task ChatPage_WhenAMentionAddressesATeammate_SaysNothing()
     {
-        using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(10));
+        using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(60));
         var ct = cts.Token;
 
         await using var factory = new TeamWebApplicationFactory();
@@ -547,7 +547,7 @@ public sealed class ChatPageTests
     [Fact]
     public async Task ChatPage_AfterAnAgentReplyInAGroupRoom_SaysNothing()
     {
-        using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(10));
+        using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(60));
         var ct = cts.Token;
 
         await using var factory = new TeamWebApplicationFactory();
@@ -570,7 +570,7 @@ public sealed class ChatPageTests
     [Fact]
     public async Task ChatPage_AfterAnAgentReplyInADirectRoom_SaysNothing()
     {
-        using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(10));
+        using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(60));
         var ct = cts.Token;
 
         await using var factory = new TeamWebApplicationFactory();
@@ -598,7 +598,7 @@ public sealed class ChatPageTests
     [Fact]
     public async Task ChatPage_WhileADraftIsOpen_SaysNothing()
     {
-        using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(10));
+        using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(60));
         var ct = cts.Token;
 
         await using var factory = new TeamWebApplicationFactory();
@@ -628,7 +628,7 @@ public sealed class ChatPageTests
     [Fact]
     public async Task ChatPage_WhenEveryTeammateIsOffline_SaysNothing()
     {
-        using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(10));
+        using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(60));
         var ct = cts.Token;
 
         await using var factory = new TeamWebApplicationFactory();
@@ -654,7 +654,7 @@ public sealed class ChatPageTests
     [Fact]
     public async Task ChatPage_WhenAMentionedTeammateIsOffline_SaysNothing()
     {
-        using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(10));
+        using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(60));
         var ct = cts.Token;
 
         await using var factory = new TeamWebApplicationFactory();
@@ -677,7 +677,7 @@ public sealed class ChatPageTests
     [Fact]
     public async Task ChatPage_WhenTheRoomIsPaused_ShowsTheBudgetPromptAndNotTheContextOnlyNote()
     {
-        using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(10));
+        using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(60));
         var ct = cts.Token;
 
         await using var factory = new TeamWebApplicationFactory { AgentMessageBudget = 2 };
@@ -702,7 +702,7 @@ public sealed class ChatPageTests
     [Fact]
     public async Task ChatPage_ContextOnlyNote_ClearsOnTheNextMessage()
     {
-        using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(10));
+        using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(60));
         var ct = cts.Token;
 
         await using var factory = new TeamWebApplicationFactory();
@@ -729,7 +729,7 @@ public sealed class ChatPageTests
     [Fact]
     public async Task ChatPage_ContextOnlyNote_IsAbsentFromAPlainLoad()
     {
-        using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(10));
+        using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(60));
         var ct = cts.Token;
 
         await using var factory = new TeamWebApplicationFactory();
@@ -761,7 +761,7 @@ public sealed class ChatPageTests
     [Fact]
     public async Task ChatPage_BudgetPrompt_WarnsBeforeTheClickWhenTheLastMessageIsTheAgentsOwn()
     {
-        using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(10));
+        using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(60));
         var ct = cts.Token;
 
         await using var factory = new TeamWebApplicationFactory { AgentMessageBudget = 1 };
@@ -792,7 +792,7 @@ public sealed class ChatPageTests
     [Fact]
     public async Task ChatPage_Continue_WhenTheLastMessageIsTheAgentsOwn_SaysNobodyWasWoken()
     {
-        using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(10));
+        using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(60));
         var ct = cts.Token;
 
         await using var factory = new TeamWebApplicationFactory { AgentMessageBudget = 1 };
@@ -833,7 +833,7 @@ public sealed class ChatPageTests
     [Fact]
     public async Task ChatPage_Continue_DoesNotRenderTheRedeliveredMessageTwice()
     {
-        using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(10));
+        using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(60));
         var ct = cts.Token;
 
         await using var factory = new TeamWebApplicationFactory { AgentMessageBudget = 1 };
@@ -882,7 +882,7 @@ public sealed class ChatPageTests
     [Fact]
     public async Task Composer_StatusLine_DoesNotFollowARoomSwitch()
     {
-        using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(10));
+        using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(60));
         var ct = cts.Token;
 
         await using var factory = new TeamWebApplicationFactory();
@@ -931,7 +931,7 @@ public sealed class ChatPageTests
     [Fact]
     public async Task ChatPage_ShowsTheRoomsWaitingForm()
     {
-        using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(10));
+        using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(60));
         var ct = cts.Token;
 
         await using var factory = new TeamWebApplicationFactory();

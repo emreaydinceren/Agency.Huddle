@@ -34,7 +34,7 @@
         <MudNavGroup Title="Tasks" Icon="@Icons.Material.Outlined.TaskAlt" @bind-Expanded="this.expanded">
             @foreach (TaskView view in this.ViewStore.Views)
             {
-                <div class="hover-reveal-row"
+                <div @key="view.Id" class="hover-reveal-row"
                      @oncontextmenu="@(e => this.OnRowContextMenuAsync(view.Id, e))"
                      @oncontextmenu:preventDefault="true">
                     <NavTabLink Href="@($"/tasks/{view.Id}")" TabTitle="@view.Name" Class="hover-reveal-link"
@@ -105,9 +105,19 @@
         this.ViewStore.ViewsChanged -= this.OnViewsChanged;
     }
 
+    /// <summary>
+    /// Re-renders for a changed View list. Drops only the menu refs of Views that are gone: Blazor assigns a
+    /// component <c>@ref</c> when it creates the instance, not on every render, so clearing them all would leave
+    /// every surviving row's right-click with no menu to open. Each row is keyed by View id, so a surviving
+    /// View keeps its own MudMenu instance - and its ref - when Views before it are added or deleted.
+    /// </summary>
     private void OnViewsChanged() => _ = this.DispatchAsync(() =>
     {
-        this.menuRefs.Clear();
+        HashSet<string> current = new(this.ViewStore.Views.Select(static view => view.Id), StringComparer.Ordinal);        foreach (string gone in this.menuRefs.Keys.Where(id => !current.Contains(id)).ToList())
+        {
+            this.menuRefs.Remove(gone);
+        }
+
         this.StateHasChanged();
         return Task.CompletedTask;
     });

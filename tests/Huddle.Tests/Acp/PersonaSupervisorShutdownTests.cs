@@ -1,5 +1,4 @@
 using System.Collections.Concurrent;
-using System.Diagnostics;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Options;
@@ -20,35 +19,39 @@ public sealed class PersonaSupervisorShutdownTests
 {
     private const int PersonaCount = 6;
 
-    private static readonly TimeSpan HostStopTime = TimeSpan.FromMilliseconds(200);
-
     /// <summary>
-    /// Six hosts that each take 200 ms to stop must be stopped concurrently: the sequential loop took
-    /// about 1200 ms, the concurrent one about 200 ms, and the bound leaves wide room for a loaded CI
-    /// machine without ever admitting the sequential time.
+    /// Six hosts must be stopped concurrently: each host's disposal is held open until every host has
+    /// begun disposing, which a sequential loop never reaches (the first host would wait forever for the
+    /// sixth). Proving it with an event instead of a stopwatch keeps it exact under CPU load, where a
+    /// 200 ms delay times six stretched past the old wall-clock bound.
     /// </summary>
     [Fact]
     public async Task StopAsync_ManyHosts_StopsThemConcurrently()
     {
         using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(30));
         var ct = cts.Token;
+        TaskCompletionSource allStarted = new(TaskCreationOptions.RunContinuationsAsynchronously);
+        int startedCount = 0;
         ConcurrentBag<FakePersonaHost> hosts = [];
         await using var started = await StartSupervisorAsync(host =>
         {
-            host.DisposeDelay = HostStopTime;
+            host.OnDispose = () =>
+            {
+                if (Interlocked.Increment(ref startedCount) == PersonaCount)
+                {
+                    allStarted.SetResult();
+                }
+            };
+            host.DisposeGate = allStarted.Task;
             hosts.Add(host);
         }, ct);
 
         await WaitUntilAsync(() => started.Supervisor.RunningHostCount == PersonaCount && hosts.Count == PersonaCount, ct);
 
-        var stopwatch = Stopwatch.StartNew();
-        await started.Supervisor.StopAsync(ct);
-        stopwatch.Stop();
+        await started.Supervisor.StopAsync(ct).WaitAsync(TimeSpan.FromSeconds(10), ct);
 
         Assert.All(hosts, host => Assert.True(host.Disposed));
-        Assert.True(
-            stopwatch.Elapsed < HostStopTime * (PersonaCount / 2),
-            $"Stopping {PersonaCount} hosts of {HostStopTime.TotalMilliseconds} ms each took {stopwatch.Elapsed.TotalMilliseconds} ms; they were stopped one after another.");
+        Assert.Equal(PersonaCount, Volatile.Read(ref startedCount));
     }
 
     /// <summary>

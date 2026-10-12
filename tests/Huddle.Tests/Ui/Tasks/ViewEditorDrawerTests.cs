@@ -33,7 +33,7 @@ public sealed class ViewEditorDrawerTests
     {
         CancellationToken ct = TestContext.Current.CancellationToken;
         using TaskToolHarness harness = await TaskToolHarness.CreateAsync(ct);
-        TaskView saved = Save(harness, "v1", ViewKind.List, name: "Original", description: "Old");
+        TaskView saved = await SaveAsync(harness, "v1", ViewKind.List, name: "Original", description: "Old");
 
         await using MudBunitContext ctx = NewContext(harness);
         IRenderedComponent<ContainerFragment> root = RenderDrawer(ctx, saved.Id);
@@ -57,7 +57,7 @@ public sealed class ViewEditorDrawerTests
     {
         CancellationToken ct = TestContext.Current.CancellationToken;
         using TaskToolHarness harness = await TaskToolHarness.CreateAsync(ct);
-        TaskView listView = Save(harness, "v1", ViewKind.List);
+        TaskView listView = await SaveAsync(harness, "v1", ViewKind.List);
 
         await using MudBunitContext ctx = NewContext(harness);
         IRenderedComponent<ContainerFragment> root = RenderDrawer(ctx, listView.Id);
@@ -78,7 +78,7 @@ public sealed class ViewEditorDrawerTests
     {
         CancellationToken ct = TestContext.Current.CancellationToken;
         using TaskToolHarness harness = await TaskToolHarness.CreateAsync(ct);
-        TaskView saved = Save(harness, "v1", ViewKind.List);
+        TaskView saved = await SaveAsync(harness, "v1", ViewKind.List);
 
         await using MudBunitContext ctx = NewContext(harness);
         IRenderedComponent<ContainerFragment> root = RenderDrawer(ctx, saved.Id);
@@ -102,7 +102,7 @@ public sealed class ViewEditorDrawerTests
     {
         CancellationToken ct = TestContext.Current.CancellationToken;
         using TaskToolHarness harness = await TaskToolHarness.CreateAsync(ct);
-        TaskView saved = Save(harness, "v1", ViewKind.List, fields: ["status", "priority", "assignee"]);
+        TaskView saved = await SaveAsync(harness, "v1", ViewKind.List, fields: ["status", "priority", "assignee"]);
 
         await using MudBunitContext ctx = NewContext(harness);
         IRenderedComponent<ContainerFragment> root = RenderDrawer(ctx, saved.Id);
@@ -123,7 +123,7 @@ public sealed class ViewEditorDrawerTests
     {
         CancellationToken ct = TestContext.Current.CancellationToken;
         using TaskToolHarness harness = await TaskToolHarness.CreateAsync(ct);
-        TaskView saved = Save(harness, "v1", ViewKind.List, fields: ["status", "priority"]);
+        TaskView saved = await SaveAsync(harness, "v1", ViewKind.List, fields: ["status", "priority"]);
 
         await using MudBunitContext ctx = NewContext(harness);
         IRenderedComponent<ContainerFragment> root = RenderDrawer(ctx, saved.Id);
@@ -143,7 +143,7 @@ public sealed class ViewEditorDrawerTests
     {
         CancellationToken ct = TestContext.Current.CancellationToken;
         using TaskToolHarness harness = await TaskToolHarness.CreateAsync(ct);
-        TaskView saved = Save(harness, "v1", ViewKind.List, fields: ["status", "priority"]);
+        TaskView saved = await SaveAsync(harness, "v1", ViewKind.List, fields: ["status", "priority"]);
 
         await using MudBunitContext ctx = NewContext(harness);
         IRenderedComponent<ContainerFragment> root = RenderDrawer(ctx, saved.Id);
@@ -163,15 +163,14 @@ public sealed class ViewEditorDrawerTests
     {
         CancellationToken ct = TestContext.Current.CancellationToken;
         using TaskToolHarness harness = await TaskToolHarness.CreateAsync(ct);
-        TaskView saved = Save(harness, "v1", ViewKind.List, fields: ["status"]);
+        TaskView saved = await SaveAsync(harness, "v1", ViewKind.List, fields: ["status"]);
 
         await using MudBunitContext ctx = NewContext(harness);
         IRenderedComponent<ContainerFragment> root = RenderDrawer(ctx, saved.Id);
         IRenderedComponent<ViewEditorDrawer> drawer = root.FindComponent<ViewEditorDrawer>();
 
         await OpenMenuAsync(root, drawer, ".view-editor-fields-add");
-        var priorityOption = root.FindAll(".view-editor-fields-add-option").Single(el => string.Equals(el.TextContent.Trim(), "priority", StringComparison.Ordinal));
-        await root.InvokeAsync(() => priorityOption.ClickAsync());
+        await ClickFieldOptionAsync(root, "priority");
         await ClickAsync(root, drawer, ".view-editor-save");
 
         TaskView? persisted = harness.Views.Get(saved.Id);
@@ -185,7 +184,7 @@ public sealed class ViewEditorDrawerTests
     {
         CancellationToken ct = TestContext.Current.CancellationToken;
         using TaskToolHarness harness = await TaskToolHarness.CreateAsync(ct);
-        TaskView saved = Save(harness, "v1", ViewKind.List, fields: ["status", "priority"]);
+        TaskView saved = await SaveAsync(harness, "v1", ViewKind.List, fields: ["status", "priority"]);
 
         await using MudBunitContext ctx = NewContext(harness);
         IRenderedComponent<ContainerFragment> root = RenderDrawer(ctx, saved.Id);
@@ -194,8 +193,7 @@ public sealed class ViewEditorDrawerTests
         Assert.Equal(2, root.FindAll(".view-editor-field-row").Count);
 
         await OpenMenuAsync(root, drawer, ".view-editor-fields-add");
-        var assigneeOption = root.FindAll(".view-editor-fields-add-option").Single(el => string.Equals(el.TextContent.Trim(), "assignee", StringComparison.Ordinal));
-        await root.InvokeAsync(() => assigneeOption.ClickAsync());
+        await ClickFieldOptionAsync(root, "assignee");
 
         Assert.Equal(3, root.FindAll(".view-editor-field-row").Count);
         Assert.NotEmpty(root.FindAll(".view-editor-field-remove-assignee"));
@@ -212,7 +210,7 @@ public sealed class ViewEditorDrawerTests
     {
         CancellationToken ct = TestContext.Current.CancellationToken;
         using TaskToolHarness harness = await TaskToolHarness.CreateAsync(ct);
-        TaskView saved = Save(harness, "v1", ViewKind.List, fields: ["status", "priority", "assignee"]);
+        TaskView saved = await SaveAsync(harness, "v1", ViewKind.List, fields: ["status", "priority", "assignee"]);
 
         await using MudBunitContext ctx = NewContext(harness);
         IRenderedComponent<ContainerFragment> root = RenderDrawer(ctx, saved.Id);
@@ -233,7 +231,7 @@ public sealed class ViewEditorDrawerTests
     {
         CancellationToken ct = TestContext.Current.CancellationToken;
         using TaskToolHarness harness = await TaskToolHarness.CreateAsync(ct);
-        TaskView saved = Save(harness, "v1", ViewKind.List, fields: ["status", "priority", "assignee"]);
+        TaskView saved = await SaveAsync(harness, "v1", ViewKind.List, fields: ["status", "priority", "assignee"]);
 
         await using MudBunitContext ctx = NewContext(harness);
         IRenderedComponent<ContainerFragment> root = RenderDrawer(ctx, saved.Id);
@@ -260,7 +258,7 @@ public sealed class ViewEditorDrawerTests
         // empty Task folder on disk (TaskStore.Teams), so the union must carry both without duplicating Platform.
         Directory.CreateDirectory(Path.Combine(harness.TasksDirPath, "Legal"));
         harness.Store.RebuildFromWatcher();
-        TaskView saved = Save(harness, "v1", ViewKind.List);
+        TaskView saved = await SaveAsync(harness, "v1", ViewKind.List);
 
         await using MudBunitContext ctx = NewContext(harness);
         IRenderedComponent<ContainerFragment> root = RenderDrawer(ctx, saved.Id);
@@ -283,7 +281,7 @@ public sealed class ViewEditorDrawerTests
         // "Legal" is a Task folder with no Persona naming it, so TaskStore marks it IsOrphan.
         Directory.CreateDirectory(Path.Combine(harness.TasksDirPath, "Legal"));
         harness.Store.RebuildFromWatcher();
-        TaskView saved = Save(harness, "v1", ViewKind.List);
+        TaskView saved = await SaveAsync(harness, "v1", ViewKind.List);
 
         await using MudBunitContext ctx = NewContext(harness);
         IRenderedComponent<ContainerFragment> root = RenderDrawer(ctx, saved.Id);
@@ -304,7 +302,7 @@ public sealed class ViewEditorDrawerTests
         Directory.CreateDirectory(Path.Combine(harness.TasksDirPath, "Platform", "Backend"));
         Directory.CreateDirectory(Path.Combine(harness.TasksDirPath, "Legal", "Contracts"));
         harness.Store.RebuildFromWatcher();
-        TaskView saved = Save(harness, "v1", ViewKind.List, teams: ["Platform"]);
+        TaskView saved = await SaveAsync(harness, "v1", ViewKind.List, teams: ["Platform"]);
 
         await using MudBunitContext ctx = NewContext(harness);
         IRenderedComponent<ContainerFragment> root = RenderDrawer(ctx, saved.Id);
@@ -322,7 +320,7 @@ public sealed class ViewEditorDrawerTests
     {
         CancellationToken ct = TestContext.Current.CancellationToken;
         using TaskToolHarness harness = await TaskToolHarness.CreateAsync(ct);
-        TaskView saved = Save(harness, "v1", ViewKind.List);
+        TaskView saved = await SaveAsync(harness, "v1", ViewKind.List);
 
         await using MudBunitContext ctx = NewContext(harness);
         IRenderedComponent<ContainerFragment> root = RenderDrawer(ctx, saved.Id);
@@ -340,7 +338,7 @@ public sealed class ViewEditorDrawerTests
     {
         CancellationToken ct = TestContext.Current.CancellationToken;
         using TaskToolHarness harness = await TaskToolHarness.CreateAsync(ct);
-        TaskView saved = Save(harness, "v1", ViewKind.List, assignees: ["Ghost"]);
+        TaskView saved = await SaveAsync(harness, "v1", ViewKind.List, assignees: ["Ghost"]);
 
         await using MudBunitContext ctx = NewContext(harness);
         IRenderedComponent<ContainerFragment> root = RenderDrawer(ctx, saved.Id);
@@ -359,7 +357,7 @@ public sealed class ViewEditorDrawerTests
     {
         CancellationToken ct = TestContext.Current.CancellationToken;
         using TaskToolHarness harness = await TaskToolHarness.CreateAsync(ct);
-        TaskView saved = Save(harness, "v1", ViewKind.List, teams: ["Atlas", "Zephyr"]);
+        TaskView saved = await SaveAsync(harness, "v1", ViewKind.List, teams: ["Atlas", "Zephyr"]);
 
         await using MudBunitContext ctx = NewContext(harness);
         IRenderedComponent<ContainerFragment> root = RenderDrawer(ctx, saved.Id);
@@ -376,7 +374,7 @@ public sealed class ViewEditorDrawerTests
     {
         CancellationToken ct = TestContext.Current.CancellationToken;
         using TaskToolHarness harness = await TaskToolHarness.CreateAsync(ct);
-        TaskView saved = Save(harness, "v1", ViewKind.List, grouping: [TaskGroupField.State, TaskGroupField.Assignee]);
+        TaskView saved = await SaveAsync(harness, "v1", ViewKind.List, grouping: [TaskGroupField.State, TaskGroupField.Assignee]);
 
         await using MudBunitContext ctx = NewContext(harness);
         IRenderedComponent<ContainerFragment> root = RenderDrawer(ctx, saved.Id);
@@ -397,7 +395,7 @@ public sealed class ViewEditorDrawerTests
     {
         CancellationToken ct = TestContext.Current.CancellationToken;
         using TaskToolHarness harness = await TaskToolHarness.CreateAsync(ct);
-        TaskView saved = Save(harness, "v1", ViewKind.Board, columns: BoardDefaultColumns);
+        TaskView saved = await SaveAsync(harness, "v1", ViewKind.Board, columns: BoardDefaultColumns);
 
         await using MudBunitContext ctx = NewContext(harness);
         IRenderedComponent<ContainerFragment> root = RenderDrawer(ctx, saved.Id);
@@ -415,7 +413,7 @@ public sealed class ViewEditorDrawerTests
     {
         CancellationToken ct = TestContext.Current.CancellationToken;
         using TaskToolHarness harness = await TaskToolHarness.CreateAsync(ct);
-        TaskView saved = Save(harness, "v1", ViewKind.List, sort: [new SortKey("priority", SortDirection.Descending), new SortKey("due_date", SortDirection.Ascending)]);
+        TaskView saved = await SaveAsync(harness, "v1", ViewKind.List, sort: [new SortKey("priority", SortDirection.Descending), new SortKey("due_date", SortDirection.Ascending)]);
 
         await using MudBunitContext ctx = NewContext(harness);
         IRenderedComponent<ContainerFragment> root = RenderDrawer(ctx, saved.Id);
@@ -437,7 +435,7 @@ public sealed class ViewEditorDrawerTests
     {
         CancellationToken ct = TestContext.Current.CancellationToken;
         using TaskToolHarness harness = await TaskToolHarness.CreateAsync(ct);
-        TaskView saved = Save(harness, "v1", ViewKind.Board, columns: BoardDefaultColumns);
+        TaskView saved = await SaveAsync(harness, "v1", ViewKind.Board, columns: BoardDefaultColumns);
 
         await using MudBunitContext ctx = NewContext(harness);
         IRenderedComponent<ContainerFragment> generalRoot = ctx.RenderWithPopovers(builder =>
@@ -467,7 +465,7 @@ public sealed class ViewEditorDrawerTests
     {
         CancellationToken ct = TestContext.Current.CancellationToken;
         using TaskToolHarness harness = await TaskToolHarness.CreateAsync(ct);
-        TaskView saved = Save(harness, "v1", ViewKind.List);
+        TaskView saved = await SaveAsync(harness, "v1", ViewKind.List);
 
         await using MudBunitContext ctx = NewContext(harness);
         IRenderedComponent<ContainerFragment> root = RenderDrawer(ctx, saved.Id);
@@ -505,7 +503,7 @@ public sealed class ViewEditorDrawerTests
             new("Done", [TaskState.Done]),
             new("Won't do", [TaskState.Cancelled, TaskState.Duplicate, TaskState.Rejected]),
         ];
-        TaskView saved = Save(harness, "v1", ViewKind.Board, columns: columns);
+        TaskView saved = await SaveAsync(harness, "v1", ViewKind.Board, columns: columns);
 
         await using MudBunitContext ctx = NewContext(harness);
         IRenderedComponent<ContainerFragment> root = RenderDrawer(ctx, saved.Id);
@@ -533,7 +531,7 @@ public sealed class ViewEditorDrawerTests
         using TaskToolHarness harness = await TaskToolHarness.CreateAsync(ct);
         // Saved valid (every state placed once), then Review is cleared from its own column through
         // the rendered editor - ViewStore.Save would refuse an already-invalid fixture outright.
-        TaskView saved = Save(harness, "v1", ViewKind.Board, columns: BoardDefaultColumns);
+        TaskView saved = await SaveAsync(harness, "v1", ViewKind.Board, columns: BoardDefaultColumns);
 
         await using MudBunitContext ctx = NewContext(harness);
         IRenderedComponent<ContainerFragment> root = RenderDrawer(ctx, saved.Id);
@@ -553,10 +551,10 @@ public sealed class ViewEditorDrawerTests
     {
         CancellationToken ct = TestContext.Current.CancellationToken;
         using TaskToolHarness harness = await TaskToolHarness.CreateAsync(ct);
-        _ = Save(harness, "v1", ViewKind.List, name: "Taken");
+        _ = await SaveAsync(harness, "v1", ViewKind.List, name: "Taken");
         // Saved valid under a placeholder name, then edited in the drawer to collide with "v1"'s
         // name and to lose Review's placement, so both problems appear from one draft at once.
-        TaskView saved = Save(harness, "v2", ViewKind.Board, name: "Not Taken Yet", columns: BoardDefaultColumns);
+        TaskView saved = await SaveAsync(harness, "v2", ViewKind.Board, name: "Not Taken Yet", columns: BoardDefaultColumns);
 
         await using MudBunitContext ctx = NewContext(harness);
         IRenderedComponent<ContainerFragment> root = RenderDrawer(ctx, saved.Id);
@@ -591,7 +589,7 @@ public sealed class ViewEditorDrawerTests
     {
         CancellationToken ct = TestContext.Current.CancellationToken;
         using TaskToolHarness harness = await TaskToolHarness.CreateAsync(ct);
-        TaskView saved = Save(harness, "v1", ViewKind.List, name: "Platform board");
+        TaskView saved = await SaveAsync(harness, "v1", ViewKind.List, name: "Platform board");
 
         await using MudBunitContext ctx = NewContext(harness);
         IRenderedComponent<ContainerFragment> root = RenderDrawer(ctx, saved.Id);
@@ -614,7 +612,7 @@ public sealed class ViewEditorDrawerTests
     {
         CancellationToken ct = TestContext.Current.CancellationToken;
         using TaskToolHarness harness = await TaskToolHarness.CreateAsync(ct);
-        TaskView saved = Save(harness, "v1", ViewKind.List, name: "Platform board");
+        TaskView saved = await SaveAsync(harness, "v1", ViewKind.List, name: "Platform board");
 
         await using MudBunitContext ctx = NewContext(harness);
         NavigationManager navigation = ctx.Services.GetRequiredService<NavigationManager>();
@@ -635,7 +633,7 @@ public sealed class ViewEditorDrawerTests
     {
         CancellationToken ct = TestContext.Current.CancellationToken;
         using TaskToolHarness harness = await TaskToolHarness.CreateAsync(ct);
-        TaskView saved = Save(harness, "v1", ViewKind.List, name: "Platform board");
+        TaskView saved = await SaveAsync(harness, "v1", ViewKind.List, name: "Platform board");
 
         await using MudBunitContext ctx = NewContext(harness);
         IRenderedComponent<ContainerFragment> root = RenderDrawer(ctx, saved.Id);
@@ -654,7 +652,7 @@ public sealed class ViewEditorDrawerTests
     {
         CancellationToken ct = TestContext.Current.CancellationToken;
         using TaskToolHarness harness = await TaskToolHarness.CreateAsync(ct);
-        TaskView saved = Save(harness, "v1", ViewKind.List, name: "Original");
+        TaskView saved = await SaveAsync(harness, "v1", ViewKind.List, name: "Original");
 
         await using MudBunitContext ctx = NewContext(harness);
         IRenderedComponent<ContainerFragment> root = RenderDrawer(ctx, saved.Id);
@@ -680,7 +678,7 @@ public sealed class ViewEditorDrawerTests
     {
         CancellationToken ct = TestContext.Current.CancellationToken;
         using TaskToolHarness harness = await TaskToolHarness.CreateAsync(ct);
-        TaskView saved = Save(harness, "v1", ViewKind.List, name: "Original");
+        TaskView saved = await SaveAsync(harness, "v1", ViewKind.List, name: "Original");
         bool? openChangedTo = null;
 
         await using MudBunitContext ctx = NewContext(harness);
@@ -715,7 +713,7 @@ public sealed class ViewEditorDrawerTests
     {
         CancellationToken ct = TestContext.Current.CancellationToken;
         using TaskToolHarness harness = await TaskToolHarness.CreateAsync(ct);
-        TaskView saved = Save(harness, "v1", ViewKind.List, name: "Original");
+        TaskView saved = await SaveAsync(harness, "v1", ViewKind.List, name: "Original");
 
         await using MudBunitContext ctx = NewContext(harness);
         IRenderedComponent<ViewEditorDrawer> drawer = ctx.Render<ViewEditorDrawer>(parameters => parameters
@@ -766,7 +764,7 @@ public sealed class ViewEditorDrawerTests
     {
         CancellationToken ct = TestContext.Current.CancellationToken;
         using TaskToolHarness harness = await TaskToolHarness.CreateAsync(ct);
-        TaskView saved = Save(harness, "v1", ViewKind.List, name: "Original");
+        TaskView saved = await SaveAsync(harness, "v1", ViewKind.List, name: "Original");
 
         await using MudBunitContext ctx = NewContext(harness);
         IRenderedComponent<ContainerFragment> root = RenderDrawer(ctx, saved.Id);
@@ -782,7 +780,7 @@ public sealed class ViewEditorDrawerTests
     {
         CancellationToken ct = TestContext.Current.CancellationToken;
         using TaskToolHarness harness = await TaskToolHarness.CreateAsync(ct);
-        TaskView saved = Save(harness, "v1", ViewKind.List, name: "Original");
+        TaskView saved = await SaveAsync(harness, "v1", ViewKind.List, name: "Original");
 
         await using MudBunitContext ctx = NewContext(harness);
         IRenderedComponent<ContainerFragment> root = RenderDrawer(ctx, saved.Id);
@@ -872,7 +870,7 @@ public sealed class ViewEditorDrawerTests
     ];
 
     /// <summary>Saves a fresh View with the given shape and returns the copy <see cref="ViewStore"/> actually resolved.</summary>
-    private static TaskView Save(
+    private static async Task<TaskView> SaveAsync(
         TaskToolHarness harness,
         string id,
         ViewKind kind,
@@ -897,7 +895,7 @@ public sealed class ViewEditorDrawerTests
             Sort = sort ?? [],
             Columns = columns ?? [],
         };
-        ViewSaveResult result = harness.Views.Save(view);
+        ViewSaveResult result = await ViewStoreEcho.SaveAndSettleAsync(harness.Views, view, Xunit.TestContext.Current.CancellationToken);
         Assert.True(result.Saved);
         return harness.Views.Get(id) ?? throw new InvalidOperationException($"'{id}' was just saved but is missing.");
     }
@@ -919,6 +917,18 @@ public sealed class ViewEditorDrawerTests
     /// <summary>Opens a <c>MudMenu</c> whose root carries <paramref name="cssSelector"/>, by clicking its inner activator button.</summary>
     private static Task OpenMenuAsync(IRenderedComponent<ContainerFragment> root, IRenderedComponent<ViewEditorDrawer> drawer, string cssSelector) =>
         drawer.InvokeAsync(() => root.Find($"{cssSelector} button").ClickAsync());
+
+    /// <summary>
+    /// Clicks the Add field menu option reading <paramref name="text"/>. The option is looked up inside the dispatch,
+    /// never held across an await: the store's own watcher re-renders the drawer about half a second after the test's
+    /// <c>Save</c>, so an <c>IElement</c> found earlier can carry a handler id that render has already retired.
+    /// </summary>
+    private static async Task ClickFieldOptionAsync(IRenderedComponent<ContainerFragment> root, string text)
+    {
+        // The popover paints its items on a render after the opening click returns; wait for that render.
+        root.WaitForAssertion(() => Assert.Single(root.FindAll(".view-editor-fields-add-option"), el => string.Equals(el.TextContent.Trim(), text, StringComparison.Ordinal)));
+        await root.InvokeAsync(() => root.FindAll(".view-editor-fields-add-option").Single(el => string.Equals(el.TextContent.Trim(), text, StringComparison.Ordinal)).ClickAsync());
+    }
 
     /// <summary>Opens a <c>MudSelect</c> whose root carries <paramref name="cssSelector"/>: it toggles on <c>mousedown</c>, not <c>click</c>.</summary>
     private static Task OpenSelectAsync(IRenderedComponent<ContainerFragment> root, IRenderedComponent<ViewEditorDrawer> drawer, string cssSelector) =>

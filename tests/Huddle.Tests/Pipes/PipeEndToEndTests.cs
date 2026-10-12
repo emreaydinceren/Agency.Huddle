@@ -14,7 +14,7 @@ public sealed class PipeEndToEndTests
     [Fact]
     public async Task Agent_Hello_Post_Reply_RoundTrip()
     {
-        using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(10));
+        using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(60));
         var ct = cts.Token;
 
         await using var fixture = await PipeHostFixture.StartAsync(ct);
@@ -71,7 +71,7 @@ public sealed class PipeEndToEndTests
     [Fact]
     public async Task TwoAgents_OnlyMentionedOneGetsFlag_AndRoomIsRenamed()
     {
-        using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(10));
+        using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(60));
         var ct = cts.Token;
 
         await using var fixture = await PipeHostFixture.StartAsync(ct);
@@ -103,7 +103,7 @@ public sealed class PipeEndToEndTests
     [Fact]
     public async Task FirstMessageNotHello_GetsError_AndDisconnect()
     {
-        using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(10));
+        using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(60));
         var ct = cts.Token;
 
         await using var fixture = await PipeHostFixture.StartAsync(ct);
@@ -120,7 +120,7 @@ public sealed class PipeEndToEndTests
     [Fact]
     public async Task InvalidAgentName_GetsError_AndDisconnect()
     {
-        using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(10));
+        using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(60));
         var ct = cts.Token;
 
         await using var fixture = await PipeHostFixture.StartAsync(ct);
@@ -139,7 +139,7 @@ public sealed class PipeEndToEndTests
     [Fact]
     public async Task NameWithSpaces_IsAccepted()
     {
-        using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(10));
+        using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(60));
         var ct = cts.Token;
 
         await using var fixture = await PipeHostFixture.StartAsync(ct);
@@ -154,7 +154,7 @@ public sealed class PipeEndToEndTests
     [Fact]
     public async Task HumanName_GetsNameReserved()
     {
-        using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(10));
+        using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(60));
         var ct = cts.Token;
 
         await using var fixture = await PipeHostFixture.StartAsync(ct);
@@ -171,7 +171,7 @@ public sealed class PipeEndToEndTests
     [Fact]
     public async Task Post_ToUnknownRoom_GetsErrorWithRelatedId_ConnectionStaysOpen()
     {
-        using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(10));
+        using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(60));
         var ct = cts.Token;
 
         await using var fixture = await PipeHostFixture.StartAsync(ct);
@@ -207,7 +207,7 @@ public sealed class PipeEndToEndTests
     [Fact]
     public async Task MessageDelta_FromAMember_IsAccepted()
     {
-        using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(10));
+        using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(60));
         var ct = cts.Token;
 
         await using var fixture = await PipeHostFixture.StartAsync(ct);
@@ -236,7 +236,7 @@ public sealed class PipeEndToEndTests
     [Fact]
     public async Task MessageDelta_FromANonMember_IsRefused()
     {
-        using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(10));
+        using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(60));
         var ct = cts.Token;
 
         await using var fixture = await PipeHostFixture.StartAsync(ct);
@@ -267,7 +267,7 @@ public sealed class PipeEndToEndTests
     [Fact]
     public async Task MessageDelta_ReusingAMessageIdInAnotherRoom_IsStillRefused()
     {
-        using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(10));
+        using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(60));
         var ct = cts.Token;
 
         await using var fixture = await PipeHostFixture.StartAsync(ct);
@@ -309,7 +309,7 @@ public sealed class PipeEndToEndTests
     [Fact]
     public async Task MessageDelta_WithAnInvalidMessageId_IsRefused()
     {
-        using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(10));
+        using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(60));
         var ct = cts.Token;
 
         await using var fixture = await PipeHostFixture.StartAsync(ct);
@@ -329,7 +329,7 @@ public sealed class PipeEndToEndTests
     [Fact]
     public async Task Drafts_AreNeverDeliveredToAnotherAgent()
     {
-        using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(10));
+        using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(60));
         var ct = cts.Token;
 
         await using var fixture = await PipeHostFixture.StartAsync(ct);
@@ -356,7 +356,7 @@ public sealed class PipeEndToEndTests
     [Fact]
     public async Task BadJsonLine_GetsBadMessage_ConnectionStaysOpen()
     {
-        using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(10));
+        using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(60));
         var ct = cts.Token;
 
         await using var fixture = await PipeHostFixture.StartAsync(ct);
@@ -383,7 +383,7 @@ public sealed class PipeEndToEndTests
     [Fact]
     public async Task Reconnect_SameName_ReplacesConnection_KeepsAgentId()
     {
-        using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(10));
+        using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(60));
         var ct = cts.Token;
 
         await using var fixture = await PipeHostFixture.StartAsync(ct);
@@ -404,7 +404,7 @@ public sealed class PipeEndToEndTests
     [Fact]
     public async Task Welcome_NewAgentRoom_IsEmptyTrue()
     {
-        using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(10));
+        using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(60));
         var ct = cts.Token;
 
         await using var fixture = await PipeHostFixture.StartAsync(ct);
@@ -425,7 +425,7 @@ public sealed class PipeEndToEndTests
     [Fact]
     public async Task Welcome_AfterOneMessage_ReconnectIsEmptyFalse()
     {
-        using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(10));
+        using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(60));
         var ct = cts.Token;
 
         await using var fixture = await PipeHostFixture.StartAsync(ct);
@@ -450,7 +450,7 @@ public sealed class PipeEndToEndTests
     [Fact]
     public async Task Disconnect_UnregistersAgent()
     {
-        using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(10));
+        using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(60));
         var ct = cts.Token;
 
         await using var fixture = await PipeHostFixture.StartAsync(ct);
@@ -476,7 +476,7 @@ public sealed class PipeEndToEndTests
     [Fact]
     public async Task Disconnect_ClearsTheAgentsDrafts()
     {
-        using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(10));
+        using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(60));
         var ct = cts.Token;
 
         await using var fixture = await PipeHostFixture.StartAsync(ct);
@@ -513,7 +513,7 @@ public sealed class PipeEndToEndTests
     [Fact]
     public async Task MessagePosted_CarriesEveryRoomMember()
     {
-        using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(10));
+        using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(60));
         var ct = cts.Token;
 
         await using var fixture = await PipeHostFixture.StartAsync(ct);
@@ -548,7 +548,7 @@ public sealed class PipeEndToEndTests
     [Fact]
     public async Task AgentPostOverBudget_ReturnsABudgetExhaustedError()
     {
-        using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(10));
+        using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(60));
         var ct = cts.Token;
 
         await using var fixture = await PipeHostFixture.StartAsync(
@@ -581,7 +581,7 @@ public sealed class PipeEndToEndTests
     [Fact]
     public async Task AgentKeepsWritingAfterARefusedPost_ConnectionStaysAlive()
     {
-        using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(10));
+        using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(60));
         var ct = cts.Token;
 
         await using var fixture = await PipeHostFixture.StartAsync(
@@ -613,7 +613,7 @@ public sealed class PipeEndToEndTests
     [Fact]
     public async Task TwoClients_ConnectConcurrently()
     {
-        using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(10));
+        using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(60));
         var ct = cts.Token;
 
         await using var fixture = await PipeHostFixture.StartAsync(ct);
@@ -637,7 +637,7 @@ public sealed class PipeEndToEndTests
     [Fact]
     public async Task PostMessage_CompletesTheDraftWithTheSameId()
     {
-        using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(10));
+        using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(60));
         var ct = cts.Token;
 
         await using var fixture = await PipeHostFixture.StartAsync(ct);
@@ -672,7 +672,7 @@ public sealed class PipeEndToEndTests
     [Fact]
     public async Task StopTurnAsync_ReachesTheAgentsConnection()
     {
-        using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(10));
+        using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(60));
         var ct = cts.Token;
 
         await using var fixture = await PipeHostFixture.StartAsync(ct);
@@ -701,7 +701,7 @@ public sealed class PipeEndToEndTests
     [Fact]
     public async Task StopTurnAsync_ForAnOfflineAgent_IsHarmless()
     {
-        using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(10));
+        using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(60));
         var ct = cts.Token;
 
         await using var fixture = await PipeHostFixture.StartAsync(ct);
@@ -716,7 +716,7 @@ public sealed class PipeEndToEndTests
     [Fact]
     public async Task ToolActivity_FromAMember_IsAccepted()
     {
-        using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(10));
+        using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(60));
         var ct = cts.Token;
 
         await using var fixture = await PipeHostFixture.StartAsync(ct);
@@ -744,7 +744,7 @@ public sealed class PipeEndToEndTests
     [Fact]
     public async Task ToolActivity_WithEdit_ReachesTheDraft()
     {
-        using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(10));
+        using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(60));
         var ct = cts.Token;
 
         await using var fixture = await PipeHostFixture.StartAsync(ct);
@@ -761,7 +761,7 @@ public sealed class PipeEndToEndTests
     [Fact]
     public async Task ToolActivity_FromANonMember_IsRefused()
     {
-        using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(10));
+        using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(60));
         var ct = cts.Token;
 
         await using var fixture = await PipeHostFixture.StartAsync(ct);
@@ -784,7 +784,7 @@ public sealed class PipeEndToEndTests
     [Fact]
     public async Task ToolActivity_OversizeEdit_IsClipped()
     {
-        using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(10));
+        using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(60));
         var ct = cts.Token;
 
         await using var fixture = await PipeHostFixture.StartAsync(ct);
@@ -804,7 +804,7 @@ public sealed class PipeEndToEndTests
     [Fact]
     public async Task ToolActivity_InvalidLine_IsDropped()
     {
-        using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(10));
+        using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(60));
         var ct = cts.Token;
 
         await using var fixture = await PipeHostFixture.StartAsync(ct);
@@ -821,7 +821,7 @@ public sealed class PipeEndToEndTests
     [Fact]
     public async Task ToolActivity_OverlongPath_IsDropped()
     {
-        using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(10));
+        using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(60));
         var ct = cts.Token;
 
         await using var fixture = await PipeHostFixture.StartAsync(ct);
@@ -838,7 +838,7 @@ public sealed class PipeEndToEndTests
     [Fact]
     public async Task ToolActivity_OverlongTitle_IsClipped()
     {
-        using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(10));
+        using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(60));
         var ct = cts.Token;
 
         await using var fixture = await PipeHostFixture.StartAsync(ct);
@@ -854,7 +854,7 @@ public sealed class PipeEndToEndTests
     [Fact]
     public async Task ToolActivity_RunnerMarkedTruncated_StaysTruncated()
     {
-        using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(10));
+        using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(60));
         var ct = cts.Token;
 
         await using var fixture = await PipeHostFixture.StartAsync(ct);
@@ -870,7 +870,7 @@ public sealed class PipeEndToEndTests
     [Fact]
     public async Task ToolActivity_NegativeOmittedChanges_IsSetToZero()
     {
-        using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(10));
+        using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(60));
         var ct = cts.Token;
 
         await using var fixture = await PipeHostFixture.StartAsync(ct);
@@ -924,7 +924,7 @@ public sealed class PipeEndToEndTests
     [Fact]
     public async Task Disconnect_CleanClose_LogsExactlyOneInformationLine()
     {
-        using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(10));
+        using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(60));
         var ct = cts.Token;
 
         await using var fixture = await PipeHostFixture.StartAsync(ct);
@@ -975,7 +975,7 @@ public sealed class PipeEndToEndTests
     [Fact]
     public async Task Disconnect_AbruptClose_StillLogsTheFaultedConnectionWarning()
     {
-        using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(10));
+        using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(60));
         var ct = cts.Token;
 
         await using var fixture = await PipeHostFixture.StartAsync(ct);

@@ -638,6 +638,8 @@ public sealed class TaskBoardDropTests
             if (viaMenu)
             {
                 await this.Board.InvokeAsync(() => this.Board.Find($"button[aria-label='Move {item.Id}']").ClickAsync());
+                // The menu's popover paints its items on a render after the opening click returns.
+                this.Popovers.WaitForAssertion(() => Assert.Single(this.Popovers.FindAll("div.mud-menu-item"), e => string.Equals(e.TextContent.Trim(), state.ToWire(), StringComparison.Ordinal)));
                 await this.Board.InvokeAsync(() => this.Popovers.FindAll("div.mud-menu-item")
                     .First(e => string.Equals(e.TextContent.Trim(), state.ToWire(), StringComparison.Ordinal))
                     .ClickAsync(new MouseEventArgs()));

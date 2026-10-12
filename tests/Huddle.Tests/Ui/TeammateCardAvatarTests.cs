@@ -42,7 +42,7 @@ public sealed class TeammateCardAvatarTests
 
     /// <summary>Waits until the editor dialog has gone from the DOM, which is how a close shows.</summary>
     private static void WaitForEditorClosed(IRenderedComponent<ContainerFragment> cut) =>
-        cut.WaitForAssertion(() => Assert.Empty(cut.FindAll(EditorDialog)), TimeSpan.FromSeconds(5));
+        cut.WaitForAssertion(() => Assert.Empty(cut.FindAll(EditorDialog)), TimeSpan.FromSeconds(30));
 
     /// <summary>Chooses "A short label" in the open editor and types <paramref name="label"/>.</summary>
     private static async Task TypeLabelAsync(IRenderedComponent<ContainerFragment> cut, string label)

@@ -105,6 +105,14 @@ internal sealed class FakePersonaHost : IPersonaHost
     public TimeSpan DisposeDelay { get; set; }
 
     /// <summary>
+    /// When set, <see cref="DisposeAsync"/> awaits this after <see cref="OnDispose"/> ran and before it
+    /// completes - lets a test hold every host's disposal open until all of them have <em>started</em>,
+    /// which only a concurrent stop can reach, so concurrency is proved by an event rather than by a
+    /// stopwatch that CPU load can stretch.
+    /// </summary>
+    public Task? DisposeGate { get; set; }
+
+    /// <summary>
     /// Thrown by <see cref="DisposeAsync"/> after the delay, once <see cref="Disposed"/> is set - lets a
     /// test prove one host failing to stop never prevents the others from being stopped.
     /// </summary>
@@ -210,6 +218,11 @@ internal sealed class FakePersonaHost : IPersonaHost
         if (this.DisposeDelay > TimeSpan.Zero)
         {
             await Task.Delay(this.DisposeDelay, CancellationToken.None);
+        }
+
+        if (this.DisposeGate is { } disposeGate)
+        {
+            await disposeGate;
         }
 
         if (this.DisposeFailure is not null)

@@ -59,6 +59,22 @@ namespace Agency.Huddle.Tests.Ui;
 internal sealed class MudBunitContext : BunitContext
 {
     /// <summary>
+    /// Raises bUnit's default wait budget from one second to <see cref="WaitBudget"/>. Every
+    /// <c>WaitForAssertion</c> / <c>WaitForState</c> / <c>WaitForElement</c> in this project is already
+    /// waiting on the right signal (an async load or a debounced re-render); under the shared CI
+    /// desktop's CPU load a one-second budget expires before the first check even runs ("Check count:
+    /// 0"). A wait that passes returns on the first render that satisfies it, so the larger budget
+    /// costs nothing on a green run and only delays a genuine failure.
+    /// </summary>
+    static MudBunitContext()
+    {
+        DefaultWaitTimeout = WaitBudget;
+    }
+
+    /// <summary>The wait budget every bUnit wait in this project gets unless a call passes its own.</summary>
+    private static readonly TimeSpan WaitBudget = TimeSpan.FromSeconds(10);
+
+    /// <summary>
     /// Creates the context: registers MudBlazor's services and switches bUnit's JSInterop to loose
     /// mode. See the type-level remarks for why each is needed.
     /// </summary>
