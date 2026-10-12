@@ -47,6 +47,73 @@ public sealed class AppJsSourceTests
         Assert.Contains("window.teamScroll", text, StringComparison.Ordinal);
     }
 
+    /// <summary><c>teamScroll.toMessage</c> finds the row by <c>data-message-id</c> with <c>CSS.escape</c>, centres it, focuses it without scrolling, flashes it and clears the flash on <c>animationend</c> or after two seconds (Global Search spec §9.1 step 3).</summary>
+    [Fact]
+    public void AppJs_TeamScroll_ToMessage_CentresFocusesAndFlashesTheRow()
+    {
+        string block = AppJsSourceTests.TeamScrollBlock();
+
+        // contains-ok: source-fact test, no JS runner - app.js's own text is what's pinned.
+        Assert.Contains("toMessage(el, id)", block, StringComparison.Ordinal);
+        // contains-ok: source-fact test, no JS runner - app.js's own text is what's pinned.
+        Assert.Contains("[data-message-id=\"", block, StringComparison.Ordinal);
+        // contains-ok: source-fact test, no JS runner - app.js's own text is what's pinned.
+        Assert.Contains("CSS.escape(id)", block, StringComparison.Ordinal);
+        // contains-ok: source-fact test, no JS runner - app.js's own text is what's pinned.
+        Assert.Contains("scrollIntoView({ block: \"center\" })", block, StringComparison.Ordinal);
+        // contains-ok: source-fact test, no JS runner - app.js's own text is what's pinned.
+        Assert.Contains("focus({ preventScroll: true })", block, StringComparison.Ordinal);
+        // contains-ok: source-fact test, no JS runner - app.js's own text is what's pinned.
+        Assert.Contains("classList.add(\"search-hit-flash\")", block, StringComparison.Ordinal);
+        // contains-ok: source-fact test, no JS runner - app.js's own text is what's pinned.
+        Assert.Contains("animationend", block, StringComparison.Ordinal);
+        // contains-ok: source-fact test, no JS runner - app.js's own text is what's pinned.
+        Assert.Contains("2000", block, StringComparison.Ordinal);
+        // contains-ok: source-fact test, no JS runner - app.js's own text is what's pinned.
+        Assert.Contains("return false", block, StringComparison.Ordinal);
+    }
+
+    /// <summary><c>teamScroll.isAtBottom</c> is true within 4 px of the bottom, in the element's own (zoomed) scroll coordinates.</summary>
+    [Fact]
+    public void AppJs_TeamScroll_IsAtBottom_UsesFourPixelsInTheElementsOwnCoordinates()
+    {
+        string block = AppJsSourceTests.TeamScrollBlock();
+
+        // contains-ok: source-fact test, no JS runner - app.js's own text is what's pinned.
+        Assert.Contains("isAtBottom(el)", block, StringComparison.Ordinal);
+        // contains-ok: source-fact test, no JS runner - app.js's own text is what's pinned.
+        Assert.Contains("el.scrollHeight - el.scrollTop - el.clientHeight <= 4", block, StringComparison.Ordinal);
+    }
+
+    /// <summary>The flash style sits in the <c>/* Global search */</c> block, fades from a MudBlazor palette variable, has a reduced-motion outline, and uses neither <c>zoom</c> nor viewport units (plan §3.6).</summary>
+    [Fact]
+    public void AppCss_SearchHitFlash_IsInTheGlobalSearchBlockAndHonoursReducedMotion()
+    {
+        string css = File.ReadAllText(CssSource.RepoPath("src", "Huddle.App", "wwwroot", "app.css"));
+        int blockStart = css.IndexOf("/* Global search */", StringComparison.Ordinal);
+        Assert.True(blockStart >= 0, "Expected a /* Global search */ block in app.css.");
+        string block = css[blockStart..];
+
+        // contains-ok: source-fact test, no stylesheet runner - app.css's own text is what's pinned.
+        Assert.Contains(".search-hit-flash", block, StringComparison.Ordinal);
+        // contains-ok: source-fact test, no stylesheet runner - app.css's own text is what's pinned.
+        Assert.Contains("var(--mud-palette-", block, StringComparison.Ordinal);
+        // contains-ok: source-fact test, no stylesheet runner - app.css's own text is what's pinned.
+        Assert.Contains("@media (prefers-reduced-motion: reduce)", block, StringComparison.Ordinal);
+        Assert.DoesNotContain("zoom", block, StringComparison.Ordinal);
+        Assert.DoesNotContain("vh", block, StringComparison.Ordinal);
+    }
+
+    /// <summary>The text of the <c>window.teamScroll</c> object, up to the next top-level comment.</summary>
+    private static string TeamScrollBlock()
+    {
+        string text = File.ReadAllText(CssSource.RepoPath("src", "Huddle.App", "wwwroot", "app.js"));
+        int start = text.IndexOf("window.teamScroll", StringComparison.Ordinal);
+        int end = text.IndexOf("// Tab shortcuts", start, StringComparison.Ordinal);
+        Assert.True(start >= 0 && end > start, "Expected window.teamScroll to be followed by the Tab shortcuts comment.");
+        return text[start..end];
+    }
+
     /// <summary>The <c>#</c> picker (Spec §13.13.4, corrections-B6 "D15.3" item 3) lives in <c>teamComposer</c>'s single <c>keydown</c> handler, tracking its state per element on <c>el._picker</c> rather than in a module-level variable.</summary>
     [Fact]
     public void AppJs_TeamComposerKeydownHandler_IsSingleAndTracksPerElementPickerState()

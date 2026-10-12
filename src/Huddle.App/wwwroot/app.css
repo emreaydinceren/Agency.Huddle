@@ -2592,3 +2592,29 @@ button:focus-visible {
         position: static;
     }
 }
+
+/* Global search */
+
+/* The Room jump (spec 9.1): the matching Message row is flashed by app.js for about two seconds. */
+@keyframes search-hit-flash-fade {
+    from {
+        background-color: color-mix(in srgb, var(--mud-palette-primary) 30%, transparent);
+    }
+
+    to {
+        background-color: transparent;
+    }
+}
+
+.search-hit-flash {
+    border-radius: 8px;
+    animation: search-hit-flash-fade 2s ease-out;
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .search-hit-flash {
+        animation: none;
+        outline: 2px solid var(--mud-palette-primary);
+        outline-offset: 2px;
+    }
+}
