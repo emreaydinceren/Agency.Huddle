@@ -49,8 +49,9 @@ public sealed class RoomEvents
 
     /// <summary>
     /// A Message already posted and already on screen, being delivered to the Agents again because
-    /// the Human extended the Room's Budget. <c>AgentGateway</c> is the only subscriber, and must
-    /// stay so: a Blazor component that handled this would render the Message a second time.
+    /// the Human extended the Room's Budget. <c>AgentGateway</c> is the subscriber that delivers it, and no
+    /// Blazor component may subscribe: it would render the Message a second time. <c>NeedsYouTracker</c> also
+    /// subscribes, to end a Room's Budget reason; it draws nothing, so it cannot render twice.
     /// </summary>
     public event Action<MessagePostedEvent>? MessageRedelivered;
 

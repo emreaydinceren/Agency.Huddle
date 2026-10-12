@@ -70,7 +70,7 @@ that exercise it. All are **chat** unless stated.
 | Skills, Proposals and the Chief of Staff | [Huddle.Skills-Specifications.md](Huddle.Skills-Specifications.md) | [0020](adr/0020-a-hook-is-a-prompt.md), [0021](adr/0021-a-skill-is-know-how-an-agent-reads-on-demand.md) | [skills](engineering/manual-tests/skills.md) | Built |
 | Agent tools (`mcp__team__*`) | [code-map.md](engineering/code-map.md) | none | [app-tools](engineering/manual-tests/app-tools.md) | Built |
 | Questions (`ask_human`) | [Huddle.Questions-Specifications.md](Huddle.Questions-Specifications.md) | [0022](adr/0022-an-agent-asks-the-human-with-a-question.md) | [questions](engineering/manual-tests/questions.md) | Built 2026-10-01 |
-| Needs You: the sidebar card of Rooms waiting on the Human | [Huddle.NeedsYou-Specifications.md](Huddle.NeedsYou-Specifications.md) | [0050](adr/0050-needs-you-is-derived-from-room-events-and-held-in-memory.md) | none yet | Designed 2026-10-12 |
+| Needs You: the sidebar card of Rooms waiting on the Human | [Huddle.NeedsYou-Specifications.md](Huddle.NeedsYou-Specifications.md) | [0050](adr/0050-needs-you-is-derived-from-room-events-and-held-in-memory.md) | [needs-you](engineering/manual-tests/needs-you.md) | Built 2026-10-12 |
 | Prompt blocks: a Library image reaches the Agent as an image | [Huddle.PromptBlocks-Specifications.md](Huddle.PromptBlocks-Specifications.md) | [0036](adr/0036-a-prompt-block-is-sent-only-when-the-adapter-advertised-it.md) | [prompt-blocks](engineering/manual-tests/prompt-blocks.md) | Built 2026-10-01 |
 | Tasks, Views, Board and List | [Huddle.Tasks-Specifications.md](Huddle.Tasks-Specifications.md) | [0025](adr/0025-in-tasks-a-team-is-a-folder-by-convention.md), [0026](adr/0026-a-change-to-a-task-wakes-its-assignee.md) | [tasks](engineering/manual-tests/tasks.md) | Built |
 | Sprints: a named group of Tasks, listed in `sprints.md` | [Huddle.Sprints-Specifications.md](Huddle.Sprints-Specifications.md) | [0037](adr/0037-a-sprint-is-a-named-group-of-tasks-in-one-markdown-file.md) | [tasks](engineering/manual-tests/tasks.md) (TASKS-16 to TASKS-19 cover Sprints) | Implemented 2026-10-05 |
@@ -186,6 +186,7 @@ One page per feature area, run by hand in a browser. Start with `common.md`.
 | [invite-rooms.md](engineering/manual-tests/invite-rooms.md) | Room creation, membership, sidebar updates, invite paths |
 | [library.md](engineering/manual-tests/library.md) | Library explorer, reading, writing, navigation, copying |
 | [model-effort.md](engineering/manual-tests/model-effort.md) | Model and Effort selection, catalog probe, persistence |
+| [needs-you.md](engineering/manual-tests/needs-you.md) | Needs You card: Mention rebuilt at startup, Dismiss, Archive |
 | [persona-lifecycle.md](engineering/manual-tests/persona-lifecycle.md) | Persona lifecycle, Work Dirs, health badges, session restart |
 | [pipe-external.md](engineering/manual-tests/pipe-external.md) | Named pipe protocol, external agent clients, message routing |
 | [prompt-blocks.md](engineering/manual-tests/prompt-blocks.md) | Library images and document text sent to an Adapter as prompt blocks |

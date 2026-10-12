@@ -102,6 +102,75 @@ public sealed class FileChatStore : IChatStore
         }
     }
 
+    public async Task<IReadOnlyList<ChatMessage>> ReadTailAsync(string roomId, int count, CancellationToken ct = default)
+    {
+        ArgumentOutOfRangeException.ThrowIfNegative(count);
+
+        var path = this.GetRoomPath(roomId);
+        var semaphore = this.locks.GetOrAdd(roomId, static _ => new SemaphoreSlim(1, 1));
+        await semaphore.WaitAsync(ct);
+        try
+        {
+            if (count == 0 || !File.Exists(path))
+            {
+                return [];
+            }
+
+            // Read blocks backwards until the tail holds more than `count` line breaks (so its first
+            // line is whole) or the start of the file is reached. Bytes are joined before decoding:
+            // a block boundary may split a multi-byte character, but never a 0x0A.
+            const int BlockSize = 8192;
+            List<byte[]> blocks = [];
+            await using (var stream = new FileStream(path, FileMode.Open, FileAccess.Read, FileShare.ReadWrite, 4096, useAsync: true))
+            {
+                long position = stream.Length;
+                var breaks = 0;
+                while (position > 0 && breaks <= count)
+                {
+                    var size = (int)Math.Min(BlockSize, position);
+                    position -= size;
+                    stream.Seek(position, SeekOrigin.Begin);
+                    var block = new byte[size];
+                    await stream.ReadExactlyAsync(block, ct);
+                    blocks.Add(block);
+                    breaks += block.Count(static b => b == (byte)'\n');
+                }
+
+                blocks.Reverse();
+                var tail = Encoding.UTF8.GetString([.. blocks.SelectMany(static b => b)]);
+                var lines = tail.Split('\n');
+                var firstWhole = position > 0 ? 1 : 0;
+                List<ChatMessage> messages = [];
+                for (var index = firstWhole; index < lines.Length; index++)
+                {
+                    if (string.IsNullOrWhiteSpace(lines[index]))
+                    {
+                        continue;
+                    }
+
+                    try
+                    {
+                        var message = JsonSerializer.Deserialize<ChatMessage>(lines[index], ProtocolJson.Options);
+                        if (message is not null)
+                        {
+                            messages.Add(message);
+                        }
+                    }
+                    catch (JsonException ex)
+                    {
+                        this.logger.LogWarning(ex, "Skipping unparsable line in the tail of room {RoomId}.", roomId);
+                    }
+                }
+
+                return messages.Count <= count ? messages : [.. messages.Skip(messages.Count - count)];
+            }
+        }
+        finally
+        {
+            semaphore.Release();
+        }
+    }
+
     public async Task DeleteAsync(string roomId, CancellationToken ct = default)
     {
         var path = this.GetRoomPath(roomId);

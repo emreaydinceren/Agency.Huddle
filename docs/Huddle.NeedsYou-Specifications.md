@@ -1,6 +1,6 @@
 # Huddle.NeedsYou — Design Specification
 
-**Date:** 2026-10-12 · **Status:** Designed, not built · **Decision record:**
+**Date:** 2026-10-12 · **Status:** Built 2026-10-12 · **Decision record:**
 [ADR-0050](adr/0050-needs-you-is-derived-from-room-events-and-held-in-memory.md) · **Vocabulary:**
 [language.md](engineering/language.md) (**Needs You**)
 
@@ -19,6 +19,17 @@ alternative it beat.
 > [rules.md](engineering/rules.md) before editing `src/Huddle.App`, and
 > [agents/CSharpPrinciples.md](../agents/CSharpPrinciples.md) for every C# file. Nothing here
 > overrides either.
+
+> [!NOTE]
+> **Built 2026-10-12.** Every task in Appendix A landed, in order. Four things differ from what was drafted.
+> The card is **hidden, not unmounted**, while the list is empty (`hidden` on the paper plus a CSS rule), because the
+> list is what reports the count and a list that is not mounted cannot hear the tracker. The list's test for
+> unsubscribing in `Dispose` was **not written**: an event's subscribers cannot be counted without a seam this
+> feature does not otherwise need, so it rests on the house rule and review. The `MessageRedelivered` comment now
+> says no *component* may subscribe, rather than that `AgentGateway` is the only subscriber. And **looking at it
+> in the running app** (two seeded Rooms, restarted so the scan read them) confirmed the card, the oldest-first
+> order, Dismiss, and one Reply clearing one row, which bUnit cannot show. The by-hand tests are written
+> ([needs-you.md](engineering/manual-tests/needs-you.md)) and have not been run by a person.
 
 ---
 
@@ -283,7 +294,7 @@ Each row is:
   `tracker.Dismiss(roomId)`.
 
 **`NeedsYouCard`** wraps the list in an outlined `MudPaper` with the title "Needs you" and a
-count. It does not draw the paper while the count is 0 (N19). Check
+count. It hides the paper while the count is 0 (N19). Check
 [agents/MudBlazorDesign.md](../agents/MudBlazorDesign.md) before choosing between `MudPaper`
 and `MudCard`; use whichever the catalogue already uses for a sidebar card.
 
@@ -329,8 +340,8 @@ Follow [agents/Testing.md](../agents/Testing.md) and, for the two components,
 | `NeedsYouTracker` | One test per row of the §6.2 table, driven through a real `RoomEvents`; Dismiss hides and a new reason brings the entry back; Dismiss leaves the `QuestionStore` card in place; an entry with no reasons is gone from `Snapshot`; `Changed` is not raised when nothing changed; `Snapshot` order is oldest first |
 | `NeedsYouStartupScan` | Seeds a Room whose Transcript ends with an unanswered Mention; skips a Room where the Human spoke last; a live event before `Seed` wins; one Room throwing does not stop the rest |
 | `FileChatStore.ReadTailAsync` | Fewer lines than `count`; exactly `count`; a block boundary splitting a line; a bad line skipped; an empty file |
-| `NeedsYouList` (bUnit) | Renders a row per entry; ✕ calls `Dismiss`; an Archived Room's row is hidden; a rename updates the row after `RoomsChanged`; `Dispose` unsubscribes from both events |
-| `NeedsYouCard` (bUnit) | Not drawn at count 0; drawn with the count otherwise |
+| `NeedsYouList` (bUnit) | Renders a row per entry; ✕ calls `Dismiss`; an Archived Room's row is hidden; a rename updates the row after `RoomsChanged`; the list reports its count through `CountChanged` |
+| `NeedsYouCard` (bUnit) | Hidden at count 0; shown with the count otherwise, and hidden again when the Human answers |
 
 Prove each new test can fail before you trust it (Testing.md).
 

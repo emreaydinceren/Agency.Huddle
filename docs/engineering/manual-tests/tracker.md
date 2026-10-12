@@ -138,6 +138,7 @@ the per-area tables below.
 | [Room Sessions: per-Room context, resume and Stop](room-sessions.md) | [below](#room-sessions) |
 | [Teams: Sidebar, Members, Files, Tasks and Shared Memory](team-pages.md) | [below](#team-pages) |
 | [Turn detail and Spend](turn-detail.md) | [below](#turn-detail) |
+| [Needs You: the sidebar card of Rooms waiting on the Human](needs-you.md) | [below](#needs-you) |
 
 ---
 
@@ -963,6 +964,17 @@ Turn detail and Spend — [area file](turn-detail.md)
 | [TURNDETAIL-03](turn-detail.md#turndetail-03--a-persona-on-agency-acp-shows-rows-with-no-preview-and-no-spend-line) |  | Active | |  |
 | [TURNDETAIL-04](turn-detail.md#turndetail-04--the-list-and-preview-at-320-px-and-under-three-themes) | 💰 | Active | |  |
 | [TURNDETAIL-05](turn-detail.md#turndetail-05--a-burst-of-ten-quick-tool-calls-neither-reorders-nor-flickers-the-list) | 💰 | Active | |  |
+
+## needs-you
+
+Needs You: the sidebar card of Rooms waiting on the Human — [area file](needs-you.md)
+
+| Test | 💰 | Status | Issue | Notes |
+| --- | --- | --- | --- | --- |
+| [NEEDSYOU-01](needs-you.md#needsyou-01--a-mention-is-rebuilt-at-startup-listed-oldest-first-and-the-card-is-hidden-when-nothing-waits) |  | Active |  | | not yet run by a person; checked once in the app 2026-10-12 |
+| [NEEDSYOU-02](needs-you.md#needsyou-02--opening-a-room-does-not-clear-it-posting-in-it-does) |  | Active |  | | not yet run by a person; checked once in the app 2026-10-12 |
+| [NEEDSYOU-03](needs-you.md#needsyou-03--dismiss-hides-a-room-without-answering-what-is-behind-it) |  | Active |  | | not yet run by a person; checked once in the app 2026-10-12 |
+| [NEEDSYOU-04](needs-you.md#needsyou-04--archiving-hides-a-room-from-the-card-and-unarchiving-brings-it-back) |  | Active |  | | not yet run by a person; checked once in the app 2026-10-12 |
 
 ---
 
