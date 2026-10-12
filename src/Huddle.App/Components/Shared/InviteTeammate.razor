@@ -11,7 +11,9 @@
 @inject AvatarStore Avatars
 
 <div class="invite-teammate">
-    <MudButton Variant="Variant.Text" OnClick="this.TogglePanel">Add teammate</MudButton>
+    <MudTooltip Text="Add teammate" Placement="Placement.Start">
+        <MudIconButton Icon="@Icons.Material.Filled.PersonAddAlt" aria-label="Add teammate" OnClick="this.TogglePanel" />
+    </MudTooltip>
     <MudCollapse Expanded="@this.isOpen">
         <MudStack Class="invite-panel pa-2 border-l-2 mud-border-lines-default" Spacing="2">
             @if (this.errorText is not null)

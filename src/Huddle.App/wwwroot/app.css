@@ -436,6 +436,11 @@ button:focus-visible {
     cursor: pointer;
 }
 
+/* MudButton centres its label; the list reads better flush left. */
+.invite-agent .mud-button-label {
+    justify-content: flex-start;
+}
+
 .invite-agent:hover {
     background: var(--mud-palette-table-hover);
 }
@@ -819,7 +824,19 @@ button:focus-visible {
     padding: 1rem 1.5rem;
 }
 
+.composer-box {
+    position: relative;
+}
+
+/* Sits inside the box's bottom-right corner; the input's right padding keeps text out from under it. */
+.composer-send {
+    position: absolute;
+    right: 0.5rem;
+    bottom: 0.5rem;
+}
+
 .composer-input {
+    box-sizing: border-box;
     width: 100%;
     min-height: 2.5rem;
     max-height: 8rem;
@@ -831,7 +848,7 @@ button:focus-visible {
     font-size: 14px;
     font-weight: 400;
     line-height: 18px;
-    padding: 0.75rem 1rem;
+    padding: 0.75rem 3rem 0.75rem 1rem;
     color: var(--mud-palette-text-primary);
     background: var(--mud-palette-surface);
     border: 1px solid var(--mud-palette-lines-inputs);
