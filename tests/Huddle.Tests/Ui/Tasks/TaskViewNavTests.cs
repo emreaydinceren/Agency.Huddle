@@ -166,6 +166,54 @@ public sealed class TaskViewNavTests
         Assert.Contains(MenuItems(cut), item => string.Equals(item.TextContent.Trim(), "Delete view", StringComparison.Ordinal));
     }
 
+    /// <summary>
+    /// A View saved after the nav rendered (including the store's own watcher echo) must not cost the existing
+    /// rows their right-click: the nav once cleared every menu ref on ViewsChanged, and Blazor never re-assigns a
+    /// surviving component's ref, so right-click silently opened nothing until the page was reloaded.
+    /// </summary>
+    [Fact]
+    public async Task RightClickingARow_AfterAnotherViewIsSaved_StillOpensTheMenu()
+    {
+        CancellationToken ct = TestContext.Current.CancellationToken;
+        using TaskToolHarness harness = await TaskToolHarness.CreateAsync(ct);
+        _ = harness.Views.Save(new TaskView { Id = "custom1", Name = "Sprint Board", Kind = ViewKind.List });
+
+        await using MudBunitContext ctx = NewContext(harness, tasksEnabled: true);
+        IRenderedComponent<ContainerFragment> cut = RenderNav(ctx);
+
+        _ = await ViewStoreEcho.SaveAndSettleAsync(harness.Views, new TaskView { Id = "custom2", Name = "Later View", Kind = ViewKind.List }, ct);
+        cut.WaitForAssertion(() => Assert.NotNull(RowFor(cut, "Later View")));
+
+        await cut.InvokeAsync(() => RowFor(cut, "Sprint Board").ContextMenuAsync());
+
+        _ = Assert.Single(MenuItems(cut), item => string.Equals(item.TextContent.Trim(), "Edit view", StringComparison.Ordinal));
+    }
+
+    /// <summary>
+    /// Deleting a View listed above another must leave the survivor's right-click on its own menu: rows are keyed
+    /// by View id, so the survivor keeps its MudMenu instance (and ref) instead of inheriting the deleted row's slot.
+    /// </summary>
+    [Fact]
+    public async Task RightClickingARow_AfterTheViewAboveIsDeleted_StillOpensTheMenu()
+    {
+        CancellationToken ct = TestContext.Current.CancellationToken;
+        using TaskToolHarness harness = await TaskToolHarness.CreateAsync(ct);
+        _ = harness.Views.Save(new TaskView { Id = "custom1", Name = "Alpha", Kind = ViewKind.List });
+        _ = harness.Views.Save(new TaskView { Id = "custom2", Name = "Beta", Kind = ViewKind.List });
+
+        await using MudBunitContext ctx = NewContext(harness, tasksEnabled: true);
+        IRenderedComponent<ContainerFragment> cut = RenderNav(ctx);
+
+        _ = harness.Views.Delete("custom1");
+        cut.WaitForAssertion(() => Assert.DoesNotContain(
+            cut.FindAll("div.hover-reveal-row"),
+            row => string.Equals(row.QuerySelector("a")?.TextContent.Trim(), "Alpha", StringComparison.Ordinal)));
+
+        await cut.InvokeAsync(() => RowFor(cut, "Beta").ContextMenuAsync());
+
+        _ = Assert.Single(MenuItems(cut), item => string.Equals(item.TextContent.Trim(), "Delete view", StringComparison.Ordinal));
+    }
+
     /// <summary>Clicking Edit View opens this component's own <see cref="ViewEditorDrawer"/> for that row's View.</summary>
     [Fact]
     public async Task EditView_OpensTheViewEditorDrawerForThatView()

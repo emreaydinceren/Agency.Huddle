@@ -52,7 +52,8 @@ public sealed class TasksPageTests
     [Fact]
     public async Task TasksPage_UnknownViewId_ShowsViewNoLongerExistsWithStatusRole()
     {
-        using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(10));
+        // A fresh factory boots a whole host and JITs the first request; under CI load that alone outlasted ten seconds.
+        using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(60));
         var ct = cts.Token;
 
         await using var factory = new TeamWebApplicationFactory();

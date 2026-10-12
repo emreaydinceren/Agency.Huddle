@@ -96,7 +96,7 @@ public sealed class SettingsPageTests
     [Fact]
     public async Task SettingsPage_UnknownTab_FallsBackToPromptsPanel()
     {
-        using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(10));
+        using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(60));
         var ct = cts.Token;
 
         await using var factory = new TeamWebApplicationFactory();
@@ -113,7 +113,7 @@ public sealed class SettingsPageTests
     [Fact]
     public async Task SettingsPromptsPage_ListsEveryPromptLabel()
     {
-        using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(10));
+        using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(60));
         var ct = cts.Token;
 
         await using var factory = new TeamWebApplicationFactory();
@@ -131,7 +131,7 @@ public sealed class SettingsPageTests
     [Fact]
     public async Task SettingsPage_DoesNotProbeForModelsOnAPlainLoad()
     {
-        using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(10));
+        using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(60));
         var ct = cts.Token;
 
         await using var factory = new TeamWebApplicationFactory();
@@ -165,7 +165,7 @@ public sealed class SettingsPageTests
     [Fact]
     public async Task SettingsPromptsPage_ShowsTheOverrideFilePath()
     {
-        using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(10));
+        using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(60));
         var ct = cts.Token;
 
         await using var factory = new TeamWebApplicationFactory();
@@ -194,7 +194,7 @@ public sealed class SettingsPageTests
     [Fact]
     public async Task Sidebar_LinksToSettingsPage()
     {
-        using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(10));
+        using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(60));
         var ct = cts.Token;
 
         await using var factory = new TeamWebApplicationFactory();
@@ -227,7 +227,7 @@ public sealed class SettingsPageTests
     [Fact]
     public async Task SettingsAppearancePage_RendersOneThemePickerAndNoDarkModeControl()
     {
-        using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(10));
+        using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(60));
         var ct = cts.Token;
 
         await using var factory = new TeamWebApplicationFactory();
@@ -252,7 +252,7 @@ public sealed class SettingsPageTests
     [Fact]
     public async Task SettingsAppearancePage_OffersEveryThemeUnderItsGroupHeading()
     {
-        using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(10));
+        using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(60));
         var ct = cts.Token;
 
         await using var factory = new TeamWebApplicationFactory();
@@ -278,7 +278,7 @@ public sealed class SettingsPageTests
     [Fact]
     public async Task SettingsAppearancePage_DoesNotRenderThePromptsIntro()
     {
-        using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(10));
+        using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(60));
         var ct = cts.Token;
 
         await using var factory = new TeamWebApplicationFactory();
@@ -296,7 +296,7 @@ public sealed class SettingsPageTests
     [Fact]
     public async Task SettingsAppearancePage_NamesTheOverrideFile()
     {
-        using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(10));
+        using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(60));
         var ct = cts.Token;
 
         await using var factory = new TeamWebApplicationFactory();
@@ -314,7 +314,8 @@ public sealed class SettingsPageTests
     [Fact]
     public async Task SettingsAppearancePage_CreditsVisualStudioCode()
     {
-        using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(10));
+        // A fresh factory boots a whole host and JITs the first request; under CI load that alone outlasted ten seconds.
+        using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(60));
         var ct = cts.Token;
 
         await using var factory = new TeamWebApplicationFactory();
@@ -346,7 +347,7 @@ public sealed class SettingsPageTests
     [Fact]
     public async Task SettingsPersonasPage_ShowsThePersonaFolderAndDatabasePaths()
     {
-        using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(10));
+        using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(60));
         var ct = cts.Token;
 
         await using var factory = new TeamWebApplicationFactory();
@@ -363,7 +364,7 @@ public sealed class SettingsPageTests
     [Fact]
     public async Task SettingsPersonasPage_DoesNotRenderThePromptsIntro()
     {
-        using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(10));
+        using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(60));
         var ct = cts.Token;
 
         await using var factory = new TeamWebApplicationFactory();
@@ -383,7 +384,7 @@ public sealed class SettingsPageTests
     [Fact]
     public async Task SkillsTab_ListsTeamBuildingAsDefault()
     {
-        using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(10));
+        using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(60));
         var ct = cts.Token;
 
         await using var factory = new TeamWebApplicationFactory();
@@ -447,7 +448,7 @@ public sealed class SettingsPageTests
     [Fact]
     public async Task SkillsTab_InvalidYoursSkill_ShowsError()
     {
-        using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(10));
+        using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(60));
         var ct = cts.Token;
 
         await using var factory = new TeamWebApplicationFactory();
@@ -476,7 +477,7 @@ public sealed class SettingsPageTests
     [Fact]
     public async Task SettingsRoute_TabSkills_SelectsSkillsTab()
     {
-        using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(10));
+        using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(60));
         var ct = cts.Token;
 
         await using var factory = new TeamWebApplicationFactory();

@@ -130,7 +130,7 @@ public sealed class TaskSprintViewsTests
     public async Task Editor_SprintFilter_OffersCurrentNoneThenSprintsNewestFirst()
     {
         using TaskToolHarness harness = new(sprintsText: TwoSprints);
-        SaveView(harness, new TaskFilter());
+        await SaveViewAsync(harness, new TaskFilter());
         await using MudBunitContext ctx = new();
         harness.AddTo(ctx.Services);
         IRenderedComponent<ContainerFragment> root = RenderDrawer(ctx);
@@ -147,7 +147,7 @@ public sealed class TaskSprintViewsTests
     public async Task Editor_SprintFilter_MissingValue_StaysSelected()
     {
         using TaskToolHarness harness = new(sprintsText: TwoSprints);
-        SaveView(harness, new TaskFilter { Sprints = ["S9", "@current"] });
+        await SaveViewAsync(harness, new TaskFilter { Sprints = ["S9", "@current"] });
         await using MudBunitContext ctx = new();
         harness.AddTo(ctx.Services);
         IRenderedComponent<ContainerFragment> root = RenderDrawer(ctx);
@@ -162,7 +162,7 @@ public sealed class TaskSprintViewsTests
     public async Task Editor_SprintFilter_SavesTheChosenValues()
     {
         using TaskToolHarness harness = new(sprintsText: TwoSprints);
-        SaveView(harness, new TaskFilter());
+        await SaveViewAsync(harness, new TaskFilter());
         await using MudBunitContext ctx = new();
         harness.AddTo(ctx.Services);
         IRenderedComponent<ContainerFragment> root = RenderDrawer(ctx);
@@ -179,16 +179,17 @@ public sealed class TaskSprintViewsTests
     public async Task Editor_SprintIsAnAddableFieldAndGrouping()
     {
         using TaskToolHarness harness = new(sprintsText: TwoSprints);
-        SaveView(harness, new TaskFilter());
+        await SaveViewAsync(harness, new TaskFilter());
         await using MudBunitContext ctx = new();
         harness.AddTo(ctx.Services);
         IRenderedComponent<ContainerFragment> root = RenderDrawer(ctx);
 
         await root.InvokeAsync(() => root.Find(".view-editor-fields-add button").ClickAsync());
-        Assert.Contains("sprint", root.FindAll(".view-editor-fields-add-option").Select(o => o.TextContent.Trim()));
+        // The popover paints its items on a render after the opening click returns.
+        root.WaitForAssertion(() => Assert.Single(root.FindAll(".view-editor-fields-add-option"), o => string.Equals(o.TextContent.Trim(), "sprint", StringComparison.Ordinal)));
 
         await root.InvokeAsync(() => root.Find(".view-editor-grouping-add button").ClickAsync());
-        Assert.NotEmpty(root.FindAll(".view-editor-grouping-add-sprint"));
+        root.WaitForAssertion(() => Assert.NotEmpty(root.FindAll(".view-editor-grouping-add-sprint")));
     }
 
     /// <summary>The toolbar's Filter menu has a multi-select Sprint row that raises <c>EffectiveViewChanged</c> without saving (spec §12.3).</summary>
@@ -196,7 +197,7 @@ public sealed class TaskSprintViewsTests
     public async Task Toolbar_SprintFilter_RaisesEffectiveViewChanged()
     {
         using TaskToolHarness harness = new(sprintsText: TwoSprints);
-        TaskView saved = SaveView(harness, new TaskFilter());
+        TaskView saved = await SaveViewAsync(harness, new TaskFilter());
         TaskView? raised = null;
         await using MudBunitContext ctx = new();
         harness.AddTo(ctx.Services);
@@ -249,7 +250,7 @@ public sealed class TaskSprintViewsTests
     public async Task Page_CurrentSprintFilter_FollowsTheFileOnSprintsChanged()
     {
         using TaskToolHarness harness = new(sprintsText: TwoSprints);
-        SaveView(harness, new TaskFilter { Sprints = ["@current"] });
+        await SaveViewAsync(harness, new TaskFilter { Sprints = ["@current"] });
         TaskActor actor = TaskActors.Human(harness.Options.Value);
         _ = Assert.IsType<TaskResult.Saved>(harness.Service.Create(new TaskDraft("Old work", "Platform", null, Sprint: new SprintId(1)), actor));
         _ = Assert.IsType<TaskResult.Saved>(harness.Service.Create(new TaskDraft("New work", "Platform", null, Sprint: new SprintId(2)), actor));
@@ -281,11 +282,11 @@ public sealed class TaskSprintViewsTests
         Assert.Equal(0, HandlerCount(harness.Sprints));
     }
 
-    /// <summary>Saves a List View <c>v1</c> with <paramref name="filter"/> into the harness's store.</summary>
-    private static TaskView SaveView(TaskToolHarness harness, TaskFilter filter)
+    /// <summary>Saves a List View <c>v1</c> with <paramref name="filter"/> into the harness's store and waits for the store's watcher echo (see <see cref="ViewStoreEcho"/>).</summary>
+    private static async Task<TaskView> SaveViewAsync(TaskToolHarness harness, TaskFilter filter)
     {
         TaskView view = new() { Id = "v1", Name = "Sprint view", Kind = ViewKind.List, Fields = ["status"], Filter = filter };
-        Assert.True(harness.Views.Save(view).Saved);
+        Assert.True((await ViewStoreEcho.SaveAndSettleAsync(harness.Views, view, Xunit.TestContext.Current.CancellationToken)).Saved);
         return harness.Views.Get("v1") ?? throw new InvalidOperationException("The View was just saved.");
     }
 
