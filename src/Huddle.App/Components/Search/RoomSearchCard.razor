@@ -1,0 +1,67 @@
+@*
+    The Room card (spec §6.6): one card per Room, collapsing its many matches. The Room's name, then the
+    count, the sender and the time, then the snippet with the match bolded. A name-only hit has no meta
+    line. An Archived Room is dimmed and its accessible name ends with ", archived" (spec §11). The
+    action slot is empty in V1 (D-12).
+*@
+
+@using System.Globalization
+@using Agency.Huddle.App.Search
+
+<div class="search-card @(this.Hit.IsArchived ? "search-card-archived" : null)" aria-label="@this.AccessibleName">
+    <span class="search-card-icon"><MudIcon Icon="@Icons.Material.Filled.Forum" Size="Size.Small" /></span>
+    <span class="search-card-text">
+        <span class="search-card-title"><MudHighlighter Text="@this.Hit.Title" HighlightedText="@this.Phrase" /></span>
+        @if (this.Meta.Length > 0)
+        {
+            <span class="search-card-meta">@this.Meta</span>
+        }
+        @if (this.Hit.Snippet is { } snippet)
+        {
+            <span class="search-card-snippet"><MudHighlighter Text="@snippet" HighlightedText="@this.Phrase" /></span>
+        }
+    </span>
+    <span class="search-card-action" aria-hidden="true"></span>
+</div>
+
+@code {
+    /// <summary>The Room hit this card shows.</summary>
+    [Parameter, EditorRequired]
+    public required RoomHit Hit { get; set; }
+
+    /// <summary>The phrase the match is bolded for.</summary>
+    [Parameter]
+    public string Phrase { get; set; } = string.Empty;
+
+    /// <summary>
+    /// The meta line: <c>14 matches · Kai · 14:02</c>, each part only when known. Empty for a name-only
+    /// hit, which has no match count.
+    /// </summary>
+    private string Meta
+    {
+        get
+        {
+            if (this.Hit.MatchCount == 0)
+            {
+                return string.Empty;
+            }
+
+            string noun = this.Hit.MatchCount == 1 ? "match" : "matches";
+            List<string> parts = [string.Create(CultureInfo.InvariantCulture, $"{this.Hit.MatchCount} {noun}")];
+            if (this.Hit.SenderName is { } sender)
+            {
+                parts.Add(sender);
+            }
+
+            if (this.Hit.Time is { } time)
+            {
+                parts.Add(time.ToLocalTime().ToString("HH:mm", CultureInfo.CurrentCulture));
+            }
+
+            return string.Join(" · ", parts);
+        }
+    }
+
+    /// <summary>The accessible name: the Room's name, the meta line, and ", archived" for an Archived Room (spec §11).</summary>
+    private string AccessibleName => this.Hit.IsArchived ? $"{this.Hit.Title}, {this.Meta}, archived" : $"{this.Hit.Title}, {this.Meta}";
+}

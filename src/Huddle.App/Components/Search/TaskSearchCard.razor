@@ -1,0 +1,34 @@
+@*
+    The Task card (spec §6.6): the title leads, then a status chip with the Board's colour for the
+    status (TaskColors.For, the one mapping), then the assignee and the Team. A Closed Task is dimmed and
+    its accessible name ends with ", closed" (spec §11). The action slot is empty in V1 (D-12).
+*@
+
+@using Agency.Huddle.App.Components.Tasks
+@using Agency.Huddle.App.Search
+@using Agency.Huddle.App.Tasks
+
+<div class="search-card @(this.Hit.IsArchived ? "search-card-archived" : null)" aria-label="@this.AccessibleName">
+    <span class="search-card-text">
+        <span class="search-card-title"><MudHighlighter Text="@this.Hit.Title" HighlightedText="@this.Phrase" /></span>
+        <MudChip T="string" Size="Size.Small" Color="@TaskColors.For(this.Hit.Status)" Class="search-card-chip">@this.Hit.Status.ToWire()</MudChip>
+        <span class="search-card-meta">@this.Meta</span>
+    </span>
+    <span class="search-card-action" aria-hidden="true"></span>
+</div>
+
+@code {
+    /// <summary>The Task hit this card shows.</summary>
+    [Parameter, EditorRequired]
+    public required TaskHit Hit { get; set; }
+
+    /// <summary>The phrase the match is bolded for.</summary>
+    [Parameter]
+    public string Phrase { get; set; } = string.Empty;
+
+    /// <summary>The meta line: the assignee and the Team, or the Team alone when unassigned.</summary>
+    private string Meta => this.Hit.Assignee is { } assignee ? $"{assignee} · {this.Hit.Team}" : this.Hit.Team;
+
+    /// <summary>The accessible name: the title, the meta line, and ", closed" for a Closed Task (spec §11).</summary>
+    private string AccessibleName => this.Hit.IsArchived ? $"{this.Hit.Title}, {this.Meta}, closed" : $"{this.Hit.Title}, {this.Meta}";
+}
