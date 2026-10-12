@@ -116,6 +116,97 @@ public sealed class AppJsSourceTests
         return text[start..end];
     }
 
+    /// <summary><c>window.huddleSearch</c> adds its one <c>keydown</c> listener on <c>window</c> in the capture phase, so the composer and CodeMirror cannot swallow the key, and removes it in <c>detach</c> (Global Search spec §5.2).</summary>
+    [Fact]
+    public void HuddleSearch_ListensInCapturePhase()
+    {
+        string block = AppJsSourceTests.HuddleSearchBlock();
+
+        AppJsSourceTests.AssertInOrder(
+            block,
+            "attach(dotnetRef, host)",
+            "window.addEventListener(\"keydown\", window.huddleSearch._handler, true)",
+            "detach()",
+            "window.removeEventListener(\"keydown\", window.huddleSearch._handler, true)");
+        Assert.Equal(1, AppJsSourceTests.CountOccurrences(block, "addEventListener("));
+    }
+
+    /// <summary><c>Ctrl+K</c> (no Shift, either letter case) calls <c>preventDefault</c>, remembers the focused element, focuses the box and tells C# to open (Global Search spec §5.2, D-3).</summary>
+    [Fact]
+    public void HuddleSearch_CtrlK_PreventsDefault()
+    {
+        string block = AppJsSourceTests.HuddleSearchBlock();
+
+        AppJsSourceTests.AssertInOrder(
+            block,
+            "e.ctrlKey",
+            "e.shiftKey === window.huddleSearch.shortcutNeedsShift",
+            "\"k\"",
+            "e.preventDefault()",
+            "document.activeElement",
+            ".focus()",
+            "invokeMethodAsync(\"OpenAsync\")");
+        AppJsSourceTests.AssertInOrder(block, "e.key.toLowerCase()");
+    }
+
+    /// <summary><c>/</c> opens the box only when the target is not an <c>input</c>, a <c>textarea</c>, a <c>[contenteditable]</c> element or inside <c>.cm-editor</c>, so a slash typed in the composer is never stolen (Global Search spec §5.2).</summary>
+    [Fact]
+    public void HuddleSearch_Slash_SkipsTextFieldsAndCodeMirror()
+    {
+        string block = AppJsSourceTests.HuddleSearchBlock();
+
+        AppJsSourceTests.AssertInOrder(
+            block,
+            "e.key === \"/\"",
+            "INPUT",
+            "TEXTAREA",
+            "[contenteditable]",
+            ".cm-editor",
+            "e.preventDefault()");
+    }
+
+    /// <summary><c>Alt+1</c> to <c>Alt+6</c> and <c>Ctrl+Left/Right</c> are handled only after a check of the open flag that <c>setOpen</c> sets, so they never collide with the Tab shortcuts (Global Search spec §6.5).</summary>
+    [Fact]
+    public void HuddleSearch_AltDigits_OnlyWhileOpen()
+    {
+        string block = AppJsSourceTests.HuddleSearchBlock();
+
+        AppJsSourceTests.AssertInOrder(
+            block,
+            "if (!window.huddleSearch._open)",
+            "e.altKey",
+            "invokeMethodAsync(\"SelectChipAsync\"",
+            "\"ArrowLeft\"",
+            "invokeMethodAsync(\"MoveChipAsync\"");
+        AppJsSourceTests.AssertInOrder(block, "setOpen(open)", "window.huddleSearch._open = open");
+        AppJsSourceTests.AssertInOrder(block, "restoreFocus()", "window.huddleSearch._previous", ".focus()");
+    }
+
+    /// <summary>The text of the <c>window.huddleSearch</c> object, up to the closing <c>};</c> at the start of a line.</summary>
+    private static string HuddleSearchBlock()
+    {
+        string text = File.ReadAllText(CssSource.RepoPath("src", "Huddle.App", "wwwroot", "app.js"));
+        int start = text.IndexOf("window.huddleSearch = {", StringComparison.Ordinal);
+        Assert.True(start >= 0, "Expected window.huddleSearch in app.js.");
+        int end = text.IndexOf("\n};", start, StringComparison.Ordinal);
+        Assert.True(end > start, "Expected the huddleSearch object literal to end with a line holding only };.");
+        return text[start..(end + 3)];
+    }
+
+    /// <summary>Asserts that each needle occurs in <paramref name="text"/> after the one before it.</summary>
+    /// <param name="text">The source text.</param>
+    /// <param name="needles">The fragments, in the order they must appear.</param>
+    private static void AssertInOrder(string text, params string[] needles)
+    {
+        int from = 0;
+        foreach (string needle in needles)
+        {
+            int found = text.IndexOf(needle, from, StringComparison.Ordinal);
+            Assert.True(found >= 0, $"Expected '{needle}' after offset {from} in the huddleSearch block.");
+            from = found + needle.Length;
+        }
+    }
+
     /// <summary>The <c>#</c> picker (Spec §13.13.4, corrections-B6 "D15.3" item 3) lives in <c>teamComposer</c>'s single <c>keydown</c> handler, tracking its state per element on <c>el._picker</c> rather than in a module-level variable.</summary>
     [Fact]
     public void AppJs_TeamComposerKeydownHandler_IsSingleAndTracksPerElementPickerState()

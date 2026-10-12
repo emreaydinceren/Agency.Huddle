@@ -18,8 +18,9 @@
 @inject TabService Tabs
 @inject NavigationManager Navigation
 @inject TeammateCardOpener CardOpener
+@inject IJSRuntime JS
 
-<div class="search-bar" style="position: relative;" @onclick="this.OpenAsync" @onfocusin="this.OpenAsync" @onfocusout="this.CloseAsync">
+<div class="search-bar" @ref="this.host" style="position: relative;" @onclick="this.OpenAsync" @onfocusin="this.OpenAsync" @onfocusout="this.CloseAsync">
     <MudTextField T="string"
                   Value="@this.text"
                   ValueChanged="this.OnInputAsync"
@@ -144,6 +145,9 @@
     private SearchFilter chip = SearchFilter.All;
     private bool open;
     private int highlighted = -1;
+    private ElementReference host;
+    private DotNetObjectReference<SearchBar>? self;
+    private bool openSent;
 
     /// <summary>The attributes of the box's input element: the ARIA combobox wiring of spec §11.</summary>
     private Dictionary<string, object> InputAttributes
@@ -176,31 +180,116 @@
         this.Rebuild();
     }
 
-    /// <summary>Unsubscribes from the orchestrator and cancels the search in flight.</summary>
+    /// <summary>Attaches the global keys once the page can run script, and tells the script whenever the dropdown opens or closes.</summary>
+    /// <param name="firstRender">Whether this is the first render.</param>
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        try
+        {
+            if (firstRender)
+            {
+                this.self = DotNetObjectReference.Create(this);
+                await this.JS.InvokeVoidAsync("huddleSearch.attach", this.disposed.Token, this.self, this.host);
+            }
+
+            if (this.open != this.openSent)
+            {
+                this.openSent = this.open;
+                await this.JS.InvokeVoidAsync("huddleSearch.setOpen", this.disposed.Token, this.open);
+            }
+        }
+        catch (JSDisconnectedException)
+        {
+            // The circuit is gone; there is nothing to register keys on.
+        }
+        catch (OperationCanceledException)
+        {
+            // The box was disposed while a call was in flight.
+        }
+    }
+
+    /// <summary>Unsubscribes from the orchestrator, cancels the search in flight and removes the global keys.</summary>
     public void Dispose()
     {
         this.Orchestrator.GroupUpdated -= this.OnGroupUpdated;
         this.Orchestrator.Cancel();
         this.disposed.Cancel();
         this.disposed.Dispose();
+        if (this.self is not null)
+        {
+            _ = SearchBar.DetachAsync(this.JS, this.self);
+        }
+    }
+
+    private static async Task DetachAsync(IJSRuntime js, DotNetObjectReference<SearchBar> reference)
+    {
+        try
+        {
+            await js.InvokeVoidAsync("huddleSearch.detach");
+        }
+        catch (JSDisconnectedException)
+        {
+            // The circuit is gone; the listener went with the page.
+        }
+        finally
+        {
+            reference.Dispose();
+        }
     }
 
     /// <summary>
     /// Opens the dropdown: clears the box, keeps the last filter and runs the last phrase again (spec §6.4).
     /// Does nothing when it is already open. The global key script calls this after it focuses the box.
     /// </summary>
-    /// <returns>A completed task.</returns>
+    /// <returns>A task that ends once the box has re-rendered.</returns>
     [JSInvokable]
-    public Task OpenAsync()
+    public async Task OpenAsync()
     {
         if (!this.open)
         {
             this.open = true;
             this.text = string.Empty;
             this.RunSearch();
+            await this.InvokeAsync(this.StateHasChanged);
         }
+    }
 
-        return Task.CompletedTask;
+    /// <summary>Lights the chip an Alt+1 to Alt+6 key names (1 is All, 6 is Rooms). Does nothing while the dropdown is closed.</summary>
+    /// <param name="number">The chip's position, from 1.</param>
+    /// <returns>A task that ends once the box has re-rendered.</returns>
+    [JSInvokable]
+    public async Task SelectChipAsync(int number)
+    {
+        if (this.open && number >= 1 && number <= ChipOrder.Length)
+        {
+            await this.InvokeAsync(async () =>
+            {
+                await this.OnChipChangedAsync(ChipOrder[number - 1]);
+                this.StateHasChanged();
+            });
+        }
+    }
+
+    /// <summary>Moves the lit chip one place for Ctrl+Left (-1) or Ctrl+Right (1), stopping at the first and last. Does nothing while closed.</summary>
+    /// <param name="step">-1 for the previous chip, 1 for the next.</param>
+    /// <returns>A task that ends once the box has re-rendered.</returns>
+    [JSInvokable]
+    public Task MoveChipAsync(int step)
+    {
+        int target = Math.Clamp(Array.IndexOf(ChipOrder, this.chip) + Math.Sign(step), 0, ChipOrder.Length - 1);
+        return this.SelectChipAsync(target + 1);
+    }
+
+    private async Task RestoreFocusAsync()
+    {
+        try
+        {
+            await this.JS.InvokeVoidAsync("huddleSearch.restoreFocus", this.disposed.Token);
+        }
+        catch (JSDisconnectedException)
+        {
+            // The circuit is gone; there is no focus to restore.
+        }
     }
 
     private Task CloseAsync()
@@ -252,6 +341,7 @@
                 break;
             case "Escape":
                 await this.CloseAsync();
+                await this.RestoreFocusAsync();
                 break;
         }
     }
