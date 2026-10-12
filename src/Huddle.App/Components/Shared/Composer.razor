@@ -16,10 +16,16 @@
     {
         <div class="composer-info">@this.infoText</div>
     }
-    <textarea @ref="this.textarea" class="composer-input" placeholder="Message… (/invite @@agent)"
-              aria-expanded="@(this.pickerOpen ? "true" : "false")"
-              aria-controls="@(this.pickerOpen ? this.listboxId : null)"
-              aria-activedescendant="@(this.pickerOpen ? this.HighlightedItemId() : null)"></textarea>
+    <div class="composer-box">
+        <textarea @ref="this.textarea" class="composer-input" placeholder="Message… (/invite @@agent)"
+                  aria-expanded="@(this.pickerOpen ? "true" : "false")"
+                  aria-controls="@(this.pickerOpen ? this.listboxId : null)"
+                  aria-activedescendant="@(this.pickerOpen ? this.HighlightedItemId() : null)"></textarea>
+        <MudTooltip Text="Send" Placement="Placement.Start" RootClass="composer-send">
+            <MudIconButton Icon="@Icons.Material.Filled.Send" Color="Color.Primary" Size="Size.Small"
+                           aria-label="Send message" OnClick="this.SendClickedAsync" />
+        </MudTooltip>
+    </div>
     @if (this.pickerOpen)
     {
         <div class="composer-picker" @onmousedown:preventDefault="true">
@@ -124,6 +130,13 @@
     }
 
     private static string DraftKey(string roomId) => $"huddle:draft:{roomId}";
+
+    /// <summary>Sends the typed text the way Enter does - the script reads the box, calls <see cref="SendAsync"/> and clears it - then returns focus to the box.</summary>
+    private async Task SendClickedAsync()
+    {
+        await this.JS.InvokeVoidAsync("teamComposer.send", this.textarea);
+        await this.textarea.FocusAsync();
+    }
 
     [JSInvokable]
     public async Task SendAsync(string text)

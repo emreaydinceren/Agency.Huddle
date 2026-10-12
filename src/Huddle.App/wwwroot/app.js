@@ -30,7 +30,19 @@ window.teamComposer = {
         el._typedNotified = false;
     },
 
+    // Sends what is typed and clears the box and its saved draft: the one path both Enter and the
+    // Send button take, so the two can never drift apart.
+    async send(el) {
+        await el._dotnetRef.invokeMethodAsync("SendAsync", el.value);
+        el.value = "";
+        el._picker.open = false;
+        if (el._draftKey) {
+            window.teamComposer.draftSet(el._draftKey, "");
+        }
+    },
+
     attach(el, dotnetRef, draftKey) {
+        el._dotnetRef = dotnetRef;
         el._picker = { open: false };
         el._draftKey = draftKey || null;
         el._typedNotified = false;
@@ -87,12 +99,7 @@ window.teamComposer = {
                     return;
                 }
                 e.preventDefault();
-                await dotnetRef.invokeMethodAsync("SendAsync", el.value);
-                el.value = "";
-                el._picker.open = false;
-                if (el._draftKey) {
-                    window.teamComposer.draftSet(el._draftKey, "");
-                }
+                await window.teamComposer.send(el);
             }
         });
 
