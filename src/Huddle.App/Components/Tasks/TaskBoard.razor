@@ -133,7 +133,7 @@
         </ChildContent>
         <ItemRenderer>
             <TaskCard Task="@context" Fields="@this.View.Fields" Presence="@this.PresenceOf(context)"
-                      LastWake="@this.Activity.LastWake(context.Id)" Busy="@this.IsBusy(context)" Search="@this.Search"
+                      LastWake="@this.Activity.LastWake(context.Id)" Busy="@this.IsBusy(context)" Search="@this.Search" Selected="@(this.SelectedId is { } open && open == context.Id)"
                       OnOpen="@(() => this.OnOpenTask.InvokeAsync(context.Id))"
                       OnMoveTo="@(state => this.MoveAsync(context, state))"
                       OnCopyId="@(() => this.OnCopyId.InvokeAsync(context.Id))" />
@@ -153,6 +153,10 @@
     /// <summary>The active search term, highlighted on each card.</summary>
     [Parameter]
     public string? Search { get; set; }
+
+    /// <summary>The Task open in the detail panel, or <see langword="null"/>: its card is marked selected.</summary>
+    [Parameter]
+    public TaskId? SelectedId { get; set; }
 
     /// <summary>Raised with a card's id when the Human opens it (Spec §13.4, "Clicking a card opens the detail panel").</summary>
     [Parameter]
