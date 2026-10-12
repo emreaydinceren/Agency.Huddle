@@ -2774,6 +2774,16 @@ button:focus-visible {
     overflow-y: auto;
 }
 
+/* The box is filled with the same palette variable as .composer-input, so the two read as one surface in
+   the light and the dark theme. The fill goes on the input root and is repeated for hover and focus, where
+   MudBlazor would otherwise draw its own. The "Ctrl K" hint and the placeholder sit on top of it. */
+.search-bar .mud-input-control .mud-input.mud-input-outlined,
+.search-bar .mud-input-control .mud-input.mud-input-outlined:hover,
+.search-bar .mud-input-control .mud-input.mud-input-outlined.mud-focused,
+.search-bar .mud-input-control .mud-input.mud-input-outlined:focus-within {
+    background: var(--mud-palette-surface);
+}
+
 /* The Room jump (spec 9.1): the matching Message row is flashed by app.js for about two seconds. */
 @keyframes search-hit-flash-fade {
     from {

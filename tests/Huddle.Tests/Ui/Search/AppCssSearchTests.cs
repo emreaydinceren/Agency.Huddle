@@ -67,6 +67,25 @@ public sealed class AppCssSearchTests
         Assert.Contains("font-weight: 600;", text[rule..(text.IndexOf('}', rule) + 1)], StringComparison.Ordinal);
     }
 
+    /// <summary>The search box is filled with <c>var(--mud-palette-surface)</c>, the composer's own fill, in rest, hover and focus.</summary>
+    [Fact]
+    public void SearchBox_FillMatchesTheComposer()
+    {
+        string text = ReadAppCss();
+        int composer = text.IndexOf(".composer-input {", StringComparison.Ordinal);
+        string composerRule = text[composer..(text.IndexOf('}', composer) + 1)];
+        int block = text.IndexOf("/* Global search */", StringComparison.Ordinal);
+        int rule = text.IndexOf(".search-bar .mud-input-control .mud-input.mud-input-outlined,", block, StringComparison.Ordinal);
+        Assert.True(rule > block, "Expected a .search-bar fill rule in the Global search block.");
+        string searchRule = text[rule..(text.IndexOf('}', rule) + 1)];
+
+        // contains-ok: source-fact test, no CSS parser - the rules' own text is what's pinned.
+        Assert.Contains("background: var(--mud-palette-surface);", composerRule, StringComparison.Ordinal);
+        Assert.Contains("background: var(--mud-palette-surface);", searchRule, StringComparison.Ordinal);
+        Assert.Contains(":hover", searchRule, StringComparison.Ordinal);
+        Assert.Contains(".mud-focused", searchRule, StringComparison.Ordinal);
+    }
+
     /// <summary>Reads <c>app.css</c> as the source fact every test in this class pins.</summary>
     /// <returns>The full text of <c>app.css</c>.</returns>
     private static string ReadAppCss() => File.ReadAllText(CssSource.RepoPath("src", "Huddle.App", "wwwroot", "app.css"));
