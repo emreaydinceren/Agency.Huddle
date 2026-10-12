@@ -1,0 +1,35 @@
+@*
+    The one card the dropdown draws for a hit (spec §6.6). The card is chosen by the hit's subtype with
+    a pattern match, never by a kind enum (D-15). A hit of a subtype with no card draws nothing.
+*@
+
+@using Agency.Huddle.App.Search
+
+@switch (this.Hit)
+{
+    case TeamHit team:
+        <TeamSearchCard Hit="@team" Phrase="@this.Phrase" />
+        break;
+    case TeammateHit teammate:
+        <TeammateSearchCard Hit="@teammate" Phrase="@this.Phrase" />
+        break;
+    case LibraryHit library:
+        <LibrarySearchCard Hit="@library" Phrase="@this.Phrase" />
+        break;
+    case TaskHit task:
+        <TaskSearchCard Hit="@task" Phrase="@this.Phrase" />
+        break;
+    case RoomHit room:
+        <RoomSearchCard Hit="@room" Phrase="@this.Phrase" />
+        break;
+}
+
+@code {
+    /// <summary>The hit to draw; the subtype decides the card.</summary>
+    [Parameter, EditorRequired]
+    public required SearchHit Hit { get; set; }
+
+    /// <summary>The phrase the match is bolded for.</summary>
+    [Parameter]
+    public string Phrase { get; set; } = string.Empty;
+}

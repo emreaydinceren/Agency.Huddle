@@ -1,0 +1,38 @@
+@*
+    The Library card (spec §6.6): a file or folder icon, the name, the folder path within its Library
+    Root (the Root's name at the root), and for a content hit a one-line snippet with the match bolded.
+    The action slot is empty in V1 (D-12).
+*@
+
+@using Agency.Huddle.App.Search
+
+<div class="search-card @(this.Hit.IsArchived ? "search-card-archived" : null)" aria-label="@this.AccessibleName">
+    <span class="search-card-icon">
+        <MudIcon Icon="@(this.Hit.IsFolder ? Icons.Material.Filled.Folder : Icons.Material.Outlined.Description)" Size="Size.Small" />
+    </span>
+    <span class="search-card-text">
+        <span class="search-card-title"><MudHighlighter Text="@this.Hit.Title" HighlightedText="@this.Phrase" /></span>
+        <span class="search-card-meta">@this.Meta</span>
+        @if (this.Hit.Snippet is { } snippet)
+        {
+            <span class="search-card-snippet"><MudHighlighter Text="@snippet" HighlightedText="@this.Phrase" /></span>
+        }
+    </span>
+    <span class="search-card-action" aria-hidden="true"></span>
+</div>
+
+@code {
+    /// <summary>The Library hit this card shows.</summary>
+    [Parameter, EditorRequired]
+    public required LibraryHit Hit { get; set; }
+
+    /// <summary>The phrase the match is bolded for.</summary>
+    [Parameter]
+    public string Phrase { get; set; } = string.Empty;
+
+    /// <summary>The folder path within the Root, or the Root's name when the file sits at its top.</summary>
+    private string Meta => string.IsNullOrEmpty(this.Hit.FolderPath) ? this.Hit.RootName : this.Hit.FolderPath;
+
+    /// <summary>The accessible name: the file name, then the meta line (spec §11).</summary>
+    private string AccessibleName => $"{this.Hit.Title}, {this.Meta}";
+}

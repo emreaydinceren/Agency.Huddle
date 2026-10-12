@@ -23,7 +23,7 @@ html {
     /* The whole UI is drawn at 90%: fonts, heights, widths and gaps together, which a root font-size
        cannot do because much of MudBlazor is sized in px. Viewport units are not zoomed, so a height
        meant to fill the window divides by the scale (see .main-column), and the popover provider
-       cancels it (below). Change 0.9 in all three places together; a var() cannot hold it, because
+       cancels it (below). Change 0.9 in every place together: here, in both .mud-popover-provider rules below, in .main-column and in .search-dropdown (the Global search block); a var() cannot hold it, because
        every var() in this file must be a MudBlazor variable. */
     zoom: 0.9;
 }
@@ -2591,4 +2591,75 @@ button:focus-visible {
     .team-setup-footer {
         position: static;
     }
+}
+
+/* Global search */
+
+/* A result card is one row with three zones: what it is (icon or avatar), what it says, and the action
+   slot at the right. The slot is empty in V1 and holds its width so a V2 button lands where it will sit. */
+.search-card {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.375rem 0.5rem;
+}
+
+.search-card-icon {
+    flex: none;
+    display: inline-flex;
+    align-items: center;
+}
+
+.search-card-text {
+    display: flex;
+    flex-direction: column;
+    flex: 1 1 auto;
+    min-width: 0;
+}
+
+.search-card-title,
+.search-card-meta,
+.search-card-snippet {
+    display: block;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.search-card-meta,
+.search-card-snippet {
+    color: var(--mud-palette-text-secondary);
+    font-size: 0.875rem;
+}
+
+.search-card-chip {
+    align-self: flex-start;
+}
+
+.search-card-action {
+    flex: none;
+    width: 2rem;
+}
+
+/* An Archived Room or a Closed Task is dimmed, and its group heading says so in words, so the state
+   never rests on colour alone (spec §11). */
+.search-card-archived {
+    opacity: 0.6;
+}
+
+/* Group headings are upper case by style only; the text stays "Closed Tasks" for a screen reader. */
+.search-group-heading {
+    padding: 0.5rem 0.5rem 0.25rem;
+    color: var(--mud-palette-text-secondary);
+    font-size: 0.75rem;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+}
+
+/* The dropdown is the popover's direct child, so it is drawn inside the provider's 0.9 (see the zoom
+   rules at the top of this file). Viewport units are not zoomed, so 80% of the window is 80vh / 0.9. */
+.search-dropdown {
+    width: min(720px, calc(100vw / 0.9));
+    max-height: calc(80vh / 0.9);
+    overflow-y: auto;
 }

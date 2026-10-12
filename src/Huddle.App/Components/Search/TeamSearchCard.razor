@@ -1,0 +1,41 @@
+@*
+    The Team card (spec §6.6): a Team icon, its Name, then its type and Teammate count. The action
+    slot at the right is empty in V1 and holds its width (D-12).
+*@
+
+@using System.Globalization
+@using Agency.Huddle.App.Search
+
+<div class="search-card @(this.Hit.IsArchived ? "search-card-archived" : null)" aria-label="@this.AccessibleName">
+    <span class="search-card-icon"><MudIcon Icon="@Icons.Material.Filled.Groups" Size="Size.Small" /></span>
+    <span class="search-card-text">
+        <span class="search-card-title"><MudHighlighter Text="@this.Hit.Title" HighlightedText="@this.Phrase" /></span>
+        <span class="search-card-meta">@this.Meta</span>
+    </span>
+    <span class="search-card-action" aria-hidden="true"></span>
+</div>
+
+@code {
+    /// <summary>The Team this card shows.</summary>
+    [Parameter, EditorRequired]
+    public required TeamHit Hit { get; set; }
+
+    /// <summary>The phrase the match is bolded for.</summary>
+    [Parameter]
+    public string Phrase { get; set; } = string.Empty;
+
+    /// <summary>The meta line: the type and the count, or the count alone when there is no type.</summary>
+    private string Meta
+    {
+        get
+        {
+            string count = this.Hit.TeammateCount == 1
+                ? "1 teammate"
+                : string.Create(CultureInfo.InvariantCulture, $"{this.Hit.TeammateCount} teammates");
+            return this.Hit.TypeLabel is { } type ? $"{type} · {count}" : count;
+        }
+    }
+
+    /// <summary>The accessible name: the title, then the meta line (spec §11).</summary>
+    private string AccessibleName => $"{this.Hit.Title}, {this.Meta}";
+}
