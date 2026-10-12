@@ -2742,8 +2742,47 @@ button:focus-visible {
     font-size: 0.875rem;
 }
 
+/* The Task card's first line: the id and title take the width and truncate, the status chip sits at the right. */
+.search-card-head {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    min-width: 0;
+}
+
+.search-card-head .search-card-title {
+    flex: 1 1 auto;
+    min-width: 0;
+}
+
 .search-card-chip {
-    align-self: flex-start;
+    flex: none;
+}
+
+/* The Task card's second line: the assignee at the left (truncating), the Team at the right under the chip. */
+.search-card-foot {
+    display: flex;
+    align-items: baseline;
+    gap: 0.5rem;
+    min-width: 0;
+}
+
+.search-card-foot .search-card-meta {
+    flex: 1 1 auto;
+    min-width: 0;
+}
+
+.search-card-team {
+    flex: none;
+    margin-left: auto;
+    color: var(--mud-palette-text-secondary);
+    font-size: 0.875rem;
+    white-space: nowrap;
+}
+
+/* The assignee's job title is de-emphasised beside the name. */
+.search-card-subtitle {
+    opacity: 0.75;
 }
 
 .search-card-action {

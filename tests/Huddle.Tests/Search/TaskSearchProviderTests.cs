@@ -17,7 +17,7 @@ public sealed class TaskSearchProviderTests
         CancellationToken ct = TestContext.Current.CancellationToken;
         using TaskToolHarness harness = await TaskToolHarness.CreateAsync(ct);
         harness.SeedOnDisk(MakeTask("PLAT-0001", "Fix login page"));
-        TaskSearchProvider provider = new(harness.Store, harness.Options);
+        TaskSearchProvider provider = new(harness.Store, harness.Personas, harness.Options);
 
         SearchResult result = await provider.SearchAsync(Query("login"), ct);
 
@@ -32,7 +32,7 @@ public sealed class TaskSearchProviderTests
         CancellationToken ct = TestContext.Current.CancellationToken;
         using TaskToolHarness harness = await TaskToolHarness.CreateAsync(ct);
         harness.SeedOnDisk(MakeTask("PLAT-0042", "Fix login page"));
-        TaskSearchProvider provider = new(harness.Store, harness.Options);
+        TaskSearchProvider provider = new(harness.Store, harness.Personas, harness.Options);
 
         SearchResult result = await provider.SearchAsync(Query("PLAT-004"), ct);
 
@@ -48,7 +48,7 @@ public sealed class TaskSearchProviderTests
         using TaskToolHarness harness = await TaskToolHarness.CreateAsync(ct);
         harness.SeedOnDisk(MakeTask("PLAT-0042", "Fix login page"));
         harness.SeedOnDisk(MakeTask("PLAT-0043", "Write the spec"));
-        TaskSearchProvider provider = new(harness.Store, harness.Options);
+        TaskSearchProvider provider = new(harness.Store, harness.Personas, harness.Options);
 
         SearchResult result = await provider.SearchAsync(Query("plat-0042"), ct);
 
@@ -63,12 +63,29 @@ public sealed class TaskSearchProviderTests
         CancellationToken ct = TestContext.Current.CancellationToken;
         using TaskToolHarness harness = await TaskToolHarness.CreateAsync(ct);
         harness.SeedOnDisk(MakeTask("PLAT-0001", "Write the spec", assignee: "Nova"));
-        TaskSearchProvider provider = new(harness.Store, harness.Options);
+        TaskSearchProvider provider = new(harness.Store, harness.Personas, harness.Options);
 
         SearchResult result = await provider.SearchAsync(Query("nova"), ct);
 
-        List<SearchHit> expected = [new TaskHit(new TaskId("PLAT", 1), "Write the spec", TaskState.ToDo, "Nova", "Platform", false, MatchTier.ContentMatch)];
+        List<SearchHit> expected = [new TaskHit(new TaskId("PLAT", 1), "Write the spec", TaskState.ToDo, "Nova", "Platform", false, MatchTier.ContentMatch, "Nova")];
         Assert.Equal(expected, result.Hits);
+    }
+
+    /// <summary>The hit carries the assignee Persona's title, matched on the Name ignoring case; an unassigned Task has none.</summary>
+    [Fact]
+    public async Task AssigneeTitle_ComesFromThePersona()
+    {
+        CancellationToken ct = TestContext.Current.CancellationToken;
+        using TaskToolHarness harness = await TaskToolHarness.CreateAsync(ct);
+        harness.SeedOnDisk(MakeTask("PLAT-0001", "Write the spec", assignee: "Nova"));
+        harness.SeedOnDisk(MakeTask("PLAT-0002", "Write the spec too"));
+        TaskSearchProvider provider = new(harness.Store, harness.Personas, harness.Options);
+
+        SearchResult result = await provider.SearchAsync(Query("write the spec"), ct);
+
+        Dictionary<string, string?> titles = result.Hits.OfType<TaskHit>().ToDictionary(hit => hit.Id.ToString(), hit => hit.AssigneeTitle, StringComparer.Ordinal);
+        Assert.Equal("Nova", titles["PLAT-0001"]);
+        Assert.Null(titles["PLAT-0002"]);
     }
 
     /// <summary>The Active pass never returns a Closed Task, even when its title matches.</summary>
@@ -79,7 +96,7 @@ public sealed class TaskSearchProviderTests
         using TaskToolHarness harness = await TaskToolHarness.CreateAsync(ct);
         harness.SeedOnDisk(MakeTask("PLAT-0001", "Fix login page"));
         harness.SeedOnDisk(MakeTask("PLAT-0002", "Fix login old", closed: true));
-        TaskSearchProvider provider = new(harness.Store, harness.Options);
+        TaskSearchProvider provider = new(harness.Store, harness.Personas, harness.Options);
 
         SearchResult result = await provider.SearchAsync(Query("login"), ct);
 
@@ -95,7 +112,7 @@ public sealed class TaskSearchProviderTests
         using TaskToolHarness harness = await TaskToolHarness.CreateAsync(ct);
         harness.SeedOnDisk(MakeTask("PLAT-0001", "Fix login page"));
         harness.SeedOnDisk(MakeTask("PLAT-0002", "Fix login old", closed: true));
-        TaskSearchProvider provider = new(harness.Store, harness.Options);
+        TaskSearchProvider provider = new(harness.Store, harness.Personas, harness.Options);
 
         SearchResult result = await provider.SearchAsync(Query("login", SearchScope.Archived), ct);
 
@@ -110,7 +127,7 @@ public sealed class TaskSearchProviderTests
         CancellationToken ct = TestContext.Current.CancellationToken;
         using TaskToolHarness harness = await TaskToolHarness.CreateAsync(ct);
         harness.SeedOnDisk(MakeTask("PLAT-0001", "Fix login page"));
-        TaskSearchProvider provider = new(harness.Store, harness.Options);
+        TaskSearchProvider provider = new(harness.Store, harness.Personas, harness.Options);
 
         SearchResult result = await provider.SearchAsync(Query(""), ct);
 
@@ -126,7 +143,7 @@ public sealed class TaskSearchProviderTests
         using TaskToolHarness harness = await TaskToolHarness.CreateAsync(ct);
         harness.SeedOnDisk(MakeTask("PLAT-0001", "Fix login page"));
         IOptions<TeamOptions> disabled = Options.Create(new TeamOptions { Tasks = new TasksOptions { Enabled = false } });
-        TaskSearchProvider provider = new(harness.Store, disabled);
+        TaskSearchProvider provider = new(harness.Store, harness.Personas, disabled);
 
         SearchResult result = await provider.SearchAsync(Query("login"), ct);
 

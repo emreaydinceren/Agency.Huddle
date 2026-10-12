@@ -21,8 +21,8 @@ public sealed record TeammateHit(string Name, string PersonaTitle, string Alias,
 public sealed record LibraryHit(string RootId, string RootName, string RelativePath, string FolderPath, bool IsFolder, string? Snippet, string? TeamName, MatchTier Tier)
     : SearchHit(RelativePath[(RelativePath.LastIndexOf('/') + 1)..], TeamName, false, Tier);
 
-/// <summary>A Task hit: its id, status and assignee are what its card shows.</summary>
-public sealed record TaskHit(TaskId Id, string TaskTitle, TaskState Status, string? Assignee, string Team, bool IsClosed, MatchTier Tier)
+/// <summary>A Task hit: its id, status and assignee are what its card shows. <see cref="AssigneeTitle"/> is the assignee Persona's title, or null when unassigned or the Persona is gone.</summary>
+public sealed record TaskHit(TaskId Id, string TaskTitle, TaskState Status, string? Assignee, string Team, bool IsClosed, MatchTier Tier, string? AssigneeTitle = null)
     : SearchHit(TaskTitle, Team, IsClosed, Tier);
 
 /// <summary>A Room hit. A Room has no Team (OP-4), so its Team name is always null.</summary>

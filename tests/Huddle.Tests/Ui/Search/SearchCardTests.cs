@@ -107,18 +107,62 @@ public sealed class SearchCardTests : IDisposable
         Assert.Equal("Marketing", cut.Find(".search-card-meta").TextContent.Trim());
     }
 
-    /// <summary>A Task shows its title, its status chip with the wire name, then <c>Nova · Platform</c>.</summary>
+    /// <summary>A Task's first line is <c>SUP-0012 · Support SAML login</c> with the status chip beside it; the second is <c>Nova · Staff Engineer</c> at the left and <c>Platform Team</c> at the right.</summary>
     [Fact]
-    public async Task TaskCard_RendersStatusChipAssigneeAndTeam()
+    public async Task TaskCard_RendersBothLines()
     {
         await using MudBunitContext ctx = new();
-        TaskHit hit = new(new TaskId("SUP", 12), "Support SAML login", TaskState.InProgress, "Nova", "Platform", false, MatchTier.ExactName);
+        TaskHit hit = new(new TaskId("SUP", 12), "Support SAML login", TaskState.InProgress, "Nova", "Platform", false, MatchTier.ExactName, "Staff Engineer");
 
         IRenderedComponent<TaskSearchCard> cut = ctx.Render<TaskSearchCard>(p => p.Add(c => c.Hit, hit));
 
-        Assert.Equal("Support SAML login", cut.Find(".search-card-title").TextContent.Trim());
-        Assert.Equal("In Progress", cut.Find(".search-card-chip").TextContent.Trim());
-        Assert.Equal("Nova · Platform", cut.Find(".search-card-meta").TextContent.Trim());
+        Assert.Equal("SUP-0012 · Support SAML login", cut.Find(".search-card-head .search-card-title").TextContent.Trim());
+        Assert.Equal("In Progress", cut.Find(".search-card-head .search-card-chip").TextContent.Trim());
+        Assert.Equal("Nova · Staff Engineer", cut.Find(".search-card-foot .search-card-meta").TextContent.Trim());
+        Assert.Equal("Platform Team", cut.Find(".search-card-foot .search-card-team").TextContent.Trim());
+        Assert.Equal("· Staff Engineer", cut.Find(".search-card-subtitle").TextContent.Trim());
+    }
+
+    /// <summary>A Team name that already ends in "Team" (any case) is not given a second suffix.</summary>
+    [Theory]
+    [InlineData("Growth Team", "Growth Team")]
+    [InlineData("growth team", "growth team")]
+    [InlineData("Platform", "Platform Team")]
+    public async Task TaskCard_TeamSuffix_AppendedOnlyWhenMissing(string team, string expected)
+    {
+        await using MudBunitContext ctx = new();
+        TaskHit hit = new(new TaskId("SUP", 12), "Support SAML login", TaskState.ToDo, "Nova", team, false, MatchTier.ExactName);
+
+        IRenderedComponent<TaskSearchCard> cut = ctx.Render<TaskSearchCard>(p => p.Add(c => c.Hit, hit));
+
+        Assert.Equal(expected, cut.Find(".search-card-team").TextContent.Trim());
+    }
+
+    /// <summary>An unassigned Task's second line is the Team at the right alone: no assignee part and no dot.</summary>
+    [Fact]
+    public async Task TaskCard_NoAssignee_ShowsTeamOnly()
+    {
+        await using MudBunitContext ctx = new();
+        TaskHit hit = new(new TaskId("SUP", 12), "Support SAML login", TaskState.ToDo, null, "Platform", false, MatchTier.ExactName);
+
+        IRenderedComponent<TaskSearchCard> cut = ctx.Render<TaskSearchCard>(p => p.Add(c => c.Hit, hit));
+
+        Assert.Equal("Platform Team", cut.Find(".search-card-foot").TextContent.Trim());
+        Assert.Empty(cut.FindAll(".search-card-meta"));
+    }
+
+    /// <summary>An assignee with no Persona title shows the name only.</summary>
+    [Fact]
+    public async Task TaskCard_AssigneeWithoutTitle_ShowsNameOnly()
+    {
+        await using MudBunitContext ctx = new();
+        TaskHit hit = new(new TaskId("SUP", 12), "Support SAML login", TaskState.ToDo, "Nova", "Platform", false, MatchTier.ExactName);
+
+        IRenderedComponent<TaskSearchCard> cut = ctx.Render<TaskSearchCard>(p => p.Add(c => c.Hit, hit));
+
+        Assert.Equal("Nova", cut.Find(".search-card-meta").TextContent.Trim());
+        Assert.Equal("Platform Team", cut.Find(".search-card-team").TextContent.Trim());
+        Assert.Empty(cut.FindAll(".search-card-subtitle"));
     }
 
     /// <summary>A Room shows its name, then <c>14 matches · Kai · HH:mm</c> in the local clock, then the snippet with the match in bold.</summary>

@@ -1032,7 +1032,7 @@ default arm renders nothing.
 | Team | `MudIcon` `Icons.Material.Filled.Groups` | `Development Team · 4 teammates`; `1 teammate`; no type: `4 teammates` |
 | Teammate | `TeammateAvatar Name="@Hit.Name" Avatar="this.Avatars.Get(Hit.Name)" Size="Size.Small"` | `Product Manager · Marketing, Platform`; no Team: `Product Manager · No team` (OP-8) |
 | Library | `Icons.Material.Filled.Folder` for a folder, `Icons.Material.Outlined.Description` otherwise | `FolderPath`, or `RootName` when `FolderPath` is empty |
-| Task | none (the title leads); a `MudChip T="string" Size="Size.Small" Color="@TaskColors.For(Hit.Status)"` with `Hit.Status.ToWire()` | `Nova · Platform`; unassigned: `Platform` |
+| Task | none; line 1 is `{Id} · {Title}` with a right-aligned `MudChip T="string" Size="Size.Small" Color="@TaskColors.For(Hit.Status)"` with `Hit.Status.ToWire()` | left `Nova · Staff Engineer` (`Hit.AssigneeTitle` de-emphasised; none when unassigned), right `Platform Team` (" Team" only if missing) |
 | Room | `Icons.Material.Filled.Forum` | `14 matches · Kai · 14:02`; `1 match · Kai · 14:02`; a name-only hit: no meta. Time is `Time.ToLocalTime().ToString("HH:mm", CultureInfo.CurrentCulture)`, as `MessageList.razor:16` |
 
 The card's accessible name (§11): the outer `div` gets `aria-label` = title, meta, and for an
