@@ -85,14 +85,16 @@ public sealed class AppJsSourceTests
         Assert.Contains("el.scrollHeight - el.scrollTop - el.clientHeight <= 4", block, StringComparison.Ordinal);
     }
 
-    /// <summary>The flash style sits in the <c>/* Global search */</c> block, fades from a MudBlazor palette variable, has a reduced-motion outline, and uses neither <c>zoom</c> nor viewport units (plan §3.6).</summary>
+    /// <summary>The flash rules (from the <c>/* The Room jump */</c> comment inside the <c>/* Global search */</c> block to the end of app.css) fade from a MudBlazor palette variable, have a reduced-motion outline, and use neither <c>zoom</c> nor viewport units; the dropdown rules above them legitimately use <c>vh</c> (plan §3.6).</summary>
     [Fact]
     public void AppCss_SearchHitFlash_IsInTheGlobalSearchBlockAndHonoursReducedMotion()
     {
         string css = File.ReadAllText(CssSource.RepoPath("src", "Huddle.App", "wwwroot", "app.css"));
         int blockStart = css.IndexOf("/* Global search */", StringComparison.Ordinal);
         Assert.True(blockStart >= 0, "Expected a /* Global search */ block in app.css.");
-        string block = css[blockStart..];
+        int flashStart = css.IndexOf("/* The Room jump", blockStart, StringComparison.Ordinal);
+        Assert.True(flashStart >= 0, "Expected the /* The Room jump */ flash rules inside the Global search block.");
+        string block = css[flashStart..];
 
         // contains-ok: source-fact test, no stylesheet runner - app.css's own text is what's pinned.
         Assert.Contains(".search-hit-flash", block, StringComparison.Ordinal);
