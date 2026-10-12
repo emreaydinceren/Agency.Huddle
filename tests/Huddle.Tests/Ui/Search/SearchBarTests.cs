@@ -463,6 +463,57 @@ public sealed class SearchBarTests(TeamWebApplicationFactory factory) : IClassFi
         Assert.Equal(0, h.SubscriberCount());
     }
 
+    /// <summary>Enter on a box whose last run found nothing runs the same text again, because the box cannot see an unchanged retype (D2).</summary>
+    [Fact]
+    public async Task Enter_WithNoCards_RunsTheSameTextAgain()
+    {
+        CancellationToken ct = Xunit.TestContext.Current.CancellationToken;
+        await using SearchBarHarness h = new(factory);
+        IRenderedComponent<ContainerFragment> cut = h.Render();
+        await SearchBarHarness.OpenAsync(cut);
+        await SearchBarHarness.TypeAsync(cut, "team:cor");
+        await h.FinishAsync([SearchFilter.Teams], NoHits, ct);
+        int before = h.Providers[SearchFilter.Teams].Calls.Count;
+
+        await SearchBarHarness.PressAsync(cut, "Enter");
+
+        await h.Providers[SearchFilter.Teams].WaitForCallsAsync(before + 1, ct);
+        Assert.True(h.Providers[SearchFilter.Teams].Calls.Count > before);
+    }
+
+    /// <summary>Typing a text, changing it and typing the first text again runs the search each time.</summary>
+    [Fact]
+    public async Task RetypingEarlierText_RunsTheSearchAgain()
+    {
+        CancellationToken ct = Xunit.TestContext.Current.CancellationToken;
+        await using SearchBarHarness h = new(factory);
+        IRenderedComponent<ContainerFragment> cut = h.Render();
+        await SearchBarHarness.OpenAsync(cut);
+        await SearchBarHarness.TypeAsync(cut, "team:login");
+        await SearchBarHarness.TypeAsync(cut, "team:logi");
+        await SearchBarHarness.TypeAsync(cut, "team:login");
+
+        IReadOnlyList<GatedCall> calls = await h.Providers[SearchFilter.Teams].WaitForCallsAsync(3, ct);
+
+        Assert.Equal("login", calls[^1].Query.Text);
+    }
+
+    /// <summary>The dropdown is centred under the box: MudBlazor anchors it at the box's bottom centre and grows it from its own top centre.</summary>
+    [Fact]
+    public async Task Dropdown_IsCentredUnderTheBox()
+    {
+        await using SearchBarHarness h = new(factory);
+        IRenderedComponent<ContainerFragment> cut = h.Render();
+
+        await SearchBarHarness.OpenAsync(cut);
+
+        IElement popover = cut.Find(".mud-popover-open");
+        // contains-ok: MudBlazor writes the placement as class tokens on one attribute; the tokens are what's pinned.
+        Assert.Contains("mud-popover-anchor-bottom-center", popover.ClassName, StringComparison.Ordinal);
+        // contains-ok: MudBlazor writes the placement as class tokens on one attribute; the tokens are what's pinned.
+        Assert.Contains("mud-popover-top-center", popover.ClassName, StringComparison.Ordinal);
+    }
+
     /// <summary>Renders the box, searches the Teams filter for "cor" and answers with one Team named Core.</summary>
     /// <param name="h">The harness to render in.</param>
     /// <param name="ct">The test's cancellation token.</param>

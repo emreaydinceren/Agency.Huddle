@@ -38,7 +38,7 @@
     <div aria-live="polite"
          role="status"
          style="position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap;">@(this.open ? this.view.Announcement : null)</div>
-    <MudPopover Open="@this.open" AnchorOrigin="Origin.BottomLeft" TransformOrigin="Origin.TopLeft">
+    <MudPopover Open="@this.open" AnchorOrigin="Origin.BottomCenter" TransformOrigin="Origin.TopCenter">
         <div class="search-dropdown" @onmousedown:preventDefault="true">
             <div role="radiogroup" aria-label="Filter" class="d-flex flex-wrap gap-1 pa-2">
                 <MudChipSet T="SearchFilter"
@@ -338,6 +338,10 @@
                 break;
             case "Enter" when this.open && this.cards.Count > 0:
                 await this.OpenHitAsync(this.cards[Math.Max(this.highlighted, 0)].Hit, e.CtrlKey);
+                break;
+            case "Enter" when this.open:
+                // Retyping identical text raises no value change (MudTextField drops it), so Enter is the way to run it again.
+                this.RunSearch();
                 break;
             case "Escape":
                 await this.CloseAsync();

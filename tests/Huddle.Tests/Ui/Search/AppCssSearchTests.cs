@@ -17,14 +17,14 @@ public sealed class AppCssSearchTests
         Assert.Contains("max-height: calc(80vh / 0.9);", rule, StringComparison.Ordinal);
     }
 
-    /// <summary>The dropdown's width is capped at 720px and never wider than the window: <c>min(720px, calc(100vw / 0.9))</c>.</summary>
+    /// <summary>The dropdown's width is capped at 720px and never wider than the window less a 24px margin each side: <c>min(720px, calc((100vw - 48px) / 0.9))</c>.</summary>
     [Fact]
     public void SearchDropdown_WidthNeverExceedsTheWindow()
     {
         string rule = DropdownRule();
 
         // contains-ok: source-fact test, no CSS parser - the rule's own text is what's pinned.
-        Assert.Contains("width: min(720px, calc(100vw / 0.9));", rule, StringComparison.Ordinal);
+        Assert.Contains("width: min(720px, calc((100vw - 48px) / 0.9));", rule, StringComparison.Ordinal);
     }
 
     /// <summary>No rule in the <c>/* Global search */</c> block sets <c>zoom</c>; the scale belongs to the provider and <c>html</c> only.</summary>
@@ -52,6 +52,19 @@ public sealed class AppCssSearchTests
 
         // contains-ok: source-fact test, no CSS parser - the comment above the declaration is what's pinned.
         Assert.Contains(".search-dropdown", text[..zoomIndex], StringComparison.Ordinal);
+    }
+
+    /// <summary>The match mark a card draws is bold: a <c>.search-card mark</c> rule sets <c>font-weight: 600</c>.</summary>
+    [Fact]
+    public void SearchCardMark_IsBold()
+    {
+        string text = ReadAppCss();
+        int block = text.IndexOf("/* Global search */", StringComparison.Ordinal);
+        int rule = text.IndexOf(".search-card mark {", block, StringComparison.Ordinal);
+        Assert.True(rule > block, "Expected a .search-card mark rule in the Global search block.");
+
+        // contains-ok: source-fact test, no CSS parser - the rule's own text is what's pinned.
+        Assert.Contains("font-weight: 600;", text[rule..(text.IndexOf('}', rule) + 1)], StringComparison.Ordinal);
     }
 
     /// <summary>Reads <c>app.css</c> as the source fact every test in this class pins.</summary>
