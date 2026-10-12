@@ -30,17 +30,6 @@ window.teamComposer = {
         el._typedNotified = false;
     },
 
-    // Sends what is typed and clears the box and its saved draft: the one path both Enter and the
-    // Send button take, so the two can never drift apart.
-    async send(el) {
-        await el._dotnetRef.invokeMethodAsync("SendAsync", el.value);
-        el.value = "";
-        el._picker.open = false;
-        if (el._draftKey) {
-            window.teamComposer.draftSet(el._draftKey, "");
-        }
-    },
-
     attach(el, dotnetRef, draftKey) {
         el._dotnetRef = dotnetRef;
         el._picker = { open: false };
@@ -140,6 +129,17 @@ window.teamComposer = {
                 }
             }, 150);
         });
+    },
+
+    // Sends what is typed and clears the box and its saved draft: the one path both Enter and the
+    // Send button take, so the two can never drift apart.
+    async send(el) {
+        await el._dotnetRef.invokeMethodAsync("SendAsync", el.value);
+        el.value = "";
+        el._picker.open = false;
+        if (el._draftKey) {
+            window.teamComposer.draftSet(el._draftKey, "");
+        }
     },
 
     // Replaces the `#query` token ending at the caret with the plain id plus a space (D-33: the
