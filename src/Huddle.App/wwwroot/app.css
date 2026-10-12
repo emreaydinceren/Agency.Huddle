@@ -1660,6 +1660,23 @@ button:focus-visible {
     color: var(--mud-palette-warning);
 }
 
+/* The Task open in the detail panel: its List row and its Board card. A tint of the primary palette
+   colour reads in both themes (a fixed grey would vanish in one of them), and the row's hover
+   state is a slightly deeper tint, so hovering the selected row still looks hovered. The card
+   also gets a primary left edge, since its surface is a flat fill the tint alone barely lifts. */
+.mud-table .mud-table-body tr.task-row-selected > td {
+    background-color: color-mix(in srgb, var(--mud-palette-primary) 16%, transparent);
+}
+
+.mud-table.mud-table-hover .mud-table-body tr.task-row-selected:hover > td {
+    background-color: color-mix(in srgb, var(--mud-palette-primary) 24%, transparent);
+}
+
+.task-card.task-card-selected {
+    background-color: color-mix(in srgb, var(--mud-palette-primary) 16%, var(--mud-palette-surface));
+    box-shadow: inset 3px 0 0 var(--mud-palette-primary);
+}
+
 /* A Task id rendered as a link inside a chat Message: a dotted underline keeps it visibly
    different from an ordinary web link. */
 .task-ref {

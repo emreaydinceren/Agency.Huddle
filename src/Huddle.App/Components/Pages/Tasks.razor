@@ -159,11 +159,11 @@
         IReadOnlyList<TaskItem> tasks = this.FilteredTasks(this.search);
         @if (this.effectiveView.Kind == ViewKind.List)
         {
-            <TaskListView View="this.effectiveView" Tasks="tasks" Search="@this.search" OnOpenTask="this.OnOpenTaskAsync" OnCopyId="this.OnCopyIdAsync" />
+            <TaskListView View="this.effectiveView" Tasks="tasks" Search="@this.search" SelectedId="@(this.detailOpen ? this.selectedTaskId : null)" OnOpenTask="this.OnOpenTaskAsync" OnCopyId="this.OnCopyIdAsync" />
         }
         else
         {
-            <TaskBoard View="this.effectiveView" Tasks="tasks" Search="@this.search" OnOpenTask="this.OnOpenTaskAsync"
+            <TaskBoard View="this.effectiveView" Tasks="tasks" Search="@this.search" SelectedId="@(this.detailOpen ? this.selectedTaskId : null)" OnOpenTask="this.OnOpenTaskAsync"
                        ViewChanged="this.OnEffectiveViewChangedAsync" OnEditColumns="this.OnEditColumnsClicked" OnCopyId="this.OnCopyIdAsync" />
         }
 
