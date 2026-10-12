@@ -392,6 +392,7 @@ Tabs — the open pages in the strip above the content, `docs/Huddle.Tabs-Specif
 | `Components/Layout/TabHost.razor` | Draws the groups side by side, follows every location the router reaches, and takes the keyboard shortcuts. |
 | `Components/Layout/TabGroupPane.razor` | One group: its strip over the page of its active Tab; focuses itself when pressed. |
 | `Components/Layout/TabPageHost.razor` | Mounts one Tab's page (a `DynamicComponent`) from its URL. |
+| `Components/Layout/TopBar.razor` | The fixed bar across the top of the window: the focused pane's breadcrumb trail, with cells reserved for a search box and toolbar buttons. |
 | `Components/Layout/TabStrip.razor` | One group's strip of Tabs, with the right-click Tab menu (pin, move left, move right, close). |
 | `Components/Layout/NavTabLink.razor` | A left-menu link that opens a Tab (single click previews, double click keeps). |
 | `Components/Layout/TabSync.razor` | Keeps a Room's Tab title and lifetime in step with the Room, and closes the Tab of a removed Team or Project. |

@@ -1,0 +1,75 @@
+@*
+    The bar across the top of the window, above the menu and every pane. Today it holds the breadcrumb
+    trail of the focused pane's active Tab: the shell draws one trail for the whole window rather than
+    one per pane, and it follows focus because TabService.Active is the focused group's Tab. Following
+    a crumb navigates that Tab in place, then points the router at it so the browser URL keeps naming
+    the focused pane's page.
+
+    It is laid out as three cells: the trail at the start, then room for a search box in the middle and
+    a toolbar at the end. Search and Actions are the two slots those later features fill, so adding
+    one is a change to the caller and not to the bar's layout; both cells exist (and the trail keeps
+    its place) while a slot is empty.
+*@
+@using Agency.Huddle.App.Tabs
+@implements IDisposable
+@inject TabService Tabs
+@inject NavigationManager Navigation
+
+<MudAppBar Fixed="true" Dense="true" Elevation="0" Class="top-bar">
+    <div class="top-bar-grid">
+        <div class="top-bar-start">
+            @if (this.Tabs.Active is { } active)
+            {
+                <PageBreadcrumbs Crumbs="TabTrail.Build(active.Url, active.Title)" OnNavigate="this.NavigateAsync" />
+            }
+        </div>
+        <div class="top-bar-center">@this.Search</div>
+        <div class="top-bar-end">@this.Actions</div>
+    </div>
+</MudAppBar>
+
+@code {
+    /// <summary>Content for the middle cell, where the search box goes.</summary>
+    [Parameter]
+    public RenderFragment? Search { get; set; }
+
+    /// <summary>Content for the end cell, where the toolbar buttons go.</summary>
+    [Parameter]
+    public RenderFragment? Actions { get; set; }
+
+    /// <summary>Redraws the trail whenever a Tab is opened, activated, retitled or navigated, or focus moves to another pane.</summary>
+    protected override void OnInitialized()
+    {
+        this.Tabs.Changed += this.OnTabsChanged;
+    }
+
+    /// <summary>Unsubscribes from <see cref="TabService.Changed"/>.</summary>
+    public void Dispose()
+    {
+        this.Tabs.Changed -= this.OnTabsChanged;
+    }
+
+    private void OnTabsChanged()
+    {
+        _ = this.DispatchAsync(() =>
+        {
+            this.StateHasChanged();
+            return Task.CompletedTask;
+        });
+    }
+
+    private Task NavigateAsync(string href)
+    {
+        if (this.Tabs.Active is { } active && this.Tabs.Navigate(active.Id, href) is { } navigated)
+        {
+            this.Navigation.NavigateTo(navigated.Url);
+        }
+
+        return Task.CompletedTask;
+    }
+
+    private Task DispatchAsync(Func<Task> action)
+    {
+        return RendererDispatch.RunAsync(this.InvokeAsync, action);
+    }
+}

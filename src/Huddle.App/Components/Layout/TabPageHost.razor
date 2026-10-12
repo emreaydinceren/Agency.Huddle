@@ -9,23 +9,17 @@
     and a new instance on every render would make Blazor treat the page's parameters as changed every
     time a Tab was retitled or another group was clicked.
 
-    Above the page it draws the Tab's breadcrumb bar (PageBreadcrumbs), so every page has one trail
-    from the shell and none draws its own. The bar is sticky, so it stays in view while a long page
-    scrolls inside .tab-body, and a page that fills the pane (the Room) still does. Following a crumb
-    navigates this Tab in place, whichever pane has focus, then points the router at the Tab so the
-    browser URL keeps naming the focused pane's page.
+    The Tab's breadcrumb trail is not drawn here: the shell's TopBar draws one for the focused pane,
+    so no page draws its own.
 *@
 @using Agency.Huddle.App.Tabs
 @inject TabPageRoutes Routes
-@inject TabService Tabs
-@inject NavigationManager Navigation
 
 @* The page is captured in a pattern variable: CascadingValue builds its content after this component has
    rendered, and by then OnParametersSet may have replaced the page (a crumb can point the Tab at a URL
    with no page), so reading the field there would dereference null. *@
 @if (this.page is { } shown)
 {
-    <PageBreadcrumbs Crumbs="this.trail" Collapse="this.Tabs.Groups.Count > 1" OnNavigate="this.NavigateAsync" />
     <CascadingValue Value="this.context">
         <DynamicComponent Type="shown.Component" Parameters="shown.Parameters" />
     </CascadingValue>
@@ -39,9 +33,6 @@ else
     private string? resolvedUrl;
     private TabPage? page;
     private TabPageContext? context;
-    private string? trailUrl;
-    private string? trailTitle;
-    private IReadOnlyList<TrailCrumb> trail = [];
 
     /// <summary>The Tab whose page to mount.</summary>
     [Parameter, EditorRequired]
@@ -50,13 +41,6 @@ else
     /// <summary>Resolves the page again only when the Tab's URL differs from the one last resolved.</summary>
     protected override void OnParametersSet()
     {
-        if (!string.Equals(this.trailUrl, this.Tab.Url, StringComparison.Ordinal) || !string.Equals(this.trailTitle, this.Tab.Title, StringComparison.Ordinal))
-        {
-            this.trailUrl = this.Tab.Url;
-            this.trailTitle = this.Tab.Title;
-            this.trail = TabTrail.Build(this.Tab.Url, this.Tab.Title);
-        }
-
         if (string.Equals(this.resolvedUrl, this.Tab.Url, StringComparison.Ordinal))
         {
             return;
@@ -65,15 +49,5 @@ else
         this.resolvedUrl = this.Tab.Url;
         this.page = this.Routes.Resolve(this.Tab.Url);
         this.context = new TabPageContext(this.Tab.Url);
-    }
-
-    private Task NavigateAsync(string href)
-    {
-        if (this.Tabs.Navigate(this.Tab.Id, href) is { } navigated)
-        {
-            this.Navigation.NavigateTo(navigated.Url);
-        }
-
-        return Task.CompletedTask;
     }
 }
