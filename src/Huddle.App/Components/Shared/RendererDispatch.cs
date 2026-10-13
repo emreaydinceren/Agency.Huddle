@@ -37,4 +37,23 @@ internal static class RendererDispatch
             // Renderer disposed mid-dispatch.
         }
     }
+
+    /// <summary>
+    /// Repaints a component by calling its <c>StateHasChanged</c> on the renderer, with the same tolerance
+    /// as <see cref="RunAsync"/>. Components that only need a repaint on a store event use this instead of
+    /// their own copy of the dispatch wrapper (UX-R02).
+    /// </summary>
+    /// <param name="invokeAsync">The component's <c>InvokeAsync(Func&lt;Task&gt;)</c>, as a method group.</param>
+    /// <param name="stateHasChanged">The component's <c>StateHasChanged</c>.</param>
+    /// <returns>A task that completes when the repaint has run or the renderer was found gone.</returns>
+    public static Task Repaint(Func<Func<Task>, Task> invokeAsync, Action stateHasChanged)
+    {
+        ArgumentNullException.ThrowIfNull(stateHasChanged);
+
+        return RendererDispatch.RunAsync(invokeAsync, () =>
+        {
+            stateHasChanged();
+            return Task.CompletedTask;
+        });
+    }
 }
