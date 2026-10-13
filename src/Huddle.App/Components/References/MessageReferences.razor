@@ -1,0 +1,143 @@
+@using Agency.Huddle.App.References
+@using Microsoft.Extensions.DependencyInjection
+@using Microsoft.Extensions.Logging
+@inject IServiceProvider Services
+
+@if (this.chips.Count > 0)
+{
+    <div class="message-references">
+        @foreach (var chip in this.chips)
+        {
+            @if (chip.Gone)
+            {
+                <span class="message-reference-gone-wrap" title="@chip.Tooltip">
+                    <MudChip T="string" Disabled="true" Class="message-reference-gone">@chip.Text</MudChip>
+                </span>
+            }
+            else
+            {
+                <MudChip T="string" Class="message-reference-changed"><a href="@chip.Href" title="@chip.Tooltip">@chip.Text</a></MudChip>
+            }
+        }
+    </div>
+}
+
+@code {
+    /// <summary>The Message whose snapshot is drawn.</summary>
+    [Parameter, EditorRequired]
+    public required ChatMessage Message { get; set; }
+
+    /// <summary>The chips drawn for the Message last looked up; empty when every target is unchanged.</summary>
+    private IReadOnlyList<ReferenceChip> chips = [];
+
+    /// <summary>The id of the Message the chips were looked up for, so a re-render never looks up again.</summary>
+    private string? lookedUpMessageId;
+
+    /// <summary>Looks the snapshot up again only when the Message changes (spec §8.4), never on every render.</summary>
+    protected override async Task OnParametersSetAsync()
+    {
+        if (string.Equals(this.lookedUpMessageId, this.Message.Id, StringComparison.Ordinal))
+        {
+            return;
+        }
+
+        string messageId = this.Message.Id;
+        IReadOnlyList<ReferenceChip> found = await this.LookUpAsync(this.Message, CancellationToken.None);
+        this.lookedUpMessageId = messageId;
+        this.chips = found;
+    }
+
+    /// <summary>Resolves each snapshot entry now and keeps the ones that are gone or changed.</summary>
+    /// <param name="message">The Message whose snapshot is read.</param>
+    /// <param name="ct">Cancels the lookups.</param>
+    /// <returns>The chips to draw, in snapshot order; empty when there are none or a lookup failed.</returns>
+    private async Task<IReadOnlyList<ReferenceChip>> LookUpAsync(ChatMessage message, CancellationToken ct)
+    {
+        IReadOnlyList<MessageReference>? references = message.References;
+        if (references is null || references.Count == 0)
+        {
+            return [];
+        }
+
+        List<ReferenceChip> found = [];
+        try
+        {
+            ReferenceResolver resolver = this.Services.GetRequiredService<ReferenceResolver>();
+            for (int index = 0; index < references.Count; index++)
+            {
+                MessageReference reference = references[index];
+                IReadOnlyList<ResolvedReference> resolved = await resolver.ResolveAsync([new ReferenceCandidate(reference.Kind, reference.Key, index)], ct);
+                ReferenceChip? chip = resolved.Count == 0 ? null : MessageReferences.ChipFor(reference, resolved[0]);
+                if (chip is not null)
+                {
+                    found.Add(chip);
+                }
+            }
+        }
+        catch (Exception ex) when (ex is not OperationCanceledException)
+        {
+            // The Room view never throws over a snapshot (spec §8.4): a failed lookup draws nothing and is logged.
+            this.Services.GetService<ILogger<MessageReferences>>()?.LogWarning(ex, "Reference lookup failed for Message {MessageId}.", message.Id);
+            return [];
+        }
+
+        return found;
+    }
+
+    /// <summary>Decides what a snapshot entry draws, given what it resolves to now.</summary>
+    /// <param name="reference">The entry as it was sent.</param>
+    /// <param name="resolved">What the resolver found for it now.</param>
+    /// <returns>A gone or changed chip, or null when the target is unchanged or only its status moved.</returns>
+    private static ReferenceChip? ChipFor(MessageReference reference, ResolvedReference resolved)
+    {
+        return resolved switch
+        {
+            GoneReference gone => new ReferenceChip(reference.Label + " (unavailable)", null, MessageReferences.GoneTooltip(gone.Kind), true),
+            ResolvedRoom room => MessageReferences.RoomChip(reference, room),
+            ResolvedTask task => MessageReferences.TaskChip(reference, task),
+            _ => null,
+        };
+    }
+
+    /// <summary>A Room's chip when its label now differs from the snapshot's.</summary>
+    /// <param name="reference">The entry as it was sent.</param>
+    /// <param name="room">The Room as it is now.</param>
+    /// <returns>The changed chip, or null when the label is the same.</returns>
+    private static ReferenceChip? RoomChip(MessageReference reference, ResolvedRoom room)
+    {
+        string label = ReferenceText.RoomPlainLabelFor(room.Name, room.Team, room.IsTeamRoom);
+        return string.Equals(label, reference.Label, StringComparison.Ordinal)
+            ? null
+            : new ReferenceChip(label, ReferenceText.RoomHref(room.Id), $"Was '{reference.Label}' when sent.", false);
+    }
+
+    /// <summary>A Task's chip when its title now differs from the snapshot's; a status change alone draws nothing.</summary>
+    /// <param name="reference">The entry as it was sent.</param>
+    /// <param name="task">The Task as it is now.</param>
+    /// <returns>The changed chip, or null when the title is the same.</returns>
+    private static ReferenceChip? TaskChip(MessageReference reference, ResolvedTask task)
+    {
+        return string.Equals(task.Title, reference.Title, StringComparison.Ordinal)
+            ? null
+            : new ReferenceChip(task.Title, "/tasks/item/" + Uri.EscapeDataString(task.Id.ToString()), $"Was '{reference.Title}' when sent.", false);
+    }
+
+    /// <summary>The tooltip a gone chip carries, one sentence per kind (spec §8.4).</summary>
+    /// <param name="kind">What the reference named.</param>
+    /// <returns>The sentence from the spec table.</returns>
+    private static string GoneTooltip(ReferenceKind kind) => kind switch
+    {
+        ReferenceKind.Task => "This Task no longer exists.",
+        ReferenceKind.Room => "This Room no longer exists.",
+        ReferenceKind.Team => "This Team no longer exists.",
+        ReferenceKind.LibraryFile => "This file is no longer in the Library.",
+        _ => string.Empty,
+    };
+
+    /// <summary>One chip the row draws.</summary>
+    /// <param name="Text">What the chip shows.</param>
+    /// <param name="Href">Where a changed chip links, or null for a gone one.</param>
+    /// <param name="Tooltip">The tooltip sentence.</param>
+    /// <param name="Gone">Whether the target no longer exists.</param>
+    private sealed record ReferenceChip(string Text, string? Href, string Tooltip, bool Gone);
+}

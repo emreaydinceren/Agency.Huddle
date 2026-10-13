@@ -4,6 +4,7 @@ using System.Text.RegularExpressions;
 using Agency.Huddle.App.Data;
 using Agency.Huddle.App.Elicitation;
 using Agency.Huddle.App.Questions;
+using Agency.Huddle.App.References;
 using Agency.Huddle.App.Teammates;
 using Agency.Huddle.App.Teams;
 using Agency.Huddle.App.Uploads;
@@ -102,6 +103,7 @@ public sealed partial class ChatService
     private readonly ProposalStore proposals;
     private readonly QuestionStore questions;
     private readonly ElicitationStore? elicitations;
+    private readonly IReferenceSnapshotter? references;
     private readonly ILogger<ChatService> logger;
     private readonly ConcurrentDictionary<string, SemaphoreSlim> postLocks = new(StringComparer.Ordinal);
 
@@ -166,6 +168,10 @@ public sealed partial class ChatService
     /// answering one form must not cancel another. Optional and last so every earlier caller compiles
     /// unchanged; <see langword="null"/> drops nothing.
     /// </param>
+    /// <param name="references">
+    /// Builds the reference snapshot every posted Message carries (spec §8.2). Optional so a caller that
+    /// does not care compiles unchanged; <see langword="null"/> records no references.
+    /// </param>
     /// <param name="timeProvider">
     /// The clock stamped onto each posted Message. Optional and last so every earlier caller compiles
     /// unchanged; <see langword="null"/> uses <see cref="TimeProvider.System"/>.
@@ -180,6 +186,7 @@ public sealed partial class ChatService
         QuestionStore questions,
         ILogger<ChatService> logger,
         ElicitationStore? elicitations = null,
+        IReferenceSnapshotter? references = null,
         TimeProvider? timeProvider = null)
     {
         ArgumentNullException.ThrowIfNull(teamDirectory);
@@ -199,6 +206,7 @@ public sealed partial class ChatService
         this.proposals = proposals;
         this.questions = questions;
         this.elicitations = elicitations;
+        this.references = references;
         this.logger = logger;
         this.timeProvider = timeProvider ?? TimeProvider.System;
     }
@@ -273,6 +281,13 @@ public sealed partial class ChatService
         var sender = members.FirstOrDefault(m => m.Id == senderId)
             ?? throw new ChatException(ErrorCodes.NotMember, $"'{senderId}' is not a member of room '{roomId}'.");
 
+        // The reference lookups need no ordering against other posts, so they run before the Room's post lock
+        // is taken (spec §8.2): holding it across them would slow every other writer to the Room. A snapshotter
+        // that fails returns null, so the post goes ahead without references.
+        IReadOnlyList<MessageReference>? snapshot = this.references is null
+            ? null
+            : await this.references.SnapshotAsync(text, ct);
+
         var semaphore = this.postLocks.GetOrAdd(roomId, static _ => new SemaphoreSlim(1, 1));
         await semaphore.WaitAsync(ct);
         try
@@ -296,7 +311,7 @@ public sealed partial class ChatService
             IReadOnlyList<User> mentions = withheldFromAgentId is null
                 ? MentionParser.Parse(text, members, this.aliasSource.Aliases)
                 : [];
-            var message = new ChatMessage(id, this.timeProvider.GetUtcNow(), sender.Id, sender.Name, text);
+            var message = new ChatMessage(id, this.timeProvider.GetUtcNow(), sender.Id, sender.Name, text) { References = snapshot };
             await this.store.AppendAsync(roomId, message, ct);
 
             // Only a Message that reached the Transcript spends Budget, so a failed append above

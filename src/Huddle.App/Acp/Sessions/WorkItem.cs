@@ -52,6 +52,7 @@ internal enum WorkItemKind
 /// </param>
 /// <param name="Command">The command to run, in the Adapter's own casing; set exactly when <paramref name="Kind"/> is <see cref="WorkItemKind.Command"/>.</param>
 /// <param name="Team">The Team the Room is scoped to, or <see langword="null"/> for a root Room; it names the Team in the Room label.</param>
+/// <param name="ReferencedItems">The Referenced items header built from the triggering Message's references (spec section 9.1), or <see langword="null"/> when there is none; it follows the Library documents block.</param>
 internal sealed record WorkItem(
     string RoomId,
     string RoomName,
@@ -65,7 +66,8 @@ internal sealed record WorkItem(
     IReadOnlyList<string>? OwnPostLines = null,
     LibraryDocumentsReport? LibraryDocuments = null,
     AdapterCommandCall? Command = null,
-    string? Team = null);
+    string? Team = null,
+    string? ReferencedItems = null);
 
 /// <summary>One earlier Message the Agent was not Mentioned in, carried as catch-up context only.</summary>
 /// <param name="SenderName">Who sent it.</param>

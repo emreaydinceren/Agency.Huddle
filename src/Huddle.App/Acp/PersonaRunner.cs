@@ -8,6 +8,7 @@ using Agency.Huddle.App.Acp.Sessions;
 using Agency.Huddle.App.FileChanges;
 using Agency.Huddle.App.Library;
 using Agency.Huddle.App.Prompts;
+using Agency.Huddle.App.References;
 using Agency.Huddle.App.Services;
 using Agency.Huddle.App.Teammates;
 using Agency.Huddle.Contracts;
@@ -98,6 +99,7 @@ internal sealed class PersonaRunner : IAsyncDisposable, IRoomSessionOwner
     private readonly OwnPosts? ownPosts;
     private readonly TurnActivity? turnActivity;
     private readonly LibraryDocumentCollector? libraryDocs;
+    private readonly ReferenceExpander? references;
     private readonly bool readsFiles;
 
     // Shows the Human the questions this Persona's agent asks (elicitation bridge); handed to every
@@ -148,7 +150,8 @@ internal sealed class PersonaRunner : IAsyncDisposable, IRoomSessionOwner
         bool readsFiles = true,
         PersonaSpend? spend = null,
         PersonaCommands? commands = null,
-        IElicitationBridge? elicitationBridge = null)
+        IElicitationBridge? elicitationBridge = null,
+        ReferenceExpander? references = null)
     {
         ArgumentNullException.ThrowIfNull(persona);
         ArgumentNullException.ThrowIfNull(options);
@@ -169,6 +172,7 @@ internal sealed class PersonaRunner : IAsyncDisposable, IRoomSessionOwner
         this.ownPosts = ownPosts;
         this.turnActivity = turnActivity;
         this.libraryDocs = libraryDocs;
+        this.references = references;
         this.readsFiles = readsFiles;
         this.spend = spend;
         this.commands = commands;
@@ -458,7 +462,8 @@ internal sealed class PersonaRunner : IAsyncDisposable, IRoomSessionOwner
             this.turnActivity,
             this.libraryDocs,
             this.readsFiles,
-            this.elicitationBridge);
+            this.elicitationBridge,
+            this.references);
 
         // Per-Room mode opens the Room with exactly two Members, one of them the Human - the same
         // predicate as the Greeting's below, without IsEmpty: unlike the Greeting, this open must

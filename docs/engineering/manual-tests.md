@@ -235,6 +235,7 @@ the [Tracker](manual-tests/tracker.md), never here.
 - [Teams](manual-tests/team-pages.md): the sidebar, Members, Files, Tasks and Shared Memory.
 - [Teammate card](manual-tests/teammate-card.md): view, edit, create and delete.
 - [Global Search](manual-tests/global-search.md): the search box, the dropdown and the jump to a Message.
+- [References](manual-tests/at-tagging.md): the `@` picker, what a pick writes, the Room and Team links, Copy link and the Referenced items header.
 - [Teammates page](manual-tests/teammates-library.md): tiles, Teams grouping, the filter and rejected files.
 - [Turn detail and Spend](manual-tests/turn-detail.md): the live preview, Spend and phone width.
 - [Work Mode](manual-tests/work-mode.md): the picker, hidden modes and the permission behaviour.

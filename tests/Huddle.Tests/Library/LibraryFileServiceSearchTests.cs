@@ -5,7 +5,7 @@ using Agency.Huddle.App.Search;
 namespace Agency.Huddle.Tests.Library;
 
 /// <summary>
-/// Tests for <see cref="LibraryFileService.SearchTextAsync"/> (Global Search spec §8.3): the name walk
+/// Tests for <c>SearchTextAsync</c> (Global Search spec §8.3): the name walk
 /// <see cref="LibraryFileService.FindAsync"/> uses, plus the content test for a file whose name did not match.
 /// </summary>
 public sealed class LibraryFileServiceSearchTests

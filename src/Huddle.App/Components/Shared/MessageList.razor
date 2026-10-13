@@ -1,4 +1,5 @@
 @using Agency.Huddle.App.Avatars
+@using Agency.Huddle.App.Components.References
 @using Agency.Huddle.App.Library
 @using Microsoft.Extensions.Options
 @inject IJSRuntime JS
@@ -53,6 +54,7 @@
                stays in the tooltip. *@
             <div class="@(continues ? "message-row human grouped" : "message-row human")" title="@time" data-message-id="@message.Id" tabindex="-1">
                 <div class="message-bubble message-body">@((MarkupString)MarkdownRenderer.ToHtml(message.Text, this.TaskResolver, this.ChatLibraryResolver))</div>
+                <MessageReferences Message="@message" />
             </div>
             continue;
         }
@@ -74,6 +76,7 @@
                     </div>
                 }
                 <div class="message-body message-card">@((MarkupString)MarkdownRenderer.ToHtml(message.Text, this.TaskResolver, this.ChatLibraryResolver))</div>
+                <MessageReferences Message="@message" />
             </div>
         </div>
     }

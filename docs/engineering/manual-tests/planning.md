@@ -30,6 +30,7 @@ is done. Within an area, tests run top to bottom — free tests first, paid test
 | 8 | [Model and Effort pickers, catalog probe and runner restart](model-effort.md) | 28 | 1 | 3.8h |
 | 9 | [Creating Rooms, inviting Agents, Room naming](invite-rooms.md) | 38 | 4 | 4.2h |
 | — | [Global Search: the box, the dropdown and the jump](global-search.md) | 10 | — | 2.3h |
+| — | [References in a Message: the @ picker, Copy link and the Referenced items header](at-tagging.md) | 12 | 0 | 2.1h |
 | 10 | [Settings: the Prompts, editing, per-field reset and Save](prompts-settings.md) | 41 | 3 | 4.7h |
 | 11 | [Appearance tab and Themes](appearance-theme.md) | 21 | — | 2.4h |
 | 12 | [The named pipe: external agents and the wire](pipe-external.md) | 33 | — | 3.7h |

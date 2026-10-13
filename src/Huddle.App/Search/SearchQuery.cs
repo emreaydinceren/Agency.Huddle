@@ -6,7 +6,8 @@ namespace Agency.Huddle.App.Search;
 /// <param name="OpenTeam">The Team of the focused Tab, or null (spec §7.4).</param>
 /// <param name="Scope">Active or Archived.</param>
 /// <param name="MaxHits">The per-group cap for this view.</param>
-public sealed record SearchQuery(string Text, SearchFilter Filter, string? OpenTeam, SearchScope Scope, int MaxHits);
+/// <param name="Purpose">Why the search runs; <see cref="SearchPurpose.Box"/> unless the Composer's picker asked (D-4).</param>
+public sealed record SearchQuery(string Text, SearchFilter Filter, string? OpenTeam, SearchScope Scope, int MaxHits, SearchPurpose Purpose = SearchPurpose.Box);
 
 /// <summary>What the box text means: its filter, its phrase, and whether it searches (spec §7.2). Built by the parser.</summary>
 /// <param name="Filter">The filter the prefix sets, or the chip's filter when there is none.</param>

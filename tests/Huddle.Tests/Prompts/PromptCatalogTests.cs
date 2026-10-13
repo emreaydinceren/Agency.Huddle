@@ -37,12 +37,12 @@ public sealed partial class PromptCatalogTests
     /// blocks design §6.5 (count now 71), plus <c>tool.fileRequest.description</c>, <c>tool.confirmRequest.description</c> and
     /// <c>tool.triageRequest.description</c> added for the tool descriptions batch 2 (count now 84), plus
     /// <c>tool.proposeSprint.description</c>, <c>tool.markRetroRow.description</c> and <c>tool.proposeRetroChanges.description</c>
-    /// added for the tool descriptions batch 3 (count now 87).
+    /// added for the tool descriptions batch 3 (count now 87), plus the eight Referenced items prompts (count now 95).
     /// </summary>
     [Fact]
     public void All_HasExpectedPromptCount()
     {
-        Assert.Equal(87, PromptCatalog.All.Count);
+        Assert.Equal(95, PromptCatalog.All.Count);
     }
 
     /// <summary>Task 58 (PR-4, PR-5): the process blocks and the onboarding turn take and require their one placeholder and carry no tool prefix.</summary>
@@ -815,6 +815,55 @@ public sealed partial class PromptCatalogTests
         Assert.DoesNotContain("update_task", prompt.Default, StringComparison.Ordinal);
         Assert.DoesNotContain("close_task", prompt.Default, StringComparison.Ordinal);
         Assert.DoesNotContain("reopen_task", prompt.Default, StringComparison.Ordinal);
+    }
+
+    /// <summary>AT-T18: each Referenced items prompt takes and requires the placeholders spec §9.2 gives it, and carries no tool prefix.</summary>
+    [Theory]
+    [InlineData("turn.referencesHeader", "")]
+    [InlineData("turn.referenceTask", "id,title,status,assignee,team")]
+    [InlineData("turn.referenceRoom", "name,id,scope,members")]
+    [InlineData("turn.referenceTeam", "name,type,members,teamRoom")]
+    [InlineData("turn.referenceGone", "kind,key")]
+    [InlineData("turn.referencesMore", "count")]
+    [InlineData("turn.referencesHint", "listAgents")]
+    [InlineData("turn.referencesTaskHint", "getTask")]
+    public void ReferencePrompts_Exist_WithRequiredPlaceholders(string key, string names)
+    {
+        var prompt = PromptCatalog.Get(key);
+        string[] expected = string.IsNullOrEmpty(names) ? [] : names.Split(',').Select(name => string.Concat("{{", name, "}}")).ToArray();
+
+        Assert.Equal(expected, prompt.Placeholders);
+        Assert.Equal(expected, prompt.RequiredPlaceholders);
+    }
+
+    /// <summary>AT-T18: the hint is the verbatim spec §9.2 text, and it names the unprefixed placeholder, not a tool prefix.</summary>
+    [Fact]
+    public void ReferencesHint_DefaultIsVerbatim()
+    {
+        var prompt = PromptCatalog.Get("turn.referencesHint");
+
+        Assert.Equal(
+            "To learn more, list Teammates and their Teams with {{listAgents}}. You cannot read the Messages of a Room you are not a Member of.",
+            prompt.Default.TrimEnd('\r', '\n'));
+    }
+
+    /// <summary>AT-T18: every Referenced items prompt is Live, so an edit takes effect on the next Turn.</summary>
+    [Fact]
+    public void ReferencePrompts_AreLive()
+    {
+        string[] keys =
+        [
+            "turn.referencesHeader",
+            "turn.referenceTask",
+            "turn.referenceRoom",
+            "turn.referenceTeam",
+            "turn.referenceGone",
+            "turn.referencesMore",
+            "turn.referencesHint",
+            "turn.referencesTaskHint",
+        ];
+
+        Assert.All(keys, key => Assert.Equal(PromptTiming.Live, PromptCatalog.Get(key).Timing));
     }
 
     [GeneratedRegex(@"\{\{[a-zA-Z]+\}\}")]

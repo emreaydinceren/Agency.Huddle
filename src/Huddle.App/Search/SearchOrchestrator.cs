@@ -42,8 +42,9 @@ internal sealed class SearchOrchestrator(
     /// </summary>
     /// <param name="parse">The box text as the parser read it.</param>
     /// <param name="openTeam">The Team of the focused Tab, or null.</param>
+    /// <param name="purpose">Why the search runs: the box uses <see cref="SearchPurpose.Box"/>; the Composer's picker uses <see cref="SearchPurpose.Reference"/> (D-4).</param>
     /// <returns>A task that ends with the search.</returns>
-    public Task SearchAsync(SearchParse parse, string? openTeam)
+    public Task SearchAsync(SearchParse parse, string? openTeam, SearchPurpose purpose = SearchPurpose.Box)
     {
         ArgumentNullException.ThrowIfNull(parse);
         CancellationToken ct;
@@ -66,7 +67,7 @@ internal sealed class SearchOrchestrator(
             ct = this.current.Token;
         }
 
-        return this.RunAsync(parse, openTeam, id, ct);
+        return this.RunAsync(parse, openTeam, id, purpose, ct);
     }
 
     /// <summary>Cancels the search in flight; its late results are dropped.</summary>
@@ -105,7 +106,7 @@ internal sealed class SearchOrchestrator(
         this.current = null;
     }
 
-    private async Task RunAsync(SearchParse parse, string? openTeam, long id, CancellationToken ct)
+    private async Task RunAsync(SearchParse parse, string? openTeam, long id, SearchPurpose purpose, CancellationToken ct)
     {
         int maxHits = parse.Filter == SearchFilter.All ? SearchLimits.GroupCap : SearchLimits.SingleFilterCap;
         ISearchProvider[] selected = [.. this.registered.Where(provider => parse.Filter == SearchFilter.All || provider.Group == parse.Filter)];
@@ -114,7 +115,10 @@ internal sealed class SearchOrchestrator(
             List<Task> pass = [];
             foreach (ISearchProvider provider in selected)
             {
-                SearchQuery query = new(parse.Phrase, parse.Filter, openTeam, scope, maxHits);
+                // The picker puts the Room's Members first and cuts to five itself (spec §5.3), so its Teammates
+                // group is fetched at the single-filter cap: a Member the ranker listed late is not cut away here.
+                int cap = purpose == SearchPurpose.Reference && provider.Group == SearchFilter.Teammates ? SearchLimits.SingleFilterCap : maxHits;
+                SearchQuery query = new(parse.Phrase, parse.Filter, openTeam, scope, cap, purpose);
                 pass.Add(this.RunProviderAsync(provider, query, id, scope == SearchScope.Active && provider.IsExpensive, ct));
             }
 

@@ -1,12 +1,14 @@
 using Microsoft.Extensions.Options;
 using Agency.Huddle.App.Acp;
 using Agency.Huddle.App.Tasks;
+using Agency.Huddle.App.Tasks.Views;
 
 namespace Agency.Huddle.App.Search;
 
 /// <summary>
 /// Searches the Tasks in memory (spec §8.4). The Active pass holds the open Tasks and the Archived
-/// pass holds the Closed ones. An empty phrase finds nothing, and a disabled feature finds nothing.
+/// pass holds the Closed ones. An empty phrase finds nothing under the Box purpose; under the Reference purpose
+/// it browses the most recently updated Active Tasks, as the <c>#</c> picker always did (spec §5.2).
 /// </summary>
 internal sealed class TaskSearchProvider(TaskStore store, PersonaStore personas, IOptions<TeamOptions> options) : ISearchProvider
 {
@@ -18,7 +20,8 @@ internal sealed class TaskSearchProvider(TaskStore store, PersonaStore personas,
 
     /// <summary>
     /// Matches each Task by its title, then its id, and then, as a ContentMatch, by its assignee's Name.
-    /// An exact id gets no special jump behaviour (D-14).
+    /// An exact id gets no special jump behaviour (D-14). A Reference browse with an empty phrase is the Active
+    /// Tasks in <see cref="TaskQuery.Suggest"/> order, eight at most.
     /// </summary>
     /// <param name="query">The search as the orchestrator received it.</param>
     /// <param name="ct">Checked once before the Tasks are read.</param>
@@ -26,7 +29,23 @@ internal sealed class TaskSearchProvider(TaskStore store, PersonaStore personas,
     public Task<SearchResult> SearchAsync(SearchQuery query, CancellationToken ct)
     {
         ct.ThrowIfCancellationRequested();
-        if (!options.Value.Tasks.Enabled || query.Text.Length == 0)
+        if (!options.Value.Tasks.Enabled)
+        {
+            return Task.FromResult(SearchResult.Empty);
+        }
+
+        if (query.Purpose == SearchPurpose.Reference && query.Text.Length == 0)
+        {
+            if (query.Scope == SearchScope.Archived)
+            {
+                return Task.FromResult(SearchResult.Empty);
+            }
+
+            List<SearchHit> browse = [.. TaskQuery.Suggest(store.All, string.Empty, 8).Select<TaskItem, SearchHit>(task => Hit(task, MatchTier.ExactName))];
+            return Task.FromResult(new SearchResult(browse, false));
+        }
+
+        if (query.Text.Length == 0)
         {
             return Task.FromResult(SearchResult.Empty);
         }
@@ -48,13 +67,28 @@ internal sealed class TaskSearchProvider(TaskStore store, PersonaStore personas,
 
             if (tier is { } matched)
             {
-                hits.Add(new TaskHit(task.Id, task.Title, task.Status, task.Assignee, task.Location.Team, task.Location.Closed, matched, TitleOf(task.Assignee)));
+                hits.Add(Hit(task, matched));
             }
         }
 
         return Task.FromResult(new SearchResult(hits, false));
+    }
 
-        string? TitleOf(string? assignee) => assignee is null
+    /// <summary>Maps one Task to its hit, with the assignee's Persona title when one is found.</summary>
+    /// <param name="task">The Task.</param>
+    /// <param name="tier">How well it matched.</param>
+    /// <returns>The Task hit.</returns>
+    private TaskHit Hit(TaskItem task, MatchTier tier)
+    {
+        return new TaskHit(task.Id, task.Title, task.Status, task.Assignee, task.Location.Team, task.Location.Closed, tier, TitleOf(task.Assignee));
+    }
+
+    /// <summary>The assignee Persona's title, or null when unassigned or the Persona is gone.</summary>
+    /// <param name="assignee">The assignee's Name, or null.</param>
+    /// <returns>The Persona's title, or null.</returns>
+    private string? TitleOf(string? assignee)
+    {
+        return assignee is null
             ? null
             : personas.Entries.FirstOrDefault(entry => string.Equals(entry.Name, assignee, StringComparison.OrdinalIgnoreCase))?.Title;
     }

@@ -16,6 +16,8 @@
 @inject NavigationManager Navigation
 @inject AvatarStore Avatars
 @inject IServiceProvider Services
+@inject ISnackbar Snackbar
+@inject IJSRuntime JS
 
 @if (this.room is null)
 {
@@ -45,6 +47,10 @@ else
                                 </MudTooltip>
                             }
                         }
+                        <MudTooltip Text="Copy link">
+                            <MudIconButton Icon="@Icons.Material.Filled.Link" Size="Size.Small"
+                                           aria-label="Copy link to this Room" OnClick="this.CopyLinkAsync" />
+                        </MudTooltip>
                     </MudStack>
                 </MudStack>
                 <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2" Class="room-members">
@@ -245,6 +251,29 @@ else
         }
 
         return Task.CompletedTask;
+    }
+
+    /// <summary>
+    /// Copy link (spec §6.1, D-30): puts this Room's reference on the clipboard as plain text. The clipboard call is
+    /// made directly from the click, with no other <c>await</c> before it, so it stays inside the click's user activation.
+    /// </summary>
+    private async Task CopyLinkAsync()
+    {
+        Room? current = this.room;
+        if (current is null)
+        {
+            return;
+        }
+
+        bool copied = await this.JS.InvokeAsync<bool>("huddleClipboard.copy", Agency.Huddle.App.References.RoomLinkText.For(current));
+        if (copied)
+        {
+            this.Snackbar.Add($"Copied link to {current.Name}", Severity.Success, configure: null, key: "copy");
+        }
+        else
+        {
+            this.Snackbar.Add("Couldn't copy the link.", Severity.Warning, configure: null, key: "copy");
+        }
     }
 
     private string? loadedRoomId;

@@ -4,6 +4,7 @@ using Agency.Huddle.Acp.Abstractions;
 using Agency.Huddle.App.FileChanges;
 using Agency.Huddle.App.Library;
 using Agency.Huddle.App.Prompts;
+using Agency.Huddle.App.References;
 using Agency.Huddle.App.Services;
 using Agency.Huddle.Contracts;
 
@@ -83,6 +84,7 @@ internal sealed class RoomSession : IAsyncDisposable, IElicitationScope
     // means the Library is off (PersonaSupervisor is the only place that gate is applied) or this
     // caller predates it.
     private readonly LibraryDocumentCollector? libraryDocs;
+    private readonly ReferenceExpander? references;
     private readonly bool readsFiles;
 
     // Shows the Human an agent's elicitation request (E-3). Null means there is no UI to show it in:
@@ -168,6 +170,7 @@ internal sealed class RoomSession : IAsyncDisposable, IElicitationScope
     /// <param name="libraryDocs">Collects the Library documents mentioned in a Turn (Spec §6.14). <see langword="null"/> when the Library is off, like every caller that predates it.</param>
     /// <param name="readsFiles">Whether the resolved Adapter Profile can read files (FC §6.11's Library counterpart): <see langword="false"/> inlines a kept document's own text instead of just its path.</param>
     /// <param name="elicitationBridge">Shows the Human the questions the agent asks through this session (E-3). <see langword="null"/> answers every one as cancelled, like every caller that predates it.</param>
+    /// <param name="references">Builds the Referenced items header for a Message Turn (spec section 9.1). <see langword="null"/> adds no header, like every caller that predates it.</param>
     public RoomSession(
         string? roomId,
         Func<CancellationToken, Task<IAgentSession>> open,
@@ -188,7 +191,8 @@ internal sealed class RoomSession : IAsyncDisposable, IElicitationScope
         TurnActivity? turnActivity = null,
         LibraryDocumentCollector? libraryDocs = null,
         bool readsFiles = true,
-        IElicitationBridge? elicitationBridge = null)
+        IElicitationBridge? elicitationBridge = null,
+        ReferenceExpander? references = null)
     {
         ArgumentNullException.ThrowIfNull(open);
         ArgumentNullException.ThrowIfNull(owner);
@@ -217,6 +221,7 @@ internal sealed class RoomSession : IAsyncDisposable, IElicitationScope
         this.agentId = agentId;
         this.turnActivity = turnActivity;
         this.libraryDocs = libraryDocs;
+        this.references = references;
         this.readsFiles = readsFiles;
         this.elicitationBridge = elicitationBridge;
 
@@ -956,6 +961,26 @@ internal sealed class RoomSession : IAsyncDisposable, IElicitationScope
             {
                 this.logger.LogWarning(
                     ex, "Persona '{PersonaName}' failed to collect Library documents for room {RoomId}.", this.owner.PersonaName, item.RoomId);
+            }
+        }
+
+        // Spec section 9.1: the Referenced items header describes only the references in the triggering
+        // Message's own text, never the catch-up or Transcript, looked up now. Only an ordinary Message
+        // Turn gets one: a Command is the bare command and a Greeting has no Message (traps.md, a
+        // Command Turn must not drain anything it does not send). Expanded before the locked
+        // check-and-publish, like the Library collect, so a slow lookup is not counted as Adapter
+        // silence. A failed lookup must not kill the consumer loop, which nothing else drains.
+        if (this.references is not null && item.Kind == WorkItemKind.Message)
+        {
+            try
+            {
+                string? header = await this.references.ExpandAsync(item.Text, this.host?.Profile.UsesToolNamePrefix ?? true, ct);
+                item = item with { ReferencedItems = header };
+            }
+            catch (Exception ex) when (ex is not OperationCanceledException)
+            {
+                this.logger.LogWarning(
+                    ex, "Persona '{PersonaName}' failed to expand references for room {RoomId}.", this.owner.PersonaName, item.RoomId);
             }
         }
 
@@ -1786,6 +1811,14 @@ internal sealed class RoomSession : IAsyncDisposable, IElicitationScope
         var builder = new StringBuilder();
         RoomSession.AppendFileChangesBlock(builder, item.FileChanges, prompts);
         RoomSession.AppendLibraryDocumentsBlock(builder, item.LibraryDocuments, prompts);
+
+        // Spec section 9.3: after the Library documents block and before any catch-up or the Message.
+        // Absent means unchanged, so every prompt without a header stays byte-identical.
+        if (item.ReferencedItems is { } referencedItems)
+        {
+            builder.Append(referencedItems);
+            builder.Append("\n\n");
+        }
 
         // RS §6.5: the Transcript block replaces the catch-up buffer on this Turn only, and only
         // when it actually holds Messages — an empty Transcript (the read was refused, timed out, or

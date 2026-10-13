@@ -74,6 +74,8 @@ Two of those steps exist for reasons specific to this repo:
 - **Install Node.js.** `AgentProcessLauncherTests` (marked `[Trait("Category", "Process")]`)
   launches a real `node -e` subprocess to prove the stdio pipe wiring works. The SDK image
   ships no Node, and without this step those six tests fail with `Failed to start 'node'`.
+  `ComposerScriptTests` (6 test methods; the picker harness `tests/Huddle.Tests/Ui/References/composer-picker.harness.js`
+  loads the real `app.js` into a `vm` context under `node`) need it too, so 12 test methods in all.
   Ubuntu's `nodejs` package (v18) is enough for `node -e`; the ACP adapter wants something
   newer, but it only runs under `TEAM_E2E=1`, which CI pins off.
 - **Build is also the style gate.** `Directory.Build.props` sets `TreatWarningsAsErrors`,
@@ -249,7 +251,7 @@ Check these before reading the code.
 | Symptom | Cause | Fix |
 | --- | --- | --- |
 | `Requested SDK version: 10.0.400 ... Install the [10.0.400] .NET SDK` at the restore step | `global.json` moved ahead of the image pinned in the workflows, so the container's SDK no longer satisfies `rollForward: latestPatch` | Bump `image:` in **both** workflows to a tag whose SDK matches. Do not loosen `global.json` to chase the image, and do not go back to the floating `:10.0` tag |
-| Six `AgentProcessLauncherTests` fail with `Failed to start 'node'` | The Install Node.js step was removed, reordered after the test step, or its `apt-get` failed | Restore the step; confirm `node --version` printed in the log |
+| Six `AgentProcessLauncherTests` and the `ComposerScriptTests` fail with `Failed to start 'node'` | The Install Node.js step was removed, reordered after the test step, or its `apt-get` failed | Restore the step; confirm `node --version` printed in the log |
 | `Zero tests ran`, job exits 5, and the step reads as a no-op rather than a failure | The trailing `--` was dropped from `dotnet test` | Put it back. This SDK's Microsoft Testing Platform CLI requires it; it is not a typo |
 | `The following test projects are using VSTest test runner` | Restore assets are stale or missing, so the `xunit.v3` props never imported and the test projects evaluated as `Library` instead of `Exe`. The message names the wrong cause. | Delete `bin/` and `obj/`, then restore again in the same container as the build |
 | `secret-scan` fails on `internal-mdns-host` | A real `*.local` hostname reached a tracked file — most often a doc or a workflow comment | Replace it with a `*.example` placeholder, or allowlist the path in `.gitleaks.toml` |

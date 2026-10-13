@@ -142,7 +142,27 @@ the per-area tables below.
 | [Turn detail and Spend](turn-detail.md) | [below](#turn-detail) |
 | [Global Search: the box, the dropdown and the jump](global-search.md) | [below](#global-search) |
 | [Needs You: the sidebar card of Rooms waiting on the Human](needs-you.md) | [below](#needs-you) |
+| [References in a Message: the @ picker, Copy link and the Referenced items header](at-tagging.md) | [below](#at-tagging) |
 ---
+
+## at-tagging
+
+References in a Message: the @ picker, Copy link and the Referenced items header — [area file](at-tagging.md)
+
+| Test | 💰 | Status | Issue | Notes |
+| --- | --- | --- | --- | --- |
+| [ATTAG-01](at-tagging.md#attag-01--the-picker-opens-on-an-at-sign-at-a-word-start-at-m1) |  | Active |  |  |
+| [ATTAG-02](at-tagging.md#attag-02--picking-a-teammate-writes-its-name-and-wakes-only-that-teammate-at-m2) |  | Active |  |  |
+| [ATTAG-03](at-tagging.md#attag-03--a-task-pick-writes-the-plain-id-and-the-hash-key-gives-the-same-text-at-m3) |  | Active |  |  |
+| [ATTAG-04](at-tagging.md#attag-04--room-and-team-picks-write-links-and-labels-tell-same-named-rooms-apart-at-m4) |  | Active |  |  |
+| [ATTAG-05](at-tagging.md#attag-05--a-library-pick-writes-a-code-span-path-and-the-upload-line-matches-at-m5) |  | Active |  |  |
+| [ATTAG-06](at-tagging.md#attag-06--renames-and-deletes-show-the-chips-and-an-old-transcript-opens-unchanged-at-m6) |  | Active |  |  |
+| [ATTAG-07](at-tagging.md#attag-07--the-agent-prompt-carries-the-referenced-items-header-at-m7) |  | Active |  |  |
+| [ATTAG-08](at-tagging.md#attag-08--keyboard-alone-picks-sends-nothing-while-open-and-announces-the-count-at-m8) |  | Active |  |  |
+| [ATTAG-09](at-tagging.md#attag-09--the-picker-height-at-90-percent-zoom-and-on-a-narrow-window-at-m9) |  | Active |  |  |
+| [ATTAG-10](at-tagging.md#attag-10--undo-after-a-pick-restores-the-typed-token-at-m10) |  | Active |  |  |
+| [ATTAG-11](at-tagging.md#attag-11--the-picker-lists-rooms-and-library-files-by-name-only-at-m11) |  | Active |  |  |
+| [ATTAG-12](at-tagging.md#attag-12--copy-link-from-the-header-the-sidebar-and-a-team-room-at-m12) |  | Active |  |  |
 
 ## global-search
 

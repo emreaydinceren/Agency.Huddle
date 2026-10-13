@@ -4,9 +4,9 @@ using Agency.Huddle.Contracts;
 namespace Agency.Huddle.App.Search;
 
 /// <summary>
-/// Searches the Rooms (spec §8.5): the Room name, and the text of each Message in its Transcript.
-/// Reads one Transcript at a time, and gives each Room at most one hit, carrying its match count and
-/// its newest matching Message.
+/// Searches the Rooms (spec §8.5). Under the Box purpose: the Room name, and the text of each Message in its
+/// Transcript, one hit per Room with its match count and newest matching Message. Under the Reference purpose
+/// (spec §5.2, D-29): the Rooms themselves, matched on name then Team name, with no Transcript read.
 /// </summary>
 /// <param name="directory">The Rooms, and each one's Archived flag.</param>
 /// <param name="chats">Reads each Room's Transcript.</param>
@@ -20,16 +20,20 @@ internal sealed class RoomSearchProvider(ITeamDirectory directory, IChatStore ch
     public bool IsExpensive => true;
 
     /// <summary>
-    /// Searches the Rooms of the pass that <paramref name="query"/> asks for. A blank phrase gives no hits,
-    /// because Rooms have no browse. A Room whose Transcript cannot be read is skipped; when every Room in
-    /// the pass fails, the search throws so the group is marked Failed.
+    /// Searches the Rooms of the pass that <paramref name="query"/> asks for. Under the Box purpose a blank phrase gives
+    /// no hits and an unreadable Transcript is skipped; under the Reference purpose no Transcript is read at all.
     /// </summary>
     /// <param name="query">The search as the orchestrator received it.</param>
     /// <param name="ct">Cancels the search, checked between Rooms.</param>
     /// <returns>One hit per matching Room, not truncated.</returns>
-    /// <exception cref="InvalidOperationException">Every Room in the pass had an unreadable Transcript.</exception>
+    /// <exception cref="InvalidOperationException">Every Room in the pass had an unreadable Transcript (Box purpose only).</exception>
     public async Task<SearchResult> SearchAsync(SearchQuery query, CancellationToken ct)
     {
+        if (query.Purpose == SearchPurpose.Reference)
+        {
+            return await this.NamesOnlyAsync(query, ct);
+        }
+
         if (string.IsNullOrWhiteSpace(query.Text))
         {
             return SearchResult.Empty;
@@ -64,6 +68,36 @@ internal sealed class RoomSearchProvider(ITeamDirectory directory, IChatStore ch
         if (inPass.Count > 0 && failures == inPass.Count)
         {
             throw new InvalidOperationException("No Transcript could be read.");
+        }
+
+        return new SearchResult(hits, false);
+    }
+
+    /// <summary>
+    /// The Reference purpose (D-29): every Room of the pass whose name, or whose Team's name, matches the phrase, with
+    /// no match count, snippet or Message. An empty phrase lists every Room of the pass, newest first.
+    /// </summary>
+    /// <param name="query">The picker's query.</param>
+    /// <param name="ct">Checked between Rooms.</param>
+    /// <returns>One row per Room, in the provider's order.</returns>
+    private async Task<SearchResult> NamesOnlyAsync(SearchQuery query, CancellationToken ct)
+    {
+        IReadOnlyList<Room> rooms = await directory.GetRoomsAsync(ct);
+        bool archived = query.Scope == SearchScope.Archived;
+        List<SearchHit> hits = [];
+        foreach (Room room in rooms.Where(room => room.Archived == archived).OrderByDescending(room => room.Created))
+        {
+            ct.ThrowIfCancellationRequested();
+            MatchTier? tier = query.Text.Length == 0 ? MatchTier.ExactName : SearchMatch.Tier(room.Name, query.Text);
+            if (tier is null && room.Team is { } team && team.Contains(query.Text, StringComparison.OrdinalIgnoreCase))
+            {
+                tier = MatchTier.NameContains;
+            }
+
+            if (tier is { } matched)
+            {
+                hits.Add(new RoomHit(room.Id, room.Name, 0, null, null, null, null, room.Archived, matched, room.Team, room.IsTeamRoom));
+            }
         }
 
         return new SearchResult(hits, false);
@@ -110,6 +144,8 @@ internal sealed class RoomSearchProvider(ITeamDirectory directory, IChatStore ch
             newest is null ? null : SearchSnippet.Around(newest.Text, phrase, SearchLimits.SnippetWidth),
             newest?.Timestamp,
             room.Archived,
-            nameTier ?? MatchTier.ContentMatch);
+            nameTier ?? MatchTier.ContentMatch,
+            room.Team,
+            room.IsTeamRoom);
     }
 }

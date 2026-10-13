@@ -94,7 +94,9 @@ public sealed class AppJsSourceTests
         Assert.True(blockStart >= 0, "Expected a /* Global search */ block in app.css.");
         int flashStart = css.IndexOf("/* The Room jump", blockStart, StringComparison.Ordinal);
         Assert.True(flashStart >= 0, "Expected the /* The Room jump */ flash rules inside the Global search block.");
-        string block = css[flashStart..];
+        // The flash rules end where the /* References */ block begins (its picker legitimately uses vh; AT-T13 pins it).
+        int referencesStart = css.IndexOf("/* References */", flashStart, StringComparison.Ordinal);
+        string block = referencesStart >= 0 ? css[flashStart..referencesStart] : css[flashStart..];
 
         // contains-ok: source-fact test, no stylesheet runner - app.css's own text is what's pinned.
         Assert.Contains(".search-hit-flash", block, StringComparison.Ordinal);
@@ -258,7 +260,7 @@ public sealed class AppJsSourceTests
         Assert.Contains("isComposing", composerBlock, StringComparison.Ordinal);
     }
 
-    /// <summary>Escape closes the picker by calling <c>TaskQueryAsync</c> with <see langword="null"/> (Spec §13.13.4: "Escape: Close the picker").</summary>
+    /// <summary>Escape closes the picker by calling <c>ReferenceQueryAsync</c> with a <see langword="null"/> token (spec §5.4: "Escape: Close the picker").</summary>
     [Fact]
     public void AppJs_TeamComposerKeydownHandler_EscapeClosesThePickerWithANullQuery()
     {
@@ -267,8 +269,8 @@ public sealed class AppJsSourceTests
         int escapeIndex = composerBlock.IndexOf("\"Escape\"", StringComparison.Ordinal);
         Assert.True(escapeIndex >= 0, "Expected an Escape case in teamComposer's keydown handler.");
 
-        int nullQueryCallIndex = composerBlock.IndexOf("TaskQueryAsync\", null", escapeIndex, StringComparison.Ordinal);
-        Assert.True(nullQueryCallIndex > escapeIndex, "Expected Escape's branch to call TaskQueryAsync with null.");
+        int nullQueryCallIndex = composerBlock.IndexOf("ReferenceQueryAsync\", null", escapeIndex, StringComparison.Ordinal);
+        Assert.True(nullQueryCallIndex > escapeIndex, "Expected Escape's branch to call ReferenceQueryAsync with null.");
     }
 
     /// <summary>The 150 ms blur-close callback is wrapped in try/catch, so a disposed component or <c>DotNetObjectReference</c> can't throw out of a timer callback (corrections-B6 "D15.3" item 3).</summary>
@@ -288,14 +290,106 @@ public sealed class AppJsSourceTests
         Assert.True(delayIndex > catchIndex, "Expected the 150 ms delay to close the setTimeout call after the try/catch.");
     }
 
-    /// <summary><c>teamComposer.insertTask</c> exists, for a picked or clicked Task id to be inserted into the textarea (Spec §13.13.4).</summary>
+    /// <summary>The <c>@</c> token rule is <c>MentionParser</c>'s: at the start or after a character that is not a letter, digit, <c>_</c> or <c>@</c>, then up to 64 characters with no newline and no <c>@</c> (spec §5.1).</summary>
     [Fact]
-    public void AppJs_DefinesInsertTask()
+    public void AtToken_UsesMentionParsersBlockedCharacters()
     {
         string composerBlock = AppJsSourceTests.TeamComposerBlock();
 
         // contains-ok: source-fact test, no JS runner
-        Assert.Contains("insertTask", composerBlock, StringComparison.Ordinal);
+        Assert.Contains("/(?:^|[^A-Za-z0-9_@])@([^\\n@]{0,64})$/", composerBlock, StringComparison.Ordinal);
+    }
+
+    /// <summary>The <c>#</c> token regex is today's, unchanged (spec §5.1).</summary>
+    [Fact]
+    public void HashToken_RegexUnchanged()
+    {
+        string composerBlock = AppJsSourceTests.TeamComposerBlock();
+
+        // contains-ok: source-fact test, no JS runner
+        Assert.Contains("/(?:^|\\s)#([A-Za-z0-9-]{0,40})$/", composerBlock, StringComparison.Ordinal);
+    }
+
+    /// <summary>An insert is one undoable edit: <c>execCommand("insertText")</c>, with <c>setRangeText</c> and an <c>input</c> event when it returns false (spec §6 undo, D-24).</summary>
+    [Fact]
+    public void Insert_UsesExecCommandWithSetRangeTextFallback()
+    {
+        string composerBlock = AppJsSourceTests.TeamComposerBlock();
+
+        int insertIndex = composerBlock.IndexOf("insertReference(el, text)", StringComparison.Ordinal);
+        Assert.True(insertIndex >= 0, "Expected teamComposer.insertReference.");
+        int execIndex = composerBlock.IndexOf("document.execCommand(\"insertText\", false, text + \" \")", insertIndex, StringComparison.Ordinal);
+        int fallbackIndex = composerBlock.IndexOf("el.setRangeText(text + \" \", tokenStart, caret, \"end\")", insertIndex, StringComparison.Ordinal);
+        int inputIndex = composerBlock.IndexOf("new Event(\"input\"", fallbackIndex, StringComparison.Ordinal);
+        Assert.True(execIndex > insertIndex, "Expected execCommand insertText.");
+        Assert.True(fallbackIndex > execIndex, "Expected the setRangeText fallback after execCommand.");
+        Assert.True(inputIndex > fallbackIndex, "Expected an input event after the fallback.");
+    }
+
+    /// <summary>A pick suppresses the picker for the inserted text until the caret leaves it, and the suppression is set before the insert fires <c>input</c> (spec §5.1).</summary>
+    [Fact]
+    public void Insert_SuppressesUntilCaretLeaves()
+    {
+        string composerBlock = AppJsSourceTests.TeamComposerBlock();
+
+        int fromIndex = composerBlock.IndexOf("suppressFrom = tokenStart", StringComparison.Ordinal);
+        int execIndex = composerBlock.IndexOf("document.execCommand(\"insertText\"", StringComparison.Ordinal);
+        int refreshIndex = composerBlock.IndexOf("async refresh(el)", StringComparison.Ordinal);
+        int checkIndex = composerBlock.IndexOf("suppressFrom", refreshIndex, StringComparison.Ordinal);
+        Assert.True(fromIndex >= 0, "Expected suppressFrom to be recorded.");
+        Assert.DoesNotContain("suppressTo", composerBlock, StringComparison.Ordinal);
+        Assert.True(fromIndex < execIndex, "Expected the suppression to be set before execCommand fires input.");
+        Assert.True(checkIndex > refreshIndex, "Expected refresh (run by the input handler) to read the suppression.");
+    }
+
+    /// <summary>The suppression holds only while the SAME token continues: a caret range alone must not keep it, or a new token typed over replaced text never reopens the picker (QA defect D1).</summary>
+    [Fact]
+    public void InputHandler_SuppressionEndsWhenTheTokenChanges()
+    {
+        string composerBlock = AppJsSourceTests.TeamComposerBlock();
+
+        int inputHandlerIndex = composerBlock.IndexOf("async refresh(el)", StringComparison.Ordinal);
+        int sameTokenIndex = composerBlock.IndexOf("if (sameToken)", inputHandlerIndex, StringComparison.Ordinal);
+        int clearIndex = composerBlock.IndexOf("picker.suppressFrom = null", inputHandlerIndex, StringComparison.Ordinal);
+        Assert.DoesNotContain("inRange", composerBlock, StringComparison.Ordinal);
+        Assert.True(sameTokenIndex > inputHandlerIndex, "Expected the suppression to be kept only when the token is the same one.");
+        Assert.True(clearIndex > sameTokenIndex, "Expected any other token to clear the suppression.");
+    }
+
+    /// <summary>Sending empties the box without an <c>input</c> event, so the send path clears the suppression itself (QA defect D1).</summary>
+    [Fact]
+    public void Send_ClearsTheSuppression()
+    {
+        string composerBlock = AppJsSourceTests.TeamComposerBlock();
+
+        int sendIndex = composerBlock.IndexOf("async send(el)", StringComparison.Ordinal);
+        int endIndex = composerBlock.IndexOf("findToken(el) {", sendIndex, StringComparison.Ordinal);
+        int clearIndex = composerBlock.IndexOf("el._picker.suppressFrom = null", sendIndex, StringComparison.Ordinal);
+        Assert.True(sendIndex >= 0 && endIndex > sendIndex, "Expected send before findToken.");
+        Assert.True(clearIndex > sendIndex && clearIndex < endIndex, "Expected send to clear the suppression.");
+    }
+
+    /// <summary>Esc suppresses by the token it closed (so only that token's continuation stays shut), not by an empty prefix that matches any token at the same start (QA defect D1, AT-M8).</summary>
+    [Fact]
+    public void Escape_SuppressesTheClosedTokenOnly()
+    {
+        string composerBlock = AppJsSourceTests.TeamComposerBlock();
+
+        int escapeIndex = composerBlock.IndexOf("e.key === \"Escape\"", StringComparison.Ordinal);
+        int suppressIndex = composerBlock.IndexOf("suppress(el, null)", escapeIndex, StringComparison.Ordinal);
+        int returnIndex = composerBlock.IndexOf("return;", escapeIndex, StringComparison.Ordinal);
+        Assert.True(escapeIndex >= 0, "Expected an Escape branch.");
+        Assert.True(suppressIndex > escapeIndex && suppressIndex < returnIndex, "Expected Esc to suppress by the closed token.");
+    }
+
+    /// <summary><c>teamComposer.insertTask</c> is gone: every kind goes through <c>insertReference</c> (plan T7.4).</summary>
+    [Fact]
+    public void InsertTask_IsGone()
+    {
+        string composerBlock = AppJsSourceTests.TeamComposerBlock();
+
+        // contains-ok: source-fact test, no JS runner
+        Assert.DoesNotContain("insertTask", composerBlock, StringComparison.Ordinal);
     }
 
     /// <summary>Extracts the <c>window.teamComposer = { ... };</c> object literal's source text, so the picker's source-fact tests above don't match unrelated code elsewhere in <c>app.js</c> (e.g. <c>huddleClipboard</c>'s own <c>await</c>s and <c>catch</c>es).</summary>

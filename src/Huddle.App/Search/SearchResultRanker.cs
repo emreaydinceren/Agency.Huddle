@@ -2,7 +2,8 @@ namespace Agency.Huddle.App.Search;
 
 /// <summary>
 /// Orders one group's hits and cuts them to the cap (spec §7.4). A pure static function with no I/O (D-22): the
-/// open Team first, then the match tier, then active before archived, then the title ignoring case.
+/// open Team first, then the match tier, then active before archived, then the title ignoring case. Under the
+/// Reference purpose with an empty phrase the provider's own browse order is kept (spec §5.2).
 /// </summary>
 internal static class SearchResultRanker
 {
@@ -14,6 +15,12 @@ internal static class SearchResultRanker
     {
         ArgumentNullException.ThrowIfNull(result);
         ArgumentNullException.ThrowIfNull(query);
+
+        if (query.Purpose == SearchPurpose.Reference && query.Text.Length == 0)
+        {
+            List<SearchHit> browse = [.. result.Hits.Take(query.MaxHits)];
+            return new SearchResult(browse, result.Truncated || result.Hits.Count > query.MaxHits);
+        }
 
         List<SearchHit> ordered = [.. result.Hits
             .OrderBy(hit => !IsOnOpenTeam(hit, query.OpenTeam))
