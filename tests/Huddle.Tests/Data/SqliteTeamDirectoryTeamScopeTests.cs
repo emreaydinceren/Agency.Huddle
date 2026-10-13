@@ -4,7 +4,7 @@ using Agency.Huddle.App.Data;
 namespace Agency.Huddle.Tests.Data;
 
 /// <summary>
-/// Tests for the Scope a Room carries (ADR-0051, Team chats spec §6.1 and §6.3): the
+/// Tests for the Scope a Room carries (ADR-0052, Team chats spec §6.1 and §6.3): the
 /// <c>room_teams</c> sibling table, <see cref="Room.Team"/>, the Scope parameter on the two exact-member
 /// lookups, <see cref="ITeamDirectory.GetRoomsForTeamAsync"/> and <see cref="ITeamDirectory.FindTeamRoomAsync"/>.
 /// </summary>

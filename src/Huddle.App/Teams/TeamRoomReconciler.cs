@@ -6,7 +6,7 @@ using Agency.Huddle.Contracts;
 namespace Agency.Huddle.App.Teams;
 
 /// <summary>
-/// Keeps one Team Room per Team (Team chats spec §6.4, ADR-0051): creates it when a Team first has a
+/// Keeps one Team Room per Team (Team chats spec §6.4, ADR-0052): creates it when a Team first has a
 /// connected member, invites later members into it, leaves an Archived one alone, and archives every
 /// Room scoped to a Team that has left the catalog. Runs once at startup and again on
 /// <see cref="ITeamCatalog.Changed"/> and <see cref="RoomEvents.RoomsChanged"/> (a member's User row

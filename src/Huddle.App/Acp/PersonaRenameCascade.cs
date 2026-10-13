@@ -326,7 +326,7 @@ internal sealed partial class PersonaRenameCascade(
         {
             if (room.IsTeamRoom)
             {
-                // A Team Room's name is its Team's (ADR-0051), whatever the derivation would say.
+                // A Team Room's name is its Team's (ADR-0052), whatever the derivation would say.
                 continue;
             }
 

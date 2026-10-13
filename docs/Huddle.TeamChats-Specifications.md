@@ -1,7 +1,7 @@
 # Huddle.TeamChats — Design Specification
 
 **Date:** 2026-10-12 · **Status:** Built 2026-10-12 · **Decision record:**
-[ADR-0051](adr/0051-a-room-belongs-to-the-root-or-to-one-team.md) · **Vocabulary:**
+[ADR-0052](adr/0052-a-room-belongs-to-the-root-or-to-one-team.md) · **Vocabulary:**
 [language.md](engineering/language.md) (**Scope**, **Team Room**)
 
 This is the design for **Team chats**. Every Room gets a **Scope**: the root, as every Room

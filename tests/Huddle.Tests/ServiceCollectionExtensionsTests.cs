@@ -140,6 +140,32 @@ public sealed class ServiceCollectionExtensionsTests
         Assert.NotNull(provider.GetRequiredService<Agency.Huddle.App.Teams.HireService>());
     }
 
+    /// <summary>The orchestrator resolves in a scope, and the container holds the five providers, one per group.</summary>
+    [Fact]
+    public void AddTeamServices_ResolvesSearchOrchestratorWithFiveProviders()
+    {
+        using TempDataDir dataDir = new();
+        using ServiceProvider provider = BuildTeamProvider(dataDir);
+        using IServiceScope scope = provider.CreateScope();
+
+        Agency.Huddle.App.Search.SearchOrchestrator orchestrator = scope.ServiceProvider.GetRequiredService<Agency.Huddle.App.Search.SearchOrchestrator>();
+        List<Agency.Huddle.App.Search.SearchFilter> groups = [.. scope.ServiceProvider
+            .GetServices<Agency.Huddle.App.Search.ISearchProvider>()
+            .Select(searchProvider => searchProvider.Group)
+            .Order()];
+
+        Assert.NotNull(orchestrator);
+        Assert.Equal(
+            [
+                Agency.Huddle.App.Search.SearchFilter.Teams,
+                Agency.Huddle.App.Search.SearchFilter.Teammates,
+                Agency.Huddle.App.Search.SearchFilter.Library,
+                Agency.Huddle.App.Search.SearchFilter.Tasks,
+                Agency.Huddle.App.Search.SearchFilter.Rooms,
+            ],
+            groups);
+    }
+
     /// <summary>The merge gate the permission handler consults resolves to the process-backed implementation.</summary>
     [Fact]
     public void AddTeamServices_ResolvesMergeGate()

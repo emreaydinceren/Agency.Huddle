@@ -233,7 +233,7 @@ public sealed class RoomListTests
         Assert.Contains("No rooms yet", cut.Find(".mud-nav-group").TextContent, StringComparison.Ordinal);
     }
 
-    /// <summary>A Room scoped to a Team in the catalog belongs under that Team in the sidebar, so the root Chats group does not list it (ADR-0051).</summary>
+    /// <summary>A Room scoped to a Team in the catalog belongs under that Team in the sidebar, so the root Chats group does not list it (ADR-0052).</summary>
     [Fact]
     public async Task LoadAsync_RoomScopedToAKnownTeam_IsNotListedInChats()
     {

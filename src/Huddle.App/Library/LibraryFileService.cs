@@ -3,6 +3,7 @@ using System.Text;
 using Microsoft.Extensions.Options;
 using Agency.Huddle.App.Acp;
 using Agency.Huddle.App.FileChanges;
+using Agency.Huddle.App.Search;
 
 namespace Agency.Huddle.App.Library;
 
@@ -173,6 +174,7 @@ internal sealed class LibraryFileService(
         List<LibraryEntry> entries = [];
         foreach (FileSystemInfo child in children)
         {
+            ct.ThrowIfCancellationRequested();
             bool isFolder = child is DirectoryInfo;
             if (isFolder && LibraryHiddenFolders.IsHidden(child.Name, ignoredFolders, hideUnderscoreFolders))
             {
@@ -227,9 +229,138 @@ internal sealed class LibraryFileService(
             return new LibrarySearchResult([], false);
         }
 
-        int visitLimit = this.options.Value.Library.MaxIndexedFiles;
+        LibraryTextSearchResult found = await this.WalkAsync(
+            fresh,
+            max,
+            this.options.Value.Library.MaxIndexedFiles,
+            (entry, _) => ValueTask.FromResult<LibraryTextHit?>(IsNameMatch(entry.Path, needle) ? new LibraryTextHit(entry, MatchTier.NameContains, null) : null),
+            ct);
+
+        return new LibrarySearchResult([.. found.Hits.Select(static hit => hit.Entry)], found.Truncated);
+    }
+
+    /// <summary>
+    /// Like <see cref="FindAsync"/>, but ranks each hit and, for a file whose name did not match, reads
+    /// its text and matches that too (Global Search spec §8.3). Shares <see cref="WalkAsync"/> with
+    /// <see cref="FindAsync"/>, so every hiding rule the tree applies applies here. The visit budget is
+    /// <see cref="SearchOptions.MaxVisitedEntries"/>, never <see cref="LibraryOptions.MaxIndexedFiles"/>.
+    /// A file is read only when <see cref="SearchContentPolicy"/> says so; one that is locked, vanishes or
+    /// will not decode is skipped. A text file over the size limit is matched by name only and marks the result truncated.
+    /// </summary>
+    /// <param name="scope">The folder to search under; never itself a hit.</param>
+    /// <param name="phrase">The text to look for, in names and contents; trimmed, and a blank phrase finds nothing.</param>
+    /// <param name="max">The most hits to return; zero or less finds nothing.</param>
+    /// <param name="search">The search options, for the visit budget, the text extensions and the size limit.</param>
+    /// <param name="isExcluded">Names the entries that are never a hit (a folder it names is still walked); <see langword="null"/> excludes nothing.</param>
+    /// <param name="ct">Cancels the search; checked before every file read.</param>
+    /// <returns>The hits in walk order, and whether more could have been found.</returns>
+    internal async Task<LibraryTextSearchResult> SearchTextAsync(LibraryPath scope, string phrase, int max, SearchOptions search, Predicate<LibraryEntry>? isExcluded, CancellationToken ct)
+    {
+        ArgumentNullException.ThrowIfNull(scope);
+        ArgumentNullException.ThrowIfNull(phrase);
+        ArgumentNullException.ThrowIfNull(search);
+
+        string needle = phrase.Trim();
+        if (needle.Length == 0 || max <= 0 || !this.resolver.TryResolve(scope.Root.Id, scope.RelativePath, out LibraryPath? fresh, out _))
+        {
+            return new LibraryTextSearchResult([], false);
+        }
+
+        bool skippedOverSize = false;
+        LibraryTextSearchResult walked = await this.WalkAsync(
+            fresh,
+            max,
+            search.MaxVisitedEntries,
+            async (entry, token) =>
+            {
+                (LibraryTextHit? hit, bool overSize) = await TestEntryAsync(entry, needle, search, isExcluded, token);
+                skippedOverSize |= overSize;
+                return hit;
+            },
+            ct);
+
+        return skippedOverSize && !walked.Truncated ? walked with { Truncated = true } : walked;
+    }
+
+    /// <summary>Tests one entry against <paramref name="needle"/>: by name first, then, for a file, by its contents.</summary>
+    /// <param name="entry">The entry visited.</param>
+    /// <param name="needle">The already-trimmed, non-empty phrase.</param>
+    /// <param name="search">The search options, for the content policy.</param>
+    /// <param name="isExcluded">The exclusion predicate, or <see langword="null"/>.</param>
+    /// <param name="ct">Cancels the read; checked before it starts.</param>
+    /// <returns>The hit or <see langword="null"/>, and whether a text file was skipped for being over the size limit.</returns>
+    private static async ValueTask<(LibraryTextHit? Hit, bool OverSize)> TestEntryAsync(LibraryEntry entry, string needle, SearchOptions search, Predicate<LibraryEntry>? isExcluded, CancellationToken ct)
+    {
+        if (isExcluded is not null && isExcluded(entry))
+        {
+            return (null, false);
+        }
+
+        string relative = entry.Path.RelativePath;
+        string name = relative[(relative.LastIndexOf('/') + 1)..];
+        MatchTier? tier = SearchMatch.Tier(name, needle);
+        if (!entry.IsFolder && SearchMatch.Tier(Path.GetFileNameWithoutExtension(name), needle) is { } stemTier && (tier is null || stemTier < tier))
+        {
+            tier = stemTier;
+        }
+
+        if (tier is { } nameTier)
+        {
+            return (new LibraryTextHit(entry, nameTier, null), false);
+        }
+
+        if (entry.IsFolder)
+        {
+            return (null, false);
+        }
+
+        ct.ThrowIfCancellationRequested();
+        switch (SearchContentPolicy.Decide(name, entry.Length, search))
+        {
+            case ContentDecision.NameOnlyTooLarge:
+                return (null, true);
+            case ContentDecision.Read:
+                break;
+            default:
+                return (null, false);
+        }
+
+        byte[] bytes;
+        try
+        {
+            bytes = await File.ReadAllBytesAsync(entry.Path.FullPath, ct);
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+        {
+            // A file that is locked or vanished mid-walk is skipped so one bad file does not fail the whole search.
+            return (null, false);
+        }
+
+        if (!TextFileCodec.TryDecode(bytes, LineEnding.Lf, out string? text, out _))
+        {
+            return (null, false);
+        }
+
+        string? snippet = SearchSnippet.Around(text, needle, SearchLimits.SnippetWidth);
+        return (snippet is null ? null : new LibraryTextHit(entry, MatchTier.ContentMatch, snippet), false);
+    }
+
+    /// <summary>
+    /// The one breadth-first walk under an already-resolved folder that <see cref="FindAsync"/> and
+    /// <see cref="SearchTextAsync"/> share. Lists each folder through <see cref="ListAsync"/>, so every
+    /// hiding rule applies; counts every entry visited against <paramref name="visitLimit"/>; stops once
+    /// more than <paramref name="max"/> hits are found.
+    /// </summary>
+    /// <param name="fresh">The re-resolved folder to walk; never itself a hit.</param>
+    /// <param name="max">The most hits to return; above zero.</param>
+    /// <param name="visitLimit">The most entries to visit before stopping with a truncated result.</param>
+    /// <param name="test">Tests one entry, returning its hit or <see langword="null"/>.</param>
+    /// <param name="ct">Cancels the walk.</param>
+    /// <returns>The hits in walk order, and whether more could have been found.</returns>
+    private async Task<LibraryTextSearchResult> WalkAsync(LibraryPath fresh, int max, int visitLimit, Func<LibraryEntry, CancellationToken, ValueTask<LibraryTextHit?>> test, CancellationToken ct)
+    {
         int visited = 0;
-        List<LibraryEntry> hits = [];
+        List<LibraryTextHit> hits = [];
         Queue<LibraryPath> pending = new();
         HashSet<string> visitedFolders = new(FolderSnapshot.PathComparer) { fresh.FullPath };
         pending.Enqueue(fresh);
@@ -250,16 +381,17 @@ internal sealed class LibraryFileService(
             {
                 if (visited >= visitLimit)
                 {
-                    return new LibrarySearchResult(hits, true);
+                    return new LibraryTextSearchResult(hits, true);
                 }
 
+                ct.ThrowIfCancellationRequested();
                 visited++;
-                if (IsNameMatch(entry.Path, needle))
+                if (await test(entry, ct) is { } hit)
                 {
-                    hits.Add(entry);
+                    hits.Add(hit);
                     if (hits.Count > max)
                     {
-                        return new LibrarySearchResult(hits.GetRange(0, max), true);
+                        return new LibraryTextSearchResult(hits.GetRange(0, max), true);
                     }
                 }
 
@@ -270,7 +402,7 @@ internal sealed class LibraryFileService(
             }
         }
 
-        return new LibrarySearchResult(hits, false);
+        return new LibraryTextSearchResult(hits, false);
     }
 
     /// <summary>Whether the last segment of <paramref name="path"/>'s <c>RelativePath</c> (the name the tree shows, never the link target's <c>FullPath</c>) contains <paramref name="needle"/>, ignoring case.</summary>

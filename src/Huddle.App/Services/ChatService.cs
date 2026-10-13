@@ -468,7 +468,7 @@ public sealed partial class ChatService
 
     /// <summary>
     /// Creates a Room holding the Human and the named Agents, scoped to <paramref name="team"/> when one
-    /// is given (ADR-0051). A single Agent reuses that Agent's existing one-to-one in the same Scope.
+    /// is given (ADR-0052). A single Agent reuses that Agent's existing one-to-one in the same Scope.
     /// </summary>
     /// <param name="agentIds">The Agents to invite.</param>
     /// <param name="team">The Team to scope the Room to, or <see langword="null"/> for the root.</param>

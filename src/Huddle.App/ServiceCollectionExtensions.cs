@@ -395,6 +395,17 @@ public static class ServiceCollectionExtensions
 
         // Scoped: the open Tabs of one circuit (docs/Huddle.Tabs-Specifications.md).
         services.AddScoped<Tabs.TabService>();
+        services.AddScoped<Components.Shared.TeammateCardOpener>();
+
+        // Global Search (spec §7.3): the five providers are stateless readers, one each per category.
+        services.AddSingleton<Search.ISearchProvider, Search.TeamSearchProvider>();
+        services.AddSingleton<Search.ISearchProvider, Search.TeammateSearchProvider>();
+        services.AddSingleton<Search.ISearchProvider, Search.LibrarySearchProvider>();
+        services.AddSingleton<Search.ISearchProvider, Search.TaskSearchProvider>();
+        services.AddSingleton<Search.ISearchProvider, Search.RoomSearchProvider>();
+
+        // Scoped, not singleton: it owns the one search in flight, and every circuit has its own (spec §7.3).
+        services.AddScoped<Search.SearchOrchestrator>();
         services.AddSingleton(new Tabs.TabPageRoutes(typeof(ServiceCollectionExtensions).Assembly));
 
         // Unconditional too, and for the same reason: the probe spends nothing on its own (it never
@@ -473,7 +484,7 @@ public static class ServiceCollectionExtensions
         services.AddSingleton<NeedsYouTracker>();
         services.AddHostedService<NeedsYouStartupScan>();
 
-        // Team chats (ADR-0051): one Team Room per Team, reconciled from the catalog. Registered after
+        // Team chats (ADR-0052): one Team Room per Team, reconciled from the catalog. Registered after
         // DataInitializer so the Team Directory exists, and after the catalog it subscribes to.
         services.AddHostedService<Agency.Huddle.App.Teams.TeamRoomReconciler>();
 

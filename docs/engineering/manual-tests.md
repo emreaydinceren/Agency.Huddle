@@ -233,6 +233,7 @@ the [Tracker](manual-tests/tracker.md), never here.
 - [Team chats](manual-tests/team-chats.md): the Team Room, Team chats in the sidebar, the Members-tab Message, archiving and Task wakes and digests in a Team's Room.
 - [Teams](manual-tests/team-pages.md): the sidebar, Members, Files, Tasks and Shared Memory.
 - [Teammate card](manual-tests/teammate-card.md): view, edit, create and delete.
+- [Global Search](manual-tests/global-search.md): the search box, the dropdown and the jump to a Message.
 - [Teammates page](manual-tests/teammates-library.md): tiles, Teams grouping, the filter and rejected files.
 - [Turn detail and Spend](manual-tests/turn-detail.md): the live preview, Spend and phone width.
 - [Work Mode](manual-tests/work-mode.md): the picker, hidden modes and the permission behaviour.

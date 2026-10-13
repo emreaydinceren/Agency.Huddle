@@ -4,6 +4,7 @@
 @using Agency.Huddle.App.Acp
 @using Agency.Huddle.App.Avatars
 @using Agency.Huddle.App.Pipes
+@using Agency.Huddle.App.Tabs
 @inject ITeamDirectory TeamDirectory
 @inject IChatStore Store
 @inject RoomEvents Events
@@ -14,6 +15,7 @@
 @inject RoomFollows Follows
 @inject NavigationManager Navigation
 @inject AvatarStore Avatars
+@inject IServiceProvider Services
 
 @if (this.room is null)
 {
@@ -68,10 +70,13 @@ else
             }
         </MudStack>
         <MessageList
+            @key="this.room.Id"
             Messages="this.messages"
             HumanIds="this.HumanIds()"
             Drafts="this.drafts"
             StoppingAgentIds="this.stoppingAgentIds"
+            TargetMessageId="@this.Message"
+            OnJumped="this.OnJumpedAsync"
             OnStop="this.StopDraftAsync" />
         @* Same slot as the budget prompt below, and for the same reason: this is the thing you need
            to read before the composer, not after. Rendered inline rather than as a component for the
@@ -214,6 +219,33 @@ else
 @code {
     [Parameter]
     public string? RoomId { get; set; }
+
+    /// <summary>
+    /// The id of the Message to scroll to and flash (Global Search spec §9.1), filled by <c>TabPageRoutes</c> from
+    /// the Tab URL's <c>?message=</c>. A plain parameter, not <c>SupplyParameterFromQuery</c>, which would read the
+    /// browser URL and so name only the focused group's Tab.
+    /// </summary>
+    [Parameter]
+    public string? Message { get; set; }
+
+    /// <summary>
+    /// Drops <c>?message=</c> from the Tab showing this Room once the jump has happened, so a reload or a return
+    /// to the Tab does not jump again (OP-16). Follows <c>TopBar.NavigateAsync</c>: the Tab first, then the address bar.
+    /// </summary>
+    private Task OnJumpedAsync()
+    {
+        // The Tab's page host leaves a parameter its new URL no longer carries out of the dictionary, so this
+        // page would keep the old id and a later hit on the same Message would read as already handled.
+        this.Message = null;
+        TabService? tabs = this.Services.GetService(typeof(TabService)) as TabService;
+        Tab? tab = tabs?.Tabs.FirstOrDefault(candidate => string.Equals(candidate.Key, $"room:{this.RoomId}", StringComparison.Ordinal));
+        if (tabs is not null && tab is not null && tabs.Navigate(tab.Id, $"/rooms/{this.RoomId}") is { } navigated)
+        {
+            this.Navigation.NavigateTo(navigated.Url);
+        }
+
+        return Task.CompletedTask;
+    }
 
     private string? loadedRoomId;
     private Room? room;

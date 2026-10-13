@@ -163,6 +163,29 @@ window.teamScroll = {
     toBottom(el) {
         el.scrollTop = el.scrollHeight;
     },
+    // Scrolls the Message row with this id to the middle of the list, moves focus to it without
+    // scrolling again, and flashes it (Global Search spec 9.1). Returns false when no row has the id.
+    // scrollIntoView works in the zoomed page's own coordinates, so the 90% zoom needs no correction.
+    toMessage(el, id) {
+        const row = el.querySelector('[data-message-id="' + CSS.escape(id) + '"]');
+        if (!row) {
+            return false;
+        }
+
+        row.scrollIntoView({ block: "center" });
+        row.focus({ preventScroll: true });
+        row.classList.remove("search-hit-flash");
+        void row.offsetWidth;
+        row.classList.add("search-hit-flash");
+        const clear = () => row.classList.remove("search-hit-flash");
+        row.addEventListener("animationend", clear, { once: true });
+        setTimeout(clear, 2000);
+        return true;
+    },
+    // True when the list is scrolled to within 4 px of its bottom, in its own (zoomed) coordinates.
+    isAtBottom(el) {
+        return el.scrollHeight - el.scrollTop - el.clientHeight <= 4;
+    },
 };
 
 // Tab shortcuts (docs/Huddle.Tabs-Specifications.md). The browser keeps Ctrl+W, Ctrl+Tab and
@@ -197,6 +220,90 @@ window.huddleTabs = {
     if (window.huddleTabs._handler) {
       document.removeEventListener("keydown", window.huddleTabs._handler);
       window.huddleTabs._handler = null;
+    }
+  }
+};
+
+// Global search keys (docs/Huddle.GlobalSearch-Specifications.md §5.2, §6.5). One keydown listener on window in
+// the capture phase, so the composer and CodeMirror cannot swallow a key first. Ctrl+K and "/" open the box;
+// Alt+1..6 and Ctrl+Left/Right move between the chips, and only while the dropdown is open (setOpen), so they
+// never collide with the Tab shortcuts above. Edge may keep Ctrl+K for its address bar: if so, set
+// shortcutNeedsShift to true and the shortcut becomes Ctrl+Shift+K (D-4).
+window.huddleSearch = {
+  _handler: null,
+  _open: false,
+  _previous: null,
+  shortcutNeedsShift: false,
+  attach(dotnetRef, host) {
+    window.huddleSearch.detach();
+    window.huddleSearch._handler = (e) => {
+      if (e.ctrlKey && !e.altKey && !e.metaKey && e.shiftKey === window.huddleSearch.shortcutNeedsShift
+        && e.key.toLowerCase() === "k") {
+        e.preventDefault();
+        openBox();
+        return;
+      }
+
+      if (e.key === "/" && !e.ctrlKey && !e.altKey && !e.metaKey) {
+        const target = e.target;
+        const tag = target && target.tagName;
+        if (tag === "INPUT" || tag === "TEXTAREA" || tag === "SELECT"
+          || (target && target.closest && (target.closest("[contenteditable]") || target.closest(".cm-editor")))) {
+          return;
+        }
+
+        e.preventDefault();
+        openBox();
+        return;
+      }
+
+      if (!window.huddleSearch._open) {
+        return;
+      }
+
+      if (e.altKey && !e.ctrlKey && !e.metaKey && !e.shiftKey) {
+        const digit = e.code && e.code.startsWith("Digit") ? Number(e.code.substring(5)) : Number(e.key);
+        if (digit >= 1 && digit <= 6) {
+          e.preventDefault();
+          dotnetRef.invokeMethodAsync("SelectChipAsync", digit).catch(() => { });
+        }
+      } else if (e.ctrlKey && !e.altKey && !e.metaKey && !e.shiftKey && (e.key === "ArrowLeft" || e.key === "ArrowRight")) {
+        e.preventDefault();
+        dotnetRef.invokeMethodAsync("MoveChipAsync", e.key === "ArrowLeft" ? -1 : 1).catch(() => { });
+      }
+    };
+    const openBox = () => {
+      const input = host && host.querySelector("input");
+      if (!input) {
+        return;
+      }
+
+      if (document.activeElement !== input) {
+        window.huddleSearch._previous = document.activeElement;
+      }
+
+      input.focus();
+      dotnetRef.invokeMethodAsync("OpenAsync").catch(() => { });
+    };
+    window.addEventListener("keydown", window.huddleSearch._handler, true);
+  },
+  detach() {
+    if (window.huddleSearch._handler) {
+      window.removeEventListener("keydown", window.huddleSearch._handler, true);
+      window.huddleSearch._handler = null;
+    }
+
+    window.huddleSearch._open = false;
+    window.huddleSearch._previous = null;
+  },
+  setOpen(open) {
+    window.huddleSearch._open = open;
+  },
+  restoreFocus() {
+    const previous = window.huddleSearch._previous;
+    window.huddleSearch._previous = null;
+    if (previous && previous.isConnected && typeof previous.focus === "function") {
+      previous.focus();
     }
   }
 };

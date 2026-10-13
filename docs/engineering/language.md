@@ -217,7 +217,7 @@ contexts](../Huddle.EngineeringGuide.md#two-bounded-contexts). Back to the hub:
 **Scope**
 : Where a Room belongs: the root, or exactly one Team. Set when the Room is
   created and never changed. It decides where the Room is listed and where its
-  uploaded files go, never who may join or who replies (ADR-0051).
+  uploaded files go, never who may join or who replies (ADR-0052).
 : *Avoid*: team chat as a kind of Room, workspace, channel.
 
 **Team Room**
@@ -770,6 +770,32 @@ See
   prompt is fixed at `session/new` and there is no later event that re-reads it.
   Editing a Prompt never restarts a session; see [Rules](rules.md).
 : *Avoid*: scope, refresh, reload.
+
+## Search
+
+**Global Search**
+: The search box in the Top Bar and its dropdown, which finds Teams, Teammates, Library
+  entries, Tasks and Rooms by exact phrase, ignoring case. It keeps no index of its own:
+  every search reads again.
+: *Avoid*: quick open, find, lookup, omnibox.
+
+**Top Bar**
+: The fixed bar across the top of the window, above the left menu and every pane. It holds
+  the breadcrumb trail of the focused pane's active Tab and the Global Search box. The window
+  owns it, never a Tab or a page.
+: *Avoid*: header, app bar, title bar, toolbar.
+
+**Filter**
+: In Global Search, one of All, Teams, Teammates, Library, Tasks and Rooms, drawn as a chip.
+  Typing its prefix (`team:`, `teammate:`, `lib:`, `task:`, `room:`) and picking its chip
+  are the same act.
+: *Avoid*: scope (that is the Active or Archived pass), category, tab.
+
+**Card** (search)
+: One result row in the Global Search dropdown, drawn by the component for its kind of hit.
+  *Card* already names two other things: a Board's drawing of a Task, and the Teammate card
+  that opens from the Teammates page. Say *search card* where the three could be confused.
+: *Avoid*: result item, tile, row.
 
 ## Appearance
 

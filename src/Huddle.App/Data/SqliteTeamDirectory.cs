@@ -48,7 +48,7 @@ public sealed class SqliteTeamDirectory : ITeamDirectory
         """;
 
     // Same reasoning as archived_rooms above: a sibling table so an existing team.db gains Scope by a
-    // plain CREATE TABLE IF NOT EXISTS. No row means a root Room (ADR-0051). team_room = 1 marks a
+    // plain CREATE TABLE IF NOT EXISTS. No row means a root Room (ADR-0052). team_room = 1 marks a
     // Team's Team Room, and the unique partial index allows at most one per Team.
     private const string DdlCreateRoomTeams = """
         CREATE TABLE IF NOT EXISTS room_teams (
