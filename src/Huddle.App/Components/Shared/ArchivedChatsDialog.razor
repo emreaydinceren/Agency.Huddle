@@ -45,7 +45,7 @@
                 <div class="archived-chats-row">
                     @if (string.Equals(this.confirmingDeleteRoomId, room.Id, StringComparison.Ordinal))
                     {
-                        <InlineConfirm Class="flex-1-truncate" Prompt="@($"Delete \"{room.Name}\"?")" Busy="this.busy"
+                        <InlineConfirm Class="flex-1-truncate" Prompt="@RoomDeleteCopy.Prompt(room.Name, this.uploadCount)" Busy="this.busy"
                                        OnConfirm="@(() => this.ConfirmDeleteAsync(room.Id))" OnCancel="this.CancelDelete" />
                     }
                     else
@@ -77,6 +77,7 @@
 
     private IReadOnlyList<Room> rooms = [];
     private string? confirmingDeleteRoomId;
+    private int uploadCount;
     private string? error;
     private bool busy;
 
@@ -139,6 +140,8 @@
     private void BeginDelete(string roomId)
     {
         this.confirmingDeleteRoomId = roomId;
+        Room? room = this.rooms.FirstOrDefault(candidate => string.Equals(candidate.Id, roomId, StringComparison.Ordinal));
+        this.uploadCount = room is null ? 0 : this.ChatService.CountRoomUploads(room);
         this.error = null;
     }
 

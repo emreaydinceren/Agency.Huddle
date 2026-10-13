@@ -89,6 +89,7 @@ public static class ServiceCollectionExtensions
         {
             ChatService service = ActivatorUtilities.CreateInstance<ChatService>(sp);
             service.TeamCatalog = sp.GetRequiredService<ITeamCatalog>();
+            service.UploadFolders = sp.GetRequiredService<Uploads.IRoomUploadFolders>();
             return service;
         });
         services.TryAddSingleton<ToolCallLogWriter>();
@@ -349,6 +350,12 @@ public static class ServiceCollectionExtensions
         // Registered right after LibraryPathResolver (corrections-B4 item 7): it depends on the
         // resolver above and on IRecycleBin, registered just above.
         services.AddSingleton<LibraryFileService>();
+
+        // Chat uploads (ChatUploads spec 5): the folder lookup is an interface so the Room delete can be
+        // tested against a fake; the service and the per-circuit chip list need no abstraction.
+        services.AddSingleton<Uploads.IRoomUploadFolders, Uploads.RoomUploadFolders>();
+        services.AddSingleton<Uploads.ChatUploadService>();
+        services.AddScoped<Uploads.PendingUploads>();
 
         // Registered right after LibraryFileService (Task 10.2.i): collects the Library documents
         // mentioned in a Turn's messages. No Library.Enabled gate here (corrections-B6 item 8) -

@@ -21,7 +21,7 @@
      @oncontextmenu:preventDefault="true">
     @if (this.confirmingDelete)
     {
-        <InlineConfirm Class="room-list-confirm" Prompt="@($"Delete \"{this.Room.Name}\"?")" Busy="this.busy"
+        <InlineConfirm Class="room-list-confirm" Prompt="@RoomDeleteCopy.Prompt(this.Room.Name, this.uploadCount)" Busy="this.busy"
                        OnConfirm="this.ConfirmDeleteAsync" OnCancel="this.CancelDelete" />
     }
     else
@@ -58,6 +58,7 @@
     private MudMenu? menu;
     private bool confirmingDelete;
     private bool busy;
+    private int uploadCount;
 
     /// <summary>The Room this row shows.</summary>
     [Parameter, EditorRequired]
@@ -112,6 +113,7 @@
 
     private async Task BeginDeleteAsync()
     {
+        this.uploadCount = this.ChatService.CountRoomUploads(this.Room);
         this.confirmingDelete = true;
         await this.OnError.InvokeAsync(null);
     }

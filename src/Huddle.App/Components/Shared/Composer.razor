@@ -1,4 +1,7 @@
 @using System.Globalization
+@using Agency.Huddle.App.Library
+@using Agency.Huddle.App.Uploads
+@using Microsoft.AspNetCore.Components.Forms
 @using Microsoft.Extensions.Options
 @implements IDisposable
 @inject ChatService Chat
@@ -16,13 +19,56 @@
     {
         <div class="composer-info">@this.infoText</div>
     }
-    <div class="composer-box">
+    @if (this.Chips.Count > 0)
+    {
+        <div class="upload-chips">
+            @foreach (PendingUpload chip in this.Chips)
+            {
+                <MudChip T="string" Class="upload-chip" Size="Size.Small" Variant="Variant.Outlined"
+                         Color="@(chip.State == UploadState.Failed ? Color.Error : Color.Default)"
+                         Icon="@ChipIcon(chip)">
+                    <span class="upload-chip-name">@chip.DisplayName</span>
+                    @if (chip.State == UploadState.Done)
+                    {
+                        <span class="upload-chip-size">@FormatSize(chip.Size)</span>
+                    }
+                    else if (chip.State == UploadState.Uploading)
+                    {
+                        <MudProgressLinear Indeterminate="true" Size="Size.Small" Class="upload-chip-progress" />
+                    }
+                    else
+                    {
+                        <span class="upload-chip-error">@chip.Error</span>
+                    }
+                    <MudIconButton Icon="@Icons.Material.Filled.Close" Size="Size.Small" Class="upload-chip-remove"
+                                   aria-label="@($"Remove {chip.DisplayName}")"
+                                   OnClick="@(() => this.RemoveChipAsync(chip.Id))" />
+                </MudChip>
+            }
+        </div>
+    }
+    <div class="@(this.AttachmentsAvailable ? "composer-box composer-box-attach" : "composer-box")">
         <textarea @ref="this.textarea" class="composer-input" placeholder="Message… (/invite @@agent)"
                   aria-expanded="@(this.pickerOpen ? "true" : "false")"
                   aria-controls="@(this.pickerOpen ? this.listboxId : null)"
                   aria-activedescendant="@(this.pickerOpen ? this.HighlightedItemId() : null)"></textarea>
-        <MudTooltip Text="Send" Placement="Placement.Start" RootClass="composer-send">
+        @if (this.AttachmentsAvailable)
+        {
+            <div @ref="this.attachHost" class="composer-attach">
+                <MudFileUpload @ref="this.picker" T="IReadOnlyList<IBrowserFile>" MaximumFileCount="this.RemainingFiles()"
+                               FilesChanged="this.OnFilesPickedAsync">
+                    <CustomContent Context="fileUpload">
+                        <MudTooltip Text="Attach files" Placement="Placement.Top">
+                            <MudIconButton Icon="@Icons.Material.Filled.AttachFile" Size="Size.Small"
+                                           aria-label="Attach files" OnClick="@(() => fileUpload.OpenFilePickerAsync())" />
+                        </MudTooltip>
+                    </CustomContent>
+                </MudFileUpload>
+            </div>
+        }
+        <MudTooltip Text="@(this.Uploading ? "Waiting for uploads…" : "Send")" Placement="Placement.Start" RootClass="composer-send">
             <MudIconButton Icon="@Icons.Material.Filled.Send" Color="Color.Primary" Size="Size.Small"
+                           Disabled="this.Uploading"
                            aria-label="Send message" OnClick="this.SendClickedAsync" />
         </MudTooltip>
     </div>
@@ -59,6 +105,9 @@
     public string RoomId { get; set; } = "";
 
     private ElementReference textarea;
+    private ElementReference attachHost;
+    private MudFileUpload<IReadOnlyList<IBrowserFile>>? picker;
+    private PendingUploads? pending;
     private DotNetObjectReference<Composer>? selfReference;
     private string? loadedRoomId;
     private string? attachedRoomId;
@@ -82,6 +131,24 @@
 
     /// <summary>Whether Tasks are enabled at all - when not, the picker never opens (Spec §14, corrections-B6 "D15.1" item 9).</summary>
     private bool TasksEnabled => this.TeamOptions.Value.Tasks.Enabled;
+
+    /// <summary>The attachment chips of this Room, in the order they were added; empty when attachments are off.</summary>
+    private IReadOnlyList<PendingUpload> Chips => this.pending?.For(this.RoomId) ?? [];
+
+    /// <summary>Whether a chip is still saving its file, which holds Send back (ChatUploads spec 6.5).</summary>
+    private bool Uploading => this.Chips.Any(static chip => chip.State == UploadState.Uploading);
+
+    /// <summary>Whether the paperclip is offered: the Library is on and the upload stack is registered (ChatUploads spec 6.5 "Library disabled").</summary>
+    private bool AttachmentsAvailable => this.pending is not null && this.TeamOptions.Value.Library.Enabled;
+
+    protected override void OnInitialized()
+    {
+        this.pending = this.Services.GetService<PendingUploads>();
+        if (this.pending is not null)
+        {
+            this.pending.Changed += this.OnPendingChanged;
+        }
+    }
 
     protected override Task OnParametersSetAsync()
     {
@@ -114,8 +181,84 @@
 
         this.selfReference = DotNetObjectReference.Create(this);
         this.attachedRoomId = this.RoomId;
-        await this.JS.InvokeVoidAsync("teamComposer.attach", this.textarea, this.selfReference, DraftKey(this.RoomId));
+        object? fileInputHost = this.AttachmentsAvailable ? this.attachHost : null;
+        await this.JS.InvokeVoidAsync("teamComposer.attach", this.textarea, this.selfReference, DraftKey(this.RoomId), fileInputHost);
     }
+
+    /// <summary>Re-renders when a chip is added, finishes or is removed; the event can arrive on any thread.</summary>
+    private void OnPendingChanged() => _ = this.InvokeAsync(this.StateHasChanged);
+
+    /// <summary>
+    /// Saves every picked file as a chip, three at a time (ChatUploads spec 6.5), then resets the picker so the
+    /// same file can be picked again. A refusal that leaves no chip (the count cap) is shown as the status line.
+    /// </summary>
+    /// <param name="files">The files the Human picked, dropped or pasted.</param>
+    private async Task OnFilesPickedAsync(IReadOnlyList<IBrowserFile>? files)
+    {
+        // Resetting the picker raises this callback again with no files; there is nothing to save then.
+        if (this.pending is null || files is null || files.Count == 0)
+        {
+            return;
+        }
+
+        PendingUploads uploads = this.pending;
+        string roomId = this.RoomId;
+        long cap = this.TeamOptions.Value.Library.MaxUploadBytes;
+        long maxBytes = cap + 1;
+        this.errorText = null;
+        this.infoText = null;
+        await Parallel.ForEachAsync(files, new ParallelOptions { MaxDegreeOfParallelism = 3 }, async (file, ct) =>
+        {
+            // OpenReadStream throws for a file past its limit, so an oversized file is refused before a chip is reserved.
+            if (file.Size > cap)
+            {
+                this.errorText = LibraryFileService.UploadTooLargeMessage(file.Name, cap);
+                return;
+            }
+
+            PendingUpload result = await uploads.AddAsync(roomId, file.Name, token => file.OpenReadStream(maxBytes, token), ct);
+            if (result.State == UploadState.Failed && uploads.For(roomId).All(chip => chip.Id != result.Id))
+            {
+                this.errorText = result.Error;
+            }
+        });
+
+        if (this.picker is not null)
+        {
+            await this.picker.ClearAsync();
+        }
+
+        this.StateHasChanged();
+    }
+
+    /// <summary>Drops a chip and deletes its file.</summary>
+    /// <param name="id">The chip to remove.</param>
+    private Task RemoveChipAsync(Guid id) => this.pending is null ? Task.CompletedTask : this.pending.RemoveAsync(this.RoomId, id, CancellationToken.None);
+
+    /// <summary>How many more files this Message can take, never below 1 so the picker is not given a zero cap and the refusal copy is shown instead.</summary>
+    private int RemainingFiles() => Math.Max(1, this.TeamOptions.Value.Library.MaxUploadsPerMessage - this.Chips.Count(static chip => chip.State != UploadState.Failed));
+
+    /// <summary>The icon of a chip: a warning for a refused file, otherwise one per kind.</summary>
+    /// <param name="chip">The chip to draw.</param>
+    private static string ChipIcon(PendingUpload chip) => chip.State == UploadState.Failed
+        ? Icons.Material.Filled.ErrorOutline
+        : chip.Kind switch
+        {
+            UploadKind.Image => Icons.Material.Filled.Image,
+            UploadKind.Pdf => Icons.Material.Filled.PictureAsPdf,
+            UploadKind.Archive => Icons.Material.Filled.FolderZip,
+            UploadKind.Text => Icons.Material.Filled.Description,
+            _ => Icons.Material.Filled.InsertDriveFile,
+        };
+
+    /// <summary>A file size as shown on a chip: bytes, whole kilobytes, or megabytes to one decimal, in invariant culture.</summary>
+    /// <param name="bytes">The saved size.</param>
+    private static string FormatSize(long bytes) => bytes switch
+    {
+        < 1024 => string.Create(CultureInfo.InvariantCulture, $"{bytes} B"),
+        < 1024 * 1024 => string.Create(CultureInfo.InvariantCulture, $"{(long)Math.Round(bytes / 1024.0, MidpointRounding.AwayFromZero)} KB"),
+        _ => string.Create(CultureInfo.InvariantCulture, $"{bytes / (1024.0 * 1024.0):0.0} MB"),
+    };
 
     /// <summary>
     /// Called by the Composer's script the first time the Human types here: typing is working in the
@@ -138,22 +281,39 @@
         await this.textarea.FocusAsync();
     }
 
+    /// <summary>Posts the typed text plus the finished chips' paths; returns <see langword="false"/> when held back because an upload is still running, so the script keeps the text in the box.</summary>
+    /// <param name="text">The text in the box.</param>
+    /// <returns><see langword="false"/> if nothing was handled because an upload is running; otherwise <see langword="true"/>.</returns>
     [JSInvokable]
-    public async Task SendAsync(string text)
+    public async Task<bool> SendAsync(string text)
     {
         var trimmed = text.Trim();
-        if (trimmed.Length == 0)
+        if (this.Uploading)
         {
-            return;
+            return false;
         }
+
+        IReadOnlyList<PendingUpload> snapshot = this.Chips;
+        List<string> pathLines = [.. snapshot
+            .Where(static chip => chip.State == UploadState.Done)
+            .Select(static chip => chip.File)
+            .OfType<LibraryPath>()
+            .Select(static file => $"`{file.FullPath}`")];
+        if (trimmed.Length == 0 && pathLines.Count == 0)
+        {
+            return true;
+        }
+
+        string message = string.Join("\n\n", new[] { trimmed, string.Join("\n", pathLines) }.Where(static part => part.Length > 0));
 
         this.errorText = null;
         this.infoText = null;
 
         try
         {
-            var result = await this.Chat.SubmitFromComposerAsync(this.RoomId, KnownIds.Human, trimmed);
+            var result = await this.Chat.SubmitFromComposerAsync(this.RoomId, KnownIds.Human, message);
             this.infoText = result.Info;
+            _ = this.pending?.TakeAll(this.RoomId, [.. snapshot.Select(static chip => chip.Id)]);
         }
         catch (ChatException ex)
         {
@@ -161,6 +321,7 @@
         }
 
         this.StateHasChanged();
+        return true;
     }
 
     /// <summary>
@@ -242,6 +403,11 @@
 
     public void Dispose()
     {
+        if (this.pending is not null)
+        {
+            this.pending.Changed -= this.OnPendingChanged;
+        }
+
         this.selfReference?.Dispose();
     }
 }

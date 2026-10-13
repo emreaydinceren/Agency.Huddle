@@ -1,6 +1,6 @@
 # Huddle.ChatUploads — Design Specification
 
-**Date:** 2026-10-13 · **Status:** Accepted, not built · **Decision record:**
+**Date:** 2026-10-13 · **Status:** Built · **Decision record:**
 [ADR-0053](adr/0053-an-upload-is-saved-to-the-library-and-sent-as-its-path.md) · **Builds on:**
 [ADR-0052](adr/0052-a-room-belongs-to-the-root-or-to-one-team.md) (Scope),
 [PromptBlocks](Huddle.PromptBlocks-Specifications.md) D-12 · **Vocabulary:**
@@ -176,7 +176,8 @@ one rule: skip a file whose name starts with `.` and ends with `.upload`.
 ### 6.3 Names and kinds
 
 **Names.** Take the browser's file name; strip any directory part; replace characters
-`LibraryNames.Validate` refuses with `-`; trim trailing dots and spaces; collapse runs of `-`;
+`LibraryNames.Validate` refuses with `-`, and the backtick too (it would end the code span the path
+is sent in); trim trailing dots and spaces; collapse runs of `-`;
 cut the stem to 100 characters keeping the extension; an empty or device-name stem becomes
 `file`. A clipboard image with no name, or the generic `image.png` browsers give pasted
 images, becomes `pasted-image-yyyyMMdd-HHmmss.png` in the Human's local time from
@@ -300,7 +301,8 @@ Room's rows are read (to know `Room.Team`) and **after** the delete succeeds:
 - Best effort: a failure is logged and never fails the delete. Where no Recycle Bin is available
   (`NotAvailableRecycleBin`), the folder is left and logged.
 - The delete confirmation (RoomNavRow and the Archived dialog) adds
-  *"Its {n} uploaded files go to the Recycle Bin."* when n > 0, counted with one directory
+  *"Its uploaded file goes to the Recycle Bin."* when n is 1 and
+  *"Its {n} uploaded files go to the Recycle Bin."* when n > 1, counted with one directory
   enumeration of both folders.
 
 Archive changes nothing. A Room whose Team vanished keeps its files under the old Team folder.
@@ -316,8 +318,8 @@ Archive changes nothing. A Room whose Team vanished keeps its files under the ol
 | Send tooltip while uploading | *Waiting for uploads…* |
 | Drop target hint (while dragging) | *Drop to attach* |
 | `watch_folder` on the Uploads root | *Uploads are announced in the chat, not watched.* |
-| Refusals | *SVG files can't be attached.* · *Programs can't be attached.* · *{name} is larger than {cap}.* · *A Message can carry up to {n} files.* · *Couldn't save {name}.* |
-| Delete confirmation addition | *Its {n} uploaded files go to the Recycle Bin.* |
+| Refusals | *SVG files can't be attached.* · *Programs can't be attached.* · *{name} is larger than {cap}.* · *A Message can carry up to {n} files.* (*…up to 1 file.* when n is 1) · *Couldn't save {name}.* A cap under 1 MiB is printed in KB. |
+| Delete confirmation addition | *Its uploaded file goes to the Recycle Bin.* (n = 1) · *Its {n} uploaded files go to the Recycle Bin.* (n > 1) |
 | Agent `{{location}}` for a root upload | `upload` |
 | `getHelp.rooms` sentence | *A file the Human attaches is saved in the Library and its path is in the Message; open it with your file tools.* |
 

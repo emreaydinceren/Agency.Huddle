@@ -343,6 +343,54 @@ public sealed class RoomListTests
         Assert.Equal(0, catalog.ChangedSubscriberCount);
     }
 
+    /// <summary>The Delete confirm of a Room with uploads adds the Recycle Bin sentence with the file count (ChatUploads spec 7).</summary>
+    [Theory]
+    [InlineData(1, "Its uploaded file goes to the Recycle Bin.")]
+    [InlineData(3, "Its 3 uploaded files go to the Recycle Bin.")]
+    public async Task Delete_RoomWithUploads_ConfirmMentionsUploadCount(int count, string sentence)
+    {
+        var ct = Xunit.TestContext.Current.CancellationToken;
+        using var dir = new TempDataDir();
+        var events = new RoomEvents(NullLogger<RoomEvents>.Instance);
+        var directory = new SqliteTeamDirectory(dir.Options());
+        await directory.InitializeAsync("You", ct);
+        var agent = await directory.UpsertAgentUserAsync("coo", null, ct);
+        Assert.NotNull(agent);
+        var chat = CreateChatService(dir, directory, events);
+        chat.UploadFolders = new Agency.Huddle.Tests.Uploads.FakeRoomUploadFolders { Count = count };
+        var room = await chat.EnsureRoomForAsync(agent, ct);
+
+        await using var ctx = NewContext(directory, chat, events);
+        var cut = RenderRoomList(ctx);
+        await OpenRowMenuAsync(cut);
+        await ClickMenuItemAsync(cut, "Delete");
+
+        Assert.Equal($"Delete \"{room.Name}\"? {sentence}", cut.Find(".inline-confirm-prompt").TextContent.Trim());
+    }
+
+    /// <summary>The Delete confirm of a Room without uploads keeps the plain prompt.</summary>
+    [Fact]
+    public async Task Delete_RoomWithoutUploads_ConfirmHasNoUploadSentence()
+    {
+        var ct = Xunit.TestContext.Current.CancellationToken;
+        using var dir = new TempDataDir();
+        var events = new RoomEvents(NullLogger<RoomEvents>.Instance);
+        var directory = new SqliteTeamDirectory(dir.Options());
+        await directory.InitializeAsync("You", ct);
+        var agent = await directory.UpsertAgentUserAsync("coo", null, ct);
+        Assert.NotNull(agent);
+        var chat = CreateChatService(dir, directory, events);
+        chat.UploadFolders = new Agency.Huddle.Tests.Uploads.FakeRoomUploadFolders { Count = 0 };
+        var room = await chat.EnsureRoomForAsync(agent, ct);
+
+        await using var ctx = NewContext(directory, chat, events);
+        var cut = RenderRoomList(ctx);
+        await OpenRowMenuAsync(cut);
+        await ClickMenuItemAsync(cut, "Delete");
+
+        Assert.Equal($"Delete \"{room.Name}\"?", cut.Find(".inline-confirm-prompt").TextContent.Trim());
+    }
+
     private static Agency.Huddle.Tests.Teams.FakeTeamCatalog KnownTeam(string name) =>
         new() { Teams = [new Agency.Huddle.App.Teams.TeamSummary(name, [], ["coo"], true)] };
 

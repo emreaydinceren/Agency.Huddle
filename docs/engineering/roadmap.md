@@ -49,7 +49,7 @@ reminder that the remaining three on that line are cheap for the same reason.
 | 21 | An Agent asks the Human before a tool runs — **proposed 2026-09-30, not built** | a new approval handler wrapping `WorkDirPermissionHandler`, a pending-approval store, an approval card in the Room, and a pause in `RoomSession`'s idle watchdog | `IPermissionHandler` is already the seam, `session/request_permission` already arrives and is answered, and Stop already cancels a waiting request — see [item 21](#21-an-agent-asks-the-human-before-a-tool-runs--proposed-2026-09-30-not-built) |
 | 22 | Turn detail: an Edit preview and Spend — **built 2026-09-30 (V1); Adapter commands built 2026-09-30 as [their own spec](../Huddle.Commands-Specifications.md); Plan and Thinking not built** | `Drafts` and `MessageList.razor` for the preview; a new `PersonaSpend` and `TeammateCard.razor` for Spend | `diff`, `locations` and `cost` already arrive and `SessionUpdateMapper` drops them. No protocol bump: every change is an optional field on `ToolActivity`, and Spend never crosses the pipe. Item 21's approval card reuses the preview — see [the Turn detail spec](../Huddle.TurnDetail-Specifications.md) |
 | 23 | A Persona has a Work Mode — **phase 1 delivered (code) 2026-09-30; phases 2 and 3 designed, not built** | `Persona`, `PersonaWorkModeStore`, `DotAcpAgentHost`'s option application, `WorkModePolicy`, `TeammateCard.razor` | shipped as a setting beside Model and Effort, applied with `session/set_config_option` and read back. Not a smarter permission handler: a mode changes what the Adapter will *try*. The live per-Room switch and non-blocking plan approval are the next two phases — see [item 23](#23-a-persona-has-a-work-mode--phase-1-delivered-code-2026-09-30) and [ADR-0033](../adr/0033-a-persona-has-a-work-mode.md) |
-| 24 | Non-text prompts — **A built 2026-10-01 (live checks passed); B (the Human attaches a file to a Message) proposed, not built** | A (done): `LibraryDocumentCollector`, `RoomSession`, then `IAgentSession.PromptAsync`. B: `Composer.razor`, then wherever the bytes are kept | `claude-agent-acp` advertises `image` and `embeddedContext` and `dotacp` types the blocks; A now sends a named image, and for an Adapter with no file tools a document's text, as Prompt blocks ([ADR-0036](../adr/0036-a-prompt-block-is-sent-only-when-the-adapter-advertised-it.md)). B's cheapest route reuses A — see [item 24](#24-non-text-prompts--a-designed-2026-10-01-b-proposed-neither-built) and [the Prompt blocks spec](../Huddle.PromptBlocks-Specifications.md) |
+| 24 | Non-text prompts — **A built 2026-10-01 (live checks passed); B (the Human attaches a file to a Message) built, see [the ChatUploads spec](../Huddle.ChatUploads-Specifications.md)** | A (done): `LibraryDocumentCollector`, `RoomSession`, then `IAgentSession.PromptAsync`. B: `Composer.razor`, then wherever the bytes are kept | `claude-agent-acp` advertises `image` and `embeddedContext` and `dotacp` types the blocks; A now sends a named image, and for an Adapter with no file tools a document's text, as Prompt blocks ([ADR-0036](../adr/0036-a-prompt-block-is-sent-only-when-the-adapter-advertised-it.md)). B's cheapest route reuses A — see [item 24](#24-non-text-prompts--a-designed-2026-10-01-b-proposed-neither-built) and [the Prompt blocks spec](../Huddle.PromptBlocks-Specifications.md) |
 | 25 | An in-app Quit button — **designed, not built** | a button in the app UI, `IHostApplicationLifetime.StopApplication()` | the `stop` verb and `/_desktop/stop` endpoint already wire the shutdown path; a UI button is the cheapest addition, see [Known limits](known-limits.md) |
 
 ## 1. Renaming a Teammate
@@ -1545,10 +1545,10 @@ a tool runs.
 
 ## 23. Non-text prompts — A designed 2026-10-01, B proposed, neither built
 
-> **A was built on 2026-10-01 and its live checks passed; B is proposed and not built or scheduled.**
+> **A was built on 2026-10-01 and its live checks passed. B is built: the Human attaches a file to a Message. Its design is [the ChatUploads spec](../Huddle.ChatUploads-Specifications.md).**
 > A has a spec, [Huddle.PromptBlocks-Specifications.md](../Huddle.PromptBlocks-Specifications.md), and
-> [ADR-0036](../adr/0036-a-prompt-block-is-sent-only-when-the-adapter-advertised-it.md); B has only this
-> entry. Nothing is decided about B except what is recorded below. (The heading above is kept as
+> [ADR-0036](../adr/0036-a-prompt-block-is-sent-only-when-the-adapter-advertised-it.md); B's decision is [ADR-0053](../adr/0053-an-upload-is-saved-to-the-library-and-sent-as-its-path.md). B has only this
+> entry, which records what B left undecided and where it was decided. (The heading above is kept as
 > written so the table's link to it still resolves.)
 
 **A, in one paragraph.** A Turn sends the Adapter one text block today. A has the Turn also send an
@@ -1591,7 +1591,7 @@ extension or a client-supplied type; never accept SVG; serve a run-time file thr
 `UseStaticFiles` and a `PhysicalFileProvider`, not `MapStaticAssets`; and keep persisted state in a
 sibling table rather than a new column.
 
-**Not decided.** Which route. Where a Room's folder lives and when it is cleaned. Whether the Human
+**Decided, and built, in [the ChatUploads spec](../Huddle.ChatUploads-Specifications.md).** The route is save, then name; the Room's Scope picks its folder, and its Recycle Bin clean-up is on Room delete. Still open: whether the Human
 should see what was sent, which the Prompt blocks spec leaves to B (its D-14), because there the
 Human did not write the path. Whether a pipe Agent should ever receive the bytes.
 

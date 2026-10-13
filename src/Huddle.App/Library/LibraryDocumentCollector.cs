@@ -9,6 +9,7 @@ using Agency.Huddle.Acp.Abstractions;
 using Agency.Huddle.App.Acp;
 using Agency.Huddle.App.FileChanges;
 using Agency.Huddle.App.Services;
+using Agency.Huddle.App.Teams;
 
 namespace Agency.Huddle.App.Library;
 
@@ -318,7 +319,7 @@ internal sealed class LibraryDocumentCollector(LibraryPathResolver resolver, Lib
     /// <summary>
     /// Builds a document's §6.14 location label from its <see cref="LibraryPath"/>: <c>Team {Team}</c>,
     /// <c>Team {Team}, Project {Project}</c>, <c>{Name}'s Work Dir</c>, <c>teammate {Name}</c> (corrections-B6
-    /// item 4) or <c>pinned root "{Name}"</c>.
+    /// item 4), <c>pinned root "{Name}"</c> or <c>upload</c> for a file in the Uploads root.
     /// </summary>
     private async Task<string> ResolveLocationAsync(LibraryPath path, CancellationToken ct)
     {
@@ -327,11 +328,16 @@ internal sealed class LibraryDocumentCollector(LibraryPathResolver resolver, Lib
             return string.Create(CultureInfo.InvariantCulture, $"pinned root \"{path.Root.DisplayName}\"");
         }
 
+        if (path.Root.Kind == LibraryRootKind.Uploads)
+        {
+            return "upload";
+        }
+
         string[] segments = path.RelativePath.Split('/');
 
         if (path.Root.Kind == LibraryRootKind.Teams)
         {
-            return segments.Length >= 3
+            return segments.Length >= 3 && !string.Equals(segments[1], TeamNames.UploadsFolder, StringComparison.OrdinalIgnoreCase)
                 ? string.Create(CultureInfo.InvariantCulture, $"Team {segments[0]}, Project {segments[1]}")
                 : string.Create(CultureInfo.InvariantCulture, $"Team {segments[0]}");
         }

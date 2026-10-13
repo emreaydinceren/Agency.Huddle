@@ -51,7 +51,7 @@ public sealed class LibraryRootStoreTests
 
         var store = new LibraryRootStore(options, paths, NullLogger<LibraryRootStore>.Instance);
 
-        var pinned = store.Roots[2];
+        var pinned = store.Roots[3];
         Assert.Equal("huddle-docs", pinned.Id);
         Assert.Equal(LibraryRootKind.Pinned, pinned.Kind);
         Assert.Equal(Path.GetFullPath(docsPath), pinned.FullPath);
@@ -72,7 +72,7 @@ public sealed class LibraryRootStoreTests
 
         var store = new LibraryRootStore(options, paths, NullLogger<LibraryRootStore>.Instance);
 
-        Assert.Equal(Path.GetFullPath("Docs", dataDir.Path), store.Roots[2].FullPath);
+        Assert.Equal(Path.GetFullPath("Docs", dataDir.Path), store.Roots[3].FullPath);
     }
 
     /// <summary>A trailing directory separator on a pinned path is trimmed from the resolved root (corrections-B3 item 3).</summary>
@@ -91,7 +91,7 @@ public sealed class LibraryRootStoreTests
 
         var store = new LibraryRootStore(options, paths, NullLogger<LibraryRootStore>.Instance);
 
-        Assert.Equal(Path.GetFullPath(docsPath), store.Roots[2].FullPath);
+        Assert.Equal(Path.GetFullPath(docsPath), store.Roots[3].FullPath);
     }
 
     /// <summary>A blank pinned path is skipped rather than crashing startup, and a warning is logged (corrections-B3 item 4).</summary>
@@ -222,6 +222,61 @@ public sealed class LibraryRootStoreTests
 
         Assert.False(File.Exists(Path.Combine(dataDir.Path, "library-roots.json")));
         Assert.Contains(store.Roots, r => r.DisplayName == "Configured");
+    }
+
+    /// <summary>The Uploads root is a built-in after Teams and Teammates, kind Uploads, at the configured folder under DataDir, and the folder is not created.</summary>
+    [Fact]
+    public void Roots_Default_IncludeUploadsAfterTeammates()
+    {
+        using var dataDir = new TempDataDir();
+        var paths = new TeammatePaths(dataDir.Options());
+        var store = new LibraryRootStore(dataDir.Options(), paths, NullLogger<LibraryRootStore>.Instance);
+
+        LibraryRoot uploads = store.Roots[2];
+
+        Assert.Equal("uploads", uploads.Id);
+        Assert.Equal("Uploads", uploads.DisplayName);
+        Assert.Equal(LibraryRootKind.Uploads, uploads.Kind);
+        Assert.Equal(Path.Combine(dataDir.Path, "Uploads"), uploads.FullPath);
+        Assert.False(Directory.Exists(uploads.FullPath));
+    }
+
+    /// <summary>A configured <c>Team:Library:Uploads:Dir</c> moves the Uploads root.</summary>
+    [Fact]
+    public void Roots_ConfiguredUploadsDir_MovesTheRoot()
+    {
+        using var dataDir = new TempDataDir();
+        var paths = new TeammatePaths(dataDir.Options());
+        var options = Options.Create(new TeamOptions
+        {
+            DataDir = dataDir.Path,
+            Library = new LibraryOptions { Uploads = new LibraryUploadsOptions { Dir = "Attachments" } },
+        });
+
+        var store = new LibraryRootStore(options, paths, NullLogger<LibraryRootStore>.Instance);
+
+        Assert.Equal(Path.Combine(dataDir.Path, "Attachments"), store.Roots[2].FullPath);
+    }
+
+    /// <summary>A pinned root named "Uploads" cannot take the reserved id, so it becomes <c>uploads-2</c>.</summary>
+    [Fact]
+    public void Slug_Uploads_IsReserved()
+    {
+        Assert.Equal("uploads-2", LibraryRootStore.Slug("Uploads", []));
+    }
+
+    /// <summary>Hiding the Uploads root omits it from VisibleRoots, keeps it in Roots, and does not throw.</summary>
+    [Fact]
+    public void SetHidden_Uploads_HidesTheRoot()
+    {
+        using var dataDir = new TempDataDir();
+        var paths = new TeammatePaths(dataDir.Options());
+        var store = new LibraryRootStore(dataDir.Options(), paths, NullLogger<LibraryRootStore>.Instance);
+
+        store.SetHidden("uploads", true);
+
+        Assert.DoesNotContain(store.VisibleRoots, r => r.Id == "uploads");
+        Assert.Contains(store.Roots, r => r.Id == "uploads");
     }
 
     /// <summary><see cref="LibraryRootStore.Reset"/> also clears any hidden built-in (corrections-B3 item 8).</summary>

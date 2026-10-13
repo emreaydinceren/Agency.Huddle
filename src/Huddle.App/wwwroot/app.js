@@ -30,7 +30,69 @@ window.teamComposer = {
         el._typedNotified = false;
     },
 
-    attach(el, dotnetRef, draftKey) {
+    // Puts dropped or pasted files into the hidden file input and fires `change`, so Blazor's
+    // InputFile handles them exactly as a pick from the paperclip.
+    handOver(input, files) {
+        const transfer = new DataTransfer();
+        for (const file of files) {
+            transfer.items.add(file);
+        }
+        input.files = transfer.files;
+        input.dispatchEvent(new Event("change", { bubbles: true }));
+    },
+
+    // Paste and drop of files (docs/Huddle.ChatUploads-Specifications.md 6.5). `fileInputHost` is the
+    // div wrapping the paperclip's input; null (Library off) means files are never taken, but a file
+    // dragged or dropped over the box is still cancelled so the browser does not open it (spec U20).
+    // The input is looked up on each paste or drop: the picker may replace it after a pick.
+    attachFiles(el, fileInputHost) {
+        const findInput = () => (fileInputHost ? fileInputHost.querySelector("input[type=file]") : null);
+
+        const box = el.closest(".composer-box") || el;
+        const hasFiles = (transfer) => !!transfer && Array.from(transfer.types || []).includes("Files");
+
+        el.addEventListener("paste", (e) => {
+            const input = findInput();
+            const files = e.clipboardData ? e.clipboardData.files : null;
+            if (!input || !files || files.length === 0) {
+                return;
+            }
+            e.preventDefault();
+            window.teamComposer.handOver(input, files);
+        });
+
+        box.addEventListener("dragover", (e) => {
+            if (!hasFiles(e.dataTransfer)) {
+                return;
+            }
+            e.preventDefault();
+            if (findInput()) {
+                box.classList.add("composer-dropping");
+            }
+        });
+
+        box.addEventListener("dragleave", (e) => {
+            if (e.relatedTarget && box.contains(e.relatedTarget)) {
+                return;
+            }
+            box.classList.remove("composer-dropping");
+        });
+
+        box.addEventListener("drop", (e) => {
+            if (!hasFiles(e.dataTransfer)) {
+                return;
+            }
+            e.preventDefault();
+            box.classList.remove("composer-dropping");
+            const input = findInput();
+            if (input && e.dataTransfer.files.length > 0) {
+                window.teamComposer.handOver(input, e.dataTransfer.files);
+            }
+        });
+    },
+
+    attach(el, dotnetRef, draftKey, fileInputHost) {
+        window.teamComposer.attachFiles(el, fileInputHost);
         el._dotnetRef = dotnetRef;
         el._picker = { open: false };
         el._draftKey = draftKey || null;
@@ -134,7 +196,11 @@ window.teamComposer = {
     // Sends what is typed and clears the box and its saved draft: the one path both Enter and the
     // Send button take, so the two can never drift apart.
     async send(el) {
-        await el._dotnetRef.invokeMethodAsync("SendAsync", el.value);
+        const handled = await el._dotnetRef.invokeMethodAsync("SendAsync", el.value);
+        if (handled === false) {
+            // The Composer held the message back (an upload is still running): keep the text.
+            return;
+        }
         el.value = "";
         el._picker.open = false;
         if (el._draftKey) {

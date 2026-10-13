@@ -94,6 +94,21 @@ public sealed class GetHelpToolTests
         }
     }
 
+    /// <summary>ChatUploads spec 6.7: the ROOMS help tells a member that an attached file arrives as a Library path in the Message.</summary>
+    [Fact]
+    public async Task GetHelp_RoomsSection_TellsMembersAttachedFilesArriveAsPaths()
+    {
+        var ct = TestContext.Current.CancellationToken;
+        var tool = new GetHelpTool([], new FakePromptSource(), "mcp__team__");
+
+        var help = await tool.InvokeAsync(new JsonObject(), ct);
+
+        Assert.Contains(
+            "A file the Human attaches is saved in the Library and its path is in the Message; open it with your file tools.",
+            help,
+            StringComparison.Ordinal);
+    }
+
     /// <summary>An override configured on a prompt <see cref="GetHelpTool"/> renders must actually reach its output.</summary>
     [Fact]
     public async Task GetHelp_OverriddenBudgetPrompt_AppearsInHelp()

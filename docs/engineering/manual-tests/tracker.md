@@ -137,6 +137,7 @@ the per-area tables below.
 | [File Changes, Watched Folders and Memory](file-changes.md) | [below](#file-changes) |
 | [Room Sessions: per-Room context, resume and Stop](room-sessions.md) | [below](#room-sessions) |
 | [Team chats: the Team Room, Team chats in the sidebar, the Members-tab Message, archiving and Task wakes and digests](team-chats.md) | [below](#team-chats) |
+| [Chat uploads: the paperclip, paste and drop, the chips, the Message's path lines, the Uploads root and Room delete](uploads.md) | [below](#uploads) |
 | [Teams: Sidebar, Members, Files, Tasks and Shared Memory](team-pages.md) | [below](#team-pages) |
 | [Turn detail and Spend](turn-detail.md) | [below](#turn-detail) |
 | [Global Search: the box, the dropdown and the jump](global-search.md) | [below](#global-search) |
@@ -964,6 +965,21 @@ Team chats: the Team Room, Team chats in the sidebar, the Members-tab Message, a
 | [TEAMCHATS-09](team-chats.md#teamchats-09--a-task-wake-whose-origin-room-is-gone-lands-in-the-teams-room) |  | Active |  |  |
 | [TEAMCHATS-10](team-chats.md#teamchats-10--a-digest-posts-in-the-team-room-with-a-mention-of-its-recipient) |  | Active |  |  |
 | [TEAMCHATS-11](team-chats.md#teamchats-11--a-digest-falls-back-to-the-recipients-root-one-to-one-when-the-team-room-is-archived) |  | Active |  |  |
+
+## uploads
+
+Chat uploads: the paperclip, paste and drop, the chips, the Message's path lines, the Uploads root and Room delete — [area file](uploads.md)
+
+| Test | 💰 | Status | Issue | Notes |
+| --- | --- | --- | --- | --- |
+| [UPLOADS-01](uploads.md#uploads-01--the-paperclip-attaches-a-file-as-a-chip-saved-into-the-rooms-uploads-folder) |  | Active |  |  |
+| [UPLOADS-02](uploads.md#uploads-02--a-pasted-screenshot-is-saved-under-a-time-stamped-name) |  | Active |  |  |
+| [UPLOADS-03](uploads.md#uploads-03--dragging-a-file-onto-the-composer-shows-the-drop-hint-and-attaches-it) |  | Active |  |  |
+| [UPLOADS-04](uploads.md#uploads-04--a-refused-file-shows-its-reason-on-the-chip-and-is-not-saved) |  | Active |  |  |
+| [UPLOADS-05](uploads.md#uploads-05--send-posts-the-path-lines-with-the-typed-text-and-the-path-is-a-library-link) |  | Active |  |  |
+| [UPLOADS-06](uploads.md#uploads-06--removing-a-chip-deletes-its-saved-file-and-nothing-is-posted) |  | Active |  |  |
+| [UPLOADS-07](uploads.md#uploads-07--deleting-a-room-sends-its-uploads-to-the-recycle-bin-and-says-how-many) |  | Active |  |  |
+| [UPLOADS-08](uploads.md#uploads-08--the-uploads-root-and-the-attached-files-look-right-in-light-and-dark-themes) |  | Active |  |  |
 
 ## team-pages
 
