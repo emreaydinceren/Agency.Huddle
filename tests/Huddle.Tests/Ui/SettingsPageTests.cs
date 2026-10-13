@@ -218,14 +218,14 @@ public sealed class SettingsPageTests
     }
 
     /// <summary>
-    /// The Appearance tab shows one labelled theme picker - not two controls - carrying the catalog's
+    /// The Appearance tab shows a labelled light-theme picker and a labelled dark-theme picker - no light/dark preference control - carrying the catalog's
     /// default theme's label. The second control it used to show, a light/dark preference, is gone:
     /// a theme now carries its own mode, so there is nothing left for a second control to contradict
     /// (<c>docs/adr/0017-a-theme-is-a-palette-not-a-pair.md</c>). Stays on HTTP: it is a fact about
     /// the prerender.
     /// </summary>
     [Fact]
-    public async Task SettingsAppearancePage_RendersOneThemePickerAndNoDarkModeControl()
+    public async Task SettingsAppearancePage_RendersALightAndADarkThemePickerAndNoDarkModeControl()
     {
         using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(60));
         var ct = cts.Token;
@@ -235,7 +235,8 @@ public sealed class SettingsPageTests
 
         var html = await client.GetStringAsync("/settings/appearance", ct);
 
-        Assert.Contains("aria-label=\"Theme\"", html, StringComparison.Ordinal);
+        Assert.Contains("aria-label=\"Light theme\"", html, StringComparison.Ordinal);
+        Assert.Contains("aria-label=\"Dark theme\"", html, StringComparison.Ordinal);
         Assert.DoesNotContain("aria-label=\"Appearance\"", html, StringComparison.Ordinal);
         Assert.Contains($">{HtmlEncoder.Default.Encode(ThemeCatalog.BuiltIn[0].Label)}<", html, StringComparison.Ordinal);
     }

@@ -175,6 +175,7 @@ One row per decision. Open the ADR only when its row is your question.
 | [0051](adr/0051-search-keeps-no-index-of-its-own.md) | Global Search keeps no index of its own: every search re-reads from memory or disk, bounded by a per-root visit budget, a per-file size cap, the debounce and cancellation; `WikiLinkIndex` is not used. | Accepted |
 | [0052](adr/0052-a-room-belongs-to-the-root-or-to-one-team.md) | A Room's Scope is the root or one Team, stored in a `room_teams` sibling table at creation and never changed; root and Team one-to-ones are separate Rooms; each Team has a Team Room reconciled from the catalog; a Team that leaves the catalog archives its Rooms. Revises TeamPages D-1 and D-9. | Accepted |
 | [0053](adr/0053-an-upload-is-saved-to-the-library-and-sent-as-its-path.md) | A file attached in the composer is saved at once into the Room's upload folder (a new built-in Uploads Library Root, or the Team's `Uploads` folder) and its path is appended to the Message at send; the existing prompt-block planner decides what the Agent gets; kind by magic bytes, SVG and executables refused; the chat Message is the notification and upload folders are silent in File Changes; Room delete recycles its uploads. Amends 0027. | Built |
+| [0054](adr/0054-a-light-theme-and-a-dark-theme.md) | The Human picks one light and one dark Theme; a top-bar button switches between them. | Accepted |
 
 ## 5. Manual tests
 

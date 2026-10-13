@@ -174,6 +174,81 @@ internal sealed partial class AppearanceStore : IDisposable
         this.AppearanceChanged?.Invoke();
     }
 
+    /// <summary>
+    /// Chooses <paramref name="themeId"/> as the Human's light or dark theme - whichever its
+    /// <see cref="ThemeDescriptor.Mode"/> says - under the write lock. The theme being shown changes
+    /// too when it is of the same mode (picking a new dark theme while in dark mode repaints at once);
+    /// picking the other mode's theme only records the choice for the next toggle.
+    /// </summary>
+    /// <param name="themeId">A <see cref="ThemeCatalog"/> id; an unknown id is ignored.</param>
+    public void SavePreferred(string themeId)
+    {
+        ArgumentNullException.ThrowIfNull(themeId);
+
+        var chosen = FindTheme(themeId);
+        if (chosen is null)
+        {
+            return;
+        }
+
+        lock (this.writeGate)
+        {
+            var document = this.ReadDocumentFromDisk();
+            var shownMode = (FindTheme(this.BuildSettings(document).ThemeId) ?? ThemeCatalog.BuiltIn[0]).Mode;
+
+            document[chosen.Mode == ThemeMode.Dark ? "darkTheme" : "lightTheme"] = chosen.Id;
+            if (shownMode == chosen.Mode)
+            {
+                document["theme"] = chosen.Id;
+            }
+
+            this.WriteDocumentToDisk(document);
+            this.current = this.BuildSettings(document);
+        }
+
+        this.AppearanceChanged?.Invoke();
+    }
+
+    /// <summary>
+    /// Switches between the Human's light and dark themes, under the write lock: shows the preferred
+    /// theme of the mode not currently shown (<see cref="AppearanceSettings.PreferredLightId"/> or
+    /// <see cref="AppearanceSettings.PreferredDarkId"/>), then raises <see cref="AppearanceChanged"/>.
+    /// </summary>
+    public void ToggleMode()
+    {
+        lock (this.writeGate)
+        {
+            var document = this.ReadDocumentFromDisk();
+            var settings = this.BuildSettings(document);
+            var shown = FindTheme(settings.ThemeId) ?? ThemeCatalog.BuiltIn[0];
+
+            // Record the theme being left as its mode's choice first, so a file that predates the pair
+            // (only "theme" set) still toggles back to it.
+            document[shown.Mode == ThemeMode.Dark ? "darkTheme" : "lightTheme"] = shown.Id;
+            document["theme"] = shown.Mode == ThemeMode.Dark ? settings.PreferredLightId : settings.PreferredDarkId;
+
+            this.WriteDocumentToDisk(document);
+            this.current = this.BuildSettings(document);
+        }
+
+        this.AppearanceChanged?.Invoke();
+    }
+
+    /// <summary>The catalog entry named <paramref name="themeId"/>, or <see langword="null"/> when it is <see langword="null"/> or names none.</summary>
+    /// <param name="themeId">The theme id to look up.</param>
+    private static ThemeDescriptor? FindTheme(string? themeId)
+    {
+        foreach (var theme in ThemeCatalog.BuiltIn)
+        {
+            if (string.Equals(theme.Id, themeId, StringComparison.Ordinal))
+            {
+                return theme;
+            }
+        }
+
+        return null;
+    }
+
     /// <summary>A valid theme id: lowercase letters, digits and hyphens, 1-64 characters. The same shape a filename built from it must be safe to use as (see <c>rules.md</c>'s Name path-traversal reasoning).</summary>
     [GeneratedRegex(@"\A[a-z0-9-]{1,64}\z", RegexOptions.CultureInvariant)]
     private static partial Regex ThemeIdPattern();
@@ -254,7 +329,44 @@ internal sealed partial class AppearanceStore : IDisposable
             }
         }
 
-        return new AppearanceSettings(themeId, accentColorHex);
+        var active = FindTheme(themeId) ?? ThemeCatalog.BuiltIn[0];
+        var lightThemeId = this.ReadPreferred(document, "lightTheme", ThemeMode.Light, active);
+        var darkThemeId = this.ReadPreferred(document, "darkTheme", ThemeMode.Dark, active);
+
+        return new AppearanceSettings(themeId, accentColorHex, lightThemeId, darkThemeId);
+    }
+
+    /// <summary>
+    /// Reads the stored light or dark choice at <paramref name="key"/>, warning and ignoring one that
+    /// names no theme or a theme of the other mode. When the key is absent and the theme being shown
+    /// is of <paramref name="mode"/>, that theme is the choice - which is how a file written before the
+    /// pair existed still toggles to the theme it was using.
+    /// </summary>
+    /// <param name="document">The parsed <c>appearance.json</c> object.</param>
+    /// <param name="key">The JSON key, <c>lightTheme</c> or <c>darkTheme</c>.</param>
+    /// <param name="mode">The mode the stored theme must have.</param>
+    /// <param name="active">The theme being shown.</param>
+    private string? ReadPreferred(JsonObject document, string key, ThemeMode mode, ThemeDescriptor active)
+    {
+        if (document.TryGetPropertyValue(key, out var node) && node is not null)
+        {
+            var candidate = node is JsonValue value && value.TryGetValue<string>(out var text) ? text : null;
+            var theme = FindTheme(candidate);
+
+            if (theme is not null && theme.Mode == mode)
+            {
+                return theme.Id;
+            }
+
+            this.logger.LogWarning(
+                "Appearance file '{Path}' sets {Key} to '{ThemeId}', which is not a known {Mode} theme; the default is used instead and the file is left unchanged.",
+                this.path,
+                key,
+                candidate ?? node.ToJsonString(),
+                mode);
+        }
+
+        return active.Mode == mode ? active.Id : null;
     }
 
     /// <summary>

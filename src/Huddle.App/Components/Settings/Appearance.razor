@@ -59,17 +59,35 @@
 @inject IAvatarLibraryLoader LibraryLoader
 
 <p class="teammates-intro">
-    Pick a theme. Each theme is either a light or a dark one, so choosing it sets the application's
-    light or dark colours too.
+    Pick one light theme and one dark theme. The button at the right of the top bar switches between
+    them.
 </p>
 
+<MudText Typo="Typo.subtitle2">Light theme</MudText>
 <MudList T="string"
          Class="theme-picker"
          SelectionMode="SelectionMode.SingleSelection"
-         SelectedValue="@this.SelectedThemeId"
+         SelectedValue="@this.AppearanceStore.Current.PreferredLightId"
          SelectedValueChanged="this.OnThemeChangedAsync"
-         aria-label="Theme">
-    @foreach (var grouping in ThemeCatalog.Grouped)
+         aria-label="Light theme">
+    @foreach (var grouping in GroupedFor(ThemeMode.Light))
+    {
+        <MudListSubheader Class="theme-picker-heading">@grouping.Heading</MudListSubheader>
+        @foreach (var theme in grouping.Themes)
+        {
+            <MudListItem T="string" Value="@theme.Id" Text="@theme.Label" />
+        }
+    }
+</MudList>
+
+<MudText Typo="Typo.subtitle2" Class="mt-4">Dark theme</MudText>
+<MudList T="string"
+         Class="theme-picker"
+         SelectionMode="SelectionMode.SingleSelection"
+         SelectedValue="@this.AppearanceStore.Current.PreferredDarkId"
+         SelectedValueChanged="this.OnThemeChangedAsync"
+         aria-label="Dark theme">
+    @foreach (var grouping in GroupedFor(ThemeMode.Dark))
     {
         <MudListSubheader Class="theme-picker-heading">@grouping.Heading</MudListSubheader>
         @foreach (var theme in grouping.Themes)
@@ -184,15 +202,21 @@
 </p>
 
 @code {
-    /// <summary>The theme id shown selected: the store's current selection, or the catalog's default when nothing is selected yet.</summary>
-    private string SelectedThemeId => this.AppearanceStore.Current.ThemeId ?? ThemeCatalog.BuiltIn[0].Id;
+    /// <summary><see cref="ThemeCatalog.Grouped"/> narrowed to the themes of one <see cref="ThemeMode"/>, so each picker lists only themes that can fill its slot; "High contrast" appears under both.</summary>
+    /// <param name="mode">The mode the picker's slot holds.</param>
+    private static IEnumerable<ThemeGrouping> GroupedFor(ThemeMode mode)
+    {
+        return ThemeCatalog.Grouped
+            .Select(grouping => grouping with { Themes = [.. grouping.Themes.Where(theme => theme.Mode == mode)] })
+            .Where(grouping => grouping.Themes.Count > 0);
+    }
 
     /// <summary>Whether the colour picker should show at all: only when one of the two <see cref="AccentTheme"/> entries is selected, since every other theme ignores <see cref="AppearanceSettings.AccentColorHex"/> entirely.</summary>
     private bool IsCustomAccentSelected =>
-        string.Equals(this.SelectedThemeId, AccentTheme.LightDescriptor.Id, StringComparison.Ordinal) ||
-        string.Equals(this.SelectedThemeId, AccentTheme.DarkDescriptor.Id, StringComparison.Ordinal);
+        string.Equals(this.AppearanceStore.Current.PreferredLightId, AccentTheme.LightDescriptor.Id, StringComparison.Ordinal) ||
+        string.Equals(this.AppearanceStore.Current.PreferredDarkId, AccentTheme.DarkDescriptor.Id, StringComparison.Ordinal);
 
-    /// <summary>The accent colour shown in the picker: the store's own value, read straight through with no local buffer - mirrors <see cref="SelectedThemeId"/>'s own shape, since there is only one value here and nothing to seed across a mode switch the way the avatar editor's fields need.</summary>
+    /// <summary>The accent colour shown in the picker: the store's own value, read straight through with no local buffer - since there is only one value here and nothing to seed across a mode switch the way the avatar editor's fields need.</summary>
     private string? AccentColorText => this.AppearanceStore.Current.AccentColorHex;
 
     // Editor-only working state for the Human's avatar editor - the same three fields
@@ -448,14 +472,18 @@
     }
 
     /// <summary>
-    /// Saves the newly picked theme id. A null reaches here when MudList clears its selection, which
-    /// SingleSelection does when the selected item is clicked again; the store reads that as "no
-    /// theme selected" and the catalog's default applies, which is the right answer either way.
+    /// Saves the newly picked theme as the Human's light or dark theme, whichever its mode is. A null
+    /// reaches here when MudList clears its selection, which SingleSelection does when the selected
+    /// item is clicked again; it is ignored, so a slot always holds a theme.
     /// </summary>
     /// <param name="themeId">The theme id the Human just picked.</param>
     private Task OnThemeChangedAsync(string? themeId)
     {
-        this.AppearanceStore.Save(themeId);
+        if (themeId is not null)
+        {
+            this.AppearanceStore.SavePreferred(themeId);
+        }
+
         return Task.CompletedTask;
     }
 

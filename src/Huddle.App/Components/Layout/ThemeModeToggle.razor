@@ -1,0 +1,51 @@
+@*
+    The top bar's light/dark switch. It does not flip a flag: it asks AppearanceStore to show the other
+    mode's chosen theme, because a theme carries exactly one palette and its own ThemeMode
+    (docs/adr/0017-a-theme-is-a-palette-not-a-pair.md; the pair is docs/adr/0054-a-light-theme-and-a-dark-theme.md).
+    The icon names the mode the click leads to.
+*@
+@using Agency.Huddle.App.Appearance
+@using Agency.Huddle.App.Themes
+@implements IDisposable
+@inject AppearanceStore AppearanceStore
+
+<MudTooltip Text="@this.Label">
+    <MudIconButton Icon="@(this.ShowingDark ? Icons.Material.Filled.LightMode : Icons.Material.Filled.DarkMode)"
+                   Size="Size.Small"
+                   Class="theme-mode-toggle"
+                   aria-label="@this.Label"
+                   OnClick="this.Toggle" />
+</MudTooltip>
+
+@code {
+    /// <summary>Whether the theme being shown is a dark one.</summary>
+    private bool ShowingDark => (ThemeCatalog.BuiltIn.FirstOrDefault(theme => string.Equals(theme.Id, this.AppearanceStore.Current.ThemeId, StringComparison.Ordinal)) ?? ThemeCatalog.BuiltIn[0]).Mode == ThemeMode.Dark;
+
+    private string Label => this.ShowingDark ? "Switch to light theme" : "Switch to dark theme";
+
+    /// <summary>Repaints the icon when the appearance changes from any tab or a hand-edit.</summary>
+    protected override void OnInitialized()
+    {
+        this.AppearanceStore.AppearanceChanged += this.OnAppearanceChanged;
+    }
+
+    private void Toggle()
+    {
+        this.AppearanceStore.ToggleMode();
+    }
+
+    private void OnAppearanceChanged()
+    {
+        _ = RendererDispatch.RunAsync(this.InvokeAsync, () =>
+        {
+            this.StateHasChanged();
+            return Task.CompletedTask;
+        });
+    }
+
+    /// <summary>Unsubscribes from <see cref="AppearanceStore.AppearanceChanged"/>; a leaked subscription to a singleton never dies.</summary>
+    public void Dispose()
+    {
+        this.AppearanceStore.AppearanceChanged -= this.OnAppearanceChanged;
+    }
+}
