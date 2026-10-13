@@ -21,10 +21,7 @@
 
 @if (this.Confirming)
 {
-    <MudStack Row="true" Spacing="2">
-        <MudButton Variant="Variant.Outlined" Size="Size.Small" Color="Color.Error" OnClick="this.OnConfirm">Reset all</MudButton>
-        <MudButton Variant="Variant.Outlined" Size="Size.Small" OnClick="this.OnCancel">Cancel</MudButton>
-    </MudStack>
+    <InlineConfirm Prompt="Reset every prompt to its default?" ConfirmText="Reset all" OnConfirm="this.OnConfirm" OnCancel="this.OnCancel" />
 }
 else
 {

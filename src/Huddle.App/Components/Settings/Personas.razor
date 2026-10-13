@@ -20,20 +20,15 @@
 @inject IOptions<TeamOptions> Options
 @inject TeammatePaths TeammatePaths
 
-<p class="teammates-intro">
+<SettingsIntro>
     Persona files and the room database live in plain folders and files on disk, so you can back
     them up, hand-edit a Persona, or copy them to another installation without going through the
     application.
-</p>
+</SettingsIntro>
 
-<p class="settings-prompts-file-path">
-    Persona files are stored at <code>@this.TeamsDirPath</code>, one Markdown file per Persona,
-    Team sub-folders included.
-</p>
+<StoredAt Label="Persona files stored at" Path="@this.TeamsDirPath" />
 
-<p class="settings-prompts-file-path">
-    The room database is stored at <code>@this.DbPath</code>.
-</p>
+<StoredAt Label="Room database stored at" Path="@this.DbPath" />
 
 @code {
     /// <summary>

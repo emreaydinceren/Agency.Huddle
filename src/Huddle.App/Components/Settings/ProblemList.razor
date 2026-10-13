@@ -1,0 +1,27 @@
+@*
+    The "Problems" section the Skills and Team Types panels share (UX-058, UX-R16): always present, so
+    a clean panel says "No problems." instead of the section vanishing. The caller renders its own
+    outlined cards as the content and says how many there are.
+*@
+
+<div class="problem-list">
+    <MudText Typo="Typo.overline" Class="problem-list-heading mt-4 d-block">Problems</MudText>
+    @if (this.Count == 0)
+    {
+        <MudText Class="problem-list-empty">No problems.</MudText>
+    }
+    else
+    {
+        @this.ChildContent
+    }
+</div>
+
+@code {
+    /// <summary>How many problems the caller is about to render; zero shows "No problems." instead of the content.</summary>
+    [Parameter]
+    public int Count { get; set; }
+
+    /// <summary>The problem cards, one outlined paper each.</summary>
+    [Parameter]
+    public RenderFragment? ChildContent { get; set; }
+}

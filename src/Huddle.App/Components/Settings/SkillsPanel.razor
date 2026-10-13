@@ -21,16 +21,13 @@
 @inject IDialogService DialogService
 @inject ISnackbar Snackbar
 
-<p class="teammates-intro">
+<SettingsIntro>
     A Skill is a named folder of Markdown that teaches a teammate one kind of work, assigned to a
-    Teammate on its own card. This tab only shows what already exists on disk - nothing here is
-    editable.
-</p>
+    Teammate on its own card. Write a new Skill as a folder in the skills folder; it appears
+    within a second.
+</SettingsIntro>
 
-<p class="settings-prompts-file-path">
-    Skills are stored at <code>@this.Skills.SkillsDirectory</code>. Write a new Skill as a folder
-    here; it appears within a second.
-</p>
+<StoredAt Path="@this.Skills.SkillsDirectory" />
 
 <MudButton Variant="Variant.Outlined" Size="Size.Small" Class="skills-import-button mb-2" OnClick="this.ImportSkillAsync">Import skill</MudButton>
 
@@ -72,9 +69,7 @@
     </tbody>
 </MudSimpleTable>
 
-@if (this.OrphanIssues.Count > 0)
-{
-    <MudText Typo="Typo.overline" Class="mt-4 d-block">Problems</MudText>
+<ProblemList Count="this.OrphanIssues.Count">
     @foreach (var group in this.OrphanIssues)
     {
         <MudPaper Outlined="true" Class="pa-3 mb-2">
@@ -85,7 +80,7 @@
             }
         </MudPaper>
     }
-}
+</ProblemList>
 
 @code {
     /// <summary>Unsubscribes from <see cref="SkillStore.SkillsChanged"/> - see the file-level comment for why this tab, unlike Personas, keeps a live subscription.</summary>

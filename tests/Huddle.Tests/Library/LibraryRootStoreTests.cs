@@ -35,6 +35,47 @@ public sealed class LibraryRootStoreTests
         Assert.Equal("Teammates", store.Roots[1].DisplayName);
     }
 
+    /// <summary>The trust warning every pinning surface shows is one constant with the Spec's settled text (UX-R15).</summary>
+    [Fact]
+    public void TrustWarning_IsTheSettledText()
+    {
+        Assert.Equal("Anything in this folder can be read and changed from Huddle.", LibraryRootStore.TrustWarning);
+    }
+
+    /// <summary><c>LibraryRootStore.TryPin</c> refuses a path that is not an existing folder with the settled text, saving nothing (UX-R15).</summary>
+    [Fact]
+    public void TryPin_MissingFolder_ReturnsTheErrorAndSavesNothing()
+    {
+        using var dataDir = new TempDataDir();
+        var store = new LibraryRootStore(dataDir.Options(), new TeammatePaths(dataDir.Options()), NullLogger<LibraryRootStore>.Instance);
+
+        string? error = store.TryPin("Docs", Path.Combine(dataDir.Path, "Nope"));
+
+        Assert.Equal("That folder doesn't exist.", error);
+        Assert.Empty(store.Pinned);
+        Assert.False(File.Exists(store.FilePath));
+    }
+
+    /// <summary><c>LibraryRootStore.TryPin</c> pins an existing folder, returns no error, and keeps the pinned roots that were already there (UX-R15).</summary>
+    [Fact]
+    public void TryPin_ExistingFolder_PinsItAfterTheOthers()
+    {
+        using var dataDir = new TempDataDir();
+        var store = new LibraryRootStore(dataDir.Options(), new TeammatePaths(dataDir.Options()), NullLogger<LibraryRootStore>.Instance);
+        string first = Path.Combine(dataDir.Path, "First");
+        string second = Path.Combine(dataDir.Path, "Second");
+        Directory.CreateDirectory(first);
+        Directory.CreateDirectory(second);
+
+        string? firstError = store.TryPin("First", first);
+        string? secondError = store.TryPin("Second", second);
+
+        Assert.Null(firstError);
+        Assert.Null(secondError);
+        Assert.Equal(["First", "Second"], store.Pinned.Select(p => p.Name));
+        Assert.True(File.Exists(store.FilePath));
+    }
+
     /// <summary>A pinned root from <c>Team:Library:Roots</c> follows the two built-ins, with an id slugged from its name.</summary>
     [Fact]
     public void Roots_ConfiguredPinned_FollowBuiltIns()

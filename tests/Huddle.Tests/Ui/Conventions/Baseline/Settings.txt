@@ -1,4 +1,3 @@
 CV1|src/Huddle.App/Components/Settings/Appearance.razor|2
 CV2|src/Huddle.App/Components/Settings/Appearance.razor|1
 CV3|src/Huddle.App/Components/Settings/Appearance.razor|1
-CV6|src/Huddle.App/Components/Settings/PromptsPanel.razor|1

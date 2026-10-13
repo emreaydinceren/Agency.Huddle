@@ -18,13 +18,7 @@
 *@
 
 <MudContainer MaxWidth="MaxWidth.Large" Class="pa-4">
-    <MudStack Row="true" AlignItems="AlignItems.Center" Justify="Justify.FlexEnd" Class="mb-4">
-        <ResetAllControl AnyModified="this.AnyModified"
-                          Confirming="this.confirmingResetAll"
-                          OnBeginReset="this.BeginResetAll"
-                          OnConfirm="this.ConfirmResetAll"
-                          OnCancel="this.CancelResetAll" />
-    </MudStack>
+    <PageHeader Title="Settings" />
 
     @if (this.error is not null)
     {
@@ -32,46 +26,47 @@
     }
 
     <MudTabs ActivePanelIndex="this.ActivePanelIndex" ActivePanelIndexChanged="this.OnActivePanelIndexChanged">
-        <MudTabPanel Text="Prompts">
-            <p class="teammates-intro">
+        <MudTabPanel Text="Prompts" Icon="@Icons.Material.Outlined.EditNote">
+            <SettingsIntro>
                 A prompt is one piece of wording this application sends to a model — part of a system prompt,
                 a turn, <code>get_help</code>'s output, or a tool's own description. Editing one changes what every
                 teammate is told, not how the application itself behaves, and a prompt you have changed can
                 always be restored to the wording it shipped with.
-            </p>
+            </SettingsIntro>
 
-            <p class="settings-prompts-file-path">
-                Overrides are stored at <code>@this.Prompts.FilePath</code>, which holds only the prompts you have
-                changed — hand-edit it for fast prototyping if you like. The file does not exist until the
-                first time you save here, so it being absent is expected, not a bug.
-            </p>
+            <StoredAt Label="Overrides stored at" Path="@this.Prompts.FilePath" />
 
             <form @onsubmit="this.Save">
                 <PromptsPanel Groups="this.groups"
                             ValueChanged="this.OnFieldValueChanged"
                             ResetRequested="this.OnResetRequested" />
-                <MudStack Row="true" Spacing="2">
+                <MudStack Row="true" Spacing="2" AlignItems="AlignItems.Center" Class="settings-prompts-actions">
                     <MudButton Variant="Variant.Filled"
                                Size="Size.Small"
                                Color="Color.Primary"
                                ButtonType="ButtonType.Submit"
                                Disabled="@(!this.HasUnsavedChanges)">Save</MudButton>
+                    <ResetAllControl AnyModified="this.AnyModified"
+                                     Confirming="this.confirmingResetAll"
+                                     OnBeginReset="this.BeginResetAll"
+                                     OnConfirm="this.ConfirmResetAll"
+                                     OnCancel="this.CancelResetAll" />
                 </MudStack>
             </form>
         </MudTabPanel>
-        <MudTabPanel Text="Appearance">
+        <MudTabPanel Text="Appearance" Icon="@Icons.Material.Outlined.Palette">
             <Appearance />
         </MudTabPanel>
-        <MudTabPanel Text="Personas">
+        <MudTabPanel Text="Personas" Icon="@Icons.Material.Outlined.People">
             <Personas />
         </MudTabPanel>
-        <MudTabPanel Text="Skills">
+        <MudTabPanel Text="Skills" Icon="@Icons.Material.Outlined.MenuBook">
             <SkillsPanel />
         </MudTabPanel>
-        <MudTabPanel Text="Team Types">
+        <MudTabPanel Text="Team Types" Icon="@Icons.Material.Outlined.AccountTree">
             <TeamTypesPanel />
         </MudTabPanel>
-        <MudTabPanel Text="Library">
+        <MudTabPanel Text="Library" Icon="@Icons.Material.Outlined.FolderOpen">
             <LibraryPanel />
         </MudTabPanel>
     </MudTabs>

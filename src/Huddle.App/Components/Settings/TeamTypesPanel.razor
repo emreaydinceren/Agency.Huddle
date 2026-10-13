@@ -12,42 +12,48 @@
 @inject TeamTypeCatalog Catalog
 
 <div class="teamtypes-panel">
-    <p class="teammates-intro">
+    <SettingsIntro>
         A team type is the set of roles and processes a Team starts from; each role is a job of the hiring pool. Built-in types ship with the
         application; a folder of the same id in your TeamTypes folder replaces one, and a new id adds one.
-    </p>
+    </SettingsIntro>
+
+    <StoredAt Label="Your team types stored at" Path="@this.Catalog.UserDirectory" />
 
     <MudStack Row="true" Spacing="2" Class="mb-2">
         <MudButton Variant="Variant.Outlined" Size="Size.Small" Class="teamtypes-reload" OnClick="this.Reload">Reload</MudButton>
     </MudStack>
 
-    <MudTable T="TeamTypeManifest" Items="this.Catalog.Types" RowClass="teamtypes-row" Hover="true" Dense="true">
-        <HeaderContent>
-            <MudTh>Name</MudTh>
-            <MudTh>Id</MudTh>
-            <MudTh>Version</MudTh>
-            <MudTh>Source</MudTh>
-            <MudTh>Roles</MudTh>
-        </HeaderContent>
-        <RowTemplate>
-            <MudTd Class="teamtypes-name">@context.DisplayName</MudTd>
-            <MudTd Class="teamtypes-id">@context.Id</MudTd>
-            <MudTd Class="teamtypes-version">@context.Version</MudTd>
-            <MudTd Class="teamtypes-source">@(this.Catalog.IsUserDefined(context.Id) ? "Yours" : "Built-in")</MudTd>
-            <MudTd Class="teamtypes-roles">@context.Roles.Count(static role => !role.Pooled)</MudTd>
-        </RowTemplate>
-        <NoRecordsContent>
-            <EmptyState Text="No team types found." />
-        </NoRecordsContent>
-    </MudTable>
+    <MudSimpleTable Hover="true" Dense="true">
+        <thead>
+            <tr>
+                <th>Name</th>
+                <th>Id</th>
+                <th>Version</th>
+                <th>Source</th>
+                <th>Roles</th>
+            </tr>
+        </thead>
+        <tbody>
+            @foreach (var manifest in this.Catalog.Types)
+            {
+                <tr class="teamtypes-row">
+                    <td class="teamtypes-name">@manifest.DisplayName</td>
+                    <td class="teamtypes-id">@manifest.Id</td>
+                    <td class="teamtypes-version">@manifest.Version</td>
+                    <td class="teamtypes-source">@(this.Catalog.IsUserDefined(manifest.Id) ? "Yours" : "Built-in")</td>
+                    <td class="teamtypes-roles">@manifest.Roles.Count(static role => !role.Pooled)</td>
+                </tr>
+            }
+            @if (this.Catalog.Types.Count == 0)
+            {
+                <tr>
+                    <td colspan="5"><EmptyState Text="No team types found." /></td>
+                </tr>
+            }
+        </tbody>
+    </MudSimpleTable>
 
-    <MudText Typo="Typo.overline" Class="mt-4 d-block">Problems</MudText>
-    @if (this.Catalog.Problems.Count == 0 && this.Catalog.Pool.Problems.Count == 0)
-    {
-        <MudText Class="teamtypes-no-problems">No problems.</MudText>
-    }
-    else
-    {
+    <ProblemList Count="@(this.Catalog.Problems.Count + this.Catalog.Pool.Problems.Count)">
         @foreach (var problem in this.Catalog.Problems)
         {
             <MudPaper Outlined="true" Class="pa-3 mb-2 teamtypes-problem">
@@ -65,7 +71,7 @@
                 <MudText Class="teamtypes-problem-message">@problem.Message</MudText>
             </MudPaper>
         }
-    }
+    </ProblemList>
 </div>
 
 @code {

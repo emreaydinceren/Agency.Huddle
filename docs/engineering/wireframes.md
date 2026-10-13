@@ -236,11 +236,11 @@ active panel. Left, the Team page; right, Settings.
 | `M5` | Search | `MudTextField` | Filters the panel's list |
 | `M6` | Member card | A tile in `TeamMembers` | Avatar, name, role |
 | `G1` | Settings container | `MudContainer`, `MaxWidth.Large` | |
-| `G1a` | Reset all | `ResetAllControl` | "Reset all to defaults"; disabled until a prompt has been changed, then asks to confirm |
-| `G2` | Tabs | `MudTabs` | The active tab follows the route |
-| `G2a` | Tab rail | | Prompts, Appearance, Personas, Skills, Team Types, Library |
-| `G3` | Active panel | `PromptsPanel`, `Appearance`, `Personas`, `SkillsPanel`, `TeamTypesPanel` or `LibraryPanel` | |
-| `G3a` | Save | `MudButton` Filled | Prompts panel only |
+| `G1a` | Reset all | `ResetAllControl` | In the Prompts panel's action row beside Save; "Reset all to defaults", disabled until a prompt has been changed, then asks inline (`InlineConfirm`) |
+| `G2` | Tabs | `MudTabs` | The active tab follows the route; under a `PageHeader` "Settings" |
+| `G2a` | Tab rail | | Prompts, Appearance, Personas, Skills, Team Types, Library, each with an icon |
+| `G3` | Active panel | `PromptsPanel`, `Appearance`, `Personas`, `SkillsPanel`, `TeamTypesPanel` or `LibraryPanel` | Each opens with `SettingsIntro`, `StoredAt` and an action row |
+| `G3a` | Save | `MudButton` Filled | Prompts panel only, in a sticky action row with Reset all |
 
 ## Figure 7: The Teammates page
 

@@ -58,10 +58,12 @@
 @inject AvatarLibraryLocator LibraryLocator
 @inject IAvatarLibraryLoader LibraryLoader
 
-<p class="teammates-intro">
+<SettingsIntro>
     Pick one light theme and one dark theme. The button at the right of the top bar switches between
     them.
-</p>
+</SettingsIntro>
+
+<StoredAt Label="The selection is stored at" Path="@this.AppearanceStore.FilePath" />
 
 <MudText Typo="Typo.subtitle2">Light theme</MudText>
 <MudList T="string"
@@ -115,11 +117,6 @@
     Every other theme except Huddle Light and Huddle Dark is one of the colour themes bundled with Visual Studio Code, mapped onto this application's palette. Visual Studio Code and its default
     themes are Microsoft's, under the MIT licence; Solarized is Ethan Schoonover's and Monokai is
     Wimer Hazenberg's.
-</p>
-
-<p class="settings-prompts-file-path">
-    The selection is stored at <code>@this.AppearanceStore.FilePath</code>. The file does not exist
-    until you save a choice here, so it being absent is expected, not a bug.
 </p>
 
 @* See the file-level comment for why this section exists: the Human has no Persona file, so this is

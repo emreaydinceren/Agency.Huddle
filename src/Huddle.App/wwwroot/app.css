@@ -1646,6 +1646,22 @@ a.team-ref,
     justify-content: flex-end;
 }
 
+/* Settings panel header: the intro and the "stored at" line (UX-012, UX-R17). */
+.settings-intro,
+.settings-stored-at {
+    margin: 0 0 0.5rem 0;
+    color: var(--mud-palette-text-secondary);
+}
+
+/* The Prompts panel's Save and Reset all, kept in reach of a long form (UX-011). */
+.settings-prompts-actions {
+    position: sticky;
+    bottom: 0;
+    z-index: 1;
+    padding: 0.5rem 0;
+    background: var(--mud-palette-background);
+}
+
 /* ---- Tasks ------------------------------------------------------------------------------------ */
 
 /* ---- Board layout (Spec §13.4, §13.10) --------------------------------------------------------

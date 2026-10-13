@@ -26,8 +26,8 @@
 
 @foreach (var group in this.Groups)
 {
-    <MudPaper Class="pa-4 mb-4">
-        <h2 class="prompts-group-heading">@group.Label</h2>
+    <MudPaper Outlined="true" Class="pa-3 mb-4">
+        <MudText Typo="Typo.h6" HtmlTag="h2" Class="prompts-group-heading">@group.Label</MudText>
 
         @foreach (var field in group.Fields)
         {

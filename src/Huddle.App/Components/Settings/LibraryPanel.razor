@@ -15,10 +15,16 @@
 @inject LibraryRootStore Roots
 @inject IDialogService DialogService
 
-<p class="teammates-intro">
+<SettingsIntro>
     A Library Root is a folder the Library can read and change. Teams and Teammates are always
     here; pin any other folder to add it.
-</p>
+</SettingsIntro>
+
+<StoredAt Path="@this.Roots.FilePath" />
+
+<MudStack Row="true" Spacing="2" Class="mb-2">
+    <MudButton Variant="Variant.Outlined" Size="Size.Small" Class="library-panel-reset-button" OnClick="this.ResetAsync">Reset pinned folders</MudButton>
+</MudStack>
 
 <MudSimpleTable Hover="true" Dense="true" Class="library-panel-roots-table">
     <thead>
@@ -37,7 +43,14 @@
                 <td>
                     @if (root.Kind == LibraryRootKind.Pinned)
                     {
-                        <MudButton Variant="Variant.Outlined" Size="Size.Small" Class="library-panel-remove-button" OnClick="@(() => this.RemoveAsync(root))">Remove</MudButton>
+                        @if (string.Equals(this.confirmingRemoveId, root.Id, StringComparison.Ordinal))
+                        {
+                            <InlineConfirm Prompt="@($"Remove '{root.DisplayName}'?")" ConfirmText="Remove" OnConfirm="@(() => this.RemoveAsync(root))" OnCancel="this.CancelRemove" />
+                        }
+                        else
+                        {
+                            <MudButton Variant="Variant.Outlined" Size="Size.Small" Class="library-panel-remove-button" OnClick="@(() => this.AskRemove(root))">Remove</MudButton>
+                        }
                     }
                     else
                     {
@@ -49,7 +62,7 @@
     </tbody>
 </MudSimpleTable>
 
-<MudText Typo="Typo.body2" Class="library-panel-trust-warning mt-2">Anything in this folder can be read and changed from Huddle.</MudText>
+<MudText Typo="Typo.body2" Class="library-panel-trust-warning mt-2">@LibraryRootStore.TrustWarning</MudText>
 
 @if (this.addError is not null)
 {
@@ -62,12 +75,11 @@
     <MudButton Variant="Variant.Filled" Size="Size.Small" Color="Color.Primary" Class="library-panel-add-button" OnClick="this.AddAsync">Add</MudButton>
 </MudStack>
 
-<MudButton Variant="Variant.Outlined" Size="Size.Small" Class="library-panel-reset-button mt-4" OnClick="this.ResetAsync">Reset pinned folders</MudButton>
-
 @code {
     private string name = string.Empty;
     private string path = string.Empty;
     private string? addError;
+    private string? confirmingRemoveId;
 
     /// <summary>Subscribes to <see cref="LibraryRootStore.RootsChanged"/> so this tab repaints when a Root is pinned, removed, hidden or reset from elsewhere.</summary>
     protected override void OnInitialized()
@@ -101,15 +113,12 @@
     /// </summary>
     private Task AddAsync()
     {
-        this.addError = null;
-        if (!Directory.Exists(this.path))
+        this.addError = this.Roots.TryPin(this.name, this.path);
+        if (this.addError is not null)
         {
-            this.addError = "That folder doesn't exist.";
             return Task.CompletedTask;
         }
 
-        List<PinnedRootEntry> pinned = [.. this.Roots.Pinned, new PinnedRootEntry(this.name, this.path)];
-        this.Roots.Save(pinned);
         this.name = string.Empty;
         this.path = string.Empty;
         return Task.CompletedTask;
@@ -119,10 +128,18 @@
     /// <param name="root">The pinned root's own resolved <see cref="LibraryRoot"/>.</param>
     private Task RemoveAsync(LibraryRoot root)
     {
+        this.confirmingRemoveId = null;
         List<PinnedRootEntry> pinned = [.. this.Roots.Pinned.Where(p => !string.Equals(p.Name, root.DisplayName, StringComparison.Ordinal))];
         this.Roots.Save(pinned);
         return Task.CompletedTask;
     }
+
+    /// <summary>Swaps a pinned root's Remove button for the inline confirmation (UX-026).</summary>
+    /// <param name="root">The pinned root being asked about.</param>
+    private void AskRemove(LibraryRoot root) => this.confirmingRemoveId = root.Id;
+
+    /// <summary>Abandons the inline Remove confirmation.</summary>
+    private void CancelRemove() => this.confirmingRemoveId = null;
 
     /// <summary>Confirms through a real <see cref="MudDialog"/> (Spec §6.10, settled texts), then deletes <c>library-roots.json</c> via <see cref="LibraryRootStore.Reset"/>.</summary>
     private async Task ResetAsync()
