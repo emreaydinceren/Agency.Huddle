@@ -1042,7 +1042,7 @@ Ids are `<deliverable number>.<task>`, the form `Set-Tracker.ps1` updates:
 `pwsh -NoProfile -File agents/scripts/Set-Tracker.ps1 -Task "12.3" -State Done -TrackerPath docs/engineering/UX-Issues-Plan.md`.
 `(H)` is Haiku, `(S)` is Sonnet.
 
-**Status:** 18 of 141 tasks Done · 0 of 2 retrospectives done · last updated 2026-10-13.
+**Status:** 23 of 141 tasks Done · 0 of 2 retrospectives done · last updated 2026-10-13.
 
 | **Deliverable / Task** | **Model** | **Depends on** | **Active** | **In Progress** | **Done** |
 | --- | --- | --- | --- | --- | --- |
@@ -1075,11 +1075,11 @@ Ids are `<deliverable number>.<task>`, the form `Set-Tracker.ps1` updates:
 | 4.4 Utilities (H) | Haiku | 4.1 | | | |
 | 4.5 Clean-up (H) | Haiku | 4.2, 4.3, 4.4 | | | |
 | **U5 Dialog building blocks** | Sonnet | none | | | |
-| 5.1 Red (S) | Sonnet | none | | | |
-| 5.2 HuddleDialogOptions (S) | Sonnet | 5.1 | | | |
-| 5.3 NameDialog (S) | Sonnet | 5.2 | | | |
-| 5.4 ConfirmDialog (S) | Sonnet | 5.2 | | | |
-| 5.5 Catalog summary (S) | Sonnet | 5.3, 5.4 | | | |
+| 5.1 Red (S) | Sonnet | none | | | ✔ |
+| 5.2 HuddleDialogOptions (S) | Sonnet | 5.1 | | | ✔ |
+| 5.3 NameDialog (S) | Sonnet | 5.2 | | | ✔ |
+| 5.4 ConfirmDialog (S) | Sonnet | 5.2 | | | ✔ |
+| 5.5 Catalog summary (S) | Sonnet | 5.3, 5.4 | | | ✔ |
 | **U6 Small components** | Haiku | none | | | |
 | 6.1 Red (H) | Haiku | none | | | ✔ |
 | 6.2 PageHeader (H) | Haiku | 6.1 | | | ✔ |
