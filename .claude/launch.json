@@ -2,6 +2,12 @@
   "version": "0.0.1",
   "configurations": [
     {
+      "name": "huddle-seed",
+      "runtimeExecutable": "pwsh",
+      "runtimeArgs": ["-NoProfile", "-File", "run.ps1", "-Seed", "-Port", "1111"],
+      "port": 1111
+    },
+    {
       "name": "huddle-app",
       "runtimeExecutable": "dotnet",
       "runtimeArgs": [

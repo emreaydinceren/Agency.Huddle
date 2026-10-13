@@ -1,0 +1,188 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 800" width="1200" height="800" font-family="Inter, 'Segoe UI', Helvetica, Arial, sans-serif" xml:space="preserve" style="white-space: pre" role="img" aria-label="Figure 4: The Tasks page">
+<title>Figure 4: The Tasks page</title>
+<defs><filter id="sh" x="-10%" y="-10%" width="125%" height="130%"><feDropShadow dx="0" dy="3" stdDeviation="4" flood-color="#000" flood-opacity="0.22"/></filter><marker id="ar" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0 L10 5 L0 10 z" fill="#6b7280"/></marker></defs>
+<rect width="1200" height="800" fill="#ffffff"/>
+<text x="24" y="30" font-size="18" font-weight="700" fill="#1f2430" text-anchor="start">Figure 4: The Tasks page</text>
+<text x="24" y="48" font-size="12" font-weight="400" fill="#6b7280" text-anchor="start">Tasks.razor, TaskToolbar, TaskBoard / TaskListView, TaskDetail. The board is shown; List replaces T4 with a grid.</text>
+<rect x="24" y="60" width="1152" height="700" rx="6" fill="#eceef2" stroke="#8b93a1" stroke-width="1.4"/>
+<rect x="30" y="65" width="25" height="17" rx="8.5" fill="#b45309"/>
+<text x="42.4" y="77.5" font-size="11" font-weight="700" fill="#fff" text-anchor="middle">T1</text>
+<text x="60.8" y="78" font-size="12" font-weight="600" fill="#1f2430" text-anchor="start">Page container</text>
+<text x="166.8" y="78" font-size="11" font-weight="400" fill="#6b7280" text-anchor="start">MudContainer, full width, pa-4</text>
+<rect x="36" y="100" width="1128" height="44" rx="4" fill="#ffffff" stroke="#8b93a1" stroke-width="1.2"/>
+<rect x="32" y="92" width="25" height="17" rx="8.5" fill="#b45309"/>
+<text x="44.4" y="104.5" font-size="11" font-weight="700" fill="#fff" text-anchor="middle">T2</text>
+<text x="63" y="104" font-size="11" font-weight="600" fill="#1f2430" stroke="#ffffff" stroke-width="4" paint-order="stroke">Header</text>
+<text x="100" y="128" font-size="14" font-weight="700" fill="#1f2430" text-anchor="start">View name (h1)</text>
+<rect x="230" y="108" width="96" height="28" rx="4" fill="#ffffff" stroke="#8b93a1" stroke-width="1.2"/>
+<text x="278.0" y="126.0" font-size="11" font-weight="400" fill="#1f2430" text-anchor="middle">Actions ›</text>
+<rect x="226" y="100" width="32" height="17" rx="8.5" fill="#b45309"/>
+<text x="242.1" y="112.5" font-size="11" font-weight="700" fill="#fff" text-anchor="middle">T2a</text>
+<text x="344" y="127" font-size="11" font-weight="400" fill="#6b7280" text-anchor="start">View description…</text>
+<rect x="530" y="108" width="60" height="28" rx="4" fill="#ffffff" stroke="#8b93a1" stroke-width="1.2" stroke-dasharray="6 4"/>
+<text x="560.0" y="126.0" font-size="11" font-weight="400" fill="#1f2430" text-anchor="middle">Reset</text>
+<rect x="526" y="100" width="32" height="17" rx="8.5" fill="#b45309"/>
+<text x="542.1" y="112.5" font-size="11" font-weight="700" fill="#fff" text-anchor="middle">T2b</text>
+<rect x="700" y="108" width="150" height="28" rx="4" fill="#f6f7f9" stroke="#8b93a1" stroke-width="1.2"/>
+<text x="775.0" y="126.0" font-size="11" font-weight="400" fill="#1f2430" text-anchor="middle">AI is reacting…</text>
+<rect x="696" y="100" width="32" height="17" rx="8.5" fill="#b45309"/>
+<text x="712.1" y="112.5" font-size="11" font-weight="700" fill="#fff" text-anchor="middle">T2c</text>
+<rect x="36" y="164" width="1128" height="22" rx="4" fill="#fdf0d5" stroke="#d99a1e" stroke-width="1.2" stroke-dasharray="6 4"/>
+<text x="600.0" y="179.0" font-size="10" font-weight="400" fill="#1f2430" text-anchor="middle">Notices: Tasks off, invalid view, load errors, ignored lines (only when needed)</text>
+<rect x="32" y="156" width="25" height="17" rx="8.5" fill="#b45309"/>
+<text x="44.4" y="168.5" font-size="11" font-weight="700" fill="#fff" text-anchor="middle">T9</text>
+<rect x="36" y="206" width="1128" height="48" rx="4" fill="#ffffff" stroke="#8b93a1" stroke-width="1.2"/>
+<rect x="32" y="198" width="25" height="17" rx="8.5" fill="#b45309"/>
+<text x="44.4" y="210.5" font-size="11" font-weight="700" fill="#fff" text-anchor="middle">T3</text>
+<text x="63" y="210" font-size="11" font-weight="600" fill="#1f2430" stroke="#ffffff" stroke-width="4" paint-order="stroke">Toolbar</text>
+<rect x="92" y="216" width="90" height="28" rx="4" fill="#f6f7f9" stroke="#8b93a1" stroke-width="1.2"/>
+<text x="137.0" y="234.0" font-size="10" font-weight="400" fill="#1f2430" text-anchor="middle">List | Board</text>
+<rect x="88" y="208" width="32" height="17" rx="8.5" fill="#b45309"/>
+<text x="104.1" y="220.5" font-size="11" font-weight="700" fill="#fff" text-anchor="middle">T3a</text>
+<rect x="192" y="216" width="62" height="28" rx="4" fill="#f6f7f9" stroke="#8b93a1" stroke-width="1.2"/>
+<text x="223.0" y="234.0" font-size="10" font-weight="400" fill="#1f2430" text-anchor="middle">Filter ▾</text>
+<rect x="188" y="208" width="32" height="17" rx="8.5" fill="#b45309"/>
+<text x="204.1" y="220.5" font-size="11" font-weight="700" fill="#fff" text-anchor="middle">T3b</text>
+<rect x="264" y="216" width="100" height="28" rx="4" fill="#f6f7f9" stroke="#8b93a1" stroke-width="1.2"/>
+<text x="314.0" y="234.0" font-size="10" font-weight="400" fill="#1f2430" text-anchor="middle">Group, Sort ▾</text>
+<rect x="260" y="208" width="32" height="17" rx="8.5" fill="#b45309"/>
+<text x="276.1" y="220.5" font-size="11" font-weight="700" fill="#fff" text-anchor="middle">T3c</text>
+<rect x="374" y="216" width="180" height="28" rx="4" fill="#f6f7f9" stroke="#8b93a1" stroke-width="1.2"/>
+<text x="464.0" y="234.0" font-size="10" font-weight="400" fill="#1f2430" text-anchor="middle">All | Blocked | Unblocked</text>
+<rect x="370" y="208" width="32" height="17" rx="8.5" fill="#b45309"/>
+<text x="386.1" y="220.5" font-size="11" font-weight="700" fill="#fff" text-anchor="middle">T3d</text>
+<rect x="564" y="216" width="110" height="28" rx="4" fill="#f6f7f9" stroke="#8b93a1" stroke-width="1.2"/>
+<text x="619.0" y="234.0" font-size="10" font-weight="400" fill="#1f2430" text-anchor="middle">Search</text>
+<rect x="560" y="208" width="32" height="17" rx="8.5" fill="#b45309"/>
+<text x="576.1" y="220.5" font-size="11" font-weight="700" fill="#fff" text-anchor="middle">T3e</text>
+<rect x="684" y="216" width="70" height="28" rx="4" fill="#f6f7f9" stroke="#8b93a1" stroke-width="1.2"/>
+<text x="719.0" y="234.0" font-size="10" font-weight="400" fill="#1f2430" text-anchor="middle">Dense  ●</text>
+<rect x="680" y="208" width="32" height="17" rx="8.5" fill="#b45309"/>
+<text x="696.1" y="220.5" font-size="11" font-weight="700" fill="#fff" text-anchor="middle">T3f</text>
+<rect x="764" y="216" width="100" height="28" rx="4" fill="#f6f7f9" stroke="#8b93a1" stroke-width="1.2"/>
+<text x="814.0" y="234.0" font-size="10" font-weight="400" fill="#1f2430" text-anchor="middle">Save to view</text>
+<rect x="760" y="208" width="32" height="17" rx="8.5" fill="#b45309"/>
+<text x="776.1" y="220.5" font-size="11" font-weight="700" fill="#fff" text-anchor="middle">T3g</text>
+<rect x="36" y="276" width="1128" height="470" rx="4" fill="#f6f7f9" stroke="#8b93a1" stroke-width="1.2"/>
+<rect x="32" y="268" width="25" height="17" rx="8.5" fill="#b45309"/>
+<text x="44.4" y="280.5" font-size="11" font-weight="700" fill="#fff" text-anchor="middle">T4</text>
+<text x="63" y="280" font-size="11" font-weight="600" fill="#1f2430" stroke="#f6f7f9" stroke-width="4" paint-order="stroke">Content: Board (or List)</text>
+<rect x="52" y="316" width="158" height="414" rx="4" fill="#ffffff" stroke="#8b93a1" stroke-width="1.2"/>
+<text x="62" y="342" font-size="12" font-weight="600" fill="#1f2430" text-anchor="start">Backlog</text>
+<rect x="48" y="308" width="25" height="17" rx="8.5" fill="#b45309"/>
+<text x="60.4" y="320.5" font-size="11" font-weight="700" fill="#fff" text-anchor="middle">T5</text>
+<rect x="62" y="360" width="138" height="78" rx="4" fill="#f6f7f9" stroke="#8b93a1" stroke-width="1.2"/>
+<rect x="58" y="352" width="25" height="17" rx="8.5" fill="#b45309"/>
+<text x="70.4" y="364.5" font-size="11" font-weight="700" fill="#fff" text-anchor="middle">T6</text>
+<text x="70" y="378" font-size="10" font-weight="600" fill="#6b7280" text-anchor="start">T-12</text>
+<rect x="70" y="388" width="110" height="6" rx="3" fill="#cfd4dc"/>
+<rect x="70" y="399" width="66" height="6" rx="3" fill="#cfd4dc"/>
+<rect x="70" y="414" width="46" height="14" rx="7" fill="#d7eef0" stroke="none" stroke-width="1.2"/>
+<circle cx="184" cy="421" r="8" fill="#9fb3c8" stroke="none" stroke-width="1"/>
+<rect x="62" y="452" width="138" height="78" rx="4" fill="#f6f7f9" stroke="#8b93a1" stroke-width="1.2"/>
+<text x="70" y="470" font-size="10" font-weight="600" fill="#6b7280" text-anchor="start">T-13</text>
+<rect x="70" y="480" width="110" height="6" rx="3" fill="#cfd4dc"/>
+<rect x="70" y="491" width="66" height="6" rx="3" fill="#cfd4dc"/>
+<rect x="70" y="506" width="46" height="14" rx="7" fill="#d7eef0" stroke="none" stroke-width="1.2"/>
+<circle cx="184" cy="513" r="8" fill="#9fb3c8" stroke="none" stroke-width="1"/>
+<rect x="62" y="544" width="138" height="78" rx="4" fill="#f6f7f9" stroke="#8b93a1" stroke-width="1.2"/>
+<text x="70" y="562" font-size="10" font-weight="600" fill="#6b7280" text-anchor="start">T-14</text>
+<rect x="70" y="572" width="110" height="6" rx="3" fill="#cfd4dc"/>
+<rect x="70" y="583" width="66" height="6" rx="3" fill="#cfd4dc"/>
+<rect x="70" y="598" width="46" height="14" rx="7" fill="#d7eef0" stroke="none" stroke-width="1.2"/>
+<circle cx="184" cy="605" r="8" fill="#9fb3c8" stroke="none" stroke-width="1"/>
+<rect x="220" y="316" width="158" height="414" rx="4" fill="#ffffff" stroke="#8b93a1" stroke-width="1.2"/>
+<text x="230" y="342" font-size="12" font-weight="600" fill="#1f2430" text-anchor="start">To Do</text>
+<rect x="230" y="360" width="138" height="78" rx="4" fill="#f6f7f9" stroke="#8b93a1" stroke-width="1.2"/>
+<text x="238" y="378" font-size="10" font-weight="600" fill="#6b7280" text-anchor="start">T-15</text>
+<rect x="238" y="388" width="110" height="6" rx="3" fill="#cfd4dc"/>
+<rect x="238" y="399" width="66" height="6" rx="3" fill="#cfd4dc"/>
+<rect x="238" y="414" width="46" height="14" rx="7" fill="#d7eef0" stroke="none" stroke-width="1.2"/>
+<circle cx="352" cy="421" r="8" fill="#9fb3c8" stroke="none" stroke-width="1"/>
+<rect x="230" y="452" width="138" height="78" rx="4" fill="#f6f7f9" stroke="#8b93a1" stroke-width="1.2"/>
+<text x="238" y="470" font-size="10" font-weight="600" fill="#6b7280" text-anchor="start">T-16</text>
+<rect x="238" y="480" width="110" height="6" rx="3" fill="#cfd4dc"/>
+<rect x="238" y="491" width="66" height="6" rx="3" fill="#cfd4dc"/>
+<rect x="238" y="506" width="46" height="14" rx="7" fill="#d7eef0" stroke="none" stroke-width="1.2"/>
+<circle cx="352" cy="513" r="8" fill="#9fb3c8" stroke="none" stroke-width="1"/>
+<rect x="388" y="316" width="158" height="414" rx="4" fill="#ffffff" stroke="#8b93a1" stroke-width="1.2"/>
+<text x="398" y="342" font-size="12" font-weight="600" fill="#1f2430" text-anchor="start">In Progress</text>
+<rect x="398" y="360" width="138" height="78" rx="4" fill="#f6f7f9" stroke="#8b93a1" stroke-width="1.2"/>
+<text x="406" y="378" font-size="10" font-weight="600" fill="#6b7280" text-anchor="start">T-18</text>
+<rect x="406" y="388" width="110" height="6" rx="3" fill="#cfd4dc"/>
+<rect x="406" y="399" width="66" height="6" rx="3" fill="#cfd4dc"/>
+<rect x="406" y="414" width="46" height="14" rx="7" fill="#d7eef0" stroke="none" stroke-width="1.2"/>
+<circle cx="520" cy="421" r="8" fill="#9fb3c8" stroke="none" stroke-width="1"/>
+<rect x="398" y="452" width="138" height="78" rx="4" fill="#f6f7f9" stroke="#8b93a1" stroke-width="1.2"/>
+<text x="406" y="470" font-size="10" font-weight="600" fill="#6b7280" text-anchor="start">T-19</text>
+<rect x="406" y="480" width="110" height="6" rx="3" fill="#cfd4dc"/>
+<rect x="406" y="491" width="66" height="6" rx="3" fill="#cfd4dc"/>
+<rect x="406" y="506" width="46" height="14" rx="7" fill="#d7eef0" stroke="none" stroke-width="1.2"/>
+<circle cx="520" cy="513" r="8" fill="#9fb3c8" stroke="none" stroke-width="1"/>
+<rect x="398" y="544" width="138" height="78" rx="4" fill="#f6f7f9" stroke="#8b93a1" stroke-width="1.2"/>
+<text x="406" y="562" font-size="10" font-weight="600" fill="#6b7280" text-anchor="start">T-20</text>
+<rect x="406" y="572" width="110" height="6" rx="3" fill="#cfd4dc"/>
+<rect x="406" y="583" width="66" height="6" rx="3" fill="#cfd4dc"/>
+<rect x="406" y="598" width="46" height="14" rx="7" fill="#d7eef0" stroke="none" stroke-width="1.2"/>
+<circle cx="520" cy="605" r="8" fill="#9fb3c8" stroke="none" stroke-width="1"/>
+<rect x="556" y="316" width="158" height="414" rx="4" fill="#ffffff" stroke="#8b93a1" stroke-width="1.2"/>
+<text x="566" y="342" font-size="12" font-weight="600" fill="#1f2430" text-anchor="start">Review</text>
+<rect x="566" y="360" width="138" height="78" rx="4" fill="#f6f7f9" stroke="#8b93a1" stroke-width="1.2"/>
+<text x="574" y="378" font-size="10" font-weight="600" fill="#6b7280" text-anchor="start">T-21</text>
+<rect x="574" y="388" width="110" height="6" rx="3" fill="#cfd4dc"/>
+<rect x="574" y="399" width="66" height="6" rx="3" fill="#cfd4dc"/>
+<rect x="574" y="414" width="46" height="14" rx="7" fill="#d7eef0" stroke="none" stroke-width="1.2"/>
+<circle cx="688" cy="421" r="8" fill="#9fb3c8" stroke="none" stroke-width="1"/>
+<rect x="724" y="316" width="158" height="414" rx="4" fill="#ffffff" stroke="#8b93a1" stroke-width="1.2"/>
+<text x="734" y="342" font-size="12" font-weight="600" fill="#1f2430" text-anchor="start">Done</text>
+<rect x="734" y="360" width="138" height="78" rx="4" fill="#f6f7f9" stroke="#8b93a1" stroke-width="1.2"/>
+<text x="742" y="378" font-size="10" font-weight="600" fill="#6b7280" text-anchor="start">T-24</text>
+<rect x="742" y="388" width="110" height="6" rx="3" fill="#cfd4dc"/>
+<rect x="742" y="399" width="66" height="6" rx="3" fill="#cfd4dc"/>
+<rect x="742" y="414" width="46" height="14" rx="7" fill="#d7eef0" stroke="none" stroke-width="1.2"/>
+<circle cx="856" cy="421" r="8" fill="#9fb3c8" stroke="none" stroke-width="1"/>
+<rect x="734" y="452" width="138" height="78" rx="4" fill="#f6f7f9" stroke="#8b93a1" stroke-width="1.2"/>
+<text x="742" y="470" font-size="10" font-weight="600" fill="#6b7280" text-anchor="start">T-25</text>
+<rect x="742" y="480" width="110" height="6" rx="3" fill="#cfd4dc"/>
+<rect x="742" y="491" width="66" height="6" rx="3" fill="#cfd4dc"/>
+<rect x="742" y="506" width="46" height="14" rx="7" fill="#d7eef0" stroke="none" stroke-width="1.2"/>
+<circle cx="856" cy="513" r="8" fill="#9fb3c8" stroke="none" stroke-width="1"/>
+<rect x="900" y="96" width="264" height="650" rx="4" fill="#ffffff" stroke="#8b93a1" stroke-width="1.2" stroke-dasharray="6 4" filter="url(#sh)"/>
+<rect x="908" y="102" width="25" height="17" rx="8.5" fill="#b45309"/>
+<text x="920.4" y="114.5" font-size="11" font-weight="700" fill="#fff" text-anchor="middle">T7</text>
+<text x="946" y="115" font-size="12" font-weight="600" fill="#1f2430" text-anchor="start">Task detail (drawer)</text>
+<rect x="892" y="390" width="18" height="76" rx="4" fill="#d7eef0" stroke="#0e7c86" stroke-width="1.2"/>
+<rect x="888" y="382" width="32" height="17" rx="8.5" fill="#b45309"/>
+<text x="904.1" y="394.5" font-size="11" font-weight="700" fill="#fff" text-anchor="middle">T7a</text>
+<text x="901" y="432" font-size="12" font-weight="700" fill="#0e7c86" text-anchor="middle">⋮</text>
+<text x="920" y="140" font-size="11" font-weight="600" fill="#1f2430" text-anchor="start">Title field</text>
+<rect x="920" y="148" width="224" height="26" rx="4" fill="#ffffff" stroke="#8b93a1" stroke-width="1.2"/>
+<text x="920" y="200" font-size="11" font-weight="600" fill="#1f2430" text-anchor="start">State</text>
+<rect x="920" y="208" width="224" height="26" rx="4" fill="#f6f7f9" stroke="#8b93a1" stroke-width="1.2"/>
+<text x="920" y="252" font-size="11" font-weight="600" fill="#1f2430" text-anchor="start">Priority</text>
+<rect x="920" y="260" width="224" height="26" rx="4" fill="#f6f7f9" stroke="#8b93a1" stroke-width="1.2"/>
+<text x="920" y="304" font-size="11" font-weight="600" fill="#1f2430" text-anchor="start">Assignee</text>
+<rect x="920" y="312" width="224" height="26" rx="4" fill="#f6f7f9" stroke="#8b93a1" stroke-width="1.2"/>
+<text x="920" y="356" font-size="11" font-weight="600" fill="#1f2430" text-anchor="start">Sprint</text>
+<rect x="920" y="364" width="224" height="26" rx="4" fill="#f6f7f9" stroke="#8b93a1" stroke-width="1.2"/>
+<text x="920" y="420" font-size="11" font-weight="600" fill="#1f2430" text-anchor="start">Description</text>
+<rect x="920" y="432.0" width="214" height="11" rx="3" fill="#cfd4dc"/>
+<rect x="920" y="432.5" width="214" height="11" rx="3" fill="#cfd4dc"/>
+<rect x="920" y="433.0" width="214" height="11" rx="3" fill="#cfd4dc"/>
+<rect x="920" y="433.5" width="214" height="11" rx="3" fill="#cfd4dc"/>
+<rect x="920" y="434.0" width="214" height="11" rx="3" fill="#cfd4dc"/>
+<rect x="920" y="434.5" width="128" height="11" rx="3" fill="#cfd4dc"/>
+<text x="920" y="520" font-size="11" font-weight="600" fill="#1f2430" text-anchor="start">Activity timeline</text>
+<rect x="920" y="532.0" width="214" height="11" rx="3" fill="#cfd4dc"/>
+<rect x="920" y="532.5" width="214" height="11" rx="3" fill="#cfd4dc"/>
+<rect x="920" y="533.0" width="214" height="11" rx="3" fill="#cfd4dc"/>
+<rect x="920" y="533.5" width="128" height="11" rx="3" fill="#cfd4dc"/>
+<text x="1032" y="740" font-size="9" font-weight="400" fill="#6b7280" text-anchor="middle" font-style="italic">opens from the right edge</text>
+<text x="24" y="786" font-size="11" font-weight="700" fill="#6b7280" text-anchor="start">Key</text>
+<rect x="58" y="775" width="30" height="14" rx="3" fill="#f6f7f9" stroke="#8b93a1" stroke-width="1.2"/>
+<text x="94" y="786" font-size="11" font-weight="400" fill="#6b7280" text-anchor="start">always rendered</text>
+<rect x="194" y="775" width="30" height="14" rx="3" fill="#ffffff" stroke="#8b93a1" stroke-width="1.2" stroke-dasharray="6 4"/>
+<text x="230" y="786" font-size="11" font-weight="400" fill="#6b7280" text-anchor="start">only in some states</text>
+<rect x="354" y="775" width="30" height="14" rx="3" fill="#ffffff" stroke="#8b93a1" stroke-width="1.2" filter="url(#sh)"/>
+<text x="390" y="786" font-size="11" font-weight="400" fill="#6b7280" text-anchor="start">overlay above the page</text>
+</svg>

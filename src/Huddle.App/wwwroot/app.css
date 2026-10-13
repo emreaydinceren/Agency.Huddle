@@ -884,9 +884,14 @@ button:focus-visible {
 .composer-input {
     box-sizing: border-box;
     width: 100%;
-    min-height: 2.5rem;
-    max-height: 8rem;
-    resize: vertical;
+
+    /* Starts at 3 lines and grows with the text (teamComposer.fit) up to 18, then scrolls. Each bound is
+       lines of the 18px line-height below, plus the vertical padding and the 1px borders. The script owns the
+       height, so there is no manual resize handle. */
+    min-height: calc((3 * 18px) + 1.5rem + 2px);
+    max-height: calc((18 * 18px) + 1.5rem + 2px);
+    overflow-y: auto;
+    resize: none;
     font: inherit;
 
     /* Matches .message-body's own literals below, so what you type reads at the same size and

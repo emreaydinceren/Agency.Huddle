@@ -29,6 +29,20 @@ window.teamComposer = {
         el._picker.open = false;
         el._picker.suppressFrom = null;
         el._typedNotified = false;
+        window.teamComposer.fit(el);
+    },
+
+    // Grows the box to fit its text. The CSS min-height (3 lines) and max-height (18 lines) bound it, so past
+    // 18 lines the height stops and the box scrolls. Height goes back to auto first so the box can shrink
+    // when text is deleted or the draft is cleared; the border is added because scrollHeight leaves it out.
+    fit(el) {
+        if (!el || !el.style) {
+            return;
+        }
+
+        el.style.height = "auto";
+        const border = el.offsetHeight - el.clientHeight;
+        el.style.height = (el.scrollHeight + border) + "px";
     },
 
     // Puts dropped or pasted files into the hidden file input and fires `change`, so Blazor's
@@ -104,6 +118,7 @@ window.teamComposer = {
                 el.value = saved;
             }
         }
+        window.teamComposer.fit(el);
 
         el.addEventListener("keydown", async (e) => {
             const picker = el._picker;
@@ -167,6 +182,7 @@ window.teamComposer = {
         });
 
         el.addEventListener("input", async (e) => {
+            window.teamComposer.fit(el);
             if (el._draftKey) {
                 window.teamComposer.draftSet(el._draftKey, el.value);
             }
@@ -210,6 +226,7 @@ window.teamComposer = {
             return;
         }
         el.value = "";
+        window.teamComposer.fit(el);
         el._picker.open = false;
         el._picker.suppressFrom = null;
         if (el._draftKey) {

@@ -1,0 +1,163 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 1010" width="1200" height="1010" font-family="Inter, 'Segoe UI', Helvetica, Arial, sans-serif" xml:space="preserve" style="white-space: pre" role="img" aria-label="Figure 3: A Room (the Chat page)">
+<title>Figure 3: A Room (the Chat page)</title>
+<defs><filter id="sh" x="-10%" y="-10%" width="125%" height="130%"><feDropShadow dx="0" dy="3" stdDeviation="4" flood-color="#000" flood-opacity="0.22"/></filter><marker id="ar" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0 L10 5 L0 10 z" fill="#6b7280"/></marker></defs>
+<rect width="1200" height="1010" fill="#ffffff"/>
+<text x="24" y="30" font-size="18" font-weight="700" fill="#1f2430" text-anchor="start">Figure 3: A Room (the Chat page)</text>
+<text x="24" y="48" font-size="12" font-weight="400" fill="#6b7280" text-anchor="start">Chat.razor, MessageList.razor, Composer.razor. Dashed parts appear only when they apply.</text>
+<rect x="24" y="60" width="1152" height="900" rx="6" fill="#eceef2" stroke="#8b93a1" stroke-width="1.4"/>
+<rect x="30" y="65" width="25" height="17" rx="8.5" fill="#1e7a3c"/>
+<text x="42.4" y="77.5" font-size="11" font-weight="700" fill="#fff" text-anchor="middle">C1</text>
+<text x="60.8" y="78" font-size="12" font-weight="600" fill="#1f2430" text-anchor="start">Room column</text>
+<text x="145.8" y="78" font-size="11" font-weight="400" fill="#6b7280" text-anchor="start">MudStack h-100, fills the pane; the list scrolls, the composer stays</text>
+<rect x="36" y="100" width="1128" height="72" rx="4" fill="#ffffff" stroke="#8b93a1" stroke-width="1.2"/>
+<text x="46" y="126" font-size="12" font-weight="600" fill="#1f2430" text-anchor="start">Room header</text>
+<rect x="32" y="92" width="25" height="17" rx="8.5" fill="#1e7a3c"/>
+<text x="44.4" y="104.5" font-size="11" font-weight="700" fill="#fff" text-anchor="middle">C2</text>
+<text x="160" y="126" font-size="14" font-weight="700" fill="#1f2430" text-anchor="start">Room name (h1)</text>
+<rect x="310" y="114" width="76" height="24" rx="4" fill="#ffffff" stroke="#8b93a1" stroke-width="1.2"/>
+<text x="348.0" y="130.0" font-size="11" font-weight="400" fill="#1f2430" text-anchor="middle">Rename</text>
+<rect x="306" y="106" width="32" height="17" rx="8.5" fill="#1e7a3c"/>
+<text x="322.1" y="118.5" font-size="11" font-weight="700" fill="#fff" text-anchor="middle">C2a</text>
+<rect x="398" y="114" width="92" height="24" rx="4" fill="#ffffff" stroke="#8b93a1" stroke-width="1.2"/>
+<text x="444.0" y="130.0" font-size="11" font-weight="400" fill="#1f2430" text-anchor="middle">Copy link</text>
+<rect x="394" y="106" width="32" height="17" rx="8.5" fill="#1e7a3c"/>
+<text x="410.1" y="118.5" font-size="11" font-weight="700" fill="#fff" text-anchor="middle">C2b</text>
+<rect x="700" y="112" width="280" height="34" rx="4" fill="#f6f7f9" stroke="#8b93a1" stroke-width="1.2"/>
+<rect x="696" y="104" width="25" height="17" rx="8.5" fill="#1e7a3c"/>
+<text x="708.4" y="116.5" font-size="11" font-weight="700" fill="#fff" text-anchor="middle">C3</text>
+<text x="727" y="116" font-size="11" font-weight="600" fill="#1f2430" stroke="#f6f7f9" stroke-width="4" paint-order="stroke">Members</text>
+<circle cx="722" cy="129" r="11" fill="#9fb3c8" stroke="none" stroke-width="1"/>
+<circle cx="740" cy="129" r="11" fill="#c8a99f" stroke="none" stroke-width="1"/>
+<circle cx="758" cy="129" r="11" fill="#a3c89f" stroke="none" stroke-width="1"/>
+<circle cx="776" cy="129" r="11" fill="#b59fc8" stroke="none" stroke-width="1"/>
+<text x="806" y="133" font-size="11" font-weight="400" fill="#1f2430" text-anchor="start">4 Members + you</text>
+<rect x="1010" y="112" width="138" height="34" rx="4" fill="#ffffff" stroke="#8b93a1" stroke-width="1.2"/>
+<text x="1079.0" y="133.0" font-size="11" font-weight="400" fill="#1f2430" text-anchor="middle">Invite teammate</text>
+<rect x="1006" y="104" width="32" height="17" rx="8.5" fill="#1e7a3c"/>
+<text x="1022.1" y="116.5" font-size="11" font-weight="700" fill="#fff" text-anchor="middle">C3a</text>
+<rect x="36" y="192" width="1128" height="380" rx="4" fill="#ffffff" stroke="#8b93a1" stroke-width="1.2"/>
+<rect x="32" y="184" width="25" height="17" rx="8.5" fill="#1e7a3c"/>
+<text x="44.4" y="196.5" font-size="11" font-weight="700" fill="#fff" text-anchor="middle">C4</text>
+<text x="63" y="196" font-size="11" font-weight="600" fill="#1f2430" stroke="#ffffff" stroke-width="4" paint-order="stroke">Message list (scrolls)</text>
+<rect x="60" y="232" width="1080" height="18" rx="4" fill="none" stroke="#cfd4dc" stroke-width="1.2"/>
+<text x="600.0" y="245.0" font-size="10" font-weight="400" fill="#1f2430" text-anchor="middle">Today</text>
+<rect x="56" y="224" width="32" height="17" rx="8.5" fill="#1e7a3c"/>
+<text x="72.1" y="236.5" font-size="11" font-weight="700" fill="#fff" text-anchor="middle">C4a</text>
+<rect x="60" y="266" width="620" height="96" rx="4" fill="#f6f7f9" stroke="#8b93a1" stroke-width="1.2"/>
+<rect x="56" y="258" width="25" height="17" rx="8.5" fill="#1e7a3c"/>
+<text x="68.4" y="270.5" font-size="11" font-weight="700" fill="#fff" text-anchor="middle">C5</text>
+<text x="87" y="270" font-size="11" font-weight="600" fill="#1f2430" stroke="#f6f7f9" stroke-width="4" paint-order="stroke">Agent message row</text>
+<rect x="70" y="292" width="34" height="34" rx="17" fill="#ffffff" stroke="#8b93a1" stroke-width="1.2"/>
+<rect x="66" y="284" width="32" height="17" rx="8.5" fill="#1e7a3c"/>
+<text x="82.1" y="296.5" font-size="11" font-weight="700" fill="#fff" text-anchor="middle">C5a</text>
+<circle cx="87" cy="309" r="12" fill="#9fb3c8" stroke="none" stroke-width="1"/>
+<text x="87" y="313.56" font-size="11.399999999999999" font-weight="700" fill="#fff" text-anchor="middle">N</text>
+<rect x="116" y="280" width="130" height="18" rx="4" fill="none" stroke="#cfd4dc" stroke-width="1.2"/>
+<text x="181.0" y="293.0" font-size="10" font-weight="400" fill="#1f2430" text-anchor="middle">Nova  10:42</text>
+<rect x="112" y="272" width="32" height="17" rx="8.5" fill="#1e7a3c"/>
+<text x="128.1" y="284.5" font-size="11" font-weight="700" fill="#fff" text-anchor="middle">C5b</text>
+<rect x="116" y="306" width="540" height="44" rx="4" fill="#ffffff" stroke="#8b93a1" stroke-width="1.2"/>
+<rect x="112" y="298" width="32" height="17" rx="8.5" fill="#1e7a3c"/>
+<text x="128.1" y="310.5" font-size="11" font-weight="700" fill="#fff" text-anchor="middle">C5c</text>
+<rect x="128" y="316" width="500" height="6" rx="3" fill="#cfd4dc"/>
+<rect x="128" y="330" width="250" height="6" rx="3" fill="#cfd4dc"/>
+<rect x="760" y="266" width="380" height="52" rx="4" fill="#d7eef0" stroke="#0e7c86" stroke-width="1.2"/>
+<rect x="756" y="258" width="25" height="17" rx="8.5" fill="#1e7a3c"/>
+<text x="768.4" y="270.5" font-size="11" font-weight="700" fill="#fff" text-anchor="middle">C6</text>
+<text x="787" y="270" font-size="11" font-weight="600" fill="#1f2430" stroke="#d7eef0" stroke-width="4" paint-order="stroke">Human message bubble</text>
+<rect x="776" y="286" width="340" height="6" rx="3" fill="#a9d3d7"/>
+<rect x="776" y="299" width="204" height="6" rx="3" fill="#a9d3d7"/>
+<rect x="760" y="340" width="380" height="22" rx="4" fill="none" stroke="#cfd4dc" stroke-width="1.2"/>
+<text x="950.0" y="355.0" font-size="10" font-weight="400" fill="#1f2430" text-anchor="middle">System row: Task T-12 woke Nova  ▾</text>
+<rect x="756" y="332" width="32" height="17" rx="8.5" fill="#1e7a3c"/>
+<text x="772.1" y="344.5" font-size="11" font-weight="700" fill="#fff" text-anchor="middle">C4b</text>
+<rect x="60" y="380" width="620" height="178" rx="4" fill="#f6f7f9" stroke="#8b93a1" stroke-width="1.2" stroke-dasharray="6 4"/>
+<rect x="56" y="372" width="25" height="17" rx="8.5" fill="#1e7a3c"/>
+<text x="68.4" y="384.5" font-size="11" font-weight="700" fill="#fff" text-anchor="middle">C7</text>
+<text x="87" y="384" font-size="11" font-weight="600" fill="#1f2430" stroke="#f6f7f9" stroke-width="4" paint-order="stroke">Draft: a reply still streaming</text>
+<circle cx="84" cy="414" r="12" fill="#a3c89f" stroke="none" stroke-width="1"/>
+<text x="84" y="418.56" font-size="11.399999999999999" font-weight="700" fill="#fff" text-anchor="middle">K</text>
+<text x="106" y="418" font-size="11" font-weight="600" fill="#1f2430" text-anchor="start">Kit  typing</text>
+<rect x="590" y="402" width="70" height="24" rx="4" fill="#ffffff" stroke="#8b93a1" stroke-width="1.2"/>
+<text x="625.0" y="418.0" font-size="11" font-weight="400" fill="#1f2430" text-anchor="middle">Stop</text>
+<rect x="586" y="394" width="32" height="17" rx="8.5" fill="#1e7a3c"/>
+<text x="602.1" y="406.5" font-size="11" font-weight="700" fill="#fff" text-anchor="middle">C7a</text>
+<rect x="106" y="436" width="556" height="32" rx="4" fill="#ffffff" stroke="#8b93a1" stroke-width="1.2"/>
+<text x="140" y="456.0" font-size="11" font-weight="400" fill="#1f2430" text-anchor="start">Reply text so far▍</text>
+<rect x="102" y="428" width="32" height="17" rx="8.5" fill="#1e7a3c"/>
+<text x="118.1" y="440.5" font-size="11" font-weight="700" fill="#fff" text-anchor="middle">C7c</text>
+<rect x="106" y="486" width="556" height="62" rx="4" fill="#ffffff" stroke="#8b93a1" stroke-width="1.2"/>
+<rect x="102" y="478" width="32" height="17" rx="8.5" fill="#1e7a3c"/>
+<text x="118.1" y="490.5" font-size="11" font-weight="700" fill="#fff" text-anchor="middle">C7b</text>
+<text x="140" y="490" font-size="11" font-weight="600" fill="#1f2430" stroke="#ffffff" stroke-width="4" paint-order="stroke">Turn detail: recent tool calls</text>
+<text x="124" y="512" font-size="11" font-weight="400" fill="#6b7280" text-anchor="start">✓  Read  src/App.cs</text>
+<text x="124" y="530" font-size="11" font-weight="400" fill="#6b7280" text-anchor="start">●  Edit  src/App.cs   (open to see the Edit preview)</text>
+<rect x="36" y="588" width="1128" height="150" rx="6" fill="#f6f7f9" stroke="#8b93a1" stroke-width="1.4" stroke-dasharray="6 4"/>
+<rect x="42" y="593" width="25" height="17" rx="8.5" fill="#1e7a3c"/>
+<text x="54.4" y="605.5" font-size="11" font-weight="700" fill="#fff" text-anchor="middle">C9</text>
+<text x="72.8" y="606" font-size="12" font-weight="600" fill="#1f2430" text-anchor="start">Notices</text>
+<text x="129.8" y="606" font-size="11" font-weight="400" fill="#6b7280" text-anchor="start">only when something needs saying</text>
+<rect x="48" y="622" width="1104" height="26" rx="4" fill="#fdf0d5" stroke="#d99a1e" stroke-width="1.2"/>
+<text x="82" y="639.0" font-size="11" font-weight="400" fill="#1f2430" text-anchor="start">Member health alert: Kit is Degraded (reason)</text>
+<rect x="44" y="614" width="32" height="17" rx="8.5" fill="#1e7a3c"/>
+<text x="60.1" y="626.5" font-size="11" font-weight="700" fill="#fff" text-anchor="middle">C9a</text>
+<rect x="48" y="658" width="1104" height="24" rx="4" fill="#dfeafb" stroke="#4f7fd1" stroke-width="1.2"/>
+<text x="82" y="674.0" font-size="11" font-weight="400" fill="#1f2430" text-anchor="start">Reply note: why nobody answered (info, dense)</text>
+<rect x="44" y="650" width="32" height="17" rx="8.5" fill="#1e7a3c"/>
+<text x="60.1" y="662.5" font-size="11" font-weight="700" fill="#fff" text-anchor="middle">C9b</text>
+<rect x="48" y="696" width="1104" height="34" rx="4" fill="#fdf0d5" stroke="#d99a1e" stroke-width="1.2"/>
+<text x="82" y="717.0" font-size="11" font-weight="400" fill="#1f2430" text-anchor="start">Budget: 6 of 6 agent replies since you last spoke. Paused.</text>
+<rect x="44" y="688" width="32" height="17" rx="8.5" fill="#1e7a3c"/>
+<text x="60.1" y="700.5" font-size="11" font-weight="700" fill="#fff" text-anchor="middle">C9c</text>
+<rect x="940" y="701" width="90" height="24" rx="5" fill="#0e7c86" stroke="#0e7c86" stroke-width="1.2"/>
+<text x="985.0" y="717.0" font-size="11" font-weight="600" fill="#fff" text-anchor="middle">Continue</text>
+<rect x="1040" y="701" width="90" height="24" rx="5" fill="#ffffff" stroke="#8b93a1" stroke-width="1.2"/>
+<text x="1085.0" y="717.0" font-size="11" font-weight="500" fill="#1f2430" text-anchor="middle">Dismiss</text>
+<rect x="36" y="752" width="1128" height="76" rx="6" fill="#f6f7f9" stroke="#8b93a1" stroke-width="1.4" stroke-dasharray="6 4"/>
+<rect x="42" y="757" width="25" height="17" rx="8.5" fill="#1e7a3c"/>
+<text x="54.4" y="769.5" font-size="11" font-weight="700" fill="#fff" text-anchor="middle">C8</text>
+<text x="72.8" y="770" font-size="12" font-weight="600" fill="#1f2430" text-anchor="start">Agent cards</text>
+<text x="157.8" y="770" font-size="11" font-weight="400" fill="#6b7280" text-anchor="start">Proposal, Sprint, Retro, Question, Elicitation: one at a time</text>
+<rect x="48" y="786" width="650" height="32" rx="4" fill="#ffffff" stroke="#8b93a1" stroke-width="1.2"/>
+<text x="82" y="806.0" font-size="10" font-weight="400" fill="#1f2430" text-anchor="start">Question card: “Which database?”   [ Postgres ]  [ SQLite ]  [ Type an answer ]</text>
+<rect x="44" y="778" width="32" height="17" rx="8.5" fill="#1e7a3c"/>
+<text x="60.1" y="790.5" font-size="11" font-weight="700" fill="#fff" text-anchor="middle">C8a</text>
+<rect x="36" y="842" width="1128" height="106" rx="6" fill="#ffffff" stroke="#8b93a1" stroke-width="1.4"/>
+<rect x="42" y="847" width="32" height="17" rx="8.5" fill="#1e7a3c"/>
+<text x="58.1" y="859.5" font-size="11" font-weight="700" fill="#fff" text-anchor="middle">C10</text>
+<text x="80.2" y="860" font-size="12" font-weight="600" fill="#1f2430" text-anchor="start">Composer</text>
+<rect x="48" y="872" width="340" height="20" rx="4" fill="#f6f7f9" stroke="#8b93a1" stroke-width="1.2" stroke-dasharray="6 4"/>
+<text x="82" y="886.0" font-size="10" font-weight="400" fill="#1f2430" text-anchor="start">notes.md  ✕    spec.pdf  ✕   (attachment chips)</text>
+<rect x="44" y="864" width="40" height="17" rx="8.5" fill="#1e7a3c"/>
+<text x="63.8" y="876.5" font-size="11" font-weight="700" fill="#fff" text-anchor="middle">C10a</text>
+<rect x="48" y="900" width="1104" height="38" rx="4" fill="#f6f7f9" stroke="#8b93a1" stroke-width="1.2"/>
+<rect x="44" y="892" width="40" height="17" rx="8.5" fill="#1e7a3c"/>
+<text x="63.8" y="904.5" font-size="11" font-weight="700" fill="#fff" text-anchor="middle">C10b</text>
+<text x="90" y="904" font-size="11" font-weight="600" fill="#1f2430" stroke="#f6f7f9" stroke-width="4" paint-order="stroke">Input box</text>
+<rect x="150" y="906" width="30" height="26" rx="4" fill="#ffffff" stroke="#8b93a1" stroke-width="1.2"/>
+<text x="165.0" y="923.0" font-size="11" font-weight="400" fill="#1f2430" text-anchor="middle">+</text>
+<rect x="146" y="898" width="40" height="17" rx="8.5" fill="#1e7a3c"/>
+<text x="165.8" y="910.5" font-size="11" font-weight="700" fill="#fff" text-anchor="middle">C10c</text>
+<text x="194" y="924" font-size="11" font-weight="400" fill="#6b7280" text-anchor="start">Message…  (type @ to mention or reference)</text>
+<rect x="1100" y="906" width="40" height="26" rx="4" fill="#0e7c86" stroke="#0e7c86" stroke-width="1.2"/>
+<text x="1120.0" y="923.0" font-size="10" font-weight="600" fill="#fff" text-anchor="middle">Send</text>
+<rect x="1096" y="898" width="40" height="17" rx="8.5" fill="#1e7a3c"/>
+<text x="1115.8" y="910.5" font-size="11" font-weight="700" fill="#fff" text-anchor="middle">C10d</text>
+<rect x="730" y="748" width="300" height="134" rx="6" fill="#ffffff" stroke="#8b93a1" stroke-width="1.2" stroke-dasharray="6 4" filter="url(#sh)"/>
+<rect x="738" y="754" width="32" height="17" rx="8.5" fill="#1e7a3c"/>
+<text x="754.1" y="766.5" font-size="11" font-weight="700" fill="#fff" text-anchor="middle">C11</text>
+<text x="776" y="767" font-size="12" font-weight="600" fill="#1f2430" text-anchor="start">Reference picker (popover)</text>
+<rect x="738" y="774" width="284" height="20" rx="3" fill="#d7eef0" stroke="none" stroke-width="1.2"/>
+<text x="748" y="788" font-size="11" font-weight="400" fill="#1f2430" text-anchor="start">Teammate   Nova</text>
+<text x="748" y="808" font-size="11" font-weight="400" fill="#1f2430" text-anchor="start">Task   T-12  Fix login</text>
+<text x="748" y="828" font-size="11" font-weight="400" fill="#1f2430" text-anchor="start">Room   Planning</text>
+<text x="748" y="848" font-size="11" font-weight="400" fill="#1f2430" text-anchor="start">Team   Alpha</text>
+<text x="748" y="868" font-size="11" font-weight="400" fill="#1f2430" text-anchor="start">Library   notes/design.md</text>
+<text x="24" y="990" font-size="11" font-weight="700" fill="#6b7280" text-anchor="start">Key</text>
+<rect x="58" y="979" width="30" height="14" rx="3" fill="#f6f7f9" stroke="#8b93a1" stroke-width="1.2"/>
+<text x="94" y="990" font-size="11" font-weight="400" fill="#6b7280" text-anchor="start">always rendered</text>
+<rect x="194" y="979" width="30" height="14" rx="3" fill="#ffffff" stroke="#8b93a1" stroke-width="1.2" stroke-dasharray="6 4"/>
+<text x="230" y="990" font-size="11" font-weight="400" fill="#6b7280" text-anchor="start">only in some states</text>
+<rect x="354" y="979" width="30" height="14" rx="3" fill="#ffffff" stroke="#8b93a1" stroke-width="1.2" filter="url(#sh)"/>
+<text x="390" y="990" font-size="11" font-weight="400" fill="#6b7280" text-anchor="start">overlay above the page</text>
+</svg>

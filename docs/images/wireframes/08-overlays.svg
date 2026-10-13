@@ -1,0 +1,190 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 860" width="1200" height="860" font-family="Inter, 'Segoe UI', Helvetica, Arial, sans-serif" xml:space="preserve" style="white-space: pre" role="img" aria-label="Figure 8: Overlays">
+<title>Figure 8: Overlays</title>
+<defs><filter id="sh" x="-10%" y="-10%" width="125%" height="130%"><feDropShadow dx="0" dy="3" stdDeviation="4" flood-color="#000" flood-opacity="0.22"/></filter><marker id="ar" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0 L10 5 L0 10 z" fill="#6b7280"/></marker></defs>
+<rect width="1200" height="860" fill="#ffffff"/>
+<text x="24" y="30" font-size="18" font-weight="700" fill="#1f2430" text-anchor="start">Figure 8: Overlays</text>
+<text x="24" y="48" font-size="12" font-weight="400" fill="#6b7280" text-anchor="start">Containers that float above a page. Each is drawn over a dimmed page.</text>
+<rect x="24" y="64" width="276" height="368" rx="6" fill="#eceef2" stroke="#8b93a1" stroke-width="1.4"/>
+<rect x="30" y="69" width="25" height="17" rx="8.5" fill="#b91c1c"/>
+<text x="42.4" y="81.5" font-size="11" font-weight="700" fill="#fff" text-anchor="middle">O1</text>
+<text x="60.8" y="82" font-size="12" font-weight="600" fill="#1f2430" text-anchor="start">Dialog</text>
+<text x="34" y="108" font-size="10" font-weight="400" fill="#6b7280" text-anchor="start">MudDialog via IDialogService</text>
+<rect x="34" y="120" width="256" height="300" rx="4" fill="#ffffff" stroke="#cfd4dc" stroke-width="1.2"/>
+<rect x="46" y="136" width="232" height="6" rx="3" fill="#cfd4dc"/>
+<rect x="46" y="150" width="232" height="6" rx="3" fill="#cfd4dc"/>
+<rect x="46" y="164" width="232" height="6" rx="3" fill="#cfd4dc"/>
+<rect x="46" y="178" width="162" height="6" rx="3" fill="#cfd4dc"/>
+<rect x="46" y="364" width="232" height="6" rx="3" fill="#cfd4dc"/>
+<rect x="46" y="378" width="232" height="6" rx="3" fill="#cfd4dc"/>
+<rect x="46" y="392" width="116" height="6" rx="3" fill="#cfd4dc"/>
+<rect x="316" y="64" width="276" height="368" rx="6" fill="#eceef2" stroke="#8b93a1" stroke-width="1.4"/>
+<rect x="322" y="69" width="25" height="17" rx="8.5" fill="#b91c1c"/>
+<text x="334.4" y="81.5" font-size="11" font-weight="700" fill="#fff" text-anchor="middle">O2</text>
+<text x="352.8" y="82" font-size="12" font-weight="600" fill="#1f2430" text-anchor="start">Detail drawer</text>
+<text x="326" y="108" font-size="10" font-weight="400" fill="#6b7280" text-anchor="start">MudDrawer, Temporary, Anchor End</text>
+<rect x="326" y="120" width="256" height="300" rx="4" fill="#ffffff" stroke="#cfd4dc" stroke-width="1.2"/>
+<rect x="338" y="136" width="232" height="6" rx="3" fill="#cfd4dc"/>
+<rect x="338" y="150" width="232" height="6" rx="3" fill="#cfd4dc"/>
+<rect x="338" y="164" width="232" height="6" rx="3" fill="#cfd4dc"/>
+<rect x="338" y="178" width="162" height="6" rx="3" fill="#cfd4dc"/>
+<rect x="338" y="364" width="232" height="6" rx="3" fill="#cfd4dc"/>
+<rect x="338" y="378" width="232" height="6" rx="3" fill="#cfd4dc"/>
+<rect x="338" y="392" width="116" height="6" rx="3" fill="#cfd4dc"/>
+<rect x="608" y="64" width="276" height="368" rx="6" fill="#eceef2" stroke="#8b93a1" stroke-width="1.4"/>
+<rect x="614" y="69" width="25" height="17" rx="8.5" fill="#b91c1c"/>
+<text x="626.4" y="81.5" font-size="11" font-weight="700" fill="#fff" text-anchor="middle">O3</text>
+<text x="644.8" y="82" font-size="12" font-weight="600" fill="#1f2430" text-anchor="start">Menu / popover</text>
+<text x="618" y="108" font-size="10" font-weight="400" fill="#6b7280" text-anchor="start">MudMenu, MudPopover</text>
+<rect x="618" y="120" width="256" height="300" rx="4" fill="#ffffff" stroke="#cfd4dc" stroke-width="1.2"/>
+<rect x="630" y="136" width="232" height="6" rx="3" fill="#cfd4dc"/>
+<rect x="630" y="150" width="232" height="6" rx="3" fill="#cfd4dc"/>
+<rect x="630" y="164" width="232" height="6" rx="3" fill="#cfd4dc"/>
+<rect x="630" y="178" width="162" height="6" rx="3" fill="#cfd4dc"/>
+<rect x="630" y="364" width="232" height="6" rx="3" fill="#cfd4dc"/>
+<rect x="630" y="378" width="232" height="6" rx="3" fill="#cfd4dc"/>
+<rect x="630" y="392" width="116" height="6" rx="3" fill="#cfd4dc"/>
+<rect x="900" y="64" width="276" height="368" rx="6" fill="#eceef2" stroke="#8b93a1" stroke-width="1.4"/>
+<rect x="906" y="69" width="25" height="17" rx="8.5" fill="#b91c1c"/>
+<text x="918.4" y="81.5" font-size="11" font-weight="700" fill="#fff" text-anchor="middle">O4</text>
+<text x="936.8" y="82" font-size="12" font-weight="600" fill="#1f2430" text-anchor="start">Snackbar</text>
+<text x="910" y="108" font-size="10" font-weight="400" fill="#6b7280" text-anchor="start">ISnackbar</text>
+<rect x="910" y="120" width="256" height="300" rx="4" fill="#ffffff" stroke="#cfd4dc" stroke-width="1.2"/>
+<rect x="922" y="136" width="232" height="6" rx="3" fill="#cfd4dc"/>
+<rect x="922" y="150" width="232" height="6" rx="3" fill="#cfd4dc"/>
+<rect x="922" y="164" width="232" height="6" rx="3" fill="#cfd4dc"/>
+<rect x="922" y="178" width="162" height="6" rx="3" fill="#cfd4dc"/>
+<rect x="922" y="364" width="232" height="6" rx="3" fill="#cfd4dc"/>
+<rect x="922" y="378" width="232" height="6" rx="3" fill="#cfd4dc"/>
+<rect x="922" y="392" width="116" height="6" rx="3" fill="#cfd4dc"/>
+<rect x="24" y="450" width="276" height="368" rx="6" fill="#eceef2" stroke="#8b93a1" stroke-width="1.4"/>
+<rect x="30" y="455" width="25" height="17" rx="8.5" fill="#b91c1c"/>
+<text x="42.4" y="467.5" font-size="11" font-weight="700" fill="#fff" text-anchor="middle">O5</text>
+<text x="60.8" y="468" font-size="12" font-weight="600" fill="#1f2430" text-anchor="start">Message box</text>
+<text x="34" y="494" font-size="10" font-weight="400" fill="#6b7280" text-anchor="start">ShowMessageBoxAsync</text>
+<rect x="34" y="506" width="256" height="300" rx="4" fill="#ffffff" stroke="#cfd4dc" stroke-width="1.2"/>
+<rect x="46" y="522" width="232" height="6" rx="3" fill="#cfd4dc"/>
+<rect x="46" y="536" width="232" height="6" rx="3" fill="#cfd4dc"/>
+<rect x="46" y="550" width="232" height="6" rx="3" fill="#cfd4dc"/>
+<rect x="46" y="564" width="162" height="6" rx="3" fill="#cfd4dc"/>
+<rect x="46" y="750" width="232" height="6" rx="3" fill="#cfd4dc"/>
+<rect x="46" y="764" width="232" height="6" rx="3" fill="#cfd4dc"/>
+<rect x="46" y="778" width="116" height="6" rx="3" fill="#cfd4dc"/>
+<rect x="316" y="450" width="276" height="368" rx="6" fill="#eceef2" stroke="#8b93a1" stroke-width="1.4"/>
+<rect x="322" y="455" width="25" height="17" rx="8.5" fill="#b91c1c"/>
+<text x="334.4" y="467.5" font-size="11" font-weight="700" fill="#fff" text-anchor="middle">O6</text>
+<text x="352.8" y="468" font-size="12" font-weight="600" fill="#1f2430" text-anchor="start">Inline confirm</text>
+<text x="326" y="494" font-size="10" font-weight="400" fill="#6b7280" text-anchor="start">InlineConfirm</text>
+<rect x="326" y="506" width="256" height="300" rx="4" fill="#ffffff" stroke="#cfd4dc" stroke-width="1.2"/>
+<rect x="338" y="522" width="232" height="6" rx="3" fill="#cfd4dc"/>
+<rect x="338" y="536" width="232" height="6" rx="3" fill="#cfd4dc"/>
+<rect x="338" y="550" width="232" height="6" rx="3" fill="#cfd4dc"/>
+<rect x="338" y="564" width="162" height="6" rx="3" fill="#cfd4dc"/>
+<rect x="338" y="750" width="232" height="6" rx="3" fill="#cfd4dc"/>
+<rect x="338" y="764" width="232" height="6" rx="3" fill="#cfd4dc"/>
+<rect x="338" y="778" width="116" height="6" rx="3" fill="#cfd4dc"/>
+<rect x="608" y="450" width="276" height="368" rx="6" fill="#eceef2" stroke="#8b93a1" stroke-width="1.4"/>
+<rect x="614" y="455" width="25" height="17" rx="8.5" fill="#b91c1c"/>
+<text x="626.4" y="467.5" font-size="11" font-weight="700" fill="#fff" text-anchor="middle">O7</text>
+<text x="644.8" y="468" font-size="12" font-weight="600" fill="#1f2430" text-anchor="start">Tooltip</text>
+<text x="618" y="494" font-size="10" font-weight="400" fill="#6b7280" text-anchor="start">MudTooltip</text>
+<rect x="618" y="506" width="256" height="300" rx="4" fill="#ffffff" stroke="#cfd4dc" stroke-width="1.2"/>
+<rect x="630" y="522" width="232" height="6" rx="3" fill="#cfd4dc"/>
+<rect x="630" y="536" width="232" height="6" rx="3" fill="#cfd4dc"/>
+<rect x="630" y="550" width="232" height="6" rx="3" fill="#cfd4dc"/>
+<rect x="630" y="564" width="162" height="6" rx="3" fill="#cfd4dc"/>
+<rect x="630" y="750" width="232" height="6" rx="3" fill="#cfd4dc"/>
+<rect x="630" y="764" width="232" height="6" rx="3" fill="#cfd4dc"/>
+<rect x="630" y="778" width="116" height="6" rx="3" fill="#cfd4dc"/>
+<rect x="900" y="450" width="276" height="368" rx="6" fill="#eceef2" stroke="#8b93a1" stroke-width="1.4"/>
+<rect x="906" y="455" width="25" height="17" rx="8.5" fill="#b91c1c"/>
+<text x="918.4" y="467.5" font-size="11" font-weight="700" fill="#fff" text-anchor="middle">O8</text>
+<text x="936.8" y="468" font-size="12" font-weight="600" fill="#1f2430" text-anchor="start">Reconnect modal</text>
+<text x="910" y="494" font-size="10" font-weight="400" fill="#6b7280" text-anchor="start">ReconnectModal.razor</text>
+<rect x="910" y="506" width="256" height="300" rx="4" fill="#ffffff" stroke="#cfd4dc" stroke-width="1.2"/>
+<rect x="922" y="522" width="232" height="6" rx="3" fill="#cfd4dc"/>
+<rect x="922" y="536" width="232" height="6" rx="3" fill="#cfd4dc"/>
+<rect x="922" y="550" width="232" height="6" rx="3" fill="#cfd4dc"/>
+<rect x="922" y="564" width="162" height="6" rx="3" fill="#cfd4dc"/>
+<rect x="922" y="750" width="232" height="6" rx="3" fill="#cfd4dc"/>
+<rect x="922" y="764" width="232" height="6" rx="3" fill="#cfd4dc"/>
+<rect x="922" y="778" width="116" height="6" rx="3" fill="#cfd4dc"/>
+<rect x="34" y="120" width="256" height="300" rx="4" fill="#000" stroke="none" stroke-width="1" opacity="0.38"/>
+<rect x="60" y="174" width="204" height="190" rx="6" fill="#ffffff" stroke="#8b93a1" stroke-width="1.2" filter="url(#sh)"/>
+<rect x="72" y="188" width="140" height="18" rx="4" fill="none" stroke="#cfd4dc" stroke-width="1.2"/>
+<text x="142.0" y="201.0" font-size="10" font-weight="400" fill="#1f2430" text-anchor="middle">Title</text>
+<rect x="68" y="180" width="32" height="17" rx="8.5" fill="#b91c1c"/>
+<text x="84.1" y="192.5" font-size="11" font-weight="700" fill="#fff" text-anchor="middle">O1a</text>
+<text x="246" y="202" font-size="10" font-weight="400" fill="#6b7280" text-anchor="middle">✕</text>
+<rect x="72" y="224" width="180" height="80" rx="4" fill="#f6f7f9" stroke="#8b93a1" stroke-width="1.2"/>
+<text x="162.0" y="268.0" font-size="10" font-weight="400" fill="#1f2430" text-anchor="middle">Content</text>
+<rect x="68" y="216" width="32" height="17" rx="8.5" fill="#b91c1c"/>
+<text x="84.1" y="228.5" font-size="11" font-weight="700" fill="#fff" text-anchor="middle">O1b</text>
+<rect x="136" y="322" width="116" height="28" rx="4" fill="none" stroke="#cfd4dc" stroke-width="1.2"/>
+<rect x="132" y="314" width="32" height="17" rx="8.5" fill="#b91c1c"/>
+<text x="148.1" y="326.5" font-size="11" font-weight="700" fill="#fff" text-anchor="middle">O1c</text>
+<rect x="138" y="326" width="52" height="20" rx="5" fill="#ffffff" stroke="#8b93a1" stroke-width="1.2"/>
+<text x="164.0" y="340.0" font-size="9" font-weight="500" fill="#1f2430" text-anchor="middle">Cancel</text>
+<rect x="194" y="326" width="52" height="20" rx="5" fill="#0e7c86" stroke="#0e7c86" stroke-width="1.2"/>
+<text x="220.0" y="340.0" font-size="9" font-weight="600" fill="#fff" text-anchor="middle">Save</text>
+<rect x="326" y="120" width="256" height="300" rx="4" fill="#000" stroke="none" stroke-width="1" opacity="0.38"/>
+<rect x="422" y="120" width="160" height="300" rx="4" fill="#ffffff" stroke="#8b93a1" stroke-width="1.2" filter="url(#sh)"/>
+<rect x="414" y="244" width="12" height="50" rx="4" fill="#d7eef0" stroke="#0e7c86" stroke-width="1.2"/>
+<rect x="410" y="236" width="32" height="17" rx="8.5" fill="#b91c1c"/>
+<text x="426.1" y="248.5" font-size="11" font-weight="700" fill="#fff" text-anchor="middle">O2a</text>
+<text x="436" y="148" font-size="11" font-weight="600" fill="#1f2430" text-anchor="start">Detail</text>
+<rect x="436" y="164" width="130" height="6" rx="3" fill="#cfd4dc"/>
+<rect x="436" y="180" width="130" height="6" rx="3" fill="#cfd4dc"/>
+<rect x="436" y="196" width="130" height="6" rx="3" fill="#cfd4dc"/>
+<rect x="436" y="212" width="130" height="6" rx="3" fill="#cfd4dc"/>
+<rect x="436" y="228" width="78" height="6" rx="3" fill="#cfd4dc"/>
+<rect x="632" y="134" width="90" height="24" rx="5" fill="#ffffff" stroke="#8b93a1" stroke-width="1.2"/>
+<text x="677.0" y="150.0" font-size="10" font-weight="500" fill="#1f2430" text-anchor="middle">Actions ▾</text>
+<rect x="632" y="162" width="140" height="98" rx="4" fill="#ffffff" stroke="#8b93a1" stroke-width="1.2" filter="url(#sh)"/>
+<text x="644" y="184" font-size="11" font-weight="400" fill="#1f2430" text-anchor="start">New chat</text>
+<text x="644" y="206" font-size="11" font-weight="400" fill="#1f2430" text-anchor="start">New project</text>
+<text x="644" y="228" font-size="11" font-weight="400" fill="#1f2430" text-anchor="start">Rename</text>
+<text x="644" y="250" font-size="11" font-weight="400" fill="#1f2430" text-anchor="start">Delete</text>
+<text x="632" y="290" font-size="10" font-weight="400" fill="#6b7280" text-anchor="start" font-style="italic">Opens at its button, or at the cursor</text>
+<text x="632" y="306" font-size="10" font-weight="400" fill="#6b7280" text-anchor="start" font-style="italic">(Tab menu, row menus, @ picker).</text>
+<rect x="922" y="356" width="232" height="40" rx="4" fill="#1f2430" stroke="#8b93a1" stroke-width="1.2"/>
+<text x="956" y="380.0" font-size="11" font-weight="400" fill="#fff" text-anchor="start">Saved. Undo</text>
+<rect x="918" y="348" width="32" height="17" rx="8.5" fill="#b91c1c"/>
+<text x="934.1" y="360.5" font-size="11" font-weight="700" fill="#fff" text-anchor="middle">O4a</text>
+<text x="924" y="334" font-size="10" font-weight="400" fill="#6b7280" text-anchor="start" font-style="italic">Bottom of the window; fades out.</text>
+<rect x="34" y="506" width="256" height="300" rx="4" fill="#000" stroke="none" stroke-width="1" opacity="0.38"/>
+<rect x="60" y="580" width="204" height="130" rx="6" fill="#ffffff" stroke="#8b93a1" stroke-width="1.2" filter="url(#sh)"/>
+<text x="74" y="606" font-size="12" font-weight="700" fill="#1f2430" text-anchor="start">Delete this file?</text>
+<text x="74" y="628" font-size="10" font-weight="400" fill="#6b7280" text-anchor="start">One line saying what is lost.</text>
+<rect x="124" y="664" width="62" height="24" rx="5" fill="#ffffff" stroke="#8b93a1" stroke-width="1.2"/>
+<text x="155.0" y="680.0" font-size="10" font-weight="500" fill="#1f2430" text-anchor="middle">Cancel</text>
+<rect x="192" y="664" width="62" height="24" rx="5" fill="#0e7c86" stroke="#0e7c86" stroke-width="1.2"/>
+<text x="223.0" y="680.0" font-size="10" font-weight="600" fill="#fff" text-anchor="middle">Delete</text>
+<rect x="338" y="530" width="232" height="28" rx="4" fill="#f6f7f9" stroke="#8b93a1" stroke-width="1.2"/>
+<text x="350" y="549" font-size="11" font-weight="400" fill="#1f2430" text-anchor="start">Room A</text>
+<rect x="338" y="574" width="232" height="40" rx="4" fill="#fdf0d5" stroke="#d99a1e" stroke-width="1.2"/>
+<text x="348" y="598" font-size="11" font-weight="600" fill="#1f2430" text-anchor="start">Delete Room B?</text>
+<rect x="444" y="584" width="56" height="22" rx="5" fill="#0e7c86" stroke="#0e7c86" stroke-width="1.2"/>
+<text x="472.0" y="599.0" font-size="9" font-weight="600" fill="#fff" text-anchor="middle">Confirm</text>
+<rect x="506" y="584" width="56" height="22" rx="5" fill="#ffffff" stroke="#8b93a1" stroke-width="1.2"/>
+<text x="534.0" y="599.0" font-size="9" font-weight="500" fill="#1f2430" text-anchor="middle">Cancel</text>
+<text x="340" y="646" font-size="10" font-weight="400" fill="#6b7280" text-anchor="start" font-style="italic">Swaps in for the row itself;</text>
+<text x="340" y="662" font-size="10" font-weight="400" fill="#6b7280" text-anchor="start" font-style="italic">Confirm takes focus, Esc cancels.</text>
+<rect x="678" y="580" width="80" height="24" rx="4" fill="#1f2430" stroke="none" stroke-width="1.2"/>
+<text x="718" y="596" font-size="10" font-weight="500" fill="#fff" text-anchor="middle">Copy link</text>
+<rect x="708" y="614" width="20" height="20" rx="4" fill="#ffffff" stroke="#8b93a1" stroke-width="1.2"/>
+<text x="718" y="628" font-size="11" font-weight="400" fill="#6b7280" text-anchor="middle">↗</text>
+<text x="632" y="676" font-size="10" font-weight="400" fill="#6b7280" text-anchor="start" font-style="italic">Shown on hover or focus.</text>
+<text x="632" y="692" font-size="10" font-weight="400" fill="#6b7280" text-anchor="start" font-style="italic">Not in the page's own markup.</text>
+<rect x="910" y="506" width="256" height="300" rx="4" fill="#000" stroke="none" stroke-width="1" opacity="0.38"/>
+<rect x="946" y="580" width="184" height="110" rx="6" fill="#ffffff" stroke="#8b93a1" stroke-width="1.2" filter="url(#sh)"/>
+<text x="1038" y="620" font-size="11" font-weight="600" fill="#1f2430" text-anchor="middle">Rejoining the server…</text>
+<rect x="998" y="642" width="80" height="24" rx="5" fill="#ffffff" stroke="#8b93a1" stroke-width="1.2"/>
+<text x="1038.0" y="658.0" font-size="10" font-weight="500" fill="#1f2430" text-anchor="middle">Retry</text>
+<text x="24" y="846" font-size="11" font-weight="700" fill="#6b7280" text-anchor="start">Key</text>
+<rect x="58" y="835" width="30" height="14" rx="3" fill="#f6f7f9" stroke="#8b93a1" stroke-width="1.2"/>
+<text x="94" y="846" font-size="11" font-weight="400" fill="#6b7280" text-anchor="start">always rendered</text>
+<rect x="194" y="835" width="30" height="14" rx="3" fill="#ffffff" stroke="#8b93a1" stroke-width="1.2" stroke-dasharray="6 4"/>
+<text x="230" y="846" font-size="11" font-weight="400" fill="#6b7280" text-anchor="start">only in some states</text>
+<rect x="354" y="835" width="30" height="14" rx="3" fill="#ffffff" stroke="#8b93a1" stroke-width="1.2" filter="url(#sh)"/>
+<text x="390" y="846" font-size="11" font-weight="400" fill="#6b7280" text-anchor="start">overlay above the page</text>
+</svg>
