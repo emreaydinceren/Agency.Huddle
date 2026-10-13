@@ -6,6 +6,7 @@ using Agency.Huddle.App.Elicitation;
 using Agency.Huddle.App.Questions;
 using Agency.Huddle.App.Teammates;
 using Agency.Huddle.App.Teams;
+using Agency.Huddle.App.Uploads;
 using Agency.Huddle.Contracts;
 
 namespace Agency.Huddle.App.Services;
@@ -121,6 +122,22 @@ public sealed partial class ChatService
     /// every Team-scoped call is refused.
     /// </summary>
     internal ITeamCatalog? TeamCatalog { get; set; }
+
+    /// <summary>
+    /// Where a Room's chat uploads live, so <see cref="DeleteRoomAsync"/> can recycle them and the delete
+    /// confirmation can count them. An optional settable property for the same reason as
+    /// <see cref="TeamCatalog"/>; <see langword="null"/> means uploads are not tracked and nothing is recycled.
+    /// </summary>
+    internal IRoomUploadFolders? UploadFolders { get; set; }
+
+    /// <summary>The number of uploaded files a delete of <paramref name="room"/> would send to the Recycle Bin.</summary>
+    /// <param name="room">The Room about to be deleted.</param>
+    /// <returns>The file count of both upload folders; 0 when none exist.</returns>
+    public int CountRoomUploads(Room room)
+    {
+        ArgumentNullException.ThrowIfNull(room);
+        return this.UploadFolders?.CountFiles(room) ?? 0;
+    }
 
     /// <param name="teamDirectory">The Team's Users and Rooms.</param>
     /// <param name="store">Where a posted Message's transcript is appended.</param>
@@ -702,11 +719,22 @@ public sealed partial class ChatService
     /// <param name="ct">Cancels the lookup and the deletes.</param>
     public async Task DeleteRoomAsync(string roomId, CancellationToken ct = default)
     {
-        _ = await this.teamDirectory.GetRoomAsync(roomId, ct)
+        Room room = await this.teamDirectory.GetRoomAsync(roomId, ct)
             ?? throw new ChatException(ErrorCodes.UnknownRoom, $"Unknown room '{roomId}'.");
 
         await this.teamDirectory.DeleteRoomAsync(roomId, ct);
         await this.store.DeleteAsync(roomId, ct);
+
+        // ChatUploads spec 6.9: the Room's uploaded files go to the Recycle Bin once the delete has
+        // succeeded. Best effort - a refusal is logged and never fails the delete.
+        if (this.UploadFolders is not null)
+        {
+            IReadOnlyList<string> failures = await this.UploadFolders.RecycleAsync(room, ct);
+            foreach (string failure in failures)
+            {
+                this.logger.LogWarning("Room '{RoomId}' was deleted but its uploads were not recycled: {Reason}", roomId, failure);
+            }
+        }
 
         // Spec §12 F-16: a deleted Room can never be Approved or Declined into, so any Proposal still
         // pending in it is dropped along with everything else below.

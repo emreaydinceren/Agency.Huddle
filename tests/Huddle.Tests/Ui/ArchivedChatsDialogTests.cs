@@ -178,6 +178,54 @@ public sealed class ArchivedChatsDialogTests
         Assert.DoesNotContain(rows, row => row.StartsWith(rootRoom.Name, StringComparison.Ordinal) && row.Contains('·'));
     }
 
+    /// <summary>The Archived dialog's Delete confirm adds the Recycle Bin sentence with the file count when the Room has uploads (ChatUploads spec 7).</summary>
+    [Theory]
+    [InlineData(1, "Its uploaded file goes to the Recycle Bin.")]
+    [InlineData(2, "Its 2 uploaded files go to the Recycle Bin.")]
+    public async Task Delete_RoomWithUploads_ConfirmMentionsUploadCount(int count, string sentence)
+    {
+        var ct = Xunit.TestContext.Current.CancellationToken;
+        using var dir = new TempDataDir();
+        var events = new RoomEvents(NullLogger<RoomEvents>.Instance);
+        var directory = new SqliteTeamDirectory(dir.Options());
+        await directory.InitializeAsync("You", ct);
+        var agent = await directory.UpsertAgentUserAsync("coo", null, ct);
+        Assert.NotNull(agent);
+        var chat = CreateChatService(dir, directory, events);
+        chat.UploadFolders = new Agency.Huddle.Tests.Uploads.FakeRoomUploadFolders { Count = count };
+        var room = await chat.EnsureRoomForAsync(agent, ct);
+        _ = await chat.SetRoomArchivedAsync(room.Id, archived: true, ct);
+
+        await using var ctx = NewContext(directory, chat, events);
+        var cut = await OpenDialogAsync(ctx);
+        await cut.InvokeAsync(() => cut.Find("button[aria-label='Delete']").ClickAsync());
+
+        Assert.Equal($"Delete \"{room.Name}\"? {sentence}", cut.Find(".inline-confirm-prompt").TextContent.Trim());
+    }
+
+    /// <summary>The Archived dialog's Delete confirm keeps the plain prompt when the Room has no uploads.</summary>
+    [Fact]
+    public async Task Delete_RoomWithoutUploads_ConfirmHasNoUploadSentence()
+    {
+        var ct = Xunit.TestContext.Current.CancellationToken;
+        using var dir = new TempDataDir();
+        var events = new RoomEvents(NullLogger<RoomEvents>.Instance);
+        var directory = new SqliteTeamDirectory(dir.Options());
+        await directory.InitializeAsync("You", ct);
+        var agent = await directory.UpsertAgentUserAsync("coo", null, ct);
+        Assert.NotNull(agent);
+        var chat = CreateChatService(dir, directory, events);
+        chat.UploadFolders = new Agency.Huddle.Tests.Uploads.FakeRoomUploadFolders { Count = 0 };
+        var room = await chat.EnsureRoomForAsync(agent, ct);
+        _ = await chat.SetRoomArchivedAsync(room.Id, archived: true, ct);
+
+        await using var ctx = NewContext(directory, chat, events);
+        var cut = await OpenDialogAsync(ctx);
+        await cut.InvokeAsync(() => cut.Find("button[aria-label='Delete']").ClickAsync());
+
+        Assert.Equal($"Delete \"{room.Name}\"?", cut.Find(".inline-confirm-prompt").TextContent.Trim());
+    }
+
     private static ChatService CreateChatService(TempDataDir dir, ITeamDirectory directory, RoomEvents events)
     {
         var store = new FileChatStore(dir.Options(), NullLogger<FileChatStore>.Instance);

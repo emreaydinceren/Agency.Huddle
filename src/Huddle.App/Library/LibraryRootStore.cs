@@ -41,6 +41,7 @@ internal sealed class LibraryRootStore(IOptions<TeamOptions> options, TeammatePa
     private const string FileName = "library-roots.json";
     private const string TeamsRootId = "teams";
     private const string TeammatesRootId = "teammates";
+    private const string UploadsRootId = "uploads";
     private const int MaxSlugLength = 64;
 
     // Same reasoning as PromptStore.IndentedJsonOptions: this file only ever round-trips through
@@ -98,7 +99,7 @@ internal sealed class LibraryRootStore(IOptions<TeamOptions> options, TeammatePa
         this.RootsChanged?.Invoke();
     }
 
-    /// <summary>Hides or shows a built-in root (<c>"teams"</c> or <c>"teammates"</c>) from <see cref="VisibleRoots"/>. It stays in <see cref="Roots"/> and still resolves.</summary>
+    /// <summary>Hides or shows a built-in root (<c>"teams"</c>, <c>"teammates"</c> or <c>"uploads"</c>) from <see cref="VisibleRoots"/>. It stays in <see cref="Roots"/> and still resolves.</summary>
     /// <param name="builtInId">The built-in root's id.</param>
     /// <param name="hidden">Whether the root should be hidden.</param>
     /// <exception cref="ArgumentException"><paramref name="builtInId"/> does not name a built-in root.</exception>
@@ -106,9 +107,11 @@ internal sealed class LibraryRootStore(IOptions<TeamOptions> options, TeammatePa
     public void SetHidden(string builtInId, bool hidden)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(builtInId);
-        if (!string.Equals(builtInId, TeamsRootId, StringComparison.Ordinal) && !string.Equals(builtInId, TeammatesRootId, StringComparison.Ordinal))
+        if (!string.Equals(builtInId, TeamsRootId, StringComparison.Ordinal)
+            && !string.Equals(builtInId, TeammatesRootId, StringComparison.Ordinal)
+            && !string.Equals(builtInId, UploadsRootId, StringComparison.Ordinal))
         {
-            throw new ArgumentException("Only a built-in Library root ('teams' or 'teammates') can be hidden.", nameof(builtInId));
+            throw new ArgumentException("Only a built-in Library root ('teams', 'teammates' or 'uploads') can be hidden.", nameof(builtInId));
         }
 
         lock (this.writeGate)
@@ -187,7 +190,7 @@ internal sealed class LibraryRootStore(IOptions<TeamOptions> options, TeammatePa
 
         string baseSlug = collapsed.Length == 0 ? "root" : collapsed;
 
-        HashSet<string> takenSlugs = new(taken, StringComparer.Ordinal) { TeamsRootId, TeammatesRootId };
+        HashSet<string> takenSlugs = new(taken, StringComparer.Ordinal) { TeamsRootId, TeammatesRootId, UploadsRootId };
         if (!takenSlugs.Contains(baseSlug))
         {
             return baseSlug;
@@ -318,11 +321,13 @@ internal sealed class LibraryRootStore(IOptions<TeamOptions> options, TeammatePa
         string dataDir = options.Value.DataDir;
         string teamsRoot = TrimTrailingSeparator(Path.GetFullPath(Path.Combine(dataDir, options.Value.Teams.Dir)));
         string teammatesRoot = TrimTrailingSeparator(Path.GetFullPath(paths.DefinitionsRoot));
+        string uploadsRoot = Path.GetFullPath(Path.Combine(dataDir, options.Value.Library.Uploads.Dir));
 
         List<LibraryRoot> roots =
         [
             new LibraryRoot(TeamsRootId, "Teams", teamsRoot, LibraryRootKind.Teams),
             new LibraryRoot(TeammatesRootId, "Teammates", teammatesRoot, LibraryRootKind.Teammates),
+            new LibraryRoot(UploadsRootId, "Uploads", uploadsRoot, LibraryRootKind.Uploads),
         ];
 
         List<string> takenSlugs = [];

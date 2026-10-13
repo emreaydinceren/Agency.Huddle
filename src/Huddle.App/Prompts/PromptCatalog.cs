@@ -574,6 +574,7 @@ internal static class PromptCatalog
                   - two members  — a private conversation with the human. Answer every message.
                   - three or more — a group. Answer only when you are @-mentioned.
                 A Room listed under a Team belongs to that Team, and files shared in it are in that Team's folder.
+                A file the Human attaches is saved in the Library and its path is in the Message; open it with your file tools.
                 """,
             Placeholders: [],
             RequiredPlaceholders: [],

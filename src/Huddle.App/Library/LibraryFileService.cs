@@ -51,6 +51,16 @@ internal sealed class LibraryFileService(
     /// changed, and the Teammates page is the only rename path.</summary>
     private const string RenameOnTeammatesPageReason = "Rename teammates on the Teammates page.";
 
+    /// <summary>The buffer size, in bytes, an upload is copied with.</summary>
+    private const int UploadBufferSize = 80 * 1024;
+    private const int UploadHeadBytes = 512;
+    private const int MaxUploadNameAttempts = 99;
+    private const long BytesPerKilobyte = 1024;
+    private const long BytesPerMegabyte = 1024 * 1024;
+    private static readonly CompositeFormat UploadTooLargeFormat = CompositeFormat.Parse("{0} is larger than {1} MB.");
+    private static readonly CompositeFormat UploadTooLargeKilobytesFormat = CompositeFormat.Parse("{0} is larger than {1} KB.");
+    private static readonly CompositeFormat UploadCouldNotSaveFormat = CompositeFormat.Parse("Couldn't save {0}.");
+
     /// <summary>Settled text (corrections-B4 item 19) when a create target's name is already taken by a file
     /// or a folder.</summary>
     private static readonly CompositeFormat AlreadyExistsReasonFormat = CompositeFormat.Parse("\"{0}\" already exists here.");
@@ -177,6 +187,11 @@ internal sealed class LibraryFileService(
             ct.ThrowIfCancellationRequested();
             bool isFolder = child is DirectoryInfo;
             if (isFolder && LibraryHiddenFolders.IsHidden(child.Name, ignoredFolders, hideUnderscoreFolders))
+            {
+                continue;
+            }
+
+            if (!isFolder && child.Name.StartsWith('.') && child.Name.EndsWith(".upload", StringComparison.Ordinal))
             {
                 continue;
             }
@@ -792,6 +807,157 @@ internal sealed class LibraryFileService(
 
         InvalidateOverlapping(this.resolver, this.index, target.FullPath);
         return Task.FromResult(this.ReResolveCreated(fresh, name));
+    }
+
+    /// <summary>The refusal text for a file over the upload cap: "{name} is larger than {cap} MB." in whole megabytes.</summary>
+    /// <param name="name">The file's name.</param>
+    /// <param name="maxBytes">The cap in bytes.</param>
+    /// <returns>The refusal text.</returns>
+    internal static string UploadTooLargeMessage(string name, long maxBytes) =>
+        maxBytes < BytesPerMegabyte
+            ? string.Format(CultureInfo.InvariantCulture, UploadTooLargeKilobytesFormat, name, maxBytes / BytesPerKilobyte)
+            : string.Format(CultureInfo.InvariantCulture, UploadTooLargeFormat, name, maxBytes / BytesPerMegabyte);
+
+    /// <summary>
+    /// Deletes a chat upload that was attached but never sent (ChatUploads spec 6.4), then invalidates the wikilink
+    /// index of every overlapping root like the other writers. A plain delete, not the Recycle Bin: the file is
+    /// not yet the Human's document. A file already gone, locked or no longer resolvable is not an error.
+    /// </summary>
+    /// <param name="file">The saved upload; re-resolved before use.</param>
+    /// <param name="ct">Cancels the delete.</param>
+    /// <returns>A task that completes once the file is gone.</returns>
+    internal Task DeleteUnsentUploadAsync(LibraryPath file, CancellationToken ct)
+    {
+        ArgumentNullException.ThrowIfNull(file);
+        ct.ThrowIfCancellationRequested();
+
+        if (!this.resolver.TryResolve(file.Root.Id, file.RelativePath, out LibraryPath? fresh, out _))
+        {
+            return Task.CompletedTask;
+        }
+
+        try
+        {
+            File.Delete(fresh.FullPath);
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+        {
+            // The chip is gone either way; an upload file that stays behind is only clutter in the Room's upload folder.
+        }
+
+        InvalidateOverlapping(this.resolver, this.index, fresh.FullPath);
+        return Task.CompletedTask;
+    }
+
+    /// <summary>
+    /// Saves <paramref name="content"/> as a new file in <paramref name="folder"/> (ChatUploads spec 6.2): the
+    /// bytes are copied to a hidden <c>.{guid}.upload</c> file while being counted, the first 512 are classified
+    /// by <see cref="UploadKinds.Classify"/>, and only an accepted file is moved to the first free name. The
+    /// folder chain is created when missing. A refusal or a failure leaves no temp file; cancellation rethrows.
+    /// </summary>
+    /// <param name="folder">The folder to save into; re-resolved before use and created when missing.</param>
+    /// <param name="name">The already cleaned-up file name, validated with <see cref="LibraryNames.Validate"/>.</param>
+    /// <param name="content">The bytes to save.</param>
+    /// <param name="maxBytes">The most bytes accepted; one more is refused.</param>
+    /// <param name="ct">Cancels the copy.</param>
+    /// <returns>The saved file with its kind and size, or a refusal reason.</returns>
+    internal async Task<LibraryResult<LibraryUpload>> CreateFromStreamAsync(LibraryPath folder, string name, Stream content, long maxBytes, CancellationToken ct)
+    {
+        ArgumentNullException.ThrowIfNull(folder);
+        ArgumentNullException.ThrowIfNull(name);
+        ArgumentNullException.ThrowIfNull(content);
+        ct.ThrowIfCancellationRequested();
+
+        string? nameError = LibraryNames.Validate(name);
+        if (nameError is not null)
+        {
+            return new LibraryResult<LibraryUpload>(null, nameError);
+        }
+
+        if (!this.resolver.TryResolve(folder.Root.Id, folder.RelativePath, out LibraryPath? fresh, out string? resolveError))
+        {
+            return new LibraryResult<LibraryUpload>(null, resolveError);
+        }
+
+        string couldNotSave = string.Format(CultureInfo.InvariantCulture, UploadCouldNotSaveFormat, name);
+        string tempPath = Path.Combine(fresh.FullPath, $".{Guid.NewGuid():N}.upload");
+        try
+        {
+            Directory.CreateDirectory(fresh.FullPath);
+
+            long size = 0;
+            byte[] head = new byte[UploadHeadBytes];
+            int headLength;
+            await using (FileStream temp = new(tempPath, FileMode.CreateNew, FileAccess.Write, FileShare.None, UploadBufferSize, useAsync: true))
+            {
+                byte[] buffer = new byte[UploadBufferSize];
+                int read;
+                while ((read = await content.ReadAsync(buffer, ct)) > 0)
+                {
+                    size += read;
+                    if (size > maxBytes)
+                    {
+                        return new LibraryResult<LibraryUpload>(null, UploadTooLargeMessage(name, maxBytes));
+                    }
+
+                    await temp.WriteAsync(buffer.AsMemory(0, read), ct);
+                }
+            }
+
+            await using (FileStream reader = new(tempPath, FileMode.Open, FileAccess.Read, FileShare.Read, UploadBufferSize, useAsync: true))
+            {
+                headLength = await reader.ReadAsync(head, ct);
+            }
+
+            UploadKind kind = UploadKinds.Classify(head.AsSpan(0, headLength));
+            if (UploadKinds.IsRefused(kind))
+            {
+                return new LibraryResult<LibraryUpload>(null, UploadKinds.RefusalText(kind) ?? couldNotSave);
+            }
+
+            for (int attempt = 1; attempt <= MaxUploadNameAttempts; attempt++)
+            {
+                string candidate = attempt == 1 ? name : UploadNames.FreeName(name, attempt);
+                if (!this.TryResolveCreateTarget(fresh, candidate, out LibraryPath? target, out _))
+                {
+                    return new LibraryResult<LibraryUpload>(null, couldNotSave);
+                }
+
+                if (File.Exists(target.FullPath) || Directory.Exists(target.FullPath))
+                {
+                    continue;
+                }
+
+                try
+                {
+                    File.Move(tempPath, target.FullPath, overwrite: false);
+                }
+                catch (IOException) when (File.Exists(target.FullPath) || Directory.Exists(target.FullPath))
+                {
+                    continue;
+                }
+
+                InvalidateOverlapping(this.resolver, this.index, target.FullPath);
+                LibraryResult<LibraryPath> created = this.ReResolveCreated(fresh, candidate);
+                return created.Value is null
+                    ? new LibraryResult<LibraryUpload>(null, created.Error)
+                    : new LibraryResult<LibraryUpload>(new LibraryUpload(created.Value, kind, size), null);
+            }
+
+            return new LibraryResult<LibraryUpload>(null, couldNotSave);
+        }
+        catch (IOException)
+        {
+            return new LibraryResult<LibraryUpload>(null, couldNotSave);
+        }
+        catch (UnauthorizedAccessException)
+        {
+            return new LibraryResult<LibraryUpload>(null, couldNotSave);
+        }
+        finally
+        {
+            UploadTempFile.DeleteQuietly(tempPath);
+        }
     }
 
     /// <summary>

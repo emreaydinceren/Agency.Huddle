@@ -30,6 +30,23 @@ public sealed class LibraryProtectionTests
         Assert.Equal("A Library root can't be renamed, moved or deleted.", protection.Reason);
     }
 
+    /// <summary>A file and a folder in the Uploads root are plain nodes: rename, move and delete are allowed.</summary>
+    [Theory]
+    [InlineData(LibraryNodeRole.File, "room1/photo.png")]
+    [InlineData(LibraryNodeRole.Folder, "room1")]
+    public void For_UploadsRootNode_IsUnprotected(LibraryNodeRole role, string relativePath)
+    {
+        LibraryRoot root = new("uploads", "Uploads", "/tmp/uploads", LibraryRootKind.Uploads);
+        LibraryPath path = new(root, relativePath, "/tmp/uploads/" + relativePath, role);
+
+        LibraryProtection protection = LibraryProtection.For(path);
+
+        Assert.True(protection.CanRename);
+        Assert.True(protection.CanMove);
+        Assert.True(protection.CanDelete);
+        Assert.Null(protection.Reason);
+    }
+
     public static IEnumerable<object?[]> ProtectionTestData()
     {
         yield return new object?[] { LibraryNodeRole.Root, false, false, false, "A Library root can't be renamed, moved or deleted." };

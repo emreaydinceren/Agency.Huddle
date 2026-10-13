@@ -3,7 +3,7 @@ using Agency.Huddle.App.FileChanges;
 namespace Agency.Huddle.Tests.FileChanges;
 
 /// <summary>
-/// Pins <see cref="FolderScanner.Scan(string, FileChangesOptions, bool)"/>: pruning of ignored
+/// Pins <see cref="FolderScanner.Scan(string, FileChangesOptions, bool, string)"/>: pruning of ignored
 /// directories, the file cap, missing-folder handling, reparse-point skipping and Spec §6.13's
 /// <c>pruneUnderscore</c> flag.
 /// </summary>
@@ -244,5 +244,92 @@ public sealed class FolderScannerTests
 
         Assert.Equal(ScanOutcome.Scanned, result.Outcome);
         Assert.Equal([Path.Combine("a_b", "c.md")], result.Snapshot.Files.Keys);
+    }
+
+    /// <summary>Spec 6.8: scanning a Team folder prunes its <c>Uploads</c> folder (any casing) and keeps its other folders.</summary>
+    [Theory]
+    [InlineData("Uploads")]
+    [InlineData("uploads")]
+    public void Scan_TeamUploadsFolder_IsPrunedAndSiblingKept(string uploadsName)
+    {
+        using TempDataDir dataDir = new();
+        string teamsRoot = Path.Combine(dataDir.Path, "Teams");
+        string team = Path.Combine(teamsRoot, "T");
+        Directory.CreateDirectory(Path.Combine(team, uploadsName, "room1"));
+        File.WriteAllText(Path.Combine(team, uploadsName, "room1", "a.png"), "x");
+        Directory.CreateDirectory(Path.Combine(team, "Notes"));
+        File.WriteAllText(Path.Combine(team, "Notes", "n.md"), "n");
+
+        ScanResult result = FolderScanner.Scan(team, new FileChangesOptions(), pruneUnderscore: true, teamsRoot: teamsRoot);
+
+        Assert.Equal(ScanOutcome.Scanned, result.Outcome);
+        Assert.Equal([Path.Combine("Notes", "n.md")], result.Snapshot.Files.Keys);
+    }
+
+    /// <summary>Spec 6.8: scanning the Teams root itself prunes <c>Teams/&lt;Team&gt;/Uploads</c> too.</summary>
+    [Fact]
+    public void Scan_TeamsRoot_PrunesEachTeamUploads()
+    {
+        using TempDataDir dataDir = new();
+        string teamsRoot = Path.Combine(dataDir.Path, "Teams");
+        Directory.CreateDirectory(Path.Combine(teamsRoot, "T", "Uploads"));
+        File.WriteAllText(Path.Combine(teamsRoot, "T", "Uploads", "a.png"), "x");
+        File.WriteAllText(Path.Combine(teamsRoot, "T", "brief.md"), "b");
+
+        ScanResult result = FolderScanner.Scan(teamsRoot, new FileChangesOptions(), pruneUnderscore: true, teamsRoot: teamsRoot);
+
+        Assert.Equal([Path.Combine("T", "brief.md")], result.Snapshot.Files.Keys);
+    }
+
+    /// <summary>Spec 6.8: only depth 2 under the Teams root is pruned; an <c>Uploads</c> folder deeper in a Team is a normal folder.</summary>
+    [Fact]
+    public void Scan_UploadsFolderDeeperThanTeam_IsKept()
+    {
+        using TempDataDir dataDir = new();
+        string teamsRoot = Path.Combine(dataDir.Path, "Teams");
+        string team = Path.Combine(teamsRoot, "T");
+        Directory.CreateDirectory(Path.Combine(team, "Notes", "Uploads"));
+        File.WriteAllText(Path.Combine(team, "Notes", "Uploads", "keep.md"), "k");
+
+        ScanResult result = FolderScanner.Scan(team, new FileChangesOptions(), pruneUnderscore: true, teamsRoot: teamsRoot);
+
+        Assert.Equal([Path.Combine("Notes", "Uploads", "keep.md")], result.Snapshot.Files.Keys);
+    }
+
+    /// <summary>Spec 6.8: without a Teams root the scanner prunes no <c>Uploads</c> folder.</summary>
+    [Fact]
+    public void Scan_NoTeamsRoot_KeepsUploadsFolder()
+    {
+        using TempDataDir dataDir = new();
+        string folder = Path.Combine(dataDir.Path, "Teams", "T");
+        Directory.CreateDirectory(Path.Combine(folder, "Uploads"));
+        File.WriteAllText(Path.Combine(folder, "Uploads", "a.png"), "x");
+
+        ScanResult result = FolderScanner.Scan(folder, new FileChangesOptions());
+
+        Assert.Equal([Path.Combine("Uploads", "a.png")], result.Snapshot.Files.Keys);
+    }
+
+    /// <summary>Spec 6.8: pruned upload files never count toward the cap, so 6,000 of them leave the Team folder <see cref="ScanOutcome.Scanned"/>.</summary>
+    [Fact]
+    public void Scan_SixThousandFilesUnderTeamUploads_DoesNotTripTheCap()
+    {
+        using TempDataDir dataDir = new();
+        string teamsRoot = Path.Combine(dataDir.Path, "Teams");
+        string team = Path.Combine(teamsRoot, "T");
+        string uploads = Path.Combine(team, "Uploads", "room1");
+        Directory.CreateDirectory(uploads);
+        for (int index = 0; index < 6000; index++)
+        {
+            File.WriteAllBytes(Path.Combine(uploads, $"f{index}.bin"), []);
+        }
+
+        Directory.CreateDirectory(Path.Combine(team, "Notes"));
+        File.WriteAllText(Path.Combine(team, "Notes", "n.md"), "n");
+
+        ScanResult result = FolderScanner.Scan(team, new FileChangesOptions(), pruneUnderscore: true, teamsRoot: teamsRoot);
+
+        Assert.Equal(ScanOutcome.Scanned, result.Outcome);
+        Assert.Equal([Path.Combine("Notes", "n.md")], result.Snapshot.Files.Keys);
     }
 }

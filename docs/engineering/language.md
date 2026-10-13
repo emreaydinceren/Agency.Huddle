@@ -226,6 +226,13 @@ contexts](../Huddle.EngineeringGuide.md#two-bounded-contexts). Back to the hub:
   Team later is added to it.
 : *Avoid*: team channel, general.
 
+**Upload**
+: A file the Human attaches to a Message in the composer. It is saved into the
+  Room's upload folder in the Library at once, and its path is added to the
+  Message when it is sent (ADR-0053). Until then it is a pending upload, shown
+  as a chip.
+: *Avoid*: attachment (there is no attachment field on a Message), file share.
+
 **Archived**
 : A Room hidden from the sidebar and listed under **Archived Chats** instead.
   Reversible, and a display filter only — an Archived Room is still live, and

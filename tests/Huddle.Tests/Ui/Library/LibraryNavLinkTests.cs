@@ -34,7 +34,7 @@ public sealed class LibraryNavLinkTests
 
         var cut = ctx.RenderWithPopovers(RenderNav);
 
-        Assert.Equal(["Teams", "Teammates"], cut.FindAll(".library-nav-root-link").Select(e => e.TextContent.Trim()));
+        Assert.Equal(["Teams", "Teammates", "Uploads"], cut.FindAll(".library-nav-root-link").Select(e => e.TextContent.Trim()));
     }
 
     /// <summary>A built-in hidden through <see cref="LibraryRootStore.SetHidden"/> is left out of the rows, matching <see cref="LibraryRootStore.VisibleRoots"/>.</summary>
@@ -47,7 +47,7 @@ public sealed class LibraryNavLinkTests
 
         var cut = ctx.RenderWithPopovers(RenderNav);
 
-        Assert.Equal(["Teammates"], cut.FindAll(".library-nav-root-link").Select(e => e.TextContent.Trim()));
+        Assert.Equal(["Teammates", "Uploads"], cut.FindAll(".library-nav-root-link").Select(e => e.TextContent.Trim()));
     }
 
     /// <summary>Each root row's own Href routes to the full <c>/library</c> page, scoped to that root's own top level (Spec §6.9) - the same query shape <c>LibraryPageTests</c> pins for the page's own <c>ScopeRoot</c>/<c>ScopePath</c> parameters.</summary>
@@ -88,7 +88,7 @@ public sealed class LibraryNavLinkTests
         cut.WaitForAssertion(() => Assert.Empty(cut.FindAll(".mud-dialog-title")));
         Assert.Equal(["Notes"], fixture.Store.Pinned.Select(p => p.Name));
         cut.WaitForAssertion(() => Assert.Equal(
-            ["Teams", "Teammates", "Notes"],
+            ["Teams", "Teammates", "Uploads", "Notes"],
             cut.FindAll(".library-nav-root-link").Select(e => e.TextContent.Trim())));
     }
 
@@ -120,14 +120,14 @@ public sealed class LibraryNavLinkTests
         using NavFixture fixture = NavFixture.Build();
         await using MudBunitContext ctx = fixture.NewContext();
         var cut = ctx.RenderWithPopovers(RenderNav);
-        Assert.Equal(["Teams", "Teammates"], cut.FindAll(".library-nav-root-link").Select(e => e.TextContent.Trim()));
+        Assert.Equal(["Teams", "Teammates", "Uploads"], cut.FindAll(".library-nav-root-link").Select(e => e.TextContent.Trim()));
 
         string outsidePath = Path.Combine(fixture.DataDir, "Outside");
         Directory.CreateDirectory(outsidePath);
         fixture.Store.Save([new PinnedRootEntry("Outside", outsidePath)]);
 
         cut.WaitForAssertion(() => Assert.Equal(
-            ["Teams", "Teammates", "Outside"],
+            ["Teams", "Teammates", "Uploads", "Outside"],
             cut.FindAll(".library-nav-root-link").Select(e => e.TextContent.Trim())));
     }
 

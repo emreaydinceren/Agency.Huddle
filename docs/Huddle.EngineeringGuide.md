@@ -313,6 +313,9 @@ All under the `Team:` section — `TeamOptions.cs`, `Acp/AcpOptions.cs`, `FileCh
 | `Library:MaxEditableBytes` | `2097152` | Above this, a text file opens read-only. |
 | `Library:MaxIndexedFiles` | `5000` | Above this, a root's wikilink index is not built and backlinks say so. |
 | `Library:MaxReferencedDocuments` | `10` | The most Library documents listed in one Turn's prompt; the rest are counted. |
+| `Team:Library:MaxUploadBytes` | `26214400` | The largest file attached in the chat (25 MiB), enforced while the bytes stream in. Over it, the chip is refused and the partial file removed. See [ADR-0053](adr/0053-an-upload-is-saved-to-the-library-and-sent-as-its-path.md). |
+| `Team:Library:MaxUploadsPerMessage` | `10` | The most files attached to one Message, matching `MaxReferencedDocuments`. |
+| `Team:Library:Uploads:Dir` | `Uploads` | The Uploads Library Root's folder, a relative name under `DataDir`; an absolute value is not supported (nothing validates it, and it would leave `DataDir`). Created on the first upload, not at start-up. |
 | `Library:MaxInlineBytes` | `16384` | Per document, the most text inlined for an Adapter without file tools. |
 | `Library:MaxImageBytes` | `3145728` | The most bytes of one image sent to an Adapter as a Prompt block (3 MiB, 4 MiB once base64-encoded). Over it, the image is a path line. Zero or less sends none. |
 | `Library:MaxImagesPerTurn` | `4` | The most image Prompt blocks in one Turn's prompt; the rest stay path lines. |

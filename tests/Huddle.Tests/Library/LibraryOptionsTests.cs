@@ -59,6 +59,36 @@ public sealed class LibraryOptionsTests
         Assert.Equal(8000, options.MaxImageEdgePixels);
     }
 
+    /// <summary>The chat-upload limits and the Uploads folder default to the spec 6.6 values.</summary>
+    [Fact]
+    public void UploadLimits_Defaults_MatchSpec()
+    {
+        LibraryOptions options = new TeamOptions().Library;
+
+        Assert.Equal(26214400, options.MaxUploadBytes);
+        Assert.Equal(10, options.MaxUploadsPerMessage);
+        Assert.Equal("Uploads", options.Uploads.Dir);
+    }
+
+    /// <summary>The chat-upload limits and the Uploads folder bind from <c>Team:Library</c>.</summary>
+    [Fact]
+    public void UploadLimits_Bind_FromConfiguration()
+    {
+        IConfigurationRoot configuration = new ConfigurationBuilder()
+            .AddInMemoryCollection(new Dictionary<string, string?>
+            {
+                ["Team:Library:MaxUploadBytes"] = "1000",
+                ["Team:Library:MaxUploadsPerMessage"] = "3",
+                ["Team:Library:Uploads:Dir"] = "Attached",
+            })
+            .Build();
+
+        TeamOptions options = new();
+        configuration.GetSection(TeamOptions.SectionName).Bind(options);
+
+        Assert.Equal((1000L, 3, "Attached"), (options.Library.MaxUploadBytes, options.Library.MaxUploadsPerMessage, options.Library.Uploads.Dir));
+    }
+
     /// <summary>The Prompt-block limits bind from <c>Team:Library</c>.</summary>
     [Fact]
     public void ImageLimits_Bind_FromConfiguration()

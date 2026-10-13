@@ -40,4 +40,20 @@ public sealed class LibraryOptions
 
     /// <summary>The longest side, in pixels, of an image sent as a Prompt block. Anthropic documents 8,000 as its limit.</summary>
     public int MaxImageEdgePixels { get; set; } = 8000;
+
+    /// <summary>The largest file a chat upload accepts, enforced while the bytes stream in (spec 6.6). Refusals name the cap.</summary>
+    public long MaxUploadBytes { get; set; } = 26214400;
+
+    /// <summary>The most chips in one Message's composer, matching <see cref="MaxReferencedDocuments"/>.</summary>
+    public int MaxUploadsPerMessage { get; set; } = 10;
+
+    /// <summary>The Uploads folder under <c>DataDir</c>, per spec 6.6 (<c>Team:Library:Uploads:Dir</c>).</summary>
+    public LibraryUploadsOptions Uploads { get; set; } = new();
+}
+
+/// <summary>Bound from <c>Team:Library:Uploads</c>, per spec 6.1 and 6.6: where chat uploads are saved in the Library.</summary>
+public sealed class LibraryUploadsOptions
+{
+    /// <summary>The Uploads root's folder, relative to <c>DataDir</c>.</summary>
+    public string Dir { get; set; } = "Uploads";
 }

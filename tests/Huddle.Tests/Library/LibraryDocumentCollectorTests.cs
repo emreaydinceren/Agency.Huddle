@@ -126,6 +126,100 @@ public sealed class LibraryDocumentCollectorTests
         Assert.Equal("pinned root \"Huddle docs\"", report.Items[4].Location, StringComparer.Ordinal);
     }
 
+    /// <summary>A file in the Uploads root is labelled <c>upload</c>, not <c>teammate {roomId}</c>; a file under a Team's Uploads folder keeps its Team label.</summary>
+    [Fact]
+    public async Task Collect_UploadsRootFile_LabelledUpload_TeamUploadKeepsTeamLabel()
+    {
+        CancellationToken ct = TestContext.Current.CancellationToken;
+        (LibraryFileServiceFixture fixture, IOptions<TeamOptions> options) = BuildFixture();
+        using LibraryFileServiceFixture _ = fixture;
+        string uploadDir = Path.Combine(fixture.DataDir, "Uploads", "room1");
+        Directory.CreateDirectory(uploadDir);
+        string uploadFile = Path.Combine(uploadDir, "note.md");
+        File.WriteAllText(uploadFile, "upload");
+        string teamUploadDir = Path.Combine(fixture.DataDir, "Teams", "Marketing", "Uploads", "room2");
+        Directory.CreateDirectory(teamUploadDir);
+        string teamUploadFile = Path.Combine(teamUploadDir, "note.md");
+        File.WriteAllText(teamUploadFile, "team upload");
+        LibraryDocumentCollector collector = new(fixture.Resolver, fixture.CreateService(), options);
+
+        LibraryDocumentsReport report = await collector.CollectAsync(
+            [new Uri(uploadFile).AbsoluteUri, new Uri(teamUploadFile).AbsoluteUri],
+            readsFiles: true,
+            ct);
+
+        Assert.Equal(2, report.Items.Count);
+        Assert.Equal("upload", report.Items[0].Location, StringComparer.Ordinal);
+        Assert.Equal("Team Marketing", report.Items[1].Location, StringComparer.Ordinal);
+    }
+
+    /// <summary>A sent upload path, an absolute path with spaces in a code span, resolves into the Uploads root and the document reads <c>upload</c> (ChatUploads spec 6.7).</summary>
+    [Fact]
+    public async Task Collect_SentUploadPathWithSpacesInCodeSpan_ResolvesToUploadsRoot()
+    {
+        CancellationToken ct = TestContext.Current.CancellationToken;
+        (LibraryFileServiceFixture fixture, IOptions<TeamOptions> options) = BuildFixture();
+        using LibraryFileServiceFixture _ = fixture;
+        string uploadDir = Path.Combine(fixture.DataDir, "Uploads", "room1");
+        Directory.CreateDirectory(uploadDir);
+        string uploadFile = Path.Combine(uploadDir, "meeting notes (2).md");
+        File.WriteAllText(uploadFile, "upload");
+        LibraryDocumentCollector collector = new(fixture.Resolver, fixture.CreateService(), options);
+
+        bool resolved = fixture.Resolver.TryResolveAbsolute(uploadFile, out LibraryPath? path);
+        LibraryDocumentsReport report = await collector.CollectAsync([$"please read `{uploadFile}`"], readsFiles: true, ct);
+
+        Assert.True(resolved);
+        Assert.NotNull(path);
+        Assert.Equal(LibraryRootKind.Uploads, path.Root.Kind);
+        LibraryDocumentItem item = Assert.Single(report.Items);
+        Assert.Equal("upload", item.Location, StringComparer.Ordinal);
+        Assert.Equal(uploadFile, item.FullPath, StringComparer.OrdinalIgnoreCase);
+    }
+
+    /// <summary>A rooted POSIX absolute path with spaces, taken as a whole code span, is recognised on every OS, so a sent upload path reaches the Agent on Linux and macOS.</summary>
+    [Theory]
+    [InlineData("/data/Uploads/room1/a b.png")]
+    [InlineData("/home/user/Huddle/Uploads/room1/meeting notes (2).md")]
+    public void TryMatchWhole_PosixAbsolutePath_Matches(string text)
+    {
+        bool matched = LibraryPathPatterns.TryMatchWhole(text, out string? path);
+
+        Assert.True(matched);
+        Assert.Equal(text, path, StringComparer.Ordinal);
+    }
+
+    /// <summary>A code span that only starts with a slash but has no path separator after it, such as a slash command, is not a path.</summary>
+    [Theory]
+    [InlineData("/help")]
+    [InlineData("/")]
+    [InlineData("a/b c.png")]
+    public void TryMatchWhole_NotAPosixAbsolutePath_DoesNotMatch(string text)
+    {
+        bool matched = LibraryPathPatterns.TryMatchWhole(text, out string? path);
+
+        Assert.False(matched);
+        Assert.Null(path);
+    }
+
+    /// <summary>A file under a Team's <c>memory</c> folder keeps its previous label, "Team {Team}, Project memory".</summary>
+    [Fact]
+    public async Task Collect_TeamMemoryFile_KeepsProjectLabel()
+    {
+        CancellationToken ct = TestContext.Current.CancellationToken;
+        (LibraryFileServiceFixture fixture, IOptions<TeamOptions> options) = BuildFixture();
+        using LibraryFileServiceFixture _ = fixture;
+        string memoryDir = Path.Combine(fixture.DataDir, "Teams", "Marketing", "memory");
+        Directory.CreateDirectory(memoryDir);
+        string memoryFile = Path.Combine(memoryDir, "note.md");
+        File.WriteAllText(memoryFile, "memory");
+        LibraryDocumentCollector collector = new(fixture.Resolver, fixture.CreateService(), options);
+
+        LibraryDocumentsReport report = await collector.CollectAsync([new Uri(memoryFile).AbsoluteUri], readsFiles: true, ct);
+
+        Assert.Equal("Team Marketing, Project memory", Assert.Single(report.Items).Location, StringComparer.Ordinal);
+    }
+
     /// <summary>A document's <see cref="LibraryDocumentItem.Size"/> is the shared Library size format.</summary>
     [Fact]
     public async Task Collect_SizeUsesLibrarySize()

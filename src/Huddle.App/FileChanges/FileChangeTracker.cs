@@ -2,6 +2,7 @@ using Microsoft.Extensions.Options;
 using Agency.Huddle.App.Acp;
 using Agency.Huddle.App.Data;
 using Agency.Huddle.App.Library;
+using Agency.Huddle.App.Teams;
 
 namespace Agency.Huddle.App.FileChanges;
 
@@ -54,11 +55,12 @@ internal sealed class FileChangeTracker(
         ArgumentNullException.ThrowIfNull(declared);
 
         IReadOnlyList<WatchedFolder> folders = this.ResolveFolders(agentName, declared);
+        string teamsRoot = FileChangeTracker.ResolveTeamsRoot(options.Value);
 
         Dictionary<string, ScanResult> scans = new(StringComparer.OrdinalIgnoreCase);
         foreach (WatchedFolder folder in folders)
         {
-            ScanResult scan = await Task.Run(() => FolderScanner.Scan(folder.FullPath, options.Value.FileChanges, folder.PruneUnderscore), cancellationToken).ConfigureAwait(false);
+            ScanResult scan = await Task.Run(() => FolderScanner.Scan(folder.FullPath, options.Value.FileChanges, folder.PruneUnderscore, teamsRoot), cancellationToken).ConfigureAwait(false);
             scans[folder.Entry] = scan;
         }
 
@@ -86,7 +88,7 @@ internal sealed class FileChangeTracker(
                 // A baseline saved before this folder's PruneUnderscore applied (or before Spec §6.13
                 // existed at all) can still hold a _tasks/_drafts entry the live scan now omits; filtering
                 // it here keeps that entry from showing up as spuriously "deleted".
-                previousSnapshot = FileChangeTracker.PruneSnapshot(previousSnapshot, folder.PruneUnderscore);
+                previousSnapshot = FileChangeTracker.PruneSnapshot(previousSnapshot, folder.PruneUnderscore, folder.FullPath, teamsRoot);
                 foreach (FileChange change in FileStateDiff.Compare(previousSnapshot, scan.Snapshot, folder.FullPath))
                 {
                     string? byYouRoomName = await this.DetermineByYouRoomNameAsync(
@@ -514,9 +516,11 @@ internal sealed class FileChangeTracker(
     /// <paramref name="pruneUnderscore"/> applying to this folder, and would otherwise show that
     /// entry as spuriously deleted the first time it does.
     /// </summary>
-    private static FolderSnapshot PruneSnapshot(FolderSnapshot snapshot, bool pruneUnderscore)
+    private static FolderSnapshot PruneSnapshot(FolderSnapshot snapshot, bool pruneUnderscore, string folderFullPath, string teamsRoot)
     {
-        if (!pruneUnderscore)
+        string[] folderSegments = FileChangeTracker.SegmentsBelowTeamsRoot(folderFullPath, teamsRoot);
+        bool pruneUploads = folderSegments.Length <= 1;
+        if (!pruneUnderscore && !pruneUploads)
         {
             return snapshot;
         }
@@ -524,7 +528,14 @@ internal sealed class FileChangeTracker(
         Dictionary<string, FileEntry> filtered = new(FolderSnapshot.PathComparer);
         foreach ((string relativePath, FileEntry fileEntry) in snapshot.Files)
         {
-            if (relativePath.Split(Path.DirectorySeparatorChar).Any(segment => segment.StartsWith('_')))
+            string[] segments = relativePath.Split(Path.DirectorySeparatorChar);
+            if (pruneUnderscore && segments.Any(segment => segment.StartsWith('_')))
+            {
+                continue;
+            }
+
+            // Chat uploads spec 6.8: drop what FolderScanner no longer walks, Teams/<Team>/Uploads/**.
+            if (pruneUploads && FileChangeTracker.IsInTeamUploads(folderSegments, segments))
             {
                 continue;
             }
@@ -533,6 +544,39 @@ internal sealed class FileChangeTracker(
         }
 
         return new FolderSnapshot(filtered);
+    }
+
+    /// <summary>
+    /// The segments of <paramref name="folderFullPath"/> below <paramref name="teamsRoot"/>: empty for
+    /// the Teams root itself, and a sentinel of two empty segments when the folder is not inside it
+    /// (so callers that only care about depth 0 or 1 treat it as unrelated).
+    /// </summary>
+    private static string[] SegmentsBelowTeamsRoot(string folderFullPath, string teamsRoot)
+    {
+        string teamsRootPrefix = teamsRoot + Path.DirectorySeparatorChar;
+        if (FolderSnapshot.PathComparer.Equals(folderFullPath, teamsRoot))
+        {
+            return [];
+        }
+
+        if (folderFullPath.Length > teamsRootPrefix.Length && FolderSnapshot.PathComparer.Equals(folderFullPath[..teamsRootPrefix.Length], teamsRootPrefix))
+        {
+            return folderFullPath[teamsRootPrefix.Length..].Split(Path.DirectorySeparatorChar);
+        }
+
+        return ["", ""];
+    }
+
+    /// <summary>
+    /// True when a snapshot entry lies under <c>Teams/&lt;Team&gt;/Uploads</c>, given the watched folder's
+    /// segments below the Teams root (0 = the Teams root, 1 = a Team folder). The Uploads folder is the
+    /// second segment overall, and the entry must be inside it, not a file named Uploads.
+    /// </summary>
+    private static bool IsInTeamUploads(string[] folderSegments, string[] entrySegments)
+    {
+        int uploadsIndex = 1 - folderSegments.Length;
+        return entrySegments.Length > uploadsIndex + 1
+            && string.Equals(entrySegments[uploadsIndex], TeamNames.UploadsFolder, StringComparison.OrdinalIgnoreCase);
     }
 
     /// <summary>Builds this Agent's new saved state for <see cref="CommitAsync"/>, run inside <see cref="FileStateStore.Update"/>.</summary>

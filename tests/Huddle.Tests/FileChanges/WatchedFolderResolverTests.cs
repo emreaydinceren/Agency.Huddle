@@ -214,4 +214,97 @@ public sealed class WatchedFolderResolverTests
         Assert.NotNull(folder);
         Assert.False(Directory.Exists(folder.FullPath));
     }
+
+    /// <summary>Spec 6.8: the Uploads root and anything under it (including a Room's folder) is refused with the spec 7 text.</summary>
+    [Theory]
+    [InlineData("Uploads")]
+    [InlineData("uploads")]
+    [InlineData("./Uploads")]
+    [InlineData("Uploads/room1")]
+    [InlineData("Uploads\\room1\\deeper")]
+    public void TryResolve_UploadsRootOrUnderIt_IsRefused(string entry)
+    {
+        using TempDataDir dataDir = new();
+        WatchedFolderResolver resolver = new(dataDir.Options(), new(dataDir.Options()));
+
+        bool resolved = resolver.TryResolve(entry, [], out WatchedFolder? folder, out string? reason);
+
+        Assert.False(resolved);
+        Assert.Null(folder);
+        Assert.Equal("Uploads are announced in the chat, not watched.", reason);
+    }
+
+    /// <summary>Spec 6.8: a full path at or under the Uploads root is refused too.</summary>
+    [Fact]
+    public void TryResolve_FullPathUnderUploadsRoot_IsRefused()
+    {
+        using TempDataDir dataDir = new();
+        WatchedFolderResolver resolver = new(dataDir.Options(), new(dataDir.Options()));
+
+        bool resolved = resolver.TryResolve(Path.Combine(dataDir.Path, "Uploads", "room1"), [], out WatchedFolder? folder, out string? reason);
+
+        Assert.False(resolved);
+        Assert.Null(folder);
+        Assert.Equal("Uploads are announced in the chat, not watched.", reason);
+    }
+
+    /// <summary>Spec 6.8: a Team's Uploads folder and anything under it is refused with the same text, whichever case and separator.</summary>
+    [Theory]
+    [InlineData("./Teams/Alpha/Uploads")]
+    [InlineData("./teams/alpha/UPLOADS/room1")]
+    [InlineData("Teams/Alpha/uploads/room1/deeper")]
+    [InlineData("Teams\\Alpha\\Uploads\\room1")]
+    public void TryResolve_TeamUploadsOrUnderIt_IsRefused(string entry)
+    {
+        using TempDataDir dataDir = new();
+        WatchedFolderResolver resolver = new(dataDir.Options(), new(dataDir.Options()));
+
+        bool resolved = resolver.TryResolve(entry, [], out WatchedFolder? folder, out string? reason);
+
+        Assert.False(resolved);
+        Assert.Null(folder);
+        Assert.Equal("Uploads are announced in the chat, not watched.", reason);
+    }
+
+    /// <summary>A Team's other folders, and a folder merely starting with <c>Uploads</c> inside a Team, still resolve.</summary>
+    [Theory]
+    [InlineData("./Teams/Alpha")]
+    [InlineData("./Teams/Alpha/Docs")]
+    [InlineData("./Teams/Alpha/Uploads-archive")]
+    public void TryResolve_TeamFolderOutsideUploads_Accepted(string entry)
+    {
+        using TempDataDir dataDir = new();
+        WatchedFolderResolver resolver = new(dataDir.Options(), new(dataDir.Options()));
+
+        bool resolved = resolver.TryResolve(entry, [], out WatchedFolder? folder, out string? reason);
+
+        Assert.True(resolved);
+        Assert.Null(reason);
+        Assert.NotNull(folder);
+    }
+
+    /// <summary>A folder whose name merely starts with <c>Uploads</c> is not the Uploads root and still resolves.</summary>
+    [Fact]
+    public void TryResolve_SiblingNamedUploadsArchive_Accepted()
+    {
+        using TempDataDir dataDir = new();
+        WatchedFolderResolver resolver = new(dataDir.Options(), new(dataDir.Options()));
+
+        bool resolved = resolver.TryResolve("Uploads-archive", [], out WatchedFolder? folder, out string? reason);
+
+        Assert.True(resolved);
+        Assert.Null(reason);
+        Assert.NotNull(folder);
+    }
+
+    /// <summary>
+    /// Spec 6.8: Uploads is refused by its own check, never by <see cref="WatchedFolderResolver.ReservedFolders"/>,
+    /// which the Library path resolver shares (the Library resolving a file in the Uploads root is pinned by
+    /// <c>LibraryPathResolverTests.TryResolve_UploadsRoot_ResolvesFile</c>).
+    /// </summary>
+    [Fact]
+    public void ReservedFolders_DoesNotContainUploads()
+    {
+        Assert.DoesNotContain("uploads", WatchedFolderResolver.ReservedFolders, StringComparer.OrdinalIgnoreCase);
+    }
 }
