@@ -28,7 +28,7 @@
 
     @if (this.error is not null)
     {
-        <MudAlert Severity="Severity.Error" Dense="true">@this.error</MudAlert>
+        <MudAlert Severity="Severity.Error" Dense="true" role="alert">@this.error</MudAlert>
     }
 
     <MudTabs ActivePanelIndex="this.ActivePanelIndex" ActivePanelIndexChanged="this.OnActivePanelIndexChanged">
@@ -52,6 +52,7 @@
                             ResetRequested="this.OnResetRequested" />
                 <MudStack Row="true" Spacing="2">
                     <MudButton Variant="Variant.Filled"
+                               Size="Size.Small"
                                Color="Color.Primary"
                                ButtonType="ButtonType.Submit"
                                Disabled="@(!this.HasUnsavedChanges)">Save</MudButton>
@@ -234,16 +235,11 @@
 
     private void OnPromptsChanged()
     {
-        _ = this.DispatchAsync(() =>
+        _ = RendererDispatch.RunAsync(this.InvokeAsync, () =>
         {
             this.RebuildGroups();
             this.StateHasChanged();
             return Task.CompletedTask;
         });
-    }
-
-    private Task DispatchAsync(Func<Task> action)
-    {
-        return RendererDispatch.RunAsync(this.InvokeAsync, action);
     }
 }

@@ -401,8 +401,8 @@ public sealed class SettingsPageTests
     /// Spec §6.7, U10: an Overridden Skill's row offers Restore default; clicking it opens a MudDialog
     /// confirm naming the exact folder <see cref="Agency.Huddle.App.Skills.Skill.FolderPath"/> resolved
     /// - never typed by the UI, per the Spec's "Constraints" paragraph - and confirming it (the
-    /// dialog's own "Yes, restore default", the same naming precedent <c>ResetAllControl</c>'s "Yes,
-    /// reset everything" set) deletes that folder and the row reverts to Default. Needs
+    /// dialog's own "Restore default" button, which repeats the verb of the "Restore default?" title,
+    /// UX-080) deletes that folder and the row reverts to Default. Needs
     /// <see cref="MudBunitContext.RenderWithPopovers"/>, not a plain HTTP round trip: the dialog is
     /// real MudBlazor content shown through <c>IDialogService</c>, the same reasoning
     /// <c>TeammateCardTests</c> gives for <c>TeammateCard</c>'s own dialog.
@@ -431,7 +431,7 @@ public sealed class SettingsPageTests
 
         cut.WaitForAssertion(() => Assert.Contains(overrideFolder, cut.Markup, StringComparison.Ordinal));
 
-        await cut.InvokeAsync(() => cut.FindAll("button").First(button => button.TextContent.Contains("Yes, restore default", StringComparison.Ordinal)).ClickAsync());
+        await cut.InvokeAsync(() => cut.Find(".mud-message-box__yes-button").ClickAsync());
         await restore;
 
         Assert.False(Directory.Exists(overrideFolder));

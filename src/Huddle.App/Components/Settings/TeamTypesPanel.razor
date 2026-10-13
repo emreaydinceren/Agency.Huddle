@@ -37,7 +37,7 @@
             <MudTd Class="teamtypes-roles">@context.Roles.Count(static role => !role.Pooled)</MudTd>
         </RowTemplate>
         <NoRecordsContent>
-            <span class="teamtypes-empty">No team types found.</span>
+            <EmptyState Text="No team types found." />
         </NoRecordsContent>
     </MudTable>
 
@@ -90,15 +90,10 @@
     /// <summary>Repaints when the catalog has replaced its types.</summary>
     private void OnCatalogChanged()
     {
-        _ = this.DispatchAsync(() =>
+        _ = RendererDispatch.RunAsync(this.InvokeAsync, () =>
         {
             this.StateHasChanged();
             return Task.CompletedTask;
         });
-    }
-
-    private Task DispatchAsync(Func<Task> action)
-    {
-        return RendererDispatch.RunAsync(this.InvokeAsync, action);
     }
 }

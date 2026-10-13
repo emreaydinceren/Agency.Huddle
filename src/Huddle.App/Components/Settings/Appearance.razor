@@ -463,7 +463,7 @@
             return;
         }
 
-        _ = this.DispatchAsync(() =>
+        _ = RendererDispatch.RunAsync(this.InvokeAsync, () =>
         {
             this.SeedAvatarEditorState();
             this.StateHasChanged();
@@ -501,15 +501,10 @@
 
     private void OnAppearanceChanged()
     {
-        _ = this.DispatchAsync(() =>
+        _ = RendererDispatch.RunAsync(this.InvokeAsync, () =>
         {
             this.StateHasChanged();
             return Task.CompletedTask;
         });
-    }
-
-    private Task DispatchAsync(Func<Task> action)
-    {
-        return RendererDispatch.RunAsync(this.InvokeAsync, action);
     }
 }

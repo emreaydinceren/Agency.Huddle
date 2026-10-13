@@ -28,7 +28,7 @@ public sealed class ResetAllControlTests
 
         Assert.Contains("Reset all to defaults", cut.Markup, StringComparison.Ordinal);
         Assert.True(cut.Find("button").HasAttribute("disabled"));
-        Assert.DoesNotContain("Yes, reset everything", cut.Markup, StringComparison.Ordinal);
+        Assert.DoesNotContain(">Reset all<", cut.Markup, StringComparison.Ordinal);
     }
 
     /// <summary>With something modified and not confirming, the plain button renders enabled.</summary>
@@ -76,12 +76,12 @@ public sealed class ResetAllControlTests
             .Add(p => p.AnyModified, true)
             .Add(p => p.Confirming, true));
 
-        Assert.Contains("Yes, reset everything", cut.Markup, StringComparison.Ordinal);
+        Assert.Equal("Reset all", cut.FindAll("button")[0].TextContent.Trim());
         Assert.Contains(">Cancel<", cut.Markup, StringComparison.Ordinal);
         Assert.DoesNotContain("Reset all to defaults", cut.Markup, StringComparison.Ordinal);
     }
 
-    /// <summary>Clicking "Yes, reset everything" while confirming raises <see cref="ResetAllControl.OnConfirm"/>, and clicking Cancel raises <see cref="ResetAllControl.OnCancel"/> instead.</summary>
+    /// <summary>Clicking "Reset all" while confirming raises <see cref="ResetAllControl.OnConfirm"/>, and clicking Cancel raises <see cref="ResetAllControl.OnCancel"/> instead.</summary>
     [Fact]
     public async Task Confirming_ClickingYesRaisesOnConfirm_AndClickingCancelRaisesOnCancel()
     {

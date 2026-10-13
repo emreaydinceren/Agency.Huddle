@@ -53,16 +53,16 @@
 
 @if (this.addError is not null)
 {
-    <MudAlert Severity="Severity.Error" Dense="true" Class="library-panel-add-error">@this.addError</MudAlert>
+    <MudAlert Severity="Severity.Error" Dense="true" role="alert" Class="library-panel-add-error">@this.addError</MudAlert>
 }
 
 <MudStack Row="true" Spacing="2" Class="mt-2 library-panel-add-row">
-    <MudTextField T="string" Label="Name" @bind-Value="this.name" Class="library-panel-name-field" />
-    <MudTextField T="string" Label="Path" @bind-Value="this.path" Class="library-panel-path-field" />
-    <MudButton Variant="Variant.Filled" Color="Color.Primary" Class="library-panel-add-button" OnClick="this.AddAsync">Add</MudButton>
+    <MudTextField T="string" Label="Name" @bind-Value="this.name" Variant="Variant.Outlined" Margin="Margin.Dense" Class="library-panel-name-field" />
+    <MudTextField T="string" Label="Path" @bind-Value="this.path" Variant="Variant.Outlined" Margin="Margin.Dense" Class="library-panel-path-field" />
+    <MudButton Variant="Variant.Filled" Size="Size.Small" Color="Color.Primary" Class="library-panel-add-button" OnClick="this.AddAsync">Add</MudButton>
 </MudStack>
 
-<MudButton Variant="Variant.Outlined" Class="library-panel-reset-button mt-4" OnClick="this.ResetAsync">Reset pinned folders</MudButton>
+<MudButton Variant="Variant.Outlined" Size="Size.Small" Class="library-panel-reset-button mt-4" OnClick="this.ResetAsync">Reset pinned folders</MudButton>
 
 @code {
     private string name = string.Empty;
@@ -144,15 +144,10 @@
     /// <summary>Repaints this tab when <see cref="LibraryRootStore.RootsChanged"/> fires, the same dispatch <c>SkillsPanel</c> uses for its own subscription.</summary>
     private void OnRootsChanged()
     {
-        _ = this.DispatchAsync(() =>
+        _ = RendererDispatch.RunAsync(this.InvokeAsync, () =>
         {
             this.StateHasChanged();
             return Task.CompletedTask;
         });
-    }
-
-    private Task DispatchAsync(Func<Task> action)
-    {
-        return RendererDispatch.RunAsync(this.InvokeAsync, action);
     }
 }

@@ -32,7 +32,7 @@
     here; it appears within a second.
 </p>
 
-<MudButton Variant="Variant.Outlined" Class="skills-import-button mb-2" OnClick="this.ImportSkillAsync">Import skill</MudButton>
+<MudButton Variant="Variant.Outlined" Size="Size.Small" Class="skills-import-button mb-2" OnClick="this.ImportSkillAsync">Import skill</MudButton>
 
 <MudSimpleTable Hover="true" Dense="true">
     <thead>
@@ -144,9 +144,9 @@
     private async Task RestoreDefaultAsync(Skill skill)
     {
         var confirmed = await this.DialogService.ShowMessageBoxAsync(
-            "Restore default",
+            "Restore default?",
             $"This restores '{skill.Name}' to its shipped default. This deletes {skill.FolderPath} and everything in it.",
-            yesText: "Yes, restore default",
+            yesText: "Restore default",
             cancelText: "Cancel");
 
         if (confirmed != true)
@@ -160,12 +160,12 @@
         }
         catch (IOException ex)
         {
-            this.Snackbar.Add(ex.Message, Severity.Error);
+            this.Snackbar.Add(ex.Message, Severity.Error, configure: null, key: "skill-restore");
             return;
         }
         catch (InvalidOperationException ex)
         {
-            this.Snackbar.Add(ex.Message, Severity.Error);
+            this.Snackbar.Add(ex.Message, Severity.Error, configure: null, key: "skill-restore");
             return;
         }
 
@@ -175,15 +175,10 @@
     /// <summary>Repaints this tab when <see cref="SkillStore.SkillsChanged"/> fires, the same dispatch <c>TeammateCard.OnSkillsStoreChanged</c> uses for its own subscription.</summary>
     private void OnSkillsChanged()
     {
-        _ = this.DispatchAsync(() =>
+        _ = RendererDispatch.RunAsync(this.InvokeAsync, () =>
         {
             this.StateHasChanged();
             return Task.CompletedTask;
         });
-    }
-
-    private Task DispatchAsync(Func<Task> action)
-    {
-        return RendererDispatch.RunAsync(this.InvokeAsync, action);
     }
 }

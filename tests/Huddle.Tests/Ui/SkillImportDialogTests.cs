@@ -53,8 +53,12 @@ public sealed class SkillImportDialogTests
 
         await cut.InvokeAsync(() => cut.Find(".skill-import-search input").InputAsync(typed));
 
-        string[] names = [.. cut.FindAll(".skill-import-result-name").Select(static e => e.TextContent.Trim())];
-        Assert.Equal(expected.Split(',', StringSplitOptions.RemoveEmptyEntries), names);
+        string[] want = expected.Split(',', StringSplitOptions.RemoveEmptyEntries);
+        cut.WaitForAssertion(() =>
+        {
+            string[] names = [.. cut.FindAll(".skill-import-result-name").Select(static e => e.TextContent.Trim())];
+            Assert.Equal(want, names);
+        });
     }
 
     /// <summary>Picking a result previews that catalog id, once, and moves to the review step.</summary>

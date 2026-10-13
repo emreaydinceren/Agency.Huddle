@@ -54,6 +54,7 @@
                               Lines="@PromptFieldFactory.RowsFor(field.Value)"
                               HelperText="@field.HelperText"
                               Variant="Variant.Outlined"
+                              Margin="Margin.Dense"
                               Immediate="true" />
 
                 @if (field.Placeholders.Count > 0)
@@ -71,12 +72,13 @@
                 {
                     @foreach (var issue in field.Issues)
                     {
-                        <MudAlert Severity="@(issue.Severity == PromptIssueSeverity.Error ? Severity.Error : Severity.Warning)" Dense="true" Class="mb-1">@issue.Message</MudAlert>
+                        <MudAlert Severity="@(issue.Severity == PromptIssueSeverity.Error ? Severity.Error : Severity.Warning)" Dense="true" role="alert" Class="mb-1">@issue.Message</MudAlert>
                     }
                 }
 
                 <div class="prompts-field-actions">
                     <MudButton Variant="Variant.Outlined"
+                               Size="Size.Small"
                                Disabled="@(!field.IsModified)"
                                OnClick="@(() => this.OnResetClicked(field.Key))">Reset</MudButton>
                 </div>
