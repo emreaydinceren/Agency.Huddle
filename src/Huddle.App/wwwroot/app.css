@@ -1225,17 +1225,6 @@ a.team-ref,
     margin-top: 0.25rem;
 }
 
-.teammate-chip {
-    display: inline-flex;
-    align-items: center;
-    gap: 0.375rem;
-    padding: 0.125rem 0.5rem;
-    font-size: var(--mud-typography-caption-size);
-    color: var(--mud-palette-text-secondary);
-    background: var(--mud-palette-background-gray);
-    border-radius: 999px;
-}
-
 .teammate-tile-context {
     margin-top: 0.25rem;
     font-size: var(--mud-typography-caption-size);
@@ -1245,20 +1234,6 @@ a.team-ref,
 .teammates-item-name {
     font-size: var(--mud-typography-body1-size);
     font-weight: 700;
-}
-
-/* The monogram stands in for Slack's avatar photo. */
-.teammate-avatar {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    flex: 0 0 auto;
-    width: 3.25rem;
-    height: 3.25rem;
-    border-radius: var(--mud-default-borderradius);
-    font-size: var(--mud-typography-subtitle1-size);
-    font-weight: 600;
-    letter-spacing: 0.02em;
 }
 
 /* The Avatar Library picker (Spec 6.6). The filters block stays put and the grid is the

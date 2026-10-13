@@ -17,6 +17,7 @@
 @inject IServiceProvider Services
 
 <MudContainer MaxWidth="MaxWidth.Large" Class="pa-4">
+    <PageHeader Title="Teammates" />
     <MudText Typo="Typo.body2" Class="mud-text-secondary">
         A Persona is a Markdown file describing how one teammate should behave, plus the model it
         thinks with. Add one and that teammate comes online with a chat of its own. Editing the file,
@@ -91,7 +92,7 @@
                                    and nesting a button inside (or around) a MudCard would be two interactive
                                    elements fighting over the same click. *@
                                 <button type="button" class="teammate-tile" @onclick="() => this.OpenCard(entry.Name)">
-                                    <TeammateAvatar Name="@entry.Name" Avatar="this.Avatars.Get(entry.Name)" Size="Size.Large" Class="teammate-avatar" />
+                                    <TeammateAvatar Name="@entry.Name" Avatar="this.Avatars.Get(entry.Name)" Size="Size.Large" />
                                     <span class="teammate-tile-text">
                                         <span class="teammates-item-name">@entry.Name</span>
                                         <span class="teammate-tile-role">@entry.Title</span>
@@ -99,11 +100,11 @@
                                            tile is already the densest surface on the page. TeammateCard.razor shows the
                                            same reason as a full line, where there is room for it. *@
                                         <span class="teammate-tile-chips">
-                                            <span class="teammate-chip">@(Teammates.FormattedAlias(entry.Alias))</span>
-                                            <span class="teammate-chip teammate-tile-status" title="@status.Reason">
+                                            <MudChip T="string" Size="Size.Small" Variant="Variant.Text">@(Teammates.FormattedAlias(entry.Alias))</MudChip>
+                                            <MudChip T="string" Size="Size.Small" Variant="Variant.Text" Class="teammate-tile-status" title="@status.Reason">
                                                 <StatusDot State="status.State" />
                                                 @Teammates.StatusLabel(status.State)
-                                            </span>
+                                            </MudChip>
                                         </span>
                                         @if (this.WorkingOn(entry.Name) is { } working)
                                         {

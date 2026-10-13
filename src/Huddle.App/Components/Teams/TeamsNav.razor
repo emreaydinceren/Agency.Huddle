@@ -12,6 +12,7 @@
 *@
 
 @using System.Text.Json
+@using Agency.Huddle.App.Components.Shared.Dialogs
 @using Agency.Huddle.App.Library
 @using Microsoft.Extensions.Options
 @implements IDisposable
@@ -320,13 +321,8 @@
     /// <summary>Asks for a Team name, creates the Team's folder and opens its page.</summary>
     private async Task NewTeamAsync()
     {
-        DialogParameters<NewTeamDialog> parameters = new()
-        {
-            { x => x.Mode, NewTeamDialogMode.Team },
-            { x => x.Team, null },
-            { x => x.Teams, this.Catalog.Teams },
-        };
-        string? name = await this.AskNameAsync("New team", parameters);
+        IReadOnlyList<TeamSummary> teams = this.Catalog.Teams;
+        string? name = await this.AskNameAsync("New team", "Team name", trimmed => TeamNames.ValidateTeamName(trimmed, teams));
         if (name is null)
         {
             return;
@@ -342,13 +338,10 @@
     /// <param name="team">The Team whose row's menu was used.</param>
     private async Task NewProjectAsync(string team)
     {
-        DialogParameters<NewTeamDialog> parameters = new()
-        {
-            { x => x.Mode, NewTeamDialogMode.Project },
-            { x => x.Team, team },
-            { x => x.Teams, this.Catalog.Teams },
-        };
-        string? project = await this.AskNameAsync("New project", parameters);
+        IReadOnlyList<TeamSummary> teams = this.Catalog.Teams;
+        TeamSummary summary = teams.FirstOrDefault(t => string.Equals(t.Name, team, StringComparison.OrdinalIgnoreCase))
+            ?? new TeamSummary(team, [], [], false);
+        string? project = await this.AskNameAsync("New project", "Project name", trimmed => TeamNames.ValidateProjectName(trimmed, summary));
         if (project is null)
         {
             return;
@@ -361,9 +354,19 @@
     }
 
     /// <summary>Shows the name dialog and returns the trimmed name it closed with, or <see langword="null"/> when it was cancelled.</summary>
-    private async Task<string?> AskNameAsync(string title, DialogParameters<NewTeamDialog> parameters)
+    /// <param name="title">The dialog title.</param>
+    /// <param name="label">The field label.</param>
+    /// <param name="validate">The settled validator over the trimmed name.</param>
+    private async Task<string?> AskNameAsync(string title, string label, Func<string, string?> validate)
     {
-        IDialogReference reference = await this.Dialogs.ShowAsync<NewTeamDialog>(title, parameters, NewTeamDialog.Options);
+        DialogParameters<NameDialog> parameters = new()
+        {
+            { x => x.Label, label },
+            { x => x.ConfirmText, "Create" },
+            { x => x.Validate, validate },
+            { x => x.SubmitAsync, static _ => Task.FromResult<string?>(null) },
+        };
+        IDialogReference reference = await this.Dialogs.ShowAsync<NameDialog>(title, parameters, HuddleDialogOptions.SmallForm);
         DialogResult? result = await reference.Result;
         return result is { Canceled: false, Data: string name } ? name : null;
     }

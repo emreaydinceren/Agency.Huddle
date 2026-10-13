@@ -3,6 +3,7 @@
     title and workspace and hands both to TeamDuplicator. A refusal shows inline; a copy that skipped
     members lists them before the user opens the new Team.
 *@
+@using Agency.Huddle.App.Components.Shared.Dialogs
 @using Agency.Huddle.App.Teams
 
 @inject TeamDuplicator Duplicator
@@ -29,21 +30,21 @@
         </MudStack>
     </DialogContent>
     <DialogActions>
+        <MudButton Variant="Variant.Text" Size="Size.Small" OnClick="this.Cancel">Cancel</MudButton>
         @if (this.result is null)
         {
-            <MudButton Size="Size.Small" Color="Color.Primary" Class="duplicate-team-submit" OnClick="this.Submit">Duplicate</MudButton>
+            <MudButton Variant="Variant.Filled" Size="Size.Small" Color="Color.Primary" Class="duplicate-team-submit" OnClick="this.Submit">Duplicate</MudButton>
         }
         else
         {
-            <MudButton Size="Size.Small" Color="Color.Primary" Class="duplicate-team-open" OnClick="this.OpenNewTeam">Open Team</MudButton>
+            <MudButton Variant="Variant.Filled" Size="Size.Small" Color="Color.Primary" Class="duplicate-team-open" OnClick="this.OpenNewTeam">Open Team</MudButton>
         }
-        <MudButton Size="Size.Small" OnClick="this.Cancel">Cancel</MudButton>
     </DialogActions>
 </MudDialog>
 
 @code {
     /// <summary>How the Team page shows this dialog: small, full-width, with a close button that cancels.</summary>
-    public static readonly DialogOptions Options = new() { CloseButton = true, MaxWidth = MaxWidth.Small, FullWidth = true };
+    public static DialogOptions Options => HuddleDialogOptions.SmallForm;
 
     [CascadingParameter]
     private IMudDialogInstance? Dialog { get; set; }

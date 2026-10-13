@@ -9,6 +9,7 @@
 *@
 
 @using Agency.Huddle.App.Avatars
+@using Agency.Huddle.App.Components.Shared.Dialogs
 
 @inject ITeamMembership Membership
 @inject AvatarStore Avatars
@@ -45,15 +46,15 @@
     <DialogActions>
         @if (this.Team is not null)
         {
-            <MudButton Size="Size.Small" Color="Color.Primary" Disabled="@(this.selected is null)" Class="add-member-dialog-add-button" OnClick="this.Add">Add</MudButton>
-            <MudButton Size="Size.Small" Class="add-member-dialog-cancel-button" OnClick="this.Cancel">Cancel</MudButton>
+            <MudButton Variant="Variant.Text" Size="Size.Small" Class="add-member-dialog-cancel-button" OnClick="this.Cancel">Cancel</MudButton>
+            <MudButton Variant="Variant.Filled" Size="Size.Small" Color="Color.Primary" Disabled="@(this.selected is null)" Class="add-member-dialog-add-button" OnClick="this.Add">Add</MudButton>
         }
     </DialogActions>
 </MudDialog>
 
 @code {
     /// <summary>How <see cref="TeamMembers"/> shows this dialog: small, full-width, with a close button that cancels.</summary>
-    public static readonly DialogOptions Options = new() { CloseButton = true, MaxWidth = MaxWidth.Small, FullWidth = true };
+    public static DialogOptions Options => HuddleDialogOptions.SmallForm;
 
     [CascadingParameter]
     private IMudDialogInstance? Dialog { get; set; }

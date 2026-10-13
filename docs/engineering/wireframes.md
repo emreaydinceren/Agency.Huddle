@@ -248,13 +248,13 @@ active panel. Left, the Team page; right, Settings.
 
 | Code | Name | Component | Notes |
 | --- | --- | --- | --- |
-| `P1` | Page container | `MudContainer`, `MaxWidth.Large` | Opens with a line of explanatory text |
+| `P1` | Page container | `MudContainer`, `MaxWidth.Large` | Opens with the `PageHeader` "Teammates", then a line of explanatory text |
 | `P2` | Toolbar | `MudToolBar`, dense | |
 | `P2a` | New teammate | `MudButton` | Starts the create flow |
-| `P2b` | Team filter | `MudSelect` | Narrows the groups to one Team; shown once there are Teammates |
+| `P2b` | Team filter | `MudSelect`, Outlined and Dense | Narrows the groups to one Team; shown once there are Teammates |
 | `P5` | Load notice | `MudAlert` Warning | "Files that didn't load" |
 | `P3` | Group | `section.teammates-group` | One per Team, with a heading and a list |
-| `P4` | Teammate tile | `button.teammate-tile` | Parts: avatar (`TeammateAvatar`, large), name, role title, alias chip, status chip with `StatusDot`, and a "Working on" line |
+| `P4` | Teammate tile | `button.teammate-tile` | Parts: avatar (`TeammateAvatar`, large, a circle), name, role title, alias `MudChip` (small), status `MudChip` (small) with `StatusDot`, and a "Working on" line; all left-aligned |
 
 Not drawn: the empty lines "No Personas yet" and "No teammates in this team".
 

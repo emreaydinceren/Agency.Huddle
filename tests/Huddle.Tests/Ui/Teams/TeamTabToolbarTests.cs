@@ -108,7 +108,8 @@ public sealed class TeamTabToolbarTests
 
     private static IRenderedComponent<MudTextField<string>> SearchField(IRenderedComponent<TeamTabToolbar> cut)
     {
-        return cut.FindComponents<MudTextField<string>>().Single(static m => string.Equals(m.Instance.Class, SearchClass, StringComparison.Ordinal));
+        // UX-055: the field is now the shared SearchField, so its MudTextField is found inside it.
+        return cut.FindComponent<Agency.Huddle.App.Components.Shared.SearchField>().FindComponent<MudTextField<string>>();
     }
 
     private static IRenderedComponent<TeamTabToolbar> Render(

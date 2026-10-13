@@ -1,4 +1,5 @@
 @using System.Text.RegularExpressions
+@using Agency.Huddle.App.Components.Shared.Dialogs
 @using Agency.Huddle.App.TeamTypes
 @inject TeamTypeCatalog Types
 @inject UserCandidateWriter Writer
@@ -32,9 +33,9 @@
         </MudStack>
     </DialogContent>
     <DialogActions>
-        <MudButton Size="Size.Small" Color="Color.Primary" Disabled="@(string.IsNullOrWhiteSpace(this.title) || string.IsNullOrWhiteSpace(this.stance))"
+        <MudButton Variant="Variant.Text" Size="Size.Small" Class="custom-role-cancel-button" OnClick="this.Cancel">Cancel</MudButton>
+        <MudButton Variant="Variant.Filled" Size="Size.Small" Color="Color.Primary" Disabled="@(string.IsNullOrWhiteSpace(this.title) || string.IsNullOrWhiteSpace(this.stance))"
                    Class="custom-role-save-button" OnClick="this.Save">Save</MudButton>
-        <MudButton Size="Size.Small" Class="custom-role-cancel-button" OnClick="this.Cancel">Cancel</MudButton>
     </DialogActions>
 </MudDialog>
 
@@ -42,7 +43,7 @@
     private const string BlankValue = "";
 
     /// <summary>How the pool shows this dialog: small, full-width, with a close button that cancels.</summary>
-    public static readonly DialogOptions Options = new() { CloseButton = true, MaxWidth = MaxWidth.Small, FullWidth = true };
+    public static DialogOptions Options => HuddleDialogOptions.SmallForm;
 
     private string startFrom = BlankValue;
     private string title = string.Empty;
