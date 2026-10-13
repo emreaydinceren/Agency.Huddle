@@ -66,6 +66,25 @@ public sealed class LibraryPathResolverTests
         }
     }
 
+    /// <summary>A file under the Uploads root resolves as a File in the <c>uploads</c> root, and a folder named Uploads directly under DataDir is not refused as reserved.</summary>
+    [Fact]
+    public void TryResolve_UploadsRoot_ResolvesFile()
+    {
+        using Fixture fixture = BuildFixture();
+        string folder = Path.Combine(fixture.DataDir, "Uploads", "x");
+        Directory.CreateDirectory(folder);
+        File.WriteAllBytes(Path.Combine(folder, "y.png"), [1, 2, 3]);
+
+        bool resolved = fixture.Resolver.TryResolve("uploads", "x/y.png", out LibraryPath? path, out string? error);
+
+        Assert.True(resolved);
+        Assert.Null(error);
+        Assert.NotNull(path);
+        Assert.Equal(LibraryNodeRole.File, path.Role);
+        Assert.Equal(LibraryRootKind.Uploads, path.Root.Kind);
+        Assert.Equal("x/y.png", path.RelativePath);
+    }
+
     /// <summary>Case-insensitive matching resolves the input, keeping its own casing as the relative path (corrections-B3 item 21: assert relative path and role only).</summary>
     [Fact]
     public void TryResolve_CaseInsensitiveSegments_ResolvesWithGivenCasingAndFileRole()

@@ -95,6 +95,26 @@ public sealed class RoomSessionPromptBlocksTests
         Assert.Contains(png, prompt.Text, StringComparison.Ordinal); // contains-ok: prompt text, not markup
     }
 
+    /// <summary>ChatUploads spec 6.7: a PNG saved into the Uploads root and named by path in a Message becomes an image block, with the document labelled <c>upload</c>.</summary>
+    [Fact]
+    public async Task Turn_UploadedPngNamedByPath_SendsOneImageBlock()
+    {
+        CancellationToken ct = TestContext.Current.CancellationToken;
+        using LibraryFileServiceFixture fixture = LibraryFileServiceFixture.Build();
+        Assert.True(fixture.Resolver.TryResolve("uploads", "room-1", out LibraryPath? folder, out _));
+        byte[] bytes = TestImages.Png(40, 30, 64);
+        LibraryResult<LibraryUpload> saved = await fixture.CreateService().CreateFromStreamAsync(folder, "shot.png", new MemoryStream(bytes), 1024 * 1024, ct);
+        Assert.NotNull(saved.Value);
+        string path = saved.Value.File.FullPath;
+
+        AgentPrompt prompt = await RunTurnAsync(fixture, MessageNaming($"what is wrong with `{path}`"), ImageAndText);
+
+        AgentImageBlock block = Assert.IsType<AgentImageBlock>(Assert.Single(prompt.Blocks!));
+        Assert.Equal("image/png", block.MimeType);
+        Assert.Equal(bytes, block.Data.ToArray());
+        Assert.Contains("(upload,", prompt.Text, StringComparison.Ordinal); // contains-ok: prompt text, not markup
+    }
+
     /// <summary>An Adapter that advertised nothing receives today's prompt: no block, and an ordinary path line.</summary>
     [Fact]
     public async Task Turn_ImageNamedNothingAdvertised_SendsNoBlocksAndAPathLine()

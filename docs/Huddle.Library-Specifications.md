@@ -611,6 +611,9 @@ All under `Team:`.
 | `Library:MaxIndexedFiles` | `5000` | Above this, a root's wikilink index is not built and backlinks say so |
 | `Library:MaxReferencedDocuments` | `10` | The most Library documents listed in one Turn's prompt; the rest are counted |
 | `Library:MaxInlineBytes` | `16384` | Per document, the most text inlined for an Adapter without file tools |
+| `Library:MaxUploadBytes` | `26214400` | Largest file attached in the chat (25 MiB), enforced while streaming. Uploads, §6.6 of the [ChatUploads spec](Huddle.ChatUploads-Specifications.md) |
+| `Library:MaxUploadsPerMessage` | `10` | Chips per Message, matching `MaxReferencedDocuments` |
+| `Library:Uploads:Dir` | `Uploads` | The Uploads root's folder under `DataDir`; created on the first upload |
 
 ---
 

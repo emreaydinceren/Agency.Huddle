@@ -28,6 +28,10 @@ internal static partial class LibraryPathPatterns
     [GeneratedRegex(@"^[A-Za-z]:\\[^\r\n<>""|?*]+$", RegexOptions.CultureInvariant)]
     private static partial Regex WindowsWholePathRegex();
 
+    /// <summary>Matches a whole rooted POSIX path with at least two segments, spaces allowed, for a whole-string check on a code span's content.</summary>
+    [GeneratedRegex(@"^/[^\r\n<>""|?*/]+/[^\r\n<>""|?*]+$", RegexOptions.CultureInvariant)]
+    private static partial Regex PosixWholePathRegex();
+
     /// <summary>Matches a whole <c>file:///</c> URL for a whole-string check on a code span's content.</summary>
     [GeneratedRegex(@"^file:///\S+$", RegexOptions.CultureInvariant)]
     private static partial Regex FileUrlWholeRegex();
@@ -71,7 +75,7 @@ internal static partial class LibraryPathPatterns
 
     /// <summary>
     /// Whether <paramref name="text"/>, taken as a whole - spaces included - is exactly one Windows drive path,
-    /// <c>file:///</c> URL or UNC path, for the whole-code-span rule (Spec §6.6, corrections-B5 item 18).
+    /// <c>file:///</c> URL, UNC path or rooted POSIX path (<c>/data/Uploads/room1/a b.png</c>), for the whole-code-span rule (Spec §6.6, corrections-B5 item 18).
     /// </summary>
     /// <param name="text">The candidate text - typically a whole <see cref="Markdig.Syntax.Inlines.CodeInline"/>'s content.</param>
     /// <param name="path">Set to <paramref name="text"/> when it matches; otherwise <see langword="null"/>.</param>
@@ -80,7 +84,8 @@ internal static partial class LibraryPathPatterns
         if (text.Length > 0 &&
             (LibraryPathPatterns.WindowsWholePathRegex().IsMatch(text) ||
              LibraryPathPatterns.FileUrlWholeRegex().IsMatch(text) ||
-             LibraryPathPatterns.UncWholePathRegex().IsMatch(text)))
+             LibraryPathPatterns.UncWholePathRegex().IsMatch(text) ||
+             LibraryPathPatterns.PosixWholePathRegex().IsMatch(text)))
         {
             path = text;
             return true;

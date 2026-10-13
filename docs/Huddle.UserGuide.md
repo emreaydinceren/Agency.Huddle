@@ -1070,6 +1070,32 @@ its adapter reports a cost. It is a figure for this run, not a ledger.
 - When a Task changes and wakes its assignee, the Room shows one slim line (such as "PLAT-0004 changed by You") instead of a message from you. Choose the line to see the changes.
 - A Task link carries a small dot in its status colour, the same colour as the status on the List and Board.
 
+### Attaching files
+
+Click the paperclip beside Send, paste a screenshot, or drop files on the
+composer. Each file is saved at once into the Library, and its chip shows above
+the text box. Remove a chip with its close button before you send if you change
+your mind; the saved file is then deleted and nothing is posted. When you send,
+each file's path is added to your Message, so the Teammates who answer can open
+it with their own tools.
+
+- The limits are 25 MiB per file and 10 files per Message. A file over the size
+  limit, or one more than the Message can carry, is refused with the reason in
+  the red line under the text box and no chip is added.
+- SVG files and programs (executables) are refused: the chip turns red and shows
+  the reason. Huddle identifies a file by its contents, not its name.
+- Send waits while a file is still uploading, and the text you typed stays in the
+  box.
+- The paperclip, paste and drop appear only when the Library is on.
+- Files go to **Uploads** in the Library, one folder per Room. In a Team's chat
+  they go to that Team's Library instead, under `Uploads`.
+- Deleting a Room sends its uploaded files to the Recycle Bin. Archiving keeps
+  them.
+- The Message that carries a file's path is the only notice of it. File Changes
+  does not report uploads, so a Teammate is not told of one by a file change.
+- Pending chips do not survive a page reload. Files already saved stay in the
+  Room's folder; remove them from the Library if you do not want them.
+
 ### Linking to Tasks and files
 
 - Type `#` at the start of a word to pick a Task. A Task ID such as `BUSI-0001`

@@ -50,7 +50,7 @@ public sealed class LibraryPanelTests
         var cut = ctx.RenderWithPopovers(RenderPanel);
 
         Assert.Equal(
-            ["Teams", "Teammates", "Docs"],
+            ["Teams", "Teammates", "Uploads", "Docs"],
             cut.FindAll(".library-panel-root-row td:first-child").Select(e => e.TextContent.Trim()));
     }
 
@@ -88,7 +88,7 @@ public sealed class LibraryPanelTests
 
         Assert.Equal(["Notes"], fixture.Store.Pinned.Select(p => p.Name));
         cut.WaitForAssertion(() => Assert.Equal(
-            ["Teams", "Teammates", "Notes"],
+            ["Teams", "Teammates", "Uploads", "Notes"],
             cut.FindAll(".library-panel-root-row td:first-child").Select(e => e.TextContent.Trim())));
     }
 
@@ -192,8 +192,8 @@ public sealed class LibraryPanelTests
         await cut.InvokeAsync(() => cut.Find(".library-panel-root-row[data-root-id='teams'] .library-panel-hide-switch input").ChangeAsync(true));
 
         LibraryRootStore reloaded = new(fixture.Options, fixture.Paths, NullLogger<LibraryRootStore>.Instance);
-        Assert.Equal(["teammates"], reloaded.VisibleRoots.Select(r => r.Id));
-        Assert.Equal(["teams", "teammates"], reloaded.Roots.Select(r => r.Id));
+        Assert.Equal(["teammates", "uploads"], reloaded.VisibleRoots.Select(r => r.Id));
+        Assert.Equal(["teams", "teammates", "uploads"], reloaded.Roots.Select(r => r.Id));
     }
 
     /// <summary>The panel re-renders when <see cref="LibraryRootStore.RootsChanged"/> fires from outside it (e.g. another tab or window saving a pinned root).</summary>

@@ -1,3 +1,5 @@
+using Agency.Huddle.App.Teams;
+
 namespace Agency.Huddle.App.FileChanges;
 
 /// <summary>What a scan of one folder found, per FC §6.4.</summary>
@@ -13,7 +15,7 @@ internal enum ScanOutcome
     TooLarge,
 }
 
-/// <summary>The result of one <see cref="FolderScanner.Scan(string, FileChangesOptions, bool)"/> call.</summary>
+/// <summary>The result of one <see cref="FolderScanner.Scan(string, FileChangesOptions, bool, string)"/> call.</summary>
 /// <param name="Outcome">Whether the folder was scanned, is missing, or is too large.</param>
 /// <param name="Snapshot"><see cref="FolderSnapshot.Empty"/> for <see cref="ScanOutcome.Missing"/> and <see cref="ScanOutcome.TooLarge"/>.</param>
 internal sealed record ScanResult(ScanOutcome Outcome, FolderSnapshot Snapshot);
@@ -48,7 +50,13 @@ internal static class FolderScanner
     /// When <see langword="true"/>, per Spec §6.13, any <c>_</c>-prefixed sub-folder (at any depth)
     /// is pruned before its contents are enumerated, alongside <see cref="FileChangesOptions.EffectiveIgnore"/>.
     /// </param>
-    internal static ScanResult Scan(string fullPath, FileChangesOptions options, bool pruneUnderscore = false)
+    /// <param name="teamsRoot">
+    /// The Teams root, when known. Per Chat uploads spec 6.8, a <c>Teams/&lt;Team&gt;/Uploads</c>
+    /// folder (two levels under it, compared with <see cref="TeamNames.UploadsFolder"/>, ordinal
+    /// ignoring case) is pruned before its contents are enumerated, so its files never count toward
+    /// <see cref="FileChangesOptions.MaxFilesPerFolder"/>. <see langword="null"/> prunes nothing.
+    /// </param>
+    internal static ScanResult Scan(string fullPath, FileChangesOptions options, bool pruneUnderscore = false, string? teamsRoot = null)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(fullPath);
         ArgumentNullException.ThrowIfNull(options);
@@ -60,7 +68,7 @@ internal static class FolderScanner
 
         Dictionary<string, FileEntry> files = new(FolderSnapshot.PathComparer);
 
-        if (!Walk(fullPath, fullPath, options, pruneUnderscore, files))
+        if (!Walk(fullPath, fullPath, options, pruneUnderscore, teamsRoot, files))
         {
             return new ScanResult(ScanOutcome.TooLarge, FolderSnapshot.Empty);
         }
@@ -73,7 +81,7 @@ internal static class FolderScanner
     /// <paramref name="files"/> and recursing into every non-ignored subdirectory.
     /// </summary>
     /// <returns><see langword="false"/> once <paramref name="files"/> exceeds the cap, to unwind the recursion.</returns>
-    private static bool Walk(string root, string directory, FileChangesOptions options, bool pruneUnderscore, Dictionary<string, FileEntry> files)
+    private static bool Walk(string root, string directory, FileChangesOptions options, bool pruneUnderscore, string? teamsRoot, Dictionary<string, FileEntry> files)
     {
         foreach (string file in Directory.EnumerateFiles(directory, "*", EnumerationOptions))
         {
@@ -100,12 +108,30 @@ internal static class FolderScanner
                 continue;
             }
 
-            if (!Walk(root, subdirectory, options, pruneUnderscore, files))
+            if (teamsRoot is not null && FolderScanner.IsTeamUploads(subdirectory, name, teamsRoot))
+            {
+                continue;
+            }
+
+            if (!Walk(root, subdirectory, options, pruneUnderscore, teamsRoot, files))
             {
                 return false;
             }
         }
 
         return true;
+    }
+
+    /// <summary>True when <paramref name="subdirectory"/> is named Uploads and sits directly under a Team folder, itself directly under <paramref name="teamsRoot"/>.</summary>
+    private static bool IsTeamUploads(string subdirectory, string name, string teamsRoot)
+    {
+        if (!string.Equals(name, TeamNames.UploadsFolder, StringComparison.OrdinalIgnoreCase))
+        {
+            return false;
+        }
+
+        string? teamFolder = Path.GetDirectoryName(subdirectory);
+        string? parentOfTeam = teamFolder is null ? null : Path.GetDirectoryName(teamFolder);
+        return parentOfTeam is not null && FolderSnapshot.PathComparer.Equals(parentOfTeam, Path.GetFullPath(teamsRoot));
     }
 }

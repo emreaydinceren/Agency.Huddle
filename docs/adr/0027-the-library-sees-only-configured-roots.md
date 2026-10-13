@@ -31,6 +31,7 @@ read or write anywhere on the machine.
 | --- | --- | --- |
 | **Teams** | `{DataDir}/Teams/`, one folder per Team: notes and Projects ([ADR-0030](0030-a-team-folder-is-its-library-and-holds-its-tasks.md)) | Built in |
 | **Teammates** | `{DataDir}/Teammates/`, one folder per Teammate: its definition, and its `work/` folder with artifacts and `memory/` ([ADR-0031](0031-teammates-and-teams-are-sibling-folders.md)) | Built in |
+| **Uploads** | `{DataDir}/Uploads/`, one folder per root Room holding files attached in the chat; a Team Room's files sit under its Team's `Uploads/` instead ([ADR-0053](0053-an-upload-is-saved-to-the-library-and-sent-as-its-path.md)) | Built in |
 | **Pinned roots** | Any folder the Human adds, such as `E:\Repos\Huddle\docs` | `Team:Library:Roots` in configuration, plus the Settings → Library panel, persisted to `{DataDir}/library-roots.json` on first save |
 
 **One resolver guards every operation.** `LibraryPathResolver` takes a root id and a path

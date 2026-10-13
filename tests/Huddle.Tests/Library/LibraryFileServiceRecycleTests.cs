@@ -116,19 +116,66 @@ public sealed class LibraryFileServiceRecycleTests
         Assert.True(File.Exists(filePath));
     }
 
-    /// <summary>Source-text check (corrections-B4 item 15 note): <see cref="LibraryFileService"/> never
-    /// calls <see cref="File.Delete(string)"/> or <see cref="Directory.Delete(string)"/> itself, so nothing
-    /// is ever permanently, silently deleted from the code path — recycling always goes through
-    /// <see cref="IRecycleBin"/>.</summary>
+    /// <summary>Every <c>File.Delete(</c> allowed under the Library and Uploads source folders, with the number of
+    /// call sites and why each is not a permanent delete of a Human document.</summary>
+    private static readonly (string RelativePath, int Count, string Reason)[] AllowedFileDeletes =
+    [
+        // Library/UploadTempFile.cs: removes the hidden .{guid}.upload temp file of a refused or failed upload.
+        ("Library/UploadTempFile.cs", 1, "temp file of a refused upload"),
+
+        // Library/LibraryFileService.cs: DeleteUnsentUploadAsync drops an attachment chip's file that was never sent.
+        ("Library/LibraryFileService.cs", 1, "an unsent attachment, not yet the Human's document"),
+
+        // Library/AtomicFile.cs: cleans up the sibling temp file of an atomic write.
+        ("Library/AtomicFile.cs", 1, "temp file of an atomic write"),
+
+        // Library/LibraryRootStore.cs: resets the store's own settings file, never a Human document.
+        ("Library/LibraryRootStore.cs", 1, "the root store's own settings file"),
+
+        // Library/TeamFolderProvisioner.cs: removes the provisioner's own marker and temp files.
+        ("Library/TeamFolderProvisioner.cs", 2, "the provisioner's own marker and temp files"),
+    ];
+
+    /// <summary>Source-text check (corrections-B4 item 15 note): the Library and Uploads source folders call
+    /// <see cref="File.Delete(string)"/> only at the sites in <see cref="AllowedFileDeletes"/>, each documented, and
+    /// never <see cref="Directory.Delete(string)"/>, so nothing is permanently, silently deleted from the code path
+    /// — recycling always goes through <see cref="IRecycleBin"/>.</summary>
     [Fact]
     public void Recycle_NeverDeletesPermanently()
     {
         string repoRoot = FindRepoRoot();
-        string sourcePath = Path.Combine(repoRoot, "src", "Huddle.App", "Library", "LibraryFileService.cs");
-        string text = File.ReadAllText(sourcePath);
+        string appRoot = Path.Combine(repoRoot, "src", "Huddle.App");
+        List<string> files =
+        [
+            .. Directory.EnumerateFiles(Path.Combine(appRoot, "Library"), "*.cs", SearchOption.AllDirectories),
+            .. Directory.EnumerateFiles(Path.Combine(appRoot, "Uploads"), "*.cs", SearchOption.AllDirectories),
+        ];
 
-        Assert.DoesNotContain("File.Delete(", text, StringComparison.Ordinal);
-        Assert.DoesNotContain("Directory.Delete(", text, StringComparison.Ordinal);
+        foreach (string file in files)
+        {
+            string text = File.ReadAllText(file);
+            string relative = Path.GetRelativePath(appRoot, file).Replace('\\', '/');
+            int allowed = AllowedFileDeletes.FirstOrDefault(entry => string.Equals(entry.RelativePath, relative, StringComparison.Ordinal)).Count;
+
+            Assert.True(CountOccurrences(text, "File.Delete(") == allowed, $"{relative}: unexpected File.Delete( count (allowed {allowed}).");
+            Assert.DoesNotContain("Directory.Delete(", text, StringComparison.Ordinal);
+        }
+    }
+
+    /// <summary>Counts non-overlapping ordinal occurrences of <paramref name="needle"/> in <paramref name="text"/>.</summary>
+    /// <param name="text">The text to search.</param>
+    /// <param name="needle">The text to count.</param>
+    private static int CountOccurrences(string text, string needle)
+    {
+        int count = 0;
+        int index = text.IndexOf(needle, StringComparison.Ordinal);
+        while (index >= 0)
+        {
+            count++;
+            index = text.IndexOf(needle, index + needle.Length, StringComparison.Ordinal);
+        }
+
+        return count;
     }
 
     /// <summary>Walks up from <see cref="AppContext.BaseDirectory"/> until it finds the directory containing

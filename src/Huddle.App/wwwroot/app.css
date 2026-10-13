@@ -856,6 +856,24 @@ button:focus-visible {
     position: relative;
 }
 
+/* While files are dragged over the box: a dashed border and the hint, laid over the input. */
+.composer-dropping::after {
+    content: "Drop to attach";
+    position: absolute;
+    inset: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-sizing: border-box;
+    pointer-events: none;
+    font-size: 14px;
+    color: var(--mud-palette-text-primary);
+    background: var(--mud-palette-surface);
+    border: 2px dashed var(--mud-palette-primary);
+    border-radius: calc(var(--mud-default-borderradius) * 1.5);
+    opacity: 0.92;
+}
+
 /* Sits inside the box's bottom-right corner; the input's right padding keeps text out from under it. */
 .composer-send {
     position: absolute;
@@ -896,6 +914,55 @@ button:focus-visible {
 .composer-input:focus-visible {
     outline: none;
     border-color: var(--mud-palette-text-disabled);
+}
+
+/* The paperclip sits just left of Send; the extra right padding keeps typed text clear of both. */
+.composer-attach {
+    position: absolute;
+    right: 2.75rem;
+    bottom: 0.5rem;
+}
+
+.composer-box-attach .composer-input {
+    padding-right: 5.5rem;
+}
+
+/* Attachment chips: one wrapping row above the box. A refused chip carries its reason inline. */
+.upload-chips {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+    margin-bottom: 0.5rem;
+}
+
+.upload-chip {
+    max-width: 100%;
+    color: var(--mud-palette-text-primary);
+}
+
+.upload-chip-name {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.upload-chip-size {
+    margin-left: 0.5rem;
+    color: var(--mud-palette-text-secondary);
+}
+
+.upload-chip-progress {
+    width: 3rem;
+    margin-left: 0.5rem;
+}
+
+.upload-chip-error {
+    margin-left: 0.5rem;
+    color: var(--mud-palette-error);
+}
+
+.upload-chip-remove {
+    margin-left: 0.25rem;
 }
 
 .composer-error {

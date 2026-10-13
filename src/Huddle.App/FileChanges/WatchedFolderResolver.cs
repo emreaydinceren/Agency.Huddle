@@ -1,6 +1,7 @@
 using System.Diagnostics.CodeAnalysis;
 using Microsoft.Extensions.Options;
 using Agency.Huddle.App.Acp;
+using Agency.Huddle.App.Teams;
 
 namespace Agency.Huddle.App.FileChanges;
 
@@ -83,8 +84,34 @@ internal sealed class WatchedFolderResolver(IOptions<TeamOptions> options, Teamm
             return false;
         }
 
+        string uploadsRoot = Path.GetFullPath(Path.Combine(dataDir, options.Value.Library.Uploads.Dir));
+        string teamsRoot = Path.GetFullPath(Path.Combine(dataDir, options.Value.Teams.Dir));
+        if (string.Equals(fullPath, uploadsRoot, StringComparison.OrdinalIgnoreCase)
+            || fullPath.StartsWith(uploadsRoot + Path.DirectorySeparatorChar, StringComparison.OrdinalIgnoreCase)
+            || WatchedFolderResolver.IsTeamUploads(fullPath, teamsRoot))
+        {
+            reason = "Uploads are announced in the chat, not watched.";
+            return false;
+        }
+
         folder = new WatchedFolder(entry, fullPath);
         return true;
+    }
+
+    /// <summary>True when <paramref name="fullPath"/> is a Team's Uploads folder or lies under it: its segments below the Teams root are <c>[Team, Uploads, ...]</c>.</summary>
+    /// <param name="fullPath">The resolved full path.</param>
+    /// <param name="teamsRoot">The full path of the Teams root.</param>
+    /// <returns><see langword="true"/> for a Team's Uploads folder or anything under it.</returns>
+    private static bool IsTeamUploads(string fullPath, string teamsRoot)
+    {
+        string prefix = teamsRoot + Path.DirectorySeparatorChar;
+        if (!fullPath.StartsWith(prefix, StringComparison.OrdinalIgnoreCase))
+        {
+            return false;
+        }
+
+        string[] segments = fullPath[prefix.Length..].Split(Path.DirectorySeparatorChar, StringSplitOptions.RemoveEmptyEntries);
+        return segments.Length >= 2 && string.Equals(segments[1], TeamNames.UploadsFolder, StringComparison.OrdinalIgnoreCase);
     }
 
     /// <summary>Resolves <paramref name="entry"/> to a full path, per the ordered rules in FC §6.3, before the containment checks run.</summary>
