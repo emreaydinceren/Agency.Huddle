@@ -381,6 +381,12 @@ button:focus-visible {
     opacity: 1;
 }
 
+/* The Team a Room still names after the Team is gone (RoomNavRow's TeamLabel): muted, after the Room's name. */
+.room-team-label {
+    margin-left: 0.25rem;
+    color: var(--mud-palette-text-secondary);
+}
+
 .room-list-confirm {
     display: flex;
     align-items: center;

@@ -6,7 +6,15 @@ using Microsoft.Extensions.Options;
 using Microsoft.JSInterop;
 using Agency.Huddle.App;
 using Agency.Huddle.App.Components.Teams;
+using Microsoft.Extensions.Logging.Abstractions;
+using Agency.Huddle.App.Acp;
+using Agency.Huddle.App.Avatars;
+using Agency.Huddle.App.Data;
 using Agency.Huddle.App.Library;
+using Agency.Huddle.App.Pipes;
+using Agency.Huddle.App.Questions;
+using Agency.Huddle.App.Services;
+using Agency.Huddle.App.Teammates;
 using Agency.Huddle.App.Teams;
 using Agency.Huddle.Tests.Teams;
 
@@ -75,7 +83,7 @@ public sealed class TeamsNavTests
         Assert.Equal(expectedProjects, actualProjects);
     }
 
-    /// <summary>The Team row's link goes to the Team page, and its "Team actions" button opens a menu whose only item is "New project".</summary>
+    /// <summary>The Team row's link goes to the Team page, and its "Team actions" button opens a menu whose items are "New chat" and "New project".</summary>
     [Fact]
     public async Task Team_Row_LinksToTheTeamPage_AndHasAMenuWithNewProject()
     {
@@ -91,7 +99,7 @@ public sealed class TeamsNavTests
         Assert.Equal("Team actions", button.GetAttribute("aria-label"));
         await cut.InvokeAsync(() => button.ClickAsync());
 
-        string[] expected = ["New project"];
+        string[] expected = ["New chat", "New project"];
         Assert.Equal(expected, MenuItemTexts(cut));
     }
 
@@ -106,7 +114,7 @@ public sealed class TeamsNavTests
 
         await cut.InvokeAsync(() => RowFor(cut, "Business").ContextMenuAsync());
 
-        string[] expected = ["New project"];
+        string[] expected = ["New chat", "New project"];
         Assert.Equal(expected, MenuItemTexts(cut));
     }
 
@@ -778,7 +786,190 @@ public sealed class TeamsNavTests
             await cut.InvokeAsync(() => button.ClickAsync());
         }
 
-        Assert.Empty(MenuItemTexts(cut));
+        string[] expected = ["New chat"];
+        Assert.Equal(expected, MenuItemTexts(cut));
+    }
+
+    /// <summary>Spec §6.5: the Team menu is rendered whatever Library and Tasks say, so a Team with both off still offers New chat and nothing else.</summary>
+    [Fact]
+    public async Task NewChat_Shown_WhenLibraryAndTasksAreBothOff()
+    {
+        FakeTeamCatalog catalog = new() { Teams = [Team("Business")] };
+        await using MudBunitContext ctx = NewContext(catalog, libraryEnabled: false, tasksEnabled: false);
+        IRenderedComponent<ContainerFragment> cut = RenderNav(ctx);
+
+        await cut.InvokeAsync(() => MenuButton(cut, "Business").ClickAsync());
+
+        string[] expected = ["New chat"];
+        Assert.Equal(expected, MenuItemTexts(cut));
+    }
+
+    /// <summary>T1/T5 sidebar half: an expanded Team lists its Team Room first, then its other scoped Rooms oldest first, then its Projects; an archived scoped Room is left out.</summary>
+    [Fact]
+    public async Task ExpandedTeam_ListsTeamRoomFirst_ThenScopedRooms_ThenProjects()
+    {
+        ITeamDirectory directory = ScriptedRoomsDirectory.Create(out ScriptedRoomsDirectory script);
+        DateTimeOffset t0 = DateTimeOffset.UnixEpoch;
+        script.Rooms.Add(new Room("newer", "Ada", t0.AddDays(2)) { Team = "Business" });
+        script.Rooms.Add(new Room("older", "Nova, Bo", t0) { Team = "business" });
+        script.Rooms.Add(new Room("teamroom", "Business", t0.AddDays(1)) { Team = "Business", IsTeamRoom = true });
+        script.Rooms.Add(new Room("gone", "Archived one", t0.AddDays(3)) { Team = "Business", Archived = true });
+        script.Rooms.Add(new Room("other", "Other team chat", t0) { Team = "Sales" });
+        script.Rooms.Add(new Room("root", "Root chat", t0));
+        FakeTeamCatalog catalog = new() { Teams = [Team("Business", projects: ["Marketing"]), Team("Sales")] };
+
+        await using MudBunitContext ctx = NewContext(catalog, directory: directory);
+        IRenderedComponent<ContainerFragment> cut = RenderNav(ctx);
+
+        cut.WaitForAssertion(() =>
+        {
+            string?[] hrefs = [.. cut.FindAll(".teams-nav a[href]").Select(a => a.GetAttribute("href"))];
+            string?[] expected =
+            [
+                "/teams/Business",
+                "/rooms/teamroom",
+                "/rooms/older",
+                "/rooms/newer",
+                "/teams/Business/projects/Marketing",
+                "/teams/Sales",
+                "/rooms/other",
+                "/teams/new",
+            ];
+            Assert.Equal(expected, hrefs);
+        });
+    }
+
+    /// <summary>A collapsed Team shows none of its Rooms, only its row.</summary>
+    [Fact]
+    public async Task CollapsedTeam_HidesItsRooms()
+    {
+        ITeamDirectory directory = ScriptedRoomsDirectory.Create(out ScriptedRoomsDirectory script);
+        script.Rooms.Add(new Room("teamroom", "Business", DateTimeOffset.UnixEpoch) { Team = "Business", IsTeamRoom = true });
+        FakeTeamCatalog catalog = new() { Teams = [Team("Business")] };
+
+        await using MudBunitContext ctx = NewContext(catalog, stored: BusinessOnly, directory: directory);
+        IRenderedComponent<ContainerFragment> cut = RenderNav(ctx);
+
+        cut.WaitForAssertion(() => Assert.Empty(cut.FindAll("a[href='/rooms/teamroom']")));
+    }
+
+    /// <summary>The nav follows <c>RoomEvents.RoomsChanged</c>: a Room created under the Team appears without a catalog change.</summary>
+    [Fact]
+    public async Task RoomsChanged_RefreshesTheTeamsRooms()
+    {
+        ITeamDirectory directory = ScriptedRoomsDirectory.Create(out ScriptedRoomsDirectory script);
+        FakeTeamCatalog catalog = new() { Teams = [Team("Business")] };
+        await using MudBunitContext ctx = NewContext(catalog, directory: directory);
+        IRenderedComponent<ContainerFragment> cut = RenderNav(ctx);
+        Assert.Empty(cut.FindAll("a[href='/rooms/fresh']"));
+
+        script.Rooms.Add(new Room("fresh", "Fresh chat", DateTimeOffset.UnixEpoch) { Team = "Business" });
+        ctx.Services.GetRequiredService<RoomEvents>().PublishRoomsChanged();
+
+        cut.WaitForAssertion(() => Assert.Single(cut.FindAll("a[href='/rooms/fresh']")));
+    }
+
+    /// <summary>T5 entry: choosing New chat in the Team menu opens the panel headed "New chat in Business".</summary>
+    [Fact]
+    public async Task NewChatMenuItem_OpensThePanelForThatTeam()
+    {
+        FakeTeamCatalog catalog = new() { Teams = [Team("Business")] };
+        await using MudBunitContext ctx = NewContext(catalog);
+        IRenderedComponent<ContainerFragment> cut = RenderNav(ctx);
+
+        await cut.InvokeAsync(() => MenuButton(cut, "Business").ClickAsync());
+        await cut.InvokeAsync(() => cut.FindAll("div.mud-menu-item").Single(item => string.Equals(item.TextContent.Trim(), "New chat", StringComparison.Ordinal)).ClickAsync());
+
+        cut.WaitForAssertion(() => Assert.Equal("New chat in Business", cut.Find(".new-chat-heading").TextContent.Trim()));
+    }
+
+    /// <summary>An archived Team Room is not listed, and is not listed as one of the other scoped Rooms either.</summary>
+    [Fact]
+    public async Task ArchivedTeamRoom_IsNotListed()
+    {
+        ITeamDirectory directory = ScriptedRoomsDirectory.Create(out ScriptedRoomsDirectory script);
+        script.Rooms.Add(new Room("teamroom", "Business", DateTimeOffset.UnixEpoch) { Team = "Business", IsTeamRoom = true, Archived = true });
+        script.Rooms.Add(new Room("chat", "Ada", DateTimeOffset.UnixEpoch.AddDays(1)) { Team = "Business" });
+        FakeTeamCatalog catalog = new() { Teams = [Team("Business")] };
+
+        await using MudBunitContext ctx = NewContext(catalog, directory: directory);
+        IRenderedComponent<ContainerFragment> cut = RenderNav(ctx);
+
+        cut.WaitForAssertion(() => Assert.Single(cut.FindAll("a[href^='/rooms/']")));
+        Assert.Equal("/rooms/chat", cut.Find("a[href^='/rooms/']").GetAttribute("href"));
+    }
+
+    /// <summary>One read serves every Team (not two queries per Team), and a slower earlier load never overwrites a newer one that finished first.</summary>
+    [Fact]
+    public async Task OverlappingRefreshes_ASlowerEarlierLoad_DoesNotOverwriteANewerOne()
+    {
+        ITeamDirectory directory = ScriptedRoomsDirectory.Create(out ScriptedRoomsDirectory script);
+        FakeTeamCatalog catalog = new() { Teams = [Team("Business"), Team("Sales")] };
+        await using MudBunitContext ctx = NewContext(catalog, directory: directory);
+        IRenderedComponent<ContainerFragment> cut = RenderNav(ctx);
+        cut.WaitForAssertion(() => Assert.Equal(1, script.RoomReads));
+        RoomEvents events = ctx.Services.GetRequiredService<RoomEvents>();
+        TaskCompletionSource slow = new(TaskCreationOptions.RunContinuationsAsynchronously);
+        TaskCompletionSource fast = new(TaskCreationOptions.RunContinuationsAsynchronously);
+        script.Gates.Enqueue(slow);
+        script.Gates.Enqueue(fast);
+
+        script.Rooms.Add(new Room("first", "First chat", DateTimeOffset.UnixEpoch) { Team = "Business" });
+        events.PublishRoomsChanged();
+        cut.WaitForAssertion(() => Assert.Equal(2, script.RoomReads));
+        script.Rooms.Add(new Room("second", "Second chat", DateTimeOffset.UnixEpoch.AddDays(1)) { Team = "Business" });
+        events.PublishRoomsChanged();
+        cut.WaitForAssertion(() => Assert.Equal(3, script.RoomReads));
+
+        fast.SetResult();
+        cut.WaitForAssertion(() => Assert.Single(cut.FindAll("a[href='/rooms/second']")));
+        slow.SetResult();
+        await Flush(cut);
+        await Flush(cut);
+
+        string?[] hrefs = [.. cut.FindAll("a[href^='/rooms/']").Select(a => a.GetAttribute("href"))];
+        string?[] expected = ["/rooms/first", "/rooms/second"];
+        Assert.Equal(expected, hrefs);
+    }
+
+    /// <summary>The panel's close icon collapses the panel the Team menu opened.</summary>
+    [Fact]
+    public async Task NewChatPanel_CloseIcon_CollapsesThePanel()
+    {
+        FakeTeamCatalog catalog = new() { Teams = [Team("Business")] };
+        await using MudBunitContext ctx = NewContext(catalog);
+        IRenderedComponent<ContainerFragment> cut = RenderNav(ctx);
+        await OpenNewChatAsync(cut, "Business");
+        cut.WaitForAssertion(() => Assert.Single(cut.FindAll(".new-chat-heading")));
+
+        await cut.InvokeAsync(() => cut.Find("button[aria-label='Close new chat']").ClickAsync());
+
+        cut.WaitForAssertion(() => Assert.Empty(cut.FindAll(".new-chat-heading")));
+    }
+
+    /// <summary>Choosing New chat in the menu of the Team whose panel is already open closes it again; choosing it for another Team moves the panel there.</summary>
+    [Fact]
+    public async Task NewChatMenuItem_TogglesThePanelForTheSameTeam()
+    {
+        FakeTeamCatalog catalog = new() { Teams = [Team("Business"), Team("Sales")] };
+        await using MudBunitContext ctx = NewContext(catalog);
+        IRenderedComponent<ContainerFragment> cut = RenderNav(ctx);
+
+        await OpenNewChatAsync(cut, "Business");
+        cut.WaitForAssertion(() => Assert.Equal("New chat in Business", cut.Find(".new-chat-heading").TextContent.Trim()));
+
+        await OpenNewChatAsync(cut, "Sales");
+        cut.WaitForAssertion(() => Assert.Equal("New chat in Sales", cut.Find(".new-chat-heading").TextContent.Trim()));
+
+        await OpenNewChatAsync(cut, "Sales");
+        cut.WaitForAssertion(() => Assert.Empty(cut.FindAll(".new-chat-heading")));
+    }
+
+    /// <summary>Opens <paramref name="team"/>'s menu and clicks New chat.</summary>
+    private static async Task OpenNewChatAsync(IRenderedComponent<ContainerFragment> cut, string team)
+    {
+        await cut.InvokeAsync(() => MenuButton(cut, team).ClickAsync());
+        await cut.InvokeAsync(() => cut.FindAll("div.mud-menu-item").Single(item => string.Equals(item.TextContent.Trim(), "New chat", StringComparison.Ordinal)).ClickAsync());
     }
 
     /// <summary>The twin: with either feature still on, the Team menu offers "New project".</summary>
@@ -793,7 +984,7 @@ public sealed class TeamsNavTests
 
         await cut.InvokeAsync(() => MenuButton(cut, "Business").ClickAsync());
 
-        string[] expected = ["New project"];
+        string[] expected = ["New chat", "New project"];
         Assert.Equal(expected, MenuItemTexts(cut));
     }
 
@@ -808,7 +999,7 @@ public sealed class TeamsNavTests
     private static async Task OpenNewProjectDialog(IRenderedComponent<ContainerFragment> cut, string team)
     {
         await cut.InvokeAsync(() => MenuButton(cut, team).ClickAsync());
-        _ = cut.InvokeAsync(() => cut.Find("div.mud-menu-item").Click());
+        _ = cut.InvokeAsync(() => cut.FindAll("div.mud-menu-item").Single(item => string.Equals(item.TextContent.Trim(), "New project", StringComparison.Ordinal)).Click());
         cut.WaitForAssertion(() => Assert.NotEmpty(cut.FindAll(".mud-dialog-title")));
     }
 
@@ -846,9 +1037,24 @@ public sealed class TeamsNavTests
         bool storageThrows = false,
         FakeTeamFolders? folders = null,
         bool libraryEnabled = true,
-        bool tasksEnabled = true)
+        bool tasksEnabled = true,
+        ITeamDirectory? directory = null)
     {
         MudBunitContext ctx = new();
+        ITeamDirectory rooms = directory ?? ScriptedRoomsDirectory.Create(out _);
+        ctx.Services.AddSingleton(rooms);
+        ctx.Services.AddSingleton<TempDataDir>();
+        ctx.Services.AddSingleton(new RoomEvents(NullLogger<RoomEvents>.Instance));
+        ctx.Services.AddSingleton<ChatService>(sp =>
+        {
+            TempDataDir dir = sp.GetRequiredService<TempDataDir>();
+            RoomEvents events = sp.GetRequiredService<RoomEvents>();
+            FileChatStore store = new(dir.Options(), NullLogger<FileChatStore>.Instance);
+            return new ChatService(rooms, store, events, new FakeMentionAliasSource(), Options.Create(new TeamOptions()), new ProposalStore(events), new QuestionStore(events), NullLogger<ChatService>.Instance) { TeamCatalog = catalog };
+        });
+        ctx.Services.AddSingleton<IAgentGateway>(new Ui.FakeAgentGateway());
+        ctx.Services.AddSingleton(new PersonaHealth(TimeProvider.System, NullLogger<PersonaHealth>.Instance));
+        ctx.Services.AddSingleton(sp => new AvatarStore(sp.GetRequiredService<TempDataDir>().Options(), NullLogger<AvatarStore>.Instance));
         ctx.Services.AddSingleton<ITeamCatalog>(catalog);
         ctx.Services.AddSingleton<ITeamFolders>(folders ?? new FakeTeamFolders());
         TeamOptions teamOptions = new();

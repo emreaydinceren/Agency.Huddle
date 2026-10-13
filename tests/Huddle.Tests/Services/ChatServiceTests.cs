@@ -6,7 +6,9 @@ using Agency.Huddle.App.Data;
 using Agency.Huddle.App.Services;
 using Agency.Huddle.App.Questions;
 using Agency.Huddle.App.Teammates;
+using Agency.Huddle.App.Teams;
 using Agency.Huddle.Contracts;
+using Agency.Huddle.Tests.Teams;
 
 namespace Agency.Huddle.Tests.Services;
 
@@ -1313,13 +1315,309 @@ public sealed class ChatServiceTests
         IReadOnlyList<MentionAlias>? aliases = null,
         int agentMessageBudget = 40,
         ProposalStore? proposals = null,
-        QuestionStore? questions = null)
+        QuestionStore? questions = null,
+        ITeamCatalog? teams = null)
     {
         var store = new FileChatStore(dir.Options(), NullLogger<FileChatStore>.Instance);
         var events = new RoomEvents(NullLogger<RoomEvents>.Instance);
         var aliasSource = new FakeMentionAliasSource { Aliases = aliases ?? [] };
         var options = Options.Create(new TeamOptions { AgentMessageBudget = agentMessageBudget });
-        var service = new ChatService(directory, store, events, aliasSource, options, proposals ?? new ProposalStore(events), questions ?? new QuestionStore(events), NullLogger<ChatService>.Instance);
+        var service = new ChatService(directory, store, events, aliasSource, options, proposals ?? new ProposalStore(events), questions ?? new QuestionStore(events), NullLogger<ChatService>.Instance) { TeamCatalog = teams };
         return (service, events);
+    }
+
+    private static FakeTeamCatalog CatalogWith(params string[] teams) =>
+        new() { Teams = [.. teams.Select(t => new TeamSummary(t, [], [], false))] };
+
+    /// <summary>
+    /// A New chat started inside a Team with one Teammate creates a Room scoped to that Team and leaves
+    /// the root one-to-one with the same Teammate alone (T6).
+    /// </summary>
+    [Fact]
+    public async Task CreateRoomFor_SingleAgentInTeam_CreatesScopedRoom_AndLeavesRootRoomAlone()
+    {
+        CancellationToken ct = TestContext.Current.CancellationToken;
+        using TempDataDir dir = new();
+        SqliteTeamDirectory directory = new(dir.Options());
+        await directory.InitializeAsync("You", ct);
+        User? nova = await directory.UpsertAgentUserAsync("Nova", null, ct);
+        Assert.NotNull(nova);
+        (ChatService service, _) = CreateService(dir, directory, teams: CatalogWith("Marketing"));
+        Room root = await service.EnsureRoomForAsync(nova, ct);
+
+        Room scoped = await service.CreateRoomForAsync([nova.Id], "Marketing", ct);
+
+        Assert.NotEqual(root.Id, scoped.Id);
+        Assert.Equal("Marketing", scoped.Team);
+        Assert.Equal("Nova", scoped.Name);
+        Assert.Null((await directory.GetRoomAsync(root.Id, ct))?.Team);
+        Room? stillRoot = await directory.FindRoomWithExactMembersAsync(KnownIds.Human, nova.Id, ct);
+        Assert.Equal(root.Id, stillRoot?.Id);
+    }
+
+    /// <summary>A New chat in a Team with several Teammates, one of them not in the Team, is scoped and named as before (T5).</summary>
+    [Fact]
+    public async Task CreateRoomFor_SeveralAgentsInTeam_CreatesScopedRoom_NamedByDerive()
+    {
+        CancellationToken ct = TestContext.Current.CancellationToken;
+        using TempDataDir dir = new();
+        SqliteTeamDirectory directory = new(dir.Options());
+        await directory.InitializeAsync("You", ct);
+        User? nova = await directory.UpsertAgentUserAsync("Nova", null, ct);
+        User? bo = await directory.UpsertAgentUserAsync("Bo", null, ct);
+        Assert.NotNull(nova);
+        Assert.NotNull(bo);
+        (ChatService service, _) = CreateService(dir, directory, teams: CatalogWith("Marketing"));
+
+        Room room = await service.CreateRoomForAsync([nova.Id, bo.Id], "Marketing", ct);
+
+        Assert.Equal("Marketing", room.Team);
+        Assert.Equal(RoomNaming.Derive([nova, bo]), room.Name);
+        Assert.Equal(3, (await directory.GetRoomMembersAsync(room.Id, ct)).Count);
+        Assert.Single(await directory.GetRoomsForTeamAsync("Marketing", ct));
+    }
+
+    /// <summary>A New chat in the Chats group (no Team) opens the root Room, as today (T7).</summary>
+    [Fact]
+    public async Task CreateRoomFor_NoTeam_ReturnsRootRoom()
+    {
+        CancellationToken ct = TestContext.Current.CancellationToken;
+        using TempDataDir dir = new();
+        SqliteTeamDirectory directory = new(dir.Options());
+        await directory.InitializeAsync("You", ct);
+        User? nova = await directory.UpsertAgentUserAsync("Nova", null, ct);
+        Assert.NotNull(nova);
+        (ChatService service, _) = CreateService(dir, directory, teams: CatalogWith("Marketing"));
+        Room teamOneToOne = await service.EnsureTeamOneToOneAsync("Marketing", nova, ct);
+
+        Room first = await service.CreateRoomForAsync([nova.Id], null, ct);
+        Room second = await service.CreateRoomForAsync([nova.Id], ct);
+
+        Assert.Null(first.Team);
+        Assert.Equal(first.Id, second.Id);
+        Assert.NotEqual(teamOneToOne.Id, first.Id);
+    }
+
+    /// <summary>A Team the catalog does not know is refused with a <see cref="ChatException"/> and creates nothing.</summary>
+    [Fact]
+    public async Task CreateRoomFor_UnknownTeam_ThrowsChatException_AndCreatesNothing()
+    {
+        CancellationToken ct = TestContext.Current.CancellationToken;
+        using TempDataDir dir = new();
+        SqliteTeamDirectory directory = new(dir.Options());
+        await directory.InitializeAsync("You", ct);
+        User? nova = await directory.UpsertAgentUserAsync("Nova", null, ct);
+        User? bo = await directory.UpsertAgentUserAsync("Bo", null, ct);
+        Assert.NotNull(nova);
+        Assert.NotNull(bo);
+        (ChatService service, _) = CreateService(dir, directory, teams: CatalogWith("Marketing"));
+
+        await Assert.ThrowsAsync<ChatException>(() => service.CreateRoomForAsync([nova.Id], "Ghosts", ct));
+        await Assert.ThrowsAsync<ChatException>(() => service.CreateRoomForAsync([nova.Id, bo.Id], "Ghosts", ct));
+        await Assert.ThrowsAsync<ChatException>(() => service.EnsureTeamOneToOneAsync("Ghosts", nova, ct));
+
+        Assert.Empty(await directory.GetRoomsAsync(ct));
+    }
+
+    /// <summary>With no Team catalog wired in, any Team is unknown and refused rather than trusted.</summary>
+    [Fact]
+    public async Task CreateRoomFor_TeamWithoutCatalog_ThrowsChatException()
+    {
+        CancellationToken ct = TestContext.Current.CancellationToken;
+        using TempDataDir dir = new();
+        SqliteTeamDirectory directory = new(dir.Options());
+        await directory.InitializeAsync("You", ct);
+        User? nova = await directory.UpsertAgentUserAsync("Nova", null, ct);
+        Assert.NotNull(nova);
+        (ChatService service, _) = CreateService(dir, directory);
+
+        await Assert.ThrowsAsync<ChatException>(() => service.CreateRoomForAsync([nova.Id], "Marketing", ct));
+    }
+
+    /// <summary>A Team typed in another case resolves to the catalog's spelling, which is what is stored.</summary>
+    [Fact]
+    public async Task CreateRoomFor_TeamInOtherCase_StoresCatalogSpelling()
+    {
+        CancellationToken ct = TestContext.Current.CancellationToken;
+        using TempDataDir dir = new();
+        SqliteTeamDirectory directory = new(dir.Options());
+        await directory.InitializeAsync("You", ct);
+        User? nova = await directory.UpsertAgentUserAsync("Nova", null, ct);
+        Assert.NotNull(nova);
+        (ChatService service, _) = CreateService(dir, directory, teams: CatalogWith("Marketing"));
+
+        Room room = await service.CreateRoomForAsync([nova.Id], "marketing", ct);
+
+        Assert.Equal("Marketing", room.Team);
+    }
+
+    /// <summary>
+    /// <see cref="ChatService.EnsureTeamOneToOneAsync"/> is idempotent: a second call finds the Room the
+    /// first created, and only the first raises <see cref="RoomEvents.RoomsChanged"/>.
+    /// </summary>
+    [Fact]
+    public async Task EnsureTeamOneToOne_IsIdempotent_AndRaisesRoomsChangedOnceOnCreate()
+    {
+        CancellationToken ct = TestContext.Current.CancellationToken;
+        using TempDataDir dir = new();
+        SqliteTeamDirectory directory = new(dir.Options());
+        await directory.InitializeAsync("You", ct);
+        User? nova = await directory.UpsertAgentUserAsync("Nova", null, ct);
+        Assert.NotNull(nova);
+        (ChatService service, RoomEvents events) = CreateService(dir, directory, teams: CatalogWith("Marketing"));
+        int roomsChangedCount = 0;
+        events.RoomsChanged += () => roomsChangedCount++;
+
+        Room first = await service.EnsureTeamOneToOneAsync("Marketing", nova, ct);
+        Room second = await service.EnsureTeamOneToOneAsync("MARKETING", nova, ct);
+
+        Assert.Equal(first.Id, second.Id);
+        Assert.Equal("Marketing", first.Team);
+        Assert.Equal(1, roomsChangedCount);
+        Assert.Single(await directory.GetRoomsForTeamAsync("Marketing", ct));
+    }
+
+    /// <summary>Two Teams get two separate one-to-ones with the same Teammate.</summary>
+    [Fact]
+    public async Task EnsureTeamOneToOne_ForTwoTeams_CreatesTwoRooms()
+    {
+        CancellationToken ct = TestContext.Current.CancellationToken;
+        using TempDataDir dir = new();
+        SqliteTeamDirectory directory = new(dir.Options());
+        await directory.InitializeAsync("You", ct);
+        User? nova = await directory.UpsertAgentUserAsync("Nova", null, ct);
+        Assert.NotNull(nova);
+        (ChatService service, _) = CreateService(dir, directory, teams: CatalogWith("Marketing", "Sales"));
+
+        Room marketing = await service.EnsureTeamOneToOneAsync("Marketing", nova, ct);
+        Room sales = await service.EnsureTeamOneToOneAsync("Sales", nova, ct);
+
+        Assert.NotEqual(marketing.Id, sales.Id);
+    }
+
+    /// <summary><see cref="ChatService.EnsureRoomForAsync"/> stays root-only: it never returns a scoped Room, even when one exists.</summary>
+    [Fact]
+    public async Task EnsureRoomFor_NeverReturnsScopedRoom()
+    {
+        CancellationToken ct = TestContext.Current.CancellationToken;
+        using TempDataDir dir = new();
+        SqliteTeamDirectory directory = new(dir.Options());
+        await directory.InitializeAsync("You", ct);
+        User? nova = await directory.UpsertAgentUserAsync("Nova", null, ct);
+        Assert.NotNull(nova);
+        (ChatService service, _) = CreateService(dir, directory, teams: CatalogWith("Marketing"));
+        Room scoped = await service.EnsureTeamOneToOneAsync("Marketing", nova, ct);
+
+        Room root = await service.EnsureRoomForAsync(nova, ct);
+
+        Assert.NotEqual(scoped.Id, root.Id);
+        Assert.Null(root.Team);
+    }
+
+    /// <summary>A Team Room cannot be renamed through <see cref="ChatService.RenameRoomAsync"/>: it is refused with the spec's text and keeps its name (T10a).</summary>
+    [Fact]
+    public async Task RenameRoom_TeamRoom_IsRefused()
+    {
+        CancellationToken ct = TestContext.Current.CancellationToken;
+        using TempDataDir dir = new();
+        SqliteTeamDirectory directory = new(dir.Options());
+        await directory.InitializeAsync("You", ct);
+        User? nova = await directory.UpsertAgentUserAsync("Nova", null, ct);
+        Assert.NotNull(nova);
+        Room teamRoom = await directory.CreateRoomAsync("Marketing", [KnownIds.Human, nova.Id], "Marketing", true, ct);
+        (ChatService service, _) = CreateService(dir, directory, teams: CatalogWith("Marketing"));
+
+        ChatException exception = await Assert.ThrowsAsync<ChatException>(
+            () => service.RenameRoomAsync(teamRoom.Id, "Launch crew", ct));
+
+        Assert.Equal("A Team Room is named after its Team and can't be renamed.", exception.Message);
+        Assert.Equal("Marketing", (await directory.GetRoomAsync(teamRoom.Id, ct))?.Name);
+    }
+
+    /// <summary>The refusal is by the Team Room flag, not by name: another Room in the Team, or a root Room named after the Team, renames normally.</summary>
+    [Fact]
+    public async Task RenameRoom_ScopedNonTeamRoom_AndRootRoomNamedAfterTeam_AreRenamed()
+    {
+        CancellationToken ct = TestContext.Current.CancellationToken;
+        using TempDataDir dir = new();
+        SqliteTeamDirectory directory = new(dir.Options());
+        await directory.InitializeAsync("You", ct);
+        User? nova = await directory.UpsertAgentUserAsync("Nova", null, ct);
+        Assert.NotNull(nova);
+        await directory.CreateRoomAsync("Marketing", [KnownIds.Human, nova.Id], "Marketing", true, ct);
+        Room chat = await directory.CreateRoomAsync("Nova", [KnownIds.Human, nova.Id], team: "Marketing", ct: ct);
+        Room rootLookalike = await directory.CreateRoomAsync("Marketing", [KnownIds.Human, nova.Id], ct);
+        (ChatService service, _) = CreateService(dir, directory, teams: CatalogWith("Marketing"));
+
+        Room renamedChat = await service.RenameRoomAsync(chat.Id, "Campaign", ct);
+        Room renamedRoot = await service.RenameRoomAsync(rootLookalike.Id, "Plans", ct);
+
+        Assert.Equal("Campaign", renamedChat.Name);
+        Assert.Equal("Plans", renamedRoot.Name);
+    }
+
+    /// <summary>In a one-member Team the Team Room holds exactly {Human, Nova}, yet a Team one-to-one with Nova is a separate scoped Room, never the Team Room.</summary>
+    [Fact]
+    public async Task EnsureTeamOneToOne_OneMemberTeam_CreatesSeparateRoomFromTheTeamRoom()
+    {
+        CancellationToken ct = TestContext.Current.CancellationToken;
+        using TempDataDir dir = new();
+        SqliteTeamDirectory directory = new(dir.Options());
+        await directory.InitializeAsync("You", ct);
+        User? nova = await directory.UpsertAgentUserAsync("Nova", null, ct);
+        Assert.NotNull(nova);
+        Room teamRoom = await directory.CreateRoomAsync("Marketing", [KnownIds.Human, nova.Id], "Marketing", true, ct);
+        (ChatService service, _) = CreateService(dir, directory, teams: CatalogWith("Marketing"));
+
+        Room oneToOne = await service.EnsureTeamOneToOneAsync("Marketing", nova, ct);
+        Room again = await service.EnsureTeamOneToOneAsync("Marketing", nova, ct);
+
+        Assert.NotEqual(teamRoom.Id, oneToOne.Id);
+        Assert.Equal("Marketing", oneToOne.Team);
+        Assert.False(oneToOne.IsTeamRoom);
+        Assert.Equal(oneToOne.Id, again.Id);
+    }
+
+    /// <summary>A Team Room is never renamed by an Invitation, even when its name equals the derived one (a Team named like its only member).</summary>
+    [Fact]
+    public async Task Invite_TeamRoomNamedLikeItsOnlyMember_KeepsTheTeamName()
+    {
+        CancellationToken ct = TestContext.Current.CancellationToken;
+        using TempDataDir dir = new();
+        SqliteTeamDirectory directory = new(dir.Options());
+        await directory.InitializeAsync("You", ct);
+        User? nova = await directory.UpsertAgentUserAsync("Nova", null, ct);
+        User? kai = await directory.UpsertAgentUserAsync("Kai", null, ct);
+        Assert.NotNull(nova);
+        Assert.NotNull(kai);
+        Room teamRoom = await directory.CreateRoomAsync("Nova", [KnownIds.Human, nova.Id], "Nova", true, ct);
+        (ChatService service, _) = CreateService(dir, directory, teams: CatalogWith("Nova"));
+
+        Room invited = await service.InviteAsync(teamRoom.Id, "Kai", ct);
+
+        Assert.Equal("Nova", invited.Name);
+        Assert.Equal(3, (await directory.GetRoomMembersAsync(teamRoom.Id, ct)).Count);
+    }
+
+    /// <summary>A scoped Room that is not the Team Room still re-derives its auto-name on an Invitation.</summary>
+    [Fact]
+    public async Task Invite_ScopedNonTeamAutoNamedRoom_ReDerivesTheName()
+    {
+        CancellationToken ct = TestContext.Current.CancellationToken;
+        using TempDataDir dir = new();
+        SqliteTeamDirectory directory = new(dir.Options());
+        await directory.InitializeAsync("You", ct);
+        User? nova = await directory.UpsertAgentUserAsync("Nova", null, ct);
+        User? kai = await directory.UpsertAgentUserAsync("Kai", null, ct);
+        Assert.NotNull(nova);
+        Assert.NotNull(kai);
+        await directory.CreateRoomAsync("Nova", [KnownIds.Human, nova.Id], "Nova", true, ct);
+        Room chat = await directory.CreateRoomAsync("Nova", [KnownIds.Human, nova.Id], team: "Nova", ct: ct);
+        (ChatService service, _) = CreateService(dir, directory, teams: CatalogWith("Nova"));
+
+        Room invited = await service.InviteAsync(chat.Id, "Kai", ct);
+
+        Assert.Equal(RoomNaming.Derive(await directory.GetRoomMembersAsync(chat.Id, ct)), invited.Name);
+        Assert.NotEqual("Nova", invited.Name);
     }
 }

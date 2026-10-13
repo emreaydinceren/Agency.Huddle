@@ -5,6 +5,7 @@ using Agency.Huddle.App.Data;
 using Agency.Huddle.App.Elicitation;
 using Agency.Huddle.App.Questions;
 using Agency.Huddle.App.Teammates;
+using Agency.Huddle.App.Teams;
 using Agency.Huddle.Contracts;
 
 namespace Agency.Huddle.App.Services;
@@ -111,6 +112,15 @@ public sealed partial class ChatService
 
     private readonly int agentMessageBudget;
     private readonly TimeProvider timeProvider;
+
+    /// <summary>
+    /// The live Team list, used to refuse a Room scoped to a Team that does not exist. A settable property
+    /// rather than a constructor parameter because <see cref="ITeamCatalog"/> is internal and this
+    /// constructor is public; <c>ServiceCollectionExtensions</c> sets it right after
+    /// <c>ActivatorUtilities</c> builds the service. <see langword="null"/> means no Team is known, so
+    /// every Team-scoped call is refused.
+    /// </summary>
+    internal ITeamCatalog? TeamCatalog { get; set; }
 
     /// <param name="teamDirectory">The Team's Users and Rooms.</param>
     /// <param name="store">Where a posted Message's transcript is appended.</param>
@@ -450,12 +460,26 @@ public sealed partial class ChatService
     }
 
     /// <summary>
-    /// Creates a Room holding the Human and the named Agents. A single Agent reuses that Agent's
+    /// Creates a root Room holding the Human and the named Agents. A single Agent reuses that Agent's
     /// existing Room, so this is the one entry point for starting any conversation.
     /// </summary>
-    public async Task<Room> CreateRoomForAsync(IReadOnlyList<string> agentIds, CancellationToken ct = default)
+    public Task<Room> CreateRoomForAsync(IReadOnlyList<string> agentIds, CancellationToken ct = default) =>
+        this.CreateRoomForAsync(agentIds, null, ct);
+
+    /// <summary>
+    /// Creates a Room holding the Human and the named Agents, scoped to <paramref name="team"/> when one
+    /// is given (ADR-0052). A single Agent reuses that Agent's existing one-to-one in the same Scope.
+    /// </summary>
+    /// <param name="agentIds">The Agents to invite.</param>
+    /// <param name="team">The Team to scope the Room to, or <see langword="null"/> for the root.</param>
+    /// <param name="ct">Cancels the lookups and the write.</param>
+    /// <returns>The Room.</returns>
+    /// <exception cref="ChatException">The Team is unknown, no Agent is named, or an id is not an Agent.</exception>
+    public async Task<Room> CreateRoomForAsync(IReadOnlyList<string> agentIds, string? team, CancellationToken ct = default)
     {
         ArgumentNullException.ThrowIfNull(agentIds);
+
+        string? scope = this.ResolveTeam(team);
 
         if (agentIds.Count == 0)
         {
@@ -476,16 +500,62 @@ public sealed partial class ChatService
 
         if (agents.Count == 1)
         {
-            return await this.EnsureRoomForAsync(agents[0], ct);
+            return scope is null
+                ? await this.EnsureRoomForAsync(agents[0], ct)
+                : await this.EnsureTeamOneToOneAsync(scope, agents[0], ct);
         }
 
         var name = RoomNaming.Derive(agents);
         var memberIds = new List<string>(agents.Count + 1) { KnownIds.Human };
         memberIds.AddRange(agents.Select(a => a.Id));
-        var room = await this.teamDirectory.CreateRoomAsync(name, memberIds, ct);
+        Room room = await this.teamDirectory.CreateRoomAsync(name, memberIds, scope, false, ct);
         ChatService.LogCreatedRoom(this.logger, room.Id, room.Name, memberIds.Count);
         this.events.PublishRoomsChanged();
         return room;
+    }
+
+    /// <summary>
+    /// Returns the Human's one-to-one with <paramref name="agent"/> inside <paramref name="team"/>,
+    /// creating it, scoped to the Team, if there is none. The root one-to-one is a different Room and is
+    /// left alone.
+    /// </summary>
+    /// <param name="team">The Team, matched ignoring case against the Team catalog.</param>
+    /// <param name="agent">The Agent.</param>
+    /// <param name="ct">Cancels the lookup and the write.</param>
+    /// <returns>The Team-scoped one-to-one.</returns>
+    /// <exception cref="ChatException">The Team is unknown.</exception>
+    public async Task<Room> EnsureTeamOneToOneAsync(string team, User agent, CancellationToken ct = default)
+    {
+        ArgumentNullException.ThrowIfNull(team);
+        ArgumentNullException.ThrowIfNull(agent);
+
+        string scope = this.ResolveTeam(team) ?? throw new ChatException(ErrorCodes.BadMessage, $"Unknown team '{team}'.");
+
+        Room? existing = await this.teamDirectory.FindRoomWithExactMembersAsync(KnownIds.Human, agent.Id, scope, ct);
+        if (existing is not null)
+        {
+            return existing;
+        }
+
+        Room room = await this.teamDirectory.CreateRoomAsync(RoomNaming.Derive([agent]), [KnownIds.Human, agent.Id], scope, false, ct);
+        ChatService.LogCreatedDirectRoom(this.logger, room.Id, agent.Name);
+        this.events.PublishRoomsChanged();
+        return room;
+    }
+
+    /// <summary>
+    /// Resolves a Team name to the catalog's spelling. <see langword="null"/> in, <see langword="null"/>
+    /// out (the root); a name the catalog does not know, or no catalog at all, is refused.
+    /// </summary>
+    private string? ResolveTeam(string? team)
+    {
+        if (team is null)
+        {
+            return null;
+        }
+
+        return this.TeamCatalog?.Find(team)?.Name
+            ?? throw new ChatException(ErrorCodes.BadMessage, $"Unknown team '{team}'.");
     }
 
     /// <summary>
@@ -535,7 +605,7 @@ public sealed partial class ChatService
         }
 
         var before = await this.teamDirectory.GetRoomMembersAsync(roomId, ct);
-        var wasAutoNamed = string.Equals(room.Name, RoomNaming.Derive(before), StringComparison.Ordinal);
+        var wasAutoNamed = !room.IsTeamRoom && string.Equals(room.Name, RoomNaming.Derive(before), StringComparison.Ordinal);
 
         await this.teamDirectory.AddMemberAsync(roomId, user.Id, ct);
 
@@ -575,8 +645,13 @@ public sealed partial class ChatService
             throw new ChatException(ErrorCodes.BadMessage, "A room name cannot be blank.");
         }
 
-        _ = await this.teamDirectory.GetRoomAsync(roomId, ct)
+        Room existing = await this.teamDirectory.GetRoomAsync(roomId, ct)
             ?? throw new ChatException(ErrorCodes.UnknownRoom, $"Unknown room '{roomId}'.");
+
+        if (existing.IsTeamRoom)
+        {
+            throw new ChatException(ErrorCodes.BadMessage, "A Team Room is named after its Team and can't be renamed.");
+        }
 
         await this.teamDirectory.RenameRoomAsync(roomId, trimmed, ct);
         this.events.PublishRoomsChanged();

@@ -524,6 +524,115 @@ public sealed class PersonaRunnerTests
     }
 
     /// <summary>
+    /// T9: a Turn in a Room scoped to a Team opens with a label that names the Team, and a Turn in the
+    /// Agent's root Room opens with the label as it always read.
+    /// </summary>
+    [Fact]
+    public async Task Turn_InTeamScopedRoom_LabelNamesTheTeam()
+    {
+        using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(10));
+        var ct = cts.Token;
+
+        await using var fixture = await PipeHostFixture.StartAsync(ct);
+        var factory = new FakeAgentHostFactory();
+        factory.Session.EnqueueReply("scoped reply");
+        factory.Session.EnqueueReply("root reply");
+        var persona = new Persona("nova", "You are Nova.");
+
+        await using var agentHost = CreateHost(fixture, persona, factory);
+        await agentHost.StartAsync(ct);
+
+        var (novaId, rootRoomId) = await WaitForDirectRoomAsync(fixture, "nova", ct);
+        var directory = fixture.Services.GetRequiredService<ITeamDirectory>();
+        var scoped = await directory.CreateRoomAsync("Plans", [KnownIds.Human, novaId], "Marketing", ct: ct);
+        var chat = fixture.Services.GetRequiredService<ChatService>();
+
+        await chat.PostAsync(scoped.Id, KnownIds.Human, "hello", ct: ct);
+        var scopedPrompts = await WaitForPromptCountAsync(factory.Session, 1, ct);
+        await chat.PostAsync(rootRoomId, KnownIds.Human, "hello", ct: ct);
+        var allPrompts = await WaitForPromptCountAsync(factory.Session, 2, ct);
+
+        Assert.Equal($"[Room: Plans (id: {scoped.Id}, Team: Marketing)]", scopedPrompts[0].Split(']')[0] + "]");
+        Assert.Equal($"[Room: nova (id: {rootRoomId})]", allPrompts[1].Split(']')[0] + "]");
+    }
+
+    /// <summary>
+    /// A Team-scoped two-Member Room with the Human that sorts BEFORE the root one is not what the runner
+    /// opens at start (per-Room mode): the root Room is.
+    /// </summary>
+    [Fact]
+    public async Task Start_TeamScopedHumanRoomListedFirst_OpensTheRootRoomAtStart()
+    {
+        using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(10));
+        var ct = cts.Token;
+
+        await using var fixture = await PipeHostFixture.StartAsync(ct);
+        var directory = fixture.Services.GetRequiredService<ITeamDirectory>();
+        var nova = await directory.UpsertAgentUserAsync("nova", null, ct);
+        Assert.NotNull(nova);
+        await directory.CreateRoomAsync("Plans", [KnownIds.Human, nova.Id], "Marketing", ct: ct);
+        var factory = new FakeAgentHostFactory { SessionPerRoom = true };
+
+        await using var runner = CreateHost(fixture, new Persona("nova", "You are Nova."), factory);
+        await runner.StartAsync(ct);
+
+        var (_, rootRoomId) = await WaitForDirectRoomAsync(fixture, "nova", ct);
+        Assert.Equal(rootRoomId, StartupRoomId(runner));
+    }
+
+    /// <summary>The Greeting goes to the root two-Member Room, not to an empty Team-scoped one that sorts first.</summary>
+    [Fact]
+    public async Task Greeting_TeamScopedEmptyRoomListedFirst_IsQueuedInTheRootRoom()
+    {
+        using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(10));
+        var ct = cts.Token;
+
+        await using var fixture = await PipeHostFixture.StartAsync(ct);
+        var directory = fixture.Services.GetRequiredService<ITeamDirectory>();
+        var chief = await directory.UpsertAgentUserAsync("Chief of Staff", null, ct);
+        Assert.NotNull(chief);
+        await directory.CreateRoomAsync("Plans", [KnownIds.Human, chief.Id], "Marketing", ct: ct);
+        var factory = new FakeAgentHostFactory();
+
+        await using var runner = CreateHost(fixture, new Persona("Chief of Staff", BuiltinTeammate.DefaultText), factory);
+        await runner.StartAsync(ct);
+
+        var (_, rootRoomId) = await WaitForDirectRoomAsync(fixture, "Chief of Staff", ct);
+        var prompts = await WaitForPromptCountAsync(factory.Session, 1, ct);
+        Assert.StartsWith($"[Room: Chief of Staff (id: {rootRoomId})]", prompts[0], StringComparison.Ordinal); // contains-ok: prompt text, not markup; only the label prefix is pinned, the rest is the Greeting
+    }
+
+    /// <summary>A slash command read in a Team-scoped Room becomes a Command work item that carries the Team.</summary>
+    [Fact]
+    public async Task HumanCommand_InTeamScopedRoom_WorkItemCarriesTheTeam()
+    {
+        using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(10));
+        var ct = cts.Token;
+        await using var rig = await CommandRig.StartAsync(["compact"], advertise: true, ct);
+        var posted = HumanPosts("@nova /compact") with { Team = "Marketing" };
+        object?[] arguments = [posted, null];
+
+        var built = (bool?)typeof(PersonaRunner)
+            .GetMethod("TryBuildCommandItem", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance)
+            ?.Invoke(rig.Runner, arguments);
+
+        Assert.True(built);
+        var item = Assert.IsType<WorkItem>(arguments[1]);
+        Assert.Equal(WorkItemKind.Command, item.Kind);
+        Assert.Equal("Marketing", item.Team);
+    }
+
+    private static string? StartupRoomId(PersonaRunner runner)
+    {
+        const System.Reflection.BindingFlags flags = System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance;
+        var pool = typeof(PersonaRunner).GetField("pool", flags)?.GetValue(runner);
+        Assert.NotNull(pool);
+        var session = pool.GetType().GetField("startupSession", flags)?.GetValue(pool);
+        Assert.NotNull(session);
+        return (string?)session.GetType().GetProperty("RoomId", flags)?.GetValue(session);
+    }
+
+    /// <summary>
     /// D16 P0-3 (RS §9 E-7): the runner's known-names table is refreshed from every
     /// <see cref="MessagePosted.RoomName"/>, so a Room renamed after its direct Room was created
     /// labels its very next Turn with the new name.

@@ -13,7 +13,11 @@ public sealed record MemberInfo(string Id, string Name, UserKind Kind);
 /// <see langword="false"/> — "not empty" — so a server built before this field existed can never
 /// cause a Greeting.
 /// </param>
-public sealed record RoomInfo(string Id, string Name, IReadOnlyList<MemberInfo> Members, bool IsEmpty = false);
+/// <param name="Team">
+/// The Team the Room is scoped to, or <see langword="null"/> for a root Room. Additive on the wire:
+/// omitted when <see langword="null"/>, and absent deserialises as a root Room.
+/// </param>
+public sealed record RoomInfo(string Id, string Name, IReadOnlyList<MemberInfo> Members, bool IsEmpty = false, string? Team = null);
 
 [JsonPolymorphic(TypeDiscriminatorPropertyName = "type")]
 [JsonDerivedType(typeof(Hello), "hello")]
@@ -134,10 +138,15 @@ public sealed record StopTurn(string RoomId) : ProtocolMessage;
 /// is why this arrives on every delivery rather than being read from a client's own configuration.
 /// Zero or less means the Room is uncapped.
 /// </param>
+/// <param name="Team">
+/// The Team the Room is scoped to, or <see langword="null"/> for a root Room. A label for the Turn
+/// prompt, nothing more. Additive on the wire: omitted when <see langword="null"/>, and absent
+/// deserialises as a root Room.
+/// </param>
 public sealed record MessagePosted(
     string RoomId, string RoomName, ChatMessage Message, bool Mentioned,
     IReadOnlyList<MemberInfo> Mentions, IReadOnlyList<MemberInfo> Members,
-    int AgentMessagesSinceHuman, int Budget) : ProtocolMessage;
+    int AgentMessagesSinceHuman, int Budget, string? Team = null) : ProtocolMessage;
 
 public sealed record ProtocolError(string Code, string Message, string? RelatedMessageId = null) : ProtocolMessage;
 

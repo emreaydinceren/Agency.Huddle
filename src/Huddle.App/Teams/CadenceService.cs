@@ -144,7 +144,7 @@ internal sealed class CadenceService(
             && current.LastDigestUtc is { } lastDigest && Elapsed(now, lastDigest, digest.Every))
         {
             string text = prompts.Render(DigestPrompt, Values(team.Name, lastDigest));
-            current = await this.FireAsync(current with { LastDigestUtc = now }, current, manager, text, ct).ConfigureAwait(false);
+            current = await this.FireAsync(current with { LastDigestUtc = now }, current, team.Name, manager, text, ct).ConfigureAwait(false);
         }
 
         if (!retroBaselined && process.Retro is { } retro
@@ -153,7 +153,7 @@ internal sealed class CadenceService(
         {
             string text = prompts.Render(RetroPrompt, Values(team.Name, lastRetro));
             (string recipient, string message) = this.RetroRecipient(team, manager, text);
-            _ = await this.FireAsync(current with { LastRetroUtc = now, DoneAtLastRetro = done }, current, recipient, message, ct).ConfigureAwait(false);
+            _ = await this.FireAsync(current with { LastRetroUtc = now, DoneAtLastRetro = done }, current, team.Name, recipient, message, ct).ConfigureAwait(false);
         }
     }
 
@@ -168,13 +168,13 @@ internal sealed class CadenceService(
         };
 
     /// <summary>Records the firing first, then posts; a refused or failed post puts the previous state back so the next tick retries.</summary>
-    private async Task<CadenceState> FireAsync(CadenceState fired, CadenceState previous, string recipient, string text, CancellationToken ct)
+    private async Task<CadenceState> FireAsync(CadenceState fired, CadenceState previous, string team, string recipient, string text, CancellationToken ct)
     {
         state.Set(fired);
         bool posted = false;
         try
         {
-            posted = await poster.PostAsync(recipient, text, ct).ConfigureAwait(false);
+            posted = await poster.PostToTeamAsync(team, recipient, text, ct).ConfigureAwait(false);
         }
         finally
         {

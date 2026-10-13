@@ -89,6 +89,27 @@ public sealed class PersonaRenameCascadeTests
         Assert.Equal("echoprime", updated.Name);
     }
 
+    /// <summary>A Team Room keeps its Team's name through a Persona rename, even when that name equals the derived one; a scoped chat still re-derives.</summary>
+    [Fact]
+    public async Task Rename_TeamRoomNamedLikeItsMember_IsLeftAlone_ButScopedChatIsReDerived()
+    {
+        var ct = TestContext.Current.CancellationToken;
+        using var dir = new TempDataDir();
+        using var harness = await CreateHarnessAsync(dir, ct);
+        harness.PersonaStore.Add(Identity("echo"), "You answer support questions.");
+        var echo = await harness.TeamDirectory.UpsertAgentUserAsync("echo", null, ct);
+        Assert.NotNull(echo);
+        var teamRoom = await harness.TeamDirectory.CreateRoomAsync("echo", [KnownIds.Human, echo.Id], "echo", true, ct);
+        var chat = await harness.TeamDirectory.CreateRoomAsync("echo", [KnownIds.Human, echo.Id], team: "echo", ct: ct);
+        CreateWorkDir(dir, "echo");
+
+        harness.PersonaStore.Update("echo", PersonaText("echoprime", "You answer support questions."), model: null, effort: null, workMode: null);
+        await harness.FolderMoves.WhenSettledAsync("echoprime", ct);
+
+        Assert.Equal("echo", (await harness.TeamDirectory.GetRoomAsync(teamRoom.Id, ct))?.Name);
+        Assert.Equal("echoprime", (await harness.TeamDirectory.GetRoomAsync(chat.Id, ct))?.Name);
+    }
+
     /// <summary>A Room the Human renamed by hand keeps its chosen name, even though its Agent Member was renamed.</summary>
     [Fact]
     public async Task Rename_HandRenamedRoom_IsLeftAlone()

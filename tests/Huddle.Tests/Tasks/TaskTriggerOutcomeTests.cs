@@ -320,7 +320,7 @@ public sealed class TaskTriggerOutcomeTests
 
     /// <summary>
     /// Spec §10.5: a <see cref="ChatException"/> other than <c>BudgetExhausted</c> - here from
-    /// <see cref="ChatService.CreateRoomForAsync"/> meeting a stale Agent while creating step 4's Room -
+    /// <see cref="ChatService.CreateRoomForAsync(IReadOnlyList{string}, CancellationToken)"/> meeting a stale Agent while creating step 4's Room -
     /// is <see cref="WakeOutcome.Failed"/>, recorded with no Room, and Kai's Task wake is not left counted.
     /// </summary>
     [Fact]

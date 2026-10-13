@@ -79,6 +79,24 @@ public sealed class CadenceServiceTests
         Assert.Equal([(Manager, "prompt.digest|Platform|2026-10-08")], harness.Poster.Posts);
     }
 
+    /// <summary>T18: the digest and the retro go out through the Team-aware call naming the Team they fire for, never the root-only one.</summary>
+    [Fact]
+    public async Task Tick_DigestAndRetro_PostThroughTeamAwareCallForTheirTeam()
+    {
+        CancellationToken ct = TestContext.Current.CancellationToken;
+        using Harness harness = new();
+        harness.WriteProcess(Both);
+        await harness.Service().TickAsync(ct);
+        harness.Clock.UtcNow = Start.AddDays(1);
+        harness.WriteDone(10);
+
+        await harness.Service().TickAsync(ct);
+
+        Assert.Equal(2, harness.Poster.Posts.Count);
+        Assert.Equal([Team, Team], harness.Poster.PostedTeams);
+        Assert.Equal(0, harness.Poster.RootPostCount);
+    }
+
     /// <summary>After a digest fires the next one waits another full period.</summary>
     [Fact]
     public async Task Tick_DigestFired_DoesNotRepeatWithinThePeriod()
@@ -292,10 +310,16 @@ public sealed class CadenceServiceTests
         "---\ntitle: 'Flow'\ndigest: { every: 1, unit: 'days' }\nretro: { every: 10, unit: 'done-tasks' }\n---\n# Flow\n";
 
     /// <summary>Records each post instead of waking anyone.</summary>
-    private sealed class RecordingPoster : IOnboardingPoster
+    internal sealed class RecordingPoster : IOnboardingPoster
     {
         /// <summary>Every post, in order, as recipient and text.</summary>
         public List<(string Name, string Text)> Posts { get; } = [];
+
+        /// <summary>The Team each <see cref="PostToTeamAsync"/> call named, in order.</summary>
+        public List<string> PostedTeams { get; } = [];
+
+        /// <summary>How many posts went through the root-only <see cref="PostAsync"/>.</summary>
+        public int RootPostCount { get; private set; }
 
         /// <summary>What <see cref="PostAsync"/> reports; false simulates a refused post.</summary>
         public bool Accept { get; set; } = true;
@@ -305,6 +329,20 @@ public sealed class CadenceServiceTests
 
         /// <inheritdoc />
         public Task<bool> PostAsync(string managerName, string text, CancellationToken ct)
+        {
+            this.RootPostCount++;
+            return this.RecordAsync(managerName, text);
+        }
+
+        /// <inheritdoc />
+        public Task<bool> PostToTeamAsync(string team, string recipientName, string text, CancellationToken ct)
+        {
+            ct.ThrowIfCancellationRequested();
+            this.PostedTeams.Add(team);
+            return this.RecordAsync(recipientName, text);
+        }
+
+        private Task<bool> RecordAsync(string managerName, string text)
         {
             if (this.ThrowOnce)
             {

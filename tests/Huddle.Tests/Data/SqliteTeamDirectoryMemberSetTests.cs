@@ -2,7 +2,7 @@ using Agency.Huddle.App.Data;
 
 namespace Agency.Huddle.Tests.Data;
 
-/// <summary>Tests for <see cref="ITeamDirectory.FindRoomWithExactMemberSetAsync"/> (Spec §10.4).</summary>
+/// <summary>Tests for <see cref="ITeamDirectory.FindRoomWithExactMemberSetAsync(IReadOnlyCollection{string}, CancellationToken)"/> (Spec §10.4).</summary>
 public sealed class SqliteTeamDirectoryMemberSetTests
 {
     /// <summary>A Room whose Members are exactly the requested set is found.</summary>

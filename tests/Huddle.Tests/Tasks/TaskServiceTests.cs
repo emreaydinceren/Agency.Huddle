@@ -1310,6 +1310,46 @@ public sealed class TaskServiceTests
         Assert.False(Directory.Exists(Path.Combine(TestTaskStore.Root(dir), "Platform", project)));
     }
 
+    /// <summary>Spec §6.8: a Project named <c>Uploads</c> in any case is the Team's shared upload folder, so Create refuses it with exactly the Uploads problem and writes nothing.</summary>
+    [Theory]
+    [InlineData("Uploads")]
+    [InlineData("uploads")]
+    public void Create_ProjectUploads_RefusedWithUploadsReservedProblem(string project)
+    {
+        using TempDataDir dir = new();
+        using PersonaStore personas = CreatePersonaStore(dir);
+        using TaskStore store = CreateTaskStore(dir, personas);
+        TaskService service = CreateTaskService(dir, store, personas);
+
+        TaskResult result = service.Create(new TaskDraft("T", "Platform", project), HumanActor);
+
+        TaskResult.Refused refused = Assert.IsType<TaskResult.Refused>(result);
+        Assert.Equal(["\"Uploads\" is reserved for files shared in a Team's chats."], refused.Problems);
+        Assert.False(Directory.Exists(Path.Combine(TestTaskStore.Root(dir), "Platform", project)));
+        Assert.Empty(store.All);
+    }
+
+    /// <summary>Spec §6.8 on the Update entry point: moving a Task into Project <c>Uploads</c> (any case) is refused with exactly the Uploads problem, and the Task stays where it was.</summary>
+    [Theory]
+    [InlineData("Uploads")]
+    [InlineData("uploads")]
+    public void Update_ProjectUploads_RefusedWithUploadsReservedProblem(string project)
+    {
+        using TempDataDir dir = new();
+        using PersonaStore personas = CreatePersonaStore(dir);
+        using TaskStore store = CreateTaskStore(dir, personas);
+        TaskService service = CreateTaskService(dir, store, personas);
+        TaskItem task = SeedTask(service, new TaskDraft("T", "Platform", "Auth v2"));
+        byte[] before = File.ReadAllBytes(task.Path);
+
+        TaskResult result = service.Update(task.Id, new TaskPatch { Project = Optional<string?>.Set(project) }, null, HumanActor);
+
+        TaskResult.Refused refused = Assert.IsType<TaskResult.Refused>(result);
+        Assert.Equal(["\"Uploads\" is reserved for files shared in a Team's chats."], refused.Problems);
+        Assert.Equal(before, File.ReadAllBytes(task.Path));
+        Assert.False(Directory.Exists(Path.Combine(TestTaskStore.Root(dir), "Platform", project)));
+    }
+
     /// <summary>Guard (passes today): Update into Project <c>memory-notes</c> still moves the Task.</summary>
     [Fact]
     public void Update_ProjectMemoryNotes_Accepted()

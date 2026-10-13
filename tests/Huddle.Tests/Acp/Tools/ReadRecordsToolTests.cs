@@ -365,6 +365,102 @@ public sealed class ReadRecordsToolTests
         Assert.Equal("2026-10-08 10:00 Rae: hello\n2026-10-08 11:00 " + human + ": thanks", result);
     }
 
+    /// <summary>Creates a real Room in the directory, scoped to <paramref name="roomTeam"/> or root when <see langword="null"/>.</summary>
+    /// <param name="scene">The scene whose directory holds the Room.</param>
+    /// <param name="roomTeam">The Team the Room is scoped to, or <see langword="null"/> for a root Room.</param>
+    /// <param name="ct">Cancels the setup.</param>
+    private static async Task<string> CreateRoomAsync(Scene scene, string? roomTeam, CancellationToken ct)
+    {
+        Room room = await scene.Harness.Directory.CreateRoomAsync("Chat", [KnownIds.Human, scene.Ids["Rae"]], roomTeam, ct: ct);
+        return room.Id;
+    }
+
+    /// <summary>T15: a Room scoped to the requested Team is readable even when only someone outside the Team posted in it.</summary>
+    [Fact]
+    public async Task Invoke_RoomScopedToThisTeam_IsReadWhoeverPosted()
+    {
+        CancellationToken ct = TestContext.Current.CancellationToken;
+        using Scene scene = await CreateSceneAsync(ct);
+        string roomId = await CreateRoomAsync(scene, Team, ct);
+        await scene.Chat.AppendAsync(roomId, new ChatMessage("a", Now.AddHours(-2), "u1", "Stranger", "hello"), ct);
+        await scene.Chat.AppendAsync(roomId, new ChatMessage("b", Now.AddHours(-1), "u2", "Ola", "from Design"), ct);
+
+        string result = await scene.Tool("Rae").InvokeAsync(Args(room: roomId), ct);
+
+        Assert.Equal("2026-10-08 10:00 Stranger: hello\n2026-10-08 11:00 Ola: from Design", result);
+    }
+
+    /// <summary>The scope match ignores case, as every Team comparison does.</summary>
+    [Fact]
+    public async Task Invoke_RoomScopedToThisTeamInOtherCase_IsRead()
+    {
+        CancellationToken ct = TestContext.Current.CancellationToken;
+        using Scene scene = await CreateSceneAsync(ct);
+        string roomId = await CreateRoomAsync(scene, "platform", ct);
+        await scene.Chat.AppendAsync(roomId, new ChatMessage("a", Now.AddHours(-2), "u1", "Stranger", "hello"), ct);
+
+        string result = await scene.Tool("Rae").InvokeAsync(Args(room: roomId), ct);
+
+        Assert.Equal("2026-10-08 10:00 Stranger: hello", result);
+    }
+
+    /// <summary>A Room scoped to a different Team is refused even when a member of the requested Team posted in it.</summary>
+    [Fact]
+    public async Task Invoke_RoomScopedToAnotherTeam_IsRefused()
+    {
+        CancellationToken ct = TestContext.Current.CancellationToken;
+        using Scene scene = await CreateSceneAsync(ct);
+        string roomId = await CreateRoomAsync(scene, "Design", ct);
+        await scene.Chat.AppendAsync(roomId, new ChatMessage("a", Now.AddHours(-2), "u1", "Rae", "hello"), ct);
+
+        string result = await scene.Tool("Rae").InvokeAsync(Args(room: roomId), ct);
+
+        Assert.Equal($"Room {roomId} has no messages from Team Platform.", result);
+    }
+
+    /// <summary>A root Room that exists in the directory keeps the sender rule: a Team member posting is enough to read it.</summary>
+    [Fact]
+    public async Task Invoke_RootRoomWithTeamMember_IsRead()
+    {
+        CancellationToken ct = TestContext.Current.CancellationToken;
+        using Scene scene = await CreateSceneAsync(ct);
+        string roomId = await CreateRoomAsync(scene, null, ct);
+        await scene.Chat.AppendAsync(roomId, new ChatMessage("a", Now.AddHours(-2), "u1", "Rae", "hello"), ct);
+
+        string result = await scene.Tool("Rae").InvokeAsync(Args(room: roomId), ct);
+
+        Assert.Equal("2026-10-08 10:00 Rae: hello", result);
+    }
+
+    /// <summary>A root Room that exists in the directory keeps the sender rule: with no Team member posting it is refused.</summary>
+    [Fact]
+    public async Task Invoke_RootRoomWithoutTeamMember_IsRefused()
+    {
+        CancellationToken ct = TestContext.Current.CancellationToken;
+        using Scene scene = await CreateSceneAsync(ct);
+        string roomId = await CreateRoomAsync(scene, null, ct);
+        await scene.Chat.AppendAsync(roomId, new ChatMessage("a", Now.AddHours(-2), "u1", "Stranger", "hello"), ct);
+
+        string result = await scene.Tool("Rae").InvokeAsync(Args(room: roomId), ct);
+
+        Assert.Equal($"Room {roomId} has no messages from Team Platform.", result);
+    }
+
+    /// <summary>A root Room that exists in the directory keeps the outsider rule: a member of another Team posting refuses it.</summary>
+    [Fact]
+    public async Task Invoke_RootRoomWithOutsider_IsRefused()
+    {
+        CancellationToken ct = TestContext.Current.CancellationToken;
+        using Scene scene = await CreateSceneAsync(ct);
+        string roomId = await CreateRoomAsync(scene, null, ct);
+        await scene.Chat.AppendAsync(roomId, new ChatMessage("a", Now.AddHours(-2), "u1", "Rae", "hello"), ct);
+        await scene.Chat.AppendAsync(roomId, new ChatMessage("b", Now.AddHours(-1), "u2", "Ola", "secret"), ct);
+
+        string result = await scene.Tool("Rae").InvokeAsync(Args(room: roomId), ct);
+
+        Assert.Equal($"Room {roomId} has participants outside Team Platform.", result);
+    }
+
     /// <summary>Review fix 6: a Room id the chat store rejects gives a normal refusal rather than an exception.</summary>
     [Fact]
     public async Task Invoke_InvalidRoomId_IsRefused()

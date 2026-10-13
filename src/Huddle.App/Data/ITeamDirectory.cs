@@ -75,6 +75,25 @@ public interface ITeamDirectory
 
     Task<Room> CreateRoomAsync(string name, IEnumerable<string> memberIds, CancellationToken ct = default);
 
+    /// <summary>Creates a Room scoped to a Team, or a root Room when <paramref name="team"/> is <see langword="null"/>.</summary>
+    /// <param name="name">The Room's name.</param>
+    /// <param name="memberIds">The Members' user ids.</param>
+    /// <param name="team">The Team the Room belongs to for good, or <see langword="null"/> for the root.</param>
+    /// <param name="teamRoom">Marks the Room as <paramref name="team"/>'s Team Room; at most one per Team.</param>
+    /// <param name="ct">Cancels the write.</param>
+    /// <returns>The new Room, carrying its <see cref="Room.Team"/>.</returns>
+    Task<Room> CreateRoomAsync(string name, IEnumerable<string> memberIds, string? team, bool teamRoom = false, CancellationToken ct = default);
+
+    /// <summary>Every Room scoped to <paramref name="team"/> (ignoring case), Archived ones included, oldest first.</summary>
+    /// <param name="team">The Team name.</param>
+    /// <param name="ct">Cancels the read.</param>
+    Task<IReadOnlyList<Room>> GetRoomsForTeamAsync(string team, CancellationToken ct = default);
+
+    /// <summary>The Room flagged as <paramref name="team"/>'s Team Room (ignoring case), archived or not; null when none.</summary>
+    /// <param name="team">The Team name.</param>
+    /// <param name="ct">Cancels the read.</param>
+    Task<Room?> FindTeamRoomAsync(string team, CancellationToken ct = default);
+
     Task<bool> AddMemberAsync(string roomId, string userId, CancellationToken ct = default);
 
     Task RenameRoomAsync(string roomId, string name, CancellationToken ct = default);
@@ -86,6 +105,17 @@ public interface ITeamDirectory
     /// </summary>
     Task<Room?> FindRoomWithExactMembersAsync(string humanId, string agentId, CancellationToken ct = default);
 
+    /// <summary>
+    /// <see cref="FindRoomWithExactMembersAsync(string, string, CancellationToken)"/> within one Scope: a
+    /// <see langword="null"/> <paramref name="team"/> is the root and never returns a scoped Room; a Team
+    /// returns only that Team's Rooms, matched ignoring case. The two-argument form is the root lookup.
+    /// </summary>
+    /// <param name="humanId">The Human's user id.</param>
+    /// <param name="agentId">The Agent's user id.</param>
+    /// <param name="team">The Scope to search, or <see langword="null"/> for the root.</param>
+    /// <param name="ct">Cancels the read.</param>
+    Task<Room?> FindRoomWithExactMembersAsync(string humanId, string agentId, string? team, CancellationToken ct = default);
+
     /// <summary>The oldest non-Archived Room whose Members are exactly <paramref name="memberIds"/>.</summary>
     /// <param name="memberIds">
     /// The exact Member set to match. Duplicate ids are treated as one set member each. An empty
@@ -93,6 +123,15 @@ public interface ITeamDirectory
     /// </param>
     /// <param name="ct">Cancels the read.</param>
     Task<Room?> FindRoomWithExactMemberSetAsync(IReadOnlyCollection<string> memberIds, CancellationToken ct = default);
+
+    /// <summary>
+    /// <see cref="FindRoomWithExactMemberSetAsync(IReadOnlyCollection{string}, CancellationToken)"/> within one
+    /// Scope, with the same rule as <see cref="FindRoomWithExactMembersAsync(string, string, string?, CancellationToken)"/>.
+    /// </summary>
+    /// <param name="memberIds">The exact Member set to match.</param>
+    /// <param name="team">The Scope to search, or <see langword="null"/> for the root.</param>
+    /// <param name="ct">Cancels the read.</param>
+    Task<Room?> FindRoomWithExactMemberSetAsync(IReadOnlyCollection<string> memberIds, string? team, CancellationToken ct = default);
 
     /// <summary>
     /// Archives or unarchives a Room. Archiving is a display filter only - see

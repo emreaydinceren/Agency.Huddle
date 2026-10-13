@@ -166,7 +166,11 @@
         @if (this.mode == TeammateCardMode.View)
         {
             <MudStack Row="true" Spacing="2" Wrap="Wrap.Wrap" Class="mb-2">
-                @if (this.roomId is not null)
+                @if (this.onMessage.HasDelegate)
+                {
+                    <MudButton Variant="Variant.Outlined" OnClick="this.MessageAsync">Message</MudButton>
+                }
+                else if (this.roomId is not null)
                 {
                     <MudButton Href="@($"/rooms/{this.roomId}")" Variant="Variant.Outlined">Message</MudButton>
                 }
@@ -567,6 +571,14 @@
     [Parameter]
     public string? RoomId { get; set; }
 
+    /// <summary>
+    /// When supplied, the Message action is a button that raises this (and closes the card) instead of a
+    /// link to <see cref="RoomId"/>: the Team page's Members tab opens a Team-scoped Room, which no
+    /// fixed <c>/rooms/{id}</c> known at open time could name.
+    /// </summary>
+    [Parameter]
+    public EventCallback OnMessage { get; set; }
+
     [Parameter]
     public string? FilePath { get; set; }
 
@@ -604,6 +616,14 @@
     private string? avatarPendingExtension;
 
     private string? roomId;
+    private EventCallback onMessage;
+
+    /// <summary>Raises the Message callback, then closes the card so the page it navigates to is not left behind a dialog.</summary>
+    private async Task MessageAsync()
+    {
+        await this.onMessage.InvokeAsync();
+        this.MudDialog.Close();
+    }
     private string? filePath;
     private PersonaStatus status = new(PersonaState.Offline, null, DateTimeOffset.MinValue);
 
@@ -740,6 +760,7 @@
         }
 
         this.roomId = this.RoomId;
+        this.onMessage = this.OnMessage;
         this.filePath = this.FilePath;
         this.status = this.Status;
 

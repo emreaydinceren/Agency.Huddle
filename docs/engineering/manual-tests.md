@@ -230,6 +230,7 @@ the [Tracker](manual-tests/tracker.md), never here.
 - [Startup and configuration](manual-tests/startup-config.md): start-up, configuration and first-run state.
 - [Turn streaming](manual-tests/streaming-turn.md): Drafts, Stop and failure surfacing.
 - [Tasks](manual-tests/tasks.md): creating, moving, viewing and referencing a Task.
+- [Team chats](manual-tests/team-chats.md): the Team Room, Team chats in the sidebar, the Members-tab Message, archiving and Task wakes and digests in a Team's Room.
 - [Teams](manual-tests/team-pages.md): the sidebar, Members, Files, Tasks and Shared Memory.
 - [Teammate card](manual-tests/teammate-card.md): view, edit, create and delete.
 - [Global Search](manual-tests/global-search.md): the search box, the dropdown and the jump to a Message.

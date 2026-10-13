@@ -12,14 +12,22 @@ internal static class TeamNames
     /// <summary>The error message when a Project name is the reserved memory folder.</summary>
     public const string MemoryReservedProblem = "\"memory\" is reserved for the Team's shared Memory.";
 
+    /// <summary>The folder name reserved for files shared in a Team's chats; visible in the Library, never a Project.</summary>
+    public const string UploadsFolder = "Uploads";
+
+    /// <summary>The error message when a Project name is the reserved Uploads folder.</summary>
+    public const string UploadsReservedProblem = "\"Uploads\" is reserved for files shared in a Team's chats.";
+
     /// <summary>
-    /// Checks if a name is reserved for Projects: either a reserved folder name (starting with _ or .)
-    /// or the memory folder (case-insensitive).
+    /// Checks if a name is reserved for Projects: either a reserved folder name (starting with _ or .),
+    /// the memory folder, or the Uploads folder (case-insensitive).
     /// </summary>
     /// <param name="name">The Project name to check.</param>
     /// <returns>True when the name is reserved for Projects.</returns>
     public static bool IsReservedProjectName(string name) =>
-        TaskLayout.IsReservedFolderName(name) || string.Equals(name, MemoryFolder, StringComparison.OrdinalIgnoreCase);
+        TaskLayout.IsReservedFolderName(name)
+        || string.Equals(name, MemoryFolder, StringComparison.OrdinalIgnoreCase)
+        || string.Equals(name, UploadsFolder, StringComparison.OrdinalIgnoreCase);
 
     /// <summary>
     /// Validates a Team name against the naming rules. Returns null if the name is valid,
@@ -80,6 +88,12 @@ internal static class TeamNames
         if (string.Equals(name, MemoryFolder, StringComparison.OrdinalIgnoreCase))
         {
             return MemoryReservedProblem;
+        }
+
+        // 2b. Check if the name is the reserved Uploads folder (case-insensitive)
+        if (string.Equals(name, UploadsFolder, StringComparison.OrdinalIgnoreCase))
+        {
+            return UploadsReservedProblem;
         }
 
         // 3. Check for reserved Project-level prefixes

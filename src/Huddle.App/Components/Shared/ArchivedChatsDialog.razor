@@ -50,7 +50,7 @@
                     }
                     else
                     {
-                        <MudText Typo="Typo.body1" Class="flex-1-truncate">@room.Name</MudText>
+                        <MudText Typo="Typo.body1" Class="flex-1-truncate">@(room.Team is null ? room.Name : $"{room.Name} · {room.Team}")</MudText>
                         <MudButton Size="Size.Small" Variant="Variant.Outlined" Disabled="this.busy" OnClick="@(() => this.UnarchiveAsync(room.Id))">Unarchive</MudButton>
                         <MudTooltip Text="Delete">
                             <MudIconButton Icon="@Icons.Material.Filled.Delete" Color="Color.Error" Size="Size.Small"
