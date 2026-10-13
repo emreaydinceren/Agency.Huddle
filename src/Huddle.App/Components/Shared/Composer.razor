@@ -50,7 +50,7 @@
         </div>
     }
     <div class="@(this.AttachmentsAvailable ? "composer-box composer-box-attach" : "composer-box")">
-        <textarea @ref="this.textarea" class="composer-input" placeholder="Message… (/invite @@agent)"
+        <textarea @ref="this.textarea" class="composer-input" rows="3" placeholder="Message… (/invite @@agent)"
                   role="combobox" aria-autocomplete="list"
                   aria-expanded="@(this.pickerOpen ? "true" : "false")"
                   aria-controls="@(this.pickerOpen ? this.listboxId : null)"
