@@ -57,7 +57,7 @@
 
     private void OnTabsChanged()
     {
-        _ = this.DispatchAsync(this.SaveAsync);
+        _ = RendererDispatch.RunAsync(this.InvokeAsync,this.SaveAsync);
     }
 
     private async Task SaveAsync()
@@ -70,10 +70,5 @@
         {
             // The circuit is gone; the last save before it is what the next load restores.
         }
-    }
-
-    private Task DispatchAsync(Func<Task> action)
-    {
-        return RendererDispatch.RunAsync(this.InvokeAsync, action);
     }
 }

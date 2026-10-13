@@ -97,15 +97,7 @@
     /// </summary>
     private async Task CopyLinkAsync()
     {
-        bool copied = await this.JS.InvokeAsync<bool>("huddleClipboard.copy", Agency.Huddle.App.References.RoomLinkText.For(this.Room));
-        if (copied)
-        {
-            this.Snackbar.Add($"Copied link to {this.Room.Name}", Severity.Success, configure: null, key: "copy");
-        }
-        else
-        {
-            this.Snackbar.Add("Couldn't copy the link.", Severity.Warning, configure: null, key: "copy");
-        }
+        await RoomLinkCopier.CopyAsync(this.JS, this.Snackbar, this.Room, CancellationToken.None);
     }
 
     private async Task ArchiveAsync()

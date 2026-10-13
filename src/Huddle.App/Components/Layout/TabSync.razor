@@ -40,7 +40,7 @@
 
     private void OnCatalogChanged()
     {
-        _ = this.DispatchAsync(() =>
+        _ = RendererDispatch.RunAsync(this.InvokeAsync,() =>
         {
             this.CloseMissingTeams();
             return Task.CompletedTask;
@@ -59,7 +59,7 @@
 
     private void OnChanged()
     {
-        _ = this.DispatchAsync(this.ReconcileAsync);
+        _ = RendererDispatch.RunAsync(this.InvokeAsync,this.ReconcileAsync);
     }
 
     private async Task ReconcileAsync()
@@ -92,8 +92,4 @@
         }
     }
 
-    private Task DispatchAsync(Func<Task> action)
-    {
-        return RendererDispatch.RunAsync(this.InvokeAsync, action);
-    }
 }

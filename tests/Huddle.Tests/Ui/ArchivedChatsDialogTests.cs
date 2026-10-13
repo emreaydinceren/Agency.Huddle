@@ -123,7 +123,7 @@ public sealed class ArchivedChatsDialogTests
 
         await using var ctx = NewContext(directory, chat, events);
         var cut = await OpenDialogAsync(ctx);
-        await cut.InvokeAsync(() => cut.Find("button[aria-label='Delete']").ClickAsync());
+        await cut.InvokeAsync(() => cut.Find("button[aria-label^='Delete ']").ClickAsync());
 
         Assert.NotNull(await directory.GetRoomAsync(room.Id, ct));
         Assert.Contains(cut.FindAll("button"), button => string.Equals(button.TextContent.Trim(), "Confirm", StringComparison.Ordinal));
@@ -146,7 +146,7 @@ public sealed class ArchivedChatsDialogTests
 
         await using var ctx = NewContext(directory, chat, events);
         var cut = await OpenDialogAsync(ctx);
-        await cut.InvokeAsync(() => cut.Find("button[aria-label='Delete']").ClickAsync());
+        await cut.InvokeAsync(() => cut.Find("button[aria-label^='Delete ']").ClickAsync());
         await cut.InvokeAsync(() => cut.FindAll("button").First(button => string.Equals(button.TextContent.Trim(), "Confirm", StringComparison.Ordinal)).ClickAsync());
 
         Assert.Null(await directory.GetRoomAsync(room.Id, ct));
@@ -198,7 +198,7 @@ public sealed class ArchivedChatsDialogTests
 
         await using var ctx = NewContext(directory, chat, events);
         var cut = await OpenDialogAsync(ctx);
-        await cut.InvokeAsync(() => cut.Find("button[aria-label='Delete']").ClickAsync());
+        await cut.InvokeAsync(() => cut.Find("button[aria-label^='Delete ']").ClickAsync());
 
         Assert.Equal($"Delete \"{room.Name}\"? {sentence}", cut.Find(".inline-confirm-prompt").TextContent.Trim());
     }
@@ -221,7 +221,7 @@ public sealed class ArchivedChatsDialogTests
 
         await using var ctx = NewContext(directory, chat, events);
         var cut = await OpenDialogAsync(ctx);
-        await cut.InvokeAsync(() => cut.Find("button[aria-label='Delete']").ClickAsync());
+        await cut.InvokeAsync(() => cut.Find("button[aria-label^='Delete ']").ClickAsync());
 
         Assert.Equal($"Delete \"{room.Name}\"?", cut.Find(".inline-confirm-prompt").TextContent.Trim());
     }

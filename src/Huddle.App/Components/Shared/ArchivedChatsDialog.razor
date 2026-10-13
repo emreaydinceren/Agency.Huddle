@@ -16,16 +16,14 @@
 *@
 
 @implements IDisposable
+@using Agency.Huddle.App.Components.Shared.Dialogs
 @inject ITeamDirectory TeamDirectory
 @inject ChatService ChatService
 @inject RoomEvents Events
 
 <MudDialog>
     <TitleContent>
-        <MudStack Row="true" Justify="Justify.SpaceBetween" AlignItems="AlignItems.Center" Class="w-100">
-            <MudText Typo="Typo.h6">Archived chats</MudText>
-            <MudIconButton Icon="@Icons.Material.Filled.Close" Size="Size.Small" title="Close" aria-label="Close" OnClick="this.Close" />
-        </MudStack>
+        <MudText Typo="Typo.h6">Archived chats</MudText>
     </TitleContent>
     <DialogContent>
         @if (this.error is not null)
@@ -36,7 +34,7 @@
 
         @if (this.rooms.Count == 0)
         {
-            <MudText Typo="Typo.body2" Class="empty-state">No archived chats.</MudText>
+            <EmptyState Text="No archived chats." />
         }
         else
         {
@@ -54,7 +52,7 @@
                         <MudButton Size="Size.Small" Variant="Variant.Outlined" Disabled="this.busy" OnClick="@(() => this.UnarchiveAsync(room.Id))">Unarchive</MudButton>
                         <MudTooltip Text="Delete">
                             <MudIconButton Icon="@Icons.Material.Filled.Delete" Color="Color.Error" Size="Size.Small"
-                                           aria-label="Delete" OnClick="@(() => this.BeginDelete(room.Id))" />
+                                           aria-label="@($"Delete {room.Name}")" OnClick="@(() => this.BeginDelete(room.Id))" />
                         </MudTooltip>
                     }
                 </div>
@@ -64,16 +62,8 @@
 </MudDialog>
 
 @code {
-    /// <summary>The <see cref="DialogOptions"/> this dialog opens with - mirrors <see cref="Agency.Huddle.App.Components.Shared.TeammateCard.Options"/>.</summary>
-    public static readonly DialogOptions Options = new()
-    {
-        MaxWidth = MaxWidth.Small,
-        FullWidth = true,
-        CloseOnEscapeKey = true,
-    };
-
-    [CascadingParameter]
-    private IMudDialogInstance MudDialog { get; set; } = default!;
+    /// <summary>The <see cref="DialogOptions"/> this dialog opens with: the shared picker options, with the close button (UX-022).</summary>
+    public static readonly DialogOptions Options = HuddleDialogOptions.Picker;
 
     private IReadOnlyList<Room> rooms = [];
     private string? confirmingDeleteRoomId;
@@ -95,7 +85,7 @@
 
     private void OnRoomsChanged()
     {
-        _ = this.DispatchAsync(async () =>
+        _ = RendererDispatch.RunAsync(this.InvokeAsync,async () =>
         {
             await this.LoadAsync();
             this.StateHasChanged();
@@ -107,11 +97,6 @@
     {
         var all = await this.TeamDirectory.GetRoomsAsync();
         this.rooms = [.. all.Where(room => room.Archived).OrderByDescending(room => room.Created)];
-    }
-
-    private void Close()
-    {
-        this.MudDialog.Close();
     }
 
     private async Task UnarchiveAsync(string roomId)
@@ -173,10 +158,5 @@
         {
             this.busy = false;
         }
-    }
-
-    private Task DispatchAsync(Func<Task> action)
-    {
-        return RendererDispatch.RunAsync(this.InvokeAsync, action);
     }
 }
