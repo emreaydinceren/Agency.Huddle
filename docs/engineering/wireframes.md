@@ -172,8 +172,8 @@ error alert, the budget caption and the "continue" notes, which sit in the `C9` 
 | Code | Name | Component | Notes |
 | --- | --- | --- | --- |
 | `T1` | Page container | `MudContainer`, full width, `pa-4` | |
-| `T2` | Header | `.tasks-header` | View name as an `h1`, then its controls |
-| `T2a` | View actions | `MudFabMenu` | Edit task view, Delete task view |
+| `T2` | Header | `PageHeader` inside `.tasks-header` | View name as the page's `h1`; its description, Reset filters, the AI chip and `T2a` sit on the right |
+| `T2a` | View actions | `MudMenu`, `MoreVert` icon button | Edit view, Delete view (the same menu as the sidebar row) |
 | `T2b` | Reset | `MudLink` | Appears only when the Human has overridden the View |
 | `T2c` | AI reacting chip | `AiReactingChip` | Tasks an Agent is acting on |
 | `T9` | Notices | `MudAlert`, `WakeToasts` | Tasks off, invalid or missing View, load errors, ignored lines |
@@ -188,11 +188,11 @@ error alert, the budget caption and the "continue" notes, which sit in the `C9` 
 | `T4` | Content | `TaskBoard` or `TaskListView` | Or an empty state with "Reset filters" |
 | `T5` | Column | A `MudDropZone` per lane and column | Header with a label the Human can rename |
 | `T6` | Task card | `TaskCard`, `MudBadge` | Draggable between columns |
-| `T7` | Task detail | `MudDrawer`, temporary, `Anchor.End` | Holds `TaskDetail` |
-| `T7a` | Resize handle | `.tasks-detail-resize-handle`, `role="separator"` | Drag to change the drawer's width |
+| `T7` | Task detail | `ResizableEndDrawer`, temporary, `Anchor.End` | Header with title ("Task" or "New task") and a close button; holds `TaskDetail` in `pa-4` |
+| `T7a` | Resize handle | `.resizable-drawer-handle`, `role="separator"`, `tabindex="0"` | Drag, or press Left and Right (Shift for larger steps, Home and End for the limits), to change the drawer's width |
 
-Not drawn: the View editor, `ViewEditorDrawer`, which opens from the same edge as `T7`
-and also resizes; and `TaskDetailDialog`, the dialog form of the detail (see Figure 8).
+Not drawn: the View editor, `ViewEditorDrawer`, which is a `ResizableEndDrawer` too (titled
+"Edit view" or "New view") and opens from the same edge as `T7`; and `TaskDetailDialog`, the dialog form of the detail (see Figure 8).
 
 ## Figure 5: The Library page
 

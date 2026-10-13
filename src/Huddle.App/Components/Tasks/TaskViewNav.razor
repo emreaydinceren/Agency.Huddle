@@ -157,12 +157,7 @@
     /// <param name="view">The View to delete.</param>
     private async Task DeleteViewAsync(TaskView view)
     {
-        bool? confirmed = await this.DialogService.ShowMessageBoxAsync(
-            "Delete View",
-            $"Delete '{view.Name}'? Tasks are not affected.",
-            yesText: "Delete",
-            cancelText: "Cancel");
-        if (confirmed != true)
+        if (!await ViewActions.ConfirmDeleteAsync(this.DialogService, view))
         {
             return;
         }

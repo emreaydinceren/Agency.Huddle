@@ -1862,42 +1862,6 @@ a.team-ref,
     user-select: all;
 }
 
-/* ---- The View's own actions menu, beside the Tasks page title ----------------------------------
-   MudFabMenu positions each item absolutely under its button and lets the label wrap inside a pill
-   only as wide as its first word, so "Edit task view" broke over three lines. Nowrap gives each
-   item its natural width; the component's own AlignItems.Start makes that width extend rightwards
-   from the button instead of overhanging the title on the left. The default-coloured item is
-   painted by MudBlazor as a 6% black wash, which lets the toolbar behind it show through where the
-   menu overlaps it; the theme's surface colour makes it opaque under every Theme. */
-.tasks-view-menu .mud-fab-menu-item {
-    white-space: nowrap;
-}
-
-.tasks-view-menu .mud-fab-menu-item.mud-fab-default {
-    background-color: var(--mud-palette-surface);
-}
-
-/* Size.Small is still a 40px button (34px for the extended item pills) with a 1.25rem icon, larger
-   than the page title beside it wants. Everything here is 80% of that: 32px, 27px and 1rem. The
-   .mud-fab base rule's min-height:36px would otherwise stop the button shrinking below 36px. */
-.tasks-view-menu .mud-fab.mud-fab-size-small {
-    width: 32px;
-    height: 32px;
-    min-height: 0;
-}
-
-.tasks-view-menu .mud-fab.mud-fab-extended.mud-fab-size-small {
-    width: auto;
-    height: 27px;
-    min-width: 27px;
-    padding: 0 0.75rem;
-    border-radius: 999px;
-}
-
-.tasks-view-menu .mud-fab.mud-fab-size-small .mud-icon-root {
-    font-size: var(--mud-typography-body1-size);
-}
-
 /* ---- The Task detail panel: comfortable margins around and between its fields -----------------
    Every field TaskDetail.razor renders in Panel mode (fieldsContent/sideContent) is a flat sibling
    directly under .task-detail - there is no per-field wrapper to carry spacing of its own - so this
@@ -1938,23 +1902,26 @@ a.team-ref,
     border-block-end: 1px solid var(--mud-palette-lines-default);
 }
 
-/* ---- The Task detail panel's drag-to-resize width ---------------------------------------------
+/* ---- ResizableEndDrawer: the Task detail panel and the View editor (UX-R05, UX-V10) -----------
    MudBlazor's own compiled CSS (Drawer.min.css, package 9.10.0) reads a Temporary drawer's width
    from "var(--mud-drawer-width, var(--mud-drawer-width-right))" - an instance-level override this
    rule declares a default for, and huddleResize.attachDrawer (app.js) then reassigns directly on
-   drag, restoring a saved width from localStorage with no round trip to the server on every
-   pointermove. huddleResize finds the drawer itself via ".mud-drawer", so this handle only needs
-   to sit inside it. */
-.tasks-detail-drawer {
+   drag or arrow key, restoring a saved width from localStorage with no round trip to the server.
+   huddleResize finds the drawer itself via ".mud-drawer", so the handle only needs to sit inside it. */
+.resizable-drawer {
     --mud-drawer-width: 420px;
+}
+
+/* The Task detail's own panel padding would double the drawer's pa-4 around its content. */
+.resizable-drawer .task-detail {
+    padding: 0;
 }
 
 /* A strip straddling the drawer's left (content-facing) edge - Anchor.End puts the drawer on the
    right, so dragging this leftward is what grows it. The 8px width is the pointer target, wider
-   than the visible line it carries so the target stays comfortable to grab; the line itself
-   (::before) is what makes the strip read as draggable at rest, not just once the pointer finds
-   it - a hover-only cue is what the panel shipped with first and it read as invisible. */
-.tasks-detail-resize-handle {
+   than the visible line it carries; the line itself (::before) is what makes the strip read as
+   draggable at rest. The handle takes keyboard focus (tabindex 0), where the arrow keys resize. */
+.resizable-drawer-handle {
     position: absolute;
     top: 0;
     left: -4px;
@@ -1965,7 +1932,7 @@ a.team-ref,
     touch-action: none;
 }
 
-.tasks-detail-resize-handle::before {
+.resizable-drawer-handle::before {
     content: "";
     position: absolute;
     top: 0;
@@ -1975,47 +1942,19 @@ a.team-ref,
     background-color: var(--mud-palette-action-default);
 }
 
-.tasks-detail-resize-handle:hover::before,
-.tasks-detail-resize-handle:active::before {
+.resizable-drawer-handle:hover::before,
+.resizable-drawer-handle:active::before,
+.resizable-drawer-handle:focus-visible::before {
     left: 2px;
     width: 5px;
     background-color: var(--mud-palette-primary);
 }
 
-/* ---- The View editor drawer: drag-to-resize width and single-line Fields rows ----------------
-   Same mechanism as .tasks-detail-drawer above: huddleResize.attachDrawer (app.js) reassigns
-   --mud-drawer-width on drag. The handle reuses the detail panel's look. */
-.view-editor-drawer {
-    --mud-drawer-width: 420px;
+.resizable-drawer-handle:focus-visible {
+    outline: none;
 }
 
-.view-editor-resize-handle {
-    position: absolute;
-    top: 0;
-    left: -4px;
-    z-index: 1;
-    width: 8px;
-    height: 100%;
-    cursor: ew-resize;
-    touch-action: none;
-}
-
-.view-editor-resize-handle::before {
-    content: "";
-    position: absolute;
-    top: 0;
-    left: 3px;
-    width: 3px;
-    height: 100%;
-    background-color: var(--mud-palette-action-default);
-}
-
-.view-editor-resize-handle:hover::before,
-.view-editor-resize-handle:active::before {
-    left: 2px;
-    width: 5px;
-    background-color: var(--mud-palette-primary);
-}
+/* ---- The View editor: single-line Fields rows -------------------------------------------------- */
 
 /* A Fields row is one line - switch, name, then the move and remove buttons - never wrapped. The
    name takes the slack and truncates before the buttons are pushed onto a second line. */
