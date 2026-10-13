@@ -1042,20 +1042,20 @@ Ids are `<deliverable number>.<task>`, the form `Set-Tracker.ps1` updates:
 `pwsh -NoProfile -File agents/scripts/Set-Tracker.ps1 -Task "12.3" -State Done -TrackerPath docs/engineering/UX-Issues-Plan.md`.
 `(H)` is Haiku, `(S)` is Sonnet.
 
-**Status:** 0 of 141 tasks Done · 0 of 2 retrospectives done · last updated 2026-10-13.
+**Status:** 18 of 141 tasks Done · 0 of 2 retrospectives done · last updated 2026-10-13.
 
 | **Deliverable / Task** | **Model** | **Depends on** | **Active** | **In Progress** | **Done** |
 | --- | --- | --- | --- | --- | --- |
 | **U0 Convention test and baselines** | Sonnet | none | | | |
-| 0.1 Scanner tests (S) | Sonnet | none | | | |
-| 0.2 Scanner (S) | Sonnet | 0.1 | | | |
-| 0.3 Baseline tests (S) | Sonnet | 0.2 | | | |
-| 0.4 Generate baselines (S) | Sonnet | 0.3 | | | |
-| 0.5 Mutation proofs (S) | Sonnet | 0.4 | | | |
+| 0.1 Scanner tests (S) | Sonnet | none | | | ✔ |
+| 0.2 Scanner (S) | Sonnet | 0.1 | | | ✔ |
+| 0.3 Baseline tests (S) | Sonnet | 0.2 | | | ✔ |
+| 0.4 Generate baselines (S) | Sonnet | 0.3 | | | ✔ |
+| 0.5 Mutation proofs (S) | Sonnet | 0.4 | | | ✔ |
 | **U1 Doc decisions** | Haiku | none | | | |
-| 1.1 language.md (H) | Haiku | none | | | |
-| 1.2 Picker dialog row (H) | Haiku | none | | | |
-| 1.3 Agent cards exception (H) | Haiku | none | | | |
+| 1.1 language.md (H) | Haiku | none | | | ✔ |
+| 1.2 Picker dialog row (H) | Haiku | none | | | ✔ |
+| 1.3 Agent cards exception (H) | Haiku | none | | | ✔ |
 | **U2 CSS: tokens** | Haiku | U0 | | | |
 | 2.1 Red (H) | Haiku | U0 | | | |
 | 2.2 Radii (H) | Haiku | 2.1 | | | |
@@ -1081,17 +1081,17 @@ Ids are `<deliverable number>.<task>`, the form `Set-Tracker.ps1` updates:
 | 5.4 ConfirmDialog (S) | Sonnet | 5.2 | | | |
 | 5.5 Catalog summary (S) | Sonnet | 5.3, 5.4 | | | |
 | **U6 Small components** | Haiku | none | | | |
-| 6.1 Red (H) | Haiku | none | | | |
-| 6.2 PageHeader (H) | Haiku | 6.1 | | | |
-| 6.3 EmptyState (H) | Haiku | 6.1 | | | |
-| 6.4 SearchField (H) | Haiku | 6.1 | | | |
-| 6.5 StatusDot and TeammateLabel (H) | Haiku | 6.1 | | | |
+| 6.1 Red (H) | Haiku | none | | | ✔ |
+| 6.2 PageHeader (H) | Haiku | 6.1 | | | ✔ |
+| 6.3 EmptyState (H) | Haiku | 6.1 | | | ✔ |
+| 6.4 SearchField (H) | Haiku | 6.1 | | | ✔ |
+| 6.5 StatusDot and TeammateLabel (H) | Haiku | 6.1 | | | ✔ |
 | **U7 Pure helpers** | Haiku | none | | | |
-| 7.1 Red (H) | Haiku | none | | | |
-| 7.2 Plural and ByteSize (H) | Haiku | 7.1 | | | |
-| 7.3 TimeLabel and FileName (H) | Haiku | 7.1 | | | |
-| 7.4 ActionIcons, StatusColors, RoomLinkCopier (H) | Haiku | 7.1 | | | |
-| 7.5 Repaint (H) | Haiku | 7.1 | | | |
+| 7.1 Red (H) | Haiku | none | | | ✔ |
+| 7.2 Plural and ByteSize (H) | Haiku | 7.1 | | | ✔ |
+| 7.3 TimeLabel and FileName (H) | Haiku | 7.1 | | | ✔ |
+| 7.4 ActionIcons, StatusColors, RoomLinkCopier (H) | Haiku | 7.1 | | | ✔ |
+| 7.5 Repaint (H) | Haiku | 7.1 | | | ✔ |
 | **U8 Shell: mechanical pass** | Haiku | U0, U5, U6, U7 | | | |
 | 8.1 Red (H) | Haiku | U0 | | | |
 | 8.2 Attributes, roles, keys, icons (H) | Haiku | 8.1 | | | |
