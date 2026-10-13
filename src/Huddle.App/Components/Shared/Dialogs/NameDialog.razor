@@ -1,0 +1,124 @@
+@*
+    The one single-field name dialog (UX-024, UX-025): Outlined Dense field with AutoFocus, live validation
+    through the feature's pure validator (the TRIMMED text is validated and submitted), Enter submits like the
+    primary, and an error returned by SubmitAsync shows in a Dense MudAlert role="alert" and keeps the dialog
+    open. Open it with HuddleDialogOptions.SmallForm; the title is the caller's.
+*@
+
+<MudDialog>
+    <DialogContent>
+        <MudStack Spacing="2">
+            <MudTextField T="string" Label="@this.Label" Variant="Variant.Outlined" Margin="Margin.Dense"
+                          AutoFocus="true" Immediate="true" Value="this.text" ValueChanged="this.OnTextChanged"
+                          Error="@(this.problem is not null)" ErrorText="@this.problem" OnKeyDown="this.OnKeyDown" />
+            @this.ChildContent
+            @if (this.submitError is not null)
+            {
+                <MudAlert Severity="Severity.Error" Dense="true" role="alert">@this.submitError</MudAlert>
+            }
+        </MudStack>
+    </DialogContent>
+    <DialogActions>
+        <MudButton Variant="Variant.Text" Size="Size.Small" OnClick="this.Cancel">Cancel</MudButton>
+        <MudButton Variant="Variant.Filled" Size="Size.Small" Color="Color.Primary" Disabled="@(!this.CanSubmit)" OnClick="this.SubmitAsyncCore">@this.ConfirmText</MudButton>
+    </DialogActions>
+</MudDialog>
+
+@code {
+    [CascadingParameter]
+    private IMudDialogInstance? Dialog { get; set; }
+
+    /// <summary>The field's label.</summary>
+    [Parameter]
+    public string Label { get; set; } = string.Empty;
+
+    /// <summary>The primary button's text (a verb: "Create", "Rename").</summary>
+    [Parameter]
+    public string ConfirmText { get; set; } = string.Empty;
+
+    /// <summary>The text the field starts with.</summary>
+    [Parameter]
+    public string InitialValue { get; set; } = string.Empty;
+
+    /// <summary>The feature's pure validator over the trimmed text: a problem, or <see langword="null"/> when fine.</summary>
+    [Parameter]
+    public Func<string, string?>? Validate { get; set; }
+
+    /// <summary>The action: returns an error to show above the actions, or <see langword="null"/> on success.</summary>
+    [Parameter]
+    public required Func<string, Task<string?>> SubmitAsync { get; set; }
+
+    /// <summary>Optional extra content under the field.</summary>
+    [Parameter]
+    public RenderFragment? ChildContent { get; set; }
+
+    private string text = string.Empty;
+    private string? problem;
+    private string? submitError;
+    private bool busy;
+    private bool initialised;
+
+    private bool CanSubmit => !this.busy && this.text.Trim().Length > 0 && this.problem is null;
+
+    /// <summary>Takes the initial value once, and validates it when it is not empty.</summary>
+    protected override void OnParametersSet()
+    {
+        if (this.initialised)
+        {
+            return;
+        }
+
+        this.initialised = true;
+        this.text = this.InitialValue;
+        this.problem = this.ProblemFor(this.text);
+    }
+
+    private string? ProblemFor(string value)
+    {
+        string trimmed = value.Trim();
+        return trimmed.Length == 0 ? null : this.Validate?.Invoke(trimmed);
+    }
+
+    private void OnTextChanged(string? value)
+    {
+        this.text = value ?? string.Empty;
+        this.problem = this.ProblemFor(this.text);
+        this.submitError = null;
+    }
+
+    private async Task OnKeyDown(KeyboardEventArgs e)
+    {
+        if (string.Equals(e.Key, "Enter", StringComparison.Ordinal))
+        {
+            await this.SubmitAsyncCore();
+        }
+    }
+
+    /// <summary>Runs <see cref="SubmitAsync"/> with the trimmed text when the name is valid; closes OK on success, shows the error otherwise.</summary>
+    private async Task SubmitAsyncCore()
+    {
+        if (!this.CanSubmit)
+        {
+            return;
+        }
+
+        this.busy = true;
+        this.submitError = null;
+        string trimmed = this.text.Trim();
+        try
+        {
+            this.submitError = await this.SubmitAsync(trimmed);
+        }
+        finally
+        {
+            this.busy = false;
+        }
+
+        if (this.submitError is null)
+        {
+            this.Dialog?.Close(DialogResult.Ok(trimmed));
+        }
+    }
+
+    private void Cancel() => this.Dialog?.Cancel();
+}
