@@ -119,6 +119,8 @@ that exercise it. All are **chat** unless stated.
 | [decisions.md](engineering/decisions.md) | The decision record and the old-to-new vocabulary mapping | chat | ~6.3k |
 | [analyzer-decisions.md](engineering/analyzer-decisions.md) | Which compiler and Sonar rules are off or on, what each group rests on, and which are proven to fire | chat | ~4.5k |
 | [wireframes.md](engineering/wireframes.md) | The code and name of every UI container, drawn as SVG wireframes from the shell down to each page and overlay | chat | ~4k |
+| [UX-Issues.md](engineering/UX-Issues.md) | The audit of `src/Huddle.App` against the design system: inconsistencies, reuse opportunities, violations and documentation drift, one row each | chat | ~20k |
+| [UX-Issues-Plan.md](engineering/UX-Issues-Plan.md) | The delivery plan that closes every row of UX-Issues.md: deliverables U0 to U28, the convention test, row ownership and the tracker | chat | ~40k |
 | [UXDesignGuidelines.md](engineering/UXDesignGuidelines.md) | The hub for UI work: which document owns which answer, the reading order by task, the order of authority, and how to check a change in the running app; a catalog of every reusable component, helper and stylesheet class | chat | ~7.5k |
 | [design-system.md](engineering/design-system.md) | **Binding** for UI. The tokens, type roles, spacing, shape, elevation, icons, layout, overlay anatomy, component defaults, interface copy and stylesheet rules, with a checklist | chat | ~10k |
 | [mudblazor.md](engineering/mudblazor.md) | Which MudBlazor facts were checked against the package | chat | small |
