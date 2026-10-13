@@ -44,15 +44,18 @@ public sealed class AppCssReferencesTests
             "Expected .composer-picker in the zoom comment above html { zoom: 0.9; }.");
     }
 
-    /// <summary>A Room link and a Team link take the same declarations as <c>.task-ref</c>.</summary>
+    /// <summary>
+    /// A Room link and a Team link take the same declarations as <c>.task-ref</c> because one
+    /// shared <c>.ref-link</c> rule lists all of them (UX-R22).
+    /// </summary>
     [Fact]
     public void RoomAndTeamRefs_StyledLikeTaskRef()
     {
         string text = ReadAppCss();
-        string taskBody = RuleBody(text, ".task-ref {");
-        string refBody = RuleBody(text, "a.room-ref, a.team-ref {");
 
-        Assert.Equal(taskBody, refBody);
+        Assert.Matches(@"\.task-ref,\s*\.library-ref,\s*a\.room-ref,\s*a\.team-ref,\s*\.ref-link\s*\{", text);
+
+        Assert.Matches(@"\.ref-link\s*\{[^}]*text-decoration:\s*underline dotted", text);
     }
 
     /// <summary>Reads <c>app.css</c> as the source fact every test in this class pins.</summary>
@@ -77,19 +80,5 @@ public sealed class AppCssReferencesTests
         int classIndex = block.IndexOf(".composer-picker {", StringComparison.Ordinal);
         Assert.True(classIndex >= 0, "Expected a .composer-picker rule in the References block.");
         return block[classIndex..(block.IndexOf('}', classIndex) + 1)];
-    }
-
-    /// <summary>Returns the declarations of the first rule with the given selector, without the braces.</summary>
-    /// <param name="text">The whole stylesheet.</param>
-    /// <param name="selector">The selector with its opening brace, as written in the stylesheet.</param>
-    /// <returns>The text between the braces, trimmed.</returns>
-    private static string RuleBody(string text, string selector)
-    {
-        int start = text.IndexOf(selector, StringComparison.Ordinal);
-        Assert.True(start >= 0, $"Expected a rule '{selector}' in app.css.");
-        int open = start + selector.Length;
-        int close = text.IndexOf('}', open);
-        Assert.True(close > open, $"Expected the rule '{selector}' to be closed.");
-        return text[open..close].Trim();
     }
 }
