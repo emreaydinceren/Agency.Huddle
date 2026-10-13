@@ -1,5 +1,5 @@
 CV11|src/Huddle.App/Components/Layout/MainLayout.razor.css|1
-CV11|src/Huddle.App/Components/Layout/ReconnectModal.razor.css|4
-CV11|src/Huddle.App/Components/Shared/HuddleSegmentedControl.razor.css|16
-CV11|src/Huddle.App/Components/Teams/TeamsNav.razor.css|2
-CV11|src/Huddle.App/wwwroot/app.css|93
+CV11|src/Huddle.App/Components/Layout/ReconnectModal.razor.css|1
+CV11|src/Huddle.App/Components/Shared/HuddleSegmentedControl.razor.css|11
+CV11|src/Huddle.App/Components/Teams/TeamsNav.razor.css|1
+CV11|src/Huddle.App/wwwroot/app.css|13

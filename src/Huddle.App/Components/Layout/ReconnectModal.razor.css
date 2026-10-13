@@ -25,7 +25,7 @@
     margin: 20vh auto;
     padding: 2rem;
     border: 0;
-    border-radius: 0.5rem;
+    border-radius: var(--mud-default-borderradius);
     box-shadow: var(--mud-elevation-8);
     opacity: 0;
     transition: display 0.5s allow-discrete, overlay 0.5s allow-discrete;
@@ -89,8 +89,8 @@
     border: 0;
     background-color: var(--mud-palette-primary);
     color: var(--mud-palette-primary-text);
-    padding: 4px 24px;
-    border-radius: 4px;
+    padding: 0.25rem 1.5rem;
+    border-radius: var(--mud-default-borderradius);
 }
 
     #components-reconnect-modal button:hover {

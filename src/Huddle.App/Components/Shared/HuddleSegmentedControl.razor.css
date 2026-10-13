@@ -2,8 +2,8 @@
     position: relative;
     display: inline-flex;
     background-color: var(--mud-palette-background-gray);
-    border-radius: 8px;
-    padding: 3px;
+    border-radius: var(--mud-default-borderradius);
+    padding: 0.25rem;
 }
 
 .huddle-segmented-indicator {
@@ -13,7 +13,7 @@
     left: 3px;
     background-color: var(--mud-palette-surface);
     border: 1px solid var(--mud-palette-lines-default);
-    border-radius: 6px;
+    border-radius: calc(var(--mud-default-borderradius) * 0.75);
     box-shadow: var(--mud-elevation-1);
     transition: transform 0.3s cubic-bezier(0.4, 0.0, 0.2, 1);
     z-index: 1;
@@ -35,10 +35,10 @@
 ::deep .huddle-segmented-group .mud-toggle-item {
     flex: 1 1 0;
     text-align: center;
-    border-radius: 6px;
+    border-radius: calc(var(--mud-default-borderradius) * 0.75);
     border: none !important;
     background: transparent !important;
-    padding: 2px 12px;
+    padding: 2px 0.75rem;
     min-height: unset;
     position: relative;
     z-index: 2;

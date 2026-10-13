@@ -77,8 +77,8 @@ button:focus-visible {
 
 .agent-dot {
     display: inline-block;
-    width: 0.6rem;
-    height: 0.6rem;
+    width: 0.5rem;
+    height: 0.5rem;
     border-radius: 50%;
     background: var(--mud-palette-error);
 }
@@ -129,7 +129,7 @@ button:focus-visible {
    drawn like the TopBar's bottom border. The vertical padding is 0.22rem rather than the 1rem of
    MudBlazor's pa-4, which takes about 35% off the bar's height (about 72px down to about 47px). */
 .room-header {
-    padding-block: 0.22rem;
+    padding-block: 0.25rem;
     border-bottom: 2px solid var(--mud-palette-lines-default);
 }
 
@@ -200,7 +200,7 @@ button:focus-visible {
     align-items: center;
     column-gap: 1rem;
     width: 100%;
-    font-size: 0.75rem;
+    font-size: var(--mud-typography-caption-size);
 }
 
 .top-bar-start {
@@ -240,7 +240,7 @@ button:focus-visible {
 }
 
 .page-crumb .mud-icon-root {
-    font-size: 1rem;
+    font-size: var(--mud-typography-body1-size);
 }
 
 .page-crumb-link {
@@ -430,7 +430,7 @@ button:focus-visible {
 .invite-panel {
     position: absolute;
     right: 0;
-    top: calc(100% + 0.35rem);
+    top: calc(100% + 0.375rem);
     z-index: 10;
     min-width: 14rem;
     padding: 1rem;
@@ -527,25 +527,26 @@ button:focus-visible {
     display: flex;
     gap: 0.5rem;
     align-items: baseline;
-    font-size: 0.75rem;
+    font-size: var(--mud-typography-caption-size);
     color: var(--mud-palette-text-secondary);
     margin-bottom: 0.25rem;
 }
 
 .message-sender {
-    font-size: 0.9375rem;
+    font-weight: 700;
+    font-size: var(--mud-typography-body1-size);
     font-weight: 700;
     color: var(--mud-palette-text-primary);
 }
 
 .message-time {
-    font-size: 0.75rem;
+    font-size: var(--mud-typography-caption-size);
     font-weight: 400;
 }
 
 .message-body {
     font-family: var(--mud-typography-body1-family);
-    font-size: 14.5px;
+    font-size: var(--mud-typography-body1-size);
     font-weight: 400;
     line-height: 1.6;
 }
@@ -553,7 +554,7 @@ button:focus-visible {
 /* An agent's reply sits on a light card, so who-said-what reads at a glance against the Human's
    tinted bubble. */
 .message-card {
-    padding: 0.625rem 1rem;
+    padding: 0.75rem 1rem;
     background: var(--mud-palette-surface);
     border: 1px solid var(--mud-palette-divider);
     border-radius: calc(var(--mud-default-borderradius) * 1.5);
@@ -577,7 +578,7 @@ button:focus-visible {
     align-items: center;
     gap: 0.75rem;
     margin: 0.5rem 0 1.25rem;
-    font-size: 0.75rem;
+    font-size: var(--mud-typography-caption-size);
     font-weight: 600;
     color: var(--mud-palette-text-secondary);
 }
@@ -591,7 +592,7 @@ button:focus-visible {
 
 .system-row {
     margin: 0 0 1rem 0;
-    font-size: 0.8125rem;
+    font-size: var(--mud-typography-body2-size);
     color: var(--mud-palette-text-secondary);
 }
 
@@ -618,7 +619,7 @@ button:focus-visible {
 
 .system-row-time {
     margin-left: auto;
-    font-size: 0.75rem;
+    font-size: var(--mud-typography-caption-size);
 }
 
 .system-row-chevron {
@@ -682,7 +683,7 @@ button:focus-visible {
     margin: 1rem 0 0.25rem 0;
     padding-top: 0.5rem;
     border-top: 1px solid var(--mud-palette-divider-light);
-    font-size: 15px;
+    font-size: var(--mud-typography-subtitle1-size);
 }
 
 .message-body p.message-heading:first-child {
@@ -714,7 +715,7 @@ button:focus-visible {
 .tool-activity {
     margin-top: 0.25rem;
     color: var(--mud-palette-text-disabled);
-    font-size: 0.8rem;
+    font-size: var(--mud-typography-body2-size);
     font-style: italic;
 }
 
@@ -749,7 +750,7 @@ button:focus-visible {
 
 .turn-detail-line {
     color: var(--mud-palette-text-disabled);
-    font-size: 0.8rem;
+    font-size: var(--mud-typography-body2-size);
 }
 
 /* At least 44px each way so the expander is a real touch target at phone width. */
@@ -761,7 +762,7 @@ button:focus-visible {
     min-height: 44px;
     padding: 0;
     border: none;
-    border-radius: 4px;
+    border-radius: var(--mud-default-borderradius);
     background: none;
     color: var(--mud-palette-text-secondary);
     cursor: pointer;
@@ -785,9 +786,9 @@ button:focus-visible {
     margin: 0.25rem 0 0.5rem;
     padding: 0.5rem;
     border: 1px solid var(--mud-palette-lines-default);
-    border-radius: 4px;
+    border-radius: var(--mud-default-borderradius);
     color: var(--mud-palette-text-primary);
-    font-size: 0.8rem;
+    font-size: var(--mud-typography-body2-size);
 }
 
 .edit-preview-path {
@@ -815,7 +816,7 @@ button:focus-visible {
 
 .edit-preview-label {
     color: var(--mud-palette-text-secondary);
-    font-size: 0.75rem;
+    font-size: var(--mud-typography-caption-size);
     font-weight: 600;
 }
 
@@ -832,7 +833,7 @@ button:focus-visible {
 .edit-preview-note {
     margin-top: 0.25rem;
     color: var(--mud-palette-text-disabled);
-    font-size: 0.75rem;
+    font-size: var(--mud-typography-caption-size);
 }
 
 /* Deliberately styled like an ordinary secondary action, never like .composer-error or
@@ -973,13 +974,13 @@ button:focus-visible {
 .composer-error {
     color: var(--mud-palette-error);
     margin-bottom: 0.5rem;
-    font-size: 0.85rem;
+    font-size: var(--mud-typography-body2-size);
 }
 
 .composer-info {
     color: var(--mud-palette-success);
     margin-bottom: 0.5rem;
-    font-size: 0.85rem;
+    font-size: var(--mud-typography-body2-size);
 }
 
 /* ---- Room member health: an Agent that is Offline or Degraded, surfaced where it matters most --- */
@@ -1001,7 +1002,7 @@ button:focus-visible {
 .member-health-alert-item {
     margin: 0;
     color: var(--mud-palette-error);
-    font-size: 0.85rem;
+    font-size: var(--mud-typography-body2-size);
 }
 
 /* ---- Room budget: the pause, and the question that offers to lift it ----- */
@@ -1018,7 +1019,7 @@ button:focus-visible {
 .budget-prompt-text {
     margin: 0;
     color: var(--mud-palette-error);
-    font-size: 0.85rem;
+    font-size: var(--mud-typography-body2-size);
     flex: 1 1 16rem;
 }
 
@@ -1031,7 +1032,7 @@ button:focus-visible {
     margin: 0;
     padding: 0.5rem 1rem 0;
     color: var(--mud-palette-text-secondary);
-    font-size: 0.8rem;
+    font-size: var(--mud-typography-body2-size);
 }
 
 /* Neutral, unlike .budget-prompt-text above: these two report a fact about a delivery, not an
@@ -1049,7 +1050,7 @@ button:focus-visible {
 .budget-prompt-warning {
     margin: 0;
     color: var(--mud-palette-text-secondary);
-    font-size: 0.85rem;
+    font-size: var(--mud-typography-body2-size);
     flex: 1 1 100%;
 }
 
@@ -1085,7 +1086,7 @@ button:focus-visible {
     color: inherit;
     background: var(--mud-palette-surface);
     border: 1px solid var(--mud-palette-divider);
-    border-radius: 8px;
+    border-radius: var(--mud-default-borderradius);
     cursor: pointer;
 }
 
@@ -1113,7 +1114,7 @@ button:focus-visible {
     align-items: center;
     gap: 0.375rem;
     padding: 0.125rem 0.5rem;
-    font-size: 0.75rem;
+    font-size: var(--mud-typography-caption-size);
     color: var(--mud-palette-text-secondary);
     background: var(--mud-palette-background-gray);
     border-radius: 999px;
@@ -1121,12 +1122,12 @@ button:focus-visible {
 
 .teammate-tile-context {
     margin-top: 0.25rem;
-    font-size: 0.75rem;
+    font-size: var(--mud-typography-caption-size);
     color: var(--mud-palette-text-secondary);
 }
 
 .teammates-item-name {
-    font-size: 0.9375rem;
+    font-size: var(--mud-typography-body1-size);
     font-weight: 700;
 }
 
@@ -1138,7 +1139,7 @@ button:focus-visible {
     flex: 0 0 auto;
     width: 3.25rem;
     height: 3.25rem;
-    border-radius: 10px;
+    border-radius: var(--mud-default-borderradius);
     font-size: 1.15rem;
     font-weight: 600;
     letter-spacing: 0.02em;
@@ -1183,12 +1184,12 @@ button:focus-visible {
 .avatar-library-clear,
 .avatar-library-more {
     font: inherit;
-    font-size: 0.8125rem;
+    font-size: var(--mud-typography-body2-size);
     color: var(--mud-palette-text-primary);
     background: var(--mud-palette-background-gray);
     border: 1px solid var(--mud-palette-divider);
     border-radius: 999px;
-    padding: 0.2rem 0.7rem;
+    padding: 0.25rem 0.75rem;
     cursor: pointer;
 }
 
@@ -1210,14 +1211,14 @@ button:focus-visible {
 }
 
 .avatar-library-cloud-title {
-    font-size: 0.75rem;
+    font-size: var(--mud-typography-caption-size);
     color: var(--mud-palette-text-secondary);
 }
 
 .avatar-library-cloud {
     display: flex;
     flex-wrap: wrap;
-    gap: 0.35rem;
+    gap: 0.375rem;
 }
 
 .avatar-library-tags {
@@ -1226,7 +1227,7 @@ button:focus-visible {
 }
 
 .avatar-library-chip-close {
-    margin-left: 0.35rem;
+    margin-left: 0.375rem;
     font-weight: 700;
 }
 
@@ -1238,7 +1239,7 @@ button:focus-visible {
     display: flex;
     align-items: center;
     justify-content: space-between;
-    font-size: 0.875rem;
+    font-size: var(--mud-typography-body2-size);
 }
 
 .avatar-library-grid {
@@ -1252,7 +1253,7 @@ button:focus-visible {
 .avatar-library-thumbs {
     display: flex;
     flex-wrap: wrap;
-    gap: 12px;
+    gap: 0.75rem;
 }
 
 .avatar-library-thumb {
@@ -1331,7 +1332,7 @@ button:focus-visible {
 
 .teammate-card-name {
     margin: 0;
-    font-size: 1.25rem;
+    font-size: var(--mud-typography-subtitle1-size);
 
     /* A Name may now contain spaces, so a long one wraps inside the card rather
        than pushing the avatar or the close button out of it. */
@@ -1406,12 +1407,12 @@ button:focus-visible {
     overflow-wrap: anywhere;
     background: var(--mud-palette-background-gray);
     border: 1px solid var(--mud-palette-divider-light);
-    border-radius: 6px;
+    border-radius: calc(var(--mud-default-borderradius) * 0.75);
 }
 
 .teammate-card-path {
     margin: 0;
-    font-size: 0.8rem;
+    font-size: var(--mud-typography-body2-size);
     color: var(--mud-palette-text-secondary);
     overflow-wrap: anywhere;
 }
@@ -1426,7 +1427,7 @@ button:focus-visible {
 
 .teammates-rejected-item {
     padding: 0.25rem 0;
-    font-size: 0.85rem;
+    font-size: var(--mud-typography-body2-size);
 }
 
 .teammates-rejected-path {
@@ -1459,14 +1460,14 @@ button:focus-visible {
 
 .teammates-group-heading {
     margin: 0 0 0.5rem 0;
-    font-size: 1rem;
+    font-size: var(--mud-typography-body1-size);
     color: var(--mud-palette-text-secondary);
     padding-bottom: 0.25rem;
     border-bottom: 1px solid var(--mud-palette-divider-light);
 }
 
 .teammate-tile-role {
-    font-size: 0.8125rem;
+    font-size: var(--mud-typography-body2-size);
     color: var(--mud-palette-text-secondary);
     overflow-wrap: anywhere;
 }
@@ -1487,7 +1488,7 @@ button:focus-visible {
 }
 
 .theme-picker-heading {
-    font-size: 0.8rem;
+    font-size: var(--mud-typography-body2-size);
     text-transform: uppercase;
     letter-spacing: 0.04em;
     color: var(--mud-palette-text-secondary);
@@ -1502,7 +1503,7 @@ button:focus-visible {
 
 .prompts-group-heading {
     margin: 0 0 0.5rem 0;
-    font-size: 1rem;
+    font-size: var(--mud-typography-body1-size);
     color: var(--mud-palette-text-secondary);
     padding-bottom: 0.25rem;
     border-bottom: 1px solid var(--mud-palette-divider-light);
@@ -1533,14 +1534,14 @@ button:focus-visible {
     gap: 0.5rem;
     align-items: center;
     margin: 0;
-    font-size: 0.78rem;
+    font-size: var(--mud-typography-caption-size);
     color: var(--mud-palette-text-disabled);
 }
 
 .prompts-field-placeholder {
     padding: 0.25rem 0.5rem;
     background: var(--mud-palette-background-gray);
-    border-radius: 3px;
+    border-radius: calc(var(--mud-default-borderradius) * 0.75);
 }
 
 .prompts-field-actions {
@@ -1589,9 +1590,9 @@ button:focus-visible {
 
 .task-board-column-count {
     flex: 0 0 auto;
-    padding: 0 0.35rem;
+    padding: 0 0.375rem;
     color: var(--mud-palette-text-secondary);
-    font-size: 0.85rem;
+    font-size: var(--mud-typography-body2-size);
 }
 
 .task-board-column-menu {
@@ -1645,7 +1646,7 @@ button:focus-visible {
 }
 
 .task-ghost-bucket-label {
-    font-size: 0.85rem;
+    font-size: var(--mud-typography-body2-size);
 }
 
 /* One class per TaskColors state family, so a Board column's left edge reads the same
@@ -1715,8 +1716,8 @@ button:focus-visible {
    inset overrides the overlap position so the dot's centre lands on the avatar's corner. */
 .task-card-presence .mud-badge.mud-badge-dot.mud-badge-overlap {
     box-sizing: content-box;
-    width: 8px;
-    height: 8px;
+    width: 0.5rem;
+    height: 0.5rem;
     border: 2px solid var(--mud-palette-surface);
     inset: calc(100% - 9px) auto auto calc(100% - 9px);
 }
@@ -1769,7 +1770,7 @@ button:focus-visible {
     display: inline-block;
     width: 0.5rem;
     height: 0.5rem;
-    margin-inline-end: 0.3rem;
+    margin-inline-end: 0.25rem;
     border-radius: 50%;
     background: var(--task-ref-dot, var(--mud-palette-lines-default));
 }
@@ -1826,12 +1827,12 @@ button:focus-visible {
     width: auto;
     height: 27px;
     min-width: 27px;
-    padding: 0 10px;
-    border-radius: 14px;
+    padding: 0 0.75rem;
+    border-radius: 999px;
 }
 
 .tasks-view-menu .mud-fab.mud-fab-size-small .mud-icon-root {
-    font-size: 1rem;
+    font-size: var(--mud-typography-body1-size);
 }
 
 /* ---- The Task detail panel: comfortable margins around and between its fields -----------------
@@ -1845,8 +1846,8 @@ button:focus-visible {
 .task-detail {
     display: flex;
     flex-direction: column;
-    gap: 16px;
-    padding: 16px;
+    gap: 1rem;
+    padding: 1rem;
 }
 
 /* A rounder corner than MudBlazor's own outlined-field default (--mud-default-borderradius, 8px in
@@ -1856,7 +1857,7 @@ button:focus-visible {
    just ".mud-input-outlined-border" alone: that prefix makes the library's own rule three classes
    specific, and a two-class override here would lose the cascade to it regardless of load order. */
 .task-detail .mud-input.mud-input-outlined .mud-input-outlined-border {
-    border-radius: 12px;
+    border-radius: calc(var(--mud-default-borderradius) * 1.5);
 }
 
 /* The Panel's conflict rows (manual test TASKS-07 finding F17): at ~300px the table's four columns
@@ -1869,7 +1870,7 @@ button:focus-visible {
 .task-detail-conflict-stacked .task-detail-conflict-row {
     display: flex;
     flex-direction: column;
-    gap: 4px;
+    gap: 0.25rem;
     padding-block-end: 8px;
     border-block-end: 1px solid var(--mud-palette-lines-default);
 }
@@ -1959,7 +1960,7 @@ button:focus-visible {
     display: flex;
     flex-wrap: nowrap;
     align-items: center;
-    gap: 4px;
+    gap: 0.25rem;
 }
 
 .view-editor-field-row > .mud-switch {
@@ -2011,13 +2012,13 @@ button:focus-visible {
 /* The document's folder path and file name, between the header and the first line of the document. */
 .library-document-path {
     display: block;
-    padding: 0 16px 4px;
+    padding: 0 1rem 0.25rem;
     color: var(--mud-palette-text-secondary);
     overflow-wrap: anywhere;
 }
 
 .library-document-path-inline {
-    padding: 0 16px;
+    padding: 0 1rem;
 }
 
 /* The Team/Project Files tab: the explorer fills the page's height and width, flush left. Every wrapper from
@@ -2044,7 +2045,7 @@ button:focus-visible {
 
 .team-page-wide .team-tasks-tab,
 .team-page-wide .team-members {
-    padding: 0 16px 16px;
+    padding: 0 1rem 1rem;
 }
 
 .team-page-wide .team-tasks-tab > .task-board {
@@ -2084,7 +2085,7 @@ button:focus-visible {
     min-height: 0;
     display: grid;
     grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
-    gap: 16px;
+    gap: 1rem;
 }
 
 .team-page-wide .library-document-split > .library-editor,
@@ -2097,7 +2098,7 @@ button:focus-visible {
     max-width: none;
     margin-inline: 0;
     overflow: auto;
-    padding: 4px 16px 0 0;
+    padding: 0.25rem 1rem 0 0;
 }
 
 .team-page-wide .library-document .library-rendered,
@@ -2444,7 +2445,7 @@ button:focus-visible {
     display: flex;
     flex-wrap: wrap;
     align-items: center;
-    gap: 8px 16px;
+    gap: 0.5rem 1rem;
 }
 
 .team-tab-toolbar-action {
@@ -2517,7 +2518,7 @@ button:focus-visible {
     padding: 1rem;
     background: var(--mud-palette-background-gray);
     border: 1px solid var(--mud-palette-divider);
-    border-radius: 8px;
+    border-radius: var(--mud-default-borderradius);
 }
 
 .hiring-pool-heading,
@@ -2529,7 +2530,7 @@ button:focus-visible {
 .hiring-pool-filters {
     display: flex;
     flex-direction: column;
-    gap: 0.35rem;
+    gap: 0.375rem;
     margin-bottom: 0.5rem;
 }
 
@@ -2541,24 +2542,24 @@ button:focus-visible {
 .hiring-pool-clear {
     align-self: flex-start;
     font: inherit;
-    font-size: 0.8125rem;
+    font-size: var(--mud-typography-body2-size);
     color: var(--mud-palette-text-primary);
     background: transparent;
     border: 1px solid var(--mud-palette-divider);
     border-radius: 999px;
-    padding: 0.2rem 0.7rem;
+    padding: 0.25rem 0.75rem;
     cursor: pointer;
 }
 
 .chip-cloud-title {
-    font-size: 0.75rem;
+    font-size: var(--mud-typography-caption-size);
     color: var(--mud-palette-text-secondary);
 }
 
 .chip-cloud {
     display: flex;
     flex-wrap: wrap;
-    gap: 0.35rem;
+    gap: 0.375rem;
     max-height: 30vh;
     overflow-y: auto;
 }
@@ -2566,12 +2567,12 @@ button:focus-visible {
 .chip-cloud-chip,
 .chip-cloud-all {
     font: inherit;
-    font-size: 0.8125rem;
+    font-size: var(--mud-typography-body2-size);
     color: var(--mud-palette-text-primary);
     background: var(--mud-palette-background-gray);
     border: 1px solid var(--mud-palette-divider);
     border-radius: 999px;
-    padding: 0.2rem 0.7rem;
+    padding: 0.25rem 0.75rem;
     cursor: pointer;
 }
 
@@ -2589,7 +2590,7 @@ button:focus-visible {
 }
 
 .chip-cloud-close {
-    margin-left: 0.35rem;
+    margin-left: 0.375rem;
     font-weight: 700;
 }
 
@@ -2660,7 +2661,7 @@ button:focus-visible {
     padding: 1rem;
     background: var(--mud-palette-surface);
     border: 1px solid var(--mud-palette-divider);
-    border-radius: 8px;
+    border-radius: var(--mud-default-borderradius);
 }
 
 .process-step-preview {
@@ -2669,10 +2670,10 @@ button:focus-visible {
     padding: 0.75rem;
     overflow: auto;
     font-family: var(--font-mono);
-    font-size: 0.8125rem;
+    font-size: var(--mud-typography-body2-size);
     white-space: pre-wrap;
     background: var(--mud-palette-background-gray);
-    border-radius: 6px;
+    border-radius: calc(var(--mud-default-borderradius) * 0.75);
 }
 
 .team-setup-footer {
@@ -2687,7 +2688,7 @@ button:focus-visible {
     padding: 0.75rem 1rem;
     background: var(--mud-palette-surface);
     border: 1px solid var(--mud-palette-divider);
-    border-radius: 8px;
+    border-radius: var(--mud-default-borderradius);
 }
 
 .team-setup-footer-status {
@@ -2707,7 +2708,7 @@ button:focus-visible {
 .team-check-blockers {
     margin: 0.5rem 0 0;
     padding-inline-start: 1.25rem;
-    font-size: 0.8125rem;
+    font-size: var(--mud-typography-body2-size);
     color: var(--mud-palette-warning);
 }
 
@@ -2789,7 +2790,7 @@ button:focus-visible {
 }
 
 .needs-you-detail {
-    font-size: 0.75rem;
+    font-size: var(--mud-typography-caption-size);
     color: var(--mud-palette-text-secondary);
 }
 
@@ -2834,7 +2835,7 @@ button:focus-visible {
 .search-card-meta,
 .search-card-snippet {
     color: var(--mud-palette-text-secondary);
-    font-size: 0.875rem;
+    font-size: var(--mud-typography-body2-size);
 }
 
 /* The Task card's first line: the id and title take the width and truncate, the status chip sits at the right. */
@@ -2871,7 +2872,7 @@ button:focus-visible {
     flex: none;
     margin-left: auto;
     color: var(--mud-palette-text-secondary);
-    font-size: 0.875rem;
+    font-size: var(--mud-typography-body2-size);
     white-space: nowrap;
 }
 
@@ -2895,7 +2896,7 @@ button:focus-visible {
 .search-group-heading {
     padding: 0.5rem 0.5rem 0.25rem;
     color: var(--mud-palette-text-secondary);
-    font-size: 0.75rem;
+    font-size: var(--mud-typography-caption-size);
     letter-spacing: 0.05em;
     text-transform: uppercase;
 }
@@ -2930,7 +2931,7 @@ button:focus-visible {
 }
 
 .search-hit-flash {
-    border-radius: 8px;
+    border-radius: var(--mud-default-borderradius);
     animation: search-hit-flash-fade 2s ease-out;
 }
 
@@ -2965,12 +2966,12 @@ button:focus-visible {
 }
 
 .composer-picker-heading {
-    padding: 6px 12px 2px;
-    font-size: 0.8125rem;
+    padding: 0.375rem 0.75rem 2px;
+    font-size: var(--mud-typography-body2-size);
 }
 
 .composer-picker-item {
-    padding: 4px 12px;
+    padding: 0.25rem 0.75rem;
     cursor: pointer;
 }
 
@@ -2989,12 +2990,12 @@ button:focus-visible {
 
 .composer-picker-note {
     display: block;
-    font-size: 0.8125rem;
+    font-size: var(--mud-typography-body2-size);
 }
 
 .composer-picker-footer {
-    padding: 4px 12px 6px;
-    font-size: 0.8125rem;
+    padding: 0.25rem 0.75rem 0.375rem;
+    font-size: var(--mud-typography-body2-size);
     border-top: 1px solid var(--mud-palette-lines-default);
 }
 
@@ -3023,8 +3024,8 @@ a.room-ref, a.team-ref {
 .message-references {
     display: flex;
     flex-wrap: wrap;
-    gap: 6px;
-    margin-top: 4px;
+    gap: 0.375rem;
+    margin-top: 0.25rem;
 }
 
 .message-reference-gone {
