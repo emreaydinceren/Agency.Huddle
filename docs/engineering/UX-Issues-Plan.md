@@ -1042,7 +1042,7 @@ Ids are `<deliverable number>.<task>`, the form `Set-Tracker.ps1` updates:
 `pwsh -NoProfile -File agents/scripts/Set-Tracker.ps1 -Task "12.3" -State Done -TrackerPath docs/engineering/UX-Issues-Plan.md`.
 `(H)` is Haiku, `(S)` is Sonnet.
 
-**Status:** 47 of 141 tasks Done · 0 of 2 retrospectives done · last updated 2026-10-13.
+**Status:** 52 of 141 tasks Done · 0 of 2 retrospectives done · last updated 2026-10-13.
 
 | **Deliverable / Task** | **Model** | **Depends on** | **Active** | **In Progress** | **Done** |
 | --- | --- | --- | --- | --- | --- |
@@ -1177,11 +1177,11 @@ Ids are `<deliverable number>.<task>`, the form `Set-Tracker.ps1` updates:
 | 21.4 Create flows and Process confirm (S) | Sonnet | 21.1 | | | |
 | 21.5 Wireframes (S) | Sonnet | 21.2, 21.3 | | | |
 | **U22 Settings: mechanical pass** | Haiku | U0, U5, U6, U7 | | | |
-| 22.1 Red (H) | Haiku | U0 | | | |
-| 22.2 Attributes, roles, keys, icons (H) | Haiku | 22.1 | | | |
-| 22.3 Skill import dialog (H) | Haiku | 22.2, U5, U6 | | | |
-| 22.4 Confirm texts (H) | Haiku | 22.2 | | | |
-| 22.5 Empty states and suite (H) | Haiku | 22.3, 22.4 | | | |
+| 22.1 Red (H) | Haiku | U0 | | | ✔ |
+| 22.2 Attributes, roles, keys, icons (H) | Haiku | 22.1 | | | ✔ |
+| 22.3 Skill import dialog (H) | Haiku | 22.2, U5, U6 | | | ✔ |
+| 22.4 Confirm texts (H) | Haiku | 22.2 | | | ✔ |
+| 22.5 Empty states and suite (H) | Haiku | 22.3, 22.4 | | | ✔ |
 | **U23 Settings: panels** | Haiku | U22, U5, U4 | | | |
 | 23.1 Red (H) | Haiku | U22, U4 | | | |
 | 23.2 Header, Reset all, Save, rail (H) | Haiku | 23.1 | | | |
