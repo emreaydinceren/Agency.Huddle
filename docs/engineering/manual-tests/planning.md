@@ -32,7 +32,7 @@ is done. Within an area, tests run top to bottom — free tests first, paid test
 | — | [Global Search: the box, the dropdown and the jump](global-search.md) | 10 | — | 2.3h |
 | — | [References in a Message: the @ picker, Copy link and the Referenced items header](at-tagging.md) | 12 | 0 | 2.1h |
 | 10 | [Settings: the Prompts, editing, per-field reset and Save](prompts-settings.md) | 41 | 3 | 4.7h |
-| 11 | [Appearance tab and Themes](appearance-theme.md) | 21 | — | 2.4h |
+| 11 | [Appearance tab and Themes](appearance-theme.md) | 25 | — | 2.9h |
 | 12 | [The named pipe: external agents and the wire](pipe-external.md) | 33 | — | 3.7h |
 | 13 | [App Tools a real model calls (progressive discovery)](app-tools.md) | 28 | 21 | 4.3h |
 | 14 | [Persona lifecycle: supervisor, work dirs, health and restarts](persona-lifecycle.md) | 32 | 7 | 6.6h |

@@ -123,6 +123,75 @@ public sealed class AppearanceStoreTests
         Assert.Contains("\"dark\"", json, StringComparison.Ordinal);
     }
 
+    /// <summary>With nothing chosen the toggle moves between the two Huddle themes, and back.</summary>
+    [Fact]
+    public void ToggleMode_WithNothingChosen_SwitchesBetweenTheHuddleThemes()
+    {
+        using var dataDir = new TempDataDir();
+        using var store = new AppearanceStore(dataDir.Options(), NullLogger<AppearanceStore>.Instance);
+
+        store.ToggleMode();
+        Assert.Equal("huddle-dark", store.Current.ThemeId);
+
+        store.ToggleMode();
+        Assert.Equal("huddle", store.Current.ThemeId);
+    }
+
+    /// <summary>Choosing a dark theme while a light one is shown records it for the toggle without changing what is shown.</summary>
+    [Fact]
+    public void SavePreferred_OtherModesTheme_IsRememberedAndNotShownUntilToggled()
+    {
+        using var dataDir = new TempDataDir();
+        using var store = new AppearanceStore(dataDir.Options(), NullLogger<AppearanceStore>.Instance);
+
+        store.SavePreferred("solarized-dark");
+
+        Assert.Null(store.Current.ThemeId);
+        Assert.Equal("solarized-dark", store.Current.DarkThemeId);
+
+        store.ToggleMode();
+
+        Assert.Equal("solarized-dark", store.Current.ThemeId);
+    }
+
+    /// <summary>Choosing a theme of the mode already shown repaints at once.</summary>
+    [Fact]
+    public void SavePreferred_SameModeTheme_IsShownImmediately()
+    {
+        using var dataDir = new TempDataDir();
+        using var store = new AppearanceStore(dataDir.Options(), NullLogger<AppearanceStore>.Instance);
+
+        store.SavePreferred("quiet-light");
+
+        Assert.Equal("quiet-light", store.Current.ThemeId);
+        Assert.Equal("quiet-light", store.Current.LightThemeId);
+    }
+
+    /// <summary>A file written before the pair existed still toggles back to the theme it was using.</summary>
+    [Fact]
+    public void ToggleMode_FromALegacyFile_ReturnsToTheThemeThatWasInUse()
+    {
+        using var dataDir = new TempDataDir();
+        File.WriteAllText(Path.Combine(dataDir.Path, "appearance.json"), "{\"theme\":\"solarized-dark\"}");
+        using var store = new AppearanceStore(dataDir.Options(), NullLogger<AppearanceStore>.Instance);
+
+        store.ToggleMode();
+        store.ToggleMode();
+
+        Assert.Equal("solarized-dark", store.Current.ThemeId);
+    }
+
+    /// <summary>A stored light choice that names a dark theme is ignored rather than shown.</summary>
+    [Fact]
+    public void Current_WithALightThemeKeyNamingADarkTheme_IgnoresIt()
+    {
+        using var dataDir = new TempDataDir();
+        File.WriteAllText(Path.Combine(dataDir.Path, "appearance.json"), "{\"lightTheme\":\"solarized-dark\"}");
+        using var store = new AppearanceStore(dataDir.Options(), NullLogger<AppearanceStore>.Instance);
+
+        Assert.Equal("huddle", store.Current.PreferredLightId);
+    }
+
     /// <summary>Saving raises <see cref="AppearanceStore.AppearanceChanged"/> after the write and the rebuild.</summary>
     [Fact]
     public void Save_RaisesAppearanceChanged()

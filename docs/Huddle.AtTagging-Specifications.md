@@ -1,8 +1,8 @@
 # Huddle.AtTagging — Design Specification
 
 **Date:** 2026-10-12 · **Status:** Built 2026-10-12 · **Owner:** chat surface ·
-**Decision record:** [ADR-0054](adr/0054-a-reference-is-text-with-a-stable-key.md), *a reference is
-text with a stable key* (ADR-0052 is Team chats', ADR-0053 chat uploads') · **Vocabulary:** [language.md](engineering/language.md) (**Teammate**,
+**Decision record:** [ADR-0055](adr/0055-a-reference-is-text-with-a-stable-key.md), *a reference is
+text with a stable key* (ADR-0052 is Team chats', ADR-0053 chat uploads', ADR-0054 the theme pair) · **Vocabulary:** [language.md](engineering/language.md) (**Teammate**,
 **Name**, **Alias**, **Room**, **Scope**, **Team Room**, **Member**, **Message**, **Mention**,
 **Transcript**, **Task**, **Team**, **Library**, **Turn**, **Prompt**, **Placeholder**) ·
 **Builds on:** [Global Search](Huddle.GlobalSearch-Specifications.md) (the providers, the parser,
@@ -789,7 +789,7 @@ Existing files that change. New code goes under `src/Huddle.App/References/`,
 | `docs/Huddle.UserGuide.md` | *Referencing things in a Message*, under *Chatting in Rooms* |
 | `docs/engineering/code-map.md`, `known-limits.md` | The new folder; no rename-safe Library reference in chat; status-only changes not flagged |
 | `docs/engineering/manual-tests/at-tagging.md` (new), `tracker.md`, `docs/Index.md` | §12.5 |
-| `docs/adr/0054-…` | A reference is text with a stable key (0052 is Team chats', 0053 chat uploads') |
+| `docs/adr/0055-…` | A reference is text with a stable key (0052 is Team chats', 0053 chat uploads', 0054 the theme pair) |
 
 `TopBar.razor`, `SearchBar.razor`, `SearchCard.razor` and the five search cards,
 `SearchQueryParser.cs`, `MentionParser.cs`, `ITeamDirectory` (and so its test doubles, such as
@@ -807,7 +807,7 @@ ending on a green build.
 | Wave | Deliverables | Model |
 | --- | --- | --- |
 | 0 | L1 contracts; L5 search purpose and the picker's search | Haiku |
-| 0 | L0 ADR-0054 | Sonnet |
+| 0 | L0 ADR-0055 | Sonnet |
 | 1 | L2 scanner and reference text | Haiku |
 | 2 | L6 picker view model | Haiku |
 | 2 | L3 renderer; L4 resolver and snapshot | Sonnet |

@@ -7,7 +7,7 @@ The manager reads [DeliveryPlaybook.md](../../agents/DeliveryPlaybook.md) before
 
 **Written:** 2026-10-12 against `main` at `5fbaf5d`, revised the same day after PR #169 (Team chats:
 a Room's Scope and the Team Room, ADR-0052) and PR #170 (chat uploads, ADR-0053), so this feature's
-ADR is **0054** · **Status:** not started · **Spec:**
+ADR is **0055** (0054 went to the theme pair on `main`) · **Status:** not started · **Spec:**
 `docs/Huddle.AtTagging-Specifications.md` (cited below as **§n**, decisions **D-n**, tests
 **AT-Tn** and **AT-Mn**, open points **OP-n**).
 
@@ -47,7 +47,7 @@ point. The open points are applied with their recommended defaults (§15, [§4](
 
 | Deliverable | Model | Spec sections | Tests it owns |
 | --- | --- | --- | --- |
-| L0 ADR-0054: a reference is text with a stable key | Sonnet | §13 D-11, D-13, D-14, D-16 | none |
+| L0 ADR-0055: a reference is text with a stable key | Sonnet | §13 D-11, D-13, D-14, D-16 | none |
 | L1 Contracts: `MessageReference` and `ChatMessage.References` | Haiku | §8.1, §8.3 | AT-T4 |
 | L2 Reference text, the Task id pattern and the scanner | Haiku | §6, §8.2 step 1, D-9, D-10 (parse half), D-19, D-26 | AT-T2, AT-T3 |
 | L3 Renderer: two link shapes and their classes | Sonnet | §7, D-10 | AT-T5 |
@@ -366,19 +366,19 @@ Each deliverable lists: model and reason, goal, *done when*, depends on, read li
 tasks, pitfalls and size. Each task names the pattern file to copy, the test names (each test's
 `///` summary is the sentence after the name, or a plain restatement of it) and how to verify it.
 
-### L0 ADR-0054: a reference is text with a stable key
+### L0 ADR-0055: a reference is text with a stable key
 
 - **Model:** Sonnet. An ADR states a trade and its consequences in the repo's voice.
 - **Goal:** record D-11, D-13, D-14 and D-16 as one decision: *a reference is text with a stable
   key; the snapshot is metadata of what the sender saw; Agents get a compact, fresh header*.
-- **Done when:** `docs/adr/0054-a-reference-is-text-with-a-stable-key.md` exists with status
+- **Done when:** `docs/adr/0055-a-reference-is-text-with-a-stable-key.md` exists with status
   `accepted`; `docs/Index.md` §4 has its row; the spec header links it; `Check-DocIndex.ps1` exits 0.
 - **Depends on:** none.
 - **Read:** `docs/adr/0051-search-keeps-no-index-of-its-own.md` (the template); spec §1, §6, §8, §9,
   §13 D-8, D-11 to D-18; traps.md *Adding to the wire*.
 - **Touch:** create the ADR; edit `docs/Index.md` §4; edit the spec's header line.
 
-#### T0.1 Write ADR-0054
+#### T0.1 Write ADR-0055
 
 Say what is rejected (a rich token or a hidden marker in the text; a snapshot as the source of
 Mentions; expanding history; inlining descriptions or Transcripts), and why: text survives paste,
@@ -393,7 +393,7 @@ text or file content (D-29). Verify: links resolve; no trailing whitespace.
 #### T0.2 Index and spec header
 
 Add the row to `docs/Index.md` §4 in the existing style (one sentence, `Accepted`). Change the spec
-header's "ADR-0054, … (to be written by the plan's L0)" to a link to the file. Run
+header's "ADR-0055, … (to be written by the plan's L0)" to a link to the file. Run
 `pwsh -NoProfile -File agents/scripts/Check-DocIndex.ps1`; it must exit 0.
 
 - **Pitfalls:** ADR-0003, ADR-0011 and ADR-0035 are current; link them, do not edit them.
@@ -1230,8 +1230,8 @@ unavailable (D-8); a Task's status change is not flagged; Teams are linked by Na
 Team folder rename makes its Team links unavailable while its Rooms, archived by the reconciler,
 still open by id (OP-1); a Library file whose path contains a backtick is not offered by the picker,
 and the current Room's uploads are not ranked first (spec §14). Spec header: `**Status:** Built <date>`. `docs/Index.md`: update the
-existing §2 row (ADR-0054 linked, manual tests `at-tagging`, status *Built*) and the §1 task row;
-add ADR-0054 to §4 if L0 has not.
+existing §2 row (ADR-0055 linked, manual tests `at-tagging`, status *Built*) and the §1 task row;
+add ADR-0055 to §4 if L0 has not.
 
 #### T12.4 Glossary
 
@@ -1439,7 +1439,7 @@ Apply the findings (FACT, BRIEF, PLAN, SCRIPT) before the next dispatch.
 | RK5 | **`IsSafe` widened too far.** A relative URL allowlist is an XSS surface for agent-written Markdown | One parser in `ReferenceText` used by both the scanner and `IsSafe`; L3 is Sonnet with a red of refused shapes; a mutation proof in T13.3 |
 | RK6 | **`ChatService`'s 28 call sites** and its post path latency | A defaulted parameter before `timeProvider`; only positional `timeProvider` callers change; lookups outside the lock; an Opus review of the diff |
 | RK7 | **The 90% zoom and the protected `app.css`.** A `zoom` on the picker or a bare `40vh` misplaces it or makes it 36% high, and no test runs layout | §3.6 and spec §5.6 fix the rules; AT-T13 pins them as source facts; L7 and L13 measure AT-M9 in a browser; L8 and L9 announce their `app.css` edits |
-| RK8 | **An honest limit read as a bug.** A renamed Library file referenced in chat shows as unavailable; the owner's brief expected rename safety | Spec D-8 explains it; L12 writes it into `known-limits.md`; ADR-0054 states it |
+| RK8 | **An honest limit read as a bug.** A renamed Library file referenced in chat shows as unavailable; the owner's brief expected rename safety | Spec D-8 explains it; L12 writes it into `known-limits.md`; ADR-0055 states it |
 
 ---
 
@@ -1453,8 +1453,8 @@ Ids are `<deliverable number>.<task>`, the form `Set-Tracker.ps1` updates:
 
 | **Deliverable / Task** | **Model** | **Depends on** | **Active** | **In Progress** | **Done** |
 | --- | --- | --- | --- | --- | --- |
-| **L0 ADR-0054: a reference is text with a stable key** | Sonnet | none | | | |
-| 0.1 Write ADR-0054 (S) | Sonnet | none | | | |
+| **L0 ADR-0055: a reference is text with a stable key** | Sonnet | none | | | |
+| 0.1 Write ADR-0055 (S) | Sonnet | none | | | |
 | 0.2 Index and spec header (S) | Sonnet | 0.1 | | | |
 | **L1 Contracts: `MessageReference` and `ChatMessage.References`** | Haiku | none | | | |
 | 1.1 The two types (H) | Haiku | none | | | |
@@ -1549,7 +1549,7 @@ Ids are `<deliverable number>.<task>`, the form `Set-Tracker.ps1` updates:
 - [ ] ATTAG-01 to 12 run in Chrome and Edge at 90%, results in `tracker.md`; AT-M9's height measured;
   AT-M11 shows no picker row from Message text or file content; AT-M12's copied text pastes as a
   reference.
-- [ ] ADR-0054 written; glossary entries added; user guide, code map, engineering guide, known limits
+- [ ] ADR-0055 written; glossary entries added; user guide, code map, engineering guide, known limits
   and Index updated; `Check-DocIndex.ps1` and `Check-ManualTests.ps1` exit 0.
 - [ ] The open points OP-1 to OP-10 confirmed by the owner, or listed in the PR body as applied
   defaults.
