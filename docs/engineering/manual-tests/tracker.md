@@ -651,6 +651,10 @@ Appearance tab, Themes, Tokens and overrides — [area file](appearance-theme.md
 | [APPEARANCETHEME-27](appearance-theme.md#appearancetheme-27--every-imported-theme-paints-its-own-palette-across-the-whole-application) |  | Active |  | Added 2026-09-16 with the VS Code theme import (ADR-0016). The acceptance walk for the imported catalog. |
 | [APPEARANCETHEME-28](appearance-theme.md#appearancetheme-28--custom-accent-stores-the-picked-colour-clamps-it-for-contrast-and-shows-its-picker-only-for-the-two-accent-themes) |  | Active |  |  |
 | [APPEARANCETHEME-29](appearance-theme.md#appearancetheme-29--there-is-no-library-pane-setting-and-a-leftover-librarypaneside-key-is-ignored-without-a-warning-and-kept-in-the-file) |  | Active |  |  |
+| [APPEARANCETHEME-30](appearance-theme.md#appearancetheme-30--the-top-bar-button-switches-between-the-chosen-light-and-dark-themes-and-is-the-last-control-in-the-bar) |  | Active |  | Added 2026-10-12 with ADR-0054. |
+| [APPEARANCETHEME-31](appearance-theme.md#appearancetheme-31--the-appearance-tab-has-a-light-picker-and-a-dark-picker-each-holding-only-its-own-mode) |  | Active |  | Added 2026-10-12 with ADR-0054. |
+| [APPEARANCETHEME-32](appearance-theme.md#appearancetheme-32--picking-a-theme-changes-the-screen-only-when-it-is-of-the-mode-already-shown) |  | Active |  | Added 2026-10-12 with ADR-0054. |
+| [APPEARANCETHEME-33](appearance-theme.md#appearancetheme-33--old-files-hand-edits-and-bad-values-the-pair-resolves-safely) |  | Active |  | Added 2026-10-12 with ADR-0054. |
 
 ## pipe-external
 

@@ -23,6 +23,12 @@ namespace Agency.Huddle.App.Appearance;
 /// (see <see cref="AppearanceStore"/>'s remarks — that case is a warning, never a failure). Either
 /// way the catalog's default theme applies.
 /// </param>
+/// <param name="LightThemeId">
+/// The Human's chosen light theme, which the top bar's mode toggle switches to; <see langword="null"/>
+/// when none is chosen or the stored id is unknown or not a light theme (a warning, never a failure).
+/// A file that predates the pair but selects a light <see cref="ThemeId"/> resolves that theme here.
+/// </param>
+/// <param name="DarkThemeId">The dark counterpart of <paramref name="LightThemeId"/>, resolved the same way.</param>
 /// <param name="AccentColorHex">
 /// The Human's own accent colour, as <c>#rrggbb</c>, or <see langword="null"/> when none is chosen
 /// yet or the stored value is malformed (a warning, never a failure - see <see cref="AppearanceStore"/>'s
@@ -30,8 +36,14 @@ namespace Agency.Huddle.App.Appearance;
 /// <see cref="Themes.AccentTheme.DarkDescriptor"/> ever read it; every other <see cref="ThemeId"/>
 /// ignores it.
 /// </param>
-internal sealed record AppearanceSettings(string? ThemeId, string? AccentColorHex)
+internal sealed record AppearanceSettings(string? ThemeId, string? AccentColorHex, string? LightThemeId = null, string? DarkThemeId = null)
 {
     /// <summary>The state when no <c>appearance.json</c> exists, or nothing in it is valid: no theme selected and no accent colour chosen.</summary>
     public static AppearanceSettings Empty { get; } = new((string?)null, (string?)null);
+
+    /// <summary>The theme the mode toggle switches to from dark: the stored light choice, or Huddle Light when none is chosen.</summary>
+    public string PreferredLightId => this.LightThemeId ?? Themes.HuddleTheme.LightDescriptor.Id;
+
+    /// <summary>The theme the mode toggle switches to from light: the stored dark choice, or Huddle Dark when none is chosen.</summary>
+    public string PreferredDarkId => this.DarkThemeId ?? Themes.HuddleTheme.DarkDescriptor.Id;
 }

@@ -2,7 +2,7 @@
 
 Prove that the Appearance tab is an honest control for the Theme: that it is reachable by its own route, lists the whole built-in catalog under the right headings, stores the choice as an id in `appearance.json`, applies it at once with no page load and with no first-paint flash, shares it across browsers, and degrades safely when the file is wrong. The Development profile sets `Team:Acp:Enabled: true`, so the global cost guard in section 0.2 is the only thing holding ACP off. Set it before you launch.
 
-**21 tests** · 21 free, none paid · about 2.4 hours.
+**25 tests** · 25 free, none paid · about 2.9 hours.
 
 Read [the manual test script](../manual-tests.md) first — the cost guard, the Model and Effort
 convention, and the rules for concluding a result — then [Common procedures](common.md), which
@@ -14,8 +14,16 @@ defines the terminals, states, procedures and oracles this page names. Both are 
 > There is **no light/dark control** on this tab: choosing a Theme chooses light or dark, and the
 > application ignores the device's colour setting entirely. The per-token override layer
 > (`wwwroot/theme.css`, `themes/*.css`, `ThemeOverrides`) no longer exists.
-> `appearance.json` holds the keys `theme`, and `accentColor` (Custom Accent only);
+> `appearance.json` holds the keys `theme` (the Theme being shown), `lightTheme` and `darkTheme` (the Human's pair, [ADR-0054](../../adr/0054-a-light-theme-and-a-dark-theme.md)), and `accentColor` (Custom Accent only);
 > a retired `dark` key, or a retired `libraryPaneSide` key, left in an old file is kept as an unknown key and ignored.
+>
+> **Since ADR-0054 the Appearance tab has two pickers**, `Light theme` and `Dark theme`, and the top
+> bar has a mode button (APPEARANCETHEME-30 to 33 cover them). Tests 03, 04, 06, 28 and 29 were
+> written for the single picker: read "the Theme picker" there as whichever of the two lists holds
+> the Theme named; "stores its id as `theme`" as "stores it as `lightTheme` or `darkTheme`, and as
+> `theme` too when it is of the mode currently shown"; and "the catalog's 21 Themes" as the 8 light
+> and 13 dark entries the two lists split them into (each list repeats the `High contrast` heading
+> for its own mode). Hand-editing `theme` to put a dark Theme on screen is unaffected.
 >
 > [`docs/engineering/known-limits.md`](../known-limits.md) is the source of truth for what a Theme
 > can no longer do — read it before filing anything here as a defect.
@@ -954,6 +962,147 @@ If you cannot read `--mud-palette-primary` in DevTools, compare the `New chat` b
 **Inconclusive if**
 
 If the Appearance tab will not render, this is INCONCLUSIVE, not a failure; re-run APPEARANCETHEME-01 first.
+
+### APPEARANCETHEME-30 — The top-bar button switches between the chosen light and dark Themes, and is the last control in the bar
+
+**Free** · about 6 min
+
+*Proves the button exists at the right of the top bar, names where a click leads, switches the whole application and stores the result, starting from the virgin first-run state ([ADR-0054](../../adr/0054-a-light-theme-and-a-dark-theme.md)).*
+
+**Before you start**
+
+- The application is running and `<data>\appearance.json` is absent (`P-RESET-SETTINGS`).
+- Open http://localhost:5100/ and wait for the shell to load.
+
+**Steps**
+
+1. Look at the right-hand end of the top bar (the bar holding the breadcrumb and the search box). Find the round icon button there and hover it for a second. Note the icon and the tooltip.
+2. Click it. Note the page colours, the icon and the tooltip.
+3. Run `type <data>\appearance.json`.
+4. Click the button again. Note the colours, icon and tooltip, and run `type <data>\appearance.json` again.
+5. Press Ctrl+Shift+R while the page is light, then again while it is dark (click the button between the two). Watch the first paint.
+
+**Pass if — all of these**
+
+- The button is the right-most thing in the top bar. Its icon is a moon and its tooltip reads `Switch to dark theme` while the page is light.
+- After the first click the page is dark (Huddle Dark), the icon is a sun and the tooltip reads `Switch to light theme`.
+- After the first click the file holds `"theme": "huddle-dark"` together with `"lightTheme": "huddle"` and `"darkTheme": "huddle-dark"`. After the second click `theme` is `huddle` again and the other two keys are unchanged.
+- No page load happens on a click, and a hard reload paints the right mode from the first frame with no flash of the other one.
+
+**Fail if — any of these**
+
+- The button is missing, or sits in the middle or at the left of the bar -> `MainLayout` is not filling `TopBar`'s `Actions` slot.
+- The icon or tooltip names the mode already shown rather than the mode a click leads to.
+- A click changes the file but not the page, or the reverse -> the button is flipping a flag instead of calling `AppearanceStore.ToggleMode`.
+
+**Inconclusive if**
+
+If the shell will not load, re-run APPEARANCETHEME-01 first.
+
+### APPEARANCETHEME-31 — The Appearance tab has a Light picker and a Dark picker, each holding only its own mode
+
+**Free** · about 5 min
+
+*Proves each slot can only be filled by a Theme of its own mode, which is what keeps ADR-0017's guarantee (a mode never contradicts its Theme) true now that there are two slots.*
+
+**Before you start**
+
+- The application is running and `<data>\appearance.json` is absent (`P-RESET-SETTINGS`).
+- http://localhost:5100/settings/appearance is open.
+
+**Steps**
+
+1. Read the intro paragraph, then the two list titles, `Light theme` and `Dark theme`.
+2. Write down every heading and row in each list, and which row is marked selected in each.
+3. Click the marked row in the `Dark theme` list once more, then read the list and the page.
+
+**Pass if — all of these**
+
+- `Light theme` holds 8 Themes: under `Light` — `Huddle Light`, `Custom Accent Light`, `Light 2026`, `Light Modern`, `Light+`, `Quiet Light`, `Solarized Light`; under `High contrast` — `Light High Contrast`.
+- `Dark theme` holds 13: under `Dark` — `Huddle Dark`, `Custom Accent Dark`, `Dark 2026`, `Dark Modern`, `Dark+`, `Abyss`, `Kimbie Dark`, `Monokai`, `Monokai Dimmed`, `Red`, `Solarized Dark`, `Tomorrow Night Blue`; under `High contrast` — `Dark High Contrast`.
+- With no file, `Huddle Light` is marked in the first list and `Huddle Dark` in the second.
+- Clicking the marked row again leaves it marked: a slot is never left empty.
+- The intro paragraph mentions the button in the top bar.
+
+**Fail if — any of these**
+
+- A dark Theme appears in the light list, or the reverse -> `GroupedFor` is not filtering on `ThemeMode`.
+- Clicking the marked row empties the list or writes nothing back -> the cleared selection is reaching the store.
+
+**Inconclusive if**
+
+If the page is still loading, wait five seconds, press F5 and read again.
+
+### APPEARANCETHEME-32 — Picking a Theme changes the screen only when it is of the mode already shown
+
+**Free** · about 8 min
+
+*Proves `AppearanceStore.SavePreferred`: choosing the other mode's Theme records it for the button without surprising the Human with a repaint, while choosing a Theme of the mode on screen repaints at once.*
+
+**Before you start**
+
+- The application is running and `<data>\appearance.json` is absent (`P-RESET-SETTINGS`).
+- http://localhost:5100/settings/appearance is open and the page is light.
+
+**Steps**
+
+1. In `Dark theme` click `Solarized Dark`. Look at the page colours, the mode button's tooltip and `<data>\appearance.json`.
+2. Click the mode button. Look at the page, both lists and the file.
+3. While dark, click `Abyss` in `Dark theme`. Look at the page.
+4. While dark, click `Quiet Light` in `Light theme`. Look at the page and the file.
+5. Click the mode button.
+
+**Pass if — all of these**
+
+- Step 1: the page stays light and the tooltip still reads `Switch to dark theme`; the file gains `"darkTheme": "solarized-dark"` and `theme` is absent or `huddle`.
+- Step 2: the page turns Solarized Dark's deep teal ground (`#002b36`); `Huddle Light` and `Solarized Dark` are the marked rows.
+- Step 3: the page repaints at once to Abyss's near-black blue ground (`#000c18`) and `theme` becomes `abyss`.
+- Step 4: the page stays dark, and the file now holds `"lightTheme": "quiet-light"` with `theme` still `abyss`.
+- Step 5: the page becomes Quiet Light's pale grey ground (`#f5f5f5`).
+
+**Fail if — any of these**
+
+- Step 1 turns the page dark -> a pick of the other mode is being shown, and the Human loses their place.
+- Step 3 does not repaint -> a same-mode pick is only being recorded.
+- The page ends on a Theme other than the one marked in the matching list -> a slot and `theme` have diverged.
+
+**Inconclusive if**
+
+If a click on a row does nothing at all, check APPEARANCETHEME-04 first.
+
+### APPEARANCETHEME-33 — Old files, hand edits and bad values: the pair resolves safely
+
+**Free** · about 8 min
+
+*Proves a file written before the pair existed still toggles back to the Theme it was using, a hand-edit updates the open page and button live, and a wrong-mode or unknown choice is a warning that leaves the file alone.*
+
+**Before you start**
+
+- The application is running with the console visible in `T-A`, and http://localhost:5100/settings/appearance is open.
+
+**Steps**
+
+1. Hand-write `<data>\appearance.json` as `{ "theme": "solarized-dark", "dark": "light", "accentColor": "#e2762d" }` and save. Wait 2 seconds. Read the page, both lists and the button tooltip.
+2. Click the mode button twice. Then run `type <data>\appearance.json`.
+3. Hand-write `{ "theme": "huddle", "lightTheme": "solarized-dark", "darkTheme": "nonsense" }`, save and wait 2 seconds. Read the console in `T-A` and both lists.
+4. Run `type <data>\appearance.json`. Then delete the file.
+
+**Pass if — all of these**
+
+- Step 1: the page repaints to Solarized Dark by itself, `Solarized Dark` is marked in `Dark theme`, `Huddle Light` in `Light theme`, and the tooltip reads `Switch to light theme`.
+- Step 2: the first click goes to Huddle Light, the second back to Solarized Dark. The file keeps `"dark": "light"` and `"accentColor"`, and gains `"lightTheme": "huddle"` and `"darkTheme": "solarized-dark"`.
+- Step 3: the console carries two warnings naming `lightTheme` ... `not a known Light theme` and `darkTheme` ... `not a known Dark theme`; the lists mark `Huddle Light` and `Huddle Dark`.
+- Step 4: the file is exactly as hand-written in step 3 — the warnings never rewrite it.
+
+**Fail if — any of these**
+
+- Step 2 lands on Huddle Dark the second time -> the Theme being left is not recorded, so an old file loses its Theme at the first toggle.
+- Step 3 shows `Solarized Dark` in the light list -> a wrong-mode choice is being honoured, and a mode can again contradict its Theme.
+- The retired `dark` key or `accentColor` disappears -> the store is dropping keys it should preserve.
+
+**Inconclusive if**
+
+If the hand edit never reaches the page after 5 seconds, the filesystem watcher is not firing; see APPEARANCETHEME-18.
 
 ---
 

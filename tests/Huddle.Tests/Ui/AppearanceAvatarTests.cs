@@ -54,7 +54,7 @@ public sealed class AppearanceAvatarTests
         Assert.Contains("Initials of the name", cut.Markup, StringComparison.Ordinal);
         Assert.Contains("A short label", cut.Markup, StringComparison.Ordinal);
         Assert.Contains("An image", cut.Markup, StringComparison.Ordinal);
-        Assert.Contains("aria-label=\"Theme\"", cut.Markup, StringComparison.Ordinal);
+        Assert.Contains("aria-label=\"Light theme\"", cut.Markup, StringComparison.Ordinal);
     }
 
     /// <summary>
@@ -105,10 +105,10 @@ public sealed class AppearanceAvatarTests
 
         var cut = RenderPage(ctx);
         await cut.InvokeAsync(() => cut.FindAll(".theme-picker .mud-list-item")
-            .First(item => item.TextContent.Contains("Huddle Dark", StringComparison.Ordinal))
+            .First(item => item.TextContent.Contains("Abyss", StringComparison.Ordinal))
             .ClickAsync());
 
-        Assert.Equal("huddle-dark", appearance.Current.ThemeId);
+        Assert.Equal("abyss", appearance.Current.DarkThemeId);
     }
 
     /// <summary>An upload too large for <see cref="AvatarImage.MaxBytes"/> sets an error and never reaches <see cref="AvatarStore.WriteImage(ReadOnlySpan{byte}, string)"/>.</summary>
