@@ -1042,7 +1042,7 @@ Ids are `<deliverable number>.<task>`, the form `Set-Tracker.ps1` updates:
 `pwsh -NoProfile -File agents/scripts/Set-Tracker.ps1 -Task "12.3" -State Done -TrackerPath docs/engineering/UX-Issues-Plan.md`.
 `(H)` is Haiku, `(S)` is Sonnet.
 
-**Status:** 97 of 141 tasks Done · 0 of 2 retrospectives done · last updated 2026-10-13.
+**Status:** 102 of 141 tasks Done · 0 of 2 retrospectives done · last updated 2026-10-13.
 
 | **Deliverable / Task** | **Model** | **Depends on** | **Active** | **In Progress** | **Done** |
 | --- | --- | --- | --- | --- | --- |
@@ -1099,11 +1099,11 @@ Ids are `<deliverable number>.<task>`, the form `Set-Tracker.ps1` updates:
 | 8.4 Archived chats dialog (H) | Haiku | 8.2, U5 | | | ✔ |
 | 8.5 Empty states and suite (H) | Haiku | 8.3, 8.4 | | | ✔ |
 | **U9 Shell: sidebar consistency** | Sonnet | U8, U4 | | | |
-| 9.1 Red (S) | Sonnet | U8, U4 | | | |
-| 9.2 Headers and footer (S) | Sonnet | 9.1 | | | |
-| 9.3 Indent and icons (S) | Sonnet | 9.1 | | | |
-| 9.4 RoomActions (S) | Sonnet | 9.1 | | | |
-| 9.5 Wireframes (S) | Sonnet | 9.2, 9.3 | | | |
+| 9.1 Red (S) | Sonnet | U8, U4 | | | ✔ |
+| 9.2 Headers and footer (S) | Sonnet | 9.1 | | | ✔ |
+| 9.3 Indent and icons (S) | Sonnet | 9.1 | | | ✔ |
+| 9.4 RoomActions (S) | Sonnet | 9.1 | | | ✔ |
+| 9.5 Wireframes (S) | Sonnet | 9.2, 9.3 | | | ✔ |
 | **U10 Room: mechanical pass** | Haiku | U0, U5, U6, U7 | | | |
 | 10.1 Red (H) | Haiku | U0 | | | ✔ |
 | 10.2 Attributes, roles, keys, icons (H) | Haiku | 10.1 | | | ✔ |
