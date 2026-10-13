@@ -1,12 +1,14 @@
 @using System.Globalization
 @using Agency.Huddle.App.Library
+@using Agency.Huddle.App.Components.References
+@using Agency.Huddle.App.References
+@using Agency.Huddle.App.Search
 @using Agency.Huddle.App.Uploads
 @using Microsoft.AspNetCore.Components.Forms
 @using Microsoft.Extensions.Options
 @implements IDisposable
 @inject ChatService Chat
 @inject IJSRuntime JS
-@inject TaskStore Tasks
 @inject IOptions<TeamOptions> TeamOptions
 @inject IServiceProvider Services
 
@@ -49,6 +51,7 @@
     }
     <div class="@(this.AttachmentsAvailable ? "composer-box composer-box-attach" : "composer-box")">
         <textarea @ref="this.textarea" class="composer-input" placeholder="Message… (/invite @@agent)"
+                  role="combobox" aria-autocomplete="list"
                   aria-expanded="@(this.pickerOpen ? "true" : "false")"
                   aria-controls="@(this.pickerOpen ? this.listboxId : null)"
                   aria-activedescendant="@(this.pickerOpen ? this.HighlightedItemId() : null)"></textarea>
@@ -72,31 +75,9 @@
                            aria-label="Send message" OnClick="this.SendClickedAsync" />
         </MudTooltip>
     </div>
-    @if (this.pickerOpen)
+    @if (this.pickerOpen && this.view is not null)
     {
-        <div class="composer-picker" @onmousedown:preventDefault="true">
-            <div role="listbox" id="@this.listboxId" class="composer-picker-list">
-                @if (this.matches.Count == 0)
-                {
-                    <div role="option" class="composer-picker-empty" aria-disabled="true">No task matches '#@this.query'</div>
-                }
-                else
-                {
-                    @foreach (var (task, index) in this.matches.Select((match, i) => (match, i)))
-                    {
-                        <div role="option"
-                             id="@this.OptionId(index)"
-                             aria-selected="@(index == this.highlightIndex ? "true" : "false")"
-                             class="composer-picker-item"
-                             @onclick="() => this.OnPickClickAsync(task.Id.ToString())">
-                            <span class="composer-picker-id">@task.Id</span>
-                            <span class="composer-picker-title"><MudHighlighter Text="@task.Title" HighlightedText="@this.query" /></span>
-                            <span class="composer-picker-status"><MudChip T="string" Color="@TaskColors.For(task.Status)" Size="Size.Small">@TaskStates.ToWire(task.Status)</MudChip></span>
-                        </div>
-                    }
-                }
-            </div>
-        </div>
+        <ReferencePicker View="this.view" ListboxId="@this.listboxId" OnPick="this.OnPickClickAsync" />
     }
 </div>
 
@@ -117,19 +98,43 @@
     /// <summary>The picker's stable list id, unique per Composer instance, that the textarea's <c>aria-controls</c> and each row's <c>id</c> reference (Spec §13.13.4 "Accessibility").</summary>
     private readonly string listboxId = $"composer-picker-{Guid.NewGuid():N}";
 
-    /// <summary>Whether the <c>#</c> picker is open (Spec §13.13.4).</summary>
+    /// <summary>Whether the Reference picker is open (spec §5.1).</summary>
     private bool pickerOpen;
 
-    /// <summary>The query the picker was last opened or updated with, with no leading <c>#</c>.</summary>
-    private string query = "";
+    /// <summary>The picker's own search (D-5); null when the search stack is not registered, in which case the picker never opens.</summary>
+    private ReferenceSearch? search;
 
-    /// <summary>The index into <see cref="matches"/> the keyboard or the default has highlighted.</summary>
+    /// <summary>The newest picker query's search and its close check; ends when both have, so a test awaits it instead of sleeping.</summary>
+    private Task settled = Task.CompletedTask;
+
+    /// <summary>Completes once the newest picker query's search and close check have finished.</summary>
+    internal Task PickerSettled => this.settled;
+
+    /// <summary>The trigger of the open picker: <c>@</c> or <c>#</c>.</summary>
+    private char trigger = '@';
+
+    /// <summary>The text after the trigger, as the script sent it.</summary>
+    private string token = "";
+
+    /// <summary>The filter the token's prefix set (the Tasks filter for <c>#</c>).</summary>
+    private SearchFilter filter = SearchFilter.All;
+
+    /// <summary>Whether the box starts with <c>/invite </c>, which pins the Teammates group.</summary>
+    private bool inviteCommand;
+
+    /// <summary>The index into the rows the keyboard or the default has highlighted.</summary>
     private int highlightIndex;
 
-    /// <summary>The current search results, in <c>TaskQuery.Suggest</c> order.</summary>
-    private IReadOnlyList<TaskItem> matches = [];
+    /// <summary>The group states of the search in flight, keyed by group and side; only the renderer touches it.</summary>
+    private Dictionary<(SearchFilter Group, SearchScope Scope), SearchGroupState> states = [];
 
-    /// <summary>Whether Tasks are enabled at all - when not, the picker never opens (Spec §14, corrections-B6 "D15.1" item 9).</summary>
+    /// <summary>The names of the current Room's Members, loaded when the Room changes.</summary>
+    private IReadOnlySet<string> memberNames = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+
+    /// <summary>What the picker draws; null while it is closed.</summary>
+    private ReferencePickerView? view;
+
+    /// <summary>Whether Tasks are enabled at all - when not, a <c>#</c> never opens the picker (spec §5.1).</summary>
     private bool TasksEnabled => this.TeamOptions.Value.Tasks.Enabled;
 
     /// <summary>The attachment chips of this Room, in the order they were added; empty when attachments are off.</summary>
@@ -148,13 +153,20 @@
         {
             this.pending.Changed += this.OnPendingChanged;
         }
+
+        // Looked up rather than injected so a Composer rendered without the search stack (an upload test) still works.
+        this.search = this.Services.GetService<ReferenceSearchFactory>()?.Create();
+        if (this.search is not null)
+        {
+            this.search.GroupUpdated += this.OnGroupUpdated;
+        }
     }
 
-    protected override Task OnParametersSetAsync()
+    protected override async Task OnParametersSetAsync()
     {
         if (this.RoomId == this.loadedRoomId)
         {
-            return Task.CompletedTask;
+            return;
         }
 
         // Switching Rooms must not carry the previous Room's status line across, the same reason
@@ -162,7 +174,16 @@
         this.loadedRoomId = this.RoomId;
         this.errorText = null;
         this.infoText = null;
-        return Task.CompletedTask;
+        this.ClosePicker();
+        ITeamDirectory? directory = this.Services.GetService<ITeamDirectory>();
+        if (directory is null)
+        {
+            this.memberNames = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+            return;
+        }
+
+        IReadOnlyList<User> members = await directory.GetRoomMembersAsync(this.RoomId);
+        this.memberNames = new HashSet<string>(members.Select(static member => member.Name), StringComparer.OrdinalIgnoreCase);
     }
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
@@ -325,79 +346,186 @@
     }
 
     /// <summary>
-    /// Runs the <c>#</c> picker's search and re-renders the popover (Spec §13.13.4). <see langword="null"/>
-    /// closes it; an empty string returns the most recently updated Active Tasks. Never opens when
-    /// <see cref="TasksEnabled"/> is <see langword="false"/> (corrections-B6 "D15.1" item 9).
+    /// Runs the Reference picker's search and re-renders the list (spec §5.1, §5.2, §5.5). <see langword="null"/>
+    /// closes it. A <c>#</c> token is the Tasks filter pinned (D-3) and never opens when Tasks is off. The
+    /// search runs on the picker's own orchestrator and its groups arrive through <see cref="OnGroupUpdated"/>;
+    /// this method does not wait for them.
     /// </summary>
-    /// <param name="query">The typed query, with no leading <c>#</c>, or <see langword="null"/> to close the picker.</param>
+    /// <param name="token">The text after the trigger, or <see langword="null"/> to close the picker.</param>
+    /// <param name="trigger">The trigger the script found: <c>@</c> or <c>#</c>.</param>
+    /// <param name="inviteCommand">Whether the box starts with <c>/invite </c>, which shows the Teammates group alone.</param>
     [JSInvokable]
-    public Task TaskQueryAsync(string? query)
+    public Task ReferenceQueryAsync(string? token, string trigger, bool inviteCommand)
     {
-        if (query is null || !this.TasksEnabled)
+        char triggerChar = trigger.Length > 0 ? trigger[0] : '@';
+        if (token is null || this.search is null || (triggerChar == '#' && !this.TasksEnabled))
         {
             this.ClosePicker();
             this.StateHasChanged();
             return Task.CompletedTask;
         }
 
-        this.query = query;
-        this.matches = TaskQuery.Suggest(this.Tasks.All, query);
-        this.pickerOpen = true;
+        SearchParse parse = ReferenceQueryParser.Parse(token, triggerChar, inviteCommand);
+        this.trigger = triggerChar;
+        this.token = token;
+        this.filter = parse.Filter;
+        this.inviteCommand = inviteCommand;
+        this.states = [];
         this.highlightIndex = 0;
+        this.pickerOpen = true;
+        this.Rebuild();
+        Task running = this.search.SearchAsync(parse);
+
+        // A filter prefix with nothing searchable yet ("lib: ", "lib: my") is not a Name with a space: the search has not
+        // started, so an empty answer must not close the picker or the rest of the token could never search (spec §5.5).
+        // Once the phrase can search ("team: standup in 5 min"), no row closes it so Enter sends.
+        bool closeable = parse.IsSearchable && parse.Phrase.Length > 0;
+        this.settled = this.CloseWhenEmptyAsync(running, this.search.CurrentSearchId, token, closeable);
+
         this.StateHasChanged();
         return Task.CompletedTask;
     }
 
-    /// <summary>Moves the picker's highlight by <paramref name="delta"/>, wrapping around at either end (Spec §13.13.4).</summary>
+    /// <summary>Moves the picker's highlight by <paramref name="delta"/> over the rows only, wrapping around at either end (spec §5.4).</summary>
     /// <param name="delta">The number of rows to move: -1 for <c>ArrowUp</c>, +1 for <c>ArrowDown</c>.</param>
     [JSInvokable]
     public Task MoveAsync(int delta)
     {
-        if (!this.pickerOpen || this.matches.Count == 0)
+        int count = this.RowCount();
+        if (!this.pickerOpen || count == 0)
         {
             return Task.CompletedTask;
         }
 
-        int count = this.matches.Count;
         this.highlightIndex = (((this.highlightIndex + delta) % count) + count) % count;
+        this.Rebuild();
         this.StateHasChanged();
         return Task.CompletedTask;
     }
 
     /// <summary>
-    /// Returns the highlighted row's id and closes the picker (Spec §13.13.4), re-rendering before
+    /// Returns the highlighted row's insert text and closes the picker (spec §5.4, §6), re-rendering before
     /// returning (corrections-B6 "D15.3" item 4) so a stray Enter never sends against stale markup.
     /// </summary>
-    /// <returns>The highlighted Task's id, or <see langword="null"/> when there are no matches.</returns>
+    /// <returns>The text the pick writes, or <see langword="null"/> when there are no rows.</returns>
     [JSInvokable]
     public Task<string?> PickAsync()
     {
-        string? picked = this.matches.Count > 0 ? this.matches[this.highlightIndex].Id.ToString() : null;
+        string? picked = null;
+        if (this.view is not null)
+        {
+            List<ReferencePickerRow> rows = [.. this.view.Groups.SelectMany(static group => group.Rows)];
+            if (rows.Count > 0)
+            {
+                picked = rows[Math.Clamp(this.view.HighlightIndex, 0, rows.Count - 1)].InsertText;
+            }
+        }
+
         this.ClosePicker();
         this.StateHasChanged();
         return Task.FromResult(picked);
     }
 
-    /// <summary>Handles a mouse click on a row: closes the picker and asks JavaScript to insert the clicked Task's id (Spec §13.13.4 "A mouse click").</summary>
-    /// <param name="id">The clicked row's Task id.</param>
-    private async Task OnPickClickAsync(string id)
+    /// <summary>Handles a mouse click on a row: closes the picker and asks the script to insert the row's text (spec §5.4 "Mouse click").</summary>
+    /// <param name="row">The clicked row.</param>
+    private async Task OnPickClickAsync(ReferencePickerRow row)
     {
         this.ClosePicker();
-        await this.JS.InvokeVoidAsync("teamComposer.insertTask", this.textarea, id);
+        await this.JS.InvokeVoidAsync("teamComposer.insertReference", this.textarea, row.InsertText);
     }
 
-    /// <summary>The id of the currently highlighted row, or <see langword="null"/> with no matches, for the textarea's <c>aria-activedescendant</c>.</summary>
-    private string? HighlightedItemId() => this.matches.Count > 0 ? this.OptionId(this.highlightIndex) : null;
+    /// <summary>Takes one group's result from the picker's search, on the renderer, and drops an update of an older search.</summary>
+    /// <param name="update">The group's state, raised from a pool thread.</param>
+    private void OnGroupUpdated(SearchGroupUpdate update)
+    {
+        _ = RendererDispatch.RunAsync(this.InvokeAsync, () =>
+        {
+            if (this.pickerOpen && this.search is not null && update.SearchId == this.search.CurrentSearchId)
+            {
+                this.states[(update.Group, update.Scope)] = update.State;
+                this.Rebuild();
+                this.StateHasChanged();
+            }
 
-    /// <summary>The stable <c>id</c> attribute for the row at <paramref name="index"/>, scoped to this Composer instance's <see cref="listboxId"/>.</summary>
-    private string OptionId(int index) => string.Create(CultureInfo.InvariantCulture, $"{this.listboxId}-{index}");
+            return Task.CompletedTask;
+        });
+    }
 
-    /// <summary>Resets every picker field to its closed state.</summary>
+    /// <summary>
+    /// Once both passes of a search have ended, closes the picker when the token contains a space and there is no
+    /// row (spec §5.1), and tells the script so its next keystroke does not reopen it.
+    /// </summary>
+    /// <param name="running">The search in flight.</param>
+    /// <param name="searchId">The id of that search; a newer search makes this a no-op.</param>
+    /// <param name="searchedToken">The token that search ran for.</param>
+    /// <param name="closeable">False while the token is a filter prefix whose phrase cannot search yet; the picker then stays open.</param>
+    private async Task CloseWhenEmptyAsync(Task running, long searchId, string searchedToken, bool closeable)
+    {
+        await running;
+        if (!closeable || !searchedToken.Contains(' ', StringComparison.Ordinal))
+        {
+            return;
+        }
+
+        await RendererDispatch.RunAsync(this.InvokeAsync, async () =>
+        {
+            if (this.pickerOpen && this.search is not null && this.search.CurrentSearchId == searchId && this.RowCount() == 0)
+            {
+                this.ClosePicker();
+                this.StateHasChanged();
+                await this.JS.InvokeVoidAsync("teamComposer.pickerClosed", this.textarea);
+            }
+        });
+    }
+
+    /// <summary>Builds the view from the current state.</summary>
+    private void Rebuild()
+    {
+        Dictionary<string, string> rootPaths = [];
+        LibraryRootStore? roots = this.Services.GetService<LibraryRootStore>();
+        if (roots is not null)
+        {
+            foreach (LibraryRoot root in roots.VisibleRoots)
+            {
+                rootPaths[root.Id] = root.FullPath;
+            }
+        }
+
+        this.view = ReferencePickerModel.Build(new ReferencePickerInput(
+            this.trigger,
+            this.token,
+            this.filter,
+            this.states,
+            this.memberNames,
+            rootPaths,
+            this.inviteCommand,
+            this.listboxId,
+            this.highlightIndex));
+    }
+
+    /// <summary>The number of rows the picker shows now.</summary>
+    private int RowCount() => this.view is null ? 0 : this.view.Groups.Sum(static group => group.Rows.Count);
+
+    /// <summary>The id of the currently highlighted row, or <see langword="null"/> with no rows, for the textarea's <c>aria-activedescendant</c>.</summary>
+    private string? HighlightedItemId()
+    {
+        if (this.view is null)
+        {
+            return null;
+        }
+
+        List<ReferencePickerRow> rows = [.. this.view.Groups.SelectMany(static group => group.Rows)];
+        return rows.Count == 0 ? null : rows[Math.Clamp(this.view.HighlightIndex, 0, rows.Count - 1)].Id;
+    }
+
+    /// <summary>Resets every picker field to its closed state and cancels the search in flight.</summary>
     private void ClosePicker()
     {
+        this.search?.Cancel();
         this.pickerOpen = false;
-        this.matches = [];
-        this.query = "";
+        this.view = null;
+        this.states = [];
+        this.token = "";
         this.highlightIndex = 0;
     }
 
@@ -406,6 +534,12 @@
         if (this.pending is not null)
         {
             this.pending.Changed -= this.OnPendingChanged;
+        }
+
+        if (this.search is not null)
+        {
+            this.search.GroupUpdated -= this.OnGroupUpdated;
+            this.search.Dispose();
         }
 
         this.selfReference?.Dispose();

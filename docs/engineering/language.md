@@ -804,6 +804,30 @@ See
   that opens from the Teammates page. Say *search card* where the three could be confused.
 : *Avoid*: result item, tile, row.
 
+## References
+
+**Reference**
+: Text in a Message that names one Task, Room, Team or Library file by its stable key: a Task id,
+  a `/rooms/<id>` or `/teams/<Team>` link, or a Library path. Written by the Reference picker or
+  typed; either way it is ordinary text. A Teammate is never referenced: it is **Mentioned**. When
+  the Message is posted, what each reference named is kept beside the text as its snapshot.
+: *Avoid*: tag, hashtag, link card, pill.
+
+**Reference picker**
+: The list the Composer opens on `@`, and on `#` for Tasks, over the Global Search providers. Picking
+  a row writes a Mention or a reference at the caret.
+: *Avoid*: autocomplete, mention picker, tag picker.
+
+**Referenced items**
+: The short header a Turn's prompt gains for the references in the Message that started it, looked
+  up when the Turn starts: a few facts per item, fenced as data, ending in how to learn more.
+: *Avoid*: context, attachments, expansion (in interface copy).
+
+**Snapshot**
+: What a reference named when its Message was posted, kept beside the Message's text. It is what
+  the Transcript shows when the named item later changes or goes away.
+: *Avoid*: cache, copy of the item.
+
 ## Appearance
 
 **Theme**

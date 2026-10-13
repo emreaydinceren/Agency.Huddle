@@ -1,0 +1,84 @@
+@*
+    The Reference picker's list (spec §5.3, §5.6, §11). The composer draws it above its box as an
+    absolutely positioned child, so the page's 90% zoom applies to it (D-2): it is not a MudPopover.
+    Each row is the existing SearchCard for its hit, unchanged; the /* References */ block in app.css
+    hides its snippet and action.
+*@
+
+@using Agency.Huddle.App.Components.Search
+@using Agency.Huddle.App.References
+
+@{
+    string? highlighted = this.HighlightedId();
+}
+
+<div class="composer-picker" @onmousedown:preventDefault="true">
+    <div role="listbox" id="@this.ListboxId" class="composer-picker-list">
+        @foreach (ReferencePickerGroup group in this.View.Groups)
+        {
+            <div role="group" aria-label="@group.Heading">
+                <div class="composer-picker-heading" aria-hidden="true">@group.Heading</div>
+                @foreach (ReferencePickerRow row in group.Rows)
+                {
+                    <div role="option"
+                         id="@row.Id"
+                         aria-selected="@(string.Equals(row.Id, highlighted, StringComparison.Ordinal) ? "true" : "false")"
+                         aria-label="@row.AccessibleName"
+                         class="composer-picker-item @(row.Dimmed ? "composer-picker-dimmed" : null)"
+                         @onclick="() => this.PickAsync(row)">
+                        <SearchCard Hit="@row.Hit" />
+                        @if (row.Note is { } note)
+                        {
+                            <span class="composer-picker-note">@note</span>
+                        }
+                    </div>
+                }
+            </div>
+        }
+        @if (this.View.EmptyText is { } emptyText)
+        {
+            <div role="option" aria-disabled="true" class="composer-picker-item">@emptyText</div>
+        }
+    </div>
+    @if (this.View.Footer.Length > 0)
+    {
+        <div class="composer-picker-footer" aria-hidden="true">@this.View.Footer</div>
+    }
+    <div role="status" aria-live="polite" class="composer-picker-live">@this.View.LiveText</div>
+</div>
+
+@code {
+    /// <summary>The view the picker draws: its groups, its empty text, its footer and its live text.</summary>
+    [Parameter, EditorRequired]
+    public required ReferencePickerView View { get; set; }
+
+    /// <summary>The id of the listbox, which the composer's textarea names in aria-controls.</summary>
+    [Parameter]
+    public string ListboxId { get; set; } = string.Empty;
+
+    /// <summary>Raised with the row the Human picked, by a click or a tap.</summary>
+    [Parameter]
+    public EventCallback<ReferencePickerRow> OnPick { get; set; }
+
+    /// <summary>Raises <see cref="OnPick"/> with the clicked row.</summary>
+    /// <param name="row">The row that was clicked.</param>
+    /// <returns>A task that completes when the callback has run.</returns>
+    private async Task PickAsync(ReferencePickerRow row)
+    {
+        await this.OnPick.InvokeAsync(row);
+    }
+
+    /// <summary>Finds the id of the highlighted row, counting every row across the groups.</summary>
+    /// <returns>The highlighted row's id, clamped into the rows, or null when there are no rows.</returns>
+    private string? HighlightedId()
+    {
+        List<ReferencePickerRow> rows = this.View.Groups.SelectMany(group => group.Rows).ToList();
+        if (rows.Count == 0)
+        {
+            return null;
+        }
+
+        int index = Math.Clamp(this.View.HighlightIndex, 0, rows.Count - 1);
+        return rows[index].Id;
+    }
+}

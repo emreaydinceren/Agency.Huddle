@@ -30,6 +30,13 @@ claim — that an existing install keeps working — is asserted in prose and te
 and the failure mode it guards against is silent: no exception, no warning, just a column
 that is never there.
 
+### The composer's `@` picker: a Node harness
+
+The picker's key rules, its suppression and its insert are tested by a Node harness
+(`tests/Huddle.Tests/Ui/References/composer-picker.harness.js`, driven by `ComposerScriptTests.cs`).
+Like the other node-dependent tests, it needs `node` on PATH; the six such tests are listed in
+`agents/CIPipeline.md`. The source-text checks in `AppJsSourceTests` do not replace it.
+
 ### Conformance: a real Persona against a real ACP peer
 
 Added 2026-09-16 with the Adapters work, and it closed a gap worth naming. Until then

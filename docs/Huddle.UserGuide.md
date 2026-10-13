@@ -1049,6 +1049,63 @@ are open per Teammate at once. A closed session resumes where it left off if the
 adapter supports it. Otherwise it starts fresh and catches up from the last 20
 messages of the transcript.
 
+### Referencing things in a Message
+
+Type `@` in the message box to find a Teammate, a Room, a Team or a Library file. The
+list opens at the start of a line, after a space or after an opening bracket, so an
+email address such as `me@example.com` does not open it. Type `@room:` or `@lib:` to
+narrow the list to Rooms or Library files. A bare `@` lists the Room's Members first.
+
+Type `#` to find a Task. Picking a Task writes its plain id, such as `GROW-0002`, and
+the id becomes a link in the sent Message.
+
+What a pick writes:
+
+| You pick | The Message gets |
+| --- | --- |
+| A Teammate | `@` and the Teammate's name. It is addressed exactly as if you had typed `@Name`. |
+| A Task | The Task's id, shown as a link. |
+| A Room | A link to the Room. A Room in a Team says which Team in its label. |
+| A Team | A link to the Team's page. |
+| A Library file | The file's path in a code span, the same text an attached file produces. |
+
+The keys work the same for every kind of pick. While the list is open:
+
+| Key | What it does |
+| --- | --- |
+| Up and Down | Move the highlight. It wraps from the last row to the first, and back. |
+| Enter or Tab | Pick the highlighted row. |
+| Enter | Never sends while the list is open, even when no row matches. |
+| Esc | Closes the list and keeps the text you typed. It does not reopen for the same word. |
+
+Typing keeps narrowing the list. Ctrl+Z after a pick undoes it in one step and brings back
+the text you typed. The **Send** button always sends the text exactly as you typed it, even
+while the list is open.
+
+A Teammate who is not a Member of the Room is dimmed and marked **Not in this Room**.
+Choose **/invite @** in the message box, or pick the Teammate after inviting it, to add
+it to the Room first.
+
+When a referenced item changes, the link shows the change. A **changed** chip means
+the item was renamed or retitled since the Message was sent; the Message keeps the name
+it had. An **(unavailable)** chip means the item no longer exists, for example a deleted
+Room or a Library file that was renamed or moved. An archived Room still exists, so its
+references show no chip at all. A Task id or a Library path that names nothing when you
+send is not a reference: it stays plain text, with no chip.
+
+Agents are told what a reference is when you send one, so they can read the item. To
+stop that, set `Team:References:ExpandInPrompt` to `false`.
+
+### Copying a Room's link
+
+Use **Copy link** to put a Room's reference on the clipboard. It is the link button in
+the Room's header, and *Copy link* in the `…` or right-click menu of a Room in the
+sidebar, both for Chats and for a Team. Paste it into any message box to make the same
+reference the picker writes. The Room opens when a reader selects it.
+
+A plain address from the address bar opens the Room, but it is not a reference: it
+shows as a link and nothing more.
+
 ### Watching a Teammate work
 
 While a Teammate is answering, its reply shows its last six tool calls as rows.

@@ -15,6 +15,8 @@
 *@
 
 @inject ChatService ChatService
+@inject ISnackbar Snackbar
+@inject IJSRuntime JS
 
 <div class="hover-reveal-row"
      @oncontextmenu="this.OnRowContextMenuAsync"
@@ -47,6 +49,7 @@
                 </MudTooltip>
             </ActivatorContent>
             <ChildContent>
+                <MudMenuItem OnClick="this.CopyLinkAsync">Copy link</MudMenuItem>
                 <MudMenuItem Disabled="this.busy" OnClick="this.ArchiveAsync">Archive</MudMenuItem>
                 <MudMenuItem Disabled="this.busy" OnClick="this.BeginDeleteAsync">Delete</MudMenuItem>
             </ChildContent>
@@ -85,6 +88,23 @@
         if (this.menu is not null)
         {
             await this.menu.OpenMenuAsync(e);
+        }
+    }
+
+    /// <summary>
+    /// Copy link (spec §6.1, D-31): puts this Room's reference on the clipboard as plain text. The clipboard call is
+    /// made directly from the menu item's click, with no other <c>await</c> before it.
+    /// </summary>
+    private async Task CopyLinkAsync()
+    {
+        bool copied = await this.JS.InvokeAsync<bool>("huddleClipboard.copy", Agency.Huddle.App.References.RoomLinkText.For(this.Room));
+        if (copied)
+        {
+            this.Snackbar.Add($"Copied link to {this.Room.Name}", Severity.Success, configure: null, key: "copy");
+        }
+        else
+        {
+            this.Snackbar.Add("Couldn't copy the link.", Severity.Warning, configure: null, key: "copy");
         }
     }
 

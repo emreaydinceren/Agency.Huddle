@@ -386,6 +386,27 @@ The Library — the explorer, viewer and editor, Spec §6. Paths are relative to
 | `Acp/TeammateLayoutMigration.cs` | The one-time move from `Teams/` + `work/` to `Teammates/`. |
 | `wwwroot/library-editor.js` | CodeMirror 6 interop module. |
 
+References — the `@` and `#` picker in the Composer, the reference snapshot and the Referenced items header, `docs/Huddle.AtTagging-Specifications.md`. Paths are relative to `src/Huddle.App`:
+
+| Path | Responsibility |
+| --- | --- |
+| `References/ReferencesOptions.cs` | The `References:` configuration keys, read once: `ExpandInPrompt` and `MaxPromptChars`. |
+| `References/ReferenceLimits.cs` | The constants: 10 references per Message, 60-character labels, 120 per header value, the token length. |
+| `References/ReferenceText.cs` | The pure text functions: Room and Team addresses, labels, escaping and the text a pick writes. |
+| `References/RoomLinkText.cs` | The Copy link text for a Room, built by `ReferenceText` so it matches the picker. |
+| `References/ReferenceQueryParser.cs` | Reads one picker token into its filter, phrase and whether it may search. Pure. |
+| `References/ReferencePickerModel.cs` | Turns the picker's state into groups, rows, the footer and the live line, with no renderer. |
+| `References/ReferenceSearch.cs` | Runs one picker search under the Reference purpose and drops late results. |
+| `References/ReferenceCandidate.cs` | A reference the scanner found in a Message's text, before it is checked. |
+| `References/ReferenceScanner.cs` | Finds the references in a Message's text through the chat Markdown pipeline. |
+| `References/ResolvedReference.cs` | A reference after the resolver looked it up: a Task, Room, Team or Library file, or a gone reference. |
+| `References/ReferenceResolver.cs` | Looks up each candidate now against the stores. |
+| `References/IReferenceSnapshotter.cs`, `ReferenceSnapshotter.cs` | Builds a Message's snapshot at post time. A failure never blocks a post. |
+| `References/ReferencedItemsFormatter.cs` | Writes the Referenced items header, quoting every untrusted value. |
+| `References/ReferenceExpander.cs` | Expands a Turn's trigger Message into the header text. |
+| `Components/References/ReferencePicker.razor` | The picker list drawn over the Composer. |
+| `Components/References/MessageReferences.razor` | The reference row under a Message that has a snapshot. |
+
 Global Search — the search box in the Top Bar, its dropdown and the providers behind it, `docs/Huddle.GlobalSearch-Specifications.md`. Paths are relative to `src/Huddle.App`:
 
 | Path | Responsibility |

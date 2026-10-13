@@ -2,6 +2,7 @@ using Agency.Huddle.Acp.Abstractions;
 using Agency.Huddle.App.FileChanges;
 using Agency.Huddle.App.Library;
 using Agency.Huddle.App.Prompts;
+using Agency.Huddle.App.References;
 using Agency.Huddle.App.Services;
 
 namespace Agency.Huddle.App.Acp.Sessions;
@@ -32,6 +33,7 @@ internal sealed class RoomSessionPool : ITurnScheduler, IAsyncDisposable
     private readonly string? agentId;
     private readonly TurnActivity? turnActivity;
     private readonly LibraryDocumentCollector? libraryDocs;
+    private readonly ReferenceExpander? references;
     private readonly bool readsFiles;
     private readonly IElicitationBridge? elicitationBridge;
     private readonly bool sessionPerRoom;
@@ -69,6 +71,7 @@ internal sealed class RoomSessionPool : ITurnScheduler, IAsyncDisposable
     /// <param name="libraryDocs">Collects the Library documents mentioned in a Turn (Spec §6.14), passed to every Room Session this pool creates. <see langword="null"/> when the Library is off, like every caller that predates it.</param>
     /// <param name="readsFiles">Whether the resolved Adapter Profile can read files (FC §6.11's Library counterpart), passed to every Room Session this pool creates.</param>
     /// <param name="elicitationBridge">Shows the Human the questions the agent asks (E-3), passed to every Room Session this pool creates. <see langword="null"/> answers every one as cancelled, like every caller that predates it.</param>
+    /// <param name="references">Builds the Referenced items header, passed to every Room Session this pool creates. <see langword="null"/> adds no header, like every caller that predates it.</param>
     public RoomSessionPool(
         IPersonaHost host,
         IRoomSessionOwner owner,
@@ -86,7 +89,8 @@ internal sealed class RoomSessionPool : ITurnScheduler, IAsyncDisposable
         TurnActivity? turnActivity = null,
         LibraryDocumentCollector? libraryDocs = null,
         bool readsFiles = true,
-        IElicitationBridge? elicitationBridge = null)
+        IElicitationBridge? elicitationBridge = null,
+        ReferenceExpander? references = null)
     {
         ArgumentNullException.ThrowIfNull(host);
         ArgumentNullException.ThrowIfNull(owner);
@@ -112,6 +116,7 @@ internal sealed class RoomSessionPool : ITurnScheduler, IAsyncDisposable
         this.agentId = agentId;
         this.turnActivity = turnActivity;
         this.libraryDocs = libraryDocs;
+        this.references = references;
         this.readsFiles = readsFiles;
         this.elicitationBridge = elicitationBridge;
         this.sessionPerRoom = host.Profile.SessionPerRoom;
@@ -357,7 +362,8 @@ internal sealed class RoomSessionPool : ITurnScheduler, IAsyncDisposable
             turnActivity: this.turnActivity,
             libraryDocs: this.libraryDocs,
             readsFiles: this.readsFiles,
-            elicitationBridge: this.elicitationBridge);
+            elicitationBridge: this.elicitationBridge,
+            references: this.references);
 
     private RoomSession GetOrCreateSession(string roomId)
     {

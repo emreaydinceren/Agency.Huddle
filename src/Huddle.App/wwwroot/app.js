@@ -27,6 +27,7 @@ window.teamComposer = {
         el._draftKey = key;
         el.value = (key && window.teamComposer.draftGet(key)) || "";
         el._picker.open = false;
+        el._picker.suppressFrom = null;
         el._typedNotified = false;
     },
 
@@ -94,7 +95,7 @@ window.teamComposer = {
     attach(el, dotnetRef, draftKey, fileInputHost) {
         window.teamComposer.attachFiles(el, fileInputHost);
         el._dotnetRef = dotnetRef;
-        el._picker = { open: false };
+        el._picker = { open: false, suppressFrom: null, suppressPrefix: "" };
         el._draftKey = draftKey || null;
         el._typedNotified = false;
         if (el._draftKey) {
@@ -107,24 +108,27 @@ window.teamComposer = {
         el.addEventListener("keydown", async (e) => {
             const picker = el._picker;
 
+            // While an IME composes (isComposing, or the legacy keyCode 229) every key belongs to the IME:
+            // arrows choose its candidates, Esc cancels the composition, Enter commits it.
+            if (window.teamComposer.isIme(e)) {
+                return;
+            }
+
             if (picker.open) {
-                if (e.key === "Enter" && !e.shiftKey) {
-                    if (e.isComposing) {
-                        return;
-                    }
+                // Enter picks and never sends, even with no rows (spec 5.4, OP-7); Tab picks (OP-10).
+                if ((e.key === "Enter" && !e.shiftKey) || (e.key === "Tab" && !e.shiftKey)) {
                     e.preventDefault();
-                    const id = await dotnetRef.invokeMethodAsync("PickAsync");
-                    if (id) {
-                        window.teamComposer.insertTask(el, id);
+                    const text = await dotnetRef.invokeMethodAsync("PickAsync");
+                    picker.open = false;
+                    if (text) {
+                        window.teamComposer.insertReference(el, text);
                     }
                     return;
                 }
-                if (e.key === "Tab") {
-                    e.preventDefault();
-                    const id = await dotnetRef.invokeMethodAsync("PickAsync");
-                    if (id) {
-                        window.teamComposer.insertTask(el, id);
-                    }
+                if (e.key === "Enter") {
+                    // Shift+Enter is a new line and ends the token: the browser default stays, the picker closes.
+                    picker.open = false;
+                    await dotnetRef.invokeMethodAsync("ReferenceQueryAsync", null, "@", false);
                     return;
                 }
                 if (e.key === "ArrowUp") {
@@ -139,22 +143,30 @@ window.teamComposer = {
                 }
                 if (e.key === "Escape") {
                     picker.open = false;
-                    await dotnetRef.invokeMethodAsync("TaskQueryAsync", null);
+                    window.teamComposer.suppress(el, null);
+                    await dotnetRef.invokeMethodAsync("ReferenceQueryAsync", null, "@", false);
                     return;
                 }
                 return;
             }
 
             if (e.key === "Enter" && !e.shiftKey) {
-                if (e.isComposing) {
-                    return;
-                }
                 e.preventDefault();
                 await window.teamComposer.send(el);
             }
         });
 
-        el.addEventListener("input", async () => {
+        // The picker does not query while a composition is active; the committed text is queried once it ends.
+        el.addEventListener("compositionstart", () => {
+            el._composing = true;
+        });
+
+        el.addEventListener("compositionend", async () => {
+            el._composing = false;
+            await window.teamComposer.refresh(el);
+        });
+
+        el.addEventListener("input", async (e) => {
             if (el._draftKey) {
                 window.teamComposer.draftSet(el._draftKey, el.value);
             }
@@ -167,15 +179,11 @@ window.teamComposer = {
                 } catch { }
             }
 
-            const beforeCaret = el.value.substring(0, el.selectionStart);
-            const match = beforeCaret.match(/(?:^|\s)#([A-Za-z0-9-]{0,40})$/);
-            if (match) {
-                el._picker.open = true;
-                await dotnetRef.invokeMethodAsync("TaskQueryAsync", match[1]);
-            } else if (el._picker.open) {
-                el._picker.open = false;
-                await dotnetRef.invokeMethodAsync("TaskQueryAsync", null);
+            if (el._composing || (e && e.isComposing)) {
+                return;
             }
+
+            await window.teamComposer.refresh(el);
         });
 
         el.addEventListener("blur", () => {
@@ -183,7 +191,7 @@ window.teamComposer = {
                 try {
                     if (el._picker.open) {
                         el._picker.open = false;
-                        await dotnetRef.invokeMethodAsync("TaskQueryAsync", null);
+                        await dotnetRef.invokeMethodAsync("ReferenceQueryAsync", null, "@", false);
                     }
                 } catch {
                     // The Composer, or its DotNetObjectReference, may already be disposed by the
@@ -203,25 +211,111 @@ window.teamComposer = {
         }
         el.value = "";
         el._picker.open = false;
+        el._picker.suppressFrom = null;
         if (el._draftKey) {
             window.teamComposer.draftSet(el._draftKey, "");
         }
     },
 
-    // Replaces the `#query` token ending at the caret with the plain id plus a space (D-33: the
-    // `#` is not kept), puts the caret after it, refocuses the textarea and closes the picker.
-    insertTask(el, id) {
-        const beforeCaret = el.value.substring(0, el.selectionStart);
-        const afterCaret = el.value.substring(el.selectionStart);
-        const replaced = beforeCaret.replace(/(?:^|\s)#([A-Za-z0-9-]{0,40})$/, (whole) => {
-            const lead = whole.startsWith("#") ? "" : whole[0];
-            return lead + id + " ";
-        });
-        el.value = replaced + afterCaret;
-        const caret = replaced.length;
-        el.selectionStart = el.selectionEnd = caret;
+    // True while an IME composition is active: the event says so, or it is the legacy keyCode 229.
+    isIme(e) {
+        return !!e && (e.isComposing === true || e.keyCode === 229);
+    },
+
+    // Opens, updates or closes the picker for the token at the caret, honouring the suppression.
+    async refresh(el) {
+        const hit = window.teamComposer.findToken(el);
+        const picker = el._picker;
+
+        // After a pick (or Esc, or a token with no hits) the picker stays shut for that SAME token only:
+        // it still starts where it did and still begins with the text that was closed. Any other token (the
+        // box was emptied or replaced, or the caret moved elsewhere) ends the suppression, so a new `@`
+        // always reopens. An insert fires `input` itself, so the record was made before it.
+        if (picker.suppressFrom !== null) {
+            const sameToken = !!hit && hit.start === picker.suppressFrom && hit.token.startsWith(picker.suppressPrefix);
+            if (sameToken) {
+                return;
+            }
+            picker.suppressFrom = null;
+        }
+
+        if (hit) {
+            picker.open = true;
+            const inviteCommand = /^\/invite\s/.test(el.value);
+            await el._dotnetRef.invokeMethodAsync("ReferenceQueryAsync", hit.token, hit.trigger, inviteCommand);
+        } else if (picker.open) {
+            picker.open = false;
+            await el._dotnetRef.invokeMethodAsync("ReferenceQueryAsync", null, "@", false);
+        }
+    },
+
+    // The picker token ending at the caret, or null. `@` is MentionParser's rule (at the start or after a
+    // character that is not a letter, digit, `_` or `@`, then up to 64 characters with no newline and no
+    // `@`; spaces allowed because a Name may contain them). `#` is the old rule, unchanged. `#` is tried
+    // first so "@Nova see #12" still opens the Task picker. start is the index of the trigger character.
+    findToken(el) {
+        return window.teamComposer.tokenAt(el.value, el.selectionStart);
+    },
+
+    // findToken over plain text: the token in `value` that ends at `caret`.
+    tokenAt(value, caret) {
+        const beforeCaret = value.substring(0, caret);
+        const hash = beforeCaret.match(/(?:^|\s)#([A-Za-z0-9-]{0,40})$/);
+        if (hash) {
+            return { trigger: "#", token: hash[1], start: caret - hash[1].length - 1 };
+        }
+        const at = beforeCaret.match(/(?:^|[^A-Za-z0-9_@])@([^\n@]{0,64})$/);
+        if (at) {
+            return { trigger: "@", token: at[1], start: caret - at[1].length - 1 };
+        }
+        return null;
+    },
+
+    // Keeps the picker shut for the token at the caret for as long as the SAME token continues: it still starts
+    // at suppressFrom and begins with suppressPrefix (see refresh). Not "until the next space", because a token
+    // may contain spaces. Any other token ends the suppression.
+    suppress(el, prefix) {
+        const hit = window.teamComposer.findToken(el);
+        if (!hit) {
+            return;
+        }
+        el._picker.suppressFrom = hit.start;
+        el._picker.suppressPrefix = prefix === null ? hit.token : prefix;
+    },
+
+    // Called by the Composer when a token with a space has no hits and it closed the picker: the script's
+    // state follows, and the next keystroke of the same token does not reopen it.
+    pickerClosed(el) {
         el._picker.open = false;
+        window.teamComposer.suppress(el, null);
+    },
+
+    // Replaces the token ending at the caret with the pick's text plus a space and puts the caret after it
+    // (spec 6). One undoable edit (D-24, OP-8): execCommand("insertText") is recorded by the browser as
+    // such, so Ctrl+Z brings the token back; setRangeText is the fallback where it is refused. The
+    // suppression is recorded first because the insert raises `input` itself.
+    insertReference(el, text) {
         el.focus();
+        const hit = window.teamComposer.findToken(el);
+        const caret = el.selectionStart;
+        const tokenStart = hit ? hit.start : caret;
+        el._picker.open = false;
+        el._picker.suppressFrom = tokenStart;
+        el._picker.suppressPrefix = text.startsWith("@") ? text.substring(1) : "";
+        if (!text.startsWith("@")) {
+            // A Name may contain spaces, so an EARLIER `@` ("@Nova check #gro") still reaches the caret once the
+            // pick is in. That token is the one kept shut: nothing is active after a pick until the Human types.
+            const earlier = window.teamComposer.tokenAt(el.value, tokenStart);
+            if (earlier && earlier.trigger === "@") {
+                el._picker.suppressFrom = earlier.start;
+                el._picker.suppressPrefix = earlier.token + text + " ";
+            }
+        }
+        el.setSelectionRange(tokenStart, caret);
+        if (!document.execCommand("insertText", false, text + " ")) {
+            el.setRangeText(text + " ", tokenStart, caret, "end");
+            el.dispatchEvent(new Event("input", { bubbles: true }));
+        }
     },
 };
 

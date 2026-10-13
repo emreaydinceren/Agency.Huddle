@@ -39,7 +39,7 @@ internal sealed class NeedsYouFixture : IDisposable
             this.Questions,
             NullLogger<ChatService>.Instance,
             this.Forms,
-            this.Clock);
+            timeProvider: this.Clock);
         this.Tracker = new NeedsYouTracker(this.Events, this.Questions, this.Forms, this.Team, NullLogger<NeedsYouTracker>.Instance, this.Clock);
     }
 

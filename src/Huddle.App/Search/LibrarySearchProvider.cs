@@ -6,8 +6,9 @@ namespace Agency.Huddle.App.Search;
 
 /// <summary>
 /// The Library group's provider (Global Search spec §8.3 and §8.6): walks every visible Library Root
-/// concurrently through <see cref="LibraryFileService.SearchTextAsync"/>, and leaves out Persona and
-/// Task files, which the Teammates and Tasks groups list instead.
+/// concurrently through <c>LibraryFileService.SearchTextAsync</c>, and leaves out Persona and
+/// Task files, which the Teammates and Tasks groups list instead. Under the Reference purpose (D-8, D-29) it
+/// matches file names only, opens no file, and drops folders and paths that contain a backtick.
 /// </summary>
 /// <remarks>
 /// The Library has no archived side, and a disabled Library returns nothing at once. Hits are not
@@ -40,13 +41,17 @@ internal sealed class LibrarySearchProvider(
     {
         ArgumentNullException.ThrowIfNull(query);
 
-        if (query.Scope == SearchScope.Archived || !this.options.Value.Library.Enabled || query.Text.Trim().Length == 0)
+        bool reference = query.Purpose == SearchPurpose.Reference;
+        string phrase = query.Text.Trim();
+        if (query.Scope == SearchScope.Archived || !this.options.Value.Library.Enabled || phrase.Length == 0 || (reference && phrase.Length < SearchLimits.MinChars))
         {
             return SearchResult.Empty;
         }
 
         string teamsRoot = Path.GetFullPath(Path.Combine(this.options.Value.DataDir, this.options.Value.Teams.Dir));
-        Predicate<LibraryEntry> isExcluded = entry => IsExcluded(entry, teamsRoot);
+
+        // Under Reference a folder or a backtick path is excluded during the walk, so it never uses up the hit cap before a file can.
+        Predicate<LibraryEntry> isExcluded = entry => IsExcluded(entry, teamsRoot) || (reference && !IsReferenceable(entry));
         List<LibraryRoot> visible = [.. this.roots.VisibleRoots];
         LibraryTextSearchResult?[] perRoot = new LibraryTextSearchResult?[visible.Count];
         ParallelOptions parallel = new()
@@ -68,7 +73,7 @@ internal sealed class LibrarySearchProvider(
                 return;
             }
 
-            perRoot[index] = await this.files.SearchTextAsync(scope, query.Text, query.MaxHits, this.options.Value.Search, isExcluded, token);
+            perRoot[index] = await this.files.SearchTextAsync(scope, query.Text, query.MaxHits, this.options.Value.Search, isExcluded, !reference, token);
         });
 
         // Merge in root order, never in completion order, so equal-ranked hits keep one order from run to run (§7.4).
@@ -85,6 +90,14 @@ internal sealed class LibrarySearchProvider(
 
         return new SearchResult([.. hits], truncated);
     }
+
+    /// <summary>
+    /// Whether an entry may be a Reference hit (D-8): a file, not a folder, whose full path has no backtick, since a
+    /// backtick would break the code span the reference is written in.
+    /// </summary>
+    /// <param name="entry">The entry the walk matched.</param>
+    /// <returns><see langword="true"/> when the entry may be referenced.</returns>
+    private static bool IsReferenceable(LibraryEntry entry) => !entry.IsFolder && !entry.Path.FullPath.Contains('`');
 
     /// <summary>
     /// Whether an entry is never a Library hit (OP-10, §8.6): a Teammate's definition file, or a Task file

@@ -80,6 +80,28 @@ public sealed class SearchOrchestratorTests : IDisposable
         await EndAsync(search, ct);
     }
 
+    /// <summary>The picker's Teammates group is asked for the single-filter cap even under All, so the Composer can put the Room's Members first before cutting to five (spec §5.3).</summary>
+    [Fact]
+    public async Task ReferencePurpose_TeammatesUnderAll_AskForTheSingleFilterCap()
+    {
+        CancellationToken ct = TestContext.Current.CancellationToken;
+        GatedSearchProvider mates = new(SearchFilter.Teammates, isExpensive: false);
+        GatedSearchProvider teams = new(SearchFilter.Teams, isExpensive: false);
+        SearchOrchestrator orchestrator = this.Create(mates, teams);
+
+        Task search = orchestrator.SearchAsync(Parse(SearchFilter.All), null, SearchPurpose.Reference);
+        IReadOnlyList<GatedCall> mateCalls = await mates.WaitForCallsAsync(1, ct);
+        IReadOnlyList<GatedCall> teamCalls = await teams.WaitForCallsAsync(1, ct);
+
+        Assert.Equal(SearchLimits.SingleFilterCap, mateCalls[0].Query.MaxHits);
+        Assert.Equal(SearchLimits.GroupCap, teamCalls[0].Query.MaxHits);
+        mateCalls[0].Complete();
+        teamCalls[0].Complete();
+        (await mates.WaitForCallsAsync(2, ct))[1].Complete();
+        (await teams.WaitForCallsAsync(2, ct))[1].Complete();
+        await EndAsync(search, ct);
+    }
+
     /// <summary>The Archived pass starts only after every Active call has finished, and then asks for the Archived scope.</summary>
     [Fact]
     public async Task ArchivedPass_WaitsForEveryActiveCall()

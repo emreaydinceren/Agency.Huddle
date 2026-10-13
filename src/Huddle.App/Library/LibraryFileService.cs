@@ -269,7 +269,19 @@ internal sealed class LibraryFileService(
     /// <param name="isExcluded">Names the entries that are never a hit (a folder it names is still walked); <see langword="null"/> excludes nothing.</param>
     /// <param name="ct">Cancels the search; checked before every file read.</param>
     /// <returns>The hits in walk order, and whether more could have been found.</returns>
-    internal async Task<LibraryTextSearchResult> SearchTextAsync(LibraryPath scope, string phrase, int max, SearchOptions search, Predicate<LibraryEntry>? isExcluded, CancellationToken ct)
+    internal Task<LibraryTextSearchResult> SearchTextAsync(LibraryPath scope, string phrase, int max, SearchOptions search, Predicate<LibraryEntry>? isExcluded, CancellationToken ct) =>
+        this.SearchTextAsync(scope, phrase, max, search, isExcluded, readContent: true, ct);
+
+    /// <summary>Searches the Library, reading file contents only when <paramref name="readContent"/> is true (the picker's names-only purpose, D-29).</summary>
+    /// <param name="scope">The folder to walk.</param>
+    /// <param name="phrase">The text to look for.</param>
+    /// <param name="max">The most hits to return.</param>
+    /// <param name="search">The search options.</param>
+    /// <param name="isExcluded">Names the entries that are never a hit, or null.</param>
+    /// <param name="readContent">False matches file names only and opens no file.</param>
+    /// <param name="ct">Cancels the search.</param>
+    /// <returns>The hits in walk order, and whether more could have been found.</returns>
+    internal async Task<LibraryTextSearchResult> SearchTextAsync(LibraryPath scope, string phrase, int max, SearchOptions search, Predicate<LibraryEntry>? isExcluded, bool readContent, CancellationToken ct)
     {
         ArgumentNullException.ThrowIfNull(scope);
         ArgumentNullException.ThrowIfNull(phrase);
@@ -288,7 +300,7 @@ internal sealed class LibraryFileService(
             search.MaxVisitedEntries,
             async (entry, token) =>
             {
-                (LibraryTextHit? hit, bool overSize) = await TestEntryAsync(entry, needle, search, isExcluded, token);
+                (LibraryTextHit? hit, bool overSize) = await TestEntryAsync(entry, needle, search, isExcluded, readContent, token);
                 skippedOverSize |= overSize;
                 return hit;
             },
@@ -301,10 +313,11 @@ internal sealed class LibraryFileService(
     /// <param name="entry">The entry visited.</param>
     /// <param name="needle">The already-trimmed, non-empty phrase.</param>
     /// <param name="search">The search options, for the content policy.</param>
+    /// <param name="readContent">False matches names only and opens no file (the picker's Reference purpose).</param>
     /// <param name="isExcluded">The exclusion predicate, or <see langword="null"/>.</param>
     /// <param name="ct">Cancels the read; checked before it starts.</param>
     /// <returns>The hit or <see langword="null"/>, and whether a text file was skipped for being over the size limit.</returns>
-    private static async ValueTask<(LibraryTextHit? Hit, bool OverSize)> TestEntryAsync(LibraryEntry entry, string needle, SearchOptions search, Predicate<LibraryEntry>? isExcluded, CancellationToken ct)
+    private static async ValueTask<(LibraryTextHit? Hit, bool OverSize)> TestEntryAsync(LibraryEntry entry, string needle, SearchOptions search, Predicate<LibraryEntry>? isExcluded, bool readContent, CancellationToken ct)
     {
         if (isExcluded is not null && isExcluded(entry))
         {
@@ -330,7 +343,7 @@ internal sealed class LibraryFileService(
         }
 
         ct.ThrowIfCancellationRequested();
-        switch (SearchContentPolicy.Decide(name, entry.Length, search))
+        switch (readContent ? SearchContentPolicy.Decide(name, entry.Length, search) : ContentDecision.NameOnlyNotText)
         {
             case ContentDecision.NameOnlyTooLarge:
                 return (null, true);
@@ -362,7 +375,7 @@ internal sealed class LibraryFileService(
 
     /// <summary>
     /// The one breadth-first walk under an already-resolved folder that <see cref="FindAsync"/> and
-    /// <see cref="SearchTextAsync"/> share. Lists each folder through <see cref="ListAsync"/>, so every
+    /// <c>SearchTextAsync</c> share. Lists each folder through <see cref="ListAsync"/>, so every
     /// hiding rule applies; counts every entry visited against <paramref name="visitLimit"/>; stops once
     /// more than <paramref name="max"/> hits are found.
     /// </summary>

@@ -4,6 +4,7 @@ using Agency.Huddle.App.Acp.Sessions;
 using Agency.Huddle.App.FileChanges;
 using Agency.Huddle.App.Library;
 using Agency.Huddle.App.Prompts;
+using Agency.Huddle.App.References;
 using Agency.Huddle.App.Services;
 using Agency.Huddle.App.Skills;
 
@@ -40,6 +41,7 @@ internal sealed class PersonaSupervisor : BackgroundService, Agency.Huddle.App.T
     private readonly OwnPosts? ownPosts;
     private readonly TurnActivity? turnActivity;
     private readonly LibraryDocumentCollector? libraryDocs;
+    private readonly ReferenceExpander? references;
 
     // Every runner this supervisor builds writes the cost its Adapter reports into this table, which
     // the Teammate card reads. Null where a supervisor is built without a container.
@@ -92,7 +94,8 @@ internal sealed class PersonaSupervisor : BackgroundService, Agency.Huddle.App.T
         LibraryDocumentCollector? libraryDocs = null,
         PersonaSpend? spend = null,
         PersonaCommands? commands = null,
-        IElicitationBridge? elicitationBridge = null)
+        IElicitationBridge? elicitationBridge = null,
+        ReferenceExpander? references = null)
     {
         ArgumentNullException.ThrowIfNull(options);
         ArgumentNullException.ThrowIfNull(personaStore);
@@ -120,6 +123,7 @@ internal sealed class PersonaSupervisor : BackgroundService, Agency.Huddle.App.T
         this.ownPosts = ownPosts;
         this.turnActivity = turnActivity;
         this.libraryDocs = libraryDocs;
+        this.references = references;
         this.spend = spend;
         this.commands = commands;
         this.elicitationBridge = elicitationBridge;
@@ -580,7 +584,7 @@ internal sealed class PersonaSupervisor : BackgroundService, Agency.Huddle.App.T
             // Library reaches every runner as a null collector, the same "absent means off" shape
             // File Changes and every other optional collaborator here already use.
             var host = new PersonaRunner(
-                persona, Options.Create(this.options), this.factory, this.prompts, this.roomFollows, this.loggerFactory.CreateLogger<PersonaRunner>(), tracker, roomSessions: this.roomSessions, ownPosts: this.ownPosts, turnActivity: this.turnActivity, libraryDocs: this.options.Library.Enabled ? this.libraryDocs : null, readsFiles: profile.ReadsFiles, spend: this.spend, commands: this.commands, elicitationBridge: this.elicitationBridge);
+                persona, Options.Create(this.options), this.factory, this.prompts, this.roomFollows, this.loggerFactory.CreateLogger<PersonaRunner>(), tracker, roomSessions: this.roomSessions, ownPosts: this.ownPosts, turnActivity: this.turnActivity, libraryDocs: this.options.Library.Enabled ? this.libraryDocs : null, readsFiles: profile.ReadsFiles, spend: this.spend, commands: this.commands, elicitationBridge: this.elicitationBridge, references: this.references);
 
             // Forwards every health signal the runner itself observes (T4.3) - a session/Turn
             // fact, arriving over the wire - into the one table every UI surface reads.

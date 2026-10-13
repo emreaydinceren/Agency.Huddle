@@ -413,6 +413,17 @@ public static class ServiceCollectionExtensions
 
         // Scoped, not singleton: it owns the one search in flight, and every circuit has its own (spec §7.3).
         services.AddScoped<Search.SearchOrchestrator>();
+
+        // A factory, not the search itself (spec §5.2, D-5): each Composer makes and disposes its own picker orchestrator, so a
+        // keystroke never cancels the Top Bar search; a transient IDisposable would be held by the circuit until it ended.
+        services.AddSingleton<References.ReferenceSearchFactory>();
+
+        // Singletons (spec §8.2): ChatService takes the snapshotter as an optional constructor parameter, and the
+        // resolver is shared with the Turn's Referenced items header. They read the Task, Team and Library
+        // singletons registered above, so there is no cycle.
+        services.AddSingleton<References.ReferenceResolver>();
+        services.AddSingleton<References.IReferenceSnapshotter, References.ReferenceSnapshotter>();
+        services.AddSingleton<References.ReferenceExpander>();
         services.AddSingleton(new Tabs.TabPageRoutes(typeof(ServiceCollectionExtensions).Assembly));
 
         // Unconditional too, and for the same reason: the probe spends nothing on its own (it never

@@ -8,14 +8,14 @@ using Markdig.Syntax;
 using Markdig.Syntax.Inlines;
 using Agency.Huddle.App.Components.Tasks;
 using Agency.Huddle.App.Library;
+using Agency.Huddle.App.References;
 using Agency.Huddle.App.Tasks;
 
 namespace Agency.Huddle.App.Services;
 
 /// <summary>
 /// Renders chat Markdown to safe HTML, and - when a resolver is given - rewrites Task ids into
-/// links (Spec §13.13.2). <c>partial</c> only to host the <see cref="TaskReferenceRegex"/> source
-/// generator.
+/// links (Spec §13.13.2). <c>partial</c> only to host its source-generated regexes.
 /// </summary>
 public static partial class MarkdownRenderer
 {
@@ -101,6 +101,8 @@ public static partial class MarkdownRenderer
         {
             MarkdownRenderer.LinkTaskReferences(document, tasks);
         }
+
+        MarkdownRenderer.MarkReferenceLinks(document);
 
         if (noteLibrary is not null && from is not null)
         {
@@ -190,6 +192,33 @@ public static partial class MarkdownRenderer
     }
 
     /// <summary>
+    /// Adds <c>room-ref</c> or <c>team-ref</c> to each non-image link whose address is exactly a Room or Team
+    /// address (spec §7, D-10). The same <see cref="ReferenceText"/> parsers that <see cref="IsSafe"/> consults
+    /// decide, so a class is never put on a link the renderer will turn into <c>#</c>.
+    /// </summary>
+    /// <param name="document">The parsed Markdown document, mutated in place.</param>
+    private static void MarkReferenceLinks(MarkdownDocument document)
+    {
+        List<LinkInline> links = document.Descendants<LinkInline>().ToList();
+        foreach (LinkInline link in links)
+        {
+            if (link.IsImage || link.Url is null)
+            {
+                continue;
+            }
+
+            if (ReferenceText.TryParseRoomHref(link.Url, out _))
+            {
+                link.GetAttributes().AddClass("room-ref");
+            }
+            else if (ReferenceText.TryParseTeamHref(link.Url, out _))
+            {
+                link.GetAttributes().AddClass("team-ref");
+            }
+        }
+    }
+
+    /// <summary>
     /// Splits <paramref name="literal"/> around every token that resolves through
     /// <paramref name="tasks"/>, inserting a <c>task-ref</c> link for each and leaving the
     /// surrounding text as plain literals. Does nothing when no token in <paramref name="literal"/>
@@ -200,7 +229,7 @@ public static partial class MarkdownRenderer
     private static void RewriteLiteral(LiteralInline literal, ITaskReferenceResolver tasks)
     {
         string text = literal.Content.ToString();
-        MatchCollection matches = MarkdownRenderer.TaskReferenceRegex().Matches(text);
+        MatchCollection matches = TaskIdPattern.Candidate().Matches(text);
         if (matches.Count == 0)
         {
             return;
@@ -800,20 +829,15 @@ public static partial class MarkdownRenderer
         const string TaskItemPrefix = "/tasks/item/";
         if (!url.StartsWith(TaskItemPrefix, StringComparison.Ordinal))
         {
-            return false;
+            // The only other admitted shapes are the Room and Team addresses (spec §7, D-10); the one parser
+            // in ReferenceText decides, so there is no second reading of "what a Room address is" here.
+            return ReferenceText.TryParseRoomHref(url, out _) || ReferenceText.TryParseTeamHref(url, out _);
         }
 
         string remainder = url[TaskItemPrefix.Length..];
         return TaskId.TryParse(remainder, out TaskId id) && string.Equals(remainder, id.ToString(), StringComparison.Ordinal);
     }
 
-    /// <summary>
-    /// Matches a stand-alone candidate Task id token: an upper-case prefix (D-32 - stricter than
-    /// <see cref="TaskId.TryParse"/>, which also accepts lower case), a dash, and its number, with
-    /// no letter, digit, underscore or dash immediately before or after.
-    /// </summary>
-    [GeneratedRegex(@"(?<![A-Za-z0-9_-])([A-Z][A-Z0-9]{0,7}-[0-9]{1,9})(?![A-Za-z0-9_-])", RegexOptions.CultureInvariant)]
-    private static partial Regex TaskReferenceRegex();
 
     /// <summary>
     /// Whether the text after <c>?library=</c> is exactly the admitted shape (corrections-B5 item 23): a raw
