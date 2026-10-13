@@ -90,12 +90,12 @@ this.
 | `S1c` | Top bar actions | `ThemeModeToggle` | Switches between the chosen light and dark Theme |
 | `S2` | Sidebar | `MudDrawer`, persistent, 240px | Always open; not resizable |
 | `S2a` | Needs You card | `NeedsYouCard` | Rooms waiting on the Human |
-| `S2b` | Chats group | `RoomList` (`MudNavGroup`), `RoomNavRow`, `NewChat` | Rooms that belong to no Team |
+| `S2b` | Chats group | `RoomList` (`MudNavGroup`), `RoomNavRow`, `NewChat` | Rooms that belong to no Team. A 1:1 Room's row leads with the Teammate's small avatar, a group Room's with the Chat icon; shared actions in `RoomActions` |
 | `S2c` | Teams group | `TeamsNav` (`MudNavGroup`) | Each Team expands to its Rooms and Projects; each row has a hover menu |
 | `S2d` | Teammates link | `NavTabLink` to `/teammates` | |
 | `S2e` | Tasks group | `TaskViewNav` (`MudNavGroup`) | Saved Task Views and "New view" |
 | `S2f` | Library link | `LibraryNavLink` | |
-| `S2g` | Sidebar footer | `MudNavMenu` `.nav-settings` | Archived chats and Settings, pinned to the bottom |
+| `S2g` | Sidebar footer | `MudNavMenu` `.nav-settings` | Two icon-only 36px rows, Archived chats and Settings, each with an `aria-label` and a tooltip (OP-4), pinned to the bottom |
 | `S3` | Workspace | `MudMainContent` `.main-column` | Also holds the invisible `TabSync`, `TabPersistence` and `LibraryLinkRouter` |
 
 `W1`, `W3` and `W6` appear here only to show where Figure 2 plugs in.

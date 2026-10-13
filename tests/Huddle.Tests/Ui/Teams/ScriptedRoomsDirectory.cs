@@ -48,6 +48,9 @@ public class ScriptedRoomsDirectory : DispatchProxy
             case nameof(ITeamDirectory.GetUsersAsync):
                 IReadOnlyList<User> none = [];
                 return Task.FromResult(none);
+            case nameof(ITeamDirectory.GetRoomMembersAsync):
+                IReadOnlyList<User> noMembers = [];
+                return Task.FromResult(noMembers);
             default:
                 throw new NotSupportedException($"ScriptedRoomsDirectory does not answer {targetMethod.Name}.");
         }

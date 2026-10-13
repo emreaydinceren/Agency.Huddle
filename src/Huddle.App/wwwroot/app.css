@@ -440,12 +440,38 @@ a.team-ref,
     color: var(--mud-palette-text-secondary);
 }
 
-/* Child links inside a MudNavGroup that have no leading icon (room names, task view names)
-   must align their text with sibling links that DO have a leading icon (e.g. "New chat", "New view"),
-   while clearly indenting under the group header text. */
-.mud-nav-group .mud-collapse-container .mud-nav-link > .mud-nav-link-text:first-child {
-    margin-left: 26px;
-    margin-inline-start: 26px;
+/* One indent per nesting level, set here and nowhere else (UX-015). Every child row has a leading visual
+   (an icon or, for a 1:1 Room, the Teammate's small avatar), so the text of every row of a level starts at the
+   same x. Level 1 is a row inside a group (a Room, a task view, a Library entry, a Team); level 2 is a row
+   inside a Team (its Rooms and Projects), used by the "Teams nav" rules further down. Every sidebar row is
+   one height (UX-014, UX-017). */
+:root {
+    --nav-indent-1: 2.25rem;
+    --nav-indent-2: 3.25rem;
+    --nav-row-height: 36px;
+}
+
+.mud-nav-group .mud-collapse-container .mud-nav-link {
+    padding-left: var(--nav-indent-1);
+}
+
+/* A top-level entry that is a single link (Teammates) is drawn as a section header like the group headers (UX-014). */
+.nav-section-link .mud-nav-link-text {
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--mud-palette-text-secondary);
+}
+
+/* The footer is icon-only (OP-4): the same row height and text size as every other row (UX-017). */
+.nav-settings .mud-nav-link {
+    min-height: var(--nav-row-height);
+    font-size: 14px;
+}
+
+/* A 1:1 Room's avatar sits where an icon would, before the name. */
+.room-row-avatar {
+    margin-right: 0.5rem;
+    vertical-align: middle;
 }
 
 /* Action links inside left nav groups ("New chat", "New view", "Add Folder"): tighten the gap between the
@@ -2811,7 +2837,7 @@ a.team-ref,
    at that same 62px so it sits directly under the Team's name, with the Project name after the icon. */
 .teams-nav-host .nav-project-link .mud-nav-link,
 .teams-nav-host .nav-team-room-link .mud-nav-link {
-    padding-left: 3.875rem;
+    padding-left: var(--nav-indent-2);
 }
 
 .teams-nav-host .nav-project-link .mud-nav-link-icon {
@@ -2824,7 +2850,7 @@ a.team-ref,
     left: 0.75rem;
     z-index: 1;
     padding: 0;
-    color: var(--mud-palette-text-secondary);
+    color: var(--mud-palette-action-default);
 }
 
 .teams-nav-host .teams-nav-nomembers {

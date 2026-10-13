@@ -109,12 +109,7 @@
         this.busy = true;
         try
         {
-            _ = await this.ChatService.SetRoomArchivedAsync(roomId, archived: false, CancellationToken.None);
-            this.error = null;
-        }
-        catch (ChatException ex)
-        {
-            this.error = ex.Message;
+            this.error = await RoomActions.SetArchivedAsync(this.ChatService, roomId, archived: false, CancellationToken.None);
         }
         finally
         {
@@ -145,13 +140,7 @@
         this.busy = true;
         try
         {
-            await this.ChatService.DeleteRoomAsync(roomId, CancellationToken.None);
-            this.error = null;
-            this.confirmingDeleteRoomId = null;
-        }
-        catch (ChatException ex)
-        {
-            this.error = ex.Message;
+            this.error = await RoomActions.DeleteAsync(this.ChatService, roomId, CancellationToken.None);
             this.confirmingDeleteRoomId = null;
         }
         finally

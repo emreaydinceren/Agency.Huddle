@@ -28,9 +28,11 @@
                     <span class="needs-you-detail">@row.Detail</span>
                 </span>
             </NavTabLink>
-            <MudIconButton Icon="@Icons.Material.Filled.Close" Size="Size.Small" aria-label="@($"Dismiss {row.RoomName}")"
-                           Class="hover-reveal-menu hover-reveal-menu-button"
-                           OnClick="@(() => this.Tracker.Dismiss(row.RoomId))" />
+            <MudTooltip Text="Dismiss" Class="hover-reveal-menu">
+                <MudIconButton Icon="@Icons.Material.Filled.Close" Size="Size.Small" aria-label="@($"Dismiss {row.RoomName}")"
+                               Class="hover-reveal-menu-button"
+                               OnClick="@(() => this.Tracker.Dismiss(row.RoomId))" />
+            </MudTooltip>
         </div>
     }
 </div>

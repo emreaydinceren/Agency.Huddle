@@ -28,6 +28,11 @@ public sealed partial class ThemeSourceTests
     {
         "--font-mono",
 
+        // The sidebar's own layout tokens, declared once in app.css "Left menu" (UX-015, UX-017).
+        "--nav-indent-1",
+        "--nav-indent-2",
+        "--nav-row-height",
+
         "--mud-appbar-height",
         "--mud-default-borderradius",
         "--mud-drawer-width-left",

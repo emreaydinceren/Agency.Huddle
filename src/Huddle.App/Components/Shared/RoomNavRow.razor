@@ -14,9 +14,12 @@
     OnError (null clears it); the parent list refreshes on RoomEvents.RoomsChanged, which both publish.
 *@
 
+@using Agency.Huddle.App.Avatars
 @inject ChatService ChatService
 @inject ISnackbar Snackbar
 @inject IJSRuntime JS
+@inject ITeamDirectory TeamDirectory
+@inject AvatarStore Avatars
 
 <div class="hover-reveal-row"
      @oncontextmenu="this.OnRowContextMenuAsync"
@@ -28,7 +31,13 @@
     }
     else
     {
-        <NavTabLink Href="@($"/rooms/{this.Room.Id}")" TabTitle="@this.Room.Name" Class="@this.LinkClass">
+        <NavTabLink Href="@($"/rooms/{this.Room.Id}")" TabTitle="@this.Room.Name" Class="@this.LinkClass"
+                    Icon="@(this.oneToOneTeammate is null ? Icons.Material.Filled.Chat : null)">
+            @if (this.oneToOneTeammate is not null)
+            {
+                @* A 1:1 Room's leading visual is the Teammate's small avatar; a group Room takes the Chat icon (UX-016, OP-5). *@
+                <TeammateAvatar Name="@this.oneToOneTeammate.Name" Avatar="this.Avatars.Get(this.oneToOneTeammate.Name)" Size="Size.Small" Class="room-row-avatar" />
+            }
             @this.Room.Name
             @if (this.TeamLabel is not null)
             {
@@ -62,6 +71,7 @@
     private bool confirmingDelete;
     private bool busy;
     private int uploadCount;
+    private User? oneToOneTeammate;
 
     /// <summary>The Room this row shows.</summary>
     [Parameter, EditorRequired]
@@ -78,6 +88,14 @@
     /// <summary>Raised with a refusal's message when Archive or Delete fails, and with <see langword="null"/> when a new attempt starts.</summary>
     [Parameter]
     public EventCallback<string?> OnError { get; set; }
+
+    /// <summary>Finds the Room's one Teammate when it is a 1:1 Room (exactly one Agent member), or clears it for a group Room.</summary>
+    protected override async Task OnParametersSetAsync()
+    {
+        IReadOnlyList<User> members = await this.TeamDirectory.GetRoomMembersAsync(this.Room.Id);
+        List<User> agents = [.. members.Where(static member => member.Kind == UserKind.Agent)];
+        this.oneToOneTeammate = agents.Count == 1 ? agents[0] : null;
+    }
 
     private string LinkClass => this.Class is null ? "hover-reveal-link" : $"hover-reveal-link {this.Class}";
 
@@ -110,12 +128,7 @@
         this.busy = true;
         try
         {
-            _ = await this.ChatService.SetRoomArchivedAsync(this.Room.Id, archived: true, CancellationToken.None);
-            await this.OnError.InvokeAsync(null);
-        }
-        catch (ChatException ex)
-        {
-            await this.OnError.InvokeAsync(ex.Message);
+            await this.OnError.InvokeAsync(await RoomActions.SetArchivedAsync(this.ChatService, this.Room.Id, archived: true, CancellationToken.None));
         }
         finally
         {
@@ -145,13 +158,8 @@
         this.busy = true;
         try
         {
-            await this.ChatService.DeleteRoomAsync(this.Room.Id, CancellationToken.None);
-            await this.OnError.InvokeAsync(null);
-            this.confirmingDelete = false;
-        }
-        catch (ChatException ex)
-        {
-            await this.OnError.InvokeAsync(ex.Message);
+            string? error = await RoomActions.DeleteAsync(this.ChatService, this.Room.Id, CancellationToken.None);
+            await this.OnError.InvokeAsync(error);
             this.confirmingDelete = false;
         }
         finally

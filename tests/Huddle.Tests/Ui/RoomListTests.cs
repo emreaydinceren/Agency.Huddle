@@ -210,8 +210,9 @@ public sealed class RoomListTests
         Assert.Equal("Chats", groupHeader.TextContent.Trim());
 
         var roomLink = cut.Find(".hover-reveal-link");
-        Assert.Equal(room.Name, roomLink.TextContent.Trim());
-        Assert.Empty(roomLink.QuerySelectorAll(".mud-nav-link-icon"));
+        Assert.Equal(room.Name, NameText(roomLink));
+        Assert.Empty(roomLink.QuerySelectorAll(".mud-nav-link-icon")); // UX-016: a 1:1 row has an avatar, never the icon.
+        Assert.Single(roomLink.QuerySelectorAll(".mud-avatar"));
     }
 
     /// <summary>When there are no rooms, the collapsible "Chats" group is still present and displays the empty state inside it.</summary>
@@ -252,7 +253,7 @@ public sealed class RoomListTests
         var cut = RenderRoomList(ctx);
 
         Assert.DoesNotContain("Marketing", cut.Find(".mud-nav-group").TextContent, StringComparison.Ordinal);
-        Assert.Equal(rootRoom.Name, Assert.Single(cut.FindAll(".hover-reveal-link a")).TextContent.Trim());
+        Assert.Equal(rootRoom.Name, NameText(Assert.Single(cut.FindAll(".hover-reveal-link a"))));
     }
 
     /// <summary>T12: a Room whose Team has left the catalog is listed in Chats with a muted "(Team)" after its name, and still opens /rooms/{id}.</summary>
@@ -274,7 +275,7 @@ public sealed class RoomListTests
 
         var link = cut.Find(".hover-reveal-link a");
         Assert.Equal($"/rooms/{orphan.Id}", link.GetAttribute("href"));
-        Assert.Equal("Launchplan(Marketing)", link.TextContent.Replace(" ", string.Empty, StringComparison.Ordinal).Trim());
+        Assert.Equal("Launchplan(Marketing)", NameText(link).Replace(" ", string.Empty, StringComparison.Ordinal));
         Assert.Equal("(Marketing)", link.QuerySelector(".room-team-label")?.TextContent.Trim());
     }
 
@@ -424,6 +425,19 @@ public sealed class RoomListTests
 
         var group = cut.Find(".mud-nav-group");
         Assert.Contains("New chat", group.TextContent, StringComparison.Ordinal);
+    }
+
+    /// <summary>The link's text without the 1:1 avatar's monogram (UX-016), trimmed.</summary>
+    /// <param name="link">The row's link element.</param>
+    private static string NameText(IElement link)
+    {
+        IElement copy = (IElement)link.Clone(deep: true);
+        foreach (IElement avatar in copy.QuerySelectorAll(".mud-avatar"))
+        {
+            avatar.Remove();
+        }
+
+        return copy.TextContent.Trim();
     }
 
     private static MudBunitContext NewContext(ITeamDirectory directory, ChatService chat, RoomEvents events, TempDataDir? dir = null)
