@@ -1,0 +1,148 @@
+@*
+    One Room's row in a sidebar list: a NavTabLink to /rooms/{id} plus an Archive/Delete MudMenu,
+    shared by RoomList ("Chats") and TeamsNav (a Team's Rooms). The menu is reachable two ways: a
+    keyboard-focusable "..." MudIconButton (revealed on hover/focus via app.css) and a right-click on
+    the row itself, which opens the SAME MudMenu instance programmatically through an @ref -
+    right-click alone would not be reachable by keyboard, which is why the button is not optional.
+
+    Delete's confirmation is an inline row swap, never a nested MudDialog and never a JS confirm() -
+    the same reasoning TeammateCard.razor's Remove button and ResetAllControl.razor both give: a
+    confirmation dialog stacked on top of another dialog would need its own backdrop and focus trap for
+    what is only ever a yes/no choice, and here there is no dialog to stack on at all - just a row.
+
+    The row performs the Archive and Delete itself through ChatService and reports a refusal through
+    OnError (null clears it); the parent list refreshes on RoomEvents.RoomsChanged, which both publish.
+*@
+
+@inject ChatService ChatService
+
+<div class="hover-reveal-row"
+     @oncontextmenu="this.OnRowContextMenuAsync"
+     @oncontextmenu:preventDefault="true">
+    @if (this.confirmingDelete)
+    {
+        <InlineConfirm Class="room-list-confirm" Prompt="@($"Delete \"{this.Room.Name}\"?")" Busy="this.busy"
+                       OnConfirm="this.ConfirmDeleteAsync" OnCancel="this.CancelDelete" />
+    }
+    else
+    {
+        <NavTabLink Href="@($"/rooms/{this.Room.Id}")" TabTitle="@this.Room.Name" Class="@this.LinkClass">
+            @this.Room.Name
+            @if (this.TeamLabel is not null)
+            {
+                <span class="room-team-label">(@this.TeamLabel)</span>
+            }
+        </NavTabLink>
+        <MudMenu @ref="this.menu" Class="hover-reveal-menu">
+            @* ActivatorContent replaces MudMenu's own built-in activator entirely, so
+               MudMenu does not wire a click listener around it automatically - the
+               supplied MenuContext.ToggleAsync is how custom activator content opens
+               the menu, which is why the button's OnClick calls it explicitly rather
+               than relying on MudMenu's default ActivationEvent handling. *@
+            <ActivatorContent Context="menuContext">
+                <MudTooltip Text="Room actions">
+                    <MudIconButton Icon="@Icons.Material.Filled.MoreVert" Size="Size.Small"
+                                   aria-label="Room actions" Class="hover-reveal-menu-button"
+                                   OnClick="menuContext.ToggleAsync" />
+                </MudTooltip>
+            </ActivatorContent>
+            <ChildContent>
+                <MudMenuItem Disabled="this.busy" OnClick="this.ArchiveAsync">Archive</MudMenuItem>
+                <MudMenuItem Disabled="this.busy" OnClick="this.BeginDeleteAsync">Delete</MudMenuItem>
+            </ChildContent>
+        </MudMenu>
+    }
+</div>
+
+@code {
+    private MudMenu? menu;
+    private bool confirmingDelete;
+    private bool busy;
+
+    /// <summary>The Room this row shows.</summary>
+    [Parameter, EditorRequired]
+    public required Room Room { get; set; }
+
+    /// <summary>The Team to show muted in brackets after the name (an orphaned scoped Room), or <see langword="null"/> for none.</summary>
+    [Parameter]
+    public string? TeamLabel { get; set; }
+
+    /// <summary>An extra CSS class for the link, after <c>hover-reveal-link</c>.</summary>
+    [Parameter]
+    public string? Class { get; set; }
+
+    /// <summary>Raised with a refusal's message when Archive or Delete fails, and with <see langword="null"/> when a new attempt starts.</summary>
+    [Parameter]
+    public EventCallback<string?> OnError { get; set; }
+
+    private string LinkClass => this.Class is null ? "hover-reveal-link" : $"hover-reveal-link {this.Class}";
+
+    /// <summary>Opens the row's own MudMenu programmatically, so a right-click reaches the same Archive/Delete menu the "..." button does.</summary>
+    /// <param name="e">The right-click's mouse event args, forwarded to <see cref="MudMenu.OpenMenuAsync"/>.</param>
+    private async Task OnRowContextMenuAsync(MouseEventArgs e)
+    {
+        if (this.menu is not null)
+        {
+            await this.menu.OpenMenuAsync(e);
+        }
+    }
+
+    private async Task ArchiveAsync()
+    {
+        if (this.busy)
+        {
+            return;
+        }
+
+        this.busy = true;
+        try
+        {
+            _ = await this.ChatService.SetRoomArchivedAsync(this.Room.Id, archived: true, CancellationToken.None);
+            await this.OnError.InvokeAsync(null);
+        }
+        catch (ChatException ex)
+        {
+            await this.OnError.InvokeAsync(ex.Message);
+        }
+        finally
+        {
+            this.busy = false;
+        }
+    }
+
+    private async Task BeginDeleteAsync()
+    {
+        this.confirmingDelete = true;
+        await this.OnError.InvokeAsync(null);
+    }
+
+    private void CancelDelete()
+    {
+        this.confirmingDelete = false;
+    }
+
+    private async Task ConfirmDeleteAsync()
+    {
+        if (this.busy)
+        {
+            return;
+        }
+
+        this.busy = true;
+        try
+        {
+            await this.ChatService.DeleteRoomAsync(this.Room.Id, CancellationToken.None);
+            await this.OnError.InvokeAsync(null);
+            this.confirmingDelete = false;
+        }
+        catch (ChatException ex)
+        {
+            await this.OnError.InvokeAsync(ex.Message);
+            this.confirmingDelete = false;
+        }
+        finally
+        {
+            this.busy = false;
+        }
+    }
+}

@@ -136,6 +136,7 @@ the per-area tables below.
 | [Avatar library: choosing a face from the library](avatar-library.md) | [below](#avatar-library) |
 | [File Changes, Watched Folders and Memory](file-changes.md) | [below](#file-changes) |
 | [Room Sessions: per-Room context, resume and Stop](room-sessions.md) | [below](#room-sessions) |
+| [Team chats: the Team Room, Team chats in the sidebar, the Members-tab Message, archiving and Task wakes and digests](team-chats.md) | [below](#team-chats) |
 | [Teams: Sidebar, Members, Files, Tasks and Shared Memory](team-pages.md) | [below](#team-pages) |
 | [Turn detail and Spend](turn-detail.md) | [below](#turn-detail) |
 | [Global Search: the box, the dropdown and the jump](global-search.md) | [below](#global-search) |
@@ -945,6 +946,24 @@ Room Sessions: per-Room context, resume and Stop — [area file](room-sessions.m
 | [RS-M10](room-sessions.md#rs-m10--a-coordinators-overview-deliberately-reassembled) |  | Active | |  |
 | [RS-V3](room-sessions.md#rs-v3--resume-survives-a-rename) |  | Active | |  |
 | [RS-V5](room-sessions.md#rs-v5--does-agency-acp-hold-several-sessions-and-advertise-resume) |  | Active | |  |
+
+## team-chats
+
+Team chats: the Team Room, Team chats in the sidebar, the Members-tab Message, archiving and Task wakes and digests — [area file](team-chats.md)
+
+| Test | 💰 | Status | Issue | Notes |
+| --- | --- | --- | --- | --- |
+| [TEAMCHATS-01](team-chats.md#teamchats-01--the-team-room-appears-under-its-team-with-every-member-and-chats-does-not-list-it) |  | Active |  |  |
+| [TEAMCHATS-02](team-chats.md#teamchats-02--a-teammate-who-joins-the-team-is-invited-into-the-team-room-and-the-transcript-says-so) |  | Active |  |  |
+| [TEAMCHATS-03](team-chats.md#teamchats-03--new-chat-on-a-team-scopes-the-room-to-that-team-and-a-non-member-can-be-ticked) |  | Active |  |  |
+| [TEAMCHATS-04](team-chats.md#teamchats-04--message-on-the-members-tab-opens-the-teams-own-one-to-one-not-the-root-one) |  | Active |  |  |
+| [TEAMCHATS-05](team-chats.md#teamchats-05--new-chat-in-the-chats-group-still-makes-a-root-room) |  | Active |  |  |
+| [TEAMCHATS-06](team-chats.md#teamchats-06--the-team-room-has-no-rename-pencil-and-a-rename-through-the-chat-header-is-refused) |  | Active |  |  |
+| [TEAMCHATS-07](team-chats.md#teamchats-07--renaming-the-team-folder-in-explorer-archives-its-rooms-history-intact) |  | Active |  |  |
+| [TEAMCHATS-08](team-chats.md#teamchats-08--an-archived-team-room-is-not-recreated-or-refilled) |  | Active |  |  |
+| [TEAMCHATS-09](team-chats.md#teamchats-09--a-task-wake-whose-origin-room-is-gone-lands-in-the-teams-room) |  | Active |  |  |
+| [TEAMCHATS-10](team-chats.md#teamchats-10--a-digest-posts-in-the-team-room-with-a-mention-of-its-recipient) |  | Active |  |  |
+| [TEAMCHATS-11](team-chats.md#teamchats-11--a-digest-falls-back-to-the-recipients-root-one-to-one-when-the-team-room-is-archived) |  | Active |  |  |
 
 ## team-pages
 

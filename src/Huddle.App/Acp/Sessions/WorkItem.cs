@@ -51,6 +51,7 @@ internal enum WorkItemKind
 /// <see langword="null"/> when none were found or the Library is off.
 /// </param>
 /// <param name="Command">The command to run, in the Adapter's own casing; set exactly when <paramref name="Kind"/> is <see cref="WorkItemKind.Command"/>.</param>
+/// <param name="Team">The Team the Room is scoped to, or <see langword="null"/> for a root Room; it names the Team in the Room label.</param>
 internal sealed record WorkItem(
     string RoomId,
     string RoomName,
@@ -63,7 +64,8 @@ internal sealed record WorkItem(
     TranscriptCatchUp? Transcript = null,
     IReadOnlyList<string>? OwnPostLines = null,
     LibraryDocumentsReport? LibraryDocuments = null,
-    AdapterCommandCall? Command = null);
+    AdapterCommandCall? Command = null,
+    string? Team = null);
 
 /// <summary>One earlier Message the Agent was not Mentioned in, carried as catch-up context only.</summary>
 /// <param name="SenderName">Who sent it.</param>

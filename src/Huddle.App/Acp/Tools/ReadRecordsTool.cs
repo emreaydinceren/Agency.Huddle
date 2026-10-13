@@ -282,6 +282,17 @@ internal sealed class ReadRecordsTool(
             return $"Room '{roomId}' is not a valid Room id.";
         }
 
+        Room? scoped = await directory.GetRoomAsync(roomId, cancellationToken);
+        if (scoped?.Team is { } scopedTeam)
+        {
+            if (!string.Equals(scopedTeam, team.Name, StringComparison.OrdinalIgnoreCase))
+            {
+                return $"Room {roomId} has no messages from Team {team.Name}.";
+            }
+
+            return RenderTail(messages);
+        }
+
         if (!messages.Any(message => team.Members.Contains(message.SenderName, StringComparer.OrdinalIgnoreCase)))
         {
             return $"Room {roomId} has no messages from Team {team.Name}.";
@@ -294,6 +305,14 @@ internal sealed class ReadRecordsTool(
             return $"Room {roomId} has participants outside Team {team.Name}.";
         }
 
+        return RenderTail(messages);
+    }
+
+    /// <summary>Renders the newest messages, one compact line each, capped to the output limit.</summary>
+    /// <param name="messages">The Room's messages.</param>
+    /// <returns>The transcript tail.</returns>
+    private static string RenderTail(IReadOnlyList<ChatMessage> messages)
+    {
         List<string> lines = [.. messages
             .OrderBy(static message => message.Timestamp)
             .TakeLast(MaxMessages)

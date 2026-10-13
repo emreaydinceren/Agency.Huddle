@@ -23,6 +23,8 @@
 @inject IDialogService DialogService
 @inject ISnackbar Snackbar
 @inject ITeamMembership Membership
+@inject ChatService Chat
+@inject NavigationManager Navigation
 
 @if (this.Team is not null)
 {
@@ -102,7 +104,6 @@
     private bool busy;
     private TeamSummary? loadedTeam;
     private Dictionary<string, string?> agentIdByMember = new(StringComparer.OrdinalIgnoreCase);
-    private Dictionary<string, string?> roomIdByMember = new(StringComparer.OrdinalIgnoreCase);
 
     /// <summary>The members that pass the search, sorted by Name ignoring case.</summary>
     private IReadOnlyList<string> VisibleMembers
@@ -143,22 +144,14 @@
 
         this.loadedTeam = this.Team;
         Dictionary<string, string?> agentIds = new(StringComparer.OrdinalIgnoreCase);
-        Dictionary<string, string?> roomIds = new(StringComparer.OrdinalIgnoreCase);
         foreach (string member in this.Team?.Members ?? [])
         {
             string lookupName = this.FindEntry(member)?.Name ?? member;
             User? agent = await this.TeamDirectory.FindUserByNameAsync(lookupName);
             agentIds[member] = agent?.Id;
-
-            // Only a Teammate that has actually connected has a Room to be messaged in, so the
-            // card's Message action is absent rather than broken for one that never has.
-            roomIds[member] = agent is null
-                ? null
-                : (await this.TeamDirectory.FindRoomWithExactMembersAsync(KnownIds.Human, agent.Id))?.Id;
         }
 
         this.agentIdByMember = agentIds;
-        this.roomIdByMember = roomIds;
     }
 
     public void Dispose()
@@ -200,10 +193,43 @@
             entry,
             this.Personas.Get(lookupName),
             this.ResolveStatus(member),
-            this.roomIdByMember.GetValueOrDefault(member),
+            null,
             this.TryPathFor(lookupName));
 
+        // Only a Teammate that has actually connected has a User to open a Room with, so the card's
+        // Message action is absent rather than broken for one that never has. Here it opens the
+        // Team's one-to-one with that Teammate, never the root one.
+        if (this.agentIdByMember.GetValueOrDefault(member) is not null)
+        {
+            parameters[nameof(TeammateCard.OnMessage)] = EventCallback.Factory.Create(this, () => this.MessageAsync(lookupName));
+        }
+
         await this.DialogService.ShowAsync<TeammateCard>(member, parameters, TeammateCard.Options);
+    }
+
+    /// <summary>Opens (creating it on first use) the Team's one-to-one with the Teammate called <paramref name="lookupName"/> and navigates to it.</summary>
+    private async Task MessageAsync(string lookupName)
+    {
+        if (this.Team is not { } team)
+        {
+            return;
+        }
+
+        User? agent = await this.TeamDirectory.FindUserByNameAsync(lookupName);
+        if (agent is null)
+        {
+            return;
+        }
+
+        try
+        {
+            Room room = await this.Chat.EnsureTeamOneToOneAsync(team.Name, agent);
+            this.Navigation.NavigateTo($"/rooms/{room.Id}");
+        }
+        catch (ChatException ex)
+        {
+            this.Snackbar.Add(ex.Message, Severity.Error);
+        }
     }
 
     /// <summary>

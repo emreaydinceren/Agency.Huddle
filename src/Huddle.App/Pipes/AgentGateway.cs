@@ -141,7 +141,8 @@ internal sealed class AgentGateway : IAgentGateway, IDisposable
                 e.Mentions.Select(ToMemberInfo).ToList(),
                 e.Members.Select(ToMemberInfo).ToList(),
                 e.Budget.Used,
-                e.Budget.Granted);
+                e.Budget.Granted,
+                e.Room.Team);
 
             sends.Add(this.SendSafeAsync(connection, payload, ct));
         }

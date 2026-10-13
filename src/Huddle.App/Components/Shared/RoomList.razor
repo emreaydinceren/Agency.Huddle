@@ -16,7 +16,7 @@
 
 @implements IDisposable
 @inject ITeamDirectory TeamDirectory
-@inject ChatService ChatService
+@inject ITeamCatalog Catalog
 @inject RoomEvents Events
 
 <div class="room-list">
@@ -36,37 +36,8 @@
             {
                 @foreach (var room in this.rooms)
                 {
-                    <div class="hover-reveal-row"
-                         @oncontextmenu="@(e => this.OnRowContextMenuAsync(room.Id, e))"
-                         @oncontextmenu:preventDefault="true">
-                        @if (string.Equals(this.confirmingDeleteRoomId, room.Id, StringComparison.Ordinal))
-                        {
-                            <InlineConfirm Class="room-list-confirm" Prompt="@($"Delete \"{room.Name}\"?")" Busy="this.busy"
-                                           OnConfirm="@(() => this.ConfirmDeleteAsync(room.Id))" OnCancel="this.CancelDelete" />
-                        }
-                        else
-                        {
-                            <NavTabLink Href="@($"/rooms/{room.Id}")" TabTitle="@room.Name" Class="hover-reveal-link">@room.Name</NavTabLink>
-                            <MudMenu @ref="@this.menuRefs[room.Id]" Class="hover-reveal-menu">
-                                @* ActivatorContent replaces MudMenu's own built-in activator entirely, so
-                                   MudMenu does not wire a click listener around it automatically - the
-                                   supplied MenuContext.ToggleAsync is how custom activator content opens
-                                   the menu, which is why the button's OnClick calls it explicitly rather
-                                   than relying on MudMenu's default ActivationEvent handling. *@
-                                <ActivatorContent Context="menuContext">
-                                    <MudTooltip Text="Room actions">
-                                        <MudIconButton Icon="@Icons.Material.Filled.MoreVert" Size="Size.Small"
-                                                       aria-label="Room actions" Class="hover-reveal-menu-button"
-                                                       OnClick="menuContext.ToggleAsync" />
-                                    </MudTooltip>
-                                </ActivatorContent>
-                                <ChildContent>
-                                    <MudMenuItem Disabled="this.busy" OnClick="@(() => this.ArchiveAsync(room.Id))">Archive</MudMenuItem>
-                                    <MudMenuItem Disabled="this.busy" OnClick="@(() => this.BeginDelete(room.Id))">Delete</MudMenuItem>
-                                </ChildContent>
-                            </MudMenu>
-                        }
-                    </div>
+                    <RoomNavRow @key="room.Id" Room="room" OnError="this.OnRowError"
+                                TeamLabel="@(room.Team)" />
                 }
             }
             <NewChat />
@@ -77,20 +48,19 @@
 @code {
     private bool expanded = true;
     private IReadOnlyList<Room> rooms = [];
-    private readonly Dictionary<string, MudMenu> menuRefs = new(StringComparer.Ordinal);
-    private string? confirmingDeleteRoomId;
     private string? error;
-    private bool busy;
 
     protected override async Task OnInitializedAsync()
     {
         this.Events.RoomsChanged += this.OnRoomsChanged;
+        this.Catalog.Changed += this.OnRoomsChanged;
         await this.LoadAsync();
     }
 
     public void Dispose()
     {
         this.Events.RoomsChanged -= this.OnRoomsChanged;
+        this.Catalog.Changed -= this.OnRoomsChanged;
     }
 
     private void OnRoomsChanged()
@@ -102,82 +72,20 @@
         });
     }
 
-    /// <summary>Reads every Room and filters out the archived ones - archiving is a display filter, and this is the one place that filter is applied.</summary>
+    /// <summary>
+    /// Reads every Room and keeps the unarchived root ones (<c>Team is null</c>) plus the unarchived Rooms whose Team is
+    /// no longer in the catalog (shown with the Team after the name) - archiving is a display filter, and this is the one
+    /// place that filter is applied. A Room of a live Team is listed under that Team by <c>TeamsNav</c> instead.
+    /// </summary>
     private async Task LoadAsync()
     {
         var all = await this.TeamDirectory.GetRoomsAsync();
-        this.rooms = [.. all.Where(room => !room.Archived)];
-        this.menuRefs.Clear();
+        this.rooms = [.. all.Where(room => !room.Archived && (room.Team is null || this.Catalog.Find(room.Team) is null))];
     }
 
-    /// <summary>Opens the row's own MudMenu programmatically, so a right-click reaches the same Archive/Delete menu the "..." button does.</summary>
-    /// <param name="roomId">The Room whose row was right-clicked.</param>
-    /// <param name="e">The right-click's mouse event args, forwarded to <see cref="MudMenu.OpenMenuAsync"/>.</param>
-    private async Task OnRowContextMenuAsync(string roomId, MouseEventArgs e)
+    private void OnRowError(string? message)
     {
-        if (this.menuRefs.TryGetValue(roomId, out var menu))
-        {
-            await menu.OpenMenuAsync(e);
-        }
-    }
-
-    private async Task ArchiveAsync(string roomId)
-    {
-        if (this.busy)
-        {
-            return;
-        }
-
-        this.busy = true;
-        try
-        {
-            _ = await this.ChatService.SetRoomArchivedAsync(roomId, archived: true, CancellationToken.None);
-            this.error = null;
-        }
-        catch (ChatException ex)
-        {
-            this.error = ex.Message;
-        }
-        finally
-        {
-            this.busy = false;
-        }
-    }
-
-    private void BeginDelete(string roomId)
-    {
-        this.confirmingDeleteRoomId = roomId;
-        this.error = null;
-    }
-
-    private void CancelDelete()
-    {
-        this.confirmingDeleteRoomId = null;
-    }
-
-    private async Task ConfirmDeleteAsync(string roomId)
-    {
-        if (this.busy)
-        {
-            return;
-        }
-
-        this.busy = true;
-        try
-        {
-            await this.ChatService.DeleteRoomAsync(roomId, CancellationToken.None);
-            this.error = null;
-            this.confirmingDeleteRoomId = null;
-        }
-        catch (ChatException ex)
-        {
-            this.error = ex.Message;
-            this.confirmingDeleteRoomId = null;
-        }
-        finally
-        {
-            this.busy = false;
-        }
+        this.error = message;
     }
 
     private Task DispatchAsync(Func<Task> action)

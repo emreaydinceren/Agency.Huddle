@@ -25,6 +25,7 @@ configuring models. See [the chat-surface hub](Huddle.EngineeringGuide.md) for t
 | Hire a Team from a type, or set its process and gates | [Hiring a Team from a type](#hiring-a-team-from-a-type) and [Process and gates](#process-and-gates) |
 | Handle asks between Teams, or Team retrospectives | [Requests between Teams](#requests-between-teams) and [Retrospectives](#retrospectives) |
 | Chat with one or several Teammates | [Chatting in Rooms](#chatting-in-rooms) |
+| Chat inside a Team, or find its Team Room | [Team chats](#team-chats) |
 | Track work | [Tracking work with Tasks](#tracking-work-with-tasks) |
 | Share notes and documents | [Keeping notes in the Library](#keeping-notes-in-the-library) |
 | Teach Teammates a procedure | [Giving Teammates Skills](#giving-teammates-skills) |
@@ -90,8 +91,8 @@ The left sidebar is the whole app. From top to bottom:
 | Sidebar group | What it holds |
 | --- | --- |
 | **Needs you** | A card above Chats, drawn only while a Room is waiting on you. See [Needs you](#needs-you). |
-| **Chats** | Every Room you are in, plus **New chat**. |
-| **Teams** | One row per Team. Expand it to see its Projects. **New team** sits at the bottom. The `⋯` menu on a Team row has **New project**. |
+| **Chats** | Your root Rooms, plus **New chat**. A Team's chats are not listed here; see [Team chats](#team-chats). |
+| **Teams** | One row per Team. Expand it to see its Team Room, its chats and its Projects. **New team** sits at the bottom. The `⋯` menu on a Team row has **New chat** and **New project**. |
 | **Teammates** | The page listing every Teammate, grouped by Team. |
 | **Tasks** | Your saved Views of Tasks: **All Tasks**, **My Tasks**, any you saved, and **New view**. |
 | **Library** | One row per Library root (**Teams**, **Teammates**, and any folders you pinned), plus **Add Folder**. |
@@ -1008,7 +1009,9 @@ and its default process runs a retro every 14 days.
 ### Starting a chat
 
 Select **New chat** and pick one or more Teammates. Choosing a single Teammate
-reopens your existing one-to-one Room with it, if there is one.
+reopens your existing one-to-one Room with it, if there is one. In the Chats
+group this makes a root Room. From a Team's menu it makes a chat inside that
+Team; see [Team chats](#team-chats).
 
 **In the background:** Huddle adds the Room and its members to `team.db`. The
 Room gets a name derived from its members. Its transcript file is created in
@@ -1125,13 +1128,50 @@ session; nothing new is written to disk for the compaction itself.
 
 | Action | In the background |
 | --- | --- |
-| **Rename** (pencil icon beside the Room name) | Updates `team.db`. A name you type is kept even when members change. |
+| **Rename** (pencil icon beside the Room name) | Updates `team.db`. A name you type is kept even when members change. Not offered for a Team Room, whose name is its Team's. |
 | **Archive** | Adds the Room to the archived list in `team.db`. It only hides the Room; it still works and can still be woken. Find it under **Archived chats**. |
 | **Delete** | Removes the Room from `team.db` and **permanently deletes** `rooms/<roomId>.jsonl`. Asks for confirmation. |
 
 > [!WARNING]
 > Deleting a Room cannot be undone. The transcript file is deleted, not moved to
 > the Recycle Bin. Archive the Room instead if you might want it later.
+
+### Team chats
+
+A Room is either a root Room or belongs to one Team. The two look the same in
+the chat; they differ in where they are listed.
+
+- **Chats** lists the root Rooms: the chats you start from the Chats group, and
+  your one-to-one Rooms with Teammates.
+- **A Team's chats** are listed under the Team in the sidebar, below its Team
+  Room and above its Projects. Open the Team's `⋯` menu and select **New chat**.
+  The panel is headed *New chat in Marketing* and lists that Team's members
+  first, but you can still tick a Teammate from another Team.
+- **The Team Room** is a chat named after the Team, holding you and every member
+  of the Team. Every Team has one. It is created when the Team first has a
+  member, and a Teammate who joins the Team later is invited into it; the
+  Transcript records the join like any invitation. Leaving a Team does not take
+  the Teammate out of the Team Room. The Team Room cannot be renamed, so it has
+  no pencil icon.
+- **Message** on a Teammate's card in the Team's **Members** tab opens that
+  Team's own one-to-one with the Teammate, created if it does not exist. It is
+  separate from the one-to-one under Chats, so the two conversations do not mix.
+- **Digests and retrospectives** for a Team post in its Team Room, with a
+  mention of the Teammate they are for, so it replies. If the Team Room is
+  archived, they post in that Teammate's one-to-one under Chats instead. A Task
+  whose original chat is gone wakes its assignee in a chat of that Team.
+- **A Team that goes away** (no folder and no Teammate's label names it any more,
+  which is what renaming its folder in Explorer does while no Teammate still
+  carries the old name) has its chats archived, with their history kept. Find them under **Archived chats**. If you unarchive one of them
+  while its Team is still gone, it is listed under Chats with *(Marketing)* after
+  its name.
+
+**In the background:** when a chat is created inside a Team, Huddle writes a
+row to the `room_teams` table in `team.db`, saying which Team the Room belongs
+to. A Team Room has its flag set there too. Huddle creates and fills Team Rooms
+when the list of Teams changes, so a Team made by hand, or from a Teammate's
+`teams:` line, gets one as well. A Team Room that you archive stays archived;
+Huddle does not recreate it.
 
 ## Memory and file changes
 

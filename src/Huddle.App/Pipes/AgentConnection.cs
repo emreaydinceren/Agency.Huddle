@@ -224,7 +224,7 @@ internal sealed class AgentConnection
         {
             var members = await this.teamDirectory.GetRoomMembersAsync(room.Id, ct);
             var isEmpty = !await this.chatStore.HasMessagesAsync(room.Id, ct);
-            roomInfos.Add(new RoomInfo(room.Id, room.Name, members.Select(ToMemberInfo).ToList(), isEmpty));
+            roomInfos.Add(new RoomInfo(room.Id, room.Name, members.Select(ToMemberInfo).ToList(), isEmpty, room.Team));
         }
 
         return new Welcome(user.Id, user.Name, roomInfos);

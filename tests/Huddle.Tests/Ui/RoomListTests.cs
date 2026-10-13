@@ -233,6 +233,126 @@ public sealed class RoomListTests
         Assert.Contains("No rooms yet", cut.Find(".mud-nav-group").TextContent, StringComparison.Ordinal);
     }
 
+    /// <summary>A Room scoped to a Team in the catalog belongs under that Team in the sidebar, so the root Chats group does not list it (ADR-0052).</summary>
+    [Fact]
+    public async Task LoadAsync_RoomScopedToAKnownTeam_IsNotListedInChats()
+    {
+        var ct = Xunit.TestContext.Current.CancellationToken;
+        using var dir = new TempDataDir();
+        var events = new RoomEvents(NullLogger<RoomEvents>.Instance);
+        var directory = new SqliteTeamDirectory(dir.Options());
+        await directory.InitializeAsync("You", ct);
+        var agent = await directory.UpsertAgentUserAsync("coo", null, ct);
+        Assert.NotNull(agent);
+        _ = await directory.CreateRoomAsync("Marketing", [KnownIds.Human, agent.Id], "Marketing", teamRoom: true, ct);
+        var rootRoom = await directory.CreateRoomAsync("Lunch plans", [KnownIds.Human, agent.Id], ct);
+        var chat = CreateChatService(dir, directory, events, KnownTeam("Marketing"));
+
+        await using var ctx = NewContext(directory, chat, events);
+        var cut = RenderRoomList(ctx);
+
+        Assert.DoesNotContain("Marketing", cut.Find(".mud-nav-group").TextContent, StringComparison.Ordinal);
+        Assert.Equal(rootRoom.Name, Assert.Single(cut.FindAll(".hover-reveal-link a")).TextContent.Trim());
+    }
+
+    /// <summary>T12: a Room whose Team has left the catalog is listed in Chats with a muted "(Team)" after its name, and still opens /rooms/{id}.</summary>
+    [Fact]
+    public async Task LoadAsync_RoomOfAVanishedTeam_IsListedWithMutedTeamLabel()
+    {
+        var ct = Xunit.TestContext.Current.CancellationToken;
+        using var dir = new TempDataDir();
+        var events = new RoomEvents(NullLogger<RoomEvents>.Instance);
+        var directory = new SqliteTeamDirectory(dir.Options());
+        await directory.InitializeAsync("You", ct);
+        var agent = await directory.UpsertAgentUserAsync("coo", null, ct);
+        Assert.NotNull(agent);
+        var orphan = await directory.CreateRoomAsync("Launch plan", [KnownIds.Human, agent.Id], "Marketing", teamRoom: false, ct);
+        var chat = CreateChatService(dir, directory, events, KnownTeam("Sales"));
+
+        await using var ctx = NewContext(directory, chat, events);
+        var cut = RenderRoomList(ctx);
+
+        var link = cut.Find(".hover-reveal-link a");
+        Assert.Equal($"/rooms/{orphan.Id}", link.GetAttribute("href"));
+        Assert.Equal("Launchplan(Marketing)", link.TextContent.Replace(" ", string.Empty, StringComparison.Ordinal).Trim());
+        Assert.Equal("(Marketing)", link.QuerySelector(".room-team-label")?.TextContent.Trim());
+    }
+
+    /// <summary>An archived Room of a vanished Team stays out of the sidebar like any archived Room: the orphan rule only rescues unarchived ones.</summary>
+    [Fact]
+    public async Task LoadAsync_ArchivedRoomOfAVanishedTeam_IsNotListed()
+    {
+        var ct = Xunit.TestContext.Current.CancellationToken;
+        using var dir = new TempDataDir();
+        var events = new RoomEvents(NullLogger<RoomEvents>.Instance);
+        var directory = new SqliteTeamDirectory(dir.Options());
+        await directory.InitializeAsync("You", ct);
+        var agent = await directory.UpsertAgentUserAsync("coo", null, ct);
+        Assert.NotNull(agent);
+        var orphan = await directory.CreateRoomAsync("Launch plan", [KnownIds.Human, agent.Id], "Marketing", teamRoom: false, ct);
+        var chat = CreateChatService(dir, directory, events, KnownTeam("Sales"));
+        _ = await chat.SetRoomArchivedAsync(orphan.Id, archived: true, ct);
+
+        await using var ctx = NewContext(directory, chat, events);
+        var cut = RenderRoomList(ctx);
+
+        Assert.DoesNotContain("Launch plan", cut.Markup, StringComparison.Ordinal);
+    }
+
+    /// <summary>The orphan row stops being listed at once when its Team returns to the catalog: the list follows <see cref="Agency.Huddle.App.Teams.ITeamCatalog.Changed"/>, with Team names compared ignoring case.</summary>
+    [Fact]
+    public async Task CatalogChanged_TeamReturns_RemovesTheOrphanRow()
+    {
+        var ct = Xunit.TestContext.Current.CancellationToken;
+        using var dir = new TempDataDir();
+        var events = new RoomEvents(NullLogger<RoomEvents>.Instance);
+        var directory = new SqliteTeamDirectory(dir.Options());
+        await directory.InitializeAsync("You", ct);
+        var agent = await directory.UpsertAgentUserAsync("coo", null, ct);
+        Assert.NotNull(agent);
+        _ = await directory.CreateRoomAsync("Launch plan", [KnownIds.Human, agent.Id], "Marketing", teamRoom: false, ct);
+        var catalog = KnownTeam("Sales");
+        var chat = CreateChatService(dir, directory, events, catalog);
+        await using var ctx = NewContext(directory, chat, events);
+        var cut = RenderRoomList(ctx);
+        Assert.Single(cut.FindAll(".hover-reveal-link a"));
+
+        catalog.Teams = [new Agency.Huddle.App.Teams.TeamSummary("marketing", [], ["coo"], true)];
+        catalog.Raise();
+
+        cut.WaitForAssertion(() => Assert.Empty(cut.FindAll(".hover-reveal-link a")));
+    }
+
+    /// <summary>Disposing the list unsubscribes it from the catalog, which is a singleton that would otherwise throw into a dead component.</summary>
+    [Fact]
+    public async Task Dispose_UnsubscribesFromTheCatalog()
+    {
+        var ct = Xunit.TestContext.Current.CancellationToken;
+        using var dir = new TempDataDir();
+        var events = new RoomEvents(NullLogger<RoomEvents>.Instance);
+        var directory = new SqliteTeamDirectory(dir.Options());
+        await directory.InitializeAsync("You", ct);
+        var catalog = KnownTeam("Sales");
+        var chat = CreateChatService(dir, directory, events, catalog);
+        await using var ctx = NewContext(directory, chat, events);
+        _ = RenderRoomList(ctx);
+        Assert.Equal(1, catalog.ChangedSubscriberCount);
+
+        await ctx.DisposeComponentsAsync();
+
+        Assert.Equal(0, catalog.ChangedSubscriberCount);
+    }
+
+    private static Agency.Huddle.Tests.Teams.FakeTeamCatalog KnownTeam(string name) =>
+        new() { Teams = [new Agency.Huddle.App.Teams.TeamSummary(name, [], ["coo"], true)] };
+
+    private static ChatService CreateChatService(TempDataDir dir, ITeamDirectory directory, RoomEvents events, Agency.Huddle.Tests.Teams.FakeTeamCatalog catalog)
+    {
+        var store = new FileChatStore(dir.Options(), NullLogger<FileChatStore>.Instance);
+        var proposals = new ProposalStore(events);
+        return new ChatService(directory, store, events, new FakeMentionAliasSource(), Options.Create(new TeamOptions()), proposals, new QuestionStore(events), NullLogger<ChatService>.Instance) { TeamCatalog = catalog };
+    }
+
     private static ChatService CreateChatService(TempDataDir dir, ITeamDirectory directory, RoomEvents events)
     {
         var store = new FileChatStore(dir.Options(), NullLogger<FileChatStore>.Instance);
@@ -263,6 +383,7 @@ public sealed class RoomListTests
         MudBunitContext ctx = new();
         ctx.Services.AddSingleton(directory);
         ctx.Services.AddSingleton(chat);
+        ctx.Services.AddSingleton<Agency.Huddle.App.Teams.ITeamCatalog>(chat.TeamCatalog ??new Agency.Huddle.Tests.Teams.FakeTeamCatalog());
         ctx.Services.AddSingleton(events);
         ctx.Services.AddSingleton<IAgentGateway>(new FakeAgentGateway());
         ctx.Services.AddSingleton(new PersonaHealth(TimeProvider.System, NullLogger<PersonaHealth>.Instance));

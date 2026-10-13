@@ -47,6 +47,23 @@ public sealed class SqliteTeamDirectory : ITeamDirectory
         );
         """;
 
+    // Same reasoning as archived_rooms above: a sibling table so an existing team.db gains Scope by a
+    // plain CREATE TABLE IF NOT EXISTS. No row means a root Room (ADR-0052). team_room = 1 marks a
+    // Team's Team Room, and the unique partial index allows at most one per Team.
+    private const string DdlCreateRoomTeams = """
+        CREATE TABLE IF NOT EXISTS room_teams (
+            room_id   TEXT PRIMARY KEY REFERENCES rooms(id),
+            team      TEXT NOT NULL COLLATE NOCASE,
+            team_room INTEGER NOT NULL DEFAULT 0
+        );
+        """;
+
+    private const string DdlCreateRoomTeamsIndex =
+        "CREATE INDEX IF NOT EXISTS ix_room_teams_team ON room_teams(team);";
+
+    private const string DdlCreateRoomTeamsTeamRoomIndex =
+        "CREATE UNIQUE INDEX IF NOT EXISTS ux_room_teams_team_room ON room_teams(team) WHERE team_room = 1;";
+
     private readonly string connectionString;
     private readonly TimeProvider timeProvider;
 
@@ -81,6 +98,9 @@ public sealed class SqliteTeamDirectory : ITeamDirectory
         await ExecuteNonQueryAsync(connection, DdlCreateRoomMembers, ct);
         await ExecuteNonQueryAsync(connection, DdlCreateRoomMembersIndex, ct);
         await ExecuteNonQueryAsync(connection, DdlCreateArchivedRooms, ct);
+        await ExecuteNonQueryAsync(connection, DdlCreateRoomTeams, ct);
+        await ExecuteNonQueryAsync(connection, DdlCreateRoomTeamsIndex, ct);
+        await ExecuteNonQueryAsync(connection, DdlCreateRoomTeamsTeamRoomIndex, ct);
 
         await using var seed = connection.CreateCommand();
         seed.CommandText = """
@@ -243,9 +263,10 @@ public sealed class SqliteTeamDirectory : ITeamDirectory
         await using var connection = await this.OpenConnectionAsync(ct);
         await using var command = connection.CreateCommand();
         command.CommandText = """
-            SELECT r.id, r.name, r.created, a.room_id IS NOT NULL
+            SELECT r.id, r.name, r.created, a.room_id IS NOT NULL, t.team, COALESCE(t.team_room, 0)
             FROM rooms r
             LEFT JOIN archived_rooms a ON a.room_id = r.id
+            LEFT JOIN room_teams t ON t.room_id = r.id
             ORDER BY r.created, r.id;
             """;
 
@@ -264,10 +285,11 @@ public sealed class SqliteTeamDirectory : ITeamDirectory
         await using var connection = await this.OpenConnectionAsync(ct);
         await using var command = connection.CreateCommand();
         command.CommandText = """
-            SELECT r.id, r.name, r.created, a.room_id IS NOT NULL
+            SELECT r.id, r.name, r.created, a.room_id IS NOT NULL, t.team, COALESCE(t.team_room, 0)
             FROM rooms r
             JOIN room_members m ON m.room_id = r.id
             LEFT JOIN archived_rooms a ON a.room_id = r.id
+            LEFT JOIN room_teams t ON t.room_id = r.id
             WHERE m.user_id = $u
             ORDER BY r.created, r.id;
             """;
@@ -288,9 +310,10 @@ public sealed class SqliteTeamDirectory : ITeamDirectory
         await using var connection = await this.OpenConnectionAsync(ct);
         await using var command = connection.CreateCommand();
         command.CommandText = """
-            SELECT r.id, r.name, r.created, a.room_id IS NOT NULL
+            SELECT r.id, r.name, r.created, a.room_id IS NOT NULL, t.team, COALESCE(t.team_room, 0)
             FROM rooms r
             LEFT JOIN archived_rooms a ON a.room_id = r.id
+            LEFT JOIN room_teams t ON t.room_id = r.id
             WHERE r.id = $id;
             """;
         command.Parameters.AddWithValue("$id", roomId);
@@ -322,7 +345,11 @@ public sealed class SqliteTeamDirectory : ITeamDirectory
         return members;
     }
 
-    public async Task<Room> CreateRoomAsync(string name, IEnumerable<string> memberIds, CancellationToken ct = default)
+    public Task<Room> CreateRoomAsync(string name, IEnumerable<string> memberIds, CancellationToken ct = default) =>
+        this.CreateRoomAsync(name, memberIds, null, false, ct);
+
+    /// <inheritdoc />
+    public async Task<Room> CreateRoomAsync(string name, IEnumerable<string> memberIds, string? team, bool teamRoom = false, CancellationToken ct = default)
     {
         ArgumentNullException.ThrowIfNull(memberIds);
 
@@ -352,9 +379,68 @@ public sealed class SqliteTeamDirectory : ITeamDirectory
             await insertMember.ExecuteNonQueryAsync(ct);
         }
 
+        if (team is not null)
+        {
+            await using var insertTeam = connection.CreateCommand();
+            insertTeam.Transaction = transaction;
+            insertTeam.CommandText = "INSERT INTO room_teams(room_id, team, team_room) VALUES($r, $team, $teamRoom);";
+            insertTeam.Parameters.AddWithValue("$r", id);
+            insertTeam.Parameters.AddWithValue("$team", team);
+            insertTeam.Parameters.AddWithValue("$teamRoom", teamRoom ? 1 : 0);
+            await insertTeam.ExecuteNonQueryAsync(ct);
+        }
+
         await transaction.CommitAsync(ct);
 
-        return new Room(id, name, created);
+        return new Room(id, name, created) { Team = team, IsTeamRoom = team is not null && teamRoom };
+    }
+
+    /// <inheritdoc />
+    public async Task<IReadOnlyList<Room>> GetRoomsForTeamAsync(string team, CancellationToken ct = default)
+    {
+        ArgumentNullException.ThrowIfNull(team);
+
+        await using var connection = await this.OpenConnectionAsync(ct);
+        await using var command = connection.CreateCommand();
+        command.CommandText = """
+            SELECT r.id, r.name, r.created, a.room_id IS NOT NULL, t.team, COALESCE(t.team_room, 0)
+            FROM rooms r
+            LEFT JOIN archived_rooms a ON a.room_id = r.id
+            JOIN room_teams t ON t.room_id = r.id
+            WHERE t.team = $team
+            ORDER BY r.created, r.id;
+            """;
+        command.Parameters.AddWithValue("$team", team);
+
+        var rooms = new List<Room>();
+        await using var reader = await command.ExecuteReaderAsync(ct);
+        while (await reader.ReadAsync(ct))
+        {
+            rooms.Add(ReadRoom(reader));
+        }
+
+        return rooms;
+    }
+
+    /// <inheritdoc />
+    public async Task<Room?> FindTeamRoomAsync(string team, CancellationToken ct = default)
+    {
+        ArgumentNullException.ThrowIfNull(team);
+
+        await using var connection = await this.OpenConnectionAsync(ct);
+        await using var command = connection.CreateCommand();
+        command.CommandText = """
+            SELECT r.id, r.name, r.created, a.room_id IS NOT NULL, t.team, COALESCE(t.team_room, 0)
+            FROM rooms r
+            LEFT JOIN archived_rooms a ON a.room_id = r.id
+            JOIN room_teams t ON t.room_id = r.id
+            WHERE t.team = $team AND t.team_room = 1
+            LIMIT 1;
+            """;
+        command.Parameters.AddWithValue("$team", team);
+
+        await using var reader = await command.ExecuteReaderAsync(ct);
+        return await reader.ReadAsync(ct) ? ReadRoom(reader) : null;
     }
 
     public async Task<bool> AddMemberAsync(string roomId, string userId, CancellationToken ct = default)
@@ -379,30 +465,41 @@ public sealed class SqliteTeamDirectory : ITeamDirectory
         await command.ExecuteNonQueryAsync(ct);
     }
 
-    public async Task<Room?> FindRoomWithExactMembersAsync(string humanId, string agentId, CancellationToken ct = default)
+    public Task<Room?> FindRoomWithExactMembersAsync(string humanId, string agentId, CancellationToken ct = default) =>
+        this.FindRoomWithExactMembersAsync(humanId, agentId, null, ct);
+
+    /// <inheritdoc />
+    public async Task<Room?> FindRoomWithExactMembersAsync(string humanId, string agentId, string? team, CancellationToken ct = default)
     {
         await using var connection = await this.OpenConnectionAsync(ct);
         await using var command = connection.CreateCommand();
         command.CommandText = """
-            SELECT r.id, r.name, r.created, a.room_id IS NOT NULL
+            SELECT r.id, r.name, r.created, a.room_id IS NOT NULL, t.team, COALESCE(t.team_room, 0)
             FROM rooms r
             LEFT JOIN archived_rooms a ON a.room_id = r.id
+            LEFT JOIN room_teams t ON t.room_id = r.id
             WHERE EXISTS (SELECT 1 FROM room_members WHERE room_id = r.id AND user_id = $h)
               AND EXISTS (SELECT 1 FROM room_members WHERE room_id = r.id AND user_id = $ag)
               AND (SELECT COUNT(*) FROM room_members WHERE room_id = r.id) = 2
               AND NOT EXISTS (SELECT 1 FROM archived_rooms WHERE room_id = r.id)
+              AND (($team IS NULL AND t.room_id IS NULL) OR (t.team = $team AND COALESCE(t.team_room, 0) = 0))
             ORDER BY r.created, r.id
             LIMIT 1;
             """;
         command.Parameters.AddWithValue("$h", humanId);
         command.Parameters.AddWithValue("$ag", agentId);
+        command.Parameters.AddWithValue("$team", (object?)team ?? DBNull.Value);
 
         await using var reader = await command.ExecuteReaderAsync(ct);
         return await reader.ReadAsync(ct) ? ReadRoom(reader) : null;
     }
 
     /// <inheritdoc />
-    public async Task<Room?> FindRoomWithExactMemberSetAsync(IReadOnlyCollection<string> memberIds, CancellationToken ct = default)
+    public Task<Room?> FindRoomWithExactMemberSetAsync(IReadOnlyCollection<string> memberIds, CancellationToken ct = default) =>
+        this.FindRoomWithExactMemberSetAsync(memberIds, null, ct);
+
+    /// <inheritdoc />
+    public async Task<Room?> FindRoomWithExactMemberSetAsync(IReadOnlyCollection<string> memberIds, string? team, CancellationToken ct = default)
     {
         ArgumentNullException.ThrowIfNull(memberIds);
 
@@ -425,16 +522,19 @@ public sealed class SqliteTeamDirectory : ITeamDirectory
 
         var inClause = string.Join(", ", placeholders);
         command.CommandText = string.Create(CultureInfo.InvariantCulture, $"""
-            SELECT r.id, r.name, r.created, a.room_id IS NOT NULL
+            SELECT r.id, r.name, r.created, a.room_id IS NOT NULL, t.team, COALESCE(t.team_room, 0)
             FROM rooms r
             LEFT JOIN archived_rooms a ON a.room_id = r.id
+            LEFT JOIN room_teams t ON t.room_id = r.id
             WHERE (SELECT COUNT(*) FROM room_members m WHERE m.room_id = r.id) = $count
               AND (SELECT COUNT(*) FROM room_members m WHERE m.room_id = r.id AND m.user_id IN ({inClause})) = $count
               AND NOT EXISTS (SELECT 1 FROM archived_rooms WHERE room_id = r.id)
+              AND (($team IS NULL AND t.room_id IS NULL) OR (t.team = $team AND COALESCE(t.team_room, 0) = 0))
             ORDER BY r.created, r.id
             LIMIT 1;
             """);
         command.Parameters.AddWithValue("$count", distinctIds.Count);
+        command.Parameters.AddWithValue("$team", (object?)team ?? DBNull.Value);
 
         await using var reader = await command.ExecuteReaderAsync(ct);
         return await reader.ReadAsync(ct) ? ReadRoom(reader) : null;
@@ -498,6 +598,14 @@ public sealed class SqliteTeamDirectory : ITeamDirectory
             await deleteMembers.ExecuteNonQueryAsync(ct);
         }
 
+        await using (var deleteScope = connection.CreateCommand())
+        {
+            deleteScope.Transaction = transaction;
+            deleteScope.CommandText = "DELETE FROM room_teams WHERE room_id = $id;";
+            deleteScope.Parameters.AddWithValue("$id", roomId);
+            await deleteScope.ExecuteNonQueryAsync(ct);
+        }
+
         await using (var deleteArchived = connection.CreateCommand())
         {
             deleteArchived.Transaction = transaction;
@@ -539,7 +647,11 @@ public sealed class SqliteTeamDirectory : ITeamDirectory
         var created = DateTimeOffset.Parse(reader.GetString(2), CultureInfo.InvariantCulture);
         var archived = reader.GetBoolean(3);
 
-        return new Room(id, name, created) { Archived = archived };
+        var team = reader.IsDBNull(4) ? null : reader.GetString(4);
+
+        var isTeamRoom = reader.GetBoolean(5);
+
+        return new Room(id, name, created) { Archived = archived, Team = team, IsTeamRoom = isTeamRoom };
     }
 
     private static async Task ExecuteNonQueryAsync(SqliteConnection connection, string sql, CancellationToken ct)

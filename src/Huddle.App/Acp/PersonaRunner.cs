@@ -469,7 +469,7 @@ internal sealed class PersonaRunner : IAsyncDisposable, IRoomSessionOwner
         // warning this open may trigger now arrives through IRoomSessionOwner.ReportModels (D24
         // correction 23) rather than a one-time check here.
         var humanRoom = welcome.Rooms.FirstOrDefault(room =>
-            room.Members.Count == 2 && room.Members.Any(member => member.Kind == UserKind.Human));
+            room.Team is null && room.Members.Count == 2 && room.Members.Any(member => member.Kind == UserKind.Human));
         await this.pool.OpenAtStartAsync(humanRoom?.Id, cancellationToken);
 
         // The Greeting (Spec §6.14): queued here, only now that the session opened successfully, so a
@@ -483,7 +483,7 @@ internal sealed class PersonaRunner : IAsyncDisposable, IRoomSessionOwner
             string.Equals(identity.Builtin, BuiltinTeammate.ChiefOfStaffMarker, StringComparison.Ordinal))
         {
             var emptyHumanRoom = welcome.Rooms.FirstOrDefault(room =>
-                room.Members.Count == 2 && room.Members.Any(member => member.Kind == UserKind.Human) && room.IsEmpty);
+                room.Team is null && room.Members.Count == 2 && room.Members.Any(member => member.Kind == UserKind.Human) && room.IsEmpty);
             if (emptyHumanRoom is not null)
             {
                 this.greetingQueued = true;
@@ -491,7 +491,7 @@ internal sealed class PersonaRunner : IAsyncDisposable, IRoomSessionOwner
                 var greetingRoomName = RoomLabels.Distinguish(emptyHumanRoom.Id, emptyHumanRoom.Name, this.knownRoomNames);
                 this.pool.Enqueue(new QueuedWork(
                     greetingSequence,
-                    new WorkItem(emptyHumanRoom.Id, greetingRoomName, string.Empty, string.Empty, [], WorkItemKind.Greeting)));
+                    new WorkItem(emptyHumanRoom.Id, greetingRoomName, string.Empty, string.Empty, [], WorkItemKind.Greeting, Team: emptyHumanRoom.Team)));
             }
         }
 
@@ -616,7 +616,8 @@ internal sealed class PersonaRunner : IAsyncDisposable, IRoomSessionOwner
                             var item = new WorkItem(
                                 posted.RoomId, labelledRoomName, posted.Message.SenderName, posted.Message.Text, missed,
                                 TriggerMessageId: posted.Message.Id,
-                                OwnPostLines: ownPostLines.Count > 0 ? ownPostLines : null);
+                                OwnPostLines: ownPostLines.Count > 0 ? ownPostLines : null,
+                                Team: posted.Team);
                             var sequence = Interlocked.Increment(ref this.sequenceCounter);
 
                             // Never call the agent from the read loop: hand the item to the pool,
@@ -892,7 +893,8 @@ internal sealed class PersonaRunner : IAsyncDisposable, IRoomSessionOwner
             [],
             WorkItemKind.Command,
             TriggerMessageId: posted.Message.Id,
-            Command: new AdapterCommandCall(offered.Name, call.Arguments));
+            Command: new AdapterCommandCall(offered.Name, call.Arguments),
+            Team: posted.Team);
         return true;
     }
 

@@ -71,6 +71,7 @@ that exercise it. All are **chat** unless stated.
 | Skills, Proposals and the Chief of Staff | [Huddle.Skills-Specifications.md](Huddle.Skills-Specifications.md) | [0020](adr/0020-a-hook-is-a-prompt.md), [0021](adr/0021-a-skill-is-know-how-an-agent-reads-on-demand.md) | [skills](engineering/manual-tests/skills.md) | Built |
 | Agent tools (`mcp__team__*`) | [code-map.md](engineering/code-map.md) | none | [app-tools](engineering/manual-tests/app-tools.md) | Built |
 | Questions (`ask_human`) | [Huddle.Questions-Specifications.md](Huddle.Questions-Specifications.md) | [0022](adr/0022-an-agent-asks-the-human-with-a-question.md) | [questions](engineering/manual-tests/questions.md) | Built 2026-10-01 |
+| Team chats: a Room's Scope (root or one Team) and the Team Room | [Huddle.TeamChats-Specifications.md](Huddle.TeamChats-Specifications.md) | [0052](adr/0052-a-room-belongs-to-the-root-or-to-one-team.md) (revises TeamPages D-1, D-9) | [team-chats](engineering/manual-tests/team-chats.md) | Built 2026-10-12 (uploads: separate spec, not built) |
 | Needs You: the sidebar card of Rooms waiting on the Human | [Huddle.NeedsYou-Specifications.md](Huddle.NeedsYou-Specifications.md) | [0050](adr/0050-needs-you-is-derived-from-room-events-and-held-in-memory.md) | [needs-you](engineering/manual-tests/needs-you.md) | Built 2026-10-12 |
 | Prompt blocks: a Library image reaches the Agent as an image | [Huddle.PromptBlocks-Specifications.md](Huddle.PromptBlocks-Specifications.md) | [0036](adr/0036-a-prompt-block-is-sent-only-when-the-adapter-advertised-it.md) | [prompt-blocks](engineering/manual-tests/prompt-blocks.md) | Built 2026-10-01 |
 | Tasks, Views, Board and List | [Huddle.Tasks-Specifications.md](Huddle.Tasks-Specifications.md) | [0025](adr/0025-in-tasks-a-team-is-a-folder-by-convention.md), [0026](adr/0026-a-change-to-a-task-wakes-its-assignee.md) | [tasks](engineering/manual-tests/tasks.md) | Built |
@@ -171,6 +172,8 @@ One row per decision. Open the ADR only when its row is your question.
 | [0049](adr/0049-a-hiring-pool-holds-the-jobs-and-a-team-type-lists-them.md) | Jobs live once in a global hiring pool (`hiringpool.json` plus a persona file each); a team type lists the jobs it uses and keeps only its manager, limit, coverage and vendor rule; presets are gone; the pool is browsed by a type cloud and a tags-and-skills cloud. Amends 0038. | Accepted |
 | [0050](adr/0050-needs-you-is-derived-from-room-events-and-held-in-memory.md) | Needs You is one in-memory singleton keyed by Room id that observes existing `RoomEvents`; four reasons (Mention, Question, Form, Budget); only a Human post or a dismissal clears a Room, never opening it; the Mention reason is rebuilt from the end of each Transcript at startup; tracker, list and card are separate so the list can move to a right-hand sidebar. | Accepted |
 | [0051](adr/0051-search-keeps-no-index-of-its-own.md) | Global Search keeps no index of its own: every search re-reads from memory or disk, bounded by a per-root visit budget, a per-file size cap, the debounce and cancellation; `WikiLinkIndex` is not used. | Accepted |
+| [0052](adr/0052-a-room-belongs-to-the-root-or-to-one-team.md) | A Room's Scope is the root or one Team, stored in a `room_teams` sibling table at creation and never changed; root and Team one-to-ones are separate Rooms; each Team has a Team Room reconciled from the catalog; a Team that leaves the catalog archives its Rooms. Revises TeamPages D-1 and D-9. | Accepted |
+
 ## 5. Manual tests
 
 One page per feature area, run by hand in a browser. Start with `common.md`.
@@ -204,6 +207,7 @@ One page per feature area, run by hand in a browser. Start with `common.md`.
 | [startup-config.md](engineering/manual-tests/startup-config.md) | Startup configuration, first-run state, environment variables |
 | [streaming-turn.md](engineering/manual-tests/streaming-turn.md) | Turn streaming, Drafts, Stop, failure alerts, reload |
 | [tasks.md](engineering/manual-tests/tasks.md) | Tasks, Board drag, keyboard navigation, frontmatter, agent edits |
+| [team-chats.md](engineering/manual-tests/team-chats.md) | Team chats: the Team Room, scoped New chat, Members-tab Message, archiving, Task wakes and digests |
 | [team-pages.md](engineering/manual-tests/team-pages.md) | Teams sidebar, Members tab, Files tab, shared Memory |
 | [teammate-card.md](engineering/manual-tests/teammate-card.md) | Teammate card: create, edit, delete |
 | [teammates-library.md](engineering/manual-tests/teammates-library.md) | Teammates page, file mirroring, Team grouping, filter, watcher |

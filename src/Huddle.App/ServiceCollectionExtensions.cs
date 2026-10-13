@@ -82,7 +82,15 @@ public static class ServiceCollectionExtensions
         services.AddSingleton<ITeamDirectory, SqliteTeamDirectory>();
         services.AddSingleton<IChatStore, FileChatStore>();
 
-        services.AddSingleton<ChatService>();
+        // A factory because ChatService.TeamCatalog is an internal settable property (ITeamCatalog is
+        // internal, the constructor public); ITeamCatalog is registered further down and resolved lazily.
+        // ActivatorUtilities fills the constructor, so a new constructor parameter needs no edit here.
+        services.AddSingleton(sp =>
+        {
+            ChatService service = ActivatorUtilities.CreateInstance<ChatService>(sp);
+            service.TeamCatalog = sp.GetRequiredService<ITeamCatalog>();
+            return service;
+        });
         services.TryAddSingleton<ToolCallLogWriter>();
         services.AddSingleton<Drafts>();
 
@@ -475,6 +483,10 @@ public static class ServiceCollectionExtensions
         // DataInitializer so the Team Directory is initialised before the scan reads it.
         services.AddSingleton<NeedsYouTracker>();
         services.AddHostedService<NeedsYouStartupScan>();
+
+        // Team chats (ADR-0052): one Team Room per Team, reconciled from the catalog. Registered after
+        // DataInitializer so the Team Directory exists, and after the catalog it subscribes to.
+        services.AddHostedService<Agency.Huddle.App.Teams.TeamRoomReconciler>();
 
         return services;
     }

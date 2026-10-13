@@ -492,6 +492,24 @@ public sealed class ProposalCardTests
         }
 
         /// <inheritdoc />
+        public Task<Room> CreateRoomAsync(string name, IEnumerable<string> memberIds, string? team, bool teamRoom = false, CancellationToken ct = default)
+        {
+            return inner.CreateRoomAsync(name, memberIds, team, teamRoom, ct);
+        }
+
+        /// <inheritdoc />
+        public Task<IReadOnlyList<Room>> GetRoomsForTeamAsync(string team, CancellationToken ct = default)
+        {
+            return inner.GetRoomsForTeamAsync(team, ct);
+        }
+
+        /// <inheritdoc />
+        public Task<Room?> FindTeamRoomAsync(string team, CancellationToken ct = default)
+        {
+            return inner.FindTeamRoomAsync(team, ct);
+        }
+
+        /// <inheritdoc />
         public Task<bool> AddMemberAsync(string roomId, string userId, CancellationToken ct = default)
         {
             return inner.AddMemberAsync(roomId, userId, ct);
@@ -510,9 +528,21 @@ public sealed class ProposalCardTests
         }
 
         /// <inheritdoc />
+        public Task<Room?> FindRoomWithExactMembersAsync(string humanId, string agentId, string? team, CancellationToken ct = default)
+        {
+            return inner.FindRoomWithExactMembersAsync(humanId, agentId, team, ct);
+        }
+
+        /// <inheritdoc />
         public Task<Room?> FindRoomWithExactMemberSetAsync(IReadOnlyCollection<string> memberIds, CancellationToken ct = default)
         {
             return inner.FindRoomWithExactMemberSetAsync(memberIds, ct);
+        }
+
+        /// <inheritdoc />
+        public Task<Room?> FindRoomWithExactMemberSetAsync(IReadOnlyCollection<string> memberIds, string? team, CancellationToken ct = default)
+        {
+            return inner.FindRoomWithExactMemberSetAsync(memberIds, team, ct);
         }
 
         /// <inheritdoc />

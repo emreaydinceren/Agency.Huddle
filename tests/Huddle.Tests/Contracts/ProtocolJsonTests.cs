@@ -287,4 +287,32 @@ public sealed class ProtocolJsonTests
     {
         Assert.Equal(3, ProtocolVersion.Current);
     }
+
+    /// <summary>The optional Team on <see cref="MessagePosted"/> and <see cref="RoomInfo"/> round-trips when set.</summary>
+    [Fact]
+    public void Team_OnMessagePostedAndRoomInfo_RoundTrips()
+    {
+        ChatMessage chatMessage = new("m1", DateTimeOffset.UtcNow, "human", "You", "hi");
+        MessagePosted posted = new("room-1", "echo", chatMessage, true, [], [], 0, 0, Team: "Marketing");
+        Welcome welcome = new("agent-1", "echo", [new RoomInfo("room-1", "echo", [], Team: "Marketing")]);
+
+        MessagePosted postedResult = Assert.IsType<MessagePosted>(ProtocolJson.Deserialize(ProtocolJson.Serialize(posted)));
+        Welcome welcomeResult = Assert.IsType<Welcome>(ProtocolJson.Deserialize(ProtocolJson.Serialize(welcome)));
+
+        Assert.Equal("Marketing", postedResult.Team);
+        Assert.Equal("Marketing", Assert.Single(welcomeResult.Rooms).Team);
+    }
+
+    /// <summary>A root Room writes no <c>team</c> on the wire, and a message from a server built before the field reads as root.</summary>
+    [Fact]
+    public void Team_Absent_DeserialisesAsNullAndIsNotWritten()
+    {
+        ChatMessage chatMessage = new("m1", DateTimeOffset.UtcNow, "human", "You", "hi");
+        string json = ProtocolJson.Serialize(new MessagePosted("room-1", "echo", chatMessage, true, [], [], 0, 0));
+
+        MessagePosted result = Assert.IsType<MessagePosted>(ProtocolJson.Deserialize(json));
+
+        Assert.DoesNotContain("\"team\"", json, StringComparison.Ordinal);
+        Assert.Null(result.Team);
+    }
 }

@@ -178,6 +178,25 @@ public sealed class TeamFolderProvisionerTests
         Assert.Empty(Directory.GetFileSystemEntries(teamDir));
     }
 
+    /// <summary>Spec §6.8: a Project named <c>Uploads</c> (any case) is the Team's upload folder, so it is refused with the Uploads text and nothing at all is created under the Team folder.</summary>
+    [Theory]
+    [InlineData("Uploads")]
+    [InlineData("uploads")]
+    public void EnsureProject_Uploads_RefusedWithUploadsTextAndNothingCreated(string project)
+    {
+        using ProvisionerFixture fixture = new();
+        string teamDir = Path.Combine(fixture.TeamsRoot, "Marketing");
+        Directory.CreateDirectory(teamDir);
+        using TeamFolderProvisioner provisioner = fixture.CreateProvisioner();
+        Assert.True(fixture.Resolver.TryResolve("teams", "Marketing", out LibraryPath? teamFolder, out _));
+
+        LibraryResult<LibraryPath> result = provisioner.EnsureProject(teamFolder!, project);
+
+        Assert.Null(result.Value);
+        Assert.Equal(TeamNames.UploadsReservedProblem, result.Error);
+        Assert.Empty(Directory.GetFileSystemEntries(teamDir));
+    }
+
     /// <summary>Guard (passes today, corrections-D3 item 9): <c>_x</c> keeps the resolver's own refusal text, not the memory text, and nothing is created.</summary>
     [Fact]
     public void EnsureProject_UnderscoreX_StillRefusedAsReserved()
