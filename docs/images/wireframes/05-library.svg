@@ -1,0 +1,98 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 740" width="1200" height="740" font-family="Inter, 'Segoe UI', Helvetica, Arial, sans-serif" xml:space="preserve" style="white-space: pre" role="img" aria-label="Figure 5: The Library page">
+<title>Figure 5: The Library page</title>
+<defs><filter id="sh" x="-10%" y="-10%" width="125%" height="130%"><feDropShadow dx="0" dy="3" stdDeviation="4" flood-color="#000" flood-opacity="0.22"/></filter><marker id="ar" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0 L10 5 L0 10 z" fill="#6b7280"/></marker></defs>
+<rect width="1200" height="740" fill="#ffffff"/>
+<text x="24" y="30" font-size="18" font-weight="700" fill="#1f2430" text-anchor="start">Figure 5: The Library page</text>
+<text x="24" y="48" font-size="12" font-weight="400" fill="#6b7280" text-anchor="start">Library.razor, LibraryExplorer.razor (MudSplitPanel), LibraryDocument.razor. The divider is draggable and remembered.</text>
+<rect x="24" y="60" width="1152" height="640" rx="6" fill="#eceef2" stroke="#8b93a1" stroke-width="1.4"/>
+<rect x="30" y="65" width="25" height="17" rx="8.5" fill="#0f766e"/>
+<text x="42.4" y="77.5" font-size="11" font-weight="700" fill="#fff" text-anchor="middle">L1</text>
+<text x="60.8" y="78" font-size="12" font-weight="600" fill="#1f2430" text-anchor="start">Explorer</text>
+<text x="124.8" y="78" font-size="11" font-weight="400" fill="#6b7280" text-anchor="start">LibraryExplorer, side by side</text>
+<rect x="36" y="100" width="1128" height="30" rx="4" fill="#ffffff" stroke="#8b93a1" stroke-width="1.2"/>
+<text x="70" y="119.0" font-size="11" font-weight="400" fill="#1f2430" text-anchor="start">/Users/me/Library   (the root's path, h2; or a title)</text>
+<rect x="32" y="92" width="32" height="17" rx="8.5" fill="#0f766e"/>
+<text x="48.1" y="104.5" font-size="11" font-weight="700" fill="#fff" text-anchor="middle">L1a</text>
+<rect x="36" y="150" width="300" height="536" rx="4" fill="#ffffff" stroke="#8b93a1" stroke-width="1.2"/>
+<rect x="32" y="142" width="25" height="17" rx="8.5" fill="#0f766e"/>
+<text x="44.4" y="154.5" font-size="11" font-weight="700" fill="#fff" text-anchor="middle">L2</text>
+<text x="63" y="154" font-size="11" font-weight="600" fill="#1f2430" stroke="#ffffff" stroke-width="4" paint-order="stroke">Tree panel (first panel)</text>
+<rect x="48" y="190" width="276" height="150" rx="4" fill="#f6f7f9" stroke="#8b93a1" stroke-width="1.2"/>
+<rect x="44" y="182" width="32" height="17" rx="8.5" fill="#0f766e"/>
+<text x="60.1" y="194.5" font-size="11" font-weight="700" fill="#fff" text-anchor="middle">L2a</text>
+<text x="82" y="194" font-size="11" font-weight="600" fill="#1f2430" stroke="#f6f7f9" stroke-width="4" paint-order="stroke">Tree (lazy-loaded)</text>
+<text x="62" y="220" font-size="11" font-weight="400" fill="#1f2430" text-anchor="start">▾ notes</text>
+<text x="80" y="238" font-size="11" font-weight="400" fill="#6b7280" text-anchor="start">design.md</text>
+<text x="80" y="256" font-size="11" font-weight="400" fill="#6b7280" text-anchor="start">todo.md</text>
+<text x="62" y="274" font-size="11" font-weight="400" fill="#1f2430" text-anchor="start">▸ teams</text>
+<text x="62" y="292" font-size="11" font-weight="400" fill="#1f2430" text-anchor="start">▾ projects</text>
+<text x="80" y="310" font-size="11" font-weight="400" fill="#6b7280" text-anchor="start">plan.md</text>
+<rect x="48" y="366" width="276" height="50" rx="4" fill="#f6f7f9" stroke="#8b93a1" stroke-width="1.2" stroke-dasharray="6 4"/>
+<rect x="44" y="358" width="32" height="17" rx="8.5" fill="#0f766e"/>
+<text x="60.1" y="370.5" font-size="11" font-weight="700" fill="#fff" text-anchor="middle">L2b</text>
+<text x="82" y="370" font-size="11" font-weight="600" fill="#1f2430" stroke="#f6f7f9" stroke-width="4" paint-order="stroke">Filtered results (replace the tree)</text>
+<text x="62" y="398" font-size="11" font-weight="400" fill="#6b7280" text-anchor="start">design.md   notes/</text>
+<rect x="340" y="150" width="10" height="536" rx="4" fill="#d7eef0" stroke="#0e7c86" stroke-width="1.2"/>
+<text x="345" y="420" font-size="12" font-weight="700" fill="#0e7c86" text-anchor="middle">⋮</text>
+<rect x="322" y="440" width="25" height="17" rx="8.5" fill="#0f766e"/>
+<text x="334.4" y="452.5" font-size="11" font-weight="700" fill="#fff" text-anchor="middle">L4</text>
+<rect x="356" y="150" width="808" height="536" rx="4" fill="#ffffff" stroke="#8b93a1" stroke-width="1.2"/>
+<rect x="352" y="142" width="25" height="17" rx="8.5" fill="#0f766e"/>
+<text x="364.4" y="154.5" font-size="11" font-weight="700" fill="#fff" text-anchor="middle">L3</text>
+<text x="383" y="154" font-size="11" font-weight="600" fill="#1f2430" stroke="#ffffff" stroke-width="4" paint-order="stroke">Document panel (second panel)</text>
+<rect x="368" y="190" width="784" height="36" rx="4" fill="#f6f7f9" stroke="#8b93a1" stroke-width="1.2"/>
+<rect x="364" y="182" width="32" height="17" rx="8.5" fill="#0f766e"/>
+<text x="380.1" y="194.5" font-size="11" font-weight="700" fill="#fff" text-anchor="middle">L3a</text>
+<text x="402" y="194" font-size="11" font-weight="600" fill="#1f2430" stroke="#f6f7f9" stroke-width="4" paint-order="stroke">Toolbar</text>
+<text x="412" y="213" font-size="11" font-weight="400" fill="#6b7280" text-anchor="start">notes › design.md</text>
+<rect x="700" y="196" width="190" height="24" rx="4" fill="#ffffff" stroke="#8b93a1" stroke-width="1.2"/>
+<text x="795.0" y="212.0" font-size="10" font-weight="400" fill="#1f2430" text-anchor="middle">Read | Edit | Split</text>
+<rect x="696" y="188" width="32" height="17" rx="8.5" fill="#0f766e"/>
+<text x="712.1" y="200.5" font-size="11" font-weight="700" fill="#fff" text-anchor="middle">L3b</text>
+<rect x="920" y="196" width="220" height="24" rx="4" fill="#ffffff" stroke="#8b93a1" stroke-width="1.2"/>
+<text x="1030.0" y="212.0" font-size="10" font-weight="400" fill="#1f2430" text-anchor="middle">Copy  ·  Pop out  ·  Close</text>
+<rect x="916" y="188" width="32" height="17" rx="8.5" fill="#0f766e"/>
+<text x="932.1" y="200.5" font-size="11" font-weight="700" fill="#fff" text-anchor="middle">L3c</text>
+<rect x="368" y="244" width="784" height="24" rx="4" fill="#fdf0d5" stroke="#d99a1e" stroke-width="1.2" stroke-dasharray="6 4"/>
+<text x="760.0" y="260.0" font-size="10" font-weight="400" fill="#1f2430" text-anchor="middle">Banners: file moved or deleted, newer on disk (Reload / Keep mine), save error</text>
+<rect x="364" y="236" width="32" height="17" rx="8.5" fill="#0f766e"/>
+<text x="380.1" y="248.5" font-size="11" font-weight="700" fill="#fff" text-anchor="middle">L3d</text>
+<rect x="368" y="288" width="784" height="246" rx="4" fill="#f6f7f9" stroke="#8b93a1" stroke-width="1.2"/>
+<rect x="364" y="280" width="32" height="17" rx="8.5" fill="#0f766e"/>
+<text x="380.1" y="292.5" font-size="11" font-weight="700" fill="#fff" text-anchor="middle">L3e</text>
+<text x="402" y="292" font-size="11" font-weight="600" fill="#1f2430" stroke="#f6f7f9" stroke-width="4" paint-order="stroke">Content (Read, Edit or Split)</text>
+<rect x="380" y="312" width="380" height="210" rx="4" fill="#ffffff" stroke="#8b93a1" stroke-width="1.2"/>
+<text x="392" y="330" font-size="11" font-weight="600" fill="#1f2430" text-anchor="start">Editor (CodeMirror)</text>
+<rect x="392" y="342.0" width="340" height="11" rx="3" fill="#cfd4dc"/>
+<rect x="392" y="342.5" width="340" height="11" rx="3" fill="#cfd4dc"/>
+<rect x="392" y="343.0" width="340" height="11" rx="3" fill="#cfd4dc"/>
+<rect x="392" y="343.5" width="340" height="11" rx="3" fill="#cfd4dc"/>
+<rect x="392" y="344.0" width="340" height="11" rx="3" fill="#cfd4dc"/>
+<rect x="392" y="344.5" width="340" height="11" rx="3" fill="#cfd4dc"/>
+<rect x="392" y="345.0" width="340" height="11" rx="3" fill="#cfd4dc"/>
+<rect x="392" y="345.5" width="204" height="11" rx="3" fill="#cfd4dc"/>
+<rect x="772" y="312" width="368" height="210" rx="4" fill="#ffffff" stroke="#8b93a1" stroke-width="1.2"/>
+<text x="784" y="330" font-size="11" font-weight="600" fill="#1f2430" text-anchor="start">Rendered preview</text>
+<rect x="784" y="342.0" width="330" height="11" rx="3" fill="#cfd4dc"/>
+<rect x="784" y="342.5" width="330" height="11" rx="3" fill="#cfd4dc"/>
+<rect x="784" y="343.0" width="330" height="11" rx="3" fill="#cfd4dc"/>
+<rect x="784" y="343.5" width="330" height="11" rx="3" fill="#cfd4dc"/>
+<rect x="784" y="344.0" width="330" height="11" rx="3" fill="#cfd4dc"/>
+<rect x="784" y="344.5" width="330" height="11" rx="3" fill="#cfd4dc"/>
+<rect x="784" y="345.0" width="330" height="11" rx="3" fill="#cfd4dc"/>
+<rect x="784" y="345.5" width="198" height="11" rx="3" fill="#cfd4dc"/>
+<rect x="368" y="556" width="784" height="116" rx="4" fill="#f6f7f9" stroke="#8b93a1" stroke-width="1.2"/>
+<rect x="364" y="548" width="32" height="17" rx="8.5" fill="#0f766e"/>
+<text x="380.1" y="560.5" font-size="11" font-weight="700" fill="#fff" text-anchor="middle">L3f</text>
+<text x="402" y="560" font-size="11" font-weight="600" fill="#1f2430" stroke="#f6f7f9" stroke-width="4" paint-order="stroke">Backlinks panel</text>
+<text x="384" y="590" font-size="11" font-weight="400" fill="#6b7280" text-anchor="start">Linked from  ·  teams/alpha.md  ·  plan.md</text>
+<text x="384" y="614" font-size="10" font-weight="400" fill="#6b7280" text-anchor="start" font-style="italic">With no file selected, L3 shows “Select a note to read it” and a New note button.</text>
+<text x="384" y="630" font-size="10" font-weight="400" fill="#6b7280" text-anchor="start" font-style="italic">Read-only and non-text files show a banner or an Open in default app button.</text>
+<text x="24" y="726" font-size="11" font-weight="700" fill="#6b7280" text-anchor="start">Key</text>
+<rect x="58" y="715" width="30" height="14" rx="3" fill="#f6f7f9" stroke="#8b93a1" stroke-width="1.2"/>
+<text x="94" y="726" font-size="11" font-weight="400" fill="#6b7280" text-anchor="start">always rendered</text>
+<rect x="194" y="715" width="30" height="14" rx="3" fill="#ffffff" stroke="#8b93a1" stroke-width="1.2" stroke-dasharray="6 4"/>
+<text x="230" y="726" font-size="11" font-weight="400" fill="#6b7280" text-anchor="start">only in some states</text>
+<rect x="354" y="715" width="30" height="14" rx="3" fill="#ffffff" stroke="#8b93a1" stroke-width="1.2" filter="url(#sh)"/>
+<text x="390" y="726" font-size="11" font-weight="400" fill="#6b7280" text-anchor="start">overlay above the page</text>
+</svg>

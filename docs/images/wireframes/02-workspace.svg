@@ -1,0 +1,99 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 720" width="1200" height="720" font-family="Inter, 'Segoe UI', Helvetica, Arial, sans-serif" xml:space="preserve" style="white-space: pre" role="img" aria-label="Figure 2: The workspace with two tab groups">
+<title>Figure 2: The workspace with two tab groups</title>
+<defs><filter id="sh" x="-10%" y="-10%" width="125%" height="130%"><feDropShadow dx="0" dy="3" stdDeviation="4" flood-color="#000" flood-opacity="0.22"/></filter><marker id="ar" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0 L10 5 L0 10 z" fill="#6b7280"/></marker></defs>
+<rect width="1200" height="720" fill="#ffffff"/>
+<text x="24" y="30" font-size="18" font-weight="700" fill="#1f2430" text-anchor="start">Figure 2: The workspace with two tab groups</text>
+<text x="24" y="48" font-size="12" font-weight="400" fill="#6b7280" text-anchor="start">TabHost &gt; TabGroupPane &gt; TabStrip &gt; TabPageHost. One pane has focus and its active Tab names the URL.</text>
+<rect x="24" y="60" width="1152" height="616" rx="6" fill="#eceef2" stroke="#8b93a1" stroke-width="1.4"/>
+<rect x="30" y="65" width="25" height="17" rx="8.5" fill="#6b3fa0"/>
+<text x="42.4" y="77.5" font-size="11" font-weight="700" fill="#fff" text-anchor="middle">W1</text>
+<text x="60.8" y="78" font-size="12" font-weight="600" fill="#1f2430" text-anchor="start">Tab host</text>
+<text x="124.8" y="78" font-size="11" font-weight="400" fill="#6b7280" text-anchor="start">TabHost, .tab-groups</text>
+<rect x="36" y="94" width="560" height="566" rx="6" fill="#ffffff" stroke="#0e7c86" stroke-width="2.6"/>
+<rect x="44" y="100" width="25" height="17" rx="8.5" fill="#6b3fa0"/>
+<text x="56.4" y="112.5" font-size="11" font-weight="700" fill="#fff" text-anchor="middle">W2</text>
+<text x="82" y="113" font-size="12" font-weight="600" fill="#1f2430" text-anchor="start">Group pane  (focused)</text>
+<rect x="44" y="130" width="544" height="40" rx="4" fill="#eceef2" stroke="#8b93a1" stroke-width="1.2"/>
+<rect x="50" y="122" width="25" height="17" rx="8.5" fill="#6b3fa0"/>
+<text x="62.4" y="134.5" font-size="11" font-weight="700" fill="#fff" text-anchor="middle">W3</text>
+<rect x="100" y="136" width="138" height="28" rx="4" fill="#ffffff" stroke="#8b93a1" stroke-width="1.2"/>
+<line x1="102" y1="163" x2="236" y2="163" stroke="#0e7c86" stroke-width="3"/>
+<circle cx="114" cy="150" r="5" fill="#cfd4dc" stroke="none" stroke-width="1"/>
+<text x="126" y="154" font-size="11" font-weight="600" fill="#1f2430" text-anchor="start">Room A</text>
+<text x="200" y="154" font-size="10" font-weight="400" fill="#6b7280" text-anchor="start">▾</text>
+<text x="220" y="154" font-size="10" font-weight="400" fill="#6b7280" text-anchor="start">✕</text>
+<rect x="244" y="136" width="138" height="28" rx="4" fill="#f6f7f9" stroke="#8b93a1" stroke-width="1.2"/>
+<circle cx="258" cy="150" r="5" fill="#cfd4dc" stroke="none" stroke-width="1"/>
+<text x="270" y="154" font-size="11" font-weight="400" fill="#1f2430" text-anchor="start">Tasks</text>
+<text x="344" y="154" font-size="10" font-weight="400" fill="#6b7280" text-anchor="start">▾</text>
+<text x="364" y="154" font-size="10" font-weight="400" fill="#6b7280" text-anchor="start">✕</text>
+<rect x="388" y="136" width="138" height="28" rx="4" fill="#f6f7f9" stroke="#8b93a1" stroke-width="1.2"/>
+<circle cx="402" cy="150" r="5" fill="#cfd4dc" stroke="none" stroke-width="1"/>
+<text x="414" y="154" font-size="11" font-weight="400" fill="#1f2430" text-anchor="start">Library</text>
+<text x="488" y="154" font-size="10" font-weight="400" fill="#6b7280" text-anchor="start">▾</text>
+<text x="508" y="154" font-size="10" font-weight="400" fill="#6b7280" text-anchor="start">✕</text>
+<rect x="44" y="182" width="544" height="468" rx="4" fill="#f6f7f9" stroke="#8b93a1" stroke-width="1.2"/>
+<rect x="50" y="188" width="25" height="17" rx="8.5" fill="#6b3fa0"/>
+<text x="62.4" y="200.5" font-size="11" font-weight="700" fill="#fff" text-anchor="middle">W5</text>
+<text x="88" y="201" font-size="12" font-weight="600" fill="#1f2430" text-anchor="start">Tab body</text>
+<rect x="56" y="216" width="520" height="420" rx="4" fill="#ffffff" stroke="#8b93a1" stroke-width="1.2"/>
+<rect x="62" y="208" width="25" height="17" rx="8.5" fill="#6b3fa0"/>
+<text x="74.4" y="220.5" font-size="11" font-weight="700" fill="#fff" text-anchor="middle">W6</text>
+<text x="316.0" y="400" font-size="16" font-weight="600" fill="#6b7280" text-anchor="middle">Page</text>
+<text x="316.0" y="420" font-size="11" font-weight="400" fill="#6b7280" text-anchor="middle">mounted by TabPageHost</text>
+<text x="316.0" y="436" font-size="10" font-weight="400" fill="#6b7280" text-anchor="middle" font-style="italic">only the active tab of each group is mounted</text>
+<rect x="608" y="94" width="556" height="566" rx="6" fill="#ffffff" stroke="#8b93a1" stroke-width="1.2"/>
+<rect x="616" y="100" width="25" height="17" rx="8.5" fill="#6b3fa0"/>
+<text x="628.4" y="112.5" font-size="11" font-weight="700" fill="#fff" text-anchor="middle">W2</text>
+<text x="654" y="113" font-size="12" font-weight="600" fill="#1f2430" text-anchor="start">Group pane  (not focused: its active tab is dimmed)</text>
+<rect x="616" y="130" width="540" height="40" rx="4" fill="#eceef2" stroke="#8b93a1" stroke-width="1.2"/>
+<rect x="622" y="122" width="25" height="17" rx="8.5" fill="#6b3fa0"/>
+<text x="634.4" y="134.5" font-size="11" font-weight="700" fill="#fff" text-anchor="middle">W3</text>
+<rect x="672" y="136" width="138" height="28" rx="4" fill="#ffffff" stroke="#8b93a1" stroke-width="1.2"/>
+<line x1="674" y1="163" x2="808" y2="163" stroke="#cfd4dc" stroke-width="3"/>
+<circle cx="686" cy="150" r="5" fill="#cfd4dc" stroke="none" stroke-width="1"/>
+<text x="698" y="154" font-size="11" font-weight="600" fill="#1f2430" text-anchor="start">Room A</text>
+<text x="772" y="154" font-size="10" font-weight="400" fill="#6b7280" text-anchor="start">▾</text>
+<text x="792" y="154" font-size="10" font-weight="400" fill="#6b7280" text-anchor="start">✕</text>
+<rect x="816" y="136" width="138" height="28" rx="4" fill="#f6f7f9" stroke="#8b93a1" stroke-width="1.2"/>
+<circle cx="830" cy="150" r="5" fill="#cfd4dc" stroke="none" stroke-width="1"/>
+<text x="842" y="154" font-size="11" font-weight="400" fill="#1f2430" text-anchor="start">Tasks</text>
+<text x="916" y="154" font-size="10" font-weight="400" fill="#6b7280" text-anchor="start">▾</text>
+<text x="936" y="154" font-size="10" font-weight="400" fill="#6b7280" text-anchor="start">✕</text>
+<rect x="960" y="136" width="138" height="28" rx="4" fill="#f6f7f9" stroke="#8b93a1" stroke-width="1.2"/>
+<circle cx="974" cy="150" r="5" fill="#cfd4dc" stroke="none" stroke-width="1"/>
+<text x="986" y="154" font-size="11" font-weight="400" fill="#1f2430" text-anchor="start">Library</text>
+<text x="1060" y="154" font-size="10" font-weight="400" fill="#6b7280" text-anchor="start">▾</text>
+<text x="1080" y="154" font-size="10" font-weight="400" fill="#6b7280" text-anchor="start">✕</text>
+<rect x="616" y="182" width="540" height="468" rx="4" fill="#f6f7f9" stroke="#8b93a1" stroke-width="1.2"/>
+<rect x="622" y="188" width="25" height="17" rx="8.5" fill="#6b3fa0"/>
+<text x="634.4" y="200.5" font-size="11" font-weight="700" fill="#fff" text-anchor="middle">W5</text>
+<text x="660" y="201" font-size="12" font-weight="600" fill="#1f2430" text-anchor="start">Tab body</text>
+<rect x="628" y="216" width="516" height="420" rx="4" fill="#ffffff" stroke="#8b93a1" stroke-width="1.2"/>
+<rect x="634" y="208" width="25" height="17" rx="8.5" fill="#6b3fa0"/>
+<text x="646.4" y="220.5" font-size="11" font-weight="700" fill="#fff" text-anchor="middle">W6</text>
+<rect x="102" y="134" width="142" height="32" rx="4" fill="none" stroke="#0e7c86" stroke-width="1.2"/>
+<rect x="98" y="126" width="25" height="17" rx="8.5" fill="#6b3fa0"/>
+<text x="110.4" y="138.5" font-size="11" font-weight="700" fill="#fff" text-anchor="middle">W4</text>
+<text x="246" y="183" font-size="9" font-weight="400" fill="#1f2430" text-anchor="start"></text>
+<rect x="700" y="232" width="440" height="150" rx="6" fill="#ffffff" stroke="#8b93a1" stroke-width="1.2" stroke-dasharray="6 4" filter="url(#sh)"/>
+<rect x="708" y="238" width="25" height="17" rx="8.5" fill="#6b3fa0"/>
+<text x="720.4" y="250.5" font-size="11" font-weight="700" fill="#fff" text-anchor="middle">W7</text>
+<text x="746" y="251" font-size="12" font-weight="600" fill="#1f2430" text-anchor="start">Tab menu (popover, right-click or the ▾ on a tab)</text>
+<text x="724" y="280" font-size="11" font-weight="400" fill="#1f2430" text-anchor="start">Pin Tab  /  Unpin Tab</text>
+<text x="724" y="302" font-size="11" font-weight="400" fill="#1f2430" text-anchor="start">Move Left</text>
+<text x="724" y="324" font-size="11" font-weight="400" fill="#1f2430" text-anchor="start">Move Right</text>
+<text x="724" y="346" font-size="11" font-weight="400" fill="#1f2430" text-anchor="start">Close</text>
+<rect x="700" y="410" width="440" height="120" rx="6" fill="#ffffff" stroke="#8b93a1" stroke-width="1.2" stroke-dasharray="6 4"/>
+<rect x="708" y="416" width="25" height="17" rx="8.5" fill="#6b3fa0"/>
+<text x="720.4" y="428.5" font-size="11" font-weight="700" fill="#fff" text-anchor="middle">W8</text>
+<text x="746" y="429" font-size="12" font-weight="600" fill="#1f2430" text-anchor="start">Empty group (replaces the page)</text>
+<text x="920" y="478" font-size="12" font-weight="400" fill="#6b7280" text-anchor="middle">No pages are open. Choose one from the menu.</text>
+<text x="24" y="706" font-size="11" font-weight="700" fill="#6b7280" text-anchor="start">Key</text>
+<rect x="58" y="695" width="30" height="14" rx="3" fill="#f6f7f9" stroke="#8b93a1" stroke-width="1.2"/>
+<text x="94" y="706" font-size="11" font-weight="400" fill="#6b7280" text-anchor="start">always rendered</text>
+<rect x="194" y="695" width="30" height="14" rx="3" fill="#ffffff" stroke="#8b93a1" stroke-width="1.2" stroke-dasharray="6 4"/>
+<text x="230" y="706" font-size="11" font-weight="400" fill="#6b7280" text-anchor="start">only in some states</text>
+<rect x="354" y="695" width="30" height="14" rx="3" fill="#ffffff" stroke="#8b93a1" stroke-width="1.2" filter="url(#sh)"/>
+<text x="390" y="706" font-size="11" font-weight="400" fill="#6b7280" text-anchor="start">overlay above the page</text>
+</svg>

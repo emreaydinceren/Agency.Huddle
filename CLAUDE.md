@@ -96,6 +96,7 @@ Read the one that matches the stage you're in:
 
 | Guide | Read it when |
 | --- | --- |
+| `docs/engineering/UXDesignGuidelines.md` | Building, changing or reviewing anything a Human sees: what to use for each need, the catalog of reusable components and helpers, which document owns which rule, and the duty to name containers by and update `wireframes.md`. Read it before exploring the UI code |
 | `agents/MudBlazorDesign.md` | Writing a spec or plan with UI: does MudBlazor already ship it, and where is the example |
 | `agents/MudBlazorImplementation.md` | Coding or testing a component: the house pattern to copy, the rules MudBlazor examples break, the API facts already checked |
 | `agents/Testing.md` | Writing or changing any test: what a test must pin, proving it can fail, flaky-test triage, the shared helpers, prompts and goldens |

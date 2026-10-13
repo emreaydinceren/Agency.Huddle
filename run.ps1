@@ -3,9 +3,11 @@
     Builds the solution and runs the Agency.Huddle web app.
 
 .DESCRIPTION
-    Builds Huddle.slnx, then starts src/Huddle.App (Blazor Server) and leaves it
-    running until Ctrl+C. The build happens once: the app is started with
-    --no-build so `dotnet run` does not repeat it.
+    Builds src/Huddle.App (plus the projects it references), not the whole solution, so
+    the test projects are never compiled here. Then starts the app (Blazor Server) and
+    leaves it running until Ctrl+C. The build happens once: the app is started with
+    --no-build so `dotnet run` does not repeat it. Use `dotnet build Huddle.slnx` for a
+    full build.
 
     Development configuration sets Team:Acp:Enabled to true, so the app starts
     one node process per Persona before you type anything. Pass -NoAcp to open
@@ -242,7 +244,7 @@ if ($NoBuild -and -not (Test-Path $appAssembly)) {
     exit 1
 }
 
-$buildCommand = "dotnet build `"$solution`""
+$buildCommand = "dotnet build `"$appProject`""
 $runCommand = "dotnet run --project `"$appProject`" --no-build --urls $url"
 if ($Seed) {
     $runCommand += ' -- ' + ($seedArgs -join ' ')
@@ -389,11 +391,11 @@ if ($seedCommand) {
 
 if (-not $NoBuild) {
     Write-Host ''
-    Write-Host 'Building Huddle.slnx...' -ForegroundColor Cyan
+    Write-Host 'Building Huddle.App (and its project references; tests are not built)...' -ForegroundColor Cyan
 
     Push-Location $scriptDir
     try {
-        dotnet build $solution
+        dotnet build $appProject
         $buildExitCode = $LASTEXITCODE
     } finally {
         Pop-Location
