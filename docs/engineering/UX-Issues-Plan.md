@@ -1042,7 +1042,7 @@ Ids are `<deliverable number>.<task>`, the form `Set-Tracker.ps1` updates:
 `pwsh -NoProfile -File agents/scripts/Set-Tracker.ps1 -Task "12.3" -State Done -TrackerPath docs/engineering/UX-Issues-Plan.md`.
 `(H)` is Haiku, `(S)` is Sonnet.
 
-**Status:** 62 of 141 tasks Done · 0 of 2 retrospectives done · last updated 2026-10-13.
+**Status:** 67 of 141 tasks Done · 0 of 2 retrospectives done · last updated 2026-10-13.
 
 | **Deliverable / Task** | **Model** | **Depends on** | **Active** | **In Progress** | **Done** |
 | --- | --- | --- | --- | --- | --- |
@@ -1141,11 +1141,11 @@ Ids are `<deliverable number>.<task>`, the form `Set-Tracker.ps1` updates:
 | 15.4 Clipboard, picker, snackbar actions (S) | Sonnet | 15.2 | | | |
 | 15.5 Toolbar and Board (S) | Sonnet | 15.1 | | | |
 | **U16 Library: mechanical pass** | Haiku | U0, U5, U6, U7 | | | |
-| 16.1 Red (H) | Haiku | U0 | | | |
-| 16.2 Attributes, roles, keys, icons (H) | Haiku | 16.1 | | | |
-| 16.3 Folder and Project icons (H) | Haiku | 16.2 | | | |
-| 16.4 Labels (H) | Haiku | 16.2 | | | |
-| 16.5 ByteSize, empty states, suite (H) | Haiku | 16.3, 16.4 | | | |
+| 16.1 Red (H) | Haiku | U0 | | | ✔ |
+| 16.2 Attributes, roles, keys, icons (H) | Haiku | 16.1 | | | ✔ |
+| 16.3 Folder and Project icons (H) | Haiku | 16.2 | | | ✔ |
+| 16.4 Labels (H) | Haiku | 16.2 | | | ✔ |
+| 16.5 ByteSize, empty states, suite (H) | Haiku | 16.3, 16.4 | | | ✔ |
 | **U17 Library: dialogs and banners** | Haiku | U16, U5, U4 | | | |
 | 17.1 Red (H) | Haiku | U16, U5 | | | |
 | 17.2 NameDialog adoption (H) | Haiku | 17.1 | | | |
