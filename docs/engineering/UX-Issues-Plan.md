@@ -1042,7 +1042,7 @@ Ids are `<deliverable number>.<task>`, the form `Set-Tracker.ps1` updates:
 `pwsh -NoProfile -File agents/scripts/Set-Tracker.ps1 -Task "12.3" -State Done -TrackerPath docs/engineering/UX-Issues-Plan.md`.
 `(H)` is Haiku, `(S)` is Sonnet.
 
-**Status:** 32 of 141 tasks Done · 0 of 2 retrospectives done · last updated 2026-10-13.
+**Status:** 47 of 141 tasks Done · 0 of 2 retrospectives done · last updated 2026-10-13.
 
 | **Deliverable / Task** | **Model** | **Depends on** | **Active** | **In Progress** | **Done** |
 | --- | --- | --- | --- | --- | --- |
@@ -1063,11 +1063,11 @@ Ids are `<deliverable number>.<task>`, the form `Set-Tracker.ps1` updates:
 | 2.4 Spacing (H) | Haiku | 2.1 | | | ✔ |
 | 2.5 Baseline and suite (H) | Haiku | 2.2, 2.3, 2.4 | | | ✔ |
 | **U3 CSS: structure** | Sonnet | U2 | | | |
-| 3.1 Red (S) | Sonnet | U2 | | | |
-| 3.2 Overrides and headers (S) | Sonnet | 3.1 | | | |
-| 3.3 Zoom (S) | Sonnet | 3.1 | | | |
-| 3.4 Layering and motion (S) | Sonnet | 3.1 | | | |
-| 3.5 Focus and scoped rules (S) | Sonnet | 3.1 | | | |
+| 3.1 Red (S) | Sonnet | U2 | | | ✔ |
+| 3.2 Overrides and headers (S) | Sonnet | 3.1 | | | ✔ |
+| 3.3 Zoom (S) | Sonnet | 3.1 | | | ✔ |
+| 3.4 Layering and motion (S) | Sonnet | 3.1 | | | ✔ |
+| 3.5 Focus and scoped rules (S) | Sonnet | 3.1 | | | ✔ |
 | **U4 CSS: states and utilities** | Haiku | U3 | | | |
 | 4.1 Red (H) | Haiku | U3 | | | |
 | 4.2 Lines and hover (H) | Haiku | 4.1 | | | |
@@ -1105,11 +1105,11 @@ Ids are `<deliverable number>.<task>`, the form `Set-Tracker.ps1` updates:
 | 9.4 RoomActions (S) | Sonnet | 9.1 | | | |
 | 9.5 Wireframes (S) | Sonnet | 9.2, 9.3 | | | |
 | **U10 Room: mechanical pass** | Haiku | U0, U5, U6, U7 | | | |
-| 10.1 Red (H) | Haiku | U0 | | | |
-| 10.2 Attributes, roles, keys, icons (H) | Haiku | 10.1 | | | |
-| 10.3 Room header and notices (H) | Haiku | 10.2, U7 | | | |
-| 10.4 Adopt helpers (H) | Haiku | 10.2, U6, U7 | | | |
-| 10.5 Suite (H) | Haiku | 10.3, 10.4 | | | |
+| 10.1 Red (H) | Haiku | U0 | | | ✔ |
+| 10.2 Attributes, roles, keys, icons (H) | Haiku | 10.1 | | | ✔ |
+| 10.3 Room header and notices (H) | Haiku | 10.2, U7 | | | ✔ |
+| 10.4 Adopt helpers (H) | Haiku | 10.2, U6, U7 | | | ✔ |
+| 10.5 Suite (H) | Haiku | 10.3, 10.4 | | | ✔ |
 | **U11 Room: agent card shell** | Sonnet | U10, U4 | | | |
 | 11.1 Red (S) | Sonnet | U10, U4 | | | |
 | 11.2 AgentCardBase (S) | Sonnet | 11.1 | | | |
@@ -1117,11 +1117,11 @@ Ids are `<deliverable number>.<task>`, the form `Set-Tracker.ps1` updates:
 | 11.4 Question and Elicitation (S) | Sonnet | 11.3 | | | |
 | 11.5 Composer and wireframes (S) | Sonnet | 11.1 | | | |
 | **U12 Tasks: mechanical pass** | Haiku | U0, U5, U6, U7 | | | |
-| 12.1 Red (H) | Haiku | U0 | | | |
-| 12.2 Attributes, roles, keys, icons (H) | Haiku | 12.1 | | | |
-| 12.3 Toolbar, toggle, dialogs (H) | Haiku | 12.2, U5 | | | |
-| 12.4 Wording (H) | Haiku | 12.2 | | | |
-| 12.5 Empty states and suite (H) | Haiku | 12.3, 12.4 | | | |
+| 12.1 Red (H) | Haiku | U0 | | | ✔ |
+| 12.2 Attributes, roles, keys, icons (H) | Haiku | 12.1 | | | ✔ |
+| 12.3 Toolbar, toggle, dialogs (H) | Haiku | 12.2, U5 | | | ✔ |
+| 12.4 Wording (H) | Haiku | 12.2 | | | ✔ |
+| 12.5 Empty states and suite (H) | Haiku | 12.3, 12.4 | | | ✔ |
 | **U13 Tasks: field components** | Haiku | U12, U4 | | | |
 | 13.1 Red (H) | Haiku | U12, U4 | | | |
 | 13.2 Chips and assignee (H) | Haiku | 13.1 | | | |
