@@ -5,6 +5,7 @@ using Agency.Huddle.App;
 using Agency.Huddle.App.Acp;
 using Agency.Huddle.App.Data;
 using Agency.Huddle.App.Teammates;
+using Agency.Huddle.App.Teams;
 
 namespace Agency.Huddle.Tests;
 
@@ -103,6 +104,30 @@ public sealed class ServiceCollectionExtensionsTests
         services.AddLogging();
         services.AddTeamServices(configuration);
         return services.BuildServiceProvider();
+    }
+
+    /// <summary>The ChatService the container resolves is given the Team catalog, so it can create a Room scoped to a catalog Team.</summary>
+    [Fact]
+    public async Task AddTeamServices_ResolvedChatService_CreatesRoomForACatalogTeam()
+    {
+        CancellationToken ct = TestContext.Current.CancellationToken;
+        using TempDataDir dataDir = new();
+        var configuration = new ConfigurationBuilder()
+            .AddInMemoryCollection(new Dictionary<string, string?> { ["Team:DataDir"] = dataDir.Path })
+            .Build();
+        var services = new ServiceCollection();
+        services.AddLogging();
+        services.AddTeamServices(configuration);
+        services.AddSingleton<ITeamCatalog>(new Teams.FakeTeamCatalog { Teams = [new TeamSummary("Marketing", [], [], false)] });
+        using ServiceProvider provider = services.BuildServiceProvider();
+        ITeamDirectory directory = provider.GetRequiredService<ITeamDirectory>();
+        await directory.InitializeAsync("You", ct);
+        User? nova = await directory.UpsertAgentUserAsync("Nova", null, ct);
+        Assert.NotNull(nova);
+
+        Room room = await provider.GetRequiredService<Agency.Huddle.App.Services.ChatService>().CreateRoomForAsync([nova.Id], "Marketing", ct);
+
+        Assert.Equal("Marketing", room.Team);
     }
 
     /// <summary>The hire service resolves from the container.</summary>

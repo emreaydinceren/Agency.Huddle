@@ -324,6 +324,12 @@ internal sealed partial class PersonaRenameCascade(
 
         foreach (var room in rooms)
         {
+            if (room.IsTeamRoom)
+            {
+                // A Team Room's name is its Team's (ADR-0051), whatever the derivation would say.
+                continue;
+            }
+
             var members = await teamDirectory.GetRoomMembersAsync(room.Id).ConfigureAwait(false);
 
             // The Team Directory rename already committed, so `members` carries the NEW Name. To

@@ -1007,4 +1007,33 @@ public sealed class PipeEndToEndTests
         Assert.Contains("ended", warning.Message, StringComparison.Ordinal);
         Assert.DoesNotContain("disconnected", warning.Message, StringComparison.Ordinal);
     }
+
+    /// <summary>
+    /// A Team-scoped Room reaches the Agent with its Team on both the Welcome and a delivered Message
+    /// (Team chats §6.6), and the Agent's root Room carries none.
+    /// </summary>
+    [Fact]
+    public async Task ScopedRoom_CarriesItsTeamOnWelcomeAndDelivery()
+    {
+        using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(60));
+        var ct = cts.Token;
+
+        await using var fixture = await PipeHostFixture.StartAsync(ct);
+        var chat = fixture.Services.GetRequiredService<ChatService>();
+        var directory = fixture.Services.GetRequiredService<ITeamDirectory>();
+        User agent = await directory.UpsertAgentUserAsync("echo", null, ct) ?? throw new InvalidOperationException("No agent user.");
+        Room scoped = await directory.CreateRoomAsync("Nova", [KnownIds.Human, agent.Id], "Marketing", ct: ct);
+
+        await using var client = await fixture.ConnectClientAsync(ct);
+        await client.WriteAsync(new Hello("echo", null), ct);
+        var welcome = Assert.IsType<Welcome>(await client.ReadAsync(ct));
+
+        Assert.Equal("Marketing", Assert.Single(welcome.Rooms, r => r.Id == scoped.Id).Team);
+        Assert.All(welcome.Rooms.Where(r => r.Id != scoped.Id), r => Assert.Null(r.Team));
+
+        await chat.PostAsync(scoped.Id, KnownIds.Human, "hi @echo", ct: ct);
+        var delivered = Assert.IsType<MessagePosted>(await client.ReadAsync(ct));
+
+        Assert.Equal("Marketing", delivered.Team);
+    }
 }

@@ -152,6 +152,32 @@ public sealed class ArchivedChatsDialogTests
         Assert.Null(await directory.GetRoomAsync(room.Id, ct));
     }
 
+    /// <summary>Spec section 7: a Team-scoped Room's row reads "Room · Team", and a root Room's row keeps just its name.</summary>
+    [Fact]
+    public async Task Dialog_TeamScopedRoom_ReadsRoomDotTeam_AndRootRoomIsUnchanged()
+    {
+        var ct = Xunit.TestContext.Current.CancellationToken;
+        using var dir = new TempDataDir();
+        var events = new RoomEvents(NullLogger<RoomEvents>.Instance);
+        var directory = new SqliteTeamDirectory(dir.Options());
+        await directory.InitializeAsync("You", ct);
+        var agent = await directory.UpsertAgentUserAsync("coo", null, ct);
+        Assert.NotNull(agent);
+        var chat = CreateChatService(dir, directory, events);
+        var rootRoom = await chat.EnsureRoomForAsync(agent, ct);
+        var teamRoom = await directory.CreateRoomAsync("Launch plan", [KnownIds.Human, agent.Id], "Marketing", false, ct);
+        _ = await chat.SetRoomArchivedAsync(rootRoom.Id, archived: true, ct);
+        _ = await chat.SetRoomArchivedAsync(teamRoom.Id, archived: true, ct);
+
+        await using var ctx = NewContext(directory, chat, events);
+        var cut = await OpenDialogAsync(ctx);
+
+        string[] rows = [.. cut.FindAll(".archived-chats-row .flex-1-truncate").Select(element => element.TextContent.Trim())];
+        Assert.Contains("Launch plan · Marketing", rows);
+        Assert.Contains(rootRoom.Name, rows);
+        Assert.DoesNotContain(rows, row => row.StartsWith(rootRoom.Name, StringComparison.Ordinal) && row.Contains('·'));
+    }
+
     private static ChatService CreateChatService(TempDataDir dir, ITeamDirectory directory, RoomEvents events)
     {
         var store = new FileChatStore(dir.Options(), NullLogger<FileChatStore>.Instance);
@@ -164,6 +190,7 @@ public sealed class ArchivedChatsDialogTests
         MudBunitContext ctx = new();
         ctx.Services.AddSingleton(directory);
         ctx.Services.AddSingleton(chat);
+        ctx.Services.AddSingleton<Agency.Huddle.App.Teams.ITeamCatalog>(chat.TeamCatalog ?? new Agency.Huddle.Tests.Teams.FakeTeamCatalog());
         ctx.Services.AddSingleton(events);
         ctx.Services.AddSingleton<IAgentGateway>(new FakeAgentGateway());
         ctx.Services.AddSingleton(new PersonaHealth(TimeProvider.System, NullLogger<PersonaHealth>.Instance));

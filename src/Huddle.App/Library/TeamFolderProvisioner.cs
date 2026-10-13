@@ -101,6 +101,11 @@ internal sealed class TeamFolderProvisioner : IHostedService, IDisposable, ITeam
             return new LibraryResult<LibraryPath>(null, TeamNames.MemoryReservedProblem);
         }
 
+        if (string.Equals(project, TeamNames.UploadsFolder, StringComparison.OrdinalIgnoreCase))
+        {
+            return new LibraryResult<LibraryPath>(null, TeamNames.UploadsReservedProblem);
+        }
+
         if (!this.resolver.TryResolve(teamFolder.Root.Id, teamFolder.RelativePath, out LibraryPath? freshTeamFolder, out string? teamResolveError) ||
             freshTeamFolder.Role != LibraryNodeRole.TeamFolder)
         {

@@ -6,16 +6,29 @@
 @inject IAgentGateway Gateway
 @inject PersonaHealth Health
 @inject ChatService Chat
+@inject ITeamCatalog Catalog
+@inject ISnackbar Snackbar
 @inject RoomEvents Events
 @inject NavigationManager Navigation
 @inject AvatarStore Avatars
 
 <div class="new-chat">
-    <MudNavLink Icon="@Icons.Material.Filled.Add" IconColor="Color.Primary" OnClick="this.TogglePanel" Class="nav-action-link">New chat</MudNavLink>
+    @if (this.Team is null)
+    {
+        <MudNavLink Icon="@Icons.Material.Filled.Add" IconColor="Color.Primary" OnClick="this.TogglePanel" Class="nav-action-link">New chat</MudNavLink>
+    }
     <MudCollapse Expanded="@this.isOpen">
         @if (this.isOpen)
         {
             <div class="new-chat-panel">
+                @if (this.Team is not null)
+                {
+                    <MudStack Row="true" Justify="Justify.SpaceBetween" AlignItems="AlignItems.Center">
+                        <MudText Typo="Typo.subtitle2" Class="new-chat-heading">New chat in @this.Team</MudText>
+                        <MudIconButton Icon="@Icons.Material.Filled.Close" Size="Size.Small" aria-label="Close new chat" OnClick="this.CloseAsync" />
+                    </MudStack>
+                }
+
                 @if (this.agents.Count == 0)
                 {
                     <MudText Typo="Typo.body2" Class="empty-state">No agents have connected yet. Start one with <code>tools/echo-bot.ps1</code>, or enable the demo agent in <code>appsettings.json</code>.</MudText>
@@ -36,7 +49,7 @@
                             </div>
                         }
                     </div>
-                    <MudButton Variant="Variant.Filled" Color="Color.Primary" FullWidth="true" Disabled="@(this.selectedAgentIds.Count == 0)" OnClick="this.StartChatAsync">Start chat</MudButton>
+                    <MudButton Variant="Variant.Filled" Color="Color.Primary" FullWidth="true" Class="new-chat-start" Disabled="@(this.selectedAgentIds.Count == 0)" OnClick="this.StartChatAsync">Start chat</MudButton>
                 }
             </div>
         }
@@ -48,8 +61,21 @@
     private IReadOnlyList<User> agents = [];
     private bool isOpen;
 
+    /// <summary>The Team the new Room is scoped to, or <see langword="null"/> for a root Room. With a Team the panel is open from the start (the Team's menu opened it), is headed "New chat in {Team}" and lists the Team's Teammates first.</summary>
+    [Parameter]
+    public string? Team { get; set; }
+
+    /// <summary>Raised after a chat has been started, so the host that opened the panel can close it.</summary>
+    [Parameter]
+    public EventCallback OnStarted { get; set; }
+
+    /// <summary>Raised when the Team panel's close icon is used, so the host that opened the panel can close it. No chat has been started.</summary>
+    [Parameter]
+    public EventCallback OnClosed { get; set; }
+
     protected override async Task OnInitializedAsync()
     {
+        this.isOpen = this.Team is not null;
         this.Events.RoomsChanged += this.OnRoomsChanged;
         await this.LoadAgentsAsync();
     }
@@ -83,17 +109,37 @@
             return;
         }
 
-        var room = await this.Chat.CreateRoomForAsync([.. this.selectedAgentIds]);
+        Room room;
+        try
+        {
+            room = await this.Chat.CreateRoomForAsync([.. this.selectedAgentIds], this.Team);
+        }
+        catch (ChatException ex)
+        {
+            this.Snackbar.Add(ex.Message, Severity.Error);
+            return;
+        }
 
         this.isOpen = false;
         this.selectedAgentIds.Clear();
+        await this.OnStarted.InvokeAsync();
         this.Navigation.NavigateTo($"/rooms/{room.Id}");
+    }
+
+    private async Task CloseAsync()
+    {
+        this.isOpen = false;
+        await this.OnClosed.InvokeAsync();
     }
 
     private async Task LoadAgentsAsync()
     {
         var users = await this.TeamDirectory.GetUsersAsync();
-        this.agents = [.. users.Where(u => u.Kind == UserKind.Agent)];
+        var agentUsers = users.Where(u => u.Kind == UserKind.Agent);
+        var members = this.Team is null ? null : this.Catalog.Find(this.Team)?.Members;
+        this.agents = members is null
+            ? [.. agentUsers]
+            : [.. agentUsers.OrderBy(u => members.Contains(u.Name, StringComparer.OrdinalIgnoreCase) ? 0 : 1)];
     }
 
     private void OnRoomsChanged()

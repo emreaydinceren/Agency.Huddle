@@ -214,6 +214,18 @@ contexts](../Huddle.EngineeringGuide.md#two-bounded-contexts). Back to the hub:
 : *Avoid*: channel, chat, conversation, thread. Also avoid *Direct Room* and
   *Group Room* — a Room is a Room, and behaviour follows from member count.
 
+**Scope**
+: Where a Room belongs: the root, or exactly one Team. Set when the Room is
+  created and never changed. It decides where the Room is listed and where its
+  uploaded files go, never who may join or who replies (ADR-0051).
+: *Avoid*: team chat as a kind of Room, workspace, channel.
+
+**Team Room**
+: The Room scoped to a Team and named after it, holding the Human and every
+  member. Created when the Team first has a member; a Teammate who joins the
+  Team later is added to it.
+: *Avoid*: team channel, general.
+
 **Archived**
 : A Room hidden from the sidebar and listed under **Archived Chats** instead.
   Reversible, and a display filter only — an Archived Room is still live, and

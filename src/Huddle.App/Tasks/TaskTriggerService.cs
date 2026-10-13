@@ -975,11 +975,12 @@ internal sealed partial class TaskTriggerService : IHostedService, IDisposable
     /// Chooses the Room the wake is posted in, by Spec §10.4 steps 1-4 in order:
     /// <list type="number">
     /// <item><description>The Task's origin Room, when it exists (Archived is allowed, D-12) and both the sender and the assignee are Members.</description></item>
-    /// <item><description>The creator Room: S = {Human, creator, assignee}, or {Human, assignee} when the creator is the Human or has no user row (corrections-B3 D9 item 13). Used only when the sender is in S, via <see cref="ITeamDirectory.FindRoomWithExactMemberSetAsync"/> (which skips Archived Rooms).</description></item>
+    /// <item><description>The creator Room: S = {Human, creator, assignee}, or {Human, assignee} when the creator is the Human or has no user row (corrections-B3 D9 item 13). Used only when the sender is in S, via <see cref="ITeamDirectory.FindRoomWithExactMemberSetAsync(IReadOnlyCollection{string}, CancellationToken)"/> (which skips Archived Rooms).</description></item>
     /// <item><description>Otherwise - a third Agent made the change (D-13) - the actor Room: S = {Human, sender, assignee}, looked up the same way.</description></item>
-    /// <item><description>No Room found: <see cref="ChatService.CreateRoomForAsync"/> creates one for the last step's S without the Human (it adds the Human itself, and one Agent gives the direct Room).</description></item>
+    /// <item><description>No Room found: <see cref="ChatService.CreateRoomForAsync(IReadOnlyList{string}, CancellationToken)"/> creates one for the last step's S without the Human (it adds the Human itself, and one Agent gives the direct Room).</description></item>
     /// </list>
-    /// Every set tried contains the sender, so <see cref="ChatService.PostAsync"/>'s membership check
+    /// Steps 2-4 run in the Task's Team Scope (found and created scoped to <see cref="TaskLocation.Team"/>); a Team the
+    /// catalog does not know stays at the root. Every set tried contains the sender, so <see cref="ChatService.PostAsync"/>'s membership check
     /// passes. Runs inside the fire gate, which is what keeps two racing fires from creating two Rooms.
     /// </summary>
     /// <param name="task">The latest Task.</param>
@@ -1008,14 +1009,16 @@ internal sealed partial class TaskTriggerService : IHostedService, IDisposable
             AddOnce(memberSet, assignee.Id);
         }
 
-        Room? existing = await this.directory.FindRoomWithExactMemberSetAsync(memberSet, ct);
+        // The fallback Room lives in the Task's Team Scope (Team chats D-15); a Team the catalog does not know stays at the root.
+        string? scope = this.teams?.Find(task.Location.Team)?.Name;
+        Room? existing = await this.directory.FindRoomWithExactMemberSetAsync(memberSet, scope, ct);
         if (existing is not null)
         {
             return existing;
         }
 
         List<string> agentIds = [.. memberSet.Where(static id => !string.Equals(id, KnownIds.Human, StringComparison.Ordinal))];
-        return await this.chat.CreateRoomForAsync(agentIds, ct);
+        return await this.chat.CreateRoomForAsync(agentIds, scope, ct);
     }
 
     /// <summary>Adds <paramref name="id"/> to <paramref name="ids"/> unless it is already there (ordinal).</summary>

@@ -16,6 +16,8 @@
 @using Microsoft.Extensions.Options
 @implements IDisposable
 @inject ITeamCatalog Catalog
+@inject ITeamDirectory TeamDirectory
+@inject RoomEvents Events
 @inject ITeamFolders Folders
 @inject IDialogService Dialogs
 @inject ISnackbar Snackbar
@@ -43,28 +45,41 @@
                     {
                         <MudText Typo="Typo.caption" Class="teams-nav-nomembers">No members</MudText>
                     }
-                    @if (this.ProjectsAllowed)
-                    {
-                        <MudMenu @ref="@this.menuRefs[team.Name]" Class="hover-reveal-menu">
-                            @* ActivatorContent replaces MudMenu's own built-in activator entirely, so
-                               MudMenu does not wire a click listener around it automatically - the
-                               supplied MenuContext.ToggleAsync is how custom activator content opens
-                               the menu (TaskViewNav.razor's and RoomList.razor's own precedent). *@
-                            <ActivatorContent Context="menuContext">
-                                <MudTooltip Text="Team actions">
-                                    <MudIconButton Icon="@Icons.Material.Filled.MoreVert" Size="Size.Small"
-                                                   aria-label="Team actions" Class="hover-reveal-menu-button"
-                                                   OnClick="menuContext.ToggleAsync" />
-                                </MudTooltip>
-                            </ActivatorContent>
-                            <ChildContent>
+                    <MudMenu @ref="@this.menuRefs[team.Name]" Class="hover-reveal-menu">
+                        @* ActivatorContent replaces MudMenu's own built-in activator entirely, so
+                           MudMenu does not wire a click listener around it automatically - the
+                           supplied MenuContext.ToggleAsync is how custom activator content opens
+                           the menu (TaskViewNav.razor's and RoomList.razor's own precedent). *@
+                        <ActivatorContent Context="menuContext">
+                            <MudTooltip Text="Team actions">
+                                <MudIconButton Icon="@Icons.Material.Filled.MoreVert" Size="Size.Small"
+                                               aria-label="Team actions" Class="hover-reveal-menu-button"
+                                               OnClick="menuContext.ToggleAsync" />
+                            </MudTooltip>
+                        </ActivatorContent>
+                        <ChildContent>
+                            <MudMenuItem OnClick="@(() => this.ToggleNewChat(team.Name))">New chat</MudMenuItem>
+                            @if (this.ProjectsAllowed)
+                            {
                                 <MudMenuItem OnClick="@(() => this.NewProjectAsync(team.Name))">New project</MudMenuItem>
-                            </ChildContent>
-                        </MudMenu>
-                    }
+                            }
+                        </ChildContent>
+                    </MudMenu>
                 </div>
+                @if (string.Equals(this.newChatTeam, team.Name, StringComparison.OrdinalIgnoreCase))
+                {
+                    <NewChat Team="@team.Name" OnStarted="this.EndNewChat" OnClosed="this.EndNewChat" />
+                }
                 @if (isExpanded)
                 {
+                    @if (this.roomsByTeam.TryGetValue(team.Name, out IReadOnlyList<Room>? teamRooms))
+                    {
+                        @foreach (Room room in teamRooms)
+                        {
+                            <RoomNavRow @key="room.Id" Room="room" Class="nav-team-room-link" OnError="this.OnRoomError" />
+                        }
+                    }
+
                     @foreach (string project in team.Projects)
                     {
                         <NavTabLink Href="@($"/teams/{Uri.EscapeDataString(team.Name)}/projects/{Uri.EscapeDataString(project)}")"
@@ -97,11 +112,21 @@
 
     private EventHandler<LocationChangedEventArgs>? locationChanged;
 
-    /// <summary>Subscribes to <see cref="ITeamCatalog.Changed"/> and to navigation, and reads the route's Team.</summary>
-    protected override void OnInitialized()
+    /// <summary>Each Team's Rooms to list under it: its Team Room first (when not archived), then its other unarchived scoped Rooms, oldest first. Keyed by Team name ignoring case.</summary>
+    private readonly Dictionary<string, IReadOnlyList<Room>> roomsByTeam = new(StringComparer.OrdinalIgnoreCase);
+
+    /// <summary>The Team whose New chat panel is open, or <see langword="null"/>.</summary>
+    private string? newChatTeam;
+
+    /// <summary>Counts the Room loads started; a load that finds a higher number than its own has been overtaken and drops its result.</summary>
+    private int loadVersion;
+
+    /// <summary>Subscribes to <see cref="ITeamCatalog.Changed"/>, <see cref="RoomEvents.RoomsChanged"/> and navigation, reads the route's Team and loads each Team's Rooms.</summary>
+    protected override async Task OnInitializedAsync()
     {
         this.UpdateRoute();
         this.Catalog.Changed += this.OnCatalogChanged;
+        this.Events.RoomsChanged += this.OnRoomsChanged;
         this.locationChanged = (_, _) => _ = this.DispatchAsync(() =>
         {
             this.UpdateRoute();
@@ -109,6 +134,7 @@
             return Task.CompletedTask;
         });
         this.Navigation.LocationChanged += this.locationChanged;
+        await this.LoadRoomsAsync();
     }
 
     /// <summary>Loads the remembered collapsed Teams once, after the first render.</summary>
@@ -158,10 +184,11 @@
         }
     }
 
-    /// <summary>Unsubscribes from <see cref="ITeamCatalog.Changed"/> and navigation.</summary>
+    /// <summary>Unsubscribes from <see cref="ITeamCatalog.Changed"/>, <see cref="RoomEvents.RoomsChanged"/> and navigation.</summary>
     public void Dispose()
     {
         this.Catalog.Changed -= this.OnCatalogChanged;
+        this.Events.RoomsChanged -= this.OnRoomsChanged;
         if (this.locationChanged is not null)
         {
             this.Navigation.LocationChanged -= this.locationChanged;
@@ -220,12 +247,69 @@
         this.routeOpen = inTeam;
     }
 
-    private void OnCatalogChanged() => _ = this.DispatchAsync(() =>
+    private void OnCatalogChanged() => _ = this.DispatchAsync(async () =>
     {
         this.menuRefs.Clear();
+        await this.LoadRoomsAsync();
         this.StateHasChanged();
-        return Task.CompletedTask;
     });
+
+    private void OnRoomsChanged() => _ = this.DispatchAsync(async () =>
+    {
+        await this.LoadRoomsAsync();
+        this.StateHasChanged();
+    });
+
+    /// <summary>Reads the Rooms to list under every Team in the catalog (see <see cref="roomsByTeam"/>).</summary>
+    private async Task LoadRoomsAsync()
+    {
+        int version = Interlocked.Increment(ref this.loadVersion);
+        IReadOnlyList<Room> all = await this.TeamDirectory.GetRoomsAsync();
+        if (version != Volatile.Read(ref this.loadVersion))
+        {
+            // A newer refresh started while this one was reading; it owns the result.
+            return;
+        }
+
+        Dictionary<string, IReadOnlyList<Room>> loaded = new(StringComparer.OrdinalIgnoreCase);
+        foreach (TeamSummary team in this.Catalog.Teams)
+        {
+            List<Room> scoped = [.. all.Where(room => !room.Archived && string.Equals(room.Team, team.Name, StringComparison.OrdinalIgnoreCase))];
+            loaded[team.Name] =
+            [
+                .. scoped.Where(static room => room.IsTeamRoom),
+                .. scoped.Where(static room => !room.IsTeamRoom).OrderBy(static room => room.Created),
+            ];
+        }
+
+        this.roomsByTeam.Clear();
+        foreach ((string name, IReadOnlyList<Room> rooms) in loaded)
+        {
+            this.roomsByTeam[name] = rooms;
+        }
+    }
+
+    /// <summary>Opens the New chat panel for <paramref name="team"/>, or closes it when that Team's panel is already open.</summary>
+    /// <param name="team">The Team whose menu was used.</param>
+    private void ToggleNewChat(string team)
+    {
+        this.newChatTeam = string.Equals(this.newChatTeam, team, StringComparison.OrdinalIgnoreCase) ? null : team;
+    }
+
+    private void EndNewChat()
+    {
+        this.newChatTeam = null;
+    }
+
+    /// <summary>Shows a refusal from a Room row's Archive or Delete as a snackbar; <see langword="null"/> (a new attempt starting) shows nothing.</summary>
+    /// <param name="message">The refusal's message, or <see langword="null"/>.</param>
+    private void OnRoomError(string? message)
+    {
+        if (message is not null)
+        {
+            this.Snackbar.Add(message, Severity.Error);
+        }
+    }
 
     /// <summary>Invokes <paramref name="action"/> on the renderer's synchronization context, swallowing the two exceptions a catalog event racing component teardown can throw.</summary>
     private Task DispatchAsync(Func<Task> action)

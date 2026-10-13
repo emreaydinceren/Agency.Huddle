@@ -234,6 +234,29 @@ public sealed class TeamCatalogTests
         Assert.Equal([true, true, true, false, false], actual);
     }
 
+    /// <summary>Spec §6.8: a folder named <c>Uploads</c> under a Team is the Team's upload folder, not a Project: it is neither listed nor found, in any case, while a real Project beside it still is.</summary>
+    [Fact]
+    public void ProjectExists_ReservedUploadsFolder_IsNotAProject()
+    {
+        using TempDataDir dir = new();
+        WritePersona(dir, "Nova", "Ops");
+        CreateFolder(dir, "Ops", "Uploads");
+        CreateFolder(dir, "Ops", "Alpha");
+        using PersonaStore personas = TestTaskStore.CreatePersonaStore(dir);
+        using TaskStore tasks = TestTaskStore.CreateTaskStore(dir, personas);
+        using TeamCatalog catalog = new(personas, tasks);
+
+        bool[] actual =
+        [
+            catalog.ProjectExists("Ops", "Uploads"),
+            catalog.ProjectExists("Ops", "uploads"),
+            catalog.ProjectExists("Ops", "Alpha")
+        ];
+
+        Assert.Equal([false, false, true], actual);
+        Assert.Equal(["Ops|projects=Alpha|members=Nova|folder=True"], Describe(catalog.Teams));
+    }
+
     /// <summary>A folder named <c>memory</c> under a Team is the shared memory folder, not a Project: it is neither listed nor found, in any case, while a real Project beside it still is.</summary>
     [Fact]
     public void ProjectExists_ReservedMemoryFolder_IsNotAProject()

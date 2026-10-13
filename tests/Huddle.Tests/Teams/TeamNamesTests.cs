@@ -5,11 +5,13 @@ namespace Agency.Huddle.Tests.Teams;
 /// <summary>Tests for TeamNames validation methods and constants.</summary>
 public sealed class TeamNamesTests
 {
-    /// <summary>IsReservedProjectName returns true for reserved folder names: memory (case-insensitive), _tasks, _x, .git, .x.</summary>
+    /// <summary>IsReservedProjectName returns true for reserved folder names: memory and Uploads (case-insensitive), _tasks, _x, .git, .x.</summary>
     [Theory]
     [InlineData("memory")]
     [InlineData("Memory")]
     [InlineData("MEMORY")]
+    [InlineData("Uploads")]
+    [InlineData("uploads")]
     [InlineData("_tasks")]
     [InlineData("_x")]
     [InlineData(".git")]
@@ -25,6 +27,8 @@ public sealed class TeamNamesTests
     [Theory]
     [InlineData("memory-notes")]
     [InlineData("memories")]
+    [InlineData("uploads-notes")]
+    [InlineData("Uploaded")]
     [InlineData("mem")]
     [InlineData("Launch Q4")]
     [InlineData("")]
@@ -211,6 +215,19 @@ public sealed class TeamNamesTests
         Assert.Equal(TeamNames.MemoryReservedProblem, result);
     }
 
+    /// <summary>ValidateProjectName rejects "Uploads" (case-insensitive) in Project names with the Uploads text, not the memory text.</summary>
+    [Theory]
+    [InlineData("Uploads")]
+    [InlineData("uploads")]
+    public void ValidateProjectName_Uploads_ReturnsUploadsReservedMessage(string name)
+    {
+        TeamSummary team = Team("Business", "Marketing Project");
+
+        string? result = TeamNames.ValidateProjectName(name, team);
+
+        Assert.Equal(TeamNames.UploadsReservedProblem, result);
+    }
+
     /// <summary>ValidateProjectName rejects names starting with underscore.</summary>
     [Fact]
     public void ValidateProjectName_StartsWithUnderscore_ReturnsReservedPrefixMessage()
@@ -267,6 +284,20 @@ public sealed class TeamNamesTests
     public void MemoryReservedProblem_Value_EqualsSettledText()
     {
         Assert.Equal("\"memory\" is reserved for the Team's shared Memory.", TeamNames.MemoryReservedProblem);
+    }
+
+    /// <summary>UploadsFolder constant equals "Uploads".</summary>
+    [Fact]
+    public void UploadsFolder_Value_EqualsUploadsString()
+    {
+        Assert.Equal("Uploads", TeamNames.UploadsFolder);
+    }
+
+    /// <summary>UploadsReservedProblem constant equals the settled text.</summary>
+    [Fact]
+    public void UploadsReservedProblem_Value_EqualsSettledText()
+    {
+        Assert.Equal("\"Uploads\" is reserved for files shared in a Team's chats.", TeamNames.UploadsReservedProblem);
     }
 
     /// <summary>Helper factory for a TeamSummary with no members and HasFolder true.</summary>

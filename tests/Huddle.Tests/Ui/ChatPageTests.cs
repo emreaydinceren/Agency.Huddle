@@ -145,6 +145,43 @@ public sealed class ChatPageTests
         Assert.Equal(room.Name, input.GetAttribute("value"));
     }
 
+    /// <summary>T10a: a Team's Team Room is named after its Team, so its header offers no Rename pencil.</summary>
+    [Fact]
+    public async Task ChatPage_RoomHeader_TeamRoom_HasNoRenamePencil()
+    {
+        using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(60));
+        var ct = cts.Token;
+
+        await using var factory = new TeamWebApplicationFactory();
+        var (directory, _, _) = ChatPageTests.Services(factory);
+        Room teamRoom = await directory.CreateRoomAsync("Marketing", [KnownIds.Human], "Marketing", true, ct);
+
+        await using MudBunitContext ctx = ChatPageTests.NewContext(factory);
+        var cut = ChatPageTests.RenderChatPage(ctx, teamRoom.Id);
+
+        cut.WaitForAssertion(() => Assert.Equal("Marketing", cut.Find("h1").TextContent.Trim()));
+        Assert.Empty(cut.FindAll("button[aria-label=\"Rename room\"]"));
+    }
+
+    /// <summary>T10a: a Room scoped to a Team that is not its Team Room keeps the Rename pencil.</summary>
+    [Fact]
+    public async Task ChatPage_RoomHeader_OtherTeamScopedRoom_KeepsTheRenamePencil()
+    {
+        using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(60));
+        var ct = cts.Token;
+
+        await using var factory = new TeamWebApplicationFactory();
+        var (directory, _, _) = ChatPageTests.Services(factory);
+        _ = await directory.CreateRoomAsync("Marketing", [KnownIds.Human], "Marketing", true, ct);
+        Room other = await directory.CreateRoomAsync("Launch plan", [KnownIds.Human], "Marketing", false, ct);
+
+        await using MudBunitContext ctx = ChatPageTests.NewContext(factory);
+        var cut = ChatPageTests.RenderChatPage(ctx, other.Id);
+
+        cut.WaitForAssertion(() => Assert.Equal("Launch plan", cut.Find("h1").TextContent.Trim()));
+        Assert.Single(cut.FindAll("button[aria-label=\"Rename room\"]"));
+    }
+
     /// <summary>Pressing Enter in the Rename control commits the typed name through <see cref="ChatService.RenameRoomAsync"/>.</summary>
     [Fact]
     public async Task ChatPage_Rename_EnterCommitsTheTypedNameThroughChatService()

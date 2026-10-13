@@ -3,7 +3,11 @@ using Bunit;
 using Microsoft.AspNetCore.Components;
 using Microsoft.AspNetCore.Components.Rendering;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging.Abstractions;
+using Microsoft.Extensions.Options;
 using MudBlazor;
+using Agency.Huddle.App;
+using Agency.Huddle.App.Questions;
 using Agency.Huddle.App.Acp;
 using Agency.Huddle.App.Avatars;
 using Agency.Huddle.App.Components;
@@ -309,6 +313,52 @@ public sealed class TeamMembersTests
         Assert.Equal("Kim", card.Name);
         Assert.Equal("Editor", card.Title);
         Assert.Equal("Scribe", card.Alias);
+    }
+
+    /// <summary>
+    /// T6: the card's Message action, opened from Marketing's Members tab, goes to Marketing's one-to-one
+    /// with Nova (created on demand) and not to the root Nova Room, which stays a different Room.
+    /// </summary>
+    [Fact]
+    public async Task CardMessage_OnATeamsMembersTab_OpensTheTeamOneToOne_NotTheRootRoom()
+    {
+        CancellationToken ct = Xunit.TestContext.Current.CancellationToken;
+        await using TeamWebApplicationFactory factory = new();
+        await SeedAsync(factory);
+        ChatService chat = MarketingChat(factory);
+        await using MudBunitContext ctx = NewContext(factory, chat: chat);
+        User nova = await AgentAsync(ctx, "Nova", ct);
+        Room rootRoom = await chat.EnsureRoomForAsync(nova, ct);
+        IRenderedComponent<Host> cut = RenderHost(ctx, Team("Marketing", "Nova", "Ada"));
+        cut.WaitForAssertion(() => Assert.Equal(2, cut.FindAll(".team-members-row").Count));
+        _ = OpenCardButtons(cut, "Nova");
+
+        AngleSharp.Dom.IElement message = cut.FindAll("button").Single(button => string.Equals(button.TextContent.Trim(), "Message", StringComparison.Ordinal));
+        await cut.InvokeAsync(() => message.ClickAsync());
+
+        Room? teamRoom = await ctx.Services.GetRequiredService<ITeamDirectory>().FindRoomWithExactMembersAsync(KnownIds.Human, nova.Id, "Marketing", ct);
+        Assert.NotNull(teamRoom);
+        Assert.NotEqual(rootRoom.Id, teamRoom.Id);
+        Assert.Null(rootRoom.Team);
+        Assert.Equal("Marketing", teamRoom.Team);
+        NavigationManager navigation = ctx.Services.GetRequiredService<NavigationManager>();
+        Assert.Equal($"/rooms/{teamRoom.Id}", $"/{navigation.ToBaseRelativePath(navigation.Uri)}");
+    }
+
+    /// <summary>A member who never connected has no agent user, so the card offers no Message action.</summary>
+    [Fact]
+    public async Task Card_MemberWithoutAUser_HasNoMessageAction()
+    {
+        // Nova is not given a user here either: nobody in this Team has ever connected.
+        await using TeamWebApplicationFactory factory = new();
+        await SeedAsync(factory);
+        await using MudBunitContext ctx = NewContext(factory, chat: MarketingChat(factory));
+        IRenderedComponent<Host> cut = RenderHost(ctx, Team("Marketing", "Nova", "Ada"));
+        cut.WaitForAssertion(() => Assert.Equal(2, cut.FindAll(".team-members-row").Count));
+
+        string[] buttons = OpenCardButtons(cut, "Ada");
+
+        Assert.DoesNotContain("Message", buttons);
     }
 
     /// <summary>Clicking the <c>⋯</c> button opens the menu but not the card: the click does not reach the row.</summary>
@@ -703,9 +753,10 @@ public sealed class TeamMembersTests
     }
 
     /// <summary>Registers this factory's real services (the same set <c>TeammatesPageTests</c> uses, which also satisfies <see cref="TeammateCard"/>) into a fresh <see cref="MudBunitContext"/>.</summary>
-    private static MudBunitContext NewContext(TeamWebApplicationFactory factory, FakeTeamMembership? membership = null)
+    private static MudBunitContext NewContext(TeamWebApplicationFactory factory, FakeTeamMembership? membership = null, ChatService? chat = null)
     {
         MudBunitContext ctx = new();
+        ctx.Services.AddSingleton(chat ?? factory.Services.GetRequiredService<ChatService>());
         ctx.Services.AddSingleton<ITeamMembership>(membership ?? new FakeTeamMembership());
         ctx.Services.AddSingleton(factory.Services.GetRequiredService<PersonaStore>());
         ctx.Services.AddSingleton(factory.Services.GetRequiredService<ITeamDirectory>());
@@ -721,6 +772,31 @@ public sealed class TeamMembersTests
         ctx.Services.AddSingleton(factory.Services.GetRequiredService<SkillStore>());
         ctx.Services.AddSingleton(factory.Services.GetRequiredService<BuiltinTeammateReset>());
         return ctx;
+    }
+
+    /// <summary>A real <see cref="ChatService"/> over the factory's directory and store whose Team catalog knows <c>Marketing</c>.</summary>
+    private static ChatService MarketingChat(TeamWebApplicationFactory factory)
+    {
+        RoomEvents events = factory.Services.GetRequiredService<RoomEvents>();
+        Agency.Huddle.Tests.Teams.FakeTeamCatalog catalog = new() { Teams = [Team("Marketing", "Nova")] };
+        return new ChatService(
+            factory.Services.GetRequiredService<ITeamDirectory>(),
+            factory.Services.GetRequiredService<IChatStore>(),
+            events,
+            new FakeMentionAliasSource(),
+            Options.Create(new TeamOptions()),
+            new ProposalStore(events),
+            new QuestionStore(events),
+            NullLogger<ChatService>.Instance) { TeamCatalog = catalog };
+    }
+
+    /// <summary>Opens the card of <paramref name="name"/> by clicking its row and returns the open card's buttons' trimmed texts.</summary>
+    private static string[] OpenCardButtons(IRenderedComponent<Host> cut, string name)
+    {
+        AngleSharp.Dom.IElement row = RowFor(cut, name);
+        _ = cut.InvokeAsync(() => row.Click());
+        _ = OpenedCard(cut);
+        return [.. cut.FindAll("button").Select(button => button.TextContent.Trim())];
     }
 
     /// <summary>The agent user of <paramref name="name"/>, created in the directory the context's components read.</summary>

@@ -12,6 +12,10 @@
     color: var(--mud-palette-text-secondary);
 }
 
+.teams-nav-host ::deep .nav-team-room-link .mud-nav-link {
+    padding-left: 3.875rem;
+}
+
 .teams-nav-host ::deep .teams-nav-chevron {
     position: absolute;
     left: 0.75rem;

@@ -2061,7 +2061,12 @@ internal sealed class RoomSession : IAsyncDisposable, IElicitationScope
     private static string RoomLabel(WorkItem item, IPromptSource prompts) =>
         prompts.Render(
             "turn.roomLabel",
-            new Dictionary<string, string> { ["{{roomName}}"] = item.RoomName, ["{{roomId}}"] = item.RoomId });
+            new Dictionary<string, string>
+            {
+                ["{{roomName}}"] = item.RoomName,
+                ["{{roomId}}"] = item.RoomId,
+                ["{{teamSuffix}}"] = item.Team is null ? string.Empty : $", Team: {item.Team}",
+            });
 
     /// <summary>Renders one <c>turn.message</c> line: a Room label, its sender, and its text.</summary>
     /// <param name="prompts">Resolves the <c>turn.message</c> prompt's current text.</param>

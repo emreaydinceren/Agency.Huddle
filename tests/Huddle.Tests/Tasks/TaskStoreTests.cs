@@ -811,6 +811,23 @@ public sealed class TaskStoreTests
         Assert.Equal(["Launch"], projects);
     }
 
+    /// <summary>Spec §6.8: a folder named <c>Uploads</c> under a Team is the Team's visible upload folder, not a Project, in any case; a real Project beside it still is.</summary>
+    [Fact]
+    public void Teams_UploadsFolder_IsNotAProject()
+    {
+        using TempDataDir dir = new();
+        string root = TestTaskStore.Root(dir);
+        Directory.CreateDirectory(Path.Combine(root, "Business", "Uploads"));
+        Directory.CreateDirectory(Path.Combine(root, "Business", "uploads"));
+        Directory.CreateDirectory(Path.Combine(root, "Business", "Launch"));
+        using PersonaStore personas = TestTaskStore.CreatePersonaStore(dir);
+
+        using TaskStore store = TestTaskStore.CreateTaskStore(dir, personas);
+
+        TeamFolder business = Assert.Single(store.Teams, team => string.Equals(team.Name, "Business", StringComparison.Ordinal));
+        Assert.Equal(["Launch"], business.Projects.ToList());
+    }
+
     /// <summary>The allowed neighbours of <c>memory</c> - <c>memory-notes</c> and <c>memories</c> -
     /// are still Projects beside <c>Marketing</c>; the <c>memory</c> folder itself is not.</summary>
     [Fact]

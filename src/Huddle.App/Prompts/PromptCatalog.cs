@@ -224,12 +224,13 @@ internal static class PromptCatalog
             Label: "Room label",
             HelperText:
                 "How each incoming message names the Room it came from. Must keep {{roomId}}: it is the " +
-                "only way an agent learns a Room's id.",
+                "only way an agent learns a Room's id. {{teamSuffix}} is \", Team: <name>\" for a Room " +
+                "scoped to a Team and empty otherwise.",
             Default:
                 """
-                [Room: {{roomName}} (id: {{roomId}})]
+                [Room: {{roomName}} (id: {{roomId}}{{teamSuffix}})]
                 """,
-            Placeholders: ["{{roomName}}", "{{roomId}}"],
+            Placeholders: ["{{roomName}}", "{{roomId}}", "{{teamSuffix}}"],
             RequiredPlaceholders: ["{{roomId}}"],
             Timing: PromptTiming.Live),
 
@@ -572,6 +573,7 @@ internal static class PromptCatalog
                 how you behave in it follows from how many members it has:
                   - two members  — a private conversation with the human. Answer every message.
                   - three or more — a group. Answer only when you are @-mentioned.
+                A Room listed under a Team belongs to that Team, and files shared in it are in that Team's folder.
                 """,
             Placeholders: [],
             RequiredPlaceholders: [],

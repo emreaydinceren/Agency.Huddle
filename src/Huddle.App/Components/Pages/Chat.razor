@@ -35,10 +35,13 @@ else
                         else
                         {
                             <MudText HtmlTag="h1" Typo="Typo.h6" Class="mb-0">@this.room.Name</MudText>
-                            <MudTooltip Text="Rename">
-                                <MudIconButton Icon="@Icons.Material.Filled.Edit" Size="Size.Small"
-                                               aria-label="Rename room" OnClick="this.BeginRename" />
-                            </MudTooltip>
+                            @if (!this.isTeamRoom)
+                            {
+                                <MudTooltip Text="Rename">
+                                    <MudIconButton Icon="@Icons.Material.Filled.Edit" Size="Size.Small"
+                                                   aria-label="Rename room" OnClick="this.BeginRename" />
+                                </MudTooltip>
+                            }
                         }
                     </MudStack>
                 </MudStack>
@@ -231,6 +234,9 @@ else
 
     private bool extending;
     private bool isRenaming;
+
+    /// <summary>True when the shown Room is its Team's Team Room, which is named after the Team and so has no Rename pencil.</summary>
+    private bool isTeamRoom;
     private string editingName = string.Empty;
     private string? renameError;
 
@@ -332,6 +338,7 @@ else
     private async Task LoadRoomAsync(string roomId)
     {
         this.room = await this.TeamDirectory.GetRoomAsync(roomId);
+        this.isTeamRoom = this.room is { IsTeamRoom: true };
         this.members = this.room is null ? [] : await this.TeamDirectory.GetRoomMembersAsync(roomId);
         this.messages = this.room is null ? [] : [.. await this.Store.ReadAllAsync(roomId)];
 

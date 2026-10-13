@@ -480,6 +480,25 @@ public sealed class HireServiceStartTests
         Assert.True(folders.File?.Onboarded);
     }
 
+    /// <summary>T20: onboarding posts through the root <c>PostAsync</c> and never through the Team-aware call, so it stays in the manager's root one-to-one.</summary>
+    [Fact]
+    public async Task StartTeamAsync_Onboarding_UsesRootPostNotTeamPost()
+    {
+        CancellationToken ct = TestContext.Current.CancellationToken;
+        using TempDataDir dir = new();
+        using TempDataDir teamFolder = new();
+        File.WriteAllText(Path.Combine(teamFolder.Path, TeamPaths.ProcessFileName), ProcessWithOnboarding);
+        DiskTeamFolders folders = new(teamFolder.Path);
+        FakeOnboardingPoster poster = new();
+        HireService service = Create(dir, out _, out _, out _, makeOnboarding: _ => new TeamOnboarding(folders, new FakePromptSource(), poster));
+
+        StartTeamResult result = await service.StartTeamAsync(TeamName, [Request("Lee", "lead"), Request("Dan", "dev")], ct);
+
+        Assert.True(result.Ok);
+        Assert.Single(poster.Posts);
+        Assert.Empty(poster.TeamPosts);
+    }
+
     /// <summary>A Team whose file already carries the marker is not onboarded again after a restart.</summary>
     [Fact]
     public async Task StartTeamAsync_MarkerPresent_PostsNothing()
@@ -544,8 +563,19 @@ internal sealed class FakeOnboardingPoster : IOnboardingPoster
     /// <summary>Gets the posts, each the manager's name and the text.</summary>
     public List<(string Manager, string Text)> Posts { get; } = [];
 
+    /// <summary>Gets the Team-aware posts, each the Team, the recipient's name and the text.</summary>
+    public List<(string Team, string Recipient, string Text)> TeamPosts { get; } = [];
+
     /// <summary>Gets or sets whether the post reaches the manager.</summary>
     public bool Delivers { get; set; } = true;
+
+    /// <inheritdoc />
+    public Task<bool> PostToTeamAsync(string team, string recipientName, string text, CancellationToken ct)
+    {
+        ct.ThrowIfCancellationRequested();
+        this.TeamPosts.Add((team, recipientName, text));
+        return Task.FromResult(this.Delivers);
+    }
 
     /// <inheritdoc />
     public Task<bool> PostAsync(string managerName, string text, CancellationToken ct)

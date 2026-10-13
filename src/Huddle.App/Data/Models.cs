@@ -12,4 +12,17 @@ public sealed record Room(string Id, string Name, DateTimeOffset Created)
     /// changes. Archiving only changes whether the Room is offered in the default sidebar view.
     /// </summary>
     public bool Archived { get; init; }
+
+    /// <summary>
+    /// The Team this Room is scoped to (ADR-0051), or <see langword="null"/> for a root Room. Chosen when
+    /// the Room is created and never changed.
+    /// </summary>
+    public string? Team { get; init; }
+
+    /// <summary>
+    /// Whether this is its Team's Team Room (ADR-0051): the one Room of a Team that holds all its Members
+    /// and is named after the Team. Always <see langword="false"/> for a root Room. A Team Room is never
+    /// renamed, whatever its name looks like.
+    /// </summary>
+    public bool IsTeamRoom { get; init; }
 }

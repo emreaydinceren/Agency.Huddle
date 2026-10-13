@@ -21,6 +21,8 @@ public sealed class LibraryPathResolverTests
     [InlineData("teams", "Marketing/Launch Q4", "Marketing/Launch Q4", "ProjectFolder", null)]
     [InlineData("teams", "Marketing/memory", "Marketing/memory", "Folder", null)]
     [InlineData("teams", "Marketing/MEMORY", "Marketing/MEMORY", "Folder", null)]
+    [InlineData("teams", "Marketing/Uploads", "Marketing/Uploads", "Folder", null)]
+    [InlineData("teams", "Marketing/uploads", "Marketing/uploads", "Folder", null)]
     [InlineData("teams", "Marketing/Launch Q4/memory", "Marketing/Launch Q4/memory", "Folder", null)]
     [InlineData("teams", "memory", "memory", "TeamFolder", null)]
     [InlineData("teams", "memory/memory", "memory/memory", "Folder", null)]
