@@ -1069,6 +1069,19 @@ What a pick writes:
 | A Team | A link to the Team's page. |
 | A Library file | The file's path in a code span, the same text an attached file produces. |
 
+The keys work the same for every kind of pick. While the list is open:
+
+| Key | What it does |
+| --- | --- |
+| Up and Down | Move the highlight. It wraps from the last row to the first, and back. |
+| Enter or Tab | Pick the highlighted row. |
+| Enter | Never sends while the list is open, even when no row matches. |
+| Esc | Closes the list and keeps the text you typed. It does not reopen for the same word. |
+
+Typing keeps narrowing the list. Ctrl+Z after a pick undoes it in one step and brings back
+the text you typed. The **Send** button always sends the text exactly as you typed it, even
+while the list is open.
+
 A Teammate who is not a Member of the Room is dimmed and marked **Not in this Room**.
 Choose **/invite @** in the message box, or pick the Teammate after inviting it, to add
 it to the Room first.
