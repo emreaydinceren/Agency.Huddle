@@ -7,7 +7,7 @@ namespace Agency.Huddle.Tests.Ui.References;
 /// </summary>
 public sealed class AppCssReferencesTests
 {
-    private const string BlockMarker = "/* References */";
+    private const string BlockMarker = "/* ---- References ";
 
     /// <summary>The picker sits above the composer and its height is <c>min(320px, calc(40vh / 0.9))</c>.</summary>
     [Fact]

@@ -63,28 +63,23 @@ public sealed class ReconnectModalCssTests
         string text = File.ReadAllText(CssPath);
         IReadOnlyList<string> lines = File.ReadAllLines(CssPath);
 
-        Assert.Contains("&[open] {", text, StringComparison.Ordinal);
+        Assert.Contains("&[open] {", text, StringComparison.Ordinal); // contains-ok: stylesheet source text, not markup
         Assert.DoesNotContain(lines, line => string.Equals(line.Trim(), "{", StringComparison.Ordinal));
     }
 
     /// <summary>
-    /// The app's own <c>background-color</c> on <c>#components-reconnect-modal</c> carries
-    /// <c>!important</c>. MudBlazor ships
-    /// <c>#components-reconnect-modal{background-color:var(--mud-palette-background) !important}</c>
-    /// in the same origin, and an <c>!important</c> declaration always beats one without it
-    /// regardless of specificity - so without this, the modal's background resolves to the dark
-    /// palette's <c>Background</c> colour, which is identical to the page body behind it and leaves
-    /// the panel with no visible edge.
+    /// MudBlazor ships <c>#components-reconnect-modal{background-color:var(--mud-palette-background) !important}</c>
+    /// in the same origin, which no specificity can beat. The modal redirects <c>--mud-palette-background</c> to
+    /// the surface colour on its own element instead, so the fill MudBlazor paints is the surface and the panel
+    /// keeps a visible edge in dark mode, and the stylesheet carries no important flag (UX-V22).
     /// </summary>
     [Fact]
-    public void BackgroundColor_CarriesImportant_ToBeatMudBlazorsSameOriginOverride()
+    public void BackgroundColor_RedirectsMudBlazorsFillToSurface_WithoutImportant()
     {
         string text = File.ReadAllText(CssPath);
 
-        Assert.Contains(
-            "background-color: var(--mud-palette-surface) !important;",
-            text,
-            StringComparison.Ordinal);
+        Assert.Contains("--mud-palette-background: var(--mud-palette-surface);", text, StringComparison.Ordinal); // contains-ok: stylesheet source text, not markup
+        Assert.DoesNotContain("!important", text, StringComparison.Ordinal); // contains-ok: stylesheet source text, not markup
     }
 
     private static string CssPath =>

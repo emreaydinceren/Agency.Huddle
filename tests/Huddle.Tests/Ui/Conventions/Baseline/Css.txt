@@ -1,5 +1,1 @@
-CV11|src/Huddle.App/Components/Layout/MainLayout.razor.css|1
-CV11|src/Huddle.App/Components/Layout/ReconnectModal.razor.css|1
-CV11|src/Huddle.App/Components/Shared/HuddleSegmentedControl.razor.css|11
-CV11|src/Huddle.App/Components/Teams/TeamsNav.razor.css|1
-CV11|src/Huddle.App/wwwroot/app.css|13
+# CV11 baseline for the CSS area is 0; the documented exceptions are in Exceptions.txt.

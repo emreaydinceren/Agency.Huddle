@@ -16,15 +16,21 @@ html, body {
     font-optical-sizing: auto;
 }
 
-/* 100% honours the browser's own font-size setting; every existing rem scales from this one token. */
+/* The root size is MudBlazor's default typography size (0.875rem, so 1rem is 14px); every rem in this
+   file scales from this one token. */
 html {
     font-size: var(--mud-typography-default-size);
 
     /* The whole UI is drawn at 90%: fonts, heights, widths and gaps together, which a root font-size
-       cannot do because much of MudBlazor is sized in px. Viewport units are not zoomed, so a height
-       meant to fill the window divides by the scale (see .main-column), and the popover provider
-       cancels it (below). Change 0.9 in every place together: here, in both .mud-popover-provider rules below, in .main-column and in .search-dropdown (the Global search block) and in .composer-picker (the References block); a var() cannot hold it, because
-       every var() in this file must be a MudBlazor variable. */
+       cannot do because much of MudBlazor is sized in px. Viewport units are not zoomed, so a size
+       meant to fill the window divides by the scale, and the popover provider cancels the zoom for
+       placement (below). Change 0.9 in every place together; a var() cannot hold it, because every
+       var() in this file must be a MudBlazor variable. The sites: here; both .mud-popover-provider
+       rules below; .main-column (height); .search-dropdown (width and max-height, Global search);
+       .composer-picker (max-height, References); .avatar-library-body (max-height); .avatar-library-tags
+       and .chip-cloud (max-height); the phone Avatar Library dialog and its body (width, height,
+       max-height, in the max-width 600px block); .avatar-library-filters (max-height, same block);
+       .elicitation-card (max-height); and #components-reconnect-modal (margin, ReconnectModal.razor.css). */
     zoom: 0.9;
 }
 
@@ -67,6 +73,35 @@ button:focus-visible {
     outline-offset: 2px;
 }
 
+/* ---- Global MudBlazor overrides --------------------------------------------------------------
+   Rules that restyle a MudBlazor component for the whole app live here, not beside a feature. */
+
+/* A button label never wraps. */
+.mud-button-root {
+    white-space: nowrap;
+}
+
+/* The sidebar is its own surface (the theme's DrawerBackground) with a hairline edge, so navigation and
+   work are told apart at a glance. */
+.mud-drawer {
+    border-inline-end: 1px solid var(--mud-palette-divider);
+}
+
+/* An image avatar fills its circle and is cropped to it. TeammateAvatar renders a bare <img> and MudBlazor
+   sizes only its own MudImage, so without this a 256 px picture sat at full size inside a 56 px avatar. */
+.mud-avatar img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+/* Tab labels are sentence case like every other label, not MudBlazor's upper case. */
+.mud-tab {
+    text-transform: none;
+}
+
+/* ---- New chat and the agent status dots ------------------------------------------------------ */
+
 .new-chat-panel {
     padding: 0.5rem 1rem 0.75rem 2rem;
 }
@@ -105,6 +140,8 @@ button:focus-visible {
 }
 
 
+
+/* ---- The main column and the page under the tab strip ----------------------------------------- */
 
 /* MudMainContent reserves padding-top for the TopBar's MudAppBar, and the fixed-height column below
    sits inside that padding (border-box), so the panes fill exactly what is left of the window. */
@@ -431,7 +468,7 @@ button:focus-visible {
     position: absolute;
     right: 0;
     top: calc(100% + 0.375rem);
-    z-index: 10;
+    z-index: var(--mud-zindex-popover);
     min-width: 14rem;
     padding: 1rem;
     background: var(--mud-palette-surface);
@@ -478,6 +515,8 @@ button:focus-visible {
     overflow-y: auto;
     padding: 1.5rem;
 }
+
+/* ---- Message layout: avatar gutter and content column ------------------------------------------ */
 
 /* Slack-style two-column layout: an avatar gutter in the first column, everything else - the
    sender/timestamp line, the body, and (for a Draft) its tool-activity line - stacked in the
@@ -712,6 +751,12 @@ button:focus-visible {
     }
 }
 
+@media (prefers-reduced-motion: reduce) {
+    .draft-caret {
+        animation: none;
+    }
+}
+
 .tool-activity {
     margin-top: 0.25rem;
     color: var(--mud-palette-text-disabled);
@@ -770,11 +815,6 @@ button:focus-visible {
 
 .turn-detail-toggle:hover {
     background: var(--mud-palette-table-hover);
-}
-
-.turn-detail-toggle:focus-visible {
-    outline: 2px solid var(--mud-palette-primary);
-    outline-offset: 1px;
 }
 
 .turn-detail-panel {
@@ -848,6 +888,8 @@ button:focus-visible {
     background: var(--mud-palette-table-hover);
 }
 
+/* ---- Composer --------------------------------------------------------------------------------- */
+
 .composer {
     border-top: 1px solid var(--mud-palette-divider);
     padding: 1rem 1.5rem;
@@ -867,7 +909,7 @@ button:focus-visible {
     justify-content: center;
     box-sizing: border-box;
     pointer-events: none;
-    font-size: 14px;
+    font-size: var(--mud-typography-body1-size);
     color: var(--mud-palette-text-primary);
     background: var(--mud-palette-surface);
     border: 2px dashed var(--mud-palette-primary);
@@ -897,7 +939,7 @@ button:focus-visible {
 
     /* Matches .message-body's own literals below, so what you type reads at the same size and
        weight as what lands in the transcript once it's sent. */
-    font-size: 14px;
+    font-size: var(--mud-typography-body1-size);
     font-weight: 400;
     line-height: 18px;
     padding: 0.75rem 3rem 0.75rem 1rem;
@@ -1140,17 +1182,9 @@ button:focus-visible {
     width: 3.25rem;
     height: 3.25rem;
     border-radius: var(--mud-default-borderradius);
-    font-size: 1.15rem;
+    font-size: var(--mud-typography-subtitle1-size);
     font-weight: 600;
     letter-spacing: 0.02em;
-}
-
-/* An image avatar fills its circle and is cropped to it. TeammateAvatar renders a bare <img> and MudBlazor
-   sizes only its own MudImage, so without this a 256 px picture sat at full size inside a 56 px avatar. */
-.mud-avatar img {
-    width: 100%;
-    height: 100%;
-    object-fit: cover;
 }
 
 /* The Avatar Library picker (Spec 6.6). The filters block stays put and the grid is the
@@ -1162,7 +1196,7 @@ button:focus-visible {
     gap: 0.5rem;
     /* A percentage here resolves against the dialog content's auto height, so it is ignored and the
        whole dialog scrolls with the filters in it; the viewport is the bound that actually holds. */
-    max-height: calc(100vh - 11rem);
+    max-height: calc(100vh / 0.9 - 11rem);
     min-height: 0;
 }
 
@@ -1200,16 +1234,6 @@ button:focus-visible {
     color: var(--mud-palette-primary);
 }
 
-.avatar-library-skin:focus-visible,
-.avatar-library-chip:focus-visible,
-.avatar-library-tags-all:focus-visible,
-.avatar-library-clear:focus-visible,
-.avatar-library-more:focus-visible,
-.avatar-library-thumb:focus-visible {
-    outline: 3px solid var(--mud-palette-primary);
-    outline-offset: 2px;
-}
-
 .avatar-library-cloud-title {
     font-size: var(--mud-typography-caption-size);
     color: var(--mud-palette-text-secondary);
@@ -1222,7 +1246,7 @@ button:focus-visible {
 }
 
 .avatar-library-tags {
-    max-height: 30vh;
+    max-height: calc(30vh / 0.9);
     overflow-y: auto;
 }
 
@@ -1276,8 +1300,7 @@ button:focus-visible {
 }
 
 .avatar-library-thumb:hover {
-    outline: 3px solid var(--mud-palette-primary);
-    outline-offset: 2px;
+    background: var(--mud-palette-action-default-hover);
 }
 
 .avatar-library-more {
@@ -1292,24 +1315,24 @@ button:focus-visible {
 
 @media (max-width: 600px) {
     .mud-dialog.avatar-library-dialog {
-        width: 100vw;
-        max-width: 100vw;
-        height: 100vh;
-        max-height: 100vh;
+        width: calc(100vw / 0.9);
+        max-width: calc(100vw / 0.9);
+        height: calc(100vh / 0.9);
+        max-height: calc(100vh / 0.9);
         margin: 0;
         border-radius: 0;
     }
 
     .avatar-library-body {
-        height: calc(100vh - 7rem);
-        max-height: calc(100vh - 7rem);
+        height: calc(100vh / 0.9 - 7rem);
+        max-height: calc(100vh / 0.9 - 7rem);
     }
 
     /* On a phone the chips alone are taller than the screen, so the filters take at most
        half of it and scroll inside that, which leaves the pictures a visible strip below. */
     .avatar-library-filters {
         flex: 0 1 auto;
-        max-height: 50vh;
+        max-height: calc(50vh / 0.9);
         overflow-y: auto;
     }
 
@@ -1372,9 +1395,22 @@ button:focus-visible {
     opacity: 1;
 }
 
+/* ---- Hover reveals ---------------------------------------------------------------------------
+   Every control that is hidden until hover is shown at once on a device with no hover (UX-075). The
+   Tab reveals take the same 120ms ease as the other reveals (their scoped sheet sets the opacity). */
+.tab-close,
+.tab-actions {
+    transition: opacity 120ms ease;
+}
+
 @media (hover: none) {
-    .teammate-card-avatar-edit {
+    .teammate-card-avatar-edit,
+    .hover-reveal-row .hover-reveal-menu-button,
+    /* [class] adds the specificity that beats the scoped sheet's .tab-close[b-xxxx] without the important flag. */
+    .tab-item .tab-close[class],
+    .tab-item .tab-actions[class] {
         opacity: 1;
+        pointer-events: auto;
     }
 }
 
@@ -1549,7 +1585,7 @@ button:focus-visible {
     justify-content: flex-end;
 }
 
-/* Tasks */
+/* ---- Tasks ------------------------------------------------------------------------------------ */
 
 /* ---- Board layout (Spec §13.4, §13.10) --------------------------------------------------------
    The Board is a header row (.task-board-columns) followed by one horizontal band per lane
@@ -1871,7 +1907,7 @@ button:focus-visible {
     display: flex;
     flex-direction: column;
     gap: 0.25rem;
-    padding-block-end: 8px;
+    padding-block-end: 0.5rem;
     border-block-end: 1px solid var(--mud-palette-lines-default);
 }
 
@@ -2122,7 +2158,7 @@ button:focus-visible {
    panels keep sizes that no longer fit (LibraryExplorer.razor's header has the live failure). So
    the second panel ignores its inline size and flexes into whatever is left, and the first keeps
    the size the divider gave it but is bounded on both sides, so neither can be squeezed to
-   nothing. !important is the only way past an inline style. */
+   nothing. The important flag is the only way past an inline style (listed in Exceptions.txt). */
 
 .library-explorer-split-side-by-side > .child-panel:first-child {
     flex: 0 0 auto;
@@ -2300,7 +2336,7 @@ button:focus-visible {
 .elicitation-card {
     display: flex;
     flex-direction: column;
-    max-height: 50vh;
+    max-height: calc(50vh / 0.9);
 }
 
 .elicitation-card-fields {
@@ -2409,10 +2445,6 @@ button:focus-visible {
     text-overflow: ellipsis;
 }
 
-.mud-button-root {
-    white-space: nowrap;
-}
-
 @media (max-width: 1500px) {
     .task-col-low-1 { display: none; }
 }
@@ -2432,13 +2464,8 @@ button:focus-visible {
     margin: 1rem 0;
 }
 
-/* The sidebar is its own surface (the theme's DrawerBackground) with a hairline edge, so navigation and
-   work are told apart at a glance. */
-.mud-drawer {
-    border-inline-end: 1px solid var(--mud-palette-divider);
-}
-
-/* The Team page toolbar (action button and search box) sits in a column that the persistent 240px
+/* ---- Team page toolbar -----------------------------------------------------------------------
+   The Team page toolbar (action button and search box) sits in a column that the persistent 240px
    drawer leaves very narrow on a phone: let the two wrap onto their own lines and let the search box
    shrink, so neither is clipped by the column. */
 .team-tab-toolbar {
@@ -2460,9 +2487,11 @@ button:focus-visible {
 @media (max-width: 600px) {
     .team-page-wide .team-members,
     .team-page-wide .team-tasks-tab {
-        padding-inline: 8px;
+        padding-inline: 0.5rem;
     }
 }
+
+/* ---- Team setup ------------------------------------------------------------------------------- */
 
 /* Team setup (/teams/new, /teams/{Team}/setup): the hiring pool on the left, the Team being built on the
    right, the Process step under them and a footer that keeps the team check and Start Team in view. */
@@ -2560,7 +2589,7 @@ button:focus-visible {
     display: flex;
     flex-wrap: wrap;
     gap: 0.375rem;
-    max-height: 30vh;
+    max-height: calc(30vh / 0.9);
     overflow-y: auto;
 }
 
@@ -2580,13 +2609,6 @@ button:focus-visible {
     font-weight: 700;
     border: 2px solid var(--mud-palette-primary);
     color: var(--mud-palette-primary);
-}
-
-.chip-cloud-chip:focus-visible,
-.chip-cloud-all:focus-visible,
-.hiring-pool-clear:focus-visible {
-    outline: 3px solid var(--mud-palette-primary);
-    outline-offset: 2px;
 }
 
 .chip-cloud-close {
@@ -2794,7 +2816,73 @@ button:focus-visible {
     color: var(--mud-palette-text-secondary);
 }
 
-/* Global search */
+/* ---- Segmented control: MudBlazor's toggle group inside HuddleSegmentedControl ------------------
+   The indicator that slides under the active item is scoped to the component; these rules reach the
+   toggle group's own markup, so they live here. Each selector starts at .huddle-segmented-control, which
+   out-ranks MudBlazor's own toggle-item rules, so none of them needs the important flag. */
+.huddle-segmented-control .huddle-segmented-group {
+    background: transparent;
+    position: relative;
+    z-index: 2;
+    width: 100%;
+}
+
+.huddle-segmented-control .huddle-segmented-group .mud-toggle-item {
+    flex: 1 1 0;
+    text-align: center;
+    border-radius: calc(var(--mud-default-borderradius) * 0.75);
+    border: none;
+    background: transparent;
+    padding: 2px 0.75rem;
+    min-height: unset;
+    position: relative;
+    z-index: 2;
+    color: var(--mud-palette-text-primary);
+    opacity: 0.5;
+    font-weight: 500;
+    transition: opacity 120ms ease;
+}
+
+.huddle-segmented-control .huddle-segmented-group .mud-toggle-item.huddle-segmented-active-item {
+    background-color: transparent;
+    opacity: 1;
+}
+
+.huddle-segmented-control .huddle-segmented-group .mud-toggle-item * {
+    color: inherit;
+    font-weight: inherit;
+}
+
+/* ---- Teams nav: the Team, Project and Room rows in the sidebar -------------------------------
+   Every other group's child text starts at 62px (36px link padding). A Team row keeps that: the chevron
+   floats over the link's left padding instead of pushing the name right, and a Project's icon starts
+   at that same 62px so it sits directly under the Team's name, with the Project name after the icon. */
+.teams-nav-host .nav-project-link .mud-nav-link,
+.teams-nav-host .nav-team-room-link .mud-nav-link {
+    padding-left: 3.875rem;
+}
+
+.teams-nav-host .nav-project-link .mud-nav-link-icon {
+    font-size: var(--mud-typography-subtitle1-size);
+    color: var(--mud-palette-text-secondary);
+}
+
+.teams-nav-host .teams-nav-chevron {
+    position: absolute;
+    left: 0.75rem;
+    z-index: 1;
+    padding: 0;
+    color: var(--mud-palette-text-secondary);
+}
+
+.teams-nav-host .teams-nav-nomembers {
+    flex: 0 0 auto;
+    margin-right: 0.25rem;
+    color: var(--mud-palette-text-secondary);
+    font-style: italic;
+}
+
+/* ---- Global search ---------------------------------------------------------------------------- */
 
 /* A result card is one row with three zones: what it is (icon or avatar), what it says, and the action
    slot at the right. The slot is empty in V1 and holds its width so a V2 button lands where it will sit. */
@@ -2943,7 +3031,7 @@ button:focus-visible {
     }
 }
 
-/* References */
+/* ---- References ------------------------------------------------------------------------------- */
 .composer-picker {
     position: absolute;
     left: 0;
@@ -2956,7 +3044,7 @@ button:focus-visible {
     border: 1px solid var(--mud-palette-lines-default);
     border-radius: var(--mud-default-borderradius);
     box-shadow: var(--mud-elevation-8);
-    z-index: 10;
+    z-index: var(--mud-zindex-popover);
 }
 
 .composer-picker-heading,

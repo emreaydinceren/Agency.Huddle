@@ -13,7 +13,7 @@ public sealed class AppCssTasksTests
         string text = File.ReadAllText(CssSource.RepoPath("src", "Huddle.App", "wwwroot", "app.css"));
 
         // contains-ok: source-fact test, no CSS parser - app.css's own text is what's pinned.
-        Assert.Contains("/* Tasks */", text, StringComparison.Ordinal);
+        Assert.Contains("/* ---- Tasks ", text, StringComparison.Ordinal);
     }
 
     /// <summary>The Board's scroller lane class is declared.</summary>

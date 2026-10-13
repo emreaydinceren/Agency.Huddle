@@ -45,7 +45,7 @@ public sealed class RoomLayoutSourceTests
     {
         string body = RuleBody(ReadAppCss(), ".elicitation-card");
 
-        Assert.Contains("max-height: 50vh;", body, StringComparison.Ordinal); // contains-ok: stylesheet source text, not markup
+        Assert.Contains("max-height: calc(50vh / 0.9);", body, StringComparison.Ordinal); // contains-ok: stylesheet source text, not markup
         Assert.Contains("display: flex;", body, StringComparison.Ordinal); // contains-ok: stylesheet source text, not markup
         Assert.Contains("flex-direction: column;", body, StringComparison.Ordinal); // contains-ok: stylesheet source text, not markup
     }

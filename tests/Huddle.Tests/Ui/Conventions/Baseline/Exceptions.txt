@@ -1,1 +1,2 @@
 # Permanent, justified exceptions: CVn|path|count|reason. Manager-only; agents never edit this file.
+CV11|src/Huddle.App/wwwroot/app.css|6|Sidebar exception (design-system.md "The sidebar is the one exception"): .mud-nav-link-text 15px, 14px inside a group, and the 26px indent of nested nav text; plus two important-flagged width/height overrides that are the only way past LibraryExplorer.razor inline panel sizes.

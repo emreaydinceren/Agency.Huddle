@@ -90,12 +90,12 @@ public sealed class AppJsSourceTests
     public void AppCss_SearchHitFlash_IsInTheGlobalSearchBlockAndHonoursReducedMotion()
     {
         string css = File.ReadAllText(CssSource.RepoPath("src", "Huddle.App", "wwwroot", "app.css"));
-        int blockStart = css.IndexOf("/* Global search */", StringComparison.Ordinal);
+        int blockStart = css.IndexOf("/* ---- Global search ", StringComparison.Ordinal);
         Assert.True(blockStart >= 0, "Expected a /* Global search */ block in app.css.");
         int flashStart = css.IndexOf("/* The Room jump", blockStart, StringComparison.Ordinal);
         Assert.True(flashStart >= 0, "Expected the /* The Room jump */ flash rules inside the Global search block.");
         // The flash rules end where the /* References */ block begins (its picker legitimately uses vh; AT-T13 pins it).
-        int referencesStart = css.IndexOf("/* References */", flashStart, StringComparison.Ordinal);
+        int referencesStart = css.IndexOf("/* ---- References ", flashStart, StringComparison.Ordinal);
         string block = referencesStart >= 0 ? css[flashStart..referencesStart] : css[flashStart..];
 
         // contains-ok: source-fact test, no stylesheet runner - app.css's own text is what's pinned.
