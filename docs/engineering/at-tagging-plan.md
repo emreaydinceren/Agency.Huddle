@@ -5,13 +5,14 @@ The deliverable-by-deliverable plan for building
 with `/Execute-Project-Plan` and track it in [§9](#9-tracker) with `agents/scripts/Set-Tracker.ps1`.
 The manager reads [DeliveryPlaybook.md](../../agents/DeliveryPlaybook.md) before the first dispatch.
 
-**Written:** 2026-10-12 against `main` at `5fbaf5d` · **Status:** not started · **Spec:**
+**Written:** 2026-10-12 against `main` at `5fbaf5d`, revised the same day after PR #169 (Team chats:
+a Room's Scope and the Team Room, ADR-0052; so this feature's ADR is **0053**) · **Status:** not started · **Spec:**
 `docs/Huddle.AtTagging-Specifications.md` (cited below as **§n**, decisions **D-n**, tests
 **AT-Tn** and **AT-Mn**, open points **OP-n**).
 
 > [!IMPORTANT]
-> **Deliverables are `L0`…`L13`, with no hyphen. Tasks are `T<deliverable>.<n>` (`T4.2`), tracked as
-> `4.2`. Spec decisions are `D-1`…`D-25`, with a hyphen. Tests are `AT-T1`… and `AT-M1`….** `L4` is a
+> **Deliverables are `L0`…`L14`, with no hyphen. Tasks are `T<deliverable>.<n>` (`T4.2`), tracked as
+> `4.2`. Spec decisions are `D-1`…`D-31`, with a hyphen (a bare `D-32`/`D-33` is the Tasks spec's). Tests are `AT-T1`… and `AT-M1`….** `L4` is a
 > piece of work in this plan; `D-4` is the spec's search-purpose decision; `AT-T4` is a test. Every
 > agent prompt repeats this line.
 
@@ -21,7 +22,7 @@ The manager reads [DeliveryPlaybook.md](../../agents/DeliveryPlaybook.md) before
 2. [Ground rules every agent repeats](#2-ground-rules-every-agent-repeats)
 3. [Conventions](#3-conventions) - commands, code map, helpers, file ownership, the 90% zoom
 4. [Open points as applied](#4-open-points-as-applied)
-5. [Deliverables](#5-deliverables) - L0 to L13
+5. [Deliverables](#5-deliverables) - L0 to L14
 6. [Handoff prompt template](#6-handoff-prompt-template)
 7. [Retrospectives](#7-retrospectives)
 8. [Risks](#8-risks)
@@ -45,44 +46,47 @@ point. The open points are applied with their recommended defaults (§15, [§4](
 
 | Deliverable | Model | Spec sections | Tests it owns |
 | --- | --- | --- | --- |
-| L0 ADR-0052: a reference is text with a stable key | Sonnet | §13 D-11, D-13, D-14, D-16 | none |
+| L0 ADR-0053: a reference is text with a stable key | Sonnet | §13 D-11, D-13, D-14, D-16 | none |
 | L1 Contracts: `MessageReference` and `ChatMessage.References` | Haiku | §8.1, §8.3 | AT-T4 |
-| L2 Reference text, the Task id pattern and the scanner | Haiku | §6, §8.2 step 1, D-9, D-10 (parse half), D-19 | AT-T2, AT-T3 |
+| L2 Reference text, the Task id pattern and the scanner | Haiku | §6, §8.2 step 1, D-9, D-10 (parse half), D-19, D-26 | AT-T2, AT-T3 |
 | L3 Renderer: two link shapes and their classes | Sonnet | §7, D-10 | AT-T5 |
-| L4 Resolver and the snapshot on post | Sonnet | §8.2, §9.1 (lookups), D-12, D-13, OP-3, OP-6 | AT-T6, AT-T7 |
-| L5 Search: the Reference purpose, the picker parser and the picker's own search | Haiku | §5.1 (filters), §5.2, §5.5 (parse), D-3, D-4, D-5 | AT-T1, AT-T8, AT-T9 |
-| L6 Picker view model | Haiku | §5.3, §5.7, §11 (names and live text), D-6, D-22, D-23, D-25 | AT-T10 |
+| L4 Resolver and the snapshot on post | Sonnet | §8.2, §9.1 (lookups, with a Room's Scope and a Team's Team Room), D-12, D-13, D-28, OP-3, OP-6 | AT-T6, AT-T7 |
+| L5 Search: the Reference purpose, the picker parser and the picker's own search | Haiku | §5.1 (filters), §5.2, §5.5 (parse), D-3, D-4, D-5, D-27 (`RoomHit` Scope), D-29 (names only) | AT-T1, AT-T8, AT-T9 |
+| L6 Picker view model | Haiku | §5.3, §5.7, §11 (names and live text), D-6, D-22, D-23, D-25, D-27 | AT-T10 |
 | L7 Composer and script | Sonnet | §5.1, §5.4, §5.5, §6 (undo), §11, D-3, D-24, OP-4, OP-7, OP-8, OP-10 | AT-T11, AT-T12 |
 | L8 Picker list and the `/* References */` stylesheet block | Haiku | §5.3 (rows), §5.6, §7 step 4 (link style), §11 (roles), OP-5 | AT-T13, the list half of AT-T11 |
 | L9 Snapshot chips in the Room view | Haiku | §8.4, D-15 | AT-T14 |
-| L10 Options, Prompts and the header formatter | Haiku | §9.2, §9.3 (caps), §10, D-17, D-18, D-19, D-20 | AT-T15, AT-T16, AT-T18 |
+| L10 Options, Prompts and the header formatter | Haiku | §9.2, §9.3 (caps), §10, D-17, D-18, D-19, D-20, D-28 | AT-T15, AT-T16, AT-T18 |
 | L11 The header in `RoomSession` | Sonnet | §9.1, §9.3 (placement), traps.md (Command Turn) | AT-T17 |
-| L12 Docs, glossary, manual tests and the user guide | Haiku | §3, §10, §12.5, §16 (docs rows) | AT-M1 to AT-M10 written |
+| L12 Docs, glossary, manual tests and the user guide | Haiku | §3, §6.1 (user guide), §10, §12.5, §16 (docs rows) | AT-M1 to AT-M12 written |
 | L13 Integration and QA | Sonnet | §1, §12.5 | full suite, `Check-All`, AT-M run at 90% |
+| L14 Copy link for a Room | Haiku | §6.1, D-30, D-31 | AT-T19, AT-T20 |
 
 ### 1.3 Dependency graph and waves
 
 ```text
 Wave 0   L1 ─────────┐        L5 ──────────────┐        L0 (docs only, any time)
-                     ▼                         │
-Wave 1   L2 ─────────┼───────────────┐         │
+                     ▼                         │        (L2 needs L5's RoomHit fields too)
+Wave 1   L2 ◄────────┼─────────────────────────┤
+                     │───────────────┐         │
                      ▼               ▼         ▼
 Wave 2   L3          L4 ──────┐      L6 ◄──────┘
                      │        │      │
 Wave 3   L9 ◄────────┘   L10 ◄┘      L8 ◄── L6
                          │           │
 Wave 4                   L11         L7 ◄── L6, L8
-Wave 5   L7 + L9 + L11 ─► L12 ─► L13
+Wave 3   L14 ◄── L2, L3, L4 (Copy link; beside L8, L9, L10)
+Wave 5   L7 + L9 + L11 + L14 ─► L12 ─► L13
 ```
 
 | Wave | Runs in parallel | Starts when | Gate to leave the wave |
 | --- | --- | --- | --- |
 | 0 | L0, L1, L5 | Now | L1 and L5 merged; `dotnet build Huddle.slnx` and `dotnet test Huddle.slnx --` green |
-| 1 | L2 | L1 merged | Full suite green |
+| 1 | L2 | L1 and L5 merged | Full suite green |
 | 2 | L3, L4, L6 | L2 merged (L6 also needs L5) | Each merged one at a time in the order of [§3.4](#34-file-ownership-and-merge-order); full suite green; one Opus review of L4's `ChatService` diff |
 | 3 | L8, L9, L10 | L6 merged (L8); L4 merged (L9, L10) | Full suite green; L8's `app.css` diff checked against §5.6 |
 | 4 | L7, L11 | L8 merged (L7); L10 merged (L11) | Full suite green twice (UI and prompt work); AT-M9 smoke at 90%; one Opus review of L7 |
-| 5 | L12, then L13 | L7, L9, L11 merged | [§10](#10-verification-checklist) all ticked |
+| 5 | L12, then L13 | L7, L9, L11, L14 merged | [§10](#10-verification-checklist) all ticked |
 
 The critical path is **L1 → L2 → L6 → L8 → L7 → L12 → L13**. The prompt path L4 → L10 → L11 runs
 beside it and joins at L12.
@@ -93,14 +97,14 @@ Opus orchestrates (the manager, the L4 and L7 reviews and the retrospectives) an
 
 | | Haiku | Sonnet | Haiku share |
 | --- | --- | --- | --- |
-| Deliverables | L1, L2, L5, L6, L8, L9, L10, L12 = **8** | L0, L3, L4, L7, L11, L13 = **6** | **57%** (8 of 14) |
-| Size points (S = 1, M = 2, L = 3) | 8 × M = **16** | L0 S 1 + L7 L 3 + four M 8 = **12** | **57%** (16 of 28) |
-| Tasks | **31** | **22** | **58%** (31 of 53) |
+| Deliverables | L1, L2, L5, L6, L8, L9, L10, L12, L14 = **9** | L0, L3, L4, L7, L11, L13 = **6** | **60%** (9 of 15) |
+| Size points (S = 1, M = 2, L = 3) | 9 × M = **18** | L0 S 1 + L7 L 3 + four M 8 = **12** | **60%** (18 of 30) |
+| Tasks | **35** | **22** | **61%** (35 of 57) |
 
 Where the judgement sits, the work was cut so Haiku gets the specified half. The text rules (labels,
 escaping, addresses) and the scanner are pure functions with case tables (Haiku, L2); admitting them
 in the security-sensitive renderer is Sonnet's (L3). The snapshot is split into the lookups and the
-`ChatService` change (Sonnet, L4: a public constructor with 23 call sites and a post path under a
+`ChatService` change (Sonnet, L4: a public constructor with 27 call sites and a post path under a
 lock) and its display (Haiku, L9: a component with an exact table of states and strings). The header
 is split into the pure formatter, the options and the Prompt rows (Haiku, L10) and threading it into
 `RoomSession` through four constructors (Sonnet, L11). The picker is split into the pure view model
@@ -236,17 +240,17 @@ parameters). Everything else is `internal` and `sealed`. `Huddle.Tests` already 
 
 ### 3.3 Existing code the plan touches
 
-Line numbers taken on 2026-10-12 at `5fbaf5d`. Regenerate with `grep -n` when writing a prompt
+Line numbers taken on 2026-10-12 after PR #169 merged (`dc3408a`). Regenerate with `grep -n` when writing a prompt
 (DeliveryPlaybook: ranges go stale).
 
 | Thing | File (line) | What matters |
 | --- | --- | --- |
 | `ChatMessage` | `src/Huddle.Contracts/ChatMessage.cs:3` | Positional record `(Id, Timestamp, SenderId, SenderName, Text)`, no body |
-| On the wire | `src/Huddle.Contracts/Messages.cs:138` (`MessagePosted`), `:159` (`TranscriptTail`) | Additive field, version unchanged (traps.md *Adding to the wire*) |
+| On the wire | `src/Huddle.Contracts/Messages.cs:146` (`MessagePosted`), `:167` (`TranscriptTail`); `:20` `RoomInfo` | Additive field, version unchanged (traps.md *Adding to the wire*); PR #169 added an optional `Team` to `RoomInfo` and `MessagePosted` the same way, with literal-JSON tests in `ProtocolJsonTests` to copy |
 | JSON options | `src/Huddle.Contracts/ProtocolJson.cs:34-46` | camelCase, case-insensitive, `WhenWritingNull`, `JsonStringEnumConverter(CamelCase)` |
 | JSON tests | `tests/Huddle.Tests/Contracts/ProtocolJsonTests.cs:35` `Serialize_OmitsNulls`, `:67` literal JSON | The pattern for AT-T4 |
 | Transcript store | `src/Huddle.App/Data/FileChatStore.cs:39` (write), `:84`, `:153` (read); tests `tests/Huddle.Tests/Data/FileChatStoreTests.cs` | A line that fails to parse is skipped with a warning |
-| Posting | `src/Huddle.App/Services/ChatService.cs:146-156` (constructor, `timeProvider` last), `:239-305` `PostCoreAsync`, `:245-247` members and sender, `:249` the lock, `:269-272` Mentions and `new ChatMessage` | 23 `new ChatService(` call sites in `src/` and `tests/` |
+| Posting | `src/Huddle.App/Services/ChatService.cs:156-166` (constructor, `elicitations` then `timeProvider` last), `:249-315` `PostCoreAsync`, `:255-257` members and sender, `:260` the lock, `:279-282` Mentions and `new ChatMessage`, `:653` the Team Room rename refusal | **27** `new ChatService(` call sites in `src/` and `tests/` (PR #169 added `ChatServiceTests` cases) |
 | Mentions | `src/Huddle.App/Services/MentionParser.cs` `Parse(text, members, aliases)`, `IsBlockedBeforeAt`, `IsNameCharacter` | Unchanged by this plan |
 | Renderer | `src/Huddle.App/Services/MarkdownRenderer.cs:28` `CreateBuilder()` (internal), `:62` chat `ToHtml`, `:84-119` `Render`, `:178-280` Task links, `:488-533` Library paths and the code-span form, `:757-769` `RewriteUrl`, `:780-808` `IsSafe`, `:815-816` the private `TaskReferenceRegex` | Classes are added with `GetAttributes().AddClass`; no `UseAdvancedExtensions()` |
 | Library paths | `src/Huddle.App/Library/LibraryPathPatterns.cs:45` `Find(text)`, `:78` `TryMatchWhole(text, out path)` | Internal; the renderer and the collector share them |
@@ -254,20 +258,22 @@ Line numbers taken on 2026-10-12 at `5fbaf5d`. Regenerate with `grep -n` when wr
 | Library collector | `src/Huddle.App/Library/LibraryDocumentCollector.cs:50-162` | The scan the scanner mirrors for Library paths |
 | Tasks | `src/Huddle.App/Tasks/TaskStore.cs:147` `Get(TaskId)`, `:131` `All`; `TaskItem` `Id`, `Title`, `Status`, `Assignee`, `Location.Team`; `TaskState.ToWire()`; `src/Huddle.App/Tasks/Views/TaskQuery.cs:478` `Suggest(all, query, limit = 8)` | `TaskId.TryParse` |
 | Teams | `src/Huddle.App/Teams/ITeamCatalog.cs` `Teams`; `TeamSummary(Name, Projects, Members, HasFolder) { TeamType }`; `TeamTypes/TeamTypeCatalog.cs:96` `Find(id)?.DisplayName`; `Teams/TeamNames.cs:31` `ValidateTeamName(name, existing)` | A Team name may not contain `,`, `;`, `[`, `]`, `/`, `\`, nor start with `_` or `.` |
-| Rooms | `src/Huddle.App/Data/ITeamDirectory.cs` `GetRoomAsync`, `GetRoomMembersAsync`, `GetRoomsAsync`; `Data/Models.cs:7` | |
+| Rooms | `src/Huddle.App/Data/ITeamDirectory.cs` `GetRoomAsync`, `GetRoomMembersAsync`, `GetRoomsAsync`, `GetRoomsForTeamAsync(team)`, `FindTeamRoomAsync(team)`; `Data/Models.cs:7-28` `Room(Id, Name, Created) { Archived, Team, IsTeamRoom }` | A Room's Scope (ADR-0052): `Team` null is root; names repeat across Scopes; a Team Room is never renamed; `TeamRoomReconciler` archives a gone Team's Rooms. The address is `/rooms/{id}` for every Scope |
+| Turn label | `src/Huddle.App/Prompts/PromptCatalog.cs:223` `turn.roomLabel` (`[Room: {{roomName}} (id: {{roomId}}{{teamSuffix}})]`), `RoomSession.cs:2061` `RoomLabel`, `WorkItem.cs:68` `Team` | The shape the header's Room line follows (D-28) |
 | Ids | `src/Huddle.Contracts/NameRules.cs:24` `IsValidId` | |
 | Search | `src/Huddle.App/Search/SearchQuery.cs` (record), `SearchQueryParser.cs`, `SearchLimits.cs`, `SearchOrchestrator.cs:46` `SearchAsync(parse, openTeam)`, `:109-127` `RunAsync`, `:141` ranks; `SearchResultRanker.cs:13` `Rank(result, query)`; `RoomSearchProvider.cs:48` reads Transcripts; `LibrarySearchProvider.cs:71` `SearchTextAsync`; `TaskSearchProvider.cs:29` empty → nothing; `TeammateSearchProvider.cs:35` | `SearchQuery` is public |
-| Search DI | `src/Huddle.App/ServiceCollectionExtensions.cs:393-400` | Providers singletons, orchestrator **scoped** |
+| Search DI | `src/Huddle.App/ServiceCollectionExtensions.cs:401-408` (`:356` `LibraryDocumentCollector`, `:489` `TeamRoomReconciler`) | Providers singletons, orchestrator **scoped** |
+| Room hit | `src/Huddle.App/Search/SearchHit.cs` `RoomHit(RoomId, RoomName, MatchCount, MessageId, SenderName, Snippet, Time, IsArchivedRoom, Tier)` | No Team today; L5 adds two optional trailing fields |
 | Search tests | `tests/Huddle.Tests/Search/*` (`GatedSearchProvider.cs`, `SearchOrchestratorTests.cs`, `RoomSearchProviderTests.cs`, `SearchOptionsTests.cs`, `SearchDropdownModelTests.cs`) | Patterns for L5, L6, L10 |
 | Cards | `src/Huddle.App/Components/Search/SearchCard.razor` (`Hit`, `Phrase`); card classes `search-card`, `search-card-archived`, `search-card-title`, `search-card-meta`, `search-card-snippet`, `search-card-action` | Not edited |
-| Composer | `src/Huddle.App/Components/Shared/Composer.razor:10-55` markup, `:20-23` textarea ARIA, `:68-84` picker fields, `:141-164` `SendAsync`, `:172-226` `TaskQueryAsync`, `MoveAsync`, `PickAsync`, `OnPickClickAsync`; tests `tests/Huddle.Tests/Ui/ComposerTests.cs` | Drawn only by `Chat.razor:212` |
+| Composer | `src/Huddle.App/Components/Shared/Composer.razor:10-55` markup, `:20-23` textarea ARIA, `:68-84` picker fields, `:141-164` `SendAsync`, `:172-226` `TaskQueryAsync`, `MoveAsync`, `PickAsync`, `OnPickClickAsync`; tests `tests/Huddle.Tests/Ui/ComposerTests.cs` | Drawn only by `Chat.razor:215`; unchanged by PR #169 |
 | Composer script | `src/Huddle.App/wwwroot/app.js:1-160` `window.teamComposer`: `:45-93` keydown, `:95-117` input and the `#` regex at `:109`, `:119-131` blur, `:136-143` `send`, `:147-159` `insertTask` | Source facts pinned by `tests/Huddle.Tests/Ui/Tasks/AppJsSourceTests.cs` |
-| Stylesheet | `src/Huddle.App/wwwroot/app.css:19-41` (the zoom and its comment), `:844-900` `.composer*`, `:2718` `/* Global search */`; tests `tests/Huddle.Tests/Ui/Search/AppCssSearchTests.cs`, `Ui/ThemeSourceTests.cs` | **No rule styles `.composer-picker` today** |
+| Stylesheet | `src/Huddle.App/wwwroot/app.css:19-41` (the zoom and its comment), `:850-906` `.composer*`, `:2724` `/* Global search */`; tests `tests/Huddle.Tests/Ui/Search/AppCssSearchTests.cs`, `Ui/ThemeSourceTests.cs` | **No rule styles `.composer-picker` today** |
 | Room view | `src/Huddle.App/Components/Shared/MessageList.razor:54-56` (Human bubble), `:59-78` (Agent row), `:171-177` the resolvers | Rows render `MarkdownRenderer.ToHtml(...)` as a `MarkupString` |
-| Room Session | `src/Huddle.App/Acp/Sessions/RoomSession.cs:85` `libraryDocs` field, `:189` its constructor parameter, `:941-960` the Library collect, `:1027` `BuildPrompt` call, `:1694-1710` `BuildPrompt`, `:1771-1800` `BuildFramedPrompt`, `:1929` `AppendLibraryDocumentsBlock`, `:2037` `ChooseFence`; `WorkItem.cs:54-65` | The pattern L11 copies |
+| Room Session | `src/Huddle.App/Acp/Sessions/RoomSession.cs:85` `libraryDocs` field, `:189` its constructor parameter, `:941-960` the Library collect, `:1027` `BuildPrompt` call, `:1694-1710` `BuildPrompt`, `:1771-1800` `BuildFramedPrompt`, `:1929` `AppendLibraryDocumentsBlock`, `:2037` `ChooseFence`, `:2061` `RoomLabel`; `WorkItem.cs:55-68` (now ends with `string? Team = null`) | The pattern L11 copies; add `ReferencedItems` **after** `Team` |
 | The chain | `src/Huddle.App/Acp/PersonaSupervisor.cs:42`, `:92`; `PersonaRunner.cs:100`, `:147`; `Acp/Sessions/RoomSessionPool.cs:34`, `:87` | Each takes `LibraryDocumentCollector? libraryDocs = null` |
 | Tool prefix | `src/Huddle.App/Acp/DotAcpAgentHostFactory.cs:234`; `AdapterProfile.UsesToolNamePrefix`; `Acp/Tools/SkillGrants.cs:27`, `:39` | `list_teams`, `read_records` are Skill-gated |
-| Prompts | `src/Huddle.App/Prompts/PromptCatalog.cs:236-248` `turn.message`, `:424-436` `turn.libraryDocsHeader`; tests `tests/Huddle.Tests/Prompts/PromptCatalogTests.cs`, `tests/Huddle.Tests/Acp/PromptGoldenTests.cs` | `Regenerate-PromptDefaults.ps1`; `Reseed-Goldens.ps1` only when a golden changes on purpose |
+| Prompts | `src/Huddle.App/Prompts/PromptCatalog.cs:238-250` `turn.message`, `:425-437` `turn.libraryDocsHeader`; tests `tests/Huddle.Tests/Prompts/PromptCatalogTests.cs`, `tests/Huddle.Tests/Acp/PromptGoldenTests.cs` | `Regenerate-PromptDefaults.ps1`; `Reseed-Goldens.ps1` only when a golden changes on purpose |
 | Prompt tests | `tests/Huddle.Tests/Acp/Sessions/BuildPromptLibraryDeliveryTests.cs`, `BuildPromptCommandTests.cs` | Patterns for AT-T17 |
 | Options | `src/Huddle.App/TeamOptions.cs:53` `Search`; `src/Huddle.App/Search/SearchOptions.cs`; `tests/Huddle.Tests/Search/SearchOptionsTests.cs` | The pattern for `ReferencesOptions` |
 | Renderer tests | `tests/Huddle.Tests/Services/MarkdownRendererTests.cs`, `MentionParserTests.cs`, `ChatServiceTests.cs` | |
@@ -289,6 +295,7 @@ One editor per file at a time (DeliveryPlaybook, *Dispatching work*).
 | `src/Huddle.App/Components/Shared/Composer.razor`, `src/Huddle.App/wwwroot/app.js`, `tests/Huddle.Tests/Ui/Tasks/AppJsSourceTests.cs`, `tests/Huddle.Tests/Ui/ComposerTests.cs` | L7 only |
 | `src/Huddle.App/wwwroot/app.css` (**protected**) | L8 (creates `/* References */` and names the new `0.9` in the zoom comment), then L9 (adds the chip rules inside the block) |
 | `src/Huddle.App/Components/Shared/MessageList.razor` | L9 only |
+| `src/Huddle.App/Components/Pages/Chat.razor`, `src/Huddle.App/Components/Shared/RoomNavRow.razor` | L14 only |
 | `docs/**` | L0 (the ADR, Index §4, the spec header), L12 (everything else) |
 
 Wave 2 merges in the order L6, L3, L4; wave 3 in the order L8, L10, L9.
@@ -306,6 +313,8 @@ Wave 2 merges in the order L6, L3, L4; wave 3 in the order L8, L10, L9.
 | A Transcript | a real `FileChatStore` over `TempDataDir` (`Data/FileChatStoreTests.cs`) |
 | A gated provider | `Search/GatedSearchProvider.cs` |
 | A `ChatService` with real stores | `Services/ChatServiceTests.cs` setup |
+| Scoped Rooms and Team Rooms in a real database | `Data/SqliteTeamDirectoryTeamScopeTests.cs` setup (`CreateRoomAsync(name, members, team, teamRoom)`) |
+| A fake `ITeamDirectory` for bUnit, with scoped Rooms | `Ui/Teams/ScriptedRoomsDirectory.cs` (a `DispatchProxy`; implements PR #169's new members) |
 | A prompt from a `WorkItem` | `Acp/Sessions/BuildPromptLibraryDeliveryTests.cs` setup |
 | bUnit with MudBlazor | `Ui/MudBunitContext.cs`, disposed with `await using` |
 | `app.js` / `app.css` facts | `Ui/Tasks/AppJsSourceTests.cs`, `Ui/Search/AppCssSearchTests.cs`, `Ui/ThemeSourceTests.cs` |
@@ -335,8 +344,8 @@ answers otherwise, only the tasks named change.
 
 | OP | Applied default | Tasks it shapes |
 | --- | --- | --- |
-| OP-1 | Teams are linked by Name; a by-hand folder rename shows `(unavailable)` | T2.2, T4.2, T9.2 |
-| OP-2 | A Room's label is its Name at pick time | T2.2, T6.2 |
+| OP-1 | Teams are linked by Name (as Team chats keys Scope); a by-hand folder rename shows `(unavailable)`, and the reconciler archives the old Team's Rooms, which still open | T2.2, T4.2, T9.2 |
+| OP-2 | A Room's label is its Name at pick time, with its Scope (D-26); a Team Room is never renamed | T2.2, T4.3, T6.2, T9.2 |
 | OP-3 | Agents as senders are treated like the Human: snapshot and header | T4.3, T11.2 |
 | OP-4 | The `#` picker's keys; no chip keys | T7.3 |
 | OP-5 | Above the composer; `min(320px, calc(40vh / 0.9))`; inside the page zoom | T8.3 |
@@ -354,31 +363,34 @@ Each deliverable lists: model and reason, goal, *done when*, depends on, read li
 tasks, pitfalls and size. Each task names the pattern file to copy, the test names (each test's
 `///` summary is the sentence after the name, or a plain restatement of it) and how to verify it.
 
-### L0 ADR-0052: a reference is text with a stable key
+### L0 ADR-0053: a reference is text with a stable key
 
 - **Model:** Sonnet. An ADR states a trade and its consequences in the repo's voice.
 - **Goal:** record D-11, D-13, D-14 and D-16 as one decision: *a reference is text with a stable
   key; the snapshot is metadata of what the sender saw; Agents get a compact, fresh header*.
-- **Done when:** `docs/adr/0052-a-reference-is-text-with-a-stable-key.md` exists with status
+- **Done when:** `docs/adr/0053-a-reference-is-text-with-a-stable-key.md` exists with status
   `accepted`; `docs/Index.md` §4 has its row; the spec header links it; `Check-DocIndex.ps1` exits 0.
 - **Depends on:** none.
 - **Read:** `docs/adr/0051-search-keeps-no-index-of-its-own.md` (the template); spec §1, §6, §8, §9,
   §13 D-8, D-11 to D-18; traps.md *Adding to the wire*.
 - **Touch:** create the ADR; edit `docs/Index.md` §4; edit the spec's header line.
 
-#### T0.1 Write ADR-0052
+#### T0.1 Write ADR-0053
 
 Say what is rejected (a rich token or a hidden marker in the text; a snapshot as the source of
 Mentions; expanding history; inlining descriptions or Transcripts), and why: text survives paste,
 undo, Agents and old clients; the key in the text (a Task id, a Room id, a Team Name, a path) is
 what makes a rename harmless for Rooms and Tasks; the snapshot only reports. State the honest limits:
 Teams have no id (OP-1), a Library file has no id so a renamed file shows as unavailable (D-8). Name
-the wire rule (additive, version unchanged). Verify: links resolve; no trailing whitespace.
+the wire rule (additive, version unchanged). Add the consequence that one mechanism serves both
+doors: Copy link (D-30) puts the same reference text on the clipboard as plain text, so a paste is a
+reference with no second code path, and picker rows are always the things themselves, never Message
+text or file content (D-29). Verify: links resolve; no trailing whitespace.
 
 #### T0.2 Index and spec header
 
 Add the row to `docs/Index.md` §4 in the existing style (one sentence, `Accepted`). Change the spec
-header's "ADR-0052, … (to be written by the plan's L0)" to a link to the file. Run
+header's "ADR-0053, … (to be written by the plan's L0)" to a link to the file. Run
 `pwsh -NoProfile -File agents/scripts/Check-DocIndex.ps1`; it must exit 0.
 
 - **Pitfalls:** ADR-0003, ADR-0011 and ADR-0035 are current; link them, do not edit them.
@@ -481,8 +493,8 @@ Message with a reference, read both).
   and the scanner share), D-19.
 - **Done when:** `ReferenceTextTests` (AT-T2), `ReferenceScannerTests` (AT-T3) and
   `TaskIdPatternTests` green; full suite green.
-- **Depends on:** L1 (`ReferenceKind`).
-- **Read:** spec §6, §7 (the two shapes), §8.2 step 1; `src/Huddle.App/Services/MarkdownRenderer.cs:20-35`,
+- **Depends on:** L1 (`ReferenceKind`), L5 (`RoomHit.Team`, `RoomHit.IsTeamRoom`). Both are wave 0.
+- **Read:** spec §6 (with D-26), §7 (the two shapes), §8.2 step 1; `src/Huddle.App/Services/MarkdownRenderer.cs:20-35`,
   `:178-260`, `:488-533`, `:811-816`; `src/Huddle.App/Library/LibraryPathPatterns.cs:40-90`;
   `src/Huddle.App/Library/LibraryDocumentCollector.cs:141-162`; `src/Huddle.App/Teams/TeamNames.cs:25-60`;
   `src/Huddle.App/Search/SearchHit.cs`; `src/Huddle.App/Search/SearchHitLinks.cs` (the pattern for a
@@ -524,6 +536,10 @@ An `internal static class` with:
   (`'\uFF20'`); backslash-escape `\ [ ] ` * _` (in that set); collapse whitespace runs to one space
   and trim; cut to `MaxLabelChars` text elements (`StringInfo`) and append `…` (`'\u2026'`) when cut;
   empty → `Room` or `Team`.
+- `string RoomLabelFor(string roomName, string? team, bool isTeamRoom)` (D-26): the Team Room →
+  `LabelFor(team + " Team Room", Room)`; another scoped Room → `LabelFor(roomName + " (" + team + ")", Room)`;
+  root → `LabelFor(roomName, Room)`. The escaping applies to the whole composed text, so a Team or
+  Room Name with `@` or `[` is made safe either way.
 - `string RoomHref(string roomId)` → `/rooms/<id>`; `string TeamHref(string name)` →
   `/teams/` + `Uri.EscapeDataString(name)`.
 - `bool TryParseRoomHref(string url, [NotNullWhen(true)] out string? roomId)`: `/rooms/` prefix
@@ -532,15 +548,17 @@ An `internal static class` with:
   the remainder has no `/`, `?` or `#`; `Uri.UnescapeDataString` succeeds; the decoded name is not
   `new` (ignoring case), and `TeamNames.ValidateTeamName(decoded, [])` returns `null`.
 - `string? InsertFor(SearchHit hit)`: §6's table: `TeammateHit` → `@` + `Name`; `TaskHit` →
-  `Id.ToString()`; `RoomHit` → `[` + `LabelFor(RoomName, Room)` + `](` + `RoomHref` + `)`;
-  `TeamHit` → the same with `TeamHref`; `LibraryHit` → `null` (the full path is not on the hit;
+  `Id.ToString()`; `RoomHit` → `[` + `RoomLabelFor(RoomName, Team, IsTeamRoom)` + `](` + `RoomHref` + `)`;
+  `TeamHit` → `[` + `LabelFor(Name, Team)` + `](` + `TeamHref` + `)`; `LibraryHit` → `null` (the full path is not on the hit;
   L6 builds it, see T6.2). The trailing space is added by the script, not here.
 
 Tests, one per rule, names: `LabelFor_ReplacesAtWithFullwidthAt`, `LabelFor_EscapesMarkdownSpecials`
 (`[Theory]` over each of the six), `LabelFor_CollapsesWhitespace`, `LabelFor_CutsAt60TextElements`
 (an emoji at the boundary is not split), `LabelFor_EmptyBecomesRoomOrTeam`,
 `LabelFor_NeverMakesAMention` (build `[label](/rooms/x)` from `Q@Nova`, run
-`MentionParser.Parse` with a Member `Nova`: empty), `TeamHref_EscapesSpaces`,
+`MentionParser.Parse` with a Member `Nova`: empty), `RoomLabelFor_EachScope` (`[Theory]`: root
+`Nova` → `Nova`; scoped `Nova` in `Marketing` → `Nova (Marketing)`; Team Room of `Marketing` →
+`Marketing Team Room`), `TeamHref_EscapesSpaces`,
 `TryParseRoomHref_AcceptsOnlyAValidIdAndNothingElse` (`[Theory]` over `/rooms/abc`, `/rooms/../x`,
 `/rooms/a/b`, `/rooms/a?x=1`, `/rooms/a#f`, `/rooms/`), `TryParseTeamHref_Cases` (`[Theory]`:
 `Growth%20Ops` ok; `a%2Fb`, `new`, `NEW`, `_x`, `a%5Bb`, `%E0%A4%A` (bad escape) refused),
@@ -624,7 +642,7 @@ each non-image link whose `Url` passes either parser add `room-ref` or `team-ref
 
 ### L4 Resolver and the snapshot on post
 
-- **Model:** Sonnet. A change to `ChatService`'s public constructor (23 call sites) and its post path,
+- **Model:** Sonnet. A change to `ChatService`'s public constructor (27 call sites) and its post path,
   plus a resolver over four stores with feature flags.
 - **Goal:** §8.2, §9.1's lookups, D-12, D-13, OP-3, OP-6.
 - **Done when:** `ReferenceResolverTests` (AT-T6) and `ChatServiceReferenceSnapshotTests` (AT-T7)
@@ -643,7 +661,10 @@ each non-image link whose `Url` passes either parser add `room-ref` or `team-ref
 #### T4.1 Red
 
 AT-T6: `Resolve_Task_FreshTitleStatusAssigneeTeam`, `Resolve_Room_NameAndMemberCount`,
-`Resolve_Team_TypeAndMembers`, `Resolve_LibraryFile_ExistingOnly`, `Resolve_UnknownKeys_AreGone`,
+`Resolve_Room_ScopeAndTeamRoomFlag` (root, scoped, Team Room, built with
+`CreateRoomAsync(name, members, team, teamRoom)` as `SqliteTeamDirectoryTeamScopeTests` does),
+`Resolve_ArchivedRoomOfAGoneTeam_IsNotGone`, `Resolve_Team_TypeAndMembers`,
+`Resolve_Team_TeamRoomIdOrNone`, `Resolve_LibraryFile_ExistingOnly`, `Resolve_UnknownKeys_AreGone`,
 `Resolve_TasksDisabled_NoTaskResolved`, `Resolve_LibraryDisabled_NoFileResolved`. AT-T7:
 `HumanPost_GetsSnapshot`, `AgentPost_GetsSnapshot`, `NoReferences_ReferencesNullAndLineUnchanged`
 (read the JSONL bytes), `UnresolvedId_NotInSnapshot` (`UTF-8`), `Mentions_SameWithAndWithoutReferences`,
@@ -655,8 +676,10 @@ AT-T6: `Resolve_Task_FreshTitleStatusAssigneeTeam`, `Resolve_Room_NameAndMemberC
 with `Task<IReadOnlyList<ResolvedReference>> ResolveAsync(IReadOnlyList<ReferenceCandidate> candidates, CancellationToken ct)`,
 in candidate order. `ResolvedReference` is an abstract record with sealed subtypes:
 `ResolvedTask(TaskId Id, string Title, TaskState Status, string? Assignee, string Team)`,
-`ResolvedRoom(string Id, string Name, int MemberCount)`,
-`ResolvedTeam(string Name, string? TypeLabel, IReadOnlyList<string> Members)`,
+`ResolvedRoom(string Id, string Name, int MemberCount, string? Team, bool IsTeamRoom)` (from
+`Room.Team` and `Room.IsTeamRoom`; an Archived Room is still resolved),
+`ResolvedTeam(string Name, string? TypeLabel, IReadOnlyList<string> Members, string? TeamRoomId)`
+(from `directory.FindTeamRoomAsync(name, ct)`, archived or not),
 `ResolvedLibraryFile(string Path, string FileName)`, and `GoneReference(ReferenceKind Kind, string Key)`.
 A Task is gone when Tasks is enabled and `Get` is null; with Tasks disabled a Task candidate yields
 **nothing** (not gone); the same for the Library. A Team matches by Name ignoring case; its type is
@@ -666,7 +689,8 @@ A Task is gone when Tasks is enabled and `Get` is null; with Tasks disabled a Ta
 
 `public interface IReferenceSnapshotter { Task<IReadOnlyList<MessageReference>?> SnapshotAsync(string text, CancellationToken ct); }`
 and `internal sealed class ReferenceSnapshotter(ReferenceResolver resolver, ILogger<ReferenceSnapshotter> logger)`:
-scan, resolve, map per §8.1's table, drop `GoneReference`, empty → `null`; a thrown exception other
+scan, resolve, map per §8.1's table (a Room's `Label` is `ReferenceText.RoomLabelFor(Name, Team, IsTeamRoom)`,
+D-26), drop `GoneReference`, empty → `null`; a thrown exception other
 than `OperationCanceledException` is logged once and returns `null`. In `ChatService`, add
 `IReferenceSnapshotter? references = null` as the parameter **before** `TimeProvider? timeProvider = null`,
 then in `PostCoreAsync` after the sender check and **before** `semaphore.WaitAsync`:
@@ -691,7 +715,7 @@ the app once (`dotnet run --project src/Huddle.App` until `Now listening on`), t
 
 - **Model:** Haiku. A new enum and optional record parameter, three provider branches given as code,
   a pure parser with a case table, and a small owner class.
-- **Goal:** §5.1 (filters), §5.2, §5.5 (parse), D-3, D-4, D-5.
+- **Goal:** §5.1 (filters), §5.2, §5.5 (parse), D-3, D-4, D-5, and the Room hit's Scope (D-27).
 - **Done when:** `ReferenceQueryParserTests` (AT-T1), `ReferencePurposeProviderTests` (AT-T8) and
   `ReferenceSearchTests` (AT-T9) green; every existing `tests/Huddle.Tests/Search/*` and
   `Ui/Search/*` test green unchanged; full suite green.
@@ -704,7 +728,7 @@ the app once (`dotnet run --project src/Huddle.App` until `Now listening on`), t
   `SearchOrchestratorTests.cs:1-80`, `GatedSearchProvider.cs`.
 - **Touch:** create `src/Huddle.App/Search/SearchPurpose.cs`,
   `src/Huddle.App/References/ReferenceQueryParser.cs`, `ReferenceSearch.cs`; edit `SearchQuery.cs`,
-  `SearchOrchestrator.cs`, `SearchResultRanker.cs`, `RoomSearchProvider.cs`,
+  `SearchHit.cs` (`RoomHit` only), `SearchOrchestrator.cs`, `SearchResultRanker.cs`, `RoomSearchProvider.cs`,
   `LibrarySearchProvider.cs`, `TaskSearchProvider.cs`, `ServiceCollectionExtensions.cs`; tests in
   `tests/Huddle.Tests/References/`.
 
@@ -714,15 +738,29 @@ the app once (`dotnet run --project src/Huddle.App` until `Now listening on`), t
 **last** positional parameter of `SearchQuery`. Add an optional
 `SearchPurpose purpose = SearchPurpose.Box` to `SearchOrchestrator.SearchAsync(parse, openTeam, purpose)`
 and pass it into each `new SearchQuery(...)` in `RunAsync`. Nothing else in the orchestrator changes.
+Add `string? Team = null, bool IsTeamRoom = false` as the **last** positional parameters of
+`RoomHit` (after `Tier`), with `<param>` docs; do **not** pass `Team` to the base `SearchHit`'s
+`TeamName` (it stays `null`: Global Search's OP-4, a Room never ranks by Team).
 
 #### T5.2 Providers under `Reference`
 
-- `RoomSearchProvider`: when `query.Purpose == Reference`, match the Room name only (the same tier
-  rule it uses for a name today), never call `ReadAllAsync`; an empty phrase returns every Room of the
+**The mechanism is the `SearchQuery.Purpose` flag (D-29), never a second provider registration**:
+only `ReferenceSearch` sets `Reference`; the search box's orchestrator never does, so its Room and
+Library content search is byte-for-byte unchanged.
+
+- `RoomSearchProvider`: when `query.Purpose == Reference`, return **the Rooms themselves**: match the
+  Room name (the same tier rule it uses for a name today), and when the name does not match, the
+  Room's `Team` name at `MatchTier.NameContains`; **never call `ReadAllAsync`** (branch before the
+  Transcript loop, not after it); one hit per Room with `MatchCount = 0`, `MessageId`, `SenderName`,
+  `Snippet` and `Time` all `null`. An empty phrase returns every Room of the
   pass, newest `Created` first, each at `MatchTier.ExactName` (the tier `TeammateSearchProvider`
-  gives a browse, `:35-36`); the ranker keeps that order (below).
-- `LibrarySearchProvider`: under `Reference`, pass a content-off policy so no file is opened, and
-  drop folder hits.
+  gives a browse, `:35-36`); the ranker keeps that order (below). In **both** purposes, fill the
+  hit's `Team` and `IsTeamRoom` from `Room.Team` and `Room.IsTeamRoom` (`GetRoomsAsync` already
+  returns them since PR #169).
+- `LibrarySearchProvider`: under `Reference`, pass a content-off policy so **no file is opened**
+  (file-name matches only), and drop folder hits.
+- `TaskSearchProvider` keeps matching id, title and assignee: those are the Task's own fields, never
+  Message text.
 - `TaskSearchProvider`: under `Reference` with an empty phrase, return the Active pass as
   `TaskQuery.Suggest(all, "", limit: 8)` in that order (Archived pass empty).
 - `SearchResultRanker.Rank`: when `query.Purpose == Reference && query.Text.Length == 0`, return the
@@ -753,10 +791,16 @@ Register **transient**. Tests (AT-T9): `PickerSearch_DoesNotCancelTheBoxSearch` 
 #### T5.5 Provider tests (AT-T8)
 
 `ReferencePurposeProviderTests`: `Rooms_Reference_NeverReadsATranscript` (hold the Transcript file
-open with `FileShare.None`; the Room is still found by name), `Rooms_Reference_EmptyBrowsesNewestFirst`,
-`Library_Reference_NoContentHitNoFolder`, `Library_Reference_UnderThree_Empty`,
+open with `FileShare.None`; the Room is still found by name),
+`Rooms_Reference_MessageTextMatchOnly_IsAbsent` (a Room whose Messages contain `login` and whose
+name does not), `Rooms_Reference_NameMatch_WithEmptyTranscript_IsPresent`,
+`Rooms_Reference_MatchedByTeamName`, `Rooms_Reference_HitHasNoCountSnippetOrMessageId`,
+`Rooms_Box_StillMatchesMessageText` (the same data, box purpose), `Rooms_Reference_EmptyBrowsesNewestFirst`,
+`Library_Reference_NoContentHitNoFolder` (a file whose text holds the phrase and whose name does not
+is absent), `Library_Box_StillMatchesContent`, `Library_Reference_UnderThree_Empty`,
 `Tasks_Reference_EmptyIsSuggestOrder`, `Ranker_ReferenceEmpty_KeepsProviderOrder`,
-`Ranker_ReferenceNonEmpty_RanksAsBox`, `Box_Unchanged` (one existing query per provider gives the
+`Ranker_ReferenceNonEmpty_RanksAsBox`, `Rooms_BothPurposes_CarryTeamAndTeamRoomFlag` (a root Room,
+a scoped Room and a Team Room), `RoomHit_TeamNameStaysNull`, `Box_Unchanged` (one existing query per provider gives the
 same hits with `Purpose` omitted).
 
 - **Pitfalls:** adding `Purpose` **last** with a default keeps every `new SearchQuery(...)` compiling;
@@ -791,6 +835,11 @@ Group order `Teammates, Tasks, Rooms, Teams, Library` then the second-pass `Clos
 `Archived Rooms`. Caps: All 5 per group (already cut by the orchestrator); a single filter 8 Tasks,
 20 otherwise. Teammates: Members (by `MemberNames`, ignoring case) first, then others, stable; under
 `InviteCommand` non-Members first; a non-Member row `Dimmed = true`, `Note = "Not in this Room"`.
+Rooms (D-27): a `RoomHit` with `IsTeamRoom` gets `Note = "Team Room · <Team>"`, one with only a
+`Team` gets `Note = "<Team>"`, a root one none; the Team hit and its Team Room are separate rows in
+the Teams and Rooms groups. A Room row never reads `MessageId`, `Snippet` or `MatchCount` (D-29):
+its insert is `[label](/rooms/<id>)` and never the Room jump's `?message=`; do not call
+`SearchHitLinks.UrlFor` for it.
 `InsertText`: `ReferenceText.InsertFor(hit)`, and for a `LibraryHit` the root's full path joined
 with the relative path (`Path.Combine` of the root's full path and the relative path's segments) in
 a code span, the root path taken from `LibraryRootPaths` keyed by root id (L7 fills it from
@@ -798,7 +847,7 @@ a code span, the root path taken from `LibraryRootPaths` keyed by root id (L7 fi
 Strings: §5.7 exactly (`Nothing matches '@<token>'.`, `No task matches '#<token>'`,
 `Type 3 characters to search the Library.`, the footer, `1 result`/`<n> results`/`No results`).
 `HighlightIndex` clamps into the selectable rows. Row ids: `<listboxId>-<n>` with invariant
-formatting. `AccessibleName`: the card's own text plus `, Not in this Room` when dimmed.
+formatting. `AccessibleName`: the card's own text plus `, ` and the `Note` when there is one.
 
 #### T6.3 Tests (AT-T10)
 
@@ -806,7 +855,10 @@ formatting. `AccessibleName`: the card's own text plus `, Not in this Room` when
 `Build_InviteCommand_NonMembersFirst`, `Build_NonMember_DimmedWithNote`, `Build_EmptyTexts` (`[Theory]`
 over the three empty strings), `Build_Footer`, `Build_LiveText` (`[Theory]` 0, 1, 7),
 `Build_InsertText_EachKind`, `Build_LibraryInsert_IsCodeSpanFullPath`, `Build_Highlight_Clamped`,
-`Build_SecondPass_AfterActiveGroups`.
+`Build_SecondPass_AfterActiveGroups`, `Build_RoomNote_EachScope` (`[Theory]`: root none, scoped
+`Marketing`, Team Room `Team Room · Marketing`), `Build_TeamAndItsTeamRoom_AreTwoRows`,
+`Build_RoomHitWithMessageId_InsertHasNoMessageQuery` (a box-style hit with a `MessageId` still
+inserts the bare `/rooms/<id>` link).
 
 - **Pitfalls:** this is pure: no services, no `TimeProvider`; copy `SearchDropdownModel`'s shape so
   the two read alike; a `[Parameter]` of these records requires them public (rules.md), the input
@@ -957,15 +1009,18 @@ to the comment above `html { zoom: 0.9 }` that lists every `0.9`. Tests: `Picker
 
 `NoSnapshot_RendersNothing`, `AllUnchanged_RendersNothing`, `TaskStatusOnlyChanged_RendersNothing`,
 `GoneTask_DimmedChipWithTooltip`, `GoneRoom_…`, `GoneTeam_…`, `GoneFile_…` (each tooltip string
-exact), `RenamedRoom_ChangedChipLinksToRoom`, `RetitledTask_ChangedChip`, `ThrowingResolver_RendersNothing`.
+exact), `RenamedRoom_ChangedChipLinksToRoom`, `ScopedRoomUnchanged_RendersNothing` (the snapshot's
+`Nova (Marketing)` against the same Room now), `ArchivedRoom_RendersNothing`, `RetitledTask_ChangedChip`,
+`ThrowingResolver_RendersNothing`. Use `Ui/Teams/ScriptedRoomsDirectory.cs` for the directory.
 
 #### T9.2 `MessageReferences.razor`
 
 `[Parameter, EditorRequired] public required ChatMessage Message`. On parameters set (only when the
 Message id changes), when `Message.References` is non-empty: build candidates from the snapshot
 (kind, key), `await resolver.ResolveAsync(...)` inside `try`/`catch (Exception ex) when (ex is not OperationCanceledException)`
-(log, render nothing), and compute per entry: **Gone** (`GoneReference`), **Changed** (Room Name or
-Task title differs from `Label`/`Title`, ordinal), else nothing. Render, only when any chip,
+(log, render nothing), and compute per entry: **Gone** (`GoneReference`), **Changed**
+(`ReferenceText.RoomLabelFor(room.Name, room.Team, room.IsTeamRoom)` differs from `Label`, or a
+Task's title differs from `Title`, ordinal), else nothing. An Archived Room is not gone (spec §8.4). Render, only when any chip,
 `<div class="message-references">` with `MudChip` per entry: gone →
 `<MudChip T="string" Disabled="true" Class="message-reference-gone">@($"{label} (unavailable)")</MudChip>`
 wrapped in a `title` of §8.4's sentence; changed → a chip whose content is an `<a href>` to
@@ -988,13 +1043,14 @@ deleted Room, and check the chip once.
 
 - **Model:** Haiku. An options class copied from `SearchOptions`, eight Prompt rows given verbatim,
   and a pure formatter with every rule listed.
-- **Goal:** §9.2, §9.3 (caps), §10, D-17 to D-20.
+- **Goal:** §9.2, §9.3 (caps), §10, D-17 to D-20, D-28.
 - **Done when:** `ReferencesOptionsTests` (AT-T15), `ReferencedItemsFormatterTests` (AT-T16) and the
   new `PromptCatalogTests` rows (AT-T18) green; `prompts.default.json` regenerated; `PromptGoldenTests`
   green **unchanged** (no golden may change in L10); full suite green.
 - **Depends on:** L2, L4 (`ResolvedReference`).
 - **Read:** spec §9, §10; `src/Huddle.App/Search/SearchOptions.cs`; `TeamOptions.cs:30-56`;
-  `tests/Huddle.Tests/Search/SearchOptionsTests.cs`; `PromptCatalog.cs:236-262`, `:420-465`;
+  `tests/Huddle.Tests/Search/SearchOptionsTests.cs`; `PromptCatalog.cs:220-264` (`turn.roomLabel` and
+  `turn.message`), `:420-465`;
   `tests/Huddle.Tests/Prompts/PromptCatalogTests.cs:1-80`; `RoomSession.cs:2030-2060` (`ChooseFence`).
 - **Touch:** create `src/Huddle.App/References/ReferencesOptions.cs`,
   `ReferencedItemsFormatter.cs`; edit `TeamOptions.cs`, `PromptCatalog.cs`,
@@ -1023,7 +1079,8 @@ Run `Regenerate-PromptDefaults.ps1`. Tests: `ReferencePrompts_Exist_WithRequired
 line; one line per item (skip `ResolvedLibraryFile`), each value through `Quote(value)` =
 `JsonSerializer.Serialize(Cut(value, MaxValueChars))` (a `private static readonly JsonSerializerOptions`
 with `JavaScriptEncoder.UnsafeRelaxedJsonEscaping`, so `—` stays readable; see traps.md on
-`ProtocolJson`'s encoder); a Team's members as `Quote(string.Join(", ", first 8))` plus
+`ProtocolJson`'s encoder); a Room's `{{scope}}` as `Team ` + `Quote(team)`, `Team Room of ` +
+`Quote(team)`, or `root` (D-28); a Team's `{{teamRoom}}` as its Team Room id or `none`; a Team's members as `Quote(string.Join(", ", first 8))` plus
 ` and N more` outside the quotes; lines added while their running total stays within `maxChars`;
 `turn.referencesMore` with the count of items not written plus `totalCandidates - items.Count`; the
 closing fence; then `turn.referencesHint`, plus a space and `turn.referencesTaskHint` when a Task line
@@ -1032,7 +1089,8 @@ was written and `getTaskTool` is not null. The fence: copy `ChooseFence`'s rule 
 `Format_EachKind_ExactLines`, `Format_QuotesAndEscapes`, `Format_TitleWithFence_GetsLongerFence`,
 `Format_Cuts120`, `Format_TeamMembers_Cut8`, `Format_MaxChars_CountsTheRest`,
 `Format_LibraryOnly_ReturnsNull`, `Format_Gone_Line`, `Format_TaskHint_OnlyWithTaskAndTool`,
-`Format_UnprefixedToolNames`.
+`Format_UnprefixedToolNames`, `Format_RoomScope_EachScope` (`[Theory]`: root, `Team "Marketing"`,
+`Team Room of "Marketing"`), `Format_Team_TeamRoomIdOrNone`.
 
 #### T10.4 Verify
 
@@ -1080,7 +1138,8 @@ down the chain exactly beside `LibraryDocumentCollector? libraryDocs = null`
 
 #### T11.3 `RoomSession`
 
-Add `string? ReferencedItems = null` to `WorkItem`. In `ProcessWorkItemAsync`, right after the Library
+Add `string? ReferencedItems = null` to `WorkItem` as its **last** parameter, after PR #169's
+`string? Team = null`. In `ProcessWorkItemAsync`, right after the Library
 collect block and only for `WorkItemKind.Message`, call
 `ExpandAsync(item.Text, this.host?.Profile.UsesToolNamePrefix ?? true, ct)` inside the same
 `try`/`catch (Exception ex) when (ex is not OperationCanceledException)` shape, logging
@@ -1117,8 +1176,10 @@ Human alike (OP-3).
 
 #### T12.1 Manual tests
 
-Create `at-tagging.md` in `global-search.md`'s format, tests `ATTAG-01` to `ATTAG-10`, one per AT-M1
-to AT-M10 in order, each naming its AT-M id in its heading. AT-M9 gives the exact check: open
+Create `at-tagging.md` in `global-search.md`'s format, tests `ATTAG-01` to `ATTAG-12`, one per AT-M1
+to AT-M12 in order (AT-M11: the picker lists Rooms and Library files by name, never by Message text
+or file content; AT-M12: Copy link from the header, the sidebar row and a Team Room, paste, send,
+click, rename, and the non-secure-context fallback, opening the app over a LAN address), each naming its AT-M id in its heading. AT-M9 gives the exact check: open
 DevTools, open the picker with a long list, compare
 `document.querySelector('.composer-picker').getBoundingClientRect().height` with
 `Math.min(320 * 0.9, 0.4 * window.innerHeight)` (equal within a few pixels when the list is long),
@@ -1132,17 +1193,22 @@ Add **Referencing things in a Message** under *Chatting in Rooms*, after *What h
 a message*: `@` and what it finds; the prefixes; `#` for Tasks; what each pick writes (§6's table,
 in the Human's words); that a Teammate picked is addressed exactly as typing `@Name`; the `Not in this
 Room` note and `/invite @`; the unavailable and changed chips; that Agents are told what a reference
-is when you send it, and that `Team:References:ExpandInPrompt` turns that off. Words: reference,
-never tag.
+is when you send it, and that `Team:References:ExpandInPrompt` turns that off. Then **Copying a
+Room's link** (§6.1): the link button in the Room header and *Copy link* in a sidebar Room's `…` or
+right-click menu, under Chats and under a Team; what is copied (the same text the picker writes);
+pasting it in another Room; that an address-bar URL opens the Room but is not a reference. Words:
+reference, never tag.
 
 #### T12.3 Reference pages
 
 `code-map.md`: a `References/` block (one row per file L2 to L11 created) and
 `Components/References/`. `Huddle.EngineeringGuide.md`: the two `References:` rows of spec §10 after
 the `Search:` rows. `known-limits.md`: a renamed or moved Library file referenced in chat shows as
-unavailable (D-8); a Task's status change is not flagged; Teams are linked by Name (OP-1). Spec header:
-`**Status:** Built <date>`. `docs/Index.md` §2: a row for the feature with the spec, the plan,
-ADR-0052, the manual tests and the status; §1: a task row ("Reference something in a Message…").
+unavailable (D-8); a Task's status change is not flagged; Teams are linked by Name, so a by-hand
+Team folder rename makes its Team links unavailable while its Rooms, archived by the reconciler,
+still open by id (OP-1). Spec header: `**Status:** Built <date>`. `docs/Index.md`: update the
+existing §2 row (ADR-0053 linked, manual tests `at-tagging`, status *Built*) and the §1 task row;
+add ADR-0053 to §4 if L0 has not.
 
 #### T12.4 Glossary
 
@@ -1207,10 +1273,73 @@ label's `@` replacement, the snapshot's drop of unresolved ids, the header's tri
 
 #### T13.4 Manual run
 
-Run ATTAG-01 to 10 (AT-M1 to AT-M10) in Chrome and Edge at the 90% zoom and record each in
+Run ATTAG-01 to 12 (AT-M1 to AT-M12) in Chrome and Edge at the 90% zoom and record each in
 `tracker.md`; record AT-M7's header text as seen on the wire.
 
 - **Size:** M · 4 tasks · 60 calls · 6M to 9M tokens.
+
+### L14 Copy link for a Room
+
+- **Model:** Haiku. Two buttons that call one existing JS helper with text another deliverable
+  already builds, a snackbar pattern to copy, and exact strings; no new script, no CSS.
+- **Goal:** spec §6.1, D-30, D-31: the Room header's Copy link button and the `RoomNavRow` menu item,
+  copying the picker's own Room reference as plain text.
+- **Done when:** `RoomCopyLinkTests` (AT-T19) and `PastedReferenceTests` (AT-T20) green; the existing
+  `ChatPageTests`, `RoomListTests` and `TeamsNavTests` green unchanged; full suite green; the copy
+  checked once in the running app.
+- **Depends on:** L2 (`ReferenceText.RoomLabelFor`, `RoomHref`), L3 (the pasted link renders), L4 (the
+  snapshot AT-T20 asserts).
+- **Read:** spec §6, §6.1; `src/Huddle.App/wwwroot/app.js:365-379` (`huddleClipboard`, read only);
+  `src/Huddle.App/Components/Tasks/TaskDetail.razor:1077-1112` (`CopyIdAsync`, `ShowCopyToast`: the
+  pattern); `src/Huddle.App/Components/Pages/Chat.razor:25-64` (the header, the Rename pencil and
+  `isTeamRoom`); `src/Huddle.App/Components/Shared/RoomNavRow.razor` (whole; the menu at `:36-53`, the
+  right-click at `:20-21`, `:80-90`); `tests/Huddle.Tests/Ui/ChatPageTests.cs:1-80`,
+  `tests/Huddle.Tests/Ui/RoomListTests.cs:1-60`; `tests/Huddle.Tests/Ui/Teams/ScriptedRoomsDirectory.cs`.
+- **Touch:** create `src/Huddle.App/References/RoomLinkText.cs`; edit `Chat.razor`,
+  `RoomNavRow.razor`; create `tests/Huddle.Tests/Ui/References/RoomCopyLinkTests.cs`,
+  `tests/Huddle.Tests/References/PastedReferenceTests.cs`. **`app.js` is not edited.**
+
+#### T14.1 Red (AT-T19, AT-T20)
+
+`RoomCopyLinkTests` (bUnit, `JSInterop` set up so `huddleClipboard.copy` returns `true` or `false`
+and records its argument): `Header_CopiesThePickersInsertText` (`[Theory]`: root `Nova` →
+`[Nova](/rooms/<id>)`; scoped → `[Nova (Marketing)](/rooms/<id>)`; Team Room →
+`[Marketing Team Room](/rooms/<id>)`; `Q@A [x]` → `[Q＠A \[x\]](/rooms/<id>)`),
+`Header_ButtonShownOnATeamRoom`, `Header_Success_Snackbar` (`Copied link to Nova`),
+`Header_Failure_Snackbar` (`Couldn't copy the link.`), `NavRow_MenuHasCopyLinkFirst`,
+`NavRow_CopyLink_CopiesTheSameText` (once in `RoomList`, once in `TeamsNav` under a Team),
+`Copy_CallsTheHelperExactlyOnce`. `PastedReferenceTests` (real `ChatService`):
+`PastedRoomReference_SnapshotEqualsPickedOne`, `BareAbsoluteRoomUrl_IsNotAReference`.
+
+#### T14.2 `RoomLinkText` and the header button
+
+`internal static class RoomLinkText { public static string For(Room room) => string.Concat("[", ReferenceText.RoomLabelFor(room.Name, room.Team, room.IsTeamRoom), "](", ReferenceText.RoomHref(room.Id), ")"); }`
+(no trailing space; the picker's script adds that). In `Chat.razor`'s header, after the Rename
+block and outside its `@if (!this.isTeamRoom)`, add
+`<MudTooltip Text="Copy link"><MudIconButton Icon="@Icons.Material.Filled.Link" Size="Size.Small" aria-label="Copy link to this Room" OnClick="this.CopyLinkAsync" /></MudTooltip>`.
+`CopyLinkAsync` calls `this.JS.InvokeAsync<bool>("huddleClipboard.copy", RoomLinkText.For(this.room))`
+**first**, with no `await` before it, then the snackbar exactly as `ShowCopyToast` does (key `copy`;
+`Copied link to {room.Name}` success, `Couldn't copy the link.` warning). Inject `ISnackbar` if the page
+does not already.
+
+#### T14.3 The `RoomNavRow` menu item
+
+Add `<MudMenuItem OnClick="this.CopyLinkAsync">Copy link</MudMenuItem>` as the **first** item of the
+existing menu (above Archive and Delete); it is not disabled by `busy`. The same `CopyLinkAsync`
+shape as T14.2. Because `RoomList` and `TeamsNav` both draw `RoomNavRow`, this one edit covers root
+Rooms, scoped Rooms and the Team Room under its Team, by the `…` button and by right-click.
+
+#### T14.4 Verify and smoke
+
+Full suite; start the app, copy from a header and from a sidebar row, paste into another Room's
+Composer, send, click the link; note the result in the report.
+
+- **Pitfalls:** an `await` before the clipboard call can lose the user activation in some browsers
+  (Tasks spec warning); do not add a new JS function (`huddleClipboard.copy` already falls back
+  outside a secure context); do not copy an absolute URL or HTML (D-30); the snackbar shows the plain
+  Room Name, never the Markdown label; `RoomNavRow`'s menu is opened programmatically on right-click,
+  so test the item through the menu, not by a separate handler.
+- **Size:** M · 4 tasks · about 13 tests · 40 calls · 2M to 3M tokens.
 
 ---
 
@@ -1227,7 +1356,7 @@ and report. (Delete this paragraph for L0 and L12, which have no red.)
 You are a <Haiku|Sonnet> implementer on the References (@ tagging) delivery in
 E:\Repos\Huddle-wt\<ln> (your worktree; never touch another). Deliverable <Ln>: <title>.
 
-Deliverables are L0..L13 (no hyphen); tasks are T<n>.<m>; spec decisions are D-1..D-25 (hyphen);
+Deliverables are L0..L14 (no hyphen); tasks are T<n>.<m>; spec decisions are D-1..D-31 (hyphen);
 tests are AT-T<n> and AT-M<n>. Do not confuse them. The word is reference, never tag. A Turn is an
 Agent's reply and nothing else. The mcp__team__ prefix and the Team: config root are never renamed.
 The UI is drawn at 90%: read plan §3.6 before any CSS or layout.
@@ -1285,9 +1414,9 @@ Apply the findings (FACT, BRIEF, PLAN, SCRIPT) before the next dispatch.
 | RK3 | **The wire and the JSONL.** A sixth positional parameter, a renamed property or a version bump would break old Transcripts or every client (traps.md) | L1 adds an `init` property only; AT-T4 pins the literal JSON and reads a pre-change line; the ground rules forbid a version bump without asking |
 | RK4 | **Prompt drift.** A new block that writes even a blank line when empty moves every golden prompt | L10 must leave `PromptGoldenTests` unchanged; L11's `NoReferences_ByteIdentical` and `ExpandInPromptFalse_ByteIdentical`; the header is skipped, not emptied |
 | RK5 | **`IsSafe` widened too far.** A relative URL allowlist is an XSS surface for agent-written Markdown | One parser in `ReferenceText` used by both the scanner and `IsSafe`; L3 is Sonnet with a red of refused shapes; a mutation proof in T13.3 |
-| RK6 | **`ChatService`'s 23 call sites** and its post path latency | A defaulted parameter before `timeProvider`; only positional `timeProvider` callers change; lookups outside the lock; an Opus review of the diff |
+| RK6 | **`ChatService`'s 27 call sites** and its post path latency | A defaulted parameter before `timeProvider`; only positional `timeProvider` callers change; lookups outside the lock; an Opus review of the diff |
 | RK7 | **The 90% zoom and the protected `app.css`.** A `zoom` on the picker or a bare `40vh` misplaces it or makes it 36% high, and no test runs layout | §3.6 and spec §5.6 fix the rules; AT-T13 pins them as source facts; L7 and L13 measure AT-M9 in a browser; L8 and L9 announce their `app.css` edits |
-| RK8 | **An honest limit read as a bug.** A renamed Library file referenced in chat shows as unavailable; the owner's brief expected rename safety | Spec D-8 explains it; L12 writes it into `known-limits.md`; ADR-0052 states it |
+| RK8 | **An honest limit read as a bug.** A renamed Library file referenced in chat shows as unavailable; the owner's brief expected rename safety | Spec D-8 explains it; L12 writes it into `known-limits.md`; ADR-0053 states it |
 
 ---
 
@@ -1297,21 +1426,21 @@ Ids are `<deliverable number>.<task>`, the form `Set-Tracker.ps1` updates:
 `pwsh -NoProfile -File agents/scripts/Set-Tracker.ps1 -Task "4.3" -State Done -TrackerPath docs/engineering/at-tagging-plan.md`.
 `(H)` is Haiku, `(S)` is Sonnet.
 
-**Status:** 0 of 53 tasks Done · 0 of 2 retrospectives done · last updated 2026-10-12.
+**Status:** 0 of 57 tasks Done · 0 of 2 retrospectives done · last updated 2026-10-12.
 
 | **Deliverable / Task** | **Model** | **Depends on** | **Active** | **In Progress** | **Done** |
 | --- | --- | --- | --- | --- | --- |
-| **L0 ADR-0052: a reference is text with a stable key** | Sonnet | none | | | |
-| 0.1 Write ADR-0052 (S) | Sonnet | none | | | |
+| **L0 ADR-0053: a reference is text with a stable key** | Sonnet | none | | | |
+| 0.1 Write ADR-0053 (S) | Sonnet | none | | | |
 | 0.2 Index and spec header (S) | Sonnet | 0.1 | | | |
 | **L1 Contracts: `MessageReference` and `ChatMessage.References`** | Haiku | none | | | |
 | 1.1 The two types (H) | Haiku | none | | | |
 | 1.2 `ChatMessage.References` (H) | Haiku | 1.1 | | | |
 | 1.3 JSON tests, AT-T4 (H) | Haiku | 1.2 | | | |
 | 1.4 Transcript round trip (H) | Haiku | 1.2 | | | |
-| **L2 Reference text, the Task id pattern and the scanner** | Haiku | L1 | | | |
+| **L2 Reference text, the Task id pattern and the scanner** | Haiku | L1, L5 | | | |
 | 2.1 Limits, candidate, `TaskIdPattern` (H) | Haiku | L1 | | | |
-| 2.2 `ReferenceText`, AT-T2 (H) | Haiku | 2.1 | | | |
+| 2.2 `ReferenceText`, AT-T2 (H) | Haiku | 2.1, L5 | | | |
 | 2.3 `ReferenceScanner`, AT-T3 (H) | Haiku | 2.2 | | | |
 | 2.4 Verify (H) | Haiku | 2.3 | | | |
 | **L3 Renderer: two link shapes and their classes** | Sonnet | L2 | | | |
@@ -1363,6 +1492,11 @@ Ids are `<deliverable number>.<task>`, the form `Set-Tracker.ps1` updates:
 | 12.3 Reference pages (H) | Haiku | L7, L9, L11 | | | |
 | 12.4 Glossary (H) | Haiku | none | | | |
 | 12.5 Checks (H) | Haiku | 12.1 to 12.4 | | | |
+| **L14 Copy link for a Room** | Haiku | L2, L3, L4 | | | |
+| 14.1 Red, AT-T19 and AT-T20 (H) | Haiku | L2, L4 | | | |
+| 14.2 `RoomLinkText` and the header button (H) | Haiku | 14.1 | | | |
+| 14.3 The `RoomNavRow` menu item (H) | Haiku | 14.2 | | | |
+| 14.4 Verify and smoke (H) | Haiku | 14.3 | | | |
 | **L13 Integration and QA** | Sonnet | L12 | | | |
 | 13.1 Full suite three times (S) | Sonnet | L12 | | | |
 | 13.2 Branch checks (S) | Sonnet | 13.1 | | | |
@@ -1389,8 +1523,10 @@ Ids are `<deliverable number>.<task>`, the form `Set-Tracker.ps1` updates:
   unchanged and green.
 - [ ] `TopBar.razor`, `SearchBar.razor`, `SearchCard.razor` and the five cards unchanged.
 - [ ] Mutation proofs (T13.3) all `CAUGHT`.
-- [ ] ATTAG-01 to 10 run in Chrome and Edge at 90%, results in `tracker.md`; AT-M9's height measured.
-- [ ] ADR-0052 written; glossary entries added; user guide, code map, engineering guide, known limits
+- [ ] ATTAG-01 to 12 run in Chrome and Edge at 90%, results in `tracker.md`; AT-M9's height measured;
+  AT-M11 shows no picker row from Message text or file content; AT-M12's copied text pastes as a
+  reference.
+- [ ] ADR-0053 written; glossary entries added; user guide, code map, engineering guide, known limits
   and Index updated; `Check-DocIndex.ps1` and `Check-ManualTests.ps1` exit 0.
 - [ ] The open points OP-1 to OP-10 confirmed by the owner, or listed in the PR body as applied
   defaults.
