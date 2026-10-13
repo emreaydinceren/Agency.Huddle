@@ -8,7 +8,7 @@
    </summary> *@
 @using Agency.Huddle.App.Acp
 
-<span class="agent-dot @StatusDot.StatusClass(this.State)" title="@StatusDot.StatusClass(this.State)"></span>
+<span class="agent-dot @StatusDot.StatusClass(this.State)" role="img" aria-label="@StatusDot.Label(this.State)" title="@StatusDot.Label(this.State)"></span>
 
 @code {
     /// <summary>The Persona state this dot renders.</summary>
@@ -23,5 +23,15 @@
         PersonaState.Online => "online",
         PersonaState.Degraded => "degraded",
         _ => "offline",
+    };
+
+    /// <summary>The words for <paramref name="state"/>: this dot's accessible name and its title (UX-V08). U6 T6.1 red placeholder.</summary>
+    /// <param name="state">The state to label.</param>
+    internal static string Label(PersonaState state) => state switch
+    {
+        PersonaState.Starting => "Starting",
+        PersonaState.Online => "Online",
+        PersonaState.Degraded => "Degraded",
+        _ => "Offline",
     };
 }

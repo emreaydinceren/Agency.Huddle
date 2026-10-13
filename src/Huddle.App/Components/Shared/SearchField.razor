@@ -1,0 +1,34 @@
+@*
+    The one search field every surface uses (design-system "House defaults"; UX-055): Outlined and Dense,
+    a start search adornment, Clearable, Immediate, one debounce constant and an accessible name.
+*@
+
+<MudTextField T="string" Value="@this.Value" ValueChanged="this.OnValueChangedAsync" Immediate="true"
+              DebounceInterval="@DebounceMs" Variant="Variant.Outlined" Margin="Margin.Dense"
+              Clearable="true" Adornment="Adornment.Start" AdornmentIcon="@Icons.Material.Filled.Search"
+              Placeholder="@this.Placeholder" aria-label="@this.AriaLabel" />
+
+@code {
+    /// <summary>The debounce, in milliseconds, shared by every search field in the app (UX-055).</summary>
+    internal const int DebounceMs = 250;
+
+    /// <summary>The search text. Two-way bound through <see cref="Value"/> and <see cref="ValueChanged"/>.</summary>
+    [Parameter]
+    public string? Value { get; set; }
+
+    /// <summary>Raised with the new text after the debounce.</summary>
+    [Parameter]
+    public EventCallback<string?> ValueChanged { get; set; }
+
+    /// <summary>The placeholder text, for example "Search members".</summary>
+    [Parameter]
+    public string Placeholder { get; set; } = string.Empty;
+
+    /// <summary>The accessible name of the input.</summary>
+    [Parameter]
+    public string AriaLabel { get; set; } = string.Empty;
+
+    /// <summary>Forwards the debounced text to <see cref="ValueChanged"/>.</summary>
+    /// <param name="value">The text the field now holds.</param>
+    private Task OnValueChangedAsync(string? value) => this.ValueChanged.InvokeAsync(value);
+}
