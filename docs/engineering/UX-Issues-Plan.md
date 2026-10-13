@@ -1042,7 +1042,7 @@ Ids are `<deliverable number>.<task>`, the form `Set-Tracker.ps1` updates:
 `pwsh -NoProfile -File agents/scripts/Set-Tracker.ps1 -Task "12.3" -State Done -TrackerPath docs/engineering/UX-Issues-Plan.md`.
 `(H)` is Haiku, `(S)` is Sonnet.
 
-**Status:** 57 of 141 tasks Done · 0 of 2 retrospectives done · last updated 2026-10-13.
+**Status:** 62 of 141 tasks Done · 0 of 2 retrospectives done · last updated 2026-10-13.
 
 | **Deliverable / Task** | **Model** | **Depends on** | **Active** | **In Progress** | **Done** |
 | --- | --- | --- | --- | --- | --- |
@@ -1093,11 +1093,11 @@ Ids are `<deliverable number>.<task>`, the form `Set-Tracker.ps1` updates:
 | 7.4 ActionIcons, StatusColors, RoomLinkCopier (H) | Haiku | 7.1 | | | ✔ |
 | 7.5 Repaint (H) | Haiku | 7.1 | | | ✔ |
 | **U8 Shell: mechanical pass** | Haiku | U0, U5, U6, U7 | | | |
-| 8.1 Red (H) | Haiku | U0 | | | |
-| 8.2 Attributes, roles, keys, icons (H) | Haiku | 8.1 | | | |
-| 8.3 Adopt helpers (H) | Haiku | 8.2, U6, U7 | | | |
-| 8.4 Archived chats dialog (H) | Haiku | 8.2, U5 | | | |
-| 8.5 Empty states and suite (H) | Haiku | 8.3, 8.4 | | | |
+| 8.1 Red (H) | Haiku | U0 | | | ✔ |
+| 8.2 Attributes, roles, keys, icons (H) | Haiku | 8.1 | | | ✔ |
+| 8.3 Adopt helpers (H) | Haiku | 8.2, U6, U7 | | | ✔ |
+| 8.4 Archived chats dialog (H) | Haiku | 8.2, U5 | | | ✔ |
+| 8.5 Empty states and suite (H) | Haiku | 8.3, 8.4 | | | ✔ |
 | **U9 Shell: sidebar consistency** | Sonnet | U8, U4 | | | |
 | 9.1 Red (S) | Sonnet | U8, U4 | | | |
 | 9.2 Headers and footer (S) | Sonnet | 9.1 | | | |
