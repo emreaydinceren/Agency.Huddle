@@ -137,7 +137,8 @@
                       LastWake="@this.Activity.LastWake(context.Id)" Busy="@this.IsBusy(context)" Search="@this.Search" Selected="@(this.SelectedId is { } open && open == context.Id)"
                       OnOpen="@(() => this.OnOpenTask.InvokeAsync(context.Id))"
                       OnMoveTo="@(state => this.MoveAsync(context, state))"
-                      OnCopyId="@(() => this.OnCopyId.InvokeAsync(context.Id))" />
+                      OnCopyId="@(() => this.OnCopyId.InvokeAsync(context.Id))"
+                      OnCopyLink="@(() => this.OnCopyLink.InvokeAsync(context.Id))" RoomNames="this.RoomNames" />
         </ItemRenderer>
     </MudDropContainer>
 </div>
@@ -174,6 +175,14 @@
     /// <summary>Raised with a card's id when its ⋮ menu's "Copy id" is chosen (corrections-B7 "15.2.i" item 2): the page wires this to the same <c>huddleClipboard.copy</c> path as the detail header's own copy button.</summary>
     [Parameter]
     public EventCallback<TaskId> OnCopyId { get; set; }
+
+    /// <summary>Raised with a card's id when its ⋮ menu's "Copy link" is chosen.</summary>
+    [Parameter]
+    public EventCallback<TaskId> OnCopyLink { get; set; }
+
+    /// <summary>Room names by id, passed to each card for its Origin field.</summary>
+    [Parameter]
+    public IReadOnlyDictionary<string, string>? RoomNames { get; set; }
 
     private BoardModel model = new([], [], 0);
     private int renamingColumn = -1;

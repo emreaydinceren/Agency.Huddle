@@ -20,8 +20,6 @@
 *@
 
 @using System.Globalization
-@using Agency.Huddle.App.Avatars
-@inject AvatarStore AvatarStore
 @inject TimeProvider Clock
 @inject TaskStore Store
 @inject ISprintCatalog Sprints
@@ -52,7 +50,7 @@
                                      Grouping="@this.IsGrouped(TaskGroupField.State)" GroupByOrder="@this.GroupOrder(TaskGroupField.State)"
                                      GroupBy="@(t => this.GroupSortKey(t, TaskGroupField.State))">
                         <CellTemplate>
-                            <MudChip T="string" Size="Size.Small" Color="@TaskColors.For(context.Item.Status)">@context.Item.Status.ToWire()</MudChip>
+                            <TaskStatusChip Status="context.Item.Status" />
                         </CellTemplate>
                         <GroupTemplate>@this.GroupHeading(context, TaskGroupField.State)</GroupTemplate>
                     </TemplateColumn>
@@ -61,8 +59,7 @@
                     <TemplateColumn @key="key" T="TaskItem" Title="Priority" Hidden="@(!this.Shows("priority"))" Sortable="true"
                                      SortBy="@(t => (object)(int)t.Priority)">
                         <CellTemplate>
-                            <MudChip T="string" Size="Size.Small" Color="Color.Default" Class="task-priority-chip"
-                                     Icon="@TaskColors.Icon(context.Item.Priority)">@context.Item.Priority.ToWire()</MudChip>
+                            <TaskPriorityChip Priority="context.Item.Priority" />
                         </CellTemplate>
                     </TemplateColumn>
                     break;
@@ -72,19 +69,7 @@
                                      Grouping="@this.IsGrouped(TaskGroupField.Assignee)" GroupByOrder="@this.GroupOrder(TaskGroupField.Assignee)"
                                      GroupBy="@(t => this.GroupSortKey(t, TaskGroupField.Assignee))">
                         <CellTemplate>
-                            @if (context.Item.Assignee is { } assignee)
-                            {
-                                <MudChip T="string" Size="Size.Small" Class="task-list-assignee">
-                                    <AvatarContent>
-                                        <TeammateAvatar Name="@assignee" Avatar="this.AvatarStore.Get(assignee)" />
-                                    </AvatarContent>
-                                    <ChildContent>@assignee</ChildContent>
-                                </MudChip>
-                            }
-                            else
-                            {
-                                @("Unassigned")
-                            }
+                            <TaskAssignee Name="@context.Item.Assignee" />
                         </CellTemplate>
                         <GroupTemplate>@this.GroupHeading(context, TaskGroupField.Assignee)</GroupTemplate>
                     </TemplateColumn>
@@ -113,7 +98,7 @@
                                      SortBy="@(t => (object)(t.Location.Project ?? string.Empty))"
                                      Grouping="@this.IsGrouped(TaskGroupField.Project)" GroupByOrder="@this.GroupOrder(TaskGroupField.Project)"
                                      GroupBy="@(t => this.GroupSortKey(t, TaskGroupField.Project))">
-                        <CellTemplate>@(context.Item.Location.Project ?? "No project")</CellTemplate>
+                        <CellTemplate>@(context.Item.Location.Project ?? TaskFieldView.EmptyText("project"))</CellTemplate>
                         <GroupTemplate>@this.GroupHeading(context, TaskGroupField.Project)</GroupTemplate>
                     </TemplateColumn>
                     break;
@@ -150,10 +135,7 @@
                 case "tags":
                     <TemplateColumn @key="key" T="TaskItem" Title="Tags" Hidden="@(!this.Shows("tags"))" CellClass="task-col-low-3" HeaderClass="task-col-low-3" Sortable="false">
                         <CellTemplate>
-                            @foreach (string tag in context.Item.Tags)
-                            {
-                                <MudChip T="string" Label="true" Size="Size.Small" Class="task-list-tag">@tag</MudChip>
-                            }
+                            @TaskFieldView.Tags(context.Item.Tags)
                         </CellTemplate>
                     </TemplateColumn>
                     break;
@@ -169,9 +151,13 @@
                         <CellTemplate>
                             @if (this.IsOverdue(context.Item))
                             {
-                                <MudIcon Icon="@Icons.Material.Filled.Warning" Color="Color.Warning" Size="Size.Small" aria-label="Overdue" />
+                                <MudIcon Icon="@Icons.Material.Filled.Warning" Color="Color.Error" Size="Size.Small" aria-label="Overdue" />
+                                <span class="task-due-overdue">@TaskDates.Display(context.Item.DueDate)</span>
                             }
-                            @TaskDates.Display(context.Item.DueDate)
+                            else
+                            {
+                                @TaskDates.Display(context.Item.DueDate)
+                            }
                         </CellTemplate>
                     </TemplateColumn>
                     break;
@@ -195,7 +181,7 @@
                     break;
                 case "origin":
                     <TemplateColumn @key="key" T="TaskItem" Title="Origin" Hidden="@(!this.Shows("origin"))">
-                        <CellTemplate>@context.Item.OriginRoomId</CellTemplate>
+                        <CellTemplate>@TaskFieldView.OriginText(context.Item.OriginRoomId, this.RoomNames)</CellTemplate>
                     </TemplateColumn>
                     break;
             }
@@ -205,15 +191,9 @@
         <TemplateColumn @key="@("actions")" T="TaskItem" Title="" Sortable="false" Filterable="false">
             <CellTemplate>
                 <span @onclick:stopPropagation="true">
-                    <MudMenu Class="task-list-row-menu">
-                        <ActivatorContent Context="menuContext">
-                            <MudIconButton Icon="@Icons.Material.Filled.MoreVert" Size="Size.Small"
-                                           aria-label="@($"Actions for {context.Item.Id}")" OnClick="menuContext.ToggleAsync" />
-                        </ActivatorContent>
-                        <ChildContent>
-                            <MudMenuItem OnClick="@(() => this.OnCopyId.InvokeAsync(context.Item.Id))">Copy id</MudMenuItem>
-                        </ChildContent>
-                    </MudMenu>
+                    <TaskActionsMenu Id="context.Item.Id" ShowMoveTo="false"
+                                     OnCopyId="@(() => this.OnCopyId.InvokeAsync(context.Item.Id))"
+                                     OnCopyLink="@(() => this.OnCopyLink.InvokeAsync(context.Item.Id))" />
                 </span>
             </CellTemplate>
         </TemplateColumn>
@@ -244,6 +224,14 @@
     /// <summary>Raised with a row's id when its trailing ⋮ menu's "Copy id" is chosen (Spec §13.13.1, settled design J52).</summary>
     [Parameter]
     public EventCallback<TaskId> OnCopyId { get; set; }
+
+    /// <summary>Raised with a row's id when its ⋮ menu's "Copy link" is chosen.</summary>
+    [Parameter]
+    public EventCallback<TaskId> OnCopyLink { get; set; }
+
+    /// <summary>Room names by id, so the Origin column shows the Room's name (UX-047).</summary>
+    [Parameter]
+    public IReadOnlyDictionary<string, string>? RoomNames { get; set; }
 
     /// <summary>Maps each groupable field to its §12.2 field key, so a Grouping field not in Fields still gets a (hidden) column.</summary>
     private static readonly Dictionary<TaskGroupField, string> GroupFieldKeys = new()
@@ -396,16 +384,7 @@
     }
 
     /// <summary>Whether <paramref name="task"/> is overdue: it has a due date in the past and isn't in a terminal state.</summary>
-    private bool IsOverdue(TaskItem task)
-    {
-        if (task.DueDate is not { } due || task.Status.IsTerminal())
-        {
-            return false;
-        }
-
-        DateOnly today = DateOnly.FromDateTime(this.Clock.GetUtcNow().UtcDateTime);
-        return due < today;
-    }
+    private bool IsOverdue(TaskItem task) => TaskDates.IsOverdue(task, this.Clock);
 
     /// <summary>The CSS class for a row: <c>task-overdue</c> when overdue, nothing otherwise. The row index is unused; the shape is fixed by RowClassFunc.</summary>
     private string RowClass(TaskItem task, int _)

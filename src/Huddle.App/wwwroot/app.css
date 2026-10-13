@@ -1802,9 +1802,10 @@ a.team-ref,
     outline: 2px solid var(--mud-palette-text-primary);
 }
 
-/* A row or date past its due date. */
-.task-overdue {
-    color: var(--mud-palette-warning);
+/* An overdue due date, and nothing else on the card or row (UX-043): the error colour, with the
+   warning icon beside it. The row and card class task-overdue is a marker only. */
+.task-due-overdue {
+    color: var(--mud-palette-error);
 }
 
 /* The Task open in the detail panel: its List row and its Board card. A tint of the primary palette
@@ -1844,12 +1845,6 @@ a.team-ref,
 .task-ref-status-success::before { background: var(--mud-palette-success); }
 .task-ref-status-error::before { background: var(--mud-palette-error); }
 .task-ref-status-default::before { background: var(--mud-palette-lines-default); }
-
-/* Priority is shown by its icon alone, so it never competes with status for colour. */
-.task-priority-chip {
-    background: transparent;
-    color: var(--mud-palette-text-secondary);
-}
 
 /* A link to a Closed Task, drawn struck through in addition to .task-ref's styling. */
 .task-ref-closed {

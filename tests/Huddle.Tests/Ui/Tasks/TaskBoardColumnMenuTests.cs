@@ -260,21 +260,16 @@ public sealed partial class TaskBoardColumnMenuTests
     /// <param name="key">The View field key.</param>
     /// <param name="expected">The span's exact text.</param>
     [Theory]
-    [InlineData("status", "In Progress")]
-    [InlineData("priority", "High")]
-    [InlineData("assignee", "Nova")]
     [InlineData("creator", "You")]
     [InlineData("team", "Platform")]
     [InlineData("project", "Auth")]
     [InlineData("parent", "PLAT-0009")]
     [InlineData("blocked_by", "PLAT-0007, PLAT-0008")]
-    [InlineData("tags", "auth, sso")]
     [InlineData("start_date", "2030-01-02")]
     [InlineData("due_date", "2030-01-03")]
     [InlineData("created", "2026-09-20")]
     [InlineData("updated", "2026-09-24")]
     [InlineData("closed", "2026-09-25")]
-    [InlineData("origin", "room-1")]
     public async Task Card_ShowsEveryViewField(string key, string expected)
     {
         ArgumentNullException.ThrowIfNull(key);

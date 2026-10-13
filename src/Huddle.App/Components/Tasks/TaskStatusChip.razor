@@ -1,0 +1,12 @@
+@*
+    A Task's state as a Small chip in the state's colour (TaskColors.For): the one way the List and
+    search draw status (UX-044, UX-R07). The Board card shows none, because its column names the state (OP-11).
+*@
+
+<MudChip T="string" Size="Size.Small" Color="@TaskColors.For(this.Status)" Class="task-status-chip">@this.Status.ToWire()</MudChip>
+
+@code {
+    /// <summary>The state to show.</summary>
+    [Parameter, EditorRequired]
+    public TaskState Status { get; set; }
+}

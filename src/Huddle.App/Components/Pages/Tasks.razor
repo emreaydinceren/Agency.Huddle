@@ -53,6 +53,7 @@
 @using Agency.Huddle.App.Tabs
 @inject TaskStore Store
 @inject TaskEvents Events
+@inject ITeamDirectory Directory
 @inject ViewStore Views
 @inject SprintStore Sprints
 @inject IOptions<TeamOptions> Options
@@ -168,12 +169,12 @@
         IReadOnlyList<TaskItem> tasks = this.FilteredTasks(this.search);
         @if (this.effectiveView.Kind == ViewKind.List)
         {
-            <TaskListView View="this.effectiveView" Tasks="tasks" Search="@this.search" SelectedId="@(this.detailOpen ? this.selectedTaskId : null)" OnOpenTask="this.OnOpenTaskAsync" OnCopyId="this.OnCopyIdAsync" />
+            <TaskListView View="this.effectiveView" Tasks="tasks" Search="@this.search" SelectedId="@(this.detailOpen ? this.selectedTaskId : null)" OnOpenTask="this.OnOpenTaskAsync" OnCopyId="this.OnCopyIdAsync" OnCopyLink="this.OnCopyLinkAsync" RoomNames="this.roomNames" />
         }
         else
         {
             <TaskBoard View="this.effectiveView" Tasks="tasks" Search="@this.search" SelectedId="@(this.detailOpen ? this.selectedTaskId : null)" OnOpenTask="this.OnOpenTaskAsync"
-                       ViewChanged="this.OnEffectiveViewChangedAsync" OnEditColumns="this.OnEditColumnsClicked" OnCopyId="this.OnCopyIdAsync" />
+                       ViewChanged="this.OnEffectiveViewChangedAsync" OnEditColumns="this.OnEditColumnsClicked" OnCopyId="this.OnCopyIdAsync" OnCopyLink="this.OnCopyLinkAsync" RoomNames="this.roomNames" />
         }
 
         @if (tasks.Count == 0)
@@ -266,7 +267,16 @@
     {
         this.ResolveEffectiveViewFromRoute();
         await this.ResolveItemRouteAsync();
+
+        if (this.effectiveView?.Fields.Contains("origin", StringComparer.Ordinal) is true)
+        {
+            IReadOnlyList<Room> rooms = await this.Directory.GetRoomsAsync();
+            this.roomNames = rooms.ToDictionary(room => room.Id, room => room.Name, StringComparer.Ordinal);
+        }
     }
+
+    /// <summary>Room names by id, for the Origin field of cards and rows.</summary>
+    private Dictionary<string, string> roomNames = new(StringComparer.Ordinal);
 
     /// <summary>The View-resolution half of <see cref="OnParametersSetAsync"/> - unchanged from before the item route existed.</summary>
     private void ResolveEffectiveViewFromRoute()
@@ -674,6 +684,14 @@
         {
             this.Snackbar.Add("Couldn't copy. The id is selected; press Ctrl+C.", Severity.Warning, configure: null, key: "copy");
         }
+    }
+
+    /// <summary>Copy link from a card or row menu: the same link the detail's Copy link copies.</summary>
+    /// <param name="id">The Task id the link opens.</param>
+    private async Task OnCopyLinkAsync(TaskId id)
+    {
+        bool copied = await this.JS.InvokeAsync<bool>("huddleClipboard.copy", $"{this.Navigation.BaseUri}tasks/item/{id}");
+        this.Snackbar.Add(copied ? $"Copied {id}" : "Couldn't copy the link.", copied ? Severity.Success : Severity.Warning, configure: null, key: "copy");
     }
 
     private async Task TryStoreLastViewAsync(string viewId)

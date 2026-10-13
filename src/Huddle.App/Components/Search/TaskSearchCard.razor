@@ -13,7 +13,7 @@
     <span class="search-card-text">
         <span class="search-card-head">
             <span class="search-card-title"><MudHighlighter Text="@this.Heading" HighlightedText="@this.Phrase" /></span>
-            <MudChip T="string" Size="Size.Small" Color="@TaskColors.For(this.Hit.Status)" Class="search-card-chip">@this.Hit.Status.ToWire()</MudChip>
+            <span class="search-card-chip"><TaskStatusChip Status="this.Hit.Status" /></span>
         </span>
         <span class="search-card-foot">
             @if (this.Hit.Assignee is { } assignee)

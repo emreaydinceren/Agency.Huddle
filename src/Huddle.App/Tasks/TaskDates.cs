@@ -19,4 +19,23 @@ internal static class TaskDates
     /// <summary>Formats <paramref name="date"/> as <c>yyyy-MM-dd</c>, or an empty string when <see langword="null"/>.</summary>
     /// <param name="date">The date to format.</param>
     public static string Display(DateTimeOffset? date) => date?.ToString(Format, CultureInfo.InvariantCulture) ?? string.Empty;
+
+    /// <summary>
+    /// Whether <paramref name="task"/> is overdue: it has a due date before today in the clock's local
+    /// time zone (as the Change log is local) and is not in a terminal state (UX-R08).
+    /// </summary>
+    /// <param name="task">The Task to test.</param>
+    /// <param name="clock">The clock that says what today is.</param>
+    public static bool IsOverdue(TaskItem task, TimeProvider clock)
+    {
+        ArgumentNullException.ThrowIfNull(task);
+        ArgumentNullException.ThrowIfNull(clock);
+
+        if (task.DueDate is not { } due || task.Status.IsTerminal())
+        {
+            return false;
+        }
+
+        return due < DateOnly.FromDateTime(clock.GetLocalNow().DateTime);
+    }
 }

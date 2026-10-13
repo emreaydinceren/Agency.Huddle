@@ -48,7 +48,7 @@ public sealed class AppCssTasksTests
     [InlineData(".task-ghost-bucket")]
     [InlineData(".task-card")]
     [InlineData(".task-card-dragging")]
-    [InlineData(".task-overdue")]
+    [InlineData(".task-due-overdue")]
     [InlineData(".task-ref")]
     [InlineData(".task-ref-closed")]
     public void AppCss_DeclaresRemainingTaskClasses(string className)

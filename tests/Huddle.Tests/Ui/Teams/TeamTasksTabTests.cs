@@ -484,7 +484,7 @@ public sealed class TeamTasksTabTests
         {
             if (viaMenu)
             {
-                await this.Tab.InvokeAsync(() => this.Tab.Find($"button[aria-label='Move {item.Id}']").ClickAsync());
+                await this.Tab.InvokeAsync(() => this.Tab.Find($"button[aria-label='Actions for {item.Id}']").ClickAsync());
                 await this.ClickMenuItemAsync(state.ToWire());
                 return;
             }
@@ -500,7 +500,7 @@ public sealed class TeamTasksTabTests
         /// <returns>A task that completes when the item was clicked.</returns>
         public async Task ChooseCopyIdAsync(TaskItem item)
         {
-            await this.Tab.InvokeAsync(() => this.Tab.Find($"button[aria-label='Move {item.Id}']").ClickAsync());
+            await this.Tab.InvokeAsync(() => this.Tab.Find($"button[aria-label='Actions for {item.Id}']").ClickAsync());
             await this.ClickMenuItemAsync("Copy id");
         }
 

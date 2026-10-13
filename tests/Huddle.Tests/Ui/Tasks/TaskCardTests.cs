@@ -88,7 +88,7 @@ public sealed class TaskCardTests : IDisposable
 
         IElement card = cut.Find("div.task-card");
         IElement openButton = cut.Find("div.task-card > button.task-card-open");
-        IElement menuButton = cut.Find($"button[aria-label='Move {task.Id}']");
+        IElement menuButton = cut.Find($"button[aria-label='Actions for {task.Id}']");
         IElement awakeLink = cut.Find("a.task-card-awake-link");
 
         Assert.True(card.Contains(menuButton), "The ⋮ menu's activator must be inside the card.");
@@ -123,7 +123,7 @@ public sealed class TaskCardTests : IDisposable
         IRenderedComponent<ContainerFragment> cut = this.Render(ctx, task);
 
         IRenderedComponent<MudChip<string>> chip = cut.FindComponent<MudChip<string>>();
-        Assert.Equal(Color.Default, chip.Instance.Color);
+        Assert.Equal(TaskColors.For(priority), chip.Instance.Color);
         Assert.Equal(TaskColors.Icon(priority), chip.Instance.Icon);
         Assert.Equal(priority.ToWire(), cut.Find(".task-card-header .mud-chip").TextContent.Trim());
     }
@@ -269,10 +269,10 @@ public sealed class TaskCardTests : IDisposable
         await using MudBunitContext ctx = new();
         IRenderedComponent<ContainerFragment> cut = this.Render(ctx, task);
 
-        await cut.InvokeAsync(() => cut.Find($"button[aria-label='Move {task.Id}']").ClickAsync());
+        await cut.InvokeAsync(() => cut.Find($"button[aria-label='Actions for {task.Id}']").ClickAsync());
 
         IReadOnlyList<IElement> items = cut.FindAll("div.mud-menu-item");
-        List<string> expected = [.. TaskStates.All.Select(state => state.ToWire()), "Copy id"];
+        List<string> expected = [.. TaskStates.All.Select(state => state.ToWire()), "Copy id", "Copy link"];
         Assert.Equal(expected, items.Select(item => item.TextContent.Trim()));
 
         int moveToIndex = cut.Markup.IndexOf("Move to", StringComparison.Ordinal);
@@ -295,7 +295,7 @@ public sealed class TaskCardTests : IDisposable
         await using MudBunitContext ctx = new();
         IRenderedComponent<ContainerFragment> cut = this.Render(ctx, task, onMoveTo: state => moved.Add(state));
 
-        await cut.InvokeAsync(() => cut.Find($"button[aria-label='Move {task.Id}']").ClickAsync());
+        await cut.InvokeAsync(() => cut.Find($"button[aria-label='Actions for {task.Id}']").ClickAsync());
         await cut.InvokeAsync(() => cut.FindAll("div.mud-menu-item").First(item => string.Equals(item.TextContent.Trim(), "Done", StringComparison.Ordinal)).ClickAsync());
 
         Assert.Single(moved);
@@ -312,7 +312,7 @@ public sealed class TaskCardTests : IDisposable
         await using MudBunitContext ctx = new();
         IRenderedComponent<ContainerFragment> cut = this.Render(ctx, task, onCopyId: () => copyCount++);
 
-        await cut.InvokeAsync(() => cut.Find($"button[aria-label='Move {task.Id}']").ClickAsync());
+        await cut.InvokeAsync(() => cut.Find($"button[aria-label='Actions for {task.Id}']").ClickAsync());
         await cut.InvokeAsync(() => cut.FindAll("div.mud-menu-item").First(item => string.Equals(item.TextContent.Trim(), "Copy id", StringComparison.Ordinal)).ClickAsync());
 
         Assert.Equal(1, copyCount);

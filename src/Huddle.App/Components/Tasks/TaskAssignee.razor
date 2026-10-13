@@ -1,0 +1,43 @@
+@*
+    A Task's assignee: a Small avatar and the name, with a presence dot only when the presence is
+    known. Unknown presence shows no dot, never an "Offline" guess (UX-046, UX-R07). No name reads
+    "Unassigned" (the shared field rule).
+*@
+@using System.Globalization
+@using Agency.Huddle.App.Avatars
+@inject AvatarStore AvatarStore
+
+<span class="task-assignee">
+    @if (this.Name is { } name)
+    {
+        @if (this.Presence is { } presence)
+        {
+            string presenceText = string.Create(CultureInfo.InvariantCulture, $"{name} is {presence}");
+            <MudTooltip Text="@presenceText">
+                <MudBadge Dot="true" Overlap="true" Origin="Origin.BottomRight" Class="task-card-presence" Color="@TaskColors.For(presence)" BadgeAriaLabel="@presenceText">
+                    <TeammateAvatar Name="@name" Avatar="this.AvatarStore.Get(name)" Size="Size.Small" />
+                </MudBadge>
+            </MudTooltip>
+        }
+        else
+        {
+            <TeammateAvatar Name="@name" Avatar="this.AvatarStore.Get(name)" Size="Size.Small" />
+        }
+
+        <span class="task-assignee-name">@name</span>
+    }
+    else
+    {
+        @TaskFieldView.EmptyText("assignee")
+    }
+</span>
+
+@code {
+    /// <summary>The assignee name, or <see langword="null"/> for an unassigned Task.</summary>
+    [Parameter]
+    public string? Name { get; set; }
+
+    /// <summary>The assignee's presence, or <see langword="null"/> when unknown: no dot is drawn.</summary>
+    [Parameter]
+    public PresenceState? Presence { get; set; }
+}

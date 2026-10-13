@@ -216,7 +216,7 @@ public sealed class TaskRouteAndCopyTests
             builder.CloseComponent();
         });
 
-        await cut.InvokeAsync(() => cut.Find("button[aria-label=\"Move PLAT-0001\"]").ClickAsync());
+        await cut.InvokeAsync(() => cut.Find("button[aria-label=\"Actions for PLAT-0001\"]").ClickAsync());
         await cut.InvokeAsync(() => cut.FindAll(".mud-menu-item").Single(i => string.Equals(i.TextContent.Trim(), "Copy id", StringComparison.Ordinal)).ClickAsync());
 
         Assert.Equal(task.Id, copied);

@@ -37,6 +37,11 @@ internal static class TaskColors
         _ => Color.Default,
     };
 
+    /// <summary>The due date's colour: Error when <paramref name="task"/> is overdue, Default otherwise (UX-043).</summary>
+    /// <param name="task">The Task.</param>
+    /// <param name="clock">The clock that says what today is.</param>
+    public static Color ForDue(TaskItem task, TimeProvider clock) => TaskDates.IsOverdue(task, clock) ? Color.Error : Color.Default;
+
     /// <summary>The icon that always accompanies a priority alongside its colour and word.</summary>
     public static string Icon(TaskPriority priority) => priority switch
     {
