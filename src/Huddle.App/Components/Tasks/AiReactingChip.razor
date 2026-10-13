@@ -14,7 +14,7 @@
 
 @if (this.IsReacting())
 {
-    <MudChip T="string" Class="ai-reacting-chip" Color="Color.Info" Text="AI reacting">
+    <MudChip T="string" Size="Size.Small" Class="ai-reacting-chip" Color="Color.Info" Text="Teammate working">
         <AvatarContent>
             <MudProgressCircular Indeterminate="true" Size="Size.Small" />
         </AvatarContent>
@@ -70,16 +70,5 @@
         return false;
     }
 
-    private void OnChanged() => _ = this.DispatchAsync(() =>
-    {
-        this.StateHasChanged();
-        return Task.CompletedTask;
-    });
-
-    /// <summary>Invokes <paramref name="action"/> on the renderer's synchronization context, swallowing the two exceptions a store event racing component teardown can throw (Spec §13.11).</summary>
-    /// <param name="action">The state update to run.</param>
-    private Task DispatchAsync(Func<Task> action)
-    {
-        return RendererDispatch.RunAsync(this.InvokeAsync, action);
-    }
+    private void OnChanged() => _ = RendererDispatch.Repaint(this.InvokeAsync, this.StateHasChanged);
 }

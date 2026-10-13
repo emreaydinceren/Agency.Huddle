@@ -54,7 +54,7 @@
 @if (this.deleted)
 {
     <MudAlert Severity="Severity.Warning" role="status" Class="task-detail-deleted">This Task was deleted</MudAlert>
-    <MudButton Disabled="true">Save</MudButton>
+    <MudButton Size="Size.Medium" Disabled="true">Save</MudButton>
 }
 else if (this.loaded is { } task)
 {
@@ -88,7 +88,7 @@ else if (this.loaded is { } task)
     {
         <MudAlert Severity="Severity.Warning" role="alert" Class="task-detail-gate-refusal">
             <span class="task-detail-gate-refusal-text">@refusal.Message</span>
-            <MudButton Class="task-detail-gate-override" OnClick="this.MoveAnywayAsync">Move anyway</MudButton>
+            <MudButton Size="Size.Medium" Class="task-detail-gate-override" OnClick="this.MoveAnywayAsync">Move anyway</MudButton>
         </MudAlert>
     }
 
@@ -120,8 +120,8 @@ else if (this.loaded is { } task)
                         <div class="task-detail-conflict-field">@TaskDiff.FieldLabel(conflictField)</div>
                         @if (conflictField == TaskField.Description)
                         {
-                            <MudTextField T="string" Value="@activeConflict.Current.Description" ReadOnly="true" Lines="6" Class="task-detail-conflict-theirs" />
-                            <MudTextField T="string" Value="@effective.Description" ReadOnly="true" Lines="6" Class="task-detail-conflict-yours" />
+                            <MudTextField T="string" Variant="Variant.Outlined" Margin="Margin.Dense" Value="@activeConflict.Current.Description" ReadOnly="true" Lines="6" Class="task-detail-conflict-theirs" />
+                            <MudTextField T="string" Variant="Variant.Outlined" Margin="Margin.Dense" Value="@effective.Description" ReadOnly="true" Lines="6" Class="task-detail-conflict-yours" />
                         }
                         else
                         {
@@ -148,8 +148,8 @@ else if (this.loaded is { } task)
                             <td class="task-detail-conflict-field">@TaskDiff.FieldLabel(conflictField)</td>
                             @if (conflictField == TaskField.Description)
                             {
-                                <td><MudTextField T="string" Value="@activeConflict.Current.Description" ReadOnly="true" Lines="6" Class="task-detail-conflict-theirs" /></td>
-                                <td><MudTextField T="string" Value="@effective.Description" ReadOnly="true" Lines="6" Class="task-detail-conflict-yours" /></td>
+                                <td><MudTextField T="string" Variant="Variant.Outlined" Margin="Margin.Dense" Value="@activeConflict.Current.Description" ReadOnly="true" Lines="6" Class="task-detail-conflict-theirs" /></td>
+                                <td><MudTextField T="string" Variant="Variant.Outlined" Margin="Margin.Dense" Value="@effective.Description" ReadOnly="true" Lines="6" Class="task-detail-conflict-yours" /></td>
                             }
                             else
                             {
@@ -174,7 +174,7 @@ else if (this.loaded is { } task)
     {
         <MudAlert Severity="Severity.Warning" role="status" Class="task-detail-budget-banner">
             <span class="task-detail-budget-banner-text">@($"Wake-ups for this task are paused after {agentWakeBudget} changes by Teammates.")</span>
-            <MudButton OnClick="this.AllowMore">@($"Allow {agentWakeBudget} more")</MudButton>
+            <MudButton Size="Size.Medium" OnClick="this.AllowMore">@($"Allow {agentWakeBudget} more")</MudButton>
         </MudAlert>
     }
 
@@ -182,8 +182,8 @@ else if (this.loaded is { } task)
     {
         <MudAlert Severity="Severity.Info" Dense="true" role="status" Class="task-detail-unsaved">
             <span class="task-detail-unsaved-text">Unsaved edits</span>
-            <MudButton OnClick="this.SaveAsync" Disabled="saveDisabled">@saveLabel</MudButton>
-            <MudButton Variant="Variant.Text" OnClick="this.Revert">Revert</MudButton>
+            <MudButton Size="Size.Medium" OnClick="this.SaveAsync" Disabled="saveDisabled">@saveLabel</MudButton>
+            <MudButton Size="Size.Medium" Variant="Variant.Text" OnClick="this.Revert">Revert</MudButton>
         </MudAlert>
     }
 
@@ -197,12 +197,12 @@ else if (this.loaded is { } task)
             <div class="task-detail-title-row">
                 @if (this.titleEditing)
                 {
-                    <MudTextField T="string" Value="@effective.Title" ValueChanged="this.OnTitleChanged" Class="task-detail-title" aria-label="Title" />
+                    <MudTextField T="string" Variant="Variant.Outlined" Margin="Margin.Dense" Value="@effective.Title" ValueChanged="this.OnTitleChanged" Class="task-detail-title" aria-label="Title" />
                 }
                 else
                 {
                     <span class="task-detail-title-display"><span class="task-id">@effective.Id.ToString()</span>: @effective.Title</span>
-                    <MudIconButton Icon="@Icons.Material.Filled.Edit" aria-label="Edit title" OnClick="this.BeginEditTitle" />
+                    <MudIconButton Icon="@Icons.Material.Filled.Edit" Size="Size.Small" aria-label="Edit title" OnClick="this.BeginEditTitle" />
                     @if (!this.createMode)
                     {
                         @if (task.Location.Closed)
@@ -210,7 +210,7 @@ else if (this.loaded is { } task)
                             <MudChip T="string" Size="Size.Small" Class="task-detail-closed-chip">Closed</MudChip>
                         }
                         <MudTooltip Text="Copy id">
-                            <MudIconButton Icon="@Icons.Material.Outlined.ContentCopy" aria-label="@($"Copy task id {effective.Id}")"
+                            <MudIconButton Icon="@Icons.Material.Outlined.ContentCopy" Size="Size.Small" aria-label="@($"Copy task id {effective.Id}")"
                                            Class="task-detail-copy-id" OnClick="@(() => this.CopyIdAsync(effective.Id))" />
                         </MudTooltip>
                     }
@@ -253,7 +253,7 @@ else if (this.loaded is { } task)
                 </div>
             }
 
-            <MudSelect T="TaskState" Value="effective.Status" ValueChanged="this.OnStatusChanged"
+            <MudSelect T="TaskState" Variant="Variant.Outlined" Margin="Margin.Dense" Value="effective.Status" ValueChanged="this.OnStatusChanged"
                        Label="Status" Class="task-detail-status">
                 @foreach (TaskState state in TaskStates.All)
                 {
@@ -263,17 +263,17 @@ else if (this.loaded is { } task)
 
             @if (effective.Status == TaskState.Duplicate)
             {
-                <MudAutocomplete T="TaskItem" Strict="true" SearchFunc="this.SearchTaskCandidates" ToStringFunc="TaskDetail.TaskToString"
+                <MudAutocomplete T="TaskItem" Variant="Variant.Outlined" Margin="Margin.Dense" Strict="true" SearchFunc="this.SearchTaskCandidates" ToStringFunc="TaskDetail.TaskToString"
                                   Value="@(effective.DuplicateOf is { } dupId ? this.Store.Get(dupId) : null)" ValueChanged="this.OnDuplicateOfChanged"
                                   Label="Duplicate of" Class="task-detail-duplicate-of" />
             }
             else if (effective.Status is TaskState.Cancelled or TaskState.Rejected)
             {
-                <MudTextField T="string" Value="@(this.pending.Reason ?? string.Empty)" ValueChanged="this.OnReasonChanged"
+                <MudTextField T="string" Variant="Variant.Outlined" Margin="Margin.Dense" Value="@(this.pending.Reason ?? string.Empty)" ValueChanged="this.OnReasonChanged"
                               Label="Reason (optional)" Class="task-detail-reason" />
             }
 
-            <MudSelect T="TaskPriority" Value="effective.Priority" ValueChanged="this.OnPriorityChanged" Class="task-detail-priority"
+            <MudSelect T="TaskPriority" Variant="Variant.Outlined" Margin="Margin.Dense" Value="effective.Priority" ValueChanged="this.OnPriorityChanged" Class="task-detail-priority"
                        Label="Priority" AdornmentIcon="@TaskColors.Icon(effective.Priority)" Adornment="Adornment.Start">
                 <MudSelectItem T="TaskPriority" Value="TaskPriority.Low">@TaskPriority.Low.ToWire()</MudSelectItem>
                 <MudSelectItem T="TaskPriority" Value="TaskPriority.Medium">@TaskPriority.Medium.ToWire()</MudSelectItem>
@@ -286,7 +286,7 @@ else if (this.loaded is { } task)
                 <div class="task-detail-wake-notice">@notice</div>
             }
 
-            <MudAutocomplete T="AssigneeOption" Strict="true" SearchFunc="this.SearchAssignees" ToStringFunc="@(o => o?.Name)"
+            <MudAutocomplete T="AssigneeOption" Variant="Variant.Outlined" Margin="Margin.Dense" Strict="true" SearchFunc="this.SearchAssignees" ToStringFunc="@(o => o?.Name)"
                               Value="@(effective.Assignee is { } assigneeName ? new AssigneeOption(assigneeName, string.Empty, null) : null)"
                               ValueChanged="this.OnAssigneeChanged" Class="task-detail-assignee" Label="Assignee">
                 <ItemTemplate Context="option">
@@ -312,37 +312,37 @@ else if (this.loaded is { } task)
             </MudAutocomplete>
             @if (this.Activity.LastWake(task.Id) is { RoomId: { } wokenRoomId, RoomName: { } wokenRoomName })
             {
-                <MudLink Href="@($"/rooms/{wokenRoomId}")" Class="task-detail-woken-link">@($"Woken in Room: {wokenRoomName}")</MudLink>
+                <MudLink Href="@($"/rooms/{wokenRoomId}")" Class="task-detail-woken-link">@($"Woken in Room {wokenRoomName}")</MudLink>
             }
 
             @if (this.Mode == TaskDetailMode.Panel)
             {
                 <div class="task-detail-team-project">
                     <span class="task-detail-team-project-label">Team / Project</span>
-                    <MudSelect T="string" Value="effective.Location.Team" ValueChanged="this.OnTeamChanged" Class="task-detail-team" aria-label="Team">
+                    <MudSelect T="string" Variant="Variant.Outlined" Margin="Margin.Dense" Value="effective.Location.Team" ValueChanged="this.OnTeamChanged" Class="task-detail-team" aria-label="Team">
                         @foreach (string teamName in this.TeamOptions())
                         {
                             <MudSelectItem T="string" Value="teamName">@teamName</MudSelectItem>
                         }
                     </MudSelect>
-                    <MudAutocomplete T="string" Value="effective.Location.Project" ValueChanged="this.OnProjectChanged"
+                    <MudAutocomplete T="string" Variant="Variant.Outlined" Margin="Margin.Dense" Value="effective.Location.Project" ValueChanged="this.OnProjectChanged"
                                       CoerceValue="true" SearchFunc="this.SearchProjects" Class="task-detail-project" aria-label="Project" />
                 </div>
             }
             else
             {
-                <MudSelect T="string" Value="effective.Location.Team" ValueChanged="this.OnTeamChanged" Class="task-detail-team" Label="Team" aria-label="Team">
+                <MudSelect T="string" Variant="Variant.Outlined" Margin="Margin.Dense" Value="effective.Location.Team" ValueChanged="this.OnTeamChanged" Class="task-detail-team" Label="Team" aria-label="Team">
                     @foreach (string teamName in this.TeamOptions())
                     {
                         <MudSelectItem T="string" Value="teamName">@teamName</MudSelectItem>
                     }
                 </MudSelect>
-                <MudAutocomplete T="string" Value="effective.Location.Project" ValueChanged="this.OnProjectChanged"
+                <MudAutocomplete T="string" Variant="Variant.Outlined" Margin="Margin.Dense" Value="effective.Location.Project" ValueChanged="this.OnProjectChanged"
                                   CoerceValue="true" SearchFunc="this.SearchProjects" Class="task-detail-project" Label="Project" aria-label="Project" />
             }
 
             <div class="task-detail-sprint">
-                <MudAutocomplete T="string" Value="@this.SprintFieldText(task)" ValueChanged="this.OnSprintChanged" Immediate="true"
+                <MudAutocomplete T="string" Variant="Variant.Outlined" Margin="Margin.Dense" Value="@this.SprintFieldText(task)" ValueChanged="this.OnSprintChanged" Immediate="true"
                                   CoerceValue="true" Clearable="true" SearchFunc="this.SearchSprints" Class="task-detail-sprint-field"
                                   Label="Sprint" aria-label="Sprint" HelperText="@sprintHelper"
                                   Error="@(sprintProblem is not null)" ErrorText="@sprintProblem" />
@@ -351,11 +351,11 @@ else if (this.loaded is { } task)
                     <MudTooltip Text="Not in sprints.md">
                         <MudIcon Icon="@Icons.Material.Filled.Warning" Color="Color.Warning" Size="Size.Small" Class="task-detail-sprint-missing" aria-label="Not in sprints.md" />
                     </MudTooltip>
-                    <MudButton Class="task-detail-sprint-clear" Variant="Variant.Text" OnClick="this.ClearSprint">Clear</MudButton>
+                    <MudButton Size="Size.Medium" Class="task-detail-sprint-clear" Variant="Variant.Text" OnClick="this.ClearSprint">Clear</MudButton>
                 }
             </div>
 
-            <MudAutocomplete T="TaskItem" Strict="true" SearchFunc="this.SearchTaskCandidates" ToStringFunc="TaskDetail.TaskToString"
+            <MudAutocomplete T="TaskItem" Variant="Variant.Outlined" Margin="Margin.Dense" Strict="true" SearchFunc="this.SearchTaskCandidates" ToStringFunc="TaskDetail.TaskToString"
                               Value="@(effective.Parent is { } parentId ? this.Store.Get(parentId) : null)" ValueChanged="this.OnParentChanged"
                               Label="Parent" Class="task-detail-parent" />
 
@@ -363,12 +363,12 @@ else if (this.loaded is { } task)
                 @foreach (TaskId blockerId in effective.BlockedBy)
                 {
                     TaskItem? blockerTask = this.Store.Get(blockerId);
-                    <MudChip T="TaskId" Value="blockerId" OnClose="this.OnRemoveBlocker" Icon="@(blockerTask is { } bt && bt.Status.IsTerminal() ? Icons.Material.Filled.Check : null)">
+                    <MudChip T="TaskId" Size="Size.Small" Value="blockerId" OnClose="this.OnRemoveBlocker" Icon="@(blockerTask is { } bt && bt.Status.IsTerminal() ? Icons.Material.Filled.Check : null)">
                         @($"{blockerId} {blockerTask?.Status.ToWire() ?? "?"}")
                     </MudChip>
                 }
             </MudChipSet>
-            <MudAutocomplete T="TaskItem" Strict="true" SearchFunc="this.SearchTaskCandidates" ToStringFunc="TaskDetail.TaskToString"
+            <MudAutocomplete T="TaskItem" Variant="Variant.Outlined" Margin="Margin.Dense" Strict="true" SearchFunc="this.SearchTaskCandidates" ToStringFunc="TaskDetail.TaskToString"
                               Value="null" ValueChanged="this.OnAddBlocker" Label="Add blocker" Class="task-detail-blocked-by-add" />
             @if (this.BlockedBySummary(effective) is { } blockedBySummary)
             {
@@ -378,27 +378,27 @@ else if (this.loaded is { } task)
             <MudChipSet T="string" AllClosable="true" OnClose="this.OnRemoveTag" Class="task-detail-tags-chips">
                 @foreach (string tag in effective.Tags)
                 {
-                    <MudChip T="string" Value="@tag" OnClose="this.OnRemoveTag">@tag</MudChip>
+                    <MudChip T="string" Size="Size.Small" Value="@tag" OnClose="this.OnRemoveTag">@tag</MudChip>
                 }
             </MudChipSet>
-            <MudTextField T="string" Immediate="true" Value="@this.tagInput" ValueChanged="this.OnTagInputChanged"
+            <MudTextField T="string" Variant="Variant.Outlined" Margin="Margin.Dense" Immediate="true" Value="@this.tagInput" ValueChanged="this.OnTagInputChanged"
                           OnKeyDown="this.OnTagKeyDown" Label="Add tag" Class="task-detail-tags-add" />
 
-            <MudDatePicker Date="@(effective.StartDate is { } startDate ? startDate.ToDateTime(TimeOnly.MinValue) : (DateTime?)null)"
+            <MudDatePicker Variant="Variant.Outlined" Margin="Margin.Dense" Date="@(effective.StartDate is { } startDate ? startDate.ToDateTime(TimeOnly.MinValue) : (DateTime?)null)"
                            DateChanged="this.OnStartDateChanged" Label="Start date" Class="task-detail-start-date"
                            DateFormat="@TaskDates.Format" />
-            <MudDatePicker Date="@(effective.DueDate is { } dueDate ? dueDate.ToDateTime(TimeOnly.MinValue) : (DateTime?)null)"
+            <MudDatePicker Variant="Variant.Outlined" Margin="Margin.Dense" Date="@(effective.DueDate is { } dueDate ? dueDate.ToDateTime(TimeOnly.MinValue) : (DateTime?)null)"
                            DateChanged="this.OnDueDateChanged" Label="Due date"
                            Class="@($"task-detail-due-date{(this.IsOverdue(effective) ? " task-overdue" : string.Empty)}")"
                            Adornment="@(this.IsOverdue(effective) ? Adornment.Start : Adornment.None)"
                            AdornmentIcon="@(this.IsOverdue(effective) ? Icons.Material.Filled.Warning : null)"
                            DateFormat="@TaskDates.Format" />
 
-            <span class="task-detail-created">@TaskDates.Display(task.Created)</span>
-            <span class="task-detail-updated">@TaskDates.Display(task.Updated)</span>
+            <span class="task-detail-created">@($"Created {TaskDates.Display(task.Created)}")</span>
+            <span class="task-detail-updated">@($"Updated {TaskDates.Display(task.Updated)}")</span>
             @if (task.ClosedAt is { } closedAt)
             {
-                <span class="task-detail-closed">@TaskDates.Display(closedAt)</span>
+                <span class="task-detail-closed">@($"Closed {TaskDates.Display(closedAt)}")</span>
             }
         </text>;
 
@@ -412,7 +412,7 @@ else if (this.loaded is { } task)
 
                 @if (this.descriptionMode == DescriptionViewMode.Edit)
                 {
-                    <MudTextField T="string" Value="@effective.Description" ValueChanged="this.OnDescriptionChanged"
+                    <MudTextField T="string" Variant="Variant.Outlined" Margin="Margin.Dense" Value="@effective.Description" ValueChanged="this.OnDescriptionChanged"
                                   Lines="10" Sizing="InputSizing.Auto" MaxLines="30" Class="task-detail-description" />
                 }
                 else
@@ -454,12 +454,12 @@ else if (this.loaded is { } task)
     <div class="task-detail-actions">
         @if (!this.HasPending)
         {
-            <MudButton Variant="Variant.Filled" Color="Color.Primary" OnClick="this.SaveAsync" Disabled="saveDisabled">@saveLabel</MudButton>
+            <MudButton Variant="Variant.Filled" Size="Size.Medium" Color="Color.Primary" OnClick="this.SaveAsync" Disabled="saveDisabled">@saveLabel</MudButton>
         }
-        <MudButton Variant="Variant.Outlined" Class="task-detail-cancel" OnClick="this.CancelAsync">Cancel</MudButton>
+        <MudButton Variant="Variant.Outlined" Size="Size.Medium" Class="task-detail-cancel" OnClick="this.CancelAsync">Cancel</MudButton>
         @if (!this.createMode && this.Mode == TaskDetailMode.Panel)
         {
-            <MudIconButton Icon="@Icons.Material.Filled.OpenInFull" aria-label="Expand" Class="task-detail-expand" OnClick="this.ExpandAsync" />
+            <MudIconButton Icon="@Icons.Material.Filled.OpenInFull" Size="Size.Small" aria-label="Expand" Class="task-detail-expand" OnClick="this.ExpandAsync" />
         }
     </div>
 
@@ -660,11 +660,7 @@ else if (this.loaded is { } task)
     }
 
     /// <summary>Re-renders when <c>sprints.md</c> changed, so the list, the missing marker and the new-name helper follow the file.</summary>
-    private void OnSprintsChanged() => _ = this.DispatchAsync(() =>
-    {
-        this.StateHasChanged();
-        return Task.CompletedTask;
-    });
+    private void OnSprintsChanged() => _ = RendererDispatch.Repaint(this.InvokeAsync, this.StateHasChanged);
 
     /// <inheritdoc />
     protected override async Task OnInitializedAsync()
@@ -774,25 +770,12 @@ else if (this.loaded is { } task)
     /// <summary>Marshals a requery back onto the render's synchronisation context (the <c>RoomList.razor</c> pattern), tolerating a disposed component.</summary>
     private void DispatchRefresh()
     {
-        _ = this.DispatchAsync(async () =>
+        _ = RendererDispatch.RunAsync(this.InvokeAsync, async () =>
         {
             this.Refresh();
             await this.RefreshOriginRoomAsync();
             this.StateHasChanged();
         });
-    }
-
-    /// <summary>
-    /// Marshals <paramref name="action"/> onto the render's synchronisation context via
-    /// <see cref="ComponentBase.InvokeAsync(Action)"/>'s <see cref="Task"/> overload. Both catches are
-    /// deliberately empty: they exist only to swallow the component having already been disposed (its
-    /// Renderer torn down, or the underlying circuit gone) between an event firing and this callback
-    /// running - a race inherent to any hub subscription outliving a component's own lifetime, not a bug
-    /// to surface, and there is nothing left to notify since nothing is listening any more (Spec §13.11).
-    /// </summary>
-    private Task DispatchAsync(Func<Task> action)
-    {
-        return RendererDispatch.RunAsync(this.InvokeAsync, action);
     }
 
     private void BeginEditTitle() => this.titleEditing = true;

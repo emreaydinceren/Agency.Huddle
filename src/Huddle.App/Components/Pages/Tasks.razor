@@ -75,7 +75,7 @@
         <MudAlert Severity="Severity.Warning" role="status" Class="tasks-invalid-view-alert">
             This View is invalid: @string.Join(" ", invalid.Problems)
         </MudAlert>
-        <MudButton OnClick="@(() => this.OpenEditorFor(invalid.Id ?? this.ViewId ?? string.Empty))" Class="tasks-invalid-view-edit">Edit view</MudButton>
+        <MudButton Size="Size.Medium" OnClick="@(() => this.OpenEditorFor(invalid.Id ?? this.ViewId ?? string.Empty))" Class="tasks-invalid-view-edit">Edit view</MudButton>
     }
     else if (this.viewNotFound)
     {
@@ -107,7 +107,7 @@
             }
             @if (this.HasOverrides)
             {
-                <MudLink OnClick="this.ResetOverrides" Class="tasks-reset">Reset</MudLink>
+                <MudLink OnClick="this.ResetOverrides" Class="tasks-reset">Reset filters</MudLink>
             }
             <MudSpacer />
             <AiReactingChip Watched="this.WatchedTaskIds" />
@@ -171,21 +171,24 @@
         {
             @* Spec §13.12 empty states, one rendering below the List and the Board (corrections-B7 12.4 item 1).
                "No tasks yet." carries no button of its own: the toolbar's "+ New task" is right above it. *@
-            <MudStack AlignItems="AlignItems.Center" Class="tasks-empty pa-8">
+            <div class="tasks-empty">
                 @if (this.Store.All.Count == 0)
                 {
-                    <MudText Typo="Typo.body1" Class="tasks-empty-message mud-text-secondary">No tasks yet.</MudText>
+                    <EmptyState Text="No tasks yet." />
                 }
                 else if (!string.IsNullOrWhiteSpace(this.search) && this.FilteredTasks(null).Count > 0)
                 {
-                    <MudText Typo="Typo.body1" Class="tasks-empty-message mud-text-secondary">No tasks match '@this.search'.</MudText>
+                    <EmptyState Text="@($"No tasks match '{this.search}'.")" />
                 }
                 else
                 {
-                    <MudText Typo="Typo.body1" Class="tasks-empty-message mud-text-secondary">No tasks match this View.</MudText>
-                    <MudButton Variant="Variant.Text" OnClick="this.ResetOverrides" Class="tasks-empty-action">Reset filters</MudButton>
+                    <EmptyState Text="No tasks match this View.">
+                        <Action>
+                            <MudButton Variant="Variant.Text" Size="Size.Medium" OnClick="this.ResetOverrides" Class="tasks-empty-action">Reset filters</MudButton>
+                        </Action>
+                    </EmptyState>
                 }
-            </MudStack>
+            </div>
         }
 
         @if (this.itemNotFoundText is not null)
@@ -609,37 +612,19 @@
     /// <summary>The ids of every Task in the current effective View (Spec §10.8), unnarrowed by the search box, for <see cref="AiReactingChip.Watched"/>.</summary>
     private IReadOnlyList<TaskId> WatchedTaskIds => this.FilteredTasks(null).Select(t => t.Id).ToList();
 
-    private void OnTasksReloaded() => _ = this.DispatchAsync(() =>
-    {
-        this.StateHasChanged();
-        return Task.CompletedTask;
-    });
+    private void OnTasksReloaded() => _ = RendererDispatch.Repaint(this.InvokeAsync, this.StateHasChanged);
 
-    private void OnTaskChanged(TaskChange change) => _ = this.DispatchAsync(() =>
-    {
-        this.StateHasChanged();
-        return Task.CompletedTask;
-    });
+    private void OnTaskChanged(TaskChange change) => _ = RendererDispatch.Repaint(this.InvokeAsync, this.StateHasChanged);
 
     /// <summary>A change to <c>sprints.md</c> re-queries: <c>@current</c> and every Sprint name are resolved again on the next render (Sprints spec §12.4, E-S17).</summary>
-    private void OnSprintsChanged() => _ = this.DispatchAsync(() =>
-    {
-        this.StateHasChanged();
-        return Task.CompletedTask;
-    });
+    private void OnSprintsChanged() => _ = RendererDispatch.Repaint(this.InvokeAsync, this.StateHasChanged);
 
-    private void OnViewsChanged() => _ = this.DispatchAsync(() =>
+    private void OnViewsChanged() => _ = RendererDispatch.RunAsync(this.InvokeAsync, () =>
     {
         this.SetEffectiveViewFromStore(this.effectiveView.Id);
         this.StateHasChanged();
         return Task.CompletedTask;
     });
-
-    /// <summary>Invokes <paramref name="action"/> on the renderer's synchronization context, swallowing the two exceptions a hub event racing component teardown can throw (§13.11).</summary>
-    private Task DispatchAsync(Func<Task> action)
-    {
-        return RendererDispatch.RunAsync(this.InvokeAsync, action);
-    }
 
     private async Task TryNavigateToLastViewAsync()
     {

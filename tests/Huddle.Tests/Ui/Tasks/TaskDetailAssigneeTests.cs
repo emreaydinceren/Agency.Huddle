@@ -179,7 +179,7 @@ public sealed class TaskDetailAssigneeTests
         await using MudBunitContext ctx = NewContext(harness);
         var cut = RenderDetail(ctx, task.Id, mode);
 
-        Assert.Equal("Woken in Room: SAML Integration", TextOf(cut, ".task-detail-woken-link"));
+        Assert.Equal("Woken in Room SAML Integration", TextOf(cut, ".task-detail-woken-link"));
         Assert.Equal("/rooms/room-1", cut.Find(".task-detail-woken-link").GetAttribute("href"));
     }
 

@@ -40,7 +40,7 @@ public sealed class WakeToastsTests
             Assert.Equal(Severity.Info, shown.Severity);
             // The Woken toast's content is a RenderFragment (it also carries Task and Room links),
             // so Snackbar.Message is null; the text lives in the toast's own .wake-toast-text span.
-            cut.WaitForAssertion(() => Assert.Equal("Nova woken for PLAT-0042 in Room: SAML Integration", cut.Find(".wake-toast-text").TextContent.Trim()));
+            cut.WaitForAssertion(() => Assert.Equal("Nova woken for PLAT-0042 in Room SAML Integration", cut.Find(".wake-toast-text").TextContent.Trim()));
         }
     }
 

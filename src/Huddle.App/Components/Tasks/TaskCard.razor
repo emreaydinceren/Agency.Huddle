@@ -71,7 +71,7 @@
     @if (this.Busy && this.LastWake is { } lastWake)
     {
         <MudChip T="string" Size="Size.Small" Color="Color.Success" Class="task-card-awake-chip">Awake</MudChip>
-        <MudLink Href="@($"/rooms/{lastWake.RoomId}")" Class="task-card-awake-link">active in Room @lastWake.RoomName</MudLink>
+        <MudLink Href="@($"/rooms/{lastWake.RoomId}")" Class="task-card-awake-link">Woken in Room @lastWake.RoomName</MudLink>
     }
 
     <MudMenu Class="task-card-menu">

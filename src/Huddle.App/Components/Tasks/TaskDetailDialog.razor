@@ -25,7 +25,7 @@
         CloseOnEscapeKey = true,
     };
 
-    /// <summary>The hosting dialog instance, cascaded by <c>MudDialogProvider</c>; <c>required</c> instead of <c>= default!</c> since a null-forgiving operator is never used in this codebase.</summary>
+    /// <summary>The hosting dialog instance, cascaded by <c>MudDialogProvider</c>; <c>required</c> instead of a null-forgiving initialiser, which this codebase never uses.</summary>
     [CascadingParameter]
     public required IMudDialogInstance MudDialog { get; set; }
 

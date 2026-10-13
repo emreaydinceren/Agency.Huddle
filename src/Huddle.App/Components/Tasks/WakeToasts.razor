@@ -37,7 +37,7 @@
 
     /// <summary>Turns one recorded wake into a toast, or nothing, per Spec §13.8.</summary>
     /// <param name="record">The wake attempt that was just recorded.</param>
-    private void OnWoken(WakeRecord record) => _ = this.DispatchAsync(() =>
+    private void OnWoken(WakeRecord record) => _ = RendererDispatch.RunAsync(this.InvokeAsync, () =>
     {
         string key = $"wake:{record.TaskId}";
         switch (record.Outcome)
@@ -95,7 +95,7 @@
     /// <param name="record">The successful wake to describe.</param>
     private RenderFragment WokenMessage(WakeRecord record) =>
         @<text>
-            <span class="wake-toast-text">@($"{record.Assignee} woken for {record.TaskId} in Room: {record.RoomName}")</span>
+            <span class="wake-toast-text">@($"{record.Assignee} woken for {record.TaskId} in Room {record.RoomName}")</span>
             <a class="wake-toast-task-link" href="@($"/tasks/item/{record.TaskId}")" @onclick="() => this.OnOpenTask.InvokeAsync(record.TaskId)" @onclick:preventDefault="true">@record.TaskId.ToString()</a>
             @if (record.RoomId is not null)
             {
@@ -111,11 +111,4 @@
             <span class="wake-toast-text">@text</span>
             <a class="wake-toast-room-link" href="@($"/rooms/{record.RoomId}")">@record.RoomName</a>
         </text>;
-
-    /// <summary>Invokes <paramref name="action"/> on the renderer's synchronization context, swallowing the two exceptions a store event racing component teardown can throw (Spec §13.11).</summary>
-    /// <param name="action">The state update to run.</param>
-    private Task DispatchAsync(Func<Task> action)
-    {
-        return RendererDispatch.RunAsync(this.InvokeAsync, action);
-    }
 }

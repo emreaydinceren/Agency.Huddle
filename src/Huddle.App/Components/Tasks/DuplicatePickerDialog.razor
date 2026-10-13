@@ -10,20 +10,17 @@
 
 <MudDialog>
     <DialogContent>
-        <MudAutocomplete T="TaskItem" Label="Duplicate of" Strict="true" SearchFunc="@this.SearchAsync"
+        <MudAutocomplete T="TaskItem" Label="Duplicate of" Strict="true" Variant="Variant.Outlined" Margin="Margin.Dense" SearchFunc="@this.SearchAsync"
                          ToStringFunc="@(task => task is null ? string.Empty : $"{task.Id} {task.Title}")"
                          Value="@this.selected" ValueChanged="@this.OnSelected" DebounceInterval="100" />
     </DialogContent>
     <DialogActions>
-        <MudButton OnClick="this.Cancel">Cancel</MudButton>
-        <MudButton Color="Color.Primary" Disabled="@(this.selected is null)" OnClick="this.Save">Save</MudButton>
+        <MudButton Size="Size.Medium" OnClick="this.Cancel">Cancel</MudButton>
+        <MudButton Variant="Variant.Filled" Size="Size.Medium" Color="Color.Primary" Disabled="@(this.selected is null)" OnClick="this.Save">Save</MudButton>
     </DialogActions>
 </MudDialog>
 
 @code {
-    /// <summary>How the Board shows this dialog: small, full-width, with a close button.</summary>
-    public static readonly DialogOptions Options = new() { CloseButton = true, MaxWidth = MaxWidth.Small, FullWidth = true };
-
     /// <summary>The dialog instance, for closing with a result.</summary>
     [CascadingParameter]
     private IMudDialogInstance? Dialog { get; set; }

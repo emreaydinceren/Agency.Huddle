@@ -27,6 +27,7 @@
 *@
 
 @using System.Globalization
+@using Agency.Huddle.App.Components.Shared.Dialogs
 @using Microsoft.Extensions.Options
 @using Agency.Huddle.App.Acp
 @using Agency.Huddle.App.Pipes
@@ -57,7 +58,7 @@
             <div class="task-board-column-header">
                 @if (this.renamingColumn == i)
                 {
-                    <MudTextField T="string" Class="task-board-column-rename" Value="@column.Label" AutoFocus="true"
+                    <MudTextField T="string" Variant="Variant.Outlined" Margin="Margin.Dense" Class="task-board-column-rename" Value="@column.Label" AutoFocus="true"
                                   ValueChanged="@(label => this.RenameAsync(i, label))" />
                 }
                 else
@@ -295,7 +296,7 @@
             ViewSaveResult result = this.ViewStore.Save(saved with { Columns = columns });
             if (!result.Saved)
             {
-                this.Snackbar.Add($"Could not save the View: {string.Join(' ', result.Problems)}", Severity.Error);
+                this.Snackbar.Add($"Could not save the View: {string.Join(' ', result.Problems)}", Severity.Error, configure: null, key: "view-save");
             }
 
             return;
@@ -501,7 +502,7 @@
         if (target == TaskState.Duplicate)
         {
             DialogParameters<DuplicatePickerDialog> parameters = new() { { dialog => dialog.Excluding, item.Id } };
-            IDialogReference picker = await this.Dialogs.ShowAsync<DuplicatePickerDialog>($"Mark {item.Id} as a duplicate", parameters, DuplicatePickerDialog.Options);
+            IDialogReference picker = await this.Dialogs.ShowAsync<DuplicatePickerDialog>($"Mark {item.Id} as a duplicate", parameters, HuddleDialogOptions.SmallForm);
             if (await picker.Result is not { Canceled: false, Data: TaskId original })
             {
                 this.container?.Refresh();
@@ -512,7 +513,7 @@
         }
         else if (target is TaskState.Cancelled or TaskState.Rejected)
         {
-            IDialogReference prompt = await this.Dialogs.ShowAsync<ReasonDialog>($"Mark {item.Id} as {target.ToWire()}", ReasonDialog.Options);
+            IDialogReference prompt = await this.Dialogs.ShowAsync<ReasonDialog>($"Mark {item.Id} as {target.ToWire()}", HuddleDialogOptions.SmallForm);
             if (await prompt.Result is not { Canceled: false } answer)
             {
                 this.container?.Refresh();
@@ -534,7 +535,7 @@
 
         if (error is not null)
         {
-            this.Snackbar.Add(error, Severity.Error);
+            this.Snackbar.Add(error, Severity.Error, configure: null, key: "board-error");
             this.container?.Refresh();
         }
     }

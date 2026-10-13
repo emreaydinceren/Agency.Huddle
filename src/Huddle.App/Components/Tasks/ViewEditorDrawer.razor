@@ -43,8 +43,8 @@
             </MudAlert>
         }
 
-        <MudTextField T="string" Label="Name" Value="@this.name" ValueChanged="@this.OnNameChanged" Disabled="this.ControlsDisabled" Class="view-editor-name" />
-        <MudTextField T="string" Label="Description" Value="@this.description" ValueChanged="@this.OnDescriptionChanged" Disabled="this.ControlsDisabled" Class="view-editor-description" />
+        <MudTextField T="string" Variant="Variant.Outlined" Margin="Margin.Dense" Label="Name" Value="@this.name" ValueChanged="@this.OnNameChanged" Disabled="this.ControlsDisabled" Class="view-editor-name" />
+        <MudTextField T="string" Variant="Variant.Outlined" Margin="Margin.Dense" Label="Description" Value="@this.description" ValueChanged="@this.OnDescriptionChanged" Disabled="this.ControlsDisabled" Class="view-editor-description" />
 
         <HuddleSegmentedControl T="ViewKind" Value="this.kind" ValueChanged="this.OnKindChanged" Disabled="this.ControlsDisabled"
                          Class="view-editor-kind" ItemCount="2">
@@ -69,16 +69,16 @@
                     <MudSwitch T="bool" Value="@this.IsShown(context)" ValueChanged="@(shown => this.SetFieldShown(context, shown))"
                                Class="@($"view-editor-field-switch-{context}")" />
                     <MudText>@context</MudText>
-                    <MudIconButton Icon="@Icons.Material.Filled.ArrowUpward" aria-label="@($"Move {context} up")"
+                    <MudIconButton Icon="@Icons.Material.Filled.ArrowUpward" Size="Size.Small" aria-label="@($"Move {context} up")"
                                    Class="@($"view-editor-field-up-{context}")" OnClick="@(() => this.MoveField(context, -1))" />
-                    <MudIconButton Icon="@Icons.Material.Filled.ArrowDownward" aria-label="@($"Move {context} down")"
+                    <MudIconButton Icon="@Icons.Material.Filled.ArrowDownward" Size="Size.Small" aria-label="@($"Move {context} down")"
                                    Class="@($"view-editor-field-down-{context}")" OnClick="@(() => this.MoveField(context, 1))" />
-                    <MudIconButton Icon="@Icons.Material.Filled.Close" aria-label="@($"Remove {context}")"
+                    <MudIconButton Icon="@Icons.Material.Filled.Close" Size="Size.Small" aria-label="@($"Remove {context}")"
                                    Class="@($"view-editor-field-remove-{context}")" OnClick="@(() => this.RemoveField(context))" />
                 </div>
             </ItemRenderer>
         </MudDropContainer>
-        <MudMenu Label="+ Add field" Class="view-editor-fields-add">
+        <MudMenu Label="Add field" Class="view-editor-fields-add">
             @foreach (string key in this.AddableFieldKeys())
             {
                 <MudMenuItem Class="view-editor-fields-add-option" OnClick="@(() => this.AddField(key))">@key</MudMenuItem>
@@ -103,7 +103,7 @@
                 <MudChip T="string" Size="Size.Small" Class="view-editor-filter-team-chip">@team</MudChip>
             }
         </div>
-        <MudSelect T="string" Label="Team" MultiSelection="true" SelectedValues="this.teamFilter" SelectedValuesChanged="this.OnTeamFilterChanged"
+        <MudSelect T="string" Variant="Variant.Outlined" Margin="Margin.Dense" Label="Team" MultiSelection="true" SelectedValues="this.teamFilter" SelectedValuesChanged="this.OnTeamFilterChanged"
                    Disabled="this.ControlsDisabled" Class="view-editor-filter-team">
             @foreach ((string value, string label) in this.TeamFilterOptions())
             {
@@ -127,7 +127,7 @@
                 <MudChip T="string" Size="Size.Small" Class="view-editor-filter-project-chip">@project</MudChip>
             }
         </div>
-        <MudSelect T="string" Label="Project" MultiSelection="true" SelectedValues="this.projectFilter" SelectedValuesChanged="this.OnProjectFilterChanged"
+        <MudSelect T="string" Variant="Variant.Outlined" Margin="Margin.Dense" Label="Project" MultiSelection="true" SelectedValues="this.projectFilter" SelectedValuesChanged="this.OnProjectFilterChanged"
                    Disabled="this.ControlsDisabled" Class="view-editor-filter-project">
             @foreach ((string value, string label) in this.ProjectFilterOptions())
             {
@@ -145,7 +145,7 @@
                 <MudChip T="string" Size="Size.Small" Class="view-editor-filter-assignee-chip">@assignee</MudChip>
             }
         </div>
-        <MudSelect T="string" Label="Assignee" MultiSelection="true" SelectedValues="this.assigneeFilter" SelectedValuesChanged="this.OnAssigneeFilterChanged"
+        <MudSelect T="string" Variant="Variant.Outlined" Margin="Margin.Dense" Label="Assignee" MultiSelection="true" SelectedValues="this.assigneeFilter" SelectedValuesChanged="this.OnAssigneeFilterChanged"
                    Disabled="this.ControlsDisabled" Class="view-editor-filter-assignee">
             @foreach ((string value, string label) in this.AssigneeFilterOptions())
             {
@@ -163,7 +163,7 @@
                 <MudChip T="string" Size="Size.Small" Class="view-editor-filter-sprint-chip">@SprintLabels.FilterLabel(this.Sprints, sprint)</MudChip>
             }
         </div>
-        <MudSelect T="string" Label="Sprint" MultiSelection="true" SelectedValues="this.sprintFilter" SelectedValuesChanged="this.OnSprintFilterChanged"
+        <MudSelect T="string" Variant="Variant.Outlined" Margin="Margin.Dense" Label="Sprint" MultiSelection="true" SelectedValues="this.sprintFilter" SelectedValuesChanged="this.OnSprintFilterChanged"
                    Disabled="this.ControlsDisabled" Class="view-editor-filter-sprint">
             @foreach ((string value, string label) in SprintLabels.FilterOptions(this.Sprints, this.sprintFilter))
             {
@@ -171,7 +171,7 @@
             }
         </MudSelect>
 
-        <MudSelect T="TaskState" Label="Status" MultiSelection="true" SelectedValues="this.stateFilter" SelectedValuesChanged="this.OnStateFilterChanged"
+        <MudSelect T="TaskState" Variant="Variant.Outlined" Margin="Margin.Dense" Label="Status" MultiSelection="true" SelectedValues="this.stateFilter" SelectedValuesChanged="this.OnStateFilterChanged"
                    Disabled="this.ControlsDisabled" Class="view-editor-filter-state">
             @foreach (TaskState state in TaskStates.All)
             {
@@ -179,7 +179,7 @@
             }
         </MudSelect>
 
-        <MudSelect T="TaskPriority" Label="Priority" MultiSelection="true" SelectedValues="this.priorityFilter" SelectedValuesChanged="this.OnPriorityFilterChanged"
+        <MudSelect T="TaskPriority" Variant="Variant.Outlined" Margin="Margin.Dense" Label="Priority" MultiSelection="true" SelectedValues="this.priorityFilter" SelectedValuesChanged="this.OnPriorityFilterChanged"
                    Disabled="this.ControlsDisabled" Class="view-editor-filter-priority">
             @foreach (TaskPriority priority in Enum.GetValues<TaskPriority>())
             {
@@ -197,7 +197,7 @@
                 <MudChip T="string" Size="Size.Small">@context</MudChip>
             </ItemRenderer>
         </MudDropContainer>
-        <MudMenu Label="+ Add grouping" Class="view-editor-grouping-add">
+        <MudMenu Label="Add grouping" Class="view-editor-grouping-add">
             @foreach (TaskGroupField field in this.AddableGroupingFields())
             {
                 <MudMenuItem Class="@($"view-editor-grouping-add-{field.ToString().ToLowerInvariant()}")"
@@ -224,9 +224,9 @@
                 {
                     Dictionary<TaskState, string> otherColumn = this.StatesUsedElsewhere(index);
                     <div class="view-editor-column-row">
-                        <MudTextField T="string" Label="Label" Value="@column.Label" ValueChanged="@(value => this.SetColumnLabel(index, value))"
+                        <MudTextField T="string" Variant="Variant.Outlined" Margin="Margin.Dense" Label="Label" Value="@column.Label" ValueChanged="@(value => this.SetColumnLabel(index, value))"
                                        Disabled="this.ControlsDisabled" Class="@($"view-editor-column-label-{index}")" />
-                        <MudSelect T="TaskState" Label="States" MultiSelection="true" SelectedValues="column.States"
+                        <MudSelect T="TaskState" Variant="Variant.Outlined" Margin="Margin.Dense" Label="States" MultiSelection="true" SelectedValues="column.States"
                                    SelectedValuesChanged="@(states => this.SetColumnStates(index, states))"
                                    Disabled="this.ControlsDisabled" Class="@($"view-editor-column-states-{index}")">
                             @foreach (TaskState state in TaskStates.All)
@@ -257,12 +257,12 @@
             </MudAlert>
         }
 
-        <MudButton Variant="Variant.Filled" Color="Color.Primary" OnClick="this.Save"
+        <MudButton Variant="Variant.Filled" Size="Size.Medium" Color="Color.Primary" OnClick="this.Save"
                    Disabled="@(problems.Count > 0 || this.ControlsDisabled)" Class="view-editor-save">Save view</MudButton>
-        <MudButton Variant="Variant.Outlined" OnClick="this.CancelAsync" Class="view-editor-cancel">Cancel</MudButton>
+        <MudButton Variant="Variant.Outlined" Size="Size.Medium" OnClick="this.CancelAsync" Class="view-editor-cancel">Cancel</MudButton>
         @if (!this.loadedView.BuiltIn)
         {
-            <MudButton Variant="Variant.Text" Color="Color.Error" OnClick="this.DeleteAsync"
+            <MudButton Variant="Variant.Text" Size="Size.Medium" Color="Color.Error" OnClick="this.DeleteAsync"
                        Disabled="this.ControlsDisabled" Class="view-editor-delete">Delete</MudButton>
         }
 
@@ -397,11 +397,7 @@
     }
 
     /// <summary>Re-renders so the Sprint filter's options follow <c>sprints.md</c>; the draft is untouched.</summary>
-    private void OnSprintsChanged() => _ = this.DispatchAsync(() =>
-    {
-        this.StateHasChanged();
-        return Task.CompletedTask;
-    });
+    private void OnSprintsChanged() => _ = RendererDispatch.Repaint(this.InvokeAsync, this.StateHasChanged);
 
     /// <summary>Loads the draft for <see cref="Id"/> the first time it is seen - always on this instance's very first call, per <see cref="seeded"/>'s own remarks, even when <see cref="Id"/> is null both then and now.</summary>
     protected override void OnParametersSet()
@@ -451,7 +447,7 @@
     }
 
     /// <summary>On an external <see cref="ViewStore.ViewsChanged"/>, re-seeds the draft from the store - but only when it is not dirty (corrections-B5 D13 item 4), so this drawer's own in-flight edit is never silently overwritten.</summary>
-    private void OnViewsChanged() => _ = this.DispatchAsync(() =>
+    private void OnViewsChanged() => _ = RendererDispatch.RunAsync(this.InvokeAsync, () =>
     {
         if (!this.IsDirty() && this.Id is { } id && this.ViewStore.Get(id) is { } fresh)
         {
@@ -461,12 +457,6 @@
         this.StateHasChanged();
         return Task.CompletedTask;
     });
-
-    /// <summary>Invokes <paramref name="action"/> on the renderer's synchronization context, swallowing the two exceptions a hub event racing component teardown can throw (Spec §13.11's pattern).</summary>
-    private Task DispatchAsync(Func<Task> action)
-    {
-        return RendererDispatch.RunAsync(this.InvokeAsync, action);
-    }
 
     private void OnNameChanged(string value) => this.name = value;
 

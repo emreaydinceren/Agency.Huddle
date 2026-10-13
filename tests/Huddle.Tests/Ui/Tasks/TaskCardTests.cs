@@ -185,7 +185,7 @@ public sealed class TaskCardTests : IDisposable
 
         Assert.Equal("Awake", cut.Find(".task-card-awake-chip").TextContent.Trim());
         IElement link = cut.Find("a.task-card-awake-link");
-        Assert.Equal("active in Room General", link.TextContent.Trim());
+        Assert.Equal("Woken in Room General", link.TextContent.Trim());
         Assert.Equal("/rooms/room-42", link.GetAttribute("href"));
     }
 
@@ -200,7 +200,7 @@ public sealed class TaskCardTests : IDisposable
         await using MudBunitContext ctx = new();
         IRenderedComponent<ContainerFragment> cut = this.Render(ctx, task, presence: PresenceState.Asleep, lastWake: lastWake, busy: false);
 
-        Assert.DoesNotContain("active in Room", cut.Markup, StringComparison.Ordinal);
+        Assert.DoesNotContain("Woken in Room", cut.Markup, StringComparison.Ordinal);
         Assert.Empty(cut.FindAll("a.task-card-awake-link"));
     }
 
