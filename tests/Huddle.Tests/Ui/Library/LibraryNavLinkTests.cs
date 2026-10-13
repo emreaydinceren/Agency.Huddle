@@ -1,4 +1,5 @@
 using Bunit;
+using Microsoft.AspNetCore.Components;
 using Microsoft.AspNetCore.Components.Rendering;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging.Abstractions;
@@ -6,6 +7,7 @@ using Microsoft.Extensions.Options;
 using Agency.Huddle.App;
 using Agency.Huddle.App.Acp;
 using Agency.Huddle.App.Components.Library;
+using Agency.Huddle.App.Components.Shared.Dialogs;
 using Agency.Huddle.App.Library;
 
 namespace Agency.Huddle.Tests.Ui.Library;
@@ -16,7 +18,7 @@ namespace Agency.Huddle.Tests.Ui.Library;
 /// (a hidden built-in is left out), each row's own Href routes to the full <c>/library</c> page
 /// scoped to that root (Spec §6.9), landing the Human on Library as its own primary panel rather
 /// than opening a docked pane next to whatever page they were on - and a trailing "Add Folder" row
-/// opens <see cref="AddFolderDialog"/>, the same pin flow and refusal text <c>LibraryPanelTests</c>
+/// opens a <see cref="NameDialog"/>, the same pin flow and refusal text <c>LibraryPanelTests</c>
 /// pins for Settings > Library's own Add row. The group re-renders on
 /// <see cref="LibraryRootStore.RootsChanged"/> from anywhere - this dialog, Settings, or a reset -
 /// and renders nothing when <c>Library.Enabled</c> is <see langword="false"/>. The docked
@@ -81,36 +83,15 @@ public sealed class LibraryNavLinkTests
         cut.WaitForAssertion(() => Assert.NotEmpty(cut.FindAll(".mud-dialog-title")));
         Assert.Equal("Add folder", cut.Find(".mud-dialog-title").TextContent.Trim());
 
-        await cut.InvokeAsync(() => cut.Find(".add-folder-dialog-name-field input").ChangeAsync("Notes"));
-        await cut.InvokeAsync(() => cut.Find(".add-folder-dialog-path-field input").ChangeAsync(newPath));
-        await cut.InvokeAsync(() => cut.Find(".add-folder-dialog-add-button").ClickAsync());
+        await cut.InvokeAsync(() => cut.FindAll(".mud-dialog-content input")[0].InputAsync(new ChangeEventArgs { Value = "Notes" }));
+        await cut.InvokeAsync(() => cut.FindAll(".mud-dialog-content input")[1].InputAsync(new ChangeEventArgs { Value = newPath }));
+        await cut.InvokeAsync(() => cut.FindAll(".mud-dialog-actions button")[1].ClickAsync());
 
         cut.WaitForAssertion(() => Assert.Empty(cut.FindAll(".mud-dialog-title")));
         Assert.Equal(["Notes"], fixture.Store.Pinned.Select(p => p.Name));
         cut.WaitForAssertion(() => Assert.Equal(
             ["Teams", "Teammates", "Uploads", "Notes"],
             cut.FindAll(".library-nav-root-link").Select(e => e.TextContent.Trim())));
-    }
-
-    /// <summary>A path that does not exist on disk is refused inline with the Spec's settled text; the dialog stays open and nothing is saved.</summary>
-    [Fact]
-    public async Task AddFolder_MissingFolder_RefusedInline_DialogStaysOpen()
-    {
-        using NavFixture fixture = NavFixture.Build();
-        string missingPath = Path.Combine(fixture.DataDir, "DoesNotExist");
-        await using MudBunitContext ctx = fixture.NewContext();
-        var cut = ctx.RenderWithPopovers(RenderNav);
-
-        _ = cut.InvokeAsync(() => cut.Find(".nav-action-link .mud-nav-link").Click());
-        cut.WaitForAssertion(() => Assert.NotEmpty(cut.FindAll(".mud-dialog-title")));
-
-        await cut.InvokeAsync(() => cut.Find(".add-folder-dialog-name-field input").ChangeAsync("Ghost"));
-        await cut.InvokeAsync(() => cut.Find(".add-folder-dialog-path-field input").ChangeAsync(missingPath));
-        await cut.InvokeAsync(() => cut.Find(".add-folder-dialog-add-button").ClickAsync());
-
-        Assert.Equal("That folder doesn't exist.", cut.Find(".add-folder-dialog-error").TextContent.Trim());
-        Assert.NotEmpty(cut.FindAll(".mud-dialog-title"));
-        Assert.Empty(fixture.Store.Pinned);
     }
 
     /// <summary>A pin saved from outside this component (Settings, another tab) still re-renders the row list.</summary>
@@ -141,6 +122,73 @@ public sealed class LibraryNavLinkTests
         var cut = ctx.Render<LibraryNavLink>();
 
         Assert.Equal(string.Empty, cut.Markup.Trim());
+    }
+
+    /// <summary>[T17.1, UX-R10] Add folder opens the shared <see cref="NameDialog"/> labelled "Name" with the verb "Add"; the Path
+    /// field and the trust warning are its <c>ChildContent</c>, under the name field.</summary>
+    [Fact]
+    public async Task AddFolder_OpensNameDialogWithPathFieldAndTrustWarningAsChildContent()
+    {
+        using NavFixture fixture = NavFixture.Build();
+        await using MudBunitContext ctx = fixture.NewContext();
+        var cut = ctx.RenderWithPopovers(RenderNav);
+
+        _ = cut.InvokeAsync(() => cut.Find(".nav-action-link .mud-nav-link").Click());
+        cut.WaitForAssertion(() => Assert.NotEmpty(cut.FindAll(".mud-dialog-title")));
+
+        NameDialog dialog = cut.FindComponent<NameDialog>().Instance;
+        Assert.Equal("Add folder", cut.Find(".mud-dialog-title").TextContent.Trim());
+        Assert.Equal("Name", dialog.Label);
+        Assert.Equal("Add", dialog.ConfirmText);
+        Assert.Equal(["Name", "Path"], cut.FindAll(".mud-dialog-content label").Select(e => e.TextContent.Trim()));
+        Assert.Equal("Anything in this folder can be read and changed from Huddle.", cut.Find(".mud-dialog-content .add-folder-dialog-trust-warning").TextContent.Trim());
+        Assert.Equal(["Cancel", "Add"], cut.FindAll(".mud-dialog-actions button").Select(b => b.TextContent.Trim()));
+    }
+
+    /// <summary>[T17.1, UX-025] A path that does not exist is refused by the action: the settled text shows in the dialog's
+    /// Dense error <c>MudAlert</c>, the dialog stays open and nothing is pinned.</summary>
+    [Fact]
+    public async Task AddFolder_MissingFolder_ShowsDenseAlertFromSubmit()
+    {
+        using NavFixture fixture = NavFixture.Build();
+        string missingPath = Path.Combine(fixture.DataDir, "DoesNotExist");
+        await using MudBunitContext ctx = fixture.NewContext();
+        var cut = ctx.RenderWithPopovers(RenderNav);
+
+        _ = cut.InvokeAsync(() => cut.Find(".nav-action-link .mud-nav-link").Click());
+        cut.WaitForAssertion(() => Assert.NotEmpty(cut.FindAll(".mud-dialog-title")));
+        _ = cut.FindComponent<NameDialog>();
+
+        IReadOnlyList<AngleSharp.Dom.IElement> inputs = cut.FindAll(".mud-dialog-content input");
+        await cut.InvokeAsync(() => inputs[0].InputAsync(new ChangeEventArgs { Value = "Ghost" }));
+        await cut.InvokeAsync(() => cut.FindAll(".mud-dialog-content input")[1].InputAsync(new ChangeEventArgs { Value = missingPath }));
+        await cut.InvokeAsync(() => cut.FindAll(".mud-dialog-actions button")[1].ClickAsync());
+
+        Assert.Equal("That folder doesn't exist.", cut.Find(".mud-dialog-content .mud-alert-text-error[role='alert']").TextContent.Trim());
+        Assert.NotEmpty(cut.FindAll(".mud-dialog-title"));
+        Assert.Empty(fixture.Store.Pinned);
+    }
+
+    /// <summary>[T17.1, UX-R10] An existing folder pins on the primary and closes the <see cref="NameDialog"/>.</summary>
+    [Fact]
+    public async Task AddFolder_ValidFolder_SubmitPinsAndCloses()
+    {
+        using NavFixture fixture = NavFixture.Build();
+        string newPath = Path.Combine(fixture.DataDir, "Notes");
+        Directory.CreateDirectory(newPath);
+        await using MudBunitContext ctx = fixture.NewContext();
+        var cut = ctx.RenderWithPopovers(RenderNav);
+
+        _ = cut.InvokeAsync(() => cut.Find(".nav-action-link .mud-nav-link").Click());
+        cut.WaitForAssertion(() => Assert.NotEmpty(cut.FindAll(".mud-dialog-title")));
+        _ = cut.FindComponent<NameDialog>();
+
+        await cut.InvokeAsync(() => cut.FindAll(".mud-dialog-content input")[0].InputAsync(new ChangeEventArgs { Value = "Notes" }));
+        await cut.InvokeAsync(() => cut.FindAll(".mud-dialog-content input")[1].InputAsync(new ChangeEventArgs { Value = newPath }));
+        await cut.InvokeAsync(() => cut.FindAll(".mud-dialog-actions button")[1].ClickAsync());
+
+        cut.WaitForAssertion(() => Assert.Empty(cut.FindAll(".mud-dialog-title")));
+        Assert.Equal(["Notes"], fixture.Store.Pinned.Select(p => p.Name));
     }
 
     private static void RenderNav(RenderTreeBuilder builder)

@@ -1,6 +1,7 @@
 using Bunit;
 using Bunit.Rendering;
 using Microsoft.AspNetCore.Components;
+using Agency.Huddle.App.Components.Shared.Dialogs;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging.Abstractions;
 using MudBlazor;
@@ -54,7 +55,7 @@ public sealed class LibraryFileOpsTests : IDisposable
             "5 links in 3 notes point here and will be updated.",
             cut.Find(".library-file-ops-link-count").TextContent.Trim());
         Assert.Equal(
-            ["Rename and update", "Cancel"],
+            ["Cancel", "Rename and update"],
             cut.FindAll(".mud-dialog-actions button").Select(b => b.TextContent.Trim()).ToList());
     }
 
@@ -74,7 +75,7 @@ public sealed class LibraryFileOpsTests : IDisposable
         cut.WaitForAssertion(() => Assert.NotEmpty(cut.FindAll(".mud-dialog-title")));
 
         Assert.Equal(
-            ["Rename", "Cancel"],
+            ["Cancel", "Rename"],
             cut.FindAll(".mud-dialog-actions button").Select(b => b.TextContent.Trim()).ToList());
         Assert.Empty(cut.FindAll(".library-file-ops-link-count"));
     }
@@ -96,8 +97,8 @@ public sealed class LibraryFileOpsTests : IDisposable
 
         _ = cut.InvokeAsync(() => ops.HandleAsync(new LibraryTreeAction(LibraryTreeActionKind.Rename, target, null)));
         cut.WaitForAssertion(() => Assert.NotEmpty(cut.FindAll(".mud-dialog-title")));
-        await cut.InvokeAsync(() => cut.Find(".library-file-ops-name-field input").ChangeAsync("Renamed.md"));
-        await cut.InvokeAsync(() => cut.FindAll(".mud-dialog-actions button")[0].ClickAsync());
+        await cut.InvokeAsync(() => cut.Find(".mud-dialog-content input").InputAsync(new ChangeEventArgs { Value = "Renamed.md" }));
+        await cut.InvokeAsync(() => cut.FindAll(".mud-dialog-actions button")[1].ClickAsync());
         cut.WaitForAssertion(() => Assert.Single(changes), TimeSpan.FromSeconds(5));
 
         Assert.False(File.Exists(Path.Combine(root, "Target.md")));
@@ -124,10 +125,10 @@ public sealed class LibraryFileOpsTests : IDisposable
 
         _ = cut.InvokeAsync(() => ops.HandleAsync(new LibraryTreeAction(LibraryTreeActionKind.Rename, target, null)));
         cut.WaitForAssertion(() => Assert.NotEmpty(cut.FindAll(".mud-dialog-title")));
-        await cut.InvokeAsync(() => cut.Find(".library-file-ops-name-field input").ChangeAsync("CON.md"));
-        await cut.InvokeAsync(() => cut.FindAll(".mud-dialog-actions button")[0].ClickAsync());
+        await cut.InvokeAsync(() => cut.Find(".mud-dialog-content input").InputAsync(new ChangeEventArgs { Value = "CON.md" }));
+        await cut.InvokeAsync(() => cut.FindAll(".mud-dialog-actions button")[1].ClickAsync());
 
-        Assert.Equal("\"CON.md\" is reserved by Windows.", cut.Find(".library-file-ops-error").TextContent.Trim());
+        Assert.Equal("\"CON.md\" is reserved by Windows.", cut.Find(".mud-dialog-content .mud-input-helper-text").TextContent.Trim());
         Assert.NotEmpty(cut.FindAll(".mud-dialog-title"));
         Assert.True(File.Exists(Path.Combine(root, "Target.md")));
         Assert.False(File.Exists(Path.Combine(root, "CON.md")));
@@ -149,11 +150,11 @@ public sealed class LibraryFileOpsTests : IDisposable
 
         _ = cut.InvokeAsync(() => ops.HandleAsync(new LibraryTreeAction(LibraryTreeActionKind.Rename, target, null)));
         cut.WaitForAssertion(() => Assert.NotEmpty(cut.FindAll(".mud-dialog-title")));
-        await cut.InvokeAsync(() => cut.Find(".library-file-ops-name-field input").ChangeAsync("Renamed.md"));
+        await cut.InvokeAsync(() => cut.Find(".mud-dialog-content input").InputAsync(new ChangeEventArgs { Value = "Renamed.md" }));
 
         using (FileStream hold = new(Path.Combine(root, "Locked.md"), FileMode.Open, FileAccess.Read, FileShare.None))
         {
-            await cut.InvokeAsync(() => cut.FindAll(".mud-dialog-actions button")[0].ClickAsync());
+            await cut.InvokeAsync(() => cut.FindAll(".mud-dialog-actions button")[1].ClickAsync());
             cut.WaitForAssertion(() => Assert.NotEmpty(cut.FindAll(".library-file-ops-partial-failure")), TimeSpan.FromSeconds(5));
         }
 
@@ -186,7 +187,7 @@ public sealed class LibraryFileOpsTests : IDisposable
         Assert.Equal(
             "Links weren't updated: this root has too many files to index.",
             cut.Find(".library-file-ops-links-not-updated").TextContent.Trim());
-        Assert.Equal(["Rename", "Cancel"], cut.FindAll(".mud-dialog-actions button").Select(b => b.TextContent.Trim()).ToList());
+        Assert.Equal(["Cancel", "Rename"], cut.FindAll(".mud-dialog-actions button").Select(b => b.TextContent.Trim()).ToList());
     }
 
     /// <summary>[12.5a] The Move dialog's destination list holds only folders inside the item's own Library
@@ -260,8 +261,8 @@ public sealed class LibraryFileOpsTests : IDisposable
 
         _ = cut.InvokeAsync(() => ops.HandleAsync(new LibraryTreeAction(LibraryTreeActionKind.Rename, target, null)));
         cut.WaitForAssertion(() => Assert.NotEmpty(cut.FindAll(".mud-dialog-title")));
-        await cut.InvokeAsync(() => cut.Find(".library-file-ops-name-field input").ChangeAsync("Renamed.md"));
-        await cut.InvokeAsync(() => cut.FindAll(".mud-dialog-actions button")[0].ClickAsync());
+        await cut.InvokeAsync(() => cut.Find(".mud-dialog-content input").InputAsync(new ChangeEventArgs { Value = "Renamed.md" }));
+        await cut.InvokeAsync(() => cut.FindAll(".mud-dialog-actions button")[1].ClickAsync());
 
         Assert.True(File.Exists(Path.Combine(root, "Target.md")));
         Assert.False(File.Exists(Path.Combine(root, "Renamed.md")));
@@ -383,8 +384,8 @@ public sealed class LibraryFileOpsTests : IDisposable
 
         _ = cut.InvokeAsync(() => ops.HandleAsync(new LibraryTreeAction(LibraryTreeActionKind.NewNote, file, null)));
         cut.WaitForAssertion(() => Assert.NotEmpty(cut.FindAll(".mud-dialog-title")));
-        await cut.InvokeAsync(() => cut.Find(".library-file-ops-name-field input").ChangeAsync("B"));
-        await cut.InvokeAsync(() => cut.FindAll(".mud-dialog-actions button")[0].ClickAsync());
+        await cut.InvokeAsync(() => cut.Find(".mud-dialog-content input").InputAsync(new ChangeEventArgs { Value = "B" }));
+        await cut.InvokeAsync(() => cut.FindAll(".mud-dialog-actions button")[1].ClickAsync());
 
         cut.WaitForAssertion(() => Assert.True(File.Exists(Path.Combine(root, "Sub", "B.md"))), TimeSpan.FromSeconds(5));
     }
@@ -405,7 +406,7 @@ public sealed class LibraryFileOpsTests : IDisposable
         _ = cut.InvokeAsync(() => ops.HandleAsync(new LibraryTreeAction(LibraryTreeActionKind.Delete, item, null)));
         cut.WaitForAssertion(() => Assert.NotEmpty(cut.FindAll(".mud-dialog-title")));
 
-        Assert.Equal("Delete Gone.md?", cut.Find(".mud-dialog-title").TextContent.Trim());
+        Assert.Equal("Delete 'Gone.md'?", cut.Find(".mud-dialog-title").TextContent.Trim());
         Assert.Equal("It goes to the Recycle Bin.", cut.Find(".mud-dialog-content").TextContent.Trim());
         Assert.Equal(
             ["Cancel", "Delete"],
@@ -501,11 +502,11 @@ public sealed class LibraryFileOpsTests : IDisposable
         cut.WaitForAssertion(() => Assert.NotEmpty(cut.FindAll(".mud-dialog-title")));
 
         Assert.Equal("New project", cut.Find(".mud-dialog-title").TextContent.Trim());
-        Assert.Equal("Name", cut.Find(".library-file-ops-name-field label").TextContent.Trim());
-        Assert.Equal(["Create", "Cancel"], cut.FindAll(".mud-dialog-actions button").Select(b => b.TextContent.Trim()).ToList());
+        Assert.Equal("Name", cut.Find(".mud-dialog-content label").TextContent.Trim());
+        Assert.Equal(["Cancel", "Create"], cut.FindAll(".mud-dialog-actions button").Select(b => b.TextContent.Trim()).ToList());
 
-        await cut.InvokeAsync(() => cut.Find(".library-file-ops-name-field input").ChangeAsync("Launch Q4"));
-        await cut.InvokeAsync(() => cut.FindAll(".mud-dialog-actions button")[0].ClickAsync());
+        await cut.InvokeAsync(() => cut.Find(".mud-dialog-content input").InputAsync(new ChangeEventArgs { Value = "Launch Q4" }));
+        await cut.InvokeAsync(() => cut.FindAll(".mud-dialog-actions button")[1].ClickAsync());
         cut.WaitForAssertion(() => Assert.Single(changes), TimeSpan.FromSeconds(5));
 
         Assert.True(Directory.Exists(Path.Combine(teamsPath, "Teams", "Acme", "Launch Q4")));
@@ -531,11 +532,11 @@ public sealed class LibraryFileOpsTests : IDisposable
         cut.WaitForAssertion(() => Assert.NotEmpty(cut.FindAll(".mud-dialog-title")));
 
         Assert.Equal("New note", cut.Find(".mud-dialog-title").TextContent.Trim());
-        Assert.Equal("Name", cut.Find(".library-file-ops-name-field label").TextContent.Trim());
-        Assert.Equal(["Create", "Cancel"], cut.FindAll(".mud-dialog-actions button").Select(b => b.TextContent.Trim()).ToList());
+        Assert.Equal("Name", cut.Find(".mud-dialog-content label").TextContent.Trim());
+        Assert.Equal(["Cancel", "Create"], cut.FindAll(".mud-dialog-actions button").Select(b => b.TextContent.Trim()).ToList());
 
-        await cut.InvokeAsync(() => cut.Find(".library-file-ops-name-field input").ChangeAsync("Meeting notes"));
-        await cut.InvokeAsync(() => cut.FindAll(".mud-dialog-actions button")[0].ClickAsync());
+        await cut.InvokeAsync(() => cut.Find(".mud-dialog-content input").InputAsync(new ChangeEventArgs { Value = "Meeting notes" }));
+        await cut.InvokeAsync(() => cut.FindAll(".mud-dialog-actions button")[1].ClickAsync());
         cut.WaitForAssertion(() => Assert.Single(changes), TimeSpan.FromSeconds(5));
 
         Assert.True(File.Exists(Path.Combine(root, "Meeting notes.md")));
@@ -561,8 +562,8 @@ public sealed class LibraryFileOpsTests : IDisposable
 
         Assert.Equal("New folder", cut.Find(".mud-dialog-title").TextContent.Trim());
 
-        await cut.InvokeAsync(() => cut.Find(".library-file-ops-name-field input").ChangeAsync("Archive"));
-        await cut.InvokeAsync(() => cut.FindAll(".mud-dialog-actions button")[0].ClickAsync());
+        await cut.InvokeAsync(() => cut.Find(".mud-dialog-content input").InputAsync(new ChangeEventArgs { Value = "Archive" }));
+        await cut.InvokeAsync(() => cut.FindAll(".mud-dialog-actions button")[1].ClickAsync());
         cut.WaitForAssertion(() => Assert.True(Directory.Exists(Path.Combine(root, "Archive"))), TimeSpan.FromSeconds(5));
 
         Assert.False(File.Exists(Path.Combine(root, "Archive.md")));
@@ -586,10 +587,10 @@ public sealed class LibraryFileOpsTests : IDisposable
         cut.WaitForAssertion(() => Assert.NotEmpty(cut.FindAll(".mud-dialog-title")));
 
         Assert.Equal("New note", cut.Find(".mud-dialog-title").TextContent.Trim());
-        Assert.Equal(["Create", "Cancel"], cut.FindAll(".mud-dialog-actions button").Select(b => b.TextContent.Trim()).ToList());
+        Assert.Equal(["Cancel", "Create"], cut.FindAll(".mud-dialog-actions button").Select(b => b.TextContent.Trim()).ToList());
 
-        await cut.InvokeAsync(() => cut.Find(".library-file-ops-name-field input").ChangeAsync("Meeting notes"));
-        await cut.InvokeAsync(() => cut.FindAll(".mud-dialog-actions button")[0].ClickAsync());
+        await cut.InvokeAsync(() => cut.Find(".mud-dialog-content input").InputAsync(new ChangeEventArgs { Value = "Meeting notes" }));
+        await cut.InvokeAsync(() => cut.FindAll(".mud-dialog-actions button")[1].ClickAsync());
         await pending.WaitAsync(TimeSpan.FromSeconds(5), ct);
 
         Assert.True(File.Exists(Path.Combine(root, "Meeting notes.md")));
@@ -621,7 +622,7 @@ public sealed class LibraryFileOpsTests : IDisposable
             completed = true;
         });
         cut.WaitForAssertion(() => Assert.Equal("New note", cut.Find(".mud-dialog-title").TextContent.Trim()));
-        await cut.InvokeAsync(() => cut.Find(".library-file-ops-name-field input").ChangeAsync("Meeting notes"));
+        await cut.InvokeAsync(() => cut.Find(".mud-dialog-content input").InputAsync(new ChangeEventArgs { Value = "Meeting notes" }));
         await cut.InvokeAsync(() => cut.FindAll(".mud-dialog-actions button").First(b => b.TextContent.Trim() == "Cancel").ClickAsync());
         await pending.WaitAsync(TimeSpan.FromSeconds(5), ct);
 
@@ -630,6 +631,265 @@ public sealed class LibraryFileOpsTests : IDisposable
         List<string> after = [.. Directory.GetFileSystemEntries(root)];
         Assert.Equal(before, after);
         Assert.Empty(changes);
+    }
+
+    /// <summary>[T17.1, UX-R10] Rename opens the shared <see cref="NameDialog"/> titled "Rename note", labelled "Name",
+    /// pre-filled with the file name and with the plain verb "Rename" when no links point at the note.</summary>
+    [Fact]
+    public async Task Rename_Note_OpensNameDialogWithLabelVerbAndFileName()
+    {
+        string root = this.fixture.LibraryFixture.CreatePinnedRoot("Notes");
+        File.WriteAllText(Path.Combine(root, "Target.md"), "target body");
+        LibraryPath target = this.fixture.LibraryFixture.Resolve(root, "Target.md");
+
+        await using MudBunitContext ctx = this.fixture.NewContext();
+        IRenderedComponent<ContainerFragment> cut = RenderOps(ctx);
+        LibraryFileOps ops = cut.FindComponent<LibraryFileOps>().Instance;
+
+        _ = cut.InvokeAsync(() => ops.HandleAsync(new LibraryTreeAction(LibraryTreeActionKind.Rename, target, null)));
+        cut.WaitForAssertion(() => Assert.NotEmpty(cut.FindAll(".mud-dialog-title")));
+
+        NameDialog dialog = cut.FindComponent<NameDialog>().Instance;
+        Assert.Equal("Rename note", cut.Find(".mud-dialog-title").TextContent.Trim());
+        Assert.Equal("Name", dialog.Label);
+        Assert.Equal("Rename", dialog.ConfirmText);
+        Assert.Equal("Target.md", dialog.InitialValue);
+        Assert.Equal(["Cancel", "Rename"], cut.FindAll(".mud-dialog-actions button").Select(b => b.TextContent.Trim()).ToList());
+    }
+
+    /// <summary>[T17.1, UX-R10] Renaming a folder keeps its title "Rename folder" on the same <see cref="NameDialog"/>.</summary>
+    [Fact]
+    public async Task Rename_Folder_OpensNameDialogTitledRenameFolder()
+    {
+        string root = this.fixture.LibraryFixture.CreatePinnedRoot("Notes");
+        Directory.CreateDirectory(Path.Combine(root, "Sub"));
+        LibraryPath folder = this.fixture.LibraryFixture.Resolve(root, "Sub");
+
+        await using MudBunitContext ctx = this.fixture.NewContext();
+        IRenderedComponent<ContainerFragment> cut = RenderOps(ctx);
+        LibraryFileOps ops = cut.FindComponent<LibraryFileOps>().Instance;
+
+        _ = cut.InvokeAsync(() => ops.HandleAsync(new LibraryTreeAction(LibraryTreeActionKind.Rename, folder, null)));
+        cut.WaitForAssertion(() => Assert.NotEmpty(cut.FindAll(".mud-dialog-title")));
+
+        Assert.Equal("Rename folder", cut.Find(".mud-dialog-title").TextContent.Trim());
+        Assert.Equal("Sub", cut.FindComponent<NameDialog>().Instance.InitialValue);
+    }
+
+    /// <summary>[T17.1, UX-R10] With links pointing at the note, the count line is the dialog's <c>ChildContent</c> (inside the
+    /// dialog content, under the field) and the primary verb becomes "Rename and update".</summary>
+    [Fact]
+    public async Task Rename_WithLinks_CountLineIsChildContentAndVerbIsRenameAndUpdate()
+    {
+        string root = this.fixture.LibraryFixture.CreatePinnedRoot("Notes");
+        File.WriteAllText(Path.Combine(root, "Target.md"), "target body");
+        File.WriteAllText(Path.Combine(root, "One.md"), "See [[Target]] and [[Target|alias]] and ![[Target]].");
+        File.WriteAllText(Path.Combine(root, "Two.md"), "Also [[Target]].");
+        File.WriteAllText(Path.Combine(root, "Three.md"), "And [[Target#heading]].");
+        LibraryPath target = this.fixture.LibraryFixture.Resolve(root, "Target.md");
+
+        await using MudBunitContext ctx = this.fixture.NewContext();
+        IRenderedComponent<ContainerFragment> cut = RenderOps(ctx);
+        LibraryFileOps ops = cut.FindComponent<LibraryFileOps>().Instance;
+
+        _ = cut.InvokeAsync(() => ops.HandleAsync(new LibraryTreeAction(LibraryTreeActionKind.Rename, target, null)));
+        cut.WaitForAssertion(() => Assert.NotEmpty(cut.FindAll(".mud-dialog-title")));
+
+        Assert.Equal("Rename and update", cut.FindComponent<NameDialog>().Instance.ConfirmText);
+        Assert.Equal(
+            "5 links in 3 notes point here and will be updated.",
+            cut.Find(".mud-dialog-content .library-file-ops-link-count").TextContent.Trim());
+        Assert.Equal(["Cancel", "Rename and update"], cut.FindAll(".mud-dialog-actions button").Select(b => b.TextContent.Trim()).ToList());
+    }
+
+    /// <summary>[T17.1, UX-R10] When the root's index is unavailable the "Links weren't updated" line is the dialog's
+    /// <c>ChildContent</c> and the verb stays "Rename".</summary>
+    [Fact]
+    public async Task Rename_IndexUnavailable_LinksNotUpdatedLineIsChildContent()
+    {
+        using OpsFixture indexLimitedFixture = OpsFixture.Build(options => options.Library.MaxIndexedFiles = 1);
+        string root = indexLimitedFixture.LibraryFixture.CreatePinnedRoot("Notes");
+        File.WriteAllText(Path.Combine(root, "A.md"), "a");
+        File.WriteAllText(Path.Combine(root, "Target.md"), "target body");
+        LibraryPath target = indexLimitedFixture.LibraryFixture.Resolve(root, "Target.md");
+
+        await using MudBunitContext ctx = indexLimitedFixture.NewContext();
+        IRenderedComponent<ContainerFragment> cut = RenderOps(ctx);
+        LibraryFileOps ops = cut.FindComponent<LibraryFileOps>().Instance;
+
+        _ = cut.InvokeAsync(() => ops.HandleAsync(new LibraryTreeAction(LibraryTreeActionKind.Rename, target, null)));
+        cut.WaitForAssertion(() => Assert.NotEmpty(cut.FindAll(".mud-dialog-title")));
+
+        Assert.Equal("Rename", cut.FindComponent<NameDialog>().Instance.ConfirmText);
+        Assert.Equal(
+            "Links weren't updated: this root has too many files to index.",
+            cut.Find(".mud-dialog-content .library-file-ops-links-not-updated").TextContent.Trim());
+    }
+
+    /// <summary>[T17.1, UX-024] A name <see cref="LibraryNames"/> refuses is shown on the field while typing (helper text) and
+    /// disables the primary, instead of being refused after the click.</summary>
+    [Fact]
+    public async Task Rename_InvalidName_ValidatesLiveAndDisablesPrimary()
+    {
+        string root = this.fixture.LibraryFixture.CreatePinnedRoot("Notes");
+        File.WriteAllText(Path.Combine(root, "Target.md"), "target body");
+        LibraryPath target = this.fixture.LibraryFixture.Resolve(root, "Target.md");
+
+        await using MudBunitContext ctx = this.fixture.NewContext();
+        IRenderedComponent<ContainerFragment> cut = RenderOps(ctx);
+        LibraryFileOps ops = cut.FindComponent<LibraryFileOps>().Instance;
+
+        _ = cut.InvokeAsync(() => ops.HandleAsync(new LibraryTreeAction(LibraryTreeActionKind.Rename, target, null)));
+        cut.WaitForAssertion(() => Assert.NotEmpty(cut.FindAll(".mud-dialog-title")));
+        await cut.InvokeAsync(() => cut.Find(".mud-dialog-content input").InputAsync(new ChangeEventArgs { Value = "CON.md" }));
+
+        Assert.Equal("\"CON.md\" is reserved by Windows.", cut.Find(".mud-dialog-content .mud-input-helper-text").TextContent.Trim());
+        Assert.True(cut.FindAll(".mud-dialog-actions button")[1].HasAttribute("disabled"));
+        Assert.NotEmpty(cut.FindAll(".mud-dialog-title"));
+    }
+
+    /// <summary>[T17.1, UX-025] A refusal from <see cref="LibraryFileService.RenameAsync"/> (the name is taken) shows in the
+    /// dialog's Dense error <c>MudAlert</c> and leaves the dialog open and nothing renamed.</summary>
+    [Fact]
+    public async Task Rename_ServiceRefusal_ShowsDenseAlertAndKeepsDialogOpen()
+    {
+        string root = this.fixture.LibraryFixture.CreatePinnedRoot("Notes");
+        File.WriteAllText(Path.Combine(root, "Target.md"), "target body");
+        File.WriteAllText(Path.Combine(root, "Taken.md"), "taken");
+        LibraryPath target = this.fixture.LibraryFixture.Resolve(root, "Target.md");
+
+        await using MudBunitContext ctx = this.fixture.NewContext();
+        IRenderedComponent<ContainerFragment> cut = RenderOps(ctx);
+        LibraryFileOps ops = cut.FindComponent<LibraryFileOps>().Instance;
+
+        _ = cut.InvokeAsync(() => ops.HandleAsync(new LibraryTreeAction(LibraryTreeActionKind.Rename, target, null)));
+        cut.WaitForAssertion(() => Assert.NotEmpty(cut.FindAll(".mud-dialog-title")));
+        await cut.InvokeAsync(() => cut.Find(".mud-dialog-content input").InputAsync(new ChangeEventArgs { Value = "Taken.md" }));
+        await cut.InvokeAsync(() => cut.FindAll(".mud-dialog-actions button")[1].ClickAsync());
+
+        cut.WaitForAssertion(() => Assert.NotEmpty(cut.FindAll(".mud-dialog-content .mud-alert-text-error[role='alert']")));
+        Assert.NotEmpty(cut.FindAll(".mud-dialog-title"));
+        Assert.True(File.Exists(Path.Combine(root, "Target.md")));
+    }
+
+    /// <summary>[T17.1, UX-R10] Confirming the <see cref="NameDialog"/> renames through the service, closes the dialog and
+    /// raises <c>OnChanged</c> with the old and new path and the rewritten notes.</summary>
+    [Fact]
+    public async Task Rename_SubmitOnNameDialog_RenamesAndRaisesOnChanged()
+    {
+        string root = this.fixture.LibraryFixture.CreatePinnedRoot("Notes");
+        File.WriteAllText(Path.Combine(root, "Target.md"), "target body");
+        File.WriteAllText(Path.Combine(root, "Linker.md"), "See [[Target]].");
+        LibraryPath target = this.fixture.LibraryFixture.Resolve(root, "Target.md");
+        List<LibraryChange> changes = [];
+
+        await using MudBunitContext ctx = this.fixture.NewContext();
+        IRenderedComponent<ContainerFragment> cut = RenderOps(ctx, onChanged: EventCallback.Factory.Create<LibraryChange>(this, c => changes.Add(c)));
+        LibraryFileOps ops = cut.FindComponent<LibraryFileOps>().Instance;
+
+        _ = cut.InvokeAsync(() => ops.HandleAsync(new LibraryTreeAction(LibraryTreeActionKind.Rename, target, null)));
+        cut.WaitForAssertion(() => Assert.NotEmpty(cut.FindAll(".mud-dialog-title")));
+        _ = cut.FindComponent<NameDialog>();
+        await cut.InvokeAsync(() => cut.Find(".mud-dialog-content input").InputAsync(new ChangeEventArgs { Value = "Renamed.md" }));
+        await cut.InvokeAsync(() => cut.FindAll(".mud-dialog-actions button")[1].ClickAsync());
+        cut.WaitForAssertion(() => Assert.Single(changes), TimeSpan.FromSeconds(5));
+
+        cut.WaitForAssertion(() => Assert.Empty(cut.FindAll(".mud-dialog-title")));
+        LibraryChange change = Assert.Single(changes);
+        Assert.Equal("Target.md", change.OldPath?.RelativePath);
+        Assert.Equal("Renamed.md", change.NewPath?.RelativePath);
+        Assert.Equal(["Linker.md"], change.RewrittenNotes);
+    }
+
+    /// <summary>[T17.1, UX-R10] New note, New folder and New project each open the shared <see cref="NameDialog"/> labelled
+    /// "Name" with the verb "Create", under their own titles.</summary>
+    [Theory]
+    [InlineData(LibraryTreeActionKind.NewNote, "New note")]
+    [InlineData(LibraryTreeActionKind.NewFolder, "New folder")]
+    public async Task Create_OpensNameDialogWithLabelAndCreateVerb(LibraryTreeActionKind kind, string title)
+    {
+        string root = this.fixture.LibraryFixture.CreatePinnedRoot("Notes");
+        LibraryPath folder = this.fixture.LibraryFixture.Resolve(root, string.Empty);
+
+        await using MudBunitContext ctx = this.fixture.NewContext();
+        IRenderedComponent<ContainerFragment> cut = RenderOps(ctx);
+        LibraryFileOps ops = cut.FindComponent<LibraryFileOps>().Instance;
+
+        _ = cut.InvokeAsync(() => ops.HandleAsync(new LibraryTreeAction(kind, folder, null)));
+        cut.WaitForAssertion(() => Assert.NotEmpty(cut.FindAll(".mud-dialog-title")));
+
+        NameDialog dialog = cut.FindComponent<NameDialog>().Instance;
+        Assert.Equal(title, cut.Find(".mud-dialog-title").TextContent.Trim());
+        Assert.Equal("Name", dialog.Label);
+        Assert.Equal("Create", dialog.ConfirmText);
+        Assert.Equal(string.Empty, dialog.InitialValue);
+        Assert.Equal(["Cancel", "Create"], cut.FindAll(".mud-dialog-actions button").Select(b => b.TextContent.Trim()).ToList());
+    }
+
+    /// <summary>[T17.1, UX-R10] New project on a Team folder opens the same <see cref="NameDialog"/> titled "New project".</summary>
+    [Fact]
+    public async Task NewProject_OpensNameDialogWithLabelAndCreateVerb()
+    {
+        Directory.CreateDirectory(Path.Combine(this.fixture.LibraryFixture.DataDir, "Teams", "Acme"));
+        this.fixture.LibraryFixture.Reload();
+        LibraryPath teamFolder = this.fixture.LibraryFixture.ResolveTeams("Acme");
+
+        await using MudBunitContext ctx = this.fixture.NewContext();
+        IRenderedComponent<ContainerFragment> cut = RenderOps(ctx);
+        LibraryFileOps ops = cut.FindComponent<LibraryFileOps>().Instance;
+
+        _ = cut.InvokeAsync(() => ops.HandleAsync(new LibraryTreeAction(LibraryTreeActionKind.NewProject, teamFolder, null)));
+        cut.WaitForAssertion(() => Assert.NotEmpty(cut.FindAll(".mud-dialog-title")));
+
+        NameDialog dialog = cut.FindComponent<NameDialog>().Instance;
+        Assert.Equal("New project", cut.Find(".mud-dialog-title").TextContent.Trim());
+        Assert.Equal("Name", dialog.Label);
+        Assert.Equal("Create", dialog.ConfirmText);
+    }
+
+    /// <summary>[T17.1, UX-025] A create the service refuses (the note already exists) shows in the dialog's Dense error
+    /// <c>MudAlert</c> and keeps the dialog open.</summary>
+    [Fact]
+    public async Task NewNote_ServiceRefusal_ShowsDenseAlertAndKeepsDialogOpen()
+    {
+        string root = this.fixture.LibraryFixture.CreatePinnedRoot("Notes");
+        File.WriteAllText(Path.Combine(root, "Dup.md"), "already here");
+        LibraryPath folder = this.fixture.LibraryFixture.Resolve(root, string.Empty);
+
+        await using MudBunitContext ctx = this.fixture.NewContext();
+        IRenderedComponent<ContainerFragment> cut = RenderOps(ctx);
+        LibraryFileOps ops = cut.FindComponent<LibraryFileOps>().Instance;
+
+        _ = cut.InvokeAsync(() => ops.HandleAsync(new LibraryTreeAction(LibraryTreeActionKind.NewNote, folder, null)));
+        cut.WaitForAssertion(() => Assert.NotEmpty(cut.FindAll(".mud-dialog-title")));
+        await cut.InvokeAsync(() => cut.Find(".mud-dialog-content input").InputAsync(new ChangeEventArgs { Value = "Dup" }));
+        await cut.InvokeAsync(() => cut.FindAll(".mud-dialog-actions button")[1].ClickAsync());
+
+        cut.WaitForAssertion(() => Assert.NotEmpty(cut.FindAll(".mud-dialog-content .mud-alert-text-error[role='alert']")));
+        Assert.NotEmpty(cut.FindAll(".mud-dialog-title"));
+    }
+
+    /// <summary>[T17.1, UX-026, UX-R12] Delete opens the shared <see cref="ConfirmDialog"/>: the title is the question,
+    /// the body the one sentence, the verb "Delete", and it is a danger confirm (the Error-coloured button).</summary>
+    [Fact]
+    public async Task Delete_OpensConfirmDialogWithDangerVerb()
+    {
+        string root = this.fixture.LibraryFixture.CreatePinnedRoot("Notes");
+        File.WriteAllText(Path.Combine(root, "Gone.md"), "body");
+        LibraryPath item = this.fixture.LibraryFixture.Resolve(root, "Gone.md");
+
+        await using MudBunitContext ctx = this.fixture.NewContext();
+        IRenderedComponent<ContainerFragment> cut = RenderOps(ctx);
+        LibraryFileOps ops = cut.FindComponent<LibraryFileOps>().Instance;
+
+        _ = cut.InvokeAsync(() => ops.HandleAsync(new LibraryTreeAction(LibraryTreeActionKind.Delete, item, null)));
+        cut.WaitForAssertion(() => Assert.NotEmpty(cut.FindAll(".mud-dialog-title")));
+
+        ConfirmDialog dialog = cut.FindComponent<ConfirmDialog>().Instance;
+        Assert.Equal("Delete 'Gone.md'?", cut.Find(".mud-dialog-title").TextContent.Trim());
+        Assert.Equal("It goes to the Recycle Bin.", dialog.Message);
+        Assert.Equal("Delete", dialog.ConfirmText);
+        Assert.True(dialog.Danger);
     }
 
     private static IRenderedComponent<ContainerFragment> RenderOps(

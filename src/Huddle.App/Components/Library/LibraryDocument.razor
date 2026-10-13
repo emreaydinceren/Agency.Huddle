@@ -7,6 +7,7 @@
 *@
 @implements IAsyncDisposable
 @using Agency.Huddle.App.Acp
+@using Agency.Huddle.App.Components.Shared.Dialogs
 @using Agency.Huddle.App.FileChanges
 @using Agency.Huddle.App.Library
 @inject LibraryFileService FileService
@@ -55,12 +56,12 @@
 
     @if (this.outsideScope)
     {
-        <div class="library-document-outside-scope">Outside this view</div>
+        <MudAlert Severity="Severity.Info" Dense="true" role="status" Class="library-document-outside-scope">Outside this view</MudAlert>
         <MudButton Size="Size.Small" Class="library-document-open-in-library" OnClick="@this.RaiseOpenInLibraryAsync">Open in Library</MudButton>
     }
     else if (this.missing)
     {
-        <div class="library-document-banner">This file was moved or deleted.</div>
+        <MudAlert Severity="Severity.Warning" Dense="true" role="status" Class="library-document-banner">This file was moved or deleted.</MudAlert>
     }
     else if (this.content is not null)
     {
@@ -81,15 +82,15 @@
         }
         @if (this.saveError is not null)
         {
-            <div class="library-document-save-error">@this.saveError</div>
+            <MudAlert Severity="Severity.Error" Dense="true" role="alert" Class="library-document-save-error">@this.saveError</MudAlert>
         }
         @if (this.definitionName is not null)
         {
-            <div class="library-document-banner">This is @(this.definitionName)'s definition.</div>
+            <MudAlert Severity="Severity.Info" Dense="true" role="status" Class="library-document-banner">This is @(this.definitionName)'s definition.</MudAlert>
         }
         @if (this.content.ViewOnlyReason is not null)
         {
-            <div class="library-document-banner">@this.content.ViewOnlyReason</div>
+            <MudAlert Severity="Severity.Info" Dense="true" role="status" Class="library-document-banner">@this.content.ViewOnlyReason</MudAlert>
         }
         else if (this.mode == LibraryMode.Edit && this.content.Kind == LibraryFileKind.Markdown && this.content.Editable)
         {
@@ -356,12 +357,12 @@
 
         if (current.Length != this.content.Length || current.LastWriteUtc != this.content.LastWriteUtc)
         {
-            bool? overwrite = await this.Dialogs.ShowMessageBoxAsync(
+            bool overwrite = await this.Dialogs.ConfirmAsync(
                 "Overwrite changes on disk?",
                 "This file changed since you opened it. Saving replaces those changes.",
-                yesText: "Overwrite",
-                cancelText: "Cancel");
-            if (overwrite != true)
+                "Overwrite",
+                danger: true);
+            if (!overwrite)
             {
                 return;
             }
@@ -369,12 +370,11 @@
 
         if (this.definitionName is not null)
         {
-            bool? confirmed = await this.Dialogs.ShowMessageBoxAsync(
+            bool confirmed = await this.Dialogs.ConfirmAsync(
                 "Save this definition?",
                 $"Saving restarts {this.definitionName} and clears its conversation memory.",
-                yesText: "Save",
-                cancelText: "Cancel");
-            if (confirmed != true)
+                "Save");
+            if (!confirmed)
             {
                 return;
             }

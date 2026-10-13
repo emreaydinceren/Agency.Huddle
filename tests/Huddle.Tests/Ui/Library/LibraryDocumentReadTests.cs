@@ -283,6 +283,28 @@ public sealed class LibraryDocumentReadTests : IDisposable
             cut.Find(".library-document-banner").TextContent.Trim()));
     }
 
+    /// <summary>[T17.4, UX-056] The definition banner and the view-only reason are Dense <c>MudAlert</c>s with <c>role="status"</c>, not bare divs.</summary>
+    [Fact]
+    public async Task Banners_AreDenseStatusAlerts()
+    {
+        this.fixture.LibraryFixture.CreateTeammate("ada", "Ada", "ada");
+        LibraryPath path = this.fixture.LibraryFixture.ResolveTeammates("ada");
+        using DocFixture smallLimitFixture = DocFixture.Build(options => options.Library.MaxEditableBytes = 16);
+        string root = smallLimitFixture.LibraryFixture.CreatePinnedRoot("Notes");
+        File.WriteAllText(Path.Combine(root, "big.md"), new string('x', 1024));
+        LibraryPath big = smallLimitFixture.LibraryFixture.Resolve(root, "big.md");
+
+        await using MudBunitContext ctx = this.fixture.NewContext();
+        IRenderedComponent<ContainerFragment> definition = RenderDoc(ctx, path);
+        await using MudBunitContext bigCtx = smallLimitFixture.NewContext();
+        IRenderedComponent<ContainerFragment> tooLarge = RenderDoc(bigCtx, big);
+
+        definition.WaitForAssertion(() => Assert.NotEmpty(definition.FindAll(".library-document-banner.mud-alert.mud-dense[role='status']")));
+        tooLarge.WaitForAssertion(() => Assert.NotEmpty(tooLarge.FindAll(".library-document-banner.mud-alert.mud-dense[role='status']")));
+        Assert.Equal("This is Ada's definition.", definition.Find(".library-document-banner").TextContent.Trim());
+        Assert.Equal("This file is too large to edit here.", tooLarge.Find(".library-document-banner").TextContent.Trim());
+    }
+
     /// <summary>[12.2a] A file renamed or deleted outside Huddle shows the settled moved-or-deleted banner (Spec §10 E-3).</summary>
     [Fact]
     public async Task Missing_ShowsMovedOrDeleted()
