@@ -1042,7 +1042,7 @@ Ids are `<deliverable number>.<task>`, the form `Set-Tracker.ps1` updates:
 `pwsh -NoProfile -File agents/scripts/Set-Tracker.ps1 -Task "12.3" -State Done -TrackerPath docs/engineering/UX-Issues-Plan.md`.
 `(H)` is Haiku, `(S)` is Sonnet.
 
-**Status:** 23 of 141 tasks Done · 0 of 2 retrospectives done · last updated 2026-10-13.
+**Status:** 28 of 141 tasks Done · 0 of 2 retrospectives done · last updated 2026-10-13.
 
 | **Deliverable / Task** | **Model** | **Depends on** | **Active** | **In Progress** | **Done** |
 | --- | --- | --- | --- | --- | --- |
@@ -1057,11 +1057,11 @@ Ids are `<deliverable number>.<task>`, the form `Set-Tracker.ps1` updates:
 | 1.2 Picker dialog row (H) | Haiku | none | | | ✔ |
 | 1.3 Agent cards exception (H) | Haiku | none | | | ✔ |
 | **U2 CSS: tokens** | Haiku | U0 | | | |
-| 2.1 Red (H) | Haiku | U0 | | | |
-| 2.2 Radii (H) | Haiku | 2.1 | | | |
-| 2.3 Font sizes (H) | Haiku | 2.1 | | | |
-| 2.4 Spacing (H) | Haiku | 2.1 | | | |
-| 2.5 Baseline and suite (H) | Haiku | 2.2, 2.3, 2.4 | | | |
+| 2.1 Red (H) | Haiku | U0 | | | ✔ |
+| 2.2 Radii (H) | Haiku | 2.1 | | | ✔ |
+| 2.3 Font sizes (H) | Haiku | 2.1 | | | ✔ |
+| 2.4 Spacing (H) | Haiku | 2.1 | | | ✔ |
+| 2.5 Baseline and suite (H) | Haiku | 2.2, 2.3, 2.4 | | | ✔ |
 | **U3 CSS: structure** | Sonnet | U2 | | | |
 | 3.1 Red (S) | Sonnet | U2 | | | |
 | 3.2 Overrides and headers (S) | Sonnet | 3.1 | | | |
