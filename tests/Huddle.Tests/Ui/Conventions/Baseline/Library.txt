@@ -1,15 +1,8 @@
 CV1|src/Huddle.App/Components/Library/AddFolderDialog.razor|2
 CV1|src/Huddle.App/Components/Library/DeleteDialog.razor|2
-CV1|src/Huddle.App/Components/Library/LibraryDocument.razor|4
-CV1|src/Huddle.App/Components/Library/LibraryExplorer.razor|1
 CV1|src/Huddle.App/Components/Library/MoveDialog.razor|2
 CV1|src/Huddle.App/Components/Library/NamePromptDialog.razor|2
 CV1|src/Huddle.App/Components/Library/RenameDialog.razor|2
 CV2|src/Huddle.App/Components/Library/AddFolderDialog.razor|2
 CV2|src/Huddle.App/Components/Library/NamePromptDialog.razor|1
 CV2|src/Huddle.App/Components/Library/RenameDialog.razor|1
-CV4|src/Huddle.App/Components/Library/LibraryFileOps.razor|3
-CV8|src/Huddle.App/Components/Library/LibraryExplorer.razor|1
-CV8|src/Huddle.App/Components/Library/LibraryTree.razor|1
-CV10|src/Huddle.App/Components/Library/LibraryNavLink.razor|1
-CV10|src/Huddle.App/Components/Library/LibraryTree.razor|1

@@ -110,7 +110,7 @@ public sealed class LibraryTreeTests : IDisposable
             cut.FindAll("span.library-tree-node-name").Select(e => e.TextContent.Trim()));
     }
 
-    /// <summary>A file's context menu is New Document, New Folder, Copy Path, Rename, Delete, in that order, with an icon on each and a divider ahead of Copy Path and Rename.</summary>
+    /// <summary>A file's context menu is New note, New folder, Copy path, Rename, Delete, in that order, with an icon on each and a divider ahead of Copy Path and Rename.</summary>
     [Fact]
     public async Task Menu_OnFile_HasTheSettledActions()
     {
@@ -127,7 +127,7 @@ public sealed class LibraryTreeTests : IDisposable
         await cut.InvokeAsync(() => NodeRow(cut, filePath.RelativePath).ContextMenuAsync());
 
         Assert.Equal(
-            ["New Document", "New Folder", "Copy Path", "Rename", "Delete"],
+            ["New note", "New folder", "Copy path", "Rename", "Delete"],
             cut.FindAll("div.mud-menu-item div.library-tree-menu-label").Select(e => e.TextContent.Trim()));
         Assert.Equal(5, cut.FindAll("div.mud-menu-item svg").Count);
         Assert.Equal(2, cut.FindAll("div.mud-popover-open hr.mud-divider").Count);
@@ -249,7 +249,7 @@ public sealed class LibraryTreeTests : IDisposable
 
         Assert.Contains(
             cut.FindAll("div.mud-menu-item div.library-tree-menu-label"),
-            e => string.Equals(e.TextContent.Trim(), "New Project", StringComparison.Ordinal));
+            e => string.Equals(e.TextContent.Trim(), "New project", StringComparison.Ordinal));
 
         var renameItem = cut.FindAll("div.mud-menu-item").Single(e =>
             e.QuerySelector("div.library-tree-menu-label")?.TextContent.Trim() == "Rename");

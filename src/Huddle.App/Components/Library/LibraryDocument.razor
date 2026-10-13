@@ -56,7 +56,7 @@
     @if (this.outsideScope)
     {
         <div class="library-document-outside-scope">Outside this view</div>
-        <MudButton Class="library-document-open-in-library" OnClick="@this.RaiseOpenInLibraryAsync">Open in Library</MudButton>
+        <MudButton Size="Size.Small" Class="library-document-open-in-library" OnClick="@this.RaiseOpenInLibraryAsync">Open in Library</MudButton>
     }
     else if (this.missing)
     {
@@ -74,8 +74,8 @@
             <MudAlert Severity="Severity.Warning" Class="library-document-freshness" role="alert">
                 <p class="library-document-freshness-notice">This file changed on disk since you opened it.</p>
                 <MudStack Row="true" Class="library-document-freshness-notice" Spacing="2">
-                    <MudButton OnClick="@this.OnReloadFreshnessAsync">Reload</MudButton>
-                    <MudButton OnClick="@this.OnKeepMine">Keep mine</MudButton>
+                    <MudButton Size="Size.Small" OnClick="@this.OnReloadFreshnessAsync">Reload</MudButton>
+                    <MudButton Size="Size.Small" OnClick="@this.OnKeepMine">Keep mine</MudButton>
                 </MudStack>
             </MudAlert>
         }
@@ -129,8 +129,8 @@
         {
             <div class="library-document-other">
                 <div class="library-document-other-name">@this.FileName()</div>
-                <div class="library-document-other-size">@FormatSize(this.content.Length)</div>
-                <MudButton Class="library-document-open-default" OnClick="@this.OpenInDefaultAppAsync">Open in default app</MudButton>
+                <div class="library-document-other-size">@ByteSize.Format(this.content.Length)</div>
+                <MudButton Size="Size.Small" Class="library-document-open-default" OnClick="@this.OpenInDefaultAppAsync">Open in default app</MudButton>
             </div>
         }
     }
@@ -572,11 +572,6 @@
         ".PS1" => "powershell",
         _ => "plain",
     };
-
-    /// <summary>A binary file's size, in whole kilobytes above 1 KB, otherwise bytes (Spec §8's Other card).</summary>
-    private static string FormatSize(long bytes) => bytes < 1024
-        ? $"{bytes} B"
-        : $"{(long)Math.Round(bytes / 1024.0, MidpointRounding.AwayFromZero)} KB";
 
     /// <summary>Whether <paramref name="candidate"/> is <paramref name="scope"/> itself or lies under it, comparing resolved full paths with <see cref="FolderSnapshot.PathComparer"/>.</summary>
     private static bool IsWithinScope(LibraryPath candidate, LibraryPath scope)

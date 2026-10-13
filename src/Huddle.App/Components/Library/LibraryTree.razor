@@ -14,7 +14,7 @@
     the only way to tell those roots apart.
 
     A right-click on a row opens that row's MudMenu at the pointer; there is no "..." button. The menu
-    lists New Document, New Folder, Copy Path, Rename and Delete; Rename/Delete are disabled by LibraryProtection.For, with a settled,
+    lists New note, New folder, Copy path, Rename and Delete; Rename/Delete are disabled by LibraryProtection.For, with a settled,
     locally-owned reason text as the item's SECONDARY text (never tooltip-only, item 26) - the wording
     is duplicated here on purpose rather than read from LibraryProtection.Reason, per item 26.
 
@@ -333,12 +333,7 @@
         }
     }
 
-    private void OnRootsChanged() => _ = this.DispatchAsync(this.RefreshAsync);
-
-    private Task DispatchAsync(Func<Task> action)
-    {
-        return RendererDispatch.RunAsync(this.InvokeAsync, action);
-    }
+    private void OnRootsChanged() => _ = RendererDispatch.RunAsync(this.InvokeAsync, this.RefreshAsync);
 
     private async Task OnSelectedValueChangedAsync(LibraryPath value) => await this.SelectedPathChanged.InvokeAsync(value);
 
@@ -533,16 +528,16 @@
 
         List<MenuAction> actions =
         [
-            new(LibraryTreeActionKind.NewNote, "New Document", Icons.Material.Outlined.NoteAdd, false, null, false),
-            new(LibraryTreeActionKind.NewFolder, "New Folder", Icons.Material.Outlined.CreateNewFolder, false, null, false),
+            new(LibraryTreeActionKind.NewNote, "New note", Icons.Material.Outlined.NoteAdd, false, null, false),
+            new(LibraryTreeActionKind.NewFolder, "New folder", Icons.Material.Outlined.CreateNewFolder, false, null, false),
         ];
 
         if (path.Role == LibraryNodeRole.TeamFolder)
         {
-            actions.Add(new MenuAction(LibraryTreeActionKind.NewProject, "New Project", Icons.Material.Outlined.FolderSpecial, false, null, false));
+            actions.Add(new MenuAction(LibraryTreeActionKind.NewProject, "New project", Icons.Material.Outlined.FolderSpecial, false, null, false));
         }
 
-        actions.Add(new MenuAction(LibraryTreeActionKind.CopyPath, "Copy Path", Icons.Material.Outlined.ContentPaste, false, null, true));
+        actions.Add(new MenuAction(LibraryTreeActionKind.CopyPath, "Copy path", ActionIcons.Copy, false, null, true));
         actions.Add(new MenuAction(LibraryTreeActionKind.Rename, "Rename", Icons.Material.Outlined.DriveFileRenameOutline, !protection.CanRename, protection.CanRename ? null : reason, true));
         actions.Add(new MenuAction(LibraryTreeActionKind.Delete, "Delete", Icons.Material.Outlined.Delete, !protection.CanDelete, protection.CanDelete ? null : reason, false));
 

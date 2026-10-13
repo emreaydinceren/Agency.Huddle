@@ -24,9 +24,9 @@
         <MudNavGroup Title="Library" Icon="@Icons.Material.Filled.MenuBook" @bind-Expanded="this.expanded">
             @foreach (LibraryRoot root in this.Roots.VisibleRoots)
             {
-                <NavTabLink Href="@BuildRootHref(root)" TabTitle="Library" Icon="@Icons.Material.Filled.LibraryBooks" Class="library-nav-root-link">@root.DisplayName</NavTabLink>
+                <NavTabLink Href="@BuildRootHref(root)" TabTitle="Library" Icon="@Icons.Material.Outlined.Folder" Class="library-nav-root-link">@root.DisplayName</NavTabLink>
             }
-            <MudNavLink Icon="@Icons.Material.Filled.Add" IconColor="Color.Primary" Class="nav-action-link" OnClick="this.OpenAddFolderAsync">Add Folder</MudNavLink>
+            <MudNavLink Icon="@ActionIcons.Add" IconColor="Color.Primary" Class="nav-action-link" OnClick="this.OpenAddFolderAsync">Add folder</MudNavLink>
         </MudNavGroup>
     </MudNavMenu>
 }
@@ -58,16 +58,6 @@
         await this.DialogService.ShowAsync<AddFolderDialog>("Add folder", AddFolderDialog.Options);
     }
 
-    /// <summary>Repaints the root list when <see cref="LibraryRootStore.RootsChanged"/> fires, the same dispatch <c>TaskViewNav</c> uses for its own subscription.</summary>
-    private void OnRootsChanged() => _ = this.DispatchAsync(() =>
-    {
-        this.StateHasChanged();
-        return Task.CompletedTask;
-    });
-
-    /// <summary>Invokes <paramref name="action"/> on the renderer's synchronization context, swallowing the two exceptions a store event racing component teardown can throw (rules.md).</summary>
-    private Task DispatchAsync(Func<Task> action)
-    {
-        return RendererDispatch.RunAsync(this.InvokeAsync, action);
-    }
+    /// <summary>Repaints the root list when <see cref="LibraryRootStore.RootsChanged"/> fires.</summary>
+    private void OnRootsChanged() => _ = RendererDispatch.Repaint(this.InvokeAsync, this.StateHasChanged);
 }

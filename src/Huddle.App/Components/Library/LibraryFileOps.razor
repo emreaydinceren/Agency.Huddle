@@ -110,7 +110,7 @@
         LibraryResult<LibraryPath> result = await this.FileService.RecycleAsync(item, CancellationToken.None);
         if (result.Value is null)
         {
-            this.Snackbar.Add(result.Error ?? string.Empty, Severity.Error);
+            this.Snackbar.Add(result.Error ?? string.Empty, Severity.Error, configure: null, key: "library-error");
             return;
         }
 
@@ -140,7 +140,7 @@
             LibraryResult<LibraryPath> direct = await this.FileService.CreateFileAsync(folder, name, CancellationToken.None);
             if (direct.Value is null)
             {
-                this.Snackbar.Add(direct.Error ?? string.Empty, Severity.Error);
+                this.Snackbar.Add(direct.Error ?? string.Empty, Severity.Error, configure: null, key: "library-error");
                 return;
             }
 
@@ -251,7 +251,7 @@
         LibraryResult<LibraryMoveResult> result = await this.FileService.MoveAsync(item, destination, CancellationToken.None);
         if (result.Value is null)
         {
-            this.Snackbar.Add(result.Error ?? string.Empty, Severity.Error);
+            this.Snackbar.Add(result.Error ?? string.Empty, Severity.Error, configure: null, key: "library-error");
             return;
         }
 
