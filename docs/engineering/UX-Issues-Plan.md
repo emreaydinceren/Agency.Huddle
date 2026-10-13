@@ -1042,7 +1042,7 @@ Ids are `<deliverable number>.<task>`, the form `Set-Tracker.ps1` updates:
 `pwsh -NoProfile -File agents/scripts/Set-Tracker.ps1 -Task "12.3" -State Done -TrackerPath docs/engineering/UX-Issues-Plan.md`.
 `(H)` is Haiku, `(S)` is Sonnet.
 
-**Status:** 52 of 141 tasks Done · 0 of 2 retrospectives done · last updated 2026-10-13.
+**Status:** 57 of 141 tasks Done · 0 of 2 retrospectives done · last updated 2026-10-13.
 
 | **Deliverable / Task** | **Model** | **Depends on** | **Active** | **In Progress** | **Done** |
 | --- | --- | --- | --- | --- | --- |
@@ -1194,11 +1194,11 @@ Ids are `<deliverable number>.<task>`, the form `Set-Tracker.ps1` updates:
 | 24.3 Appearance on it (S) | Sonnet | 24.2 | | | |
 | 24.4 Parameters for U26 (S) | Sonnet | 24.2 | | | |
 | **U25 Shared: mechanical pass** | Haiku | U0, U5, U6, U7 | | | |
-| 25.1 Red (H) | Haiku | U0 | | | |
-| 25.2 Attributes, roles, keys, icons, styles (H) | Haiku | 25.1 | | | |
-| 25.3 Segmented control (H) | Haiku | 25.1 | | | |
-| 25.4 Search and provenance (H) | Haiku | 25.2, U7 | | | |
-| 25.5 Suite (H) | Haiku | 25.3, 25.4 | | | |
+| 25.1 Red (H) | Haiku | U0 | | | ✔ |
+| 25.2 Attributes, roles, keys, icons, styles (H) | Haiku | 25.1 | | | ✔ |
+| 25.3 Segmented control (H) | Haiku | 25.1 | | | ✔ |
+| 25.4 Search and provenance (H) | Haiku | 25.2, U7 | | | ✔ |
+| 25.5 Suite (H) | Haiku | 25.3, 25.4 | | | ✔ |
 | **U26 Shared: Teammate card and shared structure** | Sonnet | U24, U25 | | | |
 | 26.1 Red (S) | Sonnet | U24, U25 | | | |
 | 26.2 TeammateCard (S) | Sonnet | 26.1 | | | |
