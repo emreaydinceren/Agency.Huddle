@@ -1042,7 +1042,7 @@ Ids are `<deliverable number>.<task>`, the form `Set-Tracker.ps1` updates:
 `pwsh -NoProfile -File agents/scripts/Set-Tracker.ps1 -Task "12.3" -State Done -TrackerPath docs/engineering/UX-Issues-Plan.md`.
 `(H)` is Haiku, `(S)` is Sonnet.
 
-**Status:** 28 of 141 tasks Done · 0 of 2 retrospectives done · last updated 2026-10-13.
+**Status:** 32 of 141 tasks Done · 0 of 2 retrospectives done · last updated 2026-10-13.
 
 | **Deliverable / Task** | **Model** | **Depends on** | **Active** | **In Progress** | **Done** |
 | --- | --- | --- | --- | --- | --- |
@@ -1159,10 +1159,10 @@ Ids are `<deliverable number>.<task>`, the form `Set-Tracker.ps1` updates:
 | 18.4 MoveDialog (S) | Sonnet | 18.1 | | | |
 | 18.5 Wireframes (S) | Sonnet | 18.2, 18.4 | | | |
 | **U19 Teams: mechanical pass** | Haiku | U0, U5, U6, U7 | | | |
-| 19.1 Red (H) | Haiku | U0 | | | |
-| 19.2 Attributes, roles, keys, icons (H) | Haiku | 19.1 | | | |
-| 19.3 Labels and display names (H) | Haiku | 19.2 | | | |
-| 19.4 Status labels and controls (H) | Haiku | 19.2, U6 | | | |
+| 19.1 Red (H) | Haiku | U0 | | | ✔ |
+| 19.2 Attributes, roles, keys, icons (H) | Haiku | 19.1 | | | ✔ |
+| 19.3 Labels and display names (H) | Haiku | 19.2 | | | ✔ |
+| 19.4 Status labels and controls (H) | Haiku | 19.2, U6 | | | ✔ |
 | 19.5 Empty states and suite (H) | Haiku | 19.3, 19.4 | | | |
 | **U20 Teams: tiles and dialogs** | Haiku | U19, U5, U4 | | | |
 | 20.1 Red (H) | Haiku | U19, U4 | | | |
