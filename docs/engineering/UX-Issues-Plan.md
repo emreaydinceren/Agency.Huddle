@@ -1042,7 +1042,7 @@ Ids are `<deliverable number>.<task>`, the form `Set-Tracker.ps1` updates:
 `pwsh -NoProfile -File agents/scripts/Set-Tracker.ps1 -Task "12.3" -State Done -TrackerPath docs/engineering/UX-Issues-Plan.md`.
 `(H)` is Haiku, `(S)` is Sonnet.
 
-**Status:** 82 of 141 tasks Done · 0 of 2 retrospectives done · last updated 2026-10-13.
+**Status:** 97 of 141 tasks Done · 0 of 2 retrospectives done · last updated 2026-10-13.
 
 | **Deliverable / Task** | **Model** | **Depends on** | **Active** | **In Progress** | **Done** |
 | --- | --- | --- | --- | --- | --- |
@@ -1111,11 +1111,11 @@ Ids are `<deliverable number>.<task>`, the form `Set-Tracker.ps1` updates:
 | 10.4 Adopt helpers (H) | Haiku | 10.2, U6, U7 | | | ✔ |
 | 10.5 Suite (H) | Haiku | 10.3, 10.4 | | | ✔ |
 | **U11 Room: agent card shell** | Sonnet | U10, U4 | | | |
-| 11.1 Red (S) | Sonnet | U10, U4 | | | |
-| 11.2 AgentCardBase (S) | Sonnet | 11.1 | | | |
-| 11.3 Shell and three cards (S) | Sonnet | 11.2 | | | |
-| 11.4 Question and Elicitation (S) | Sonnet | 11.3 | | | |
-| 11.5 Composer and wireframes (S) | Sonnet | 11.1 | | | |
+| 11.1 Red (S) | Sonnet | U10, U4 | | | ✔ |
+| 11.2 AgentCardBase (S) | Sonnet | 11.1 | | | ✔ |
+| 11.3 Shell and three cards (S) | Sonnet | 11.2 | | | ✔ |
+| 11.4 Question and Elicitation (S) | Sonnet | 11.3 | | | ✔ |
+| 11.5 Composer and wireframes (S) | Sonnet | 11.1 | | | ✔ |
 | **U12 Tasks: mechanical pass** | Haiku | U0, U5, U6, U7 | | | |
 | 12.1 Red (H) | Haiku | U0 | | | ✔ |
 | 12.2 Attributes, roles, keys, icons (H) | Haiku | 12.1 | | | ✔ |
@@ -1123,11 +1123,11 @@ Ids are `<deliverable number>.<task>`, the form `Set-Tracker.ps1` updates:
 | 12.4 Wording (H) | Haiku | 12.2 | | | ✔ |
 | 12.5 Empty states and suite (H) | Haiku | 12.3, 12.4 | | | ✔ |
 | **U13 Tasks: field components** | Haiku | U12, U4 | | | |
-| 13.1 Red (H) | Haiku | U12, U4 | | | |
-| 13.2 Chips and assignee (H) | Haiku | 13.1 | | | |
-| 13.3 TaskDates (H) | Haiku | 13.1 | | | |
-| 13.4 Card and List (H) | Haiku | 13.2, 13.3 | | | |
-| 13.5 TaskActionsMenu and overdue CSS (H) | Haiku | 13.4 | | | |
+| 13.1 Red (H) | Haiku | U12, U4 | | | ✔ |
+| 13.2 Chips and assignee (H) | Haiku | 13.1 | | | ✔ |
+| 13.3 TaskDates (H) | Haiku | 13.1 | | | ✔ |
+| 13.4 Card and List (H) | Haiku | 13.2, 13.3 | | | ✔ |
+| 13.5 TaskActionsMenu and overdue CSS (H) | Haiku | 13.4 | | | ✔ |
 | **U14 Tasks: drawers** | Sonnet | U12, U4 | | | |
 | 14.1 Red (S) | Sonnet | U12, U4 | | | ✔ |
 | 14.2 ResizableEndDrawer (S) | Sonnet | 14.1 | | | ✔ |
@@ -1147,11 +1147,11 @@ Ids are `<deliverable number>.<task>`, the form `Set-Tracker.ps1` updates:
 | 16.4 Labels (H) | Haiku | 16.2 | | | ✔ |
 | 16.5 ByteSize, empty states, suite (H) | Haiku | 16.3, 16.4 | | | ✔ |
 | **U17 Library: dialogs and banners** | Haiku | U16, U5, U4 | | | |
-| 17.1 Red (H) | Haiku | U16, U5 | | | |
-| 17.2 NameDialog adoption (H) | Haiku | 17.1 | | | |
-| 17.3 ConfirmDialog adoption (H) | Haiku | 17.1 | | | |
-| 17.4 Banners (H) | Haiku | 17.1 | | | |
-| 17.5 Baseline and suite (H) | Haiku | 17.2, 17.3, 17.4 | | | |
+| 17.1 Red (H) | Haiku | U16, U5 | | | ✔ |
+| 17.2 NameDialog adoption (H) | Haiku | 17.1 | | | ✔ |
+| 17.3 ConfirmDialog adoption (H) | Haiku | 17.1 | | | ✔ |
+| 17.4 Banners (H) | Haiku | 17.1 | | | ✔ |
+| 17.5 Baseline and suite (H) | Haiku | 17.2, 17.3, 17.4 | | | ✔ |
 | **U18 Library: layout and Move** | Sonnet | U17, U23 | | | |
 | 18.1 Red (S) | Sonnet | U17, U23 | | | |
 | 18.2 Header and split (S) | Sonnet | 18.1 | | | |
