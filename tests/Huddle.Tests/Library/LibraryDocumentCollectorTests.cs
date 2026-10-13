@@ -177,6 +177,31 @@ public sealed class LibraryDocumentCollectorTests
         Assert.Equal(uploadFile, item.FullPath, StringComparer.OrdinalIgnoreCase);
     }
 
+    /// <summary>A rooted POSIX absolute path with spaces, taken as a whole code span, is recognised on every OS, so a sent upload path reaches the Agent on Linux and macOS.</summary>
+    [Theory]
+    [InlineData("/data/Uploads/room1/a b.png")]
+    [InlineData("/home/user/Huddle/Uploads/room1/meeting notes (2).md")]
+    public void TryMatchWhole_PosixAbsolutePath_Matches(string text)
+    {
+        bool matched = LibraryPathPatterns.TryMatchWhole(text, out string? path);
+
+        Assert.True(matched);
+        Assert.Equal(text, path, StringComparer.Ordinal);
+    }
+
+    /// <summary>A code span that only starts with a slash but has no path separator after it, such as a slash command, is not a path.</summary>
+    [Theory]
+    [InlineData("/help")]
+    [InlineData("/")]
+    [InlineData("a/b c.png")]
+    public void TryMatchWhole_NotAPosixAbsolutePath_DoesNotMatch(string text)
+    {
+        bool matched = LibraryPathPatterns.TryMatchWhole(text, out string? path);
+
+        Assert.False(matched);
+        Assert.Null(path);
+    }
+
     /// <summary>A file under a Team's <c>memory</c> folder keeps its previous label, "Team {Team}, Project memory".</summary>
     [Fact]
     public async Task Collect_TeamMemoryFile_KeepsProjectLabel()
