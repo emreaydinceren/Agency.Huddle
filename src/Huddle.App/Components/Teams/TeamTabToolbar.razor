@@ -4,10 +4,10 @@
 *@
 
 <div class="team-tab-toolbar">
-    <MudButton Variant="Variant.Text" Color="Color.Primary" StartIcon="@Icons.Material.Filled.Add"
+    <MudButton Size="Size.Small" Variant="Variant.Text" Color="Color.Primary" StartIcon="@Icons.Material.Filled.Add"
                OnClick="this.OnAction" Class="team-tab-toolbar-action">@this.ActionText</MudButton>
 
-    <MudTextField T="string" Value="@this.Search" ValueChanged="this.OnSearchChangedAsync" Immediate="true"
+    <MudTextField Variant="Variant.Outlined" Margin="Margin.Dense" T="string" Value="@this.Search" ValueChanged="this.OnSearchChangedAsync" Immediate="true"
                   DebounceInterval="250" Clearable="true" Adornment="Adornment.Start"
                   AdornmentIcon="@Icons.Material.Filled.Search" Placeholder="@this.SearchPlaceholder"
                   aria-label="@this.SearchPlaceholder" Class="team-tab-toolbar-search" />

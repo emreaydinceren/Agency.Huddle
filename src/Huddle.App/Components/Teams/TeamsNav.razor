@@ -90,7 +90,7 @@
                 }
             }
             <MudNavLink Icon="@Icons.Material.Filled.Add" IconColor="Color.Primary" Class="nav-action-link" OnClick="this.NewTeamAsync">New team</MudNavLink>
-            <NavTabLink Href="/teams/new" TabTitle="New team" Icon="@Icons.Material.Filled.Add" IconColor="Color.Primary" Class="nav-action-link">New Team from a type</NavTabLink>
+            <NavTabLink Href="/teams/new" TabTitle="New team" Icon="@Icons.Material.Filled.Add" IconColor="Color.Primary" Class="nav-action-link">New team from a type</NavTabLink>
         </MudNavGroup>
     </MudNavMenu>
 </div>
@@ -127,7 +127,7 @@
         this.UpdateRoute();
         this.Catalog.Changed += this.OnCatalogChanged;
         this.Events.RoomsChanged += this.OnRoomsChanged;
-        this.locationChanged = (_, _) => _ = this.DispatchAsync(() =>
+        this.locationChanged = (_, _) => _ = RendererDispatch.RunAsync(this.InvokeAsync, () =>
         {
             this.UpdateRoute();
             this.StateHasChanged();
@@ -247,14 +247,14 @@
         this.routeOpen = inTeam;
     }
 
-    private void OnCatalogChanged() => _ = this.DispatchAsync(async () =>
+    private void OnCatalogChanged() => _ = RendererDispatch.RunAsync(this.InvokeAsync, async () =>
     {
         this.menuRefs.Clear();
         await this.LoadRoomsAsync();
         this.StateHasChanged();
     });
 
-    private void OnRoomsChanged() => _ = this.DispatchAsync(async () =>
+    private void OnRoomsChanged() => _ = RendererDispatch.RunAsync(this.InvokeAsync, async () =>
     {
         await this.LoadRoomsAsync();
         this.StateHasChanged();
@@ -307,14 +307,8 @@
     {
         if (message is not null)
         {
-            this.Snackbar.Add(message, Severity.Error);
+            this.Snackbar.Add(message, Severity.Error, key: "teams-nav");
         }
-    }
-
-    /// <summary>Invokes <paramref name="action"/> on the renderer's synchronization context, swallowing the two exceptions a catalog event racing component teardown can throw.</summary>
-    private Task DispatchAsync(Func<Task> action)
-    {
-        return RendererDispatch.RunAsync(this.InvokeAsync, action);
     }
 
     /// <summary>How long a create action waits for the catalog to list the new Team or Project before navigating anyway.</summary>
@@ -397,7 +391,7 @@
             LibraryResult<LibraryPath> result = create();
             if (result.Error is { } error)
             {
-                this.Snackbar.Add(error, Severity.Error);
+                this.Snackbar.Add(error, Severity.Error, key: "teams-nav");
                 return;
             }
 

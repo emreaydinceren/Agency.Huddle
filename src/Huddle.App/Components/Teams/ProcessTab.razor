@@ -31,8 +31,9 @@
                 {
                     GateId current = gate;
                     string id = ProcessDocument.ToId(current);
+                    string name = ProcessDocument.DisplayName(current);
                     <div class="process-tab-gate" data-gate="@id">
-                        <MudSwitch T="bool" @key="@($"{id}:{this.version}")" Value="true" Color="Color.Primary" Label="@id"
+                        <MudSwitch T="bool" @key="@($"{id}:{this.version}")" Value="true" Color="Color.Primary" Label="@name"
                                    ValueChanged="@(on => this.OnGateChanged(current, on))" />
                         @if (current == GateId.ChecksBeforeMerge)
                         {
@@ -90,7 +91,7 @@
         }
 
         bool? confirmed = await this.Dialogs.ShowMessageBoxAsync(
-            $"Turn off {ProcessDocument.ToId(gate)}?",
+            $"Turn off {ProcessDocument.DisplayName(gate)}?",
             ProcessGateService.GateRisk(gate),
             yesText: "Turn off",
             cancelText: "Cancel");

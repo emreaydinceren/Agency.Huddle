@@ -38,7 +38,7 @@
             {
                 <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2">
                     <MudText Typo="Typo.caption" Class="hiring-pool-count" aria-live="polite">@visible.Count of @entries.Count jobs</MudText>
-                    <button type="button" class="hiring-pool-clear" @onclick="this.ClearFilters">Clear all</button>
+                    <MudButton Variant="Variant.Text" Size="Size.Small" Class="hiring-pool-clear" OnClick="this.ClearFilters">Clear all</MudButton>
                 </MudStack>
             }
         </div>

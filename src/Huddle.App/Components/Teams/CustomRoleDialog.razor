@@ -14,16 +14,16 @@
 <MudDialog>
     <DialogContent>
         <MudStack Spacing="2">
-            <MudSelect T="string" Label="Start from" Value="@this.startFrom" ValueChanged="@this.OnStartFrom" Class="custom-role-start-from">
+            <MudSelect Variant="Variant.Outlined" Margin="Margin.Dense" T="string" Label="Start from" Value="@this.startFrom" ValueChanged="@this.OnStartFrom" Class="custom-role-start-from">
                 <MudSelectItem T="string" Value="@BlankValue">Blank</MudSelectItem>
                 @foreach (RoleSpec role in this.Roles)
                 {
                     <MudSelectItem T="string" Value="@role.Id">@role.Title</MudSelectItem>
                 }
             </MudSelect>
-            <MudTextField T="string" Label="Title" @bind-Value="this.title" Immediate="true" Class="custom-role-title" />
-            <MudTextField T="string" Label="Consult when" @bind-Value="this.consultWhen" Immediate="true" Class="custom-role-consult-when" />
-            <MudTextField T="string" Label="Stance" @bind-Value="this.stance" Lines="6" Immediate="true" Class="custom-role-stance" />
+            <MudTextField Variant="Variant.Outlined" Margin="Margin.Dense" T="string" Label="Title" @bind-Value="this.title" Immediate="true" Class="custom-role-title" />
+            <MudTextField Variant="Variant.Outlined" Margin="Margin.Dense" T="string" Label="Consult when" @bind-Value="this.consultWhen" Immediate="true" Class="custom-role-consult-when" />
+            <MudTextField Variant="Variant.Outlined" Margin="Margin.Dense" T="string" Label="Stance" @bind-Value="this.stance" Lines="6" Immediate="true" Class="custom-role-stance" />
             <MudCheckBox T="bool" Value="true" Disabled="true" Label="Save for next time" Class="custom-role-save" />
             @if (this.error is not null)
             {
@@ -32,9 +32,9 @@
         </MudStack>
     </DialogContent>
     <DialogActions>
-        <MudButton Color="Color.Primary" Disabled="@(string.IsNullOrWhiteSpace(this.title) || string.IsNullOrWhiteSpace(this.stance))"
+        <MudButton Size="Size.Small" Color="Color.Primary" Disabled="@(string.IsNullOrWhiteSpace(this.title) || string.IsNullOrWhiteSpace(this.stance))"
                    Class="custom-role-save-button" OnClick="this.Save">Save</MudButton>
-        <MudButton Class="custom-role-cancel-button" OnClick="this.Cancel">Cancel</MudButton>
+        <MudButton Size="Size.Small" Class="custom-role-cancel-button" OnClick="this.Cancel">Cancel</MudButton>
     </DialogActions>
 </MudDialog>
 

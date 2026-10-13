@@ -10,7 +10,7 @@
 <MudDialog>
     <DialogContent>
         <MudStack Spacing="2">
-            <MudTextField T="string" Label="@(this.Mode == NewTeamDialogMode.Team ? "Team name" : "Project name")"
+            <MudTextField Variant="Variant.Outlined" Margin="Margin.Dense" T="string" Label="@(this.Mode == NewTeamDialogMode.Team ? "Team name" : "Project name")"
                           Value="this.name" ValueChanged="this.OnNameChanged" Immediate="true"
                           Error="@(this.problem is not null)" OnKeyDown="this.OnKeyDown"
                           Class="new-team-dialog-name-field" />
@@ -21,8 +21,8 @@
         </MudStack>
     </DialogContent>
     <DialogActions>
-        <MudButton Color="Color.Primary" Disabled="@(!this.IsValid)" Class="new-team-dialog-create-button" OnClick="this.Create">Create</MudButton>
-        <MudButton Class="new-team-dialog-cancel-button" OnClick="this.Cancel">Cancel</MudButton>
+        <MudButton Size="Size.Small" Color="Color.Primary" Disabled="@(!this.IsValid)" Class="new-team-dialog-create-button" OnClick="this.Create">Create</MudButton>
+        <MudButton Size="Size.Small" Class="new-team-dialog-cancel-button" OnClick="this.Cancel">Cancel</MudButton>
     </DialogActions>
 </MudDialog>
 

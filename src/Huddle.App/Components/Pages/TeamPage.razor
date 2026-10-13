@@ -211,15 +211,10 @@
         this.Navigation.NavigateTo($"{path}/{TeamPageTabs.Segment(available[index])}");
     }
 
-    private void OnCatalogChanged() => _ = this.DispatchAsync(() =>
+    private void OnCatalogChanged() => _ = RendererDispatch.RunAsync(this.InvokeAsync, () =>
     {
         this.StateHasChanged();
         return Task.CompletedTask;
     });
 
-    /// <summary>Invokes <paramref name="action"/> on the renderer's synchronization context, swallowing the two exceptions a catalog event racing component teardown can throw.</summary>
-    private Task DispatchAsync(Func<Task> action)
-    {
-        return RendererDispatch.RunAsync(this.InvokeAsync, action);
-    }
 }

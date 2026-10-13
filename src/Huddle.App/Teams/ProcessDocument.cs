@@ -249,6 +249,17 @@ internal sealed record ProcessDocument(
         _ => throw new ArgumentOutOfRangeException(nameof(gate), gate, null),
     };
 
+    /// <summary>Returns the name a person reads for a gate, in the Process tab and the override prompt.</summary>
+    /// <param name="gate">The gate.</param>
+    /// <returns>The sentence-case display name, for example <c>QA evidence before done</c>.</returns>
+    public static string DisplayName(GateId gate) => gate switch
+    {
+        GateId.QaEvidenceBeforeDone => "QA evidence before done",
+        GateId.ChecksBeforeMerge => "Checks before merge",
+        GateId.SpecApprovedBeforeBuild => "Spec approved before build",
+        GateId.FailingTestBeforeFix => "Failing test before fix",
+        _ => throw new ArgumentOutOfRangeException(nameof(gate), gate, null),
+    };
     /// <summary>Parses a frontmatter gate id.</summary>
     /// <param name="id">The id, compared ordinally.</param>
     /// <param name="gate">The gate when the id is known.</param>

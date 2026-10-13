@@ -26,7 +26,7 @@
 
     @* The same toolbar shape as the Tasks page: the create action leads, the narrowing controls follow. *@
     <MudToolBar Dense="true" Class="gap-4 mb-4">
-        <MudButton StartIcon="@Icons.Material.Outlined.Add" Color="Color.Primary" OnClick="this.BeginCreate" Class="btn-action-tight">New teammate</MudButton>
+        <MudButton Size="Size.Small" StartIcon="@Icons.Material.Filled.Add" Color="Color.Primary" OnClick="this.BeginCreate" Class="btn-action-tight">New teammate</MudButton>
 
         @if (this.entries.Count > 0)
         {
@@ -34,7 +34,7 @@
                semantics the old <select>'s @onchange comment called out. Never touches ModelCatalog or
                PersonaStore's write path - selecting a team is pure display narrowing over state already
                loaded, the same "never probes" guarantee a plain page load has. *@
-            <MudSelect T="string" Label="Team" Value="@this.selectedTeam" ValueChanged="this.OnTeamFilterChanged" Class="teammates-filter">
+            <MudSelect Variant="Variant.Outlined" Margin="Margin.Dense" T="string" Label="Team" Value="@this.selectedTeam" ValueChanged="this.OnTeamFilterChanged" Class="teammates-filter">
                 <MudSelectItem T="string" Value="@string.Empty">All teams</MudSelectItem>
                 @foreach (var team in this.teams)
                 {
@@ -48,7 +48,7 @@
        load is impossible to miss, rather than just silently absent from the directory below. *@
     @if (this.rejectedFiles.Count > 0)
     {
-        <MudAlert Severity="Severity.Warning" Class="mb-4">
+        <MudAlert role="status" Severity="Severity.Warning" Class="mb-4">
             <MudText Typo="Typo.subtitle2">Files that didn't load</MudText>
             <ul class="teammates-rejected-list">
                 @foreach (var rejected in this.rejectedFiles)
@@ -64,7 +64,7 @@
 
     @if (this.entries.Count == 0)
     {
-        <MudText Typo="Typo.body2" Class="mud-text-secondary">No Personas yet. Choose <strong>New teammate</strong> to add one.</MudText>
+        <EmptyState Text="No Teammates yet. Choose New teammate." />
     }
     else
     {
@@ -72,14 +72,14 @@
 
         if (groups.Count == 0)
         {
-            <MudText Typo="Typo.body2" Class="mud-text-secondary">No teammates in this team.</MudText>
+            <EmptyState Text="No teammates in this team." />
         }
         else
         {
             foreach (var group in groups)
             {
                 <section class="teammates-group">
-                    <h2 class="teammates-group-heading">@group.Heading</h2>
+                    <MudText Typo="Typo.h6" HtmlTag="h2" Class="teammates-group-heading">@group.Heading</MudText>
                     <ul class="teammates-list">
                         @foreach (var entry in group.Members)
                         {
@@ -303,7 +303,7 @@
 
     private void OnPersonasChanged()
     {
-        _ = this.DispatchAsync(async () =>
+        _ = RendererDispatch.RunAsync(this.InvokeAsync, async () =>
         {
             await this.LoadAsync();
             this.StateHasChanged();
@@ -312,7 +312,7 @@
 
     private void OnRoomsChanged()
     {
-        _ = this.DispatchAsync(async () =>
+        _ = RendererDispatch.RunAsync(this.InvokeAsync, async () =>
         {
             await this.LoadAsync();
             this.StateHasChanged();
@@ -330,7 +330,7 @@
     /// </summary>
     private void OnHealthOrPresenceChanged()
     {
-        _ = this.DispatchAsync(() =>
+        _ = RendererDispatch.RunAsync(this.InvokeAsync, () =>
         {
             this.StateHasChanged();
             return Task.CompletedTask;
@@ -345,15 +345,10 @@
     /// </summary>
     private void OnAvatarsChanged()
     {
-        _ = this.DispatchAsync(() =>
+        _ = RendererDispatch.RunAsync(this.InvokeAsync, () =>
         {
             this.StateHasChanged();
             return Task.CompletedTask;
         });
-    }
-
-    private Task DispatchAsync(Func<Task> action)
-    {
-        return RendererDispatch.RunAsync(this.InvokeAsync, action);
     }
 }

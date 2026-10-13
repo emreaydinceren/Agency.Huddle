@@ -217,7 +217,7 @@ public sealed class ProcessStepTests
         IRenderedComponent<ContainerFragment> cut = RenderTab(ctx);
 
         _ = cut.InvokeAsync(() => cut.Find("div[data-gate='qa-evidence-before-done'] input").ChangeAsync(new ChangeEventArgs { Value = false }));
-        cut.WaitForAssertion(() => Assert.Equal("Turn off qa-evidence-before-done?", cut.Find(".mud-dialog-title").TextContent.Trim()));
+        cut.WaitForAssertion(() => Assert.Equal("Turn off QA evidence before done?", cut.Find(".mud-dialog-title").TextContent.Trim()));
         Assert.Equal("A Task can then be marked Done with no verified Evidence.", cut.Find(".mud-dialog-content").TextContent.Trim());
         Assert.Equal(TwoGateText, File.ReadAllText(Path.Combine(dir.Path, "Process.md")));
         await cut.InvokeAsync(() => ButtonNamed(cut, "Cancel").ClickAsync());
@@ -238,7 +238,7 @@ public sealed class ProcessStepTests
         IRenderedComponent<ContainerFragment> cut = RenderTab(ctx);
 
         _ = cut.InvokeAsync(() => cut.Find("div[data-gate='qa-evidence-before-done'] input").ChangeAsync(new ChangeEventArgs { Value = false }));
-        cut.WaitForAssertion(() => Assert.Equal("Turn off qa-evidence-before-done?", cut.Find(".mud-dialog-title").TextContent.Trim()));
+        cut.WaitForAssertion(() => Assert.Equal("Turn off QA evidence before done?", cut.Find(".mud-dialog-title").TextContent.Trim()));
         await cut.InvokeAsync(() => ButtonNamed(cut, "Turn off").ClickAsync());
 
         string expected = TwoGateText.Replace("gates: ['qa-evidence-before-done', 'checks-before-merge']", "gates: ['checks-before-merge']", StringComparison.Ordinal);

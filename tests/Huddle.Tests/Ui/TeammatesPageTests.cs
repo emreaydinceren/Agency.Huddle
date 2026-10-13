@@ -276,8 +276,8 @@ public sealed class TeammatesPageTests
         using var client = factory.CreateClient();
         var html = await client.GetStringAsync("/teammates", ct);
 
-        Assert.Contains("class=\"teammates-group-heading\">Business<", html, StringComparison.Ordinal);
-        Assert.Contains("class=\"teammates-group-heading\">Household<", html, StringComparison.Ordinal);
+        Assert.Contains("teammates-group-heading\">Business<", html, StringComparison.Ordinal); // contains-ok: pins the heading markup the group heading renders
+        Assert.Contains("teammates-group-heading\">Household<", html, StringComparison.Ordinal); // contains-ok: pins the heading markup the group heading renders
 
         // One tile per heading: Amy's name element has to appear exactly twice, once under each. Count
         // the element, never the bare name - the page's prerender markers carry random base64, which

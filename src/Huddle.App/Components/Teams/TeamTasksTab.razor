@@ -184,22 +184,16 @@
         }
     }
 
-    private void OnTasksReloaded() => _ = this.DispatchAsync(() =>
+    private void OnTasksReloaded() => _ = RendererDispatch.RunAsync(this.InvokeAsync, () =>
     {
         this.StateHasChanged();
         return Task.CompletedTask;
     });
 
-    private void OnTaskChanged(TaskChange change) => _ = this.DispatchAsync(() =>
+    private void OnTaskChanged(TaskChange change) => _ = RendererDispatch.RunAsync(this.InvokeAsync, () =>
     {
         this.StateHasChanged();
         return Task.CompletedTask;
     });
 
-    /// <summary>Invokes <paramref name="action"/> on the renderer's synchronization context, swallowing the two exceptions a Task event racing component teardown can throw.</summary>
-    /// <param name="action">The work to run.</param>
-    private Task DispatchAsync(Func<Task> action)
-    {
-        return RendererDispatch.RunAsync(this.InvokeAsync, action);
-    }
 }
