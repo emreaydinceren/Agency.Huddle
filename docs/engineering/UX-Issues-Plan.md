@@ -1042,7 +1042,7 @@ Ids are `<deliverable number>.<task>`, the form `Set-Tracker.ps1` updates:
 `pwsh -NoProfile -File agents/scripts/Set-Tracker.ps1 -Task "12.3" -State Done -TrackerPath docs/engineering/UX-Issues-Plan.md`.
 `(H)` is Haiku, `(S)` is Sonnet.
 
-**Status:** 72 of 141 tasks Done · 0 of 2 retrospectives done · last updated 2026-10-13.
+**Status:** 77 of 141 tasks Done · 0 of 2 retrospectives done · last updated 2026-10-13.
 
 | **Deliverable / Task** | **Model** | **Depends on** | **Active** | **In Progress** | **Done** |
 | --- | --- | --- | --- | --- | --- |
@@ -1165,11 +1165,11 @@ Ids are `<deliverable number>.<task>`, the form `Set-Tracker.ps1` updates:
 | 19.4 Status labels and controls (H) | Haiku | 19.2, U6 | | | ✔ |
 | 19.5 Empty states and suite (H) | Haiku | 19.3, 19.4 | | | |
 | **U20 Teams: tiles and dialogs** | Haiku | U19, U5, U4 | | | |
-| 20.1 Red (H) | Haiku | U19, U4 | | | |
-| 20.2 Tiles (H) | Haiku | 20.1 | | | |
-| 20.3 HiringPool avatar (H) | Haiku | 20.1 | | | |
-| 20.4 Team dialogs (H) | Haiku | 20.1, U5 | | | |
-| 20.5 Search, header, wireframes (H) | Haiku | 20.2 | | | |
+| 20.1 Red (H) | Haiku | U19, U4 | | | ✔ |
+| 20.2 Tiles (H) | Haiku | 20.1 | | | ✔ |
+| 20.3 HiringPool avatar (H) | Haiku | 20.1 | | | ✔ |
+| 20.4 Team dialogs (H) | Haiku | 20.1, U5 | | | ✔ |
+| 20.5 Search, header, wireframes (H) | Haiku | 20.2 | | | ✔ |
 | **U21 Teams: Team page frame and create flows** | Sonnet | U20 | | | |
 | 21.1 Red (S) | Sonnet | U20 | | | |
 | 21.2 Page header and container (S) | Sonnet | 21.1 | | | |
