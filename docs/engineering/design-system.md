@@ -389,6 +389,7 @@ acts on one tab lives inside that tab, not above the rail (UX-010).
 | An error from the action | `MudAlert Severity.Error Dense role="alert"` above the actions. Not a raw `<p>` or a `MudText` (UX-025) |
 | Actions | Right-aligned in this order: **Cancel** (`Variant.Text`), then **Back** if there is one, then the **primary action** (`Variant.Filled`, `Color.Primary`, or `Color.Error` when it destroys). All `Size.Small` (UX-020, UX-021) |
 | Busy | The primary action disables and shows a busy label ("Saving…") or a spinner |
+| Picker dialog | No actions row; `CloseButton = true` is the way out |
 
 ### Drawer anatomy
 
@@ -449,7 +450,7 @@ Start from the pattern in the file the table names; the full list is in
 | `StatusDot` | A coloured dot for a Teammate's health | Use it; don't copy the state-to-class switch |
 | `HuddleSegmentedControl` | A pill track with a sliding indicator, up to five options | Colours come from `background-gray` and `surface` |
 | `InlineConfirm` | A Confirm/Cancel row that swaps in for a list row while a destructive action awaits an answer | Confirm takes focus, Escape cancels, both buttons disable while busy. Pass `ConfirmText` |
-| `ProposalCard`, `QuestionCard`, `ElicitationCard`, `RetroProposalCard`, `SprintProposalCard` | Cards an Agent puts in front of the Human | Rendered inline in the Transcript. The outcome is never card state: once decided, the card goes and the decision appears as a posted Message (Spec §6.11). Each is an outlined panel with a title and an in-place action row (UX-030 to UX-035) |
+| `ProposalCard`, `QuestionCard`, `ElicitationCard`, `RetroProposalCard`, `SprintProposalCard` | Cards an Agent puts in front of the Human | Rendered inline in the Transcript. The outcome is never card state: once decided, the card goes and the decision appears as a posted Message (Spec §6.11). Each is an outlined panel with a title and an in-place action row (UX-030 to UX-035). `QuestionCard` uses buttons with `aria-pressed` rather than radios because it owns the selection (see its header comment); `ElicitationCard` uses radios and checkboxes |
 | `NeedsYouCard` | Rooms waiting on the Human | Sidebar, above the Room list |
 | `Composer` and `ReferencePicker` | Message input and the `@` picker | The picker is a popover; its keyboard shortcuts are in the User Guide |
 | `PageBreadcrumbs` | A pane's trail | Drawn by the shell, not by a page |
