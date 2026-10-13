@@ -8,7 +8,7 @@
 
 @if (this.Skill.Provenance is { } provenance)
 {
-    <span class="skill-provenance mud-typography mud-typography-caption mud-text-secondary">
+    <MudText Typo="Typo.caption" HtmlTag="span" Class="skill-provenance mud-text-secondary">
         <span class="skill-provenance-publisher">@provenance.Publisher</span>
         <span aria-hidden="true"> · </span>
         @if (SkillProvenanceLine.IsWebLink(provenance.Repo))
@@ -27,11 +27,11 @@
         {
             <MudChip T="string" Size="Size.Small" Color="Color.Warning" Class="skill-provenance-modified ml-1">modified locally</MudChip>
         }
-    </span>
+    </MudText>
 }
 else
 {
-    <span class="skill-provenance skill-provenance-origin mud-typography mud-typography-caption mud-text-secondary">@(this.Skill.Source == SkillSource.Yours ? "Yours" : "Built in")</span>
+    <MudText Typo="Typo.caption" HtmlTag="span" Class="skill-provenance skill-provenance-origin mud-text-secondary">@(this.Skill.Source == SkillSource.Yours ? "Yours" : "Built in")</MudText>
 }
 
 @code {

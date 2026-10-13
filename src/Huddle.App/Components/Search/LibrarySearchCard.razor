@@ -6,7 +6,7 @@
 
 @using Agency.Huddle.App.Search
 
-<div class="search-card @(this.Hit.IsArchived ? "search-card-archived" : null)" aria-label="@this.AccessibleName">
+<div class="search-card @(this.Hit.IsArchived ? "search-card-archived" : null)" role="group" aria-label="@this.AccessibleName">
     <span class="search-card-icon">
         <MudIcon Icon="@(this.Hit.IsFolder ? Icons.Material.Filled.Folder : Icons.Material.Outlined.Description)" Size="Size.Small" />
     </span>

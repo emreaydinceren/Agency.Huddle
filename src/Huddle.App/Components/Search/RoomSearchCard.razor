@@ -5,10 +5,11 @@
     action slot is empty in V1 (D-12).
 *@
 
-@using System.Globalization
+@using Agency.Huddle.App.Components.Shared
 @using Agency.Huddle.App.Search
+@inject TimeProvider Clock
 
-<div class="search-card @(this.Hit.IsArchived ? "search-card-archived" : null)" aria-label="@this.AccessibleName">
+<div class="search-card @(this.Hit.IsArchived ? "search-card-archived" : null)" role="group" aria-label="@this.AccessibleName">
     <span class="search-card-icon"><MudIcon Icon="@Icons.Material.Filled.Forum" Size="Size.Small" /></span>
     <span class="search-card-text">
         <span class="search-card-title"><MudHighlighter Text="@this.Hit.Title" HighlightedText="@this.Phrase" /></span>
@@ -46,8 +47,7 @@
                 return string.Empty;
             }
 
-            string noun = this.Hit.MatchCount == 1 ? "match" : "matches";
-            List<string> parts = [string.Create(CultureInfo.InvariantCulture, $"{this.Hit.MatchCount} {noun}")];
+            List<string> parts = [Plural.Of(this.Hit.MatchCount, "match", "matches")];
             if (this.Hit.SenderName is { } sender)
             {
                 parts.Add(sender);
@@ -55,7 +55,7 @@
 
             if (this.Hit.Time is { } time)
             {
-                parts.Add(time.ToLocalTime().ToString("HH:mm", CultureInfo.CurrentCulture));
+                parts.Add(MessageDisplay.TimeLabel(time, this.Clock.GetLocalNow()));
             }
 
             return string.Join(" · ", parts);

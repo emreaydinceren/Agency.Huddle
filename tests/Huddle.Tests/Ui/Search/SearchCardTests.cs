@@ -1,6 +1,5 @@
 namespace Agency.Huddle.Tests.Ui.Search;
 
-using System.Globalization;
 using AngleSharp.Dom;
 using Bunit;
 using Microsoft.Extensions.DependencyInjection;
@@ -9,6 +8,7 @@ using Agency.Huddle.App.Avatars;
 using Agency.Huddle.App.Components.Search;
 using Agency.Huddle.App.Search;
 using Agency.Huddle.App.Tasks;
+using Agency.Huddle.Tests.Acp.Fakes;
 
 /// <summary>
 /// Pins spec §6.6 and §6.7 for the five search cards and the <see cref="SearchCard"/> switch: each
@@ -172,7 +172,8 @@ public sealed class SearchCardTests : IDisposable
         await using MudBunitContext ctx = new();
         DateTimeOffset time = new(2026, 10, 12, 14, 2, 0, TimeSpan.Zero);
         RoomHit hit = new("room-1", "findings", 14, "msg-1", "Kai", "we should drop the login cookie", time, false, MatchTier.ContentMatch);
-        string clock = time.ToLocalTime().ToString("HH:mm", CultureInfo.CurrentCulture);
+        ctx.Services.AddSingleton<TimeProvider>(new ManualTimeProvider(time.AddHours(1), TimeZoneInfo.Utc));
+        const string clock = "14:02";
 
         IRenderedComponent<RoomSearchCard> cut = ctx.Render<RoomSearchCard>(p => p.Add(c => c.Hit, hit).Add(c => c.Phrase, "login"));
 
@@ -188,7 +189,8 @@ public sealed class SearchCardTests : IDisposable
         await using MudBunitContext ctx = new();
         DateTimeOffset time = new(2026, 10, 12, 14, 2, 0, TimeSpan.Zero);
         RoomHit hit = new("room-1", "findings", 1, "msg-1", "Kai", "login", time, false, MatchTier.ContentMatch);
-        string clock = time.ToLocalTime().ToString("HH:mm", CultureInfo.CurrentCulture);
+        ctx.Services.AddSingleton<TimeProvider>(new ManualTimeProvider(time.AddHours(1), TimeZoneInfo.Utc));
+        const string clock = "14:02";
 
         IRenderedComponent<RoomSearchCard> cut = ctx.Render<RoomSearchCard>(p => p.Add(c => c.Hit, hit));
 

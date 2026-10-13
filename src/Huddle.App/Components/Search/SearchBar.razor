@@ -20,7 +20,7 @@
 @inject TeammateCardOpener CardOpener
 @inject IJSRuntime JS
 
-<div class="search-bar" @ref="this.host" style="position: relative;" @onclick="this.OpenAsync" @onfocusin="this.OpenAsync" @onfocusout="this.CloseAsync">
+<div class="search-bar" @ref="this.host" @onclick="this.OpenAsync" @onfocusin="this.OpenAsync" @onfocusout="this.CloseAsync">
     <MudTextField T="string"
                   Value="@this.text"
                   ValueChanged="this.OnInputAsync"
@@ -33,11 +33,10 @@
                   OnKeyDown="this.OnKeyDownAsync"
                   UserAttributes="@this.InputAttributes" />
     <span aria-hidden="true"
-          class="mud-text-secondary"
-          style="position: absolute; right: 0.75rem; top: 50%; transform: translateY(-50%); pointer-events: none; font-size: 0.75rem;">Ctrl K</span>
+          class="search-shortcut-hint mud-text-secondary">Ctrl K</span>
     <div aria-live="polite"
          role="status"
-         style="position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap;">@(this.open ? this.view.Announcement : null)</div>
+         class="visually-hidden">@(this.open ? this.view.Announcement : null)</div>
     <MudPopover Open="@this.open" AnchorOrigin="Origin.BottomCenter" TransformOrigin="Origin.TopCenter">
         <div class="search-dropdown" @onmousedown:preventDefault="true">
             <div role="radiogroup" aria-label="Filter" class="d-flex flex-wrap gap-1 pa-2">
@@ -88,14 +87,13 @@
                                              role="option"
                                              aria-selected="@(selected ? "true" : "false")"
                                              class="search-option"
-                                             style="@(selected ? "cursor: pointer; background: var(--mud-palette-action-default-hover);" : "cursor: pointer;")"
                                              @onclick="@(e => this.OpenHitAsync(hit, e.CtrlKey))">
                                             <SearchCard Hit="@hit" Phrase="@this.phrase" />
                                         </div>
                                         break;
                                     case SearchNoticeRow notice:
                                         <MudText Typo="Typo.body2"
-                                                 Color="@(notice.Kind == SearchNoticeKind.NoMatch ? Color.Default : Color.Warning)"
+                                                 Color="@StatusColors.For(notice.Kind)"
                                                  Class="search-notice px-3 py-1">
                                             @if (notice.Kind != SearchNoticeKind.NoMatch)
                                             {

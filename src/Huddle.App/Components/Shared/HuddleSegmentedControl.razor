@@ -1,22 +1,47 @@
 @typeparam T
 @using MudBlazor
 
-<div class="huddle-segmented-control @Class">
-    <div class="huddle-segmented-indicator" style="width: calc((100% - 8px) / @ItemCount);"></div>
+<div class="huddle-segmented-control @this.Class">
+    <div class="huddle-segmented-indicator" style="@this.IndicatorStyle"></div>
 
-    <MudToggleGroup T="T" Value="@Value" ValueChanged="@ValueChanged" Disabled="@Disabled"
-                     SelectionMode="@SelectionMode" Class="huddle-segmented-group" SelectedClass="huddle-segmented-active-item"
-                     Outlined="false" Delimiters="false" Ripple="false" CheckMark="false" Color="Color.Default">
-        @ChildContent
+    <MudToggleGroup T="T" Value="@this.Value" ValueChanged="@this.ValueChanged" Disabled="@this.Disabled"
+                    SelectionMode="@this.SelectionMode" Class="huddle-segmented-group" SelectedClass="huddle-segmented-active-item"
+                    Size="Size.Small" Outlined="false" Delimiters="false" Ripple="false" CheckMark="false" Color="Color.Default">
+        @this.ChildContent
     </MudToggleGroup>
 </div>
 
 @code {
-    [Parameter] public T Value { get; set; } = default!;
-    [Parameter] public EventCallback<T> ValueChanged { get; set; }
-    [Parameter] public bool Disabled { get; set; }
-    [Parameter] public SelectionMode SelectionMode { get; set; } = SelectionMode.SingleSelection;
-    [Parameter] public string? Class { get; set; }
-    [Parameter] public RenderFragment ChildContent { get; set; } = default!;
-    [Parameter] public int ItemCount { get; set; } = 2;
+    /// <summary>The selected value.</summary>
+    [Parameter]
+    public T? Value { get; set; }
+
+    /// <summary>Raised with the new value when the selection changes.</summary>
+    [Parameter]
+    public EventCallback<T?> ValueChanged { get; set; }
+
+    /// <summary>Whether the control ignores input.</summary>
+    [Parameter]
+    public bool Disabled { get; set; }
+
+    /// <summary>How many items may be selected at once.</summary>
+    [Parameter]
+    public SelectionMode SelectionMode { get; set; } = SelectionMode.SingleSelection;
+
+    /// <summary>Extra CSS classes for the wrapper.</summary>
+    [Parameter]
+    public string? Class { get; set; }
+
+    /// <summary>The <c>MudToggleItem</c> children.</summary>
+    [Parameter]
+    public RenderFragment? ChildContent { get; set; }
+
+    /// <summary>The number of items; the indicator is one item wide.</summary>
+    [Parameter]
+    public int ItemCount { get; set; } = 2;
+
+    /// <summary>The indicator width: the track less its 6px of inset, shared between the items.</summary>
+    private string IndicatorStyle => string.Create(
+        System.Globalization.CultureInfo.InvariantCulture,
+        $"width: calc((100% - 6px) / {this.ItemCount});");
 }

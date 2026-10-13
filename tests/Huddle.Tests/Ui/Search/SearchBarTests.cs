@@ -299,7 +299,7 @@ public sealed class SearchBarTests(TeamWebApplicationFactory factory) : IClassFi
         {
             IElement listbox = cut.Find("[role='listbox']");
             Assert.Equal("search-listbox", listbox.Id);
-            IElement group = Assert.Single(listbox.QuerySelectorAll("[role='group']"));
+            IElement group = Assert.Single(cut.FindAll("[role='listbox'] > [role='group']"));
             Assert.Equal("search-group-teams-active", group.GetAttribute("aria-labelledby"));
             Assert.Equal("Teams", cut.Find("#search-group-teams-active").TextContent.Trim());
             IElement option = Assert.Single(group.QuerySelectorAll("[role='option']"));

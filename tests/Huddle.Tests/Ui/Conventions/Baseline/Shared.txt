@@ -1,13 +1,1 @@
-CV1|src/Huddle.App/Components/Shared/AvatarEditorDialog.razor|4
-CV1|src/Huddle.App/Components/Shared/HuddleSegmentedControl.razor|1
-CV1|src/Huddle.App/Components/Shared/TeammateCard.razor|15
-CV2|src/Huddle.App/Components/Shared/AvatarEditorDialog.razor|1
-CV2|src/Huddle.App/Components/Shared/TeammateCard.razor|13
-CV3|src/Huddle.App/Components/Shared/TeammateCard.razor|1
 CV5|src/Huddle.App/Components/Shared/TeammateCard.razor|3
-CV7|src/Huddle.App/Components/Shared/HuddleSegmentedControl.razor|2
-CV7|src/Huddle.App/Components/Shared/TeammateCard.razor|1
-CV9|src/Huddle.App/Components/Search/SearchBar.razor|3
-CV9|src/Huddle.App/Components/Shared/HuddleSegmentedControl.razor|1
-CV9|src/Huddle.App/Components/Shared/TeammateAvatar.razor|1
-CV10|src/Huddle.App/Components/Shared/TeammateCard.razor|1

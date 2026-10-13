@@ -9,7 +9,7 @@
 
 @inject AvatarStore Avatars
 
-<div class="search-card @(this.Hit.IsArchived ? "search-card-archived" : null)" aria-label="@this.AccessibleName">
+<div class="search-card @(this.Hit.IsArchived ? "search-card-archived" : null)" role="group" aria-label="@this.AccessibleName">
     <span class="search-card-icon"><TeammateAvatar Name="@this.Hit.Name" Avatar="this.Avatars.Get(this.Hit.Name)" Size="Size.Small" /></span>
     <span class="search-card-text">
         <span class="search-card-title"><MudHighlighter Text="@this.Hit.Title" HighlightedText="@this.Phrase" /></span>

@@ -50,7 +50,7 @@
                MaxLength: it truncates by UTF-16 index, which can cut a surrogate pair in half
                (Avatar.TrimLabel's own remarks). Counter gives the same affordance without that defect, sized
                from Avatar.MaxLabelTextElements so the two can never drift apart. *@
-            <MudTextField T="string" Label="Label" Value="@this.label" ValueChanged="this.OnLabelChanged"
+            <MudTextField T="string" Label="Label" Variant="Variant.Outlined" Margin="Margin.Dense" Value="@this.label" ValueChanged="this.OnLabelChanged"
                           Immediate="true" Counter="@Avatar.MaxLabelTextElements"
                           HelperText="Shown instead of initials." />
         }
@@ -60,7 +60,7 @@
             <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2">
                 <MudFileUpload T="IBrowserFile" Accept=".png,.jpg,.jpeg,.webp" MaximumFileCount="1" FilesChanged="this.OnFileChangedAsync">
                     <CustomContent Context="fileUpload">
-                        <MudButton Variant="Variant.Outlined" StartIcon="@Icons.Material.Filled.Upload" OnClick="@(() => fileUpload.OpenFilePickerAsync())">
+                        <MudButton Variant="Variant.Outlined" Size="Size.Small" StartIcon="@Icons.Material.Filled.Upload" OnClick="@(() => fileUpload.OpenFilePickerAsync())">
                             Choose an image
                         </MudButton>
                     </CustomContent>
@@ -68,7 +68,7 @@
 
                 @if (this.LibraryConfigured)
                 {
-                    <MudButton Variant="Variant.Outlined" StartIcon="@Icons.Material.Filled.PhotoLibrary" OnClick="this.ChooseFromLibraryAsync">
+                    <MudButton Variant="Variant.Outlined" Size="Size.Small" StartIcon="@Icons.Material.Filled.PhotoLibrary" OnClick="this.ChooseFromLibraryAsync">
                         Choose from library
                     </MudButton>
                 }
@@ -109,8 +109,8 @@
         }
     </DialogContent>
     <DialogActions>
-        <MudButton OnClick="this.Cancel">Cancel</MudButton>
-        <MudButton Variant="Variant.Filled" Color="Color.Primary" OnClick="this.Commit">@(this.Deferred ? "Apply" : "Save")</MudButton>
+        <MudButton Variant="Variant.Text" Size="Size.Small" OnClick="this.Cancel">Cancel</MudButton>
+        <MudButton Variant="Variant.Filled" Size="Size.Small" Color="Color.Primary" OnClick="this.Commit">@(this.Deferred ? "Apply" : "Save")</MudButton>
     </DialogActions>
 </MudDialog>
 
