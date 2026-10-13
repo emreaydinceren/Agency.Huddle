@@ -1042,7 +1042,7 @@ Ids are `<deliverable number>.<task>`, the form `Set-Tracker.ps1` updates:
 `pwsh -NoProfile -File agents/scripts/Set-Tracker.ps1 -Task "12.3" -State Done -TrackerPath docs/engineering/UX-Issues-Plan.md`.
 `(H)` is Haiku, `(S)` is Sonnet.
 
-**Status:** 77 of 141 tasks Done · 0 of 2 retrospectives done · last updated 2026-10-13.
+**Status:** 82 of 141 tasks Done · 0 of 2 retrospectives done · last updated 2026-10-13.
 
 | **Deliverable / Task** | **Model** | **Depends on** | **Active** | **In Progress** | **Done** |
 | --- | --- | --- | --- | --- | --- |
@@ -1129,11 +1129,11 @@ Ids are `<deliverable number>.<task>`, the form `Set-Tracker.ps1` updates:
 | 13.4 Card and List (H) | Haiku | 13.2, 13.3 | | | |
 | 13.5 TaskActionsMenu and overdue CSS (H) | Haiku | 13.4 | | | |
 | **U14 Tasks: drawers** | Sonnet | U12, U4 | | | |
-| 14.1 Red (S) | Sonnet | U12, U4 | | | |
-| 14.2 ResizableEndDrawer (S) | Sonnet | 14.1 | | | |
-| 14.3 Page and editor on it (S) | Sonnet | 14.2 | | | |
-| 14.4 View actions and PageHeader (S) | Sonnet | 14.3, U5, U6 | | | |
-| 14.5 CSS and wireframes (S) | Sonnet | 14.3 | | | |
+| 14.1 Red (S) | Sonnet | U12, U4 | | | ✔ |
+| 14.2 ResizableEndDrawer (S) | Sonnet | 14.1 | | | ✔ |
+| 14.3 Page and editor on it (S) | Sonnet | 14.2 | | | ✔ |
+| 14.4 View actions and PageHeader (S) | Sonnet | 14.3, U5, U6 | | | ✔ |
+| 14.5 CSS and wireframes (S) | Sonnet | 14.3 | | | ✔ |
 | **U15 Tasks: detail, menus, toolbar, board** | Sonnet | U13, U14 | | | |
 | 15.1 Red (S) | Sonnet | U13, U14 | | | |
 | 15.2 Detail (S) | Sonnet | 15.1 | | | |
