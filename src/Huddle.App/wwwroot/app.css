@@ -978,9 +978,13 @@ a.team-ref,
     position: relative;
 }
 
-/* While files are dragged over the box: a dashed border and the hint, laid over the input. */
-.composer-dropping::after {
-    content: "Drop to attach";
+.composer {
+    position: relative;
+}
+
+/* The hint is markup in the Composer (UX-V23); it shows only while files are dragged over the box: a dashed border laid over the input. */
+.composer-drop-hint {
+    display: none;
     position: absolute;
     inset: 0;
     display: flex;
@@ -993,6 +997,10 @@ a.team-ref,
     background: var(--mud-palette-surface);
     border: 1px dashed var(--mud-palette-primary);
     border-radius: calc(var(--mud-default-borderradius) * 1.5);
+}
+
+.composer-dropping .composer-drop-hint {
+    display: flex;
 }
 
 /* Sits inside the box's bottom-right corner; the input's right padding keeps text out from under it. */
@@ -2298,8 +2306,12 @@ a.team-ref,
     overflow-y: auto;
 }
 
-.elicitation-card-actions {
+/* An agent card's actions row sits below its body (UX-R01). */
+.agent-card-actions {
     margin-top: 0.75rem;
+}
+
+.elicitation-card .agent-card-actions {
     flex: 0 0 auto;
 }
 
@@ -2368,10 +2380,6 @@ a.team-ref,
 /* A ranking row's label takes the space the two arrow buttons leave. */
 .question-card-rank-label {
     flex: 1 1 auto;
-}
-
-.question-card-actions {
-    margin-top: 0.75rem;
 }
 
 /* ---- The Task List at narrower widths ------------------------------------------------------

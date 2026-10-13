@@ -427,6 +427,24 @@ public sealed class ElicitationCardTests
         Assert.True(SendButton(cut, 0).HasAttribute("disabled"));
     }
 
+    /// <summary>UX-030 to UX-032: the card is the shared shell, and "Skip" is now the Dismiss verb, an Outlined secondary after the Send primary.</summary>
+    [Fact]
+    public async Task Card_IsTheSharedShell_SendThenDismiss()
+    {
+        CancellationToken ct = Xunit.TestContext.Current.CancellationToken;
+        using ElicitationFixture fixture = await ElicitationFixture.CreateAsync(ct);
+        User coach = await fixture.AddAgentAsync("Coach", ct);
+        Room room = await fixture.CreateRoomAsync([coach], ct);
+        _ = fixture.Elicitations.Add(room.Id, coach.Id, coach.Name, FormOf(Schema("\"note\":{\"type\":\"string\",\"title\":\"Note\"}")));
+        await using MudBunitContext ctx = new();
+        Register(ctx, fixture);
+
+        IRenderedComponent<ContainerFragment> cut = RenderCard(ctx, room.Id);
+
+        IElement actions = AgentCardAssert.IsShell(cut, "Coach is asking", "Form from Coach");
+        Assert.Equal(["Send", "Dismiss"], AgentCardAssert.Verbs(actions));
+    }
+
     /// <summary>Skip declines the waiting request and posts nothing - even with a field filled in - and the card goes.</summary>
     [Fact]
     public async Task Skip_DeclinesAndPostsNothing_EvenWithAFieldFilled()
@@ -1130,7 +1148,7 @@ public sealed class ElicitationCardTests
     /// <param name="card">Which card, from zero.</param>
     private static IElement SkipButton(IRenderedComponent<ContainerFragment> cut, int card)
     {
-        return Card(cut, card).QuerySelector("button.elicitation-card-skip") ?? throw new InvalidOperationException("The card has no Skip button.");
+        return Card(cut, card).QuerySelector("button.elicitation-card-dismiss") ?? throw new InvalidOperationException("The card has no Skip button.");
     }
 
     /// <summary>The input control of the card's text-like field whose label reads <paramref name="label"/>.</summary>

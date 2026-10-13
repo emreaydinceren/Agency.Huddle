@@ -12,7 +12,7 @@
 @inject IOptions<TeamOptions> TeamOptions
 @inject IServiceProvider Services
 
-<div class="composer" style="@("position: relative;")">
+<div class="composer">
     @if (this.errorText is not null)
     {
         <MudAlert Severity="Severity.Error" Dense="true" Class="composer-error" role="alert">@this.errorText</MudAlert>
@@ -50,6 +50,7 @@
         </div>
     }
     <div class="@(this.AttachmentsAvailable ? "composer-box composer-box-attach" : "composer-box")">
+        <div class="composer-drop-hint" aria-hidden="true">Drop to attach</div>
         <textarea @ref="this.textarea" class="composer-input" rows="3" placeholder="Message… (/invite @@agent)"
                   role="combobox" aria-autocomplete="list"
                   aria-expanded="@(this.pickerOpen ? "true" : "false")"

@@ -7,6 +7,7 @@ using Agency.Huddle.App.TeamTypes;
 using Agency.Huddle.App.Teams;
 using Agency.Huddle.Tests.Acp.Fakes;
 using Agency.Huddle.Tests.Acp.Tools;
+using Agency.Huddle.Tests.Ui;
 
 namespace Agency.Huddle.Tests.Teams;
 
@@ -55,17 +56,22 @@ internal sealed class RetroProposalFixture : IDisposable
         this.Folders = folders;
         this.Proposals = new RetroProposalStore(folders);
         this.Retro = new RetroFileStore(folders);
+        ITeamDirectory serviceDirectory = DirectoryGate.Wrap(harness.Directory, out DirectoryGate gate);
+        this.Gate = gate;
         this.Service = new RetroProposalService(
             this.Proposals,
             this.Catalog,
             folders,
             harness.Personas,
             this.Retro,
-            harness.Directory,
+            serviceDirectory,
             harness.Chat,
             this.Clock,
             NullLogger<RetroProposalService>.Instance);
     }
+
+    /// <summary>Holds the service's directory calls while a card test keeps a decision in flight.</summary>
+    public DirectoryGate Gate { get; }
 
     /// <summary>The Task tool harness with Nova and Kai.</summary>
     public TaskToolHarness Harness { get; }

@@ -20,24 +20,19 @@
     that owns the selected value, and this card needs to own it, because "choosing one clears the others"
     differs by Question kind and a replaced card must reset it.
 *@
-@implements IDisposable
+@inherits AgentCardBase
+@using Agency.Huddle.App.Components.Shared.AgentCards
 @using Agency.Huddle.App.Questions
 
 @inject RoomEvents Events
 @inject QuestionStore Questions
 @inject QuestionService Service
 @inject Drafts Drafts
-@inject ITeamDirectory TeamDirectory
-@inject ISnackbar Snackbar
 
-@if (this.pending is { } current && this.room is { Archived: false })
+@if (this.pending is { } current && this.RoomIsOpen)
 {
-    <MudPaper Outlined="true" Class="question-card pa-3 my-2" role="region" aria-label="@($"Questions from {this.askerName}")">
-        <MudStack Row="true" Justify="Justify.SpaceBetween" AlignItems="AlignItems.Center">
-            <MudText Typo="Typo.subtitle2" Class="question-card-title">@this.askerName is asking</MudText>
-            <MudButton Variant="Variant.Text" Size="Size.Small" Disabled="@this.busy" OnClick="this.Dismiss">Dismiss</MudButton>
-        </MudStack>
-
+    <AgentCard Class="question-card" TitleClass="question-card-title" Title="@($"{this.askerName} is asking")" AriaLabel="@($"Questions from {this.askerName}")">
+        <ChildContent>
         @if (this.askerIsWriting)
         {
             <MudText Typo="Typo.caption" role="status" Class="question-card-writing">@this.askerName is still writing…</MudText>
@@ -103,62 +98,50 @@
             </div>
         }
 
-        @if (!this.SendsOnTap(current))
-        {
-            <MudStack Row="true" Spacing="2" Class="question-card-actions">
+        </ChildContent>
+        <Actions>
+            @if (!this.SendsOnTap(current))
+            {
                 <MudButton Variant="Variant.Filled" Color="Color.Primary"
                            Disabled="@(this.OptionsDisabled || !this.IsComplete(current))"
                            Size="Size.Small"
-                           OnClick="this.SendAsync">Send</MudButton>
-            </MudStack>
-        }
-    </MudPaper>
+                           OnClick="this.SendAsync">@(this.Busy ? "Sending…" : "Send")</MudButton>
+            }
+            <MudButton Variant="Variant.Outlined" Size="Size.Small" Disabled="@this.Busy" OnClick="this.Dismiss">Dismiss</MudButton>
+        </Actions>
+    </AgentCard>
 }
 
 @code {
-    /// <summary>The Room whose waiting Questions, if any, this card shows.</summary>
-    [Parameter, EditorRequired]
-    public string RoomId { get; set; } = "";
-
-    private string? loadedRoomId;
     private PendingQuestions? pending;
-    private Room? room;
     private string askerName = "";
     private bool askerIsWriting;
-    private bool busy;
 
     // One entry per Question. Single and multi select hold the chosen option indexes; a ranking
     // holds every option index in the order the Human has put them, starting in the Agent's order.
     private List<List<int>> picks = [];
 
     /// <summary>Whether a tap or a button would be ignored: an answer is in flight, or the asker's framing Message has not landed yet (D-8).</summary>
-    private bool OptionsDisabled => this.busy || this.askerIsWriting;
+    private bool OptionsDisabled => this.Busy || this.askerIsWriting;
 
-    /// <summary>Subscribes to <see cref="RoomEvents.QuestionsChanged"/> and <see cref="RoomEvents.DraftChanged"/> - both unsubscribed in <see cref="Dispose"/>, per rules.md.</summary>
-    protected override void OnInitialized()
+    /// <summary>Follows <see cref="RoomEvents.QuestionsChanged"/> and <see cref="RoomEvents.DraftChanged"/> - both undone in <see cref="Unsubscribe"/>, per rules.md.</summary>
+    protected override void Subscribe()
     {
-        this.Events.QuestionsChanged += this.OnQuestionsChanged;
+        this.Events.QuestionsChanged += this.RefreshOnChange;
         this.Events.DraftChanged += this.OnDraftChanged;
     }
 
-    /// <summary>Reloads this card's Room and waiting Questions whenever <see cref="RoomId"/> changes - a component reused across Rooms.</summary>
-    protected override async Task OnParametersSetAsync()
+    /// <summary>Lets go of both events.</summary>
+    protected override void Unsubscribe()
     {
-        if (this.RoomId == this.loadedRoomId)
-        {
-            return;
-        }
-
-        this.loadedRoomId = this.RoomId;
-        this.room = await this.TeamDirectory.GetRoomAsync(this.RoomId);
-        await this.ShowAsync(this.Questions.Get(this.RoomId));
+        this.Events.QuestionsChanged -= this.RefreshOnChange;
+        this.Events.DraftChanged -= this.OnDraftChanged;
     }
 
-    /// <summary>Unsubscribes from both events - the hub is a singleton, so a component that does not unsubscribe here never dies.</summary>
-    public void Dispose()
+    /// <summary>Reads the waiting Questions of this card's Room.</summary>
+    protected override async Task LoadAsync()
     {
-        this.Events.QuestionsChanged -= this.OnQuestionsChanged;
-        this.Events.DraftChanged -= this.OnDraftChanged;
+        await this.ShowAsync(this.Questions.Get(this.RoomId));
     }
 
     /// <summary>
@@ -194,26 +177,6 @@
     private bool AskerHasDraft(PendingQuestions card)
     {
         return this.Drafts.ForRoom(this.RoomId).Any(draft => string.Equals(draft.AgentId, card.AskerAgentId, StringComparison.Ordinal));
-    }
-
-    /// <summary>
-    /// Reacts to <see cref="RoomEvents.QuestionsChanged"/> for this card's own Room - ignored while
-    /// <see cref="busy"/> is true, because that is this card's own answer taking the card; the click
-    /// handler's <c>finally</c> block refreshes once the call returns.
-    /// </summary>
-    /// <param name="roomId">The Room whose waiting Questions changed.</param>
-    private void OnQuestionsChanged(string roomId)
-    {
-        if (!string.Equals(roomId, this.RoomId, StringComparison.Ordinal) || this.busy)
-        {
-            return;
-        }
-
-        _ = RendererDispatch.RunAsync(this.InvokeAsync, async () =>
-        {
-            await this.ShowAsync(this.Questions.Get(this.RoomId));
-            this.StateHasChanged();
-        });
     }
 
     /// <summary>Reacts to <see cref="RoomEvents.DraftChanged"/> for this card's Room: recomputes whether the asker is still writing (D-8).</summary>
@@ -318,9 +281,9 @@
     /// Sends the answer through the real <see cref="QuestionService"/>. The outcome is the posted
     /// Message, never card state, so this only refreshes what is still waiting once the call returns.
     /// <see cref="CancellationToken.None"/> on purpose: once the card is taken, abandoning the post
-    /// when a circuit drops would lose the answer. Any exception is reported through
-    /// <see cref="ISnackbar"/> rather than left to crash the circuit; <see cref="QuestionService"/>
-    /// already turns an expected failure into a <see langword="null"/> result.
+    /// when a circuit drops would lose the answer. <see cref="QuestionService"/> already turns an
+    /// expected failure into a <see langword="null"/> result; anything else is reported by
+    /// <see cref="AgentCardBase.RunBusyAsync"/>.
     /// </summary>
     private async Task SendAsync()
     {
@@ -329,20 +292,7 @@
             return;
         }
 
-        this.busy = true;
-        try
-        {
-            _ = await this.Service.AnswerAsync(this.RoomId, card.Id, this.BuildAnswers(card), CancellationToken.None);
-        }
-        catch (Exception ex) when (ex is not OperationCanceledException)
-        {
-            this.Snackbar.Add(ex.Message, Severity.Error, configure: null, key: "error");
-        }
-        finally
-        {
-            this.busy = false;
-            await this.ShowAsync(this.Questions.Get(this.RoomId));
-        }
+        await this.RunBusyAsync(async () => _ = await this.Service.AnswerAsync(this.RoomId, card.Id, this.BuildAnswers(card), CancellationToken.None));
     }
 
     /// <summary>Builds the answers the card holds. A multi select is sent in option order, as <see cref="QuestionService"/> requires.</summary>
@@ -367,7 +317,7 @@
     /// <summary>Dismisses the waiting card: nothing is posted and the asker is not woken.</summary>
     private void Dismiss()
     {
-        if (this.busy || this.pending is not { } card)
+        if (this.Busy || this.pending is not { } card)
         {
             return;
         }
