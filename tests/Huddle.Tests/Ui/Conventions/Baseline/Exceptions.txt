@@ -1,0 +1,1 @@
+# Permanent, justified exceptions: CVn|path|count|reason. Manager-only; agents never edit this file.

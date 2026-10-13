@@ -1,0 +1,11 @@
+CV1|src/Huddle.App/Components/Shared/NewChat.razor|1
+CV4|src/Huddle.App/Components/Shared/NewChat.razor|1
+CV7|src/Huddle.App/Components/Shared/ArchivedChatsDialog.razor|1
+CV10|src/Huddle.App/Components/Layout/MainLayout.razor|1
+CV10|src/Huddle.App/Components/Layout/TabHost.razor|1
+CV10|src/Huddle.App/Components/Layout/TabPersistence.razor|1
+CV10|src/Huddle.App/Components/Layout/TabSync.razor|1
+CV10|src/Huddle.App/Components/Layout/TopBar.razor|1
+CV10|src/Huddle.App/Components/Shared/ArchivedChatsDialog.razor|1
+CV10|src/Huddle.App/Components/Shared/NewChat.razor|1
+CV10|src/Huddle.App/Components/Shared/RoomList.razor|1
