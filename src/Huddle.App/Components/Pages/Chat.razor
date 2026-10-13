@@ -32,13 +32,13 @@ else
                     <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2">
                         @if (this.isRenaming)
                         {
-                            <MudTextField T="string" @bind-Value="this.editingName" Immediate="true" AutoFocus="true"
-                                          Label="Room name" aria-label="Room name"
+                            <MudTextField T="string" Variant="Variant.Outlined" Margin="Margin.Dense" @bind-Value="this.editingName" Immediate="true" AutoFocus="true"
+                                          Label="Room name"
                                           OnKeyDown="this.OnRenameKeyDown" OnBlur="this.CommitRenameAsync" />
                         }
                         else
                         {
-                            <MudText HtmlTag="h1" Typo="Typo.h6" Class="mb-0">@this.room.Name</MudText>
+                            <MudText HtmlTag="h1" Typo="Typo.h5" Class="mb-0">@this.room.Name</MudText>
                             @if (!this.isTeamRoom)
                             {
                                 <MudTooltip Text="Rename">
@@ -63,7 +63,7 @@ else
                             <TeammateAvatar Name="@agent.Name" Avatar="this.Avatars.Get(agent.Name)" Size="Size.Small" />
                         }
                     </MudAvatarGroup>
-                    <MudText Typo="Typo.subtitle1" Class="room-members-label">@agentMembers.Count Members + you</MudText>
+                    <MudText Typo="Typo.caption" Class="room-members-label">@Plural.Of(agentMembers.Count, "member", "members") + you</MudText>
                     @* The leading @ is load-bearing: RoomId="this.room.Id" would pass that literal text. *@
                     <InviteTeammate RoomId="@this.room.Id" />
                 </MudStack>
@@ -72,7 +72,7 @@ else
             {
                 @* MudAlert renders no role by default - verified against the rendered markup, not assumed -
                    so role="alert" is added explicitly to keep the message announced, per rules.md. *@
-                <MudAlert Severity="Severity.Error" Class="rename-error" role="alert">@this.renameError</MudAlert>
+                <MudAlert Severity="Severity.Error" Dense="true" Class="rename-error" role="alert">@this.renameError</MudAlert>
             }
         </MudStack>
         <MessageList
@@ -169,10 +169,10 @@ else
                     </p>
                 }
                 <MudStack Row="true" Spacing="2" Class="budget-prompt-actions">
-                    <MudButton Variant="Variant.Filled" Color="Color.Primary" Disabled="@this.extending" OnClick="this.ContinueAsync">
+                    <MudButton Size="Size.Small" Variant="Variant.Filled" Color="Color.Primary" Disabled="@this.extending" OnClick="this.ContinueAsync">
                         @(this.extending ? "Continuing…" : "Continue")
                     </MudButton>
-                    <MudButton Variant="Variant.Outlined" Disabled="@this.extending" OnClick="this.DismissBudgetPrompt">
+                    <MudButton Size="Size.Small" Variant="Variant.Outlined" Disabled="@this.extending" OnClick="this.DismissBudgetPrompt">
                         Leave paused
                     </MudButton>
                 </MudStack>
@@ -265,15 +265,7 @@ else
             return;
         }
 
-        bool copied = await this.JS.InvokeAsync<bool>("huddleClipboard.copy", Agency.Huddle.App.References.RoomLinkText.For(current));
-        if (copied)
-        {
-            this.Snackbar.Add($"Copied link to {current.Name}", Severity.Success, configure: null, key: "copy");
-        }
-        else
-        {
-            this.Snackbar.Add("Couldn't copy the link.", Severity.Warning, configure: null, key: "copy");
-        }
+        await RoomLinkCopier.CopyAsync(this.JS, this.Snackbar, current, CancellationToken.None);
     }
 
     private string? loadedRoomId;
@@ -428,7 +420,7 @@ else
             return;
         }
 
-        _ = this.DispatchAsync(() =>
+        _ = RendererDispatch.RunAsync(this.InvokeAsync, () =>
         {
             this.messages.Add(e.Message);
             this.budget = e.Budget;
@@ -457,6 +449,7 @@ else
             }
 
             this.StateHasChanged();
+            return Task.CompletedTask;
         });
     }
 
@@ -557,7 +550,7 @@ else
 
     private void OnRoomsChanged()
     {
-        _ = this.DispatchAsync(async () =>
+        _ = RendererDispatch.RunAsync(this.InvokeAsync, async () =>
         {
             if (this.loadedRoomId is not null)
             {
@@ -592,10 +585,7 @@ else
     /// </summary>
     private void OnHealthOrPresenceChanged()
     {
-        _ = this.DispatchAsync(() =>
-        {
-            this.StateHasChanged();
-        });
+        _ = RendererDispatch.Repaint(this.InvokeAsync, this.StateHasChanged);
     }
 
     /// <summary>
@@ -606,10 +596,7 @@ else
     /// </summary>
     private void OnAvatarsChanged()
     {
-        _ = this.DispatchAsync(() =>
-        {
-            this.StateHasChanged();
-        });
+        _ = RendererDispatch.Repaint(this.InvokeAsync, this.StateHasChanged);
     }
 
     /// <summary>
@@ -717,7 +704,7 @@ else
             return;
         }
 
-        _ = this.DispatchAsync(() =>
+        _ = RendererDispatch.RunAsync(this.InvokeAsync, () =>
         {
             this.drafts = this.Drafts.ForRoom(roomId);
 
@@ -730,6 +717,8 @@ else
             {
                 this.drawPending = true;
             }
+
+            return Task.CompletedTask;
         });
     }
 
@@ -772,19 +761,5 @@ else
         }
 
         await Task.WhenAll(agentIds.Select(agentId => this.Gateway.StopTurnAsync(agentId, roomId)));
-    }
-
-    private Task DispatchAsync(Action action)
-    {
-        return RendererDispatch.RunAsync(this.InvokeAsync, () =>
-        {
-            action();
-            return Task.CompletedTask;
-        });
-    }
-
-    private Task DispatchAsync(Func<Task> action)
-    {
-        return RendererDispatch.RunAsync(this.InvokeAsync, action);
     }
 }

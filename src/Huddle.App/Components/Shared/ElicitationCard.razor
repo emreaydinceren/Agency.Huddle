@@ -75,6 +75,7 @@
                                                    HelperText="@shown.Description"
                                                    Required="@shown.Required"
                                                    Variant="Variant.Outlined"
+                                                   Margin="Margin.Dense"
                                                    Editable="true"
                                                    DateFormat="yyyy-MM-dd"
                                                    Culture="@CultureInfo.InvariantCulture"
@@ -158,6 +159,7 @@
                                                   ErrorText="@problem"
                                                   Required="@shown.Required"
                                                   Variant="Variant.Outlined"
+                                                  Margin="Margin.Dense"
                                                   Immediate="true"
                                                   InputMode="@InputModeOf(shown.Kind)"
                                                   Disabled="@busy"
@@ -172,6 +174,7 @@
                                               Label="@other.Label"
                                               HelperText="@other.Description"
                                               Variant="Variant.Outlined"
+                                              Margin="Margin.Dense"
                                               Immediate="true"
                                               Disabled="@busy"
                                               Class="elicitation-card-other"
@@ -184,10 +187,10 @@
             </MudStack>
 
             <MudStack Row="true" Spacing="2" Class="elicitation-card-actions">
-                <MudButton Variant="Variant.Filled" Color="Color.Primary" Class="elicitation-card-send"
+                <MudButton Size="Size.Small" Variant="Variant.Filled" Color="Color.Primary" Class="elicitation-card-send"
                            Disabled="@(busy || !this.CanSend(current))"
                            OnClick="@(() => this.SendAsync(current))">@(busy ? "Sending…" : "Send")</MudButton>
-                <MudButton Variant="Variant.Text" Class="elicitation-card-skip"
+                <MudButton Size="Size.Small" Variant="Variant.Text" Class="elicitation-card-skip"
                            Disabled="@busy"
                            OnClick="@(() => this.SkipAsync(current))">Skip</MudButton>
             </MudStack>
@@ -264,7 +267,7 @@
             return;
         }
 
-        _ = this.DispatchAsync(() =>
+        _ = RendererDispatch.RunAsync(this.InvokeAsync, () =>
         {
             this.Show(this.Elicitations.Get(this.RoomId));
             this.StateHasChanged();
@@ -534,7 +537,7 @@
         }
         catch (InvalidOperationException ex)
         {
-            this.Snackbar.Add(ex.Message, Severity.Error);
+            this.Snackbar.Add(ex.Message, Severity.Error, configure: null, key: "error");
         }
         finally
         {
@@ -554,16 +557,5 @@
 
         _ = await this.Service.DeclineAsync(this.RoomId, card.Id);
         this.Show(this.Elicitations.Get(this.RoomId));
-    }
-
-    /// <summary>
-    /// Marshals <paramref name="action"/> onto this component's renderer, matching <c>QuestionCard</c>'s own
-    /// <c>DispatchAsync</c> - a stale subscription firing after this card has already been disposed (a Room
-    /// switch, a closed circuit) must not throw.
-    /// </summary>
-    /// <param name="action">The state update and repaint to run on the renderer.</param>
-    private Task DispatchAsync(Func<Task> action)
-    {
-        return RendererDispatch.RunAsync(this.InvokeAsync, action);
     }
 }

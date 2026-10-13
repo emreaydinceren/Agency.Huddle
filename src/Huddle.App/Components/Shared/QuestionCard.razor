@@ -92,6 +92,7 @@
 
                             <MudButton Variant="@(selected ? Variant.Filled : Variant.Outlined)"
                                        Color="Color.Primary"
+                                       Size="Size.Small"
                                        Class="question-card-option"
                                        aria-pressed="@(selected ? "true" : "false")"
                                        Disabled="@this.OptionsDisabled"
@@ -107,6 +108,7 @@
             <MudStack Row="true" Spacing="2" Class="question-card-actions">
                 <MudButton Variant="Variant.Filled" Color="Color.Primary"
                            Disabled="@(this.OptionsDisabled || !this.IsComplete(current))"
+                           Size="Size.Small"
                            OnClick="this.SendAsync">Send</MudButton>
             </MudStack>
         }
@@ -207,7 +209,7 @@
             return;
         }
 
-        _ = this.DispatchAsync(async () =>
+        _ = RendererDispatch.RunAsync(this.InvokeAsync, async () =>
         {
             await this.ShowAsync(this.Questions.Get(this.RoomId));
             this.StateHasChanged();
@@ -223,7 +225,7 @@
             return;
         }
 
-        _ = this.DispatchAsync(() =>
+        _ = RendererDispatch.RunAsync(this.InvokeAsync, () =>
         {
             this.askerIsWriting = this.pending is { } card && this.AskerHasDraft(card);
             this.StateHasChanged();
@@ -334,7 +336,7 @@
         }
         catch (Exception ex) when (ex is not OperationCanceledException)
         {
-            this.Snackbar.Add(ex.Message, Severity.Error);
+            this.Snackbar.Add(ex.Message, Severity.Error, configure: null, key: "error");
         }
         finally
         {
@@ -372,16 +374,5 @@
 
         this.Service.Dismiss(this.RoomId, card.Id);
         this.pending = this.Questions.Get(this.RoomId);
-    }
-
-    /// <summary>
-    /// Marshals <paramref name="action"/> onto this component's renderer, matching
-    /// <c>ProposalCard</c>'s own <c>DispatchAsync</c> - a stale subscription firing after this card has
-    /// already been disposed (a Room switch, a closed circuit) must not throw.
-    /// </summary>
-    /// <param name="action">The state update and repaint to run on the renderer.</param>
-    private Task DispatchAsync(Func<Task> action)
-    {
-        return RendererDispatch.RunAsync(this.InvokeAsync, action);
     }
 }

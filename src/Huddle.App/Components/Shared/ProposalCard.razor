@@ -43,14 +43,14 @@
                 <MudTh>Alias</MudTh>
                 <MudTh>Title</MudTh>
                 <MudTh>Teams</MudTh>
-                <MudTh>Consult When</MudTh>
+                <MudTh>Consult when</MudTh>
             </HeaderContent>
             <RowTemplate Context="candidate">
                 <MudTd DataLabel="Name">@candidate.Name</MudTd>
                 <MudTd DataLabel="Alias">@candidate.Alias</MudTd>
                 <MudTd DataLabel="Title">@candidate.Title</MudTd>
                 <MudTd DataLabel="Teams">@string.Join(", ", candidate.Teams)</MudTd>
-                <MudTd DataLabel="Consult When">@candidate.ConsultWhen</MudTd>
+                <MudTd DataLabel="Consult when">@candidate.ConsultWhen</MudTd>
             </RowTemplate>
         </MudTable>
 
@@ -64,8 +64,8 @@
         </MudExpansionPanels>
 
         <MudStack Row="true" Spacing="2" Class="proposal-card-actions">
-            <MudButton Variant="Variant.Filled" Color="Color.Primary" Disabled="@this.busy" OnClick="this.ApproveAsync">Approve</MudButton>
-            <MudButton Variant="Variant.Outlined" Disabled="@this.busy" OnClick="this.DeclineAsync">Decline</MudButton>
+            <MudButton Size="Size.Small" Variant="Variant.Filled" Color="Color.Primary" Disabled="@this.busy" OnClick="this.ApproveAsync">Approve</MudButton>
+            <MudButton Size="Size.Small" Variant="Variant.Outlined" Disabled="@this.busy" OnClick="this.DeclineAsync">Decline</MudButton>
         </MudStack>
     </MudAlert>
 }
@@ -126,10 +126,11 @@
             return;
         }
 
-        _ = this.DispatchAsync(() =>
+        _ = RendererDispatch.RunAsync(this.InvokeAsync, () =>
         {
             this.proposal = this.Proposals.Get(this.RoomId);
             this.StateHasChanged();
+            return Task.CompletedTask;
         });
     }
 
@@ -155,7 +156,7 @@
         }
         catch (Exception ex) when (ex is not OperationCanceledException)
         {
-            this.Snackbar.Add(ex.Message, Severity.Error);
+            this.Snackbar.Add(ex.Message, Severity.Error, configure: null, key: "error");
         }
         finally
         {
@@ -179,7 +180,7 @@
         }
         catch (Exception ex) when (ex is not OperationCanceledException)
         {
-            this.Snackbar.Add(ex.Message, Severity.Error);
+            this.Snackbar.Add(ex.Message, Severity.Error, configure: null, key: "error");
         }
         finally
         {
@@ -208,21 +209,5 @@
 
         var unit = tightest.Kind == HireLimitKind.PerTeam ? "per Team" : "live processes";
         return $"This adds {count} {noun}; {tightest.Used} of {tightest.Limit} {unit}.";
-    }
-
-    /// <summary>
-    /// Marshals <paramref name="action"/> onto this component's renderer, matching
-    /// <c>Chat.razor</c>'s and <c>InviteTeammate.razor</c>'s own <c>DispatchAsync</c> - a stale
-    /// <see cref="RoomEvents"/> subscription firing after this card has already been disposed (a
-    /// Room switch, a closed circuit) must not throw.
-    /// </summary>
-    /// <param name="action">The state update and repaint to run on the renderer.</param>
-    private Task DispatchAsync(Action action)
-    {
-        return RendererDispatch.RunAsync(this.InvokeAsync, () =>
-        {
-            action();
-            return Task.CompletedTask;
-        });
     }
 }

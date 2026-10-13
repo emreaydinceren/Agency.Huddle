@@ -28,14 +28,14 @@
                     <span class="retro-change-file">@change.TargetFile</span>
                     <pre class="retro-change-diff">@this.Service.Preview(set, change)</pre>
                     <MudStack Row="true" Spacing="2" Class="retro-change-actions">
-                        <MudButton Variant="Variant.Filled" Color="Color.Primary" Class="retro-change-accept" Disabled="@this.busy" OnClick="() => this.AcceptAsync(set, change)">Accept</MudButton>
-                        <MudButton Variant="Variant.Outlined" Class="retro-change-reject" Disabled="@this.busy" OnClick="() => this.RejectAsync(set, change)">Reject</MudButton>
+                        <MudButton Size="Size.Small" Variant="Variant.Filled" Color="Color.Primary" Class="retro-change-accept" Disabled="@this.busy" OnClick="() => this.AcceptAsync(set, change)">Accept</MudButton>
+                        <MudButton Size="Size.Small" Variant="Variant.Outlined" Class="retro-change-reject" Disabled="@this.busy" OnClick="() => this.RejectAsync(set, change)">Reject</MudButton>
                     </MudStack>
                 </div>
             }
         }
 
-        <MudTextField T="string" @bind-Value="this.reason" Label="Reason if you reject" Class="retro-proposal-reason" Disabled="@this.busy" />
+        <MudTextField T="string" Variant="Variant.Outlined" Margin="Margin.Dense" @bind-Value="this.reason" Label="Reason if you reject" Class="retro-proposal-reason" Disabled="@this.busy" />
     </MudAlert>
 }
 
@@ -88,7 +88,7 @@
             return;
         }
 
-        _ = this.DispatchAsync(async () =>
+        _ = RendererDispatch.RunAsync(this.InvokeAsync, async () =>
         {
             await this.LoadAsync();
             this.StateHasChanged();
@@ -105,7 +105,7 @@
             RetroChangeOutcome outcome = await this.Service.AcceptAsync(this.RoomId, set.Id, change.Id, CancellationToken.None);
             if (outcome.Kind == RetroChangeOutcomeKind.Refused)
             {
-                this.Snackbar.Add(outcome.Text, Severity.Warning);
+                this.Snackbar.Add(outcome.Text, Severity.Warning, configure: null, key: "refused");
             }
         });
     }
@@ -138,19 +138,12 @@
         }
         catch (Exception ex) when (ex is not OperationCanceledException)
         {
-            this.Snackbar.Add(ex.Message, Severity.Error);
+            this.Snackbar.Add(ex.Message, Severity.Error, configure: null, key: "error");
         }
         finally
         {
             await this.LoadAsync();
             this.busy = false;
         }
-    }
-
-    /// <summary>Runs <paramref name="action"/> on the renderer; a card disposed in the meantime is ignored.</summary>
-    /// <param name="action">The state update and repaint.</param>
-    private Task DispatchAsync(Func<Task> action)
-    {
-        return RendererDispatch.RunAsync(this.InvokeAsync, action);
     }
 }

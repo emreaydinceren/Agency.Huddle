@@ -12,14 +12,14 @@
 @inject IOptions<TeamOptions> TeamOptions
 @inject IServiceProvider Services
 
-<div class="composer" style="position: relative;">
+<div class="composer" style="@("position: relative;")">
     @if (this.errorText is not null)
     {
-        <div class="composer-error">@this.errorText</div>
+        <MudAlert Severity="Severity.Error" Dense="true" Class="composer-error" role="alert">@this.errorText</MudAlert>
     }
     else if (this.infoText is not null)
     {
-        <div class="composer-info">@this.infoText</div>
+        <MudAlert Severity="Severity.Info" Dense="true" Class="composer-info" role="status">@this.infoText</MudAlert>
     }
     @if (this.Chips.Count > 0)
     {
@@ -32,7 +32,7 @@
                     <span class="upload-chip-name">@chip.DisplayName</span>
                     @if (chip.State == UploadState.Done)
                     {
-                        <span class="upload-chip-size">@FormatSize(chip.Size)</span>
+                        <span class="upload-chip-size">@ByteSize.Format(chip.Size)</span>
                     }
                     else if (chip.State == UploadState.Uploading)
                     {
@@ -271,15 +271,6 @@
             UploadKind.Text => Icons.Material.Filled.Description,
             _ => Icons.Material.Filled.InsertDriveFile,
         };
-
-    /// <summary>A file size as shown on a chip: bytes, whole kilobytes, or megabytes to one decimal, in invariant culture.</summary>
-    /// <param name="bytes">The saved size.</param>
-    private static string FormatSize(long bytes) => bytes switch
-    {
-        < 1024 => string.Create(CultureInfo.InvariantCulture, $"{bytes} B"),
-        < 1024 * 1024 => string.Create(CultureInfo.InvariantCulture, $"{(long)Math.Round(bytes / 1024.0, MidpointRounding.AwayFromZero)} KB"),
-        _ => string.Create(CultureInfo.InvariantCulture, $"{bytes / (1024.0 * 1024.0):0.0} MB"),
-    };
 
     /// <summary>
     /// Called by the Composer's script the first time the Human types here: typing is working in the

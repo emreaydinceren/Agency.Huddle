@@ -31,11 +31,11 @@
             }
         </ul>
 
-        <MudTextField T="string" @bind-Value="this.reason" Label="Reason if you decline" Class="sprint-proposal-reason" Disabled="@this.busy" />
+        <MudTextField T="string" Variant="Variant.Outlined" Margin="Margin.Dense" @bind-Value="this.reason" Label="Reason if you decline" Class="sprint-proposal-reason" Disabled="@this.busy" />
 
         <MudStack Row="true" Spacing="2" Class="sprint-proposal-actions">
-            <MudButton Variant="Variant.Filled" Color="Color.Primary" Class="sprint-proposal-approve" Disabled="@this.busy" OnClick="this.ApproveAsync">Approve</MudButton>
-            <MudButton Variant="Variant.Outlined" Class="sprint-proposal-decline" Disabled="@this.busy" OnClick="this.DeclineAsync">Decline</MudButton>
+            <MudButton Size="Size.Small" Variant="Variant.Filled" Color="Color.Primary" Class="sprint-proposal-approve" Disabled="@this.busy" OnClick="this.ApproveAsync">Approve</MudButton>
+            <MudButton Size="Size.Small" Variant="Variant.Outlined" Class="sprint-proposal-decline" Disabled="@this.busy" OnClick="this.DeclineAsync">Decline</MudButton>
         </MudStack>
     </MudAlert>
 }
@@ -96,7 +96,7 @@
             return;
         }
 
-        _ = this.DispatchAsync(async () =>
+        _ = RendererDispatch.RunAsync(this.InvokeAsync, async () =>
         {
             await this.LoadAsync();
             this.StateHasChanged();
@@ -134,7 +134,7 @@
         }
         catch (Exception ex) when (ex is not OperationCanceledException)
         {
-            this.Snackbar.Add(ex.Message, Severity.Error);
+            this.Snackbar.Add(ex.Message, Severity.Error, configure: null, key: "error");
         }
         finally
         {
@@ -159,19 +159,12 @@
         }
         catch (Exception ex) when (ex is not OperationCanceledException)
         {
-            this.Snackbar.Add(ex.Message, Severity.Error);
+            this.Snackbar.Add(ex.Message, Severity.Error, configure: null, key: "error");
         }
         finally
         {
             await this.LoadAsync();
             this.busy = false;
         }
-    }
-
-    /// <summary>Runs <paramref name="action"/> on the renderer; a card disposed in the meantime is ignored.</summary>
-    /// <param name="action">The state update and repaint.</param>
-    private Task DispatchAsync(Func<Task> action)
-    {
-        return RendererDispatch.RunAsync(this.InvokeAsync, action);
     }
 }

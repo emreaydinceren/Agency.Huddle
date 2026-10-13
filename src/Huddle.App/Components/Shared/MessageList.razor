@@ -14,7 +14,7 @@
     {
         var message = this.Messages[messageIndex];
         ChatMessage? previousMessage = messageIndex > 0 ? this.Messages[messageIndex - 1] : null;
-        var time = message.Timestamp.ToLocalTime().ToString("HH:mm", System.Globalization.CultureInfo.CurrentCulture);
+        var time = MessageDisplay.TimeLabel(message.Timestamp, this.Clock.GetLocalNow());
         @if (MessageDisplay.StartsNewDay(previousMessage?.Timestamp, message.Timestamp))
         {
             <div class="day-separator" role="separator">
@@ -144,7 +144,7 @@
                                 }
                                 @if (call.Edit is not null)
                                 {
-                                    var fileName = MessageList.FileName(call.Path) ?? MessageList.RowText(call);
+                                    var fileName = MessageDisplay.FileName(call.Path) ?? MessageList.RowText(call);
                                     <button type="button" class="turn-detail-toggle"
                                             aria-expanded="@(open ? "true" : "false")" aria-controls="@panelId"
                                             aria-label="@($"{(open ? "Hide" : "Show")} change to {fileName}")"
@@ -315,23 +315,7 @@
 
     /// <summary>What a row says: the Adapter's title, else the file name of its path, else a plain fallback.</summary>
     /// <param name="call">The tool call.</param>
-    private static string RowText(ToolCallDetail call) => call.Title ?? MessageList.FileName(call.Path) ?? "Tool call";
-
-    /// <summary>
-    /// The last segment of <paramref name="path"/>, splitting on both separators because the path is
-    /// the Adapter's text and may name a Windows file while this server runs anywhere.
-    /// </summary>
-    /// <param name="path">The path, or <see langword="null"/>.</param>
-    private static string? FileName(string? path)
-    {
-        if (string.IsNullOrEmpty(path))
-        {
-            return null;
-        }
-
-        string name = path[(path.AsSpan().LastIndexOfAny('\\', '/') + 1)..];
-        return name.Length > 0 ? name : path;
-    }
+    private static string RowText(ToolCallDetail call) => call.Title ?? MessageDisplay.FileName(call.Path) ?? "Tool call";
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
