@@ -275,7 +275,7 @@ public sealed class TasksPageTests
             builder.CloseComponent();
         });
 
-        cut.WaitForAssertion(() => Assert.Single(cut.FindAll("td").Where(cell => string.Equals(cell.TextContent.Trim(), "Launch room", StringComparison.Ordinal))));
+        cut.WaitForAssertion(() => Assert.Single(cut.FindAll("td"), cell => string.Equals(cell.TextContent.Trim(), "Launch room", StringComparison.Ordinal)));
     }
 
     /// <summary>Corrections-B7 §13.2 item 4: a route naming an invalid View (parses, but fails <see cref="ViewValidator"/>) shows its reason and an Edit View button, not "no longer exists".</summary>
