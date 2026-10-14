@@ -722,8 +722,9 @@ commands, network calls), nothing is created: the message names it and links to
 runs on the adapter and model its role's strength resolved to and carries the role's Skills
 and packs. **Edit** on a draft can change them: its **Skills** list shows the role's own skills first,
 checked, then your installed skills, then the whole catalog, so you can add any skill and
-it is imported when you approve. A skill that is not installed yet shows its publisher and
-its path in the repository, so you can see who made it. The role form for your own roles has the same **Skills**
+it is imported when you approve. Every skill in the list shows where
+it lives: its publisher and its path in the repository for an imported or catalog skill, or
+its folder (`Skills/<name>`) for one of your own, so you can see who made it. The role form for your own roles has the same **Skills**
 field.
 
 ### Hiring a Team from a type
