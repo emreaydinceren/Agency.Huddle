@@ -3508,3 +3508,47 @@ a.team-ref,
 .message-reference-gone {
     opacity: 0.6;
 }
+
+.role-card {
+    position: relative;
+    display: flex;
+    min-width: 0;
+}
+
+.role-card > .team-type-card {
+    flex: 1 1 auto;
+    padding-inline-end: 4.5rem;
+}
+
+.role-card-actions {
+    position: absolute;
+    top: 0.25rem;
+    inset-inline-end: 0.25rem;
+    display: inline-flex;
+}
+
+.role-add-card {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 0.25rem;
+    min-width: 0;
+    min-height: 5rem;
+    padding: 0.75rem;
+    font: inherit;
+    color: var(--mud-palette-primary);
+    background: transparent;
+    border: 2px dashed var(--mud-palette-divider);
+    border-radius: calc(var(--mud-default-borderradius) * 1.5);
+    cursor: pointer;
+}
+
+.role-add-card:hover {
+    background: var(--mud-palette-action-default-hover);
+    border-color: var(--mud-palette-primary);
+}
+
+.role-add-label {
+    font-size: var(--mud-typography-body2-size);
+}

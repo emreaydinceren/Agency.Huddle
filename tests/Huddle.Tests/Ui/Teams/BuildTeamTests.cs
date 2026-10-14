@@ -7,6 +7,7 @@ using Microsoft.Extensions.Logging.Abstractions;
 using Agency.Huddle.App;
 using Agency.Huddle.App.Acp;
 using Agency.Huddle.App.Components.Pages;
+using Agency.Huddle.App.HiringPool;
 using Agency.Huddle.App.TeamTypes;
 using Agency.Huddle.App.Teams;
 using Agency.Huddle.Tests.Tasks;
@@ -21,7 +22,7 @@ namespace Agency.Huddle.Tests.Ui.Teams;
 /// </summary>
 public sealed class BuildTeamTests
 {
-    private const string Card = "button.team-type-card";
+    private const string Card = ".build-team-section:not(.build-team-hire) button.team-type-card";
 
     /// <summary>The page declares the one route <c>/teams/build</c>.</summary>
     [Fact]
@@ -60,7 +61,7 @@ public sealed class BuildTeamTests
         IRenderedComponent<ContainerFragment> cut = Render(ctx);
 
         IReadOnlyList<IElement> steps = cut.FindAll("ol.build-stepper > li");
-        Assert.Equal(["Team type", "Team details", "Review", "Approve"], steps.Select(step => step.QuerySelector(".build-step-label")?.TextContent.Trim()));
+        Assert.Equal(["Team type", "Team details", "Hire", "Approve"], steps.Select(step => step.QuerySelector(".build-step-label")?.TextContent.Trim()));
         Assert.Equal("step", steps[0].GetAttribute("aria-current"));
         Assert.Null(steps[1].GetAttribute("aria-current"));
     }
@@ -300,6 +301,95 @@ public sealed class BuildTeamTests
         Assert.Equal(repo, cut.Find(".build-team-workspace input").GetAttribute("value"));
     }
 
+    /// <summary>Step 3 (Hire) stays hidden until step 2 is complete, then offers the Add card first, then the roles of the hiring pool.</summary>
+    [Fact]
+    public async Task Hire_ShowsOnceDetailsAreReady_WithTheAddCardFirst()
+    {
+        using Fixture fixture = new(typeCount: 3);
+        await using MudBunitContext ctx = fixture.NewContext();
+        ctx.Services.GetRequiredService<NavigationManager>().NavigateTo("/teams/build");
+        IRenderedComponent<ContainerFragment> cut = Render(ctx);
+        await cut.InvokeAsync(() => cut.FindAll(Card)[0].ClickAsync());
+        Assert.Empty(cut.FindAll(".build-team-hire"));
+
+        await cut.InvokeAsync(() => cut.Find(".build-team-name input").InputAsync("Garden"));
+
+        Assert.Equal("Hire", cut.Find("#build-team-hire-heading").TextContent.Trim());
+        Assert.Equal("Available roles", cut.Find(".build-team-roles-subtitle").TextContent.Trim());
+        Assert.NotNull(cut.Find("[aria-label='Add a custom role']"));
+        Assert.Equal(["Bookkeeper", "Tutor"], cut.FindAll(".build-team-hire .role-card .team-type-name").Select(name => name.TextContent.Trim()));
+    }
+
+    /// <summary>Pressing a role hires it, the step strip counts it, and pressing again takes it back.</summary>
+    [Fact]
+    public async Task Hire_PressingARole_TogglesItAndCountsIt()
+    {
+        using Fixture fixture = new(typeCount: 3);
+        await using MudBunitContext ctx = fixture.NewContext();
+        ctx.Services.GetRequiredService<NavigationManager>().NavigateTo("/teams/build?type=blank");
+        IRenderedComponent<ContainerFragment> cut = Render(ctx);
+        await cut.InvokeAsync(() => cut.Find(".build-team-name input").InputAsync("Garden"));
+
+        await cut.InvokeAsync(() => cut.Find(".build-team-hire .role-card button.team-type-card").ClickAsync());
+
+        Assert.Equal("true", cut.Find(".build-team-hire .role-card button.team-type-card").GetAttribute("aria-pressed"));
+        Assert.Equal("1 role chosen", cut.FindAll("ol.build-stepper > li")[2].QuerySelector(".build-step-detail")?.TextContent.Trim());
+
+        await cut.InvokeAsync(() => cut.Find(".build-team-hire .role-card button.team-type-card").ClickAsync());
+
+        Assert.Equal("false", cut.Find(".build-team-hire .role-card button.team-type-card").GetAttribute("aria-pressed"));
+    }
+
+    /// <summary>The Add card opens the role form; Save stores the role in the custom roles file and shows it as a hired, editable card.</summary>
+    [Fact]
+    public async Task Hire_AddingACustomRole_StoresItAndHiresIt()
+    {
+        using Fixture fixture = new(typeCount: 3);
+        await using MudBunitContext ctx = fixture.NewContext();
+        ctx.Services.GetRequiredService<NavigationManager>().NavigateTo("/teams/build?type=blank");
+        IRenderedComponent<ContainerFragment> cut = Render(ctx);
+        await cut.InvokeAsync(() => cut.Find(".build-team-name input").InputAsync("Garden"));
+
+        _ = cut.InvokeAsync(() => cut.Find("[aria-label='Add a custom role']").Click());
+        Assert.Equal("Add a role", cut.Find(".mud-dialog-title").TextContent.Trim());
+        Assert.True(cut.Find("button.custom-role-save").HasAttribute("disabled"));
+        await cut.InvokeAsync(() => cut.Find(".custom-role-title input").InputAsync("Gardener"));
+        await cut.InvokeAsync(() => cut.Find("button.custom-role-save").ClickAsync());
+
+        CustomRole stored = Assert.Single(fixture.Roles.Roles);
+        Assert.Equal("Gardener", stored.Title);
+        Assert.Equal("custom-gardener", stored.Id);
+        Assert.True(File.Exists(Path.Combine(fixture.DirPath, "custom-roles.json")));
+        Assert.Equal("Gardener", cut.Find(".build-team-hire .role-card .team-type-name").TextContent.Trim());
+        Assert.Equal("true", cut.Find(".build-team-hire .role-card button.team-type-card").GetAttribute("aria-pressed"));
+    }
+
+    /// <summary>Edit opens the form with the role's fields and stores the changes; Delete asks first and then removes the role.</summary>
+    [Fact]
+    public async Task Hire_EditAndDeleteACustomRole_ChangeTheStore()
+    {
+        using Fixture fixture = new(typeCount: 3);
+        CustomRole role = fixture.Roles.Add("Gardener", "Grows things.", "You garden.", ModelTier.Fast);
+        await using MudBunitContext ctx = fixture.NewContext();
+        ctx.Services.GetRequiredService<NavigationManager>().NavigateTo("/teams/build?type=blank");
+        IRenderedComponent<ContainerFragment> cut = Render(ctx);
+        await cut.InvokeAsync(() => cut.Find(".build-team-name input").InputAsync("Garden"));
+
+        _ = cut.InvokeAsync(() => cut.Find("[aria-label='Edit Gardener']").Click());
+        Assert.Equal("Edit role", cut.Find(".mud-dialog-title").TextContent.Trim());
+        Assert.Equal("Gardener", cut.Find(".custom-role-title input").GetAttribute("value"));
+        await cut.InvokeAsync(() => cut.Find(".custom-role-title input").InputAsync("Head gardener"));
+        await cut.InvokeAsync(() => cut.Find("button.custom-role-save").ClickAsync());
+
+        Assert.Equal("Head gardener", fixture.Roles.Find(role.Id)?.Title);
+
+        _ = cut.InvokeAsync(() => cut.Find("[aria-label='Delete Head gardener']").Click());
+        await cut.InvokeAsync(() => cut.FindAll(".mud-dialog button").Single(button => string.Equals(button.TextContent.Trim(), "Delete", StringComparison.Ordinal)).ClickAsync());
+
+        Assert.Empty(fixture.Roles.Roles);
+        Assert.Empty(cut.FindAll(".role-card-edit"));
+    }
+
     /// <summary>A renamed Chief of Staff is named in the subtitle, whatever Name it was given.</summary>
     [Fact]
     public async Task RenamedChiefOfStaff_IsNamedInTheSubtitle()
@@ -355,6 +445,13 @@ public sealed class BuildTeamTests
                 builtins[$"{id}/processes/flow.md"] = "# Flow";
             }
 
+            this.Roles = new CustomRoleStore(this.dir.Options());
+            this.Pool = new HiringPoolCatalog(this.dir.Options(), NullLogger<HiringPoolCatalog>.Instance, new Dictionary<string, string>(StringComparer.Ordinal)
+            {
+                ["hiringpool.json"] = """{ "schemaVersion": 1, "jobs": [ { "id": "tutor", "title": "Tutor", "description": "Teaches." }, { "id": "bookkeeper", "title": "Bookkeeper", "description": "Keeps the books." } ] }""",
+                ["personas/tutor.md"] = "---\ntitle: Tutor\nconsult_when: asked\n---\nYou teach.",
+                ["personas/bookkeeper.md"] = "---\ntitle: Bookkeeper\nconsult_when: receipts\n---\nYou keep books.",
+            });
             this.Types = new TeamTypeCatalog(this.dir.Options(), NullLogger<TeamTypeCatalog>.Instance, builtins);
         }
 
@@ -366,6 +463,10 @@ public sealed class BuildTeamTests
 
         public TeamTypeCatalog Types { get; }
 
+        public CustomRoleStore Roles { get; }
+
+        public HiringPoolCatalog Pool { get; }
+
         public MudBunitContext NewContext()
         {
             MudBunitContext ctx = new();
@@ -373,6 +474,8 @@ public sealed class BuildTeamTests
             ctx.Services.AddSingleton(this.Types);
             ctx.Services.AddSingleton(this.Personas);
             ctx.Services.AddSingleton(this.dir.Options());
+            ctx.Services.AddSingleton(this.Roles);
+            ctx.Services.AddSingleton(this.Pool);
             return ctx;
         }
 

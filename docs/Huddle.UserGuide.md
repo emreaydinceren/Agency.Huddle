@@ -320,6 +320,7 @@ App_Data/
 ├── team.db                        SQLite: users, agents, rooms, members, models, task ID counters
 ├── views.json                     saved Task Views
 ├── library-roots.json             pinned Library folders (created on first change)
+├── custom-roles.json              your own roles from Build a team (created on first change)
 ├── prompts.json                   prompt overrides from Settings
 ├── appearance.json                theme and accent colour
 ├── avatars.json, avatars/         avatars
@@ -688,6 +689,14 @@ roles and no process, and its name and purpose start empty.
 Select it again to clear the choice. The choice stays in the address (`?type=`), so
 it is still there when you come back to the tab. Open the page with **Build a team**,
 the last link of the Teams group in the sidebar.
+
+**Hire**, step 3, opens once **Team details** is complete. Under **Roles** (*Available
+roles*) it shows the same two scrolling rows of cards: a blank card with a large **+**
+first, then your own roles, then the roles of the hiring pool. Select a card to hire
+that role; select it again to take it back. The **+** card opens a form (title, what it
+does, instructions, model strength); the role is saved in `custom-roles.json` in your data
+folder, hired at once, and stays on the page for next time. A role you wrote has **Edit**
+and **Delete** buttons; Delete asks first. Choosing roles does not create a Team yet.
 
 ### Hiring a Team from a type
 

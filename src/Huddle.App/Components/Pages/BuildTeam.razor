@@ -1,7 +1,9 @@
 @page "/teams/build"
 @using Agency.Huddle.App.Acp
 @using Agency.Huddle.App.Components.Shared
+@using Agency.Huddle.App.Components.Shared.Dialogs
 @using Agency.Huddle.App.Components.Teams
+@using Agency.Huddle.App.HiringPool
 @using Agency.Huddle.App.Teammates
 @using Agency.Huddle.App.TeamTypes
 @using Agency.Huddle.App.Teams
@@ -13,6 +15,8 @@
 @inject NavigationManager Navigation
 @inject IDialogService Dialogs
 @inject IOptions<TeamOptions> Options
+@inject HiringPoolCatalog Pool
+@inject CustomRoleStore CustomRoles
 @implements IDisposable
 
 @*
@@ -20,7 +24,8 @@
     read the proposal, review it, approve it. This page draws the strip of all four steps and the first: every team
     type as a card, in a grid of two rows that scrolls to the right for the types that do not fit. Choosing a type
     completes step 1 and is kept in the address (?type=), so a Tab that is unmounted and mounted again comes back to it.
-    Steps 2 to 4 are not built yet. The Chief of Staff is whichever Persona carries the _builtin marker, so a rename shows here.
+    Step 3 (Hire) offers the roles of the hiring pool and the Human's own, as cards in the same two-row grid, with a blank card
+    to add a custom role. Step 4 is not built yet. The Chief of Staff is whichever Persona carries the _builtin marker, so a rename shows here.
 *@
 
 <MudContainer MaxWidth="MaxWidth.Large" Class="build-team pa-4">
@@ -75,6 +80,40 @@
             </MudPaper>
         </section>
     }
+
+    @if (this.selected is not null && this.DetailsReady)
+    {
+        <section class="build-team-section build-team-hire" aria-labelledby="build-team-hire-heading">
+            <div class="build-team-section-head">
+                <span class="build-team-section-number" aria-hidden="true">3</span>
+                <MudText Typo="Typo.h6" id="build-team-hire-heading">Hire</MudText>
+            </div>
+            <div>
+                <MudText Typo="Typo.subtitle1">Roles</MudText>
+                <MudText Typo="Typo.body2" Class="build-team-intro build-team-roles-subtitle">Available roles</MudText>
+            </div>
+            @if (this.CustomRoles.LoadError is not null)
+            {
+                <MudAlert Severity="Severity.Warning" Dense="true" role="alert" Class="build-team-roles-error">Your custom roles file could not be read, so roles cannot be added or changed: @this.CustomRoles.LoadError</MudAlert>
+            }
+            <div class="team-type-grid" role="group" aria-label="Roles">
+                <button type="button" class="role-add-card" aria-label="Add a custom role" @onclick="this.AddRoleAsync">
+                    <MudIcon Icon="@Icons.Material.Filled.Add" Size="Size.Large" />
+                    <span class="role-add-label">Add a role</span>
+                </button>
+                @foreach (CustomRole role in this.CustomRoles.Roles)
+                {
+                    <RoleCard @key="role.Id" RoleId="@role.Id" Title="@role.Title" Description="@role.Description" Custom="true"
+                              Selected="@this.hired.Contains(role.Id)" OnPick="this.ToggleRole" OnEdit="this.EditRoleAsync" OnDelete="this.DeleteRoleAsync" />
+                }
+                @foreach (PoolJob job in this.Pool.Jobs)
+                {
+                    <RoleCard @key="job.Id" RoleId="@job.Id" Title="@job.Title" Description="@job.Description"
+                              Selected="@this.hired.Contains(job.Id)" OnPick="this.ToggleRole" />
+                }
+            </div>
+        </section>
+    }
 </MudContainer>
 
 @code {
@@ -106,6 +145,7 @@
     private string name = string.Empty;
     private string purpose = string.Empty;
     private string workspace = string.Empty;
+    private readonly HashSet<string> hired = new(StringComparer.Ordinal);
     private bool nameEdited;
     private bool purposeEdited;
 
@@ -176,7 +216,12 @@
                 return 0;
             }
 
-            return this.DetailsReady ? 2 : 1;
+            if (!this.DetailsReady)
+            {
+                return 1;
+            }
+
+            return this.hired.Count > 0 ? 3 : 2;
         }
     }
 
@@ -184,7 +229,7 @@
     [
         new("Team type", this.selected?.DisplayName ?? "Choose one"),
         new("Team details", this.DetailsReady ? this.TrimmedName : "name and what it’s for"),
-        new("Review", "rename, re-roll, add"),
+        new("Hire", this.hired.Count > 0 ? Plural.Of(this.hired.Count, "role", "roles") + " chosen" : "choose the roles"),
         new("Approve", "only you"),
     ];
 
@@ -207,6 +252,8 @@
     {
         this.Catalog.Changed += this.OnCatalogChanged;
         this.Types.Changed += this.OnCatalogChanged;
+        this.Pool.Changed += this.OnCatalogChanged;
+        this.CustomRoles.Changed += this.OnCatalogChanged;
     }
 
     /// <inheritdoc />
@@ -249,6 +296,75 @@
         }
     }
 
+    /// <summary>Hires the role, or takes it back when it is pressed again.</summary>
+    /// <param name="roleId">The pressed card's role id.</param>
+    private void ToggleRole(string roleId)
+    {
+        if (!this.hired.Remove(roleId))
+        {
+            _ = this.hired.Add(roleId);
+        }
+    }
+
+    /// <summary>Opens the role form empty and stores the role it returns.</summary>
+    private async Task AddRoleAsync()
+    {
+        CustomRole? role = await this.ShowRoleDialogAsync(new DialogParameters<RoleFormDialog>());
+        if (role is not null)
+        {
+            CustomRole stored = this.CustomRoles.Add(role.Title, role.Description, role.Instructions, role.Tier);
+            _ = this.hired.Add(stored.Id);
+        }
+    }
+
+    /// <summary>Opens the role form with a custom role's fields and stores the changes.</summary>
+    /// <param name="roleId">The custom role's id.</param>
+    private async Task EditRoleAsync(string roleId)
+    {
+        if (this.CustomRoles.Find(roleId) is not { } current)
+        {
+            return;
+        }
+
+        DialogParameters<RoleFormDialog> parameters = new()
+        {
+            { x => x.Id, current.Id },
+            { x => x.Title, current.Title },
+            { x => x.Description, current.Description },
+            { x => x.Instructions, current.Instructions },
+            { x => x.Tier, current.Tier },
+        };
+        CustomRole? edited = await this.ShowRoleDialogAsync(parameters);
+        if (edited is not null)
+        {
+            _ = this.CustomRoles.Update(edited);
+        }
+    }
+
+    /// <summary>Asks, then deletes a custom role (and un-hires it).</summary>
+    /// <param name="roleId">The custom role's id.</param>
+    private async Task DeleteRoleAsync(string roleId)
+    {
+        if (this.CustomRoles.Find(roleId) is not { } current)
+        {
+            return;
+        }
+
+        if (await this.Dialogs.ConfirmAsync($"Delete {current.Title}?", "The role is removed from your roles. Teams already built keep their Teammates.", "Delete", danger: true))
+        {
+            _ = this.CustomRoles.Delete(roleId);
+            _ = this.hired.Remove(roleId);
+        }
+    }
+
+    private async Task<CustomRole?> ShowRoleDialogAsync(DialogParameters<RoleFormDialog> parameters)
+    {
+        string heading = parameters.Any() ? "Edit role" : "Add a role";
+        IDialogReference reference = await this.Dialogs.ShowAsync<RoleFormDialog>(heading, parameters, RoleFormDialog.Options);
+        DialogResult? result = await reference.Result;
+        return result is { Canceled: false, Data: CustomRole role } ? role : null;
+    }
+
     private void OnNameChanged(string? value)
     {
         this.name = value ?? string.Empty;
@@ -268,6 +384,8 @@
     {
         this.Catalog.Changed -= this.OnCatalogChanged;
         this.Types.Changed -= this.OnCatalogChanged;
+        this.Pool.Changed -= this.OnCatalogChanged;
+        this.CustomRoles.Changed -= this.OnCatalogChanged;
     }
 
     private static int RoleCount(TeamTypeManifest type) => type.Roles.Count(static role => !role.Manager && !role.Pooled);

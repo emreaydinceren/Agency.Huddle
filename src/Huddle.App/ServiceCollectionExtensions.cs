@@ -145,6 +145,7 @@ public static class ServiceCollectionExtensions
         services.AddSingleton<TeammatePaths>();
         services.AddSingleton<SkillPackStore>();
         services.AddSingleton<HiringPoolCatalog>();
+        services.AddSingleton<CustomRoleStore>();
         services.AddSingleton<TeamTypeCatalog>();
         services.AddSingleton<SkillsCatalogIndex>();
         services.AddSingleton<UserCandidateWriter>();

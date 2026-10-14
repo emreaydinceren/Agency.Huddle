@@ -1,0 +1,80 @@
+@*
+    One role on the Build a team page (step 3, Hire): a pressed button like TeamTypeCard, so choosing reads as the
+    check mark and aria-pressed, never by colour alone. A custom role also carries Edit and Delete buttons; they sit
+    beside the card button, not inside it, because a button may not hold buttons. The caller owns the selection.
+*@
+
+<div class="role-card">
+    <button type="button" class="@this.CardClass" aria-pressed="@(this.Selected ? "true" : "false")" @onclick="this.OnSelect">
+        <span class="@($"team-type-icon {(this.Custom ? "team-type-tint-secondary" : "team-type-tint-primary")}")" aria-hidden="true">
+            <MudIcon Icon="@(this.Custom ? Icons.Material.Outlined.PersonAdd : Icons.Material.Outlined.Badge)" Size="Size.Small" />
+        </span>
+        <span class="team-type-text">
+            <span class="team-type-name">@this.Title</span>
+            <span class="team-type-tagline">@this.Description</span>
+            <span class="team-type-meta">
+                <span class="team-type-roles">@(this.Custom ? "Your role" : "Hiring pool")</span>
+            </span>
+        </span>
+        @if (this.Selected)
+        {
+            <span class="team-type-check">
+                <MudIcon Icon="@Icons.Material.Filled.Check" Size="Size.Small" />
+                <span class="visually-hidden">Selected</span>
+            </span>
+        }
+    </button>
+    @if (this.Custom)
+    {
+        <span class="role-card-actions">
+            <MudIconButton Icon="@Icons.Material.Outlined.Edit" Size="Size.Small" aria-label="@($"Edit {this.Title}")"
+                           OnClick="this.OnEditClick" Class="role-card-edit" />
+            <MudIconButton Icon="@Icons.Material.Outlined.Delete" Size="Size.Small" aria-label="@($"Delete {this.Title}")"
+                           OnClick="this.OnDeleteClick" Class="role-card-delete" />
+        </span>
+    }
+</div>
+
+@code {
+    /// <summary>The role's id, which is what the callbacks report.</summary>
+    [Parameter]
+    [EditorRequired]
+    public string RoleId { get; set; } = string.Empty;
+
+    /// <summary>The role's title.</summary>
+    [Parameter]
+    [EditorRequired]
+    public string Title { get; set; } = string.Empty;
+
+    /// <summary>The role's description; the card shows up to two lines of it.</summary>
+    [Parameter]
+    public string? Description { get; set; }
+
+    /// <summary>Whether the Human wrote this role, which makes it editable and deletable.</summary>
+    [Parameter]
+    public bool Custom { get; set; }
+
+    /// <summary>Whether this role is chosen.</summary>
+    [Parameter]
+    public bool Selected { get; set; }
+
+    /// <summary>Raised with the role's id when the card is pressed.</summary>
+    [Parameter]
+    public EventCallback<string> OnPick { get; set; }
+
+    /// <summary>Raised with the role's id when Edit is pressed.</summary>
+    [Parameter]
+    public EventCallback<string> OnEdit { get; set; }
+
+    /// <summary>Raised with the role's id when Delete is pressed.</summary>
+    [Parameter]
+    public EventCallback<string> OnDelete { get; set; }
+
+    private string CardClass => this.Selected ? "team-type-card team-type-card-selected" : "team-type-card";
+
+    private Task OnSelect() => this.OnPick.InvokeAsync(this.RoleId);
+
+    private Task OnEditClick() => this.OnEdit.InvokeAsync(this.RoleId);
+
+    private Task OnDeleteClick() => this.OnDelete.InvokeAsync(this.RoleId);
+}
