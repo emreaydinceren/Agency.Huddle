@@ -53,7 +53,7 @@
 @inject IDialogService DialogService
 @inject NavigationManager Navigation
 
-<MudContainer MaxWidth="MaxWidth.False" Class="pa-4">
+<MudContainer MaxWidth="MaxWidth.False" Class="pa-4 pt-2">
     <WakeToasts OnOpenTask="this.OnOpenTaskAsync" />
     @if (!this.Options.Value.Tasks.Enabled)
     {
