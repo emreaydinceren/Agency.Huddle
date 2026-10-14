@@ -799,12 +799,12 @@ Tasks: creating, moving, viewing and referencing a unit of work — [area file](
 | [TASKS-01](tasks.md#tasks-01--creating-a-task-in-the-ui-writes-the-file-at-the-right-path-with-the-canonical-frontmatter) |  | Active |  |  |
 | [TASKS-02](tasks.md#tasks-02--a-hand-edit-in-a-text-editor-appears-within-a-second-with-an-edited-outside-huddle-entry) |  | Active |  |  |
 | [TASKS-03](tasks.md#tasks-03--board-drag-ghost-buckets-the-duplicate-picker-and-cancelling-snaps-the-card-back) |  | Active |  |  |
-| [TASKS-04](tasks.md#tasks-04--the-view-editor-saves-reorders-fields-and-refuses-a-board-with-an-unplaced-state) |  | Active |  |  |
+| [TASKS-04](tasks.md#tasks-04--a-view-saves-every-change-as-it-is-made-and-the-fields-dialog-reorders-fields) |  | Active |  |  |
 | [TASKS-05](tasks.md#tasks-05--a-broken-viewsjson-shows-the-error-and-the-file-is-untouched) |  | Active |  |  |
 | [TASKS-06](tasks.md#tasks-06--the-last-view-reopens-after-a-browser-restart-and-a-private-window-falls-back-to-all-tasks) |  | Active |  |  |
 | [TASKS-07](tasks.md#tasks-07--a-conflict-shows-both-versions-and-merging-changes-to-different-fields-is-silent) |  | Active |  |  |
 | [TASKS-08](tasks.md#tasks-08--renaming-a-persona-rewrites-assignee-in-every-task-file-and-view-filter-with-no-wake-up) |  | Active |  |  |
-| [TASKS-09](tasks.md#tasks-09--keyboard-only-move-to-the-view-editor-and-the-task-panel-with-no-dragging) |  | Active |  |  |
+| [TASKS-09](tasks.md#tasks-09--keyboard-only-move-to-the-fields-dialog-and-the-task-panel-with-no-dragging) |  | Active |  |  |
 | [TASKS-10](tasks.md#tasks-10--assigning-to-a-live-claude-persona-wakes-it-in-the-right-room-and-it-calls-update_task-to-set-in-progress) | 💰 | Active |  |  |
 | [TASKS-11](tasks.md#tasks-11--two-personas-reassigning-to-each-other-stop-at-the-wake-budget-and-allow-10-more-resumes-them) | 💰 | Active |  |  |
 | [TASKS-12](tasks.md#tasks-12--an-agent-that-creates-a-task-with-originroomid-wakes-the-assignee-in-that-room) | 💰 | Active |  |  |

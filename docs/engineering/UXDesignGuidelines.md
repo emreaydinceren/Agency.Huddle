@@ -147,7 +147,7 @@ before you create a component, a helper or a CSS class.
 | `ResetAllControl` | `Components/Settings/ResetAllControl.razor` | `G1a` | `AnyModified`, `Confirming`, `OnBeginReset`, `OnConfirm`, `OnCancel` | Prompts' reset-all only; its confirm reads "Reset all" |
 | `SearchField` | `Components/Shared/SearchField.razor` | The search box of `M5`, `T2`, Skill import | `Value`, `ValueChanged`, `Placeholder`, `AriaLabel` | Any search box: outlined, dense, clearable, one debounce |
 | `AvatarEditor` | `Components/Shared/AvatarEditor.razor` | Settings, Appearance; the Teammate card | `Name`, `Value`, `ValueChanged`, `SaveMode`, `PendingImage` | Choosing an avatar: library, upload or text. Immediate in Settings, buffered in dialogs |
-| `ResizableEndDrawer` | `Components/Shared/ResizableEndDrawer.razor` | The Task detail and View editor drawers | `Title`, `StorageKey`, `Open`, `OpenChanged`, `OverlayAutoClose`, `Class` | Any right-hand drawer: drag or arrow-key resize, width remembered |
+| `ResizableEndDrawer` | `Components/Shared/ResizableEndDrawer.razor` | The Task detail drawer | `Title`, `StorageKey`, `Open`, `OpenChanged`, `OverlayAutoClose`, `Class` | Any right-hand drawer: drag or arrow-key resize, width remembered |
 | `TeamTabToolbar` | `Components/Teams/TeamTabToolbar.razor` | `M5` | `ActionText`, `OnAction`, `SearchPlaceholder`, `Search`, `SearchChanged` | A tab toolbar with one action and a search box, built on `SearchField` |
 | `Composer` | `Components/Shared/Composer.razor` | `C10` | `RoomId` | The message input; one per Room |
 | `ReferencePicker` | `Components/References/ReferencePicker.razor` | `C11` | `View`, `ListboxId`, `OnPick` | The `@` picker; driven by `Composer` |

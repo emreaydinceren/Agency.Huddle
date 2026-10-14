@@ -1357,7 +1357,7 @@ release).
 | Active / Closed, List / Board, status buttons | `MudToggleGroup<T>` (`Value`/`ValueChanged`, `SelectionMode`) | [Usage](https://mudblazor.com/components/togglegroup#usage) | — |
 | **The List** | **`MudDataGrid<TaskItem>`**: read-only by default, multi-sort by default, multi-level grouping through `GroupByOrder`, `Hidden` columns, `RowClick`, `RowClassFunc` | [Grouping](https://mudblazor.com/components/datagrid#grouping), [Advanced Sorting](https://mudblazor.com/components/datagrid#advanced-sorting) | `ProposalCard.razor` uses the older `MudTable` |
 | The Board, ghost buckets, reordering fields | `MudDropContainer<T>` + `MudDropZone<T>` | [Miscellaneous](https://mudblazor.com/components/dropzone#miscellaneous) (kanban), [Drop Rules](https://mudblazor.com/components/dropzone#drop-rules) | none; this is the first use |
-| Detail panel, View editor | `MudDrawer Anchor="Anchor.End" Variant="DrawerVariant.Temporary"` | [Anchor Drawer](https://mudblazor.com/components/drawer#anchor-drawer) | `MainLayout.razor` |
+| Detail panel | `MudDrawer Anchor="Anchor.End" Variant="DrawerVariant.Temporary"` | [Anchor Drawer](https://mudblazor.com/components/drawer#anchor-drawer) | `MainLayout.razor` |
 | Large editor, Duplicate picker, Reason prompt | `MudDialog` through `IDialogService` | [Passing Data](https://mudblazor.com/components/dialog#passing-data) | `ArchivedChatsDialog.razor` |
 | Confirm deleting a View | `IDialogService.ShowMessageBoxAsync` | [Message Box](https://mudblazor.com/components/messagebox#message-box) | `SkillsPanel.razor:138-147` |
 | Warn before leaving unsaved edits | `MudExitPrompt` (`Disabled`, `Title`, `Text`) | [Usage](https://mudblazor.com/components/exitprompt#usage) | none |
@@ -1399,8 +1399,9 @@ release).
 
 ### 13.2 The page — `Components/Pages/Tasks.razor`
 
-- **Routes:** `@page "/tasks"`, `@page "/tasks/{ViewId}"`, and `@page "/tasks/new"`, which opens the
-  View editor for a new View.
+- **Routes:** `@page "/tasks"`, `@page "/tasks/{ViewId}"`, and `@page "/tasks/new"`, which creates a
+  View under a default name ("New view", "New view 2", and so on) and opens it; the Human renames it from
+  the ⋮ menu.
 - **`/tasks` with no ViewId:** during prerender, render *All Tasks*. In
   `OnAfterRenderAsync(firstRender)`, read `huddle.tasks.lastView` through `huddleStorage.get`
   (§13.9). If it names an existing View, `NavigateTo($"/tasks/{id}", replace: true)`.
@@ -1409,7 +1410,9 @@ release).
 - **An unknown ViewId** shows a `MudAlert Severity.Warning role="status"` reading *"That View no
   longer exists."*, with a link to All Tasks.
 - **Layout:**
-  - A header: `Tasks: {View name}`, the description underneath, and the **AI reacting** chip.
+  - A header row with the counts, the **AI reacting** chip, Group by, List | Kanban and **+ New task**,
+    and the View's ⋮ menu. There is no `h1` and no description: the View name is the breadcrumb's last
+    crumb, and `PageTitle` sets the document title.
   - The toolbar (§13.3).
   - Rejected-file and orphan alerts (§13.12).
   - Then either `TaskListView` or `TaskBoard`.
@@ -1424,20 +1427,20 @@ release).
 ### 13.3 Toolbar — `TaskToolbar.razor`
 
 The toolbar is a `MudToolBar Dense="true"` with the controls below, left to right. A `MudSpacer`
-separates the view controls from **Edit View** and **+ New task**. Don't write flex CSS for it.
+separates the view controls from **+ New task**. Don't write flex CSS for it.
 
 | Control | Component | Behaviour |
 | --- | --- | --- |
 | Active / Closed | `MudToggleGroup<ViewScope>` | Disabled, with a tooltip, on a Board. Changes the page state, not the saved View |
-| Filter | `MudMenu` showing the active filters as a `MudChipSet` of closable chips | Changes the page state. **Save to View** appears when it differs from the saved View |
-| Group, Sort | `MudMenu` | The same "not saved until Save to View" rule |
-| Search | `MudTextField Immediate="true" DebounceInterval="200" Clearable="true" Adornment="Adornment.Start" AdornmentIcon="@Icons.Material.Filled.Search"` | Never saved. Matches are highlighted with `MudHighlighter` in the List's title cells and on cards |
-| List / Board | `MudToggleGroup<ViewKind>` | Shows the other kind **for this session**. **Save to View** persists it; switching to Board applies the default columns if there are none |
-| Edit View | `MudButton` | Opens the View editor drawer (§13.5) |
+| Filter | `MudMenu` showing the active filters as a `MudChipSet` of closable chips | Saved to the View as it is changed. Filters that are set also show as `TaskFilterChip`s with a clear button |
+| Group, Sort | `MudMenu` | Group by is a `TaskFilterChip` in the header row; saved to the View as it is changed |
+| Search | `MudTextField Immediate="true" DebounceInterval="200" Clearable="true" Adornment="Adornment.Start" AdornmentIcon="@Icons.Material.Filled.Search"` | `SearchField`. Never saved. Matches are highlighted with `MudHighlighter` in the List's title cells and on cards |
+| List / Board | `MudToggleGroup<ViewKind>` | Saved to the View as it is changed; switching to Board applies the default columns if there are none |
+| View ⋮ menu | `MudMenu` | **Rename** and **Fields…** open the dialogs of §13.5; **Delete view** (not for built-ins) asks first |
 | + New task | `MudButton Variant.Filled` | Opens `TaskDetail` in create mode, with the Team and Project defaulting from the View's filter when it names exactly one |
 
-The page holds the *effective* View: the saved one with the toolbar's overrides applied. A
-**Reset** link appears whenever they differ.
+Every toolbar change is saved to the View at once, so there is no Save button and no Reset link; the
+empty-result state offers **Reset filters**, which clears the View's filter and the search.
 
 ### 13.3a List — `TaskListView.razor`
 
@@ -1478,7 +1481,7 @@ does what the View asks for. Each of these was checked in the package's XML docs
   returns `TaskQuery.GroupLabel`, so labels such as *Unassigned* and *Team / Project* match the
   Board.
 - **What's turned off.** `ShowColumnOptions` and `Filterable` are false. Column choice and
-  filtering belong to the View editor, and two ways to change them would drift apart.
+  filtering belong to the Fields dialog and the toolbar, and two ways to change them would drift apart.
 - **Row styling.** `RowClassFunc` returns `task-overdue` for overdue rows that aren't terminal. The
   row also shows a warning `MudIcon`, because colour is never the only signal.
 - **Row click.** `RowClick` opens the detail panel (§13.6).
@@ -1572,7 +1575,7 @@ lists all eight states. Choosing one takes the same path as a drop, so Duplicate
 target.
 
 **Columns.** Each column header shows its label, the count, and a `⋮` `MudMenu` with *Rename*,
-*Hide* and *Edit columns…*. The last one opens the View editor at its Columns section. Changes made
+and *Hide*. Changes made
 from the header menu are saved to the View immediately. When columns are hidden, a hidden-count
 chip on the Board reads *"4 tasks in hidden columns"*.
 
@@ -1593,44 +1596,26 @@ MudCard, because keyboard focus matters (the precedent is `Teammates.razor:85-90
 
 Clicking a card opens the detail panel.
 
-### 13.5 View editor — `ViewEditorDrawer.razor`
+### 13.5 Saving a View — Rename and Fields dialogs
 
-This is a `MudDrawer Anchor="Anchor.End" Variant="DrawerVariant.Temporary" Width="420px"`, hosted
-in the Tasks page. Its sections, top to bottom, follow the mockup:
+There is no View editor panel and a View has no Description. Every change to a View is saved to it
+through `ViewStore` as it is made, so the page follows `ViewsChanged`:
 
-1. **Name** and **Description**, as `MudTextField`s.
-2. **List or Board**, and **Active or Closed**. Closed is disabled for a Board.
-3. **Fields shown.** A `MudDropContainer<string>` with one `MudDropZone AllowReorder="true"`,
-   so dragging reorders fields. Read the new order from `ItemDropped`'s `IndexInZone`. This is the
-   [Basic Usage](https://mudblazor.com/components/dropzone#basic-usage) reordering pattern, and
-   the same one is used for Grouping order and Sorting below. Each row has a `MudSwitch` and a remove button, and there is a
-   **+ Add field** menu. Up and down `MudIconButton`s are also provided as a keyboard alternative
-   to dragging (the Questions spec's D-9 made the same choice).
-4. **Filters.** One row per dimension. Each row is a `MudSelect MultiSelection="true"` whose chips
-   are joined by **OR** labels.
-   - Team options: `PersonaStore.Teams` ∪ `TaskStore.Teams`.
-   - Project options: `Team / Project`, limited to the chosen Teams when any are chosen.
-   - Assignee options: *Me*, *Unassigned*, then every Persona.
-   - Values that no longer exist are listed as *"Nova (missing)"* and stay selected.
-5. **Grouping order.** A reorderable list rendered as a chain, *State → Assignee → Team*. The
-   `State` option is disabled for a Board.
-6. **Sorting.** One or more rows of field and direction, reorderable.
-7. **Columns** (Board only). Each row has a label, a `MudSelect MultiSelection` of states, and a
-   hidden toggle.
-   - A state already used in another column is shown disabled, with the name of that column.
-   - **Every state must be placed** before Save is enabled. The editor shows *"Place Review in a
-     column"*.
-8. **Save View**, **Cancel** and **Delete** (not offered for built-ins). Delete asks for
-   confirmation with `IDialogService.ShowMessageBoxAsync("Delete View", "Delete 'Platform
-   board'? Tasks are not affected.", yesText: "Delete", cancelText: "Cancel")`. This is the
-   `SkillsPanel.razor:138-147` precedent, and mudblazor.md's choice for destructive
-   confirmations. It opens over a drawer, not over another dialog, so it isn't a nested dialog.
-9. **Unsaved changes.** A `MudExitPrompt Disabled="@(!this.dirty)"` warns before navigating away
-   from an edited View.
-
-Before saving, call `ViewValidator.Validate` and list its problems in a
-`MudAlert Severity.Error role="alert"`. If `ViewStore.LoadError` is set, every control is
-disabled and the drawer shows the error.
+- **Filter, grouping, layout (List or Kanban), header sort, Dense, column widths and fields** are
+  each written the moment the Human changes them. Resizing a List column saves its width, in CSS
+  pixels, to `TaskView.ColumnWidths` (by field key; `task-list-resize.js`). Search text is never saved.
+- **Rename** (the View's ⋮ menu, and the sidebar row's) opens the shared `NameDialog` as "Rename
+  view", prefilled with the name. The trimmed name must be 1-60 characters and unique among the other
+  Views, ignoring case.
+- **Fields…** opens `FieldsDialog`: a `MudDropContainer<string>` with one `MudDropZone
+  AllowReorder="true"`, so dragging reorders fields, with up and down `MudIconButton`s as the keyboard
+  alternative. Each row has a `MudSwitch` (excludes the field from `View.Fields` but keeps its row and
+  position) and a remove button (deletes the row and returns the field to the **+ Add field** menu).
+  `id` and `title` are always shown and are never rows. **Save** writes the shown rows, in order;
+  **Cancel** writes nothing.
+- **Delete view** (not offered for built-ins) asks `Delete 'name'?` through the shared confirm and says
+  that Tasks are not affected.
+- If `ViewStore.LoadError` is set, the page shows the error and the controls are disabled.
 
 ### 13.6 Task detail — one component, two sizes (`TaskDetail.razor`)
 
@@ -2101,12 +2086,12 @@ TASKS-10 to TASKS-12 are paid 💰.
 | TASKS-1 | Creating a Task in the UI writes the file at the right path with the canonical frontmatter |
 | TASKS-2 | A hand edit in a text editor appears within a second, with an `edited outside Huddle` entry |
 | TASKS-3 | Board drag, ghost buckets, the Duplicate picker, and cancelling snaps the card back |
-| TASKS-4 | The View editor saves, reorders fields, and refuses a Board with an unplaced state |
+| TASKS-4 | A View saves every change as it is made; Rename and Fields… work |
 | TASKS-5 | A broken `views.json` shows the error and the file is untouched (compare its hash before and after) |
 | TASKS-6 | The last View reopens after a browser restart, and a private window falls back to All Tasks |
 | TASKS-7 | A conflict shows both versions, and merging changes to different fields is silent |
 | TASKS-8 | Renaming a Persona rewrites `assignee:` in every task file and View filter, with no wake-up |
-| TASKS-9 | Keyboard only: Move to, the View editor, and the Task panel, with no dragging |
+| TASKS-9 | Keyboard only: Move to, the Fields dialog, and the Task panel, with no dragging |
 | TASKS-10 💰 | Assigning to a live Claude Persona wakes it in the right Room, and it calls `update_task` to set In Progress |
 | TASKS-11 💰 | Two Personas reassigning to each other stop at the wake budget, and Allow 10 more resumes them |
 | TASKS-12 💰 | An Agent that creates a Task with `originRoomId` wakes the assignee in that Room |
@@ -2175,7 +2160,7 @@ WS1 Domain+format ──┬──▶ WS2 TaskStore ──▶ WS3 TaskService ─
                     │                                        └──▶ WS5 App Tools ─┤ (WS5 owns prompts; WS4 waits for task.wake.message)
                     └──▶ WS6 Views (model, store, query) ─────────────────────────┤
                                                                                   ▼
-                                               WS7 UI shell ──▶ WS8 Board, WS9 View editor, WS10 Task detail (parallel)
+                                               WS7 UI shell ──▶ WS8 Board, WS9 View saving, WS10 Task detail (parallel)
                                                                                   ▼
                                                WS11 Task references (copy, links, route, # picker) — needs WS2 + WS7 + WS10
                                                                                   ▼
@@ -2215,8 +2200,8 @@ WS5 lands `task.wake.message` first.
 | TK-I13 | 7 | Impl | `TaskViewNav` (`MudNavGroup`), `Tasks.razor`, `TaskToolbar` (`MudToolBar`), `TaskListView` (`MudDataGrid`), `TaskColors`, the `app.js` storage, the minimal `app.css` block, and `MainLayout` wiring. Settle the group-order note in §13.3a and record the answer in this spec | §13.0-13.3a | T13 green, `ThemeSourceTests` green |
 | TK-T14 | 8 | bUnit | `TaskBoardTests`: columns from the View; ghost buckets appear only while dragging (bUnit can't drag. Start a drag with the container's public `StartTransaction(item, zoneId, index, Func<Task> commit, Func<Task> cancel)` and end it with `CancelTransaction()`. Check first that these raise `TransactionStarted` and `TransactionEnded`; if they don't, test through the component's own `OnDragStarted` and `OnDragEnded` handlers); a drop on Duplicate opens the picker and cancel saves nothing; Move to menu parity; cross-lane drops refused; hidden count | §13.4 | Fails |
 | TK-I14 | 8 | Impl | `TaskBoard`, `TaskCard`, `DuplicatePickerDialog`, `ReasonDialog` | §13.4 | T14 green |
-| TK-T15 | 9 | bUnit | `ViewEditorDrawerTests`: an unplaced state disables Save; State grouping disabled on a Board; *(missing)* values kept; Delete uses an inline confirm; `LoadError` disables everything | §13.5 | Fails |
-| TK-I15 | 9 | Impl | `ViewEditorDrawer` | §13.5 | T15 green |
+| TK-T15 | 9 | bUnit | `FieldsDialogTests` and `RenameViewTests` (replacing the removed View editor tests): Fields reorder, switch and remove; Rename validates length and uniqueness | §13.5 | Fails |
+| TK-I15 | 9 | Impl | `FieldsDialog` | §13.5 | T15 green |
 | TK-T16 | 10 | bUnit | `TaskDetailTests`: Save label per `WakePreview`; unsaved-edits bar and Revert; Won't do menu, the Duplicate picker required; a conflict shows both versions and Save stays disabled until resolved; Make a copy opens create mode and writes nothing; Expand opens the dialog with only the id; the Change log `MudTimeline` is collapsed and newest first; `MudExitPrompt` is enabled only while there are unsaved edits; adding and removing a blocker chip updates `pending`; `DateOnly` round-trips through `MudDatePicker` | §13.0, §13.6-13.7 | Fails |
 | TK-I16 | 10 | Impl | `TaskDetail`, `TaskDetailDialog`, the toast and the AI-reacting chip | §13.6-13.8 | T16 green |
 | TK-T17 | 11 | Unit | `MarkdownRendererTests` gains: an id that resolves becomes `<a class="task-ref" href="/tasks/item/PLAT-0042" title="…">`; an unknown id, `UTF-8`, a lower-case `plat-0042`, and ids inside a code span, a code block or an existing link stay plain; a Closed Task gets `task-ref-closed`; `[x](/tasks/item/../../evil)` and `[x](/other)` are still rewritten to `#`; `ToHtml(string)` without a resolver is unchanged (all existing tests pass as they are) | §13.13.2 | Fails |
