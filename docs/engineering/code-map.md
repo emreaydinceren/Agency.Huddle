@@ -65,13 +65,11 @@ the hub: [Huddle.EngineeringGuide.md](../Huddle.EngineeringGuide.md).
 | `Components/Shared/RoomNavRow.razor` | One Room row in the sidebar: the `NavTabLink` to `/rooms/{id}` and its Archive and Delete menu, shared by `RoomList` and `TeamsNav` so the two cannot drift (ADR-0052). |
 | `Components/Teams/NewTeamDialog.razor` | The name dialog for creating a new Team or Project (Spec §6.5), behind the TeamsNav's "New team" and "New project" buttons. Copies `Library/AddFolderDialog.razor`'s shape. |
 | `Components/Teams/NewTeamDialogMode.cs` | Enum: whether `NewTeamDialog` is naming a Team or a Project. |
-| `Components/Teams/AddMemberDialog.razor` | The dialog to add a Teammate to a Team (Spec §6.7): a strict `MudAutocomplete` over the Teammates not yet in the Team, searched over Name, Alias and Title. |
-| `Components/Teams/TeammateChoice.cs` | One Teammate in the Add member dialog: Name, Title and Alias. |
 | `Components/Teams/TeamTabToolbar.razor` | The action button and search field every Team page tab shares (Spec §6.6): owned state for search text, passed back debounced and trimmed-to-null. |
-| `Components/Teams/TeamMembers.razor` | The Members tab list of a Team page (Spec §6.7): one row per member with status dot, avatar, Name and "Title · Alias", sorted by Name. Rows open the same `TeammateCard` the Teammates page does, and a context menu offers to remove the member. The card's **Message** calls `ChatService.EnsureTeamOneToOneAsync` and navigates, so it opens the Team's own one-to-one, not the root one (ADR-0052). |
+| `Components/Teams/TeamDetails.razor` | The Details tab of a Team page, always last: `BuildTeam` with only `Team` set, i.e. Build a team's type and details sections for the Team (type and name fixed) with its own Save changes, which writes "What it's for" and the Library folder to `_team.md`. |
+| `Components/Teams/TeamRoster.razor` | The Members tab of a Team page: `BuildTeam` with `MembersOnly` (Build a team's Hire section for the Team, with its own Save changes), plus each member's status dot (pipe liveness, then health, through `PersonaStatusResolver`) and a **Message** that calls `ChatService.EnsureTeamOneToOneAsync` and navigates, so it opens the Team's own one-to-one, not the root one (ADR-0052). |
 | `Components/Teams/TeamFilesTab.razor` | The Files tab of a Team or Project page (Spec §6.8): a `LibraryExplorer` scoped to the Team's or Project's folder, with a shared toolbar for "New note" and "Search files". |
 | `Components/Teams/TeamTasksTab.razor` | The Tasks tab of a Team or Project page (Spec §6.9): shows an in-memory Task View grouped into swimlanes by Project for Teams, or ungrouped for Projects. |
-| *(`Components/Teams/TeamMembers.razor.css` — scoped stylesheet)* | Styling for the Members tab, including the `stopPropagation` wrapper around Team member row menu. |
 | *(`Components/Teams/TeamsNav.razor.css` — scoped stylesheet)* | Styling for the sidebar Teams list. |
 | *(`Themes/ThemeTokens.cs` — deleted 2026-09-14)* | The 39 Token names are gone with `theme.css`. MudBlazor's `Palette` properties are the key set roadmap item 7 maps onto now. See [ADR-0010](../adr/0010-a-theme-is-a-mudblazor-theme.md). |
 | `Themes/ThemeCatalog.cs` | An assembly point and nothing else: `BuiltIn`, a flat list of nineteen `ThemeDescriptor`s in **authoring** order, and `Grouped`, the projection the picker renders. `HuddleTheme.LightDescriptor` is deliberately first — three call sites read `BuiltIn[0]` to mean "the default Theme", which is why grouping is a projection and never a re-sort. |
@@ -305,7 +303,6 @@ order decides per Token, independently.
 | `Teams/CardResolver.cs` | Resolves one role's defaults into a hire card: `Ready` when all resolve, `NeedsSetup` otherwise. |
 | `Teams/TierModelPicker.cs` | Picks a card's model from `Team:Teams:Tiers:<adapterId>:<tier>`; an adapter with no entry for a tier uses its default model. |
 | `Teams/FileConnectorStatus.cs` | Reads the connected connectors from `connectors.json` in the data folder on every call; a missing or malformed file means none. |
-| `Teams/TeamCheckBar.cs` | What the team check bar shows (one entry per coverage step of the type) and whether Start Team is enabled. |
 | `Teams/MemberWarnings.cs` | The setup warnings for one member: a shared vendor, too many Skills, and Skills sharing a catalog sub-category. |
 | `Teams/TeamDuplicator.cs` | Copies a Team's members into a new Team for Duplicate, and reports each member it did not copy, with the reason. |
 | `Teams/ProcessDocument.cs` | Parses and writes `Process.md`: the `gates`, `wip`, `checkCommand`, `retro` and `digest` keys, and the four `GateId`s. |
@@ -335,16 +332,12 @@ order decides per Token, independently.
 | `Acp/Tools/ProposeRetroChangesTool.cs` (`propose_retro_changes`) | Lets a member holding the `retrospective` Skill propose up to three exact-text changes to the Human. |
 | `Acp/Tools/MarkRetroRowTool.cs` (`mark_retro_row`) | Updates one `Retro register.md` row's status. |
 | `Components/Pages/TeamSetup.razor` | `/teams/new` and `/teams/{Team}/setup`: the New Team from a type form, then the setup screen with the hiring pool, the team check bar and Start Team. |
-| `Components/Teams/HiringPool.razor` | The hiring pool: one card per job, the two filter clouds, Custom role and the staged hires. |
 | `Components/Shared/ChipCloud.razor` | A cloud of toggle chips (selected first, optional cap with "Show all"), the avatar picker's cloud as a component. |
 | `HiringPool/HiringPoolFile.cs` | The records `hiringpool.json` reads into: `PoolTeamType`, `PoolJob`, `HiringPoolFile`. |
 | `HiringPool/HiringPoolCatalog.cs` | Loads the embedded pool and the user pool (merged by id), serves jobs, team type names and personas; never throws for bad content. |
-| `HiringPool/HiringPoolSearch.cs` | Builds the pool's cards and filters them by the two clouds (types any, tags and skills all). |
-| `Components/Teams/CustomRoleDialog.razor` | The dialog for a custom role: title, stance, consult-when and start-from. |
 | `Components/Teams/ProcessStep.razor` | The Process step on a manager's Teammate card: Use this process, or Start blank. |
 | `Components/Teams/ProcessTab.razor` | The Process tab of a Team page: `Process.md`, with Edit. |
 | `Components/Teams/DuplicateTeamDialog.razor` | The Duplicate dialog: the new Team's title and an optional workspace folder. |
-| `Components/Teams/TeamCheckBarView.razor` | Renders the team check bar. |
 | `Components/Settings/SkillImportDialog.razor` | The Import skill dialog: catalog search or a URL, Review, then Install. |
 | `Components/Shared/SkillProvenanceLine.razor` | The provenance line shown wherever a Skill appears, with a "modified locally" chip. |
 | `Components/Shared/RetroProposalCard.razor` | A Room's pending retro changes, with Accept and Reject. |

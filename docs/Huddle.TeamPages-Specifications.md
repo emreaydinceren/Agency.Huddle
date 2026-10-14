@@ -28,8 +28,11 @@ This is the design for **Team pages** and **Project pages**. It adds a **Teams**
 sidebar, listing each Team with its Projects nested below it. Selecting a Team opens a page with
 three tabs:
 
-- **Members** lists the Teammates whose `teams` field names the Team, with *+ Add member* and a
-  search box.
+- **Members** lists the Teammates whose `teams` field names the Team. Since 2026-10-14 it is
+  Build a team's Hire section for the Team (see §6.7).
+- **Details** (added 2026-10-14, always the last tab of a Team page, never on a Project page) is
+  Build a team's type and details sections for the Team (`TeamDetails`): the type and name are
+  fixed, and *Save changes* writes "What it's for" and the Library folder to `_team.md`.
 - **Files** is the existing `LibraryExplorer`, scoped to the Team folder, with *+ New note* and a
   search box.
 - **Tasks** is the existing Board, filtered to the Team and grouped by Project.
@@ -249,9 +252,8 @@ The new code goes in folder `src/Huddle.App/Teams/`, namespace `Agency.Huddle.Ap
 | `Components/Teams/TeamsNav.razor` | The sidebar group | §6.5 |
 | `Components/Pages/TeamPage.razor` | Both routes, the tab strip, and each tab's search text (the shell draws the breadcrumbs: Tabs spec) | §6.6 |
 | `Components/Teams/TeamTabToolbar.razor` | The action button and the search field, used by each tab component. It owns no state | §6.6 |
-| `Components/Teams/TeamMembers.razor` | Members tab | §6.7 |
-| `Components/Teams/AddMemberDialog.razor` | Pick a Teammate, show the restart warning | §6.7 |
-| `Components/Teams/TeammateChoice.cs` | `public sealed record TeammateChoice(Name, Title, Alias)`, one row of the picker | §6.7 |
+| `Components/Teams/TeamRoster.razor` | Members tab (replaced `TeamMembers`, `AddMemberDialog` and `TeammateChoice` on 2026-10-14) | §6.7 |
+| `Components/Teams/TeamDetails.razor` | Details tab, last on a Team page (added 2026-10-14) | §2 |
 | `Components/Teams/TeamFilesTab.razor` | Files tab: the toolbar and a scoped `LibraryExplorer` | §6.8 |
 | `Components/Teams/TeamTasksTab.razor` | Tasks tab: the toolbar and a `TaskBoard` over an in-memory `TaskView` | §6.9 |
 | `Components/Teams/NewTeamDialog.razor`, `NewTeamDialogMode.cs` | Name a new Team or Project, validated inline; `public enum NewTeamDialogMode { Team, Project }` | §6.5 |
@@ -609,7 +611,7 @@ depends on the Room scope that §3 defers.
 | --- | --- | --- |
 | Team | `div.hover-reveal-row` holding a chevron `MudIconButton` (expand/collapse, `aria-expanded`), a `MudNavLink Href="/teams/{team}" Match="NavLinkMatch.Prefix" Class="hover-reveal-link"`, and a `MudMenu Class="hover-reveal-menu"` with **New project** | Clicking the name navigates. The chevron toggles the Projects. Right-click opens the same menu (`RoomList.razor` pattern). A Team with no members shows a muted `MudText` *No members* after its name |
 | Project | `MudNavLink Href="/teams/{team}/projects/{project}" Class="nav-project-link"`, indented one level | Navigates |
-| Action | `MudNavLink Icon="@Icons.Material.Filled.Add" IconColor="Color.Primary" Class="nav-action-link"` **New team** | Opens `NewTeamDialog` |
+| Action | `NavTabLink Href="/teams/build" Icon="@Icons.Material.Filled.Add" IconColor="Color.Primary" Class="nav-action-link"` **Build a team** | Opens the Build a team page (the sidebar's *New team* and *New team from a type* links were removed) |
 
 **Why not a nested `MudNavGroup` per Team?** A `MudNavGroup` title toggles the group and has no
 `Href`, but the design needs the Team name to navigate. A link plus a separate chevron gives both,
@@ -624,10 +626,9 @@ is never hidden; the chevron collapses it again after the next navigation.
 **Creation.** `TeamsNav` creates through `ITeamFolders` (`Agency.Huddle.App.Library`), which
 `TeamFolderProvisioner` implements. It never touches the disk itself.
 
-- *New team* opens `NewTeamDialog` in Team mode. On OK it calls `ITeamFolders.EnsureTeam(name)`,
-  which validates with `TeamNames.ValidateTeamName`, refuses a name that already exists on disk
-  ignoring case, and creates `Teams/<name>/`. It then navigates to `/teams/<name>`. The Team has
-  no members yet (T9), which is expected, not an error.
+- *Build a team* is a page, not a dialog; see the Build a team figure in `wireframes.md`. The
+  sidebar no longer has a *New team* action; `ITeamFolders.EnsureTeam(name)` remains for the
+  Library and for tests.
 - *New project* opens the same dialog in Project mode and calls
   `ITeamFolders.EnsureProjectIn(team, name)`. That validates with `TeamNames.ValidateProjectName`,
   creates the Team folder first when the Team exists only as a Persona label, then calls the
@@ -735,6 +736,15 @@ stray URL.
 plain `Huddle` for an unknown Team or Project.
 
 ### 6.7 Members tab
+
+> **Superseded (2026-10-14).** The Members tab is now `TeamRoster`: Build a team's Hire section
+> for the Team (`BuildTeam` with `MembersOnly`; `wireframes.md` `M6`, `B12`). It shows the role
+> cards and a roster of the members (status dot, Edit, Message, and a Remove menu with *Remove
+> from Team* and *Delete Teammate*) beside new drafts, a Manager select, and one *Save changes*.
+> There is no search box, no *+ Add member* and no `AddMemberDialog`: a Teammate joins a Team by
+> being hired into it, or through its `teams:` line. `ITeamMembership.Remove` still does *Remove
+> from Team*, and Message still calls `EnsureTeamOneToOneAsync`. The text below records the
+> original design.
 
 **Purpose.** See who is in the Team, add Teammates, remove them.
 

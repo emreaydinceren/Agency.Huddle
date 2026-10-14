@@ -10,38 +10,38 @@ public sealed class TeamPageTabsTests
     private static readonly TeamPageFeatures TasksOnly = new(Library: false, Tasks: true);
     private static readonly TeamPageFeatures NeitherFeature = new(Library: false, Tasks: false);
 
-    /// <summary>Team with both features on includes Members, Files, and Tasks.</summary>
+    /// <summary>Team with both features on includes Members, Files, Tasks and Details.</summary>
     [Fact]
     public void Available_Team_BothFeatures_ReturnsMembersFilesAndTasks()
     {
-        TeamPageTab[] expected = [TeamPageTab.Members, TeamPageTab.Files, TeamPageTab.Tasks];
+        TeamPageTab[] expected = [TeamPageTab.Members, TeamPageTab.Files, TeamPageTab.Tasks, TeamPageTab.Details];
         IReadOnlyList<TeamPageTab> actual = TeamPageTabs.Available(isProject: false, Both);
         Assert.Equal(expected, actual);
     }
 
-    /// <summary>Team with Library on and Tasks off includes Members and Files.</summary>
+    /// <summary>Team with Library on and Tasks off includes Members, Files and Details.</summary>
     [Fact]
     public void Available_Team_LibraryOnly_ReturnsMembersAndFiles()
     {
-        TeamPageTab[] expected = [TeamPageTab.Members, TeamPageTab.Files];
+        TeamPageTab[] expected = [TeamPageTab.Members, TeamPageTab.Files, TeamPageTab.Details];
         IReadOnlyList<TeamPageTab> actual = TeamPageTabs.Available(isProject: false, LibraryOnly);
         Assert.Equal(expected, actual);
     }
 
-    /// <summary>Team with Tasks on and Library off includes Members and Tasks.</summary>
+    /// <summary>Team with Tasks on and Library off includes Members, Tasks and Details.</summary>
     [Fact]
     public void Available_Team_TasksOnly_ReturnsMembersAndTasks()
     {
-        TeamPageTab[] expected = [TeamPageTab.Members, TeamPageTab.Tasks];
+        TeamPageTab[] expected = [TeamPageTab.Members, TeamPageTab.Tasks, TeamPageTab.Details];
         IReadOnlyList<TeamPageTab> actual = TeamPageTabs.Available(isProject: false, TasksOnly);
         Assert.Equal(expected, actual);
     }
 
-    /// <summary>Team with both features off includes only Members.</summary>
+    /// <summary>Team with both features off includes only Members and Details.</summary>
     [Fact]
     public void Available_Team_NeitherFeature_ReturnsMembersOnly()
     {
-        TeamPageTab[] expected = [TeamPageTab.Members];
+        TeamPageTab[] expected = [TeamPageTab.Members, TeamPageTab.Details];
         IReadOnlyList<TeamPageTab> actual = TeamPageTabs.Available(isProject: false, NeitherFeature);
         Assert.Equal(expected, actual);
     }
@@ -218,7 +218,7 @@ public sealed class TeamPageTabsTests
         Assert.Equal("process", actual);
     }
 
-    /// <summary>A Team with a process file gets the Process tab last; without one it does not.</summary>
+    /// <summary>A Team with a process file gets the Process tab, just before Details; without one it does not.</summary>
     [Fact]
     public void Available_Team_WithProcess_AddsProcessLast()
     {
@@ -226,10 +226,19 @@ public sealed class TeamPageTabsTests
         TeamPageFeatures libraryAndProcess = new(Library: true, Tasks: false, Process: true);
         TeamPageFeatures onlyProcess = new(Library: false, Tasks: false, Process: true);
 
-        Assert.Equal([TeamPageTab.Members, TeamPageTab.Files, TeamPageTab.Tasks, TeamPageTab.Process], TeamPageTabs.Available(isProject: false, withProcess));
-        Assert.Equal([TeamPageTab.Members, TeamPageTab.Files, TeamPageTab.Process], TeamPageTabs.Available(isProject: false, libraryAndProcess));
-        Assert.Equal([TeamPageTab.Members, TeamPageTab.Process], TeamPageTabs.Available(isProject: false, onlyProcess));
-        Assert.Equal([TeamPageTab.Members, TeamPageTab.Files, TeamPageTab.Tasks], TeamPageTabs.Available(isProject: false, Both));
+        Assert.Equal([TeamPageTab.Members, TeamPageTab.Files, TeamPageTab.Tasks, TeamPageTab.Process, TeamPageTab.Details], TeamPageTabs.Available(isProject: false, withProcess));
+        Assert.Equal([TeamPageTab.Members, TeamPageTab.Files, TeamPageTab.Process, TeamPageTab.Details], TeamPageTabs.Available(isProject: false, libraryAndProcess));
+        Assert.Equal([TeamPageTab.Members, TeamPageTab.Process, TeamPageTab.Details], TeamPageTabs.Available(isProject: false, onlyProcess));
+        Assert.Equal([TeamPageTab.Members, TeamPageTab.Files, TeamPageTab.Tasks, TeamPageTab.Details], TeamPageTabs.Available(isProject: false, Both));
+    }
+
+    /// <summary>The "details" segment resolves to the Details tab on a Team page, and a Project page has none.</summary>
+    [Fact]
+    public void Resolve_DetailsSegment_IsATeamTabOnly()
+    {
+        Assert.Equal("details", TeamPageTabs.Segment(TeamPageTab.Details));
+        Assert.Equal(TeamPageTab.Details, TeamPageTabs.Resolve(isProject: false, "Details", NeitherFeature));
+        Assert.DoesNotContain(TeamPageTab.Details, TeamPageTabs.Available(isProject: true, Both));
     }
 
     /// <summary>A Project never has a Process tab.</summary>

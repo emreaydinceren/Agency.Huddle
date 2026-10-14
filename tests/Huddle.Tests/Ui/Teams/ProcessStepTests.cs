@@ -120,14 +120,14 @@ public sealed class ProcessStepTests
         File.WriteAllText(Path.Combine(dir.Path, "Process.md"), TwoGateText);
         ctx.Services.AddSingleton<ITeamCatalog>(new FakeTeamCatalog { Teams = [new TeamSummary(Team, [], ["Nova"], true)] });
         ctx.Services.AddSingleton(Options.Create(new TeamOptions()));
-        ctx.ComponentFactories.AddStub<TeamMembers>();
+        ctx.ComponentFactories.AddStub<TeamRoster>();
         ctx.ComponentFactories.AddStub<TeamFilesTab>();
         ctx.ComponentFactories.AddStub<TeamTasksTab>();
         ctx.ComponentFactories.AddStub<TeamSpend>();
 
         IRenderedComponent<TeamPage> cut = ctx.Render<TeamPage>(p => p.Add(x => x.Team, Team).Add(x => x.Tab, "process"));
 
-        Assert.Equal(["Members", "Files", "Tasks", "Process"], cut.FindAll(".team-page-tabs .mud-tab").Select(static header => header.TextContent.Trim()).ToList());
+        Assert.Equal(["Members", "Files", "Tasks", "Process", "Details"], cut.FindAll(".team-page-tabs .mud-tab").Select(static header => header.TextContent.Trim()).ToList());
         cut.WaitForAssertion(() => Assert.Equal(2, cut.FindAll("div.process-tab-gate").Count));
     }
 

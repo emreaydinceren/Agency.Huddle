@@ -36,8 +36,6 @@ internal static class TabTrail
         return segments switch
         {
             ["rooms", ..] => [new("Chats", "/", "chat"), last],
-            ["teams", "new"] => [new("Teams", null, "team"), last],
-            ["teams", var team, "setup", ..] => [new("Teams", null, "team"), new(team, TeamHref(team), "team"), new("Setup", null, "team")],
             ["teams", var team, "projects", ..] => [new("Teams", null, "team"), new(team, TeamHref(team), "team"), last],
             ["teams", ..] => [new("Teams", null, "team"), last],
             ["tasks"] => [last],

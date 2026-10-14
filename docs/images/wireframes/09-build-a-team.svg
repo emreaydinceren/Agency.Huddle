@@ -1,0 +1,273 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 1690" width="1200" height="1690" font-family="Inter, 'Segoe UI', Helvetica, Arial, sans-serif" xml:space="preserve" style="white-space: pre" role="img" aria-label="Figure 9: The Build a team page">
+<title>Figure 9: The Build a team page</title>
+<rect width="1200" height="1690" fill="#ffffff"/>
+<text x="24" y="30" font-size="18" font-weight="700" fill="#1f2430" text-anchor="start">Figure 9: The Build a team page</text>
+<text x="24" y="48" font-size="12" font-weight="400" fill="#6b7280" text-anchor="start">BuildTeam.razor. All four steps on one page: Team type, Team details, Hire (roles and draft roster) and Approve; the three dialogs it opens are below.</text>
+<rect x="24" y="60" width="1152" height="1130" rx="6" fill="#eceef2" stroke="#8b93a1" stroke-width="1.4"/>
+<rect x="30" y="65" width="25" height="17" rx="8.5" fill="#475569"/>
+<text x="42.5" y="77.5" font-size="11" font-weight="700" fill="#fff" text-anchor="middle">B1</text>
+<text x="60.8" y="78" font-size="12" font-weight="600" fill="#1f2430" text-anchor="start">Page container</text>
+<text x="166.8" y="78" font-size="11" font-weight="400" fill="#6b7280" text-anchor="start">MudContainer, MaxWidth.Large</text>
+<rect x="48" y="96" width="1104" height="36" rx="4" fill="#ffffff" stroke="#8b93a1" stroke-width="1.2"/>
+<rect x="44" y="88" width="25" height="17" rx="8.5" fill="#475569"/>
+<text x="56.5" y="100.5" font-size="11" font-weight="700" fill="#fff" text-anchor="middle">B2</text>
+<text x="64" y="121" font-size="16" font-weight="700" fill="#1f2430" text-anchor="start">Build a team</text>
+<text x="170" y="121" font-size="11" font-weight="400" fill="#6b7280" text-anchor="start">with Margot, your Chief of Staff</text>
+<rect x="48" y="150" width="1104" height="48" rx="4" fill="#ffffff" stroke="#8b93a1" stroke-width="1.2"/>
+<rect x="44" y="142" width="25" height="17" rx="8.5" fill="#475569"/>
+<text x="56.5" y="154.5" font-size="11" font-weight="700" fill="#fff" text-anchor="middle">B3</text>
+<circle cx="76" cy="176" r="10" fill="#6e78da"/>
+<text x="76" y="180" font-size="11" font-weight="700" fill="#fff" text-anchor="middle">✓</text>
+<text x="94" y="172" font-size="11" font-weight="600" fill="#1f2430" text-anchor="start">Team type</text>
+<text x="94" y="186" font-size="10" font-weight="400" fill="#6b7280" text-anchor="start">Product Team</text>
+<line x1="56" y1="194" x2="318" y2="194" stroke="#6e78da" stroke-width="2"/>
+<circle cx="352" cy="176" r="10" fill="#6e78da"/>
+<text x="352" y="180" font-size="11" font-weight="700" fill="#fff" text-anchor="middle">✓</text>
+<text x="370" y="172" font-size="11" font-weight="600" fill="#1f2430" text-anchor="start">Team details</text>
+<text x="370" y="186" font-size="10" font-weight="400" fill="#6b7280" text-anchor="start">Garden</text>
+<line x1="332" y1="194" x2="594" y2="194" stroke="#6e78da" stroke-width="2"/>
+<circle cx="628" cy="176" r="10" fill="#6e78da"/>
+<text x="628" y="180" font-size="11" font-weight="700" fill="#fff" text-anchor="middle">3</text>
+<text x="646" y="172" font-size="11" font-weight="700" fill="#1f2430" text-anchor="start">Hire</text>
+<text x="646" y="186" font-size="10" font-weight="400" fill="#6b7280" text-anchor="start">2 Teammates drafted</text>
+<line x1="608" y1="194" x2="870" y2="194" stroke="#6e78da" stroke-width="2"/>
+<circle cx="904" cy="176" r="10" fill="#ffffff" stroke="#8b93a1" stroke-width="1.2"/>
+<text x="904" y="180" font-size="11" font-weight="700" fill="#6b7280" text-anchor="middle">4</text>
+<text x="922" y="172" font-size="11" font-weight="600" fill="#6b7280" text-anchor="start">Approve</text>
+<text x="922" y="186" font-size="10" font-weight="400" fill="#6b7280" text-anchor="start">only you</text>
+<line x1="884" y1="194" x2="1146" y2="194" stroke="#8b93a1" stroke-width="2"/>
+<rect x="48" y="216" width="1104" height="190" rx="6" fill="#ffffff" stroke="#8b93a1" stroke-width="1.4"/>
+<rect x="54" y="221" width="25" height="17" rx="8.5" fill="#475569"/>
+<text x="66.5" y="233.5" font-size="11" font-weight="700" fill="#fff" text-anchor="middle">B4</text>
+<text x="84.8" y="234" font-size="12" font-weight="600" fill="#1f2430" text-anchor="start">Step section</text>
+<rect x="64" y="244" width="18" height="18" rx="4" fill="#e3e5f7" stroke="#e3e5f7" stroke-width="1"/>
+<text x="73" y="257" font-size="11" font-weight="700" fill="#6e78da" text-anchor="middle">1</text>
+<text x="90" y="258" font-size="13" font-weight="700" fill="#1f2430" text-anchor="start">Team type</text>
+<rect x="64" y="266" width="580" height="16" rx="3" fill="#f6f7f9" stroke="#8b93a1" stroke-width="1.2"/>
+<rect x="58" y="262" width="25" height="17" rx="8.5" fill="#475569"/>
+<text x="70.5" y="274.5" font-size="11" font-weight="700" fill="#fff" text-anchor="middle">B5</text>
+<text x="96" y="278" font-size="10" font-weight="400" fill="#6b7280" text-anchor="start">Huddle hires a manager and the roles around it. 26 types — you already run Data Team…</text>
+<rect x="660" y="262" width="25" height="17" rx="8.5" fill="#475569"/>
+<text x="672.5" y="274.5" font-size="11" font-weight="700" fill="#fff" text-anchor="middle">B6</text>
+<text x="702" y="275" font-size="10" font-weight="400" fill="#6b7280" text-anchor="start" font-style="italic">Team type grid: two rows, scrolls right; the Blank Team is first</text>
+<rect x="64" y="292" width="260" height="76" rx="6" fill="#ffffff" stroke="#8b93a1" stroke-width="1.2"/>
+<circle cx="90" cy="330" r="16" fill="#f1f2f5"/>
+<text x="90" y="334" font-size="11" font-weight="700" fill="#6b7280" text-anchor="middle">＋</text>
+<text x="118" y="320" font-size="12" font-weight="700" fill="#1f2430" text-anchor="start">Blank Team</text>
+<text x="118" y="336" font-size="10" font-weight="400" fill="#6b7280" text-anchor="start">Start from nothing</text>
+<text x="118" y="354" font-size="10" font-weight="400" fill="#6b7280" text-anchor="start">You decide everything</text>
+<rect x="340" y="292" width="260" height="76" rx="6" fill="#e9eafa" stroke="#6e78da" stroke-width="1.6" stroke-dasharray="6 4"/>
+<rect x="334" y="286" width="32" height="17" rx="8.5" fill="#475569"/>
+<text x="350.0" y="298.5" font-size="11" font-weight="700" fill="#fff" text-anchor="middle">B6a</text>
+<circle cx="366" cy="330" r="16" fill="#ede1f7"/>
+<text x="366" y="334" font-size="11" font-weight="700" fill="#7c3aed" text-anchor="middle">◈</text>
+<text x="394" y="320" font-size="12" font-weight="700" fill="#1f2430" text-anchor="start">Product Team</text>
+<text x="394" y="336" font-size="10" font-weight="400" fill="#6b7280" text-anchor="start">Shapes what to build next</text>
+<text x="394" y="354" font-size="10" font-weight="400" fill="#6b7280" text-anchor="start">Manager + 5 roles</text>
+<circle cx="580" cy="312" r="9" fill="#6e78da"/>
+<text x="580" y="316" font-size="10" font-weight="700" fill="#fff" text-anchor="middle">✓</text>
+<rect x="616" y="292" width="260" height="76" rx="6" fill="#ffffff" stroke="#8b93a1" stroke-width="1.2"/>
+<circle cx="642" cy="330" r="16" fill="#dbeafe"/>
+<text x="642" y="334" font-size="11" font-weight="700" fill="#2563eb" text-anchor="middle">▤</text>
+<text x="670" y="320" font-size="12" font-weight="700" fill="#1f2430" text-anchor="start">Data Team</text>
+<text x="670" y="336" font-size="10" font-weight="400" fill="#6b7280" text-anchor="start">Turns your data into answers</text>
+<text x="670" y="354" font-size="10" font-weight="400" fill="#6b7280" text-anchor="start">Manager + 6 roles</text>
+<rect x="796" y="344" width="70" height="16" rx="8" fill="#ffffff" stroke="#8b93a1" stroke-width="1.2" stroke-dasharray="6 4"/>
+<text x="831" y="356" font-size="9" font-weight="600" fill="#1f2430" text-anchor="middle">You have one</text>
+<text x="892" y="332" font-size="10" font-weight="400" fill="#6b7280" text-anchor="start" font-style="italic">The chosen card: tinted, check mark</text>
+<text x="892" y="348" font-size="10" font-weight="400" fill="#6b7280" text-anchor="start" font-style="italic">A type you already run: “You have one” chip</text>
+<text x="64" y="392" font-size="10" font-weight="400" fill="#6b7280" text-anchor="start" font-style="italic">Second row: more cards in the same grid; the rest scroll to the right</text>
+<rect x="48" y="420" width="1104" height="210" rx="6" fill="#ffffff" stroke="#8b93a1" stroke-width="1.4" stroke-dasharray="6 4"/>
+<rect x="54" y="425" width="25" height="17" rx="8.5" fill="#475569"/>
+<text x="66.5" y="437.5" font-size="11" font-weight="700" fill="#fff" text-anchor="middle">B8</text>
+<text x="92" y="438" font-size="12" font-weight="600" fill="#1f2430" text-anchor="start">Team details section (once a type is chosen)</text>
+<rect x="64" y="448" width="18" height="18" rx="4" fill="#e3e5f7" stroke="#e3e5f7" stroke-width="1"/>
+<text x="73" y="461" font-size="11" font-weight="700" fill="#6e78da" text-anchor="middle">2</text>
+<text x="90" y="462" font-size="13" font-weight="700" fill="#1f2430" text-anchor="start">Team details</text>
+<rect x="64" y="472" width="520" height="150" rx="6" fill="#ffffff" stroke="#8b93a1" stroke-width="1.2"/>
+<rect x="58" y="468" width="32" height="17" rx="8.5" fill="#475569"/>
+<text x="74.0" y="480.5" font-size="11" font-weight="700" fill="#fff" text-anchor="middle">B8a</text>
+<rect x="80" y="484" width="488" height="26" rx="4" fill="#f6f7f9" stroke="#8b93a1" stroke-width="1.2"/>
+<text x="90" y="501" font-size="10" font-weight="400" fill="#6b7280" text-anchor="start">Team name</text>
+<text x="180" y="501" font-size="11" font-weight="400" fill="#1f2430" text-anchor="start">Garden</text>
+<rect x="80" y="518" width="488" height="58" rx="4" fill="#f6f7f9" stroke="#8b93a1" stroke-width="1.2"/>
+<text x="90" y="533" font-size="10" font-weight="400" fill="#6b7280" text-anchor="start">What it’s for  (six lines)</text>
+<text x="90" y="550" font-size="11" font-weight="400" fill="#1f2430" text-anchor="start">Keeps the garden planned, planted and watered…</text>
+<rect x="80" y="584" width="488" height="26" rx="4" fill="#f6f7f9" stroke="#8b93a1" stroke-width="1.2"/>
+<text x="90" y="601" font-size="10" font-weight="400" fill="#6b7280" text-anchor="start">Library folder</text>
+<text x="180" y="601" font-size="11" font-weight="400" fill="#1f2430" text-anchor="start">C:\data\Teams</text>
+<text x="552" y="602" font-size="12" font-weight="400" fill="#6b7280" text-anchor="middle">📁</text>
+<text x="610" y="498" font-size="10" font-weight="400" fill="#6b7280" text-anchor="start" font-style="italic">Library folder: the same for every type; starts as the Teams folder, may be blank, must exist.</text>
+<text x="610" y="514" font-size="10" font-weight="400" fill="#6b7280" text-anchor="start" font-style="italic">The folder icon opens the folder picker (B8b, below).</text>
+<text x="610" y="540" font-size="10" font-weight="400" fill="#6b7280" text-anchor="start" font-style="italic">Step 2 is done once the name is free and the folder is allowed.</text>
+<rect x="48" y="646" width="1104" height="420" rx="6" fill="#ffffff" stroke="#8b93a1" stroke-width="1.4" stroke-dasharray="6 4"/>
+<rect x="54" y="651" width="25" height="17" rx="8.5" fill="#475569"/>
+<text x="66.5" y="663.5" font-size="11" font-weight="700" fill="#fff" text-anchor="middle">B9</text>
+<text x="92" y="664" font-size="12" font-weight="600" fill="#1f2430" text-anchor="start">Hire section (once step 2 is complete)</text>
+<rect x="64" y="674" width="18" height="18" rx="4" fill="#e3e5f7" stroke="#e3e5f7" stroke-width="1"/>
+<text x="73" y="687" font-size="11" font-weight="700" fill="#6e78da" text-anchor="middle">3</text>
+<text x="90" y="688" font-size="13" font-weight="700" fill="#1f2430" text-anchor="start">Hire</text>
+<text x="64" y="710" font-size="12" font-weight="700" fill="#1f2430" text-anchor="start">Roles</text>
+<text x="64" y="724" font-size="10" font-weight="400" fill="#6b7280" text-anchor="start">Available roles</text>
+<rect x="130" y="698" width="32" height="17" rx="8.5" fill="#475569"/>
+<text x="146.0" y="710.5" font-size="11" font-weight="700" fill="#fff" text-anchor="middle">B9a</text>
+<rect x="64" y="734" width="180" height="90" rx="6" fill="#ffffff" stroke="#8b93a1" stroke-width="1.2" stroke-dasharray="6 4"/>
+<text x="154" y="776" font-size="26" font-weight="400" fill="#6e78da" text-anchor="middle">+</text>
+<text x="154" y="798" font-size="10" font-weight="400" fill="#6e78da" text-anchor="middle">Add a role</text>
+<rect x="260" y="734" width="240" height="90" rx="6" fill="#ffffff" stroke="#8b93a1" stroke-width="1.2"/>
+<rect x="254" y="728" width="32" height="17" rx="8.5" fill="#475569"/>
+<text x="270.0" y="740.5" font-size="11" font-weight="700" fill="#fff" text-anchor="middle">B9d</text>
+<circle cx="284" cy="760" r="12" fill="#e3e5f7"/>
+<text x="284" y="764" font-size="10" font-weight="700" fill="#6e78da" text-anchor="middle">▣</text>
+<text x="306" y="756" font-size="12" font-weight="700" fill="#1f2430" text-anchor="start">Developer</text>
+<text x="306" y="771" font-size="10" font-weight="400" fill="#6b7280" text-anchor="start">Builds the assigned change…</text>
+<text x="306" y="784" font-size="9" font-weight="400" fill="#6b7280" text-anchor="start">Hiring pool</text>
+<rect x="276" y="796" width="62" height="18" rx="9" fill="#dcfce7" stroke="#16a34a" stroke-width="1.2"/>
+<text x="307" y="809" font-size="9" font-weight="600" fill="#166534" text-anchor="middle">Suggested</text>
+<rect x="432" y="796" width="54" height="20" rx="4" fill="#ffffff" stroke="#1f2430" stroke-width="1.2"/>
+<text x="459" y="810" font-size="10" font-weight="600" fill="#1f2430" text-anchor="middle">Add</text>
+<text x="486" y="752" font-size="11" font-weight="400" fill="#166534" text-anchor="middle">☑</text>
+<rect x="516" y="734" width="240" height="90" rx="6" fill="#ffffff" stroke="#8b93a1" stroke-width="1.2"/>
+<circle cx="540" cy="760" r="12" fill="#ede1f7"/>
+<text x="540" y="764" font-size="10" font-weight="700" fill="#7c3aed" text-anchor="middle">☺</text>
+<text x="562" y="756" font-size="12" font-weight="700" fill="#1f2430" text-anchor="start">Gardener</text>
+<text x="562" y="771" font-size="10" font-weight="400" fill="#6b7280" text-anchor="start">Grows things.</text>
+<text x="562" y="784" font-size="9" font-weight="400" fill="#6b7280" text-anchor="start">Your role</text>
+<rect x="688" y="796" width="54" height="20" rx="4" fill="#ffffff" stroke="#1f2430" stroke-width="1.2"/>
+<text x="715" y="810" font-size="10" font-weight="600" fill="#1f2430" text-anchor="middle">Add</text>
+<text x="716" y="750" font-size="11" font-weight="400" fill="#6b7280" text-anchor="middle">✎</text>
+<text x="736" y="750" font-size="11" font-weight="400" fill="#6b7280" text-anchor="middle">🗑</text>
+<rect x="772" y="734" width="240" height="90" rx="6" fill="#ffffff" stroke="#8b93a1" stroke-width="1.2"/>
+<circle cx="796" cy="760" r="12" fill="#e3e5f7"/>
+<text x="796" y="764" font-size="10" font-weight="700" fill="#6e78da" text-anchor="middle">▣</text>
+<text x="818" y="756" font-size="12" font-weight="700" fill="#1f2430" text-anchor="start">Analyst</text>
+<text x="818" y="771" font-size="10" font-weight="400" fill="#6b7280" text-anchor="start">Turns sources and data…</text>
+<text x="818" y="784" font-size="9" font-weight="400" fill="#6b7280" text-anchor="start">Hiring pool</text>
+<rect x="944" y="796" width="54" height="20" rx="4" fill="#ffffff" stroke="#1f2430" stroke-width="1.2"/>
+<text x="971" y="810" font-size="10" font-weight="600" fill="#1f2430" text-anchor="middle">Add</text>
+<text x="264" y="838" font-size="10" font-weight="400" fill="#6b7280" text-anchor="start" font-style="italic">Order: Add card, the roles the template defines (green “Suggested”), your own roles, then the rest of the pool. Edit and Delete only on your own roles; ☑ = on the roster.</text>
+<text x="64" y="852" font-size="12" font-weight="700" fill="#1f2430" text-anchor="start">Draft roster</text>
+<text x="150" y="852" font-size="10" font-weight="400" fill="#6b7280" text-anchor="start">2 draft Teammates · dashed ring = not hired yet</text>
+<rect x="380" y="840" width="32" height="17" rx="8.5" fill="#475569"/>
+<text x="396.0" y="852.5" font-size="11" font-weight="700" fill="#fff" text-anchor="middle">B9c</text>
+<rect x="64" y="862" width="260" height="130" rx="6" fill="#f0f1fb" stroke="#6e78da" stroke-width="1.4"/>
+<circle cx="92" cy="888" r="15" fill="#e3d3a6" stroke="#1f2430" stroke-width="1.2" stroke-dasharray="3 2"/>
+<text x="92" y="892" font-size="11" font-weight="700" fill="#1f2430" text-anchor="middle">S</text>
+<text x="118" y="884" font-size="12" font-weight="700" fill="#1f2430" text-anchor="start">Sam</text>
+<text x="118" y="898" font-size="10" font-weight="400" fill="#6b7280" text-anchor="start">Development Manager</text>
+<rect x="256" y="874" width="56" height="16" rx="8" fill="#6e78da" stroke="#6e78da" stroke-width="1"/>
+<text x="284" y="885" font-size="8" font-weight="700" fill="#fff" text-anchor="middle">MANAGER</text>
+<text x="78" y="918" font-size="10" font-weight="400" fill="#1f2430" text-anchor="start">Plans, assigns and tracks development work…</text>
+<rect x="78" y="928" width="54" height="14" rx="7" fill="#e3e5f7" stroke="#e3e5f7" stroke-width="1"/>
+<text x="105" y="938" font-size="9" font-weight="400" fill="#1f2430" text-anchor="middle">strongest</text>
+<line x1="78" y1="950" x2="310" y2="950" stroke="#d6d9e0" stroke-width="1"/>
+<rect x="78" y="958" width="60" height="22" rx="4" fill="#ffffff" stroke="#1f2430" stroke-width="1.2"/>
+<text x="108" y="973" font-size="9" font-weight="600" fill="#1f2430" text-anchor="middle">⚄ Re-roll</text>
+<text x="170" y="973" font-size="10" font-weight="400" fill="#1f2430" text-anchor="middle">✎ Edit</text>
+<text x="236" y="973" font-size="10" font-weight="400" fill="#1f2430" text-anchor="middle">Remove</text>
+<rect x="340" y="862" width="260" height="130" rx="6" fill="#ffffff" stroke="#8b93a1" stroke-width="1.2"/>
+<circle cx="368" cy="888" r="15" fill="#bfdbfe" stroke="#1f2430" stroke-width="1.2" stroke-dasharray="3 2"/>
+<text x="368" y="892" font-size="11" font-weight="700" fill="#1f2430" text-anchor="middle">L</text>
+<text x="394" y="884" font-size="12" font-weight="700" fill="#1f2430" text-anchor="start">Leo</text>
+<text x="394" y="898" font-size="10" font-weight="400" fill="#6b7280" text-anchor="start">Developer</text>
+<text x="354" y="918" font-size="10" font-weight="400" fill="#1f2430" text-anchor="start">Builds the assigned change and its tests…</text>
+<rect x="354" y="928" width="54" height="14" rx="7" fill="#dbeafe" stroke="#dbeafe" stroke-width="1"/>
+<text x="381" y="938" font-size="9" font-weight="400" fill="#1f2430" text-anchor="middle">balanced</text>
+<line x1="354" y1="950" x2="586" y2="950" stroke="#d6d9e0" stroke-width="1"/>
+<rect x="354" y="958" width="60" height="22" rx="4" fill="#ffffff" stroke="#1f2430" stroke-width="1.2"/>
+<text x="384" y="973" font-size="9" font-weight="600" fill="#1f2430" text-anchor="middle">⚄ Re-roll</text>
+<text x="446" y="973" font-size="10" font-weight="400" fill="#1f2430" text-anchor="middle">✎ Edit</text>
+<text x="512" y="973" font-size="10" font-weight="400" fill="#1f2430" text-anchor="middle">Remove</text>
+<rect x="616" y="862" width="260" height="130" rx="6" fill="#ffffff" stroke="#8b93a1" stroke-width="1.2" stroke-dasharray="6 4"/>
+<text x="746" y="922" font-size="10" font-weight="400" fill="#6b7280" text-anchor="middle">Draft Teammates appear here,</text>
+<text x="746" y="936" font-size="10" font-weight="400" fill="#6b7280" text-anchor="middle">each with a name and an avatar.</text>
+<text x="746" y="1010" font-size="10" font-weight="400" fill="#6b7280" text-anchor="middle" font-style="italic">While the roster is empty this dashed box holds the space</text>
+<text x="896" y="884" font-size="10" font-weight="400" fill="#6b7280" text-anchor="start" font-style="italic">Each card: an avatar drawn from the library</text>
+<text x="896" y="898" font-size="10" font-weight="400" fill="#6b7280" text-anchor="start" font-style="italic">(a role’s suggested images first) in a dashed ring,</text>
+<text x="896" y="912" font-size="10" font-weight="400" fill="#6b7280" text-anchor="start" font-style="italic">a drawn name, the role, a Manager badge for the</text>
+<text x="896" y="926" font-size="10" font-weight="400" fill="#6b7280" text-anchor="start" font-style="italic">template’s manager, the model tier, and Re-roll</text>
+<text x="896" y="940" font-size="10" font-weight="400" fill="#6b7280" text-anchor="start" font-style="italic">(name and avatar), Edit (B9e) and Remove.</text>
+<rect x="48" y="1076" width="1104" height="100" rx="6" fill="#ffffff" stroke="#8b93a1" stroke-width="1.4"/>
+<rect x="54" y="1081" width="32" height="17" rx="8.5" fill="#475569"/>
+<text x="70.0" y="1093.5" font-size="11" font-weight="700" fill="#fff" text-anchor="middle">B10</text>
+<text x="98" y="1094" font-size="12" font-weight="600" fill="#1f2430" text-anchor="start">Approve section (once a type is chosen)</text>
+<rect x="64" y="1104" width="18" height="18" rx="4" fill="#e3e5f7" stroke="#e3e5f7" stroke-width="1"/>
+<text x="73" y="1117" font-size="11" font-weight="700" fill="#6e78da" text-anchor="middle">4</text>
+<text x="90" y="1118" font-size="13" font-weight="700" fill="#1f2430" text-anchor="start">Approve</text>
+<rect x="64" y="1128" width="150" height="34" rx="6" fill="#6e78da" stroke="#6e78da" stroke-width="1"/>
+<text x="139" y="1150" font-size="12" font-weight="700" fill="#fff" text-anchor="middle">✓ Approve &amp; hire</text>
+<text x="232" y="1150" font-size="10" font-weight="400" fill="#6b7280" text-anchor="start">Off (hint: “Finish the team details first.” or “Add at least one Teammate to the roster.”) until step 2 is</text>
+<text x="232" y="1164" font-size="10" font-weight="400" fill="#6b7280" text-anchor="start">complete and the roster has a Teammate. On: creates the Team, hires the roster, sets the manager, opens the Team.</text>
+<rect x="760" y="1086" width="380" height="24" rx="4" fill="#fdecea" stroke="#d32f2f" stroke-width="1.2" stroke-dasharray="6 4"/>
+<text x="770" y="1102" font-size="10" font-weight="400" fill="#7f1d1d" text-anchor="start">A refused hire shows here; part-way failures add “Open team”.</text>
+<rect x="24" y="1206" width="1152" height="430" rx="6" fill="#f6f7f9" stroke="#8b93a1" stroke-width="1.4"/>
+<text x="36" y="1226" font-size="12" font-weight="700" fill="#1f2430" text-anchor="start">Dialogs the page opens</text>
+<rect x="48" y="1240" width="360" height="360" rx="6" fill="#ffffff" stroke="#8b93a1" stroke-width="1.4"/>
+<rect x="54" y="1245" width="32" height="17" rx="8.5" fill="#475569"/>
+<text x="70.0" y="1257.5" font-size="11" font-weight="700" fill="#fff" text-anchor="middle">B8b</text>
+<text x="100" y="1258" font-size="11" font-weight="600" fill="#1f2430" text-anchor="start">Folder picker (FolderPickerDialog)</text>
+<text x="64" y="1286" font-size="13" font-weight="700" fill="#1f2430" text-anchor="start">Choose a folder</text>
+<text x="386" y="1286" font-size="11" font-weight="400" fill="#6b7280" text-anchor="middle">✕</text>
+<rect x="64" y="1298" width="28" height="28" rx="4" fill="#ffffff" stroke="#8b93a1" stroke-width="1.2"/>
+<text x="78" y="1317" font-size="12" font-weight="700" fill="#6b7280" text-anchor="middle">↑</text>
+<rect x="100" y="1298" width="292" height="28" rx="4" fill="#f6f7f9" stroke="#8b93a1" stroke-width="1.2"/>
+<text x="110" y="1316" font-size="11" font-weight="400" fill="#1f2430" text-anchor="start">C:\data\Teams</text>
+<rect x="64" y="1338" width="328" height="26" rx="4" fill="#ffffff" stroke="#d6d9e0" stroke-width="1"/>
+<text x="74" y="1355" font-size="10" font-weight="400" fill="#1f2430" text-anchor="start">📁  Garden</text>
+<rect x="64" y="1368" width="328" height="26" rx="4" fill="#ffffff" stroke="#d6d9e0" stroke-width="1"/>
+<text x="74" y="1385" font-size="10" font-weight="400" fill="#1f2430" text-anchor="start">📁  Growth</text>
+<rect x="64" y="1398" width="328" height="26" rx="4" fill="#ffffff" stroke="#d6d9e0" stroke-width="1"/>
+<text x="74" y="1415" font-size="10" font-weight="400" fill="#1f2430" text-anchor="start">📁  Platform</text>
+<text x="64" y="1450" font-size="10" font-weight="400" fill="#6b7280" text-anchor="start" font-style="italic">Up one folder; type a path and press Enter; hidden and system</text>
+<text x="64" y="1464" font-size="10" font-weight="400" fill="#6b7280" text-anchor="start" font-style="italic">folders are left out; a drive root goes up to the list of drives.</text>
+<text x="250" y="1580" font-size="11" font-weight="400" fill="#1f2430" text-anchor="middle">Cancel</text>
+<rect x="300" y="1564" width="92" height="26" rx="4" fill="#6e78da" stroke="#6e78da" stroke-width="1"/>
+<text x="346" y="1581" font-size="11" font-weight="600" fill="#fff" text-anchor="middle">Select</text>
+<rect x="424" y="1240" width="360" height="360" rx="6" fill="#ffffff" stroke="#8b93a1" stroke-width="1.4"/>
+<rect x="430" y="1245" width="32" height="17" rx="8.5" fill="#475569"/>
+<text x="446.0" y="1257.5" font-size="11" font-weight="700" fill="#fff" text-anchor="middle">B9b</text>
+<text x="476" y="1258" font-size="11" font-weight="600" fill="#1f2430" text-anchor="start">Role form (RoleFormDialog)</text>
+<text x="440" y="1286" font-size="13" font-weight="700" fill="#1f2430" text-anchor="start">Add a role  /  Edit role</text>
+<text x="762" y="1286" font-size="11" font-weight="400" fill="#6b7280" text-anchor="middle">✕</text>
+<rect x="440" y="1300" width="328" height="30" rx="4" fill="#f6f7f9" stroke="#8b93a1" stroke-width="1.2"/>
+<text x="450" y="1314" font-size="10" font-weight="400" fill="#6b7280" text-anchor="start">Title</text>
+<rect x="440" y="1340" width="328" height="30" rx="4" fill="#f6f7f9" stroke="#8b93a1" stroke-width="1.2"/>
+<text x="450" y="1354" font-size="10" font-weight="400" fill="#6b7280" text-anchor="start">What it does</text>
+<rect x="440" y="1380" width="328" height="110" rx="4" fill="#f6f7f9" stroke="#8b93a1" stroke-width="1.2"/>
+<text x="450" y="1394" font-size="10" font-weight="400" fill="#6b7280" text-anchor="start">Instructions (six lines)</text>
+<rect x="440" y="1500" width="328" height="30" rx="4" fill="#f6f7f9" stroke="#8b93a1" stroke-width="1.2"/>
+<text x="450" y="1514" font-size="10" font-weight="400" fill="#6b7280" text-anchor="start">Model strength</text>
+<text x="440" y="1546" font-size="10" font-weight="400" fill="#6b7280" text-anchor="start" font-style="italic">Opened by the + card and by Edit on your own role. Saved to</text>
+<text x="440" y="1560" font-size="10" font-weight="400" fill="#6b7280" text-anchor="start" font-style="italic">custom-roles.json; Save is off until there is a title.</text>
+<text x="626" y="1590" font-size="11" font-weight="400" fill="#1f2430" text-anchor="middle">Cancel</text>
+<rect x="676" y="1572" width="92" height="20" rx="4" fill="#6e78da" stroke="#6e78da" stroke-width="1"/>
+<text x="722" y="1586" font-size="11" font-weight="600" fill="#fff" text-anchor="middle">Save</text>
+<rect x="800" y="1240" width="360" height="360" rx="6" fill="#ffffff" stroke="#8b93a1" stroke-width="1.4"/>
+<rect x="806" y="1245" width="32" height="17" rx="8.5" fill="#475569"/>
+<text x="822.0" y="1257.5" font-size="11" font-weight="700" fill="#fff" text-anchor="middle">B9e</text>
+<text x="852" y="1258" font-size="11" font-weight="600" fill="#1f2430" text-anchor="start">Edit draft (TeammateCard, draft mode)</text>
+<text x="816" y="1286" font-size="13" font-weight="700" fill="#1f2430" text-anchor="start">Edit draft</text>
+<text x="1138" y="1286" font-size="11" font-weight="400" fill="#6b7280" text-anchor="middle">✕</text>
+<circle cx="846" cy="1330" r="22" fill="#e3d3a6" stroke="#1f2430" stroke-width="1.2"/>
+<text x="846" y="1335" font-size="13" font-weight="700" fill="#1f2430" text-anchor="middle">S</text>
+<rect x="884" y="1304" width="264" height="30" rx="4" fill="#f6f7f9" stroke="#8b93a1" stroke-width="1.2"/>
+<text x="894" y="1322" font-size="10" font-weight="400" fill="#6b7280" text-anchor="start">Name  (random-name button)</text>
+<rect x="884" y="1342" width="264" height="30" rx="4" fill="#f6f7f9" stroke="#8b93a1" stroke-width="1.2"/>
+<text x="894" y="1360" font-size="10" font-weight="400" fill="#6b7280" text-anchor="start">Title</text>
+<rect x="884" y="1380" width="264" height="30" rx="4" fill="#f6f7f9" stroke="#8b93a1" stroke-width="1.2"/>
+<text x="894" y="1398" font-size="10" font-weight="400" fill="#6b7280" text-anchor="start">Alias</text>
+<rect x="884" y="1418" width="264" height="30" rx="4" fill="#f6f7f9" stroke="#8b93a1" stroke-width="1.2"/>
+<text x="894" y="1436" font-size="10" font-weight="400" fill="#6b7280" text-anchor="start">Teams</text>
+<rect x="816" y="1460" width="332" height="40" rx="4" fill="#f6f7f9" stroke="#8b93a1" stroke-width="1.2"/>
+<text x="826" y="1476" font-size="10" font-weight="400" fill="#6b7280" text-anchor="start">Persona body, Skills, Model, Effort, Work mode</text>
+<text x="816" y="1520" font-size="10" font-weight="400" fill="#6b7280" text-anchor="start" font-style="italic">The same card as a new Teammate, started from the draft with its</text>
+<text x="816" y="1534" font-size="10" font-weight="400" fill="#6b7280" text-anchor="start" font-style="italic">avatar. Save draft changes only the roster card; nothing is created.</text>
+<text x="1020" y="1590" font-size="11" font-weight="400" fill="#1f2430" text-anchor="middle">Cancel</text>
+<rect x="1054" y="1572" width="94" height="20" rx="4" fill="#6e78da" stroke="#6e78da" stroke-width="1"/>
+<text x="1101" y="1586" font-size="11" font-weight="600" fill="#fff" text-anchor="middle">Save draft</text>
+<text x="24" y="1668" font-size="11" font-weight="700" fill="#6b7280" text-anchor="start">Key</text>
+<rect x="58" y="1657" width="30" height="14" rx="3" fill="#f6f7f9" stroke="#8b93a1" stroke-width="1.2"/>
+<text x="94" y="1668" font-size="11" font-weight="400" fill="#6b7280" text-anchor="start">always rendered</text>
+<rect x="194" y="1657" width="30" height="14" rx="3" fill="#ffffff" stroke="#8b93a1" stroke-width="1.2" stroke-dasharray="6 4"/>
+<text x="230" y="1668" font-size="11" font-weight="400" fill="#6b7280" text-anchor="start">only in some states</text>
+</svg>

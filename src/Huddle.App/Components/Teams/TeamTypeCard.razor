@@ -1,0 +1,76 @@
+@using Agency.Huddle.App.Components.Shared
+
+@*
+    One selectable team type on the Build a team page (step 1, Team type). A pressed button, like ChipCloud's
+    chips: selection reads as the check mark and aria-pressed, never by colour alone. The caller owns the selection.
+    "You have one" says the Human already runs a Team of this type. Parameters are plain values because a
+    [Parameter] may not be of an internal type (rules.md), and TeamTypeManifest is internal.
+*@
+
+@{
+    TeamTypeStyle style = TeamTypeStyles.For(this.TypeId);
+}
+
+<button type="button" class="@this.CardClass" aria-pressed="@(this.Selected ? "true" : "false")" @onclick="this.OnSelect">
+    <span class="@($"team-type-icon team-type-tint-{style.Color.ToString().ToLowerInvariant()}")" aria-hidden="true">
+        <MudIcon Icon="@style.Icon" Size="Size.Small" />
+    </span>
+    <span class="team-type-text">
+        <span class="team-type-name">@this.Name</span>
+        <span class="team-type-tagline">@TeamTypeStyles.Tagline(this.Description)</span>
+        <span class="team-type-meta">
+            <span class="team-type-roles">@(this.MetaText ?? $"Manager + {Plural.Of(this.Roles, "role", "roles")}")</span>
+            @if (this.Owned)
+            {
+                <span class="team-type-owned">You have one</span>
+            }
+        </span>
+    </span>
+    @if (this.Selected)
+    {
+        <span class="team-type-check">
+            <MudIcon Icon="@Icons.Material.Filled.Check" Size="Size.Small" />
+            <span class="visually-hidden">Selected</span>
+        </span>
+    }
+</button>
+
+@code {
+    /// <summary>The team type's id, which picks its icon and tint and is what <see cref="OnPick"/> reports.</summary>
+    [Parameter]
+    [EditorRequired]
+    public string TypeId { get; set; } = string.Empty;
+
+    /// <summary>The team type's display name.</summary>
+    [Parameter]
+    [EditorRequired]
+    public string Name { get; set; } = string.Empty;
+
+    /// <summary>The team type's description; the card shows its first sentence.</summary>
+    [Parameter]
+    public string? Description { get; set; }
+
+    /// <summary>How many roles the type lists besides its manager.</summary>
+    [Parameter]
+    public int Roles { get; set; }
+
+    /// <summary>Replaces "Manager + N roles" for a card with no roles to count, such as the Blank Team.</summary>
+    [Parameter]
+    public string? MetaText { get; set; }
+
+    /// <summary>Whether this is the chosen type.</summary>
+    [Parameter]
+    public bool Selected { get; set; }
+
+    /// <summary>Whether a Team of this type already exists.</summary>
+    [Parameter]
+    public bool Owned { get; set; }
+
+    /// <summary>Raised with the type's id when the card is pressed.</summary>
+    [Parameter]
+    public EventCallback<string> OnPick { get; set; }
+
+    private string CardClass => this.Selected ? "team-type-card team-type-card-selected" : "team-type-card";
+
+    private Task OnSelect() => this.OnPick.InvokeAsync(this.TypeId);
+}

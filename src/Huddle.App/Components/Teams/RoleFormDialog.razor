@@ -1,0 +1,122 @@
+@using Agency.Huddle.App.Components.Shared.Dialogs
+@using Agency.Huddle.App.HiringPool
+@using Agency.Huddle.App.Skills
+@using Agency.Huddle.App.TeamTypes
+
+@*
+    The form for a custom role on the Build a team page (step 3, Hire): add a new one, or edit one that exists (Id is
+    set). Save returns a CustomRole as the dialog's result; the caller stores it. Parameters are plain values because a
+    [Parameter] may not be of an internal type (rules.md), and CustomRole is internal.
+*@
+
+@inject SkillStore InstalledSkills
+@inject SkillsCatalogIndex SkillCatalog
+
+<MudDialog>
+    <DialogContent>
+        <MudStack Spacing="3">
+            <MudTextField T="string" Variant="Variant.Outlined" Margin="Margin.Dense" Label="Title" Immediate="true" Required="true"
+                          Value="this.title" ValueChanged="this.OnTitleChanged" MaxLength="60" Class="custom-role-title" />
+            <MudTextField T="string" Variant="Variant.Outlined" Margin="Margin.Dense" Label="What it does" Immediate="true"
+                          Value="this.description" ValueChanged="this.OnDescriptionChanged" MaxLength="200" Class="custom-role-description" />
+            <MudTextField T="string" Variant="Variant.Outlined" Margin="Margin.Dense" Label="Instructions" Immediate="true" Lines="6"
+                          HelperText="What a Teammate in this role is told to do."
+                          Value="this.instructions" ValueChanged="this.OnInstructionsChanged" Class="custom-role-instructions" />
+            <MudSelect T="string" Label="Skills" MultiSelection="true" SelectedValues="@this.skills" SelectedValuesChanged="this.OnSkillsChanged"
+                       Variant="Variant.Outlined" Margin="Margin.Dense" HelperText="Installed Skills and the whole catalog; a Teammate in this role carries them." Class="custom-role-skills">
+                @foreach (Skill skill in this.InstalledSkills.All)
+                {
+                    <MudSelectItem T="string" Value="@skill.Name">
+                        <MudText>@skill.Name</MudText>
+                        <SkillProvenanceLine Skill="@skill" />
+                        @if (SkillOrigin.Of(skill) is { } origin)
+                        {
+                            <MudText Typo="Typo.caption" Class="d-block mud-text-secondary skill-origin">@origin</MudText>
+                        }
+                    </MudSelectItem>
+                }
+                @foreach (SkillsCatalogEntry entry in this.SkillCatalog.All.Where(entry => this.InstalledSkills.Get(entry.Name) is null).OrderBy(static entry => entry.Name, StringComparer.OrdinalIgnoreCase))
+                {
+                    <MudSelectItem T="string" Value="@entry.Name">
+                        <MudText>@entry.Name</MudText>
+                        <MudText Typo="Typo.caption" Class="d-block mud-text-secondary skill-origin">@SkillOrigin.Describe(entry.Publisher, entry.Repo, entry.Path)</MudText>
+                        <MudText Typo="Typo.caption" Class="d-block mud-text-secondary">From the catalog; imported when a Team is approved.</MudText>
+                    </MudSelectItem>
+                }
+            </MudSelect>
+            <MudSelect T="ModelTier" Variant="Variant.Outlined" Margin="Margin.Dense" Label="Model strength"
+                       Value="this.tier" ValueChanged="this.OnTierChanged" Class="custom-role-tier">
+                <MudSelectItem T="ModelTier" Value="ModelTier.Strongest">Strongest</MudSelectItem>
+                <MudSelectItem T="ModelTier" Value="ModelTier.Balanced">Balanced</MudSelectItem>
+                <MudSelectItem T="ModelTier" Value="ModelTier.Fast">Fast</MudSelectItem>
+            </MudSelect>
+        </MudStack>
+    </DialogContent>
+    <DialogActions>
+        <MudButton Variant="Variant.Text" Size="Size.Small" OnClick="this.Cancel">Cancel</MudButton>
+        <MudButton Variant="Variant.Filled" Size="Size.Small" Color="Color.Primary" Disabled="@(this.title.Trim().Length == 0)" OnClick="this.Save"
+                   Class="custom-role-save">Save</MudButton>
+    </DialogActions>
+</MudDialog>
+
+@code {
+    /// <summary>How a caller shows this dialog: the shared small-form options (the backdrop does not dismiss it, so typing is not lost).</summary>
+    public static DialogOptions Options => HuddleDialogOptions.SmallForm;
+
+    private string title = string.Empty;
+    private string description = string.Empty;
+    private string instructions = string.Empty;
+    private ModelTier tier = ModelTier.Balanced;
+    private IReadOnlyList<string> skills = [];
+
+    [CascadingParameter]
+    private IMudDialogInstance? Dialog { get; set; }
+
+    /// <summary>The id of the role being edited; <see langword="null"/> when a new role is being added.</summary>
+    [Parameter]
+    public string? Id { get; set; }
+
+    /// <summary>The title to start with.</summary>
+    [Parameter]
+    public string? Title { get; set; }
+
+    /// <summary>The description to start with.</summary>
+    [Parameter]
+    public string? Description { get; set; }
+
+    /// <summary>The instructions to start with.</summary>
+    [Parameter]
+    public string? Instructions { get; set; }
+
+    /// <summary>The names of the Skills to start with.</summary>
+    [Parameter]
+    public IReadOnlyList<string>? RoleSkills { get; set; }
+
+    /// <summary>The model strength to start with.</summary>
+    [Parameter]
+    public ModelTier Tier { get; set; } = ModelTier.Balanced;
+
+    /// <inheritdoc />
+    protected override void OnInitialized()
+    {
+        this.title = this.Title ?? string.Empty;
+        this.description = this.Description ?? string.Empty;
+        this.instructions = this.Instructions ?? string.Empty;
+        this.tier = this.Tier;
+        this.skills = this.RoleSkills ?? [];
+    }
+
+    private void OnTitleChanged(string? value) => this.title = value ?? string.Empty;
+
+    private void OnDescriptionChanged(string? value) => this.description = value ?? string.Empty;
+
+    private void OnInstructionsChanged(string? value) => this.instructions = value ?? string.Empty;
+
+    private void OnTierChanged(ModelTier value) => this.tier = value;
+
+    private void OnSkillsChanged(IReadOnlyCollection<string> value) => this.skills = [.. value];
+
+    private void Save() => this.Dialog?.Close(DialogResult.Ok(new CustomRole(this.Id ?? string.Empty, this.title, this.description, this.instructions, this.tier, this.skills)));
+
+    private void Cancel() => this.Dialog?.Cancel();
+}

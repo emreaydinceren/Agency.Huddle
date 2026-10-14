@@ -2094,7 +2094,8 @@ a.team-ref,
 }
 
 .team-page-wide .team-tasks-tab,
-.team-page-wide .team-members {
+.team-page-wide .team-roster,
+.team-page-wide .team-details {
     padding: 0 1rem 1rem;
 }
 
@@ -2664,100 +2665,14 @@ a.team-ref,
 }
 
 @media (max-width: 600px) {
-    .team-page-wide .team-members,
+    .team-page-wide .team-roster,
+    .team-page-wide .team-details,
     .team-page-wide .team-tasks-tab {
         padding-inline: 0.5rem;
     }
 }
 
-/* ---- Team setup ------------------------------------------------------------------------------- */
-
-/* Team setup (/teams/new, /teams/{Team}/setup): the hiring pool on the left, the Team being built on the
-   right, the Process step under them and a footer that keeps the team check and Start Team in view. */
-.team-setup {
-    display: flex;
-    flex-direction: column;
-    gap: 1.5rem;
-}
-
-.team-setup-header {
-    display: flex;
-    flex-wrap: wrap;
-    align-items: baseline;
-    justify-content: space-between;
-    gap: 0.5rem 1rem;
-}
-
-.team-setup-manager-line {
-    display: flex;
-    align-items: baseline;
-    gap: 0.5rem;
-}
-
-.team-setup-manager-label {
-    color: var(--mud-palette-text-secondary);
-}
-
-.team-setup-manager {
-    font-weight: 600;
-}
-
-.team-setup-manager-card {
-    display: flex;
-    flex-direction: column;
-    align-items: flex-start;
-    gap: 0.5rem;
-    padding: 1rem;
-}
-
-.hiring-pool {
-    display: grid;
-    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
-    gap: 1.5rem;
-    align-items: start;
-}
-
-.hiring-pool-pool,
-.hiring-pool-team {
-    display: flex;
-    flex-direction: column;
-    gap: 0.5rem;
-    min-width: 0;
-    padding: 1rem;
-    background: var(--mud-palette-background-gray);
-    border: 1px solid var(--mud-palette-divider);
-    border-radius: var(--mud-default-borderradius);
-}
-
-.hiring-pool-heading,
-.hiring-pool-next-label,
-.hiring-pool-count {
-    color: var(--mud-palette-text-secondary);
-}
-
-.hiring-pool-filters {
-    display: flex;
-    flex-direction: column;
-    gap: 0.375rem;
-    margin-bottom: 0.5rem;
-}
-
-.hiring-pool-tags {
-    flex-wrap: wrap;
-    gap: 0.25rem;
-}
-
-.hiring-pool-clear {
-    align-self: flex-start;
-    font: inherit;
-    font-size: var(--mud-typography-body2-size);
-    color: var(--mud-palette-text-primary);
-    background: transparent;
-    border: 1px solid var(--mud-palette-divider);
-    border-radius: 999px;
-    padding: 0.25rem 0.75rem;
-    cursor: pointer;
-}
+/* ---- Chip cloud and process step ------------------------------------------------------------- */
 
 .chip-cloud-title {
     font-size: var(--mud-typography-caption-size);
@@ -2803,65 +2718,6 @@ a.team-ref,
     color: var(--mud-palette-text-secondary);
 }
 
-.hiring-pool-card,
-.hiring-pool-hired,
-.hiring-pool-custom {
-    padding: 0.75rem 1rem;
-    background: var(--mud-palette-surface);
-}
-
-.hiring-pool-custom {
-    border-style: dashed;
-}
-
-.hiring-pool-card-full {
-    background: var(--mud-palette-background-gray);
-}
-
-.hiring-pool-card-full .hiring-pool-title,
-.hiring-pool-card-full .hiring-pool-tier,
-.hiring-pool-card-full .hiring-pool-covers {
-    color: var(--mud-palette-text-disabled);
-}
-
-.hiring-pool-limit {
-    font-weight: 600;
-    color: var(--mud-palette-text-secondary);
-}
-
-.hiring-pool-next {
-    display: flex;
-    gap: 0.375rem;
-}
-
-.hiring-pool-hired-needs-setup {
-    border-color: var(--mud-palette-warning);
-}
-
-.hiring-pool-avatar {
-    flex: 0 0 auto;
-}
-
-.hiring-pool-name {
-    font-weight: 600;
-}
-
-.hiring-pool-status {
-    font-weight: 600;
-}
-
-.hiring-pool-hired:not(.hiring-pool-hired-needs-setup) .hiring-pool-status {
-    color: var(--mud-palette-success);
-}
-
-.hiring-pool-hired-needs-setup .hiring-pool-status {
-    color: var(--mud-palette-warning);
-}
-
-.hiring-pool-connected {
-    align-self: flex-start;
-}
-
 .process-step {
     padding: 1rem;
     background: var(--mud-palette-surface);
@@ -2874,71 +2730,270 @@ a.team-ref,
     padding: 0.75rem;
 }
 
-.team-setup-footer {
-    position: sticky;
-    bottom: 0;
-    z-index: 1;
+/* ---- Build a team ----------------------------------------------------------------------------- */
+
+/* Build a team (/teams/build): the step strip over the team type grid. */
+.build-team {
+    display: flex;
+    flex-direction: column;
+    gap: 1.5rem;
+}
+
+.page-header-subtitle {
+    color: var(--mud-palette-text-secondary);
+}
+
+.build-stepper {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 0.75rem;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+}
+
+.build-step {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    min-width: 0;
+    padding-bottom: 0.5rem;
+    border-bottom: 2px solid var(--mud-palette-divider);
+}
+
+.build-step-done,
+.build-step-current {
+    border-bottom-color: var(--mud-palette-primary);
+}
+
+.build-step-badge {
+    display: inline-flex;
+    flex: 0 0 auto;
+    align-items: center;
+    justify-content: center;
+    width: 1.5rem;
+    height: 1.5rem;
+    border-radius: 50%;
+    border: 1px solid var(--mud-palette-divider);
+    font-size: var(--mud-typography-caption-size);
+    font-weight: 600;
+    color: var(--mud-palette-text-secondary);
+}
+
+.build-step-current .build-step-badge {
+    border-color: var(--mud-palette-primary);
+    background: var(--mud-palette-primary);
+    color: var(--mud-palette-primary-text);
+}
+
+.build-step-done .build-step-badge {
+    border-color: var(--mud-palette-primary);
+    background: var(--mud-palette-primary);
+    color: var(--mud-palette-primary-text);
+}
+
+.build-step-text {
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+}
+
+.build-step-label {
+    font-size: var(--mud-typography-body2-size);
+    font-weight: 600;
+}
+
+.build-step-todo .build-step-label {
+    color: var(--mud-palette-text-secondary);
+}
+
+.build-step-detail {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    font-size: var(--mud-typography-caption-size);
+    color: var(--mud-palette-text-secondary);
+}
+
+.build-team-section {
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+}
+
+.build-team-section-head {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.build-team-section-number {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 1.5rem;
+    height: 1.5rem;
+    border-radius: var(--mud-default-borderradius);
+    background: color-mix(in srgb, var(--mud-palette-primary) 14%, var(--mud-palette-surface));
+    font-size: var(--mud-typography-caption-size);
+    font-weight: 600;
+    color: var(--mud-palette-primary);
+}
+
+.build-team-intro {
+    color: var(--mud-palette-text-secondary);
+}
+
+.build-team-details-card {
+    max-width: 32rem;
+}
+
+.team-type-grid {
+    display: grid;
+    grid-template-rows: repeat(2, auto);
+    grid-auto-flow: column;
+    grid-auto-columns: 16rem;
+    gap: 0.75rem;
+    overflow-x: auto;
+    padding-bottom: 0.5rem;
+}
+
+.team-type-card {
+    position: relative;
+    display: flex;
+    align-items: flex-start;
+    gap: 0.75rem;
+    min-width: 0;
+    padding: 0.75rem;
+    font: inherit;
+    text-align: start;
+    color: var(--mud-palette-text-primary);
+    background: var(--mud-palette-surface);
+    border: 1px solid var(--mud-palette-divider);
+    border-radius: calc(var(--mud-default-borderradius) * 1.5);
+    cursor: pointer;
+}
+
+.team-type-card:hover {
+    background: var(--mud-palette-action-default-hover);
+}
+
+.team-type-card-selected,
+.team-type-card-selected:hover {
+    background: color-mix(in srgb, var(--mud-palette-primary) 14%, var(--mud-palette-surface));
+    border-color: var(--mud-palette-primary);
+}
+
+.team-type-card-selected:hover {
+    background: color-mix(in srgb, var(--mud-palette-primary) 24%, var(--mud-palette-surface));
+}
+
+.team-type-icon {
+    display: inline-flex;
+    flex: 0 0 auto;
+    align-items: center;
+    justify-content: center;
+    width: 2rem;
+    height: 2rem;
+    border-radius: 50%;
+}
+
+.team-type-tint-default {
+    color: var(--mud-palette-text-secondary);
+    background: var(--mud-palette-background-gray);
+}
+
+.team-type-tint-primary {
+    color: var(--mud-palette-primary);
+    background: color-mix(in srgb, var(--mud-palette-primary) 14%, var(--mud-palette-surface));
+}
+
+.team-type-tint-secondary {
+    color: var(--mud-palette-secondary);
+    background: color-mix(in srgb, var(--mud-palette-secondary) 14%, var(--mud-palette-surface));
+}
+
+.team-type-tint-tertiary {
+    color: var(--mud-palette-tertiary);
+    background: color-mix(in srgb, var(--mud-palette-tertiary) 14%, var(--mud-palette-surface));
+}
+
+.team-type-tint-info {
+    color: var(--mud-palette-info);
+    background: color-mix(in srgb, var(--mud-palette-info) 14%, var(--mud-palette-surface));
+}
+
+.team-type-tint-success {
+    color: var(--mud-palette-success);
+    background: color-mix(in srgb, var(--mud-palette-success) 14%, var(--mud-palette-surface));
+}
+
+.team-type-tint-warning {
+    color: var(--mud-palette-warning);
+    background: color-mix(in srgb, var(--mud-palette-warning) 14%, var(--mud-palette-surface));
+}
+
+.team-type-tint-error {
+    color: var(--mud-palette-error);
+    background: color-mix(in srgb, var(--mud-palette-error) 14%, var(--mud-palette-surface));
+}
+
+.team-type-text {
+    display: flex;
+    flex: 1 1 auto;
+    flex-direction: column;
+    gap: 0.25rem;
+    min-width: 0;
+}
+
+.team-type-name {
+    font-size: var(--mud-typography-subtitle1-size);
+    font-weight: 600;
+}
+
+.team-type-tagline {
+    display: -webkit-box;
+    overflow: hidden;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 2;
+    line-clamp: 2;
+    font-size: var(--mud-typography-body2-size);
+    color: var(--mud-palette-text-secondary);
+}
+
+.team-type-meta {
     display: flex;
     flex-wrap: wrap;
     align-items: center;
     justify-content: space-between;
-    gap: 0.75rem 1.5rem;
-    padding: 0.75rem 1rem;
-    background: var(--mud-palette-surface);
-    border: 1px solid var(--mud-palette-divider);
-    border-radius: var(--mud-default-borderradius);
-}
-
-.team-setup-footer-status {
-    flex: 1 1 20rem;
-    min-width: 0;
-}
-
-.team-check-bar > .mud-stack {
-    flex-wrap: wrap;
-}
-
-.team-check-vendors,
-.team-check-processes {
+    gap: 0.25rem 0.5rem;
+    font-size: var(--mud-typography-caption-size);
     color: var(--mud-palette-text-secondary);
 }
 
-.team-check-blockers {
-    margin: 0.5rem 0 0;
-    padding-inline-start: 1.25rem;
-    font-size: var(--mud-typography-body2-size);
-    color: var(--mud-palette-warning);
+.team-type-owned {
+    padding: 0.25rem 0.5rem;
+    border: 1px solid var(--mud-palette-divider);
+    border-radius: 999px;
+    font-weight: 600;
+    color: var(--mud-palette-text-primary);
 }
 
-@media (max-width: 900px) {
-    .hiring-pool {
-        grid-template-columns: minmax(0, 1fr);
-    }
+.team-type-check {
+    display: inline-flex;
+    flex: 0 0 auto;
+    align-items: center;
+    justify-content: center;
+    width: 1.5rem;
+    height: 1.5rem;
+    border-radius: 50%;
+    background: var(--mud-palette-primary);
+    color: var(--mud-palette-primary-text);
 }
+
 @media (max-width: 600px) {
-    .hiring-pool-pool,
-    .hiring-pool-team {
-        padding: 0.5rem;
-    }
-
-    .hiring-pool-card,
-    .hiring-pool-hired,
-    .hiring-pool-custom {
-        padding: 0.5rem 0.75rem;
-    }
-
-    .hiring-pool-card .mud-stack,
-    .hiring-pool-hired .mud-stack {
-        min-width: 0;
-    }
-
-    .hiring-pool-title,
-    .hiring-pool-name {
-        overflow-wrap: anywhere;
-    }
-
-    .team-setup-footer {
-        position: static;
+    .build-stepper {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
     }
 }
 
@@ -3240,4 +3295,263 @@ a.team-ref,
 
 .message-reference-gone {
     opacity: 0.6;
+}
+
+.role-card {
+    position: relative;
+    display: flex;
+    min-width: 0;
+}
+
+.role-card > .team-type-card {
+    flex: 1 1 auto;
+    padding-inline-end: 4.5rem;
+}
+
+.role-card-actions {
+    position: absolute;
+    top: 0.25rem;
+    inset-inline-end: 0.25rem;
+    display: inline-flex;
+}
+
+.role-add-card {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 0.25rem;
+    min-width: 0;
+    min-height: 5rem;
+    padding: 0.75rem;
+    font: inherit;
+    color: var(--mud-palette-primary);
+    background: transparent;
+    border: 1px dashed var(--mud-palette-divider);
+    border-radius: calc(var(--mud-default-borderradius) * 1.5);
+    cursor: pointer;
+}
+
+.role-add-card:hover {
+    background: var(--mud-palette-action-default-hover);
+    border-color: var(--mud-palette-primary);
+}
+
+.role-add-label {
+    font-size: var(--mud-typography-body2-size);
+}
+
+.role-card-body {
+    flex: 1 1 auto;
+    padding-inline-end: 4.5rem;
+    cursor: default;
+}
+
+.role-card-body:hover {
+    background: var(--mud-palette-surface);
+}
+
+.role-suggested {
+    padding: 0.25rem 0.5rem;
+    border: 1px solid var(--mud-palette-success);
+    border-radius: 999px;
+    font-weight: 600;
+    color: var(--mud-palette-success-darken);
+    background: color-mix(in srgb, var(--mud-palette-success) 14%, var(--mud-palette-surface));
+}
+
+.role-card-footer {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.5rem;
+    margin-top: 0.25rem;
+}
+
+.role-card-add {
+    margin-inline-start: auto;
+}
+
+.roster-empty {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 9rem;
+    padding: 1rem;
+    text-align: center;
+    border: 1px dashed var(--mud-palette-divider);
+    border-radius: calc(var(--mud-default-borderradius) * 1.5);
+    color: var(--mud-palette-text-secondary);
+}
+
+.build-team-roster {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+}
+
+.roster-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(16rem, 1fr));
+    gap: 0.75rem;
+}
+
+.roster-card {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+    min-width: 0;
+    padding: 0.75rem;
+    background: var(--mud-palette-surface);
+    border: 1px solid var(--mud-palette-divider);
+    border-radius: calc(var(--mud-default-borderradius) * 1.5);
+}
+
+.roster-card-manager {
+    background: color-mix(in srgb, var(--mud-palette-primary) 8%, var(--mud-palette-surface));
+    border-color: var(--mud-palette-primary);
+}
+
+.roster-card-head {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+}
+
+.roster-avatar-ring {
+    display: inline-flex;
+    flex: 0 0 auto;
+    padding: 2px;
+    border: 1px dashed var(--mud-palette-text-secondary);
+    border-radius: 50%;
+}
+
+.roster-card-who {
+    display: flex;
+    flex: 1 1 auto;
+    flex-direction: column;
+    min-width: 0;
+}
+
+.roster-name {
+    font-size: var(--mud-typography-subtitle1-size);
+    font-weight: 600;
+}
+
+.roster-title {
+    font-size: var(--mud-typography-body2-size);
+    color: var(--mud-palette-text-secondary);
+}
+
+.roster-manager-badge {
+    padding: 0.125rem 0.5rem;
+    border-radius: 999px;
+    font-size: var(--mud-typography-caption-size);
+    font-weight: 700;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+    color: var(--mud-palette-primary-text);
+    background: var(--mud-palette-primary);
+}
+
+.roster-description {
+    font-size: var(--mud-typography-body2-size);
+}
+
+.roster-tier {
+    align-self: flex-start;
+    padding: 0.125rem 0.5rem;
+    border-radius: 999px;
+    font-size: var(--mud-typography-caption-size);
+    color: var(--mud-palette-text-primary);
+    background: var(--mud-palette-background-gray);
+}
+
+.roster-tier-strongest {
+    background: color-mix(in srgb, var(--mud-palette-primary) 14%, var(--mud-palette-surface));
+}
+
+.roster-tier-balanced {
+    background: color-mix(in srgb, var(--mud-palette-info) 16%, var(--mud-palette-surface));
+}
+
+.roster-tier-fast {
+    background: color-mix(in srgb, var(--mud-palette-success) 16%, var(--mud-palette-surface));
+}
+
+.roster-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.25rem;
+    padding-top: 0.5rem;
+    border-top: 1px solid var(--mud-palette-divider);
+}
+
+.role-card-taken {
+    position: absolute;
+    bottom: 0.5rem;
+    inset-inline-end: 0.5rem;
+    display: inline-flex;
+    color: var(--mud-palette-success-darken);
+}
+
+.roster-chips {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.25rem;
+}
+
+.roster-skills {
+    padding: 0.125rem 0.5rem;
+    border: 1px solid var(--mud-palette-divider);
+    border-radius: 999px;
+    font-size: var(--mud-typography-caption-size);
+}
+
+.roster-setup {
+    font-size: var(--mud-typography-caption-size);
+    color: var(--mud-palette-warning-darken);
+}
+
+.roster-name .agent-dot {
+    margin-inline-end: 0.375rem;
+}
+
+.roster-card-existing .roster-avatar-ring {
+    border-style: solid;
+}
+
+.roster-card-removed {
+    border-color: var(--mud-palette-error);
+    border-style: dashed;
+}
+
+.roster-card-removed .roster-name {
+    text-decoration: line-through;
+}
+
+.roster-removing {
+    font-size: var(--mud-typography-caption-size);
+    font-weight: 600;
+    color: var(--mud-palette-error);
+}
+
+.roster-state {
+    padding: 0.125rem 0.5rem;
+    border-radius: 999px;
+    font-size: var(--mud-typography-caption-size);
+    background: var(--mud-palette-background-gray);
+}
+
+.roster-state-new {
+    background: color-mix(in srgb, var(--mud-palette-primary) 14%, var(--mud-palette-surface));
+}
+
+.build-team-manager {
+    max-width: 24rem;
+}
+
+.skill-origin {
+    font-weight: 600;
+    word-break: break-all;
 }

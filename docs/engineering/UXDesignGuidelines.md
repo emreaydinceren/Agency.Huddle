@@ -125,7 +125,7 @@ before you create a component, a helper or a CSS class.
 | `TeammateAvatar` | `Components/Shared/TeammateAvatar.razor` | `C5a`, `P4` | `Name`, `Avatar`, `Size`, `Class`, `PendingImage` | Every Teammate face: image, then label, then a two-letter monogram |
 | `StatusDot` | `Components/Shared/StatusDot.razor` | In `P4`, pickers | `State` (`PersonaState`) | Every Teammate health dot; it carries its own text label |
 | `TeammateLabel` | `Components/Shared/TeammateLabel.razor` | Rows in New chat and Invite | `Name`, `State`, `Avatar`, `IsUser` | A Teammate's dot, avatar and name on one line |
-| `PageHeader` | `Components/Shared/PageHeader.razor` | The page title in `P1`, `L1`, `G1`, `M1` | `Title`, `Actions`, `SetPageTitle` | Every page's one `h1`, with its action buttons at the right. The Tasks page is the one exception: its View name is the breadcrumb's last crumb, so it draws no `h1` and sets the document title with `PageTitle` |
+| `PageHeader` | `Components/Shared/PageHeader.razor` | The page title in `P1`, `L1`, `G1`, `M1`, `B2` | `Title`, `Subtitle`, `Actions`, `SetPageTitle` | Every page's one `h1`, with its action buttons at the right. The Tasks page is the one exception: its View name is the breadcrumb's last crumb, so it draws no `h1` and sets the document title with `PageTitle` |
 | `EmptyState` | `Components/Shared/EmptyState.razor` | An empty list, table or pane | `Text`, `Icon`, `Action`, `FullPane` | Any "nothing here" line; says what to do next, `role="status"` |
 | `ChipCloud` | `Components/Shared/ChipCloud.razor` | Avatar picker, hiring pool | `Title`, `Pool`, `Selected`, `Cap`, `CssClass`, `Quiet`, `OnToggle` | A wrapping cloud of toggle chips, selected first |
 | `TaskStatusChip`, `TaskPriorityChip`, `TaskAssignee` | `Components/Tasks/` | Fields of a Task in `T3`, `T4`, `T6` and search | `Status`; `Priority`; `Name`, `Presence` | A Task's State, Priority or Assignee wherever it is shown. A Board card omits the State chip |
@@ -139,7 +139,6 @@ before you create a component, a helper or a CSS class.
 | `EditPreview` | `Components/Shared/EditPreview.razor` | `C7b` | `Edit`, `Path` | A file edit's before and after |
 | `MessageReferences` | `Components/References/MessageReferences.razor` | Under `C5c` | `Message` | The reference chips a Message carries |
 | `TeamSpend` | `Components/Teams/TeamSpend.razor` | `M3` | `Members` | Spend per currency for a set of Teammates |
-| `TeamCheckBarView` | `Components/Teams/TeamCheckBarView.razor` | Team setup | the check result | A Team's readiness checks |
 | `AiReactingChip` | `Components/Tasks/AiReactingChip.razor` | `T2c` | `Watched` | Tasks an Agent is acting on |
 | `SearchCard` and the five `*SearchCard`s | `Components/Search/` | `S1b` dropdown | the hit, `Phrase` | A result row in Global search |
 
@@ -158,7 +157,8 @@ before you create a component, a helper or a CSS class.
 | `ReferencePicker` | `Components/References/ReferencePicker.razor` | `C11` | `View`, `ListboxId`, `OnPick` | The `@` picker; driven by `Composer` |
 | `NewChat` | `Components/Shared/NewChat.razor` | In `S2b` | `Team`, `OnStarted`, `OnClosed` | Starting a Room, optionally in a Team |
 | `InviteTeammate` | `Components/Shared/InviteTeammate.razor` | `C3a` | `RoomId` | Bringing a Teammate into a Room |
-| `HiringPool` | `Components/Teams/HiringPool.razor` | Team setup | `Team`, `TypeId`, `Selection`, `SelectionChanged` | Choosing Candidates by Role, with `TeammateAvatar` faces |
+| `TeamTypeCard` | `Components/Teams/TeamTypeCard.razor` | `B6a` | `TypeId`, `Name`, `Description`, `Roles`, `Selected`, `Owned`, `OnPick` | A selectable team type: icon tile, name, first sentence, "Manager + N roles", "You have one". Plain-value parameters, because `TeamTypeManifest` is internal |
+| `BuildStepper` | `Components/Teams/BuildStepper.razor` | `B3` | `Steps` (`BuildStep(Label, Detail)`), `Current`, `AriaLabel` | A numbered step strip: checked before `Current`, `aria-current` on it |
 
 ### Cards in the Transcript (`C8`)
 
@@ -178,8 +178,12 @@ the shell and follow [In-place action rows](design-system.md#in-place-action-row
 | `NameDialog` | `Components/Shared/Dialogs/` | `Label`, `ConfirmText`, `InitialValue`, `Validate`, `SubmitAsync` | Any one-field name: live validation, Enter submits, focus on open. Used for New team, New project, Rename, Rename view (`ViewActions.RenameAsync`), New note, New folder and Add folder (`NewTeamDialog`, `RenameDialog`, `NamePromptDialog` and `DeleteDialog` were removed) |
 | `ConfirmDialog` with `ConfirmAsync` | `Components/Shared/Dialogs/` | `Message`, `ConfirmText`, `Danger` | `await this.DialogService.ConfirmAsync(title, message, confirmText, danger)`; `true` only on confirm |
 | `HuddleDialogOptions` | `Components/Shared/Dialogs/HuddleDialogOptions.cs` | `SmallForm`, `Picker` | The options for every dialog: `SmallForm` for forms and confirms, `Picker` for list pickers |
-| `AddMemberDialog` | `Components/Teams/` | `Team`, `Candidates` (a snapshot) | Passing a snapshot, not live objects |
-| `DuplicateTeamDialog`, `CustomRoleDialog` | `Components/Teams/` | `SourceTeam`; `TypeId` | Multi-field, so they stay bespoke; both open with `SmallForm` |
+| `DuplicateTeamDialog` | `Components/Teams/` | `SourceTeam` | Multi-field, so it stays bespoke; opens with `SmallForm` |
+| `RoleFormDialog` | `Components/Teams/` | `Id`, `Title`, `Description`, `Instructions`, `Tier` | Adding or editing a custom role (Build a team, Hire). Returns a `CustomRole`; the caller stores it with `CustomRoleStore` |
+| `TeamDetails` | `Components/Teams/` | `Team` | A Team's type and details as Build a team's first two steps (`BuildTeam` with only `Team` set) with Save changes; the Team page's Details tab |
+| `TeamRoster` | `Components/Teams/` | `Team` | A Team's members as Build a team's Hire section (`BuildTeam` with `MembersOnly`), with status dots and Message; the Team page's Members tab |
+| `RoleCard` | `Components/Teams/` | `RoleId`, `Title`, `Description`, `Custom`, `Suggested`, `OnAdd`, `OnEdit`, `OnDelete` | A card for one hireable role with an Add button (adds a draft Teammate to Build a team's roster); a custom role adds Edit and Delete icon buttons, and `Suggested` shows a green chip |
+| `FolderPickerDialog` | `Components/Shared/` | `Start` | Choosing a folder on disk: Up, a typed path, a list of sub-folders, Select. Reads through `FolderBrowser`; returns the path as a string. Opened with `FolderPickerDialog.Options` |
 | `AddFolderDialog`, `MoveDialog` | `Components/Library/` | a path, a callback | `MoveDialog` is a `MudList` picker opened from the tree's "Move…" item |
 | `AvatarEditorDialog`, `AvatarLibraryDialog` | `Components/Shared/` | `Name`, `Current`, `Deferred` | A thin dialog around a buffered `AvatarEditor`; the library dialog draws its filters with `ChipCloud` |
 | `TeammateCard` | `Components/Shared/` | `Mode`, `Name`, … | Its header comment explains why an open dialog's parameters are frozen |
@@ -195,6 +199,7 @@ id or a snapshot: an open dialog ignores new parameters.
 
 | Helper | Path | Gives you |
 | --- | --- | --- |
+| `TeamTypeStyles` | `Components/Teams/TeamTypeStyles.cs` | `For(typeId)`: a team type's icon and palette role (tinted in CSS by `.team-type-tint-{role}`); `Tagline(description)`: the first sentence |
 | `TaskColors` | `Components/Tasks/TaskColors.cs` | `For(TaskState)`, `For(TaskPriority)`, `For(PresenceState)` as a `Color`; `Icon(TaskPriority)`. Add new status mappings here or beside it |
 | `TabIcons` | `Tabs/TabIcons.cs` | `For(name)`: the entity icon for `chat`, `team`, `project`, `tasks`, `teammates`, `settings`, `library` |
 | `MaterialSymbols` | `Tabs/MaterialSymbols.cs` | Icons MudBlazor lacks |

@@ -49,6 +49,8 @@ internal static class TeamPageTabs
                 tabs.Add(TeamPageTab.Process);
             }
 
+            // Team pages always end with Details: the type, what it's for and the Library folder
+            tabs.Add(TeamPageTab.Details);
             return tabs;
         }
     }
@@ -97,13 +99,14 @@ internal static class TeamPageTabs
 
     /// <summary>Returns the URL segment for a tab.</summary>
     /// <param name="tab">The tab to convert to a segment.</param>
-    /// <returns>"members", "files", or "tasks".</returns>
+    /// <returns>"members", "files", "tasks", "process" or "details".</returns>
     public static string Segment(TeamPageTab tab) => tab switch
     {
         TeamPageTab.Members => "members",
         TeamPageTab.Files => "files",
         TeamPageTab.Tasks => "tasks",
         TeamPageTab.Process => "process",
+        TeamPageTab.Details => "details",
         _ => "members",
     };
 }

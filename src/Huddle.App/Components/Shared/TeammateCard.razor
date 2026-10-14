@@ -353,12 +353,36 @@
             <MudSelect T="string" Label="Skills" MultiSelection="true" SelectedValues="@this.skills"
                        SelectedValuesChanged="this.OnSkillsChanged" Variant="Variant.Outlined" Margin="Margin.Dense"
                        HelperText="Changing Skills restarts this Teammate." Class="mb-4">
-                @foreach (var skill in this.Skills.All)
+                @* A draft's Skills that are not installed yet are still options, listed first and checked, so the Human sees what the
+                   role brings; they are imported when the Team is approved. *@
+                @foreach ((string Name, string Description, bool FromRole, string Origin) option in this.draftOptions.Where(static option => option.FromRole))
+                {
+                    <MudSelectItem T="string" Value="@option.Name">
+                        <MudText>@option.Name</MudText>
+                        <MudText Typo="Typo.caption" Class="d-block mud-text-secondary">@option.Description</MudText>
+                        <MudText Typo="Typo.caption" Class="d-block mud-text-secondary skill-origin">@option.Origin</MudText>
+                        <MudText Typo="Typo.caption" Class="d-block mud-text-secondary">Not installed yet; imported when you approve.</MudText>
+                    </MudSelectItem>
+                }
+                @foreach (var skill in this.OrderedSkills)
                 {
                     <MudSelectItem T="string" Value="@skill.Name">
                         <MudText>@skill.Name</MudText>
                         <MudText Typo="Typo.caption" Class="mud-text-secondary">@skill.Description</MudText>
                         <SkillProvenanceLine Skill="@skill" />
+                        @if (SkillOrigin.Of(skill) is { } origin)
+                        {
+                            <MudText Typo="Typo.caption" Class="d-block mud-text-secondary skill-origin">@origin</MudText>
+                        }
+                    </MudSelectItem>
+                }
+                @foreach ((string Name, string Description, bool FromRole, string Origin) option in this.draftOptions.Where(static option => !option.FromRole))
+                {
+                    <MudSelectItem T="string" Value="@option.Name">
+                        <MudText>@option.Name</MudText>
+                        <MudText Typo="Typo.caption" Class="d-block mud-text-secondary">@option.Description</MudText>
+                        <MudText Typo="Typo.caption" Class="d-block mud-text-secondary skill-origin">@option.Origin</MudText>
+                        <MudText Typo="Typo.caption" Class="d-block mud-text-secondary">From the catalog; imported when you approve.</MudText>
                     </MudSelectItem>
                 }
             </MudSelect>
@@ -367,7 +391,7 @@
                since this Persona last saved (Spec §6.7). Shown as a removable chip rather than silently
                dropped, so the Human can see it and take it off; OnClose runs the same WriteListField
                write as a fresh selection, just with the missing name filtered out. *@
-            @if (this.MissingSkillNames.Count > 0)
+            @if (this.MissingSkillNames.Count > 0 && !this.OnDraftSaved.HasDelegate)
             {
                 <MudStack Row="true" Spacing="1" Wrap="Wrap.Wrap" Class="mb-4">
                     @foreach (var missing in this.MissingSkillNames)
@@ -500,7 +524,7 @@
         @if (this.mode != TeammateCardMode.View)
         {
             <MudButton Variant="Variant.Text" Size="Size.Small" OnClick="this.Close">Cancel</MudButton>
-            <MudButton Variant="Variant.Filled" Size="Size.Small" Color="Color.Primary" OnClick="this.SaveAsync">@(this.mode == TeammateCardMode.Create ? "Add teammate" : "Save")</MudButton>
+            <MudButton Variant="Variant.Filled" Size="Size.Small" Color="Color.Primary" OnClick="this.SaveAsync">@this.SaveLabel</MudButton>
         }
     </DialogActions>
 </MudDialog>
@@ -579,6 +603,38 @@
     [Parameter]
     public string? FilePath { get; set; }
 
+    /// <summary>
+    /// When supplied, a Create card edits a draft instead of making a Teammate: Save raises this with the
+    /// fields as typed and closes, and nothing is written to the Persona store. Build a team's draft roster
+    /// opens the card this way.
+    /// </summary>
+    [Parameter]
+    public EventCallback<(string Name, string Title, string Text, string? Model, string? Effort, Avatar Avatar, byte[]? Image, string? ImageExtension, string? Adapter, IReadOnlyList<string> Skills)> OnDraftSaved { get; set; }
+
+    /// <summary>The Skills a draft card offers beyond the installed ones, so the whole list can be chosen from: the role's own that are not installed (<c>FromRole</c>), then every other catalog Skill. Only read with <see cref="OnDraftSaved"/>.</summary>
+    [Parameter]
+    public IReadOnlyList<(string Name, string Description, bool FromRole, string Origin)>? DraftSkillChoices { get; set; }
+
+    /// <summary>The names of the Skills the draft carries, which a draft card starts with. Only read with <see cref="OnDraftSaved"/>.</summary>
+    [Parameter]
+    public IReadOnlyList<string>? DraftSkills { get; set; }
+
+    /// <summary>The draft's avatar, which a draft card starts with instead of drawing a new one. Only read with <see cref="OnDraftSaved"/>.</summary>
+    [Parameter]
+    public Avatar? DraftAvatar { get; set; }
+
+    /// <summary>The bytes of the draft's library image, shown on the avatar until it is saved. Only read with <see cref="OnDraftSaved"/>.</summary>
+    [Parameter]
+    public byte[]? DraftImage { get; set; }
+
+    /// <summary>The extension, with its dot, of <see cref="DraftImage"/>.</summary>
+    [Parameter]
+    public string? DraftImageExtension { get; set; }
+
+    /// <summary>The Names a draft may not take, besides those of existing Teammates: the other drafts. Only read with <see cref="OnDraftSaved"/>.</summary>
+    [Parameter]
+    public IReadOnlyList<string> TakenNames { get; set; } = [];
+
     // Local, mutable working copies of the parameters above, seeded once in OnInitialized and never
     // re-seeded from the (frozen, per the file-level comment) parameters again. Every action this
     // card performs - Save, Remove, Restart, the Model/Effort probes - reads and writes these, never
@@ -598,6 +654,12 @@
     // assignment lives only in this.text's frontmatter (Spec §6.7), never on the Persona record, so
     // ReadSkills(this.text) is the only source - see its own remarks.
     private IReadOnlyList<string> skills = [];
+    private IReadOnlyList<(string Name, string Description, bool FromRole, string Origin)> draftOptions = [];
+
+    /// <summary>The installed Skills; a draft card lists the ones its role brings first, so the checked options are the first thing the Human sees.</summary>
+    private IEnumerable<Skill> OrderedSkills => this.DraftSkills is null
+        ? this.Skills.All
+        : this.Skills.All.OrderBy(skill => this.DraftSkills?.Contains(skill.Name, StringComparer.Ordinal) == true ? 0 : 1);
 
     // The avatar this card shows: what the store holds, until the avatar editor applies something, and
     // then what it applied. In Create and Edit that is only in memory until SaveAsync; in View it is
@@ -746,7 +808,20 @@
         if (this.mode == TeammateCardMode.Create)
         {
             this.avatar = Avatar.None with { Background = AvatarPalette.Pick(Random.Shared) };
-            this.name = this.PickName(null);
+            if (this.OnDraftSaved.HasDelegate && this.DraftAvatar is not null)
+            {
+                this.avatar = this.DraftAvatar;
+                this.avatarPendingBytes = this.DraftImage;
+                this.avatarPendingExtension = this.DraftImageExtension;
+            }
+
+            if (this.OnDraftSaved.HasDelegate && this.DraftSkills is not null)
+            {
+                this.skills = this.DraftSkills;
+                this.draftOptions = this.DraftSkillChoices ?? [];
+            }
+
+            this.name = this.Name.Length > 0 ? this.Name : this.PickName(null);
         }
 
         this.roomId = this.RoomId;
@@ -996,9 +1071,22 @@
         this.avatarPendingBytes = null;
         this.avatarPendingExtension = null;
     }
+    private string SaveLabel
+    {
+        get
+        {
+            if (this.mode != TeammateCardMode.Create)
+            {
+                return "Save";
+            }
+
+            return this.OnDraftSaved.HasDelegate ? "Save draft" : "Add teammate";
+        }
+    }
+
     private string CardTitle => this.mode switch
     {
-        TeammateCardMode.Create => "New teammate",
+        TeammateCardMode.Create => this.OnDraftSaved.HasDelegate ? "Edit draft" : "New teammate",
         TeammateCardMode.Edit => $"Edit {this.name}",
         _ => "Teammate",
     };
@@ -1699,6 +1787,12 @@
     private async Task SaveAsync()
     {
         var creating = this.mode == TeammateCardMode.Create;
+        if (creating && this.OnDraftSaved.HasDelegate)
+        {
+            await this.SaveDraftAsync();
+            return;
+        }
+
         Persona persona;
 
         try
@@ -1760,6 +1854,29 @@
         this.nameLocked = false;
         this.titleLocked = false;
         this.aliasLocked = false;
+    }
+
+    /// <summary>Hands the draft's fields to <see cref="OnDraftSaved"/> and closes, once the Name is free; a refusal keeps the card open and says why.</summary>
+    private async Task SaveDraftAsync()
+    {
+        string draftName = this.name.Trim();
+        if (draftName.Length == 0)
+        {
+            this.error = "A Teammate needs a Name.";
+            return;
+        }
+
+        bool taken = this.Personas.Entries.Select(static entry => entry.Name).Concat(this.TakenNames)
+            .Any(existing => string.Equals(existing, draftName, StringComparison.OrdinalIgnoreCase));
+        if (taken)
+        {
+            this.error = "A Teammate with that Name exists.";
+            return;
+        }
+
+        this.error = null;
+        await this.OnDraftSaved.InvokeAsync((draftName, this.title.Trim(), this.text, this.model, this.effort, this.avatar, this.avatarPendingBytes, this.avatarPendingExtension, this.adapter, this.skills));
+        this.MudDialog.Close();
     }
 
     /// <summary>

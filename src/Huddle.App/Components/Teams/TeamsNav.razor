@@ -8,7 +8,7 @@
 
     A MudNavGroup title toggles the group and has no Href, so a Team is a link plus a separate
     chevron rather than a nested group. The chevron's behaviour (expansion state) and the New project
-    / New team handlers arrive in tasks 7.3 and 7.4; this file only lists.
+    handler arrive in tasks 7.3 and 7.4; this file only lists.
 *@
 
 @using System.Text.Json
@@ -90,8 +90,7 @@
                     }
                 }
             }
-            <MudNavLink Icon="@Icons.Material.Filled.Add" IconColor="Color.Primary" Class="nav-action-link" OnClick="this.NewTeamAsync">New team</MudNavLink>
-            <NavTabLink Href="/teams/new" TabTitle="New team" Icon="@Icons.Material.Filled.Add" IconColor="Color.Primary" Class="nav-action-link">New team from a type</NavTabLink>
+            <NavTabLink Href="/teams/build" TabTitle="Build a team" Icon="@Icons.Material.Filled.Add" IconColor="Color.Primary" Class="nav-action-link">Build a team</NavTabLink>
         </MudNavGroup>
     </MudNavMenu>
 </div>
@@ -318,22 +317,6 @@
     /// <summary>Spec §6.5 Gating: a Project needs the Library or Tasks to live in, so "New project" is offered only when either is enabled.</summary>
     private bool ProjectsAllowed => this.TeamConfig.Value.Library.Enabled || this.TeamConfig.Value.Tasks.Enabled;
 
-    /// <summary>Asks for a Team name, creates the Team's folder and opens its page.</summary>
-    private async Task NewTeamAsync()
-    {
-        IReadOnlyList<TeamSummary> teams = this.Catalog.Teams;
-        string? name = await this.AskNameAsync("New team", "Team name", trimmed => TeamNames.ValidateTeamName(trimmed, teams));
-        if (name is null)
-        {
-            return;
-        }
-
-        await this.CreateAndOpenAsync(
-            () => this.Folders.EnsureTeam(name),
-            () => this.Catalog.Find(name) is not null,
-            $"/teams/{Uri.EscapeDataString(name)}");
-    }
-
     /// <summary>Asks for a Project name, creates the Project's folder in <paramref name="team"/> and opens its page.</summary>
     /// <param name="team">The Team whose row's menu was used.</param>
     private async Task NewProjectAsync(string team)
@@ -351,24 +334,6 @@
             () => this.Folders.EnsureProjectIn(team, project),
             () => this.Catalog.ProjectExists(team, project),
             $"/teams/{Uri.EscapeDataString(team)}/projects/{Uri.EscapeDataString(project)}");
-    }
-
-    /// <summary>Shows the name dialog and returns the trimmed name it closed with, or <see langword="null"/> when it was cancelled.</summary>
-    /// <param name="title">The dialog title.</param>
-    /// <param name="label">The field label.</param>
-    /// <param name="validate">The settled validator over the trimmed name.</param>
-    private async Task<string?> AskNameAsync(string title, string label, Func<string, string?> validate)
-    {
-        DialogParameters<NameDialog> parameters = new()
-        {
-            { x => x.Label, label },
-            { x => x.ConfirmText, "Create" },
-            { x => x.Validate, validate },
-            { x => x.SubmitAsync, static _ => Task.FromResult<string?>(null) },
-        };
-        IDialogReference reference = await this.Dialogs.ShowAsync<NameDialog>(title, parameters, HuddleDialogOptions.SmallForm);
-        DialogResult? result = await reference.Result;
-        return result is { Canceled: false, Data: string name } ? name : null;
     }
 
     /// <summary>

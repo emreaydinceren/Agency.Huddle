@@ -15,7 +15,7 @@ namespace Agency.Huddle.Tests.Ui.Teams;
 /// <summary>
 /// Pins U20 T20.1 (UX-001 Teammates, UX-051 to UX-054): a Teammates tile shows the shared
 /// <c>TeammateAvatar</c> at <c>Size.Large</c> with no size or radius override, its alias in a small
-/// <c>MudChip</c>, and left-aligned content; <c>HiringPool</c> draws its hired avatar through
+/// <c>MudChip</c>, and left-aligned content; Build a team's roster draws its avatars through
 /// <c>TeammateAvatar</c> rather than a bare <c>MudAvatar</c>.
 /// </summary>
 public sealed class TeammateTileTests
@@ -96,11 +96,11 @@ public sealed class TeammateTileTests
         Assert.Contains("align-items: flex-start;", tile, StringComparison.Ordinal); // contains-ok: haystack is one rule of the stylesheet source, not markup
     }
 
-    /// <summary>The hiring pool's hired card draws its avatar through <c>TeammateAvatar</c>, not a bare <c>MudAvatar</c>.</summary>
+    /// <summary>Build a team's roster card draws its avatar through <c>TeammateAvatar</c>, not a bare <c>MudAvatar</c>.</summary>
     [Fact]
-    public void HiringPool_Source_UsesTeammateAvatar()
+    public void BuildTeam_Source_UsesTeammateAvatar()
     {
-        string razor = File.ReadAllText(CssSource.RepoPath("src", "Huddle.App", "Components", "Teams", "HiringPool.razor"));
+        string razor = File.ReadAllText(CssSource.RepoPath("src", "Huddle.App", "Components", "Pages", "BuildTeam.razor"));
 
         Assert.Contains("<TeammateAvatar ", razor, StringComparison.Ordinal); // contains-ok: haystack is the razor source file, which a render cannot distinguish
         Assert.DoesNotContain("<MudAvatar", razor, StringComparison.Ordinal);

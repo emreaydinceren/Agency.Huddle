@@ -1012,21 +1012,19 @@ Teams: Sidebar, Members, Files, Tasks and Shared Memory — [area file](team-pag
 | Test | 💰 | Status | Issue | Notes |
 | --- | --- | --- | --- | --- |
 | [TP-T0](team-pages.md#tp-t0--click-business-team-and-open-members-tab) |  | Active | |  |
-| [TP-T1](team-pages.md#tp-t1--add-member-to-team-with-restart-warning) |  | Active | |  |
-| [TP-T2](team-pages.md#tp-t2--remove-member-from-team-with-inline-confirm) |  | Active | |  |
-| [TP-T3](team-pages.md#tp-t3--search-members-by-name-alias-or-title) |  | Active | |  |
+| [TP-T1](team-pages.md#tp-t1--members-tab-shows-the-roster-with-status-and-message) |  | Active | |  |
+| [TP-T2](team-pages.md#tp-t2--remove-from-team-keeps-the-teammate) |  | Active | |  |
 | [TP-T4](team-pages.md#tp-t4--open-files-tab-and-create-new-note) |  | Active | |  |
 | [TP-T5](team-pages.md#tp-t5--search-files-by-name) |  | Active | |  |
 | [TP-T6](team-pages.md#tp-t6--open-project-page-scoped-to-project-folder) |  | Active | |  |
 | [TP-T7](team-pages.md#tp-t7--open-tasks-tab-on-team-and-create-new-task) |  | Active | |  |
 | [TP-T8](team-pages.md#tp-t8--open-tasks-tab-on-project-and-create-new-task) |  | Active | |  |
-| [TP-T9](team-pages.md#tp-t9--create-new-team-from-sidebar) |  | Active | |  |
 | [TP-T10](team-pages.md#tp-t10--create-new-project-from-team-actions-menu) |  | Active | |  |
 | [TP-T11](team-pages.md#tp-t11--refuse-project-name-memory) |  | Active | |  |
 | [TP-T12](team-pages.md#tp-t12--team-memory-file-appears-in-another-members-next-turn) |  | Active | |  |
 | [TP-T14](team-pages.md#tp-t14--team-exists-with-no-members-but-has-members-page) |  | Active | |  |
 | [TP-T15](team-pages.md#tp-t15--team-with-no-folder-yet-creates-folder-on-first-save) |  | Active | |  |
-| [TP-REAL-01](team-pages.md#tp-real-01--row-menu-button-does-not-open-teammate-card) |  | Active | |  |
+| [TP-T16](team-pages.md#tp-t16--details-tab-saves-the-purpose-the-members-tab-hires-and-deletes) |  | Active | |  |
 | [TP-REAL-02](team-pages.md#tp-real-02--dark-theme-and-narrow-window-styling) |  | Active | |  |
 
 ## turn-detail

@@ -12,8 +12,8 @@ Run [`P-BUILD`](common.md#p-build) then [`P-LAUNCH-UAT`](common.md#p-launch-uat)
 
 1. Wait until **Ada** and **Bo** are both **Online** on `/teammates`. Both are in no Team yet.
 2. Open Ada's and Bo's root one-to-ones under **Chats** once, send `hello` in each, and note each Room's id: the 32 hexadecimal characters after `/rooms/` in the address bar. In `T-B` set `$data = 'C:\seeds\huddle\uat\data'`, and `$ada = '<Ada's room id>'`, `$bo = '<Bo's room id>'`.
-3. Create the Team **Marketing**: in the sidebar's **Teams** group select **New team**, type `Marketing`, and select **Create**. It has no members, so it has no Team Room yet, and that is expected.
-4. On **Marketing**'s **Members** tab select **Add member** and add **Ada**, then accept the restart warning. Wait until Ada is **Online** again. Then add **Bo** the same way. The Team Room appears within a few seconds of each add; if it does not, reload the page once.
+3. Create the Team **Marketing** by making the folder `<data>\Teams\Marketing` and reloading the page. It has no members, so it has no Team Room yet, and that is expected.
+4. Add **Ada** to Marketing: open her card on `/teammates`, select **Edit**, add `Marketing` to the `teams:` line of the text and save. Wait until Ada is **Online** again. Then add **Bo** the same way. The Team Room appears within a few seconds of each add; if it does not, reload the page once.
 5. The area's tests share this fixture and run in order. TEAMCHATS-02 adds a third Teammate, and TEAMCHATS-07 renames the folder, so leave the fixture as it is when a test says so.
 
 This area makes a Teammate post a Message into a Transcript by hand, because the mock Teammates strip every `@` from what they echo. Define the helper once:
@@ -65,7 +65,7 @@ After each `Post`, stop the app and relaunch it with the `P-LAUNCH-UAT` launch c
 
 **Steps**
 
-1. Open **Kim**'s card on `/teammates`, and add Kim to **Marketing** from the Members tab, accepting the restart warning.
+1. Open **Kim**'s card on `/teammates`, select **Edit**, add `Marketing` to the `teams:` line of the text and save.
 2. Wait until Kim is **Online**, then open the Team Room.
 3. Read the end of the Transcript.
 4. Open the Members tab of Marketing.
@@ -175,7 +175,7 @@ After each `Post`, stop the app and relaunch it with the `P-LAUNCH-UAT` launch c
 **Before you start**
 
 - TEAMCHATS-03 has passed, so Marketing has a Team Room and at least one more scoped Room.
-- Ada and Bo no longer carry the `Marketing` label: on the Members tab of Marketing, **Remove from Team** each of them, accept the restart warning, and wait for both to be **Online**. A Team that a Teammate still names is not gone, so it would not be archived.
+- Ada and Bo no longer carry the `Marketing` label: on the Members tab of Marketing, choose **Remove** › **Remove from Team** on each of them, select **Save changes**, and wait for both to be **Online**. A Team that a Teammate still names is not gone, so it would not be archived.
 - Note the Team Room's id and the number of Messages in it.
 
 **Steps**
@@ -201,14 +201,14 @@ After each `Post`, stop the app and relaunch it with the `P-LAUNCH-UAT` launch c
 **Before you start**
 
 - TEAMCHATS-07 has passed and the folder is named `Marketing` again.
-- Add **Ada** and **Bo** back to Marketing from the Members tab, accepting the restart warning, and wait for both to be **Online**.
+- Add **Ada** and **Bo** back to Marketing through the `teams:` line on each one's card, and wait for both to be **Online**.
 - Archive the Team Room: use its `⋯` menu and choose **Archive**. Note its Message count.
 
 **Steps**
 
 1. Restart the app, then wait one minute.
 2. Look at **Marketing** in the sidebar and at **Archived chats**.
-3. Add **Kim** to Marketing from the Members tab, accepting the restart warning.
+3. Add **Kim** to Marketing through the `teams:` line on Kim's card.
 4. Wait a minute, then open **Archived chats** and look at the Team Room.
 
 **Pass if — all of these**

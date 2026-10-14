@@ -1,0 +1,61 @@
+@*
+    The progress strip of the Build a team page: one cell per step, each with a numbered (or checked) badge, a label,
+    a one-line detail and a rule underneath. A step before Current is done and shows a check; Current is the step in
+    progress; the rest wait. State is also in the text, never colour alone: the list marks the current step with
+    aria-current and a done step's badge reads "Done".
+*@
+
+<ol class="build-stepper" aria-label="@this.AriaLabel">
+    @for (int i = 0; i < this.Steps.Count; i++)
+    {
+        BuildStep step = this.Steps[i];
+        int index = i;
+        <li class="@this.StepClass(index)" aria-current="@(index == this.Current ? "step" : null)">
+            <span class="build-step-badge">
+                @if (index < this.Current)
+                {
+                    <MudIcon Icon="@Icons.Material.Filled.Check" Size="Size.Small" />
+                    <span class="visually-hidden">Done</span>
+                }
+                else
+                {
+                    @(index + 1)
+                }
+            </span>
+            <span class="build-step-text">
+                <span class="build-step-label">@step.Label</span>
+                <span class="build-step-detail">@step.Detail</span>
+            </span>
+        </li>
+    }
+</ol>
+
+@code {
+    /// <summary>One step of the strip.</summary>
+    /// <param name="Label">The step's name, such as "Team type".</param>
+    /// <param name="Detail">The line under the name: what the step is, or what was chosen in it.</param>
+    public sealed record BuildStep(string Label, string Detail);
+
+    /// <summary>The steps, in order.</summary>
+    [Parameter]
+    [EditorRequired]
+    public IReadOnlyList<BuildStep> Steps { get; set; } = [];
+
+    /// <summary>The zero-based index of the step in progress; every step before it is done.</summary>
+    [Parameter]
+    public int Current { get; set; }
+
+    /// <summary>The accessible name of the list.</summary>
+    [Parameter]
+    public string AriaLabel { get; set; } = "Progress";
+
+    private string StepClass(int index)
+    {
+        if (index < this.Current)
+        {
+            return "build-step build-step-done";
+        }
+
+        return index == this.Current ? "build-step build-step-current" : "build-step build-step-todo";
+    }
+}

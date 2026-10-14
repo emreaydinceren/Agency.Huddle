@@ -47,11 +47,11 @@ public sealed class TeamRecordsTests
         Assert.Null(result.Problem);
     }
 
-    /// <summary>TeamPageTab enum members are Members, Files, Tasks and Process.</summary>
+    /// <summary>TeamPageTab enum members are Members, Files, Tasks, Process and Details.</summary>
     [Fact]
-    public void TeamPageTab_Members_AreMembersFilesTasksProcess()
+    public void TeamPageTab_Members_AreMembersFilesTasksProcessDetails()
     {
-        string[] expected = ["Members", "Files", "Tasks", "Process"];
+        string[] expected = ["Members", "Files", "Tasks", "Process", "Details"];
         string[] actual = Enum.GetNames<TeamPageTab>();
 
         Assert.Equal(expected, actual);

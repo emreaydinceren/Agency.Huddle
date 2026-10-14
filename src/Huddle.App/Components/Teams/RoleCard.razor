@@ -1,0 +1,90 @@
+@*
+    One role on the Build a team page (step 3, Hire). Its Add button puts a new Teammate for this role on the draft
+    roster; the role itself is not chosen or used up, so it can be added again. A custom role also carries Edit and
+    Delete buttons.
+*@
+
+<div class="role-card">
+    <div class="team-type-card role-card-body">
+        @if (this.Taken)
+        {
+            <span class="role-card-taken" title="On the draft roster">
+                <MudIcon Icon="@Icons.Material.Outlined.CheckBox" Size="Size.Small" />
+                <span class="visually-hidden">On the draft roster</span>
+            </span>
+        }
+        <span class="@($"team-type-icon {(this.Custom ? "team-type-tint-secondary" : "team-type-tint-primary")}")" aria-hidden="true">
+            <MudIcon Icon="@(this.Custom ? Icons.Material.Outlined.PersonAdd : Icons.Material.Outlined.Badge)" Size="Size.Small" />
+        </span>
+        <span class="team-type-text">
+            <span class="team-type-name">@this.Title</span>
+            <span class="team-type-tagline">@this.Description</span>
+            <span class="team-type-meta">
+                <span class="team-type-roles">@(this.Custom ? "Your role" : "Hiring pool")</span>
+            </span>
+            <span class="role-card-footer">
+                @if (this.Suggested)
+                {
+                    <span class="role-suggested">Suggested</span>
+                }
+                <MudButton Variant="Variant.Outlined" Size="Size.Small" OnClick="this.OnAddClick"
+                           aria-label="@($"Add {this.Title}")" Class="role-card-add">Add</MudButton>
+            </span>
+        </span>
+    </div>
+    @if (this.Custom)
+    {
+        <span class="role-card-actions">
+            <MudIconButton Icon="@Icons.Material.Outlined.Edit" Size="Size.Small" aria-label="@($"Edit {this.Title}")"
+                           OnClick="this.OnEditClick" Class="role-card-edit" />
+            <MudIconButton Icon="@Icons.Material.Outlined.Delete" Size="Size.Small" aria-label="@($"Delete {this.Title}")"
+                           OnClick="this.OnDeleteClick" Class="role-card-delete" />
+        </span>
+    }
+</div>
+
+@code {
+    /// <summary>The role's id, which is what the callbacks report.</summary>
+    [Parameter]
+    [EditorRequired]
+    public string RoleId { get; set; } = string.Empty;
+
+    /// <summary>The role's title.</summary>
+    [Parameter]
+    [EditorRequired]
+    public string Title { get; set; } = string.Empty;
+
+    /// <summary>The role's description; the card shows up to two lines of it.</summary>
+    [Parameter]
+    public string? Description { get; set; }
+
+    /// <summary>Whether the Human wrote this role, which makes it editable and deletable.</summary>
+    [Parameter]
+    public bool Custom { get; set; }
+
+    /// <summary>Whether the chosen team type's template defines this role, which earns it a "Suggested" chip.</summary>
+    [Parameter]
+    public bool Suggested { get; set; }
+
+    /// <summary>Whether the draft roster already has a Teammate for this role, which shows a subtle check: the role is taken care of.</summary>
+    [Parameter]
+    public bool Taken { get; set; }
+
+    /// <summary>Raised with the role's id when Add is pressed.</summary>
+    [Parameter]
+    public EventCallback<string> OnAdd { get; set; }
+
+    /// <summary>Raised with the role's id when Edit is pressed.</summary>
+    [Parameter]
+    public EventCallback<string> OnEdit { get; set; }
+
+    /// <summary>Raised with the role's id when Delete is pressed.</summary>
+    [Parameter]
+    public EventCallback<string> OnDelete { get; set; }
+
+    private Task OnAddClick() => this.OnAdd.InvokeAsync(this.RoleId);
+
+    private Task OnEditClick() => this.OnEdit.InvokeAsync(this.RoleId);
+
+    private Task OnDeleteClick() => this.OnDelete.InvokeAsync(this.RoleId);
+}

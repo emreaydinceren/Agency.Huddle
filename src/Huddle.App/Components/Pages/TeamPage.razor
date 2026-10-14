@@ -103,8 +103,7 @@
                         @switch (current)
                         {
                             case TeamPageTab.Members:
-                                <TeamMembers Team="@summary" Search="@this.SearchFor(current)"
-                                             SearchChanged="@(text => this.SetSearch(current, text))" />
+                                <TeamRoster Team="@summary.Name" />
                                 break;
                             case TeamPageTab.Files:
                                 <TeamFilesTab Team="@summary.Name" Project="@project" Search="@this.SearchFor(current)"
@@ -116,6 +115,9 @@
                                 break;
                             case TeamPageTab.Process:
                                 <ProcessTab Team="@summary.Name" />
+                                break;
+                            case TeamPageTab.Details:
+                                <TeamDetails Team="@summary.Name" />
                                 break;
                         }
                     </MudTabPanel>
@@ -168,6 +170,7 @@
         TeamPageTab.Members => TabIcons.For("teammates"),
         TeamPageTab.Files => TabIcons.For("library"),
         TeamPageTab.Process => Icons.Material.Outlined.AccountTree,
+        TeamPageTab.Details => Icons.Material.Outlined.Info,
         _ => TabIcons.For("tasks"),
     };
 
