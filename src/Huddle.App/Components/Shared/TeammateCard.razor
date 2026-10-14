@@ -359,9 +359,9 @@
                 {
                     <MudSelectItem T="string" Value="@option.Name">
                         <MudText>@option.Name</MudText>
-                        <MudText Typo="Typo.caption" Class="mud-text-secondary">@option.Description</MudText>
-                        <MudText Typo="Typo.caption" Class="mud-text-secondary skill-origin">@option.Origin</MudText>
-                        <MudText Typo="Typo.caption" Class="mud-text-secondary">Not installed yet; imported when you approve.</MudText>
+                        <MudText Typo="Typo.caption" Class="d-block mud-text-secondary">@option.Description</MudText>
+                        <MudText Typo="Typo.caption" Class="d-block mud-text-secondary skill-origin">@option.Origin</MudText>
+                        <MudText Typo="Typo.caption" Class="d-block mud-text-secondary">Not installed yet; imported when you approve.</MudText>
                     </MudSelectItem>
                 }
                 @foreach (var skill in this.OrderedSkills)
@@ -372,7 +372,7 @@
                         <SkillProvenanceLine Skill="@skill" />
                         @if (SkillOrigin.Of(skill) is { } origin)
                         {
-                            <MudText Typo="Typo.caption" Class="mud-text-secondary skill-origin">@origin</MudText>
+                            <MudText Typo="Typo.caption" Class="d-block mud-text-secondary skill-origin">@origin</MudText>
                         }
                     </MudSelectItem>
                 }
@@ -380,9 +380,9 @@
                 {
                     <MudSelectItem T="string" Value="@option.Name">
                         <MudText>@option.Name</MudText>
-                        <MudText Typo="Typo.caption" Class="mud-text-secondary">@option.Description</MudText>
-                        <MudText Typo="Typo.caption" Class="mud-text-secondary skill-origin">@option.Origin</MudText>
-                        <MudText Typo="Typo.caption" Class="mud-text-secondary">From the catalog; imported when you approve.</MudText>
+                        <MudText Typo="Typo.caption" Class="d-block mud-text-secondary">@option.Description</MudText>
+                        <MudText Typo="Typo.caption" Class="d-block mud-text-secondary skill-origin">@option.Origin</MudText>
+                        <MudText Typo="Typo.caption" Class="d-block mud-text-secondary">From the catalog; imported when you approve.</MudText>
                     </MudSelectItem>
                 }
             </MudSelect>

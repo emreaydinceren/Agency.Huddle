@@ -31,7 +31,7 @@
                         <SkillProvenanceLine Skill="@skill" />
                         @if (SkillOrigin.Of(skill) is { } origin)
                         {
-                            <MudText Typo="Typo.caption" Class="mud-text-secondary skill-origin">@origin</MudText>
+                            <MudText Typo="Typo.caption" Class="d-block mud-text-secondary skill-origin">@origin</MudText>
                         }
                     </MudSelectItem>
                 }
@@ -39,8 +39,8 @@
                 {
                     <MudSelectItem T="string" Value="@entry.Name">
                         <MudText>@entry.Name</MudText>
-                        <MudText Typo="Typo.caption" Class="mud-text-secondary skill-origin">@SkillOrigin.Describe(entry.Publisher, entry.Repo, entry.Path)</MudText>
-                        <MudText Typo="Typo.caption" Class="mud-text-secondary">From the catalog; imported when a Team is approved.</MudText>
+                        <MudText Typo="Typo.caption" Class="d-block mud-text-secondary skill-origin">@SkillOrigin.Describe(entry.Publisher, entry.Repo, entry.Path)</MudText>
+                        <MudText Typo="Typo.caption" Class="d-block mud-text-secondary">From the catalog; imported when a Team is approved.</MudText>
                     </MudSelectItem>
                 }
             </MudSelect>

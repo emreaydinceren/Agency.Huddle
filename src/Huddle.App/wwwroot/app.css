@@ -3663,3 +3663,8 @@ a.team-ref,
     font-size: var(--mud-typography-caption-size);
     color: var(--mud-palette-warning-darken);
 }
+
+.skill-origin {
+    font-weight: 600;
+    word-break: break-all;
+}
