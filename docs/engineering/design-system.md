@@ -113,7 +113,12 @@ tests cover palettes, not tinted states; see [Known gaps](#known-gaps).
 **The shipped palettes.** Huddle Light and Huddle Dark are authored in
 [`HuddleTheme.cs`](../../src/Huddle.App/Themes/HuddleTheme.cs). Their neutrals are warm,
 low-contrast greys and near-neutral charcoals sampled from the Claude desktop app.
-`Primary` is the same indigo (`#6e78da`) in light and dark. The catalog
+`Primary` is the same indigo (`#6e78da`) in light and dark, and `PrimaryContrastText` is white in
+both, and in the Custom Accent themes whatever the accent ([`AccentTheme.cs`](../../src/Huddle.App/Themes/AccentTheme.cs)),
+so every button, avatar and chip filled with the accent carries white text or icons. White on `#6e78da`
+is 3.92:1, under the 4.5:1 text floor (black would reach 5.36:1), and `Primary` against Surface (3.92:1)
+and Background (3.44:1) also falls short; `ThemeCatalogTests` records these as documented shortfalls for
+the Huddle themes. The catalog
 also holds an accent pair whose `Primary` the Human picks, and 17 palettes converted from
 VS Code ([ADR-0016](../adr/0016-vs-codes-bundled-themes-are-converted-once-not-imported.md)).
 All 21 sit in three picker groups: Light, Dark and High Contrast.
@@ -143,7 +148,7 @@ at `h5`; don't use `h1` to `h4` as a `Typo`.
 
 | Role | `Typo` | `HtmlTag` | Examples |
 | --- | --- | --- | --- |
-| Page title | `h5` | `h1` | "All Tasks", a Room's name (`C2`, UX-038), "Settings", a Team's name |
+| Page title | `h5` | `h1` | a Room's name (`C2`, UX-038), "Settings", a Team's name. The Tasks page is the one exception: no `h1`, its View name is the breadcrumb's last crumb |
 | Dialog or drawer title | `h6` | MudBlazor's | "New team", "Task PLAT-12" |
 | Section heading inside a page or panel | `subtitle2` | `h2` | Teammates groups, Prompts groups (UX-001) |
 | Card title | `subtitle1` | | A Teammate tile's name, an agent card's "Nova is asking" (UX-031) |
@@ -355,7 +360,8 @@ container's code (`S2`, `C7a`, `T3`) is in [wireframes.md](wireframes.md).
 3. **Title it.** Every page opens with a page header: the title as
    `MudText Typo="Typo.h5" HtmlTag="h1"` on the left and the page's actions on the right,
    each a `Size.Small` button at its natural width, never full width. Set `<PageTitle>` to
-   the same text (UX-001, UX-004). A page's toolbar sits under the header, lined up with
+   the same text (UX-001, UX-004). The one exception is the Tasks page: it has no `h1`, because
+   the View's name is the breadcrumb's last crumb; its `<PageTitle>` still sets the document title. A page's toolbar sits under the header, lined up with
    the title.
 4. **Fill the pane.** The page's root is `h-100`, with `min-height: 0` on a flex child so
    inner regions scroll instead of the page growing past the window (`.room-column` is the
@@ -374,7 +380,7 @@ acts on one tab lives inside that tab, not above the rail (UX-010).
 | A form or a short flow | `MudDialog` through `IDialogService` | Pass an id or a snapshot, not live objects: an open dialog's parameters are frozen |
 | A destructive yes or no | The shared confirm (see [Confirming](#confirming)) | Not a custom dialog per site |
 | A destructive yes or no on a list row | `InlineConfirm` | Swaps in for the row |
-| A side panel over a page | `MudDrawer`, `Variant.Temporary`, `Anchor.End` | Task detail and the View editor |
+| A side panel over a page | `MudDrawer`, `Variant.Temporary`, `Anchor.End` | Task detail |
 | A transient result | `ISnackbar` | Always with a `key` |
 | A menu or picker | `MudMenu`, `MudPopover` | The popover provider cancels the 90% zoom; don't re-scale |
 
@@ -393,7 +399,7 @@ acts on one tab lives inside that tab, not above the rail (UX-010).
 
 ### Drawer anatomy
 
-A side drawer (`T7`, the View editor) has a header row with its title (`Typo.h6`) and a
+A side drawer (`T7`, the Task detail) has a header row with its title (`Typo.h6`) and a
 close `MudIconButton`, content in `pa-4` with `MudStack Spacing="4"`, and its actions at
 the bottom in the dialog order. A resizable drawer uses one shared handle (UX-048,
 UX-R05).
@@ -455,7 +461,7 @@ Start from the pattern in the file the table names; the full list is in
 | `Composer` and `ReferencePicker` | Message input and the `@` picker | The picker is a popover; its keyboard shortcuts are in the User Guide |
 | `PageBreadcrumbs` | A pane's trail | Drawn by the shell, not by a page |
 | `ChipCloud` | A wrapping cloud of filter chips, selected first | Selection reads as text and `aria-pressed`, never by colour alone. Use it wherever chips filter a list. `Quiet` draws the unselected chips without a fill; `AvatarChipCloud.Arrange` orders them |
-| `PageHeader` | A page's one `h1` (`Typo.h5`) with a right-aligned `Actions` slot; also sets the Tab title | Every page starts with it; a page never writes its own `h1` or a loose action row |
+| `PageHeader` | A page's one `h1` (`Typo.h5`) with a right-aligned `Actions` slot; also sets the Tab title | Every page starts with it, except Tasks, which has no `h1` (its View name is the breadcrumb's last crumb); a page never writes its own `h1` or a loose action row |
 | `EmptyState` | An empty list, table or pane: `Typo.body1`, secondary colour, `role="status"`, a next-step sentence, an optional `Icon` and `Action` | `FullPane` for a whole-pane empty state (`2rem`), otherwise inline (`1rem`). In a table, put it in a `colspan` row |
 | `SearchField` | The one search box: outlined, dense, `Filled.Search` adornment, clearable, debounced | Team page, Tasks and Skill import use it; takes `Value`, `Placeholder`, `AriaLabel` |
 | `TeammateLabel` | A Teammate's dot, avatar and name on one line | `Name`, `State`, `Avatar`, `IsUser`. New chat and Invite use it; don't rebuild the row |
@@ -463,8 +469,9 @@ Start from the pattern in the file the table names; the full list is in
 | `ConfirmDialog` and `ConfirmAsync` | A destructive or irreversible yes or no that needs a dialog | `await DialogService.ConfirmAsync(title, message, confirmText, danger)` returns `true` only when confirmed. Use `InlineConfirm` instead when the answer replaces a list row |
 | `HuddleDialogOptions` | The two dialog option sets | `SmallForm` for forms and confirms (close button, no backdrop dismiss); `Picker` for list pickers (backdrop dismisses). Never build `DialogOptions` by hand |
 | `AgentCard` and `AgentCardBase` | The shell and the busy logic of the five Transcript cards | `AgentCard` draws the outlined panel, title and action row; `AgentCardBase` owns load, subscribe, the archived check and `RunBusyAsync`, which reports a failure through a keyed snackbar. A new card derives from it |
-| `ResizableEndDrawer` | The Task detail and View editor drawers | Drag and keyboard resize (Arrow, Home, End), width remembered under `StorageKey`, clamped 320 to 800px; reads the unzoomed width under the 90% zoom |
+| `ResizableEndDrawer` | The Task detail drawer | Drag and keyboard resize (Arrow, Home, End), width remembered under `StorageKey`, clamped 320 to 800px; reads the unzoomed width under the 90% zoom |
 | `TaskStatusChip`, `TaskPriorityChip`, `TaskAssignee` | Board, List, card and picker renderings of a Task's State, Priority and Assignee | Colours and icons come from `TaskColors`. A Board card shows no State chip, because its column names it |
+| `TaskFilterChip` | One filter or grouping chip of the Tasks toolbar: "Label: Value" with a caret that opens a menu, plus a clear button once set | Dashed while unset, filled once set. Owns no state; the toolbar passes the text and raises the changes. Group by, Team, Project, Assignee, Sprint, Priority, Blocked and Status use it |
 | `TaskActionsMenu` | The `Actions for {id}` menu on a Task card, List row and detail | Same items everywhere (Move to, Copy ID, Copy link); the detail adds its own through `ExtraItems` |
 | `TaskPicker` | Choosing another Task (the detail's pickers, `DuplicatePickerDialog`) | `Value`, `Excluding`, `Label` |
 | `TaskClipboard` | Copying a Task's id or link and reporting the result | A helper, not a component; Tasks, the detail and the actions menu share it |
@@ -614,7 +621,7 @@ with review: copy, icon choice, layout and the checklist below.
 - [ ] Every colour is a palette role or a `Color.*`; none is a literal. Status colours
       come from a mapping function.
 - [ ] Every line, hover, selected and drop state uses the treatments under Colour.
-- [ ] Every text size comes from the type roles; the page has one `h1`.
+- [ ] Every text size comes from the type roles; the page has one `h1` (the Tasks page has none).
 - [ ] Every spacing, radius and `z-index` value comes from the scales above.
 - [ ] Every icon comes from the entity or action table.
 
