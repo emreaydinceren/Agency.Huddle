@@ -216,12 +216,12 @@ public sealed class RoomSessionResumeTests
         RoomSessionStore store = new(dataDir.Options(), NullLogger<RoomSessionStore>.Instance);
         FakeAgentSession session = new();
 
-        // The first chunk lands (and is observed via a MessageDelta below) after a short delay that
-        // itself respects the Turn's own token; the Stop below arrives while PromptAsync is still
-        // awaiting the delay before the SECOND chunk, so PromptAsync throws
+        // The chunk lands (and is observed via a MessageDelta below), then PromptAsync waits on the
+        // Turn's own token with nothing to end it but the Stop below, so it throws
         // OperationCanceledException and never returns - promptReturned stays false - while
-        // turn.SawActivity has already been latched true by the first chunk's MessageChunk event.
-        session.EnqueueDripFedReply(TimeSpan.FromMilliseconds(150), "chunk one", "chunk two never sent");
+        // turn.SawActivity has already been latched true by the chunk's MessageChunk event. No clock
+        // is involved, so a slow Stop cannot let the Turn finish and post a reply first.
+        session.EnqueueReplyThenHang("chunk one");
         FakePersonaHost host = new(session, ClaudeProfile());
         FakeRoomSessionOwner owner = new();
         var (room, runCts) = CreateRoomSession(owner, host, store);

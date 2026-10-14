@@ -211,6 +211,21 @@ internal sealed class FakeAgentSession : IAgentSession
     }
 
     /// <summary>
+    /// Queues a turn that publishes <paramref name="chunks"/> at once and then waits until the prompt's
+    /// own token is cancelled, so <see cref="PromptAsync"/> throws <see cref="OperationCanceledException"/>
+    /// and never returns. Unlike <see cref="EnqueueDripFedReply"/> nothing here depends on a clock: the
+    /// Turn stays in flight however long a Stop takes to arrive, and ends only when the Stop does.
+    /// </summary>
+    /// <param name="chunks">The reply text, published before the wait.</param>
+    public void EnqueueReplyThenHang(params string[] chunks)
+    {
+        lock (this.gate)
+        {
+            this.plannedTurns.Enqueue(new TurnPlan(chunks, null, TimeSpan.Zero, [], HangUntilCancelled: true));
+        }
+    }
+
+    /// <summary>
     /// Queues a turn that ends in a <see cref="StopReason"/> other than <see cref="StopReason.EndTurn"/> -
     /// a Refusal or a Cancellation - so a test can prove such a Turn is handled differently even when
     /// text arrived before the stop.
@@ -413,6 +428,11 @@ internal sealed class FakeAgentSession : IAgentSession
                 }
             }
 
+            if (plan.HangUntilCancelled)
+            {
+                await Task.Delay(Timeout.InfiniteTimeSpan, ct);
+            }
+
             if (plan.Gate is { } releaseGate)
             {
                 await releaseGate;
@@ -439,5 +459,6 @@ internal sealed class FakeAgentSession : IAgentSession
         StopReason Reason = StopReason.EndTurn,
         TimeSpan? DripGap = null,
         Task? Gate = null,
-        IReadOnlyList<UsageCost?>? UsageCosts = null);
+        IReadOnlyList<UsageCost?>? UsageCosts = null,
+        bool HangUntilCancelled = false);
 }
