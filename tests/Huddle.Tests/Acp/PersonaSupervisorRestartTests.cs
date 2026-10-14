@@ -110,7 +110,10 @@ public sealed class PersonaSupervisorRestartTests
 
         personaStore.Add(Identity("nova"), "You are Nova.");
         await supervisor.StartAsync(ct);
-        await WaitUntilAsync(() => factory.Calls.Count >= 1, ct);
+        // The host is running once the supervisor has registered it, not when the factory is first called:
+        // a Restart landing in between defers to the start already in progress, so this test would race
+        // (see RestartButton_ForgetsEveryRoomSession for the same fix).
+        await WaitUntilAsync(() => supervisor.RunningHostCount >= 1, ct);
 
         var first = supervisor.RestartAsync("nova", ct);
         var second = supervisor.RestartAsync("nova", ct);
@@ -152,7 +155,12 @@ public sealed class PersonaSupervisorRestartTests
 
         personaStore.Add(Identity("nova"), "You are Nova.");
         await supervisor.StartAsync(ct);
-        await WaitUntilAsync(() => factory.Calls.Count >= 1, ct);
+        // Wait for the host to be registered as running, not for the factory call: the factory is
+        // called inside PersonaRunner.StartAsync, 5-25 ms before StartHostIfMissingAsync commits the
+        // runner to `hosts` and releases `starting`. A Restart landing in that window finds no old
+        // host and skips the start because one is already in flight, so the factory is never called
+        // a second time and the wait below times out (captured timeline: flaky-restart.md).
+        await WaitUntilAsync(() => supervisor.RunningHostCount >= 1, ct);
         var novaId = await WaitForAgentOnlineAsync(directory, gateway, "nova", ct);
         var room = await chat.CreateRoomForAsync([novaId], ct);
 
