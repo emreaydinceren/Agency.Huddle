@@ -1,0 +1,107 @@
+@using Agency.Huddle.App.Components.Shared.Dialogs
+
+@*
+    A folder picker: the Human walks the folders of the machine the app runs on (the app runs on their own machine,
+    as rules.md says of the Open action) and chooses one. Nothing is created or changed. Start is where it opens, a
+    typed path jumps there on Enter, Up goes one level (a drive root goes up to the list of drives), and Select returns
+    the folder shown as the dialog's string result. FolderBrowser does the reading.
+*@
+
+<MudDialog>
+    <DialogContent>
+        <MudStack Spacing="2">
+            <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="1">
+                <MudIconButton Icon="@Icons.Material.Filled.ArrowUpward" Size="Size.Small" aria-label="Up one folder"
+                               Disabled="@(this.listing.Current is null)" OnClick="this.Up" Class="folder-picker-up" />
+                <MudTextField T="string" Variant="Variant.Outlined" Margin="Margin.Dense" Label="Folder" Value="this.typed"
+                              ValueChanged="this.OnTyped" OnKeyDown="this.OnKeyDown" Immediate="true" Class="folder-picker-path flex-grow-1" />
+            </MudStack>
+            @if (this.listing.Error is not null)
+            {
+                <MudAlert Severity="Severity.Warning" Dense="true" role="alert" Class="folder-picker-error">@this.listing.Error</MudAlert>
+            }
+            <MudList T="string" Class="folder-picker-list" aria-label="Folders">
+                @foreach (BrowsedFolder folder in this.listing.Folders)
+                {
+                    <MudListItem T="string" Icon="@Icons.Material.Outlined.Folder" Text="@folder.Name" OnClick="@(() => this.Open(folder.Path))" Class="folder-picker-item" />
+                }
+            </MudList>
+            @if (this.listing.Truncated)
+            {
+                <MudText Typo="Typo.caption" Class="folder-picker-truncated">Showing the first @FolderBrowser.MaxFolders folders. Type a path to go further.</MudText>
+            }
+            else if (this.listing.Error is null && this.listing.Folders.Count == 0)
+            {
+                <MudText Typo="Typo.caption" Class="folder-picker-empty">No folders here.</MudText>
+            }
+        </MudStack>
+    </DialogContent>
+    <DialogActions>
+        <MudButton Variant="Variant.Text" Size="Size.Small" OnClick="this.Cancel">Cancel</MudButton>
+        <MudButton Variant="Variant.Filled" Size="Size.Small" Color="Color.Primary" Disabled="@(!this.listing.CanSelect)" OnClick="this.Select"
+                   Class="folder-picker-select">Select</MudButton>
+    </DialogActions>
+</MudDialog>
+
+@code {
+    /// <summary>How a caller shows this dialog: the shared picker options (medium, full width, close button).</summary>
+    public static DialogOptions Options => HuddleDialogOptions.Picker;
+
+    private FolderListing listing = new(null, null, [], false, null);
+    private string typed = string.Empty;
+
+    [CascadingParameter]
+    private IMudDialogInstance? Dialog { get; set; }
+
+    /// <summary>The folder to open first; blank or a folder that does not exist opens the top level.</summary>
+    [Parameter]
+    public string? Start { get; set; }
+
+    /// <inheritdoc />
+    protected override void OnInitialized()
+    {
+        FolderListing first = FolderBrowser.List(this.Start);
+        this.Show(first.Error is null ? first : FolderBrowser.List(null));
+    }
+
+    private void Show(FolderListing next)
+    {
+        this.listing = next;
+        this.typed = next.Current ?? string.Empty;
+    }
+
+    private void Open(string path) => this.Show(FolderBrowser.List(path));
+
+    /// <summary>Goes one level up; from a drive root or a root folder that is the top level.</summary>
+    private void Up() => this.Show(FolderBrowser.List(this.listing.Parent));
+
+    private void OnTyped(string? value) => this.typed = value ?? string.Empty;
+
+    /// <summary>Enter jumps to the typed path; a path that is not a folder shows its refusal and keeps the old listing.</summary>
+    private void OnKeyDown(KeyboardEventArgs args)
+    {
+        if (!string.Equals(args.Key, "Enter", StringComparison.Ordinal))
+        {
+            return;
+        }
+
+        FolderListing next = FolderBrowser.List(this.typed);
+        if (next.Error is FolderBrowser.MissingMessage)
+        {
+            this.listing = this.listing with { Error = next.Error };
+            return;
+        }
+
+        this.Show(next);
+    }
+
+    private void Select()
+    {
+        if (this.listing.Current is { } current)
+        {
+            this.Dialog?.Close(DialogResult.Ok(current));
+        }
+    }
+
+    private void Cancel() => this.Dialog?.Cancel();
+}

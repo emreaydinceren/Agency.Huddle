@@ -19,7 +19,7 @@
         <span class="team-type-name">@this.Name</span>
         <span class="team-type-tagline">@TeamTypeStyles.Tagline(this.Description)</span>
         <span class="team-type-meta">
-            <span class="team-type-roles">Manager + @Plural.Of(this.Roles, "role", "roles")</span>
+            <span class="team-type-roles">@(this.MetaText ?? $"Manager + {Plural.Of(this.Roles, "role", "roles")}")</span>
             @if (this.Owned)
             {
                 <span class="team-type-owned">You have one</span>
@@ -53,6 +53,10 @@
     /// <summary>How many roles the type lists besides its manager.</summary>
     [Parameter]
     public int Roles { get; set; }
+
+    /// <summary>Replaces "Manager + N roles" for a card with no roles to count, such as the Blank Team.</summary>
+    [Parameter]
+    public string? MetaText { get; set; }
 
     /// <summary>Whether this is the chosen type.</summary>
     [Parameter]

@@ -10,6 +10,7 @@
 @inject ITeamCatalog Catalog
 @inject PersonaStore Personas
 @inject NavigationManager Navigation
+@inject IDialogService Dialogs
 @implements IDisposable
 
 @*
@@ -33,13 +34,14 @@
         <MudText Typo="Typo.body2" Class="build-team-intro">@this.Intro</MudText>
 
         <div class="team-type-grid" role="group" aria-label="Team types">
-            @foreach (TeamTypeManifest type in this.Types.Types)
+            @foreach (TeamTypeManifest type in this.AllTypes)
             {
                 <TeamTypeCard @key="type.Id"
                               TypeId="@type.Id"
                               Name="@type.DisplayName"
                               Description="@type.Description"
                               Roles="@RoleCount(type)"
+                              MetaText="@(IsBlank(type) ? "You decide everything" : null)"
                               Selected="@string.Equals(type.Id, this.selected?.Id, StringComparison.Ordinal)"
                               Owned="@this.Owned(type.Id)"
                               OnPick="this.Pick" />
@@ -60,11 +62,13 @@
                                   Value="this.name" ValueChanged="this.OnNameChanged"
                                   Error="@(this.NameProblem is not null)" ErrorText="@this.NameProblem" Class="build-team-name" />
                     <MudTextField T="string" Variant="Variant.Outlined" Margin="Margin.Dense" Label="What it&#8217;s for" Immediate="true"
-                                  Lines="3" Value="this.purpose" ValueChanged="this.OnPurposeChanged" Class="build-team-purpose" />
+                                  Lines="6" Value="this.purpose" ValueChanged="this.OnPurposeChanged" Class="build-team-purpose" />
                     @if (chosen.Workspace.Kind != WorkspaceKind.None)
                     {
                         <MudTextField T="string" Variant="Variant.Outlined" Margin="Margin.Dense" Label="@chosen.Workspace.Label" Immediate="true"
                                       Value="this.workspace" ValueChanged="this.OnWorkspaceChanged"
+                                      Adornment="Adornment.End" AdornmentIcon="@Icons.Material.Outlined.Folder"
+                                      AdornmentAriaLabel="@($"Browse for {chosen.Workspace.Label.ToLowerInvariant()}")" OnAdornmentClick="this.BrowseAsync"
                                       Error="@(this.WorkspaceProblem is not null)" ErrorText="@this.WorkspaceProblem" Class="build-team-workspace" />
                     }
                 </MudStack>
@@ -103,6 +107,14 @@
     private string workspace = string.Empty;
     private bool nameEdited;
     private bool purposeEdited;
+
+    /// <summary>The Blank Team first, then every team type in catalog order.</summary>
+    private IReadOnlyList<TeamTypeManifest> AllTypes => [BlankTeamType.Manifest, .. this.Types.Types];
+
+    private static bool IsBlank(TeamTypeManifest type) => string.Equals(type.Id, BlankTeamType.Id, StringComparison.Ordinal);
+
+    /// <summary>The Blank Team when <paramref name="id"/> is its id, otherwise the catalog's type; <see langword="null"/> when there is none.</summary>
+    private TeamTypeManifest? FindType(string id) => string.Equals(id, BlankTeamType.Id, StringComparison.Ordinal) ? BlankTeamType.Manifest : this.Types.Find(id);
 
     private string TrimmedName => this.name.Trim();
 
@@ -197,7 +209,7 @@
     protected override void OnParametersSet()
     {
         string? typeId = QueryHelpers.ParseQuery(new Uri(this.Navigation.Uri).Query).TryGetValue("type", out var values) ? values.ToString() : null;
-        TeamTypeManifest? arrived = string.IsNullOrEmpty(typeId) ? null : this.Types.Find(typeId);
+        TeamTypeManifest? arrived = string.IsNullOrEmpty(typeId) ? null : this.FindType(typeId);
         if (!string.Equals(arrived?.Id, this.selected?.Id, StringComparison.Ordinal))
         {
             this.selected = arrived;
@@ -209,14 +221,27 @@
     private void ApplyDefaults()
     {
         this.workspace = string.Empty;
+        bool blank = this.selected is { } chosen && IsBlank(chosen);
         if (!this.nameEdited)
         {
-            this.name = this.selected?.DisplayName ?? string.Empty;
+            this.name = blank ? string.Empty : this.selected?.DisplayName ?? string.Empty;
         }
 
         if (!this.purposeEdited)
         {
-            this.purpose = this.selected?.Description ?? string.Empty;
+            this.purpose = blank ? string.Empty : this.selected?.Description ?? string.Empty;
+        }
+    }
+
+    /// <summary>Opens the folder picker at the folder typed so far and, when one is chosen, puts it in the field.</summary>
+    private async Task BrowseAsync()
+    {
+        DialogParameters<FolderPickerDialog> parameters = new() { { x => x.Start, this.workspace } };
+        IDialogReference reference = await this.Dialogs.ShowAsync<FolderPickerDialog>("Choose a folder", parameters, FolderPickerDialog.Options);
+        DialogResult? result = await reference.Result;
+        if (result is { Canceled: false, Data: string folder })
+        {
+            this.workspace = folder;
         }
     }
 
@@ -261,7 +286,7 @@
     private void Pick(string typeId)
     {
         bool same = string.Equals(this.selected?.Id, typeId, StringComparison.Ordinal);
-        this.selected = same ? null : this.Types.Find(typeId);
+        this.selected = same ? null : this.FindType(typeId);
         this.ApplyDefaults();
         this.Navigation.NavigateTo(this.Navigation.GetUriWithQueryParameter("type", same ? null : typeId), replace: true);
     }

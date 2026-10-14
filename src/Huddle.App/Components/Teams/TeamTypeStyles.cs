@@ -12,7 +12,8 @@ internal static class TeamTypeStyles
 {
     private static readonly Dictionary<string, TeamTypeStyle> Known = new(StringComparer.Ordinal)
     {
-        ["development"] = new(Icons.Material.Outlined.Code, Color.Primary),
+        ["blank"] = new(Icons.Material.Outlined.NoteAdd, Color.Default),
+        ["development"] =new(Icons.Material.Outlined.Code, Color.Primary),
         ["data"] = new(Icons.Material.Outlined.Storage, Color.Info),
         ["research"] = new(Icons.Material.Outlined.Search, Color.Success),
         ["product"] = new(Icons.Material.Outlined.Layers, Color.Secondary),

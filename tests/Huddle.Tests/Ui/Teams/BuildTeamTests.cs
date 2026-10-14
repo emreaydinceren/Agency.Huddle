@@ -72,7 +72,7 @@ public sealed class BuildTeamTests
         await using MudBunitContext ctx = fixture.NewContext();
         IRenderedComponent<ContainerFragment> cut = Render(ctx);
 
-        Assert.Equal(10, cut.FindAll(Card).Count);
+        Assert.Equal(11, cut.FindAll(Card).Count);
         Assert.Empty(cut.FindAll("button.build-team-all"));
         Assert.Single(cut.FindAll("div.team-type-grid"));
     }
@@ -86,7 +86,7 @@ public sealed class BuildTeamTests
 
         IRenderedComponent<ContainerFragment> cut = Render(ctx);
 
-        Assert.Equal("Manager + 2 roles", cut.Find(".team-type-roles").TextContent.Trim());
+        Assert.Equal("Manager + 2 roles", cut.FindAll(".team-type-roles")[1].TextContent.Trim());
     }
 
     /// <summary>Pressing a card marks it pressed, completes step 1 with the type's name and puts the choice in the address.</summary>
@@ -98,10 +98,10 @@ public sealed class BuildTeamTests
         ctx.Services.GetRequiredService<NavigationManager>().NavigateTo("/teams/build");
         IRenderedComponent<ContainerFragment> cut = Render(ctx);
 
-        await cut.InvokeAsync(() => cut.FindAll(Card)[0].ClickAsync());
+        await cut.InvokeAsync(() => cut.FindAll(Card)[1].ClickAsync());
 
-        Assert.Equal("true", cut.FindAll(Card)[0].GetAttribute("aria-pressed"));
-        Assert.Equal("false", cut.FindAll(Card)[1].GetAttribute("aria-pressed"));
+        Assert.Equal("true", cut.FindAll(Card)[1].GetAttribute("aria-pressed"));
+        Assert.Equal("false", cut.FindAll(Card)[2].GetAttribute("aria-pressed"));
         IReadOnlyList<IElement> steps = cut.FindAll("ol.build-stepper > li");
         Assert.Equal("build-step build-step-done", steps[0].ClassName);
         Assert.Equal("Type 01", steps[0].QuerySelector(".build-step-detail")?.TextContent.Trim());
@@ -136,7 +136,7 @@ public sealed class BuildTeamTests
 
         IElement pressed = Assert.Single(cut.FindAll(Card + "[aria-pressed=true]"));
         Assert.Equal("Type 10", pressed.QuerySelector(".team-type-name")?.TextContent.Trim());
-        Assert.Equal(10, cut.FindAll(Card).Count);
+        Assert.Equal(11, cut.FindAll(Card).Count);
     }
 
     /// <summary>A type a Team already uses is marked "You have one", and the intro names it.</summary>
@@ -177,12 +177,13 @@ public sealed class BuildTeamTests
         IRenderedComponent<ContainerFragment> cut = Render(ctx);
         Assert.Empty(cut.FindAll(".build-team-details"));
 
-        await cut.InvokeAsync(() => cut.FindAll(Card)[0].ClickAsync());
+        await cut.InvokeAsync(() => cut.FindAll(Card)[1].ClickAsync());
 
         Assert.Equal("Team details", cut.Find("#build-team-details-heading").TextContent.Trim());
         Assert.Equal("Type 01", cut.Find(".build-team-name input").GetAttribute("value"));
         Assert.Equal("Team name", cut.Find(".build-team-name label").TextContent.Trim());
         Assert.Equal("What it’s for", cut.Find(".build-team-purpose label").TextContent.Trim());
+        Assert.Equal("6", cut.Find(".build-team-purpose textarea").GetAttribute("rows"));
         Assert.Empty(cut.FindAll(".build-team-workspace"));
         IReadOnlyList<IElement> steps = cut.FindAll("ol.build-stepper > li");
         Assert.Equal("build-step build-step-done", steps[1].ClassName);
@@ -199,7 +200,7 @@ public sealed class BuildTeamTests
         await using MudBunitContext ctx = fixture.NewContext();
         ctx.Services.GetRequiredService<NavigationManager>().NavigateTo("/teams/build");
         IRenderedComponent<ContainerFragment> cut = Render(ctx);
-        await cut.InvokeAsync(() => cut.FindAll(Card)[0].ClickAsync());
+        await cut.InvokeAsync(() => cut.FindAll(Card)[1].ClickAsync());
 
         await cut.InvokeAsync(() => cut.Find(".build-team-name input").InputAsync("core"));
 
@@ -216,7 +217,7 @@ public sealed class BuildTeamTests
         ctx.Services.GetRequiredService<NavigationManager>().NavigateTo("/teams/build");
         IRenderedComponent<ContainerFragment> cut = Render(ctx);
 
-        await cut.InvokeAsync(() => cut.FindAll(Card)[1].ClickAsync());
+        await cut.InvokeAsync(() => cut.FindAll(Card)[2].ClickAsync());
 
         Assert.Equal("Project folder", cut.Find(".build-team-workspace label").TextContent.Trim());
         Assert.Equal("build-step build-step-current", cut.FindAll("ol.build-stepper > li")[1].ClassName);
@@ -229,6 +230,69 @@ public sealed class BuildTeamTests
 
         Assert.Empty(cut.FindAll(".build-team-workspace .mud-input-helper-text"));
         Assert.Equal("build-step build-step-done", cut.FindAll("ol.build-stepper > li")[1].ClassName);
+    }
+
+    /// <summary>The hard-coded Blank Team is the first card, says you decide everything, and is not counted among the types.</summary>
+    [Fact]
+    public async Task BlankTeam_IsTheFirstCard_AndNotCountedAmongTheTypes()
+    {
+        using Fixture fixture = new(typeCount: 3);
+        await using MudBunitContext ctx = fixture.NewContext();
+
+        IRenderedComponent<ContainerFragment> cut = Render(ctx);
+
+        IReadOnlyList<IElement> cards = cut.FindAll(Card);
+        Assert.Equal(4, cards.Count);
+        Assert.Equal("Blank Team", cards[0].QuerySelector(".team-type-name")?.TextContent.Trim());
+        Assert.Equal("You decide everything", cards[0].QuerySelector(".team-type-roles")?.TextContent.Trim());
+        Assert.Equal("Start from nothing", cards[0].QuerySelector(".team-type-tagline")?.TextContent.Trim().Split('.')[0]);
+        Assert.Equal("Huddle hires a manager and the roles around it. 3 types.", cut.Find(".build-team-intro").TextContent.Trim());
+    }
+
+    /// <summary>Choosing the Blank Team leaves the name and the purpose empty for the Human to write, offers the folder as optional, and keeps step 2 open until a name is typed.</summary>
+    [Fact]
+    public async Task BlankTeam_StartsEmpty_WithAnOptionalFolder_AndNeedsAName()
+    {
+        using Fixture fixture = new(typeCount: 3);
+        await using MudBunitContext ctx = fixture.NewContext();
+        ctx.Services.GetRequiredService<NavigationManager>().NavigateTo("/teams/build");
+        IRenderedComponent<ContainerFragment> cut = Render(ctx);
+
+        await cut.InvokeAsync(() => cut.FindAll(Card)[0].ClickAsync());
+
+        Assert.Equal("Blank Team", cut.FindAll("ol.build-stepper > li")[0].QuerySelector(".build-step-detail")?.TextContent.Trim());
+        Assert.Equal(string.Empty, cut.Find(".build-team-name input").GetAttribute("value") ?? string.Empty);
+        Assert.Equal("Folder", cut.Find(".build-team-workspace label").TextContent.Trim());
+        Assert.Equal("build-step build-step-current", cut.FindAll("ol.build-stepper > li")[1].ClassName);
+        Assert.Equal("/teams/build?type=blank", new Uri(ctx.Services.GetRequiredService<NavigationManager>().Uri).PathAndQuery);
+
+        await cut.InvokeAsync(() => cut.Find(".build-team-name input").InputAsync("Garden"));
+
+        Assert.Equal("build-step build-step-done", cut.FindAll("ol.build-stepper > li")[1].ClassName);
+    }
+
+    /// <summary>The folder field's Browse button opens the picker at the typed folder; opening a sub-folder and pressing Select puts it in the field.</summary>
+    [Fact]
+    public async Task Workspace_Browse_PicksASubFolder()
+    {
+        using Fixture fixture = new(typeCount: 3);
+        string repo = Path.Combine(fixture.DirPath, "repo");
+        Directory.CreateDirectory(repo);
+        await using MudBunitContext ctx = fixture.NewContext();
+        ctx.Services.GetRequiredService<NavigationManager>().NavigateTo("/teams/build");
+        IRenderedComponent<ContainerFragment> cut = Render(ctx);
+        await cut.InvokeAsync(() => cut.FindAll(Card)[0].ClickAsync());
+        await cut.InvokeAsync(() => cut.Find(".build-team-workspace input").InputAsync(fixture.DirPath));
+
+        _ = cut.InvokeAsync(() => cut.Find("[aria-label='Browse for folder']").Click());
+
+        Assert.Equal("Choose a folder", cut.Find(".mud-dialog-title").TextContent.Trim());
+        IElement item = cut.FindAll(".folder-picker-item").Single(candidate => string.Equals(candidate.TextContent.Trim(), "repo", StringComparison.Ordinal));
+
+        await cut.InvokeAsync(() => item.ClickAsync());
+        await cut.InvokeAsync(() => cut.Find("button.folder-picker-select").ClickAsync());
+
+        Assert.Equal(repo, cut.Find(".build-team-workspace input").GetAttribute("value"));
     }
 
     /// <summary>A renamed Chief of Staff is named in the subtitle, whatever Name it was given.</summary>

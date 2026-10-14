@@ -3071,6 +3071,11 @@ a.team-ref,
     border-radius: 50%;
 }
 
+.team-type-tint-default {
+    color: var(--mud-palette-text-secondary);
+    background: var(--mud-palette-background-gray);
+}
+
 .team-type-tint-primary {
     color: var(--mud-palette-primary);
     background: color-mix(in srgb, var(--mud-palette-primary) 14%, var(--mud-palette-surface));
