@@ -6,11 +6,13 @@
 @using Agency.Huddle.App.TeamTypes
 @using Agency.Huddle.App.Teams
 @using Microsoft.AspNetCore.WebUtilities
+@using Microsoft.Extensions.Options
 @inject TeamTypeCatalog Types
 @inject ITeamCatalog Catalog
 @inject PersonaStore Personas
 @inject NavigationManager Navigation
 @inject IDialogService Dialogs
+@inject IOptions<TeamOptions> Options
 @implements IDisposable
 
 @*
@@ -49,7 +51,7 @@
         </div>
     </section>
 
-    @if (this.selected is { } chosen)
+    @if (this.selected is not null)
     {
         <section class="build-team-section build-team-details" aria-labelledby="build-team-details-heading">
             <div class="build-team-section-head">
@@ -63,14 +65,12 @@
                                   Error="@(this.NameProblem is not null)" ErrorText="@this.NameProblem" Class="build-team-name" />
                     <MudTextField T="string" Variant="Variant.Outlined" Margin="Margin.Dense" Label="What it&#8217;s for" Immediate="true"
                                   Lines="6" Value="this.purpose" ValueChanged="this.OnPurposeChanged" Class="build-team-purpose" />
-                    @if (chosen.Workspace.Kind != WorkspaceKind.None)
-                    {
-                        <MudTextField T="string" Variant="Variant.Outlined" Margin="Margin.Dense" Label="@chosen.Workspace.Label" Immediate="true"
-                                      Value="this.workspace" ValueChanged="this.OnWorkspaceChanged"
-                                      Adornment="Adornment.End" AdornmentIcon="@Icons.Material.Outlined.Folder"
-                                      AdornmentAriaLabel="@($"Browse for {chosen.Workspace.Label.ToLowerInvariant()}")" OnAdornmentClick="this.BrowseAsync"
-                                      Error="@(this.WorkspaceProblem is not null)" ErrorText="@this.WorkspaceProblem" Class="build-team-workspace" />
-                    }
+                    <MudTextField T="string" Variant="Variant.Outlined" Margin="Margin.Dense" Label="@LibraryFolderLabel" Immediate="true"
+                                  Value="this.workspace" ValueChanged="this.OnWorkspaceChanged"
+                                  Adornment="Adornment.End" AdornmentIcon="@Icons.Material.Outlined.Folder"
+                                  AdornmentAriaLabel="Browse for library folder" OnAdornmentClick="this.BrowseAsync"
+                                  Error="@(this.WorkspaceProblem is not null)" ErrorText="@this.WorkspaceProblem" Class="build-team-workspace" />
+
                 </MudStack>
             </MudPaper>
         </section>
@@ -101,6 +101,7 @@
     }
 
     private const string ExistsMessage = "A Team with that name exists.";
+    private const string LibraryFolderLabel = "Library folder";
 
     private string name = string.Empty;
     private string purpose = string.Empty;
@@ -138,30 +139,33 @@
         }
     }
 
-    /// <summary>The refusal for the workspace folder, or <see langword="null"/>; the same rules as New team from a type.</summary>
+    /// <summary>The refusal for the Library folder, or <see langword="null"/>; every team type has one, it is optional, and a typed folder must exist.</summary>
     private string? WorkspaceProblem
     {
         get
         {
-            WorkspaceSpec? spec = this.selected?.Workspace;
-            if (spec is null || spec.Kind == WorkspaceKind.None)
+            string trimmed = this.workspace.Trim();
+            if (trimmed.Length == 0 || Directory.Exists(trimmed))
             {
                 return null;
             }
 
-            string trimmed = this.workspace.Trim();
-            if (trimmed.Length == 0)
-            {
-                return spec.Required ? "Choose a workspace folder." : null;
-            }
-
-            return Directory.Exists(trimmed) ? null : "That folder does not exist.";
+            return "That folder does not exist.";
         }
     }
 
-    /// <summary>Whether step 2 is complete: a valid, unused name and a workspace that is allowed.</summary>
-    private bool DetailsReady => this.TrimmedName.Length > 0 && this.NameProblem is null && this.WorkspaceProblem is null
-        && (this.selected?.Workspace is not { Required: true, Kind: not WorkspaceKind.None } || this.workspace.Trim().Length > 0);
+    /// <summary>Whether step 2 is complete: a valid, unused name and a Library folder that is allowed.</summary>
+    private bool DetailsReady => this.TrimmedName.Length > 0 && this.NameProblem is null && this.WorkspaceProblem is null;
+
+    /// <summary>The Teams folder under the app's data folder, the Library folder a new Team starts with; empty when it does not exist yet.</summary>
+    private string DefaultLibraryFolder
+    {
+        get
+        {
+            string folder = Path.GetFullPath(Path.Combine(this.Options.Value.DataDir, this.Options.Value.Teams.Dir));
+            return Directory.Exists(folder) ? folder : string.Empty;
+        }
+    }
 
     private int CurrentStep
     {
@@ -217,10 +221,10 @@
         }
     }
 
-    /// <summary>Starts the details from the chosen type: its name and description, unless the Human has already typed their own; the workspace is always cleared.</summary>
+    /// <summary>Starts the details from the chosen type: its name and description, unless the Human has already typed their own; the Library folder is always reset to the default.</summary>
     private void ApplyDefaults()
     {
-        this.workspace = string.Empty;
+        this.workspace = this.DefaultLibraryFolder;
         bool blank = this.selected is { } chosen && IsBlank(chosen);
         if (!this.nameEdited)
         {

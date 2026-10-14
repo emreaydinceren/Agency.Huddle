@@ -4,6 +4,7 @@ using Bunit.Rendering;
 using Microsoft.AspNetCore.Components;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging.Abstractions;
+using Agency.Huddle.App;
 using Agency.Huddle.App.Acp;
 using Agency.Huddle.App.Components.Pages;
 using Agency.Huddle.App.TeamTypes;
@@ -184,7 +185,7 @@ public sealed class BuildTeamTests
         Assert.Equal("Team name", cut.Find(".build-team-name label").TextContent.Trim());
         Assert.Equal("What it’s for", cut.Find(".build-team-purpose label").TextContent.Trim());
         Assert.Equal("6", cut.Find(".build-team-purpose textarea").GetAttribute("rows"));
-        Assert.Empty(cut.FindAll(".build-team-workspace"));
+        Assert.Equal("Library folder", cut.Find(".build-team-workspace label").TextContent.Trim());
         IReadOnlyList<IElement> steps = cut.FindAll("ol.build-stepper > li");
         Assert.Equal("build-step build-step-done", steps[1].ClassName);
         Assert.Equal("Type 01", steps[1].QuerySelector(".build-step-detail")?.TextContent.Trim());
@@ -208,25 +209,29 @@ public sealed class BuildTeamTests
         Assert.Equal("build-step build-step-current", cut.FindAll("ol.build-stepper > li")[1].ClassName);
     }
 
-    /// <summary>A type with a required workspace shows it under its own label, refuses a blank or missing folder with the New team words, and completes step 2 once the folder exists.</summary>
+    /// <summary>Every type shows the same "Library folder" field, filled with the Teams folder under the data folder; a missing folder is refused, a blank one is allowed, and an existing one is accepted.</summary>
     [Fact]
-    public async Task Details_RequiredWorkspace_IsShownRefusedAndThenAccepted()
+    public async Task Details_LibraryFolder_IsUniformDefaultedAndValidated()
     {
         using Fixture fixture = new(typeCount: 3);
+        string teamsFolder = Path.GetFullPath(Path.Combine(fixture.DirPath, new TeamOptions().Teams.Dir));
+        Directory.CreateDirectory(teamsFolder);
         await using MudBunitContext ctx = fixture.NewContext();
         ctx.Services.GetRequiredService<NavigationManager>().NavigateTo("/teams/build");
         IRenderedComponent<ContainerFragment> cut = Render(ctx);
 
         await cut.InvokeAsync(() => cut.FindAll(Card)[2].ClickAsync());
 
-        Assert.Equal("Project folder", cut.Find(".build-team-workspace label").TextContent.Trim());
-        Assert.Equal("build-step build-step-current", cut.FindAll("ol.build-stepper > li")[1].ClassName);
+        Assert.Equal("Library folder", cut.Find(".build-team-workspace label").TextContent.Trim());
+        Assert.Equal(teamsFolder, cut.Find(".build-team-workspace input").GetAttribute("value"));
+        Assert.Equal("build-step build-step-done", cut.FindAll("ol.build-stepper > li")[1].ClassName);
 
         await cut.InvokeAsync(() => cut.Find(".build-team-workspace input").InputAsync(Path.Combine(fixture.DirPath, "nowhere")));
 
         Assert.Equal("That folder does not exist.", cut.Find(".build-team-workspace .mud-input-helper-text").TextContent.Trim());
+        Assert.Equal("build-step build-step-current", cut.FindAll("ol.build-stepper > li")[1].ClassName);
 
-        await cut.InvokeAsync(() => cut.Find(".build-team-workspace input").InputAsync(fixture.DirPath));
+        await cut.InvokeAsync(() => cut.Find(".build-team-workspace input").InputAsync(string.Empty));
 
         Assert.Empty(cut.FindAll(".build-team-workspace .mud-input-helper-text"));
         Assert.Equal("build-step build-step-done", cut.FindAll("ol.build-stepper > li")[1].ClassName);
@@ -262,7 +267,7 @@ public sealed class BuildTeamTests
 
         Assert.Equal("Blank Team", cut.FindAll("ol.build-stepper > li")[0].QuerySelector(".build-step-detail")?.TextContent.Trim());
         Assert.Equal(string.Empty, cut.Find(".build-team-name input").GetAttribute("value") ?? string.Empty);
-        Assert.Equal("Folder", cut.Find(".build-team-workspace label").TextContent.Trim());
+        Assert.Equal("Library folder", cut.Find(".build-team-workspace label").TextContent.Trim());
         Assert.Equal("build-step build-step-current", cut.FindAll("ol.build-stepper > li")[1].ClassName);
         Assert.Equal("/teams/build?type=blank", new Uri(ctx.Services.GetRequiredService<NavigationManager>().Uri).PathAndQuery);
 
@@ -284,7 +289,7 @@ public sealed class BuildTeamTests
         await cut.InvokeAsync(() => cut.FindAll(Card)[0].ClickAsync());
         await cut.InvokeAsync(() => cut.Find(".build-team-workspace input").InputAsync(fixture.DirPath));
 
-        _ = cut.InvokeAsync(() => cut.Find("[aria-label='Browse for folder']").Click());
+        _ = cut.InvokeAsync(() => cut.Find("[aria-label='Browse for library folder']").Click());
 
         Assert.Equal("Choose a folder", cut.Find(".mud-dialog-title").TextContent.Trim());
         IElement item = cut.FindAll(".folder-picker-item").Single(candidate => string.Equals(candidate.TextContent.Trim(), "repo", StringComparison.Ordinal));
@@ -367,6 +372,7 @@ public sealed class BuildTeamTests
             ctx.Services.AddSingleton<ITeamCatalog>(this.Catalog);
             ctx.Services.AddSingleton(this.Types);
             ctx.Services.AddSingleton(this.Personas);
+            ctx.Services.AddSingleton(this.dir.Options());
             return ctx;
         }
 

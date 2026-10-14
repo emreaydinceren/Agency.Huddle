@@ -677,14 +677,14 @@ that type. The cards sit in two rows; scroll to the right for the rest.
 Select a card to choose that type; step 1 then shows a check and the type's name, and
 **Team details** opens under it. There you set the **Team name** (it starts as the
 type's name; a name an existing Team has is refused), **What it's for** (it starts as
-the type's description) and, for a type that has a workspace, the repository or
-folder, under the same label and with the same rule as **New team from a type**: a
-required one must be filled in and must be a folder that exists. The folder icon at
-the end of that field opens a folder picker: walk the folders, or type a path and
-press Enter, then select **Select**. Nothing is created yet; the later steps do that.
+the type's description) and the **Library folder**. Every type has the same field: it
+starts as the Teams folder under your data folder, you may clear it, and a folder you
+type must exist. The folder icon at the end of that field opens a folder picker: walk
+the folders, or type a path and press Enter, then select **Select**. Nothing is
+created yet; the later steps do that.
 
 **Blank Team**, the first card, is for when you want to decide everything: it has no
-roles and no process, its folder is optional, and its name and purpose start empty.
+roles and no process, and its name and purpose start empty.
 Select it again to clear the choice. The choice stays in the address (`?type=`), so
 it is still there when you come back to the tab. Open the page with **Build a team**,
 the last link of the Teams group in the sidebar.
