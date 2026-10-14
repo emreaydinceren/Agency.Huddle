@@ -247,8 +247,8 @@ public sealed class TaskDetailConflictTests
         cut.WaitForAssertion(() => Assert.Single(cut.FindAll(".task-detail-conflict-row"), r => r.TextContent.Contains("description", StringComparison.Ordinal)));
         IRenderedComponent<MudTextField<string>> theirsBox = cut.FindComponents<MudTextField<string>>().Single(m => string.Equals(m.Instance.Class, "task-detail-conflict-theirs", StringComparison.Ordinal));
         IRenderedComponent<MudTextField<string>> yoursBox = cut.FindComponents<MudTextField<string>>().Single(m => string.Equals(m.Instance.Class, "task-detail-conflict-yours", StringComparison.Ordinal));
-        Assert.True(theirsBox.Instance.ReadOnly);
-        Assert.True(yoursBox.Instance.ReadOnly);
+        Assert.True(theirsBox.Instance.Disabled);
+        Assert.True(yoursBox.Instance.Disabled);
         Assert.Equal(6, theirsBox.Instance.Lines);
         Assert.Equal(6, yoursBox.Instance.Lines);
         Assert.Equal("Theirs: a different plan.", theirsBox.Instance.GetState(x => x.Value));

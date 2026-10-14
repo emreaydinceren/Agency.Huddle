@@ -26,6 +26,34 @@ public sealed class AppCssTasksTests
         Assert.Contains(".task-board-lane", text, StringComparison.Ordinal);
     }
 
+    /// <summary>OP-3 (UX-007): the Board scrolls both ways inside its pane, so its scrollbar sits at the pane's bottom edge, and its column headers stick to the top.</summary>
+    [Fact]
+    public void AppCss_BoardScrollsBothWays_WithStickyColumnHeaders()
+    {
+        string text = File.ReadAllText(CssSource.RepoPath("src", "Huddle.App", "wwwroot", "app.css"));
+
+        string board = RuleBody(text, ".task-board");
+        string header = RuleBody(text, ".task-board-columns");
+        // contains-ok: source-fact test, no CSS parser - app.css's own declarations are what's pinned.
+        Assert.Contains("overflow: auto", board, StringComparison.Ordinal);
+        Assert.Contains("position: sticky", header, StringComparison.Ordinal);
+        Assert.Contains("top: 0", header, StringComparison.Ordinal);
+    }
+
+    /// <summary>The declarations of the first rule whose selector list ends with <paramref name="selector"/>.</summary>
+    /// <param name="css">The stylesheet text.</param>
+    /// <param name="selector">The selector, for example <c>.task-board</c>.</param>
+    private static string RuleBody(string css, string selector)
+    {
+        System.Text.RegularExpressions.Match match = System.Text.RegularExpressions.Regex.Match(
+            css,
+            @"(?:^|\n)(?:[^{}\n]*,\s*)?" + System.Text.RegularExpressions.Regex.Escape(selector) + @"\s*(?:,[^{}]*)?\{(?<body>[^}]*)\}",
+            System.Text.RegularExpressions.RegexOptions.CultureInvariant,
+            TimeSpan.FromSeconds(2));
+        Assert.True(match.Success, $"No rule for {selector}.");
+        return match.Groups["body"].Value;
+    }
+
     /// <summary>One column-edge class per state colour family: Default, Info, Warning, Secondary, Success, Error.</summary>
     [Theory]
     [InlineData(".task-col-edge-default")]
@@ -74,14 +102,14 @@ public sealed class AppCssTasksTests
         Assert.Contains("user-select: all", rule, StringComparison.Ordinal);
     }
 
-    /// <summary>The Board scrolls horizontally once its columns are wider than the page (finding F10).</summary>
+    /// <summary>The Board scrolls both ways inside its pane once its columns are wider or its lanes taller (finding F10, OP-3).</summary>
     [Fact]
-    public void AppCss_DeclaresTaskBoard_WithOverflowX()
+    public void AppCss_DeclaresTaskBoard_WithOverflowBothWays()
     {
         string rule = RuleFor(".task-board");
 
         // contains-ok: source-fact test, no CSS parser - the rule's own text is what's pinned.
-        Assert.Contains("overflow-x: auto", rule, StringComparison.Ordinal);
+        Assert.Contains("overflow: auto", rule, StringComparison.Ordinal);
     }
 
     /// <summary>

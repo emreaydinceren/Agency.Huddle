@@ -28,7 +28,7 @@ public sealed class TeamTasksTabTests
     private const string ActionButton = ".task-toolbar > button.btn-action-tight";
 
     /// <summary>The toolbar's search input.</summary>
-    private const string SearchInput = ".task-toolbar-search input";
+    private const string SearchInput = "input[aria-label='Search tasks']";
 
     /// <summary>The Board's column header labels.</summary>
     private const string ColumnLabel = ".task-board-column-label";
@@ -180,7 +180,7 @@ public sealed class TeamTasksTabTests
         Rig rig = Render(ctx, harness, "Business");
 
         Assert.Equal("New task", rig.Tab.Find(ActionButton).TextContent.Trim());
-        Assert.Equal("Search", rig.Tab.Find(SearchInput).GetAttribute("placeholder"));
+        Assert.Equal("Search tasks", rig.Tab.Find(SearchInput).GetAttribute("placeholder"));
         _ = rig.Tab.FindComponent<TaskToolbar>();
         Assert.NotEmpty(rig.Tab.FindAll(".task-toolbar-kind"));
         Assert.NotEmpty(rig.Tab.FindAll(".task-toolbar-blocked"));

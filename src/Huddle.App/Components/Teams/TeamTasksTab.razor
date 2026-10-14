@@ -166,23 +166,12 @@
     private async Task OpenTaskAsync(TaskId id)
     {
         DialogParameters<TaskDetailDialog> parameters = new() { { dialog => dialog.Id, id } };
-        _ = await this.Dialogs.ShowAsync<TaskDetailDialog>(id.ToString(), parameters, TaskDetailDialog.Options);
+        _ = await this.Dialogs.ShowAsync<TaskDetailDialog>(this.Store.Get(id) is { } opened ? $"{id} · {opened.Title}" : id.ToString(), parameters, TaskDetailDialog.Options);
     }
 
     /// <summary>Copies a card's id to the clipboard, with the same success or warning toast as the Tasks page.</summary>
     /// <param name="id">The Task id to copy.</param>
-    private async Task CopyIdAsync(TaskId id)
-    {
-        bool copied = await this.JS.InvokeAsync<bool>("huddleClipboard.copy", id.ToString());
-        if (copied)
-        {
-            this.Snackbar.Add($"Copied {id}", Severity.Success, configure: null, key: "copy");
-        }
-        else
-        {
-            this.Snackbar.Add("Couldn't copy. The id is selected; press Ctrl+C.", Severity.Warning, configure: null, key: "copy");
-        }
-    }
+    private Task CopyIdAsync(TaskId id) => TaskClipboard.CopyIdAsync(this.JS, this.Snackbar, id, CancellationToken.None);
 
     private void OnTasksReloaded() => _ = RendererDispatch.RunAsync(this.InvokeAsync, () =>
     {

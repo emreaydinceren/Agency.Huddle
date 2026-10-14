@@ -1673,9 +1673,19 @@ a.team-ref,
    a wide page leaves free space on the right instead of stretching them): .task-board-columns and
    .task-board-lane-columns share the exact same grid-auto-columns function, so their tracks land
    at identical x offsets and a header cell sits directly above the cards it describes. The board
-   itself scrolls horizontally once the columns are wider than the page. */
+   itself scrolls inside the pane in both directions (OP-3, UX-007): it is capped to the pane's height
+   (a viewport unit, so divided by the 0.9 zoom), which puts its horizontal scrollbar at the pane's bottom
+   edge instead of below the last lane, and the column header row sticks to the top while the lanes scroll. */
 .task-board {
-    overflow-x: auto;
+    overflow: auto;
+    max-height: calc((100vh / 0.9) - 12rem);
+}
+
+.task-board-columns {
+    position: sticky;
+    top: 0;
+    z-index: 1;
+    background: var(--mud-palette-background);
 }
 
 .task-board-columns,

@@ -544,7 +544,25 @@
 
         if (error is not null)
         {
-            this.Snackbar.Add(error, Severity.Error, configure: null, key: "board-error");
+            if (result is TaskResult.GateRefused)
+            {
+                // A refused gate offers a way forward (UX-V26): open the Task, whose detail offers Move anyway.
+                TaskId refusedId = item.Id;
+                this.Snackbar.Add(
+                    error,
+                    Severity.Error,
+                    options =>
+                    {
+                        options.Action = "Open task";
+                        options.OnClick = _ => this.OnOpenTask.InvokeAsync(refusedId);
+                    },
+                    key: "board-gate");
+            }
+            else
+            {
+                this.Snackbar.Add(error, Severity.Error, configure: null, key: "board-error");
+            }
+
             this.container?.Refresh();
         }
     }

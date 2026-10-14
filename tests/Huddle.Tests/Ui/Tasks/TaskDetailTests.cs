@@ -277,7 +277,8 @@ public sealed class TaskDetailTests
         harness.Store.RebuildFromWatcher();
 
         cut.WaitForAssertion(() => Assert.Equal("This Task was deleted", TextOf(cut, ".task-detail-deleted")));
-        Assert.True(cut.FindAll("button").Single(b => string.Equals(b.TextContent.Trim(), "Save", StringComparison.Ordinal)).HasAttribute("disabled"));
+        Assert.DoesNotContain(cut.FindAll("button"), b => string.Equals(b.TextContent.Trim(), "Save", StringComparison.Ordinal));
+        Assert.False(cut.FindAll("button").Single(b => string.Equals(b.TextContent.Trim(), "Close", StringComparison.Ordinal)).HasAttribute("disabled"));
     }
 
     /// <summary>

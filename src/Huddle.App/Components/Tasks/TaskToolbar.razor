@@ -11,8 +11,12 @@
 *@
 
 @using System.Text.Json
+@using Agency.Huddle.App.Acp
+@using Agency.Huddle.App.Components.Shared
 @inject ViewStore ViewStore
 @inject ISprintCatalog Sprints
+@inject PersonaStore Personas
+@inject TaskStore TaskStore
 
 <MudToolBar Dense="true" Gutters="false" Class="task-toolbar">
     <MudButton StartIcon="@Icons.Material.Filled.Add" Size="Size.Medium" Color="Color.Primary" OnClick="this.OnNewTaskClickedAsync" Class="btn-action-tight">New task</MudButton>
@@ -26,16 +30,14 @@
     </HuddleSegmentedControl>
 
     <MudMenu Label="Filter" Class="task-toolbar-filter">
-        <MudChipSet T="string" ReadOnly="false" OnClose="this.OnRemoveTeamFilterAsync" Class="task-toolbar-filter-chips">
-            @foreach (string team in this.EffectiveView.Filter.Teams)
+        @* The View editor's Team control (UX-050c, OP-8): a multi-select of the Teams known to the app. *@
+        <MudSelect T="string" Variant="Variant.Outlined" Margin="Margin.Dense" Label="Team" MultiSelection="true" SelectedValues="this.EffectiveView.Filter.Teams"
+                   SelectedValuesChanged="this.OnTeamFilterChangedAsync" Class="task-toolbar-filter-team">
+            @foreach (string team in this.TeamOptions())
             {
-                <MudChip T="string" Size="Size.Small" Value="@team">@team</MudChip>
+                <MudSelectItem T="string" Value="@team" Class="task-toolbar-filter-team-option">@team</MudSelectItem>
             }
-        </MudChipSet>
-        <MudTextField T="string" Variant="Variant.Outlined" Margin="Margin.Dense" Label="Add team" Immediate="true" Value="@this.teamFilterInput"
-                       ValueChanged="this.OnTeamFilterInputChanged" Class="task-toolbar-filter-input" />
-        <MudIconButton Icon="@Icons.Material.Filled.Add" Size="Size.Small" aria-label="Add team filter" Class="task-toolbar-filter-add"
-                        OnClick="this.OnAddTeamFilterAsync" />
+        </MudSelect>
         @* Sprints spec §12.3: the "filter dynamically" path. A value no longer in sprints.md stays selected as "S5 (missing)". *@
         <MudSelect T="string" Variant="Variant.Outlined" Margin="Margin.Dense" Label="Sprint" MultiSelection="true" SelectedValues="this.EffectiveView.Filter.Sprints"
                    SelectedValuesChanged="this.OnSprintFilterChangedAsync" Class="task-toolbar-filter-sprint">
@@ -53,6 +55,11 @@
             <MudSelectItem T="TaskGroupField?" Value="TaskGroupField.Project">Project</MudSelectItem>
             <MudSelectItem T="TaskGroupField?" Value="TaskGroupField.Assignee">Assignee</MudSelectItem>
             <MudSelectItem T="TaskGroupField?" Value="TaskGroupField.Sprint">Sprint</MudSelectItem>
+            @if (this.EffectiveView.Kind == ViewKind.List)
+            {
+                @* State is a Group by choice on a List only: a Board's columns already are the states. *@
+                <MudSelectItem T="TaskGroupField?" Value="TaskGroupField.State">State</MudSelectItem>
+            }
         </MudSelect>
     </MudMenu>
 
@@ -71,9 +78,7 @@
              aria-pressed="@(this.EffectiveView.Filter.RequestsOnly ? "true" : "false")"
              OnClick="this.OnRequestsToggledAsync">Requests</MudChip>
 
-    <MudTextField T="string" Variant="Variant.Outlined" Margin="Margin.Dense" Value="@this.Search" ValueChanged="this.OnSearchChangedAsync" Immediate="true"
-                   DebounceInterval="200" Clearable="true" Adornment="Adornment.Start"
-                   AdornmentIcon="@Icons.Material.Filled.Search" Placeholder="Search" Class="task-toolbar-search" />
+    <SearchField Value="@this.Search" ValueChanged="this.OnSearchChangedAsync" Placeholder="Search tasks" AriaLabel="Search tasks" />
 
     @if (this.EffectiveView.Kind == ViewKind.List)
     {
@@ -91,8 +96,6 @@
 </MudToolBar>
 
 @code {
-    private string teamFilterInput = string.Empty;
-
     /// <summary>The effective View: the saved one with this session's own overrides applied.</summary>
     [Parameter]
     [EditorRequired]
@@ -139,34 +142,18 @@
         }
     }
 
-    private void OnTeamFilterInputChanged(string value) => this.teamFilterInput = value;
+    /// <summary>Every Team the app knows, plus any the filter already names, sorted ordinally.</summary>
+    private List<string> TeamOptions() =>
+        [.. this.Personas.Teams
+            .Concat(this.TaskStore.Teams.Select(static team => team.Name))
+            .Concat(this.EffectiveView.Filter.Teams)
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .OrderBy(static team => team, StringComparer.Ordinal)];
 
-    private Task OnAddTeamFilterAsync()
-    {
-        string team = this.teamFilterInput.Trim();
-        this.teamFilterInput = string.Empty;
-        if (team.Length == 0 || this.EffectiveView.Filter.Teams.Contains(team, StringComparer.OrdinalIgnoreCase))
-        {
-            return Task.CompletedTask;
-        }
-
-        List<string> teams = [.. this.EffectiveView.Filter.Teams, team];
-        TaskView updated = this.EffectiveView with { Filter = this.EffectiveView.Filter with { Teams = teams } };
-        return this.EffectiveViewChanged.InvokeAsync(updated);
-    }
-
-    private Task OnRemoveTeamFilterAsync(MudChip<string> chip)
-    {
-        ArgumentNullException.ThrowIfNull(chip);
-        if (chip.Value is not { } team)
-        {
-            return Task.CompletedTask;
-        }
-
-        List<string> teams = [.. this.EffectiveView.Filter.Teams.Where(existing => !string.Equals(existing, team, StringComparison.Ordinal))];
-        TaskView updated = this.EffectiveView with { Filter = this.EffectiveView.Filter with { Teams = teams } };
-        return this.EffectiveViewChanged.InvokeAsync(updated);
-    }
+    /// <summary>Applies the Team multi-select's choice to the effective View's filter.</summary>
+    /// <param name="values">The Teams now selected.</param>
+    private Task OnTeamFilterChangedAsync(IEnumerable<string> values) =>
+        this.EffectiveViewChanged.InvokeAsync(this.EffectiveView with { Filter = this.EffectiveView.Filter with { Teams = [.. values] } });
 
     private Task OnSprintFilterChangedAsync(IEnumerable<string> values) =>
         this.EffectiveViewChanged.InvokeAsync(this.EffectiveView with { Filter = this.EffectiveView.Filter with { Sprints = [.. values] } });

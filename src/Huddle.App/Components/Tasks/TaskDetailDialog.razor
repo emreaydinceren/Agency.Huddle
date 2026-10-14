@@ -5,12 +5,6 @@
 *@
 
 <MudDialog>
-    <TitleContent>
-        <MudStack Row="true" Justify="Justify.SpaceBetween" AlignItems="AlignItems.Center" Class="w-100">
-            <MudText Typo="Typo.h6">@(this.Id?.ToString() ?? "New task")</MudText>
-            <MudIconButton Icon="@Icons.Material.Filled.Close" Size="Size.Small" title="Close" aria-label="Close" OnClick="this.Close" />
-        </MudStack>
-    </TitleContent>
     <DialogContent>
         <TaskDetail Id="this.Id" Draft="this.Draft" Mode="TaskDetailMode.Expanded" OnClose="this.Close" />
     </DialogContent>
@@ -23,6 +17,7 @@
         MaxWidth = MaxWidth.Large,
         FullWidth = true,
         CloseOnEscapeKey = true,
+        CloseButton = true,
     };
 
     /// <summary>The hosting dialog instance, cascaded by <c>MudDialogProvider</c>; <c>required</c> instead of a null-forgiving initialiser, which this codebase never uses.</summary>
