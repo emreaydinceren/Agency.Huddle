@@ -37,6 +37,7 @@
 @using Agency.Huddle.Acp.Abstractions
 @using Agency.Huddle.App.Acp
 @using Agency.Huddle.App.Avatars
+@using Agency.Huddle.App.Components.Shared.Dialogs
 @using Agency.Huddle.App.Pipes
 @using Agency.Huddle.App.Skills
 @using Agency.Huddle.App.TeamTypes
@@ -68,10 +69,7 @@
 
 <MudDialog>
     <TitleContent>
-        <MudStack Row="true" Justify="Justify.SpaceBetween" AlignItems="AlignItems.Center" Class="w-100">
-            <MudText Typo="Typo.h6">@this.CardTitle</MudText>
-            <MudIconButton Icon="@Icons.Material.Filled.Close" Size="Size.Small" title="Close" aria-label="Close" OnClick="this.Close" />
-        </MudStack>
+        <MudText Typo="Typo.h6">@this.CardTitle</MudText>
     </TitleContent>
     <DialogContent>
         @if (this.error is not null)
@@ -198,7 +196,8 @@
                 @* Deliberately an inline swap, not a nested MudDialog: MudBlazor dialogs are not
                    designed to stack, and a confirmation dialog on top of this one would need a second
                    backdrop and a second focus trap for what is only ever a yes/no choice. Swapping the
-                   one Remove (or, for the Chief of Staff, Reset to default) button for Confirm/Cancel
+                   one Remove (or, for the Chief of Staff, Reset to default) button for an InlineConfirm
+                   (its verb button and Cancel; Escape cancels it and focus returns to the button it replaced)
                    in place reads as a confirmation without either, and keeps the whole exchange inside
                    the one dialog whose parameters are already frozen (see the file-level comment) - a
                    nested dialog would need its own independent parameter set anyway.
@@ -211,33 +210,31 @@
                 {
                     @if (this.confirmingReset)
                     {
-                        <MudButton Variant="Variant.Outlined" Size="Size.Small" Color="Color.Error" OnClick="this.ConfirmReset">Confirm</MudButton>
-                        <MudButton Variant="Variant.Outlined" Size="Size.Small" OnClick="this.CancelReset">Cancel</MudButton>
+                        <InlineConfirm Prompt="Reset to default?" ConfirmText="Reset" OnConfirm="this.ConfirmReset" OnCancel="this.CancelReset" />
                     }
                     else
                     {
-                        <MudButton Variant="Variant.Outlined" Size="Size.Small" Color="Color.Error" OnClick="this.BeginReset">Reset to default</MudButton>
+                        <MudButton Variant="Variant.Outlined" Size="Size.Small" Color="Color.Error" @ref="this.resetButton" OnClick="this.BeginReset">Reset to default</MudButton>
                     }
                 }
                 else
                 {
                     @if (this.confirmingRemove)
                     {
-                        <MudButton Variant="Variant.Outlined" Size="Size.Small" Color="Color.Error" OnClick="this.ConfirmRemove">Confirm</MudButton>
-                        <MudButton Variant="Variant.Outlined" Size="Size.Small" OnClick="this.CancelRemove">Cancel</MudButton>
+                        <InlineConfirm Prompt="@($"Remove {this.name}?")" ConfirmText="Remove" OnConfirm="this.ConfirmRemove" OnCancel="this.CancelRemove" />
                     }
                     else
                     {
                         <MudTooltip Text="Remove">
                             <MudIconButton Icon="@Icons.Material.Filled.PersonRemove" Size="Size.Small" Color="Color.Error"
-                                           aria-label="Remove" OnClick="this.BeginRemove" />
+                                           aria-label="Remove" @ref="this.removeButton" OnClick="this.BeginRemove" />
                         </MudTooltip>
                     }
                 }
             </MudStack>
 
             @* Spec §6.12's confirm copy, verbatim - shown only during the Reset confirm step, the
-               same way the caption line just below explains what Confirm does for every other card. *@
+               same way the caption line just below explains what saving does for every other card. *@
             @if (this.IsBuiltinTeammate && this.confirmingReset)
             {
                 <MudText Typo="Typo.body2" Class="d-block mb-3 mud-text-secondary">Restore the Chief of Staff's instructions, Title, Teams, Skills, Model and Effort to their defaults? Its Name, Alias, Rooms and history are kept.</MudText>
@@ -283,13 +280,13 @@
                 <MudStack Spacing="2" Class="mb-3">
                     <MudTextField T="string" Label="Name" Placeholder="Chief of Staff" Value="@this.name" ValueChanged="this.OnNameChanged"
                                   Variant="Variant.Outlined" Margin="Margin.Dense"
-                                  ReadOnly="@this.nameLocked" HelperText="@this.NameHelperText" />
+                                  Disabled="@this.nameLocked" HelperText="@this.NameHelperText" />
                     <MudTextField T="string" Label="Title" Placeholder="Chief of Staff" Value="@this.title" ValueChanged="this.OnTitleChanged"
                                   Variant="Variant.Outlined" Margin="Margin.Dense"
-                                  ReadOnly="@this.titleLocked" HelperText="@this.TitleHelperText" />
+                                  Disabled="@this.titleLocked" HelperText="@this.TitleHelperText" />
                     <MudTextField T="string" Label="Alias" Placeholder="coo" Value="@this.alias" ValueChanged="this.OnAliasChanged"
                                   Variant="Variant.Outlined" Margin="Margin.Dense"
-                                  ReadOnly="@this.aliasLocked" HelperText="@this.AliasHelperText" />
+                                  Disabled="@this.aliasLocked" HelperText="@this.AliasHelperText" />
                 </MudStack>
 
                 @* This said the opposite until ADR-0011: a rename used to leave the Agent, its Rooms and
@@ -417,7 +414,7 @@
                the stored id - and an interactive select offers that two-item list as though it were the
                whole truth.
 
-               Disabled, NOT ReadOnly, even though ReadOnly is what the locked identity boxes above use.
+               Disabled, NOT ReadOnly, the same as the locked identity boxes above.
                Both refuse to open the popover, but MudBlazor 9.10.0 styles only the disabled one:
                .mud-input.mud-disabled dims the text and dots the underline, while the read-only case has
                no input rule at all. A read-only select would therefore look live and silently swallow
@@ -510,16 +507,11 @@
 
 @code {
     /// <summary>
-    /// The <see cref="DialogOptions"/> every <see cref="TeammateCard"/> opens with - a single shared
-    /// instance so <c>Teammates.razor</c>'s <c>ShowAsync</c> call and this file agree on them without
-    /// duplicating the literal.
+    /// The <see cref="DialogOptions"/> every <see cref="TeammateCard"/> opens with: the shared
+    /// <see cref="HuddleDialogOptions.SmallForm"/> (close button, no backdrop dismissal, because Edit and
+    /// Create hold typed text), so <c>Teammates.razor</c>'s <c>ShowAsync</c> call and this file agree.
     /// </summary>
-    internal static readonly DialogOptions Options = new()
-    {
-        MaxWidth = MaxWidth.Small,
-        FullWidth = true,
-        CloseOnEscapeKey = true,
-    };
+    internal static DialogOptions Options => HuddleDialogOptions.SmallForm;
 
     [CascadingParameter]
     public required IMudDialogInstance MudDialog { get; set; }
@@ -645,6 +637,9 @@
     // Empty when it offers none or is not running.
     private IReadOnlyList<AdapterCommand> offeredCommands = [];
     private string? error;
+    private MudButton? resetButton;
+    private MudIconButton? removeButton;
+    private bool restoreActionFocus;
     private bool confirmingRemove;
     private bool confirmingReset;
     private bool restarting;
@@ -1805,6 +1800,7 @@
     private void CancelRemove()
     {
         this.confirmingRemove = false;
+        this.restoreActionFocus = true;
     }
 
     private void ConfirmRemove()
@@ -1832,6 +1828,30 @@
     private void CancelReset()
     {
         this.confirmingReset = false;
+        this.restoreActionFocus = true;
+    }
+
+    /// <summary>
+    /// After a cancelled Reset or Remove confirm has re-rendered, puts focus back on the button the confirm replaced,
+    /// so a keyboard user does not lose their place in the dialog.
+    /// </summary>
+    /// <param name="firstRender">True on the first render, which never restores focus.</param>
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (!this.restoreActionFocus)
+        {
+            return;
+        }
+
+        this.restoreActionFocus = false;
+        if (this.resetButton is not null)
+        {
+            await this.resetButton.FocusAsync();
+        }
+        else if (this.removeButton is not null)
+        {
+            await this.removeButton.FocusAsync();
+        }
     }
 
     /// <summary>

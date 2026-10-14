@@ -11,6 +11,7 @@ internal static class HuddleDialogOptions
         CloseButton = true,
         MaxWidth = MaxWidth.Small,
         FullWidth = true,
+        CloseOnEscapeKey = true,
         BackdropClick = false,
     };
 
@@ -20,5 +21,6 @@ internal static class HuddleDialogOptions
         CloseButton = true,
         MaxWidth = MaxWidth.Medium,
         FullWidth = true,
+        CloseOnEscapeKey = true,
     };
 }

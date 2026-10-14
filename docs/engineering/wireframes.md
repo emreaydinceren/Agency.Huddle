@@ -268,7 +268,7 @@ Containers that float above a page. Each cell shows one over a dimmed page.
 
 | Code | Name | Component | Use it for |
 | --- | --- | --- | --- |
-| `O1` | Dialog | `MudDialog` through `IDialogService` | A form or a short flow: the Teammate card, New team, Add member, the Task detail dialog |
+| `O1` | Dialog | `MudDialog` through `IDialogService` | A form or a short flow: the Teammate card (opened with `HuddleDialogOptions.SmallForm`: MudBlazor's close button, no backdrop dismissal; its avatar opens a second `O1` dialog hosting `AvatarEditor`), New team, Add member, the Task detail dialog |
 | `O1a` | Dialog title | `.mud-dialog-title` | May carry a close button |
 | `O1b` | Dialog content | `.mud-dialog-content` | |
 | `O1c` | Dialog actions | `.mud-dialog-actions` | Cancel on the left of the primary action |
@@ -278,7 +278,7 @@ Containers that float above a page. Each cell shows one over a dimmed page.
 | `O4` | Snackbar | `ISnackbar` | A transient result; repeated messages with one key collapse |
 | `O4a` | Toast | | The message and an optional action |
 | `O5` | Message box | `ShowMessageBoxAsync` | A yes or no: a title, one line, Cancel and the action |
-| `O6` | Inline confirm | `InlineConfirm` | A destructive yes or no that swaps in for the row itself |
+| `O6` | Inline confirm | `InlineConfirm` | A destructive yes or no that swaps in for the row itself; the Teammate card's Remove ("Remove {name}?" / "Remove") and Reset ("Reset to default?" / "Reset") use it |
 | `O7` | Tooltip | `MudTooltip` | Names an icon-only control; not a substitute for an `aria-label` |
 | `O8` | Reconnect modal | `ReconnectModal.razor`, a `<dialog>` | The circuit dropped; offers Retry or Resume |
 

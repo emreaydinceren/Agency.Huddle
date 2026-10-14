@@ -1,0 +1,68 @@
+@namespace Agency.Huddle.App.Components.Search
+
+@*
+    The layout every search card shares: a leading icon (or avatar), then the title, the meta line and a one-line
+    snippet stacked in the text column, then a trailing slot at the right. A card passes only the slots it has; an
+    omitted Icon leaves no gap, an omitted Meta or Snippet leaves no empty line, and an omitted Trailing keeps an
+    empty slot hidden from assistive tech so every card holds the same right edge (D-12). Dimming an archived or
+    closed card and the group's accessible name live here too, so the five cards cannot drift apart.
+*@
+
+<div class="search-card @(this.Archived ? "search-card-archived" : null)" role="group" aria-label="@this.AccessibleName">
+    @if (this.Icon is not null)
+    {
+        <span class="search-card-icon">@this.Icon</span>
+    }
+    <span class="search-card-text">
+        @if (this.Title is not null)
+        {
+            <span class="search-card-title">@this.Title</span>
+        }
+        @if (this.Meta is not null)
+        {
+            <span class="search-card-meta">@this.Meta</span>
+        }
+        @if (this.Snippet is not null)
+        {
+            <span class="search-card-snippet">@this.Snippet</span>
+        }
+    </span>
+    @if (this.Trailing is not null)
+    {
+        <span class="search-card-action">@this.Trailing</span>
+    }
+    else
+    {
+        <span class="search-card-action" aria-hidden="true"></span>
+    }
+</div>
+
+@code {
+    /// <summary>The leading icon or avatar.</summary>
+    [Parameter]
+    public RenderFragment? Icon { get; set; }
+
+    /// <summary>The title line.</summary>
+    [Parameter]
+    public RenderFragment? Title { get; set; }
+
+    /// <summary>The meta line under the title.</summary>
+    [Parameter]
+    public RenderFragment? Meta { get; set; }
+
+    /// <summary>The one-line snippet under the meta line.</summary>
+    [Parameter]
+    public RenderFragment? Snippet { get; set; }
+
+    /// <summary>The trailing content at the right; an empty hidden slot when omitted.</summary>
+    [Parameter]
+    public RenderFragment? Trailing { get; set; }
+
+    /// <summary>The card's accessible name.</summary>
+    [Parameter]
+    public string? AccessibleName { get; set; }
+
+    /// <summary>True to dim the card (an Archived Room or a Closed Task).</summary>
+    [Parameter]
+    public bool Archived { get; set; }
+}

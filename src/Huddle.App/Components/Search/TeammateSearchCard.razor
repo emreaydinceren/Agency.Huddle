@@ -9,14 +9,11 @@
 
 @inject AvatarStore Avatars
 
-<div class="search-card @(this.Hit.IsArchived ? "search-card-archived" : null)" role="group" aria-label="@this.AccessibleName">
-    <span class="search-card-icon"><TeammateAvatar Name="@this.Hit.Name" Avatar="this.Avatars.Get(this.Hit.Name)" Size="Size.Small" /></span>
-    <span class="search-card-text">
-        <span class="search-card-title"><MudHighlighter Text="@this.Hit.Title" HighlightedText="@this.Phrase" /></span>
-        <span class="search-card-meta">@this.Meta</span>
-    </span>
-    <span class="search-card-action" aria-hidden="true"></span>
-</div>
+<SearchCardShell Archived="this.Hit.IsArchived" AccessibleName="@this.AccessibleName">
+    <Icon><TeammateAvatar Name="@this.Hit.Name" Avatar="this.Avatars.Get(this.Hit.Name)" Size="Size.Small" /></Icon>
+    <Title><MudHighlighter Text="@this.Hit.Title" HighlightedText="@this.Phrase" /></Title>
+    <Meta>@this.Meta</Meta>
+</SearchCardShell>
 
 @code {
     /// <summary>The Teammate this card shows.</summary>

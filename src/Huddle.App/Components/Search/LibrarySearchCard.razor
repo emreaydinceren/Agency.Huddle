@@ -6,22 +6,19 @@
 
 @using Agency.Huddle.App.Search
 
-<div class="search-card @(this.Hit.IsArchived ? "search-card-archived" : null)" role="group" aria-label="@this.AccessibleName">
-    <span class="search-card-icon">
+<SearchCardShell Archived="this.Hit.IsArchived" AccessibleName="@this.AccessibleName"
+                 Snippet="@(this.Hit.Snippet is { } snippet ? this.Highlighted(snippet) : null)">
+    <Icon>
         <MudIcon Icon="@(this.Hit.IsFolder ? Icons.Material.Filled.Folder : Icons.Material.Outlined.Description)" Size="Size.Small" />
-    </span>
-    <span class="search-card-text">
-        <span class="search-card-title"><MudHighlighter Text="@this.Hit.Title" HighlightedText="@this.Phrase" /></span>
-        <span class="search-card-meta">@this.Meta</span>
-        @if (this.Hit.Snippet is { } snippet)
-        {
-            <span class="search-card-snippet"><MudHighlighter Text="@snippet" HighlightedText="@this.Phrase" /></span>
-        }
-    </span>
-    <span class="search-card-action" aria-hidden="true"></span>
-</div>
+    </Icon>
+    <Title><MudHighlighter Text="@this.Hit.Title" HighlightedText="@this.Phrase" /></Title>
+    <Meta>@this.Meta</Meta>
+</SearchCardShell>
 
 @code {
+    /// <summary>Renders a line of text with the phrase bolded.</summary>
+    private RenderFragment<string> Highlighted => text => @<MudHighlighter Text="@text" HighlightedText="@this.Phrase" />;
+
     /// <summary>The Library hit this card shows.</summary>
     [Parameter, EditorRequired]
     public required LibraryHit Hit { get; set; }

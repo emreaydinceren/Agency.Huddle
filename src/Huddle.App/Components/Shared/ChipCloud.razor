@@ -10,7 +10,7 @@
     <div class="@($"chip-cloud {this.CssClass}")" role="group" aria-label="@this.Title">
         @foreach (ChipItem chip in AvatarChipCloud.Arrange(this.Pool, this.Selected, this.Expanded ? null : this.Cap))
         {
-            <button type="button" class="@ChipClass(chip)" aria-pressed="@(chip.Selected ? "true" : "false")" @onclick="() => this.OnToggle.InvokeAsync(chip.Text)">
+            <button type="button" class="@this.ChipClass(chip)" aria-pressed="@(chip.Selected ? "true" : "false")" @onclick="() => this.OnToggle.InvokeAsync(chip.Text)">
                 @if (chip.Selected)
                 {
                     <span class="chip-cloud-bracket" aria-hidden="true">[</span>
@@ -53,14 +53,22 @@
     [Parameter]
     public string CssClass { get; set; } = string.Empty;
 
+    /// <summary>True to render the chips in the quiet style (<c>is-quiet</c>), as the Avatar Library does.</summary>
+    [Parameter]
+    public bool Quiet { get; set; }
+
     /// <summary>Raised with a chip's text when it is pressed.</summary>
     [Parameter]
     public EventCallback<string> OnToggle { get; set; }
 
     private bool Expanded => this.expanded;
 
-    private static string ChipClass(ChipItem chip) =>
-        chip.Selected ? "chip-cloud-chip chip-cloud-chip-selected" : "chip-cloud-chip";
+    private string ChipClass(ChipItem chip)
+    {
+        string selected = chip.Selected ? " chip-cloud-chip-selected" : string.Empty;
+        string quiet = this.Quiet ? " is-quiet" : string.Empty;
+        return $"chip-cloud-chip{selected}{quiet}";
+    }
 
     private void ToggleExpanded() => this.expanded = !this.expanded;
 }

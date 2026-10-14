@@ -6,14 +6,11 @@
 @using Agency.Huddle.App.Components.Shared
 @using Agency.Huddle.App.Search
 
-<div class="search-card @(this.Hit.IsArchived ? "search-card-archived" : null)" role="group" aria-label="@this.AccessibleName">
-    <span class="search-card-icon"><MudIcon Icon="@Icons.Material.Filled.Groups" Size="Size.Small" /></span>
-    <span class="search-card-text">
-        <span class="search-card-title"><MudHighlighter Text="@this.Hit.Title" HighlightedText="@this.Phrase" /></span>
-        <span class="search-card-meta">@this.Meta</span>
-    </span>
-    <span class="search-card-action" aria-hidden="true"></span>
-</div>
+<SearchCardShell Archived="this.Hit.IsArchived" AccessibleName="@this.AccessibleName">
+    <Icon><MudIcon Icon="@Icons.Material.Filled.Groups" Size="Size.Small" /></Icon>
+    <Title><MudHighlighter Text="@this.Hit.Title" HighlightedText="@this.Phrase" /></Title>
+    <Meta>@this.Meta</Meta>
+</SearchCardShell>
 
 @code {
     /// <summary>The Team this card shows.</summary>

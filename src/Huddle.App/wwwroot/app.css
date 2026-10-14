@@ -27,8 +27,8 @@ html {
        placement (below). Change 0.9 in every place together; a var() cannot hold it, because every
        var() in this file must be a MudBlazor variable. The sites: here; both .mud-popover-provider
        rules below; .main-column (height); .search-dropdown (width and max-height, Global search);
-       .composer-picker (max-height, References); .avatar-library-body (max-height); .avatar-library-tags
-       and .chip-cloud (max-height); the phone Avatar Library dialog and its body (width, height,
+       .composer-picker (max-height, References); .avatar-library-body (max-height); .chip-cloud
+       (max-height); the phone Avatar Library dialog and its body (width, height,
        max-height, in the max-width 600px block); .avatar-library-filters (max-height, same block);
        .elicitation-card (max-height); and #components-reconnect-modal (margin, ReconnectModal.razor.css). */
     zoom: 0.9;
@@ -1296,8 +1296,6 @@ a.team-ref,
 }
 
 .avatar-library-skin,
-.avatar-library-chip,
-.avatar-library-tags-all,
 .avatar-library-clear,
 .avatar-library-more {
     font: inherit;
@@ -1310,36 +1308,10 @@ a.team-ref,
     cursor: pointer;
 }
 
-.avatar-library-skin[aria-pressed="true"],
-.avatar-library-chip-selected {
+.avatar-library-skin[aria-pressed="true"] {
     font-weight: 700;
     border: 2px solid var(--mud-palette-primary);
     color: var(--mud-palette-primary);
-}
-
-.avatar-library-cloud-title {
-    font-size: var(--mud-typography-caption-size);
-    color: var(--mud-palette-text-secondary);
-}
-
-.avatar-library-cloud {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 0.375rem;
-}
-
-.avatar-library-tags {
-    max-height: calc(30vh / 0.9);
-    overflow-y: auto;
-}
-
-.avatar-library-chip-close {
-    margin-left: 0.375rem;
-    font-weight: 700;
-}
-
-.avatar-library-chip-bracket {
-    color: var(--mud-palette-text-secondary);
 }
 
 .avatar-library-status {
@@ -2646,6 +2618,10 @@ a.team-ref,
     cursor: pointer;
 }
 
+.chip-cloud-chip.is-quiet {
+    background: transparent;
+}
+
 .chip-cloud-chip-selected {
     font-weight: 700;
     border: 2px solid var(--mud-palette-primary);
@@ -2959,42 +2935,9 @@ a.team-ref,
     font-size: var(--mud-typography-body2-size);
 }
 
-/* The Task card's first line: the id and title take the width and truncate, the status chip sits at the right. */
-.search-card-head {
-    display: flex;
-    align-items: center;
-    gap: 0.5rem;
-    min-width: 0;
-}
-
-.search-card-head .search-card-title {
-    flex: 1 1 auto;
-    min-width: 0;
-}
-
+/* The Task card's status chip sits in the trailing slot. */
 .search-card-chip {
     flex: none;
-}
-
-/* The Task card's second line: the assignee at the left (truncating), the Team at the right under the chip. */
-.search-card-foot {
-    display: flex;
-    align-items: baseline;
-    gap: 0.5rem;
-    min-width: 0;
-}
-
-.search-card-foot .search-card-meta {
-    flex: 1 1 auto;
-    min-width: 0;
-}
-
-.search-card-team {
-    flex: none;
-    margin-left: auto;
-    color: var(--mud-palette-text-secondary);
-    font-size: var(--mud-typography-body2-size);
-    white-space: nowrap;
 }
 
 /* The assignee's job title is de-emphasised beside the name. */
@@ -3002,9 +2945,10 @@ a.team-ref,
     color: var(--mud-palette-text-secondary);
 }
 
+/* The trailing slot: an empty one holds a fixed width so every card ends at the same edge; one with content (the Task chip) fits it. */
 .search-card-action {
     flex: none;
-    width: 2rem;
+    min-width: 2rem;
 }
 
 /* An Archived Room or a Closed Task is dimmed, and its group heading says so in words, so the state
@@ -3117,7 +3061,7 @@ a.team-ref,
 }
 
 .composer-picker .search-card-snippet,
-.composer-picker .search-card-action {
+.composer-picker .search-card-action[aria-hidden="true"] {
     display: none;
 }
 
