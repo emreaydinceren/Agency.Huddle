@@ -1042,7 +1042,7 @@ Ids are `<deliverable number>.<task>`, the form `Set-Tracker.ps1` updates:
 `pwsh -NoProfile -File agents/scripts/Set-Tracker.ps1 -Task "12.3" -State Done -TrackerPath docs/engineering/UX-Issues-Plan.md`.
 `(H)` is Haiku, `(S)` is Sonnet.
 
-**Status:** 135 of 141 tasks Done · 0 of 2 retrospectives done · last updated 2026-10-13.
+**Status:** 139 of 141 tasks Done · 0 of 2 retrospectives done · last updated 2026-10-13.
 
 | **Deliverable / Task** | **Model** | **Depends on** | **Active** | **In Progress** | **Done** |
 | --- | --- | --- | --- | --- | --- |
@@ -1212,10 +1212,10 @@ Ids are `<deliverable number>.<task>`, the form `Set-Tracker.ps1` updates:
 | 27.4 Checks (H) | Haiku | 27.2, 27.3 | | | ✔ |
 | **U28 Integration and QA** | Sonnet | U27 | | | |
 | 28.1 Suite three times and checks (S) | Sonnet | U27 | | | |
-| 28.2 Baselines empty (S) | Sonnet | 28.1 | | | |
-| 28.3 Live pass (S) | Sonnet | 28.1 | | | |
-| 28.4 Docs: backlog, design system, hub (S) | Sonnet | 28.2, 28.3 | | | |
-| 28.5 PR body (S) | Sonnet | 28.4 | | | |
+| 28.2 Baselines empty (S) | Sonnet | 28.1 | | | ✔ |
+| 28.3 Live pass (S) | Sonnet | 28.1 | | | ✔ |
+| 28.4 Docs: backlog, design system, hub (S) | Sonnet | 28.2, 28.3 | | | ✔ |
+| 28.5 PR body (S) | Sonnet | 28.4 | | | ✔ |
 | 🔁 R1 Retrospective after wave 1 | Opus | wave 1 | | | |
 | 🔁 R2 Retrospective after wave 3 | Opus | wave 3 | | | |
 
