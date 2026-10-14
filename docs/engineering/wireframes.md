@@ -177,7 +177,6 @@ error alert, the budget caption and the "continue" notes, which sit in the `C9` 
 | `T2` | Header row | First `MudToolBar` of `TaskToolbar` (`SplitHeader`), inside `.tasks-header` | No `h1`: the View name is the breadcrumb's last crumb. The counts (`T2d`) on the left; the AI chip, Group by (`T3c`), `T3a`, the filled New task button and `T2a` on the right |
 | `T2d` | Counts | `.tasks-counts` | "N open" (not Done, Cancelled, Duplicate or Rejected, over the Tasks the View shows), "N need you" (open and assigned to the Human) and "N all" (every Task in the store) |
 | `T2a` | View actions | `MudMenu`, `MoreVert` icon button | Rename, Fields…, Delete view (Rename and Delete are the sidebar row's menu too) |
-| `T2b` | Reset | `MudLink` | Appears only when the Human has overridden the View |
 | `T2c` | AI reacting chip | `AiReactingChip` | Tasks an Agent is acting on |
 | `T9` | Notices | `MudAlert`, `WakeToasts` | Tasks off, invalid or missing View, load errors, ignored lines |
 | `T3` | Toolbar | `TaskToolbar` | The second row, the same dense height as `T2`. It leads with the Filter icon (T3b), then one chip per filter that is set (Team, Project, Assignee, Sprint, Priority, Status - `T3h` and `T3i` are the Assignee and Status ones); a filter chosen in `T3b` appears as a chip and its × removes it, so an unfiltered View shows none |
@@ -186,10 +185,9 @@ error alert, the budget caption and the "continue" notes, which sit in the `C9` 
 | `T3c` | Group by | `TaskFilterChip` in the header row | "Group by: Assignee ⌄ ×", the same chip as `T3h` and `T3i`: None, Team, Project, Assignee, Sprint, and Status on a List, with a clear button once one is chosen. On the Team page's tab, where there is one row, it stays a `MudSelect` in a "Group, Sort" menu |
 | `T3h` | Assignee chip | `TaskFilterChip` | Any, Me, Unassigned or a name; dashed while Any, filled with a clear button once set. Edits the View's Assignee filter |
 | `T3i` | Status chip | `TaskFilterChip` | A two-level menu: All, then Open (Backlog, To Do, In Progress, Review) and Closed (Done, Cancelled, Duplicate, Rejected), each choosable as a group and followed by its own statuses indented beneath it. The chip reads All, Open, Closed or the one status; same look as `T3h`. Edits the View's Status filter |
-| `T3d` | Blocked filter | Toggle | All, Blocked, Unblocked |
-| `T3e` | Search | `MudTextField` | |
+| `T3d` | Blocked filter | `MudSelect` in the Filter menu (`T3b`), then a `TaskFilterChip` | All, Blocked or Unblocked. Chosen in the Filter menu; once it is not All, a "Blocked: Blocked" chip with a clear button appears in the row. Edits the View's Blocked filter |
+| `T3e` | Search | `SearchField` | The shared outlined, clearable, debounced search box |
 | `T3f` | Dense | `MudSwitch` | |
-| `T3g` | Save to view | Button | Saves the overrides into the View |
 | `T4` | Content | `TaskBoard` or `TaskListView` | Or an empty state with "Reset filters" |
 | `T5` | Column | A `MudDropZone` per lane and column | Header with a label the Human can rename |
 | `T6` | Task card | `TaskCard`, `MudBadge` | Draggable between columns |
