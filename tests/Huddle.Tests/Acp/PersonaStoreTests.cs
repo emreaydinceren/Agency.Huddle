@@ -600,14 +600,12 @@ public sealed class PersonaStoreTests
     }
 
     /// <summary>
-    /// Pins the idempotency the whole detection scheme relies on: a single save raises
-    /// PersonasChanged twice (see <see cref="Update_RaisesPersonasChangedOnce"/>'s comment) - once
-    /// synchronously from Update, once ~500&#160;ms later from the debounced FileSystemWatcher noticing
-    /// the same write. By the time the second, redundant refresh runs, both the previous and the new
-    /// index already agree on the renamed path's Name, so PersonaRenamed must not fire a second time.
+    /// Pins the idempotency the whole detection scheme relies on: after an in-app save, the debounced
+    /// FileSystemWatcher rescan (fired here directly rather than waited for) sees the same write the
+    /// store already published, so PersonaRenamed must not fire a second time.
     /// </summary>
     [Fact]
-    public async Task Update_ChangingTheName_DoesNotRaisePersonaRenamedAgainOnTheWatchersRedundantRefresh()
+    public void Update_ChangingTheName_DoesNotRaisePersonaRenamedAgainOnTheWatchersRedundantRefresh()
     {
         using var dir = new TempDataDir();
         using var store = CreateStore(dir);
@@ -615,26 +613,91 @@ public sealed class PersonaStoreTests
         var renames = new List<PersonaRenamed>();
         store.PersonaRenamed += renamed => renames.Add(renamed);
 
-        var secondPersonasChanged = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
-        var changedCount = 0;
-        store.PersonasChanged += () =>
-        {
-            changedCount++;
-            if (changedCount == 2)
-            {
-                secondPersonasChanged.TrySetResult();
-            }
-        };
-
         store.Update("coo", PersonaText("vp", "second"), model: null, effort: null, workMode: null);
-
-        using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(10));
-        await using var registration = cts.Token.Register(() => secondPersonasChanged.TrySetCanceled());
-        await secondPersonasChanged.Task;
+        store.OnDebounceElapsed(null);
 
         var renamed = Assert.Single(renames);
         Assert.Equal("coo", renamed.OldName);
         Assert.Equal("vp", renamed.NewName);
+    }
+
+    /// <summary>
+    /// The watcher's rescan after an in-app Add finds exactly what Add already published, so it must
+    /// not raise a second PersonasChanged (a redundant Teammates reload and supervisor pass).
+    /// </summary>
+    [Fact]
+    public void Add_FollowedByTheWatchersDebounce_RaisesPersonasChangedOnce()
+    {
+        using var dir = new TempDataDir();
+        using var store = CreateStore(dir);
+        var raisedCount = 0;
+        store.PersonasChanged += () => Interlocked.Increment(ref raisedCount);
+
+        store.Add(Identity("coo"), "first");
+        store.OnDebounceElapsed(null);
+
+        Assert.Equal(1, raisedCount);
+    }
+
+    /// <summary>
+    /// Same as the Add case for Update: the watcher's rescan of the store's own write raises nothing.
+    /// </summary>
+    [Fact]
+    public void Update_FollowedByTheWatchersDebounce_RaisesPersonasChangedOnce()
+    {
+        using var dir = new TempDataDir();
+        using var store = CreateStore(dir);
+        store.Add(Identity("coo"), "first");
+        var raisedCount = 0;
+        store.PersonasChanged += () => Interlocked.Increment(ref raisedCount);
+
+        store.Update("coo", PersonaText("coo", "second"), model: null, effort: null, workMode: null);
+        store.OnDebounceElapsed(null);
+
+        Assert.Equal(1, raisedCount);
+    }
+
+    /// <summary>
+    /// A file changed on disk by something other than the store (here only its body, which is the
+    /// subtlest difference) is still an outside edit and raises PersonasChanged exactly once, however
+    /// many times the debounce then fires.
+    /// </summary>
+    [Fact]
+    public void ExternalEdit_FollowedByTheDebounce_RaisesPersonasChangedOnce()
+    {
+        using var dir = new TempDataDir();
+        using var store = CreateStore(dir);
+        store.Add(Identity("coo"), "first");
+        store.OnDebounceElapsed(null);
+        var raisedCount = 0;
+        store.PersonasChanged += () => Interlocked.Increment(ref raisedCount);
+
+        File.WriteAllText(store.PathFor("coo"), PersonaText("coo", "edited outside the app"));
+        store.OnDebounceElapsed(null);
+        store.OnDebounceElapsed(null);
+
+        Assert.Equal(1, raisedCount);
+    }
+
+    /// <summary>
+    /// A file deleted outside the app is still detected: PersonaRemoved fires, strictly before
+    /// PersonasChanged.
+    /// </summary>
+    [Fact]
+    public void ExternalDelete_FollowedByTheDebounce_RaisesPersonaRemovedBeforePersonasChanged()
+    {
+        using var dir = new TempDataDir();
+        using var store = CreateStore(dir);
+        store.Add(Identity("coo"), "first");
+        store.OnDebounceElapsed(null);
+        var order = new List<string>();
+        store.PersonaRemoved += removed => order.Add("PersonaRemoved:" + removed.Name);
+        store.PersonasChanged += () => order.Add("PersonasChanged");
+
+        File.Delete(store.PathFor("coo"));
+        store.OnDebounceElapsed(null);
+
+        Assert.Equal(["PersonaRemoved:coo", "PersonasChanged"], order);
     }
 
     /// <summary>

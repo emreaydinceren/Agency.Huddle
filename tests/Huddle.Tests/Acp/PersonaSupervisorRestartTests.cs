@@ -227,6 +227,7 @@ public sealed class PersonaSupervisorRestartTests
         personaStore.Add(Identity("nova"), "You are Nova.", "a");
         await supervisor.StartAsync(ct);
         await WaitUntilAsync(() => factory.Calls.Count >= 1, ct);
+        await WaitUntilAsync(() => supervisor.RunningHostCount >= 1, ct);
         var novaId = await WaitForAgentOnlineAsync(directory, gateway, "nova", ct);
         var room = await chat.CreateRoomForAsync([novaId], ct);
         roomSessions.Put("nova", room.Id, new RoomSessionEntry("sess-1", "claude", "a", null, null, DateTimeOffset.UtcNow));
