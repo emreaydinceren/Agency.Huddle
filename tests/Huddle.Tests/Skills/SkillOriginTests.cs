@@ -22,6 +22,18 @@ public sealed class SkillOriginTests
         Assert.Equal("acme/skills", SkillOrigin.Describe(" ", "acme/skills", null));
     }
 
+    /// <summary>An installed Skill reads from its provenance record when it has one, else from its folder, and a shipped Skill with no folder adds nothing.</summary>
+    [Fact]
+    public void Of_InstalledSkill_UsesProvenanceOrItsSource()
+    {
+        SkillProvenance provenance = new("https://github.com/acme/skills", "skills/x", "abc1234", "sha", "Acme", "MIT", DateTimeOffset.UnixEpoch);
+        Skill imported = new("x", "d", [], [], SkillSource.Yours, null, provenance);
+
+        Assert.Equal("Acme · acme/skills/skills/x", SkillOrigin.Of(imported));
+        Assert.Equal("Skills/x", SkillOrigin.Of(imported with { Provenance = null, FolderPath = Path.Combine("data", "Skills", "x") }));
+        Assert.Null(SkillOrigin.Of(imported with { Provenance = null, Source = SkillSource.Default }));
+    }
+
     /// <summary>A built-in Skill says so.</summary>
     [Fact]
     public void Describe_BuiltIn_SaysBuiltIn()

@@ -370,6 +370,10 @@
                         <MudText>@skill.Name</MudText>
                         <MudText Typo="Typo.caption" Class="mud-text-secondary">@skill.Description</MudText>
                         <SkillProvenanceLine Skill="@skill" />
+                        @if (SkillOrigin.Of(skill) is { } origin)
+                        {
+                            <MudText Typo="Typo.caption" Class="mud-text-secondary skill-origin">@origin</MudText>
+                        }
                     </MudSelectItem>
                 }
                 @foreach ((string Name, string Description, bool FromRole, string Origin) option in this.draftOptions.Where(static option => !option.FromRole))

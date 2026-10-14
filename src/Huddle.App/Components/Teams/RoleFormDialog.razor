@@ -29,6 +29,10 @@
                     <MudSelectItem T="string" Value="@skill.Name">
                         <MudText>@skill.Name</MudText>
                         <SkillProvenanceLine Skill="@skill" />
+                        @if (SkillOrigin.Of(skill) is { } origin)
+                        {
+                            <MudText Typo="Typo.caption" Class="mud-text-secondary skill-origin">@origin</MudText>
+                        }
                     </MudSelectItem>
                 }
                 @foreach (SkillsCatalogEntry entry in this.SkillCatalog.All.Where(entry => this.InstalledSkills.Get(entry.Name) is null).OrderBy(static entry => entry.Name, StringComparer.OrdinalIgnoreCase))
