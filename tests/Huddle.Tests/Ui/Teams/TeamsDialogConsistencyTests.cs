@@ -13,19 +13,19 @@ namespace Agency.Huddle.Tests.Ui.Teams;
 /// </summary>
 public sealed class TeamsDialogConsistencyTests
 {
-    /// <summary>The two remaining Team dialogs open with the shared small-form options, so the backdrop does not dismiss them.</summary>
+    /// <summary>The Team dialogs open with the shared small-form options, so the backdrop does not dismiss them; the retired Add member and custom role dialogs are gone.</summary>
     [Fact]
     public void TeamDialogs_UseSmallFormOptions()
     {
         Assert.Same(HuddleDialogOptions.SmallForm, DuplicateTeamDialog.Options);
-        Assert.Same(HuddleDialogOptions.SmallForm, CustomRoleDialog.Options);
         Assert.False(File.Exists(CssSource.RepoPath("src", "Huddle.App", "Components", "Teams", "AddMemberDialog.razor")));
+        Assert.False(File.Exists(CssSource.RepoPath("src", "Huddle.App", "Components", "Teams", "CustomRoleDialog.razor")));
     }
 
     /// <summary>In each dialog the Cancel button comes first and the primary action is the Filled one after it.</summary>
     [Theory]
     [InlineData("DuplicateTeamDialog")]
-    [InlineData("CustomRoleDialog")]
+    [InlineData("RoleFormDialog")]
     public void TeamDialogs_ActionsAreCancelThenFilledPrimary(string dialog)
     {
         string actions = DialogActions(dialog);

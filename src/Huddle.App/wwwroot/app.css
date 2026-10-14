@@ -2672,56 +2672,7 @@ a.team-ref,
     }
 }
 
-/* ---- Team setup ------------------------------------------------------------------------------- */
-
-.hiring-pool {
-    display: grid;
-    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
-    gap: 1.5rem;
-    align-items: start;
-}
-
-.hiring-pool-pool,
-.hiring-pool-team {
-    display: flex;
-    flex-direction: column;
-    gap: 0.5rem;
-    min-width: 0;
-    padding: 1rem;
-    background: var(--mud-palette-background-gray);
-    border: 1px solid var(--mud-palette-divider);
-    border-radius: var(--mud-default-borderradius);
-}
-
-.hiring-pool-heading,
-.hiring-pool-next-label,
-.hiring-pool-count {
-    color: var(--mud-palette-text-secondary);
-}
-
-.hiring-pool-filters {
-    display: flex;
-    flex-direction: column;
-    gap: 0.375rem;
-    margin-bottom: 0.5rem;
-}
-
-.hiring-pool-tags {
-    flex-wrap: wrap;
-    gap: 0.25rem;
-}
-
-.hiring-pool-clear {
-    align-self: flex-start;
-    font: inherit;
-    font-size: var(--mud-typography-body2-size);
-    color: var(--mud-palette-text-primary);
-    background: transparent;
-    border: 1px solid var(--mud-palette-divider);
-    border-radius: 999px;
-    padding: 0.25rem 0.75rem;
-    cursor: pointer;
-}
+/* ---- Chip cloud and process step ------------------------------------------------------------- */
 
 .chip-cloud-title {
     font-size: var(--mud-typography-caption-size);
@@ -2767,65 +2718,6 @@ a.team-ref,
     color: var(--mud-palette-text-secondary);
 }
 
-.hiring-pool-card,
-.hiring-pool-hired,
-.hiring-pool-custom {
-    padding: 0.75rem 1rem;
-    background: var(--mud-palette-surface);
-}
-
-.hiring-pool-custom {
-    border-style: dashed;
-}
-
-.hiring-pool-card-full {
-    background: var(--mud-palette-background-gray);
-}
-
-.hiring-pool-card-full .hiring-pool-title,
-.hiring-pool-card-full .hiring-pool-tier,
-.hiring-pool-card-full .hiring-pool-covers {
-    color: var(--mud-palette-text-disabled);
-}
-
-.hiring-pool-limit {
-    font-weight: 600;
-    color: var(--mud-palette-text-secondary);
-}
-
-.hiring-pool-next {
-    display: flex;
-    gap: 0.375rem;
-}
-
-.hiring-pool-hired-needs-setup {
-    border-color: var(--mud-palette-warning);
-}
-
-.hiring-pool-avatar {
-    flex: 0 0 auto;
-}
-
-.hiring-pool-name {
-    font-weight: 600;
-}
-
-.hiring-pool-status {
-    font-weight: 600;
-}
-
-.hiring-pool-hired:not(.hiring-pool-hired-needs-setup) .hiring-pool-status {
-    color: var(--mud-palette-success);
-}
-
-.hiring-pool-hired-needs-setup .hiring-pool-status {
-    color: var(--mud-palette-warning);
-}
-
-.hiring-pool-connected {
-    align-self: flex-start;
-}
-
 .process-step {
     padding: 1rem;
     background: var(--mud-palette-surface);
@@ -2836,15 +2728,6 @@ a.team-ref,
 .process-step-preview {
     margin: 0.5rem 0 0;
     padding: 0.75rem;
-}
-
-.team-check-bar > .mud-stack {
-    flex-wrap: wrap;
-}
-
-.team-check-vendors,
-.team-check-processes {
-    color: var(--mud-palette-text-secondary);
 }
 
 /* ---- Build a team ----------------------------------------------------------------------------- */
@@ -3112,42 +2995,6 @@ a.team-ref,
     .build-stepper {
         grid-template-columns: repeat(2, minmax(0, 1fr));
     }
-}
-
-.team-check-blockers {
-    margin: 0.5rem 0 0;
-    padding-inline-start: 1.25rem;
-    font-size: var(--mud-typography-body2-size);
-    color: var(--mud-palette-warning);
-}
-
-@media (max-width: 900px) {
-    .hiring-pool {
-        grid-template-columns: minmax(0, 1fr);
-    }
-}
-@media (max-width: 600px) {
-    .hiring-pool-pool,
-    .hiring-pool-team {
-        padding: 0.5rem;
-    }
-
-    .hiring-pool-card,
-    .hiring-pool-hired,
-    .hiring-pool-custom {
-        padding: 0.5rem 0.75rem;
-    }
-
-    .hiring-pool-card .mud-stack,
-    .hiring-pool-hired .mud-stack {
-        min-width: 0;
-    }
-
-    .hiring-pool-title,
-    .hiring-pool-name {
-        overflow-wrap: anywhere;
-    }
-
 }
 
 /* ---- Needs You: the sidebar card of Rooms waiting on the Human ---------------------------------

@@ -100,6 +100,11 @@ role. A type that names an unknown job is rejected (`job-unknown`).
 
 ## 4. The screen
 
+> **Retired (2026-10-14).** `HiringPool.razor`, `HiringPoolSearch`, `CustomRoleDialog`,
+> `TeamCheckBar` and `TeamCheckBarView` were removed with the old Team setup page. The pool's jobs
+> are now hired from the role cards of Build a team (`/teams/build`) and of a Team page's Members
+> tab, and custom roles use `RoleFormDialog`. This section records the original screen.
+
 `HiringPool.razor` shows one card per job and two clouds (`ChipCloud`, the avatar picker's cloud as
 a component):
 

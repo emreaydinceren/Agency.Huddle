@@ -303,7 +303,6 @@ order decides per Token, independently.
 | `Teams/CardResolver.cs` | Resolves one role's defaults into a hire card: `Ready` when all resolve, `NeedsSetup` otherwise. |
 | `Teams/TierModelPicker.cs` | Picks a card's model from `Team:Teams:Tiers:<adapterId>:<tier>`; an adapter with no entry for a tier uses its default model. |
 | `Teams/FileConnectorStatus.cs` | Reads the connected connectors from `connectors.json` in the data folder on every call; a missing or malformed file means none. |
-| `Teams/TeamCheckBar.cs` | What the team check bar shows (one entry per coverage step of the type) and whether Start Team is enabled. |
 | `Teams/MemberWarnings.cs` | The setup warnings for one member: a shared vendor, too many Skills, and Skills sharing a catalog sub-category. |
 | `Teams/TeamDuplicator.cs` | Copies a Team's members into a new Team for Duplicate, and reports each member it did not copy, with the reason. |
 | `Teams/ProcessDocument.cs` | Parses and writes `Process.md`: the `gates`, `wip`, `checkCommand`, `retro` and `digest` keys, and the four `GateId`s. |
@@ -333,16 +332,12 @@ order decides per Token, independently.
 | `Acp/Tools/ProposeRetroChangesTool.cs` (`propose_retro_changes`) | Lets a member holding the `retrospective` Skill propose up to three exact-text changes to the Human. |
 | `Acp/Tools/MarkRetroRowTool.cs` (`mark_retro_row`) | Updates one `Retro register.md` row's status. |
 | `Components/Pages/TeamSetup.razor` | `/teams/new` and `/teams/{Team}/setup`: the New Team from a type form, then the setup screen with the hiring pool, the team check bar and Start Team. |
-| `Components/Teams/HiringPool.razor` | The hiring pool: one card per job, the two filter clouds, Custom role and the staged hires. |
 | `Components/Shared/ChipCloud.razor` | A cloud of toggle chips (selected first, optional cap with "Show all"), the avatar picker's cloud as a component. |
 | `HiringPool/HiringPoolFile.cs` | The records `hiringpool.json` reads into: `PoolTeamType`, `PoolJob`, `HiringPoolFile`. |
 | `HiringPool/HiringPoolCatalog.cs` | Loads the embedded pool and the user pool (merged by id), serves jobs, team type names and personas; never throws for bad content. |
-| `HiringPool/HiringPoolSearch.cs` | Builds the pool's cards and filters them by the two clouds (types any, tags and skills all). |
-| `Components/Teams/CustomRoleDialog.razor` | The dialog for a custom role: title, stance, consult-when and start-from. |
 | `Components/Teams/ProcessStep.razor` | The Process step on a manager's Teammate card: Use this process, or Start blank. |
 | `Components/Teams/ProcessTab.razor` | The Process tab of a Team page: `Process.md`, with Edit. |
 | `Components/Teams/DuplicateTeamDialog.razor` | The Duplicate dialog: the new Team's title and an optional workspace folder. |
-| `Components/Teams/TeamCheckBarView.razor` | Renders the team check bar. |
 | `Components/Settings/SkillImportDialog.razor` | The Import skill dialog: catalog search or a URL, Review, then Install. |
 | `Components/Shared/SkillProvenanceLine.razor` | The provenance line shown wherever a Skill appears, with a "modified locally" chip. |
 | `Components/Shared/RetroProposalCard.razor` | A Room's pending retro changes, with Accept and Reject. |
