@@ -10,6 +10,13 @@
             "command": "bash \"${CLAUDE_PROJECT_DIR:-.}/.claude/hooks/csharp-principles.sh\"",
             "timeout": 10,
             "statusMessage": "Checking C# principles"
+          },
+          {
+            "type": "command",
+            "shell": "bash",
+            "command": "bash \"${CLAUDE_PROJECT_DIR:-.}/.claude/hooks/block-frozen-test-edits.sh\"",
+            "timeout": 10,
+            "statusMessage": "Checking for edits to frozen tests"
           }
         ]
       },
