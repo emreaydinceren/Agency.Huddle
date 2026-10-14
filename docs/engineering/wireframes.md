@@ -285,7 +285,7 @@ Containers that float above a page. Each cell shows one over a dimmed page.
 
 ## Figure 9: The Build a team page
 
-`BuildTeam.razor` at `/teams/build`. The Chief of Staff's four steps, of which steps 1 (Team type), 2 (Team details) and 3 (Hire) are built. The figure shows step 1 only; `B8` to `B9b` are described in the table.
+`BuildTeam.razor` at `/teams/build`. The Chief of Staff's four steps, of which steps 1 (Team type), 2 (Team details) and 3 (Hire) are built. The figure shows step 1 only; `B8` to `B9c` are described in the table.
 
 ![The Build a team page: a title with the Chief of Staff's name, a four-step strip, and a grid of team type cards with one chosen and one marked You have one](../images/wireframes/09-build-a-team.svg)
 
@@ -301,11 +301,12 @@ Containers that float above a page. Each cell shows one over a dimmed page.
 | `B8a` | Team details card | `MudPaper` Outlined, `pa-3` | Three fields in a `MudStack`: Team name (starts as the type's name), "What it's for" (starts as the type's description, six lines), and the "Library folder", the same for every type. It starts as the Teams folder under the data folder, may be left blank, and must be a folder that exists when filled. Step 2 of `B3` is done once the name is free and the folder is allowed |
 | `B8b` | Folder picker | `FolderPickerDialog` (a picker dialog, `O1`) | Opened by the folder icon at the end of the Library folder field in `B8a`. Up one folder, a Folder field (type a path, Enter jumps), the sub-folders of the folder shown, Cancel and Select. A drive root goes up to the list of drives |
 | `B9` | Hire section | `section.build-team-hire` | Step 3; drawn once step 2 is complete. A numbered badge and "Hire", the sub-heading "Roles" with "Available roles" under it, then `B9a`. Its step in `B3` is done once at least one role is chosen |
-| `B9a` | Roles grid | `.team-type-grid` (the same two scrolling rows as `B5`) | A blank dashed card with a large + ("Add a role") first, then the pool roles the chosen type's template defines ("Suggested"), then the Human's own roles, then the rest of the hiring pool. A card is pressed to hire the role (check mark, `aria-pressed`). A pool role that the chosen type's template defines carries a "Suggested" chip. A role the Human wrote also has Edit and Delete icon buttons; Delete asks first |
+| `B9a` | Roles grid | `.team-type-grid` (the same two scrolling rows as `B5`) | A blank dashed card with a large + ("Add a role") first, then the pool roles the chosen type's template defines (a green "Suggested" chip), then the Human's own roles, then the rest of the hiring pool. A role card has an Add button, which puts a new Teammate for the role on the draft roster (`B9c`); a role the Human wrote also has Edit and Delete icon buttons, and Delete asks first |
 | `B9b` | Role form | `RoleFormDialog` (a form dialog, `O2`) | Opened by the + card and by Edit: Title, What it does, Instructions (six lines) and Model strength. Save is disabled until there is a title. Saved to `custom-roles.json` |
+| `B9c` | Draft roster | `.roster-grid` of `.roster-card` | Under the roles: "Draft roster", a count and "dashed ring = not hired yet", then one card per draft Teammate: a dashed-ring monogram, Name, role title, a Manager badge when the template makes the role its manager, the role's description, its model tier, and Re-roll (another free Name), Edit (the Teammate card in draft mode: Save draft changes the draft only) and Remove. Step 3 of `B3` is done once the roster has a Teammate |
 | `B6a` | Team type card | `TeamTypeCard` (`button.team-type-card`) | An icon tile tinted by the type's palette role, the name, the first sentence of the description (two lines at most), "Manager + N roles", a dashed-outline "You have one" chip when a Team of this type exists, and a check mark when chosen; pressed state is `aria-pressed` |
 
-Not drawn: steps 2 and 3 (`B8` to `B9b`) and step 4.
+Not drawn: steps 2 and 3 (`B8` to `B9c`) and step 4.
 
 ## Using the codes
 

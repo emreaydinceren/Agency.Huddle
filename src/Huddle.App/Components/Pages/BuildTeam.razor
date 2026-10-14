@@ -103,18 +103,54 @@
                 </button>
                 @foreach (PoolJob job in this.Pool.Jobs.Where(job => this.IsSuggested(job.Id)))
                 {
-                    <RoleCard @key="job.Id" RoleId="@job.Id" Title="@job.Title" Description="@job.Description" Suggested="true"
-                              Selected="@this.hired.Contains(job.Id)" OnPick="this.ToggleRole" />
+                    <RoleCard @key="job.Id" RoleId="@job.Id" Title="@job.Title" Description="@job.Description" Suggested="true" OnAdd="this.AddRole" />
                 }
                 @foreach (CustomRole role in this.CustomRoles.Roles)
                 {
                     <RoleCard @key="role.Id" RoleId="@role.Id" Title="@role.Title" Description="@role.Description" Custom="true"
-                              Selected="@this.hired.Contains(role.Id)" OnPick="this.ToggleRole" OnEdit="this.EditRoleAsync" OnDelete="this.DeleteRoleAsync" />
+                              OnAdd="this.AddRole" OnEdit="this.EditRoleAsync" OnDelete="this.DeleteRoleAsync" />
                 }
                 @foreach (PoolJob job in this.Pool.Jobs.Where(job => !this.IsSuggested(job.Id)))
                 {
-                    <RoleCard @key="job.Id" RoleId="@job.Id" Title="@job.Title" Description="@job.Description"
-                              Selected="@this.hired.Contains(job.Id)" OnPick="this.ToggleRole" />
+                    <RoleCard @key="job.Id" RoleId="@job.Id" Title="@job.Title" Description="@job.Description" OnAdd="this.AddRole" />
+                }
+            </div>
+
+            <div class="build-team-roster">
+                <MudText Typo="Typo.subtitle1">Draft roster</MudText>
+                <MudText Typo="Typo.body2" Class="build-team-intro build-team-roster-summary">
+                    @(this.drafts.Count == 0 ? "No Teammates yet. Add a role above." : $"{Plural.Of(this.drafts.Count, "draft Teammate", "draft Teammates")} · dashed ring = not hired yet")
+                </MudText>
+                @if (this.drafts.Count > 0)
+                {
+                    <div class="roster-grid" role="list" aria-label="Draft roster">
+                        @foreach (DraftMember draft in this.drafts)
+                        {
+                            <div @key="draft.Key" class="@(draft.Manager ? "roster-card roster-card-manager" : "roster-card")" role="listitem">
+                                <div class="roster-card-head">
+                                    <span class="roster-avatar" aria-hidden="true">@TeammateAvatar.Monogram(draft.Name)</span>
+                                    <span class="roster-card-who">
+                                        <span class="roster-name">@draft.Name</span>
+                                        <span class="roster-title">@draft.Title</span>
+                                    </span>
+                                    @if (draft.Manager)
+                                    {
+                                        <span class="roster-manager-badge">Manager</span>
+                                    }
+                                </div>
+                                <span class="roster-description">@draft.Description</span>
+                                <span class="@($"roster-tier roster-tier-{draft.Tier.ToString().ToLowerInvariant()}")">@draft.Tier.ToString().ToLowerInvariant()</span>
+                                <div class="roster-actions">
+                                    <MudButton Variant="Variant.Outlined" Size="Size.Small" StartIcon="@Icons.Material.Outlined.Casino" OnClick="@(() => this.RerollDraft(draft.Key))"
+                                               aria-label="@($"Re-roll {draft.Name}")" Class="roster-reroll">Re-roll</MudButton>
+                                    <MudButton Variant="Variant.Text" Size="Size.Small" StartIcon="@Icons.Material.Outlined.Edit" OnClick="@(() => this.EditDraftAsync(draft.Key))"
+                                               aria-label="@($"Edit {draft.Name}")" Class="roster-edit">Edit</MudButton>
+                                    <MudButton Variant="Variant.Text" Size="Size.Small" OnClick="@(() => this.RemoveDraft(draft.Key))"
+                                               aria-label="@($"Remove {draft.Name}")" Class="roster-remove">Remove</MudButton>
+                                </div>
+                            </div>
+                        }
+                    </div>
                 }
             </div>
         </section>
@@ -150,7 +186,7 @@
     private string name = string.Empty;
     private string purpose = string.Empty;
     private string workspace = string.Empty;
-    private readonly HashSet<string> hired = new(StringComparer.Ordinal);
+    private readonly List<DraftMember> drafts = [];
     private bool nameEdited;
     private bool purposeEdited;
 
@@ -226,7 +262,7 @@
                 return 1;
             }
 
-            return this.hired.Count > 0 ? 3 : 2;
+            return this.drafts.Count > 0 ? 3 : 2;
         }
     }
 
@@ -234,7 +270,7 @@
     [
         new("Team type", this.selected?.DisplayName ?? "Choose one"),
         new("Team details", this.DetailsReady ? this.TrimmedName : "name and what it’s for"),
-        new("Hire", this.hired.Count > 0 ? Plural.Of(this.hired.Count, "role", "roles") + " chosen" : "choose the roles"),
+        new("Hire", this.drafts.Count > 0 ? Plural.Of(this.drafts.Count, "Teammate", "Teammates") + " drafted" : "add the roles"),
         new("Approve", "only you"),
     ];
 
@@ -306,14 +342,96 @@
     private bool IsSuggested(string jobId) => this.selected?.Roles.Any(role =>
         !role.Pooled && string.Equals(role.Job ?? role.Id, jobId, StringComparison.Ordinal)) ?? false;
 
-    /// <summary>Hires the role, or takes it back when it is pressed again.</summary>
-    /// <param name="roleId">The pressed card's role id.</param>
-    private void ToggleRole(string roleId)
+    /// <summary>One Teammate on the draft roster: a role with a Name, not hired until the Human approves.</summary>
+    /// <param name="Key">Tells this draft from the others; stable while it is edited or re-rolled.</param>
+    /// <param name="Title">The role's title.</param>
+    /// <param name="Description">One sentence on the role.</param>
+    /// <param name="Tier">The model strength the role asks for.</param>
+    /// <param name="Manager">Whether the team type's template makes this role its manager.</param>
+    /// <param name="Name">The Teammate's Name.</param>
+    /// <param name="Text">The persona text the Teammate is hired with.</param>
+    /// <param name="NameChoices">The names the role suggests, tried before the shared pool when re-rolling.</param>
+    private sealed record DraftMember(string Key, string Title, string Description, ModelTier Tier, bool Manager, string Name, string Text, IReadOnlyList<string> NameChoices);
+
+    /// <summary>Whether the chosen type's template makes the pool job its manager.</summary>
+    /// <param name="jobId">The pool job's id.</param>
+    private bool IsManagerRole(string jobId) => this.selected?.Roles.Any(role =>
+        role.Manager && string.Equals(role.Job ?? role.Id, jobId, StringComparison.Ordinal)) ?? false;
+
+    /// <summary>A Name no Teammate and no other draft has: one of the role's own suggestions when one is free, otherwise from the shared pool.</summary>
+    /// <param name="choices">The role's suggested names.</param>
+    /// <param name="current">The Name now showing, which is not drawn again, or <see langword="null"/>.</param>
+    private string FreeName(IReadOnlyList<string> choices, string? current)
     {
-        if (!this.hired.Remove(roleId))
+        List<string> taken = [.. this.Personas.Entries.Select(static entry => entry.Name), .. this.drafts.Select(static draft => draft.Name)];
+        string[] free = [.. choices.Where(choice => !taken.Contains(choice, StringComparer.OrdinalIgnoreCase)
+            && !string.Equals(choice, current, StringComparison.OrdinalIgnoreCase))];
+        return free.Length > 0 ? free[Random.Shared.Next(free.Length)] : TeammateNamePool.Pick(Random.Shared, taken, current);
+    }
+
+    /// <summary>Adds a Teammate for the role to the draft roster, with a free Name.</summary>
+    /// <param name="roleId">The pressed card's role id: a pool job's, or a custom role's.</param>
+    private void AddRole(string roleId)
+    {
+        DraftMember? draft = null;
+        if (this.CustomRoles.Find(roleId) is { } custom)
         {
-            _ = this.hired.Add(roleId);
+            draft = new DraftMember(Guid.NewGuid().ToString("N"), custom.Title, custom.Description, custom.Tier, false, this.FreeName([], null), custom.Instructions, []);
         }
+        else if (this.Pool.FindJob(roleId) is { } job)
+        {
+            string text = this.Pool.ReadPersona(job.Id)?.Stance ?? job.Description;
+            draft = new DraftMember(Guid.NewGuid().ToString("N"), job.Title, job.Description, job.Model.Tier, this.IsManagerRole(job.Id), this.FreeName(job.SuggestedNames, null), text, job.SuggestedNames);
+        }
+
+        if (draft is not null)
+        {
+            this.drafts.Add(draft);
+        }
+    }
+
+    /// <summary>Gives the draft another free Name.</summary>
+    /// <param name="key">The draft's key.</param>
+    private void RerollDraft(string key)
+    {
+        int index = this.drafts.FindIndex(draft => string.Equals(draft.Key, key, StringComparison.Ordinal));
+        if (index >= 0)
+        {
+            this.drafts[index] = this.drafts[index] with { Name = this.FreeName(this.drafts[index].NameChoices, this.drafts[index].Name) };
+        }
+    }
+
+    /// <summary>Takes the draft off the roster.</summary>
+    /// <param name="key">The draft's key.</param>
+    private void RemoveDraft(string key) => _ = this.drafts.RemoveAll(draft => string.Equals(draft.Key, key, StringComparison.Ordinal));
+
+    /// <summary>Opens the Teammate card on the draft; Save puts the edited Name, title and text back on the roster, and nothing is written to the Teammates.</summary>
+    /// <param name="key">The draft's key.</param>
+    private async Task EditDraftAsync(string key)
+    {
+        DraftMember? draft = this.drafts.Find(candidate => string.Equals(candidate.Key, key, StringComparison.Ordinal));
+        if (draft is null)
+        {
+            return;
+        }
+
+        DialogParameters parameters = new()
+        {
+            [nameof(TeammateCard.Mode)] = TeammateCardMode.Create,
+            [nameof(TeammateCard.Name)] = draft.Name,
+            [nameof(TeammateCard.Title)] = draft.Title,
+            [nameof(TeammateCard.Text)] = draft.Text,
+            [nameof(TeammateCard.TakenNames)] = (IReadOnlyList<string>)[.. this.drafts.Where(other => !string.Equals(other.Key, key, StringComparison.Ordinal)).Select(static other => other.Name)],
+            [nameof(TeammateCard.OnDraftSaved)] = EventCallback.Factory.Create<(string Name, string Title, string Text, string? Model, string? Effort)>(this, saved =>
+            {
+                int index = this.drafts.FindIndex(candidate => string.Equals(candidate.Key, key, StringComparison.Ordinal));
+                if (index >= 0)
+                {
+                    this.drafts[index] = this.drafts[index] with { Name = saved.Name, Title = saved.Title, Text = saved.Text };
+                }
+            }),
+        };
+        _ = await this.Dialogs.ShowAsync<TeammateCard>("Edit draft", parameters, TeammateCard.Options);
     }
 
     /// <summary>Opens the role form empty and stores the role it returns.</summary>
@@ -322,8 +440,7 @@
         CustomRole? role = await this.ShowRoleDialogAsync(new DialogParameters<RoleFormDialog>());
         if (role is not null)
         {
-            CustomRole stored = this.CustomRoles.Add(role.Title, role.Description, role.Instructions, role.Tier);
-            _ = this.hired.Add(stored.Id);
+            _ = this.CustomRoles.Add(role.Title, role.Description, role.Instructions, role.Tier);
         }
     }
 
@@ -363,7 +480,6 @@
         if (await this.Dialogs.ConfirmAsync($"Delete {current.Title}?", "The role is removed from your roles. Teams already built keep their Teammates.", "Delete", danger: true))
         {
             _ = this.CustomRoles.Delete(roleId);
-            _ = this.hired.Remove(roleId);
         }
     }
 

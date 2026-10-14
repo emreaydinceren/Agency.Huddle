@@ -3539,7 +3539,7 @@ a.team-ref,
     font: inherit;
     color: var(--mud-palette-primary);
     background: transparent;
-    border: 2px dashed var(--mud-palette-divider);
+    border: 1px dashed var(--mud-palette-divider);
     border-radius: calc(var(--mud-default-borderradius) * 1.5);
     cursor: pointer;
 }
@@ -3551,4 +3551,138 @@ a.team-ref,
 
 .role-add-label {
     font-size: var(--mud-typography-body2-size);
+}
+
+.role-card-body {
+    flex: 1 1 auto;
+    padding-inline-end: 4.5rem;
+    cursor: default;
+}
+
+.role-card-body:hover {
+    background: var(--mud-palette-surface);
+}
+
+.role-suggested {
+    padding: 0.25rem 0.5rem;
+    border: 1px solid var(--mud-palette-success);
+    border-radius: 999px;
+    font-weight: 600;
+    color: var(--mud-palette-success-darken);
+    background: color-mix(in srgb, var(--mud-palette-success) 14%, var(--mud-palette-surface));
+}
+
+.role-card-add {
+    align-self: flex-start;
+    margin-top: 0.25rem;
+}
+
+.build-team-roster {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+}
+
+.roster-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(16rem, 1fr));
+    gap: 0.75rem;
+}
+
+.roster-card {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+    min-width: 0;
+    padding: 0.75rem;
+    background: var(--mud-palette-surface);
+    border: 1px solid var(--mud-palette-divider);
+    border-radius: calc(var(--mud-default-borderradius) * 1.5);
+}
+
+.roster-card-manager {
+    background: color-mix(in srgb, var(--mud-palette-primary) 8%, var(--mud-palette-surface));
+    border-color: var(--mud-palette-primary);
+}
+
+.roster-card-head {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+}
+
+.roster-avatar {
+    display: inline-flex;
+    flex: 0 0 auto;
+    align-items: center;
+    justify-content: center;
+    width: 2.5rem;
+    height: 2.5rem;
+    border: 1px dashed var(--mud-palette-primary);
+    border-radius: 50%;
+    font-size: var(--mud-typography-body2-size);
+    font-weight: 600;
+    color: var(--mud-palette-primary);
+    background: color-mix(in srgb, var(--mud-palette-primary) 12%, var(--mud-palette-surface));
+}
+
+.roster-card-who {
+    display: flex;
+    flex: 1 1 auto;
+    flex-direction: column;
+    min-width: 0;
+}
+
+.roster-name {
+    font-size: var(--mud-typography-subtitle1-size);
+    font-weight: 600;
+}
+
+.roster-title {
+    font-size: var(--mud-typography-body2-size);
+    color: var(--mud-palette-text-secondary);
+}
+
+.roster-manager-badge {
+    padding: 0.125rem 0.5rem;
+    border-radius: 999px;
+    font-size: var(--mud-typography-caption-size);
+    font-weight: 700;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+    color: var(--mud-palette-primary-text);
+    background: var(--mud-palette-primary);
+}
+
+.roster-description {
+    font-size: var(--mud-typography-body2-size);
+}
+
+.roster-tier {
+    align-self: flex-start;
+    padding: 0.125rem 0.5rem;
+    border-radius: 999px;
+    font-size: var(--mud-typography-caption-size);
+    color: var(--mud-palette-text-primary);
+    background: var(--mud-palette-background-gray);
+}
+
+.roster-tier-strongest {
+    background: color-mix(in srgb, var(--mud-palette-primary) 14%, var(--mud-palette-surface));
+}
+
+.roster-tier-balanced {
+    background: color-mix(in srgb, var(--mud-palette-info) 16%, var(--mud-palette-surface));
+}
+
+.roster-tier-fast {
+    background: color-mix(in srgb, var(--mud-palette-success) 16%, var(--mud-palette-surface));
+}
+
+.roster-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.25rem;
+    padding-top: 0.5rem;
+    border-top: 1px solid var(--mud-palette-divider);
 }

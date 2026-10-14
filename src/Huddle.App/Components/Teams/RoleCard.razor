@@ -1,11 +1,11 @@
 @*
-    One role on the Build a team page (step 3, Hire): a pressed button like TeamTypeCard, so choosing reads as the
-    check mark and aria-pressed, never by colour alone. A custom role also carries Edit and Delete buttons; they sit
-    beside the card button, not inside it, because a button may not hold buttons. The caller owns the selection.
+    One role on the Build a team page (step 3, Hire). Its Add button puts a new Teammate for this role on the draft
+    roster; the role itself is not chosen or used up, so it can be added again. A custom role also carries Edit and
+    Delete buttons.
 *@
 
 <div class="role-card">
-    <button type="button" class="@this.CardClass" aria-pressed="@(this.Selected ? "true" : "false")" @onclick="this.OnSelect">
+    <div class="team-type-card role-card-body">
         <span class="@($"team-type-icon {(this.Custom ? "team-type-tint-secondary" : "team-type-tint-primary")}")" aria-hidden="true">
             <MudIcon Icon="@(this.Custom ? Icons.Material.Outlined.PersonAdd : Icons.Material.Outlined.Badge)" Size="Size.Small" />
         </span>
@@ -16,18 +16,13 @@
                 <span class="team-type-roles">@(this.Custom ? "Your role" : "Hiring pool")</span>
                 @if (this.Suggested)
                 {
-                    <span class="team-type-owned role-suggested">Suggested</span>
+                    <span class="role-suggested">Suggested</span>
                 }
             </span>
+            <MudButton Variant="Variant.Outlined" Size="Size.Small" StartIcon="@Icons.Material.Filled.Add" OnClick="this.OnAddClick"
+                       aria-label="@($"Add {this.Title}")" Class="role-card-add">Add</MudButton>
         </span>
-        @if (this.Selected)
-        {
-            <span class="team-type-check">
-                <MudIcon Icon="@Icons.Material.Filled.Check" Size="Size.Small" />
-                <span class="visually-hidden">Selected</span>
-            </span>
-        }
-    </button>
+    </div>
     @if (this.Custom)
     {
         <span class="role-card-actions">
@@ -62,13 +57,9 @@
     [Parameter]
     public bool Suggested { get; set; }
 
-    /// <summary>Whether this role is chosen.</summary>
+    /// <summary>Raised with the role's id when Add is pressed.</summary>
     [Parameter]
-    public bool Selected { get; set; }
-
-    /// <summary>Raised with the role's id when the card is pressed.</summary>
-    [Parameter]
-    public EventCallback<string> OnPick { get; set; }
+    public EventCallback<string> OnAdd { get; set; }
 
     /// <summary>Raised with the role's id when Edit is pressed.</summary>
     [Parameter]
@@ -78,9 +69,7 @@
     [Parameter]
     public EventCallback<string> OnDelete { get; set; }
 
-    private string CardClass => this.Selected ? "team-type-card team-type-card-selected" : "team-type-card";
-
-    private Task OnSelect() => this.OnPick.InvokeAsync(this.RoleId);
+    private Task OnAddClick() => this.OnAdd.InvokeAsync(this.RoleId);
 
     private Task OnEditClick() => this.OnEdit.InvokeAsync(this.RoleId);
 

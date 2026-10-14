@@ -343,29 +343,74 @@ public sealed class BuildTeamTests
         Assert.Empty(cut.FindAll(".build-team-hire .role-suggested"));
     }
 
-    /// <summary>Pressing a role hires it, the step strip counts it, and pressing again takes it back.</summary>
+    /// <summary>Add puts a draft Teammate for the role on the roster with a Name, the step strip counts it, and the role can be added again.</summary>
     [Fact]
-    public async Task Hire_PressingARole_TogglesItAndCountsIt()
+    public async Task Hire_AddingARole_PutsADraftTeammateOnTheRoster()
     {
         using Fixture fixture = new(typeCount: 3);
         await using MudBunitContext ctx = fixture.NewContext();
         ctx.Services.GetRequiredService<NavigationManager>().NavigateTo("/teams/build?type=blank");
         IRenderedComponent<ContainerFragment> cut = Render(ctx);
         await cut.InvokeAsync(() => cut.Find(".build-team-name input").InputAsync("Garden"));
+        Assert.Equal("No Teammates yet. Add a role above.", cut.Find(".build-team-roster-summary").TextContent.Trim());
 
-        await cut.InvokeAsync(() => cut.Find(".build-team-hire .role-card button.team-type-card").ClickAsync());
+        await cut.InvokeAsync(() => cut.Find("[aria-label='Add Bookkeeper']").ClickAsync());
 
-        Assert.Equal("true", cut.Find(".build-team-hire .role-card button.team-type-card").GetAttribute("aria-pressed"));
-        Assert.Equal("1 role chosen", cut.FindAll("ol.build-stepper > li")[2].QuerySelector(".build-step-detail")?.TextContent.Trim());
+        IElement card = Assert.Single(cut.FindAll(".roster-card"));
+        Assert.Equal("Bookkeeper", card.QuerySelector(".roster-title")?.TextContent.Trim());
+        Assert.NotEqual(string.Empty, card.QuerySelector(".roster-name")?.TextContent.Trim());
+        Assert.Equal("balanced", card.QuerySelector(".roster-tier")?.TextContent.Trim());
+        Assert.Equal("1 Teammate drafted", cut.FindAll("ol.build-stepper > li")[2].QuerySelector(".build-step-detail")?.TextContent.Trim());
+        Assert.Equal("1 draft Teammate · dashed ring = not hired yet", cut.Find(".build-team-roster-summary").TextContent.Trim());
 
-        await cut.InvokeAsync(() => cut.Find(".build-team-hire .role-card button.team-type-card").ClickAsync());
+        await cut.InvokeAsync(() => cut.Find("[aria-label='Add Bookkeeper']").ClickAsync());
 
-        Assert.Equal("false", cut.Find(".build-team-hire .role-card button.team-type-card").GetAttribute("aria-pressed"));
+        Assert.Equal(2, cut.FindAll(".roster-card").Count);
+        Assert.DoesNotContain(fixture.Personas.Entries, entry => string.Equals(entry.Title, "Bookkeeper", StringComparison.Ordinal));
     }
 
-    /// <summary>The Add card opens the role form; Save stores the role in the custom roles file and shows it as a hired, editable card.</summary>
+    /// <summary>Re-roll gives the draft another Name, and Remove takes it off the roster.</summary>
     [Fact]
-    public async Task Hire_AddingACustomRole_StoresItAndHiresIt()
+    public async Task Hire_RerollAndRemove_ChangeTheDraft()
+    {
+        using Fixture fixture = new(typeCount: 3);
+        await using MudBunitContext ctx = fixture.NewContext();
+        ctx.Services.GetRequiredService<NavigationManager>().NavigateTo("/teams/build?type=blank");
+        IRenderedComponent<ContainerFragment> cut = Render(ctx);
+        await cut.InvokeAsync(() => cut.Find(".build-team-name input").InputAsync("Garden"));
+        await cut.InvokeAsync(() => cut.Find("[aria-label='Add Tutor']").ClickAsync());
+        string? before = cut.Find(".roster-name").TextContent.Trim();
+
+        await cut.InvokeAsync(() => cut.Find(".roster-reroll").ClickAsync());
+
+        Assert.NotEqual(before, cut.Find(".roster-name").TextContent.Trim());
+
+        await cut.InvokeAsync(() => cut.Find(".roster-remove").ClickAsync());
+
+        Assert.Empty(cut.FindAll(".roster-card"));
+    }
+
+    /// <summary>The template's manager role, once added, is badged Manager on the roster; other roles are not.</summary>
+    [Fact]
+    public async Task Hire_TheManagerRole_IsBadged()
+    {
+        using Fixture fixture = new(typeCount: 3);
+        await using MudBunitContext ctx = fixture.NewContext();
+        ctx.Services.GetRequiredService<NavigationManager>().NavigateTo("/teams/build?type=t01");
+        IRenderedComponent<ContainerFragment> cut = Render(ctx);
+
+        await cut.InvokeAsync(() => cut.Find("[aria-label='Add Tutor']").ClickAsync());
+        await cut.InvokeAsync(() => cut.Find("[aria-label='Add Bookkeeper']").ClickAsync());
+
+        IReadOnlyList<IElement> cards = cut.FindAll(".roster-card");
+        Assert.Equal(2, cards.Count);
+        Assert.Equal("Manager", Assert.Single(cards[0].QuerySelectorAll(".roster-manager-badge")).TextContent.Trim());
+        Assert.Empty(cards[1].QuerySelectorAll(".roster-manager-badge"));
+    }
+
+    /// <summary>The Add card opens the role form; Save stores the role in the custom roles file and shows it as an editable role card.</summary>
+    [Fact]
+    public async Task Hire_AddingACustomRole_StoresItAndShowsIt()
     {
         using Fixture fixture = new(typeCount: 3);
         await using MudBunitContext ctx = fixture.NewContext();
@@ -384,7 +429,7 @@ public sealed class BuildTeamTests
         Assert.Equal("custom-gardener", stored.Id);
         Assert.True(File.Exists(Path.Combine(fixture.DirPath, "custom-roles.json")));
         Assert.Equal("Gardener", cut.Find(".build-team-hire .role-card .team-type-name").TextContent.Trim());
-        Assert.Equal("true", cut.Find(".build-team-hire .role-card button.team-type-card").GetAttribute("aria-pressed"));
+        Assert.Empty(cut.FindAll(".roster-card"));
     }
 
     /// <summary>Edit opens the form with the role's fields and stores the changes; Delete asks first and then removes the role.</summary>
@@ -513,9 +558,9 @@ public sealed class BuildTeamTests
               "workspace": {{(order == 2 ? """{ "kind": "folder", "label": "Project folder", "required": true }""" : """{ "kind": "none", "label": "None", "required": false }""")}},
               "processes": [{ "id": "flow", "file": "processes/flow.md", "default": true }],
               "roles": [
-                { "id": "lead", "title": "Lead", "candidate": "candidates/lead.md", "manager": true, "required": true },
+                { "id": "tutor", "title": "Lead", "candidate": "candidates/lead.md", "manager": true, "required": true },
                 { "id": "dev", "title": "Developer", "candidate": "candidates/dev.md" },
-                { "id": "tutor", "title": "Tester", "candidate": "candidates/qa.md" }
+                { "id": "qa", "title": "Tester", "candidate": "candidates/qa.md" }
               ] }
             """;
     }
