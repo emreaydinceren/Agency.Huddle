@@ -335,6 +335,7 @@ public sealed class BuildTeamTests
         IReadOnlyList<IElement> chips = cut.FindAll(".build-team-hire .role-suggested");
 
         Assert.Equal("Suggested", Assert.Single(chips).TextContent.Trim());
+        Assert.Equal(["Suggested", "Add"], chips[0].ParentElement?.Children.Select(child => child.TextContent.Trim()));
         Assert.Equal("Tutor", chips[0].Closest(".role-card")?.QuerySelector(".team-type-name")?.TextContent.Trim());
         Assert.Equal(["Tutor", "Bookkeeper"], cut.FindAll(".build-team-hire .role-card .team-type-name").Select(name => name.TextContent.Trim()));
 
@@ -356,6 +357,7 @@ public sealed class BuildTeamTests
         IRenderedComponent<ContainerFragment> cut = Render(ctx);
         await cut.InvokeAsync(() => cut.Find(".build-team-name input").InputAsync("Garden"));
         Assert.Equal("No Teammates yet. Add a role above.", cut.Find(".build-team-roster-summary").TextContent.Trim());
+        Assert.Equal("Draft Teammates appear here, each with a name and an avatar.", cut.Find(".roster-empty").TextContent.Trim());
 
         await cut.InvokeAsync(() => cut.Find("[aria-label='Add Bookkeeper']").ClickAsync());
 
@@ -365,6 +367,7 @@ public sealed class BuildTeamTests
         Assert.Equal("balanced", card.QuerySelector(".roster-tier")?.TextContent.Trim());
         Assert.Equal("1 Teammate drafted", cut.FindAll("ol.build-stepper > li")[2].QuerySelector(".build-step-detail")?.TextContent.Trim());
         Assert.Equal("1 draft Teammate · dashed ring = not hired yet", cut.Find(".build-team-roster-summary").TextContent.Trim());
+        Assert.Empty(cut.FindAll(".roster-empty"));
         Assert.Equal("On the draft roster", Assert.Single(cut.FindAll(".role-card-taken")).TextContent.Trim());
         Assert.Equal("Bookkeeper", cut.Find(".role-card-taken").Closest(".role-card")?.QuerySelector(".team-type-name")?.TextContent.Trim());
 

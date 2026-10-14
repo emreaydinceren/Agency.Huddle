@@ -21,13 +21,15 @@
             <span class="team-type-tagline">@this.Description</span>
             <span class="team-type-meta">
                 <span class="team-type-roles">@(this.Custom ? "Your role" : "Hiring pool")</span>
+            </span>
+            <span class="role-card-footer">
                 @if (this.Suggested)
                 {
                     <span class="role-suggested">Suggested</span>
                 }
+                <MudButton Variant="Variant.Outlined" Size="Size.Small" OnClick="this.OnAddClick"
+                           aria-label="@($"Add {this.Title}")" Class="role-card-add">Add</MudButton>
             </span>
-            <MudButton Variant="Variant.Outlined" Size="Size.Small" StartIcon="@Icons.Material.Filled.Add" OnClick="this.OnAddClick"
-                       aria-label="@($"Add {this.Title}")" Class="role-card-add">Add</MudButton>
         </span>
     </div>
     @if (this.Custom)
