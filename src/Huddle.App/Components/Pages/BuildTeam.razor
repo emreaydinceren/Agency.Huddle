@@ -524,19 +524,21 @@
 
     /// <summary>The Skills Edit draft offers besides the installed ones: the role's own that are not installed, then the rest of the catalog, so the list is never narrowed to what is already installed.</summary>
     /// <param name="draft">The draft being edited.</param>
-    private IReadOnlyList<(string Name, string Description, bool FromRole)> DraftSkillChoices(DraftMember draft)
+    private IReadOnlyList<(string Name, string Description, bool FromRole, string Origin)> DraftSkillChoices(DraftMember draft)
     {
-        List<(string Name, string Description, bool FromRole)> choices = [];
+        List<(string Name, string Description, bool FromRole, string Origin)> choices = [];
         foreach (SkillRef skill in draft.Skills.Where(skill => this.InstalledSkills.Get(skill.Name) is null))
         {
-            choices.Add((skill.Name, this.SkillCatalog.FindByName(skill.Name)?.Description ?? string.Empty, true));
+            SkillsCatalogEntry? known = this.SkillCatalog.FindByName(skill.Name);
+            string origin = known is null ? SkillOrigin.Describe(null, skill.Source, skill.Path) : SkillOrigin.Describe(known.Publisher, known.Repo, known.Path);
+            choices.Add((skill.Name, known?.Description ?? string.Empty, true, origin));
         }
 
         foreach (SkillsCatalogEntry entry in this.SkillCatalog.All.OrderBy(static entry => entry.Name, StringComparer.OrdinalIgnoreCase))
         {
             if (this.InstalledSkills.Get(entry.Name) is null && !choices.Exists(choice => string.Equals(choice.Name, entry.Name, StringComparison.Ordinal)))
             {
-                choices.Add((entry.Name, entry.Description, false));
+                choices.Add((entry.Name, entry.Description, false, SkillOrigin.Describe(entry.Publisher, entry.Repo, entry.Path)));
             }
         }
 
