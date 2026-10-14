@@ -720,8 +720,10 @@ Skills** does. If a Skill's review shows more than a missing licence (scripts, s
 commands, network calls), nothing is created: the message names it and links to
 **Settings › Skills**, where you import it yourself before approving again. A hired Teammate
 runs on the adapter and model its role's strength resolved to and carries the role's Skills
-and packs. **Edit** on a draft can change them, and the role form for your own roles has a
-**Skills** field.
+and packs. **Edit** on a draft can change them: its **Skills** list shows the role's own skills first,
+checked, then your installed skills, then the whole catalog, so you can add any skill and
+it is imported when you approve. The role form for your own roles has the same **Skills**
+field.
 
 ### Hiring a Team from a type
 

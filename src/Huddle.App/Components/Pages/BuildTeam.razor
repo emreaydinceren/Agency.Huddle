@@ -6,6 +6,7 @@
 @using Agency.Huddle.App.Components.Teams
 @using Agency.Huddle.App.HiringPool
 @using Agency.Huddle.App.Library
+@using Agency.Huddle.App.Skills
 @using Agency.Huddle.App.Teammates
 @using Agency.Huddle.App.TeamTypes
 @using Agency.Huddle.App.Teams
@@ -24,6 +25,8 @@
 @inject HireService Hiring
 @inject IHireContext HireContext
 @inject SkillPackStore Packs
+@inject SkillsCatalogIndex SkillCatalog
+@inject SkillStore InstalledSkills
 @implements IDisposable
 
 @*
@@ -500,7 +503,7 @@
         if (this.CustomRoles.Find(roleId) is { } custom)
         {
             string drawn = this.FreeName([], null);
-            RoleSpec spec = new(custom.Id, custom.Title, string.Empty, Model: new ModelSpec(custom.Tier), Skills: [.. custom.Skills.Select(static skill => new SkillRef(skill, "local", null))]);
+            RoleSpec spec = new(custom.Id, custom.Title, string.Empty, Model: new ModelSpec(custom.Tier), Skills: [.. custom.Skills.Select(this.SkillRefFor)]);
             draft = this.NewDraft(custom.Id, custom.Title, custom.Description, custom.Tier, false, drawn, custom.Instructions, [], [], spec);
             draft = await this.WithLibraryAvatarAsync(draft);
         }
@@ -517,6 +520,39 @@
         {
             this.drafts.Add(draft);
         }
+    }
+
+    /// <summary>The Skills Edit draft offers besides the installed ones: the role's own that are not installed, then the rest of the catalog, so the list is never narrowed to what is already installed.</summary>
+    /// <param name="draft">The draft being edited.</param>
+    private IReadOnlyList<(string Name, string Description, bool FromRole)> DraftSkillChoices(DraftMember draft)
+    {
+        List<(string Name, string Description, bool FromRole)> choices = [];
+        foreach (SkillRef skill in draft.Skills.Where(skill => this.InstalledSkills.Get(skill.Name) is null))
+        {
+            choices.Add((skill.Name, this.SkillCatalog.FindByName(skill.Name)?.Description ?? string.Empty, true));
+        }
+
+        foreach (SkillsCatalogEntry entry in this.SkillCatalog.All.OrderBy(static entry => entry.Name, StringComparer.OrdinalIgnoreCase))
+        {
+            if (this.InstalledSkills.Get(entry.Name) is null && !choices.Exists(choice => string.Equals(choice.Name, entry.Name, StringComparison.Ordinal)))
+            {
+                choices.Add((entry.Name, entry.Description, false));
+            }
+        }
+
+        return choices;
+    }
+
+    /// <summary>The Skill to ask the installer for: one already installed stays as it is; otherwise the catalog entry it came from, so approving imports it.</summary>
+    /// <param name="name">The Skill's name.</param>
+    private SkillRef SkillRefFor(string name)
+    {
+        if (this.InstalledSkills.Get(name) is null && this.SkillCatalog.FindByName(name) is { } entry)
+        {
+            return new SkillRef(entry.Name, entry.Repo, entry.Path);
+        }
+
+        return new SkillRef(name, "local", null);
     }
 
     /// <summary>A draft for a role, its Skills, packs, adapter, model and setup reasons resolved the way a hire card was (the card resolver).</summary>
@@ -587,6 +623,7 @@
             [nameof(TeammateCard.DraftAvatar)] = draft.Avatar,
             [nameof(TeammateCard.DraftImage)] = draft.Image,
             [nameof(TeammateCard.DraftImageExtension)] = draft.ImageExtension,
+            [nameof(TeammateCard.DraftSkillChoices)] = this.DraftSkillChoices(draft),
             [nameof(TeammateCard.DraftSkills)] = (IReadOnlyList<string>)[.. draft.Skills.Select(static skill => skill.Name)],
             [nameof(TeammateCard.Adapter)] = draft.Adapter,
             [nameof(TeammateCard.Model)] = draft.Model,
@@ -598,7 +635,7 @@
                 if (index >= 0)
                 {
                     DraftMember current = this.drafts[index];
-                    IReadOnlyList<SkillRef> skills = [.. saved.Skills.Select(name => current.Skills.FirstOrDefault(known => string.Equals(known.Name, name, StringComparison.Ordinal)) ?? new SkillRef(name, "local", null))];
+                    IReadOnlyList<SkillRef> skills = [.. saved.Skills.Select(name => current.Skills.FirstOrDefault(known => string.Equals(known.Name, name, StringComparison.Ordinal)) ?? this.SkillRefFor(name))];
                     this.drafts[index] = current with { Name = saved.Name, Title = saved.Title, Text = saved.Text, Avatar = saved.Avatar, Image = saved.Image, ImageExtension = saved.ImageExtension, Skills = skills, Adapter = saved.Adapter, Model = saved.Model, Effort = saved.Effort };
                 }
             }),

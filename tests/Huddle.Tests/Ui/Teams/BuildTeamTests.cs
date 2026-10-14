@@ -731,6 +731,7 @@ public sealed class BuildTeamTests
             ctx.Services.AddSingleton(this.Hire);
             ctx.Services.AddSingleton(this.Packs);
             ctx.Services.AddSingleton(this.Skills);
+            ctx.Services.AddSingleton(new SkillsCatalogIndex(this.dir.Options(), NullLogger<SkillsCatalogIndex>.Instance));
             ctx.Services.AddSingleton<IHireContext>(new RoleFixtures.Context());
             return ctx;
         }

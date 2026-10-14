@@ -10,6 +10,7 @@
 *@
 
 @inject SkillStore InstalledSkills
+@inject SkillsCatalogIndex SkillCatalog
 
 <MudDialog>
     <DialogContent>
@@ -22,10 +23,17 @@
                           HelperText="What a Teammate in this role is told to do."
                           Value="this.instructions" ValueChanged="this.OnInstructionsChanged" Class="custom-role-instructions" />
             <MudSelect T="string" Label="Skills" MultiSelection="true" SelectedValues="@this.skills" SelectedValuesChanged="this.OnSkillsChanged"
-                       Variant="Variant.Outlined" Margin="Margin.Dense" HelperText="Skills you have installed; a Teammate in this role carries them." Class="custom-role-skills">
+                       Variant="Variant.Outlined" Margin="Margin.Dense" HelperText="Installed Skills and the whole catalog; a Teammate in this role carries them." Class="custom-role-skills">
                 @foreach (Skill skill in this.InstalledSkills.All)
                 {
                     <MudSelectItem T="string" Value="@skill.Name">@skill.Name</MudSelectItem>
+                }
+                @foreach (SkillsCatalogEntry entry in this.SkillCatalog.All.Where(entry => this.InstalledSkills.Get(entry.Name) is null).OrderBy(static entry => entry.Name, StringComparer.OrdinalIgnoreCase))
+                {
+                    <MudSelectItem T="string" Value="@entry.Name">
+                        <MudText>@entry.Name</MudText>
+                        <MudText Typo="Typo.caption" Class="mud-text-secondary">From the catalog; imported when a Team is approved.</MudText>
+                    </MudSelectItem>
                 }
             </MudSelect>
             <MudSelect T="ModelTier" Variant="Variant.Outlined" Margin="Margin.Dense" Label="Model strength"
