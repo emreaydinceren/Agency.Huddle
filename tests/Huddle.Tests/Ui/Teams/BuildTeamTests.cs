@@ -320,7 +320,7 @@ public sealed class BuildTeamTests
         Assert.Equal(["Bookkeeper", "Tutor"], cut.FindAll(".build-team-hire .role-card .team-type-name").Select(name => name.TextContent.Trim()));
     }
 
-    /// <summary>A pool role the chosen type's template defines carries a "Suggested" chip; the others, and every role under the Blank Team, do not.</summary>
+    /// <summary>A pool role the chosen type's template defines carries a "Suggested" chip and comes before the others (the Tutor would follow the Bookkeeper by title); the others, and every role under the Blank Team, do not.</summary>
     [Fact]
     public async Task Hire_RoleInTheTemplate_IsMarkedSuggested()
     {
@@ -332,7 +332,8 @@ public sealed class BuildTeamTests
         IReadOnlyList<IElement> chips = cut.FindAll(".build-team-hire .role-suggested");
 
         Assert.Equal("Suggested", Assert.Single(chips).TextContent.Trim());
-        Assert.Equal("Bookkeeper", chips[0].Closest(".role-card")?.QuerySelector(".team-type-name")?.TextContent.Trim());
+        Assert.Equal("Tutor", chips[0].Closest(".role-card")?.QuerySelector(".team-type-name")?.TextContent.Trim());
+        Assert.Equal(["Tutor", "Bookkeeper"], cut.FindAll(".build-team-hire .role-card .team-type-name").Select(name => name.TextContent.Trim()));
 
         await cut.InvokeAsync(() => cut.Find(Card).ClickAsync());
         await cut.InvokeAsync(() => cut.Find(Card).ClickAsync());
@@ -514,7 +515,7 @@ public sealed class BuildTeamTests
               "roles": [
                 { "id": "lead", "title": "Lead", "candidate": "candidates/lead.md", "manager": true, "required": true },
                 { "id": "dev", "title": "Developer", "candidate": "candidates/dev.md" },
-                { "id": "bookkeeper", "title": "Tester", "candidate": "candidates/qa.md" }
+                { "id": "tutor", "title": "Tester", "candidate": "candidates/qa.md" }
               ] }
             """;
     }

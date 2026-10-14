@@ -101,14 +101,19 @@
                     <MudIcon Icon="@Icons.Material.Filled.Add" Size="Size.Large" />
                     <span class="role-add-label">Add a role</span>
                 </button>
+                @foreach (PoolJob job in this.Pool.Jobs.Where(job => this.IsSuggested(job.Id)))
+                {
+                    <RoleCard @key="job.Id" RoleId="@job.Id" Title="@job.Title" Description="@job.Description" Suggested="true"
+                              Selected="@this.hired.Contains(job.Id)" OnPick="this.ToggleRole" />
+                }
                 @foreach (CustomRole role in this.CustomRoles.Roles)
                 {
                     <RoleCard @key="role.Id" RoleId="@role.Id" Title="@role.Title" Description="@role.Description" Custom="true"
                               Selected="@this.hired.Contains(role.Id)" OnPick="this.ToggleRole" OnEdit="this.EditRoleAsync" OnDelete="this.DeleteRoleAsync" />
                 }
-                @foreach (PoolJob job in this.Pool.Jobs)
+                @foreach (PoolJob job in this.Pool.Jobs.Where(job => !this.IsSuggested(job.Id)))
                 {
-                    <RoleCard @key="job.Id" RoleId="@job.Id" Title="@job.Title" Description="@job.Description" Suggested="@this.IsSuggested(job.Id)"
+                    <RoleCard @key="job.Id" RoleId="@job.Id" Title="@job.Title" Description="@job.Description"
                               Selected="@this.hired.Contains(job.Id)" OnPick="this.ToggleRole" />
                 }
             </div>

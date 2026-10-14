@@ -693,7 +693,7 @@ the last link of the Teams group in the sidebar.
 **Hire**, step 3, opens once **Team details** is complete. Under **Roles** (*Available
 roles*) it shows the same two scrolling rows of cards: a blank card with a large **+**
 first, then your own roles, then the roles of the hiring pool. A role the chosen team
-type already defines carries a **Suggested** chip. Select a card to hire
+type already defines carries a **Suggested** chip and comes first, before your own roles. Select a card to hire
 that role; select it again to take it back. The **+** card opens a form (title, what it
 does, instructions, model strength); the role is saved in `custom-roles.json` in your data
 folder, hired at once, and stays on the page for next time. A role you wrote has **Edit**
