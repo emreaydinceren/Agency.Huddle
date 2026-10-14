@@ -184,6 +184,25 @@ public sealed class AppJsSourceTests
         AppJsSourceTests.AssertInOrder(block, "restoreFocus()", "window.huddleSearch._previous", ".focus()");
     }
 
+    /// <summary>
+    /// <c>huddleResize.attachDrawer</c> reads the drawer's unzoomed layout width (<c>offsetWidth</c>), never
+    /// <c>getBoundingClientRect().width</c>, which is the 90%-zoomed width and made the first ArrowLeft shrink a 420px drawer.
+    /// </summary>
+    [Fact]
+    public void AttachDrawer_ReadsUnzoomedWidth_NotBoundingRect()
+    {
+        string text = File.ReadAllText(CssSource.RepoPath("src", "Huddle.App", "wwwroot", "app.js"));
+        int start = text.IndexOf("attachDrawer(", StringComparison.Ordinal);
+        int end = text.IndexOf("window.huddleClipboard", start, StringComparison.Ordinal);
+        Assert.True(start >= 0 && end > start, "Expected attachDrawer followed by window.huddleClipboard.");
+        string block = text[start..end];
+
+        Assert.DoesNotContain("getBoundingClientRect().width", block, StringComparison.Ordinal);
+        // contains-ok: source-fact test, no JS runner - app.js's own text is what's pinned.
+        Assert.Contains("drawer.offsetWidth", block, StringComparison.Ordinal);
+        Assert.Equal(3, AppJsSourceTests.CountOccurrences(block, "drawer.offsetWidth"));
+    }
+
     /// <summary>The text of the <c>window.huddleSearch</c> object, up to the closing <c>};</c> at the start of a line.</summary>
     private static string HuddleSearchBlock()
     {

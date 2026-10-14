@@ -517,7 +517,7 @@ window.huddleResize = {
     // right, so ArrowLeft grows it and ArrowRight shrinks it; Shift takes a bigger step, Home and End
     // jump to the narrowest and widest.
     handle.addEventListener("keydown", (e) => {
-      const current = drawer.getBoundingClientRect().width;
+      const current = drawer.offsetWidth;
       const step = e.shiftKey ? 64 : 16;
       let next;
       switch (e.key) {
@@ -539,7 +539,7 @@ window.huddleResize = {
     handle.addEventListener("pointerdown", (e) => {
       dragging = true;
       startX = e.clientX;
-      startWidth = drawer.getBoundingClientRect().width;
+      startWidth = drawer.offsetWidth;
       handle.setPointerCapture(e.pointerId);
       e.preventDefault();
     });
@@ -550,7 +550,11 @@ window.huddleResize = {
       }
       // Anchor.End puts the drawer on the right, so dragging the handle left (clientX decreasing,
       // startX - e.clientX growing) is what should grow it.
-      setWidth(startWidth + (startX - e.clientX));
+      // The page runs at html { zoom: 0.9 }. offsetWidth is the unzoomed layout width (the CSS px that
+      // --mud-drawer-width takes), whereas getBoundingClientRect() and clientX are visual (zoomed) pixels
+      // in Chromium, so the pointer delta is divided by the zoom factor to land in the same unit.
+      const zoom = parseFloat(getComputedStyle(document.documentElement).zoom) || 1;
+      setWidth(startWidth + ((startX - e.clientX) / zoom));
     });
 
     const endDrag = (e) => {
@@ -559,7 +563,7 @@ window.huddleResize = {
       }
       dragging = false;
       handle.releasePointerCapture(e.pointerId);
-      window.huddleStorage.set(storageKey, String(Math.round(drawer.getBoundingClientRect().width)));
+      window.huddleStorage.set(storageKey, String(Math.round(drawer.offsetWidth)));
     };
 
     handle.addEventListener("pointerup", endDrag);
