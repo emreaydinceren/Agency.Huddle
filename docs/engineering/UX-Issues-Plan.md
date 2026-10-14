@@ -1042,7 +1042,7 @@ Ids are `<deliverable number>.<task>`, the form `Set-Tracker.ps1` updates:
 `pwsh -NoProfile -File agents/scripts/Set-Tracker.ps1 -Task "12.3" -State Done -TrackerPath docs/engineering/UX-Issues-Plan.md`.
 `(H)` is Haiku, `(S)` is Sonnet.
 
-**Status:** 117 of 141 tasks Done · 0 of 2 retrospectives done · last updated 2026-10-13.
+**Status:** 122 of 141 tasks Done · 0 of 2 retrospectives done · last updated 2026-10-13.
 
 | **Deliverable / Task** | **Model** | **Depends on** | **Active** | **In Progress** | **Done** |
 | --- | --- | --- | --- | --- | --- |
@@ -1153,11 +1153,11 @@ Ids are `<deliverable number>.<task>`, the form `Set-Tracker.ps1` updates:
 | 17.4 Banners (H) | Haiku | 17.1 | | | ✔ |
 | 17.5 Baseline and suite (H) | Haiku | 17.2, 17.3, 17.4 | | | ✔ |
 | **U18 Library: layout and Move** | Sonnet | U17, U23 | | | |
-| 18.1 Red (S) | Sonnet | U17, U23 | | | |
-| 18.2 Header and split (S) | Sonnet | 18.1 | | | |
-| 18.3 TryPin (S) | Sonnet | 18.1 | | | |
-| 18.4 MoveDialog (S) | Sonnet | 18.1 | | | |
-| 18.5 Wireframes (S) | Sonnet | 18.2, 18.4 | | | |
+| 18.1 Red (S) | Sonnet | U17, U23 | | | ✔ |
+| 18.2 Header and split (S) | Sonnet | 18.1 | | | ✔ |
+| 18.3 TryPin (S) | Sonnet | 18.1 | | | ✔ |
+| 18.4 MoveDialog (S) | Sonnet | 18.1 | | | ✔ |
+| 18.5 Wireframes (S) | Sonnet | 18.2, 18.4 | | | ✔ |
 | **U19 Teams: mechanical pass** | Haiku | U0, U5, U6, U7 | | | |
 | 19.1 Red (H) | Haiku | U0 | | | ✔ |
 | 19.2 Attributes, roles, keys, icons (H) | Haiku | 19.1 | | | ✔ |
