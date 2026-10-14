@@ -75,8 +75,6 @@
                 @if (!isProject)
                 {
                     string sourceTeam = summary.Name;
-                    <MudButton Variant="Variant.Outlined" Size="Size.Small" StartIcon="@Icons.Material.Outlined.Edit"
-                               Href="@($"{TeamHref(sourceTeam)}/edit")" Class="team-page-edit">Edit team</MudButton>
                     <MudButton Variant="Variant.Outlined" Size="Size.Small" StartIcon="@Icons.Material.Outlined.ContentCopy"
                                OnClick="@(() => this.DuplicateAsync(sourceTeam))">Duplicate</MudButton>
                 }
@@ -117,6 +115,9 @@
                                 break;
                             case TeamPageTab.Process:
                                 <ProcessTab Team="@summary.Name" />
+                                break;
+                            case TeamPageTab.Details:
+                                <TeamDetails Team="@summary.Name" />
                                 break;
                         }
                     </MudTabPanel>
@@ -169,6 +170,7 @@
         TeamPageTab.Members => TabIcons.For("teammates"),
         TeamPageTab.Files => TabIcons.For("library"),
         TeamPageTab.Process => Icons.Material.Outlined.AccountTree,
+        TeamPageTab.Details => Icons.Material.Outlined.Info,
         _ => TabIcons.For("tasks"),
     };
 

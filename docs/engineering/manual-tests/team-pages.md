@@ -414,21 +414,21 @@ The Teams provisioner makes the folder the moment the Teammate is saved
 - The Files tab shows an error.
 - The folder is not created on save.
 
-### TP-T16 — Edit team saves the purpose; the Members tab hires and deletes
+### TP-T16 — Details tab saves the purpose; the Members tab hires and deletes
 
 **Free** · about 4 min
 
-*Proves that **Edit team** opens Build a team for an existing Team with its type and name fixed and
-no Hire step, and writes "What it's for" to `_team.md`; and that the Members tab hires a new
+*Proves that the **Details** tab shows Build a team's type and details for an existing Team with
+its type and name fixed and no Hire step, and writes "What it's for" to `_team.md`; and that the Members tab hires a new
 draft and deletes a removed member (the Teammate, not only the label).*
 
 **Steps**
 
 1. Open **Build a team**, choose **Blank Team**, name it `Garden`, add two roles from the role
    cards and select **Approve & hire**. Note the two Names.
-2. On the Garden Team page, click **Edit team** in the header.
-3. Confirm the page is titled `Edit Garden`, has three steps, shows only the Blank Team card and no
-   role cards, and the Team name field cannot be typed in.
+2. On the Garden Team page, open the last tab, **Details**. Confirm the header has no **Edit team** button.
+3. Confirm the tab has no steps and no role cards, shows only the Blank Team card, and the Team name
+   field cannot be typed in.
 4. Change **What it's for** to `Grows vegetables.` and click **Save changes**.
 5. On the Garden **Members** tab, add any role from the role cards, then click **Remove** on the
    first of the two members and choose **Delete Teammate**.
@@ -436,7 +436,7 @@ draft and deletes a removed member (the Teammate, not only the label).*
 
 **Pass if**
 
-- After step 4 the Garden Team page opens and `<data>\Teams\Garden\_team.md` has `owns: Grows vegetables.`.
+- After step 4 the Details tab stays open with "Nothing has changed yet." and `<data>\Teams\Garden\_team.md` has `owns: Grows vegetables.`.
 - The roster showed the two members with a **Member** chip and the new draft with a **New** chip,
   and the removed member's card said "Will be deleted when you save" with an **Undo** button.
 - The confirmation named the removed member.
@@ -445,7 +445,7 @@ draft and deletes a removed member (the Teammate, not only the label).*
 
 **Fail if**
 
-- The type cards or the Team name can be changed, or the edit page shows role cards.
+- The type cards or the Team name can be changed, or the Details tab shows role cards.
 - The removed member is still on the Teammates page, or only lost the `Garden` label.
 - The new draft was not hired, or a member was hired a second time.
 

@@ -71,13 +71,13 @@ public sealed class TeamPageTests
     /// <param name="expectedHeaders">The tab headers, comma-joined.</param>
     /// <param name="expectedStub">The one tab component that renders.</param>
     [Theory]
-    [InlineData(true, true, null, "Members,Files,Tasks", nameof(TeamRoster))]
+    [InlineData(true, true, null, "Members,Files,Tasks,Details", nameof(TeamRoster))]
     [InlineData(true, true, "Marketing Project", "Files,Tasks", nameof(TeamFilesTab))]
-    [InlineData(false, true, null, "Members,Tasks", nameof(TeamRoster))]
+    [InlineData(false, true, null, "Members,Tasks,Details", nameof(TeamRoster))]
     [InlineData(false, true, "Marketing Project", "Tasks", nameof(TeamTasksTab))]
-    [InlineData(true, false, null, "Members,Files", nameof(TeamRoster))]
+    [InlineData(true, false, null, "Members,Files,Details", nameof(TeamRoster))]
     [InlineData(true, false, "Marketing Project", "Files", nameof(TeamFilesTab))]
-    [InlineData(false, false, null, "Members", nameof(TeamRoster))]
+    [InlineData(false, false, null, "Members,Details", nameof(TeamRoster))]
     public async Task Tabs_FollowTheFlags_AndOnlyTheDefaultTabRenders(
         bool libraryEnabled,
         bool tasksEnabled,
@@ -294,7 +294,7 @@ public sealed class TeamPageTests
 
         Assert.Equal([nameof(TeamFilesTab)], RenderedTabs(cut));
         Assert.Equal("Business", FilesParameters(cut).Get(p => p.Team));
-        Assert.Equal("Members,Files,Tasks", string.Join(',', TabHeaders(cut)));
+        Assert.Equal("Members,Files,Tasks,Details", string.Join(',', TabHeaders(cut)));
         Assert.Empty(cut.FindAll(AlertSelector));
     }
 
@@ -424,19 +424,20 @@ public sealed class TeamPageTests
         Assert.Contains("mb-4", row.ClassList);
     }
 
-    /// <summary>The Team page's header has an Edit team link to the Team's edit page; a Project page has none.</summary>
+    /// <summary>The Details tab, last on a Team page, renders the Team's details with the catalog's spelling; the header has no Edit team button, and a Project page has no Details tab.</summary>
     [Fact]
-    public async Task TeamPage_EditTeam_LinksToTheEditPage()
+    public async Task TeamPage_DetailsTab_RendersTheTeamsDetails()
     {
         await using MudBunitContext ctx = NewContext(Catalog());
 
-        IRenderedComponent<TeamPage> team = RenderPage(ctx, "Business");
+        IRenderedComponent<TeamPage> team = RenderPage(ctx, "business", tab: "details");
         IRenderedComponent<TeamPage> project = RenderPage(ctx, "Business", "marketing project");
 
-        IElement edit = team.Find("a.team-page-edit");
-        Assert.Equal("Edit team", edit.TextContent.Trim());
-        Assert.Equal("/teams/Business/edit", edit.GetAttribute("href"));
-        Assert.Empty(project.FindAll("a.team-page-edit"));
+        Assert.Equal([nameof(TeamDetails)], RenderedTabs(team));
+        Assert.Equal("Business", team.FindComponent<Stub<TeamDetails>>().Instance.Parameters.Get(p => p.Team));
+        Assert.Equal("Details", TabHeaders(team)[^1]);
+        Assert.Empty(team.FindAll("a.team-page-edit"));
+        Assert.DoesNotContain("Details", TabHeaders(project));
     }
 
     /// <summary>The Team page container is <c>MaxWidth.False</c> with <c>pa-4</c> padding, for a Team page and a Project page alike (UX-002, UX-003).</summary>
@@ -454,7 +455,7 @@ public sealed class TeamPageTests
         Assert.Contains("pa-4", cut.Find(".mud-container").ClassList);
     }
 
-    /// <summary>The tab rail takes its icons from <c>TabIcons</c>, the entity table of design-system.md (UX-008): Teammates for Members, Library for Files, Tasks for Tasks.</summary>
+    /// <summary>The tab rail takes its icons from <c>TabIcons</c>, the entity table of design-system.md (UX-008): Teammates for Members, Library for Files, Tasks for Tasks; Details, which has no entity, takes the Info icon.</summary>
     [Fact]
     public async Task TabRail_IconsComeFromTabIcons()
     {
@@ -463,7 +464,7 @@ public sealed class TeamPageTests
         IRenderedComponent<TeamPage> cut = RenderPage(ctx, "Business");
 
         string?[] icons = [.. cut.FindComponents<MudTabPanel>().Select(panel => panel.Instance.Icon)];
-        Assert.Equal([TabIcons.For("teammates"), TabIcons.For("library"), TabIcons.For("tasks")], icons);
+        Assert.Equal([TabIcons.For("teammates"), TabIcons.For("library"), TabIcons.For("tasks"), Icons.Material.Outlined.Info], icons);
     }
 
     /// <summary>The "turned off" notice is a status, not an alert: it says nothing went wrong (UX-V13 family, U19 carry-over).</summary>
@@ -488,6 +489,7 @@ public sealed class TeamPageTests
         teamOptions.Tasks.Enabled = tasksEnabled;
         ctx.Services.AddSingleton(Options.Create(teamOptions));
         ctx.ComponentFactories.AddStub<TeamRoster>();
+        ctx.ComponentFactories.AddStub<TeamDetails>();
         ctx.ComponentFactories.AddStub<TeamFilesTab>();
         ctx.ComponentFactories.AddStub<TeamTasksTab>();
         ctx.ComponentFactories.AddStub<TeamSpend>();
@@ -532,6 +534,11 @@ public sealed class TeamPageTests
         if (cut.FindComponents<Stub<TeamTasksTab>>().Count > 0)
         {
             names.Add(nameof(TeamTasksTab));
+        }
+
+        if (cut.FindComponents<Stub<TeamDetails>>().Count > 0)
+        {
+            names.Add(nameof(TeamDetails));
         }
 
         return [.. names];

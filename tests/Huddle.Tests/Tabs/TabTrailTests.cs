@@ -15,7 +15,6 @@ public sealed class TabTrailTests
     [InlineData("/teams/Core/tasks", "Core", "Teams > Core")]
     [InlineData("/teams/Core/projects/Alpha", "Alpha", "Teams > [Core](/teams/Core) > Alpha")]
     [InlineData("/teams/Core/projects/Alpha/files", "Alpha", "Teams > [Core](/teams/Core) > Alpha")]
-    [InlineData("/teams/Core/edit", "Edit Core", "Teams > [Core](/teams/Core) > Edit Core")]
     [InlineData("/tasks", "Tasks", "Tasks")]
     [InlineData("/tasks/board", "board", "[Tasks](/tasks) > board")]
     [InlineData("/tasks/new", "New task", "[Tasks](/tasks) > New task")]

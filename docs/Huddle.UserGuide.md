@@ -652,9 +652,10 @@ Select a Team or Project in the sidebar.
 
 | Tab | On a Team page | On a Project page |
 | --- | --- | --- |
-| **Members** | Members, with status, title and alias; search; Add and Remove. Opening a row opens the Teammate card. | Not shown. Projects are worked by the Team. |
+| **Members** | The role cards and the roster of members, with status, Edit, Message and Remove, and **Save changes**. See [Adding and removing members](#adding-and-removing-members). | Not shown. Projects are worked by the Team. |
 | **Files** | The Library, scoped to `Teams/<Team>/`, with **New note** and a file-name search. | Scoped to `Teams/<Team>/<Project>/`. |
 | **Tasks** | The Team's Tasks as a List or a Board (one swimlane per Project), with the same toolbar as the Tasks page. **New task** fills in the Team. | The same, for the Project. **New task** fills in the Team and Project. |
+| **Details** | Last. The Team's type, name, **What it's for** and **Library folder**, and **Save changes**. See [Editing a team](#editing-a-team). | Not shown. |
 
 Changes you make with the Tasks tab toolbar (filter, group, sort, search) last for
 the current visit only, and always stay inside the Team or Project.
@@ -741,12 +742,12 @@ field.
 
 #### Editing a team
 
-**Edit team** in a Team page's header opens the same page for that Team
-(`/teams/<Team>/edit`) with three steps: **Team type**, **Team details** and **Save**. Its
-type and name can't be changed; **What it's for** and the **Library folder** can. There is
-no Hire step here: the Team's members are edited on its **Members** tab (see
-[Adding and removing members](#adding-and-removing-members)). **Save changes** is off until a
-detail changed; it writes them to the Team file and opens the Team.
+A Team page's last tab, **Details**, holds the first two steps of Build a team for that
+Team: **Team type** and **Team details**, then **Save changes**. The type and name can't be
+changed; **What it's for** and the **Library folder** can. **Save changes** is off until a
+detail changed; it writes them to the Team file and the tab stays open. The Team's members
+are edited on its **Members** tab (see
+[Adding and removing members](#adding-and-removing-members)).
 
 ### Hiring a Team from a type
 
@@ -1670,7 +1671,7 @@ Skill you wrote yourself shows **Yours**, and a shipped one shows **Built in**.
 | Remove a Teammate | Deletes `<Name>.md` only | Goes offline; Rooms, transcripts and `work/` stay |
 | Restart a Teammate | Deletes `room-sessions/<Name>.json` | Every Room starts fresh, with catch-up |
 | Build a team (**Approve & hire**) | `Teams/<Team>/_team.md`, then a Teammate file for each draft | The Teammates are hired; start them from their cards |
-| Edit team (**Save changes**) | `Teams/<Team>/_team.md` (purpose, Library folder) | Nothing else |
+| Details tab (**Save changes**) | `Teams/<Team>/_team.md` (purpose, Library folder) | Nothing else |
 | Members tab (**Save changes**) | A Teammate file for each new draft, `_team.md`'s manager, the `teams:` line of each member taken off the Team, and removes the deleted Teammates' files | The new Teammates are hired; the ones taken off restart; the deleted ones are gone |
 | Duplicate a Team | A new `Teams/<Team>/` and new Teammate files; no memory, notes or Tasks | New Teammates start |
 | Use a process | `Teams/<Team>/Process.md`, never over an existing one | Members read it |

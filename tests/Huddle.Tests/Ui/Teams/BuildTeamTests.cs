@@ -30,17 +30,16 @@ public sealed class BuildTeamTests
 {
     private const string Card = ".build-team-section:not(.build-team-hire) button.team-type-card";
 
-    /// <summary>The page declares <c>/teams/build</c> to build a Team and <c>/teams/{Team}/edit</c> to edit one.</summary>
+    /// <summary>The page declares the one route <c>/teams/build</c>; an existing Team is edited in its Team page's Details and Members tabs, not on a page of its own.</summary>
     [Fact]
-    public void Route_IsTeamsBuild_AndTeamEdit()
+    public void Route_IsTeamsBuild()
     {
-        string[] templates = [.. typeof(BuildTeam)
+        string template = Assert.Single(typeof(BuildTeam)
             .GetCustomAttributes(typeof(RouteAttribute), inherit: false)
             .OfType<RouteAttribute>()
-            .Select(route => route.Template)
-            .Order(StringComparer.Ordinal)];
+            .Select(route => route.Template));
 
-        Assert.Equal(["/teams/build", "/teams/{Team}/edit"], templates);
+        Assert.Equal("/teams/build", template);
     }
 
     /// <summary>The page opens with <c>PageHeader</c>: the only h1 reads "Build a team" at Typo.h5, inside a <c>pa-4</c> container.</summary>
@@ -634,9 +633,9 @@ public sealed class BuildTeamTests
         Assert.Equal("with your Chief of Staff", cut.Find(".page-header-subtitle").TextContent.Trim());
     }
 
-    /// <summary>Editing a Team shows only its own type and its name disabled, has no Hire section (members are edited in the Members tab), and keeps Save off until a detail changes.</summary>
+    /// <summary>The Details tab shows only the Team's own type and its name disabled, with no header, steps, section numbers or Hire section, and keeps Save off until a detail changes.</summary>
     [Fact]
-    public async Task Edit_ShowsTheDetails_WithTheTypeAndNameFixed_AndNoHire()
+    public async Task Details_ShowsTheTypeAndDetails_WithTheNameFixed_AndNoHire()
     {
         using Fixture fixture = new(typeCount: 3);
         fixture.SeedGarden();
@@ -644,12 +643,14 @@ public sealed class BuildTeamTests
 
         IRenderedComponent<ContainerFragment> cut = RenderEdit(ctx, "Garden");
 
-        Assert.Equal("Edit Garden", Assert.Single(cut.FindAll("h1")).TextContent.Trim());
+        Assert.Empty(cut.FindAll("h1"));
+        Assert.Empty(cut.FindAll(".build-stepper"));
+        Assert.Empty(cut.FindAll(".build-team-section-number"));
+        Assert.Single(cut.FindAll(".team-details"));
         Assert.Equal("Type 01", Assert.Single(cut.FindAll(Card)).QuerySelector(".team-type-name")?.TextContent.Trim());
         Assert.True(cut.Find(".build-team-name input").HasAttribute("disabled"));
         Assert.Equal("Grows things.", cut.Find(".build-team-purpose textarea").TextContent.Trim());
         Assert.Empty(cut.FindAll(".build-team-hire"));
-        Assert.Equal(3, cut.FindAll(".build-stepper li").Count);
         Assert.True(cut.Find("button.build-team-approve-button").HasAttribute("disabled"));
         Assert.Equal("Nothing has changed yet.", cut.Find(".build-team-approve-hint").TextContent.Trim());
         Assert.Equal("Save changes", cut.Find("button.build-team-approve-button").TextContent.Trim());
@@ -804,9 +805,9 @@ public sealed class BuildTeamTests
         Assert.Equal(["Ada"], messaged);
     }
 
-    /// <summary>A changed "What it's for" is written to the team file as one line; nothing is asked, since nobody is deleted.</summary>
+    /// <summary>On the Details tab a changed "What it's for" is written to the team file as one line, and the tab stays with nothing pending.</summary>
     [Fact]
-    public async Task Edit_ChangingWhatItsFor_UpdatesTheTeamFile()
+    public async Task Details_ChangingWhatItsFor_UpdatesTheTeamFile()
     {
         using Fixture fixture = new(typeCount: 3);
         fixture.SeedGarden();
@@ -818,12 +819,12 @@ public sealed class BuildTeamTests
 
         Assert.Equal("Grows vegetables.", fixture.Folders.ReadResult?.Owns);
         Assert.Equal("Ada", fixture.Folders.ReadResult?.Manager);
-        Assert.Equal("/teams/Garden", new Uri(ctx.Services.GetRequiredService<NavigationManager>().Uri).AbsolutePath);
+        Assert.Equal("Nothing has changed yet.", cut.Find(".build-team-approve-hint").TextContent.Trim());
     }
 
     /// <summary>Editing a Team that does not exist says so instead of drawing the page.</summary>
     [Fact]
-    public async Task Edit_UnknownTeam_SaysSo()
+    public async Task Details_UnknownTeam_SaysSo()
     {
         using Fixture fixture = new(typeCount: 3);
         await using MudBunitContext ctx = fixture.NewContext();
@@ -834,6 +835,7 @@ public sealed class BuildTeamTests
         Assert.Empty(cut.FindAll(".build-team-section"));
     }
 
+    /// <summary>Renders the page as the Details tab does: only the Team set.</summary>
     private static IRenderedComponent<ContainerFragment> RenderEdit(MudBunitContext ctx, string team)
     {
         return ctx.RenderWithPopovers(builder =>

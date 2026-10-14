@@ -30,6 +30,9 @@ three tabs:
 
 - **Members** lists the Teammates whose `teams` field names the Team. Since 2026-10-14 it is
   Build a team's Hire section for the Team (see §6.7).
+- **Details** (added 2026-10-14, always the last tab of a Team page, never on a Project page) is
+  Build a team's type and details sections for the Team (`TeamDetails`): the type and name are
+  fixed, and *Save changes* writes "What it's for" and the Library folder to `_team.md`.
 - **Files** is the existing `LibraryExplorer`, scoped to the Team folder, with *+ New note* and a
   search box.
 - **Tasks** is the existing Board, filtered to the Team and grouped by Project.
@@ -250,6 +253,7 @@ The new code goes in folder `src/Huddle.App/Teams/`, namespace `Agency.Huddle.Ap
 | `Components/Pages/TeamPage.razor` | Both routes, the tab strip, and each tab's search text (the shell draws the breadcrumbs: Tabs spec) | §6.6 |
 | `Components/Teams/TeamTabToolbar.razor` | The action button and the search field, used by each tab component. It owns no state | §6.6 |
 | `Components/Teams/TeamRoster.razor` | Members tab (replaced `TeamMembers`, `AddMemberDialog` and `TeammateChoice` on 2026-10-14) | §6.7 |
+| `Components/Teams/TeamDetails.razor` | Details tab, last on a Team page (added 2026-10-14) | §2 |
 | `Components/Teams/TeamFilesTab.razor` | Files tab: the toolbar and a scoped `LibraryExplorer` | §6.8 |
 | `Components/Teams/TeamTasksTab.razor` | Tasks tab: the toolbar and a `TaskBoard` over an in-memory `TaskView` | §6.9 |
 | `Components/Teams/NewTeamDialog.razor`, `NewTeamDialogMode.cs` | Name a new Team or Project, validated inline; `public enum NewTeamDialogMode { Team, Project }` | §6.5 |

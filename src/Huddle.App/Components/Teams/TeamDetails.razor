@@ -1,0 +1,15 @@
+@using Agency.Huddle.App.Components.Pages
+
+@*
+    The Team page's Details tab: Build a team's type and details sections for an existing Team, with its own Save
+    changes. The type and name are fixed; "What it's for" and the Library folder are saved to the Team's _team.md.
+    It is BuildTeam with only Team set, so building a Team and editing its details share one form and one save path.
+*@
+
+<BuildTeam Team="@this.Team" />
+
+@code {
+    /// <summary>The Team whose details are shown, in the catalog's spelling.</summary>
+    [Parameter, EditorRequired]
+    public string Team { get; set; } = string.Empty;
+}

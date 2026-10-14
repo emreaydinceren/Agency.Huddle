@@ -2094,7 +2094,8 @@ a.team-ref,
 }
 
 .team-page-wide .team-tasks-tab,
-.team-page-wide .team-roster {
+.team-page-wide .team-roster,
+.team-page-wide .team-details {
     padding: 0 1rem 1rem;
 }
 
@@ -2665,6 +2666,7 @@ a.team-ref,
 
 @media (max-width: 600px) {
     .team-page-wide .team-roster,
+    .team-page-wide .team-details,
     .team-page-wide .team-tasks-tab {
         padding-inline: 0.5rem;
     }

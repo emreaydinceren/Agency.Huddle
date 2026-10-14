@@ -1,5 +1,4 @@
 @page "/teams/build"
-@page "/teams/{Team}/edit"
 @using Agency.Huddle.App.Acp
 @using Agency.Huddle.App.Avatars
 @using Agency.Huddle.App.Components.Shared
@@ -46,12 +45,13 @@
     Step 3 (Hire) offers the roles of the hiring pool and the Human's own, as cards in the same two-row grid, with a blank card
     to add a custom role. Step 4 is not built yet. The Chief of Staff is whichever Persona carries the _builtin marker, so a rename shows here.
 
-    At /teams/{Team}/edit the same page edits an existing Team's details: its type and name are fixed, and Save
-    changes writes "What it's for" and the Library folder. The Team's members are edited on the Team page's Members
-    tab, which embeds this component with MembersOnly (through TeamRoster): only the Hire section and a Save row.
-    There the members are on the roster beside any new drafts, a member's Edit opens their card (which saves at
-    once), and Remove marks a member for deletion. Save changes hires the new drafts, replaces the manager, then
-    deletes the marked Teammates, in that order, so the manager is replaced before the old one is deleted.
+    The Team page embeds this component twice for an existing Team (Team set). Its Details tab (TeamDetails) shows
+    the type and details sections and a Save row: the type and name are fixed, and Save changes writes "What it's
+    for" and the Library folder. Its Members tab (TeamRoster, MembersOnly) shows only the Hire section and a Save
+    row: the members are on the roster beside any new drafts, a member's Edit opens their card (which saves at
+    once), and Remove marks a member to leave the Team or to be deleted. Save changes hires the new drafts,
+    replaces the manager, then takes members off or deletes them, in that order, so the manager is replaced before
+    the old one goes. Neither embedded form has the page header or the steps, and both redraw in place on save.
 *@
 
 @if (this.EditMode && this.missingTeam)
@@ -62,16 +62,22 @@
     return;
 }
 
-<MudContainer MaxWidth="@(this.MembersOnly ? MaxWidth.False : MaxWidth.Large)" Gutters="@(!this.MembersOnly)" Class="@(this.MembersOnly ? "build-team team-roster" : "build-team pa-4")">
+<MudContainer MaxWidth="@(this.EditMode ? MaxWidth.False : MaxWidth.Large)" Gutters="@(!this.EditMode)" Class="@this.ContainerClass">
     @if (!this.MembersOnly)
     {
-    <PageHeader Title="@(this.EditMode ? $"Edit {this.Team}" : "Build a team")" Subtitle="@this.Subtitle" />
+    @if (!this.EditMode)
+    {
+        <PageHeader Title="Build a team" Subtitle="@this.Subtitle" />
 
-    <BuildStepper Steps="this.Steps" Current="this.CurrentStep" AriaLabel="@(this.EditMode ? "Edit a team: three steps" : "Build a team: four steps")" />
+        <BuildStepper Steps="this.Steps" Current="this.CurrentStep" AriaLabel="Build a team: four steps" />
+    }
 
     <section class="build-team-section" aria-labelledby="build-team-type-heading">
         <div class="build-team-section-head">
-            <span class="build-team-section-number" aria-hidden="true">1</span>
+            @if (!this.EditMode)
+            {
+                <span class="build-team-section-number" aria-hidden="true">1</span>
+            }
             <MudText Typo="Typo.h6" id="build-team-type-heading">Team type</MudText>
         </div>
         <MudText Typo="Typo.body2" Class="build-team-intro">@(this.EditMode ? "A Team's type can't be changed." : this.Intro)</MudText>
@@ -96,7 +102,10 @@
     {
         <section class="build-team-section build-team-details" aria-labelledby="build-team-details-heading">
             <div class="build-team-section-head">
-                <span class="build-team-section-number" aria-hidden="true">2</span>
+                @if (!this.EditMode)
+                {
+                    <span class="build-team-section-number" aria-hidden="true">2</span>
+                }
                 <MudText Typo="Typo.h6" id="build-team-details-heading">Team details</MudText>
             </div>
             <MudPaper Outlined="true" Elevation="0" Class="build-team-details-card pa-3">
@@ -268,12 +277,12 @@
 
     @if (this.selected is not null)
     {
-        <section class="build-team-section build-team-approve" aria-labelledby="@(this.MembersOnly ? null : "build-team-approve-heading")" aria-label="@(this.MembersOnly ? "Save" : null)">
-            @if (!this.MembersOnly)
+        <section class="build-team-section build-team-approve" aria-labelledby="@(this.EditMode ? null : "build-team-approve-heading")" aria-label="@(this.EditMode ? "Save" : null)">
+            @if (!this.EditMode)
             {
                 <div class="build-team-section-head">
-                    <span class="build-team-section-number" aria-hidden="true">@(this.EditMode ? 3 : 4)</span>
-                    <MudText Typo="Typo.h6" id="build-team-approve-heading">@(this.EditMode ? "Save" : "Approve")</MudText>
+                    <span class="build-team-section-number" aria-hidden="true">4</span>
+                    <MudText Typo="Typo.h6" id="build-team-approve-heading">Approve</MudText>
                 </div>
             }
             @if (this.approveError is not null)
@@ -302,9 +311,27 @@
 @code {
     private TeamTypeManifest? selected;
 
-    /// <summary>The Team being edited, from <c>/teams/{Team}/edit</c>; <see langword="null"/> when building a new Team.</summary>
+    /// <summary>The existing Team the Team page embeds this for (its Details or Members tab); <see langword="null"/> when building a new Team at <c>/teams/build</c>.</summary>
     [Parameter]
     public string? Team { get; set; }
+
+    private string ContainerClass
+    {
+        get
+        {
+            string part;
+            if (!this.EditMode)
+            {
+                part = "pa-4";
+            }
+            else
+            {
+                part = this.MembersOnly ? "team-roster" : "team-details";
+            }
+
+            return string.Join(' ', "build-team", part);
+        }
+    }
 
     /// <summary>When set with <see cref="Team"/>, only the Team's roster is drawn and saved (the Members tab): no header, steps, type or details.</summary>
     [Parameter]
@@ -605,25 +632,11 @@
                 return 1;
             }
 
-            if (this.EditMode)
-            {
-                return 2;
-            }
-
             return this.KeptCount > 0 ? 3 : 2;
         }
     }
 
-    private IReadOnlyList<BuildStepper.BuildStep> Steps => this.EditMode ? this.EditSteps : this.BuildSteps;
-
-    private IReadOnlyList<BuildStepper.BuildStep> EditSteps =>
-    [
-        new("Team type", this.selected?.DisplayName ?? "Unknown"),
-        new("Team details", this.TrimmedName),
-        new("Save", "only you"),
-    ];
-
-    private IReadOnlyList<BuildStepper.BuildStep> BuildSteps =>
+    private IReadOnlyList<BuildStepper.BuildStep> Steps =>
     [
         new("Team type", this.selected?.DisplayName ?? "Choose one"),
         new("Team details", this.DetailsReady ? this.TrimmedName : "name and what it’s for"),
@@ -1307,13 +1320,7 @@
             return;
         }
 
-        if (this.MembersOnly)
-        {
-            this.LoadTeam(team);
-            return;
-        }
-
-        this.Navigation.NavigateTo(this.TeamHref(team));
+        this.LoadTeam(team);
     }
 
     /// <summary>Opens the role form empty and stores the role it returns.</summary>
