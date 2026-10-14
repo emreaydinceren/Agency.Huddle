@@ -1,0 +1,53 @@
+@*
+    The one "pick another Task" field (UX-R28): a strict, Outlined, Dense MudAutocomplete over the Task index,
+    shown as "{Id} · {Title}", searched with TaskQuery.Suggest after the shared search debounce, and never
+    offering the Task being edited or moved. Used by the detail's Duplicate-of and the Board's duplicate dialog.
+*@
+@using Agency.Huddle.App.Components.Shared
+@inject TaskStore Store
+
+<MudAutocomplete T="TaskItem" Label="@this.Label" Variant="Variant.Outlined" Margin="Margin.Dense" Strict="true"
+                 SearchFunc="@this.SearchAsync" ToStringFunc="@TaskPicker.Format" DebounceInterval="@SearchField.DebounceMs"
+                 Value="@(this.Value is { } id ? this.Store.Get(id) : null)" ValueChanged="@this.OnChosenAsync" Class="@this.Class" />
+
+@code {
+    /// <summary>The chosen Task's id, or <see langword="null"/> for none.</summary>
+    [Parameter]
+    public TaskId? Value { get; set; }
+
+    /// <summary>Raised with the chosen Task's id.</summary>
+    [Parameter]
+    public EventCallback<TaskId?> ValueChanged { get; set; }
+
+    /// <summary>A Task the search never offers (the Task being edited or moved).</summary>
+    [Parameter]
+    public TaskId? Excluding { get; set; }
+
+    /// <summary>The field's label.</summary>
+    [Parameter]
+    public string Label { get; set; } = string.Empty;
+
+    /// <summary>An extra CSS class for the field.</summary>
+    [Parameter]
+    public string? Class { get; set; }
+
+    /// <summary>The field's text for a Task: "{Id} · {Title}".</summary>
+    /// <param name="task">The Task, or <see langword="null"/>.</param>
+    private static string? Format(TaskItem? task) => task is null ? null : $"{task.Id} · {task.Title}";
+
+    /// <summary>Suggests Tasks matching <paramref name="text"/>, leaving out <see cref="Excluding"/>.</summary>
+    /// <param name="text">What the Human typed.</param>
+    /// <param name="cancellationToken">Unused: the search is in memory.</param>
+    private Task<IEnumerable<TaskItem>> SearchAsync(string? text, CancellationToken cancellationToken)
+    {
+        _ = cancellationToken;
+        IEnumerable<TaskItem> found = TaskQuery.Suggest(this.Store.All, text ?? string.Empty)
+            .Where(task => task.Id != this.Excluding)
+            .ToList();
+        return Task.FromResult(found);
+    }
+
+    /// <summary>Raises the chosen Task's id.</summary>
+    /// <param name="task">The chosen Task, or <see langword="null"/> when cleared.</param>
+    private Task OnChosenAsync(TaskItem? task) => this.ValueChanged.InvokeAsync(task?.Id);
+}

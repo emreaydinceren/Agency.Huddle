@@ -16,10 +16,10 @@ namespace Agency.Huddle.Tests.Ui;
 /// <see cref="FakeAvatarLibraryLoader"/>'s 120 records (see that class for the exact fixture).
 /// <para>
 /// Markup contract: <c>.avatar-library-filters</c> (never scrolls) holds <c>button.avatar-library-skin</c> x4,
-/// <c>.avatar-library-search</c> (a <c>MudTextField&lt;string&gt;</c>), <c>.avatar-library-professions</c> and
-/// <c>.avatar-library-tags</c> (each holding <c>button.avatar-library-chip</c> with <c>.avatar-library-chip-text</c>;
-/// a selected chip has <c>aria-pressed="true"</c>, two <c>.avatar-library-chip-bracket</c> and one
-/// <c>.avatar-library-chip-close</c>), <c>.avatar-library-tags-all</c> (toggle: Show all / Show fewer),
+/// <c>.avatar-library-search</c> (a <c>MudTextField&lt;string&gt;</c>), two shared <c>ChipCloud</c>s (<c>.chip-cloud</c> labelled Professions and
+/// Tags, each holding <c>button.chip-cloud-chip</c> with <c>.chip-cloud-chip-text</c>;
+/// a selected chip has <c>aria-pressed="true"</c>, two <c>.chip-cloud-bracket</c> and one
+/// <c>.chip-cloud-close</c>), <c>.chip-cloud-all</c> (toggle: Show all / Show fewer),
 /// <c>.avatar-library-count</c> and <c>.avatar-library-clear</c>. <c>.avatar-library-grid</c> (the only scroller)
 /// holds <c>button.avatar-library-thumb</c> and <c>.avatar-library-more</c>. Messages: <c>.avatar-library-error</c>
 /// (+ <c>-hint</c>) and <c>.avatar-library-empty</c> (+ <c>-hint</c>).
@@ -31,9 +31,9 @@ public sealed class AvatarLibraryDialogTests
 
     private const string Skin = "button.avatar-library-skin";
 
-    private const string Professions = ".avatar-library-professions";
+    private const string Professions = ".chip-cloud[aria-label='Professions']";
 
-    private const string Tags = ".avatar-library-tags";
+    private const string Tags = ".chip-cloud[aria-label='Tags']";
 
     private const string Count = ".avatar-library-count";
 
@@ -41,7 +41,7 @@ public sealed class AvatarLibraryDialogTests
 
     private const string More = ".avatar-library-more";
 
-    private const string TagsAll = ".avatar-library-tags-all";
+    private const string TagsAll = ".chip-cloud[aria-label='Tags'] .chip-cloud-all";
 
     private const string SearchInput = ".avatar-library-search input";
 
@@ -158,9 +158,9 @@ public sealed class AvatarLibraryDialogTests
         Assert.Equal(["Chef", "Accountant", "Artist", "Butler", "Nurse", "Pilot"], harness.ChipTexts(Professions));
         IElement first = harness.Chips(Professions)[0];
         Assert.Equal("true", first.GetAttribute("aria-pressed"));
-        Assert.NotNull(first.QuerySelector(".avatar-library-chip-close"));
+        Assert.NotNull(first.QuerySelector(".chip-cloud-close"));
         Assert.Equal("20 of 120", harness.CountText);
-        Assert.Single(harness.Chips(Professions), static c => c.QuerySelector(".avatar-library-chip-close") is not null);
+        Assert.Single(harness.Chips(Professions), static c => c.QuerySelector(".chip-cloud-close") is not null);
     }
 
     /// <summary>Pressing the selected chip's X deselects it: the cloud returns to alphabetical order and the count to 120 of 120.</summary>
@@ -170,12 +170,12 @@ public sealed class AvatarLibraryDialogTests
         await using Harness harness = await Harness.OpenAsync();
         await harness.PressChipAsync(Professions, "Chef");
 
-        IElement close = Assert.IsAssignableFrom<IElement>(harness.Chips(Professions)[0].QuerySelector(".avatar-library-chip-close"));
+        IElement close = Assert.IsAssignableFrom<IElement>(harness.Chips(Professions)[0].QuerySelector(".chip-cloud-close"));
         await harness.Cut.InvokeAsync(() => close.ClickAsync());
 
         Assert.Equal(AlphabeticalProfessions, harness.ChipTexts(Professions));
         Assert.Equal("120 of 120", harness.CountText);
-        Assert.Empty(harness.Cut.FindAll(Professions + " .avatar-library-chip-close"));
+        Assert.Empty(harness.Cut.FindAll(Professions + " .chip-cloud-close"));
     }
 
     /// <summary>Pressing a tag chip floats it left with a close X, keeps the rest in order and narrows the grid to the 3 records carrying it.</summary>
@@ -191,7 +191,7 @@ public sealed class AvatarLibraryDialogTests
         Assert.Equal("tag05", after[0]);
         Assert.Equal(before.Where(static t => t != "tag05"), after.Skip(1));
         Assert.Equal("true", harness.Chips(Tags)[0].GetAttribute("aria-pressed"));
-        Assert.NotNull(harness.Chips(Tags)[0].QuerySelector(".avatar-library-chip-close"));
+        Assert.NotNull(harness.Chips(Tags)[0].QuerySelector(".chip-cloud-close"));
         Assert.Equal("3 of 120", harness.CountText);
     }
 
@@ -247,7 +247,7 @@ public sealed class AvatarLibraryDialogTests
         harness.Cut.WaitForAssertion(() => Assert.Equal("120 of 120", harness.CountText), TimeSpan.FromSeconds(5));
         Assert.Equal("true", harness.SkinButton("All").GetAttribute("aria-pressed"));
         Assert.Equal(string.Empty, harness.Cut.Find(SearchInput).GetAttribute("value") ?? string.Empty);
-        Assert.Empty(harness.Cut.FindAll("button.avatar-library-chip[aria-pressed=true]"));
+        Assert.Empty(harness.Cut.FindAll("button.chip-cloud-chip[aria-pressed=true]"));
         Assert.Equal(AlphabeticalProfessions, harness.ChipTexts(Professions));
     }
 
@@ -318,7 +318,7 @@ public sealed class AvatarLibraryDialogTests
         Assert.Equal("The avatar library could not be read.", harness.Cut.Find(".avatar-library-error").TextContent.Trim());
         Assert.Empty(harness.Cut.FindAll(Skin));
         Assert.Empty(harness.Cut.FindAll(".avatar-library-search"));
-        Assert.Empty(harness.Cut.FindAll("button.avatar-library-chip"));
+        Assert.Empty(harness.Cut.FindAll("button.chip-cloud-chip"));
         Assert.Empty(harness.Cut.FindAll(Count));
         Assert.Empty(harness.Cut.FindAll(Clear));
         Assert.Empty(harness.Cut.FindAll(Thumb));
@@ -434,7 +434,7 @@ public sealed class AvatarLibraryDialogTests
 
         IElement grid = harness.Cut.Find(".avatar-library-grid");
         IElement filters = harness.Cut.Find(".avatar-library-filters");
-        Assert.Null(grid.QuerySelector(".avatar-library-skin, .avatar-library-search, .avatar-library-chip, .avatar-library-count, .avatar-library-clear, .avatar-library-tags-all"));
+        Assert.Null(grid.QuerySelector(".avatar-library-skin, .avatar-library-search, .chip-cloud-chip,.avatar-library-count, .avatar-library-clear, .avatar-library-tags-all"));
         Assert.Equal(4, filters.QuerySelectorAll(Skin).Length);
         Assert.NotNull(filters.QuerySelector(".avatar-library-search"));
         Assert.NotNull(filters.QuerySelector(Professions));
@@ -454,12 +454,12 @@ public sealed class AvatarLibraryDialogTests
 
         IElement chip = harness.Chips(Professions)[0];
         Assert.Equal("true", chip.GetAttribute("aria-pressed"));
-        Assert.Equal(2, chip.QuerySelectorAll(".avatar-library-chip-bracket").Length);
-        Assert.Single(chip.QuerySelectorAll(".avatar-library-chip-close"));
+        Assert.Equal(2, chip.QuerySelectorAll(".chip-cloud-bracket").Length);
+        Assert.Single(chip.QuerySelectorAll(".chip-cloud-close"));
         Assert.All(harness.Chips(Professions).Skip(1), static c =>
         {
             Assert.Equal("false", c.GetAttribute("aria-pressed"));
-            Assert.Empty(c.QuerySelectorAll(".avatar-library-chip-bracket, .avatar-library-chip-close"));
+            Assert.Empty(c.QuerySelectorAll(".chip-cloud-bracket, .chip-cloud-close"));
         });
         Assert.Equal("true", harness.SkinButton("All").GetAttribute("aria-pressed"));
         Assert.Equal("false", harness.SkinButton("Tan").GetAttribute("aria-pressed"));
@@ -554,11 +554,11 @@ public sealed class AvatarLibraryDialogTests
         }
 
         /// <summary>The chip buttons of one cloud, in display order.</summary>
-        public IReadOnlyList<IElement> Chips(string cloud) => [.. this.Cut.FindAll(cloud + " button.avatar-library-chip")];
+        public IReadOnlyList<IElement> Chips(string cloud) => [.. this.Cut.FindAll(cloud + " button.chip-cloud-chip")];
 
         /// <summary>The chip labels of one cloud, in display order.</summary>
         public IReadOnlyList<string> ChipTexts(string cloud) =>
-            [.. this.Chips(cloud).Select(static c => c.QuerySelector(".avatar-library-chip-text")?.TextContent.Trim() ?? string.Empty)];
+            [.. this.Chips(cloud).Select(static c => c.QuerySelector(".chip-cloud-chip-text")?.TextContent.Trim() ?? string.Empty)];
 
         /// <summary>The skin switch button with the given label.</summary>
         public IElement SkinButton(string label) => this.Cut.FindAll(Skin).First(b => b.TextContent.Trim() == label);
@@ -568,7 +568,7 @@ public sealed class AvatarLibraryDialogTests
 
         /// <summary>Presses the chip labelled <paramref name="text"/> in <paramref name="cloud"/>.</summary>
         public Task PressChipAsync(string cloud, string text) =>
-            this.Cut.InvokeAsync(() => this.Chips(cloud).First(c => c.QuerySelector(".avatar-library-chip-text")?.TextContent.Trim() == text).ClickAsync());
+            this.Cut.InvokeAsync(() => this.Chips(cloud).First(c => c.QuerySelector(".chip-cloud-chip-text")?.TextContent.Trim() == text).ClickAsync());
 
         /// <summary>Types into the text box and waits (up to five seconds) until the debounced filter has been applied to the count line.</summary>
         public async Task TypeAsync(string text)

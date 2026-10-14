@@ -941,7 +941,7 @@ If no teammate is Online (adapters disabled, or all failed), this test cannot di
 5. Click **Remove**.
 6. Observe what happens to the action row — do NOT click anything yet.
 7. Click **Cancel** and confirm the row returns to normal.
-8. Click **Remove** again, then click **Confirm**.
+8. Click **Remove** again, then click **Remove** in the `Remove {name}?` prompt.
 9. Read the page: the card, the tile list, and the sidebar.
 10. Click the Room named `Ada` in the sidebar and read the whole Room, especially above the composer.
 11. In `T-B` run `Adapters` and count rows.
@@ -950,9 +950,9 @@ If no teammate is Online (adapters disabled, or all failed), this test cannot di
 
 **Pass if — all of these**
 
-- Clicking **Remove** swaps the button row in place for **Confirm** and **Cancel** — no browser dialog appears.
+- Clicking **Remove** swaps the button row in place for a `Remove {name}?` prompt with **Remove** and **Cancel** — no browser dialog appears.
 - **Cancel** returns the row to the normal actions with nothing removed.
-- **Confirm** closes the card and removes the tile from `/teammates`.
+- The prompt's **Remove** closes the card and removes the tile from `/teammates`.
 - The Room named `Ada` STAYS in the sidebar with its full history and its member list intact.
 - That Room shows NO red alert strip.
 - `<data>\Teammates\Ada\Ada.md` is gone: step 12 lists no `Ada.md`. Remove deletes only the definition file (`PersonaStore.cs:477`).

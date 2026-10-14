@@ -137,7 +137,7 @@ public sealed class TeammateCardTests
         _ = await OpenViewCardAsync(ctx, factory, "coo");
         Assert.Equal(1, spend.SubscriberCount);
 
-        await ctx.DisposeComponentsAsync();
+        await ctx.DisposeComponentsOnDispatcherAsync();
 
         Assert.Equal(0, spend.SubscriberCount);
     }
@@ -344,7 +344,7 @@ public sealed class TeammateCardTests
     /// read-only instead, with a helper line pointing at the Persona text below.
     /// </summary>
     [Fact]
-    public async Task EditMode_TitleWrittenAsABlockScalar_LocksTheTitleBoxReadOnly()
+    public async Task EditMode_TitleWrittenAsABlockScalar_DisablesTheTitleBox()
     {
         await using var factory = new TeamWebApplicationFactory();
         await File.WriteAllTextAsync(
@@ -359,7 +359,7 @@ public sealed class TeammateCardTests
         await SetTextValueAsync(cut, "Title", "New Title");
 
         var titleInput = FindInputControl(cut, "Title").QuerySelector("input") ?? throw new InvalidOperationException("No Title input.");
-        Assert.True(titleInput.HasAttribute("readonly"));
+        Assert.True(titleInput.HasAttribute("disabled"));
         Assert.Contains("can only be edited there", cut.Markup, StringComparison.Ordinal);
 
         // The refused edit never reached the raw text - the block scalar is still there, untouched.
@@ -495,8 +495,9 @@ public sealed class TeammateCardTests
         var cut = await OpenViewCardAsync(ctx, factory, "coo");
         await ClickButtonAsync(cut, "Remove");
 
-        Assert.True(HasButton(cut, "Confirm"));
-        Assert.False(HasButton(cut, "Remove"));
+        Assert.Single(cut.FindAll(".inline-confirm"));
+        Assert.Equal("Remove", cut.Find(".inline-confirm-confirm").TextContent.Trim());
+        Assert.Empty(cut.FindAll("button[aria-label='Remove']"));
     }
 
     /// <summary>Confirming Remove actually removes the Persona and closes the dialog. Remove itself is found by aria-label, since it is now an icon-only button - see <see cref="HasButton"/>.</summary>
@@ -509,7 +510,7 @@ public sealed class TeammateCardTests
 
         var cut = await OpenViewCardAsync(ctx, factory, "coo");
         await ClickButtonAsync(cut, "Remove");
-        await ClickButtonAsync(cut, "Confirm");
+        await ClickAsync(cut, () => cut.Find(".inline-confirm-confirm"));
 
         Assert.Null(factory.Services.GetRequiredService<PersonaStore>().Get("coo"));
         Assert.Empty(cut.FindAll(".mud-dialog-container"));
@@ -568,9 +569,9 @@ public sealed class TeammateCardTests
             cut.Markup,
             StringComparison.Ordinal);
 
-        await ClickButtonAsync(cut, "Confirm");
+        await ClickAsync(cut, () => cut.Find(".inline-confirm-confirm"));
 
-        var reset = personas.Get("Alfred");
+        var reset =personas.Get("Alfred");
         Assert.NotNull(reset);
         Assert.Null(reset.Model);
         Assert.Null(reset.Effort);

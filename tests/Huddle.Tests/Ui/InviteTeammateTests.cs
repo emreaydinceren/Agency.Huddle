@@ -40,7 +40,7 @@ public sealed class InviteTeammateTests
 
         Assert.Contains("outside", html, StringComparison.Ordinal);
         Assert.DoesNotContain(">inside", html, StringComparison.Ordinal);
-        Assert.Contains("Add teammate", html, StringComparison.Ordinal);
+        Assert.Contains("Invite teammate", html, StringComparison.Ordinal); // contains-ok: pins the control's accessible name (UX-081) inside a larger panel
     }
 
     [Fact]

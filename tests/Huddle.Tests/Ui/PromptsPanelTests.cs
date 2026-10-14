@@ -52,6 +52,23 @@ public sealed class PromptsPanelTests
         Assert.Equal("turn.roomLabel", requestedKey);
     }
 
+    /// <summary>
+    /// Each prompt group is an outlined paper with a hairline, not an elevation-1 shadow, as the Appearance
+    /// and Skills sections are (UX-013), and its heading is the shared <c>Typo.h6</c> <c>h2</c> (CV6).
+    /// </summary>
+    [Fact]
+    public async Task Group_IsAnOutlinedPaper_NotElevated()
+    {
+        await using MudBunitContext ctx = new();
+
+        var cut = ctx.Render<PromptsPanel>(parameters => parameters
+            .Add(p => p.Groups, SingleGroup(MakeField("turn.roomLabel", isModified: false, hasUnsavedChange: false))));
+
+        Assert.Single(cut.FindAll(".mud-paper-outlined"));
+        Assert.Empty(cut.FindAll(".mud-elevation-1"));
+        Assert.True(cut.Find("h2").ClassList.Contains("mud-typography-h6"));
+    }
+
     /// <summary>The "Modified" badge shows only when <see cref="PromptFieldState.IsModified"/> is true.</summary>
     [Fact]
     public async Task IsModified_ShowsTheModifiedBadge()

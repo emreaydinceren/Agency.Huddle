@@ -7,18 +7,15 @@
 
 <MudDialog>
     <DialogContent>
-        <MudTextField T="string" Label="Reason (optional)" @bind-Value="this.reason" />
+        <MudTextField T="string" Label="Reason (optional)" Variant="Variant.Outlined" Margin="Margin.Dense" @bind-Value="this.reason" />
     </DialogContent>
     <DialogActions>
-        <MudButton OnClick="this.Skip">Skip</MudButton>
-        <MudButton Color="Color.Primary" OnClick="this.Save">Save</MudButton>
+        <MudButton Size="Size.Medium" OnClick="this.Skip">Skip</MudButton>
+        <MudButton Variant="Variant.Filled" Size="Size.Medium" Color="Color.Primary" OnClick="this.Save">Save</MudButton>
     </DialogActions>
 </MudDialog>
 
 @code {
-    /// <summary>How the Board shows this dialog: small, full-width, with a close button that cancels.</summary>
-    public static readonly DialogOptions Options = new() { CloseButton = true, MaxWidth = MaxWidth.Small, FullWidth = true };
-
     /// <summary>The dialog instance, for closing with a result.</summary>
     [CascadingParameter]
     private IMudDialogInstance? Dialog { get; set; }

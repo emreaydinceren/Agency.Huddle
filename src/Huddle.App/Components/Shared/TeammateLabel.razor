@@ -1,0 +1,35 @@
+@*
+    The row New chat and Invite show for a Teammate (design-system "Components to build"; UX-R23): a
+    StatusDot, a small TeammateAvatar and the name. A User (the Human, not a Teammate) has no Persona
+    state, so IsUser drops the dot and keeps the avatar and the name.
+*@
+@using Agency.Huddle.App.Acp
+@using Agency.Huddle.App.Avatars
+
+<span class="teammate-label">
+    @if (!this.IsUser)
+    {
+        <StatusDot State="this.State" />
+    }
+    <TeammateAvatar Name="@this.Name" Avatar="this.Avatar" Size="Size.Small" />
+    <span>@this.Name</span>
+</span>
+
+@code {
+    /// <summary>The Teammate's name, rendered beside the avatar.</summary>
+    [Parameter]
+    [EditorRequired]
+    public string Name { get; set; } = string.Empty;
+
+    /// <summary>The Teammate's Persona state, rendered as a <c>StatusDot</c> with its label.</summary>
+    [Parameter]
+    public PersonaState State { get; set; }
+
+    /// <summary>The Teammate's avatar, or <see langword="null"/> for the monogram.</summary>
+    [Parameter]
+    public Avatar? Avatar { get; set; }
+
+    /// <summary>True for the Human rather than a Teammate: no status dot, since a User has no Persona state.</summary>
+    [Parameter]
+    public bool IsUser { get; set; }
+}

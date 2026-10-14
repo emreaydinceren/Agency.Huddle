@@ -50,7 +50,7 @@ public sealed class TaskDetailActionsTests
         Assert.Equal(task.Id, dialog.Instance.Id);
         Assert.Null(dialog.Instance.Draft);
         Assert.Equal(TaskDetailMode.Expanded, dialog.FindComponent<TaskDetail>().Instance.Mode);
-        Assert.Equal($"{task.Id}: Ship the thing", TextOf(dialog, ".task-detail-title-display"));
+        Assert.Equal("Ship the thing", TextOf(dialog, ".task-detail-title-display"));
         Assert.True(closed);
     }
 
@@ -589,7 +589,7 @@ public sealed class TaskDetailActionsTests
     /// <param name="cut">The rendered panel.</param>
     private static async Task<IReadOnlyList<IElement>> OpenMenuItemsAsync(IRenderedComponent<ContainerFragment> cut)
     {
-        await cut.InvokeAsync(() => cut.Find("button[aria-label=\"More actions\"]").ClickAsync());
+        await cut.InvokeAsync(() => cut.Find("button[aria-label^=\"Actions for \"]").ClickAsync());
         return [.. cut.FindAll(".mud-menu-item")];
     }
 
@@ -600,7 +600,7 @@ public sealed class TaskDetailActionsTests
     {
         if (cut.FindAll(".mud-menu-item").Count == 0)
         {
-            await cut.InvokeAsync(() => cut.Find("button[aria-label=\"More actions\"]").ClickAsync());
+            await cut.InvokeAsync(() => cut.Find("button[aria-label^=\"Actions for \"]").ClickAsync());
         }
 
         IElement item = cut.FindAll(".mud-menu-item").Single(element => string.Equals(element.TextContent.Trim(), text, StringComparison.Ordinal));

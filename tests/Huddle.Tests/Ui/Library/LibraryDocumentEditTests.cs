@@ -4,6 +4,7 @@ using Microsoft.AspNetCore.Components;
 using Microsoft.Extensions.DependencyInjection;
 using MudBlazor;
 using Agency.Huddle.App.Components.Library;
+using Agency.Huddle.App.Components.Shared.Dialogs;
 using Agency.Huddle.App.Library;
 using Agency.Huddle.Tests.Library;
 
@@ -349,6 +350,64 @@ public sealed class LibraryDocumentEditTests : IDisposable
         cut.WaitForAssertion(() => Assert.Equal("mine", File.ReadAllText(filePath)));
     }
 
+    /// <summary>[T17.1, UX-026, UX-R12] The overwrite question is the shared <see cref="ConfirmDialog"/>: its title, one-sentence
+    /// body and the verb "Overwrite" on a danger button, because the save replaces another writer's content.</summary>
+    [Fact]
+    public async Task Save_AfterFileChangedOnDisk_OpensDangerConfirmDialog()
+    {
+        string root = this.fixture.LibraryFixture.CreatePinnedRoot("Notes");
+        string filePath = Path.Combine(root, "a.md");
+        File.WriteAllText(filePath, "hi");
+        LibraryPath path = this.fixture.LibraryFixture.Resolve(root, "a.md");
+
+        await using MudBunitContext ctx = this.fixture.NewContext();
+        (_, BunitJSModuleInterop handle) = SetupEditorModule(ctx, "hi");
+        handle.Setup<string>("getText", _ => true).SetResult("mine");
+        IRenderedComponent<ContainerFragment> cut = RenderDoc(ctx, path);
+        await SwitchModeAsync(cut, LibraryMode.Edit);
+
+        LibraryEditor editor = cut.FindComponent<LibraryEditor>().Instance;
+        await cut.InvokeAsync(() => editor.OnDirtyChanged(true));
+        File.SetLastWriteTimeUtc(filePath, DateTime.UtcNow.AddMinutes(5));
+        File.WriteAllText(filePath, "someone else's content");
+
+        _ = cut.InvokeAsync(() => editor.OnSaveRequested());
+        cut.WaitForAssertion(() => Assert.NotEmpty(cut.FindAll(".mud-dialog-actions button")));
+
+        ConfirmDialog dialog = cut.FindComponent<ConfirmDialog>().Instance;
+        Assert.Equal("Overwrite changes on disk?", cut.Find(".mud-dialog-title").TextContent.Trim());
+        Assert.Equal("This file changed since you opened it. Saving replaces those changes.", dialog.Message);
+        Assert.Equal("Overwrite", dialog.ConfirmText);
+        Assert.True(dialog.Danger);
+    }
+
+    /// <summary>[T17.1, UX-026, UX-R12] Saving a Teammate definition asks through the shared <see cref="ConfirmDialog"/> titled
+    /// "Save this definition?" with the verb "Save" on a primary (not danger) button.</summary>
+    [Fact]
+    public async Task SaveDefinition_OpensConfirmDialogWithSaveVerb()
+    {
+        this.fixture.LibraryFixture.CreateTeammate("ada", "Ada", "ada");
+        LibraryPath path = this.fixture.LibraryFixture.ResolveTeammates("ada");
+        string original = File.ReadAllText(path.FullPath);
+
+        await using MudBunitContext ctx = this.fixture.NewContext();
+        (_, BunitJSModuleInterop handle) = SetupEditorModule(ctx, original);
+        handle.Setup<string>("getText", _ => true).SetResult(original + "\nmore");
+        IRenderedComponent<ContainerFragment> cut = RenderDoc(ctx, path);
+        await SwitchModeAsync(cut, LibraryMode.Edit);
+
+        LibraryEditor editor = cut.FindComponent<LibraryEditor>().Instance;
+        await cut.InvokeAsync(() => editor.OnDirtyChanged(true));
+        _ = cut.InvokeAsync(() => editor.OnSaveRequested());
+        cut.WaitForAssertion(() => Assert.NotEmpty(cut.FindAll(".mud-dialog-actions button")));
+
+        ConfirmDialog dialog = cut.FindComponent<ConfirmDialog>().Instance;
+        Assert.Equal("Save this definition?", cut.Find(".mud-dialog-title").TextContent.Trim());
+        Assert.Equal("Saving restarts Ada and clears its conversation memory.", dialog.Message);
+        Assert.Equal("Save", dialog.ConfirmText);
+        Assert.False(dialog.Danger);
+    }
+
     /// <summary>(corrections-B6 item 21) Saving after the loaded file was moved or deleted refuses without recreating it: no confirm, nothing written, the settled reason shown.</summary>
     [Fact]
     public async Task Save_AfterFileDeleted_RefusesAndDoesNotRecreate()
@@ -375,6 +434,28 @@ public sealed class LibraryDocumentEditTests : IDisposable
         Assert.Equal("This file was moved or deleted.", cut.Find(".library-document-save-error").TextContent.Trim());
         Assert.False(File.Exists(filePath));
         Assert.Empty(cut.FindAll(".mud-dialog-actions button"));
+    }
+
+    /// <summary>[T17.4, UX-056] The save error is a Dense error <c>MudAlert</c> with <c>role="alert"</c>.</summary>
+    [Fact]
+    public async Task SaveError_IsDenseAlertWithRoleAlert()
+    {
+        string root = this.fixture.LibraryFixture.CreatePinnedRoot("Notes");
+        string filePath = Path.Combine(root, "a.md");
+        File.WriteAllText(filePath, "hi");
+        LibraryPath path = this.fixture.LibraryFixture.Resolve(root, "a.md");
+
+        await using MudBunitContext ctx = this.fixture.NewContext();
+        (_, BunitJSModuleInterop handle) = SetupEditorModule(ctx, "hi");
+        handle.Setup<string>("getText", _ => true).SetResult("mine");
+        IRenderedComponent<ContainerFragment> cut = RenderDoc(ctx, path);
+        await SwitchModeAsync(cut, LibraryMode.Edit);
+        LibraryEditor editor = cut.FindComponent<LibraryEditor>().Instance;
+        await cut.InvokeAsync(() => editor.OnDirtyChanged(true));
+        File.Delete(filePath);
+        await cut.InvokeAsync(() => editor.OnSaveRequested());
+
+        cut.WaitForAssertion(() => Assert.NotEmpty(cut.FindAll(".library-document-save-error.mud-alert.mud-dense.mud-alert-text-error[role='alert']")));
     }
 
     /// <summary>The allowed neighbour of the two freshness guards: an unchanged file saves straight through, with no confirm dialog.</summary>

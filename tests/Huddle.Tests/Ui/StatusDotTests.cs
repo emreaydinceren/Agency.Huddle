@@ -12,13 +12,13 @@ namespace Agency.Huddle.Tests.Ui;
 /// </summary>
 public sealed class StatusDotTests
 {
-    /// <summary>Each <see cref="PersonaState"/> renders its own, distinct <c>agent-dot</c> class, carried as the dot's own tooltip too.</summary>
+    /// <summary>Each <see cref="PersonaState"/> renders its own <c>agent-dot</c> class, and <see cref="StatusDot.Label"/> as its accessible name and its title (UX-V08).</summary>
     [Theory]
-    [InlineData(PersonaState.Starting, "starting")]
-    [InlineData(PersonaState.Online, "online")]
-    [InlineData(PersonaState.Degraded, "degraded")]
-    [InlineData(PersonaState.Offline, "offline")]
-    public async Task State_RendersItsOwnDotClassAndTitle(PersonaState state, string expectedClass)
+    [InlineData(PersonaState.Starting, "starting", "Starting")]
+    [InlineData(PersonaState.Online, "online", "Online")]
+    [InlineData(PersonaState.Degraded, "degraded", "Degraded")]
+    [InlineData(PersonaState.Offline, "offline", "Offline")]
+    public async Task State_RendersItsOwnDotClassAndLabel(PersonaState state, string expectedClass, string expectedLabel)
     {
         await using MudBunitContext ctx = new();
 
@@ -26,7 +26,20 @@ public sealed class StatusDotTests
 
         var dot = cut.Find("span.agent-dot");
         Assert.Contains(expectedClass, dot.ClassList);
-        Assert.Equal(expectedClass, dot.GetAttribute("title"));
+        Assert.Equal("img", dot.GetAttribute("role"));
+        Assert.Equal(expectedLabel, dot.GetAttribute("aria-label"));
+        Assert.Equal(expectedLabel, dot.GetAttribute("title"));
+    }
+
+    /// <summary>The label is the plain word for each state, the text New chat and Invite show beside the dot.</summary>
+    [Theory]
+    [InlineData(PersonaState.Starting, "Starting")]
+    [InlineData(PersonaState.Online, "Online")]
+    [InlineData(PersonaState.Degraded, "Degraded")]
+    [InlineData(PersonaState.Offline, "Offline")]
+    public void Label_ReadsAsThePlainWord(PersonaState state, string expectedLabel)
+    {
+        Assert.Equal(expectedLabel, StatusDot.Label(state));
     }
 
     /// <summary>The four states map to four distinct classes - no two collapse onto the same dot.</summary>

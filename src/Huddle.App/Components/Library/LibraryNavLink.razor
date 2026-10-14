@@ -1,4 +1,5 @@
 @using Microsoft.Extensions.Options
+@using Agency.Huddle.App.Components.Shared.Dialogs
 @using Agency.Huddle.App.Library
 @implements IDisposable
 @inject LibraryRootStore Roots
@@ -24,9 +25,9 @@
         <MudNavGroup Title="Library" Icon="@Icons.Material.Filled.MenuBook" @bind-Expanded="this.expanded">
             @foreach (LibraryRoot root in this.Roots.VisibleRoots)
             {
-                <NavTabLink Href="@BuildRootHref(root)" TabTitle="Library" Icon="@Icons.Material.Filled.LibraryBooks" Class="library-nav-root-link">@root.DisplayName</NavTabLink>
+                <NavTabLink Href="@BuildRootHref(root)" TabTitle="Library" Icon="@Icons.Material.Outlined.Folder" Class="library-nav-root-link">@root.DisplayName</NavTabLink>
             }
-            <MudNavLink Icon="@Icons.Material.Filled.Add" IconColor="Color.Primary" Class="nav-action-link" OnClick="this.OpenAddFolderAsync">Add Folder</MudNavLink>
+            <MudNavLink Icon="@ActionIcons.Add" IconColor="Color.Primary" Class="nav-action-link" OnClick="this.OpenAddFolderAsync">Add folder</MudNavLink>
         </MudNavGroup>
     </MudNavMenu>
 }
@@ -52,22 +53,35 @@
         System.Globalization.CultureInfo.InvariantCulture,
         $"/library?scopeRoot={Uri.EscapeDataString(root.Id)}&scopePath=");
 
-    /// <summary>Opens <see cref="AddFolderDialog"/> - it reads and saves <see cref="LibraryRootStore"/> itself, so no parameters are built here.</summary>
+    /// <summary>Opens the shared <see cref="NameDialog"/> as the Add folder prompt: the Name is its own field, the Path field and
+    /// the trust warning are its <c>ChildContent</c>, and the action pins the folder through <see cref="LibraryRootStore.Save"/>
+    /// - the same flow and "doesn't exist" refusal as Settings > Library's Add row.</summary>
     private async Task OpenAddFolderAsync()
     {
-        await this.DialogService.ShowAsync<AddFolderDialog>("Add folder", AddFolderDialog.Options);
+        string path = string.Empty;
+
+        Task<string?> SubmitAsync(string name)
+        {
+            return Task.FromResult(this.Roots.TryPin(name, path));
+        }
+
+        RenderFragment extra = @<MudStack Spacing="2">
+            <MudTextField T="string" Label="Path" Variant="Variant.Outlined" Margin="Margin.Dense" Immediate="true"
+                          ValueChanged="@(value => path = value ?? string.Empty)" />
+            <MudText Typo="Typo.body2" Class="add-folder-dialog-trust-warning">@LibraryRootStore.TrustWarning</MudText>
+        </MudStack>;
+
+        DialogParameters<NameDialog> parameters = new()
+        {
+            { dialog => dialog.Label, "Name" },
+            { dialog => dialog.ConfirmText, "Add" },
+            { dialog => dialog.SubmitAsync, SubmitAsync },
+            { dialog => dialog.ChildContent, extra },
+        };
+
+        _ = await this.DialogService.ShowAsync<NameDialog>("Add folder", parameters, HuddleDialogOptions.SmallForm);
     }
 
-    /// <summary>Repaints the root list when <see cref="LibraryRootStore.RootsChanged"/> fires, the same dispatch <c>TaskViewNav</c> uses for its own subscription.</summary>
-    private void OnRootsChanged() => _ = this.DispatchAsync(() =>
-    {
-        this.StateHasChanged();
-        return Task.CompletedTask;
-    });
-
-    /// <summary>Invokes <paramref name="action"/> on the renderer's synchronization context, swallowing the two exceptions a store event racing component teardown can throw (rules.md).</summary>
-    private Task DispatchAsync(Func<Task> action)
-    {
-        return RendererDispatch.RunAsync(this.InvokeAsync, action);
-    }
+    /// <summary>Repaints the root list when <see cref="LibraryRootStore.RootsChanged"/> fires.</summary>
+    private void OnRootsChanged() => _ = RendererDispatch.Repaint(this.InvokeAsync, this.StateHasChanged);
 }

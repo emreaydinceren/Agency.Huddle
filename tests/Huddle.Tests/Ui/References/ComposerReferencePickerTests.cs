@@ -40,7 +40,7 @@ public sealed class ComposerReferencePickerTests
 
         cut.WaitForAssertion(() => Assert.Equal(
             ["Teammates", "Tasks", "Rooms", "Teams"],
-            cut.FindAll("[role='group']").Select(static group => group.GetAttribute("aria-label")).ToArray()));
+            cut.FindAll("[role='listbox'] > [role='group']").Select(static group => group.GetAttribute("aria-label")).ToArray()));
         Assert.Equal("true", cut.Find("textarea").GetAttribute("aria-expanded"));
     }
 
@@ -208,7 +208,7 @@ public sealed class ComposerReferencePickerTests
 
         cut.WaitForAssertion(() => Assert.Equal(
             ["Teammates"],
-            cut.FindAll("[role='group']").Select(static group => group.GetAttribute("aria-label")).ToArray()));
+            cut.FindAll("[role='listbox'] > [role='group']").Select(static group => group.GetAttribute("aria-label")).ToArray()));
     }
 
     /// <summary>With Tasks off, a <c>#</c> query never opens the picker.</summary>

@@ -6,7 +6,6 @@
     See docs/Huddle.NeedsYou-Specifications.md section 6.4.
 *@
 @implements IDisposable
-@using System.Globalization
 @using Agency.Huddle.App.NeedsYou
 @inject NeedsYouTracker Tracker
 @inject ITeamDirectory TeamDirectory
@@ -29,9 +28,11 @@
                     <span class="needs-you-detail">@row.Detail</span>
                 </span>
             </NavTabLink>
-            <MudIconButton Icon="@Icons.Material.Filled.Close" Size="Size.Small" aria-label="Dismiss"
-                           Class="hover-reveal-menu hover-reveal-menu-button"
-                           OnClick="@(() => this.Tracker.Dismiss(row.RoomId))" />
+            <MudTooltip Text="Dismiss" Class="hover-reveal-menu">
+                <MudIconButton Icon="@Icons.Material.Filled.Close" Size="Size.Small" aria-label="@($"Dismiss {row.RoomName}")"
+                               Class="hover-reveal-menu-button"
+                               OnClick="@(() => this.Tracker.Dismiss(row.RoomId))" />
+            </MudTooltip>
         </div>
     }
 </div>
@@ -90,9 +91,7 @@
     /// <summary>The second line of a row: who asked and when, with the day only when it was not today.</summary>
     private static string Describe(NeedsYouEntry entry, DateTimeOffset now)
     {
-        var local = entry.Since.ToOffset(now.Offset);
-        var format = local.Date == now.Date ? "HH:mm" : "ddd HH:mm";
-        return $"{entry.AskedBy} · {local.ToString(format, CultureInfo.CurrentCulture)}";
+        return string.Join(" · ", entry.AskedBy, MessageDisplay.TimeLabel(entry.Since, now));
     }
 
     /// <summary>The icons of a row, one per reason, in a fixed order.</summary>
@@ -102,22 +101,22 @@
         List<ReasonIcon> icons = [];
         if (entry.Reasons.HasFlag(NeedsYouReason.Mention))
         {
-            icons.Add(new ReasonIcon(Icons.Material.Filled.AlternateEmail, Color.Warning, $"{by} mentioned you"));
+            icons.Add(new ReasonIcon(Icons.Material.Filled.AlternateEmail, StatusColors.For(NeedsYouReason.Mention),$"{by} mentioned you"));
         }
 
         if (entry.Reasons.HasFlag(NeedsYouReason.Question))
         {
-            icons.Add(new ReasonIcon(Icons.Material.Filled.HelpOutline, Color.Default, $"{by} asked you a question"));
+            icons.Add(new ReasonIcon(Icons.Material.Filled.HelpOutline, StatusColors.For(NeedsYouReason.Question),$"{by} asked you a question"));
         }
 
         if (entry.Reasons.HasFlag(NeedsYouReason.Form))
         {
-            icons.Add(new ReasonIcon(Icons.Material.Filled.Assignment, Color.Default, $"{by} is waiting on a form"));
+            icons.Add(new ReasonIcon(Icons.Material.Filled.Assignment, StatusColors.For(NeedsYouReason.Form),$"{by} is waiting on a form"));
         }
 
         if (entry.Reasons.HasFlag(NeedsYouReason.Budget))
         {
-            icons.Add(new ReasonIcon(Icons.Material.Filled.PauseCircleOutline, Color.Default, "Paused: the Room's Budget is spent"));
+            icons.Add(new ReasonIcon(Icons.Material.Filled.PauseCircleOutline, StatusColors.For(NeedsYouReason.Budget),"Paused: the Room's Budget is spent"));
         }
 
         return icons;

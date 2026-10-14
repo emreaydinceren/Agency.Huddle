@@ -1,0 +1,40 @@
+@*
+    The shell the five Transcript cards share (UX-R01): an outlined region, not an alert, named for
+    assistive technology, with a subtitle1 title, the card's body, and an actions row that is left-aligned
+    with the primary first (DS "In-place action rows"). A card with no card-level actions passes none and
+    gets no row.
+*@
+<MudPaper Outlined="true" Class="@("agent-card pa-3 my-2 " + this.Class)" role="region" aria-label="@(this.AriaLabel ?? this.Title)">
+    <MudText Typo="Typo.subtitle1" Class="@("agent-card-title " + this.TitleClass)">@this.Title</MudText>
+    @this.ChildContent
+    @if (this.Actions is not null)
+    {
+        <MudStack Row="true" Spacing="2" Class="agent-card-actions">@this.Actions</MudStack>
+    }
+</MudPaper>
+
+@code {
+    /// <summary>The card title, rendered as a <c>subtitle1</c> heading (UX-031).</summary>
+    [Parameter, EditorRequired]
+    public string Title { get; set; } = "";
+
+    /// <summary>The region's accessible name; the <see cref="Title"/> when omitted.</summary>
+    [Parameter]
+    public string? AriaLabel { get; set; }
+
+    /// <summary>Extra classes for the card's own styles and tests.</summary>
+    [Parameter]
+    public string? Class { get; set; }
+
+    /// <summary>Extra classes for the title.</summary>
+    [Parameter]
+    public string? TitleClass { get; set; }
+
+    /// <summary>The card body, between the title and the actions row.</summary>
+    [Parameter]
+    public RenderFragment? ChildContent { get; set; }
+
+    /// <summary>The card-level actions row, laid out left-aligned with the primary first (UX-032); no row renders when omitted.</summary>
+    [Parameter]
+    public RenderFragment? Actions { get; set; }
+}

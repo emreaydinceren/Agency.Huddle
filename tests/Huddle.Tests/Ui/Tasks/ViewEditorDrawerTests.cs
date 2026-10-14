@@ -407,6 +407,38 @@ public sealed class ViewEditorDrawerTests
         Assert.True(stateOption.Instance.Disabled);
     }
 
+    /// <summary>Editing a saved View titles the drawer "Edit view" (UX-048).</summary>
+    [Fact]
+    public async Task Title_ForASavedView_IsEditView()
+    {
+        CancellationToken ct = TestContext.Current.CancellationToken;
+        using TaskToolHarness harness = await TaskToolHarness.CreateAsync(ct);
+        TaskView saved = await SaveAsync(harness, "v1", ViewKind.List, name: "Platform board");
+
+        await using MudBunitContext ctx = NewContext(harness);
+        IRenderedComponent<ContainerFragment> root = RenderDrawer(ctx, saved.Id);
+
+        Assert.Equal("Edit view", root.Find(".mud-typography-h6").TextContent.Trim());
+    }
+
+    /// <summary>Creating a View (no id) titles the drawer "New view" (UX-048).</summary>
+    [Fact]
+    public async Task Title_WithNoId_IsNewView()
+    {
+        CancellationToken ct = TestContext.Current.CancellationToken;
+        using TaskToolHarness harness = await TaskToolHarness.CreateAsync(ct);
+
+        await using MudBunitContext ctx = NewContext(harness);
+        IRenderedComponent<ContainerFragment> root = ctx.RenderWithPopovers(builder =>
+        {
+            builder.OpenComponent<ViewEditorDrawer>(0);
+            builder.AddAttribute(1, nameof(ViewEditorDrawer.Open), true);
+            builder.CloseComponent();
+        });
+
+        Assert.Equal("New view", root.Find(".mud-typography-h6").TextContent.Trim());
+    }
+
     /// <summary>Dragging a Sort row reorders <see cref="TaskView.Sort"/>.</summary>
     [Fact]
     public async Task Sort_ReorderByDrop_UpdatesOrder()
@@ -598,8 +630,8 @@ public sealed class ViewEditorDrawerTests
         _ = drawer.InvokeAsync(() => root.Find(".view-editor-delete").Click());
         root.WaitForAssertion(() => Assert.NotEmpty(root.FindAll(".mud-dialog-actions button")));
 
-        Assert.Equal("Delete View", root.Find(".mud-dialog-title").TextContent.Trim());
-        Assert.Equal("Delete 'Platform board'? Tasks are not affected.", root.Find(".mud-dialog-content").TextContent.Trim());
+        Assert.Equal("Delete 'Platform board'?", root.Find(".mud-dialog-title").TextContent.Trim());
+        Assert.Equal("This removes the View. Tasks are not affected.", root.Find(".mud-dialog-content").TextContent.Trim());
         var buttons = root.FindAll(".mud-dialog-actions button").Select(b => b.TextContent.Trim()).ToList();
         Assert.Equal(["Cancel", "Delete"], buttons);
 

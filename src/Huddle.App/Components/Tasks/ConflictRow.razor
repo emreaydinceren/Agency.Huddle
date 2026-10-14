@@ -1,0 +1,85 @@
+@*
+    One conflicting field of a Task detail's conflict UI (Spec §13.7, UX-R09): the field name, Theirs, Yours
+    and the Keep mine / Take theirs choice. The Panel stacks it in a div (a table's four columns overflow at
+    Panel width, manual test TASKS-07 F17); Expanded draws it as a table row. Description shows its two
+    texts in inert six-line fields (Disabled, never ReadOnly: UX-V04).
+*@
+@using Agency.Huddle.App.Tasks
+
+@{
+    RenderFragment theirs = @<text>
+        @if (this.IsDescription)
+        {
+            <MudTextField T="string" Variant="Variant.Outlined" Margin="Margin.Dense" Value="@this.TheirsText" Disabled="true" Lines="6" Class="task-detail-conflict-theirs" />
+        }
+        else
+        {
+            <div class="task-detail-conflict-theirs">@this.TheirsText</div>
+        }
+    </text>;
+    RenderFragment yours = @<text>
+        @if (this.IsDescription)
+        {
+            <MudTextField T="string" Variant="Variant.Outlined" Margin="Margin.Dense" Value="@this.YoursText" Disabled="true" Lines="6" Class="task-detail-conflict-yours" />
+        }
+        else
+        {
+            <div class="task-detail-conflict-yours">@this.YoursText</div>
+        }
+    </text>;
+    RenderFragment choices = @<text>
+        <MudRadioGroup T="ConflictChoice?" Value="this.Choice" ValueChanged="this.ChoiceChanged" aria-label="@($"{TaskDiff.FieldLabel(this.Field)}: keep mine or take theirs")">
+            <MudRadio T="ConflictChoice?" Value="ConflictChoice.Mine">Keep mine</MudRadio>
+            <MudRadio T="ConflictChoice?" Value="ConflictChoice.Theirs">Take theirs</MudRadio>
+        </MudRadioGroup>
+    </text>;
+}
+
+@if (this.Stacked)
+{
+    <div class="task-detail-conflict-row">
+        <div class="task-detail-conflict-field">@TaskDiff.FieldLabel(this.Field)</div>
+        @theirs
+        @yours
+        @choices
+    </div>
+}
+else
+{
+    <tr class="task-detail-conflict-row">
+        <td class="task-detail-conflict-field">@TaskDiff.FieldLabel(this.Field)</td>
+        <td>@theirs</td>
+        <td>@yours</td>
+        <td>@choices</td>
+    </tr>
+}
+
+@code {
+    /// <summary>The conflicting field.</summary>
+    [Parameter, EditorRequired]
+    public TaskField Field { get; set; }
+
+    /// <summary>Whether the row stacks in a div (Panel) rather than being a table row (Expanded).</summary>
+    [Parameter]
+    public bool Stacked { get; set; }
+
+    /// <summary>Whether the two sides are long text, shown in inert six-line fields.</summary>
+    [Parameter]
+    public bool IsDescription { get; set; }
+
+    /// <summary>The other writer's value.</summary>
+    [Parameter]
+    public string? TheirsText { get; set; }
+
+    /// <summary>The Human's own pending value.</summary>
+    [Parameter]
+    public string? YoursText { get; set; }
+
+    /// <summary>The choice made so far, or <see langword="null"/>.</summary>
+    [Parameter]
+    public ConflictChoice? Choice { get; set; }
+
+    /// <summary>Raised with the chosen side.</summary>
+    [Parameter]
+    public EventCallback<ConflictChoice?> ChoiceChanged { get; set; }
+}

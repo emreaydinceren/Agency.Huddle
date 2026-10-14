@@ -19,7 +19,7 @@ oracles `O-LOG` / `O-ADAPTERS` / `O-TRANSCRIPT` / `O-DB` / `O-WIRE`, the four re
 2. `T-A` runs the app. Extra terminals are opened by individual tests as `T-C`, `T-D` and so on, each at `<repo>`.
 3. Arrange the browser at `http://localhost:5100` and `T-A` so both are visible at once. Confirm the sidebar shows, top to bottom: the **Chats** group (the Rooms, then **New chat** below them), **Teams**, **Teammates**, **Tasks**, **Library**, **Archived** and the **Settings** icon. If it does not, STOP and report the app as not starting; every test below is INCONCLUSIVE.
 4. No test in this area configures a Persona. Under `P-LAUNCH-FREE` ACP stays off, so nothing here spends money; the six UAT tests use the free mock adapter.
-5. A fresh install has no pipe Agents: the sidebar starts with no Rooms of bots, and a bot's own Room appears only when it connects. The built-in Chief of Staff is seeded at every start and is an in-process Agent whatever `Acp:Enabled` is; ignore it wherever these tests read the New chat and Add teammate lists. Tests that need an extra in-process Agent in a Room use Ada or Bo from `P-LAUNCH-UAT`, and say so in **Before you start**. Do not run `P-ECHO-BOT` under the name `Ada` or `Bo` in such a test: an external client under an in-process Agent's name collides with it.
+5. A fresh install has no pipe Agents: the sidebar starts with no Rooms of bots, and a bot's own Room appears only when it connects. The built-in Chief of Staff is seeded at every start and is an in-process Agent whatever `Acp:Enabled` is; ignore it wherever these tests read the New chat and Invite teammate lists. Tests that need an extra in-process Agent in a Room use Ada or Bo from `P-LAUNCH-UAT`, and say so in **Before you start**. Do not run `P-ECHO-BOT` under the name `Ada` or `Bo` in such a test: an external client under an in-process Agent's name collides with it.
 6. **RAW-CLIENT** (used by PIPEEXTERNAL-28 through -32): a plain PowerShell pipe client, distinct from `P-ECHO-BOT`. In a new terminal, line by line:
 
 ```powershell
@@ -362,7 +362,7 @@ If a banner DOES appear and the name it lists is a Persona (an entry that also a
 > [!NOTE]
 > A pipe-only Agent NEVER appears on the **Teammates** page — that page renders Persona files, and `mybot` has none. "My bot is missing from Teammates" is not a bug.
 
-### PIPEEXTERNAL-12 — Where a disconnect IS visible: the agent-dot in New chat and Add teammate
+### PIPEEXTERNAL-12 — Where a disconnect IS visible: the agent-dot in New chat and Invite teammate
 
 **Free** · about 7 min
 
@@ -372,7 +372,7 @@ If a banner DOES appear and the name it lists is a Persona (an entry that also a
 
 - The app is running.
 - `mybot` exists in the directory.
-- A second bot `otherbot` is connected in `T-D` (`pwsh tools/echo-bot.ps1 -Name otherbot`) so that its own Room is a Room `mybot` is NOT a Member of. The Add teammate panel lists only non-Members, so `mybot` can never be read from its own Room.
+- A second bot `otherbot` is connected in `T-D` (`pwsh tools/echo-bot.ps1 -Name otherbot`) so that its own Room is a Room `mybot` is NOT a Member of. The Invite teammate panel lists only non-Members, so `mybot` can never be read from its own Room.
 
 **Steps**
 
@@ -383,14 +383,14 @@ If a banner DOES appear and the name it lists is a Persona (an entry that also a
 5. Click **New chat** again to close the panel.
 6. Press Ctrl+C in `T-C`.
 7. Click **New chat** again to reopen the panel and read `mybot`'s dot and tooltip again.
-8. Open the `otherbot` Room, click **Add teammate**, leave the Team filter on `All teams`, and read the dot beside `mybot` in that panel (it is offline now). Close the panel, restart `mybot` in `T-C`, reopen the panel and read the dot again.
+8. Open the `otherbot` Room, click **Invite teammate**, leave the Team filter on `All teams`, and read the dot beside `mybot` in that panel (it is offline now). Close the panel, restart `mybot` in `T-C`, reopen the panel and read the dot again.
 9. Now test the known staleness: with `mybot` connected, open the **New chat** panel and LEAVE IT OPEN, then press Ctrl+C in `T-C` and watch the open panel for 10 seconds. Press Ctrl+C in `T-D` when done.
 
 **Pass if — all of these**
 
 - While the bot is connected, `mybot`'s dot in the New chat panel is green and its `title` / tooltip reads `online` (the element's class is `agent-dot online`).
 - After Ctrl+C and REOPENING the panel, `mybot`'s dot is red (`--mud-palette-error`, `app.css:71-73`) and its `title` reads `offline` (class `agent-dot offline`).
-- The **Add teammate** panel in the `otherbot` Room shows the same dot and the same tooltip for `mybot`: red `offline` while `mybot` is stopped, green `online` once it is restarted.
+- The **Invite teammate** panel in the `otherbot` Room shows the same dot and the same tooltip for `mybot`: red `offline` while `mybot` is stopped, green `online` once it is restarted.
 - The dot's colour and its tooltip text agree with each other in every case.
 
 **Fail if — any of these**
@@ -621,7 +621,7 @@ If step 7 also fails to connect, the app may not have finished starting — wait
 
 1. In the `mybot` Room, type `hi @mybot` and press Enter.
 2. In `T-C`, find the `"members":[` section of the delivered line and count its entries.
-3. Click **Add teammate** at the top right of the Room.
+3. Click **Invite teammate** at the top right of the Room.
 4. Leave the `Team` dropdown on `All teams`.
 5. Click `Ada` in the list.
 6. Read the info line the panel shows, then read the page heading and the members line.
@@ -632,7 +632,7 @@ If step 7 also fails to connect, the app may not have finished starting — wait
 **Pass if — all of these**
 
 - The first delivered line's `members` array holds exactly two objects: `{"id":"human","name":"You","kind":"human"}` and one with `"name":"mybot","kind":"agent"`.
-- The Add teammate panel's info line reads `Invited Ada. Room is now "mybot, Ada".`
+- The Invite teammate panel's info line reads `Invited Ada. Room is now "mybot, Ada".`
 - The page heading becomes `mybot, Ada`, the members line becomes `You, mybot, Ada`, and the sidebar entry renames itself — all without a refresh.
 - `T-A` logs `Invited agent 'Ada' (<id>) into room '<roomId>'.`
 - The SECOND delivered line's `members` array holds exactly THREE objects, including the Human and both agents.
@@ -647,7 +647,7 @@ If step 7 also fails to connect, the app may not have finished starting — wait
 
 **Inconclusive if**
 
-If `Ada` does not appear in the Add teammate list, check the `Team` dropdown is on `All teams` — a pipe-only agent has no Team and is filtered out by any narrower selection, and the panel then reads `No agents in this team.` That is correct filtering, not a missing agent. If the panel reads `Every agent is already in this room.`, `Ada` is already a Member and this test needs a fresh two-member Room.
+If `Ada` does not appear in the Invite teammate list, check the `Team` dropdown is on `All teams` — a pipe-only agent has no Team and is filtered out by any narrower selection, and the panel then reads `No agents in this team.` That is correct filtering, not a missing agent. If the panel reads `Every agent is already in this room.`, `Ada` is already a Member and this test needs a fresh two-member Room.
 
 > [!NOTE]
 > Leave this three-member Room in place: PIPEEXTERNAL-20 and PIPEEXTERNAL-21 build on it.
@@ -667,7 +667,7 @@ If `Ada` does not appear in the Add teammate list, check the `Team` dropdown is 
 
 1. Click **New chat**, tick `Ada` and `Bo`, and click **Start chat**. You are now in a Room named `Ada, Bo` that `mybot` is not a Member of.
 2. Copy the room id from the address bar (`/rooms/{id}`).
-3. Click **Add teammate**, leave the Team filter on `All teams`, and click `mybot`.
+3. Click **Invite teammate**, leave the Team filter on `All teams`, and click `mybot`.
 4. Read the panel's info line, the page heading, the members line and the sidebar.
 5. Read `T-A`'s newest log line.
 6. Type `hi @mybot` in this Room and press Enter.
@@ -678,7 +678,7 @@ If `Ada` does not appear in the Add teammate list, check the `Team` dropdown is 
 
 **Pass if — all of these**
 
-- The Add teammate info line reads `Invited mybot. Room is now "Ada, Bo, mybot".`
+- The Invite teammate info line reads `Invited mybot. Room is now "Ada, Bo, mybot".`
 - The heading becomes `Ada, Bo, mybot`, the members line becomes `You, Ada, Bo, mybot`, and the sidebar entry renames itself — all live, with no refresh and with no restart of the bot.
 - `T-A` logs `Invited agent 'mybot' (<id>) into room '<roomId>'.`
 - `T-C` — the same process that has been running since before this Room existed — prints a `messagePosted` line whose `roomId` is the id you copied and whose `roomName` is `Ada, Bo, mybot`, and the bot's reply appears in that Room.
@@ -689,7 +689,7 @@ If `Ada` does not appear in the Add teammate list, check the `Team` dropdown is 
 - The bot receives nothing until it is restarted -> membership is being resolved once at connect instead of per delivery, so every invite silently requires a client restart that nobody will know to perform.
 - The bot receives the envelope but its reply comes back refused as `notMember` -> the membership check on the inbound path is caching a stale verdict.
 - The Room name is not rebuilt from its Agents after the invite -> a Room's name and its membership have diverged.
-- `/invite @mybot` behaves differently from the **Add teammate** button -> the two doors are no longer reaching the same code path, so one of them will drift.
+- `/invite @mybot` behaves differently from the **Invite teammate** button -> the two doors are no longer reaching the same code path, so one of them will drift.
 
 **Inconclusive if**
 
@@ -794,7 +794,7 @@ If the browser showed NO streaming row for `Ada`, no deltas were produced at all
 1. In `T-C`, run `pwsh tools/echo-bot.ps1 -Name bot1`.
 2. In `T-D`, run `pwsh tools/echo-bot.ps1 -Name bot2`.
 3. In the browser, click the sidebar entry `bot1`.
-4. Click **Add teammate**, leave the Team filter on `All teams`, and click `bot2`.
+4. Click **Invite teammate**, leave the Team filter on `All teams`, and click `bot2`.
 5. Confirm the heading reads `bot1, bot2` and the members line reads `You, bot1, bot2`.
 6. Type `hello @bot1` and press Enter.
 7. Read the new line in `T-C` and the new line in `T-D`.
@@ -962,7 +962,7 @@ Pressing Enter by hand is not truly simultaneous. If all three rounds pass, that
 2. In `T-A` run `$env:Team__AgentMessageBudget = '1'`.
 3. In `T-A` run `$env:Team__Acp__Enabled = 'false'` again (a fresh shell state can lose it), then `dotnet run --project src/Huddle.App --urls http://localhost:5100`.
 4. In `T-C`, run `pwsh tools/echo-bot.ps1 -Name bud1`. In `T-D`, run `pwsh tools/echo-bot.ps1 -Name bud2`.
-5. In the browser, open the `bud1` Room, click **Add teammate**, leave the filter on `All teams`, and click `bud2`. Confirm the members line reads `You, bud1, bud2`.
+5. In the browser, open the `bud1` Room, click **Invite teammate**, leave the filter on `All teams`, and click `bud2`. Confirm the members line reads `You, bud1, bud2`.
 6. Type `hi @bud1 @bud2` and press Enter.
 7. Read the delivered line in BOTH `T-C` and `T-D` — specifically the two values at the very end of the line.
 8. Read whichever terminal printed an `error` line and copy it in full.

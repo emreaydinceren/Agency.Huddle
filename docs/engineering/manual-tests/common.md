@@ -352,11 +352,11 @@ finds where `Team:DataDir` actually resolved.
   (the reply is the whole prompt); a Persona's stored definition through `O-FILE`.
 - **Clear every variable a test set** before the next one, or it inherits and
   reports a false result. `Get-ChildItem Env:Team__*` lists what is set.
-- **"Add teammate" is two different buttons.** The invite toggle in a Room header
-  and the submit button of the Create card on `/teammates`. Both are `MudButton`s
-  now, so neither carries a distinguishing class of its own — disambiguate by
-  **page**, or by container (`.invite-teammate` wraps the Room-header one), never by
-  text alone. Buttons are not upper-cased in this app, so both read "Add teammate".
+- **"Invite teammate" and "Add teammate" are two different controls.** The invite
+  toggle in a Room header (an icon button; its tooltip and `aria-label` read
+  "Invite teammate") and the submit button of the Create card on `/teammates`
+  (**Add teammate**). Find the Room-header one by container (`.invite-teammate`
+  wraps it) or `aria-label`, never by text alone.
 - **Four controls are icon buttons with no visible text.** **Remove** on the
   Teammate card (`PersonRemove`), **Stop** on a streaming Draft (`StopCircle`),
   **Settings** in the drawer (`Settings`, pinned to the bottom) and **Archived chats**
@@ -366,7 +366,7 @@ finds where `Team:DataDir` actually resolved.
   `document.querySelector('[aria-label="Stop"]')`. Steps written before this change
   still name them in words; that is the same control. **New teammate** on
   `/teammates` is a text button (first in the toolbar), and **Teammates** in the
-  drawer and both **Add teammate** buttons also show their text.
+  drawer and the **Add teammate** submit button also show their text.
 - **A Room can be renamed, and a renamed Room stops auto-renaming.** The Edit icon
   beside a Room's title puts it into edit mode; Enter or blur commits, Escape
   cancels. Until somebody renames it, a Room is still named after its Agent Members

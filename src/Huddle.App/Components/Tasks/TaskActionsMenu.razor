@@ -1,0 +1,54 @@
+@*
+    The ⋮ menu of a Task, the same everywhere (UX-050a): "Actions for {id}" holding, on a Board card
+    only, a flat "Move to" list of every state, then Copy id and Copy link.
+*@
+@using Agency.Huddle.App.Components.Shared
+
+<MudMenu Class="task-actions-menu">
+    <ActivatorContent Context="menuContext">
+        <MudIconButton Icon="@ActionIcons.MoreActions" Size="Size.Small"
+                       aria-label="@($"Actions for {this.Id}")" OnClick="menuContext.ToggleAsync" />
+    </ActivatorContent>
+    <ChildContent>
+        @if (this.ShowMoveTo)
+        {
+            <MudText Typo="Typo.overline" Class="px-4 pt-2 pb-1 mud-text-secondary">Move to</MudText>
+            @foreach (TaskState state in TaskStates.All)
+            {
+                <MudMenuItem OnClick="@(() => this.OnMoveTo.InvokeAsync(state))">@state.ToWire()</MudMenuItem>
+            }
+
+            <MudDivider />
+        }
+
+        <MudMenuItem Icon="@ActionIcons.Copy" OnClick="@(() => this.OnCopyId.InvokeAsync())">Copy id</MudMenuItem>
+        <MudMenuItem Icon="@ActionIcons.CopyLink" OnClick="@(() => this.OnCopyLink.InvokeAsync())">Copy link</MudMenuItem>
+        @this.ExtraItems
+    </ChildContent>
+</MudMenu>
+
+@code {
+    /// <summary>The Task the menu acts on.</summary>
+    [Parameter, EditorRequired]
+    public TaskId Id { get; set; }
+
+    /// <summary>Whether the "Move to" list shows (the Board card only).</summary>
+    [Parameter]
+    public bool ShowMoveTo { get; set; }
+
+    /// <summary>Raised with the chosen state.</summary>
+    [Parameter]
+    public EventCallback<TaskState> OnMoveTo { get; set; }
+
+    /// <summary>Raised by "Copy id".</summary>
+    [Parameter]
+    public EventCallback OnCopyId { get; set; }
+
+    /// <summary>Raised by "Copy link".</summary>
+    [Parameter]
+    public EventCallback OnCopyLink { get; set; }
+
+    /// <summary>Further <c>MudMenuItem</c>s after Copy link (the detail's Make a copy and Close task).</summary>
+    [Parameter]
+    public RenderFragment? ExtraItems { get; set; }
+}

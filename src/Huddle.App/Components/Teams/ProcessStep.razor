@@ -16,7 +16,7 @@
     <MudText Typo="Typo.overline">Process</MudText>
     @if (this.Processes.Count > 0)
     {
-        <MudSelect T="string" Label="Process" Value="this.selected" ValueChanged="this.OnSelected" Class="process-step-select">
+        <MudSelect Variant="Variant.Outlined" Margin="Margin.Dense" T="string" Label="Process" Value="this.selected" ValueChanged="this.OnSelected" Class="process-step-select">
             @foreach (ProcessRef process in this.Processes)
             {
                 <MudSelectItem T="string" Value="@process.Id">@process.Id</MudSelectItem>
@@ -25,9 +25,9 @@
         <pre class="process-step-preview">@this.Preview</pre>
     }
     <MudStack Row="true" Spacing="2" Class="mt-2">
-        <MudButton Variant="Variant.Filled" Color="Color.Primary" Disabled="@(this.selected is null)" OnClick="this.Use"
+        <MudButton Size="Size.Small" Variant="Variant.Filled" Color="Color.Primary" Disabled="@(this.selected is null)" OnClick="this.Use"
                    Class="process-step-use">Use this process</MudButton>
-        <MudButton Variant="Variant.Outlined" OnClick="this.StartBlank" Class="process-step-blank">Start blank</MudButton>
+        <MudButton Size="Size.Small" Variant="Variant.Outlined" OnClick="this.StartBlank" Class="process-step-blank">Start blank</MudButton>
     </MudStack>
     @if (this.result is not null)
     {

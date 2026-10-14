@@ -8,9 +8,11 @@
     only confirming does.
 *@
 @using System.Globalization
+@using Agency.Huddle.App.Components.Shared.Dialogs
 @using Agency.Huddle.App.Library
 
 @inject LibraryFileService FileService
+@inject IServiceProvider Services
 @inject LibraryPathResolver Resolver
 @inject IDialogService Dialogs
 @inject ISnackbar Snackbar
@@ -87,7 +89,7 @@
     }
 
     /// <summary>Asks <see cref="BeforeChangeAsync"/>, then the settled Delete confirm text through
-    /// <see cref="DeleteDialog"/>;
+    /// <see cref="ConfirmDialog"/>;
     /// confirming sends the item to the Recycle Bin, a refusal shows through <see cref="ISnackbar"/>, and
     /// success raises <see cref="OnChanged"/> with only <see cref="LibraryChange.OldPath"/> set.</summary>
     private async Task HandleDeleteAsync(LibraryPath item)
@@ -98,11 +100,9 @@
         }
 
         string fileName = Path.GetFileName(item.FullPath);
-        DialogParameters<DeleteDialog> parameters = new() { { dialog => dialog.Message, "It goes to the Recycle Bin." } };
-        IDialogReference reference = await this.Dialogs.ShowAsync<DeleteDialog>(
-            string.Create(CultureInfo.InvariantCulture, $"Delete {fileName}?"), parameters, DeleteDialog.Options);
-        DialogResult? answer = await reference.Result;
-        if (answer is null || answer.Canceled)
+        bool confirmed = await this.Dialogs.ConfirmAsync(
+            string.Create(CultureInfo.InvariantCulture, $"Delete '{fileName}'?"), "It goes to the Recycle Bin.", "Delete", danger: true);
+        if (!confirmed)
         {
             return;
         }
@@ -110,7 +110,7 @@
         LibraryResult<LibraryPath> result = await this.FileService.RecycleAsync(item, CancellationToken.None);
         if (result.Value is null)
         {
-            this.Snackbar.Add(result.Error ?? string.Empty, Severity.Error);
+            this.Snackbar.Add(result.Error ?? string.Empty, Severity.Error, configure: null, key: "library-error");
             return;
         }
 
@@ -140,7 +140,7 @@
             LibraryResult<LibraryPath> direct = await this.FileService.CreateFileAsync(folder, name, CancellationToken.None);
             if (direct.Value is null)
             {
-                this.Snackbar.Add(direct.Error ?? string.Empty, Severity.Error);
+                this.Snackbar.Add(direct.Error ?? string.Empty, Severity.Error, configure: null, key: "library-error");
                 return;
             }
 
@@ -175,12 +175,6 @@
     /// <see langword="null"/> when it was cancelled.</summary>
     private async Task<LibraryPath?> PromptForCreateAsync(LibraryTreeActionKind kind, LibraryPath folder)
     {
-        DialogParameters<NamePromptDialog> parameters = new()
-        {
-            { dialog => dialog.Folder, folder },
-            { dialog => dialog.Kind, kind },
-        };
-
         string title = kind switch
         {
             LibraryTreeActionKind.NewNote => "New note",
@@ -189,14 +183,43 @@
             _ => throw new NotSupportedException("HandleCreateAsync only drives create actions."),
         };
 
-        IDialogReference reference = await this.Dialogs.ShowAsync<NamePromptDialog>(title, parameters, NamePromptDialog.Options);
-        DialogResult? result = await reference.Result;
-        if (result is null || result.Canceled || result.Data is not LibraryResult<LibraryPath> { Value: { } created })
+        LibraryPath? created = null;
+
+        async Task<string?> SubmitAsync(string name)
         {
+            LibraryResult<LibraryPath> result = kind switch
+            {
+                LibraryTreeActionKind.NewNote => await this.FileService.CreateFileAsync(folder, name, CancellationToken.None),
+                LibraryTreeActionKind.NewFolder => await this.FileService.CreateFolderAsync(folder, name, CancellationToken.None),
+                _ => Microsoft.Extensions.DependencyInjection.ServiceProviderServiceExtensions.GetRequiredService<TeamFolderProvisioner>(this.Services).EnsureProject(folder, name),
+            };
+
+            if (result.Value is null)
+            {
+                return result.Error ?? string.Empty;
+            }
+
+            created = result.Value;
             return null;
         }
 
-        return created;
+        if (kind == LibraryTreeActionKind.NewProject)
+        {
+            string? name = await NewProjectPrompt.AskAsync(this.Dialogs, LibraryNames.Validate, SubmitAsync);
+            return name is null ? null : created;
+        }
+
+        DialogParameters<NameDialog> parameters = new()
+        {
+            { dialog => dialog.Label, "Name" },
+            { dialog => dialog.ConfirmText, "Create" },
+            { dialog => dialog.Validate, LibraryNames.Validate },
+            { dialog => dialog.SubmitAsync, SubmitAsync },
+        };
+
+        IDialogReference reference = await this.Dialogs.ShowAsync<NameDialog>(title, parameters, HuddleDialogOptions.SmallForm);
+        DialogResult? dialogResult = await reference.Result;
+        return dialogResult is null || dialogResult.Canceled ? null : created;
     }
 
     private async Task HandleRenameAsync(LibraryPath item)
@@ -204,20 +227,58 @@
         this.failedNotes = [];
         LibraryLinkPreview preview = await this.FileService.PreviewLinkChangesAsync(item, item, CancellationToken.None);
 
-        DialogParameters<RenameDialog> parameters = new()
+        LibraryResult<LibraryMoveResult>? renamed = null;
+
+        async Task<string?> SubmitAsync(string newName)
         {
-            { dialog => dialog.Item, item },
-            { dialog => dialog.LinkCount, preview.Links },
-            { dialog => dialog.NoteCount, preview.Notes },
-            { dialog => dialog.IndexAvailable, preview.IndexAvailable },
-            { dialog => dialog.BeforeChangeAsync, this.BeforeChangeAsync },
+            if (this.BeforeChangeAsync is not null && !await this.BeforeChangeAsync(item))
+            {
+                return null;
+            }
+
+            LibraryResult<LibraryMoveResult> result = await this.FileService.RenameAsync(item, newName, CancellationToken.None);
+            if (result.Value is null)
+            {
+                return result.Error ?? string.Empty;
+            }
+
+            renamed = result;
+            return null;
+        }
+
+        bool linksUpdated = preview.IndexAvailable && preview.Links > 0;
+        string linkLine = preview.IndexAvailable
+            ? string.Create(CultureInfo.InvariantCulture, $"{preview.Links} links in {preview.Notes} notes point here and will be updated.")
+            : LinksNotUpdatedText;
+        RenderFragment? extra = null;
+        if (!preview.IndexAvailable)
+        {
+            extra = @<p class="library-file-ops-links-not-updated">@linkLine</p>;
+        }
+        else if (preview.Links > 0)
+        {
+            extra = @<p class="library-file-ops-link-count">@linkLine</p>;
+        }
+
+        DialogParameters<NameDialog> parameters = new()
+        {
+            { dialog => dialog.Label, "Name" },
+            { dialog => dialog.ConfirmText, linksUpdated ? "Rename and update" : "Rename" },
+            { dialog => dialog.InitialValue, Path.GetFileName(item.FullPath) },
+            { dialog => dialog.Validate, LibraryNames.Validate },
+            { dialog => dialog.SubmitAsync, SubmitAsync },
+            { dialog => dialog.ChildContent, extra },
         };
 
         string title = item.Role == LibraryNodeRole.File ? "Rename note" : "Rename folder";
-        IDialogReference reference = await this.Dialogs.ShowAsync<RenameDialog>(title, parameters, RenameDialog.Options);
+        IDialogReference reference = await this.Dialogs.ShowAsync<NameDialog>(title, parameters, HuddleDialogOptions.SmallForm);
         DialogResult? result = await reference.Result;
-        this.ApplyMoveResult(result, item, "Renamed");
+        bool accepted = result is { Canceled: false } && renamed is not null;
+        this.ApplyMoveResult(accepted ? DialogResult.Ok(renamed) : null, item, "Renamed");
     }
+
+    /// <summary>The settled text shown when the root's index is unavailable (corrections-B5 item 8).</summary>
+    internal const string LinksNotUpdatedText = "Links weren't updated: this root has too many files to index.";
 
     private async Task HandleMoveAsync(LibraryPath item)
     {
@@ -251,7 +312,7 @@
         LibraryResult<LibraryMoveResult> result = await this.FileService.MoveAsync(item, destination, CancellationToken.None);
         if (result.Value is null)
         {
-            this.Snackbar.Add(result.Error ?? string.Empty, Severity.Error);
+            this.Snackbar.Add(result.Error ?? string.Empty, Severity.Error, configure: null, key: "library-error");
             return;
         }
 

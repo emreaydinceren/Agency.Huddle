@@ -1,0 +1,1 @@
+# CV11 baseline for the CSS area is 0; the documented exceptions are in Exceptions.txt.

@@ -21,14 +21,11 @@
 
 @if (this.Confirming)
 {
-    <MudStack Row="true" Spacing="2">
-        <MudButton Variant="Variant.Outlined" Color="Color.Error" OnClick="this.OnConfirm">Yes, reset everything</MudButton>
-        <MudButton Variant="Variant.Outlined" OnClick="this.OnCancel">Cancel</MudButton>
-    </MudStack>
+    <InlineConfirm Prompt="Reset every prompt to its default?" ConfirmText="Reset all" OnConfirm="this.OnConfirm" OnCancel="this.OnCancel" />
 }
 else
 {
-    <MudButton Variant="Variant.Outlined" Color="Color.Error" Disabled="@(!this.AnyModified)" OnClick="this.OnBeginReset">Reset all to defaults</MudButton>
+    <MudButton Variant="Variant.Outlined" Size="Size.Small" Color="Color.Error" Disabled="@(!this.AnyModified)" OnClick="this.OnBeginReset">Reset all to defaults</MudButton>
 }
 
 @code {
@@ -44,7 +41,7 @@ else
     [Parameter]
     public EventCallback OnBeginReset { get; set; }
 
-    /// <summary>Raised when the confirm step's "Yes, reset everything" is clicked.</summary>
+    /// <summary>Raised when the confirm step's "Reset all" is clicked.</summary>
     [Parameter]
     public EventCallback OnConfirm { get; set; }
 

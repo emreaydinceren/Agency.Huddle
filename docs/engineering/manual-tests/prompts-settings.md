@@ -641,7 +641,7 @@ If you reset the wrong field, start over from a clean state rather than reasonin
 2. Press F5 to reload /settings. Refresh Explorer and compare.
 3. Type text into three different fields. Refresh Explorer and compare.
 4. Click the `Reset` button on one of those fields. Refresh Explorer and compare.
-5. Click `Reset all to defaults` in the header, then click `Yes, reset everything`. Refresh Explorer and compare.
+5. Click `Reset all to defaults` in the header, then click `Reset all`. Refresh Explorer and compare.
 6. Click the `Appearance` tab, then the `Prompts` tab. Refresh Explorer and compare.
 7. Now click `Save` once. Watch the page closely for the next three seconds.
 8. Refresh Explorer and compare.
@@ -694,7 +694,7 @@ If the timestamp granularity is too coarse to distinguish, use content compariso
 - Before any edit the `Reset all to defaults` button is visibly DISABLED and clicking it does nothing.
 - It is styled as a danger action (distinct from the plain buttons).
 - After one keystroke in any field it becomes ENABLED.
-- Clicking it replaces it IN PLACE with two buttons: `Yes, reset everything` (danger styling) and `Cancel`.
+- Clicking it replaces it IN PLACE with two buttons: `Reset all` (danger styling) and `Cancel`.
 - No browser `confirm()` dialog and no modal overlay appears at any point.
 - Clicking `Cancel` restores the single `Reset all to defaults` button and changes nothing — your typed character and its badges are still there.
 - Clicking it again re-shows the confirm pair.
@@ -709,7 +709,7 @@ If the timestamp granularity is too coarse to distinguish, use content compariso
 
 If you cannot tell whether the button is disabled, inspect it in devtools and check for the `disabled` attribute. Judge from the attribute, not the shade of grey.
 
-### PROMPTSSETTINGS-17 — "Yes, reset everything" stages every default but writes nothing — and the reset is silently lost if you navigate away
+### PROMPTSSETTINGS-17 — "Reset all" stages every default but writes nothing — and the reset is silently lost if you navigate away
 
 **Free** · about 8 min
 
@@ -724,7 +724,7 @@ If you cannot tell whether the button is disabled, inspect it in devtools and ch
 
 1. Type ` ONE` into `Room label`, ` TWO` into `Help: budget`, and ` THREE` into `Identity`. Click `Save`.
 2. Confirm `prompts.json` holds exactly three keys; note its Date modified and copy its content to a scratch file.
-3. Click `Reset all to defaults`, then click `Yes, reset everything`.
+3. Click `Reset all to defaults`, then click `Reset all`.
 4. Scan every field header, group by group, and note every badge you can see.
 5. Look at the `Save` button and at the header's `Reset all to defaults` button.
 6. Refresh Explorer, compare `prompts.json`'s timestamp and content with the scratch copy.
@@ -769,7 +769,7 @@ If step 9 shows the overrides gone rather than restored, check `prompts.json` fi
 
 1. Type ` ONE` into `Room label` and ` TWO` into `Help: footer`. Click `Save`.
 2. Confirm `prompts.json` holds two keys.
-3. Click `Reset all to defaults`, then `Yes, reset everything`.
+3. Click `Reset all to defaults`, then `Reset all`.
 4. Click `Save`.
 5. Read every field header for badges, and read the `Save` button's state.
 6. Open `App_Data\prompts.json` and read its entire contents.
@@ -1159,7 +1159,7 @@ The absence of an unsaved-changes prompt is documented designed behaviour, not a
 4. Look at the page header, to the right of the `Settings` heading.
 5. Click `Reset all to defaults`.
 6. Look at what replaces it.
-7. Click `Yes, reset everything`.
+7. Click `Reset all`.
 8. Look for a `Save` button anywhere on the Appearance pane.
 9. Check `App_Data\appearance.json` — its content, or its continued absence.
 10. Check `App_Data\prompts.json` — its content.
@@ -1168,7 +1168,7 @@ The absence of an unsaved-changes prompt is documented designed behaviour, not a
 **Pass if — all of these**
 
 - The `Reset all to defaults` button is present in the header on the Appearance tab and is ENABLED (because a prompt is modified), even though the pane shows only theme settings.
-- Clicking it shows the same inline `Yes, reset everything` / `Cancel` confirm pair there.
+- Clicking it shows the same inline `Reset all` / `Cancel` confirm pair there.
 - Confirming does NOT change `appearance.json` (unchanged content, or still absent).
 - `prompts.json` is UNCHANGED — still holding the `turn.roomLabel` override — because there is no Save button on this tab to commit with.
 - Switching back to the Prompts tab shows `Room label` at its shipped default with an `Unsaved` badge: the reset was staged and survived the tab switch.

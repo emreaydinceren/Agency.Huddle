@@ -1,0 +1,11 @@
+@*
+    The intro paragraph that opens every Settings panel (UX-012, UX-R17).
+*@
+
+<p class="settings-intro">@this.ChildContent</p>
+
+@code {
+    /// <summary>The intro text.</summary>
+    [Parameter]
+    public RenderFragment? ChildContent { get; set; }
+}

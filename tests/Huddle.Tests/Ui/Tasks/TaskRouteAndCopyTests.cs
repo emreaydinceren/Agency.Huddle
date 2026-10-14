@@ -188,8 +188,8 @@ public sealed class TaskRouteAndCopyTests
         ctx.JSInterop.Setup<bool>("huddleClipboard.copy", expected).SetResult(true);
 
         var cut = RenderPanel(ctx, task.Id);
-        await cut.InvokeAsync(() => cut.Find("button[aria-label=\"More actions\"]").ClickAsync());
-        await cut.InvokeAsync(() => cut.Find(".task-detail-copy-link").ClickAsync());
+        await cut.InvokeAsync(() => cut.Find("button[aria-label^=\"Actions for \"]").ClickAsync());
+        await cut.InvokeAsync(() => cut.FindAll(".mud-menu-item").Single(item => string.Equals(item.TextContent.Trim(), "Copy link", StringComparison.Ordinal)).ClickAsync());
 
         JSRuntimeInvocation invocation = ctx.JSInterop.VerifyInvoke("huddleClipboard.copy");
         Assert.Equal(expected, Assert.Single(invocation.Arguments));
@@ -216,7 +216,7 @@ public sealed class TaskRouteAndCopyTests
             builder.CloseComponent();
         });
 
-        await cut.InvokeAsync(() => cut.Find("button[aria-label=\"Move PLAT-0001\"]").ClickAsync());
+        await cut.InvokeAsync(() => cut.Find("button[aria-label=\"Actions for PLAT-0001\"]").ClickAsync());
         await cut.InvokeAsync(() => cut.FindAll(".mud-menu-item").Single(i => string.Equals(i.TextContent.Trim(), "Copy id", StringComparison.Ordinal)).ClickAsync());
 
         Assert.Equal(task.Id, copied);

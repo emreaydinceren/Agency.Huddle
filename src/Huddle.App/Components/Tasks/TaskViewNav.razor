@@ -111,9 +111,10 @@
     /// every surviving row's right-click with no menu to open. Each row is keyed by View id, so a surviving
     /// View keeps its own MudMenu instance - and its ref - when Views before it are added or deleted.
     /// </summary>
-    private void OnViewsChanged() => _ = this.DispatchAsync(() =>
+    private void OnViewsChanged() => _ = RendererDispatch.RunAsync(this.InvokeAsync, () =>
     {
-        HashSet<string> current = new(this.ViewStore.Views.Select(static view => view.Id), StringComparer.Ordinal);        foreach (string gone in this.menuRefs.Keys.Where(id => !current.Contains(id)).ToList())
+        HashSet<string> current = new(this.ViewStore.Views.Select(static view => view.Id), StringComparer.Ordinal);
+        foreach (string gone in this.menuRefs.Keys.Where(id => !current.Contains(id)).ToList())
         {
             this.menuRefs.Remove(gone);
         }
@@ -121,12 +122,6 @@
         this.StateHasChanged();
         return Task.CompletedTask;
     });
-
-    /// <summary>Invokes <paramref name="action"/> on the renderer's synchronization context, swallowing the two exceptions a store event racing component teardown can throw (§13.11).</summary>
-    private Task DispatchAsync(Func<Task> action)
-    {
-        return RendererDispatch.RunAsync(this.InvokeAsync, action);
-    }
 
     /// <summary>Opens the row's own MudMenu programmatically, so a right-click reaches the same Edit View/Delete View menu the "..." button does (RoomList.razor's own precedent).</summary>
     /// <param name="viewId">The View whose row was right-clicked.</param>
@@ -162,12 +157,7 @@
     /// <param name="view">The View to delete.</param>
     private async Task DeleteViewAsync(TaskView view)
     {
-        bool? confirmed = await this.DialogService.ShowMessageBoxAsync(
-            "Delete View",
-            $"Delete '{view.Name}'? Tasks are not affected.",
-            yesText: "Delete",
-            cancelText: "Cancel");
-        if (confirmed != true)
+        if (!await ViewActions.ConfirmDeleteAsync(this.DialogService, view))
         {
             return;
         }

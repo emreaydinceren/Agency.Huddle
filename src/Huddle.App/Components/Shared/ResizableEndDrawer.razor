@@ -1,0 +1,76 @@
+@*
+    The end-anchored drawer behind the Task detail panel and the View editor (design-system "Drawer anatomy"; UX-048,
+    UX-R05, UX-V10): a header row with the title (Typo.h6) and a close button, the content in pa-4 with a 16px gap, and
+    one resize handle that the mouse drags and the arrow keys move. huddleResize.attachDrawer (app.js) does the resizing
+    in the browser and remembers the width under StorageKey, so a drag never round-trips to the server.
+*@
+@inject IJSRuntime JS
+
+<MudDrawer Open="this.Open" OpenChanged="this.OpenChanged" Anchor="Anchor.End" Variant="DrawerVariant.Temporary"
+           OverlayAutoClose="this.OverlayAutoClose" Class="@this.DrawerClass">
+    <div @ref="this.handle" class="resizable-drawer-handle" role="separator" tabindex="0" aria-orientation="vertical" aria-label="Resize panel"
+         aria-valuemin="@MinWidthPx" aria-valuemax="@MaxWidthPx" aria-valuenow="@DefaultWidthPx"></div>
+    <MudStack Row="true" Justify="Justify.SpaceBetween" AlignItems="AlignItems.Center" Class="resizable-drawer-header px-4 pt-4">
+        <MudText Typo="Typo.h6">@this.Title</MudText>
+        <MudIconButton Icon="@Icons.Material.Filled.Close" Size="Size.Small" aria-label="Close" OnClick="this.CloseAsync" />
+    </MudStack>
+    <MudStack Spacing="4" Class="pa-4">
+        @this.ChildContent
+    </MudStack>
+</MudDrawer>
+
+@code {
+    /// <summary>The narrowest dragged width, in pixels - narrow enough to still fit the Task detail's stacked conflict rows (manual test TASKS-07 finding F17).</summary>
+    private const int MinWidthPx = 320;
+
+    /// <summary>The widest dragged width, in pixels - short of crowding the List or Board behind it on a laptop screen.</summary>
+    private const int MaxWidthPx = 800;
+
+    /// <summary>The width before any drag was remembered; the same value as <c>.resizable-drawer</c> in app.css.</summary>
+    private const int DefaultWidthPx = 420;
+
+    private ElementReference handle;
+
+    /// <summary>The <c>localStorage</c> key the dragged width is remembered under.</summary>
+    [Parameter]
+    [EditorRequired]
+    public string StorageKey { get; set; } = string.Empty;
+
+    /// <summary>The drawer's title, shown in its header.</summary>
+    [Parameter]
+    [EditorRequired]
+    public string Title { get; set; } = string.Empty;
+
+    /// <summary>The drawer's content, laid out in a <c>pa-4</c> stack.</summary>
+    [Parameter]
+    public RenderFragment? ChildContent { get; set; }
+
+    /// <summary>Whether the drawer is open.</summary>
+    [Parameter]
+    public bool Open { get; set; }
+
+    /// <summary>Raised when the drawer asks to open or close: the close button, the backdrop and Escape.</summary>
+    [Parameter]
+    public EventCallback<bool> OpenChanged { get; set; }
+
+    /// <summary>Whether a click on the backdrop closes the drawer; false while the content has unsaved changes.</summary>
+    [Parameter]
+    public bool OverlayAutoClose { get; set; } = true;
+
+    /// <summary>An extra CSS class for the drawer, for a test or a stylesheet to find this instance.</summary>
+    [Parameter]
+    public string? Class { get; set; }
+
+    private string DrawerClass => string.IsNullOrEmpty(this.Class) ? "resizable-drawer" : $"resizable-drawer {this.Class}";
+
+    /// <summary>Wires the drag and keyboard handlers once: the drawer is never re-created while this component lives, and every later width is set and remembered in JS.</summary>
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            await this.JS.InvokeVoidAsync("huddleResize.attachDrawer", this.handle, this.StorageKey, MinWidthPx, MaxWidthPx, DefaultWidthPx);
+        }
+    }
+
+    private Task CloseAsync() => this.OpenChanged.InvokeAsync(false);
+}

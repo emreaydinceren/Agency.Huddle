@@ -38,7 +38,7 @@
             {
                 <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2">
                     <MudText Typo="Typo.caption" Class="hiring-pool-count" aria-live="polite">@visible.Count of @entries.Count jobs</MudText>
-                    <button type="button" class="hiring-pool-clear" @onclick="this.ClearFilters">Clear all</button>
+                    <MudButton Variant="Variant.Text" Size="Size.Small" Class="hiring-pool-clear" OnClick="this.ClearFilters">Clear all</MudButton>
                 </MudStack>
             }
         </div>
@@ -101,7 +101,7 @@
         {
             <MudPaper Outlined="true" Class="@HiredCardClass(entry)">
                 <MudStack Row="true" AlignItems="AlignItems.Center">
-                    <MudAvatar Color="Color.Primary" Size="Size.Medium" Class="hiring-pool-avatar">@Monogram(entry.Card.Name)</MudAvatar>
+                    <TeammateAvatar Name="@entry.Card.Name" Class="hiring-pool-avatar" />
                     <MudStack Spacing="1" Class="flex-grow-1">
                         <MudText Typo="Typo.subtitle1" Class="hiring-pool-name">@entry.Card.Name</MudText>
                         <MudText Typo="Typo.caption">@this.RoleTitle(entry.Card.RoleId)</MudText>
@@ -226,9 +226,6 @@
 
     private static string HiredCardClass(HiredEntry entry) =>
         $"hiring-pool-hired hiring-pool-hired-{entry.Card.RoleId}{(entry.Card.Readiness == CardReadiness.Ready ? string.Empty : " hiring-pool-hired-needs-setup")}";
-
-    private static string Monogram(string name) =>
-        name.Length == 0 ? string.Empty : char.ToUpperInvariant(name[0]).ToString();
 
     private bool IsFull(RoleSpec role) =>
         TeamCheckBar.IsRoleFull(role, this.hired.Count(entry => string.Equals(entry.Card.RoleId, role.Id, StringComparison.Ordinal)));

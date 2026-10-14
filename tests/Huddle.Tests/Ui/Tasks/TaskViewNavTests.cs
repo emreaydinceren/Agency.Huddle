@@ -247,8 +247,8 @@ public sealed class TaskViewNavTests
         await OpenRowMenuAsync(cut, "Sprint Board");
         Task deleting = await OpenDeleteDialogAsync(cut);
 
-        Assert.Equal("Delete View", cut.Find(".mud-dialog-title").TextContent.Trim());
-        Assert.Equal("Delete 'Sprint Board'? Tasks are not affected.", cut.Find(".mud-dialog-content").TextContent.Trim());
+        Assert.Equal("Delete 'Sprint Board'?", cut.Find(".mud-dialog-title").TextContent.Trim());
+        Assert.Equal("This removes the View. Tasks are not affected.", cut.Find(".mud-dialog-content").TextContent.Trim());
         var buttons = cut.FindAll(".mud-dialog-actions button").Select(b => b.TextContent.Trim()).ToList();
         Assert.Equal(["Cancel", "Delete"], buttons);
 

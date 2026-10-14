@@ -1,0 +1,29 @@
+@*
+    The header every routable page opens with (design-system "A page"; UX-001, UX-004): the title as the
+    page's only h1 at Typo.h5 on the left, the page's actions on the right, and the same text as the
+    document title through PageTitle.
+*@
+
+<MudStack Row="true" Justify="Justify.SpaceBetween" AlignItems="AlignItems.Center" Class="mb-4">
+    <MudText Typo="Typo.h5" HtmlTag="h1">@this.Title</MudText>
+    @this.Actions
+</MudStack>
+@if (this.SetPageTitle)
+{
+    <PageTitle>@this.Title</PageTitle>
+}
+
+@code {
+    /// <summary>The page's title, rendered as its h1 and as the document title.</summary>
+    [Parameter]
+    [EditorRequired]
+    public string Title { get; set; } = string.Empty;
+
+    /// <summary>The page's actions, rendered on the right of the header.</summary>
+    [Parameter]
+    public RenderFragment? Actions { get; set; }
+
+    /// <summary>Whether the header also sets the document title to <see cref="Title"/>; a page whose document title differs from its heading (the Team page) turns it off and sets its own.</summary>
+    [Parameter]
+    public bool SetPageTitle { get; set; } = true;
+}

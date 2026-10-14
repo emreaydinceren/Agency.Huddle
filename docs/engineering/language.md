@@ -59,7 +59,7 @@ contexts](../Huddle.EngineeringGuide.md#two-bounded-contexts). Back to the hub:
   different thing.
 
 **Avatar**
-: What a Teammate shows for itself — the small square beside its Name on the
+: What a Teammate shows for itself — the small picture beside its Name on the
   Teammates page, in the invite and new-chat lists, and against every Message it
   posts. Three ways to fill it, and a background colour that is separate from all
   three:

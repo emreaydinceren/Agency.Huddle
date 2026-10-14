@@ -338,7 +338,8 @@ Team, with a **Team** filter at the top. A Teammate in two Teams is listed under
 both. Each card shows a status of Offline, Starting, Online or Degraded.
 
 Each Teammate has its own card with **Message**, **Edit**, **Open**,
-**Restart** and **Remove**.
+**Restart** and **Remove**. With no Teammates the page says "No Teammates yet.
+Choose New teammate."
 
 ### Adding a Teammate
 
@@ -368,7 +369,8 @@ and how many run at once, is limited; see [Hire limits](#hire-limits).
 
 The built-in **Chief of Staff** is the first Teammate you meet. It helps you put
 a team together: it proposes Teammates, and nothing is created until you select
-**Approve**. It has **Reset to default** instead of **Remove**.
+**Approve**. It has **Reset to default** instead of **Remove**; the card asks
+**Reset to default?** in place, and **Reset** confirms it.
 
 ### Editing a Teammate
 
@@ -514,7 +516,8 @@ was said at the time.
 
 ### Removing a Teammate
 
-Select **Remove** and confirm.
+Select **Remove**. The card asks **Remove {name}?** in place; select **Remove**
+again to confirm, or **Cancel** to keep the Teammate.
 
 **In the background:** only `<Name>.md` is deleted, along with its Model, Effort,
 Work mode, avatar and resume entries. The Teammate goes offline. Its Rooms, their
@@ -581,7 +584,7 @@ process its team type offers, or **Start blank**. Either one writes the Team's
 
 Select **New team** at the bottom of the Teams group, type a name, and select
 **Create**. This makes an empty Team folder. To start a Team with a team type and
-its hired members, use **New Team from a type** instead; see
+its hired members, use **New team from a type** instead; see
 [Hiring a Team from a type](#hiring-a-team-from-a-type).
 
 **In the background:** Huddle creates the folder `Teams/<Team>/`. Nothing else
@@ -653,7 +656,7 @@ A Team whose `_team.md` names a process also has a **Process** tab, which shows 
 Under a Team's title (not a Project's), the header has two more things:
 
 - **Duplicate** copies the Team's roster into a new Team. A small dialog asks for
-  the **New Team title** and a **Workspace folder** (left blank, it means none,
+  the **New team name** and a **Workspace folder** (left blank, it means none,
   which is refused when the type requires one). The new Team has
   the same team type, and each member is hired afresh under a new name; no
   memory, Library file or Task is copied. A member whose role no longer exists
@@ -678,9 +681,9 @@ so you can see why a folder you wrote never reached the Team type list.
 
 To make a Team from a type:
 
-1. Select **New Team from a type** at the bottom of the Teams group. This opens
+1. Select **New team from a type** at the bottom of the Teams group. This opens
    the **New Team** screen (`/teams/new`).
-2. Choose a **Team type** and type a **Team title**. If the type has a workspace,
+2. Choose a **Team type** and type a **Team name**. If the type has a workspace,
    fill in its folder: a Development Team's workspace is a repository and is
    required; a Household's is a home folder and is optional. A title that is
    taken, or a folder that does not exist, is refused on the spot.
@@ -963,8 +966,8 @@ member of the Team, or who lacks the Skill, is refused.
 **What it proposes.** The proposals arrive as a card in the Retro agent's Room.
 Each change shows its title, the file it targets and a diff Huddle computes from the
 file as it is now. A change is an exact-text replacement in one file: `Process.md`,
-`_team.md`, or one member's file. Select **Accept** to apply a change, or **Reject**
-(type the reason in **Reason if you reject** first). Huddle refuses an Accept, and
+`_team.md`, or one member's file. Select **Accept** to apply a change, or **Decline**
+(type the reason in **Reason if you decline** first). Huddle refuses an Accept, and
 changes nothing, when:
 
 - the text to replace is not in the file exactly once;
@@ -1024,7 +1027,7 @@ Room gets a name derived from its members. Its transcript file is created in
 | You and one Teammate | The Teammate answers every message. |
 | You and two or more Teammates | A Teammate answers only when you mention it, as in `@nova`. |
 
-Type `/invite @alias` in the message box, or use the Invite control, to add a
+Type `/invite @alias` in the message box, or use the **Invite teammate** button in the Room's header, to add a
 Teammate to the current Room.
 
 Teammates can reply to each other. To stop runaway conversations, a Room has a
@@ -1430,8 +1433,18 @@ In a List, Tags show as label chips and the Assignee as a chip with their
 avatar. The View editor opens in a side panel; drag its left edge to resize it.
 
 The toolbar above a View lets you filter, group, search, switch List/Board and
-turn **Dense** on or off for the current visit only. **Save to view** keeps those
-changes.
+turn **Dense** on or off for the current visit only. **Save view** (the toolbar's
+save button, formerly **Save to view**) keeps those changes.
+**Reset filters** clears them again; it is also the button on an empty result.
+
+A View's `⋯` menu has **Edit view** and **Delete view**. The editor's panel is
+titled **Edit view** or **New view**, and has a close button. **Delete view** asks
+`Delete 'name'?` and says that Tasks are not affected.
+
+A Task's `⋯` menu is titled **Actions for {id}**. It has **Copy id** and **Copy link**
+(the toast reads **Copied link to {id}**). A Task's panel shows **Created**, **Updated**
+and **Closed** dates. A Task a Teammate is working on shows a **Teammate working**
+chip, and a Task that woke a Teammate links to **Woken in Room {name}**.
 
 **In the background:** Views are saved to `views.json` in the data root. If that
 file has a syntax error, Huddle shows the line and column and makes Views
@@ -1511,9 +1524,9 @@ Open the `⋯` menu on any item, or right-click it.
 | --- | --- |
 | **New note** | Creates an empty file (`.md` added if you give no extension). |
 | **New folder** | Creates the folder. Inside a Team folder, this is a new Project. |
-| **Rename** / **Move** | Moves the file or folder, then rewrites `[[links]]` in every note in the root that pointed at it. The dialog tells you how many links will change. Notes it could not update are listed. Moves stay within one root. |
+| **Rename** / **Move…** | **Move…** opens a folder picker with **Cancel** and **Move**. Moves the file or folder, then rewrites `[[links]]` in every note in the root that pointed at it. The dialog tells you how many links will change. Notes it could not update are listed. Moves stay within one root. |
 | **Copy path** | Copies the full path, which you can paste into chat. |
-| **Delete** | Sends the item to the **Windows Recycle Bin**. Refused on network or removable drives, where the Recycle Bin is not available. |
+| **Delete** | Asks `Delete 'name'?`, then sends the item to the **Windows Recycle Bin**. Refused on network or removable drives, where the Recycle Bin is not available. |
 
 Roots, Team folders, Project folders, Teammate folders, definitions and `work/`
 folders cannot be renamed, moved or deleted here. Folders that hold Tasks cannot
@@ -1575,7 +1588,8 @@ create `Skills/<name>/` (for example `Skills/team-building/`) and put a file of 
 same name in it, for example `onboarding.md`. Your file replaces that one file; the
 others still come from the built-in version. **Settings › Skills** marks the Skill
 as **Overridden**. **Restore default** deletes your whole `Skills/<name>/` folder,
-including any extra files you added.
+including any extra files you added. It asks **Restore default?** first; the
+dialog's **Restore default** button confirms.
 
 ### Importing a Skill
 
@@ -1590,7 +1604,8 @@ commands**, **Network calls**, **Paths outside the Work Dir** or **No license**.
 A flag is a warning for you to read, not a block. A skill is refused, with the
 reason, when its folder is over 5 MB or 200 files, holds a symbolic link or an unsafe
 path, has no valid `SKILL.md`, or is larger than the download limit. Nothing is
-written until you select **Install**. **Back** and **Cancel** write nothing. After an
+written until you select **Install**. The buttons run **Cancel**, **Back**, **Install**,
+and **Back** and **Cancel** write nothing. After an
 install the dialog links to the Skills tab.
 
 Two cases are safe to repeat or refused:
@@ -1618,7 +1633,7 @@ import, without this dialog; see [Hiring a Team from a type](#hiring-a-team-from
 
 | Tab | What it changes | Saved to |
 | --- | --- | --- |
-| **Prompts** | The text Huddle sends to Teammates, such as the wake-up message. | `prompts.json` |
+| **Prompts** | The text Huddle sends to Teammates, such as the wake-up message. **Reset all to defaults** (beside the sticky **Save**) asks "Reset every prompt to its default?" and **Reset all** confirms. | `prompts.json` |
 | **Appearance** | Theme, light/dark and accent colour. | `appearance.json` |
 | **Personas** | The Teammate definitions. | `Teammates/…` |
 | **Skills** | List of Skills with where each came from, and their problems; **Import skill**; **Restore default**. | `Skills/…` |

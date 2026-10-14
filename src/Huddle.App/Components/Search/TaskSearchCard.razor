@@ -1,30 +1,20 @@
 @*
-    The Task card (spec §6.6). The first line leads with "{Task Id} · {Task Title}" and ends with a status
-    chip in the Board's colour (TaskColors.For, the one mapping). The second line is "{Assignee} · {Title}"
-    at the left (title de-emphasised) and "{Team} Team" at the right, under the chip. A Closed Task is dimmed and its accessible
-    name ends with ", closed" (spec §11). The action slot is empty in V1 (D-12).
+    The Task card (spec §6.6), on the shared SearchCardShell: the Outlined TaskAlt icon, then "{Task Id} · {Task Title}",
+    then "{Assignee} · {Title} · {Team} Team" (title de-emphasised), with a status chip in the Board's colour
+    (TaskColors.For, the one mapping) in the trailing slot. A Closed Task is dimmed and its accessible name ends with
+    ", closed" (spec §11).
 *@
 
 @using Agency.Huddle.App.Components.Tasks
 @using Agency.Huddle.App.Search
 @using Agency.Huddle.App.Tasks
 
-<div class="search-card @(this.Hit.IsArchived ? "search-card-archived" : null)" aria-label="@this.AccessibleName">
-    <span class="search-card-text">
-        <span class="search-card-head">
-            <span class="search-card-title"><MudHighlighter Text="@this.Heading" HighlightedText="@this.Phrase" /></span>
-            <MudChip T="string" Size="Size.Small" Color="@TaskColors.For(this.Hit.Status)" Class="search-card-chip">@this.Hit.Status.ToWire()</MudChip>
-        </span>
-        <span class="search-card-foot">
-            @if (this.Hit.Assignee is { } assignee)
-            {
-                <span class="search-card-meta">@assignee@if (!string.IsNullOrWhiteSpace(this.Hit.AssigneeTitle)){<span class="search-card-subtitle">@(" · ")@this.Hit.AssigneeTitle</span>}</span>
-            }
-            <span class="search-card-team">@this.TeamLabel</span>
-        </span>
-    </span>
-    <span class="search-card-action" aria-hidden="true"></span>
-</div>
+<SearchCardShell Archived="this.Hit.IsArchived" AccessibleName="@this.AccessibleName">
+    <Icon><MudIcon Icon="@Icons.Material.Outlined.TaskAlt" Size="Size.Small" /></Icon>
+    <Title><MudHighlighter Text="@this.Heading" HighlightedText="@this.Phrase" /></Title>
+    <Meta>@if (this.Hit.Assignee is { } assignee){@assignee@if (!string.IsNullOrWhiteSpace(this.Hit.AssigneeTitle)){<span class="search-card-subtitle">@(" · ")@this.Hit.AssigneeTitle</span>}@(" · ")}@this.TeamLabel</Meta>
+    <Trailing><span class="search-card-chip"><TaskStatusChip Status="this.Hit.Status" /></span></Trailing>
+</SearchCardShell>
 
 @code {
     /// <summary>The Task hit this card shows.</summary>

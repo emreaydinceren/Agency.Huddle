@@ -6,185 +6,107 @@
     The busy flag and the RoomEvents.ProposalChanged subscription interact in a way worth recording.
     ProposalService.ApproveAsync/DeclineAsync's very first action is ProposalStore.TryTake, which
     fires ProposalChanged synchronously, before either method's own first await - and this card is
-    itself subscribed to that event. A handler that always refreshed "proposal" on every fire would
-    therefore hide this card the instant ITS OWN Approve/Decline click began, before "busy" could
-    ever be observed disabling the buttons. OnProposalChanged below guards against exactly that: it
-    ignores a fire while this.busy is true, and the click handler's own finally block re-reads
-    ProposalStore.Get once the call returns - Approved, Declined or Gone (another tab won the race)
-    all converge on the same refresh, so nothing is lost either way. A fire for a DIFFERENT, external
+    itself subscribed to that event. AgentCardBase.RefreshOnChange ignores a fire while a call of this
+    card is running, and RunBusyAsync reloads once the call returns - Approved, Declined or Gone
+    (another tab won the race) all converge on the same refresh. A fire for a DIFFERENT, external
     change (another tab, while this card is idle) still updates normally.
 *@
-@implements IDisposable
+@inherits AgentCardBase
 @using Agency.Huddle.App.Acp
+@using Agency.Huddle.App.Components.Shared.AgentCards
 @using Agency.Huddle.App.Teammates
 
 @inject RoomEvents Events
 @inject ProposalStore Proposals
 @inject ProposalService Service
 @inject HireLimitGuard HireLimits
-@inject ITeamDirectory TeamDirectory
-@inject ISnackbar Snackbar
 
-@if (this.proposal is { } current && this.room is { Archived: false })
+@if (this.proposal is { } current && this.RoomIsOpen)
 {
-    @* MudAlert renders no role by default - verified against the rendered markup, not assumed - so
-       role="alert" is added explicitly, per rules.md. Severity.Info rather than Warning: a Proposal
-       is not a problem, it is an ordinary agent-initiated request for a decision - the same
-       reasoning that gives it "alert" rather than "status" is the Budget prompt's own precedent
-       (Chat.razor, lines 107-138): this was not caused by the Human's own click, so it needs
-       announcing rather than merely confirming. *@
-    <MudAlert Severity="Severity.Info" Class="proposal-card" role="alert">
-        <p class="proposal-card-text">@current.ProposerName proposes new Teammates. Approve creates these Teammates.</p>
-        <p class="proposal-card-headroom">@this.HeadroomText(current)</p>
+    <AgentCard Class="proposal-card" Title="@($"{current.ProposerName} is proposing Teammates")" AriaLabel="@($"Teammate proposal from {current.ProposerName}")">
+        <ChildContent>
+            <p class="proposal-card-text">@current.ProposerName proposes new Teammates. Approve creates these Teammates.</p>
+            <p class="proposal-card-headroom">@this.HeadroomText(current)</p>
 
-        <MudTable Items="@current.Candidates" Hover="false" Dense="true" Elevation="0">
-            <HeaderContent>
-                <MudTh>Name</MudTh>
-                <MudTh>Alias</MudTh>
-                <MudTh>Title</MudTh>
-                <MudTh>Teams</MudTh>
-                <MudTh>Consult When</MudTh>
-            </HeaderContent>
-            <RowTemplate Context="candidate">
-                <MudTd DataLabel="Name">@candidate.Name</MudTd>
-                <MudTd DataLabel="Alias">@candidate.Alias</MudTd>
-                <MudTd DataLabel="Title">@candidate.Title</MudTd>
-                <MudTd DataLabel="Teams">@string.Join(", ", candidate.Teams)</MudTd>
-                <MudTd DataLabel="Consult When">@candidate.ConsultWhen</MudTd>
-            </RowTemplate>
-        </MudTable>
+            <MudTable Items="@current.Candidates" Hover="false" Dense="true" Elevation="0">
+                <HeaderContent>
+                    <MudTh>Name</MudTh>
+                    <MudTh>Alias</MudTh>
+                    <MudTh>Title</MudTh>
+                    <MudTh>Teams</MudTh>
+                    <MudTh>Consult when</MudTh>
+                </HeaderContent>
+                <RowTemplate Context="candidate">
+                    <MudTd DataLabel="Name">@candidate.Name</MudTd>
+                    <MudTd DataLabel="Alias">@candidate.Alias</MudTd>
+                    <MudTd DataLabel="Title">@candidate.Title</MudTd>
+                    <MudTd DataLabel="Teams">@string.Join(", ", candidate.Teams)</MudTd>
+                    <MudTd DataLabel="Consult when">@candidate.ConsultWhen</MudTd>
+                </RowTemplate>
+            </MudTable>
 
-        <MudExpansionPanels Class="proposal-card-bodies">
-            @foreach (var candidate in current.Candidates)
-            {
-                <MudExpansionPanel Text="@candidate.Name">
-                    <MudText Class="proposal-card-body">@candidate.Body</MudText>
-                </MudExpansionPanel>
-            }
-        </MudExpansionPanels>
-
-        <MudStack Row="true" Spacing="2" Class="proposal-card-actions">
-            <MudButton Variant="Variant.Filled" Color="Color.Primary" Disabled="@this.busy" OnClick="this.ApproveAsync">Approve</MudButton>
-            <MudButton Variant="Variant.Outlined" Disabled="@this.busy" OnClick="this.DeclineAsync">Decline</MudButton>
-        </MudStack>
-    </MudAlert>
+            <MudExpansionPanels Class="proposal-card-bodies">
+                @foreach (var candidate in current.Candidates)
+                {
+                    <MudExpansionPanel Text="@candidate.Name">
+                        <MudText Class="proposal-card-body">@candidate.Body</MudText>
+                    </MudExpansionPanel>
+                }
+            </MudExpansionPanels>
+        </ChildContent>
+        <Actions>
+            <MudButton Size="Size.Small" Variant="Variant.Filled" Color="Color.Primary" Disabled="@this.Busy" OnClick="this.ApproveAsync">@(this.IsBusy(ApproveKey) ? "Approving…" : "Approve")</MudButton>
+            <MudButton Size="Size.Small" Variant="Variant.Outlined" Disabled="@this.Busy" OnClick="this.DeclineAsync">@(this.IsBusy(DeclineKey) ? "Declining…" : "Decline")</MudButton>
+        </Actions>
+    </AgentCard>
 }
 
 @code {
-    /// <summary>The Room whose pending Proposal, if any, this card shows.</summary>
-    [Parameter, EditorRequired]
-    public string RoomId { get; set; } = "";
+    private const string ApproveKey = "approve";
+    private const string DeclineKey = "decline";
 
-    private string? loadedRoomId;
     private Proposal? proposal;
-    private Room? room;
-    private bool busy;
 
-    /// <summary>Subscribes to <see cref="RoomEvents.ProposalChanged"/> - unsubscribed in <see cref="Dispose"/>, per rules.md.</summary>
-    protected override void OnInitialized()
+    /// <summary>Follows <see cref="RoomEvents.ProposalChanged"/> - unsubscribed in <see cref="Unsubscribe"/>, per rules.md.</summary>
+    protected override void Subscribe()
     {
-        this.Events.ProposalChanged += this.OnProposalChanged;
+        this.Events.ProposalChanged += this.RefreshOnChange;
     }
 
-    /// <summary>Reloads this card's Room and pending Proposal whenever <see cref="RoomId"/> changes - a component reused across Rooms, per Spec §6.11.</summary>
-    protected override async Task OnParametersSetAsync()
+    /// <summary>Lets go of <see cref="RoomEvents.ProposalChanged"/>.</summary>
+    protected override void Unsubscribe()
     {
-        if (this.RoomId == this.loadedRoomId)
-        {
-            return;
-        }
-
-        this.loadedRoomId = this.RoomId;
-        await this.LoadAsync();
+        this.Events.ProposalChanged -= this.RefreshOnChange;
     }
 
-    /// <summary>Unsubscribes from <see cref="RoomEvents.ProposalChanged"/> - the hub is a singleton, so a component that does not unsubscribe here never dies.</summary>
-    public void Dispose()
+    /// <summary>Reads whatever Proposal is currently pending for this card's Room.</summary>
+    protected override Task LoadAsync()
     {
-        this.Events.ProposalChanged -= this.OnProposalChanged;
-    }
-
-    /// <summary>Reads this card's Room (for its Archived flag) and whatever Proposal is currently pending for it.</summary>
-    private async Task LoadAsync()
-    {
-        this.room = await this.TeamDirectory.GetRoomAsync(this.RoomId);
         this.proposal = this.Proposals.Get(this.RoomId);
-    }
-
-    /// <summary>
-    /// Reacts to <see cref="RoomEvents.ProposalChanged"/> for this card's own Room - filtered to
-    /// <see cref="RoomId"/>, and ignored entirely while <see cref="busy"/> is true, because that
-    /// case is this card's OWN Approve/Decline call taking the Proposal: its click handler's own
-    /// <c>finally</c> block refreshes state once that call returns, so reacting here too would only
-    /// hide the busy view before it could ever be seen. See the file's own top-of-file remarks.
-    /// </summary>
-    /// <param name="roomId">The Room whose pending Proposal changed.</param>
-    private void OnProposalChanged(string roomId)
-    {
-        if (!string.Equals(roomId, this.RoomId, StringComparison.Ordinal) || this.busy)
-        {
-            return;
-        }
-
-        _ = this.DispatchAsync(() =>
-        {
-            this.proposal = this.Proposals.Get(this.RoomId);
-            this.StateHasChanged();
-        });
+        return Task.CompletedTask;
     }
 
     /// <summary>
     /// Approves <see cref="proposal"/> through the real <see cref="ProposalService"/> - the outcome
-    /// appears as the posted Message, never as card state (Spec §6.11), so this method only refreshes
-    /// whether a Proposal is still pending once the call returns. Any exception is reported through
-    /// <see cref="ISnackbar"/> rather than left to crash the circuit - <see cref="ProposalService"/>
-    /// already turns every expected failure into a <see cref="ProposalOutcome"/> rather than a throw,
-    /// so this catch exists only for whatever it does not anticipate.
+    /// appears as the posted Message, never as card state (Spec §6.11), so this only refreshes whether a
+    /// Proposal is still pending once the call returns. <see cref="ProposalService"/> already turns every
+    /// expected failure into a <see cref="ProposalOutcome"/> rather than a throw, so the snackbar in
+    /// <see cref="AgentCardBase.RunBusyAsync"/> is only for whatever it does not anticipate.
     /// </summary>
     private async Task ApproveAsync()
     {
-        if (this.busy || this.proposal is not { } current)
+        if (this.proposal is { } current)
         {
-            return;
-        }
-
-        this.busy = true;
-        try
-        {
-            _ = await this.Service.ApproveAsync(this.RoomId, current.Id, CancellationToken.None);
-        }
-        catch (Exception ex) when (ex is not OperationCanceledException)
-        {
-            this.Snackbar.Add(ex.Message, Severity.Error);
-        }
-        finally
-        {
-            this.proposal = this.Proposals.Get(this.RoomId);
-            this.busy = false;
+            await this.RunBusyAsync(async () => _ = await this.Service.ApproveAsync(this.RoomId, current.Id, CancellationToken.None), ApproveKey);
         }
     }
 
-    /// <summary>The Decline twin of <see cref="ApproveAsync"/> - see its remarks for the busy/refresh and exception-handling reasoning, both identical here.</summary>
+    /// <summary>The Decline twin of <see cref="ApproveAsync"/>.</summary>
     private async Task DeclineAsync()
     {
-        if (this.busy || this.proposal is not { } current)
+        if (this.proposal is { } current)
         {
-            return;
-        }
-
-        this.busy = true;
-        try
-        {
-            _ = await this.Service.DeclineAsync(this.RoomId, current.Id, CancellationToken.None);
-        }
-        catch (Exception ex) when (ex is not OperationCanceledException)
-        {
-            this.Snackbar.Add(ex.Message, Severity.Error);
-        }
-        finally
-        {
-            this.proposal = this.Proposals.Get(this.RoomId);
-            this.busy = false;
+            await this.RunBusyAsync(async () => _ = await this.Service.DeclineAsync(this.RoomId, current.Id, CancellationToken.None), DeclineKey);
         }
     }
 
@@ -208,21 +130,5 @@
 
         var unit = tightest.Kind == HireLimitKind.PerTeam ? "per Team" : "live processes";
         return $"This adds {count} {noun}; {tightest.Used} of {tightest.Limit} {unit}.";
-    }
-
-    /// <summary>
-    /// Marshals <paramref name="action"/> onto this component's renderer, matching
-    /// <c>Chat.razor</c>'s and <c>InviteTeammate.razor</c>'s own <c>DispatchAsync</c> - a stale
-    /// <see cref="RoomEvents"/> subscription firing after this card has already been disposed (a
-    /// Room switch, a closed circuit) must not throw.
-    /// </summary>
-    /// <param name="action">The state update and repaint to run on the renderer.</param>
-    private Task DispatchAsync(Action action)
-    {
-        return RendererDispatch.RunAsync(this.InvokeAsync, () =>
-        {
-            action();
-            return Task.CompletedTask;
-        });
     }
 }

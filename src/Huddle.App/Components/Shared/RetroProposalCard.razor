@@ -1,98 +1,83 @@
 @*
     Changes a retro agent proposed, waiting for the Human in the agent's room (RT-5, Spec §Retro). Each change shows its title, its
     target file and a unified diff Huddle computed from the file as it is now (the agent supplies no diff). Accept makes the edit,
-    but only when the text to replace occurs exactly once; Reject writes nothing. Both go through RetroProposalService. A refused
-    Accept leaves the change in place and says why in a snackbar; an applied or rejected one appears as the Message the service posts.
+    but only when the text to replace occurs exactly once; Decline writes nothing. Both go through RetroProposalService. A refused
+    Accept leaves the change in place and says why in a snackbar; an applied or declined one appears as the Message the service posts.
 
-    RetroProposalStore.Changed fires for every add and remove, including the one this card's own click causes. OnChanged ignores a
-    fire while busy is true, and the click handler's finally block reloads once the call returns, the same arrangement
-    SprintProposalCard uses.
+    Each change has its own in-place actions row (DS "In-place action rows"); the shared reason sits above the changes, so it is
+    typed before the Decline it belongs to. RetroProposalStore.Changed fires for every add and remove, including the one this card's
+    own click causes; AgentCardBase ignores it while a call is running and reloads once the call returns.
 *@
-@implements IDisposable
+@inherits AgentCardBase
+@using Agency.Huddle.App.Components.Shared.AgentCards
 @using Agency.Huddle.App.Teams
 
 @inject RetroProposalStore Proposals
 @inject RetroProposalService Service
-@inject ISnackbar Snackbar
 
-@if (this.sets.Count > 0)
+@if (this.RoomIsOpen)
 {
-    <MudAlert Severity="Severity.Info" Class="retro-proposal-card" role="alert">
-        @foreach (var set in this.sets)
-        {
+    @foreach (var set in this.sets)
+    {
+        <AgentCard @key="set.Id" Class="retro-proposal-card" Title="@($"{set.Proposer} is proposing changes")" AriaLabel="@($"Retro changes from {set.Proposer}")">
             <p class="retro-proposal-intro">@set.Proposer proposes changes after the retro. Accept makes the edit; nothing changes until you do.</p>
+
+            <MudTextField T="string" Variant="Variant.Outlined" Margin="Margin.Dense" @bind-Value="this.reason" Label="Reason if you decline" Class="retro-proposal-reason" Disabled="@this.Busy" />
+
             @foreach (var change in set.Changes)
             {
+                string acceptKey = KeyOf(change, "accept");
+                string declineKey = KeyOf(change, "decline");
+
                 <div class="retro-change">
                     <strong class="retro-change-title">@change.Title</strong>
                     <span class="retro-change-file">@change.TargetFile</span>
                     <pre class="retro-change-diff">@this.Service.Preview(set, change)</pre>
-                    <MudStack Row="true" Spacing="2" Class="retro-change-actions">
-                        <MudButton Variant="Variant.Filled" Color="Color.Primary" Class="retro-change-accept" Disabled="@this.busy" OnClick="() => this.AcceptAsync(set, change)">Accept</MudButton>
-                        <MudButton Variant="Variant.Outlined" Class="retro-change-reject" Disabled="@this.busy" OnClick="() => this.RejectAsync(set, change)">Reject</MudButton>
+                    <MudStack Row="true" Spacing="2" Class="agent-card-actions retro-change-actions">
+                        <MudButton Size="Size.Small" Variant="Variant.Filled" Color="Color.Primary" Class="retro-change-accept" Disabled="@this.Busy" OnClick="() => this.AcceptAsync(set, change)">@(this.IsBusy(acceptKey) ? "Accepting…" : "Accept")</MudButton>
+                        <MudButton Size="Size.Small" Variant="Variant.Outlined" Class="retro-change-decline" Disabled="@this.Busy" OnClick="() => this.DeclineAsync(set, change)">@(this.IsBusy(declineKey) ? "Declining…" : "Decline")</MudButton>
                     </MudStack>
                 </div>
             }
-        }
-
-        <MudTextField T="string" @bind-Value="this.reason" Label="Reason if you reject" Class="retro-proposal-reason" Disabled="@this.busy" />
-    </MudAlert>
+        </AgentCard>
+    }
 }
 
 @code {
-    /// <summary>The Room whose pending retro proposals, if any, this card shows.</summary>
-    [Parameter, EditorRequired]
-    public string RoomId { get; set; } = "";
-
-    private string? loadedRoomId;
     private IReadOnlyList<RetroProposalSet> sets = [];
     private string reason = "";
-    private bool busy;
 
-    /// <summary>Subscribes to <see cref="RetroProposalStore.Changed"/>; unsubscribed in <see cref="Dispose"/>.</summary>
-    protected override void OnInitialized()
+    /// <summary>Names one change's call, so the button that was clicked is the one that shows its busy label.</summary>
+    /// <param name="change">The change.</param>
+    /// <param name="verb">The call.</param>
+    private static string KeyOf(RetroChange change, string verb)
+    {
+        return $"{change.Id}:{verb}";
+    }
+
+    /// <summary>Follows <see cref="RetroProposalStore.Changed"/>; undone in <see cref="Unsubscribe"/>.</summary>
+    protected override void Subscribe()
     {
         this.Proposals.Changed += this.OnChanged;
     }
 
-    /// <summary>Reloads the pending sets whenever <see cref="RoomId"/> changes.</summary>
-    protected override async Task OnParametersSetAsync()
-    {
-        if (this.RoomId == this.loadedRoomId)
-        {
-            return;
-        }
-
-        this.loadedRoomId = this.RoomId;
-        await this.LoadAsync();
-    }
-
-    /// <summary>Unsubscribes from <see cref="RetroProposalStore.Changed"/>.</summary>
-    public void Dispose()
+    /// <summary>Lets go of <see cref="RetroProposalStore.Changed"/>.</summary>
+    protected override void Unsubscribe()
     {
         this.Proposals.Changed -= this.OnChanged;
     }
 
     /// <summary>Reads the sets pending in this card's Room.</summary>
-    private async Task LoadAsync()
+    protected override async Task LoadAsync()
     {
         this.sets = await this.Service.PendingAsync(this.RoomId, CancellationToken.None);
     }
 
-    /// <summary>Reloads after a set was added or changed by someone else; ignored while this card's own call is running.</summary>
-    /// <param name="team">The Team whose proposals changed.</param>
+    /// <summary>Reloads after a set was added or changed by someone else.</summary>
+    /// <param name="team">The Team whose proposals changed; the event is not per Room.</param>
     private void OnChanged(string team)
     {
-        if (this.busy)
-        {
-            return;
-        }
-
-        _ = this.DispatchAsync(async () =>
-        {
-            await this.LoadAsync();
-            this.StateHasChanged();
-        });
+        this.RefreshOnChange();
     }
 
     /// <summary>Accepts one change; an applied change appears as the posted Message, a refusal is shown here.</summary>
@@ -100,57 +85,29 @@
     /// <param name="change">The change.</param>
     private async Task AcceptAsync(RetroProposalSet set, RetroChange change)
     {
-        await this.RunAsync(async () =>
-        {
-            RetroChangeOutcome outcome = await this.Service.AcceptAsync(this.RoomId, set.Id, change.Id, CancellationToken.None);
-            if (outcome.Kind == RetroChangeOutcomeKind.Refused)
+        await this.RunBusyAsync(
+            async () =>
             {
-                this.Snackbar.Add(outcome.Text, Severity.Warning);
-            }
-        });
+                RetroChangeOutcome outcome = await this.Service.AcceptAsync(this.RoomId, set.Id, change.Id, CancellationToken.None);
+                if (outcome.Kind == RetroChangeOutcomeKind.Refused)
+                {
+                    this.Snackbar.Add(outcome.Text, Severity.Warning, configure: null, key: "refused");
+                }
+            },
+            KeyOf(change, "accept"));
     }
 
-    /// <summary>Rejects one change with the typed reason.</summary>
+    /// <summary>Declines one change with the typed reason.</summary>
     /// <param name="set">The set the change belongs to.</param>
     /// <param name="change">The change.</param>
-    private async Task RejectAsync(RetroProposalSet set, RetroChange change)
+    private async Task DeclineAsync(RetroProposalSet set, RetroChange change)
     {
-        await this.RunAsync(async () =>
-        {
-            _ = await this.Service.RejectAsync(this.RoomId, set.Id, change.Id, this.reason, CancellationToken.None);
-            this.reason = "";
-        });
-    }
-
-    /// <summary>Runs one click's work with the card locked, then reloads.</summary>
-    /// <param name="work">The call to the service.</param>
-    private async Task RunAsync(Func<Task> work)
-    {
-        if (this.busy)
-        {
-            return;
-        }
-
-        this.busy = true;
-        try
-        {
-            await work();
-        }
-        catch (Exception ex) when (ex is not OperationCanceledException)
-        {
-            this.Snackbar.Add(ex.Message, Severity.Error);
-        }
-        finally
-        {
-            await this.LoadAsync();
-            this.busy = false;
-        }
-    }
-
-    /// <summary>Runs <paramref name="action"/> on the renderer; a card disposed in the meantime is ignored.</summary>
-    /// <param name="action">The state update and repaint.</param>
-    private Task DispatchAsync(Func<Task> action)
-    {
-        return RendererDispatch.RunAsync(this.InvokeAsync, action);
+        await this.RunBusyAsync(
+            async () =>
+            {
+                _ = await this.Service.RejectAsync(this.RoomId, set.Id, change.Id, this.reason, CancellationToken.None);
+                this.reason = "";
+            },
+            KeyOf(change, "decline"));
     }
 }

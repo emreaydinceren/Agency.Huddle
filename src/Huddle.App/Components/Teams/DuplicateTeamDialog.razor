@@ -3,6 +3,7 @@
     title and workspace and hands both to TeamDuplicator. A refusal shows inline; a copy that skipped
     members lists them before the user opens the new Team.
 *@
+@using Agency.Huddle.App.Components.Shared.Dialogs
 @using Agency.Huddle.App.Teams
 
 @inject TeamDuplicator Duplicator
@@ -11,15 +12,15 @@
 <MudDialog>
     <DialogContent>
         <MudStack Spacing="2">
-            <MudTextField T="string" Label="New Team title" @bind-Value="this.title" Class="duplicate-team-title" />
-            <MudTextField T="string" Label="Workspace folder (optional)" @bind-Value="this.workspace" Class="duplicate-team-workspace" />
+            <MudTextField Variant="Variant.Outlined" Margin="Margin.Dense" T="string" Label="New team name" @bind-Value="this.title" Class="duplicate-team-title" />
+            <MudTextField Variant="Variant.Outlined" Margin="Margin.Dense" T="string" Label="Workspace folder (optional)" @bind-Value="this.workspace" Class="duplicate-team-workspace" />
             @if (this.error is not null)
             {
                 <MudAlert Severity="Severity.Error" Dense="true" role="alert" Class="duplicate-team-error">@this.error</MudAlert>
             }
             @if (this.result is { Skipped.Count: > 0 })
             {
-                <MudAlert Severity="Severity.Warning" Dense="true" Class="duplicate-team-skipped">
+                <MudAlert role="status" Severity="Severity.Warning" Dense="true" Class="duplicate-team-skipped">
                     @foreach (SkippedMember skipped in this.result.Skipped)
                     {
                         <div>@skipped.Name: @skipped.Reason</div>
@@ -29,21 +30,21 @@
         </MudStack>
     </DialogContent>
     <DialogActions>
+        <MudButton Variant="Variant.Text" Size="Size.Small" OnClick="this.Cancel">Cancel</MudButton>
         @if (this.result is null)
         {
-            <MudButton Color="Color.Primary" Class="duplicate-team-submit" OnClick="this.Submit">Duplicate</MudButton>
+            <MudButton Variant="Variant.Filled" Size="Size.Small" Color="Color.Primary" Class="duplicate-team-submit" OnClick="this.Submit">Duplicate</MudButton>
         }
         else
         {
-            <MudButton Color="Color.Primary" Class="duplicate-team-open" OnClick="this.OpenNewTeam">Open Team</MudButton>
+            <MudButton Variant="Variant.Filled" Size="Size.Small" Color="Color.Primary" Class="duplicate-team-open" OnClick="this.OpenNewTeam">Open Team</MudButton>
         }
-        <MudButton OnClick="this.Cancel">Cancel</MudButton>
     </DialogActions>
 </MudDialog>
 
 @code {
     /// <summary>How the Team page shows this dialog: small, full-width, with a close button that cancels.</summary>
-    public static readonly DialogOptions Options = new() { CloseButton = true, MaxWidth = MaxWidth.Small, FullWidth = true };
+    public static DialogOptions Options => HuddleDialogOptions.SmallForm;
 
     [CascadingParameter]
     private IMudDialogInstance? Dialog { get; set; }

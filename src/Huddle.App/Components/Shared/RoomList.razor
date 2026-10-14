@@ -30,7 +30,7 @@
         <MudNavGroup Title="Chats" Icon="@Icons.Material.Filled.Chat" @bind-Expanded="this.expanded">
             @if (this.rooms.Count == 0)
             {
-                <MudText Typo="Typo.body2" Class="empty-state">No rooms yet. Start an agent to create one.</MudText>
+                <EmptyState Text="No rooms yet. Start an agent to create one." />
             }
             else
             {
@@ -65,7 +65,7 @@
 
     private void OnRoomsChanged()
     {
-        _ = this.DispatchAsync(async () =>
+        _ = RendererDispatch.RunAsync(this.InvokeAsync,async () =>
         {
             await this.LoadAsync();
             this.StateHasChanged();
@@ -86,10 +86,5 @@
     private void OnRowError(string? message)
     {
         this.error = message;
-    }
-
-    private Task DispatchAsync(Func<Task> action)
-    {
-        return RendererDispatch.RunAsync(this.InvokeAsync, action);
     }
 }

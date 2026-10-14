@@ -1,129 +1,46 @@
+@namespace Agency.Huddle.App.Components.Shared
+
 @*
     Avatar editing for the Teammate card, in its own dialog. The card's avatar is a button; pressing it, in View,
-    Edit and Create alike, opens this. The dialog holds its own working copy of an avatar - a three-way choice
-    (initials, a short label, an image), the image's source (an upload or the Avatar Library picker, opened as a
-    second dialog above this one) and a background colour - and hands back an AvatarEditorResult only when the
-    Human presses the commit button. Cancelling, Escape and the close button hand back nothing, so a half-made
-    choice never reaches the card.
+    Edit and Create alike, opens this. The dialog is a thin wrapper: the editing itself is AvatarEditor in Buffered
+    mode, which writes nothing and reports every change. The dialog keeps the latest avatar and pending image and
+    hands back an AvatarEditorResult only when the Human presses the commit button. Cancelling, Escape and the close
+    button hand back nothing, so a half-made choice never reaches the card.
 
     It never writes to disk. The card decides what a result means: in Create and Edit it is held until the card is
     saved (nothing can be filed under a Name that does not exist yet in Create, and Edit's Cancel must still
-    discard it), and in View, which has no Save of its own, the card writes it at once. CommitText and Deferred
-    tell this dialog which of the two it is serving, so the button and the hint say the truth.
+    discard it), and in View, which has no Save of its own, the card writes it at once. Deferred tells this dialog
+    which of the two it is serving, so the button and the hint say the truth.
 
     An open dialog's parameters are frozen (see the header of TeammateCard.razor), so every parameter below is a
-    snapshot read once, in OnInitialized, into local fields. The live preview is an ordinary child render of those
-    fields inside this same open dialog.
+    snapshot: it seeds the editor once and the editor's own reports are held in local fields.
 *@
 
 @using Agency.Huddle.App.Avatars
-@using System.Globalization
-@using Microsoft.AspNetCore.Components.Forms
-@using MudBlazor.Utilities
-@inject IDialogService DialogService
-@inject IServiceProvider Services
+@using Agency.Huddle.App.Components.Shared.Dialogs
 
 <MudDialog Class="avatar-editor-dialog">
     <TitleContent>
         <MudText Typo="Typo.h6">Avatar</MudText>
     </TitleContent>
     <DialogContent>
-        <MudStack AlignItems="AlignItems.Center" Spacing="1" Class="mb-3">
-            <TeammateAvatar Name="@this.Name" Avatar="this.Working" Size="Size.Large"
-                            PendingImage="this.pendingBytes" PendingImageExtension="@this.pendingExtension" />
-            @if (this.Deferred)
-            {
-                <MudText Typo="Typo.caption" Class="mud-text-secondary">Written when you save the teammate.</MudText>
-            }
-        </MudStack>
-
-        <MudRadioGroup T="AvatarChoice" Value="this.choice" ValueChanged="this.OnChoiceChanged" Class="mb-2">
-            <MudRadio T="AvatarChoice" Value="AvatarChoice.Initials">Initials of the name</MudRadio>
-            <MudRadio T="AvatarChoice" Value="AvatarChoice.Label">A short label</MudRadio>
-            <MudRadio T="AvatarChoice" Value="AvatarChoice.Image">An image</MudRadio>
-        </MudRadioGroup>
-
-        @if (this.choice == AvatarChoice.Label)
+        @if (this.Deferred)
         {
-            @* Immediate="true" so the preview above follows every keystroke; a preview that only updated on
-               blur would not be a preview. Trimming happens once, in Working's Avatar.TrimLabel call. No
-               MaxLength: it truncates by UTF-16 index, which can cut a surrogate pair in half
-               (Avatar.TrimLabel's own remarks). Counter gives the same affordance without that defect, sized
-               from Avatar.MaxLabelTextElements so the two can never drift apart. *@
-            <MudTextField T="string" Label="Label" Value="@this.label" ValueChanged="this.OnLabelChanged"
-                          Immediate="true" Counter="@Avatar.MaxLabelTextElements"
-                          HelperText="Shown instead of initials." />
+            <MudText Typo="Typo.caption" Class="d-block mb-2 mud-text-secondary">Written when you save the teammate.</MudText>
         }
-
-        @if (this.choice == AvatarChoice.Image)
-        {
-            <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2">
-                <MudFileUpload T="IBrowserFile" Accept=".png,.jpg,.jpeg,.webp" MaximumFileCount="1" FilesChanged="this.OnFileChangedAsync">
-                    <CustomContent Context="fileUpload">
-                        <MudButton Variant="Variant.Outlined" StartIcon="@Icons.Material.Filled.Upload" OnClick="@(() => fileUpload.OpenFilePickerAsync())">
-                            Choose an image
-                        </MudButton>
-                    </CustomContent>
-                </MudFileUpload>
-
-                @if (this.LibraryConfigured)
-                {
-                    <MudButton Variant="Variant.Outlined" StartIcon="@Icons.Material.Filled.PhotoLibrary" OnClick="this.ChooseFromLibraryAsync">
-                        Choose from library
-                    </MudButton>
-                }
-            </MudStack>
-
-            @if (this.pendingBytes is not null || this.image is not null)
-            {
-                <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2" Class="mt-2">
-                    <MudText Typo="Typo.body2">@(this.pendingBytes is not null ? "New image selected (not yet saved)" : this.image)</MudText>
-                    <MudButton Variant="Variant.Text" Size="Size.Small" OnClick="this.RemoveImage">Remove image</MudButton>
-                </MudStack>
-            }
-        }
-
-        @if (this.error is not null)
-        {
-            <MudAlert Severity="Severity.Error" Dense="true" Class="mt-2" role="alert">@this.error</MudAlert>
-        }
-
-        @* A background sits behind initials or a label; an image covers it, so under "An image" there is nothing
-           for a colour to do and the controls are not offered. Only the controls go: a stored colour is left
-           exactly as it was, and is there again on a return to initials or a label. *@
-        @if (this.choice != AvatarChoice.Image)
-        {
-            @* THE TRAP: MudColorPicker.Value is a non-null MudColor, so "no background chosen" (null) cannot be shown
-               by it directly, and a picker that reported its default on first render would write a colour nobody
-               chose. So the picker is shown a transparent colour (PickerValue), which matches no swatch, and the
-               background changes only in OnBackgroundPicked, which only a press on a swatch reaches - see
-               docs/engineering/traps.md. The swatches are AvatarPalette.Colours, the same set a new Teammate's random
-               colour is drawn from. *@
-            <div class="avatar-editor-background mt-2">
-                <MudText Typo="Typo.overline">Background</MudText>
-                <MudColorPicker PickerVariant="PickerVariant.Static" ColorPickerView="ColorPickerView.Palette"
-                                Palette="AvatarPalette.Colours" ShowToolbar="false" ShowAlpha="false" ShowInputs="false"
-                                ShowPreview="false" ShowSliders="false" Elevation="0"
-                                Value="@this.PickerValue" ValueChanged="this.OnBackgroundPicked" />
-            </div>
-        }
+        <AvatarEditor Name="@this.Name" Value="this.Current" ValueChanged="this.OnValueChanged" SaveMode="AvatarSaveMode.Buffered"
+                      PendingImage="this.PendingImage" PendingImageExtension="@this.PendingImageExtension"
+                      PendingImageChanged="this.OnPendingImageChanged" />
     </DialogContent>
     <DialogActions>
-        <MudButton OnClick="this.Cancel">Cancel</MudButton>
-        <MudButton Variant="Variant.Filled" Color="Color.Primary" OnClick="this.Commit">@(this.Deferred ? "Apply" : "Save")</MudButton>
+        <MudButton Variant="Variant.Text" Size="Size.Small" OnClick="this.Cancel">Cancel</MudButton>
+        <MudButton Variant="Variant.Filled" Size="Size.Small" Color="Color.Primary" OnClick="this.Commit">@(this.Deferred ? "Apply" : "Save")</MudButton>
     </DialogActions>
 </MudDialog>
 
 @code {
-    /// <summary>How the editor is shown: small and full-width, with a close button and Escape, but no backdrop click, so a stray click outside cannot throw away a half-made choice.</summary>
-    internal static readonly DialogOptions Options = new()
-    {
-        FullWidth = true,
-        MaxWidth = MaxWidth.Small,
-        CloseButton = true,
-        CloseOnEscapeKey = true,
-        BackdropClick = false,
-    };
+    /// <summary>How the editor is shown: the shared small form, with a close button and Escape but no backdrop click, so a stray click outside cannot throw away a half-made choice.</summary>
+    internal static DialogOptions Options => HuddleDialogOptions.SmallForm;
 
     [CascadingParameter]
     private IMudDialogInstance? Dialog { get; set; }
@@ -151,187 +68,30 @@
     [Parameter]
     public bool Deferred { get; set; }
 
-    private AvatarChoice choice;
-    private string label = string.Empty;
-    private string? image;
+    private Avatar? edited;
     private byte[]? pendingBytes;
     private string? pendingExtension;
-    private string? background;
-    private string? error;
+    private bool pendingTouched;
 
-    /// <summary>Whether an Avatar Library is configured and so the "Choose from library" button shows; false when the host registers no locator.</summary>
-    private bool LibraryConfigured => this.Services.GetService<AvatarLibraryLocator>() is { IsConfigured: true };
+    /// <summary>Keeps the editor's latest avatar.</summary>
+    /// <param name="value">The avatar after the change.</param>
+    private void OnValueChanged(Avatar value) => this.edited = value;
 
-    /// <summary>
-    /// The one place the working fields are projected back into an <see cref="Avatars.Avatar"/>, for the live preview and for
-    /// the result alike. Reads <see cref="choice"/> but stores no discriminator of its own: switching to Initials nulls both
-    /// payloads only in this projection, while <see cref="label"/> keeps what was typed, so switching back restores it.
-    /// </summary>
-    private Avatar Working => new(
-        this.choice == AvatarChoice.Label ? Avatar.TrimLabel(this.label) : null,
-        this.choice == AvatarChoice.Image ? this.image : null,
-        this.background);
-
-    /// <summary>Seeds every working field once from the frozen parameters. The choice is derived the way <see cref="TeammateAvatar"/> renders: an image beats a label beats initials.</summary>
-    protected override void OnInitialized()
+    /// <summary>Keeps the editor's latest pending image; (null, null) means it was dropped.</summary>
+    /// <param name="image">The chosen image's bytes and extension, or (null, null).</param>
+    private void OnPendingImageChanged((byte[]? Bytes, string? Extension) image)
     {
-        this.pendingBytes = this.PendingImage;
-        this.pendingExtension = this.PendingImageExtension;
-        this.image = this.Current.Image;
-        this.label = this.Current.Label ?? string.Empty;
-        this.background = this.Current.Background;
-        this.choice = this.Current switch
-        {
-            _ when this.pendingBytes is not null => AvatarChoice.Image,
-            { Image: not null } => AvatarChoice.Image,
-            { Label: not null } => AvatarChoice.Label,
-            _ => AvatarChoice.Initials,
-        };
+        this.pendingBytes = image.Bytes;
+        this.pendingExtension = image.Extension;
+        this.pendingTouched = true;
     }
 
-    /// <summary>Switches the three-way choice and clears any earlier error.</summary>
-    /// <param name="value">The newly selected choice.</param>
-    private void OnChoiceChanged(AvatarChoice value)
-    {
-        this.choice = value;
-        this.error = null;
-    }
-
-    /// <summary>Stores the Label box's typed text verbatim; trimming happens once, in <see cref="Working"/>.</summary>
-    /// <param name="value">The Label box's text.</param>
-    private void OnLabelChanged(string value)
-    {
-        this.label = value;
-        this.error = null;
-    }
-
-    /// <summary>
-    /// Validates an uploaded image and, on success, buffers it in <see cref="pendingBytes"/>. It deliberately never writes to
-    /// disk: only the card does, through <see cref="AvatarStore.WriteImage(ReadOnlySpan{byte}, string)"/>, once a Name to file
-    /// it under is known.
-    /// </summary>
-    /// <param name="file">The single file <see cref="MudFileUpload{T}"/> just selected.</param>
-    private async Task OnFileChangedAsync(IBrowserFile file)
-    {
-        ArgumentNullException.ThrowIfNull(file);
-
-        this.error = null;
-
-        // Checked before opening the stream at all - fast, and gives a better message than the
-        // IOException OpenReadStream's own maxAllowedSize guard would throw for the same file.
-        if (file.Size > AvatarImage.MaxBytes)
-        {
-            this.error = TooLargeText();
-            return;
-        }
-
-        byte[] bytes;
-        try
-        {
-            await using Stream stream = file.OpenReadStream(AvatarImage.MaxBytes, CancellationToken.None);
-            using MemoryStream buffer = new();
-            await stream.CopyToAsync(buffer, CancellationToken.None);
-            bytes = buffer.ToArray();
-        }
-        catch (IOException)
-        {
-            // A lying Size (or a stream that grew mid-read) still trips OpenReadStream's own
-            // maxAllowedSize guard - same message as the fast check above, since it is the same
-            // fact from the user's point of view.
-            this.error = TooLargeText();
-            return;
-        }
-
-        string? extension = AvatarImage.SniffExtension(bytes);
-        if (extension is null)
-        {
-            this.error = "That file is not a PNG, JPEG or WebP image.";
-            return;
-        }
-
-        this.BufferImage(bytes, extension);
-    }
-
-    private static string TooLargeText() =>
-        string.Create(CultureInfo.InvariantCulture, $"That file is larger than {AvatarImage.MaxBytes / 1000} KB.");
-
-    /// <summary>Buffers a chosen image, from an upload or from the library, and clears any earlier error.</summary>
-    /// <param name="bytes">The image bytes, already validated as a PNG, JPEG or WebP.</param>
-    /// <param name="extension">The extension <see cref="AvatarImage.SniffExtension"/> found, with its dot.</param>
-    private void BufferImage(byte[] bytes, string extension)
-    {
-        this.pendingBytes = bytes;
-        this.pendingExtension = extension;
-        this.error = null;
-    }
-
-    /// <summary>
-    /// Opens the Avatar Library picker above this dialog and, when a thumbnail is chosen, reads that file and buffers it the
-    /// way an upload is buffered. A file that cannot be read shows the error line; cancelling the picker changes nothing.
-    /// </summary>
-    private async Task ChooseFromLibraryAsync()
-    {
-        this.error = null;
-
-        IDialogReference reference = await this.DialogService.ShowAsync<AvatarLibraryDialog>(null, new DialogParameters(), AvatarLibraryDialog.Options);
-        DialogResult? result = await reference.Result;
-        if (result is null || result.Canceled || result.Data is not string fileName)
-        {
-            return;
-        }
-
-        IAvatarLibraryLoader? loader = this.Services.GetService<IAvatarLibraryLoader>();
-        AvatarLibraryImage? picked = loader is null ? null : await loader.ReadImageAsync(fileName, CancellationToken.None);
-        if (picked is null)
-        {
-            this.error = "That image could not be read.";
-            return;
-        }
-
-        this.BufferImage(picked.Bytes, picked.Extension);
-    }
-
-    /// <summary>Clears a chosen image - whether already saved (<see cref="image"/>) or only buffered (<see cref="pendingBytes"/>) - so the preview falls back to initials until a new file is chosen.</summary>
-    private void RemoveImage()
-    {
-        this.image = null;
-        this.pendingBytes = null;
-        this.pendingExtension = null;
-        this.error = null;
-    }
-
-    /// <summary>A transparent colour, which matches no swatch, shown by the picker while no background is chosen.</summary>
-    private static readonly MudColor NoSelection = new("#00000000");
-
-    /// <summary>
-    /// What the palette picker shows as selected: the chosen background, or <see cref="NoSelection"/> when there is none.
-    /// A background that is not in the palette (a hand-edited <c>avatars.json</c>) highlights no swatch, and is kept until a swatch is pressed.
-    /// </summary>
-    private MudColor PickerValue => this.background is null ? NoSelection : new MudColor(this.background);
-
-    /// <summary>
-    /// THE TRAP: the only way <see cref="background"/> gains a colour - see the markup comment beside the control. Stores the
-    /// pressed swatch as the six-digit hex the avatar store holds.
-    /// </summary>
-    /// <param name="colour">The swatch the Human pressed.</param>
-    private void OnBackgroundPicked(MudColor colour)
-    {
-        this.background = colour.ToString(MudColorOutputFormats.Hex);
-        this.error = null;
-    }
-
-    /// <summary>
-    /// Hands the card what was made. A pending image travels only under the Image choice: choosing initials or a label after
-    /// uploading one means that image is no longer wanted, and the card must not file an orphan.
-    /// </summary>
+    /// <summary>Hands the card what was made; a pending image the editor did not touch travels on unchanged.</summary>
     private void Commit()
     {
-        bool keepsImage = this.choice == AvatarChoice.Image && this.pendingBytes is not null && this.pendingExtension is not null;
-        AvatarEditorResult result = new(
-            this.Working,
-            keepsImage ? this.pendingBytes : null,
-            keepsImage ? this.pendingExtension : null);
-        this.Dialog?.Close(DialogResult.Ok(result));
+        byte[]? bytes = this.pendingTouched ? this.pendingBytes : this.PendingImage;
+        string? extension = this.pendingTouched ? this.pendingExtension : this.PendingImageExtension;
+        this.Dialog?.Close(DialogResult.Ok(new AvatarEditorResult(this.edited ?? this.Current, bytes, extension)));
     }
 
     /// <summary>Closes the editor and discards the working copy.</summary>

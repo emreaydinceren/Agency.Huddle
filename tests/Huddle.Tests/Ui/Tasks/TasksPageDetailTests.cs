@@ -203,8 +203,7 @@ public sealed class TasksPageDetailTests
         await using MudBunitContext ctx = NewContext(harness);
         IRenderedComponent<ContainerFragment> cut = RenderPage(ctx);
 
-        IRenderedComponent<MudTextField<string>> searchBox = cut.FindComponents<MudTextField<string>>()
-            .Single(t => (t.Instance.Class ?? string.Empty).Contains("task-toolbar-search", StringComparison.Ordinal));
+        IRenderedComponent<Agency.Huddle.App.Components.Shared.SearchField> searchBox = cut.FindComponent<Agency.Huddle.App.Components.Shared.SearchField>();
         await cut.InvokeAsync(() => searchBox.Instance.ValueChanged.InvokeAsync("Alpha"));
 
         // The search now excludes Bravo from the rendered List (Spec §13.12's own "No tasks match" path

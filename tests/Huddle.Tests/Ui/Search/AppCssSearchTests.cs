@@ -32,7 +32,7 @@ public sealed class AppCssSearchTests
     public void SearchRules_NeverSetZoom()
     {
         string text = ReadAppCss();
-        int start = text.IndexOf("/* Global search */", StringComparison.Ordinal);
+        int start = text.IndexOf("/* ---- Global search ", StringComparison.Ordinal);
         Assert.True(start >= 0, "Expected a /* Global search */ block in app.css.");
 
         string block = text[start..];
@@ -59,7 +59,7 @@ public sealed class AppCssSearchTests
     public void SearchCardMark_IsBold()
     {
         string text = ReadAppCss();
-        int block = text.IndexOf("/* Global search */", StringComparison.Ordinal);
+        int block = text.IndexOf("/* ---- Global search ", StringComparison.Ordinal);
         int rule = text.IndexOf(".search-card mark {", block, StringComparison.Ordinal);
         Assert.True(rule > block, "Expected a .search-card mark rule in the Global search block.");
 
@@ -74,7 +74,7 @@ public sealed class AppCssSearchTests
         string text = ReadAppCss();
         int composer = text.IndexOf(".composer-input {", StringComparison.Ordinal);
         string composerRule = text[composer..(text.IndexOf('}', composer) + 1)];
-        int block = text.IndexOf("/* Global search */", StringComparison.Ordinal);
+        int block = text.IndexOf("/* ---- Global search ", StringComparison.Ordinal);
         int rule = text.IndexOf(".search-bar .mud-input-control .mud-input.mud-input-outlined,", block, StringComparison.Ordinal);
         Assert.True(rule > block, "Expected a .search-bar fill rule in the Global search block.");
         string searchRule = text[rule..(text.IndexOf('}', rule) + 1)];

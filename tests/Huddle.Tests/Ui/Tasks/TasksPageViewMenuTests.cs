@@ -12,18 +12,18 @@ using TestContext = Xunit.TestContext;
 namespace Agency.Huddle.Tests.Ui.Tasks;
 
 /// <summary>
-/// Pins the FAB menu beside the Tasks page's title: <c>Edit task view</c> for every View and
-/// <c>Delete task view</c> for a non-built-in one, with the same confirm wording and navigate-away rule
+/// Pins the MoreVert menu (T2a, UX-050b) beside the Tasks page's title: <c>Edit view</c> for every View and
+/// <c>Delete view</c> for a non-built-in one, with the same confirm wording and navigate-away rule
 /// as <c>TaskViewNav</c>'s row menu and <c>ViewEditorDrawer</c>'s own Delete button.
 /// </summary>
 public sealed class TasksPageViewMenuTests
 {
-    private const string EditLabel = "Edit task view";
-    private const string DeleteLabel = "Delete task view";
+    private const string EditLabel = "Edit view";
+    private const string DeleteLabel = "Delete view";
 
-    /// <summary>A saved, non-built-in View gets both actions in the menu beside its title, opening downward.</summary>
+    /// <summary>A saved, non-built-in View gets both actions in the MoreVert menu beside its title.</summary>
     [Fact]
-    public async Task ViewMenu_ForACustomView_OffersEditAndDelete_OpeningDownward()
+    public async Task ViewMenu_ForACustomView_OffersEditAndDelete()
     {
         CancellationToken ct = TestContext.Current.CancellationToken;
         using TaskToolHarness harness = await TaskToolHarness.CreateAsync(ct);
@@ -32,9 +32,9 @@ public sealed class TasksPageViewMenuTests
         await using MudBunitContext ctx = NewContext(harness);
         IRenderedComponent<ContainerFragment> cut = RenderPage(ctx, "custom1");
 
-        Assert.NotNull(cut.Find(".tasks-header .tasks-view-menu"));
+        await OpenMenuAsync(cut);
+
         Assert.Equal([EditLabel, DeleteLabel], ItemLabels(cut));
-        Assert.Contains("mud-fab-menu-direction-bottom", cut.Find(".tasks-view-menu .mud-fab-menu").ClassName, StringComparison.Ordinal);
     }
 
     /// <summary>A built-in View (here All Tasks) can be edited but never deleted, so the menu offers only Edit.</summary>
@@ -46,11 +46,12 @@ public sealed class TasksPageViewMenuTests
 
         await using MudBunitContext ctx = NewContext(harness);
         IRenderedComponent<ContainerFragment> cut = RenderPage(ctx, ViewStore.AllTasksId);
+        await OpenMenuAsync(cut);
 
         Assert.Equal([EditLabel], ItemLabels(cut));
     }
 
-    /// <summary>Edit task view opens the page's hosted <see cref="ViewEditorDrawer"/> on the View whose title the menu sits beside.</summary>
+    /// <summary>Edit view opens the page's hosted <see cref="ViewEditorDrawer"/> on the View whose title the menu sits beside.</summary>
     [Fact]
     public async Task EditTaskView_OpensTheEditorDrawerForThatView()
     {
@@ -61,6 +62,7 @@ public sealed class TasksPageViewMenuTests
         await using MudBunitContext ctx = NewContext(harness);
         IRenderedComponent<ContainerFragment> cut = RenderPage(ctx, "custom1");
         Assert.False(cut.FindComponent<ViewEditorDrawer>().Instance.Open);
+        await OpenMenuAsync(cut);
 
         await cut.InvokeAsync(() => ItemFor(cut, EditLabel).ClickAsync());
 
@@ -69,7 +71,7 @@ public sealed class TasksPageViewMenuTests
         Assert.Equal("custom1", drawer.Id);
     }
 
-    /// <summary>Delete task view asks through <c>ShowMessageBoxAsync</c> with the exact wording the other two Delete entry points use.</summary>
+    /// <summary>Delete view asks through the shared confirm (UX-R06) with the exact wording the other two Delete entry points use.</summary>
     [Fact]
     public async Task DeleteTaskView_MessageBox_HasTheExactTitleTextAndButtons()
     {
@@ -80,10 +82,11 @@ public sealed class TasksPageViewMenuTests
         await using MudBunitContext ctx = NewContext(harness);
         IRenderedComponent<ContainerFragment> cut = RenderPage(ctx, "custom1");
 
+        await OpenMenuAsync(cut);
         Task deleting = await OpenDeleteDialogAsync(cut);
 
-        Assert.Equal("Delete View", cut.Find(".mud-dialog-title").TextContent.Trim());
-        Assert.Equal("Delete 'Sprint Board'? Tasks are not affected.", cut.Find(".mud-dialog-content").TextContent.Trim());
+        Assert.Equal("Delete 'Sprint Board'?", cut.Find(".mud-dialog-title").TextContent.Trim());
+        Assert.Equal("This removes the View. Tasks are not affected.", cut.Find(".mud-dialog-content").TextContent.Trim());
         Assert.Equal(["Cancel", "Delete"], cut.FindAll(".mud-dialog-actions button").Select(b => b.TextContent.Trim()).ToList());
 
         await cut.InvokeAsync(() => DialogButton(cut, "Cancel").ClickAsync());
@@ -103,6 +106,7 @@ public sealed class TasksPageViewMenuTests
         string before = navigation.Uri;
         IRenderedComponent<ContainerFragment> cut = RenderPage(ctx, "custom1");
 
+        await OpenMenuAsync(cut);
         Task deleting = await OpenDeleteDialogAsync(cut);
         await cut.InvokeAsync(() => DialogButton(cut, "Cancel").ClickAsync());
         await deleting;
@@ -124,6 +128,7 @@ public sealed class TasksPageViewMenuTests
         navigation.NavigateTo("/tasks/custom1");
         IRenderedComponent<ContainerFragment> cut = RenderPage(ctx, "custom1");
 
+        await OpenMenuAsync(cut);
         Task deleting = await OpenDeleteDialogAsync(cut);
         await cut.InvokeAsync(() => DialogButton(cut, "Delete").ClickAsync());
         await deleting;
@@ -132,9 +137,9 @@ public sealed class TasksPageViewMenuTests
         Assert.EndsWith("/tasks", navigation.Uri, StringComparison.Ordinal); // contains-ok: a full URI, whose scheme/host prefix bUnit's FakeNavigationManager owns; only the path is this test's concern.
     }
 
-    /// <summary>With <c>views.json</c> unreadable the store refuses every write, so Edit and Delete are both disabled rather than offered and then silently failing.</summary>
+    /// <summary>With <c>views.json</c> unreadable the store refuses every write, so the page shows no View (and so no View menu) rather than offering Edit and Delete that silently fail.</summary>
     [Fact]
-    public async Task ViewMenu_WhileViewsJsonHasALoadError_DisablesEditAndDelete()
+    public async Task ViewMenu_WhileViewsJsonHasALoadError_IsNotOffered()
     {
         CancellationToken ct = TestContext.Current.CancellationToken;
         using TaskToolHarness harness = await TaskToolHarness.CreateAsync(ct);
@@ -148,7 +153,7 @@ public sealed class TasksPageViewMenuTests
         ctx.Services.AddSingleton(broken);
         IRenderedComponent<ContainerFragment> cut = RenderPage(ctx, ViewStore.AllTasksId);
 
-        Assert.All(cut.FindAll(".tasks-view-menu .mud-fab-menu-item"), item => Assert.True(item.HasAttribute("disabled")));
+        Assert.Empty(cut.FindAll(".tasks-header button[aria-label='View actions']"));
     }
 
     /// <summary>Registers the harness's services into a fresh <see cref="MudBunitContext"/>.</summary>
@@ -189,11 +194,17 @@ public sealed class TasksPageViewMenuTests
 
     /// <summary>The menu items' visible labels, in order.</summary>
     private static List<string> ItemLabels(IRenderedComponent<ContainerFragment> cut) =>
-        [.. cut.FindAll(".tasks-view-menu .mud-fab-menu-item").Select(item => item.TextContent.Trim())];
+        [.. cut.FindAll("div.mud-menu-item").Select(item => item.TextContent.Trim())];
+
+    /// <summary>Clicks the title row's View actions button, opening the menu.</summary>
+    private static async Task OpenMenuAsync(IRenderedComponent<ContainerFragment> cut)
+    {
+        await cut.InvokeAsync(() => cut.Find(".tasks-header button[aria-label='View actions']").ClickAsync());
+    }
 
     /// <summary>The menu item whose label is <paramref name="label"/>.</summary>
     private static IElement ItemFor(IRenderedComponent<ContainerFragment> cut, string label) =>
-        cut.FindAll(".tasks-view-menu .mud-fab-menu-item").Single(item => string.Equals(item.TextContent.Trim(), label, StringComparison.Ordinal));
+        cut.FindAll("div.mud-menu-item").Single(item => string.Equals(item.TextContent.Trim(), label, StringComparison.Ordinal));
 
     private static IElement DialogButton(IRenderedComponent<ContainerFragment> cut, string text) =>
         cut.FindAll(".mud-dialog-actions button").Single(b => string.Equals(b.TextContent.Trim(), text, StringComparison.Ordinal));

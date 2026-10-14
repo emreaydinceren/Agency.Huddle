@@ -9,6 +9,7 @@
 *@
 
 @using Agency.Huddle.App.Avatars
+@using Agency.Huddle.App.Components.Shared.Dialogs
 
 @inject ITeamMembership Membership
 @inject AvatarStore Avatars
@@ -18,7 +19,7 @@
         @if (this.Team is not null)
         {
             <MudStack Spacing="2">
-                <MudAutocomplete T="TeammateChoice" Label="Teammate" Strict="true" CoerceValue="false"
+                <MudAutocomplete Variant="Variant.Outlined" Margin="Margin.Dense" T="TeammateChoice" Label="Teammate" Strict="true" CoerceValue="false"
                                  SearchFunc="@this.SearchAsync"
                                  ToStringFunc="@(choice => choice is null ? string.Empty : choice.Name)"
                                  Value="@this.selected" ValueChanged="@this.OnSelected" DebounceInterval="100"
@@ -45,15 +46,15 @@
     <DialogActions>
         @if (this.Team is not null)
         {
-            <MudButton Color="Color.Primary" Disabled="@(this.selected is null)" Class="add-member-dialog-add-button" OnClick="this.Add">Add</MudButton>
-            <MudButton Class="add-member-dialog-cancel-button" OnClick="this.Cancel">Cancel</MudButton>
+            <MudButton Variant="Variant.Text" Size="Size.Small" Class="add-member-dialog-cancel-button" OnClick="this.Cancel">Cancel</MudButton>
+            <MudButton Variant="Variant.Filled" Size="Size.Small" Color="Color.Primary" Disabled="@(this.selected is null)" Class="add-member-dialog-add-button" OnClick="this.Add">Add</MudButton>
         }
     </DialogActions>
 </MudDialog>
 
 @code {
     /// <summary>How <see cref="TeamMembers"/> shows this dialog: small, full-width, with a close button that cancels.</summary>
-    public static readonly DialogOptions Options = new() { CloseButton = true, MaxWidth = MaxWidth.Small, FullWidth = true };
+    public static DialogOptions Options => HuddleDialogOptions.SmallForm;
 
     [CascadingParameter]
     private IMudDialogInstance? Dialog { get; set; }

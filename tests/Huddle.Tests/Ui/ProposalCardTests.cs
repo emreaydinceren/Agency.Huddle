@@ -185,7 +185,55 @@ public sealed class ProposalCardTests
         // Fire-and-forget: the approve handler parks on the gate, so awaiting ClickAsync would never return.
         _ = cut.InvokeAsync(() => FindButton(cut, "Approve").ClickAsync());
 
-        cut.WaitForAssertion(() => Assert.True(FindButton(cut, "Approve").HasAttribute("disabled")));
+        cut.WaitForAssertion(() => Assert.True(FindButton(cut, "Approving…").HasAttribute("disabled")));
+        Assert.True(FindButton(cut, "Decline").HasAttribute("disabled"));
+
+        await cut.InvokeAsync(gate.SetResult);
+
+        cut.WaitForAssertion(() => Assert.True(string.IsNullOrWhiteSpace(cut.Markup)));
+    }
+
+    /// <summary>UX-030 to UX-032: the card is the shared shell (an outlined region, not an alert) with Approve then Decline in one left-aligned actions row.</summary>
+    [Fact]
+    public async Task Card_IsTheSharedShell_ApproveThenDecline()
+    {
+        CancellationToken ct = Xunit.TestContext.Current.CancellationToken;
+        using Fixture fixture = await Fixture.CreateAsync(ct);
+        var proposer = await fixture.Directory.UpsertAgentUserAsync("Chief of Staff", null, ct);
+        Assert.NotNull(proposer);
+        var room = await fixture.Directory.CreateRoomAsync("Launch", [KnownIds.Human, proposer.Id], ct);
+        IReadOnlyList<Candidate> candidates = [new Candidate("Vera", "vera", "Researcher", "You research things.", [], null)];
+        _ = fixture.Proposals.TryPut(MakeProposal(room.Id, proposer.Id, proposer.Name, candidates));
+        await using MudBunitContext ctx = new();
+        fixture.RegisterInto(ctx);
+
+        var cut = RenderCard(ctx, room.Id);
+
+        IElement actions = AgentCardAssert.IsShell(cut, "Chief of Staff is proposing Teammates", "Teammate proposal from Chief of Staff");
+        Assert.Equal(["Approve", "Decline"], AgentCardAssert.Verbs(actions));
+    }
+
+    /// <summary>UX-033: while Approve is in flight its button reads "Approving…" and Decline is disabled.</summary>
+    [Fact]
+    public async Task Approve_InFlight_ShowsBusyLabel()
+    {
+        CancellationToken ct = Xunit.TestContext.Current.CancellationToken;
+        using Fixture fixture = await Fixture.CreateAsync(ct);
+        var proposer = await fixture.Directory.UpsertAgentUserAsync("Chief of Staff", null, ct);
+        Assert.NotNull(proposer);
+        var room = await fixture.Directory.CreateRoomAsync("Launch", [KnownIds.Human, proposer.Id], ct);
+        IReadOnlyList<Candidate> candidates = [new Candidate("Vera", "vera", "Researcher", "You research things.", [], null)];
+        _ = fixture.Proposals.TryPut(MakeProposal(room.Id, proposer.Id, proposer.Name, candidates));
+        await using MudBunitContext ctx = new();
+        fixture.RegisterInto(ctx);
+        var cut = RenderCard(ctx, room.Id);
+        TaskCompletionSource gate = new(TaskCreationOptions.RunContinuationsAsynchronously);
+        fixture.Directory.Gate = gate;
+
+        // Fire-and-forget: the approve handler parks on the gate, so awaiting ClickAsync would never return.
+        _ = cut.InvokeAsync(() => FindButton(cut, "Approve").ClickAsync());
+
+        cut.WaitForAssertion(() => Assert.Equal(["Approving…", "Decline"], AgentCardAssert.Verbs(cut.Find(".agent-card-actions"))));
         Assert.True(FindButton(cut, "Decline").HasAttribute("disabled"));
 
         await cut.InvokeAsync(gate.SetResult);
@@ -195,7 +243,7 @@ public sealed class ProposalCardTests
 
     /// <summary>Renders <see cref="ProposalCard"/> alone - it opens no popover and no dialog, so the plain generic render is enough.</summary>
     /// <param name="ctx">The context to render into.</param>
-    /// <param name="roomId">The Room id passed as <see cref="ProposalCard.RoomId"/>.</param>
+    /// <param name="roomId">The Room id passed as <c>RoomId</c>.</param>
     private static IRenderedComponent<ProposalCard> RenderCard(MudBunitContext ctx, string roomId)
     {
         return ctx.Render<ProposalCard>(parameters => parameters.Add(p => p.RoomId, roomId));

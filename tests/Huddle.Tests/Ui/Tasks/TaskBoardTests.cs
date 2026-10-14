@@ -663,7 +663,7 @@ public sealed class TaskBoardTests
             SubscriberCount(harness.TaskActivity, nameof(harness.TaskActivity.Changed)) - activity,
         ];
 
-        await ctx.DisposeComponentsAsync();
+        await ctx.DisposeComponentsOnDispatcherAsync();
 
         int[] oneEach = [1, 1, 1, 1];
         Assert.Equal(oneEach, whileRendered);

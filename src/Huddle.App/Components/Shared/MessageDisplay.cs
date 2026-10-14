@@ -98,4 +98,36 @@ internal static partial class MessageDisplay
         && string.Equals(previousSenderId, senderId, StringComparison.Ordinal)
         && !StartsNewDay(before, current)
         && (current - before) <= GroupWindow;
+
+    /// <summary>
+    /// The time a Message shows: <c>HH:mm</c> when it falls on the same day as <paramref name="now"/> in
+    /// <paramref name="now"/>'s offset, and <c>ddd HH:mm</c> otherwise. Invariant culture, so the label
+    /// reads the same on every machine (UX-R25).
+    /// </summary>
+    /// <param name="at">The Message time.</param>
+    /// <param name="now">The current time, whose offset decides the local day.</param>
+    /// <returns>The label, such as "09:30" or "Mon 23:59".</returns>
+    internal static string TimeLabel(DateTimeOffset at, DateTimeOffset now)
+    {
+        DateTimeOffset local = at.ToOffset(now.Offset);
+        string format = local.Date == now.Date ? "HH:mm" : "ddd HH:mm";
+        return local.ToString(format, CultureInfo.InvariantCulture);
+    }
+
+    /// <summary>
+    /// The file name at the end of a path, for either separator. A path that ends in a separator keeps
+    /// the whole path, as the Tool call row always has.
+    /// </summary>
+    /// <param name="path">The path, or <see langword="null"/> when there is none.</param>
+    /// <returns>The file name, or <see langword="null"/> when <paramref name="path"/> is null or empty.</returns>
+    internal static string? FileName(string? path)
+    {
+        if (string.IsNullOrEmpty(path))
+        {
+            return null;
+        }
+
+        string name = path[(path.AsSpan().LastIndexOfAny('\\', '/') + 1)..];
+        return name.Length > 0 ? name : path;
+    }
 }

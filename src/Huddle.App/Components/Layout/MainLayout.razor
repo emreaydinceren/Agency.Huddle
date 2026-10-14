@@ -28,7 +28,7 @@
         <RoomList />
         <TeamsNav />
         <MudNavMenu>
-            <NavTabLink Href="/teammates" TabTitle="Teammates" Icon="@Icons.Material.Filled.Group">Teammates</NavTabLink>
+            <NavTabLink Href="/teammates" TabTitle="Teammates" Icon="@Icons.Material.Filled.Group" Class="nav-section-link">Teammates</NavTabLink>
         </MudNavMenu>
         <TaskViewNav />
         <LibraryNavLink />
@@ -132,17 +132,12 @@
     /// </summary>
     private void OnAppearanceChanged()
     {
-        _ = this.DispatchAsync(() =>
+        _ = RendererDispatch.RunAsync(this.InvokeAsync,() =>
         {
             this.ApplyAppearance(this.AppearanceStore.Current);
             this.StateHasChanged();
             return Task.CompletedTask;
         });
-    }
-
-    private Task DispatchAsync(Func<Task> action)
-    {
-        return RendererDispatch.RunAsync(this.InvokeAsync, action);
     }
 
     /// <summary>Unsubscribes from <see cref="AppearanceStore.AppearanceChanged"/> - rules.md is explicit that a leaked subscription to a singleton never dies.</summary>

@@ -26,7 +26,7 @@ public sealed class ReferencePickerTests
             .Add(c => c.View, view)
             .Add(c => c.ListboxId, "refs"));
 
-        IReadOnlyList<AngleSharp.Dom.IElement> groups = cut.FindAll("[role=group]");
+        IReadOnlyList<AngleSharp.Dom.IElement> groups = cut.FindAll("[role=listbox] > [role=group]");
         Assert.Equal(2, groups.Count);
         Assert.Equal("Teams", groups[0].GetAttribute("aria-label"));
         Assert.Equal("Rooms", groups[1].GetAttribute("aria-label"));

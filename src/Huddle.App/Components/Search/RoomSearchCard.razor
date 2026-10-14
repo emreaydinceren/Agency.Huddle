@@ -5,26 +5,24 @@
     action slot is empty in V1 (D-12).
 *@
 
-@using System.Globalization
+@using Agency.Huddle.App.Components.Shared
 @using Agency.Huddle.App.Search
+@inject TimeProvider Clock
 
-<div class="search-card @(this.Hit.IsArchived ? "search-card-archived" : null)" aria-label="@this.AccessibleName">
-    <span class="search-card-icon"><MudIcon Icon="@Icons.Material.Filled.Forum" Size="Size.Small" /></span>
-    <span class="search-card-text">
-        <span class="search-card-title"><MudHighlighter Text="@this.Hit.Title" HighlightedText="@this.Phrase" /></span>
-        @if (this.Meta.Length > 0)
-        {
-            <span class="search-card-meta">@this.Meta</span>
-        }
-        @if (this.Hit.Snippet is { } snippet)
-        {
-            <span class="search-card-snippet"><MudHighlighter Text="@snippet" HighlightedText="@this.Phrase" /></span>
-        }
-    </span>
-    <span class="search-card-action" aria-hidden="true"></span>
-</div>
+<SearchCardShell Archived="this.Hit.IsArchived" AccessibleName="@this.AccessibleName"
+                 Meta="@(this.Meta.Length > 0 ? this.Plain(this.Meta) : null)"
+                 Snippet="@(this.Hit.Snippet is { } snippet ? this.Highlighted(snippet) : null)">
+    <Icon><MudIcon Icon="@Icons.Material.Filled.Forum" Size="Size.Small" /></Icon>
+    <Title><MudHighlighter Text="@this.Hit.Title" HighlightedText="@this.Phrase" /></Title>
+</SearchCardShell>
 
 @code {
+    /// <summary>Renders a line of text with the phrase bolded.</summary>
+    private RenderFragment<string> Highlighted => text => @<MudHighlighter Text="@text" HighlightedText="@this.Phrase" />;
+
+    /// <summary>Renders a line of plain text.</summary>
+    private RenderFragment<string> Plain => text => @<text>@text</text>;
+
     /// <summary>The Room hit this card shows.</summary>
     [Parameter, EditorRequired]
     public required RoomHit Hit { get; set; }
@@ -46,8 +44,7 @@
                 return string.Empty;
             }
 
-            string noun = this.Hit.MatchCount == 1 ? "match" : "matches";
-            List<string> parts = [string.Create(CultureInfo.InvariantCulture, $"{this.Hit.MatchCount} {noun}")];
+            List<string> parts = [Plural.Of(this.Hit.MatchCount, "match", "matches")];
             if (this.Hit.SenderName is { } sender)
             {
                 parts.Add(sender);
@@ -55,7 +52,7 @@
 
             if (this.Hit.Time is { } time)
             {
-                parts.Add(time.ToLocalTime().ToString("HH:mm", CultureInfo.CurrentCulture));
+                parts.Add(MessageDisplay.TimeLabel(time, this.Clock.GetLocalNow()));
             }
 
             return string.Join(" · ", parts);

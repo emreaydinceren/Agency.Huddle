@@ -1,6 +1,6 @@
 # Creating Rooms, inviting Agents, Room naming
 
-Prove that every path by which a Room is born or changes membership behaves as specified, and that the four live surfaces (sidebar, Room header h1, members line, invite candidate list) repaint over SignalR without a page reload. Covers: the automatic Direct Room an Agent gets on registration, the sidebar "New chat" panel, the "Add teammate" control on the Room header, the `/invite @name` composer command, and the two Agent-facing tools `mcp__team__create_room` and `mcp__team__invite_agent`. The suite exists because a page GET only returns the Blazor prerender, so automated tests literally cannot see these panels, and because the load-bearing rule "an Agent belongs to at most one two-Member Room" only becomes visible as a second sidebar entry after a real re-registration. Tests INVITEROOMS-08 and INVITEROOMS-16 target this repo's two documented SILENT failures and are the highest-value tests in the set.
+Prove that every path by which a Room is born or changes membership behaves as specified, and that the four live surfaces (sidebar, Room header h1, members line, invite candidate list) repaint over SignalR without a page reload. Covers: the automatic Direct Room an Agent gets on registration, the sidebar "New chat" panel, the "Invite teammate" control on the Room header, the `/invite @name` composer command, and the two Agent-facing tools `mcp__team__create_room` and `mcp__team__invite_agent`. The suite exists because a page GET only returns the Blazor prerender, so automated tests literally cannot see these panels, and because the load-bearing rule "an Agent belongs to at most one two-Member Room" only becomes visible as a second sidebar entry after a real re-registration. Tests INVITEROOMS-08 and INVITEROOMS-16 target this repo's two documented SILENT failures and are the highest-value tests in the set.
 
 **38 tests** · 34 free, 4 paid 💰 · about 4.2 hours.
 
@@ -423,11 +423,11 @@ If you cannot tell the two `Ada, Bo` links apart in the sidebar, hover each and 
 > [!NOTE]
 > Two Rooms with identical names is CORRECT behaviour today — only the single-Agent case reuses. Do NOT file the duplicate name as a defect. This test exists to catch the opposite failure: the second click doing nothing.
 
-### INVITEROOMS-11 — Add teammate on the Room header offers only Agents that are not already Members, and starts closed
+### INVITEROOMS-11 — Invite teammate on the Room header offers only Agents that are not already Members, and starts closed
 
 **Free** · about 5 min
 
-*Proves the invite candidate list is the set difference (all Agents minus this Room's Members), that the Human is never offered, and that the panel is collapsed on first render. The panel is now `MudCollapse` (Stage 5 of the MudBlazor migration) rather than an always-in-the-DOM panel toggled by the `hidden` attribute, and the Room header's **Add teammate** button no longer carries an `invite-toggle` class — disambiguate it from the `/teammates` page's identically-labelled submit button by WHERE it is, not by a CSS class: this one lives inside the Room header's `.invite-teammate` wrapper.*
+*Proves the invite candidate list is the set difference (all Agents minus this Room's Members), that the Human is never offered, and that the panel is collapsed on first render. The panel is now `MudCollapse` (Stage 5 of the MudBlazor migration) rather than an always-in-the-DOM panel toggled by the `hidden` attribute, and the Room header's **Invite teammate** button no longer carries an `invite-toggle` class — disambiguate it from the `/teammates` page's identically-labelled submit button by WHERE it is, not by a CSS class: this one lives inside the Room header's `.invite-teammate` wrapper.*
 
 **Before you start**
 
@@ -437,9 +437,9 @@ If you cannot tell the two `Ada, Bo` links apart in the sidebar, hover each and 
 **Steps**
 
 1. Click the sidebar link `mybot`.
-2. Before clicking anything else, look at the top right of the Room header and confirm the panel below **Add teammate** is NOT showing.
+2. Before clicking anything else, look at the top right of the Room header and confirm the panel below **Invite teammate** is NOT showing.
 3. In the DevTools Console, type `document.querySelector('.invite-teammate .mud-collapse-container').getBoundingClientRect().height > 0` and press Enter. It must print `false`.
-4. Click the **Add teammate** button at the top right of the Room header — the one inside `.invite-teammate`, not the `/teammates` page's submit button of the same name. Repeat the Console command from step 3; it must now print `true`.
+4. Click the **Invite teammate** button at the top right of the Room header — the one inside `.invite-teammate`, not the `/teammates` page's **Add teammate** submit button. Repeat the Console command from step 3; it must now print `true`.
 5. Read every entry in the list that opens.
 6. Read the label above the list.
 
@@ -471,16 +471,16 @@ If you clicked a button labelled 'Add teammate' and a Name/Title/Alias FORM open
 
 **Before you start**
 
-- INVITEROOMS-11 passed; you are in the `mybot` Room with the Add teammate panel open, and `Bo` is offered.
+- INVITEROOMS-11 passed; you are in the `mybot` Room with the Invite teammate panel open, and `Bo` is offered.
 
 **Steps**
 
-1. Close the Add teammate panel by clicking **Add teammate** again.
+1. Close the Invite teammate panel by clicking **Invite teammate** again.
 2. Click into the composer and type exactly: `hi @mybot`
 3. Press Enter. Wait 3 seconds and confirm the Transcript now holds your message and a reply that starts with a bold `mybot:` (the Transcript renders Markdown, so no asterisks show; only the `.jsonl` file holds the literal `**mybot:**`).
 4. In File Explorer or a terminal, open `<data>\rooms\` and find the `<roomId>.jsonl` file matching this Room's id. Count its lines: `(Get-Content '<data>\rooms\<roomId>.jsonl' | Measure-Object -Line).Lines`. Write the number down.
 5. Note the current last line in `T-A`.
-6. Click **Add teammate** in the Room header (inside `.invite-teammate` — see INVITEROOMS-11's note on why this is no longer identified by an `invite-toggle` class).
+6. Click **Invite teammate** in the Room header (inside `.invite-teammate` — see INVITEROOMS-11's note on why this is no longer identified by an `invite-toggle` class).
 7. Click the entry `Bo` in the candidate list.
 8. IMMEDIATELY read the blue Info alert that appears inside the panel (`InviteTeammate.razor:23`), and copy its text exactly.
 9. Read the candidate list again.
@@ -518,7 +518,7 @@ If the Room has no `.jsonl` file at all, `mybot` never replied and no Message wa
 > [!NOTE]
 > This test deliberately converts mybot's Direct Room into a group Room. INVITEROOMS-21 depends on that having happened.
 
-### INVITEROOMS-13 — Add teammate says so when every Agent is already a Member, and hides the Team filter in that state
+### INVITEROOMS-13 — Invite teammate says so when every Agent is already a Member, and hides the Team filter in that state
 
 **Free** · about 5 min
 
@@ -526,12 +526,12 @@ If the Room has no `.jsonl` file at all, `mybot` never replied and no Message wa
 
 **Before you start**
 
-- INVITEROOMS-12 passed; you are in the `mybot, Bo` Room with Add teammate open (Ada and the Chief of Staff are still offered).
+- INVITEROOMS-12 passed; you are in the `mybot, Bo` Room with Invite teammate open (Ada and the Chief of Staff are still offered).
 - No new Agent registers during this test — do not start any extra bots until it is finished.
 
 **Steps**
 
-1. With the Add teammate panel open, click the FIRST entry in the candidate list.
+1. With the Invite teammate panel open, click the FIRST entry in the candidate list.
 2. Read the info line and confirm the candidate disappeared.
 3. Repeat: click the next remaining entry, one at a time, until the candidate list is empty.
 4. Read the whole panel.
@@ -570,17 +570,17 @@ If a new Agent connects mid-test (a terminal you forgot about), the list will ne
 **Steps**
 
 1. Click the sidebar link whose name begins `mybot, Bo` (Room A — INVITEROOMS-13 may have appended more Members to its name).
-2. Click **Add teammate** in the Room header.
+2. Click **Invite teammate** in the Room header.
 3. Confirm the panel shows a message, a candidate list or, if every Agent is already a Member, `Every agent is already in this room.`
 4. Click a DIFFERENT sidebar link — the second `Ada, Bo` Room (Room B).
 5. Without clicking anything else, look at the top right of Room B's header.
 6. In the DevTools Console, type `document.querySelector('.invite-teammate .mud-collapse-container').getBoundingClientRect().height > 0` and press Enter. It must print `false`.
-7. Click **Add teammate** in Room B and read the panel contents.
+7. Click **Invite teammate** in Room B and read the panel contents.
 8. Click back to Room A and look at its header area without clicking.
 
 **Pass if — all of these**
 
-- On arriving in Room B, the invite panel is CLOSED — nothing is visible beneath the Add teammate button and the Console command in step 6 prints `false`.
+- On arriving in Room B, the invite panel is CLOSED — nothing is visible beneath the Invite teammate button and the Console command in step 6 prints `false`.
 - When you open Room B's panel, there is NO `Invited …` info line and no red error line carried over from Room A.
 - Room B's candidate list contains only Agents that are not Members of Room B — an Agent that is a Member of B is absent even if it was offered in A.
 - Returning to Room A shows its panel closed again, with no leftover message.
@@ -936,7 +936,7 @@ If the sidebar entry for `mybot` still has NO comma, INVITEROOMS-12 did not actu
 1. In tab A (the current tab) click **New chat**, tick `Ada` and `Bo` and click **Start chat**. The new Room is named `Ada, Bo`. Then open a second browser tab on `http://localhost:5100`. Call the first tab A and the second tab B.
 2. In tab A, stay on the new `Ada, Bo` Room. Write its room id down.
 3. In tab B, navigate to the SAME `/rooms/<id>`.
-4. In tab B, click **Add teammate** in the Room header and leave the panel OPEN. Confirm `gamma` is listed as a candidate.
+4. In tab B, click **Invite teammate** in the Room header and leave the panel OPEN. Confirm `gamma` is listed as a candidate.
 5. Arrange the two tabs (or two windows) so you can see tab B while acting in tab A. If you cannot, take a screenshot of tab B first and compare after.
 6. Note the current last line in `T-A`.
 7. In TAB A, click into the composer, type exactly `/invite @gamma`, and press Enter.
@@ -983,7 +983,7 @@ If tab B's SignalR circuit had already dropped (you will see a 'Attempting to re
 4. Confirm the members line reads `You, delta`.
 5. Type exactly `hi @delta` and press Enter. Wait 3 seconds.
 6. Read the Transcript.
-7. Click **Add teammate** in the Room header and click `Bo`.
+7. Click **Invite teammate** in the Room header and click `Bo`.
 8. Confirm the `<h1>` is now `delta, Bo` and the members line is `You, delta, Bo`.
 9. Type exactly `hi` (no @ anywhere) and press Enter. Wait 10 seconds.
 10. Read the Transcript.
@@ -1063,7 +1063,7 @@ If Ada or Bo does not return to Online after the restart, its Rooms will still b
 
 **Free** · about 9 min
 
-*Proves the Team dropdown is populated from the Persona library, that filtering is pure display narrowing over already-loaded candidates, and that it never triggers a model probe or a node spawn. This dropdown (inside the Room header's Add teammate panel) is a `MudSelect` labelled **Team** (`InviteTeammate.razor:35`), so its options are read by opening its popover, and it is only rendered while the Room has at least one candidate.*
+*Proves the Team dropdown is populated from the Persona library, that filtering is pure display narrowing over already-loaded candidates, and that it never triggers a model probe or a node spawn. This dropdown (inside the Room header's Invite teammate panel) is a `MudSelect` labelled **Team** (`InviteTeammate.razor:35`), so its options are read by opening its popover, and it is only rendered while the Room has at least one candidate.*
 
 **Before you start**
 
@@ -1073,17 +1073,17 @@ If Ada or Bo does not return to Online after the restart, its Rooms will still b
 
 **Steps**
 
-1. Click the Room `Ada` (or any Room that still has a candidate), click **Add teammate**, and open the **Team** select. Confirm its only option is `All teams`. This is the no-Persona baseline. Close the popover.
+1. Click the Room `Ada` (or any Room that still has a candidate), click **Invite teammate**, and open the **Team** select. Confirm its only option is `All teams`. This is the no-Persona baseline. Close the popover.
 2. Run `O-MOCK-ADAPTERS` in `T-B` and write the count down.
 3. Create the Teammate through `P-NEW-PERSONA`: **Name** = `coo`, **Title** = `Chief of Staff`, **Alias** = `coo`, **Teams** = `Business`, body = `You are the Chief of Staff.`; leave **Model** and **Effort** at whatever the mock adapter offers (it spends nothing). Wait until the `coo` tile reads Online and a sidebar link reading `coo` appears.
 4. Run `O-MOCK-ADAPTERS` again and write the new count down (one more than step 2). This is the count to hold steady below.
-5. Click the Room `Ada` and click **Add teammate**.
+5. Click the Room `Ada` and click **Invite teammate**.
 6. Open the **Team** select and read every option.
 7. Select `Business`.
 8. Read the candidate list.
 9. Select `All teams` again.
 10. Read the candidate list.
-11. Click the `coo` Room, click **Add teammate**, open the **Team** select and select `Business`. Read the panel.
+11. Click the `coo` Room, click **Invite teammate**, open the **Team** select and select `Business`. Read the panel.
 12. Run `O-MOCK-ADAPTERS` a last time.
 
 **Pass if — all of these**
@@ -1135,7 +1135,7 @@ If `coo` does not reach Online, or `Business` does not appear, check the `coo` c
 9. In the persona body textarea type exactly: `You are Jarvis. Answer in one short sentence.`
 10. Set the **Model** select to `Haiku`.
 11. Set the **Effort** select to `low`.
-12. Click the **Add teammate** submit button AT THE BOTTOM OF THIS CARD (this is the New teammate dialog's submit action, NOT the Room header's Add teammate control — see INVITEROOMS-11's note on telling the two apart).
+12. Click the **Add teammate** submit button AT THE BOTTOM OF THIS CARD (this is the New teammate dialog's submit action, NOT the Room header's Invite teammate control — see INVITEROOMS-11's note on telling the two apart).
 13. Wait until the `Jarvis` tile shows a status of Online or Starting, and until a sidebar link reading `Jarvis` appears. This may take 10-30 seconds.
 14. Click a Room that does NOT contain `Jarvis` — use the Room named `mybot`.
 15. Note the current last line in `T-A`.
@@ -1188,7 +1188,7 @@ If `node --version` fails, or the `Jarvis` tile stays Offline with a reason in t
 3. Read the row of actions near the bottom of the card and write down every action label you see.
 4. Close the card (click the × at its top right).
 5. Click the sidebar link reading exactly `Jarvis` and confirm its members line reads `You, Jarvis`.
-6. Click **Add teammate** in the Room header and click `mybot` (pipe bot `mybot` from `T-C` must be running).
+6. Click **Invite teammate** in the Room header and click `mybot` (pipe bot `mybot` from `T-C` must be running).
 7. Confirm the `<h1>` is now `Jarvis, mybot`.
 8. Click **Teammates** in the sidebar again.
 9. Click the `Jarvis` tile.

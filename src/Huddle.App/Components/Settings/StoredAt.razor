@@ -1,0 +1,16 @@
+@*
+    The "stored at" line under a Settings panel's intro (UX-012, UX-R17): a label and the path in code type.
+*@
+
+<p class="settings-stored-at">@this.Label <code>@this.Path</code></p>
+
+@code {
+    /// <summary>The words before the path, for example "Stored at" or "Room database stored at".</summary>
+    [Parameter]
+    public string Label { get; set; } = "Stored at";
+
+    /// <summary>The file or folder path shown in code type.</summary>
+    [Parameter]
+    [EditorRequired]
+    public string Path { get; set; } = string.Empty;
+}

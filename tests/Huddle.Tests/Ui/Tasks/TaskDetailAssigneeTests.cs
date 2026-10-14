@@ -71,7 +71,7 @@ public sealed class TaskDetailAssigneeTests
         IRenderedComponent<TeammateAvatar> avatar = badge.FindComponent<TeammateAvatar>();
         Assert.Equal("Nova", avatar.Instance.Name);
         Assert.Equal("Nova is Asleep", badge.Instance.BadgeAriaLabel);
-        Assert.Equal("Nova", TextOf(itemCut, ".task-detail-assignee-option-name"));
+        Assert.Equal("Nova", TextOf(itemCut, ".task-assignee-name"));
     }
 
     /// <summary>Selecting a known Persona from the Assignee autocomplete's own <c>SearchFunc</c> results sets the pending Assignee, proven by saving it (never constructing an <c>AssigneeOption</c> by hand - its shape is 14.2.i's own decision).</summary>
@@ -164,7 +164,7 @@ public sealed class TaskDetailAssigneeTests
 
         Assert.Empty(itemCut.FindComponents<MudBadge>());
         Assert.Equal(humanName, itemCut.FindComponent<TeammateAvatar>().Instance.Name);
-        Assert.Equal(humanName, TextOf(itemCut, ".task-detail-assignee-option-name"));
+        Assert.Equal(humanName, TextOf(itemCut, ".task-assignee-name"));
     }
 
     /// <summary>When the Task has a <c>LastWake</c>, a line underneath the Assignee reads exactly "Woken in Room: {name}" (Spec §13.6) and links to the Room.</summary>
@@ -179,7 +179,7 @@ public sealed class TaskDetailAssigneeTests
         await using MudBunitContext ctx = NewContext(harness);
         var cut = RenderDetail(ctx, task.Id, mode);
 
-        Assert.Equal("Woken in Room: SAML Integration", TextOf(cut, ".task-detail-woken-link"));
+        Assert.Equal("Woken in Room SAML Integration", TextOf(cut, ".task-detail-woken-link"));
         Assert.Equal("/rooms/room-1", cut.Find(".task-detail-woken-link").GetAttribute("href"));
     }
 

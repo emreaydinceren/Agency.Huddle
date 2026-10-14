@@ -11,18 +11,18 @@
 @inject AvatarStore Avatars
 
 <div class="invite-teammate">
-    <MudTooltip Text="Add teammate" Placement="Placement.Start">
-        <MudIconButton Icon="@Icons.Material.Filled.PersonAddAlt" aria-label="Add teammate" OnClick="this.TogglePanel" />
+    <MudTooltip Text="Invite teammate" Placement="Placement.Start">
+        <MudIconButton Size="Size.Small" Icon="@Icons.Material.Filled.PersonAddAlt" aria-label="Invite teammate" OnClick="this.TogglePanel" />
     </MudTooltip>
     <MudCollapse Expanded="@this.isOpen">
         <MudStack Class="invite-panel pa-2 border-l-2 mud-border-lines-default" Spacing="2">
             @if (this.errorText is not null)
             {
-                <MudAlert Severity="Severity.Error" Dense="true">@this.errorText</MudAlert>
+                <MudAlert Severity="Severity.Error" Dense="true" role="alert">@this.errorText</MudAlert>
             }
             else if (this.infoText is not null)
             {
-                <MudAlert Severity="Severity.Info" Dense="true">@this.infoText</MudAlert>
+                <MudAlert Severity="Severity.Info" Dense="true" role="status">@this.infoText</MudAlert>
             }
 
             @if (this.candidates.Count == 0)
@@ -34,7 +34,7 @@
                 @* An Agent with no Persona behind it (a raw pipe client, or the echo/alpha demo agents)
                    has no Teams at all, so it only ever shows up under "All teams" - narrowing this
                    filter to a real Team simply never matches it, with no special case needed. *@
-                <MudSelect T="string" Label="Team" Value="@this.selectedTeam" ValueChanged="this.OnTeamFilterChanged" Dense="true" Class="mb-4">
+                <MudSelect T="string" Variant="Variant.Outlined" Label="Team" Value="@this.selectedTeam" ValueChanged="this.OnTeamFilterChanged" Margin="Margin.Dense" Class="mb-4">
                     <MudSelectItem T="string" Value="@string.Empty">All teams</MudSelectItem>
                     @foreach (var team in this.Personas.Teams)
                     {
@@ -55,10 +55,8 @@
                         {
                             var status = PersonaStatusResolver.Resolve(this.Gateway.IsOnline(agent.Id), this.Health.Get(agent.Name));
                             var name = agent.Name;
-                            <MudButton Variant="Variant.Text" FullWidth="true" Class="invite-agent" OnClick="@(() => this.InviteAsync(name))">
-                                <StatusDot State="status.State" />
-                                <TeammateAvatar Name="@name" Avatar="this.Avatars.Get(name)" Size="Size.Small" />
-                                @name
+                            <MudButton Size="Size.Small" Variant="Variant.Text" FullWidth="true" Class="invite-agent" OnClick="@(() => this.InviteAsync(name))">
+                                <TeammateLabel Name="@name" State="status.State" Avatar="this.Avatars.Get(name)" />
                             </MudButton>
                         }
                     </MudStack>
@@ -184,15 +182,10 @@
 
     private void OnRoomsChanged()
     {
-        _ = this.DispatchAsync(async () =>
+        _ = RendererDispatch.RunAsync(this.InvokeAsync, async () =>
         {
             await this.LoadCandidatesAsync();
             this.StateHasChanged();
         });
-    }
-
-    private Task DispatchAsync(Func<Task> action)
-    {
-        return RendererDispatch.RunAsync(this.InvokeAsync, action);
     }
 }

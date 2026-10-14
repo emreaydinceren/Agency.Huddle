@@ -205,4 +205,14 @@ public sealed class ProcessDocumentTests
         Assert.Equal(wip == 0 ? null : wip, document.WipLimit);
         Assert.Equal("dotnet test", document.CheckCommand);
     }
+
+    /// <summary>Each gate reads as its sentence-case display name in the Process tab and the override prompt.</summary>
+    [Fact]
+    public void DisplayName_EachGate_ReadsAsItsSentenceCaseName()
+    {
+        Assert.Equal("QA evidence before done", ProcessDocument.DisplayName(GateId.QaEvidenceBeforeDone));
+        Assert.Equal("Checks before merge", ProcessDocument.DisplayName(GateId.ChecksBeforeMerge));
+        Assert.Equal("Spec approved before build", ProcessDocument.DisplayName(GateId.SpecApprovedBeforeBuild));
+        Assert.Equal("Failing test before fix", ProcessDocument.DisplayName(GateId.FailingTestBeforeFix));
+    }
 }

@@ -99,6 +99,31 @@ internal sealed class LibraryRootStore(IOptions<TeamOptions> options, TeammatePa
         this.RootsChanged?.Invoke();
     }
 
+    /// <summary>The trust warning every surface that pins a folder shows beside it.</summary>
+    public const string TrustWarning = "Anything in this folder can be read and changed from Huddle.";
+
+    /// <summary>
+    /// Pins <paramref name="path"/> under <paramref name="name"/> after the roots already pinned, refusing a path that is
+    /// not an existing folder (<see cref="Save"/> does not check this itself).
+    /// </summary>
+    /// <param name="name">The new root's display name.</param>
+    /// <param name="path">The folder to pin.</param>
+    /// <returns>An error message to show the Human, or <see langword="null"/> when the folder was pinned.</returns>
+    public string? TryPin(string name, string path)
+    {
+        ArgumentNullException.ThrowIfNull(name);
+        ArgumentNullException.ThrowIfNull(path);
+
+        if (!Directory.Exists(path))
+        {
+            return "That folder doesn't exist.";
+        }
+
+        List<PinnedRootEntry> pinned = [.. this.Pinned, new PinnedRootEntry(name, path)];
+        this.Save(pinned);
+        return null;
+    }
+
     /// <summary>Hides or shows a built-in root (<c>"teams"</c>, <c>"teammates"</c> or <c>"uploads"</c>) from <see cref="VisibleRoots"/>. It stays in <see cref="Roots"/> and still resolves.</summary>
     /// <param name="builtInId">The built-in root's id.</param>
     /// <param name="hidden">Whether the root should be hidden.</param>

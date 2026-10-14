@@ -251,6 +251,33 @@ public sealed class TasksPageTests
         ctx.JSInterop.VerifyInvoke("huddleStorage.set");
     }
 
+    /// <summary>U13 (UX-047): the page looks up Room names, so a List row's Origin shows the origin Room's name and not its id.</summary>
+    [Fact]
+    public async Task TasksPage_Origin_ShowsTheRoomName()
+    {
+        CancellationToken ct = Xunit.TestContext.Current.CancellationToken;
+        using TaskToolHarness harness = new();
+        await harness.Directory.InitializeAsync("You", ct);
+        Agency.Huddle.App.Data.User human = await harness.Directory.GetHumanAsync(ct);
+        Agency.Huddle.App.Data.Room room = await harness.Directory.CreateRoomAsync("Launch room", [human.Id], ct);
+        TestTaskStore.WriteTask(
+            harness.TasksDirPath,
+            Path.Combine("Platform", "_tasks", "PLAT-0001.md"),
+            TestTasks.Make(id: "PLAT-0001", title: "Has an origin", originRoomId: room.Id));
+        harness.Store.RebuildFromWatcher();
+        Assert.True(harness.Views.Save(new TaskView { Id = "origin-view", Name = "Origins", Kind = ViewKind.List, Fields = ["origin"] }).Saved);
+
+        await using MudBunitContext ctx = NewContext(harness);
+        var cut = ctx.RenderWithPopovers(builder =>
+        {
+            builder.OpenComponent<TasksPage>(0);
+            builder.AddAttribute(1, nameof(TasksPage.ViewId), "origin-view");
+            builder.CloseComponent();
+        });
+
+        cut.WaitForAssertion(() => Assert.Single(cut.FindAll("td"), cell => string.Equals(cell.TextContent.Trim(), "Launch room", StringComparison.Ordinal)));
+    }
+
     /// <summary>Corrections-B7 §13.2 item 4: a route naming an invalid View (parses, but fails <see cref="ViewValidator"/>) shows its reason and an Edit View button, not "no longer exists".</summary>
     [Fact]
     public async Task TasksPage_InvalidViewRoute_ShowsItsReasonAndEditViewButton()
@@ -274,6 +301,7 @@ public sealed class TasksPageTests
         ctx.Services.AddSingleton(views);
         ctx.Services.AddSingleton(sprints);
         ctx.Services.AddSingleton<ISprintCatalog>(sprints);
+        ctx.Services.AddSingleton<Agency.Huddle.App.Data.ITeamDirectory>(new Agency.Huddle.App.Data.SqliteTeamDirectory(dir.Options()));
         ctx.Services.AddSingleton(Options.Create(new TeamOptions()));
         // 14.5.i: the page always hosts WakeToasts (Spec §13.8), which @injects TaskActivity.
         ctx.Services.AddSingleton<TaskActivity>();

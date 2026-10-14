@@ -211,7 +211,7 @@ public sealed class TeamsNavTests
         _ = RenderNav(ctx);
         Assert.Equal(1, catalog.ChangedSubscriberCount);
 
-        await ctx.DisposeComponentsAsync();
+        await ctx.DisposeComponentsOnDispatcherAsync();
 
         Assert.Equal(0, catalog.ChangedSubscriberCount);
     }
@@ -570,8 +570,8 @@ public sealed class TeamsNavTests
         await TypeNameAsync(cut, "Business");
 
         Assert.Equal("New team", cut.Find(".mud-dialog-title").TextContent.Trim());
-        Assert.Equal("Team name", cut.Find(".new-team-dialog-name-field label").TextContent.Trim());
-        Assert.Equal("A Team named \"Business\" already exists.", cut.Find(".new-team-dialog-problem").TextContent.Trim());
+        Assert.Equal("Team name", cut.Find(".mud-dialog label").TextContent.Trim());
+        Assert.Equal("A Team named \"Business\" already exists.", cut.Find(".mud-dialog .mud-input-helper-text").TextContent.Trim());
     }
 
     /// <summary>OK on "Research" calls <c>EnsureTeam("Research")</c> once and, the catalog already listing it, navigates to <c>/teams/Research</c>.</summary>
@@ -659,7 +659,7 @@ public sealed class TeamsNavTests
         OpenNewTeamDialog(cut);
         await TypeNameAsync(cut, "Research");
 
-        await cut.InvokeAsync(() => cut.Find(".new-team-dialog-cancel-button").ClickAsync());
+        await cut.InvokeAsync(() => cut.Find(".mud-dialog-actions button:first-child").ClickAsync());
         cut.WaitForAssertion(() => Assert.Empty(cut.FindAll(".mud-dialog-title")));
         await Flush(cut);
 
@@ -680,8 +680,8 @@ public sealed class TeamsNavTests
         await TypeNameAsync(cut, "marketing");
 
         Assert.Equal("New project", cut.Find(".mud-dialog-title").TextContent.Trim());
-        Assert.Equal("Project name", cut.Find(".new-team-dialog-name-field label").TextContent.Trim());
-        Assert.Equal("A Project named \"marketing\" already exists in Business.", cut.Find(".new-team-dialog-problem").TextContent.Trim());
+        Assert.Equal("Project name", cut.Find(".mud-dialog label").TextContent.Trim());
+        Assert.Equal("A Project named \"marketing\" already exists in Business.", cut.Find(".mud-dialog .mud-input-helper-text").TextContent.Trim());
     }
 
     /// <summary>OK on "Q4 Launch" calls <c>EnsureProjectIn("Business", "Q4 Launch")</c> once and navigates to the escaped Project route.</summary>
@@ -764,7 +764,7 @@ public sealed class TeamsNavTests
         await OpenNewProjectDialog(cut, "Business");
         await TypeNameAsync(cut, "Q4 Launch");
 
-        await cut.InvokeAsync(() => cut.Find(".new-team-dialog-cancel-button").ClickAsync());
+        await cut.InvokeAsync(() => cut.Find(".mud-dialog-actions button:first-child").ClickAsync());
         cut.WaitForAssertion(() => Assert.Empty(cut.FindAll(".mud-dialog-title")));
         await Flush(cut);
 
@@ -1005,13 +1005,13 @@ public sealed class TeamsNavTests
 
     /// <summary>Types <paramref name="name"/> into the open dialog's name field.</summary>
     private static Task TypeNameAsync(IRenderedComponent<ContainerFragment> cut, string name) =>
-        cut.InvokeAsync(() => cut.Find(".new-team-dialog-name-field input").InputAsync(name));
+        cut.InvokeAsync(() => cut.Find(".mud-dialog input").InputAsync(name));
 
     /// <summary>Types <paramref name="name"/> and clicks Create.</summary>
     private static async Task SubmitNameAsync(IRenderedComponent<ContainerFragment> cut, string name)
     {
         await TypeNameAsync(cut, name);
-        await cut.InvokeAsync(() => cut.Find(".new-team-dialog-create-button").ClickAsync());
+        await cut.InvokeAsync(() => cut.Find(".mud-dialog-actions button:last-child").ClickAsync());
     }
 
     /// <summary>Runs an empty action on the renderer's synchronization context, so any handler continuation queued before it has finished before the caller asserts an absence.</summary>

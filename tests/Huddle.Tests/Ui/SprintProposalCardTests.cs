@@ -1,3 +1,4 @@
+using AngleSharp.Dom;
 using Bunit;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging.Abstractions;
@@ -20,8 +21,9 @@ public sealed class SprintProposalCardTests
     /// <summary>The harness, a manager's room, the proposal store and the real service the card calls.</summary>
     private sealed class Fixture : IDisposable
     {
-        private Fixture(TaskToolHarness harness, SprintProposalStore proposals, SprintProposalService service, string roomId)
+        private Fixture(TaskToolHarness harness, SprintProposalStore proposals, SprintProposalService service, string roomId, DirectoryGate gate)
         {
+            this.Gate = gate;
             this.Harness = harness;
             this.Proposals = proposals;
             this.Service = service;
@@ -51,18 +53,22 @@ public sealed class SprintProposalCardTests
             {
                 Teams = [new TeamSummary("Platform", [], ["Nova", "Kai"], true) { Manager = "Nova" }],
             };
+            ITeamDirectory serviceDirectory = DirectoryGate.Wrap(harness.Directory, out DirectoryGate gate);
             SprintProposalService service = new(
                 proposals,
                 (SprintStore)harness.Sprints,
                 harness.Service,
                 harness.Store,
                 harness.Chat,
-                harness.Directory,
+                serviceDirectory,
                 catalog,
                 harness.Options,
                 NullLogger<SprintProposalService>.Instance);
-            return new Fixture(harness, proposals, service, room.Id);
+            return new Fixture(harness, proposals, service, room.Id, gate);
         }
+
+        /// <summary>Holds the service's directory calls while a test keeps a decision in flight.</summary>
+        public DirectoryGate Gate { get; }
 
         /// <summary>Writes a Task straight into the store.</summary>
         /// <param name="id">The Task id.</param>
@@ -93,6 +99,7 @@ public sealed class SprintProposalCardTests
             ctx.Services.AddSingleton(this.Proposals);
             ctx.Services.AddSingleton(this.Service);
             ctx.Services.AddSingleton(this.Harness.Store);
+            AgentCardAssert.RegisterRoomServices(ctx, this.Harness.Directory);
         }
 
         /// <inheritdoc />
@@ -180,6 +187,72 @@ public sealed class SprintProposalCardTests
         Assert.Null(((SprintStore)fixture.Harness.Sprints).FindByName("Launch"));
         Assert.Null(fixture.Harness.Store.Get(new TaskId("PLAT", 1))?.Sprint);
         Assert.Empty(fixture.Proposals.Pending("Platform"));
+    }
+
+    /// <summary>UX-030 to UX-034: the card is the shared shell; the reason field sits directly above the actions row, which reads Approve then Decline.</summary>
+    [Fact]
+    public async Task Card_IsTheSharedShell_ReasonAboveApproveThenDecline()
+    {
+        CancellationToken ct = Xunit.TestContext.Current.CancellationToken;
+        using Fixture fixture = await Fixture.CreateAsync(ct);
+        fixture.Put("PLAT-0001", "Write the parser", null);
+        _ = fixture.Propose("Launch", "PLAT-0001");
+        await using MudBunitContext ctx = new();
+        fixture.RegisterInto(ctx);
+        AgentCardAssert.RegisterRoomServices(ctx, fixture.Harness.Directory);
+
+        IRenderedComponent<SprintProposalCard> cut = RenderCard(ctx, fixture.RoomId);
+
+        cut.WaitForAssertion(() => Assert.NotEmpty(cut.FindAll("[role=region]")));
+        IElement actions = AgentCardAssert.IsShell(cut, "Nova is proposing a Sprint", "Sprint proposal from Nova");
+        Assert.Equal(["Approve", "Decline"], AgentCardAssert.Verbs(actions));
+        IElement? field = actions.PreviousElementSibling;
+        Assert.True(field is not null && field.Matches(".sprint-proposal-reason"), "The reason field belongs directly above the actions row.");
+    }
+
+    /// <summary>UX-035: the card is not rendered for an Archived Room, as with Proposal, Question and Elicitation.</summary>
+    [Fact]
+    public async Task ArchivedRoom_RendersNothing()
+    {
+        CancellationToken ct = Xunit.TestContext.Current.CancellationToken;
+        using Fixture fixture = await Fixture.CreateAsync(ct);
+        fixture.Put("PLAT-0001", "Write the parser", null);
+        _ = fixture.Propose("Launch", "PLAT-0001");
+        await fixture.Harness.Directory.SetRoomArchivedAsync(fixture.RoomId, true, ct);
+        await using MudBunitContext ctx = new();
+        fixture.RegisterInto(ctx);
+        AgentCardAssert.RegisterRoomServices(ctx, fixture.Harness.Directory);
+
+        IRenderedComponent<SprintProposalCard> cut = RenderCard(ctx, fixture.RoomId);
+
+        Assert.True(string.IsNullOrWhiteSpace(cut.Markup));
+    }
+
+    /// <summary>UX-033: while Approve is in flight its button reads "Approving…" and Decline is disabled.</summary>
+    [Fact]
+    public async Task Approve_InFlight_ShowsBusyLabel()
+    {
+        CancellationToken ct = Xunit.TestContext.Current.CancellationToken;
+        using Fixture fixture = await Fixture.CreateAsync(ct);
+        fixture.Put("PLAT-0001", "Write the parser", null);
+        _ = fixture.Propose("Launch", "PLAT-0001");
+        await using MudBunitContext ctx = new();
+        fixture.RegisterInto(ctx);
+        AgentCardAssert.RegisterRoomServices(ctx, fixture.Harness.Directory);
+        IRenderedComponent<SprintProposalCard> cut = RenderCard(ctx, fixture.RoomId);
+        cut.WaitForAssertion(() => Assert.NotEmpty(cut.FindAll("[role=region]")));
+        TaskCompletionSource gate = new(TaskCreationOptions.RunContinuationsAsynchronously);
+        fixture.Gate.Gate = gate;
+
+        // Fire-and-forget: the approve parks on the gate, so awaiting Click would never return.
+        _ = cut.InvokeAsync(() => cut.FindAll("button").First(static button => button.TextContent.Trim() == "Approve").ClickAsync());
+
+        cut.WaitForAssertion(() => Assert.Equal(["Approving…", "Decline"], AgentCardAssert.Verbs(cut.Find(".agent-card-actions"))));
+        Assert.True(cut.FindAll("button").First(static button => button.TextContent.Trim() == "Decline").HasAttribute("disabled"));
+
+        await cut.InvokeAsync(gate.SetResult);
+
+        cut.WaitForAssertion(() => Assert.True(string.IsNullOrWhiteSpace(cut.Markup)));
     }
 
     /// <summary>A proposal that arrives after the card rendered appears without a reload.</summary>

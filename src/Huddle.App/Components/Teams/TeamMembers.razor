@@ -228,7 +228,7 @@
         }
         catch (ChatException ex)
         {
-            this.Snackbar.Add(ex.Message, Severity.Error);
+            this.Snackbar.Add(ex.Message, Severity.Error, key: "team-members");
         }
     }
 
@@ -257,7 +257,7 @@
         DialogResult? result = await reference.Result;
         if (result is { Canceled: false, Data: string name })
         {
-            this.Snackbar.Add($"{name} added to {team.Name}.", Severity.Success);
+            this.Snackbar.Add($"{name} added to {team.Name}.", Severity.Success, key: "team-members");
         }
     }
 
@@ -302,7 +302,7 @@
     {
         if (result.Outcome == MembershipOutcome.Removed)
         {
-            this.Snackbar.Add($"{member} removed from {team}.", Severity.Success);
+            this.Snackbar.Add($"{member} removed from {team}.", Severity.Success, key: "team-members");
             return;
         }
 
@@ -312,7 +312,7 @@
             MembershipOutcome.NotFound => $"{member} no longer exists.",
             _ => result.Problem ?? $"Couldn't remove {member} from {team}.",
         };
-        this.Snackbar.Add(message, Severity.Error);
+        this.Snackbar.Add(message, Severity.Error, key: "team-members");
     }
 
     private string? TryPathFor(string name)
@@ -327,15 +327,10 @@
         }
     }
 
-    private void OnHealthOrPresenceChanged() => _ = this.DispatchAsync(() =>
+    private void OnHealthOrPresenceChanged() => _ = RendererDispatch.RunAsync(this.InvokeAsync, () =>
     {
         this.StateHasChanged();
         return Task.CompletedTask;
     });
 
-    /// <summary>Invokes <paramref name="action"/> on the renderer's synchronization context, swallowing the two exceptions an event racing component teardown can throw.</summary>
-    private Task DispatchAsync(Func<Task> action)
-    {
-        return RendererDispatch.RunAsync(this.InvokeAsync, action);
-    }
 }

@@ -53,6 +53,7 @@
 @using Agency.Huddle.App.Tabs
 @inject TaskStore Store
 @inject TaskEvents Events
+@inject ITeamDirectory Directory
 @inject ViewStore Views
 @inject SprintStore Sprints
 @inject IOptions<TeamOptions> Options
@@ -75,7 +76,7 @@
         <MudAlert Severity="Severity.Warning" role="status" Class="tasks-invalid-view-alert">
             This View is invalid: @string.Join(" ", invalid.Problems)
         </MudAlert>
-        <MudButton OnClick="@(() => this.OpenEditorFor(invalid.Id ?? this.ViewId ?? string.Empty))" Class="tasks-invalid-view-edit">Edit view</MudButton>
+        <MudButton Size="Size.Medium" OnClick="@(() => this.OpenEditorFor(invalid.Id ?? this.ViewId ?? string.Empty))" Class="tasks-invalid-view-edit">Edit view</MudButton>
     }
     else if (this.viewNotFound)
     {
@@ -86,32 +87,41 @@
     }
     else
     {
-        <MudStack Row="true" AlignItems="AlignItems.Center" Class="tasks-header mb-4">
-            <MudText HtmlTag="h1" Typo="Typo.h5" Class="mb-0">@this.effectiveView.Name</MudText>
-            @* The View's own actions, next to its title: Edit for every View, Delete only for a
-               non-built-in one (ViewStore.Delete refuses the two built-ins). Both are disabled while
-               views.json cannot be read, since the store refuses every write then. *@
-            <MudFabMenu StartIcon="@Icons.Material.Filled.KeyboardArrowRight" Size="Size.Small" Color="Color.Primary"
-                        Direction="Direction.Bottom" AlignItems="AlignItems.Start" Class="tasks-view-menu" aria-label="Task view actions">
-                <MudFabMenuItem StartIcon="@Icons.Material.Filled.Edit" Label="Edit task view" aria-label="Edit task view" Size="Size.Small"
-                                Disabled="@(this.Views.LoadError is not null)" OnClick="this.OnEditViewClicked" />
-                @if (!this.effectiveView.BuiltIn)
-                {
-                    <MudFabMenuItem StartIcon="@Icons.Material.Filled.Delete" Label="Delete task view" aria-label="Delete task view" Size="Size.Small"
-                                    Color="Color.Error" Disabled="@(this.Views.LoadError is not null)" OnClick="this.DeleteViewAsync" />
-                }
-            </MudFabMenu>
-            @if (!string.IsNullOrEmpty(this.effectiveView.Description))
-            {
-                <MudText Typo="Typo.body2" Class="mud-text-secondary tasks-description">@this.effectiveView.Description</MudText>
-            }
-            @if (this.HasOverrides)
-            {
-                <MudLink OnClick="this.ResetOverrides" Class="tasks-reset">Reset</MudLink>
-            }
-            <MudSpacer />
-            <AiReactingChip Watched="this.WatchedTaskIds" />
-        </MudStack>
+        <div class="tasks-header">
+        <PageHeader Title="@this.effectiveView.Name">
+            <Actions>
+                <MudStack Row="true" AlignItems="AlignItems.Center" Class="tasks-header-actions">
+                    @if (!string.IsNullOrEmpty(this.effectiveView.Description))
+                    {
+                        <MudText Typo="Typo.body2" Class="mud-text-secondary tasks-description">@this.effectiveView.Description</MudText>
+                    }
+                    @if (this.HasOverrides)
+                    {
+                        <MudLink OnClick="this.ResetOverrides" Class="tasks-reset">Reset filters</MudLink>
+                    }
+                    <AiReactingChip Watched="this.WatchedTaskIds" />
+                    @* The View's own actions (T2a), the same MoreVert menu as the sidebar row: Edit for every
+                       View, Delete only for a non-built-in one (ViewStore.Delete refuses the two built-ins).
+                       Disabled while views.json cannot be read, since the store refuses every write then. *@
+                    <MudMenu Class="tasks-view-menu">
+                        <ActivatorContent Context="menuContext">
+                            <MudTooltip Text="View actions">
+                                <MudIconButton Icon="@Icons.Material.Filled.MoreVert" Size="Size.Small" aria-label="View actions"
+                                               Disabled="@(this.Views.LoadError is not null)" OnClick="menuContext.ToggleAsync" />
+                            </MudTooltip>
+                        </ActivatorContent>
+                        <ChildContent>
+                            <MudMenuItem OnClick="this.OnEditViewClicked">Edit view</MudMenuItem>
+                            @if (!this.effectiveView.BuiltIn)
+                            {
+                                <MudMenuItem OnClick="this.DeleteViewAsync">Delete view</MudMenuItem>
+                            }
+                        </ChildContent>
+                    </MudMenu>
+                </MudStack>
+            </Actions>
+        </PageHeader>
+        </div>
 
         @if (this.Views.LoadError is { } loadError)
         {
@@ -159,33 +169,36 @@
         IReadOnlyList<TaskItem> tasks = this.FilteredTasks(this.search);
         @if (this.effectiveView.Kind == ViewKind.List)
         {
-            <TaskListView View="this.effectiveView" Tasks="tasks" Search="@this.search" SelectedId="@(this.detailOpen ? this.selectedTaskId : null)" OnOpenTask="this.OnOpenTaskAsync" OnCopyId="this.OnCopyIdAsync" />
+            <TaskListView View="this.effectiveView" Tasks="tasks" Search="@this.search" SelectedId="@(this.detailOpen ? this.selectedTaskId : null)" OnOpenTask="this.OnOpenTaskAsync" OnCopyId="this.OnCopyIdAsync" OnCopyLink="this.OnCopyLinkAsync" RoomNames="this.roomNames" />
         }
         else
         {
             <TaskBoard View="this.effectiveView" Tasks="tasks" Search="@this.search" SelectedId="@(this.detailOpen ? this.selectedTaskId : null)" OnOpenTask="this.OnOpenTaskAsync"
-                       ViewChanged="this.OnEffectiveViewChangedAsync" OnEditColumns="this.OnEditColumnsClicked" OnCopyId="this.OnCopyIdAsync" />
+                       ViewChanged="this.OnEffectiveViewChangedAsync" OnEditColumns="this.OnEditColumnsClicked" OnCopyId="this.OnCopyIdAsync" OnCopyLink="this.OnCopyLinkAsync" RoomNames="this.roomNames" />
         }
 
         @if (tasks.Count == 0)
         {
             @* Spec §13.12 empty states, one rendering below the List and the Board (corrections-B7 12.4 item 1).
                "No tasks yet." carries no button of its own: the toolbar's "+ New task" is right above it. *@
-            <MudStack AlignItems="AlignItems.Center" Class="tasks-empty pa-8">
+            <div class="tasks-empty">
                 @if (this.Store.All.Count == 0)
                 {
-                    <MudText Typo="Typo.body1" Class="tasks-empty-message mud-text-secondary">No tasks yet.</MudText>
+                    <EmptyState Text="No tasks yet." />
                 }
                 else if (!string.IsNullOrWhiteSpace(this.search) && this.FilteredTasks(null).Count > 0)
                 {
-                    <MudText Typo="Typo.body1" Class="tasks-empty-message mud-text-secondary">No tasks match '@this.search'.</MudText>
+                    <EmptyState Text="@($"No tasks match '{this.search}'.")" />
                 }
                 else
                 {
-                    <MudText Typo="Typo.body1" Class="tasks-empty-message mud-text-secondary">No tasks match this View.</MudText>
-                    <MudButton Variant="Variant.Text" OnClick="this.ResetOverrides" Class="tasks-empty-action">Reset filters</MudButton>
+                    <EmptyState Text="No tasks match this View.">
+                        <Action>
+                            <MudButton Variant="Variant.Text" Size="Size.Medium" OnClick="this.ResetOverrides" Class="tasks-empty-action">Reset filters</MudButton>
+                        </Action>
+                    </EmptyState>
                 }
-            </MudStack>
+            </div>
         }
 
         @if (this.itemNotFoundText is not null)
@@ -194,15 +207,15 @@
             <MudAlert Severity="Severity.Warning" role="status" Class="tasks-item-not-found-alert">@this.itemNotFoundText</MudAlert>
         }
 
-        <MudDrawer Open="this.detailOpen" OpenChanged="this.OnDetailOpenChanged" Anchor="Anchor.End" Variant="DrawerVariant.Temporary"
-                   OverlayAutoClose="@(!this.detailHasPending)" Class="tasks-detail-drawer">
-            <div @ref="this.detailResizeHandle" class="tasks-detail-resize-handle" role="separator" aria-orientation="vertical" aria-label="Resize Task detail panel"></div>
+        <ResizableEndDrawer Open="this.detailOpen" OpenChanged="this.OnDetailOpenChanged" StorageKey="taskDetailPanelWidth"
+                            Title="@(this.selectedDraft is not null ? "New task" : "Task")"
+                            OverlayAutoClose="@(!this.detailHasPending)" Class="tasks-detail-drawer">
             @if (this.selectedTaskId is not null || this.selectedDraft is not null)
             {
                 <TaskDetail @ref="this.detail" @key="this.DetailKey" Id="this.selectedTaskId" Draft="this.selectedDraft"
                             Mode="TaskDetailMode.Panel" OnClose="this.OnDetailClosed" HasPendingChanged="this.OnDetailHasPendingChanged" />
             }
-        </MudDrawer>
+        </ResizableEndDrawer>
     }
 
     <ViewEditorDrawer Open="this.editorOpen" OpenChanged="this.OnEditorOpenChanged" Id="@this.editorViewId" Section="this.editorSection" />
@@ -227,17 +240,6 @@
     private TaskDraft? selectedDraft;
     private TaskDetail? detail;
     private bool detailHasPending;
-    private ElementReference detailResizeHandle;
-
-    /// <summary>The <c>localStorage</c> key <c>huddleResize.attachDrawer</c> (app.js) remembers the detail panel's dragged width under.</summary>
-    private const string DetailWidthStorageKey = "taskDetailPanelWidth";
-
-    /// <summary>The detail panel's narrowest and widest drag-resized widths, in pixels - narrow enough to still fit the Panel-mode conflict rows' stacked layout (manual test TASKS-07 finding F17), wide enough to stay short of crowding the List/Board behind it on a typical laptop screen.</summary>
-    private const int DetailWidthMinPx = 320;
-    private const int DetailWidthMaxPx = 800;
-
-    /// <summary>The detail panel's width before any drag has been recorded - matches <c>.tasks-detail-drawer</c>'s own CSS default in app.css, so a fresh browser (nothing in <c>localStorage</c> yet) renders the same width either way.</summary>
-    private const int DetailWidthDefaultPx = 420;
     private bool editorOpen;
     private string? editorViewId;
     private ViewEditorSection editorSection = ViewEditorSection.General;
@@ -265,7 +267,16 @@
     {
         this.ResolveEffectiveViewFromRoute();
         await this.ResolveItemRouteAsync();
+
+        if (this.effectiveView?.Fields.Contains("origin", StringComparer.Ordinal) is true)
+        {
+            IReadOnlyList<Room> rooms = await this.Directory.GetRoomsAsync();
+            this.roomNames = rooms.ToDictionary(room => room.Id, room => room.Name, StringComparer.Ordinal);
+        }
     }
+
+    /// <summary>Room names by id, for the Origin field of cards and rows.</summary>
+    private Dictionary<string, string> roomNames = new(StringComparer.Ordinal);
 
     /// <summary>The View-resolution half of <see cref="OnParametersSetAsync"/> - unchanged from before the item route existed.</summary>
     private void ResolveEffectiveViewFromRoute()
@@ -378,12 +389,7 @@
     private async Task DeleteViewAsync()
     {
         TaskView view = this.effectiveView;
-        bool? confirmed = await this.DialogService.ShowMessageBoxAsync(
-            "Delete View",
-            $"Delete '{view.Name}'? Tasks are not affected.",
-            yesText: "Delete",
-            cancelText: "Cancel");
-        if (confirmed != true)
+        if (!await ViewActions.ConfirmDeleteAsync(this.DialogService, view))
         {
             return;
         }
@@ -407,26 +413,10 @@
     /// Spec §13.9: on first render of the bare route, reads the remembered last View and navigates
     /// there if it still exists. The item route (Spec §13.13.3 step 2) reads the same remembered View
     /// to decide what renders under its panel, but never navigates - the URL stays on
-    /// <c>/tasks/item/{TaskIdText}</c> until the panel closes. First render is also when the detail
-    /// drawer's drag-to-resize handle is wired up (<c>huddleResize.attachDrawer</c>, app.js): the
-    /// drawer itself is never re-created while this page lives - only its <see cref="TaskDetail"/>
-    /// child is, per <see cref="DetailKey"/> - so one attach call is enough for the page's whole
-    /// lifetime, and every width the handle drags to afterwards is set and remembered entirely in
-    /// JS, with no further round trip through this method.
+    /// <c>/tasks/item/{TaskIdText}</c> until the panel closes.
     /// </summary>
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
-        if (firstRender)
-        {
-            await this.JS.InvokeVoidAsync(
-                "huddleResize.attachDrawer",
-                this.detailResizeHandle,
-                DetailWidthStorageKey,
-                DetailWidthMinPx,
-                DetailWidthMaxPx,
-                DetailWidthDefaultPx);
-        }
-
         if (firstRender && this.ViewId is null && this.TaskIdText is null && this.Options.Value.Tasks.Enabled)
         {
             await this.TryNavigateToLastViewAsync();
@@ -609,37 +599,19 @@
     /// <summary>The ids of every Task in the current effective View (Spec §10.8), unnarrowed by the search box, for <see cref="AiReactingChip.Watched"/>.</summary>
     private IReadOnlyList<TaskId> WatchedTaskIds => this.FilteredTasks(null).Select(t => t.Id).ToList();
 
-    private void OnTasksReloaded() => _ = this.DispatchAsync(() =>
-    {
-        this.StateHasChanged();
-        return Task.CompletedTask;
-    });
+    private void OnTasksReloaded() => _ = RendererDispatch.Repaint(this.InvokeAsync, this.StateHasChanged);
 
-    private void OnTaskChanged(TaskChange change) => _ = this.DispatchAsync(() =>
-    {
-        this.StateHasChanged();
-        return Task.CompletedTask;
-    });
+    private void OnTaskChanged(TaskChange change) => _ = RendererDispatch.Repaint(this.InvokeAsync, this.StateHasChanged);
 
     /// <summary>A change to <c>sprints.md</c> re-queries: <c>@current</c> and every Sprint name are resolved again on the next render (Sprints spec §12.4, E-S17).</summary>
-    private void OnSprintsChanged() => _ = this.DispatchAsync(() =>
-    {
-        this.StateHasChanged();
-        return Task.CompletedTask;
-    });
+    private void OnSprintsChanged() => _ = RendererDispatch.Repaint(this.InvokeAsync, this.StateHasChanged);
 
-    private void OnViewsChanged() => _ = this.DispatchAsync(() =>
+    private void OnViewsChanged() => _ = RendererDispatch.RunAsync(this.InvokeAsync, () =>
     {
         this.SetEffectiveViewFromStore(this.effectiveView.Id);
         this.StateHasChanged();
         return Task.CompletedTask;
     });
-
-    /// <summary>Invokes <paramref name="action"/> on the renderer's synchronization context, swallowing the two exceptions a hub event racing component teardown can throw (§13.11).</summary>
-    private Task DispatchAsync(Func<Task> action)
-    {
-        return RendererDispatch.RunAsync(this.InvokeAsync, action);
-    }
 
     private async Task TryNavigateToLastViewAsync()
     {
@@ -701,18 +673,11 @@
     /// Spec §13.13.1 warning), and shows the same success/warning toast as the detail header's button.
     /// </summary>
     /// <param name="id">The Task id to copy.</param>
-    private async Task OnCopyIdAsync(TaskId id)
-    {
-        bool copied = await this.JS.InvokeAsync<bool>("huddleClipboard.copy", id.ToString());
-        if (copied)
-        {
-            this.Snackbar.Add($"Copied {id}", Severity.Success, configure: null, key: "copy");
-        }
-        else
-        {
-            this.Snackbar.Add("Couldn't copy. The id is selected; press Ctrl+C.", Severity.Warning, configure: null, key: "copy");
-        }
-    }
+    private Task OnCopyIdAsync(TaskId id) => TaskClipboard.CopyIdAsync(this.JS, this.Snackbar, id, CancellationToken.None);
+
+    /// <summary>Copy link from a card or row menu: the same link the detail's Copy link copies.</summary>
+    /// <param name="id">The Task id the link opens.</param>
+    private Task OnCopyLinkAsync(TaskId id) => TaskClipboard.CopyLinkAsync(this.JS, this.Snackbar, this.Navigation.BaseUri, id, CancellationToken.None);
 
     private async Task TryStoreLastViewAsync(string viewId)
     {

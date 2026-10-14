@@ -90,12 +90,12 @@ this.
 | `S1c` | Top bar actions | `ThemeModeToggle` | Switches between the chosen light and dark Theme |
 | `S2` | Sidebar | `MudDrawer`, persistent, 240px | Always open; not resizable |
 | `S2a` | Needs You card | `NeedsYouCard` | Rooms waiting on the Human |
-| `S2b` | Chats group | `RoomList` (`MudNavGroup`), `RoomNavRow`, `NewChat` | Rooms that belong to no Team |
+| `S2b` | Chats group | `RoomList` (`MudNavGroup`), `RoomNavRow`, `NewChat` | Rooms that belong to no Team. A 1:1 Room's row leads with the Teammate's small avatar, a group Room's with the Chat icon; shared actions in `RoomActions` |
 | `S2c` | Teams group | `TeamsNav` (`MudNavGroup`) | Each Team expands to its Rooms and Projects; each row has a hover menu |
 | `S2d` | Teammates link | `NavTabLink` to `/teammates` | |
 | `S2e` | Tasks group | `TaskViewNav` (`MudNavGroup`) | Saved Task Views and "New view" |
 | `S2f` | Library link | `LibraryNavLink` | |
-| `S2g` | Sidebar footer | `MudNavMenu` `.nav-settings` | Archived chats and Settings, pinned to the bottom |
+| `S2g` | Sidebar footer | `MudNavMenu` `.nav-settings` | Two icon-only 36px rows, Archived chats and Settings, each with an `aria-label` and a tooltip (OP-4), pinned to the bottom |
 | `S3` | Workspace | `MudMainContent` `.main-column` | Also holds the invisible `TabSync`, `TabPersistence` and `LibraryLinkRouter` |
 
 `W1`, `W3` and `W6` appear here only to show where Figure 2 plugs in.
@@ -147,9 +147,11 @@ list, notices, cards, composer.
 | `C7a` | Stop | `MudIconButton` | Stops this Room's Turn |
 | `C7b` | Turn detail | `.turn-detail-panel` | Recent tool calls; an edit opens its preview (`EditPreview`) |
 | `C7c` | Draft text | `.message-body.streaming` | Ends in a blinking caret |
-| `C8` | Agent cards | `ProposalCard`, `SprintProposalCard`, `RetroProposalCard`, `QuestionCard`, `ElicitationCard` | Appear when an Agent needs a decision; one at a time |
+| `C8` | Agent cards | `ProposalCard`, `SprintProposalCard`, `RetroProposalCard`, `QuestionCard`, `ElicitationCard`, each an `AgentCard` shell | Appear when an Agent needs a decision, only in a Room that is not archived. The shell is an outlined `MudPaper` with `role="region"`, an `aria-label`, a `subtitle1` title ("Nova is asking"), the body, then one actions row. Never a `MudAlert` |
 | `C8a` | Question card | `QuestionCard` | Shown as the example |
-| `C9` | Notices | `MudAlert` rows | Present only when something needs saying |
+| `C8b` | Card actions row | `.agent-card-actions` | Left-aligned, primary first: the Filled primary, then Outlined secondaries. The refusing verb is Decline for a proposal and Dismiss for a request answered with nothing. While a call runs the clicked button shows its busy label ("Approving…", "Accepting…", "Sending…") and the others are disabled |
+| `C8c` | Retro change row | `.retro-change` | A change's diff with its own actions row (Accept, Decline) in the card body; the shared reason field sits above the changes |
+| `C9` | Notices | `MudAlert` rows | Present only when something needs saying. An agent card (`C8`) is not a notice |
 | `C9a` | Member health alert | `MudAlert` Warning, `role="alert"` | A Teammate that is Offline or Degraded, with a reason |
 | `C9b` | Reply note | `MudAlert` Info, dense, `role="status"` | Why nobody replied |
 | `C9c` | Budget prompt | `MudAlert` Warning with Continue and Dismiss | The Room's reply budget is spent |
@@ -172,8 +174,8 @@ error alert, the budget caption and the "continue" notes, which sit in the `C9` 
 | Code | Name | Component | Notes |
 | --- | --- | --- | --- |
 | `T1` | Page container | `MudContainer`, full width, `pa-4` | |
-| `T2` | Header | `.tasks-header` | View name as an `h1`, then its controls |
-| `T2a` | View actions | `MudFabMenu` | Edit task view, Delete task view |
+| `T2` | Header | `PageHeader` inside `.tasks-header` | View name as the page's `h1`; its description, Reset filters, the AI chip and `T2a` sit on the right |
+| `T2a` | View actions | `MudMenu`, `MoreVert` icon button | Edit view, Delete view (the same menu as the sidebar row) |
 | `T2b` | Reset | `MudLink` | Appears only when the Human has overridden the View |
 | `T2c` | AI reacting chip | `AiReactingChip` | Tasks an Agent is acting on |
 | `T9` | Notices | `MudAlert`, `WakeToasts` | Tasks off, invalid or missing View, load errors, ignored lines |
@@ -188,11 +190,11 @@ error alert, the budget caption and the "continue" notes, which sit in the `C9` 
 | `T4` | Content | `TaskBoard` or `TaskListView` | Or an empty state with "Reset filters" |
 | `T5` | Column | A `MudDropZone` per lane and column | Header with a label the Human can rename |
 | `T6` | Task card | `TaskCard`, `MudBadge` | Draggable between columns |
-| `T7` | Task detail | `MudDrawer`, temporary, `Anchor.End` | Holds `TaskDetail` |
-| `T7a` | Resize handle | `.tasks-detail-resize-handle`, `role="separator"` | Drag to change the drawer's width |
+| `T7` | Task detail | `ResizableEndDrawer`, temporary, `Anchor.End` | Header with title ("Task" or "New task") and a close button; holds `TaskDetail` in `pa-4` |
+| `T7a` | Resize handle | `.resizable-drawer-handle`, `role="separator"`, `tabindex="0"` | Drag, or press Left and Right (Shift for larger steps, Home and End for the limits), to change the drawer's width |
 
-Not drawn: the View editor, `ViewEditorDrawer`, which opens from the same edge as `T7`
-and also resizes; and `TaskDetailDialog`, the dialog form of the detail (see Figure 8).
+Not drawn: the View editor, `ViewEditorDrawer`, which is a `ResizableEndDrawer` too (titled
+"Edit view" or "New view") and opens from the same edge as `T7`; and `TaskDetailDialog`, the dialog form of the detail (see Figure 8).
 
 ## Figure 5: The Library page
 
@@ -202,17 +204,17 @@ and also resizes; and `TaskDetailDialog`, the dialog form of the detail (see Fig
 
 | Code | Name | Component | Notes |
 | --- | --- | --- | --- |
-| `L1` | Explorer | `LibraryExplorer`, `MudSplitPanel` | Side by side on this page; other hosts can stack the panels |
-| `L1a` | Root path | `h2` | The root's full path; some hosts show a title here instead |
+| `L1` | Explorer | `LibraryExplorer`, `MudSplitPanel` | Under the `PageHeader` "Library"; the split is `h-100` with `min-height: 0` and both panels are full height; side by side on this page, other hosts can stack the panels |
+| `L1a` | Root path | `h2` | The root's full path, shown only when the page is scoped to one root, below the page's `h1`; some hosts show a title here instead |
 | `L2` | Tree panel | First panel | |
 | `L2a` | Tree | `LibraryTree`, `MudTreeView` | Loads a folder's children when it opens |
 | `L2b` | Filtered results | `.library-search-results` | Replace the tree while a filter is set |
-| `L4` | Divider | `MudSplitPanel` divider | Draggable; the position is remembered |
+| `L4` | Divider | `MudSplitPanel` divider | A `lines-default` hairline; draggable; the position is remembered |
 | `L3` | Document panel | Second panel, `LibraryDocument` | With nothing open: "Select a note to read it" and a New note button |
 | `L3a` | Toolbar | `MudToolBar`, dense | Path or breadcrumbs, then the controls on its right |
 | `L3b` | Mode switch | `HuddleSegmentedControl` | Read, Edit, Split |
 | `L3c` | Document actions | `MudIconButton` row | Copy, Pop out, Close |
-| `L3d` | Banners | `MudAlert`, `.library-document-banner` | Moved or deleted, newer on disk (Reload or Keep mine), save error, read-only reason |
+| `L3d` | Banners | Dense `MudAlert` with a role, `.library-document-banner` | Moved or deleted, newer on disk (Reload or Keep mine), save error, read-only reason. The Move dialog's refusal is the same Dense `MudAlert` |
 | `L3e` | Content | `LibraryEditor` (CodeMirror) | Editor, preview, or both |
 | `L3f` | Backlinks panel | `BacklinksPanel` | Files that link here |
 
@@ -225,20 +227,20 @@ active panel. Left, the Team page; right, Settings.
 
 | Code | Name | Component | Notes |
 | --- | --- | --- | --- |
-| `M1` | Team page container | `MudContainer`, full width (`.team-page-wide`) | `MaxWidth.Large` applies only to the not-found notice |
-| `M2` | Duplicate | `MudButton` | Team pages only, not Project pages |
+| `M1` | Team page container | `MudContainer`, `MaxWidth.False`, `pa-4` (`.team-page-wide` only sizes the panels) | Opens with the `PageHeader` (the Team or Project name as the page's `h1`). `MaxWidth.Large` applies only to the not-found and "turned off" notices, which are `role="status"` or `role="alert"` as the case needs |
+| `M2` | Duplicate | `MudButton`, Outlined, in the `PageHeader` actions slot | At its natural width, on the right of the `h1`; Team pages only, not Project pages |
 | `M3` | Team spend | `TeamSpend` | One line per currency |
 | `M4` | Tabs | `MudTabs` `.team-page-tabs` | Keyed by Team and Project |
-| `M4a` | Tab rail | `MudTabPanel` headers | Members, Files, Tasks, Process; a Project page and a disabled feature show fewer |
+| `M4a` | Tab rail | `MudTabPanel` headers, each with its `TabIcons` entity icon | Members, Files, Tasks, Process; a Project page and a disabled feature show fewer |
 | `M4b` | Active panel | `TeamMembers`, `TeamFilesTab`, `TeamTasksTab` or `ProcessTab` | Only the selected panel is rendered |
 | `M5` | Search | `MudTextField` | Filters the panel's list |
-| `M6` | Member card | A tile in `TeamMembers` | Avatar, name, role |
+| `M6` | Member row | A `MudListItem` row in `TeamMembers` | Avatar, name, role; it opens the Teammate card (UX-D06) |
 | `G1` | Settings container | `MudContainer`, `MaxWidth.Large` | |
-| `G1a` | Reset all | `ResetAllControl` | "Reset all to defaults"; disabled until a prompt has been changed, then asks to confirm |
-| `G2` | Tabs | `MudTabs` | The active tab follows the route |
-| `G2a` | Tab rail | | Prompts, Appearance, Personas, Skills, Team Types, Library |
-| `G3` | Active panel | `PromptsPanel`, `Appearance`, `Personas`, `SkillsPanel`, `TeamTypesPanel` or `LibraryPanel` | |
-| `G3a` | Save | `MudButton` Filled | Prompts panel only |
+| `G1a` | Reset all | `ResetAllControl` | In the Prompts panel's action row beside Save; "Reset all to defaults", disabled until a prompt has been changed, then asks inline (`InlineConfirm`) |
+| `G2` | Tabs | `MudTabs` | The active tab follows the route; under a `PageHeader` "Settings" |
+| `G2a` | Tab rail | | Prompts, Appearance, Personas, Skills, Team Types, Library, each with an icon |
+| `G3` | Active panel | `PromptsPanel`, `Appearance`, `Personas`, `SkillsPanel`, `TeamTypesPanel` or `LibraryPanel` | Each opens with `SettingsIntro`, `StoredAt` and an action row |
+| `G3a` | Save | `MudButton` Filled | Prompts panel only, in a sticky action row with Reset all |
 
 ## Figure 7: The Teammates page
 
@@ -248,13 +250,13 @@ active panel. Left, the Team page; right, Settings.
 
 | Code | Name | Component | Notes |
 | --- | --- | --- | --- |
-| `P1` | Page container | `MudContainer`, `MaxWidth.Large` | Opens with a line of explanatory text |
+| `P1` | Page container | `MudContainer`, `MaxWidth.Large` | Opens with the `PageHeader` "Teammates", then a line of explanatory text |
 | `P2` | Toolbar | `MudToolBar`, dense | |
 | `P2a` | New teammate | `MudButton` | Starts the create flow |
-| `P2b` | Team filter | `MudSelect` | Narrows the groups to one Team; shown once there are Teammates |
+| `P2b` | Team filter | `MudSelect`, Outlined and Dense | Narrows the groups to one Team; shown once there are Teammates |
 | `P5` | Load notice | `MudAlert` Warning | "Files that didn't load" |
 | `P3` | Group | `section.teammates-group` | One per Team, with a heading and a list |
-| `P4` | Teammate tile | `button.teammate-tile` | Parts: avatar (`TeammateAvatar`, large), name, role title, alias chip, status chip with `StatusDot`, and a "Working on" line |
+| `P4` | Teammate tile | `button.teammate-tile` | Parts: avatar (`TeammateAvatar`, large, a circle), name, role title, alias `MudChip` (small), status `MudChip` (small) with `StatusDot`, and a "Working on" line; all left-aligned |
 
 Not drawn: the empty lines "No Personas yet" and "No teammates in this team".
 
@@ -266,7 +268,7 @@ Containers that float above a page. Each cell shows one over a dimmed page.
 
 | Code | Name | Component | Use it for |
 | --- | --- | --- | --- |
-| `O1` | Dialog | `MudDialog` through `IDialogService` | A form or a short flow: the Teammate card, New team, Add member, the Task detail dialog |
+| `O1` | Dialog | `MudDialog` through `IDialogService` | A form or a short flow: the Teammate card (opened with `HuddleDialogOptions.SmallForm`: MudBlazor's close button, no backdrop dismissal; its avatar opens a second `O1` dialog hosting `AvatarEditor`), New team, Add member, the Task detail dialog |
 | `O1a` | Dialog title | `.mud-dialog-title` | May carry a close button |
 | `O1b` | Dialog content | `.mud-dialog-content` | |
 | `O1c` | Dialog actions | `.mud-dialog-actions` | Cancel on the left of the primary action |
@@ -276,7 +278,7 @@ Containers that float above a page. Each cell shows one over a dimmed page.
 | `O4` | Snackbar | `ISnackbar` | A transient result; repeated messages with one key collapse |
 | `O4a` | Toast | | The message and an optional action |
 | `O5` | Message box | `ShowMessageBoxAsync` | A yes or no: a title, one line, Cancel and the action |
-| `O6` | Inline confirm | `InlineConfirm` | A destructive yes or no that swaps in for the row itself |
+| `O6` | Inline confirm | `InlineConfirm` | A destructive yes or no that swaps in for the row itself; the Teammate card's Remove ("Remove {name}?" / "Remove") and Reset ("Reset to default?" / "Reset") use it |
 | `O7` | Tooltip | `MudTooltip` | Names an icon-only control; not a substitute for an `aria-label` |
 | `O8` | Reconnect modal | `ReconnectModal.razor`, a `<dialog>` | The circuit dropped; offers Retry or Resume |
 

@@ -1,3 +1,4 @@
+using AngleSharp.Dom;
 using Bunit;
 using Bunit.TestDoubles;
 using Microsoft.AspNetCore.Components;
@@ -6,7 +7,9 @@ using Microsoft.Extensions.Options;
 using MudBlazor;
 using Agency.Huddle.App;
 using Agency.Huddle.App.Components.Pages;
+using Agency.Huddle.App.Components.Shared;
 using Agency.Huddle.App.Components.Teams;
+using Agency.Huddle.App.Tabs;
 using Agency.Huddle.App.Teams;
 using Agency.Huddle.Tests.Teams;
 
@@ -25,6 +28,8 @@ public sealed class TeamPageTests
     private const string TabHeaderSelector = ".team-page-tabs .mud-tab";
 
     private const string AlertSelector = ".team-page-notice[role='alert']";
+
+    private const string StatusSelector = ".team-page-notice[role='status']";
 
     /// <summary>The page declares exactly the four route templates of Spec §6.6, with <c>projects</c> a literal segment.</summary>
     [Fact]
@@ -98,7 +103,7 @@ public sealed class TeamPageTests
 
         IRenderedComponent<TeamPage> cut = RenderPage(ctx, "Business", "Marketing Project");
 
-        Assert.Equal("Files and Tasks are turned off in this installation.", cut.Find($"{AlertSelector} .team-page-notice-text").TextContent.Trim());
+        Assert.Equal("Files and Tasks are turned off in this installation.", cut.Find($"{StatusSelector} .team-page-notice-text").TextContent.Trim());
         Assert.Equal(Severity.Info, cut.FindComponent<MudAlert>().Instance.Severity);
         Assert.Empty(TabHeaders(cut));
         Assert.Empty(RenderedTabs(cut));
@@ -378,9 +383,89 @@ public sealed class TeamPageTests
         _ = RenderPage(ctx, "Business");
         Assert.Equal(1, catalog.ChangedSubscriberCount);
 
-        await ctx.DisposeComponentsAsync();
+        await ctx.DisposeComponentsOnDispatcherAsync();
 
         Assert.Equal(0, catalog.ChangedSubscriberCount);
+    }
+
+    /// <summary>The Team page opens with <c>PageHeader</c> (UX-001): one h1 at Typo.h5 whose text is the catalog's own spelling of the Team.</summary>
+    [Fact]
+    public async Task TeamPage_Header_IsTheTeamNameAsTheOnlyH1()
+    {
+        await using MudBunitContext ctx = NewContext(Catalog());
+
+        IRenderedComponent<TeamPage> cut = RenderPage(ctx, "business");
+
+        IElement heading = Assert.Single(cut.FindAll("h1"));
+        Assert.Equal("Business", heading.TextContent.Trim());
+        Assert.Contains("mud-typography-h5", heading.ClassList);
+        Assert.NotNull(cut.FindComponent<PageHeader>());
+    }
+
+    /// <summary>The Project page's h1 is the Project's own spelling, and it has no Duplicate button (UX-001, UX-004).</summary>
+    [Fact]
+    public async Task ProjectPage_Header_IsTheProjectNameWithoutDuplicate()
+    {
+        await using MudBunitContext ctx = NewContext(Catalog());
+
+        IRenderedComponent<TeamPage> cut = RenderPage(ctx, "Business", "marketing project");
+
+        Assert.Equal("Marketing Project", Assert.Single(cut.FindAll("h1")).TextContent.Trim());
+        Assert.DoesNotContain(cut.FindAll("button"), button => string.Equals(button.TextContent.Trim(), "Duplicate", StringComparison.Ordinal));
+    }
+
+    /// <summary>Duplicate sits in the header's actions slot, in the same row as the h1, and is no longer the full-width bar above the tab rail (UX-004).</summary>
+    [Fact]
+    public async Task TeamPage_Duplicate_SitsInTheHeaderRowAtItsNaturalWidth()
+    {
+        await using MudBunitContext ctx = NewContext(Catalog());
+
+        IRenderedComponent<TeamPage> cut = RenderPage(ctx, "Business");
+
+        IElement row = Assert.IsAssignableFrom<IElement>(cut.Find("h1").ParentElement);
+        IElement duplicate = Assert.Single(row.QuerySelectorAll("button"));
+        Assert.Equal("Duplicate", duplicate.TextContent.Trim());
+        Assert.DoesNotContain("team-page-duplicate", duplicate.ClassList);
+        Assert.Contains("mb-4", row.ClassList);
+    }
+
+    /// <summary>The Team page container is <c>MaxWidth.False</c> with <c>pa-4</c> padding, for a Team page and a Project page alike (UX-002, UX-003).</summary>
+    /// <param name="project">The Project, or <see langword="null"/> for a Team page.</param>
+    [Theory]
+    [InlineData(null)]
+    [InlineData("Marketing Project")]
+    public async Task Page_Container_IsWideWithSixteenPixelPadding(string? project)
+    {
+        await using MudBunitContext ctx = NewContext(Catalog());
+
+        IRenderedComponent<TeamPage> cut = RenderPage(ctx, "Business", project);
+
+        Assert.Equal(MaxWidth.False, cut.FindComponent<MudContainer>().Instance.MaxWidth);
+        Assert.Contains("pa-4", cut.Find(".mud-container").ClassList);
+    }
+
+    /// <summary>The tab rail takes its icons from <c>TabIcons</c>, the entity table of design-system.md (UX-008): Teammates for Members, Library for Files, Tasks for Tasks.</summary>
+    [Fact]
+    public async Task TabRail_IconsComeFromTabIcons()
+    {
+        await using MudBunitContext ctx = NewContext(Catalog());
+
+        IRenderedComponent<TeamPage> cut = RenderPage(ctx, "Business");
+
+        string?[] icons = [.. cut.FindComponents<MudTabPanel>().Select(panel => panel.Instance.Icon)];
+        Assert.Equal([TabIcons.For("teammates"), TabIcons.For("library"), TabIcons.For("tasks")], icons);
+    }
+
+    /// <summary>The "turned off" notice is a status, not an alert: it says nothing went wrong (UX-V13 family, U19 carry-over).</summary>
+    [Fact]
+    public async Task FeaturesOffNotice_IsAStatus()
+    {
+        await using MudBunitContext ctx = NewContext(Catalog(), libraryEnabled: false, tasksEnabled: false);
+
+        IRenderedComponent<TeamPage> cut = RenderPage(ctx, "Business", "Marketing Project");
+
+        Assert.Single(cut.FindAll(StatusSelector));
+        Assert.Empty(cut.FindAll(AlertSelector));
     }
 
     /// <summary>The test context: the fake catalog, both feature flags, and the three tab components replaced by parameter-capturing stubs.</summary>

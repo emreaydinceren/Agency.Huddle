@@ -95,11 +95,11 @@ mapping function, never at a call site (UX-V14).
 | Subject | Mapping | Source |
 | --- | --- | --- |
 | Task state | Backlog default, To Do info, In Progress warning, Review secondary, Done success, Cancelled/Duplicate/Rejected error | [`TaskColors.cs`](../../src/Huddle.App/Components/Tasks/TaskColors.cs) |
-| Task priority | Low default, Medium info, High warning, Urgent error | `TaskColors.cs` (no caller yet: UX-045) |
-| Task due date | Overdue is error, on the date and its icon only | Add it to `TaskColors.cs` (UX-043) |
+| Task priority | Low default, Medium info, High warning, Urgent error | `TaskColors.cs`, drawn by `TaskPriorityChip` |
+| Task due date | Overdue is error, on the date and its icon only | `TaskColors.cs`; `TaskDates.IsOverdue` decides |
 | Presence | Awake success, Asleep default, Offline error | `TaskColors.cs` |
 | Teammate health | Online success, Degraded warning, Starting warning-lighten, Offline error | [`StatusDot.razor`](../../src/Huddle.App/Components/Shared/StatusDot.razor) |
-| Needs You reason, search notice | Not yet mapped | Move into a sibling of `TaskColors.cs` (UX-V14) |
+| Needs You reason, search notice | `StatusColors.For(NeedsYouReason)`, `StatusColors.For(SearchNoticeKind)` | [`StatusColors.cs`](../../src/Huddle.App/Components/Shared/StatusColors.cs). The Composer's upload chip still colours itself inline (UX-V14) |
 
 A status colour never stands alone: a chip has its text, a dot has an accessible name
 (UX-V08).
@@ -389,6 +389,7 @@ acts on one tab lives inside that tab, not above the rail (UX-010).
 | An error from the action | `MudAlert Severity.Error Dense role="alert"` above the actions. Not a raw `<p>` or a `MudText` (UX-025) |
 | Actions | Right-aligned in this order: **Cancel** (`Variant.Text`), then **Back** if there is one, then the **primary action** (`Variant.Filled`, `Color.Primary`, or `Color.Error` when it destroys). All `Size.Small` (UX-020, UX-021) |
 | Busy | The primary action disables and shows a busy label ("Saving…") or a spinner |
+| Picker dialog | No actions row; `CloseButton = true` is the way out |
 
 ### Drawer anatomy
 
@@ -449,29 +450,35 @@ Start from the pattern in the file the table names; the full list is in
 | `StatusDot` | A coloured dot for a Teammate's health | Use it; don't copy the state-to-class switch |
 | `HuddleSegmentedControl` | A pill track with a sliding indicator, up to five options | Colours come from `background-gray` and `surface` |
 | `InlineConfirm` | A Confirm/Cancel row that swaps in for a list row while a destructive action awaits an answer | Confirm takes focus, Escape cancels, both buttons disable while busy. Pass `ConfirmText` |
-| `ProposalCard`, `QuestionCard`, `ElicitationCard`, `RetroProposalCard`, `SprintProposalCard` | Cards an Agent puts in front of the Human | Rendered inline in the Transcript. The outcome is never card state: once decided, the card goes and the decision appears as a posted Message (Spec §6.11). Each is an outlined panel with a title and an in-place action row (UX-030 to UX-035) |
+| `ProposalCard`, `QuestionCard`, `ElicitationCard`, `RetroProposalCard`, `SprintProposalCard` | Cards an Agent puts in front of the Human | Rendered inline in the Transcript. The outcome is never card state: once decided, the card goes and the decision appears as a posted Message (Spec §6.11). Each is an outlined panel with a title and an in-place action row (UX-030 to UX-035). `QuestionCard` uses buttons with `aria-pressed` rather than radios because it owns the selection (see its header comment); `ElicitationCard` uses radios and checkboxes |
 | `NeedsYouCard` | Rooms waiting on the Human | Sidebar, above the Room list |
 | `Composer` and `ReferencePicker` | Message input and the `@` picker | The picker is a popover; its keyboard shortcuts are in the User Guide |
 | `PageBreadcrumbs` | A pane's trail | Drawn by the shell, not by a page |
-| `ChipCloud` | A wrapping cloud of filter chips, selected first | Selection reads as text and `aria-pressed`, never by colour alone. Use it wherever chips filter a list (UX-R19) |
+| `ChipCloud` | A wrapping cloud of filter chips, selected first | Selection reads as text and `aria-pressed`, never by colour alone. Use it wherever chips filter a list. `Quiet` draws the unselected chips without a fill; `AvatarChipCloud.Arrange` orders them |
+| `PageHeader` | A page's one `h1` (`Typo.h5`) with a right-aligned `Actions` slot; also sets the Tab title | Every page starts with it; a page never writes its own `h1` or a loose action row |
+| `EmptyState` | An empty list, table or pane: `Typo.body1`, secondary colour, `role="status"`, a next-step sentence, an optional `Icon` and `Action` | `FullPane` for a whole-pane empty state (`2rem`), otherwise inline (`1rem`). In a table, put it in a `colspan` row |
+| `SearchField` | The one search box: outlined, dense, `Filled.Search` adornment, clearable, debounced | Team page, Tasks and Skill import use it; takes `Value`, `Placeholder`, `AriaLabel` |
+| `TeammateLabel` | A Teammate's dot, avatar and name on one line | `Name`, `State`, `Avatar`, `IsUser`. New chat and Invite use it; don't rebuild the row |
+| `NameDialog` | A one-field name dialog: label, live validation, Enter submits, focus on open | `Label`, `ConfirmText`, `InitialValue`, `Validate`, `SubmitAsync`. Rename, New note, New folder, New project, Add folder, New team and Duplicate use it. `NewTeamDialog` no longer exists; a New project goes through `NameDialog` too (UX-R14) |
+| `ConfirmDialog` and `ConfirmAsync` | A destructive or irreversible yes or no that needs a dialog | `await DialogService.ConfirmAsync(title, message, confirmText, danger)` returns `true` only when confirmed. Use `InlineConfirm` instead when the answer replaces a list row |
+| `HuddleDialogOptions` | The two dialog option sets | `SmallForm` for forms and confirms (close button, no backdrop dismiss); `Picker` for list pickers (backdrop dismisses). Never build `DialogOptions` by hand |
+| `AgentCard` and `AgentCardBase` | The shell and the busy logic of the five Transcript cards | `AgentCard` draws the outlined panel, title and action row; `AgentCardBase` owns load, subscribe, the archived check and `RunBusyAsync`, which reports a failure through a keyed snackbar. A new card derives from it |
+| `ResizableEndDrawer` | The Task detail and View editor drawers | Drag and keyboard resize (Arrow, Home, End), width remembered under `StorageKey`, clamped 320 to 800px; reads the unzoomed width under the 90% zoom |
+| `TaskStatusChip`, `TaskPriorityChip`, `TaskAssignee` | Board, List, card and picker renderings of a Task's State, Priority and Assignee | Colours and icons come from `TaskColors`. A Board card shows no State chip, because its column names it |
+| `TaskActionsMenu` | The `Actions for {id}` menu on a Task card, List row and detail | Same items everywhere (Move to, Copy ID, Copy link); the detail adds its own through `ExtraItems` |
+| `TaskPicker` | Choosing another Task (the detail's pickers, `DuplicatePickerDialog`) | `Value`, `Excluding`, `Label` |
+| `TaskClipboard` | Copying a Task's id or link and reporting the result | A helper, not a component; Tasks, the detail and the actions menu share it |
+| `ConflictRow` | One field of a Task edit conflict, as a panel `div` or an expanded table row | `Field`, `Stacked`, `TheirsText`, `YoursText`, `Choice` |
+| `AvatarEditor` | Choosing a Teammate's avatar: library, upload, text | `SaveMode` is immediate (Settings, Appearance) or buffered (`AvatarEditorDialog`, the Teammate card). One editor, three hosts |
+| `SearchCardShell` | The frame of every Global search result: icon, title, meta, snippet, trailing slot | Each `*SearchCard` fills the slots; `AccessibleName` and `Archived` are set once here |
+| `SettingsIntro`, `StoredAt`, `ProblemList` | The top of a Settings panel (one intro paragraph, a "Stored at" line) and its "Problems" list | Every Settings panel opens with `SettingsIntro` then `StoredAt`; `ProblemList` shows nothing when `Count` is 0 |
+| `ActionIcons`, `StatusColors`, `Plural`, `ByteSize`, `MessageDisplay.TimeLabel`/`FileName`, `RoomLinkCopier`, `RendererDispatch` | Helpers that remove per-site copies | Icon vocabulary for actions (never `Outlined.Add` or a `+ ` label), status-to-colour maps, "1 member" and "2 members", file sizes, message times, copying a Room link, rendering from a background event. Catalogued in [UXDesignGuidelines.md](UXDesignGuidelines.md#helpers) |
 
 ### Components to build
 
-These shapes recur, and today each site hand-builds its own. **The next change that
-touches one of these sites builds the component and moves that site onto it**, rather
-than adding another copy. Until then, follow the anatomy on this page.
-
-| Component | Replaces | Rows |
-| --- | --- | --- |
-| `PageHeader` | Per-page titles and loose action buttons | UX-001, UX-004 |
-| `EmptyState` | About 17 hand-written empty lines: `Typo.body1`, secondary colour, `role="status"`, a next-step sentence, an optional icon and action | UX-R20, UX-V11 |
-| `NameDialog` | Rename, NamePrompt, AddFolder, NewTeam and Duplicate | UX-R10 |
-| `ConfirmDialog` | `DeleteDialog` and every destructive message box | UX-R12 |
-| `AgentCard` and `AgentCardBase` | The five Transcript cards' shell and busy logic | UX-R01 |
-| `ResizableEndDrawer` | The Task detail and View editor drawers and their handles | UX-R05 |
-| `SearchField` | The Team page, Tasks and Skill import search fields | UX-055 |
-| `TaskStatusChip`, `TaskPriorityChip`, `TaskAssignee` | Board, List and search renderings of the same fields | UX-R07 |
-| `TeammateLabel` | Dot, avatar and name rows in New chat and Invite | UX-R23 |
+None are planned. The shapes the audit found recurring are all built and are listed under
+[Huddle components](#huddle-components). When a change finds a shape hand-built in a second
+place, build the component then and add it to that table; don't add another copy.
 
 ### Patterns worth copying
 
@@ -574,11 +581,24 @@ Words follow [language.md](language.md). These rules decide the form.
 | Only MudBlazor variables and `--font-mono` in `var()` | `AppCss_UsesOnlyMudBlazorVariables`, `ScopedCss_UsesOnlyMudBlazorVariables` |
 | Palette contrast | `ThemeCatalogTests` |
 | No colour literal in an inline `style` attribute | `RazorComponents_NoInlineColourLiteralInStyleAttribute` |
+| `Size.Small` on buttons, icon buttons, chips, toggles and FABs (CV1) | `UiConventionTests` |
+| `Variant.Outlined` and `Margin.Dense` on inputs (CV2) | `UiConventionTests` |
+| A `role` on every `MudAlert` (CV3) | `UiConventionTests` |
+| A `key` on every `Snackbar.Add` (CV4) | `UiConventionTests` |
+| No `ReadOnly` on an input; use `Disabled` (CV5) | `UiConventionTests` |
+| No `Typo.h1` to `Typo.h4` and no raw `<h1>` to `<h6>` (CV6) | `UiConventionTests` |
+| No `= default!` or `= null!` (CV7) | `UiConventionTests` |
+| No `Outlined.Add`, `ContentPaste` or `+ ` label (CV8) | `UiConventionTests` |
+| No `style=` with a literal value (CV9) | `UiConventionTests` |
+| No component-local `DispatchAsync` (CV10) | `UiConventionTests` |
+| In a stylesheet: radius, font size, spacing over 2px, `z-index` over 2 and `!important` come from the scales (CV11) | `UiConventionTests` |
 | Everything else on this page | Review, and the checklist below |
 
-The rules most often broken are the ones only review enforces: `Size.Small`,
-`Variant.Outlined`, a `MudAlert` role and a snackbar `key`. Each could become a source
-test in the style of the `AppCss_*` tests. Until one exists, review checks them.
+`UiConventionTests` (`tests/Huddle.Tests/Ui/Conventions`) scans `src/Huddle.App` and fails
+on any violation not listed in `Baseline/Exceptions.txt`. Every area baseline file is empty;
+an exception names the rule, the file, a count and the reason, and only the manager adds
+one. The sidebar's text sizes are the one permanent exception. What the test can't see stays
+with review: copy, icon choice, layout and the checklist below.
 
 ## Checklist for a new or changed screen
 
@@ -628,9 +648,9 @@ test in the style of the `AppCss_*` tests. Until one exists, review checks them.
 
 These are open questions, not decisions. Raise them before relying on them.
 
-- **No global MudBlazor defaults.** `Size.Small` and `Variant.Outlined` are set per call
-  site. Whether 9.10.0 can set them once is unchecked; if it can't, a thin wrapper is the
-  fallback (UX-V01, UX-V02).
+- **No global MudBlazor defaults.** MudBlazor 9.10.0 can't set `Size.Small` and
+  `Variant.Outlined` once, so they are set per call site and kept by the convention test
+  (CV1, CV2) rather than by a wrapper.
 - **No narrow-width guidance for the shell.** The drawer is persistent at 240px with no
   collapse, and only the Task list has a narrow-width rule.
 - **Two spacing scales.** Markup uses MudBlazor's px utilities and the stylesheet uses

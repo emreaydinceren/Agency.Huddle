@@ -17,6 +17,7 @@
 @inject IServiceProvider Services
 
 <MudContainer MaxWidth="MaxWidth.Large" Class="pa-4">
+    <PageHeader Title="Teammates" />
     <MudText Typo="Typo.body2" Class="mud-text-secondary">
         A Persona is a Markdown file describing how one teammate should behave, plus the model it
         thinks with. Add one and that teammate comes online with a chat of its own. Editing the file,
@@ -26,7 +27,7 @@
 
     @* The same toolbar shape as the Tasks page: the create action leads, the narrowing controls follow. *@
     <MudToolBar Dense="true" Class="gap-4 mb-4">
-        <MudButton StartIcon="@Icons.Material.Outlined.Add" Color="Color.Primary" OnClick="this.BeginCreate" Class="btn-action-tight">New teammate</MudButton>
+        <MudButton Size="Size.Small" StartIcon="@Icons.Material.Filled.Add" Color="Color.Primary" OnClick="this.BeginCreate" Class="btn-action-tight">New teammate</MudButton>
 
         @if (this.entries.Count > 0)
         {
@@ -34,7 +35,7 @@
                semantics the old <select>'s @onchange comment called out. Never touches ModelCatalog or
                PersonaStore's write path - selecting a team is pure display narrowing over state already
                loaded, the same "never probes" guarantee a plain page load has. *@
-            <MudSelect T="string" Label="Team" Value="@this.selectedTeam" ValueChanged="this.OnTeamFilterChanged" Class="teammates-filter">
+            <MudSelect Variant="Variant.Outlined" Margin="Margin.Dense" T="string" Label="Team" Value="@this.selectedTeam" ValueChanged="this.OnTeamFilterChanged" Class="teammates-filter">
                 <MudSelectItem T="string" Value="@string.Empty">All teams</MudSelectItem>
                 @foreach (var team in this.teams)
                 {
@@ -48,7 +49,7 @@
        load is impossible to miss, rather than just silently absent from the directory below. *@
     @if (this.rejectedFiles.Count > 0)
     {
-        <MudAlert Severity="Severity.Warning" Class="mb-4">
+        <MudAlert role="status" Severity="Severity.Warning" Class="mb-4">
             <MudText Typo="Typo.subtitle2">Files that didn't load</MudText>
             <ul class="teammates-rejected-list">
                 @foreach (var rejected in this.rejectedFiles)
@@ -64,7 +65,7 @@
 
     @if (this.entries.Count == 0)
     {
-        <MudText Typo="Typo.body2" Class="mud-text-secondary">No Personas yet. Choose <strong>New teammate</strong> to add one.</MudText>
+        <EmptyState Text="No Teammates yet. Choose New teammate." />
     }
     else
     {
@@ -72,14 +73,14 @@
 
         if (groups.Count == 0)
         {
-            <MudText Typo="Typo.body2" Class="mud-text-secondary">No teammates in this team.</MudText>
+            <EmptyState Text="No teammates in this team." />
         }
         else
         {
             foreach (var group in groups)
             {
                 <section class="teammates-group">
-                    <h2 class="teammates-group-heading">@group.Heading</h2>
+                    <MudText Typo="Typo.h6" HtmlTag="h2" Class="teammates-group-heading">@group.Heading</MudText>
                     <ul class="teammates-list">
                         @foreach (var entry in group.Members)
                         {
@@ -91,7 +92,7 @@
                                    and nesting a button inside (or around) a MudCard would be two interactive
                                    elements fighting over the same click. *@
                                 <button type="button" class="teammate-tile" @onclick="() => this.OpenCard(entry.Name)">
-                                    <TeammateAvatar Name="@entry.Name" Avatar="this.Avatars.Get(entry.Name)" Size="Size.Large" Class="teammate-avatar" />
+                                    <TeammateAvatar Name="@entry.Name" Avatar="this.Avatars.Get(entry.Name)" Size="Size.Large" />
                                     <span class="teammate-tile-text">
                                         <span class="teammates-item-name">@entry.Name</span>
                                         <span class="teammate-tile-role">@entry.Title</span>
@@ -99,11 +100,11 @@
                                            tile is already the densest surface on the page. TeammateCard.razor shows the
                                            same reason as a full line, where there is room for it. *@
                                         <span class="teammate-tile-chips">
-                                            <span class="teammate-chip">@(Teammates.FormattedAlias(entry.Alias))</span>
-                                            <span class="teammate-chip teammate-tile-status" title="@status.Reason">
+                                            <MudChip T="string" Size="Size.Small" Variant="Variant.Text">@(Teammates.FormattedAlias(entry.Alias))</MudChip>
+                                            <MudChip T="string" Size="Size.Small" Variant="Variant.Text" Class="teammate-tile-status" title="@status.Reason">
                                                 <StatusDot State="status.State" />
                                                 @Teammates.StatusLabel(status.State)
-                                            </span>
+                                            </MudChip>
                                         </span>
                                         @if (this.WorkingOn(entry.Name) is { } working)
                                         {
@@ -303,7 +304,7 @@
 
     private void OnPersonasChanged()
     {
-        _ = this.DispatchAsync(async () =>
+        _ = RendererDispatch.RunAsync(this.InvokeAsync, async () =>
         {
             await this.LoadAsync();
             this.StateHasChanged();
@@ -312,7 +313,7 @@
 
     private void OnRoomsChanged()
     {
-        _ = this.DispatchAsync(async () =>
+        _ = RendererDispatch.RunAsync(this.InvokeAsync, async () =>
         {
             await this.LoadAsync();
             this.StateHasChanged();
@@ -330,7 +331,7 @@
     /// </summary>
     private void OnHealthOrPresenceChanged()
     {
-        _ = this.DispatchAsync(() =>
+        _ = RendererDispatch.RunAsync(this.InvokeAsync, () =>
         {
             this.StateHasChanged();
             return Task.CompletedTask;
@@ -345,15 +346,10 @@
     /// </summary>
     private void OnAvatarsChanged()
     {
-        _ = this.DispatchAsync(() =>
+        _ = RendererDispatch.RunAsync(this.InvokeAsync, () =>
         {
             this.StateHasChanged();
             return Task.CompletedTask;
         });
-    }
-
-    private Task DispatchAsync(Func<Task> action)
-    {
-        return RendererDispatch.RunAsync(this.InvokeAsync, action);
     }
 }

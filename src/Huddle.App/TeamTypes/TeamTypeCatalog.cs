@@ -87,6 +87,9 @@ internal sealed class TeamTypeCatalog
     /// <summary>The valid types, ordered by order then display name.</summary>
     public IReadOnlyList<TeamTypeManifest> Types => this.snapshot.Types;
 
+    /// <summary>The folder the user's own team types live in, shown on the Settings Team Types tab.</summary>
+    public string UserDirectory => this.userDir;
+
     /// <summary>The types that were rejected, with the reason.</summary>
     public IReadOnlyList<TeamTypeFileProblem> Problems => this.snapshot.Problems;
 

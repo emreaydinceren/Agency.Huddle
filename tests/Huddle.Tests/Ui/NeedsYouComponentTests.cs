@@ -45,7 +45,7 @@ public sealed class NeedsYouComponentTests
         await using MudBunitContext ctx = NewContext(fixture);
         IRenderedComponent<NeedsYouList> cut = ctx.Render<NeedsYouList>();
 
-        await cut.InvokeAsync(() => cut.Find("button[aria-label='Dismiss']").ClickAsync());
+        await cut.InvokeAsync(() => cut.Find("button[aria-label^='Dismiss ']").ClickAsync());
 
         cut.WaitForAssertion(() => Assert.Empty(cut.FindAll(".needs-you-row")));
         Assert.Empty(fixture.Tracker.Snapshot());

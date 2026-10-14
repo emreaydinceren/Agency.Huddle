@@ -6,6 +6,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
 using Agency.Huddle.App;
 using Agency.Huddle.App.Components.Pages;
+using Agency.Huddle.App.Components.Shared.Dialogs;
 using Agency.Huddle.App.Components.Teams;
 using Agency.Huddle.App.Library;
 using Agency.Huddle.App.Teams;
@@ -186,7 +187,7 @@ public sealed class ProcessStepTests
 
         IRenderedComponent<ContainerFragment> cut = RenderTab(ctx);
 
-        Assert.Equal("This Team has no process yet.", cut.Find(".process-tab-empty").TextContent.Trim());
+        Assert.Equal("This Team has no process yet.", cut.Find(".process-tab").TextContent.Trim());
         Assert.Empty(cut.FindAll("div.process-tab-gate"));
     }
 
@@ -217,7 +218,7 @@ public sealed class ProcessStepTests
         IRenderedComponent<ContainerFragment> cut = RenderTab(ctx);
 
         _ = cut.InvokeAsync(() => cut.Find("div[data-gate='qa-evidence-before-done'] input").ChangeAsync(new ChangeEventArgs { Value = false }));
-        cut.WaitForAssertion(() => Assert.Equal("Turn off qa-evidence-before-done?", cut.Find(".mud-dialog-title").TextContent.Trim()));
+        cut.WaitForAssertion(() => Assert.Equal("Turn off QA evidence before done?", cut.Find(".mud-dialog-title").TextContent.Trim()));
         Assert.Equal("A Task can then be marked Done with no verified Evidence.", cut.Find(".mud-dialog-content").TextContent.Trim());
         Assert.Equal(TwoGateText, File.ReadAllText(Path.Combine(dir.Path, "Process.md")));
         await cut.InvokeAsync(() => ButtonNamed(cut, "Cancel").ClickAsync());
@@ -225,6 +226,25 @@ public sealed class ProcessStepTests
         cut.WaitForAssertion(() => Assert.Empty(cut.FindAll(".mud-dialog-title")));
         Assert.Equal(TwoGateText, File.ReadAllText(Path.Combine(dir.Path, "Process.md")));
         Assert.Equal(2, cut.FindAll("div.process-tab-gate").Count);
+    }
+
+    /// <summary>Turning a gate off asks through the shared <c>ConfirmDialog</c> (UX-026): a danger confirm repeating the verb "Turn off", not the stock message box.</summary>
+    [Fact]
+    public async Task GateSwitchOff_AsksThroughTheSharedDangerConfirm()
+    {
+        using TempDataDir dir = new();
+        await using MudBunitContext ctx = new();
+        Register(ctx, dir, out _);
+        File.WriteAllText(Path.Combine(dir.Path, "Process.md"), TwoGateText);
+        IRenderedComponent<ContainerFragment> cut = RenderTab(ctx);
+
+        _ = cut.InvokeAsync(() => cut.Find("div[data-gate='qa-evidence-before-done'] input").ChangeAsync(new ChangeEventArgs { Value = false }));
+        cut.WaitForAssertion(() => Assert.NotEmpty(cut.FindAll(".mud-dialog-title")));
+
+        ConfirmDialog confirm = cut.FindComponent<ConfirmDialog>().Instance;
+        Assert.True(confirm.Danger);
+        Assert.Equal("Turn off", confirm.ConfirmText);
+        Assert.Empty(cut.FindAll(".mud-message-box"));
     }
 
     /// <summary>Confirming rewrites only the gates line and keeps every other key and the body.</summary>
@@ -238,7 +258,7 @@ public sealed class ProcessStepTests
         IRenderedComponent<ContainerFragment> cut = RenderTab(ctx);
 
         _ = cut.InvokeAsync(() => cut.Find("div[data-gate='qa-evidence-before-done'] input").ChangeAsync(new ChangeEventArgs { Value = false }));
-        cut.WaitForAssertion(() => Assert.Equal("Turn off qa-evidence-before-done?", cut.Find(".mud-dialog-title").TextContent.Trim()));
+        cut.WaitForAssertion(() => Assert.Equal("Turn off QA evidence before done?", cut.Find(".mud-dialog-title").TextContent.Trim()));
         await cut.InvokeAsync(() => ButtonNamed(cut, "Turn off").ClickAsync());
 
         string expected = TwoGateText.Replace("gates: ['qa-evidence-before-done', 'checks-before-merge']", "gates: ['checks-before-merge']", StringComparison.Ordinal);

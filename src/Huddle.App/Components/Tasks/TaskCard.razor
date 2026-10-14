@@ -12,8 +12,6 @@
 *@
 
 @using System.Globalization
-@using Agency.Huddle.App.Avatars
-@inject AvatarStore AvatarStore
 @inject TimeProvider Clock
 @inject ISprintCatalog Sprints
 @implements IDisposable
@@ -22,9 +20,7 @@
     <button type="button" class="task-card-open" aria-label="@($"Open {this.Task.Id}")" aria-current="@(this.Selected ? "true" : null)" @onclick="() => this.OnOpen.InvokeAsync()">
         <div class="task-card-header">
             <span class="task-card-id">@this.Task.Id.ToString()</span>
-            <MudChip T="string" Size="Size.Small" Color="Color.Default" Class="task-priority-chip" Icon="@TaskColors.Icon(this.Task.Priority)">
-                @this.Task.Priority.ToWire()
-            </MudChip>
+            <TaskPriorityChip Priority="this.Task.Priority" />
         </div>
 
         <div class="task-card-title">
@@ -33,31 +29,23 @@
 
         @if (this.IsOverdue)
         {
-            <MudIcon Icon="@Icons.Material.Filled.Warning" Color="Color.Warning" Size="Size.Small" aria-label="Overdue" />
+            <MudIcon Icon="@Icons.Material.Filled.Warning" Color="Color.Error" Size="Size.Small" aria-label="Overdue" />
         }
 
         @if (this.Task.Assignee is { } assignee)
         {
-            @if (this.Presence is { } presence)
-            {
-                string presenceText = string.Create(CultureInfo.InvariantCulture, $"{assignee} is {presence}");
-                <MudTooltip Text="@presenceText">
-                    <MudBadge Dot="true" Overlap="true" Origin="Origin.BottomRight" Class="task-card-presence" Color="@TaskColors.For(presence)" BadgeAriaLabel="@presenceText">
-                        <TeammateAvatar Name="@assignee" Avatar="this.AvatarStore.Get(assignee)" Size="Size.Small" />
-                    </MudBadge>
-                </MudTooltip>
-            }
-            else
-            {
-                <TeammateAvatar Name="@assignee" Avatar="this.AvatarStore.Get(assignee)" Size="Size.Small" />
-            }
+            <TaskAssignee Name="@assignee" Presence="this.Presence" />
         }
 
         @foreach (string field in this.Fields)
         {
-            @if (this.FieldText(field) is { } text)
+            @if (string.Equals(field, "tags", StringComparison.Ordinal) && this.Task.Tags.Count > 0)
             {
-                <span class="@($"task-card-field-{field.Replace('_', '-')}")">
+                <span class="task-card-field-tags">@TaskFieldView.Tags(this.Task.Tags)</span>
+            }
+            else if (this.FieldText(field) is { } text)
+            {
+                <span class="@this.FieldClass(field)">
                     @if (string.Equals(field, "sprint", StringComparison.Ordinal) && this.Task.Sprint is { } sprint && this.Sprints.Get(sprint) is null)
                     {
                         <MudIcon Icon="@Icons.Material.Filled.Warning" Color="Color.Warning" Size="Size.Small" Class="task-sprint-missing" aria-label="@SprintLabels.MissingText" />
@@ -71,26 +59,10 @@
     @if (this.Busy && this.LastWake is { } lastWake)
     {
         <MudChip T="string" Size="Size.Small" Color="Color.Success" Class="task-card-awake-chip">Awake</MudChip>
-        <MudLink Href="@($"/rooms/{lastWake.RoomId}")" Class="task-card-awake-link">active in Room @lastWake.RoomName</MudLink>
+        <MudLink Href="@($"/rooms/{lastWake.RoomId}")" Class="task-card-awake-link">Woken in Room @lastWake.RoomName</MudLink>
     }
 
-    <MudMenu Class="task-card-menu">
-        <ActivatorContent Context="menuContext">
-            <MudTooltip Text="Move to another state">
-                <MudIconButton Icon="@Icons.Material.Filled.MoreVert" Size="Size.Small"
-                               aria-label="@($"Move {this.Task.Id}")" OnClick="menuContext.ToggleAsync" />
-            </MudTooltip>
-        </ActivatorContent>
-        <ChildContent>
-            <MudText Typo="Typo.overline" Class="px-4 pt-2 pb-1 mud-text-secondary">Move to</MudText>
-            @foreach (TaskState state in TaskStates.All)
-            {
-                <MudMenuItem OnClick="@(() => this.OnMoveTo.InvokeAsync(state))">@state.ToWire()</MudMenuItem>
-            }
-            <MudDivider />
-            <MudMenuItem OnClick="@(() => this.OnCopyId.InvokeAsync())">Copy id</MudMenuItem>
-        </ChildContent>
-    </MudMenu>
+    <TaskActionsMenu Id="this.Task.Id" ShowMoveTo="true" OnMoveTo="this.OnMoveTo" OnCopyId="this.OnCopyId" OnCopyLink="this.OnCopyLink" />
 </div>
 
 @code {
@@ -134,6 +106,14 @@
     [Parameter]
     public EventCallback OnCopyId { get; set; }
 
+    /// <summary>Raised when "Copy link" is chosen from the ⋮ menu.</summary>
+    [Parameter]
+    public EventCallback OnCopyLink { get; set; }
+
+    /// <summary>Room names by id, so the Origin field shows the Room's name (UX-047).</summary>
+    [Parameter]
+    public IReadOnlyDictionary<string, string>? RoomNames { get; set; }
+
     /// <summary>Re-renders when <c>sprints.md</c> changed, so the Sprint field follows the file even when the Board does not re-lay out.</summary>
     protected override void OnInitialized() => this.Sprints.SprintsChanged += this.OnSprintsChanged;
 
@@ -164,18 +144,14 @@
     }
 
     /// <summary>Whether <see cref="Task"/> is overdue: it has a due date in the past and isn't in a terminal state (the same rule <c>TaskListView</c> uses).</summary>
-    private bool IsOverdue
-    {
-        get
-        {
-            if (this.Task.DueDate is not { } due || this.Task.Status.IsTerminal())
-            {
-                return false;
-            }
+    private bool IsOverdue => TaskDates.IsOverdue(this.Task, this.Clock);
 
-            DateOnly today = DateOnly.FromDateTime(this.Clock.GetUtcNow().UtcDateTime);
-            return due < today;
-        }
+    /// <summary>The <c>class</c> of one field's span: its own name, plus <c>task-due-overdue</c> on an overdue due date (UX-043).</summary>
+    /// <param name="field">A §12.2 field key.</param>
+    private string FieldClass(string field)
+    {
+        string own = $"task-card-field-{field.Replace('_', '-')}";
+        return string.Equals(field, "due_date", StringComparison.Ordinal) && this.IsOverdue ? $"{own} task-due-overdue" : own;
     }
 
     /// <summary>
@@ -187,22 +163,18 @@
     /// <param name="field">A §12.2 field key.</param>
     private string? FieldText(string field) => field switch
     {
-        "status" => this.Task.Status.ToWire(),
-        "priority" => this.Task.Priority.ToWire(),
-        "assignee" => this.Task.Assignee,
         "creator" => this.Task.Creator,
         "team" => this.Task.Location.Team,
-        "project" => this.Task.Location.Project,
+        "project" => this.Task.Location.Project ?? TaskFieldView.EmptyText("project"),
         "parent" => this.Task.Parent?.ToString(),
         "blocked_by" => this.Task.BlockedBy.Count > 0 ? string.Join(", ", this.Task.BlockedBy) : null,
-        "tags" => this.Task.Tags.Count > 0 ? string.Join(", ", this.Task.Tags) : null,
         "start_date" => this.Task.StartDate is { } startDate ? TaskDates.Display(startDate) : null,
         "due_date" => this.Task.DueDate is { } dueDate ? TaskDates.Display(dueDate) : null,
         "sprint" => this.Task.Sprint is { } sprint ? SprintLabels.Text(this.Sprints, sprint) : null,
         "created" => this.Task.Created is { } created ? TaskDates.Display(created) : null,
         "updated" => this.Task.Updated is { } updated ? TaskDates.Display(updated) : null,
         "closed" => this.Task.ClosedAt is { } closed ? TaskDates.Display(closed) : null,
-        "origin" => this.Task.OriginRoomId,
+        "origin" => TaskFieldView.OriginText(this.Task.OriginRoomId, this.RoomNames),
         _ => null,
     };
 }

@@ -1,4 +1,5 @@
 using Bunit;
+using Microsoft.AspNetCore.Components.Web;
 using Agency.Huddle.App.Components.Settings;
 
 namespace Agency.Huddle.Tests.Ui;
@@ -28,7 +29,7 @@ public sealed class ResetAllControlTests
 
         Assert.Contains("Reset all to defaults", cut.Markup, StringComparison.Ordinal);
         Assert.True(cut.Find("button").HasAttribute("disabled"));
-        Assert.DoesNotContain("Yes, reset everything", cut.Markup, StringComparison.Ordinal);
+        Assert.DoesNotContain(">Reset all<", cut.Markup, StringComparison.Ordinal);
     }
 
     /// <summary>With something modified and not confirming, the plain button renders enabled.</summary>
@@ -76,12 +77,12 @@ public sealed class ResetAllControlTests
             .Add(p => p.AnyModified, true)
             .Add(p => p.Confirming, true));
 
-        Assert.Contains("Yes, reset everything", cut.Markup, StringComparison.Ordinal);
+        Assert.Equal("Reset all", cut.FindAll("button")[0].TextContent.Trim());
         Assert.Contains(">Cancel<", cut.Markup, StringComparison.Ordinal);
         Assert.DoesNotContain("Reset all to defaults", cut.Markup, StringComparison.Ordinal);
     }
 
-    /// <summary>Clicking "Yes, reset everything" while confirming raises <see cref="ResetAllControl.OnConfirm"/>, and clicking Cancel raises <see cref="ResetAllControl.OnCancel"/> instead.</summary>
+    /// <summary>Clicking "Reset all" while confirming raises <see cref="ResetAllControl.OnConfirm"/>, and clicking Cancel raises <see cref="ResetAllControl.OnCancel"/> instead.</summary>
     [Fact]
     public async Task Confirming_ClickingYesRaisesOnConfirm_AndClickingCancelRaisesOnCancel()
     {
@@ -103,6 +104,41 @@ public sealed class ResetAllControlTests
         Assert.False(cancelRaised);
 
         await cut.InvokeAsync(() => buttons[1].ClickAsync());
+        Assert.True(cancelRaised);
+    }
+
+    /// <summary>
+    /// The confirm step is the shared <c>InlineConfirm</c> row (UX-R13): it asks "Reset every prompt to its
+    /// default?" and its Confirm button repeats the verb.
+    /// </summary>
+    [Fact]
+    public async Task Confirming_IsTheSharedInlineConfirmRowWithItsPrompt()
+    {
+        await using MudBunitContext ctx = new();
+
+        var cut = ctx.Render<ResetAllControl>(parameters => parameters
+            .Add(p => p.AnyModified, true)
+            .Add(p => p.Confirming, true));
+
+        Assert.Equal("Reset every prompt to its default?", cut.Find(".inline-confirm .inline-confirm-prompt").TextContent.Trim());
+        Assert.Equal("Reset all", cut.Find(".inline-confirm-confirm").TextContent.Trim());
+        Assert.Equal("Cancel", cut.Find(".inline-confirm-cancel").TextContent.Trim());
+    }
+
+    /// <summary>Escape inside the confirm row cancels it, which the hand-built buttons could not do (UX-R13).</summary>
+    [Fact]
+    public async Task Confirming_EscapeRaisesOnCancel()
+    {
+        await using MudBunitContext ctx = new();
+        var cancelRaised = false;
+
+        var cut = ctx.Render<ResetAllControl>(parameters => parameters
+            .Add(p => p.AnyModified, true)
+            .Add(p => p.Confirming, true)
+            .Add(p => p.OnCancel, () => cancelRaised = true));
+
+        await cut.InvokeAsync(() => cut.Find(".inline-confirm").KeyDownAsync(new KeyboardEventArgs { Key = "Escape" }));
+
         Assert.True(cancelRaised);
     }
 }

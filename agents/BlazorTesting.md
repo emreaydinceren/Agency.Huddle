@@ -48,8 +48,10 @@ For a component that needs the whole Tasks stack (stores, services, presence), r
   content portals into the popover provider, so search the returned root, not a
   `FindComponent<Owner>()` handle.
 - bUnit 2.11.3 has no `SetParametersAndRender`; re-render with `cut.Render(p => …)`.
-  `BunitContext.DisposeComponentsAsync()` disposes rendered components, so a test can then assert
-  they unsubscribed.
+  Use `MudBunitContext.DisposeComponentsOnDispatcherAsync()` for any test that asserts after
+  disposal (for example that a component unsubscribed). bUnit's `DisposeComponentsAsync()` can race a
+  busy renderer dispatcher: it queues the detach, clears the root list, and reports success having
+  disposed nothing.
 
 ## Clicking without racing a re-render
 

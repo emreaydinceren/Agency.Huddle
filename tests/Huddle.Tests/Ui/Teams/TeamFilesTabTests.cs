@@ -199,7 +199,7 @@ public sealed class TeamFilesTabTests : IDisposable
         _ = cut.InvokeAsync(() => cut.Find(ActionButton).Click());
 
         cut.WaitForAssertion(() => Assert.Equal("New note", cut.Find(".mud-dialog-title").TextContent.Trim()));
-        await cut.InvokeAsync(() => cut.Find(".library-file-ops-name-field input").ChangeAsync("Idea"));
+        await cut.InvokeAsync(() => cut.Find(".mud-dialog-content input").InputAsync(new ChangeEventArgs { Value = "Idea" }));
         await cut.InvokeAsync(() => cut.FindAll(".mud-dialog-actions button").First(button => button.TextContent.Trim() == "Cancel").ClickAsync());
 
         cut.WaitForAssertion(() => Assert.Empty(cut.FindAll(".mud-dialog-title")));
@@ -221,8 +221,8 @@ public sealed class TeamFilesTabTests : IDisposable
 
         _ = cut.InvokeAsync(() => cut.Find(ActionButton).Click());
         cut.WaitForAssertion(() => Assert.Equal("New note", cut.Find(".mud-dialog-title").TextContent.Trim()));
-        await cut.InvokeAsync(() => cut.Find(".library-file-ops-name-field input").ChangeAsync("Idea"));
-        await cut.InvokeAsync(() => cut.FindAll(".mud-dialog-actions button")[0].ClickAsync());
+        await cut.InvokeAsync(() => cut.Find(".mud-dialog-content input").InputAsync(new ChangeEventArgs { Value = "Idea" }));
+        await cut.InvokeAsync(() => cut.FindAll(".mud-dialog-actions button")[1].ClickAsync());
 
         cut.WaitForAssertion(() => Assert.True(File.Exists(Path.Combine(this.fixture.TeamsPath, "Business", "Idea.md"))), TimeSpan.FromSeconds(5));
         cut.WaitForAssertion(() => Assert.Equal(["Existing.md", "Idea.md"], SortedNodeNames(cut)));

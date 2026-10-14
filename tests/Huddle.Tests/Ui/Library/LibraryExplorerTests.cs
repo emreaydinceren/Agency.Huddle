@@ -111,12 +111,12 @@ public sealed class LibraryExplorerTests : IDisposable
 
         await cut.InvokeAsync(() => cut.Find("div.library-tree-node").ContextMenuAsync());
         cut.WaitForAssertion(() => Assert.NotEmpty(cut.FindAll(".mud-menu-item")));
-        int newNoteIndex = cut.FindAll(".library-tree-menu-label").Select(el => el.TextContent.Trim()).ToList().IndexOf("New Document");
+        int newNoteIndex = cut.FindAll(".library-tree-menu-label").Select(el => el.TextContent.Trim()).ToList().IndexOf("New note");
         _ = cut.InvokeAsync(() => cut.FindAll(".mud-menu-item")[newNoteIndex].Click());
 
-        cut.WaitForAssertion(() => Assert.NotEmpty(cut.FindAll(".library-file-ops-name-field input")));
-        await cut.InvokeAsync(() => cut.Find(".library-file-ops-name-field input").ChangeAsync("Idea"));
-        await cut.InvokeAsync(() => cut.FindAll(".mud-dialog-actions button")[0].ClickAsync());
+        cut.WaitForAssertion(() => Assert.NotEmpty(cut.FindAll(".mud-dialog-content input")));
+        await cut.InvokeAsync(() => cut.Find(".mud-dialog-content input").InputAsync(new ChangeEventArgs { Value = "Idea" }));
+        await cut.InvokeAsync(() => cut.FindAll(".mud-dialog-actions button")[1].ClickAsync());
 
         cut.WaitForAssertion(() => Assert.True(File.Exists(Path.Combine(root, "Sub", "Idea.md"))), TimeSpan.FromSeconds(5));
         Assert.False(File.Exists(Path.Combine(root, "Idea.md")));
@@ -298,7 +298,7 @@ public sealed class LibraryExplorerTests : IDisposable
 
         Task pending = cut.InvokeAsync(() => explorer.NewNoteAsync());
         cut.WaitForAssertion(() => Assert.Equal("New note", cut.Find(".mud-dialog-title").TextContent.Trim()));
-        await cut.InvokeAsync(() => cut.Find(".library-file-ops-name-field input").ChangeAsync("Idea"));
+        await cut.InvokeAsync(() => cut.Find(".mud-dialog-content input").InputAsync(new ChangeEventArgs { Value = "Idea" }));
         await cut.InvokeAsync(() => cut.FindAll(".mud-dialog-actions button").First(b => b.TextContent.Trim() == "Cancel").ClickAsync());
         await pending.WaitAsync(TimeSpan.FromSeconds(5), ct);
 
@@ -322,11 +322,11 @@ public sealed class LibraryExplorerTests : IDisposable
         LibraryExplorer explorer = cut.FindComponent<LibraryExplorer>().Instance;
 
         Task pending = cut.InvokeAsync(() => explorer.NewNoteAsync());
-        cut.WaitForAssertion(() => Assert.NotEmpty(cut.FindAll(".library-file-ops-name-field input")));
-        await cut.InvokeAsync(() => cut.Find(".library-file-ops-name-field input").ChangeAsync("Idea"));
-        await cut.InvokeAsync(() => cut.FindAll(".mud-dialog-actions button")[0].ClickAsync());
+        cut.WaitForAssertion(() => Assert.NotEmpty(cut.FindAll(".mud-dialog-content input")));
+        await cut.InvokeAsync(() => cut.Find(".mud-dialog-content input").InputAsync(new ChangeEventArgs { Value = "Idea" }));
+        await cut.InvokeAsync(() => cut.FindAll(".mud-dialog-actions button")[1].ClickAsync());
 
-        cut.WaitForAssertion(() => Assert.Equal("Couldn't create Idea.md.", cut.Find(".library-file-ops-error").TextContent.Trim()));
+        cut.WaitForAssertion(() => Assert.Equal("Couldn't create Idea.md.", cut.Find(".mud-dialog-content .mud-alert[role='alert']").TextContent.Trim()));
         Assert.False(pending.IsCompleted);
         Assert.False(Directory.Exists(missing.FullPath));
         Assert.Empty(cut.FindComponents<LibraryDocument>());
@@ -620,9 +620,9 @@ public sealed class LibraryExplorerTests : IDisposable
         await cut.InvokeAsync(() => NodeRows(cut, "Old.md").Single().ContextMenuAsync());
         int renameIndex = cut.FindAll(".library-tree-menu-label").Select(el => el.TextContent.Trim()).ToList().IndexOf("Rename");
         _ = cut.InvokeAsync(() => cut.FindAll(".mud-menu-item")[renameIndex].Click());
-        cut.WaitForAssertion(() => Assert.NotEmpty(cut.FindAll(".library-file-ops-name-field input")));
-        await cut.InvokeAsync(() => cut.Find(".library-file-ops-name-field input").ChangeAsync("New"));
-        _ = cut.InvokeAsync(() => cut.FindAll(".mud-dialog-actions button")[0].Click());
+        cut.WaitForAssertion(() => Assert.NotEmpty(cut.FindAll(".mud-dialog-content input")));
+        await cut.InvokeAsync(() => cut.Find(".mud-dialog-content input").InputAsync(new ChangeEventArgs { Value = "New" }));
+        _ = cut.InvokeAsync(() => cut.FindAll(".mud-dialog-actions button")[1].Click());
 
         cut.WaitForAssertion(() => Assert.NotEmpty(cut.FindAll(".mud-dialog-actions button")));
         await cut.InvokeAsync(() => cut.FindAll(".mud-dialog-actions button").First(b => b.TextContent.Trim() == "Cancel").ClickAsync());
@@ -1242,8 +1242,8 @@ public sealed class LibraryExplorerTests : IDisposable
         IRenderedComponent<ContainerFragment> cut, Task pending, string name, CancellationToken ct)
     {
         cut.WaitForAssertion(() => Assert.Equal("New note", cut.Find(".mud-dialog-title").TextContent.Trim()));
-        await cut.InvokeAsync(() => cut.Find(".library-file-ops-name-field input").ChangeAsync(name));
-        await cut.InvokeAsync(() => cut.FindAll(".mud-dialog-actions button")[0].ClickAsync());
+        await cut.InvokeAsync(() => cut.Find(".mud-dialog-content input").InputAsync(new ChangeEventArgs { Value = name }));
+        await cut.InvokeAsync(() => cut.FindAll(".mud-dialog-actions button")[1].ClickAsync());
         await pending.WaitAsync(TimeSpan.FromSeconds(5), ct);
     }
 

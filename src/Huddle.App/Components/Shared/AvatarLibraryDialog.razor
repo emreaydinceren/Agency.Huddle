@@ -45,46 +45,10 @@
                                       Value="@this.text" ValueChanged="this.SetText" Immediate="true" DebounceInterval="200"
                                       OnKeyDown="this.OnSearchKeyDown" Variant="Variant.Outlined" Margin="Margin.Dense" />
                     </div>
-                    <div class="avatar-library-cloud-title">Professions</div>
-                    <div class="avatar-library-professions avatar-library-cloud">
-                        @foreach (ChipItem chip in AvatarChipCloud.Arrange(this.catalog.Professions, this.selectedProfessions, null))
-                        {
-                            <button type="button" class="@ChipClass(chip)" aria-pressed="@(chip.Selected ? "true" : "false")" @onclick="() => this.ToggleProfession(chip.Text)">
-                                @if (chip.Selected)
-                                {
-                                    <span class="avatar-library-chip-bracket" aria-hidden="true">[</span>
-                                }
-                                <span class="avatar-library-chip-text">@chip.Text</span>
-                                @if (chip.Selected)
-                                {
-                                    <span class="avatar-library-chip-close" aria-hidden="true">X</span>
-                                    <span class="avatar-library-chip-bracket" aria-hidden="true">]</span>
-                                }
-                            </button>
-                        }
-                    </div>
-                    <div class="avatar-library-cloud-title">Tags</div>
-                    <div class="avatar-library-tags avatar-library-cloud">
-                        @foreach (ChipItem chip in AvatarChipCloud.Arrange(this.TagPool(), this.selectedTags, this.tagsExpanded ? null : TagCap))
-                        {
-                            <button type="button" class="@ChipClass(chip)" aria-pressed="@(chip.Selected ? "true" : "false")" @onclick="() => this.ToggleTag(chip.Text)">
-                                @if (chip.Selected)
-                                {
-                                    <span class="avatar-library-chip-bracket" aria-hidden="true">[</span>
-                                }
-                                <span class="avatar-library-chip-text">@chip.Text</span>
-                                @if (chip.Selected)
-                                {
-                                    <span class="avatar-library-chip-close" aria-hidden="true">X</span>
-                                    <span class="avatar-library-chip-bracket" aria-hidden="true">]</span>
-                                }
-                            </button>
-                        }
-                        @if (this.catalog.Tags.Count > TagCap)
-                        {
-                            <button type="button" class="avatar-library-tags-all" aria-expanded="@(this.tagsExpanded ? "true" : "false")" @onclick="this.ToggleTagsExpanded">@(this.tagsExpanded ? "Show fewer" : "Show all")</button>
-                        }
-                    </div>
+                    <ChipCloud Title="Professions" Pool="this.catalog.Professions" Selected="this.selectedProfessions"
+                               Quiet="true" OnToggle="this.ToggleProfession" />
+                    <ChipCloud Title="Tags" Pool="this.TagPool()" Selected="this.selectedTags" Cap="TagCap"
+                               Quiet="true" OnToggle="this.ToggleTag" />
                     <div class="avatar-library-status">
                         <span class="avatar-library-count" aria-live="polite">@this.results.Count of @this.catalog.Count</span>
                         <button type="button" class="avatar-library-clear" @onclick="this.ClearAll">Clear all</button>
@@ -152,7 +116,6 @@
     private string text = string.Empty;
     private readonly List<string> selectedProfessions = [];
     private readonly List<string> selectedTags = [];
-    private bool tagsExpanded;
     private int shown = PageSize;
     private int gridVersion;
     private ElementReference searchWrap;
@@ -190,9 +153,6 @@
         this.catalog = null;
         this.results = null;
     }
-
-    private static string ChipClass(ChipItem chip) =>
-        chip.Selected ? "avatar-library-chip avatar-library-chip-selected" : "avatar-library-chip";
 
     private IReadOnlyList<string> TagPool() => this.catalog is null ? [] : [.. this.catalog.Tags.Select(static t => t.Tag)];
 
@@ -261,8 +221,6 @@
             list.Add(value);
         }
     }
-
-    private void ToggleTagsExpanded() => this.tagsExpanded = !this.tagsExpanded;
 
     private void ClearAll()
     {

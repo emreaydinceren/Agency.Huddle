@@ -18,28 +18,32 @@
 }
 
 
+/* MudBlazor.min.css paints this id with the important flag on a var(--mud-palette-background) fill, which
+   no specificity can beat. The variable is resolved on this element, so pointing it at the surface colour
+   changes the fill MudBlazor paints; the modal keeps a visible edge without the flag. */
 #components-reconnect-modal {
-    background-color: var(--mud-palette-surface) !important;
+    --mud-palette-background: var(--mud-palette-surface);
+    background-color: var(--mud-palette-surface);
     color: var(--mud-palette-text-primary);
     width: 20rem;
-    margin: 20vh auto;
+    margin: calc(20vh / 0.9) auto;
     padding: 2rem;
     border: 0;
-    border-radius: 0.5rem;
+    border-radius: var(--mud-default-borderradius);
     box-shadow: var(--mud-elevation-8);
     opacity: 0;
-    transition: display 0.5s allow-discrete, overlay 0.5s allow-discrete;
-    animation: components-reconnect-modal-fadeOutOpacity 0.5s both;
+    transition: display 500ms allow-discrete, overlay 500ms allow-discrete;
+    animation: components-reconnect-modal-fadeOutOpacity 500ms both;
 
     &[open] {
-        animation: components-reconnect-modal-slideUp 1.5s cubic-bezier(.05, .89, .25, 1.02) 0.3s, components-reconnect-modal-fadeInOpacity 0.5s ease-in-out 0.3s;
+        animation: components-reconnect-modal-slideUp 1500ms cubic-bezier(.05, .89, .25, 1.02) 300ms, components-reconnect-modal-fadeInOpacity 500ms ease-in-out 300ms;
         animation-fill-mode: both;
     }
 }
 
 #components-reconnect-modal::backdrop {
     background-color: var(--mud-palette-overlay-dark);
-    animation: components-reconnect-modal-fadeInOpacity 0.5s ease-in-out;
+    animation: components-reconnect-modal-fadeInOpacity 500ms ease-in-out;
     opacity: 1;
 }
 
@@ -89,8 +93,8 @@
     border: 0;
     background-color: var(--mud-palette-primary);
     color: var(--mud-palette-primary-text);
-    padding: 4px 24px;
-    border-radius: 4px;
+    padding: 0.25rem 1.5rem;
+    border-radius: var(--mud-default-borderradius);
 }
 
     #components-reconnect-modal button:hover {
@@ -112,11 +116,11 @@
         border: 3px solid var(--mud-palette-secondary);
         opacity: 1;
         border-radius: 50%;
-        animation: components-rejoining-animation 1.5s cubic-bezier(0, 0.2, 0.8, 1) infinite;
+        animation: components-rejoining-animation 1500ms cubic-bezier(0, 0.2, 0.8, 1) infinite;
     }
 
         .components-rejoining-animation div:nth-child(2) {
-            animation-delay: -0.5s;
+            animation-delay: -500ms;
         }
 
 @keyframes components-rejoining-animation {
@@ -150,5 +154,25 @@
         width: 80px;
         height: 80px;
         opacity: 0;
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    #components-reconnect-modal,
+    #components-reconnect-modal[open] {
+        animation: none;
+        opacity: 1;
+    }
+
+    #components-reconnect-modal::backdrop {
+        animation: none;
+    }
+
+    .components-rejoining-animation div {
+        animation: none;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
     }
 }

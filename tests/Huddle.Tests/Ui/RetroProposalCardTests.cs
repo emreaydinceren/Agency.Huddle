@@ -1,3 +1,4 @@
+using AngleSharp.Dom;
 using Bunit;
 using Microsoft.Extensions.DependencyInjection;
 using Agency.Huddle.App.Components.Shared;
@@ -19,6 +20,7 @@ public sealed class RetroProposalCardTests
     /// <param name="ctx">The bUnit context to register into.</param>
     private static void Register(RetroProposalFixture fixture, MudBunitContext ctx)
     {
+        AgentCardAssert.RegisterRoomServices(ctx, fixture.Harness.Directory);
         ctx.Services.AddSingleton(fixture.Proposals);
         ctx.Services.AddSingleton(fixture.Service);
     }
@@ -52,7 +54,7 @@ public sealed class RetroProposalCardTests
             ],
             cut.FindAll(".retro-change-diff").Select(static each => each.TextContent));
         Assert.Equal(2, cut.FindAll(".retro-change-accept").Count);
-        Assert.Equal(2, cut.FindAll(".retro-change-reject").Count);
+        Assert.Equal(2, cut.FindAll(".retro-change-decline").Count);
     }
 
     /// <summary>Accept on one change applies it, and only that change leaves the card.</summary>
@@ -90,11 +92,74 @@ public sealed class RetroProposalCardTests
         cut.WaitForAssertion(() => Assert.Single(cut.FindAll(".retro-change")));
         cut.Find(".retro-proposal-reason input").Change("Too strict.");
 
-        cut.Find(".retro-change-reject").Click();
+        cut.Find(".retro-change-decline").Click();
 
         cut.WaitForAssertion(() => Assert.Empty(cut.FindAll(".retro-change")));
         Assert.Equal(RetroProposalFixture.ProcessText, fixture.ProcessNow);
         Assert.Empty(fixture.Retro.ReadRegister("Platform"));
+    }
+
+    /// <summary>UX-030 to UX-034: the card is the shared shell; the reason field sits directly above the actions row, which reads Accept then Decline (the verb for refusing a proposal, UX-032).</summary>
+    [Fact]
+    public async Task Card_IsTheSharedShell_ReasonAboveAcceptThenDecline()
+    {
+        CancellationToken ct = Xunit.TestContext.Current.CancellationToken;
+        using RetroProposalFixture fixture = await RetroProposalFixture.CreateAsync(ct);
+        _ = fixture.Propose(RetroProposalFixture.Change("1", "Process.md", "One PR per Task.", Squash));
+        await using MudBunitContext ctx = new();
+        Register(fixture, ctx);
+        AgentCardAssert.RegisterRoomServices(ctx, fixture.Harness.Directory);
+
+        IRenderedComponent<RetroProposalCard> cut = RenderCard(ctx, fixture.RoomId);
+
+        cut.WaitForAssertion(() => Assert.NotEmpty(cut.FindAll("[role=region]")));
+        IElement actions = AgentCardAssert.IsShell(cut, "Nova is proposing changes", "Retro changes from Nova");
+        Assert.Equal(["Accept", "Decline"], AgentCardAssert.Verbs(actions));
+        string html = cut.Find("[role=region]").InnerHtml;
+        Assert.True(html.IndexOf("retro-proposal-reason", StringComparison.Ordinal) < html.IndexOf("retro-change-diff", StringComparison.Ordinal), "The shared reason belongs above the changes and their action rows.");
+    }
+
+    /// <summary>UX-035: the card is not rendered for an Archived Room, as with Proposal, Question and Elicitation.</summary>
+    [Fact]
+    public async Task ArchivedRoom_RendersNothing()
+    {
+        CancellationToken ct = Xunit.TestContext.Current.CancellationToken;
+        using RetroProposalFixture fixture = await RetroProposalFixture.CreateAsync(ct);
+        _ = fixture.Propose(RetroProposalFixture.Change("1", "Process.md", "One PR per Task.", Squash));
+        await fixture.Harness.Directory.SetRoomArchivedAsync(fixture.RoomId, true, ct);
+        await using MudBunitContext ctx = new();
+        Register(fixture, ctx);
+        AgentCardAssert.RegisterRoomServices(ctx, fixture.Harness.Directory);
+
+        IRenderedComponent<RetroProposalCard> cut = RenderCard(ctx, fixture.RoomId);
+
+        Assert.True(string.IsNullOrWhiteSpace(cut.Markup));
+    }
+
+    /// <summary>UX-033: while Accept is in flight its button reads "Accepting…" and Decline is disabled.</summary>
+    [Fact]
+    public async Task Accept_InFlight_ShowsBusyLabel()
+    {
+        CancellationToken ct = Xunit.TestContext.Current.CancellationToken;
+        using RetroProposalFixture fixture = await RetroProposalFixture.CreateAsync(ct);
+        _ = fixture.Propose(RetroProposalFixture.Change("1", "Process.md", "One PR per Task.", Squash));
+        await using MudBunitContext ctx = new();
+        Register(fixture, ctx);
+        AgentCardAssert.RegisterRoomServices(ctx, fixture.Harness.Directory);
+        IRenderedComponent<RetroProposalCard> cut = RenderCard(ctx, fixture.RoomId);
+        cut.WaitForAssertion(() => Assert.NotEmpty(cut.FindAll("[role=region]")));
+        TaskCompletionSource gate = new(TaskCreationOptions.RunContinuationsAsynchronously);
+        fixture.Gate.Gate = gate;
+
+        // Fire-and-forget: the accept parks on the gate, so awaiting Click would never return.
+        _ = cut.InvokeAsync(() => cut.FindAll("button").First(static button => button.TextContent.Trim() == "Accept").ClickAsync());
+
+        cut.WaitForAssertion(() => Assert.Equal(["Accepting…", "Decline"], AgentCardAssert.Verbs(cut.Find(".agent-card-actions"))));
+        Assert.True(cut.FindAll("button").First(static button => button.TextContent.Trim() == "Decline").HasAttribute("disabled"));
+
+        await cut.InvokeAsync(gate.SetResult);
+
+        cut.WaitForAssertion(() => Assert.True(string.IsNullOrWhiteSpace(cut.Markup)));
     }
 
     /// <summary>A room whose members proposed nothing renders no card.</summary>

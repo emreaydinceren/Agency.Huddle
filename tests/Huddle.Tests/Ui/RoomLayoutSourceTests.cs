@@ -45,7 +45,7 @@ public sealed class RoomLayoutSourceTests
     {
         string body = RuleBody(ReadAppCss(), ".elicitation-card");
 
-        Assert.Contains("max-height: 50vh;", body, StringComparison.Ordinal); // contains-ok: stylesheet source text, not markup
+        Assert.Contains("max-height: calc(50vh / 0.9);", body, StringComparison.Ordinal); // contains-ok: stylesheet source text, not markup
         Assert.Contains("display: flex;", body, StringComparison.Ordinal); // contains-ok: stylesheet source text, not markup
         Assert.Contains("flex-direction: column;", body, StringComparison.Ordinal); // contains-ok: stylesheet source text, not markup
     }
@@ -59,7 +59,7 @@ public sealed class RoomLayoutSourceTests
     {
         string css = ReadAppCss();
         string fields = RuleBody(css, ".elicitation-card-fields");
-        string actions = RuleBody(css, ".elicitation-card-actions");
+        string actions = RuleBody(css, ".elicitation-card .agent-card-actions");
 
         Assert.Contains("overflow-y: auto;", fields, StringComparison.Ordinal); // contains-ok: stylesheet source text, not markup
         Assert.Contains("min-height: 0;", fields, StringComparison.Ordinal); // contains-ok: stylesheet source text, not markup
@@ -111,7 +111,7 @@ public sealed class RoomLayoutSourceTests
     [Fact]
     public void AppCss_QuestionCardActions_SitBelowTheQuestions()
     {
-        string body = RuleBody(ReadAppCss(), ".question-card-actions");
+        string body = RuleBody(ReadAppCss(), ".agent-card-actions");
 
         Assert.Contains("margin-top: 0.75rem;", body, StringComparison.Ordinal); // contains-ok: stylesheet source text, not markup
     }

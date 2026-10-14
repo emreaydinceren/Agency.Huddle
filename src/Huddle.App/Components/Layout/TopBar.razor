@@ -51,7 +51,7 @@
 
     private void OnTabsChanged()
     {
-        _ = this.DispatchAsync(() =>
+        _ = RendererDispatch.RunAsync(this.InvokeAsync,() =>
         {
             this.StateHasChanged();
             return Task.CompletedTask;
@@ -66,10 +66,5 @@
         }
 
         return Task.CompletedTask;
-    }
-
-    private Task DispatchAsync(Func<Task> action)
-    {
-        return RendererDispatch.RunAsync(this.InvokeAsync, action);
     }
 }

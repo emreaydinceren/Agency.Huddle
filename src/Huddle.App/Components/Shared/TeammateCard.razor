@@ -37,6 +37,7 @@
 @using Agency.Huddle.Acp.Abstractions
 @using Agency.Huddle.App.Acp
 @using Agency.Huddle.App.Avatars
+@using Agency.Huddle.App.Components.Shared.Dialogs
 @using Agency.Huddle.App.Pipes
 @using Agency.Huddle.App.Skills
 @using Agency.Huddle.App.TeamTypes
@@ -68,15 +69,12 @@
 
 <MudDialog>
     <TitleContent>
-        <MudStack Row="true" Justify="Justify.SpaceBetween" AlignItems="AlignItems.Center" Class="w-100">
-            <MudText Typo="Typo.h6">@this.CardTitle</MudText>
-            <MudIconButton Icon="@Icons.Material.Filled.Close" Size="Size.Small" title="Close" aria-label="Close" OnClick="this.Close" />
-        </MudStack>
+        <MudText Typo="Typo.h6">@this.CardTitle</MudText>
     </TitleContent>
     <DialogContent>
         @if (this.error is not null)
         {
-            <MudAlert Severity="Severity.Error" Dense="true" Class="mb-4">@this.error</MudAlert>
+            <MudAlert Severity="Severity.Error" Dense="true" Class="mb-4" role="alert">@this.error</MudAlert>
         }
 
         <MudStack Row="true" Spacing="3" Class="mb-4">
@@ -93,15 +91,15 @@
             {
                 <MudStack Spacing="2" Class="flex-grow-1">
                     <MudTextField T="string" Label="Name" Placeholder="Chief of Staff" @bind-Value="this.name"
-                                  Adornment="Adornment.End" AdornmentIcon="@Icons.Material.Filled.RestartAlt"
+                                  Variant="Variant.Outlined" Margin="Margin.Dense" Adornment="Adornment.End" AdornmentIcon="@Icons.Material.Filled.RestartAlt"
                                   AdornmentAriaLabel="New random name" OnAdornmentClick="this.PickAnotherName"
                                   HelperText="Letters, digits, spaces, - and _. Spaces are fine." />
                     <MudTextField T="string" Label="Title" Placeholder="Chief of Staff" @bind-Value="this.title"
-                                  HelperText="A short role description, shown alongside the Name." />
+                                  Variant="Variant.Outlined" Margin="Margin.Dense" HelperText="A short role description, shown alongside the Name." />
                     <MudTextField T="string" Label="Alias" Placeholder="coo" @bind-Value="this.alias"
-                                  HelperText="A short working handle, for mentions and quick reference." />
+                                  Variant="Variant.Outlined" Margin="Margin.Dense" HelperText="A short working handle, for mentions and quick reference." />
                     <MudTextField T="string" Label="Teams" Placeholder="Business, Household" @bind-Value="this.teams"
-                                  HelperText="Comma-separated. Leave blank for no team." />
+                                  Variant="Variant.Outlined" Margin="Margin.Dense" HelperText="Comma-separated. Leave blank for no team." />
                 </MudStack>
             }
             else
@@ -114,7 +112,7 @@
                     }
                     <MudText Typo="Typo.body2" Class="d-flex align-center gap-2">
                         <StatusDot State="this.status.State" />
-                        @TeammateCard.StatusLabel(this.status.State)
+                        @StatusDot.Label(this.status.State)
                     </MudText>
                     @* The reason (when one is known) is a full line here - there is room for it on the
                        card, unlike the tile's tooltip in Teammates.razor. Follows the same pattern as
@@ -168,14 +166,14 @@
             <MudStack Row="true" Spacing="2" Wrap="Wrap.Wrap" Class="mb-2">
                 @if (this.onMessage.HasDelegate)
                 {
-                    <MudButton Variant="Variant.Outlined" OnClick="this.MessageAsync">Message</MudButton>
+                    <MudButton Variant="Variant.Outlined" Size="Size.Small" OnClick="this.MessageAsync">Message</MudButton>
                 }
                 else if (this.roomId is not null)
                 {
-                    <MudButton Href="@($"/rooms/{this.roomId}")" Variant="Variant.Outlined">Message</MudButton>
+                    <MudButton Href="@($"/rooms/{this.roomId}")" Variant="Variant.Outlined" Size="Size.Small">Message</MudButton>
                 }
-                <MudButton Variant="Variant.Outlined" OnClick="this.BeginEditAsync">Edit</MudButton>
-                <MudButton Variant="Variant.Outlined" OnClick="this.OpenInEditor">Open</MudButton>
+                <MudButton Variant="Variant.Outlined" Size="Size.Small" OnClick="this.BeginEditAsync">Edit</MudButton>
+                <MudButton Variant="Variant.Outlined" Size="Size.Small" OnClick="this.OpenInEditor">Open</MudButton>
                 @* Offered in every state, including Online. It was once offered only while there was
                    "something to fix", on the grounds that a healthy teammate needs no button that
                    would restart a session for nothing - but a session is exactly what a NextSession
@@ -193,12 +191,13 @@
                    be cancelling. Offline, Degraded and Online are all settled states. *@
                 @if (this.status.State is not PersonaState.Starting)
                 {
-                    <MudButton Variant="Variant.Outlined" Disabled="this.restarting" OnClick="this.RestartAsync">@(this.restarting ? "Restarting…" : "Restart")</MudButton>
+                    <MudButton Variant="Variant.Outlined" Size="Size.Small" Disabled="this.restarting" OnClick="this.RestartAsync">@(this.restarting ? "Restarting…" : "Restart")</MudButton>
                 }
                 @* Deliberately an inline swap, not a nested MudDialog: MudBlazor dialogs are not
                    designed to stack, and a confirmation dialog on top of this one would need a second
                    backdrop and a second focus trap for what is only ever a yes/no choice. Swapping the
-                   one Remove (or, for the Chief of Staff, Reset to default) button for Confirm/Cancel
+                   one Remove (or, for the Chief of Staff, Reset to default) button for an InlineConfirm
+                   (its verb button and Cancel; Escape cancels it and focus returns to the button it replaced)
                    in place reads as a confirmation without either, and keeps the whole exchange inside
                    the one dialog whose parameters are already frozen (see the file-level comment) - a
                    nested dialog would need its own independent parameter set anyway.
@@ -211,33 +210,31 @@
                 {
                     @if (this.confirmingReset)
                     {
-                        <MudButton Variant="Variant.Outlined" Color="Color.Error" OnClick="this.ConfirmReset">Confirm</MudButton>
-                        <MudButton Variant="Variant.Outlined" OnClick="this.CancelReset">Cancel</MudButton>
+                        <InlineConfirm Prompt="Reset to default?" ConfirmText="Reset" OnConfirm="this.ConfirmReset" OnCancel="this.CancelReset" />
                     }
                     else
                     {
-                        <MudButton Variant="Variant.Outlined" Color="Color.Error" OnClick="this.BeginReset">Reset to default</MudButton>
+                        <MudButton Variant="Variant.Outlined" Size="Size.Small" Color="Color.Error" @ref="this.resetButton" OnClick="this.BeginReset">Reset to default</MudButton>
                     }
                 }
                 else
                 {
                     @if (this.confirmingRemove)
                     {
-                        <MudButton Variant="Variant.Outlined" Color="Color.Error" OnClick="this.ConfirmRemove">Confirm</MudButton>
-                        <MudButton Variant="Variant.Outlined" OnClick="this.CancelRemove">Cancel</MudButton>
+                        <InlineConfirm Prompt="@($"Remove {this.name}?")" ConfirmText="Remove" OnConfirm="this.ConfirmRemove" OnCancel="this.CancelRemove" />
                     }
                     else
                     {
                         <MudTooltip Text="Remove">
-                            <MudIconButton Icon="@Icons.Material.Filled.PersonRemove" Color="Color.Error"
-                                           aria-label="Remove" OnClick="this.BeginRemove" />
+                            <MudIconButton Icon="@Icons.Material.Filled.PersonRemove" Size="Size.Small" Color="Color.Error"
+                                           aria-label="Remove" @ref="this.removeButton" OnClick="this.BeginRemove" />
                         </MudTooltip>
                     }
                 }
             </MudStack>
 
             @* Spec §6.12's confirm copy, verbatim - shown only during the Reset confirm step, the
-               same way the caption line just below explains what Confirm does for every other card. *@
+               same way the caption line just below explains what saving does for every other card. *@
             @if (this.IsBuiltinTeammate && this.confirmingReset)
             {
                 <MudText Typo="Typo.body2" Class="d-block mb-3 mud-text-secondary">Restore the Chief of Staff's instructions, Title, Teams, Skills, Model and Effort to their defaults? Its Name, Alias, Rooms and history are kept.</MudText>
@@ -282,11 +279,14 @@
             {
                 <MudStack Spacing="2" Class="mb-3">
                     <MudTextField T="string" Label="Name" Placeholder="Chief of Staff" Value="@this.name" ValueChanged="this.OnNameChanged"
-                                  ReadOnly="@this.nameLocked" HelperText="@this.NameHelperText" />
+                                  Variant="Variant.Outlined" Margin="Margin.Dense"
+                                  Disabled="@this.nameLocked" HelperText="@this.NameHelperText" />
                     <MudTextField T="string" Label="Title" Placeholder="Chief of Staff" Value="@this.title" ValueChanged="this.OnTitleChanged"
-                                  ReadOnly="@this.titleLocked" HelperText="@this.TitleHelperText" />
+                                  Variant="Variant.Outlined" Margin="Margin.Dense"
+                                  Disabled="@this.titleLocked" HelperText="@this.TitleHelperText" />
                     <MudTextField T="string" Label="Alias" Placeholder="coo" Value="@this.alias" ValueChanged="this.OnAliasChanged"
-                                  ReadOnly="@this.aliasLocked" HelperText="@this.AliasHelperText" />
+                                  Variant="Variant.Outlined" Margin="Margin.Dense"
+                                  Disabled="@this.aliasLocked" HelperText="@this.AliasHelperText" />
                 </MudStack>
 
                 @* This said the opposite until ADR-0011: a rename used to leave the Agent, its Rooms and
@@ -308,7 +308,7 @@
             <MudTextField T="string" Value="@this.text" ValueChanged="this.OnTextChanged"
                           Label="@(this.mode == TeammateCardMode.Create ? "Persona body" : "Persona text")"
                           Placeholder="You are the Chief of Staff. You keep the team honest."
-                          Lines="6"
+                          Lines="6" Variant="Variant.Outlined" Margin="Margin.Dense"
                           HelperText="@this.TextHelperText"
                           Class="mb-4" />
 
@@ -322,6 +322,7 @@
             @if (this.AdapterChoices.Count > 1)
             {
                 <MudSelect T="string" Label="Adapter" Value="@(this.adapter ?? string.Empty)" ValueChanged="this.OnAdapterChangedAsync"
+                           Variant="Variant.Outlined" Margin="Margin.Dense"
                            HelperText="@this.AdapterHelperText" Class="mb-4">
                     <MudSelectItem T="string" Value="@string.Empty">Use the default adapter</MudSelectItem>
                     @foreach (var choice in this.AdapterChoices)
@@ -350,7 +351,7 @@
                Adapter select's "@if (AdapterChoices.Count > 1)": a MultiSelection picker with zero or
                one option is still a legitimate zero/one-Skill catalog, not a control nobody could use. *@
             <MudSelect T="string" Label="Skills" MultiSelection="true" SelectedValues="@this.skills"
-                       SelectedValuesChanged="this.OnSkillsChanged"
+                       SelectedValuesChanged="this.OnSkillsChanged" Variant="Variant.Outlined" Margin="Margin.Dense"
                        HelperText="Changing Skills restarts this Teammate." Class="mb-4">
                 @foreach (var skill in this.Skills.All)
                 {
@@ -371,7 +372,7 @@
                 <MudStack Row="true" Spacing="1" Wrap="Wrap.Wrap" Class="mb-4">
                     @foreach (var missing in this.MissingSkillNames)
                     {
-                        <MudChip T="string" Color="Color.Warning" OnClose="@(() => this.RemoveSkill(missing))">@missing</MudChip>
+                        <MudChip T="string" Size="Size.Small" Color="Color.Warning" OnClose="@(() => this.RemoveSkill(missing))">@missing</MudChip>
                     }
                 </MudStack>
             }
@@ -385,7 +386,7 @@
                     @foreach (var pack in this.rolePacks)
                     {
                         var active = this.IsPackActive(pack);
-                        <MudChip T="string" Class="teammate-card-pack" Color="@(active ? Color.Primary : Color.Default)"
+                        <MudChip T="string" Size="Size.Small" Class="teammate-card-pack" Color="@(active ? Color.Primary : Color.Default)"
                                  Variant="@(active ? Variant.Filled : Variant.Outlined)" aria-pressed="@(active ? "true" : "false")"
                                  OnClick="@(() => this.TogglePack(pack))">@pack.Title</MudChip>
                     }
@@ -413,7 +414,7 @@
                the stored id - and an interactive select offers that two-item list as though it were the
                whole truth.
 
-               Disabled, NOT ReadOnly, even though ReadOnly is what the locked identity boxes above use.
+               Disabled, NOT ReadOnly, the same as the locked identity boxes above.
                Both refuse to open the popover, but MudBlazor 9.10.0 styles only the disabled one:
                .mud-input.mud-disabled dims the text and dots the underline, while the read-only case has
                no input rule at all. A read-only select would therefore look live and silently swallow
@@ -421,7 +422,7 @@
                MudBlazor.min.css, not assumed. The cost is the tab order; ModelHelperText carries the
                reason on screen either way, and the window is one adapter spawn long. *@
             <MudSelect T="string" Label="Model" Value="@(this.model ?? string.Empty)" ValueChanged="this.OnModelChangedAsync"
-                       Disabled="@this.modelsLoading"
+                       Disabled="@this.modelsLoading" Variant="Variant.Outlined" Margin="Margin.Dense"
                        HelperText="@this.ModelHelperText" Class="mb-4">
                 <MudSelectItem T="string" Value="@string.Empty">Use the agent's default</MudSelectItem>
                 @foreach (var choice in this.ModelChoices)
@@ -447,7 +448,7 @@
                two separate adapter spawns and land at different moments, so each select waits only on
                the list it is actually offering. *@
             <MudSelect T="string" Label="Effort" Value="@(this.effort ?? string.Empty)" ValueChanged="this.OnEffortChanged"
-                       Disabled="@this.effortsLoading"
+                       Disabled="@this.effortsLoading" Variant="Variant.Outlined" Margin="Margin.Dense"
                        HelperText="@this.EffortHelperText">
                 <MudSelectItem T="string" Value="@string.Empty">Use the agent's default</MudSelectItem>
                 @foreach (var choice in this.EffortChoices)
@@ -484,6 +485,7 @@
             {
                 <MudSelect T="string" Label="Work mode" Value="@(this.workMode ?? string.Empty)" ValueChanged="this.OnWorkModeChanged"
                            Disabled="@this.effortsLoading" ToStringFunc="@this.WorkModeLabel"
+                           Variant="Variant.Outlined" Margin="Margin.Dense"
                            HelperText="@this.WorkModeHelperText" Class="mt-4">
                     <MudSelectItem T="string" Value="@string.Empty">Use the agent's default</MudSelectItem>
                     @foreach (var choice in this.WorkModeChoices)
@@ -497,27 +499,22 @@
     <DialogActions>
         @if (this.mode != TeammateCardMode.View)
         {
-            <MudButton OnClick="this.Close">Cancel</MudButton>
-            <MudButton Variant="Variant.Filled" Color="Color.Primary" OnClick="this.SaveAsync">@(this.mode == TeammateCardMode.Create ? "Add teammate" : "Save")</MudButton>
+            <MudButton Variant="Variant.Text" Size="Size.Small" OnClick="this.Close">Cancel</MudButton>
+            <MudButton Variant="Variant.Filled" Size="Size.Small" Color="Color.Primary" OnClick="this.SaveAsync">@(this.mode == TeammateCardMode.Create ? "Add teammate" : "Save")</MudButton>
         }
     </DialogActions>
 </MudDialog>
 
 @code {
     /// <summary>
-    /// The <see cref="DialogOptions"/> every <see cref="TeammateCard"/> opens with - a single shared
-    /// instance so <c>Teammates.razor</c>'s <c>ShowAsync</c> call and this file agree on them without
-    /// duplicating the literal.
+    /// The <see cref="DialogOptions"/> every <see cref="TeammateCard"/> opens with: the shared
+    /// <see cref="HuddleDialogOptions.SmallForm"/> (close button, no backdrop dismissal, because Edit and
+    /// Create hold typed text), so <c>Teammates.razor</c>'s <c>ShowAsync</c> call and this file agree.
     /// </summary>
-    internal static readonly DialogOptions Options = new()
-    {
-        MaxWidth = MaxWidth.Small,
-        FullWidth = true,
-        CloseOnEscapeKey = true,
-    };
+    internal static DialogOptions Options => HuddleDialogOptions.SmallForm;
 
     [CascadingParameter]
-    private IMudDialogInstance MudDialog { get; set; } = default!;
+    public required IMudDialogInstance MudDialog { get; set; }
 
     [Parameter]
     [EditorRequired]
@@ -640,6 +637,9 @@
     // Empty when it offers none or is not running.
     private IReadOnlyList<AdapterCommand> offeredCommands = [];
     private string? error;
+    private MudButton? resetButton;
+    private MudIconButton? removeButton;
+    private bool restoreActionFocus;
     private bool confirmingRemove;
     private bool confirmingReset;
     private bool restarting;
@@ -713,16 +713,6 @@
     /// <see cref="LoadEffortsAsync"/>.
     /// </summary>
     private IReadOnlyList<AgentModeOption> availableWorkModes = [];
-
-    /// <summary>The Human-facing label for <paramref name="state"/> - "Starting" rather than "Offline" so a Persona launching for the first time does not read as a fault.</summary>
-    /// <param name="state">The state to label.</param>
-    private static string StatusLabel(PersonaState state) => state switch
-    {
-        PersonaState.Starting => "Starting",
-        PersonaState.Online => "Online",
-        PersonaState.Degraded => "Degraded",
-        _ => "Offline",
-    };
 
     /// <summary>Draws a Teammate name from the pool that no existing Teammate has.</summary>
     /// <param name="current">The name now showing, which is not drawn again, or <see langword="null"/>.</param>
@@ -859,7 +849,7 @@
             return;
         }
 
-        _ = this.DispatchAsync(() =>
+        _ = RendererDispatch.RunAsync(this.InvokeAsync, () =>
         {
             this.spendAmounts = this.Spend.Get(this.name);
             this.StateHasChanged();
@@ -879,7 +869,7 @@
             return;
         }
 
-        _ = this.DispatchAsync(() =>
+        _ = RendererDispatch.RunAsync(this.InvokeAsync, () =>
         {
             this.offeredCommands = this.Commands.Get(this.name);
             this.StateHasChanged();
@@ -905,7 +895,7 @@
     /// </summary>
     private void OnHealthOrPresenceChanged()
     {
-        _ = this.DispatchAsync(async () =>
+        _ = RendererDispatch.RunAsync(this.InvokeAsync, async () =>
         {
             await this.ResolveAgentIdAsync();
             this.RefreshStatus();
@@ -928,11 +918,6 @@
         }
     }
 
-    private Task DispatchAsync(Func<Task> action)
-    {
-        return RendererDispatch.RunAsync(this.InvokeAsync, action);
-    }
-
     /// <summary>
     /// Repaints this card when <see cref="SkillStore.SkillsChanged"/> fires - a Skill written,
     /// edited or removed on disk while this card is open - so the Skills select's own option list
@@ -942,11 +927,7 @@
     /// </summary>
     private void OnSkillsStoreChanged()
     {
-        _ = this.DispatchAsync(() =>
-        {
-            this.StateHasChanged();
-            return Task.CompletedTask;
-        });
+        _ = RendererDispatch.Repaint(this.InvokeAsync, this.StateHasChanged);
     }
 
     /// <summary>
@@ -1819,6 +1800,7 @@
     private void CancelRemove()
     {
         this.confirmingRemove = false;
+        this.restoreActionFocus = true;
     }
 
     private void ConfirmRemove()
@@ -1846,6 +1828,30 @@
     private void CancelReset()
     {
         this.confirmingReset = false;
+        this.restoreActionFocus = true;
+    }
+
+    /// <summary>
+    /// After a cancelled Reset or Remove confirm has re-rendered, puts focus back on the button the confirm replaced,
+    /// so a keyboard user does not lose their place in the dialog.
+    /// </summary>
+    /// <param name="firstRender">True on the first render, which never restores focus.</param>
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (!this.restoreActionFocus)
+        {
+            return;
+        }
+
+        this.restoreActionFocus = false;
+        if (this.resetButton is not null)
+        {
+            await this.resetButton.FocusAsync();
+        }
+        else if (this.removeButton is not null)
+        {
+            await this.removeButton.FocusAsync();
+        }
     }
 
     /// <summary>

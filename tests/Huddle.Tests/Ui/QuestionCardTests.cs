@@ -317,6 +317,95 @@ public sealed class QuestionCardTests
         Assert.True(string.IsNullOrWhiteSpace(cut.Markup));
     }
 
+    /// <summary>UX-030 to UX-032: a card that needs Send is the shared shell, with Send then Dismiss in one left-aligned actions row.</summary>
+    [Fact]
+    public async Task Card_IsTheSharedShell_SendThenDismiss()
+    {
+        CancellationToken ct = Xunit.TestContext.Current.CancellationToken;
+        using Fixture fixture = await Fixture.CreateAsync(ct);
+        (Room room, User coach) = await fixture.RoomWithCoachAsync(ct);
+        _ = fixture.Questions.TryPut(Fixture.Card(room, coach, new Question("Which days can you train?", ["Mon", "Wed"], QuestionKind.MultiSelect)));
+        await using MudBunitContext ctx = new();
+        fixture.RegisterInto(ctx);
+
+        IRenderedComponent<QuestionCard> cut = RenderCard(ctx, room.Id);
+
+        IElement actions = AgentCardAssert.IsShell(cut, "Coach is asking", "Questions from Coach");
+        Assert.Equal(["Send", "Dismiss"], AgentCardAssert.Verbs(actions));
+    }
+
+    /// <summary>UX-032: a card that sends on tap has no primary, so Dismiss is the only action, in the same row.</summary>
+    [Fact]
+    public async Task SendsOnTapCard_HasDismissAsItsOnlyAction()
+    {
+        CancellationToken ct = Xunit.TestContext.Current.CancellationToken;
+        using Fixture fixture = await Fixture.CreateAsync(ct);
+        (Room room, User coach) = await fixture.RoomWithCoachAsync(ct);
+        _ = fixture.Questions.TryPut(Fixture.Card(room, coach, new Question("Goal?", ["Strength", "Cardio"], QuestionKind.SingleSelect)));
+        await using MudBunitContext ctx = new();
+        fixture.RegisterInto(ctx);
+
+        IRenderedComponent<QuestionCard> cut = RenderCard(ctx, room.Id);
+
+        IElement actions = AgentCardAssert.IsShell(cut, "Coach is asking", "Questions from Coach", hasPrimary: false);
+        Assert.Equal(["Dismiss"], AgentCardAssert.Verbs(actions));
+    }
+
+    /// <summary>UX-033: while the answer is in flight Send reads "Sending…" and Dismiss is disabled; releasing it lets the card go.</summary>
+    [Fact]
+    public async Task Send_InFlight_ShowsBusyLabel()
+    {
+        CancellationToken ct = Xunit.TestContext.Current.CancellationToken;
+        using Fixture fixture = await Fixture.CreateAsync(ct);
+        (Room room, User coach) = await fixture.RoomWithCoachAsync(ct);
+        _ = fixture.Questions.TryPut(Fixture.Card(room, coach, new Question("Which days can you train?", ["Mon", "Wed"], QuestionKind.MultiSelect)));
+        await using MudBunitContext ctx = new();
+        fixture.RegisterInto(ctx);
+        IRenderedComponent<QuestionCard> cut = RenderCard(ctx, room.Id);
+        await cut.InvokeAsync(() => FindButton(cut, "Mon").ClickAsync());
+        TaskCompletionSource gate = new(TaskCreationOptions.RunContinuationsAsynchronously);
+        fixture.Gate.Gate = gate;
+
+        // Fire-and-forget: the send parks on the gate, so awaiting ClickAsync would never return.
+        _ = cut.InvokeAsync(() => FindButton(cut, "Send").ClickAsync());
+
+        cut.WaitForAssertion(() => Assert.Equal(["Sending…", "Dismiss"], AgentCardAssert.Verbs(cut.Find(".agent-card-actions"))));
+        Assert.True(FindButton(cut, "Dismiss").HasAttribute("disabled"));
+
+        await cut.InvokeAsync(gate.SetResult);
+
+        cut.WaitForAssertion(() => Assert.True(string.IsNullOrWhiteSpace(cut.Markup)));
+    }
+
+    /// <summary>UX-R01: a call that throws is reported by one keyed error snackbar (a repeat collapses into it) instead of crashing the circuit.</summary>
+    [Fact]
+    public async Task Send_Throws_ShowsOneKeyedErrorSnackbarAndUnlocks()
+    {
+        CancellationToken ct = Xunit.TestContext.Current.CancellationToken;
+        using Fixture fixture = await Fixture.CreateAsync(ct);
+        (Room room, User coach) = await fixture.RoomWithCoachAsync(ct);
+        _ = fixture.Questions.TryPut(Fixture.Card(room, coach, new Question("Which days can you train?", ["Mon", "Wed"], QuestionKind.MultiSelect)));
+        await using MudBunitContext ctx = new();
+        fixture.RegisterInto(ctx);
+        MudBlazor.ISnackbar snackbar = ctx.Services.GetRequiredService<MudBlazor.ISnackbar>();
+        IRenderedComponent<QuestionCard> cut = RenderCard(ctx, room.Id);
+        await cut.InvokeAsync(() => FindButton(cut, "Mon").ClickAsync());
+        TaskCompletionSource gate = new(TaskCreationOptions.RunContinuationsAsynchronously);
+        fixture.Gate.Gate = gate;
+
+        // Fire-and-forget: the send parks on the gate, so awaiting ClickAsync would never return.
+        _ = cut.InvokeAsync(() => FindButton(cut, "Send").ClickAsync());
+        cut.WaitForAssertion(() => Assert.Equal(["Sending…", "Dismiss"], AgentCardAssert.Verbs(cut.Find(".agent-card-actions"))));
+        fixture.Gate.Gate = null;
+        await cut.InvokeAsync(() => gate.SetException(new InvalidOperationException("The post failed.")));
+
+        cut.WaitForAssertion(() => Assert.Single(snackbar.ShownSnackbars));
+        MudBlazor.Snackbar shown = snackbar.ShownSnackbars.Single();
+        Assert.Equal("The post failed.", shown.Message);
+        Assert.Equal(MudBlazor.Severity.Error, shown.Severity);
+        Assert.Null(snackbar.Add("A repeat", MudBlazor.Severity.Error, configure: null, key: "agent-card-error"));
+    }
+
     /// <summary>A Room with no waiting card renders nothing at all.</summary>
     [Fact]
     public async Task NoCard_RendersNothing()
@@ -364,7 +453,7 @@ public sealed class QuestionCardTests
 
     /// <summary>Renders the card for a Room.</summary>
     /// <param name="ctx">The context to render into.</param>
-    /// <param name="roomId">The Room id passed as <see cref="QuestionCard.RoomId"/>.</param>
+    /// <param name="roomId">The Room id passed as <c>RoomId</c>.</param>
     private static IRenderedComponent<QuestionCard> RenderCard(MudBunitContext ctx, string roomId)
     {
         return ctx.Render<QuestionCard>(parameters => parameters.Add(p => p.RoomId, roomId));
@@ -392,8 +481,10 @@ public sealed class QuestionCardTests
             RoomEvents events,
             QuestionStore questions,
             QuestionService service,
-            Drafts drafts)
+            Drafts drafts,
+            DirectoryGate gate)
         {
+            this.Gate = gate;
             this.dataDir = dataDir;
             this.Directory = directory;
             this.Store = store;
@@ -434,10 +525,14 @@ public sealed class QuestionCardTests
             QuestionStore questions = new(events);
             ChatService chat = new(
                 directory, store, events, new FakeMentionAliasSource(), options, new ProposalStore(events), questions, NullLogger<ChatService>.Instance);
-            QuestionService service = new(questions, chat, directory, NullLogger<QuestionService>.Instance);
+            ITeamDirectory serviceDirectory = DirectoryGate.Wrap(directory, out DirectoryGate gate);
+            QuestionService service = new(questions, chat, serviceDirectory, NullLogger<QuestionService>.Instance);
 
-            return new Fixture(dataDir, directory, store, events, questions, service, new Drafts());
+            return new Fixture(dataDir, directory, store, events, questions, service, new Drafts(), gate);
         }
+
+        /// <summary>Holds the service's directory calls while a test keeps an answer in flight.</summary>
+        public DirectoryGate Gate { get; }
 
         /// <summary>Creates a Room of the Human and a Teammate named Coach.</summary>
         /// <param name="ct">Cancels the writes.</param>

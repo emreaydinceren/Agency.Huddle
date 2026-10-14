@@ -8,7 +8,8 @@
 <rect x="30" y="65" width="25" height="17" rx="8.5" fill="#9d174d"/>
 <text x="42.4" y="77.5" font-size="11" font-weight="700" fill="#fff" text-anchor="middle">M1</text>
 <text x="60.8" y="78" font-size="12" font-weight="600" fill="#1f2430" text-anchor="start">Team page</text>
-<text x="131.8" y="78" font-size="11" font-weight="400" fill="#6b7280" text-anchor="start">MudContainer, full width</text>
+<text x="131.8" y="78" font-size="11" font-weight="400" fill="#6b7280" text-anchor="start">MudContainer, MaxWidth.False, pa-4</text>
+<text x="48" y="116" font-size="14" font-weight="600" fill="#1f2430" text-anchor="start">Team name (PageHeader, h1)</text>
 <rect x="468" y="98" width="96" height="26" rx="4" fill="#ffffff" stroke="#8b93a1" stroke-width="1.2"/>
 <text x="516.0" y="115.0" font-size="11" font-weight="400" fill="#1f2430" text-anchor="middle">Duplicate</text>
 <rect x="464" y="90" width="25" height="17" rx="8.5" fill="#9d174d"/>

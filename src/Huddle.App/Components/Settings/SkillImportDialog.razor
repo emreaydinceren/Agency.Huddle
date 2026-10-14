@@ -19,12 +19,13 @@
         <MudStack Spacing="2">
             @if (this.step == ImportStep.Search)
             {
-                <MudTextField T="string" Label="Search the catalog" Placeholder="Name, publisher or category" Immediate="true"
-                              @bind-Value="this.search" Class="skill-import-search" />
+                <div class="skill-import-search">
+                    <SearchField @bind-Value="this.search" Placeholder="Search the catalog by name, publisher or category" AriaLabel="Search the catalog" />
+                </div>
                 <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2">
-                    <MudTextField T="string" Label="Or paste a GitHub tree URL" Immediate="true"
+                    <MudTextField T="string" Label="Or paste a GitHub tree URL" Immediate="true" Variant="Variant.Outlined" Margin="Margin.Dense"
                                   @bind-Value="this.url" Class="skill-import-url" />
-                    <MudButton Variant="Variant.Outlined" Class="skill-import-url-go" Disabled="@this.CannotReviewUrl"
+                    <MudButton Variant="Variant.Outlined" Size="Size.Small" Class="skill-import-url-go" Disabled="@this.CannotReviewUrl"
                                OnClick="this.ReviewUrlAsync">Review</MudButton>
                 </MudStack>
                 @if (this.error is not null)
@@ -72,7 +73,7 @@
                             <td class="skill-import-link">
                                 @if (SkillImportDialog.TryBrowseUrl(this.preview, out string? browseUrl))
                                 {
-                                    <a href="@browseUrl" target="_blank" rel="noopener noreferrer">@browseUrl</a>
+                                    <MudLink Href="@browseUrl" Target="_blank" rel="noopener noreferrer">@browseUrl</MudLink>
                                 }
                                 else
                                 {
@@ -86,7 +87,7 @@
                 </MudSimpleTable>
                 @foreach (string difference in this.preview.FrontmatterDifferences)
                 {
-                    <MudAlert Severity="Severity.Info" Dense="true" Class="skill-import-difference">@difference</MudAlert>
+                    <MudAlert Severity="Severity.Info" Dense="true" role="status" Class="skill-import-difference">@difference</MudAlert>
                 }
                 <MudText Typo="Typo.body2" Class="skill-import-description">@this.preview.Description</MudText>
                 @foreach (string problem in this.preview.ValidationProblems)
@@ -101,24 +102,24 @@
             else if (this.step == ImportStep.Done)
             {
                 <MudAlert Severity="Severity.Success" Dense="true" role="status" Class="skill-import-success">Installed @(this.installedName).</MudAlert>
-                <a href="/settings/skills" class="skill-import-skill-link">Open the Skills tab</a>
+                <MudLink Href="/settings/skills" Class="skill-import-skill-link">Open the Skills tab</MudLink>
             }
         </MudStack>
     </DialogContent>
     <DialogActions>
-        @if (this.step == ImportStep.Review)
-        {
-            <MudButton Color="Color.Primary" Variant="Variant.Filled" Class="skill-import-install"
-                       Disabled="@(this.preview is null || !this.preview.CanInstall)" OnClick="this.Install">Install</MudButton>
-            <MudButton Class="skill-import-back" OnClick="this.Back">Back</MudButton>
-        }
         @if (this.step == ImportStep.Done)
         {
-            <MudButton Color="Color.Primary" Class="skill-import-close" OnClick="this.Close">Close</MudButton>
+            <MudButton Color="Color.Primary" Variant="Variant.Filled" Size="Size.Small" Class="skill-import-close" OnClick="this.Close">Close</MudButton>
         }
         else
         {
-            <MudButton Class="skill-import-cancel" OnClick="this.Cancel">Cancel</MudButton>
+            <MudButton Variant="Variant.Text" Size="Size.Small" Class="skill-import-cancel" OnClick="this.Cancel">Cancel</MudButton>
+        }
+        @if (this.step == ImportStep.Review)
+        {
+            <MudButton Variant="Variant.Text" Size="Size.Small" Class="skill-import-back" OnClick="this.Back">Back</MudButton>
+            <MudButton Color="Color.Primary" Variant="Variant.Filled" Size="Size.Small" Class="skill-import-install"
+                       Disabled="@(this.preview is null || !this.preview.CanInstall)" OnClick="this.Install">Install</MudButton>
         }
     </DialogActions>
 </MudDialog>

@@ -4,51 +4,49 @@
     creates a Sprint (ADR-0037). The outcome appears as the Message the service posts, never as card state.
 
     SprintProposalStore.Changed fires for every add and remove, including the one this card's own click causes.
-    OnChanged ignores a fire while busy is true, and the click handler's finally block reloads once the call returns,
-    the same arrangement ProposalCard uses with RoomEvents.ProposalChanged.
+    AgentCardBase.RefreshOnChange ignores a fire while a call of this card is running, and RunBusyAsync reloads
+    once the call returns, the same arrangement ProposalCard uses with RoomEvents.ProposalChanged.
 *@
-@implements IDisposable
+@inherits AgentCardBase
+@using Agency.Huddle.App.Components.Shared.AgentCards
 @using Agency.Huddle.App.Tasks
 
 @inject SprintProposalStore Proposals
 @inject SprintProposalService Service
 @inject TaskStore TaskStore
-@inject ISnackbar Snackbar
 
-@if (this.proposal is { } current)
+@if (this.proposal is { } current && this.RoomIsOpen)
 {
-    <MudAlert Severity="Severity.Info" Class="sprint-proposal-card" role="alert">
-        <p>@current.Proposer proposes a Sprint: <strong class="sprint-proposal-name">@current.Name</strong>. Approve creates it.</p>
+    <AgentCard Class="sprint-proposal-card" Title="@($"{current.Proposer} is proposing a Sprint")" AriaLabel="@($"Sprint proposal from {current.Proposer}")">
+        <ChildContent>
+            <p>@current.Proposer proposes a Sprint: <strong class="sprint-proposal-name">@current.Name</strong>. Approve creates it.</p>
 
-        <ul class="sprint-proposal-tasks">
-            @foreach (var line in this.Lines(current))
-            {
-                <li>
-                    <span class="sprint-proposal-task-id">@line.Id</span>
-                    <span class="sprint-proposal-task-title">@line.Title</span>
-                    <span class="sprint-proposal-task-assignee">@line.Assignee</span>
-                </li>
-            }
-        </ul>
+            <ul class="sprint-proposal-tasks">
+                @foreach (var line in this.Lines(current))
+                {
+                    <li>
+                        <span class="sprint-proposal-task-id">@line.Id</span>
+                        <span class="sprint-proposal-task-title">@line.Title</span>
+                        <span class="sprint-proposal-task-assignee">@line.Assignee</span>
+                    </li>
+                }
+            </ul>
 
-        <MudTextField T="string" @bind-Value="this.reason" Label="Reason if you decline" Class="sprint-proposal-reason" Disabled="@this.busy" />
-
-        <MudStack Row="true" Spacing="2" Class="sprint-proposal-actions">
-            <MudButton Variant="Variant.Filled" Color="Color.Primary" Class="sprint-proposal-approve" Disabled="@this.busy" OnClick="this.ApproveAsync">Approve</MudButton>
-            <MudButton Variant="Variant.Outlined" Class="sprint-proposal-decline" Disabled="@this.busy" OnClick="this.DeclineAsync">Decline</MudButton>
-        </MudStack>
-    </MudAlert>
+            <MudTextField T="string" Variant="Variant.Outlined" Margin="Margin.Dense" @bind-Value="this.reason" Label="Reason if you decline" Class="sprint-proposal-reason" Disabled="@this.Busy" />
+        </ChildContent>
+        <Actions>
+            <MudButton Size="Size.Small" Variant="Variant.Filled" Color="Color.Primary" Class="sprint-proposal-approve" Disabled="@this.Busy" OnClick="this.ApproveAsync">@(this.IsBusy(ApproveKey) ? "Approving…" : "Approve")</MudButton>
+            <MudButton Size="Size.Small" Variant="Variant.Outlined" Class="sprint-proposal-decline" Disabled="@this.Busy" OnClick="this.DeclineAsync">@(this.IsBusy(DeclineKey) ? "Declining…" : "Decline")</MudButton>
+        </Actions>
+    </AgentCard>
 }
 
 @code {
-    /// <summary>The Room whose pending Sprint proposal, if any, this card shows.</summary>
-    [Parameter, EditorRequired]
-    public string RoomId { get; set; } = "";
+    private const string ApproveKey = "approve";
+    private const string DeclineKey = "decline";
 
-    private string? loadedRoomId;
     private SprintProposal? proposal;
     private string reason = "";
-    private bool busy;
 
     /// <summary>One Task row of the card.</summary>
     /// <param name="Id">The Task id as proposed.</param>
@@ -56,51 +54,30 @@
     /// <param name="Assignee">The assignee, or "Unassigned".</param>
     private sealed record TaskLine(string Id, string Title, string Assignee);
 
-    /// <summary>Subscribes to <see cref="SprintProposalStore.Changed"/>; unsubscribed in <see cref="Dispose"/>.</summary>
-    protected override void OnInitialized()
+    /// <summary>Follows <see cref="SprintProposalStore.Changed"/>; undone in <see cref="Unsubscribe"/>.</summary>
+    protected override void Subscribe()
     {
         this.Proposals.Changed += this.OnChanged;
     }
 
-    /// <summary>Reloads the pending proposal whenever <see cref="RoomId"/> changes.</summary>
-    protected override async Task OnParametersSetAsync()
-    {
-        if (this.RoomId == this.loadedRoomId)
-        {
-            return;
-        }
-
-        this.loadedRoomId = this.RoomId;
-        await this.LoadAsync();
-    }
-
-    /// <summary>Unsubscribes from <see cref="SprintProposalStore.Changed"/>.</summary>
-    public void Dispose()
+    /// <summary>Lets go of <see cref="SprintProposalStore.Changed"/>.</summary>
+    protected override void Unsubscribe()
     {
         this.Proposals.Changed -= this.OnChanged;
     }
 
     /// <summary>Reads the first proposal pending in this card's Room.</summary>
-    private async Task LoadAsync()
+    protected override async Task LoadAsync()
     {
         var pending = await this.Service.PendingAsync(this.RoomId, CancellationToken.None);
         this.proposal = pending.Count > 0 ? pending[0] : null;
     }
 
-    /// <summary>Reloads after a proposal was added or removed by someone else; ignored while this card's own call is running.</summary>
-    /// <param name="team">The Team whose proposals changed.</param>
+    /// <summary>Reloads after a proposal was added or removed by someone else.</summary>
+    /// <param name="team">The Team whose proposals changed; the event is not per Room.</param>
     private void OnChanged(string team)
     {
-        if (this.busy)
-        {
-            return;
-        }
-
-        _ = this.DispatchAsync(async () =>
-        {
-            await this.LoadAsync();
-            this.StateHasChanged();
-        });
+        this.RefreshOnChange();
     }
 
     /// <summary>The rows for <paramref name="current"/>, resolved against the live Task store.</summary>
@@ -122,56 +99,24 @@
     /// <summary>Approves the shown proposal; the outcome is the posted Message, so this only reloads afterwards.</summary>
     private async Task ApproveAsync()
     {
-        if (this.busy || this.proposal is not { } current)
+        if (this.proposal is { } current)
         {
-            return;
-        }
-
-        this.busy = true;
-        try
-        {
-            _ = await this.Service.ApproveAsync(this.RoomId, current.Id, CancellationToken.None);
-        }
-        catch (Exception ex) when (ex is not OperationCanceledException)
-        {
-            this.Snackbar.Add(ex.Message, Severity.Error);
-        }
-        finally
-        {
-            await this.LoadAsync();
-            this.busy = false;
+            await this.RunBusyAsync(async () => _ = await this.Service.ApproveAsync(this.RoomId, current.Id, CancellationToken.None), ApproveKey);
         }
     }
 
     /// <summary>The Decline twin of <see cref="ApproveAsync"/>: sends the typed reason to the manager.</summary>
     private async Task DeclineAsync()
     {
-        if (this.busy || this.proposal is not { } current)
+        if (this.proposal is { } current)
         {
-            return;
+            await this.RunBusyAsync(
+                async () =>
+                {
+                    _ = await this.Service.DeclineAsync(this.RoomId, current.Id, this.reason, CancellationToken.None);
+                    this.reason = "";
+                },
+                DeclineKey);
         }
-
-        this.busy = true;
-        try
-        {
-            _ = await this.Service.DeclineAsync(this.RoomId, current.Id, this.reason, CancellationToken.None);
-            this.reason = "";
-        }
-        catch (Exception ex) when (ex is not OperationCanceledException)
-        {
-            this.Snackbar.Add(ex.Message, Severity.Error);
-        }
-        finally
-        {
-            await this.LoadAsync();
-            this.busy = false;
-        }
-    }
-
-    /// <summary>Runs <paramref name="action"/> on the renderer; a card disposed in the meantime is ignored.</summary>
-    /// <param name="action">The state update and repaint.</param>
-    private Task DispatchAsync(Func<Task> action)
-    {
-        return RendererDispatch.RunAsync(this.InvokeAsync, action);
     }
 }

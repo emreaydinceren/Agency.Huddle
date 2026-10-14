@@ -32,9 +32,8 @@ public sealed class TaskToolbarTests
         Assert.Empty(root.FindAll(".task-toolbar-save"));
 
         await root.InvokeAsync(() => root.FindAll("button").Single(b => string.Equals(b.TextContent.Trim(), "Filter", StringComparison.Ordinal)).ClickAsync());
-        var teamInput = root.FindComponents<MudTextField<string>>().Single(m => string.Equals(m.Instance.Class, "task-toolbar-filter-input", StringComparison.Ordinal));
-        await root.InvokeAsync(() => teamInput.Instance.ValueChanged.InvokeAsync("Atlas"));
-        await root.InvokeAsync(() => root.Find(".task-toolbar-filter-add").ClickAsync());
+        var teamSelect = root.FindComponents<MudSelect<string>>().Single(m => string.Equals(m.Instance.Class, "task-toolbar-filter-team", StringComparison.Ordinal));
+        await root.InvokeAsync(() => teamSelect.Instance.SelectedValuesChanged.InvokeAsync(["Atlas"]));
 
         TaskView updated = raised ?? throw new InvalidOperationException("EffectiveViewChanged was not raised.");
         Assert.Contains("Atlas", updated.Filter.Teams, StringComparer.Ordinal);
@@ -75,7 +74,7 @@ public sealed class TaskToolbarTests
         Assert.Equal(BlockedFilter.All, store.Get("v1")?.Filter.Blocked);
     }
 
-    /// <summary>The Search field debounces at 200ms and is never part of a saved View.</summary>
+    /// <summary>The Search field is the shared <c>SearchField</c> (debounced at its shared 250ms) and is never part of a saved View.</summary>
     [Fact]
     public async Task Search_IsDebounced_AndNeverSaved()
     {
@@ -87,8 +86,8 @@ public sealed class TaskToolbarTests
         await using var ctx = NewContext(store);
         var (root, toolbar) = RenderToolbar(ctx, saved, searchChanged: EventCallback.Factory.Create<string?>(this, v => searched = v));
 
-        var search = toolbar.FindComponents<MudTextField<string>>().Single(m => string.Equals(m.Instance.Class, "task-toolbar-search", StringComparison.Ordinal));
-        Assert.Equal(200, search.Instance.DebounceInterval);
+        var search = toolbar.FindComponent<Agency.Huddle.App.Components.Shared.SearchField>();
+        Assert.Equal(250, toolbar.FindComponent<MudTextField<string>>().Instance.DebounceInterval);
 
         await toolbar.InvokeAsync(() => search.Instance.ValueChanged.InvokeAsync("urgent"));
 
@@ -261,6 +260,10 @@ public sealed class TaskToolbarTests
         MudBunitContext ctx = new();
         ctx.Services.AddSingleton(store);
         ctx.Services.AddSingleton<ISprintCatalog>(new Agency.Huddle.Tests.Tasks.EmptySprintCatalog());
+        // The toolbar's Team multi-select lists the Teams the app knows (UX-050c): a harness supplies the stores, disposed with the container.
+        ctx.Services.AddSingleton(_ => new Agency.Huddle.Tests.Acp.Tools.TaskToolHarness());
+        ctx.Services.AddSingleton(sp => sp.GetRequiredService<Agency.Huddle.Tests.Acp.Tools.TaskToolHarness>().Store);
+        ctx.Services.AddSingleton(sp => sp.GetRequiredService<Agency.Huddle.Tests.Acp.Tools.TaskToolHarness>().Personas);
         return ctx;
     }
 }

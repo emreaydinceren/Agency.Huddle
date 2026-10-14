@@ -1652,7 +1652,7 @@ After Save, the card on screen looks empty (no Title, no Persona text, no `Perso
 1. Go to /teammates, press F5, click the teammate's tile and note its group heading and whether its Team has any other member.
 2. In the card, click the red Remove icon button (tooltip `Remove`). Read the button row that appears.
 3. Click **Cancel**. Confirm the row returns to its previous buttons and nothing was deleted.
-4. Click Remove again, then click **Confirm**.
+4. Click Remove again, then click **Remove** in the `Remove {name}?` prompt.
 5. Read the page: is the card closed, is the tile gone, is its group heading gone (if it was the last member), and is its Team still in the **Team** dropdown?
 6. In `T-B` run `Get-ChildItem -Recurse <data>\Teammates\<that name>` and note what is left.
 7. If you have sqlite3: `sqlite3 <data>\team.db "select * from persona_models; select * from persona_efforts; select id,name,kind from users;"` and also check the `rooms` table.
@@ -1662,9 +1662,9 @@ After Save, the card on screen looks empty (no Title, no Persona text, no `Perso
 
 **Pass if — all of these**
 
-- Remove does not delete on the first click: the row swaps to `Confirm` and `Cancel`.
+- Remove does not delete on the first click: the row swaps to a `Remove {name}?` prompt with `Remove` and `Cancel`.
 - `Cancel` restores the previous button row and deletes nothing.
-- `Confirm` closes the card, removes the tile, removes the group heading if it was that Team's last member, and removes that Team from the **Team** dropdown if nobody else names it.
+- The prompt's `Remove` closes the card, removes the tile, removes the group heading if it was that Team's last member, and removes that Team from the **Team** dropdown if nobody else names it.
 - `<that name>.md` is gone from disk. The Teammate's folder and its `work\` notes remain: Remove deletes the definition file only (PersonaStore.cs:472-480).
 - `persona_models` and `persona_efforts` hold NO row for that name.
 - Any Room and transcript the teammate had are STILL in the sidebar and still readable — removal is deliberately non-cascading for chats. (Its Avatar entry and image are deleted with it: PersonaRenameCascade removal handler.)

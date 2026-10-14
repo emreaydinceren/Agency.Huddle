@@ -205,8 +205,8 @@ public sealed class TaskListViewTests : IDisposable
         await using MudBunitContext ctx = new();
         IRenderedComponent<ContainerFragment> cut = Render(ctx, view, [task]);
 
-        Assert.Equal(["alpha", "beta"], cut.FindAll(".task-list-tag").Select(chip => chip.TextContent.Trim()));
-        IElement assignee = cut.Find(".task-list-assignee");
+        Assert.Equal(["alpha", "beta"], cut.FindAll(".task-tag").Select(chip => chip.TextContent.Trim()));
+        IElement assignee = cut.Find(".task-assignee");
         Assert.Contains("Amy", assignee.TextContent, StringComparison.Ordinal);
         Assert.NotNull(assignee.QuerySelector(".mud-avatar"));
     }

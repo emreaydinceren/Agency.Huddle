@@ -158,8 +158,8 @@ public sealed class TaskDetailPlacementTests
         DateTimeOffset updated = task.Updated ?? throw new InvalidOperationException("Task has no Updated date.");
         string expectedCreated = created.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture);
         string expectedUpdated = updated.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture);
-        Assert.Equal(expectedCreated, TextOf(cut, ".task-detail-created"));
-        Assert.Equal(expectedUpdated, TextOf(cut, ".task-detail-updated"));
+        Assert.Equal($"Created {expectedCreated}", TextOf(cut, ".task-detail-created"));
+        Assert.Equal($"Updated {expectedUpdated}", TextOf(cut, ".task-detail-updated"));
     }
 
     /// <summary>Closed shows only when the Task has a <see cref="TaskItem.ClosedAt"/> (Spec §13.6).</summary>
@@ -181,6 +181,6 @@ public sealed class TaskDetailPlacementTests
 
         DateTimeOffset closedAt = closedTask.ClosedAt ?? throw new InvalidOperationException("Task has no ClosedAt date.");
         string expected = closedAt.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture);
-        Assert.Equal(expected, TextOf(closedCut, ".task-detail-closed"));
+        Assert.Equal($"Closed {expected}", TextOf(closedCut, ".task-detail-closed"));
     }
 }

@@ -147,6 +147,9 @@ public sealed class RequestTaskPanelTests
         await using MudBunitContext ctx = new();
         ctx.Services.AddSingleton(store);
         ctx.Services.AddSingleton<ISprintCatalog>(new Agency.Huddle.Tests.Tasks.EmptySprintCatalog());
+        ctx.Services.AddSingleton(_ => new Agency.Huddle.Tests.Acp.Tools.TaskToolHarness());
+        ctx.Services.AddSingleton(sp => sp.GetRequiredService<Agency.Huddle.Tests.Acp.Tools.TaskToolHarness>().Store);
+        ctx.Services.AddSingleton(sp => sp.GetRequiredService<Agency.Huddle.Tests.Acp.Tools.TaskToolHarness>().Personas);
         TaskView? raised = null;
         TaskView view = new() { Id = "v1", Name = "v1", Kind = ViewKind.List };
         var root = ctx.RenderWithPopovers(builder =>

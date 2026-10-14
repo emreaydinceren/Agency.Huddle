@@ -125,6 +125,9 @@ internal static class TeammateCardTestSupport
         ctx.Services.AddSingleton(factory.Services.GetRequiredService<IModelCatalog>());
         ctx.Services.AddSingleton(factory.Services.GetRequiredService<AdapterCatalog>());
         ctx.Services.AddSingleton(factory.Services.GetRequiredService<AvatarStore>());
+
+        // The card's avatar dialog hosts AvatarEditor, which injects the library locator and loader (U26, UX-R18).
+        AvatarLibraryPickSupport.RegisterUnconfigured(ctx.Services);
         ctx.Services.AddSingleton(factory.Services.GetRequiredService<SkillStore>());
         ctx.Services.AddSingleton(factory.Services.GetRequiredService<BuiltinTeammateReset>());
         return ctx;

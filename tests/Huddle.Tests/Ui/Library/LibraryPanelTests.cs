@@ -124,7 +124,11 @@ public sealed class LibraryPanelTests
             cut.Find(".library-panel-trust-warning").TextContent.Trim());
     }
 
-    /// <summary>Removing a pinned root saves the remaining list and the row disappears.</summary>
+    /// <summary>
+    /// Removing a pinned root saves the remaining list and the row disappears, once the row's inline
+    /// confirmation is answered (UX-026: Remove used to act on the first click). Changed from the
+    /// one-click version for UX-026.
+    /// </summary>
     [Fact]
     public async Task Remove_Pinned_Saves()
     {
@@ -133,9 +137,71 @@ public sealed class LibraryPanelTests
 
         var cut = ctx.RenderWithPopovers(RenderPanel);
         await cut.InvokeAsync(() => cut.Find(".library-panel-root-row[data-root-id='docs'] .library-panel-remove-button").ClickAsync());
+        await cut.InvokeAsync(() => cut.Find(".library-panel-root-row[data-root-id='docs'] .inline-confirm-confirm").ClickAsync());
 
         cut.WaitForAssertion(() => Assert.Empty(cut.FindAll(".library-panel-root-row[data-root-id='docs']")));
         Assert.Empty(fixture.Store.Pinned);
+    }
+
+    /// <summary>The first click on a pinned root's Remove only asks: the row swaps to an inline "Remove 'Docs'?" with Remove and Cancel, and nothing is saved (UX-026).</summary>
+    [Fact]
+    public async Task Remove_Pinned_AsksFirst_AndSavesNothing()
+    {
+        using PanelFixture fixture = PanelFixture.Build(pinnedName: "Docs", pinnedPath: null, createPinned: true);
+        await using MudBunitContext ctx = fixture.NewContext();
+
+        var cut = ctx.RenderWithPopovers(RenderPanel);
+        await cut.InvokeAsync(() => cut.Find(".library-panel-root-row[data-root-id='docs'] .library-panel-remove-button").ClickAsync());
+
+        var row = cut.Find(".library-panel-root-row[data-root-id='docs']");
+        Assert.Equal("Remove 'Docs'?", row.QuerySelector(".inline-confirm-prompt")?.TextContent.Trim());
+        Assert.Equal("Remove", row.QuerySelector(".inline-confirm-confirm")?.TextContent.Trim());
+        Assert.Equal("Cancel", row.QuerySelector(".inline-confirm-cancel")?.TextContent.Trim());
+        Assert.Empty(row.QuerySelectorAll(".library-panel-remove-button"));
+        Assert.Single(fixture.Store.Pinned);
+    }
+
+    /// <summary>Cancelling the inline confirmation keeps the root and brings the Remove button back (UX-026).</summary>
+    [Fact]
+    public async Task Remove_Pinned_Cancel_KeepsTheRoot()
+    {
+        using PanelFixture fixture = PanelFixture.Build(pinnedName: "Docs", pinnedPath: null, createPinned: true);
+        await using MudBunitContext ctx = fixture.NewContext();
+
+        var cut = ctx.RenderWithPopovers(RenderPanel);
+        await cut.InvokeAsync(() => cut.Find(".library-panel-root-row[data-root-id='docs'] .library-panel-remove-button").ClickAsync());
+        await cut.InvokeAsync(() => cut.Find(".library-panel-root-row[data-root-id='docs'] .inline-confirm-cancel").ClickAsync());
+
+        var row = cut.Find(".library-panel-root-row[data-root-id='docs']");
+        Assert.NotEmpty(row.QuerySelectorAll(".library-panel-remove-button"));
+        Assert.Empty(row.QuerySelectorAll(".inline-confirm"));
+        Assert.Single(fixture.Store.Pinned);
+    }
+
+    /// <summary>The panel's action row (Reset pinned folders) comes before the table, as a Small button, not after it (UX-012).</summary>
+    [Fact]
+    public async Task ActionRow_ComesBeforeTheTable_AndIsSmall()
+    {
+        using PanelFixture fixture = PanelFixture.Build();
+        await using MudBunitContext ctx = fixture.NewContext();
+
+        var cut = ctx.RenderWithPopovers(RenderPanel);
+
+        var reset = cut.Find(".library-panel-reset-button");
+        Assert.Contains("mud-button-outlined-size-small", reset.ClassList);
+        Assert.True(cut.Markup.IndexOf("library-panel-reset-button", StringComparison.Ordinal) < cut.Markup.IndexOf("library-panel-roots-table", StringComparison.Ordinal));
+    }
+
+    /// <summary>The panel shows the shared trust-warning constant, the one <c>AddFolderDialog</c> adopts too (UX-R15).</summary>
+    [Fact]
+    public async Task Add_TrustWarning_IsTheSharedConstant()
+    {
+        using PanelFixture fixture = PanelFixture.Build();
+        await using MudBunitContext ctx = fixture.NewContext();
+
+        var cut = ctx.RenderWithPopovers(RenderPanel);
+
+        Assert.Equal(LibraryRootStore.TrustWarning, cut.Find(".library-panel-trust-warning").TextContent.Trim());
     }
 
     /// <summary>Reset asks the settled confirm text through <c>ShowMessageBoxAsync</c>; confirming deletes <c>library-roots.json</c>.</summary>

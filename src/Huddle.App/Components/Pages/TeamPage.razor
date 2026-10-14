@@ -4,6 +4,7 @@
 @page "/teams/{Team}/projects/{Project}/{Tab}"
 @implements IDisposable
 @using Agency.Huddle.App.Library
+@using Agency.Huddle.App.Tabs
 @using Microsoft.Extensions.Options
 @inject ITeamCatalog Catalog
 @inject IOptions<TeamOptions> TeamConfig
@@ -40,15 +41,15 @@
         title = $"{project} · {summary.Name} — Huddle";
     }
 
-    // Every tab uses the whole page, so the container drops the width cap and padding whenever the Team (and
-    // Project) exist; the not-found and "turned off" notices keep the capped, padded container.
+    // Every tab uses the whole page, so the container drops the width cap whenever the Team (and Project) exist;
+    // the not-found and "turned off" notices keep the capped container. Both keep the page's 16px padding.
     bool wideActive = summary is not null && (!isProject || project is not null)
         && TeamPageTabs.Available(isProject, this.Features()).Count > 0;
 }
 
 <PageTitle>@title</PageTitle>
 
-<MudContainer MaxWidth="@(wideActive ? MaxWidth.False : MaxWidth.Large)" Class="@(wideActive ? "team-page-wide" : "pa-4")">
+<MudContainer MaxWidth="@(wideActive ? MaxWidth.False : MaxWidth.Large)" Class="@(wideActive ? "team-page-wide pa-4" : "pa-4")">
     @if (summary is null)
     {
         <MudAlert Severity="Severity.Warning" role="alert" Class="team-page-notice">
@@ -68,17 +69,22 @@
         IReadOnlyList<TeamPageTab> available = TeamPageTabs.Available(isProject, this.Features());
         int activeIndex = Math.Max(0, available.ToList().IndexOf(TeamPageTabs.Resolve(isProject, this.Tab, this.Features())));
 
-        @if (!isProject)
-        {
-            string sourceTeam = summary.Name;
-            <MudButton Variant="Variant.Outlined" Size="Size.Small" StartIcon="@Icons.Material.Outlined.ContentCopy" Class="team-page-duplicate"
-                       OnClick="@(() => this.DuplicateAsync(sourceTeam))">Duplicate</MudButton>
-        }
+        @* The document title stays "{Team} - Huddle" (set above), so the header does not set its own. *@
+        <PageHeader Title="@(project ?? summary.Name)" SetPageTitle="false">
+            <Actions>
+                @if (!isProject)
+                {
+                    string sourceTeam = summary.Name;
+                    <MudButton Variant="Variant.Outlined" Size="Size.Small" StartIcon="@Icons.Material.Outlined.ContentCopy"
+                               OnClick="@(() => this.DuplicateAsync(sourceTeam))">Duplicate</MudButton>
+                }
+            </Actions>
+        </PageHeader>
         <TeamSpend Members="@summary.Members" />
 
         @if (available.Count == 0)
         {
-            <MudAlert Severity="Severity.Info" role="alert" Class="team-page-notice">
+            <MudAlert Severity="Severity.Info" role="status" Class="team-page-notice">
                 <span class="team-page-notice-text">Files and Tasks are turned off in this installation.</span>
             </MudAlert>
         }
@@ -156,13 +162,13 @@
     /// <summary>Unsubscribes from <see cref="ITeamCatalog.Changed"/>.</summary>
     public void Dispose() => this.Catalog.Changed -= this.OnCatalogChanged;
 
-    /// <summary>A tab's icon: People for Members, and the sidebar's own Library and Tasks icons for Files and Tasks.</summary>
+    /// <summary>A tab's icon: the entity icons of TabIcons for Members, Files and Tasks; Process has no entity of its own.</summary>
     private static string TabIcon(TeamPageTab tab) => tab switch
     {
-        TeamPageTab.Members => Icons.Material.Filled.People,
-        TeamPageTab.Files => Icons.Material.Filled.MenuBook,
+        TeamPageTab.Members => TabIcons.For("teammates"),
+        TeamPageTab.Files => TabIcons.For("library"),
         TeamPageTab.Process => Icons.Material.Outlined.AccountTree,
-        _ => Icons.Material.Outlined.TaskAlt,
+        _ => TabIcons.For("tasks"),
     };
 
     /// <summary>Opens <see cref="DuplicateTeamDialog"/> for <paramref name="team"/> (HR-12).</summary>
@@ -211,15 +217,10 @@
         this.Navigation.NavigateTo($"{path}/{TeamPageTabs.Segment(available[index])}");
     }
 
-    private void OnCatalogChanged() => _ = this.DispatchAsync(() =>
+    private void OnCatalogChanged() => _ = RendererDispatch.RunAsync(this.InvokeAsync, () =>
     {
         this.StateHasChanged();
         return Task.CompletedTask;
     });
 
-    /// <summary>Invokes <paramref name="action"/> on the renderer's synchronization context, swallowing the two exceptions a catalog event racing component teardown can throw.</summary>
-    private Task DispatchAsync(Func<Task> action)
-    {
-        return RendererDispatch.RunAsync(this.InvokeAsync, action);
-    }
 }

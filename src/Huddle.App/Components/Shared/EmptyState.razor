@@ -1,0 +1,32 @@
+@*
+    The one sentence that says what is missing and what to do next (design-system "Patterns worth
+    copying"; UX-R20, UX-077). Inline it is .empty-state; when it fills a pane it is .tab-empty.
+*@
+
+<div class="@(this.FullPane ? "tab-empty" : "empty-state")">
+    @if (this.Icon is not null)
+    {
+        <MudIcon Icon="@this.Icon" Size="Size.Large" Class="mud-text-secondary" />
+    }
+    <MudText Typo="Typo.body1" Class="mud-text-secondary" role="status">@this.Text</MudText>
+    @this.Action
+</div>
+
+@code {
+    /// <summary>The empty-state sentence: what is missing and what to do next.</summary>
+    [Parameter]
+    [EditorRequired]
+    public string Text { get; set; } = string.Empty;
+
+    /// <summary>An optional MudBlazor icon name, shown above the text.</summary>
+    [Parameter]
+    public string? Icon { get; set; }
+
+    /// <summary>An optional action, rendered below the text.</summary>
+    [Parameter]
+    public RenderFragment? Action { get; set; }
+
+    /// <summary>True for a full-pane empty state (<c>.tab-empty</c>), false for an inline one (<c>.empty-state</c>).</summary>
+    [Parameter]
+    public bool FullPane { get; set; }
+}

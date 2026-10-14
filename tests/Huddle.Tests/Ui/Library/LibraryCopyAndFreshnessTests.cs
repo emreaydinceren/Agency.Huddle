@@ -334,6 +334,25 @@ public sealed class LibraryCopyAndFreshnessTests : IDisposable
         Assert.Equal("This file was moved or deleted.", cut.Find(".library-document-banner").TextContent.Trim());
     }
 
+    /// <summary>[T17.4, UX-056] The moved-or-deleted banner is a Dense <c>MudAlert</c> with <c>role="status"</c>.</summary>
+    [Fact]
+    public async Task Refresh_FileNowMissing_BannerIsDenseStatusAlert()
+    {
+        string root = this.fixture.LibraryFixture.CreatePinnedRoot("Notes");
+        string filePath = Path.Combine(root, "a.md");
+        File.WriteAllText(filePath, "hi");
+        LibraryPath path = this.fixture.LibraryFixture.Resolve(root, "a.md");
+
+        await using MudBunitContext ctx = this.fixture.NewContext();
+        IRenderedComponent<ContainerFragment> cut = RenderDoc(ctx, path);
+        cut.WaitForAssertion(() => Assert.NotEmpty(cut.FindAll(".library-rendered")));
+        File.Delete(filePath);
+        LibraryDocument document = cut.FindComponent<LibraryDocument>().Instance;
+        await cut.InvokeAsync(() => document.RefreshAsync());
+
+        cut.WaitForAssertion(() => Assert.NotEmpty(cut.FindAll(".library-document-banner.mud-alert.mud-dense[role='status']")));
+    }
+
     /// <summary>(corrections-B6 item 28) The <c>[JSInvokable] OnVisible</c> callback triggers the same
     /// refresh as <see cref="LibraryDocument.RefreshAsync"/>.</summary>
     [Fact]

@@ -173,8 +173,11 @@ public sealed class TeamTypesPanelTests
 
         IRenderedComponent<ContainerFragment> cut = RenderPanel(ctx, Create(dir, new Dictionary<string, string>(StringComparer.Ordinal)));
 
-        Assert.Equal("No team types found.", cut.Find(".teamtypes-empty").TextContent.Trim());
-        Assert.Equal("No problems.", cut.Find(".teamtypes-no-problems").TextContent.Trim());
+        Assert.NotEmpty(cut.FindAll(".mud-simple-table"));
+        Assert.Empty(cut.FindAll(".mud-table-head"));
+        Assert.NotEmpty(cut.FindAll("tbody tr .empty-state"));
+        Assert.Equal("No team types found.", cut.Find(".empty-state [role=status]").TextContent.Trim());
+        Assert.Equal("No problems.", cut.Find(".problem-list-empty").TextContent.Trim());
         Assert.Empty(cut.FindAll("tr.teamtypes-row"));
     }
 

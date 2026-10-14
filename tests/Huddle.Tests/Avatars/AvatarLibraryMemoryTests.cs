@@ -128,7 +128,7 @@ public sealed class AvatarLibraryMemoryTests : IDisposable
             _ = await cut.InvokeAsync(() => dialogService.ShowAsync<Agency.Huddle.App.Components.Shared.AvatarLibraryDialog>(null, new MudBlazor.DialogParameters(), Agency.Huddle.App.Components.Shared.AvatarLibraryDialog.Options));
             cut.WaitForAssertion(() => Assert.NotEmpty(cut.FindAll("button.avatar-library-thumb")), TimeSpan.FromSeconds(5));
             ct.ThrowIfCancellationRequested();
-            await ctx.DisposeComponentsAsync();
+            await ctx.DisposeComponentsOnDispatcherAsync();
         }
 
         return loader.LastCatalog ?? throw new InvalidOperationException("The dialog never asked the loader for the catalogue.");

@@ -1,6 +1,5 @@
 namespace Agency.Huddle.Tests.Ui.Search;
 
-using System.Globalization;
 using AngleSharp.Dom;
 using Bunit;
 using Microsoft.Extensions.DependencyInjection;
@@ -9,6 +8,7 @@ using Agency.Huddle.App.Avatars;
 using Agency.Huddle.App.Components.Search;
 using Agency.Huddle.App.Search;
 using Agency.Huddle.App.Tasks;
+using Agency.Huddle.Tests.Acp.Fakes;
 
 /// <summary>
 /// Pins spec §6.6 and §6.7 for the five search cards and the <see cref="SearchCard"/> switch: each
@@ -107,7 +107,7 @@ public sealed class SearchCardTests : IDisposable
         Assert.Equal("Marketing", cut.Find(".search-card-meta").TextContent.Trim());
     }
 
-    /// <summary>A Task's first line is <c>SUP-0012 · Support SAML login</c> with the status chip beside it; the second is <c>Nova · Staff Engineer</c> at the left and <c>Platform Team</c> at the right.</summary>
+    /// <summary>A Task's title is <c>SUP-0012 · Support SAML login</c> with the status chip in the trailing slot; its meta line is <c>Nova · Staff Engineer · Platform Team</c>.</summary>
     [Fact]
     public async Task TaskCard_RendersBothLines()
     {
@@ -116,10 +116,9 @@ public sealed class SearchCardTests : IDisposable
 
         IRenderedComponent<TaskSearchCard> cut = ctx.Render<TaskSearchCard>(p => p.Add(c => c.Hit, hit));
 
-        Assert.Equal("SUP-0012 · Support SAML login", cut.Find(".search-card-head .search-card-title").TextContent.Trim());
-        Assert.Equal("In Progress", cut.Find(".search-card-head .search-card-chip").TextContent.Trim());
-        Assert.Equal("Nova · Staff Engineer", cut.Find(".search-card-foot .search-card-meta").TextContent.Trim());
-        Assert.Equal("Platform Team", cut.Find(".search-card-foot .search-card-team").TextContent.Trim());
+        Assert.Equal("SUP-0012 · Support SAML login", cut.Find(".search-card-title").TextContent.Trim());
+        Assert.Equal("In Progress", cut.Find(".search-card-action .search-card-chip").TextContent.Trim());
+        Assert.Equal("Nova · Staff Engineer · Platform Team", cut.Find(".search-card-meta").TextContent.Trim());
         Assert.Equal("· Staff Engineer", cut.Find(".search-card-subtitle").TextContent.Trim());
     }
 
@@ -135,7 +134,7 @@ public sealed class SearchCardTests : IDisposable
 
         IRenderedComponent<TaskSearchCard> cut = ctx.Render<TaskSearchCard>(p => p.Add(c => c.Hit, hit));
 
-        Assert.Equal(expected, cut.Find(".search-card-team").TextContent.Trim());
+        Assert.Equal($"Nova · {expected}", cut.Find(".search-card-meta").TextContent.Trim());
     }
 
     /// <summary>An unassigned Task's second line is the Team at the right alone: no assignee part and no dot.</summary>
@@ -147,8 +146,8 @@ public sealed class SearchCardTests : IDisposable
 
         IRenderedComponent<TaskSearchCard> cut = ctx.Render<TaskSearchCard>(p => p.Add(c => c.Hit, hit));
 
-        Assert.Equal("Platform Team", cut.Find(".search-card-foot").TextContent.Trim());
-        Assert.Empty(cut.FindAll(".search-card-meta"));
+        Assert.Equal("Platform Team", cut.Find(".search-card-meta").TextContent.Trim());
+        Assert.Empty(cut.FindAll(".search-card-subtitle"));
     }
 
     /// <summary>An assignee with no Persona title shows the name only.</summary>
@@ -160,8 +159,7 @@ public sealed class SearchCardTests : IDisposable
 
         IRenderedComponent<TaskSearchCard> cut = ctx.Render<TaskSearchCard>(p => p.Add(c => c.Hit, hit));
 
-        Assert.Equal("Nova", cut.Find(".search-card-meta").TextContent.Trim());
-        Assert.Equal("Platform Team", cut.Find(".search-card-team").TextContent.Trim());
+        Assert.Equal("Nova · Platform Team", cut.Find(".search-card-meta").TextContent.Trim());
         Assert.Empty(cut.FindAll(".search-card-subtitle"));
     }
 
@@ -172,7 +170,8 @@ public sealed class SearchCardTests : IDisposable
         await using MudBunitContext ctx = new();
         DateTimeOffset time = new(2026, 10, 12, 14, 2, 0, TimeSpan.Zero);
         RoomHit hit = new("room-1", "findings", 14, "msg-1", "Kai", "we should drop the login cookie", time, false, MatchTier.ContentMatch);
-        string clock = time.ToLocalTime().ToString("HH:mm", CultureInfo.CurrentCulture);
+        ctx.Services.AddSingleton<TimeProvider>(new ManualTimeProvider(time.AddHours(1), TimeZoneInfo.Utc));
+        const string clock = "14:02";
 
         IRenderedComponent<RoomSearchCard> cut = ctx.Render<RoomSearchCard>(p => p.Add(c => c.Hit, hit).Add(c => c.Phrase, "login"));
 
@@ -188,7 +187,8 @@ public sealed class SearchCardTests : IDisposable
         await using MudBunitContext ctx = new();
         DateTimeOffset time = new(2026, 10, 12, 14, 2, 0, TimeSpan.Zero);
         RoomHit hit = new("room-1", "findings", 1, "msg-1", "Kai", "login", time, false, MatchTier.ContentMatch);
-        string clock = time.ToLocalTime().ToString("HH:mm", CultureInfo.CurrentCulture);
+        ctx.Services.AddSingleton<TimeProvider>(new ManualTimeProvider(time.AddHours(1), TimeZoneInfo.Utc));
+        const string clock = "14:02";
 
         IRenderedComponent<RoomSearchCard> cut = ctx.Render<RoomSearchCard>(p => p.Add(c => c.Hit, hit));
 
@@ -201,7 +201,6 @@ public sealed class SearchCardTests : IDisposable
     [InlineData("team")]
     [InlineData("teammate")]
     [InlineData("library")]
-    [InlineData("task")]
     [InlineData("room")]
     public async Task EveryCard_HasAnEmptyActionSlot(string kind)
     {
