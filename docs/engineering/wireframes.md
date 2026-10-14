@@ -32,6 +32,7 @@ A code is **a letter, a number and sometimes a lowercase letter**.
 | `G` | Settings | [6](#figure-6-tabbed-pages-team-page-and-settings) |
 | `P` | The Teammates page | [7](#figure-7-the-teammates-page) |
 | `O` | Overlays: dialogs, drawers, menus, toasts | [8](#figure-8-overlays) |
+| `B` | The Build a team page | [9](#figure-9-the-build-a-team-page) |
 
 **Rules for keeping them stable**
 
@@ -281,6 +282,24 @@ Containers that float above a page. Each cell shows one over a dimmed page.
 | `O6` | Inline confirm | `InlineConfirm` | A destructive yes or no that swaps in for the row itself; the Teammate card's Remove ("Remove {name}?" / "Remove") and Reset ("Reset to default?" / "Reset") use it |
 | `O7` | Tooltip | `MudTooltip` | Names an icon-only control; not a substitute for an `aria-label` |
 | `O8` | Reconnect modal | `ReconnectModal.razor`, a `<dialog>` | The circuit dropped; offers Retry or Resume |
+
+## Figure 9: The Build a team page
+
+`BuildTeam.razor` at `/teams/build`. The Chief of Staff's four steps, of which only step 1 (Team type) is built.
+
+![The Build a team page: a title with the Chief of Staff's name, a four-step strip, and a grid of team type cards with one chosen and one marked You have one](../images/wireframes/09-build-a-team.svg)
+
+| Code | Name | Component | Notes |
+| --- | --- | --- | --- |
+| `B1` | Page container | `MudContainer`, `MaxWidth.Large` | |
+| `B2` | Page header | `PageHeader` with `Subtitle` | The h1 "Build a team", then "with {Chief of Staff}, your Chief of Staff"; the subtitle is left out when no Persona is the Chief of Staff |
+| `B3` | Step strip | `BuildStepper` (`ol.build-stepper`) | Four steps: Team type, Proposal, Review, Approve. A step before the current one shows a check; the current step carries `aria-current="step"`. Choosing a type makes step 2 current |
+| `B4` | Step section | `section.build-team-section` | A numbered badge and the step's name (`Typo.h6`) |
+| `B5` | Intro | `MudText` body2 | How many types there are and which ones the Human already runs |
+| `B6` | Team type grid | `div.team-type-grid` | Every team type, in two rows; cards are 16rem wide and what does not fit is reached by scrolling right |
+| `B6a` | Team type card | `TeamTypeCard` (`button.team-type-card`) | An icon tile tinted by the type's palette role, the name, the first sentence of the description (two lines at most), "Manager + N roles", a dashed-outline "You have one" chip when a Team of this type exists, and a check mark when chosen; pressed state is `aria-pressed` |
+
+Not drawn: steps 2 to 4.
 
 ## Using the codes
 

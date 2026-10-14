@@ -1,0 +1,81 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 560" width="1200" height="560" font-family="Inter, 'Segoe UI', Helvetica, Arial, sans-serif" xml:space="preserve" style="white-space: pre" role="img" aria-label="Figure 9: The Build a team page">
+<title>Figure 9: The Build a team page</title>
+<rect width="1200" height="560" fill="#ffffff"/>
+<text x="24" y="30" font-size="18" font-weight="700" fill="#1f2430" text-anchor="start">Figure 9: The Build a team page</text>
+<text x="24" y="48" font-size="12" font-weight="400" fill="#6b7280" text-anchor="start">BuildTeam.razor. Step 1 of 4, Team type: the step strip over a grid of team type cards.</text>
+<rect x="24" y="60" width="1152" height="460" rx="6" fill="#eceef2" stroke="#8b93a1" stroke-width="1.4"/>
+<rect x="30" y="65" width="25" height="17" rx="8.5" fill="#475569"/>
+<text x="42.4" y="77.5" font-size="11" font-weight="700" fill="#fff" text-anchor="middle">B1</text>
+<text x="60.8" y="78" font-size="12" font-weight="600" fill="#1f2430" text-anchor="start">Page container</text>
+<text x="166.8" y="78" font-size="11" font-weight="400" fill="#6b7280" text-anchor="start">MudContainer, MaxWidth.Large</text>
+<rect x="48" y="96" width="1104" height="36" rx="4" fill="#ffffff" stroke="#8b93a1" stroke-width="1.2"/>
+<rect x="44" y="88" width="25" height="17" rx="8.5" fill="#475569"/>
+<text x="56.4" y="100.5" font-size="11" font-weight="700" fill="#fff" text-anchor="middle">B2</text>
+<text x="64" y="121" font-size="16" font-weight="700" fill="#1f2430" text-anchor="start">Build a team</text>
+<text x="170" y="121" font-size="11" font-weight="400" fill="#6b7280" text-anchor="start">with Margot, your Chief of Staff</text>
+<rect x="48" y="150" width="1104" height="48" rx="4" fill="#ffffff" stroke="#8b93a1" stroke-width="1.2"/>
+<rect x="44" y="142" width="25" height="17" rx="8.5" fill="#475569"/>
+<text x="56.4" y="154.5" font-size="11" font-weight="700" fill="#fff" text-anchor="middle">B3</text>
+<circle cx="76" cy="176" r="10" fill="#6e78da"/>
+<text x="76" y="180" font-size="11" font-weight="700" fill="#fff" text-anchor="middle">✓</text>
+<text x="94" y="172" font-size="11" font-weight="600" fill="#1f2430" text-anchor="start">Team type</text>
+<text x="94" y="186" font-size="10" font-weight="400" fill="#6b7280" text-anchor="start">Product Team</text>
+<line x1="56" y1="194" x2="318" y2="194" stroke="#6e78da" stroke-width="2"/>
+<circle cx="352" cy="176" r="10" fill="#ffffff" stroke="#8b93a1" stroke-width="1.2"/>
+<text x="352" y="180" font-size="11" font-weight="700" fill="#6b7280" text-anchor="middle">2</text>
+<text x="370" y="172" font-size="11" font-weight="600" fill="#6b7280" text-anchor="start">Proposal</text>
+<text x="370" y="186" font-size="10" font-weight="400" fill="#6b7280" text-anchor="start">by Margot</text>
+<line x1="332" y1="194" x2="594" y2="194" stroke="#8b93a1" stroke-width="2"/>
+<circle cx="628" cy="176" r="10" fill="#ffffff" stroke="#8b93a1" stroke-width="1.2"/>
+<text x="628" y="180" font-size="11" font-weight="700" fill="#6b7280" text-anchor="middle">3</text>
+<text x="646" y="172" font-size="11" font-weight="600" fill="#6b7280" text-anchor="start">Review</text>
+<text x="646" y="186" font-size="10" font-weight="400" fill="#6b7280" text-anchor="start">rename, re-roll, add</text>
+<line x1="608" y1="194" x2="870" y2="194" stroke="#8b93a1" stroke-width="2"/>
+<circle cx="904" cy="176" r="10" fill="#ffffff" stroke="#8b93a1" stroke-width="1.2"/>
+<text x="904" y="180" font-size="11" font-weight="700" fill="#6b7280" text-anchor="middle">4</text>
+<text x="922" y="172" font-size="11" font-weight="600" fill="#6b7280" text-anchor="start">Approve</text>
+<text x="922" y="186" font-size="10" font-weight="400" fill="#6b7280" text-anchor="start">only you</text>
+<line x1="884" y1="194" x2="1146" y2="194" stroke="#8b93a1" stroke-width="2"/>
+<rect x="48" y="216" width="1104" height="260" rx="6" fill="#ffffff" stroke="#8b93a1" stroke-width="1.4"/>
+<rect x="54" y="221" width="25" height="17" rx="8.5" fill="#475569"/>
+<text x="66.4" y="233.5" font-size="11" font-weight="700" fill="#fff" text-anchor="middle">B4</text>
+<text x="84.8" y="234" font-size="12" font-weight="600" fill="#1f2430" text-anchor="start">Step section</text>
+<rect x="64" y="248" width="18" height="18" rx="4" fill="#e3e5f7"/>
+<text x="73" y="261" font-size="11" font-weight="700" fill="#6e78da" text-anchor="middle">1</text>
+<text x="90" y="262" font-size="13" font-weight="700" fill="#1f2430" text-anchor="start">Team type</text>
+<rect x="64" y="272" width="580" height="16" rx="3" fill="#f6f7f9" stroke="#8b93a1" stroke-width="1.2"/>
+<rect x="58" y="268" width="25" height="17" rx="8.5" fill="#475569"/>
+<text x="70.4" y="280.5" font-size="11" font-weight="700" fill="#fff" text-anchor="middle">B5</text>
+<text x="92" y="284" font-size="10" font-weight="400" fill="#6b7280" text-anchor="start">Huddle hires a manager and the roles around it. 26 types — you already run Data Team, Research Team…</text>
+<rect x="64" y="300" width="260" height="76" rx="6" fill="#ffffff" stroke="#8b93a1" stroke-width="1.2"/>
+<rect x="58" y="294" width="32" height="17" rx="8.5" fill="#475569"/>
+<text x="74" y="306.5" font-size="11" font-weight="700" fill="#fff" text-anchor="middle">B6a</text>
+<circle cx="90" cy="338" r="16" fill="#e3e5f7"/>
+<text x="90" y="342" font-size="11" font-weight="700" fill="#6e78da" text-anchor="middle">&lt;/&gt;</text>
+<text x="118" y="328" font-size="12" font-weight="700" fill="#1f2430" text-anchor="start">Development Team</text>
+<text x="118" y="344" font-size="10" font-weight="400" fill="#6b7280" text-anchor="start">Builds and changes software</text>
+<text x="118" y="362" font-size="10" font-weight="400" fill="#6b7280" text-anchor="start">Manager + 7 roles</text>
+<rect x="340" y="300" width="260" height="76" rx="6" fill="#ffffff" stroke="#8b93a1" stroke-width="1.2"/>
+<circle cx="366" cy="338" r="16" fill="#dbeafe"/>
+<text x="366" y="342" font-size="11" font-weight="700" fill="#2563eb" text-anchor="middle">▤</text>
+<text x="394" y="328" font-size="12" font-weight="700" fill="#1f2430" text-anchor="start">Data Team</text>
+<text x="394" y="344" font-size="10" font-weight="400" fill="#6b7280" text-anchor="start">Turns your data into answers</text>
+<text x="394" y="362" font-size="10" font-weight="400" fill="#6b7280" text-anchor="start">Manager + 6 roles</text>
+<rect x="520" y="352" width="70" height="16" rx="8" fill="#ffffff" stroke="#8b93a1" stroke-width="1.2" stroke-dasharray="6 4"/>
+<text x="555" y="364" font-size="9" font-weight="600" fill="#1f2430" text-anchor="middle">You have one</text>
+<rect x="616" y="300" width="260" height="76" rx="6" fill="#e9eafa" stroke="#6e78da" stroke-width="1.6" stroke-dasharray="6 4"/>
+<circle cx="642" cy="338" r="16" fill="#ede1f7"/>
+<text x="642" y="342" font-size="11" font-weight="700" fill="#7c3aed" text-anchor="middle">◈</text>
+<text x="670" y="328" font-size="12" font-weight="700" fill="#1f2430" text-anchor="start">Product Team</text>
+<text x="670" y="344" font-size="10" font-weight="400" fill="#6b7280" text-anchor="start">Shapes what to build next</text>
+<text x="670" y="362" font-size="10" font-weight="400" fill="#6b7280" text-anchor="start">Manager + 5 roles</text>
+<circle cx="856" cy="320" r="9" fill="#6e78da"/>
+<text x="856" y="324" font-size="10" font-weight="700" fill="#fff" text-anchor="middle">✓</text>
+<text x="892" y="338" font-size="10" font-weight="400" fill="#6b7280" text-anchor="start" font-style="italic">The chosen card: tinted, check mark (dashed: only once a type is chosen)</text>
+<text x="64" y="404" font-size="10" font-weight="400" fill="#6b7280" text-anchor="start" font-style="italic">Second row: more cards in the same grid; two rows in all, the rest scroll to the right</text>
+<text x="24" y="552" font-size="11" font-weight="700" fill="#6b7280" text-anchor="start">Key</text>
+<rect x="58" y="541" width="30" height="14" rx="3" fill="#f6f7f9" stroke="#8b93a1" stroke-width="1.2"/>
+<text x="94" y="552" font-size="11" font-weight="400" fill="#6b7280" text-anchor="start">always rendered</text>
+<rect x="194" y="541" width="30" height="14" rx="3" fill="#ffffff" stroke="#8b93a1" stroke-width="1.2" stroke-dasharray="6 4"/>
+<text x="230" y="552" font-size="11" font-weight="400" fill="#6b7280" text-anchor="start">only in some states</text>
+</svg>

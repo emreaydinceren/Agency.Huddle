@@ -666,6 +666,19 @@ Under a Team's title (not a Project's), the header has two more things:
 - **Spent** shows what the Team's members have cost in total, one amount per
   currency. It stays blank until something was spent, and it survives restarts.
 
+### Building a team with the Chief of Staff
+
+**Build a team** (`/teams/build`) walks you through making a Team in four steps:
+**Team type**, **Proposal**, **Review** and **Approve**. Only the first step exists so
+far. It shows a card for each team type: its name, what it does in a line, how many
+roles it has besides the manager, and **You have one** when you already run a Team of
+that type. The cards sit in two rows; scroll to the right for the rest.
+
+Select a card to choose that type; step 1 then shows a check and the type's name.
+Select it again to clear the choice. The choice stays in the address (`?type=`), so
+it is still there when you come back to the tab. Open the page with **Build a team**,
+the last link of the Teams group in the sidebar.
+
 ### Hiring a Team from a type
 
 A team type is a template for a kind of Team: its roles, the Teammates that fill

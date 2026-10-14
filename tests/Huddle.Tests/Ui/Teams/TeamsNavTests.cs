@@ -1,3 +1,4 @@
+using AngleSharp.Dom;
 using Bunit;
 using Bunit.Rendering;
 using Microsoft.AspNetCore.Components;
@@ -74,6 +75,7 @@ public sealed class TeamsNavTests
             "/teams/Lab%20%232",
             "/teams/Lab%20%232/projects/Item%20%231",
             "/teams/new",
+            "/teams/build",
         ];
         string?[] actualHrefs = [.. cut.FindAll(".teams-nav a[href]").Select(a => a.GetAttribute("href"))];
         Assert.Equal(expectedHrefs, actualHrefs);
@@ -168,6 +170,21 @@ public sealed class TeamsNavTests
         IRenderedComponent<ContainerFragment> cut = RenderNav(ctx);
 
         Assert.Equal("New team", cut.Find(".nav-action-link").TextContent.Trim());
+    }
+
+    /// <summary>The Teams group ends with a "Build a team" action that opens <c>/teams/build</c>.</summary>
+    [Fact]
+    public async Task BuildATeamAction_OpensTheBuildPage()
+    {
+        FakeTeamCatalog catalog = new() { Teams = [Team("Business")] };
+
+        await using MudBunitContext ctx = NewContext(catalog);
+        IRenderedComponent<ContainerFragment> cut = RenderNav(ctx);
+
+        IReadOnlyList<IElement> links = cut.FindAll(".nav-action-link a");
+        IElement link = links[^1];
+        Assert.Equal("Build a team", link.TextContent.Trim());
+        Assert.Equal("/teams/build", link.GetAttribute("href"));
     }
 
     /// <summary>With no Teams at all the "New team" action is still offered and no Team row renders.</summary>
@@ -834,6 +851,7 @@ public sealed class TeamsNavTests
                 "/teams/Sales",
                 "/rooms/other",
                 "/teams/new",
+                "/teams/build",
             ];
             Assert.Equal(expected, hrefs);
         });

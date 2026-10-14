@@ -5,7 +5,17 @@
 *@
 
 <MudStack Row="true" Justify="Justify.SpaceBetween" AlignItems="AlignItems.Center" Class="mb-4">
-    <MudText Typo="Typo.h5" HtmlTag="h1">@this.Title</MudText>
+    @if (this.Subtitle is null)
+    {
+        <MudText Typo="Typo.h5" HtmlTag="h1">@this.Title</MudText>
+    }
+    else
+    {
+        <MudStack Row="true" AlignItems="AlignItems.Baseline" Spacing="2">
+            <MudText Typo="Typo.h5" HtmlTag="h1">@this.Title</MudText>
+            <MudText Typo="Typo.body2" Class="page-header-subtitle">@this.Subtitle</MudText>
+        </MudStack>
+    }
     @this.Actions
 </MudStack>
 @if (this.SetPageTitle)
@@ -18,6 +28,10 @@
     [Parameter]
     [EditorRequired]
     public string Title { get; set; } = string.Empty;
+
+    /// <summary>An optional line beside the title, in secondary text, such as "with Margot, your Chief of Staff"; it is not part of the document title.</summary>
+    [Parameter]
+    public string? Subtitle { get; set; }
 
     /// <summary>The page's actions, rendered on the right of the header.</summary>
     [Parameter]

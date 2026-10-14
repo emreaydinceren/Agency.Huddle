@@ -11,6 +11,8 @@ public sealed class TabKeysTests
     [InlineData("/teams/Core/projects/Alpha", "project:core/alpha")]
     [InlineData("/teams/Core/projects/Alpha/files", "project:core/alpha")]
     [InlineData("/teams/new", "team-new")]
+    [InlineData("/teams/build", "team-build")]
+    [InlineData("/teams/build?type=product", "team-build")]
     [InlineData("/teams/Core/setup", "team-setup:core")]
     [InlineData("/tasks", "tasks")]
     [InlineData("/tasks/board", "tasks:board")]

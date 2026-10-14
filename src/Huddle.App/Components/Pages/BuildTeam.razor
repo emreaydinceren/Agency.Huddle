@@ -1,0 +1,142 @@
+@page "/teams/build"
+@using Agency.Huddle.App.Acp
+@using Agency.Huddle.App.Components.Shared
+@using Agency.Huddle.App.Components.Teams
+@using Agency.Huddle.App.Teammates
+@using Agency.Huddle.App.TeamTypes
+@using Agency.Huddle.App.Teams
+@using Microsoft.AspNetCore.WebUtilities
+@inject TeamTypeCatalog Types
+@inject ITeamCatalog Catalog
+@inject PersonaStore Personas
+@inject NavigationManager Navigation
+@implements IDisposable
+
+@*
+    Build a team, step 1 of 4 (Team type). The Chief of Staff walks the Human through four steps: choose a team type,
+    read the proposal, review it, approve it. This page draws the strip of all four steps and the first: every team
+    type as a card, in a grid of two rows that scrolls to the right for the types that do not fit. Choosing a type
+    completes step 1 and is kept in the address (?type=), so a Tab that is unmounted and mounted again comes back to it.
+    Steps 2 to 4 are not built yet. The Chief of Staff is whichever Persona carries the _builtin marker, so a rename shows here.
+*@
+
+<MudContainer MaxWidth="MaxWidth.Large" Class="build-team pa-4">
+    <PageHeader Title="Build a team" Subtitle="@this.Subtitle" />
+
+    <BuildStepper Steps="this.Steps" Current="this.CurrentStep" AriaLabel="Build a team: four steps" />
+
+    <section class="build-team-section" aria-labelledby="build-team-type-heading">
+        <div class="build-team-section-head">
+            <span class="build-team-section-number" aria-hidden="true">1</span>
+            <MudText Typo="Typo.h6" id="build-team-type-heading">Team type</MudText>
+        </div>
+        <MudText Typo="Typo.body2" Class="build-team-intro">@this.Intro</MudText>
+
+        <div class="team-type-grid" role="group" aria-label="Team types">
+            @foreach (TeamTypeManifest type in this.Types.Types)
+            {
+                <TeamTypeCard @key="type.Id"
+                              TypeId="@type.Id"
+                              Name="@type.DisplayName"
+                              Description="@type.Description"
+                              Roles="@RoleCount(type)"
+                              Selected="@string.Equals(type.Id, this.selected?.Id, StringComparison.Ordinal)"
+                              Owned="@this.Owned(type.Id)"
+                              OnPick="this.Pick" />
+            }
+        </div>
+    </section>
+</MudContainer>
+
+@code {
+    private TeamTypeManifest? selected;
+
+    private string ChiefName => this.Personas.Entries
+        .FirstOrDefault(static entry => string.Equals(entry.Builtin, BuiltinTeammate.ChiefOfStaffMarker, StringComparison.Ordinal))?.Name
+        is { } name && !string.Equals(name, "Chief of Staff", StringComparison.Ordinal) ? name : "your Chief of Staff";
+
+    private bool HasChief => this.Personas.Entries.Any(static entry => string.Equals(entry.Builtin, BuiltinTeammate.ChiefOfStaffMarker, StringComparison.Ordinal));
+
+    /// <summary>"with Margot, your Chief of Staff" once renamed; "with your Chief of Staff" while it still has the default name; nothing without one.</summary>
+    private string? Subtitle
+    {
+        get
+        {
+            if (!this.HasChief)
+            {
+                return null;
+            }
+
+            return this.ChiefName.StartsWith("your ", StringComparison.Ordinal) ? $"with {this.ChiefName}" : $"with {this.ChiefName}, your Chief of Staff";
+        }
+    }
+
+    private int CurrentStep => this.selected is null ? 0 : 1;
+
+    private IReadOnlyList<BuildStepper.BuildStep> Steps =>
+    [
+        new("Team type", this.selected?.DisplayName ?? "Choose one"),
+        new("Proposal", $"by {this.ChiefName}"),
+        new("Review", "rename, re-roll, add"),
+        new("Approve", "only you"),
+    ];
+
+    /// <summary>Display names of the types the Human already runs a Team of, in catalog order.</summary>
+    private IReadOnlyList<string> OwnedNames =>
+        [.. this.Types.Types.Where(type => this.Owned(type.Id)).Select(static type => type.DisplayName)];
+
+    private string Intro
+    {
+        get
+        {
+            string text = $"Huddle hires a manager and the roles around it. {this.Types.Types.Count} types";
+            IReadOnlyList<string> owned = this.OwnedNames;
+            return owned.Count == 0 ? $"{text}." : $"{text} — you already run {JoinNames(owned)}.";
+        }
+    }
+
+    /// <inheritdoc />
+    protected override void OnInitialized()
+    {
+        this.Catalog.Changed += this.OnCatalogChanged;
+        this.Types.Changed += this.OnCatalogChanged;
+    }
+
+    /// <inheritdoc />
+    protected override void OnParametersSet()
+    {
+        string? typeId = QueryHelpers.ParseQuery(new Uri(this.Navigation.Uri).Query).TryGetValue("type", out var values) ? values.ToString() : null;
+        this.selected = string.IsNullOrEmpty(typeId) ? null : this.Types.Find(typeId);
+    }
+
+    /// <summary>Stops listening to the catalogs.</summary>
+    public void Dispose()
+    {
+        this.Catalog.Changed -= this.OnCatalogChanged;
+        this.Types.Changed -= this.OnCatalogChanged;
+    }
+
+    private static int RoleCount(TeamTypeManifest type) => type.Roles.Count(static role => !role.Manager && !role.Pooled);
+
+    /// <summary>"A", "A and B", "A, B and C".</summary>
+    private static string JoinNames(IReadOnlyList<string> names) =>
+        names.Count == 1 ? names[0] : $"{string.Join(", ", names.Take(names.Count - 1))} and {names[^1]}";
+
+    private bool Owned(string typeId) =>
+        this.Catalog.Teams.Any(team => string.Equals(team.TeamType?.Id, typeId, StringComparison.Ordinal));
+
+    private void OnCatalogChanged() => _ = RendererDispatch.RunAsync(this.InvokeAsync, () =>
+    {
+        this.StateHasChanged();
+        return Task.CompletedTask;
+    });
+
+    /// <summary>Chooses a type, or clears the choice when it is pressed again; the address follows, replacing the history entry.</summary>
+    /// <param name="typeId">The pressed card's type id.</param>
+    private void Pick(string typeId)
+    {
+        bool same = string.Equals(this.selected?.Id, typeId, StringComparison.Ordinal);
+        this.selected = same ? null : this.Types.Find(typeId);
+        this.Navigation.NavigateTo(this.Navigation.GetUriWithQueryParameter("type", same ? null : typeId), replace: true);
+    }
+}

@@ -2903,6 +2903,264 @@ a.team-ref,
     color: var(--mud-palette-text-secondary);
 }
 
+/* ---- Build a team ----------------------------------------------------------------------------- */
+
+/* Build a team (/teams/build): the step strip over the team type grid. */
+.build-team {
+    display: flex;
+    flex-direction: column;
+    gap: 1.5rem;
+}
+
+.page-header-subtitle {
+    color: var(--mud-palette-text-secondary);
+}
+
+.build-stepper {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 0.75rem;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+}
+
+.build-step {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    min-width: 0;
+    padding-bottom: 0.5rem;
+    border-bottom: 2px solid var(--mud-palette-divider);
+}
+
+.build-step-done,
+.build-step-current {
+    border-bottom-color: var(--mud-palette-primary);
+}
+
+.build-step-badge {
+    display: inline-flex;
+    flex: 0 0 auto;
+    align-items: center;
+    justify-content: center;
+    width: 1.5rem;
+    height: 1.5rem;
+    border-radius: 50%;
+    border: 1px solid var(--mud-palette-divider);
+    font-size: var(--mud-typography-caption-size);
+    font-weight: 600;
+    color: var(--mud-palette-text-secondary);
+}
+
+.build-step-current .build-step-badge {
+    border-color: var(--mud-palette-primary);
+    background: var(--mud-palette-primary);
+    color: var(--mud-palette-primary-text);
+}
+
+.build-step-done .build-step-badge {
+    border-color: var(--mud-palette-primary);
+    background: var(--mud-palette-primary);
+    color: var(--mud-palette-primary-text);
+}
+
+.build-step-text {
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+}
+
+.build-step-label {
+    font-size: var(--mud-typography-body2-size);
+    font-weight: 600;
+}
+
+.build-step-todo .build-step-label {
+    color: var(--mud-palette-text-secondary);
+}
+
+.build-step-detail {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    font-size: var(--mud-typography-caption-size);
+    color: var(--mud-palette-text-secondary);
+}
+
+.build-team-section {
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+}
+
+.build-team-section-head {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.build-team-section-number {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 1.5rem;
+    height: 1.5rem;
+    border-radius: var(--mud-default-borderradius);
+    background: color-mix(in srgb, var(--mud-palette-primary) 14%, var(--mud-palette-surface));
+    font-size: var(--mud-typography-caption-size);
+    font-weight: 600;
+    color: var(--mud-palette-primary);
+}
+
+.build-team-intro {
+    color: var(--mud-palette-text-secondary);
+}
+
+.team-type-grid {
+    display: grid;
+    grid-template-rows: repeat(2, auto);
+    grid-auto-flow: column;
+    grid-auto-columns: 16rem;
+    gap: 0.75rem;
+    overflow-x: auto;
+    padding-bottom: 0.5rem;
+}
+
+.team-type-card {
+    position: relative;
+    display: flex;
+    align-items: flex-start;
+    gap: 0.75rem;
+    min-width: 0;
+    padding: 0.75rem;
+    font: inherit;
+    text-align: start;
+    color: var(--mud-palette-text-primary);
+    background: var(--mud-palette-surface);
+    border: 1px solid var(--mud-palette-divider);
+    border-radius: calc(var(--mud-default-borderradius) * 1.5);
+    cursor: pointer;
+}
+
+.team-type-card:hover {
+    background: var(--mud-palette-action-default-hover);
+}
+
+.team-type-card-selected,
+.team-type-card-selected:hover {
+    background: color-mix(in srgb, var(--mud-palette-primary) 14%, var(--mud-palette-surface));
+    border-color: var(--mud-palette-primary);
+}
+
+.team-type-card-selected:hover {
+    background: color-mix(in srgb, var(--mud-palette-primary) 24%, var(--mud-palette-surface));
+}
+
+.team-type-icon {
+    display: inline-flex;
+    flex: 0 0 auto;
+    align-items: center;
+    justify-content: center;
+    width: 2rem;
+    height: 2rem;
+    border-radius: 50%;
+}
+
+.team-type-tint-primary {
+    color: var(--mud-palette-primary);
+    background: color-mix(in srgb, var(--mud-palette-primary) 14%, var(--mud-palette-surface));
+}
+
+.team-type-tint-secondary {
+    color: var(--mud-palette-secondary);
+    background: color-mix(in srgb, var(--mud-palette-secondary) 14%, var(--mud-palette-surface));
+}
+
+.team-type-tint-tertiary {
+    color: var(--mud-palette-tertiary);
+    background: color-mix(in srgb, var(--mud-palette-tertiary) 14%, var(--mud-palette-surface));
+}
+
+.team-type-tint-info {
+    color: var(--mud-palette-info);
+    background: color-mix(in srgb, var(--mud-palette-info) 14%, var(--mud-palette-surface));
+}
+
+.team-type-tint-success {
+    color: var(--mud-palette-success);
+    background: color-mix(in srgb, var(--mud-palette-success) 14%, var(--mud-palette-surface));
+}
+
+.team-type-tint-warning {
+    color: var(--mud-palette-warning);
+    background: color-mix(in srgb, var(--mud-palette-warning) 14%, var(--mud-palette-surface));
+}
+
+.team-type-tint-error {
+    color: var(--mud-palette-error);
+    background: color-mix(in srgb, var(--mud-palette-error) 14%, var(--mud-palette-surface));
+}
+
+.team-type-text {
+    display: flex;
+    flex: 1 1 auto;
+    flex-direction: column;
+    gap: 0.25rem;
+    min-width: 0;
+}
+
+.team-type-name {
+    font-size: var(--mud-typography-subtitle1-size);
+    font-weight: 600;
+}
+
+.team-type-tagline {
+    display: -webkit-box;
+    overflow: hidden;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 2;
+    line-clamp: 2;
+    font-size: var(--mud-typography-body2-size);
+    color: var(--mud-palette-text-secondary);
+}
+
+.team-type-meta {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.25rem 0.5rem;
+    font-size: var(--mud-typography-caption-size);
+    color: var(--mud-palette-text-secondary);
+}
+
+.team-type-owned {
+    padding: 0.25rem 0.5rem;
+    border: 1px solid var(--mud-palette-divider);
+    border-radius: 999px;
+    font-weight: 600;
+    color: var(--mud-palette-text-primary);
+}
+
+.team-type-check {
+    display: inline-flex;
+    flex: 0 0 auto;
+    align-items: center;
+    justify-content: center;
+    width: 1.5rem;
+    height: 1.5rem;
+    border-radius: 50%;
+    background: var(--mud-palette-primary);
+    color: var(--mud-palette-primary-text);
+}
+
+@media (max-width: 600px) {
+    .build-stepper {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+}
+
 .team-check-blockers {
     margin: 0.5rem 0 0;
     padding-inline-start: 1.25rem;
