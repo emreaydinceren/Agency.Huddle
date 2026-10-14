@@ -209,7 +209,7 @@ If **Add teammate** shows a red error line above the fields (for example a name 
 12. Click **Add teammate**.
 13. In `T-C` run `Get-TeamDb "SELECT * FROM persona_models WHERE persona_name='Probe Blank'"` and `Get-TeamDb "SELECT * FROM persona_efforts WHERE persona_name='Probe Blank'"`.
 14. Read the **Model** and **Effort** sections of the card now showing for `Probe Blank`.
-15. Clean up: open each of `Probe Default` and `Probe Blank` from its tile, click **Remove**, then click **Confirm**.
+15. Clean up: open each of `Probe Default` and `Probe Blank` from its tile, click **Remove**, then click **Remove** again in the `Remove {name}?` prompt.
 
 **Pass if — all of these**
 
@@ -478,7 +478,7 @@ If the probe completes before you can click Cancel (the hint never lingers), the
 8. Click **Add teammate**.
 9. In `T-C` run `Get-TeamDb "SELECT * FROM persona_efforts WHERE persona_name='Probe NoEffort'"`.
 10. Read the **Effort** section of the card now showing.
-11. Clean up: click **Remove** on that card, then **Confirm**.
+11. Clean up: click **Remove** on that card, then **Remove** in the prompt.
 **Pass if — all of these**
 
 - The **Effort** select contains ONLY the option `Use the agent's default` - no other entries.
@@ -608,16 +608,16 @@ If `Set-TeamDb` errors with 'database is locked', the app was not fully stopped 
 2. Set **Model** to LADDER-MODEL and, once the Effort select settles, set **Effort** to `Low`.
 3. Click **Add teammate**.
 4. In `T-C` run `Get-TeamDb "SELECT * FROM persona_models WHERE persona_name='Probe Two'"` and `Get-TeamDb "SELECT * FROM persona_efforts WHERE persona_name='Probe Two'"`. Both must return one row. Write the values down.
-5. On the card now showing, click **Remove**. Two buttons replace it: **Confirm** and **Cancel**.
-6. Click **Confirm**. The card closes and the `Probe Two` tile disappears from the list.
+5. On the card now showing, click **Remove**. The prompt `Remove Probe Two?` replaces it, with **Remove** and **Cancel**.
+6. Click **Remove** in the prompt. The card closes and the `Probe Two` tile disappears from the list.
 7. In `T-C` run both queries from step 4 again.
 8. Click **New teammate**. Type **Name** `Probe Two`, **Title** `Tester`, **Alias** `p2` (Tab after each), **Persona body** `You are a tester.` and leave BOTH selects on `Use the agent's default`.
 9. Click **Add teammate**.
 10. Read the **Model** and **Effort** sections of the card now showing.
 11. In `T-C` run both queries from step 4 once more.
-12. Now test the case-insensitive key: click **Remove** then **Confirm** on `Probe Two`. Click **New teammate** and create `probe two` (all lowercase, Tab after each of Name, Title and Alias) with **Title** `Tester`, **Alias** `p2`, **Persona body** `You are a tester.`, both selects left on `Use the agent's default`.
+12. Now test the case-insensitive key: click **Remove** then **Remove** in the prompt on `Probe Two`. Click **New teammate** and create `probe two` (all lowercase, Tab after each of Name, Title and Alias) with **Title** `Tester`, **Alias** `p2`, **Persona body** `You are a tester.`, both selects left on `Use the agent's default`.
 13. In `T-C` run `Get-TeamDb "SELECT * FROM persona_models"` and `Get-TeamDb "SELECT * FROM persona_efforts"` and look for any row keyed `Probe Two` or `probe two`.
-14. Clean up: remove `probe two` (**Remove**, then **Confirm**).
+14. Clean up: remove `probe two` (**Remove**, then **Remove** in the prompt).
 
 **Pass if — all of these**
 
@@ -634,7 +634,7 @@ If `Set-TeamDb` errors with 'database is locked', the app was not fully stopped 
 
 **Inconclusive if**
 
-If **Confirm** produces a red error line on the card, the removal never happened - read the message, resolve it (usually a file lock) and re-run. Seeing the removed teammate's old Agent still listed in a Room or in the sidebar is NOT a failure of this test: Agents, Rooms and Transcripts deliberately do not cascade, only the Model and Effort rows do.
+If the prompt's **Remove** produces a red error line on the card, the removal never happened - read the message, resolve it (usually a file lock) and re-run. Seeing the removed teammate's old Agent still listed in a Room or in the sidebar is NOT a failure of this test: Agents, Rooms and Transcripts deliberately do not cascade, only the Model and Effort rows do.
 
 > [!NOTE]
 > This is manual checklist step 19.
@@ -662,7 +662,7 @@ If **Confirm** produces a red error line on the card, the removal never happened
 8. Read the **Model** and **Effort** sections of the card now showing.
 9. In `T-C` run both queries from step 3 again and look for rows keyed `Probe Three` and `Probe Four`.
 10. In `T-C` run `Get-ChildItem '<data>\Teammates' -Name` and then `Get-ChildItem '<data>\Teammates\Probe Four' -Name`. Note the folder names and the definition filename.
-11. Clean up: open `Probe Four`, click **Remove**, then **Confirm**.
+11. Clean up: open `Probe Four`, click **Remove**, then **Remove** in the prompt.
 
 **Pass if — all of these**
 
@@ -888,7 +888,7 @@ If step 3's rename fails with 'file in use', a runner or a probe still holds the
 12. WITHOUT restarting the app, run in `T-C`: `Rename-Item '<repo>\tools\acp\node_modules.off' 'node_modules'`.
 13. In the browser, close the card (× button) and click **New teammate** again. Wait for the hints to settle.
 14. Read the **Model** select's contents.
-15. Clean up: click **Cancel**, open `Probe NoAdapter`, click the **Remove** icon button (tooltip `Remove`), then **Confirm**.
+15. Clean up: click **Cancel**, open `Probe NoAdapter`, click the **Remove** icon button (tooltip `Remove`), then **Remove** in the prompt.
 
 **Pass if — all of these**
 
@@ -988,7 +988,7 @@ The identical on-screen text across all four causes is DOCUMENTED and must not b
 9. In `T-C` re-run the two count queries from step 3.
 10. Click **New teammate**, create `Probe Migrate` with **Title** `Tester`, **Alias** `pm`, **Persona body** `You are a tester.`, **Model** = LADDER-MODEL and **Effort** = `Low`, then click **Add teammate**.
 11. In `T-C` run `Get-TeamDb "SELECT * FROM persona_models WHERE persona_name='Probe Migrate'"` and `Get-TeamDb "SELECT * FROM persona_efforts WHERE persona_name='Probe Migrate'"`.
-12. Clean up: remove `Probe Migrate` through the card (the **Remove** icon button, then **Confirm**), and delete the backup file if everything passed.
+12. Clean up: remove `Probe Migrate` through the card (the **Remove** icon button, then **Remove** in the prompt), and delete the backup file if everything passed.
 
 **Pass if — all of these**
 

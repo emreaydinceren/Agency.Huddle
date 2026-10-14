@@ -186,7 +186,7 @@ The tests that spend money, with an estimate for each. This register is not yet 
 | [QUESTIONS-05](questions.md#questions-05--in-a-room-of-three-an-answer-wakes-only-the-asker) | `questions` | In a Room of three, an answer wakes only the asker | 20 min |
 | [QUESTIONS-06](questions.md#questions-06--a-claude-teammate-has-no-built-in-askuserquestion) | `questions` | A Claude Teammate has no built-in `AskUserQuestion` (with `Acp:AdvertiseElicitation` off) | 20 min |
 | [QUESTIONS-08](questions.md#questions-08--claudes-askuserquestion-reaches-the-human-and-the-turn-survives-the-wait) | `questions` | Claude's `AskUserQuestion` reaches the Human, and the Turn survives the wait | 20 min |
-| [QUESTIONS-09](questions.md#questions-09--skip-and-stop-end-a-waiting-form-cleanly) | `questions` | Skip and Stop end a waiting form cleanly | 20 min |
+| [QUESTIONS-09](questions.md#questions-09--dismiss-and-stop-end-a-waiting-form-cleanly) | `questions` | Skip and Stop end a waiting form cleanly | 20 min |
 | [QUESTIONS-10](questions.md#questions-10--an-unanswered-form-is-dropped-after-acpuserinputtimeoutseconds) | `questions` | An unanswered form is dropped after `Acp:UserInputTimeoutSeconds` | 15 min |
 
 Before the first paid test of a session:

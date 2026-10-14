@@ -22,7 +22,7 @@ QM-1 to QM-10) and [ADR-0022](../../adr/0022-an-agent-asks-the-human-with-a-ques
 | QUESTIONS-06 | QM-6 | Paid 💰 | With `Acp:AdvertiseElicitation` **off**, does a Claude Teammate have no `AskUserQuestion`, and does the Turn not hang (§6.8) |
 | QUESTIONS-07 | QM-7 | Free | Does a scripted Adapter's form reach the Human as a card, with typed fields and the right typed answer (§6.8a) |
 | QUESTIONS-08 | QM-8 | Paid 💰 | With the default **on**, does Claude's `AskUserQuestion` reach the Human as a card, does the Turn survive the wait, and does the answer land in the Transcript without waking the asker |
-| QUESTIONS-09 | QM-9 | Paid 💰 | Do Skip and Stop end a waiting form cleanly |
+| QUESTIONS-09 | QM-9 | Paid 💰 | Do Dismiss and Stop end a waiting form cleanly |
 | QUESTIONS-10 | QM-10 | Paid 💰 | Is an unanswered form dropped after `Acp:UserInputTimeoutSeconds` |
 
 ## Setup
@@ -43,8 +43,8 @@ Run [`P-BUILD`](common.md#p-build) then `P-LAUNCH-PAID` from [Common procedures]
    reach for either (`systemPrompt.askHuman` says `AskUserQuestion` also works,
    `prompts.default.json:6`). The `ask_human` card (QuestionCard) offers options as buttons and a
    **Dismiss** button (`QuestionCard.razor:38`), plus **Send** only when it holds more than one Question.
-   The Elicitation card, Claude's own `AskUserQuestion`, has typed fields with **Send** and **Skip**
-   (`ElicitationCard.razor:187-192`). In QUESTIONS-01, -02 and -05, a card with **Skip** is the wrong one:
+   The Elicitation card, Claude's own `AskUserQuestion`, has typed fields with **Send** and **Dismiss**
+   (`ElicitationCard.razor:187-192`). In QUESTIONS-01, -02 and -05, a card with **Dismiss** is the wrong one:
    record it and fail the test. Settle which tool was called from `O-TOOLCALLS`: the `tool` of an
    `ask_human` call ends in `ask_human`.
 4. QUESTIONS-04 needs an Adapter Profile beyond the stock one, with `agency-acp` as the candidate;
@@ -69,7 +69,7 @@ Run [`P-BUILD`](common.md#p-build) then `P-LAUNCH-PAID` from [Common procedures]
    `claude-agent-acp` entry point if you run from a worktree.
 7. QUESTIONS-08 shortens the idle bound so the pause is visible: set `Team__Acp__TurnIdleTimeoutSeconds` to
    `20`. QUESTIONS-10 sets `Team__Acp__UserInputTimeoutSeconds` to `30` (its minimum). "The form card" means
-   the panel headed *"<Name> is asking"* with typed fields and **Send** and **Skip**, between the
+   the panel headed *"<Name> is asking"* with typed fields and **Send** and **Dismiss**, between the
    Transcript and the composer. "The hung-Adapter line" is, in `O-LOG`,
    `Persona '<Name>' turn in room <RoomId> was abandoned after <N> seconds of silence.`
    (`RoomSession.cs:1096`). The failure it reports to the Room carries the reason
@@ -103,7 +103,7 @@ Run [`P-BUILD`](common.md#p-build) then `P-LAUNCH-PAID` from [Common procedures]
 
 **Fail if — any of these**
 
-- The card has typed fields with **Send** and **Skip**, or `O-TOOLCALLS` shows `AskUserQuestion` -> the model picked Claude's own tool; this is the Elicitation card of QUESTIONS-08, not `ask_human`. Record it and fail QM-1.
+- The card has typed fields with **Send** and **Dismiss**, or `O-TOOLCALLS` shows `AskUserQuestion` -> the model picked Claude's own tool; this is the Elicitation card of QUESTIONS-08, not `ask_human`. Record it and fail QM-1.
 - Coach wrote its questions out as a list in the Message and no card appeared -> the model did not call the tool; record the wording it used and check `systemPrompt.askHuman` (the system prompt, `prompts.default.json`), which is what asks the model to use the tool.
 - Coach said it has no such tool -> the tool is not offered; restart the Teammate from its card and check [get_help](app-tools.md).
 - The card appeared with no framing sentence at all -> the description's "say why you are asking" is not being followed.
@@ -200,7 +200,7 @@ Run [`P-BUILD`](common.md#p-build) then `P-LAUNCH-PAID` from [Common procedures]
 
 **Steps**
 
-1. Send *"@Coach help me plan a workout routine"*. Wait for the card. If it has typed fields with **Skip**, Coach picked `AskUserQuestion`, not `ask_human` (setup step 3): record it and fail the test; do not continue.
+1. Send *"@Coach help me plan a workout routine"*. Wait for the card. If it has typed fields with **Dismiss**, Coach picked `AskUserQuestion`, not `ask_human` (setup step 3): record it and fail the test; do not continue.
 2. Tap an option on each Question and press **Send** (or tap once if the card holds one Question).
 3. Watch which Teammates start a Turn, and run `O-TRANSCRIPT`.
 4. Then send *"@Nova what did Coach just ask me?"*.
@@ -259,20 +259,20 @@ Run [`P-BUILD`](common.md#p-build) then `P-LAUNCH-PAID` from [Common procedures]
 1. Send `[elicit:form] plan this`. The card "Plan the delivery" appears. Try **Send** with only Title filled: it is disabled. Fill Title `Move the office`, Due date `2026-10-15`, Boxes `25`, and note that **Send stays disabled** (the schema's maximum is 20, and the field says so); change Boxes to `7`, Budget `12.5`, switch **Insured** on, choose **High**, tick **Fragile** and **Cold chain**, type `Pianos <b>first</b> & "quotes"` in Notes, and press **Send**.
 2. Read the Transcript and the Teammate's reply.
 3. Send `[elicit:ask] two`. In the first question tap **Green**, then type `Teal` in **Other**. Tick two options of the second question and press **Send**.
-4. Send `[elicit:unsupported]`, then `[elicit:one]` (press **Skip**), then `[elicit:refusal]` (choose the second option and press **Send**).
+4. Send `[elicit:unsupported]`, then `[elicit:one]` (press **Dismiss**), then `[elicit:refusal]` (choose the second option and press **Send**).
 5. Send `[elicit:ask] again`, and while its card is open type `never mind` in the composer and send it.
 
 **Pass if — all of these**
 
-- Step 1: the card is capped well inside the window, its fields scroll, and **Send** and **Skip** stay in view with the composer below. The Transcript holds a Message from you that quotes each field's label (muted, barred) and its answer. The reply reads `Got action=accept content=` followed by JSON with `"count":7`, `"budget":12.5`, `"agree":true`, `"priority":"high"`, `"tags":["fragile","cold"]`, `"due":"2026-10-15"` and the notes with their `<b>` shown as text, never as bold.
+- Step 1: the card is capped well inside the window, its fields scroll, and **Send** and **Dismiss** stay in view with the composer below. The Transcript holds a Message from you that quotes each field's label (muted, barred) and its answer. The reply reads `Got action=accept content=` followed by JSON with `"count":7`, `"budget":12.5`, `"agree":true`, `"priority":"high"`, `"tags":["fragile","cold"]`, `"due":"2026-10-15"` and the notes with their `<b>` shown as text, never as bold.
 - Step 3: tapping into **Other** clears the first question's selection and disables its options. The reply's content holds `question_0_custom` `Teal` and **no** `question_0`, and `question_1` as an array of the two options.
-- Step 4: `[elicit:unsupported]` shows **no card** and the reply says `action=decline content=none`. `[elicit:one]` shows the question **once** (not as both a heading and a label) and **Skip** posts nothing, the reply saying `action=decline`. The refusal form shows no raw heading `choice`, its Transcript Message quotes the question text, and the reply holds `{"choice":"cancelled"}`.
+- Step 4: `[elicit:unsupported]` shows **no card** and the reply says `action=decline content=none`. `[elicit:one]` shows the question **once** (not as both a heading and a label) and **Dismiss** posts nothing, the reply saying `action=decline`. The refusal form shows no raw heading `choice`, its Transcript Message quotes the question text, and the reply holds `{"choice":"cancelled"}`.
 - Step 5: the card disappears at once, the reply says `action=cancel content=none`, and your typed Message gets its own, normal reply.
 - A multi-select's options stand in one left-aligned column.
 
 **Fail if — any of these**
 
-- Send, Skip or the composer cannot be reached on a 720-pixel window -> the card's height cap is not applying; check that its rules are in `app.css`, not a scoped stylesheet.
+- Send, Dismiss or the composer cannot be reached on a 720-pixel window -> the card's height cap is not applying; check that its rules are in `app.css`, not a scoped stylesheet.
 - A number or boolean arrives as text (`"7"`, `"true"`) -> the answer's typing is broken (D-17).
 - The Teammate replied to the Transcript Message as if you had spoken to it -> the answer is being delivered to the asker (D-16).
 - A card stays after step 5 -> a typed Message no longer ends a waiting form.
@@ -307,7 +307,7 @@ Run [`P-BUILD`](common.md#p-build) then `P-LAUNCH-PAID` from [Common procedures]
 - No card appeared and Coach said the tool is unavailable -> elicitation is not being advertised; check `Acp:AdvertiseElicitation` and the `initialize` in the trace.
 - A second `session/prompt` for Coach follows your answer, or Coach answers twice -> the Transcript Message woke the asker (D-16).
 
-### QUESTIONS-09 — Skip and Stop end a waiting form cleanly
+### QUESTIONS-09 — Dismiss and Stop end a waiting form cleanly
 
 **Paid** 💰 · about 20 min
 
@@ -319,7 +319,7 @@ Run [`P-BUILD`](common.md#p-build) then `P-LAUNCH-PAID` from [Common procedures]
 
 **Steps**
 
-1. Send Coach *"Use your AskUserQuestion tool to ask me whether I prefer morning or evening workouts."* When the card appears press **Skip**.
+1. Send Coach *"Use your AskUserQuestion tool to ask me whether I prefer morning or evening workouts."* When the card appears press **Dismiss**.
 2. Send Coach *"Use your AskUserQuestion tool to ask me which day I train: Monday, Wednesday or Friday."* When the card appears press **Stop** on Coach's Draft.
 3. Send Coach *"Say hello back in exactly five words."*
 

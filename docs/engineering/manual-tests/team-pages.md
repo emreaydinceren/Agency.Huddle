@@ -42,7 +42,7 @@ removes Ada, and later tests rely on both.
 
 Confirm the sidebar **Teams** group sits between the Rooms list and the main menu, is labelled
 `Teams`, and shows the Groups icon on its header; the `+` icons belong to the two links at the
-bottom of the group, **New team** and **New Team from a type** (`TeamsNav.razor:28,76,77`). Click
+bottom of the group, **New team** and **New team from a type** (`TeamsNav.razor:28,76,77`). Click
 only **New team** where a test says so.
 
 **Why TP-T13 is gone.** It asked whether a Persona on an Adapter with `ReadsFiles=false` gets no
@@ -300,7 +300,7 @@ and opens its Members page.*
 
 **Steps**
 
-1. In the sidebar Teams group, click the `New team` link (the one with the `+` icon; not `New Team from a type`).
+1. In the sidebar Teams group, click the `New team` link (the one with the `+` icon; not `New team from a type`).
 2. In the dialog (titled "New team"), type `Research` in the **Team name** field.
 3. Click `Create`.
 

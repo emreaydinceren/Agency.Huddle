@@ -39,10 +39,10 @@ oracles `O-LOG` / `O-ADAPTERS` / `O-TRANSCRIPT` / `O-DB` / `O-WIRE`, the four re
 
 **Steps**
 
-1. Click **Add teammate** at the right of the Room header.
+1. Click **Invite teammate** at the right of the Room header.
 2. In the panel that opens, click `Bo`.
 3. Read the blue strip at the top of the panel.
-4. Click **Add teammate** again to close the panel.
+4. Click **Invite teammate** again to close the panel.
 5. Read the sidebar entry, the Room heading and the grey member line, WITHOUT reloading the page.
 6. Type `good morning everyone` and press Enter.
 7. Wait 15 seconds without touching anything.
@@ -70,7 +70,7 @@ oracles `O-LOG` / `O-ADAPTERS` / `O-TRANSCRIPT` / `O-DB` / `O-WIRE`, the four re
 
 **Inconclusive if**
 
-If `Bo` does not appear in the **Add teammate** list, it is either already a Member or not Online — check the sidebar for a Room named `Bo` and the Teammates page for `Bo` reading Online, then restart from RESET. If the dot beside `Bo` in the panel is red rather than green, `Bo` is offline and its silence proves nothing about the gate: fix the agent first. If the strip is a red error alert instead of the blue note, read its text and treat the test as inconclusive.
+If `Bo` does not appear in the **Invite teammate** list, it is either already a Member or not Online — check the sidebar for a Room named `Bo` and the Teammates page for `Bo` reading Online, then restart from RESET. If the dot beside `Bo` in the panel is red rather than green, `Bo` is offline and its silence proves nothing about the gate: fix the agent first. If the strip is a red error alert instead of the blue note, read its text and treat the test as inconclusive.
 
 > [!NOTE]
 > A Room has no stored kind anywhere: the member count is the whole of this rule. That is why this test changes nothing but membership.
@@ -157,7 +157,7 @@ If `Ada` is already a Member of the `Bo` Room from an earlier test, step 2 will 
 
 **Inconclusive if**
 
-If `Ada` is offline (a red dot beside Ada on the Teammates page, or the tile reads Offline — the **Add teammate** panel lists only non-Members, so Ada is not in it), every line of this test is inconclusive — no Mention can be observed through an Agent that receives nothing. If the Room has only two Members, a reply proves nothing about Mention resolution because a two-Member Room would be answered anyway: add a second Agent first. If `Bo` does reply, read its text: a reply that merely re-quotes an earlier Message naming `Bo` is the mock echoing a Mention (Setup item 8), not a gate failure — re-run from a fresh seeder.
+If `Ada` is offline (a red dot beside Ada on the Teammates page, or the tile reads Offline — the **Invite teammate** panel lists only non-Members, so Ada is not in it), every line of this test is inconclusive — no Mention can be observed through an Agent that receives nothing. If the Room has only two Members, a reply proves nothing about Mention resolution because a two-Member Room would be answered anyway: add a second Agent first. If `Bo` does reply, read its text: a reply that merely re-quotes an earlier Message naming `Bo` is the mock echoing a Mention (Setup item 8), not a gate failure — re-run from a fresh seeder.
 
 > [!NOTE]
 > A space is deliberately NOT a boundary character, which is what makes multi-word Names possible; that is covered in REPLYGATEBUDGET-19 and -21.
@@ -245,7 +245,7 @@ If the Human's display name is not `You` (it is configurable), step 3 names nobo
 
 **Inconclusive if**
 
-If one of the two Agents is offline at step 3 only one reply arrives and the line will read `1 of 40`, which is correct for what happened — check on the Teammates page that both `Ada` and `Bo` read Online before judging (the **Add teammate** panel lists only non-Members, so neither is in it). If the app was launched with a different `Team__AgentMessageBudget` from a previous test, substitute that number for 40 throughout rather than failing the test.
+If one of the two Agents is offline at step 3 only one reply arrives and the line will read `1 of 40`, which is correct for what happened — check on the Teammates page that both `Ada` and `Bo` read Online before judging (the **Invite teammate** panel lists only non-Members, so neither is in it). If the app was launched with a different `Team__AgentMessageBudget` from a previous test, substitute that number for 40 throughout rather than failing the test.
 
 > [!NOTE]
 > The line is deliberately suppressed when the Room is uncapped; that case is REPLYGATEBUDGET-16.
@@ -317,8 +317,8 @@ If no reply arrives at all, you have a dead agent rather than a pause — confir
 1. Run `P-LAUNCH-UAT` with a Budget of `1` (Setup item 2). Re-running its seeder line is the reset.
 2. Wait for Ada and Bo to go **Online**.
 3. Open `http://localhost:5100`, click the Room named `Ada`, and note the Room id from the URL.
-4. Click **Add teammate**, click `Bo`, and confirm the header renames to `Ada, Bo`.
-5. Click **Add teammate** again to close the panel.
+4. Click **Invite teammate**, click `Bo`, and confirm the header renames to `Ada, Bo`.
+5. Click **Invite teammate** again to close the panel.
 6. Type `@Ada @Bo go` and press Enter.
 7. Wait 10 seconds and count the agent Messages that appear.
 8. Read `T-A`.
@@ -339,7 +339,7 @@ If no reply arrives at all, you have a dead agent rather than a pause — confir
 
 **Inconclusive if**
 
-If only one of the two Agents is online, only one post is ever attempted and the test proves nothing about the race: check on the Teammates page that both read Online first (the **Add teammate** panel lists only non-Members). If `T-A` shows a `declined a turn in room` warning for the second Teammate and NO `refused a message from` line, the second Teammate started its Turn after the first had already posted, so the cheap layer (REPLYGATEBUDGET-33) caught it and the write path was never reached: that is correct behaviour but not what this test is for — re-run from the seeder (a few attempts may be needed to hit the race). If the timing is such that the second Agent's post arrives after you have already typed something else, the Budget will have reset — do not type anything between step 6 and step 9.
+If only one of the two Agents is online, only one post is ever attempted and the test proves nothing about the race: check on the Teammates page that both read Online first (the **Invite teammate** panel lists only non-Members). If `T-A` shows a `declined a turn in room` warning for the second Teammate and NO `refused a message from` line, the second Teammate started its Turn after the first had already posted, so the cheap layer (REPLYGATEBUDGET-33) caught it and the write path was never reached: that is correct behaviour but not what this test is for — re-run from the seeder (a few attempts may be needed to hit the race). If the timing is such that the second Agent's post arrives after you have already typed something else, the Budget will have reset — do not type anything between step 6 and step 9.
 
 > [!NOTE]
 > This layer refuses AFTER the Turn that produced the Message has already happened. With a real Persona the model has thought and the text is thrown away. That is the documented price of putting the authority on the write path, not a defect; the layer that avoids the spend is covered in REPLYGATEBUDGET-33.
@@ -1279,7 +1279,7 @@ If the bot fails to reconnect (the terminal shows a connection error), nothing i
 
 1. Type `@nobodyhere hello` and press Enter, then wait 10 seconds and watch the whole page.
 2. Read both bot terminals for that Message.
-3. In the sidebar click **New chat** and note the colour of the dot beside each Agent, then click **New chat** again to close the panel. (This panel lists every Agent, Members or not, with its presence dot. The Room's **Add teammate** panel lists only Agents who are not yet Members, so Ada and Bo are not in it.)
+3. In the sidebar click **New chat** and note the colour of the dot beside each Agent, then click **New chat** again to close the panel. (This panel lists every Agent, Members or not, with its presence dot. The Room's **Invite teammate** panel lists only Agents who are not yet Members, so Ada and Bo are not in it.)
 4. In `T-B` press Ctrl+C to take `Ada` offline, and wait 5 seconds.
 5. Click **New chat** again and note the colour of the dot beside `Ada`, then close the panel.
 6. Type `@Ada are you there?` and press Enter, then wait 10 seconds.
@@ -1337,7 +1337,7 @@ This test is itself the disambiguation procedure, so it cannot be inconclusive i
 
 1. Run `P-RESET-ROOMS`.
 2. Start the app with `P-LAUNCH-FREE` (`$env:Team__Acp__Enabled = 'false'`), only so you can create the Persona without starting a model.
-3. Open `http://localhost:5100`, click **Teammates**, click **New teammate**, and create Name `Ada`, Title `Analyst`, Alias `ada1`, body `You are Ada, a concise analyst. Answer in one short sentence.` Click **Add teammate**. Then, still on **Teammates**, open the **Chief of Staff** card, choose **Edit**, set **Model** to the Haiku entry and **Effort** to `low`, and **Save**.
+3. Open `http://localhost:5100`, click **Teammates**, click **New teammate**, and create Name `Ada`, Title `Analyst`, Alias `ada1`, body `You are Ada, a concise analyst. Answer in one short sentence.` Click **Invite teammate**. Then, still on **Teammates**, open the **Chief of Staff** card, choose **Edit**, set **Model** to the Haiku entry and **Effort** to `low`, and **Save**.
 4. Stop the app with Ctrl+C.
 5. Start the app with PROFILE C: `$env:Team__Acp__Enabled = 'true'`, `$env:Team__AgentMessageBudget = '4'`, then `dotnet run --project src/Huddle.App --urls http://localhost:5100`.
 6. Open `http://localhost:5100`, click **Teammates**, and wait until the `Ada` tile reads **Online**.

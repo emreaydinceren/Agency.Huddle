@@ -31,7 +31,7 @@ oracles `O-LOG` / `O-ADAPTERS` / `O-TRANSCRIPT` / `O-DB` / `O-WIRE`, the four re
 4. `O-DB` is REQUIRED from TEAMMATECARD-35 onward, not optional: install `sqlite3` and confirm `sqlite3 -version` in a fresh `T-B`. (DB Browser for SQLite is an acceptable substitute.)
 5. Confirm `node --version` prints a version. TEAMMATECARD-37 onward need a node process spawn to be observable.
 6. Open `http://localhost:5100/teammates`. Keep a File Explorer window on `<data>\Teammates` and a text editor able to show line endings (VS Code, Notepad++). A Persona lives at `<data>\Teammates\<Name>\<Name>.md`; a `.md` directly under `Teammates` is rejected.
-7. **Clean-up.** After each test, remove every Persona it created, unless the next test says to keep it: open its card and use **Remove** (the person-with-a-minus icon, then **Confirm**), then delete the leftover `<data>\Teammates\<Name>` folder in File Explorer. Never remove the Chief of Staff (its card offers **Reset to default**, not Remove). This keeps tests from leaking state into one another.
+7. **Clean-up.** After each test, remove every Persona it created, unless the next test says to keep it: open its card and use **Remove** (the person-with-a-minus icon, then **Remove** in the prompt), then delete the leftover `<data>\Teammates\<Name>` folder in File Explorer. Never remove the Chief of Staff (its card offers **Reset to default**, not Remove). This keeps tests from leaking state into one another.
 
 ## Tests
 
@@ -597,7 +597,7 @@ If your browser or OS has a screen-magnifier or accessibility tool intercepting 
 
 **Free** · about 7 min
 
-*Proves no field, no error and no pending Remove confirmation survives a close — a leftover Name would be used to create the wrong teammate, and a leftover Confirm is a one-click accidental delete.*
+*Proves no field, no error and no pending Remove confirmation survives a close — a leftover Name would be used to create the wrong teammate, and a leftover Remove prompt is a one-click accidental delete.*
 
 **Before you start**
 
@@ -609,8 +609,8 @@ If your browser or OS has a screen-magnifier or accessibility tool intercepting 
 1. Click `New teammate`. Fill **Name** `Atlas`, **Title** `Ops`, **Alias** `atl`, **Teams** `Business`, **Persona body** `You are Atlas.`; if the selects offer options, choose Haiku and low.
 2. Click `Cancel`.
 3. Click `New teammate` again and inspect all four inputs, the body box, both selects and the top of the card body.
-4. Close the card. Click the `Nova` tile, then click the red `Remove` icon button so the buttons `Confirm` and `Cancel` are showing.
-5. Close the card by clicking the dimmed backdrop — do NOT click `Confirm` or `Cancel`.
+4. Close the card. Click the `Nova` tile, then click the red `Remove` icon button so the prompt `Remove Nova?` with the buttons `Remove` and `Cancel` is showing.
+5. Close the card by clicking the dimmed backdrop — do NOT click `Remove` or `Cancel` in the prompt.
 6. Click the `Nova` tile again and read the action row.
 7. With `Nova`'s card open, click `Edit`, clear the whole text box, click `Save` so a red error appears, then close the card with `×`.
 8. Click the `Nova` tile again and look for the red error line.
@@ -618,13 +618,13 @@ If your browser or OS has a screen-magnifier or accessibility tool intercepting 
 **Pass if — all of these**
 
 - On reopening Create, all four inputs and the body box are empty, both selects show `Use the agent's default`, and no red error line is showing.
-- After reopening `Nova`, the action row shows the single `Remove` icon button — not `Confirm` and `Cancel`.
+- After reopening `Nova`, the action row shows the single `Remove` icon button — not the `Remove Nova?` prompt.
 - After reopening `Nova` following the errored Edit, no red error line is showing.
 
 **Fail if — any of these**
 
 - Any typed value carries over into the next card -> most dangerously a leftover Name, which a Create would then use for a different teammate entirely.
-- The reopened card still shows `Confirm` -> one stray click now deletes a Persona file with no further warning.
+- The reopened card still shows the `Remove Nova?` prompt -> one stray click now deletes a Persona file with no further warning.
 - A stale error line persists on a freshly opened card -> the user is shown a failure that belongs to a different card.
 
 **Inconclusive if**
@@ -647,16 +647,16 @@ If step 7's Save succeeds instead of erroring, you did not fully clear the text 
 2. Click the red `Remove` icon button (tooltip `Remove`) and read the action row.
 3. Click `Cancel` and read the action row again.
 4. Confirm in File Explorer that `Nova.md` is still present and its modified time is unchanged.
-5. Click the `Remove` icon button, then click `Confirm`.
+5. Click the `Remove` icon button, then click `Remove` in the prompt.
 6. Observe the card and the list behind it.
 7. Confirm in File Explorer that `Nova.md` is gone. The `Nova` folder itself may remain; it is not a Persona and the page ignores it.
 
 **Pass if — all of these**
 
-- Clicking the `Remove` icon replaces it with two text buttons, `Confirm` (styled as the danger action) and `Cancel`.
+- Clicking the `Remove` icon replaces it with the prompt `Remove Nova?` and two text buttons, `Remove` (styled as the danger action) and `Cancel`.
 - Clicking `Cancel` collapses them back to the single `Remove` icon and the card stays open.
 - `Nova.md` is untouched after the Cancel.
-- Clicking `Confirm` closes the card and the `Nova` tile disappears from the list.
+- Clicking the prompt's `Remove` closes the card and the `Nova` tile disappears from the list.
 - `Nova.md` no longer exists.
 
 **Fail if — any of these**
@@ -667,7 +667,7 @@ If step 7's Save succeeds instead of erroring, you did not fully clear the text 
 
 **Inconclusive if**
 
-If `Confirm` produces a red line `Persona 'Nova' does not exist.`, the file was removed outside the app between steps — recreate `Nova` and repeat.
+If the prompt's `Remove` produces a red line `Persona 'Nova' does not exist.`, the file was removed outside the app between steps — recreate `Nova` and repeat.
 
 > [!NOTE]
 > Recreate `Nova` (Name `Nova`, Title `Ops Lead`, Alias `nov`, Teams `Business`, body `You are Nova.`) before continuing to later tests that assume it exists.
@@ -1281,7 +1281,7 @@ Some editors write via a temp file plus a rename, which can produce a different 
 1. Click the `Nova` tile to open its View card. Leave it open.
 2. In File Explorer, delete `Nova`'s `.md` file (the `Nova` folder may stay).
 3. Wait about one second (the list behind will repaint) but do NOT close the card.
-4. On the still-open card, click the `Remove` icon button, then `Confirm`. Read the card and the action row.
+4. On the still-open card, click the `Remove` icon button, then `Remove` in the prompt. Read the card and the action row.
 5. Click `Open`. Read the card.
 6. Click `Edit`, change a word, then click `Save`. Read the card.
 7. Read the app console for any unhandled exception.
@@ -1297,7 +1297,7 @@ Some editors write via a temp file plus a rename, which can produce a different 
 
 - The yellow error bar appears -> an unhandled exception killed the circuit; the user loses the whole page because a file moved.
 - Nothing at all happens on click -> a silent no-op leaves the user believing the action worked.
-- `Confirm` stays showing after the failure -> the pending-delete state survives an error and can be triggered again by one click.
+- The `Remove` prompt stays showing after the failure -> the pending-delete state survives an error and can be triggered again by one click.
 
 **Inconclusive if**
 
@@ -1397,7 +1397,7 @@ If the Name is rejected with `'CON' is not a valid Persona name.`, the rule has 
 1. Open http://localhost:5100/teammates in tab A and again in tab B. Arrange them so both are visible.
 2. In tab A, create a teammate: Name `Sync`, Title `T`, Alias `syn`, body `x`. Do not touch tab B.
 3. Look at tab B's list without reloading it.
-4. In tab A, close the card, click the `Sync` tile, click the `Remove` icon button, then `Confirm`.
+4. In tab A, close the card, click the `Sync` tile, click the `Remove` icon button, then `Remove` in the prompt.
 5. Look at tab B's list again without reloading it.
 6. Recreate `Sync`. In tab A click its tile then `Edit`; in tab B click the same tile then `Edit`, so both cards are open at once.
 7. Run `O-ADAPTERS` in `T-B` and count the node processes.
@@ -1438,22 +1438,22 @@ If no node process ever appears, the adapter is missing or unauthenticated — t
 2. Click `Reset to default`. Read the action row and any caption or sentence that appears.
 3. Click `Cancel`. Read the action row, and confirm the file is untouched.
 4. Click `Edit`, change the **Title** box to `Edited title`, press Tab, and click `Save`. Confirm the View card shows `Edited title`.
-5. Click `Reset to default`, then `Confirm`. Read the card.
+5. Click `Reset to default`, then `Reset` in the `Reset to default?` prompt. Read the card.
 6. Open the Chief of Staff's file and read the `name:`, `alias:` and `title:` lines.
 
 **Pass if — all of these**
 
 - The action row holds `Edit`, `Open`, `Restart` and an outlined red button `Reset to default` (a `Message` button leads the row when a direct Room exists). There is NO `Remove` icon button and no `Remove` tooltip (`TeammateCard.razor:198-209`).
-- Clicking `Reset to default` replaces it with `Confirm` and `Cancel`, and shows the sentence `Restore the Chief of Staff's instructions, Title, Teams, Skills, Model and Effort to their defaults? Its Name, Alias, Rooms and history are kept.` (`TeammateCard.razor:229-232`).
+- Clicking `Reset to default` replaces it with the prompt `Reset to default?`, `Reset` and `Cancel`, and shows the sentence `Restore the Chief of Staff's instructions, Title, Teams, Skills, Model and Effort to their defaults? Its Name, Alias, Rooms and history are kept.` (`TeammateCard.razor:229-232`).
 - `Cancel` brings back the single `Reset to default` button and changes nothing.
-- `Confirm` does NOT close the card: it stays in View mode, and the Title is back to the value noted in step 1, not `Edited title` (`TeammateCard.razor:1963-1994`).
+- `Reset` does NOT close the card: it stays in View mode, and the Title is back to the value noted in step 1, not `Edited title` (`TeammateCard.razor:1963-1994`).
 - Afterwards `name:` still reads the Chief of Staff's Name and `alias:` reads `cos`; the card's `Model` reads `Agent default`, `Effort` reads `Model default` and `Work mode` reads `Agent default`.
 
 **Fail if — any of these**
 
 - A `Remove` icon appears on this card -> the built-in teammate can be deleted from the UI, and the next start silently re-creates a fresh one.
 - `Reset to default` acts on the first click -> a destructive overwrite of the Persona text has no confirmation.
-- `Confirm` closes the card, or the Title is still `Edited title` -> the reset did not write the defaults back.
+- `Reset` closes the card, or the Title is still `Edited title` -> the reset did not write the defaults back.
 - The Name or Alias changed -> Reset overwrote an identity it promises to keep.
 
 **Inconclusive if**
@@ -1476,7 +1476,7 @@ If the Chief of Staff's tile is missing, run TEAMMATECARD-01's restore (`P-STOP`
 1. Seed all three settings directly so this test needs no model catalog: run `sqlite3 "<data>\team.db" "INSERT OR REPLACE INTO persona_models(persona_name,model) VALUES('Nova','claude-haiku-test'); INSERT OR REPLACE INTO persona_efforts(persona_name,effort) VALUES('Nova','low'); INSERT OR REPLACE INTO persona_work_modes(persona_name,work_mode) VALUES('Nova','ghost-mode');"`
 2. Verify: `sqlite3 "<data>\team.db" "SELECT * FROM persona_models WHERE persona_name='Nova'; SELECT * FROM persona_efforts WHERE persona_name='Nova'; SELECT * FROM persona_work_modes WHERE persona_name='Nova';"` — all three must return a row.
 3. In the browser, click the `Nova` tile and confirm `Model` shows `claude-haiku-test` and `Effort` shows `low`.
-4. Click the `Remove` icon button (the person-with-a-minus icon), then `Confirm`.
+4. Click the `Remove` icon button (the person-with-a-minus icon), then `Remove` in the prompt.
 5. Confirm `<data>\Teammates\Nova\Nova.md` is gone. The `Nova` folder itself stays behind (`Remove` deletes only the file and the rows, `PersonaStore.cs:472-483`).
 6. Re-run the sqlite query from step 2.
 7. Delete the leftover `<data>\Teammates\Nova` folder.
@@ -1816,7 +1816,7 @@ If `O-ADAPTERS` was above `0` before the click, an earlier test left an adapter 
 4. Watch the tile behind the dialog at the same time.
 5. Run `O-MOCK-ADAPTERS` again and count how many NEW processes appeared for this one teammate.
 6. Read the app console for any line naming `Live`.
-7. Close the card, click the `Remove` icon button then `Confirm`, and run `O-MOCK-ADAPTERS` once more after 10 seconds. Then delete the leftover `<data>\Teammates\Live` folder.
+7. Close the card, click the `Remove` icon button then `Remove` in the prompt, and run `O-MOCK-ADAPTERS` once more after 10 seconds. Then delete the leftover `<data>\Teammates\Live` folder.
 
 **Pass if — all of these**
 
@@ -2015,7 +2015,7 @@ If Ada does not reach `Online` after a `Restart` with a seeded ghost value, reco
 1. Open Ada's card, click `Message`, send `Hello Ada` and wait for the mock's echo. Note the full `/rooms/<id>` URL from the address bar, and Ada's **Title** and **Alias** from her card.
 2. Seed her settings: `sqlite3 "<data>\team.db" "INSERT OR REPLACE INTO persona_models(persona_name,model) VALUES('Ada','ghost-model-1'); INSERT OR REPLACE INTO persona_efforts(persona_name,effort) VALUES('Ada','ghost-effort-1');"`
 3. Run `sqlite3 "<data>\team.db" "SELECT id,name FROM users WHERE name='Ada'; SELECT id,name FROM rooms;"` and record the rows.
-4. Go back to /teammates, open Ada's card, click the `Remove` icon button, then `Confirm`.
+4. Go back to /teammates, open Ada's card, click the `Remove` icon button, then `Remove` in the prompt.
 5. Confirm the tile is gone from /teammates and `<data>\Teammates\Ada\Ada.md` is gone from disk (the `Ada` folder stays).
 6. Look at the Rooms list in the left sidebar.
 7. Navigate to the `/rooms/<id>` URL you noted and read the page.

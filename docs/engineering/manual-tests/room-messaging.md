@@ -52,7 +52,7 @@ standing conventions. This area adds:
 - The address bar changed from `http://localhost:5100/` to `http://localhost:5100/rooms/` followed by exactly 32 hexadecimal characters.
 - The `<h1>` reads `Ada` (a word, not 32 hex characters).
 - The muted line beneath it reads exactly `You, Ada`.
-- A button labelled `Add teammate` sits at the right of the header row.
+- A button labelled `Invite teammate` sits at the right of the header row.
 - The sidebar contains, in order (`MainLayout.razor:17-31`, `RoomList.razor`): a `Chats` group holding the Rooms `Ada`, `Bo` and `Chief of Staff` with a `New chat` link as the last item of that group; then a `Teams` group, a `Teammates` link, a `Tasks` group and a `Library` group; then two icon-only links at the bottom, Archived chats and Settings (a tooltip names Settings).
 - The pasted URL in the second tab opens the same Room with the same `<h1>` and the same transcript.
 - The sidebar entry for the open Room is visually distinguished (different colour or weight) from the other entry.
