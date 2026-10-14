@@ -1156,6 +1156,66 @@ internal sealed class PersonaStore : IDisposable, IMentionAliasSource
     }
 
     /// <summary>
+    /// Whether two rescans saw the same disk: the same Personas (every field, including the cached
+    /// file text, so an outside body edit still counts as a change), the same rejected files and the
+    /// same folder warnings. <see cref="PersonaEntry"/>'s own record equality is not enough because
+    /// its list members compare by reference.
+    /// </summary>
+    /// <param name="currentIndex">The index currently published.</param>
+    /// <param name="currentWarnings">The folder warnings currently published.</param>
+    /// <param name="freshIndex">The index just rebuilt from disk.</param>
+    /// <param name="freshWarnings">The folder warnings just rebuilt from disk.</param>
+    private static bool IsSameSnapshot(
+        PersonaIndex currentIndex,
+        IReadOnlyList<RejectedPersonaFile> currentWarnings,
+        PersonaIndex freshIndex,
+        IReadOnlyList<RejectedPersonaFile> freshWarnings)
+    {
+        return currentIndex.Entries.SequenceEqual(freshIndex.Entries, PersonaEntryComparer.Instance)
+            && currentIndex.Rejected.SequenceEqual(freshIndex.Rejected)
+            && currentIndex.Teams.SequenceEqual(freshIndex.Teams, StringComparer.Ordinal)
+            && currentWarnings.SequenceEqual(freshWarnings);
+    }
+
+    /// <summary>Compares <see cref="PersonaEntry"/> values field by field, treating list members by content.</summary>
+    private sealed class PersonaEntryComparer : IEqualityComparer<PersonaEntry>
+    {
+        /// <summary>The shared instance.</summary>
+        public static readonly PersonaEntryComparer Instance = new();
+
+        /// <inheritdoc />
+        public bool Equals(PersonaEntry? x, PersonaEntry? y)
+        {
+            if (ReferenceEquals(x, y))
+            {
+                return true;
+            }
+
+            if (x is null || y is null)
+            {
+                return false;
+            }
+
+            return string.Equals(x.Name, y.Name, StringComparison.Ordinal)
+                && string.Equals(x.Title, y.Title, StringComparison.Ordinal)
+                && string.Equals(x.Alias, y.Alias, StringComparison.Ordinal)
+                && string.Equals(x.Path, y.Path, StringComparison.Ordinal)
+                && string.Equals(x.Text, y.Text, StringComparison.Ordinal)
+                && string.Equals(x.Adapter, y.Adapter, StringComparison.Ordinal)
+                && string.Equals(x.Builtin, y.Builtin, StringComparison.Ordinal)
+                && x.Teams.SequenceEqual(y.Teams, StringComparer.Ordinal)
+                && (x.Skills ?? []).SequenceEqual(y.Skills ?? [], StringComparer.Ordinal);
+        }
+
+        /// <inheritdoc />
+        public int GetHashCode(PersonaEntry obj)
+        {
+            ArgumentNullException.ThrowIfNull(obj);
+            return HashCode.Combine(obj.Name, obj.Path, obj.Text);
+        }
+    }
+
+    /// <summary>
     /// The debounce timer's callback: rescans disk, swaps the index and raises the change events.
     /// <c>internal</c> rather than <c>private</c> only so <c>Huddle.Tests</c> can fire it at an exact
     /// moment - a debounce that lands in the middle of an <see cref="Update"/> cannot be scheduled
@@ -1221,6 +1281,16 @@ internal sealed class PersonaStore : IDisposable, IMentionAliasSource
                 }
 
                 this.consecutiveLockRetries = 0;
+
+                // The watcher cannot tell the store's own write from an outside edit, so every
+                // in-app Add/Update/Remove is followed ~500 ms later by a rescan that finds exactly
+                // what PublishFreshIndex already published. Raising again would make every
+                // subscriber (Teammates page reload, PersonaSupervisor) redo its work for nothing.
+                if (IsSameSnapshot(this.index, this.folderWarnings, fresh.Index, fresh.FolderWarnings))
+                {
+                    return;
+                }
+
                 previous = this.index;
                 (updated, this.folderWarnings) = fresh;
                 this.index = updated;
