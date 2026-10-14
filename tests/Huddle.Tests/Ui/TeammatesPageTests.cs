@@ -133,7 +133,7 @@ public sealed class TeammatesPageTests
         await using var ctx = NewContext(factory);
         var cut = RenderPage(ctx);
 
-        cut.Find(NewTeammateSelector).Click();
+        await ClickNewTeammateAsync(cut);
 
         // The Create card itself, fully rendered - proof this got past ResolveStatus rather than
         // the page having quietly swallowed the crash and shown nothing.
@@ -166,7 +166,7 @@ public sealed class TeammatesPageTests
 
         Assert.Equal(0, factory.FakeModelCatalog.ProbeCount);
 
-        cut.Find(NewTeammateSelector).Click();
+        await ClickNewTeammateAsync(cut);
 
         // The card probes when it initialises inside the dialog, which paints after the click handler returns.
         cut.WaitForAssertion(() => Assert.Equal(1, factory.FakeModelCatalog.ProbeCount), TimeSpan.FromSeconds(10));
@@ -357,9 +357,11 @@ public sealed class TeammatesPageTests
         await using var ctx = NewContext(factory);
         var cut = RenderPage(ctx);
 
-        var filter = cut.FindAll("div.mud-input-control")
-            .First(control => control.QuerySelectorAll("label").Any(label => label.TextContent.Contains("Team", StringComparison.Ordinal)));
-        await filter.MouseDownAsync(new Microsoft.AspNetCore.Components.Web.MouseEventArgs());
+        // Found and raised in one InvokeAsync for the same reason as ClickNewTeammateAsync: the
+        // factory's startup PersonasChanged echo can repaint the page between the two.
+        await cut.InvokeAsync(() => cut.FindAll("div.mud-input-control")
+            .First(control => control.QuerySelectorAll("label").Any(label => label.TextContent.Contains("Team", StringComparison.Ordinal)))
+            .MouseDownAsync(new Microsoft.AspNetCore.Components.Web.MouseEventArgs()));
 
         Assert.Contains("All teams", cut.Markup, StringComparison.Ordinal);
         Assert.Contains("Business", cut.Markup, StringComparison.Ordinal);
@@ -462,6 +464,23 @@ public sealed class TeammatesPageTests
     /// rather than invoking <c>Teammates.BeginCreate</c> directly.
     /// </summary>
     private const string NewTeammateSelector = "button.btn-action-tight";
+
+    /// <summary>
+    /// Clicks "New teammate" with the <c>Find</c> and the dispatch inside one <c>InvokeAsync</c>, so no
+    /// render can land between them. Every <see cref="TeamWebApplicationFactory"/> host repaints this
+    /// page once on its own: <see cref="BuiltinTeammateSeeder"/> writes the Chief of Staff at startup,
+    /// <see cref="PersonaStore"/>'s file watcher sees that write and, 500 ms later, its debounce raises
+    /// <see cref="PersonaStore.PersonasChanged"/>, which reloads and repaints the page and retires the
+    /// button's event handler id. A bare <c>Find(...).Click()</c> reads the id on the test thread and
+    /// queues the dispatch behind that repaint, then throws <c>UnknownEventHandlerIdException</c> -
+    /// about one full-suite run in three. The synchronous <c>Click()</c> rather than awaiting
+    /// <c>ClickAsync()</c>: the handler awaits <c>IDialogService.ShowAsync</c>, and the callers wait for
+    /// the card itself with <c>WaitForAssertion</c> (see <c>agents/BlazorTesting.md</c>).
+    /// </summary>
+    /// <param name="cut">The rendered page from <see cref="RenderPage"/>.</param>
+    /// <returns>A task that completes once the click has been dispatched.</returns>
+    private static Task ClickNewTeammateAsync(IRenderedComponent<Bunit.Rendering.ContainerFragment> cut) =>
+        cut.InvokeAsync(() => cut.Find(NewTeammateSelector).Click());
 
     /// <summary>Counts non-overlapping occurrences of <paramref name="needle"/> in <paramref name="haystack"/>.</summary>
     private static int CountOccurrences(string haystack, string needle)
