@@ -523,6 +523,7 @@ public sealed class PersonaSupervisorLifecycleTests
         personaStore.Add(Identity("nova"), "You are Nova.", "a", "low", "acceptEdits");
         await supervisor.StartAsync(ct);
         await WaitUntilAsync(() => factory.Calls.Count >= 1, ct);
+        await WaitUntilAsync(() => supervisor.RunningHostCount >= 1, ct);
 
         personaStore.Update("nova", PersonaText("nova", "You are Nova."), "a", "low", "plan");
 

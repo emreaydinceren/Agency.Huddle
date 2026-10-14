@@ -61,7 +61,7 @@ them together.
 | S3 | The Human opens a View whose filter is *Current sprint* | It shows the Tasks whose Sprint has the highest number. With no Sprints at all it shows nothing |
 | S4 | The Human renames `Auth hardening` to `Auth v2 hardening` in `sprints.md` | Every Task shows the new name. No Task file changes, no Change log entry, nobody is woken |
 | S5 | The Human deletes the `S2` line from `sprints.md` | Tasks with `sprint: S2` show `S2` with a warning and *not in sprints.md*. Filters on `S2` still match them. Nothing is rewritten |
-| S6 | The Human toggles the toolbar's Sprint filter to *No sprint* | The page shows only Tasks with no Sprint. Nothing is saved until **Save to View** |
+| S6 | The Human toggles the toolbar's Sprint filter to *No sprint* | The page shows only Tasks with no Sprint. The change is saved to the View as it is made |
 | S7 | Nova calls `update_task` with `sprint: "current"` | The Task is set to the current Sprint, logged and, if Nova is not the assignee, the assignee is woken |
 | S8 | Nova calls `update_task` with `sprint: "Auth hardning"` (a typo) | Refused: *Unknown sprint 'Auth hardning'. Known sprints: S1 Sprint 1, S2 Auth hardening.* No Sprint is created |
 | S9 | Nova calls `list_tasks` with `sprint: "none"` | She gets the Active Tasks that have no Sprint, one line each |
@@ -124,7 +124,7 @@ them together.
                               ISprintCatalog (read-only: All, Current, Get, FindByName)
                          ┌──────────────────┼──────────────────────────┐
                          ▼                  ▼                          ▼
-                   TaskService         App Tools               Tasks page, View editor,
+                   TaskService         App Tools               Tasks page, Fields dialog,
               (validate sprint on     (resolve "current",       toolbar (names, options)
                create and update)      id or name)
 
@@ -160,7 +160,7 @@ them together.
 | `Prompts/PromptCatalog.cs`, `prompts.default.json`, goldens | Three tool descriptions and `getHelp.tasks` | §10.4 |
 | `Components/Tasks/TaskDetail.razor` | The Sprint field | §12.1 |
 | `Components/Tasks/TaskListView.razor`, `TaskCard.razor` | The `sprint` column and card field | §12.2 |
-| `Components/Tasks/ViewEditorDrawer.razor`, `TaskToolbar.razor` | The Sprint filter, group and field | §12.3 |
+| `Components/Tasks/FieldsDialog.razor`, `TaskToolbar.razor` | The Sprint filter, group and field | §12.3 |
 | `Components/Pages/Tasks.razor` | `sprints.md` problems alert; subscribe to `SprintsChanged` | §12.4 |
 | `ServiceCollectionExtensions.cs` | Register `SprintStore` and `ISprintCatalog` | §13 |
 | `language.md`, `Index.md` | The *Sprint* term; the feature and ADR rows | Appendix A |
@@ -648,18 +648,18 @@ A **Sprint** row, after *Team / Project* and before *Parent* (Tasks §13.6's fie
   name as small text. The warning icon appears for a missing Sprint.
 - Both resolve the name through `ISprintCatalog` and re-render on `SprintsChanged`.
 
-### 12.3 The View editor and the toolbar
+### 12.3 The Fields dialog and the toolbar
 
-- **View editor** (`ViewEditorDrawer.razor`), the *Filters* section (Tasks §13.5 step 4): a
-  **Sprint** row, a `MudSelect<string> MultiSelection="true"`. Options, in order: **Current
-  sprint** (`@current`), **No sprint** (`@none`), then every Sprint, newest first, by name. A
+- **Toolbar** (`TaskToolbar.razor`): the *Filter* menu has a multi-select **Sprint** row, a
+  `MudSelect<string> MultiSelection="true"`, after the team and project rows. Options, in order:
+  **Current sprint** (`@current`), **No sprint** (`@none`), then every Sprint, newest first, by name. A
   saved id that is no longer in the file is listed as `S5 (missing)` and stays selected, as for
-  every other missing value.
-- *Fields shown*: **Sprint** joins the *+ Add field* menu. *Grouping order*: **Sprint** joins
-  the chain's options. *Sorting*: **Sprint** is a sort field.
-- **Toolbar** (`TaskToolbar.razor`): the *Filter* menu gains the same multi-select Sprint row,
-  after the team chips. It edits the page's effective View, and **Save to View** persists it,
-  like every other toolbar filter (Tasks §13.3). This is the "filter dynamically" path.
+  every other missing value. Once a Sprint is chosen a Sprint chip appears in the row. The change is
+  saved to the View as it is made, like every other toolbar filter (Tasks §13.3 and §13.5); there is
+  no View editor. This is the "filter dynamically" path.
+- *Fields shown*: **Sprint** joins the *+ Add field* menu of the Fields dialog (Tasks §13.5).
+  *Grouping*: **Sprint** is a choice of the Group by chip. *Sorting*: **Sprint** is a sort field
+  (click its column header).
 
 ### 12.4 The Tasks page (`Tasks.razor`)
 
@@ -742,7 +742,7 @@ Every automated test uses real stores over `TempDataDir` with no mocks, and time
 | SP-T9 | Unit | One tool test each: `create_task`, `update_task`, `list_tasks` and `get_task` with `current`, an id, a name, `""`, `none`, an unknown name and an empty catalogue; no task tool's constructor takes a `SprintStore` (a reflection test over the six tools) |
 | SP-T10 | Unit | `PromptCatalogTests` and the goldens: the changed descriptions, with the diff reviewed |
 | SP-T11 | bUnit | `TaskDetailTests` additions: the list shows names newest first; a typed new name shows *New sprint* and is accepted in place; an invalid name shows the error and disables **Save**; **Save** creates the Sprint then saves the Task with its id; a `Refused` create saves nothing; **a failed save after a `Created` Sprint removes it again, and after an `Existing` one does not**; **Cancel** and **Revert** leave `sprints.md` untouched; after moving the last Task out, the old name leaves the list; a missing Sprint shows the warning and **Clear**; the wake label follows `Preview` |
-| SP-T12 | bUnit | `TaskListViewTests`, `TaskBoardTests`, `ViewEditorDrawerTests`, `TaskToolbarTests`, `TasksPageTests` additions: the column; grouping and lanes by Sprint; the filter rows and their options; a missing value stays selected; the `sprints.md` alert has a `role` |
+| SP-T12 | bUnit | `TaskListViewTests`, `TaskBoardTests`, `FieldsDialogTests`, `TaskToolbarTests`, `TasksPageTests` additions: the column; grouping and lanes by Sprint; the filter rows and their options; a missing value stays selected; the `sprints.md` alert has a `role` |
 
 **Manual tests.** Add `TASKS-16` to `TASKS-19` to
 [manual-tests/tasks.md](engineering/manual-tests/tasks.md), and rows to `tracker.md`:

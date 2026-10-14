@@ -1419,26 +1419,28 @@ you can override from the Task panel and they cannot.
 ### Views: lists and boards
 
 A **View** is a saved way of looking at Tasks. **All Tasks** and **My Tasks**
-are built in. Select **New view** to make your own.
+are built in. Select **New view** to make your own: it is created at once under
+the name **New view** (or **New view 2** and so on), and you rename it from its `⋯` menu.
 
 | Setting | Options |
 | --- | --- |
-| Kind | **List** or **Board** |
-| Scope | **Active** or **Closed** Tasks |
-| Filters | Team, Project, Assignee, Status, Priority, and Blocked / Unblocked / All |
-| Fields shown, grouping, sorting | As you choose. Boards also let you rename, hide and reorder columns. |
+| Kind | **List** or **Kanban** |
+| Filters | Team, Project, Assignee, Sprint, Status, Priority, and Blocked / Unblocked / All |
+| Grouping | The **Group by** chip: None, Team, Project, Assignee, Sprint, or Status in a List |
+| Fields shown | **Fields…** in the View's `⋯` menu: drag to reorder, switch a field off, remove it or add it back |
+| Column widths | Drag the right edge of a List column header |
 | Dense | Compact or roomier rows in a List. On by default. |
 
 In a List, Tags show as label chips and the Assignee as a chip with their
-avatar. The View editor opens in a side panel; drag its left edge to resize it.
+avatar.
 
-The toolbar above a View lets you filter, group, search, switch List/Board and
-turn **Dense** on or off for the current visit only. **Save view** (the toolbar's
-save button, formerly **Save to view**) keeps those changes.
-**Reset filters** clears them again; it is also the button on an empty result.
+The toolbar above a View has a **Filter** menu, a chip for each filter that is set
+(click its **×** to clear it), a search box, and **Dense**. There is no Save button:
+**every change is saved to the View as you make it**, apart from the search text.
+**Reset filters** clears the filter and the search; it is the button on an empty result.
 
-A View's `⋯` menu has **Edit view** and **Delete view**. The editor's panel is
-titled **Edit view** or **New view**, and has a close button. **Delete view** asks
+A View's `⋯` menu has **Rename**, **Fields…** and **Delete view**. **Rename** opens a
+small dialog (1 to 60 characters, not the name of another View). **Delete view** asks
 `Delete 'name'?` and says that Tasks are not affected.
 
 A Task's `⋯` menu is titled **Actions for {id}**. It has **Copy id** and **Copy link**

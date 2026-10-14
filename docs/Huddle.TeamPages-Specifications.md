@@ -871,7 +871,7 @@ requeried on `TaskEvents.TasksReloaded` and `TaskChanged`.
 - **Empty `Columns`.** A `TaskView` with empty `Columns` renders **no columns and no text**
   (`BoardLayout.Build` gives no visible columns; TP-0 answer). So `TeamTasksTab` sets
   `Columns = BoardLayout.DefaultColumns` (`Tasks/Views/BoardLayout.cs`, `internal static`, six
-  columns), the same seed `ViewEditorDrawer` uses. Spec §6.9 first said a Board with no `Columns`
+  columns), the same seed the default Board View uses. Spec §6.9 first said a Board with no `Columns`
   shows its empty state; it does not.
 - **Swimlanes.** The property is `TaskView.Grouping`, an `IReadOnlyList<TaskGroupField>` (`Team`,
   `Project`, `Assignee`, `State`; `State` is invalid on a Board). Empty means one lane.

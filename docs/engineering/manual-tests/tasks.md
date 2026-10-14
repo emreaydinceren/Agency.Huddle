@@ -5,7 +5,7 @@
 Prove, in a real browser against a real `node` adapter where a test says so, everything between "a
 Task file exists on disk" and "an Agent reacts to it": that the UI writes the exact frontmatter the
 spec defines, that a hand edit to the file is picked up within a second, that the Board and the
-View editor hold their invariants under drag and under a broken `views.json`, that Views survive a
+View menus hold their invariants under drag and under a broken `views.json`, that Views survive a
 restart, that a conflicting edit is shown rather than silently lost, that renaming a Persona
 follows every Task and filter, that the whole page works with no mouse, and that a Task id in chat
 becomes a link and a wake-up. Almost none of this is reachable from the automated suite — bUnit
@@ -36,7 +36,7 @@ Run [`P-BUILD`](common.md#p-build) then the lane named below from
    (`TaskIdAllocator.cs:19`); read it with
    `O-DB` if you need to predict the next id, but every test below reads the id off the UI instead.
 4. The page is `/tasks` (the last-opened View, or the built-in **All Tasks**), `/tasks/{ViewId}`
-   for a specific View, `/tasks/new` for **+ New View**, and `/tasks/item/{id}` for a Task opened
+   for a specific View, `/tasks/new` for **+ New view**, and `/tasks/item/{id}` for a Task opened
    directly — the route TASKS-13's link uses.
 5. **There is no send button** and **no send confirmation for a drag** — a Board drop saves at
    once (D-20); only the panel's edits wait for its own **Save**.
@@ -162,7 +162,7 @@ dragging, a drop on Duplicate opens a picker, and a cancelled drag leaves nothin
 
 **Before you start**
 
-- `/tasks` shows a **Board** View (switch the toolbar's List/Board toggle, or open **+ New View**
+- `/tasks` shows a **Board** View (switch the toolbar's List/Board toggle, or open **+ New view**
   and choose Board).
 - At least one Task is visible on the Board, not already in a terminal state.
 - Chrome or Edge (see Setup item 6 for Firefox).
@@ -214,52 +214,56 @@ dragging, a drop on Duplicate opens a picker, and a cancelled drag leaves nothin
 If your mouse/trackpad cannot hold a slow enough drag for the ghost buckets to register, use a
 different pointing device — bUnit cannot substitute for this test, which is why it exists here.
 
-### TASKS-04 — The View editor saves, reorders fields, and refuses a Board with an unplaced state
+### TASKS-04 — A View saves every change as it is made and the Fields dialog reorders fields
 
 **Free** · about 12 min
 
-*Proves the View editor's Save gate: every state must be placed in some Board column before Save
-enables, and Fields/Grouping edits round-trip.*
+*Proves a View has no Save step: filter, grouping, layout, column widths and Fields edits are written
+to the View as they are made, and the Rename and Fields dialogs round-trip.*
 
 **Before you start**
 
-- `/tasks` is open with at least one View to edit, or start from **+ New View**.
+- `/tasks` is open on a saved View you can change (not All Tasks or My Tasks), or open `/tasks/new`.
 
 **Steps**
 
-1. Click **Edit View** (or **+ New View**), and set **Kind** to **Board**.
-2. Open the column editor and remove one state from every column so it is placed nowhere.
-3. Read the **Save View** button's enabled state.
-4. Re-add the removed state to a column.
-5. Read **Save View** again.
-6. In the **Fields** section, use **+ Add field**, add a field, then toggle one existing field's
-   switch off (leaving its row in place) and remove another field's row entirely.
-7. Click **Save View**.
-8. Reopen the View editor for the same View and confirm the Fields list matches what you set.
-9. In **Grouping**, use **+ Add grouping**, add two levels, and reorder them if the editor allows
-   it; Save and reopen to confirm they persisted in order.
+1. Open `/tasks/new`. Read the new View's name in the breadcrumb and the sidebar.
+2. Open the View's ⋮ menu and click **Rename**. Enter a name longer than 60 characters, then a name
+   another View already has, then a fresh name; click **Rename**.
+3. Use the **Filter** menu to set a Status, then switch **List | Kanban** to Kanban and back, and set
+   **Group by** to a field.
+4. Reload the page and read the toolbar.
+5. In the List, drag a column header's right edge to widen it, then reload.
+6. Open the ⋮ menu and click **Fields…**. Use **+ Add field**, add a field, toggle one existing
+   field's switch off (leaving its row in place) and remove another field's row entirely. Click
+   **Save**.
+7. Reopen **Fields…** and confirm the list matches what you set. Reorder two rows, click **Cancel**,
+   and reopen to confirm nothing changed.
 
 **Pass if — all of these**
 
-- With any state unplaced on a Board, **Save View** is disabled.
-- Placing every state re-enables **Save View**.
-- A field switched off (not removed) stays in the Fields list but is left out of the View's saved
+- `/tasks/new` creates a View named **New view** (or **New view 2** and so on) and opens it; there is no
+  editor panel and no **Save View**, **Save to View** or Description field anywhere.
+- **Rename** refuses a name over 60 characters and a duplicate (ignoring case), and accepts a fresh
+  name, which shows in the breadcrumb and the sidebar.
+- After the reload in step 4 the Status filter, layout and grouping are all still set, with no Save
+  click.
+- The widened column keeps its width after the reload (`TaskView.ColumnWidths`).
+- A field switched off (not removed) stays in the Fields dialog but is left out of the View's saved
   `Fields`; a removed field's row disappears and can be re-added via **+ Add field**.
-- Reopening the editor shows exactly the Fields and Grouping state last saved, in the order saved.
+- **Cancel** writes nothing.
 
 **Fail if — any of these**
 
-- Save stays enabled with a state placed nowhere -> `ViewValidator`'s Board-completeness rule is
-  not gating the button.
-- A switched-off field is dropped from the Fields list entirely (indistinguishable from Remove)
+- A change is lost on reload -> the toolbar is saving to the page's effective View only, not to the
+  stored View.
+- A switched-off field is dropped from the Fields dialog entirely (indistinguishable from Remove)
   -> the switch-vs-remove distinction (J34) has been lost.
-- Grouping order is not preserved on reopen -> the saved `Grouping` list is being re-sorted rather
-  than read back in order.
+- A column width is not kept -> `ColumnWidths` is not being written.
 
 **Inconclusive if**
 
-If the editor offers no existing Board View to start from, build one via **+ New View** first and
-record that you did.
+If every View is built in, create one with `/tasks/new` first and record that you did.
 
 ### TASKS-05 — A broken `views.json` shows the error and the file is untouched
 
@@ -281,7 +285,7 @@ being silently rewritten, mirroring `PersonaStore`'s and `ViewStore`'s shared co
 3. Open `views.json` in a text editor and break its JSON (delete a closing brace) and save.
 4. Restart the app (`P-LAUNCH-FREE`) and open `/tasks`.
 5. Read the alert shown.
-6. Try **Edit View** or **+ New View**; read whether Save is available.
+6. Try the View ⋮ menu's **Rename** and **Fields…**, and `/tasks/new`; read whether they are available.
 7. In `T-B`, re-hash the file and compare with step 2.
 8. Restore the file from your rollback copy ([§0.4](../manual-tests.md#04-rollback)) and restart.
 
@@ -290,7 +294,7 @@ being silently rewritten, mirroring `PersonaStore`'s and `ViewStore`'s shared co
 - The page renders the exact wording `views.json could not be read (line …, column …): … . Views
   are read-only until the file is fixed; nothing has been lost.` with the parser's real line and
   column.
-- Every View-editing control (Save, Delete, +New View) is disabled or refused while the error is
+- Every View-editing control (Rename, Fields…, Delete, + New view) is disabled or refused while the error is
   active.
 - The file's hash in step 7 is **identical** to step 2 — the app never touched a file it could not
   parse.
@@ -438,7 +442,7 @@ anyone (D-25).*
 - The View's filter still names the old Persona -> `PersonaRenameCascade`'s View-filter call
   (corrections-B2 item 11) is missing or not reached for Tasks.
 
-### TASKS-09 — Keyboard only: Move to, the View editor, and the Task panel, with no dragging
+### TASKS-09 — Keyboard only: Move to, the Fields dialog, and the Task panel, with no dragging
 
 **Free** · about 12 min
 
@@ -458,7 +462,7 @@ drive a real drag and this is the only place that path is exercised at all.*
    a divider, then **Copy id**.
 3. Arrow down to a different state and press Enter.
 4. Confirm (via Tab/Enter, no mouse) that the card moved, the same way the drag path would have.
-5. Tab into **Edit View**, and using only the keyboard, change one Field's switch and Save.
+5. Tab to the View's ⋮ menu, open **Fields…**, and using only the keyboard, change one Field's switch and Save.
 6. Tab to a Task's title/row to open its panel, edit the Title with the keyboard, and Tab to
    **Save**.
 7. Tab to **Cancel** on an edited-but-unsaved panel and confirm the **Discard changes?** prompt
@@ -818,7 +822,7 @@ removes a Sprint because a Task file went away.*
 **Before you start**
 
 - `E-FREE` app running, `sprints.md` with `S1 | Sprint 1` and `S2 | Auth hardening`, one Task in
-  each, and the **All Tasks** View open with the **Sprint** field shown (add it in the View editor if
+  each, and the **All Tasks** View open with the **Sprint** field shown (add it in the **Fields…** dialog if
   needed).
 - Note each Task file's hash (`Get-FileHash`).
 
@@ -866,26 +870,24 @@ that follows the current Sprint, and Sprint lanes ordered newest first with No s
 
 1. On **All Tasks**, open the toolbar **Filter** menu and open its **Sprint** row. Choose **Current
    sprint**, then also **No sprint**.
-2. Open **Group, Sort**, and group by **Sprint**. Switch the page to Board. Do not click **Save to
-   View**.
-3. Click **+ New View** (or edit one): name it `Now`, filter **Sprint** to **Current sprint**, add
-   the **Sprint** field, kind Board, group by **Sprint**; **Save view**.
+2. Open the **Group by** chip, and group by **Sprint**. Switch the page to Kanban. Reload to check nothing needs saving.
+3. Open `/tasks/new` and **Rename** the View `Now`; filter **Sprint** to **Current sprint**, add
+   the **Sprint** field through **Fields…**, kind Kanban, group by **Sprint** (each is saved as it is made).
 4. Open `Now`. Then, in an editor, append `- S3 | Release train` to `sprints.md` and save.
-5. In `Now`'s editor, also select `Sprint 1` in the Sprint filter and **Save view**. Then delete
-   `- S1 | Sprint 1` from the file, save it, and reopen `Now`'s editor.
+5. In `Now`, also select `Sprint 1` in the Sprint filter. Then delete
+   `- S1 | Sprint 1` from the file, save it, and reopen `Now`'s Filter menu.
 
 **Pass if — all of these**
 
 - Step 1: the options read **Current sprint**, **No sprint**, then `Auth hardening`, `Sprint 1`;
   the List narrows to the Tasks in `S2` plus the two with none.
 - Step 2: the Board has a lane per Sprint labelled by name, newest first, **No sprint** last; the
-  toolbar offers **Save to View** only after a filter or grouping change, and nothing was written
-  before it was clicked.
+  change was saved to the View as it was made, with no Save step.
 - Step 3: the saved View shows only `S2`'s Task, as a card with the Sprint name.
 - Step 4: within a second the View becomes empty (`S3` is current and holds no Task), with no
   reload.
 - Step 5: the Sprint filter still lists `S1 (missing)`, selected, beside **Current sprint**, and
-  saving the View does not drop it.
+  the View keeps it.
 
 **Fail if — any of these**
 - Lanes are in label order (`Auth hardening` before `Sprint 1` by accident) rather than by number
