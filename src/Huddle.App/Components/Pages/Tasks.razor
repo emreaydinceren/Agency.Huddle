@@ -6,28 +6,19 @@
     PersonaHealth.Changed feed the AI-reacting chip, which is D14's work.
 
     The effective View's Kind picks the List or the Board (§13.4; 12.4.i). Both open a Task into the
-    detail drawer, which is still an empty slot showing only the clicked Task's id until TaskDetail
-    lands (14.5.i); + New task is still a no-op EventCallback. The Board's column header changes a
-    saved Board View through ViewStore (the page follows ViewsChanged) and anything else through
-    ViewChanged (the effective View), and its "Edit columns…" opens the View editor at Columns.
-    Below either view, one §13.12 empty state: "No tasks yet." when there are no Tasks at all, "No
-    tasks match '{text}'." when only the search excludes everything, otherwise "No tasks match this
-    View." with Reset filters, which drops the toolbar's overrides and the search (J43).
+    detail drawer. The Board's column header changes a saved Board View through ViewStore (the page
+    follows ViewsChanged) and anything else through ViewChanged (the effective View). Below either
+    view, one §13.12 empty state: "No tasks yet." when there are no Tasks at all, "No tasks match
+    '{text}'." when only the search excludes everything, otherwise "No tasks match this View." with
+    Reset filters, which clears the View's filter and the search.
 
-    The View editor drawer (§13.5) IS hosted here (corrections-B5 D13 item 7; 13.2.i, the only agent
-    editing this file for that dispatch per corrections-B7's ordering, J42), for two triggers that
-    are both about the page's own on-screen state rather than an arbitrary View: the Board's "Edit
-    columns…" (12.4.i, opens at Columns) and /tasks/new, which opens it for a new View, detected
-    from NavigationManager.Uri since that route's own @page template carries no ViewId to
-    distinguish it from the bare /tasks case. An invalid View route (corrections-B7 §13.2 item 4)
-    shows its ViewValidator reason and its own Edit View button, opening this same hosted drawer,
-    never the "no longer exists" wording that only ever meant "no such id at all". Editing any OTHER
-    View - including the one currently effective here, by name rather than by being on screen - goes
-    through TaskViewNav's own separate ViewEditorDrawer instance instead, reached from that View's
-    row menu in the sidebar (moved there from a standalone toolbar button, so any View can be edited
-    or deleted from wherever the Human is in the app, not only while it happens to be the page open
-    here).
-
+    A View has no editor panel: every change the Human makes - a filter, the grouping, a sort, a
+    column's width, the layout, or a field added or removed through FieldsDialog - is saved to the
+    View as it happens (OnEffectiveViewChangedAsync), so the saved View and the effective one are the
+    same thing, apart from the search text, which is never saved. Rename and Delete are in the ⋮
+    menus; /tasks/new creates a View under a default name and opens it. An invalid View route
+    (corrections-B7 §13.2 item 4) shows its ViewValidator reason, never the "no longer exists"
+    wording that only ever meant "no such id at all".
     14.5.i (this dispatch, third page-wiring step, corrections-B7): the detail drawer now hosts a real
     TaskDetail (Mode=Panel) instead of the placeholder - opening a row/card, "+ New task" (the toolbar
     button) and switching between two already-open Tasks all go through
@@ -48,7 +39,6 @@
 @page "/tasks/new"
 @page "/tasks/item/{TaskIdText}"
 @implements IDisposable
-@using System.Text.Json
 @using Microsoft.Extensions.Options
 @using Agency.Huddle.App.Tabs
 @inject TaskStore Store
@@ -72,11 +62,10 @@
     else if (this.invalidView is { } invalid)
     {
         @* corrections-B7 §13.2 item 4: an invalid View (parses, fails ViewValidator) shows its
-           reason and an Edit View button - never "no longer exists", which means no such id at all. *@
+           reason - never "no longer exists", which means no such id at all. *@
         <MudAlert Severity="Severity.Warning" role="status" Class="tasks-invalid-view-alert">
             This View is invalid: @string.Join(" ", invalid.Problems)
         </MudAlert>
-        <MudButton Size="Size.Medium" OnClick="@(() => this.OpenEditorFor(invalid.Id ?? this.ViewId ?? string.Empty))" Class="tasks-invalid-view-edit">Edit view</MudButton>
     }
     else if (this.viewNotFound)
     {
@@ -87,41 +76,8 @@
     }
     else
     {
-        <div class="tasks-header">
-        <PageHeader Title="@this.effectiveView.Name">
-            <Actions>
-                <MudStack Row="true" AlignItems="AlignItems.Center" Class="tasks-header-actions">
-                    @if (!string.IsNullOrEmpty(this.effectiveView.Description))
-                    {
-                        <MudText Typo="Typo.body2" Class="mud-text-secondary tasks-description">@this.effectiveView.Description</MudText>
-                    }
-                    @if (this.HasOverrides)
-                    {
-                        <MudLink OnClick="this.ResetOverrides" Class="tasks-reset">Reset filters</MudLink>
-                    }
-                    <AiReactingChip Watched="this.WatchedTaskIds" />
-                    @* The View's own actions (T2a), the same MoreVert menu as the sidebar row: Edit for every
-                       View, Delete only for a non-built-in one (ViewStore.Delete refuses the two built-ins).
-                       Disabled while views.json cannot be read, since the store refuses every write then. *@
-                    <MudMenu Class="tasks-view-menu">
-                        <ActivatorContent Context="menuContext">
-                            <MudTooltip Text="View actions">
-                                <MudIconButton Icon="@Icons.Material.Filled.MoreVert" Size="Size.Small" aria-label="View actions"
-                                               Disabled="@(this.Views.LoadError is not null)" OnClick="menuContext.ToggleAsync" />
-                            </MudTooltip>
-                        </ActivatorContent>
-                        <ChildContent>
-                            <MudMenuItem OnClick="this.OnEditViewClicked">Edit view</MudMenuItem>
-                            @if (!this.effectiveView.BuiltIn)
-                            {
-                                <MudMenuItem OnClick="this.DeleteViewAsync">Delete view</MudMenuItem>
-                            }
-                        </ChildContent>
-                    </MudMenu>
-                </MudStack>
-            </Actions>
-        </PageHeader>
-        </div>
+        @* The View's name is the breadcrumb's last crumb, so the page has no h1 of its own; PageTitle still sets the document title. *@
+        <PageTitle>@this.effectiveView.Name</PageTitle>
 
         @if (this.Views.LoadError is { } loadError)
         {
@@ -162,19 +118,55 @@
             </MudAlert>
         }
 
-        <TaskToolbar EffectiveView="this.effectiveView" EffectiveViewChanged="this.OnEffectiveViewChangedAsync"
-                     Search="@this.search" SearchChanged="this.OnSearchChangedAsync"
-                     OnNewTask="this.OnNewTaskAsync" />
+        <div class="tasks-header">
+            <TaskToolbar EffectiveView="this.effectiveView" EffectiveViewChanged="this.OnEffectiveViewChangedAsync"
+                         Search="@this.search" SearchChanged="this.OnSearchChangedAsync"
+                         OnNewTask="this.OnNewTaskAsync" SplitHeader="true">
+                <HeaderLeading>
+                    @* Wireframe counts: open and need-you are over the Tasks this View shows (the search included); all is every Task in the store. *@
+                    <div class="tasks-counts" role="status">
+                        <span class="tasks-count-open"><strong>@this.OpenCount</strong> open</span>
+                        <span class="tasks-count-need-you"><strong>@this.NeedYouCount</strong> need you</span>
+                        <span class="tasks-count-all"><strong>@this.Store.All.Count</strong> all</span>
+                    </div>
+                </HeaderLeading>
+                <HeaderActions>
+                    <AiReactingChip Watched="this.WatchedTaskIds" />
+                </HeaderActions>
+                <HeaderTrailing>
+                    @* The View's own actions (T2a), the same MoreVert menu as the sidebar row: Rename and Fields for every
+                       View, Delete only for a non-built-in one (ViewStore.Delete refuses the two built-ins).
+                       Disabled while views.json cannot be read, since the store refuses every write then. *@
+                    <MudMenu Class="tasks-view-menu">
+                        <ActivatorContent Context="menuContext">
+                            @* Opens to the left: centred under a button this close to the right edge, the tooltip would overshoot the viewport and add a horizontal scrollbar, which shifts the page and flickers the tooltip. *@
+                            <MudTooltip Text="View actions" Placement="Placement.Left">
+                                <MudIconButton Icon="@Icons.Material.Filled.MoreVert" Size="Size.Small" aria-label="View actions"
+                                               Disabled="@(this.Views.LoadError is not null)" OnClick="menuContext.ToggleAsync" />
+                            </MudTooltip>
+                        </ActivatorContent>
+                        <ChildContent>
+                            <MudMenuItem OnClick="this.OnRenameClickedAsync">Rename</MudMenuItem>
+                            <MudMenuItem OnClick="this.OnFieldsClickedAsync">Fields…</MudMenuItem>
+                            @if (!this.effectiveView.BuiltIn)
+                            {
+                                <MudMenuItem OnClick="this.DeleteViewAsync">Delete view</MudMenuItem>
+                            }
+                        </ChildContent>
+                    </MudMenu>
+                </HeaderTrailing>
+            </TaskToolbar>
+        </div>
 
         IReadOnlyList<TaskItem> tasks = this.FilteredTasks(this.search);
         @if (this.effectiveView.Kind == ViewKind.List)
         {
-            <TaskListView View="this.effectiveView" Tasks="tasks" Search="@this.search" SelectedId="@(this.detailOpen ? this.selectedTaskId : null)" OnOpenTask="this.OnOpenTaskAsync" OnCopyId="this.OnCopyIdAsync" OnCopyLink="this.OnCopyLinkAsync" RoomNames="this.roomNames" />
+            <TaskListView View="this.effectiveView" ViewChanged="this.OnEffectiveViewChangedAsync" Tasks="tasks" Search="@this.search" SelectedId="@(this.detailOpen ? this.selectedTaskId : null)" OnOpenTask="this.OnOpenTaskAsync" OnCopyId="this.OnCopyIdAsync" OnCopyLink="this.OnCopyLinkAsync" RoomNames="this.roomNames" />
         }
         else
         {
             <TaskBoard View="this.effectiveView" Tasks="tasks" Search="@this.search" SelectedId="@(this.detailOpen ? this.selectedTaskId : null)" OnOpenTask="this.OnOpenTaskAsync"
-                       ViewChanged="this.OnEffectiveViewChangedAsync" OnEditColumns="this.OnEditColumnsClicked" OnCopyId="this.OnCopyIdAsync" OnCopyLink="this.OnCopyLinkAsync" RoomNames="this.roomNames" />
+                       ViewChanged="this.OnEffectiveViewChangedAsync" OnCopyId="this.OnCopyIdAsync" OnCopyLink="this.OnCopyLinkAsync" RoomNames="this.roomNames" />
         }
 
         @if (tasks.Count == 0)
@@ -218,7 +210,6 @@
         </ResizableEndDrawer>
     }
 
-    <ViewEditorDrawer Open="this.editorOpen" OpenChanged="this.OnEditorOpenChanged" Id="@this.editorViewId" Section="this.editorSection" />
 </MudContainer>
 
 @code {
@@ -240,9 +231,6 @@
     private TaskDraft? selectedDraft;
     private TaskDetail? detail;
     private bool detailHasPending;
-    private bool editorOpen;
-    private string? editorViewId;
-    private ViewEditorSection editorSection = ViewEditorSection.General;
 
     /// <summary>Subscribes to the three hubs Spec §13.2 (narrowed by corrections-B4 D11 item 9) names.</summary>
     protected override void OnInitialized()
@@ -291,8 +279,7 @@
             this.SetEffectiveViewFromStore(ViewStore.AllTasksId);
             if (this.IsTasksNewRoute())
             {
-                this.editorViewId = null;
-                this.editorOpen = true;
+                this.CreateViewAndOpen();
             }
 
             return;
@@ -369,20 +356,20 @@
     [CascadingParameter]
     public TabPageContext? Page { get; set; }
 
-    /// <summary>Opens the View editor drawer for <paramref name="id"/> (the invalid-View route's Edit View button).</summary>
-    private void OpenEditorFor(string id)
-    {
-        this.editorViewId = id;
-        this.editorSection = ViewEditorSection.General;
-        this.editorOpen = true;
-    }
+    /// <summary>The title menu's <i>Rename</i>: opens the rename dialog for the effective View; the page follows the saved name through <c>ViewsChanged</c>.</summary>
+    private Task OnRenameClickedAsync() => ViewActions.RenameAsync(this.DialogService, this.Views, this.effectiveView.Id);
 
-    /// <summary>The title menu's <i>Edit task view</i>: opens the hosted View editor for the effective View at its General section.</summary>
-    private void OnEditViewClicked() => this.OpenEditorFor(this.effectiveView.Id);
+    /// <summary>The title menu's <i>Fields…</i>: opens <see cref="FieldsDialog"/> for the effective View's saved copy.</summary>
+    private async Task OnFieldsClickedAsync()
+    {
+        DialogParameters<FieldsDialog> parameters = new() { { dialog => dialog.ViewId, this.effectiveView.Id } };
+        DialogOptions options = new() { MaxWidth = MaxWidth.Small, FullWidth = true };
+        _ = await this.DialogService.ShowAsync<FieldsDialog>("Fields", parameters, options);
+    }
 
     /// <summary>
     /// The title menu's <i>Delete task view</i>: confirms with the same wording as
-    /// <see cref="ViewEditorDrawer"/>'s Delete button and <c>TaskViewNav</c>'s row menu, removes the
+    /// <c>TaskViewNav</c>'s row menu, removes the
     /// effective View through <see cref="ViewStore.Delete(string)"/>, then replaces the URL with
     /// <c>/tasks</c> - the View just deleted is always the one on screen here.
     /// </summary>
@@ -398,17 +385,15 @@
         this.Navigation.NavigateTo("/tasks");
     }
 
-    /// <summary>The Board's <i>Edit columns…</i>: opens the View editor for the effective View at its Columns section (corrections-B7 12.4 item 7).</summary>
-    private void OnEditColumnsClicked()
+    /// <summary>/tasks/new: creates a List View under the first free default name ("New view", "New view 2", …), saves it, and replaces the URL with its own.</summary>
+    private void CreateViewAndOpen()
     {
-        this.editorViewId = this.effectiveView.Id;
-        this.editorSection = ViewEditorSection.Columns;
-        this.editorOpen = true;
+        TaskView created = new() { Id = Guid.NewGuid().ToString("N"), Name = ViewActions.NewViewName(this.Views), Kind = ViewKind.List };
+        if (this.Views.Save(created).Saved)
+        {
+            this.Navigation.NavigateTo($"/tasks/{created.Id}", replace: true);
+        }
     }
-
-    /// <summary>Reflects the drawer's own chrome (backdrop, Escape) closing it.</summary>
-    private void OnEditorOpenChanged(bool open) => this.editorOpen = open;
-
     /// <summary>
     /// Spec §13.9: on first render of the bare route, reads the remembered last View and navigates
     /// there if it still exists. The item route (Spec §13.13.3 step 2) reads the same remembered View
@@ -434,35 +419,12 @@
         }
     }
 
-    /// <summary>Whether the effective View differs from the one <see cref="ViewStore"/> has saved, ignoring <see cref="TaskView.Scope"/> (the Active/Closed toggle is page state only, per Spec §13.3 and <c>TaskToolbar</c>'s own <c>ShowSaveToView</c>).</summary>
-    private bool HasOverrides
+    /// <summary>Reset filters: clears the View's filter (saving that, like any change) and the search, keeping its grouping, sort and fields.</summary>
+    private async Task ResetOverrides()
     {
-        get
-        {
-            TaskView? saved = this.Views.Get(this.effectiveView.Id);
-            if (saved is null)
-            {
-                return false;
-            }
-
-            TaskView forCompare = this.effectiveView with { Scope = saved.Scope };
-            string effectiveJson = JsonSerializer.Serialize(forCompare, ViewJson.Options);
-            string savedJson = JsonSerializer.Serialize(saved, ViewJson.Options);
-            return !string.Equals(effectiveJson, savedJson, StringComparison.Ordinal);
-        }
+        this.search = null;
+        await this.OnEffectiveViewChangedAsync(this.effectiveView with { Filter = new TaskFilter() });
     }
-
-    /// <summary>Discards the toolbar's session overrides, falling back to the saved View.</summary>
-    private void ResetOverrides()
-    {
-        TaskView? saved = this.Views.Get(this.effectiveView.Id);
-        if (saved is not null)
-        {
-            this.effectiveView = saved;
-            this.search = null;
-        }
-    }
-
     /// <summary>The Tasks matching the effective View's scope and filter and <paramref name="searchText"/>, sorted per its Sort keys - recomputed on every render, so a requery after any of the three subscribed events shows straight away.</summary>
     /// <param name="searchText">The search to apply; <see langword="null"/> for none (to tell "the search matches nothing" from "the filters match nothing").</param>
     private IReadOnlyList<TaskItem> FilteredTasks(string? searchText)
@@ -477,6 +439,20 @@
         return TaskQuery.Sort(filtered, this.effectiveView.Sort);
     }
 
+    /// <summary>How many of the Tasks the page shows are not yet Done, Cancelled, Duplicate or Rejected.</summary>
+    private int OpenCount => this.FilteredTasks(this.search).Count(static task => !task.Status.IsTerminal());
+
+    /// <summary>How many open Tasks are assigned to the Human, so waiting on them.</summary>
+    private int NeedYouCount
+    {
+        get
+        {
+            string human = this.Options.Value.HumanName;
+            return this.FilteredTasks(this.search)
+                .Count(task => !task.Status.IsTerminal() && string.Equals(task.Assignee, human, StringComparison.OrdinalIgnoreCase));
+        }
+    }
+
     private void SetEffectiveViewFromStore(string id)
     {
         if (this.Views.Get(id) is { } view)
@@ -485,9 +461,16 @@
         }
     }
 
+    /// <summary>Takes a change from the toolbar, the List or the Board as the effective View and saves it to the View's own entry at once - there is no Save button. A change the store refuses (a read-only views.json, an invalid combination) still shows for the session.</summary>
+    /// <param name="view">The View with the change applied.</param>
     private Task OnEffectiveViewChangedAsync(TaskView view)
     {
         this.effectiveView = view;
+        if (this.Views.LoadError is null && this.Views.Get(view.Id) is not null)
+        {
+            _ = this.Views.Save(view);
+        }
+
         return Task.CompletedTask;
     }
 

@@ -66,7 +66,8 @@ internal static class AccentTheme
         var clamped = AccentPalette.ClampForContrast(accent, palette.Background, palette.Surface, towardBlack);
         palette.Primary = clamped;
         palette.PrimaryDarken = clamped.ColorRgbDarken().Value;
-        palette.PrimaryContrastText = ContrastColour.ReadableForeground(clamped);
+        // White whatever the accent: anything filled with it carries white text or icons, on request.
+        palette.PrimaryContrastText = "#ffffff";
     }
 
     /// <summary>Custom Accent Light's descriptor. <see cref="ThemeDescriptor.Theme"/> is a placeholder - see the type's remarks.</summary>

@@ -51,7 +51,7 @@ public sealed class TaskToolbarEditorControlsTests
         await using MudBunitContext ctx = NewToolbarContext(harness, store);
         (IRenderedComponent<ContainerFragment> root, _) = RenderToolbar(ctx, ListView(), effectiveViewChanged: EventCallback.Factory.Create<TaskView>(ctx, view => raised = view));
 
-        await root.InvokeAsync(() => root.FindAll("button").Single(b => string.Equals(b.TextContent.Trim(), "Filter", StringComparison.Ordinal)).ClickAsync());
+        await root.InvokeAsync(() => root.Find(".task-toolbar-filter button").ClickAsync());
 
         Assert.Empty(root.FindAll(".task-toolbar-filter-input"));
         Assert.Empty(root.FindAll(".task-toolbar-filter-add"));
@@ -101,6 +101,132 @@ public sealed class TaskToolbarEditorControlsTests
         Assert.Contains(TaskGroupField.Team, GroupChoices(root));
     }
 
+    /// <summary>The Filter menu's Team options are the union of the Persona and Task stores' Teams, deduplicated.</summary>
+    [Fact]
+    public async Task FilterMenu_TeamOffersTheUnionOfPersonaAndTaskStoreTeams()
+    {
+        using TempDataDir dir = new();
+        using TaskToolHarness harness = new();
+        _ = CreateTask(harness);
+        Directory.CreateDirectory(Path.Combine(harness.TasksDirPath, "Legal"));
+        harness.Store.RebuildFromWatcher();
+        using ViewStore store = new(dir.Options(), NullLogger<ViewStore>.Instance);
+        await using MudBunitContext ctx = NewToolbarContext(harness, store);
+        (IRenderedComponent<ContainerFragment> root, _) = RenderToolbar(ctx, ListView());
+
+        await OpenFilterAsync(root);
+        await root.InvokeAsync(() => root.Find(".task-toolbar-filter-team").MouseDownAsync());
+
+        List<string> options = [.. root.FindAll(".task-toolbar-filter-team-option").Select(el => el.TextContent.Trim())];
+        Assert.Contains("Legal", options);
+        Assert.Equal(options.Count, options.Distinct(StringComparer.OrdinalIgnoreCase).Count());
+    }
+
+    /// <summary>The Project options are narrowed to the chosen Teams, and a chosen pair that no longer exists stays selected as "(missing)".</summary>
+    [Fact]
+    public async Task FilterMenu_ProjectNarrowsToTheChosenTeams_AndKeepsAMissingValue()
+    {
+        using TempDataDir dir = new();
+        using TaskToolHarness harness = new();
+        Directory.CreateDirectory(Path.Combine(harness.TasksDirPath, "Platform", "Backend"));
+        Directory.CreateDirectory(Path.Combine(harness.TasksDirPath, "Legal", "Contracts"));
+        harness.Store.RebuildFromWatcher();
+        using ViewStore store = new(dir.Options(), NullLogger<ViewStore>.Instance);
+        await using MudBunitContext ctx = NewToolbarContext(harness, store);
+        TaskView view = ListView() with { Filter = new TaskFilter { Teams = ["Platform"], Projects = [new ProjectRef("Platform", "Gone")] } };
+        (IRenderedComponent<ContainerFragment> root, _) = RenderToolbar(ctx, view);
+
+        await OpenFilterAsync(root);
+        await root.InvokeAsync(() => root.Find(".task-toolbar-filter-project").MouseDownAsync());
+
+        Assert.Equal(
+            ["Platform / Backend", "Platform/Gone (missing)"],
+            root.FindAll(".task-toolbar-filter-project-option").Select(el => el.TextContent.Trim()));
+    }
+
+    /// <summary>The Assignee options lead with Me and Unassigned and keep a filtered-on name no Task holds.</summary>
+    [Fact]
+    public async Task FilterMenu_AssigneeOffersMeUnassignedThenNames()
+    {
+        using TempDataDir dir = new();
+        using TaskToolHarness harness = new();
+        using ViewStore store = new(dir.Options(), NullLogger<ViewStore>.Instance);
+        await using MudBunitContext ctx = NewToolbarContext(harness, store);
+        TaskView view = ListView() with { Filter = new TaskFilter { Assignees = ["Ghost"] } };
+        (IRenderedComponent<ContainerFragment> root, _) = RenderToolbar(ctx, view);
+
+        await OpenFilterAsync(root);
+        await root.InvokeAsync(() => root.Find(".task-toolbar-filter-assignee").MouseDownAsync());
+
+        List<string> options = [.. root.FindAll(".task-toolbar-filter-assignee-option").Select(el => el.TextContent.Trim())];
+        Assert.Equal(["Me", "Unassigned"], options[..2]);
+        Assert.Contains("Ghost", options);
+    }
+
+    /// <summary>The Project, Assignee, Status and Priority multi-selects each raise the effective View with their choice, without saving.</summary>
+    [Fact]
+    public async Task FilterMenu_ProjectAssigneeStatusAndPriority_RaiseTheFilter()
+    {
+        using TempDataDir dir = new();
+        using TaskToolHarness harness = new();
+        using ViewStore store = new(dir.Options(), NullLogger<ViewStore>.Instance);
+        TaskView? raised = null;
+        await using MudBunitContext ctx = NewToolbarContext(harness, store);
+        (IRenderedComponent<ContainerFragment> root, _) = RenderToolbar(ctx, ListView(), effectiveViewChanged: EventCallback.Factory.Create<TaskView>(ctx, view => raised = view));
+        await OpenFilterAsync(root);
+
+        await root.InvokeAsync(() => FindSelect<string>(root, "task-toolbar-filter-project").Instance.SelectedValuesChanged.InvokeAsync(["Platform/Backend", "Legal"]));
+        Assert.Equal([new ProjectRef("Platform", "Backend"), new ProjectRef("Legal", null)], raised?.Filter.Projects);
+
+        await root.InvokeAsync(() => FindSelect<string>(root, "task-toolbar-filter-assignee").Instance.SelectedValuesChanged.InvokeAsync(["@me", "Kai"]));
+        Assert.Equal(["@me", "Kai"], raised?.Filter.Assignees);
+
+        await root.InvokeAsync(() => FindSelect<string>(root, "task-toolbar-filter-state").Instance.SelectedValuesChanged.InvokeAsync(["To Do", "Review"]));
+        Assert.Equal([TaskState.ToDo, TaskState.Review], raised?.Filter.States);
+
+        await root.InvokeAsync(() => FindSelect<TaskPriority>(root, "task-toolbar-filter-priority").Instance.SelectedValuesChanged.InvokeAsync([TaskPriority.High]));
+        Assert.Equal([TaskPriority.High], raised?.Filter.Priorities);
+    }
+
+    /// <summary>The Status select leads with selectable All, Open and Closed headers, each followed by its own statuses, and choosing a header sets the whole group (All clears the filter).</summary>
+    [Fact]
+    public async Task FilterMenu_StatusHeaders_AllOpenClosed_ChooseWholeGroups()
+    {
+        using TempDataDir dir = new();
+        using TaskToolHarness harness = new();
+        using ViewStore store = new(dir.Options(), NullLogger<ViewStore>.Instance);
+        TaskView? raised = null;
+        await using MudBunitContext ctx = NewToolbarContext(harness, store);
+        TaskView view = ListView() with { Filter = new TaskFilter { States = [TaskState.Review] } };
+        (IRenderedComponent<ContainerFragment> root, _) = RenderToolbar(ctx, view, effectiveViewChanged: EventCallback.Factory.Create<TaskView>(ctx, v => raised = v));
+        await OpenFilterAsync(root);
+        await root.InvokeAsync(() => root.Find(".task-toolbar-filter-state").MouseDownAsync());
+
+        Assert.Equal(
+            ["All", "Open", "Backlog", "To Do", "In Progress", "Review", "Closed", "Done", "Cancelled", "Duplicate", "Rejected"],
+            root.FindAll(".task-toolbar-filter-state-group, .task-toolbar-filter-state-option").Select(el => el.TextContent.Trim()));
+
+        IRenderedComponent<MudSelect<string>> select = FindSelect<string>(root, "task-toolbar-filter-state");
+        await root.InvokeAsync(() => select.Instance.SelectedValuesChanged.InvokeAsync(["Review", "@open"]));
+        Assert.Equal([TaskState.Backlog, TaskState.ToDo, TaskState.InProgress, TaskState.Review], raised?.Filter.States);
+
+        await root.InvokeAsync(() => select.Instance.SelectedValuesChanged.InvokeAsync(["Review", "@closed"]));
+        Assert.Equal([TaskState.Done, TaskState.Cancelled, TaskState.Duplicate, TaskState.Rejected], raised?.Filter.States);
+
+        await root.InvokeAsync(() => select.Instance.SelectedValuesChanged.InvokeAsync(["Review", "@all"]));
+        Assert.Empty(raised?.Filter.States ?? [TaskState.Review]);
+    }
+    /// <summary>Opens the toolbar's Filter menu.</summary>
+    /// <param name="root">The rendered toolbar host.</param>
+    private static Task OpenFilterAsync(IRenderedComponent<ContainerFragment> root) =>
+        root.InvokeAsync(() => root.Find(".task-toolbar-filter button").ClickAsync());
+
+    /// <summary>The Filter menu's select carrying <paramref name="className"/>.</summary>
+    /// <typeparam name="T">The select's value type.</typeparam>
+    /// <param name="root">The rendered toolbar host.</param>
+    /// <param name="className">The select's own class.</param>
+    private static IRenderedComponent<MudSelect<T>> FindSelect<T>(IRenderedComponent<ContainerFragment> root, string className) =>
+        root.FindComponents<MudSelect<T>>().Single(m => string.Equals(m.Instance.Class, className, StringComparison.Ordinal));
     /// <summary>A List View with no filter, grouping or search.</summary>
     private static TaskView ListView() => new() { Id = "v1", Name = "All", Kind = ViewKind.List };
 

@@ -125,73 +125,6 @@ public sealed class TaskSprintViewsTests
         Assert.Equal(["Auth hardening", "Sprint 1", "No sprint"], cut.FindAll(".task-board-lane-label").Select(l => l.TextContent.Trim()));
     }
 
-    /// <summary>The View editor's Sprint filter lists Current sprint, No sprint, then every Sprint newest first by name (spec §12.3).</summary>
-    [Fact]
-    public async Task Editor_SprintFilter_OffersCurrentNoneThenSprintsNewestFirst()
-    {
-        using TaskToolHarness harness = new(sprintsText: TwoSprints);
-        await SaveViewAsync(harness, new TaskFilter());
-        await using MudBunitContext ctx = new();
-        harness.AddTo(ctx.Services);
-        IRenderedComponent<ContainerFragment> root = RenderDrawer(ctx);
-
-        await root.InvokeAsync(() => root.Find(".view-editor-filter-sprint").MouseDownAsync());
-
-        Assert.Equal(
-            ["Current sprint", "No sprint", "Auth hardening", "Sprint 1"],
-            root.FindAll(".view-editor-filter-sprint-option").Select(o => o.TextContent.Trim()));
-    }
-
-    /// <summary>A saved Sprint filter value that is no longer in the file stays selected and is listed as <c>S9 (missing)</c> (spec §12.3).</summary>
-    [Fact]
-    public async Task Editor_SprintFilter_MissingValue_StaysSelected()
-    {
-        using TaskToolHarness harness = new(sprintsText: TwoSprints);
-        await SaveViewAsync(harness, new TaskFilter { Sprints = ["S9", "@current"] });
-        await using MudBunitContext ctx = new();
-        harness.AddTo(ctx.Services);
-        IRenderedComponent<ContainerFragment> root = RenderDrawer(ctx);
-
-        Assert.Equal(["S9 (missing)", "Current sprint"], root.FindAll(".view-editor-filter-sprint-chip").Select(c => c.TextContent.Trim()));
-        await root.InvokeAsync(() => root.Find(".view-editor-filter-sprint").MouseDownAsync());
-        Assert.Contains("S9 (missing)", root.FindAll(".view-editor-filter-sprint-option").Select(o => o.TextContent.Trim()));
-    }
-
-    /// <summary>Choosing Sprint values in the editor and saving writes them to the View's filter (spec §12.3).</summary>
-    [Fact]
-    public async Task Editor_SprintFilter_SavesTheChosenValues()
-    {
-        using TaskToolHarness harness = new(sprintsText: TwoSprints);
-        await SaveViewAsync(harness, new TaskFilter());
-        await using MudBunitContext ctx = new();
-        harness.AddTo(ctx.Services);
-        IRenderedComponent<ContainerFragment> root = RenderDrawer(ctx);
-        IRenderedComponent<MudSelect<string>> select = root.FindComponents<MudSelect<string>>().Single(c => string.Equals(c.Instance.Class, "view-editor-filter-sprint", StringComparison.Ordinal));
-
-        await root.InvokeAsync(() => select.Instance.SelectedValuesChanged.InvokeAsync(["@current", "S1"]));
-        await root.InvokeAsync(() => root.Find(".view-editor-save").ClickAsync());
-
-        Assert.Equal(["@current", "S1"], harness.Views.Get("v1")?.Filter.Sprints);
-    }
-
-    /// <summary>Sprint joins the editor's Add field and Add grouping menus (spec §12.3).</summary>
-    [Fact]
-    public async Task Editor_SprintIsAnAddableFieldAndGrouping()
-    {
-        using TaskToolHarness harness = new(sprintsText: TwoSprints);
-        await SaveViewAsync(harness, new TaskFilter());
-        await using MudBunitContext ctx = new();
-        harness.AddTo(ctx.Services);
-        IRenderedComponent<ContainerFragment> root = RenderDrawer(ctx);
-
-        await root.InvokeAsync(() => root.Find(".view-editor-fields-add button").ClickAsync());
-        // The popover paints its items on a render after the opening click returns.
-        root.WaitForAssertion(() => Assert.Single(root.FindAll(".view-editor-fields-add-option"), o => string.Equals(o.TextContent.Trim(), "sprint", StringComparison.Ordinal)));
-
-        await root.InvokeAsync(() => root.Find(".view-editor-grouping-add button").ClickAsync());
-        root.WaitForAssertion(() => Assert.NotEmpty(root.FindAll(".view-editor-grouping-add-sprint")));
-    }
-
     /// <summary>The toolbar's Filter menu has a multi-select Sprint row that raises <c>EffectiveViewChanged</c> without saving (spec §12.3).</summary>
     [Fact]
     public async Task Toolbar_SprintFilter_RaisesEffectiveViewChanged()
@@ -208,7 +141,7 @@ public sealed class TaskSprintViewsTests
             builder.AddAttribute(2, nameof(TaskToolbar.EffectiveViewChanged), EventCallback.Factory.Create<TaskView>(this, v => raised = v));
             builder.CloseComponent();
         });
-        await root.InvokeAsync(() => root.FindAll("button").Single(b => string.Equals(b.TextContent.Trim(), "Filter", StringComparison.Ordinal)).ClickAsync());
+        await root.InvokeAsync(() => root.Find(".task-toolbar-filter button").ClickAsync());
         IRenderedComponent<MudSelect<string>> select = root.FindComponents<MudSelect<string>>().Single(c => string.Equals(c.Instance.Class, "task-toolbar-filter-sprint", StringComparison.Ordinal));
 
         await root.InvokeAsync(() => select.Instance.SelectedValuesChanged.InvokeAsync(["@none"]));
@@ -325,16 +258,6 @@ public sealed class TaskSprintViewsTests
             builder.CloseComponent();
         });
     }
-
-    /// <summary>Renders the View editor drawer, open, on View <c>v1</c>.</summary>
-    private static IRenderedComponent<ContainerFragment> RenderDrawer(MudBunitContext ctx) =>
-        ctx.RenderWithPopovers(builder =>
-        {
-            builder.OpenComponent<ViewEditorDrawer>(0);
-            builder.AddAttribute(1, nameof(ViewEditorDrawer.Open), true);
-            builder.AddAttribute(2, nameof(ViewEditorDrawer.Id), "v1");
-            builder.CloseComponent();
-        });
 
     /// <summary>Renders the Tasks page on View <paramref name="viewId"/> (All Tasks when <see langword="null"/>).</summary>
     private static IRenderedComponent<ContainerFragment> RenderPage(MudBunitContext ctx, string? viewId) =>

@@ -43,9 +43,32 @@ public sealed class TasksPageTests
 
         var html = await client.GetStringAsync("/tasks", ct);
         IDocument document = new HtmlParser().ParseDocument(html);
-        IElement heading = document.QuerySelector(".tasks-header h1") ?? throw new InvalidOperationException("No .tasks-header h1 in the response.");
+        Assert.Empty(document.QuerySelectorAll(".tasks-header h1"));
+        Assert.NotNull(document.QuerySelector(".tasks-header .task-toolbar-header .task-toolbar-kind"));
+        Assert.Equal("All Tasks", NormalizeWhitespace(document.Title ?? string.Empty));
+    }
 
-        Assert.Equal("All Tasks", NormalizeWhitespace(heading.TextContent));
+    /// <summary>The header row follows the wireframe: open, need-you and all counts on the left; Group by, List | Kanban and New task on the right; and the toolbar row below no longer carries a Group menu.</summary>
+    [Fact]
+    public async Task TasksPage_HeaderRow_HasCountsGroupByKanbanAndNewTask_AndToolbarHasNoGroupMenu()
+    {
+        using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(60));
+        var ct = cts.Token;
+
+        await using var factory = new TeamWebApplicationFactory();
+        using var client = factory.CreateClient();
+
+        var html = await client.GetStringAsync("/tasks", ct);
+        IDocument document = new HtmlParser().ParseDocument(html);
+        IElement header = document.QuerySelector(".tasks-header .task-toolbar-header") ?? throw new InvalidOperationException("No header row in the response.");
+
+        Assert.EndsWith("open", NormalizeWhitespace(header.QuerySelector(".tasks-count-open")?.TextContent ?? string.Empty), StringComparison.Ordinal);
+        Assert.EndsWith("need you", NormalizeWhitespace(header.QuerySelector(".tasks-count-need-you")?.TextContent ?? string.Empty), StringComparison.Ordinal);
+        Assert.EndsWith("all", NormalizeWhitespace(header.QuerySelector(".tasks-count-all")?.TextContent ?? string.Empty), StringComparison.Ordinal);
+        Assert.StartsWith("Group by:", NormalizeWhitespace(header.QuerySelector(".task-toolbar-group")?.TextContent ?? string.Empty), StringComparison.Ordinal);
+        Assert.Equal(["List", "Kanban"], header.QuerySelectorAll(".task-toolbar-kind .mud-toggle-item").Select(item => NormalizeWhitespace(item.TextContent)));
+        Assert.NotNull(header.QuerySelector(".btn-action-tight"));
+        Assert.Empty(document.QuerySelectorAll(".task-toolbar .task-toolbar-group-sort, .task-toolbar .task-toolbar-grouping"));
     }
 
     /// <summary>A ViewId naming no known View - built-in, valid or invalid - shows the "no longer exists" warning, with <c>role="status"</c>.</summary>
@@ -208,7 +231,7 @@ public sealed class TasksPageTests
         cut.WaitForAssertion(() => Assert.Equal("Freshly created via TaskService", cut.Find(".task-list-title").TextContent.Trim()));
     }
 
-    /// <summary>Saving a rename through <see cref="ViewStore"/> raises <see cref="ViewStore.ViewsChanged"/>, and the page must re-read the effective View's own name from the store rather than the one it first rendered with.</summary>
+    /// <summary>Saving a change through <see cref="ViewStore"/> raises <see cref="ViewStore.ViewsChanged"/>, and the page must re-read the effective View (its name and, through it, its filter) from the store rather than the one it first rendered with.</summary>
     [Fact]
     public async Task TasksPage_ViewsChanged_RefreshesTheViewFromTheStore()
     {
@@ -222,11 +245,11 @@ public sealed class TasksPageTests
             builder.AddAttribute(1, nameof(TasksPage.ViewId), "custom-view");
             builder.CloseComponent();
         });
-        cut.WaitForAssertion(() => Assert.Equal("Sprint Board", cut.Find(".tasks-header h1").TextContent.Trim()));
+        cut.WaitForAssertion(() => Assert.Equal("Sprint Board", cut.FindComponent<TaskToolbar>().Instance.EffectiveView.Name));
 
         Assert.True(harness.Views.Save(new TaskView { Id = "custom-view", Name = "Sprint Board Renamed", Kind = ViewKind.List }).Saved);
 
-        cut.WaitForAssertion(() => Assert.Equal("Sprint Board Renamed", cut.Find(".tasks-header h1").TextContent.Trim()));
+        cut.WaitForAssertion(() => Assert.Equal("Sprint Board Renamed", cut.FindComponent<TaskToolbar>().Instance.EffectiveView.Name));
     }
 
     /// <summary>
@@ -316,33 +339,27 @@ public sealed class TasksPageTests
         Assert.Empty(cut.FindAll(".tasks-view-not-found-alert"));
         var alert = cut.Find(".tasks-invalid-view-alert");
         Assert.Equal("This View is invalid: Name must be 1-60 characters.", alert.TextContent.Trim());
-
-        await cut.InvokeAsync(() => cut.Find(".tasks-invalid-view-edit").ClickAsync());
-        var drawer = cut.FindComponent<ViewEditorDrawer>();
-        Assert.True(drawer.Instance.Open);
-        Assert.Equal("bad-view", drawer.Instance.Id);
+        Assert.Empty(cut.FindAll(".tasks-invalid-view-edit"));
     }
 
-    /// <summary><c>/tasks/new</c> opens <see cref="ViewEditorDrawer"/> for a new View (<c>Id</c> null), rather than falling through to All Tasks.</summary>
+    /// <summary><c>/tasks/new</c> creates a View under the default name "New view" and replaces the URL with its own, rather than falling through to All Tasks.</summary>
     [Fact]
-    public async Task TasksPage_NavigatedToTasksNew_OpensTheViewEditorDrawerForANewView()
+    public async Task TasksPage_NavigatedToTasksNew_CreatesAViewAndOpensIt()
     {
         using TaskToolHarness harness = new();
         await using MudBunitContext ctx = NewContext(harness);
         BunitNavigationManager navigation = (BunitNavigationManager)ctx.Services.GetRequiredService<NavigationManager>();
         navigation.NavigateTo("/tasks/new");
 
-        var cut = ctx.RenderWithPopovers(builder =>
+        _ = ctx.RenderWithPopovers(builder =>
         {
             builder.OpenComponent<TasksPage>(0);
             builder.CloseComponent();
         });
 
-        var drawer = cut.FindComponent<ViewEditorDrawer>();
-        Assert.True(drawer.Instance.Open);
-        Assert.Null(drawer.Instance.Id);
+        TaskView created = Assert.Single(harness.Views.Views, view => string.Equals(view.Name, "New view", StringComparison.Ordinal));
+        Assert.EndsWith($"/tasks/{created.Id}", navigation.Uri, StringComparison.Ordinal); // contains-ok: a full URI, whose scheme/host prefix bUnit's FakeNavigationManager owns; only the path is this test's concern.
     }
-
     /// <summary>
     /// Disposing the page removes its handlers from all three hubs it subscribes to
     /// (<see cref="TaskEvents.TasksReloaded"/>, <see cref="TaskEvents.TaskChanged"/> and
@@ -366,9 +383,7 @@ public sealed class TasksPageTests
         // 2, not 1: the page's own, plus the SprintStore the page injects (the harness builds an empty one on demand),
         // which subscribes to the same hub to remove a vacated Sprint (Sprints spec §8.2).
         Assert.Equal(2, SubscriberCount(harness.Events, nameof(TaskEvents.TaskChanged)));
-        // 2, not 1: the page's own subscription plus ViewEditorDrawer's (13.2.i hosts it here now,
-        // and it re-seeds its draft on ViewsChanged too - corrections-B5 D13 item 4).
-        Assert.Equal(2, SubscriberCount(harness.Views, nameof(ViewStore.ViewsChanged)));
+        Assert.Equal(1, SubscriberCount(harness.Views, nameof(ViewStore.ViewsChanged)));
 
         await ctx.DisposeAsync();
 

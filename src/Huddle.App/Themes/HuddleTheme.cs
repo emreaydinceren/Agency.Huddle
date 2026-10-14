@@ -29,15 +29,12 @@ internal static class HuddleTheme
     /// darker than the ground rather than mid-grey rules.
     /// </para>
     /// <para>
-    /// <c>Primary</c> was rebranded from the original burgundy (<c>#4a154b</c>), first to a seafoam
-    /// green and then, on request, to a cyan. The requested shade, <c>#00B7C3</c>, measures only
-    /// 2.4:1 against this palette's own Background and Surface - under the WCAG 1.4.3 4.5:1 floor
-    /// <c>ThemeCatalogTests</c> holds every built-in theme's Primary to, and would read as
-    /// low-contrast text or a hard-to-read active nav link. <c>#007c85</c> keeps that same hue (184
-    /// degrees) and saturation (full), darkened until it clears the floor - 4.80:1 against
-    /// Background, 4.97:1 against Surface - the identical move <see cref="Dark"/>'s own <c>Primary</c>
-    /// already made for the original burgundy brand hue, and the one <c>AccentPalette.ClampForContrast</c>
-    /// automates for a Human's own accent colour choice.
+    /// <c>Primary</c> is the brand accent <c>#6e78da</c>, shared with <see cref="Dark"/>, set on request
+    /// verbatim. It is a mid-tone: 3.92:1 against Surface and 3.44:1 against Background, under the
+    /// 4.5:1 text floor, so <c>ThemeCatalogTests</c> records "Primary vs Surface" as a documented
+    /// shortfall for the Huddle themes. <c>PrimaryContrastText</c> is white, on request: every button,
+    /// avatar and chip filled with the accent carries white text or icons, even though white measures
+    /// only 3.92:1 against it (black would reach 5.36:1), recorded as a second documented shortfall.
     /// </para>
     /// </remarks>
     public static PaletteLight Light() => new()
@@ -54,8 +51,8 @@ internal static class HuddleTheme
         TextPrimary = "#141413",
         TextSecondary = "#45443f",
         TextDisabled = "#8a8882",
-        Primary = "#007c85",
-        PrimaryDarken = "#00565c",
+        Primary = "#6e78da",
+        PrimaryDarken = "#4b55b8",
         PrimaryContrastText = "#ffffff",
         Secondary = "#3a6fd8",
         Success = "#2e9e44",
@@ -95,22 +92,15 @@ internal static class HuddleTheme
         // 4.32:1.
         TextDisabled = "#8a8984",
 
-        // Lightened from the original #5e2b60, which measured only 1.63:1 against this
-        // palette's then Background (#1b1b1f), well under the 4.5:1 MudBlazor needs for
-        // --mud-palette-primary to read on the active MudNavLink. #c07bc3 keeps the same brand
-        // hue (~297.5 degrees, against the light palette's ~298.9) and a close saturation, only
-        // lighter, and was verified with the WCAG 2.1 relative-luminance formula against the
-        // current neutrals:
-        //   - vs Surface (#262625):    4.950:1
-        //   - vs Background (#1c1c1b): 5.573:1
-        // Both clear the 4.5:1 text minimum.
-        Primary = "#c07bc3",
-        PrimaryDarken = "#7a3a7e",
-        // White PrimaryContrastText only reaches 3.06:1 against the new, lighter Primary -
-        // enough for large text but short of the 4.5:1 minimum the avatar monogram needs.
-        // Black reaches 6.86:1, comfortably clearing it. The general reasoning behind
-        // picking black or white now lives in ContrastColour.ReadableForeground.
-        PrimaryContrastText = "#000000",
+        // The brand accent, the same #6e78da as Huddle Light, set on request. Against the dark
+        // neutrals it measures 3.87:1 against Surface (#262625) and 4.35:1 against Background
+        // (#1c1c1b): short of the 4.5:1 text minimum, recorded as a documented shortfall.
+        Primary = "#6e78da",
+        PrimaryDarken = "#4b55b8",
+        // White, on request: anything filled with the accent carries white text or icons. It only
+        // reaches 3.92:1 against this Primary - short of the 4.5:1 text minimum, where black would
+        // reach 5.36:1 - so ThemeCatalogTests records it as a documented shortfall.
+        PrimaryContrastText = "#ffffff",
         Secondary = "#7aa2f7",
         Success = "#3fbf5a",
         Error = "#e05a5a",

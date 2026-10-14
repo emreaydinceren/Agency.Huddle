@@ -6,9 +6,13 @@
 <MudTextField T="string" Value="@this.Value" ValueChanged="this.OnValueChangedAsync" Immediate="true"
               DebounceInterval="@DebounceMs" Variant="Variant.Outlined" Margin="Margin.Dense"
               Clearable="true" Adornment="Adornment.Start" AdornmentIcon="@Icons.Material.Filled.Search"
-              Placeholder="@this.Placeholder" aria-label="@this.AriaLabel" />
+              Placeholder="@this.Placeholder" aria-label="@this.AriaLabel" Class="@this.Class" />
 
 @code {
+    /// <summary>Extra CSS classes for the field, so a surface can restyle its own search box.</summary>
+    [Parameter]
+    public string? Class { get; set; }
+
     /// <summary>The debounce, in milliseconds, shared by every search field in the app (UX-055).</summary>
     internal const int DebounceMs = 250;
 

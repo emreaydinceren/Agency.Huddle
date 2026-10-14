@@ -67,13 +67,13 @@ public sealed class ThemeCatalogTests
         var dark = ThemeCatalog.BuiltIn.Single(descriptor => string.Equals(descriptor.Id, "huddle-dark", StringComparison.Ordinal));
 
         Assert.Equal(ThemeMode.Light, light.Mode);
-        Assert.Equal("#007C85", Hex(light.Theme.PaletteLight.Primary), ignoreCase: true);
+        Assert.Equal("#6E78DA", Hex(light.Theme.PaletteLight.Primary), ignoreCase: true);
         Assert.Equal("#F2F0ED", Hex(light.Theme.PaletteLight.Background), ignoreCase: true);
         Assert.Equal("#FFFFFF", Hex(light.Theme.PaletteLight.Surface), ignoreCase: true);
         Assert.Equal("#e6e2dc", Hex(light.Theme.PaletteLight.DrawerBackground), ignoreCase: true);
 
         Assert.Equal(ThemeMode.Dark, dark.Mode);
-        Assert.Equal("#C07BC3", Hex(dark.Theme.PaletteDark.Primary), ignoreCase: true);
+        Assert.Equal("#6E78DA", Hex(dark.Theme.PaletteDark.Primary), ignoreCase: true);
         Assert.Equal("#1C1C1B", Hex(dark.Theme.PaletteDark.Background), ignoreCase: true);
     }
 
@@ -353,7 +353,58 @@ public sealed class ThemeCatalogTests
             3.98,
             4.5,
             "TextSecondary is the same #717171 registry default as the themes above, but Solarized Light's own Surface (#eee8d5) is not near-white, lowering the ratio to 3.98:1. Imported unmodified."),
+        new(
+            "huddle",
+            "Primary vs Surface",
+            3.92,
+            4.5,
+            "The requested brand accent #6e78da is a mid-tone: it measures 3.92:1 against this palette's own Surface, under the 4.5:1 text floor, and is kept as asked."),
+        new(
+            "huddle-dark",
+            "Primary vs Surface",
+            3.87,
+            4.5,
+            "The requested brand accent #6e78da is a mid-tone: it measures 3.87:1 against this palette's own Surface, under the 4.5:1 text floor, and is kept as asked."),
+        new(
+            "custom-accent",
+            "Primary vs Surface",
+            3.92,
+            4.5,
+            "The requested brand accent #6e78da is a mid-tone: it measures 3.92:1 against this palette's own Surface, under the 4.5:1 text floor, and is kept as asked."),
+        new(
+            "custom-accent-dark",
+            "Primary vs Surface",
+            3.87,
+            4.5,
+            "The requested brand accent #6e78da is a mid-tone: it measures 3.87:1 against this palette's own Surface, under the 4.5:1 text floor, and is kept as asked."),
+        new(
+            "huddle",
+            "PrimaryContrastText vs Primary",
+            3.92,
+            4.5,
+            WhiteOnAccent),
+        new(
+            "huddle-dark",
+            "PrimaryContrastText vs Primary",
+            3.92,
+            4.5,
+            WhiteOnAccent),
+        new(
+            "custom-accent",
+            "PrimaryContrastText vs Primary",
+            3.92,
+            4.5,
+            WhiteOnAccent),
+        new(
+            "custom-accent-dark",
+            "PrimaryContrastText vs Primary",
+            3.92,
+            4.5,
+            WhiteOnAccent),
     ];
+
+    /// <summary>Why the Huddle and Custom Accent themes' white-on-accent text sits under the floor: white text and icons on anything filled with the accent were asked for, and black would reach 5.36:1.</summary>
+    private const string WhiteOnAccent = "Text and icons on anything filled with the accent are white, as asked: white measures 3.92:1 against the mid-tone brand accent #6e78da, under the 4.5:1 text floor, where black would reach 5.36:1.";
 
     /// <summary>One foreground/background pair this suite holds to a WCAG contrast floor.</summary>
     /// <param name="Name">The pair's display name, used as the theory's data label and in failure messages.</param>

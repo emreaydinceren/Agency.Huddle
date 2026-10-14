@@ -74,13 +74,13 @@ public sealed class ContrastColourTests
         Assert.Equal("#FFFFFFFF", foreground.ToString(MudColorOutputFormats.HexA), ignoreCase: true);
     }
 
-    /// <summary>Huddle Light's <c>Primary</c> is dark enough that white is the readable foreground - the choice this theme's own <c>PrimaryContrastText</c> already makes. Reads <see cref="HuddleTheme.Light"/> directly rather than a hardcoded literal, so a future palette change cannot make this pin stale without also failing it.</summary>
+    /// <summary>Huddle Light's <c>Primary</c> is light enough that black is the readable foreground - the choice this theme's own <c>PrimaryContrastText</c> already makes. Reads <see cref="HuddleTheme.Light"/> directly rather than a hardcoded literal, so a future palette change cannot make this pin stale without also failing it.</summary>
     [Fact]
-    public void ReadableForeground_HuddleLightPrimary_ReturnsWhite()
+    public void ReadableForeground_HuddleLightPrimary_ReturnsBlack()
     {
         var foreground = ContrastColour.ReadableForeground(HuddleTheme.Light().Primary);
 
-        Assert.Equal("#FFFFFFFF", foreground.ToString(MudColorOutputFormats.HexA), ignoreCase: true);
+        Assert.Equal("#000000FF", foreground.ToString(MudColorOutputFormats.HexA), ignoreCase: true);
     }
 
     /// <summary>
@@ -90,15 +90,15 @@ public sealed class ContrastColourTests
     /// drifting apart.
     /// </summary>
     [Fact]
-    public void ReadableForeground_HuddleDarkPrimary_ReturnsBlackAt686ToOne()
+    public void ReadableForeground_HuddleDarkPrimary_ReturnsBlackAt536ToOne()
     {
-        MudColor background = "#c07bc3";
+        MudColor background = "#6e78da";
 
         var foreground = ContrastColour.ReadableForeground(background);
         var ratio = ContrastColour.Ratio(foreground, background);
 
         Assert.Equal("#000000FF", foreground.ToString(MudColorOutputFormats.HexA), ignoreCase: true);
-        Assert.Equal(6.86, ratio, precision: 2);
+        Assert.Equal(5.36, ratio, precision: 2);
     }
 
     /// <summary>

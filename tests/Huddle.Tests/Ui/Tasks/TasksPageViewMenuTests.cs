@@ -3,7 +3,6 @@ using Bunit;
 using Bunit.Rendering;
 using Microsoft.AspNetCore.Components;
 using Microsoft.Extensions.DependencyInjection;
-using Agency.Huddle.App.Components.Tasks;
 using Agency.Huddle.App.Tasks.Views;
 using Agency.Huddle.Tests.Acp.Tools;
 using TasksPage = Agency.Huddle.App.Components.Pages.Tasks;
@@ -12,18 +11,19 @@ using TestContext = Xunit.TestContext;
 namespace Agency.Huddle.Tests.Ui.Tasks;
 
 /// <summary>
-/// Pins the MoreVert menu (T2a, UX-050b) beside the Tasks page's title: <c>Edit view</c> for every View and
+/// Pins the MoreVert menu (T2a, UX-050b) beside the Tasks page's title: <c>Rename</c> and <c>Fields…</c> for every View and
 /// <c>Delete view</c> for a non-built-in one, with the same confirm wording and navigate-away rule
-/// as <c>TaskViewNav</c>'s row menu and <c>ViewEditorDrawer</c>'s own Delete button.
+/// as <c>TaskViewNav</c>'s row menu.
 /// </summary>
 public sealed class TasksPageViewMenuTests
 {
-    private const string EditLabel = "Edit view";
+    private const string RenameLabel = "Rename";
+    private const string FieldsLabel = "Fields…";
     private const string DeleteLabel = "Delete view";
 
     /// <summary>A saved, non-built-in View gets both actions in the MoreVert menu beside its title.</summary>
     [Fact]
-    public async Task ViewMenu_ForACustomView_OffersEditAndDelete()
+    public async Task ViewMenu_ForACustomView_OffersRenameFieldsAndDelete()
     {
         CancellationToken ct = TestContext.Current.CancellationToken;
         using TaskToolHarness harness = await TaskToolHarness.CreateAsync(ct);
@@ -34,12 +34,12 @@ public sealed class TasksPageViewMenuTests
 
         await OpenMenuAsync(cut);
 
-        Assert.Equal([EditLabel, DeleteLabel], ItemLabels(cut));
+        Assert.Equal([RenameLabel, FieldsLabel, DeleteLabel], ItemLabels(cut));
     }
 
-    /// <summary>A built-in View (here All Tasks) can be edited but never deleted, so the menu offers only Edit.</summary>
+    /// <summary>A built-in View (here All Tasks) can be renamed but never deleted, so the menu offers no Delete.</summary>
     [Fact]
-    public async Task ViewMenu_ForABuiltInView_OffersOnlyEdit()
+    public async Task ViewMenu_ForABuiltInView_OffersRenameAndFieldsButNotDelete()
     {
         CancellationToken ct = TestContext.Current.CancellationToken;
         using TaskToolHarness harness = await TaskToolHarness.CreateAsync(ct);
@@ -48,27 +48,7 @@ public sealed class TasksPageViewMenuTests
         IRenderedComponent<ContainerFragment> cut = RenderPage(ctx, ViewStore.AllTasksId);
         await OpenMenuAsync(cut);
 
-        Assert.Equal([EditLabel], ItemLabels(cut));
-    }
-
-    /// <summary>Edit view opens the page's hosted <see cref="ViewEditorDrawer"/> on the View whose title the menu sits beside.</summary>
-    [Fact]
-    public async Task EditTaskView_OpensTheEditorDrawerForThatView()
-    {
-        CancellationToken ct = TestContext.Current.CancellationToken;
-        using TaskToolHarness harness = await TaskToolHarness.CreateAsync(ct);
-        _ = harness.Views.Save(new TaskView { Id = "custom1", Name = "Sprint Board", Kind = ViewKind.List });
-
-        await using MudBunitContext ctx = NewContext(harness);
-        IRenderedComponent<ContainerFragment> cut = RenderPage(ctx, "custom1");
-        Assert.False(cut.FindComponent<ViewEditorDrawer>().Instance.Open);
-        await OpenMenuAsync(cut);
-
-        await cut.InvokeAsync(() => ItemFor(cut, EditLabel).ClickAsync());
-
-        ViewEditorDrawer drawer = cut.FindComponent<ViewEditorDrawer>().Instance;
-        Assert.True(drawer.Open);
-        Assert.Equal("custom1", drawer.Id);
+        Assert.Equal([RenameLabel, FieldsLabel], ItemLabels(cut));
     }
 
     /// <summary>Delete view asks through the shared confirm (UX-R06) with the exact wording the other two Delete entry points use.</summary>

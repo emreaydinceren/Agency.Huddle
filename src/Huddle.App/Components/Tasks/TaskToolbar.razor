@@ -1,16 +1,10 @@
 @*
-    Spec §13.3: the page's toolbar. It owns none of the persisted state itself - EffectiveView is
-    the saved View with whatever overrides the controls below have applied for this session - and
-    writes to ViewStore only when "Save to View" is clicked, never as a side effect of a filter,
-    group or sort change. "Save to View" itself is computed by comparing the serialised
-    effective View against the serialised saved one (ViewJson.Options, never record ==, per D13
-    corrections item 1, which the same brief applies to this toolbar's own visibility rule too),
-    with Scope masked out first. Active/Closed is no longer a toolbar control - Scope is set in the View
-    editor - while List/Board is again one, sitting right after "+ New task", which leads the toolbar
-    rather than sitting at its far end. The List/Board switch is ad hoc (session-only) like the rest.
+    Spec §13.3: the page's toolbar. It owns none of the persisted state itself - EffectiveView is the View
+    being shown, and every control raises EffectiveViewChanged with the change applied; the host decides what
+    to do with it (the Tasks page saves it to the View at once, the Team page's tab keeps it for the session).
+    The Filter menu leads the row and holds every saved filter; the ones that are set show as chips after it.
 *@
 
-@using System.Text.Json
 @using Agency.Huddle.App.Acp
 @using Agency.Huddle.App.Components.Shared
 @inject ViewStore ViewStore
@@ -18,24 +12,56 @@
 @inject PersonaStore Personas
 @inject TaskStore TaskStore
 
+@if (this.SplitHeader)
+{
+    @* The Tasks page's own first row (wireframe): the counts on the left; the page's actions, Group by,
+       List | Kanban and "+ New task" on the right. Same dense MudToolBar as the row below, so the two
+       rows are the same height. *@
+    <MudToolBar Dense="true" Gutters="false" Class="task-toolbar-header">
+        @this.HeaderLeading
+        <MudSpacer />
+        @this.HeaderActions
+        @* Group by is a filter-style chip, like Status below: "Group by: Assignee" with a menu of choices, and a clear button once one is chosen. *@
+        <TaskFilterChip Label="Group by" Value="@this.GroupText" IsSet="@(this.PrimaryGrouping is not null)"
+                        OnClear="this.ClearGroupingAsync" Class="task-toolbar-group">
+            <MudMenuItem OnClick="this.ClearGroupingAsync">None</MudMenuItem>
+            @foreach (TaskGroupField field in this.GroupChoices())
+            {
+                TaskGroupField chosen = field;
+                <MudMenuItem OnClick="@(() => this.OnGroupingChangedAsync(chosen))">@GroupFieldLabel(chosen)</MudMenuItem>
+            }
+        </TaskFilterChip>
+        @this.KindControl
+        @this.NewTaskButton
+        @this.HeaderTrailing
+    </MudToolBar>
+}
+
 <MudToolBar Dense="true" Gutters="false" Class="task-toolbar">
-    <MudButton StartIcon="@Icons.Material.Filled.Add" Size="Size.Medium" Color="Color.Primary" OnClick="this.OnNewTaskClickedAsync" Class="btn-action-tight">New task</MudButton>
-
-    @* Ad hoc like every other toolbar control: it flips the effective View's layout only, and "Save to view"
-       offers to persist it - the View editor's own Kind control is the saved counterpart. *@
-    <HuddleSegmentedControl T="ViewKind" Value="this.EffectiveView.Kind" ValueChanged="this.OnKindChangedAsync"
-                            Class="task-toolbar-kind" ItemCount="2">
-        <MudToggleItem Value="ViewKind.List" Text="List" />
-        <MudToggleItem Value="ViewKind.Board" Text="Board" />
-    </HuddleSegmentedControl>
-
-    <MudMenu Label="Filter" Class="task-toolbar-filter">
+    @* The Filter menu leads the row, as an icon: every saved filter is chosen here and the ones set show as chips after it. *@
+    <MudMenu Icon="@Icons.Material.Outlined.FilterList" Size="Size.Small" AriaLabel="Filter" Class="task-toolbar-filter">
         @* The View editor's Team control (UX-050c, OP-8): a multi-select of the Teams known to the app. *@
         <MudSelect T="string" Variant="Variant.Outlined" Margin="Margin.Dense" Label="Team" MultiSelection="true" SelectedValues="this.EffectiveView.Filter.Teams"
                    SelectedValuesChanged="this.OnTeamFilterChangedAsync" Class="task-toolbar-filter-team">
             @foreach (string team in this.TeamOptions())
             {
                 <MudSelectItem T="string" Value="@team" Class="task-toolbar-filter-team-option">@team</MudSelectItem>
+            }
+        </MudSelect>
+        @* Team/Project pairs, narrowed to the chosen Teams. A value no longer known stays selected as "X (missing)". *@
+        <MudSelect T="string" Variant="Variant.Outlined" Margin="Margin.Dense" Label="Project" MultiSelection="true" SelectedValues="this.ProjectKeys()"
+                   SelectedValuesChanged="this.OnProjectFilterChangedAsync" Class="task-toolbar-filter-project">
+            @foreach ((string value, string label) in this.ProjectOptions())
+            {
+                <MudSelectItem T="string" Value="@value" Class="task-toolbar-filter-project-option">@label</MudSelectItem>
+            }
+        </MudSelect>
+        @* Me, Unassigned, then every name that holds a Task or is already filtered on. *@
+        <MudSelect T="string" Variant="Variant.Outlined" Margin="Margin.Dense" Label="Assignee" MultiSelection="true" SelectedValues="this.EffectiveView.Filter.Assignees"
+                   SelectedValuesChanged="this.OnAssigneeFilterChangedAsync" Class="task-toolbar-filter-assignee">
+            @foreach ((string value, string label) in this.AssigneeOptions())
+            {
+                <MudSelectItem T="string" Value="@value" Class="task-toolbar-filter-assignee-option">@label</MudSelectItem>
             }
         </MudSelect>
         @* Sprints spec §12.3: the "filter dynamically" path. A value no longer in sprints.md stays selected as "S5 (missing)". *@
@@ -46,39 +72,142 @@
                 <MudSelectItem T="string" Value="@value" Class="task-toolbar-filter-sprint-option">@label</MudSelectItem>
             }
         </MudSelect>
-    </MudMenu>
-
-    <MudMenu Label="Group, Sort" Class="task-toolbar-group-sort">
-        <MudSelect T="TaskGroupField?" Variant="Variant.Outlined" Margin="Margin.Dense" Label="Group by" Value="this.PrimaryGrouping" ValueChanged="this.OnGroupingChangedAsync"
-                   Clearable="true" Class="task-toolbar-grouping">
-            <MudSelectItem T="TaskGroupField?" Value="TaskGroupField.Team">Team</MudSelectItem>
-            <MudSelectItem T="TaskGroupField?" Value="TaskGroupField.Project">Project</MudSelectItem>
-            <MudSelectItem T="TaskGroupField?" Value="TaskGroupField.Assignee">Assignee</MudSelectItem>
-            <MudSelectItem T="TaskGroupField?" Value="TaskGroupField.Sprint">Sprint</MudSelectItem>
-            @if (this.EffectiveView.Kind == ViewKind.List)
+        @* Status: All, Open and Closed are selectable group headers that choose the whole group, followed by the individual statuses. *@
+        <MudSelect T="string" Variant="Variant.Outlined" Margin="Margin.Dense" Label="Status" MultiSelection="true" SelectedValues="this.StateKeys()"
+                   SelectedValuesChanged="this.OnStateKeysChangedAsync" Class="task-toolbar-filter-state">
+            <MudSelectItem T="string" Value="@AllKey" Class="task-toolbar-filter-state-group task-toolbar-filter-state-all">All</MudSelectItem>
+            <MudSelectItem T="string" Value="@OpenKey" Class="task-toolbar-filter-state-group task-toolbar-filter-state-open">Open</MudSelectItem>
+            @foreach (TaskState state in ActiveStates)
             {
-                @* State is a Group by choice on a List only: a Board's columns already are the states. *@
-                <MudSelectItem T="TaskGroupField?" Value="TaskGroupField.State">State</MudSelectItem>
+                <MudSelectItem T="string" Value="@state.ToWire()" Class="task-toolbar-filter-state-option">@state.ToWire()</MudSelectItem>
+            }
+            <MudSelectItem T="string" Value="@ClosedKey" Class="task-toolbar-filter-state-group task-toolbar-filter-state-closed">Closed</MudSelectItem>
+            @foreach (TaskState state in ClosedStates)
+            {
+                <MudSelectItem T="string" Value="@state.ToWire()" Class="task-toolbar-filter-state-option">@state.ToWire()</MudSelectItem>
+            }
+        </MudSelect>        @* Blocked: All, Blocked or Unblocked. *@
+        <MudSelect T="BlockedFilter" Variant="Variant.Outlined" Margin="Margin.Dense" Label="Blocked" Value="this.EffectiveView.Filter.Blocked"
+                   ValueChanged="this.OnBlockedChangedAsync" Class="task-toolbar-filter-blocked">
+            <MudSelectItem T="BlockedFilter" Value="BlockedFilter.All">All</MudSelectItem>
+            <MudSelectItem T="BlockedFilter" Value="BlockedFilter.Blocked">Blocked</MudSelectItem>
+            <MudSelectItem T="BlockedFilter" Value="BlockedFilter.Unblocked">Unblocked</MudSelectItem>
+        </MudSelect>        <MudSelect T="TaskPriority" Variant="Variant.Outlined" Margin="Margin.Dense" Label="Priority" MultiSelection="true" SelectedValues="this.EffectiveView.Filter.Priorities"
+                   SelectedValuesChanged="this.OnPriorityFilterChangedAsync" Class="task-toolbar-filter-priority">
+            @foreach (TaskPriority priority in Enum.GetValues<TaskPriority>())
+            {
+                <MudSelectItem T="TaskPriority" Value="@priority" Class="task-toolbar-filter-priority-option">@priority.ToWire()</MudSelectItem>
             }
         </MudSelect>
     </MudMenu>
+    @if (this.SplitHeader)
+    {
+        @* Wireframe: the quick filters lead the second row. Each is the same Filter the menu below edits, so a choice here shows there too. *@
+        @if (this.EffectiveView.Filter.Teams.Count > 0)
+        {
+            <TaskFilterChip Label="Team" Value="@(SummaryText(this.EffectiveView.Filter.Teams))" IsSet="true" OnClear="this.ClearTeamAsync" Class="task-toolbar-team">
+                @foreach (string team in this.TeamOptions())
+                {
+                    <MudMenuItem OnClick="@(() => this.OnTeamFilterChangedAsync([team]))">@team</MudMenuItem>
+                }
+            </TaskFilterChip>
+        }
 
-    @* Ad hoc like every other toolbar control: it changes the effective View only, and "Save to view"
-       above offers to persist it - the View editor's own Blocked control is the saved counterpart. *@
-    <HuddleSegmentedControl T="BlockedFilter" Value="this.EffectiveView.Filter.Blocked" ValueChanged="this.OnBlockedChangedAsync"
-                            Class="task-toolbar-blocked" ItemCount="3">
-        <MudToggleItem Value="BlockedFilter.All" Text="All" />
-        <MudToggleItem Value="BlockedFilter.Blocked" Text="Blocked" />
-        <MudToggleItem Value="BlockedFilter.Unblocked" Text="Unblocked" />
-    </HuddleSegmentedControl>
+        @if (this.EffectiveView.Filter.Projects.Count > 0)
+        {
+            <TaskFilterChip Label="Project" Value="@(SummaryText(this.ProjectKeys()))" IsSet="true" OnClear="this.ClearProjectAsync" Class="task-toolbar-project">
+                @foreach ((string value, string label) in this.ProjectOptions())
+                {
+                    <MudMenuItem OnClick="@(() => this.OnProjectFilterChangedAsync([value]))">@label</MudMenuItem>
+                }
+            </TaskFilterChip>
+        }
 
-    @* Ad hoc like the Blocked control: toggles the effective View's Requests-only filter. *@
+        @if (this.EffectiveView.Filter.Assignees.Count > 0)
+        {
+        <TaskFilterChip Label="Assignee" Value="@this.AssigneeText" IsSet="@(this.EffectiveView.Filter.Assignees.Count > 0)"
+                        OnClear="this.ClearAssigneeAsync" Class="task-toolbar-assignee">
+            <MudMenuItem OnClick="this.ClearAssigneeAsync">Any</MudMenuItem>
+            @foreach ((string value, string label) in this.AssigneeOptions())
+            {
+                <MudMenuItem OnClick="@(() => this.OnAssigneeChosenAsync(value))">@label</MudMenuItem>
+            }
+        </TaskFilterChip>
+        }
+
+        @if (this.EffectiveView.Filter.Sprints.Count > 0)
+        {
+            <TaskFilterChip Label="Sprint" Value="@(SummaryText(this.EffectiveView.Filter.Sprints.Select(sprint => SprintLabels.FilterLabel(this.Sprints, sprint)).ToList()))" IsSet="true" OnClear="this.ClearSprintAsync" Class="task-toolbar-sprint">
+                @foreach ((string value, string label) in SprintLabels.FilterOptions(this.Sprints, this.EffectiveView.Filter.Sprints))
+                {
+                    <MudMenuItem OnClick="@(() => this.OnSprintFilterChangedAsync([value]))">@label</MudMenuItem>
+                }
+            </TaskFilterChip>
+        }
+
+        @if (this.EffectiveView.Filter.Priorities.Count > 0)
+        {
+            <TaskFilterChip Label="Priority" Value="@(SummaryText(this.EffectiveView.Filter.Priorities.Select(static priority => priority.ToWire()).ToList()))" IsSet="true" OnClear="this.ClearPriorityAsync" Class="task-toolbar-priority">
+                @foreach (TaskPriority priority in Enum.GetValues<TaskPriority>())
+                {
+                    TaskPriority chosen = priority;
+                    <MudMenuItem OnClick="@(() => this.OnPriorityFilterChangedAsync([chosen]))">@chosen.ToWire()</MudMenuItem>
+                }
+            </TaskFilterChip>
+        }
+
+        @if (this.EffectiveView.Filter.Blocked != BlockedFilter.All)
+        {
+            <TaskFilterChip Label="Blocked" Value="@this.EffectiveView.Filter.Blocked.ToString()" IsSet="true" OnClear="this.ClearBlockedAsync" Class="task-toolbar-blocked">
+                <MudMenuItem OnClick="this.ClearBlockedAsync">All</MudMenuItem>
+                <MudMenuItem OnClick="@(() => this.OnBlockedChangedAsync(BlockedFilter.Blocked))">Blocked</MudMenuItem>
+                <MudMenuItem OnClick="@(() => this.OnBlockedChangedAsync(BlockedFilter.Unblocked))">Unblocked</MudMenuItem>
+            </TaskFilterChip>
+        }
+        @if (this.EffectiveView.Filter.States.Count > 0)
+        {
+        <TaskFilterChip Label="Status" Value="@this.StatusText" IsSet="@(this.EffectiveView.Filter.States.Count > 0)"
+                        OnClear="this.ClearStatusAsync" Class="task-toolbar-status">
+            @* Two levels: All, then the Open and Closed groups, each choosable as a whole and followed by its own statuses. *@
+            <MudMenuItem OnClick="this.ClearStatusAsync" Class="task-status-all">All</MudMenuItem>
+            <MudMenuItem OnClick="@(() => this.OnStatusChosenAsync(ActiveStates))" Class="task-status-group task-status-active">Open</MudMenuItem>
+            @foreach (TaskState state in ActiveStates)
+            {
+                TaskState chosen = state;
+                <MudMenuItem OnClick="@(() => this.OnStatusChosenAsync([chosen]))" Class="task-status-sub">@chosen.ToWire()</MudMenuItem>
+            }
+
+            <MudMenuItem OnClick="@(() => this.OnStatusChosenAsync(ClosedStates))" Class="task-status-group task-status-closed">Closed</MudMenuItem>
+            @foreach (TaskState state in ClosedStates)
+            {
+                TaskState chosen = state;
+                <MudMenuItem OnClick="@(() => this.OnStatusChosenAsync([chosen]))" Class="task-status-sub">@chosen.ToWire()</MudMenuItem>
+            }
+        </TaskFilterChip>
+        }
+    }
+    else
+    {
+        @this.NewTaskButton
+        @this.KindControl
+    }
+
+
+    @if (!this.SplitHeader)
+    {
+        @* With SplitHeader, Group by lives in the header row instead. *@
+        <MudMenu Label="Group, Sort" Class="task-toolbar-group-sort">
+            @this.GroupSelect
+        </MudMenu>
+    }
+
+    @* Ad hoc like the filters in the Filter menu: toggles the effective View's Requests-only filter. *@
     <MudChip T="string" Size="Size.Small" Class="task-toolbar-requests" Color="@(this.EffectiveView.Filter.RequestsOnly ? Color.Primary : Color.Default)"
              Icon="@(this.EffectiveView.Filter.RequestsOnly ? Icons.Material.Filled.Check : null)"
              aria-pressed="@(this.EffectiveView.Filter.RequestsOnly ? "true" : "false")"
              OnClick="this.OnRequestsToggledAsync">Requests</MudChip>
 
-    <SearchField Value="@this.Search" ValueChanged="this.OnSearchChangedAsync" Placeholder="Search tasks" AriaLabel="Search tasks" />
+    <SearchField Value="@this.Search" ValueChanged="this.OnSearchChangedAsync" Placeholder="Search tasks" AriaLabel="Search tasks" Class="task-toolbar-search" />
 
     @if (this.EffectiveView.Kind == ViewKind.List)
     {
@@ -86,13 +215,6 @@
                    Class="task-toolbar-dense" />
     }
 
-    @if (this.ShowSaveToView)
-    {
-        <MudTooltip Text="Save view">
-            <MudIconButton Icon="@Icons.Material.Filled.Save" Size="Size.Small" OnClick="this.SaveToViewAsync"
-                           aria-label="Save view" Class="task-toolbar-save" />
-        </MudTooltip>
-    }
 </MudToolBar>
 
 @code {
@@ -109,6 +231,25 @@
     [Parameter]
     public EventCallback<NewTaskDefaults> OnNewTask { get; set; }
 
+    /// <summary>
+    /// Whether "+ New task" and List | Board sit in their own first row above the filters, with
+    /// <see cref="HeaderActions"/> and <see cref="HeaderTrailing"/> (the Tasks page). Off, they lead the one row (the Team page's tab).
+    /// </summary>
+    [Parameter]
+    public bool SplitHeader { get; set; }
+
+    /// <summary>With <see cref="SplitHeader"/>, the page's counts (open, need you, all), placed at the left of the first row.</summary>
+    [Parameter]
+    public RenderFragment? HeaderLeading { get; set; }
+
+    /// <summary>With <see cref="SplitHeader"/>, the page's own actions, placed in the first row just before Group by.</summary>
+    [Parameter]
+    public RenderFragment? HeaderActions { get; set; }
+
+    /// <summary>With <see cref="SplitHeader"/>, the page's own actions placed in the first row after "+ New task", at the far right.</summary>
+    [Parameter]
+    public RenderFragment? HeaderTrailing { get; set; }
+
     /// <summary>The search text. Never saved to a View.</summary>
     [Parameter]
     public string? Search { get; set; }
@@ -117,30 +258,121 @@
     [Parameter]
     public EventCallback<string?> SearchChanged { get; set; }
 
-    private TaskGroupField? PrimaryGrouping => this.EffectiveView.Grouping.Count > 0 ? this.EffectiveView.Grouping[0] : null;
+    private RenderFragment NewTaskButton => @<MudButton StartIcon="@Icons.Material.Filled.Add" Size="Size.Medium" Variant="Variant.Filled" Color="Color.Primary" OnClick="this.OnNewTaskClickedAsync" Class="btn-action-tight">New task</MudButton>;
 
-    /// <summary>
-    /// Whether the effective View differs from the one <see cref="ViewStore"/> actually has saved,
-    /// ignoring <see cref="TaskFilter"/>... no - ignoring <see cref="TaskView.Scope"/>, which the
-    /// Active/Closed toggle changes as page state only (Spec §13.3). Compared by serialised JSON
-    /// (<c>ViewJson.Options</c>), never record equality - see the file header.
-    /// </summary>
-    private bool ShowSaveToView
+    /// <summary>The Group by choice as an outlined, labelled field, inside the "Group, Sort" menu of the one-row toolbar (<see cref="SplitHeader"/> off). The Tasks page's header has a chip instead.</summary>
+    private RenderFragment GroupSelect => @<MudSelect T="TaskGroupField?" Variant="Variant.Outlined" Margin="Margin.Dense"
+                                                      Label="Group by" Placeholder="None" aria-label="Group by"
+                                                      Value="this.PrimaryGrouping" ValueChanged="this.OnGroupingChangedAsync" ToStringFunc="GroupFieldLabel"
+                                                      Clearable="true" Class="task-toolbar-grouping">
+        <MudSelectItem T="TaskGroupField?" Value="TaskGroupField.Team">Team</MudSelectItem>
+        <MudSelectItem T="TaskGroupField?" Value="TaskGroupField.Project">Project</MudSelectItem>
+        <MudSelectItem T="TaskGroupField?" Value="TaskGroupField.Assignee">Assignee</MudSelectItem>
+        <MudSelectItem T="TaskGroupField?" Value="TaskGroupField.Sprint">Sprint</MudSelectItem>
+        @if (this.EffectiveView.Kind == ViewKind.List)
+        {
+            @* Status is a Group by choice on a List only: a Kanban's columns already are the statuses. *@
+            <MudSelectItem T="TaskGroupField?" Value="TaskGroupField.State">Status</MudSelectItem>
+        }
+    </MudSelect>;
+
+    /// <summary>The text a Group by value shows: the field's name, with the State field called Status as everywhere the Human reads it.</summary>
+    /// <param name="field">The grouping field, or null for no grouping.</param>
+    private static string GroupFieldLabel(TaskGroupField? field) => field switch
+    {
+        null => string.Empty,
+        TaskGroupField.State => "Status",
+        TaskGroupField value => value.ToString(),
+    };
+
+    /// <summary>Ad hoc like every other toolbar control: it flips the effective View's layout only, and "Save to view" offers to persist it - the View editor's own Kind control is the saved counterpart.</summary>
+    private RenderFragment KindControl => @<HuddleSegmentedControl T="ViewKind" Value="this.EffectiveView.Kind" ValueChanged="this.OnKindChangedAsync"
+                                                                   Class="task-toolbar-kind" ItemCount="2">
+        <MudToggleItem Value="ViewKind.List" Text="List" />
+        <MudToggleItem Value="ViewKind.Board" Text="Kanban" />
+    </HuddleSegmentedControl>;
+
+    /// <summary>The statuses "Open" stands for: every one that is not terminal.</summary>
+    private static readonly IReadOnlyList<TaskState> ActiveStates = [.. TaskStates.All.Where(static state => !state.IsTerminal())];
+
+    /// <summary>The statuses "Closed" stands for: every terminal one (Done and the Won't do family).</summary>
+    private static readonly IReadOnlyList<TaskState> ClosedStates = [.. TaskStates.All.Where(static state => state.IsTerminal())];
+
+    /// <summary>The Assignee chip's text: "Any" when unset, otherwise the one choice's label or a count.</summary>
+    private string AssigneeText => this.EffectiveView.Filter.Assignees switch
+    {
+        [] => "Any",
+        [string single] => AssigneeLabel(single),
+        IReadOnlyList<string> many => $"{many.Count} selected",
+    };
+
+    /// <summary>The Status chip's text: "All" when unset, "Open" or "Closed" for exactly that group's statuses, otherwise the one status or a count.</summary>
+    private string StatusText
     {
         get
         {
-            TaskView? saved = this.ViewStore.Get(this.EffectiveView.Id);
-            if (saved is null)
+            IReadOnlyList<TaskState> states = this.EffectiveView.Filter.States;
+            if (states.Count == 0)
             {
-                return false;
+                return "All";
             }
 
-            TaskView forCompare = this.EffectiveView with { Scope = saved.Scope };
-            string effectiveJson = JsonSerializer.Serialize(forCompare, ViewJson.Options);
-            string savedJson = JsonSerializer.Serialize(saved, ViewJson.Options);
-            return !string.Equals(effectiveJson, savedJson, StringComparison.Ordinal);
+            if (IsGroup(states, ActiveStates))
+            {
+                return "Open";
+            }
+
+            if (IsGroup(states, ClosedStates))
+            {
+                return "Closed";
+            }
+
+            return states.Count == 1 ? states[0].ToWire() : $"{states.Count} selected";
         }
     }
+
+    /// <summary>Whether <paramref name="states"/> is exactly <paramref name="group"/>, in any order.</summary>
+    /// <param name="states">The statuses the filter holds.</param>
+    /// <param name="group">The group's statuses.</param>
+    private static bool IsGroup(IReadOnlyList<TaskState> states, IReadOnlyList<TaskState> group) =>
+        states.Count == group.Count && group.All(states.Contains);
+
+    /// <summary>The label of an assignee filter value: <c>@me</c> reads "Me", <c>@unassigned</c> "Unassigned", a name as itself.</summary>
+    /// <param name="value">The stored filter value.</param>
+    private static string AssigneeLabel(string value) => value.ToUpperInvariant() switch
+    {
+        "@ME" => "Me",
+        "@UNASSIGNED" => "Unassigned",
+        _ => value,
+    };
+
+    /// <summary>The Assignee choices after Any: Me, Unassigned, then every name that holds a Task or is already filtered on.</summary>
+    private List<(string Value, string Label)> AssigneeOptions()
+    {
+        List<(string Value, string Label)> options = [("@me", "Me"), ("@unassigned", "Unassigned")];
+        IEnumerable<string> names = this.TaskStore.All
+            .Select(static task => task.Assignee)
+            .OfType<string>()
+            .Concat(this.EffectiveView.Filter.Assignees.Where(static value => !value.StartsWith('@')))
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .OrderBy(static name => name, StringComparer.Ordinal);
+        options.AddRange(names.Select(static name => (name, name)));
+        return options;
+    }
+
+    private Task OnAssigneeChosenAsync(string value) =>
+        this.EffectiveViewChanged.InvokeAsync(this.EffectiveView with { Filter = this.EffectiveView.Filter with { Assignees = [value] } });
+
+    private Task ClearAssigneeAsync() =>
+        this.EffectiveViewChanged.InvokeAsync(this.EffectiveView with { Filter = this.EffectiveView.Filter with { Assignees = [] } });
+
+    private Task OnStatusChosenAsync(IReadOnlyList<TaskState> states) =>
+        this.EffectiveViewChanged.InvokeAsync(this.EffectiveView with { Filter = this.EffectiveView.Filter with { States = states } });
+
+    private Task ClearStatusAsync() =>
+        this.EffectiveViewChanged.InvokeAsync(this.EffectiveView with { Filter = this.EffectiveView.Filter with { States = [] } });
+
+    private TaskGroupField? PrimaryGrouping => this.EffectiveView.Grouping.Count > 0 ? this.EffectiveView.Grouping[0] : null;
 
     /// <summary>Every Team the app knows, plus any the filter already names, sorted ordinally.</summary>
     private List<string> TeamOptions() =>
@@ -157,6 +389,111 @@
 
     private Task OnSprintFilterChangedAsync(IEnumerable<string> values) =>
         this.EffectiveViewChanged.InvokeAsync(this.EffectiveView with { Filter = this.EffectiveView.Filter with { Sprints = [.. values] } });
+
+    private Task ClearTeamAsync() => this.OnTeamFilterChangedAsync([]);
+
+    private Task ClearProjectAsync() => this.OnProjectFilterChangedAsync([]);
+
+    private Task ClearSprintAsync() => this.OnSprintFilterChangedAsync([]);
+
+    private Task ClearPriorityAsync() => this.OnPriorityFilterChangedAsync([]);
+
+    /// <summary>A chip's value text: the one choice, or a count when several.</summary>
+    /// <param name="labels">The chosen values' labels.</param>
+    private static string SummaryText(IReadOnlyList<string> labels) => labels.Count == 1 ? labels[0] : $"{labels.Count} selected";
+
+    private Task OnAssigneeFilterChangedAsync(IEnumerable<string> values) =>
+        this.EffectiveViewChanged.InvokeAsync(this.EffectiveView with { Filter = this.EffectiveView.Filter with { Assignees = [.. values] } });
+
+    /// <summary>The Status select's keys for the filter: each chosen status's wire name, never a group header (a header acts once and is not kept selected).</summary>
+    private List<string> StateKeys() => [.. this.EffectiveView.Filter.States.Select(static state => state.ToWire())];
+
+    /// <summary>
+    /// Applies the Status select's new selection: a group header newly chosen sets that whole group (All clears the filter),
+    /// otherwise the chosen statuses are the filter.
+    /// </summary>
+    /// <param name="keys">The keys now selected.</param>
+    private Task OnStateKeysChangedAsync(IEnumerable<string> keys)
+    {
+        List<string> chosen = [.. keys];
+        IReadOnlyList<TaskState> states;
+        if (chosen.Contains(AllKey, StringComparer.Ordinal))
+        {
+            states = [];
+        }
+        else if (chosen.Contains(OpenKey, StringComparer.Ordinal))
+        {
+            states = ActiveStates;
+        }
+        else if (chosen.Contains(ClosedKey, StringComparer.Ordinal))
+        {
+            states = ClosedStates;
+        }
+        else
+        {
+            states = [.. TaskStates.All.Where(state => chosen.Contains(state.ToWire(), StringComparer.Ordinal))];
+        }
+
+        return this.EffectiveViewChanged.InvokeAsync(this.EffectiveView with { Filter = this.EffectiveView.Filter with { States = states } });
+    }
+
+    private const string AllKey = "@all";
+    private const string OpenKey = "@open";
+    private const string ClosedKey = "@closed";
+    private Task OnPriorityFilterChangedAsync(IEnumerable<TaskPriority> values) =>
+        this.EffectiveViewChanged.InvokeAsync(this.EffectiveView with { Filter = this.EffectiveView.Filter with { Priorities = [.. values] } });
+
+    private Task OnProjectFilterChangedAsync(IEnumerable<string> keys) =>
+        this.EffectiveViewChanged.InvokeAsync(this.EffectiveView with { Filter = this.EffectiveView.Filter with { Projects = [.. keys.Select(ParseProjectKey)] } });
+
+    /// <summary>The filter's Projects as the "Team/Project" keys the Project select holds.</summary>
+    private List<string> ProjectKeys() => [.. this.EffectiveView.Filter.Projects.Select(ProjectKey)];
+
+    /// <summary>Team/Project pairs, narrowed to the filter's Teams when it names any, plus any selected pair no longer known as "{key} (missing)".</summary>
+    private List<(string Value, string Label)> ProjectOptions()
+    {
+        IReadOnlyList<string> teams = this.EffectiveView.Filter.Teams;
+        List<(string Value, string Label)> options = [];
+        foreach (TeamFolder team in this.TaskStore.Teams)
+        {
+            if (teams.Count > 0 && !teams.Contains(team.Name, StringComparer.OrdinalIgnoreCase))
+            {
+                continue;
+            }
+
+            options.AddRange(team.Projects.Select(project => ($"{team.Name}/{project}", $"{team.Name} / {project}")));
+        }
+
+        foreach (string selected in this.ProjectKeys().Where(key => !options.Exists(option => string.Equals(option.Value, key, StringComparison.OrdinalIgnoreCase))))
+        {
+            options.Add((selected, $"{selected} (missing)"));
+        }
+
+        return options;
+    }
+
+    private static string ProjectKey(ProjectRef project) => project.Project is { } name ? $"{project.Team}/{name}" : project.Team;
+
+    private static ProjectRef ParseProjectKey(string key)
+    {
+        int slash = key.IndexOf('/', StringComparison.Ordinal);
+        return slash < 0 ? new ProjectRef(key, null) : new ProjectRef(key[..slash], key[(slash + 1)..]);
+    }
+
+    /// <summary>The Group by chip's text: the chosen field's name, or "None".</summary>
+    private string GroupText => this.PrimaryGrouping is { } grouping ? GroupFieldLabel(grouping) : "None";
+
+    /// <summary>The fields the Group by chip offers: State (shown as Status) only on a List, since a Kanban's columns already are the statuses.</summary>
+    private List<TaskGroupField> GroupChoices() =>
+    [
+        TaskGroupField.Team,
+        TaskGroupField.Project,
+        TaskGroupField.Assignee,
+        TaskGroupField.Sprint,
+        .. this.EffectiveView.Kind == ViewKind.List ? [TaskGroupField.State] : Array.Empty<TaskGroupField>(),
+    ];
+
+    private Task ClearGroupingAsync() => this.OnGroupingChangedAsync(null);
 
     private Task OnGroupingChangedAsync(TaskGroupField? field)
     {
@@ -200,6 +537,8 @@
         return this.EffectiveViewChanged.InvokeAsync(updated);
     }
 
+    private Task ClearBlockedAsync() => this.OnBlockedChangedAsync(BlockedFilter.All);
+
     private Task OnBlockedChangedAsync(BlockedFilter blocked) =>
         this.EffectiveViewChanged.InvokeAsync(this.EffectiveView with { Filter = this.EffectiveView.Filter with { Blocked = blocked } });
 
@@ -210,12 +549,6 @@
         this.EffectiveViewChanged.InvokeAsync(this.EffectiveView with { Dense = dense });
 
     private Task OnSearchChangedAsync(string? value) => this.SearchChanged.InvokeAsync(value);
-
-    private Task SaveToViewAsync()
-    {
-        _ = this.ViewStore.Save(this.EffectiveView);
-        return Task.CompletedTask;
-    }
 
     private Task OnNewTaskClickedAsync()
     {

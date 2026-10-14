@@ -18,8 +18,7 @@ using TasksPage = Agency.Huddle.App.Components.Pages.Tasks;
 /// Plan 12.4.t - the Board's column header menu (Spec §13.4 <i>Columns</i>, corrections-B5 D12-13) -
 /// plus every corrections-B7 §12.4 item: the §13.12 empty states on the Tasks page, the default
 /// columns when the toolbar switches to Board, the orphan-Team chip on Board lanes and List groups,
-/// every View field on a card, the presence tooltip, the two CSS defects, <i>Edit columns…</i> opening
-/// the View editor at its Columns section, and the Board rendered in the page with card-open bound to
+/// every View field on a card, the presence tooltip, the two CSS defects, and the Board rendered in the page with card-open bound to
 /// the detail drawer.
 /// <para>
 /// Provisional (flagged): the header menu's activator <c>aria-label="{Label} column menu"</c>; the
@@ -50,9 +49,9 @@ public sealed partial class TaskBoardColumnMenuTests
     /// <summary>The default column labels, in order.</summary>
     private static readonly string[] DefaultLabels = ["Backlog", "To Do", "In Progress", "Review", "Done", "Won't do"];
 
-    /// <summary>Spec §13.4 <i>Columns</i>: each column header's ⋮ menu offers exactly <i>Rename</i>, <i>Hide</i> and <i>Edit columns…</i>.</summary>
+    /// <summary>Spec §13.4 <i>Columns</i>: each column header's ⋮ menu offers exactly <i>Rename</i> and <i>Hide</i>.</summary>
     [Fact]
-    public async Task HeaderMenu_OffersRenameHideAndEditColumns()
+    public async Task HeaderMenu_OffersRenameAndHide()
     {
         CancellationToken ct = Xunit.TestContext.Current.CancellationToken;
         using TaskToolHarness harness = await TaskToolHarness.CreateAsync(ct);
@@ -63,7 +62,7 @@ public sealed partial class TaskBoardColumnMenuTests
         await OpenHeaderMenuAsync(cut, "In Progress");
 
         string[] items = [.. cut.FindAll("div.mud-menu-item").Select(i => i.TextContent.Trim())];
-        string[] expected = ["Rename", "Hide", "Edit columns…"];
+        string[] expected = ["Rename", "Hide"];
         Assert.Equal(expected, items);
     }
 
@@ -196,22 +195,6 @@ public sealed partial class TaskBoardColumnMenuTests
         string[] expected = ["Backlog", "To Do", "Doing", "Review", "Done", "Won't do"];
         Assert.Equal(expected, raised.Columns.Select(c => c.Label));
         Assert.Empty(harness.Views.Get(ViewStore.AllTasksId)?.Columns ?? []);
-    }
-
-    /// <summary>Plan 12.4.t: <i>Edit columns…</i> raises <c>OnEditColumns</c> once.</summary>
-    [Fact]
-    public async Task EditColumns_RaisesOnEditColumns()
-    {
-        CancellationToken ct = Xunit.TestContext.Current.CancellationToken;
-        using TaskToolHarness harness = await TaskToolHarness.CreateAsync(ct);
-        TaskView view = SaveBoard(harness);
-        int raised = 0;
-
-        await using MudBunitContext ctx = new();
-        IRenderedComponent<ContainerFragment> cut = RenderBoard(ctx, harness, view, [], onEditColumns: () => raised++);
-        await ClickHeaderItemAsync(cut, "Review", "Edit columns…");
-
-        Assert.Equal(1, raised);
     }
 
     /// <summary>corrections-B7 12.4 item 3: grouped by Team, the lane of an orphan Team folder carries the chip "No teammate is in Legal" (Spec §13.12); a Team some Persona is in has none.</summary>
@@ -450,24 +433,6 @@ public sealed partial class TaskBoardColumnMenuTests
         Assert.Equal(TaskDetailMode.Panel, detail.Mode);
     }
 
-    /// <summary>corrections-B7 12.4 item 7: the Board's <i>Edit columns…</i> opens the View editor drawer for this View at its Columns section.</summary>
-    [Fact]
-    public async Task Page_EditColumns_OpensTheViewEditorAtColumns()
-    {
-        CancellationToken ct = Xunit.TestContext.Current.CancellationToken;
-        using TaskToolHarness harness = await TaskToolHarness.CreateAsync(ct);
-        _ = SaveBoard(harness);
-
-        await using MudBunitContext ctx = new();
-        IRenderedComponent<ContainerFragment> cut = RenderPage(ctx, harness, viewId: BoardId);
-        await ClickHeaderItemAsync(cut, "Review", "Edit columns…");
-
-        IRenderedComponent<ViewEditorDrawer> drawer = cut.FindComponent<ViewEditorDrawer>();
-        Assert.True(drawer.Instance.Open);
-        Assert.Equal(BoardId, drawer.Instance.Id);
-        Assert.Equal(ViewEditorSection.Columns, drawer.Instance.Section);
-    }
-
     /// <summary>Plan 12.4.t: hiding a column from the header updates the Board's hidden-count chip.</summary>
     [Fact]
     public async Task Page_Hide_UpdatesTheHiddenCountChip()
@@ -486,9 +451,9 @@ public sealed partial class TaskBoardColumnMenuTests
         cut.WaitForAssertion(() => Assert.Equal("2 tasks in hidden columns", cut.Find(".task-board-hidden-count").TextContent.Trim()));
     }
 
-    /// <summary>DM decision D on the page: hiding a column on a List View shown as a Board changes the effective View, so the toolbar offers <b>Save to View</b>.</summary>
+    /// <summary>DM decision D on the page: hiding a column on a List View shown as a Board changes the effective View, and the page saves that to the View at once (there is no Save button).</summary>
     [Fact]
-    public async Task Page_ListShownAsBoard_Hide_OffersSaveToView()
+    public async Task Page_ListShownAsBoard_Hide_IsSavedToTheView()
     {
         CancellationToken ct = Xunit.TestContext.Current.CancellationToken;
         using TaskToolHarness harness = await TaskToolHarness.CreateAsync(ct);
@@ -500,8 +465,9 @@ public sealed partial class TaskBoardColumnMenuTests
         Assert.Equal(DefaultLabels, cut.FindAll("div.task-board-column-header .task-board-column-label").Select(e => e.TextContent.Trim()));
         await ClickHeaderItemAsync(cut, "Done", "Hide");
 
-        cut.WaitForAssertion(() => Assert.Single(cut.FindAll(".task-toolbar-save")));
-        Assert.Equal(ViewKind.List, harness.Views.Get(ViewStore.AllTasksId)?.Kind);
+        TaskView saved = Assert.IsType<TaskView>(harness.Views.Get(ViewStore.AllTasksId));
+        Assert.Equal(ViewKind.Board, saved.Kind);
+        Assert.True(saved.Columns.Single(column => string.Equals(column.Label, "Done", StringComparison.Ordinal)).Hidden);
     }
 
     /// <summary>12.4.i: a Board grouped by a field but holding no Tasks has no lanes (there is no value to key one by) and still lays out every visible column, rather than failing.</summary>
@@ -642,7 +608,6 @@ public sealed partial class TaskBoardColumnMenuTests
     /// <param name="harness">Supplies every service.</param>
     /// <param name="view">The effective View.</param>
     /// <param name="tasks">The Tasks.</param>
-    /// <param name="onEditColumns">Receives <c>OnEditColumns</c>.</param>
     /// <param name="viewChanged">Receives <c>ViewChanged</c>.</param>
     /// <returns>The rendered root.</returns>
     private static IRenderedComponent<ContainerFragment> RenderBoard(
@@ -650,7 +615,6 @@ public sealed partial class TaskBoardColumnMenuTests
         TaskToolHarness harness,
         TaskView view,
         IReadOnlyList<TaskItem> tasks,
-        Action? onEditColumns = null,
         Action<TaskView>? viewChanged = null)
     {
         harness.AddTo(ctx.Services);
@@ -659,11 +623,6 @@ public sealed partial class TaskBoardColumnMenuTests
             builder.OpenComponent<TaskBoard>(0);
             builder.AddAttribute(1, nameof(TaskBoard.View), view);
             builder.AddAttribute(2, nameof(TaskBoard.Tasks), tasks);
-            if (onEditColumns is not null)
-            {
-                builder.AddAttribute(3, nameof(TaskBoard.OnEditColumns), EventCallback.Factory.Create(onEditColumns, onEditColumns));
-            }
-
             if (viewChanged is not null)
             {
                 builder.AddAttribute(4, nameof(TaskBoard.ViewChanged), EventCallback.Factory.Create(viewChanged, viewChanged));

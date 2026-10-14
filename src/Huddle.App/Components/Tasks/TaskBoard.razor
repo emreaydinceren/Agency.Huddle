@@ -74,7 +74,6 @@
                     <ChildContent>
                         <MudMenuItem OnClick="@(() => this.StartRename(i))">Rename</MudMenuItem>
                         <MudMenuItem OnClick="@(() => this.HideAsync(i))">Hide</MudMenuItem>
-                        <MudMenuItem OnClick="@(() => this.OnEditColumns.InvokeAsync())">Edit columns…</MudMenuItem>
                     </ChildContent>
                 </MudMenu>
                 @if (this.dragging && this.caption is { } text && i != this.draggedColumn)
@@ -163,10 +162,6 @@
     /// <summary>Raised with a card's id when the Human opens it (Spec §13.4, "Clicking a card opens the detail panel").</summary>
     [Parameter]
     public EventCallback<TaskId> OnOpenTask { get; set; }
-
-    /// <summary>Raised by a column header's <i>Edit columns…</i> (Spec §13.4 Columns): the page opens the View editor at its Columns section.</summary>
-    [Parameter]
-    public EventCallback OnEditColumns { get; set; }
 
     /// <summary>Raised with the changed effective View when a column header changes a View that isn't a saved Board - a List View shown as a Board (corrections-B5 D12-13, DM decision D).</summary>
     [Parameter]

@@ -1799,6 +1799,29 @@ a.team-ref,
     border-radius: var(--mud-default-borderradius);
 }
 
+/* The card is the positioning context for its ⋮ menu, which sits outside the open button (it cannot nest in it) but is drawn as the last element of the first row. */
+.task-card {
+    position: relative;
+}
+
+.task-card > .task-actions-menu {
+    position: absolute;
+    top: 0.25rem;
+    right: 0.25rem;
+}
+
+.task-card-title {
+    font-weight: 600;
+}
+
+/* Row 4: the assignee, under a horizontal rule across the card's width. */
+.task-card-assignee-row {
+    align-self: stretch;
+    margin-top: 0.25rem;
+    padding-top: 0.5rem;
+    border-top: 1px solid var(--mud-palette-lines-default);
+}
+
 /* The open button holds every field of the card; they stack top to bottom, left-aligned, rather
    than flowing in a row that squeezes the title into a narrow column. */
 .task-card-open {
@@ -2266,19 +2289,102 @@ a.team-ref,
     overflow-wrap: anywhere;
 }
 
-/* The toolbar's Blocked segmented control. HuddleSegmentedControl's indicator assumes equal-width segments, but MudToolBar is a flex row that would shrink the control until its longest label ("Unblocked") overflows its segment, so the control keeps its width and every segment gets the same floor. */
-.task-toolbar-blocked,
+/* The toolbar's List | Kanban control is a segmented control; HuddleSegmentedControl's indicator assumes equal-width segments, but MudToolBar is a flex row that would shrink it, so it keeps its width. */
 .task-toolbar-kind {
     flex: none;
 }
 
-.task-toolbar-blocked .mud-toggle-item {
-    min-width: 5.5rem;
+/* The List | Kanban control has two short, equal-width segments, so the same equal-segment floor is smaller. */
+.task-toolbar-kind .mud-toggle-item {
+    min-width: 5rem;
 }
 
-/* The List | Board control has two short, equal-width segments, so the same equal-segment floor is smaller. */
-.task-toolbar-kind .mud-toggle-item {
-    min-width: 4.5rem;
+.task-toolbar-header {
+    gap: 0.5rem;
+}
+
+/* A Task's assignee (TaskAssignee): the avatar, then the name, with room between so the monogram does not run into the name. */
+.task-assignee {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+/* The header row's counts ("14 open  3 need you  52 all"): quiet text, the numbers in the body weight, "need you" in the warning colour. */
+.tasks-counts {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.25rem 1rem;
+    color: var(--mud-palette-text-secondary);
+}
+
+.tasks-counts strong {
+    color: var(--mud-palette-text-primary);
+}
+
+.tasks-count-need-you strong {
+    color: var(--mud-palette-warning-darken, var(--mud-palette-warning));
+}
+
+/* The toolbar's search box takes the segmented controls' track colour, so the row reads as one set of controls. */
+.task-toolbar-search .mud-input-outlined {
+    background-color: var(--mud-palette-background-gray);
+    border-radius: var(--mud-default-borderradius);
+}
+
+/* The second row's quick filters (wireframe): the Filter icon menu, then pill chips - dashed while a filter is unset, filled with a clear button once set. */
+.task-toolbar-filter {
+    flex: none;
+    color: var(--mud-palette-text-secondary);
+}
+
+.task-filter-chip {
+    display: inline-flex;
+    align-items: center;
+    flex: none;
+    margin-right: 0.5rem;
+    border: 1px solid var(--mud-palette-lines-inputs);
+    border-radius: 999px;
+}
+
+.task-filter-chip-unset {
+    border-style: dashed;
+}
+
+.task-filter-chip-set {
+    border-color: var(--mud-palette-primary);
+    background: var(--mud-palette-primary-hover);
+}
+
+.task-filter-chip .task-filter-chip-button {
+    border: 0;
+    border-radius: 999px;
+    text-transform: none;
+}
+
+.task-toolbar-filter-state-group .mud-list-item-text {
+    font-weight: 600;
+}
+
+.task-toolbar-filter-state-option {
+    padding-left: 2rem;
+}
+
+/* The Status menu's two levels: a group (Open, Closed) in the heavier weight, its statuses indented beneath it. */
+.mud-menu-item.task-status-group .mud-menu-item-text {
+    font-weight: 600;
+}
+
+.mud-menu-item.task-status-sub {
+    padding-left: 2rem;
+}
+
+.task-filter-chip .task-filter-chip-value {
+    margin-left: 0.25rem;
+}
+
+.task-filter-chip .task-filter-chip-clear {
+    margin-right: 0.125rem;
 }
 
 /* A Library document's rendered Markdown. The global reset zeroes block margins, so without these the paragraphs of a Teammate definition run together. */
@@ -2443,8 +2549,67 @@ a.team-ref,
     white-space: nowrap;
 }
 
+/* The List's columns are resizable by task-list-resize.js: dragging the border after a column trades width between that
+   column and the one beside it, so the table keeps its width. Until then the table fills its container (min-width),
+   every column but Title has a default width (8rem; ID and the last column are narrower) that is wider than its content,
+   so each border has room to move - a column cannot be dragged below its content, and tight columns would leave a border
+   nothing to trade - and Title, the one flexible column, takes whatever is left. */
+.task-list-grid table {
+    min-width: 100%;
+}
+
+.task-list-grid thead th {
+    position: relative;
+}
+
+.task-col-resizer {
+    position: absolute;
+    top: 0;
+    right: 0;
+    bottom: 0;
+    width: 8px;
+    cursor: col-resize;
+    touch-action: none;
+    user-select: none;
+}
+
+.task-col-resizer::after {
+    content: "";
+    position: absolute;
+    top: 25%;
+    bottom: 25%;
+    right: 3px;
+    width: 1px;
+    background: var(--mud-palette-lines-default);
+}
+
+.task-col-resizer:hover::after,
+.task-col-resizer.active::after {
+    right: 2px;
+    width: 3px;
+    border-radius: var(--mud-default-borderradius);
+    background: var(--mud-palette-primary);
+}
+
+.task-list-grid thead th {
+    width: 8rem;
+    white-space: nowrap;
+}
+
+.task-list-grid thead th.task-list-id-cell {
+    width: 6.5rem;
+}
+
+.task-list-grid thead th:last-child {
+    width: 3rem;
+}
+
+.task-list-grid thead th.task-list-title-header {
+    width: auto;
+}
+
 .task-list-title-cell {
-    width: 100%;
+    width: auto;
     min-width: 12rem;
     max-width: 0;
     overflow: hidden;

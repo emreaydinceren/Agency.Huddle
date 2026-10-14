@@ -183,7 +183,6 @@ public sealed class TeamTasksTabTests
         Assert.Equal("Search tasks", rig.Tab.Find(SearchInput).GetAttribute("placeholder"));
         _ = rig.Tab.FindComponent<TaskToolbar>();
         Assert.NotEmpty(rig.Tab.FindAll(".task-toolbar-kind"));
-        Assert.NotEmpty(rig.Tab.FindAll(".task-toolbar-blocked"));
         Assert.NotEmpty(rig.Tab.FindAll(".task-toolbar-filter"));
         Assert.NotEmpty(rig.Tab.FindAll(".task-toolbar-group-sort"));
     }

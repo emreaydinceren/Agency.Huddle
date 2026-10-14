@@ -12,20 +12,19 @@ namespace Agency.Huddle.Tests.Ui;
 /// </summary>
 public sealed class AppearanceRenderingTests
 {
-    // The exact CSS custom property MudThemeProvider.GenerateTheme emits for Palette.Primary, in
-    // MudColor's default (rgba) string form - see ThemeCatalogTests for the same value read back
-    // through the C# API instead. Present in the response only when the "Huddle Light" theme's
-    // palette actually rendered. #007c85: HuddleTheme.Light's own remarks walk through why this is a
-    // darkened cyan rather than the requested #00b7c3 verbatim.
-    private const string LightPrimaryVariable = "--mud-palette-primary: rgba(0,124,133,1);";
+    // The exact CSS custom property MudThemeProvider.GenerateTheme emits for Palette.Background, in
+    // MudColor's default (rgba) string form. Present in the response only when the "Huddle Light"
+    // theme's palette actually rendered. (Primary can no longer tell the two Huddle themes apart:
+    // both use the brand accent #6e78da, so the neutral ground is what differs.) The constant keeps
+    // its historical name.
+    private const string LightPrimaryVariable = "--mud-palette-background: rgba(242,240,237,1);";
 
     // The counterpart for "Huddle Dark", present only when IsDarkMode resolved to true before the
-    // response was written.
-    // #c07bc3. The dark palette used to DARKEN the brand purple to #5e2b60, which measured 1.63:1
-    // against the dark ground - so MudBlazor's Primary-tinted active nav link was effectively
-    // unreadable. ThemeCatalogTests now pins the contrast ratio itself; this constant only has to
-    // follow the value. Kept as the literal rendered rgba because that is what reaches the browser.
-    private const string DarkPrimaryVariable = "--mud-palette-primary: rgba(192,123,195,1);";
+    // response was written. Kept as the literal rendered rgba because that is what reaches the browser.
+    private const string DarkPrimaryVariable = "--mud-palette-background: rgba(28,28,27,1);";
+
+    // The brand Primary both Huddle themes - and so the Custom Accent placeholder - carry.
+    private const string BrandPrimaryVariable = "--mud-palette-primary: rgba(110,120,218,1);";
 
     // Solarized Dark's own editor.background, #002b36. Asserted rather than its Primary because
     // Solarized Dark takes Primary from VS Code's textLink.foreground registry default, which other
@@ -133,7 +132,7 @@ public sealed class AppearanceRenderingTests
         var html = await client.GetStringAsync("/", ct);
 
         Assert.Contains("--mud-palette-primary:", html, StringComparison.Ordinal);
-        Assert.DoesNotContain(LightPrimaryVariable, html, StringComparison.Ordinal);
+        Assert.DoesNotContain(BrandPrimaryVariable, html, StringComparison.Ordinal);
     }
 
     /// <summary>Selecting "Custom Accent Light" with no colour chosen yet renders the placeholder - plain Huddle Light's own Primary - rather than an error or a blank palette.</summary>
@@ -149,6 +148,6 @@ public sealed class AppearanceRenderingTests
 
         var html = await client.GetStringAsync("/", ct);
 
-        Assert.Contains(LightPrimaryVariable, html, StringComparison.Ordinal);
+        Assert.Contains(BrandPrimaryVariable, html, StringComparison.Ordinal);
     }
 }

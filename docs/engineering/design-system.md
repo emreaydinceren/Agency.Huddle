@@ -113,7 +113,7 @@ tests cover palettes, not tinted states; see [Known gaps](#known-gaps).
 **The shipped palettes.** Huddle Light and Huddle Dark are authored in
 [`HuddleTheme.cs`](../../src/Huddle.App/Themes/HuddleTheme.cs). Their neutrals are warm,
 low-contrast greys and near-neutral charcoals sampled from the Claude desktop app.
-`Primary` is a teal in light (`#007c85`) and a mauve in dark (`#c07bc3`). The catalog
+`Primary` is the same indigo (`#6e78da`) in light and dark. The catalog
 also holds an accent pair whose `Primary` the Human picks, and 17 palettes converted from
 VS Code ([ADR-0016](../adr/0016-vs-codes-bundled-themes-are-converted-once-not-imported.md)).
 All 21 sit in three picker groups: Light, Dark and High Contrast.
