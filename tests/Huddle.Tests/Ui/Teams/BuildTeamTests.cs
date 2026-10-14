@@ -7,6 +7,7 @@ using Microsoft.Extensions.Logging.Abstractions;
 using Agency.Huddle.App;
 using Agency.Huddle.App.Acp;
 using Agency.Huddle.App.Components.Pages;
+using Agency.Huddle.App.Avatars;
 using Agency.Huddle.App.HiringPool;
 using Agency.Huddle.App.TeamTypes;
 using Agency.Huddle.App.Teams;
@@ -371,6 +372,30 @@ public sealed class BuildTeamTests
         Assert.DoesNotContain(fixture.Personas.Entries, entry => string.Equals(entry.Title, "Bookkeeper", StringComparison.Ordinal));
     }
 
+    /// <summary>A role with suggested avatars draws one of them; a role without draws from the whole library; the draft shows the image, and Re-roll draws again.</summary>
+    [Fact]
+    public async Task Hire_AddingARole_DrawsALibraryAvatar()
+    {
+        using Fixture fixture = new(typeCount: 3);
+        await using MudBunitContext ctx = fixture.NewContext();
+        ctx.Services.GetRequiredService<NavigationManager>().NavigateTo("/teams/build?type=blank");
+        IRenderedComponent<ContainerFragment> cut = Render(ctx);
+        await cut.InvokeAsync(() => cut.Find(".build-team-name input").InputAsync("Garden"));
+
+        await cut.InvokeAsync(() => cut.Find("[aria-label='Add Bookkeeper']").ClickAsync());
+        await cut.InvokeAsync(() => cut.Find("[aria-label='Add Tutor']").ClickAsync());
+
+        Assert.Equal("book-1.png", fixture.Library.Reads[0]);
+        Assert.Matches(@"^lib-[123]\.png$", fixture.Library.Reads[1]);
+        IReadOnlyList<IElement> images = cut.FindAll(".roster-avatar img");
+        Assert.Equal(2, images.Count);
+        Assert.Equal("data:image/png;base64,AQID", images[0].GetAttribute("src"));
+
+        await cut.InvokeAsync(() => cut.FindAll(".roster-reroll")[1].ClickAsync());
+
+        Assert.Equal(3, fixture.Library.Reads.Count);
+    }
+
     /// <summary>Re-roll gives the draft another Name, and Remove takes it off the roster.</summary>
     [Fact]
     public async Task Hire_RerollAndRemove_ChangeTheDraft()
@@ -497,6 +522,25 @@ public sealed class BuildTeamTests
         });
     }
 
+    /// <summary>A library of three images whose reads are recorded, so a test can tell which file a draft drew.</summary>
+    private sealed class RecordingLibrary : IAvatarLibraryLoader
+    {
+        public List<string> Reads { get; } = [];
+
+        public Task<AvatarLibraryLoadResult> LoadAsync(CancellationToken cancellationToken)
+        {
+            string[] files = ["lib-1.png", "lib-2.png", "lib-3.png"];
+            AvatarCatalog catalog = new(files.Select(static file => new LibraryAvatar(file, "Chef", "fair", "man", [])));
+            return Task.FromResult(new AvatarLibraryLoadResult(catalog, 0, false));
+        }
+
+        public Task<AvatarLibraryImage?> ReadImageAsync(string fileName, CancellationToken cancellationToken)
+        {
+            this.Reads.Add(fileName);
+            return Task.FromResult<AvatarLibraryImage?>(new AvatarLibraryImage([1, 2, 3], ".png"));
+        }
+    }
+
     /// <summary>Real stores behind the page: <c>typeCount</c> team types named "Type 01", "Type 02", … with a manager and two other roles each; Type 02 needs a project folder.</summary>
     private sealed class Fixture : IDisposable
     {
@@ -520,7 +564,7 @@ public sealed class BuildTeamTests
             this.Roles = new CustomRoleStore(this.dir.Options());
             this.Pool = new HiringPoolCatalog(this.dir.Options(), NullLogger<HiringPoolCatalog>.Instance, new Dictionary<string, string>(StringComparer.Ordinal)
             {
-                ["hiringpool.json"] = """{ "schemaVersion": 1, "jobs": [ { "id": "tutor", "title": "Tutor", "description": "Teaches." }, { "id": "bookkeeper", "title": "Bookkeeper", "description": "Keeps the books." } ] }""",
+                ["hiringpool.json"] = """{ "schemaVersion": 1, "jobs": [ { "id": "tutor", "title": "Tutor", "description": "Teaches." }, { "id": "bookkeeper", "title": "Bookkeeper", "description": "Keeps the books.", "avatars": [ "book-1.png" ] } ] }""",
                 ["personas/tutor.md"] = "---\ntitle: Tutor\nconsult_when: asked\n---\nYou teach.",
                 ["personas/bookkeeper.md"] = "---\ntitle: Bookkeeper\nconsult_when: receipts\n---\nYou keep books.",
             });
@@ -539,6 +583,8 @@ public sealed class BuildTeamTests
 
         public HiringPoolCatalog Pool { get; }
 
+        public RecordingLibrary Library { get; } = new();
+
         public MudBunitContext NewContext()
         {
             MudBunitContext ctx = new();
@@ -548,6 +594,7 @@ public sealed class BuildTeamTests
             ctx.Services.AddSingleton(this.dir.Options());
             ctx.Services.AddSingleton(this.Roles);
             ctx.Services.AddSingleton(this.Pool);
+            ctx.Services.AddSingleton<IAvatarLibraryLoader>(this.Library);
             return ctx;
         }
 

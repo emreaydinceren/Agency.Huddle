@@ -696,7 +696,8 @@ roles*) it shows the same two scrolling rows of cards: a blank card with a large
 first, then the roles the chosen team type already defines (each with a green
 **Suggested** chip), then your own roles, then the rest of the hiring pool. **Add** on a
 role card puts a new Teammate for that role on the **Draft roster** below, with a name
-and an avatar colour drawn for it, and the card gets a small green check to show the
+and an avatar drawn for it (a picture from the avatar library, one of those the
+role suggests when it has any), and the card gets a small green check to show the
 role is taken care of; add a role again for a second Teammate. Each draft card has **Re-roll**
 (another name and avatar), **Edit** (the Teammate card, saved with **Save draft**; it changes only the
 draft) and **Remove**, and the team type's manager role carries a **Manager** badge. A

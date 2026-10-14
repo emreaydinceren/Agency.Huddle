@@ -18,6 +18,7 @@
 @inject IOptions<TeamOptions> Options
 @inject HiringPoolCatalog Pool
 @inject CustomRoleStore CustomRoles
+@inject IAvatarLibraryLoader AvatarLibrary
 @implements IDisposable
 
 @*
@@ -104,16 +105,16 @@
                 </button>
                 @foreach (PoolJob job in this.Pool.Jobs.Where(job => this.IsSuggested(job.Id)))
                 {
-                    <RoleCard @key="job.Id" RoleId="@job.Id" Title="@job.Title" Description="@job.Description" Suggested="true" Taken="@this.OnRoster(job.Id)" OnAdd="this.AddRole" />
+                    <RoleCard @key="job.Id" RoleId="@job.Id" Title="@job.Title" Description="@job.Description" Suggested="true" Taken="@this.OnRoster(job.Id)" OnAdd="this.AddDraftAsync" />
                 }
                 @foreach (CustomRole role in this.CustomRoles.Roles)
                 {
                     <RoleCard @key="role.Id" RoleId="@role.Id" Title="@role.Title" Description="@role.Description" Custom="true" Taken="@this.OnRoster(role.Id)"
-                              OnAdd="this.AddRole" OnEdit="this.EditRoleAsync" OnDelete="this.DeleteRoleAsync" />
+                              OnAdd="this.AddDraftAsync" OnEdit="this.EditRoleAsync" OnDelete="this.DeleteRoleAsync" />
                 }
                 @foreach (PoolJob job in this.Pool.Jobs.Where(job => !this.IsSuggested(job.Id)))
                 {
-                    <RoleCard @key="job.Id" RoleId="@job.Id" Title="@job.Title" Description="@job.Description" Taken="@this.OnRoster(job.Id)" OnAdd="this.AddRole" />
+                    <RoleCard @key="job.Id" RoleId="@job.Id" Title="@job.Title" Description="@job.Description" Taken="@this.OnRoster(job.Id)" OnAdd="this.AddDraftAsync" />
                 }
             </div>
 
@@ -129,7 +130,7 @@
                         {
                             <div @key="draft.Key" class="@(draft.Manager ? "roster-card roster-card-manager" : "roster-card")" role="listitem">
                                 <div class="roster-card-head">
-                                    <span class="roster-avatar-ring" aria-hidden="true"><TeammateAvatar Name="@draft.Name" Avatar="@draft.Avatar" Class="roster-avatar" /></span>
+                                    <span class="roster-avatar-ring" aria-hidden="true"><TeammateAvatar Name="@draft.Name" Avatar="@draft.Avatar" PendingImage="@draft.Image" PendingImageExtension="@draft.ImageExtension" Class="roster-avatar" /></span>
                                     <span class="roster-card-who">
                                         <span class="roster-name">@draft.Name</span>
                                         <span class="roster-title">@draft.Title</span>
@@ -142,7 +143,7 @@
                                 <span class="roster-description">@draft.Description</span>
                                 <span class="@($"roster-tier roster-tier-{draft.Tier.ToString().ToLowerInvariant()}")">@draft.Tier.ToString().ToLowerInvariant()</span>
                                 <div class="roster-actions">
-                                    <MudButton Variant="Variant.Outlined" Size="Size.Small" StartIcon="@Icons.Material.Outlined.Casino" OnClick="@(() => this.RerollDraft(draft.Key))"
+                                    <MudButton Variant="Variant.Outlined" Size="Size.Small" StartIcon="@Icons.Material.Outlined.Casino" OnClick="@(() => this.RerollDraftAsync(draft.Key))"
                                                aria-label="@($"Re-roll {draft.Name}")" Class="roster-reroll">Re-roll</MudButton>
                                     <MudButton Variant="Variant.Text" Size="Size.Small" StartIcon="@Icons.Material.Outlined.Edit" OnClick="@(() => this.EditDraftAsync(draft.Key))"
                                                aria-label="@($"Edit {draft.Name}")" Class="roster-edit">Edit</MudButton>
@@ -353,11 +354,46 @@
     /// <param name="Name">The Teammate's Name.</param>
     /// <param name="Text">The persona text the Teammate is hired with.</param>
     /// <param name="NameChoices">The names the role suggests, tried before the shared pool when re-rolling.</param>
-    /// <param name="Avatar">The avatar drawn with the Name: a random background colour, the way a new Teammate card draws one.</param>
-    private sealed record DraftMember(string Key, string RoleId, string Title, string Description, ModelTier Tier, bool Manager, string Name, string Text, IReadOnlyList<string> NameChoices, Avatar Avatar);
+    /// <param name="Avatar">The colour avatar drawn with the Name; it shows its initials until, or unless, a library image is drawn.</param>
+    /// <param name="AvatarChoices">The avatar library files that suit the role, best first; empty to draw from the whole library.</param>
+    /// <param name="AvatarFile">The library file drawn, or <see langword="null"/> when the library gave none.</param>
+    /// <param name="Image">The bytes of the drawn library image, or <see langword="null"/>.</param>
+    /// <param name="ImageExtension">The extension, with its dot, of <paramref name="Image"/>.</param>
+    private sealed record DraftMember(string Key, string RoleId, string Title, string Description, ModelTier Tier, bool Manager, string Name, string Text, IReadOnlyList<string> NameChoices, Avatar Avatar, IReadOnlyList<string> AvatarChoices, string? AvatarFile, byte[]? Image, string? ImageExtension);
 
     /// <summary>An avatar with a random background colour, drawn together with a Name; the initials show on it until the Teammate gets an image.</summary>
     private static Avatar RandomAvatar() => Avatar.None with { Background = AvatarPalette.Pick(Random.Shared) };
+
+    private IReadOnlyList<string>? libraryFiles;
+
+    /// <summary>Draws a library avatar at random: from the role's own suggestions when it has some, otherwise from the whole library, never the one showing now when another exists. Gives nothing when the library is missing or unreadable.</summary>
+    /// <param name="choices">The role's suggested library files.</param>
+    /// <param name="current">The library file showing now, or <see langword="null"/>.</param>
+    private async Task<(string? File, byte[]? Bytes, string? Extension)> DrawLibraryAvatarAsync(IReadOnlyList<string> choices, string? current)
+    {
+        IReadOnlyList<string> files = choices;
+        if (files.Count == 0)
+        {
+            if (this.libraryFiles is null)
+            {
+                AvatarLibraryLoadResult loaded = await this.AvatarLibrary.LoadAsync(CancellationToken.None);
+                this.libraryFiles = loaded.Catalog is null ? [] : [.. loaded.Catalog.All.Select(static avatar => avatar.File)];
+            }
+
+            files = this.libraryFiles;
+        }
+
+        string[] others = [.. files.Where(file => !string.Equals(file, current, StringComparison.Ordinal))];
+        string[] pool = others.Length > 0 ? others : [.. files];
+        if (pool.Length == 0)
+        {
+            return (null, null, null);
+        }
+
+        string chosen = pool[Random.Shared.Next(pool.Length)];
+        AvatarLibraryImage? image = await this.AvatarLibrary.ReadImageAsync(chosen, CancellationToken.None);
+        return image is null ? (null, null, null) : (chosen, image.Bytes, image.Extension);
+    }
 
     /// <summary>Whether the draft roster has a Teammate added from the role.</summary>
     /// <param name="roleId">The role's id.</param>
@@ -381,17 +417,19 @@
 
     /// <summary>Adds a Teammate for the role to the draft roster, with a free Name.</summary>
     /// <param name="roleId">The pressed card's role id: a pool job's, or a custom role's.</param>
-    private void AddRole(string roleId)
+    private async Task AddDraftAsync(string roleId)
     {
         DraftMember? draft = null;
         if (this.CustomRoles.Find(roleId) is { } custom)
         {
-            draft = new DraftMember(Guid.NewGuid().ToString("N"), custom.Id, custom.Title, custom.Description, custom.Tier, false, this.FreeName([], null), custom.Instructions, [], RandomAvatar());
+            draft = new DraftMember(Guid.NewGuid().ToString("N"), custom.Id, custom.Title, custom.Description, custom.Tier, false, this.FreeName([], null), custom.Instructions, [], RandomAvatar(), [], null, null, null);
+            draft = await this.WithLibraryAvatarAsync(draft);
         }
         else if (this.Pool.FindJob(roleId) is { } job)
         {
             string text = this.Pool.ReadPersona(job.Id)?.Stance ?? job.Description;
-            draft = new DraftMember(Guid.NewGuid().ToString("N"), job.Id, job.Title, job.Description, job.Model.Tier, this.IsManagerRole(job.Id), this.FreeName(job.SuggestedNames, null), text, job.SuggestedNames, RandomAvatar());
+            draft = new DraftMember(Guid.NewGuid().ToString("N"), job.Id, job.Title, job.Description, job.Model.Tier, this.IsManagerRole(job.Id), this.FreeName(job.SuggestedNames, null), text, job.SuggestedNames, RandomAvatar(), job.Avatars, null, null, null);
+            draft = await this.WithLibraryAvatarAsync(draft);
         }
 
         if (draft is not null)
@@ -400,14 +438,30 @@
         }
     }
 
-    /// <summary>Gives the draft another free Name.</summary>
+    /// <summary>The draft with a library avatar drawn for it.</summary>
+    /// <param name="draft">The draft.</param>
+    private async Task<DraftMember> WithLibraryAvatarAsync(DraftMember draft)
+    {
+        (string? file, byte[]? bytes, string? extension) = await this.DrawLibraryAvatarAsync(draft.AvatarChoices, draft.AvatarFile);
+        return draft with { AvatarFile = file, Image = bytes, ImageExtension = extension };
+    }
+
+    /// <summary>Gives the draft another free Name and another avatar.</summary>
     /// <param name="key">The draft's key.</param>
-    private void RerollDraft(string key)
+    private async Task RerollDraftAsync(string key)
     {
         int index = this.drafts.FindIndex(draft => string.Equals(draft.Key, key, StringComparison.Ordinal));
+        if (index < 0)
+        {
+            return;
+        }
+
+        DraftMember rerolled = this.drafts[index] with { Name = this.FreeName(this.drafts[index].NameChoices, this.drafts[index].Name), Avatar = RandomAvatar() };
+        rerolled = await this.WithLibraryAvatarAsync(rerolled);
+        index = this.drafts.FindIndex(draft => string.Equals(draft.Key, key, StringComparison.Ordinal));
         if (index >= 0)
         {
-            this.drafts[index] = this.drafts[index] with { Name = this.FreeName(this.drafts[index].NameChoices, this.drafts[index].Name), Avatar = RandomAvatar() };
+            this.drafts[index] = rerolled;
         }
     }
 
