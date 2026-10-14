@@ -533,7 +533,7 @@ Record each Room's ID from the address bar.
 
 | Goal | Steps |
 | --- | --- |
-| Team with no members | Select **New team** at the bottom of the **Teams** group, type the name, select **Create** |
+| Team with no members | Create the folder `<data>\Teams\<name>` and reload the page |
 | Project with no files | Open `⋯` on the Team row in the sidebar, select **New project**, type the name, select **Create** |
 
 ### Set Model and Effort (only if the scenario needs them)

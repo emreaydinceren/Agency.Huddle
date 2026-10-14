@@ -2672,44 +2672,6 @@ a.team-ref,
 
 /* ---- Team setup ------------------------------------------------------------------------------- */
 
-/* Team setup (/teams/new, /teams/{Team}/setup): the hiring pool on the left, the Team being built on the
-   right, the Process step under them and a footer that keeps the team check and Start Team in view. */
-.team-setup {
-    display: flex;
-    flex-direction: column;
-    gap: 1.5rem;
-}
-
-.team-setup-header {
-    display: flex;
-    flex-wrap: wrap;
-    align-items: baseline;
-    justify-content: space-between;
-    gap: 0.5rem 1rem;
-}
-
-.team-setup-manager-line {
-    display: flex;
-    align-items: baseline;
-    gap: 0.5rem;
-}
-
-.team-setup-manager-label {
-    color: var(--mud-palette-text-secondary);
-}
-
-.team-setup-manager {
-    font-weight: 600;
-}
-
-.team-setup-manager-card {
-    display: flex;
-    flex-direction: column;
-    align-items: flex-start;
-    gap: 0.5rem;
-    padding: 1rem;
-}
-
 .hiring-pool {
     display: grid;
     grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
@@ -2872,26 +2834,6 @@ a.team-ref,
 .process-step-preview {
     margin: 0.5rem 0 0;
     padding: 0.75rem;
-}
-
-.team-setup-footer {
-    position: sticky;
-    bottom: 0;
-    z-index: 1;
-    display: flex;
-    flex-wrap: wrap;
-    align-items: center;
-    justify-content: space-between;
-    gap: 0.75rem 1.5rem;
-    padding: 0.75rem 1rem;
-    background: var(--mud-palette-surface);
-    border: 1px solid var(--mud-palette-divider);
-    border-radius: var(--mud-default-borderradius);
-}
-
-.team-setup-footer-status {
-    flex: 1 1 20rem;
-    min-width: 0;
 }
 
 .team-check-bar > .mud-stack {
@@ -3204,9 +3146,6 @@ a.team-ref,
         overflow-wrap: anywhere;
     }
 
-    .team-setup-footer {
-        position: static;
-    }
 }
 
 /* ---- Needs You: the sidebar card of Rooms waiting on the Human ---------------------------------

@@ -609,7 +609,7 @@ depends on the Room scope that §3 defers.
 | --- | --- | --- |
 | Team | `div.hover-reveal-row` holding a chevron `MudIconButton` (expand/collapse, `aria-expanded`), a `MudNavLink Href="/teams/{team}" Match="NavLinkMatch.Prefix" Class="hover-reveal-link"`, and a `MudMenu Class="hover-reveal-menu"` with **New project** | Clicking the name navigates. The chevron toggles the Projects. Right-click opens the same menu (`RoomList.razor` pattern). A Team with no members shows a muted `MudText` *No members* after its name |
 | Project | `MudNavLink Href="/teams/{team}/projects/{project}" Class="nav-project-link"`, indented one level | Navigates |
-| Action | `MudNavLink Icon="@Icons.Material.Filled.Add" IconColor="Color.Primary" Class="nav-action-link"` **New team** | Opens `NewTeamDialog` |
+| Action | `NavTabLink Href="/teams/build" Icon="@Icons.Material.Filled.Add" IconColor="Color.Primary" Class="nav-action-link"` **Build a team** | Opens the Build a team page (the sidebar's *New team* and *New team from a type* links were removed) |
 
 **Why not a nested `MudNavGroup` per Team?** A `MudNavGroup` title toggles the group and has no
 `Href`, but the design needs the Team name to navigate. A link plus a separate chevron gives both,
@@ -624,10 +624,9 @@ is never hidden; the chevron collapses it again after the next navigation.
 **Creation.** `TeamsNav` creates through `ITeamFolders` (`Agency.Huddle.App.Library`), which
 `TeamFolderProvisioner` implements. It never touches the disk itself.
 
-- *New team* opens `NewTeamDialog` in Team mode. On OK it calls `ITeamFolders.EnsureTeam(name)`,
-  which validates with `TeamNames.ValidateTeamName`, refuses a name that already exists on disk
-  ignoring case, and creates `Teams/<name>/`. It then navigates to `/teams/<name>`. The Team has
-  no members yet (T9), which is expected, not an error.
+- *Build a team* is a page, not a dialog; see the Build a team figure in `wireframes.md`. The
+  sidebar no longer has a *New team* action; `ITeamFolders.EnsureTeam(name)` remains for the
+  Library and for tests.
 - *New project* opens the same dialog in Project mode and calls
   `ITeamFolders.EnsureProjectIn(team, name)`. That validates with `TeamNames.ValidateProjectName`,
   creates the Team folder first when the Team exists only as a Persona label, then calls the

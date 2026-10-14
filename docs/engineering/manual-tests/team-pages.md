@@ -5,7 +5,7 @@ with the right actions, that Members, Files and Tasks tabs navigate and function
 creating Teams and Projects works with the right validation, and — the one case this page exists
 to answer — whether a file in a Team's shared Memory surfaces in another member's next Turn.
 
-**17 tests** · 17 free, 0 paid · about 0.6 hours (plus about 15 minutes to build the fixture in Setup) · **none of them has been run yet.** This page documents what to
+**16 tests** · 16 free, 0 paid · about 0.6 hours (plus about 15 minutes to build the fixture in Setup) · **none of them has been run yet.** This page documents what to
 run, not a result — see [Known limits](../known-limits.md) for what that leaves unverified today.
 TP-T13 was removed: no free oracle can read a Persona's system prompt (see Setup).
 
@@ -41,9 +41,12 @@ removes Ada, and later tests rely on both.
 5. On Business → **Files** click `New note` and name it `brief-notes`.
 
 Confirm the sidebar **Teams** group sits between the Rooms list and the main menu, is labelled
-`Teams`, and shows the Groups icon on its header; the `+` icons belong to the two links at the
-bottom of the group, **New team** and **New team from a type** (`TeamsNav.razor:28,76,77`). Click
-only **New team** where a test says so.
+`Teams`, and shows the Groups icon on its header; the `+` icon belongs to the link at the
+bottom of the group, which is **Build a team** (`TeamsNav.razor`).
+
+**Why TP-T9 is gone.** It created a Team from the sidebar's **New team** link, which was removed
+together with **New team from a type**; a Team is now made with **Build a team**, which has its own
+tests. The Team a fixture needs can be made by creating its folder under `<data>\Teams`.
 
 **Why TP-T13 is gone.** It asked whether a Persona on an Adapter with `ReadsFiles=false` gets no
 Team Memory block in its system prompt. Nothing in the UI shows a system prompt, and the mock
@@ -290,32 +293,6 @@ defaults the Team and Project correctly.*
 
 - The Board shows Tasks from other Projects or is empty.
 - The Team or Project field is not pre-filled or is incorrect.
-
-### TP-T9 — Create new Team from sidebar
-
-**Free** · about 2 min
-
-*Proves the New team action in the sidebar opens a dialog, creates a Team folder, lists the Team,
-and opens its Members page.*
-
-**Steps**
-
-1. In the sidebar Teams group, click the `New team` link (the one with the `+` icon; not `New team from a type`).
-2. In the dialog (titled "New team"), type `Research` in the **Team name** field.
-3. Click `Create`.
-
-**Pass if**
-
-- The dialog accepts the Team name.
-- A folder `<data>\Teams\Research\` is created.
-- The Team appears in the sidebar Teams list.
-- The Research Team's Members page opens showing "No members yet." and an `Add member` button.
-
-**Fail if**
-
-- The dialog fails or the name is rejected.
-- The folder is not created.
-- The Team does not appear in the sidebar.
 
 ### TP-T10 — Create new Project from Team actions menu
 

@@ -12,7 +12,7 @@ Run [`P-BUILD`](common.md#p-build) then [`P-LAUNCH-UAT`](common.md#p-launch-uat)
 
 1. Wait until **Ada** and **Bo** are both **Online** on `/teammates`. Both are in no Team yet.
 2. Open Ada's and Bo's root one-to-ones under **Chats** once, send `hello` in each, and note each Room's id: the 32 hexadecimal characters after `/rooms/` in the address bar. In `T-B` set `$data = 'C:\seeds\huddle\uat\data'`, and `$ada = '<Ada's room id>'`, `$bo = '<Bo's room id>'`.
-3. Create the Team **Marketing**: in the sidebar's **Teams** group select **New team**, type `Marketing`, and select **Create**. It has no members, so it has no Team Room yet, and that is expected.
+3. Create the Team **Marketing** by making the folder `<data>\Teams\Marketing` and reloading the page. It has no members, so it has no Team Room yet, and that is expected.
 4. On **Marketing**'s **Members** tab select **Add member** and add **Ada**, then accept the restart warning. Wait until Ada is **Online** again. Then add **Bo** the same way. The Team Room appears within a few seconds of each add; if it does not, reload the page once.
 5. The area's tests share this fixture and run in order. TEAMCHATS-02 adds a third Teammate, and TEAMCHATS-07 renames the folder, so leave the fixture as it is when a test says so.
 

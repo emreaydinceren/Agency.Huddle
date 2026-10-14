@@ -76,8 +76,7 @@ public sealed class TabPageRoutesTests
     [InlineData("/tasks", "Tasks")]
     [InlineData("/tasks/new", "Tasks")]
     [InlineData("/tasks/item/12", "Tasks")]
-    [InlineData("/teams/new", "TeamSetup")]
-    [InlineData("/teams/Design/setup", "TeamSetup")]
+    [InlineData("/teams/build", "BuildTeam")]
     [InlineData("/teams/Design", "TeamPage")]
     [InlineData("/teams/Design/projects/Site/overview", "TeamPage")]
     public void Resolve_TheAppsOwnPages_FindTheirComponent(string url, string component)

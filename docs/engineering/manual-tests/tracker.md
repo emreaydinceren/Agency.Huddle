@@ -1020,7 +1020,6 @@ Teams: Sidebar, Members, Files, Tasks and Shared Memory — [area file](team-pag
 | [TP-T6](team-pages.md#tp-t6--open-project-page-scoped-to-project-folder) |  | Active | |  |
 | [TP-T7](team-pages.md#tp-t7--open-tasks-tab-on-team-and-create-new-task) |  | Active | |  |
 | [TP-T8](team-pages.md#tp-t8--open-tasks-tab-on-project-and-create-new-task) |  | Active | |  |
-| [TP-T9](team-pages.md#tp-t9--create-new-team-from-sidebar) |  | Active | |  |
 | [TP-T10](team-pages.md#tp-t10--create-new-project-from-team-actions-menu) |  | Active | |  |
 | [TP-T11](team-pages.md#tp-t11--refuse-project-name-memory) |  | Active | |  |
 | [TP-T12](team-pages.md#tp-t12--team-memory-file-appears-in-another-members-next-turn) |  | Active | |  |

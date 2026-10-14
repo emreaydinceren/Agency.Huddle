@@ -60,8 +60,7 @@ layout table names, with the frontmatter fields in the canonical order and nothi
 - `E-FREE` app running, `Team:Tasks:Enabled` at its default `true`.
 - A Team named `Platform` exists. On fresh data the only Teams are those the built-in Teammate
   labels, and the Task **Team** field is a pick list, not free text (`TaskDetail.razor:334`), so
-  create it first: in the sidebar choose **New team**, name it `Platform`, click **Create**
-  (`TeamsNav.razor:76`, `NewTeamDialog.razor:24`). Its folder is `<data>\Teams\Platform`.
+  create it first: make the folder `<data>\Teams\Platform` and reload the page.
 - No Task named `PLAT-` exists yet, or you accept whatever id the allocator gives next.
 
 **Steps**
@@ -101,8 +100,8 @@ layout table names, with the frontmatter fields in the canonical order and nothi
 **Inconclusive if**
 
 If the **Team** list does not offer `Platform`, the Team was not created: `TaskService` refuses an
-unknown Team (`Unknown team 'Platform'. Known teams: ...`, `TaskService.cs:1010-1014`). Create it
-with **New team** in the sidebar and repeat from step 2.
+unknown Team (`Unknown team 'Platform'. Known teams: ...`, `TaskService.cs:1010-1014`). Create its
+folder `<data>\Teams\Platform`, reload and repeat from step 2.
 
 > [!NOTE]
 > Leave `Rae` unassigned to this Task for now — TASKS-08 needs an assigned Task under a Persona

@@ -92,7 +92,7 @@ The left sidebar is the whole app. From top to bottom:
 | --- | --- |
 | **Needs you** | A card above Chats, drawn only while a Room is waiting on you. See [Needs you](#needs-you). |
 | **Chats** | Your root Rooms, plus **New chat**. A Team's chats are not listed here; see [Team chats](#team-chats). |
-| **Teams** | One row per Team. Expand it to see its Team Room, its chats and its Projects. **New team** sits at the bottom. The `⋯` menu on a Team row has **New chat** and **New project**. |
+| **Teams** | One row per Team. Expand it to see its Team Room, its chats and its Projects. **Build a team** sits at the bottom. The `⋯` menu on a Team row has **New chat** and **New project**. |
 | **Teammates** | The page listing every Teammate, grouped by Team. |
 | **Tasks** | Your saved Views of Tasks: **All Tasks**, **My Tasks**, any you saved, and **New view**. |
 | **Library** | One row per Library root (**Teams**, **Teammates**, and any folders you pinned), plus **Add Folder**. |
@@ -584,10 +584,9 @@ process its team type offers, or **Start blank**. Either one writes the Team's
 
 ### Creating a Team
 
-Select **New team** at the bottom of the Teams group, type a name, and select
-**Create**. This makes an empty Team folder. To start a Team with a team type and
-its hired members, use **New team from a type** instead; see
-[Hiring a Team from a type](#hiring-a-team-from-a-type).
+Select **Build a team** at the bottom of the Teams group and follow its four steps;
+see [Building a team with the Chief of Staff](#building-a-team-with-the-chief-of-staff).
+Approving the last step creates the Team folder and hires the Teammates you drafted.
 
 **In the background:** Huddle creates the folder `Teams/<Team>/`. Nothing else
 is written and no Teammate restarts. The new Team shows **No members** until you
@@ -727,75 +726,14 @@ has. **Reload** rereads the built-in types and your `TeamTypes` folder. Under
 **Problems**, each type Huddle rejected is listed with its file and the reason,
 so you can see why a folder you wrote never reached the Team type list.
 
-To make a Team from a type:
-
-1. Select **New team from a type** at the bottom of the Teams group. This opens
-   the **New Team** screen (`/teams/new`).
-2. Choose a **Team type** and type a **Team name**. If the type has a workspace,
-   fill in its folder: a Development Team's workspace is a repository and is
-   required; a Household's is a home folder and is optional. A title that is
-   taken, or a folder that does not exist, is refused on the spot.
-3. Select **Create**. Huddle creates `Teams/<Team>/`, writes its `_team.md`
-   (which names the type, the manager and the workspace), and hires the type's
-   manager at once if its card is Ready. The Team's setup screen
-   (`/teams/<Team>/setup`) then opens. If the manager's card needs setup, the
-   Team is still created; the setup screen lists the reasons and offers **Hire
-   manager** once they are fixed. If hiring the manager is refused, the Team is
-   kept and **Open setup** takes you to it.
-4. In the **hiring pool**, the left side has one card per role: its tier, what it
-   covers and the name the next hire would get. Select a card's **+** to add that
-   role to the Team on the right. Two chip clouds above the cards narrow them:
-   **Team types** (a job shows if it suits any selected type; it opens on this
-   Team's own type) and **Tags and skills** (a job must carry every selected chip).
-   Clear the type chip to browse every job in the pool; a job this type does not
-   list can still be hired, with default settings. **Clear all** resets both clouds.
-   There are no presets and no drag and drop. The manager is already there and is
-   locked: it cannot be removed. A role that has reached its limit is greyed and
-   says **Limit reached**. **Custom role** adds a role of your own; see
-   [Custom roles](#custom-roles).
-5. Each card on the right shows **Ready** when every default resolves, or **Needs
-   setup** with the reasons, such as "no logged-in adapter for tier balanced" or
-   "connector email:read not connected". A card that needs a connector says
-   "Connect <connector> to finish setup" and where to list it; see
-   [Household teams](#household-teams). Select **I connected it** to check
-   again. Select the **x** on a card to take it off.
-6. The **team check bar** shows one chip per coverage step of the type (filled
-   when a hired role covers it), how many vendors and processes the Team would
-   run, and each reason **Start Team** is disabled: a card that needs setup, a
-   missing manager, or a required role that is not hired.
-7. The **Process** step on the same screen lets you pick the process the team
-   type offers and preview it, then **Use this process** or **Start blank**. If
-   you skip it, **Start Team** gives the Team the type's default process when
-   it has none.
-8. Select **Start Team** once the bar has no blockers. Huddle installs the
-   Skills the members need, hires and starts the manager first, waits until it is
-   running, then hires the rest in order. The manager's first Turn arrives as a
-   message from you in its direct Room, with the onboarding steps of the Team's
-   process. That message is posted once per Team, never again after a restart. A
-   failure stops the start with an error on the screen and tells you who already
-   started; nobody is removed.
-
-If a Team you open on the setup screen has no `_team.md`, the screen says
-**This Team has no setup file.**
-
-**Skills during a hire.** Hiring installs any Skill a member needs that is not
-already on disk, by importing it from the catalog. If a Skill's review shows more
-than a missing licence (scripts, shell commands, network calls), Huddle does not
-install it on its own and the start stops with "Skills not installed: ...". Import
-it yourself from **Settings › Skills**; see [Importing a Skill](#importing-a-skill).
-
-### Custom roles
-
-**Custom role** in the hiring pool opens a small dialog. **Start from** is
-**Blank** or one of the type's roles, which pre-fills the **Title**,
-**Consult when** and **Stance**. **Save** stores the role as a candidate in your
-copy of the team type and stages it for the Team. A custom role is always saved
-for next time: the **Save for next time** box is shown ticked and cannot be
-cleared, and the role appears in the pool of every later Team of that type.
+To make a Team from a type, use **Build a team**: choose the type in step 1, name the Team
+and give it a Library folder in step 2, add the roles in step 3 and select **Approve &
+hire** in step 4. See
+[Building a team with the Chief of Staff](#building-a-team-with-the-chief-of-staff).
 
 ### Hire limits
 
-Two limits apply whenever Teammates are hired, whether from the setup screen or by
+Two limits apply whenever Teammates are hired, whether from **Build a team** or by
 approving a Chief of Staff proposal:
 
 | Setting | Default | What it limits |
@@ -817,11 +755,10 @@ vendor from the role it must differ from, and then looks for the model with
 `Team:Teams:Tiers:<adapter>:<tier>` in your configuration. With no entry for that adapter and tier, the adapter's default model is used. A
 mapped model the adapter does not list is ignored in the same way.
 
-> **Example (Scenario 1).** Emre picks **Development Team**, names it **Web Team**,
-> points it at his repository. Joe, the
-> Development Manager, is hired first. Emre adds a Developer, a Reviewer and QA,
-> with the Reviewer and QA on a different vendor from the Developer, and selects
-> **Start Team**.
+> **Example (Scenario 1).** Emre picks **Development Team** in **Build a team**,
+> names it **Web Team** and points its Library folder at his repository. He adds the
+> Development Manager, a Developer, a Reviewer and QA to the roster, and selects
+> **Approve & hire**.
 
 ### Process and gates
 
@@ -836,8 +773,8 @@ process's settings:
   `retro: { every: 10, unit: 'done-tasks' }`. See
   [Digests and retrospectives on a schedule](#digests-and-retrospectives-on-a-schedule).
 
-A Team gets its `Process.md` from the **Process** step (on the setup screen, or on
-the manager's card), from **Start Team**, or by writing the file yourself.
+A Team gets its `Process.md` from the **Process** step on the manager's card, or by
+writing the file yourself.
 **Start blank** writes an empty outline; **Use this process** copies the type's
 template. Neither overwrites an existing `Process.md`. The team types ship several
 templates, such as a lightweight flow, spec-driven, sprints and maintenance for a
@@ -1671,8 +1608,6 @@ provenance line shows the publisher, repository, commit and licence. If the fold
 has changed since the import, the line also shows a **modified locally** chip. A
 Skill you wrote yourself shows **Yours**, and a shipped one shows **Built in**.
 
-Hiring a Team installs any Skill its members need that is missing, by the same
-import, without this dialog; see [Hiring a Team from a type](#hiring-a-team-from-a-type).
 
 > **Example (Scenario 2).** Emre adds the MSBuild Authoring pack to Jane's card. The
 > pack's Skills join hers, and the card's warnings, described under
@@ -1699,8 +1634,7 @@ import, without this dialog; see [Hiring a Team from a type](#hiring-a-team-from
 | Rename a Teammate | Moves `Teammates/<Old>/`; renames entries in `room-sessions/`, `file-state/`, `avatars.json`, `team.db`; rewrites Task creators and assignees and View filters | Restarts |
 | Remove a Teammate | Deletes `<Name>.md` only | Goes offline; Rooms, transcripts and `work/` stay |
 | Restart a Teammate | Deletes `room-sessions/<Name>.json` | Every Room starts fresh, with catch-up |
-| Create a Team | `Teams/<Team>/` | None |
-| Create a Team from a type | `Teams/<Team>/_team.md`, then the manager's Teammate file | The manager starts; **Start Team** hires and starts the rest and posts the onboarding message to the manager once |
+| Build a team (**Approve & hire**) | `Teams/<Team>/_team.md`, then a Teammate file for each draft | The Teammates are hired; start them from their cards |
 | Duplicate a Team | A new `Teams/<Team>/` and new Teammate files; no memory, notes or Tasks | New Teammates start |
 | Use a process | `Teams/<Team>/Process.md`, never over an existing one | Members read it |
 | Import a Skill | `Skills/<name>/` with `.source.json` | Read on next `read_skill` |
@@ -1741,7 +1675,7 @@ import, without this dialog; see [Hiring a Team from a type](#hiring-a-team-from
 | Delete in the Library says the Recycle Bin isn't available | The file is on a network or removable drive. Delete it in your file manager. |
 | A new Skill doesn't show | Check **Settings › Skills › Problems**. The `name` must match the folder name. |
 | A Team type I wrote is missing from the Team type list | Check **Settings › Team Types › Problems** for the file and reason, fix it, then select **Reload**. |
-| **Start Team** is disabled | The team check bar lists why: a card that needs setup, no manager, or a required role not hired. |
+| **Approve & hire** is disabled | The team details are not complete, or the roster has no Teammate; the hint beside the button says which. |
 | A hire says a Team is full, or that agent processes are running | A hire limit was reached; see [Hire limits](#hire-limits). |
 | A Task would not move, with a message naming a gate | The Team's process has that gate on. Add the Evidence it asks for, or use **Move anyway** in the Task panel. |
 | A Teammate's `git push` was denied | The Team's `checks-before-merge` gate wants an Evidence line showing the `checkCommand` passing. The reason is in the log, not shown to the Teammate. |

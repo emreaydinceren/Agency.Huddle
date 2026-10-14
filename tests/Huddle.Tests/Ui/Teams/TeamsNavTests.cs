@@ -26,7 +26,7 @@ namespace Agency.Huddle.Tests.Ui.Teams;
 /// "Teams" group; each Team is a <c>div.hover-reveal-row</c> whose link goes to the escaped
 /// <c>/teams/{team}</c> route, with its Projects as <c>nav-project-link</c> rows, a "No members" hint
 /// for a memberless Team, a "Team actions" menu (button or right-click) offering "New project", and a
-/// trailing "New team" action. It follows <see cref="ITeamCatalog.Changed"/> and unsubscribes on
+/// trailing "Build a team" action. It follows <see cref="ITeamCatalog.Changed"/> and unsubscribes on
 /// dispose.
 /// </summary>
 public sealed class TeamsNavTests
@@ -74,7 +74,6 @@ public sealed class TeamsNavTests
             "/teams/Sales%20%26%20Ops",
             "/teams/Lab%20%232",
             "/teams/Lab%20%232/projects/Item%20%231",
-            "/teams/new",
             "/teams/build",
         ];
         string?[] actualHrefs = [.. cut.FindAll(".teams-nav a[href]").Select(a => a.GetAttribute("href"))];
@@ -160,18 +159,6 @@ public sealed class TeamsNavTests
         Assert.DoesNotContain("active", cut.Find("a[href='/teams/Sales%20%26%20Ops']").ClassList);
     }
 
-    /// <summary>The trailing "New team" action is present, styled as <c>nav-action-link</c>, after the Teams.</summary>
-    [Fact]
-    public async Task NewTeamAction_IsPresent()
-    {
-        FakeTeamCatalog catalog = new() { Teams = [Team("Business")] };
-
-        await using MudBunitContext ctx = NewContext(catalog);
-        IRenderedComponent<ContainerFragment> cut = RenderNav(ctx);
-
-        Assert.Equal("New team", cut.Find(".nav-action-link").TextContent.Trim());
-    }
-
     /// <summary>The Teams group ends with a "Build a team" action that opens <c>/teams/build</c>.</summary>
     [Fact]
     public async Task BuildATeamAction_OpensTheBuildPage()
@@ -187,16 +174,16 @@ public sealed class TeamsNavTests
         Assert.Equal("/teams/build", link.GetAttribute("href"));
     }
 
-    /// <summary>With no Teams at all the "New team" action is still offered and no Team row renders.</summary>
+    /// <summary>With no Teams at all the "Build a team" action is still offered and no Team row renders.</summary>
     [Fact]
-    public async Task NewTeamAction_IsPresent_WhenThereAreNoTeams()
+    public async Task BuildATeamAction_IsPresent_WhenThereAreNoTeams()
     {
         FakeTeamCatalog catalog = new();
 
         await using MudBunitContext ctx = NewContext(catalog);
         IRenderedComponent<ContainerFragment> cut = RenderNav(ctx);
 
-        Assert.Equal("New team", cut.Find(".nav-action-link").TextContent.Trim());
+        Assert.Equal("Build a team", cut.Find(".nav-action-link").TextContent.Trim());
         Assert.Empty(cut.FindAll("div.hover-reveal-row"));
     }
 
@@ -575,116 +562,6 @@ public sealed class TeamsNavTests
         Assert.Empty(Writes(ctx));
     }
 
-    /// <summary>"New team" opens the name dialog titled "New team", and it checks the name against the Teams the nav knows (a duplicate is refused inline).</summary>
-    [Fact]
-    public async Task NewTeam_OpensTheDialog_ThatKnowsTheExistingTeams()
-    {
-        FakeTeamCatalog catalog = new() { Teams = [Team("Business")] };
-        await using MudBunitContext ctx = NewContext(catalog);
-        IRenderedComponent<ContainerFragment> cut = RenderNav(ctx);
-
-        OpenNewTeamDialog(cut);
-        await TypeNameAsync(cut, "Business");
-
-        Assert.Equal("New team", cut.Find(".mud-dialog-title").TextContent.Trim());
-        Assert.Equal("Team name", cut.Find(".mud-dialog label").TextContent.Trim());
-        Assert.Equal("A Team named \"Business\" already exists.", cut.Find(".mud-dialog .mud-input-helper-text").TextContent.Trim());
-    }
-
-    /// <summary>OK on "Research" calls <c>EnsureTeam("Research")</c> once and, the catalog already listing it, navigates to <c>/teams/Research</c>.</summary>
-    [Fact]
-    public async Task NewTeam_Ok_CreatesTheTeam_AndNavigatesToIt()
-    {
-        FakeTeamCatalog catalog = new() { Teams = [Team("Business")] };
-        FakeTeamFolders folders = new();
-        await using MudBunitContext ctx = NewContext(catalog, folders: folders);
-        IRenderedComponent<ContainerFragment> cut = RenderNav(ctx);
-        NavigationManager nav = ctx.Services.GetRequiredService<NavigationManager>();
-
-        OpenNewTeamDialog(cut);
-        catalog.Teams = [Team("Business"), Team("Research")];
-        await SubmitNameAsync(cut, "Research");
-
-        cut.WaitForAssertion(() => Assert.Equal("teams/Research", nav.ToBaseRelativePath(nav.Uri)));
-        string[] expected = ["EnsureTeam:Research"];
-        Assert.Equal(expected, folders.Calls);
-    }
-
-    /// <summary>
-    /// A Team the dialog just created is not in the catalog for about 500 ms (corrections-D6 #21): the nav
-    /// makes the call, does not navigate yet (no "There is no Team named" flash), and navigates once the
-    /// catalog raises <c>Changed</c> with the Team in it. The bounded timeout that navigates anyway after
-    /// 2 s has no row here: it would need a real delay.
-    /// </summary>
-    [Fact]
-    public async Task NewTeam_NotYetInTheCatalog_NavigatesOnlyAfterTheCatalogListsIt()
-    {
-        FakeTeamCatalog catalog = new() { Teams = [Team("Business")] };
-        FakeTeamFolders folders = new();
-        await using MudBunitContext ctx = NewContext(catalog, folders: folders);
-        IRenderedComponent<ContainerFragment> cut = RenderNav(ctx);
-        NavigationManager nav = ctx.Services.GetRequiredService<NavigationManager>();
-        string before = nav.Uri;
-
-        OpenNewTeamDialog(cut);
-        await SubmitNameAsync(cut, "Research");
-        string[] expectedCalls = ["EnsureTeam:Research"];
-        cut.WaitForAssertion(() => Assert.Equal(expectedCalls, folders.Calls));
-        await Flush(cut);
-        Assert.Equal(before, nav.Uri);
-
-        catalog.Teams = [Team("Business"), Team("Research")];
-        catalog.Raise();
-
-        cut.WaitForAssertion(() => Assert.Equal("teams/Research", nav.ToBaseRelativePath(nav.Uri)));
-    }
-
-    /// <summary>A refused <c>EnsureTeam</c> shows its error text in one error snackbar, closes nothing else and does not navigate.</summary>
-    [Fact]
-    public async Task NewTeam_Failure_ShowsAnErrorSnackbar_AndDoesNotNavigate()
-    {
-        FakeTeamCatalog catalog = new() { Teams = [Team("Business")] };
-        FakeTeamFolders folders = new() { TeamResult = LibraryResult<LibraryPath>.Fail("Teams/Research is not writable.") };
-        await using MudBunitContext ctx = NewContext(catalog, folders: folders);
-        IRenderedComponent<ContainerFragment> cut = RenderNav(ctx);
-        NavigationManager nav = ctx.Services.GetRequiredService<NavigationManager>();
-        MudBlazor.ISnackbar snackbar = ctx.Services.GetRequiredService<MudBlazor.ISnackbar>();
-        string before = nav.Uri;
-
-        OpenNewTeamDialog(cut);
-        await SubmitNameAsync(cut, "Research");
-
-        cut.WaitForAssertion(() => Assert.Single(snackbar.ShownSnackbars));
-        MudBlazor.Snackbar shown = Assert.Single(snackbar.ShownSnackbars);
-        Assert.Equal("Teams/Research is not writable.", shown.Message);
-        Assert.Equal(MudBlazor.Severity.Error, shown.Severity);
-        await Flush(cut);
-        Assert.Equal(before, nav.Uri);
-    }
-
-    /// <summary>Cancelling the dialog calls nothing, shows nothing and does not navigate.</summary>
-    [Fact]
-    public async Task NewTeam_Cancelled_CallsNothing_AndDoesNotNavigate()
-    {
-        FakeTeamCatalog catalog = new() { Teams = [Team("Business")] };
-        FakeTeamFolders folders = new();
-        await using MudBunitContext ctx = NewContext(catalog, folders: folders);
-        IRenderedComponent<ContainerFragment> cut = RenderNav(ctx);
-        NavigationManager nav = ctx.Services.GetRequiredService<NavigationManager>();
-        MudBlazor.ISnackbar snackbar = ctx.Services.GetRequiredService<MudBlazor.ISnackbar>();
-        string before = nav.Uri;
-        OpenNewTeamDialog(cut);
-        await TypeNameAsync(cut, "Research");
-
-        await cut.InvokeAsync(() => cut.Find(".mud-dialog-actions button:first-child").ClickAsync());
-        cut.WaitForAssertion(() => Assert.Empty(cut.FindAll(".mud-dialog-title")));
-        await Flush(cut);
-
-        Assert.Empty(folders.Calls);
-        Assert.Empty(snackbar.ShownSnackbars);
-        Assert.Equal(before, nav.Uri);
-    }
-
     /// <summary>"New project" on Business opens the dialog titled "New project" for that Team: an existing Project is refused inline naming Business.</summary>
     [Fact]
     public async Task NewProject_OpensTheDialog_ForThatTeam()
@@ -850,7 +727,6 @@ public sealed class TeamsNavTests
                 "/teams/Business/projects/Marketing",
                 "/teams/Sales",
                 "/rooms/other",
-                "/teams/new",
                 "/teams/build",
             ];
             Assert.Equal(expected, hrefs);
@@ -1004,13 +880,6 @@ public sealed class TeamsNavTests
 
         string[] expected = ["New chat", "New project"];
         Assert.Equal(expected, MenuItemTexts(cut));
-    }
-
-    /// <summary>Clicks the trailing "New team" action and waits for the dialog. The click's handler awaits the dialog, so it runs fire-and-forget.</summary>
-    private static void OpenNewTeamDialog(IRenderedComponent<ContainerFragment> cut)
-    {
-        _ = cut.InvokeAsync(() => cut.Find(".nav-action-link .mud-nav-link").Click());
-        cut.WaitForAssertion(() => Assert.NotEmpty(cut.FindAll(".mud-dialog-title")));
     }
 
     /// <summary>Opens <paramref name="team"/>'s "Team actions" menu, clicks "New project" and waits for the dialog.</summary>

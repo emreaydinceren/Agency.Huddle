@@ -39,14 +39,16 @@ public sealed class TeamsDialogConsistencyTests
         Assert.Contains("Variant.Text", actions, StringComparison.Ordinal); // contains-ok: haystack is the dialog's razor source
     }
 
-    /// <summary>The single-field New team and New project name dialog is the shared <c>NameDialog</c>; the bespoke dialog is gone.</summary>
+    /// <summary>The single-field New project name dialog is the shared <c>NameDialog</c>, opened by the nav through <c>NewProjectPrompt</c>; the bespoke dialog is gone.</summary>
     [Fact]
-    public void NewTeam_UsesNameDialog()
+    public void NewProject_UsesNameDialog()
     {
         string nav = File.ReadAllText(CssSource.RepoPath("src", "Huddle.App", "Components", "Teams", "TeamsNav.razor"));
+        string prompt = File.ReadAllText(CssSource.RepoPath("src", "Huddle.App", "Components", "Shared", "Dialogs", "NewProjectPrompt.cs"));
 
-        Assert.Contains("ShowAsync<NameDialog>", nav, StringComparison.Ordinal); // contains-ok: haystack is TeamsNav's razor source
-        Assert.Contains("HuddleDialogOptions.SmallForm", nav, StringComparison.Ordinal); // contains-ok: haystack is TeamsNav's razor source
+        Assert.Contains("NewProjectPrompt.AskAsync", nav, StringComparison.Ordinal); // contains-ok: haystack is TeamsNav's razor source
+        Assert.Contains("ShowAsync<NameDialog>", prompt, StringComparison.Ordinal); // contains-ok: haystack is the prompt's C# source
+        Assert.Contains("HuddleDialogOptions.SmallForm", prompt, StringComparison.Ordinal); // contains-ok: haystack is the prompt's C# source
         Assert.False(File.Exists(CssSource.RepoPath("src", "Huddle.App", "Components", "Teams", "NewTeamDialog.razor")));
     }
 
