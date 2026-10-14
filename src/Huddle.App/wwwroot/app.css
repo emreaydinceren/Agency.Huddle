@@ -2076,7 +2076,6 @@ a.team-ref,
     min-height: 0;
     display: flex;
     flex-direction: column;
-    padding: 0;
 }
 
 .team-page-wide .team-page-tabs,

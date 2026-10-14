@@ -203,6 +203,12 @@
             return null;
         }
 
+        if (kind == LibraryTreeActionKind.NewProject)
+        {
+            string? name = await NewProjectPrompt.AskAsync(this.Dialogs, LibraryNames.Validate, SubmitAsync);
+            return name is null ? null : created;
+        }
+
         DialogParameters<NameDialog> parameters = new()
         {
             { dialog => dialog.Label, "Name" },

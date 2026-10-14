@@ -1,5 +1,6 @@
 @using System.Text
 @using Agency.Huddle.App.Acp
+@using Agency.Huddle.App.Components.Shared.Dialogs
 @using Agency.Huddle.App.Library
 @inject ITeamFolders Folders
 @inject IDialogService Dialogs
@@ -15,7 +16,7 @@
 <div class="process-tab">
     @if (this.text is null)
     {
-        <MudText Class="process-tab-empty">This Team has no process yet.</MudText>
+        <EmptyState Text="This Team has no process yet." />
     }
     else
     {
@@ -90,13 +91,13 @@
             return;
         }
 
-        bool? confirmed = await this.Dialogs.ShowMessageBoxAsync(
+        bool confirmed = await this.Dialogs.ConfirmAsync(
             $"Turn off {ProcessDocument.DisplayName(gate)}?",
             ProcessGateService.GateRisk(gate),
-            yesText: "Turn off",
-            cancelText: "Cancel");
+            "Turn off",
+            danger: true);
         this.version++;
-        if (confirmed != true)
+        if (!confirmed)
         {
             return;
         }

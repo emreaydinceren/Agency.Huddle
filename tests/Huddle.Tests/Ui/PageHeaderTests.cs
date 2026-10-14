@@ -54,6 +54,20 @@ public sealed class PageHeaderTests
         Assert.Contains("mb-4", row.ClassList);
     }
 
+    /// <summary>A page whose document title differs from its heading turns the header's PageTitle off (UX-001, the Team page keeps "{Team} - Huddle").</summary>
+    [Fact]
+    public async Task SetPageTitleFalse_RendersNoPageTitle()
+    {
+        await using MudBunitContext ctx = new();
+
+        var cut = ctx.Render<PageHeader>(parameters => parameters
+            .Add(p => p.Title, "Business")
+            .Add(p => p.SetPageTitle, false));
+
+        Assert.Empty(cut.FindComponents<PageTitle>());
+        Assert.Equal("Business", cut.Find("h1").TextContent);
+    }
+
     /// <summary>The same text is set as the document title through PageTitle.</summary>
     [Fact]
     public async Task Title_AlsoSetsThePageTitle()

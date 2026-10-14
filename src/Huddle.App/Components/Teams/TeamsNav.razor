@@ -341,7 +341,7 @@
         IReadOnlyList<TeamSummary> teams = this.Catalog.Teams;
         TeamSummary summary = teams.FirstOrDefault(t => string.Equals(t.Name, team, StringComparison.OrdinalIgnoreCase))
             ?? new TeamSummary(team, [], [], false);
-        string? project = await this.AskNameAsync("New project", "Project name", trimmed => TeamNames.ValidateProjectName(trimmed, summary));
+        string? project = await NewProjectPrompt.AskAsync(this.Dialogs, trimmed => TeamNames.ValidateProjectName(trimmed, summary), static _ => Task.FromResult<string?>(null));
         if (project is null)
         {
             return;

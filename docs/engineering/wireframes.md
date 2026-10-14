@@ -227,14 +227,14 @@ active panel. Left, the Team page; right, Settings.
 
 | Code | Name | Component | Notes |
 | --- | --- | --- | --- |
-| `M1` | Team page container | `MudContainer`, full width (`.team-page-wide`) | `MaxWidth.Large` applies only to the not-found notice |
-| `M2` | Duplicate | `MudButton` | Team pages only, not Project pages |
+| `M1` | Team page container | `MudContainer`, `MaxWidth.False`, `pa-4` (`.team-page-wide` only sizes the panels) | Opens with the `PageHeader` (the Team or Project name as the page's `h1`). `MaxWidth.Large` applies only to the not-found and "turned off" notices, which are `role="status"` or `role="alert"` as the case needs |
+| `M2` | Duplicate | `MudButton`, Outlined, in the `PageHeader` actions slot | At its natural width, on the right of the `h1`; Team pages only, not Project pages |
 | `M3` | Team spend | `TeamSpend` | One line per currency |
 | `M4` | Tabs | `MudTabs` `.team-page-tabs` | Keyed by Team and Project |
-| `M4a` | Tab rail | `MudTabPanel` headers | Members, Files, Tasks, Process; a Project page and a disabled feature show fewer |
+| `M4a` | Tab rail | `MudTabPanel` headers, each with its `TabIcons` entity icon | Members, Files, Tasks, Process; a Project page and a disabled feature show fewer |
 | `M4b` | Active panel | `TeamMembers`, `TeamFilesTab`, `TeamTasksTab` or `ProcessTab` | Only the selected panel is rendered |
 | `M5` | Search | `MudTextField` | Filters the panel's list |
-| `M6` | Member card | A tile in `TeamMembers` | Avatar, name, role |
+| `M6` | Member row | A `MudListItem` row in `TeamMembers` | Avatar, name, role; it opens the Teammate card (UX-D06) |
 | `G1` | Settings container | `MudContainer`, `MaxWidth.Large` | |
 | `G1a` | Reset all | `ResetAllControl` | In the Prompts panel's action row beside Save; "Reset all to defaults", disabled until a prompt has been changed, then asks inline (`InlineConfirm`) |
 | `G2` | Tabs | `MudTabs` | The active tab follows the route; under a `PageHeader` "Settings" |

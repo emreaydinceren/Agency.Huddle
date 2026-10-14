@@ -7,6 +7,7 @@ using Microsoft.Extensions.Logging.Abstractions;
 using Agency.Huddle.App.Acp;
 using Agency.Huddle.App.Avatars;
 using Agency.Huddle.App.Components.Pages;
+using Agency.Huddle.App.Components.Shared;
 using Agency.Huddle.App.Library;
 using Agency.Huddle.App.TeamTypes;
 using Agency.Huddle.App.Teams;
@@ -251,6 +252,55 @@ public sealed class TeamSetupTests
 
         Assert.Equal("This Team has no setup file.", cut.Find(".team-setup-notice").TextContent.Trim());
         Assert.Empty(cut.FindAll("button.team-setup-hire"));
+    }
+
+    /// <summary>The create screen opens with <c>PageHeader</c> (UX-001): the page's only h1 at Typo.h5, "New team".</summary>
+    [Fact]
+    public async Task NewMode_Header_IsNewTeamAsTheOnlyH1()
+    {
+        using Fixture fixture = new();
+        await using MudBunitContext ctx = fixture.NewContext();
+
+        IRenderedComponent<ContainerFragment> cut = Render(ctx, team: null);
+
+        IElement heading = Assert.Single(cut.FindAll("h1"));
+        Assert.Equal("New team", heading.TextContent.Trim());
+        Assert.Contains("mud-typography-h5", heading.ClassList);
+        Assert.NotNull(cut.FindComponent<PageHeader>());
+    }
+
+    /// <summary>The setup route opens with <c>PageHeader</c> too: the h1 reads "Set up" and the Team name, and the old h5 heading is gone (UX-001).</summary>
+    [Fact]
+    public async Task SetupMode_Header_IsSetUpTeamAsTheOnlyH1()
+    {
+        using Fixture fixture = new();
+        TeamFile created = new(new VersionedRef("alpha", "1.0.0"), null, null, null, "Process.md", string.Empty);
+        Assert.Equal(TeamCreateOutcome.Created, fixture.Folders.CreateTeam("Alpha Team", created).Outcome);
+        await using MudBunitContext ctx = fixture.NewContext();
+
+        IRenderedComponent<ContainerFragment> cut = Render(ctx, team: "Alpha Team");
+
+        Assert.Equal("Set up Alpha Team", Assert.Single(cut.FindAll("h1")).TextContent.Trim());
+        Assert.Empty(cut.FindAll(".team-setup-heading"));
+    }
+
+    /// <summary>The container carries <c>pa-4</c> on every route: the old <c>py-4</c> left no side gutter (UX-001, UX-003).</summary>
+    /// <param name="team">The Team of the setup route, or <see langword="null"/> for the create screen.</param>
+    [Theory]
+    [InlineData(null)]
+    [InlineData("Alpha Team")]
+    public async Task Container_HasSixteenPixelPaddingOnAllSides(string? team)
+    {
+        using Fixture fixture = new();
+        TeamFile created = new(new VersionedRef("alpha", "1.0.0"), null, null, null, "Process.md", string.Empty);
+        Assert.Equal(TeamCreateOutcome.Created, fixture.Folders.CreateTeam("Alpha Team", created).Outcome);
+        await using MudBunitContext ctx = fixture.NewContext();
+
+        IRenderedComponent<ContainerFragment> cut = Render(ctx, team);
+
+        IElement container = cut.Find(".team-setup.mud-container");
+        Assert.Contains("pa-4", container.ClassList);
+        Assert.DoesNotContain("py-4", container.ClassList);
     }
 
     private static IRenderedComponent<ContainerFragment> Render(MudBunitContext ctx, string? team)

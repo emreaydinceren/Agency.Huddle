@@ -28,7 +28,8 @@
     its error in an alert and the page stays.
 *@
 
-<MudContainer MaxWidth="MaxWidth.Large" Class="team-setup py-4">
+<MudContainer MaxWidth="MaxWidth.Large" Class="team-setup pa-4">
+    <PageHeader Title="@(this.Team is null ? "New team" : $"Set up {this.Team}")" />
     @if (this.Team is null)
     {
         <MudStack Spacing="3">
@@ -66,7 +67,6 @@
     else
     {
         <div class="team-setup-header">
-            <MudText Typo="Typo.h5" Class="team-setup-heading">Set up @this.Team</MudText>
             @if (this.teamFile.Manager is not null)
             {
                 <div class="team-setup-manager-line">

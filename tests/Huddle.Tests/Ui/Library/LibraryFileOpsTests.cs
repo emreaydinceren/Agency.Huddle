@@ -502,7 +502,7 @@ public sealed class LibraryFileOpsTests : IDisposable
         cut.WaitForAssertion(() => Assert.NotEmpty(cut.FindAll(".mud-dialog-title")));
 
         Assert.Equal("New project", cut.Find(".mud-dialog-title").TextContent.Trim());
-        Assert.Equal("Name", cut.Find(".mud-dialog-content label").TextContent.Trim());
+        Assert.Equal("Project name", cut.Find(".mud-dialog-content label").TextContent.Trim());
         Assert.Equal(["Cancel", "Create"], cut.FindAll(".mud-dialog-actions button").Select(b => b.TextContent.Trim()).ToList());
 
         await cut.InvokeAsync(() => cut.Find(".mud-dialog-content input").InputAsync(new ChangeEventArgs { Value = "Launch Q4" }));
@@ -826,7 +826,7 @@ public sealed class LibraryFileOpsTests : IDisposable
         Assert.Equal(["Cancel", "Create"], cut.FindAll(".mud-dialog-actions button").Select(b => b.TextContent.Trim()).ToList());
     }
 
-    /// <summary>[T17.1, UX-R10] New project on a Team folder opens the same <see cref="NameDialog"/> titled "New project".</summary>
+    /// <summary>[T17.1, UX-R10] New project on a Team folder opens the same <see cref="NameDialog"/> titled "New project" and labelled "Project name", as the Teams nav does (UX-R14, OP-2).</summary>
     [Fact]
     public async Task NewProject_OpensNameDialogWithLabelAndCreateVerb()
     {
@@ -843,7 +843,7 @@ public sealed class LibraryFileOpsTests : IDisposable
 
         NameDialog dialog = cut.FindComponent<NameDialog>().Instance;
         Assert.Equal("New project", cut.Find(".mud-dialog-title").TextContent.Trim());
-        Assert.Equal("Name", dialog.Label);
+        Assert.Equal("Project name", dialog.Label);
         Assert.Equal("Create", dialog.ConfirmText);
     }
 
