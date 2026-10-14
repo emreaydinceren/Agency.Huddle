@@ -137,7 +137,7 @@ public sealed class TeammateCardTests
         _ = await OpenViewCardAsync(ctx, factory, "coo");
         Assert.Equal(1, spend.SubscriberCount);
 
-        await ctx.DisposeComponentsAsync();
+        await ctx.DisposeComponentsOnDispatcherAsync();
 
         Assert.Equal(0, spend.SubscriberCount);
     }

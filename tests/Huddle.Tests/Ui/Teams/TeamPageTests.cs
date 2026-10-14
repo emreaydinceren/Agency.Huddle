@@ -383,7 +383,7 @@ public sealed class TeamPageTests
         _ = RenderPage(ctx, "Business");
         Assert.Equal(1, catalog.ChangedSubscriberCount);
 
-        await ctx.DisposeComponentsAsync();
+        await ctx.DisposeComponentsOnDispatcherAsync();
 
         Assert.Equal(0, catalog.ChangedSubscriberCount);
     }

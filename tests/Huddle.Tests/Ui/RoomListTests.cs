@@ -339,7 +339,7 @@ public sealed class RoomListTests
         _ = RenderRoomList(ctx);
         Assert.Equal(1, catalog.ChangedSubscriberCount);
 
-        await ctx.DisposeComponentsAsync();
+        await ctx.DisposeComponentsOnDispatcherAsync();
 
         Assert.Equal(0, catalog.ChangedSubscriberCount);
     }

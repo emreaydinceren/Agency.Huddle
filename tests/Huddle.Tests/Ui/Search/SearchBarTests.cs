@@ -457,7 +457,7 @@ public sealed class SearchBarTests(TeamWebApplicationFactory factory) : IClassFi
         _ = h.Render();
         int before = h.SubscriberCount();
 
-        await h.Ctx.DisposeComponentsAsync();
+        await h.Ctx.DisposeComponentsOnDispatcherAsync();
 
         Assert.Equal(1, before);
         Assert.Equal(0, h.SubscriberCount());

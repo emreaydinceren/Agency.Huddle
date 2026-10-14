@@ -139,7 +139,7 @@ public sealed class SearchBarKeyTests(TeamWebApplicationFactory factory) : IClas
         await using SearchBarHarness h = new(factory);
         IRenderedComponent<ContainerFragment> cut = h.Render();
 
-        await h.Ctx.DisposeComponentsAsync();
+        await h.Ctx.DisposeComponentsOnDispatcherAsync();
 
         Assert.Equal(1, SearchBarKeyTests.Calls(h, "huddleSearch.detach"));
         Assert.NotNull(cut);

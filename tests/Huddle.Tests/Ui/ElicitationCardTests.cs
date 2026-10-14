@@ -639,7 +639,7 @@ public sealed class ElicitationCardTests
         Assert.Single(cut.FindAll(".elicitation-card"));
         Assert.Equal(1, SubscriberCount(fixture.Events, nameof(RoomEvents.ElicitationsChanged)));
 
-        await ctx.DisposeComponentsAsync();
+        await ctx.DisposeComponentsOnDispatcherAsync();
 
         Assert.Equal(0, SubscriberCount(fixture.Events, nameof(RoomEvents.ElicitationsChanged)));
         Assert.Null(Record.Exception(() => fixture.Events.PublishElicitationsChanged(room.Id)));
