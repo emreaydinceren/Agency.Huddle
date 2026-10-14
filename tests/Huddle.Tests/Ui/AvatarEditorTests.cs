@@ -133,7 +133,7 @@ public sealed class AvatarEditorTests
         await cut.InvokeAsync(() => cut.FindAll(Thumb)[3].Click());
     }
 
-    /// <summary>With nothing stored the editor offers the three choices and shows neither the Label field nor the image controls.</summary>
+    /// <summary>With nothing stored the editor offers the three choices, starts on "An image" with its controls and no Label field, and shows no fields for the initials.</summary>
     [Fact]
     public async Task Renders_ThreeChoices_AndNoFieldsForInitials()
     {
@@ -144,6 +144,10 @@ public sealed class AvatarEditorTests
 
         Assert.Equal(["Initials of the name", "A short label", "An image"], cut.FindAll(".mud-radio").Select(radio => radio.TextContent.Trim()));
         Assert.False(HasText(cut, "Shown instead of initials."));
+        Assert.True(HasButton(cut, "Choose an image"));
+
+        await SelectChoiceAsync(cut, "Initials of the name");
+
         Assert.False(HasButton(cut, "Choose an image"));
     }
 
@@ -189,9 +193,12 @@ public sealed class AvatarEditorTests
 
         IRenderedComponent<ContainerFragment> cut = RenderEditor(ctx, probe);
 
-        Assert.Equal(AvatarPalette.Colours.Count, cut.FindAll(Swatch).Count);
         Assert.Equal(Avatar.None, avatars.Get("You"));
         Assert.Empty(probe.Values);
+
+        await SelectChoiceAsync(cut, "Initials of the name");
+
+        Assert.Equal(AvatarPalette.Colours.Count, cut.FindAll(Swatch).Count);
     }
 
     /// <summary>Immediate: choosing "A short label" and typing writes the label under the Name with no Save, and reports it.</summary>
@@ -463,6 +470,7 @@ public sealed class AvatarEditorTests
         Probe probe = new(AvatarSaveMode.Buffered);
 
         IRenderedComponent<ContainerFragment> cut = RenderEditor(ctx, probe);
+        await SelectChoiceAsync(cut, "Initials of the name");
         await cut.InvokeAsync(() => cut.FindAll(Swatch)[3].ClickAsync());
 
         Assert.Equal(AvatarPalette.Colours[3].ToString(MudBlazor.Utilities.MudColorOutputFormats.Hex), probe.Values[^1].Background, ignoreCase: true);

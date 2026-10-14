@@ -314,6 +314,7 @@ public sealed class TeammateCardAvatarTests
 
         IRenderedComponent<ContainerFragment> cut = await OpenViewCardAsync(ctx, factory, "coo");
         await OpenAvatarEditorAsync(cut);
+        await SelectAvatarChoiceAsync(cut, "Initials of the name");
 
         Assert.Equal(AvatarPalette.Colours.Count, cut.FindAll(Swatch).Count);
         Assert.Empty(cut.FindAll(BackgroundPicker + " input"));
@@ -330,6 +331,7 @@ public sealed class TeammateCardAvatarTests
 
         IRenderedComponent<ContainerFragment> cut = await OpenViewCardAsync(ctx, factory, "coo");
         await OpenAvatarEditorAsync(cut);
+        await SelectAvatarChoiceAsync(cut, "Initials of the name");
         await ClickAsync(cut, () => cut.FindAll(Swatch)[3]);
         await ClickEditorButtonAsync(cut, "Save");
         WaitForEditorClosed(cut);
@@ -440,6 +442,10 @@ public sealed class TeammateCardAvatarTests
 
         IRenderedComponent<ContainerFragment> cut = await OpenViewCardAsync(ctx, factory, "coo");
         await OpenAvatarEditorAsync(cut);
+
+        Assert.Empty(cut.FindAll(BackgroundPicker));
+
+        await SelectAvatarChoiceAsync(cut, "Initials of the name");
 
         Assert.Single(cut.FindAll(BackgroundPicker));
         Assert.Empty(cut.FindAll(BackgroundPicker + " button"));

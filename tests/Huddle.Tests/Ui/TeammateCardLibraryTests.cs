@@ -86,7 +86,7 @@ public sealed class TeammateCardLibraryTests
         _ = Register(ctx.Services, library.Path, null);
 
         IRenderedComponent<ContainerFragment> cut = await OpenEditorAsync(ctx, factory, edit: true, chooseImage: false);
-        Assert.False(HasEditorButton(cut, ButtonText));
+        Assert.True(HasEditorButton(cut, ButtonText));
 
         await SelectAvatarChoiceAsync(cut, "A short label");
         Assert.False(HasEditorButton(cut, ButtonText));

@@ -195,7 +195,7 @@
         {
             { Image: not null } => AvatarChoice.Image,
             { Label: not null } => AvatarChoice.Label,
-            _ => AvatarChoice.Initials,
+            _ => AvatarChoice.Image,
         };
         this.label = avatar.Label ?? string.Empty;
         this.image = avatar.Image;

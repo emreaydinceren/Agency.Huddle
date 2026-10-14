@@ -362,6 +362,8 @@ public sealed class BuildTeamTests
         Assert.Equal("balanced", card.QuerySelector(".roster-tier")?.TextContent.Trim());
         Assert.Equal("1 Teammate drafted", cut.FindAll("ol.build-stepper > li")[2].QuerySelector(".build-step-detail")?.TextContent.Trim());
         Assert.Equal("1 draft Teammate · dashed ring = not hired yet", cut.Find(".build-team-roster-summary").TextContent.Trim());
+        Assert.Equal("On the draft roster", Assert.Single(cut.FindAll(".role-card-taken")).TextContent.Trim());
+        Assert.Equal("Bookkeeper", cut.Find(".role-card-taken").Closest(".role-card")?.QuerySelector(".team-type-name")?.TextContent.Trim());
 
         await cut.InvokeAsync(() => cut.Find("[aria-label='Add Bookkeeper']").ClickAsync());
 
@@ -380,6 +382,7 @@ public sealed class BuildTeamTests
         await cut.InvokeAsync(() => cut.Find(".build-team-name input").InputAsync("Garden"));
         await cut.InvokeAsync(() => cut.Find("[aria-label='Add Tutor']").ClickAsync());
         string? before = cut.Find(".roster-name").TextContent.Trim();
+        Assert.NotNull(cut.Find(".roster-avatar").GetAttribute("style"));
 
         await cut.InvokeAsync(() => cut.Find(".roster-reroll").ClickAsync());
 
@@ -388,6 +391,7 @@ public sealed class BuildTeamTests
         await cut.InvokeAsync(() => cut.Find(".roster-remove").ClickAsync());
 
         Assert.Empty(cut.FindAll(".roster-card"));
+        Assert.Empty(cut.FindAll(".role-card-taken"));
     }
 
     /// <summary>The template's manager role, once added, is badged Manager on the roster; other roles are not.</summary>

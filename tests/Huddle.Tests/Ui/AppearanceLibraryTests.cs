@@ -32,10 +32,12 @@ public sealed class AppearanceLibraryTests
             builder.CloseComponent();
         });
 
-    private static Task ChooseImageAsync(IRenderedComponent<ContainerFragment> cut) =>
+    private static Task ChooseImageAsync(IRenderedComponent<ContainerFragment> cut) => ChooseAsync(cut, "An image");
+
+    private static Task ChooseAsync(IRenderedComponent<ContainerFragment> cut, string choice) =>
         cut.InvokeAsync(() =>
         {
-            AngleSharp.Dom.IElement radio = cut.FindAll(".mud-radio").First(element => element.TextContent.Contains("An image", StringComparison.Ordinal));
+            AngleSharp.Dom.IElement radio = cut.FindAll(".mud-radio").First(element => element.TextContent.Contains(choice, StringComparison.Ordinal));
             return (radio.QuerySelector("input.mud-radio-input") ?? throw new InvalidOperationException("No radio input.")).ClickAsync();
         });
 
@@ -107,9 +109,9 @@ public sealed class AppearanceLibraryTests
         _ = Register(ctx.Services, library.Path, null);
 
         IRenderedComponent<ContainerFragment> cut = RenderPage(ctx);
-        Assert.Null(FindLibraryButton(cut));
-
-        await ChooseImageAsync(cut);
         Assert.NotNull(FindLibraryButton(cut));
+
+        await ChooseAsync(cut, "Initials of the name");
+        Assert.Null(FindLibraryButton(cut));
     }
 }

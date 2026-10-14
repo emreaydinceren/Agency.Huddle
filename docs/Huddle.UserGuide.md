@@ -396,7 +396,8 @@ or Teams. Changing the avatar does not restart anything.
 
 Select the avatar at the top of a Teammate's card. It does this in every mode:
 viewing, editing and creating. A small pencil appears on it when you point at it
-or tab to it. A window titled **Avatar** opens with three choices:
+or tab to it. A window titled **Avatar** opens with three choices, and **An image**
+is selected when the avatar has no label or image yet:
 
 - **Initials of the name** shows the letters Huddle makes from the Name.
 - **A short label** shows up to three characters you type instead.
@@ -695,8 +696,9 @@ roles*) it shows the same two scrolling rows of cards: a blank card with a large
 first, then the roles the chosen team type already defines (each with a green
 **Suggested** chip), then your own roles, then the rest of the hiring pool. **Add** on a
 role card puts a new Teammate for that role on the **Draft roster** below, with a name
-drawn for it; add a role again for a second Teammate. Each draft card has **Re-roll**
-(another name), **Edit** (the Teammate card, saved with **Save draft**; it changes only the
+and an avatar colour drawn for it, and the card gets a small green check to show the
+role is taken care of; add a role again for a second Teammate. Each draft card has **Re-roll**
+(another name and avatar), **Edit** (the Teammate card, saved with **Save draft**; it changes only the
 draft) and **Remove**, and the team type's manager role carries a **Manager** badge. A
 dashed ring means the Teammate is not hired yet; nothing is hired or created on this page.
 

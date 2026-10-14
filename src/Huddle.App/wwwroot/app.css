@@ -3611,19 +3611,12 @@ a.team-ref,
     gap: 0.75rem;
 }
 
-.roster-avatar {
+.roster-avatar-ring {
     display: inline-flex;
     flex: 0 0 auto;
-    align-items: center;
-    justify-content: center;
-    width: 2.5rem;
-    height: 2.5rem;
-    border: 1px dashed var(--mud-palette-primary);
+    padding: 2px;
+    border: 1px dashed var(--mud-palette-text-secondary);
     border-radius: 50%;
-    font-size: var(--mud-typography-body2-size);
-    font-weight: 600;
-    color: var(--mud-palette-primary);
-    background: color-mix(in srgb, var(--mud-palette-primary) 12%, var(--mud-palette-surface));
 }
 
 .roster-card-who {
@@ -3685,4 +3678,12 @@ a.team-ref,
     gap: 0.25rem;
     padding-top: 0.5rem;
     border-top: 1px solid var(--mud-palette-divider);
+}
+
+.role-card-taken {
+    position: absolute;
+    bottom: 0.5rem;
+    inset-inline-end: 0.5rem;
+    display: inline-flex;
+    color: var(--mud-palette-success-darken);
 }

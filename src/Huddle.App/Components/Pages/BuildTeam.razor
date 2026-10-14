@@ -1,5 +1,6 @@
 @page "/teams/build"
 @using Agency.Huddle.App.Acp
+@using Agency.Huddle.App.Avatars
 @using Agency.Huddle.App.Components.Shared
 @using Agency.Huddle.App.Components.Shared.Dialogs
 @using Agency.Huddle.App.Components.Teams
@@ -103,16 +104,16 @@
                 </button>
                 @foreach (PoolJob job in this.Pool.Jobs.Where(job => this.IsSuggested(job.Id)))
                 {
-                    <RoleCard @key="job.Id" RoleId="@job.Id" Title="@job.Title" Description="@job.Description" Suggested="true" OnAdd="this.AddRole" />
+                    <RoleCard @key="job.Id" RoleId="@job.Id" Title="@job.Title" Description="@job.Description" Suggested="true" Taken="@this.OnRoster(job.Id)" OnAdd="this.AddRole" />
                 }
                 @foreach (CustomRole role in this.CustomRoles.Roles)
                 {
-                    <RoleCard @key="role.Id" RoleId="@role.Id" Title="@role.Title" Description="@role.Description" Custom="true"
+                    <RoleCard @key="role.Id" RoleId="@role.Id" Title="@role.Title" Description="@role.Description" Custom="true" Taken="@this.OnRoster(role.Id)"
                               OnAdd="this.AddRole" OnEdit="this.EditRoleAsync" OnDelete="this.DeleteRoleAsync" />
                 }
                 @foreach (PoolJob job in this.Pool.Jobs.Where(job => !this.IsSuggested(job.Id)))
                 {
-                    <RoleCard @key="job.Id" RoleId="@job.Id" Title="@job.Title" Description="@job.Description" OnAdd="this.AddRole" />
+                    <RoleCard @key="job.Id" RoleId="@job.Id" Title="@job.Title" Description="@job.Description" Taken="@this.OnRoster(job.Id)" OnAdd="this.AddRole" />
                 }
             </div>
 
@@ -128,7 +129,7 @@
                         {
                             <div @key="draft.Key" class="@(draft.Manager ? "roster-card roster-card-manager" : "roster-card")" role="listitem">
                                 <div class="roster-card-head">
-                                    <span class="roster-avatar" aria-hidden="true">@TeammateAvatar.Monogram(draft.Name)</span>
+                                    <span class="roster-avatar-ring" aria-hidden="true"><TeammateAvatar Name="@draft.Name" Avatar="@draft.Avatar" Class="roster-avatar" /></span>
                                     <span class="roster-card-who">
                                         <span class="roster-name">@draft.Name</span>
                                         <span class="roster-title">@draft.Title</span>
@@ -344,6 +345,7 @@
 
     /// <summary>One Teammate on the draft roster: a role with a Name, not hired until the Human approves.</summary>
     /// <param name="Key">Tells this draft from the others; stable while it is edited or re-rolled.</param>
+    /// <param name="RoleId">The id of the role it was added from.</param>
     /// <param name="Title">The role's title.</param>
     /// <param name="Description">One sentence on the role.</param>
     /// <param name="Tier">The model strength the role asks for.</param>
@@ -351,7 +353,15 @@
     /// <param name="Name">The Teammate's Name.</param>
     /// <param name="Text">The persona text the Teammate is hired with.</param>
     /// <param name="NameChoices">The names the role suggests, tried before the shared pool when re-rolling.</param>
-    private sealed record DraftMember(string Key, string Title, string Description, ModelTier Tier, bool Manager, string Name, string Text, IReadOnlyList<string> NameChoices);
+    /// <param name="Avatar">The avatar drawn with the Name: a random background colour, the way a new Teammate card draws one.</param>
+    private sealed record DraftMember(string Key, string RoleId, string Title, string Description, ModelTier Tier, bool Manager, string Name, string Text, IReadOnlyList<string> NameChoices, Avatar Avatar);
+
+    /// <summary>An avatar with a random background colour, drawn together with a Name; the initials show on it until the Teammate gets an image.</summary>
+    private static Avatar RandomAvatar() => Avatar.None with { Background = AvatarPalette.Pick(Random.Shared) };
+
+    /// <summary>Whether the draft roster has a Teammate added from the role.</summary>
+    /// <param name="roleId">The role's id.</param>
+    private bool OnRoster(string roleId) => this.drafts.Exists(draft => string.Equals(draft.RoleId, roleId, StringComparison.Ordinal));
 
     /// <summary>Whether the chosen type's template makes the pool job its manager.</summary>
     /// <param name="jobId">The pool job's id.</param>
@@ -376,12 +386,12 @@
         DraftMember? draft = null;
         if (this.CustomRoles.Find(roleId) is { } custom)
         {
-            draft = new DraftMember(Guid.NewGuid().ToString("N"), custom.Title, custom.Description, custom.Tier, false, this.FreeName([], null), custom.Instructions, []);
+            draft = new DraftMember(Guid.NewGuid().ToString("N"), custom.Id, custom.Title, custom.Description, custom.Tier, false, this.FreeName([], null), custom.Instructions, [], RandomAvatar());
         }
         else if (this.Pool.FindJob(roleId) is { } job)
         {
             string text = this.Pool.ReadPersona(job.Id)?.Stance ?? job.Description;
-            draft = new DraftMember(Guid.NewGuid().ToString("N"), job.Title, job.Description, job.Model.Tier, this.IsManagerRole(job.Id), this.FreeName(job.SuggestedNames, null), text, job.SuggestedNames);
+            draft = new DraftMember(Guid.NewGuid().ToString("N"), job.Id, job.Title, job.Description, job.Model.Tier, this.IsManagerRole(job.Id), this.FreeName(job.SuggestedNames, null), text, job.SuggestedNames, RandomAvatar());
         }
 
         if (draft is not null)
@@ -397,7 +407,7 @@
         int index = this.drafts.FindIndex(draft => string.Equals(draft.Key, key, StringComparison.Ordinal));
         if (index >= 0)
         {
-            this.drafts[index] = this.drafts[index] with { Name = this.FreeName(this.drafts[index].NameChoices, this.drafts[index].Name) };
+            this.drafts[index] = this.drafts[index] with { Name = this.FreeName(this.drafts[index].NameChoices, this.drafts[index].Name), Avatar = RandomAvatar() };
         }
     }
 
