@@ -11,6 +11,8 @@
   const GRID = ".task-list-grid";
   const HANDLE = "task-col-resizer";
   const MIN_WIDTH = 56;
+  const KEY_STEP = 16;
+  const KEY_STEP_LARGE = 64;
 
   // The Blazor TaskListView registers itself here so a finished drag can be saved to the View.
   let listener = null;
@@ -32,6 +34,8 @@
         handle.className = HANDLE;
         handle.setAttribute("role", "separator");
         handle.setAttribute("aria-orientation", "vertical");
+        handle.setAttribute("tabindex", "0");
+        handle.setAttribute("aria-label", "Resize " + (cell.textContent || "").trim() + " column");
         cell.appendChild(handle);
       });
     }
@@ -62,6 +66,52 @@
     return Math.max(MIN_WIDTH, narrowest);
   }
 
+  /**
+   * Freezes every column of the handle's row at its current width and returns the drag state for the border: the
+   * two columns either side of it, the pointer scale and how far the border may move either way. Null for the last
+   * column, which has no neighbour to trade with.
+   */
+  function beginResize(handle) {
+    const cell = handle.parentElement;
+    const next = cell.nextElementSibling;
+    if (!next) {
+      return null;
+    }
+
+    const cells = Array.from(cell.parentElement.children);
+    const widths = cells.map(styleWidth);
+    cells.forEach((c, i) => {
+      c.style.width = widths[i] + "px";
+    });
+
+    const startCell = styleWidth(cell);
+    const startNext = styleWidth(next);
+    return {
+      cell,
+      next,
+      cells,
+      startCell,
+      startNext,
+      scale: pointerScale(cell),
+      lowest: minWidthOf(cell) - startCell,
+      highest: startNext - minWidthOf(next),
+    };
+  }
+
+  /** Moves the border by delta CSS pixels from where the drag began, clamped to what both columns allow. */
+  function applyDelta(state, delta) {
+    const clamped = Math.max(state.lowest, Math.min(state.highest, delta));
+    state.cell.style.width = state.startCell + clamped + "px";
+    state.next.style.width = state.startNext - clamped + "px";
+  }
+
+  /** Tells the Blazor list the final widths of every column, so they are saved to the View. */
+  function commit(state) {
+    if (listener) {
+      listener.invokeMethodAsync("OnColumnsResized", state.cells.map(styleWidth));
+    }
+  }
+
   document.addEventListener("pointerdown", (event) => {
     if (event.button !== 0 || !(event.target instanceof Element)) {
       return;
@@ -72,48 +122,51 @@
       return;
     }
 
-    const cell = handle.parentElement;
-    const next = cell.nextElementSibling;
-    if (!next) {
+    const state = beginResize(handle);
+    if (!state) {
       return;
     }
 
-    const cells = Array.from(cell.parentElement.children);
-    const widths = cells.map(styleWidth);
-    cells.forEach((c, i) => {
-      c.style.width = widths[i] + "px";
-    });
-
     const startX = event.clientX;
-    const scale = pointerScale(cell);
-    const startCell = styleWidth(cell);
-    const startNext = styleWidth(next);
-    const lowest = minWidthOf(cell) - startCell;
-    const highest = startNext - minWidthOf(next);
-
     handle.setPointerCapture(event.pointerId);
     handle.classList.add("active");
     event.preventDefault();
 
-    const move = (e) => {
-      const delta = Math.max(lowest, Math.min(highest, (e.clientX - startX) / scale));
-      cell.style.width = startCell + delta + "px";
-      next.style.width = startNext - delta + "px";
-    };
+    const move = (e) => applyDelta(state, (e.clientX - startX) / state.scale);
 
     const stop = () => {
       handle.classList.remove("active");
       handle.removeEventListener("pointermove", move);
       handle.removeEventListener("pointerup", stop);
       handle.removeEventListener("pointercancel", stop);
-      if (listener) {
-        listener.invokeMethodAsync("OnColumnsResized", cells.map(styleWidth));
-      }
+      commit(state);
     };
 
     handle.addEventListener("pointermove", move);
     handle.addEventListener("pointerup", stop);
     handle.addEventListener("pointercancel", stop);
+  });
+
+  // Keyboard: Left and Right move the focused border by KEY_STEP pixels (Shift: KEY_STEP_LARGE), like the Task detail's
+  // own resize handle. Each press is a complete resize, so it is saved as it is made.
+  document.addEventListener("keydown", (event) => {
+    if (!(event.target instanceof Element) || !event.target.classList.contains(HANDLE)) {
+      return;
+    }
+
+    const direction = event.key === "ArrowLeft" ? -1 : event.key === "ArrowRight" ? 1 : 0;
+    if (direction === 0) {
+      return;
+    }
+
+    event.preventDefault();
+    const state = beginResize(event.target);
+    if (!state) {
+      return;
+    }
+
+    applyDelta(state, direction * (event.shiftKey ? KEY_STEP_LARGE : KEY_STEP));
+    commit(state);
   });
 
   new MutationObserver(ensureHandles).observe(document.body, { childList: true, subtree: true });

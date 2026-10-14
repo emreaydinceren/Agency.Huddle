@@ -86,13 +86,15 @@
             {
                 <MudSelectItem T="string" Value="@state.ToWire()" Class="task-toolbar-filter-state-option">@state.ToWire()</MudSelectItem>
             }
-        </MudSelect>        @* Blocked: All, Blocked or Unblocked. *@
+        </MudSelect>
+        @* Blocked: All, Blocked or Unblocked. *@
         <MudSelect T="BlockedFilter" Variant="Variant.Outlined" Margin="Margin.Dense" Label="Blocked" Value="this.EffectiveView.Filter.Blocked"
                    ValueChanged="this.OnBlockedChangedAsync" Class="task-toolbar-filter-blocked">
             <MudSelectItem T="BlockedFilter" Value="BlockedFilter.All">All</MudSelectItem>
             <MudSelectItem T="BlockedFilter" Value="BlockedFilter.Blocked">Blocked</MudSelectItem>
             <MudSelectItem T="BlockedFilter" Value="BlockedFilter.Unblocked">Unblocked</MudSelectItem>
-        </MudSelect>        <MudSelect T="TaskPriority" Variant="Variant.Outlined" Margin="Margin.Dense" Label="Priority" MultiSelection="true" SelectedValues="this.EffectiveView.Filter.Priorities"
+        </MudSelect>
+        <MudSelect T="TaskPriority" Variant="Variant.Outlined" Margin="Margin.Dense" Label="Priority" MultiSelection="true" SelectedValues="this.EffectiveView.Filter.Priorities"
                    SelectedValuesChanged="this.OnPriorityFilterChangedAsync" Class="task-toolbar-filter-priority">
             @foreach (TaskPriority priority in Enum.GetValues<TaskPriority>())
             {

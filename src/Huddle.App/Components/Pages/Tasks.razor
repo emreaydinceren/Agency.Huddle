@@ -40,6 +40,7 @@
 @page "/tasks/item/{TaskIdText}"
 @implements IDisposable
 @using Microsoft.Extensions.Options
+@using Agency.Huddle.App.Components.Shared.Dialogs
 @using Agency.Huddle.App.Tabs
 @inject TaskStore Store
 @inject TaskEvents Events
@@ -363,8 +364,7 @@
     private async Task OnFieldsClickedAsync()
     {
         DialogParameters<FieldsDialog> parameters = new() { { dialog => dialog.ViewId, this.effectiveView.Id } };
-        DialogOptions options = new() { MaxWidth = MaxWidth.Small, FullWidth = true };
-        _ = await this.DialogService.ShowAsync<FieldsDialog>("Fields", parameters, options);
+        _ = await this.DialogService.ShowAsync<FieldsDialog>("Fields", parameters, HuddleDialogOptions.SmallForm);
     }
 
     /// <summary>
