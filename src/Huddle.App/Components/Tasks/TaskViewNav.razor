@@ -6,19 +6,10 @@
 
     Each View row also copies RoomList.razor's own row-actions menu shape: a keyboard-focusable
     "..." MudIconButton (revealed on hover/focus via app.css) and a right-click on the row itself,
-    both opening the SAME MudMenu instance via an @ref, offering Edit View and (for a non-built-in
-    View) Delete View. Edit View used to be TaskToolbar's own standalone button, editing only the
-    page's current effective View (corrections-B5 D13 item 7); it moved here so every View - not
-    only the one currently open - can be edited or deleted from wherever the Human is in the app,
-    since this nav (unlike Tasks.razor) is mounted once in MainLayout and outlives any one page.
-    That is also why this component hosts its own ViewEditorDrawer instance rather than reusing
-    Tasks.razor's: ViewEditorDrawer is deliberately self-contained, driven only by Open/Id/Section
-    (its own file header), so a second instance here is the same pattern Tasks.razor already uses
-    for "Edit columns…" and the invalid-View route's own Edit View button - just for a different
-    trigger. Delete reuses ViewStore.Delete directly (the same call ViewEditorDrawer's own Delete
-    button makes), with the same confirm wording, and only replaces the URL with /tasks when the
-    View just deleted is the one currently on screen - unlike ViewEditorDrawer's Delete, which can
-    only ever be deleted while it IS the one on screen.
+    both opening the SAME MudMenu instance via an @ref, offering Rename and (for a non-built-in
+    View) Delete View. Delete reuses ViewStore.Delete directly, with the same confirm wording as the
+    Tasks page's own menu, and only replaces the URL with /tasks when the View just deleted is the one
+    currently on screen.
 *@
 
 @implements IDisposable
@@ -54,7 +45,7 @@
                             </MudTooltip>
                         </ActivatorContent>
                         <ChildContent>
-                            <MudMenuItem OnClick="@(() => this.OpenEditor(view.Id))">Edit view</MudMenuItem>
+                            <MudMenuItem OnClick="@(() => ViewActions.RenameAsync(this.DialogService, this.ViewStore, view.Id))">Rename</MudMenuItem>
                             @if (!view.BuiltIn)
                             {
                                 <MudMenuItem OnClick="@(() => this.DeleteViewAsync(view))">Delete view</MudMenuItem>
@@ -84,14 +75,11 @@
         </MudNavGroup>
     </MudNavMenu>
 
-    <ViewEditorDrawer Open="this.editorOpen" OpenChanged="this.OnEditorOpenChanged" Id="@this.editorViewId" />
 }
 
 @code {
     private bool expanded = true;
     private readonly Dictionary<string, MudMenu> menuRefs = new(StringComparer.Ordinal);
-    private bool editorOpen;
-    private string? editorViewId;
 
     /// <summary>Subscribes to <see cref="ViewStore.ViewsChanged"/> so the nav follows every save, delete or hand edit of <c>views.json</c>.</summary>
     protected override void OnInitialized()
@@ -123,7 +111,7 @@
         return Task.CompletedTask;
     });
 
-    /// <summary>Opens the row's own MudMenu programmatically, so a right-click reaches the same Edit View/Delete View menu the "..." button does (RoomList.razor's own precedent).</summary>
+    /// <summary>Opens the row's own MudMenu programmatically, so a right-click reaches the same Rename/Delete View menu the "..." button does (RoomList.razor's own precedent).</summary>
     /// <param name="viewId">The View whose row was right-clicked.</param>
     /// <param name="e">The right-click's mouse event args, forwarded to <see cref="MudMenu.OpenMenuAsync"/>.</param>
     private async Task OnRowContextMenuAsync(string viewId, MouseEventArgs e)
@@ -134,25 +122,12 @@
         }
     }
 
-    /// <summary>Opens this component's own <see cref="ViewEditorDrawer"/> for <paramref name="viewId"/>, always at its General section.</summary>
-    /// <param name="viewId">The View to edit.</param>
-    private void OpenEditor(string viewId)
-    {
-        this.editorViewId = viewId;
-        this.editorOpen = true;
-    }
-
-    /// <summary>Reflects the drawer's own chrome (backdrop, Escape) closing it.</summary>
-    /// <param name="open">The drawer's new Open state.</param>
-    private void OnEditorOpenChanged(bool open) => this.editorOpen = open;
-
     /// <summary>
     /// Confirms through <see cref="IDialogService.ShowMessageBoxAsync(string, string, string, string?, string?, DialogOptions?)"/>
-    /// with <see cref="ViewEditorDrawer"/>'s own Delete wording, then removes <paramref name="view"/>
+    /// with the same Delete wording as the page's own menu, then removes <paramref name="view"/>
     /// through <see cref="ViewStore.Delete(string)"/> (a no-op for a built-in id, which this menu
     /// item is never offered for). Replaces the URL with <c>/tasks</c> only when <paramref name="view"/>
-    /// is the one currently on screen - unlike <see cref="ViewEditorDrawer"/>'s own Delete, which
-    /// always is.
+    /// is the one currently on screen.
     /// </summary>
     /// <param name="view">The View to delete.</param>
     private async Task DeleteViewAsync(TaskView view)

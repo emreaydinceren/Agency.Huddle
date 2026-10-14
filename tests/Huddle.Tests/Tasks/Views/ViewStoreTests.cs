@@ -409,13 +409,13 @@ public sealed class ViewStoreTests
         ViewSaveResult first = store.Save(ListView("custom-1", "Sprint Board"));
         Assert.True(first.Saved);
 
-        ViewSaveResult second = store.Save(ListView("custom-1", "Sprint Board") with { Description = "Updated" });
+        ViewSaveResult second = store.Save(ListView("custom-1", "Sprint Board") with { Fields = ["status"] });
 
         Assert.True(second.Saved);
         Assert.Empty(second.Problems);
         TaskView? renamed = store.Get("custom-1");
         Assert.NotNull(renamed);
-        Assert.Equal("Updated", renamed.Description);
+        Assert.Equal(["status"], renamed.Fields);
     }
 
     /// <summary><see cref="ViewStore.RenameTeammate(string, string)"/> rewrites every View's assignee filter that named the old Teammate, leaving other assignee values untouched.</summary>

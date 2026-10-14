@@ -255,8 +255,7 @@ public sealed class TasksPageDetailTests
     /// <summary>
     /// Sets the mounted <see cref="TaskDetail"/>'s Priority through its rendered <c>MudSelect</c>,
     /// adding a pending edit (the same technique <c>TaskDetailTests</c>/<c>TaskDetailActionsTests</c>
-    /// use) - scoped to <see cref="TaskDetail"/>'s own subtree, because the always-mounted
-    /// <see cref="ViewEditorDrawer"/> has its own unrelated <c>MudSelect&lt;TaskPriority&gt;</c> (its
+    /// use) - scoped to <see cref="TaskDetail"/>'s own subtree, because the toolbar's Filter menu has its own unrelated <c>MudSelect&lt;TaskPriority&gt;</c> (its
     /// Priority filter).
     /// </summary>
     private static async Task EditPriorityAsync(IRenderedComponent<ContainerFragment> cut, TaskPriority value)
@@ -274,7 +273,7 @@ public sealed class TasksPageDetailTests
     private static Task ClickRevertAsync(IRenderedComponent<ContainerFragment> cut) =>
         cut.InvokeAsync(() => cut.FindComponent<TaskDetail>().FindAll("button").Single(b => string.Equals(b.TextContent.Trim(), "Revert", StringComparison.Ordinal)).ClickAsync());
 
-    /// <summary>The page's own detail drawer, picked out from <see cref="ViewEditorDrawer"/>'s <c>MudDrawer</c> by its <c>tasks-detail-drawer</c> CSS hook.</summary>
+    /// <summary>The page's own detail drawer, picked out from any other <c>MudDrawer</c> by its <c>tasks-detail-drawer</c> CSS hook.</summary>
     private static IRenderedComponent<MudDrawer> DetailDrawer(IRenderedComponent<ContainerFragment> cut) =>
         cut.FindComponents<MudDrawer>().Single(d => (d.Instance.Class ?? string.Empty).Contains("tasks-detail-drawer", StringComparison.Ordinal));
 }

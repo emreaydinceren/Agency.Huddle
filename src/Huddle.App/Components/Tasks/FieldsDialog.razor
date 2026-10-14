@@ -1,0 +1,168 @@
+@*
+    The dialog behind "Fields…" in the Tasks page's ⋮ menu: the View's Fields exactly as the View
+    editor's Fields section used to edit them, which is where this moved from.
+
+    A row's MudSwitch and remove button are deliberately different (delivery-manager settled,
+    2026-09-24): the switch excludes the field from the saved View.Fields but keeps its row - and its
+    position - in the dialog, so switching it back on restores the field where it was; the remove
+    button deletes the row outright and returns the field to the Add field menu. Reordering (drag or
+    the up/down buttons) only ever moves rows, never changes which are shown. Save writes the shown
+    rows, in order, to the saved View through ViewStore, so the page follows ViewsChanged; Cancel
+    writes nothing. id and title are always shown and are never rows.
+
+    MudDropContainer keeps its own copy of Items and of the rendered ItemRenderer output, and a parent
+    re-render does not refresh either (agents/BlazorTesting.md), so OnAfterRender refreshes it by hand
+    whenever the rows' signature changed since it last drew.
+*@
+
+@inject ViewStore ViewStore
+
+<MudDialog>
+    <DialogContent>
+        @if (this.view is null)
+        {
+            <MudText Class="fields-dialog-missing">That View no longer exists.</MudText>
+        }
+        else
+        {
+            <MudDropContainer T="string" @ref="this.container" Items="this.Keys()" ItemsSelector="@((_, _) => true)"
+                               ItemDropped="this.OnDropped" Class="view-editor-fields">
+                <ChildContent>
+                    <MudDropZone T="string" Identifier="fields" AllowReorder="true" />
+                </ChildContent>
+                <ItemRenderer>
+                    <div class="view-editor-field-row">
+                        <MudSwitch T="bool" Value="@this.IsShown(context)" ValueChanged="@(shown => this.SetShown(context, shown))"
+                                   Class="@($"view-editor-field-switch-{context}")" />
+                        <MudText>@context</MudText>
+                        <MudIconButton Icon="@Icons.Material.Filled.ArrowUpward" Size="Size.Small" aria-label="@($"Move {context} up")"
+                                       Class="@($"view-editor-field-up-{context}")" OnClick="@(() => this.Move(context, -1))" />
+                        <MudIconButton Icon="@Icons.Material.Filled.ArrowDownward" Size="Size.Small" aria-label="@($"Move {context} down")"
+                                       Class="@($"view-editor-field-down-{context}")" OnClick="@(() => this.Move(context, 1))" />
+                        <MudIconButton Icon="@Icons.Material.Filled.Close" Size="Size.Small" aria-label="@($"Remove {context}")"
+                                       Class="@($"view-editor-field-remove-{context}")" OnClick="@(() => this.Remove(context))" />
+                    </div>
+                </ItemRenderer>
+            </MudDropContainer>
+            <MudMenu Label="Add field" Class="view-editor-fields-add">
+                @foreach (string key in this.Addable())
+                {
+                    <MudMenuItem Class="view-editor-fields-add-option" OnClick="@(() => this.Add(key))">@key</MudMenuItem>
+                }
+            </MudMenu>
+        }
+
+        @if (this.problem is not null)
+        {
+            <MudAlert Severity="Severity.Error" role="alert" Class="fields-dialog-problem">@this.problem</MudAlert>
+        }
+    </DialogContent>
+    <DialogActions>
+        <MudButton Size="Size.Medium" OnClick="this.Cancel" Class="fields-dialog-cancel">Cancel</MudButton>
+        <MudButton Variant="Variant.Filled" Size="Size.Medium" Color="Color.Primary" OnClick="this.Save"
+                   Disabled="@(this.view is null || this.ViewStore.LoadError is not null)" Class="fields-dialog-save">Save</MudButton>
+    </DialogActions>
+</MudDialog>
+
+@code {
+    /// <summary>The dialog instance, for closing with a result.</summary>
+    [CascadingParameter]
+    private IMudDialogInstance? Dialog { get; set; }
+
+    /// <summary>The id of the saved View whose fields are edited.</summary>
+    [Parameter, EditorRequired]
+    public required string ViewId { get; set; }
+
+    private TaskView? view;
+    private FieldRow[] rows = [];
+    private MudDropContainer<string>? container;
+    private string? signature;
+    private string? problem;
+
+    /// <summary>Loads the View once, so a store echo cannot reshuffle rows under a Human who is editing them.</summary>
+    protected override void OnInitialized()
+    {
+        this.view = this.ViewStore.Get(this.ViewId);
+        this.rows = [.. (this.view?.Fields ?? []).Select(key => new FieldRow(key, Shown: true))];
+    }
+
+    /// <summary>Repaints the drop container when the rows changed, since a parent render alone leaves it showing the previous rows.</summary>
+    protected override void OnAfterRender(bool firstRender)
+    {
+        string current = string.Join('|', this.rows.Select(row => $"{row.Key}:{row.Shown}"));
+        if (!string.Equals(current, this.signature, StringComparison.Ordinal))
+        {
+            this.signature = current;
+            this.container?.Refresh();
+        }
+    }
+
+    /// <summary>The rows' keys, in their current order (shown and switched-off alike).</summary>
+    private List<string> Keys() => [.. this.rows.Select(row => row.Key)];
+
+    private bool IsShown(string key) => this.rows.First(row => string.Equals(row.Key, key, StringComparison.Ordinal)).Shown;
+
+    private void SetShown(string key, bool shown) =>
+        this.rows = [.. this.rows.Select(row => string.Equals(row.Key, key, StringComparison.Ordinal) ? row with { Shown = shown } : row)];
+
+    private void Remove(string key) =>
+        this.rows = [.. this.rows.Where(row => !string.Equals(row.Key, key, StringComparison.Ordinal))];
+
+    private void Add(string key) => this.rows = [.. this.rows, new FieldRow(key, Shown: true)];
+
+    private void Move(string key, int delta)
+    {
+        List<FieldRow> moved = [.. this.rows];
+        int index = moved.FindIndex(row => string.Equals(row.Key, key, StringComparison.Ordinal));
+        int newIndex = index + delta;
+        if (index < 0 || newIndex < 0 || newIndex >= moved.Count)
+        {
+            return;
+        }
+
+        (moved[index], moved[newIndex]) = (moved[newIndex], moved[index]);
+        this.rows = [.. moved];
+    }
+
+    private void OnDropped(MudItemDropInfo<string> info)
+    {
+        List<FieldRow> moved = [.. this.rows];
+        int oldIndex = moved.FindIndex(row => string.Equals(row.Key, info.Item, StringComparison.Ordinal));
+        if (oldIndex < 0)
+        {
+            return;
+        }
+
+        FieldRow row = moved[oldIndex];
+        moved.RemoveAt(oldIndex);
+        moved.Insert(Math.Min(info.IndexInZone, moved.Count), row);
+        this.rows = [.. moved];
+    }
+
+    /// <summary>Every known field key not currently a row, offered by the Add field menu (never the always-shown id and title).</summary>
+    private List<string> Addable() =>
+        [.. ViewFieldKeys.All.Where(key => key is not ("id" or "title") && !this.rows.Any(row => string.Equals(row.Key, key, StringComparison.Ordinal)))];
+
+    /// <summary>Saves the shown rows, in order, to the View, closing on success and showing the store's reasons otherwise.</summary>
+    private void Save()
+    {
+        if (this.view is null)
+        {
+            return;
+        }
+
+        IReadOnlyList<string> fields = [.. this.rows.Where(row => row.Shown).Select(row => row.Key)];
+        ViewSaveResult result = this.ViewStore.Save(this.view with { Fields = fields });
+        if (result.Saved)
+        {
+            this.Dialog?.Close(DialogResult.Ok(true));
+            return;
+        }
+
+        this.problem = string.Join(" ", result.Problems);
+    }
+
+    private void Cancel() => this.Dialog?.Cancel();
+
+    private sealed record FieldRow(string Key, bool Shown);
+}

@@ -174,15 +174,18 @@ error alert, the budget caption and the "continue" notes, which sit in the `C9` 
 | Code | Name | Component | Notes |
 | --- | --- | --- | --- |
 | `T1` | Page container | `MudContainer`, full width, `pa-4` | |
-| `T2` | Header | `PageHeader` inside `.tasks-header` | View name as the page's `h1`; its description, Reset filters, the AI chip and `T2a` sit on the right |
-| `T2a` | View actions | `MudMenu`, `MoreVert` icon button | Edit view, Delete view (the same menu as the sidebar row) |
+| `T2` | Header row | First `MudToolBar` of `TaskToolbar` (`SplitHeader`), inside `.tasks-header` | No `h1`: the View name is the breadcrumb's last crumb. The counts (`T2d`) on the left; the AI chip, Group by (`T3c`), `T3a`, the filled New task button and `T2a` on the right |
+| `T2d` | Counts | `.tasks-counts` | "N open" (not Done, Cancelled, Duplicate or Rejected, over the Tasks the View shows), "N need you" (open and assigned to the Human) and "N all" (every Task in the store) |
+| `T2a` | View actions | `MudMenu`, `MoreVert` icon button | Rename, Fields…, Delete view (Rename and Delete are the sidebar row's menu too) |
 | `T2b` | Reset | `MudLink` | Appears only when the Human has overridden the View |
 | `T2c` | AI reacting chip | `AiReactingChip` | Tasks an Agent is acting on |
 | `T9` | Notices | `MudAlert`, `WakeToasts` | Tasks off, invalid or missing View, load errors, ignored lines |
-| `T3` | Toolbar | `TaskToolbar` | |
-| `T3a` | View kind | Toggle | List or Board |
-| `T3b` | Filter | `MudMenu` | Team, Sprint and more |
-| `T3c` | Group, Sort | `MudMenu` | |
+| `T3` | Toolbar | `TaskToolbar` | The second row, the same dense height as `T2`. It leads with the Filter icon (T3b), then one chip per filter that is set (Team, Project, Assignee, Sprint, Priority, Status - `T3h` and `T3i` are the Assignee and Status ones); a filter chosen in `T3b` appears as a chip and its × removes it, so an unfiltered View shows none |
+| `T3a` | View kind | Toggle | List or Kanban (the saved `ViewKind.Board`) |
+| `T3b` | Filter | `MudMenu` | Every saved filter as an outlined multi-select: Team, Project, Assignee, Sprint, Status (with selectable All / Open / Closed group headers above their statuses), Priority. A change is saved to the View at once |
+| `T3c` | Group by | `TaskFilterChip` in the header row | "Group by: Assignee ⌄ ×", the same chip as `T3h` and `T3i`: None, Team, Project, Assignee, Sprint, and Status on a List, with a clear button once one is chosen. On the Team page's tab, where there is one row, it stays a `MudSelect` in a "Group, Sort" menu |
+| `T3h` | Assignee chip | `TaskFilterChip` | Any, Me, Unassigned or a name; dashed while Any, filled with a clear button once set. Edits the View's Assignee filter |
+| `T3i` | Status chip | `TaskFilterChip` | A two-level menu: All, then Open (Backlog, To Do, In Progress, Review) and Closed (Done, Cancelled, Duplicate, Rejected), each choosable as a group and followed by its own statuses indented beneath it. The chip reads All, Open, Closed or the one status; same look as `T3h`. Edits the View's Status filter |
 | `T3d` | Blocked filter | Toggle | All, Blocked, Unblocked |
 | `T3e` | Search | `MudTextField` | |
 | `T3f` | Dense | `MudSwitch` | |
@@ -193,8 +196,7 @@ error alert, the budget caption and the "continue" notes, which sit in the `C9` 
 | `T7` | Task detail | `ResizableEndDrawer`, temporary, `Anchor.End` | Header with title ("Task" or "New task") and a close button; holds `TaskDetail` in `pa-4` |
 | `T7a` | Resize handle | `.resizable-drawer-handle`, `role="separator"`, `tabindex="0"` | Drag, or press Left and Right (Shift for larger steps, Home and End for the limits), to change the drawer's width |
 
-Not drawn: the View editor, `ViewEditorDrawer`, which is a `ResizableEndDrawer` too (titled
-"Edit view" or "New view") and opens from the same edge as `T7`; and `TaskDetailDialog`, the dialog form of the detail (see Figure 8).
+Not drawn: `TaskDetailDialog`, the dialog form of the detail (see Figure 8). A View has no editor panel: every change to it is saved as it is made.
 
 ## Figure 5: The Library page
 
@@ -287,7 +289,7 @@ Containers that float above a page. Each cell shows one over a dimmed page.
 Name the container, then the change.
 
 - "In `C9c`, put Continue before Dismiss."
-- "`T3` loses `T3f`; Dense moves into the View editor."
+- "`T3` loses `T3f`; Dense moves into the Filter menu."
 - "The Tab menu (`W7`) needs a Duplicate item."
 - "`P4` should show the Teammate's Adapter under the role."
 - "`S2c` and `S2b` should share one row component."

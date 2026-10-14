@@ -12,12 +12,12 @@ using Agency.Huddle.App.Tasks.Views;
 
 /// <summary>
 /// Pins Spec §13.3: a filter, group/sort or kind change is
-/// session-only and only offers <c>Save to View</c> rather than writing straight through; Search is
+/// raised to the host rather than written by the toolbar itself; Search is
 /// debounced and never saved; and <c>+ New task</c> defaults the Team from a single-Team filter.
 /// </summary>
 public sealed class TaskToolbarTests
 {
-    /// <summary>Adding a team to the filter raises <c>EffectiveViewChanged</c> and, once the parent reflects it back, shows <c>Save to View</c> - without writing to <see cref="ViewStore"/>.</summary>
+    /// <summary>Adding a team to the filter raises <c>EffectiveViewChanged</c> - without writing to <see cref="ViewStore"/> itself (the host decides what to do with the change).</summary>
     [Fact]
     public async Task AddingATeamFilter_RaisesEffectiveViewChanged_AndShowsSaveToView_WithoutWritingToViewStore()
     {
@@ -29,9 +29,8 @@ public sealed class TaskToolbarTests
         await using var ctx = NewContext(store);
         var (root, toolbar) = RenderToolbar(ctx, saved, effectiveViewChanged: EventCallback.Factory.Create<TaskView>(this, v => raised = v));
 
-        Assert.Empty(root.FindAll(".task-toolbar-save"));
 
-        await root.InvokeAsync(() => root.FindAll("button").Single(b => string.Equals(b.TextContent.Trim(), "Filter", StringComparison.Ordinal)).ClickAsync());
+        await root.InvokeAsync(() => root.Find(".task-toolbar-filter button").ClickAsync());
         var teamSelect = root.FindComponents<MudSelect<string>>().Single(m => string.Equals(m.Instance.Class, "task-toolbar-filter-team", StringComparison.Ordinal));
         await root.InvokeAsync(() => teamSelect.Instance.SelectedValuesChanged.InvokeAsync(["Atlas"]));
 
@@ -40,15 +39,14 @@ public sealed class TaskToolbarTests
 
         toolbar.Render(builder => builder.Add(t => t.EffectiveView, updated));
 
-        Assert.NotEmpty(root.FindAll(".task-toolbar-save"));
         TaskView? unsaved = store.Get("v1");
         Assert.NotNull(unsaved);
         Assert.Null(unsaved.Filter.Teams.SingleOrDefault());
     }
 
-    /// <summary>The toolbar's All | Blocked | Unblocked control is ad hoc: picking Blocked raises <c>EffectiveViewChanged</c> with the filter set, offers <c>Save to View</c> once the parent reflects it, and never writes to <see cref="ViewStore"/>.</summary>
+    /// <summary>The Filter menu's Blocked select (All, Blocked, Unblocked) is ad hoc: picking Blocked raises <c>EffectiveViewChanged</c> with the filter set, shows a Blocked chip whose clear button restores All, and never writes to <see cref="ViewStore"/>.</summary>
     [Fact]
-    public async Task BlockedControl_RaisesEffectiveViewChanged_AndOffersSave_WithoutWritingToViewStore()
+    public async Task BlockedFilter_RaisesEffectiveViewChanged_ShowsAChip_AndOffersSave_WithoutWritingToViewStore()
     {
         using var dir = new TempDataDir();
         using var store = new ViewStore(dir.Options(), NullLogger<ViewStore>.Instance);
@@ -56,24 +54,26 @@ public sealed class TaskToolbarTests
 
         TaskView? raised = null;
         await using var ctx = NewContext(store);
-        var (root, toolbar) = RenderToolbar(ctx, saved, effectiveViewChanged: EventCallback.Factory.Create<TaskView>(this, v => raised = v));
+        var (root, toolbar) = RenderToolbar(ctx, saved, effectiveViewChanged: EventCallback.Factory.Create<TaskView>(this, v => raised = v), splitHeader: true);
 
-        var control = toolbar.FindComponent<MudToggleGroup<BlockedFilter>>();
-        Assert.Equal(["All", "Blocked", "Unblocked"], toolbar.FindAll(".task-toolbar-blocked .mud-toggle-item").Select(item => item.TextContent.Trim()));
-        Assert.Equal("All", toolbar.Find(".task-toolbar-blocked .huddle-segmented-active-item").TextContent.Trim());
+        Assert.Empty(toolbar.FindAll(".task-toolbar-blocked"));
+        await root.InvokeAsync(() => root.Find(".task-toolbar-filter button").ClickAsync());
+        var select = root.FindComponent<MudSelect<BlockedFilter>>();
+        Assert.Equal([BlockedFilter.All, BlockedFilter.Blocked, BlockedFilter.Unblocked], select.FindComponents<MudSelectItem<BlockedFilter>>().Select(item => item.Instance.Value));
 
-        await toolbar.InvokeAsync(() => control.Instance.ValueChanged.InvokeAsync(BlockedFilter.Blocked));
+        await toolbar.InvokeAsync(() => select.Instance.ValueChanged.InvokeAsync(BlockedFilter.Blocked));
 
         TaskView updated = raised ?? throw new InvalidOperationException("EffectiveViewChanged was not raised.");
         Assert.Equal(BlockedFilter.Blocked, updated.Filter.Blocked);
 
         toolbar.Render(builder => builder.Add(t => t.EffectiveView, updated));
 
-        Assert.Equal("Blocked", toolbar.Find(".task-toolbar-blocked .huddle-segmented-active-item").TextContent.Trim());
-        Assert.NotEmpty(root.FindAll(".task-toolbar-save"));
+        Assert.Equal("Blocked", toolbar.Find(".task-toolbar-blocked .task-filter-chip-value").TextContent.Trim());
         Assert.Equal(BlockedFilter.All, store.Get("v1")?.Filter.Blocked);
-    }
 
+        await toolbar.InvokeAsync(() => toolbar.Find(".task-toolbar-blocked .task-filter-chip-clear").ClickAsync());
+        Assert.Equal(BlockedFilter.All, raised?.Filter.Blocked);
+    }
     /// <summary>The Search field is the shared <c>SearchField</c> (debounced at its shared 250ms) and is never part of a saved View.</summary>
     [Fact]
     public async Task Search_IsDebounced_AndNeverSaved()
@@ -84,7 +84,7 @@ public sealed class TaskToolbarTests
 
         string? searched = null;
         await using var ctx = NewContext(store);
-        var (root, toolbar) = RenderToolbar(ctx, saved, searchChanged: EventCallback.Factory.Create<string?>(this, v => searched = v));
+        var (_, toolbar) = RenderToolbar(ctx, saved, searchChanged: EventCallback.Factory.Create<string?>(this, v => searched = v));
 
         var search = toolbar.FindComponent<Agency.Huddle.App.Components.Shared.SearchField>();
         Assert.Equal(250, toolbar.FindComponent<MudTextField<string>>().Instance.DebounceInterval);
@@ -92,12 +92,11 @@ public sealed class TaskToolbarTests
         await toolbar.InvokeAsync(() => search.Instance.ValueChanged.InvokeAsync("urgent"));
 
         Assert.Equal("urgent", searched);
-        Assert.Empty(root.FindAll(".task-toolbar-save"));
     }
 
-    /// <summary>The toolbar has no Active/Closed toggle (Scope is set in the View editor); <c>+ New task</c> leads it and the List | Board control sits directly after it, before <c>Filter</c>.</summary>
+    /// <summary>The toolbar has no Active/Closed toggle (Scope is set in the View editor); the <c>Filter</c> icon leads it, then <c>+ New task</c>, then the List | Board control.</summary>
     [Fact]
-    public async Task Toolbar_LeadsWithNewTask_ThenListBoardControl_ThenFilter_AndHasNoScopeToggle()
+    public async Task Toolbar_LeadsWithFilter_ThenNewTask_ThenListBoardControl_AndHasNoScopeToggle()
     {
         using var dir = new TempDataDir();
         using var store = new ViewStore(dir.Options(), NullLogger<ViewStore>.Instance);
@@ -108,14 +107,14 @@ public sealed class TaskToolbarTests
 
         Assert.Empty(toolbar.FindComponents<MudToggleGroup<ViewScope>>());
         var children = toolbar.Find(".task-toolbar").Children;
-        Assert.Contains("btn-action-tight", children[0].ClassList);
-        Assert.Contains("task-toolbar-kind", children[1].ClassList);
-        Assert.Contains("task-toolbar-filter", children[2].ClassList);
-        Assert.Equal(["List", "Board"], toolbar.FindAll(".task-toolbar-kind .mud-toggle-item").Select(item => item.TextContent.Trim()));
-        Assert.Equal("Board", toolbar.Find(".task-toolbar-kind .huddle-segmented-active-item").TextContent.Trim());
+        Assert.Contains("task-toolbar-filter", children[0].ClassList);
+        Assert.Contains("btn-action-tight", children[1].ClassList);
+        Assert.Contains("task-toolbar-kind", children[2].ClassList);
+        Assert.Equal(["List", "Kanban"],toolbar.FindAll(".task-toolbar-kind .mud-toggle-item").Select(item => item.TextContent.Trim()));
+        Assert.Equal("Kanban", toolbar.Find(".task-toolbar-kind .huddle-segmented-active-item").TextContent.Trim());
     }
 
-    /// <summary>Picking Board on a List View raises <c>EffectiveViewChanged</c> with a Board that passes <c>ViewValidator</c> (Active scope, every state in a column), offers <c>Save to View</c> once reflected, and leaves the saved View a List.</summary>
+    /// <summary>Picking Board on a List View raises <c>EffectiveViewChanged</c> with a Board that passes <c>ViewValidator</c> (Active scope, every state in a column), and leaves the saved View a List.</summary>
     [Fact]
     public async Task KindControl_ListToBoard_RaisesAValidBoard_AndOffersSave_WithoutWritingToViewStore()
     {
@@ -125,7 +124,7 @@ public sealed class TaskToolbarTests
 
         TaskView? raised = null;
         await using var ctx = NewContext(store);
-        var (root, toolbar) = RenderToolbar(ctx, saved, effectiveViewChanged: EventCallback.Factory.Create<TaskView>(this, v => raised = v));
+        var (_, toolbar) = RenderToolbar(ctx, saved, effectiveViewChanged: EventCallback.Factory.Create<TaskView>(this, v => raised = v));
 
         Assert.Equal("List", toolbar.Find(".task-toolbar-kind .huddle-segmented-active-item").TextContent.Trim());
         await toolbar.InvokeAsync(() => toolbar.FindComponent<MudToggleGroup<ViewKind>>().Instance.ValueChanged.InvokeAsync(ViewKind.Board));
@@ -137,8 +136,7 @@ public sealed class TaskToolbarTests
 
         toolbar.Render(builder => builder.Add(t => t.EffectiveView, updated));
 
-        Assert.Equal("Board", toolbar.Find(".task-toolbar-kind .huddle-segmented-active-item").TextContent.Trim());
-        Assert.NotEmpty(root.FindAll(".task-toolbar-save"));
+        Assert.Equal("Kanban", toolbar.Find(".task-toolbar-kind .huddle-segmented-active-item").TextContent.Trim());
         Assert.Equal(ViewKind.List, store.Get("v1")?.Kind);
     }
 
@@ -196,6 +194,140 @@ public sealed class TaskToolbarTests
         Assert.Null(twoTeamsDefaults?.Team);
     }
 
+    /// <summary>With the split header, the second row leads with the filter icon and shows a chip only for a filter that is set - none for an unfiltered View - and without the header (the Team tab) there are never any.</summary>
+    [Fact]
+    public async Task FilterChips_AppearOnlyForSetFilters_AndOnlyWithTheSplitHeader()
+    {
+        using var dir = new TempDataDir();
+        using var store = new ViewStore(dir.Options(), NullLogger<ViewStore>.Instance);
+        var saved = Save(store, "v1", ViewKind.List, []);
+        TaskView filtered = saved with
+        {
+            Filter = new TaskFilter
+            {
+                Teams = ["Platform"],
+                Projects = [new ProjectRef("Platform", "Backend")],
+                Assignees = ["@me"],
+                Sprints = ["@current"],
+                Priorities = [TaskPriority.High],
+                States = [TaskState.ToDo],
+            },
+        };
+
+        await using var splitCtx = NewContext(store);
+        var (_, split) = RenderToolbar(splitCtx, saved, splitHeader: true);
+        Assert.Contains("task-toolbar-filter", split.Find(".task-toolbar").Children[0].ClassList);
+        Assert.Empty(split.FindAll(".task-toolbar .task-filter-chip"));
+
+        split.Render(builder => builder.Add(t => t.EffectiveView, filtered));
+        Assert.Equal(
+            ["Team: Platform", "Project: Platform/Backend", "Assignee: Me", "Sprint: Current sprint", "Priority: High", "Status: To Do"],
+            split.FindAll(".task-toolbar .task-filter-chip").Select(chip => string.Join(' ', chip.QuerySelector(".task-filter-chip-button")!.TextContent.Split((char[]?)null, StringSplitOptions.RemoveEmptyEntries))));
+        Assert.Equal(6, split.FindAll(".task-toolbar .task-filter-chip-clear").Count);
+
+        await using var plainCtx = NewContext(store);
+        var (_, plain) = RenderToolbar(plainCtx, filtered);
+        Assert.Empty(plain.FindAll(".task-filter-chip"));
+    }
+
+    /// <summary>The clear button on each filter chip empties just that filter, so its chip disappears.</summary>
+    [Fact]
+    public async Task FilterChips_ClearButton_EmptiesOnlyThatFilter()
+    {
+        using var dir = new TempDataDir();
+        using var store = new ViewStore(dir.Options(), NullLogger<ViewStore>.Instance);
+        var saved = Save(store, "v1", ViewKind.List, []);
+        TaskView filtered = saved with { Filter = new TaskFilter { Teams = ["Platform"], Priorities = [TaskPriority.High], Sprints = ["@current"], Projects = [new ProjectRef("Platform", null)] } };
+
+        TaskView? raised = null;
+        await using var ctx = NewContext(store);
+        var (_, toolbar) = RenderToolbar(ctx, filtered, effectiveViewChanged: EventCallback.Factory.Create<TaskView>(this, v => raised = v), splitHeader: true);
+
+        await toolbar.InvokeAsync(() => toolbar.Find(".task-toolbar-team .task-filter-chip-clear").ClickAsync());
+        Assert.Empty(raised?.Filter.Teams ?? [Guid.NewGuid().ToString()]);
+        await toolbar.InvokeAsync(() => toolbar.Find(".task-toolbar-project .task-filter-chip-clear").ClickAsync());
+        Assert.Empty(raised?.Filter.Projects ?? [new ProjectRef("x", null)]);
+        await toolbar.InvokeAsync(() => toolbar.Find(".task-toolbar-sprint .task-filter-chip-clear").ClickAsync());
+        Assert.Empty(raised?.Filter.Sprints ?? ["x"]);
+        await toolbar.InvokeAsync(() => toolbar.Find(".task-toolbar-priority .task-filter-chip-clear").ClickAsync());
+        Assert.Empty(raised?.Filter.Priorities ?? [TaskPriority.High]);
+    }
+    /// <summary>The Status chip reads "Open" for the non-terminal set, shows a clear button then, and clearing restores All; the Assignee chip names a single choice ("@me" reads "Me").</summary>
+    [Fact]
+    public async Task FilterChips_ReflectTheFilter_AndClearBackToAny()
+    {
+        using var dir = new TempDataDir();
+        using var store = new ViewStore(dir.Options(), NullLogger<ViewStore>.Instance);
+        var saved = Save(store, "v1", ViewKind.List, []);
+        TaskView notDoneMine = saved with
+        {
+            Filter = new TaskFilter { States = [TaskState.Backlog, TaskState.ToDo, TaskState.InProgress, TaskState.Review], Assignees = ["@me"] },
+        };
+
+        TaskView? raised = null;
+        await using var ctx = NewContext(store);
+        var (_, toolbar) = RenderToolbar(ctx, notDoneMine, effectiveViewChanged: EventCallback.Factory.Create<TaskView>(this, v => raised = v), splitHeader: true);
+
+        Assert.Equal("Open", toolbar.Find(".task-toolbar-status .task-filter-chip-value").TextContent.Trim());
+        Assert.Equal("Me", toolbar.Find(".task-toolbar-assignee .task-filter-chip-value").TextContent.Trim());
+        Assert.Contains("task-filter-chip-set", toolbar.Find(".task-toolbar-status").ClassList);
+
+        await toolbar.InvokeAsync(() => toolbar.Find(".task-toolbar-status .task-filter-chip-clear").ClickAsync());
+
+        TaskView cleared = raised ?? throw new InvalidOperationException("EffectiveViewChanged was not raised.");
+        Assert.Empty(cleared.Filter.States);
+        Assert.Equal("@me", Assert.Single(cleared.Filter.Assignees));
+    }
+
+    /// <summary>The header row's Group by is a filter chip like Status: "None" and unset to begin with, with a clear button only while a grouping is set, and clicking that raises the View with no grouping.</summary>
+    [Fact]
+    public async Task GroupBy_ClearButton_ShowsOnlyWhenGrouped_AndUngroups()
+    {
+        using var dir = new TempDataDir();
+        using var store = new ViewStore(dir.Options(), NullLogger<ViewStore>.Instance);
+        var saved = Save(store, "v1", ViewKind.List, []);
+        TaskView grouped = saved with { Grouping = [TaskGroupField.Assignee] };
+
+        TaskView? raised = null;
+        await using var ctx = NewContext(store);
+        var (_, toolbar) = RenderToolbar(ctx, saved, effectiveViewChanged: EventCallback.Factory.Create<TaskView>(this, v => raised = v), splitHeader: true);
+        Assert.Equal("None", toolbar.Find(".task-toolbar-group .task-filter-chip-value").TextContent.Trim());
+        Assert.Empty(toolbar.FindAll(".task-toolbar-group .task-filter-chip-clear"));
+
+        toolbar.Render(builder => builder.Add(t => t.EffectiveView, grouped));
+        Assert.Equal("Assignee", toolbar.Find(".task-toolbar-group .task-filter-chip-value").TextContent.Trim());
+        Assert.Equal("Clear Group by filter", toolbar.Find(".task-toolbar-group .task-filter-chip-clear").GetAttribute("aria-label"));
+        await toolbar.InvokeAsync(() => toolbar.Find(".task-toolbar-group .task-filter-chip-clear").ClickAsync());
+
+        TaskView ungrouped = raised ?? throw new InvalidOperationException("EffectiveViewChanged was not raised.");
+        Assert.Empty(ungrouped.Grouping);
+    }
+
+    /// <summary>The Status chip reads "Closed" for exactly the terminal statuses and the status's own name for one, and its menu is two levels: All, then Open and Closed each followed by their own statuses.</summary>
+    [Fact]
+    public async Task StatusChip_ReadsClosedAndSingleStatus_AndItsMenuHasTwoLevels()
+    {
+        using var dir = new TempDataDir();
+        using var store = new ViewStore(dir.Options(), NullLogger<ViewStore>.Instance);
+        var saved = Save(store, "v1", ViewKind.List, []);
+        TaskView closed = saved with { Filter = new TaskFilter { States = [TaskState.Done, TaskState.Cancelled, TaskState.Duplicate, TaskState.Rejected] } };
+        TaskView review = saved with { Filter = new TaskFilter { States = [TaskState.Review] } };
+
+        await using var ctx = NewContext(store);
+        var (root, toolbar) = RenderToolbar(ctx, closed, splitHeader: true);
+        Assert.Equal("Closed", toolbar.Find(".task-toolbar-status .task-filter-chip-value").TextContent.Trim());
+        toolbar.Render(builder => builder.Add(t => t.EffectiveView, review));
+        Assert.Equal("Review", toolbar.Find(".task-toolbar-status .task-filter-chip-value").TextContent.Trim());
+
+        await root.InvokeAsync(() => root.Find(".task-toolbar-status .task-filter-chip-button").ClickAsync());
+
+        Assert.Equal(
+            ["All", "Open", "Backlog", "To Do", "In Progress", "Review", "Closed", "Done", "Cancelled", "Duplicate", "Rejected"],
+            root.FindAll(".mud-popover-open .mud-menu-item").Select(item => item.TextContent.Trim()));
+        Assert.Equal(2, root.FindAll(".mud-popover-open .task-status-group").Count);
+        Assert.Equal(8, root.FindAll(".mud-popover-open .task-status-sub").Count);
+    }
+
     /// <summary>The columns a Board View needs to pass <c>ViewValidator</c>: every <see cref="TaskState"/> covered exactly once, mirroring <c>BoardLayout.DefaultColumns</c> (internal to the production assembly, so restated here rather than referenced).</summary>
     private static readonly IReadOnlyList<BoardColumn> BoardDefaultColumns =
     [
@@ -228,12 +360,14 @@ public sealed class TaskToolbarTests
         TaskView view,
         EventCallback<TaskView>? effectiveViewChanged = null,
         EventCallback<string?>? searchChanged = null,
-        EventCallback<NewTaskDefaults>? onNewTask = null)
+        EventCallback<NewTaskDefaults>? onNewTask = null,
+        bool splitHeader = false)
     {
         IRenderedComponent<ContainerFragment> root = ctx.RenderWithPopovers(builder =>
         {
             builder.OpenComponent<TaskToolbar>(0);
             builder.AddAttribute(1, nameof(TaskToolbar.EffectiveView), view);
+            builder.AddAttribute(5, nameof(TaskToolbar.SplitHeader), splitHeader);
             if (effectiveViewChanged is { } evc)
             {
                 builder.AddAttribute(2, nameof(TaskToolbar.EffectiveViewChanged), evc);

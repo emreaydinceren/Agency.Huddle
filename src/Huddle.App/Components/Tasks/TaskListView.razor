@@ -1,7 +1,7 @@
 @*
     The List (Spec §13.3a): a read-only MudDataGrid<TaskItem>. Column visibility follows
-    View.Fields (id and title are always shown, implicitly), header sorting is the grid's own
-    transient state and never touches the View, and grouping is bound to View.Grouping using
+    View.Fields (id and title are always shown, implicitly), header sorting is saved to the View's Sort
+    and the column widths to its ColumnWidths, and grouping is bound to View.Grouping using
     TaskQuery.GroupLabel for its labels - the same helper the Board uses, so the two views can't
     disagree.
 
@@ -15,18 +15,28 @@
     its own group. GroupTemplate then shows the real label via TaskQuery.GroupLabel, since the raw
     key is never fit for display. See delivery-facts.md for the same note.
 
+    Column resizing is task-list-resize.js, not MudDataGrid's own (server round trip per pointer move): the grid's
+    task-list-grid class is its hook. When a drag ends the script calls OnColumnsResized, which saves the widths
+    to the View (ViewChanged), and each header gets its saved width back through HeaderStyle. A header click that
+    changes the sort saves it to the View the same way (OnSortChangedAsync); the View's own Sort shows as the
+    column's initial sort direction.
+
     @key on the grid is the View's Id: switching to a different saved View recreates the grid so its
     internal sort and expansion state doesn't leak from one View to the next.
 *@
 
 @using System.Globalization
+@using ViewSortDirection = Agency.Huddle.App.Tasks.Views.SortDirection
+@using ViewSortKey = Agency.Huddle.App.Tasks.Views.SortKey
 @inject TimeProvider Clock
 @inject TaskStore Store
 @inject ISprintCatalog Sprints
+@inject IJSRuntime JS
 @implements IDisposable
 
 <MudDataGrid T="TaskItem" @key="@this.View.Id" Items="@this.GroupOrdered()" ReadOnly="true" Dense="@(this.View.Dense ?? true)" Hover="true"
-             Groupable="true" GroupExpanded="true" ShowColumnOptions="false" Filterable="false"
+             Groupable="true" GroupExpanded="true" ShowColumnOptions="false" Filterable="false" Class="task-list-grid"
+             SortMode="SortMode.Single" SortChanged="@this.OnSortChangedAsync" @ref="this.grid"
              RowClick="@this.OnRowClickAsync" RowClassFunc="@this.RowClass">
     <Columns>
         @foreach (string key in this.ColumnKeys())
@@ -34,18 +44,18 @@
             @switch (key)
             {
                 case "id":
-                    <PropertyColumn @key="key" T="TaskItem" TProperty="TaskId" Property="t => t.Id" Title="ID" Sortable="true" CellClass="task-list-id-cell" HeaderClass="task-list-id-cell"
+                    <PropertyColumn @key="key" HeaderStyle="@this.HeaderStyle("id")" InitialDirection="@this.DirectionFor("id")" T="TaskItem" TProperty="TaskId" Property="t => t.Id" Title="ID" Sortable="true" CellClass="task-list-id-cell" HeaderClass="task-list-id-cell"
                                      SortBy="@(t => (object)(t.Id.Prefix, t.Id.Number))" />
                     break;
                 case "title":
-                    <TemplateColumn @key="key" T="TaskItem" Title="Title" Sortable="true" SortBy="@(t => (object)t.Title)" CellClass="task-list-title-cell">
+                    <TemplateColumn @key="key" HeaderStyle="@this.HeaderStyle("title")" InitialDirection="@this.DirectionFor("title")" T="TaskItem" Title="Title" Sortable="true" SortBy="@(t => (object)t.Title)" CellClass="task-list-title-cell" HeaderClass="task-list-title-header">
                         <CellTemplate>
                             <span class="task-list-title" title="@context.Item.Title" aria-current="@(this.IsSelected(context.Item) ? "true" : null)"><MudHighlighter Text="@context.Item.Title" HighlightedText="@this.Search" /></span>
                         </CellTemplate>
                     </TemplateColumn>
                     break;
                 case "status":
-                    <TemplateColumn @key="key" T="TaskItem" Title="Status" Hidden="@(!this.Shows("status"))" Sortable="true"
+                    <TemplateColumn @key="key" HeaderStyle="@this.HeaderStyle("status")" InitialDirection="@this.DirectionFor("status")" T="TaskItem" Title="Status" Hidden="@(!this.Shows("status"))" Sortable="true"
                                      SortBy="@(t => (object)(int)t.Status)"
                                      Grouping="@this.IsGrouped(TaskGroupField.State)" GroupByOrder="@this.GroupOrder(TaskGroupField.State)"
                                      GroupBy="@(t => this.GroupSortKey(t, TaskGroupField.State))">
@@ -56,7 +66,7 @@
                     </TemplateColumn>
                     break;
                 case "priority":
-                    <TemplateColumn @key="key" T="TaskItem" Title="Priority" Hidden="@(!this.Shows("priority"))" Sortable="true"
+                    <TemplateColumn @key="key" HeaderStyle="@this.HeaderStyle("priority")" InitialDirection="@this.DirectionFor("priority")" T="TaskItem" Title="Priority" Hidden="@(!this.Shows("priority"))" Sortable="true"
                                      SortBy="@(t => (object)(int)t.Priority)">
                         <CellTemplate>
                             <TaskPriorityChip Priority="context.Item.Priority" />
@@ -64,7 +74,7 @@
                     </TemplateColumn>
                     break;
                 case "assignee":
-                    <TemplateColumn @key="key" T="TaskItem" Title="Assignee" Hidden="@(!this.Shows("assignee"))" Sortable="true"
+                    <TemplateColumn @key="key" HeaderStyle="@this.HeaderStyle("assignee")" InitialDirection="@this.DirectionFor("assignee")" T="TaskItem" Title="Assignee" Hidden="@(!this.Shows("assignee"))" Sortable="true"
                                      SortBy="@(t => (object)(t.Assignee ?? string.Empty))"
                                      Grouping="@this.IsGrouped(TaskGroupField.Assignee)" GroupByOrder="@this.GroupOrder(TaskGroupField.Assignee)"
                                      GroupBy="@(t => this.GroupSortKey(t, TaskGroupField.Assignee))">
@@ -75,12 +85,12 @@
                     </TemplateColumn>
                     break;
                 case "creator":
-                    <TemplateColumn @key="key" T="TaskItem" Title="Creator" Hidden="@(!this.Shows("creator"))" CellClass="task-col-low-1" HeaderClass="task-col-low-1" Sortable="true" SortBy="@(t => (object)t.Creator)">
+                    <TemplateColumn @key="key" HeaderStyle="@this.HeaderStyle("creator")" InitialDirection="@this.DirectionFor("creator")" T="TaskItem" Title="Creator" Hidden="@(!this.Shows("creator"))" CellClass="task-col-low-1" HeaderClass="task-col-low-1" Sortable="true" SortBy="@(t => (object)t.Creator)">
                         <CellTemplate>@context.Item.Creator</CellTemplate>
                     </TemplateColumn>
                     break;
                 case "team":
-                    <TemplateColumn @key="key" T="TaskItem" Title="Team" Hidden="@(!this.Shows("team"))" Sortable="true" SortBy="@(t => (object)t.Location.Team)"
+                    <TemplateColumn @key="key" HeaderStyle="@this.HeaderStyle("team")" InitialDirection="@this.DirectionFor("team")" T="TaskItem" Title="Team" Hidden="@(!this.Shows("team"))" Sortable="true" SortBy="@(t => (object)t.Location.Team)"
                                      Grouping="@this.IsGrouped(TaskGroupField.Team)" GroupByOrder="@this.GroupOrder(TaskGroupField.Team)"
                                      GroupBy="@(t => this.GroupSortKey(t, TaskGroupField.Team))">
                         <CellTemplate>@context.Item.Location.Team</CellTemplate>
@@ -94,7 +104,7 @@
                     </TemplateColumn>
                     break;
                 case "project":
-                    <TemplateColumn @key="key" T="TaskItem" Title="Project" Hidden="@(!this.Shows("project"))" Sortable="true"
+                    <TemplateColumn @key="key" HeaderStyle="@this.HeaderStyle("project")" InitialDirection="@this.DirectionFor("project")" T="TaskItem" Title="Project" Hidden="@(!this.Shows("project"))" Sortable="true"
                                      SortBy="@(t => (object)(t.Location.Project ?? string.Empty))"
                                      Grouping="@this.IsGrouped(TaskGroupField.Project)" GroupByOrder="@this.GroupOrder(TaskGroupField.Project)"
                                      GroupBy="@(t => this.GroupSortKey(t, TaskGroupField.Project))">
@@ -103,7 +113,7 @@
                     </TemplateColumn>
                     break;
                 case "sprint":
-                    <TemplateColumn @key="key" T="TaskItem" Title="Sprint" Hidden="@(!this.Shows("sprint"))" Sortable="true"
+                    <TemplateColumn @key="key" HeaderStyle="@this.HeaderStyle("sprint")" InitialDirection="@this.DirectionFor("sprint")" T="TaskItem" Title="Sprint" Hidden="@(!this.Shows("sprint"))" Sortable="true"
                                      SortBy="@(t => (object)(t.Sprint?.Number ?? int.MaxValue))"
                                      Grouping="@this.IsGrouped(TaskGroupField.Sprint)" GroupByOrder="@this.GroupOrder(TaskGroupField.Sprint)"
                                      GroupBy="@(t => this.GroupSortKey(t, TaskGroupField.Sprint))">
@@ -123,30 +133,30 @@
                     </TemplateColumn>
                     break;
                 case "parent":
-                    <TemplateColumn @key="key" T="TaskItem" Title="Parent" Hidden="@(!this.Shows("parent"))">
+                    <TemplateColumn @key="key" HeaderStyle="@this.HeaderStyle("parent")" InitialDirection="@this.DirectionFor("parent")" T="TaskItem" Title="Parent" Hidden="@(!this.Shows("parent"))">
                         <CellTemplate>@(context.Item.Parent?.ToString() ?? "")</CellTemplate>
                     </TemplateColumn>
                     break;
                 case "blocked_by":
-                    <TemplateColumn @key="key" T="TaskItem" Title="Blocked by" Hidden="@(!this.Shows("blocked_by"))" Sortable="false">
+                    <TemplateColumn @key="key" HeaderStyle="@this.HeaderStyle("blocked_by")" InitialDirection="@this.DirectionFor("blocked_by")" T="TaskItem" Title="Blocked by" Hidden="@(!this.Shows("blocked_by"))" Sortable="false">
                         <CellTemplate>@string.Join(", ", context.Item.BlockedBy)</CellTemplate>
                     </TemplateColumn>
                     break;
                 case "tags":
-                    <TemplateColumn @key="key" T="TaskItem" Title="Tags" Hidden="@(!this.Shows("tags"))" CellClass="task-col-low-3" HeaderClass="task-col-low-3" Sortable="false">
+                    <TemplateColumn @key="key" HeaderStyle="@this.HeaderStyle("tags")" InitialDirection="@this.DirectionFor("tags")" T="TaskItem" Title="Tags" Hidden="@(!this.Shows("tags"))" CellClass="task-col-low-3" HeaderClass="task-col-low-3" Sortable="false">
                         <CellTemplate>
                             @TaskFieldView.Tags(context.Item.Tags)
                         </CellTemplate>
                     </TemplateColumn>
                     break;
                 case "start_date":
-                    <TemplateColumn @key="key" T="TaskItem" Title="Start date" Hidden="@(!this.Shows("start_date"))" Sortable="true"
+                    <TemplateColumn @key="key" HeaderStyle="@this.HeaderStyle("start_date")" InitialDirection="@this.DirectionFor("start_date")" T="TaskItem" Title="Start date" Hidden="@(!this.Shows("start_date"))" Sortable="true"
                                      SortBy="@(t => (object?)t.StartDate)">
                         <CellTemplate>@TaskDates.Display(context.Item.StartDate)</CellTemplate>
                     </TemplateColumn>
                     break;
                 case "due_date":
-                    <TemplateColumn @key="key" T="TaskItem" Title="Due date" Hidden="@(!this.Shows("due_date"))" Sortable="true"
+                    <TemplateColumn @key="key" HeaderStyle="@this.HeaderStyle("due_date")" InitialDirection="@this.DirectionFor("due_date")" T="TaskItem" Title="Due date" Hidden="@(!this.Shows("due_date"))" Sortable="true"
                                      SortBy="@(t => (object?)t.DueDate)">
                         <CellTemplate>
                             @if (this.IsOverdue(context.Item))
@@ -162,25 +172,25 @@
                     </TemplateColumn>
                     break;
                 case "created":
-                    <TemplateColumn @key="key" T="TaskItem" Title="Created" Hidden="@(!this.Shows("created"))" Sortable="true"
+                    <TemplateColumn @key="key" HeaderStyle="@this.HeaderStyle("created")" InitialDirection="@this.DirectionFor("created")" T="TaskItem" Title="Created" Hidden="@(!this.Shows("created"))" Sortable="true"
                                      SortBy="@(t => (object?)t.Created)">
                         <CellTemplate>@TaskDates.Display(context.Item.Created)</CellTemplate>
                     </TemplateColumn>
                     break;
                 case "updated":
-                    <TemplateColumn @key="key" T="TaskItem" Title="Updated" Hidden="@(!this.Shows("updated"))" CellClass="task-col-low-2" HeaderClass="task-col-low-2" Sortable="true"
+                    <TemplateColumn @key="key" HeaderStyle="@this.HeaderStyle("updated")" InitialDirection="@this.DirectionFor("updated")" T="TaskItem" Title="Updated" Hidden="@(!this.Shows("updated"))" CellClass="task-col-low-2" HeaderClass="task-col-low-2" Sortable="true"
                                      SortBy="@(t => (object?)t.Updated)">
                         <CellTemplate>@TaskDates.Display(context.Item.Updated)</CellTemplate>
                     </TemplateColumn>
                     break;
                 case "closed":
-                    <TemplateColumn @key="key" T="TaskItem" Title="Closed" Hidden="@(!this.Shows("closed"))" Sortable="true"
+                    <TemplateColumn @key="key" HeaderStyle="@this.HeaderStyle("closed")" InitialDirection="@this.DirectionFor("closed")" T="TaskItem" Title="Closed" Hidden="@(!this.Shows("closed"))" Sortable="true"
                                      SortBy="@(t => (object?)t.ClosedAt)">
                         <CellTemplate>@TaskDates.Display(context.Item.ClosedAt)</CellTemplate>
                     </TemplateColumn>
                     break;
                 case "origin":
-                    <TemplateColumn @key="key" T="TaskItem" Title="Origin" Hidden="@(!this.Shows("origin"))">
+                    <TemplateColumn @key="key" HeaderStyle="@this.HeaderStyle("origin")" InitialDirection="@this.DirectionFor("origin")" T="TaskItem" Title="Origin" Hidden="@(!this.Shows("origin"))">
                         <CellTemplate>@TaskFieldView.OriginText(context.Item.OriginRoomId, this.RoomNames)</CellTemplate>
                     </TemplateColumn>
                     break;
@@ -229,6 +239,10 @@
     [Parameter]
     public EventCallback<TaskId> OnCopyLink { get; set; }
 
+    /// <summary>Raised with the View carrying a change made in the grid itself: a column's width after a drag, or the sort after a header click. The page saves it to the View.</summary>
+    [Parameter]
+    public EventCallback<TaskView> ViewChanged { get; set; }
+
     /// <summary>Room names by id, so the Origin column shows the Room's name (UX-047).</summary>
     [Parameter]
     public IReadOnlyDictionary<string, string>? RoomNames { get; set; }
@@ -243,11 +257,113 @@
         [TaskGroupField.Sprint] = "sprint",
     };
 
+    private DotNetObjectReference<TaskListView>? self;
+    private MudDataGrid<TaskItem>? grid;
+
+    /// <summary>Hands the resize script a reference to call back when a column drag ends.</summary>
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (!firstRender)
+        {
+            return;
+        }
+
+        this.self = DotNetObjectReference.Create(this);
+        try
+        {
+            await this.JS.InvokeVoidAsync("taskListResize.register", this.self);
+        }
+        catch (JSDisconnectedException)
+        {
+            // Circuit gone; nothing to register.
+        }
+    }
+
+    /// <summary>The visible columns' keys in display order: ID and Title, then the View's shown fields (grouping-only columns are hidden).</summary>
+    private List<string> VisibleKeys() => [.. this.ColumnKeys().Where(this.Shows)];
+
+    /// <summary>The header style carrying the saved width of the <paramref name="key"/> column, or none.</summary>
+    /// <param name="key">The column's field key.</param>
+    private string? HeaderStyle(string key) =>
+        this.View.ColumnWidths is { } widths && widths.TryGetValue(key, out int width)
+            ? string.Create(CultureInfo.InvariantCulture, $"width: {width}px;")
+            : null;
+
+    /// <summary>The sort direction the View's Sort starts the <paramref name="key"/> column in.</summary>
+    /// <param name="key">The column's field key.</param>
+    private MudBlazor.SortDirection DirectionFor(string key)
+    {
+        if (this.View.Sort.FirstOrDefault(sort => string.Equals(sort.Field, key, StringComparison.Ordinal)) is not { } current)
+        {
+            return MudBlazor.SortDirection.None;
+        }
+
+        return current.Direction == ViewSortDirection.Descending ? MudBlazor.SortDirection.Descending : MudBlazor.SortDirection.Ascending;
+    }
+
+    /// <summary>A header click changed the grid's sort: saves it as the View's one sort key (or none when the sort was cleared).</summary>
+    private Task OnSortChangedAsync()
+    {
+        SortDefinition<TaskItem>? definition = this.grid?.SortDefinitions.Values.FirstOrDefault();
+        List<ViewSortKey> sort = [];
+        if (definition is not null && this.SortFieldOf(definition) is { } field)
+        {
+            sort.Add(new ViewSortKey(field, definition.Descending ? ViewSortDirection.Descending : ViewSortDirection.Ascending));
+        }
+
+        return sort.SequenceEqual(this.View.Sort) ? Task.CompletedTask : this.ViewChanged.InvokeAsync(this.View with { Sort = sort });
+    }
+
+    /// <summary>The titles of the sortable columns, by field key: the grid names a sort by a generated column id, so the sorted column's title is how its key is found (see SortFieldOf).</summary>
+    private static readonly Dictionary<string, string> SortTitles = new(StringComparer.Ordinal)
+    {
+        ["ID"] = "id",
+        ["Title"] = "title",
+        ["Status"] = "status",
+        ["Priority"] = "priority",
+        ["Assignee"] = "assignee",
+        ["Creator"] = "creator",
+        ["Team"] = "team",
+        ["Project"] = "project",
+        ["Sprint"] = "sprint",
+        ["Start date"] = "start_date",
+        ["Due date"] = "due_date",
+        ["Created"] = "created",
+        ["Updated"] = "updated",
+        ["Closed"] = "closed",
+    };
+
+    /// <summary>The field key of the column a grid sort definition names, found by the sort function it carries (the grid's own name for a sort is a generated id), or <see langword="null"/> when it names none.</summary>
+    /// <param name="definition">The grid's sort definition.</param>
+    private string? SortFieldOf(SortDefinition<TaskItem> definition)
+    {
+        string? title = this.grid?.RenderedColumns.FirstOrDefault(column => column.SortBy == definition.SortFunc)?.Title;
+        return title is not null && SortTitles.TryGetValue(title, out string? key) ? key : null;
+    }
+    /// <summary>Called by <c>task-list-resize.js</c> when a drag ends, with every header cell's width in order: saves the visible columns' widths to the View.</summary>
+    /// <param name="widths">The widths in CSS pixels, one per header cell; the last is the actions column.</param>
+    [JSInvokable]
+    public Task OnColumnsResized(double[] widths)
+    {
+        List<string> keys = this.VisibleKeys();
+        Dictionary<string, int> saved = new(StringComparer.Ordinal);
+        for (int index = 0; index < keys.Count && index < widths.Length; index++)
+        {
+            saved[keys[index]] = (int)Math.Round(widths[index]);
+        }
+
+        return this.ViewChanged.InvokeAsync(this.View with { ColumnWidths = saved });
+    }
+
     /// <summary>Re-renders when <c>sprints.md</c> changed, so a Sprint's name, its missing marker and its group follow the file.</summary>
     protected override void OnInitialized() => this.Sprints.SprintsChanged += this.OnSprintsChanged;
 
     /// <summary>Leaves <see cref="ISprintCatalog.SprintsChanged"/>.</summary>
-    public void Dispose() => this.Sprints.SprintsChanged -= this.OnSprintsChanged;
+    public void Dispose()
+    {
+        this.Sprints.SprintsChanged -= this.OnSprintsChanged;
+        this.self?.Dispose();
+    }
 
     /// <summary>Marshals a re-render onto the renderer's context, tolerating a component already disposed (the same rule as the page's hub handlers).</summary>
     private void OnSprintsChanged() => _ = this.RerenderAsync();

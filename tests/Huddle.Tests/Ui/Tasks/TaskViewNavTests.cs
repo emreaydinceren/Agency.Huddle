@@ -17,7 +17,7 @@ using TestContext = Xunit.TestContext;
 /// <c>/tasks/{id}</c> links, offers <c>New View</c>, flags an invalid View with a warning icon,
 /// re-renders on <see cref="ViewStore.ViewsChanged"/>, and renders nothing when
 /// <see cref="TasksOptions.Enabled"/> is <see langword="false"/>. Also pins the row's own "..." menu
-/// (TaskViewNav.razor's own file header, RoomList.razor's precedent): Edit View for any row, Delete
+/// (TaskViewNav.razor's own file header, RoomList.razor's precedent): Rename for any row, Delete
 /// View only for a non-built-in one, reachable by the "..." button or a right-click alike, and
 /// Delete's own confirm wording and its navigate-away-only-if-on-screen rule.
 /// </summary>
@@ -129,7 +129,7 @@ public sealed class TaskViewNavTests
         Assert.Equal(string.Empty, cut.Markup.Trim());
     }
 
-    /// <summary>Every row's "..." menu offers Edit View; a non-built-in row also offers Delete View, but a built-in one (here All Tasks) does not.</summary>
+    /// <summary>Every row's "..." menu offers Rename; a non-built-in row also offers Delete View, but a built-in one (here All Tasks) does not.</summary>
     [Fact]
     public async Task RowMenu_OffersEditView_AndDeleteViewOnlyForNonBuiltIn()
     {
@@ -141,11 +141,11 @@ public sealed class TaskViewNavTests
         IRenderedComponent<ContainerFragment> cut = RenderNav(ctx);
 
         await OpenRowMenuAsync(cut, "All Tasks");
-        Assert.Contains(MenuItems(cut), item => string.Equals(item.TextContent.Trim(), "Edit view", StringComparison.Ordinal));
+        Assert.Contains(MenuItems(cut), item => string.Equals(item.TextContent.Trim(), "Rename", StringComparison.Ordinal));
         Assert.DoesNotContain(MenuItems(cut), item => string.Equals(item.TextContent.Trim(), "Delete view", StringComparison.Ordinal));
 
         await OpenRowMenuAsync(cut, "Sprint Board");
-        Assert.Contains(MenuItems(cut), item => string.Equals(item.TextContent.Trim(), "Edit view", StringComparison.Ordinal));
+        Assert.Contains(MenuItems(cut), item => string.Equals(item.TextContent.Trim(), "Rename", StringComparison.Ordinal));
         Assert.Contains(MenuItems(cut), item => string.Equals(item.TextContent.Trim(), "Delete view", StringComparison.Ordinal));
     }
 
@@ -162,7 +162,7 @@ public sealed class TaskViewNavTests
 
         await cut.InvokeAsync(() => RowFor(cut, "Sprint Board").ContextMenuAsync());
 
-        Assert.Contains(MenuItems(cut), item => string.Equals(item.TextContent.Trim(), "Edit view", StringComparison.Ordinal));
+        Assert.Contains(MenuItems(cut), item => string.Equals(item.TextContent.Trim(), "Rename", StringComparison.Ordinal));
         Assert.Contains(MenuItems(cut), item => string.Equals(item.TextContent.Trim(), "Delete view", StringComparison.Ordinal));
     }
 
@@ -186,7 +186,7 @@ public sealed class TaskViewNavTests
 
         await cut.InvokeAsync(() => RowFor(cut, "Sprint Board").ContextMenuAsync());
 
-        _ = Assert.Single(MenuItems(cut), item => string.Equals(item.TextContent.Trim(), "Edit view", StringComparison.Ordinal));
+        _ = Assert.Single(MenuItems(cut), item => string.Equals(item.TextContent.Trim(), "Rename", StringComparison.Ordinal));
     }
 
     /// <summary>
@@ -214,26 +214,7 @@ public sealed class TaskViewNavTests
         _ = Assert.Single(MenuItems(cut), item => string.Equals(item.TextContent.Trim(), "Delete view", StringComparison.Ordinal));
     }
 
-    /// <summary>Clicking Edit View opens this component's own <see cref="ViewEditorDrawer"/> for that row's View.</summary>
-    [Fact]
-    public async Task EditView_OpensTheViewEditorDrawerForThatView()
-    {
-        CancellationToken ct = TestContext.Current.CancellationToken;
-        using TaskToolHarness harness = await TaskToolHarness.CreateAsync(ct);
-        _ = harness.Views.Save(new TaskView { Id = "custom1", Name = "Sprint Board", Kind = ViewKind.List });
-
-        await using MudBunitContext ctx = NewContext(harness, tasksEnabled: true);
-        IRenderedComponent<ContainerFragment> cut = RenderNav(ctx);
-
-        await OpenRowMenuAsync(cut, "Sprint Board");
-        await ClickMenuItemAsync(cut, "Edit view");
-
-        var drawer = cut.FindComponent<ViewEditorDrawer>();
-        Assert.True(drawer.Instance.Open);
-        Assert.Equal("custom1", drawer.Instance.Id);
-    }
-
-    /// <summary>Delete View opens <c>ShowMessageBoxAsync</c> with the exact wording <see cref="ViewEditorDrawer"/>'s own Delete uses.</summary>
+    /// <summary>Delete View opens <c>ShowMessageBoxAsync</c> with the exact wording the Tasks page's own Delete uses.</summary>
     [Fact]
     public async Task DeleteView_MessageBox_HasTheExactTitleTextAndButtons()
     {
@@ -298,7 +279,7 @@ public sealed class TaskViewNavTests
         Assert.Equal(before, navigation.Uri);
     }
 
-    /// <summary>Confirming Delete View for the View currently on screen replaces the URL with <c>/tasks</c>, mirroring <see cref="ViewEditorDrawer"/>'s own Delete.</summary>
+    /// <summary>Confirming Delete View for the View currently on screen replaces the URL with <c>/tasks</c>.</summary>
     [Fact]
     public async Task DeleteView_Confirmed_NavigatesToTasks_WhenItIsTheOneOnScreen()
     {
@@ -385,11 +366,5 @@ public sealed class TaskViewNavTests
         await await Task.WhenAny(deleting, shown);
         await shown;
         return deleting;
-    }
-
-    /// <summary>Clicks the open menu's item labelled <paramref name="text"/> and waits for its handler to finish - only for an item whose handler completes on its own (not one that opens a dialog and awaits the answer).</summary>
-    private static async Task ClickMenuItemAsync(IRenderedComponent<ContainerFragment> cut, string text)
-    {
-        await cut.InvokeAsync(() => MenuItems(cut).First(item => string.Equals(item.TextContent.Trim(), text, StringComparison.Ordinal)).ClickAsync());
     }
 }

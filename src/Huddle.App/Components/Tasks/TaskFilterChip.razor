@@ -1,0 +1,57 @@
+@*
+    One filter chip of the Tasks toolbar's second row: "Label: Value" with a caret that opens a menu of
+    choices (the ChildContent), and, once a choice other than Any is made, a clear button beside it. It
+    owns no filter state - the toolbar passes the text and raises the changes - so Assignee and Status
+    share the one look: dashed while unset, filled once set.
+*@
+
+<span class="@this.CssClass">
+    <MudMenu Dense="true" Class="task-filter-chip-menu">
+        <ActivatorContent Context="menuContext">
+            <MudButton Variant="Variant.Outlined" Size="Size.Small" EndIcon="@Icons.Material.Filled.ExpandMore" OnClick="menuContext.ToggleAsync"
+                       Class="task-filter-chip-button" aria-label="@($"{this.Label} filter: {this.Value}")">
+                @this.Label: <strong class="task-filter-chip-value">@this.Value</strong>
+            </MudButton>
+        </ActivatorContent>
+        <ChildContent>
+            @this.ChildContent
+        </ChildContent>
+    </MudMenu>
+    @if (this.IsSet)
+    {
+        <MudIconButton Icon="@Icons.Material.Filled.Close" Size="Size.Small" OnClick="this.OnClear" Class="task-filter-chip-clear"
+                       aria-label="@($"Clear {this.Label} filter")" />
+    }
+</span>
+
+@code {
+    /// <summary>The filter's name, shown before the colon.</summary>
+    [Parameter]
+    [EditorRequired]
+    public required string Label { get; set; }
+
+    /// <summary>The current choice's text: "Any" when the filter is unset.</summary>
+    [Parameter]
+    [EditorRequired]
+    public required string Value { get; set; }
+
+    /// <summary>Whether a choice other than Any is made, which fills the chip and shows its clear button.</summary>
+    [Parameter]
+    public bool IsSet { get; set; }
+
+    /// <summary>The <c>MudMenuItem</c>s offering the choices.</summary>
+    [Parameter]
+    public RenderFragment? ChildContent { get; set; }
+
+    /// <summary>Raised when the clear button is clicked.</summary>
+    [Parameter]
+    public EventCallback OnClear { get; set; }
+
+    /// <summary>Extra classes for the chip's wrapper, so a caller can name it.</summary>
+    [Parameter]
+    public string? Class { get; set; }
+
+    private string CssClass => this.IsSet
+        ? $"task-filter-chip task-filter-chip-set {this.Class}"
+        : $"task-filter-chip task-filter-chip-unset {this.Class}";
+}

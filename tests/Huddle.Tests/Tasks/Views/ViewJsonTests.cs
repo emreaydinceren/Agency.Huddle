@@ -42,8 +42,7 @@ public sealed class ViewJsonTests
 
         Assert.Equal("3f2a9c…", view.Id);
         Assert.Equal("Platform board", view.Name);
-        Assert.Equal("Engineering work in flight", view.Description);
-        Assert.Equal(ViewKind.Board, view.Kind);
+       Assert.Equal(ViewKind.Board, view.Kind);
         Assert.Equal(ViewScope.Active, view.Scope);
         Assert.Equal(["assignee", "priority", "due_date"], view.Fields);
 
@@ -113,8 +112,7 @@ public sealed class ViewJsonTests
         {
             Id = "v1",
             Name = "Platform board",
-            Description = "Engineering work in flight",
-            Kind = ViewKind.Board,
+           Kind = ViewKind.Board,
             Scope = ViewScope.Active,
             Fields = ["assignee", "priority", "due_date"],
             Filter = new TaskFilter

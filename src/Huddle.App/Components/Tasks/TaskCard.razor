@@ -27,23 +27,29 @@
             <MudHighlighter Text="@this.Task.Title" HighlightedText="@this.Search" />
         </div>
 
+        @if (this.Task.Tags.Count > 0)
+        {
+            @* Row 3: the Task's tags, always shown (not only when the View lists the tags field). *@
+            <span class="task-card-field-tags">@TaskFieldView.Tags(this.Task.Tags)</span>
+        }
+
+        @if (this.Task.Assignee is { } assignee)
+        {
+            @* Row 4: the assignee, under a rule that separates it from the rows above. *@
+            <div class="task-card-assignee-row">
+                <TaskAssignee Name="@assignee" Presence="this.Presence" />
+            </div>
+        }
+
         @if (this.IsOverdue)
         {
             <MudIcon Icon="@Icons.Material.Filled.Warning" Color="Color.Error" Size="Size.Small" aria-label="Overdue" />
         }
 
-        @if (this.Task.Assignee is { } assignee)
-        {
-            <TaskAssignee Name="@assignee" Presence="this.Presence" />
-        }
-
         @foreach (string field in this.Fields)
         {
-            @if (string.Equals(field, "tags", StringComparison.Ordinal) && this.Task.Tags.Count > 0)
-            {
-                <span class="task-card-field-tags">@TaskFieldView.Tags(this.Task.Tags)</span>
-            }
-            else if (this.FieldText(field) is { } text)
+            @* "tags" is already drawn as row 3, so FieldText has no value for it. *@
+            @if (this.FieldText(field) is { } text)
             {
                 <span class="@this.FieldClass(field)">
                     @if (string.Equals(field, "sprint", StringComparison.Ordinal) && this.Task.Sprint is { } sprint && this.Sprints.Get(sprint) is null)
