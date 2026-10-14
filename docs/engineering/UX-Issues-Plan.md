@@ -1042,7 +1042,7 @@ Ids are `<deliverable number>.<task>`, the form `Set-Tracker.ps1` updates:
 `pwsh -NoProfile -File agents/scripts/Set-Tracker.ps1 -Task "12.3" -State Done -TrackerPath docs/engineering/UX-Issues-Plan.md`.
 `(H)` is Haiku, `(S)` is Sonnet.
 
-**Status:** 112 of 141 tasks Done · 0 of 2 retrospectives done · last updated 2026-10-13.
+**Status:** 117 of 141 tasks Done · 0 of 2 retrospectives done · last updated 2026-10-13.
 
 | **Deliverable / Task** | **Model** | **Depends on** | **Active** | **In Progress** | **Done** |
 | --- | --- | --- | --- | --- | --- |
@@ -1135,11 +1135,11 @@ Ids are `<deliverable number>.<task>`, the form `Set-Tracker.ps1` updates:
 | 14.4 View actions and PageHeader (S) | Sonnet | 14.3, U5, U6 | | | ✔ |
 | 14.5 CSS and wireframes (S) | Sonnet | 14.3 | | | ✔ |
 | **U15 Tasks: detail, menus, toolbar, board** | Sonnet | U13, U14 | | | |
-| 15.1 Red (S) | Sonnet | U13, U14 | | | |
-| 15.2 Detail (S) | Sonnet | 15.1 | | | |
-| 15.3 Detail dialog (S) | Sonnet | 15.2 | | | |
-| 15.4 Clipboard, picker, snackbar actions (S) | Sonnet | 15.2 | | | |
-| 15.5 Toolbar and Board (S) | Sonnet | 15.1 | | | |
+| 15.1 Red (S) | Sonnet | U13, U14 | | | ✔ |
+| 15.2 Detail (S) | Sonnet | 15.1 | | | ✔ |
+| 15.3 Detail dialog (S) | Sonnet | 15.2 | | | ✔ |
+| 15.4 Clipboard, picker, snackbar actions (S) | Sonnet | 15.2 | | | ✔ |
+| 15.5 Toolbar and Board (S) | Sonnet | 15.1 | | | ✔ |
 | **U16 Library: mechanical pass** | Haiku | U0, U5, U6, U7 | | | |
 | 16.1 Red (H) | Haiku | U0 | | | ✔ |
 | 16.2 Attributes, roles, keys, icons (H) | Haiku | 16.1 | | | ✔ |
