@@ -285,7 +285,7 @@ Containers that float above a page. Each cell shows one over a dimmed page.
 
 ## Figure 9: The Build a team page
 
-`BuildTeam.razor` at `/teams/build`. The Chief of Staff's four steps, of which only step 1 (Team type) is built.
+`BuildTeam.razor` at `/teams/build`. The Chief of Staff's four steps, of which steps 1 (Team type) and 2 (Team details) are built. The figure shows step 1 only; `B8` and `B8a` are described in the table.
 
 ![The Build a team page: a title with the Chief of Staff's name, a four-step strip, and a grid of team type cards with one chosen and one marked You have one](../images/wireframes/09-build-a-team.svg)
 
@@ -293,13 +293,15 @@ Containers that float above a page. Each cell shows one over a dimmed page.
 | --- | --- | --- | --- |
 | `B1` | Page container | `MudContainer`, `MaxWidth.Large` | |
 | `B2` | Page header | `PageHeader` with `Subtitle` | The h1 "Build a team", then "with {Chief of Staff}, your Chief of Staff"; the subtitle is left out when no Persona is the Chief of Staff |
-| `B3` | Step strip | `BuildStepper` (`ol.build-stepper`) | Four steps: Team type, Proposal, Review, Approve. A step before the current one shows a check; the current step carries `aria-current="step"`. Choosing a type makes step 2 current |
+| `B3` | Step strip | `BuildStepper` (`ol.build-stepper`) | Four steps: Team type, Team details, Review, Approve. A step before the current one shows a check; the current step carries `aria-current="step"`. Choosing a type makes step 2 current |
 | `B4` | Step section | `section.build-team-section` | A numbered badge and the step's name (`Typo.h6`) |
 | `B5` | Intro | `MudText` body2 | How many types there are and which ones the Human already runs |
 | `B6` | Team type grid | `div.team-type-grid` | Every team type, in two rows; cards are 16rem wide and what does not fit is reached by scrolling right |
+| `B8` | Team details section | `section.build-team-details` | Step 2; drawn only once a type is chosen. A numbered badge and "Team details", then `B8a` |
+| `B8a` | Team details card | `MudPaper` Outlined, `pa-3` | Three fields in a `MudStack`: Team name (starts as the type's name), "What it's for" (starts as the type's description, three lines), and the workspace, shown only for a type that has one. The workspace takes the type's own label, is required when the type says so and must be a folder that exists: the same field and words as New team from a type. Step 2 of `B3` is done once the name is free and the workspace is allowed |
 | `B6a` | Team type card | `TeamTypeCard` (`button.team-type-card`) | An icon tile tinted by the type's palette role, the name, the first sentence of the description (two lines at most), "Manager + N roles", a dashed-outline "You have one" chip when a Team of this type exists, and a check mark when chosen; pressed state is `aria-pressed` |
 
-Not drawn: steps 2 to 4.
+Not drawn: step 2 (`B8`, `B8a`) and steps 3 and 4.
 
 ## Using the codes
 

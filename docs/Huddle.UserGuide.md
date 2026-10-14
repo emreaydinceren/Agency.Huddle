@@ -669,12 +669,18 @@ Under a Team's title (not a Project's), the header has two more things:
 ### Building a team with the Chief of Staff
 
 **Build a team** (`/teams/build`) walks you through making a Team in four steps:
-**Team type**, **Proposal**, **Review** and **Approve**. Only the first step exists so
-far. It shows a card for each team type: its name, what it does in a line, how many
+**Team type**, **Team details**, **Review** and **Approve**. Only the first two exist
+so far. Step 1 shows a card for each team type: its name, what it does in a line, how many
 roles it has besides the manager, and **You have one** when you already run a Team of
 that type. The cards sit in two rows; scroll to the right for the rest.
 
-Select a card to choose that type; step 1 then shows a check and the type's name.
+Select a card to choose that type; step 1 then shows a check and the type's name, and
+**Team details** opens under it. There you set the **Team name** (it starts as the
+type's name; a name an existing Team has is refused), **What it's for** (it starts as
+the type's description) and, for a type that has a workspace, the repository or
+folder, under the same label and with the same rule as **New team from a type**: a
+required one must be filled in and must be a folder that exists. Nothing is created
+yet; the later steps do that.
 Select it again to clear the choice. The choice stays in the address (`?type=`), so
 it is still there when you come back to the tab. Open the page with **Build a team**,
 the last link of the Teams group in the sidebar.

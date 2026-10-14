@@ -3017,6 +3017,10 @@ a.team-ref,
     color: var(--mud-palette-text-secondary);
 }
 
+.build-team-details-card {
+    max-width: 32rem;
+}
+
 .team-type-grid {
     display: grid;
     grid-template-rows: repeat(2, auto);

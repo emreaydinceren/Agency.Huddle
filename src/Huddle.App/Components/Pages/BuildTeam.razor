@@ -46,6 +46,31 @@
             }
         </div>
     </section>
+
+    @if (this.selected is { } chosen)
+    {
+        <section class="build-team-section build-team-details" aria-labelledby="build-team-details-heading">
+            <div class="build-team-section-head">
+                <span class="build-team-section-number" aria-hidden="true">2</span>
+                <MudText Typo="Typo.h6" id="build-team-details-heading">Team details</MudText>
+            </div>
+            <MudPaper Outlined="true" Elevation="0" Class="build-team-details-card pa-3">
+                <MudStack Spacing="3">
+                    <MudTextField T="string" Variant="Variant.Outlined" Margin="Margin.Dense" Label="Team name" Immediate="true"
+                                  Value="this.name" ValueChanged="this.OnNameChanged"
+                                  Error="@(this.NameProblem is not null)" ErrorText="@this.NameProblem" Class="build-team-name" />
+                    <MudTextField T="string" Variant="Variant.Outlined" Margin="Margin.Dense" Label="What it&#8217;s for" Immediate="true"
+                                  Lines="3" Value="this.purpose" ValueChanged="this.OnPurposeChanged" Class="build-team-purpose" />
+                    @if (chosen.Workspace.Kind != WorkspaceKind.None)
+                    {
+                        <MudTextField T="string" Variant="Variant.Outlined" Margin="Margin.Dense" Label="@chosen.Workspace.Label" Immediate="true"
+                                      Value="this.workspace" ValueChanged="this.OnWorkspaceChanged"
+                                      Error="@(this.WorkspaceProblem is not null)" ErrorText="@this.WorkspaceProblem" Class="build-team-workspace" />
+                    }
+                </MudStack>
+            </MudPaper>
+        </section>
+    }
 </MudContainer>
 
 @code {
@@ -53,7 +78,7 @@
 
     private string ChiefName => this.Personas.Entries
         .FirstOrDefault(static entry => string.Equals(entry.Builtin, BuiltinTeammate.ChiefOfStaffMarker, StringComparison.Ordinal))?.Name
-        is { } name && !string.Equals(name, "Chief of Staff", StringComparison.Ordinal) ? name : "your Chief of Staff";
+        is { } chief && !string.Equals(chief, "Chief of Staff", StringComparison.Ordinal) ? chief : "your Chief of Staff";
 
     private bool HasChief => this.Personas.Entries.Any(static entry => string.Equals(entry.Builtin, BuiltinTeammate.ChiefOfStaffMarker, StringComparison.Ordinal));
 
@@ -71,12 +96,78 @@
         }
     }
 
-    private int CurrentStep => this.selected is null ? 0 : 1;
+    private const string ExistsMessage = "A Team with that name exists.";
+
+    private string name = string.Empty;
+    private string purpose = string.Empty;
+    private string workspace = string.Empty;
+    private bool nameEdited;
+    private bool purposeEdited;
+
+    private string TrimmedName => this.name.Trim();
+
+    /// <summary>The refusal for the Team name, or <see langword="null"/>; a blank name is not yet an error, it just keeps step 2 open.</summary>
+    private string? NameProblem
+    {
+        get
+        {
+            string trimmed = this.TrimmedName;
+            if (trimmed.Length == 0)
+            {
+                return null;
+            }
+
+            if (this.Catalog.Teams.Any(team => string.Equals(team.Name, trimmed, StringComparison.OrdinalIgnoreCase)))
+            {
+                return ExistsMessage;
+            }
+
+            return TeamNames.ValidateTeamName(trimmed, this.Catalog.Teams);
+        }
+    }
+
+    /// <summary>The refusal for the workspace folder, or <see langword="null"/>; the same rules as New team from a type.</summary>
+    private string? WorkspaceProblem
+    {
+        get
+        {
+            WorkspaceSpec? spec = this.selected?.Workspace;
+            if (spec is null || spec.Kind == WorkspaceKind.None)
+            {
+                return null;
+            }
+
+            string trimmed = this.workspace.Trim();
+            if (trimmed.Length == 0)
+            {
+                return spec.Required ? "Choose a workspace folder." : null;
+            }
+
+            return Directory.Exists(trimmed) ? null : "That folder does not exist.";
+        }
+    }
+
+    /// <summary>Whether step 2 is complete: a valid, unused name and a workspace that is allowed.</summary>
+    private bool DetailsReady => this.TrimmedName.Length > 0 && this.NameProblem is null && this.WorkspaceProblem is null
+        && (this.selected?.Workspace is not { Required: true, Kind: not WorkspaceKind.None } || this.workspace.Trim().Length > 0);
+
+    private int CurrentStep
+    {
+        get
+        {
+            if (this.selected is null)
+            {
+                return 0;
+            }
+
+            return this.DetailsReady ? 2 : 1;
+        }
+    }
 
     private IReadOnlyList<BuildStepper.BuildStep> Steps =>
     [
         new("Team type", this.selected?.DisplayName ?? "Choose one"),
-        new("Proposal", $"by {this.ChiefName}"),
+        new("Team details", this.DetailsReady ? this.TrimmedName : "name and what it’s for"),
         new("Review", "rename, re-roll, add"),
         new("Approve", "only you"),
     ];
@@ -106,8 +197,42 @@
     protected override void OnParametersSet()
     {
         string? typeId = QueryHelpers.ParseQuery(new Uri(this.Navigation.Uri).Query).TryGetValue("type", out var values) ? values.ToString() : null;
-        this.selected = string.IsNullOrEmpty(typeId) ? null : this.Types.Find(typeId);
+        TeamTypeManifest? arrived = string.IsNullOrEmpty(typeId) ? null : this.Types.Find(typeId);
+        if (!string.Equals(arrived?.Id, this.selected?.Id, StringComparison.Ordinal))
+        {
+            this.selected = arrived;
+            this.ApplyDefaults();
+        }
     }
+
+    /// <summary>Starts the details from the chosen type: its name and description, unless the Human has already typed their own; the workspace is always cleared.</summary>
+    private void ApplyDefaults()
+    {
+        this.workspace = string.Empty;
+        if (!this.nameEdited)
+        {
+            this.name = this.selected?.DisplayName ?? string.Empty;
+        }
+
+        if (!this.purposeEdited)
+        {
+            this.purpose = this.selected?.Description ?? string.Empty;
+        }
+    }
+
+    private void OnNameChanged(string? value)
+    {
+        this.name = value ?? string.Empty;
+        this.nameEdited = true;
+    }
+
+    private void OnPurposeChanged(string? value)
+    {
+        this.purpose = value ?? string.Empty;
+        this.purposeEdited = true;
+    }
+
+    private void OnWorkspaceChanged(string? value) => this.workspace = value ?? string.Empty;
 
     /// <summary>Stops listening to the catalogs.</summary>
     public void Dispose()
@@ -137,6 +262,7 @@
     {
         bool same = string.Equals(this.selected?.Id, typeId, StringComparison.Ordinal);
         this.selected = same ? null : this.Types.Find(typeId);
+        this.ApplyDefaults();
         this.Navigation.NavigateTo(this.Navigation.GetUriWithQueryParameter("type", same ? null : typeId), replace: true);
     }
 }

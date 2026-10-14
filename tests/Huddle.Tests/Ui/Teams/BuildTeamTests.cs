@@ -59,7 +59,7 @@ public sealed class BuildTeamTests
         IRenderedComponent<ContainerFragment> cut = Render(ctx);
 
         IReadOnlyList<IElement> steps = cut.FindAll("ol.build-stepper > li");
-        Assert.Equal(["Team type", "Proposal", "Review", "Approve"], steps.Select(step => step.QuerySelector(".build-step-label")?.TextContent.Trim()));
+        Assert.Equal(["Team type", "Team details", "Review", "Approve"], steps.Select(step => step.QuerySelector(".build-step-label")?.TextContent.Trim()));
         Assert.Equal("step", steps[0].GetAttribute("aria-current"));
         Assert.Null(steps[1].GetAttribute("aria-current"));
     }
@@ -98,16 +98,14 @@ public sealed class BuildTeamTests
         ctx.Services.GetRequiredService<NavigationManager>().NavigateTo("/teams/build");
         IRenderedComponent<ContainerFragment> cut = Render(ctx);
 
-        await cut.InvokeAsync(() => cut.FindAll(Card)[1].ClickAsync());
+        await cut.InvokeAsync(() => cut.FindAll(Card)[0].ClickAsync());
 
-        Assert.Equal("true", cut.FindAll(Card)[1].GetAttribute("aria-pressed"));
-        Assert.Equal("false", cut.FindAll(Card)[0].GetAttribute("aria-pressed"));
-        IElement first = cut.Find("ol.build-stepper > li");
-        Assert.Equal("build-step build-step-done", first.ClassName);
-        Assert.Equal("build-step build-step-current", cut.FindAll("ol.build-stepper > li")[1].ClassName);
-        Assert.Equal("build-step build-step-todo", cut.FindAll("ol.build-stepper > li")[2].ClassName);
-        Assert.Equal("Type 02", first.QuerySelector(".build-step-detail")?.TextContent.Trim());
-        Assert.Equal("/teams/build?type=t02", new Uri(ctx.Services.GetRequiredService<NavigationManager>().Uri).PathAndQuery);
+        Assert.Equal("true", cut.FindAll(Card)[0].GetAttribute("aria-pressed"));
+        Assert.Equal("false", cut.FindAll(Card)[1].GetAttribute("aria-pressed"));
+        IReadOnlyList<IElement> steps = cut.FindAll("ol.build-stepper > li");
+        Assert.Equal("build-step build-step-done", steps[0].ClassName);
+        Assert.Equal("Type 01", steps[0].QuerySelector(".build-step-detail")?.TextContent.Trim());
+        Assert.Equal("/teams/build?type=t01", new Uri(ctx.Services.GetRequiredService<NavigationManager>().Uri).PathAndQuery);
     }
 
     /// <summary>Pressing the chosen card again clears the choice and the address.</summary>
@@ -157,7 +155,7 @@ public sealed class BuildTeamTests
         Assert.Equal("Huddle hires a manager and the roles around it. 3 types — you already run Type 02.", cut.Find(".build-team-intro").TextContent.Trim());
     }
 
-    /// <summary>With no Chief of Staff Persona the header has no subtitle and step 2 says it comes from the Chief of Staff.</summary>
+    /// <summary>With no Chief of Staff Persona the header has no subtitle.</summary>
     [Fact]
     public async Task NoChiefOfStaff_HasNoSubtitle()
     {
@@ -167,12 +165,75 @@ public sealed class BuildTeamTests
         IRenderedComponent<ContainerFragment> cut = Render(ctx);
 
         Assert.Empty(cut.FindAll(".page-header-subtitle"));
-        Assert.Equal("by your Chief of Staff", cut.FindAll("ol.build-stepper > li")[1].QuerySelector(".build-step-detail")?.TextContent.Trim());
     }
 
-    /// <summary>A renamed Chief of Staff is named in the subtitle and in step 2, whatever Name it was given.</summary>
+    /// <summary>Nothing of step 2 shows until a type is chosen; choosing one opens "Team details" with the type's name filled in.</summary>
     [Fact]
-    public async Task RenamedChiefOfStaff_IsNamedInTheSubtitleAndStepTwo()
+    public async Task Details_ShowOnlyOnceATypeIsChosen_WithTheTypeNameFilledIn()
+    {
+        using Fixture fixture = new(typeCount: 3);
+        await using MudBunitContext ctx = fixture.NewContext();
+        ctx.Services.GetRequiredService<NavigationManager>().NavigateTo("/teams/build");
+        IRenderedComponent<ContainerFragment> cut = Render(ctx);
+        Assert.Empty(cut.FindAll(".build-team-details"));
+
+        await cut.InvokeAsync(() => cut.FindAll(Card)[0].ClickAsync());
+
+        Assert.Equal("Team details", cut.Find("#build-team-details-heading").TextContent.Trim());
+        Assert.Equal("Type 01", cut.Find(".build-team-name input").GetAttribute("value"));
+        Assert.Equal("Team name", cut.Find(".build-team-name label").TextContent.Trim());
+        Assert.Equal("What it’s for", cut.Find(".build-team-purpose label").TextContent.Trim());
+        Assert.Empty(cut.FindAll(".build-team-workspace"));
+        IReadOnlyList<IElement> steps = cut.FindAll("ol.build-stepper > li");
+        Assert.Equal("build-step build-step-done", steps[1].ClassName);
+        Assert.Equal("Type 01", steps[1].QuerySelector(".build-step-detail")?.TextContent.Trim());
+        Assert.Equal("build-step build-step-current", steps[2].ClassName);
+    }
+
+    /// <summary>A name that matches an existing Team is refused with the same words as New team from a type, and step 2 stays open.</summary>
+    [Fact]
+    public async Task Details_ExistingTeamName_IsRefusedAndKeepsStepTwoOpen()
+    {
+        using Fixture fixture = new(typeCount: 3);
+        fixture.Catalog.Teams = [new TeamSummary("Core", [], [], true)];
+        await using MudBunitContext ctx = fixture.NewContext();
+        ctx.Services.GetRequiredService<NavigationManager>().NavigateTo("/teams/build");
+        IRenderedComponent<ContainerFragment> cut = Render(ctx);
+        await cut.InvokeAsync(() => cut.FindAll(Card)[0].ClickAsync());
+
+        await cut.InvokeAsync(() => cut.Find(".build-team-name input").InputAsync("core"));
+
+        Assert.Equal("A Team with that name exists.", cut.Find(".build-team-name .mud-input-helper-text").TextContent.Trim());
+        Assert.Equal("build-step build-step-current", cut.FindAll("ol.build-stepper > li")[1].ClassName);
+    }
+
+    /// <summary>A type with a required workspace shows it under its own label, refuses a blank or missing folder with the New team words, and completes step 2 once the folder exists.</summary>
+    [Fact]
+    public async Task Details_RequiredWorkspace_IsShownRefusedAndThenAccepted()
+    {
+        using Fixture fixture = new(typeCount: 3);
+        await using MudBunitContext ctx = fixture.NewContext();
+        ctx.Services.GetRequiredService<NavigationManager>().NavigateTo("/teams/build");
+        IRenderedComponent<ContainerFragment> cut = Render(ctx);
+
+        await cut.InvokeAsync(() => cut.FindAll(Card)[1].ClickAsync());
+
+        Assert.Equal("Project folder", cut.Find(".build-team-workspace label").TextContent.Trim());
+        Assert.Equal("build-step build-step-current", cut.FindAll("ol.build-stepper > li")[1].ClassName);
+
+        await cut.InvokeAsync(() => cut.Find(".build-team-workspace input").InputAsync(Path.Combine(fixture.DirPath, "nowhere")));
+
+        Assert.Equal("That folder does not exist.", cut.Find(".build-team-workspace .mud-input-helper-text").TextContent.Trim());
+
+        await cut.InvokeAsync(() => cut.Find(".build-team-workspace input").InputAsync(fixture.DirPath));
+
+        Assert.Empty(cut.FindAll(".build-team-workspace .mud-input-helper-text"));
+        Assert.Equal("build-step build-step-done", cut.FindAll("ol.build-stepper > li")[1].ClassName);
+    }
+
+    /// <summary>A renamed Chief of Staff is named in the subtitle, whatever Name it was given.</summary>
+    [Fact]
+    public async Task RenamedChiefOfStaff_IsNamedInTheSubtitle()
     {
         using Fixture fixture = new(typeCount: 3);
         fixture.Personas.Add(new PersonaIdentity("Margot", "Assistant", "mar", Teams: [], Builtin: "chief-of-staff"), "You are Margot.");
@@ -181,7 +242,6 @@ public sealed class BuildTeamTests
         IRenderedComponent<ContainerFragment> cut = Render(ctx);
 
         Assert.Equal("with Margot, your Chief of Staff", cut.Find(".page-header-subtitle").TextContent.Trim());
-        Assert.Equal("by Margot", cut.FindAll("ol.build-stepper > li")[1].QuerySelector(".build-step-detail")?.TextContent.Trim());
     }
 
     /// <summary>A Chief of Staff still on its default Name is not named twice: "with your Chief of Staff".</summary>
@@ -206,7 +266,7 @@ public sealed class BuildTeamTests
         });
     }
 
-    /// <summary>Real stores behind the page: <c>typeCount</c> team types named "Type 01", "Type 02", … with a manager and two other roles each.</summary>
+    /// <summary>Real stores behind the page: <c>typeCount</c> team types named "Type 01", "Type 02", … with a manager and two other roles each; Type 02 needs a project folder.</summary>
     private sealed class Fixture : IDisposable
     {
         private readonly TempDataDir dir = new();
@@ -228,6 +288,8 @@ public sealed class BuildTeamTests
 
             this.Types = new TeamTypeCatalog(this.dir.Options(), NullLogger<TeamTypeCatalog>.Instance, builtins);
         }
+
+        public string DirPath => this.dir.Path;
 
         public PersonaStore Personas { get; }
 
@@ -252,7 +314,7 @@ public sealed class BuildTeamTests
 
         private static string Manifest(string id, string name, int order) => $$"""
             { "schemaVersion": 1, "id": "{{id}}", "version": "1.0.0", "displayName": "{{name}}", "order": {{order}},
-              "workspace": { "kind": "none", "label": "None", "required": false },
+              "workspace": {{(order == 2 ? """{ "kind": "folder", "label": "Project folder", "required": true }""" : """{ "kind": "none", "label": "None", "required": false }""")}},
               "processes": [{ "id": "flow", "file": "processes/flow.md", "default": true }],
               "roles": [
                 { "id": "lead", "title": "Lead", "candidate": "candidates/lead.md", "manager": true, "required": true },
