@@ -1042,7 +1042,7 @@ Ids are `<deliverable number>.<task>`, the form `Set-Tracker.ps1` updates:
 `pwsh -NoProfile -File agents/scripts/Set-Tracker.ps1 -Task "12.3" -State Done -TrackerPath docs/engineering/UX-Issues-Plan.md`.
 `(H)` is Haiku, `(S)` is Sonnet.
 
-**Status:** 107 of 141 tasks Done · 0 of 2 retrospectives done · last updated 2026-10-13.
+**Status:** 112 of 141 tasks Done · 0 of 2 retrospectives done · last updated 2026-10-13.
 
 | **Deliverable / Task** | **Model** | **Depends on** | **Active** | **In Progress** | **Done** |
 | --- | --- | --- | --- | --- | --- |
@@ -1171,11 +1171,11 @@ Ids are `<deliverable number>.<task>`, the form `Set-Tracker.ps1` updates:
 | 20.4 Team dialogs (H) | Haiku | 20.1, U5 | | | ✔ |
 | 20.5 Search, header, wireframes (H) | Haiku | 20.2 | | | ✔ |
 | **U21 Teams: Team page frame and create flows** | Sonnet | U20 | | | |
-| 21.1 Red (S) | Sonnet | U20 | | | |
-| 21.2 Page header and container (S) | Sonnet | 21.1 | | | |
-| 21.3 Tab rail (S) | Sonnet | 21.1 | | | |
-| 21.4 Create flows and Process confirm (S) | Sonnet | 21.1 | | | |
-| 21.5 Wireframes (S) | Sonnet | 21.2, 21.3 | | | |
+| 21.1 Red (S) | Sonnet | U20 | | | ✔ |
+| 21.2 Page header and container (S) | Sonnet | 21.1 | | | ✔ |
+| 21.3 Tab rail (S) | Sonnet | 21.1 | | | ✔ |
+| 21.4 Create flows and Process confirm (S) | Sonnet | 21.1 | | | ✔ |
+| 21.5 Wireframes (S) | Sonnet | 21.2, 21.3 | | | ✔ |
 | **U22 Settings: mechanical pass** | Haiku | U0, U5, U6, U7 | | | |
 | 22.1 Red (H) | Haiku | U0 | | | ✔ |
 | 22.2 Attributes, roles, keys, icons (H) | Haiku | 22.1 | | | ✔ |
