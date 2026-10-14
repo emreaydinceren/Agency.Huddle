@@ -353,7 +353,16 @@
             <MudSelect T="string" Label="Skills" MultiSelection="true" SelectedValues="@this.skills"
                        SelectedValuesChanged="this.OnSkillsChanged" Variant="Variant.Outlined" Margin="Margin.Dense"
                        HelperText="Changing Skills restarts this Teammate." Class="mb-4">
-                @foreach (var skill in this.Skills.All)
+                @* A draft's Skills that are not installed yet are still options, listed first and checked, so the Human sees what the
+                   role brings; they are imported when the Team is approved. *@
+                @foreach (string pending in this.pendingDraftSkills)
+                {
+                    <MudSelectItem T="string" Value="@pending">
+                        <MudText>@pending</MudText>
+                        <MudText Typo="Typo.caption" Class="mud-text-secondary">Not installed yet; imported when you approve.</MudText>
+                    </MudSelectItem>
+                }
+                @foreach (var skill in this.OrderedSkills)
                 {
                     <MudSelectItem T="string" Value="@skill.Name">
                         <MudText>@skill.Name</MudText>
@@ -367,7 +376,7 @@
                since this Persona last saved (Spec §6.7). Shown as a removable chip rather than silently
                dropped, so the Human can see it and take it off; OnClose runs the same WriteListField
                write as a fresh selection, just with the missing name filtered out. *@
-            @if (this.MissingSkillNames.Count > 0)
+            @if (this.MissingSkillNames.Count > 0 && !this.OnDraftSaved.HasDelegate)
             {
                 <MudStack Row="true" Spacing="1" Wrap="Wrap.Wrap" Class="mb-4">
                     @foreach (var missing in this.MissingSkillNames)
@@ -626,6 +635,12 @@
     // assignment lives only in this.text's frontmatter (Spec §6.7), never on the Persona record, so
     // ReadSkills(this.text) is the only source - see its own remarks.
     private IReadOnlyList<string> skills = [];
+    private IReadOnlyList<string> pendingDraftSkills = [];
+
+    /// <summary>The installed Skills; a draft card lists the ones its role brings first, so the checked options are the first thing the Human sees.</summary>
+    private IEnumerable<Skill> OrderedSkills => this.pendingDraftSkills.Count == 0 && this.DraftSkills is null
+        ? this.Skills.All
+        : this.Skills.All.OrderBy(skill => this.DraftSkills?.Contains(skill.Name, StringComparer.Ordinal) == true ? 0 : 1);
 
     // The avatar this card shows: what the store holds, until the avatar editor applies something, and
     // then what it applied. In Create and Edit that is only in memory until SaveAsync; in View it is
@@ -784,6 +799,7 @@
             if (this.OnDraftSaved.HasDelegate && this.DraftSkills is not null)
             {
                 this.skills = this.DraftSkills;
+                this.pendingDraftSkills = [.. this.DraftSkills.Where(name => this.Skills.Get(name) is null)];
             }
 
             this.name = this.Name.Length > 0 ? this.Name : this.PickName(null);
