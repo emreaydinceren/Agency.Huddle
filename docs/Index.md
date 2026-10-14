@@ -127,6 +127,7 @@ that exercise it. All are **chat** unless stated.
 | [acp-agent-guide.md](engineering/acp-agent-guide.md) | What was verified against the real adapter and what is only assumed. Written under the old `Team.*` names | acp | ~9k |
 | [acp-session-config.md](engineering/acp-session-config.md) | How an ACP agent advertises models and effort, and how a client selects them | acp | ~4k |
 | [Huddle.UserGuide.md](Huddle.UserGuide.md) | What the app does from the Human's side, and what changes in the files behind each action | chat | ~12k |
+| [Huddle.About.md](Huddle.About.md) | A one-page, non-technical description of the product for marketing copy, distilled from the user guide | chat | ~1k |
 
 ## 4. Decisions (ADRs)
 
