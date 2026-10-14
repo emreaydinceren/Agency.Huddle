@@ -485,13 +485,16 @@
             [nameof(TeammateCard.Name)] = draft.Name,
             [nameof(TeammateCard.Title)] = draft.Title,
             [nameof(TeammateCard.Text)] = draft.Text,
+            [nameof(TeammateCard.DraftAvatar)] = draft.Avatar,
+            [nameof(TeammateCard.DraftImage)] = draft.Image,
+            [nameof(TeammateCard.DraftImageExtension)] = draft.ImageExtension,
             [nameof(TeammateCard.TakenNames)] = (IReadOnlyList<string>)[.. this.drafts.Where(other => !string.Equals(other.Key, key, StringComparison.Ordinal)).Select(static other => other.Name)],
-            [nameof(TeammateCard.OnDraftSaved)] = EventCallback.Factory.Create<(string Name, string Title, string Text, string? Model, string? Effort)>(this, saved =>
+            [nameof(TeammateCard.OnDraftSaved)] = EventCallback.Factory.Create<(string Name, string Title, string Text, string? Model, string? Effort, Avatar Avatar, byte[]? Image, string? ImageExtension)>(this, saved =>
             {
                 int index = this.drafts.FindIndex(candidate => string.Equals(candidate.Key, key, StringComparison.Ordinal));
                 if (index >= 0)
                 {
-                    this.drafts[index] = this.drafts[index] with { Name = saved.Name, Title = saved.Title, Text = saved.Text };
+                    this.drafts[index] = this.drafts[index] with { Name = saved.Name, Title = saved.Title, Text = saved.Text, Avatar = saved.Avatar, Image = saved.Image, ImageExtension = saved.ImageExtension };
                 }
             }),
         };

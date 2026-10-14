@@ -585,7 +585,19 @@
     /// opens the card this way.
     /// </summary>
     [Parameter]
-    public EventCallback<(string Name, string Title, string Text, string? Model, string? Effort)> OnDraftSaved { get; set; }
+    public EventCallback<(string Name, string Title, string Text, string? Model, string? Effort, Avatar Avatar, byte[]? Image, string? ImageExtension)> OnDraftSaved { get; set; }
+
+    /// <summary>The draft's avatar, which a draft card starts with instead of drawing a new one. Only read with <see cref="OnDraftSaved"/>.</summary>
+    [Parameter]
+    public Avatar? DraftAvatar { get; set; }
+
+    /// <summary>The bytes of the draft's library image, shown on the avatar until it is saved. Only read with <see cref="OnDraftSaved"/>.</summary>
+    [Parameter]
+    public byte[]? DraftImage { get; set; }
+
+    /// <summary>The extension, with its dot, of <see cref="DraftImage"/>.</summary>
+    [Parameter]
+    public string? DraftImageExtension { get; set; }
 
     /// <summary>The Names a draft may not take, besides those of existing Teammates: the other drafts. Only read with <see cref="OnDraftSaved"/>.</summary>
     [Parameter]
@@ -758,6 +770,13 @@
         if (this.mode == TeammateCardMode.Create)
         {
             this.avatar = Avatar.None with { Background = AvatarPalette.Pick(Random.Shared) };
+            if (this.OnDraftSaved.HasDelegate && this.DraftAvatar is not null)
+            {
+                this.avatar = this.DraftAvatar;
+                this.avatarPendingBytes = this.DraftImage;
+                this.avatarPendingExtension = this.DraftImageExtension;
+            }
+
             this.name = this.Name.Length > 0 ? this.Name : this.PickName(null);
         }
 
@@ -1812,7 +1831,7 @@
         }
 
         this.error = null;
-        await this.OnDraftSaved.InvokeAsync((draftName, this.title.Trim(), this.text, this.model, this.effort));
+        await this.OnDraftSaved.InvokeAsync((draftName, this.title.Trim(), this.text, this.model, this.effort, this.avatar, this.avatarPendingBytes, this.avatarPendingExtension));
         this.MudDialog.Close();
     }
 
