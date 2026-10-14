@@ -1042,7 +1042,7 @@ Ids are `<deliverable number>.<task>`, the form `Set-Tracker.ps1` updates:
 `pwsh -NoProfile -File agents/scripts/Set-Tracker.ps1 -Task "12.3" -State Done -TrackerPath docs/engineering/UX-Issues-Plan.md`.
 `(H)` is Haiku, `(S)` is Sonnet.
 
-**Status:** 122 of 141 tasks Done · 0 of 2 retrospectives done · last updated 2026-10-13.
+**Status:** 126 of 141 tasks Done · 0 of 2 retrospectives done · last updated 2026-10-13.
 
 | **Deliverable / Task** | **Model** | **Depends on** | **Active** | **In Progress** | **Done** |
 | --- | --- | --- | --- | --- | --- |
@@ -1189,10 +1189,10 @@ Ids are `<deliverable number>.<task>`, the form `Set-Tracker.ps1` updates:
 | 23.4 Problems, tables, surfaces (H) | Haiku | 23.1 | | | ✔ |
 | 23.5 Confirms and wireframes (H) | Haiku | 23.2 | | | ✔ |
 | **U24 Settings: the avatar editor** | Sonnet | U23 | | | |
-| 24.1 Red (S) | Sonnet | U23 | | | |
-| 24.2 AvatarEditor (S) | Sonnet | 24.1 | | | |
-| 24.3 Appearance on it (S) | Sonnet | 24.2 | | | |
-| 24.4 Parameters for U26 (S) | Sonnet | 24.2 | | | |
+| 24.1 Red (S) | Sonnet | U23 | | | ✔ |
+| 24.2 AvatarEditor (S) | Sonnet | 24.1 | | | ✔ |
+| 24.3 Appearance on it (S) | Sonnet | 24.2 | | | ✔ |
+| 24.4 Parameters for U26 (S) | Sonnet | 24.2 | | | ✔ |
 | **U25 Shared: mechanical pass** | Haiku | U0, U5, U6, U7 | | | |
 | 25.1 Red (H) | Haiku | U0 | | | ✔ |
 | 25.2 Attributes, roles, keys, icons, styles (H) | Haiku | 25.1 | | | ✔ |
