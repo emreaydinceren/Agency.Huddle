@@ -33,7 +33,8 @@
 @using Agency.Huddle.App.Library
 @inject IOptions<TeamOptions> Options
 
-<MudContainer MaxWidth="MaxWidth.False" Class="pa-4">
+<MudContainer MaxWidth="MaxWidth.False" Class="pa-4 library-page">
+    <PageHeader Title="Library" />
     @if (!this.Enabled)
     {
         <MudAlert Severity="Severity.Info" role="status" Class="library-disabled-alert">The Library is turned off.</MudAlert>

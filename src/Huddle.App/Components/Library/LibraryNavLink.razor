@@ -62,20 +62,13 @@
 
         Task<string?> SubmitAsync(string name)
         {
-            if (!Directory.Exists(path))
-            {
-                return Task.FromResult<string?>("That folder doesn't exist.");
-            }
-
-            List<PinnedRootEntry> pinned = [.. this.Roots.Pinned, new PinnedRootEntry(name, path)];
-            this.Roots.Save(pinned);
-            return Task.FromResult<string?>(null);
+            return Task.FromResult(this.Roots.TryPin(name, path));
         }
 
         RenderFragment extra = @<MudStack Spacing="2">
             <MudTextField T="string" Label="Path" Variant="Variant.Outlined" Margin="Margin.Dense" Immediate="true"
                           ValueChanged="@(value => path = value ?? string.Empty)" />
-            <MudText Typo="Typo.body2" Class="add-folder-dialog-trust-warning">Anything in this folder can be read and changed from Huddle.</MudText>
+            <MudText Typo="Typo.body2" Class="add-folder-dialog-trust-warning">@LibraryRootStore.TrustWarning</MudText>
         </MudStack>;
 
         DialogParameters<NameDialog> parameters = new()

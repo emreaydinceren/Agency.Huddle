@@ -2175,6 +2175,36 @@ a.team-ref,
    the size the divider gave it but is bounded on both sides, so neither can be squeezed to
    nothing. The important flag is the only way past an inline style (listed in Exceptions.txt). */
 
+/* The /library page: header on top, the explorer takes the rest of the pane. Percent heights, not vh,
+   because viewport units are not zoomed with the 90% UI zoom (UX-006). */
+.library-page {
+    height: 100%;
+    min-height: 0;
+    display: flex;
+    flex-direction: column;
+}
+
+.library-page .library-explorer {
+    flex: 1 1 auto;
+    min-height: 0;
+    display: flex;
+    flex-direction: column;
+}
+
+.library-explorer-split {
+    height: 100%;
+    min-height: 0;
+}
+
+.library-explorer-split-side-by-side > .child-panel {
+    height: 100%;
+    overflow: auto;
+}
+
+.library-explorer-split > .divider {
+    background-color: var(--mud-palette-lines-default);
+}
+
 .library-explorer-split-side-by-side > .child-panel:first-child {
     flex: 0 0 auto;
     min-width: 15rem;

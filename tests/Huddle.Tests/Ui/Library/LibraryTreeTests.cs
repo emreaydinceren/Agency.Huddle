@@ -110,7 +110,7 @@ public sealed class LibraryTreeTests : IDisposable
             cut.FindAll("span.library-tree-node-name").Select(e => e.TextContent.Trim()));
     }
 
-    /// <summary>A file's context menu is New note, New folder, Copy path, Rename, Delete, in that order, with an icon on each and a divider ahead of Copy Path and Rename.</summary>
+    /// <summary>A file's context menu is New note, New folder, Copy path, Rename, Move&#8230;, Delete, in that order (UX-R31), with an icon on each and a divider ahead of Copy Path and Rename.</summary>
     [Fact]
     public async Task Menu_OnFile_HasTheSettledActions()
     {
@@ -127,10 +127,37 @@ public sealed class LibraryTreeTests : IDisposable
         await cut.InvokeAsync(() => NodeRow(cut, filePath.RelativePath).ContextMenuAsync());
 
         Assert.Equal(
-            ["New note", "New folder", "Copy path", "Rename", "Delete"],
+            ["New note", "New folder", "Copy path", "Rename", "Move…", "Delete"],
             cut.FindAll("div.mud-menu-item div.library-tree-menu-label").Select(e => e.TextContent.Trim()));
-        Assert.Equal(5, cut.FindAll("div.mud-menu-item svg").Count);
+        Assert.Equal(6, cut.FindAll("div.mud-menu-item svg").Count);
         Assert.Equal(2, cut.FindAll("div.mud-popover-open hr.mud-divider").Count);
+    }
+
+    /// <summary>Choosing "Move&#8230;" in a file's menu raises <see cref="LibraryTreeActionKind.Move"/> for that file, which is how the Move dialog is reached (UX-R31, OP-10).</summary>
+    [Fact]
+    public async Task Menu_MoveItem_RaisesMoveForTheNode()
+    {
+        string notesPath = this.fixture.LibraryFixture.CreatePinnedRoot("Notes");
+        File.WriteAllText(Path.Combine(notesPath, "a.md"), "hello");
+        LibraryPath filePath = this.fixture.LibraryFixture.Resolve(notesPath, "a.md");
+        LibraryPath notesScope = this.fixture.LibraryFixture.Resolve(notesPath, string.Empty);
+        List<LibraryTreeAction> actions = [];
+
+        await using MudBunitContext ctx = this.fixture.NewContext();
+        IRenderedComponent<ContainerFragment> cut = RenderTree(
+            ctx, [notesScope], onAction: EventCallback.Factory.Create<LibraryTreeAction>(this, actions.Add));
+        await cut.InvokeAsync(() => cut.Find("div.mud-treeview-item-arrow button").ClickAsync());
+        cut.WaitForAssertion(() => Assert.Equal(2, cut.FindAll("span.library-tree-node-name").Count));
+        await cut.InvokeAsync(() => NodeRow(cut, filePath.RelativePath).ContextMenuAsync());
+
+        var moveItem = cut.FindAll("div.mud-menu-item").Single(e =>
+            e.QuerySelector("div.library-tree-menu-label")?.TextContent.Trim() == "Move…");
+        Assert.False(moveItem.ClassList.Contains("mud-disabled"));
+        await cut.InvokeAsync(() => moveItem.ClickAsync());
+
+        LibraryTreeAction action = Assert.Single(actions);
+        Assert.Equal(LibraryTreeActionKind.Move, action.Kind);
+        Assert.Equal("a.md", action.Path.RelativePath);
     }
 
     /// <summary>Dropping a file on a folder row raises <see cref="LibraryTreeActionKind.MoveInto"/> carrying the file and the folder.</summary>
@@ -446,7 +473,7 @@ public sealed class LibraryTreeTests : IDisposable
         cut.WaitForAssertion(() => Assert.Equal(2, cut.FindAll("span.library-tree-node-name").Count));
         await cut.InvokeAsync(() => NodeRow(cut, teamFolder.RelativePath).ContextMenuAsync());
 
-        foreach (string label in new[] { "Rename", "Delete" })
+        foreach (string label in new[] { "Rename", "Move…", "Delete" })
         {
             var item = cut.FindAll("div.mud-menu-item").Single(e =>
                 e.QuerySelector("div.library-tree-menu-label")?.TextContent.Trim() == label);

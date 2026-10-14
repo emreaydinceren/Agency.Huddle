@@ -539,6 +539,7 @@
 
         actions.Add(new MenuAction(LibraryTreeActionKind.CopyPath, "Copy path", ActionIcons.Copy, false, null, true));
         actions.Add(new MenuAction(LibraryTreeActionKind.Rename, "Rename", Icons.Material.Outlined.DriveFileRenameOutline, !protection.CanRename, protection.CanRename ? null : reason, true));
+        actions.Add(new MenuAction(LibraryTreeActionKind.Move, "Move…", Icons.Material.Outlined.DriveFileMove, !protection.CanMove, protection.CanMove ? null : reason, false));
         actions.Add(new MenuAction(LibraryTreeActionKind.Delete, "Delete", Icons.Material.Outlined.Delete, !protection.CanDelete, protection.CanDelete ? null : reason, false));
 
         return actions;

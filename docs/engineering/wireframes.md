@@ -204,17 +204,17 @@ Not drawn: the View editor, `ViewEditorDrawer`, which is a `ResizableEndDrawer` 
 
 | Code | Name | Component | Notes |
 | --- | --- | --- | --- |
-| `L1` | Explorer | `LibraryExplorer`, `MudSplitPanel` | Side by side on this page; other hosts can stack the panels |
-| `L1a` | Root path | `h2` | The root's full path; some hosts show a title here instead |
+| `L1` | Explorer | `LibraryExplorer`, `MudSplitPanel` | Under the `PageHeader` "Library"; the split is `h-100` with `min-height: 0` and both panels are full height; side by side on this page, other hosts can stack the panels |
+| `L1a` | Root path | `h2` | The root's full path, shown only when the page is scoped to one root, below the page's `h1`; some hosts show a title here instead |
 | `L2` | Tree panel | First panel | |
 | `L2a` | Tree | `LibraryTree`, `MudTreeView` | Loads a folder's children when it opens |
 | `L2b` | Filtered results | `.library-search-results` | Replace the tree while a filter is set |
-| `L4` | Divider | `MudSplitPanel` divider | Draggable; the position is remembered |
+| `L4` | Divider | `MudSplitPanel` divider | A `lines-default` hairline; draggable; the position is remembered |
 | `L3` | Document panel | Second panel, `LibraryDocument` | With nothing open: "Select a note to read it" and a New note button |
 | `L3a` | Toolbar | `MudToolBar`, dense | Path or breadcrumbs, then the controls on its right |
 | `L3b` | Mode switch | `HuddleSegmentedControl` | Read, Edit, Split |
 | `L3c` | Document actions | `MudIconButton` row | Copy, Pop out, Close |
-| `L3d` | Banners | `MudAlert`, `.library-document-banner` | Moved or deleted, newer on disk (Reload or Keep mine), save error, read-only reason |
+| `L3d` | Banners | Dense `MudAlert` with a role, `.library-document-banner` | Moved or deleted, newer on disk (Reload or Keep mine), save error, read-only reason. The Move dialog's refusal is the same Dense `MudAlert` |
 | `L3e` | Content | `LibraryEditor` (CodeMirror) | Editor, preview, or both |
 | `L3f` | Backlinks panel | `BacklinksPanel` | Files that link here |
 

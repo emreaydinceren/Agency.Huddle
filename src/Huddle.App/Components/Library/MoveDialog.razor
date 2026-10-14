@@ -4,30 +4,37 @@
     (corrections-B6 item 26) - and this dialog calls LibraryFileService.MoveAsync itself once a folder is
     picked, checking BeforeChangeAsync right before the write (corrections-B6 item 21).
 *@
+@using Agency.Huddle.App.Components.Shared.Dialogs
 @using Agency.Huddle.App.Library
 
 @inject LibraryFileService FileService
 
 <MudDialog>
     <DialogContent>
-        @foreach (var folder in this.Folders)
-        {
-            <div class="library-file-ops-move-folder" data-path="@folder.Path.RelativePath" @onclick="@(() => this.OnFolderSelected(folder.Path.RelativePath))">@folder.DisplayName</div>
-        }
+        <MudList T="string"
+                 SelectionMode="SelectionMode.SingleSelection"
+                 SelectedValue="@this.selectedRelativePath"
+                 SelectedValueChanged="this.OnFolderSelected"
+                 aria-label="Destination folder">
+            @foreach (var folder in this.Folders)
+            {
+                <MudListItem T="string" Value="@folder.Path.RelativePath" Text="@folder.DisplayName" />
+            }
+        </MudList>
         @if (this.error is not null)
         {
-            <p class="library-file-ops-error" role="alert">@this.error</p>
+            <MudAlert Severity="Severity.Error" Dense="true" role="alert" Class="mt-2">@this.error</MudAlert>
         }
     </DialogContent>
     <DialogActions>
-        <MudButton Color="Color.Primary" OnClick="this.ConfirmAsync">Move</MudButton>
-        <MudButton OnClick="this.Cancel">Cancel</MudButton>
+        <MudButton Variant="Variant.Text" Size="Size.Small" OnClick="this.Cancel">Cancel</MudButton>
+        <MudButton Variant="Variant.Filled" Size="Size.Small" Color="Color.Primary" Disabled="@(this.selectedRelativePath is null)" OnClick="this.ConfirmAsync">Move</MudButton>
     </DialogActions>
 </MudDialog>
 
 @code {
-    /// <summary>How LibraryFileOps shows this dialog: small, full-width, with a close button that cancels.</summary>
-    public static readonly DialogOptions Options = new() { CloseButton = true, MaxWidth = MaxWidth.Small, FullWidth = true };
+    /// <summary>How LibraryFileOps shows this dialog: the shared picker options (medium, full width, close button).</summary>
+    public static DialogOptions Options => HuddleDialogOptions.Picker;
 
     [CascadingParameter]
     private IMudDialogInstance? Dialog { get; set; }
@@ -47,7 +54,7 @@
     private string? selectedRelativePath;
     private string? error;
 
-    private void OnFolderSelected(string relativePath) => this.selectedRelativePath = relativePath;
+    private void OnFolderSelected(string? relativePath) => this.selectedRelativePath = relativePath;
 
     /// <summary>Checks <see cref="BeforeChangeAsync"/>, then moves the item into the selected folder through
     /// the real service; a refusal shows inline and leaves the dialog open, and success closes it with the

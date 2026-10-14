@@ -213,7 +213,138 @@ public sealed class LibraryFileOpsTests : IDisposable
         Assert.Equal("Move A.md", cut.Find(".mud-dialog-title").TextContent.Trim());
         Assert.Equal(
             ["Notes", "Sub"],
-            cut.FindAll(".library-file-ops-move-folder").Select(e => e.TextContent.Trim()));
+            cut.FindAll(".mud-dialog .mud-list-item").Select(e => e.TextContent.Trim()));
+    }
+
+    /// <summary>The destination folders are one MudList (a keyboard-reachable list, not clickable divs): one
+    /// item is selected at a time, the selected item carries <c>mud-selected-item</c>, and the old
+    /// <c>library-file-ops-move-folder</c> divs are gone (UX-R31, UX-V13).</summary>
+    [Fact]
+    public async Task Move_FolderList_IsAMudListWithSingleSelection()
+    {
+        string root = this.fixture.LibraryFixture.CreatePinnedRoot("Notes");
+        Directory.CreateDirectory(Path.Combine(root, "Sub"));
+        File.WriteAllText(Path.Combine(root, "A.md"), "a");
+        LibraryPath item = this.fixture.LibraryFixture.Resolve(root, "A.md");
+
+        await using MudBunitContext ctx = this.fixture.NewContext();
+        IRenderedComponent<ContainerFragment> cut = RenderOps(ctx);
+        LibraryFileOps ops = cut.FindComponent<LibraryFileOps>().Instance;
+
+        _ = cut.InvokeAsync(() => ops.HandleAsync(new LibraryTreeAction(LibraryTreeActionKind.Move, item, null)));
+        cut.WaitForAssertion(() => Assert.NotEmpty(cut.FindAll(".mud-dialog .mud-list")));
+        Assert.Empty(cut.FindAll(".library-file-ops-move-folder"));
+        Assert.Empty(cut.FindAll(".mud-dialog .mud-selected-item"));
+
+        await cut.InvokeAsync(() => FolderItem(cut, "Notes").ClickAsync());
+        await cut.InvokeAsync(() => FolderItem(cut, "Sub").ClickAsync());
+
+        cut.WaitForAssertion(() => Assert.Equal(
+            ["Sub"],
+            cut.FindAll(".mud-dialog .mud-selected-item").Select(e => e.TextContent.Trim())));
+    }
+
+    /// <summary>The Move dialog's actions are Cancel, then the Filled Small primary "Move" (design-system "Dialog anatomy").</summary>
+    [Fact]
+    public async Task Move_Actions_AreCancelThenTheFilledSmallPrimary()
+    {
+        string root = this.fixture.LibraryFixture.CreatePinnedRoot("Notes");
+        File.WriteAllText(Path.Combine(root, "A.md"), "a");
+        LibraryPath item = this.fixture.LibraryFixture.Resolve(root, "A.md");
+
+        await using MudBunitContext ctx = this.fixture.NewContext();
+        IRenderedComponent<ContainerFragment> cut = RenderOps(ctx);
+        LibraryFileOps ops = cut.FindComponent<LibraryFileOps>().Instance;
+
+        _ = cut.InvokeAsync(() => ops.HandleAsync(new LibraryTreeAction(LibraryTreeActionKind.Move, item, null)));
+        cut.WaitForAssertion(() => Assert.NotEmpty(cut.FindAll(".mud-dialog-actions button")));
+
+        IReadOnlyList<AngleSharp.Dom.IElement> buttons = cut.FindAll(".mud-dialog-actions button");
+        Assert.Equal(["Cancel", "Move"], buttons.Select(b => b.TextContent.Trim()).ToList());
+        Assert.Contains("mud-button-filled", buttons[1].ClassList);
+        Assert.Contains("mud-button-filled-size-small", buttons[1].ClassList);
+    }
+
+    /// <summary>Move stays disabled until a folder is picked, and enables once one is selected.</summary>
+    [Fact]
+    public async Task Move_NothingSelected_MoveButtonIsDisabledUntilAFolderIsPicked()
+    {
+        string root = this.fixture.LibraryFixture.CreatePinnedRoot("Notes");
+        Directory.CreateDirectory(Path.Combine(root, "Sub"));
+        File.WriteAllText(Path.Combine(root, "A.md"), "a");
+        LibraryPath item = this.fixture.LibraryFixture.Resolve(root, "A.md");
+
+        await using MudBunitContext ctx = this.fixture.NewContext();
+        IRenderedComponent<ContainerFragment> cut = RenderOps(ctx);
+        LibraryFileOps ops = cut.FindComponent<LibraryFileOps>().Instance;
+
+        _ = cut.InvokeAsync(() => ops.HandleAsync(new LibraryTreeAction(LibraryTreeActionKind.Move, item, null)));
+        cut.WaitForAssertion(() => Assert.NotEmpty(cut.FindAll(".mud-dialog .mud-list-item")));
+        Assert.True(cut.FindAll(".mud-dialog-actions button")[1].HasAttribute("disabled"));
+
+        await cut.InvokeAsync(() => FolderItem(cut, "Sub").ClickAsync());
+
+        cut.WaitForAssertion(() => Assert.False(cut.FindAll(".mud-dialog-actions button")[1].HasAttribute("disabled")));
+    }
+
+    /// <summary>Picking a folder in the list and pressing Move moves the file there and reports the change.</summary>
+    [Fact]
+    public async Task Move_PickedFolder_MovesTheItemAndRaisesOnChanged()
+    {
+        string root = this.fixture.LibraryFixture.CreatePinnedRoot("Notes");
+        Directory.CreateDirectory(Path.Combine(root, "Sub"));
+        File.WriteAllText(Path.Combine(root, "A.md"), "a");
+        LibraryPath item = this.fixture.LibraryFixture.Resolve(root, "A.md");
+        List<LibraryChange> changes = [];
+
+        await using MudBunitContext ctx = this.fixture.NewContext();
+        IRenderedComponent<ContainerFragment> cut = RenderOps(
+            ctx, onChanged: EventCallback.Factory.Create<LibraryChange>(this, c => changes.Add(c)));
+        LibraryFileOps ops = cut.FindComponent<LibraryFileOps>().Instance;
+
+        _ = cut.InvokeAsync(() => ops.HandleAsync(new LibraryTreeAction(LibraryTreeActionKind.Move, item, null)));
+        cut.WaitForAssertion(() => Assert.NotEmpty(cut.FindAll(".mud-dialog .mud-list-item")));
+        await cut.InvokeAsync(() => FolderItem(cut, "Sub").ClickAsync());
+        cut.WaitForAssertion(() => Assert.False(cut.FindAll(".mud-dialog-actions button")[1].HasAttribute("disabled")));
+        await cut.InvokeAsync(() => cut.FindAll(".mud-dialog-actions button")[1].ClickAsync());
+
+        Assert.True(File.Exists(Path.Combine(root, "Sub", "A.md")));
+        Assert.False(File.Exists(Path.Combine(root, "A.md")));
+        Assert.Single(changes);
+    }
+
+    /// <summary>A refused move (the name is taken in the chosen folder) shows the service's reason in a Dense
+    /// MudAlert with <c>role="alert"</c> and leaves the dialog open and the files untouched (UX-V13).</summary>
+    [Fact]
+    public async Task Move_Refused_ShowsTheReasonInADenseAlertAndStaysOpen()
+    {
+        string root = this.fixture.LibraryFixture.CreatePinnedRoot("Notes");
+        Directory.CreateDirectory(Path.Combine(root, "Sub"));
+        File.WriteAllText(Path.Combine(root, "A.md"), "outer");
+        File.WriteAllText(Path.Combine(root, "Sub", "A.md"), "inner");
+        LibraryPath item = this.fixture.LibraryFixture.Resolve(root, "A.md");
+
+        await using MudBunitContext ctx = this.fixture.NewContext();
+        IRenderedComponent<ContainerFragment> cut = RenderOps(ctx);
+        LibraryFileOps ops = cut.FindComponent<LibraryFileOps>().Instance;
+
+        _ = cut.InvokeAsync(() => ops.HandleAsync(new LibraryTreeAction(LibraryTreeActionKind.Move, item, null)));
+        cut.WaitForAssertion(() => Assert.NotEmpty(cut.FindAll(".mud-dialog .mud-list-item")));
+        await cut.InvokeAsync(() => FolderItem(cut, "Sub").ClickAsync());
+        cut.WaitForAssertion(() => Assert.False(cut.FindAll(".mud-dialog-actions button")[1].HasAttribute("disabled")));
+        await cut.InvokeAsync(() => cut.FindAll(".mud-dialog-actions button")[1].ClickAsync());
+
+        var alert = cut.Find(".mud-dialog .mud-alert-text-error[role='alert']");
+        Assert.Equal("\"A.md\" already exists here.", alert.TextContent.Trim());
+        Assert.Empty(cut.FindAll(".library-file-ops-error"));
+        Assert.Equal("outer", File.ReadAllText(Path.Combine(root, "A.md")));
+    }
+
+    /// <summary>The Move dialog is a picker: the shared <see cref="HuddleDialogOptions.Picker"/> options (medium, full width, close button).</summary>
+    [Fact]
+    public void Move_Options_AreTheSharedPickerOptions()
+    {
+        Assert.Same(HuddleDialogOptions.Picker, MoveDialog.Options);
     }
 
     /// <summary>[12.5a] In a scoped explorer (a <see cref="LibraryFileOps.Scope"/>), Move lists only folders
@@ -238,7 +369,7 @@ public sealed class LibraryFileOpsTests : IDisposable
 
         Assert.Equal(
             ["Inside", "Deeper"],
-            cut.FindAll(".library-file-ops-move-folder").Select(e => e.TextContent.Trim()));
+            cut.FindAll(".mud-dialog .mud-list-item").Select(e => e.TextContent.Trim()));
     }
 
     /// <summary>[12.5a] When <see cref="LibraryFileOps.BeforeChangeAsync"/> returns <see langword="false"/>,
@@ -290,8 +421,9 @@ public sealed class LibraryFileOpsTests : IDisposable
 
         _ = cut.InvokeAsync(() => ops.HandleAsync(new LibraryTreeAction(LibraryTreeActionKind.Move, item, null)));
         cut.WaitForAssertion(() => Assert.NotEmpty(cut.FindAll(".mud-dialog-title")));
-        await cut.InvokeAsync(() => cut.Find($".library-file-ops-move-folder[data-path='{destination.RelativePath}']").ClickAsync());
-        await cut.InvokeAsync(() => cut.FindAll(".mud-dialog-actions button")[0].ClickAsync());
+        await cut.InvokeAsync(() => FolderItem(cut, destination.RelativePath).ClickAsync());
+        cut.WaitForAssertion(() => Assert.False(cut.FindAll(".mud-dialog-actions button")[1].HasAttribute("disabled")));
+        await cut.InvokeAsync(() => cut.FindAll(".mud-dialog-actions button")[1].ClickAsync());
 
         Assert.True(File.Exists(Path.Combine(root, "A.md")));
         Assert.False(File.Exists(Path.Combine(root, "Sub", "A.md")));
@@ -891,6 +1023,10 @@ public sealed class LibraryFileOpsTests : IDisposable
         Assert.Equal("Delete", dialog.ConfirmText);
         Assert.True(dialog.Danger);
     }
+
+    /// <summary>The Move dialog's list item whose text is <paramref name="name"/>.</summary>
+    private static AngleSharp.Dom.IElement FolderItem(IRenderedComponent<ContainerFragment> cut, string name) =>
+        cut.FindAll(".mud-dialog .mud-list-item").Single(e => string.Equals(e.TextContent.Trim(), name, StringComparison.Ordinal));
 
     private static IRenderedComponent<ContainerFragment> RenderOps(
         MudBunitContext ctx,

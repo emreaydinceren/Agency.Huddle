@@ -45,6 +45,20 @@ public sealed class LibraryPageTests : IDisposable
         Assert.False(cut.FindComponent<MudSplitPanel>().Instance.Horizontal);
     }
 
+    /// <summary>The page opens with a <c>PageHeader</c>: one h1 "Library" at Typo.h5 (UX-001).</summary>
+    [Fact]
+    public async Task Page_HasAnH1TitledLibrary()
+    {
+        this.fixture.LibraryFixture.CreatePinnedRoot("Notes");
+
+        await using MudBunitContext ctx = this.fixture.NewContext();
+        IRenderedComponent<ContainerFragment> cut = RenderPage(ctx, root: null, path: null, scopeRoot: null, scopePath: null);
+
+        var heading = Assert.Single(cut.FindAll("h1"));
+        Assert.Equal("Library", heading.TextContent.Trim());
+        Assert.Contains("mud-typography-h5", heading.ClassList);
+    }
+
     /// <summary><c>?root=…&amp;path=…</c> query parameters open that file on the page.</summary>
     [Fact]
     public async Task Page_RootAndPathQuery_OpensFile()
