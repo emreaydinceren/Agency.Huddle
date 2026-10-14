@@ -39,6 +39,15 @@ below exists because its absence cost a fix round, a bug, or an hour.
   red, then STOP. Review the red and its Coverage table, then **resume the same agent** with
   "implement". Agents skipped the red three times when the STOP came mid-prompt or the prompt read
   like an implementation spec; a STOP at the start always held.
+- **Freeze the tests when you approve the red.** In the worktree, run
+  `pwsh -NoProfile -File agents/scripts/Freeze-Tests.ps1 -Freeze` before you resume the agent with
+  "implement". It copies every changed or new file under `tests/` into the worktree's private git
+  directory, and the `block-frozen-test-edits.sh` hook then refuses `Edit` and `Write` on them. An
+  implementer who cannot get a row green now has one move: stop and send a **test change
+  request**. You read it and decide. If the test has a real arrange defect, run `-Release -Path
+  <file>` for that one file, let the agent fix it, and freeze again; otherwise send the agent back
+  to the code. `-Clear` ends the freeze once the pair is committed. The hook cannot see a shell
+  redirect, so `-Check` (see Reviewing each report) is the backstop.
 - **One editor per file at a time.** Reds for tasks that share a file can be written in parallel
   (in separate test files); their implementations run one after another, in a stated order.
   Rebase the waiting worktree before its turn.
@@ -50,6 +59,24 @@ below exists because its absence cost a fix round, a bug, or an hour.
   **tool-call budget** instead (60 calls ≈ 150K for Sonnet here), counted across resumes; at the
   budget the agent finishes its step, writes the hand-off note and stops. Without it, agents were
   retired only after the fact, at 206K, 225K and 279K.
+- **Resume or spawn? Decide per task, in this order; the first line that matches wins.**
+
+  | Situation | Do | Why |
+  | --- | --- | --- |
+  | Reviewer, verifier or retrospective | Spawn fresh, every time | Independence is the point; it reads neither brief nor facts, so orientation is cheap |
+  | Agent has used its tool-call budget (60) by the time its task is reported | Give it no new task: it writes a hand-off note, and the next task goes to a fresh agent started from that note | Past ~150K, each call costs 3-4x |
+  | Next task touches the same files or component chain as the agent's last one | Resume with `SendMessage` | 2-6 calls to reorient against 45-56 for a fresh agent |
+  | Next task is a new area, or the agent's last report had unresolved deviations | Spawn fresh with a precise prompt | A resumed agent carries stale assumptions into code it has not read |
+  | Task is `data` (records, enums, options) | Spawn fresh Haiku; do not chain | Orientation is small and the context stays small |
+
+  The budget is counted across resumes, so a resume spends the same 60 calls. It gates the
+  *next* task; it never cuts a task off. An agent that reaches 60 mid-step finishes that step
+  (the red, the implementation or the fix), leaves the build and tests in a known state, writes
+  the hand-off note and stops. Stopping inside a step leaves a dirty worktree that a fresh agent
+  must reverse-engineer, which costs more than the calls saved. To make a fresh
+  spawn cheap, the prompt carries the signatures, the file paths and the line ranges (from
+  `grep -n`), and names the facts file's Core section as the only thing to read first. Do not
+  spawn a fresh agent "for hygiene": its orientation is the cost the table exists to avoid.
 - **Pick the model by the plan's Risk tag.** In the Tasks delivery every Haiku result needed a
   fix, so Sonnet does `logic` and `boundary` work. Haiku still does `data` tasks (records, enums,
   options): in the Library delivery those came in at ~2M tokens a task against ~8M for Sonnet
@@ -123,9 +150,12 @@ with the reason, and audit every transcript for them:
 | Throwaway files go in the session scratchpad, never the repo | Scratch tests written into `tests/` by heredoc |
 | In Bash, write `/e/Repos/...`; never `cd E:\...` | A Windows path ending `\"` breaks the command |
 | Visibility changes and new packages are stop-and-ask | An agent made a service public on false reasoning |
+| A failing test is the spec. Never edit, skip, loosen or delete a frozen test to get green; if you think the test is wrong, stop and file a **test change request** (the failing line, your evidence, the change you would make) | Agents under pressure to reach green relax the assert instead of fixing the code; the freeze hook enforces it |
+| Never run `python3` (the Windows Store stub blocks until the call times out), and never leave a server or `run.ps1` running in a tool call; use `-DryRun`, or `preview_start` for a dev server | A hung call ties up the agent and looks like a stuck delivery |
 
-Two PreToolUse hooks in `.claude/settings.json` enforce the worst of these: one blocks disk-wide
-`find` and `sed -i` in a command position, and one converts files created by `Write` to CRLF.
+Three hooks in `.claude/settings.json` enforce the worst of these: one blocks disk-wide `find` and
+`sed -i` in a command position, one converts files created by `Write` to CRLF, and one refuses
+edits to a test frozen by `Freeze-Tests.ps1`.
 
 ## Reviewing each report
 
@@ -138,14 +168,46 @@ Two PreToolUse hooks in `.claude/settings.json` enforce the worst of these: one 
    context registers a default fake for every service the `.i` will inject.
 3. **Check the Coverage table.** Every `NOT COVERED` row must cite the task that owns the item; a
    gap nobody owns is assigned now, not after the batch.
-4. **Read the load-bearing diff**, then run the build and the touched test classes yourself. Run
+4. **Run `Freeze-Tests.ps1 -Check`** after every implementation. Any `CHANGED` or `DELETED` line
+   is a finding until you have read its diff: fewer asserts, `Equal` weakened to `Contains` or
+   `NotEmpty`, `Skip`, a delay, a new `catch` or a widened timeout means the agent bent the test
+   to reach green. A legitimate arrange fix is one you released first.
+5. **Read the load-bearing diff**, then run the build and the touched test classes yourself. Run
    the full suite at each batch boundary and before a push, and two or three times for concurrency
-   or UI work.
-5. **Demand mutation proof** for any test that arrived green.
-6. **Treat any new flaky test as a bug** to root-cause before commit. In this delivery that rule
-   found a harness trap and three real store bugs.
-7. **Settle ambiguity yourself and log it.** Record each judgement call with its reason in a
+   or UI work. For each row that was red, name the line in `src/` that turned it green; a row
+   that went green with no `src/` change was satisfied by something else.
+6. **Demand mutation proof** for any test that arrived green.
+7. **Treat any new flaky test as a bug** to root-cause before commit. In this delivery that rule
+   found a harness trap and three real store bugs. A retry, a longer wait or a wider tolerance
+   is not a root cause.
+8. **Settle ambiguity yourself and log it.** Record each judgement call with its reason in a
    numbered list; report them all at the end.
+
+## Getting an independent review
+
+For `logic` and `boundary` pairs, and for any concurrency or UI work, dispatch the
+`delivery-reviewer` agent (`.claude/agents/delivery-reviewer.md`, Opus, read-only) once the
+manager's own checks pass. It exists because the manager's context is the most expensive in the
+run and is already anchored on the implementer's report. Skip it for `data` pairs, as for the
+architect review.
+
+- **Give it the code, not the conclusion.** The prompt names the diff command (`git diff
+  <branch>...HEAD -- src tests`), the Spec sections and plan line ranges, and the red file. It
+  does not get the implementer's report, the Coverage table or your opinion of the work. A
+  reviewer handed "all green, looks right" agrees.
+- **Ask it to find what is wrong.** The prompt says so in the first line and allows `NO
+  FINDINGS`. It checks, in order: test integrity (including `Freeze-Tests.ps1 -Check`), passing by
+  special case, Spec coverage, scope, and the house rules the build cannot see.
+- **Bound it.** Section pointers and `offset`/`limit` only, a 40-call budget, a return of at most
+  fifteen ranked lines plus a `COVERAGE` line. A reviewer that reads whole files costs what an
+  architect review costs.
+- **You triage, it never edits.** Each `BLOCKER` and `MAJOR` goes back to the same implementer by
+  resume, or is dismissed in your judgement log with the reason. Do not commit with a `BLOCKER`
+  open.
+- **Measure it.** At the next retrospective count what the reviewer found that your own checks
+  missed. If that is near zero for a risk tag, stop dispatching it for that tag.
+- **Know its limit.** It shares a model family with the implementers, so it can share their
+  blind spots. Mutation proof and reading the load-bearing diff remain yours.
 
 ## Holding retrospectives
 
@@ -159,6 +221,7 @@ across all eight — plan for them from the start:
 - behaviour implemented without a test, reported as a "design call";
 - the same rule tested at one entry point only;
 - `Assert.Contains` where an exact assert would have caught a real bug;
+- a test weakened, skipped or retried to reach green instead of the code being fixed;
 - forbidden commands used and left out of the report;
 - scope that no task owned, found late.
 
@@ -194,6 +257,9 @@ storage layout before shipping.
 | --- | --- |
 | `/tmp` differs between `python3` and Git Bash | Never hand a file between them through `/tmp` |
 | Windows `python3` can't open `/c/Users/...` | Use `C:/Users/...` |
+| `python3` on `PATH` may be the Microsoft Store stub in `WindowsApps`, which blocks (an empty heredoc made a call hang until its 120s timeout) | Never call it; use the Edit/Write/Grep tools, or the full path to a real interpreter with `-I` and a script file |
+| A call that outlives its timeout moves to a background task and the agent carries on without noticing | Read its output file and stop it with `TaskStop` at once; a "stuck" delivery is often one of these |
+| `run.ps1` and dev servers run until Ctrl+C, so a tool call that starts one never returns | Use `./run.ps1 -DryRun` to check a change, or `preview_start` for a server you need up |
 | PowerShell has no `head`/`tail` | `Select-Object -First/-Last` |
 | `grep -r` over `src/` also matches `bin/*.dll` and `*.xml` | Use `--include=*.cs` or the Grep tool |
 | `pwsh -File script.ps1 -Names a,b` from Bash binds one string | Build a real PowerShell array first |
