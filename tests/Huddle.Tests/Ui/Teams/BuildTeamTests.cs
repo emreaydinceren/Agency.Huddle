@@ -9,9 +9,11 @@ using Agency.Huddle.App.Acp;
 using Agency.Huddle.App.Components.Pages;
 using Agency.Huddle.App.Avatars;
 using Agency.Huddle.App.HiringPool;
+using Agency.Huddle.App.Library;
 using Agency.Huddle.App.TeamTypes;
 using Agency.Huddle.App.Teams;
 using Agency.Huddle.Tests.Tasks;
+using Agency.Huddle.Tests.Teammates;
 using Agency.Huddle.Tests.Teams;
 
 namespace Agency.Huddle.Tests.Ui.Teams;
@@ -396,6 +398,56 @@ public sealed class BuildTeamTests
         Assert.Equal(3, fixture.Library.Reads.Count);
     }
 
+    /// <summary>Approve &amp; hire stays off until the details are complete and the roster has a Teammate; then it creates the Team, hires the roster into it and opens it.</summary>
+    [Fact]
+    public async Task Approve_NeedsDetailsAndATeammate_ThenCreatesTheTeamAndHires()
+    {
+        using Fixture fixture = new(typeCount: 3);
+        await using MudBunitContext ctx = fixture.NewContext();
+        ctx.Services.GetRequiredService<NavigationManager>().NavigateTo("/teams/build?type=t01");
+        IRenderedComponent<ContainerFragment> cut = Render(ctx);
+        const string Button = "button.build-team-approve-button";
+        Assert.True(cut.Find(Button).HasAttribute("disabled"));
+        Assert.Equal("Add at least one Teammate to the roster.", cut.Find(".build-team-approve-hint").TextContent.Trim());
+
+        await cut.InvokeAsync(() => cut.Find(".build-team-name input").InputAsync(string.Empty));
+
+        Assert.True(cut.Find(Button).HasAttribute("disabled"));
+        Assert.Equal("Finish the team details first.", cut.Find(".build-team-approve-hint").TextContent.Trim());
+
+        await cut.InvokeAsync(() => cut.Find(".build-team-name input").InputAsync("Garden"));
+        await cut.InvokeAsync(() => cut.Find("[aria-label='Add Tutor']").ClickAsync());
+
+        Assert.False(cut.Find(Button).HasAttribute("disabled"));
+
+        await cut.InvokeAsync(() => cut.Find(Button).ClickAsync());
+
+        Assert.Contains("CreateTeam:Garden", fixture.Folders.Calls);
+        Assert.Contains("UpdateTeamFile:Garden", fixture.Folders.Calls);
+        PersonaEntry hired = Assert.Single(fixture.Personas.Entries, entry => entry.Teams.Contains("Garden", StringComparer.Ordinal));
+        Assert.Equal("Tutor", hired.Title);
+        Assert.Equal("/teams/Garden", new Uri(ctx.Services.GetRequiredService<NavigationManager>().Uri).AbsolutePath);
+    }
+
+    /// <summary>A name an existing Teammate already has is refused before the Team is created, and nothing is written.</summary>
+    [Fact]
+    public async Task Approve_NameInUse_IsRefusedBeforeAnythingIsWritten()
+    {
+        using Fixture fixture = new(typeCount: 3);
+        await using MudBunitContext ctx = fixture.NewContext();
+        ctx.Services.GetRequiredService<NavigationManager>().NavigateTo("/teams/build?type=blank");
+        IRenderedComponent<ContainerFragment> cut = Render(ctx);
+        await cut.InvokeAsync(() => cut.Find(".build-team-name input").InputAsync("Garden"));
+        await cut.InvokeAsync(() => cut.Find("[aria-label='Add Tutor']").ClickAsync());
+        string drafted = cut.Find(".roster-name").TextContent.Trim();
+        fixture.Personas.Add(new PersonaIdentity(drafted, "Other", drafted.ToLowerInvariant(), Teams: []), "You are other.");
+
+        await cut.InvokeAsync(() => cut.Find("button.build-team-approve-button").ClickAsync());
+
+        Assert.Equal($"The name '{drafted}' is already in use.", cut.Find(".build-team-approve-error").TextContent.Trim());
+        Assert.DoesNotContain("CreateTeam:Garden", fixture.Folders.Calls);
+    }
+
     /// <summary>Re-roll gives the draft another Name, and Remove takes it off the roster.</summary>
     [Fact]
     public async Task Hire_RerollAndRemove_ChangeTheDraft()
@@ -569,6 +621,10 @@ public sealed class BuildTeamTests
                 ["personas/bookkeeper.md"] = "---\ntitle: Bookkeeper\nconsult_when: receipts\n---\nYou keep books.",
             });
             this.Types = new TeamTypeCatalog(this.dir.Options(), NullLogger<TeamTypeCatalog>.Instance, builtins);
+            SkillPackStore packs = new(this.dir.Options(), NullLogger<SkillPackStore>.Instance, new Dictionary<string, string>(StringComparer.Ordinal));
+            AvatarStore avatars = new(this.dir.Options(), NullLogger<AvatarStore>.Instance);
+            HireLimitHarness harness = new(this.dir.Options());
+            this.Hire = new HireService(this.Personas, this.Types, packs, avatars, harness.Guard, new FakeSkillInstaller(), new FakeStartGate(), NullLogger<HireService>.Instance);
         }
 
         public string DirPath => this.dir.Path;
@@ -585,6 +641,10 @@ public sealed class BuildTeamTests
 
         public RecordingLibrary Library { get; } = new();
 
+        public FakeTeamFolders Folders { get; } = new();
+
+        public HireService Hire { get; }
+
         public MudBunitContext NewContext()
         {
             MudBunitContext ctx = new();
@@ -595,6 +655,8 @@ public sealed class BuildTeamTests
             ctx.Services.AddSingleton(this.Roles);
             ctx.Services.AddSingleton(this.Pool);
             ctx.Services.AddSingleton<IAvatarLibraryLoader>(this.Library);
+            ctx.Services.AddSingleton<ITeamFolders>(this.Folders);
+            ctx.Services.AddSingleton(this.Hire);
             return ctx;
         }
 

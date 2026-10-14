@@ -19,6 +19,21 @@ internal sealed record HireRequest(string Team, string TypeId, string RoleId, Ca
 /// <param name="PersonaName">The new Teammate's name when the file was written; otherwise <see langword="null"/>.</param>
 internal sealed record HireResult(bool Ok, string? Error, string? PersonaName);
 
+/// <summary>One Teammate Build a team has drafted: written as is, not resolved from a team type's candidate file.</summary>
+/// <param name="Name">The Teammate's name.</param>
+/// <param name="Title">The job title.</param>
+/// <param name="Text">The persona text, which becomes the Teammate's system prompt.</param>
+/// <param name="Role">The role of the team type this Teammate fills, or <see langword="null"/> for a Teammate outside the type's roles.</param>
+/// <param name="Avatar">The avatar to save (its colour and label); an <paramref name="Image"/> is saved with it.</param>
+/// <param name="Image">The bytes of the avatar image, or <see langword="null"/>.</param>
+/// <param name="ImageExtension">The extension, with its dot, of <paramref name="Image"/>.</param>
+internal sealed record DraftHire(string Name, string Title, string Text, RoleRef? Role, Avatar Avatar, byte[]? Image, string? ImageExtension);
+
+/// <summary>The outcome of hiring a batch of drafts.</summary>
+/// <param name="Error">Why the batch stopped, or <see langword="null"/> when every draft was hired.</param>
+/// <param name="Hired">The names written before the batch stopped, in request order.</param>
+internal sealed record DraftHireResult(string? Error, IReadOnlyList<string> Hired);
+
 /// <summary>Makes sure a Team's skills are present before its members start (HR-9).</summary>
 internal interface ISkillInstaller
 {
@@ -326,6 +341,86 @@ internal sealed class HireService(
             return this.HireLocked(request);
         }
     }
+
+    /// <summary>Checks that a batch of drafts can be hired together, writing nothing: no repeated name, no name in use, and the hire limits hold for the whole batch.</summary>
+    /// <param name="team">The Team they would join.</param>
+    /// <param name="drafts">The drafts.</param>
+    /// <returns>The refusal, or <see langword="null"/> when the batch fits.</returns>
+    public string? CheckDrafts(string team, IReadOnlyList<DraftHire> drafts)
+    {
+        ArgumentNullException.ThrowIfNull(drafts);
+
+        lock (this.gate)
+        {
+            HashSet<string> seen = new(StringComparer.OrdinalIgnoreCase);
+            foreach (DraftHire draft in drafts)
+            {
+                if (!seen.Add(draft.Name) || personas.ResolveByNameOrAlias(draft.Name) is not null || personas.ResolveByNameOrAlias(draft.Name.ToLowerInvariant()) is not null)
+                {
+                    return $"The name '{draft.Name}' is already in use.";
+                }
+            }
+
+            HireRefusal? refusal = limits.Check([.. drafts.Select(draft => HireService.AsCandidate(team, draft))]);
+            return refusal is null ? null : HireService.Describe(refusal);
+        }
+    }
+
+    /// <summary>Writes the drafts as Teammates of <paramref name="team"/>, in order; the first failure stops the batch and the ones already written stay.</summary>
+    /// <param name="team">The Team they join.</param>
+    /// <param name="drafts">The drafts; call <see cref="CheckDrafts"/> first.</param>
+    /// <returns>The outcome with the names written.</returns>
+    public DraftHireResult HireDrafts(string team, IReadOnlyList<DraftHire> drafts)
+    {
+        ArgumentNullException.ThrowIfNull(drafts);
+
+        List<string> hired = [];
+        lock (this.gate)
+        {
+            foreach (DraftHire draft in drafts)
+            {
+                string alias = draft.Name.ToLowerInvariant();
+                PersonaIdentity identity = new(draft.Name, draft.Title, alias, [team], Role: draft.Role);
+                try
+                {
+                    _ = personas.Add(identity, draft.Text, null);
+                }
+                catch (ChatException ex)
+                {
+                    return new DraftHireResult(ex.Message, hired);
+                }
+                catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+                {
+                    logger.LogWarning(ex, "Teammate {PersonaName} could not be written.", draft.Name);
+                    return new DraftHireResult($"{draft.Name} could not be hired: the Teammate file could not be written.", hired);
+                }
+
+                hired.Add(draft.Name);
+                this.SaveDraftAvatar(draft);
+            }
+        }
+
+        return new DraftHireResult(null, hired);
+    }
+
+    /// <summary>Saves a drafted Teammate's avatar and image; a failure is logged and the Teammate stays.</summary>
+    private void SaveDraftAvatar(DraftHire draft)
+    {
+        try
+        {
+            Avatar toSave = draft.Image is not null && draft.ImageExtension is not null
+                ? draft.Avatar with { Image = avatars.WriteImage(draft.Image, draft.ImageExtension) }
+                : draft.Avatar;
+            avatars.Save(draft.Name, toSave);
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or ChatException)
+        {
+            logger.LogWarning(ex, "Teammate {PersonaName} was hired but its avatar could not be saved.", draft.Name);
+        }
+    }
+
+    private static Candidate AsCandidate(string team, DraftHire draft) =>
+        new(draft.Name, draft.Name.ToLowerInvariant(), draft.Title, draft.Text, [team], null);
 
     /// <summary>Checks and writes one hire; the caller holds <see cref="gate"/> so no other hire interleaves.</summary>
     private HireResult HireLocked(HireRequest request)

@@ -671,8 +671,7 @@ Under a Team's title (not a Project's), the header has two more things:
 ### Building a team with the Chief of Staff
 
 **Build a team** (`/teams/build`) walks you through making a Team in four steps:
-**Team type**, **Team details**, **Review** and **Approve**. Only the first two exist
-so far. Step 1 shows a card for each team type: its name, what it does in a line, how many
+**Team type**, **Team details**, **Hire** and **Approve**. Step 1 shows a card for each team type: its name, what it does in a line, how many
 roles it has besides the manager, and **You have one** when you already run a Team of
 that type. The cards sit in two rows; scroll to the right for the rest.
 
@@ -701,11 +700,19 @@ role suggests when it has any), and the card gets a small green check to show th
 role is taken care of; add a role again for a second Teammate. Each draft card has **Re-roll**
 (another name and avatar), **Edit** (the Teammate card, saved with **Save draft**; it changes only the
 draft) and **Remove**, and the team type's manager role carries a **Manager** badge. A
-dashed ring means the Teammate is not hired yet; nothing is hired or created on this page.
+dashed ring means the Teammate is not hired yet; nothing is hired until you approve.
 
 The **+** card opens a form (title, what it does, instructions, model strength); the
 role is saved in `custom-roles.json` in your data folder and stays on the page for next
 time. A role you wrote has **Edit** and **Delete** buttons; Delete asks first.
+
+**Approve & hire**, the last step, is off until the team details are complete and the
+roster has at least one Teammate; a hint beside it says which is missing. Pressing it
+creates the Team (its type, Library folder and purpose), hires every draft Teammate into
+it with the avatar drawn for it, makes the draft in the type's manager role the Team's
+manager, and opens the Team. If a draft's name is already taken, you are told before
+anything is created. The Teammates start with the agent's default model, effort and work
+mode; change them on each Teammate's card.
 
 ### Hiring a Team from a type
 

@@ -285,7 +285,7 @@ Containers that float above a page. Each cell shows one over a dimmed page.
 
 ## Figure 9: The Build a team page
 
-`BuildTeam.razor` at `/teams/build`. The Chief of Staff's four steps, of which steps 1 (Team type), 2 (Team details) and 3 (Hire) are built. The figure shows step 1 only; `B8` to `B9c` are described in the table.
+`BuildTeam.razor` at `/teams/build`. The Chief of Staff's four steps, of which steps 1 (Team type), 2 (Team details), 3 (Hire) and 4 (Approve) are built. The figure shows step 1 only; `B8` to `B10` are described in the table.
 
 ![The Build a team page: a title with the Chief of Staff's name, a four-step strip, and a grid of team type cards with one chosen and one marked You have one](../images/wireframes/09-build-a-team.svg)
 
@@ -304,9 +304,10 @@ Containers that float above a page. Each cell shows one over a dimmed page.
 | `B9a` | Roles grid | `.team-type-grid` (the same two scrolling rows as `B5`) | A blank dashed card with a large + ("Add a role") first, then the pool roles the chosen type's template defines (a green "Suggested" chip), then the Human's own roles, then the rest of the hiring pool. A role card has an Add button and, once the roster has a Teammate for the role, a subtle green check ("On the draft roster"), which puts a new Teammate for the role on the draft roster (`B9c`); a role the Human wrote also has Edit and Delete icon buttons, and Delete asks first |
 | `B9b` | Role form | `RoleFormDialog` (a form dialog, `O2`) | Opened by the + card and by Edit: Title, What it does, Instructions (six lines) and Model strength. Save is disabled until there is a title. Saved to `custom-roles.json` |
 | `B9c` | Draft roster | `.roster-grid` of `.roster-card` | Under the roles: "Draft roster", a count and "dashed ring = not hired yet", then one card per draft Teammate: a dashed-ring avatar (drawn with the Name from the avatar library: one of the role's suggested images, else any; the colour and initials show when the library has none), Name, role title, a Manager badge when the template makes the role its manager, the role's description, its model tier, and Re-roll (another free Name and avatar), Edit (the Teammate card in draft mode: Save draft changes the draft only) and Remove. Step 3 of `B3` is done once the roster has a Teammate |
+| `B10` | Approve section | `section.build-team-approve` | Step 4; drawn once a type is chosen. A numbered badge and "Approve", an error alert when a hire is refused, then the filled primary button "Approve & hire" with a hint beside it ("Finish the team details first." or "Add at least one Teammate to the roster."). The button is on only when step 2 is complete and the roster has at least one Teammate. It creates the Team (`_team.md` with the type, Library folder and purpose), writes each draft as a Teammate of it with its avatar, sets the manager, and opens the Team. A refusal found before anything is written (a name in use) leaves nothing behind; a failure part-way keeps the Team and offers "Open team" |
 | `B6a` | Team type card | `TeamTypeCard` (`button.team-type-card`) | An icon tile tinted by the type's palette role, the name, the first sentence of the description (two lines at most), "Manager + N roles", a dashed-outline "You have one" chip when a Team of this type exists, and a check mark when chosen; pressed state is `aria-pressed` |
 
-Not drawn: steps 2 and 3 (`B8` to `B9c`) and step 4.
+Not drawn: steps 2 to 4 (`B8` to `B10`).
 
 ## Using the codes
 

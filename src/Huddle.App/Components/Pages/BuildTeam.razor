@@ -5,6 +5,7 @@
 @using Agency.Huddle.App.Components.Shared.Dialogs
 @using Agency.Huddle.App.Components.Teams
 @using Agency.Huddle.App.HiringPool
+@using Agency.Huddle.App.Library
 @using Agency.Huddle.App.Teammates
 @using Agency.Huddle.App.TeamTypes
 @using Agency.Huddle.App.Teams
@@ -19,6 +20,8 @@
 @inject HiringPoolCatalog Pool
 @inject CustomRoleStore CustomRoles
 @inject IAvatarLibraryLoader AvatarLibrary
+@inject ITeamFolders Folders
+@inject HireService Hiring
 @implements IDisposable
 
 @*
@@ -157,6 +160,29 @@
             </div>
         </section>
     }
+
+    @if (this.selected is not null)
+    {
+        <section class="build-team-section build-team-approve" aria-labelledby="build-team-approve-heading">
+            <div class="build-team-section-head">
+                <span class="build-team-section-number" aria-hidden="true">4</span>
+                <MudText Typo="Typo.h6" id="build-team-approve-heading">Approve</MudText>
+            </div>
+            @if (this.approveError is not null)
+            {
+                <MudAlert Severity="Severity.Error" Dense="true" role="alert" Class="build-team-approve-error">@this.approveError</MudAlert>
+            }
+            <div class="build-team-approve-row">
+                <MudButton Variant="Variant.Filled" Color="Color.Primary" Size="Size.Medium" StartIcon="@Icons.Material.Filled.Check" Disabled="@(!this.CanApprove)"
+                           OnClick="this.Approve" Class="build-team-approve-button">Approve &amp; hire</MudButton>
+                @if (this.continueTeam is not null)
+                {
+                    <MudButton Variant="Variant.Text" Size="Size.Medium" Href="@this.TeamHref(this.continueTeam)" Class="build-team-open-team">Open team</MudButton>
+                }
+                <MudText Typo="Typo.body2" Class="build-team-intro build-team-approve-hint">@this.ApproveHint</MudText>
+            </div>
+        </section>
+    }
 </MudContainer>
 
 @code {
@@ -189,6 +215,8 @@
     private string purpose = string.Empty;
     private string workspace = string.Empty;
     private readonly List<DraftMember> drafts = [];
+    private string? approveError;
+    private string? continueTeam;
     private bool nameEdited;
     private bool purposeEdited;
 
@@ -236,6 +264,25 @@
             return "That folder does not exist.";
         }
     }
+
+    /// <summary>Whether Approve &amp; hire may be pressed: step 2 is complete and the roster has at least one Teammate.</summary>
+    private bool CanApprove => this.selected is not null && this.DetailsReady && this.drafts.Count > 0;
+
+    /// <summary>Says what is still missing while the button is off; nothing once it is on.</summary>
+    private string? ApproveHint
+    {
+        get
+        {
+            if (!this.DetailsReady)
+            {
+                return "Finish the team details first.";
+            }
+
+            return this.drafts.Count == 0 ? "Add at least one Teammate to the roster." : null;
+        }
+    }
+
+    private string TeamHref(string team) => $"/teams/{Uri.EscapeDataString(team)}";
 
     /// <summary>Whether step 2 is complete: a valid, unused name and a Library folder that is allowed.</summary>
     private bool DetailsReady => this.TrimmedName.Length > 0 && this.NameProblem is null && this.WorkspaceProblem is null;
@@ -499,6 +546,79 @@
             }),
         };
         _ = await this.Dialogs.ShowAsync<TeammateCard>("Edit draft", parameters, TeammateCard.Options);
+    }
+
+    /// <summary>The drafts as Teammates to write: a draft that fills one of the type's roles carries that role, up to the role's limit per Team.</summary>
+    /// <param name="type">The chosen team type.</param>
+    private List<DraftHire> BuildHires(TeamTypeManifest type)
+    {
+        Dictionary<string, int> used = new(StringComparer.Ordinal);
+        List<DraftHire> hires = [];
+        foreach (DraftMember draft in this.drafts)
+        {
+            RoleSpec? role = IsBlank(type) ? null : type.Roles.FirstOrDefault(candidate => !candidate.Pooled
+                && string.Equals(candidate.Job ?? candidate.Id, draft.RoleId, StringComparison.Ordinal));
+            RoleRef? roleRef = null;
+            if (role is not null)
+            {
+                int count = used.GetValueOrDefault(role.Id);
+                if (role.MaxPerTeam == 0 || count < role.MaxPerTeam)
+                {
+                    roleRef = new RoleRef(type.Id, role.Id, type.Version);
+                    used[role.Id] = count + 1;
+                }
+            }
+
+            hires.Add(new DraftHire(draft.Name, draft.Title, draft.Text, roleRef, draft.Avatar, draft.Image, draft.ImageExtension));
+        }
+
+        return hires;
+    }
+
+    /// <summary>Creates the Team and hires the roster into it; the manager is the draft the template makes its manager. A refusal found before anything is written leaves nothing behind.</summary>
+    private void Approve()
+    {
+        if (this.selected is not { } type || !this.CanApprove)
+        {
+            return;
+        }
+
+        this.approveError = null;
+        this.continueTeam = null;
+        string team = this.TrimmedName;
+        List<DraftHire> hires = this.BuildHires(type);
+        string? refusal = this.Hiring.CheckDrafts(team, hires);
+        if (refusal is not null)
+        {
+            this.approveError = refusal;
+            return;
+        }
+
+        string workspaceFolder = this.workspace.Trim();
+        string purposeLine = string.Join(' ', this.purpose.Split((char[]?)null, StringSplitOptions.RemoveEmptyEntries));
+        TeamFile file = new(new VersionedRef(type.Id, type.Version), null, workspaceFolder.Length == 0 ? null : workspaceFolder, purposeLine.Length == 0 ? null : purposeLine, TeamPaths.ProcessFileName, string.Empty);
+        TeamCreateResult created = this.Folders.CreateTeam(team, file);
+        if (created.Outcome != TeamCreateOutcome.Created)
+        {
+            this.approveError = created.Outcome == TeamCreateOutcome.AlreadyExists ? ExistsMessage : "That Team name is not allowed.";
+            return;
+        }
+
+        DraftHireResult result = this.Hiring.HireDrafts(team, hires);
+        string? manager = this.drafts.FirstOrDefault(draft => draft.Manager && result.Hired.Contains(draft.Name, StringComparer.Ordinal))?.Name;
+        if (manager is not null)
+        {
+            _ = this.Folders.UpdateTeamFile(team, current => current with { Manager = manager });
+        }
+
+        if (result.Error is not null)
+        {
+            this.approveError = $"The Team was created, but not every Teammate was hired. {result.Error}";
+            this.continueTeam = team;
+            return;
+        }
+
+        this.Navigation.NavigateTo(this.TeamHref(team));
     }
 
     /// <summary>Opens the role form empty and stores the role it returns.</summary>
