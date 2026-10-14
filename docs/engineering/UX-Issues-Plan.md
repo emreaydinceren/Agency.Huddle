@@ -1042,7 +1042,7 @@ Ids are `<deliverable number>.<task>`, the form `Set-Tracker.ps1` updates:
 `pwsh -NoProfile -File agents/scripts/Set-Tracker.ps1 -Task "12.3" -State Done -TrackerPath docs/engineering/UX-Issues-Plan.md`.
 `(H)` is Haiku, `(S)` is Sonnet.
 
-**Status:** 126 of 141 tasks Done · 0 of 2 retrospectives done · last updated 2026-10-13.
+**Status:** 130 of 141 tasks Done · 0 of 2 retrospectives done · last updated 2026-10-13.
 
 | **Deliverable / Task** | **Model** | **Depends on** | **Active** | **In Progress** | **Done** |
 | --- | --- | --- | --- | --- | --- |
@@ -1206,10 +1206,10 @@ Ids are `<deliverable number>.<task>`, the form `Set-Tracker.ps1` updates:
 | 26.4 SearchCardShell (S) | Sonnet | 26.1 | | | |
 | 26.5 Wireframes (S) | Sonnet | 26.2 | | | |
 | **U27 Copy, user guide and manual tests** | Haiku | all areas | | | |
-| 27.1 Collect label changes (H) | Haiku | all areas | | | |
-| 27.2 User guide (H) | Haiku | 27.1 | | | |
-| 27.3 Manual tests (H) | Haiku | 27.1 | | | |
-| 27.4 Checks (H) | Haiku | 27.2, 27.3 | | | |
+| 27.1 Collect label changes (H) | Haiku | all areas | | | ✔ |
+| 27.2 User guide (H) | Haiku | 27.1 | | | ✔ |
+| 27.3 Manual tests (H) | Haiku | 27.1 | | | ✔ |
+| 27.4 Checks (H) | Haiku | 27.2, 27.3 | | | ✔ |
 | **U28 Integration and QA** | Sonnet | U27 | | | |
 | 28.1 Suite three times and checks (S) | Sonnet | U27 | | | |
 | 28.2 Baselines empty (S) | Sonnet | 28.1 | | | |
