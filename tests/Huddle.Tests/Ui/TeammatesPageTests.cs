@@ -137,8 +137,14 @@ public sealed class TeammatesPageTests
 
         // The Create card itself, fully rendered - proof this got past ResolveStatus rather than
         // the page having quietly swallowed the crash and shown nothing.
-        Assert.Contains("Persona body", cut.Markup, StringComparison.Ordinal);
-        Assert.Contains("Add teammate", cut.Markup, StringComparison.Ordinal);
+        // The dialog provider paints after the click handler returns, so wait for the card instead of reading at once.
+        cut.WaitForAssertion(
+            () =>
+            {
+                Assert.Contains("Persona body", cut.Markup, StringComparison.Ordinal); // contains-ok: proves the whole Create card rendered
+                Assert.Contains("Add teammate", cut.Markup, StringComparison.Ordinal); // contains-ok: proves the whole Create card rendered
+            },
+            TimeSpan.FromSeconds(10));
     }
 
     /// <summary>
@@ -162,7 +168,8 @@ public sealed class TeammatesPageTests
 
         cut.Find(NewTeammateSelector).Click();
 
-        Assert.Equal(1, factory.FakeModelCatalog.ProbeCount);
+        // The card probes when it initialises inside the dialog, which paints after the click handler returns.
+        cut.WaitForAssertion(() => Assert.Equal(1, factory.FakeModelCatalog.ProbeCount), TimeSpan.FromSeconds(10));
     }
 
     [Fact]

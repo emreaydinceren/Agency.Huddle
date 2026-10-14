@@ -64,24 +64,26 @@ describing a screen that no longer exists is incomplete.
 
 ## I need… use this
 
-Each answer is the consistent choice. If the answer is a component that is still to be
-built, build it and move your site onto it rather than writing another copy.
+Each answer is the consistent choice. If your site hand-builds a shape that has a
+component here, move it onto the component rather than writing another copy.
 
 | I need | Use | Rule |
 | --- | --- | --- |
-| A new page | `@page` component, `MudContainer pa-4`, an `h1` title, `TabKeys.Describe` | [A page](design-system.md#a-page) |
-| A page title with actions | `MudText Typo.h5 HtmlTag="h1"`, and `Size.Small` buttons on the right; later the `PageHeader` component | [A page](design-system.md#a-page) |
+| A new page | `@page` component, `MudContainer pa-4`, a `PageHeader`, `TabKeys.Describe` | [A page](design-system.md#a-page) |
+| A page title with actions | `PageHeader`, with the `Size.Small` buttons in its `Actions` slot | [A page](design-system.md#a-page) |
 | A toolbar under the title | `MudToolBar Dense Gutters="false"` | [Spacing, density and size](design-system.md#spacing-density-and-size) |
-| A search box | `MudTextField` Outlined, Dense, `Filled.Search` adornment, `Clearable`, a debounce, an `aria-label`; `TeamTabToolbar` already does this for a Team tab | [House defaults](design-system.md#house-defaults) |
-| A form or short flow | `MudDialog` through `IDialogService`, with the dialog anatomy | [Dialog anatomy](design-system.md#dialog-anatomy) |
-| A "name this thing" dialog | Copy `NewTeamDialog`, the only one with live validation and Enter to submit; later `NameDialog` | [Dialog anatomy](design-system.md#dialog-anatomy) |
-| A destructive confirmation | `IDialogService.ShowMessageBoxAsync` with the verb as the button text; later `ConfirmDialog` | [Confirming](design-system.md#confirming) |
+| A search box | `SearchField` | [House defaults](design-system.md#house-defaults) |
+| A form or short flow | `MudDialog` through `IDialogService`, opened with `HuddleDialogOptions.SmallForm`, with the dialog anatomy | [Dialog anatomy](design-system.md#dialog-anatomy) |
+| A "name this thing" dialog | `NameDialog` | [Dialog anatomy](design-system.md#dialog-anatomy) |
+| A destructive confirmation | `DialogService.ConfirmAsync(title, message, verb, danger)` | [Confirming](design-system.md#confirming) |
 | A destructive confirmation on a list row | `InlineConfirm` with `ConfirmText` set to the verb | [Confirming](design-system.md#confirming) |
-| A side panel over a page | `MudDrawer` Temporary, `Anchor.End`, with a header and close button | [Drawer anatomy](design-system.md#drawer-anatomy) |
+| A side panel over a page | `ResizableEndDrawer` | [Drawer anatomy](design-system.md#drawer-anatomy) |
 | Two resizable panes | `MudSplitPanel`, as `LibraryExplorer` uses it | [MudBlazorImplementation.md](../../agents/MudBlazorImplementation.md) |
 | A notice on the page | `MudAlert` with a role, `Dense` if one line | [Notices and snackbars](design-system.md#notices-and-snackbars) |
 | A transient result | `ISnackbar.Add(…, key: …)` | [Notices and snackbars](design-system.md#notices-and-snackbars) |
-| An empty list | `Typo.body1`, secondary colour, `role="status"`, a next step; later `EmptyState` | [Patterns worth copying](design-system.md#patterns-worth-copying) |
+| An empty list | `EmptyState`, with a next step | [Patterns worth copying](design-system.md#patterns-worth-copying) |
+| A card an Agent puts in the Transcript | Derive from `AgentCardBase`, draw with `AgentCard` | [Huddle components](design-system.md#huddle-components) |
+| A Task's state, priority or Assignee on screen | `TaskStatusChip`, `TaskPriorityChip`, `TaskAssignee` | [Huddle components](design-system.md#huddle-components) |
 | A Teammate's face | `TeammateAvatar` | [Avatars and status](design-system.md#avatars-and-status) |
 | A Teammate's health | `StatusDot` | [Avatars and status](design-system.md#avatars-and-status) |
 | A Task's state, priority or presence colour | `TaskColors.For(…)`; the priority icon is `TaskColors.Icon(priority)` | [Colour](design-system.md#colour) |
@@ -117,8 +119,17 @@ before you create a component, a helper or a CSS class.
 | Component | Path | Draws | Key parameters | Use it for |
 | --- | --- | --- | --- | --- |
 | `TeammateAvatar` | `Components/Shared/TeammateAvatar.razor` | `C5a`, `P4` | `Name`, `Avatar`, `Size`, `Class`, `PendingImage` | Every Teammate face: image, then label, then a two-letter monogram |
-| `StatusDot` | `Components/Shared/StatusDot.razor` | In `P4`, pickers | `State` (`PersonaState`) | Every Teammate health dot |
-| `ChipCloud` | `Components/Shared/ChipCloud.razor` | Avatar picker, hiring pool | `Title`, `Pool`, `Selected`, `Cap`, `CssClass`, `OnToggle` | A wrapping cloud of toggle chips, selected first |
+| `StatusDot` | `Components/Shared/StatusDot.razor` | In `P4`, pickers | `State` (`PersonaState`) | Every Teammate health dot; it carries its own text label |
+| `TeammateLabel` | `Components/Shared/TeammateLabel.razor` | Rows in New chat and Invite | `Name`, `State`, `Avatar`, `IsUser` | A Teammate's dot, avatar and name on one line |
+| `PageHeader` | `Components/Shared/PageHeader.razor` | The page title in `T1`, `P1`, `L1`, `G1`, `M1` | `Title`, `Actions`, `SetPageTitle` | Every page's one `h1`, with its action buttons at the right |
+| `EmptyState` | `Components/Shared/EmptyState.razor` | An empty list, table or pane | `Text`, `Icon`, `Action`, `FullPane` | Any "nothing here" line; says what to do next, `role="status"` |
+| `ChipCloud` | `Components/Shared/ChipCloud.razor` | Avatar picker, hiring pool | `Title`, `Pool`, `Selected`, `Cap`, `CssClass`, `Quiet`, `OnToggle` | A wrapping cloud of toggle chips, selected first |
+| `TaskStatusChip`, `TaskPriorityChip`, `TaskAssignee` | `Components/Tasks/` | Fields of a Task in `T3`, `T4`, `T6` and search | `Status`; `Priority`; `Name`, `Presence` | A Task's State, Priority or Assignee wherever it is shown. A Board card omits the State chip |
+| `TaskActionsMenu` | `Components/Tasks/TaskActionsMenu.razor` | The "Actions for {id}" menu | `Id`, `ShowMoveTo`, `OnMoveTo`, `OnCopyId`, `OnCopyLink`, `ExtraItems` | The one menu on a Task card, List row and the detail |
+| `TaskPicker` | `Components/Tasks/TaskPicker.razor` | Task pickers in the detail and `DuplicatePickerDialog` | `Value`, `Excluding`, `Label` | Choosing another Task |
+| `ConflictRow` | `Components/Tasks/ConflictRow.razor` | A conflicting field in the Task detail | `Field`, `Stacked`, `TheirsText`, `YoursText`, `Choice` | One field of an edit conflict, in the panel or the expanded table |
+| `SettingsIntro`, `StoredAt`, `ProblemList` | `Components/Settings/` | The top and foot of a Settings panel | `ChildContent`; `Path`, `Label`; `Count` | The intro paragraph, the "Stored at" line and the "Problems" list of every Settings panel |
+| `SearchCardShell` | `Components/Search/SearchCardShell.razor` | Every row of the `S1b` dropdown | `Icon`, `Title`, `Meta`, `Snippet`, `Trailing`, `AccessibleName`, `Archived` | A new kind of search result: fill the slots, don't copy a card |
 | `HuddleSegmentedControl<T>` | `Components/Shared/HuddleSegmentedControl.razor` | `T3a`, `T3d`, `L3b` | `Value`, `ValueChanged`, `ItemCount`, `Disabled`, `SelectionMode`; `MudToggleItem`s as children | A two- to five-way mode switch |
 | `SkillProvenanceLine` | `Components/Shared/SkillProvenanceLine.razor` | Skills, Teammate card | `Skill` | Where a Skill came from and whether it was modified |
 | `EditPreview` | `Components/Shared/EditPreview.razor` | `C7b` | `Edit`, `Path` | A file edit's before and after |
@@ -133,31 +144,39 @@ before you create a component, a helper or a CSS class.
 | Component | Path | Draws | Key parameters | Use it for |
 | --- | --- | --- | --- | --- |
 | `InlineConfirm` | `Components/Shared/InlineConfirm.razor` | `O6` | `Prompt`, `ConfirmText`, `Busy`, `OnConfirm`, `OnCancel`, `Class` | A destructive yes or no that replaces a list row. Confirm takes focus, Escape cancels |
-| `ResetAllControl` | `Components/Settings/ResetAllControl.razor` | `G1a` | `AnyModified`, `Confirming`, `OnBeginReset`, `OnConfirm`, `OnCancel` | Prompts' reset-all only; hand-built (UX-R13) |
-| `TeamTabToolbar` | `Components/Teams/TeamTabToolbar.razor` | `M5` | `ActionText`, `OnAction`, `SearchPlaceholder`, `Search`, `SearchChanged` | A tab toolbar with one action and a search box. The nearest thing to the planned `SearchField` |
+| `ResetAllControl` | `Components/Settings/ResetAllControl.razor` | `G1a` | `AnyModified`, `Confirming`, `OnBeginReset`, `OnConfirm`, `OnCancel` | Prompts' reset-all only; its confirm reads "Reset all" |
+| `SearchField` | `Components/Shared/SearchField.razor` | The search box of `M5`, `T2`, Skill import | `Value`, `ValueChanged`, `Placeholder`, `AriaLabel` | Any search box: outlined, dense, clearable, one debounce |
+| `AvatarEditor` | `Components/Shared/AvatarEditor.razor` | Settings, Appearance; the Teammate card | `Name`, `Value`, `ValueChanged`, `SaveMode`, `PendingImage` | Choosing an avatar: library, upload or text. Immediate in Settings, buffered in dialogs |
+| `ResizableEndDrawer` | `Components/Shared/ResizableEndDrawer.razor` | The Task detail and View editor drawers | `Title`, `StorageKey`, `Open`, `OpenChanged`, `OverlayAutoClose`, `Class` | Any right-hand drawer: drag or arrow-key resize, width remembered |
+| `TeamTabToolbar` | `Components/Teams/TeamTabToolbar.razor` | `M5` | `ActionText`, `OnAction`, `SearchPlaceholder`, `Search`, `SearchChanged` | A tab toolbar with one action and a search box, built on `SearchField` |
 | `Composer` | `Components/Shared/Composer.razor` | `C10` | `RoomId` | The message input; one per Room |
 | `ReferencePicker` | `Components/References/ReferencePicker.razor` | `C11` | `View`, `ListboxId`, `OnPick` | The `@` picker; driven by `Composer` |
 | `NewChat` | `Components/Shared/NewChat.razor` | In `S2b` | `Team`, `OnStarted`, `OnClosed` | Starting a Room, optionally in a Team |
 | `InviteTeammate` | `Components/Shared/InviteTeammate.razor` | `C3a` | `RoomId` | Bringing a Teammate into a Room |
-| `HiringPool` | `Components/Teams/HiringPool.razor` | Team setup | `Team`, `TypeId`, `Selection`, `SelectionChanged` | Choosing Candidates by Role (draws its own avatar today: UX-051) |
+| `HiringPool` | `Components/Teams/HiringPool.razor` | Team setup | `Team`, `TypeId`, `Selection`, `SelectionChanged` | Choosing Candidates by Role, with `TeammateAvatar` faces |
 
 ### Cards in the Transcript (`C8`)
 
 `ProposalCard`, `QuestionCard`, `ElicitationCard`, `RetroProposalCard` and
 `SprintProposalCard` in `Components/Shared/` each take only `RoomId` and load their own
-state. They share no base yet (UX-R01). For a new card, copy `QuestionCard`'s shell (an
-outlined panel with a title and a `role="region"`) and follow
-[In-place action rows](design-system.md#in-place-action-rows).
+state. They derive from `AgentCardBase` (`Components/Shared/AgentCards/AgentCardBase.cs`:
+the loaded-room guard, subscribe and unsubscribe hooks, and `RunBusyAsync`, which ignores a
+second action while busy and reports a failure through a keyed snackbar) and draw their
+shell with `AgentCard` (`Title`, `AriaLabel`, `Class`, `TitleClass`, `ChildContent`,
+`Actions`: an outlined `role="region"` panel). For a new card, derive from the base, use
+the shell and follow [In-place action rows](design-system.md#in-place-action-rows).
 
 ### Dialogs (`O1`)
 
 | Dialog | Path | Parameters | Pattern worth copying |
 | --- | --- | --- | --- |
-| `NewTeamDialog` | `Components/Teams/` | `Mode`, `Team`, `Teams` | Live validation, Enter submits |
+| `NameDialog` | `Components/Shared/Dialogs/` | `Label`, `ConfirmText`, `InitialValue`, `Validate`, `SubmitAsync` | Any one-field name: live validation, Enter submits, focus on open. Used for New team, New project, Rename, New note, New folder and Add folder (`NewTeamDialog`, `RenameDialog`, `NamePromptDialog` and `DeleteDialog` were removed) |
+| `ConfirmDialog` with `ConfirmAsync` | `Components/Shared/Dialogs/` | `Message`, `ConfirmText`, `Danger` | `await this.DialogService.ConfirmAsync(title, message, confirmText, danger)`; `true` only on confirm |
+| `HuddleDialogOptions` | `Components/Shared/Dialogs/HuddleDialogOptions.cs` | `SmallForm`, `Picker` | The options for every dialog: `SmallForm` for forms and confirms, `Picker` for list pickers |
 | `AddMemberDialog` | `Components/Teams/` | `Team`, `Candidates` (a snapshot) | Passing a snapshot, not live objects |
-| `DuplicateTeamDialog`, `CustomRoleDialog` | `Components/Teams/` | `SourceTeam`; `TypeId` | |
-| `RenameDialog`, `NamePromptDialog`, `AddFolderDialog`, `MoveDialog`, `DeleteDialog` | `Components/Library/` | a path, a callback | Near-duplicates waiting for `NameDialog` and `ConfirmDialog` (UX-R10, UX-R12) |
-| `AvatarEditorDialog`, `AvatarLibraryDialog` | `Components/Shared/` | `Name`, `Current`, `Deferred` | `CloseButton = true`, `BackdropClick = false` |
+| `DuplicateTeamDialog`, `CustomRoleDialog` | `Components/Teams/` | `SourceTeam`; `TypeId` | Multi-field, so they stay bespoke; both open with `SmallForm` |
+| `AddFolderDialog`, `MoveDialog` | `Components/Library/` | a path, a callback | `MoveDialog` is a `MudList` picker opened from the tree's "Move…" item |
+| `AvatarEditorDialog`, `AvatarLibraryDialog` | `Components/Shared/` | `Name`, `Current`, `Deferred` | A thin dialog around a buffered `AvatarEditor`; the library dialog draws its filters with `ChipCloud` |
 | `TeammateCard` | `Components/Shared/` | `Mode`, `Name`, … | Its header comment explains why an open dialog's parameters are frozen |
 | `ArchivedChatsDialog` | `Components/Shared/` | | A list dialog opened from `ArchivedChats` |
 | `TaskDetailDialog`, `ReasonDialog`, `DuplicatePickerDialog` | `Components/Tasks/` | `Id`, `Draft`; `Excluding` | |
@@ -177,7 +196,16 @@ id or a snapshot: an open dialog ignores new parameters.
 | `TabTrail` | `Tabs/TabTrail.cs` | `Build(url, title)`: a page's breadcrumb |
 | `TeamPageTabs` | `Teams/TeamPageTabs.cs` | Which tabs a Team or Project page shows, and their URL segments |
 | `MessageDisplay` | `Components/Shared/MessageDisplay.cs` | `DayLabel`, `LocalDay`, `StartsNewDay`, `ContinuesGroup`, `TryParseTaskWake` |
-| `RendererDispatch` | `Components/Shared/RendererDispatch.cs` | `RunAsync(this.InvokeAsync, action)`: render safely from an event raised off the UI thread |
+| `RendererDispatch` | `Components/Shared/RendererDispatch.cs` | `RunAsync(this.InvokeAsync, action)` and `Repaint(this.InvokeAsync, this.StateHasChanged)`: render safely from an event raised off the UI thread. A component never declares its own `DispatchAsync` (CV10) |
+| `ActionIcons` | `Components/Shared/ActionIcons.cs` | The icon for each recurring action (`Add`, `Copy`, and the rest). Use it, not `Outlined.Add` or a `+ ` label (CV8) |
+| `StatusColors` | `Components/Shared/StatusColors.cs` | `For(NeedsYouReason)` and `For(SearchNoticeKind)` as a `Color`; the sibling of `TaskColors` |
+| `Plural` | `Components/Shared/Plural.cs` | `Of(count, one, many)`: the word for a count, so "1 member" and "2 members" |
+| `ByteSize` | `Components/Shared/ByteSize.cs` | `Format(bytes)`: a file size in the unit it falls in |
+| `MessageDisplay.TimeLabel`, `FileName` | `Components/Shared/MessageDisplay.cs` | The time of a Message (the day only when it is not today) and the last segment of a path |
+| `RoomLinkCopier` | `Components/Shared/RoomLinkCopier.cs` | `CopyAsync`: copies a Room's link and reports the outcome in a snackbar |
+| `TaskClipboard` | `Components/Tasks/TaskClipboard.cs` | Copying a Task's id or link and the snackbar that follows |
+| `TaskDates` | `Tasks/TaskDates.cs` | `IsOverdue` and the Task date labels, in the local zone |
+| `HuddleDialogOptions`, `ConfirmAsync` | `Components/Shared/Dialogs/` | See [Dialogs](#dialogs-o1) |
 | `RoomDeleteCopy` | `Components/Shared/RoomDeleteCopy.cs` | `Prompt(roomName, uploadCount)`: the words of a Room's delete confirmation |
 | `AvatarChipCloud` | `Components/Shared/AvatarChipCloud.cs` | `Arrange(pool, selected, cap)`: chip order for `ChipCloud` |
 | `SprintLabels` | `Components/Tasks/SprintLabels.cs` | A Sprint's display text and filter options |
@@ -194,6 +222,16 @@ feature's name. Reuse these before writing a rule:
 | --- | --- |
 | `.empty-state` | An inline empty state's spacing and colour |
 | `.flex-1-truncate` | A flex child that ellipsises on one line |
+| `.truncate` | Single-line truncation with an ellipsis, anywhere |
+| `.visually-hidden` | Text for a screen reader only (clipped, still in the accessibility tree); replaces every local copy |
+| `.floating-panel` | A panel anchored to a control: card border, popover elevation (4) and popover `z-index`. `.invite-panel` and `.composer-picker` share it |
+| `.drop-target` | A drop zone that can take the drop: one 1px dashed primary border |
+| `.ref-link` | A dotted-underline reference to a Task, Library file, Room or Team inside a Message |
+| `.room-strip` | A row stacked above the Composer, with the hairline on top |
+| `.group-heading` | A muted heading with a light rule over a group of fields or tiles |
+| `.status-text`, `.panel-card`, `.preview-block` | A one-line muted hint; a bordered card on the page surface; a scrolling preformatted block. Defined, with no markup user yet |
+| `.chip-cloud-chip`, `.is-quiet` | The pill behind `ChipCloud`, and its unfilled variant |
+| `.resizable-drawer` | The handle and width rules of `ResizableEndDrawer` |
 | `.nav-action-link` | A sidebar action link ("New chat"): primary colour, tight icon gap |
 | `.hover-reveal-row` with `.hover-reveal-menu-button` | A row whose menu button shows on hover or focus |
 | `.btn-action-tight` | A button whose start icon sits close to its label |
@@ -208,13 +246,11 @@ exists.
 
 ### Components to build
 
-These are planned, not built. Their anatomy is in
-[design-system.md](design-system.md#components-to-build): `PageHeader`, `EmptyState`,
-`NameDialog`, `ConfirmDialog`, `AgentCard` with `AgentCardBase`, `ResizableEndDrawer`,
-`SearchField`, `TaskStatusChip`, `TaskPriorityChip`, `TaskAssignee` and `TeammateLabel`.
-If your change touches a site that one of them would replace, build it then. When you
-build one, move it from that list to the catalog above and to design-system.md's
-[Huddle components](design-system.md#huddle-components).
+None are planned: every shape the audit found recurring is built and catalogued above.
+Their anatomy and rules are in design-system.md's
+[Huddle components](design-system.md#huddle-components). If you find a shape hand-built in
+a second place, build the component then, and add it to the catalog above and to that
+table.
 
 ## Where things live
 
@@ -238,7 +274,7 @@ build one, move it from that list to the catalog above and to design-system.md's
 | --- | --- | --- | --- |
 | [design-system.md](design-system.md) | How the UI looks, reads and behaves: tokens, type roles, spacing, shape, elevation, icons, motion, focus, layout, overlay anatomy, component defaults, interface copy, stylesheet rules, the checklist | **Yes**, for new and changed UI | Before you design a screen, write markup or touch a stylesheet |
 | [wireframes.md](wireframes.md) | The code, name and component of every container, an SVG figure per screen, and the words for UI parts | **Yes**, for vocabulary; update it with your change | Before you discuss, specify, report on or change a part of the screen |
-| [UX-Issues.md](UX-Issues.md) | Where today's code breaks the rules, with evidence and a suggested fix | No: a backlog | Before you change an area |
+| [UX-Issues.md](UX-Issues.md) | The few rows the UX consistency delivery did not close, with a note on what is left | No: a backlog | Before you change an area |
 | [language.md](language.md) | The defined terms and the words to avoid | **Yes** | Before you write a label, a message or help text |
 | [rules.md](rules.md) | Behaviour rules the compiler can't check | **Yes** | Before you edit anything in `src/Huddle.App` |
 | [MudBlazorDesign.md](../../agents/MudBlazorDesign.md) | Whether MudBlazor already ships what a spec needs, and where its example is | Guidance | While writing a spec or plan with UI |
@@ -359,6 +395,16 @@ browser's `preview_start` instead of starting the server itself. Then check:
   shared component, helper or utility class.
 - [UX-Issues.md](UX-Issues.md): delete each row you fixed.
 - [Index.md](../Index.md) if you added, renamed or deleted a page under `docs/`.
+
+**The convention test.** `tests/Huddle.Tests/Ui/Conventions` (`UiConventionTests`) scans
+`src/Huddle.App` for eleven rules, CV1 to CV11: `Size.Small`, outlined and dense inputs, a
+`role` on every `MudAlert`, a snackbar `key`, no `ReadOnly`, no `h1` to `h4` outside
+`PageHeader`, no `!` initialisers, the action-icon rules, no literal `style`, no local
+`DispatchAsync`, and the stylesheet scales. It fails the build on a violation. Fix the
+code. Never add a line to `Baseline/*.txt`, which are empty on purpose; a permanent
+exception goes in `Baseline/Exceptions.txt` with a reason, and only the manager edits it.
+The rules and their sources are in design-system.md's
+[How the rules are enforced](design-system.md#how-the-rules-are-enforced).
 
 Build with `dotnet build Huddle.slnx` and test with `dotnet test Huddle.slnx --`.
 

@@ -91,7 +91,7 @@
     /// <summary>The second line of a row: who asked and when, with the day only when it was not today.</summary>
     private static string Describe(NeedsYouEntry entry, DateTimeOffset now)
     {
-        return $"{entry.AskedBy} · {MessageDisplay.TimeLabel(entry.Since, now)}";
+        return string.Join(" · ", entry.AskedBy, MessageDisplay.TimeLabel(entry.Since, now));
     }
 
     /// <summary>The icons of a row, one per reason, in a fixed order.</summary>

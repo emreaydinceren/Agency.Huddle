@@ -188,7 +188,7 @@ public sealed class LibraryPanelTests
         var cut = ctx.RenderWithPopovers(RenderPanel);
 
         var reset = cut.Find(".library-panel-reset-button");
-        Assert.Contains(reset.ClassList, c => c.EndsWith("size-small", StringComparison.Ordinal));
+        Assert.Contains("mud-button-outlined-size-small", reset.ClassList);
         Assert.True(cut.Markup.IndexOf("library-panel-reset-button", StringComparison.Ordinal) < cut.Markup.IndexOf("library-panel-roots-table", StringComparison.Ordinal));
     }
 
