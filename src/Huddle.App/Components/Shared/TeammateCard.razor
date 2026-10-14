@@ -585,7 +585,11 @@
     /// opens the card this way.
     /// </summary>
     [Parameter]
-    public EventCallback<(string Name, string Title, string Text, string? Model, string? Effort, Avatar Avatar, byte[]? Image, string? ImageExtension)> OnDraftSaved { get; set; }
+    public EventCallback<(string Name, string Title, string Text, string? Model, string? Effort, Avatar Avatar, byte[]? Image, string? ImageExtension, string? Adapter, IReadOnlyList<string> Skills)> OnDraftSaved { get; set; }
+
+    /// <summary>The names of the Skills the draft carries, which a draft card starts with. Only read with <see cref="OnDraftSaved"/>.</summary>
+    [Parameter]
+    public IReadOnlyList<string>? DraftSkills { get; set; }
 
     /// <summary>The draft's avatar, which a draft card starts with instead of drawing a new one. Only read with <see cref="OnDraftSaved"/>.</summary>
     [Parameter]
@@ -775,6 +779,11 @@
                 this.avatar = this.DraftAvatar;
                 this.avatarPendingBytes = this.DraftImage;
                 this.avatarPendingExtension = this.DraftImageExtension;
+            }
+
+            if (this.OnDraftSaved.HasDelegate && this.DraftSkills is not null)
+            {
+                this.skills = this.DraftSkills;
             }
 
             this.name = this.Name.Length > 0 ? this.Name : this.PickName(null);
@@ -1831,7 +1840,7 @@
         }
 
         this.error = null;
-        await this.OnDraftSaved.InvokeAsync((draftName, this.title.Trim(), this.text, this.model, this.effort, this.avatar, this.avatarPendingBytes, this.avatarPendingExtension));
+        await this.OnDraftSaved.InvokeAsync((draftName, this.title.Trim(), this.text, this.model, this.effort, this.avatar, this.avatarPendingBytes, this.avatarPendingExtension, this.adapter, this.skills));
         this.MudDialog.Close();
     }
 

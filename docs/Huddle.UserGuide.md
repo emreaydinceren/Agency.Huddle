@@ -710,8 +710,18 @@ roster has at least one Teammate; a hint beside it says which is missing. Pressi
 creates the Team (its type, Library folder and purpose), hires every draft Teammate into
 it with the avatar drawn for it, makes the draft in the type's manager role the Team's
 manager, and opens the Team. If a draft's name is already taken, you are told before
-anything is created. The Teammates start with the agent's default model, effort and work
-mode; change them on each Teammate's card.
+anything is created.
+
+Each draft card shows how many **Skills** the role brings (hover for the names) and, when
+something is missing, **Needs setup** with the reason, such as "connector email:read not
+connected". That warning does not stop the approval. Before anything is created, **Approve &
+hire** imports any Skill the roster needs that is not yet on disk, the same way **Settings ›
+Skills** does. If a Skill's review shows more than a missing licence (scripts, shell
+commands, network calls), nothing is created: the message names it and links to
+**Settings › Skills**, where you import it yourself before approving again. A hired Teammate
+runs on the adapter and model its role's strength resolved to and carries the role's Skills
+and packs. **Edit** on a draft can change them, and the role form for your own roles has a
+**Skills** field.
 
 ### Hiring a Team from a type
 

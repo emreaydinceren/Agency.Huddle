@@ -1,5 +1,6 @@
 @using Agency.Huddle.App.Components.Shared.Dialogs
 @using Agency.Huddle.App.HiringPool
+@using Agency.Huddle.App.Skills
 @using Agency.Huddle.App.TeamTypes
 
 @*
@@ -7,6 +8,8 @@
     set). Save returns a CustomRole as the dialog's result; the caller stores it. Parameters are plain values because a
     [Parameter] may not be of an internal type (rules.md), and CustomRole is internal.
 *@
+
+@inject SkillStore InstalledSkills
 
 <MudDialog>
     <DialogContent>
@@ -18,6 +21,13 @@
             <MudTextField T="string" Variant="Variant.Outlined" Margin="Margin.Dense" Label="Instructions" Immediate="true" Lines="6"
                           HelperText="What a Teammate in this role is told to do."
                           Value="this.instructions" ValueChanged="this.OnInstructionsChanged" Class="custom-role-instructions" />
+            <MudSelect T="string" Label="Skills" MultiSelection="true" SelectedValues="@this.skills" SelectedValuesChanged="this.OnSkillsChanged"
+                       Variant="Variant.Outlined" Margin="Margin.Dense" HelperText="Skills you have installed; a Teammate in this role carries them." Class="custom-role-skills">
+                @foreach (Skill skill in this.InstalledSkills.All)
+                {
+                    <MudSelectItem T="string" Value="@skill.Name">@skill.Name</MudSelectItem>
+                }
+            </MudSelect>
             <MudSelect T="ModelTier" Variant="Variant.Outlined" Margin="Margin.Dense" Label="Model strength"
                        Value="this.tier" ValueChanged="this.OnTierChanged" Class="custom-role-tier">
                 <MudSelectItem T="ModelTier" Value="ModelTier.Strongest">Strongest</MudSelectItem>
@@ -41,6 +51,7 @@
     private string description = string.Empty;
     private string instructions = string.Empty;
     private ModelTier tier = ModelTier.Balanced;
+    private IReadOnlyList<string> skills = [];
 
     [CascadingParameter]
     private IMudDialogInstance? Dialog { get; set; }
@@ -61,6 +72,10 @@
     [Parameter]
     public string? Instructions { get; set; }
 
+    /// <summary>The names of the Skills to start with.</summary>
+    [Parameter]
+    public IReadOnlyList<string>? RoleSkills { get; set; }
+
     /// <summary>The model strength to start with.</summary>
     [Parameter]
     public ModelTier Tier { get; set; } = ModelTier.Balanced;
@@ -72,6 +87,7 @@
         this.description = this.Description ?? string.Empty;
         this.instructions = this.Instructions ?? string.Empty;
         this.tier = this.Tier;
+        this.skills = this.RoleSkills ?? [];
     }
 
     private void OnTitleChanged(string? value) => this.title = value ?? string.Empty;
@@ -82,7 +98,9 @@
 
     private void OnTierChanged(ModelTier value) => this.tier = value;
 
-    private void Save() => this.Dialog?.Close(DialogResult.Ok(new CustomRole(this.Id ?? string.Empty, this.title, this.description, this.instructions, this.tier)));
+    private void OnSkillsChanged(IReadOnlyCollection<string> value) => this.skills = [.. value];
+
+    private void Save() => this.Dialog?.Close(DialogResult.Ok(new CustomRole(this.Id ?? string.Empty, this.title, this.description, this.instructions, this.tier, this.skills)));
 
     private void Cancel() => this.Dialog?.Cancel();
 }

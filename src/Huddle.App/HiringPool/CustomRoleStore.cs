@@ -13,7 +13,12 @@ namespace Agency.Huddle.App.HiringPool;
 /// <param name="Description">One sentence on the role; may be empty.</param>
 /// <param name="Instructions">What a Teammate hired into this role is told to do; may be empty.</param>
 /// <param name="Tier">The model strength the role asks for.</param>
-internal sealed record CustomRole(string Id, string Title, string Description, string Instructions, ModelTier Tier);
+/// <param name="Skills">The names of the Skills a Teammate in this role carries, or <see langword="null"/> when omitted.</param>
+internal sealed record CustomRole(string Id, string Title, string Description, string Instructions, ModelTier Tier, IReadOnlyList<string>? Skills = null)
+{
+    /// <summary>The names of the Skills a Teammate in this role carries; empty when omitted.</summary>
+    public IReadOnlyList<string> Skills { get; init; } = Skills ?? [];
+}
 
 /// <summary>
 /// The Human's own roles, stored in <c>custom-roles.json</c> under the data folder. Adding, editing and deleting
@@ -65,9 +70,10 @@ internal sealed class CustomRoleStore
     /// <param name="description">The description.</param>
     /// <param name="instructions">The instructions.</param>
     /// <param name="tier">The model strength.</param>
+    /// <param name="skills">The names of the Skills a Teammate in the role carries, or <see langword="null"/> for none.</param>
     /// <returns>The role as stored.</returns>
     /// <exception cref="InvalidOperationException">The file is unreadable, or the title is blank.</exception>
-    public CustomRole Add(string title, string description, string instructions, ModelTier tier)
+    public CustomRole Add(string title, string description, string instructions, ModelTier tier, IReadOnlyList<string>? skills = null)
     {
         ArgumentNullException.ThrowIfNull(title);
         CustomRole role;
@@ -75,7 +81,7 @@ internal sealed class CustomRoleStore
         {
             this.ThrowIfBroken();
             string id = IdPrefix + LibraryRootStore.Slug(title, [.. this.roles.Select(static existing => existing.Id[IdPrefix.Length..])]);
-            role = Clean(new CustomRole(id, title, description, instructions, tier));
+            role = Clean(new CustomRole(id, title, description, instructions, tier, skills));
             this.Write([.. this.roles, role]);
         }
 
@@ -135,7 +141,7 @@ internal sealed class CustomRoleStore
             throw new InvalidOperationException("A role needs a title.");
         }
 
-        return role with { Title = title, Description = role.Description.Trim(), Instructions = role.Instructions.Trim() };
+        return role with { Title = title, Description = role.Description.Trim(), Instructions = role.Instructions.Trim(), Skills = [.. role.Skills.Distinct(StringComparer.Ordinal)] };
     }
 
     private void ThrowIfBroken()

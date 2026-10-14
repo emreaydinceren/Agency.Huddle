@@ -10,6 +10,7 @@ using Agency.Huddle.App.Components.Pages;
 using Agency.Huddle.App.Avatars;
 using Agency.Huddle.App.HiringPool;
 using Agency.Huddle.App.Library;
+using Agency.Huddle.App.Skills;
 using Agency.Huddle.App.TeamTypes;
 using Agency.Huddle.App.Teams;
 using Agency.Huddle.Tests.Tasks;
@@ -432,6 +433,66 @@ public sealed class BuildTeamTests
         Assert.Equal("/teams/Garden", new Uri(ctx.Services.GetRequiredService<NavigationManager>().Uri).AbsolutePath);
     }
 
+    /// <summary>A role's Skills show on its draft, are imported before anything is written, and are carried by the hired Teammate.</summary>
+    [Fact]
+    public async Task Approve_ImportsTheRolesSkills_AndTheTeammateCarriesThem()
+    {
+        using Fixture fixture = new(typeCount: 3);
+        await using MudBunitContext ctx = fixture.NewContext();
+        ctx.Services.GetRequiredService<NavigationManager>().NavigateTo("/teams/build?type=blank");
+        IRenderedComponent<ContainerFragment> cut = Render(ctx);
+        await cut.InvokeAsync(() => cut.Find(".build-team-name input").InputAsync("Garden"));
+        await cut.InvokeAsync(() => cut.Find("[aria-label='Add Bookkeeper']").ClickAsync());
+
+        Assert.Equal("1 skill", cut.Find(".roster-skills").TextContent.Trim());
+        Assert.Empty(cut.FindAll(".roster-setup"));
+
+        await cut.InvokeAsync(() => cut.Find("button.build-team-approve-button").ClickAsync());
+
+        SkillRef asked = Assert.Single(Assert.Single(fixture.Installer.Calls));
+        Assert.Equal("ext-skill", asked.Name);
+        PersonaEntry hired = Assert.Single(fixture.Personas.Entries, entry => entry.Teams.Contains("Garden", StringComparer.Ordinal));
+        Assert.True(PersonaFrontmatter.TryReadIdentity(hired.Text, out PersonaIdentity? identity, out _));
+        Assert.Equal(["ext-skill"], identity.Skills);
+        Assert.Equal("claude-agent-acp", identity.Adapter);
+    }
+
+    /// <summary>A Skill that cannot be installed stops the approval before the Team is created, names the Skill and links to Settings.</summary>
+    [Fact]
+    public async Task Approve_SkillThatNeedsReview_BlocksBeforeAnythingIsWritten()
+    {
+        using Fixture fixture = new(typeCount: 3);
+        fixture.Installer.Missing = [new SkillRef("ext-skill", "acme/skills", "skills/ext-skill")];
+        await using MudBunitContext ctx = fixture.NewContext();
+        ctx.Services.GetRequiredService<NavigationManager>().NavigateTo("/teams/build?type=blank");
+        IRenderedComponent<ContainerFragment> cut = Render(ctx);
+        await cut.InvokeAsync(() => cut.Find(".build-team-name input").InputAsync("Garden"));
+        await cut.InvokeAsync(() => cut.Find("[aria-label='Add Bookkeeper']").ClickAsync());
+
+        await cut.InvokeAsync(() => cut.Find("button.build-team-approve-button").ClickAsync());
+
+        Assert.Equal("Skills not installed: ext-skill. Import them yourself, then approve again.", cut.Find(".build-team-approve-error .mud-alert-message").FirstChild?.TextContent.Trim());
+        Assert.Equal("/settings/skills", cut.Find(".build-team-skills-link").GetAttribute("href"));
+        Assert.DoesNotContain("CreateTeam:Garden", fixture.Folders.Calls);
+        Assert.DoesNotContain(fixture.Personas.Entries, entry => entry.Teams.Contains("Garden", StringComparer.Ordinal));
+    }
+
+    /// <summary>A role that needs a connector that is not connected is flagged Needs setup with the reason, and does not stop the approval.</summary>
+    [Fact]
+    public async Task Hire_RoleNeedingAnUnconnectedConnector_IsFlaggedButApprovable()
+    {
+        using Fixture fixture = new(typeCount: 3);
+        await using MudBunitContext ctx = fixture.NewContext();
+        ctx.Services.GetRequiredService<NavigationManager>().NavigateTo("/teams/build?type=blank");
+        IRenderedComponent<ContainerFragment> cut = Render(ctx);
+        await cut.InvokeAsync(() => cut.Find(".build-team-name input").InputAsync("Garden"));
+
+        await cut.InvokeAsync(() => cut.Find("[aria-label='Add Tutor']").ClickAsync());
+
+        Assert.Equal("Needs setup: connector email:read not connected", cut.Find(".roster-setup").TextContent.Trim());
+        Assert.False(cut.Find("button.build-team-approve-button").HasAttribute("disabled"));
+    }
+
     /// <summary>A name an existing Teammate already has is refused before the Team is created, and nothing is written.</summary>
     [Fact]
     public async Task Approve_NameInUse_IsRefusedBeforeAnythingIsWritten()
@@ -619,7 +680,7 @@ public sealed class BuildTeamTests
             this.Roles = new CustomRoleStore(this.dir.Options());
             this.Pool = new HiringPoolCatalog(this.dir.Options(), NullLogger<HiringPoolCatalog>.Instance, new Dictionary<string, string>(StringComparer.Ordinal)
             {
-                ["hiringpool.json"] = """{ "schemaVersion": 1, "jobs": [ { "id": "tutor", "title": "Tutor", "description": "Teaches." }, { "id": "bookkeeper", "title": "Bookkeeper", "description": "Keeps the books.", "avatars": [ "book-1.png" ] } ] }""",
+                ["hiringpool.json"] = """{ "schemaVersion": 1, "jobs": [ { "id": "tutor", "title": "Tutor", "description": "Teaches.", "requires": [ "email:read" ] }, { "id": "bookkeeper", "title": "Bookkeeper", "description": "Keeps the books.", "avatars": [ "book-1.png" ], "skillRefs": [ { "name": "ext-skill", "source": "acme/skills", "path": "skills/ext-skill" } ] } ] }""",
                 ["personas/tutor.md"] = "---\ntitle: Tutor\nconsult_when: asked\n---\nYou teach.",
                 ["personas/bookkeeper.md"] = "---\ntitle: Bookkeeper\nconsult_when: receipts\n---\nYou keep books.",
             });
@@ -627,7 +688,9 @@ public sealed class BuildTeamTests
             SkillPackStore packs = new(this.dir.Options(), NullLogger<SkillPackStore>.Instance, new Dictionary<string, string>(StringComparer.Ordinal));
             AvatarStore avatars = new(this.dir.Options(), NullLogger<AvatarStore>.Instance);
             HireLimitHarness harness = new(this.dir.Options());
-            this.Hire = new HireService(this.Personas, this.Types, packs, avatars, harness.Guard, new FakeSkillInstaller(), new FakeStartGate(), NullLogger<HireService>.Instance);
+            this.Packs = packs;
+            this.Skills = new SkillStore(this.dir.Options(), NullLogger<SkillStore>.Instance);
+            this.Hire = new HireService(this.Personas, this.Types, packs, avatars, harness.Guard, this.Installer, new FakeStartGate(), NullLogger<HireService>.Instance);
         }
 
         public string DirPath => this.dir.Path;
@@ -648,6 +711,12 @@ public sealed class BuildTeamTests
 
         public HireService Hire { get; }
 
+        public FakeSkillInstaller Installer { get; } = new();
+
+        public SkillPackStore Packs { get; private set; }
+
+        public SkillStore Skills { get; private set; }
+
         public MudBunitContext NewContext()
         {
             MudBunitContext ctx = new();
@@ -660,6 +729,9 @@ public sealed class BuildTeamTests
             ctx.Services.AddSingleton<IAvatarLibraryLoader>(this.Library);
             ctx.Services.AddSingleton<ITeamFolders>(this.Folders);
             ctx.Services.AddSingleton(this.Hire);
+            ctx.Services.AddSingleton(this.Packs);
+            ctx.Services.AddSingleton(this.Skills);
+            ctx.Services.AddSingleton<IHireContext>(new RoleFixtures.Context());
             return ctx;
         }
 

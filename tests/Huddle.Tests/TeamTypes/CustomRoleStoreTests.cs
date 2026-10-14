@@ -18,7 +18,22 @@ public sealed class CustomRoleStoreTests
         Assert.Equal("custom-gardener", added.Id);
         Assert.Equal("Gardener", added.Title);
         CustomRole again = Assert.Single(new CustomRoleStore(dir.Options()).Roles);
-        Assert.Equal(added, again);
+        Assert.Equal(added with { Skills = [] }, again with { Skills = [] });
+        Assert.Equal(added.Skills, again.Skills);
+    }
+
+    /// <summary>A role's Skills are kept without repeats and read back; a file written before Skills existed reads with none.</summary>
+    [Fact]
+    public void Skills_AreStoredDistinct_AndAnOlderFileReadsWithNone()
+    {
+        using TempDataDir dir = new();
+        CustomRoleStore store = new(dir.Options());
+
+        _ = store.Add("Gardener", string.Empty, string.Empty, ModelTier.Balanced, ["a-skill", "b-skill", "a-skill"]);
+
+        Assert.Equal(["a-skill", "b-skill"], Assert.Single(new CustomRoleStore(dir.Options()).Roles).Skills);
+        File.WriteAllText(Path.Combine(dir.Path, "custom-roles.json"), """{ "roles": [ { "id": "custom-old", "title": "Old", "description": "", "instructions": "", "tier": "balanced" } ] }""");
+        Assert.Empty(Assert.Single(new CustomRoleStore(dir.Options()).Roles).Skills);
     }
 
     /// <summary>Two roles with the same title get different ids.</summary>

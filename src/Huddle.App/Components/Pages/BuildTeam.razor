@@ -22,6 +22,8 @@
 @inject IAvatarLibraryLoader AvatarLibrary
 @inject ITeamFolders Folders
 @inject HireService Hiring
+@inject IHireContext HireContext
+@inject SkillPackStore Packs
 @implements IDisposable
 
 @*
@@ -144,7 +146,17 @@
                                     }
                                 </div>
                                 <span class="roster-description">@draft.Description</span>
-                                <span class="@($"roster-tier roster-tier-{draft.Tier.ToString().ToLowerInvariant()}")">@draft.Tier.ToString().ToLowerInvariant()</span>
+                                <span class="roster-chips">
+                                    <span class="@($"roster-tier roster-tier-{draft.Tier.ToString().ToLowerInvariant()}")">@draft.Tier.ToString().ToLowerInvariant()</span>
+                                    @if (draft.Skills.Count > 0)
+                                    {
+                                        <span class="roster-skills" title="@string.Join(", ", draft.Skills.Select(static skill => skill.Name))">@Plural.Of(draft.Skills.Count, "skill", "skills")</span>
+                                    }
+                                </span>
+                                @if (draft.Reasons.Count > 0)
+                                {
+                                    <span class="roster-setup">Needs setup: @string.Join("; ", draft.Reasons)</span>
+                                }
                                 <div class="roster-actions">
                                     <MudButton Variant="Variant.Outlined" Size="Size.Small" StartIcon="@Icons.Material.Outlined.Casino" OnClick="@(() => this.RerollDraftAsync(draft.Key))"
                                                aria-label="@($"Re-roll {draft.Name}")" Class="roster-reroll">Re-roll</MudButton>
@@ -174,11 +186,17 @@
             </div>
             @if (this.approveError is not null)
             {
-                <MudAlert Severity="Severity.Error" Dense="true" role="alert" Class="build-team-approve-error">@this.approveError</MudAlert>
+                <MudAlert Severity="Severity.Error" Dense="true" role="alert" Class="build-team-approve-error">
+                    @this.approveError
+                    @if (this.skillsBlocked)
+                    {
+                        <MudLink Href="/settings/skills" Class="build-team-skills-link">Open Settings › Skills</MudLink>
+                    }
+                </MudAlert>
             }
             <div class="build-team-approve-row">
                 <MudButton Variant="Variant.Filled" Color="Color.Primary" Size="Size.Medium" StartIcon="@Icons.Material.Filled.Check" Disabled="@(!this.CanApprove)"
-                           OnClick="this.Approve" Class="build-team-approve-button">Approve &amp; hire</MudButton>
+                           OnClick="this.ApproveAsync" Class="build-team-approve-button">@(this.approving ? "Approving…" : "Approve & hire")</MudButton>
                 @if (this.continueTeam is not null)
                 {
                     <MudButton Variant="Variant.Text" Size="Size.Medium" Href="@this.TeamHref(this.continueTeam)" Class="build-team-open-team">Open team</MudButton>
@@ -220,6 +238,8 @@
     private string workspace = string.Empty;
     private readonly List<DraftMember> drafts = [];
     private string? approveError;
+    private bool skillsBlocked;
+    private bool approving;
     private string? continueTeam;
     private bool nameEdited;
     private bool purposeEdited;
@@ -270,7 +290,7 @@
     }
 
     /// <summary>Whether Approve &amp; hire may be pressed: step 2 is complete and the roster has at least one Teammate.</summary>
-    private bool CanApprove => this.selected is not null && this.DetailsReady && this.drafts.Count > 0;
+    private bool CanApprove => this.selected is not null && this.DetailsReady && this.drafts.Count > 0 && !this.approving;
 
     /// <summary>Says what is still missing while the button is off; nothing once it is on.</summary>
     private string? ApproveHint
@@ -410,7 +430,13 @@
     /// <param name="AvatarFile">The library file drawn, or <see langword="null"/> when the library gave none.</param>
     /// <param name="Image">The bytes of the drawn library image, or <see langword="null"/>.</param>
     /// <param name="ImageExtension">The extension, with its dot, of <paramref name="Image"/>.</param>
-    private sealed record DraftMember(string Key, string RoleId, string Title, string Description, ModelTier Tier, bool Manager, string Name, string Text, IReadOnlyList<string> NameChoices, Avatar Avatar, IReadOnlyList<string> AvatarChoices, string? AvatarFile, byte[]? Image, string? ImageExtension);
+    /// <param name="Skills">The Skills the Teammate carries: the role's own plus its packs'.</param>
+    /// <param name="Packs">The skill packs the role draws from.</param>
+    /// <param name="Adapter">The adapter the role's model strength resolved to, or <see langword="null"/> when none qualified.</param>
+    /// <param name="Model">The model on that adapter, or <see langword="null"/> for the adapter's default.</param>
+    /// <param name="Effort">The effort chosen in the Teammate card, or <see langword="null"/> for the default.</param>
+    /// <param name="Reasons">Why the draft needs setup before it runs well, such as no adapter for its strength; empty when nothing is missing.</param>
+    private sealed record DraftMember(string Key, string RoleId, string Title, string Description, ModelTier Tier, bool Manager, string Name, string Text, IReadOnlyList<string> NameChoices, Avatar Avatar, IReadOnlyList<string> AvatarChoices, string? AvatarFile, byte[]? Image, string? ImageExtension, IReadOnlyList<SkillRef> Skills, IReadOnlyList<VersionedRef> Packs, string? Adapter, string? Model, string? Effort, IReadOnlyList<string> Reasons);
 
     /// <summary>An avatar with a random background colour, drawn together with a Name; the initials show on it until the Teammate gets an image.</summary>
     private static Avatar RandomAvatar() => Avatar.None with { Background = AvatarPalette.Pick(Random.Shared) };
@@ -473,13 +499,17 @@
         DraftMember? draft = null;
         if (this.CustomRoles.Find(roleId) is { } custom)
         {
-            draft = new DraftMember(Guid.NewGuid().ToString("N"), custom.Id, custom.Title, custom.Description, custom.Tier, false, this.FreeName([], null), custom.Instructions, [], RandomAvatar(), [], null, null, null);
+            string drawn = this.FreeName([], null);
+            RoleSpec spec = new(custom.Id, custom.Title, string.Empty, Model: new ModelSpec(custom.Tier), Skills: [.. custom.Skills.Select(static skill => new SkillRef(skill, "local", null))]);
+            draft = this.NewDraft(custom.Id, custom.Title, custom.Description, custom.Tier, false, drawn, custom.Instructions, [], [], spec);
             draft = await this.WithLibraryAvatarAsync(draft);
         }
         else if (this.Pool.FindJob(roleId) is { } job)
         {
             string text = this.Pool.ReadPersona(job.Id)?.Stance ?? job.Description;
-            draft = new DraftMember(Guid.NewGuid().ToString("N"), job.Id, job.Title, job.Description, job.Model.Tier, this.IsManagerRole(job.Id), this.FreeName(job.SuggestedNames, null), text, job.SuggestedNames, RandomAvatar(), job.Avatars, null, null, null);
+            string drawn = this.FreeName(job.SuggestedNames, null);
+            RoleSpec spec = new(job.Id, job.Title, job.Persona, Model: job.Model, Skills: job.SkillRefs, Packs: job.Packs, Requires: job.Requires, SuggestedNames: job.SuggestedNames, Job: job.Id, Pooled: true);
+            draft = this.NewDraft(job.Id, job.Title, job.Description, job.Model.Tier, this.IsManagerRole(job.Id), drawn, text, job.SuggestedNames, job.Avatars, spec);
             draft = await this.WithLibraryAvatarAsync(draft);
         }
 
@@ -487,6 +517,24 @@
         {
             this.drafts.Add(draft);
         }
+    }
+
+    /// <summary>A draft for a role, its Skills, packs, adapter, model and setup reasons resolved the way a hire card was (the card resolver).</summary>
+    /// <param name="roleId">The role's id.</param>
+    /// <param name="title">The role's title.</param>
+    /// <param name="description">The role's description.</param>
+    /// <param name="tier">The model strength.</param>
+    /// <param name="manager">Whether the template makes the role its manager.</param>
+    /// <param name="name">The drawn Name.</param>
+    /// <param name="text">The persona text.</param>
+    /// <param name="nameChoices">The role's suggested names.</param>
+    /// <param name="avatarChoices">The role's suggested library avatars.</param>
+    /// <param name="spec">The role as the card resolver reads it.</param>
+    private DraftMember NewDraft(string roleId, string title, string description, ModelTier tier, bool manager, string name, string text, IReadOnlyList<string> nameChoices, IReadOnlyList<string> avatarChoices, RoleSpec spec)
+    {
+        CardState card = CardResolver.Resolve(spec, [], this.HireContext.Answered, this.HireContext.TierMap, this.HireContext.AvoidAdapters, this.Packs.All, this.HireContext.Connectors, name);
+        return new DraftMember(Guid.NewGuid().ToString("N"), roleId, title, description, tier, manager, name, text, nameChoices, RandomAvatar(), avatarChoices, null, null, null,
+            card.Skills, card.Packs, card.Pick?.AdapterId, card.Pick?.Model, null, card.Reasons);
     }
 
     /// <summary>The draft with a library avatar drawn for it.</summary>
@@ -539,13 +587,19 @@
             [nameof(TeammateCard.DraftAvatar)] = draft.Avatar,
             [nameof(TeammateCard.DraftImage)] = draft.Image,
             [nameof(TeammateCard.DraftImageExtension)] = draft.ImageExtension,
+            [nameof(TeammateCard.DraftSkills)] = (IReadOnlyList<string>)[.. draft.Skills.Select(static skill => skill.Name)],
+            [nameof(TeammateCard.Adapter)] = draft.Adapter,
+            [nameof(TeammateCard.Model)] = draft.Model,
+            [nameof(TeammateCard.Effort)] = draft.Effort,
             [nameof(TeammateCard.TakenNames)] = (IReadOnlyList<string>)[.. this.drafts.Where(other => !string.Equals(other.Key, key, StringComparison.Ordinal)).Select(static other => other.Name)],
-            [nameof(TeammateCard.OnDraftSaved)] = EventCallback.Factory.Create<(string Name, string Title, string Text, string? Model, string? Effort, Avatar Avatar, byte[]? Image, string? ImageExtension)>(this, saved =>
+            [nameof(TeammateCard.OnDraftSaved)] = EventCallback.Factory.Create<(string Name, string Title, string Text, string? Model, string? Effort, Avatar Avatar, byte[]? Image, string? ImageExtension, string? Adapter, IReadOnlyList<string> Skills)>(this, saved =>
             {
                 int index = this.drafts.FindIndex(candidate => string.Equals(candidate.Key, key, StringComparison.Ordinal));
                 if (index >= 0)
                 {
-                    this.drafts[index] = this.drafts[index] with { Name = saved.Name, Title = saved.Title, Text = saved.Text, Avatar = saved.Avatar, Image = saved.Image, ImageExtension = saved.ImageExtension };
+                    DraftMember current = this.drafts[index];
+                    IReadOnlyList<SkillRef> skills = [.. saved.Skills.Select(name => current.Skills.FirstOrDefault(known => string.Equals(known.Name, name, StringComparison.Ordinal)) ?? new SkillRef(name, "local", null))];
+                    this.drafts[index] = current with { Name = saved.Name, Title = saved.Title, Text = saved.Text, Avatar = saved.Avatar, Image = saved.Image, ImageExtension = saved.ImageExtension, Skills = skills, Adapter = saved.Adapter, Model = saved.Model, Effort = saved.Effort };
                 }
             }),
         };
@@ -573,21 +627,35 @@
                 }
             }
 
-            hires.Add(new DraftHire(draft.Name, draft.Title, draft.Text, roleRef, draft.Avatar, draft.Image, draft.ImageExtension));
+            hires.Add(new DraftHire(draft.Name, draft.Title, draft.Text, roleRef, draft.Avatar, draft.Image, draft.ImageExtension, draft.Adapter, draft.Model, draft.Effort, [.. draft.Skills.Select(static skill => skill.Name)], draft.Packs));
         }
 
         return hires;
     }
 
-    /// <summary>Creates the Team and hires the roster into it; the manager is the draft the template makes its manager. A refusal found before anything is written leaves nothing behind.</summary>
-    private void Approve()
+    /// <summary>Creates the Team and hires the roster into it; the manager is the draft the template makes its manager. Names and limits are checked, and the Skills the roster needs are imported, before anything is written, so a refusal leaves nothing behind.</summary>
+    private async Task ApproveAsync()
     {
         if (this.selected is not { } type || !this.CanApprove)
         {
             return;
         }
 
+        this.approving = true;
+        try
+        {
+            await this.ApproveCoreAsync(type);
+        }
+        finally
+        {
+            this.approving = false;
+        }
+    }
+
+    private async Task ApproveCoreAsync(TeamTypeManifest type)
+    {
         this.approveError = null;
+        this.skillsBlocked = false;
         this.continueTeam = null;
         string team = this.TrimmedName;
         List<DraftHire> hires = this.BuildHires(type);
@@ -595,6 +663,15 @@
         if (refusal is not null)
         {
             this.approveError = refusal;
+            return;
+        }
+
+        IReadOnlyList<SkillRef> needed = [.. this.drafts.SelectMany(static draft => draft.Skills).DistinctBy(static skill => skill.Name, StringComparer.Ordinal)];
+        IReadOnlyList<SkillRef> missing = await this.Hiring.InstallSkillsAsync(needed, CancellationToken.None);
+        if (missing.Count > 0)
+        {
+            this.approveError = $"Skills not installed: {string.Join(", ", missing.Select(static skill => skill.Name))}. Import them yourself, then approve again.";
+            this.skillsBlocked = true;
             return;
         }
 
@@ -631,7 +708,7 @@
         CustomRole? role = await this.ShowRoleDialogAsync(new DialogParameters<RoleFormDialog>());
         if (role is not null)
         {
-            _ = this.CustomRoles.Add(role.Title, role.Description, role.Instructions, role.Tier);
+            _ = this.CustomRoles.Add(role.Title, role.Description, role.Instructions, role.Tier, role.Skills);
         }
     }
 
@@ -651,6 +728,7 @@
             { x => x.Description, current.Description },
             { x => x.Instructions, current.Instructions },
             { x => x.Tier, current.Tier },
+            { x => x.RoleSkills, current.Skills },
         };
         CustomRole? edited = await this.ShowRoleDialogAsync(parameters);
         if (edited is not null)
