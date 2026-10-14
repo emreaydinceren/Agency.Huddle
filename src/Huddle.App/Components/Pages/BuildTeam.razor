@@ -108,7 +108,7 @@
                 }
                 @foreach (PoolJob job in this.Pool.Jobs)
                 {
-                    <RoleCard @key="job.Id" RoleId="@job.Id" Title="@job.Title" Description="@job.Description"
+                    <RoleCard @key="job.Id" RoleId="@job.Id" Title="@job.Title" Description="@job.Description" Suggested="@this.IsSuggested(job.Id)"
                               Selected="@this.hired.Contains(job.Id)" OnPick="this.ToggleRole" />
                 }
             </div>
@@ -295,6 +295,11 @@
             this.workspace = folder;
         }
     }
+
+    /// <summary>Whether the chosen type's template defines this pool job as a role (by its job, or by the role id a job takes); roles the catalog only adds from the pool do not count.</summary>
+    /// <param name="jobId">The pool job's id.</param>
+    private bool IsSuggested(string jobId) => this.selected?.Roles.Any(role =>
+        !role.Pooled && string.Equals(role.Job ?? role.Id, jobId, StringComparison.Ordinal)) ?? false;
 
     /// <summary>Hires the role, or takes it back when it is pressed again.</summary>
     /// <param name="roleId">The pressed card's role id.</param>

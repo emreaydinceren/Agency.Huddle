@@ -320,6 +320,28 @@ public sealed class BuildTeamTests
         Assert.Equal(["Bookkeeper", "Tutor"], cut.FindAll(".build-team-hire .role-card .team-type-name").Select(name => name.TextContent.Trim()));
     }
 
+    /// <summary>A pool role the chosen type's template defines carries a "Suggested" chip; the others, and every role under the Blank Team, do not.</summary>
+    [Fact]
+    public async Task Hire_RoleInTheTemplate_IsMarkedSuggested()
+    {
+        using Fixture fixture = new(typeCount: 3);
+        await using MudBunitContext ctx = fixture.NewContext();
+        ctx.Services.GetRequiredService<NavigationManager>().NavigateTo("/teams/build?type=t01");
+        IRenderedComponent<ContainerFragment> cut = Render(ctx);
+
+        IReadOnlyList<IElement> chips = cut.FindAll(".build-team-hire .role-suggested");
+
+        Assert.Equal("Suggested", Assert.Single(chips).TextContent.Trim());
+        Assert.Equal("Bookkeeper", chips[0].Closest(".role-card")?.QuerySelector(".team-type-name")?.TextContent.Trim());
+
+        await cut.InvokeAsync(() => cut.Find(Card).ClickAsync());
+        await cut.InvokeAsync(() => cut.Find(Card).ClickAsync());
+        await cut.InvokeAsync(() => cut.FindAll(Card)[0].ClickAsync());
+        await cut.InvokeAsync(() => cut.Find(".build-team-name input").InputAsync("Garden"));
+
+        Assert.Empty(cut.FindAll(".build-team-hire .role-suggested"));
+    }
+
     /// <summary>Pressing a role hires it, the step strip counts it, and pressing again takes it back.</summary>
     [Fact]
     public async Task Hire_PressingARole_TogglesItAndCountsIt()
@@ -492,7 +514,7 @@ public sealed class BuildTeamTests
               "roles": [
                 { "id": "lead", "title": "Lead", "candidate": "candidates/lead.md", "manager": true, "required": true },
                 { "id": "dev", "title": "Developer", "candidate": "candidates/dev.md" },
-                { "id": "qa", "title": "Tester", "candidate": "candidates/qa.md" }
+                { "id": "bookkeeper", "title": "Tester", "candidate": "candidates/qa.md" }
               ] }
             """;
     }

@@ -14,6 +14,10 @@
             <span class="team-type-tagline">@this.Description</span>
             <span class="team-type-meta">
                 <span class="team-type-roles">@(this.Custom ? "Your role" : "Hiring pool")</span>
+                @if (this.Suggested)
+                {
+                    <span class="team-type-owned role-suggested">Suggested</span>
+                }
             </span>
         </span>
         @if (this.Selected)
@@ -53,6 +57,10 @@
     /// <summary>Whether the Human wrote this role, which makes it editable and deletable.</summary>
     [Parameter]
     public bool Custom { get; set; }
+
+    /// <summary>Whether the chosen team type's template defines this role, which earns it a "Suggested" chip.</summary>
+    [Parameter]
+    public bool Suggested { get; set; }
 
     /// <summary>Whether this role is chosen.</summary>
     [Parameter]
