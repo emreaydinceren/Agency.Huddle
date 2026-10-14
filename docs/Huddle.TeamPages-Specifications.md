@@ -28,8 +28,8 @@ This is the design for **Team pages** and **Project pages**. It adds a **Teams**
 sidebar, listing each Team with its Projects nested below it. Selecting a Team opens a page with
 three tabs:
 
-- **Members** lists the Teammates whose `teams` field names the Team, with *+ Add member* and a
-  search box.
+- **Members** lists the Teammates whose `teams` field names the Team. Since 2026-10-14 it is
+  Build a team's Hire section for the Team (see §6.7).
 - **Files** is the existing `LibraryExplorer`, scoped to the Team folder, with *+ New note* and a
   search box.
 - **Tasks** is the existing Board, filtered to the Team and grouped by Project.
@@ -249,9 +249,7 @@ The new code goes in folder `src/Huddle.App/Teams/`, namespace `Agency.Huddle.Ap
 | `Components/Teams/TeamsNav.razor` | The sidebar group | §6.5 |
 | `Components/Pages/TeamPage.razor` | Both routes, the tab strip, and each tab's search text (the shell draws the breadcrumbs: Tabs spec) | §6.6 |
 | `Components/Teams/TeamTabToolbar.razor` | The action button and the search field, used by each tab component. It owns no state | §6.6 |
-| `Components/Teams/TeamMembers.razor` | Members tab | §6.7 |
-| `Components/Teams/AddMemberDialog.razor` | Pick a Teammate, show the restart warning | §6.7 |
-| `Components/Teams/TeammateChoice.cs` | `public sealed record TeammateChoice(Name, Title, Alias)`, one row of the picker | §6.7 |
+| `Components/Teams/TeamRoster.razor` | Members tab (replaced `TeamMembers`, `AddMemberDialog` and `TeammateChoice` on 2026-10-14) | §6.7 |
 | `Components/Teams/TeamFilesTab.razor` | Files tab: the toolbar and a scoped `LibraryExplorer` | §6.8 |
 | `Components/Teams/TeamTasksTab.razor` | Tasks tab: the toolbar and a `TaskBoard` over an in-memory `TaskView` | §6.9 |
 | `Components/Teams/NewTeamDialog.razor`, `NewTeamDialogMode.cs` | Name a new Team or Project, validated inline; `public enum NewTeamDialogMode { Team, Project }` | §6.5 |
@@ -734,6 +732,15 @@ stray URL.
 plain `Huddle` for an unknown Team or Project.
 
 ### 6.7 Members tab
+
+> **Superseded (2026-10-14).** The Members tab is now `TeamRoster`: Build a team's Hire section
+> for the Team (`BuildTeam` with `MembersOnly`; `wireframes.md` `M6`, `B12`). It shows the role
+> cards and a roster of the members (status dot, Edit, Message, and a Remove menu with *Remove
+> from Team* and *Delete Teammate*) beside new drafts, a Manager select, and one *Save changes*.
+> There is no search box, no *+ Add member* and no `AddMemberDialog`: a Teammate joins a Team by
+> being hired into it, or through its `teams:` line. `ITeamMembership.Remove` still does *Remove
+> from Team*, and Message still calls `EnsureTeamOneToOneAsync`. The text below records the
+> original design.
 
 **Purpose.** See who is in the Team, add Teammates, remove them.
 

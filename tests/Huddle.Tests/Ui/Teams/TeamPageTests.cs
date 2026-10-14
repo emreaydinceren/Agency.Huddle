@@ -60,9 +60,7 @@ public sealed class TeamPageTests
 
         IRenderedComponent<TeamPage> cut = RenderPage(ctx, "Business");
 
-        TeamSummary? team = cut.FindComponent<Stub<TeamMembers>>().Instance.Parameters.Get(p => p.Team);
-        Assert.Same(catalog.Teams[0], team);
-        Assert.Equal("Business", team?.Name);
+        Assert.Equal("Business", cut.FindComponent<Stub<TeamRoster>>().Instance.Parameters.Get(p => p.Team));
         Assert.Empty(cut.FindAll(AlertSelector));
     }
 
@@ -73,13 +71,13 @@ public sealed class TeamPageTests
     /// <param name="expectedHeaders">The tab headers, comma-joined.</param>
     /// <param name="expectedStub">The one tab component that renders.</param>
     [Theory]
-    [InlineData(true, true, null, "Members,Files,Tasks", nameof(TeamMembers))]
+    [InlineData(true, true, null, "Members,Files,Tasks", nameof(TeamRoster))]
     [InlineData(true, true, "Marketing Project", "Files,Tasks", nameof(TeamFilesTab))]
-    [InlineData(false, true, null, "Members,Tasks", nameof(TeamMembers))]
+    [InlineData(false, true, null, "Members,Tasks", nameof(TeamRoster))]
     [InlineData(false, true, "Marketing Project", "Tasks", nameof(TeamTasksTab))]
-    [InlineData(true, false, null, "Members,Files", nameof(TeamMembers))]
+    [InlineData(true, false, null, "Members,Files", nameof(TeamRoster))]
     [InlineData(true, false, "Marketing Project", "Files", nameof(TeamFilesTab))]
-    [InlineData(false, false, null, "Members", nameof(TeamMembers))]
+    [InlineData(false, false, null, "Members", nameof(TeamRoster))]
     public async Task Tabs_FollowTheFlags_AndOnlyTheDefaultTabRenders(
         bool libraryEnabled,
         bool tasksEnabled,
@@ -115,10 +113,10 @@ public sealed class TeamPageTests
     /// <param name="libraryEnabled"><c>Library:Enabled</c>.</param>
     /// <param name="expectedStub">The one tab component that renders.</param>
     [Theory]
-    [InlineData(null, "nonsense", true, nameof(TeamMembers))]
+    [InlineData(null, "nonsense", true, nameof(TeamRoster))]
     [InlineData("Marketing Project", "nonsense", true, nameof(TeamFilesTab))]
     [InlineData(null, "FILES", true, nameof(TeamFilesTab))]
-    [InlineData(null, "files", false, nameof(TeamMembers))]
+    [InlineData(null, "files", false, nameof(TeamRoster))]
     [InlineData("Marketing Project", "files", false, nameof(TeamTasksTab))]
     [InlineData("Marketing Project", "members", true, nameof(TeamFilesTab))]
     public async Task Tab_UnknownOrDisabled_FallsBackToTheDefault(string? project, string tab, bool libraryEnabled, string expectedStub)
@@ -160,7 +158,7 @@ public sealed class TeamPageTests
         await using MudBunitContext ctx = NewContext(Catalog());
 
         IRenderedComponent<TeamPage> members = RenderPage(ctx, "business");
-        Assert.Equal("Business", members.FindComponent<Stub<TeamMembers>>().Instance.Parameters.Get(p => p.Team)?.Name);
+        Assert.Equal("Business", members.FindComponent<Stub<TeamRoster>>().Instance.Parameters.Get(p => p.Team));
 
         IRenderedComponent<TeamPage> files = RenderPage(ctx, "business", "marketing PROJECT", "files");
         Assert.Equal("Business", FilesParameters(files).Get(p => p.Team));
@@ -222,7 +220,7 @@ public sealed class TeamPageTests
     {
         await using MudBunitContext ctx = NewContext(Catalog());
         IRenderedComponent<TeamPage> cut = RenderPage(ctx, "Business");
-        Assert.Equal([nameof(TeamMembers)], RenderedTabs(cut));
+        Assert.Equal([nameof(TeamRoster)], RenderedTabs(cut));
 
         cut.Render(p => p.Add(x => x.Tab, "tasks"));
 
@@ -281,9 +279,7 @@ public sealed class TeamPageTests
 
         IRenderedComponent<TeamPage> cut = RenderPage(ctx, "Business");
 
-        TeamSummary? team = cut.FindComponent<Stub<TeamMembers>>().Instance.Parameters.Get(p => p.Team);
-        Assert.Equal("Business", team?.Name);
-        Assert.Empty(team?.Members ?? ["unreachable"]);
+        Assert.Equal("Business", cut.FindComponent<Stub<TeamRoster>>().Instance.Parameters.Get(p => p.Team));
         Assert.Empty(cut.FindAll(AlertSelector));
     }
 
@@ -309,9 +305,6 @@ public sealed class TeamPageTests
         await using MudBunitContext ctx = NewContext(Catalog());
         IRenderedComponent<TeamPage> cut = RenderPage(ctx, "Business");
 
-        await cut.InvokeAsync(() => MembersParameters(cut).Get(p => p.SearchChanged).InvokeAsync("ann"));
-        Assert.Equal("ann", MembersParameters(cut).Get(p => p.Search));
-
         cut.Render(p => p.Add(x => x.Tab, "files"));
         Assert.Null(FilesParameters(cut).Get(p => p.Search));
         await cut.InvokeAsync(() => FilesParameters(cut).Get(p => p.SearchChanged).InvokeAsync("brief"));
@@ -319,11 +312,13 @@ public sealed class TeamPageTests
 
         cut.Render(p => p.Add(x => x.Tab, "tasks"));
         Assert.Null(TasksParameters(cut).Get(p => p.Search));
+        await cut.InvokeAsync(() => TasksParameters(cut).Get(p => p.SearchChanged).InvokeAsync("todo"));
 
         cut.Render(p => p.Add(x => x.Tab, (string?)null));
-        Assert.Equal("ann", MembersParameters(cut).Get(p => p.Search));
         cut.Render(p => p.Add(x => x.Tab, "files"));
         Assert.Equal("brief", FilesParameters(cut).Get(p => p.Search));
+        cut.Render(p => p.Add(x => x.Tab, "tasks"));
+        Assert.Equal("todo", TasksParameters(cut).Get(p => p.Search));
     }
 
     /// <summary>The search text is reset when the Team parameter changes, and not restored when it changes back.</summary>
@@ -331,15 +326,15 @@ public sealed class TeamPageTests
     public async Task Search_IsReset_WhenTheTeamChanges()
     {
         await using MudBunitContext ctx = NewContext(Catalog());
-        IRenderedComponent<TeamPage> cut = RenderPage(ctx, "Business");
-        await cut.InvokeAsync(() => MembersParameters(cut).Get(p => p.SearchChanged).InvokeAsync("ann"));
-        Assert.Equal("ann", MembersParameters(cut).Get(p => p.Search));
+        IRenderedComponent<TeamPage> cut = RenderPage(ctx, "Business", tab: "files");
+        await cut.InvokeAsync(() => FilesParameters(cut).Get(p => p.SearchChanged).InvokeAsync("brief"));
+        Assert.Equal("brief", FilesParameters(cut).Get(p => p.Search));
 
         cut.Render(p => p.Add(x => x.Team, "Sales & Ops"));
-        Assert.Null(MembersParameters(cut).Get(p => p.Search));
+        Assert.Null(FilesParameters(cut).Get(p => p.Search));
 
         cut.Render(p => p.Add(x => x.Team, "Business"));
-        Assert.Null(MembersParameters(cut).Get(p => p.Search));
+        Assert.Null(FilesParameters(cut).Get(p => p.Search));
     }
 
     /// <summary>The search text is reset when the Project parameter changes.</summary>
@@ -370,7 +365,7 @@ public sealed class TeamPageTests
         catalog.Teams = [Team("Sales & Ops"), Team("Business")];
         catalog.Raise();
 
-        cut.WaitForAssertion(() => Assert.Equal([nameof(TeamMembers)], RenderedTabs(cut)));
+        cut.WaitForAssertion(() => Assert.Equal([nameof(TeamRoster)], RenderedTabs(cut)));
         Assert.Empty(cut.FindAll(AlertSelector));
     }
 
@@ -492,7 +487,7 @@ public sealed class TeamPageTests
         teamOptions.Library.Enabled = libraryEnabled;
         teamOptions.Tasks.Enabled = tasksEnabled;
         ctx.Services.AddSingleton(Options.Create(teamOptions));
-        ctx.ComponentFactories.AddStub<TeamMembers>();
+        ctx.ComponentFactories.AddStub<TeamRoster>();
         ctx.ComponentFactories.AddStub<TeamFilesTab>();
         ctx.ComponentFactories.AddStub<TeamTasksTab>();
         ctx.ComponentFactories.AddStub<TeamSpend>();
@@ -524,9 +519,9 @@ public sealed class TeamPageTests
     private static string[] RenderedTabs(IRenderedComponent<TeamPage> cut)
     {
         List<string> names = [];
-        if (cut.FindComponents<Stub<TeamMembers>>().Count > 0)
+        if (cut.FindComponents<Stub<TeamRoster>>().Count > 0)
         {
-            names.Add(nameof(TeamMembers));
+            names.Add(nameof(TeamRoster));
         }
 
         if (cut.FindComponents<Stub<TeamFilesTab>>().Count > 0)
@@ -541,10 +536,6 @@ public sealed class TeamPageTests
 
         return [.. names];
     }
-
-    /// <summary>The parameters the Members stub last received.</summary>
-    private static CapturedParameterView<TeamMembers> MembersParameters(IRenderedComponent<TeamPage> cut) =>
-        cut.FindComponent<Stub<TeamMembers>>().Instance.Parameters;
 
     /// <summary>The parameters the Files stub last received.</summary>
     private static CapturedParameterView<TeamFilesTab> FilesParameters(IRenderedComponent<TeamPage> cut) =>

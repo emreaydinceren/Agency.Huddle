@@ -1,0 +1,107 @@
+@using Agency.Huddle.App.Acp
+@using Agency.Huddle.App.Components.Pages
+@using Agency.Huddle.App.Pipes
+@implements IDisposable
+@inject ITeamCatalog Catalog
+@inject ITeamDirectory TeamDirectory
+@inject IAgentGateway Gateway
+@inject PersonaHealth Health
+@inject ChatService Chat
+@inject ISnackbar Snackbar
+@inject NavigationManager Navigation
+
+@*
+    The Team page's Members tab: the Hire section of Build a team for an existing Team (roles, the roster of members and
+    new drafts, the manager) with its own Save changes. It is BuildTeam with MembersOnly, so building a Team and
+    editing its members share one roster, one set of role cards and one save path. This wrapper adds what only a live
+    Team has: each member's status dot (the AGENT's pipe liveness, then reported health, through
+    PersonaStatusResolver) and a Message button that opens the Team's own one-to-one with that member (ADR-0052).
+*@
+
+<BuildTeam Team="@this.Team" MembersOnly="true" MemberState="this.StateOf" CanMessage="this.HasAgent" OnMessage="this.MessageAsync" />
+
+@code {
+    private Dictionary<string, string?> agentIdByMember = new(StringComparer.OrdinalIgnoreCase);
+
+    /// <summary>The Team whose members are shown, in the catalog's spelling.</summary>
+    [Parameter, EditorRequired]
+    public string Team { get; set; } = string.Empty;
+
+    /// <inheritdoc />
+    protected override void OnInitialized()
+    {
+        this.Health.Changed += this.OnLiveChanged;
+        this.Gateway.PresenceChanged += this.OnLiveChanged;
+        this.Catalog.Changed += this.OnMembersChanged;
+    }
+
+    /// <inheritdoc />
+    protected override Task OnParametersSetAsync() => this.LoadAgentIdsAsync();
+
+    /// <summary>Stops listening to health, presence and the catalog.</summary>
+    public void Dispose()
+    {
+        this.Health.Changed -= this.OnLiveChanged;
+        this.Gateway.PresenceChanged -= this.OnLiveChanged;
+        this.Catalog.Changed -= this.OnMembersChanged;
+    }
+
+    /// <summary>Finds each member's AGENT user, which a Teammate has once it has connected at least once.</summary>
+    private async Task LoadAgentIdsAsync()
+    {
+        Dictionary<string, string?> agentIds = new(StringComparer.OrdinalIgnoreCase);
+        foreach (string member in this.Catalog.Find(this.Team)?.Members ?? [])
+        {
+            User? agent = await this.TeamDirectory.FindUserByNameAsync(member);
+            agentIds[member] = agent?.Id;
+        }
+
+        this.agentIdByMember = agentIds;
+    }
+
+    /// <summary>A member's state, resolved as the Teammates page resolves it.</summary>
+    /// <param name="member">The member's Name.</param>
+    private PersonaState StateOf(string member)
+    {
+        string? agentId = this.agentIdByMember.GetValueOrDefault(member);
+        bool connected = agentId is not null && this.Gateway.IsOnline(agentId);
+        return PersonaStatusResolver.Resolve(connected, this.Health.Get(member)).State;
+    }
+
+    /// <summary>Whether the member has an AGENT user, so there is someone to open a Room with.</summary>
+    /// <param name="member">The member's Name.</param>
+    private bool HasAgent(string member) => this.agentIdByMember.GetValueOrDefault(member) is not null;
+
+    /// <summary>Opens (creating it on first use) the Team's one-to-one with the member and navigates to it.</summary>
+    /// <param name="member">The member's Name.</param>
+    private async Task MessageAsync(string member)
+    {
+        User? agent = await this.TeamDirectory.FindUserByNameAsync(member);
+        if (agent is null)
+        {
+            return;
+        }
+
+        try
+        {
+            Room room = await this.Chat.EnsureTeamOneToOneAsync(this.Team, agent);
+            this.Navigation.NavigateTo($"/rooms/{room.Id}");
+        }
+        catch (ChatException ex)
+        {
+            this.Snackbar.Add(ex.Message, Severity.Error, key: "team-roster");
+        }
+    }
+
+    private void OnLiveChanged() => _ = RendererDispatch.RunAsync(this.InvokeAsync, () =>
+    {
+        this.StateHasChanged();
+        return Task.CompletedTask;
+    });
+
+    private void OnMembersChanged() => _ = RendererDispatch.RunAsync(this.InvokeAsync, async () =>
+    {
+        await this.LoadAgentIdsAsync();
+        this.StateHasChanged();
+    });
+}

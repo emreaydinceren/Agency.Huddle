@@ -105,8 +105,7 @@
                         @switch (current)
                         {
                             case TeamPageTab.Members:
-                                <TeamMembers Team="@summary" Search="@this.SearchFor(current)"
-                                             SearchChanged="@(text => this.SetSearch(current, text))" />
+                                <TeamRoster Team="@summary.Name" />
                                 break;
                             case TeamPageTab.Files:
                                 <TeamFilesTab Team="@summary.Name" Project="@project" Search="@this.SearchFor(current)"

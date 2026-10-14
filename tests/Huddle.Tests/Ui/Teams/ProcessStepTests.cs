@@ -120,7 +120,7 @@ public sealed class ProcessStepTests
         File.WriteAllText(Path.Combine(dir.Path, "Process.md"), TwoGateText);
         ctx.Services.AddSingleton<ITeamCatalog>(new FakeTeamCatalog { Teams = [new TeamSummary(Team, [], ["Nova"], true)] });
         ctx.Services.AddSingleton(Options.Create(new TeamOptions()));
-        ctx.ComponentFactories.AddStub<TeamMembers>();
+        ctx.ComponentFactories.AddStub<TeamRoster>();
         ctx.ComponentFactories.AddStub<TeamFilesTab>();
         ctx.ComponentFactories.AddStub<TeamTasksTab>();
         ctx.ComponentFactories.AddStub<TeamSpend>();

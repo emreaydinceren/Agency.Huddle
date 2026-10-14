@@ -5,7 +5,7 @@ with the right actions, that Members, Files and Tasks tabs navigate and function
 creating Teams and Projects works with the right validation, and — the one case this page exists
 to answer — whether a file in a Team's shared Memory surfaces in another member's next Turn.
 
-**17 tests** · 17 free, 0 paid · about 0.7 hours (plus about 15 minutes to build the fixture in Setup) · **none of them has been run yet.** This page documents what to
+**15 tests** · 15 free, 0 paid · about 0.7 hours (plus about 15 minutes to build the fixture in Setup) · **none of them has been run yet.** This page documents what to
 run, not a result — see [Known limits](../known-limits.md) for what that leaves unverified today.
 TP-T13 was removed: no free oracle can read a Persona's system prompt (see Setup).
 
@@ -48,6 +48,10 @@ bottom of the group, which is **Build a team** (`TeamsNav.razor`).
 together with **New team from a type**; a Team is now made with **Build a team**, which has its own
 tests. The Team a fixture needs can be made by creating its folder under `<data>\Teams`.
 
+**Why TP-T3 and TP-REAL-01 are gone.** The Members tab is now Build a team's Hire section for
+the Team (role cards and a roster). It has no search box and no member row menu, so there is
+nothing to search (TP-T3) and no row click to keep the menu from (TP-REAL-01).
+
 **Why TP-T13 is gone.** It asked whether a Persona on an Adapter with `ReadsFiles=false` gets no
 Team Memory block in its system prompt. Nothing in the UI shows a system prompt, and the mock
 adapter echoes the Turn prompt, not the system prompt, so no free manual oracle exists. The
@@ -83,86 +87,59 @@ with the Team row highlighted and a list of members with avatars, names, titles 
 - Members are listed incorrectly or are missing.
 - The sidebar selection is not visible.
 
-### TP-T1 — Add member to Team with restart warning
+### TP-T1 — Members tab shows the roster with status and Message
 
 **Free** · about 2 min
 
-*Proves the Add member button opens a dialog with an autocomplete for Teammates not yet in the
-Team, shows a warning that adding restarts the Persona, and the member is added to the Team's
-definition and appears in the list.*
+*Proves the Members tab is Build a team's Hire section for the Team: the role cards, then the
+roster with each member's status dot, a Member chip, Edit, Message (for a member that has
+connected) and a Remove menu; and that a Teammate joins through its `teams:` line.*
 
 **Steps**
 
-1. On Business Members tab, click the `Add member` button above the members list.
-2. In the dialog, type `bo` in the **Teammate** autocomplete field.
-3. Click `Bo` in the dropdown.
-4. Verify the warning text appears: "Adding Bo restarts it and clears its conversation memory."
-5. Click the `Add` button.
+1. Open **Teammates** → **Bo** → **Edit**, add `Business` to the `teams:` line of the text and
+   click **Save**. Wait until Bo is **Online** again.
+2. Open Business, then the **Members** tab.
+3. Click **Remove** on Bo's card and look at the menu, then press Escape.
 
 **Pass if**
 
-- The dialog warning reads exactly: "Adding Bo restarts it and clears its conversation memory."
-  (`AddMemberDialog.razor:36`), and `Add` is disabled until Bo is picked.
-- A success snackbar reads "Bo added to Business." (`TeamMembers.razor:242`).
-- Bo appears in the Business members list after the dialog closes.
-- Bo's definition `<data>\Teammates\Bo\Bo.md` ([`O-FILE`](common.md#o-file)) lists `Business` in `teams`.
+- The tab shows the role cards (**Roles**, *Available roles*) and, under them, **Roster** with
+  Ada, Bo and Nova, each with a status dot before the Name and a **Member** chip.
+- Each member has **Edit** and **Message**; the Remove menu has **Remove from Team** and
+  **Delete Teammate**.
+- **Save changes** is off with "Nothing has changed yet."
+- There is no Add member button and no search box.
 
 **Fail if**
 
-- The warning text is missing, truncated or different.
-- The Add button fails or the dialog remains open.
-- Bo does not appear in the members list.
+- The tab still shows the old member list, or Bo is missing from the roster.
+- A member has no status dot, or Message is missing for an Online member.
 
-### TP-T2 — Remove member from Team with inline confirm
+### TP-T2 — Remove from Team keeps the Teammate
 
 **Free** · about 2 min
 
-*Proves the row menu on a member opens with a Remove option, shows an inline confirmation with
-restart warning in place of the row, and the member is removed from the Team's definition and list.*
+*Proves Remove from Team marks a member until Save changes, then takes away only the Team label:
+the Teammate stays.*
 
 **Steps**
 
-1. On Business Members tab, find the ⋯ button (`Member actions`) on the Ada row; it is always visible.
-2. Click the row menu button.
-3. Click `Remove from Team` in the popup menu.
-4. Read the confirmation text that replaces the row, then click `Confirm`.
+1. On Business Members tab, click **Remove** on Ada's card, then **Remove from Team**.
+2. Read the card, then click **Save changes**.
 
 **Pass if**
 
-- The popup menu contains `Open card` and `Remove from Team` (`TeamMembers.razor:79-80`).
-- The Ada row is replaced by a confirmation reading exactly: "Remove Ada from Business? Ada restarts and loses its conversation memory." with `Confirm` and `Cancel` buttons.
-- Clicking `Confirm` removes Ada: she leaves the members list and her `<data>\Teammates\Ada\Ada.md` `teams` field no longer includes `Business`.
+- Ada's card reads "Will leave the Team when you save", her Name is struck through, and it has
+  **Undo**; the roster summary reads "3 members · 1 leaving".
+- Saving asks nothing (nobody is deleted), and Ada then leaves the roster.
+- Ada is still on the **Teammates** page, and her `<data>\Teammates\Ada\Ada.md` `teams` field no
+  longer includes `Business`.
 
 **Fail if**
 
-- The menu or confirmation text is missing or different.
-- The row remains in the list after confirming.
-- Ada is not removed from the `teams` field in her definition.
-
-### TP-T3 — Search members by name, alias or title
-
-**Free** · about 1 min
-
-*Proves the search box filters the members list in real time, matching any part of Name, Alias or
-Title, ignoring case.*
-
-**Steps**
-
-1. On Business Members tab (now Nova and Bo), locate the search box labelled "Search members".
-2. Type `NO` (upper case, matches Nova's Name and Alias).
-3. Observe the members list.
-4. Clear the search box.
-
-**Pass if**
-
-- Only Nova remains visible.
-- Bo is hidden while `NO` is in the search box.
-- Clearing the search shows all members again.
-
-**Fail if**
-
-- Both members remain visible or the list does not filter.
-- The search is case-sensitive or does not match partial strings.
+- Ada is deleted as a Teammate, or still lists `Business` after saving.
+- Anything changes before **Save changes** is clicked.
 
 ### TP-T4 — Open Files tab and create new note
 
@@ -384,28 +361,28 @@ writing the file itself with its own tools, judged by the model) is not covered 
 **Free** · about 2 min
 
 *Proves that a Team folder with no Teammate carrying its label (an orphaned Team) is listed in the
-sidebar with a muted "No members" hint, its Members page opens and works, and Add member makes it
-active.*
+sidebar with a muted "No members" hint, its Members page opens and works, and hiring a draft
+there makes it active.*
 
 **Steps**
 
 1. Create the folder `<data>\Teams\Legal\` in a file explorer. Add no Teammate to it.
 2. In the sidebar, verify `Legal` appears in the Teams list with a muted "No members" hint (wait a few seconds; reload the page if it has not appeared).
 3. Click `Legal` in the sidebar.
-4. On the Members page, click `Add member` and add Ada (a Teammate not in Legal).
+4. On the Members page, click **Add** on any role card, then **Save changes**.
 
 **Pass if**
 
 - The Team is listed and clickable even with no members.
 - The "No members" hint appears muted (grey, italic text, not an error).
-- The Members page opens and shows "No members yet." before the add.
-- After adding a member, the "No members" hint disappears and the member is listed.
+- The Members page opens with the role cards and an empty roster ("No Teammates yet. Add a role above.") before the add.
+- After saving, the "No members" hint disappears and the new Teammate is on the roster as a member.
 
 **Fail if**
 
 - The Team does not appear in the sidebar.
-- The Members page shows an error instead of "No members yet."
-- Adding a member fails.
+- The Members page shows an error instead of the empty roster.
+- Saving fails.
 
 ### TP-T15 — Team with no folder yet creates folder on first save
 
@@ -437,69 +414,47 @@ The Teams provisioner makes the folder the moment the Teammate is saved
 - The Files tab shows an error.
 - The folder is not created on save.
 
-### TP-T16 — Edit team adds a draft, deletes a member and saves the purpose
+### TP-T16 — Edit team saves the purpose; the Members tab hires and deletes
 
 **Free** · about 4 min
 
 *Proves that **Edit team** opens Build a team for an existing Team with its type and name fixed and
-its members on the roster, and that Save changes hires a new draft, deletes a removed member
-(the Teammate, not only the label) and writes "What it's for" to `_team.md`.*
+no Hire step, and writes "What it's for" to `_team.md`; and that the Members tab hires a new
+draft and deletes a removed member (the Teammate, not only the label).*
 
 **Steps**
 
 1. Open **Build a team**, choose **Blank Team**, name it `Garden`, add two roles from the role
    cards and select **Approve & hire**. Note the two Names.
 2. On the Garden Team page, click **Edit team** in the header.
-3. Confirm the page is titled `Edit Garden`, shows only the Blank Team card, and the Team name field
-   cannot be typed in.
-4. Change **What it's for** to `Grows vegetables.`.
-5. Add any role from the role cards, then click **Remove** on the first of the two members.
+3. Confirm the page is titled `Edit Garden`, has three steps, shows only the Blank Team card and no
+   role cards, and the Team name field cannot be typed in.
+4. Change **What it's for** to `Grows vegetables.` and click **Save changes**.
+5. On the Garden **Members** tab, add any role from the role cards, then click **Remove** on the
+   first of the two members and choose **Delete Teammate**.
 6. Click **Save changes**, then **Delete** in the confirmation.
 
 **Pass if**
 
+- After step 4 the Garden Team page opens and `<data>\Teams\Garden\_team.md` has `owns: Grows vegetables.`.
 - The roster showed the two members with a **Member** chip and the new draft with a **New** chip,
   and the removed member's card said "Will be deleted when you save" with an **Undo** button.
 - The confirmation named the removed member.
-- After saving, the Garden Team page lists the second member and the new Teammate, and the removed
-  member is gone from the **Teammates** page.
-- `<data>\Teams\Garden\_team.md` has `owns: Grows vegetables.`.
+- After saving, the roster lists the second member and the new Teammate as members, and the
+  removed member is gone from the **Teammates** page.
 
 **Fail if**
 
-- The type cards or the Team name can be changed.
+- The type cards or the Team name can be changed, or the edit page shows role cards.
 - The removed member is still on the Teammates page, or only lost the `Garden` label.
 - The new draft was not hired, or a member was hired a second time.
-
-### TP-REAL-01 — Row menu button does not open Teammate card
-
-**Real browser only** · about 1 min · cannot automate
-
-*Proves that clicking the ⋯ (row menu button) on a member row opens only the popup menu and does
-**not** also open the Teammate card. The button sits in a span with `@onclick:stopPropagation`
-(`TeamMembers.razor:75`) so the click does not reach the row's own click listener.*
-
-**Steps**
-
-1. On any Team's Members tab, find the ⋯ button (`Member actions`) on a member row; it is always visible.
-2. Click the ⋯ button (do not click elsewhere on the row).
-3. Observe whether only the menu opens or whether both the menu and the Teammate card appear.
-
-**Pass if**
-
-- Only the popup menu appears.
-- No Teammate card sidebar opens.
-
-**Fail if**
-
-- The Teammate card opens alongside the menu, indicating `@onclick:stopPropagation` is missing or broken.
 
 ### TP-REAL-02 — Dark theme and narrow-window styling
 
 **Real browser only** · about 2 min · cannot automate
 
 *Proves the Teams sidebar and Team page components render correctly in dark theme and stay usable in
-a narrow window, using scoped CSS in `TeamsNav.razor.css` and `TeamMembers.razor.css`. The drawer is
+a narrow window, using scoped CSS in `TeamsNav.razor.css` and the roster rules in `app.css`. The drawer is
 persistent at 240 px (`MainLayout.razor:17`), so a narrow window shrinks the page content, not the sidebar.*
 
 **Steps**
@@ -507,7 +462,7 @@ persistent at 240 px (`MainLayout.razor:17`), so a narrow window shrinks the pag
 1. In the Settings Appearance section, switch to a Dark theme (e.g. "Huddle Dark").
 2. Observe the sidebar Teams group and the Team page in the browser.
 3. Resize the browser window to narrow (< 600px width, or DevTools mobile view).
-4. Observe the Members tab and the toolbar layout.
+4. Observe the Members tab: the role cards and the roster cards.
 
 **Pass if**
 

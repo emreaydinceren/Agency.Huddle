@@ -91,7 +91,7 @@ public sealed class TeamCheckBarViewTests
         await using MudBunitContext ctx = new();
         ctx.Services.AddSingleton<ITeamCatalog>(catalog);
         ctx.Services.AddSingleton(Options.Create(new TeamOptions()));
-        ctx.ComponentFactories.AddStub<TeamMembers>();
+        ctx.ComponentFactories.AddStub<TeamRoster>();
         ctx.ComponentFactories.AddStub<TeamFilesTab>();
         ctx.ComponentFactories.AddStub<TeamTasksTab>();
         ctx.ComponentFactories.AddStub<TeamSpend>();

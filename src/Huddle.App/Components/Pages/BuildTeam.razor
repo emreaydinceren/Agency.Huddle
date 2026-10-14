@@ -46,10 +46,12 @@
     Step 3 (Hire) offers the roles of the hiring pool and the Human's own, as cards in the same two-row grid, with a blank card
     to add a custom role. Step 4 is not built yet. The Chief of Staff is whichever Persona carries the _builtin marker, so a rename shows here.
 
-    At /teams/{Team}/edit the same page edits an existing Team: its type and name are fixed, its members are on the
-    roster beside any new drafts, a member's Edit opens their card (which saves at once), and Remove marks a member
-    for deletion. Save changes hires the new drafts, writes the details and the manager, then deletes the marked
-    Teammates, in that order, so the manager is replaced before the old one is deleted.
+    At /teams/{Team}/edit the same page edits an existing Team's details: its type and name are fixed, and Save
+    changes writes "What it's for" and the Library folder. The Team's members are edited on the Team page's Members
+    tab, which embeds this component with MembersOnly (through TeamRoster): only the Hire section and a Save row.
+    There the members are on the roster beside any new drafts, a member's Edit opens their card (which saves at
+    once), and Remove marks a member for deletion. Save changes hires the new drafts, replaces the manager, then
+    deletes the marked Teammates, in that order, so the manager is replaced before the old one is deleted.
 *@
 
 @if (this.EditMode && this.missingTeam)
@@ -60,10 +62,12 @@
     return;
 }
 
-<MudContainer MaxWidth="MaxWidth.Large" Class="build-team pa-4">
+<MudContainer MaxWidth="@(this.MembersOnly ? MaxWidth.False : MaxWidth.Large)" Gutters="@(!this.MembersOnly)" Class="@(this.MembersOnly ? "build-team team-roster" : "build-team pa-4")">
+    @if (!this.MembersOnly)
+    {
     <PageHeader Title="@(this.EditMode ? $"Edit {this.Team}" : "Build a team")" Subtitle="@this.Subtitle" />
 
-    <BuildStepper Steps="this.Steps" Current="this.CurrentStep" AriaLabel="@(this.EditMode ? "Edit a team: four steps" : "Build a team: four steps")" />
+    <BuildStepper Steps="this.Steps" Current="this.CurrentStep" AriaLabel="@(this.EditMode ? "Edit a team: three steps" : "Build a team: four steps")" />
 
     <section class="build-team-section" aria-labelledby="build-team-type-heading">
         <div class="build-team-section-head">
@@ -112,14 +116,18 @@
             </MudPaper>
         </section>
     }
+    }
 
-    @if (this.selected is not null && this.DetailsReady)
+    @if (this.ShowsHire && this.selected is not null && (this.MembersOnly || this.DetailsReady))
     {
-        <section class="build-team-section build-team-hire" aria-labelledby="build-team-hire-heading">
-            <div class="build-team-section-head">
-                <span class="build-team-section-number" aria-hidden="true">3</span>
-                <MudText Typo="Typo.h6" id="build-team-hire-heading">Hire</MudText>
-            </div>
+        <section class="build-team-section build-team-hire" aria-labelledby="@(this.MembersOnly ? null : "build-team-hire-heading")" aria-label="@(this.MembersOnly ? "Hire" : null)">
+            @if (!this.MembersOnly)
+            {
+                <div class="build-team-section-head">
+                    <span class="build-team-section-number" aria-hidden="true">3</span>
+                    <MudText Typo="Typo.h6" id="build-team-hire-heading">Hire</MudText>
+                </div>
+            }
             <div>
                 <MudText Typo="Typo.subtitle1">Roles</MudText>
                 <MudText Typo="Typo.body2" Class="build-team-intro build-team-roles-subtitle">Available roles</MudText>
@@ -156,13 +164,21 @@
                     <div class="roster-grid" role="list" aria-label="@(this.EditMode ? "Roster" : "Draft roster")">
                         @foreach (DraftMember draft in this.drafts)
                         {
-                            bool removing = this.removed.Contains(draft.Key);
+                            bool deleting = this.removed.Contains(draft.Key);
+                            bool departing = this.leaving.Contains(draft.Key);
+                            bool removing = deleting || departing;
                             bool badged = this.IsBadgedManager(draft);
                             <div @key="draft.Key" class="@RosterCardClass(draft, badged, removing)" role="listitem">
                                 <div class="roster-card-head">
                                     <span class="roster-avatar-ring" aria-hidden="true"><TeammateAvatar Name="@draft.Name" Avatar="@draft.Avatar" PendingImage="@draft.Image" PendingImageExtension="@draft.ImageExtension" Class="roster-avatar" /></span>
                                     <span class="roster-card-who">
-                                        <span class="roster-name">@draft.Name</span>
+                                        <span class="roster-name">
+                                            @if (draft.Existing && this.MemberState is { } stateOf)
+                                            {
+                                                <StatusDot State="@stateOf(draft.Name)" />
+                                            }
+                                            @draft.Name
+                                        </span>
                                         <span class="roster-title">@draft.Title</span>
                                     </span>
                                     @if (badged)
@@ -170,9 +186,13 @@
                                         <span class="roster-manager-badge">Manager</span>
                                     }
                                 </div>
-                                @if (removing)
+                                @if (deleting)
                                 {
                                     <span class="roster-removing">Will be deleted when you save</span>
+                                }
+                                else if (departing)
+                                {
+                                    <span class="roster-removing">Will leave the Team when you save</span>
                                 }
                                 <span class="roster-description">@draft.Description</span>
                                 <span class="roster-chips">
@@ -203,8 +223,15 @@
                                     {
                                         <MudButton Variant="Variant.Text" Size="Size.Small" StartIcon="@Icons.Material.Outlined.Edit" OnClick="@(() => this.EditMemberAsync(draft.Name))"
                                                    aria-label="@($"Edit {draft.Name}")" Class="roster-edit">Edit</MudButton>
-                                        <MudButton Variant="Variant.Text" Size="Size.Small" OnClick="@(() => this.RemoveDraft(draft.Key))"
-                                                   aria-label="@($"Remove {draft.Name}")" Class="roster-remove">Remove</MudButton>
+                                        @if (this.CanMessage?.Invoke(draft.Name) == true)
+                                        {
+                                            <MudButton Variant="Variant.Text" Size="Size.Small" StartIcon="@Icons.Material.Outlined.ChatBubbleOutline" OnClick="@(() => this.OnMessage.InvokeAsync(draft.Name))"
+                                                       aria-label="@($"Message {draft.Name}")" Class="roster-message">Message</MudButton>
+                                        }
+                                        <MudMenu Label="Remove" Variant="Variant.Text" Size="Size.Small" EndIcon="@Icons.Material.Filled.ArrowDropDown" AriaLabel="@($"Remove {draft.Name}")" Class="roster-remove">
+                                            <MudMenuItem OnClick="@(() => this.LeaveTeam(draft.Key))" Class="roster-leave">Remove from Team</MudMenuItem>
+                                            <MudMenuItem OnClick="@(() => this.RemoveDraft(draft.Key))" Class="roster-delete">Delete Teammate</MudMenuItem>
+                                        </MudMenu>
                                     }
                                     else
                                     {
@@ -241,11 +268,14 @@
 
     @if (this.selected is not null)
     {
-        <section class="build-team-section build-team-approve" aria-labelledby="build-team-approve-heading">
-            <div class="build-team-section-head">
-                <span class="build-team-section-number" aria-hidden="true">4</span>
-                <MudText Typo="Typo.h6" id="build-team-approve-heading">@(this.EditMode ? "Save" : "Approve")</MudText>
-            </div>
+        <section class="build-team-section build-team-approve" aria-labelledby="@(this.MembersOnly ? null : "build-team-approve-heading")" aria-label="@(this.MembersOnly ? "Save" : null)">
+            @if (!this.MembersOnly)
+            {
+                <div class="build-team-section-head">
+                    <span class="build-team-section-number" aria-hidden="true">@(this.EditMode ? 3 : 4)</span>
+                    <MudText Typo="Typo.h6" id="build-team-approve-heading">@(this.EditMode ? "Save" : "Approve")</MudText>
+                </div>
+            }
             @if (this.approveError is not null)
             {
                 <MudAlert Severity="Severity.Error" Dense="true" role="alert" Class="build-team-approve-error">
@@ -276,13 +306,39 @@
     [Parameter]
     public string? Team { get; set; }
 
+    /// <summary>When set with <see cref="Team"/>, only the Team's roster is drawn and saved (the Members tab): no header, steps, type or details.</summary>
+    [Parameter]
+    public bool MembersOnly { get; set; }
+
+    /// <summary>In the Members tab, each member's state for its status dot; <see langword="null"/> draws no dot.</summary>
+    [Parameter]
+    public Func<string, PersonaState>? MemberState { get; set; }
+
+    /// <summary>In the Members tab, whether a member can be messaged (it has connected at least once); <see langword="null"/> offers no Message button.</summary>
+    [Parameter]
+    public Func<string, bool>? CanMessage { get; set; }
+
+    /// <summary>Raised with a member's Name when its Message button is pressed.</summary>
+    [Parameter]
+    public EventCallback<string> OnMessage { get; set; }
+
     private bool EditMode => this.Team is not null;
+
+    /// <summary>Whether the Hire section is drawn: always when building; when editing, only in the Members tab, since the edit page keeps to the details.</summary>
+    private bool ShowsHire => !this.EditMode || this.MembersOnly;
 
     private const string MemberKeyPrefix = "member:";
 
     private string? loadedTeam;
     private bool missingTeam;
     private readonly HashSet<string> removed = new(StringComparer.Ordinal);
+
+    /// <summary>The members marked to leave the Team on save: their Team label is removed and they stay Teammates.</summary>
+    private readonly HashSet<string> leaving = new(StringComparer.Ordinal);
+
+    /// <summary>Whether the member or draft is marked to be deleted or to leave the Team.</summary>
+    /// <param name="key">Its key.</param>
+    private bool IsGoing(string key) => this.removed.Contains(key) || this.leaving.Contains(key);
     private string? managerKey;
     private string? originalManagerKey;
     private string originalPurpose = string.Empty;
@@ -303,25 +359,30 @@
     }
 
     /// <summary>The members and drafts that may manage the Team: those in a manager role of its type and not marked for deletion.</summary>
-    private IReadOnlyList<DraftMember> ManagerChoices => [.. this.drafts.Where(draft => draft.Manager && !this.removed.Contains(draft.Key))];
+    private IReadOnlyList<DraftMember> ManagerChoices => [.. this.drafts.Where(draft => draft.Manager && !this.IsGoing(draft.Key))];
 
-    /// <summary>Whether the Team would lose its manager: the manager chosen is marked for deletion, or the current one is and no other is chosen.</summary>
+    /// <summary>Whether the Team would lose its manager: the manager chosen is marked to go, or the current one is and no other is chosen.</summary>
     private bool ManagerBlocked =>
-        (this.managerKey is not null && this.removed.Contains(this.managerKey))
-        || (this.originalManagerKey is not null && this.removed.Contains(this.originalManagerKey) && this.managerKey is null);
+        (this.managerKey is not null && this.IsGoing(this.managerKey))
+        || (this.originalManagerKey is not null && this.IsGoing(this.originalManagerKey) && this.managerKey is null);
 
-    /// <summary>Whether anything would be written by Save changes.</summary>
-    private bool HasChanges =>
+    /// <summary>Whether anything would be written by Save changes: the roster in the Members tab, the details on the edit page.</summary>
+    private bool HasChanges => this.MembersOnly ? this.HasMemberChanges : this.HasDetailChanges;
+
+    private bool HasMemberChanges =>
         this.drafts.Exists(static draft => !draft.Existing)
         || this.removed.Count > 0
-        || !string.Equals(this.PurposeLine, this.originalPurpose, StringComparison.Ordinal)
-        || !string.Equals(this.workspace.Trim(), this.originalWorkspace, StringComparison.Ordinal)
+        || this.leaving.Count > 0
         || !string.Equals(this.managerKey, this.originalManagerKey, StringComparison.Ordinal);
+
+    private bool HasDetailChanges =>
+        !string.Equals(this.PurposeLine, this.originalPurpose, StringComparison.Ordinal)
+        || !string.Equals(this.workspace.Trim(), this.originalWorkspace, StringComparison.Ordinal);
 
     /// <summary>"What it's for" as the one line the team file keeps.</summary>
     private string PurposeLine => string.Join(' ', this.purpose.Split((char[]?)null, StringSplitOptions.RemoveEmptyEntries));
 
-    private int KeptCount => this.drafts.Count(draft => !this.removed.Contains(draft.Key));
+    private int KeptCount => this.drafts.Count(draft => !this.IsGoing(draft.Key));
 
     private string RosterSummary
     {
@@ -344,6 +405,11 @@
             if (added > 0)
             {
                 text += $" · {added} new";
+            }
+
+            if (this.leaving.Count > 0)
+            {
+                text += $" · {this.leaving.Count} leaving";
             }
 
             if (this.removed.Count > 0)
@@ -473,28 +539,37 @@
     }
 
     /// <summary>Whether Approve &amp; hire (or, when editing, Save changes) may be pressed: step 2 is complete and the roster keeps at least one Teammate; when editing, something changed and the Team keeps a manager.</summary>
-    private bool CanApprove => this.selected is not null && this.DetailsReady && this.KeptCount > 0 && !this.approving
-        && (!this.EditMode || (this.HasChanges && !this.ManagerBlocked));
+    private bool CanApprove => this.selected is not null && !this.approving && this.ApproveHint is null;
 
     /// <summary>Says what is still missing while the button is off; nothing once it is on.</summary>
     private string? ApproveHint
     {
         get
         {
-            if (!this.DetailsReady)
+            if (this.EditMode && !this.MembersOnly)
+            {
+                if (!this.DetailsReady)
+                {
+                    return "Finish the team details first.";
+                }
+
+                return this.HasDetailChanges ? null : "Nothing has changed yet.";
+            }
+
+            if (!this.MembersOnly && !this.DetailsReady)
             {
                 return "Finish the team details first.";
             }
 
             if (this.KeptCount == 0)
             {
-                return this.EditMode ? "Keep at least one Teammate on the roster." : "Add at least one Teammate to the roster.";
+                return this.removed.Count + this.leaving.Count > 0 ? "Keep at least one Teammate on the roster." : "Add at least one Teammate to the roster.";
             }
 
             if (this.EditMode && this.ManagerBlocked)
             {
-                string? leaving = this.drafts.Find(draft => string.Equals(draft.Key, this.managerKey ?? this.originalManagerKey, StringComparison.Ordinal))?.Name;
-                return $"Choose a new manager before deleting {leaving}.";
+                string? outgoing = this.drafts.Find(draft => string.Equals(draft.Key, this.managerKey ?? this.originalManagerKey, StringComparison.Ordinal))?.Name;
+                return $"Choose a new manager before removing {outgoing}.";
             }
 
             return this.EditMode && !this.HasChanges ? "Nothing has changed yet." : null;
@@ -530,6 +605,11 @@
                 return 1;
             }
 
+            if (this.EditMode)
+            {
+                return 2;
+            }
+
             return this.KeptCount > 0 ? 3 : 2;
         }
     }
@@ -540,7 +620,6 @@
     [
         new("Team type", this.selected?.DisplayName ?? "Unknown"),
         new("Team details", this.TrimmedName),
-        new("Members", Plural.Of(this.KeptCount, "Teammate", "Teammates")),
         new("Save", "only you"),
     ];
 
@@ -605,6 +684,7 @@
         this.loadedTeam = team;
         this.drafts.Clear();
         this.removed.Clear();
+        this.leaving.Clear();
         this.approveError = null;
         TeamSummary? summary = this.Catalog.Find(team);
         this.missingTeam = summary is null;
@@ -650,6 +730,7 @@
         this.drafts.AddRange(members);
         this.drafts.AddRange(added);
         this.removed.RemoveWhere(key => !this.drafts.Exists(draft => string.Equals(draft.Key, key, StringComparison.Ordinal)));
+        this.leaving.RemoveWhere(key => !this.drafts.Exists(draft => string.Equals(draft.Key, key, StringComparison.Ordinal)));
     }
 
     /// <summary>An existing member as a roster card: their title, Skills, adapter, model, effort and stored avatar, and the role they were hired into, so the role's card shows as taken and a manager role makes them a manager choice.</summary>
@@ -898,12 +979,13 @@
         }
     }
 
-    /// <summary>Takes a new draft off the roster; a member of the Team being edited is only marked, and is deleted when the changes are saved.</summary>
+    /// <summary>Takes a new draft off the roster; a member of the Team being edited is only marked, and the Teammate is deleted when the changes are saved.</summary>
     /// <param name="key">The draft's key.</param>
     private void RemoveDraft(string key)
     {
         if (this.drafts.Find(draft => string.Equals(draft.Key, key, StringComparison.Ordinal)) is { Existing: true })
         {
+            _ = this.leaving.Remove(key);
             _ = this.removed.Add(key);
             return;
         }
@@ -917,7 +999,19 @@
 
     /// <summary>Keeps a member that was marked for deletion.</summary>
     /// <param name="key">The member's key.</param>
-    private void UndoRemove(string key) => _ = this.removed.Remove(key);
+    private void UndoRemove(string key)
+    {
+        _ = this.removed.Remove(key);
+        _ = this.leaving.Remove(key);
+    }
+
+    /// <summary>Marks a member to leave the Team on save: its Team label goes, and it stays a Teammate.</summary>
+    /// <param name="key">The member's key.</param>
+    private void LeaveTeam(string key)
+    {
+        _ = this.removed.Remove(key);
+        _ = this.leaving.Add(key);
+    }
 
     private void OnManagerChanged(string? key) => this.managerKey = key;
 
@@ -1177,6 +1271,23 @@
             }
         }
 
+        List<string> stayed = [];
+        foreach (DraftMember member in this.drafts.Where(draft => draft.Existing && this.leaving.Contains(draft.Key)).ToList())
+        {
+            // The Teammate restarts when its label changes, so the write runs off the circuit thread.
+            MembershipResult left = await Task.Run(() => this.Membership.Remove(team, member.Name));
+            if (left.Outcome is not (MembershipOutcome.Removed or MembershipOutcome.NotMember))
+            {
+                stayed.Add(member.Name);
+            }
+        }
+
+        if (stayed.Count > 0)
+        {
+            this.approveError = $"Could not take {JoinNames(stayed)} off the Team.";
+            return;
+        }
+
         List<string> failed = [];
         foreach (DraftMember member in this.drafts.Where(draft => draft.Existing && this.removed.Contains(draft.Key)).ToList())
         {
@@ -1193,6 +1304,12 @@
         if (failed.Count > 0)
         {
             this.approveError = $"Could not delete {JoinNames(failed)}.";
+            return;
+        }
+
+        if (this.MembersOnly)
+        {
+            this.LoadTeam(team);
             return;
         }
 
@@ -1290,8 +1407,21 @@
     private bool Owned(string typeId) =>
         this.Catalog.Teams.Any(team => string.Equals(team.TeamType?.Id, typeId, StringComparison.Ordinal));
 
+    /// <summary>Redraws; in the Members tab the roster follows the catalog too, wholly (manager included) while nothing is pending, otherwise only the members.</summary>
     private void OnCatalogChanged() => _ = RendererDispatch.RunAsync(this.InvokeAsync, () =>
     {
+        if (this.MembersOnly && !this.approving && this.Team is { } team)
+        {
+            if (!this.HasMemberChanges)
+            {
+                this.LoadTeam(team);
+            }
+            else if (this.Catalog.Find(team) is { } summary)
+            {
+                this.RefreshMembers(summary);
+            }
+        }
+
         this.StateHasChanged();
         return Task.CompletedTask;
     });

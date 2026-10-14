@@ -388,9 +388,9 @@ A restart also happens when you change Model, Effort, Work mode, Adapter, Skills
 or Teams. Changing the avatar does not restart anything.
 
 > [!NOTE]
-> The Edit card has no **Teams** field. To change a Teammate's Teams after
-> creating it, use the Team page's **Members** tab, or edit the `teams:` line in
-> the text.
+> The Edit card has no **Teams** field. To take a Teammate off a Team, use
+> **Remove from Team** on the Team page's **Members** tab; to add it to a Team,
+> edit the `teams:` line in the text.
 
 ### Changing an avatar
 
@@ -599,18 +599,30 @@ case.
 
 ### Adding and removing members
 
-Open the Team, then the **Members** tab.
+Open the Team, then the **Members** tab. It is the **Hire** step of **Build a team** for
+this Team: the role cards, then the **Roster** with the members first (each with its
+online dot and a **Member** chip) and any new drafts after them.
 
-- **Add member** opens a picker of Teammates not yet in the Team. Huddle
-  tells you that adding restarts the Teammate.
-- **Remove from Team** in a row's menu asks you to confirm, with the same
-  warning.
+- **Add** on a role card puts a new draft Teammate on the roster, as in Build a team.
+- **Edit** on a member opens their Teammate card, which saves at once.
+- **Message** opens this Team's own one-to-one chat with that member. It shows once the
+  member has connected at least once.
+- **Remove** opens a menu: **Remove from Team** takes the member off this Team and keeps
+  the Teammate; **Delete Teammate** deletes them. Either marks the card until you save,
+  and **Undo** clears the mark.
+- **Manager** picks who manages the Team, from the members and drafts in a manager role.
 
-**In the background:** Huddle rewrites only the `teams:` line in that
+Nothing changes until **Save changes**, which is off until something did and while the
+manager is marked to go with nobody chosen instead. It asks first when anyone will be
+deleted, then hires the new drafts, makes the chosen member the manager, takes the
+leaving members off the Team, deletes the marked Teammates, and redraws the tab. To put
+a Teammate who already exists into a Team, add the Team to the `teams:` line in the text
+of their Teammate card.
+
+**In the background:** removing from a Team rewrites only the `teams:` line in that
 Teammate's `<Name>.md`, then saves. The Teammate restarts and loses its
-conversation memory, and on restart it is told about the new Team's memory.
-Removing the last member does **not** delete the Team folder. The Team stays,
-marked **No members**.
+conversation memory. Removing the last member does **not** delete the Team folder. The
+Team stays, marked **No members**.
 
 > [!CAUTION]
 > Close any open Teammate Edit card before adding or removing members. A card
@@ -730,19 +742,11 @@ field.
 #### Editing a team
 
 **Edit team** in a Team page's header opens the same page for that Team
-(`/teams/<Team>/edit`). Its type and name can't be changed; **What it's for** and the
-**Library folder** can. The **Roster** lists the Team's members first (a solid ring and a
-**Member** chip) and then any new drafts you add from the role cards. **Edit** on a member
-opens their own Teammate card, which saves as soon as you save it there. **Remove** on a member
-marks them for deletion and offers **Undo**. When the type has a manager role, a **Manager**
-list under the roster picks who manages the Team.
-
-**Save changes** is off until something changed. It also stays off while the manager is
-marked for deletion and nobody else is chosen. When you save, Huddle first asks before
-deleting anyone. Removed members are **deleted** as Teammates, not just taken off the Team; to
-keep someone and only take them off, use **Remove from Team** on the **Members** tab instead.
-Then it hires the new drafts, saves the details, makes the chosen member the manager,
-deletes the marked Teammates and opens the Team.
+(`/teams/<Team>/edit`) with three steps: **Team type**, **Team details** and **Save**. Its
+type and name can't be changed; **What it's for** and the **Library folder** can. There is
+no Hire step here: the Team's members are edited on its **Members** tab (see
+[Adding and removing members](#adding-and-removing-members)). **Save changes** is off until a
+detail changed; it writes them to the Team file and opens the Team.
 
 ### Hiring a Team from a type
 
@@ -1255,7 +1259,7 @@ the chat; they differ in where they are listed.
   Transcript records the join like any invitation. Leaving a Team does not take
   the Teammate out of the Team Room. The Team Room cannot be renamed, so it has
   no pencil icon.
-- **Message** on a Teammate's card in the Team's **Members** tab opens that
+- **Message** on a member's roster card in the Team's **Members** tab opens that
   Team's own one-to-one with the Teammate, created if it does not exist. It is
   separate from the one-to-one under Chats, so the two conversations do not mix.
 - **Digests and retrospectives** for a Team post in its Team Room, with a
@@ -1666,7 +1670,8 @@ Skill you wrote yourself shows **Yours**, and a shipped one shows **Built in**.
 | Remove a Teammate | Deletes `<Name>.md` only | Goes offline; Rooms, transcripts and `work/` stay |
 | Restart a Teammate | Deletes `room-sessions/<Name>.json` | Every Room starts fresh, with catch-up |
 | Build a team (**Approve & hire**) | `Teams/<Team>/_team.md`, then a Teammate file for each draft | The Teammates are hired; start them from their cards |
-| Edit team (**Save changes**) | A Teammate file for each new draft, `Teams/<Team>/_team.md` (purpose, Library folder, manager), and removes the deleted Teammates' files | The new Teammates are hired; the deleted ones are gone |
+| Edit team (**Save changes**) | `Teams/<Team>/_team.md` (purpose, Library folder) | Nothing else |
+| Members tab (**Save changes**) | A Teammate file for each new draft, `_team.md`'s manager, the `teams:` line of each member taken off the Team, and removes the deleted Teammates' files | The new Teammates are hired; the ones taken off restart; the deleted ones are gone |
 | Duplicate a Team | A new `Teams/<Team>/` and new Teammate files; no memory, notes or Tasks | New Teammates start |
 | Use a process | `Teams/<Team>/Process.md`, never over an existing one | Members read it |
 | Import a Skill | `Skills/<name>/` with `.source.json` | Read on next `read_skill` |

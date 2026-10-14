@@ -22,7 +22,7 @@ public sealed class TeamPageRouteTests
 
     /// <summary>Each of the four routes answers 200 with its own prerendered title and opens its default (or named) tab.</summary>
     [Theory]
-    [InlineData("/teams/Business", "Business — Huddle", "Members", ".team-members")]
+    [InlineData("/teams/Business", "Business — Huddle", "Members", ".team-roster")]
     [InlineData("/teams/Business/files", "Business — Huddle", "Files", ".team-files-tab")]
     [InlineData("/teams/Business/projects/Marketing%20Project", "Marketing Project · Business — Huddle", "Files", ".team-files-tab")]
     [InlineData("/teams/Business/projects/Marketing%20Project/tasks", "Marketing Project · Business — Huddle", "Tasks", ".team-tasks-tab")]

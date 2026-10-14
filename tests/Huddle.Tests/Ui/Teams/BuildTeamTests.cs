@@ -634,9 +634,9 @@ public sealed class BuildTeamTests
         Assert.Equal("with your Chief of Staff", cut.Find(".page-header-subtitle").TextContent.Trim());
     }
 
-    /// <summary>Editing a Team shows only its own type, its name read-only, its members on the roster with the manager badged, and Save off until something changes.</summary>
+    /// <summary>Editing a Team shows only its own type and its name disabled, has no Hire section (members are edited in the Members tab), and keeps Save off until a detail changes.</summary>
     [Fact]
-    public async Task Edit_LoadsTheMembers_WithTheTypeAndNameFixed()
+    public async Task Edit_ShowsTheDetails_WithTheTypeAndNameFixed_AndNoHire()
     {
         using Fixture fixture = new(typeCount: 3);
         fixture.SeedGarden();
@@ -648,6 +648,28 @@ public sealed class BuildTeamTests
         Assert.Equal("Type 01", Assert.Single(cut.FindAll(Card)).QuerySelector(".team-type-name")?.TextContent.Trim());
         Assert.True(cut.Find(".build-team-name input").HasAttribute("disabled"));
         Assert.Equal("Grows things.", cut.Find(".build-team-purpose textarea").TextContent.Trim());
+        Assert.Empty(cut.FindAll(".build-team-hire"));
+        Assert.Equal(3, cut.FindAll(".build-stepper li").Count);
+        Assert.True(cut.Find("button.build-team-approve-button").HasAttribute("disabled"));
+        Assert.Equal("Nothing has changed yet.", cut.Find(".build-team-approve-hint").TextContent.Trim());
+        Assert.Equal("Save changes", cut.Find("button.build-team-approve-button").TextContent.Trim());
+    }
+
+    /// <summary>The Members tab shows the Hire section alone: no header, steps, type or details; the members on the roster with the manager badged, and Save off until something changes.</summary>
+    [Fact]
+    public async Task Members_LoadsTheRoster_WithoutTheRestOfThePage()
+    {
+        using Fixture fixture = new(typeCount: 3);
+        fixture.SeedGarden();
+        await using MudBunitContext ctx = fixture.NewContext();
+
+        IRenderedComponent<ContainerFragment> cut = RenderMembers(ctx, "Garden");
+
+        Assert.Empty(cut.FindAll("h1"));
+        Assert.Empty(cut.FindAll(".build-stepper"));
+        Assert.Empty(cut.FindAll(Card));
+        Assert.Empty(cut.FindAll(".build-team-details"));
+        Assert.NotNull(cut.Find("[aria-label='Add Bookkeeper']"));
         Assert.Equal(["Ada", "Bo"], cut.FindAll(".roster-name").Select(static name => name.TextContent.Trim()));
         Assert.Equal("Manager", Assert.Single(cut.FindAll(".roster-card")[0].QuerySelectorAll(".roster-manager-badge")).TextContent.Trim());
         Assert.Equal(2, cut.FindAll(".roster-card-existing").Count);
@@ -657,15 +679,15 @@ public sealed class BuildTeamTests
         Assert.Equal("Save changes", cut.Find("button.build-team-approve-button").TextContent.Trim());
     }
 
-    /// <summary>A new draft saved into an existing Team is the only Teammate hired; the members are left as they were and the Team page opens.</summary>
+    /// <summary>A new draft saved into an existing Team is the only Teammate hired; the members are left as they were and the tab stays, with nothing pending.</summary>
     [Fact]
-    public async Task Edit_AddingADraft_HiresOnlyTheNewOne()
+    public async Task Members_AddingADraft_HiresOnlyTheNewOne()
     {
         using Fixture fixture = new(typeCount: 3);
         fixture.SeedGarden();
         string adaBefore = fixture.Personas.Get("Ada")?.Text ?? string.Empty;
         await using MudBunitContext ctx = fixture.NewContext();
-        IRenderedComponent<ContainerFragment> cut = RenderEdit(ctx, "Garden");
+        IRenderedComponent<ContainerFragment> cut = RenderMembers(ctx, "Garden");
 
         await cut.InvokeAsync(() => cut.Find("[aria-label='Add Bookkeeper']").ClickAsync());
         await cut.InvokeAsync(() => cut.Find("button.build-team-approve-button").ClickAsync());
@@ -675,23 +697,23 @@ public sealed class BuildTeamTests
         Assert.Equal(3, fixture.Personas.Entries.Count);
         Assert.Equal(adaBefore, fixture.Personas.Get("Ada")?.Text);
         Assert.DoesNotContain("CreateTeam:Garden", fixture.Folders.Calls);
-        Assert.Equal("/teams/Garden", new Uri(ctx.Services.GetRequiredService<NavigationManager>().Uri).AbsolutePath);
+        Assert.Equal("Nothing has changed yet.", cut.Find(".build-team-approve-hint").TextContent.Trim());
     }
 
-    /// <summary>Remove marks a member, Undo keeps them; saving asks first and then deletes the Teammate, not only their Team label.</summary>
+    /// <summary>Remove marks a member, Undo keeps them; saving asks first, then deletes the Teammate (not only their Team label) and takes them off the roster.</summary>
     [Fact]
-    public async Task Edit_RemovingAMember_DeletesTheTeammateAfterAsking()
+    public async Task Members_RemovingAMember_DeletesTheTeammateAfterAsking()
     {
         using Fixture fixture = new(typeCount: 3);
         fixture.SeedGarden();
         await using MudBunitContext ctx = fixture.NewContext();
-        IRenderedComponent<ContainerFragment> cut = RenderEdit(ctx, "Garden");
+        IRenderedComponent<ContainerFragment> cut = RenderMembers(ctx, "Garden");
 
-        await cut.InvokeAsync(() => cut.Find("[aria-label='Remove Bo']").ClickAsync());
-        Assert.Single(cut.FindAll(".roster-card-removed"));
+        await PickRemoveAsync(cut, "Bo", ".roster-delete");
+        Assert.Equal("Will be deleted when you save", cut.Find(".roster-card-removed .roster-removing").TextContent.Trim());
         await cut.InvokeAsync(() => cut.Find("[aria-label='Keep Bo']").ClickAsync());
         Assert.Empty(cut.FindAll(".roster-card-removed"));
-        await cut.InvokeAsync(() => cut.Find("[aria-label='Remove Bo']").ClickAsync());
+        await PickRemoveAsync(cut, "Bo", ".roster-delete");
 
         _ = cut.InvokeAsync(() => cut.Find("button.build-team-approve-button").Click());
         Assert.Equal("Delete 1 Teammate?", cut.Find(".mud-dialog-title").TextContent.Trim());
@@ -699,22 +721,22 @@ public sealed class BuildTeamTests
 
         Assert.Null(fixture.Personas.Get("Bo"));
         Assert.NotNull(fixture.Personas.Get("Ada"));
-        Assert.Equal("/teams/Garden", new Uri(ctx.Services.GetRequiredService<NavigationManager>().Uri).AbsolutePath);
+        Assert.Equal(["Ada"], cut.FindAll(".roster-name").Select(static name => name.TextContent.Trim()));
     }
 
     /// <summary>Removing the manager blocks Save until another member in a manager role is chosen; saving then makes them the manager before the old one is deleted.</summary>
     [Fact]
-    public async Task Edit_RemovingTheManager_NeedsANewOne_WhoIsMadeManagerFirst()
+    public async Task Members_RemovingTheManager_NeedsANewOne_WhoIsMadeManagerFirst()
     {
         using Fixture fixture = new(typeCount: 3);
         fixture.SeedGarden();
         await using MudBunitContext ctx = fixture.NewContext();
-        IRenderedComponent<ContainerFragment> cut = RenderEdit(ctx, "Garden");
+        IRenderedComponent<ContainerFragment> cut = RenderMembers(ctx, "Garden");
 
-        await cut.InvokeAsync(() => cut.Find("[aria-label='Remove Ada']").ClickAsync());
+        await PickRemoveAsync(cut, "Ada", ".roster-delete");
 
         Assert.True(cut.Find("button.build-team-approve-button").HasAttribute("disabled"));
-        Assert.Equal("Choose a new manager before deleting Ada.", cut.Find(".build-team-approve-hint").TextContent.Trim());
+        Assert.Equal("Choose a new manager before removing Ada.",cut.Find(".build-team-approve-hint").TextContent.Trim());
 
         await cut.InvokeAsync(() => cut.Find("[aria-label='Add Tutor']").ClickAsync());
         string successor = cut.FindAll(".roster-name")[^1].TextContent.Trim();
@@ -729,21 +751,57 @@ public sealed class BuildTeamTests
         Assert.NotNull(fixture.Personas.Get(successor));
     }
 
-    /// <summary>Marking every member for deletion keeps Save off and says the roster must keep someone; the summary counts what will be deleted.</summary>
+    /// <summary>Marking every member to go keeps Save off and says the roster must keep someone; the summary counts who leaves and who is deleted.</summary>
     [Fact]
-    public async Task Edit_RemovingEveryone_KeepsSaveOff()
+    public async Task Members_RemovingEveryone_KeepsSaveOff()
     {
         using Fixture fixture = new(typeCount: 3);
         fixture.SeedGarden();
         await using MudBunitContext ctx = fixture.NewContext();
-        IRenderedComponent<ContainerFragment> cut = RenderEdit(ctx, "Garden");
+        IRenderedComponent<ContainerFragment> cut = RenderMembers(ctx, "Garden");
 
-        await cut.InvokeAsync(() => cut.Find("[aria-label='Remove Ada']").ClickAsync());
-        await cut.InvokeAsync(() => cut.Find("[aria-label='Remove Bo']").ClickAsync());
+        await PickRemoveAsync(cut, "Ada", ".roster-delete");
+        await PickRemoveAsync(cut, "Bo", ".roster-leave");
 
         Assert.True(cut.Find("button.build-team-approve-button").HasAttribute("disabled"));
         Assert.Equal("Keep at least one Teammate on the roster.", cut.Find(".build-team-approve-hint").TextContent.Trim());
-        Assert.Equal("2 members · 2 to delete", cut.Find(".build-team-roster-summary").TextContent.Trim());
+        Assert.Equal("2 members · 1 leaving · 1 to delete", cut.Find(".build-team-roster-summary").TextContent.Trim());
+    }
+
+    /// <summary>Remove from Team takes the member's Team label away on save without asking, and the Teammate stays.</summary>
+    [Fact]
+    public async Task Members_RemoveFromTeam_KeepsTheTeammate()
+    {
+        using Fixture fixture = new(typeCount: 3);
+        fixture.SeedGarden();
+        await using MudBunitContext ctx = fixture.NewContext();
+        IRenderedComponent<ContainerFragment> cut = RenderMembers(ctx, "Garden");
+
+        await PickRemoveAsync(cut, "Bo", ".roster-leave");
+        Assert.Equal("Will leave the Team when you save", cut.Find(".roster-card-removed .roster-removing").TextContent.Trim());
+        await cut.InvokeAsync(() => cut.Find("button.build-team-approve-button").ClickAsync());
+
+        Assert.Empty(cut.FindAll(".mud-dialog"));
+        PersonaEntry? bo = fixture.Personas.ResolveByNameOrAlias("Bo");
+        Assert.NotNull(bo);
+        Assert.Empty(bo.Teams);
+    }
+
+    /// <summary>Each member shows its status dot, and a member that can be messaged has a Message button that reports its Name.</summary>
+    [Fact]
+    public async Task Members_ShowStatus_AndMessage()
+    {
+        using Fixture fixture = new(typeCount: 3);
+        fixture.SeedGarden();
+        await using MudBunitContext ctx = fixture.NewContext();
+        List<string> messaged = [];
+        IRenderedComponent<ContainerFragment> cut = RenderMembers(ctx, "Garden", messaged);
+
+        Assert.Equal(2, cut.FindAll(".roster-name .agent-dot.online").Count);
+        Assert.Empty(cut.FindAll("[aria-label='Message Bo']"));
+        await cut.InvokeAsync(() => cut.Find("[aria-label='Message Ada']").ClickAsync());
+
+        Assert.Equal(["Ada"], messaged);
     }
 
     /// <summary>A changed "What it's for" is written to the team file as one line; nothing is asked, since nobody is deleted.</summary>
@@ -784,6 +842,28 @@ public sealed class BuildTeamTests
             builder.AddAttribute(1, nameof(BuildTeam.Team), team);
             builder.CloseComponent();
         });
+    }
+
+    /// <summary>Renders the page as the Members tab does: members only, with every member Online and messageable, and Message presses recorded in <paramref name="messaged"/>.</summary>
+    private static IRenderedComponent<ContainerFragment> RenderMembers(MudBunitContext ctx, string team, List<string>? messaged = null)
+    {
+        return ctx.RenderWithPopovers(builder =>
+        {
+            builder.OpenComponent<BuildTeam>(0);
+            builder.AddAttribute(1, nameof(BuildTeam.Team), team);
+            builder.AddAttribute(2, nameof(BuildTeam.MembersOnly), true);
+            builder.AddAttribute(3, nameof(BuildTeam.MemberState), (Func<string, PersonaState>)(static _ => PersonaState.Online));
+            builder.AddAttribute(4, nameof(BuildTeam.CanMessage), (Func<string, bool>)(static name => !string.Equals(name, "Bo", StringComparison.Ordinal)));
+            builder.AddAttribute(5, nameof(BuildTeam.OnMessage), EventCallback.Factory.Create<string>(new object(), name => messaged?.Add(name)));
+            builder.CloseComponent();
+        });
+    }
+
+    /// <summary>Opens a member's Remove menu and picks one of its items.</summary>
+    private static async Task PickRemoveAsync(IRenderedComponent<ContainerFragment> cut, string member, string item)
+    {
+        await cut.InvokeAsync(() => cut.Find($"[aria-label='Remove {member}']").ClickAsync());
+        await cut.InvokeAsync(() => cut.Find(item).ClickAsync());
     }
 
     private static IRenderedComponent<ContainerFragment> Render(MudBunitContext ctx)

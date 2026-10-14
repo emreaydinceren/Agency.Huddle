@@ -357,7 +357,7 @@ whether it posted. Onboarding keeps calling `PostAsync`, which stays root-only (
 | `src/Huddle.App/Services/ChatService.cs` | chat | §6.2 |
 | `src/Huddle.App/Teams/TeamRoomReconciler.cs` | chat | New, §6.4 |
 | `src/Huddle.App/Components/Shared/RoomList.razor`, `NewChat.razor`, `RoomNavRow.razor` (new), `TeammateCard.razor`, `ArchivedChatsDialog.razor` | chat | §6.5 |
-| `src/Huddle.App/Components/Teams/TeamsNav.razor`, `TeamMembers.razor` | chat | §6.5 |
+| `src/Huddle.App/Components/Teams/TeamsNav.razor`, `TeamMembers.razor` (now `TeamRoster.razor`, whose roster cards carry Message) | chat | §6.5 |
 | `src/Huddle.App/Prompts/prompts.default.json`, `Acp/Sessions/RoomSession.cs`, `WorkItem` | chat | §6.6 |
 | `src/Huddle.App/Acp/Tools/ReadRecordsTool.cs` | chat | §6.7 |
 | `src/Huddle.App/Teams/TeamNames.cs` | chat | §6.8 |
