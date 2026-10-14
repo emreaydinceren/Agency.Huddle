@@ -89,6 +89,10 @@ component here, move it onto the component rather than writing another copy.
 | A Task's state, priority or presence colour | `TaskColors.For(…)`; the priority icon is `TaskColors.Icon(priority)` | [Colour](design-system.md#colour) |
 | A two- to five-way mode switch | `HuddleSegmentedControl<T>` | [House defaults](design-system.md#house-defaults) |
 | Filter chips | `ChipCloud` | [Huddle components](design-system.md#huddle-components) |
+| A toolbar filter shown as "Label: Value ⌄ ×" | `TaskFilterChip`, with the choices as `MudMenuItem`s; dashed while unset, filled with a clear button once set. The Tasks page's second row (`T3`) is the model: a Filter icon `MudMenu` first, then one chip per filter that is set | [wireframes.md, Figure 4](wireframes.md) |
+| To save a page's own setup (filters, grouping, layout, sort, column widths) | Save each change as it is made; no editor panel and no Save button. The Tasks page writes every change to its View through `ViewStore`. A dialog that edits a list as a whole (`FieldsDialog`) still buffers until Save | [Huddle.Tasks-Specifications.md](../Huddle.Tasks-Specifications.md) |
+| Text or an icon on a Primary fill | `Color.Primary`, and let the theme's `PrimaryContrastText` colour it: white in Huddle Light, Huddle Dark and Custom Accent, whatever the accent. Never hard-code the foreground | [Colour](design-system.md#colour) |
+| Resizable columns in a List | `task-list-resize.js` on a grid with the `task-list-grid` class; MudDataGrid's own resizing is off because it round-trips per pointer move | [Catalog: browser scripts](#browser-scripts) |
 | Row actions | A `Filled.MoreVert` `MudMenu`, revealed on hover or focus: `hover-reveal-row` on the row, `hover-reveal-menu-button` on the button | [The sidebar](design-system.md#the-sidebar) |
 | An icon | The entity or action table | [Icons](design-system.md#icons) |
 | A tinted, selected or hovered surface | The States table | [Colour](design-system.md#colour) |
@@ -121,7 +125,7 @@ before you create a component, a helper or a CSS class.
 | `TeammateAvatar` | `Components/Shared/TeammateAvatar.razor` | `C5a`, `P4` | `Name`, `Avatar`, `Size`, `Class`, `PendingImage` | Every Teammate face: image, then label, then a two-letter monogram |
 | `StatusDot` | `Components/Shared/StatusDot.razor` | In `P4`, pickers | `State` (`PersonaState`) | Every Teammate health dot; it carries its own text label |
 | `TeammateLabel` | `Components/Shared/TeammateLabel.razor` | Rows in New chat and Invite | `Name`, `State`, `Avatar`, `IsUser` | A Teammate's dot, avatar and name on one line |
-| `PageHeader` | `Components/Shared/PageHeader.razor` | The page title in `T1`, `P1`, `L1`, `G1`, `M1` | `Title`, `Actions`, `SetPageTitle` | Every page's one `h1`, with its action buttons at the right |
+| `PageHeader` | `Components/Shared/PageHeader.razor` | The page title in `P1`, `L1`, `G1`, `M1` | `Title`, `Actions`, `SetPageTitle` | Every page's one `h1`, with its action buttons at the right. The Tasks page is the one exception: its View name is the breadcrumb's last crumb, so it draws no `h1` and sets the document title with `PageTitle` |
 | `EmptyState` | `Components/Shared/EmptyState.razor` | An empty list, table or pane | `Text`, `Icon`, `Action`, `FullPane` | Any "nothing here" line; says what to do next, `role="status"` |
 | `ChipCloud` | `Components/Shared/ChipCloud.razor` | Avatar picker, hiring pool | `Title`, `Pool`, `Selected`, `Cap`, `CssClass`, `Quiet`, `OnToggle` | A wrapping cloud of toggle chips, selected first |
 | `TaskStatusChip`, `TaskPriorityChip`, `TaskAssignee` | `Components/Tasks/` | Fields of a Task in `T3`, `T4`, `T6` and search | `Status`; `Priority`; `Name`, `Presence` | A Task's State, Priority or Assignee wherever it is shown. A Board card omits the State chip |
@@ -130,7 +134,7 @@ before you create a component, a helper or a CSS class.
 | `ConflictRow` | `Components/Tasks/ConflictRow.razor` | A conflicting field in the Task detail | `Field`, `Stacked`, `TheirsText`, `YoursText`, `Choice` | One field of an edit conflict, in the panel or the expanded table |
 | `SettingsIntro`, `StoredAt`, `ProblemList` | `Components/Settings/` | The top and foot of a Settings panel | `ChildContent`; `Path`, `Label`; `Count` | The intro paragraph, the "Stored at" line and the "Problems" list of every Settings panel |
 | `SearchCardShell` | `Components/Search/SearchCardShell.razor` | Every row of the `S1b` dropdown | `Icon`, `Title`, `Meta`, `Snippet`, `Trailing`, `AccessibleName`, `Archived` | A new kind of search result: fill the slots, don't copy a card |
-| `HuddleSegmentedControl<T>` | `Components/Shared/HuddleSegmentedControl.razor` | `T3a`, `T3d`, `L3b` | `Value`, `ValueChanged`, `ItemCount`, `Disabled`, `SelectionMode`; `MudToggleItem`s as children | A two- to five-way mode switch |
+| `HuddleSegmentedControl<T>` | `Components/Shared/HuddleSegmentedControl.razor` | `T3a`, `L3b` | `Value`, `ValueChanged`, `ItemCount`, `Disabled`, `SelectionMode`; `MudToggleItem`s as children | A two- to five-way mode switch |
 | `SkillProvenanceLine` | `Components/Shared/SkillProvenanceLine.razor` | Skills, Teammate card | `Skill` | Where a Skill came from and whether it was modified |
 | `EditPreview` | `Components/Shared/EditPreview.razor` | `C7b` | `Edit`, `Path` | A file edit's before and after |
 | `MessageReferences` | `Components/References/MessageReferences.razor` | Under `C5c` | `Message` | The reference chips a Message carries |
@@ -145,9 +149,10 @@ before you create a component, a helper or a CSS class.
 | --- | --- | --- | --- | --- |
 | `InlineConfirm` | `Components/Shared/InlineConfirm.razor` | `O6` | `Prompt`, `ConfirmText`, `Busy`, `OnConfirm`, `OnCancel`, `Class` | A destructive yes or no that replaces a list row. Confirm takes focus, Escape cancels |
 | `ResetAllControl` | `Components/Settings/ResetAllControl.razor` | `G1a` | `AnyModified`, `Confirming`, `OnBeginReset`, `OnConfirm`, `OnCancel` | Prompts' reset-all only; its confirm reads "Reset all" |
-| `SearchField` | `Components/Shared/SearchField.razor` | The search box of `M5`, `T2`, Skill import | `Value`, `ValueChanged`, `Placeholder`, `AriaLabel` | Any search box: outlined, dense, clearable, one debounce |
+| `SearchField` | `Components/Shared/SearchField.razor` | The search box of `M5`, `T3e`, Skill import | `Value`, `ValueChanged`, `Placeholder`, `AriaLabel`, `Class` | Any search box: outlined, dense, clearable, one debounce. `Class` lets a surface restyle its own box (`.task-toolbar-search` takes the segmented controls' track colour) |
+| `TaskFilterChip` | `Components/Tasks/TaskFilterChip.razor` | `T3c`, `T3h`, `T3i` and the other set-filter chips in `T3` | `Label`, `Value`, `IsSet`, `ChildContent` (the `MudMenuItem`s), `OnClear`, `Class` | One "Label: Value" filter chip with a menu and a clear button. It owns no state: the toolbar passes the text and handles the change |
 | `AvatarEditor` | `Components/Shared/AvatarEditor.razor` | Settings, Appearance; the Teammate card | `Name`, `Value`, `ValueChanged`, `SaveMode`, `PendingImage` | Choosing an avatar: library, upload or text. Immediate in Settings, buffered in dialogs |
-| `ResizableEndDrawer` | `Components/Shared/ResizableEndDrawer.razor` | The Task detail drawer | `Title`, `StorageKey`, `Open`, `OpenChanged`, `OverlayAutoClose`, `Class` | Any right-hand drawer: drag or arrow-key resize, width remembered |
+| `ResizableEndDrawer` | `Components/Shared/ResizableEndDrawer.razor` | The Task detail drawer (`T7`) | `Title`, `StorageKey`, `Open`, `OpenChanged`, `OverlayAutoClose`, `Class` | Any right-hand drawer: drag or arrow-key resize, width remembered |
 | `TeamTabToolbar` | `Components/Teams/TeamTabToolbar.razor` | `M5` | `ActionText`, `OnAction`, `SearchPlaceholder`, `Search`, `SearchChanged` | A tab toolbar with one action and a search box, built on `SearchField` |
 | `Composer` | `Components/Shared/Composer.razor` | `C10` | `RoomId` | The message input; one per Room |
 | `ReferencePicker` | `Components/References/ReferencePicker.razor` | `C11` | `View`, `ListboxId`, `OnPick` | The `@` picker; driven by `Composer` |
@@ -170,7 +175,7 @@ the shell and follow [In-place action rows](design-system.md#in-place-action-row
 
 | Dialog | Path | Parameters | Pattern worth copying |
 | --- | --- | --- | --- |
-| `NameDialog` | `Components/Shared/Dialogs/` | `Label`, `ConfirmText`, `InitialValue`, `Validate`, `SubmitAsync` | Any one-field name: live validation, Enter submits, focus on open. Used for New team, New project, Rename, New note, New folder and Add folder (`NewTeamDialog`, `RenameDialog`, `NamePromptDialog` and `DeleteDialog` were removed) |
+| `NameDialog` | `Components/Shared/Dialogs/` | `Label`, `ConfirmText`, `InitialValue`, `Validate`, `SubmitAsync` | Any one-field name: live validation, Enter submits, focus on open. Used for New team, New project, Rename, Rename view (`ViewActions.RenameAsync`), New note, New folder and Add folder (`NewTeamDialog`, `RenameDialog`, `NamePromptDialog` and `DeleteDialog` were removed) |
 | `ConfirmDialog` with `ConfirmAsync` | `Components/Shared/Dialogs/` | `Message`, `ConfirmText`, `Danger` | `await this.DialogService.ConfirmAsync(title, message, confirmText, danger)`; `true` only on confirm |
 | `HuddleDialogOptions` | `Components/Shared/Dialogs/HuddleDialogOptions.cs` | `SmallForm`, `Picker` | The options for every dialog: `SmallForm` for forms and confirms, `Picker` for list pickers |
 | `AddMemberDialog` | `Components/Teams/` | `Team`, `Candidates` (a snapshot) | Passing a snapshot, not live objects |
@@ -180,6 +185,7 @@ the shell and follow [In-place action rows](design-system.md#in-place-action-row
 | `TeammateCard` | `Components/Shared/` | `Mode`, `Name`, … | Its header comment explains why an open dialog's parameters are frozen |
 | `ArchivedChatsDialog` | `Components/Shared/` | | A list dialog opened from `ArchivedChats` |
 | `TaskDetailDialog`, `ReasonDialog`, `DuplicatePickerDialog` | `Components/Tasks/` | `Id`, `Draft`; `Excluding` | |
+| `FieldsDialog` | `Components/Tasks/` | `ViewId` | A View's Fields, opened from `T2a`'s "Fields…": show, hide, reorder (drag or up and down), add and remove; Save writes through `ViewStore`, Cancel writes nothing. It replaced the View editor's Fields section |
 | `SkillImportDialog` | `Components/Settings/` | | A multi-step dialog with Back |
 
 Every dialog except the message box is opened with `IDialogService.ShowAsync<T>`. Pass an
@@ -209,6 +215,7 @@ id or a snapshot: an open dialog ignores new parameters.
 | `RoomDeleteCopy` | `Components/Shared/RoomDeleteCopy.cs` | `Prompt(roomName, uploadCount)`: the words of a Room's delete confirmation |
 | `AvatarChipCloud` | `Components/Shared/AvatarChipCloud.cs` | `Arrange(pool, selected, cap)`: chip order for `ChipCloud` |
 | `SprintLabels` | `Components/Tasks/SprintLabels.cs` | A Sprint's display text and filter options |
+| `ViewActions` | `Components/Tasks/ViewActions.cs` | `RenameAsync` (the "Rename view" `NameDialog`), `NewViewName` (the default name `/tasks/new` gives a View) and `ConfirmDeleteAsync`: the View menu actions shared by `T2a` and the sidebar's View rows |
 | `TeammateGrouping` | `Components/Pages/TeammateGrouping.cs` | Teammates grouped by Team, as `P3` shows them |
 | `PersonaStatusResolver` | `Acp/PersonaStatusResolver.cs` | A Teammate's current `PersonaStatus`, for `StatusDot` |
 | `ThemeDefaults`, `ThemeCatalog`, `AccentPalette` | `Themes/` | Typography defaults, the Theme list, accent contrast clamping |
@@ -238,6 +245,18 @@ feature's name. Reuse these before writing a rule:
 | `.agent-dot` and `.online`, `.offline`, `.degraded`, `.starting` | The dot behind `StatusDot`; use the component |
 | `.search-hit-flash` | A brief highlight with a reduced-motion branch: the model for any longer animation |
 | `.room-column`, `.main-column` | The fill-the-pane layout that the page rule points to |
+| `.task-filter-chip` with `-set`, `-unset` | The pill behind `TaskFilterChip`: dashed border while unset, primary border and hover tint once set; use the component |
+| `.task-col-resizer` | The column drag handle `task-list-resize.js` adds to each List header cell: a hairline that turns into a 3px primary bar on hover or drag |
+| `.tasks-counts` | The header row's "N open, N need you, N all": secondary text, the numbers in primary text, "need you" in the warning colour |
+
+### Browser scripts
+
+Browser-side code lives in `wwwroot/` and is loaded once from `Components/App.razor`.
+
+| Script | Does |
+| --- | --- |
+| `app.js` | Resize handles, clipboard, CodeMirror and the other shared browser code |
+| `task-list-resize.js` | Drag-to-resize columns on any `.task-list-grid`. A drag trades width between the two columns beside the border, so the table keeps its width; neither goes below 56px or its content. `TaskListView` registers through `window.taskListResize.register`, and a finished drag calls its `[JSInvokable] OnColumnsResized`, which saves the widths to `TaskView.ColumnWidths`. Each handle is focusable (`tabindex="0"`, an `aria-label` naming its column); Left and Right move the border 16px, Shift 64px, and each press is saved, like `T7a` |
 
 Many rules in `app.css` are pinned by tests (`ThemeSourceTests`, `AppStylesheetTests`, the
 `AppCss*Tests` in `tests/Huddle.Tests/Ui/`, and source tests per feature). If a CSS
@@ -263,7 +282,7 @@ table.
 | Themes and typography defaults | `src/Huddle.App/Themes/` |
 | Global stylesheet | `src/Huddle.App/wwwroot/app.css` (and `app-vars.css` for `--font-mono`) |
 | A component's own styles | `ComponentName.razor.css` beside it |
-| Browser-side code (resize handles, clipboard, CodeMirror) | `src/Huddle.App/wwwroot/app.js` |
+| Browser-side code (resize handles, clipboard, CodeMirror) | `src/Huddle.App/wwwroot/app.js`; List column resizing in `task-list-resize.js` (see [Browser scripts](#browser-scripts)) |
 | Component tests (bUnit) | `tests/Huddle.Tests/Ui/` and the feature folders in `tests/Huddle.Tests/` |
 | The bUnit host for MudBlazor | `tests/Huddle.Tests/Ui/MudBunitContext.cs` (`RenderWithPopovers`) |
 | Wireframe figures | `docs/images/wireframes/` |
@@ -337,7 +356,9 @@ Check these first. Each links to the rule that owns it.
    `Variant.Outlined` and `Margin.Dense` on inputs
    ([Spacing, density and size](design-system.md#spacing-density-and-size)).
 2. **Every page has one `h1`**, a `Typo.h5`, inside `MudContainer pa-4`
-   ([A page](design-system.md#a-page)).
+   ([A page](design-system.md#a-page)). The Tasks page is the one exception: its View
+   name is the breadcrumb's last crumb, so it draws no `h1` and sets the document title
+   with `PageTitle`. Don't copy it to another page.
 3. **Dialog actions run Cancel, then a Filled primary**
    ([Dialog anatomy](design-system.md#dialog-anatomy)).
 4. **Every `MudAlert` has a role, every snackbar a `key`, every icon-only control an
