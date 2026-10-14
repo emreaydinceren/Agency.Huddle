@@ -1025,6 +1025,7 @@ Teams: Sidebar, Members, Files, Tasks and Shared Memory — [area file](team-pag
 | [TP-T12](team-pages.md#tp-t12--team-memory-file-appears-in-another-members-next-turn) |  | Active | |  |
 | [TP-T14](team-pages.md#tp-t14--team-exists-with-no-members-but-has-members-page) |  | Active | |  |
 | [TP-T15](team-pages.md#tp-t15--team-with-no-folder-yet-creates-folder-on-first-save) |  | Active | |  |
+| [TP-T16](team-pages.md#tp-t16--edit-team-adds-a-draft-deletes-a-member-and-saves-the-purpose) |  | Active | |  |
 | [TP-REAL-01](team-pages.md#tp-real-01--row-menu-button-does-not-open-teammate-card) |  | Active | |  |
 | [TP-REAL-02](team-pages.md#tp-real-02--dark-theme-and-narrow-window-styling) |  | Active | |  |
 

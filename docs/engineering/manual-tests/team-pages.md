@@ -5,7 +5,7 @@ with the right actions, that Members, Files and Tasks tabs navigate and function
 creating Teams and Projects works with the right validation, and — the one case this page exists
 to answer — whether a file in a Team's shared Memory surfaces in another member's next Turn.
 
-**16 tests** · 16 free, 0 paid · about 0.6 hours (plus about 15 minutes to build the fixture in Setup) · **none of them has been run yet.** This page documents what to
+**17 tests** · 17 free, 0 paid · about 0.7 hours (plus about 15 minutes to build the fixture in Setup) · **none of them has been run yet.** This page documents what to
 run, not a result — see [Known limits](../known-limits.md) for what that leaves unverified today.
 TP-T13 was removed: no free oracle can read a Persona's system prompt (see Setup).
 
@@ -436,6 +436,40 @@ The Teams provisioner makes the folder the moment the Teammate is saved
 - The Team does not appear in the sidebar.
 - The Files tab shows an error.
 - The folder is not created on save.
+
+### TP-T16 — Edit team adds a draft, deletes a member and saves the purpose
+
+**Free** · about 4 min
+
+*Proves that **Edit team** opens Build a team for an existing Team with its type and name fixed and
+its members on the roster, and that Save changes hires a new draft, deletes a removed member
+(the Teammate, not only the label) and writes "What it's for" to `_team.md`.*
+
+**Steps**
+
+1. Open **Build a team**, choose **Blank Team**, name it `Garden`, add two roles from the role
+   cards and select **Approve & hire**. Note the two Names.
+2. On the Garden Team page, click **Edit team** in the header.
+3. Confirm the page is titled `Edit Garden`, shows only the Blank Team card, and the Team name field
+   cannot be typed in.
+4. Change **What it's for** to `Grows vegetables.`.
+5. Add any role from the role cards, then click **Remove** on the first of the two members.
+6. Click **Save changes**, then **Delete** in the confirmation.
+
+**Pass if**
+
+- The roster showed the two members with a **Member** chip and the new draft with a **New** chip,
+  and the removed member's card said "Will be deleted when you save" with an **Undo** button.
+- The confirmation named the removed member.
+- After saving, the Garden Team page lists the second member and the new Teammate, and the removed
+  member is gone from the **Teammates** page.
+- `<data>\Teams\Garden\_team.md` has `owns: Grows vegetables.`.
+
+**Fail if**
+
+- The type cards or the Team name can be changed.
+- The removed member is still on the Teammates page, or only lost the `Garden` label.
+- The new draft was not hired, or a member was hired a second time.
 
 ### TP-REAL-01 — Row menu button does not open Teammate card
 

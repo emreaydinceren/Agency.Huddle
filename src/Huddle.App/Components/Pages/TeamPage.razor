@@ -75,6 +75,8 @@
                 @if (!isProject)
                 {
                     string sourceTeam = summary.Name;
+                    <MudButton Variant="Variant.Outlined" Size="Size.Small" StartIcon="@Icons.Material.Outlined.Edit"
+                               Href="@($"{TeamHref(sourceTeam)}/edit")" Class="team-page-edit">Edit team</MudButton>
                     <MudButton Variant="Variant.Outlined" Size="Size.Small" StartIcon="@Icons.Material.Outlined.ContentCopy"
                                OnClick="@(() => this.DuplicateAsync(sourceTeam))">Duplicate</MudButton>
                 }

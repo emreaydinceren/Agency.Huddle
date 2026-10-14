@@ -8,8 +8,10 @@ using Agency.Huddle.App;
 using Agency.Huddle.App.Acp;
 using Agency.Huddle.App.Components.Pages;
 using Agency.Huddle.App.Avatars;
+using Agency.Huddle.App.Data;
 using Agency.Huddle.App.HiringPool;
 using Agency.Huddle.App.Library;
+using Agency.Huddle.App.Pipes;
 using Agency.Huddle.App.Skills;
 using Agency.Huddle.App.TeamTypes;
 using Agency.Huddle.App.Teams;
@@ -28,16 +30,17 @@ public sealed class BuildTeamTests
 {
     private const string Card = ".build-team-section:not(.build-team-hire) button.team-type-card";
 
-    /// <summary>The page declares the one route <c>/teams/build</c>.</summary>
+    /// <summary>The page declares <c>/teams/build</c> to build a Team and <c>/teams/{Team}/edit</c> to edit one.</summary>
     [Fact]
-    public void Route_IsTeamsBuild()
+    public void Route_IsTeamsBuild_AndTeamEdit()
     {
-        string template = Assert.Single(typeof(BuildTeam)
+        string[] templates = [.. typeof(BuildTeam)
             .GetCustomAttributes(typeof(RouteAttribute), inherit: false)
             .OfType<RouteAttribute>()
-            .Select(route => route.Template));
+            .Select(route => route.Template)
+            .Order(StringComparer.Ordinal)];
 
-        Assert.Equal("/teams/build", template);
+        Assert.Equal(["/teams/build", "/teams/{Team}/edit"], templates);
     }
 
     /// <summary>The page opens with <c>PageHeader</c>: the only h1 reads "Build a team" at Typo.h5, inside a <c>pa-4</c> container.</summary>
@@ -423,6 +426,8 @@ public sealed class BuildTeamTests
         await cut.InvokeAsync(() => cut.Find("[aria-label='Add Tutor']").ClickAsync());
 
         Assert.False(cut.Find(Button).HasAttribute("disabled"));
+        Assert.Equal("Approve & hire", cut.Find(Button).TextContent.Trim());
+        Assert.Equal("1 draft Teammate · dashed ring = not hired yet", cut.Find(".build-team-roster-summary").TextContent.Trim());
 
         await cut.InvokeAsync(() => cut.Find(Button).ClickAsync());
 
@@ -471,7 +476,7 @@ public sealed class BuildTeamTests
 
         await cut.InvokeAsync(() => cut.Find("button.build-team-approve-button").ClickAsync());
 
-        Assert.Equal("Skills not installed: ext-skill. Import them yourself, then approve again.", cut.Find(".build-team-approve-error .mud-alert-message").FirstChild?.TextContent.Trim());
+        Assert.Equal("Skills not installed: ext-skill. Import them yourself, then try again.",cut.Find(".build-team-approve-error .mud-alert-message").FirstChild?.TextContent.Trim());
         Assert.Equal("/settings/skills", cut.Find(".build-team-skills-link").GetAttribute("href"));
         Assert.DoesNotContain("CreateTeam:Garden", fixture.Folders.Calls);
         Assert.DoesNotContain(fixture.Personas.Entries, entry => entry.Teams.Contains("Garden", StringComparer.Ordinal));
@@ -629,6 +634,158 @@ public sealed class BuildTeamTests
         Assert.Equal("with your Chief of Staff", cut.Find(".page-header-subtitle").TextContent.Trim());
     }
 
+    /// <summary>Editing a Team shows only its own type, its name read-only, its members on the roster with the manager badged, and Save off until something changes.</summary>
+    [Fact]
+    public async Task Edit_LoadsTheMembers_WithTheTypeAndNameFixed()
+    {
+        using Fixture fixture = new(typeCount: 3);
+        fixture.SeedGarden();
+        await using MudBunitContext ctx = fixture.NewContext();
+
+        IRenderedComponent<ContainerFragment> cut = RenderEdit(ctx, "Garden");
+
+        Assert.Equal("Edit Garden", Assert.Single(cut.FindAll("h1")).TextContent.Trim());
+        Assert.Equal("Type 01", Assert.Single(cut.FindAll(Card)).QuerySelector(".team-type-name")?.TextContent.Trim());
+        Assert.True(cut.Find(".build-team-name input").HasAttribute("disabled"));
+        Assert.Equal("Grows things.", cut.Find(".build-team-purpose textarea").TextContent.Trim());
+        Assert.Equal(["Ada", "Bo"], cut.FindAll(".roster-name").Select(static name => name.TextContent.Trim()));
+        Assert.Equal("Manager", Assert.Single(cut.FindAll(".roster-card")[0].QuerySelectorAll(".roster-manager-badge")).TextContent.Trim());
+        Assert.Equal(2, cut.FindAll(".roster-card-existing").Count);
+        Assert.Empty(cut.FindAll(".roster-reroll"));
+        Assert.True(cut.Find("button.build-team-approve-button").HasAttribute("disabled"));
+        Assert.Equal("Nothing has changed yet.", cut.Find(".build-team-approve-hint").TextContent.Trim());
+        Assert.Equal("Save changes", cut.Find("button.build-team-approve-button").TextContent.Trim());
+    }
+
+    /// <summary>A new draft saved into an existing Team is the only Teammate hired; the members are left as they were and the Team page opens.</summary>
+    [Fact]
+    public async Task Edit_AddingADraft_HiresOnlyTheNewOne()
+    {
+        using Fixture fixture = new(typeCount: 3);
+        fixture.SeedGarden();
+        string adaBefore = fixture.Personas.Get("Ada")?.Text ?? string.Empty;
+        await using MudBunitContext ctx = fixture.NewContext();
+        IRenderedComponent<ContainerFragment> cut = RenderEdit(ctx, "Garden");
+
+        await cut.InvokeAsync(() => cut.Find("[aria-label='Add Bookkeeper']").ClickAsync());
+        await cut.InvokeAsync(() => cut.Find("button.build-team-approve-button").ClickAsync());
+
+        PersonaEntry hired = Assert.Single(fixture.Personas.Entries, entry => string.Equals(entry.Title, "Bookkeeper", StringComparison.Ordinal));
+        Assert.Equal(["Garden"], hired.Teams);
+        Assert.Equal(3, fixture.Personas.Entries.Count);
+        Assert.Equal(adaBefore, fixture.Personas.Get("Ada")?.Text);
+        Assert.DoesNotContain("CreateTeam:Garden", fixture.Folders.Calls);
+        Assert.Equal("/teams/Garden", new Uri(ctx.Services.GetRequiredService<NavigationManager>().Uri).AbsolutePath);
+    }
+
+    /// <summary>Remove marks a member, Undo keeps them; saving asks first and then deletes the Teammate, not only their Team label.</summary>
+    [Fact]
+    public async Task Edit_RemovingAMember_DeletesTheTeammateAfterAsking()
+    {
+        using Fixture fixture = new(typeCount: 3);
+        fixture.SeedGarden();
+        await using MudBunitContext ctx = fixture.NewContext();
+        IRenderedComponent<ContainerFragment> cut = RenderEdit(ctx, "Garden");
+
+        await cut.InvokeAsync(() => cut.Find("[aria-label='Remove Bo']").ClickAsync());
+        Assert.Single(cut.FindAll(".roster-card-removed"));
+        await cut.InvokeAsync(() => cut.Find("[aria-label='Keep Bo']").ClickAsync());
+        Assert.Empty(cut.FindAll(".roster-card-removed"));
+        await cut.InvokeAsync(() => cut.Find("[aria-label='Remove Bo']").ClickAsync());
+
+        _ = cut.InvokeAsync(() => cut.Find("button.build-team-approve-button").Click());
+        Assert.Equal("Delete 1 Teammate?", cut.Find(".mud-dialog-title").TextContent.Trim());
+        await cut.InvokeAsync(() => cut.FindAll(".mud-dialog button").Single(button => string.Equals(button.TextContent.Trim(), "Delete", StringComparison.Ordinal)).ClickAsync());
+
+        Assert.Null(fixture.Personas.Get("Bo"));
+        Assert.NotNull(fixture.Personas.Get("Ada"));
+        Assert.Equal("/teams/Garden", new Uri(ctx.Services.GetRequiredService<NavigationManager>().Uri).AbsolutePath);
+    }
+
+    /// <summary>Removing the manager blocks Save until another member in a manager role is chosen; saving then makes them the manager before the old one is deleted.</summary>
+    [Fact]
+    public async Task Edit_RemovingTheManager_NeedsANewOne_WhoIsMadeManagerFirst()
+    {
+        using Fixture fixture = new(typeCount: 3);
+        fixture.SeedGarden();
+        await using MudBunitContext ctx = fixture.NewContext();
+        IRenderedComponent<ContainerFragment> cut = RenderEdit(ctx, "Garden");
+
+        await cut.InvokeAsync(() => cut.Find("[aria-label='Remove Ada']").ClickAsync());
+
+        Assert.True(cut.Find("button.build-team-approve-button").HasAttribute("disabled"));
+        Assert.Equal("Choose a new manager before deleting Ada.", cut.Find(".build-team-approve-hint").TextContent.Trim());
+
+        await cut.InvokeAsync(() => cut.Find("[aria-label='Add Tutor']").ClickAsync());
+        string successor = cut.FindAll(".roster-name")[^1].TextContent.Trim();
+
+        Assert.False(cut.Find("button.build-team-approve-button").HasAttribute("disabled"));
+
+        _ = cut.InvokeAsync(() => cut.Find("button.build-team-approve-button").Click());
+        await cut.InvokeAsync(() => cut.FindAll(".mud-dialog button").Single(button => string.Equals(button.TextContent.Trim(), "Delete", StringComparison.Ordinal)).ClickAsync());
+
+        Assert.Equal(successor, fixture.Folders.ReadResult?.Manager);
+        Assert.Null(fixture.Personas.Get("Ada"));
+        Assert.NotNull(fixture.Personas.Get(successor));
+    }
+
+    /// <summary>Marking every member for deletion keeps Save off and says the roster must keep someone; the summary counts what will be deleted.</summary>
+    [Fact]
+    public async Task Edit_RemovingEveryone_KeepsSaveOff()
+    {
+        using Fixture fixture = new(typeCount: 3);
+        fixture.SeedGarden();
+        await using MudBunitContext ctx = fixture.NewContext();
+        IRenderedComponent<ContainerFragment> cut = RenderEdit(ctx, "Garden");
+
+        await cut.InvokeAsync(() => cut.Find("[aria-label='Remove Ada']").ClickAsync());
+        await cut.InvokeAsync(() => cut.Find("[aria-label='Remove Bo']").ClickAsync());
+
+        Assert.True(cut.Find("button.build-team-approve-button").HasAttribute("disabled"));
+        Assert.Equal("Keep at least one Teammate on the roster.", cut.Find(".build-team-approve-hint").TextContent.Trim());
+        Assert.Equal("2 members · 2 to delete", cut.Find(".build-team-roster-summary").TextContent.Trim());
+    }
+
+    /// <summary>A changed "What it's for" is written to the team file as one line; nothing is asked, since nobody is deleted.</summary>
+    [Fact]
+    public async Task Edit_ChangingWhatItsFor_UpdatesTheTeamFile()
+    {
+        using Fixture fixture = new(typeCount: 3);
+        fixture.SeedGarden();
+        await using MudBunitContext ctx = fixture.NewContext();
+        IRenderedComponent<ContainerFragment> cut = RenderEdit(ctx, "Garden");
+
+        await cut.InvokeAsync(() => cut.Find(".build-team-purpose textarea").InputAsync("Grows\nvegetables."));
+        await cut.InvokeAsync(() => cut.Find("button.build-team-approve-button").ClickAsync());
+
+        Assert.Equal("Grows vegetables.", fixture.Folders.ReadResult?.Owns);
+        Assert.Equal("Ada", fixture.Folders.ReadResult?.Manager);
+        Assert.Equal("/teams/Garden", new Uri(ctx.Services.GetRequiredService<NavigationManager>().Uri).AbsolutePath);
+    }
+
+    /// <summary>Editing a Team that does not exist says so instead of drawing the page.</summary>
+    [Fact]
+    public async Task Edit_UnknownTeam_SaysSo()
+    {
+        using Fixture fixture = new(typeCount: 3);
+        await using MudBunitContext ctx = fixture.NewContext();
+
+        IRenderedComponent<ContainerFragment> cut = RenderEdit(ctx, "Nowhere");
+
+        Assert.Equal("There is no Team named \"Nowhere\".", cut.Find(".build-team-missing").TextContent.Trim());
+        Assert.Empty(cut.FindAll(".build-team-section"));
+    }
+
+    private static IRenderedComponent<ContainerFragment> RenderEdit(MudBunitContext ctx, string team)
+    {
+        return ctx.RenderWithPopovers(builder =>
+        {
+            builder.OpenComponent<BuildTeam>(0);
+            builder.AddAttribute(1, nameof(BuildTeam.Team), team);
+            builder.CloseComponent();
+        });
+    }
+
     private static IRenderedComponent<ContainerFragment> Render(MudBunitContext ctx)
     {
         return ctx.RenderWithPopovers(builder =>
@@ -686,11 +843,26 @@ public sealed class BuildTeamTests
             });
             this.Types = new TeamTypeCatalog(this.dir.Options(), NullLogger<TeamTypeCatalog>.Instance, builtins);
             SkillPackStore packs = new(this.dir.Options(), NullLogger<SkillPackStore>.Instance, new Dictionary<string, string>(StringComparer.Ordinal));
-            AvatarStore avatars = new(this.dir.Options(), NullLogger<AvatarStore>.Instance);
+            this.Avatars = new AvatarStore(this.dir.Options(), NullLogger<AvatarStore>.Instance);
             HireLimitHarness harness = new(this.dir.Options());
             this.Packs = packs;
             this.Skills = new SkillStore(this.dir.Options(), NullLogger<SkillStore>.Instance);
-            this.Hire = new HireService(this.Personas, this.Types, packs, avatars, harness.Guard, this.Installer, new FakeStartGate(), NullLogger<HireService>.Instance);
+            this.Hire = new HireService(this.Personas, this.Types, packs, this.Avatars, harness.Guard, this.Installer, new FakeStartGate(), NullLogger<HireService>.Instance);
+            this.Membership = new TeamMembership(this.Personas, this.Catalog, this.Folders, this.Types);
+        }
+
+        public AvatarStore Avatars { get; }
+
+        public TeamMembership Membership { get; }
+
+        /// <summary>Seeds a Team of type Type 01 with a Lead (its manager) and a Developer, as the catalog and the Teammates report it.</summary>
+        public void SeedGarden()
+        {
+            this.Personas.Add(new PersonaIdentity("Ada", "Lead", "ada", Teams: ["Garden"], Role: new RoleRef("t01", "tutor", "1.0.0")), "You lead.");
+            this.Personas.Add(new PersonaIdentity("Bo", "Developer", "bo", Teams: ["Garden"], Skills: ["ext-skill"], Role: new RoleRef("t01", "dev", "1.0.0")), "You build things.");
+            this.Catalog.Teams = [new TeamSummary("Garden", [], ["Ada", "Bo"], true) { TeamType = new VersionedRef("t01", "1.0.0"), Manager = "Ada", Owns = "Grows things." }];
+            this.Folders.UpdateResult = true;
+            this.Folders.ReadResult = new TeamFile(new VersionedRef("t01", "1.0.0"), "Ada", null, "Grows things.", "Process.md", string.Empty);
         }
 
         public string DirPath => this.dir.Path;
@@ -733,6 +905,11 @@ public sealed class BuildTeamTests
             ctx.Services.AddSingleton(this.Skills);
             ctx.Services.AddSingleton(new SkillsCatalogIndex(this.dir.Options(), NullLogger<SkillsCatalogIndex>.Instance));
             ctx.Services.AddSingleton<IHireContext>(new RoleFixtures.Context());
+            ctx.Services.AddSingleton<ITeamMembership>(this.Membership);
+            ctx.Services.AddSingleton(this.Avatars);
+            ctx.Services.AddSingleton<ITeamDirectory>(new SqliteTeamDirectory(this.dir.Options()));
+            ctx.Services.AddSingleton<IAgentGateway>(new FakeAgentGateway());
+            ctx.Services.AddSingleton(new PersonaHealth(TimeProvider.System, NullLogger<PersonaHealth>.Instance));
             return ctx;
         }
 

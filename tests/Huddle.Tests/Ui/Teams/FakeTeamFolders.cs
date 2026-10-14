@@ -79,11 +79,16 @@ internal sealed class FakeTeamFolders : ITeamFolders
     }
 
     /// <inheritdoc />
+    /// <remarks>A successful update applies <paramref name="change"/> to <see cref="ReadResult"/> when one is set, so a test can read back what was written.</remarks>
     public bool UpdateTeamFile(string team, Func<TeamFile, TeamFile> change)
     {
         lock (this.gate)
         {
             this.calls.Add($"UpdateTeamFile:{team}");
+            if (this.UpdateResult && this.ReadResult is { } current)
+            {
+                this.ReadResult = change(current);
+            }
         }
 
         return this.UpdateResult;

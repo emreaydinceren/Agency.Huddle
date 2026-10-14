@@ -37,6 +37,7 @@ internal static class TabTrail
         {
             ["rooms", ..] => [new("Chats", "/", "chat"), last],
             ["teams", var team, "projects", ..] => [new("Teams", null, "team"), new(team, TeamHref(team), "team"), last],
+            ["teams", var team, "edit"] => [new("Teams", null, "team"), new(team, TeamHref(team), "team"), last],
             ["teams", ..] => [new("Teams", null, "team"), last],
             ["tasks"] => [last],
             ["tasks", ..] => [new("Tasks", "/tasks", "tasks"), last],

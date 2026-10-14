@@ -727,6 +727,23 @@ it lives: its publisher and its path in the repository for an imported or catalo
 its folder (`Skills/<name>`) for one of your own, so you can see who made it. The role form for your own roles has the same **Skills**
 field.
 
+#### Editing a team
+
+**Edit team** in a Team page's header opens the same page for that Team
+(`/teams/<Team>/edit`). Its type and name can't be changed; **What it's for** and the
+**Library folder** can. The **Roster** lists the Team's members first (a solid ring and a
+**Member** chip) and then any new drafts you add from the role cards. **Edit** on a member
+opens their own Teammate card, which saves as soon as you save it there. **Remove** on a member
+marks them for deletion and offers **Undo**. When the type has a manager role, a **Manager**
+list under the roster picks who manages the Team.
+
+**Save changes** is off until something changed. It also stays off while the manager is
+marked for deletion and nobody else is chosen. When you save, Huddle first asks before
+deleting anyone. Removed members are **deleted** as Teammates, not just taken off the Team; to
+keep someone and only take them off, use **Remove from Team** on the **Members** tab instead.
+Then it hires the new drafts, saves the details, makes the chosen member the manager,
+deletes the marked Teammates and opens the Team.
+
 ### Hiring a Team from a type
 
 A team type is a template for a kind of Team: its roles, the Teammates that fill
@@ -1649,6 +1666,7 @@ Skill you wrote yourself shows **Yours**, and a shipped one shows **Built in**.
 | Remove a Teammate | Deletes `<Name>.md` only | Goes offline; Rooms, transcripts and `work/` stay |
 | Restart a Teammate | Deletes `room-sessions/<Name>.json` | Every Room starts fresh, with catch-up |
 | Build a team (**Approve & hire**) | `Teams/<Team>/_team.md`, then a Teammate file for each draft | The Teammates are hired; start them from their cards |
+| Edit team (**Save changes**) | A Teammate file for each new draft, `Teams/<Team>/_team.md` (purpose, Library folder, manager), and removes the deleted Teammates' files | The new Teammates are hired; the deleted ones are gone |
 | Duplicate a Team | A new `Teams/<Team>/` and new Teammate files; no memory, notes or Tasks | New Teammates start |
 | Use a process | `Teams/<Team>/Process.md`, never over an existing one | Members read it |
 | Import a Skill | `Skills/<name>/` with `.source.json` | Read on next `read_skill` |

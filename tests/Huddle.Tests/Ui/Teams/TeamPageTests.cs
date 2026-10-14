@@ -429,6 +429,21 @@ public sealed class TeamPageTests
         Assert.Contains("mb-4", row.ClassList);
     }
 
+    /// <summary>The Team page's header has an Edit team link to the Team's edit page; a Project page has none.</summary>
+    [Fact]
+    public async Task TeamPage_EditTeam_LinksToTheEditPage()
+    {
+        await using MudBunitContext ctx = NewContext(Catalog());
+
+        IRenderedComponent<TeamPage> team = RenderPage(ctx, "Business");
+        IRenderedComponent<TeamPage> project = RenderPage(ctx, "Business", "marketing project");
+
+        IElement edit = team.Find("a.team-page-edit");
+        Assert.Equal("Edit team", edit.TextContent.Trim());
+        Assert.Equal("/teams/Business/edit", edit.GetAttribute("href"));
+        Assert.Empty(project.FindAll("a.team-page-edit"));
+    }
+
     /// <summary>The Team page container is <c>MaxWidth.False</c> with <c>pa-4</c> padding, for a Team page and a Project page alike (UX-002, UX-003).</summary>
     /// <param name="project">The Project, or <see langword="null"/> for a Team page.</param>
     [Theory]

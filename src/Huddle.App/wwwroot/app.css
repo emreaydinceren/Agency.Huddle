@@ -3664,6 +3664,40 @@ a.team-ref,
     color: var(--mud-palette-warning-darken);
 }
 
+.roster-card-existing .roster-avatar-ring {
+    border-style: solid;
+}
+
+.roster-card-removed {
+    border-color: var(--mud-palette-error);
+    border-style: dashed;
+}
+
+.roster-card-removed .roster-name {
+    text-decoration: line-through;
+}
+
+.roster-removing {
+    font-size: var(--mud-typography-caption-size);
+    font-weight: 600;
+    color: var(--mud-palette-error);
+}
+
+.roster-state {
+    padding: 0.125rem 0.5rem;
+    border-radius: 999px;
+    font-size: var(--mud-typography-caption-size);
+    background: var(--mud-palette-background-gray);
+}
+
+.roster-state-new {
+    background: color-mix(in srgb, var(--mud-palette-primary) 14%, var(--mud-palette-surface));
+}
+
+.build-team-manager {
+    max-width: 24rem;
+}
+
 .skill-origin {
     font-weight: 600;
     word-break: break-all;

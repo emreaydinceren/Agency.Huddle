@@ -54,6 +54,7 @@ plain text.
 | `/`, `/tasks`, `/teammates`, `/library`, `/settings` | the title alone |
 | `/rooms/{id}` | Chats (link to `/`), the Room's name |
 | `/teams/build` | Teams, Build a team |
+| `/teams/{team}/edit` | Teams, the Team (link), Edit {team} |
 | `/teams/{team}` | Teams, the Team |
 | `/teams/{team}/projects/{project}` | Teams, the Team (link), the Project |
 | `/tasks/{view}`, `/tasks/new`, `/tasks/item/{id}` | Tasks (link), the Tab's title |
@@ -71,6 +72,7 @@ the Task view's Tab title is its id and the Room's title row carries rename and 
 | `/teams/{team}` and its sub-tabs | `team:{team}` | A sub-tab is in-Tab navigation. |
 | `/teams/{team}/projects/{project}` and its sub-tabs | `project:{team}/{project}` | |
 | `/teams/build` | `team-build` | The query (`?type=`) is the page's own state, not part of the key. |
+| `/teams/{team}/edit` | `team-edit:{team}` | Its own Tab, so editing does not replace the Team's page. Matched before `/teams/{team}`. |
 | `/tasks/{view}` | `tasks:{view}` | |
 | `/tasks/item/{id}`, `/tasks/new` | `task:{id}`, `task-new` | |
 | `/teammates` | `teammates` | |
