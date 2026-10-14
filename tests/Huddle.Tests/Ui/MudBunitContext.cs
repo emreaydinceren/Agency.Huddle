@@ -85,6 +85,22 @@ internal sealed class MudBunitContext : BunitContext
     }
 
     /// <summary>
+    /// Disposes every rendered component, as <see cref="BunitContext.DisposeComponentsAsync"/> does, but from
+    /// the renderer's dispatcher, so it disposes them even when that dispatcher is busy.
+    /// </summary>
+    /// <remarks>
+    /// bUnit 2.11.3's <c>DisposeComponents</c> posts "detach every root" to the dispatcher and then clears
+    /// its root list. When the dispatcher is idle the post runs inline, before the clear. When it is busy
+    /// - a SQLite lookup's continuation re-rendering a component, which under full-suite load is often - the
+    /// post is queued, the clear runs first, and the queued work then detaches an empty list: nothing is
+    /// disposed and the returned task still succeeds. Called on the dispatcher, the post always runs
+    /// inline, so the roots are detached before they are forgotten. A test that asserts what disposal
+    /// did (an unsubscribe) must use this.
+    /// </remarks>
+    /// <returns>A task that completes when the components are disposed.</returns>
+    public Task DisposeComponentsOnDispatcherAsync() => this.Renderer.Dispatcher.InvokeAsync(this.DisposeComponentsAsync);
+
+    /// <summary>
     /// Renders <paramref name="content"/> alongside a <see cref="MudPopoverProvider"/> and a
     /// <see cref="MudDialogProvider"/> in one synthetic root, so a component under test that opens a
     /// popover (<c>MudSelect</c>, <c>MudMenu</c>, <c>MudAutocomplete</c>) or a dialog (anything shown

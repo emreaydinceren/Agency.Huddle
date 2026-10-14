@@ -114,7 +114,41 @@ public sealed class TeammateCardCommandsTests
         _ = await OpenViewCardAsync(ctx, factory, "coo");
         Assert.Equal(1, commands.SubscriberCount);
 
-        await ctx.DisposeComponentsAsync();
+        await ctx.DisposeComponentsOnDispatcherAsync();
+
+        Assert.Equal(0, commands.SubscriberCount);
+    }
+
+    /// <summary>
+    /// The card still unsubscribes when the renderer's dispatcher is busy at the moment the test disposes it,
+    /// as it is whenever a SQLite lookup's continuation lands then. bUnit queues its disposal behind that
+    /// work and clears its root list first, so a plain <c>DisposeComponentsAsync</c> disposes nothing; see
+    /// <see cref="MudBunitContext.DisposeComponentsOnDispatcherAsync"/>.
+    /// </summary>
+    [Fact]
+    public async Task Dispose_WhileTheRendererIsBusy_Unsubscribes()
+    {
+        CancellationToken ct = Xunit.TestContext.Current.CancellationToken;
+        await using var factory = new TeamWebApplicationFactory();
+        await SeedPersonaAsync(factory, "coo", "x");
+        var commands = factory.Services.GetRequiredService<PersonaCommands>();
+        await using var ctx = NewContext(factory);
+        _ = await OpenViewCardAsync(ctx, factory, "coo");
+        Assert.Equal(1, commands.SubscriberCount);
+        using ManualResetEventSlim held = new();
+        using ManualResetEventSlim release = new();
+
+        // Holds the dispatcher from another thread, as a lookup's continuation does, until the disposal is queued.
+        Task busy = Task.Run(() => ctx.Renderer.Dispatcher.InvokeAsync(() =>
+        {
+            held.Set();
+            release.Wait(ct);
+        }), ct);
+        held.Wait(ct);
+        Task disposing = ctx.DisposeComponentsOnDispatcherAsync();
+        release.Set();
+        await busy;
+        await disposing;
 
         Assert.Equal(0, commands.SubscriberCount);
     }
