@@ -1,9 +1,7 @@
 @*
     The Right sidebar (S4): a persistent drawer on the window's right edge, under the Top bar, opened
-    and closed by RightSidebarToggle (S1c). What it holds is contextual: the blocks the focused pane's
-    active page has put in it with RightSidebarContent, so it changes when focus moves to the other
-    pane or another Tab. A page that puts nothing in it gets a one-line empty state. The blocks are
-    drawn only while it is open, so a closed sidebar costs the pages nothing to render.
+    and closed by RightSidebarToggle (S1c). Until the panel host lands (T4.3) it draws only its one-line
+    empty state, and only while it is open.
 *@
 @using Agency.Huddle.App.Tabs
 @implements IDisposable
@@ -21,24 +19,7 @@
            aria-label="Right sidebar">
     @if (this.Sidebar.IsOpen)
     {
-        IReadOnlyList<RightSidebarSection> sections = this.Sidebar.SectionsFor(this.Tabs.Active?.Id);
-        if (sections.Count == 0)
-        {
-            <EmptyState Text="This page has nothing to show here." />
-        }
-        else
-        {
-            @foreach (RightSidebarSection section in sections)
-            {
-                <section class="right-sidebar-section" aria-label="@section.Title">
-                    @if (section.Title is not null)
-                    {
-                        <MudText Typo="Typo.subtitle2" Class="right-sidebar-title">@section.Title</MudText>
-                    }
-                    @section.Content
-                </section>
-            }
-        }
+        <EmptyState Text="This page has nothing to show here." />
     }
 </MudDrawer>
 

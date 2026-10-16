@@ -1,27 +1,21 @@
-using Microsoft.AspNetCore.Components;
+using Agency.Huddle.App.Sidebar;
 
 namespace Agency.Huddle.App.Tabs;
 
-/// <summary>One block of content a page has put in the Right sidebar (<c>S4</c>).</summary>
-/// <param name="TabId">The Tab whose page supplied it; the sidebar shows it only while that Tab is <see cref="TabService.Active"/>.</param>
-/// <param name="Title">An optional heading drawn above the content.</param>
-/// <param name="Order">Where it sits among the same Tab's sections: lower first, ties in the order they were added.</param>
-/// <param name="Content">What to draw. It is the page's own fragment, so its handlers run on the page.</param>
-internal sealed record RightSidebarSection(string TabId, string? Title, int Order, RenderFragment Content);
-
 /// <summary>
-/// The Right sidebar of one circuit: whether it is open, and the sections each mounted page has put in
-/// it. A page never talks to this directly; it renders <c>RightSidebarContent</c>, which knows its Tab
-/// from the cascaded <see cref="TabPageContext"/>. Sections are kept per Tab rather than as one list
-/// because two panes mount two pages at once, and the sidebar must follow the focused pane's Tab, not
-/// whichever page rendered last. Scoped per circuit, and touched only on the renderer's thread.
+/// The Right sidebar of one circuit: whether it is open, and the Subject each mounted page has published
+/// (Spec D-2). A page never talks to this directly; it renders <c>PageSubjectSource</c>, which knows its
+/// Tab from the cascaded <see cref="TabPageContext"/>. Subjects are kept per Tab because two panes mount
+/// two pages at once, and the sidebar must follow the focused pane's Tab. Scoped per circuit, and touched
+/// only on the renderer's thread.
 /// </summary>
 internal sealed class RightSidebarService
 {
-    private readonly SortedDictionary<long, RightSidebarSection> sections = [];
+    private readonly Dictionary<long, (string TabId, PageSubject Subject, long Seq)> entries = [];
     private long lastId;
+    private long lastSeq;
 
-    /// <summary>Raised after the sidebar is opened or closed, or any section is added, changed or removed.</summary>
+    /// <summary>Raised after the sidebar is opened or closed, or any Subject is added, changed or removed.</summary>
     public event Action? Changed;
 
     /// <summary>Whether the sidebar is shown. It starts closed.</summary>
@@ -34,32 +28,56 @@ internal sealed class RightSidebarService
         this.Changed?.Invoke();
     }
 
-    /// <summary>A new handle for one section, to pass to <see cref="Set"/> and <see cref="Remove"/>.</summary>
+    /// <summary>A new handle for one source, to pass to <see cref="Set"/> and <see cref="Remove"/>.</summary>
     public long NewId() => ++this.lastId;
 
-    /// <summary>Adds the section with handle <paramref name="id"/>, or replaces it.</summary>
+    /// <summary>Publishes <paramref name="subject"/> for Tab <paramref name="tabId"/> under handle <paramref name="id"/>; an equal repeat does nothing and raises nothing.</summary>
     /// <param name="id">A handle from <see cref="NewId"/>.</param>
-    /// <param name="section">The section's current content.</param>
-    public void Set(long id, RightSidebarSection section)
+    /// <param name="tabId">The Tab whose page publishes it.</param>
+    /// <param name="subject">What the page is showing now.</param>
+    public void Set(long id, string tabId, PageSubject subject)
     {
-        this.sections[id] = section;
+        if (this.entries.TryGetValue(id, out (string TabId, PageSubject Subject, long Seq) existing)
+            && string.Equals(existing.TabId, tabId, StringComparison.Ordinal)
+            && existing.Subject == subject)
+        {
+            return;
+        }
+
+        this.entries[id] = (tabId, subject, ++this.lastSeq);
         this.Changed?.Invoke();
     }
 
-    /// <summary>Removes the section with handle <paramref name="id"/>; does nothing when there is none.</summary>
+    /// <summary>Removes the source with handle <paramref name="id"/>; does nothing when there is none.</summary>
     /// <param name="id">A handle from <see cref="NewId"/>.</param>
     public void Remove(long id)
     {
-        if (this.sections.Remove(id))
+        if (this.entries.Remove(id))
         {
             this.Changed?.Invoke();
         }
     }
 
-    /// <summary>The sections the page of Tab <paramref name="tabId"/> has put in the sidebar, in the order to draw them.</summary>
+    /// <summary>The Subject most recently set for Tab <paramref name="tabId"/>, or null when there is none.</summary>
     /// <param name="tabId">The Tab's id, or <see langword="null"/> when no Tab is open.</param>
-    public IReadOnlyList<RightSidebarSection> SectionsFor(string? tabId) =>
-        tabId is null
-            ? []
-            : [.. this.sections.Values.Where(section => string.Equals(section.TabId, tabId, StringComparison.Ordinal)).OrderBy(section => section.Order)];
+    public PageSubject? SubjectFor(string? tabId)
+    {
+        if (tabId is null)
+        {
+            return null;
+        }
+
+        PageSubject? best = null;
+        long bestSeq = -1;
+        foreach ((string entryTab, PageSubject subject, long seq) in this.entries.Values)
+        {
+            if (seq > bestSeq && string.Equals(entryTab, tabId, StringComparison.Ordinal))
+            {
+                best = subject;
+                bestSeq = seq;
+            }
+        }
+
+        return best;
+    }
 }
