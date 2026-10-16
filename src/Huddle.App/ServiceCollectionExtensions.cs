@@ -406,6 +406,7 @@ public static class ServiceCollectionExtensions
 
         // Scoped: whether this circuit's Right sidebar is open, and what each mounted page put in it.
         services.AddScoped<Tabs.RightSidebarService>();
+        services.AddSingleton<Sidebar.SidebarPanelCatalog>();
         services.AddScoped<Components.Shared.TeammateCardOpener>();
 
         // Stateless reader over singletons: builds the card the avatar profile popover shows.
