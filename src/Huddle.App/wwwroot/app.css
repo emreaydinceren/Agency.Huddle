@@ -4245,6 +4245,8 @@ a.team-ref,
     .task-detail-prop-label {
         padding-top: 8px;
     }
+}
+
 /* Chips (design-system.md "Chips"): four looks, one per job. A status colour is never a solid fill under text.
    1. Status or priority, tinted: the status colour at 14% over Surface; text and icon the colour mixed 70% toward
       TextPrimary. StatusChipContrast mirrors the two mixes in C# and a test holds the pair to 4.5:1. */
@@ -4312,6 +4314,8 @@ a.team-ref,
 .chip-meta {
     color: var(--mud-palette-text-secondary);
     font-size: var(--mud-typography-caption-size);
+}
+
 /* ---- Reading pages start at the same left edge as every other page (DS-10) ---------------------
    A reading page (Settings, Teammates, Build a team) limits the width of its content, not its position:
    MudContainer centres itself with auto margins, and this drops them so the title does not move when

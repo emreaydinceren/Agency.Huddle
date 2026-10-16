@@ -11,8 +11,19 @@
   const LARGE_BOLD_PX = 18.66;
   const EXAMPLES = 3;
 
-  /** Parses "rgb(...)" or "rgba(...)" (comma or space syntax) into {r,g,b,a}, or null. */
+  /**
+   * Parses "rgb(...)" or "rgba(...)" (comma or space syntax) into {r,g,b,a}, or null. Also reads
+   * "color(srgb r g b / a)", which is how a browser reports a resolved color-mix().
+   */
   function parseColor(text) {
+    const srgb = /^color\(srgb\s+([\d.e-]+)\s+([\d.e-]+)\s+([\d.e-]+)(?:\s*\/\s*([\d.]+)(%?))?\s*\)$/.exec((text || '').trim());
+    if (srgb) {
+      let alpha = srgb[4] === undefined ? 1 : parseFloat(srgb[4]);
+      if (srgb[5] === '%') {
+        alpha /= 100;
+      }
+      return { r: parseFloat(srgb[1]) * 255, g: parseFloat(srgb[2]) * 255, b: parseFloat(srgb[3]) * 255, a: alpha };
+    }
     const m = /^rgba?\(\s*([\d.]+)[\s,]+([\d.]+)[\s,]+([\d.]+)(?:\s*[,/]\s*([\d.]+)(%?))?\s*\)$/.exec((text || '').trim());
     if (!m) {
       return null;
