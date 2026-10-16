@@ -14,7 +14,9 @@
         {
             string presenceText = string.Create(CultureInfo.InvariantCulture, $"{name} is {presence}");
             <MudTooltip Text="@presenceText">
-                <MudBadge Dot="true" Overlap="true" Origin="Origin.BottomRight" Class="task-card-presence" Color="@TaskColors.For(presence)" BadgeAriaLabel="@presenceText">
+                @* The badge carries a glyph as well as a colour: PresenceCue.From maps Presence into the four shapes and the
+                   glyph class makes app.css draw it. The accessible name stays "{name} is {presence}". *@
+                <MudBadge Dot="true" Overlap="true" Origin="Origin.BottomRight" Class="@PresenceClass(presence)" Color="@TaskColors.For(presence)" BadgeAriaLabel="@presenceText">
                     @this.AvatarFor(name)
                 </MudBadge>
             </MudTooltip>
@@ -47,6 +49,14 @@
     /// </summary>
     [Parameter]
     public bool ShowProfile { get; set; }
+
+    /// <summary>The classes of a presence badge: the card-badge frame, the glyph and the tone, from <see cref="PresenceCue.From(PresenceState)"/>.</summary>
+    /// <param name="presence">The assignee's presence.</param>
+    internal static string PresenceClass(PresenceState presence)
+    {
+        PresenceCue cue = PresenceCue.From(presence);
+        return $"task-card-presence presence-glyph-{cue.Glyph.ToString().ToLowerInvariant()} {cue.Tone}";
+    }
 
     /// <summary>The avatar for an assignee name: a profile button when <see cref="ShowProfile"/>, else the plain avatar.</summary>
     private RenderFragment<string> AvatarFor => name => @<text>
