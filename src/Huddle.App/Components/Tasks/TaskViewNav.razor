@@ -23,13 +23,13 @@
 {
     <MudNavMenu Class="task-view-nav">
         <MudNavGroup Title="Tasks" Icon="@Icons.Material.Outlined.TaskAlt" @bind-Expanded="this.expanded">
-            @foreach (TaskView view in this.ViewStore.Views)
+            @foreach (TaskView view in SidebarRows.Visible(this.ViewStore.Views, this.showAll, this.IsActiveView))
             {
                 <div @key="view.Id" class="hover-reveal-row"
                      @oncontextmenu="@(e => this.OnRowContextMenuAsync(view.Id, e))"
                      @oncontextmenu:preventDefault="true">
                     <NavTabLink Href="@($"/tasks/{view.Id}")" TabTitle="@view.Name" Class="hover-reveal-link"
-                                Icon="@(view.Kind == ViewKind.Board ? Icons.Material.Filled.ViewWeek : Icons.Material.Filled.TableRows)">@view.Name</NavTabLink>
+                                Icon="@(view.Kind == ViewKind.Board ? Icons.Material.Filled.ViewWeek : Icons.Material.Filled.TableRows)"><span class="sidebar-row-label" title="@view.Name">@view.Name</span></NavTabLink>
                     <MudMenu @ref="@this.menuRefs[view.Id]" Class="hover-reveal-menu">
                         @* ActivatorContent replaces MudMenu's own built-in activator entirely, so
                            MudMenu does not wire a click listener around it automatically - the
@@ -54,6 +54,7 @@
                     </MudMenu>
                 </div>
             }
+            <ShowAllRow Total="this.ViewStore.Views.Count" Expanded="this.showAll" OnToggle="this.ToggleShowAll" />
             @foreach (InvalidView invalid in this.ViewStore.InvalidViews)
             {
                 @if (invalid.Id is { } id)
@@ -78,19 +79,42 @@
 }
 
 @code {
-    private bool expanded = true;
+    private bool expanded;
+    private bool showAll;
+    private string currentPath = string.Empty;
     private readonly Dictionary<string, MudMenu> menuRefs = new(StringComparer.Ordinal);
 
     /// <summary>Subscribes to <see cref="ViewStore.ViewsChanged"/> so the nav follows every save, delete or hand edit of <c>views.json</c>.</summary>
     protected override void OnInitialized()
     {
         this.ViewStore.ViewsChanged += this.OnViewsChanged;
+        this.Navigation.LocationChanged += this.OnLocationChanged;
+        this.currentPath = SidebarRows.CurrentPath(this.Navigation);
+        this.expanded = SidebarRows.InSection(this.currentPath, "tasks");
     }
 
-    /// <summary>Unsubscribes from <see cref="ViewStore.ViewsChanged"/>.</summary>
+    /// <summary>Unsubscribes from <see cref="ViewStore.ViewsChanged"/> and navigation.</summary>
     public void Dispose()
     {
         this.ViewStore.ViewsChanged -= this.OnViewsChanged;
+        this.Navigation.LocationChanged -= this.OnLocationChanged;
+    }
+
+    private bool IsActiveView(TaskView view) =>
+        string.Equals(this.currentPath, $"tasks/{view.Id}", StringComparison.OrdinalIgnoreCase);
+
+    private void ToggleShowAll() => this.showAll = !this.showAll;
+
+    /// <summary>Opens the group when navigation lands inside Tasks; it never closes it.</summary>
+    private void OnLocationChanged(object? sender, LocationChangedEventArgs e)
+    {
+        _ = RendererDispatch.RunAsync(this.InvokeAsync, () =>
+        {
+            this.currentPath = SidebarRows.CurrentPath(this.Navigation);
+            this.expanded |= SidebarRows.InSection(this.currentPath, "tasks");
+            this.StateHasChanged();
+            return Task.CompletedTask;
+        });
     }
 
     /// <summary>
