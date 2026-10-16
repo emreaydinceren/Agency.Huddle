@@ -446,20 +446,20 @@ a.team-ref,
    A persistent MudDrawer anchored at the end, so its hairline is on the side facing the workspace:
    the .mud-drawer rule above draws the left sidebar's edge on the end side. Global for the same reason
    as the two rules above - RightSidebar's only markup is a child component. Its blocks stack with the
-   1rem step and scroll inside the drawer's own content element. */
+   16px step and scroll inside the drawer's own content element. */
 .mud-drawer.right-sidebar {
     border-inline-end: none;
     border-inline-start: 1px solid var(--mud-palette-lines-default);
 }
 
 .right-sidebar .mud-drawer-content {
-    gap: 1rem;
-    padding: 1rem;
+    gap: 16px;
+    padding: 16px;
     overflow-y: auto;
 }
 
 .right-sidebar-title {
-    margin-bottom: 0.5rem;
+    margin-bottom: 8px;
 }
 
 /* ---- Left menu: a top-level MudNavLink vs. a MudNavGroup and everything inside it ------------

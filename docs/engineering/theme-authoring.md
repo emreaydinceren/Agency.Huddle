@@ -42,17 +42,19 @@ variable (`--mud-palette-text-secondary`).
 ![The shell and a Room drawn in Huddle Light's own colours, with 17 numbered badges marking which palette property paints each part](../images/themes/palette-map.svg)
 
 The figure is drawn in Huddle Light's real values, so it is also a reference sample of
-that Theme. Each badge marks one element:
+that Theme. It predates the one-surface shell: the page, the sidebar, the top bar and the tab
+strip are now all `Surface`, split by `LinesDefault` hairlines, so read badges 1, 2, 4 and 7
+from the table below rather than from the picture. Each badge marks one element:
 
 | # | What you see | Palette property | How |
 | --- | --- | --- | --- |
-| 1 | The page ground behind the messages | `Background` | Direct |
-| 2 | The top bar | `DrawerBackground` and `Surface` | Blend, 50% each |
+| 1 | The page ground behind the messages | `Surface` | Direct. `Background` is no longer painted by the shell |
+| 2 | The top bar | `Surface` | Direct |
 | 3 | The line under the top bar, the tab strip and the Room header; the sidebar's right edge; an outlined card's border | `LinesDefault` | Direct |
-| 4 | The sidebar | `DrawerBackground` | Direct |
-| 5 | The active sidebar row's text; "New chat"; links in messages | `Primary` | Direct. The row's fill is MudBlazor's hover shade |
+| 4 | The sidebar | `Surface` | Direct. `DrawerBackground` is no longer painted by the shell |
+| 5 | The active sidebar row's text; links in messages | `Primary` | Direct for the active row; links blend toward `TextPrimary` (see the blends). "New chat" and other text actions are `TextSecondary` |
 | 6 | Group headings (CHATS, TEAMS); a message's time; an inactive tab's title | `TextSecondary` | Direct |
-| 7 | The tab strip | `BackgroundGray` | Direct |
+| 7 | The tab strip | `Surface` | Direct |
 | 8 | Message cards, the active tab, the Needs You card, the Composer, dialogs | `Surface` | Direct |
 | 9 | The 2px line on top of the active tab | `Primary` | Direct |
 | 10 | Message card borders; the day separator's rule | `Divider` | Direct |
@@ -81,7 +83,9 @@ The blends the app uses:
 
 | What you see | Recipe |
 | --- | --- |
-| The top bar | `DrawerBackground` 50% + `Surface` |
+| Link text and reference links | `Primary` 70% + `TextPrimary`, which darkens the accent on a light Theme and lightens it on a dark one so it reads as text |
+| The orphan-folder warning glyph | `Warning` 75% + `TextPrimary` |
+| The Library's raw Markdown side in Split | `TextPrimary` 3% over `Surface` |
 | Your message bubble | `Primary` 14% over `Surface`, border `Primary` 28% |
 | A selected row, card or Team type | `Primary` 14% over `Surface` |
 | A selected row while hovered; a search hit's flash | `Primary` 24% over `Surface` |
@@ -108,22 +112,22 @@ The codes (`S1`, `C6` and so on) are the container names in
 
 | Code | Element | Palette |
 | --- | --- | --- |
-| `S1` | Top bar | Fill `DrawerBackground` 50% + `Surface`; icons and text `TextSecondary`; bottom line `LinesDefault` |
+| `S1` | Top bar | Fill `Surface`; icons and text `TextSecondary`; bottom line `LinesDefault` |
 | `S1a` | Breadcrumb | Earlier crumbs `TextSecondary`; the current page and a hovered crumb `TextPrimary` |
 | `S1b` | Search bar | Input `Surface`, the same as the Composer; the highlighted result the hover shade |
-| `S2` | Sidebar | `DrawerBackground`; right edge `LinesDefault` |
+| `S2` | Sidebar | `Surface`; right edge `LinesDefault` |
 | `S2a` | Needs You card | `Surface`, border `Divider` |
 | `S2b`–`S2e` | Group headings | `TextSecondary` |
 | `S2b`–`S2e` | Active row | Text `Primary`, fill the hover shade |
-| `S2b` | "New chat" and other action rows | `Primary` text and icon |
-| `S2c` | Expand chevrons, a Project's icon | `ActionDefault` (MudBlazor's icon grey) and `TextSecondary` |
+| `S2b` | "New chat" and other action rows | `TextSecondary` text and icon |
+| `S2c` | Expand chevrons, a Project's icon | `TextSecondary`, open or closed |
 | any | Health dots | Online `Success`, degraded and starting `Warning` (starting lighter), offline `Error` |
 
 **The workspace** ([Figure 2](wireframes.md#figure-2-the-workspace-with-two-tab-groups)):
 
 | Code | Element | Palette |
 | --- | --- | --- |
-| `W3` | Tab strip | `BackgroundGray`, bottom line `LinesDefault` |
+| `W3` | Tab strip | `Surface`, bottom line `LinesDefault` |
 | `W4` | Inactive tab | Text `TextSecondary`, separators `LinesDefault` |
 | `W4` | Active tab | `Surface`, text `TextPrimary`, top line `Primary` |
 | `W2` | The unfocused group's active tab | Top line `LinesDefault` instead of `Primary` |
@@ -133,12 +137,12 @@ The codes (`S1`, `C6` and so on) are the container names in
 
 | Code | Element | Palette |
 | --- | --- | --- |
-| `C2` | Room header | On `Background`; title `TextPrimary`; bottom line `LinesDefault` |
+| `C2` | Room header | On `Surface`; title `TextPrimary`; bottom line `LinesDefault` |
 | `C4a` | Day separator | Label `TextSecondary`, rule `Divider` |
 | `C4b` | System row | `TextSecondary` |
 | `C5a` | Avatar monogram | `Primary` fill, `PrimaryContrastText` letter, unless the Teammate chose a colour (see below) |
 | `C5b` | Message meta | Name `TextPrimary`, time `TextSecondary` |
-| `C5c` | Message card | `Surface`, border `Divider`, text `TextPrimary`; quotes `TextSecondary` with a `Divider` bar; links `Primary` |
+| `C5c` | Message card | `Surface`, border `Divider`, text `TextPrimary`; quotes `TextSecondary` with a `Divider` bar; links `Primary` 70% + `TextPrimary` |
 | `C6` | Your bubble | `Primary` 14% over `Surface`, border 28% |
 | `C7b` | Turn detail | `TextSecondary` and `TextDisabled`; an edit preview's removed and added sides are marked `Error` and `Success` |
 | `C7c` | Draft caret, tool activity | `TextDisabled` |
@@ -154,7 +158,7 @@ The codes (`S1`, `C6` and so on) are the container names in
 | --- | --- | --- |
 | `T2d` | Counts | `TextSecondary`, numbers `TextPrimary`; "need you" darkened `Warning` |
 | `T3` | Filter chips | Border `LinesInputs`; a set chip has a `Primary` border and a translucent `Primary` fill |
-| `T4` | Board ground | `Background` |
+| `T4` | Board ground | `Surface` |
 | `T5` | Column | `BackgroundGray`, with a coloured left edge per state: To Do `Info`, In Progress `Warning`, Review `Secondary`, Done `Success`, Cancelled, Duplicate and Rejected `Error`, Backlog `TextDisabled` |
 | `T6` | Task card | `Surface`; assignee row rule `LinesDefault`; dragging border `Primary` |
 | `T6` | Selected card or list row | `Primary` 14% over `Surface` (24% when hovered), plus a `Primary` outline on cards |
@@ -170,7 +174,7 @@ The codes (`S1`, `C6` and so on) are the container names in
 | `L3a` | File path | `TextSecondary` |
 | `L3b` | Read / Edit / Split switch | Track `BackgroundGray`, sliding indicator `Surface` with a `LinesDefault` border; active label `TextPrimary`, others `TextSecondary` |
 | `L3e` | Editor | `Surface`, text `TextPrimary`; current line the hover shade; selection a translucent `Primary`; front matter block `BackgroundGray` |
-| `L3e` | A link to a missing file | `TextDisabled` |
+| `L3e` | A link to a missing file | `TextSecondary`, with a dashed underline |
 
 **Settings, Teammates, Team pages and Build a team** ([Figures 6, 7 and 9](wireframes.md#figure-6-tabbed-pages-team-page-and-settings)):
 
@@ -191,7 +195,7 @@ The codes (`S1`, `C6` and so on) are the container names in
 | Code | Element | Palette |
 | --- | --- | --- |
 | `O1`, `O5` | Dialog | `Surface`, text `TextPrimary`; the dimmed page behind it `OverlayDark` |
-| `O2`, `T7` | Side drawer (Task detail and others) | `DrawerBackground`, the same as the sidebar |
+| `O2`, `T7` | Side drawer (Task detail and others) | `Surface`, the same as the sidebar |
 | `O3`, `O9` | Menu, popover, profile popover | `Surface`; the profile popover's border `Divider` |
 | `O4` | Snackbar | Derived from the status colour of the message |
 | `O7` | Tooltip | **Not themed**: MudBlazor's own dark grey and white |
@@ -237,15 +241,15 @@ two Themes, so two tables.
 
 | Palette property | Your value | Notes |
 | --- | --- | --- |
-| `Background` | | Page ground |
+| `Background` | | Not painted by the shell; still checked against `TextPrimary` |
 | `Surface` | | Cards, inputs, dialogs |
-| `DrawerBackground` | | Sidebar |
-| `BackgroundGray` | | Tab strip, columns, chips |
+| `DrawerBackground` | | Not painted by the shell; still checked against `TextPrimary` |
+| `BackgroundGray` | | Board columns, chips, the segmented control's track |
 | `TableHover` | | Table row hover |
 | `Divider` | | Card borders |
 | `DividerLight` | | Rules inside a card |
 | `LinesInputs` | | Input borders |
-| `LinesDefault` | | Chrome lines, outlined cards |
+| `LinesDefault` | | Chrome lines and pane dividers, which must be clearly visible on `Surface` (Huddle: 2.1:1 light, 2.5:1 dark); outlined cards |
 | `TextPrimary` | | Body text and the focus ring |
 | `TextSecondary` | | Supporting text |
 | `TextDisabled` | | Placeholders, inert text |
@@ -331,9 +335,9 @@ the last column is where you will see a mistake.
 
 | Palette property | CSS variable | What it paints |
 | --- | --- | --- |
-| `Background` | `--mud-palette-background` | The page behind everything |
+| `Background` | `--mud-palette-background` | Nothing in the shell: the page is `Surface`. MudBlazor and the contrast tests still read it |
 | `Surface` | `--mud-palette-surface` | Cards, inputs, dialogs, menus — the raised layer. Selected and accent-tinted states are mixed over it |
-| `DrawerBackground` | `--mud-palette-drawer-background` | The left sidebar and side drawers such as Task detail; half of the top bar's blend |
+| `DrawerBackground` | `--mud-palette-drawer-background` | Nothing in the shell: the sidebar and side drawers are `Surface`. The contrast tests still read it |
 | `BackgroundGray` | `--mud-palette-background-gray` | Quiet fills: chips, the segmented control's track, preview blocks |
 | `TableHover` | (MudBlazor tables) | Row hover inside a table only |
 | `Divider` | `--mud-palette-divider` | Card, tile and list-row borders |
