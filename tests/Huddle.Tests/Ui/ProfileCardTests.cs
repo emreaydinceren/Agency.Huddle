@@ -50,7 +50,7 @@ public sealed class ProfileCardTests
         Assert.Empty(cut.FindAll(".agent-dot"));
     }
 
-    /// <summary>A set state draws the status dot inside the name.</summary>
+    /// <summary>A set state draws the presence badge on the avatar rim, not a dot beside the name.</summary>
     [Fact]
     public async Task State_Set_DrawsStatusDot()
     {
@@ -58,7 +58,8 @@ public sealed class ProfileCardTests
 
         var cut = RenderIt(ctx, Plain with { State = PersonaState.Online });
 
-        Assert.Single(cut.FindAll(".roster-name .agent-dot.online"));
+        Assert.Single(cut.FindAll(".roster-card-head .presence-anchor > .agent-dot.on-avatar.online"));
+        Assert.Empty(cut.FindAll(".roster-name .agent-dot"));
     }
 
     /// <summary>A null tier draws no tier chip.</summary>

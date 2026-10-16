@@ -12,7 +12,7 @@
 }
 
 <button type="button" class="@this.CardClass" aria-pressed="@(this.Selected ? "true" : "false")" @onclick="this.OnSelect">
-    <span class="@($"team-type-icon team-type-tint-{style.Color.ToString().ToLowerInvariant()}")" aria-hidden="true">
+    <span class="team-type-icon" aria-hidden="true">
         <MudIcon Icon="@style.Icon" Size="Size.Small" />
     </span>
     <span class="team-type-text">
@@ -22,7 +22,7 @@
             <span class="team-type-roles">@(this.MetaText ?? $"Manager + {Plural.Of(this.Roles, "role", "roles")}")</span>
             @if (this.Owned)
             {
-                <span class="team-type-owned">You have one</span>
+                <span class="chip-meta team-type-owned">You have one</span>
             }
         </span>
     </span>
@@ -36,7 +36,7 @@
 </button>
 
 @code {
-    /// <summary>The team type's id, which picks its icon and tint and is what <see cref="OnPick"/> reports.</summary>
+    /// <summary>The team type's id, which picks its icon and is what <see cref="OnPick"/> reports.</summary>
     [Parameter]
     [EditorRequired]
     public string TypeId { get; set; } = string.Empty;
