@@ -136,7 +136,13 @@
 
 @code {
     private IReadOnlyList<LibraryPath> resolvedScopes = [];
+    internal const int DividerRestoreAttempts = 5;
+
+    private static readonly TimeSpan DividerRestoreDelay = TimeSpan.FromMilliseconds(100);
+
     private LibraryPath? currentPath;
+    private LibraryPath? publishedPath;
+    private bool locationPublished;
     private LibraryPath? selectedPath;
     private bool unavailable;
     private string unavailableReason = string.Empty;
@@ -206,6 +212,10 @@
     /// <summary>Raised by the document's outside-scope hint's "Open in Library" action.</summary>
     [Parameter]
     public EventCallback<LibraryPath> OnOpenInLibrary { get; set; }
+
+    /// <summary>Raised after render with the open document's path, or <see langword="null"/> when none is open, each time that changes. The /library page turns it into the shell breadcrumb.</summary>
+    [Parameter]
+    public EventCallback<LibraryPath?> OnOpenFileChanged { get; set; }
 
     /// <summary>A name filter (Spec §6.8). Null or blank shows the tree; otherwise the tree is hidden (never
     /// unmounted) and the name matches under every scope render beside it. The explorer does not debounce.</summary>
@@ -347,6 +357,13 @@
             this.TryOpenFromQuery(this.Navigation.Uri);
             await this.RestoreStateAsync();
         }
+
+        if (this.OnOpenFileChanged.HasDelegate && (!this.locationPublished || this.currentPath != this.publishedPath))
+        {
+            this.locationPublished = true;
+            this.publishedPath = this.currentPath;
+            await this.OnOpenFileChanged.InvokeAsync(this.currentPath);
+        }
     }
 
     /// <summary>[12.7b] Restores the remembered open file and divider position under <see cref="StateKey"/>
@@ -376,13 +393,38 @@
                 string? storedDivider = await this.JS.InvokeAsync<string?>("huddleStorage.get", DividerKey(this.StateKey, this.Layout));
                 if (int.TryParse(storedDivider, NumberStyles.Integer, CultureInfo.InvariantCulture, out int position))
                 {
-                    await this.splitPanel.SetDividerPositionAsync(position);
+                    await SetDividerWhenReadyAsync(this.splitPanel, position);
                 }
             }
         }
         catch (JSDisconnectedException)
         {
             // The circuit is gone before the restore finished; nothing left to restore into.
+        }
+    }
+
+    /// <summary>Sets the divider once <paramref name="panel"/>'s script has registered it. MudSplitPanel
+    /// registers itself with <c>window.splitPanels</c> in its own render cycle, which can still be in flight
+    /// when this first render ends, and <c>setDividerPosition</c> then throws a <see cref="JSException"/>
+    /// that would take the whole circuit down. Retries <see cref="DividerRestoreAttempts"/> times, then
+    /// leaves the divider where the panel put it: a missing remembered position is not worth a crash.</summary>
+    private static async Task SetDividerWhenReadyAsync(MudSplitPanel panel, int position)
+    {
+        for (int attempt = 1; attempt <= DividerRestoreAttempts; attempt++)
+        {
+            try
+            {
+                await panel.SetDividerPositionAsync(position);
+                return;
+            }
+            catch (JSException) when (attempt < DividerRestoreAttempts)
+            {
+                await Task.Delay(DividerRestoreDelay);
+            }
+            catch (JSException)
+            {
+                // Never registered: the divider stays at FirstPanelInitialSize.
+            }
         }
     }
 

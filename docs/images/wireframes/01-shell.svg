@@ -19,7 +19,7 @@
 <text x="72.8" y="118" font-size="12" font-weight="600" fill="#1f2430" text-anchor="start">Top bar</text>
 <text x="129.8" y="118" font-size="11" font-weight="400" fill="#6b7280" text-anchor="start">MudAppBar</text>
 <rect x="48" y="134" width="330" height="24" rx="4" fill="#f6f7f9" stroke="#8b93a1" stroke-width="1.2"/>
-<text x="82" y="150.0" font-size="11" font-weight="400" fill="#1f2430" text-anchor="start">Team  ›  Chat   (breadcrumb of the focused pane)</text>
+<text x="82" y="150.0" font-size="11" font-weight="400" fill="#1f2430" text-anchor="start">Library  ›  Teammates  ›  Lena  ›  Lena.md   (breadcrumb of the focused pane)</text>
 <rect x="44" y="126" width="32" height="17" rx="8.5" fill="#1d4f8f"/>
 <text x="60.1" y="138.5" font-size="11" font-weight="700" fill="#fff" text-anchor="middle">S1a</text>
 <rect x="430" y="134" width="350" height="24" rx="4" fill="#f6f7f9" stroke="#8b93a1" stroke-width="1.2"/>

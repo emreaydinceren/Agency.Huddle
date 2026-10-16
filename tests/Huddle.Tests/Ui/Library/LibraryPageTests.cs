@@ -7,6 +7,7 @@ using Agency.Huddle.App;
 using Agency.Huddle.App.Acp;
 using Agency.Huddle.App.Components.Library;
 using Agency.Huddle.App.Library;
+using Agency.Huddle.App.Tabs;
 using Agency.Huddle.App.Tasks;
 using Agency.Huddle.Tests.Library;
 using Agency.Huddle.Tests.Tasks;
@@ -45,18 +46,17 @@ public sealed class LibraryPageTests : IDisposable
         Assert.False(cut.FindComponent<MudSplitPanel>().Instance.Horizontal);
     }
 
-    /// <summary>The page opens with a <c>PageHeader</c>: one h1 "Library" at Typo.h5 (UX-001).</summary>
+    /// <summary>The page draws no <c>h1</c> of its own: the shell breadcrumb (<c>S1a</c>) names it, as on the Tasks page.</summary>
     [Fact]
-    public async Task Page_HasAnH1TitledLibrary()
+    public async Task Page_HasNoH1OfItsOwn()
     {
         this.fixture.LibraryFixture.CreatePinnedRoot("Notes");
 
         await using MudBunitContext ctx = this.fixture.NewContext();
         IRenderedComponent<ContainerFragment> cut = RenderPage(ctx, root: null, path: null, scopeRoot: null, scopePath: null);
 
-        var heading = Assert.Single(cut.FindAll("h1"));
-        Assert.Equal("Library", heading.TextContent.Trim());
-        Assert.Contains("mud-typography-h5", heading.ClassList);
+        Assert.NotEmpty(cut.FindAll(".library-explorer"));
+        Assert.Empty(cut.FindAll("h1"));
     }
 
     /// <summary><c>?root=…&amp;path=…</c> query parameters open that file on the page.</summary>
@@ -95,9 +95,31 @@ public sealed class LibraryPageTests : IDisposable
         IRenderedComponent<ContainerFragment> cut = RenderPage(
             ctx, root: query["root"].ToString(), path: query["path"].ToString(), scopeRoot: null, scopePath: null);
 
-        cut.WaitForAssertion(() => Assert.NotEmpty(cut.FindAll(".library-document-path")));
-        AngleSharp.Dom.IElement title = cut.Find(".library-document-path");
-        Assert.Equal("My Folder / Test.md", title.TextContent.Trim());
+        cut.WaitForAssertion(() => Assert.NotEmpty(cut.FindAll(".library-rendered")));
+        Assert.Equal(filePath.FullPath, cut.Find(".library-document-path").TextContent.Trim());
+    }
+
+    /// <summary>The open file is named by the shell breadcrumb (<c>S1a</c>), not by the page: the trail is
+    /// <c>Library › root › folders › file</c>, and only <c>Library</c> is a link.</summary>
+    [Fact]
+    public async Task Page_OpenFile_SetsTheShellTrail()
+    {
+        string root = this.fixture.LibraryFixture.CreatePinnedRoot("Notes");
+        Directory.CreateDirectory(Path.Combine(root, "My Folder"));
+        File.WriteAllText(Path.Combine(root, "My Folder", "Test.md"), "test body");
+        LibraryPath filePath = this.fixture.LibraryFixture.Resolve(root, "My Folder/Test.md");
+
+        await using MudBunitContext ctx = this.fixture.NewContext();
+        TabService tabs = ctx.Services.GetRequiredService<TabService>();
+        Tab tab = tabs.Open("/library");
+        IRenderedComponent<ContainerFragment> cut = RenderPage(
+            ctx, root: filePath.Root.Id, path: filePath.RelativePath, scopeRoot: null, scopePath: null);
+
+        cut.WaitForAssertion(() => Assert.Equal(
+            ["Library", filePath.Root.DisplayName, "My Folder", "Test.md"],
+            tabs.Trail(tab).Select(static crumb => crumb.Text)));
+        Assert.Equal("/library", tabs.Trail(tab)[0].Href);
+        Assert.All(tabs.Trail(tab).Skip(1), static crumb => Assert.Null(crumb.Href));
     }
 
     /// <summary>An unknown root in the query shows the explorer with no file open, and no exception.</summary>
@@ -131,9 +153,7 @@ public sealed class LibraryPageTests : IDisposable
 
         cut.WaitForAssertion(() => Assert.NotEmpty(cut.FindAll(".library-explorer")));
         Assert.Empty(cut.FindAll(".library-explorer-title"));
-        Assert.Equal(
-            Path.Combine(this.fixture.LibraryFixture.DataDir, "Teams", "Marketing"),
-            cut.Find(".library-explorer-root-path").TextContent.Trim());
+        Assert.Empty(cut.FindAll(".library-explorer-root-path"));
         cut.WaitForAssertion(() => Assert.Equal(
             ["Campaigns"],
             cut.FindAll(".library-tree-node-name").Select(e => e.TextContent.Trim())));
@@ -218,6 +238,7 @@ public sealed class LibraryPageTests : IDisposable
         public MudBunitContext NewContext(bool libraryEnabled = true)
         {
             MudBunitContext ctx = new();
+            ctx.Services.AddSingleton<TabService>();
             ctx.Services.AddSingleton(this.LibraryFixture.Resolver);
             ctx.Services.AddSingleton(this.LibraryFixture.RootStore);
             ctx.Services.AddSingleton(this.LibraryFixture.CreateService());

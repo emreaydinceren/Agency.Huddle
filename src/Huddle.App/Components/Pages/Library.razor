@@ -31,10 +31,13 @@
 @page "/library"
 @using Microsoft.Extensions.Options
 @using Agency.Huddle.App.Library
+@using Agency.Huddle.App.Tabs
 @inject IOptions<TeamOptions> Options
+@inject TabService Tabs
 
 <MudContainer MaxWidth="MaxWidth.False" Class="pa-4 library-page">
-    <PageHeader Title="Library" />
+    @* The shell breadcrumb (S1a) names the page, so it has no h1 of its own; PageTitle still sets the document title. *@
+    <PageTitle>Library</PageTitle>
     @if (!this.Enabled)
     {
         <MudAlert Severity="Severity.Info" role="status" Class="library-disabled-alert">The Library is turned off.</MudAlert>
@@ -42,11 +45,14 @@
     else
     {
         <LibraryExplorer @key="@this.QueryKey()" Layout="LibraryExplorerLayout.SideBySide" StateKey="page"
-                          Scopes="@this.Scopes()" ShowScopeRoot="@(this.Scopes() is null)" ShowTitle="@(this.Scopes() is not null)" InitialFile="@this.InitialFile()" />
+                          Scopes="@this.Scopes()" ShowScopeRoot="@(this.Scopes() is null)" ShowTitle="false" InitialFile="@this.InitialFile()"
+                          OnOpenFileChanged="@this.OnOpenFileChanged" />
     }
 </MudContainer>
 
 @code {
+    private const string LibraryTabKey = "library";
+
     private bool Enabled => this.Options.Value.Library.Enabled;
 
     /// <summary>The pinned root id of the file to open, from <c>?root=</c>. The four query parameters are plain parameters, filled from the URL of the Tab that shows this page by <c>TabPageRoutes</c>: <c>SupplyParameterFromQuery</c> would read the browser URL, which names only the focused group's Tab.</summary>
@@ -64,6 +70,20 @@
     /// <summary>The scope's path relative to <see cref="ScopeRoot"/>, from <c>?scopePath=</c>. Only takes effect together with <see cref="ScopeRoot"/>.</summary>
     [Parameter]
     public string? ScopePath { get; set; }
+
+    /// <summary>Sets the shell breadcrumb (<c>S1a</c>) to <c>Library › root › folders › file</c> for the open file, or back to the URL's own trail when none is open. Only the file is plain text; <c>Library</c> opens the page with nothing selected.</summary>
+    private void OnOpenFileChanged(LibraryPath? path)
+    {
+        if (path is null)
+        {
+            this.Tabs.SetTrail(LibraryTabKey, null);
+            return;
+        }
+
+        List<TrailCrumb> crumbs = [new("Library", "/library", "library"), new(path.Root.DisplayName, null, string.Empty)];
+        crumbs.AddRange(path.RelativePath.Split('/', StringSplitOptions.RemoveEmptyEntries).Select(static segment => new TrailCrumb(segment, null, string.Empty)));
+        this.Tabs.SetTrail(LibraryTabKey, crumbs);
+    }
 
     private IReadOnlyList<LibraryLocation>? Scopes() =>
         this.ScopeRoot is not null && this.ScopePath is not null

@@ -86,7 +86,7 @@ this.
 | `S0a` | Providers | `MudThemeProvider`, `MudPopoverProvider`, `MudDialogProvider`, `MudSnackbarProvider` | Draw nothing; menus, dialogs and toasts appear through them |
 | `S0b` | Error banner | `#blazor-error-ui` | Hidden until an unhandled error, then offers Reload |
 | `S1` | Top bar | `TopBar` (`MudAppBar`, fixed, dense) | Three slots: start, centre, end |
-| `S1a` | Breadcrumb | `PageBreadcrumbs` | The trail of the focused pane's active Tab |
+| `S1a` | Breadcrumb | `PageBreadcrumbs` | The trail of the focused pane's active Tab. On the Library page it holds the open file's whole location, "Library › Teammates › Lena › Lena.md": the Library page sets it (`TabService.SetTrail`) each time the open file changes, so the page's own toolbar (`L3a`) does not repeat it. Only "Library" is a link (it opens the page with nothing selected) |
 | `S1b` | Search bar | `SearchBar` | Global search; its results open in a dropdown below it |
 | `S1c` | Top bar actions | `ThemeModeToggle` | Switches between the chosen light and dark Theme |
 | `S2` | Sidebar | `MudDrawer`, persistent, 240px | Always open; not resizable |
@@ -199,20 +199,18 @@ Not drawn: `TaskDetailDialog`, the dialog form of the detail (see Figure 8). A V
 
 ## Figure 5: The Library page
 
-`Library.razor`, `LibraryExplorer.razor`, `LibraryDocument.razor`.
+`Library.razor`, `LibraryExplorer.razor`, `LibraryDocument.razor`. `LibraryExplorer` (a `MudSplitPanel`) fills the page with no code of its own (`L1` and `L1a` are retired); the page has no `h1` and no root-path heading, since the shell breadcrumb (`S1a`) names it: the split is `h-100` with `min-height: 0` and both panels are full height; side by side on this page, other hosts can stack the panels.
 
 ![The Library page: a root path heading above a split: a tree panel on the left, a draggable divider, and a document panel on the right with a toolbar, banners, an editor and preview, and a backlinks panel](../images/wireframes/05-library.svg)
 
 | Code | Name | Component | Notes |
 | --- | --- | --- | --- |
-| `L1` | Explorer | `LibraryExplorer`, `MudSplitPanel` | Under the `PageHeader` "Library"; the split is `h-100` with `min-height: 0` and both panels are full height; side by side on this page, other hosts can stack the panels |
-| `L1a` | Root path | `h2` | The root's full path, shown only when the page is scoped to one root, below the page's `h1`; some hosts show a title here instead |
 | `L2` | Tree panel | First panel | |
 | `L2a` | Tree | `LibraryTree`, `MudTreeView` | Loads a folder's children when it opens |
 | `L2b` | Filtered results | `.library-search-results` | Replace the tree while a filter is set |
 | `L4` | Divider | `MudSplitPanel` divider | A `lines-default` hairline; draggable; the position is remembered |
 | `L3` | Document panel | Second panel, `LibraryDocument` | With nothing open: "Select a note to read it" and a New note button |
-| `L3a` | Toolbar | `MudToolBar`, dense | Path or breadcrumbs, then the controls on its right |
+| `L3a` | Toolbar | `MudToolBar`, dense | The open file's full system path on the left (with ● while unsaved), then the controls on its right. The same in every host, the Library page and the Team Files tab alike, since both are one `LibraryExplorer`; the shell breadcrumb (`S1a`) names the file by its Library location |
 | `L3b` | Mode switch | `HuddleSegmentedControl` | Read, Edit, Split |
 | `L3c` | Document actions | `MudIconButton` row | Copy, Pop out, Close |
 | `L3d` | Banners | Dense `MudAlert` with a role, `.library-document-banner` | Moved or deleted, newer on disk (Reload or Keep mine), save error, read-only reason. The Move dialog's refusal is the same Dense `MudAlert` |
@@ -230,8 +228,8 @@ slate `B` badges name the same containers.
 
 | Code | Name | Component | Notes |
 | --- | --- | --- | --- |
-| `M1` | Team page container | `MudContainer`, `MaxWidth.False`, `pa-4` (`.team-page-wide` only sizes the panels) | Opens with the `PageHeader` (the Team or Project name as the page's `h1`). `MaxWidth.Large` applies only to the not-found and "turned off" notices, which are `role="status"` or `role="alert"` as the case needs |
-| `M2` | Duplicate | `MudButton`, Outlined, in the `PageHeader` actions slot | At its natural width, on the right of the `h1`; Team pages only, not Project pages |
+| `M1` | Team page container | `MudContainer`, `MaxWidth.False`, `pa-4` (`.team-page-wide` only sizes the panels) | Opens with no title row or `h1`, since the shell breadcrumb (`S1a`) names the Team or Project; a Team page opens with the slim `M2` row. `MaxWidth.Large` applies only to the not-found and "turned off" notices, which are `role="status"` or `role="alert"` as the case needs |
+| `M2` | Duplicate | `MudButton`, Outlined, alone in a right-aligned `MudStack` row (`.team-page-actions`) | At its natural width, above the spend strip; Team pages only, not Project pages |
 | `M3` | Team spend | `TeamSpend` | One line per currency |
 | `M4` | Tabs | `MudTabs` `.team-page-tabs` | Keyed by Team and Project |
 | `M4a` | Tab rail | `MudTabPanel` headers, each with its `TabIcons` entity icon | Members, Files, Tasks, Process, Details (Info icon, always last on a Team page); a Project page and a disabled feature show fewer |

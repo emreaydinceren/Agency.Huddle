@@ -14,14 +14,20 @@
             @if (item.Href is { } href)
             {
                 <a class="page-crumb page-crumb-link" href="@href" @onclick="() => this.OnNavigate.InvokeAsync(href)" @onclick:preventDefault>
-                    <MudIcon Icon="@item.Icon" Size="Size.Small" />
+                    @if (item.Icon is not null)
+                    {
+                        <MudIcon Icon="@item.Icon" Size="Size.Small" />
+                    }
                     <span>@item.Text</span>
                 </a>
             }
             else
             {
                 <span class="page-crumb" aria-current="@(ReferenceEquals(item, this.items[^1]) ? "page" : null)">
-                    <MudIcon Icon="@item.Icon" Size="Size.Small" />
+                    @if (item.Icon is not null)
+                    {
+                        <MudIcon Icon="@item.Icon" Size="Size.Small" />
+                    }
                     <span>@item.Text</span>
                 </span>
             }
@@ -43,6 +49,6 @@
     /// <summary>Maps the trail to the items MudBreadcrumbs draws.</summary>
     protected override void OnParametersSet()
     {
-        this.items = [.. this.Crumbs.Select(static crumb => new BreadcrumbItem(crumb.Text, crumb.Href, disabled: false, icon: TabIcons.For(crumb.Icon)))];
+        this.items = [.. this.Crumbs.Select(static crumb => new BreadcrumbItem(crumb.Text, crumb.Href, disabled: false, icon: crumb.Icon.Length == 0 ? null : TabIcons.For(crumb.Icon)))];
     }
 }
