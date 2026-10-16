@@ -2114,24 +2114,24 @@ a.team-ref,
     overflow: auto;
 }
 
-/* Split mode on this page: the editor and the live preview sit side by side, each scrolling on its own
+/* Split mode on the Team page and the Library page: the editor and the live preview sit side by side, each scrolling on its own
    inside the pane's full height, and the preview uses its half instead of the centred reading column. */
-.team-page-wide .library-explorer-split > .child-panel:last-child > .library-document {
+:is(.team-page-wide, .library-page) .library-explorer-split > .child-panel:last-child > .library-document {
     display: flex;
     flex-direction: column;
     min-height: 100%;
 }
 
-.team-page-wide .library-document > .library-editor {
+:is(.team-page-wide, .library-page) .library-document > .library-editor {
     flex: 1 1 0;
     min-height: 0;
 }
 
-.team-page-wide .library-document > .library-editor .cm-editor {
+:is(.team-page-wide, .library-page) .library-document > .library-editor .cm-editor {
     height: 100%;
 }
 
-.team-page-wide .library-document-split {
+:is(.team-page-wide, .library-page) .library-document-split {
     flex: 1 1 0;
     min-height: 0;
     display: grid;
@@ -2139,21 +2139,21 @@ a.team-ref,
     gap: 1rem;
 }
 
-.team-page-wide .library-document-split > .library-editor,
-.team-page-wide .library-document-split .cm-editor {
+:is(.team-page-wide, .library-page) .library-document-split > .library-editor,
+:is(.team-page-wide, .library-page) .library-document-split .cm-editor {
     height: 100%;
     min-height: 0;
 }
 
-.team-page-wide .library-document .library-document-split > .library-rendered {
+:is(.team-page-wide, .library-page) .library-document .library-document-split > .library-rendered {
     max-width: none;
     margin-inline: 0;
     overflow: auto;
     padding: 0.25rem 1rem 0 0;
 }
 
-.team-page-wide .library-document .library-rendered,
-.team-page-wide .library-document .mud-expansion-panels {
+:is(.team-page-wide, .library-page) .library-document .library-rendered,
+:is(.team-page-wide, .library-page) .library-document .mud-expansion-panels {
     max-width: 56rem;
     margin-inline: auto;
 }
