@@ -17,7 +17,8 @@ internal sealed record TabPage(Type Component, IDictionary<string, object> Param
 /// is; the group's page host cascades this instead.
 /// </summary>
 /// <param name="Url">The site-relative address the Tab shows, including its query.</param>
-public sealed record TabPageContext(string Url)
+/// <param name="TabId">The id of the Tab showing the page, which is how the Right sidebar knows whose content to show.</param>
+public sealed record TabPageContext(string Url, string TabId)
 {
     /// <summary>The path of <see cref="Url"/>, without the query.</summary>
     public string Path

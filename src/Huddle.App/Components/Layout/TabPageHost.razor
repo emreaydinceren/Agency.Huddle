@@ -48,6 +48,6 @@ else
 
         this.resolvedUrl = this.Tab.Url;
         this.page = this.Routes.Resolve(this.Tab.Url);
-        this.context = new TabPageContext(this.Tab.Url);
+        this.context = new TabPageContext(this.Tab.Url, this.Tab.Id);
     }
 }

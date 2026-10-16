@@ -1,0 +1,71 @@
+@*
+    The Right sidebar (S4): a persistent drawer on the window's right edge, under the Top bar, opened
+    and closed by RightSidebarToggle (S1c). What it holds is contextual: the blocks the focused pane's
+    active page has put in it with RightSidebarContent, so it changes when focus moves to the other
+    pane or another Tab. A page that puts nothing in it gets a one-line empty state. The blocks are
+    drawn only while it is open, so a closed sidebar costs the pages nothing to render.
+*@
+@using Agency.Huddle.App.Tabs
+@implements IDisposable
+@inject RightSidebarService Sidebar
+@inject TabService Tabs
+
+<MudDrawer Open="@this.Sidebar.IsOpen"
+           Anchor="Anchor.End"
+           Variant="DrawerVariant.Persistent"
+           Width="280px"
+           Elevation="0"
+           ClipMode="DrawerClipMode.Always"
+           Class="right-sidebar"
+           id="@ElementId"
+           aria-label="Right sidebar">
+    @if (this.Sidebar.IsOpen)
+    {
+        IReadOnlyList<RightSidebarSection> sections = this.Sidebar.SectionsFor(this.Tabs.Active?.Id);
+        if (sections.Count == 0)
+        {
+            <EmptyState Text="This page has nothing to show here." />
+        }
+        else
+        {
+            @foreach (RightSidebarSection section in sections)
+            {
+                <section class="right-sidebar-section" aria-label="@section.Title">
+                    @if (section.Title is not null)
+                    {
+                        <MudText Typo="Typo.subtitle2" Class="right-sidebar-title">@section.Title</MudText>
+                    }
+                    @section.Content
+                </section>
+            }
+        }
+    }
+</MudDrawer>
+
+@code {
+    /// <summary>The drawer's element id, which the toggle names in <c>aria-controls</c>.</summary>
+    public const string ElementId = "right-sidebar";
+
+    /// <summary>Redraws when the sidebar opens or closes, a page changes its blocks, or focus moves to another Tab.</summary>
+    protected override void OnInitialized()
+    {
+        this.Sidebar.Changed += this.OnChanged;
+        this.Tabs.Changed += this.OnChanged;
+    }
+
+    /// <summary>Unsubscribes from both scoped services.</summary>
+    public void Dispose()
+    {
+        this.Sidebar.Changed -= this.OnChanged;
+        this.Tabs.Changed -= this.OnChanged;
+    }
+
+    private void OnChanged()
+    {
+        _ = RendererDispatch.RunAsync(this.InvokeAsync, () =>
+        {
+            this.StateHasChanged();
+            return Task.CompletedTask;
+        });
+    }
+}

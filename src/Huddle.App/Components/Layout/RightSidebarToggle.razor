@@ -1,0 +1,48 @@
+@*
+    The Top bar's switch for the Right sidebar (S4). The icon is Material Symbols dock_to_left, a frame
+    with a pane docked on its right; it is coloured Primary and aria-pressed while the sidebar is open.
+*@
+@using Agency.Huddle.App.Tabs
+@implements IDisposable
+@inject RightSidebarService Sidebar
+
+<MudTooltip Text="@this.Label">
+    <MudIconButton Icon="@MaterialSymbols.DockToLeft"
+                   Size="Size.Small"
+                   Color="@(this.Sidebar.IsOpen ? Color.Primary : Color.Inherit)"
+                   Class="right-sidebar-toggle"
+                   aria-label="@this.Label"
+                   aria-pressed="@(this.Sidebar.IsOpen ? "true" : "false")"
+                   aria-controls="@RightSidebar.ElementId"
+                   OnClick="this.Toggle" />
+</MudTooltip>
+
+@code {
+    private string Label => this.Sidebar.IsOpen ? "Hide right sidebar" : "Show right sidebar";
+
+    /// <summary>Repaints the button when the sidebar is opened or closed from anywhere.</summary>
+    protected override void OnInitialized()
+    {
+        this.Sidebar.Changed += this.OnChanged;
+    }
+
+    /// <summary>Unsubscribes from <see cref="RightSidebarService.Changed"/>.</summary>
+    public void Dispose()
+    {
+        this.Sidebar.Changed -= this.OnChanged;
+    }
+
+    private void Toggle()
+    {
+        this.Sidebar.Toggle();
+    }
+
+    private void OnChanged()
+    {
+        _ = RendererDispatch.RunAsync(this.InvokeAsync, () =>
+        {
+            this.StateHasChanged();
+            return Task.CompletedTask;
+        });
+    }
+}

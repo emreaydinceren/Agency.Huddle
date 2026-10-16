@@ -60,8 +60,9 @@ this.
 
 | Say | Never mean | Because |
 | --- | --- | --- |
-| **Shell** | A single page | It is everything outside the pages: `S0` to `S3` |
+| **Shell** | A single page | It is everything outside the pages: `S0` to `S4` |
 | **Sidebar** | A panel inside a page | It is the persistent left `MudDrawer` (`S2`) |
+| **Right sidebar** | The detail drawer | It is the persistent right `MudDrawer` the Top bar toggles (`S4`). It pushes the Workspace aside rather than covering it, and shows what the focused pane's page put in it |
 | **Detail drawer** | The sidebar | It is a temporary drawer that slides over a page from the right (`T7`, `O2`) |
 | **Workspace** | The window | It is the area right of the sidebar that holds Tab groups (`S3`) |
 | **Pane** | A page | It is one Tab group: a strip over a body (`W2`) |
@@ -78,7 +79,7 @@ this.
 
 `MainLayout.razor`. Everything the app draws is inside `S0`.
 
-![The shell: a top bar across the window, a sidebar down the left with its sections, and the workspace holding one tab group](../images/wireframes/01-shell.svg)
+![The shell: a top bar across the window, a sidebar down the left with its sections, the workspace holding one tab group, and the right sidebar drawn dashed at the right edge](../images/wireframes/01-shell.svg)
 
 | Code | Name | Component | Notes |
 | --- | --- | --- | --- |
@@ -88,7 +89,7 @@ this.
 | `S1` | Top bar | `TopBar` (`MudAppBar`, fixed, dense) | Three slots: start, centre, end |
 | `S1a` | Breadcrumb | `PageBreadcrumbs` | The trail of the focused pane's active Tab. On the Library page it holds the open file's whole location, "Library › Teammates › Lena › Lena.md": the Library page sets it (`TabService.SetTrail`) each time the open file changes, so the page's own toolbar (`L3a`) does not repeat it. Only "Library" is a link (it opens the page with nothing selected) |
 | `S1b` | Search bar | `SearchBar` | Global search; its results open in a dropdown below it |
-| `S1c` | Top bar actions | `ThemeModeToggle` | Switches between the chosen light and dark Theme |
+| `S1c` | Top bar actions | `RightSidebarToggle`, `ThemeModeToggle` | The first opens and closes the Right sidebar (`S4`): the Material Symbol `dock_to_left`, Primary and `aria-pressed` while open. The second switches between the chosen light and dark Theme |
 | `S2` | Sidebar | `MudDrawer`, persistent, 240px | Always open; not resizable |
 | `S2a` | Needs You card | `NeedsYouCard` | Rooms waiting on the Human |
 | `S2b` | Chats group | `RoomList` (`MudNavGroup`), `RoomNavRow`, `NewChat` | Rooms that belong to no Team. A 1:1 Room's row leads with the Teammate's small avatar, a group Room's with the Chat icon; shared actions in `RoomActions` |
@@ -98,6 +99,7 @@ this.
 | `S2f` | Library link | `LibraryNavLink` | |
 | `S2g` | Sidebar footer | `MudNavMenu` `.nav-settings` | Two icon-only 36px rows, Archived chats and Settings, each with an `aria-label` and a tooltip (OP-4), pinned to the bottom |
 | `S3` | Workspace | `MudMainContent` `.main-column` | Also holds the invisible `TabSync`, `TabPersistence` and `LibraryLinkRouter` |
+| `S4` | Right sidebar | `RightSidebar` (`MudDrawer`, end, persistent, 280px) | Drawn dashed: shown only while toggled open from `S1c`; starts closed in each circuit. Holds the blocks the focused pane's active page wrapped in `RightSidebarContent`, sorted by `Order`, each under its optional title. It follows focus to the other pane or another Tab, and a page with no blocks gets an empty state |
 
 `W1`, `W3` and `W6` appear here only to show where Figure 2 plugs in.
 
