@@ -568,6 +568,9 @@ Words follow [language.md](language.md). These rules decide the form.
 
 ## Adding a Theme or changing a palette
 
+[theme-authoring.md](theme-authoring.md) walks through these steps in full, with the
+palette table and the VS Code mapping.
+
 1. Build the palette in C# and register a `ThemeDescriptor` in
    [`ThemeCatalog.BuiltIn`](../../src/Huddle.App/Themes/ThemeCatalog.cs). Never insert
    before `BuiltIn[0]`; three call sites treat it as the default.
