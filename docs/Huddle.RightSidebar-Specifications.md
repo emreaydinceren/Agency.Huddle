@@ -1,7 +1,7 @@
 # Right sidebar: contextual panels
 
 **Status:** the shell is built. The toggle (`S1c`) and the drawer (`S4`) shipped on
-`feat/right-sidebar`. The panel framework below is **designed, not built**. The first build
+`feat/right-sidebar`. The panel framework below is **built** on `feat/right-sidebar-panels` (2026-10-16). The first build
 delivers the framework and five panels: Outline, Linked documents, Tasks in this chat,
 Documents in this chat and Members ([v1 scope](#v1-scope)).
 
