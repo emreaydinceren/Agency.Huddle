@@ -114,7 +114,7 @@ replaced, between them (memory: resumed implementers beat fresh ones). Retire an
 
 | Size | Files touched | Tests added | Tool-call budget | Read list |
 | --- | --- | --- | --- | --- |
-| Haiku | 1 to 5 | 0 to 15 | **40** | under 20K tokens |
+| Haiku | 1 to 5 | 0 to 15 | **40**; **50** for a chain creating more than 3 files (R1) | under 20K tokens |
 | Sonnet | 2 to 8 | 4 to 15 | **60** | under 35K tokens |
 
 At the budget the agent finishes its step, writes `Conversation/handoff/<task>.md` and stops.
@@ -683,7 +683,7 @@ Sonnet. Depends on P2.
 - **Goal:** a green branch before the panels start.
 - **Read first:** this task.
 - **Risk:** `data`.
-- **Deliverable:** run `dotnet build Huddle.slnx`, `dotnet test Huddle.slnx --` and
+- **Deliverable:** run `agents/scripts/Build.ps1`, `agents/scripts/Run-Tests.ps1` (no filter) and
   `Check-All.ps1`. Report the three summary lines verbatim. Fix nothing; report failures with the
   test name and first assertion line.
 - **Acceptance:** report delivered.
@@ -787,29 +787,39 @@ Sonnet. Depends on P3, P4, P5, P6.
   `<MudText Typo="Typo.body2" Class="mud-text-secondary" role="status">No headings in this document.</MudText>`.
 - **Acceptance:** `OutlinePanelTests` green.
 
-### Task 7.3 — The page scrolls and the editor reveals
+### Task 7.3 — The scroll and reveal scripts
 
-- **Goal:** **Spec** *Outline* (Acts): Read and Split scroll the rendered heading; Edit reveals the line.
-- **Read first:** `LibraryDocument.razor:20-127`, `:184-216`, `:644-665`; `LibraryEditor.razor:60-140`;
-  `library-editor.js:48-144`; `app.js:339-361`, `:591-629`; Spec lines 143-165, 190-199.
-- **Risk:** `boundary` (JS interop and a third-party editor; Opus reviews).
-- **Deliverable:** red first: `tests/Huddle.Tests/Ui/Sidebar/LibraryDocumentScrollTests.cs`
-  (bUnit, JSInterop strict for the two calls): `Read_ScrollToHeading_CallsScrollToHeading`
-  (`huddleLibrary.scrollToHeading` with the root element and the id);
-  `Edit_ScrollToHeading_RevealsTheLine` (the editor handle's `revealLine` with the line);
-  `OtherTab_Command_IsIgnored`. `LibraryEditorRevealSourceTests.cs` (source facts):
-  `LibraryEditorJs_Handle_HasRevealLine`; `LibraryEditorJs_RevealLine_ClampsToTheDocument`.
+Split from the original T7.3 by R1 (too much for one Sonnet task across JS, editor and Razor).
+
+- **Goal:** **Spec** *Outline* (Acts): the two script entry points a page calls.
+- **Read first:** `library-editor.js:48-144`; `app.js:339-361`, `:591-629`; `LibraryEditor.razor:60-140`;
+  `tests/Huddle.Tests/Ui/Sidebar/SidebarCollapseSourceTests.cs` (the source-facts pattern).
+- **Risk:** `boundary` (a third-party editor's API).
+- **Deliverable:** red first: `tests/Huddle.Tests/Ui/Sidebar/LibraryEditorRevealSourceTests.cs`
+  (source facts): `LibraryEditorJs_Handle_HasRevealLine`; `LibraryEditorJs_RevealLine_ClampsToTheDocument`;
+  `AppJs_HuddleLibrary_HasScrollToHeading`; `AppJs_ScrollToHeading_EscapesTheId` (`CSS.escape`).
   Then: in `app.js` add to `window.huddleLibrary`
   `scrollToHeading(root, id) { const el = root && root.querySelector("#" + CSS.escape(id)); if (!el) { return false; } el.scrollIntoView({ block: "start" }); return true; }`.
   In `library-editor.js` add to the handle
   `revealLine: (line) => { const n = Math.min(Math.max(1, line), view.state.doc.lines); const pos = view.state.doc.line(n).from; view.dispatch({ selection: { anchor: pos }, effects: EditorView.scrollIntoView(pos, { y: "start" }) }); view.focus(); }`.
-  In `LibraryEditor.razor` add `public async Task RevealLineAsync(int line)` (no-op without a
-  handle). In `LibraryDocument.razor` add `@ref` on the root element, a
+  In `LibraryEditor.razor` add `public async Task RevealLineAsync(int line)` (no-op without a handle).
+- **Acceptance:** the new class, `AppJsSourceTests` and every `LibraryEditor` test green.
+
+### Task 7.4 — The Library document handles `ScrollToHeading`
+
+- **Goal:** **Spec** *Outline* (Acts): Read and Split scroll the rendered heading; Edit reveals the line.
+- **Read first:** `LibraryDocument.razor:20-127`, `:184-216`, `:644-665`; Spec lines 143-165;
+  `tests/Huddle.Tests/Ui/Sidebar/LibraryDocumentSubjectTests.cs` (setup, from T5.1).
+- **Risk:** `logic`.
+- **Deliverable:** red first: `tests/Huddle.Tests/Ui/Sidebar/LibraryDocumentScrollTests.cs`
+  (bUnit; `MudBunitContext` is Loose, so `ctx.JSInterop.Setup<bool>("huddleLibrary.scrollToHeading", _ => true)`
+  and `VerifyInvoke`): `Read_ScrollToHeading_CallsScrollToHeading` (with the root element and the id);
+  `Edit_ScrollToHeading_RevealsTheLine` (the editor handle's `revealLine` with the line);
+  `OtherTab_Command_IsIgnored`. Then in `LibraryDocument.razor` add `@ref` on the root element, a
   `<PageCommandHandler OnCommand="this.OnPageCommandAsync" />`, and a handler: `ScrollToHeading`
   in Edit mode with an editor → `RevealLineAsync(line)`; otherwise →
   `JS.InvokeAsync<bool>("huddleLibrary.scrollToHeading", root, id)`. Any other command is ignored.
-- **Acceptance:** both new classes and every `LibraryDocument`/`LibraryEditor` test green; Opus
-  review passed.
+- **Acceptance:** the new class and every `LibraryDocument` test green.
 
 ### P8 Linked documents
 
@@ -950,8 +960,9 @@ Sonnet. Depends on P4 and P9.
 - **Goal:** pin **Spec** *Documents in this chat* and **D-8**.
 - **Read first:** Spec lines 210-219; `RoomTasksPanelTests.cs` (setup).
 - **Risk:** `logic`.
-- **Deliverable:** `tests/Huddle.Tests/Ui/Sidebar/RoomDocumentsPanelTests.cs`, with a fake
-  `ILibraryReferenceResolver` (one in the test file): `Documents_ListsFileNames`;
+- **Deliverable:** `tests/Huddle.Tests/Ui/Sidebar/RoomDocumentsPanelTests.cs`, with the existing
+  `tests/Huddle.Tests/Library/FakeLibraryNoteResolver.cs` as the `ILibraryReferenceResolver`
+  (its `resolvePath:` delegate; R1): `Documents_ListsFileNames`;
   `Documents_Gone_IsDisabledWithTooltip` (`"This file is no longer in the Library."`);
   `Documents_Click_OpensInTheLibrary`; `Documents_JumpButton_NavigatesTheSameTab`;
   `Documents_InvalidatedAnyRoot_Rechecks`; `Documents_MessagePostedInAnotherRoom_DoesNothing`;
@@ -1163,6 +1174,17 @@ or Opus used where Haiku would do), with a fix for each. The manager then **upda
 facts into §3.4 and §3.6, sharper Read first lists in the tasks still to run, a model change where
 a task proved simpler or harder than tagged, and a row under the retrospective in §9.
 
+**R1 outcome (2026-10-16, at 17 Done; report `Conversation/rsp/retro-R1.md`).** Applied: the
+panel and page bUnit setups, the fakes catalogue and the `-NewNames` gate rules went into the
+facts file's Core; the brief now forbids any shell write to `src/`/`tests/` (two agents used
+`python3`/`sed -i`), asks for `// contains-ok:` as the assert is written, `Check-Eol -Fix` before a
+red, foreground test runs only, and a hand-off at 75% of budget; `Freeze-Tests -Check` ignores
+line-ending-only changes; T7.3 is split into T7.3 (scripts) and T7.4 (the page handler), so the
+plan has 43 tasks; T5.4 uses the runner scripts; T11.1 reuses `FakeLibraryNoteResolver`; a Haiku
+chain creating more than 3 files gets 50 calls. Cost: implementers read 1.3M to 2.9M each; the
+manager is the hot spot (407K context), so verification goes to Haiku and diffs are checked by
+`--stat` plus grep except for `boundary` tasks.
+
 ---
 
 ## 8. Risks
@@ -1183,49 +1205,50 @@ a task proved simpler or harder than tagged, and a row under the retrospective i
 
 Ids are `<deliverable>.<task>`, the form `Set-Tracker.ps1` updates. `(H)` is Haiku, `(S)` Sonnet.
 
-**Status:** 0 of 42 tasks Done · 0 of 2 retrospectives done · last updated 2026-10-16.
+**Status:** 17 of 43 tasks Done · 1 of 2 retrospectives done · last updated 2026-10-16.
 
 | **Deliverable / Task** | **Model** | **Depends on** | **Active** | **In Progress** | **Done** |
 | --- | --- | --- | --- | --- | --- |
 | **P1 Subjects and the Panel catalog** | Haiku | none | | | |
-| 1.1 Red: Subject keys and the catalog (H) | Haiku | none | | | |
-| 1.2 The Subject and panel records (H) | Haiku | 1.1 | | | |
-| 1.3 The catalog (H) | Haiku | 1.2 | | | |
+| 1.1 Red: Subject keys and the catalog (H) | Haiku | none | | | ✔ |
+| 1.2 The Subject and panel records (H) | Haiku | 1.1 | | | ✔ |
+| 1.3 The catalog (H) | Haiku | 1.2 | | | ✔ |
 | **P2 Per-Tab Subjects in `RightSidebarService`** | Sonnet | P1 | | | |
-| 2.1 Red: the service and the source (S) | Sonnet | P1 | | | |
-| 2.2 The service and `PageSubjectSource` (S) | Sonnet | 2.1 | | | |
-| 2.3 Remove `RightSidebarContent` (S) | Sonnet | 2.2 | | | |
+| 2.1 Red: the service and the source (S) | Sonnet | P1 | | | ✔ |
+| 2.2 The service and `PageSubjectSource` (S) | Sonnet | 2.1 | | | ✔ |
+| 2.3 Remove `RightSidebarContent` (S) | Sonnet | 2.2 | | | ✔ |
 | **P3 Page commands** | Haiku, Sonnet | none | | | |
-| 3.1 The command records (H) | Haiku | none | | | |
-| 3.2 Red: the bus and the handler (S) | Sonnet | 3.1 | | | |
-| 3.3 `PageCommandBus` and `PageCommandHandler` (S) | Sonnet | 3.2, 1.3 | | | |
+| 3.1 The command records (H) | Haiku | none | | | ✔ |
+| 3.2 Red: the bus and the handler (S) | Sonnet | 3.1 | | | ✔ |
+| 3.3 `PageCommandBus` and `PageCommandHandler` (S) | Sonnet | 3.2, 1.3 | | | ✔ |
 | **P4 The host and the panel chrome** | Sonnet, Haiku | P1, P2 | | | |
 | 4.1 Red: the host (S) | Sonnet | 2.3 | | | |
 | 4.2 `SidebarPanelContext` and `SidebarPanelFrame` (S) | Sonnet | 4.1 | | | |
 | 4.3 The host draws the catalog (S) | Sonnet | 4.2 | | | |
-| 4.4 The stylesheet block and the collapse script (H) | Haiku | none | | | |
+| 4.4 The stylesheet block and the collapse script (H) | Haiku | none | | | ✔ |
 | **P5 Pages publish their Subject** | Sonnet | P2 | | | |
 | 5.1 Red: the Room page and the Library document publish (S) | Sonnet | 2.2 | | | |
 | 5.2 The Room page publishes `RoomSubject` (S) | Sonnet | 5.1 | | | |
 | 5.3 The Library document publishes `DocumentSubject` (S) | Sonnet | 5.1 | | | |
 | 5.4 Verify P2 to P5 (H) | Haiku | 4.3, 5.3 | | | |
-| 🔁 R1 Retrospective after 15 tasks Done | Opus | 15 Done | | | |
+| 🔁 R1 Retrospective after 15 tasks Done | Opus | 15 Done | | | ✔ |
 | **P6 Heading ids and the outline parser** | Haiku, Sonnet | none | | | |
-| 6.1 Red: the outline parser (H) | Haiku | none | | | |
-| 6.2 `MarkdownOutline` (H) | Haiku | 6.1 | | | |
-| 6.3 The renderer gives note headings their id (S) | Sonnet | 6.2 | | | |
+| 6.1 Red: the outline parser (H) | Haiku | none | | | ✔ |
+| 6.2 `MarkdownOutline` (H) | Haiku | 6.1 | | | ✔ |
+| 6.3 The renderer gives note headings their id (S) | Sonnet | 6.2 | | | ✔ |
 | **P7 Outline panel and the scroll** | Sonnet | P3, P4, P5, P6 | | | |
 | 7.1 Red: the Outline panel (S) | Sonnet | 4.3, 6.2, 3.3 | | | |
 | 7.2 `OutlinePanel` (S) | Sonnet | 7.1 | | | |
-| 7.3 The page scrolls and the editor reveals (S) | Sonnet | 7.2, 5.3, 4.4 | | | |
+| 7.3 The scroll and reveal scripts (S) | Sonnet | 4.4 | | | |
+| 7.4 The Library document handles `ScrollToHeading` (S) | Sonnet | 7.3, 7.2, 5.3 | | | |
 | **P8 Linked documents** | Sonnet | none, then P4, P5 | | | |
-| 8.1 Red: `LinksFrom` and `Invalidated` (S) | Sonnet | none | | | |
-| 8.2 `LinksFrom` and `Invalidated` (S) | Sonnet | 8.1 | | | |
+| 8.1 Red: `LinksFrom` and `Invalidated` (S) | Sonnet | none | | | ✔ |
+| 8.2 `LinksFrom` and `Invalidated` (S) | Sonnet | 8.1 | | | ✔ |
 | 8.3 Red: the Linked documents panel (S) | Sonnet | 8.2, 4.3 | | | |
 | 8.4 `LinkedDocumentsPanel` (S) | Sonnet | 8.3 | | | |
 | **P9 A Room's mentions** | Sonnet | none | | | |
-| 9.1 Red: `RoomMentions` (S) | Sonnet | none | | | |
-| 9.2 `RoomMentions.Collect` (S) | Sonnet | 9.1 | | | |
+| 9.1 Red: `RoomMentions` (S) | Sonnet | none | | | ✔ |
+| 9.2 `RoomMentions.Collect` (S) | Sonnet | 9.1 | | | ✔ |
 | **P10 Tasks in this chat** | Sonnet | P4, P9 | | | |
 | 10.1 Red: the Tasks panel (S) | Sonnet | 4.3, 9.2 | | | |
 | 10.2 `RoomTasksPanel` (S) | Sonnet | 10.1 | | | |
