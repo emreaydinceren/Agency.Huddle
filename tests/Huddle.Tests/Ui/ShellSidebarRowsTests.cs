@@ -30,18 +30,18 @@ public sealed class ShellSidebarRowsTests
         Assert.Matches(@"<NavTabLink Href=""/teammates""[^>]*Class=""nav-section-link""", markup);
     }
 
-    /// <summary>The <c>nav-section-link</c> rule gives the 14px, weight-600, secondary-colour header look of the group headers (UX-014).</summary>
+    /// <summary>The <c>nav-section-link</c> rule gives the subtitle2 (14px), weight-600, secondary-colour header look of the group headers (UX-014).</summary>
     [Fact]
     public void AppCss_SectionLinkRule_MatchesTheGroupHeaders()
     {
         string rule = ShellSidebarRowsTests.RuleBody(".nav-section-link .mud-nav-link-text");
 
-        ShellSidebarRowsTests.SourceHas(rule, "font-size: 14px");
+        ShellSidebarRowsTests.SourceHas(rule, "font-size: var(--mud-typography-subtitle2-size)");
         ShellSidebarRowsTests.SourceHas(rule, "font-weight: 600");
         ShellSidebarRowsTests.SourceHas(rule, "var(--mud-palette-text-secondary)");
     }
 
-    /// <summary>The footer links share the sidebar row height token and the 14px size (UX-017, OP-4).</summary>
+    /// <summary>The footer links share the sidebar row height token and the body2 (13px) row size (UX-017, OP-4).</summary>
     [Fact]
     public void AppCss_FooterRows_UseTheRowHeightToken()
     {
@@ -50,7 +50,7 @@ public sealed class ShellSidebarRowsTests
 
         Assert.Matches(@"--nav-row-height\s*:\s*36px\s*;", css);
         ShellSidebarRowsTests.SourceHas(rule, "min-height: var(--nav-row-height)");
-        ShellSidebarRowsTests.SourceHas(rule, "font-size: 14px");
+        ShellSidebarRowsTests.SourceHas(rule, "font-size: var(--mud-typography-body2-size)");
     }
 
     /// <summary>The footer stays icon-only (OP-4), so the Settings link and the Archived chats entry each carry an <c>aria-label</c> and a tooltip (UX-017).</summary>

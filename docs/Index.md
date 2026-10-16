@@ -192,6 +192,7 @@ One row per decision. Open the ADR only when its row is your question.
 | [0053](adr/0053-an-upload-is-saved-to-the-library-and-sent-as-its-path.md) | A file attached in the composer is saved at once into the Room's upload folder (a new built-in Uploads Library Root, or the Team's `Uploads` folder) and its path is appended to the Message at send; the existing prompt-block planner decides what the Agent gets; kind by magic bytes, SVG and executables refused; the chat Message is the notification and upload folders are silent in File Changes; Room delete recycles its uploads. Amends 0027. | Built |
 | [0054](adr/0054-a-light-theme-and-a-dark-theme.md) | The Human picks one light and one dark Theme; a top-bar button switches between them. | Accepted |
 | [0055](adr/0055-a-reference-is-text-with-a-stable-key.md) | A reference in the Composer is ordinary text with a stable key (a Task id, a Room id, a Team Name, a Library path); the Message's `References` snapshot is optional metadata of what the sender saw, additive on the wire with the version unchanged; Agents get a compact, fresh Referenced items header for the trigger Message only. | Accepted |
+| [0056](adr/0056-the-ui-renders-at-100-percent-with-a-px-type-scale.md) | The page is not zoomed (`html { zoom: 0.9 }` removed); the type scale is set in rendered px in the Theme (h5 20, h6 16, subtitle 14, body1 14, body2 13, caption 12, overline 11; nothing under 11px; weights 400, 500, 600); prose is capped at 75ch and the Transcript column at about 760px. | Accepted |
 
 ## 5. Manual tests
 

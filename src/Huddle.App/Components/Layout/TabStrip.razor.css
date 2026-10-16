@@ -19,6 +19,8 @@
     cursor: pointer;
     user-select: none;
     white-space: nowrap;
+    font-size: var(--mud-typography-body2-size);
+    font-weight: 500;
     color: var(--mud-palette-text-secondary);
     border-right: 1px solid var(--mud-palette-lines-default);
 }
@@ -41,8 +43,9 @@
     text-overflow: ellipsis;
 }
 
+/* A preview Tab is not yet kept: a lighter weight says so, where italic at this size is hard to read. */
 .tab-item.preview .tab-title {
-    font-style: italic;
+    font-weight: 400;
 }
 
 .tab-close {

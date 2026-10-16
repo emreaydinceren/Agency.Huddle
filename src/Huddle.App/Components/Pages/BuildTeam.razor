@@ -138,7 +138,7 @@
                 </div>
             }
             <div>
-                <MudText Typo="Typo.subtitle1">Roles</MudText>
+                <MudText Typo="Typo.subtitle2">Roles</MudText>
                 <MudText Typo="Typo.body2" Class="build-team-intro build-team-roles-subtitle">Available roles</MudText>
             </div>
             @if (this.CustomRoles.LoadError is not null)
@@ -166,7 +166,7 @@
             </div>
 
             <div class="build-team-roster">
-                <MudText Typo="Typo.subtitle1">@(this.EditMode ? "Roster" : "Draft roster")</MudText>
+                <MudText Typo="Typo.subtitle2">@(this.EditMode ? "Roster" : "Draft roster")</MudText>
                 <MudText Typo="Typo.body2" Class="build-team-intro build-team-roster-summary">@this.RosterSummary</MudText>
                 @if (this.drafts.Count > 0)
                 {
