@@ -55,7 +55,7 @@
                 <td>
                     @foreach (var issue in this.IssuesFor(skill.Name))
                     {
-                        <MudChip T="string" Size="Size.Small" Color="@SkillsPanel.ChipColor(issue.Severity)" Class="mr-1 mb-1">@issue.Message</MudChip>
+                        <StatusChip Color="@SkillsPanel.ChipColor(issue.Severity)" Icon="@SkillsPanel.ChipIcon(issue.Severity)" Class="mr-1 mb-1">@issue.Message</StatusChip>
                     }
                 </td>
                 <td>
@@ -76,7 +76,7 @@
             <MudText Typo="Typo.subtitle2">@group.Key</MudText>
             @foreach (var issue in group)
             {
-                <MudChip T="string" Size="Size.Small" Color="@SkillsPanel.ChipColor(issue.Severity)" Class="mr-1 mb-1">@issue.Message</MudChip>
+                <StatusChip Color="@SkillsPanel.ChipColor(issue.Severity)" Icon="@SkillsPanel.ChipIcon(issue.Severity)" Class="mr-1 mb-1">@issue.Message</StatusChip>
             }
         </MudPaper>
     }
@@ -100,6 +100,15 @@
     {
         _ = await this.DialogService.ShowAsync<SkillImportDialog>("Import skill", SkillImportDialog.Options);
     }
+
+    /// <summary>The leading icon for an Issue's chip, so its severity is never the colour alone.</summary>
+    /// <param name="severity">The Issue's severity.</param>
+    private static string ChipIcon(SkillIssueSeverity severity) => severity switch
+    {
+        SkillIssueSeverity.Error => Icons.Material.Filled.Error,
+        SkillIssueSeverity.Warning => Icons.Material.Filled.Warning,
+        _ => Icons.Material.Filled.Info,
+    };
 
     /// <summary>The chip colour for one Issue's severity (Spec §6.7): Error red, Warning amber, Info plain.</summary>
     /// <param name="severity">The Issue's severity.</param>

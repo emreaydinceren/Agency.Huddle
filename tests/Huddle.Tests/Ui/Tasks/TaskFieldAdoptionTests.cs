@@ -82,7 +82,7 @@ public sealed class TaskFieldAdoptionTests : IDisposable
         Assert.Equal(1, CountOf(text, "Nova"));
     }
 
-    /// <summary>The card's priority chip is coloured by priority (UX-045).</summary>
+    /// <summary>The card's priority chip is tinted by priority (UX-045): <c>status-chip-error</c> for Urgent, never a solid fill.</summary>
     [Fact]
     public async Task Card_PriorityChip_IsColouredByPriority()
     {
@@ -91,7 +91,7 @@ public sealed class TaskFieldAdoptionTests : IDisposable
         await using MudBunitContext ctx = new();
         IRenderedComponent<ContainerFragment> cut = this.RenderCard(ctx, task);
 
-        Assert.Equal(Color.Error, cut.FindComponent<TaskPriorityChip>().FindComponent<MudChip<string>>().Instance.Color);
+        Assert.Contains("status-chip-error", cut.Find(".task-priority-chip").ClassList, StringComparer.Ordinal);
     }
 
     /// <summary>The card draws its assignee with <c>TaskAssignee</c> and passes the presence it was given; with no assignee there is none.</summary>
@@ -211,9 +211,9 @@ public sealed class TaskFieldAdoptionTests : IDisposable
         IRenderedComponent<ContainerFragment> cut = this.RenderList(ctx, [task], fields: ["status", "priority"]);
 
         Assert.Equal(TaskState.ToDo, cut.FindComponent<TaskStatusChip>().Instance.Status);
-        Assert.Equal(Color.Info, cut.FindComponent<TaskStatusChip>().FindComponent<MudChip<string>>().Instance.Color);
+        Assert.Contains("status-chip-info", cut.Find(".task-status-chip").ClassList, StringComparer.Ordinal);
         Assert.Equal(TaskPriority.High, cut.FindComponent<TaskPriorityChip>().Instance.Priority);
-        Assert.Equal(Color.Warning, cut.FindComponent<TaskPriorityChip>().FindComponent<MudChip<string>>().Instance.Color);
+        Assert.Contains("status-chip-warning", cut.Find(".task-priority-chip").ClassList, StringComparer.Ordinal);
     }
 
     /// <summary>The List's Assignee cell is <c>TaskAssignee</c> with no presence dot (the List has no presence), and an empty one reads "Unassigned".</summary>
@@ -278,7 +278,7 @@ public sealed class TaskFieldAdoptionTests : IDisposable
         Assert.Empty(cut.FindAll(".task-list-title.task-due-overdue"));
     }
 
-    /// <summary>The CSS no longer turns a whole overdue card orange: <c>.task-overdue</c> sets no warning colour, and the date mark uses the error colour (UX-043).</summary>
+    /// <summary>The CSS no longer turns a whole overdue card orange: <c>.task-overdue</c> sets no warning colour, and the date mark is weight, not colour: the icon is the one cue (UX-043).</summary>
     [Fact]
     public void AppCss_OverdueMarksTheDateInErrorNotTheWholeCardInWarning()
     {
@@ -294,7 +294,7 @@ public sealed class TaskFieldAdoptionTests : IDisposable
         int date = css.IndexOf(".task-due-overdue", StringComparison.Ordinal);
         Assert.True(date >= 0, "Expected a .task-due-overdue rule in app.css.");
         string dateRule = css[date..(css.IndexOf('}', date) + 1)];
-        Assert.Equal("color: var(--mud-palette-error);", dateRule[(dateRule.IndexOf('{') + 1)..dateRule.IndexOf('}')].Trim());
+        Assert.Equal("font-weight: 600;", dateRule[(dateRule.IndexOf('{') + 1)..dateRule.IndexOf('}')].Trim());
     }
 
     /// <summary>Finds the icon whose accessible name is "Overdue".</summary>

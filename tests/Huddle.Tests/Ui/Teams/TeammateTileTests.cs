@@ -68,18 +68,19 @@ public sealed class TeammateTileTests
         Assert.DoesNotContain(".teammate-avatar", css, StringComparison.Ordinal);
     }
 
-    /// <summary>The alias reads '@alias' inside a small MudChip, not a hand-styled span.</summary>
+    /// <summary>The alias reads '@alias' as plain caption text (the "count or meta" style), not as a chip.</summary>
     [Fact]
-    public async Task Tile_Alias_IsASmallMudChip()
+    public async Task Tile_Alias_IsPlainCaptionText()
     {
         using TempDataDir dir = new();
         await using MudBunitContext ctx = await NewContextAsync(dir, Xunit.TestContext.Current.CancellationToken);
 
         IRenderedComponent<TeammatesPage> cut = ctx.Render<TeammatesPage>();
 
-        var chip = cut.FindAll(".teammate-tile .teammate-tile-chips .mud-chip")
+        var alias = cut.FindAll(".teammate-tile .teammate-tile-chips .chip-meta")
             .First(item => item.TextContent.Trim() == "@coo");
-        Assert.Contains("mud-chip-size-small", chip.ClassList);
+        Assert.Contains("chip-meta", alias.ClassList);
+        Assert.Empty(cut.FindAll(".teammate-tile .mud-chip"));
         Assert.Empty(cut.FindAll(".teammate-tile .teammate-chip"));
     }
 

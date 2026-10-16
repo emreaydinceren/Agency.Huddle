@@ -42,6 +42,18 @@ internal static class TaskColors
     /// <param name="clock">The clock that says what today is.</param>
     public static Color ForDue(TaskItem task, TimeProvider clock) => TaskDates.IsOverdue(task, clock) ? Color.Error : Color.Default;
 
+    /// <summary>The icon that always accompanies a state alongside its colour and word.</summary>
+    public static string Icon(TaskState state) => state switch
+    {
+        TaskState.Backlog => Icons.Material.Filled.Inbox,
+        TaskState.ToDo => Icons.Material.Filled.RadioButtonUnchecked,
+        TaskState.InProgress => Icons.Material.Filled.PlayCircleOutline,
+        TaskState.Review => Icons.Material.Filled.RateReview,
+        TaskState.Done => Icons.Material.Filled.CheckCircle,
+        TaskState.Cancelled or TaskState.Duplicate or TaskState.Rejected => Icons.Material.Filled.Cancel,
+        _ => Icons.Material.Filled.Inbox,
+    };
+
     /// <summary>The icon that always accompanies a priority alongside its colour and word.</summary>
     public static string Icon(TaskPriority priority) => priority switch
     {

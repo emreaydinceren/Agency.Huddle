@@ -1879,37 +1879,6 @@ a.team-ref,
     font-size: var(--mud-typography-body2-size);
 }
 
-/* One class per TaskColors state family, so a Board column's left edge reads the same
-   colour as the state's chip without a second lookup table. */
-.task-col-edge-default,
-.task-col-edge-info,
-.task-col-edge-warning,
-.task-col-edge-secondary,
-.task-col-edge-success,
-.task-col-edge-error {
-    border-inline-start: 6px solid var(--mud-palette-text-disabled);
-}
-
-.task-col-edge-info {
-    border-inline-start-color: var(--mud-palette-info);
-}
-
-.task-col-edge-warning {
-    border-inline-start-color: var(--mud-palette-warning);
-}
-
-.task-col-edge-secondary {
-    border-inline-start-color: var(--mud-palette-secondary);
-}
-
-.task-col-edge-success {
-    border-inline-start-color: var(--mud-palette-success);
-}
-
-.task-col-edge-error {
-    border-inline-start-color: var(--mud-palette-error);
-}
-
 /* A ghost bucket: a drop zone with nothing in it, its icon and state name laid out in a row.
    Dashed until a drag can land there. */
 .task-ghost-bucket {
@@ -1999,10 +1968,11 @@ a.team-ref,
     outline: 2px solid var(--mud-palette-text-primary);
 }
 
-/* An overdue due date, and nothing else on the card or row (UX-043): the error colour, with the
-   warning icon beside it. The row and card class task-overdue is a marker only. */
+/* An overdue due date, and nothing else on the card or row (UX-043): the warning icon beside it is the
+   one cue, and the date is set heavier so it is not told by colour alone. The row and card class
+   task-overdue is a marker only. */
 .task-due-overdue {
-    color: var(--mud-palette-error);
+    font-weight: 600;
 }
 
 /* The Task open in the detail panel: its List row and its Board card. A tint of the primary palette
@@ -4125,4 +4095,71 @@ a.team-ref,
     .task-detail-prop-label {
         padding-top: 8px;
     }
+/* Chips (design-system.md "Chips"): four looks, one per job. A status colour is never a solid fill under text.
+   1. Status or priority, tinted: the status colour at 14% over Surface; text and icon the colour mixed 70% toward
+      TextPrimary. StatusChipContrast mirrors the two mixes in C# and a test holds the pair to 4.5:1. */
+.mud-chip.status-chip {
+    background-color: color-mix(in srgb, var(--mud-palette-text-secondary) 14%, var(--mud-palette-surface));
+    color: color-mix(in srgb, var(--mud-palette-text-secondary) 70%, var(--mud-palette-text-primary));
+}
+
+.mud-chip.status-chip .mud-chip-icon,
+.mud-chip.status-chip .mud-icon-root {
+    color: inherit;
+}
+
+.mud-chip.status-chip-info {
+    background-color: color-mix(in srgb, var(--mud-palette-info) 14%, var(--mud-palette-surface));
+    color: color-mix(in srgb, var(--mud-palette-info) 70%, var(--mud-palette-text-primary));
+}
+
+.mud-chip.status-chip-warning {
+    background-color: color-mix(in srgb, var(--mud-palette-warning) 14%, var(--mud-palette-surface));
+    color: color-mix(in srgb, var(--mud-palette-warning) 70%, var(--mud-palette-text-primary));
+}
+
+.mud-chip.status-chip-error {
+    background-color: color-mix(in srgb, var(--mud-palette-error) 14%, var(--mud-palette-surface));
+    color: color-mix(in srgb, var(--mud-palette-error) 70%, var(--mud-palette-text-primary));
+}
+
+.mud-chip.status-chip-success {
+    background-color: color-mix(in srgb, var(--mud-palette-success) 14%, var(--mud-palette-surface));
+    color: color-mix(in srgb, var(--mud-palette-success) 70%, var(--mud-palette-text-primary));
+}
+
+.mud-chip.status-chip-secondary {
+    background-color: color-mix(in srgb, var(--mud-palette-secondary) 14%, var(--mud-palette-surface));
+    color: color-mix(in srgb, var(--mud-palette-secondary) 70%, var(--mud-palette-text-primary));
+}
+
+.mud-chip.status-chip-primary {
+    background-color: color-mix(in srgb, var(--mud-palette-primary) 14%, var(--mud-palette-surface));
+    color: color-mix(in srgb, var(--mud-palette-primary) 70%, var(--mud-palette-text-primary));
+}
+
+/* 2. Tag, quiet: BackgroundGray fill, TextPrimary text. */
+.mud-chip.tag-chip {
+    background-color: var(--mud-palette-background-gray);
+    color: var(--mud-palette-text-primary);
+}
+
+/* 3. Filter: dashed while unset; a Primary border and tint once set. TaskFilterChip draws its own pill
+   (.task-filter-chip); a MudChip that filters wears .filter-chip, and .filter-chip-set when on. */
+.mud-chip.filter-chip {
+    border: 1px dashed var(--mud-palette-lines-inputs);
+    background-color: transparent;
+    color: var(--mud-palette-text-primary);
+}
+
+.mud-chip.filter-chip.filter-chip-set,
+.mud-chip.filter-chip.mud-chip-selected {
+    border: 1px solid var(--mud-palette-primary);
+    background-color: color-mix(in srgb, var(--mud-palette-primary) 14%, var(--mud-palette-surface));
+}
+
+/* 4. Count or meta: no chip, plain caption text. */
+.chip-meta {
+    color: var(--mud-palette-text-secondary);
+    font-size: var(--mud-typography-caption-size);
 }

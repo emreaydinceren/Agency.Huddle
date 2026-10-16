@@ -100,11 +100,11 @@
                                            tile is already the densest surface on the page. TeammateCard.razor shows the
                                            same reason as a full line, where there is room for it. *@
                                         <span class="teammate-tile-chips">
-                                            <MudChip T="string" Size="Size.Small" Variant="Variant.Text">@(Teammates.FormattedAlias(entry.Alias))</MudChip>
-                                            <MudChip T="string" Size="Size.Small" Variant="Variant.Text" Class="teammate-tile-status" title="@status.Reason">
+                                            <span class="chip-meta">@(Teammates.FormattedAlias(entry.Alias))</span>
+                                            <span class="chip-meta teammate-tile-status" title="@status.Reason">
                                                 <StatusDot State="status.State" />
                                                 @Teammates.StatusLabel(status.State)
-                                            </MudChip>
+                                            </span>
                                         </span>
                                         @if (this.WorkingOn(entry.Name) is { } working)
                                         {

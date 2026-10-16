@@ -99,7 +99,7 @@
                             @this.GroupHeading(context, TaskGroupField.Team)
                             @if (this.OrphanTeamOf(context) is { } orphan)
                             {
-                                <MudChip T="string" Size="Size.Small" Color="Color.Warning" Class="task-orphan-team-chip">No teammate is in @orphan</MudChip>
+                                <StatusChip Color="Color.Warning" Icon="@Icons.Material.Filled.Warning" Class="task-orphan-team-chip">No teammate is in @orphan</StatusChip>
                             }
                         </GroupTemplate>
                     </TemplateColumn>
