@@ -160,7 +160,7 @@ public sealed class TeamPagesEndToEndTests
         Assert.Equal(["Marketing Project"], catalog.Find("Business")?.Projects);
     }
 
-    /// <summary>Step 5: the Team page and the Project page each answer 200 and the shell's breadcrumb reads Teams then the Team, and Teams then the Team and Project.</summary>
+    /// <summary>Step 5: the Team page and the Project page each answer 200 and the breadcrumb holds only the ancestors (Teams; Teams then the Team) and the page's own name is its h1.</summary>
     [Fact]
     public async Task TeamAndProjectPages_Return200_WithTheirBreadcrumbs()
     {
@@ -172,8 +172,10 @@ public sealed class TeamPagesEndToEndTests
         IHtmlDocument teamPage = await GetPageAsync(client, "/teams/Business", ct);
         IHtmlDocument projectPage = await GetPageAsync(client, "/teams/Business/projects/Marketing%20Project", ct);
 
-        Assert.Equal("Teams › Business", NormalisedTextOf(teamPage, ".page-breadcrumbs"));
-        Assert.Equal("Teams › Business › Marketing Project", NormalisedTextOf(projectPage, ".page-breadcrumbs"));
+        Assert.Equal("Teams", NormalisedTextOf(teamPage, ".page-breadcrumbs"));
+        Assert.Equal("Business", NormalisedTextOf(teamPage, "h1"));
+        Assert.Equal("Teams › Business", NormalisedTextOf(projectPage, ".page-breadcrumbs"));
+        Assert.Equal("Marketing Project", NormalisedTextOf(projectPage, "h1"));
         Assert.Equal("/teams/Business", projectPage.QuerySelector(".page-breadcrumbs a[href]")?.GetAttribute("href"));
     }
 

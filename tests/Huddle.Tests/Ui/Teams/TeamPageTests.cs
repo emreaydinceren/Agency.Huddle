@@ -383,44 +383,43 @@ public sealed class TeamPageTests
         Assert.Equal(0, catalog.ChangedSubscriberCount);
     }
 
-    /// <summary>The Team page draws no title row or h1: the shell breadcrumb (<c>S1a</c>) names the Team, as on the Tasks page.</summary>
+    /// <summary>The Team page names itself as its h1 through <see cref="PageHeader"/>, in the catalog's spelling, and the same text is the document title (DS-8).</summary>
     [Fact]
-    public async Task TeamPage_Header_HasNoTitleRow()
+    public async Task TeamPage_Header_HasTheTeamNameAsItsH1()
     {
         await using MudBunitContext ctx = NewContext(Catalog());
 
         IRenderedComponent<TeamPage> cut = RenderPage(ctx, "business");
 
-        Assert.Empty(cut.FindAll("h1"));
-        Assert.Empty(cut.FindComponents<PageHeader>());
+        Assert.Equal("Business", Assert.Single(cut.FindAll("h1")).TextContent);
+        Assert.Equal("Business", Assert.Single(cut.FindComponents<PageHeader>()).Instance.Title);
     }
 
-    /// <summary>The Project page has no title row or h1 either, and no Duplicate button (UX-004).</summary>
+    /// <summary>The Project page names itself as its h1 with the Project's name, and has no Duplicate button (UX-004).</summary>
     [Fact]
-    public async Task ProjectPage_Header_HasNoTitleRowOrDuplicate()
+    public async Task ProjectPage_Header_HasTheProjectNameAsItsH1AndNoDuplicate()
     {
         await using MudBunitContext ctx = NewContext(Catalog());
 
         IRenderedComponent<TeamPage> cut = RenderPage(ctx, "Business", "marketing project");
 
-        Assert.Empty(cut.FindAll("h1"));
+        Assert.Equal("Marketing Project", Assert.Single(cut.FindAll("h1")).TextContent);
         Assert.Empty(cut.FindAll(".team-page-actions"));
         Assert.DoesNotContain(cut.FindAll("button"), button => string.Equals(button.TextContent.Trim(), "Duplicate", StringComparison.Ordinal));
     }
 
-    /// <summary>With no title to sit beside, Duplicate is the only thing in a slim row at the right of the Team page, at its natural width and not a full-width bar above the tab rail (UX-004).</summary>
+    /// <summary>Duplicate sits on the right of the Team page's header row, on the same line as the h1, at its natural width (UX-004).</summary>
     [Fact]
-    public async Task TeamPage_Duplicate_SitsAloneInASlimRowAtItsNaturalWidth()
+    public async Task TeamPage_Duplicate_SitsInTheHeaderRowBesideTheH1()
     {
         await using MudBunitContext ctx = NewContext(Catalog());
 
         IRenderedComponent<TeamPage> cut = RenderPage(ctx, "Business");
 
-        IElement row = cut.Find(".team-page-actions");
-        IElement duplicate = Assert.Single(row.QuerySelectorAll("button"));
+        IElement duplicate = cut.Find("button.team-page-actions");
         Assert.Equal("Duplicate", duplicate.TextContent.Trim());
+        Assert.Same(cut.Find("h1").ParentElement, duplicate.ParentElement);
         Assert.DoesNotContain("team-page-duplicate", duplicate.ClassList);
-        Assert.Contains("mb-4", row.ClassList);
     }
 
     /// <summary>The Details tab, last on a Team page, renders the Team's details with the catalog's spelling; the header has no Edit team button, and a Project page has no Details tab.</summary>

@@ -4,6 +4,7 @@ using Microsoft.Extensions.Logging.Abstractions;
 using Agency.Huddle.App.Components.Layout;
 using Agency.Huddle.App.Data;
 using Agency.Huddle.App.Services;
+using Agency.Huddle.App.Tasks.Views;
 using Agency.Huddle.App.Teams;
 using Agency.Huddle.App.Tabs;
 using Agency.Huddle.Tests.Teams;
@@ -24,6 +25,7 @@ public sealed class TabSyncTests
         ctx.Services.AddSingleton<ITeamDirectory>(directory);
         ctx.Services.AddSingleton(events);
         ctx.Services.AddSingleton(tabs);
+        ctx.Services.AddSingleton(new ViewStore(dir.Options(), NullLogger<ViewStore>.Instance));
         ctx.Services.AddSingleton<ITeamCatalog>(new FakeTeamCatalog());
         return (ctx, directory, events, tabs, dir);
     }

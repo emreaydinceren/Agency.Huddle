@@ -4047,3 +4047,30 @@ a.team-ref,
 .profile-popover-empty {
     color: var(--mud-palette-text-secondary);
 }
+
+/* ---- Reading pages start at the same left edge as every other page (DS-10) ---------------------
+   A reading page (Settings, Teammates, Build a team) limits the width of its content, not its position:
+   MudContainer centres itself with auto margins, and this drops them so the title does not move when
+   the Human switches Tabs. */
+.mud-container.page-reading {
+    margin-left: 0;
+    margin-right: 0;
+}
+
+/* ---- An inline edit of a title keeps the title's size and weight (DS-11) ------------------------------
+   Renaming a Room swaps the h5 heading for this field, so it takes the h5 role from the Theme and shows
+   only the outline: no floating label and a tight padding, so nothing makes the header jump. The control
+   is pulled left by its side padding so the typed text starts where the heading's text did. */
+.mud-input-control.title-inline-edit {
+    margin: 0 0 0 -8px;
+}
+
+.title-inline-edit .mud-input-slot,
+.title-inline-edit .mud-input > input.mud-input-root.mud-input-root-outlined {
+    font-size: var(--mud-typography-h5-size);
+    font-weight: var(--mud-typography-h5-weight);
+    line-height: var(--mud-typography-h5-lineheight);
+    font-family: var(--mud-typography-h5-family);
+    padding: 0 8px;
+    height: auto;
+}

@@ -22,10 +22,10 @@ public sealed class TeamPageRouteTests
 
     /// <summary>Each of the four routes answers 200 with its own prerendered title and opens its default (or named) tab.</summary>
     [Theory]
-    [InlineData("/teams/Business", "Business — Huddle", "Members", ".team-roster")]
-    [InlineData("/teams/Business/files", "Business — Huddle", "Files", ".team-files-tab")]
-    [InlineData("/teams/Business/projects/Marketing%20Project", "Marketing Project · Business — Huddle", "Files", ".team-files-tab")]
-    [InlineData("/teams/Business/projects/Marketing%20Project/tasks", "Marketing Project · Business — Huddle", "Tasks", ".team-tasks-tab")]
+    [InlineData("/teams/Business", "Business", "Members", ".team-roster")]
+    [InlineData("/teams/Business/files", "Business", "Files", ".team-files-tab")]
+    [InlineData("/teams/Business/projects/Marketing%20Project", "Marketing Project", "Files", ".team-files-tab")]
+    [InlineData("/teams/Business/projects/Marketing%20Project/tasks", "Marketing Project", "Tasks", ".team-tasks-tab")]
     public async Task Route_Returns200_WithTheTitleAndTheActiveTab(string path, string expectedTitle, string expectedTab, string expectedPanel)
     {
         CancellationToken ct = TestContext.Current.CancellationToken;
@@ -39,9 +39,9 @@ public sealed class TeamPageRouteTests
         Assert.Single(page.QuerySelectorAll(expectedPanel));
     }
 
-    /// <summary>The Team page's prerendered title is <c>Business — Huddle</c>, the Team's own spelling and no Project.</summary>
+    /// <summary>The Team page's prerendered title is <c>Business</c>, the Team's own spelling: the bare page name every page uses.</summary>
     [Fact]
-    public async Task TeamPage_Title_IsTheTeamNameThenHuddle()
+    public async Task TeamPage_Title_IsTheBareTeamName()
     {
         CancellationToken ct = TestContext.Current.CancellationToken;
         await using TeamWebApplicationFactory factory = new();
@@ -49,7 +49,7 @@ public sealed class TeamPageRouteTests
 
         IHtmlDocument page = await GetPageAsync(client, "/teams/Business", ct);
 
-        Assert.Equal("Business — Huddle", TitleOf(page));
+        Assert.Equal("Business", TitleOf(page));
     }
 
     /// <summary>E-11: <c>/teams/Sales%20%26%20Ops</c> resolves the Team <c>Sales &amp; Ops</c> (title and default tab) and its own links are escaped.</summary>
@@ -62,7 +62,7 @@ public sealed class TeamPageRouteTests
 
         IHtmlDocument page = await GetPageAsync(client, "/teams/Sales%20%26%20Ops", ct);
 
-        Assert.Equal("Sales & Ops — Huddle", TitleOf(page));
+        Assert.Equal("Sales & Ops", TitleOf(page));
         Assert.Equal("Members", TextOf(page, ActiveTabSelector));
     }
 
@@ -80,7 +80,7 @@ public sealed class TeamPageRouteTests
         Assert.NotNull(crumb);
         Assert.Equal("/teams/Sales%20%26%20Ops", crumb.GetAttribute("href"));
         Assert.Equal("Sales & Ops", crumb.TextContent.Trim());
-        Assert.Equal("Launch · Sales & Ops — Huddle", TitleOf(page));
+        Assert.Equal("Launch", TitleOf(page));
     }
 
     /// <summary>An unknown Team is a 200 page with the notice text and creates no folder under <c>Teams/</c>.</summary>
@@ -107,7 +107,7 @@ public sealed class TeamPageRouteTests
 
         IHtmlDocument page = await GetPageAsync(client, "/teams/business", ct);
 
-        Assert.Equal("Business — Huddle", TitleOf(page));
+        Assert.Equal("Business", TitleOf(page));
     }
 
     /// <summary>Seeds the Persona and the Project folders, creates the client, and waits until the host's catalog lists all three Projects.</summary>
