@@ -4047,3 +4047,82 @@ a.team-ref,
 .profile-popover-empty {
     color: var(--mud-palette-text-secondary);
 }
+
+/* ---- DS-9: the Task detail form as four headed groups of label | value properties ----------------------
+   TaskDetail.razor groups its fields under subtitle2 headings (.group-heading). Each .task-detail-prop is a
+   label and a value: stacked, label over value, in a narrow drawer; two columns, label left and value right
+   (the Library Properties block's grid: .library-properties-list), once the container is 368px wide - a 400px
+   drawer less its 16px padding on each side. A container query on .task-detail-groups, not a viewport media
+   query, because the drawer is resizable (huddleResize). The visible label is .task-detail-prop-label; the
+   control's own MudBlazor label stays in the DOM, visually hidden, as its accessible name. */
+.task-detail-groups {
+    container-type: inline-size;
+    container-name: task-detail;
+    display: flex;
+    flex-direction: column;
+    gap: 24px;
+}
+
+.task-detail-group {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.task-detail-group > .group-heading {
+    margin: 0;
+}
+
+.task-detail-props {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    gap: 12px;
+}
+
+.task-detail-prop {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    gap: 4px;
+    align-items: start;
+}
+
+.task-detail-prop-label {
+    color: var(--mud-palette-text-secondary);
+    font-size: var(--mud-typography-body2-size);
+    line-height: 1.5;
+}
+
+.task-detail-prop-value {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    min-width: 0;
+    overflow-wrap: anywhere;
+}
+
+/* The visible label above replaces the floating one: keep it in the DOM for assistive technology, and take
+   it, and the border notch cut for it, out of the picture. */
+.task-detail-prop-value .mud-input-label {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
+}
+
+.task-detail-prop-value .mud-input-outlined-border legend {
+    display: none;
+}
+
+@container task-detail (min-width: 368px) {
+    .task-detail-prop {
+        grid-template-columns: minmax(6rem, 8rem) minmax(0, 1fr);
+        column-gap: 24px;
+        align-items: start;
+    }
+
+    .task-detail-prop-label {
+        padding-top: 8px;
+    }
+}
