@@ -130,14 +130,15 @@ public sealed class AppCssTasksTests
         Assert.Contains("display: flex", rule, StringComparison.Ordinal);
     }
 
-    /// <summary>The count chip is spaced away from the label it used to run into (finding F10).</summary>
+    /// <summary>The column count is 12px secondary text after the 13px/600 label (S4).</summary>
     [Fact]
     public void AppCss_DeclaresTaskBoardColumnCount_WithPadding()
     {
         string rule = RuleFor(".task-board-column-count");
 
         // contains-ok: source-fact test, no CSS parser - the rule's own text is what's pinned.
-        Assert.Contains("padding:", rule, StringComparison.Ordinal);
+        Assert.Contains("font-size: var(--mud-typography-caption-size)", rule, StringComparison.Ordinal);
+        Assert.Contains("color: var(--mud-palette-text-secondary)", rule, StringComparison.Ordinal);
     }
 
     /// <summary>A lane is a vertical band: its label spans the full width above its own row of columns (finding F10).</summary>
@@ -221,5 +222,47 @@ public sealed class AppCssTasksTests
         string rule = text[classIndex..(braceEnd + 1)];
         // contains-ok: source-fact test, no CSS parser - the rule's own text is what's pinned.
         Assert.Contains("flex-direction: column", rule, StringComparison.Ordinal);
+    }
+
+    /// <summary>The List's header cells are 12px/600 secondary, its rows 36px (32px Dense) and its fixed columns 110, 120 and 40px (S5).</summary>
+    [Fact]
+    public void AppCss_ListHeaderRowsAndColumns_FollowTheSpec()
+    {
+        string css = File.ReadAllText(CssSource.RepoPath("src", "Huddle.App", "wwwroot", "app.css"));
+
+        // contains-ok: source-fact test, no CSS parser - the rule's own text is what's pinned.
+        Assert.Contains(".mud-table.task-list-grid .mud-table-head .mud-table-row .mud-table-cell {\n    font-size: var(--mud-typography-caption-size);\n    font-weight: 600;\n    color: var(--mud-palette-text-secondary);", css.Replace("\r\n", "\n"), StringComparison.Ordinal);
+        Assert.Contains("height: 36px;", RuleFor(".mud-table.task-list-grid .mud-table-body .mud-table-row .mud-table-cell"), StringComparison.Ordinal);
+        Assert.Contains("height: 32px;", RuleFor(".mud-table.task-list-grid.mud-table-dense .mud-table-body .mud-table-row .mud-table-cell"), StringComparison.Ordinal);
+        Assert.Contains("width: 110px;", RuleFor(".task-list-grid thead th.task-list-id-cell"), StringComparison.Ordinal);
+        Assert.Contains("width: 120px;", RuleFor(".task-list-grid thead th.task-list-priority-cell"), StringComparison.Ordinal);
+        Assert.Contains("width: 40px;", RuleFor(".task-list-grid thead th:last-child"), StringComparison.Ordinal);
+    }
+
+    /// <summary>The card is 12px padded with a Divider border and 8px between cards; its title clamps at three lines and its id is 12px secondary (S4).</summary>
+    [Fact]
+    public void AppCss_BoardCard_FollowsTheSpec()
+    {
+        string card = RuleFor(".task-card");
+        // contains-ok: source-fact test, no CSS parser - the rule's own text is what's pinned.
+        Assert.Contains("padding: 12px;", card, StringComparison.Ordinal);
+        Assert.Contains("border: 1px solid var(--mud-palette-divider);", card, StringComparison.Ordinal);
+        Assert.Contains("gap: 8px;", RuleFor(".task-zone"), StringComparison.Ordinal);
+        Assert.Contains("line-clamp: 3;", RuleFor(".task-card-title"), StringComparison.Ordinal);
+        Assert.Contains("font-size: var(--mud-typography-caption-size);", RuleFor(".task-card-id"), StringComparison.Ordinal);
+        Assert.Contains("width: 8px;", RuleFor(".task-state-dot"), StringComparison.Ordinal);
+    }
+
+    /// <summary>The drawer's label column is 120px, its footer meta 12px secondary and its title clamps at three lines (S6).</summary>
+    [Fact]
+    public void AppCss_TaskDrawer_FollowsTheSpec()
+    {
+        string css = File.ReadAllText(CssSource.RepoPath("src", "Huddle.App", "wwwroot", "app.css"));
+
+        // contains-ok: source-fact test, no CSS parser - the rule's own text is what's pinned.
+        Assert.Contains("grid-template-columns: 120px minmax(0, 1fr);", css, StringComparison.Ordinal);
+        Assert.Contains("font-size: var(--mud-typography-caption-size);", RuleFor(".task-detail-footer-meta"), StringComparison.Ordinal);
+        Assert.Contains("line-clamp: 3;", RuleFor(".resizable-drawer-title"), StringComparison.Ordinal);
+        Assert.Contains("font-weight: 600;", RuleFor(".task-detail-group > .group-heading"), StringComparison.Ordinal);
     }
 }

@@ -67,7 +67,7 @@
                     </TemplateColumn>
                     break;
                 case "priority":
-                    <TemplateColumn @key="key" HeaderStyle="@this.HeaderStyle("priority")" InitialDirection="@this.DirectionFor("priority")" T="TaskItem" Title="Priority" Hidden="@(!this.Shows("priority"))" Sortable="true"
+                    <TemplateColumn @key="key" HeaderStyle="@this.HeaderStyle("priority")" InitialDirection="@this.DirectionFor("priority")" T="TaskItem" Title="Priority" Hidden="@(!this.Shows("priority"))" CellClass="task-list-priority-cell" HeaderClass="task-list-priority-cell" Sortable="true"
                                      SortBy="@(t => (object)(int)t.Priority)">
                         <CellTemplate>
                             <TaskPriorityChip Priority="context.Item.Priority" />
