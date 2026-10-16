@@ -15,7 +15,7 @@
 <div class="new-chat">
     @if (this.Team is null)
     {
-        <MudNavLink Icon="@Icons.Material.Filled.Add" IconColor="Color.Primary" OnClick="this.TogglePanel" Class="nav-action-link">New chat</MudNavLink>
+        <MudNavLink Icon="@Icons.Material.Filled.Add" OnClick="this.TogglePanel" Class="nav-action-link">New chat</MudNavLink>
     }
     <MudCollapse Expanded="@this.isOpen">
         @if (this.isOpen)

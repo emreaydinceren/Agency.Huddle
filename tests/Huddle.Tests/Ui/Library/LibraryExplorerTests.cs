@@ -666,7 +666,7 @@ public sealed class LibraryExplorerTests : IDisposable
         Assert.False(File.Exists(Path.Combine(root, "New.md")));
         Assert.True(File.Exists(Path.Combine(root, "Old.md")));
         Assert.Equal("Old.md", cut.FindComponent<LibraryDocument>().Instance.Path.RelativePath);
-        Assert.Equal($"{old.FullPath} ●", cut.Find(".library-document-path").TextContent.Trim());
+        Assert.Equal($"{LibraryPathDisplay.Shorten(old.FullPath)} ●", cut.Find(".library-document-path").TextContent.Trim());
     }
 
     /// <summary>[12.7b] Deleting a folder that contains the open document also asks it to leave first.</summary>

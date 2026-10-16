@@ -242,7 +242,7 @@ comments (`@* *@`, `<!-- -->`, `/* */`) are skipped.
 | CV8 | same | `Icons.Material.Outlined.Add`, `Icons.Material.Filled.ContentPaste`, `Icons.Material.Outlined.ContentPaste`, or a button or menu label starting with `+ ` | UX-083, UX-084 |
 | CV9 | `Components/**/*.razor` | a `style=` or `Style=` whose value doesn't start with `@` | UX-V28 |
 | CV10 | `Components/**/*.razor` | a `DispatchAsync` method declared in a component (after U7 the shared helper is the only one) | UX-R02 |
-| CV11 | `wwwroot/app.css`, `Components/**/*.razor.css` | a `border-radius` that isn't `0`, `50%`, `999px` or built from `var(--mud-default-borderradius)`; a literal `font-size`; a `padding`, `margin` or `gap` with a px value over 2; a `z-index` above 2; `!important` | UX-060, UX-068, UX-073, UX-V18, UX-V20, UX-V22 |
+| CV11 | `wwwroot/app.css`, `Components/**/*.razor.css` | a `border-radius` that isn't `0`, `50%`, `999px` or built from `var(--mud-default-borderradius)`; a literal `font-size`; a `padding`, `margin` or `gap` in rem, or in px over 2 and off the 4/8/12/16/24/32 scale (40/48/64/80 for a clearance); a `z-index` above 2; `!important` | UX-060, UX-068, UX-073, UX-V18, UX-V20, UX-V22 |
 
 **Baselines.** `tests/Huddle.Tests/Ui/Conventions/Baseline/<Area>.txt`, one file per area, lines of
 `CVn|<repo-relative path>|<count>`. Areas and owners: `Shell` (U8, U9), `Room` (U10, U11), `Tasks`

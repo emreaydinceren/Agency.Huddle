@@ -7,6 +7,7 @@ import {
   EditorState,
   EditorView,
   keymap,
+  lineNumbers,
   defaultKeymap,
   history,
   historyKeymap,
@@ -50,9 +51,10 @@ function languageExtension(languageId) {
  * mode switch, never per keystroke: `OnDirtyChanged` fires only when the dirty state flips, and
  * `OnSaveRequested` fires only on the `Mod-s` keymap. When `previewMode` is set (Split mode,
  * corrections-B6 item 15), `OnPreviewText` fires 300 ms after the last keystroke - the debounce
- * timer lives here, never as a .NET `Timer`, and is cleared by `dispose`.
+ * timer lives here, never as a .NET `Timer`, and is cleared by `dispose`. `showLineNumbers` adds
+ * CodeMirror's line-number gutter (Split mode's raw side).
  */
-export function create(element, text, readOnly, languageId, dotNetRef, previewMode) {
+export function create(element, text, readOnly, languageId, dotNetRef, previewMode, showLineNumbers) {
   let savedText = text;
   let dirty = false;
   let previewTimer = null;
@@ -104,6 +106,7 @@ export function create(element, text, readOnly, languageId, dotNetRef, previewMo
         EditorView.editable.of(!readOnly),
         EditorState.readOnly.of(readOnly),
         EditorView.lineWrapping,
+        showLineNumbers ? lineNumbers() : [],
         history(),
         saveKeymap,
         languageExtension(languageId),

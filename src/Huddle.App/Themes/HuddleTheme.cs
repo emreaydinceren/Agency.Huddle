@@ -47,7 +47,10 @@ internal static class HuddleTheme
         Divider = "#e5e5e4",
         DividerLight = "#ededec",
         LinesInputs = "#e0e0df",
-        LinesDefault = "#d4d3d1",
+        // The pane and chrome hairlines on the one shell surface: 2.1:1 against Surface, so a divider reads
+        // as a line without turning into a frame. #d4d3d1 (1.5:1) disappeared once the panes stopped being
+        // cards on a darker ground.
+        LinesDefault = "#b4b2ad",
         TextPrimary = "#141413",
         TextSecondary = "#45443f",
         TextDisabled = "#8a8882",
@@ -84,7 +87,9 @@ internal static class HuddleTheme
         Divider = "#333332",
         DividerLight = "#2b2b2a",
         LinesInputs = "#454543",
-        LinesDefault = "#5a5a57",
+        // The pane and chrome hairlines: 2.5:1 against Surface (#262625), the same "clearly a line" weight
+        // as Huddle Light's.
+        LinesDefault = "#646461",
         TextPrimary = "#ececea",
         TextSecondary = "#a3a29d",
 

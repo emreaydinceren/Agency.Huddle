@@ -692,7 +692,7 @@ internal static class PersonaFrontmatter
         {
             if (currentListKey is not null && currentListValues.Count > 0)
             {
-                fields.Add(new PersonaFrontmatterField(currentListKey, string.Join("; ", currentListValues)));
+                fields.Add(new PersonaFrontmatterField(currentListKey, string.Join("; ", currentListValues)) { Items = [.. currentListValues] });
             }
 
             currentListKey = null;
@@ -776,7 +776,7 @@ internal static class PersonaFrontmatter
             {
                 if (flowItems.Count > 0)
                 {
-                    fields.Add(new PersonaFrontmatterField(key, string.Join("; ", flowItems)));
+                    fields.Add(new PersonaFrontmatterField(key, string.Join("; ", flowItems)) { Items = [.. flowItems] });
                 }
             }
             else

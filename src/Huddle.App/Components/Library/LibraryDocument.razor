@@ -23,7 +23,9 @@
 <div class="library-document">
     <MudExitPrompt Title="Discard changes?" Text="Your unsaved edits to this file will be lost." Disabled="@(!this.dirty)" Class="library-document-exit-prompt" />
     <MudToolBar Dense="true" Class="library-document-toolbar">
-        @* Every host names the open file the same way: its full system path, on the toolbar's left. *@
+        @* Every host names the open file the same way: its full system path on the toolbar's left, shortened past
+           LibraryPathDisplay.MaxLength (the whole path stays in the tooltip), with Copy path just before it. *@
+        <MudIconButton Icon="@Icons.Material.Filled.ContentCopy" Size="Size.Small" aria-label="Copy path" title="Copy path" Class="library-document-copy" OnClick="@this.OnCopyAsync" />
         <MudText Typo="Typo.caption" Class="library-document-path library-document-path-inline" title="@this.Path.FullPath">@this.FullPathText()</MudText>
         <MudSpacer />
         @if (this.ShowModeToggle())
@@ -35,7 +37,6 @@
                 <MudToggleItem Value="LibraryMode.Split" Text="Split" />
             </HuddleSegmentedControl>
         }
-        <MudIconButton Icon="@Icons.Material.Filled.ContentCopy" Size="Size.Small" aria-label="Copy" Class="library-document-copy" OnClick="@this.OnCopyAsync" />
         <MudIconButton Icon="@Icons.Material.Filled.OpenInNew" Size="Size.Small" aria-label="Pop out" Class="library-document-pop-out" OnClick="@this.PopOut" />
         @if (this.OnClose.HasDelegate)
         {
@@ -90,7 +91,7 @@
             <div class="library-document-split">
                 <LibraryEditor @ref="this.editorRef" Text="@(this.content.Text ?? string.Empty)" ReadOnly="false" LanguageId="markdown"
                                DirtyChanged="@this.OnDirtyChangedAsync" SaveRequested="@this.OnSaveRequestedAsync"
-                               PreviewMode="true" PreviewTextChanged="@this.OnPreviewTextChangedAsync" />
+                               PreviewMode="true" PreviewTextChanged="@this.OnPreviewTextChangedAsync" LineNumbers="true" />
                 @this.RenderMarkdown(this.previewText ?? this.content.Text ?? string.Empty)
             </div>
         }
@@ -129,7 +130,7 @@
     /// <summary>
     /// Renders <paramref name="text"/> as the Library's rendered Markdown. A leading YAML frontmatter block
     /// (a Teammate definition's <c>name:</c>/<c>title:</c>/<c>skills:</c> header) is split off with
-    /// <see cref="PersonaFrontmatter.Parse(string)"/> and shown as a small metadata list, because left in the
+    /// <see cref="PersonaFrontmatter.Parse(string)"/> and shown as a <see cref="LibraryProperties"/> block, because left in the
     /// body the closing <c>---</c> reads as a setext underline and folds the whole block into one heading.
     /// </summary>
     /// <param name="text">The document's raw Markdown, frontmatter included.</param>
@@ -140,19 +141,9 @@
         builder.AddAttribute(1, "class", "library-rendered");
         if (fields.Count > 0)
         {
-            builder.OpenElement(2, "dl");
-            builder.AddAttribute(3, "class", "library-frontmatter mud-typography-caption mb-4");
-            foreach (PersonaFrontmatterField field in fields)
-            {
-                builder.OpenElement(4, "dt");
-                builder.AddContent(5, field.Key);
-                builder.CloseElement();
-                builder.OpenElement(6, "dd");
-                builder.AddContent(7, field.Value);
-                builder.CloseElement();
-            }
-
-            builder.CloseElement();
+            builder.OpenComponent<LibraryProperties>(2);
+            builder.AddComponentParameter(3, nameof(LibraryProperties.Fields), fields);
+            builder.CloseComponent();
         }
 
         builder.AddContent(8, (MarkupString)MarkdownRenderer.ToHtml(body, this.Tasks, this.NoteResolver, this.Path));
@@ -510,7 +501,11 @@
         && this.content is { Kind: LibraryFileKind.Markdown, Editable: true };
 
     /// <summary>The document's absolute file system path (<c>C:\...\Teams\Platform\API v2\API-v2-Design.md</c>), shown on the toolbar as the document's title, with a trailing <c>●</c> while dirty (Spec §6.7).</summary>
-    private string FullPathText() => this.dirty ? $"{this.Path.FullPath} ●" : this.Path.FullPath;
+    private string FullPathText()
+    {
+        string shown = LibraryPathDisplay.Shorten(this.Path.FullPath);
+        return this.dirty ? $"{shown} ●" : shown;
+    }
 
     /// <summary>The document's file name, from its relative path.</summary>
     private string FileName() => System.IO.Path.GetFileName(this.Path.RelativePath);

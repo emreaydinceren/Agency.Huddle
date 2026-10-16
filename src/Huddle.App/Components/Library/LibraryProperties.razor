@@ -1,0 +1,41 @@
+@*
+    A note's leading YAML frontmatter as a Properties block above its rendered body: one key/value row per
+    field, in file order. A field written as a list (a block list or a [a, b] flow list) draws one chip per
+    item, so tags read as tags rather than as a semicolon-joined line; a chip never shows a leading "#".
+*@
+@using Agency.Huddle.App.Acp
+
+<section class="library-properties" aria-label="Properties">
+    <MudText Typo="Typo.overline" Class="library-properties-title">Properties</MudText>
+    <dl class="library-properties-list">
+        @foreach (PersonaFrontmatterField field in this.Fields)
+        {
+            <div class="library-properties-row">
+                <dt class="library-properties-key">@field.Key</dt>
+                <dd class="library-properties-value">
+                    @if (field.Items.Count > 0)
+                    {
+                        @foreach (string item in field.Items)
+                        {
+                            <MudChip T="string" Size="Size.Small" Variant="Variant.Outlined" Class="library-properties-chip">@ChipText(item)</MudChip>
+                        }
+                    }
+                    else
+                    {
+                        @field.Value
+                    }
+                </dd>
+            </div>
+        }
+    </dl>
+</section>
+
+@code {
+    /// <summary>The frontmatter fields to show, in file order.</summary>
+    [Parameter, EditorRequired]
+    public IReadOnlyList<PersonaFrontmatterField> Fields { get; set; } = [];
+
+    /// <summary>A list item as a chip draws it: without the leading <c>#</c> a tag is often written with.</summary>
+    /// <param name="item">The list item as parsed.</param>
+    private static string ChipText(string item) => item.TrimStart('#');
+}

@@ -96,7 +96,7 @@ public sealed class LibraryPageTests : IDisposable
             ctx, root: query["root"].ToString(), path: query["path"].ToString(), scopeRoot: null, scopePath: null);
 
         cut.WaitForAssertion(() => Assert.NotEmpty(cut.FindAll(".library-rendered")));
-        Assert.Equal(filePath.FullPath, cut.Find(".library-document-path").TextContent.Trim());
+        Assert.Equal(LibraryPathDisplay.Shorten(filePath.FullPath), cut.Find(".library-document-path").TextContent.Trim());
     }
 
     /// <summary>The open file is named by the shell breadcrumb (<c>S1a</c>), not by the page: the trail is

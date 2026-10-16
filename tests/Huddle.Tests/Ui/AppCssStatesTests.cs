@@ -184,7 +184,7 @@ public sealed partial class AppCssStatesTests
     [Fact]
     public void AppCss_FullPaneEmptyStates_ShareOneRule()
     {
-        Assert.Matches(@"\.tab-empty,\s*\.library-empty-pane\s*\{[^}]*padding:\s*2rem", AppCss());
+        Assert.Matches(@"\.tab-empty,\s*\.library-empty-pane\s*\{[^}]*padding:\s*32px", AppCss());
     }
 
     /// <summary>

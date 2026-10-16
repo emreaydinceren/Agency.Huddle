@@ -86,10 +86,10 @@
                     @if (this.PrimaryScope() is not null)
                     {
                         <div class="library-explorer-tree-actions">
-                            <MudButton Size="Size.Small" Variant="Variant.Text" Color="Color.Primary" StartIcon="@ActionIcons.NewNote"
+                            <MudButton Size="Size.Small" Variant="Variant.Text" StartIcon="@ActionIcons.NewNote"
                                        OnClick="this.NewNoteAsync" Class="library-explorer-new-note">New note</MudButton>
                             <MudTooltip Text="New folder">
-                                <MudIconButton Icon="@ActionIcons.NewFolder" Size="Size.Small" Color="Color.Primary" aria-label="New folder"
+                                <MudIconButton Icon="@ActionIcons.NewFolder" Size="Size.Small" aria-label="New folder"
                                                OnClick="this.NewFolderAsync" Class="library-explorer-new-folder" />
                             </MudTooltip>
                         </div>

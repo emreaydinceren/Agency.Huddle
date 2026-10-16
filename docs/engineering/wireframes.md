@@ -199,7 +199,7 @@ Not drawn: `TaskDetailDialog`, the dialog form of the detail (see Figure 8). A V
 
 ## Figure 5: The Library page
 
-`Library.razor`, `LibraryExplorer.razor`, `LibraryDocument.razor`. `LibraryExplorer` (a `MudSplitPanel`) fills the page with no code of its own (`L1` and `L1a` are retired); the page has no `h1` and no root-path heading, since the shell breadcrumb (`S1a`) names it: the split is `h-100` with `min-height: 0` and both panels are full height; side by side on this page, other hosts can stack the panels.
+`Library.razor`, `LibraryExplorer.razor`, `LibraryDocument.razor`. `LibraryExplorer` (a `MudSplitPanel`) fills the page with no code of its own (`L1` and `L1a` are retired); the page has no `h1` and no root-path heading, since the shell breadcrumb (`S1a`) names it: the split is `h-100` with `min-height: 0` and both panels are full height; side by side on this page, other hosts can stack the panels. The page container is `pa-0`, so the two panes run edge to edge on the shell's one surface, split by the `lines-default` hairline; each pane pads itself 16px at the sides and 24px above its content (the tree header, and the document toolbar then 24px more to the content).
 
 ![The Library page: a root path heading above a split: a tree panel on the left, a draggable divider, and a document panel on the right with a toolbar, banners, an editor and preview, and a backlinks panel](../images/wireframes/05-library.svg)
 
@@ -211,11 +211,11 @@ Not drawn: `TaskDetailDialog`, the dialog form of the detail (see Figure 8). A V
 | `L2b` | Filtered results | `.library-search-results` | Replace the tree while a filter is set |
 | `L4` | Divider | `MudSplitPanel` divider | A `lines-default` hairline; draggable; the position is remembered |
 | `L3` | Document panel | Second panel, `LibraryDocument` | With nothing open: "Select a note to read it" and a New note button |
-| `L3a` | Toolbar | `MudToolBar`, dense | The open file's full system path on the left (with ● while unsaved), then the controls on its right. The same in every host, the Library page and the Team Files tab alike, since both are one `LibraryExplorer`; the shell breadcrumb (`S1a`) names the file by its Library location |
+| `L3a` | Toolbar | `MudToolBar`, dense | Copy path (`MudIconButton`), then the open file's full system path on the left (with ● while unsaved), then the controls on its right. A path over 60 characters keeps its drive and first folder, an ellipsis and the file name (`C:\Users\…\Email-Ideas.md`, `LibraryPathDisplay`); the tooltip holds the whole path. The same in every host, the Library page and the Team Files tab alike, since both are one `LibraryExplorer`; the shell breadcrumb (`S1a`) names the file by its Library location |
 | `L3b` | Mode switch | `HuddleSegmentedControl` | Read, Edit, Split |
-| `L3c` | Document actions | `MudIconButton` row | Copy, Pop out, Close |
+| `L3c` | Document actions | `MudIconButton` row | Pop out, Close. Copy path is at the start of `L3a` |
 | `L3d` | Banners | Dense `MudAlert` with a role, `.library-document-banner` | Moved or deleted, newer on disk (Reload or Keep mine), save error, read-only reason. The Move dialog's refusal is the same Dense `MudAlert` |
-| `L3e` | Content | `LibraryEditor` (CodeMirror) | Editor, preview, or both |
+| `L3e` | Content | `LibraryEditor` (CodeMirror), `.library-rendered` | Editor, preview, or both. Read and Split's preview share the reading styles: a centred column of about 70 characters. Split is two equal columns split by a hairline, with the raw side tinted, monospace and line-numbered. A leading frontmatter block renders as `LibraryProperties` (`.library-properties`): a "Properties" card of key/value rows, with a list field's items as chips and no `#` on a tag |
 | `L3f` | Backlinks panel | `BacklinksPanel` | Files that link here |
 
 ## Figure 6: Tabbed pages (Team page and Settings)

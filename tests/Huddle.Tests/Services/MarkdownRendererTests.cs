@@ -93,6 +93,20 @@ public sealed class MarkdownRendererTests
         Assert.Equal("PLAT-0042", anchor.TextContent);
     }
 
+    /// <summary>A <c>#</c> written straight before a known id is taken into the link, which draws the id alone.</summary>
+    [Fact]
+    public void ToHtml_HashBeforeKnownId_IsTakenIntoTheLink()
+    {
+        TaskId id = MarkdownRendererTests.MakeId("PLAT-0042");
+        FakeTaskReferenceResolver resolver = new(new TaskReference(id, "Ship the thing", Closed: false));
+
+        var html = MarkdownRenderer.ToHtml("See #PLAT-0042 for details.", resolver);
+        IElement anchor = MarkdownRendererTests.FindAnchor(html, "PLAT-0042");
+
+        Assert.Equal("PLAT-0042", anchor.TextContent);
+        Assert.DoesNotContain("#", anchor.ParentElement?.TextContent ?? "#", StringComparison.Ordinal);
+    }
+
     /// <summary>A Closed Task's link additionally carries the struck-through class.</summary>
     [Fact]
     public void ToHtml_ClosedTask_AddsTaskRefClosedClass()
@@ -457,6 +471,28 @@ public sealed class MarkdownRendererTests
         Assert.Null(document.QuerySelector("img"));
         IElement anchor = MarkdownRendererTests.FindAnchor(html, "plan");
         Assert.Contains("library-ref", anchor.ClassList, StringComparer.Ordinal);
+    }
+
+    /// <summary>
+    /// In a note, a Task link and a Room link keep their app addresses: the note resolver reads any "/" path as
+    /// Library-root-relative, so without the guard both were rewritten to a <c>?library=</c> note that does not exist.
+    /// </summary>
+    [Fact]
+    public void Note_TaskAndRoomLinks_KeepTheirAddresses()
+    {
+        TaskId id = MarkdownRendererTests.MakeId("PLAT-0042");
+        FakeTaskReferenceResolver tasks = new(new TaskReference(id, "Ship the thing", Closed: false));
+        FakeLibraryNoteResolver library = new(resolveRelative: (_, url) => new LibraryReference("teams", url.TrimStart('/'), Exists: false));
+        const string RoomHref = "/rooms/01a1268264bd7c7d9d8d575e972d48f3";
+
+        var html = MarkdownRenderer.ToHtml($"See PLAT-0042 in [standup]({RoomHref}).", tasks, library, from: MarkdownRendererTests.NotePath);
+        IElement task = MarkdownRendererTests.FindAnchor(html, "PLAT-0042");
+        IElement room = MarkdownRendererTests.FindAnchor(html, "standup");
+
+        Assert.Equal("/tasks/item/PLAT-0042", task.GetAttribute("href"));
+        Assert.Equal(RoomHref, room.GetAttribute("href"));
+        Assert.DoesNotContain("library-ref", task.ClassList, StringComparer.Ordinal);
+        Assert.DoesNotContain("library-ref", room.ClassList, StringComparer.Ordinal);
     }
 
     /// <summary>A relative Markdown link is resolved from the note's own location.</summary>

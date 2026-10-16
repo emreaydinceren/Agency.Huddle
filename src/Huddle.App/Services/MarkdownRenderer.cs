@@ -250,9 +250,12 @@ public static partial class MarkdownRenderer
                 continue;
             }
 
-            if (match.Index > consumed)
+            // A "#" written straight before the id ("#PLAT-12") is part of the reference, so the chip takes it in
+            // and draws the id alone, rather than leaving a stray "#" in front of the chip.
+            int start = match.Index > consumed && text[match.Index - 1] == '#' ? match.Index - 1 : match.Index;
+            if (start > consumed)
             {
-                replacements.Add(MarkdownRenderer.CreatePositionedLiteral(literal, text, consumed, match.Index));
+                replacements.Add(MarkdownRenderer.CreatePositionedLiteral(literal, text, consumed, start));
             }
 
             replacements.Add(MarkdownRenderer.CreateLink(reference, match.Value));
@@ -343,7 +346,9 @@ public static partial class MarkdownRenderer
     {
         foreach (LinkInline link in document.Descendants<LinkInline>().ToList())
         {
-            if (link.Url is null)
+            // A Task, Room or Team link is already an app address ("/tasks/item/PLAT-12", "/rooms/{id}"), which the
+            // resolver would otherwise read as Library-root-relative and point at a note that does not exist.
+            if (link.Url is null || MarkdownRenderer.IsAppReference(link))
             {
                 continue;
             }
@@ -368,6 +373,12 @@ public static partial class MarkdownRenderer
             }
         }
     }
+
+    /// <summary>Whether <paramref name="link"/> was already marked as a Task, Room or Team reference by an earlier pass.</summary>
+    /// <param name="link">The link to check.</param>
+    private static bool IsAppReference(LinkInline link) =>
+        link.GetAttributes().Classes is { } classes
+        && classes.Exists(static name => name is "task-ref" or "room-ref" or "team-ref");
 
     /// <summary>
     /// Finds every run of consecutive sibling <see cref="LiteralInline"/>s in <paramref name="document"/> and

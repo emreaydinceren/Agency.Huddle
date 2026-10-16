@@ -113,7 +113,7 @@ public sealed class RoomLayoutSourceTests
     {
         string body = RuleBody(ReadAppCss(), ".agent-card-actions");
 
-        Assert.Contains("margin-top: 0.75rem;", body, StringComparison.Ordinal); // contains-ok: stylesheet source text, not markup
+        Assert.Contains("margin-top: 12px;", body, StringComparison.Ordinal); // contains-ok: stylesheet source text, not markup
     }
 
     /// <summary>
@@ -125,7 +125,7 @@ public sealed class RoomLayoutSourceTests
     {
         string css = ReadAppCss();
 
-        Assert.Contains("margin-top: 0.75rem;", RuleBody(css, ".question-card-question"), StringComparison.Ordinal); // contains-ok: stylesheet source text, not markup
+        Assert.Contains("margin-top: 12px;", RuleBody(css, ".question-card-question"), StringComparison.Ordinal); // contains-ok: stylesheet source text, not markup
         Assert.Contains("flex: 1 1 auto;", RuleBody(css, ".question-card-rank-label"), StringComparison.Ordinal); // contains-ok: stylesheet source text, not markup
     }
 
