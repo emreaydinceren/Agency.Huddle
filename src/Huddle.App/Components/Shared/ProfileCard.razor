@@ -1,0 +1,127 @@
+@* <summary>
+     A Teammate's profile card: avatar, name with status dot, title, description, and the membership,
+     tier and skills chips, with an optional row of caller-supplied actions. It is the card Build a
+     team's roster draws (B9c/B12) and the card the avatar profile popover shows, so both read as the
+     same thing. The caller supplies the data as a <see cref="TeammateProfile"/> and the buttons as
+     <see cref="Actions"/>; the card owns the markup and its <c>roster-*</c> CSS classes.
+   </summary> *@
+@using Agency.Huddle.App.Avatars
+
+@if (this.Profile is { } profile)
+{
+<div class="@this.CardClass" role="@(this.ListItem ? "listitem" : null)">
+    <div class="roster-card-head">
+        <span class="roster-avatar-ring" aria-hidden="true"><TeammateAvatar Name="@profile.Name" Avatar="@profile.Avatar" PendingImage="@profile.PendingImage" PendingImageExtension="@profile.PendingImageExtension" Class="roster-avatar" /></span>
+        <span class="roster-card-who">
+            <span class="roster-name">
+                @if (profile.State is { } state)
+                {
+                    <StatusDot State="@state" />
+                }
+                @profile.Name
+            </span>
+            <span class="roster-title">@profile.Title</span>
+        </span>
+        @if (this.Manager)
+        {
+            <span class="roster-manager-badge">Manager</span>
+        }
+    </div>
+    @if (this.RemovingText is not null)
+    {
+        <span class="roster-removing">@this.RemovingText</span>
+    }
+    <span class="roster-description">@profile.Description</span>
+    <span class="roster-chips">
+        @if (this.Membership == ProfileMembership.Member)
+        {
+            <span class="roster-state roster-state-member">Member</span>
+        }
+        else if (this.Membership == ProfileMembership.New)
+        {
+            <span class="roster-state roster-state-new">New</span>
+        }
+        @if (profile.Tier is { } tier)
+        {
+            <span class="@($"roster-tier roster-tier-{tier.ToString().ToLowerInvariant()}")">@tier.ToString().ToLowerInvariant()</span>
+        }
+        @if (profile.SkillNames.Count > 0)
+        {
+            <span class="roster-skills" title="@string.Join(", ", profile.SkillNames)">@Plural.Of(profile.SkillNames.Count, "skill", "skills")</span>
+        }
+    </span>
+    @if (profile.SetupReasons.Count > 0)
+    {
+        <span class="roster-setup">Needs setup: @string.Join("; ", profile.SetupReasons)</span>
+    }
+    @if (this.Actions is not null)
+    {
+        <div class="roster-actions">@this.Actions</div>
+    }
+</div>
+}
+
+@code {
+    /// <summary>The Teammate to draw; nothing is drawn while it is <see langword="null"/>.</summary>
+    [Parameter]
+    [EditorRequired]
+    public TeammateProfile? Profile { get; set; }
+
+    /// <summary>Draws the "Manager" badge and the manager card class.</summary>
+    [Parameter]
+    public bool Manager { get; set; }
+
+    /// <summary>Draws the solid avatar ring that marks a Teammate who already exists.</summary>
+    [Parameter]
+    public bool Existing { get; set; }
+
+    /// <summary>Which membership chip to draw; <see cref="ProfileMembership.None"/> draws none.</summary>
+    [Parameter]
+    public ProfileMembership Membership { get; set; }
+
+    /// <summary>When set, the card is drawn as being removed and this text says what will happen.</summary>
+    [Parameter]
+    public string? RemovingText { get; set; }
+
+    /// <summary>When true the root carries <c>role="listitem"</c>, for a card inside a <c>role="list"</c>.</summary>
+    [Parameter]
+    public bool ListItem { get; set; }
+
+    /// <summary>The buttons inside the card's actions row; when null the row is not drawn.</summary>
+    [Parameter]
+    public RenderFragment? Actions { get; set; }
+
+    /// <summary>Extra classes appended to the root.</summary>
+    [Parameter]
+    public string? Class { get; set; }
+
+    /// <summary>The root's class list: the base class, the state classes and the caller's.</summary>
+    private string CardClass
+    {
+        get
+        {
+            List<string> classes = ["roster-card"];
+            if (this.Manager)
+            {
+                classes.Add("roster-card-manager");
+            }
+
+            if (this.Existing)
+            {
+                classes.Add("roster-card-existing");
+            }
+
+            if (this.RemovingText is not null)
+            {
+                classes.Add("roster-card-removed");
+            }
+
+            if (!string.IsNullOrWhiteSpace(this.Class))
+            {
+                classes.Add(this.Class);
+            }
+
+            return string.Join(' ', classes);
+        }
+    }
+}

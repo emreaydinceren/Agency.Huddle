@@ -987,6 +987,61 @@ public sealed class ChatPageTests
         Assert.Equal("Which database?", cut.Find(".elicitation-card-message").TextContent.Trim());
     }
 
+    /// <summary>
+    /// The Room header's Members (C3) open each member's profile: the first four avatars are profile
+    /// buttons and the rest are counted in one "+N" avatar. MudAvatarGroup's own Max is not used, because
+    /// it hides an avatar by emptying it, which would leave an empty profile button.
+    /// </summary>
+    [Fact]
+    public async Task ChatPage_Members_FirstFourOpenProfiles_RestCountedInPlusN()
+    {
+        using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(60));
+        var ct = cts.Token;
+
+        await using var factory = new TeamWebApplicationFactory();
+        var (directory, chat, _) = ChatPageTests.Services(factory);
+        List<string> ids = [];
+        foreach (string name in new[] { "ann", "bob", "cy", "dee", "eve", "fay" })
+        {
+            User? agent = await directory.UpsertAgentUserAsync(name, null, ct);
+            Assert.NotNull(agent);
+            ids.Add(agent.Id);
+        }
+
+        Room room = await chat.CreateRoomForAsync(ids, ct);
+
+        await using MudBunitContext ctx = ChatPageTests.NewContext(factory);
+        var cut = ChatPageTests.RenderChatPage(ctx, room.Id);
+
+        IElement group = cut.Find(".room-members .mud-avatar-group");
+        Assert.Equal(
+            ["Show ann's profile", "Show bob's profile", "Show cy's profile", "Show dee's profile"],
+            group.QuerySelectorAll("button.profile-avatar-button").Select(static button => button.GetAttribute("aria-label")));
+        IElement more = Assert.Single(group.QuerySelectorAll(".room-members-more"));
+        Assert.Equal("+2", more.TextContent.Trim());
+        Assert.Equal("2 more members", more.GetAttribute("aria-label"));
+        Assert.Equal(5, group.Children.Length);
+    }
+
+    /// <summary>Four or fewer members draw no "+N" avatar, and every member opens a profile.</summary>
+    [Fact]
+    public async Task ChatPage_Members_FourOrFewer_HaveNoPlusN()
+    {
+        using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(60));
+        var ct = cts.Token;
+
+        await using var factory = new TeamWebApplicationFactory();
+        var (directory, chat, _) = ChatPageTests.Services(factory);
+        var (room, _, _) = await ChatPageTests.CreateGroupRoomAsync(directory, chat, ct);
+
+        await using MudBunitContext ctx = ChatPageTests.NewContext(factory);
+        var cut = ChatPageTests.RenderChatPage(ctx, room.Id);
+
+        IElement group = cut.Find(".room-members .mud-avatar-group");
+        Assert.Equal(2, group.QuerySelectorAll("button.profile-avatar-button").Length);
+        Assert.Empty(group.QuerySelectorAll(".room-members-more"));
+    }
+
     /// <summary>Creates a Room of the Human plus two named Agents ("alpha" and "beta") - the shape most of the context-only note tests need.</summary>
     private static async Task<(Room Room, User First, User Second)> CreateGroupRoomAsync(
         ITeamDirectory directory, ChatService chat, CancellationToken ct)

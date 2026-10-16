@@ -1,7 +1,17 @@
 <Project>
+  <!--
+    Transitive pinning lets a PackageVersion below raise a package nobody references directly.
+    MessagePack is the reason: StreamJsonRpc 2.25.29 (also under dotacp.client) brings 2.5.302,
+    which GHSA-qhrr-8q5h-9q3h (CVE-2026-92707, patched in 2.5.303) makes fail restore as NU1902.
+    Drop the MessagePack line once a StreamJsonRpc release depends on a patched version.
+  -->
+  <PropertyGroup>
+    <CentralPackageTransitivePinningEnabled>true</CentralPackageTransitivePinningEnabled>
+  </PropertyGroup>
   <ItemGroup>
     <GlobalPackageReference Include="SonarAnalyzer.CSharp" Version="10.32.0.713" />
     <GlobalPackageReference Include="Microsoft.CodeAnalysis.BannedApiAnalyzers" Version="5.6.0" />
+    <PackageVersion Include="MessagePack" Version="2.5.307" />
     <PackageVersion Include="dotacp.client" Version="2026.7.19" />
     <PackageVersion Include="dotacp.protocol" Version="2026.7.19" />
     <PackageVersion Include="Microsoft.Extensions.Logging.Abstractions" Version="10.0.12" />

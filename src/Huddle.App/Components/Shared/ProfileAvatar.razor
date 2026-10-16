@@ -1,0 +1,86 @@
+@* <summary>
+     A Teammate's avatar that opens their profile: the <see cref="TeammateAvatar"/> inside a button, and
+     on click a <see cref="ProfilePopover"/> holding the Teammate's profile card with Edit and Message.
+
+     <see cref="TeammateAvatar"/> itself is left alone on purpose: its single root <c>MudAvatar</c> is
+     what several suites locate by position. This component wraps it instead, and is for avatars that
+     stand alone; one that sits inside another interactive control keeps the plain avatar, since a
+     button inside a button is not valid.
+
+     The click does not bubble (<c>stopPropagation</c>), so a Task card or a list row around the avatar
+     does not also open. This component holds only the button and whether the popover is open; the
+     popover, and every service it needs, exists only while it is open, so a page that only draws
+     avatars needs none of them. Closing, by Escape or otherwise, puts focus back on the button.
+   </summary> *@
+@using Agency.Huddle.App.Avatars
+@using Microsoft.AspNetCore.Components.Web
+
+@* One root, always: a parent that lays out its children (the message row is a two-column grid) must
+   see one item whether or not the popover is open, or the popover's own wrapper becomes a grid item
+   and pushes the avatar out of its column. *@
+<span class="profile-avatar">
+    <button type="button" class="profile-avatar-button" @ref="this.button" aria-label="@($"Show {this.Name}'s profile")" aria-haspopup="dialog" aria-expanded="@(this.open ? "true" : "false")"
+            @onclick="this.ToggleAsync" @onclick:stopPropagation="true" @onkeydown="this.OnKeyDownAsync">
+        <TeammateAvatar Name="@this.Name" Avatar="@this.Avatar" Size="this.Size" Class="@this.Class" />
+    </button>
+    @if (this.open)
+    {
+        <ProfilePopover Name="@this.Name" Team="@this.Team" OnClose="this.CloseAsync" />
+    }
+</span>
+
+@code {
+    private ElementReference button;
+    private bool open;
+
+    /// <summary>The Teammate's Name, in any letter case; also the avatar's monogram source.</summary>
+    [Parameter]
+    [EditorRequired]
+    public string Name { get; set; } = string.Empty;
+
+    /// <summary>The avatar to draw, or <see langword="null"/> for none.</summary>
+    [Parameter]
+    public Avatar? Avatar { get; set; }
+
+    /// <summary>The avatar's size.</summary>
+    [Parameter]
+    public Size Size { get; set; } = Size.Medium;
+
+    /// <summary>Extra CSS classes for the avatar.</summary>
+    [Parameter]
+    public string? Class { get; set; }
+
+    /// <summary>The Team the avatar was seen in, or <see langword="null"/> outside any Team; it picks the one-to-one Message opens.</summary>
+    [Parameter]
+    public string? Team { get; set; }
+
+    /// <summary>Opens the popover, or closes it when it is already open.</summary>
+    private async Task ToggleAsync()
+    {
+        if (this.open)
+        {
+            await this.CloseAsync();
+            return;
+        }
+
+        this.open = true;
+    }
+
+    /// <summary>Closes the popover and puts focus back on the button.</summary>
+    private async Task CloseAsync()
+    {
+        this.open = false;
+        this.StateHasChanged();
+        await this.button.FocusAsync();
+    }
+
+    /// <summary>Escape on the button closes an open popover.</summary>
+    /// <param name="args">The key event.</param>
+    private async Task OnKeyDownAsync(KeyboardEventArgs args)
+    {
+        if (this.open && string.Equals(args.Key, "Escape", StringComparison.Ordinal))
+        {
+            await this.CloseAsync();
+        }
+    }
+}

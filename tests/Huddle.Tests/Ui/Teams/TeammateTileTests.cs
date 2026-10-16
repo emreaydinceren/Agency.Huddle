@@ -96,14 +96,17 @@ public sealed class TeammateTileTests
         Assert.Contains("align-items: flex-start;", tile, StringComparison.Ordinal); // contains-ok: haystack is one rule of the stylesheet source, not markup
     }
 
-    /// <summary>Build a team's roster card draws its avatar through <c>TeammateAvatar</c>, not a bare <c>MudAvatar</c>.</summary>
+    /// <summary>Build a team's roster card is the shared <c>ProfileCard</c>, and that card draws its avatar through <c>TeammateAvatar</c>, not a bare <c>MudAvatar</c>.</summary>
     [Fact]
     public void BuildTeam_Source_UsesTeammateAvatar()
     {
-        string razor = File.ReadAllText(CssSource.RepoPath("src", "Huddle.App", "Components", "Pages", "BuildTeam.razor"));
+        string buildTeam = File.ReadAllText(CssSource.RepoPath("src", "Huddle.App", "Components", "Pages", "BuildTeam.razor"));
+        string card = File.ReadAllText(CssSource.RepoPath("src", "Huddle.App", "Components", "Shared", "ProfileCard.razor"));
 
-        Assert.Contains("<TeammateAvatar ", razor, StringComparison.Ordinal); // contains-ok: haystack is the razor source file, which a render cannot distinguish
-        Assert.DoesNotContain("<MudAvatar", razor, StringComparison.Ordinal);
+        Assert.Contains("<ProfileCard ", buildTeam, StringComparison.Ordinal); // contains-ok: haystack is the razor source file, which a render cannot distinguish
+        Assert.DoesNotContain("<MudAvatar", buildTeam, StringComparison.Ordinal);
+        Assert.Contains("<TeammateAvatar ", card, StringComparison.Ordinal); // contains-ok: haystack is the razor source file, which a render cannot distinguish
+        Assert.DoesNotContain("<MudAvatar", card, StringComparison.Ordinal);
     }
 
     private static async Task<MudBunitContext> NewContextAsync(TempDataDir dataDir, CancellationToken ct)

@@ -15,13 +15,13 @@
             string presenceText = string.Create(CultureInfo.InvariantCulture, $"{name} is {presence}");
             <MudTooltip Text="@presenceText">
                 <MudBadge Dot="true" Overlap="true" Origin="Origin.BottomRight" Class="task-card-presence" Color="@TaskColors.For(presence)" BadgeAriaLabel="@presenceText">
-                    <TeammateAvatar Name="@name" Avatar="this.AvatarStore.Get(name)" Size="Size.Small" />
+                    @this.AvatarFor(name)
                 </MudBadge>
             </MudTooltip>
         }
         else
         {
-            <TeammateAvatar Name="@name" Avatar="this.AvatarStore.Get(name)" Size="Size.Small" />
+            @this.AvatarFor(name)
         }
 
         <span class="task-assignee-name">@name</span>
@@ -40,4 +40,23 @@
     /// <summary>The assignee's presence, or <see langword="null"/> when unknown: no dot is drawn.</summary>
     [Parameter]
     public PresenceState? Presence { get; set; }
+
+    /// <summary>
+    /// Whether the avatar opens the assignee's profile popover. Off by default: an assignee drawn inside
+    /// another interactive control, such as a picker option, must keep a plain avatar.
+    /// </summary>
+    [Parameter]
+    public bool ShowProfile { get; set; }
+
+    /// <summary>The avatar for an assignee name: a profile button when <see cref="ShowProfile"/>, else the plain avatar.</summary>
+    private RenderFragment<string> AvatarFor => name => @<text>
+        @if (this.ShowProfile)
+        {
+            <ProfileAvatar Name="@name" Avatar="this.AvatarStore.Get(name)" Size="Size.Small" />
+        }
+        else
+        {
+            <TeammateAvatar Name="@name" Avatar="this.AvatarStore.Get(name)" Size="Size.Small" />
+        }
+    </text>;
 }

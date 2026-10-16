@@ -85,6 +85,8 @@ component here, move it onto the component rather than writing another copy.
 | A card an Agent puts in the Transcript | Derive from `AgentCardBase`, draw with `AgentCard` | [Huddle components](design-system.md#huddle-components) |
 | A Task's state, priority or Assignee on screen | `TaskStatusChip`, `TaskPriorityChip`, `TaskAssignee` | [Huddle components](design-system.md#huddle-components) |
 | A Teammate's face | `TeammateAvatar` | [Avatars and status](design-system.md#avatars-and-status) |
+| A Teammate's face that opens their profile on click | `ProfileAvatar` (only where the avatar is not already inside a button or link) | [wireframes.md `O9`](wireframes.md#figure-8-overlays) |
+| A Teammate's card: avatar, title, chips, your buttons | `ProfileCard` with a `TeammateProfile` | [wireframes.md `B9c`](wireframes.md#figure-9-the-build-a-team-page) |
 | A Teammate's health | `StatusDot` | [Avatars and status](design-system.md#avatars-and-status) |
 | A Task's state, priority or presence colour | `TaskColors.For(…)`; the priority icon is `TaskColors.Icon(priority)` | [Colour](design-system.md#colour) |
 | A two- to five-way mode switch | `HuddleSegmentedControl<T>` | [House defaults](design-system.md#house-defaults) |
@@ -124,6 +126,8 @@ before you create a component, a helper or a CSS class.
 | --- | --- | --- | --- | --- |
 | `TeammateAvatar` | `Components/Shared/TeammateAvatar.razor` | `C5a`, `P4` | `Name`, `Avatar`, `Size`, `Class`, `PendingImage` | Every Teammate face: image, then label, then a two-letter monogram |
 | `StatusDot` | `Components/Shared/StatusDot.razor` | In `P4`, pickers | `State` (`PersonaState`) | Every Teammate health dot; it carries its own text label |
+| `ProfileCard` | `Components/Shared/ProfileCard.razor` | `B9c`, `B12`, `O9` | `Profile` (`TeammateProfile`), `Manager`, `Existing`, `Membership` (`ProfileMembership`), `RemovingText`, `ListItem`, `Actions`, `Class` | A Teammate's card: ringed avatar, status dot, Name, title, Manager badge, description, membership, tier and skills chips, "Needs setup" line. It owns the markup and the `roster-*` classes; the caller passes the buttons in `Actions` |
+| `ProfileAvatar` | `Components/Shared/ProfileAvatar.razor` | `C5a`, `C3`, a Task List row's assignee | `Name`, `Avatar`, `Size`, `Class`, `Team` | A `TeammateAvatar` in a button that opens the profile popover (`O9`, `ProfilePopover`) with Edit and Message. `Team` picks the Team's one-to-one for Message. Never inside another button or link; `TaskAssignee` takes `ShowProfile` to opt in |
 | `TeammateLabel` | `Components/Shared/TeammateLabel.razor` | Rows in New chat and Invite | `Name`, `State`, `Avatar`, `IsUser` | A Teammate's dot, avatar and name on one line |
 | `PageHeader` | `Components/Shared/PageHeader.razor` | The page title in `P1`, `G1`, `M1`, `B2` | `Title`, `Subtitle`, `Actions`, `SetPageTitle` | Every page's one `h1`, with its action buttons at the right. The Tasks page is the one exception: its View name is the breadcrumb's last crumb, so it draws no `h1` and sets the document title with `PageTitle` |
 | `EmptyState` | `Components/Shared/EmptyState.razor` | An empty list, table or pane | `Text`, `Icon`, `Action`, `FullPane` | Any "nothing here" line; says what to do next, `role="status"` |
@@ -223,6 +227,7 @@ id or a snapshot: an open dialog ignores new parameters.
 | `ViewActions` | `Components/Tasks/ViewActions.cs` | `RenameAsync` (the "Rename view" `NameDialog`), `NewViewName` (the default name `/tasks/new` gives a View) and `ConfirmDeleteAsync`: the View menu actions shared by `T2a` and the sidebar's View rows |
 | `TeammateGrouping` | `Components/Pages/TeammateGrouping.cs` | Teammates grouped by Team, as `P3` shows them |
 | `PersonaStatusResolver` | `Acp/PersonaStatusResolver.cs` | A Teammate's current `PersonaStatus`, for `StatusDot` |
+| `TeammateProfiles` | `Components/Shared/TeammateProfiles.cs` | `BuildAsync(name, team, ct)`: a saved Teammate as a `ProfileCard`'s data (role description and tier from its team type, Skills, state, and in a Team its Manager badge and Member chip), or null when no Persona has that Name |
 | `ThemeDefaults`, `ThemeCatalog`, `AccentPalette` | `Themes/` | Typography defaults, the Theme list, accent contrast clamping |
 
 ### Stylesheet classes

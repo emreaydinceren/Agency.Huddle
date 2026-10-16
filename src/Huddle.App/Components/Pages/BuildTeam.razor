@@ -177,52 +177,9 @@
                             bool departing = this.leaving.Contains(draft.Key);
                             bool removing = deleting || departing;
                             bool badged = this.IsBadgedManager(draft);
-                            <div @key="draft.Key" class="@RosterCardClass(draft, badged, removing)" role="listitem">
-                                <div class="roster-card-head">
-                                    <span class="roster-avatar-ring" aria-hidden="true"><TeammateAvatar Name="@draft.Name" Avatar="@draft.Avatar" PendingImage="@draft.Image" PendingImageExtension="@draft.ImageExtension" Class="roster-avatar" /></span>
-                                    <span class="roster-card-who">
-                                        <span class="roster-name">
-                                            @if (draft.Existing && this.MemberState is { } stateOf)
-                                            {
-                                                <StatusDot State="@stateOf(draft.Name)" />
-                                            }
-                                            @draft.Name
-                                        </span>
-                                        <span class="roster-title">@draft.Title</span>
-                                    </span>
-                                    @if (badged)
-                                    {
-                                        <span class="roster-manager-badge">Manager</span>
-                                    }
-                                </div>
-                                @if (deleting)
-                                {
-                                    <span class="roster-removing">Will be deleted when you save</span>
-                                }
-                                else if (departing)
-                                {
-                                    <span class="roster-removing">Will leave the Team when you save</span>
-                                }
-                                <span class="roster-description">@draft.Description</span>
-                                <span class="roster-chips">
-                                    @if (this.EditMode)
-                                    {
-                                        <span class="@(draft.Existing ? "roster-state roster-state-member" : "roster-state roster-state-new")">@(draft.Existing ? "Member" : "New")</span>
-                                    }
-                                    @if (draft.RoleId.Length > 0)
-                                    {
-                                        <span class="@($"roster-tier roster-tier-{draft.Tier.ToString().ToLowerInvariant()}")">@draft.Tier.ToString().ToLowerInvariant()</span>
-                                    }
-                                    @if (draft.Skills.Count > 0)
-                                    {
-                                        <span class="roster-skills" title="@string.Join(", ", draft.Skills.Select(static skill => skill.Name))">@Plural.Of(draft.Skills.Count, "skill", "skills")</span>
-                                    }
-                                </span>
-                                @if (draft.Reasons.Count > 0)
-                                {
-                                    <span class="roster-setup">Needs setup: @string.Join("; ", draft.Reasons)</span>
-                                }
-                                <div class="roster-actions">
+                            <ProfileCard @key="draft.Key" ListItem="true" Profile="@this.ProfileOf(draft)" Manager="@badged" Existing="@draft.Existing"
+                                         Membership="@this.MembershipOf(draft)" RemovingText="@RemovingTextOf(deleting, departing)">
+                                <Actions>
                                     @if (removing)
                                     {
                                         <MudButton Variant="Variant.Text" Size="Size.Small" StartIcon="@Icons.Material.Outlined.Undo" OnClick="@(() => this.UndoRemove(draft.Key))"
@@ -251,8 +208,8 @@
                                         <MudButton Variant="Variant.Text" Size="Size.Small" OnClick="@(() => this.RemoveDraft(draft.Key))"
                                                    aria-label="@($"Remove {draft.Name}")" Class="roster-remove">Remove</MudButton>
                                     }
-                                </div>
-                            </div>
+                                </Actions>
+                            </ProfileCard>
                         }
                     </div>
                 }
@@ -465,26 +422,42 @@
     /// <param name="draft">The roster card's draft.</param>
     private bool IsBadgedManager(DraftMember draft) => this.EditMode ? string.Equals(draft.Key, this.managerKey, StringComparison.Ordinal) : draft.Manager;
 
-    private static string RosterCardClass(DraftMember draft, bool badged, bool removing)
+    /// <summary>The membership chip a roster card shows: none while building, "Member" or "New" while editing a Team.</summary>
+    /// <param name="draft">The roster card's draft.</param>
+    private ProfileMembership MembershipOf(DraftMember draft)
     {
-        List<string> classes = ["roster-card"];
-        if (badged)
+        if (!this.EditMode)
         {
-            classes.Add("roster-card-manager");
+            return ProfileMembership.None;
         }
 
-        if (draft.Existing)
-        {
-            classes.Add("roster-card-existing");
-        }
-
-        if (removing)
-        {
-            classes.Add("roster-card-removed");
-        }
-
-        return string.Join(' ', classes);
+        return draft.Existing ? ProfileMembership.Member : ProfileMembership.New;
     }
+
+    /// <summary>The line a roster card shows while its Teammate is going: deleted, leaving the Team, or null when staying.</summary>
+    /// <param name="deleting">Whether the Teammate will be deleted on save.</param>
+    /// <param name="departing">Whether the Teammate will leave the Team on save.</param>
+    private static string? RemovingTextOf(bool deleting, bool departing)
+    {
+        if (deleting)
+        {
+            return "Will be deleted when you save";
+        }
+
+        return departing ? "Will leave the Team when you save" : null;
+    }
+
+    /// <summary>Maps a roster draft to the data its <see cref="ProfileCard"/> draws: the status dot only for a saved member, the tier only once a role is chosen.</summary>
+    /// <param name="draft">The roster card's draft.</param>
+    private TeammateProfile ProfileOf(DraftMember draft) => new(draft.Name, draft.Title, draft.Description, draft.Avatar)
+    {
+        State = draft.Existing && this.MemberState is { } stateOf ? stateOf(draft.Name) : null,
+        Tier = draft.RoleId.Length > 0 ? draft.Tier : null,
+        SkillNames = [.. draft.Skills.Select(static skill => skill.Name)],
+        SetupReasons = draft.Reasons,
+        PendingImage = draft.Image,
+        PendingImageExtension = draft.ImageExtension,
+    };
 
     private string ChiefName => this.Personas.Entries
         .FirstOrDefault(static entry => string.Equals(entry.Builtin, BuiltinTeammate.ChiefOfStaffMarker, StringComparison.Ordinal))?.Name

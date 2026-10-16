@@ -357,6 +357,7 @@ public sealed class TaskFieldAdoptionTests : IDisposable
         ctx.Services.AddSingleton(this.store);
         ctx.Services.AddSingleton<ISprintCatalog>(new EmptySprintCatalog());
         ctx.Services.AddSingleton(new AvatarStore(this.dataDir.Options(), NullLogger<AvatarStore>.Instance));
+        ctx.Services.AddSingleton(this.personas);
         TaskView view = new() { Id = "v1", Name = "Test View", Kind = ViewKind.List, Fields = fields ?? [], Grouping = [] };
 
         return ctx.RenderWithPopovers(builder =>
