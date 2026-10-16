@@ -1,0 +1,81 @@
+@*
+    The Outline panel (Spec Outline): the headings of the open Markdown document, indented by level;
+    a click asks the page to scroll to the heading (Spec D-6). It ignores any other Subject.
+*@
+@namespace Agency.Huddle.App.Components.Sidebar
+@using Agency.Huddle.App.Library
+@using Agency.Huddle.App.Sidebar
+@inject PageCommandBus Bus
+
+@if (this.headings.Count == 0)
+{
+    @if (this.Subject is DocumentSubject)
+    {
+        <MudText Typo="Typo.body2" Class="mud-text-secondary" role="status">No headings in this document.</MudText>
+    }
+}
+else
+{
+    @foreach (OutlineHeading heading in this.headings)
+    {
+        int relativeLevel = heading.Level - this.shallowest;
+        OutlineHeading target = heading;
+        <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="1" Class="sidebar-row outline-row" @key="heading.Id">
+            <MudLink Typo="Typo.body2" Class="outline-item" data-level="@relativeLevel"
+                     Style="@($"padding-inline-start: {relativeLevel * 12}px")"
+                     OnClick="() => this.ScrollToAsync(target)">@heading.Text</MudLink>
+        </MudStack>
+    }
+}
+
+@code {
+    private IReadOnlyList<OutlineHeading> headings = [];
+    private int shallowest;
+    private string? lastKey;
+    private string? lastText;
+
+    /// <summary>What the page shows; only a Markdown <see cref="DocumentSubject"/> has an outline.</summary>
+    [Parameter, EditorRequired]
+    public required PageSubject Subject { get; set; }
+
+    /// <summary>The Tab whose page receives the scroll command.</summary>
+    [Parameter, EditorRequired]
+    public required string TabId { get; set; }
+
+    /// <summary>The host's context, where the panel reports its count.</summary>
+    [CascadingParameter]
+    public SidebarPanelContext? Panel { get; set; }
+
+    /// <summary>Recomputes the headings when the document or its text changed.</summary>
+    protected override void OnParametersSet()
+    {
+        if (this.Subject is not DocumentSubject document)
+        {
+            this.headings = [];
+            this.lastKey = null;
+            this.lastText = null;
+            this.Panel?.SetCount(null);
+            return;
+        }
+
+        if (string.Equals(this.lastKey, document.Key, StringComparison.Ordinal)
+            && string.Equals(this.lastText, document.Text, StringComparison.Ordinal))
+        {
+            return;
+        }
+
+        this.lastKey = document.Key;
+        this.lastText = document.Text;
+        this.headings = MarkdownOutline.Headings(document.Text ?? "");
+        this.shallowest = this.headings.Count == 0 ? 0 : this.headings.Min(static h => h.Level);
+        this.Panel?.SetCount(this.headings.Count);
+    }
+
+    /// <summary>Asks the page of this panel's Tab to scroll the heading into view.</summary>
+    /// <param name="heading">The clicked heading.</param>
+    /// <returns>A task that completes when the page's handlers have finished.</returns>
+    private Task ScrollToAsync(OutlineHeading heading)
+    {
+        return this.Bus.SendAsync(this.TabId, new ScrollToHeading(heading.Id, heading.Line));
+    }
+}
