@@ -54,20 +54,13 @@ public sealed class AppCssTasksTests
         return match.Groups["body"].Value;
     }
 
-    /// <summary>One column-edge class per state colour family: Default, Info, Warning, Secondary, Success, Error.</summary>
-    [Theory]
-    [InlineData(".task-col-edge-default")]
-    [InlineData(".task-col-edge-info")]
-    [InlineData(".task-col-edge-warning")]
-    [InlineData(".task-col-edge-secondary")]
-    [InlineData(".task-col-edge-success")]
-    [InlineData(".task-col-edge-error")]
-    public void AppCss_DeclaresTaskColEdge_ForEveryStateFamily(string className)
+    /// <summary>The per-state coloured left edge is gone: the Board column names the state, so the edge repeated it.</summary>
+    [Fact]
+    public void AppCss_DeclaresNoTaskColEdge()
     {
         string text = File.ReadAllText(CssSource.RepoPath("src", "Huddle.App", "wwwroot", "app.css"));
 
-        // contains-ok: source-fact test, no CSS parser - app.css's own text is what's pinned.
-        Assert.Contains(className, text, StringComparison.Ordinal);
+        Assert.DoesNotContain("task-col-edge", text, StringComparison.Ordinal);
     }
 
     /// <summary>The ghost bucket, its droppable state, the dragged card, the overdue marker and the two chat-reference classes are all declared.</summary>

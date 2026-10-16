@@ -11,7 +11,6 @@
     exactly one click after the ⋮ (corrections-B5 D12-2).
 *@
 
-@using System.Globalization
 @inject TimeProvider Clock
 @inject ISprintCatalog Sprints
 @implements IDisposable
@@ -64,7 +63,7 @@
 
     @if (this.Busy && this.LastWake is { } lastWake)
     {
-        <MudChip T="string" Size="Size.Small" Color="Color.Success" Class="task-card-awake-chip">Awake</MudChip>
+        <StatusChip Color="Color.Success" Class="task-card-awake-chip" Icon="@Icons.Material.Filled.FiberManualRecord">Awake</StatusChip>
         <MudLink Href="@($"/rooms/{lastWake.RoomId}")" Class="task-card-awake-link">Woken in Room @lastWake.RoomName</MudLink>
     }
 
@@ -138,13 +137,12 @@
         });
     }
 
-    /// <summary>The root <c>class</c>: <c>task-card</c>, plus <c>task-col-edge-{colour}</c> (Spec §13.10) and <c>task-overdue</c> when it applies.</summary>
+    /// <summary>The root <c>class</c>: <c>task-card</c>, plus <c>task-overdue</c> when it applies. The column names the state, so the card has no state-coloured edge.</summary>
     private string RootClass
     {
         get
         {
-            string edge = string.Create(CultureInfo.InvariantCulture, $"task-col-edge-{TaskColors.For(this.Task.Status).ToString().ToLowerInvariant()}");
-            string root = this.IsOverdue ? $"task-card {edge} task-overdue" : $"task-card {edge}";
+            string root = this.IsOverdue ? "task-card task-overdue" : "task-card";
             return this.Selected ? string.Join(' ', root, "task-card-selected") : root;
         }
     }

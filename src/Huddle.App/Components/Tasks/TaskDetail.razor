@@ -181,7 +181,7 @@ else if (this.loaded is { } task)
                     {
                         @if (task.Location.Closed)
                         {
-                            <MudChip T="string" Size="Size.Small" Class="task-detail-closed-chip">Closed</MudChip>
+                            <StatusChip Icon="@Icons.Material.Filled.Lock" Class="task-detail-closed-chip">Closed</StatusChip>
                         }
                         <MudTooltip Text="Copy id">
                             <MudIconButton Icon="@Icons.Material.Outlined.ContentCopy" Size="Size.Small" aria-label="@($"Copy task id {effective.Id}")"
@@ -203,10 +203,10 @@ else if (this.loaded is { } task)
             @if (!this.createMode && RequestFields.TryRead(task, out RequestFields? request) && request is not null)
             {
                 <div class="task-detail-request">
-                    <MudChip T="string" Size="Size.Small" Color="Color.Info" Class="task-detail-request-chip">@string.Concat("Request · ", request.Kind.ToString(), " · from ", request.FromTeam)</MudChip>
+                    <StatusChip Color="Color.Info" Icon="@Icons.Material.Filled.MoveToInbox" Class="task-detail-request-chip">@string.Concat("Request · ", request.Kind.ToString(), " · from ", request.FromTeam)</StatusChip>
                     @if (RequestTriageText(request.Triage, task.Status) is { } triageText)
                     {
-                        <MudChip T="string" Size="Size.Small" Class="task-detail-request-triage">@triageText</MudChip>
+                        <MudChip T="string" Size="Size.Small" Variant="Variant.Text" Class="tag-chip task-detail-request-triage">@triageText</MudChip>
                     }
                     @if (!string.IsNullOrEmpty(request.Requester))
                     {
@@ -263,7 +263,7 @@ else if (this.loaded is { } task)
                     <TaskAssignee Name="@option.Name" Presence="@(option.IsHuman ? null : option.Presence)" />
                     @if (!option.IsHuman && !string.IsNullOrEmpty(option.Title))
                     {
-                        <MudChip T="string" Size="Size.Small">@option.Title</MudChip>
+                        <span class="chip-meta">@option.Title</span>
                     }
                 </ItemTemplate>
             </MudAutocomplete>
@@ -309,7 +309,7 @@ else if (this.loaded is { } task)
                 @foreach (TaskId blockerId in effective.BlockedBy)
                 {
                     TaskItem? blockerTask = this.Store.Get(blockerId);
-                    <MudChip T="TaskId" Size="Size.Small" Value="blockerId" OnClose="this.OnRemoveBlocker" Icon="@(blockerTask is { } bt && bt.Status.IsTerminal() ? Icons.Material.Filled.Check : null)">
+                    <MudChip T="TaskId" Size="Size.Small" Variant="Variant.Text" Class="tag-chip" Value="blockerId" OnClose="this.OnRemoveBlocker" Icon="@(blockerTask is { } bt && bt.Status.IsTerminal() ? Icons.Material.Filled.Check : null)">
                         @($"{blockerId} {blockerTask?.Status.ToWire() ?? "?"}")
                     </MudChip>
                 }
@@ -323,7 +323,7 @@ else if (this.loaded is { } task)
             <MudChipSet T="string" AllClosable="true" OnClose="this.OnRemoveTag" Class="task-detail-tags-chips">
                 @foreach (string tag in effective.Tags)
                 {
-                    <MudChip T="string" Size="Size.Small" Value="@tag" OnClose="this.OnRemoveTag">@tag</MudChip>
+                    <MudChip T="string" Size="Size.Small" Variant="Variant.Text" Class="tag-chip" Value="@tag" OnClose="this.OnRemoveTag">@tag</MudChip>
                 }
             </MudChipSet>
             <MudTextField T="string" Variant="Variant.Outlined" Margin="Margin.Dense" Immediate="true" Value="@this.tagInput" ValueChanged="this.OnTagInputChanged"

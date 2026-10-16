@@ -49,7 +49,7 @@
 <div class="task-board">
     @if (this.model.HiddenTaskCount > 0)
     {
-        <MudChip T="string" Size="Size.Small" Class="task-board-hidden-count">@HiddenCountText(this.model.HiddenTaskCount)</MudChip>
+        <span class="task-board-hidden-count chip-meta">@HiddenCountText(this.model.HiddenTaskCount)</span>
     }
 
     <div class="task-board-columns">
@@ -97,7 +97,7 @@
                         <div class="task-board-lane-label">@lane.Label</div>
                         @if (this.OrphanTeamOf(lane) is { } orphan)
                         {
-                            <MudChip T="string" Size="Size.Small" Color="Color.Warning" Class="task-orphan-team-chip">No teammate is in @orphan</MudChip>
+                            <StatusChip Color="Color.Warning" Icon="@Icons.Material.Filled.Warning" Class="task-orphan-team-chip">No teammate is in @orphan</StatusChip>
                         }
                     }
 

@@ -20,7 +20,7 @@ using Agency.Huddle.Tests.Tasks;
 /// <c>&lt;button type="button"&gt;</c> that does NOT nest the ⋮ <c>MudMenu</c> or the Awake
 /// <c>MudLink</c> - both are siblings of that button. It shows the id, the title (highlighted while
 /// searching), the priority chip, the assignee's presence badge, the Awake line while a Turn is
-/// running, overdue styling, the state-colour left border, one field named by the View, and a ⋮ menu
+/// running, overdue styling, one field named by the View, and a ⋮ menu
 /// listing every state under a flat "Move to" heading, then a divider, then "Copy id".
 /// </summary>
 public sealed class TaskCardTests : IDisposable
@@ -41,9 +41,7 @@ public sealed class TaskCardTests : IDisposable
     /// corrections-B5 D12-1: the component's own root is a <c>&lt;div class="task-card"&gt;</c>, not a
     /// <c>&lt;button&gt;</c> (the Spec's original sketch), because the ⋮ menu and Awake link must sit
     /// outside the clickable open control. Checks the class list contains the token rather than
-    /// equalling it verbatim: the root also always carries a <c>task-col-edge-{colour}</c> token
-    /// (Spec §13.10, pinned separately by <see cref="LeftBorder_UsesStateColourClass"/>), so an exact
-    /// match here would be broken by that other, equally-real requirement.
+    /// equalling it verbatim, so a state class added later does not break this check.
     /// </summary>
     [Fact]
     public async Task Root_IsADivWithClassTaskCard()
@@ -109,7 +107,7 @@ public sealed class TaskCardTests : IDisposable
         Assert.Equal("Refactor the widget", cut.Find(".task-card-title").TextContent.Trim());
     }
 
-    /// <summary>Priority is shown by its <c>Icon</c> alone (from <see cref="TaskColors"/>) on a neutral chip, so it never competes with the status colour, for every <see cref="TaskPriority"/>.</summary>
+    /// <summary>Priority is a tinted status chip (<c>status-chip-{colour}</c>) with its icon (from <see cref="TaskColors"/>), never a solid fill, for every <see cref="TaskPriority"/>.</summary>
     [Theory]
     [InlineData(TaskPriority.Low)]
     [InlineData(TaskPriority.Medium)]
@@ -123,7 +121,8 @@ public sealed class TaskCardTests : IDisposable
         IRenderedComponent<ContainerFragment> cut = this.Render(ctx, task);
 
         IRenderedComponent<MudChip<string>> chip = cut.FindComponent<MudChip<string>>();
-        Assert.Equal(TaskColors.For(priority), chip.Instance.Color);
+        Assert.Contains($"status-chip-{TaskColors.For(priority).ToString().ToLowerInvariant()}", cut.Find(".task-card-header .mud-chip").ClassList, StringComparer.Ordinal);
+        Assert.Equal(Variant.Text, chip.Instance.Variant);
         Assert.Equal(TaskColors.Icon(priority), chip.Instance.Icon);
         Assert.Equal(priority.ToWire(), cut.Find(".task-card-header .mud-chip").TextContent.Trim());
     }
@@ -233,9 +232,9 @@ public sealed class TaskCardTests : IDisposable
         Assert.DoesNotContain("task-overdue", card.ClassName, StringComparison.Ordinal);
     }
 
-    /// <summary>Spec §13.4 Cards ("A left border in the column's colour class") and §13.10: the card carries the same <c>task-col-edge-{colour}</c> class the Board's column uses, pinned already by <c>AppCssTasksTests.AppCss_DeclaresTaskColEdge_ForEveryStateFamily</c>.</summary>
+    /// <summary>The card has no state-coloured left edge: the column already names the state, so the edge only repeated it.</summary>
     [Fact]
-    public async Task LeftBorder_UsesStateColourClass()
+    public async Task Card_HasNoStateColourEdge()
     {
         TaskItem task = TestTasks.Make(id: "PLAT-0001", title: "T", status: TaskState.InProgress);
 
@@ -243,8 +242,7 @@ public sealed class TaskCardTests : IDisposable
         IRenderedComponent<ContainerFragment> cut = this.Render(ctx, task);
 
         IElement card = cut.Find("div.task-card");
-        string expected = string.Create(CultureInfo.InvariantCulture, $"task-col-edge-{TaskColors.For(TaskState.InProgress).ToString().ToLowerInvariant()}");
-        Assert.Contains(expected, ClassTokens(card), StringComparer.Ordinal);
+        Assert.DoesNotContain(ClassTokens(card), token => token.StartsWith("task-col-edge", StringComparison.Ordinal));
     }
 
     /// <summary>Spec §13.4 Cards ("The View's extra fields"): a field named in <see cref="TaskCard.Fields"/> shows its value, formatted the same way every Tasks surface formats a date (<c>yyyy-MM-dd</c>, invariant; Settled J53).</summary>

@@ -36,15 +36,15 @@
                     <span class="prompts-field-label">@field.Label</span>
                     @if (field.Timing == PromptTiming.NextSession)
                     {
-                        <MudChip T="string" Size="Size.Small" title="Applies to teammates started after the change">Next session</MudChip>
+                        <span class="chip-meta" title="Applies to teammates started after the change">Next session</span>
                     }
                     @if (field.IsModified)
                     {
-                        <MudChip T="string" Size="Size.Small" Color="Color.Warning">Modified</MudChip>
+                        <StatusChip Color="Color.Warning" Icon="@Icons.Material.Filled.Edit">Modified</StatusChip>
                     }
                     @if (field.HasUnsavedChange)
                     {
-                        <MudChip T="string" Size="Size.Small" Color="Color.Info">Unsaved</MudChip>
+                        <StatusChip Color="Color.Info" Icon="@Icons.Material.Filled.FiberManualRecord">Unsaved</StatusChip>
                     }
                 </div>
 
