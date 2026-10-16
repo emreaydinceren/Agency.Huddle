@@ -1,87 +1,13 @@
 @using Microsoft.Extensions.Options
-@using Agency.Huddle.App.Components.Shared.Dialogs
-@using Agency.Huddle.App.Library
-@implements IDisposable
-@inject LibraryRootStore Roots
 @inject IOptions<TeamOptions> Options
-@inject IDialogService DialogService
 
-@* The sidebar's Library group (Task 13.2, Spec §6.9, extended to list roots in the sidebar):
-   mirrors TaskViewNav's own shape - a MudNavGroup titled "Library" holding one row per visible
-   Library Root (LibraryRootStore.VisibleRoots, "no local snapshot", SkillsPanel's own precedent)
-   and a trailing "Add Folder" row, the same position TaskViewNav's own "New view" row holds. A row
-   carries an Href to the full /library page (Spec §6.9 "Pop out"), scoped to that root through
-   ?scopeRoot=&scopePath= - the same TaskViewNav-style route link Teammates and Settings use for
-   their own sidebar entries, so Library opens as its own primary panel rather than splitting next
-   to whatever page the Human was already on. The docked pane this used to sit beside is gone: the
-   page is the Library's one Tab, and a wikilink or chat ?library= link opens it too
-   (LibraryLinkRouter). Add Folder opens AddFolderDialog, the same pin flow
-   Settings > Library's own Add row drives; this component repaints on LibraryRootStore.RootsChanged
-   rather than waiting for a manual refresh, so a folder pinned here or in Settings shows up in both
-   places live. *@
+@* The sidebar's one link to the Library. The Library page owns the tree (its Roots: Teams, Teammates,
+   Uploads and every pinned folder), so the sidebar does not repeat it - one home per tree. It is a
+   section header like Teammates (nav-section-link), not a group. Pinning a folder is Settings >
+   Library's Add row. The link renders nothing when Library.Enabled is off. *@
 @if (this.Options.Value.Library.Enabled)
 {
     <MudNavMenu Class="library-nav">
-        <MudNavGroup Title="Library" Icon="@Icons.Material.Filled.MenuBook" @bind-Expanded="this.expanded">
-            @foreach (LibraryRoot root in this.Roots.VisibleRoots)
-            {
-                <NavTabLink Href="@BuildRootHref(root)" TabTitle="Library" Icon="@Icons.Material.Outlined.Folder" Class="library-nav-root-link">@root.DisplayName</NavTabLink>
-            }
-            <MudNavLink Icon="@ActionIcons.Add" Class="nav-action-link" OnClick="this.OpenAddFolderAsync">Add folder</MudNavLink>
-        </MudNavGroup>
+        <NavTabLink Href="/library" TabTitle="Library" Icon="@Icons.Material.Filled.MenuBook" Class="nav-section-link">Library</NavTabLink>
     </MudNavMenu>
-}
-
-@code {
-    private bool expanded = true;
-
-    /// <summary>Subscribes to <see cref="LibraryRootStore.RootsChanged"/> so the root list follows every pin, remove, hide or reset - from this dialog, from Settings, or from a reset.</summary>
-    protected override void OnInitialized()
-    {
-        this.Roots.RootsChanged += this.OnRootsChanged;
-    }
-
-    /// <summary>Unsubscribes from <see cref="LibraryRootStore.RootsChanged"/>.</summary>
-    public void Dispose()
-    {
-        this.Roots.RootsChanged -= this.OnRootsChanged;
-    }
-
-    /// <summary>Builds the full <c>/library</c> page URL, scoped to <paramref name="root"/>'s own top level (Spec §6.9), the same query shape <see cref="Agency.Huddle.App.Components.Pages.Library"/> reads.</summary>
-    /// <param name="root">The row's own resolved root.</param>
-    private static string BuildRootHref(LibraryRoot root) => string.Create(
-        System.Globalization.CultureInfo.InvariantCulture,
-        $"/library?scopeRoot={Uri.EscapeDataString(root.Id)}&scopePath=");
-
-    /// <summary>Opens the shared <see cref="NameDialog"/> as the Add folder prompt: the Name is its own field, the Path field and
-    /// the trust warning are its <c>ChildContent</c>, and the action pins the folder through <see cref="LibraryRootStore.Save"/>
-    /// - the same flow and "doesn't exist" refusal as Settings > Library's Add row.</summary>
-    private async Task OpenAddFolderAsync()
-    {
-        string path = string.Empty;
-
-        Task<string?> SubmitAsync(string name)
-        {
-            return Task.FromResult(this.Roots.TryPin(name, path));
-        }
-
-        RenderFragment extra = @<MudStack Spacing="2">
-            <MudTextField T="string" Label="Path" Variant="Variant.Outlined" Margin="Margin.Dense" Immediate="true"
-                          ValueChanged="@(value => path = value ?? string.Empty)" />
-            <MudText Typo="Typo.body2" Class="add-folder-dialog-trust-warning">@LibraryRootStore.TrustWarning</MudText>
-        </MudStack>;
-
-        DialogParameters<NameDialog> parameters = new()
-        {
-            { dialog => dialog.Label, "Name" },
-            { dialog => dialog.ConfirmText, "Add" },
-            { dialog => dialog.SubmitAsync, SubmitAsync },
-            { dialog => dialog.ChildContent, extra },
-        };
-
-        _ = await this.DialogService.ShowAsync<NameDialog>("Add folder", parameters, HuddleDialogOptions.SmallForm);
-    }
-
-    /// <summary>Repaints the root list when <see cref="LibraryRootStore.RootsChanged"/> fires.</summary>
-    private void OnRootsChanged() => _ = RendererDispatch.Repaint(this.InvokeAsync, this.StateHasChanged);
 }

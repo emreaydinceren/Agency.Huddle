@@ -14,8 +14,7 @@ namespace Agency.Huddle.Tests.Ui.Library;
 /// Pins how a <c>?library=</c> link reaches the Library now that there is no docked pane
 /// (docs/Huddle.Tabs-Specifications.md section 6): <see cref="LibraryLinkRouter"/> resolves the value
 /// and replaces the address with the <c>/library</c> page on that file - the Library's one Tab - or
-/// merely strips the query when it resolves to nothing. <see cref="LibraryNavLink"/>'s own root-list
-/// and Add Folder behaviour is pinned in <c>LibraryNavLinkTests</c>. A final source-text test pins
+/// merely strips the query when it resolves to nothing. <see cref="LibraryNavLink"/> is pinned in <c>LibraryNavLinkTests</c>. A final source-text test pins
 /// that <c>MainLayout.razor</c> mounts the router and no longer mentions the pane host.
 /// </summary>
 public sealed class LibraryLinkRouterTests : IDisposable
@@ -25,16 +24,14 @@ public sealed class LibraryLinkRouterTests : IDisposable
     /// <summary>Disposes the underlying temp <c>DataDir</c> and stores.</summary>
     public void Dispose() => this.fixture.Dispose();
 
-    /// <summary>The sidebar's Library group is titled "Library"; its root rows and Add Folder row are pinned in <c>LibraryNavLinkTests</c>.</summary>
+    /// <summary>The sidebar links to the Library once, as a link titled "Library"; the single link is pinned in <c>LibraryNavLinkTests</c>.</summary>
     [Fact]
-    public async Task SidebarLibraryGroup_IsTitledLibrary()
+    public async Task SidebarLibraryLink_IsTitledLibrary()
     {
         await using MudBunitContext ctx = this.fixture.NewContext();
         IRenderedComponent<LibraryNavLink> cut = ctx.Render<LibraryNavLink>();
 
-        // MudNavGroup renders its own title as the first ".mud-nav-link" inside ".mud-nav-group";
-        // the root and Add Folder rows nest further inside the same outer <nav> once expanded.
-        Assert.Equal("Library", cut.Find(".mud-nav-group .mud-nav-link").TextContent.Trim());
+        Assert.Equal("Library", cut.Find(".mud-nav-link").TextContent.Trim());
     }
 
     /// <summary>A <c>?library=</c> navigation to a resolvable file replaces the address with the Library page on that file.</summary>
