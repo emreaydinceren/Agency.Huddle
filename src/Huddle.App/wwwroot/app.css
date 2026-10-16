@@ -164,10 +164,6 @@ b {
     font-size: var(--mud-typography-body2-size);
 }
 
-.mud-avatar.mud-avatar-small {
-    font-size: var(--mud-typography-overline-size);
-}
-
 /* A raised outlined label is caption size (12px), not MudBlazor's 0.75 scale of the field (10.5px). The notch in
    the border (the legend) is cut to the same size, so the label and its gap stay the same width. */
 .mud-input.mud-input-outlined > .mud-input-outlined-border legend {
@@ -301,28 +297,139 @@ a.team-ref,
     margin: 0 0 12px 0;
 }
 
+/* ---- Presence badge and status dot (DS-6) --------------------------------------------------------
+   A 10px circle in the state's tone that carries a glyph, so the state is never colour alone: a check (online),
+   a pulse (starting, awake), a dash (degraded) and a hollow ring (offline, asleep). The glyph is drawn in the
+   Surface colour (PresenceGlyphView). Standalone it is the inline dot beside a name; on an avatar (.on-avatar,
+   inside .presence-anchor) it sits on the bottom-right rim, ringed in Surface. */
 .agent-dot {
-    display: inline-block;
-    width: 0.5rem;
-    height: 0.5rem;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    box-sizing: border-box;
+    flex: 0 0 auto;
+    width: 10px;
+    height: 10px;
     border-radius: 50%;
+    vertical-align: middle;
     background: var(--mud-palette-error);
 }
 
-.agent-dot.online {
+.agent-dot.online,
+.agent-dot.awake {
     background: var(--mud-palette-success);
 }
 
-.agent-dot.offline {
-    background: var(--mud-palette-error);
-}
-
-.agent-dot.degraded {
+.agent-dot.degraded,
+.agent-dot.starting {
     background: var(--mud-palette-warning);
 }
 
-.agent-dot.starting {
-    background: var(--mud-palette-warning-lighten);
+.agent-dot.asleep {
+    background: var(--mud-palette-text-secondary);
+}
+
+/* The glyph is a mask painted in the Surface colour over the tone, drawn on ::after. The Task card's MudBadge
+   (.task-card-presence) takes the same shapes from the same presence-glyph-* classes. The ring has no mark. */
+.agent-dot.presence-glyph-check::after,
+.agent-dot.presence-glyph-pulse::after,
+.agent-dot.presence-glyph-dash::after,
+.task-card-presence.presence-glyph-check .mud-badge::after,
+.task-card-presence.presence-glyph-pulse .mud-badge::after,
+.task-card-presence.presence-glyph-dash .mud-badge::after {
+    content: "";
+    width: 100%;
+    height: 100%;
+    background: var(--mud-palette-surface);
+    mask-position: center;
+    mask-repeat: no-repeat;
+    mask-size: 100% 100%;
+}
+
+.agent-dot.presence-glyph-check::after,
+.task-card-presence.presence-glyph-check .mud-badge::after {
+    mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 10 10'%3E%3Cpath d='M2.4 5.2 L4.2 7 L7.6 3.2' fill='none' stroke='%23000' stroke-width='1.4' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+}
+
+.agent-dot.presence-glyph-pulse::after,
+.task-card-presence.presence-glyph-pulse .mud-badge::after {
+    mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 10 10'%3E%3Cpath d='M1.2 5 H3 L4.1 2.6 L5.9 7.4 L7 5 H8.8' fill='none' stroke='%23000' stroke-width='1.4' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+}
+
+.agent-dot.presence-glyph-dash::after,
+.task-card-presence.presence-glyph-dash .mud-badge::after {
+    mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 10 10'%3E%3Cpath d='M2.6 5 H7.4' fill='none' stroke='%23000' stroke-width='1.4' stroke-linecap='round'/%3E%3C/svg%3E");
+}
+
+/* A hollow ring is a Surface-filled circle with a 2px outline in the tone. */
+.agent-dot.presence-glyph-ring {
+    background: var(--mud-palette-surface);
+    box-shadow: inset 0 0 0 2px var(--mud-palette-error);
+}
+
+.agent-dot.presence-glyph-ring.asleep {
+    box-shadow: inset 0 0 0 2px var(--mud-palette-text-secondary);
+}
+
+.presence-anchor {
+    position: relative;
+    display: inline-flex;
+    flex: 0 0 auto;
+    vertical-align: middle;
+}
+
+.agent-dot.on-avatar {
+    position: absolute;
+    right: -2px;
+    bottom: -2px;
+    box-shadow: 0 0 0 2px var(--mud-palette-surface);
+}
+
+.agent-dot.on-avatar.presence-glyph-ring {
+    box-shadow: inset 0 0 0 2px var(--mud-palette-error), 0 0 0 2px var(--mud-palette-surface);
+}
+
+.agent-dot.on-avatar.presence-glyph-ring.asleep {
+    box-shadow: inset 0 0 0 2px var(--mud-palette-text-secondary), 0 0 0 2px var(--mud-palette-surface);
+}
+
+/* ---- Avatars (DS-6) -------------------------------------------------------------------------------
+   Monogram: the Teammate's colour (set inline by TeammateAvatar; the Theme accent when none) at 20% over Surface,
+   with letters mixed 75% toward TextPrimary at weight 600. A Dark Theme runs the same mix against its own Surface
+   and TextPrimary, so it gets a deep fill with light letters; there is no per-colour black or white. Letters are
+   40% of the diameter and never under 10px, a floor set by the avatar spec rather than the 11px text floor, since
+   a 24px row avatar has no room for more; the declaration uses max() so it stays a computed size, not a literal one.
+   AvatarColours mirrors this recipe in C# so a test can prove the 4.5:1 contrast. */
+.mud-avatar.mud-avatar-small {
+    font-size: max(10px, calc(24px * 0.4));
+}
+
+.mud-avatar.mud-avatar-medium {
+    font-size: max(10px, calc(40px * 0.4));
+}
+
+.mud-avatar.mud-avatar-large {
+    font-size: max(10px, calc(56px * 0.4));
+}
+
+.mud-avatar.mud-avatar-filled.avatar-monogram {
+    background-color: color-mix(in srgb, var(--mud-palette-primary) 20%, var(--mud-palette-surface));
+    color: color-mix(in srgb, var(--mud-palette-primary) 25%, var(--mud-palette-text-primary));
+    font-weight: 600;
+}
+
+/* A picture or illustration is the same circle with a 1px inner hairline in Divider, drawn over the image. */
+.mud-avatar.avatar-image {
+    position: relative;
+}
+
+.mud-avatar.avatar-image::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    border-radius: 50%;
+    box-shadow: inset 0 0 0 1px var(--mud-palette-divider);
+    pointer-events: none;
 }
 
 .empty-state {
@@ -1979,12 +2086,28 @@ a.team-ref,
    reads as separate from the initials rather than painted over them. MudBlazor's own Bordered
    option is not used: it adds padding that swells the dot to about 21px, over the initials. The
    inset overrides the overlap position so the dot's centre lands on the avatar's corner. */
-.task-card-presence .mud-badge.mud-badge-dot.mud-badge-overlap {
-    box-sizing: content-box;
-    width: 0.5rem;
-    height: 0.5rem;
-    border: 2px solid var(--mud-palette-surface);
-    inset: calc(100% - 9px) auto auto calc(100% - 9px);
+.task-card-presence .mud-badge.mud-badge-overlap {
+    box-sizing: border-box;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 10px;
+    height: 10px;
+    min-width: 10px;
+    padding: 0;
+    border: 0;
+    box-shadow: 0 0 0 2px var(--mud-palette-surface);
+    inset: calc(100% - 8px) auto auto calc(100% - 8px);
+}
+
+/* A hollow ring (asleep, offline) is a Surface-filled circle outlined in its colour. */
+.task-card-presence.presence-glyph-ring .mud-badge.mud-badge-overlap {
+    background-color: var(--mud-palette-surface);
+    box-shadow: inset 0 0 0 2px var(--mud-palette-text-secondary), 0 0 0 2px var(--mud-palette-surface);
+}
+
+.task-card-presence.presence-glyph-ring.offline .mud-badge.mud-badge-overlap {
+    box-shadow: inset 0 0 0 2px var(--mud-palette-error), 0 0 0 2px var(--mud-palette-surface);
 }
 
 /* The card currently being dragged. */

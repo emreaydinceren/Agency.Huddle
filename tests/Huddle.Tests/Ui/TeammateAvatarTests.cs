@@ -19,7 +19,10 @@ public sealed class TeammateAvatarTests
     [Theory]
     [InlineData("Emily Lee", "EL")]
     [InlineData("Chief of Staff", "CS")]
-    [InlineData("echo", "E")]
+    [InlineData("echo", "EC")]
+    [InlineData("Helen", "HE")]
+    [InlineData("j", "J")]
+    [InlineData("  Ada   Lovelace  ", "AL")]
     public async Task Render_AvatarNone_ShowsMonogramFromFirstAndLastWord(string name, string expectedMonogram)
     {
         await using MudBunitContext ctx = new();
@@ -154,9 +157,13 @@ public sealed class TeammateAvatarTests
         Assert.Equal("/teammate-avatars/abc123.png", cut.Find(".mud-avatar img").GetAttribute("src"));
     }
 
-    /// <summary>A <see cref="Avatar.Background"/> emits an inline style carrying both a <c>background</c> and a <c>color</c> declaration.</summary>
+    /// <summary>
+    /// A <see cref="Avatar.Background"/> on letters emits the monogram recipe: the fill is the colour at 20% over Surface and
+    /// the letters are the colour mixed 75% toward TextPrimary, both through <c>color-mix</c> against the Theme's own tokens -
+    /// never a fixed black or white.
+    /// </summary>
     [Fact]
-    public async Task Render_BackgroundSet_EmitsInlineStyleWithBackgroundAndColor()
+    public async Task Render_BackgroundSet_EmitsTheColourMixedFillAndLetters()
     {
         await using MudBunitContext ctx = new();
         Avatar avatar = new(Label: "AB", Image: null, Background: "#4a154b");
@@ -165,9 +172,64 @@ public sealed class TeammateAvatarTests
             .Add(p => p.Name, "Emily Lee")
             .Add(p => p.Avatar, avatar));
 
-        var style = cut.Find(".mud-avatar").GetAttribute("style") ?? string.Empty;
-        Assert.Contains("background:", style, StringComparison.Ordinal);
-        Assert.Contains("color:", style, StringComparison.Ordinal);
+        var root = cut.Find(".mud-avatar");
+        Assert.Equal(
+            [
+                "background: color-mix(in srgb, #4a154b 20%, var(--mud-palette-surface))",
+                "color: color-mix(in srgb, #4a154b 25%, var(--mud-palette-text-primary))",
+            ],
+            Declarations(root));
+        Assert.Contains("avatar-monogram", root.ClassList);
+    }
+
+    /// <summary>A picture is the same circle with the <c>avatar-image</c> hairline class, and a transparent one sits on the plain colour, not the letter mix.</summary>
+    [Fact]
+    public async Task Render_Image_GetsTheHairlineClass_AndSitsOnThePlainColour()
+    {
+        await using MudBunitContext ctx = new();
+        Avatar avatar = new(Label: null, Image: "abc123.png", Background: "#4a154b");
+
+        var cut = ctx.Render<TeammateAvatar>(parameters => parameters
+            .Add(p => p.Name, "echo")
+            .Add(p => p.Avatar, avatar));
+
+        var root = cut.Find(".mud-avatar");
+        Assert.Contains("avatar-image", root.ClassList);
+        Assert.DoesNotContain("avatar-monogram", root.ClassList);
+        Assert.Equal(["background: #4a154b"], Declarations(root));
+    }
+
+    /// <summary>The root's inline style as its trimmed, non-empty declarations (MudBlazor appends its own separators).</summary>
+    /// <param name="root">The avatar root.</param>
+    private static List<string> Declarations(IElement root) =>
+        [.. (root.GetAttribute("style") ?? string.Empty).Split(';', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)];
+
+    /// <summary>A caller's own class is kept beside the avatar's kind class.</summary>
+    [Fact]
+    public async Task Render_CallerClass_IsKeptBesideTheKindClass()
+    {
+        await using MudBunitContext ctx = new();
+
+        var cut = ctx.Render<TeammateAvatar>(parameters => parameters
+            .Add(p => p.Name, "echo")
+            .Add(p => p.Class, "room-row-avatar"));
+
+        var root = cut.Find(".mud-avatar");
+        Assert.Contains("room-row-avatar", root.ClassList);
+        Assert.Contains("avatar-monogram", root.ClassList);
+    }
+
+    /// <summary>The monogram is always two letters: a one-word name gives its first two, several words give the first and last initials, and one letter is all a one-letter name has.</summary>
+    [Theory]
+    [InlineData("Helen", "HE")]
+    [InlineData("Jo", "JO")]
+    [InlineData("N", "N")]
+    [InlineData("Emily Lee", "EL")]
+    [InlineData("Chief of Staff", "CS")]
+    [InlineData("  ", "?")]
+    public void Monogram_IsTwoLetters(string name, string expected)
+    {
+        Assert.Equal(expected, TeammateAvatar.Monogram(name));
     }
 
     /// <summary>With no <see cref="Avatar.Background"/>, no inline style is emitted at all, and the root still carries MudBlazor's own <c>mud-avatar-filled-primary</c> class from <c>Color="Color.Primary"</c>.</summary>

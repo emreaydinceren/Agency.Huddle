@@ -192,7 +192,7 @@ public sealed class TeammateCardTests
     [Theory]
     [InlineData("Emily Lee", "EL")]
     [InlineData("Chief of Staff", "CS")]
-    [InlineData("echo", "E")]
+    [InlineData("echo", "EC")]
     public async Task ViewMode_ShowsMonogramFromFirstAndLastWord(string name, string expectedMonogram)
     {
         await using var factory = new TeamWebApplicationFactory();

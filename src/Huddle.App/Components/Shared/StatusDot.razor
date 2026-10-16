@@ -8,12 +8,20 @@
    </summary> *@
 @using Agency.Huddle.App.Acp
 
-<span class="agent-dot @StatusDot.StatusClass(this.State)" role="img" aria-label="@StatusDot.Label(this.State)" title="@StatusDot.Label(this.State)"></span>
+<PresenceBadge Cue="PresenceCue.From(this.State)" OnAvatar="this.OnAvatar" Detail="@this.Detail" />
 
 @code {
     /// <summary>The Persona state this dot renders.</summary>
     [Parameter]
     public PersonaState State { get; set; }
+
+    /// <summary>Whether the dot sits on an avatar's rim; see <see cref="PresenceBadge.OnAvatar"/>.</summary>
+    [Parameter]
+    public bool OnAvatar { get; set; }
+
+    /// <summary>Extra tooltip words after the state name, such as the Reason; see <see cref="PresenceBadge.Detail"/>.</summary>
+    [Parameter]
+    public string? Detail { get; set; }
 
     /// <summary>The CSS class - and this dot's own tooltip text - for <paramref name="state"/>'s <c>agent-dot</c>.</summary>
     /// <param name="state">The state to classify.</param>

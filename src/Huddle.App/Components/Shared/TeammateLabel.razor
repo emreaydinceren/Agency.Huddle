@@ -7,11 +7,9 @@
 @using Agency.Huddle.App.Avatars
 
 <span class="teammate-label">
-    @if (!this.IsUser)
-    {
-        <StatusDot State="this.State" />
-    }
-    <TeammateAvatar Name="@this.Name" Avatar="this.Avatar" Size="Size.Small" />
+    <PresenceAnchor Cue="this.IsUser ? null : PresenceCue.From(this.State)">
+        <TeammateAvatar Name="@this.Name" Avatar="this.Avatar" Size="Size.Small" />
+    </PresenceAnchor>
     <span>@this.Name</span>
 </span>
 
