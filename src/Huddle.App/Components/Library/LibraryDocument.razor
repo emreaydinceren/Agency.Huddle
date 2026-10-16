@@ -10,6 +10,7 @@
 @using Agency.Huddle.App.Components.Shared.Dialogs
 @using Agency.Huddle.App.FileChanges
 @using Agency.Huddle.App.Library
+@using Agency.Huddle.App.Sidebar
 @inject LibraryFileService FileService
 @inject ITaskReferenceResolver Tasks
 @inject ILibraryNoteResolver NoteResolver
@@ -21,6 +22,7 @@
 @inject ISnackbar Snackbar
 
 <div class="library-document">
+    <PageSubjectSource Value="@this.Subject" />
     <MudExitPrompt Title="Discard changes?" Text="Your unsaved edits to this file will be lost." Disabled="@(!this.dirty)" Class="library-document-exit-prompt" />
     <MudToolBar Dense="true" Class="library-document-toolbar">
         @* Every host names the open file the same way: its full system path on the toolbar's left, shortened past
@@ -196,6 +198,11 @@
     private bool backlinkIndexAvailable;
     private bool freshnessNoticeVisible;
     private DotNetObjectReference<LibraryDocument>? selfReference;
+
+    /// <summary>What this pane shows, for the Right sidebar: nothing while loading, missing or outside the scope.</summary>
+    private PageSubject? Subject => (this.content is null || this.missing || this.outsideScope)
+        ? null
+        : new DocumentSubject(this.Path, this.content.Kind, this.previewText ?? this.content.Text);
 
     /// <inheritdoc />
     protected override void OnInitialized() =>
@@ -377,6 +384,7 @@
             this.content = this.content with { Length = result.Value.Length, LastWriteUtc = result.Value.LastWriteUtc };
         }
 
+        this.previewText = editorText;
         this.dirty = false;
     }
 

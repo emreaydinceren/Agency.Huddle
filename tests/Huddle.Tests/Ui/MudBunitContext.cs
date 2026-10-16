@@ -1,8 +1,11 @@
 using Bunit;
 using Bunit.Rendering;
 using Microsoft.AspNetCore.Components;
+using Microsoft.Extensions.DependencyInjection;
 using MudBlazor;
 using MudBlazor.Services;
+using Agency.Huddle.App.Sidebar;
+using Agency.Huddle.App.Tabs;
 
 namespace Agency.Huddle.Tests.Ui;
 
@@ -78,9 +81,12 @@ internal sealed class MudBunitContext : BunitContext
     /// Creates the context: registers MudBlazor's services and switches bUnit's JSInterop to loose
     /// mode. See the type-level remarks for why each is needed.
     /// </summary>
+    /// <remarks>Also registers <see cref="RightSidebarService"/> and <see cref="PageCommandBus"/>: any page that publishes a Subject (<c>PageSubjectSource</c>) or handles page commands needs them to render.</remarks>
     public MudBunitContext()
     {
         this.Services.AddMudServices();
+        this.Services.AddSingleton<RightSidebarService>();
+        this.Services.AddSingleton<PageCommandBus>();
         this.JSInterop.Mode = JSRuntimeMode.Loose;
     }
 
