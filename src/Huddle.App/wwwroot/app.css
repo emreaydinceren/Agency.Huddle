@@ -2029,19 +2029,35 @@ a.team-ref,
     padding: 8px 8px 8px 0;
 }
 
+/* S4: the state colour, shown once, as an 8px dot first in the column header (the card has no coloured edge).
+   Same colour per state as .task-ref-status-* and TaskColors.For; Backlog (Default) takes the secondary text colour so the dot reads. */
+.task-state-dot {
+    flex: 0 0 auto;
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: var(--mud-palette-text-secondary);
+}
+
+.task-state-dot-info { background: var(--mud-palette-info); }
+.task-state-dot-warning { background: var(--mud-palette-warning); }
+.task-state-dot-secondary { background: var(--mud-palette-secondary); }
+.task-state-dot-success { background: var(--mud-palette-success); }
+.task-state-dot-error { background: var(--mud-palette-error); }
+
+/* The column name is 13px/600 and the count after it 12px secondary; the dot, name and count sit on one line. */
 .task-board-column-label {
-    flex: 1 1 auto;
+    flex: 0 1 auto;
     min-width: 0;
-    font-size: var(--mud-typography-subtitle2-size);
+    font-size: var(--mud-typography-body2-size);
     font-weight: 600;
     overflow-wrap: anywhere;
 }
 
 .task-board-column-count {
-    flex: 0 0 auto;
-    padding: 0 4px;
+    flex: 1 1 auto;
     color: var(--mud-palette-text-secondary);
-    font-size: var(--mud-typography-body2-size);
+    font-size: var(--mud-typography-caption-size);
 }
 
 .task-board-column-menu {
@@ -2075,6 +2091,7 @@ a.team-ref,
 /* A column is a tinted lane (background-gray, darker than the page) and each card on it is a light
    surface, so cards read as separate objects on a contrasting column. Theme tokens only. */
 .task-board-column {
+    position: relative;
     display: flex;
     flex-direction: column;
     min-width: 0;
@@ -2089,9 +2106,23 @@ a.team-ref,
     display: flex;
     flex-direction: column;
     flex: 1 1 auto;
-    gap: 12px;
+    gap: 8px;
     min-height: 4rem;
     padding: 8px;
+}
+
+/* An empty column's line: centred over the zone, 12px secondary, and transparent to the pointer so the zone still takes a drop. */
+.task-board-column-empty {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 8px;
+    text-align: center;
+    pointer-events: none;
+    color: var(--mud-palette-text-secondary);
+    font-size: var(--mud-typography-caption-size);
 }
 
 .task-ghost-bucket-label {
@@ -2117,9 +2148,25 @@ a.team-ref,
 
 .task-card {
     text-align: left;
-    padding: 8px 12px;
+    padding: 12px;
     background-color: var(--mud-palette-surface);
+    border: 1px solid var(--mud-palette-divider);
     border-radius: var(--mud-default-borderradius);
+}
+
+/* Row 1: the id (12px secondary, top-left) and the priority chip beside it. The card's menu is absolutely placed over the right end. */
+.task-card-header {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 8px;
+    padding-right: 32px;
+}
+
+.task-card-field-tags {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px;
 }
 
 /* The card is the positioning context for its ⋮ menu, which sits outside the open button (it cannot nest in it) but is drawn as the last element of the first row. */
@@ -2136,12 +2183,26 @@ a.team-ref,
 .task-card-title {
     font-size: var(--mud-typography-subtitle2-size);
     font-weight: 600;
+    display: -webkit-box;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 3;
+    line-clamp: 3;
+    overflow: hidden;
+    overflow-wrap: anywhere;
 }
 
-/* The rest of a card is row text (body2): the id, the assignee. */
-.task-card-id,
+/* The id is 12px secondary; the assignee's name on a card is 12px too (elsewhere it stays row text). */
+.task-card-id {
+    color: var(--mud-palette-text-secondary);
+    font-size: var(--mud-typography-caption-size);
+}
+
 .task-assignee-name {
     font-size: var(--mud-typography-body2-size);
+}
+
+.task-card .task-assignee-name {
+    font-size: var(--mud-typography-caption-size);
 }
 
 /* Row 4: the assignee, under a horizontal rule across the card's width. */
@@ -2212,7 +2273,19 @@ a.team-ref,
    one cue, and the date is set heavier so it is not told by colour alone. The row and card class
    task-overdue is a marker only. */
 .task-due-overdue {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
     font-weight: 600;
+    color: color-mix(in srgb, var(--mud-palette-error) 70%, var(--mud-palette-text-primary));
+}
+
+/* The 14px warning icon before an overdue date takes the date's colour. */
+.task-due-overdue .task-due-icon {
+    width: 1em;
+    height: 1em;
+    font-size: var(--mud-typography-subtitle2-size);
+    color: inherit;
 }
 
 /* The Task open in the detail panel: its List row and its Board card. A tint of the primary palette
@@ -2314,6 +2387,26 @@ a.team-ref,
    huddleResize finds the drawer itself via ".mud-drawer", so the handle only needs to sit inside it. */
 .resizable-drawer {
     --mud-drawer-width: 420px;
+}
+
+/* S6 header: a 12px secondary line (the id and its Team or Project) over the name at 16px/600, up to three lines; the close button stays on the right. */
+.resizable-drawer-heading {
+    flex: 1 1 auto;
+    min-width: 0;
+}
+
+.resizable-drawer-eyebrow {
+    display: block;
+    color: var(--mud-palette-text-secondary);
+}
+
+.resizable-drawer-title {
+    display: -webkit-box;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 3;
+    line-clamp: 3;
+    overflow: hidden;
+    overflow-wrap: anywhere;
 }
 
 /* The Task detail's own panel padding would double the drawer's pa-4 around its content. */
@@ -2841,10 +2934,12 @@ a.team-ref,
 
 .tasks-counts strong {
     color: var(--mud-palette-text-primary);
+    font-weight: 600;
 }
 
-.tasks-count-need-you strong {
-    color: var(--mud-palette-warning-darken, var(--mud-palette-warning));
+/* "need you" is the warning colour mixed toward body text so it keeps 4.5:1 on the page; the number stays body colour. */
+.tasks-count-need-you {
+    color: color-mix(in srgb, var(--mud-palette-warning) 70%, var(--mud-palette-text-primary));
 }
 
 /* The toolbar's search box takes the segmented controls' track colour, so the row reads as one set of controls. */
@@ -3272,18 +3367,58 @@ a.team-ref,
     background: var(--mud-palette-primary);
 }
 
+/* S5: header cells 12px/600 secondary; body rows 13px and 36px tall (32px when the View is Dense); ID about 110px,
+   Priority about 120px, the row menu 40px, Title the one flexible column. */
 .task-list-grid thead th {
     width: 8rem;
     white-space: nowrap;
+    font-size: var(--mud-typography-caption-size);
+    font-weight: 600;
+    color: var(--mud-palette-text-secondary);
+}
+
+/* MudBlazor's dense rule ".mud-table-dense * .mud-table-row .mud-table-cell" sets 6px padding and its header cells a 14px/white label,
+   so these selectors carry the same weight. */
+.mud-table.task-list-grid .mud-table-head .mud-table-row .mud-table-cell {
+    font-size: var(--mud-typography-caption-size);
+    font-weight: 600;
+    color: var(--mud-palette-text-secondary);
+    padding: 0 8px 0 16px;
+    height: 36px;
+}
+
+.mud-table.task-list-grid .mud-table-head .mud-table-cell .column-header,
+.mud-table.task-list-grid .mud-table-head .mud-table-cell .sortable-column-header {
+    font-size: inherit;
+    font-weight: inherit;
+    color: inherit;
+}
+
+.mud-table.task-list-grid .mud-table-body .mud-table-row .mud-table-cell {
+    height: 36px;
+    padding: 0 8px 0 16px;
     font-size: var(--mud-typography-body2-size);
 }
 
+.mud-table.task-list-grid.mud-table-dense .mud-table-body .mud-table-row .mud-table-cell {
+    height: 32px;
+}
+
 .task-list-grid thead th.task-list-id-cell {
-    width: 6.5rem;
+    width: 110px;
+}
+
+.task-list-grid thead th.task-list-priority-cell {
+    width: 120px;
 }
 
 .task-list-grid thead th:last-child {
-    width: 3rem;
+    width: 40px;
+}
+
+.mud-table.task-list-grid .mud-table-row .mud-table-cell:last-child {
+    padding-left: 0;
+    padding-right: 0;
 }
 
 .task-list-grid thead th.task-list-title-header {
@@ -4350,6 +4485,32 @@ a.team-ref,
 
 .task-detail-group > .group-heading {
     margin: 0;
+    font-size: var(--mud-typography-subtitle2-size);
+    font-weight: 600;
+}
+
+/* The title row holds the edit, copy and menu icons on the right; in the Panel the name is in the drawer header, so a spacer pushes them right. */
+.task-detail-title-row {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+}
+
+.task-detail-title-display,
+.task-detail-title-spacer,
+.task-detail-title-row .task-detail-title {
+    flex: 1 1 auto;
+    min-width: 0;
+}
+
+/* Created, Updated and Closed: 12px secondary at the bottom of the form, out of the Dates group. */
+.task-detail-footer-meta {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px 16px;
+    margin-top: 16px;
+    color: var(--mud-palette-text-secondary);
+    font-size: var(--mud-typography-caption-size);
 }
 
 .task-detail-props {
@@ -4396,7 +4557,7 @@ a.team-ref,
 
 @container task-detail (min-width: 368px) {
     .task-detail-prop {
-        grid-template-columns: minmax(6rem, 8rem) minmax(0, 1fr);
+        grid-template-columns: 120px minmax(0, 1fr);
         column-gap: 24px;
         align-items: start;
     }

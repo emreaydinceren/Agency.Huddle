@@ -174,8 +174,17 @@ else if (this.loaded is { } task)
                 }
                 else
                 {
-                    @* Expanded sits in a dialog already titled "Id · Title", so the id row is Panel-only. *@
-                    <span class="task-detail-title-display">@if (this.Mode == TaskDetailMode.Panel){<span class="task-id">@effective.Id.ToString()</span>@(": ")}@effective.Title</span>
+                    @* The Panel's drawer header already shows the id line and the name, so the Panel row is the icons alone
+                       (the title text returns in the edit field); Expanded sits in a dialog titled "Id · Title" and shows the name. *@
+                    @if (this.Mode == TaskDetailMode.Panel && this.Id is not null)
+                    {
+                        <span class="task-detail-title-spacer"></span>
+                    }
+                    else
+                    {
+                        @* A Task made from a Draft keeps its name here: the drawer header still reads "New task". *@
+                        <span class="task-detail-title-display">@if (this.Mode == TaskDetailMode.Panel){<span class="task-id">@effective.Id.ToString()</span>@(": ")}@effective.Title</span>
+                    }
                     <MudIconButton Icon="@Icons.Material.Filled.Edit" Size="Size.Small" aria-label="Edit title" OnClick="this.BeginEditTitle" />
                     @if (!this.createMode)
                     {
@@ -419,13 +428,6 @@ else if (this.loaded is { } task)
                                                DateFormat="@TaskDates.Format" />
                             </div>
                         </div>
-
-                        <span class="task-detail-created">@($"Created {TaskDates.Display(task.Created)}")</span>
-                        <span class="task-detail-updated">@($"Updated {TaskDates.Display(task.Updated)}")</span>
-                        @if (task.ClosedAt is { } closedAt)
-                        {
-                            <span class="task-detail-closed">@($"Closed {TaskDates.Display(closedAt)}")</span>
-                        }
                     </div>
                 </section>
             </div>
@@ -510,6 +512,16 @@ else if (this.loaded is { } task)
                 </MudTimeline>
             </MudExpansionPanel>
         </MudExpansionPanels>
+
+        @* Footer meta: when the Task was created, last changed and closed, at the bottom of the form. *@
+        <div class="task-detail-footer-meta">
+            <span class="task-detail-created">@($"Created {TaskDates.Display(task.Created)}")</span>
+            <span class="task-detail-updated">@($"Updated {TaskDates.Display(task.Updated)}")</span>
+            @if (task.ClosedAt is { } closedAt)
+            {
+                <span class="task-detail-closed">@($"Closed {TaskDates.Display(closedAt)}")</span>
+            }
+        </div>
     }
 }
 </div>

@@ -40,9 +40,13 @@
             </div>
         }
 
-        @if (this.IsOverdue)
+        @if (this.IsOverdue && this.Task.DueDate is { } overdueDate && !this.Fields.Contains("due_date", StringComparer.Ordinal))
         {
-            <MudIcon Icon="@Icons.Material.Filled.Warning" Color="Color.Error" Size="Size.Small" aria-label="Overdue" />
+            @* An overdue Task shows its date even when the View does not list the field: the one overdue cue is the icon before the date. *@
+            <span class="@this.FieldClass("due_date")">
+                <MudIcon Icon="@Icons.Material.Filled.Warning" Size="Size.Small" Class="task-due-icon" aria-label="Overdue" />
+                @TaskDates.Display(overdueDate)
+            </span>
         }
 
         @foreach (string field in this.Fields)
@@ -54,6 +58,10 @@
                     @if (string.Equals(field, "sprint", StringComparison.Ordinal) && this.Task.Sprint is { } sprint && this.Sprints.Get(sprint) is null)
                     {
                         <MudIcon Icon="@Icons.Material.Filled.Warning" Color="Color.Warning" Size="Size.Small" Class="task-sprint-missing" aria-label="@SprintLabels.MissingText" />
+                    }
+                    @if (string.Equals(field, "due_date", StringComparison.Ordinal) && this.IsOverdue)
+                    {
+                        <MudIcon Icon="@Icons.Material.Filled.Warning" Size="Size.Small" Class="task-due-icon" aria-label="Overdue" />
                     }
                     @text
                 </span>

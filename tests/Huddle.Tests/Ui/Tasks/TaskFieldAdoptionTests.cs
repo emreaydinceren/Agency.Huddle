@@ -131,14 +131,15 @@ public sealed class TaskFieldAdoptionTests : IDisposable
         Assert.Equal("No project", cut.Find(".task-card-field-project").TextContent.Trim());
     }
 
-    /// <summary>Tags are Label chips on the card, as in the List (UX-047).</summary>
+    /// <summary>Tags are quiet tag chips on the card, as in the List (S4).</summary>
     [Fact]
-    public async Task Card_Tags_AreLabelChips()
+    public async Task Card_Tags_AreTagChips()
     {
         await using MudBunitContext ctx = new();
         IRenderedComponent<ContainerFragment> cut = this.RenderCard(ctx, TestTasks.Make(tags: ["alpha", "beta"]), fields: ["tags"]);
 
-        Assert.Equal(2, cut.FindComponents<MudChip<string>>().Count(chip => chip.Instance.Label is true));
+        Assert.Equal(2, cut.FindComponents<MudChip<string>>().Count(chip => chip.Instance.Variant == Variant.Text && chip.Instance.Class?.Contains("task-tag", StringComparison.Ordinal) is true));
+        Assert.Equal(2, cut.FindAll(".task-tag.tag-chip").Count);
         Assert.Equal(["alpha", "beta"], cut.FindAll(".task-tag").Select(chip => chip.TextContent.Trim()));
     }
 
@@ -182,7 +183,7 @@ public sealed class TaskFieldAdoptionTests : IDisposable
         Assert.Equal(1, copied);
     }
 
-    /// <summary>An overdue card marks its icon (Error) and its date (<c>task-due-overdue</c>) and nothing else; an on-time card marks neither (UX-043).</summary>
+    /// <summary>An overdue card draws the warning icon before its date inside the one <c>task-due-overdue</c> span and nothing else; an on-time card marks neither (S4).</summary>
     [Fact]
     public async Task Card_Overdue_MarksIconAndDateOnly()
     {
@@ -191,8 +192,10 @@ public sealed class TaskFieldAdoptionTests : IDisposable
 
         await using MudBunitContext ctx = new();
         IRenderedComponent<ContainerFragment> lateCut = this.RenderCard(ctx, late, fields: ["due_date"]);
-        Assert.Equal(Color.Error, OverdueIcon(lateCut).Instance.Color);
+        Assert.Single(lateCut.FindAll("[aria-label='Overdue']"));
         Assert.Equal("task-card-field-due-date task-due-overdue", lateCut.Find(".task-card-field-due-date").ClassName);
+        Assert.NotNull(lateCut.Find(".task-card-field-due-date > .task-due-icon[aria-label='Overdue']"));
+        Assert.Empty(lateCut.FindAll(".task-card-open > [aria-label='Overdue']"));
         Assert.Empty(lateCut.FindAll(".task-card-title.task-due-overdue, .task-card-id.task-due-overdue"));
 
         await using MudBunitContext other = new();
@@ -278,7 +281,7 @@ public sealed class TaskFieldAdoptionTests : IDisposable
         Assert.Empty(cut.FindAll(".task-list-title.task-due-overdue"));
     }
 
-    /// <summary>The CSS no longer turns a whole overdue card orange: <c>.task-overdue</c> sets no warning colour, and the date mark is weight, not colour: the icon is the one cue (UX-043).</summary>
+    /// <summary>The CSS no longer turns a whole overdue card orange: <c>.task-overdue</c> sets no warning colour, and the date is the error colour mixed toward body text, at weight 600, with the icon before it as the one marker (S4).</summary>
     [Fact]
     public void AppCss_OverdueMarksTheDateInErrorNotTheWholeCardInWarning()
     {
@@ -294,7 +297,8 @@ public sealed class TaskFieldAdoptionTests : IDisposable
         int date = css.IndexOf(".task-due-overdue", StringComparison.Ordinal);
         Assert.True(date >= 0, "Expected a .task-due-overdue rule in app.css.");
         string dateRule = css[date..(css.IndexOf('}', date) + 1)];
-        Assert.Equal("font-weight: 600;", dateRule[(dateRule.IndexOf('{') + 1)..dateRule.IndexOf('}')].Trim());
+        Assert.Contains("font-weight: 600;", dateRule, StringComparison.Ordinal);
+        Assert.Contains("color: color-mix(in srgb, var(--mud-palette-error) 70%, var(--mud-palette-text-primary));", dateRule, StringComparison.Ordinal);
     }
 
     /// <summary>Finds the icon whose accessible name is "Overdue".</summary>

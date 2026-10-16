@@ -56,6 +56,7 @@
         @foreach ((BoardColumn column, int i) in this.model.VisibleColumns.Select((column, index) => (column, index)))
         {
             <div class="task-board-column-header">
+                <span class="@StateDotClass(column)" aria-hidden="true"></span>
                 @if (this.renamingColumn == i)
                 {
                     <MudTextField T="string" Variant="Variant.Outlined" Margin="Margin.Dense" Class="task-board-column-rename" Value="@column.Label" AutoFocus="true"
@@ -106,6 +107,11 @@
                         {
                             BoardCell cell = lane.Cells[i];
                             <div class="task-board-column">
+                                @if (cell.Items.Count == 0 && !this.dragging)
+                                {
+                                    @* Drawn over the empty zone and ignoring the pointer, so the zone stays a drop target. *@
+                                    <span class="task-board-column-empty">@EmptyText(cell.Column)</span>
+                                }
                                 @if (cell.Column.States.Count == 1)
                                 {
                                     <MudDropZone T="TaskItem" Identifier="@BoardLayout.ZoneId(lane.Key, cell.Column.States[0])" Class="task-zone" />
@@ -367,6 +373,29 @@
         TaskState.Rejected => Icons.Material.Outlined.DoNotDisturbOn,
         _ => Icons.Material.Outlined.Label,
     };
+
+    /// <summary>The class of the 8px state dot that opens a column header: the colour of the column's first state (the same mapping as a Task link's dot).</summary>
+    /// <param name="column">The column.</param>
+    private static string StateDotClass(BoardColumn column)
+    {
+        Color colour = column.States.Count > 0 ? TaskColors.For(column.States[0]) : Color.Default;
+        return string.Create(CultureInfo.InvariantCulture, $"task-state-dot task-state-dot-{colour.ToString().ToLowerInvariant()}");
+    }
+
+    /// <summary>The line an empty column shows, worded for the column's state: "Nothing done yet." for Done.</summary>
+    /// <param name="column">The column.</param>
+    private static string EmptyText(BoardColumn column) =>
+        column.States.Count == 1
+            ? column.States[0] switch
+            {
+                TaskState.Backlog => "Backlog is empty.",
+                TaskState.ToDo => "Nothing to do yet.",
+                TaskState.InProgress => "Nothing in progress.",
+                TaskState.Review => "Nothing in review.",
+                TaskState.Done => "Nothing done yet.",
+                _ => string.Create(CultureInfo.InvariantCulture, $"Nothing {column.States[0].ToWire().ToLowerInvariant()} yet."),
+            }
+            : "Nothing here yet.";
 
     /// <summary>How many Tasks the visible column at <paramref name="columnIndex"/> holds across every lane.</summary>
     /// <param name="columnIndex">The column's index among the visible columns.</param>
