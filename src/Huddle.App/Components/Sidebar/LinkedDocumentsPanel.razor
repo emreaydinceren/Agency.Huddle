@@ -1,0 +1,186 @@
+@*
+    The Right sidebar's Linked documents panel (Spec: Linked documents): the open note's outgoing
+    wikilinks, resolved or not. Reloads on a new DocumentSubject and when WikiLinkIndex reports its
+    root changed.
+*@
+@using Agency.Huddle.App.Library
+@using Agency.Huddle.App.Sidebar
+@using MudBlazor
+@implements IDisposable
+@inject LibraryPathResolver PathResolver
+@inject WikiLinkIndex WikiLinks
+
+@if (this.rows.Count > 0)
+{
+    @foreach (LinkedRow row in this.rows)
+    {
+        <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="1" Class="sidebar-row linked-row">
+            @if (row.Href is not null)
+            {
+                <MudLink Typo="Typo.body2" Href="@row.Href">@row.Label</MudLink>
+            }
+            else
+            {
+                <MudText Typo="Typo.body2" Class="mud-text-secondary">@row.Label (not found)</MudText>
+            }
+        </MudStack>
+    }
+}
+else if (this.unavailable)
+{
+    <MudText Typo="Typo.body2" Class="mud-text-secondary">Links aren't available for this folder: it has too many files.</MudText>
+}
+else if (this.loaded)
+{
+    <MudText Typo="Typo.body2" Class="mud-text-secondary" role="status">This note links to no other notes.</MudText>
+}
+
+@code {
+    private sealed record LinkedRow(string Label, string? Href);
+
+    private List<LinkedRow> rows = [];
+    private bool unavailable;
+    private bool loaded;
+    private string? shownKey;
+    private string? shownText;
+    private bool subscribed;
+    private CancellationTokenSource? cts;
+
+    /// <summary>What the page shows; only a document is listed.</summary>
+    [Parameter, EditorRequired]
+    public required PageSubject Subject { get; set; }
+
+    /// <summary>The Tab this panel belongs to.</summary>
+    [Parameter, EditorRequired]
+    public required string TabId { get; set; }
+
+    /// <summary>The frame's context, for the header count.</summary>
+    [CascadingParameter]
+    public SidebarPanelContext? Panel { get; set; }
+
+    /// <summary>Starts listening for index changes.</summary>
+    protected override void OnInitialized()
+    {
+        this.WikiLinks.Invalidated += this.OnInvalidated;
+        this.subscribed = true;
+    }
+
+    /// <summary>Loads the links when the Subject, or its text, is new.</summary>
+    protected override void OnParametersSet()
+    {
+        if (this.Subject is not DocumentSubject doc)
+        {
+            this.CancelLoad();
+            this.shownKey = null;
+            this.shownText = null;
+            this.rows = [];
+            this.unavailable = false;
+            this.loaded = false;
+            this.Panel?.SetCount(null);
+            return;
+        }
+
+        if (string.Equals(this.shownKey, doc.Key, StringComparison.Ordinal)
+            && string.Equals(this.shownText, doc.Text, StringComparison.Ordinal))
+        {
+            return;
+        }
+
+        this.shownKey = doc.Key;
+        this.shownText = doc.Text;
+        _ = this.LoadAsync(doc);
+    }
+
+    private void OnInvalidated(string changedRootId)
+    {
+        if (this.Subject is DocumentSubject doc && string.Equals(changedRootId, doc.Path.Root.Id, StringComparison.Ordinal))
+        {
+            _ = RendererDispatch.RunAsync(this.InvokeAsync, () =>
+            {
+                if (this.Subject is DocumentSubject current)
+                {
+                    return this.LoadAsync(current);
+                }
+
+                return Task.CompletedTask;
+            });
+        }
+    }
+
+    private void CancelLoad()
+    {
+        this.cts?.Cancel();
+        this.cts?.Dispose();
+        this.cts = null;
+    }
+
+    private async Task LoadAsync(DocumentSubject doc)
+    {
+        this.CancelLoad();
+        CancellationTokenSource source = new();
+        this.cts = source;
+        CancellationToken ct = source.Token;
+        string key = doc.Key;
+
+        List<LinkedRow> loadedRows = [];
+        bool available = true;
+        try
+        {
+            available = await Task.Run(() =>
+            {
+                if (!this.WikiLinks.IsAvailable(doc.Path.Root.Id))
+                {
+                    return false;
+                }
+
+                foreach (LibraryOutgoingLink link in this.WikiLinks.LinksFrom(doc.Path))
+                {
+                    loadedRows.Add(this.ToRow(doc.Path.Root.Id, link));
+                }
+
+                return true;
+            }, ct);
+        }
+        catch (OperationCanceledException)
+        {
+            // A newer load or a dispose superseded this one; its result is not wanted.
+            return;
+        }
+
+        if (ct.IsCancellationRequested || !string.Equals(this.Subject.Key, key, StringComparison.Ordinal))
+        {
+            return;
+        }
+
+        this.rows = available ? loadedRows : [];
+        this.unavailable = !available;
+        this.loaded = true;
+        this.Panel?.SetCount(available ? loadedRows.Count : null);
+        this.StateHasChanged();
+    }
+
+    private LinkedRow ToRow(string linkRootId, LibraryOutgoingLink link)
+    {
+        if (link.ResolvedPath is { } resolvedPath
+            && this.PathResolver.TryResolve(linkRootId, resolvedPath, out LibraryPath? target, out _))
+        {
+            string label = link.Link.Alias
+                ?? Path.GetFileName(resolvedPath).Replace(".md", string.Empty, StringComparison.OrdinalIgnoreCase);
+            return new LinkedRow(label, LibraryLinkQuery.BuildPageUri(target));
+        }
+
+        return new LinkedRow(link.Link.Alias ?? link.Link.Target, null);
+    }
+
+    /// <summary>Stops listening and abandons any load in flight.</summary>
+    public void Dispose()
+    {
+        if (this.subscribed)
+        {
+            this.WikiLinks.Invalidated -= this.OnInvalidated;
+            this.subscribed = false;
+        }
+
+        this.CancelLoad();
+    }
+}

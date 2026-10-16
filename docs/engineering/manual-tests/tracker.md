@@ -142,6 +142,7 @@ the per-area tables below.
 | [Turn detail and Spend](turn-detail.md) | [below](#turn-detail) |
 | [Global Search: the box, the dropdown and the jump](global-search.md) | [below](#global-search) |
 | [Needs You: the sidebar card of Rooms waiting on the Human](needs-you.md) | [below](#needs-you) |
+| [Right sidebar: the panels by Subject, Outline, collapse and focus](right-sidebar.md) | [below](#right-sidebar) |
 | [References in a Message: the @ picker, Copy link and the Referenced items header](at-tagging.md) | [below](#at-tagging) |
 ---
 
@@ -1038,6 +1039,21 @@ Turn detail and Spend — [area file](turn-detail.md)
 | [TURNDETAIL-03](turn-detail.md#turndetail-03--a-persona-on-agency-acp-shows-rows-with-no-preview-and-no-spend-line) |  | Active | |  |
 | [TURNDETAIL-04](turn-detail.md#turndetail-04--the-list-and-preview-at-320-px-and-under-three-themes) | 💰 | Active | |  |
 | [TURNDETAIL-05](turn-detail.md#turndetail-05--a-burst-of-ten-quick-tool-calls-neither-reorders-nor-flickers-the-list) | 💰 | Active | |  |
+
+## right-sidebar
+
+Right sidebar: the panels by Subject, Outline scrolling, collapse and focus — [area file](right-sidebar.md)
+
+| Test | 💰 | Status | Issue | Notes |
+| --- | --- | --- | --- | --- |
+| [RSIDE-01](right-sidebar.md#rside-01--a-room-shows-members-tasks-and-documents) |  | Active |  |  |
+| [RSIDE-02](right-sidebar.md#rside-02--a-message-that-references-a-task-appears-and-its-jump-works) |  | Active |  |  |
+| [RSIDE-03](right-sidebar.md#rside-03--a-markdown-document-shows-outline-and-linked-documents) |  | Active |  |  |
+| [RSIDE-04](right-sidebar.md#rside-04--an-outline-heading-scrolls-the-document-in-read-split-and-edit) |  | Active |  |  |
+| [RSIDE-05](right-sidebar.md#rside-05--typing-a-heading-in-split-updates-the-outline) |  | Active |  |  |
+| [RSIDE-06](right-sidebar.md#rside-06--a-linked-note-opens-from-the-linked-documents-panel) |  | Active |  |  |
+| [RSIDE-07](right-sidebar.md#rside-07--a-collapsed-panel-stays-collapsed-after-a-reload) |  | Active |  |  |
+| [RSIDE-08](right-sidebar.md#rside-08--two-panes-follow-focus) |  | Active |  |  |
 
 ## needs-you
 

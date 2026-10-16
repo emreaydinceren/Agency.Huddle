@@ -1,0 +1,106 @@
+@*
+    The host-owned chrome of a Right sidebar panel (Spec D-3, D-8): icon, title, an optional count and a
+    collapse toggle. A collapsed panel keeps its body mounted, only hidden, so it keeps its state. The
+    collapsed state is remembered per viewer by panel id in local storage, a convenience that may fail.
+*@
+@using Agency.Huddle.App.Sidebar
+@implements IDisposable
+@inject IJSRuntime Js
+
+<section class="sidebar-panel" aria-label="@this.Title">
+    <button type="button" class="sidebar-panel-header" aria-expanded="@(this.collapsed ? "false" : "true")" @onclick="this.ToggleAsync">
+        <MudIcon Icon="@this.Icon" Size="Size.Small" />
+        <span class="sidebar-panel-title">@this.Title</span>
+        @if (this.context.Count is { } count)
+        {
+            <span class="sidebar-panel-count">@count</span>
+        }
+        <MudIcon Icon="@(this.collapsed ? Icons.Material.Filled.ChevronRight : Icons.Material.Filled.ExpandMore)" Size="Size.Small" />
+    </button>
+    <div class="sidebar-panel-body" hidden="@this.collapsed">
+        <CascadingValue Value="this.context" IsFixed="true">@this.ChildContent</CascadingValue>
+    </div>
+</section>
+
+@code {
+    private readonly SidebarPanelContext context = new();
+    private bool collapsed;
+
+    /// <summary>The panel's stable id; keys the remembered collapsed state.</summary>
+    [Parameter]
+    public string PanelId { get; set; } = string.Empty;
+
+    /// <summary>The heading.</summary>
+    [Parameter]
+    public string Title { get; set; } = string.Empty;
+
+    /// <summary>The icon beside the heading.</summary>
+    [Parameter]
+    public string Icon { get; set; } = string.Empty;
+
+    /// <summary>The panel body.</summary>
+    [Parameter]
+    public RenderFragment? ChildContent { get; set; }
+
+    /// <summary>Redraws the header when the panel reports a new count.</summary>
+    protected override void OnInitialized()
+    {
+        this.context.Changed += this.OnCountChanged;
+    }
+
+    /// <summary>Unsubscribes from the context.</summary>
+    public void Dispose()
+    {
+        this.context.Changed -= this.OnCountChanged;
+    }
+
+    /// <summary>On first render, collapses the panel when the viewer collapsed it before.</summary>
+    /// <param name="firstRender">Whether this is the first render.</param>
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (!firstRender)
+        {
+            return;
+        }
+
+        try
+        {
+            bool remembered = await this.Js.InvokeAsync<bool>("huddleSidebar.isCollapsed", this.PanelId);
+            if (remembered)
+            {
+                this.collapsed = true;
+                this.StateHasChanged();
+            }
+        }
+        catch (JSException)
+        {
+            // Storage is unavailable: the panel stays expanded.
+        }
+        catch (InvalidOperationException)
+        {
+            // Prerendering has no JS: the panel stays expanded.
+        }
+    }
+
+    private async Task ToggleAsync()
+    {
+        this.collapsed = !this.collapsed;
+        try
+        {
+            await this.Js.InvokeVoidAsync("huddleSidebar.setCollapsed", this.PanelId, this.collapsed);
+        }
+        catch (JSException)
+        {
+            // Storage is unavailable: the choice is not kept.
+        }
+        catch (InvalidOperationException)
+        {
+            // Prerendering has no JS: the choice is not kept.
+        }
+    }
+
+    private void OnCountChanged()
+    {
+        _ = RendererDispatch.Repaint(this.InvokeAsync, this.StateHasChanged);
+    }
+}

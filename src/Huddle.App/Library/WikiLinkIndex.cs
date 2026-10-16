@@ -10,6 +10,11 @@ namespace Agency.Huddle.App.Library;
 /// <param name="LineText">The full text of that line.</param>
 internal sealed record LibraryBacklink(string NotePath, int Line, string LineText);
 
+/// <summary>An outgoing wikilink of a note, for the Linked documents panel.</summary>
+/// <param name="Link">The parsed link as written in the note.</param>
+/// <param name="ResolvedPath">The linked note's root-relative path, or <see langword="null"/> when it does not exist.</param>
+internal sealed record LibraryOutgoingLink(WikiLink Link, string? ResolvedPath);
+
 /// <summary>
 /// The per-Library-Root wikilink index (Spec §6.5, §7 <c>MaxIndexedFiles</c>): built lazily on
 /// first use, cached per root, and invalidated by <see cref="Invalidate"/> or by
@@ -29,6 +34,11 @@ internal sealed class WikiLinkIndex : IDisposable
     private readonly Dictionary<string, RootIndex> cache = new(StringComparer.Ordinal);
     private readonly Dictionary<string, int> generations = new(StringComparer.Ordinal);
     private bool disposed;
+
+    /// <summary>Raised with the Library Root id after that root's cached index was dropped, by
+    /// <see cref="Invalidate"/> and once per root by a roots change. Always raised outside
+    /// <see cref="gate"/>, so a handler may query the index.</summary>
+    internal event Action<string>? Invalidated;
 
     /// <summary>Creates the index over <paramref name="roots"/> and <paramref name="resolver"/>, subscribing to
     /// <see cref="LibraryRootStore.RootsChanged"/> so a re-pin or a hide/show drops every cached root.</summary>
@@ -112,6 +122,44 @@ internal sealed class WikiLinkIndex : IDisposable
         }
 
         return results;
+    }
+
+    /// <summary>The wikilinks written in <paramref name="note"/>, resolved, in document order (Spec <i>Linked
+    /// documents</i>): embeds are left out, a link to a missing note is kept with a <see langword="null"/>
+    /// <see cref="LibraryOutgoingLink.ResolvedPath"/>, and a target linked more than once is listed once.
+    /// Empty when the root's index isn't available or the note isn't in it.</summary>
+    /// <param name="note">The open note, re-resolved against the caller's own spelling of its path.</param>
+    internal IReadOnlyList<LibraryOutgoingLink> LinksFrom(LibraryPath note)
+    {
+        ArgumentNullException.ThrowIfNull(note);
+
+        RootIndex? index = this.GetOrBuild(note.Root.Id);
+        if (index is not { Available: true })
+        {
+            return [];
+        }
+
+        foreach (string notePath in index.SortedNotes)
+        {
+            if (!FolderSnapshot.PathComparer.Equals(notePath, note.RelativePath))
+            {
+                continue;
+            }
+
+            List<LibraryOutgoingLink> results = [];
+            HashSet<string> seen = new(FolderSnapshot.PathComparer);
+            foreach ((WikiLink link, _, string? resolvedPath) in index.NoteLinks[notePath])
+            {
+                if (!link.IsEmbed && seen.Add(resolvedPath ?? link.Target))
+                {
+                    results.Add(new LibraryOutgoingLink(link, resolvedPath));
+                }
+            }
+
+            return results;
+        }
+
+        return [];
     }
 
     /// <summary>Every link across <paramref name="target"/>'s root that resolves to it (used by rename), in
@@ -204,20 +252,29 @@ internal sealed class WikiLinkIndex : IDisposable
             this.BumpGeneration(rootId);
             _ = this.cache.Remove(rootId);
         }
+
+        this.Invalidated?.Invoke(rootId);
     }
 
     /// <summary>Drops every cached root and bumps every known root's generation: a re-pin, a hide/show or a
     /// reset can move or remove any of them, including one whose build is still in flight.</summary>
     private void OnRootsChanged()
     {
+        List<string> rootIds = [];
         lock (this.gate)
         {
             foreach (LibraryRoot root in this.roots.Roots)
             {
                 this.BumpGeneration(root.Id);
+                rootIds.Add(root.Id);
             }
 
             this.cache.Clear();
+        }
+
+        foreach (string rootId in rootIds)
+        {
+            this.Invalidated?.Invoke(rootId);
         }
     }
 

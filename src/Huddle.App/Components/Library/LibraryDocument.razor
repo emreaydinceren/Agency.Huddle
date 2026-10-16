@@ -10,6 +10,7 @@
 @using Agency.Huddle.App.Components.Shared.Dialogs
 @using Agency.Huddle.App.FileChanges
 @using Agency.Huddle.App.Library
+@using Agency.Huddle.App.Sidebar
 @inject LibraryFileService FileService
 @inject ITaskReferenceResolver Tasks
 @inject ILibraryNoteResolver NoteResolver
@@ -20,7 +21,9 @@
 @inject IJSRuntime JS
 @inject ISnackbar Snackbar
 
-<div class="library-document">
+<div class="library-document" @ref="this.rootElement">
+    <PageSubjectSource Value="@this.Subject" />
+    <PageCommandHandler OnCommand="this.OnPageCommandAsync" />
     <MudExitPrompt Title="Discard changes?" Text="Your unsaved edits to this file will be lost." Disabled="@(!this.dirty)" Class="library-document-exit-prompt" />
     <MudToolBar Dense="true" Class="library-document-toolbar">
         @* Every host names the open file the same way: its full system path on the toolbar's left, shortened past
@@ -192,10 +195,34 @@
     private string? saveError;
     private string? previewText;
     private LibraryEditor? editorRef;
+    private ElementReference rootElement;
     private IReadOnlyList<LibraryBacklinkRow>? backlinksRows;
     private bool backlinkIndexAvailable;
     private bool freshnessNoticeVisible;
     private DotNetObjectReference<LibraryDocument>? selfReference;
+
+    /// <summary>What this pane shows, for the Right sidebar: nothing while loading, missing or outside the scope.</summary>
+    private PageSubject? Subject => (this.content is null || this.missing || this.outsideScope)
+        ? null
+        : new DocumentSubject(this.Path, this.content.Kind, this.previewText ?? this.content.Text);
+
+    /// <summary>Answers a Page command from the sidebar (Spec D-6): <see cref="ScrollToHeading"/> reveals the line in the Edit-mode editor, and otherwise scrolls the rendered heading. Any other command is ignored.</summary>
+    /// <param name="command">The command sent to this page's Tab.</param>
+    private async Task OnPageCommandAsync(PageCommand command)
+    {
+        if (command is not ScrollToHeading scroll)
+        {
+            return;
+        }
+
+        if (this.mode == LibraryMode.Edit && this.editorRef is not null)
+        {
+            await this.editorRef.RevealLineAsync(scroll.Line);
+            return;
+        }
+
+        await this.JS.InvokeAsync<bool>("huddleLibrary.scrollToHeading", this.rootElement, scroll.HeadingId);
+    }
 
     /// <inheritdoc />
     protected override void OnInitialized() =>
@@ -377,6 +404,7 @@
             this.content = this.content with { Length = result.Value.Length, LastWriteUtc = result.Value.LastWriteUtc };
         }
 
+        this.previewText = editorText;
         this.dirty = false;
     }
 

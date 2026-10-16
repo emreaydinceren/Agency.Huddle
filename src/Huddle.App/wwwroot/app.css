@@ -453,13 +453,37 @@ a.team-ref,
 }
 
 .right-sidebar .mud-drawer-content {
-    gap: 16px;
+    gap: 8px;
     padding: 16px;
     overflow-y: auto;
 }
 
-.right-sidebar-title {
-    margin-bottom: 8px;
+.sidebar-panel-header {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    width: 100%;
+    padding: 4px 0;
+    border: none;
+    background: none;
+    color: var(--mud-palette-text-primary);
+    font: inherit;
+    font-weight: 600;
+    cursor: pointer;
+    text-align: start;
+}
+
+.sidebar-panel-title {
+    flex: 1;
+}
+
+.sidebar-panel-count {
+    color: var(--mud-palette-text-secondary);
+    font-weight: 400;
+}
+
+.sidebar-panel-body {
+    padding: 4px 0 8px 24px;
 }
 
 /* ---- Left menu: a top-level MudNavLink vs. a MudNavGroup and everything inside it ------------
