@@ -282,7 +282,7 @@ public sealed class LibraryCopyAndFreshnessTests : IDisposable
 
         cut.WaitForAssertion(() => Assert.Empty(cut.FindAll(".library-document-freshness-notice")));
         Assert.Equal("hi", cut.FindComponent<LibraryEditor>().Instance.Text);
-        Assert.Equal($"{filePath} ●", cut.Find(".library-document-path").TextContent.Trim());
+        Assert.Equal($"{LibraryPathDisplay.Shorten(filePath)} ●", cut.Find(".library-document-path").TextContent.Trim());
     }
 
     /// <summary>(corrections-B6 item 23, judgement 46) A refresh that finds the open file changed on disk

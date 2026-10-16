@@ -205,7 +205,10 @@ public sealed class UiConventionScannerTests
         Assert.Equal(1, UiConventionScanner.Cv10(RazorPath, source).Count);
     }
 
-    /// <summary>CV11: off-scale radius, literal font size, big spacing, high z-index and important are counted.</summary>
+    /// <summary>
+    /// CV11: off-scale radius, literal font size, off-scale px spacing, rem spacing, high z-index and important are
+    /// counted; px spacing on the scale (including a clearance such as 48px), negative or not, and 0rem are not.
+    /// </summary>
     [Fact]
     public void Cv11_CssDeclarations_AreCounted()
     {
@@ -214,18 +217,23 @@ public sealed class UiConventionScannerTests
             .b { border-radius: 50%; }
             .c { border-radius: calc(var(--mud-default-borderradius) * 2); }
             .d { font-size: 13px; }
-            .e { padding: 8px; }
+            .e { padding: 10px; }
             .f { margin: 0 1px; }
             .g { gap: 4px; }
             .h { z-index: 5; }
             .i { z-index: 1; }
             .j { color: red !important; }
+            .k { padding: 24px 16px 8px; margin: -16px; }
+            .l { padding: 6px 8px; }
+            .m { padding-right: 48px; margin: 0rem; }
+            .n { gap: 0.5rem; }
+            .o { margin-inline: -1rem; }
             """;
 
         RuleCount result = UiConventionScanner.Cv11(CssPath, source);
 
         Assert.Equal("CV11", result.Rule);
-        Assert.Equal(6, result.Count);
+        Assert.Equal(8, result.Count);
     }
 
     /// <summary>CV11: a violation inside a CSS comment is not counted.</summary>

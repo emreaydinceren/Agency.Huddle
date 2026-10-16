@@ -51,8 +51,23 @@ public sealed class LibraryDocumentReadTests : IDisposable
 
         cut.WaitForAssertion(() => Assert.Equal("Body heading", cut.Find(".library-rendered h1").TextContent.Trim()));
         Assert.Empty(cut.FindAll(".library-rendered h2"));
-        Assert.Equal(["name", "alias"], cut.FindAll(".library-frontmatter dt").Select(dt => dt.TextContent.Trim()));
-        Assert.Equal(["Chief of Staff", "cos"], cut.FindAll(".library-frontmatter dd").Select(dd => dd.TextContent.Trim()));
+        Assert.Equal(["name", "alias"], cut.FindAll(".library-properties dt").Select(dt => dt.TextContent.Trim()));
+        Assert.Equal(["Chief of Staff", "cos"], cut.FindAll(".library-properties dd").Select(dd => dd.TextContent.Trim()));
+    }
+
+    /// <summary>A frontmatter list draws one chip per item, block or flow syntax alike, and a tag's leading <c>#</c> is not shown.</summary>
+    [Fact]
+    public async Task Markdown_ReadMode_FrontmatterListIsChipsWithoutHash()
+    {
+        string root = this.fixture.LibraryFixture.CreatePinnedRoot("Notes");
+        File.WriteAllText(Path.Combine(root, "tagged.md"), "---\r\ntags: [\"#growth\", email]\r\nowners:\r\n  - Lena\r\n  - Omar\r\n---\r\n\r\nText.");
+        LibraryPath path = this.fixture.LibraryFixture.Resolve(root, "tagged.md");
+
+        await using MudBunitContext ctx = this.fixture.NewContext();
+        IRenderedComponent<ContainerFragment> cut = RenderDoc(ctx, path);
+
+        cut.WaitForAssertion(() => Assert.Equal(2, cut.FindAll(".library-properties-row").Count));
+        Assert.Equal(["growth", "email", "Lena", "Omar"], cut.FindAll(".library-properties-chip").Select(chip => chip.TextContent.Trim()));
     }
 
     /// <summary>The toolbar names a nested file by its full system path, the same line for every host, and draws no breadcrumbs.</summary>
@@ -67,7 +82,7 @@ public sealed class LibraryDocumentReadTests : IDisposable
         await using MudBunitContext ctx = this.fixture.NewContext();
         IRenderedComponent<ContainerFragment> cut = RenderDoc(ctx, path);
 
-        cut.WaitForAssertion(() => Assert.Equal(path.FullPath, cut.Find(".library-document-path").TextContent.Trim()));
+        cut.WaitForAssertion(() => Assert.Equal(LibraryPathDisplay.Shorten(path.FullPath), cut.Find(".library-document-path").TextContent.Trim()));
         Assert.Empty(cut.FindComponents<MudBlazor.MudBreadcrumbs>());
     }
 

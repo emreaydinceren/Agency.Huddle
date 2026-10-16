@@ -78,12 +78,12 @@ public sealed class LibraryDocumentEditTests : IDisposable
         IRenderedComponent<ContainerFragment> cut = RenderDoc(ctx, path);
         await SwitchModeAsync(cut, LibraryMode.Edit);
 
-        Assert.Equal(path.FullPath, cut.Find(".library-document-path").TextContent.Trim());
+        Assert.Equal(LibraryPathDisplay.Shorten(path.FullPath), cut.Find(".library-document-path").TextContent.Trim());
 
         LibraryEditor editor = cut.FindComponent<LibraryEditor>().Instance;
         await cut.InvokeAsync(() => editor.OnDirtyChanged(true));
 
-        Assert.Equal($"{path.FullPath} ●", cut.Find(".library-document-path").TextContent.Trim());
+        Assert.Equal($"{LibraryPathDisplay.Shorten(path.FullPath)} ●", cut.Find(".library-document-path").TextContent.Trim());
     }
 
     /// <summary>A file under the Teams root shows its full system path on the toolbar, exactly as a file under any other root does, and draws no breadcrumbs.</summary>
@@ -98,8 +98,26 @@ public sealed class LibraryDocumentEditTests : IDisposable
         await using MudBunitContext ctx = this.fixture.NewContext();
         IRenderedComponent<ContainerFragment> cut = RenderDoc(ctx, path);
 
-        Assert.Equal(path.FullPath, cut.Find(".library-document-path").TextContent.Trim());
+        Assert.Equal(LibraryPathDisplay.Shorten(path.FullPath), cut.Find(".library-document-path").TextContent.Trim());
         Assert.Empty(cut.FindAll(".library-document-breadcrumbs"));
+    }
+
+    /// <summary>Copy path sits immediately before the path on the toolbar, and the path's tooltip keeps the whole path however it is shortened.</summary>
+    [Fact]
+    public async Task Toolbar_CopyPathPrecedesThePath_TooltipHasTheWholePath()
+    {
+        string root = this.fixture.LibraryFixture.CreatePinnedRoot("Notes");
+        File.WriteAllText(Path.Combine(root, "plan.md"), "hi");
+        LibraryPath path = this.fixture.LibraryFixture.Resolve(root, "plan.md");
+
+        await using MudBunitContext ctx = this.fixture.NewContext();
+        IRenderedComponent<ContainerFragment> cut = RenderDoc(ctx, path);
+
+        AngleSharp.Dom.IElement shown = cut.Find(".library-document-path");
+        AngleSharp.Dom.IElement? before = shown.PreviousElementSibling;
+        Assert.NotNull(before);
+        Assert.Contains("library-document-copy", before.ClassList, StringComparer.Ordinal);
+        Assert.Equal(path.FullPath, shown.GetAttribute("title"));
     }
 
     /// <summary>Ctrl+S (the editor's <c>SaveRequested</c> callback) writes the edited text through <see cref="LibraryFileService.WriteTextAsync"/> and clears the dirty marker; the bytes on disk equal the expected re-encoded text.</summary>
@@ -119,7 +137,7 @@ public sealed class LibraryDocumentEditTests : IDisposable
 
         LibraryEditor editor = cut.FindComponent<LibraryEditor>().Instance;
         await cut.InvokeAsync(() => editor.OnDirtyChanged(true));
-        Assert.Equal($"{path.FullPath} ●", cut.Find(".library-document-path").TextContent.Trim());
+        Assert.Equal($"{LibraryPathDisplay.Shorten(path.FullPath)} ●", cut.Find(".library-document-path").TextContent.Trim());
 
         await cut.InvokeAsync(() => editor.OnSaveRequested());
 
@@ -127,7 +145,7 @@ public sealed class LibraryDocumentEditTests : IDisposable
         // bytes for plain ASCII text are exactly its UTF-8 bytes (Spec §6.4 WriteTextAsync).
         byte[] expected = System.Text.Encoding.UTF8.GetBytes("edited text");
         cut.WaitForAssertion(() => Assert.Equal(expected, File.ReadAllBytes(filePath)));
-        cut.WaitForAssertion(() => Assert.Equal(path.FullPath, cut.Find(".library-document-path").TextContent.Trim()));
+        cut.WaitForAssertion(() => Assert.Equal(LibraryPathDisplay.Shorten(path.FullPath), cut.Find(".library-document-path").TextContent.Trim()));
     }
 
     /// <summary>Saving a Teammate definition asks a confirm first (Spec §6.12); Cancel writes nothing.</summary>

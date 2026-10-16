@@ -135,7 +135,8 @@ internal static partial class UiConventionScanner
     /// <summary>
     /// CV11: in a stylesheet, a <c>border-radius</c> that is not <c>0</c>, <c>50%</c>, <c>999px</c> or built from
     /// <c>var(--mud-default-borderradius)</c>; a literal <c>font-size</c>; a <c>padding</c>, <c>margin</c> or
-    /// <c>gap</c> (including side variants) with a px value whose magnitude is over 2; a <c>z-index</c> above 2;
+    /// <c>gap</c> (including side variants) with any non-zero rem value, or a px value whose magnitude is over 2 and
+    /// off the spacing scale (<see cref="SpacingScale"/>); a <c>z-index</c> above 2;
     /// each <c>!important</c>.
     /// </summary>
     /// <param name="path">Repository-relative path.</param>
@@ -176,9 +177,15 @@ internal static partial class UiConventionScanner
             return int.TryParse(first, NumberStyles.Integer, CultureInfo.InvariantCulture, out int zIndex) && zIndex > 2;
         }
 
+        if (RemValue().IsMatch(value))
+        {
+            return true;
+        }
+
         foreach (Match px in PixelValue().Matches(value))
         {
-            if (Math.Abs(double.Parse(px.Groups["n"].Value, CultureInfo.InvariantCulture)) > 2)
+            double magnitude = Math.Abs(double.Parse(px.Groups["n"].Value, CultureInfo.InvariantCulture));
+            if (magnitude > 2 && !SpacingScale.Contains(magnitude))
             {
                 return true;
             }
@@ -186,6 +193,12 @@ internal static partial class UiConventionScanner
 
         return false;
     }
+
+    /// <summary>
+    /// The px spacing a stylesheet may use (design-system.md "Spacing"): the 4/8/12/16/24/32 scale, plus 40, 48, 64
+    /// and 80 for a clearance that keeps text out from under an overlaid control. A hairline's 1px or 2px is always allowed.
+    /// </summary>
+    private static readonly HashSet<double> SpacingScale = [4, 8, 12, 16, 24, 32, 40, 48, 64, 80];
 
     private static int CountTags(string text, IEnumerable<string> names, Func<string, bool> isViolation)
     {
@@ -316,4 +329,8 @@ internal static partial class UiConventionScanner
 
     [GeneratedRegex(@"(?<n>-?\d*\.?\d+)px", RegexOptions.CultureInvariant)]
     private static partial Regex PixelValue();
+
+    /// <summary>A non-zero rem length: spacing in rem is the old 14px-root scale, which the px scale replaced.</summary>
+    [GeneratedRegex(@"(?<![\w.])(?!0*\.?0+rem)\d*\.?\d+rem\b", RegexOptions.CultureInvariant)]
+    private static partial Regex RemValue();
 }

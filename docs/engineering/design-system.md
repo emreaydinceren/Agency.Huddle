@@ -48,19 +48,19 @@ Colour comes from the palette of the active Theme. Use a semantic role, never a 
 
 | Role | MudBlazor variable | Use it for |
 | --- | --- | --- |
-| Ground | `--mud-palette-background` | The page behind everything |
-| Surface | `--mud-palette-surface` | Cards, inputs, dialogs, the raised layer |
-| Sidebar | `--mud-palette-drawer-background` | The left drawer |
-| Quiet fill | `--mud-palette-background-gray` | The segmented control's track, chips, preview blocks, the step between ground and surface |
+| Surface | `--mud-palette-surface` | **The one shell surface**: the page, the sidebar, the top bar, the tab strip and every pane, plus cards, inputs and dialogs. Panes are separated by hairlines (see Lines), never by a darker ground with gaps around a card |
+| Quiet fill | `--mud-palette-background-gray` | The segmented control's track, chips, preview blocks, a board lane |
+| Ground, Sidebar | `--mud-palette-background`, `--mud-palette-drawer-background` | Not painted by the shell. They stay in each palette because MudBlazor and the theme tests read them |
 | Text | `--mud-palette-text-primary`, `-secondary`, `-disabled` | Body, supporting text, inert text |
-| Accent | `--mud-palette-primary` | Active nav link, primary action, the Human's bubble tint, links |
+| Accent | `--mud-palette-primary` | **Only** the selected row, links, the active mode or tab, and primary actions (plus the Human's bubble tint). Never a text action such as "New note", "New chat" or "Build a team", and never an open group's chevron |
+| Accent as text | `color-mix(in srgb, var(--mud-palette-primary) 70%, var(--mud-palette-text-primary))` | Link text and reference links. The plain accent is about 3.9:1 on either Huddle surface; pulling it toward the body text darkens it on a light Theme and lightens it on a dark one, so it clears 4.5:1 in both |
 | Status | `-success`, `-warning`, `-error`, `-info`, `-secondary` | State, never decoration |
 
 **Lines.** Each kind of line has one token and one width (UX-061, UX-062).
 
 | Line | Rule | Examples |
 | --- | --- | --- |
-| Chrome | `1px solid var(--mud-palette-lines-default)` | Top bar, tab strip, room header, pane splitter, drawer edge |
+| Chrome | `1px solid var(--mud-palette-lines-default)` | Top bar, tab strip, room header, pane splitter, drawer edge. On the one surface this is what separates panes, so it must be clearly visible: Huddle Light's is 2.1:1 and Huddle Dark's 2.5:1 against Surface |
 | Card or row border | `1px solid var(--mud-palette-divider)` | Cards, tiles, list-row separators, floating panels |
 | Rule inside a card | `1px solid var(--mud-palette-divider-light)` | A sub-section inside a card or dialog |
 | Input border | MudBlazor's own (`--mud-palette-lines-inputs`) | Never restyle it |
@@ -103,6 +103,14 @@ mapping function, never at a call site (UX-V14).
 
 A status colour never stands alone: a chip has its text, a dot has an accessible name
 (UX-V08).
+
+**Contrast floors.** Body text reaches 7:1 against the surface it sits on. Supporting text
+(paths, secondary tree text, breadcrumb separators, line numbers) and icons reach 4.5:1, and
+so does link text. Use `text-secondary` for supporting text and icons, never `text-disabled`
+(about 3.5:1 on Huddle Light) and never opacity. A status colour used as an icon or glyph
+on its own, such as the tree's orphan warning, is pulled toward the body text the same way
+the accent is (`color-mix(in srgb, var(--mud-palette-warning) 75%, var(--mud-palette-text-primary))`).
+Check every one of these in both a light and a dark Theme.
 
 **Contrast is tested.** `ThemeCatalogTests` holds every Theme to six pairs, including
 `Primary` against both Background and Surface at 4.5:1 (WCAG 1.4.3). The Human's accent
@@ -159,7 +167,12 @@ at `h5`; don't use `h1` to `h4` as a `Typo`.
 
 **In stylesheets, font sizes come from the typography variables**:
 `var(--mud-typography-body1-size)`, `-body2-size`, `-caption-size`, `-subtitle2-size` and
-`-overline-size`. Don't write `0.8rem`, `0.85rem` or `14.5px` (UX-068, UX-V18). A
+`-overline-size`. Don't write `0.8rem`, `0.85rem` or `14.5px` (UX-068, UX-V18). The
+Library is the one place a size is derived rather than picked, because long-form reading
+needs a size the UI scale doesn't have: rendered Markdown (`.library-rendered`, Read mode
+and Split's preview) is `body1` x 1.125 (15.75px) at a 1.65 line height, about 70
+characters a line, with headings stepping up from it (h1 x 1.5, h2 x 1.25, h3 x 1.1); the
+raw editor is monospace at `body1` x 0.9375 (13px) with a 1.6 line height. A
 hand-written `mud-typography-*` class on a `<span>` is a `MudText` with `HtmlTag="span"`
 (UX-V31).
 
@@ -191,11 +204,20 @@ renders at 30px against 25px for Small (UX-V01).
 | Between related fields | `mb-2` |
 | A stack | `MudStack` with `Spacing="2"` for fields and `Spacing="4"` for sections |
 
-**Spacing in stylesheets uses `rem`, on these steps only:** `0.25`, `0.375`, `0.5`,
-`0.75`, `1`, `1.5` and `2rem`. With a 14px root, `1rem` is 14px, so MudBlazor's `pa-4`
-(16px) and the stylesheet's `1rem` (14px) are not the same length. Don't mix them on one
-element. `px` is allowed in a stylesheet only for a border width, an outline offset and
-the sidebar exception (UX-073, UX-V18).
+**There is one spacing scale: 4, 8, 12, 16 and 24px** (32px for the rare large gap), the
+same steps as MudBlazor's utility classes (`pa-1` is 4px, `pa-4` 16px, `pa-6` 24px). In
+a stylesheet, write spacing (`padding`, `margin`, `gap` and their sides) in px on that
+scale; 1px and 2px hairline offsets are fine. A pane puts 16px between its edge and its
+content and 24px above its first line.
+
+**A clearance is the one larger step.** When padding only keeps text out from under a
+control overlaid on the box (the Composer's Send and attach buttons, a role card's actions),
+size it to that control at 40, 48, 64 or 80px. It is not rhythm, so don't use those values
+for ordinary gaps.
+
+CV11 counts spacing in rem (the old 14px-root steps, 0.25 to 2rem) and any px spacing off
+these values. Heights, widths and offsets such as `top` or `right` are not spacing and keep
+their own units (UX-073, UX-V18).
 
 **Full-height areas divide by the zoom.** Viewport units are not zoomed, so a height or
 width meant to fill the window is `calc(100vh / 0.9)`, and `100vh - x` becomes
@@ -338,9 +360,11 @@ container's code (`S2`, `C7a`, `T3`) is in [wireframes.md](wireframes.md).
   Within a level, either every row has an icon or none does (UX-015).
 - **A 1:1 Room shows the Teammate's small avatar; a group Room shows the Room icon**
   (UX-016).
-- **Sidebar action links** ("New chat", "New view", "Add folder") take the
-  `nav-action-link` class: primary colour, 2px between icon and label. Don't repeat those
-  rules inline.
+- **Sidebar action links** ("New chat", "Build a team", "New view", "Add folder") take the
+  `nav-action-link` class: secondary text colour (not the accent), 2px between icon and
+  label. Don't set `IconColor` on them, and don't repeat those rules inline.
+- **The sidebar is the shell's surface**, not a tinted panel; a 1px `lines-default` edge
+  separates it from the workspace.
 - **Row actions are revealed on hover or focus** with a `120ms` opacity transition, and
   stay reachable by keyboard and on touch.
 
@@ -349,8 +373,10 @@ container's code (`S2`, `C7a`, `T3`) is in [wireframes.md](wireframes.md).
 1. **Route it.** Make it a routable component (`@page`); `TabPageRoutes` resolves a Tab's
    URL to it. Teach `TabKeys.Describe` the URL's key, title and icon name. A page does not
    draw its own breadcrumb.
-2. **Contain it.** Wrap it in a `MudContainer` with `Class="pa-4"`. Nothing sets the
-   page's padding to 0 (UX-002).
+2. **Contain it.** Wrap it in a `MudContainer` with `Class="pa-4"` (UX-002). The one
+   exception is a page that is nothing but split panes edge to edge, the Library page: it
+   uses `pa-0`, and each pane pads itself (16px sides, 24px above its content) so the
+   splitter's hairline runs the full height.
 
    | Kind | `MaxWidth` | Pages |
    | --- | --- | --- |
@@ -663,8 +689,6 @@ These are open questions, not decisions. Raise them before relying on them.
   (CV1, CV2) rather than by a wrapper.
 - **No narrow-width guidance for the shell.** The drawer is persistent at 240px with no
   collapse, and only the Task list has a narrow-width rule.
-- **Two spacing scales.** Markup uses MudBlazor's px utilities and the stylesheet uses
-  rem at a 14px root, so `pa-4` and `1rem` differ by 2px.
 - **Contrast tests cover palettes, not component states.** A tinted background such as the
   Human's bubble, or a status colour on a card, is not measured.
 

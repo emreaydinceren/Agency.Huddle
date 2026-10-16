@@ -61,6 +61,34 @@ public sealed class LibraryEditorTests
         Assert.True(Assert.IsType<bool>(invocation.Arguments[2]));
     }
 
+    /// <summary>By default <c>create</c> is told not to show line numbers.</summary>
+    [Fact]
+    public void Render_Default_PassesLineNumbersFalse()
+    {
+        using MudBunitContext context = new();
+        (_, BunitJSModuleInterop module, _) = RenderEditor(context);
+
+        JSRuntimeInvocation invocation = Assert.Single(module.Invocations, i => i.Identifier == "create");
+        Assert.False(Assert.IsType<bool>(invocation.Arguments[6]));
+    }
+
+    /// <summary><see cref="LibraryEditor.LineNumbers"/> reaches <c>create</c> as its last argument.</summary>
+    [Fact]
+    public void Render_LineNumbers_PassesLineNumbersTrue()
+    {
+        using MudBunitContext context = new();
+        BunitJSModuleInterop module = context.JSInterop.SetupModule(ModulePath);
+        module.SetupModule("create", _ => true);
+
+        context.Render<LibraryEditor>(parameters => parameters
+            .Add(p => p.Text, "hello")
+            .Add(p => p.LanguageId, "markdown")
+            .Add(p => p.LineNumbers, true));
+
+        JSRuntimeInvocation invocation = Assert.Single(module.Invocations, i => i.Identifier == "create");
+        Assert.True(Assert.IsType<bool>(invocation.Arguments[6]));
+    }
+
     /// <summary><see cref="LibraryEditor.GetTextAsync"/> calls the handle's <c>getText</c> and returns its result.</summary>
     [Fact]
     public async Task GetTextAsync_CallsGetText()

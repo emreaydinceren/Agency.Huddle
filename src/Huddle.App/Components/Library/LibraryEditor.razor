@@ -28,6 +28,10 @@
     [Parameter]
     public bool PreviewMode { get; set; }
 
+    /// <summary>Whether the editor shows CodeMirror's line-number gutter. Only read on create, like <see cref="Text"/>.</summary>
+    [Parameter]
+    public bool LineNumbers { get; set; }
+
     /// <summary>Raised 300 ms after the last keystroke while <see cref="PreviewMode"/> is set.</summary>
     [Parameter]
     public EventCallback<string> PreviewTextChanged { get; set; }
@@ -63,7 +67,7 @@
         this.module = createdModule;
         this.selfReference = DotNetObjectReference.Create(this);
         IJSObjectReference createdHandle = await this.module.InvokeAsync<IJSObjectReference>(
-            "create", this.editorElement, this.Text, this.ReadOnly, this.LanguageId, this.selfReference, this.PreviewMode);
+            "create", this.editorElement, this.Text, this.ReadOnly, this.LanguageId, this.selfReference, this.PreviewMode, this.LineNumbers);
         if (this.disposed)
         {
             await createdHandle.InvokeVoidAsync("dispose");
