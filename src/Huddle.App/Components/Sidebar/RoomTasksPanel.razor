@@ -1,0 +1,187 @@
+@using Agency.Huddle.App.Tabs
+@implements IDisposable
+@inject IChatStore ChatStore
+@inject RoomEvents Events
+@inject TaskEvents TaskEvents
+@inject ITaskReferenceResolver TaskResolver
+@inject TabService Tabs
+
+@*
+    The "Tasks in this chat" panel (Spec D-8): every Task the Room's Messages mention, newest mention first, each
+    re-resolved for its current title and state. The Transcript is reloaded when a Message is posted in this Room;
+    a Task change only re-resolves, because no Message changed.
+*@
+
+@if (this.rows.Count == 0)
+{
+    @if (this.loaded)
+    {
+        <MudText Typo="Typo.body2" Class="mud-text-secondary" role="status">No Tasks mentioned in this chat yet.</MudText>
+    }
+}
+else
+{
+    @foreach (TaskRow row in this.rows)
+    {
+        @if (row.Task is { } task)
+        {
+            <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="1" Class="@(task.Closed ? "sidebar-row room-tasks-row room-task-closed" : "sidebar-row room-tasks-row")">
+                <MudLink Typo="Typo.body2" Href="@($"/tasks/item/{Uri.EscapeDataString(row.Id)}")">@($"{row.Id} {task.Title}")</MudLink>
+                @if (task.Status is { } status)
+                {
+                    <MudText Typo="Typo.caption">@status.ToWire()</MudText>
+                }
+                <MudIconButton Icon="@Icons.Material.Filled.ArrowUpward" Size="Size.Small" aria-label="Show where it was mentioned" OnClick="@(() => this.Jump(row))" />
+            </MudStack>
+        }
+        else
+        {
+            <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="1" Class="sidebar-row room-tasks-row">
+                <MudText Typo="Typo.body2" Class="mud-text-secondary">@($"{row.Label} (unavailable)")</MudText>
+            </MudStack>
+        }
+    }
+}
+
+@code {
+    private readonly CancellationTokenSource cts = new();
+    private IReadOnlyList<RoomMention> mentions = [];
+    private List<TaskRow> rows = [];
+    private string? loadedKey;
+    private bool loaded;
+    private bool disposed;
+
+    /// <summary>The page's Subject; anything but a Room renders nothing.</summary>
+    [Parameter, EditorRequired]
+    public required PageSubject Subject { get; set; }
+
+    /// <summary>The Tab the panel's Subject lives in; the jump navigates it.</summary>
+    [Parameter, EditorRequired]
+    public required string TabId { get; set; }
+
+    /// <summary>The frame's context, which receives the row count.</summary>
+    [CascadingParameter]
+    public SidebarPanelContext? Panel { get; set; }
+
+    /// <inheritdoc />
+    protected override void OnInitialized()
+    {
+        this.Events.MessagePosted += this.OnMessagePosted;
+        this.TaskEvents.TaskChanged += this.OnTaskChanged;
+        this.TaskEvents.TasksReloaded += this.OnTasksReloaded;
+    }
+
+    /// <inheritdoc />
+    protected override async Task OnParametersSetAsync()
+    {
+        if (this.Subject is not RoomSubject room)
+        {
+            this.mentions = [];
+            this.rows = [];
+            this.loadedKey = null;
+            this.loaded = false;
+            this.Panel?.SetCount(null);
+            return;
+        }
+
+        if (!string.Equals(this.loadedKey, room.Key, StringComparison.Ordinal))
+        {
+            await this.LoadAsync(room);
+        }
+    }
+
+    /// <summary>Stops listening and cancels a load in flight.</summary>
+    public void Dispose()
+    {
+        this.disposed = true;
+        this.Events.MessagePosted -= this.OnMessagePosted;
+        this.TaskEvents.TaskChanged -= this.OnTaskChanged;
+        this.TaskEvents.TasksReloaded -= this.OnTasksReloaded;
+        this.cts.Cancel();
+        this.cts.Dispose();
+    }
+
+    /// <summary>Reads the Transcript, collects the Task mentions and resolves them; drops the result when the Subject moved on.</summary>
+    private async Task LoadAsync(RoomSubject room)
+    {
+        this.loadedKey = room.Key;
+        IReadOnlyList<ChatMessage> messages;
+        try
+        {
+            messages = await this.ChatStore.ReadAllAsync(room.RoomId, this.cts.Token);
+        }
+        catch (OperationCanceledException)
+        {
+            return;
+        }
+
+        if (this.disposed || this.Subject is not RoomSubject current || !string.Equals(current.Key, room.Key, StringComparison.Ordinal))
+        {
+            return;
+        }
+
+        this.mentions = RoomMentions.Collect(messages, ReferenceKind.Task);
+        this.Resolve();
+    }
+
+    /// <summary>Resolves every mention against the current Tasks and reports the count.</summary>
+    private void Resolve()
+    {
+        List<TaskRow> resolved = [];
+        foreach (RoomMention mention in this.mentions)
+        {
+            TaskReference? task = TaskId.TryParse(mention.Key, out TaskId id) ? this.TaskResolver.Resolve(id) : null;
+            string shown = task is not null ? task.Id.ToString() : mention.Key;
+            resolved.Add(new TaskRow(shown, mention.Label, mention.LatestMessageId, task));
+        }
+
+        this.rows = resolved;
+        this.loaded = true;
+        this.Panel?.SetCount(resolved.Count);
+    }
+
+    /// <summary>Navigates this Tab to the newest Message that mentioned the Task.</summary>
+    private void Jump(TaskRow row)
+    {
+        if (this.Subject is RoomSubject room)
+        {
+            _ = this.Tabs.Navigate(this.TabId, $"/rooms/{room.RoomId}?message={Uri.EscapeDataString(row.LatestMessageId)}");
+        }
+    }
+
+    private void OnMessagePosted(MessagePostedEvent e)
+    {
+        if (this.Subject is not RoomSubject room || !string.Equals(e.Room.Id, room.RoomId, StringComparison.Ordinal))
+        {
+            return;
+        }
+
+        _ = RendererDispatch.RunAsync(this.InvokeAsync, async () =>
+        {
+            if (this.disposed || this.Subject is not RoomSubject current)
+            {
+                return;
+            }
+
+            await this.LoadAsync(current);
+            this.StateHasChanged();
+        });
+    }
+
+    private void OnTaskChanged(TaskChange change) => this.ReResolve();
+
+    private void OnTasksReloaded() => this.ReResolve();
+
+    private void ReResolve() => _ = RendererDispatch.RunAsync(this.InvokeAsync, () =>
+    {
+        if (!this.disposed && this.loaded)
+        {
+            this.Resolve();
+            this.StateHasChanged();
+        }
+
+        return Task.CompletedTask;
+    });
+
+    private sealed record TaskRow(string Id, string Label, string LatestMessageId, TaskReference? Task);
+}
