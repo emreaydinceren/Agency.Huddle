@@ -37,7 +37,7 @@ public sealed partial class PageBreadcrumbsTests
 
         Assert.Equal("stub-page stub-room", host.Find(".tab-body").Children[0].ClassName);
         Assert.Empty(host.FindAll(".page-breadcrumbs"));
-        Assert.Equal("Chats", Words(bar.Find(".top-bar-start .page-breadcrumbs").TextContent));
+        Assert.Equal("Rooms", Words(bar.Find(".top-bar-start .page-breadcrumbs").TextContent));
     }
 
     /// <summary>The ancestor is a link and the last crumb, the page itself, is plain text marked as the current page.</summary>
@@ -114,13 +114,13 @@ public sealed partial class PageBreadcrumbsTests
         Assert.Equal(2, host.FindAll("section.tab-group").Count);
         Assert.Empty(host.FindAll(".page-breadcrumbs"));
         Assert.Single(bar.FindAll(".page-breadcrumbs"));
-        Assert.DoesNotContain("Chats", Words(bar.Find(".page-breadcrumbs").TextContent), StringComparison.Ordinal);
+        Assert.DoesNotContain("Rooms",Words(bar.Find(".page-breadcrumbs").TextContent), StringComparison.Ordinal);
 
         await bar.InvokeAsync(() => tabs.FocusGroup(left));
 
         bar.WaitForAssertion(() =>
         {
-            Assert.Equal("Chats", Words(bar.Find(".page-breadcrumbs").TextContent));
+            Assert.Equal("Rooms", Words(bar.Find(".page-breadcrumbs").TextContent));
             Assert.Equal(left, tabs.FocusedGroupId);
         });
         bar.Find("a.page-crumb-link").Click();
