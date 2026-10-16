@@ -32,6 +32,7 @@
 @inject TaskStore Store
 @inject ISprintCatalog Sprints
 @inject IJSRuntime JS
+@inject Agency.Huddle.App.Acp.PersonaStore Personas
 @implements IDisposable
 
 <MudDataGrid T="TaskItem" @key="@this.View.Id" Items="@this.GroupOrdered()" ReadOnly="true" Dense="@(this.View.Dense ?? true)" Hover="true"
@@ -79,7 +80,7 @@
                                      Grouping="@this.IsGrouped(TaskGroupField.Assignee)" GroupByOrder="@this.GroupOrder(TaskGroupField.Assignee)"
                                      GroupBy="@(t => this.GroupSortKey(t, TaskGroupField.Assignee))">
                         <CellTemplate>
-                            <TaskAssignee Name="@context.Item.Assignee" />
+                            <TaskAssignee Name="@context.Item.Assignee" ShowProfile="@this.IsTeammate(context.Item.Assignee)" />
                         </CellTemplate>
                         <GroupTemplate>@this.GroupHeading(context, TaskGroupField.Assignee)</GroupTemplate>
                     </TemplateColumn>
@@ -432,6 +433,10 @@
 
     /// <summary>Whether Team is also one of the View's grouping fields, which changes how a Project group is labelled.</summary>
     private bool TeamAlsoGrouped => this.View.Grouping.Contains(TaskGroupField.Team);
+
+    /// <summary>Whether <paramref name="assignee"/> is a Teammate, so its avatar opens a profile; the Human and an unknown name keep a plain avatar.</summary>
+    /// <param name="assignee">The Task's assignee, or <see langword="null"/> when unassigned.</param>
+    private bool IsTeammate(string? assignee) => assignee is not null && this.Personas.ResolveByNameOrAlias(assignee) is not null;
 
     /// <summary>
     /// The grid's own grouping key for <paramref name="task"/> under <paramref name="field"/>: a rank-prefixed

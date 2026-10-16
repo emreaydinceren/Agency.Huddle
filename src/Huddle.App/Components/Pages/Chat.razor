@@ -57,10 +57,18 @@ else
                     @{
                         var agentMembers = this.members.Where(m => m.Kind == UserKind.Agent).ToList();
                     }
-                    <MudAvatarGroup Max="4" Spacing="2" MaxSize="Size.Small" MaxColor="Color.Default">
-                        @foreach (var agent in agentMembers)
+                    @* The group draws the outline and the overlap, but not its own Max: MudAvatarGroup hides an
+                       avatar past Max by emptying it, which would leave an empty profile button behind. So the
+                       first MembersShown open their profile and the rest are counted in one "+N" avatar here. *@
+                    <MudAvatarGroup Spacing="2">
+                        @foreach (var agent in agentMembers.Take(MembersShown))
                         {
-                            <TeammateAvatar Name="@agent.Name" Avatar="this.Avatars.Get(agent.Name)" Size="Size.Small" />
+                            <ProfileAvatar Name="@agent.Name" Avatar="this.Avatars.Get(agent.Name)" Size="Size.Small" Team="@this.room.Team" />
+                        }
+                        @if (agentMembers.Count > MembersShown)
+                        {
+                            int more = agentMembers.Count - MembersShown;
+                            <MudAvatar Size="Size.Small" Color="Color.Default" Class="room-members-more" aria-label="@($"{Plural.Of(more, "more member", "more members")}")">+@more</MudAvatar>
                         }
                     </MudAvatarGroup>
                     <MudText Typo="Typo.caption" Class="room-members-label">@Plural.Of(agentMembers.Count, "member", "members") + you</MudText>
@@ -81,6 +89,7 @@ else
             HumanIds="this.HumanIds()"
             Drafts="this.drafts"
             StoppingAgentIds="this.stoppingAgentIds"
+            Team="@this.room.Team"
             TargetMessageId="@this.Message"
             OnJumped="this.OnJumpedAsync"
             OnStop="this.StopDraftAsync" />
@@ -223,6 +232,9 @@ else
 }
 
 @code {
+    /// <summary>How many member avatars the Room header shows before the rest are counted in "+N".</summary>
+    private const int MembersShown = 4;
+
     [Parameter]
     public string? RoomId { get; set; }
 

@@ -3555,3 +3555,46 @@ a.team-ref,
     font-weight: 600;
     word-break: break-all;
 }
+
+/* ---- Profile avatar: an avatar that opens the Teammate's profile popover ---------------------- */
+
+/* The button looks like the bare avatar: no chrome of its own. The ring is the global
+   button:focus-visible rule; the radius makes it follow the circle. */
+.profile-avatar {
+    display: inline-flex;
+}
+
+/* In a MudAvatarGroup (the Room's Members, C3) each avatar is the first child of its own
+   .profile-avatar, so MudBlazor's ":first-child { margin-inline-start: 0 !important }" cancels the
+   group's overlap on every one. The wrapper takes the overlap instead: 8px is what the group's
+   Spacing="2" gives a bare avatar (MudBlazor's ms-n2). */
+.mud-avatar-group > .profile-avatar:not(:first-child) {
+    margin-inline-start: -8px;
+}
+
+.profile-avatar-button {
+    display: inline-flex;
+    padding: 0;
+    border: 0;
+    background: none;
+    border-radius: 50%;
+    cursor: pointer;
+    color: inherit;
+}
+
+.profile-avatar-button:focus-visible {
+    outline: 2px solid var(--mud-palette-text-primary);
+    outline-offset: 2px;
+}
+
+/* The panel the popover holds: wide enough for the card, never wider than the window. */
+.profile-popover {
+    min-width: 16rem;
+    max-width: min(22rem, 90vw);
+    padding: 0.5rem;
+    outline: none;
+}
+
+.profile-popover-empty {
+    color: var(--mud-palette-text-secondary);
+}

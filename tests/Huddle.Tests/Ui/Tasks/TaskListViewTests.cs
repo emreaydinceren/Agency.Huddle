@@ -211,6 +211,23 @@ public sealed class TaskListViewTests : IDisposable
         Assert.NotNull(assignee.QuerySelector(".mud-avatar"));
     }
 
+    /// <summary>A Teammate assignee's avatar opens their profile; the Human's (any name with no Persona behind it) stays a plain avatar.</summary>
+    [Fact]
+    public async Task Assignee_ProfileButtonOnlyForATeammate()
+    {
+        _ = this.personas.Add(new Agency.Huddle.App.Acp.PersonaIdentity("Nova", "Nova", "nova", []), "You are Nova.");
+        TaskItem teammate = TestTasks.Make(id: "PLAT-0001", title: "T", assignee: "Nova");
+        TaskItem human = TestTasks.Make(id: "PLAT-0002", title: "U", assignee: "You");
+        TaskView view = MakeView(fields: ["assignee"]);
+
+        await using MudBunitContext ctx = new();
+        IRenderedComponent<ContainerFragment> cut = Render(ctx, view, [teammate, human]);
+
+        IElement button = Assert.Single(cut.FindAll(".task-assignee button.profile-avatar-button"));
+        Assert.Equal("Show Nova's profile", button.GetAttribute("aria-label"));
+        Assert.Equal(2, cut.FindAll(".task-assignee .mud-avatar").Count);
+    }
+
     /// <summary>The grid is dense by default and when <see cref="TaskView.Dense"/> is true, and drops the dense class when the View says false.</summary>
     [Theory]
     [InlineData(null, true)]
@@ -251,6 +268,7 @@ public sealed class TaskListViewTests : IDisposable
         ctx.Services.AddSingleton(this.store);
         ctx.Services.AddSingleton<ISprintCatalog>(new EmptySprintCatalog());
         ctx.Services.AddSingleton(new AvatarStore(this.dataDir.Options(), NullLogger<AvatarStore>.Instance));
+        ctx.Services.AddSingleton(this.personas);
 
         return ctx.RenderWithPopovers(builder =>
         {
