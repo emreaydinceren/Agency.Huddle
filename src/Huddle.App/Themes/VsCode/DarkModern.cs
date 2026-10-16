@@ -53,6 +53,8 @@ internal static class DarkModernTheme
         LinesDefault = "#0078d4", // focusBorder (theme)
         TextPrimary = "#cccccc", // foreground (theme)
         TextSecondary = "#9d9d9d", // descriptionForeground (theme)
+        DrawerText = "#cccccc", // TextPrimary: sideBar.foreground falls back to foreground
+        DrawerIcon = "#9d9d9d", // TextSecondary
         TextDisabled = "#767676", // disabledForeground (registry default, composited from #cccccc80 over Surface #202020)
         Primary = "#4daafc", // textLink.foreground (theme) - see the type-level remarks for why not button.background
         PrimaryContrastText = "#000000", // computed: black 8.47:1 vs white 2.48:1 against Primary #4daafc

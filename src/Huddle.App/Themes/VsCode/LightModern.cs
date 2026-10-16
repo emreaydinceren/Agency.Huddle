@@ -47,6 +47,8 @@ internal static class LightModernTheme
         LinesDefault = "#005fb8", // focusBorder (theme)
         TextPrimary = "#3b3b3b", // foreground (theme)
         TextSecondary = "#3b3b3b", // descriptionForeground (theme)
+        DrawerText = "#3b3b3b", // TextPrimary: sideBar.foreground falls back to foreground
+        DrawerIcon = "#3b3b3b", // TextSecondary
         TextDisabled = "#acacac", // disabledForeground (registry default, composited from #61616180 over Surface #f8f8f8)
         Primary = "#005fb8", // textLink.foreground (theme) - see the type-level remarks for why not button.background
         PrimaryContrastText = "#ffffff", // computed: black 3.33:1 vs white 6.31:1 against Primary #005fb8

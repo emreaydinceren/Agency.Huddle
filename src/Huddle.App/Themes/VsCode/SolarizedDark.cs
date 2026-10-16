@@ -46,6 +46,8 @@ internal static class SolarizedDarkTheme
         LinesDefault = "#197271", // focusBorder (theme, composited from #2aa19899 over Background #002b36)
         TextPrimary = "#cccccc", // foreground (registry default)
         TextSecondary = "#8f999c", // descriptionForeground (registry default, composited from #ccccccb2 over Surface #00212b)
+        DrawerText = "#cccccc", // TextPrimary: sideBar.foreground falls back to foreground
+        DrawerIcon = "#8f999c", // TextSecondary
         TextDisabled = "#66777c", // disabledForeground (registry default, composited from #cccccc80 over Surface #00212b)
         Primary = "#3794ff", // textLink.foreground (registry default) - see the type-level remarks for why not button.background
         PrimaryContrastText = "#000000", // computed: black 6.84:1 vs white 3.07:1 against Primary #3794ff
