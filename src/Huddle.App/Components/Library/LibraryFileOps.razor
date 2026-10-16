@@ -171,6 +171,17 @@
         return await this.PromptForCreateAsync(LibraryTreeActionKind.NewNote, folder);
     }
 
+    /// <summary>Opens the settled New folder prompt in <paramref name="folder"/> and creates the folder on confirm.
+    /// Raises no <see cref="OnChanged"/>, like <see cref="NewNoteAsync"/>: the caller refreshes its own tree.</summary>
+    /// <param name="folder">The already-resolved folder to create the folder in.</param>
+    /// <returns>The created folder's path, or <see langword="null"/> when the prompt was cancelled.</returns>
+    public async Task<LibraryPath?> NewFolderAsync(LibraryPath folder)
+    {
+        ArgumentNullException.ThrowIfNull(folder);
+
+        return await this.PromptForCreateAsync(LibraryTreeActionKind.NewFolder, folder);
+    }
+
     /// <summary>Shows the name prompt for a create <paramref name="kind"/> and returns what it created, or
     /// <see langword="null"/> when it was cancelled.</summary>
     private async Task<LibraryPath?> PromptForCreateAsync(LibraryTreeActionKind kind, LibraryPath folder)

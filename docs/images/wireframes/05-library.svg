@@ -9,22 +9,30 @@
 <rect x="32" y="142" width="25" height="17" rx="8.5" fill="#0f766e"/>
 <text x="44.4" y="154.5" font-size="11" font-weight="700" fill="#fff" text-anchor="middle">L2</text>
 <text x="63" y="154" font-size="11" font-weight="600" fill="#1f2430" stroke="#ffffff" stroke-width="4" paint-order="stroke">Tree panel (first panel)</text>
-<rect x="48" y="190" width="276" height="150" rx="4" fill="#f6f7f9" stroke="#8b93a1" stroke-width="1.2"/>
-<rect x="44" y="182" width="32" height="17" rx="8.5" fill="#0f766e"/>
-<text x="60.1" y="194.5" font-size="11" font-weight="700" fill="#fff" text-anchor="middle">L2a</text>
-<text x="82" y="194" font-size="11" font-weight="600" fill="#1f2430" stroke="#f6f7f9" stroke-width="4" paint-order="stroke">Tree (lazy-loaded)</text>
-<text x="62" y="220" font-size="11" font-weight="400" fill="#1f2430" text-anchor="start">▾ notes</text>
-<text x="80" y="238" font-size="11" font-weight="400" fill="#6b7280" text-anchor="start">design.md</text>
-<text x="80" y="256" font-size="11" font-weight="400" fill="#6b7280" text-anchor="start">todo.md</text>
-<text x="62" y="274" font-size="11" font-weight="400" fill="#1f2430" text-anchor="start">▸ teams</text>
-<text x="62" y="292" font-size="11" font-weight="400" fill="#1f2430" text-anchor="start">▾ projects</text>
-<text x="80" y="310" font-size="11" font-weight="400" fill="#6b7280" text-anchor="start">plan.md</text>
-<rect x="48" y="366" width="276" height="50" rx="4" fill="#f6f7f9" stroke="#8b93a1" stroke-width="1.2" stroke-dasharray="6 4"/>
-<rect x="44" y="358" width="32" height="17" rx="8.5" fill="#0f766e"/>
-<text x="60.1" y="370.5" font-size="11" font-weight="700" fill="#fff" text-anchor="middle">L2b</text>
-<text x="82" y="370" font-size="11" font-weight="600" fill="#1f2430" stroke="#f6f7f9" stroke-width="4" paint-order="stroke">Filtered results (replace the tree)</text>
-<text x="62" y="398" font-size="11" font-weight="400" fill="#6b7280" text-anchor="start">design.md   notes/</text>
-<rect x="340" y="150" width="10" height="536" rx="4" fill="#d7eef0" stroke="#0e7c86" stroke-width="1.2"/>
+<rect x="48" y="170" width="276" height="46" rx="4" fill="#f6f7f9" stroke="#8b93a1" stroke-width="1.2"/>
+<rect x="44" y="162" width="32" height="17" rx="8.5" fill="#0f766e"/>
+<text x="60.1" y="174.5" font-size="11" font-weight="700" fill="#fff" text-anchor="middle">L2c</text>
+<text x="82" y="174" font-size="11" font-weight="600" fill="#1f2430" stroke="#f6f7f9" stroke-width="4" paint-order="stroke">Tree header</text>
+<rect x="56" y="182" width="260" height="14" rx="3" fill="#ffffff" stroke="#8b93a1" stroke-width="1"/>
+<text x="64" y="193" font-size="10" font-weight="400" fill="#6b7280" text-anchor="start">Search notes</text>
+<text x="60" y="210" font-size="10" font-weight="400" fill="#1f2430" text-anchor="start">+ New note</text>
+<text x="316" y="210" font-size="10" font-weight="400" fill="#1f2430" text-anchor="end">New folder</text>
+<rect x="48" y="224" width="276" height="150" rx="4" fill="#f6f7f9" stroke="#8b93a1" stroke-width="1.2"/>
+<rect x="44" y="216" width="32" height="17" rx="8.5" fill="#0f766e"/>
+<text x="60.1" y="228.5" font-size="11" font-weight="700" fill="#fff" text-anchor="middle">L2a</text>
+<text x="82" y="228" font-size="11" font-weight="600" fill="#1f2430" stroke="#f6f7f9" stroke-width="4" paint-order="stroke">Tree (lazy-loaded)</text>
+<text x="62" y="254" font-size="11" font-weight="400" fill="#1f2430" text-anchor="start">▾ notes</text>
+<text x="80" y="272" font-size="11" font-weight="400" fill="#6b7280" text-anchor="start">design.md</text>
+<text x="80" y="290" font-size="11" font-weight="400" fill="#6b7280" text-anchor="start">todo.md</text>
+<text x="62" y="308" font-size="11" font-weight="400" fill="#1f2430" text-anchor="start">▸ teams</text>
+<text x="62" y="326" font-size="11" font-weight="400" fill="#1f2430" text-anchor="start">▾ projects</text>
+<text x="80" y="344" font-size="11" font-weight="400" fill="#6b7280" text-anchor="start">plan.md</text>
+<rect x="48" y="400" width="276" height="50" rx="4" fill="#f6f7f9" stroke="#8b93a1" stroke-width="1.2" stroke-dasharray="6 4"/>
+<rect x="44" y="392" width="32" height="17" rx="8.5" fill="#0f766e"/>
+<text x="60.1" y="404.5" font-size="11" font-weight="700" fill="#fff" text-anchor="middle">L2b</text>
+<text x="82" y="404" font-size="11" font-weight="600" fill="#1f2430" stroke="#f6f7f9" stroke-width="4" paint-order="stroke">Filtered results (replace the tree)</text>
+<text x="62" y="432" font-size="11" font-weight="400" fill="#6b7280" text-anchor="start">design.md   notes/</text>
+<rect x="340" y="184" width="10" height="536" rx="4" fill="#d7eef0" stroke="#0e7c86" stroke-width="1.2"/>
 <text x="345" y="420" font-size="12" font-weight="700" fill="#0e7c86" text-anchor="middle">⋮</text>
 <rect x="322" y="440" width="25" height="17" rx="8.5" fill="#0f766e"/>
 <text x="334.4" y="452.5" font-size="11" font-weight="700" fill="#fff" text-anchor="middle">L4</text>
