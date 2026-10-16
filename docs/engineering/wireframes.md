@@ -222,7 +222,9 @@ Not drawn: `TaskDetailDialog`, the dialog form of the detail (see Figure 8). A V
 ## Figure 6: Tabbed pages (Team page and Settings)
 
 `TeamPage.razor` and `Settings.razor` use one frame: a container, a tab rail and one
-active panel. Left, the Team page; right, Settings.
+active panel. Left, the Team page with its Members tab open; right, Settings. The Members
+panel (`M6`) is not a copy of anything: it is Build a team's own Hire section (Figure 9), so its
+slate `B` badges name the same containers.
 
 ![Two tabbed pages side by side. The Team page has a duplicate button, a spend strip and a tab rail over a members panel. Settings has a reset control and a tab rail over a prompts panel](../images/wireframes/06-tabbed-pages.svg)
 
@@ -234,8 +236,8 @@ active panel. Left, the Team page; right, Settings.
 | `M4` | Tabs | `MudTabs` `.team-page-tabs` | Keyed by Team and Project |
 | `M4a` | Tab rail | `MudTabPanel` headers, each with its `TabIcons` entity icon | Members, Files, Tasks, Process, Details (Info icon, always last on a Team page); a Project page and a disabled feature show fewer |
 | `M4b` | Active panel | `TeamRoster`, `TeamFilesTab`, `TeamTasksTab`, `ProcessTab` or `TeamDetails` | Only the selected panel is rendered |
-| `M5` | Search | `MudTextField` | Filters the Files and Tasks panels' lists; the Members panel has none |
-| `M6` | Members panel | `TeamRoster`: `BuildTeam` with `MembersOnly` | Build a team's Hire section (`B9`, `B9a`, `B9c`) for the Team, with no number badge, then the Manager select and a Save row (`B10` without its heading). A member's roster card adds its status dot before the Name and, beside Edit, Message (once it has connected; opens the Team's own one-to-one) and a Remove menu: Remove from Team (keeps the Teammate) or Delete Teammate. Save changes redraws the panel in place |
+| `M5` | Search | `MudTextField` | Filters the Files and Tasks panels' lists; the Members panel has none. Not drawn: Figure 6 shows the Members tab |
+| `M6` | Members panel | `TeamRoster`: `BuildTeam` with `MembersOnly` | Drawn in Figure 6 with the reused containers badged as in Figure 9: the roles grid (`B9a`), the roster (`B12`, the cards of `B9c`) and the save row (`B10` without its heading). Build a team's Hire section (`B9`, `B9a`, `B9c`) for the Team, with no number badge, then the Manager select and a Save row (`B10` without its heading). A member's roster card adds its status dot before the Name and, beside Edit, Message (once it has connected; opens the Team's own one-to-one) and a Remove menu: Remove from Team (keeps the Teammate) or Delete Teammate. Save changes redraws the panel in place |
 | `G1` | Settings container | `MudContainer`, `MaxWidth.Large` | |
 | `G1a` | Reset all | `ResetAllControl` | In the Prompts panel's action row beside Save; "Reset all to defaults", disabled until a prompt has been changed, then asks inline (`InlineConfirm`) |
 | `G2` | Tabs | `MudTabs` | The active tab follows the route; under a `PageHeader` "Settings" |
@@ -285,7 +287,7 @@ Containers that float above a page. Each cell shows one over a dimmed page.
 
 ## Figure 9: The Build a team page
 
-`BuildTeam.razor` at `/teams/build`. The Chief of Staff's four steps, of which steps 1 (Team type), 2 (Team details), 3 (Hire) and 4 (Approve) are built. The figure shows every step, and the three dialogs the page opens (`B8b`, `B9b`, `B9e`) below them. For an existing Team, its type and details sections are the Team page's Details panel (`B11`) and its Hire section is the Members panel (`B12`, `M6`); neither is drawn.
+`BuildTeam.razor` at `/teams/build`. The Chief of Staff's four steps, of which steps 1 (Team type), 2 (Team details), 3 (Hire) and 4 (Approve) are built. The figure shows every step, and the three dialogs the page opens (`B8b`, `B9b`, `B9e`) below them. For an existing Team, its type and details sections are the Team page's Details panel (`B11`) and its Hire section is the Members panel (`B12`, `M6`). Figure 6 draws the Members panel, with the reused `B` containers badged; the Details panel is not drawn.
 
 ![The Build a team page: a title with the Chief of Staff's name, a four-step strip, the team type grid, the team details card, the roles grid with an Add card and the draft roster, the Approve button, and the folder picker, role form and Edit draft dialogs](../images/wireframes/09-build-a-team.svg)
 
