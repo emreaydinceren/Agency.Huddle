@@ -56,7 +56,7 @@
 
 @if (this.EditMode && this.missingTeam)
 {
-    <MudContainer MaxWidth="MaxWidth.Large" Class="build-team pa-4">
+    <MudContainer MaxWidth="MaxWidth.Large" Class="build-team page-reading pa-4">
         <MudAlert Severity="Severity.Warning" role="alert" Class="build-team-missing">There is no Team named "@this.Team".</MudAlert>
     </MudContainer>
     return;
@@ -279,7 +279,7 @@
             string part;
             if (!this.EditMode)
             {
-                part = "pa-4";
+                part = "page-reading pa-4";
             }
             else
             {

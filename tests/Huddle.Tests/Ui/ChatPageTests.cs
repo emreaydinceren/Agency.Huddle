@@ -145,6 +145,33 @@ public sealed class ChatPageTests
         Assert.Equal(room.Name, input.GetAttribute("value"));
     }
 
+    /// <summary>
+    /// DS-11: renaming a Room swaps the h1 for a field at the title's own size, with no floating label and only
+    /// an outline, so the header does not jump; the field is named for assistive technology by its aria-label.
+    /// </summary>
+    [Fact]
+    public async Task ChatPage_Rename_FieldUsesTheTitleTypographyWithNoFloatingLabel()
+    {
+        using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(60));
+        var ct = cts.Token;
+
+        await using var factory = new TeamWebApplicationFactory();
+        var (directory, chat, _) = ChatPageTests.Services(factory);
+
+        var agent = await directory.UpsertAgentUserAsync("echo", "test agent", ct);
+        Assert.NotNull(agent);
+        var room = await chat.EnsureRoomForAsync(agent, ct);
+
+        await using MudBunitContext ctx = ChatPageTests.NewContext(factory);
+        var cut = ChatPageTests.RenderChatPage(ctx, room.Id);
+        await cut.InvokeAsync(() => cut.Find("button[aria-label=\"Rename room\"]").ClickAsync());
+
+        var control = cut.Find("div.title-inline-edit");
+        Assert.Empty(control.QuerySelectorAll("label"));
+        Assert.NotNull(control.QuerySelector(".mud-input-outlined"));
+        Assert.NotNull(control.QuerySelector("input[aria-label=\"Room name\"]"));
+    }
+
     /// <summary>T10a: a Team's Team Room is named after its Team, so its header offers no Rename pencil.</summary>
     [Fact]
     public async Task ChatPage_RoomHeader_TeamRoom_HasNoRenamePencil()
@@ -1170,9 +1197,7 @@ public sealed class ChatPageTests
             builder.CloseComponent();
         });
 
-    /// <summary>The <c>&lt;input&gt;</c> under the Rename control's <c>MudTextField</c>, found by its Label the same way <c>TeammateCardTests</c> locates a field.</summary>
+    /// <summary>The <c>&lt;input&gt;</c> under the Rename control's <c>MudTextField</c>, found by its aria-label, since an inline title edit has no floating label.</summary>
     private static IElement FindRoomNameInput(IRenderedComponent<ContainerFragment> cut) =>
-        cut.FindAll("div.mud-input-control")
-            .First(control => control.QuerySelectorAll("label").Any(l => l.TextContent.Contains("Room name", StringComparison.Ordinal)))
-            .QuerySelector("input") ?? throw new InvalidOperationException("No input under the Room name field.");
+        cut.Find("input[aria-label=\"Room name\"]");
 }

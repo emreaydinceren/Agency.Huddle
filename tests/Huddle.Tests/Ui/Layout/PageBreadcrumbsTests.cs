@@ -37,7 +37,7 @@ public sealed partial class PageBreadcrumbsTests
 
         Assert.Equal("stub-page stub-room", host.Find(".tab-body").Children[0].ClassName);
         Assert.Empty(host.FindAll(".page-breadcrumbs"));
-        Assert.Equal("Chats › Chat", Words(bar.Find(".top-bar-start .page-breadcrumbs").TextContent));
+        Assert.Equal("Chats", Words(bar.Find(".top-bar-start .page-breadcrumbs").TextContent));
     }
 
     /// <summary>The ancestor is a link and the last crumb, the page itself, is plain text marked as the current page.</summary>
@@ -45,31 +45,32 @@ public sealed partial class PageBreadcrumbsTests
     public async Task Trail_LinksTheAncestorAndLeavesTheLastCrumbPlain()
     {
         await using MudBunitContext ctx = NewContext();
-        ctx.Services.GetRequiredService<NavigationManager>().NavigateTo("/rooms/ab12");
-
+        TabService tabs = ctx.Services.GetRequiredService<TabService>();
+        ctx.Services.GetRequiredService<NavigationManager>().NavigateTo("/tasks/my-tasks");
         _ = ctx.Render<TabHost>();
+        tabs.SetTitle("tasks:my-tasks", "My Tasks");
         IRenderedComponent<TopBar> bar = ctx.Render<TopBar>();
 
         IElement link = Assert.Single(bar.FindAll(".page-breadcrumbs a[href]"));
-        Assert.Equal("/", link.GetAttribute("href"));
-        Assert.Equal("Chats", link.TextContent.Trim());
+        Assert.Equal("/tasks", link.GetAttribute("href"));
+        Assert.Equal("Tasks", link.TextContent.Trim());
         IElement current = bar.Find(".page-breadcrumbs [aria-current='page']");
-        Assert.Equal("Chat", current.TextContent.Trim());
+        Assert.Equal("My Tasks", current.TextContent.Trim());
     }
 
-    /// <summary>Retitling the Tab, as a Room rename does, changes the last crumb.</summary>
+    /// <summary>Retitling the Tab, as a Task View rename does, changes the last crumb.</summary>
     [Fact]
     public async Task Trail_FollowsTheTabTitle()
     {
         await using MudBunitContext ctx = NewContext();
         TabService tabs = ctx.Services.GetRequiredService<TabService>();
-        ctx.Services.GetRequiredService<NavigationManager>().NavigateTo("/rooms/ab12");
+        ctx.Services.GetRequiredService<NavigationManager>().NavigateTo("/tasks/my-tasks");
         _ = ctx.Render<TabHost>();
         IRenderedComponent<TopBar> bar = ctx.Render<TopBar>();
 
-        await bar.InvokeAsync(() => tabs.SetTitle("room:ab12", "Planning"));
+        await bar.InvokeAsync(() => tabs.SetTitle("tasks:my-tasks", "Planning"));
 
-        bar.WaitForAssertion(() => Assert.Equal("Chats › Planning", Words(bar.Find(".page-breadcrumbs").TextContent)));
+        bar.WaitForAssertion(() => Assert.Equal("Tasks › Planning", Words(bar.Find(".page-breadcrumbs").TextContent)));
     }
 
     /// <summary>Following an ancestor crumb navigates the Tab in place, so one Tab remains and it now shows the ancestor's page.</summary>
@@ -119,7 +120,7 @@ public sealed partial class PageBreadcrumbsTests
 
         bar.WaitForAssertion(() =>
         {
-            Assert.Equal("Chats › Chat", Words(bar.Find(".page-breadcrumbs").TextContent));
+            Assert.Equal("Chats", Words(bar.Find(".page-breadcrumbs").TextContent));
             Assert.Equal(left, tabs.FocusedGroupId);
         });
         bar.Find("a.page-crumb-link").Click();

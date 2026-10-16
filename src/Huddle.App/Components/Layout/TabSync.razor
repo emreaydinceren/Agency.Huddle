@@ -14,6 +14,7 @@
 @inject TabService Tabs
 @inject ITeamDirectory TeamDirectory
 @inject ITeamCatalog Catalog
+@inject ViewStore Views
 @inject RoomEvents Events
 @inject NavigationManager Navigation
 
@@ -27,6 +28,7 @@
         this.Events.RoomsChanged += this.OnChanged;
         this.Tabs.Changed += this.OnChanged;
         this.Catalog.Changed += this.OnCatalogChanged;
+        this.Views.ViewsChanged += this.OnChanged;
         await this.ReconcileAsync();
     }
 
@@ -36,6 +38,7 @@
         this.Events.RoomsChanged -= this.OnChanged;
         this.Tabs.Changed -= this.OnChanged;
         this.Catalog.Changed -= this.OnCatalogChanged;
+        this.Views.ViewsChanged -= this.OnChanged;
     }
 
     private void OnCatalogChanged()
@@ -79,6 +82,7 @@
                 IReadOnlyList<Room> rooms = await this.TeamDirectory.GetRoomsAsync();
                 string? activeBefore = this.Tabs.Active?.Id;
                 TabReconciler.ReconcileRooms(this.Tabs, rooms);
+                TabReconciler.ReconcileViews(this.Tabs, this.Views.Views);
                 if (activeBefore is not null && this.Tabs.Active is { } now && !string.Equals(now.Id, activeBefore, StringComparison.Ordinal))
                 {
                     this.Navigation.NavigateTo(now.Url);

@@ -11,6 +11,7 @@ internal static class TabReconciler
     private const string RoomKeyPrefix = "room:";
     private const string TeamKeyPrefix = "team:";
     private const string ProjectKeyPrefix = "project:";
+    private const string ViewKeyPrefix = "tasks:";
 
     /// <summary>
     /// Closes Team and Project Tabs whose Team or Project is gone. Does nothing while the catalog lists
@@ -81,6 +82,33 @@ internal static class TabReconciler
             else
             {
                 tabs.CloseByKey(tab.Key);
+            }
+        }
+    }
+
+    /// <summary>
+    /// Retitles Task View Tabs to their View's display name, so a Tab and the breadcrumb built from its
+    /// title never show the route's slug ("my-tasks"). A Tab whose View is unknown keeps its title.
+    /// </summary>
+    /// <param name="tabs">The Tabs to bring in step.</param>
+    /// <param name="views">The Views that exist now.</param>
+    public static void ReconcileViews(TabService tabs, IReadOnlyList<Tasks.Views.TaskView> views)
+    {
+        ArgumentNullException.ThrowIfNull(tabs);
+        ArgumentNullException.ThrowIfNull(views);
+
+        foreach (Tab tab in tabs.Tabs)
+        {
+            if (!tab.Key.StartsWith(ViewKeyPrefix, StringComparison.Ordinal))
+            {
+                continue;
+            }
+
+            string id = tab.Key[ViewKeyPrefix.Length..];
+            Tasks.Views.TaskView? view = views.FirstOrDefault(v => string.Equals(v.Id, id, StringComparison.Ordinal));
+            if (view is not null && !string.IsNullOrWhiteSpace(view.Name))
+            {
+                tabs.SetTitle(tab.Key, view.Name);
             }
         }
     }
