@@ -119,9 +119,23 @@ button:focus-visible {
     object-fit: cover;
 }
 
-/* Tab labels are sentence case like every other label, not MudBlazor's upper case. */
+/* The tab rail (Settings, Team page): sentence-case 13px labels at the control weight in secondary text; the
+   active label is the accent text (rule above) and its slider a 2px accent bar. The 18px icon follows the
+   label's colour. */
 .mud-tab {
     text-transform: none;
+    font-size: var(--mud-typography-body2-size);
+    font-weight: 500;
+    color: var(--mud-palette-text-secondary);
+}
+
+.mud-tab .mud-icon-root {
+    font-size: var(--icon-size-row);
+    color: inherit;
+}
+
+.mud-tab-slider {
+    height: 2px;
 }
 
 /* ---- The type scale, in rendered pixels (ADR-0056) ---------------------------------------------
@@ -621,7 +635,11 @@ a.team-ref,
 }
 
 /* MudBlazor draws the separator as body text at 38% opacity (2.4:1 on Huddle Light); it is supporting text,
-   so it takes the secondary colour at full strength. */
+   so it takes the secondary colour at full strength. MudBlazor pads it 12px a side; the trail keeps 8px. */
+.page-breadcrumbs .mud-breadcrumb-separator {
+    padding-inline: 8px;
+}
+
 .page-breadcrumbs .mud-breadcrumb-separator > span {
     color: var(--mud-palette-text-secondary);
     opacity: 1;
@@ -720,9 +738,16 @@ a.team-ref,
 }
 
 .mud-nav-group > .mud-nav-link .mud-nav-link-text {
-    font-size: var(--mud-typography-subtitle2-size);
+    font-size: var(--mud-typography-caption-size);
     font-weight: 600;
     color: var(--mud-palette-text-secondary);
+}
+
+/* A section header sits 16px below the section above and 4px above its first row (S2). */
+.mud-nav-group > .mud-nav-link,
+.nav-section-link .mud-nav-link {
+    margin-top: 16px;
+    margin-bottom: 4px;
 }
 
 /* One indent per nesting level, set here and nowhere else (UX-015). Every child row has a leading visual
@@ -733,7 +758,8 @@ a.team-ref,
 :root {
     --nav-indent-1: 2.25rem;
     --nav-indent-2: 3.25rem;
-    --nav-row-height: 36px;
+    --nav-row-height: 32px;
+    --icon-size-row: 18px;
 }
 
 .mud-nav-group .mud-collapse-container .mud-nav-link {
@@ -742,7 +768,7 @@ a.team-ref,
 
 /* A top-level entry that is a single link (Teammates) is drawn as a section header like the group headers (UX-014). */
 .nav-section-link .mud-nav-link-text {
-    font-size: var(--mud-typography-subtitle2-size);
+    font-size: var(--mud-typography-caption-size);
     font-weight: 600;
     color: var(--mud-palette-text-secondary);
 }
@@ -751,6 +777,11 @@ a.team-ref,
 .nav-settings .mud-nav-link {
     min-height: var(--nav-row-height);
     font-size: var(--mud-typography-body2-size);
+}
+
+.nav-settings .mud-nav-link .mud-nav-link-text {
+    font-size: var(--mud-typography-body2-size);
+    color: var(--mud-palette-text-primary);
 }
 
 /* A 1:1 Room's avatar sits where an icon would, before the name. */
@@ -3745,6 +3776,16 @@ a.team-ref,
    margin keeps clear of the hover "..." button, which is absolutely placed over the row's right edge. */
 .mud-nav-group .mud-collapse-container .mud-nav-link {
     min-width: 0;
+    min-height: var(--nav-row-height);
+    padding-top: 4px;
+    padding-bottom: 4px;
+    color: var(--mud-palette-text-primary);
+}
+
+/* A row's leading icon is 18px with an 8px gap to its label (a 24px avatar has the same gap). */
+.mud-nav-group .mud-collapse-container .mud-nav-link .mud-nav-link-icon {
+    font-size: var(--icon-size-row);
+    margin-inline-end: 8px;
 }
 
 .mud-nav-group .mud-collapse-container .mud-nav-link .mud-nav-link-text {
