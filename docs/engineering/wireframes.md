@@ -205,7 +205,8 @@ Not drawn: `TaskDetailDialog`, the dialog form of the detail (see Figure 8). A V
 
 | Code | Name | Component | Notes |
 | --- | --- | --- | --- |
-| `L2` | Tree panel | First panel | |
+| `L2` | Tree panel | First panel | Opens with its header (`L2c`), then the tree or the filtered results |
+| `L2c` | Tree header | `.library-explorer-tree-header`: `SearchField` and a row of New note and New folder | Sticky at the top of `L2`; the same in every host, the Library page and the Team Files tab alike. Search notes (placeholder "Search notes") filters by name and swaps the tree for `L2b`; New note (`MudButton`, the Material "note_add" glyph) and New folder (icon button, `CreateNewFolder`, tooltip "New folder") each open the name prompt in the folder selected in the tree, else the scope's own folder. Shown only when the explorer has a scope to create in |
 | `L2a` | Tree | `LibraryTree`, `MudTreeView` | Loads a folder's children when it opens |
 | `L2b` | Filtered results | `.library-search-results` | Replace the tree while a filter is set |
 | `L4` | Divider | `MudSplitPanel` divider | A `lines-default` hairline; draggable; the position is remembered |
@@ -233,8 +234,8 @@ slate `B` badges name the same containers.
 | `M3` | Team spend | `TeamSpend` | One line per currency |
 | `M4` | Tabs | `MudTabs` `.team-page-tabs` | Keyed by Team and Project |
 | `M4a` | Tab rail | `MudTabPanel` headers, each with its `TabIcons` entity icon | Members, Files, Tasks, Process, Details (Info icon, always last on a Team page); a Project page and a disabled feature show fewer |
-| `M4b` | Active panel | `TeamRoster`, `TeamFilesTab`, `TeamTasksTab`, `ProcessTab` or `TeamDetails` | Only the selected panel is rendered |
-| `M5` | Search | `MudTextField` | Filters the Files and Tasks panels' lists; the Members panel has none. Not drawn: Figure 6 shows the Members tab |
+| `M4b` | Active panel | `TeamRoster`, `TeamFilesTab`, `TeamTasksTab`, `ProcessTab` or `TeamDetails` | Only the selected panel is rendered. The Files panel is the Library explorer alone, with no toolbar above it: its search, New note and New folder are in the tree header (`L2c`) |
+| `M5` | Search | Retired | Moved into the Library tree header (`L2c`); the Tasks panel keeps its own search in its toolbar (`T3e`). The code stays retired |
 | `M6` | Members panel | `TeamRoster`: `BuildTeam` with `MembersOnly` | Drawn in Figure 6 with the reused containers badged as in Figure 9: the roles grid (`B9a`), the roster (`B12`, the cards of `B9c`) and the save row (`B10` without its heading). Build a team's Hire section (`B9`, `B9a`, `B9c`) for the Team, with no number badge, then the Manager select and a Save row (`B10` without its heading). A member's roster card adds its status dot before the Name and, beside Edit, Message (once it has connected; opens the Team's own one-to-one) and a Remove menu: Remove from Team (keeps the Teammate) or Delete Teammate. Save changes redraws the panel in place |
 | `G1` | Settings container | `MudContainer`, `MaxWidth.Large` | |
 | `G1a` | Reset all | `ResetAllControl` | In the Prompts panel's action row beside Save; "Reset all to defaults", disabled until a prompt has been changed, then asks inline (`InlineConfirm`) |

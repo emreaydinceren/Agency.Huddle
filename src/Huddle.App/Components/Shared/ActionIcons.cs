@@ -43,4 +43,13 @@ internal static class ActionIcons
 
     /// <summary>Search.</summary>
     public const string Search = Icons.Material.Filled.Search;
+
+    /// <summary>
+    /// New note: the Material Symbols "note_add" glyph. It is drawn on a 960-unit grid that starts at
+    /// y = -960, so the group scales it onto MudBlazor's 24-unit icon box.
+    /// </summary>
+    public const string NewNote = """<g transform="scale(0.025) translate(0,960)"><path d="M440-240h80v-120h120v-80H520v-120h-80v120H320v80h120v120ZM240-80q-33 0-56.5-23.5T160-160v-640q0-33 23.5-56.5T240-880h320l240 240v480q0 33-23.5 56.5T720-80H240Zm280-520v-200H240v640h480v-440H520ZM240-800v200-200 640-640Z"/></g>""";
+
+    /// <summary>New folder.</summary>
+    public const string NewFolder = Icons.Material.Outlined.CreateNewFolder;
 }

@@ -2224,6 +2224,24 @@ a.team-ref,
     min-height: 0;
 }
 
+/* The tree panel's header (L2c): the search field, then New note and New folder on one row. It stays at the top while the tree scrolls. */
+.library-explorer-tree-header {
+    position: sticky;
+    top: 0;
+    z-index: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+    padding: 0.5rem;
+    background: var(--mud-palette-surface);
+}
+
+.library-explorer-tree-actions {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
 /* Explorer filter: the tree is hidden, never unmounted, while name-search results show beside it. */
 .library-tree.hidden {
     display: none;

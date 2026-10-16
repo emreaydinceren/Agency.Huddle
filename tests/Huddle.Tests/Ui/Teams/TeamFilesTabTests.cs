@@ -17,17 +17,20 @@ namespace Agency.Huddle.Tests.Ui.Teams;
 /// <summary>
 /// Pins Spec §6.8's Files tab: <c>TeamFilesTab</c> hosts a <see cref="LibraryExplorer"/> scoped to the Team
 /// (or Project) folder under the <c>teams</c> root, side by side, remembering its state under
-/// <c>team:&lt;Team&gt;[/&lt;Project&gt;]</c>, above a <c>TeamTabToolbar</c> ("New note", "Search files"). The
-/// tab's <c>Search</c> is the explorer's <c>Filter</c>, and both a folder hit's clearing and the toolbar's
+/// <c>team:&lt;Team&gt;[/&lt;Project&gt;]</c>, with its own header in the tree panel (<c>L2c</c>: "Search notes", "New note", "New folder"). The
+/// tab's <c>Search</c> is the explorer's <c>Filter</c>, and both a folder hit's clearing and the header's
 /// clearing arrive as <c>SearchChanged(null)</c>. Runs over the REAL Library stack on a temp <c>DataDir</c>.
 /// </summary>
 public sealed class TeamFilesTabTests : IDisposable
 {
-    /// <summary>The toolbar's action button ("New note").</summary>
-    private const string ActionButton = "button.team-tab-toolbar-action";
+    /// <summary>The tree panel header's New note button.</summary>
+    private const string ActionButton = "button.library-explorer-new-note";
 
-    /// <summary>The toolbar's search input.</summary>
-    private const string SearchInput = ".team-tab-toolbar-search input";
+    /// <summary>The tree panel header's New folder icon button.</summary>
+    private const string NewFolderButton = "button.library-explorer-new-folder";
+
+    /// <summary>The tree panel header's search input.</summary>
+    private const string SearchInput = ".library-explorer-search input";
 
     /// <summary>One name-match row of the explorer's result list.</summary>
     private const string Hit = ".library-search-hit";
@@ -85,9 +88,9 @@ public sealed class TeamFilesTabTests : IDisposable
         Assert.Equal(LibraryExplorerLayout.SideBySide, cut.FindComponent<LibraryExplorer>().Instance.Layout);
     }
 
-    /// <summary>The toolbar's action button reads "New note".</summary>
+    /// <summary>The tree panel header's action button reads "New note".</summary>
     [Fact]
-    public async Task Toolbar_ActionButton_ReadsNewNote()
+    public async Task Header_ActionButton_ReadsNewNote()
     {
         this.SeedTeam("Business");
 
@@ -97,19 +100,19 @@ public sealed class TeamFilesTabTests : IDisposable
         Assert.Equal("New note", cut.Find(ActionButton).TextContent.Trim());
     }
 
-    /// <summary>The toolbar's search field carries the placeholder "Search files".</summary>
+    /// <summary>The tree panel header's search field carries the placeholder "Search notes".</summary>
     [Fact]
-    public async Task Toolbar_SearchField_HasThePlaceholderSearchFiles()
+    public async Task Header_SearchField_HasThePlaceholderSearchNotes()
     {
         this.SeedTeam("Business");
 
         await using MudBunitContext ctx = this.fixture.NewContext();
         IRenderedComponent<ContainerFragment> cut = RenderTab(ctx, "Business");
 
-        Assert.Equal("Search files", cut.Find(SearchInput).GetAttribute("placeholder"));
+        Assert.Equal("Search notes", cut.Find(SearchInput).GetAttribute("placeholder"));
     }
 
-    /// <summary>The tab's <c>Search</c> is handed to the explorer as its <c>Filter</c> and shown in the toolbar's field.</summary>
+    /// <summary>The tab's <c>Search</c> is handed to the explorer as its <c>Filter</c> and shown in the header's field.</summary>
     [Fact]
     public async Task Search_IsPassedToTheExplorerAsFilter_AndShownInTheField()
     {
@@ -169,9 +172,9 @@ public sealed class TeamFilesTabTests : IDisposable
         Assert.Equal<string?>([null], changes);
     }
 
-    /// <summary>Clearing the toolbar's field raises the tab's <c>SearchChanged</c> with <see langword="null"/>, exactly once.</summary>
+    /// <summary>Clearing the header's field raises the tab's <c>SearchChanged</c> with <see langword="null"/>, exactly once.</summary>
     [Fact]
-    public async Task ToolbarClear_RaisesSearchChangedWithNull()
+    public async Task HeaderClear_RaisesSearchChangedWithNull()
     {
         this.SeedTeam("Business");
         List<string?> changes = [];
@@ -227,6 +230,24 @@ public sealed class TeamFilesTabTests : IDisposable
         cut.WaitForAssertion(() => Assert.True(File.Exists(Path.Combine(this.fixture.TeamsPath, "Business", "Idea.md"))), TimeSpan.FromSeconds(5));
         cut.WaitForAssertion(() => Assert.Equal(["Existing.md", "Idea.md"], SortedNodeNames(cut)));
         cut.WaitForAssertion(() => Assert.Equal("Business/Idea.md", cut.FindComponent<LibraryDocument>().Instance.Path.RelativePath));
+    }
+
+    /// <summary>The New folder button opens the New folder dialog; confirming creates the folder and shows it in the tree.</summary>
+    [Fact]
+    public async Task NewFolder_Confirm_CreatesTheFolder_AndShowsItInTheTree()
+    {
+        this.SeedTeam("Business");
+
+        await using MudBunitContext ctx = this.fixture.NewContext();
+        IRenderedComponent<ContainerFragment> cut = RenderTab(ctx, "Business");
+
+        _ = cut.InvokeAsync(() => cut.Find(NewFolderButton).Click());
+        cut.WaitForAssertion(() => Assert.Equal("New folder", cut.Find(".mud-dialog-title").TextContent.Trim()));
+        await cut.InvokeAsync(() => cut.Find(".mud-dialog-content input").InputAsync(new ChangeEventArgs { Value = "Plans" }));
+        await cut.InvokeAsync(() => cut.FindAll(".mud-dialog-actions button")[1].ClickAsync());
+
+        cut.WaitForAssertion(() => Assert.True(Directory.Exists(Path.Combine(this.fixture.TeamsPath, "Business", "Plans"))), TimeSpan.FromSeconds(5));
+        cut.WaitForAssertion(() => Assert.Equal(["Plans"], NodeNames(cut)));
     }
 
     /// <summary>
