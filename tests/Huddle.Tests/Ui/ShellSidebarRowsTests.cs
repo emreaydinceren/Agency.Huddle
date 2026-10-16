@@ -66,14 +66,14 @@ public sealed class ShellSidebarRowsTests
         ShellSidebarRowsTests.SourceHas(archived, "aria-label=\"Archived chats\"");
     }
 
-    /// <summary>The Team chevron takes the default icon-button colour, not the secondary text colour (UX-018).</summary>
+    /// <summary>The Team chevron takes the Theme's secondary text colour, not a MudBlazor default grey (F4: one family of greys).</summary>
     [Fact]
-    public void AppCss_TeamChevron_UsesTheActionDefaultColour()
+    public void AppCss_TeamChevron_UsesTheSecondaryTextColour()
     {
         string rule = ShellSidebarRowsTests.RuleBody(".teams-nav-host .teams-nav-chevron");
 
-        ShellSidebarRowsTests.SourceHas(rule, "color: var(--mud-palette-action-default)");
-        Assert.DoesNotContain("text-secondary", rule, StringComparison.Ordinal);
+        ShellSidebarRowsTests.SourceHas(rule, "color: var(--mud-palette-text-secondary)");
+        Assert.DoesNotContain("action-default", rule,StringComparison.Ordinal);
     }
 
     /// <summary>Archiving a Room through the helper returns <see langword="null"/> and archives it (UX-R29).</summary>

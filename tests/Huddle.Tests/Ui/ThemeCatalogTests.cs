@@ -75,8 +75,12 @@ public sealed class ThemeCatalogTests
 
         Assert.Equal(ThemeMode.Dark, dark.Mode);
         Assert.Equal("#8F97E6", Hex(dark.Theme.PaletteDark.Primary), ignoreCase: true);
-        Assert.Equal("#000000", Hex(dark.Theme.PaletteDark.PrimaryContrastText), ignoreCase: true);
+        Assert.Equal("#141413", Hex(dark.Theme.PaletteDark.PrimaryContrastText), ignoreCase: true);
         Assert.Equal("#1C1C1B", Hex(dark.Theme.PaletteDark.Background), ignoreCase: true);
+
+        // F4: default icon buttons draw in the Theme's secondary text colour, not MudBlazor's translucent grey.
+        Assert.Equal(Hex(light.Theme.PaletteLight.TextSecondary), Hex(light.Theme.PaletteLight.ActionDefault), ignoreCase: true);
+        Assert.Equal(Hex(dark.Theme.PaletteDark.TextSecondary), Hex(dark.Theme.PaletteDark.ActionDefault), ignoreCase: true);
     }
 
     /// <summary>

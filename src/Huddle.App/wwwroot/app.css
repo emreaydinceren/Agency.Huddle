@@ -80,17 +80,18 @@ button:focus-visible {
 
 /* Accent as text: the accent pulled 30% toward the body text, so it reads 4.5:1 or better on every Huddle surface
    (raw Primary stays a fill, a bar or a border). The active sidebar row takes the Selected treatment - Primary 14%
-   over Surface, 24% when hovered - not the generic hover shade MudBlazor paints, so the selected and the hovered
+   over Surface, 20% when hovered - not the generic hover shade MudBlazor paints, so the selected and the hovered
    row no longer look alike. */
 .mud-drawer .mud-navmenu .mud-nav-link.active:not(.mud-nav-link-disabled) {
     color: color-mix(in srgb, var(--mud-palette-primary) 70%, var(--mud-palette-text-primary));
     background-color: color-mix(in srgb, var(--mud-palette-primary) 14%, var(--mud-palette-surface));
+    font-weight: 500;
 }
 
 .mud-drawer .mud-navmenu .mud-nav-link.active:not(.mud-nav-link-disabled):hover:not(.mud-nav-link-disabled),
 .mud-drawer .mud-navmenu .mud-nav-link.active:not(.mud-nav-link-disabled):focus-visible:not(.mud-nav-link-disabled),
 .mud-drawer .mud-navmenu .mud-nav-link.active:not(.mud-nav-link-disabled):active:not(.mud-nav-link-disabled) {
-    background-color: color-mix(in srgb, var(--mud-palette-primary) 24%, var(--mud-palette-surface));
+    background-color: color-mix(in srgb, var(--mud-palette-primary) 20%, var(--mud-palette-surface));
 }
 
 .mud-drawer .mud-navmenu .mud-nav-link.active:not(.mud-nav-link-disabled) .mud-nav-link-icon {
@@ -136,7 +137,11 @@ b {
 .mud-button-text-size-small,
 .mud-button-outlined-size-small,
 .mud-button-filled-size-small {
+    box-sizing: border-box;
+    height: 28px;
+    padding-block: 0;
     font-size: var(--mud-typography-body2-size);
+    font-weight: 500;
 }
 
 .mud-button-text-size-large,
@@ -1313,6 +1318,10 @@ a.team-ref,
 .composer-input:focus-visible {
     outline: none;
     border-color: var(--mud-palette-primary);
+
+    /* The 1px border plus a 0.5px inset ring is 1.5px of accent without moving the text (a 1.5px border snaps to
+       1px at a 100% display scale). */
+    box-shadow: var(--mud-elevation-1), inset 0 0 0 0.5px var(--mud-palette-primary);
 }
 
 /* The paperclip sits just left of Send; the extra right padding keeps typed text clear of both. */
@@ -2109,10 +2118,12 @@ a.team-ref,
    also gets a primary left edge, since its surface is a flat fill the tint alone barely lifts. */
 .mud-table .mud-table-body tr.task-row-selected > td {
     background-color: color-mix(in srgb, var(--mud-palette-primary) 14%, var(--mud-palette-surface));
+    color: color-mix(in srgb, var(--mud-palette-primary) 70%, var(--mud-palette-text-primary));
+    font-weight: 500;
 }
 
 .mud-table.mud-table-hover .mud-table-body tr.task-row-selected:hover > td {
-    background-color: color-mix(in srgb, var(--mud-palette-primary) 24%, var(--mud-palette-surface));
+    background-color: color-mix(in srgb, var(--mud-palette-primary) 20%, var(--mud-palette-surface));
 }
 
 .task-card.task-card-selected {
@@ -2597,21 +2608,22 @@ a.team-ref,
     color: color-mix(in srgb, var(--mud-palette-warning) 75%, var(--mud-palette-text-primary));
 }
 
-/* Hover is a light primary tint; the selected row a deeper one with a 2px primary bar on its left edge and
-   primary-text-coloured (not primary-coloured) text, the same tints as the selected Task row. The bar is an
+/* Hover is the neutral hover shade; the selected row is Primary 14% (20% when hovered) with a 2px primary bar on its
+   left edge and accent-text (not raw Primary) at weight 500, the same tints as the selected Task row. The bar is an
    inset shadow, so it takes no width and the selected row's chevron stays on its guide line. */
 .library-tree .mud-treeview-item-content:hover {
-    background-color: color-mix(in srgb, var(--mud-palette-primary) 7%, var(--mud-palette-surface));
+    background-color: var(--mud-palette-action-default-hover);
 }
 
 .library-tree.mud-treeview .mud-treeview-item-content.mud-treeview-item-selected {
-    color: var(--mud-palette-text-primary);
+    color: color-mix(in srgb, var(--mud-palette-primary) 70%, var(--mud-palette-text-primary));
+    font-weight: 500;
     background-color: color-mix(in srgb, var(--mud-palette-primary) 14%, var(--mud-palette-surface));
     box-shadow: inset 2px 0 0 var(--mud-palette-primary);
 }
 
 .library-tree.mud-treeview .mud-treeview-item-content.mud-treeview-item-selected:hover {
-    background-color: color-mix(in srgb, var(--mud-palette-primary) 24%, var(--mud-palette-surface));
+    background-color: color-mix(in srgb, var(--mud-palette-primary) 20%, var(--mud-palette-surface));
 }
 
 /* Guide lines stay quieter than the pane dividers, but are drawn from the same line colour so they still
@@ -3650,7 +3662,7 @@ a.team-ref,
     left: 0.75rem;
     z-index: 1;
     padding: 0;
-    color: var(--mud-palette-action-default);
+    color: var(--mud-palette-text-secondary);
 }
 
 /* ---- Sidebar rows: one line each, meta trails, long lists fold --------------------------------
@@ -3831,8 +3843,18 @@ a.team-ref,
     cursor: pointer;
 }
 
-.composer-picker-item[aria-selected="true"] {
+.composer-picker-item:hover {
     background: var(--mud-palette-action-default-hover);
+}
+
+.composer-picker-item[aria-selected="true"] {
+    background: color-mix(in srgb, var(--mud-palette-primary) 14%, var(--mud-palette-surface));
+    color: color-mix(in srgb, var(--mud-palette-primary) 70%, var(--mud-palette-text-primary));
+    font-weight: 500;
+}
+
+.composer-picker-item[aria-selected="true"]:hover {
+    background: color-mix(in srgb, var(--mud-palette-primary) 20%, var(--mud-palette-surface));
 }
 
 .composer-picker-item[aria-disabled="true"] {
@@ -4255,7 +4277,23 @@ a.team-ref,
 /* Chips (design-system.md "Chips"): four looks, one per job. A status colour is never a solid fill under text.
    1. Status or priority, tinted: the status colour at 14% over Surface; text and icon the colour mixed 70% toward
       TextPrimary. StatusChipContrast mirrors the two mixes in C# and a test holds the pair to 4.5:1. */
+.mud-chip.status-chip .mud-chip-icon,
+.mud-chip.status-chip .mud-icon-root {
+    width: 14px;
+    height: 14px;
+    font-size: var(--mud-typography-subtitle2-size);
+    margin-inline: 0 4px;
+}
+
+/* The Status and Tag chips share one shape, 22px high with a 6px corner (three quarters of the Theme's 8px). */
 .mud-chip.status-chip {
+    box-sizing: border-box;
+    height: 22px;
+    padding: 0 8px;
+    border-radius: calc(var(--mud-default-borderradius) * 0.75);
+    font-size: var(--mud-typography-caption-size);
+    font-weight: 500;
+    line-height: 1;
     background-color: color-mix(in srgb, var(--mud-palette-text-secondary) 14%, var(--mud-palette-surface));
     color: color-mix(in srgb, var(--mud-palette-text-secondary) 70%, var(--mud-palette-text-primary));
 }
@@ -4297,6 +4335,13 @@ a.team-ref,
 
 /* 2. Tag, quiet: BackgroundGray fill, TextPrimary text. */
 .mud-chip.tag-chip {
+    box-sizing: border-box;
+    height: 22px;
+    padding: 0 8px;
+    border-radius: calc(var(--mud-default-borderradius) * 0.75);
+    font-size: var(--mud-typography-caption-size);
+    font-weight: 500;
+    line-height: 1;
     background-color: var(--mud-palette-background-gray);
     color: var(--mud-palette-text-primary);
 }

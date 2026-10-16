@@ -48,16 +48,16 @@ internal static class ThemeDefaults
         // The type scale, in rendered pixels. The page is not zoomed (ADR-0056), so each size below is the size on
         // screen, and none is under 11px. Three weights: 400 text, 500 controls, 600 emphasis and headings.
         SetRole(theme.Typography.H5, "20px", "600", "1.3");
-        SetRole(theme.Typography.H6, "16px", "600", "1.4");
-        SetRole(theme.Typography.Subtitle1, "14px", "600", "1.5");
-        SetRole(theme.Typography.Subtitle2, "14px", "600", "1.5");
-        SetRole(theme.Typography.Body1, "14px", "400", "1.5");
-        SetRole(theme.Typography.Body2, "13px", "400", "1.5");
-        SetRole(theme.Typography.Caption, "12px", "400", "1.4");
-        SetRole(theme.Typography.Overline, "11px", "600", "1.5");
+        SetRole(theme.Typography.H6, "16px", "600", "1.35");
+        SetRole(theme.Typography.Subtitle1, "14px", "600", "1.4");
+        SetRole(theme.Typography.Subtitle2, "14px", "600", "1.4");
+        SetRole(theme.Typography.Body1, "14px", "400", "1.55");
+        SetRole(theme.Typography.Body2, "13px", "400", "1.4");
+        SetRole(theme.Typography.Caption, "12px", "400", "1.35");
+        SetRole(theme.Typography.Overline, "11px", "600", "1.3");
         theme.Typography.Overline.LetterSpacing = "0.04em";
         theme.Typography.Overline.TextTransform = "uppercase";
-        SetRole(theme.Typography.Button, "14px", "500", "1.5");
+        SetRole(theme.Typography.Button, "14px", "500", "1.4");
         return theme;
     }
 

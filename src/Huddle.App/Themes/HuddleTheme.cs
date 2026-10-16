@@ -56,6 +56,7 @@ internal static class HuddleTheme
         LinesDefault = "#b4b2ad",
         TextPrimary = "#141413",
         TextSecondary = "#45443f",
+        ActionDefault = "#45443f",
         DrawerText = "#141413",
         DrawerIcon = "#45443f",
         TextDisabled = "#8a8882",
@@ -98,6 +99,7 @@ internal static class HuddleTheme
         LinesDefault = "#646461",
         TextPrimary = "#ececea",
         TextSecondary = "#a3a29d",
+        ActionDefault = "#a3a29d",
         DrawerText = "#ececea",
         DrawerIcon = "#a3a29d",
 
@@ -106,10 +108,10 @@ internal static class HuddleTheme
         TextDisabled = "#8a8984",
 
         // A lighter periwinkle than Huddle Light's accent: 5.58:1 against Surface (#262625) and 6.28:1
-        // against Background (#1c1c1b). Black on it reads 7.74:1, so PrimaryContrastText is black.
+        // against Background (#1c1c1b). Near-black #141413 on it reads 7.5:1, so PrimaryContrastText is that, not pure black.
         Primary = "#8f97e6",
         PrimaryDarken = "#616bc1",
-        PrimaryContrastText = "#000000",
+        PrimaryContrastText = "#141413",
         Secondary = "#7aa2f7",
         Success = "#3fbf5a",
         Error = "#e05a5a",
