@@ -1,7 +1,7 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 860" width="1200" height="860" font-family="Inter, 'Segoe UI', Helvetica, Arial, sans-serif" xml:space="preserve" style="white-space: pre" role="img" aria-label="Figure 8: Overlays">
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 1250" width="1200" height="1250" font-family="Inter, 'Segoe UI', Helvetica, Arial, sans-serif" xml:space="preserve" style="white-space: pre" role="img" aria-label="Figure 8: Overlays">
 <title>Figure 8: Overlays</title>
 <defs><filter id="sh" x="-10%" y="-10%" width="125%" height="130%"><feDropShadow dx="0" dy="3" stdDeviation="4" flood-color="#000" flood-opacity="0.22"/></filter><marker id="ar" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0 L10 5 L0 10 z" fill="#6b7280"/></marker></defs>
-<rect width="1200" height="860" fill="#ffffff"/>
+<rect width="1200" height="1250" fill="#ffffff"/>
 <text x="24" y="30" font-size="18" font-weight="700" fill="#1f2430" text-anchor="start">Figure 8: Overlays</text>
 <text x="24" y="48" font-size="12" font-weight="400" fill="#6b7280" text-anchor="start">Containers that float above a page. Each is drawn over a dimmed page.</text>
 <rect x="24" y="64" width="276" height="368" rx="6" fill="#eceef2" stroke="#8b93a1" stroke-width="1.4"/>
@@ -180,11 +180,48 @@
 <text x="1038" y="620" font-size="11" font-weight="600" fill="#1f2430" text-anchor="middle">Rejoining the server…</text>
 <rect x="998" y="642" width="80" height="24" rx="5" fill="#ffffff" stroke="#8b93a1" stroke-width="1.2"/>
 <text x="1038.0" y="658.0" font-size="10" font-weight="500" fill="#1f2430" text-anchor="middle">Retry</text>
-<text x="24" y="846" font-size="11" font-weight="700" fill="#6b7280" text-anchor="start">Key</text>
-<rect x="58" y="835" width="30" height="14" rx="3" fill="#f6f7f9" stroke="#8b93a1" stroke-width="1.2"/>
-<text x="94" y="846" font-size="11" font-weight="400" fill="#6b7280" text-anchor="start">always rendered</text>
-<rect x="194" y="835" width="30" height="14" rx="3" fill="#ffffff" stroke="#8b93a1" stroke-width="1.2" stroke-dasharray="6 4"/>
-<text x="230" y="846" font-size="11" font-weight="400" fill="#6b7280" text-anchor="start">only in some states</text>
-<rect x="354" y="835" width="30" height="14" rx="3" fill="#ffffff" stroke="#8b93a1" stroke-width="1.2" filter="url(#sh)"/>
-<text x="390" y="846" font-size="11" font-weight="400" fill="#6b7280" text-anchor="start">overlay above the page</text>
+<rect x="24" y="836" width="568" height="368" rx="6" fill="#eceef2" stroke="#8b93a1" stroke-width="1.4"/>
+<rect x="30" y="841" width="25" height="17" rx="8.5" fill="#b91c1c"/>
+<text x="42.4" y="853.5" font-size="11" font-weight="700" fill="#fff" text-anchor="middle">O9</text>
+<text x="60.8" y="854" font-size="12" font-weight="600" fill="#1f2430" text-anchor="start">Profile popover</text>
+<text x="34" y="880" font-size="10" font-weight="400" fill="#6b7280" text-anchor="start">ProfileAvatar opens ProfilePopover (MudPopover, page not dimmed) holding a ProfileCard</text>
+<rect x="34" y="892" width="548" height="300" rx="4" fill="#ffffff" stroke="#cfd4dc" stroke-width="1.2"/>
+<circle cx="60" cy="920" r="12" fill="#cfd4dc" stroke="#1f2430" stroke-width="1.6"/>
+<rect x="82" y="910" width="90" height="6" rx="3" fill="#cfd4dc"/>
+<rect x="82" y="924" width="300" height="6" rx="3" fill="#cfd4dc"/>
+<rect x="82" y="938" width="240" height="6" rx="3" fill="#cfd4dc"/>
+<circle cx="60" cy="1150" r="12" fill="#cfd4dc"/>
+<rect x="82" y="1140" width="90" height="6" rx="3" fill="#cfd4dc"/>
+<rect x="82" y="1154" width="300" height="6" rx="3" fill="#cfd4dc"/>
+<rect x="52" y="940" width="268" height="190" rx="6" fill="#ffffff" stroke="#8b93a1" stroke-width="1.2" filter="url(#sh)"/>
+<circle cx="84" cy="972" r="18" fill="#cfd4dc" stroke="#8b93a1" stroke-width="2"/>
+<circle cx="112" cy="962" r="3.5" fill="#6b7280"/>
+<text x="120" y="966" font-size="11" font-weight="600" fill="#1f2430" text-anchor="start">Name</text>
+<text x="112" y="982" font-size="10" font-weight="400" fill="#6b7280" text-anchor="start">Role title</text>
+<rect x="246" y="955" width="62" height="16" rx="8" fill="#ffffff" stroke="#8b93a1" stroke-width="1.2"/>
+<text x="277" y="967" font-size="9" font-weight="600" fill="#1f2430" text-anchor="middle">MANAGER</text>
+<rect x="66" y="1004" width="240" height="6" rx="3" fill="#cfd4dc"/>
+<rect x="66" y="1018" width="240" height="6" rx="3" fill="#cfd4dc"/>
+<rect x="66" y="1032" width="150" height="6" rx="3" fill="#cfd4dc"/>
+<rect x="66" y="1050" width="54" height="16" rx="8" fill="#f6f7f9" stroke="#cfd4dc" stroke-width="1"/>
+<text x="93" y="1062" font-size="9" font-weight="400" fill="#1f2430" text-anchor="middle">Member</text>
+<rect x="126" y="1050" width="58" height="16" rx="8" fill="#f6f7f9" stroke="#cfd4dc" stroke-width="1"/>
+<text x="155" y="1062" font-size="9" font-weight="400" fill="#1f2430" text-anchor="middle">strongest</text>
+<rect x="190" y="1050" width="50" height="16" rx="8" fill="#f6f7f9" stroke="#cfd4dc" stroke-width="1"/>
+<text x="215" y="1062" font-size="9" font-weight="400" fill="#1f2430" text-anchor="middle">3 skills</text>
+<rect x="62" y="1080" width="248" height="38" rx="4" fill="none" stroke="#8b93a1" stroke-width="1.2" stroke-dasharray="6 4"/>
+<rect x="58" y="1072" width="32" height="17" rx="8.5" fill="#b91c1c"/>
+<text x="74.1" y="1084.5" font-size="11" font-weight="700" fill="#fff" text-anchor="middle">O9a</text>
+<text x="98" y="1105" font-size="10" font-weight="600" fill="#1f2430" text-anchor="start">✎ Edit</text>
+<text x="150" y="1105" font-size="10" font-weight="600" fill="#1f2430" text-anchor="start">💬 Message</text>
+<text x="340" y="1000" font-size="10" font-weight="400" fill="#6b7280" text-anchor="start">Click a Teammate's avatar</text>
+<text x="340" y="1014" font-size="10" font-weight="400" fill="#6b7280" text-anchor="start">(message rows, Task List).</text>
+<text x="340" y="1028" font-size="10" font-weight="400" fill="#6b7280" text-anchor="start">Click away or Escape closes it.</text>
+<text x="24" y="1236" font-size="11" font-weight="700" fill="#6b7280" text-anchor="start">Key</text>
+<rect x="58" y="1225" width="30" height="14" rx="3" fill="#f6f7f9" stroke="#8b93a1" stroke-width="1.2"/>
+<text x="94" y="1236" font-size="11" font-weight="400" fill="#6b7280" text-anchor="start">always rendered</text>
+<rect x="194" y="1225" width="30" height="14" rx="3" fill="#ffffff" stroke="#8b93a1" stroke-width="1.2" stroke-dasharray="6 4"/>
+<text x="230" y="1236" font-size="11" font-weight="400" fill="#6b7280" text-anchor="start">only in some states</text>
+<rect x="354" y="1225" width="30" height="14" rx="3" fill="#ffffff" stroke="#8b93a1" stroke-width="1.2" filter="url(#sh)"/>
+<text x="390" y="1236" font-size="11" font-weight="400" fill="#6b7280" text-anchor="start">overlay above the page</text>
 </svg>

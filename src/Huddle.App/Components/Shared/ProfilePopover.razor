@@ -1,0 +1,148 @@
+@* <summary>
+     The popover <see cref="ProfileAvatar"/> opens: the same <see cref="ProfileCard"/> Build a team's
+     roster shows, with only Edit (opens the Teammate card) and Message (opens the one-to-one, in the
+     Team's own when the avatar was seen in a Team). Remove, Re-roll and Undo are the Human's decisions
+     on the roster and are not offered here.
+
+     It is a separate component so that its services (the profile builder, the card opener, chat,
+     snackbar) are injected only when a popover is actually open: the parent renders it inside an
+     <c>@if</c>, so a page that merely draws avatars needs none of them. The profile is built in
+     <c>OnInitializedAsync</c>, never at avatar render, so a Room with a long transcript does no
+     lookups until someone asks.
+
+     The panel is a <c>MudPopover</c> anchored below the avatar's button with a transparent
+     <c>MudOverlay</c> behind it for click-away. Escape and the overlay both raise
+     <see cref="OnClose"/>; the parent closes and puts focus back on its button. Focus moves into the
+     panel once the profile has loaded so the keyboard can reach Edit and Message (the panel renders in
+     the popover host, not next to the button).
+   </summary> *@
+@implements IDisposable
+@inject TeammateProfiles Profiles
+@inject TeammateCardOpener CardOpener
+@inject ChatService Chat
+@inject ISnackbar Snackbar
+@inject NavigationManager Navigation
+
+@* 1190 sits just under MudBlazor's popover layer (1200): the overlay is beneath the panel but above the page. *@
+<MudOverlay Visible="true" AutoClose="true" OnClosed="this.CloseAsync" LockScroll="false" ZIndex="1190" />
+<MudPopover Open="true" AnchorOrigin="Origin.BottomLeft" TransformOrigin="Origin.TopLeft" Class="floating-panel" Paper="true">
+    <div class="profile-popover" tabindex="-1" @ref="this.panel" @onkeydown="this.OnKeyDownAsync">
+        @if (this.loading)
+        {
+            <MudProgressCircular Indeterminate="true" Size="Size.Small" aria-label="Loading profile" />
+        }
+        else if (this.view is not { } shown)
+        {
+            <span class="profile-popover-empty">No profile for @this.Name.</span>
+        }
+        else
+        {
+            <ProfileCard Profile="@shown.Profile" Existing="true" Manager="@shown.Manager" Membership="@shown.Membership">
+                <Actions>
+                    <MudButton Variant="Variant.Text" Size="Size.Small" StartIcon="@Icons.Material.Outlined.Edit" OnClick="this.EditAsync"
+                               aria-label="@($"Edit {shown.Profile.Name}")" Class="roster-edit">Edit</MudButton>
+                    @if (shown.Agent is not null)
+                    {
+                        <MudButton Variant="Variant.Text" Size="Size.Small" StartIcon="@Icons.Material.Outlined.ChatBubbleOutline" OnClick="this.MessageAsync"
+                                   aria-label="@($"Message {shown.Profile.Name}")" Class="roster-message">Message</MudButton>
+                    }
+                </Actions>
+            </ProfileCard>
+        }
+    </div>
+</MudPopover>
+
+@code {
+    private readonly CancellationTokenSource cts = new();
+    private ElementReference panel;
+    private TeammateProfileView? view;
+    private bool loading = true;
+    private bool focusPending;
+
+    /// <summary>The Teammate's Name, in any letter case.</summary>
+    [Parameter]
+    [EditorRequired]
+    public string Name { get; set; } = string.Empty;
+
+    /// <summary>The Team the avatar was seen in, or <see langword="null"/> outside any Team; it picks the one-to-one Message opens.</summary>
+    [Parameter]
+    public string? Team { get; set; }
+
+    /// <summary>Raised when the popover should close: Escape, a click away, or an action chosen.</summary>
+    [Parameter]
+    public EventCallback OnClose { get; set; }
+
+    /// <summary>Cancels a profile lookup still in flight.</summary>
+    public void Dispose()
+    {
+        this.cts.Cancel();
+        this.cts.Dispose();
+    }
+
+    /// <inheritdoc />
+    protected override async Task OnInitializedAsync()
+    {
+        try
+        {
+            this.view = await this.Profiles.BuildAsync(this.Name, this.Team, this.cts.Token);
+        }
+        catch (OperationCanceledException)
+        {
+            // Closed while loading; there is nothing to show.
+            return;
+        }
+
+        this.loading = false;
+        this.focusPending = true;
+    }
+
+    /// <inheritdoc />
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (this.focusPending && this.panel.Context is not null)
+        {
+            this.focusPending = false;
+            await this.panel.FocusAsync();
+        }
+    }
+
+    /// <summary>Asks the parent to close.</summary>
+    private Task CloseAsync() => this.OnClose.InvokeAsync();
+
+    /// <summary>Escape closes the popover.</summary>
+    /// <param name="args">The key event.</param>
+    private async Task OnKeyDownAsync(KeyboardEventArgs args)
+    {
+        if (string.Equals(args.Key, "Escape", StringComparison.Ordinal))
+        {
+            await this.CloseAsync();
+        }
+    }
+
+    /// <summary>Closes the popover, then opens the Teammate's card.</summary>
+    private async Task EditAsync()
+    {
+        await this.CloseAsync();
+        await this.CardOpener.OpenAsync(this.Name, CancellationToken.None);
+    }
+
+    /// <summary>Closes the popover, then opens (creating it on first use) the one-to-one with the Teammate and goes there.</summary>
+    private async Task MessageAsync()
+    {
+        if (this.view is not { Agent: { } agent } shown)
+        {
+            return;
+        }
+
+        await this.CloseAsync();
+        try
+        {
+            Room room = shown.Team is null ? await this.Chat.EnsureRoomForAsync(agent) : await this.Chat.EnsureTeamOneToOneAsync(shown.Team, agent);
+            this.Navigation.NavigateTo($"/rooms/{room.Id}");
+        }
+        catch (ChatException ex)
+        {
+            this.Snackbar.Add(ex.Message, Severity.Error, key: "profile-avatar");
+        }
+    }
+}

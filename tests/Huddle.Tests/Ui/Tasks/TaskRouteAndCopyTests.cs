@@ -238,6 +238,7 @@ public sealed class TaskRouteAndCopyTests
         ctx.Services.AddSingleton(store);
         ctx.Services.AddSingleton<ISprintCatalog>(new EmptySprintCatalog());
         ctx.Services.AddSingleton(new Agency.Huddle.App.Avatars.AvatarStore(dataDir.Options(), Microsoft.Extensions.Logging.Abstractions.NullLogger<Agency.Huddle.App.Avatars.AvatarStore>.Instance));
+        ctx.Services.AddSingleton(personas);
         var cut = ctx.RenderWithPopovers(builder =>
         {
             builder.OpenComponent<TaskListView>(0);

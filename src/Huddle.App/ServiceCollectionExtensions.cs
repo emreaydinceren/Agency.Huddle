@@ -405,6 +405,9 @@ public static class ServiceCollectionExtensions
         services.AddScoped<Tabs.TabService>();
         services.AddScoped<Components.Shared.TeammateCardOpener>();
 
+        // Stateless reader over singletons: builds the card the avatar profile popover shows.
+        services.AddSingleton<Components.Shared.TeammateProfiles>();
+
         // Global Search (spec §7.3): the five providers are stateless readers, one each per category.
         services.AddSingleton<Search.ISearchProvider, Search.TeamSearchProvider>();
         services.AddSingleton<Search.ISearchProvider, Search.TeammateSearchProvider>();
