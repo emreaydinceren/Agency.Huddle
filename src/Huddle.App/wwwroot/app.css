@@ -2066,6 +2066,11 @@ a.team-ref,
     padding: 0;
     border: 0;
     box-shadow: 0 0 0 2px var(--mud-palette-surface);
+}
+
+/* MudBlazor places a bottom-right overlap badge with .mud-badge-bottom.right.mud-badge-overlap, which
+   outranks the rule above, so the position needs the same classes to land on the rim. */
+.task-card-presence .mud-badge.mud-badge-overlap.mud-badge-bottom.right {
     inset: calc(100% - 8px) auto auto calc(100% - 8px);
 }
 
