@@ -631,6 +631,16 @@ window.huddleLibrary = {
       delete dotNetRef._huddleLibraryVisibilityHandler;
     }
   },
+  // Scrolls the heading with the given id inside root to the top of its scroll container. The id is
+  // escaped so a heading id with selector characters cannot break the query. Returns whether it was found.
+  scrollToHeading(root, id) {
+    const el = root && root.querySelector("#" + CSS.escape(id));
+    if (!el) {
+      return false;
+    }
+    el.scrollIntoView({ block: "start" });
+    return true;
+  },
 };
 
 /* Avatar Library picker */
