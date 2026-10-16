@@ -136,11 +136,11 @@
                 else if (this.resultTerm is null)
                 {
                     @* Nothing is open: say what to do rather than leave the whole pane blank. *@
-                    <EmptyState FullPane="true" Icon="@Icons.Material.Outlined.Description" Text="Select a note to read it, or start a new one.">
+                    <EmptyState FullPane="true" Icon="@Icons.Material.Outlined.Description" Title="No note open" Text="Select a note in the tree to read it, or start a new one.">
                         <Action>
                             @if (this.SingleScope() is not null)
                             {
-                                <MudButton Size="Size.Small" Variant="Variant.Outlined" Color="Color.Primary" StartIcon="@ActionIcons.Add" OnClick="this.NewNoteAsync">New note</MudButton>
+                                <MudButton Size="Size.Small" Variant="Variant.Text" StartIcon="@ActionIcons.NewNote" OnClick="this.NewNoteAsync">New note</MudButton>
                             }
                         </Action>
                     </EmptyState>

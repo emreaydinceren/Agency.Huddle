@@ -65,7 +65,7 @@
 
     @if (this.entries.Count == 0)
     {
-        <EmptyState Text="No Teammates yet. Choose New teammate." />
+        <EmptyState Title="No Teammates yet" Text="Choose New teammate to add the first one." />
     }
     else
     {
@@ -73,7 +73,7 @@
 
         if (groups.Count == 0)
         {
-            <EmptyState Text="No teammates in this team." />
+            <EmptyState Title="No teammates in this team" Text="Pick another team, or add a teammate to this one." />
         }
         else
         {

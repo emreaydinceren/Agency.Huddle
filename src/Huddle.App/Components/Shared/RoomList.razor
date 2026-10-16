@@ -31,7 +31,7 @@
         <MudNavGroup Title="Rooms" Icon="@Icons.Material.Filled.Chat" @bind-Expanded="this.expanded">
             @if (this.rooms.Count == 0)
             {
-                <EmptyState Text="No rooms yet. Start an agent to create one." />
+                <EmptyState Title="No rooms yet" Text="Start an agent to create one." />
             }
             else
             {

@@ -432,9 +432,56 @@ a.team-ref,
     pointer-events: none;
 }
 
+/* Empty state (change list C7): a centred stack of a 32px icon, a 14px/600 title, a 13px sentence and an action.
+   Inline it sits centred in its block; full-pane (.empty-state-centered) fills the pane and rests a third of the
+   way down, the two flex spacers splitting the free height 1:2. */
 .empty-state {
-    padding: 16px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 8px;
+    margin-inline: auto;
+    padding: 32px 16px;
+    text-align: center;
     color: var(--mud-palette-text-secondary);
+}
+
+.empty-state .mud-icon-root.empty-state-icon {
+    width: 32px;
+    height: 32px;
+}
+
+.empty-state .empty-state-title {
+    color: var(--mud-palette-text-primary);
+}
+
+.empty-state .empty-state-text {
+    max-width: 45ch;
+}
+
+.tab-empty.empty-state-centered {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 8px;
+    text-align: center;
+    height: 100%;
+    box-sizing: border-box;
+    justify-content: flex-start;
+}
+
+.empty-state-centered::before,
+.empty-state-centered::after {
+    content: "";
+    display: block;
+}
+
+.empty-state-centered::before {
+    flex: 1 1 0;
+}
+
+.empty-state-centered::after {
+    flex: 2 1 0;
 }
 
 /* ---- The main column and the page under the tab strip ----------------------------------------- */
@@ -2441,11 +2488,6 @@ a.team-ref,
     padding: 24px 16px 0;
 }
 
-:is(.team-page-wide, .library-page) .library-document .mud-expansion-panels {
-    max-width: 56rem;
-    margin-inline: auto;
-}
-
 .library-ref-missing {
     color: var(--mud-palette-text-secondary);
 }
@@ -2539,7 +2581,7 @@ a.team-ref,
 }
 
 /* ---- Library tree density ----------------------------------------------------------------------
-   28px rows; on a touch screen 44px, the minimum target. The tree is inset 8px
+   30px rows; on a touch screen 44px, the minimum target. The tree is inset 8px
    and each row pads 8px more, so a label column starts 16px from the pane edge while the hover and selected
    fills reach 8px past it. The chevron sits in a fixed 16px column that MudBlazor renders on every row,
    files included, so labels line up at each depth. Each level is indented 16px, which puts the group's
@@ -2554,7 +2596,7 @@ a.team-ref,
 }
 
 .library-tree .mud-treeview-item-content {
-    min-height: 28px;
+    min-height: 30px;
     padding-block: 0;
     padding-inline: 8px;
 }
@@ -2591,6 +2633,11 @@ a.team-ref,
 
 /* An orphan Team folder's warning glyph: the warning colour pulled toward the body text, so the icon clears
    4.5:1 on either Theme (the plain warning is 3.3:1 on Huddle Light's surface). */
+.library-tree-orphan .mud-icon-root {
+    width: 14px;
+    height: 14px;
+}
+
 .library-tree-orphan {
     display: inline-flex;
     margin-inline-start: 4px;
@@ -2804,8 +2851,27 @@ a.team-ref,
     line-height: 1.65;
 
     /* 35em of text plus the pane's 16px a side, so the padding does not eat into the measure. */
-    max-width: calc(35em + 32px);
+    max-width: calc(calc(var(--mud-typography-body1-size) * 8 / 7 * 35) + 32px);
     margin-inline: auto;
+}
+
+/* The "Linked from N notes" panel is the width of the text column above it, its label 13px/500. */
+.library-backlinks {
+    box-sizing: border-box;
+    max-width: calc(calc(var(--mud-typography-body1-size) * 8 / 7 * 35) + 32px);
+    margin: 16px auto 0;
+    padding-inline: 16px;
+}
+
+.library-backlinks .mud-expand-panel-header .mud-expand-panel-text {
+    font-size: var(--mud-typography-body2-size);
+    font-weight: 500;
+}
+
+/* The Read | Edit | Split labels are control text, 13px. */
+.library-document-mode-toggle .mud-toggle-item,
+.library-document-mode-toggle .mud-toggle-item .mud-typography {
+    font-size: var(--mud-typography-body2-size);
 }
 
 .library-rendered :is(h1, h2, h3, h4, h5, h6) {

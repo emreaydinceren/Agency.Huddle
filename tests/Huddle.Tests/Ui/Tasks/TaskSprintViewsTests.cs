@@ -195,7 +195,7 @@ public sealed class TaskSprintViewsTests
         SprintStore store = Assert.IsType<SprintStore>(harness.Sprints);
         _ = Assert.IsType<SprintCreateResult.Created>(store.Create("Sprint 3"));
 
-        cut.WaitForAssertion(() => Assert.Contains("No tasks match this View.", cut.Markup, StringComparison.Ordinal));
+        cut.WaitForAssertion(() => Assert.Contains("No tasks match this View", cut.Markup, StringComparison.Ordinal));
         Assert.Empty(cut.FindAll(".task-list-title"));
     }
 
