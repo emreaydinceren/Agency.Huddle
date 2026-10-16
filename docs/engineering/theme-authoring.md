@@ -548,10 +548,9 @@ accent-coloured text, so it is held to the text floor, and every pair below clea
 
 **Custom Accent** keeps Huddle's neutrals and replaces `Primary` with the Human's colour,
 darkened (light) or lightened (dark) until it reaches 4.5:1 on `Background` and `Surface`.
-`AccentTheme.ApplyAccent` currently sets its `PrimaryContrastText` to white whatever the
-accent, and `AccentThemeTests` pins that. The lightened dark accent can therefore carry
-white text under 4.5:1; choosing the text with `ContrastColour.ReadableForeground`, as the
-Huddle Themes do, is the open follow-up.
+`AccentTheme.ApplyAccent` then picks `PrimaryContrastText` with
+`ContrastColour.ReadableForeground`, so text on the accent is black or white, whichever
+reads better. `AccentThemeTests` holds it to 4.5:1 for pale, dark and brand accents.
 
 ### Borders and status colours
 
@@ -711,7 +710,8 @@ placeholder. Once the Human picks a colour on the Appearance tab, it is stored a
 `accentColor` in `appearance.json`, and `MainLayout` builds the real Theme at run time:
 Huddle's neutrals, with `Primary` replaced by the chosen colour after
 `AccentPalette.ClampForContrast` has darkened it (light) or lightened it (dark) in 2%
-lightness steps until it reaches 4.5:1 against both `Background` and `Surface`.
+lightness steps until it reaches 4.5:1 against both `Background` and `Surface`. Text on
+the clamped accent is black or white, whichever `ContrastColour.ReadableForeground` picks.
 
 If you want a Theme that differs from Huddle's only in accent, you do not need a new
 Theme: that is what Custom Accent is for.
