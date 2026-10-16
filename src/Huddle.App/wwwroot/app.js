@@ -365,6 +365,30 @@ window.teamScroll = {
     },
 };
 
+// Remembers which Right sidebar panels a viewer collapsed (Right sidebar spec D-8). A per-viewer
+// convenience: storage can be missing or throw, so every access is guarded and a failure reads as
+// "expanded".
+window.huddleSidebar = {
+    isCollapsed(id) {
+        try {
+            return window.localStorage.getItem("huddle.sidebar.collapsed." + id) === "1";
+        } catch {
+            return false;
+        }
+    },
+    setCollapsed(id, collapsed) {
+        try {
+            if (collapsed) {
+                window.localStorage.setItem("huddle.sidebar.collapsed." + id, "1");
+            } else {
+                window.localStorage.removeItem("huddle.sidebar.collapsed." + id);
+            }
+        } catch {
+            // Storage is unavailable (private window, blocked site data): the choice is not kept.
+        }
+    },
+};
+
 // Tab shortcuts (docs/Huddle.Tabs-Specifications.md). The browser keeps Ctrl+W, Ctrl+Tab and
 // Ctrl+PageUp/PageDown for its own tabs and a page cannot take them, so these use Alt:
 // Alt+W closes the active Tab, Alt+PageDown / Alt+PageUp move to the next / previous one.
