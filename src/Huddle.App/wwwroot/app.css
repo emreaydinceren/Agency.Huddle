@@ -3566,10 +3566,10 @@ a.team-ref,
 
 /* In a MudAvatarGroup (the Room's Members, C3) each avatar is the first child of its own
    .profile-avatar, so MudBlazor's ":first-child { margin-inline-start: 0 !important }" cancels the
-   group's overlap on every one. The wrapper takes the overlap instead: 8px is what the group's
-   Spacing="2" gives a bare avatar (MudBlazor's ms-n2). */
+   group's overlap on every one. The wrapper takes the overlap instead: 0.5rem is the 8px the group's
+   Spacing="2" gives a bare avatar (MudBlazor's ms-n2), in rem as the stylesheet rules (CV11) ask. */
 .mud-avatar-group > .profile-avatar:not(:first-child) {
-    margin-inline-start: -8px;
+    margin-inline-start: -0.5rem;
 }
 
 .profile-avatar-button {
