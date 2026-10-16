@@ -68,6 +68,13 @@ internal sealed class FakeAgentHostFactory : IAgentHostFactory
         this.failure = exception;
     }
 
+    /// <summary>
+    /// When set, each <see cref="StartAsync"/> records its call and then waits for this task before it
+    /// returns a host - a slow <c>node</c> adapter, made deterministic. A test uses it to act while a
+    /// start is in flight (the Persona has been read, the host is not yet running) and then release it.
+    /// </summary>
+    public Task? StartGate { get; set; }
+
     public Task<IPersonaHost> StartAsync(Persona persona, string agentId, CancellationToken cancellationToken)
     {
         ArgumentNullException.ThrowIfNull(persona);
@@ -80,6 +87,23 @@ internal sealed class FakeAgentHostFactory : IAgentHostFactory
             throw this.failure;
         }
 
+        return this.StartGate is { } gate
+            ? this.CreateHostAfterAsync(gate, cancellationToken)
+            : Task.FromResult<IPersonaHost>(this.CreateHost());
+    }
+
+    /// <summary>Waits for <paramref name="gate"/>, then creates the host as an ungated start would.</summary>
+    /// <param name="gate">The task <see cref="StartGate"/> held when the start began.</param>
+    /// <param name="cancellationToken">Cancels the wait, as a shutdown cancels a real adapter's start.</param>
+    private async Task<IPersonaHost> CreateHostAfterAsync(Task gate, CancellationToken cancellationToken)
+    {
+        await gate.WaitAsync(cancellationToken);
+        return this.CreateHost();
+    }
+
+    /// <summary>Creates and records the host every start returns.</summary>
+    private FakePersonaHost CreateHost()
+    {
         // SessionPerRoom comes from this.SessionPerRoom, false by default (finding P-9's "absent
         // means false" for the fakes, never the record's own default), so the many
         // FakePersonaServer-backed runner tests that never touch this switch, several of which run
@@ -103,6 +127,6 @@ internal sealed class FakeAgentHostFactory : IAgentHostFactory
 
         this.Host = host;
         this.OnHostStarted?.Invoke(host);
-        return Task.FromResult<IPersonaHost>(host);
+        return host;
     }
 }
