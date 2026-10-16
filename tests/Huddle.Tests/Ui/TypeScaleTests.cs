@@ -88,15 +88,30 @@ public sealed partial class TypeScaleTests
         Assert.Contains(".page-header-subtitle", body, StringComparison.Ordinal); // contains-ok: stylesheet source text
     }
 
-    /// <summary>The Transcript is one centred column of about 760px, and the Agent's card and the Human's bubble are each capped at 75ch inside it.</summary>
+    /// <summary>The Transcript is one centred column of about 760px, and the Agent's plain text and the Human's bubble are each capped inside it.</summary>
     [Fact]
     public void AppCss_TranscriptIsOneColumnOf760px()
     {
         string css = TypeScaleTests.ReadAppCss();
 
         Assert.Matches(@"\.message-list > \*\s*\{\s*max-width:\s*760px;\s*margin-inline:\s*auto;", css);
-        Assert.Matches(@"\.message-card\s*\{\s*max-width:\s*calc\(75ch \+ 32px\);", css);
+        Assert.Matches(@"\.message-content > \.message-body\s*\{\s*max-width:\s*75ch;", css);
+        Assert.DoesNotContain(".message-card", css, StringComparison.Ordinal);
         Assert.Matches(@"\.message-bubble\s*\{\s*max-width:\s*min\(75%, calc\(75ch \+ 32px\)\);", css);
+    }
+
+    /// <summary>The Room's Transcript metrics: 16px between senders, 4px within one, an 8px task dot, 13px sender names, a 12px bubble radius and the day separator's 24px/16px spacing.</summary>
+    [Fact]
+    public void AppCss_TranscriptMetricsFollowTheRoomSpec()
+    {
+        string css = TypeScaleTests.ReadAppCss();
+
+        Assert.Matches(@"\.message-row\s*\{[^}]*margin-bottom:\s*16px;", css);
+        Assert.Matches(@"\.message-row\.grouped\s*\{\s*margin-top:\s*-12px;", css);
+        Assert.Matches(@"\.task-ref::before\s*\{[^}]*width:\s*8px;\s*height:\s*8px;", css);
+        Assert.Matches(@"\.message-sender\s*\{\s*font-size:\s*var\(--mud-typography-body2-size\);\s*font-weight:\s*600;", css);
+        Assert.Matches(@"\.message-bubble\s*\{[^}]*border-radius:\s*calc\(var\(--mud-default-borderradius\) \* 1\.5\);", css);
+        Assert.Matches(@"\.day-separator\s*\{[^}]*margin-block:\s*24px 16px;", css);
     }
 
     /// <summary>Reads <c>app.css</c> as the source fact the stylesheet tests in this class pin.</summary>

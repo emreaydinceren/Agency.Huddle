@@ -75,7 +75,7 @@
                         <span class="message-time">@time</span>
                     </div>
                 }
-                <div class="message-body message-card">@((MarkupString)MarkdownRenderer.ToHtml(message.Text, this.TaskResolver, this.ChatLibraryResolver))</div>
+                <div class="message-body">@((MarkupString)MarkdownRenderer.ToHtml(message.Text, this.TaskResolver, this.ChatLibraryResolver))</div>
                 <MessageReferences Message="@message" />
             </div>
         </div>
@@ -109,7 +109,7 @@
                    markdown path more often than necessary is the wrong direction from that rule, not a
                    harmless extra step. The text settles into rendered Markdown the moment the real Message
                    arrives and this row is replaced. *@
-                <div class="message-body message-card streaming">@draft.Text<span class="draft-caret"></span></div>
+                <div class="message-body streaming">@draft.Text<span class="draft-caret"></span></div>
                 @* The Turn detail: one row per tool call, oldest first, under the text. A real <ul> with a
                    name and deliberately no aria-live - a Turn fires several updates a second and a live
                    region would read every one out. Every mark has a text label: state never rests on
