@@ -43,6 +43,61 @@ public sealed partial class TypeScaleTests
         });
     }
 
+    /// <summary>The role and its unitless line height, as ADR-0056 tabulates them.</summary>
+    /// <returns>One row per typography role the scale sets.</returns>
+    public static TheoryData<string, string> LineHeights() => new()
+    {
+        { "h5", "1.3" },
+        { "h6", "1.35" },
+        { "subtitle1", "1.4" },
+        { "subtitle2", "1.4" },
+        { "body1", "1.55" },
+        { "body2", "1.4" },
+        { "caption", "1.35" },
+        { "overline", "1.3" },
+        { "button", "1.4" },
+    };
+
+    /// <summary>Every built-in Theme carries the scale's line height for the role.</summary>
+    /// <param name="role">The <c>Typo</c> name.</param>
+    /// <param name="lineHeight">The expected unitless line height.</param>
+    [Theory]
+    [MemberData(nameof(LineHeights))]
+    public void EveryBuiltInTheme_SetsTheRoleLineHeight(string role, string lineHeight)
+    {
+        Assert.All(ThemeCatalog.BuiltIn, descriptor => Assert.Equal(lineHeight, TypeScaleTests.RoleOf(descriptor.Theme.Typography, role).LineHeight));
+    }
+
+    /// <summary>The Status and Tag chips share one shape: 22px high, a 6px corner, 0 8px padding, 12px text at 500.</summary>
+    /// <param name="selector">The chip rule to inspect.</param>
+    [Theory]
+    [InlineData(".mud-chip.status-chip {")]
+    [InlineData(".mud-chip.tag-chip {")]
+    public void AppCss_ChipsHaveTheStatusShape(string selector)
+    {
+        string css = TypeScaleTests.ReadAppCss().Replace("\r\n", "\n", StringComparison.Ordinal);
+        int rule = css.IndexOf(selector, StringComparison.Ordinal);
+        Assert.True(rule >= 0, "Expected the chip rule in app.css.");
+
+        string body = css[rule..css.IndexOf('}', rule)];
+
+        Assert.Contains("height: 22px;", body, StringComparison.Ordinal); // contains-ok: stylesheet source text
+        Assert.Contains("padding: 0 8px;", body, StringComparison.Ordinal); // contains-ok: stylesheet source text
+        Assert.Contains("border-radius: calc(var(--mud-default-borderradius) * 0.75);", body, StringComparison.Ordinal); // contains-ok: stylesheet source text
+        Assert.Contains("font-size: var(--mud-typography-caption-size);", body, StringComparison.Ordinal); // contains-ok: stylesheet source text
+        Assert.Contains("font-weight: 500;", body, StringComparison.Ordinal); // contains-ok: stylesheet source text
+    }
+
+    /// <summary>A Small button is 28px high at weight 500 and the Composer's focused border is 1.5px of accent.</summary>
+    [Fact]
+    public void AppCss_SmallButtonAndComposerFocusMatchTheSpec()
+    {
+        string css = TypeScaleTests.ReadAppCss();
+
+        Assert.Matches(@"\.mud-button-filled-size-small \{[^}]*height: 28px;[^}]*font-weight: 500;", css);
+        Assert.Matches(@"\.composer-input:focus-visible \{[^}]*inset 0 0 0 0\.5px var\(--mud-palette-primary\)", css);
+    }
+
     /// <summary>The overline is upper case with 0.04em tracking, the group-label look.</summary>
     [Fact]
     public void Overline_IsUpperCaseWithFourHundredthsEmTracking()
