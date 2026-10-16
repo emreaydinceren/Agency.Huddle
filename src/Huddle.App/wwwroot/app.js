@@ -342,7 +342,6 @@ window.teamScroll = {
     },
     // Scrolls the Message row with this id to the middle of the list, moves focus to it without
     // scrolling again, and flashes it (Global Search spec 9.1). Returns false when no row has the id.
-    // scrollIntoView works in the zoomed page's own coordinates, so the 90% zoom needs no correction.
     toMessage(el, id) {
         const row = el.querySelector('[data-message-id="' + CSS.escape(id) + '"]');
         if (!row) {
@@ -359,7 +358,7 @@ window.teamScroll = {
         setTimeout(clear, 2000);
         return true;
     },
-    // True when the list is scrolled to within 4 px of its bottom, in its own (zoomed) coordinates.
+    // True when the list is scrolled to within 4 px of its bottom, in its own coordinates.
     isAtBottom(el) {
         return el.scrollHeight - el.scrollTop - el.clientHeight <= 4;
     },
@@ -550,9 +549,9 @@ window.huddleResize = {
       }
       // Anchor.End puts the drawer on the right, so dragging the handle left (clientX decreasing,
       // startX - e.clientX growing) is what should grow it.
-      // The page runs at html { zoom: 0.9 }. offsetWidth is the unzoomed layout width (the CSS px that
-      // --mud-drawer-width takes), whereas getBoundingClientRect() and clientX are visual (zoomed) pixels
-      // in Chromium, so the pointer delta is divided by the zoom factor to land in the same unit.
+      // The page is not zoomed (ADR-0056), so the factor is 1. It is still read: offsetWidth is the layout width
+      // (the CSS px that --mud-drawer-width takes), whereas clientX is in visual pixels, which differ only if a
+      // zoom is ever applied to the page again.
       const zoom = parseFloat(getComputedStyle(document.documentElement).zoom) || 1;
       setWidth(startWidth + ((startX - e.clientX) / zoom));
     });

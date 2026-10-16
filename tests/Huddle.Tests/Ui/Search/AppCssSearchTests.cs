@@ -2,29 +2,28 @@ namespace Agency.Huddle.Tests.Ui.Search;
 
 /// <summary>
 /// Pins the Spec §6.8 <c>/* Global search */</c> block in <c>app.css</c> as a source fact: the dropdown
-/// is sized in the 0.9 space, its viewport units divide by the scale, no search rule sets <c>zoom</c>
-/// itself, and the zoom comment names the dropdown so a change of scale changes it too.
+/// is sized in plain viewport units (the page is not zoomed, ADR-0056) and no rule in the app sets <c>zoom</c>.
 /// </summary>
 public sealed class AppCssSearchTests
 {
-    /// <summary>The dropdown's maximum height is 80% of the window in the 0.9 space: <c>calc(80vh / 0.9)</c>.</summary>
+    /// <summary>The dropdown's maximum height is 80% of the window: <c>80vh</c>, with no zoom to divide by.</summary>
     [Fact]
-    public void SearchDropdown_MaxHeightIs80vhDividedByTheScale()
+    public void SearchDropdown_MaxHeightIs80vh()
     {
         string rule = DropdownRule();
 
         // contains-ok: source-fact test, no CSS parser - the rule's own text is what's pinned.
-        Assert.Contains("max-height: calc(80vh / 0.9);", rule, StringComparison.Ordinal);
+        Assert.Contains("max-height: 80vh;", rule, StringComparison.Ordinal);
     }
 
-    /// <summary>The dropdown's width is capped at 720px and never wider than the window less a 24px margin each side: <c>min(720px, calc((100vw - 48px) / 0.9))</c>.</summary>
+    /// <summary>The dropdown's width is capped at 720px and never wider than the window less a 24px margin each side: <c>min(720px, calc(100vw - 48px))</c>.</summary>
     [Fact]
     public void SearchDropdown_WidthNeverExceedsTheWindow()
     {
         string rule = DropdownRule();
 
         // contains-ok: source-fact test, no CSS parser - the rule's own text is what's pinned.
-        Assert.Contains("width: min(720px, calc((100vw - 48px) / 0.9));", rule, StringComparison.Ordinal);
+        Assert.Contains("width: min(720px, calc(100vw - 48px));", rule, StringComparison.Ordinal);
     }
 
     /// <summary>No rule in the <c>/* Global search */</c> block sets <c>zoom</c>; the scale belongs to the provider and <c>html</c> only.</summary>
@@ -42,16 +41,15 @@ public sealed class AppCssSearchTests
         Assert.DoesNotContain(lines, line => line.TrimStart().StartsWith("zoom:", StringComparison.Ordinal));
     }
 
-    /// <summary>The comment above <c>html { zoom: 0.9; }</c> names <c>.search-dropdown</c> among the places that take the scale.</summary>
+    /// <summary>No rule anywhere in <c>app.css</c> sets <c>zoom</c>: the page renders at 100% (ADR-0056), so no size divides by a scale.</summary>
     [Fact]
-    public void ZoomComment_NamesTheSearchDropdown()
+    public void AppCss_SetsNoZoomAnywhere()
     {
-        string text = ReadAppCss();
-        int zoomIndex = text.IndexOf("zoom: 0.9;", StringComparison.Ordinal);
-        Assert.True(zoomIndex >= 0, "Expected html { zoom: 0.9; } in app.css.");
+        string[] lines = ReadAppCss().Split('\n');
 
-        // contains-ok: source-fact test, no CSS parser - the comment above the declaration is what's pinned.
-        Assert.Contains(".search-dropdown", text[..zoomIndex], StringComparison.Ordinal);
+        // A declaration line, not the comment prose: the property name opens the trimmed line.
+        Assert.DoesNotContain(lines, line => line.TrimStart().StartsWith("zoom:", StringComparison.Ordinal));
+        Assert.DoesNotContain(lines, line => line.Contains("/ 0.9", StringComparison.Ordinal));
     }
 
     /// <summary>The match mark a card draws is bold: a <c>.search-card mark</c> rule sets <c>font-weight: 600</c>.</summary>

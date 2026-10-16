@@ -14,38 +14,19 @@ html, body {
     color: var(--mud-palette-text-primary);
     font-family: var(--mud-typography-default-family);
 
+    /* Text with no role of its own reads as body1 (14px); MudBlazor's own body rule is 0.875rem of this root, 12.25px. */
+    font-size: var(--mud-typography-body1-size);
+    font-weight: 400;
+
     /* Recommended setup for clear rendering of Inter's optical-size axis. */
     font-optical-sizing: auto;
 }
 
 /* The root size is MudBlazor's default typography size (0.875rem, so 1rem is 14px); every rem in this
-   file scales from this one token. */
+   file scales from this one token. The UI renders at 100%: there is no page zoom, so a size in this
+   file is the size on screen (ADR-0056). */
 html {
     font-size: var(--mud-typography-default-size);
-
-    /* The whole UI is drawn at 90%: fonts, heights, widths and gaps together, which a root font-size
-       cannot do because much of MudBlazor is sized in px. Viewport units are not zoomed, so a size
-       meant to fill the window divides by the scale, and the popover provider cancels the zoom for
-       placement (below). Change 0.9 in every place together; a var() cannot hold it, because every
-       var() in this file must be a MudBlazor variable. The sites: here; both .mud-popover-provider
-       rules below; .main-column (height); .search-dropdown (width and max-height, Global search);
-       .composer-picker (max-height, References); .avatar-library-body (max-height); .chip-cloud
-       (max-height); the phone Avatar Library dialog and its body (width, height,
-       max-height, in the max-width 600px block); .avatar-library-filters (max-height, same block);
-       .elicitation-card (max-height); and #components-reconnect-modal (margin, ReconnectModal.razor.css). */
-    zoom: 0.9;
-}
-
-/* MudBlazor positions a popover in viewport pixels, and zoom on an ancestor scales those pixels too,
-   so a menu opened at the pointer landed at 90% of the way there. The provider cancels the zoom for
-   placement, and the popover's content takes the scale back so the menu is drawn at the same size
-   as everything else. */
-.mud-popover-provider {
-    zoom: calc(1 / 0.9);
-}
-
-.mud-popover-provider .mud-popover > * {
-    zoom: 0.9;
 }
 
 * {
@@ -142,6 +123,76 @@ button:focus-visible {
     text-transform: none;
 }
 
+/* ---- The type scale, in rendered pixels (ADR-0056) ---------------------------------------------
+   The Theme (ThemeDefaults) sets the role sizes: h5 20, h6 16, subtitle 14, body1 14, body2 13, caption 12,
+   overline 11. Nothing renders under 11px, and there are three weights: 400 text, 500 controls, 600 emphasis and
+   headings. The rules below pull the MudBlazor components that ship their own rem or px size onto those roles. */
+strong,
+b {
+    font-weight: 600;
+}
+
+/* A Small button is a row-sized control (body2); a Large one is body1. Both keep the control weight. */
+.mud-button-text-size-small,
+.mud-button-outlined-size-small,
+.mud-button-filled-size-small {
+    font-size: var(--mud-typography-body2-size);
+}
+
+.mud-button-text-size-large,
+.mud-button-outlined-size-large,
+.mud-button-filled-size-large {
+    font-size: var(--mud-typography-body1-size);
+}
+
+/* A chip is a row-sized control. */
+.mud-chip.mud-chip-size-small,
+.mud-chip.mud-chip-size-medium {
+    font-size: var(--mud-typography-body2-size);
+    font-weight: 500;
+}
+
+/* Metadata under a control is caption; a list heading and a table footer are row text. */
+.mud-input-helper-text,
+.mud-table-cell-footer {
+    font-size: var(--mud-typography-caption-size);
+}
+
+.mud-list-subheader,
+.mud-table-pagination,
+.mud-expand-panel .mud-expand-panel-header {
+    font-size: var(--mud-typography-body2-size);
+}
+
+.mud-avatar.mud-avatar-small {
+    font-size: var(--mud-typography-overline-size);
+}
+
+/* A raised outlined label is caption size (12px), not MudBlazor's 0.75 scale of the field (10.5px). The notch in
+   the border (the legend) is cut to the same size, so the label and its gap stay the same width. */
+.mud-input.mud-input-outlined > .mud-input-outlined-border legend {
+    font-size: var(--mud-typography-caption-size);
+}
+
+.mud-shrink ~ label.mud-input-label.mud-input-label-inputcontrol.mud-input-label-outlined,
+.mud-input:focus-within ~ label.mud-input-label.mud-input-label-inputcontrol.mud-input-label-outlined,
+.mud-input:has(:-webkit-autofill) ~ label.mud-input-label.mud-input-label-inputcontrol.mud-input-label-outlined {
+    transform: translate(14px, -7px) scale(0.8572);
+    max-width: calc((100% - 14px) / 0.8572);
+}
+
+/* ---- Measure: prose never runs wider than 75 characters (ADR-0056) --------------------------------
+   An intro, a lead, helper text and an empty state are blocks of sentences; the pane may be wider, the line is not. */
+.settings-intro,
+.settings-stored-at,
+.build-team-intro,
+.page-header-subtitle,
+.page-lead,
+.empty-state,
+.mud-input-helper-text {
+    max-width: 75ch;
+}
+
 /* ---- Shared utilities: one class per job, reused by every feature (UX-063, UX-066, UX-R21) ---- */
 
 /* A panel anchored to a control (Invite, the @ picker): a card border and the popover elevation. */
@@ -207,13 +258,15 @@ a.team-ref,
     font-size: var(--mud-typography-body2-size);
 }
 
-/* A heading over a group of fields or tiles on a page: muted, with a light rule under it. */
+/* A heading over a group of fields or tiles on a page: subtitle2 at 600 in the primary text colour, so it is never
+   smaller or quieter than what it heads, with a light rule under it. */
 .teammates-group-heading,
 .prompts-group-heading,
 .group-heading {
     margin: 0 0 8px 0;
-    font-size: var(--mud-typography-body1-size);
-    color: var(--mud-palette-text-secondary);
+    font-size: var(--mud-typography-subtitle2-size);
+    font-weight: 600;
+    color: var(--mud-palette-text-primary);
     padding-bottom: 4px;
     border-bottom: 1px solid var(--mud-palette-divider-light);
 }
@@ -284,7 +337,7 @@ a.team-ref,
 .main-column {
     display: flex;
     flex-direction: column;
-    height: calc(100vh / 0.9);
+    height: 100vh;
     overflow: hidden;
 }
 
@@ -405,6 +458,7 @@ a.team-ref,
 
 .page-breadcrumbs .page-breadcrumbs-list.mud-breadcrumbs {
     padding: 0;
+    font-size: var(--mud-typography-body2-size);
 }
 
 /* MudBlazor draws the separator as body text at 38% opacity (2.4:1 on Huddle Light); it is supporting text,
@@ -494,19 +548,20 @@ a.team-ref,
    ancestor, rendering its label inside a ".mud-nav-link-text" element. The drawer's
    MudNavGroups ("Chats" and "Tasks") render their own titles the exact same way, because a MudNavGroup's header
    is itself a MudNavLink - and every room or view link nested inside them is a
-   plain MudNavLink too. So "belongs to the group" is what sets 14px, at (0,2,0) via the
-   ".mud-nav-group" ancestor - naturally beating the 15px default's (0,1,0) regardless of source
+   plain MudNavLink too. So "belongs to the group" is what sets the row size (body2), at (0,2,0) via the
+   ".mud-nav-group" ancestor - naturally beating the section size's (0,1,0) regardless of source
    order - and only the group's own header additionally gets the 600 weight, via the more specific
    *direct*-child selector that a nested view link's ".mud-nav-link" never matches. */
 .mud-nav-link-text {
-    font-size: 15px;
+    font-size: var(--mud-typography-subtitle2-size);
 }
 
 .mud-nav-group .mud-nav-link-text {
-    font-size: 14px;
+    font-size: var(--mud-typography-body2-size);
 }
 
 .mud-nav-group > .mud-nav-link .mud-nav-link-text {
+    font-size: var(--mud-typography-subtitle2-size);
     font-weight: 600;
     color: var(--mud-palette-text-secondary);
 }
@@ -528,7 +583,7 @@ a.team-ref,
 
 /* A top-level entry that is a single link (Teammates) is drawn as a section header like the group headers (UX-014). */
 .nav-section-link .mud-nav-link-text {
-    font-size: 14px;
+    font-size: var(--mud-typography-subtitle2-size);
     font-weight: 600;
     color: var(--mud-palette-text-secondary);
 }
@@ -536,7 +591,7 @@ a.team-ref,
 /* The footer is icon-only (OP-4): the same row height and text size as every other row (UX-017). */
 .nav-settings .mud-nav-link {
     min-height: var(--nav-row-height);
-    font-size: 14px;
+    font-size: var(--mud-typography-body2-size);
 }
 
 /* A 1:1 Room's avatar sits where an icon would, before the name. */
@@ -692,6 +747,13 @@ a.team-ref,
     padding: 24px;
 }
 
+/* The Transcript is one column of about 760px, centred in a wider pane: the Agent's card and the Human's bubble sit
+   inside it, so a line of a reply is never longer than the reader can follow. */
+.message-list > * {
+    max-width: 760px;
+    margin-inline: auto;
+}
+
 /* ---- Message layout: avatar gutter and content column ------------------------------------------ */
 
 /* Slack-style two-column layout: an avatar gutter in the first column, everything else - the
@@ -721,7 +783,7 @@ a.team-ref,
 }
 
 .message-bubble {
-    max-width: min(75%, 40rem);
+    max-width: min(75%, calc(75ch + 32px));
     padding: 8px 16px;
     background: color-mix(in srgb, var(--mud-palette-primary) 14%, var(--mud-palette-surface));
     border: 1px solid color-mix(in srgb, var(--mud-palette-primary) 28%, var(--mud-palette-surface));
@@ -748,9 +810,8 @@ a.team-ref,
 }
 
 .message-sender {
-    font-weight: 700;
     font-size: var(--mud-typography-body1-size);
-    font-weight: 700;
+    font-weight: 600;
     color: var(--mud-palette-text-primary);
 }
 
@@ -769,6 +830,7 @@ a.team-ref,
 /* An agent's reply sits on a light card, so who-said-what reads at a glance against the Human's
    tinted bubble. */
 .message-card {
+    max-width: calc(75ch + 32px);
     padding: 12px 16px;
     background: var(--mud-palette-surface);
     border: 1px solid var(--mud-palette-divider);
@@ -1337,7 +1399,7 @@ a.team-ref,
 
 .teammates-item-name {
     font-size: var(--mud-typography-body1-size);
-    font-weight: 700;
+    font-weight: 600;
 }
 
 /* The Avatar Library picker (Spec 6.6). The filters block stays put and the grid is the
@@ -1349,7 +1411,7 @@ a.team-ref,
     gap: 8px;
     /* A percentage here resolves against the dialog content's auto height, so it is ignored and the
        whole dialog scrolls with the filters in it; the viewport is the bound that actually holds. */
-    max-height: calc(100vh / 0.9 - 11rem);
+    max-height: calc(100vh - 11rem);
     min-height: 0;
 }
 
@@ -1379,7 +1441,7 @@ a.team-ref,
 }
 
 .avatar-library-skin[aria-pressed="true"] {
-    font-weight: 700;
+    font-weight: 600;
     border: 2px solid var(--mud-palette-primary);
     color: color-mix(in srgb, var(--mud-palette-primary) 70%, var(--mud-palette-text-primary));
 }
@@ -1440,24 +1502,24 @@ a.team-ref,
 
 @media (max-width: 600px) {
     .mud-dialog.avatar-library-dialog {
-        width: calc(100vw / 0.9);
-        max-width: calc(100vw / 0.9);
-        height: calc(100vh / 0.9);
-        max-height: calc(100vh / 0.9);
+        width: 100vw;
+        max-width: 100vw;
+        height: 100vh;
+        max-height: 100vh;
         margin: 0;
         border-radius: 0;
     }
 
     .avatar-library-body {
-        height: calc(100vh / 0.9 - 7rem);
-        max-height: calc(100vh / 0.9 - 7rem);
+        height: calc(100vh - 7rem);
+        max-height: calc(100vh - 7rem);
     }
 
     /* On a phone the chips alone are taller than the screen, so the filters take at most
        half of it and scroll inside that, which leaves the pictures a visible strip below. */
     .avatar-library-filters {
         flex: 0 1 auto;
-        max-height: calc(50vh / 0.9);
+        max-height: 50vh;
         overflow-y: auto;
     }
 
@@ -1636,8 +1698,9 @@ a.team-ref,
 
 .theme-picker-heading {
     font-size: var(--mud-typography-overline-size);
+    font-weight: 600;
     text-transform: uppercase;
-    letter-spacing: 0.05em;
+    letter-spacing: 0.04em;
     color: var(--mud-palette-text-secondary);
     background-color: var(--mud-palette-background-gray);
     border-bottom: 1px solid var(--mud-palette-divider-light);
@@ -1663,6 +1726,7 @@ a.team-ref,
 }
 
 .prompts-field-label {
+    font-size: var(--mud-typography-subtitle2-size);
     font-weight: 600;
     color: var(--mud-palette-text-primary);
 }
@@ -1716,11 +1780,11 @@ a.team-ref,
    .task-board-lane-columns share the exact same grid-auto-columns function, so their tracks land
    at identical x offsets and a header cell sits directly above the cards it describes. The board
    itself scrolls inside the pane in both directions (OP-3, UX-007): it is capped to the pane's height
-   (a viewport unit, so divided by the 0.9 zoom), which puts its horizontal scrollbar at the pane's bottom
+   (a viewport unit), which puts its horizontal scrollbar at the pane's bottom
    edge instead of below the last lane, and the column header row sticks to the top while the lanes scroll. */
 .task-board {
     overflow: auto;
-    max-height: calc((100vh / 0.9) - 12rem);
+    max-height: calc(100vh - 12rem);
 }
 
 .task-board-columns {
@@ -1749,6 +1813,7 @@ a.team-ref,
 .task-board-column-label {
     flex: 1 1 auto;
     min-width: 0;
+    font-size: var(--mud-typography-subtitle2-size);
     font-weight: 600;
     overflow-wrap: anywhere;
 }
@@ -1881,7 +1946,14 @@ a.team-ref,
 }
 
 .task-card-title {
+    font-size: var(--mud-typography-subtitle2-size);
     font-weight: 600;
+}
+
+/* The rest of a card is row text (body2): the id, the assignee. */
+.task-card-id,
+.task-assignee-name {
+    font-size: var(--mud-typography-body2-size);
 }
 
 /* Row 4: the assignee, under a horizontal rule across the card's width. */
@@ -2289,7 +2361,7 @@ a.team-ref,
    nothing. The important flag is the only way past an inline style (listed in Exceptions.txt). */
 
 /* The /library page: header on top, the explorer takes the rest of the pane. Percent heights, not vh,
-   because viewport units are not zoomed with the 90% UI zoom (UX-006). */
+   so the page fills the pane it sits in rather than the window (UX-006). */
 .library-page {
     height: 100%;
     min-height: 0;
@@ -2369,13 +2441,14 @@ a.team-ref,
 }
 
 /* ---- Library tree density ----------------------------------------------------------------------
-   28px rows; on a touch screen 3.5rem, which the 90% zoom renders as a 44px target. The tree is inset 8px
+   28px rows; on a touch screen 44px, the minimum target. The tree is inset 8px
    and each row pads 8px more, so a label column starts 16px from the pane edge while the hover and selected
    fills reach 8px past it. The chevron sits in a fixed 16px column that MudBlazor renders on every row,
    files included, so labels line up at each depth. Each level is indented 16px, which puts the group's
    guide line under the centre of its parent's chevron (8px row padding + half the 16px column). */
 .library-tree.mud-treeview {
     padding: 0 8px 16px;
+    font-size: var(--mud-typography-body2-size);
 }
 
 .library-tree .mud-treeview-item {
@@ -2453,7 +2526,7 @@ a.team-ref,
 
 @media (pointer: coarse) {
     .library-tree .mud-treeview-item-content {
-        min-height: 3.5rem;
+        min-height: 44px;
     }
 
     /* The chevron keeps its 16px footprint; padding with an equal negative margin widens only what a finger can hit. */
@@ -2549,6 +2622,7 @@ a.team-ref,
     display: flex;
     flex-wrap: wrap;
     gap: 4px 16px;
+    font-size: var(--mud-typography-body2-size);
     color: var(--mud-palette-text-secondary);
 }
 
@@ -2623,12 +2697,12 @@ a.team-ref,
 
 /* A Library document's rendered Markdown. The global reset zeroes block margins, so without these the paragraphs of a Teammate definition run together. */
 /* The reading styles, shared by Read mode and Split's preview. Long-form text is the one size derived from
-   the scale rather than taken from it (design-system.md "Typography"): body1 x 1.125 is 15.75px, at a 1.65
+   the scale rather than taken from it (design-system.md "Typography"): body1 x 8/7 is 16px, at a 1.65
    line height, and the headings step up from that so an h1 is a heading, not a banner. The 35em measure is
    about 70 characters of Inter prose a line, centred in whatever width the pane has. */
 .library-rendered {
     overflow-wrap: anywhere;
-    font-size: calc(var(--mud-typography-body1-size) * 1.125);
+    font-size: calc(var(--mud-typography-body1-size) * 8 / 7);
     line-height: 1.65;
 
     /* 35em of text plus the pane's 16px a side, so the padding does not eat into the measure. */
@@ -2647,19 +2721,19 @@ a.team-ref,
 
 .library-rendered h1 {
     margin-bottom: 16px;
-    font-size: calc(var(--mud-typography-body1-size) * 1.6875);
+    font-size: 1.5em;
 }
 
 .library-rendered h2 {
-    font-size: calc(var(--mud-typography-body1-size) * 1.40625);
+    font-size: 1.25em;
 }
 
 .library-rendered h3 {
-    font-size: calc(var(--mud-typography-body1-size) * 1.2375);
+    font-size: 1.125em;
 }
 
 .library-rendered :is(h4, h5, h6) {
-    font-size: calc(var(--mud-typography-body1-size) * 1.125);
+    font-size: 1em;
 }
 
 .library-rendered > :first-child,
@@ -2830,7 +2904,7 @@ a.team-ref,
 .elicitation-card {
     display: flex;
     flex-direction: column;
-    max-height: calc(50vh / 0.9);
+    max-height: 50vh;
 }
 
 .elicitation-card-fields {
@@ -2969,6 +3043,7 @@ a.team-ref,
 .task-list-grid thead th {
     width: 8rem;
     white-space: nowrap;
+    font-size: var(--mud-typography-body2-size);
 }
 
 .task-list-grid thead th.task-list-id-cell {
@@ -3058,7 +3133,7 @@ a.team-ref,
     display: flex;
     flex-wrap: wrap;
     gap: 4px;
-    max-height: calc(30vh / 0.9);
+    max-height: 30vh;
     overflow-y: auto;
 }
 
@@ -3079,14 +3154,14 @@ a.team-ref,
 }
 
 .chip-cloud-chip-selected {
-    font-weight: 700;
+    font-weight: 600;
     border: 2px solid var(--mud-palette-primary);
     color: color-mix(in srgb, var(--mud-palette-primary) 70%, var(--mud-palette-text-primary));
 }
 
 .chip-cloud-close {
     margin-left: 4px;
-    font-weight: 700;
+    font-weight: 600;
 }
 
 .chip-cloud-bracket {
@@ -3484,7 +3559,6 @@ a.team-ref,
     flex: 0 0 auto;
     margin-right: 4px;
     color: var(--mud-palette-text-secondary);
-    font-style: italic;
 }
 
 /* ---- Global search ---------------------------------------------------------------------------- */
@@ -3558,15 +3632,15 @@ a.team-ref,
     padding: 8px 8px 4px;
     color: var(--mud-palette-text-secondary);
     font-size: var(--mud-typography-overline-size);
-    letter-spacing: 0.05em;
+    font-weight: 600;
+    letter-spacing: 0.04em;
     text-transform: uppercase;
 }
 
-/* The dropdown is the popover's direct child, so it is drawn inside the provider's 0.9 (see the zoom
-   rules at the top of this file). Viewport units are not zoomed, so 80% of the window is 80vh / 0.9. */
+/* The dropdown is the popover's direct child; it is at most 80% of the window high. */
 .search-dropdown {
-    width: min(720px, calc((100vw - 48px) / 0.9));
-    max-height: calc(80vh / 0.9);
+    width: min(720px, calc(100vw - 48px));
+    max-height: 80vh;
     overflow-y: auto;
 }
 
@@ -3610,7 +3684,7 @@ a.team-ref,
     left: 0;
     right: 0;
     bottom: 100%;
-    max-height: min(320px, calc(40vh / 0.9));
+    max-height: min(320px, 40vh);
     overflow-y: auto;
     overflow-x: hidden;
     background: var(--mud-palette-surface);
@@ -3822,8 +3896,8 @@ a.team-ref,
     padding: 2px 8px;
     border-radius: 999px;
     font-size: var(--mud-typography-caption-size);
-    font-weight: 700;
-    letter-spacing: 0.05em;
+    font-weight: 600;
+    letter-spacing: 0.04em;
     text-transform: uppercase;
     color: var(--mud-palette-primary-text);
     background: var(--mud-palette-primary);

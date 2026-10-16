@@ -201,7 +201,7 @@
         }
 
         <ResizableEndDrawer Open="this.detailOpen" OpenChanged="this.OnDetailOpenChanged" StorageKey="taskDetailPanelWidth"
-                            Title="@(this.selectedDraft is not null ? "New task" : "Task")"
+                            Title="@this.DetailTitle"
                             OverlayAutoClose="@(!this.detailHasPending)" Class="tasks-detail-drawer">
             @if (this.selectedTaskId is not null || this.selectedDraft is not null)
             {
@@ -578,6 +578,28 @@
 
     /// <summary>The <see cref="DetailKey"/> used when neither a Draft nor a Task is selected.</summary>
     private const string NoDetailKey = "tasks-detail-none";
+
+    /// <summary>
+    /// The detail drawer's title: the Task's own name ("PLAT-0013 · Upgrade every service to .NET 10"), never its type, so
+    /// the drawer says what is open (design-system "Drawer anatomy"). A Draft has no id yet and reads "New task".
+    /// </summary>
+    private string DetailTitle
+    {
+        get
+        {
+            if (this.selectedDraft is not null)
+            {
+                return "New task";
+            }
+
+            if (this.selectedTaskId is { } id && this.Store.Get(id) is { } task)
+            {
+                return $"{id} · {task.Title}";
+            }
+
+            return "Task";
+        }
+    }
 
     /// <summary>The ids of every Task in the current effective View (Spec §10.8), unnarrowed by the search box, for <see cref="AiReactingChip.Watched"/>.</summary>
     private IReadOnlyList<TaskId> WatchedTaskIds => this.FilteredTasks(null).Select(t => t.Id).ToList();

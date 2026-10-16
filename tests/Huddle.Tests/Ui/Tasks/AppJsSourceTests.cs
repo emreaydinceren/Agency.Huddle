@@ -73,7 +73,7 @@ public sealed class AppJsSourceTests
         Assert.Contains("return false", block, StringComparison.Ordinal);
     }
 
-    /// <summary><c>teamScroll.isAtBottom</c> is true within 4 px of the bottom, in the element's own (zoomed) scroll coordinates.</summary>
+    /// <summary><c>teamScroll.isAtBottom</c> is true within 4 px of the bottom, in the element's own scroll coordinates.</summary>
     [Fact]
     public void AppJs_TeamScroll_IsAtBottom_UsesFourPixelsInTheElementsOwnCoordinates()
     {
@@ -185,8 +185,8 @@ public sealed class AppJsSourceTests
     }
 
     /// <summary>
-    /// <c>huddleResize.attachDrawer</c> reads the drawer's unzoomed layout width (<c>offsetWidth</c>), never
-    /// <c>getBoundingClientRect().width</c>, which is the 90%-zoomed width and made the first ArrowLeft shrink a 420px drawer.
+    /// <c>huddleResize.attachDrawer</c> reads the drawer's layout width (<c>offsetWidth</c>), never
+    /// <c>getBoundingClientRect().width</c>, which is the visual width and differs from it under any page zoom (it once made the first ArrowLeft shrink a 420px drawer).
     /// </summary>
     [Fact]
     public void AttachDrawer_ReadsUnzoomedWidth_NotBoundingRect()

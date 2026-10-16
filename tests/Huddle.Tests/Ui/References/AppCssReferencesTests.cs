@@ -2,26 +2,26 @@ namespace Agency.Huddle.Tests.Ui.References;
 
 /// <summary>
 /// Pins the <c>/* References */</c> block in <c>app.css</c> as a source fact (AT-T13, spec §5.6 and §7
-/// step 4): the picker opens above the composer in the 0.9 space, the block sets no <c>zoom</c>, the zoom
-/// comment names the picker, and a Room or Team link is styled exactly as a Task link.
+/// step 4): the picker opens above the composer with a viewport-unit height (the page is not zoomed,
+/// ADR-0056), the block sets no <c>zoom</c>, and a Room or Team link is styled exactly as a Task link.
 /// </summary>
 public sealed class AppCssReferencesTests
 {
     private const string BlockMarker = "/* ---- References ";
 
-    /// <summary>The picker sits above the composer and its height is <c>min(320px, calc(40vh / 0.9))</c>.</summary>
+    /// <summary>The picker sits above the composer and its height is <c>min(320px, 40vh)</c>.</summary>
     [Fact]
-    public void Picker_OpensAboveWithZoomAwareHeight()
+    public void Picker_OpensAboveWithAViewportHeight()
     {
         string rule = PickerRule();
 
         Assert.True(rule.Contains("bottom: 100%;", StringComparison.Ordinal), "Expected bottom: 100% in the picker rule.");
         Assert.True(
-            rule.Contains("max-height: min(320px, calc(40vh / 0.9));", StringComparison.Ordinal),
-            "Expected the zoom-aware max-height in the picker rule.");
+            rule.Contains("max-height: min(320px, 40vh);", StringComparison.Ordinal),
+            "Expected the viewport-unit max-height in the picker rule.");
     }
 
-    /// <summary>No rule in the <c>/* References */</c> block sets <c>zoom</c>; the picker takes the page scale.</summary>
+    /// <summary>No rule in the <c>/* References */</c> block sets <c>zoom</c>; the picker is laid out at the page's own scale.</summary>
     [Fact]
     public void ReferencesBlock_SetsNoZoom()
     {
@@ -29,19 +29,6 @@ public sealed class AppCssReferencesTests
 
         // A declaration line, not the comment prose: the property name opens the trimmed line.
         Assert.DoesNotContain(block.Split('\n'), line => line.TrimStart().StartsWith("zoom:", StringComparison.Ordinal));
-    }
-
-    /// <summary>The comment above <c>html { zoom: 0.9; }</c> names <c>.composer-picker</c> among the places that take the scale.</summary>
-    [Fact]
-    public void ZoomComment_NamesComposerPicker()
-    {
-        string text = ReadAppCss();
-        int zoomIndex = text.IndexOf("zoom: 0.9;", StringComparison.Ordinal);
-        Assert.True(zoomIndex >= 0, "Expected html { zoom: 0.9; } in app.css.");
-
-        Assert.True(
-            text[..zoomIndex].Contains(".composer-picker", StringComparison.Ordinal),
-            "Expected .composer-picker in the zoom comment above html { zoom: 0.9; }.");
     }
 
     /// <summary>
