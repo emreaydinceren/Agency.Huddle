@@ -223,128 +223,212 @@ else if (this.loaded is { } task)
                 </div>
             }
 
-            <MudSelect T="TaskState" Variant="Variant.Outlined" Margin="Margin.Dense" Value="effective.Status" ValueChanged="this.OnStatusChanged"
-                       Label="Status" Class="task-detail-status">
-                @foreach (TaskState state in TaskStates.All)
-                {
-                    <MudSelectItem T="TaskState" Value="state">@state.ToWire()</MudSelectItem>
-                }
-            </MudSelect>
+            @* The form is four headed groups (Status and priority, People, Planning, Dates); each property is a label
+               on the left and its value on the right once the drawer is 400px wide, stacked below that (a container
+               query in app.css). MudBlazor's own floating labels stay in the DOM as the accessible name. *@
+            <div class="task-detail-groups">
+                <section class="task-detail-group" aria-labelledby="task-detail-heading-status">
+                    <MudText Typo="Typo.subtitle2" HtmlTag="h3" Class="group-heading" id="task-detail-heading-status">Status and priority</MudText>
+                    <div class="task-detail-props">
+                        <div class="task-detail-prop">
+                            <span class="task-detail-prop-label" aria-hidden="true">Status</span>
+                            <div class="task-detail-prop-value">
+                                <MudSelect T="TaskState" Variant="Variant.Outlined" Margin="Margin.Dense" Value="effective.Status" ValueChanged="this.OnStatusChanged"
+                                           Label="Status" Class="task-detail-status">
+                                    @foreach (TaskState state in TaskStates.All)
+                                    {
+                                        <MudSelectItem T="TaskState" Value="state">@state.ToWire()</MudSelectItem>
+                                    }
+                                </MudSelect>
+                            </div>
+                        </div>
 
-            @if (effective.Status == TaskState.Duplicate)
-            {
-                <TaskPicker Value="effective.DuplicateOf" ValueChanged="this.OnDuplicateOfChanged" Excluding="effective.Id"
-                            Label="Duplicate of" Class="task-detail-duplicate-of" />
-            }
-            else if (effective.Status is TaskState.Cancelled or TaskState.Rejected)
-            {
-                <MudTextField T="string" Variant="Variant.Outlined" Margin="Margin.Dense" Value="@(this.pending.Reason ?? string.Empty)" ValueChanged="this.OnReasonChanged"
-                              Label="Reason (optional)" Class="task-detail-reason" />
-            }
+                        @if (effective.Status == TaskState.Duplicate)
+                        {
+                            <div class="task-detail-prop">
+                                <span class="task-detail-prop-label" aria-hidden="true">Duplicate of</span>
+                                <div class="task-detail-prop-value">
+                                    <TaskPicker Value="effective.DuplicateOf" ValueChanged="this.OnDuplicateOfChanged" Excluding="effective.Id"
+                                                Label="Duplicate of" Class="task-detail-duplicate-of" />
+                                </div>
+                            </div>
+                        }
+                        else if (effective.Status is TaskState.Cancelled or TaskState.Rejected)
+                        {
+                            <div class="task-detail-prop">
+                                <span class="task-detail-prop-label" aria-hidden="true">Reason</span>
+                                <div class="task-detail-prop-value">
+                                    <MudTextField T="string" Variant="Variant.Outlined" Margin="Margin.Dense" Value="@(this.pending.Reason ?? string.Empty)" ValueChanged="this.OnReasonChanged"
+                                                  Label="Reason (optional)" Class="task-detail-reason" />
+                                </div>
+                            </div>
+                        }
 
-            <MudSelect T="TaskPriority" Variant="Variant.Outlined" Margin="Margin.Dense" Value="effective.Priority" ValueChanged="this.OnPriorityChanged" Class="task-detail-priority"
-                       Label="Priority" AdornmentIcon="@TaskColors.Icon(effective.Priority)" Adornment="Adornment.Start">
-                <MudSelectItem T="TaskPriority" Value="TaskPriority.Low">@TaskPriority.Low.ToWire()</MudSelectItem>
-                <MudSelectItem T="TaskPriority" Value="TaskPriority.Medium">@TaskPriority.Medium.ToWire()</MudSelectItem>
-                <MudSelectItem T="TaskPriority" Value="TaskPriority.High">@TaskPriority.High.ToWire()</MudSelectItem>
-                <MudSelectItem T="TaskPriority" Value="TaskPriority.Urgent">@TaskPriority.Urgent.ToWire()</MudSelectItem>
-            </MudSelect>
+                        <div class="task-detail-prop">
+                            <span class="task-detail-prop-label" aria-hidden="true">Priority</span>
+                            <div class="task-detail-prop-value">
+                                <MudSelect T="TaskPriority" Variant="Variant.Outlined" Margin="Margin.Dense" Value="effective.Priority" ValueChanged="this.OnPriorityChanged" Class="task-detail-priority"
+                                           Label="Priority" AdornmentIcon="@TaskColors.Icon(effective.Priority)" Adornment="Adornment.Start">
+                                    <MudSelectItem T="TaskPriority" Value="TaskPriority.Low">@TaskPriority.Low.ToWire()</MudSelectItem>
+                                    <MudSelectItem T="TaskPriority" Value="TaskPriority.Medium">@TaskPriority.Medium.ToWire()</MudSelectItem>
+                                    <MudSelectItem T="TaskPriority" Value="TaskPriority.High">@TaskPriority.High.ToWire()</MudSelectItem>
+                                    <MudSelectItem T="TaskPriority" Value="TaskPriority.Urgent">@TaskPriority.Urgent.ToWire()</MudSelectItem>
+                                </MudSelect>
+                            </div>
+                        </div>
 
-            @if (notice is not null)
-            {
-                <div class="task-detail-wake-notice">@notice</div>
-            }
+                        @if (notice is not null)
+                        {
+                            <div class="task-detail-wake-notice">@notice</div>
+                        }
+                    </div>
+                </section>
 
-            <MudAutocomplete T="AssigneeOption" Variant="Variant.Outlined" Margin="Margin.Dense" Strict="true" SearchFunc="this.SearchAssignees" ToStringFunc="@(o => o?.Name)"
-                              Value="@(effective.Assignee is { } assigneeName ? new AssigneeOption(assigneeName, string.Empty, null) : null)"
-                              ValueChanged="this.OnAssigneeChanged" Class="task-detail-assignee" Label="Assignee">
-                <ItemTemplate Context="option">
-                    @* The Human has no presence dot; a Persona shows one only when its presence is known. *@
-                    <TaskAssignee Name="@option.Name" Presence="@(option.IsHuman ? null : option.Presence)" />
-                    @if (!option.IsHuman && !string.IsNullOrEmpty(option.Title))
-                    {
-                        <MudChip T="string" Size="Size.Small">@option.Title</MudChip>
-                    }
-                </ItemTemplate>
-            </MudAutocomplete>
-            @if (this.Activity.LastWake(task.Id) is { RoomId: { } wokenRoomId, RoomName: { } wokenRoomName })
-            {
-                <MudLink Href="@($"/rooms/{wokenRoomId}")" Class="task-detail-woken-link">@($"Woken in Room {wokenRoomName}")</MudLink>
-            }
+                <section class="task-detail-group" aria-labelledby="task-detail-heading-people">
+                    <MudText Typo="Typo.subtitle2" HtmlTag="h3" Class="group-heading" id="task-detail-heading-people">People</MudText>
+                    <div class="task-detail-props">
+                        <div class="task-detail-prop">
+                            <span class="task-detail-prop-label" aria-hidden="true">Assignee</span>
+                            <div class="task-detail-prop-value">
+                                <MudAutocomplete T="AssigneeOption" Variant="Variant.Outlined" Margin="Margin.Dense" Strict="true" SearchFunc="this.SearchAssignees" ToStringFunc="@(o => o?.Name)"
+                                                  Value="@(effective.Assignee is { } assigneeName ? new AssigneeOption(assigneeName, string.Empty, null) : null)"
+                                                  ValueChanged="this.OnAssigneeChanged" Class="task-detail-assignee" Label="Assignee">
+                                    <ItemTemplate Context="option">
+                                        @* The Human has no presence dot; a Persona shows one only when its presence is known. *@
+                                        <TaskAssignee Name="@option.Name" Presence="@(option.IsHuman ? null : option.Presence)" />
+                                        @if (!option.IsHuman && !string.IsNullOrEmpty(option.Title))
+                                        {
+                                            <MudChip T="string" Size="Size.Small">@option.Title</MudChip>
+                                        }
+                                    </ItemTemplate>
+                                </MudAutocomplete>
+                                @if (this.Activity.LastWake(task.Id) is { RoomId: { } wokenRoomId, RoomName: { } wokenRoomName })
+                                {
+                                    <MudLink Href="@($"/rooms/{wokenRoomId}")" Class="task-detail-woken-link">@($"Woken in Room {wokenRoomName}")</MudLink>
+                                }
+                            </div>
+                        </div>
+                    </div>
+                </section>
 
-            @* One Team/Project pair for both layouts (UX-R09); the Panel groups it under a caption and leaves the fields unlabelled. *@
-            <div class="@(this.Mode == TaskDetailMode.Panel ? "task-detail-team-project" : null)">
-                @if (this.Mode == TaskDetailMode.Panel)
-                {
-                    <span class="task-detail-team-project-label">Team / Project</span>
-                }
-                <MudSelect T="string" Variant="Variant.Outlined" Margin="Margin.Dense" Value="effective.Location.Team" ValueChanged="this.OnTeamChanged" Class="task-detail-team"
-                           Label="@(this.Mode == TaskDetailMode.Panel ? null : "Team")" aria-label="Team">
-                    @foreach (string teamName in this.TeamOptions())
-                    {
-                        <MudSelectItem T="string" Value="teamName">@teamName</MudSelectItem>
-                    }
-                </MudSelect>
-                <MudAutocomplete T="string" Variant="Variant.Outlined" Margin="Margin.Dense" Value="effective.Location.Project" ValueChanged="this.OnProjectChanged"
-                                  CoerceValue="true" SearchFunc="this.SearchProjects" Class="task-detail-project" Label="@(this.Mode == TaskDetailMode.Panel ? null : "Project")" aria-label="Project" />
+                <section class="task-detail-group" aria-labelledby="task-detail-heading-planning">
+                    <MudText Typo="Typo.subtitle2" HtmlTag="h3" Class="group-heading" id="task-detail-heading-planning">Planning</MudText>
+                    <div class="task-detail-props">
+                        @* Team and Project are two rows, each with its own visible label (UX-R09). *@
+                        <div class="task-detail-prop">
+                            <span class="task-detail-prop-label" aria-hidden="true">Team</span>
+                            <div class="task-detail-prop-value">
+                                <MudSelect T="string" Variant="Variant.Outlined" Margin="Margin.Dense" Value="effective.Location.Team" ValueChanged="this.OnTeamChanged" Class="task-detail-team"
+                                           Label="Team" aria-label="Team">
+                                    @foreach (string teamName in this.TeamOptions())
+                                    {
+                                        <MudSelectItem T="string" Value="teamName">@teamName</MudSelectItem>
+                                    }
+                                </MudSelect>
+                            </div>
+                        </div>
+                        <div class="task-detail-prop">
+                            <span class="task-detail-prop-label" aria-hidden="true">Project</span>
+                            <div class="task-detail-prop-value">
+                                <MudAutocomplete T="string" Variant="Variant.Outlined" Margin="Margin.Dense" Value="effective.Location.Project" ValueChanged="this.OnProjectChanged"
+                                                  CoerceValue="true" SearchFunc="this.SearchProjects" Class="task-detail-project" Label="Project" aria-label="Project" />
+                            </div>
+                        </div>
+
+                        <div class="task-detail-prop">
+                            <span class="task-detail-prop-label" aria-hidden="true">Sprint</span>
+                            <div class="task-detail-prop-value">
+                                <div class="task-detail-sprint">
+                                    <MudAutocomplete T="string" Variant="Variant.Outlined" Margin="Margin.Dense" Value="@this.SprintFieldText(task)" ValueChanged="this.OnSprintChanged" Immediate="true"
+                                                      CoerceValue="true" Clearable="true" SearchFunc="this.SearchSprints" Class="task-detail-sprint-field"
+                                                      Label="Sprint" aria-label="Sprint" HelperText="@sprintHelper"
+                                                      Error="@(sprintProblem is not null)" ErrorText="@sprintProblem" />
+                                    @if (this.SprintIsMissing(task))
+                                    {
+                                        <MudTooltip Text="Not in sprints.md">
+                                            <MudIcon Icon="@Icons.Material.Filled.Warning" Color="Color.Warning" Size="Size.Small" Class="task-detail-sprint-missing" aria-label="Not in sprints.md" />
+                                        </MudTooltip>
+                                        <MudButton Size="Size.Medium" Class="task-detail-sprint-clear" Variant="Variant.Text" OnClick="this.ClearSprint">Clear</MudButton>
+                                    }
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="task-detail-prop">
+                            <span class="task-detail-prop-label" aria-hidden="true">Parent</span>
+                            <div class="task-detail-prop-value">
+                                <TaskPicker Value="effective.Parent" ValueChanged="this.OnParentChanged" Excluding="effective.Id" Label="Parent" Class="task-detail-parent" />
+                            </div>
+                        </div>
+
+                        <div class="task-detail-prop">
+                            <span class="task-detail-prop-label" aria-hidden="true">Blocked by</span>
+                            <div class="task-detail-prop-value">
+                                <MudChipSet T="TaskId" AllClosable="true" OnClose="this.OnRemoveBlocker" Class="task-detail-blocked-by-chips">
+                                    @foreach (TaskId blockerId in effective.BlockedBy)
+                                    {
+                                        TaskItem? blockerTask = this.Store.Get(blockerId);
+                                        <MudChip T="TaskId" Size="Size.Small" Value="blockerId" OnClose="this.OnRemoveBlocker" Icon="@(blockerTask is { } bt && bt.Status.IsTerminal() ? Icons.Material.Filled.Check : null)">
+                                            @($"{blockerId} {blockerTask?.Status.ToWire() ?? "?"}")
+                                        </MudChip>
+                                    }
+                                </MudChipSet>
+                                <TaskPicker Value="null" ValueChanged="this.OnAddBlocker" Excluding="effective.Id" Label="Add blocker" Class="task-detail-blocked-by-add" />
+                                @if (this.BlockedBySummary(effective) is { } blockedBySummary)
+                                {
+                                    <div class="task-detail-blocked-by-summary">@blockedBySummary</div>
+                                }
+                            </div>
+                        </div>
+
+                        <div class="task-detail-prop">
+                            <span class="task-detail-prop-label" aria-hidden="true">Tags</span>
+                            <div class="task-detail-prop-value">
+                                <MudChipSet T="string" AllClosable="true" OnClose="this.OnRemoveTag" Class="task-detail-tags-chips">
+                                    @foreach (string tag in effective.Tags)
+                                    {
+                                        <MudChip T="string" Size="Size.Small" Value="@tag" OnClose="this.OnRemoveTag">@tag</MudChip>
+                                    }
+                                </MudChipSet>
+                                <MudTextField T="string" Variant="Variant.Outlined" Margin="Margin.Dense" Immediate="true" Value="@this.tagInput" ValueChanged="this.OnTagInputChanged"
+                                              OnKeyDown="this.OnTagKeyDown" Label="Add tag" Class="task-detail-tags-add" />
+                            </div>
+                        </div>
+                    </div>
+                </section>
+
+                <section class="task-detail-group" aria-labelledby="task-detail-heading-dates">
+                    <MudText Typo="Typo.subtitle2" HtmlTag="h3" Class="group-heading" id="task-detail-heading-dates">Dates</MudText>
+                    <div class="task-detail-props">
+                        <div class="task-detail-prop">
+                            <span class="task-detail-prop-label" aria-hidden="true">Start date</span>
+                            <div class="task-detail-prop-value">
+                                <MudDatePicker Variant="Variant.Outlined" Margin="Margin.Dense" Date="@(effective.StartDate is { } startDate ? startDate.ToDateTime(TimeOnly.MinValue) : (DateTime?)null)"
+                                               DateChanged="this.OnStartDateChanged" Label="Start date" Class="task-detail-start-date"
+                                               DateFormat="@TaskDates.Format" />
+                            </div>
+                        </div>
+                        <div class="task-detail-prop">
+                            <span class="task-detail-prop-label" aria-hidden="true">Due date</span>
+                            <div class="task-detail-prop-value">
+                                <MudDatePicker Variant="Variant.Outlined" Margin="Margin.Dense" Date="@(effective.DueDate is { } dueDate ? dueDate.ToDateTime(TimeOnly.MinValue) : (DateTime?)null)"
+                                               DateChanged="this.OnDueDateChanged" Label="Due date"
+                                               Class="@($"task-detail-due-date{(this.IsOverdue(effective) ? " task-overdue" : string.Empty)}")"
+                                               Adornment="@(this.IsOverdue(effective) ? Adornment.Start : Adornment.None)"
+                                               AdornmentIcon="@(this.IsOverdue(effective) ? Icons.Material.Filled.Warning : null)"
+                                               DateFormat="@TaskDates.Format" />
+                            </div>
+                        </div>
+
+                        <span class="task-detail-created">@($"Created {TaskDates.Display(task.Created)}")</span>
+                        <span class="task-detail-updated">@($"Updated {TaskDates.Display(task.Updated)}")</span>
+                        @if (task.ClosedAt is { } closedAt)
+                        {
+                            <span class="task-detail-closed">@($"Closed {TaskDates.Display(closedAt)}")</span>
+                        }
+                    </div>
+                </section>
             </div>
-
-            <div class="task-detail-sprint">
-                <MudAutocomplete T="string" Variant="Variant.Outlined" Margin="Margin.Dense" Value="@this.SprintFieldText(task)" ValueChanged="this.OnSprintChanged" Immediate="true"
-                                  CoerceValue="true" Clearable="true" SearchFunc="this.SearchSprints" Class="task-detail-sprint-field"
-                                  Label="Sprint" aria-label="Sprint" HelperText="@sprintHelper"
-                                  Error="@(sprintProblem is not null)" ErrorText="@sprintProblem" />
-                @if (this.SprintIsMissing(task))
-                {
-                    <MudTooltip Text="Not in sprints.md">
-                        <MudIcon Icon="@Icons.Material.Filled.Warning" Color="Color.Warning" Size="Size.Small" Class="task-detail-sprint-missing" aria-label="Not in sprints.md" />
-                    </MudTooltip>
-                    <MudButton Size="Size.Medium" Class="task-detail-sprint-clear" Variant="Variant.Text" OnClick="this.ClearSprint">Clear</MudButton>
-                }
-            </div>
-
-            <TaskPicker Value="effective.Parent" ValueChanged="this.OnParentChanged" Excluding="effective.Id" Label="Parent" Class="task-detail-parent" />
-
-            <MudChipSet T="TaskId" AllClosable="true" OnClose="this.OnRemoveBlocker" Class="task-detail-blocked-by-chips">
-                @foreach (TaskId blockerId in effective.BlockedBy)
-                {
-                    TaskItem? blockerTask = this.Store.Get(blockerId);
-                    <MudChip T="TaskId" Size="Size.Small" Value="blockerId" OnClose="this.OnRemoveBlocker" Icon="@(blockerTask is { } bt && bt.Status.IsTerminal() ? Icons.Material.Filled.Check : null)">
-                        @($"{blockerId} {blockerTask?.Status.ToWire() ?? "?"}")
-                    </MudChip>
-                }
-            </MudChipSet>
-            <TaskPicker Value="null" ValueChanged="this.OnAddBlocker" Excluding="effective.Id" Label="Add blocker" Class="task-detail-blocked-by-add" />
-            @if (this.BlockedBySummary(effective) is { } blockedBySummary)
-            {
-                <div class="task-detail-blocked-by-summary">@blockedBySummary</div>
-            }
-
-            <MudChipSet T="string" AllClosable="true" OnClose="this.OnRemoveTag" Class="task-detail-tags-chips">
-                @foreach (string tag in effective.Tags)
-                {
-                    <MudChip T="string" Size="Size.Small" Value="@tag" OnClose="this.OnRemoveTag">@tag</MudChip>
-                }
-            </MudChipSet>
-            <MudTextField T="string" Variant="Variant.Outlined" Margin="Margin.Dense" Immediate="true" Value="@this.tagInput" ValueChanged="this.OnTagInputChanged"
-                          OnKeyDown="this.OnTagKeyDown" Label="Add tag" Class="task-detail-tags-add" />
-
-            <MudDatePicker Variant="Variant.Outlined" Margin="Margin.Dense" Date="@(effective.StartDate is { } startDate ? startDate.ToDateTime(TimeOnly.MinValue) : (DateTime?)null)"
-                           DateChanged="this.OnStartDateChanged" Label="Start date" Class="task-detail-start-date"
-                           DateFormat="@TaskDates.Format" />
-            <MudDatePicker Variant="Variant.Outlined" Margin="Margin.Dense" Date="@(effective.DueDate is { } dueDate ? dueDate.ToDateTime(TimeOnly.MinValue) : (DateTime?)null)"
-                           DateChanged="this.OnDueDateChanged" Label="Due date"
-                           Class="@($"task-detail-due-date{(this.IsOverdue(effective) ? " task-overdue" : string.Empty)}")"
-                           Adornment="@(this.IsOverdue(effective) ? Adornment.Start : Adornment.None)"
-                           AdornmentIcon="@(this.IsOverdue(effective) ? Icons.Material.Filled.Warning : null)"
-                           DateFormat="@TaskDates.Format" />
-
-            <span class="task-detail-created">@($"Created {TaskDates.Display(task.Created)}")</span>
-            <span class="task-detail-updated">@($"Updated {TaskDates.Display(task.Updated)}")</span>
-            @if (task.ClosedAt is { } closedAt)
-            {
-                <span class="task-detail-closed">@($"Closed {TaskDates.Display(closedAt)}")</span>
-            }
         </text>;
 
         RenderFragment sideContent = @<text>
@@ -358,7 +442,7 @@ else if (this.loaded is { } task)
                 @if (this.descriptionMode == DescriptionViewMode.Edit)
                 {
                     <MudTextField T="string" Variant="Variant.Outlined" Margin="Margin.Dense" Value="@effective.Description" ValueChanged="this.OnDescriptionChanged"
-                                  Lines="10" Sizing="InputSizing.Auto" MaxLines="30" Class="task-detail-description" />
+                                  Lines="10" Sizing="InputSizing.Auto" MaxLines="30" Label="Description" Class="task-detail-description" />
                 }
                 else
                 {
