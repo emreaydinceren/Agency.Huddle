@@ -1,6 +1,6 @@
 # Application shell, navigation and layout
 
-Prove the Agency.Huddle shell holds together: that the five routes this page exercises (`/`, `/rooms/{RoomId}`, `/teammates`, `/settings`, `/settings/{Tab}`) resolve, that the fixed 240px `MudDrawer` is identical on every one of them, and above all that the shell's own assets actually load. The drawer holds the `Chats` group (the room list, with **New chat** inside it), the `Teams` group, **Teammates**, the `Tasks` and `Library` groups, and a bottom row of two icon-only links, Archived chats and **Settings**. The Tasks, Library and Teams pages (`/tasks…`, `/library`, `/teams/…`) have no shell-level test here. The asset check is the reason this area is tested by hand: `@Assets["..."]` hands back an unresolved key verbatim instead of throwing, so a stale stylesheet or script name renders as an ordinary-looking href that 404s with no build warning, no startup error, no log line and no visual error. That exact failure shipped live for a month after the 2026-09-12 namespace rename. Nothing in this area needs a Claude turn, so every test below is free.
+Prove the Agency.Huddle shell holds together: that the five routes this page exercises (`/`, `/rooms/{RoomId}`, `/teammates`, `/settings`, `/settings/{Tab}`) resolve, that the fixed 240px `MudDrawer` is identical on every one of them, and above all that the shell's own assets actually load. The drawer holds the `Rooms` group (the room list, with **New chat** inside it), the `Teams` group, **Teammates**, the `Tasks` and `Library` groups, and a bottom row of two icon-only links, Archived chats and **Settings**. The Tasks, Library and Teams pages (`/tasks…`, `/library`, `/teams/…`) have no shell-level test here. The asset check is the reason this area is tested by hand: `@Assets["..."]` hands back an unresolved key verbatim instead of throwing, so a stale stylesheet or script name renders as an ordinary-looking href that 404s with no build warning, no startup error, no log line and no visual error. That exact failure shipped live for a month after the 2026-09-12 namespace rename. Nothing in this area needs a Claude turn, so every test below is free.
 
 **43 tests** · 43 free, none paid · about 3.5 hours.
 
@@ -28,7 +28,7 @@ standing conventions. This area adds:
 1. Browse to `http://localhost:5100` in Chrome or Edge. Open DevTools (F12) and keep the Console, Network and Elements tabs available.
 2. In DevTools Network, tick **Disable cache** and leave the tab recording for the whole session. Several tests read its Status column.
 3. Every `curl.exe` oracle in this area runs in `T-B`, so it never disturbs the app.
-4. Confirm the baseline state: the `Chats` group in the sidebar is expanded and lists the one-to-one Rooms `Ada` and `Bo` (the built-in Chief of Staff's Room may be listed too), and both Teammates are **Online** on `/teammates`. A different set means an earlier session left state behind — that is fine for most tests here, but note it, because tests that name `Ada` and `Bo` assume this pair. Re-run `P-LAUNCH-UAT` to return to it.
+4. Confirm the baseline state: the `Rooms` group in the sidebar lists the one-to-one Rooms `Ada` and `Bo` once opened (groups start closed; the group holding the current page opens by itself, so open `Rooms` by clicking it if it is closed) (the built-in Chief of Staff's Room may be listed too), and both Teammates are **Online** on `/teammates`. A different set means an earlier session left state behind — that is fine for most tests here, but note it, because tests that name `Ada` and `Bo` assume this pair. Re-run `P-LAUNCH-UAT` to return to it.
 5. No test in this area needs a Model or an Effort. If a step below appears to ask you to pick one, that step is in the wrong area — stop and report it rather than picking.
 6. Do NOT click **New teammate** on `/teammates` during this area. Opening that card probes the model catalog, which is another area's business and the one place on these pages that can reach an Adapter.
 
@@ -742,7 +742,7 @@ If the Console was cleared by a DevTools setting rather than by a reload, `windo
 **Steps**
 
 1. In the browser, open any room page.
-2. Click **New chat** in the sidebar. It sits inside the `Chats` group, below the Room list (`RoomList.razor:76`), not at the top of the sidebar.
+2. Click **New chat** in the sidebar. It sits inside the `Rooms` group, below the Room list (`RoomList.razor:76`), not at the top of the sidebar.
 3. Confirm a panel opens below the button.
 4. In the DevTools Console, type `document.querySelector('.new-chat .mud-collapse-container').getBoundingClientRect().height > 0` and press Enter.
 5. Read the panel: confirm one checkbox per agent, each with a small coloured dot before the name.
@@ -1277,11 +1277,11 @@ The drawer content is shorter than the viewport in step 6 no matter how small yo
 
 ---
 
-### SHELLNAV-31 — One click on a left-menu item opens an italic preview tab, and a click on a different item replaces it
+### SHELLNAV-31 — One click on a left-menu item opens a preview tab, and a click on a different item replaces it
 
 **Free** · about 5 min
 
-*Tabs ([spec](../../Huddle.Tabs-Specifications.md) §3): browsing from the menu must not pile up tabs. The italic title and the replacement are rendering and click behaviour that only a browser shows.*
+*Tabs ([spec](../../Huddle.Tabs-Specifications.md) §3): browsing from the menu must not pile up tabs. The preview title (regular weight where other tabs are medium) and the replacement are rendering and click behaviour that only a browser shows.*
 
 **Before you start**
 
@@ -1289,15 +1289,15 @@ The drawer content is shorter than the viewport in step 6 no matter how small yo
 
 **Steps**
 
-1. Click **Teammates** in the sidebar once. Look at the strip above the page: note how many tabs there are, the title of the one that opened, and whether the title is in italics.
-2. Click Ada's Room in the sidebar once. Note the tab count, the tab titles, and which is italic.
+1. Click **Teammates** in the sidebar once. Look at the strip above the page: note how many tabs there are, the title of the one that opened, and whether the title is in the lighter regular weight (other tabs are medium; no tab is italic).
+2. Click Ada's Room in the sidebar once. Note the tab count, the tab titles, and which has the lighter regular-weight title.
 3. Click **Teammates** once more, then Bo's Room once. Note the tab count each time.
 
 **Pass if — all of these**
 
-- Step 1 shows exactly one tab, `Teammates`, with an italic title, and the page shows the Teammates list.
-- Step 2 shows exactly one tab: Ada's Room, in italics, in place of `Teammates`.
-- Step 3 ends with exactly one tab, Bo's Room, in italics. The strip never holds more than one tab.
+- Step 1 shows exactly one tab, `Teammates`, with a lighter-weight (regular, not medium) title and no italics, and the page shows the Teammates list.
+- Step 2 shows exactly one tab: Ada's Room, with the lighter regular-weight title, in place of `Teammates`.
+- Step 3 ends with exactly one tab, Bo's Room, with the lighter regular-weight title. The strip never holds more than one tab.
 
 **Fail if — any of these**
 
@@ -1319,22 +1319,22 @@ The drawer content is shorter than the viewport in step 6 no matter how small yo
 
 **Steps**
 
-1. Double-click **Teammates** in the sidebar. Note the tab count and whether the title is in italics.
-2. Click Ada's Room in the sidebar once. Note the tab count and which tab is italic.
-3. Double-click the italic Ada tab in the strip. Note whether the title is still in italics.
+1. Double-click **Teammates** in the sidebar. Note the tab count and whether the title is in the lighter regular weight (other tabs are medium; no tab is italic).
+2. Click Ada's Room in the sidebar once. Note the tab count and which tab has the lighter regular-weight title.
+3. Double-click the regular-weight Ada tab in the strip. Note whether the title is still in the lighter regular weight.
 4. Click Bo's Room once. Note the tab count and titles.
 
 **Pass if — all of these**
 
-- Step 1 shows one tab, `Teammates`, with an upright (non-italic) title.
-- Step 2 shows two tabs: `Teammates` upright and Ada's Room in italics, with Ada's active.
+- Step 1 shows one tab, `Teammates`, with a medium-weight title.
+- Step 2 shows two tabs: `Teammates` medium weight and Ada's Room regular weight, with Ada's active.
 - Step 3 makes Ada's title upright.
-- Step 4 shows three tabs, `Teammates`, Ada and Bo, with Bo's in italics. Nothing was replaced.
+- Step 4 shows three tabs, `Teammates`, Ada and Bo, with Bo's in regular weight. Nothing was replaced.
 
 **Fail if — any of these**
 
 - Step 2 replaces `Teammates` -> the double-click did not keep it.
-- Double-clicking the tab itself does not remove the italics.
+- Double-clicking the tab itself does not give the title the medium weight of a permanent tab.
 
 ---
 
@@ -1408,7 +1408,7 @@ The drawer content is shorter than the viewport in step 6 no matter how small yo
 
 **Steps**
 
-1. Click Ada's Room once, so an italic preview tab opens. Click in the message box and type `draft for Ada` without sending.
+1. Click Ada's Room once, so a regular-weight preview tab opens. Click in the message box and type `draft for Ada` without sending.
 2. Look at the Ada tab's title.
 3. Click **Teammates** once. Note that a new tab opens beside Ada's instead of replacing it.
 4. Click Ada's tab. Read the message box.
@@ -1472,14 +1472,14 @@ The drawer content is shorter than the viewport in step 6 no matter how small yo
 
 **Steps**
 
-1. Read the tab strip: three tabs, `Teammates`, `Settings`, and Ada's Room in italics.
+1. Read the tab strip: three tabs, `Teammates`, `Settings`, and Ada's Room in regular weight.
 2. Navigate the browser to the `Teammates` address and press Enter, so the page reloads on a different tab from the one active before.
 3. Read the strip again after about two seconds.
 4. Stop the app and start it again with `P-LAUNCH-UAT`, open the app, and read the strip once more.
 
 **Pass if — all of these**
 
-- Step 3 shows the same three tabs in the same order, `Teammates` active, Ada's Room still in italics.
+- Step 3 shows the same three tabs in the same order, `Teammates` active, Ada's Room still in regular weight.
 - Step 4 shows the same tabs again.
 
 **Fail if — any of these**
@@ -1543,8 +1543,8 @@ The drawer content is shorter than the viewport in step 6 no matter how small yo
 - Step 1 shows a menu at the pointer with, in order, Pin Tab, Move Left, Move Right and Close, each with an icon.
 - Step 2 moves `Settings` to the start of the strip as its gear icon alone, with no × and no title text; hovering shows "Settings".
 - Step 3's first item reads **Unpin Tab**.
-- Step 4's new italic tab opens after the pinned tab and the others, never in front of it.
-- Step 5 puts `Settings` back as a titled tab just after any pinned tabs, and it stays upright (not italic).
+- Step 4's new regular-weight tab opens after the pinned tab and the others, never in front of it.
+- Step 5 puts `Settings` back as a titled tab just after any pinned tabs, and it stays medium weight (not the lighter preview weight).
 
 **Fail if — any of these**
 
@@ -1607,7 +1607,7 @@ The drawer content is shorter than the viewport in step 6 no matter how small yo
 **Pass if — all of these**
 
 - Step 1 focuses the left pane's existing `Teammates` tab; no second `Teammates` tab appears.
-- Step 2 opens an italic `All Tasks` preview tab in the right pane, beside `Settings`, and not in the left pane.
+- Step 2 opens a regular-weight `All Tasks` preview tab in the right pane, beside `Settings`, and not in the left pane.
 
 **Fail if — any of these**
 
@@ -1680,7 +1680,7 @@ The drawer content is shorter than the viewport in step 6 no matter how small yo
 
 **Before you start**
 
-- `P-LAUNCH-UAT`. Open a Room from the `Chats` group in the sidebar.
+- `P-LAUNCH-UAT`. Open a Room from the `Rooms` group in the sidebar.
 
 **Steps**
 
@@ -1691,10 +1691,10 @@ The drawer content is shorter than the viewport in step 6 no matter how small yo
 
 **Pass if — all of these**
 
-- Every page has a slim bar above it: *Chats › the Room's name* on a Room, *Teams › Team › Project* on a Project, a single crumb on Teammates and Settings.
-- The page title text under the bar is not repeated on Teammates, Settings, Library, Team and Project pages.
+- Every page has a slim bar above it: *Rooms* alone on a Room (the Room's name is the page's own heading, not a crumb), *Teams › {Team}* on a Project, *Teams* alone on a Team, a single crumb on Teammates and Settings.
+- The page title text under the bar is not repeated on Teammates, Settings and Library pages; a Room, Team or Project draws its own name as the page heading under the bar, and the bar holds only its ancestors.
 - Step 3 changes the same tab to the Team page, leaves the tab count unchanged, and the Team's name in the bar is plain text afterwards.
-- Step 4 shows the new name in the tab and in the last crumb.
+- Step 4 shows the new name in the tab and in the Room's heading; the crumb still reads `Rooms`.
 
 **Fail if — any of these**
 
@@ -1717,7 +1717,7 @@ The drawer content is shorter than the viewport in step 6 no matter how small yo
 **Steps**
 
 1. Look at the top of each pane.
-2. Focus the right pane, then click the Team's name in the left pane's bar if it has one, otherwise click *Chats* in the left Room's bar.
+2. Focus the right pane, then click the Team's name in the left pane's bar if it has one, otherwise click *Rooms* in the left Room's bar.
 3. Look at both panes and the sidebar's highlight.
 
 **Pass if — all of these**

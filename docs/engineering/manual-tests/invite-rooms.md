@@ -75,7 +75,7 @@ If the page is blank white rather than showing the empty-state sentence, the cir
 
 **Steps**
 
-1. Click **New chat** in the sidebar's Chats group, just under the Room list.
+1. Click **New chat** in the sidebar's Rooms group, just under the Room list.
 2. In the DevTools Console, type `document.querySelector('.new-chat .mud-collapse-container').getBoundingClientRect().height > 0` and press Enter — confirms the panel is genuinely open, not merely present in the DOM.
 3. Count the checkbox rows in the panel that opens and read each row's text.
 4. For each row, hover the small round dot immediately left of the name and read its tooltip.
@@ -874,7 +874,7 @@ If the textarea does NOT clear, check whether you pressed Shift+Enter (which ins
 If `gamma` is not in the candidate set (the `/invite` returns `Unknown agent @gamma`), the `gamma` terminal has stopped. Restart it with `pwsh tools/echo-bot.ps1 -Name gamma`, wait for the sidebar entry, and retry. Do not record a fail for an absent bot.
 
 > [!NOTE]
-> A Room can be renamed by hand (issue #43), and since 2026-09-21 it can also be **archived or deleted** from the context menu on its sidebar row — see [ADR-0018](../../adr/0018-a-room-can-be-archived-or-deleted.md). A Room still cannot be *left*: membership changes only by Invitation, and there is no control anywhere that removes one Member from a Room. Archiving hides a Room from the sidebar and is reversible from **Archived Chats**, bottom-left; deleting removes the Room and its Transcript for good. A Room name is still always derived until somebody renames it.
+> A Room can be renamed by hand (issue #43), and since 2026-09-21 it can also be **archived or deleted** from the context menu on its sidebar row — see [ADR-0018](../../adr/0018-a-room-can-be-archived-or-deleted.md). A Room still cannot be *left*: membership changes only by Invitation, and there is no control anywhere that removes one Member from a Room. Archiving hides a Room from the sidebar and is reversible from **Archived Rooms**, bottom-left; deleting removes the Room and its Transcript for good. A Room name is still always derived until somebody renames it.
 
 ### INVITEROOMS-21 — An Agent belongs to at most one two-Member Room: after an invite, the next registration mints a fresh Direct Room
 

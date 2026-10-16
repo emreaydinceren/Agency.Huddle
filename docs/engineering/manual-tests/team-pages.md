@@ -361,22 +361,22 @@ writing the file itself with its own tools, judged by the model) is not covered 
 **Free** · about 2 min
 
 *Proves that a Team folder with no Teammate carrying its label (an orphaned Team) is listed in the
-sidebar with a muted "No members" hint, its Members page opens and works, and hiring a draft
+sidebar with a count of `0` (its tooltip reads "No members"), its Members page opens and works, and hiring a draft
 there makes it active.*
 
 **Steps**
 
 1. Create the folder `<data>\Teams\Legal\` in a file explorer. Add no Teammate to it.
-2. In the sidebar, verify `Legal` appears in the Teams list with a muted "No members" hint (wait a few seconds; reload the page if it has not appeared).
+2. In the sidebar, verify `Legal` appears in the Teams list (open the Teams group first) with a trailing count of `0`; hover it and the tooltip reads "No members" (wait a few seconds; reload the page if it has not appeared).
 3. Click `Legal` in the sidebar.
 4. On the Members page, click **Add** on any role card, then **Save changes**.
 
 **Pass if**
 
 - The Team is listed and clickable even with no members.
-- The "No members" hint appears muted (grey, italic text, not an error).
+- The count beside `Legal` is `0` in plain caption text, its tooltip reads "No members", and it is not an error.
 - The Members page opens with the role cards and an empty roster ("No Teammates yet. Add a role above.") before the add.
-- After saving, the "No members" hint disappears and the new Teammate is on the roster as a member.
+- After saving, the count rises to `1` and the tooltip no longer reads "No members", and the new Teammate is on the roster as a member.
 
 **Fail if**
 

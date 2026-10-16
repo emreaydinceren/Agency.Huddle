@@ -5,6 +5,8 @@ The deliverable-by-deliverable plan for building
 `/Execute-Project-Plan` and track it in [§9](#9-tracker) with `agents/scripts/Set-Tracker.ps1`. The
 manager reads [DeliveryPlaybook.md](../../agents/DeliveryPlaybook.md) before the first dispatch.
 
+> **Note (2026-10-16): the 90% zoom is gone.** [ADR-0056](../adr/0056-the-ui-renders-at-100-percent-with-a-px-type-scale.md) removed `html { zoom: 0.9 }`, the popover zoom cancel and every `/ 0.9`. The zoom rules, `calc(... / 0.9)` sizes and "at 90%" checks below are the plan as written, not current behaviour: a size in a stylesheet is the size on screen.
+
 **Written:** 2026-10-12, revised the same day against `main` at `4864ef6` (PR #162 delivered the Top
 Bar) and the owner's answers to the open points · **Status:** not started; D10 delivered · **Spec:**
 `docs/Huddle.GlobalSearch-Specifications.md` (cited below as **§n**, decisions **D-n**, tests
