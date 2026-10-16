@@ -1848,8 +1848,12 @@ a.team-ref,
     color: var(--mud-palette-text-secondary);
 }
 
+/* A {{token}} is a quiet tag chip in the mono face at 12px. */
 .prompts-field-placeholder {
-    padding: 4px 8px;
+    padding: 2px 8px;
+    font-family: var(--font-mono);
+    font-size: var(--mud-typography-caption-size);
+    color: var(--mud-palette-text-primary);
     background: var(--mud-palette-background-gray);
     border-radius: calc(var(--mud-default-borderradius) * 0.75);
 }
@@ -1864,6 +1868,25 @@ a.team-ref,
 .settings-stored-at {
     margin: 0 0 8px 0;
     color: var(--mud-palette-text-secondary);
+}
+
+/* The intro is body text (14px); the path line is meta (12px) with the path in the mono face. */
+.settings-intro {
+    font-size: var(--mud-typography-body1-size);
+}
+
+.settings-stored-at {
+    font-size: var(--mud-typography-caption-size);
+}
+
+.settings-stored-at code {
+    font-family: var(--font-mono);
+    font-size: var(--mud-typography-caption-size);
+}
+
+/* Settings limits its content to a readable width but starts at the page's left edge (S8, DS-10). */
+.mud-container.settings-page {
+    max-width: 960px;
 }
 
 /* The Prompts panel's Save and Reset all, kept in reach of a long form (UX-011). */
@@ -3287,8 +3310,16 @@ a.team-ref,
     gap: 24px;
 }
 
+/* The title and its subtitle stack: the subtitle is its own 13px secondary line under the title (S10). */
+.page-header-titles {
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+}
+
 .page-header-subtitle {
     color: var(--mud-palette-text-secondary);
+    font-size: var(--mud-typography-body2-size);
 }
 
 .build-stepper {
@@ -3348,7 +3379,7 @@ a.team-ref,
 
 .build-step-label {
     font-size: var(--mud-typography-body2-size);
-    font-weight: 600;
+    font-weight: 500;
 }
 
 .build-step-todo .build-step-label {
@@ -3396,14 +3427,30 @@ a.team-ref,
     max-width: 32rem;
 }
 
+/* Cards wrap into rows; the grid never scrolls sideways (S9, S10). */
 .team-type-grid {
     display: grid;
-    grid-template-rows: repeat(2, auto);
-    grid-auto-flow: column;
-    grid-auto-columns: 16rem;
+    grid-template-columns: repeat(auto-fill, minmax(16rem, 1fr));
     gap: 12px;
-    overflow-x: auto;
-    padding-bottom: 8px;
+}
+
+/* The roles are narrower cards, about 220px wide, in the same wrapping grid. */
+.role-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, 220px);
+    gap: 12px;
+}
+
+/* A sub-heading with its count beside it ("Roster · 4 members"). */
+.build-team-subhead {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: baseline;
+    gap: 8px;
+}
+
+.build-team-subhead .chip-meta::before {
+    content: "\00b7\00a0";
 }
 
 .team-type-card {
@@ -3444,46 +3491,13 @@ a.team-ref,
     width: 2rem;
     height: 2rem;
     border-radius: 50%;
-}
-
-.team-type-tint-default {
     color: var(--mud-palette-text-secondary);
     background: var(--mud-palette-background-gray);
 }
 
-.team-type-tint-primary {
+.team-type-card-selected .team-type-icon {
     color: color-mix(in srgb, var(--mud-palette-primary) 70%, var(--mud-palette-text-primary));
     background: color-mix(in srgb, var(--mud-palette-primary) 14%, var(--mud-palette-surface));
-}
-
-.team-type-tint-secondary {
-    color: var(--mud-palette-secondary);
-    background: color-mix(in srgb, var(--mud-palette-secondary) 14%, var(--mud-palette-surface));
-}
-
-.team-type-tint-tertiary {
-    color: var(--mud-palette-tertiary);
-    background: color-mix(in srgb, var(--mud-palette-tertiary) 14%, var(--mud-palette-surface));
-}
-
-.team-type-tint-info {
-    color: var(--mud-palette-info);
-    background: color-mix(in srgb, var(--mud-palette-info) 14%, var(--mud-palette-surface));
-}
-
-.team-type-tint-success {
-    color: var(--mud-palette-success);
-    background: color-mix(in srgb, var(--mud-palette-success) 14%, var(--mud-palette-surface));
-}
-
-.team-type-tint-warning {
-    color: var(--mud-palette-warning);
-    background: color-mix(in srgb, var(--mud-palette-warning) 14%, var(--mud-palette-surface));
-}
-
-.team-type-tint-error {
-    color: var(--mud-palette-error);
-    background: color-mix(in srgb, var(--mud-palette-error) 14%, var(--mud-palette-surface));
 }
 
 .team-type-text {
@@ -3517,14 +3531,6 @@ a.team-ref,
     gap: 4px 8px;
     font-size: var(--mud-typography-caption-size);
     color: var(--mud-palette-text-secondary);
-}
-
-.team-type-owned {
-    padding: 4px 8px;
-    border: 1px solid var(--mud-palette-divider);
-    border-radius: 999px;
-    font-weight: 600;
-    color: var(--mud-palette-text-primary);
 }
 
 .team-type-check {
@@ -3879,6 +3885,9 @@ a.team-ref,
 
 .role-card > .team-type-card {
     flex: 1 1 auto;
+}
+
+.role-card-custom > .team-type-card {
     padding-inline-end: 64px;
 }
 
@@ -3917,8 +3926,14 @@ a.team-ref,
 
 .role-card-body {
     flex: 1 1 auto;
-    padding-inline-end: 64px;
     cursor: default;
+}
+
+/* A role shows its whole description, up to three lines at 13px. */
+.role-card .team-type-tagline {
+    -webkit-line-clamp: 3;
+    line-clamp: 3;
+    overflow-wrap: anywhere;
 }
 
 .role-card-body:hover {
@@ -3943,7 +3958,7 @@ a.team-ref,
 }
 
 .role-card-add {
-    margin-inline-start: auto;
+    margin-inline-end: auto;
 }
 
 .roster-empty {
@@ -3966,7 +3981,7 @@ a.team-ref,
 
 .roster-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(16rem, 1fr));
+    grid-template-columns: repeat(auto-fill, minmax(20rem, 1fr));
     gap: 12px;
 }
 
@@ -4008,7 +4023,7 @@ a.team-ref,
 }
 
 .roster-name {
-    font-size: var(--mud-typography-subtitle1-size);
+    font-size: var(--mud-typography-subtitle2-size);
     font-weight: 600;
 }
 
@@ -4055,7 +4070,8 @@ a.team-ref,
 
 .roster-actions {
     display: flex;
-    flex-wrap: wrap;
+    flex-wrap: nowrap;
+    align-items: center;
     gap: 4px;
     padding-top: 8px;
     border-top: 1px solid var(--mud-palette-divider);
@@ -4076,10 +4092,8 @@ a.team-ref,
 }
 
 .roster-skills {
-    padding: 2px 8px;
-    border: 1px solid var(--mud-palette-divider);
-    border-radius: 999px;
     font-size: var(--mud-typography-caption-size);
+    color: var(--mud-palette-text-secondary);
 }
 
 .roster-setup {
@@ -4110,15 +4124,24 @@ a.team-ref,
     color: var(--mud-palette-error);
 }
 
+/* "Member" and "New" are meta text, not chips. */
 .roster-state {
-    padding: 2px 8px;
-    border-radius: 999px;
     font-size: var(--mud-typography-caption-size);
-    background: var(--mud-palette-background-gray);
+    color: var(--mud-palette-text-secondary);
 }
 
 .roster-state-new {
-    background: color-mix(in srgb, var(--mud-palette-primary) 14%, var(--mud-palette-surface));
+    font-weight: 600;
+}
+
+/* The Team page's save bar appears only with unsaved changes and pins to the bottom of the pane. */
+.build-team-savebar {
+    position: sticky;
+    bottom: 0;
+    z-index: 1;
+    padding: 12px 0;
+    background: var(--mud-palette-surface);
+    border-top: 1px solid var(--mud-palette-divider);
 }
 
 .build-team-manager {
