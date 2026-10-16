@@ -30,13 +30,13 @@ public sealed class ShellSidebarRowsTests
         Assert.Matches(@"<NavTabLink Href=""/teammates""[^>]*Class=""nav-section-link""", markup);
     }
 
-    /// <summary>The <c>nav-section-link</c> rule gives the subtitle2 (14px), weight-600, secondary-colour header look of the group headers (UX-014).</summary>
+    /// <summary>The <c>nav-section-link</c> rule gives the caption (12px), weight-600, secondary-colour header look of the group headers (UX-014).</summary>
     [Fact]
     public void AppCss_SectionLinkRule_MatchesTheGroupHeaders()
     {
         string rule = ShellSidebarRowsTests.RuleBody(".nav-section-link .mud-nav-link-text");
 
-        ShellSidebarRowsTests.SourceHas(rule, "font-size: var(--mud-typography-subtitle2-size)");
+        ShellSidebarRowsTests.SourceHas(rule, "font-size: var(--mud-typography-caption-size)");
         ShellSidebarRowsTests.SourceHas(rule, "font-weight: 600");
         ShellSidebarRowsTests.SourceHas(rule, "var(--mud-palette-text-secondary)");
     }
@@ -48,7 +48,7 @@ public sealed class ShellSidebarRowsTests
         string css = ShellSidebarRowsTests.AppCss();
         string rule = ShellSidebarRowsTests.RuleBody(".nav-settings .mud-nav-link");
 
-        Assert.Matches(@"--nav-row-height\s*:\s*36px\s*;", css);
+        Assert.Matches(@"--nav-row-height\s*:\s*32px\s*;", css);
         ShellSidebarRowsTests.SourceHas(rule, "min-height: var(--nav-row-height)");
         ShellSidebarRowsTests.SourceHas(rule, "font-size: var(--mud-typography-body2-size)");
     }

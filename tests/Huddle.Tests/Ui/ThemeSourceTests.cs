@@ -33,6 +33,9 @@ public sealed partial class ThemeSourceTests
         "--nav-indent-2",
         "--nav-row-height",
 
+        // The 18px icon of a sidebar row and of a tab-rail label, declared beside the row height (S2, C6).
+        "--icon-size-row",
+
         "--mud-appbar-height",
         "--mud-default-borderradius",
         "--mud-drawer-width-left",
