@@ -2,7 +2,10 @@ using AngleSharp.Dom;
 using Bunit;
 using Microsoft.AspNetCore.Components;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Options;
+using Agency.Huddle.App;
 using Agency.Huddle.App.Components.Layout;
+using Agency.Huddle.App.Sidebar;
 using Agency.Huddle.App.Tabs;
 
 namespace Agency.Huddle.Tests.Ui.Layout;
@@ -18,6 +21,7 @@ public sealed class RightSidebarTests
         ctx.Services.AddSingleton<TabService>();
         ctx.Services.AddSingleton<RightSidebarService>();
         ctx.Services.AddSingleton(StubPages.Routes());
+        ctx.Services.AddSingleton(new SidebarPanelCatalog([], Options.Create(new TeamOptions())));
         ctx.Services.GetRequiredService<NavigationManager>().NavigateTo(url);
         return ctx;
     }

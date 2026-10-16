@@ -1,12 +1,18 @@
 @*
     The Right sidebar (S4): a persistent drawer on the window's right edge, under the Top bar, opened
-    and closed by RightSidebarToggle (S1c). Until the panel host lands (T4.3) it draws only its one-line
-    empty state, and only while it is open.
+    and closed by RightSidebarToggle (S1c). It is the panel host (Spec D-3, D-5, D-7): while open, it
+    draws the catalog's panels for the active Tab's Subject, each in a SidebarPanelFrame keyed by panel
+    id and Subject Key, so a new snapshot of the same Subject updates a panel and a new Subject remounts
+    it. With no Subject, or no panel that applies, it draws the one-line empty state. Closed, it mounts
+    nothing, so panels are disposed.
 *@
+@using Agency.Huddle.App.Components.Sidebar
+@using Agency.Huddle.App.Sidebar
 @using Agency.Huddle.App.Tabs
 @implements IDisposable
 @inject RightSidebarService Sidebar
 @inject TabService Tabs
+@inject SidebarPanelCatalog Catalog
 
 <MudDrawer Open="@this.Sidebar.IsOpen"
            Anchor="Anchor.End"
@@ -19,7 +25,22 @@
            aria-label="Right sidebar">
     @if (this.Sidebar.IsOpen)
     {
-        <EmptyState Text="This page has nothing to show here." />
+        Tab? tab = this.Tabs.Active;
+        PageSubject? subject = this.Sidebar.SubjectFor(tab?.Id);
+        IReadOnlyList<SidebarPanel> panels = this.Catalog.For(subject);
+        if (tab is null || subject is null || panels.Count == 0)
+        {
+            <EmptyState Text="This page has nothing to show here." />
+        }
+        else
+        {
+            foreach (SidebarPanel panel in panels)
+            {
+                <SidebarPanelFrame @key="@(panel.Id + "|" + subject.Key)" PanelId="@panel.Id" Title="@panel.Title" Icon="@panel.Icon">
+                    <DynamicComponent Type="@panel.Component" Parameters="@(new Dictionary<string, object?> { ["Subject"] = subject, ["TabId"] = tab.Id })" />
+                </SidebarPanelFrame>
+            }
+        }
     }
 </MudDrawer>
 
