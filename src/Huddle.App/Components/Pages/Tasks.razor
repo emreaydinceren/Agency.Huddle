@@ -177,15 +177,15 @@
             <div class="tasks-empty">
                 @if (this.Store.All.Count == 0)
                 {
-                    <EmptyState Text="No tasks yet." />
+                    <EmptyState Title="No tasks yet" Text="Choose New task in the toolbar to add the first one." />
                 }
                 else if (!string.IsNullOrWhiteSpace(this.search) && this.FilteredTasks(null).Count > 0)
                 {
-                    <EmptyState Text="@($"No tasks match '{this.search}'.")" />
+                    <EmptyState Title="@($"No tasks match '{this.search}'")" Text="Try a different search." />
                 }
                 else
                 {
-                    <EmptyState Text="No tasks match this View.">
+                    <EmptyState Title="No tasks match this View" Text="Reset the filters to see every task.">
                         <Action>
                             <MudButton Variant="Variant.Text" Size="Size.Medium" OnClick="this.ResetOverrides" Class="tasks-empty-action">Reset filters</MudButton>
                         </Action>

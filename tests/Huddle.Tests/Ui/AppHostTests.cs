@@ -17,7 +17,7 @@ public sealed class AppHostTests
 
         var html = await client.GetStringAsync("/", ct);
 
-        Assert.Contains("No rooms yet. Start an agent to create one.", html, StringComparison.Ordinal);
+        Assert.Contains("No rooms yet", html, StringComparison.Ordinal);
     }
 
     [Fact]

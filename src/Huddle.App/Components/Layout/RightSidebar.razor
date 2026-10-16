@@ -24,7 +24,7 @@
         IReadOnlyList<RightSidebarSection> sections = this.Sidebar.SectionsFor(this.Tabs.Active?.Id);
         if (sections.Count == 0)
         {
-            <EmptyState Text="This page has nothing to show here." />
+            <EmptyState Title="Nothing to show here" Text="Open a page with details, such as a Room or a Task, to see them here." />
         }
         else
         {

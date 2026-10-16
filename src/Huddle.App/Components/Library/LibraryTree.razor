@@ -56,9 +56,11 @@
                         <span class="library-tree-node-name" @onclick="@(() => this.OnNameClickAsync(value))">@item.Text</span>
                         @if (this.orphanFlags.TryGetValue(value, out bool isOrphan) && isOrphan)
                         {
-                            <span class="library-tree-orphan" aria-label="@OrphanReason(item.Text ?? string.Empty)">
-                                <MudIcon Icon="@Icons.Material.Outlined.Warning" Size="Size.Small" />
-                            </span>
+                            <MudTooltip Text="@OrphanReason(item.Text ?? string.Empty)">
+                                <span class="library-tree-orphan" role="img" aria-label="@OrphanReason(item.Text ?? string.Empty)">
+                                    <MudIcon Icon="@Icons.Material.Outlined.Warning" Size="Size.Small" />
+                                </span>
+                            </MudTooltip>
                         }
                         <MudMenu @ref="this.rowMenus[value]" PositionAtCursor="true" Class="library-tree-menu">
                             <ActivatorContent Context="menuContext">
