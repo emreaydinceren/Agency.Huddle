@@ -437,6 +437,84 @@ public sealed class PersonaSupervisorLifecycleTests
         Assert.Equal(PersonaText("nova", "You are Nova."), factory.Calls[^1].Persona.Text);
     }
 
+    /// <summary>
+    /// An edit saved while the Persona's host is still starting - after the start has read the Persona,
+    /// before the host is running - is applied once the start finishes, by a restart on the new text.
+    /// It used to be dropped: the start had already read the old text, and the change event skipped a
+    /// starting Persona on the belief that the start would read it later.
+    /// </summary>
+    [Fact]
+    public async Task PersonaEditedWhileStarting_IsAppliedOnceTheStartFinishes()
+    {
+        using CancellationTokenSource cts = CancellationTokenSource.CreateLinkedTokenSource(TestContext.Current.CancellationToken);
+        cts.CancelAfter(TimeSpan.FromSeconds(10));
+        CancellationToken ct = cts.Token;
+        await using var fixture = await PipeHostFixture.StartAsync(
+            new Dictionary<string, string?> { ["Team:Acp:Enabled"] = "true" }, ct);
+        var options = fixture.Services.GetRequiredService<IOptions<TeamOptions>>();
+        var personaStore = fixture.Services.GetRequiredService<PersonaStore>();
+        TaskCompletionSource release = new(TaskCreationOptions.RunContinuationsAsynchronously);
+        FakeAgentHostFactory factory = new() { StartGate = release.Task };
+        var resolver = fixture.Services.GetRequiredService<AdapterProfileResolver>();
+        using var skillStore = NewSkillStore(options);
+        using var supervisor = new PersonaSupervisor(options, personaStore, factory, resolver, NewHealth(), new FakePromptSource(), new RoomFollows(), NullLoggerFactory.Instance, NullLogger<PersonaSupervisor>.Instance, skillStore);
+
+        personaStore.Add(Identity("nova"), "You are Nova.");
+        await supervisor.StartAsync(ct);
+        await WaitUntilAsync(() => factory.Calls.Count >= 1, ct);
+
+        personaStore.Update("nova", PersonaText("nova", "You are a changed Nova."), model: null, effort: null, workMode: null);
+        factory.StartGate = null;
+        release.SetResult();
+
+        await WaitUntilAsync(() => factory.Calls.Count >= 2, ct);
+        await WaitUntilAsync(() => supervisor.RunningHostCount >= 1, ct);
+        await supervisor.StopAsync(ct);
+
+        Assert.Equal(2, factory.Calls.Count);
+        Assert.Equal(PersonaText("nova", "You are a changed Nova."), factory.Calls[^1].Persona.Text);
+    }
+
+    /// <summary>
+    /// A second edit saved while a first edit's restart is still starting is applied too, by one more
+    /// restart, rather than being refused because a restart for that Persona was already in progress.
+    /// </summary>
+    [Fact]
+    public async Task PersonaEditedWhileRestarting_IsAppliedOnceTheRestartFinishes()
+    {
+        using CancellationTokenSource cts = CancellationTokenSource.CreateLinkedTokenSource(TestContext.Current.CancellationToken);
+        cts.CancelAfter(TimeSpan.FromSeconds(10));
+        CancellationToken ct = cts.Token;
+        await using var fixture = await PipeHostFixture.StartAsync(
+            new Dictionary<string, string?> { ["Team:Acp:Enabled"] = "true" }, ct);
+        var options = fixture.Services.GetRequiredService<IOptions<TeamOptions>>();
+        var personaStore = fixture.Services.GetRequiredService<PersonaStore>();
+        FakeAgentHostFactory factory = new();
+        var resolver = fixture.Services.GetRequiredService<AdapterProfileResolver>();
+        using var skillStore = NewSkillStore(options);
+        using var supervisor = new PersonaSupervisor(options, personaStore, factory, resolver, NewHealth(), new FakePromptSource(), new RoomFollows(), NullLoggerFactory.Instance, NullLogger<PersonaSupervisor>.Instance, skillStore);
+
+        personaStore.Add(Identity("nova"), "You are Nova.");
+        await supervisor.StartAsync(ct);
+        await WaitUntilAsync(() => supervisor.RunningHostCount >= 1, ct);
+
+        TaskCompletionSource release = new(TaskCreationOptions.RunContinuationsAsynchronously);
+        factory.StartGate = release.Task;
+        personaStore.Update("nova", PersonaText("nova", "First edit."), model: null, effort: null, workMode: null);
+        await WaitUntilAsync(() => factory.Calls.Count >= 2, ct);
+
+        personaStore.Update("nova", PersonaText("nova", "Second edit."), model: null, effort: null, workMode: null);
+        factory.StartGate = null;
+        release.SetResult();
+
+        await WaitUntilAsync(() => factory.Calls.Count >= 3, ct);
+        await WaitUntilAsync(() => supervisor.RunningHostCount >= 1, ct);
+        await supervisor.StopAsync(ct);
+
+        Assert.Equal(3, factory.Calls.Count);
+        Assert.Equal(PersonaText("nova", "Second edit."), factory.Calls[^1].Persona.Text);
+    }
+
     [Fact]
     public async Task PersonaEffortUnchanged_DoesNotRestartItsHost()
     {

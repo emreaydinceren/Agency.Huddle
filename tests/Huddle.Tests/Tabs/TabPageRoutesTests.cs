@@ -109,7 +109,7 @@ public sealed class TabPageRoutesTests
     [Fact]
     public void TabPageContext_Path_DropsTheQuery()
     {
-        Assert.Equal("/library", new TabPageContext("/library?root=a").Path);
-        Assert.Equal("/tasks/new", new TabPageContext("/tasks/new").Path);
+        Assert.Equal("/library", new TabPageContext("/library?root=a", "t1").Path);
+        Assert.Equal("/tasks/new", new TabPageContext("/tasks/new", "t1").Path);
     }
 }
