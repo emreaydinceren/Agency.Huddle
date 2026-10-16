@@ -15,6 +15,7 @@ using Agency.Huddle.App.NeedsYou;
 using Agency.Huddle.App.Prompts;
 using Agency.Huddle.App.Pipes;
 using Agency.Huddle.App.Services;
+using Agency.Huddle.App.Sidebar;
 using Agency.Huddle.App.Skills;
 using Agency.Huddle.App.Tasks;
 using Agency.Huddle.App.Tasks.Views;
@@ -407,6 +408,17 @@ public static class ServiceCollectionExtensions
         // Scoped: whether this circuit's Right sidebar is open, and what each mounted page put in it.
         services.AddScoped<Tabs.RightSidebarService>();
         services.AddSingleton<Sidebar.SidebarPanelCatalog>();
+        // The Right sidebar's panels (docs/Huddle.RightSidebar-Specifications.md): one registration each, no page changes.
+        services.AddSidebarPanel(new Sidebar.SidebarPanel("members", "Members", MudBlazor.Icons.Material.Filled.Group, 10,
+            static subject => subject is Sidebar.RoomSubject, typeof(Components.Sidebar.MembersPanel)));
+        services.AddSidebarPanel(new Sidebar.SidebarPanel("room-tasks", "Tasks in this chat", MudBlazor.Icons.Material.Filled.TaskAlt, 20,
+            static subject => subject is Sidebar.RoomSubject, typeof(Components.Sidebar.RoomTasksPanel), static options => options.Tasks.Enabled));
+        services.AddSidebarPanel(new Sidebar.SidebarPanel("room-documents", "Documents in this chat", MudBlazor.Icons.Material.Filled.Description, 30,
+            static subject => subject is Sidebar.RoomSubject, typeof(Components.Sidebar.RoomDocumentsPanel), static options => options.Library.Enabled));
+        services.AddSidebarPanel(new Sidebar.SidebarPanel("outline", "Outline", MudBlazor.Icons.Material.Filled.Toc, 10,
+            static subject => subject is Sidebar.DocumentSubject { Kind: Library.LibraryFileKind.Markdown }, typeof(Components.Sidebar.OutlinePanel), static options => options.Library.Enabled));
+        services.AddSidebarPanel(new Sidebar.SidebarPanel("linked-documents", "Linked documents", MudBlazor.Icons.Material.Filled.Link, 20,
+            static subject => subject is Sidebar.DocumentSubject { Kind: Library.LibraryFileKind.Markdown }, typeof(Components.Sidebar.LinkedDocumentsPanel), static options => options.Library.Enabled));
         services.AddScoped<Sidebar.PageCommandBus>();
         services.AddScoped<Components.Shared.TeammateCardOpener>();
 
