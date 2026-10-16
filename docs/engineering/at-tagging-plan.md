@@ -324,6 +324,11 @@ Wave 2 merges in the order L6, L3, L4; wave 3 in the order L8, L10, L9.
 
 ### 3.6 The 90% zoom
 
+> **Superseded by ADR-0056.** The 90% page zoom was removed, so `calc(... / 0.9)` and the zoom
+> cancel on the popover provider no longer apply: a size in a stylesheet is the size on screen. The
+> test `Picker_OpensAboveWithZoomAwareHeight` was renamed `Picker_OpensAboveWithAViewportHeight`, and
+> `ZoomComment_NamesComposerPicker` was removed. The text below is the plan as written.
+
 The page is drawn at 90% (`app.css:19-41`). Every deliverable that writes CSS or checks layout reads
 those lines first (spec §5.6):
 

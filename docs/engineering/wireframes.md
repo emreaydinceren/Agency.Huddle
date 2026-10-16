@@ -87,16 +87,16 @@ this.
 | `S0a` | Providers | `MudThemeProvider`, `MudPopoverProvider`, `MudDialogProvider`, `MudSnackbarProvider` | Draw nothing; menus, dialogs and toasts appear through them |
 | `S0b` | Error banner | `#blazor-error-ui` | Hidden until an unhandled error, then offers Reload |
 | `S1` | Top bar | `TopBar` (`MudAppBar`, fixed, dense) | Three slots: start, centre, end |
-| `S1a` | Breadcrumb | `PageBreadcrumbs` | The trail of the focused pane's active Tab. On the Library page it holds the open file's whole location, "Library › Teammates › Lena › Lena.md": the Library page sets it (`TabService.SetTrail`) each time the open file changes, so the page's own toolbar (`L3a`) does not repeat it. Only "Library" is a link (it opens the page with nothing selected) |
+| `S1a` | Breadcrumb | `PageBreadcrumbs` | The trail of the focused pane's active Tab: ancestors only when the page names itself with an h1. A Room's trail is "Rooms"; a Team page's is "Teams"; a Project page's is "Teams › {Team}"; a Tasks View's is "Tasks › {View name}" (the display name, never the slug). On the Library page it holds the open file's whole location, "Library › Teammates › Lena › Lena.md": the Library page sets it (`TabService.SetTrail`) each time the open file changes, so the page's own toolbar (`L3a`) does not repeat it. Only "Library" is a link (it opens the page with nothing selected) |
 | `S1b` | Search bar | `SearchBar` | Global search; its results open in a dropdown below it |
 | `S1c` | Top bar actions | `RightSidebarToggle`, `ThemeModeToggle` | The first opens and closes the Right sidebar (`S4`): the Material Symbol `dock_to_left`, Primary and `aria-pressed` while open. The second switches between the chosen light and dark Theme |
 | `S2` | Sidebar | `MudDrawer`, persistent, 240px | Always open; not resizable |
-| `S2a` | Needs You card | `NeedsYouCard` | Rooms waiting on the Human |
-| `S2b` | Chats group | `RoomList` (`MudNavGroup`), `RoomNavRow`, `NewChat` | Rooms that belong to no Team. A 1:1 Room's row leads with the Teammate's small avatar, a group Room's with the Chat icon; shared actions in `RoomActions` |
-| `S2c` | Teams group | `TeamsNav` (`MudNavGroup`) | Each Team expands to its Rooms and Projects; each row has a hover menu |
+| `S2a` | Needs You card | `NeedsYouCard` | Rooms waiting on the Human; the count is plain text, not a badge or a coloured chip |
+| `S2b` | Rooms group | `RoomList` (`MudNavGroup` titled "Rooms"), `RoomNavRow`, `NewChat` | Rooms that belong to no Team. Groups are collapsed behind a chevron except the one holding the active page. A list over 8 rows ends in "Show all (N)" (`ShowAllRow`; "Show fewer" once open). A 1:1 Room's row leads with the Teammate's 24px avatar and its presence badge, a group Room's with the Chat icon; shared actions in `RoomActions` |
+| `S2c` | Teams group | `TeamsNav` (`MudNavGroup`) | Each Team is collapsed behind a chevron until opened (or until the route is inside it) and then shows its Rooms and Projects; the opened Teams are remembered. A Team row trails its member count (`sidebar-row-meta`, tooltip "N members" or "No members") instead of an italic "No members". Over 8 rows the list ends in "Show all (N)". Each row has a hover menu |
 | `S2d` | Teammates link | `NavTabLink` to `/teammates` | |
 | `S2e` | Tasks group | `TaskViewNav` (`MudNavGroup`) | Saved Task Views and "New view" |
-| `S2f` | Library link | `LibraryNavLink` | |
+| `S2f` | Library link | `LibraryNavLink` | One link to the Library page. It lists no roots and has no "+ Add folder" |
 | `S2g` | Sidebar footer | `MudNavMenu` `.nav-settings` | Two icon-only 36px rows, Archived chats and Settings, each with an `aria-label` and a tooltip (OP-4), pinned to the bottom |
 | `S3` | Workspace | `MudMainContent` `.main-column` | Also holds the invisible `TabSync`, `TabPersistence` and `LibraryLinkRouter` |
 | `S4` | Right sidebar | `RightSidebar` (`MudDrawer`, end, persistent, 280px) | Drawn dashed: shown only while toggled open from `S1c`; starts closed in each circuit. Holds the blocks the focused pane's active page wrapped in `RightSidebarContent`, sorted by `Order`, each under its optional title. It follows focus to the other pane or another Tab, and a page with no blocks gets an empty state |
@@ -133,12 +133,12 @@ list, notices, cards, composer.
 | Code | Name | Component | Notes |
 | --- | --- | --- | --- |
 | `C1` | Room column | `MudStack` `.room-column`, full height | The list shrinks and scrolls; the composer stays on screen |
-| `C2` | Room header | `.room-header` | Title, actions and members |
-| `C2a` | Rename | `MudIconButton` | Swaps the title for a text field while editing |
+| `C2` | Room header | `.room-header` | The shell crumb is "Rooms" only (`S1a`); below it the Room's name as the h1 (`Typo.h5`), then its actions and its members |
+| `C2a` | Rename | `MudIconButton` | Swaps the title for an outlined text field while editing. The field is h5-sized, takes the title's own size and weight and has no label, so the header does not jump |
 | `C2b` | Copy link | `MudIconButton` | Copies the Room's link |
 | `C3` | Members | `MudAvatarGroup` of `ProfileAvatar`s and a "N Members + you" label | Shows up to four avatars, each opening its profile popover (`O9`), then one "+N" avatar for the rest (`.room-members-more`, drawn by `Chat.razor`: the group's own `Max` is not used, because it empties a hidden avatar and would leave an empty button) |
 | `C3a` | Invite teammate | `InviteTeammate` | Brings a Teammate into the Room |
-| `C4` | Message list | `MessageList`, `.message-list` | The only part of the Room that scrolls |
+| `C4` | Message list | `MessageList`, `.message-list` | The only part of the Room that scrolls. The Transcript column is capped at 760px and centred in a wider pane |
 | `C4a` | Day separator | `.day-separator` | |
 | `C4b` | System row | `.system-row` | A slim, expandable row such as "Task woke Nova" |
 | `C5` | Agent message row | `.message-row` | Avatar gutter on the left |
@@ -177,7 +177,7 @@ error alert, the budget caption and the "continue" notes, which sit in the `C9` 
 | Code | Name | Component | Notes |
 | --- | --- | --- | --- |
 | `T1` | Page container | `MudContainer`, full width, `pa-4` | |
-| `T2` | Header row | First `MudToolBar` of `TaskToolbar` (`SplitHeader`), inside `.tasks-header` | No `h1`: the View name is the breadcrumb's last crumb. The counts (`T2d`) on the left; the AI chip, Group by (`T3c`), `T3a`, the filled New task button and `T2a` on the right |
+| `T2` | Header row | First `MudToolBar` of `TaskToolbar` (`SplitHeader`), inside `.tasks-header` | No `h1`: the View name is the breadcrumb's last crumb ("Tasks › {View name}") and the Tab's title, never the slug. The counts (`T2d`) on the left; the AI chip, Group by (`T3c`), `T3a`, the filled New task button and `T2a` on the right |
 | `T2d` | Counts | `.tasks-counts` | "N open" (not Done, Cancelled, Duplicate or Rejected, over the Tasks the View shows), "N need you" (open and assigned to the Human) and "N all" (every Task in the store) |
 | `T2a` | View actions | `MudMenu`, `MoreVert` icon button | Rename, Fields…, Delete view (Rename and Delete are the sidebar row's menu too) |
 | `T2c` | AI reacting chip | `AiReactingChip` | Tasks an Agent is acting on |
@@ -191,10 +191,11 @@ error alert, the budget caption and the "continue" notes, which sit in the `C9` 
 | `T3d` | Blocked filter | `MudSelect` in the Filter menu (`T3b`), then a `TaskFilterChip` | All, Blocked or Unblocked. Chosen in the Filter menu; once it is not All, a "Blocked: Blocked" chip with a clear button appears in the row. Edits the View's Blocked filter |
 | `T3e` | Search | `SearchField` | The shared outlined, clearable, debounced search box |
 | `T3f` | Dense | `MudSwitch` | |
+| `T3g` | Requests chip | `MudChip`, `.task-toolbar-requests` | Dashed outline while off; Primary-bordered with a Primary tint and a check once on |
 | `T4` | Content | `TaskBoard` or `TaskListView` | Or an empty state with "Reset filters" |
 | `T5` | Column | A `MudDropZone` per lane and column | Header with a label the Human can rename |
-| `T6` | Task card | `TaskCard`, `MudBadge` | Draggable between columns |
-| `T7` | Task detail | `ResizableEndDrawer`, temporary, `Anchor.End` | Header with title ("Task" or "New task") and a close button; holds `TaskDetail` in `pa-4` |
+| `T6` | Task card | `TaskCard`, `MudBadge` | Draggable between columns. No left edge in the column colour. The priority is a tinted chip with an icon. An overdue due date is a warning icon beside the date set bold, never red text. The assignee's presence badge sits on the avatar's rim. On the List, the State and Priority cells are the same tinted chips |
+| `T7` | Task detail | `ResizableEndDrawer`, temporary, `Anchor.End` | Header with the item name as an `h6` title (the Task's id and title, or "New task") and a close button; holds `TaskDetail` in `pa-4`. The form is four headed groups: Status and priority, People, Planning, Dates. From 400px of drawer width and up each field is a label \| value row; narrower, the label sits above the value. Team and Project are separate rows. Created, Updated and Closed sit under Dates. The Description has a label. Tag, blocker and triage chips are quiet; Closed and Request chips are tinted |
 | `T7a` | Resize handle | `.resizable-drawer-handle`, `role="separator"`, `tabindex="0"` | Drag, or press Left and Right (Shift for larger steps, Home and End for the limits), to change the drawer's width |
 
 Not drawn: `TaskDetailDialog`, the dialog form of the detail (see Figure 8). A View has no editor panel: every change to it is saved as it is made.
@@ -231,19 +232,19 @@ slate `B` badges name the same containers.
 
 | Code | Name | Component | Notes |
 | --- | --- | --- | --- |
-| `M1` | Team page container | `MudContainer`, `MaxWidth.False`, `pa-4` (`.team-page-wide` only sizes the panels) | Opens with no title row or `h1`, since the shell breadcrumb (`S1a`) names the Team or Project; a Team page opens with the slim `M2` row. `MaxWidth.Large` applies only to the not-found and "turned off" notices, which are `role="status"` or `role="alert"` as the case needs |
-| `M2` | Duplicate | `MudButton`, Outlined, alone in a right-aligned `MudStack` row (`.team-page-actions`) | At its natural width, above the spend strip; Team pages only, not Project pages |
+| `M1` | Team page container | `MudContainer`, `MaxWidth.False`, `pa-4` (`.team-page-wide` only sizes the panels) | Opens with an h1 (`PageHeader`) naming the Team or Project; the shell breadcrumb (`S1a`) holds only the ancestors, "Teams" for a Team and "Teams › {Team}" for a Project. A Team page's h1 row carries `M2` on its right. `MaxWidth.Large` applies only to the not-found and "turned off" notices, which are `role="status"` or `role="alert"` as the case needs |
+| `M2` | Duplicate | `MudButton`, Outlined, in `PageHeader`'s `Actions` (`.team-page-actions`) | On the right of the Team name's h1 row, at its natural width, above the spend strip; Team pages only, not Project pages |
 | `M3` | Team spend | `TeamSpend` | One line per currency |
 | `M4` | Tabs | `MudTabs` `.team-page-tabs` | Keyed by Team and Project |
 | `M4a` | Tab rail | `MudTabPanel` headers, each with its `TabIcons` entity icon | Members, Files, Tasks, Process, Details (Info icon, always last on a Team page); a Project page and a disabled feature show fewer |
 | `M4b` | Active panel | `TeamRoster`, `TeamFilesTab`, `TeamTasksTab`, `ProcessTab` or `TeamDetails` | Only the selected panel is rendered. The Files panel is the Library explorer alone, with no toolbar above it: its search, New note and New folder are in the tree header (`L2c`) |
 | `M5` | Search | Retired | Moved into the Library tree header (`L2c`); the Tasks panel keeps its own search in its toolbar (`T3e`). The code stays retired |
 | `M6` | Members panel | `TeamRoster`: `BuildTeam` with `MembersOnly` | Drawn in Figure 6 with the reused containers badged as in Figure 9: the roles grid (`B9a`), the roster (`B12`, the cards of `B9c`) and the save row (`B10` without its heading). Build a team's Hire section (`B9`, `B9a`, `B9c`) for the Team, with no number badge, then the Manager select and a Save row (`B10` without its heading). A member's roster card adds its status dot before the Name and, beside Edit, Message (once it has connected; opens the Team's own one-to-one) and a Remove menu: Remove from Team (keeps the Teammate) or Delete Teammate. Save changes redraws the panel in place |
-| `G1` | Settings container | `MudContainer`, `MaxWidth.Large` | |
+| `G1` | Settings container | `MudContainer`, `MaxWidth.Large` | Content is left-aligned, not centred |
 | `G1a` | Reset all | `ResetAllControl` | In the Prompts panel's action row beside Save; "Reset all to defaults", disabled until a prompt has been changed, then asks inline (`InlineConfirm`) |
 | `G2` | Tabs | `MudTabs` | The active tab follows the route; under a `PageHeader` "Settings" |
 | `G2a` | Tab rail | | Prompts, Appearance, Personas, Skills, Team Types, Library, each with an icon |
-| `G3` | Active panel | `PromptsPanel`, `Appearance`, `Personas`, `SkillsPanel`, `TeamTypesPanel` or `LibraryPanel` | Each opens with `SettingsIntro`, `StoredAt` and an action row |
+| `G3` | Active panel | `PromptsPanel`, `Appearance`, `Personas`, `SkillsPanel`, `TeamTypesPanel` or `LibraryPanel` | Each opens with `SettingsIntro`, `StoredAt` and an action row. The Prompts and Skills panels mark placeholders, status and source with tinted chips that carry an icon |
 | `G3a` | Save | `MudButton` Filled | Prompts panel only, in a sticky action row with Reset all |
 
 ## Figure 7: The Teammates page
@@ -254,13 +255,13 @@ slate `B` badges name the same containers.
 
 | Code | Name | Component | Notes |
 | --- | --- | --- | --- |
-| `P1` | Page container | `MudContainer`, `MaxWidth.Large` | Opens with the `PageHeader` "Teammates", then a line of explanatory text |
+| `P1` | Page container | `MudContainer`, `MaxWidth.Large` | Content is left-aligned, not centred. Opens with the `PageHeader` "Teammates", then a line of explanatory text |
 | `P2` | Toolbar | `MudToolBar`, dense | |
 | `P2a` | New teammate | `MudButton` | Starts the create flow |
 | `P2b` | Team filter | `MudSelect`, Outlined and Dense | Narrows the groups to one Team; shown once there are Teammates |
 | `P5` | Load notice | `MudAlert` Warning | "Files that didn't load" |
 | `P3` | Group | `section.teammates-group` | One per Team, with a heading and a list |
-| `P4` | Teammate tile | `button.teammate-tile` | Parts: avatar (`TeammateAvatar`, large, a circle), name, role title, alias `MudChip` (small), status `MudChip` (small) with `StatusDot`, and a "Working on" line; all left-aligned |
+| `P4` | Teammate tile | `button.teammate-tile` | Parts: a 56px avatar (`TeammateAvatar`, large, a circle) in a `PresenceAnchor` that draws the presence badge on its rim, name, role title, the alias as caption text, and a "Working on" line; all left-aligned. There is no status chip |
 
 Not drawn: the empty lines "No Personas yet" and "No teammates in this team".
 
@@ -297,7 +298,7 @@ popover (`O9`), which leaves the page as it is.
 
 | Code | Name | Component | Notes |
 | --- | --- | --- | --- |
-| `B1` | Page container | `MudContainer`, `MaxWidth.Large` | |
+| `B1` | Page container | `MudContainer`, `MaxWidth.Large` | Content is left-aligned, not centred |
 | `B2` | Page header | `PageHeader` with `Subtitle` | The h1 "Build a team", then "with {Chief of Staff}, your Chief of Staff"; the subtitle is left out when no Persona is the Chief of Staff |
 | `B3` | Step strip | `BuildStepper` (`ol.build-stepper`) | Four steps: Team type, Team details, Hire, Approve; Hire's detail counts the drafted Teammates ("2 Teammates drafted"). A step before the current one shows a check; the current step carries `aria-current="step"`. Choosing a type makes step 2 current |
 | `B4` | Step section | `section.build-team-section` | A numbered badge and the step's name (`Typo.h6`) |
