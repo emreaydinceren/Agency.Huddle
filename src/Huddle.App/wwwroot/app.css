@@ -873,7 +873,7 @@ a.team-ref,
     grid-template-columns: auto 1fr;
     column-gap: 12px;
     align-items: start;
-    margin-bottom: 24px;
+    margin-bottom: 16px;
 }
 
 .message-content {
@@ -917,7 +917,7 @@ a.team-ref,
 }
 
 .message-sender {
-    font-size: var(--mud-typography-body1-size);
+    font-size: var(--mud-typography-body2-size);
     font-weight: 600;
     color: var(--mud-palette-text-primary);
 }
@@ -934,20 +934,18 @@ a.team-ref,
     line-height: 1.6;
 }
 
-/* An agent's reply sits on a light card, so who-said-what reads at a glance against the Human's
-   tinted bubble. */
-.message-card {
-    max-width: calc(75ch + 32px);
-    padding: 12px 16px;
-    background: var(--mud-palette-surface);
-    border: 1px solid var(--mud-palette-divider);
-    border-radius: calc(var(--mud-default-borderradius) * 1.5);
+/* An agent's reply is plain text beside its avatar, with no card of its own: the tinted bubble alone
+   marks the Human's side, and one fewer full-width box sits on every Message. The line stays capped at
+   75ch so it is never longer than the reader can follow. */
+.message-content > .message-body {
+    max-width: 75ch;
     overflow-wrap: anywhere;
 }
 
-/* Consecutive Messages from one sender share the header above them. */
+/* Messages are 16px apart (the row's bottom margin); consecutive Messages from one sender share the
+   header above them and sit 4px apart, which is that 16px less 12px. */
 .message-row.grouped {
-    margin-top: -16px;
+    margin-top: -12px;
 }
 
 .message-gutter {
@@ -961,10 +959,14 @@ a.team-ref,
     display: flex;
     align-items: center;
     gap: 12px;
-    margin: 8px 0 16px;
+    margin-block: 24px 16px;
     font-size: var(--mud-typography-caption-size);
     font-weight: 600;
     color: var(--mud-palette-text-secondary);
+}
+
+.message-list > .day-separator:first-child {
+    margin-block-start: 0;
 }
 
 .day-separator::before,
@@ -975,7 +977,7 @@ a.team-ref,
 }
 
 .system-row {
-    margin: 0 0 16px 0;
+    margin-block: 0 16px;
     font-size: var(--mud-typography-body2-size);
     color: var(--mud-palette-text-secondary);
 }
@@ -2150,8 +2152,8 @@ a.team-ref,
 .task-ref::before {
     content: "";
     display: inline-block;
-    width: 0.5rem;
-    height: 0.5rem;
+    width: 8px;
+    height: 8px;
     margin-inline-end: 4px;
     border-radius: 50%;
     background: var(--mud-palette-lines-default);
