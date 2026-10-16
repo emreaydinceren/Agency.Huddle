@@ -5,6 +5,7 @@ using Microsoft.AspNetCore.Components;
 using Microsoft.AspNetCore.Components.Rendering;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging.Abstractions;
+using Microsoft.JSInterop;
 using MudBlazor;
 using Microsoft.AspNetCore.Components.Web;
 using Agency.Huddle.App.Acp;
@@ -566,6 +567,41 @@ public sealed class LibraryExplorerTests : IDisposable
             invocation => Equals(invocation.Arguments[0], "library:k:divider"));
     }
 
+    /// <summary>
+    /// A remembered divider position is replayed through MudSplitPanel's script, which throws a
+    /// <c>JSException</c> while the panel is not registered yet. That must not take the circuit down: the
+    /// restore retries a bounded number of times, then gives up and leaves the explorer usable.
+    /// </summary>
+    [Fact]
+    public async Task RestoreState_DividerScriptThrows_RetriesThenKeepsTheCircuitAlive()
+    {
+        string root = this.fixture.LibraryFixture.CreatePinnedRoot("Notes");
+        File.WriteAllText(Path.Combine(root, "One.md"), "one");
+        LibraryPath one = this.fixture.LibraryFixture.Resolve(root, "One.md");
+
+        await using MudBunitContext ctx = this.fixture.NewContext();
+        ctx.JSInterop.Setup<string?>("huddleStorage.get", invocation => invocation.Arguments[0] is string key && key.EndsWith(":divider", StringComparison.Ordinal)).SetResult("200");
+        ctx.JSInterop.Setup<string?>("huddleStorage.get", invocation => invocation.Arguments[0] is string key && !key.EndsWith(":divider", StringComparison.Ordinal)).SetResult(null);
+        ctx.JSInterop.SetupVoid("mudSplitPanel_setDividerPosition", _ => true)
+            .SetException(new JSException("Cannot read properties of undefined (reading 'setDividerPosition')"));
+        IRenderedComponent<ContainerFragment> cut = RenderExplorer(
+            ctx, scopes: [new LibraryLocation(one.Root.Id, string.Empty)], stateKey: "k");
+
+        CancellationToken ct = Xunit.TestContext.Current.CancellationToken;
+        using CancellationTokenSource timeout = CancellationTokenSource.CreateLinkedTokenSource(ct);
+        timeout.CancelAfter(TimeSpan.FromSeconds(10));
+
+        // The retries are delays with no render in between, so poll the calls instead of waiting on renders.
+        while (ctx.JSInterop.Invocations["mudSplitPanel_setDividerPosition"].Count < LibraryExplorer.DividerRestoreAttempts)
+        {
+            await Task.Delay(TimeSpan.FromMilliseconds(25), timeout.Token);
+        }
+
+        await Task.Delay(TimeSpan.FromMilliseconds(300), ct);
+        Assert.Equal(LibraryExplorer.DividerRestoreAttempts, ctx.JSInterop.Invocations["mudSplitPanel_setDividerPosition"].Count);
+        Assert.NotEmpty(cut.FindAll(".library-tree-node-name"));
+    }
+
     /// <summary>[12.7b] Switching to a different document asks the currently open one to
     /// <c>TryLeaveAsync</c> first; answering Cancel on a dirty document keeps it open.</summary>
     [Fact]
@@ -630,7 +666,7 @@ public sealed class LibraryExplorerTests : IDisposable
         Assert.False(File.Exists(Path.Combine(root, "New.md")));
         Assert.True(File.Exists(Path.Combine(root, "Old.md")));
         Assert.Equal("Old.md", cut.FindComponent<LibraryDocument>().Instance.Path.RelativePath);
-        Assert.Equal("Old.md ●", cut.Find(".library-document-path").TextContent.Trim());
+        Assert.Equal($"{old.FullPath} ●", cut.Find(".library-document-path").TextContent.Trim());
     }
 
     /// <summary>[12.7b] Deleting a folder that contains the open document also asks it to leave first.</summary>

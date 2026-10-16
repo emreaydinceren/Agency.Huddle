@@ -8,13 +8,14 @@ namespace Agency.Huddle.Tests.Ui.Library;
 /// </summary>
 public sealed class LibrarySplitLayoutSourceTests
 {
-    /// <summary>The Library page opens with a <c>PageHeader</c> titled "Library" and its root wears <c>library-page</c> so the split can take the pane's height (UX-001, UX-006).</summary>
+    /// <summary>The Library page sets the document title "Library" without a <c>PageHeader</c> (the shell breadcrumb names it) and its root wears <c>library-page</c> so the split can take the pane's height (UX-001, UX-006).</summary>
     [Fact]
-    public void LibraryPage_HasAPageHeaderAndAFillingRoot()
+    public void LibraryPage_HasADocumentTitleAndAFillingRoot()
     {
         string markup = File.ReadAllText(CssSource.RepoPath("src", "Huddle.App", "Components", "Pages", "Library.razor"));
 
-        Assert.Contains("<PageHeader Title=\"Library\"", markup, StringComparison.Ordinal); // contains-ok: Razor source text, not rendered markup
+        Assert.Contains("<PageTitle>Library</PageTitle>", markup, StringComparison.Ordinal); // contains-ok: Razor source text, not rendered markup
+        Assert.DoesNotContain("<PageHeader", markup, StringComparison.Ordinal); // contains-ok: Razor source text, not rendered markup
         Assert.Contains("library-page", markup, StringComparison.Ordinal); // contains-ok: Razor source text, not rendered markup
     }
 

@@ -69,17 +69,16 @@
         IReadOnlyList<TeamPageTab> available = TeamPageTabs.Available(isProject, this.Features());
         int activeIndex = Math.Max(0, available.ToList().IndexOf(TeamPageTabs.Resolve(isProject, this.Tab, this.Features())));
 
-        @* The document title stays "{Team} - Huddle" (set above), so the header does not set its own. *@
-        <PageHeader Title="@(project ?? summary.Name)" SetPageTitle="false">
-            <Actions>
-                @if (!isProject)
-                {
-                    string sourceTeam = summary.Name;
-                    <MudButton Variant="Variant.Outlined" Size="Size.Small" StartIcon="@Icons.Material.Outlined.ContentCopy"
-                               OnClick="@(() => this.DuplicateAsync(sourceTeam))">Duplicate</MudButton>
-                }
-            </Actions>
-        </PageHeader>
+        @* The shell breadcrumb (S1a) names the Team or Project, so the page has no title row or h1 of its own
+           (the document title is set above). A Team page keeps Duplicate in a slim row at the right. *@
+        @if (!isProject)
+        {
+            string sourceTeam = summary.Name;
+            <MudStack Row="true" Justify="Justify.FlexEnd" Class="mb-4 team-page-actions">
+                <MudButton Variant="Variant.Outlined" Size="Size.Small" StartIcon="@Icons.Material.Outlined.ContentCopy"
+                           OnClick="@(() => this.DuplicateAsync(sourceTeam))">Duplicate</MudButton>
+            </MudStack>
+        }
         <TeamSpend Members="@summary.Members" />
 
         @if (available.Count == 0)

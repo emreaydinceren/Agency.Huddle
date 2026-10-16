@@ -20,7 +20,7 @@
         <div class="top-bar-start">
             @if (this.Tabs.Active is { } active)
             {
-                <PageBreadcrumbs Crumbs="TabTrail.Build(active.Url, active.Title)" OnNavigate="this.NavigateAsync" />
+                <PageBreadcrumbs Crumbs="this.Tabs.Trail(active)" OnNavigate="this.NavigateAsync" />
             }
         </div>
         <div class="top-bar-center">@this.Search</div>

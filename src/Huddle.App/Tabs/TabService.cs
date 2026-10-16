@@ -18,6 +18,7 @@ internal sealed class TabService
     public const int MaxGroups = 2;
 
     private readonly List<GroupState> groups = [];
+    private readonly Dictionary<string, IReadOnlyList<TrailCrumb>> trails = new(StringComparer.Ordinal);
     private IReadOnlyList<TabGroup> groupSnapshot = [];
     private IReadOnlyList<Tab> tabSnapshot = [];
     private string focusedId;
@@ -258,6 +259,43 @@ internal sealed class TabService
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(title);
         this.Replace(tab => string.Equals(tab.Key, key, StringComparison.Ordinal), tab => tab with { Title = title });
+    }
+
+    /// <summary>
+    /// Replaces the breadcrumb trail <see cref="Trail(Tab)"/> gives for the Tab with <paramref name="key"/>,
+    /// for a page whose location changes inside one URL, such as the Library's open file. The trail is
+    /// not stored with the Tab, so a restored layout starts from the URL's own trail until the page
+    /// sets it again.
+    /// </summary>
+    /// <param name="key">The key of the Tab whose trail the page owns.</param>
+    /// <param name="crumbs">The trail, or <see langword="null"/> to go back to the one the URL implies.</param>
+    public void SetTrail(string key, IReadOnlyList<TrailCrumb>? crumbs)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(key);
+        bool had = this.trails.TryGetValue(key, out IReadOnlyList<TrailCrumb>? current);
+        if (crumbs is null ? !had : had && current is not null && current.SequenceEqual(crumbs))
+        {
+            return;
+        }
+
+        if (crumbs is null)
+        {
+            _ = this.trails.Remove(key);
+        }
+        else
+        {
+            this.trails[key] = crumbs;
+        }
+
+        this.Publish();
+    }
+
+    /// <summary>The breadcrumb trail of <paramref name="tab"/>: the one its page set with <see cref="SetTrail(string, IReadOnlyList{TrailCrumb}?)"/>, else the one its URL implies.</summary>
+    /// <param name="tab">The Tab to draw the trail for.</param>
+    public IReadOnlyList<TrailCrumb> Trail(Tab tab)
+    {
+        ArgumentNullException.ThrowIfNull(tab);
+        return this.trails.TryGetValue(tab.Key, out IReadOnlyList<TrailCrumb>? crumbs) ? crumbs : TabTrail.Build(tab.Url, tab.Title);
     }
 
     /// <summary>Whether <see cref="MoveLeft(string)"/> would do something for the Tab with <paramref name="id"/>.</summary>

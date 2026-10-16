@@ -55,9 +55,9 @@ public sealed class LibraryDocumentReadTests : IDisposable
         Assert.Equal(["Chief of Staff", "cos"], cut.FindAll(".library-frontmatter dd").Select(dd => dd.TextContent.Trim()));
     }
 
-    /// <summary>[12.2a] The breadcrumbs show the root's display name, then each folder on the way to the file, in order (Spec §8).</summary>
+    /// <summary>The toolbar names a nested file by its full system path, the same line for every host, and draws no breadcrumbs.</summary>
     [Fact]
-    public async Task Header_BreadcrumbsRootThenFolders()
+    public async Task Header_ShowsTheFullSystemPath()
     {
         string root = this.fixture.LibraryFixture.CreatePinnedRoot("Notes");
         Directory.CreateDirectory(Path.Combine(root, "sub", "deeper"));
@@ -67,9 +67,8 @@ public sealed class LibraryDocumentReadTests : IDisposable
         await using MudBunitContext ctx = this.fixture.NewContext();
         IRenderedComponent<ContainerFragment> cut = RenderDoc(ctx, path);
 
-        cut.WaitForAssertion(() => Assert.NotEmpty(cut.FindComponents<MudBlazor.MudBreadcrumbs>()));
-        MudBlazor.MudBreadcrumbs breadcrumbs = cut.FindComponent<MudBlazor.MudBreadcrumbs>().Instance;
-        Assert.Equal(["Notes", "sub", "deeper"], (breadcrumbs.Items ?? []).Select(item => item.Text ?? string.Empty));
+        cut.WaitForAssertion(() => Assert.Equal(path.FullPath, cut.Find(".library-document-path").TextContent.Trim()));
+        Assert.Empty(cut.FindComponents<MudBlazor.MudBreadcrumbs>());
     }
 
     /// <summary>[12.2a] The header's Read/Edit/Split toggle group starts with Read selected for an editable Markdown document (Spec §8).</summary>
