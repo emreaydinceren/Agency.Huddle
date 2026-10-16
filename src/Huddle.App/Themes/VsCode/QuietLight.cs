@@ -48,6 +48,8 @@ internal static class QuietLightTheme
         LinesDefault = "#9769dc", // focusBorder (theme)
         TextPrimary = "#616161", // foreground (registry default; the theme carries no `foreground` key)
         TextSecondary = "#717171", // descriptionForeground (registry default)
+        DrawerText = "#616161", // TextPrimary: sideBar.foreground falls back to foreground
+        DrawerIcon = "#717171", // TextSecondary
         TextDisabled = "#aaaaaa", // disabledForeground (registry default, composited from #61616180 over Surface #f3f3f3)
         Primary = "#006ab1", // textLink.foreground (registry default) - see the type-level remarks for why not button.background
         PrimaryContrastText = "#ffffff", // computed: black 3.70:1 vs white 5.68:1 against Primary #006ab1

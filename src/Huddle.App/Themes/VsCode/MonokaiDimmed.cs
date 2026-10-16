@@ -46,6 +46,8 @@ internal static class MonokaiDimmedTheme
         LinesDefault = "#3655b5", // focusBorder (theme)
         TextPrimary = "#cccccc", // foreground (registry default)
         TextSecondary = "#9a9a9a", // descriptionForeground (registry default, composited from #ccccccb2 over Surface #252526)
+        DrawerText = "#cccccc", // TextPrimary: sideBar.foreground falls back to foreground
+        DrawerIcon = "#9a9a9a", // TextSecondary
         TextDisabled = "#797979", // disabledForeground (registry default, composited from #cccccc80 over Surface #252526)
         Primary = "#3794ff", // textLink.foreground (registry default) - see the type-level remarks for why not button.background
         PrimaryContrastText = "#000000", // computed: black 6.84:1 vs white 3.07:1 against Primary #3794ff

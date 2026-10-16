@@ -97,6 +97,33 @@ button:focus-visible {
     color: var(--mud-palette-text-secondary);
 }
 
+/* Accent as text: the accent pulled 30% toward the body text, so it reads 4.5:1 or better on every Huddle surface
+   (raw Primary stays a fill, a bar or a border). The active sidebar row takes the Selected treatment - Primary 14%
+   over Surface, 24% when hovered - not the generic hover shade MudBlazor paints, so the selected and the hovered
+   row no longer look alike. */
+.mud-drawer .mud-navmenu .mud-nav-link.active:not(.mud-nav-link-disabled) {
+    color: color-mix(in srgb, var(--mud-palette-primary) 70%, var(--mud-palette-text-primary));
+    background-color: color-mix(in srgb, var(--mud-palette-primary) 14%, var(--mud-palette-surface));
+}
+
+.mud-drawer .mud-navmenu .mud-nav-link.active:not(.mud-nav-link-disabled):hover:not(.mud-nav-link-disabled),
+.mud-drawer .mud-navmenu .mud-nav-link.active:not(.mud-nav-link-disabled):focus-visible:not(.mud-nav-link-disabled),
+.mud-drawer .mud-navmenu .mud-nav-link.active:not(.mud-nav-link-disabled):active:not(.mud-nav-link-disabled) {
+    background-color: color-mix(in srgb, var(--mud-palette-primary) 24%, var(--mud-palette-surface));
+}
+
+.mud-drawer .mud-navmenu .mud-nav-link.active:not(.mud-nav-link-disabled) .mud-nav-link-icon {
+    color: color-mix(in srgb, var(--mud-palette-primary) 70%, var(--mud-palette-text-primary));
+}
+
+/* The active tab-rail label and the words on text and outlined accent buttons: MudBlazor colours them with raw
+   Primary, so they take the accent-text mix. The outlined button's border keeps the raw accent. */
+.mud-tab.mud-tab-active,
+.mud-button-text.mud-button-text-primary,
+.mud-button-outlined.mud-button-outlined-primary {
+    color: color-mix(in srgb, var(--mud-palette-primary) 70%, var(--mud-palette-text-primary));
+}
+
 /* MudBlazor fills an open group's chevron with the accent; an open group is not a selection, so it stays neutral. */
 .mud-drawer .mud-navmenu .mud-nav-link-expand-icon.mud-transform {
     fill: var(--mud-palette-text-secondary);
@@ -890,7 +917,7 @@ a.team-ref,
     display: inline-block;
     width: 0.5em;
     margin-left: 0.1em;
-    border-right: 2px solid var(--mud-palette-text-disabled);
+    border-right: 2px solid var(--mud-palette-text-secondary);
     animation: draft-caret-blink 1s step-end infinite;
 }
 
@@ -908,7 +935,7 @@ a.team-ref,
 
 .tool-activity {
     margin-top: 4px;
-    color: var(--mud-palette-text-disabled);
+    color: var(--mud-palette-text-secondary);
     font-size: var(--mud-typography-body2-size);
     font-style: italic;
 }
@@ -943,7 +970,7 @@ a.team-ref,
 }
 
 .turn-detail-line {
-    color: var(--mud-palette-text-disabled);
+    color: var(--mud-palette-text-secondary);
     font-size: var(--mud-typography-body2-size);
 }
 
@@ -1021,7 +1048,7 @@ a.team-ref,
 
 .edit-preview-note {
     margin-top: 4px;
-    color: var(--mud-palette-text-disabled);
+    color: var(--mud-palette-text-secondary);
     font-size: var(--mud-typography-caption-size);
 }
 
@@ -1108,14 +1135,15 @@ a.team-ref,
 }
 
 .composer-input::placeholder {
-    color: var(--mud-palette-text-disabled);
+    color: var(--mud-palette-text-secondary);
 }
 
-/* The border itself is the focus indicator, so it must clear WCAG 1.4.11's 3:1: text-disabled
-   does against the white surface, where lines-default would not. */
+/* The border itself is the focus indicator, so it must clear WCAG 1.4.11's 3:1: Primary does
+   against Surface in both Huddle Themes, where lines-default would not. text-disabled paints
+   disabled controls only. */
 .composer-input:focus-visible {
     outline: none;
-    border-color: var(--mud-palette-text-disabled);
+    border-color: var(--mud-palette-primary);
 }
 
 /* The paperclip sits just left of Send; the extra right padding keeps typed text clear of both. */
@@ -1353,7 +1381,7 @@ a.team-ref,
 .avatar-library-skin[aria-pressed="true"] {
     font-weight: 700;
     border: 2px solid var(--mud-palette-primary);
-    color: var(--mud-palette-primary);
+    color: color-mix(in srgb, var(--mud-palette-primary) 70%, var(--mud-palette-text-primary));
 }
 
 .avatar-library-status {
@@ -1646,7 +1674,7 @@ a.team-ref,
     align-items: center;
     margin: 0;
     font-size: var(--mud-typography-caption-size);
-    color: var(--mud-palette-text-disabled);
+    color: var(--mud-palette-text-secondary);
 }
 
 .prompts-field-placeholder {
@@ -3053,7 +3081,7 @@ a.team-ref,
 .chip-cloud-chip-selected {
     font-weight: 700;
     border: 2px solid var(--mud-palette-primary);
-    color: var(--mud-palette-primary);
+    color: color-mix(in srgb, var(--mud-palette-primary) 70%, var(--mud-palette-text-primary));
 }
 
 .chip-cloud-close {
@@ -3184,7 +3212,7 @@ a.team-ref,
     background: color-mix(in srgb, var(--mud-palette-primary) 14%, var(--mud-palette-surface));
     font-size: var(--mud-typography-caption-size);
     font-weight: 600;
-    color: var(--mud-palette-primary);
+    color: color-mix(in srgb, var(--mud-palette-primary) 70%, var(--mud-palette-text-primary));
 }
 
 .build-team-intro {
@@ -3251,7 +3279,7 @@ a.team-ref,
 }
 
 .team-type-tint-primary {
-    color: var(--mud-palette-primary);
+    color: color-mix(in srgb, var(--mud-palette-primary) 70%, var(--mud-palette-text-primary));
     background: color-mix(in srgb, var(--mud-palette-primary) 14%, var(--mud-palette-surface));
 }
 
@@ -3614,7 +3642,7 @@ a.team-ref,
 }
 
 .composer-picker-dimmed {
-    color: var(--mud-palette-text-disabled);
+    color: var(--mud-palette-text-secondary);
 }
 
 .composer-picker-note {
@@ -3672,7 +3700,7 @@ a.team-ref,
     min-height: 5rem;
     padding: 12px;
     font: inherit;
-    color: var(--mud-palette-primary);
+    color: color-mix(in srgb, var(--mud-palette-primary) 70%, var(--mud-palette-text-primary));
     background: transparent;
     border: 1px dashed var(--mud-palette-divider);
     border-radius: calc(var(--mud-default-borderradius) * 1.5);

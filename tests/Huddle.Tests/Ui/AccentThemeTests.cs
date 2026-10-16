@@ -33,7 +33,7 @@ public sealed class AccentThemeTests
         Assert.Equal("#ffffff", theme.PaletteDark.PrimaryContrastText.ToString(MudColorOutputFormats.Hex));
     }
 
-    /// <summary>Whatever accent is chosen, text and icons on an accent-filled button or avatar are white, in both modes.</summary>
+    /// <summary>Whatever accent is chosen, text and icons on an accent-filled button or avatar are whichever of black and white <see cref="ContrastColour.ReadableForeground(MudColor)"/> picks, in both modes.</summary>
     /// <param name="accent">The Human-picked accent colour.</param>
     /// <param name="dark">Whether to build the dark palette.</param>
     [Theory]
@@ -41,7 +41,7 @@ public sealed class AccentThemeTests
     [InlineData("#6e78da", true)]
     [InlineData("#ffeb3b", false)]
     [InlineData("#ffeb3b", true)]
-    public void BuildTheme_AnyAccent_HasWhiteTextOnAccent(string accent, bool dark)
+    public void BuildTheme_AnyAccent_HasReadableTextOnAccent(string accent, bool dark)
     {
         var theme = AccentTheme.BuildTheme(accent, dark);
         MudColor text = dark ? theme.PaletteDark.PrimaryContrastText : theme.PaletteLight.PrimaryContrastText;

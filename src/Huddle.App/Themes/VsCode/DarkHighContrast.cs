@@ -49,6 +49,8 @@ internal static class DarkHighContrastTheme
         LinesDefault = "#f38518", // focusBorder (registry default)
         TextPrimary = "#ffffff", // foreground (registry default)
         TextSecondary = "#b6b8bc", // descriptionForeground (registry default, composited from #ffffffb2 over Surface #0c141f)
+        DrawerText = "#ffffff", // TextPrimary: sideBar.foreground falls back to foreground
+        DrawerIcon = "#b6b8bc", // TextSecondary
         TextDisabled = "#a5a5a5", // disabledForeground (registry default)
         Primary = "#21a6ff", // textLink.foreground (registry default) - see the type-level remarks for why not button.background
         PrimaryContrastText = "#000000", // computed: black 7.96:1 vs white 2.64:1 against Primary #21a6ff

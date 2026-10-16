@@ -44,6 +44,8 @@ internal static class AbyssTheme
         LinesDefault = "#596f99", // focusBorder (theme)
         TextPrimary = "#cccccc", // foreground (registry default)
         TextSecondary = "#9a9aa2", // descriptionForeground (registry default, composited from #ccccccb2 over Surface #262641)
+        DrawerText = "#cccccc", // TextPrimary: sideBar.foreground falls back to foreground
+        DrawerIcon = "#9a9aa2", // TextSecondary
         TextDisabled = "#797987", // disabledForeground (registry default, composited from #cccccc80 over Surface #262641)
         Primary = "#3794ff", // textLink.foreground (registry default) - see the type-level remarks for why not button.background
         PrimaryContrastText = "#000000", // computed: black 6.84:1 vs white 3.07:1 against Primary #3794ff

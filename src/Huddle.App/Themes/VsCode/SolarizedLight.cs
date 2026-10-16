@@ -46,6 +46,8 @@ internal static class SolarizedLightTheme
         LinesDefault = "#b49471", // focusBorder (theme)
         TextPrimary = "#616161", // foreground (registry default)
         TextSecondary = "#717171", // descriptionForeground (registry default)
+        DrawerText = "#616161", // TextPrimary: sideBar.foreground falls back to foreground
+        DrawerIcon = "#717171", // TextSecondary
         TextDisabled = "#a7a49b", // disabledForeground (registry default, composited from #61616180 over Surface #eee8d5)
         Primary = "#006ab1", // textLink.foreground (registry default) - see the type-level remarks for why not button.background
         PrimaryContrastText = "#ffffff", // computed: black 3.70:1 vs white 5.68:1 against Primary #006ab1
