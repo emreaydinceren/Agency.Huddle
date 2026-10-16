@@ -9,8 +9,8 @@ public sealed class TabTrailTests
 
     /// <summary>Each routed page gets its ancestors, then (unless it draws its own name as its h1: a Room, Team or Project) its page, with the last crumb the Tab's own title and every ancestor with a page of its own a link.</summary>
     [Theory]
-    [InlineData("/", "Chats", "Chats")]
-    [InlineData("/rooms/ab12", "Planning", "[Chats](/)")]
+    [InlineData("/", "Rooms", "Rooms")]
+    [InlineData("/rooms/ab12", "Planning", "[Rooms](/)")]
     [InlineData("/teams/Core", "Core", "Teams")]
     [InlineData("/teams/Core/tasks", "Core", "Teams")]
     [InlineData("/teams/Core/projects/Alpha", "Alpha", "Teams > [Core](/teams/Core)")]
@@ -28,6 +28,17 @@ public sealed class TabTrailTests
     public void Build_DrawsAreaThenPage(string url, string title, string expected)
     {
         Assert.Equal(expected, Draw(TabTrail.Build(url, title)));
+    }
+
+    /// <summary>A Room's trail is exactly one ancestor, "Rooms", matching the sidebar section, linking to the root.</summary>
+    [Fact]
+    public void Build_Room_TrailIsExactlyRooms()
+    {
+        IReadOnlyList<TrailCrumb> trail = TabTrail.Build("/rooms/ab12", "Planning");
+
+        TrailCrumb crumb = Assert.Single(trail);
+        Assert.Equal("Rooms", crumb.Text);
+        Assert.Equal("/", crumb.Href);
     }
 
     /// <summary>A Team name with spaces and punctuation is escaped in the Team crumb's address and shown unescaped in its text.</summary>

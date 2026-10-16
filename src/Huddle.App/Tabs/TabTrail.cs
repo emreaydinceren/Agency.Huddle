@@ -37,7 +37,7 @@ internal static class TabTrail
         return segments switch
         {
             // A Room, Team or Project draws its own name as the page's h1, so the trail holds only its ancestors.
-            ["rooms", ..] => [new("Chats", "/", "chat")],
+            ["rooms", ..] => [new("Rooms", "/", "chat")],
             ["teams", var team, "projects", ..] => [new("Teams", null, "team"), new(team, TeamHref(team), "team")],
             ["teams", ..] => [new("Teams", null, "team")],
             ["tasks"] => [last],
