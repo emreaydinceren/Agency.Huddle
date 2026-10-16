@@ -159,7 +159,7 @@ References in a Message: the @ picker, Copy link and the Referenced items header
 | [ATTAG-06](at-tagging.md#attag-06--renames-and-deletes-show-the-chips-and-an-old-transcript-opens-unchanged-at-m6) |  | Active |  |  |
 | [ATTAG-07](at-tagging.md#attag-07--the-agent-prompt-carries-the-referenced-items-header-at-m7) |  | Active |  |  |
 | [ATTAG-08](at-tagging.md#attag-08--keyboard-alone-picks-sends-nothing-while-open-and-announces-the-count-at-m8) |  | Active |  |  |
-| [ATTAG-09](at-tagging.md#attag-09--the-picker-height-at-90-percent-zoom-and-on-a-narrow-window-at-m9) |  | Active |  |  |
+| [ATTAG-09](at-tagging.md#attag-09--the-picker-height-and-a-narrow-window-at-m9) |  | Active |  |  |
 | [ATTAG-10](at-tagging.md#attag-10--undo-after-a-pick-restores-the-typed-token-at-m10) |  | Active |  |  |
 | [ATTAG-11](at-tagging.md#attag-11--the-picker-lists-rooms-and-library-files-by-name-only-at-m11) |  | Active |  |  |
 | [ATTAG-12](at-tagging.md#attag-12--copy-link-from-the-header-the-sidebar-and-a-team-room-at-m12) |  | Active |  |  |
@@ -174,12 +174,12 @@ Global Search: the box, the dropdown and the jump to a Message — [area file](g
 | [GLOBALSEARCH-02](global-search.md#globalsearch-02--ctrl-k-reaches-the-app-in-edge-and-not-the-address-bar-gs-m2) |  | Active |  |  |
 | [GLOBALSEARCH-03](global-search.md#globalsearch-03--groups-fill-one-by-one-on-a-large-pinned-root-and-stale-results-never-show-gs-m3) |  | Active |  |  |
 | [GLOBALSEARCH-04](global-search.md#globalsearch-04--content-hits-show-the-bold-match-the-1-mb-cut-off-and-the-incomplete-note-gs-m4) |  | Active |  |  |
-| [GLOBALSEARCH-05](global-search.md#globalsearch-05--a-room-hit-jumps-to-its-message-at-90-percent-zoom-gs-m5) |  | Active |  |  |
+| [GLOBALSEARCH-05](global-search.md#globalsearch-05--a-room-hit-jumps-to-its-message-gs-m5) |  | Active |  |  |
 | [GLOBALSEARCH-06](global-search.md#globalsearch-06--archived-rooms-and-closed-tasks-come-last-and-dimmed-gs-m6) |  | Active |  |  |
 | [GLOBALSEARCH-07](global-search.md#globalsearch-07--a-locked-folder-in-a-pinned-root-does-not-hide-the-other-groups-gs-m7) |  | Active |  |  |
 | [GLOBALSEARCH-08](global-search.md#globalsearch-08--the-keyboard-alone-reaches-every-chip-and-card-gs-m8) |  | Active |  |  |
 | [GLOBALSEARCH-09](global-search.md#globalsearch-09--the-search-box-sits-in-the-top-bar-beside-the-breadcrumb-gs-m9) |  | Active |  |  |
-| [GLOBALSEARCH-10](global-search.md#globalsearch-10--the-dropdown-height-under-90-percent-zoom-gs-m10) |  | Active |  |  |
+| [GLOBALSEARCH-10](global-search.md#globalsearch-10--the-dropdown-height-and-width-gs-m10) |  | Active |  |  |
 
 ## shell-nav
 
@@ -215,7 +215,7 @@ Application shell, navigation and layout — [area file](shell-nav.md)
 | [SHELLNAV-28](shell-nav.md#shellnav-28--the-new-chat-panel-with-no-agents-shows-its-own-guidance-instead-of-an-empty-list) |  | Active |  |  |
 | [SHELLNAV-29](shell-nav.md#shellnav-29--record-whether-the-yellow-error-band-ever-appears-during-a-genuine-circuit-fault) |  | Active |  |  |
 | [SHELLNAV-30](shell-nav.md#shellnav-30--the-drawers-icons-and-settings-pinned-to-the-bottom) |  | Active |  |  |
-| [SHELLNAV-31](shell-nav.md#shellnav-31--one-click-on-a-left-menu-item-opens-an-italic-preview-tab-and-a-click-on-a-different-item-replaces-it) |  | Active |  |  |
+| [SHELLNAV-31](shell-nav.md#shellnav-31--one-click-on-a-left-menu-item-opens-a-preview-tab-and-a-click-on-a-different-item-replaces-it) |  | Active |  |  |
 | [SHELLNAV-32](shell-nav.md#shellnav-32--double-clicking-a-menu-item-keeps-its-tab-and-the-next-click-opens-beside-it) |  | Active |  |  |
 | [SHELLNAV-33](shell-nav.md#shellnav-33--clicking-a-tab-switches-the-page-and-the-address) |  | Active |  |  |
 | [SHELLNAV-34](shell-nav.md#shellnav-34--closing-the-active-tab-activates-its-neighbour-and-closing-the-last-one-shows-no-pages-are-open) |  | Active |  |  |
@@ -389,7 +389,7 @@ Teammates page: tiles, Teams grouping, filter and rejected files — [area file]
 | --- | --- | --- | --- | --- |
 | [TEAMMATESLIBRARY-01](teammates-library.md#teammateslibrary-01--the-page-loads-is-styled-and-spawns-nothing) |  | Active |  | rewritten 2026-10. Earlier Pass. |
 | [TEAMMATESLIBRARY-02](teammates-library.md#teammateslibrary-02--a-library-of-only-the-chief-of-staff-reads-as-one-tile-then-as-empty) |  | Active |  |  |
-| [TEAMMATESLIBRARY-03](teammates-library.md#teammateslibrary-03--the-fixture-library-loads-and-a-tile-shows-monogram-name-title-an-alias-chip-and-status) |  | Active |  |  |
+| [TEAMMATESLIBRARY-03](teammates-library.md#teammateslibrary-03--the-fixture-library-loads-and-a-tile-shows-monogram-name-title-an-alias-caption-and-status) |  | Active |  |  |
 | [TEAMMATESLIBRARY-04](teammates-library.md#teammateslibrary-04--one-heading-per-team-ordinal-order-no-team-last-no-empty-groups) |  | Active |  |  |
 | [TEAMMATESLIBRARY-05](teammates-library.md#teammateslibrary-05--a-persona-in-two-teams-renders-in-full-under-both-headings) |  | Active |  |  |
 | [TEAMMATESLIBRARY-06](teammates-library.md#teammateslibrary-06--a-personas-team-comes-from-its-field-never-from-its-folder) |  | Active |  |  |
@@ -978,11 +978,11 @@ Team chats: the Team Room, Team chats in the sidebar, the Members-tab Message, a
 
 | Test | 💰 | Status | Issue | Notes |
 | --- | --- | --- | --- | --- |
-| [TEAMCHATS-01](team-chats.md#teamchats-01--the-team-room-appears-under-its-team-with-every-member-and-chats-does-not-list-it) |  | Active |  |  |
+| [TEAMCHATS-01](team-chats.md#teamchats-01--the-team-room-appears-under-its-team-with-every-member-and-rooms-does-not-list-it) |  | Active |  |  |
 | [TEAMCHATS-02](team-chats.md#teamchats-02--a-teammate-who-joins-the-team-is-invited-into-the-team-room-and-the-transcript-says-so) |  | Active |  |  |
 | [TEAMCHATS-03](team-chats.md#teamchats-03--new-chat-on-a-team-scopes-the-room-to-that-team-and-a-non-member-can-be-ticked) |  | Active |  |  |
 | [TEAMCHATS-04](team-chats.md#teamchats-04--message-on-the-members-tab-opens-the-teams-own-one-to-one-not-the-root-one) |  | Active |  |  |
-| [TEAMCHATS-05](team-chats.md#teamchats-05--new-chat-in-the-chats-group-still-makes-a-root-room) |  | Active |  |  |
+| [TEAMCHATS-05](team-chats.md#teamchats-05--new-chat-in-the-rooms-group-still-makes-a-root-room) |  | Active |  |  |
 | [TEAMCHATS-06](team-chats.md#teamchats-06--the-team-room-has-no-rename-pencil-and-a-rename-through-the-chat-header-is-refused) |  | Active |  |  |
 | [TEAMCHATS-07](team-chats.md#teamchats-07--renaming-the-team-folder-in-explorer-archives-its-rooms-history-intact) |  | Active |  |  |
 | [TEAMCHATS-08](team-chats.md#teamchats-08--an-archived-team-room-is-not-recreated-or-refilled) |  | Active |  |  |

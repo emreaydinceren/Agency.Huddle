@@ -42,7 +42,7 @@ standing conventions. This area adds:
 3. Read the `<h1>` at the top of the main column.
 4. Read the muted grey line directly beneath that `<h1>`.
 5. Look at the right-hand end of the header row for a button and read its label.
-6. Read the sidebar top to bottom and list every item you see, including the `Chats` group (expand it if collapsed).
+6. Read the sidebar top to bottom and list every item you see, including the `Rooms` group (expand it if collapsed).
 7. Select the whole URL from the address bar, open a new browser tab, paste it, press Enter.
 8. In the new tab, look at the sidebar and note whether the entry for the currently open Room is visually distinguished from the other entries (`Bo`, `Chief of Staff`).
 9. Click `Bo` in the sidebar and confirm the `<h1>` and the address bar both change.
@@ -53,7 +53,7 @@ standing conventions. This area adds:
 - The `<h1>` reads `Ada` (a word, not 32 hex characters).
 - The muted line beneath it reads exactly `You, Ada`.
 - A button labelled `Invite teammate` sits at the right of the header row.
-- The sidebar contains, in order (`MainLayout.razor:17-31`, `RoomList.razor`): a `Chats` group holding the Rooms `Ada`, `Bo` and `Chief of Staff` with a `New chat` link as the last item of that group; then a `Teams` group, a `Teammates` link, a `Tasks` group and a `Library` group; then two icon-only links at the bottom, Archived chats and Settings (a tooltip names Settings).
+- The sidebar contains, in order (`MainLayout.razor:17-31`, `RoomList.razor`): a `Rooms` group (closed until opened, or open when the current page is one of its Rooms) holding the Rooms `Ada`, `Bo` and `Chief of Staff` with a `New chat` link as the last item of that group; then a `Teams` group, a `Teammates` link, a `Tasks` group and a single `Library` link (no Library folder rows and no Add folder in the sidebar); then two icon-only links at the bottom, Archived chats and Settings (a tooltip names Settings).
 - The pasted URL in the second tab opens the same Room with the same `<h1>` and the same transcript.
 - The sidebar entry for the open Room is visually distinguished (different colour or weight) from the other entry.
 - Clicking `Bo` changes the `<h1>` to `Bo` and changes the id in the address bar.

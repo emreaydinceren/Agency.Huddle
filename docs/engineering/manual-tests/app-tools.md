@@ -156,7 +156,7 @@ If `App_Data/prompts.json` cannot be written (a permissions error paragraph appe
 3. Wait for `Now listening on: http://localhost:5100`.
 4. Run `O-ADAPTERS` and note the count (`0`). Do not count `node.exe` in Task Manager: on a development machine unrelated `node.exe` processes are normal.
 5. In the browser open http://localhost:5100/teammates.
-6. Confirm every Persona tile is listed (Chief of Staff, Nova, Jarvis), and that each tile's status chip reads **Offline** with a red dot (`app.css:71-73`, `--mud-palette-error`; red by design, never grey).
+6. Confirm every Persona tile is listed (Chief of Staff, Nova, Jarvis), and that each tile's avatar badge reads **Offline** (hollow ring in the error red, `--mud-palette-error`; red by design, never grey).
 7. Hover each **Offline** tile's status text. Confirm no tooltip reason appears (an Agent that merely never started has no reason).
 8. Click the **Nova** tile to open its card. Confirm the card shows **Offline** and shows NO reason line beneath the status.
 9. Close the card with the × button.
@@ -211,7 +211,7 @@ If `O-ADAPTERS` printed a non-zero count before the app took any action (a lefto
 3. Launch with `P-LAUNCH-PAID`, including its Chief of Staff Haiku / low step. (Development already sets `Agency.Huddle` to `Debug`, so no log-level variable is needed.)
 4. Wait for `Now listening on: http://localhost:5100`.
 5. Open http://localhost:5100/teammates in the browser and leave it open. Do NOT open any room and do NOT type any message.
-6. Watch the **Nova** tile's status line. Confirm it reads **Starting** with a light-amber dot, then changes to **Online** with a green dot, within about 30 seconds (`app.css:67-81`; Degraded is a darker amber, Offline red).
+6. Watch the badge on the **Nova** tile's avatar (hover it to read its tooltip). Confirm it reads **Starting** (pulse glyph), then changes to **Online** (check glyph), within about 30 seconds (Degraded is a dash glyph, Offline a hollow ring).
 7. Look at the left sidebar. Confirm a room named `Nova` has appeared in the room list.
 8. Read the app's console window. Find a line of the form `App tool server listening at http://127.0.0.1:<port>/mcp.` and note the port number.
 9. In the same console, find a line reading `App tool server received initialize.`
@@ -470,28 +470,28 @@ If the transcript is empty after the restart, check you reopened the right room:
 
 **Steps**
 
-1. Open http://localhost:5100/teammates. On paper or in a text file, write down every tile's Name, its title, its alias chip, and its status word (Online / Starting / Degraded / Offline).
-2. Click **New chat** in the left sidebar and write down every checkbox name in the panel and each one's dot colour. Click **New chat** again to close the panel without starting one.
+1. Open http://localhost:5100/teammates. On paper or in a text file, write down every tile's Name, its title, its alias caption, and the state word in its avatar badge's tooltip (Online / Starting / Degraded / Offline).
+2. Click **New chat** in the left sidebar and write down every checkbox name in the panel and each one's status mark (glyph and tooltip). Click **New chat** again to close the panel without starting one.
 3. Open the room named `Nova` from the sidebar.
 4. Click into the composer and type exactly: `Who else is here? List every agent and every persona you can see, name for name, and say which are online.`
 5. Press Enter and wait for the reply.
 6. Compare the reply's list of names against the two lists you wrote down. Every name must appear, and no name may appear that is not on your lists.
 7. Confirm the reply distinguishes registered Agents (with an online/offline state each) from the Personas list. `ListAgentsTool` lists every Persona by name, whether or not it has ever come online (`ListAgentsTool.cs:56-65`).
-8. Confirm the online/offline states in the reply match the dot colours you recorded.
+8. Confirm the online/offline states in the reply match the status marks you recorded.
 9. Switch to the console. At Trace, find the `App tool server replied to tools/call:` line whose payload is a JSON-RPC response (it begins `{"jsonrpc"`) and whose `text` field begins `Agents:`. Decode it, then confirm its shape: `- <Name> (online)` or `- <Name> (offline)` lines, each optionally followed by indented job-description lines, then a blank line and `Personas:`.
 
 **Pass if — all of these**
 
 - Every name in the reply appears on the /teammates page or in the New chat panel, and every name on those surfaces appears in the reply.
 - Agents are separated from Personas, each Agent carries an online/offline state, and every Persona appears by name.
-- The online/offline states match the dot colours on screen.
+- The online/offline states match the status marks on screen.
 - At Trace: the decoded tool text has the documented `Agents:` / `Personas:` shape.
 
 **Fail if — any of these**
 
 - The reply names `Alice`, `Bob`, a room called `bananas`, or any other name that is NOT on your two lists -> the agent read the repository's docs and test fixtures instead of calling the tool. This is the plausible-looking wrong answer this test exists to catch. Note which names it invented; they are traceable to `docs/` and `tests/`.
 - A Persona that is visible on /teammates is missing from the reply -> the directory and the tool disagree.
-- Online and offline are inverted relative to the dot colours -> the gateway liveness check in `ListAgentsTool` is reading the wrong thing.
+- Online and offline are inverted relative to the status marks -> the gateway liveness check in `ListAgentsTool` is reading the wrong thing.
 - No job descriptions appear at all for Personas that have a Title and Alias -> `ComposeJobDescription` is returning empty, which will also break APPTOOLS-11.
 
 **Inconclusive if**
@@ -516,7 +516,7 @@ If the reply lists the right names but gives no online/offline state, rerun once
 
 **Steps**
 
-1. Open http://localhost:5100/teammates and confirm the `Jarvis` tile shows the title `Researcher` and an alias chip reading `@jar` (separate elements, `Teammates.razor:98-104`).
+1. Open http://localhost:5100/teammates and confirm the `Jarvis` tile shows the title `Researcher` and an alias caption reading `@jar` (separate elements, `Teammates.razor:98-104`).
 2. FREE PATH FIRST — in the three-member room (`Nova, mybot`), click into the composer and type exactly `/invite @jar` then press Enter.
 3. Confirm the sidebar entry and the chat header `<h1>` both rename to include `Jarvis`, with no page refresh.
 4. Now make a room Jarvis is genuinely not in so the tool path can be tested: click **New chat**, tick `Nova` and `mybot`, click **Start chat**. A multi-agent New chat always creates a fresh Room (`ChatService.cs:477-490`), so no reset is needed.
@@ -529,7 +529,7 @@ If the reply lists the right names but gives no online/offline state, rerun once
 
 **Pass if — all of these**
 
-- The `Jarvis` tile shows the title `Researcher` and the alias chip `@jar`.
+- The `Jarvis` tile shows the title `Researcher` and the alias caption `@jar`.
 - `/invite @jar` typed by the human works (the free comparison path).
 - Nova's reply shows it read `Alias: jar` out of `list_agents`' job description.
 - The tool call succeeds: the sidebar and the header `<h1>` rename to include `Jarvis` with no refresh, and the member-names line lists Jarvis.

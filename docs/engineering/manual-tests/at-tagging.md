@@ -1,6 +1,6 @@
 # References in a Message: the @ picker, Copy link and the Referenced items header
 
-Prove, in a real browser against the running app, what the Reference picker writes, how a reference renders and resolves, what an Agent is told, and how the picker behaves under the 90% zoom and on a narrow window. The automated suite covers the pure text functions, the providers and the prompt against fakes; it cannot see the caret, the zoom, the keyboard, the screen reader or the wire, so each of those is checked here.
+Prove, in a real browser against the running app, what the Reference picker writes, how a reference renders and resolves, what an Agent is told, and how the picker behaves at the default 100% render and on a narrow window. The automated suite covers the pure text functions, the providers and the prompt against fakes; it cannot see the caret, the zoom, the keyboard, the screen reader or the wire, so each of those is checked here.
 
 **12 tests** · all free · about 2.1 hours.
 
@@ -206,16 +206,16 @@ Read [the manual test script](../manual-tests.md) first, then [Common procedures
 
 - A Message is sent while the picker is open, or the count is not announced.
 
-### ATTAG-09 — The picker height at 90 percent zoom and on a narrow window (AT-M9)
+### ATTAG-09 — The picker height and a narrow window (AT-M9)
 
 **Free** · about 10 min
 
-*Proves the picker opens above the composer, fits the height rule under the 90% zoom, scrolls inside itself and never overflows sideways on a 400 px window. Chrome and Edge.*
+*Proves the picker opens above the composer, fits the height rule (the smaller of 320 px and 40% of the window, plain `vh`, no page zoom), scrolls inside itself and never overflows sideways on a 400 px window. Chrome and Edge.*
 
 **Steps**
 
-1. Set the browser zoom to 90%. Type `@` with a long list and open DevTools.
-2. In the console, run `document.querySelector('.composer-picker').getBoundingClientRect().height` and `Math.min(320 * 0.9, 0.4 * window.innerHeight)`.
+1. Leave the browser zoom at 100% (the app applies no zoom of its own, ADR-0056). Type `@` with a long list and open DevTools.
+2. In the console, run `document.querySelector('.composer-picker').getBoundingClientRect().height` and `Math.min(320, 0.4 * window.innerHeight)`.
 3. Compare the two numbers.
 4. Narrow the window to 400 px and read the picker's right edge.
 

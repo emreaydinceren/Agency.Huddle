@@ -1028,7 +1028,7 @@ If `Set-TeamDb` errors with 'database is locked', the app is still running - sto
 **Steps**
 
 1. Start the app in the restart lane. Open `http://localhost:5100/teammates`.
-2. Wait until the `Probe One` tile shows a green dot and the label `Online`. This may take several seconds.
+2. Wait until the `Probe One` tile's avatar badge shows the check glyph and its tooltip reads `Online`. This may take several seconds.
 3. In `T-B` note the resting adapter count now that runners are up (one per Online teammate, the Chief of Staff included).
 4. Click the `Probe One` tile, then click **Edit**. Wait for both selects to settle, then wait until `T-B` is back to the step 3 count. A cold-cache probe adds a throwaway adapter for a few seconds, and it must be gone before you take the baseline.
 5. In `T-C` run `Get-CimInstance Win32_Process -Filter "Name='node.exe'" | Where-Object { $_.CommandLine -like '*claude-agent-acp*' } | Select-Object ProcessId` and write down the PIDs as list A. In `T-A`, note the last log line.

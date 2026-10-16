@@ -64,7 +64,7 @@ Read-Host 'ENTER = disconnect'
 3. In devtools Elements, press Ctrl+F and search for `member-health-alert`. Record the match count.
 4. Click each room link in the sidebar in turn and repeat the same search in each Room.
 5. In `T-D` run: `(Invoke-WebRequest "http://localhost:5100/rooms/ROOMID" -UseBasicParsing).Content | Select-String 'member-health-alert'` (substituting the real id). Record whether anything is printed.
-6. Click **Teammates** in the sidebar and record the status label and dot colour shown for each teammate.
+6. Click **Teammates** in the sidebar and record the state word in the avatar badge's tooltip for each teammate.
 7. Go back to a Room and, in `T-C`, run `pwsh tools/echo-bot.ps1 -Name pipebot`, wait for it to print `Sent hello`, then press Ctrl+C in that window to disconnect it. Reload the Room in the browser and search for `member-health-alert` again.
 
 **Pass if — all of these**
@@ -934,7 +934,7 @@ If the app fails to restart (port in use), wait for the old process to exit full
    > which needs two Agents. Same rule as `ROOMMESSAGING-30` and `STARTUPCONFIG-33`.
 5. Read the area between the transcript and the composer.
 6. In devtools Elements, search for `member-health-alert` and record the count; then search for `budget-prompt`.
-7. Click **Teammates** and read the status label and dot for `Ada`.
+7. Click **Teammates** and read the avatar badge's tooltip for `Ada`.
 8. The refusal needs its own configuration, because at a budget of 2 with two Agents both replies are accepted. Stop the app, relaunch with `$env:Team__AgentMessageBudget="1"` using the `P-LAUNCH-UAT` launch command only (do NOT re-run the seeder, which would wipe the Room), and send one `hello again @Ada and @Bo`: the first Agent to answer spends the budget and the second is refused. Check `T-A` for a Warning line reading `Room '<id>' refused a message from '<agent>': its budget of 1 agent messages since a human last spoke is spent.` - the number is the configured budget.
 9. Return to the Room and click **Continue**. BEFORE typing anything, confirm the `Agents have sent 1 replies…` prompt is gone and that either the refused Agent's reply now lands (the last Message is re-delivered to whoever it Mentions) or the blue note `Budget granted and the last message was delivered again, but it names no teammate. Mention one by name to get an answer.` appears (`Chat.razor:181`). Only then send `@Ada hello four` and confirm Ada replies; that last reply proves nothing about Continue, because any Human Message resets the counter (`ChatService.cs:280`).
 10. Press Ctrl+C in `T-A` and restart without the variable: `Remove-Item Env:Team__AgentMessageBudget`, then the `P-LAUNCH-UAT` launch command.
@@ -980,14 +980,14 @@ This Room has three Members, so per ADR-0004 each Agent answers only a Mention; 
 4. In the **Persona body** textarea type `You are Nova. Answer briefly.`
 5. In the **Model** dropdown choose the option whose name contains `Haiku`.
 6. In the **Effort** dropdown choose `low`.
-7. Click **Add teammate**. Wait until Nova's tile shows **Online** with a green dot (it may pass through **Starting** first).
+7. Click **Add teammate**. Wait until Nova's avatar badge shows **Online** (check glyph) (it may pass through **Starting** first).
 8. Open Nova's Room from the sidebar (or click her tile and then **Message**) and confirm the Room shows NO alert strip while she is healthy. Note the Room id as NOVAROOM.
 9. Press Ctrl+C in `T-A`. In the same window set `$env:Team__Acp__Command="definitely-not-node"`, then run the `P-LAUNCH-PAID` launch command (the last block of that procedure; do not repeat its first step).
 10. Wait for startup, then reload the browser and open Nova's Room.
 11. Read the area between the transcript and the composer, word for word.
 12. In devtools Elements, confirm the strip element is a `MudAlert` whose class list includes `member-health-alert` (it also carries `mud-alert` classes) and has `role="alert"` (`Chat.razor:76`), and that it sits BETWEEN the message list and the composer.
 13. Check `T-A` for `Persona 'Nova' failed to start.` at Warning.
-14. Click **Teammates**, then Nova's tile; read her status label, dot colour and the reason line on the card.
+14. Click **Teammates**, then Nova's tile; read the badge tooltip on her tile and the status and reason line on the card.
 15. Confirm the card offers a **Restart** button and the hint `Like saving an edit, this restarts the teammate, which clears what it remembers.`
 
 **Pass if — all of these**
@@ -1039,7 +1039,7 @@ If Nova never reaches **Online** in step 7 even with a working `node`, this test
 - A **Restart** button is offered for a Persona that never started, not only for one that started and then failed. (It is deliberately offered in every state except Starting, Online included: `TeammateCard.razor:182`.)
 - While the restart is in flight the button reads `Restarting…` and is disabled.
 - With the command still broken, the restart fails again and the card still shows **Offline** with the reason - correct behaviour, not a failure of this test.
-- Once the command is fixed, the card shows **Starting** and then **Online** with a green dot and NO reason line.
+- Once the command is fixed, the card shows **Starting** and then **Online** (check glyph) and NO reason line.
 - The Room tab left open clears its alert strip without a manual reload.
 - `Test-Path` prints True.
 
@@ -1113,7 +1113,7 @@ If `sqlite3` is not on PATH, do NOT improvise - record the test as inconclusive 
 
 **Steps**
 
-1. Confirm on /teammates that Nova reads **Online** with a green dot and no reason line.
+1. Confirm on /teammates that Nova reads **Online** (check glyph) and no reason line.
 2. Open Nova's Room and note its id as NOVAROOM.
 3. In `T-D` run: `Get-Content "<data>\rooms\<NOVAROOM>.jsonl" | Measure-Object -Line` and write down the count as BEFORE.
 4. In the composer type exactly `@Nova count from 1 to 200, one number per line` and press Enter.
@@ -1164,7 +1164,7 @@ If no Draft ever appears, the Turn failed before streaming: read `T-A` for a war
 2. Type `@Nova count from 1 to 200, one number per line` and press Enter; click **Stop** after a second or two.
 3. Immediately look at the area between the transcript and the composer.
 4. In devtools Elements, search for `member-health-alert` and record the count.
-5. Click **Teammates** and read Nova's tile: label and dot colour; open her card and check for a reason line.
+5. Click **Teammates** and read the badge tooltip on Nova's tile; open her card and check for a reason line.
 6. Note that the card offers a **Restart** button; it is offered in every state except Starting, so its presence says nothing about health here (`TeammateCard.razor:182`).
 7. Return to the Room and repeat the prompt-and-Stop twice more, so three Turns in a row have been stopped.
 8. After the third Stop, re-check the Room strip, the /teammates tile and the card.
@@ -1174,7 +1174,7 @@ If no Draft ever appears, the Turn failed before streaming: read `T-A` for a war
 **Pass if — all of these**
 
 - After every Stop the Room shows NO `member-health-alert` strip, no red text and no budget prompt.
-- Nova's tile and card read **Online** with a green dot and no reason line throughout, including after three consecutive Stops.
+- Nova's tile and card read **Online** (check glyph) and no reason line throughout, including after three consecutive Stops.
 - `T-A` shows exactly three `Persona 'Nova' turn in room <id> was stopped.` lines at Information and ZERO `failed to process a turn` warnings.
 - The follow-up message is answered normally.
 
@@ -1400,7 +1400,7 @@ If pulling the network also kills the browser's connection to the app, do not ju
 5. Switch back to the browser immediately and watch the Room for 30 seconds WITHOUT reloading.
 6. Record whether the Draft row cleared or froze.
 7. Read the strip between the transcript and the composer, word for word.
-8. Click **Teammates** and read Nova's tile label and dot colour.
+8. Click **Teammates** and read the badge tooltip on Nova's tile.
 9. Read `T-A` for warnings mentioning Nova.
 10. Return to the Room, type `@Nova are you there` and press Enter, and watch for 30 seconds.
 11. Open Nova's card on /teammates and click **Restart**; wait for **Online**.
