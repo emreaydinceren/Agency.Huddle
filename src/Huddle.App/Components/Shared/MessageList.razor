@@ -65,7 +65,7 @@
             }
             else
             {
-                <ProfileAvatar Name="@message.SenderName" Avatar="this.Avatars.Get(message.SenderName)" Size="Size.Small" Team="@this.Team" />
+                <ProfileAvatar Name="@message.SenderName" Avatar="this.Avatars.Get(message.SenderName)" Size="Size.Small" Class="avatar-transcript" Team="@this.Team" />
             }
             <div class="message-content">
                 @if (!continues)
@@ -88,7 +88,7 @@
                appeared once the Turn landed would make every streaming reply jump sideways as it
                completed. Resolved through the same AvatarStore.Get(SenderName) lookup a settled
                Message uses, since Draft.SenderName is keyed the same way. *@
-            <ProfileAvatar Name="@draft.SenderName" Avatar="this.Avatars.Get(draft.SenderName)" Size="Size.Small" Team="@this.Team" />
+            <ProfileAvatar Name="@draft.SenderName" Avatar="this.Avatars.Get(draft.SenderName)" Size="Size.Small" Class="avatar-transcript" Team="@this.Team" />
             <div class="message-content">
                 <div class="message-meta">
                     <span class="message-sender">@draft.SenderName</span>

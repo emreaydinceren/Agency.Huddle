@@ -424,7 +424,7 @@ public sealed class TeammateCardAvatarTests
     private static string CardAvatarBackground(IRenderedComponent<ContainerFragment> cut)
     {
         string style = CardAvatarStyle(cut);
-        Match match = Regex.Match(style, @"(?:background:\s*(?:color-mix\(in srgb,\s*)?)(#[0-9a-fA-F]{6})", RegexOptions.CultureInvariant, TimeSpan.FromSeconds(2));
+        Match match = Regex.Match(style, @"(?:(?:background|--mud-palette-primary):\s*)(#[0-9a-fA-F]{6})", RegexOptions.CultureInvariant, TimeSpan.FromSeconds(2));
         Assert.True(match.Success, $"The card's avatar has no background in its style: '{style}'.");
         return match.Groups[1].Value;
     }

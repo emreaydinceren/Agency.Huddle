@@ -132,7 +132,7 @@
     /// <summary>
     /// The root's classes: the caller's <see cref="Class"/>, plus <c>avatar-image</c> for a picture (the same circle
     /// with a 1px inner hairline) or <c>avatar-monogram</c> for letters (the Teammate's colour at 20% over Surface,
-    /// letters mixed 75% toward TextPrimary, both in <c>app.css</c>).
+    /// letters mixed 75% toward TextPrimary; a Dark Theme uses 35% and white, both in <c>app.css</c>).
     /// </summary>
     private string RootClass
     {
@@ -146,7 +146,8 @@
     /// <summary>
     /// The inline <c>style</c> for <see cref="Avatars.Avatar.Background"/>, or <see langword="null"/> when
     /// <see cref="Resolved"/> has none - so the Theme's own accent applies through <c>.avatar-monogram</c> in
-    /// <c>app.css</c>. Letters get the same mix with the Teammate's colour (<see cref="AvatarColours.MonogramStyle(string)"/>;
+    /// <c>app.css</c>. A monogram hands the Teammate's colour to <c>app.css</c> as this avatar's own primary
+    /// (<see cref="AvatarColours.MonogramStyle(string)"/>), which makes the fill and letters for the Theme in force;
     /// there is no per-colour black or white choice); a picture, which may be transparent, sits on the colour itself.
     /// Built entirely from this C# string, never a literal typed into the markup above: a later task fails the build
     /// on a colour literal found inside any literal inline style attribute under <c>Components/</c>.

@@ -1,24 +1,26 @@
 using Agency.Huddle.App.Avatars;
 using Agency.Huddle.App.Themes;
+using Agency.Huddle.Tests.Ui;
 using MudBlazor.Utilities;
 
 namespace Agency.Huddle.Tests.Themes;
 
 /// <summary>
-/// Pins the monogram recipe (<see cref="AvatarColours"/>): the Teammate's colour at 20% over Surface for the fill and 75% toward
-/// TextPrimary for the letters. The recipe replaces the old black-or-white choice, so the proof that matters is that the letters
-/// clear the WCAG 4.5:1 text floor on the fill for any colour, in the Huddle Light and Huddle Dark palettes.
+/// Pins the monogram recipe (<see cref="AvatarColours"/>): in a Light Theme the Teammate's colour at 20% over Surface for the fill and
+/// 75% toward TextPrimary for the letters; in a Dark Theme the colour at 35% over Surface and 75% toward white. The recipe replaces the
+/// old black-or-white choice, so the proof that matters is that the letters clear the WCAG 4.5:1 text floor on the fill for any colour,
+/// in the Huddle Light and Huddle Dark palettes.
 /// </summary>
 public sealed class AvatarColoursTests
 {
     /// <summary>The WCAG 1.4.3 text minimum.</summary>
     private const double WcagTextMinimum = 4.5;
 
-    /// <summary>The Huddle Light and Huddle Dark Surface and TextPrimary pairs, by Theme name.</summary>
-    public static TheoryData<string, string, string> Palettes() => new()
+    /// <summary>The Huddle Light and Huddle Dark Surface and TextPrimary pairs, with whether the Theme is a Dark one, by Theme name.</summary>
+    public static TheoryData<string, string, string, bool> Palettes() => new()
     {
-        { "Huddle Light", HuddleTheme.Light().Surface.ToString(MudColorOutputFormats.Hex), HuddleTheme.Light().TextPrimary.ToString(MudColorOutputFormats.Hex) },
-        { "Huddle Dark", HuddleTheme.Dark().Surface.ToString(MudColorOutputFormats.Hex), HuddleTheme.Dark().TextPrimary.ToString(MudColorOutputFormats.Hex) },
+        { "Huddle Light", HuddleTheme.Light().Surface.ToString(MudColorOutputFormats.Hex), HuddleTheme.Light().TextPrimary.ToString(MudColorOutputFormats.Hex), false },
+        { "Huddle Dark", HuddleTheme.Dark().Surface.ToString(MudColorOutputFormats.Hex), HuddleTheme.Dark().TextPrimary.ToString(MudColorOutputFormats.Hex), true },
     };
 
     /// <summary>The mix is plain sRGB interpolation, so its end points and midpoint are exact.</summary>
@@ -33,15 +35,29 @@ public sealed class AvatarColoursTests
         Assert.Equal("#808080", AvatarColours.Mix(black, white, 50).ToString(MudColorOutputFormats.Hex));
     }
 
-    /// <summary>The inline style states the recipe as <c>color-mix</c> against the Theme's tokens, so each Theme resolves it itself.</summary>
+    /// <summary>The inline style hands only the Teammate's colour to <c>app.css</c> as the avatar's own primary, so each Theme resolves the recipe itself.</summary>
     [Fact]
-    public void MonogramStyle_StatesTheRecipeAgainstTheThemeTokens()
+    public void MonogramStyle_HandsTheColourToTheStylesheetRecipe()
     {
         string style = AvatarColours.MonogramStyle("#123456");
 
-        Assert.Equal(
-            "background: color-mix(in srgb, #123456 20%, var(--mud-palette-surface)); color: color-mix(in srgb, #123456 25%, var(--mud-palette-text-primary));",
-            style);
+        Assert.Equal("--mud-palette-primary: #123456;", style);
+    }
+
+    /// <summary>The stylesheet states the Light recipe (20% fill, letters 75% toward TextPrimary) and the Dark one (35% fill, letters 75% toward white) that this class mirrors.</summary>
+    [Fact]
+    public void Stylesheet_StatesBothRecipes()
+    {
+        string css = File.ReadAllText(CssSource.RepoPath("src", "Huddle.App", "wwwroot", "app.css"));
+
+        Assert.Contains("background-color: color-mix(in srgb, var(--mud-palette-primary) 20%, var(--mud-palette-surface));", css, StringComparison.Ordinal); // contains-ok: haystack is the stylesheet source
+        Assert.Contains("color: color-mix(in srgb, var(--mud-palette-primary) 25%, var(--mud-palette-text-primary));", css, StringComparison.Ordinal); // contains-ok: haystack is the stylesheet source
+        Assert.Contains(":root:has(.theme-mode-dark) .mud-avatar.mud-avatar-filled.avatar-monogram", css, StringComparison.Ordinal); // contains-ok: haystack is the stylesheet source
+        Assert.Contains("background-color: color-mix(in srgb, var(--mud-palette-primary) 35%, var(--mud-palette-surface));", css, StringComparison.Ordinal); // contains-ok: haystack is the stylesheet source
+        Assert.Contains("color: color-mix(in srgb, var(--mud-palette-primary) 25%, var(--mud-palette-white));", css, StringComparison.Ordinal); // contains-ok: haystack is the stylesheet source
+        Assert.Equal(20, AvatarColours.LightFillPercent);
+        Assert.Equal(35, AvatarColours.DarkFillPercent);
+        Assert.Equal(75, AvatarColours.LettersTowardPercent);
     }
 
     /// <summary>
@@ -50,7 +66,7 @@ public sealed class AvatarColoursTests
     /// </summary>
     [Theory]
     [MemberData(nameof(Palettes))]
-    public void Letters_OnTheFill_ClearTheTextFloor_ForASampleOfColours(string theme, string surfaceHex, string textHex)
+    public void Letters_OnTheFill_ClearTheTextFloor_ForASampleOfColours(string theme, string surfaceHex, string textHex, bool dark)
     {
         MudColor surface = new(surfaceHex);
         MudColor text = new(textHex);
@@ -62,7 +78,7 @@ public sealed class AvatarColoursTests
 
         foreach (MudColor colour in sample)
         {
-            double ratio = ContrastColour.Ratio(AvatarColours.Letters(colour, text), AvatarColours.Fill(colour, surface));
+            double ratio = ContrastColour.Ratio(AvatarColours.Letters(colour, text, dark), AvatarColours.Fill(colour, surface, dark));
 
             Assert.True(ratio >= WcagTextMinimum, $"{theme}: {colour.ToString(MudColorOutputFormats.Hex)} gives {ratio:0.00}:1.");
         }
@@ -71,7 +87,7 @@ public sealed class AvatarColoursTests
     /// <summary>The claim is not about a sample: sweeping the sRGB cube at step 17 (4096 colours) the letters clear 4.5:1 in both Themes.</summary>
     [Theory]
     [MemberData(nameof(Palettes))]
-    public void Letters_OnTheFill_ClearTheTextFloor_AcrossTheSrgbCube(string theme, string surfaceHex, string textHex)
+    public void Letters_OnTheFill_ClearTheTextFloor_AcrossTheSrgbCube(string theme, string surfaceHex, string textHex, bool dark)
     {
         MudColor surface = new(surfaceHex);
         MudColor text = new(textHex);
@@ -83,7 +99,7 @@ public sealed class AvatarColoursTests
                 for (int blue = 0; blue <= 255; blue += 17)
                 {
                     MudColor colour = new(r: (byte)red, g: (byte)green, b: (byte)blue, a: 255);
-                    double ratio = ContrastColour.Ratio(AvatarColours.Letters(colour, text), AvatarColours.Fill(colour, surface));
+                    double ratio = ContrastColour.Ratio(AvatarColours.Letters(colour, text, dark), AvatarColours.Fill(colour, surface, dark));
 
                     Assert.True(ratio >= WcagTextMinimum, $"{theme}: {colour.ToString(MudColorOutputFormats.Hex)} gives {ratio:0.00}:1.");
                 }
@@ -97,10 +113,10 @@ public sealed class AvatarColoursTests
     {
         MudColor accent = new("#5b64c8");
 
-        MudColor lightFill = AvatarColours.Fill(accent, HuddleTheme.Light().Surface);
-        MudColor lightLetters = AvatarColours.Letters(accent, HuddleTheme.Light().TextPrimary);
-        MudColor darkFill = AvatarColours.Fill(accent, HuddleTheme.Dark().Surface);
-        MudColor darkLetters = AvatarColours.Letters(accent, HuddleTheme.Dark().TextPrimary);
+        MudColor lightFill = AvatarColours.Fill(accent, HuddleTheme.Light().Surface, dark: false);
+        MudColor lightLetters = AvatarColours.Letters(accent, HuddleTheme.Light().TextPrimary, dark: false);
+        MudColor darkFill = AvatarColours.Fill(accent, HuddleTheme.Dark().Surface, dark: true);
+        MudColor darkLetters = AvatarColours.Letters(accent, HuddleTheme.Dark().TextPrimary, dark: true);
 
         Assert.True(ContrastColour.RelativeLuminance(lightFill) > ContrastColour.RelativeLuminance(lightLetters));
         Assert.True(ContrastColour.RelativeLuminance(darkFill) < ContrastColour.RelativeLuminance(darkLetters));

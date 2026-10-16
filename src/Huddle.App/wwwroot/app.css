@@ -297,11 +297,13 @@ a.team-ref,
     margin: 0 0 12px 0;
 }
 
-/* ---- Presence badge and status dot (DS-6) --------------------------------------------------------
-   A 10px circle in the state's tone that carries a glyph, so the state is never colour alone: a check (online),
-   a pulse (starting, awake), a dash (degraded) and a hollow ring (offline, asleep). The glyph is drawn in the
-   Surface colour (PresenceGlyphView). Standalone it is the inline dot beside a name; on an avatar (.on-avatar,
-   inside .presence-anchor) it sits on the bottom-right rim, ringed in Surface. */
+/* ---- Presence badge and status dot (DS-6, C3) ----------------------------------------------------
+   A circle in the state's tone that carries a glyph, so the state is never colour alone: a green circle with a white
+   check (online), an amber circle with a pulse line that breathes (starting, awake), a red circle with a white dash
+   (degraded) and a hollow grey ring (offline, asleep). The three filled tones are the palette colour mixed 20% toward
+   black, so the white glyph keeps 3:1 against the fill in Huddle Light and Huddle Dark (a test holds it). 10px on avatars
+   up to 32px and standalone, 12px on 40px and up. Standalone it is the inline dot beside a name; on an avatar
+   (.on-avatar, inside .presence-anchor) it sits on the bottom-right rim, ringed in 2px of Surface. */
 .agent-dot {
     display: inline-flex;
     align-items: center;
@@ -312,24 +314,31 @@ a.team-ref,
     height: 10px;
     border-radius: 50%;
     vertical-align: middle;
-    background: var(--mud-palette-error);
+    background: var(--mud-palette-surface);
+    box-shadow: inset 0 0 0 2px var(--mud-palette-text-secondary);
 }
 
-.agent-dot.online,
+.agent-dot.online {
+    background: color-mix(in srgb, var(--mud-palette-success) 80%, var(--mud-palette-black));
+    box-shadow: none;
+}
+
 .agent-dot.awake {
-    background: var(--mud-palette-success);
+    background: color-mix(in srgb, var(--mud-palette-warning) 80%, var(--mud-palette-black));
+    box-shadow: none;
 }
 
-.agent-dot.degraded,
 .agent-dot.starting {
-    background: var(--mud-palette-warning);
+    background: color-mix(in srgb, var(--mud-palette-warning) 80%, var(--mud-palette-black));
+    box-shadow: none;
 }
 
-.agent-dot.asleep {
-    background: var(--mud-palette-text-secondary);
+.agent-dot.degraded {
+    background: color-mix(in srgb, var(--mud-palette-error) 80%, var(--mud-palette-black));
+    box-shadow: none;
 }
 
-/* The glyph is a mask painted in the Surface colour over the tone, drawn on ::after. The Task card's MudBadge
+/* The glyph is a mask painted white over the tone, drawn on ::after. The Task card's MudBadge
    (.task-card-presence) takes the same shapes from the same presence-glyph-* classes. The ring has no mark. */
 .agent-dot.presence-glyph-check::after,
 .agent-dot.presence-glyph-pulse::after,
@@ -340,7 +349,7 @@ a.team-ref,
     content: "";
     width: 100%;
     height: 100%;
-    background: var(--mud-palette-surface);
+    background: var(--mud-palette-white);
     mask-position: center;
     mask-repeat: no-repeat;
     mask-size: 100% 100%;
@@ -361,14 +370,29 @@ a.team-ref,
     mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 10 10'%3E%3Cpath d='M2.6 5 H7.4' fill='none' stroke='%23000' stroke-width='1.4' stroke-linecap='round'/%3E%3C/svg%3E");
 }
 
-/* A hollow ring is a Surface-filled circle with a 2px outline in the tone. */
-.agent-dot.presence-glyph-ring {
-    background: var(--mud-palette-surface);
-    box-shadow: inset 0 0 0 2px var(--mud-palette-error);
+/* A gentle pulse for a state in flux: the badge breathes between full and about half opacity. Static when the
+   viewer asks for reduced motion. */
+@keyframes presence-pulse {
+    0%,
+    100% {
+        opacity: 1;
+    }
+
+    50% {
+        opacity: 0.55;
+    }
 }
 
-.agent-dot.presence-glyph-ring.asleep {
-    box-shadow: inset 0 0 0 2px var(--mud-palette-text-secondary);
+.agent-dot.presence-glyph-pulse,
+.task-card-presence.presence-glyph-pulse .mud-badge {
+    animation: presence-pulse 1.8s ease-in-out infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .agent-dot.presence-glyph-pulse,
+    .task-card-presence.presence-glyph-pulse .mud-badge {
+        animation: none;
+    }
 }
 
 .presence-anchor {
@@ -386,22 +410,33 @@ a.team-ref,
 }
 
 .agent-dot.on-avatar.presence-glyph-ring {
-    box-shadow: inset 0 0 0 2px var(--mud-palette-error), 0 0 0 2px var(--mud-palette-surface);
-}
-
-.agent-dot.on-avatar.presence-glyph-ring.asleep {
     box-shadow: inset 0 0 0 2px var(--mud-palette-text-secondary), 0 0 0 2px var(--mud-palette-surface);
 }
 
-/* ---- Avatars (DS-6) -------------------------------------------------------------------------------
-   Monogram: the Teammate's colour (set inline by TeammateAvatar; the Theme accent when none) at 20% over Surface,
-   with letters mixed 75% toward TextPrimary at weight 600. A Dark Theme runs the same mix against its own Surface
-   and TextPrimary, so it gets a deep fill with light letters; there is no per-colour black or white. Letters are
-   40% of the diameter and never under 10px, a floor set by the avatar spec rather than the 11px text floor, since
-   a 24px row avatar has no room for more; the declaration uses max() so it stays a computed size, not a literal one.
-   AvatarColours mirrors this recipe in C# so a test can prove the 4.5:1 contrast. */
+/* 12px on avatars 40px and up (Medium, Large); 10px on the 24px and 32px ones. */
+.presence-anchor:has(> .mud-avatar-medium, > .mud-avatar-large) > .agent-dot.on-avatar {
+    width: 12px;
+    height: 12px;
+}
+
+/* ---- Avatars (DS-6, C2) ---------------------------------------------------------------------------
+   Four diameters: 24px in rows and the sidebar (MudBlazor Small), 32px in the Transcript (.avatar-transcript),
+   40px on cards and tiles (Medium) and 72px on a profile (Large). Letters are 40% of the diameter and never
+   under 10px, a floor set by the avatar spec rather than the 11px text floor, since a 24px row avatar has no room
+   for more; the declaration uses max() so it stays a computed size, not a literal one.
+   Monogram: the Teammate's colour (TeammateAvatar overrides --mud-palette-primary on the avatar itself; the Theme
+   accent when none is chosen) at 20% over Surface, with letters mixed 75% toward TextPrimary at weight 600. A Dark
+   Theme (MainLayout renders .theme-mode-dark) runs the colour at 35% over its Surface with letters mixed 75% toward
+   white: a deep fill, light letters. There is no per-colour black or white. AvatarColours mirrors both recipes in C#
+   so a test can prove the 4.5:1 contrast. */
 .mud-avatar.mud-avatar-small {
     font-size: max(10px, calc(24px * 0.4));
+}
+
+.mud-avatar.avatar-transcript {
+    width: 32px;
+    height: 32px;
+    font-size: max(10px, calc(32px * 0.4));
 }
 
 .mud-avatar.mud-avatar-medium {
@@ -409,13 +444,20 @@ a.team-ref,
 }
 
 .mud-avatar.mud-avatar-large {
-    font-size: max(10px, calc(56px * 0.4));
+    width: 72px;
+    height: 72px;
+    font-size: max(10px, calc(72px * 0.4));
 }
 
 .mud-avatar.mud-avatar-filled.avatar-monogram {
     background-color: color-mix(in srgb, var(--mud-palette-primary) 20%, var(--mud-palette-surface));
     color: color-mix(in srgb, var(--mud-palette-primary) 25%, var(--mud-palette-text-primary));
     font-weight: 600;
+}
+
+:root:has(.theme-mode-dark) .mud-avatar.mud-avatar-filled.avatar-monogram {
+    background-color: color-mix(in srgb, var(--mud-palette-primary) 35%, var(--mud-palette-surface));
+    color: color-mix(in srgb, var(--mud-palette-primary) 25%, var(--mud-palette-white));
 }
 
 /* A picture or illustration is the same circle with a 1px inner hairline in Divider, drawn over the image. */
@@ -952,7 +994,7 @@ a.team-ref,
 
 .message-gutter {
     display: block;
-    width: 24px;
+    width: 32px;
 }
 
 /* ---- Day separators and slim system rows in the Transcript --------------------------------- */
@@ -1447,21 +1489,34 @@ a.team-ref,
 
 /* ---- Teammates: directory tiles and the profile card -------------------- */
 
-/* A responsive grid of people, like Slack's Directories. auto-fill with a
-   minimum tile width means the column count follows the window with no media
-   queries to keep in step. */
+/* A responsive grid of people, like Slack's Directories. The columns are at least 240px and share the width left
+   over, so the grid fills the page rather than leaving fixed-width tiles with wide gaps; the column count follows the
+   window with no media queries to keep in step. */
 .teammates-list {
     display: grid;
-    grid-template-columns: repeat(auto-fill, 17rem);
+    grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
     gap: 16px;
     margin: 0;
     padding: 0;
     list-style: none;
 }
 
+/* The card: the <li> carries the border so the "Working on" Task link can sit inside it without being nested in the
+   opening <button>. */
 .teammates-item {
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
     padding: 0;
     list-style: none;
+    background: var(--mud-palette-surface);
+    border: 1px solid var(--mud-palette-divider);
+    border-radius: var(--mud-default-borderradius);
+}
+
+.teammates-item:hover {
+    background: var(--mud-palette-action-default-hover);
+    border-color: var(--mud-palette-lines-default);
 }
 
 .teammate-tile {
@@ -1473,15 +1528,10 @@ a.team-ref,
     font: inherit;
     text-align: left;
     color: inherit;
-    background: var(--mud-palette-surface);
-    border: 1px solid var(--mud-palette-divider);
+    background: transparent;
+    border: 0;
     border-radius: var(--mud-default-borderradius);
     cursor: pointer;
-}
-
-.teammate-tile:hover {
-    background: var(--mud-palette-action-default-hover);
-    border-color: var(--mud-palette-lines-default);
 }
 
 .teammate-tile-text {
@@ -1498,14 +1548,21 @@ a.team-ref,
     margin-top: 4px;
 }
 
+/* "Working on SUPP-0002": 12px secondary, under the avatar's text column (16 padding + 40 avatar + 16 gap). */
 .teammate-tile-context {
-    margin-top: 4px;
+    padding: 0 16px 16px calc(16px + 40px + 16px);
+    margin-top: -8px;
     font-size: var(--mud-typography-caption-size);
     color: var(--mud-palette-text-secondary);
 }
 
+.teammate-tile-task-link {
+    font-size: inherit;
+}
+
+/* The name is 14px at 600, the role 13px (below), the alias and state 12px, all in the tile's text column. */
 .teammates-item-name {
-    font-size: var(--mud-typography-body1-size);
+    font-size: var(--mud-typography-subtitle2-size);
     font-weight: 600;
 }
 
@@ -1782,6 +1839,13 @@ a.team-ref,
 
 .teammates-group {
     margin-bottom: 32px;
+}
+
+/* The count beside a group's name: caption size, secondary, normal weight. */
+.teammates-group-count {
+    font-size: var(--mud-typography-caption-size);
+    font-weight: 400;
+    color: var(--mud-palette-text-secondary);
 }
 
 .teammate-tile-role {
@@ -2074,14 +2138,15 @@ a.team-ref,
     inset: calc(100% - 8px) auto auto calc(100% - 8px);
 }
 
-/* A hollow ring (asleep, offline) is a Surface-filled circle outlined in its colour. */
+/* A hollow ring (asleep, offline) is a Surface-filled circle outlined in grey. */
 .task-card-presence.presence-glyph-ring .mud-badge.mud-badge-overlap {
     background-color: var(--mud-palette-surface);
     box-shadow: inset 0 0 0 2px var(--mud-palette-text-secondary), 0 0 0 2px var(--mud-palette-surface);
 }
 
-.task-card-presence.presence-glyph-ring.offline .mud-badge.mud-badge-overlap {
-    box-shadow: inset 0 0 0 2px var(--mud-palette-error), 0 0 0 2px var(--mud-palette-surface);
+/* An awake assignee is mid-Turn: the same darkened amber as the pulse badge, so the white pulse line is readable. */
+.task-card-presence.awake .mud-badge.mud-badge-overlap {
+    background-color: color-mix(in srgb, var(--mud-palette-warning) 80%, var(--mud-palette-black));
 }
 
 /* The card currently being dragged. */
@@ -4144,6 +4209,15 @@ a.team-ref,
    Spacing="2" gives a bare avatar (MudBlazor's ms-n2), on the stylesheet's px scale (CV11). */
 .mud-avatar-group > .profile-avatar:not(:first-child) {
     margin-inline-start: -8px;
+}
+
+/* The stacked member avatars in the Room header are the 24px row size, each ringed in 2px of Surface outside its
+   circle (content-box), so the overlap reads as a ring and not as a smaller avatar. */
+.mud-avatar-group.mud-avatar-group-outlined .mud-avatar.mud-avatar-small {
+    box-sizing: content-box;
+    width: 24px;
+    height: 24px;
+    border: 2px solid var(--mud-palette-surface);
 }
 
 .profile-avatar-button {
