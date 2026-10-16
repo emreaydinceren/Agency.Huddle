@@ -812,7 +812,7 @@ Split from the original T7.3 by R1 (too much for one Sonnet task across JS, edit
   `tests/Huddle.Tests/Ui/Sidebar/LibraryDocumentSubjectTests.cs` (setup, from T5.1).
 - **Risk:** `logic`.
 - **Deliverable:** red first: `tests/Huddle.Tests/Ui/Sidebar/LibraryDocumentScrollTests.cs`
-  (bUnit; `MudBunitContext` is Loose, so `ctx.JSInterop.Setup<bool>("huddleLibrary.scrollToHeading", _ => true)`
+  (bUnit; `MudBunitContext` is Loose, so `ctx.JSInterop.Setup<bool>("huddleLibrary.scrollToHeading", _ => true).SetResult(true)`
   and `VerifyInvoke`): `Read_ScrollToHeading_CallsScrollToHeading` (with the root element and the id);
   `Edit_ScrollToHeading_RevealsTheLine` (the editor handle's `revealLine` with the line);
   `OtherTab_Command_IsIgnored`. Then in `LibraryDocument.razor` add `@ref` on the root element, a
@@ -1044,7 +1044,8 @@ services.AddSidebarPanel(new Sidebar.SidebarPanel("linked-documents", "Linked do
 ```
 
   `tests/Huddle.Tests/Sidebar/SidebarPanelRegistrationTests.cs` (build the real service collection
-  the way an existing DI test does: `grep -ln "AddHuddle\|ServiceCollectionExtensions" tests/Huddle.Tests`):
+  the way `tests/Huddle.Tests/ServiceCollectionExtensionsTests.cs:84-98` does: `BuildTeamProvider`
+  with `AddTeamServices`; R2):
   `Room_GetsMembersTasksDocuments_InOrder` (ids `["members", "room-tasks", "room-documents"]`);
   `MarkdownDocument_GetsOutlineAndLinked`; `ImageDocument_GetsNothing`;
   `LibraryDisabled_RoomGetsMembersAndTasks`; `TasksDisabled_RoomGetsMembersAndDocuments`.
@@ -1068,7 +1069,7 @@ Haiku. Depends on P13. Docs only; `Check-DocIndex` and `Check-ManualTests` must 
 ### Task 14.2 — The UX catalog and the code map
 
 - **Goal:** the new components are findable.
-- **Read first:** `docs/engineering/UXDesignGuidelines.md` (its catalog section only: `grep -n "^#" docs/engineering/UXDesignGuidelines.md`);
+- **Read first:** `docs/engineering/UXDesignGuidelines.md` lines 70-130 (the rows to change are `:81` and `:123`; R2);
   `docs/engineering/code-map.md` (`grep -n "RightSidebar" docs/engineering/code-map.md`).
 - **Risk:** `data`.
 - **Deliverable:** catalog rows for `PageSubjectSource`, `PageCommandHandler`, `SidebarPanelFrame`
@@ -1107,7 +1108,7 @@ Haiku. Depends on P13. Docs only; `Check-DocIndex` and `Check-ManualTests` must 
 - **Goal:** a green, stable branch.
 - **Read first:** this task.
 - **Risk:** `data`.
-- **Deliverable:** `dotnet build Huddle.slnx`; `dotnet test Huddle.slnx --` twice;
+- **Deliverable:** `agents/scripts/Build.ps1`; `agents/scripts/Run-Tests.ps1` (no filter) twice;
   `Check-All.ps1`; `Check-Diff.ps1 -Scope Branch -Base origin/main`. Report each summary line verbatim.
 - **Acceptance:** report delivered; any failure reported with the test name.
 
@@ -1185,6 +1186,15 @@ chain creating more than 3 files gets 50 calls. Cost: implementers read 1.3M to 
 manager is the hot spot (407K context), so verification goes to Haiku and diffs are checked by
 `--stat` plus grep except for `boundary` tasks.
 
+**R2 outcome (2026-10-16, at 30 Done; report `Conversation/rsp/retro-R2.md`).** The R1 brief changes
+held: no `python3`, `sed -i` or polling since, and no budget overrun (P4 34 of 60, P5 30 of 45); one
+`rm` of a frozen file (P4), logged. Applied: a red names a not-yet-existing type through a using
+alias, never a namespace `using` (IDE0005 hit four of five panel reds); T13.1 builds the provider
+as `ServiceCollectionExtensionsTests.cs:84-98` does; T14.2 names its two lines; T15.1 uses the
+runner scripts. P13, P14 and T15.1 go to one Haiku chain; the manager keeps T15.2 and the PR. Cost
+since R1: P4 4.0M, P5 3.2M (a fresh agent re-orienting from a frozen red), P11 3.0M; the manager
+added 27.6M, more than all panel agents together.
+
 ---
 
 ## 8. Risks
@@ -1205,7 +1215,7 @@ manager is the hot spot (407K context), so verification goes to Haiku and diffs 
 
 Ids are `<deliverable>.<task>`, the form `Set-Tracker.ps1` updates. `(H)` is Haiku, `(S)` Sonnet.
 
-**Status:** 17 of 43 tasks Done · 1 of 2 retrospectives done · last updated 2026-10-16.
+**Status:** 32 of 43 tasks Done · 2 of 2 retrospectives done · last updated 2026-10-16.
 
 | **Deliverable / Task** | **Model** | **Depends on** | **Active** | **In Progress** | **Done** |
 | --- | --- | --- | --- | --- | --- |
@@ -1222,43 +1232,43 @@ Ids are `<deliverable>.<task>`, the form `Set-Tracker.ps1` updates. `(H)` is Hai
 | 3.2 Red: the bus and the handler (S) | Sonnet | 3.1 | | | ✔ |
 | 3.3 `PageCommandBus` and `PageCommandHandler` (S) | Sonnet | 3.2, 1.3 | | | ✔ |
 | **P4 The host and the panel chrome** | Sonnet, Haiku | P1, P2 | | | |
-| 4.1 Red: the host (S) | Sonnet | 2.3 | | | |
-| 4.2 `SidebarPanelContext` and `SidebarPanelFrame` (S) | Sonnet | 4.1 | | | |
-| 4.3 The host draws the catalog (S) | Sonnet | 4.2 | | | |
+| 4.1 Red: the host (S) | Sonnet | 2.3 | | | ✔ |
+| 4.2 `SidebarPanelContext` and `SidebarPanelFrame` (S) | Sonnet | 4.1 | | | ✔ |
+| 4.3 The host draws the catalog (S) | Sonnet | 4.2 | | | ✔ |
 | 4.4 The stylesheet block and the collapse script (H) | Haiku | none | | | ✔ |
 | **P5 Pages publish their Subject** | Sonnet | P2 | | | |
-| 5.1 Red: the Room page and the Library document publish (S) | Sonnet | 2.2 | | | |
-| 5.2 The Room page publishes `RoomSubject` (S) | Sonnet | 5.1 | | | |
-| 5.3 The Library document publishes `DocumentSubject` (S) | Sonnet | 5.1 | | | |
-| 5.4 Verify P2 to P5 (H) | Haiku | 4.3, 5.3 | | | |
+| 5.1 Red: the Room page and the Library document publish (S) | Sonnet | 2.2 | | | ✔ |
+| 5.2 The Room page publishes `RoomSubject` (S) | Sonnet | 5.1 | | | ✔ |
+| 5.3 The Library document publishes `DocumentSubject` (S) | Sonnet | 5.1 | | | ✔ |
+| 5.4 Verify P2 to P5 (H) | Haiku | 4.3, 5.3 | | | ✔ |
 | 🔁 R1 Retrospective after 15 tasks Done | Opus | 15 Done | | | ✔ |
 | **P6 Heading ids and the outline parser** | Haiku, Sonnet | none | | | |
 | 6.1 Red: the outline parser (H) | Haiku | none | | | ✔ |
 | 6.2 `MarkdownOutline` (H) | Haiku | 6.1 | | | ✔ |
 | 6.3 The renderer gives note headings their id (S) | Sonnet | 6.2 | | | ✔ |
 | **P7 Outline panel and the scroll** | Sonnet | P3, P4, P5, P6 | | | |
-| 7.1 Red: the Outline panel (S) | Sonnet | 4.3, 6.2, 3.3 | | | |
-| 7.2 `OutlinePanel` (S) | Sonnet | 7.1 | | | |
-| 7.3 The scroll and reveal scripts (S) | Sonnet | 4.4 | | | |
-| 7.4 The Library document handles `ScrollToHeading` (S) | Sonnet | 7.3, 7.2, 5.3 | | | |
+| 7.1 Red: the Outline panel (S) | Sonnet | 4.3, 6.2, 3.3 | | | ✔ |
+| 7.2 `OutlinePanel` (S) | Sonnet | 7.1 | | | ✔ |
+| 7.3 The scroll and reveal scripts (S) | Sonnet | 4.4 | | | ✔ |
+| 7.4 The Library document handles `ScrollToHeading` (S) | Sonnet | 7.3, 7.2, 5.3 | | | ✔ |
 | **P8 Linked documents** | Sonnet | none, then P4, P5 | | | |
 | 8.1 Red: `LinksFrom` and `Invalidated` (S) | Sonnet | none | | | ✔ |
 | 8.2 `LinksFrom` and `Invalidated` (S) | Sonnet | 8.1 | | | ✔ |
-| 8.3 Red: the Linked documents panel (S) | Sonnet | 8.2, 4.3 | | | |
-| 8.4 `LinkedDocumentsPanel` (S) | Sonnet | 8.3 | | | |
+| 8.3 Red: the Linked documents panel (S) | Sonnet | 8.2, 4.3 | | ✔ | |
+| 8.4 `LinkedDocumentsPanel` (S) | Sonnet | 8.3 | | ✔ | |
 | **P9 A Room's mentions** | Sonnet | none | | | |
 | 9.1 Red: `RoomMentions` (S) | Sonnet | none | | | ✔ |
 | 9.2 `RoomMentions.Collect` (S) | Sonnet | 9.1 | | | ✔ |
 | **P10 Tasks in this chat** | Sonnet | P4, P9 | | | |
-| 10.1 Red: the Tasks panel (S) | Sonnet | 4.3, 9.2 | | | |
-| 10.2 `RoomTasksPanel` (S) | Sonnet | 10.1 | | | |
+| 10.1 Red: the Tasks panel (S) | Sonnet | 4.3, 9.2 | | | ✔ |
+| 10.2 `RoomTasksPanel` (S) | Sonnet | 10.1 | | | ✔ |
 | **P11 Documents in this chat** | Sonnet | P4, P8, P9 | | | |
-| 11.1 Red: the Documents panel (S) | Sonnet | 4.3, 8.2, 9.2 | | | |
-| 11.2 `RoomDocumentsPanel` (S) | Sonnet | 11.1 | | | |
-| 🔁 R2 Retrospective after 30 tasks Done | Opus | 30 Done | | | |
+| 11.1 Red: the Documents panel (S) | Sonnet | 4.3, 8.2, 9.2 | | ✔ | |
+| 11.2 `RoomDocumentsPanel` (S) | Sonnet | 11.1 | | ✔ | |
+| 🔁 R2 Retrospective after 30 tasks Done | Opus | 30 Done | | | ✔ |
 | **P12 Members** | Sonnet | P4 | | | |
-| 12.1 Red: the Members panel (S) | Sonnet | 4.3 | | | |
-| 12.2 `MembersPanel` (S) | Sonnet | 12.1 | | | |
+| 12.1 Red: the Members panel (S) | Sonnet | 4.3 | | | ✔ |
+| 12.2 `MembersPanel` (S) | Sonnet | 12.1 | | | ✔ |
 | **P13 Registration** | Haiku | P7, P8, P10, P11, P12 | | | |
 | 13.1 Register the five panels (H) | Haiku | 7.2, 8.4, 10.2, 11.2, 12.2 | | | |
 | **P14 Docs** | Haiku | P13 | | | |
