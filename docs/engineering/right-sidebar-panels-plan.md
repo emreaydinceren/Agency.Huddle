@@ -1215,7 +1215,7 @@ added 27.6M, more than all panel agents together.
 
 Ids are `<deliverable>.<task>`, the form `Set-Tracker.ps1` updates. `(H)` is Haiku, `(S)` Sonnet.
 
-**Status:** 32 of 43 tasks Done · 2 of 2 retrospectives done · last updated 2026-10-16.
+**Status:** 43 of 43 tasks Done · 2 of 2 retrospectives done · last updated 2026-10-16.
 
 | **Deliverable / Task** | **Model** | **Depends on** | **Active** | **In Progress** | **Done** |
 | --- | --- | --- | --- | --- | --- |
@@ -1254,8 +1254,8 @@ Ids are `<deliverable>.<task>`, the form `Set-Tracker.ps1` updates. `(H)` is Hai
 | **P8 Linked documents** | Sonnet | none, then P4, P5 | | | |
 | 8.1 Red: `LinksFrom` and `Invalidated` (S) | Sonnet | none | | | ✔ |
 | 8.2 `LinksFrom` and `Invalidated` (S) | Sonnet | 8.1 | | | ✔ |
-| 8.3 Red: the Linked documents panel (S) | Sonnet | 8.2, 4.3 | | ✔ | |
-| 8.4 `LinkedDocumentsPanel` (S) | Sonnet | 8.3 | | ✔ | |
+| 8.3 Red: the Linked documents panel (S) | Sonnet | 8.2, 4.3 | | | ✔ |
+| 8.4 `LinkedDocumentsPanel` (S) | Sonnet | 8.3 | | | ✔ |
 | **P9 A Room's mentions** | Sonnet | none | | | |
 | 9.1 Red: `RoomMentions` (S) | Sonnet | none | | | ✔ |
 | 9.2 `RoomMentions.Collect` (S) | Sonnet | 9.1 | | | ✔ |
@@ -1263,22 +1263,22 @@ Ids are `<deliverable>.<task>`, the form `Set-Tracker.ps1` updates. `(H)` is Hai
 | 10.1 Red: the Tasks panel (S) | Sonnet | 4.3, 9.2 | | | ✔ |
 | 10.2 `RoomTasksPanel` (S) | Sonnet | 10.1 | | | ✔ |
 | **P11 Documents in this chat** | Sonnet | P4, P8, P9 | | | |
-| 11.1 Red: the Documents panel (S) | Sonnet | 4.3, 8.2, 9.2 | | ✔ | |
-| 11.2 `RoomDocumentsPanel` (S) | Sonnet | 11.1 | | ✔ | |
+| 11.1 Red: the Documents panel (S) | Sonnet | 4.3, 8.2, 9.2 | | | ✔ |
+| 11.2 `RoomDocumentsPanel` (S) | Sonnet | 11.1 | | | ✔ |
 | 🔁 R2 Retrospective after 30 tasks Done | Opus | 30 Done | | | ✔ |
 | **P12 Members** | Sonnet | P4 | | | |
 | 12.1 Red: the Members panel (S) | Sonnet | 4.3 | | | ✔ |
 | 12.2 `MembersPanel` (S) | Sonnet | 12.1 | | | ✔ |
 | **P13 Registration** | Haiku | P7, P8, P10, P11, P12 | | | |
-| 13.1 Register the five panels (H) | Haiku | 7.2, 8.4, 10.2, 11.2, 12.2 | | | |
+| 13.1 Register the five panels (H) | Haiku | 7.2, 8.4, 10.2, 11.2, 12.2 | | | ✔ |
 | **P14 Docs** | Haiku | P13 | | | |
-| 14.1 Wireframes (H) | Haiku | 13.1 | | | |
-| 14.2 The UX catalog and the code map (H) | Haiku | 13.1 | | | |
-| 14.3 Manual tests (H) | Haiku | 13.1 | | | |
-| 14.4 Spec status and the Index row (H) | Haiku | 14.3 | | | |
+| 14.1 Wireframes (H) | Haiku | 13.1 | | | ✔ |
+| 14.2 The UX catalog and the code map (H) | Haiku | 13.1 | | | ✔ |
+| 14.3 Manual tests (H) | Haiku | 13.1 | | | ✔ |
+| 14.4 Spec status and the Index row (H) | Haiku | 14.3 | | | ✔ |
 | **P15 Integration and QA** | Haiku, Sonnet | P14 | | | |
-| 15.1 Full suite twice (H) | Haiku | 14.4 | | | |
-| 15.2 Browser smoke at 90% (S) | Sonnet | 15.1 | | | |
+| 15.1 Full suite twice (H) | Haiku | 14.4 | | | ✔ |
+| 15.2 Browser smoke at 90% (S) | Sonnet | 15.1 | | | ✔ |
 
 The retrospective rows sit where 15 and 30 tasks are expected to be Done; they run when the count
 is reached, wherever that falls.
