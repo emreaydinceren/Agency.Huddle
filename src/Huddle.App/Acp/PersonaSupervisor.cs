@@ -58,6 +58,13 @@ internal sealed class PersonaSupervisor : BackgroundService, Agency.Huddle.App.T
     private readonly HashSet<string> starting = new(StringComparer.Ordinal);
     private readonly HashSet<string> restarting = new(StringComparer.Ordinal);
 
+    // Personas whose change arrived while they were starting or restarting, when it could not be acted
+    // on: a start reads the Persona before it awaits the Adapter, so an edit landing during that await
+    // is not in the host being started. Marked under `gate` in the same block that sees the Persona
+    // busy, and settled by SettlePendingChange once the start or restart that made it busy ends, so an
+    // edit is never lost to the window between the two.
+    private readonly HashSet<string> pendingChange = new(StringComparer.Ordinal);
+
     // The Persona a running host was last started with — its text AND its Model — so a save that
     // changes neither (or a debounced watcher event that fires after a no-op edit) does not restart
     // an agent: a restart is expensive and destroys the session's conversation memory.
@@ -308,27 +315,31 @@ internal sealed class PersonaSupervisor : BackgroundService, Agency.Huddle.App.T
 
         foreach (var name in currentNames)
         {
-            bool isStarting;
+            bool isBusy;
             bool isRunning;
             Persona? started;
             lock (this.gate)
             {
-                isStarting = this.starting.Contains(name);
+                isBusy = this.starting.Contains(name) || this.restarting.Contains(name);
                 isRunning = this.hosts.ContainsKey(name);
                 this.startedByName.TryGetValue(name, out started);
+                if (isBusy)
+                {
+                    this.pendingChange.Add(name);
+                }
             }
 
-            if (isStarting)
+            if (isBusy)
             {
-                // A Persona claimed via `starting` but not yet committed to `hosts` has no
-                // `startedByName` entry, so `started` above is null. The old code folded "starting"
-                // and "running" into one `alreadyKnown` state, fell through to the restart decision,
-                // read `started = null`, took NeedsRestart's `started is null` short-circuit, and
-                // restarted a host that had never finished starting - producing a second
-                // factory.StartAsync under the same agent id. The in-flight start reads current
-                // file and DB state when it runs, so a restart here has nothing to achieve: do
-                // nothing and let it finish. Not startup-specific - any second PersonasChanged
-                // arriving during a slow first start (a real `node` adapter) hits this same branch.
+                // A start or restart for this Persona is in flight. Acting now would race it: a
+                // Persona claimed via `starting` has no `startedByName` entry yet, so NeedsRestart's
+                // `started is null` short-circuit would restart a host that never finished starting
+                // (a second factory.StartAsync under the same agent id), and RestartHostAsync would
+                // refuse anyway while `restarting` holds the name. Doing nothing at all is wrong too:
+                // the start read the Persona BEFORE awaiting the Adapter, so this edit is not in the
+                // host it is starting. It used to be dropped here - the flaky *_RestartsItsHost
+                // tests were this, losing the edit whenever it landed during the start's await. The
+                // mark above is settled by SettlePendingChange when the in-flight work ends.
                 continue;
             }
 
@@ -494,6 +505,50 @@ internal sealed class PersonaSupervisor : BackgroundService, Agency.Huddle.App.T
             {
                 this.restarting.Remove(name);
             }
+
+            this.SettlePendingChange(name, cancellationToken);
+        }
+    }
+
+    /// <summary>
+    /// Acts on a change to <paramref name="name"/> that <see cref="OnPersonasChanged"/> had to set aside
+    /// because a start or restart was in flight, once nothing is in flight any more: starts the Persona
+    /// if that start failed, and restarts it if what is running differs from the Persona now on disk.
+    /// Called from the end of every start and restart, so whichever one finishes last settles it; a
+    /// start inside a restart leaves it to the restart, which still holds the name.
+    /// </summary>
+    /// <param name="name">The Persona whose start or restart just ended.</param>
+    /// <param name="cancellationToken">The supervisor's running token, handed on to any start or restart this begins.</param>
+    private void SettlePendingChange(string name, CancellationToken cancellationToken)
+    {
+        bool isRunning;
+        Persona? started;
+        lock (this.gate)
+        {
+            if (this.stopping || cancellationToken.IsCancellationRequested || this.starting.Contains(name) || this.restarting.Contains(name) || !this.pendingChange.Remove(name))
+            {
+                return;
+            }
+
+            isRunning = this.hosts.ContainsKey(name);
+            this.startedByName.TryGetValue(name, out started);
+        }
+
+        // Null when the Persona was removed meanwhile; OnPersonasChanged's own removal pass owns that.
+        var persona = this.personaStore.Get(name);
+        if (persona is null)
+        {
+            return;
+        }
+
+        if (!isRunning)
+        {
+            // The start failed, and the edit set aside during it may be the fix: try again with it.
+            _ = this.StartHostIfMissingAsync(name, cancellationToken);
+        }
+        else if (NeedsRestart(persona, started))
+        {
+            _ = this.RestartHostAsync(name, cancellationToken);
         }
     }
 
@@ -650,6 +705,8 @@ internal sealed class PersonaSupervisor : BackgroundService, Agency.Huddle.App.T
             {
                 this.starting.Remove(name);
             }
+
+            this.SettlePendingChange(name, cancellationToken);
         }
     }
 }

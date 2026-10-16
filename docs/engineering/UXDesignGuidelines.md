@@ -78,6 +78,7 @@ component here, move it onto the component rather than writing another copy.
 | A destructive confirmation | `DialogService.ConfirmAsync(title, message, verb, danger)` | [Confirming](design-system.md#confirming) |
 | A destructive confirmation on a list row | `InlineConfirm` with `ConfirmText` set to the verb | [Confirming](design-system.md#confirming) |
 | A side panel over a page | `ResizableEndDrawer` | [Drawer anatomy](design-system.md#drawer-anatomy) |
+| Context for a page beside it, in the Right sidebar | `RightSidebarContent` anywhere in the page's markup, one per block, with `Title` and `Order`. Never a drawer of the page's own | [wireframes.md `S4`](wireframes.md#figure-1-the-shell) |
 | Two resizable panes | `MudSplitPanel`, as `LibraryExplorer` uses it | [MudBlazorImplementation.md](../../agents/MudBlazorImplementation.md) |
 | A notice on the page | `MudAlert` with a role, `Dense` if one line | [Notices and snackbars](design-system.md#notices-and-snackbars) |
 | A transient result | `ISnackbar.Add(…, key: …)` | [Notices and snackbars](design-system.md#notices-and-snackbars) |
@@ -119,6 +120,8 @@ before you create a component, a helper or a CSS class.
 | `RoomNavRow` | `Components/Shared/RoomNavRow.razor` | A row in `S2b`, `S2c` | `Room`, `TeamLabel`, `Class`, `OnError` | A Room in any list, with its hover menu and delete flow |
 | `PageBreadcrumbs` | `Components/Shared/PageBreadcrumbs.razor` | `S1a` | the trail, `OnNavigate` | Drawn by the shell. A page never draws its own |
 | `TabStrip`, `TabGroupPane`, `TabHost`, `TabPageHost` | `Components/Layout/` | `W1` to `W8` | | Don't use directly; a page plugs in through `TabKeys` |
+| `RightSidebarContent` | `Components/Shared/RightSidebarContent.razor` | A block in `S4` | `Title`, `Order`, `ChildContent` | Putting a block in the Right sidebar from a page. It draws nothing in place, needs the cascaded `TabPageContext` (it does nothing outside a Tab), and its buttons run the page's own handlers |
+| `RightSidebar`, `RightSidebarToggle` | `Components/Layout/` | `S4`, its button in `S1c` | | Drawn by the shell. State is the scoped `RightSidebarService` (open or closed, and each Tab's blocks) |
 
 ### Display
 

@@ -403,6 +403,9 @@ public static class ServiceCollectionExtensions
 
         // Scoped: the open Tabs of one circuit (docs/Huddle.Tabs-Specifications.md).
         services.AddScoped<Tabs.TabService>();
+
+        // Scoped: whether this circuit's Right sidebar is open, and what each mounted page put in it.
+        services.AddScoped<Tabs.RightSidebarService>();
         services.AddScoped<Components.Shared.TeammateCardOpener>();
 
         // Stateless reader over singletons: builds the card the avatar profile popover shows.
