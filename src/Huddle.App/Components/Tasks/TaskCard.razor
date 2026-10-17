@@ -43,9 +43,9 @@
         @if (this.IsOverdue && this.Task.DueDate is { } overdueDate && !this.Fields.Contains("due_date", StringComparer.Ordinal))
         {
             @* An overdue Task shows its date even when the View does not list the field: the one overdue cue is the icon before the date. *@
-            <span class="@this.FieldClass("due_date")">
+            <span class="@this.FieldClass("due_date")" title="@TaskDates.Tooltip(overdueDate)">
                 <MudIcon Icon="@Icons.Material.Filled.Warning" Size="Size.Small" Class="task-due-icon" aria-label="Overdue" />
-                @TaskDates.Display(overdueDate)
+                @TaskDates.Human(overdueDate, this.Clock)
             </span>
         }
 
@@ -54,7 +54,7 @@
             @* "tags" is already drawn as row 3, so FieldText has no value for it. *@
             @if (this.FieldText(field) is { } text)
             {
-                <span class="@this.FieldClass(field)">
+                <span class="@this.FieldClass(field)" title="@this.FieldTitle(field)">
                     @if (string.Equals(field, "sprint", StringComparison.Ordinal) && this.Task.Sprint is { } sprint && this.Sprints.Get(sprint) is null)
                     {
                         <MudIcon Icon="@Icons.Material.Filled.Warning" Color="Color.Warning" Size="Size.Small" Class="task-sprint-missing" aria-label="@SprintLabels.MissingText" />
@@ -180,13 +180,25 @@
         "project" => this.Task.Location.Project ?? TaskFieldView.EmptyText("project"),
         "parent" => this.Task.Parent?.ToString(),
         "blocked_by" => this.Task.BlockedBy.Count > 0 ? string.Join(", ", this.Task.BlockedBy) : null,
-        "start_date" => this.Task.StartDate is { } startDate ? TaskDates.Display(startDate) : null,
-        "due_date" => this.Task.DueDate is { } dueDate ? TaskDates.Display(dueDate) : null,
+        "start_date" => this.Task.StartDate is { } startDate ? TaskDates.Human(startDate, this.Clock) : null,
+        "due_date" => this.Task.DueDate is { } dueDate ? TaskDates.Human(dueDate, this.Clock) : null,
         "sprint" => this.Task.Sprint is { } sprint ? SprintLabels.Text(this.Sprints, sprint) : null,
-        "created" => this.Task.Created is { } created ? TaskDates.Display(created) : null,
-        "updated" => this.Task.Updated is { } updated ? TaskDates.Display(updated) : null,
-        "closed" => this.Task.ClosedAt is { } closed ? TaskDates.Display(closed) : null,
+        "created" => this.Task.Created is { } created ? TaskDates.Human(created, this.Clock) : null,
+        "updated" => this.Task.Updated is { } updated ? TaskDates.Human(updated, this.Clock) : null,
+        "closed" => this.Task.ClosedAt is { } closed ? TaskDates.Human(closed, this.Clock) : null,
         "origin" => TaskFieldView.OriginText(this.Task.OriginRoomId, this.RoomNames),
+        _ => null,
+    };
+
+    /// <summary>The tooltip of one field's span: the full date for a date field, otherwise <see langword="null"/> so no <c>title</c> renders.</summary>
+    /// <param name="field">A §12.2 field key.</param>
+    private string? FieldTitle(string field) => field switch
+    {
+        "start_date" => TaskDates.Tooltip(this.Task.StartDate),
+        "due_date" => TaskDates.Tooltip(this.Task.DueDate),
+        "created" => TaskDates.Tooltip(this.Task.Created, this.Clock),
+        "updated" => TaskDates.Tooltip(this.Task.Updated, this.Clock),
+        "closed" => TaskDates.Tooltip(this.Task.ClosedAt, this.Clock),
         _ => null,
     };
 }

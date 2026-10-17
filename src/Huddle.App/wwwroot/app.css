@@ -111,6 +111,17 @@ button:focus-visible {
     fill: var(--mud-palette-text-secondary);
 }
 
+/* Editable long text (a prompt, a persona, instructions, a description) is body1: 14px, weight 400, the body line
+   height. MudBlazor draws an input's text in its subtitle1 role, which is 600 in this scale, with a 1.1876em line
+   height; this class sets the three properties back on the input and the textarea inside it. Not for monospace or code editors. */
+.long-text-field .mud-input,
+.long-text-field .mud-input .mud-input-slot,
+.long-text-field .mud-input > textarea.mud-input-root {
+    font-size: var(--mud-typography-body1-size);
+    font-weight: 400;
+    line-height: var(--mud-typography-body1-lineheight);
+}
+
 /* An image avatar fills its circle and is cropped to it. TeammateAvatar renders a bare <img> and MudBlazor
    sizes only its own MudImage, so without this a 256 px picture sat at full size inside a 56 px avatar. */
 .mud-avatar img {
@@ -266,13 +277,6 @@ a.team-ref,
     border-top: 1px solid var(--mud-palette-divider);
 }
 
-/* A one-line status or hint: small, muted, no margin of its own. */
-.status-text {
-    margin: 0;
-    color: var(--mud-palette-text-secondary);
-    font-size: var(--mud-typography-body2-size);
-}
-
 /* A heading over a group of fields or tiles on a page: subtitle2 at 600 in the primary text colour, so it is never
    smaller or quieter than what it heads, with a light rule under it. */
 .teammates-group-heading,
@@ -286,17 +290,8 @@ a.team-ref,
     border-bottom: 1px solid var(--mud-palette-divider-light);
 }
 
-/* A bordered card on the page surface. */
-.panel-card {
-    padding: 16px;
-    background: var(--mud-palette-surface);
-    border: 1px solid var(--mud-palette-divider);
-    border-radius: var(--mud-default-borderradius);
-}
-
-/* A preformatted block that scrolls: a Task's process step, a file's text. */
-.process-step-preview,
-.preview-block {
+/* A preformatted block that scrolls: a Task's process step. */
+.process-step-preview {
     max-height: 16rem;
     overflow: auto;
     font-family: var(--font-mono);
@@ -318,8 +313,9 @@ a.team-ref,
 
 /* ---- Presence badge and status dot (DS-6, C3) ----------------------------------------------------
    A circle in the state's tone that carries a glyph, so the state is never colour alone: a green circle with a white
-   check (online), an amber circle with a pulse line that breathes (starting, awake), a red circle with a white dash
-   (degraded) and a hollow grey ring (offline, asleep). The three filled tones are the palette colour mixed 20% toward
+   check (online), an amber circle with a pulse line that breathes (starting), a blue circle with the same pulse
+   (awake: amber means needs attention, a running Turn does not), a red circle with a white dash
+   (degraded) and a hollow grey ring (offline, asleep). The four filled tones are the palette colour mixed 20% toward
    black, so the white glyph keeps 3:1 against the fill in Huddle Light and Huddle Dark (a test holds it). 10px on avatars
    up to 32px and standalone, 12px on 40px and up. Standalone it is the inline dot beside a name; on an avatar
    (.on-avatar, inside .presence-anchor) it sits on the bottom-right rim, ringed in 2px of Surface. */
@@ -343,7 +339,7 @@ a.team-ref,
 }
 
 .agent-dot.awake {
-    background: color-mix(in srgb, var(--mud-palette-warning) 80%, var(--mud-palette-black));
+    background: color-mix(in srgb, var(--mud-palette-info) 80%, var(--mud-palette-black));
     box-shadow: none;
 }
 
@@ -1679,7 +1675,7 @@ a.team-ref,
 
 /* The name is 14px at 600, the role 13px (below), the alias and state 12px, all in the tile's text column. */
 .teammates-item-name {
-    font-size: var(--mud-typography-subtitle2-size);
+    font-size: var(--mud-typography-subtitle1-size);
     font-weight: 600;
 }
 
@@ -2014,7 +2010,7 @@ a.team-ref,
 }
 
 .prompts-field-label {
-    font-size: var(--mud-typography-subtitle2-size);
+    font-size: var(--mud-typography-subtitle1-size);
     font-weight: 600;
     color: var(--mud-palette-text-primary);
 }
@@ -2131,6 +2127,13 @@ a.team-ref,
     background: var(--mud-palette-text-secondary);
 }
 
+/* Backlog and To Do are both Default, so Backlog's dot is a hollow dashed ring and To Do's stays solid. */
+.task-state-dot-backlog {
+    box-sizing: border-box;
+    background: transparent;
+    border: 1px dashed var(--mud-palette-text-secondary);
+}
+
 .task-state-dot-info { background: var(--mud-palette-info); }
 .task-state-dot-warning { background: var(--mud-palette-warning); }
 .task-state-dot-secondary { background: var(--mud-palette-secondary); }
@@ -2180,14 +2183,15 @@ a.team-ref,
     padding: 4px 0;
 }
 
-/* A column is a tinted lane (background-gray, darker than the page) and each card on it is a light
-   surface, so cards read as separate objects on a contrasting column. Theme tokens only. */
+/* A column is a Surface lane with a Divider hairline and the card radius: it reads in Light without the heavy gray
+   tint and stays visible in Dark, where a Background-gray lane vanished. Theme tokens only. */
 .task-board-column {
     position: relative;
     display: flex;
     flex-direction: column;
     min-width: 0;
-    background-color: var(--mud-palette-background-gray);
+    background-color: var(--mud-palette-surface);
+    border: 1px solid var(--mud-palette-divider);
     border-radius: var(--mud-default-borderradius);
 }
 
@@ -2273,7 +2277,7 @@ a.team-ref,
 }
 
 .task-card-title {
-    font-size: var(--mud-typography-subtitle2-size);
+    font-size: var(--mud-typography-subtitle1-size);
     font-weight: 600;
     display: -webkit-box;
     -webkit-box-orient: vertical;
@@ -2345,9 +2349,9 @@ a.team-ref,
     box-shadow: inset 0 0 0 2px var(--mud-palette-text-secondary), 0 0 0 2px var(--mud-palette-surface);
 }
 
-/* An awake assignee is mid-Turn: the same darkened amber as the pulse badge, so the white pulse line is readable. */
+/* An awake assignee is mid-Turn: the same darkened info blue as the pulse badge, so the white pulse line is readable. */
 .task-card-presence.awake .mud-badge.mud-badge-overlap {
-    background-color: color-mix(in srgb, var(--mud-palette-warning) 80%, var(--mud-palette-black));
+    background-color: color-mix(in srgb, var(--mud-palette-info) 80%, var(--mud-palette-black));
 }
 
 /* The card currently being dragged. */
@@ -2373,11 +2377,15 @@ a.team-ref,
     color: color-mix(in srgb, var(--mud-palette-error) 70%, var(--mud-palette-text-primary));
 }
 
-/* The 14px warning icon before an overdue date takes the date's colour. */
+/* A card's due date is 12px like the id; the warning icon before an overdue date is 1em of that and takes the date's colour. */
+.task-card-field-due-date {
+    font-size: var(--mud-typography-caption-size);
+}
+
 .task-due-overdue .task-due-icon {
     width: 1em;
     height: 1em;
-    font-size: var(--mud-typography-subtitle2-size);
+    font-size: inherit;
     color: inherit;
 }
 
@@ -3909,6 +3917,12 @@ a.team-ref,
     padding: 4px 16px;
 }
 
+/* The card's title is a sidebar header: caption size, 600, secondary, like the other sidebar section headers. */
+.needs-you-heading {
+    font-weight: 600;
+    color: var(--mud-palette-text-secondary);
+}
+
 .needs-you-row .mud-nav-link-text {
     display: flex;
     align-items: center;
@@ -4382,7 +4396,7 @@ a.team-ref,
 }
 
 .roster-name {
-    font-size: var(--mud-typography-subtitle2-size);
+    font-size: var(--mud-typography-subtitle1-size);
     font-weight: 600;
 }
 
@@ -4676,7 +4690,7 @@ a.team-ref,
 .mud-chip.status-chip .mud-icon-root {
     width: 14px;
     height: 14px;
-    font-size: var(--mud-typography-subtitle2-size);
+    font-size: var(--mud-typography-subtitle1-size);
     margin-inline: 0 4px;
 }
 

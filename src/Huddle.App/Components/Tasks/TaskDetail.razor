@@ -515,11 +515,11 @@ else if (this.loaded is { } task)
 
         @* Footer meta: when the Task was created, last changed and closed, at the bottom of the form. *@
         <div class="task-detail-footer-meta">
-            <span class="task-detail-created">@($"Created {TaskDates.Display(task.Created)}")</span>
-            <span class="task-detail-updated">@($"Updated {TaskDates.Display(task.Updated)}")</span>
+            <span class="task-detail-created" title="@TaskDates.Tooltip(task.Created, this.Clock)">@($"Created {TaskDates.Human(task.Created, this.Clock)}")</span>
+            <span class="task-detail-updated" title="@TaskDates.Tooltip(task.Updated, this.Clock)">@($"Updated {TaskDates.Human(task.Updated, this.Clock)}")</span>
             @if (task.ClosedAt is { } closedAt)
             {
-                <span class="task-detail-closed">@($"Closed {TaskDates.Display(closedAt)}")</span>
+                <span class="task-detail-closed" title="@TaskDates.Tooltip(closedAt, this.Clock)">@($"Closed {TaskDates.Human(closedAt, this.Clock)}")</span>
             }
         </div>
     }
