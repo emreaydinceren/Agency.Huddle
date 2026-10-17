@@ -51,10 +51,9 @@ public sealed class TeammateCardTests
         Assert.True(HasButton(cut, "Edit"));
         Assert.True(HasButton(cut, "Open"));
 
-        // Remove is an icon-only MudIconButton (a destructive action gets an icon; its Confirm/Cancel
-        // step below stays text, per the file's own comment), so this is matched by aria-label rather
-        // than text content - see HasButton's remarks.
-        Assert.True(HasButton(cut, "Remove"));
+        // Removing is not a top-level button: it sits under the more-actions menu, whose activator names its
+        // target (design-system "Menus"), so it is matched by aria-label rather than text content.
+        Assert.True(HasButton(cut, "Actions for Chief of Staff"));
 
         // Viewing is not editing: the Persona text is shown, not offered for typing into.
         Assert.Empty(cut.FindAll("textarea"));
@@ -245,8 +244,8 @@ public sealed class TeammateCardTests
         Assert.NotEmpty(cut.FindAll("textarea"));
         Assert.Contains("You keep the team honest.", cut.Markup, StringComparison.Ordinal);
         Assert.True(HasButton(cut, "Save"));
-        Assert.Equal(2, cut.FindAll("input[placeholder='Chief of Staff']").Count);
-        Assert.NotEmpty(cut.FindAll("input[placeholder='coo']"));
+        Assert.Equal(2, cut.FindAll("input[placeholder='e.g. Chief of Staff']").Count);
+        Assert.NotEmpty(cut.FindAll("input[placeholder='e.g. coo']"));
     }
 
     [Fact]
@@ -294,8 +293,8 @@ public sealed class TeammateCardTests
         Assert.DoesNotContain("Teams:", identityMarkup, StringComparison.Ordinal);
 
         // The new Title/Alias boxes ARE present elsewhere in Edit mode, but Teams still has no box.
-        Assert.NotEmpty(dialogContainer.QuerySelectorAll("input[placeholder='coo']"));
-        Assert.Empty(dialogContainer.QuerySelectorAll("input[placeholder='Business, Household']"));
+        Assert.NotEmpty(dialogContainer.QuerySelectorAll("input[placeholder='e.g. coo']"));
+        Assert.Empty(dialogContainer.QuerySelectorAll("input[placeholder='e.g. Business, Household']"));
     }
 
     /// <summary>Typing a new Title rewrites the frontmatter inside the raw text field beneath it - nothing is written to disk, since only Save does that.</summary>
@@ -434,7 +433,7 @@ public sealed class TeammateCardTests
         var cut = RenderPage(ctx, factory);
         await ClickButtonAsync(cut, "New teammate");
 
-        Assert.NotEmpty(cut.FindAll("input[placeholder='Chief of Staff']"));
+        Assert.NotEmpty(cut.FindAll("input[placeholder='e.g. Chief of Staff']"));
         Assert.NotEmpty(cut.FindAll("textarea"));
         Assert.Contains("New teammate", cut.Markup, StringComparison.Ordinal);
         Assert.Contains("Title", cut.Markup, StringComparison.Ordinal);
@@ -445,7 +444,7 @@ public sealed class TeammateCardTests
         Assert.Contains("Spaces are fine.", cut.Markup, StringComparison.Ordinal);
     }
 
-    /// <summary>The Create textarea is the Persona's BODY only, not the whole file - its label and hint must say so, distinct from Edit's "whole file" wording.</summary>
+    /// <summary>The Create textarea is the Persona's BODY only, not the whole file - its hint must say so, distinct from Edit's "whole file" wording; the label is the one "Persona text" both modes use (audit B10).</summary>
     [Fact]
     public async Task CreateMode_TextareaIsExplicitlyTheBodyOnly()
     {
@@ -455,12 +454,12 @@ public sealed class TeammateCardTests
         var cut = RenderPage(ctx, factory);
         await ClickButtonAsync(cut, "New teammate");
 
-        Assert.Contains("Persona body", cut.Markup, StringComparison.Ordinal);
+        Assert.Contains("Persona text", cut.Markup, StringComparison.Ordinal);
         Assert.Contains("no front matter needed here", cut.Markup, StringComparison.Ordinal);
 
-        // "Persona text" (Edit's label) and "front matter included" (Edit's hint) must not leak into
-        // Create's copy - the two modes describe two different things in the same textarea.
-        Assert.DoesNotContain("Persona text", cut.Markup, StringComparison.Ordinal);
+        // "Persona text" was Create's second name for the same field; the Edit hint ("front matter included")
+        // must not leak into Create's copy - the two modes describe two different things in the same textarea.
+        Assert.DoesNotContain("Persona body", cut.Markup, StringComparison.Ordinal);
         Assert.DoesNotContain("front matter included", cut.Markup, StringComparison.Ordinal);
     }
 
@@ -477,14 +476,14 @@ public sealed class TeammateCardTests
         await SetTextValueAsync(cut, "Name", "bad/name");
         await SetTextValueAsync(cut, "Title", "Title");
         await SetTextValueAsync(cut, "Alias", "alias");
-        await SetTextValueAsync(cut, "Persona body", "a draft worth keeping");
+        await SetTextValueAsync(cut, "Persona text", "a draft worth keeping");
         await ClickButtonAsync(cut, "Add teammate");
 
         Assert.Contains("is not a valid Persona name.", cut.Markup, StringComparison.Ordinal);
         Assert.Contains("a draft worth keeping", cut.Markup, StringComparison.Ordinal);
     }
 
-    /// <summary>The inline confirm on Remove: clicking the icon-only Remove button (found by its aria-label - see <see cref="HasButton"/>) swaps it for text Confirm/Cancel buttons in place, never a nested dialog.</summary>
+    /// <summary>The inline confirm on Delete: choosing "Delete teammate" in the more-actions menu swaps the menu for Cancel and Delete buttons in place, never a nested dialog.</summary>
     [Fact]
     public async Task ConfirmingRemove_ReplacesRemoveWithAConfirmStep()
     {
@@ -493,14 +492,14 @@ public sealed class TeammateCardTests
         await using var ctx = NewContext(factory);
 
         var cut = await OpenViewCardAsync(ctx, factory, "coo");
-        await ClickButtonAsync(cut, "Remove");
+        await OpenDeleteAsync(cut, "coo");
 
         Assert.Single(cut.FindAll(".inline-confirm"));
-        Assert.Equal("Remove", cut.Find(".inline-confirm-confirm").TextContent.Trim());
-        Assert.Empty(cut.FindAll("button[aria-label='Remove']"));
+        Assert.Equal("Delete", cut.Find(".inline-confirm-confirm").TextContent.Trim());
+        Assert.Empty(cut.FindAll("button[aria-label='Actions for coo']"));
     }
 
-    /// <summary>Confirming Remove actually removes the Persona and closes the dialog. Remove itself is found by aria-label, since it is now an icon-only button - see <see cref="HasButton"/>.</summary>
+    /// <summary>Confirming Delete actually removes the Persona and closes the dialog. The menu is found by its aria-label, "Actions for {name}".</summary>
     [Fact]
     public async Task ConfirmRemove_RemovesThePersonaAndClosesTheDialog()
     {
@@ -509,7 +508,7 @@ public sealed class TeammateCardTests
         await using var ctx = NewContext(factory);
 
         var cut = await OpenViewCardAsync(ctx, factory, "coo");
-        await ClickButtonAsync(cut, "Remove");
+        await OpenDeleteAsync(cut, "coo");
         await ClickAsync(cut, () => cut.Find(".inline-confirm-confirm"));
 
         Assert.Null(factory.Services.GetRequiredService<PersonaStore>().Get("coo"));
@@ -531,7 +530,7 @@ public sealed class TeammateCardTests
         var cut = await OpenViewCardAsync(ctx, factory, "Chief of Staff");
 
         Assert.True(HasButton(cut, "Reset to default"));
-        Assert.False(HasButton(cut, "Remove"));
+        Assert.False(HasButton(cut, "Actions for Chief of Staff"));
     }
 
     /// <summary>
@@ -601,7 +600,7 @@ public sealed class TeammateCardTests
 
         var cut = await OpenViewCardAsync(ctx, factory, "coo");
 
-        Assert.True(HasButton(cut, "Remove"));
+        Assert.True(HasButton(cut, "Actions for coo"));
         Assert.False(HasButton(cut, "Reset to default"));
     }
 
@@ -855,7 +854,7 @@ public sealed class TeammateCardTests
         Assert.False(HasButton(cut, "Restart"));
     }
 
-    /// <summary>Pressing Edit in an open View card retitles the dialog to "Edit {Name}" at once; the title is not left at the View wording until the card is reopened.</summary>
+    /// <summary>Pressing Edit in an open View card retitles the dialog from the name to "Edit {Name}" at once; the title is not left at the View wording until the card is reopened.</summary>
     [Fact]
     public async Task EditMode_RetitlesTheOpenDialog()
     {
@@ -864,13 +863,13 @@ public sealed class TeammateCardTests
         await using var ctx = NewContext(factory);
 
         var cut = await OpenViewCardAsync(ctx, factory, "coo");
-        Assert.Equal("Teammate", cut.Find(".mud-dialog-title h6").TextContent.Trim());
+        Assert.Equal("coo", cut.Find(".mud-dialog-title h6").TextContent.Trim());
         await ClickButtonAsync(cut, "Edit");
 
         cut.WaitForAssertion(() => Assert.Equal("Edit coo", cut.Find(".mud-dialog-title h6").TextContent.Trim()));
     }
 
-    /// <summary>After Add teammate the same open card is retitled "Teammate" and follows the new Teammate's status once its pipe connects, instead of keeping "New teammate" and "Offline".</summary>
+    /// <summary>After Add teammate the same open card is retitled with the new Teammate's name and follows the new Teammate's status once its pipe connects, instead of keeping "New teammate" and "Offline".</summary>
     [Fact]
     public async Task CreateThenSave_RetitlesTheCardAndFollowsTheNewTeammatesStatus()
     {
@@ -884,10 +883,10 @@ public sealed class TeammateCardTests
         await SetTextValueAsync(cut, "Name", "zzstatus");
         await SetTextValueAsync(cut, "Title", "Probe");
         await SetTextValueAsync(cut, "Alias", "zzs");
-        await SetTextValueAsync(cut, "Persona body", "a body");
+        await SetTextValueAsync(cut, "Persona text", "a body");
         await ClickButtonAsync(cut, "Add teammate");
 
-        cut.WaitForAssertion(() => Assert.Equal("Teammate", cut.Find(".mud-dialog-title h6").TextContent.Trim()));
+        cut.WaitForAssertion(() => Assert.Equal("zzstatus", cut.Find(".mud-dialog-title h6").TextContent.Trim()));
         Assert.Contains("Offline", cut.Find(".mud-dialog-container").OuterHtml, StringComparison.Ordinal);
 
         await MakeOnlineAsync(factory, "zzstatus");

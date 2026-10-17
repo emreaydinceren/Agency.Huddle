@@ -106,22 +106,22 @@ public sealed partial class AppStylesheetTests
     }
 
     /// <summary>
-    /// The avatar editor's Background palette lets MudBlazor's swatch view flow instead of sitting in a fixed-height box.
-    /// MudBlazor gives the static picker's content area a fixed 250 px and positions the swatches inside it, which left a
-    /// blank band under a palette that needs about 160 px; the rule puts the view back in flow and lets that area follow it.
+    /// The avatar editor's Background palette is a radio group of 32px circles (audit B8h) in place of MudBlazor's colour picker, so
+    /// the picker's two layout overrides are gone and the swatch circle is 32px. TEAMS owns the swatch rules; this assertion replaces
+    /// the one that pinned the retired picker overrides.
     /// </summary>
     [Fact]
-    public void AppCss_LetsTheAvatarEditorPaletteFlow()
+    public void AppCss_DrawsTheAvatarEditorPaletteAsCircles()
     {
         string text = File.ReadAllText(CssSource.RepoPath("src", "Huddle.App", "wwwroot", "app.css"));
 
-        Match view = Regex.Match(text, @"\.avatar-editor-background \.mud-picker-color-view\s*\{(?<body>[^}]*)\}", RegexOptions.CultureInvariant, TimeSpan.FromSeconds(2));
-        Match box = Regex.Match(text, @"\.avatar-editor-background \.mud-picker-color-picker\s*\{(?<body>[^}]*)\}", RegexOptions.CultureInvariant, TimeSpan.FromSeconds(2));
+        Match dot = Regex.Match(text, @"\.avatar-swatch-dot\s*\{(?<body>[^}]*)\}", RegexOptions.CultureInvariant, TimeSpan.FromSeconds(2));
 
-        Assert.True(view.Success, "app.css has no '.avatar-editor-background .mud-picker-color-view' rule.");
-        Assert.True(box.Success, "app.css has no '.avatar-editor-background .mud-picker-color-picker' rule.");
-        Assert.Equal("position: static;", Regex.Replace(view.Groups["body"].Value.Trim(), @"\s+", " ", RegexOptions.CultureInvariant, TimeSpan.FromSeconds(2)));
-        Assert.Equal("height: auto;", Regex.Replace(box.Groups["body"].Value.Trim(), @"\s+", " ", RegexOptions.CultureInvariant, TimeSpan.FromSeconds(2)));
+        Assert.DoesNotContain(".avatar-editor-background .mud-picker", text, StringComparison.Ordinal);
+        Assert.True(dot.Success, "app.css has no '.avatar-swatch-dot' rule.");
+        Assert.Contains("width: 32px;", dot.Groups["body"].Value, StringComparison.Ordinal); // contains-ok: haystack is one rule of the stylesheet source, not markup
+        Assert.Contains("height: 32px;", dot.Groups["body"].Value, StringComparison.Ordinal); // contains-ok: haystack is one rule of the stylesheet source, not markup
+        Assert.Contains("border-radius: 50%;", dot.Groups["body"].Value, StringComparison.Ordinal); // contains-ok: haystack is one rule of the stylesheet source, not markup
     }
 
     /// <summary>

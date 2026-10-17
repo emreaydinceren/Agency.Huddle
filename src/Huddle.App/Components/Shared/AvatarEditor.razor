@@ -18,12 +18,19 @@
     Choosing "A short label" before typing saves Avatar.None; the parent then hands back Avatar.None, and re-seeding from
     it would snap the choice back to Initials - the very choice the Human just made, undone by its own save.
 
-    THE TRAP: MudColorPicker.Value is a non-null MudColor, so "no background chosen" (null) cannot be shown by it
-    directly, and a picker that reported its default on first render would write a colour nobody chose. So the picker is
-    shown a transparent colour (NoSelection), which matches no swatch, and the background changes only in
-    OnBackgroundPickedAsync, which only a press on a swatch reaches (docs/engineering/traps.md). The swatches are
-    AvatarPalette.Colours, the same set a new Teammate's random colour is drawn from. A background sits behind initials
-    or a label; an image covers it, so under "An image" the swatches are not offered - the stored colour is left alone.
+    THE BACKGROUND: "no background chosen" is null, and the background changes only in OnBackgroundPickedAsync, which
+    only a press on a swatch reaches, so nothing is written on first render (docs/engineering/traps.md). The swatches
+    are a radio group of 32px circles drawn with the avatar recipe for the current mode (audit B8h), one per
+    AvatarPalette.Swatches entry, the same set a new Teammate's random colour is drawn from, each with its colour name.
+    A stored colour outside the palette highlights no swatch and is kept until one is pressed. A background sits behind
+    initials or a label; an image covers it, so under "An image" the swatches are not offered - the stored colour is
+    left alone.
+
+    The library (audit B8k): "Choose from library" opens the Avatar Library. Outside a dialog (Settings) that is a dialog
+    of its own. Inside one (the Teammate card's avatar dialog) a third dialog would stack three deep, so the library
+    replaces the editor's content in the same dialog, with a Back button, and the dialog is widened to the library's
+    width meanwhile; the editor's working state stays in this component's fields, so Back returns to it untouched.
+    LibraryOpenChanged tells the hosting dialog so it can retitle itself and hide its own buttons.
 
     Parameter types must not be internal (CS0053), so the choice itself is a private field of the internal AvatarChoice.
 *@
@@ -31,12 +38,21 @@
 @using Agency.Huddle.App.Avatars
 @using System.Globalization
 @using Microsoft.AspNetCore.Components.Forms
-@using MudBlazor.Utilities
+@using Agency.Huddle.App.Themes
 @inject AvatarStore Avatars
 @inject IDialogService DialogService
 @inject AvatarLibraryLocator LibraryLocator
 @inject IAvatarLibraryLoader LibraryLoader
 
+@if (this.libraryOpen)
+{
+    <div class="avatar-library-inline">
+        <MudButton Variant="Variant.Text" Size="Size.Small" StartIcon="@Icons.Material.Filled.ArrowBack" OnClick="this.CloseLibraryAsync" Class="avatar-library-back mb-2">Back</MudButton>
+        <AvatarLibraryPicker OnPicked="this.OnLibraryPickedAsync" OnCancel="this.CloseLibraryAsync" />
+    </div>
+}
+else
+{
 <div class="avatar-editor">
     <MudStack Row="true" AlignItems="AlignItems.Center" Class="mb-2">
         <TeammateAvatar Name="@this.Name" Avatar="this.Working" Size="Size.Large"
@@ -96,23 +112,28 @@
     @if (this.choice != AvatarChoice.Image)
     {
         <div class="avatar-editor-background mt-2">
-            <MudText Typo="Typo.overline">Background</MudText>
-            <MudColorPicker PickerVariant="PickerVariant.Static" ColorPickerView="ColorPickerView.Palette"
-                            Palette="AvatarPalette.Colours" ShowToolbar="false" ShowAlpha="false" ShowInputs="false"
-                            ShowPreview="false" ShowSliders="false" Elevation="0"
-                            Value="@this.PickerValue" ValueChanged="this.OnBackgroundPickedAsync" />
+            <div class="group-label" id="avatar-editor-background-label">Background</div>
+            <div class="avatar-swatches" role="radiogroup" aria-labelledby="avatar-editor-background-label">
+                @foreach (AvatarSwatch swatch in AvatarPalette.Swatches)
+                {
+                    <label class="avatar-swatch" title="@swatch.Name">
+                        <input type="radio" name="avatar-background" class="avatar-swatch-input visually-hidden"
+                               checked="@this.IsChosen(swatch)" @onclick="@(() => this.OnBackgroundPickedAsync(swatch.Hex))" />
+                        <span class="avatar-swatch-dot" style="@AvatarColours.MonogramStyle(swatch.Hex)" aria-hidden="true"></span>
+                        <span class="visually-hidden">@swatch.Name</span>
+                    </label>
+                }
+            </div>
             @if (this.background is not null)
             {
-                <MudButton Variant="Variant.Text" Size="Size.Small" OnClick="this.UseThemeColourAsync">Use the theme colour</MudButton>
+                <MudButton Variant="Variant.Text" Size="Size.Small" OnClick="this.UseThemeColourAsync" Class="mt-1">Use the theme colour</MudButton>
             }
         </div>
     }
 </div>
+}
 
 @code {
-    /// <summary>A transparent colour, which matches no swatch, shown by the picker while no background is chosen.</summary>
-    private static readonly MudColor NoSelection = new("#00000000");
-
     private AvatarChoice choice;
     private string label = string.Empty;
     private string? image;
@@ -121,6 +142,10 @@
     private byte[]? pendingBytes;
     private string? pendingExtension;
     private Avatar lastValue = Avatar.None;
+    private bool libraryOpen;
+
+    [CascadingParameter]
+    private IMudDialogInstance? Dialog { get; set; }
 
     /// <summary>The Name the avatar belongs to: the initials source for the preview and, in <see cref="AvatarSaveMode.Immediate"/>, the key the avatar is saved under.</summary>
     [Parameter]
@@ -150,14 +175,19 @@
     [Parameter]
     public EventCallback<(byte[]? Bytes, string? Extension)> PendingImageChanged { get; set; }
 
+    /// <summary>Raised with true when the library replaces the editor's content inside a dialog, and false when Back brings the editor back, so the hosting dialog can retitle itself and hide its own buttons.</summary>
+    [Parameter]
+    public EventCallback<bool> LibraryOpenChanged { get; set; }
+
     /// <summary>The single place the editor's fields are projected back into an <see cref="Avatar"/>: for the preview and for everything reported or saved. Under Image the stored name only, never a pending one.</summary>
     private Avatar Working => new(
         this.choice == AvatarChoice.Label ? Avatar.TrimLabel(this.label) : null,
         this.choice == AvatarChoice.Image ? this.image : null,
         this.background);
 
-    /// <summary>What the palette picker shows as selected: the chosen background, or <see cref="NoSelection"/> when there is none. A background outside the palette highlights no swatch and is kept until a swatch is pressed.</summary>
-    private MudColor PickerValue => this.background is null ? NoSelection : new MudColor(this.background);
+    /// <summary>Whether <paramref name="swatch"/> is the chosen background. A background outside the palette matches none and is kept until a swatch is pressed.</summary>
+    /// <param name="swatch">The swatch to test.</param>
+    private bool IsChosen(AvatarSwatch swatch) => string.Equals(this.background, swatch.Hex, StringComparison.OrdinalIgnoreCase);
 
     /// <summary>Seeds the editor from <see cref="Value"/> and, once, from the pending-image parameters.</summary>
     protected override void OnInitialized()
@@ -299,10 +329,22 @@
     private static string TooLargeMessage() =>
         string.Create(CultureInfo.InvariantCulture, $"That file is larger than {AvatarImage.MaxBytes / 1000} KB.");
 
-    /// <summary>Opens the Avatar Library picker and, when a thumbnail is chosen, reads that file and takes it as an upload is taken. An unreadable file shows the error line; cancelling changes nothing.</summary>
+    /// <summary>
+    /// Opens the Avatar Library picker. Inside a dialog it replaces this editor's content in place (see the file-level
+    /// comment), so the dialog stack stays two deep; elsewhere it is a dialog of its own and, when a thumbnail is chosen,
+    /// that file is read and taken as an upload is taken. An unreadable file shows the error line; cancelling changes nothing.
+    /// </summary>
     private async Task ChooseFromLibraryAsync()
     {
         this.error = null;
+
+        if (this.Dialog is not null)
+        {
+            this.libraryOpen = true;
+            await this.Dialog.SetOptionsAsync(AvatarLibraryDialog.InlineOptions);
+            await this.LibraryOpenChanged.InvokeAsync(true);
+            return;
+        }
 
         IDialogReference reference = await this.DialogService.ShowAsync<AvatarLibraryDialog>(null, new DialogParameters(), AvatarLibraryDialog.Options);
         DialogResult? result = await reference.Result;
@@ -311,6 +353,38 @@
             return;
         }
 
+        await this.TakeLibraryImageAsync(fileName);
+    }
+
+    /// <summary>Returns from the library to the editor: the dialog goes back to its own width and the editor's fields are as they were.</summary>
+    private async Task CloseLibraryAsync()
+    {
+        if (!this.libraryOpen)
+        {
+            return;
+        }
+
+        this.libraryOpen = false;
+        if (this.Dialog is not null)
+        {
+            await this.Dialog.SetOptionsAsync(AvatarEditorDialog.Options);
+        }
+
+        await this.LibraryOpenChanged.InvokeAsync(false);
+    }
+
+    /// <summary>A thumbnail was pressed in the in-place library: go back to the editor and take that picture.</summary>
+    /// <param name="fileName">The library file the Human chose.</param>
+    private async Task OnLibraryPickedAsync(string fileName)
+    {
+        await this.CloseLibraryAsync();
+        await this.TakeLibraryImageAsync(fileName);
+    }
+
+    /// <summary>Reads a library file and takes it as an upload is taken; an unreadable one shows the error line.</summary>
+    /// <param name="fileName">The library file the Human chose.</param>
+    private async Task TakeLibraryImageAsync(string fileName)
+    {
         AvatarLibraryImage? picked = await this.LibraryLoader.ReadImageAsync(fileName, CancellationToken.None);
         if (picked is null)
         {
@@ -351,10 +425,10 @@
     }
 
     /// <summary>THE TRAP: the only way <see cref="background"/> gains a colour. Stores the pressed swatch as the six-digit hex the avatar store holds.</summary>
-    /// <param name="colour">The swatch the Human pressed.</param>
-    private async Task OnBackgroundPickedAsync(MudColor colour)
+    /// <param name="hex">The pressed swatch's colour, as the six-digit hex the avatar store holds.</param>
+    private async Task OnBackgroundPickedAsync(string hex)
     {
-        this.background = colour.ToString(MudColorOutputFormats.Hex);
+        this.background = hex;
         this.error = null;
         await this.CommitAsync();
     }

@@ -66,7 +66,7 @@ public sealed class AvatarLibraryChipCloudTests
         Assert.Single(first.QuerySelectorAll(".chip-cloud-close"));
     }
 
-    /// <summary>The Tags cloud is capped at 40 behind the shared "Show all" toggle, which expands and collapses it.</summary>
+    /// <summary>The Tags cloud is capped at 12 behind the shared "Show all" toggle, which expands and collapses it.</summary>
     [Fact]
     public async Task Library_TagsCloud_ShowAllTogglesTheCap()
     {

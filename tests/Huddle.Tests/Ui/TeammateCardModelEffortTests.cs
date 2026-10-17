@@ -232,7 +232,7 @@ public sealed class TeammateCardModelEffortTests
         await SetTextValueAsync(cut, "Name", "coo");
         await SetTextValueAsync(cut, "Title", "Chief of Staff");
         await SetTextValueAsync(cut, "Alias", "coo");
-        await SetTextValueAsync(cut, "Persona body", "You are the Chief of Staff.");
+        await SetTextValueAsync(cut, "Persona text", "You are the Chief of Staff.");
         await OpenSelectAsync(cut, "Model");
         await ClickSelectItemAsync(cut, "Opus");
         await ClickButtonAsync(cut, "Add teammate");
@@ -267,7 +267,7 @@ public sealed class TeammateCardModelEffortTests
         await SetTextValueAsync(cut, "Name", "coo");
         await SetTextValueAsync(cut, "Title", "Chief of Staff");
         await SetTextValueAsync(cut, "Alias", "coo");
-        await SetTextValueAsync(cut, "Persona body", "You are the Chief of Staff.");
+        await SetTextValueAsync(cut, "Persona text", "You are the Chief of Staff.");
         await OpenSelectAsync(cut, "Effort");
         await ClickSelectItemAsync(cut, "High");
         await ClickButtonAsync(cut, "Add teammate");

@@ -21,7 +21,7 @@ namespace Agency.Huddle.Tests.Ui;
 public sealed class AvatarEditorTests
 {
     /// <summary>The CSS selector of one swatch in the Background palette.</summary>
-    private const string Swatch = ".avatar-editor-background .mud-picker-color-dot";
+    private const string Swatch = ".avatar-editor-background .avatar-swatch-input";
 
     /// <summary>What the editor reported, and the parameters a parent would pass on its next render.</summary>
     private sealed class Probe(AvatarSaveMode mode)
