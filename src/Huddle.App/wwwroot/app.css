@@ -2128,9 +2128,64 @@ a.team-ref,
     font-size: var(--mud-typography-caption-size);
 }
 
-/* Settings limits its content to a readable width but starts at the page's left edge (S8, DS-10). */
+/* Settings limits its content to a readable width but starts at the page's left edge (S8, DS-10). The cap is the
+   200px section menu, its 24px gap and the 960px reading column the panels had before the menu moved left. */
 .mud-container.settings-page {
-    max-width: 960px;
+    max-width: 1184px;
+}
+
+/* Two columns: the section menu (G2) and the active section (G3). minmax(0, 1fr) lets a wide table scroll inside
+   its panel instead of pushing the page sideways. */
+.settings-layout {
+    display: grid;
+    grid-template-columns: 200px minmax(0, 1fr);
+    gap: 24px;
+    align-items: start;
+}
+
+/* The menu stays in view while a long section (Prompts) scrolls. */
+.settings-nav {
+    position: sticky;
+    top: 0;
+}
+
+.settings-nav .mud-nav-link {
+    border-radius: var(--mud-default-borderradius);
+    font-size: var(--mud-typography-body2-size);
+    color: var(--mud-palette-text-secondary);
+}
+
+.settings-nav .mud-nav-link .mud-nav-link-icon.mud-nav-link-icon-default {
+    color: var(--mud-palette-text-secondary);
+}
+
+/* The active section takes the sidebar's Selected treatment: Primary 14% over Surface, 20% when hovered, with the
+   accent-text mix on the label and icon. Keyed to the page's own class, not NavLink's "active", because the route
+   segment decides the section and /settings alone still means Profile. */
+.settings-nav .settings-nav-item-active .mud-nav-link {
+    color: color-mix(in srgb, var(--mud-palette-primary) 70%, var(--mud-palette-text-primary));
+    background-color: color-mix(in srgb, var(--mud-palette-primary) 14%, var(--mud-palette-surface));
+    font-weight: 500;
+}
+
+.settings-nav .settings-nav-item-active .mud-nav-link:hover,
+.settings-nav .settings-nav-item-active .mud-nav-link:focus-visible {
+    background-color: color-mix(in srgb, var(--mud-palette-primary) 20%, var(--mud-palette-surface));
+}
+
+.settings-nav .settings-nav-item-active .mud-nav-link .mud-nav-link-icon.mud-nav-link-icon-default {
+    color: color-mix(in srgb, var(--mud-palette-primary) 70%, var(--mud-palette-text-primary));
+}
+
+/* A phone has no room for two columns: the menu sits above the section and stops sticking. */
+@media (max-width: 600px) {
+    .settings-layout {
+        grid-template-columns: minmax(0, 1fr);
+    }
+
+    .settings-nav {
+        position: static;
+    }
 }
 
 /* The Prompts panel's Save and Reset all, kept in reach of a long form (UX-011). */

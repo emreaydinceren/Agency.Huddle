@@ -41,30 +41,30 @@ public sealed partial class SettingsPanelsTests
         Assert.Equal("Settings", Assert.Single(cut.FindAll("h1")).TextContent.Trim());
     }
 
-    /// <summary>Every tab in the rail carries an icon, as the Team page rail does (UX-008).</summary>
+    /// <summary>Every row in the section menu carries an icon, as the Team page rail does (UX-008).</summary>
     [Fact]
-    public async Task Rail_EveryTabHasAnIcon()
+    public async Task SectionMenu_EveryRowHasAnIcon()
     {
         await using var factory = new TeamWebApplicationFactory();
         await using var ctx = NewContext(factory);
 
         var cut = ctx.Render<Settings>();
 
-        var tabs = cut.FindAll(".mud-tab");
-        Assert.Equal(7, tabs.Count);
-        Assert.All(tabs, tab => Assert.NotEmpty(tab.QuerySelectorAll("svg")));
+        var rows = cut.FindAll(".settings-nav a.mud-nav-link");
+        Assert.Equal(7, rows.Count);
+        Assert.All(rows, static row => Assert.NotEmpty(row.QuerySelectorAll("svg")));
     }
 
-    /// <summary>"Reset all to defaults" sits in the Prompts panel's action row beside Save, inside the tab content and not above the rail (UX-010, G1a).</summary>
+    /// <summary>"Reset all to defaults" sits in the Prompts panel's action row beside Save, inside the section and not above the menu (UX-010, G1a).</summary>
     [Fact]
-    public async Task Prompts_ResetAllSitsBesideSave_InsideTheTabs()
+    public async Task Prompts_ResetAllSitsBesideSave_InsideTheSection()
     {
         await using var factory = new TeamWebApplicationFactory();
         await using var ctx = NewContext(factory);
 
         var cut = ctx.Render<Settings>(parameters => parameters.Add(page => page.Tab, "prompts"));
 
-        var actions = cut.Find(".mud-tabs .settings-prompts-actions");
+        var actions = cut.Find(".settings-section .settings-prompts-actions");
         Assert.Single(actions.QuerySelectorAll("button[type='submit']"));
         Assert.Single(actions.QuerySelectorAll("button"), button => button.TextContent.Contains("Reset all to defaults", StringComparison.Ordinal));
     }

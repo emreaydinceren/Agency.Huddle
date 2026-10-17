@@ -242,12 +242,13 @@ Not drawn: `TaskDetailDialog`, the dialog form of the detail (see Figure 8). A V
 
 ## Figure 6: Tabbed pages (Team page and Settings)
 
-`TeamPage.razor` and `Settings.razor` use one frame: a container, a tab rail and one
-active panel. Left, the Team page with its Members tab open; right, Settings. The Members
+`TeamPage.razor` is a container, a tab rail and one active panel. `Settings.razor` keeps the
+container and the single active panel but moves the sections into a vertical menu on the left
+of the page. Left, the Team page with its Members tab open; right, Settings. The Members
 panel (`M6`) is not a copy of anything: it is Build a team's own Hire section (Figure 9), so its
 slate `B` badges name the same containers.
 
-![Two tabbed pages side by side. The Team page has a duplicate button, a spend strip and a tab rail over a members panel. Settings has a reset control and a tab rail over a prompts panel](../images/wireframes/06-tabbed-pages.svg)
+![Two pages side by side. The Team page has a duplicate button, a spend strip and a tab rail over a members panel. Settings has a reset control and a section menu on the left beside a prompts panel](../images/wireframes/06-tabbed-pages.svg)
 
 | Code | Name | Component | Notes |
 | --- | --- | --- | --- |
@@ -261,11 +262,11 @@ slate `B` badges name the same containers.
 | `M6` | Members panel | `TeamRoster`: `BuildTeam` with `MembersOnly` | Drawn in Figure 6 with the reused containers badged as in Figure 9: the roles grid (`B9a`), the roster (`B12`, the cards of `B9c`) and the save row (`B10` without its heading). Build a team's Hire section (`B9`, `B9a`, `B9c`) for the Team, with no number badge and, under "Roles", the team type cloud (`B9f`, with `B9g` floated to its left once a type is picked) that filters the roles grid, then the Manager select and a Save row (`B10` without its heading). A member's roster card (`B12`) shows its presence badge on the avatar (no status dot beside the Name) and, on one row of actions, Edit, Message (once it has connected; opens the Team's own one-to-one) and a Remove menu: Remove from Team (keeps the Teammate) or Delete Teammate. Save changes redraws the panel in place. The Save row is a save bar (`.build-team-savebar`) that renders only while there are unsaved changes, sticky to the bottom of the pane with a top hairline |
 | `M7` | Not-found notice | `MudAlert` Warning, `role="alert"` | Not drawn. "There is no Team named …" (link to Teammates), or on a Project route "There is no Project named … in Team …" (link to the Team page). Nothing else is rendered, and nothing is created |
 | `M8` | Features-off notice | `MudAlert` Info, `role="status"` | Not drawn. "Files and Tasks are turned off in this installation." replaces `M4` when no tab is available |
-| `G1` | Settings container | `MudContainer`, `MaxWidth.Large`, `.settings-page` | Content is left-aligned, not centred, and capped at 960px |
+| `G1` | Settings container | `MudContainer`, `MaxWidth.Large`, `.settings-page` | Content is left-aligned, not centred, and capped at 1184px: the 200px menu, a 24px gap and a 960px reading column |
 | `G1a` | Reset all | `ResetAllControl` | In the Prompts panel's action row beside Save; "Reset all to defaults", disabled until a prompt has been changed, then asks inline (`InlineConfirm`) |
-| `G2` | Tabs | `MudTabs` | The active tab follows the route; under a `PageHeader` "Settings" |
-| `G2a` | Tab rail |  | Profile, Prompts, Appearance, Personas, Skills, Team types, Library, each with an icon; the same styling as `M4a`. Profile is first, and `/settings` and a blank system open on it |
-| `G3` | Active panel | `ProfilePanel`, `PromptsPanel`, `Appearance`, `Personas`, `SkillsPanel`, `TeamTypesPanel` or `LibraryPanel` | Each opens with `SettingsIntro` (14px TextSecondary, 75ch), `StoredAt` ("Overrides stored at", 12px TextSecondary, the path in 12px mono) and an action row. `{{tokens}}` are tag chips in 12px mono. The Prompts and Skills panels mark placeholders, status and source with tinted chips that carry an icon |
+| `G2` | Section layout | `.settings-layout` | Two columns under a `PageHeader` "Settings": the menu (200px) and the active section. Below 600px the menu stacks above the section |
+| `G2a` | Section menu | `nav.settings-nav` (`aria-label` "Settings sections") holding a `MudNavMenu` of `MudNavLink`s | Profile, Prompts, Appearance, Personas, Skills, Team types, Library, each with an icon and a link to `/settings/{section}`. Sticky while the section scrolls. The highlight follows the parsed route, not NavLink's URL match, so `/settings`, an unknown segment and a blank system all highlight Profile; the active row takes the sidebar's Selected treatment (Primary 14% over Surface, accent-text label and icon) and `aria-current="page"` |
+| `G3` | Active section | `.settings-section`: `ProfilePanel`, `PromptsPanel`, `Appearance`, `Personas`, `SkillsPanel`, `TeamTypesPanel` or `LibraryPanel` | Each opens with `SettingsIntro` (14px TextSecondary, 75ch), `StoredAt` ("Overrides stored at", 12px TextSecondary, the path in 12px mono) and an action row. `{{tokens}}` are tag chips in 12px mono. The Prompts and Skills panels mark placeholders, status and source with tinted chips that carry an icon |
 | `G3a` | Save | `MudButton` Filled | Prompts panel only, in a sticky action row with Reset all |
 | `G3b` | Profile card | `ProfileCard` with `OnAvatarClick` | The Human's own card at the top of the Profile panel: the avatar is a **Change avatar** button opening `AvatarEditorDialog` (saves at once), with Name, Alias, Title and Description fields and a Save below. A welcome `MudAlert` sits above it until `profile.json` exists |
 
