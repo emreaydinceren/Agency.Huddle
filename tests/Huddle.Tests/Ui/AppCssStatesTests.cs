@@ -57,7 +57,7 @@ public sealed partial class AppCssStatesTests
         string css = AppCss();
 
         Assert.Matches(@"\.floating-panel\s*\{[^}]*box-shadow:\s*var\(--mud-elevation-4\)", css);
-        Assert.Matches(@"\.floating-panel\s*\{[^}]*border:\s*1px solid var\(--mud-palette-divider\)", css);
+        Assert.Matches(@"\.floating-panel\s*\{[^}]*border:\s*1px solid var\(--ink-edge\)", css);
         Assert.Matches(@"\.floating-panel\s*\{[^}]*z-index:\s*var\(--mud-zindex-popover\)", css);
     }
 
@@ -142,6 +142,7 @@ public sealed partial class AppCssStatesTests
         Assert.Matches(@"\.task-ref-status-info::before\s*\{[^}]*background:\s*var\(--mud-palette-info\)", css);
         Assert.Matches(@"\.task-ref-status-warning::before\s*\{[^}]*background:\s*var\(--mud-palette-warning\)", css);
         Assert.Matches(@"\.task-ref-status-secondary::before\s*\{[^}]*background:\s*var\(--mud-palette-secondary\)", css);
+        Assert.Matches(@"\.task-ref-status-tertiary::before\s*\{[^}]*background:\s*var\(--mud-palette-tertiary\)", css);
         Assert.Matches(@"\.task-ref-status-success::before\s*\{[^}]*background:\s*var\(--mud-palette-success\)", css);
         Assert.Matches(@"\.task-ref-status-error::before\s*\{[^}]*background:\s*var\(--mud-palette-error\)", css);
         Assert.Matches(@"\.task-ref-status-default::before\s*\{[^}]*background:\s*var\(--mud-palette-lines-default\)", css);

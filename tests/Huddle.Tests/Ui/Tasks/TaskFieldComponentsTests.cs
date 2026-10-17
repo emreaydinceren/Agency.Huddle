@@ -28,7 +28,7 @@ public sealed class TaskFieldComponentsTests : IDisposable
     [InlineData(TaskState.Backlog, Color.Default)]
     [InlineData(TaskState.ToDo, Color.Default)]
     [InlineData(TaskState.InProgress, Color.Info)]
-    [InlineData(TaskState.Review, Color.Secondary)]
+    [InlineData(TaskState.Review, Color.Tertiary)]
     [InlineData(TaskState.Done, Color.Success)]
     [InlineData(TaskState.Rejected, Color.Error)]
     public async Task StatusChip_SmallChipInStateColourWithWireName(TaskState status, Color expected)
@@ -53,7 +53,7 @@ public sealed class TaskFieldComponentsTests : IDisposable
     /// <summary>The priority chip is a Small tinted chip in <c>TaskColors.For(priority)</c>'s family (UX-045), with the priority icon and the wire name.</summary>
     [Theory]
     [InlineData(TaskPriority.Low, Color.Default)]
-    [InlineData(TaskPriority.Medium, Color.Info)]
+    [InlineData(TaskPriority.Medium, Color.Default)]
     [InlineData(TaskPriority.High, Color.Warning)]
     [InlineData(TaskPriority.Urgent, Color.Error)]
     public async Task PriorityChip_SmallChipInPriorityColourWithIconAndWord(TaskPriority priority, Color expected)

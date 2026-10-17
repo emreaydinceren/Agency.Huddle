@@ -69,7 +69,10 @@ internal static class HuddleTheme
         Warning = "#c77d00",
         WarningLighten = "#e0a83e",
         ErrorLighten = "#e3b6b6",
-        Info = "#1d4f8f",
+        // Working (In Progress) is a teal-blue, 193 degrees: 42 degrees from the 235-degree Accent, so a signal never
+        // reads as the Accent (audit A2). Review is Tertiary, a purple at 289 degrees, 54 from the Accent.
+        Info = "#0e7490",
+        Tertiary = "#9333a8",
         OverlayDark = "rgba(0,0,0,0.4)",
     };
 
@@ -118,7 +121,9 @@ internal static class HuddleTheme
         Warning = "#e0a33e",
         WarningLighten = "#e8c46a",
         ErrorLighten = "#6b3535",
-        Info = "#8ab4f8",
+        // 190 degrees against the Accent's 234, and Tertiary at 281 (47 from the Accent), for the same hue-distance rule.
+        Info = "#5fc4d9",
+        Tertiary = "#c58be0",
         OverlayDark = "rgba(0,0,0,0.6)",
     };
 
