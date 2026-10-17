@@ -91,9 +91,9 @@ public sealed class MarkdownRendererMentionTests
     [Fact]
     public void ToHtml_EmailAddress_StaysPlainText()
     {
-        string html = MarkdownRendererMentionTests.Render("write to a@ops.com");
+        string html = MarkdownRendererMentionTests.Render("write to a@ops.example.com");
 
-        Assert.Equal("<p>write to a@ops.com</p>\n", html);
+        Assert.Equal("<p>write to a@ops.example.com</p>\n", html);
     }
 
     /// <summary>A Mention inside an inline code span is left as code.</summary>
@@ -175,7 +175,7 @@ public sealed class MarkdownRendererMentionTests
     [Theory]
     [InlineData("hi @Morgan, and @Emily Lee")]
     [InlineData("**bold** @Sam `@ops` [x](https://a.b)")]
-    [InlineData("a@b.com and \\@me")]
+    [InlineData("a@example.com and \\@me")]
     public void ToHtml_NullMentions_MatchesThreeArgumentOverload(string markdown)
     {
         string withoutMarks = MarkdownRenderer.ToHtml(markdown, null, null);
