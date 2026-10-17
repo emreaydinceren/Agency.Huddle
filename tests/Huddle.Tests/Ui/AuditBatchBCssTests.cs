@@ -95,17 +95,27 @@ public sealed partial class AuditBatchBCssTests
 
         Assert.Matches(@"box-sizing:\s*content-box", declarations);
         Assert.Matches(@"padding-inline:\s*calc\(\(24px - var\(--icon-size-row\)\) / 2\)", declarations);
+        Assert.Matches(@"margin-inline-start:\s*12px", declarations);
         Assert.Matches(@"margin-inline-end:\s*8px", declarations);
     }
 
-    /// <summary>The destination rows (Teammates, Library) take the same icon slot as the group rows.</summary>
+    /// <summary>
+    /// A group row's icon slot starts where a 1:1 Room's avatar does: the avatar sits after MudBlazor's 12px text inset, so
+    /// the icon takes that 12px as its own start margin and the label after an icon drops the inset.
+    /// </summary>
     [Fact]
-    public void AppCss_DestinationRowIcon_IsCentredInA24pxSlot()
+    public void AppCss_SidebarRowLabelAfterIcon_DropsTheTextInset()
     {
-        string declarations = AuditBatchBCssTests.DeclarationsFor(".nav-row-link .mud-nav-link .mud-nav-link-icon");
+        string declarations = AuditBatchBCssTests.DeclarationsFor(".mud-nav-group .mud-collapse-container .mud-nav-link .mud-nav-link-icon + .mud-nav-link-text");
 
-        Assert.Matches(@"padding-inline:\s*calc\(\(24px - var\(--icon-size-row\)\) / 2\)", declarations);
-        Assert.Matches(@"margin-inline-end:\s*8px", declarations);
+        Assert.Matches(@"margin-inline-start:\s*0", declarations);
+    }
+
+    /// <summary>The destination rows (Teammates, Library) keep the section header's icon geometry, so they are not indented like a group's children.</summary>
+    [Fact]
+    public void AppCss_DestinationRowIcon_IsNotInTheGroupSlot()
+    {
+        Assert.DoesNotContain(".nav-row-link .mud-nav-link .mud-nav-link-icon", AuditBatchBCssTests.AppCss(), StringComparison.Ordinal);
     }
 
     /// <summary>A destination row (Teammates, Library) is a 32px, 13px, body-colour row, not a section header.</summary>
@@ -159,7 +169,7 @@ public sealed partial class AuditBatchBCssTests
     {
         string declarations = AuditBatchBCssTests.DeclarationsFor(".top-bar-start");
 
-        Assert.Matches(@"padding-inline-start:\s*calc\(var\(--mud-drawer-width-left, 240px\) - 16px\)", declarations);
+        Assert.Matches(@"padding-inline-start:\s*calc\(var\(--mud-drawer-width-left\) - 16px\)", declarations);
         Assert.Matches(@"grid-template-columns:\s*minmax\(0, 1fr\) minmax\(0, 32rem\) minmax\(0, 1fr\)", AuditBatchBCssTests.DeclarationsFor(".top-bar-grid"));
     }
 

@@ -42,7 +42,7 @@ oracles `O-LOG` / `O-ADAPTERS` / `O-TRANSCRIPT` / `O-DB` / `O-TOOLCALLS`, the fi
 1. Open http://localhost:5100 in a browser.
 2. Click **Settings** in the left sidebar.
 3. Confirm the browser URL is `http://localhost:5100/settings` and the page heading reads `Settings`.
-4. Confirm the tab rail shows six tabs, in this order: **Prompts**, **Appearance**, **Personas**, **Skills**, **Team Types**, **Library** (`Settings.razor:36-76`), and that **Prompts** is the one currently shown (it is the default — you did not have to click it).
+4. Confirm the tab rail shows six tabs, in this order: **Prompts**, **Appearance**, **Personas**, **Skills**, **Team types**, **Library** (`Settings.razor:36-76`), and that **Prompts** is the one currently shown (it is the default — you did not have to click it).
 5. Read the second intro paragraph and confirm it names a file path and says the file 'does not exist until the first time you save here, so it being absent is expected, not a bug'.
 6. Scroll the page and confirm the group headings, in this order, start **System prompt**, **Turn**, **Get help**, **Tool descriptions**, and that **Tasks** and **Cadence** follow (`PromptFieldFactory.cs:32-40`). Do not count the groups' fields: the catalog grows, and the checks below name fields, not totals.
 7. Confirm **System prompt** contains these fields, in this relative order: **Orientation**, **Identity**, **Chat rules**, **Tools**.

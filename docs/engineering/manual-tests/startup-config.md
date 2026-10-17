@@ -258,7 +258,7 @@ Expecting `mybot` here is a category error, not a defect — do not file it. If 
 **Pass if — all of these**
 
 - Step 1 returns False — the file does not exist before any save.
-- The heading reads exactly `Settings`; the tab rail holds six tabs, in this order: `Prompts`, `Appearance`, `Personas`, `Skills`, `Team Types`, `Library`, with `Prompts` active by default (`Settings.razor:36-76`). Only the Prompts tab is judged here; the others are not opened.
+- The heading reads exactly `Settings`; the tab rail holds six tabs, in this order: `Prompts`, `Appearance`, `Personas`, `Skills`, `Team types`, `Library`, with `Prompts` active by default (`Settings.razor:36-76`). Only the Prompts tab is judged here; the others are not opened.
 - The overrides paragraph contains the sentence `The file does not exist until the first time you save here, so it being absent is expected, not a bug.`
 - The absolute path printed in that paragraph ends `\src\Huddle.App\App_Data\prompts.json` — matching the live DataDir.
 - With nothing edited, `Save` is disabled and `Reset all to defaults` is disabled.

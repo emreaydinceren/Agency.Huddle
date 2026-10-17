@@ -114,6 +114,13 @@ button:focus-visible {
 /* Editable long text (a prompt, a persona, instructions, a description) is body1: 14px, weight 400, the body line
    height. MudBlazor draws an input's text in its subtitle1 role, which is 600 in this scale, with a 1.1876em line
    height; this class sets the three properties back on the input and the textarea inside it. Not for monospace or code editors. */
+/* What a Human types is text, not emphasis. MudBlazor puts mud-typography-subtitle1 on every .mud-input, and subtitle1
+   is weight 600 in this scale, so every field, select and search box read bold. The inline title edit sets its own h5
+   weight on the input element and still wins. */
+.mud-input.mud-typography-subtitle1 {
+    font-weight: var(--mud-typography-body1-weight);
+}
+
 .long-text-field .mud-input,
 .long-text-field .mud-input .mud-input-slot,
 .long-text-field .mud-input > textarea.mud-input-root {
@@ -680,7 +687,7 @@ a.team-ref,
 .top-bar-start {
     min-width: 0;
     overflow: hidden;
-    padding-inline-start: calc(var(--mud-drawer-width-left, 240px) - 16px);
+    padding-inline-start: calc(var(--mud-drawer-width-left) - 16px);
 }
 
 /* With nothing in the middle cell (no search box yet) the trail gets that space instead of the 32rem
@@ -1688,8 +1695,11 @@ a.team-ref,
     border-color: var(--mud-palette-lines-default);
 }
 
+/* justify-content overrides MudBlazor's global button rule, which centres a flex button's content: the avatar and the
+   text start at the tile's padding, so the "Working on" line's indent lands on the name's edge. */
 .teammate-tile {
     display: flex;
+    justify-content: flex-start;
     align-items: flex-start;
     gap: 16px;
     width: 100%;
@@ -4082,14 +4092,21 @@ a.team-ref,
     color: var(--mud-palette-text-primary);
 }
 
-/* Every row has a 24px leading slot and an 8px gap to its label: a small avatar fills the slot (24px), an 18px icon is
-   centred in it (3px either side), so the labels of one level start at one x whichever leads the row. */
-.nav-row-link .mud-nav-link .mud-nav-link-icon,
+/* Every row in a group has a 24px leading slot and an 8px gap to its label: a small avatar fills the slot (24px), an
+   18px icon is centred in it (3px either side). The avatar sits inside the label span, after MudBlazor's 12px text
+   inset, so the icon is moved over by the same 12px and the label loses that inset: the slot and the label start at
+   one x whichever leads the row. Top-level destinations (Teammates, Library) keep the section header's geometry, so
+   they line up with "Rooms", "Teams" and "Tasks" and do not read as children of the group above. */
 .mud-nav-group .mud-collapse-container .mud-nav-link .mud-nav-link-icon {
     box-sizing: content-box;
     font-size: var(--icon-size-row);
     padding-inline: calc((24px - var(--icon-size-row)) / 2);
+    margin-inline-start: 12px;
     margin-inline-end: 8px;
+}
+
+.mud-nav-group .mud-collapse-container .mud-nav-link .mud-nav-link-icon + .mud-nav-link-text {
+    margin-inline-start: 0;
 }
 
 .mud-nav-group .mud-collapse-container .mud-nav-link .mud-nav-link-text {

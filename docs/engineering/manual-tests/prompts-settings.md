@@ -49,7 +49,7 @@ standing conventions. This area adds:
 **Pass if — all of these**
 
 - An `<h1>` reading exactly `Settings` is at the top of the page.
-- The tab rail contains exactly six buttons, in this order: `PROMPTS`, `APPEARANCE`, `PERSONAS`, `SKILLS`, `TEAM TYPES`, `LIBRARY` (MudBlazor renders tab labels in upper case; the underlying text is `Prompts`, `Appearance`, `Personas`, `Skills`, `Team Types`, `Library`), laid out horizontally ABOVE the content, not down its left edge.
+- The tab rail contains exactly six buttons, in this order: `PROMPTS`, `APPEARANCE`, `PERSONAS`, `SKILLS`, `TEAM TYPES`, `LIBRARY` (MudBlazor renders tab labels in upper case; the underlying text is `Prompts`, `Appearance`, `Personas`, `Skills`, `Team types`, `Library`), laid out horizontally ABOVE the content, not down its left edge.
 - `PROMPTS` is the visually selected tab and the other five are not.
 - The content pane below shows prompt fields (bold field labels with textareas), not a theme picker.
 - The address bar still reads `http://localhost:5100/settings` with no tab segment appended.

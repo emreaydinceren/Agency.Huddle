@@ -124,7 +124,10 @@ public sealed class TeammateTileTests
         Assert.Empty(cut.FindAll(".teammate-tile .teammate-chip"));
     }
 
-    /// <summary>The tile's text and chips are left-aligned inside the tile.</summary>
+    /// <summary>
+    /// The tile's avatar and text start at its left padding: MudBlazor's global <c>button</c> rule centres a flex button's
+    /// content, which put the avatar 50px in and left the "Working on" line's fixed indent off the name's edge.
+    /// </summary>
     [Fact]
     public void Stylesheet_TileContentIsLeftAligned()
     {
@@ -133,6 +136,7 @@ public sealed class TeammateTileTests
         int end = css.IndexOf('}', start);
         string tile = css[start..end];
 
+        Assert.Contains("justify-content: flex-start;", tile, StringComparison.Ordinal); // contains-ok: haystack is one rule of the stylesheet source, not markup
         Assert.Contains("text-align: left;", tile, StringComparison.Ordinal); // contains-ok: haystack is one rule of the stylesheet source, not markup
         Assert.Contains("align-items: flex-start;", tile, StringComparison.Ordinal); // contains-ok: haystack is one rule of the stylesheet source, not markup
     }

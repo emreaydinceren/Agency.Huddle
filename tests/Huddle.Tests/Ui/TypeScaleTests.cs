@@ -118,6 +118,18 @@ public sealed partial class TypeScaleTests
         Assert.DoesNotMatch(@"font-weight:\s*(700|800|900|bold)", css);
     }
 
+    /// <summary>
+    /// What a Human types in a field is text, not emphasis: MudBlazor puts <c>mud-typography-subtitle1</c> (weight 600 in this
+    /// scale) on every <c>.mud-input</c>, so <c>app.css</c> sets the input's weight back to body1's 400.
+    /// </summary>
+    [Fact]
+    public void AppCss_InputText_IsBodyWeight()
+    {
+        string css = TypeScaleTests.ReadAppCss().ReplaceLineEndings("\n");
+
+        Assert.Matches(@"\.mud-input\.mud-typography-subtitle1\s*\{[^}]*font-weight:\s*var\(--mud-typography-body1-weight\)", css);
+    }
+
     /// <summary><c>app.css</c> sets no literal font size under 11px, so nothing renders below the floor.</summary>
     [Fact]
     public void AppCss_SetsNoLiteralFontSizeUnder11px()

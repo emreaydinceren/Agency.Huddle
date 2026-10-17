@@ -284,7 +284,7 @@ If no screen reader is available, record the keyboard steps only and mark the an
 **Steps**
 
 1. Look at the Top Bar. Read the breadcrumb on the left and the box in the middle.
-2. Use the Tab right-click menu on one Tab and choose Move Right to make two panes. Click into the right pane's page.
+2. Use the Tab right-click menu on one Tab and choose Move right to make two panes. Click into the right pane's page.
 3. Read the breadcrumb again.
 
 **Pass if — all of these**

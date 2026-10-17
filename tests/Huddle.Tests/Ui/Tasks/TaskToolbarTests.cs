@@ -110,8 +110,8 @@ public sealed class TaskToolbarTests
         Assert.Contains("task-toolbar-filter", children[0].ClassList);
         Assert.Contains("btn-action-tight", children[1].ClassList);
         Assert.Contains("task-toolbar-kind", children[2].ClassList);
-        Assert.Equal(["List", "Kanban"],toolbar.FindAll(".task-toolbar-kind .mud-toggle-item").Select(item => item.TextContent.Trim()));
-        Assert.Equal("Kanban", toolbar.Find(".task-toolbar-kind .huddle-segmented-active-item").TextContent.Trim());
+        Assert.Equal(["List", "Board"],toolbar.FindAll(".task-toolbar-kind .mud-toggle-item").Select(item => item.TextContent.Trim()));
+        Assert.Equal("Board", toolbar.Find(".task-toolbar-kind .huddle-segmented-active-item").TextContent.Trim());
     }
 
     /// <summary>Picking Board on a List View raises <c>EffectiveViewChanged</c> with a Board that passes <c>ViewValidator</c> (Active scope, every state in a column), and leaves the saved View a List.</summary>
@@ -136,7 +136,7 @@ public sealed class TaskToolbarTests
 
         toolbar.Render(builder => builder.Add(t => t.EffectiveView, updated));
 
-        Assert.Equal("Kanban", toolbar.Find(".task-toolbar-kind .huddle-segmented-active-item").TextContent.Trim());
+        Assert.Equal("Board", toolbar.Find(".task-toolbar-kind .huddle-segmented-active-item").TextContent.Trim());
         Assert.Equal(ViewKind.List, store.Get("v1")?.Kind);
     }
 

@@ -1,0 +1,95 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 960 560" width="960" height="560" font-family="Inter, 'Helvetica Neue', sans-serif" role="img" aria-labelledby="vr-title vr-desc">
+  <title id="vr-title">Huddle visual reference</title>
+  <desc id="vr-desc">Drawn in Huddle Light's values: the five presence badges, the four chip looks, the type scale and a Board card.</desc>
+  <rect width="960" height="560" fill="#ffffff"/>
+
+  <!-- Section labels -->
+  <g font-size="11" font-weight="600" fill="#45443f" letter-spacing="0.44">
+    <text x="24" y="32">PRESENCE BADGES</text>
+    <text x="24" y="202">CHIPS: FOUR LOOKS</text>
+    <text x="520" y="32">TYPE SCALE</text>
+    <text x="520" y="292">A BOARD CARD</text>
+  </g>
+
+  <!-- Presence badges: filled tones are the palette colour 20% toward black, white glyph, 2px Surface ring -->
+  <g font-size="13" fill="#141413">
+    <circle cx="40" cy="62" r="8" fill="#257e36" stroke="#ffffff" stroke-width="2"/>
+    <path d="M36.5 62 l2.5 2.5 l4.5 -5" fill="none" stroke="#ffffff" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/>
+    <text x="60" y="66"><tspan font-weight="600">Online</tspan><tspan fill="#45443f">: green circle, check</tspan></text>
+
+    <circle cx="40" cy="90" r="8" fill="#9f6400" stroke="#ffffff" stroke-width="2"/>
+    <circle cx="40" cy="90" r="3" fill="#ffffff"/>
+    <text x="60" y="94"><tspan font-weight="600">Starting</tspan><tspan fill="#45443f">: amber circle, pulse (attention)</tspan></text>
+
+    <circle cx="40" cy="118" r="8" fill="#173f72" stroke="#ffffff" stroke-width="2"/>
+    <circle cx="40" cy="118" r="3" fill="#ffffff"/>
+    <text x="60" y="122"><tspan font-weight="600">Awake</tspan><tspan fill="#45443f">: blue circle, pulse (working)</tspan></text>
+
+    <circle cx="40" cy="146" r="8" fill="#8f1a1a" stroke="#ffffff" stroke-width="2"/>
+    <path d="M36 146 h8" stroke="#ffffff" stroke-width="1.8" stroke-linecap="round"/>
+    <text x="60" y="150"><tspan font-weight="600">Degraded</tspan><tspan fill="#45443f">: red circle, dash</tspan></text>
+
+    <circle cx="40" cy="174" r="6.5" fill="#ffffff" stroke="#8a8984" stroke-width="2"/>
+    <text x="60" y="178"><tspan font-weight="600">Offline, Asleep</tspan><tspan fill="#45443f">: hollow grey ring</tspan></text>
+  </g>
+
+  <!-- Chips: 22px high, 6px radius, 12px/500 -->
+  <g font-size="12" font-weight="500">
+    <rect x="24" y="212" width="56" height="22" rx="6" fill="#f7eddb"/>
+    <path d="M33 227 l4 -6 l4 6 z" fill="#915e06"/>
+    <text x="46" y="227" fill="#915e06">High</text>
+    <rect x="86" y="212" width="96" height="22" rx="6" fill="#dfe6ef"/>
+    <circle cx="97" cy="223" r="4" fill="none" stroke="#1a3d6a" stroke-width="1.6"/>
+    <text x="107" y="227" fill="#1a3d6a">In Progress</text>
+    <text x="212" y="227" font-weight="400" font-size="12" fill="#45443f">Status or priority: tinted, with an icon</text>
+
+    <rect x="24" y="246" width="36" height="22" rx="6" fill="#e5e2e0"/>
+    <text x="32" y="261" fill="#141413">api</text>
+    <rect x="66" y="246" width="62" height="22" rx="6" fill="#e5e2e0"/>
+    <text x="74" y="261" fill="#141413">pricing</text>
+    <text x="212" y="261" font-weight="400" fill="#45443f">Tag: quiet grey fill</text>
+
+    <rect x="24.5" y="280.5" width="78" height="23" rx="11.5" fill="#ffffff" stroke="#a8a7a3" stroke-dasharray="3 2"/>
+    <text x="36" y="296" fill="#45443f">Assignee</text>
+    <rect x="108.5" y="280.5" width="92" height="23" rx="11.5" fill="#e8e9f7" stroke="#5b64c8"/>
+    <text x="118" y="296" fill="#464c92">Assignee: Me</text>
+    <text x="212" y="296" font-weight="400" fill="#45443f">Filter: dashed, then accent once set</text>
+
+    <text x="24" y="330" font-weight="400" fill="#45443f">@jane · 3 need you</text>
+    <text x="212" y="330" font-weight="400" fill="#45443f">Count or meta: plain caption text</text>
+  </g>
+
+  <!-- Type scale -->
+  <g fill="#141413">
+    <text x="520" y="66" font-size="20" font-weight="600">Page title · 20px / 600</text>
+    <text x="520" y="100" font-size="16" font-weight="600">Section heading · 16px / 600</text>
+    <text x="520" y="130" font-size="14" font-weight="600">Card title · 14px / 600</text>
+    <text x="520" y="156" font-size="14">Prose and editable long text · 14px / 400</text>
+    <text x="520" y="180" font-size="13">Rows, cells, controls · 13px</text>
+    <text x="520" y="202" font-size="12" fill="#45443f">Meta, dates, counts · 12px</text>
+    <text x="520" y="226" font-size="11" font-weight="600" fill="#45443f" letter-spacing="0.44">GROUP LABEL · 11PX / 600</text>
+    <text x="520" y="258" font-size="12" fill="#45443f">Dates: Today · Tomorrow · Fri · Oct 27 · Oct 27, 2025</text>
+  </g>
+
+  <!-- Board card: lane is Surface with a Divider border; card 12px padding, Divider border, 8px radius -->
+  <rect x="520.5" y="304.5" width="300" height="236" rx="8" fill="#ffffff" stroke="#d0cfcc"/>
+  <circle cx="540" cy="326" r="4" fill="#1d4f8f"/>
+  <text x="550" y="330" font-size="13" font-weight="600" fill="#141413">In Progress</text>
+  <text x="634" y="330" font-size="12" fill="#45443f">2</text>
+
+  <rect x="532.5" y="344.5" width="276" height="148" rx="8" fill="#ffffff" stroke="#d0cfcc"/>
+  <text x="545" y="366" font-size="12" fill="#45443f">PLAT-0013</text>
+  <rect x="740" y="353" width="56" height="22" rx="6" fill="#f7eddb"/>
+  <path d="M749 368 l4 -6 l4 6 z" fill="#915e06"/>
+  <text x="762" y="368" font-size="12" font-weight="500" fill="#915e06">High</text>
+  <text x="545" y="392" font-size="14" font-weight="600" fill="#141413">Plan the deprecation of API v1</text>
+  <rect x="545" y="402" width="36" height="22" rx="6" fill="#e5e2e0"/>
+  <text x="553" y="417" font-size="12" font-weight="500" fill="#141413">api</text>
+  <circle cx="557" cy="452" r="12" fill="#dedff4"/>
+  <text x="557" y="456" font-size="10" font-weight="600" fill="#464c92" text-anchor="middle">GR</text>
+  <text x="575" y="456" font-size="12" fill="#141413">Grace</text>
+  <path d="M545 476 l5 -8 l5 8 z" fill="#831d1d"/>
+  <text x="560" y="480" font-size="12" font-weight="600" fill="#831d1d">Yesterday</text>
+  <text x="632" y="480" font-size="12" fill="#45443f">overdue: icon and 600, not size</text>
+  <text x="545" y="520" font-size="12" fill="#45443f">No State chip on a card: the column names it.</text>
+</svg>
