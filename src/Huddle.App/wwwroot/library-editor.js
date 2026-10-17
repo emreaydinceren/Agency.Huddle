@@ -129,6 +129,16 @@ export function create(element, text, readOnly, languageId, dotNetRef, previewMo
         dotNetRef.invokeMethodAsync("OnDirtyChanged", false);
       }
     },
+    revealLine: (line) => {
+      // Clamped into 1..doc.lines: an outline can outlive an edit that shortened the document.
+      const n = Math.min(Math.max(1, line), view.state.doc.lines);
+      const pos = view.state.doc.line(n).from;
+      view.dispatch({
+        selection: { anchor: pos },
+        effects: EditorView.scrollIntoView(pos, { y: "start" }),
+      });
+      view.focus();
+    },
     dispose: () => {
       if (previewTimer !== null) {
         clearTimeout(previewTimer);

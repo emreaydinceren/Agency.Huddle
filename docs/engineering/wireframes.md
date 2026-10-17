@@ -62,7 +62,7 @@ this.
 | --- | --- | --- |
 | **Shell** | A single page | It is everything outside the pages: `S0` to `S4` |
 | **Sidebar** | A panel inside a page | It is the persistent left `MudDrawer` (`S2`) |
-| **Right sidebar** | The detail drawer | It is the persistent right `MudDrawer` the Top bar toggles (`S4`). It pushes the Workspace aside rather than covering it, and shows what the focused pane's page put in it |
+| **Right sidebar** | The detail drawer | It is the persistent right `MudDrawer` the Top bar toggles (`S4`). It pushes the Workspace aside rather than covering it, and shows the panels the Panel catalog picks for the focused pane's Subject |
 | **Detail drawer** | The sidebar | It is a temporary drawer that slides over a page from the right (`T7`, `O2`) |
 | **Workspace** | The window | It is the area right of the sidebar that holds Tab groups (`S3`) |
 | **Pane** | A page | It is one Tab group: a strip over a body (`W2`) |
@@ -99,7 +99,7 @@ this.
 | `S2f` | Library link | `LibraryNavLink` | One link to the Library page. It lists no roots and has no "+ Add folder" |
 | `S2g` | Sidebar footer | `MudNavMenu` `.nav-settings` | Two icon-only 36px rows, Archived chats and Settings, each with an `aria-label` and a tooltip (OP-4), pinned to the bottom |
 | `S3` | Workspace | `MudMainContent` `.main-column` | Also holds the invisible `TabSync`, `TabPersistence` and `LibraryLinkRouter` |
-| `S4` | Right sidebar | `RightSidebar` (`MudDrawer`, end, persistent, 280px) | Drawn dashed: shown only while toggled open from `S1c`; starts closed in each circuit. Holds the blocks the focused pane's active page wrapped in `RightSidebarContent`, sorted by `Order`, each under its optional title. It follows focus to the other pane or another Tab, and a page with no blocks gets an empty state |
+| `S4` | Right sidebar | `RightSidebar` (`MudDrawer`, end, persistent, 280px) | Drawn dashed: shown only while toggled open from `S1c`; starts closed in each circuit. Draws the panels the Panel catalog picks for the focused pane's Subject, sorted by `Order`. Each panel sits in a `SidebarPanelFrame`: a header button with the icon, the title, the count the panel reports (none until it does) and a chevron that collapses the body, remembered per viewer. The v1 panels: for a Room, Members, Tasks in this chat and Documents in this chat; for a Markdown document, Outline and Linked documents. It follows focus to the other pane or another Tab. When no panel applies, it shows the empty state |
 
 `W1`, `W3` and `W6` appear here only to show where Figure 2 plugs in.
 

@@ -1,0 +1,177 @@
+@*
+    "Documents in this chat" (Spec): the distinct Library files a Room's Messages mention, newest mention
+    first, each resolved for existence. A file that is gone is listed as gone. Reloads when a Message is
+    posted in this Room; re-resolves (no reload) when the Library's link index is invalidated for any root.
+*@
+@namespace Agency.Huddle.App.Components.Sidebar
+@using Agency.Huddle.App.Data
+@using Agency.Huddle.App.Library
+@using Agency.Huddle.App.Services
+@using Agency.Huddle.App.Sidebar
+@using Agency.Huddle.App.Tabs
+@using Agency.Huddle.Contracts
+@implements IDisposable
+@inject IChatStore Store
+@inject RoomEvents Events
+@inject ILibraryReferenceResolver Resolver
+@inject WikiLinkIndex LinkIndex
+@inject TabService Tabs
+
+@if (this.rows.Count == 0)
+{
+    if (this.loaded)
+    {
+        <MudText Typo="Typo.body2" Class="mud-text-secondary" role="status">No documents mentioned in this chat yet.</MudText>
+    }
+}
+else
+{
+    foreach (DocumentRow row in this.rows)
+    {
+        <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="1" Class="sidebar-row documents-row" @key="row.Mention.Key">
+            @if (row.Reference is { Exists: true } reference)
+            {
+                string messageId = row.Mention.LatestMessageId;
+                <MudLink Typo="Typo.body2" Href="@LibraryLinkQuery.BuildPageUri(reference.RootId, reference.RelativePath)" title="@row.Mention.Key">@row.Mention.Label</MudLink>
+                <MudIconButton Icon="@Icons.Material.Filled.ArrowUpward" Size="Size.Small" aria-label="Show where it was mentioned"
+                               OnClick="@(() => this.Jump(messageId))" />
+            }
+            else
+            {
+                <MudText Typo="Typo.body2" Class="mud-text-secondary" title="This file is no longer in the Library.">@row.Mention.Label</MudText>
+            }
+        </MudStack>
+    }
+}
+
+@code {
+    private readonly CancellationTokenSource cts = new();
+    private IReadOnlyList<RoomMention> mentions = [];
+    private List<DocumentRow> rows = [];
+    private string? roomId;
+    private bool loaded;
+    private bool subscribed;
+
+    /// <summary>The page's Subject; anything but a Room is ignored.</summary>
+    [Parameter, EditorRequired]
+    public required PageSubject Subject { get; set; }
+
+    /// <summary>The Tab showing the Room; the jump button navigates it.</summary>
+    [Parameter, EditorRequired]
+    public required string TabId { get; set; }
+
+    /// <summary>The host's count context.</summary>
+    [CascadingParameter]
+    public SidebarPanelContext? Panel { get; set; }
+
+    /// <inheritdoc />
+    protected override void OnInitialized()
+    {
+        this.Events.MessagePosted += this.OnMessagePosted;
+        this.LinkIndex.Invalidated += this.OnInvalidated;
+        this.subscribed = true;
+    }
+
+    /// <inheritdoc />
+    protected override async Task OnParametersSetAsync()
+    {
+        string? newRoomId = (this.Subject as RoomSubject)?.RoomId;
+        if (string.Equals(newRoomId, this.roomId, StringComparison.Ordinal) && this.loaded)
+        {
+            return;
+        }
+
+        this.roomId = newRoomId;
+        this.loaded = false;
+        this.mentions = [];
+        this.rows = [];
+        if (newRoomId is null)
+        {
+            this.Panel?.SetCount(null);
+            return;
+        }
+
+        await this.LoadAsync(newRoomId);
+    }
+
+    private async Task LoadAsync(string forRoomId)
+    {
+        IReadOnlyList<ChatMessage> messages;
+        try
+        {
+            messages = await this.Store.ReadAllAsync(forRoomId, this.cts.Token);
+        }
+        catch (OperationCanceledException)
+        {
+            // The panel was disposed while loading; nothing to show.
+            return;
+        }
+
+        if (!string.Equals(forRoomId, this.roomId, StringComparison.Ordinal))
+        {
+            return;
+        }
+
+        this.mentions = RoomMentions.Collect(messages, ReferenceKind.LibraryFile);
+        this.Resolve();
+        this.loaded = true;
+    }
+
+    private void Resolve()
+    {
+        this.rows = this.mentions.Select(mention => new DocumentRow(mention, this.Resolver.ResolvePath(mention.Key))).ToList();
+        this.Panel?.SetCount(this.rows.Count);
+    }
+
+    private void Jump(string messageId)
+    {
+        if (this.roomId is not null)
+        {
+            _ = this.Tabs.Navigate(this.TabId, $"/rooms/{this.roomId}?message={Uri.EscapeDataString(messageId)}");
+        }
+    }
+
+    private void OnMessagePosted(MessagePostedEvent e)
+    {
+        if (this.roomId is null || !string.Equals(e.Room.Id, this.roomId, StringComparison.Ordinal))
+        {
+            return;
+        }
+
+        string forRoomId = this.roomId;
+        _ = RendererDispatch.RunAsync(this.InvokeAsync, async () =>
+        {
+            await this.LoadAsync(forRoomId);
+            this.StateHasChanged();
+        });
+    }
+
+    private void OnInvalidated(string rootId)
+    {
+        _ = RendererDispatch.RunAsync(this.InvokeAsync, () =>
+        {
+            if (this.loaded)
+            {
+                this.Resolve();
+                this.StateHasChanged();
+            }
+
+            return Task.CompletedTask;
+        });
+    }
+
+    /// <inheritdoc />
+    public void Dispose()
+    {
+        if (this.subscribed)
+        {
+            this.Events.MessagePosted -= this.OnMessagePosted;
+            this.LinkIndex.Invalidated -= this.OnInvalidated;
+        }
+
+        this.cts.Cancel();
+        this.cts.Dispose();
+    }
+
+    private sealed record DocumentRow(RoomMention Mention, LibraryReference? Reference);
+}

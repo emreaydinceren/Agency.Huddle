@@ -78,12 +78,12 @@ component here, move it onto the component rather than writing another copy.
 | A "name this thing" dialog | `NameDialog` | [Dialog anatomy](design-system.md#dialog-anatomy) |
 | A destructive confirmation | `DialogService.ConfirmAsync(title, message, verb, danger)` | [Confirming](design-system.md#confirming) |
 | A destructive confirmation on a list row | `InlineConfirm` with `ConfirmText` set to the verb | [Confirming](design-system.md#confirming) |
-| A side panel over a page | `ResizableEndDrawer` | [Drawer anatomy](design-system.md#drawer-anatomy) |
-| Context for a page beside it, in the Right sidebar | `RightSidebarContent` anywhere in the page's markup, one per block, with `Title` and `Order`. Never a drawer of the page's own | [wireframes.md `S4`](wireframes.md#figure-1-the-shell) |
+| A side panel over a page | `ResizableEndDrawer`, with an `Eyebrow` for the item's ID and place | [Drawer anatomy](design-system.md#drawer-anatomy) |
+| Context for a page beside it, in the Right sidebar | `PageSubjectSource` anywhere in the page's markup, with the page's Subject as `Value`. The Right sidebar draws the panels for that Subject. Never a drawer of the page's own | [wireframes.md `S4`](wireframes.md#figure-1-the-shell) |
 | Two resizable panes | `MudSplitPanel`, as `LibraryExplorer` uses it | [MudBlazorImplementation.md](../../agents/MudBlazorImplementation.md) |
 | A notice on the page | `MudAlert` with a role, `Dense` if one line | [Notices and snackbars](design-system.md#notices-and-snackbars) |
 | A transient result | `ISnackbar.Add(…, key: …)` | [Notices and snackbars](design-system.md#notices-and-snackbars) |
-| An empty list | `EmptyState`, with a next step | [Patterns worth copying](design-system.md#patterns-worth-copying) |
+| An empty list | `EmptyState`, with a `Title` and a sentence that gives the next step | [Patterns worth copying](design-system.md#patterns-worth-copying) |
 | A card an Agent puts in the Transcript | Derive from `AgentCardBase`, draw with `AgentCard` | [Component rules](design-system.md#component-rules) |
 | A Task's state, priority or Assignee on screen | `TaskStatusChip`, `TaskPriorityChip`, `TaskAssignee` | [Chips](design-system.md#chips) |
 | A status or priority in a word | `StatusChip`, the tinted look | [Chips](design-system.md#chips) |
@@ -127,7 +127,10 @@ before you create a component, a helper or a CSS class.
 | `RoomNavRow` | `Components/Shared/RoomNavRow.razor` | A row in `S2b`, `S2c` | `Room`, `TeamLabel`, `Class`, `OnError` | A Room in any list, with its hover menu and delete flow |
 | `PageBreadcrumbs` | `Components/Shared/PageBreadcrumbs.razor` | `S1a` | the trail, `OnNavigate` | Drawn by the shell. A page never draws its own. The trail holds ancestors only |
 | `TabStrip`, `TabGroupPane`, `TabHost`, `TabPageHost` | `Components/Layout/` | `W1` to `W8` | | Don't use directly; a page plugs in through `TabKeys` |
-| `RightSidebarContent` | `Components/Shared/RightSidebarContent.razor` | A block in `S4` | `Title`, `Order`, `ChildContent` | Putting a block in the Right sidebar from a page. It draws nothing in place, needs the cascaded `TabPageContext` (it does nothing outside a Tab), and its buttons run the page's own handlers |
+| `PageSubjectSource` | `Components/Sidebar/PageSubjectSource.razor` | Nothing in place; feeds `S4` | `Value` (the page's Subject) | Telling the Right sidebar what the page shows. It draws nothing, and does nothing outside a Tab |
+| `PageCommandHandler` | `Components/Sidebar/PageCommandHandler.razor` | Nothing in place | `OnCommand` (a callback for each command) | Letting a Right sidebar panel run an action on the page, such as scrolling a document to a heading. It draws nothing |
+| `SidebarPanelFrame` | `Components/Sidebar/SidebarPanelFrame.razor` | One panel in `S4` | `PanelId`, `Title`, `Icon`, `ChildContent` | Wrapping the body of a Right sidebar panel. It draws the icon, the title and the count the panel reports through the cascaded `SidebarPanelContext`, and remembers the collapsed state per viewer |
+| Add a Right sidebar panel | `Sidebar/SidebarPanelServiceCollectionExtensions.cs` | A panel in `S4` | one `AddSidebarPanel` line in `ServiceCollectionExtensions.cs` | Adding a panel: a `SidebarPanel` with its id, title, icon, Order, the Subject test and its component |
 | `RightSidebar`, `RightSidebarToggle` | `Components/Layout/` | `S4`, its button in `S1c` | | Drawn by the shell. State is the scoped `RightSidebarService` (open or closed, and each Tab's blocks) |
 | `SidebarRows`, `ShowAllRow` | `Components/Shared/SidebarRows.cs`, `Components/Shared/ShowAllRow.razor` | The "Show all (N)" row under a sidebar list | `Total`, `Expanded`, `OnToggle`; `SidebarRows.Limit` is 8 | A sidebar list that can pass 8 rows. `SidebarRows` also holds the open-group rules: a group opens when the current page is inside it |
 
@@ -135,19 +138,19 @@ before you create a component, a helper or a CSS class.
 
 | Component | Path | Draws | Key parameters | Use it for |
 | --- | --- | --- | --- | --- |
-| `TeammateAvatar` | `Components/Shared/TeammateAvatar.razor` | `C5a`, `P4` | `Name`, `Avatar`, `Size`, `Class`, `PendingImage` | Every Teammate face. One `MudAvatar` root with class `avatar-monogram` or `avatar-image`. Letters: two for a name, first and last initials for several words, "?" when empty |
-| `PresenceBadge` | `Components/Shared/PresenceBadge.razor` | The 10px mark on an avatar or inline | `Cue` (`PresenceCue`), `OnAvatar`, `Detail` | A glyph badge: check, pulse, dash or hollow ring, with `role="img"` and the state word as its `aria-label` |
+| `TeammateAvatar` | `Components/Shared/TeammateAvatar.razor` | `C5a`, `P4` | `Name`, `Avatar`, `Size`, `Class`, `PendingImage` | Every Teammate face. One `MudAvatar` root with class `avatar-monogram` or `avatar-image`. Sizes: `Size.Small` 24px, `Class="avatar-transcript"` 32px (Transcript), `Size.Medium` 40px (the default), `Size.Large` 72px. The Light and Dark recipes are in [Avatars and status](design-system.md#avatars-and-status); Dark is detected by the hidden `.theme-mode-dark` span in `MainLayout.razor`. Letters: two for a name, first and last initials for several words, "?" when empty |
+| `PresenceBadge` | `Components/Shared/PresenceBadge.razor` | The mark on an avatar or inline: 10px, 12px beside a 40px or larger avatar | `Cue` (`PresenceCue`), `OnAvatar`, `Detail` | A glyph badge: a green circle with a check, an amber circle with a pulse (it breathes, and is static under reduced motion), a red circle with a dash, or a hollow grey ring. `role="img"`, and the state word as its `aria-label` |
 | `PresenceAnchor` | `Components/Shared/PresenceAnchor.razor` | The frame around an avatar | `ChildContent`, `Cue`, `Detail` | Puts a `PresenceBadge` on an avatar's bottom-right rim. It wraps from outside because a `MudAvatar` clips |
 | `PresenceCue` | `Presence/PresenceCue.cs` | none | `From(PersonaState)`, `From(PresenceState)` | Maps Health and Presence into the four glyphs; each keeps its own word |
 | `StatusDot` | `Components/Shared/StatusDot.razor` | In `P4`, pickers | `State` (`PersonaState`), `OnAvatar`, `Detail` | A Teammate's Health as a 10px badge drawn through `PresenceBadge`, with its own text label |
 | `StatusChip` | `Components/Shared/StatusChip.razor` | The tinted chip in `T3`, `T4`, `T6` | `Color`, `Icon`, `ChildContent`, `Class` | A Small text-variant chip with classes `status-chip status-chip-{colour}` and a leading icon |
-| `ProfileCard` | `Components/Shared/ProfileCard.razor` | `B9c`, `B12`, `O9` | `Profile` (`TeammateProfile`), `Manager`, `Existing`, `Membership` (`ProfileMembership`), `RemovingText`, `ListItem`, `Actions`, `Class` | A Teammate's card: ringed avatar, status dot, Name, title, Manager badge, description, membership, tier and skills chips, "Needs setup" line. It owns the markup and the `roster-*` classes; the caller passes the buttons in `Actions` |
+| `ProfileCard` | `Components/Shared/ProfileCard.razor` | `B9c`, `B12`, `O9` | `Profile` (`TeammateProfile`), `Manager`, `Existing`, `Membership` (`ProfileMembership`), `RemovingText`, `ListItem`, `Actions`, `Class` | A Teammate's card: ringed avatar with the presence badge on it, Name, title, Manager badge, description, membership, tier and skills chips, "Needs setup" line. It owns the markup and the `roster-*` classes; the caller passes the buttons in `Actions` |
 | `ProfileAvatar` | `Components/Shared/ProfileAvatar.razor` | `C5a`, `C3`, a Task List row's assignee | `Name`, `Avatar`, `Size`, `Class`, `Team` | A `TeammateAvatar` in a button that opens the profile popover (`O9`, `ProfilePopover`) with Edit and Message. `Team` picks the Team's one-to-one for Message. Never inside another button or link; `TaskAssignee` takes `ShowProfile` to opt in |
 | `TeammateLabel` | `Components/Shared/TeammateLabel.razor` | Rows in New chat and Invite | `Name`, `State`, `Avatar`, `IsUser` | A Teammate's dot, avatar and name on one line |
-| `PageHeader` | `Components/Shared/PageHeader.razor` | The page title in `P1`, `G1`, `M1`, `B2` | `Title`, `Subtitle`, `Actions`, `SetPageTitle` | Every page's one `h1`, with its action buttons at the right. It sets the bare-name document title. Tasks is the one page without it: see [A page](design-system.md#a-page), step 3 |
-| `EmptyState` | `Components/Shared/EmptyState.razor` | An empty list, table or pane | `Text`, `Icon`, `Action`, `FullPane` | Any "nothing here" line; says what to do next, `role="status"`. 16px padding inline, 32px with `FullPane` |
+| `PageHeader` | `Components/Shared/PageHeader.razor` | The page title in `P1`, `G1`, `M1`, `B2` | `Title`, `Subtitle`, `Actions`, `SetPageTitle` | Every page's one `h1`, with its action buttons at the right. A `Subtitle` stacks under the title on its own 13px secondary line (`.page-header-titles`). It sets the bare-name document title. Tasks is the one page without it: see [A page](design-system.md#a-page), step 3 |
+| `EmptyState` | `Components/Shared/EmptyState.razor` | An empty list, table or pane | `Title` (required), `Text` (required), `Icon`, `Action`, `FullPane` | Any "nothing here" state, centred: a 32px icon, the `Title` (14px/600, `role="status"`), the `Text` sentence that says what to do next, then the `Action`. `FullPane` adds `empty-state-centered` so it sits a third of the way down |
 | `ChipCloud` | `Components/Shared/ChipCloud.razor` | Avatar picker, hiring pool | `Title`, `Pool`, `Selected`, `Cap`, `CssClass`, `Quiet`, `OnToggle` | A wrapping cloud of toggle chips, selected first |
-| `TaskStatusChip`, `TaskPriorityChip`, `TaskAssignee` | `Components/Tasks/` | Fields of a Task in `T3`, `T4`, `T6` and search | `Status`; `Priority`; `Name`, `Presence` | A Task's State, Priority or Assignee wherever it is shown. The two chips draw through `StatusChip`, with the icon from `TaskColors.Icon`. A Board card omits the State chip; its overdue date is a warning icon and weight 600 |
+| `TaskStatusChip`, `TaskPriorityChip`, `TaskAssignee` | `Components/Tasks/` | Fields of a Task in `T3`, `T4`, `T6` and search | `Status`; `Priority`; `Name`, `Presence` | A Task's State, Priority or Assignee wherever it is shown. The two chips draw through `StatusChip`, with the icon from `TaskColors.Icon`. A Board card omits the State chip; its overdue date is a warning icon and the date at weight 600 |
 | `TaskActionsMenu` | `Components/Tasks/TaskActionsMenu.razor` | The "Actions for {id}" menu | `Id`, `ShowMoveTo`, `OnMoveTo`, `OnCopyId`, `OnCopyLink`, `ExtraItems` | The one menu on a Task card, List row and the detail |
 | `TaskPicker` | `Components/Tasks/TaskPicker.razor` | Task pickers in the detail and `DuplicatePickerDialog` | `Value`, `Excluding`, `Label` | Choosing another Task |
 | `ConflictRow` | `Components/Tasks/ConflictRow.razor` | A conflicting field in the Task detail | `Field`, `Stacked`, `TheirsText`, `YoursText`, `Choice` | One field of an edit conflict, in the panel or the expanded table |
@@ -170,13 +173,13 @@ before you create a component, a helper or a CSS class.
 | `SearchField` | `Components/Shared/SearchField.razor` | The search box of `L2c`, `T3e`, Skill import | `Value`, `ValueChanged`, `Placeholder`, `AriaLabel`, `Class` | Any search box: outlined, dense, clearable, one debounce. `Class` lets a surface restyle its own box (`.task-toolbar-search` takes the segmented controls' track colour) |
 | `TaskFilterChip` | `Components/Tasks/TaskFilterChip.razor` | `T3c`, `T3h`, `T3i` and the other set-filter chips in `T3` | `Label`, `Value`, `IsSet`, `ChildContent` (the `MudMenuItem`s), `OnClear`, `Class` | One "Label: Value" filter chip: a menu, a clear button, dashed while unset, filled once set. It owns no state. The Tasks toolbar's second row (`T3`) is the model: a Filter icon menu, then one chip per set filter |
 | `AvatarEditor` | `Components/Shared/AvatarEditor.razor` | Settings, Appearance; the Teammate card | `Name`, `Value`, `ValueChanged`, `SaveMode`, `PendingImage` | Choosing an avatar: library, upload or text. Immediate in Settings, buffered in dialogs |
-| `ResizableEndDrawer` | `Components/Shared/ResizableEndDrawer.razor` | The Task detail drawer (`T7`) | `Title` (the item's name), `StorageKey`, `Open`, `OpenChanged`, `OverlayAutoClose`, `Class` | Any right-hand drawer. Resize by drag or Arrow, Home and End; width remembered, 320 to 800px |
+| `ResizableEndDrawer` | `Components/Shared/ResizableEndDrawer.razor` | The Task detail drawer (`T7`) | `Title` (the item's name), `Eyebrow` (a 12px line above it: ID, then Project or Team; none for a draft), `StorageKey`, `Open`, `OpenChanged`, `OverlayAutoClose`, `Class` | Any right-hand drawer. Resize by drag or Arrow, Home and End; width remembered, 320 to 800px |
 | `TeamTabToolbar` | `Components/Teams/TeamTabToolbar.razor` | none | `ActionText`, `OnAction`, `SearchPlaceholder`, `Search`, `SearchChanged` | A tab toolbar with one action and a search box, built on `SearchField` |
-| `Composer` | `Components/Shared/Composer.razor` | `C10` | `RoomId` | The message input; one per Room |
+| `Composer` | `Components/Shared/Composer.razor` | `C10` | `RoomId`, `RoomName` | The message input; one per Room. Its box shares the Transcript's 760px column. The placeholder is "Message {RoomName}… (/invite @Teammate)", or "Message… (/invite @Teammate)" when `RoomName` is empty. Its focus border is the accent plus a 0.5px inset ring |
 | `ReferencePicker` | `Components/References/ReferencePicker.razor` | `C11` | `View`, `ListboxId`, `OnPick` | The `@` picker; driven by `Composer` |
 | `NewChat` | `Components/Shared/NewChat.razor` | In `S2b` | `Team`, `OnStarted`, `OnClosed` | Starting a Room, optionally in a Team |
 | `InviteTeammate` | `Components/Shared/InviteTeammate.razor` | `C3a` | `RoomId` | Bringing a Teammate into a Room |
-| `TeamTypeCard` | `Components/Teams/TeamTypeCard.razor` | `B6a` | `TypeId`, `Name`, `Description`, `Roles`, `Selected`, `Owned`, `OnPick` | A selectable team type: icon tile, name, first sentence, "Manager + N roles", "You have one". Plain-value parameters, because `TeamTypeManifest` is internal |
+| `TeamTypeCard` | `Components/Teams/TeamTypeCard.razor` | `B6a` | `TypeId`, `Name`, `Description`, `Roles`, `Selected`, `Owned`, `OnPick` | A selectable team type: a quiet grey icon tile (accent-tinted only when selected), name, first sentence, "Manager + N roles", "You have one". Plain-value parameters, because `TeamTypeManifest` is internal |
 | `BuildStepper` | `Components/Teams/BuildStepper.razor` | `B3` | `Steps` (`BuildStep(Label, Detail)`), `Current`, `AriaLabel` | A numbered step strip: checked before `Current`, `aria-current` on it |
 
 ### Cards in the Transcript (`C8`)
@@ -219,8 +222,8 @@ id or a snapshot: an open dialog ignores new parameters.
 
 | Helper | Path | Gives you |
 | --- | --- | --- |
-| `TeamTypeStyles` | `Components/Teams/TeamTypeStyles.cs` | `For(typeId)`: a team type's icon and palette role (tinted in CSS by `.team-type-tint-{role}`); `Tagline(description)`: the first sentence |
-| `TaskColors` | `Components/Tasks/TaskColors.cs` | `For(TaskState)`, `For(TaskPriority)`, `For(PresenceState)` as a `Color`; `Icon(TaskPriority)`. Add new status mappings here or beside it |
+| `TeamTypeStyles` | `Components/Teams/TeamTypeStyles.cs` | `For(typeId)`: a team type's icon only (`TeamTypeStyle` carries no colour; every tile is the same quiet grey); `Tagline(description)`: the first sentence |
+| `TaskColors` | `Components/Tasks/TaskColors.cs` | `For(TaskState)`, `For(TaskPriority)`, `For(PresenceState)` (Awake Warning, Asleep and Offline Default) and `ForDue` as a `Color`; `Icon(TaskState)` and `Icon(TaskPriority)`. Add new status mappings here or beside it |
 | `TabIcons` | `Tabs/TabIcons.cs` | `For(name)`: the entity icon for `chat`, `team`, `project`, `tasks`, `teammates`, `settings`, `library` |
 | `MaterialSymbols` | `Tabs/MaterialSymbols.cs` | Icons MudBlazor lacks |
 | `TabKeys` | `Tabs/TabKeys.cs` | `Describe(url)`: a URL's Tab key, title and icon; teach it every new page |
@@ -247,7 +250,8 @@ id or a snapshot: an open dialog ignores new parameters.
 | `ThemeDefaults`, `ThemeCatalog`, `AccentPalette` | `Themes/` | The px type scale (`WithSharedTypography`), the Theme list, accent contrast clamping |
 | `ContrastColour` | `Themes/ContrastColour.cs` | `ReadableForeground`: black or white, whichever reads better, for `PrimaryContrastText` |
 | `StatusChipContrast` | `Themes/StatusChipContrast.cs` | `Fill`, `Text` and `Ratio`: the tinted chip's mixes in C#, so a test holds them to 4.5:1 |
-| `AvatarColours` | `Themes/AvatarColours.cs` | `MonogramStyle`, `Fill`, `Letters`: a monogram's fill (20% over Surface) and letters (75% toward `TextPrimary`) |
+| `AvatarColours` | `Themes/AvatarColours.cs` | `MonogramStyle` (only `--mud-palette-primary: #hex;`; `app.css` draws both Themes), `Fill` and `Letters`: the recipe in C# for the tests. Light: 20% over Surface, letters 75% toward `TextPrimary`. Dark: 35% over Surface, letters 75% toward white |
+| `LibraryPathDisplay` | `Components/Library/LibraryPathDisplay.cs` | `Shorten(fullPath)`: a path middle-truncated to its root and first folder, an ellipsis and the file; the full path goes in a tooltip |
 | `TaskPresence` | `Tasks/TaskPresence.cs` | `For`: an assignee's `PresenceState`, for `PresenceCue` |
 
 ### Stylesheet classes
@@ -257,7 +261,7 @@ feature's name. Reuse these before writing a rule:
 
 | Class | Does |
 | --- | --- |
-| `.empty-state` | An inline empty state's 16px padding and colour; capped at 75ch |
+| `.empty-state`, `.empty-state-centered` | An empty state's centred column (icon, title, sentence, action) with 32px above and below; `-centered` fills a pane and rests a third of the way down. The sentence is capped at 45ch |
 | `.flex-1-truncate` | A flex child that ellipsises on one line |
 | `.truncate` | Single-line truncation with an ellipsis, anywhere |
 | `.visually-hidden` | Text for a screen reader only (clipped, still in the accessibility tree); replaces every local copy |
@@ -269,21 +273,35 @@ feature's name. Reuse these before writing a rule:
 | `.status-text`, `.panel-card`, `.preview-block` | A one-line muted hint; a bordered card on the page surface; a scrolling preformatted block. Defined, with no markup user yet |
 | `.chip-cloud-chip`, `.is-quiet` | The pill behind `ChipCloud`, and its unfilled variant |
 | `.resizable-drawer` | The handle and width rules of `ResizableEndDrawer` |
-| `.nav-action-link` | A sidebar action link ("New chat"): primary colour, tight icon gap |
+| `.nav-action-link` | A sidebar action link ("New chat"): secondary text colour, tight icon gap |
 | `.hover-reveal-row` with `.hover-reveal-menu-button` | A row whose menu button shows on hover or focus |
 | `.btn-action-tight` | A button whose start icon sits close to its label |
-| `.agent-dot` with `.online`, `.offline`, `.degraded`, `.starting`, `.awake`, `.asleep` and `.presence-glyph-*` | The 10px badge behind `PresenceBadge`; use the component |
+| `.agent-dot` with `.online`, `.degraded`, `.starting`, `.awake`, `.on-avatar` and `.presence-glyph-*` | The badge behind `PresenceBadge` (10px, 12px beside a 40px avatar; the pulse animation is `presence-pulse`); use the component |
 | `.presence-anchor` | The frame `PresenceAnchor` draws around an avatar |
 | `.status-chip-*`, `.tag-chip`, `.filter-chip`, `.filter-chip-set`, `.chip-meta` | The four chip looks: tinted, quiet, filter and plain caption text |
-| `.page-reading` | A reading page's `MudContainer`: left-aligned, with no auto margins |
+| `.avatar-monogram`, `.avatar-image`, `.avatar-transcript` | The two avatar looks on `TeammateAvatar`'s one `MudAvatar`, and the 32px Transcript size. `:root:has(.theme-mode-dark)` switches the monogram to the Dark recipe |
+| `.message-gutter`, `.message-content`, `.message-row.grouped` | The Transcript's 32px avatar column, its text column (body at most 75ch) and the 4px gap between one sender's consecutive messages |
+| `.composer-box` | The Composer's box: the Transcript's 760px column, centred |
+| `.page-reading`, `.settings-page` | A reading page's `MudContainer`: left-aligned, with no auto margins; Settings also caps its content at 960px |
+| `.page-header-titles`, `.page-header-subtitle` | `PageHeader`'s title and its stacked 13px subtitle |
 | `.title-inline-edit` | An inline edit of a title at h5 size and weight, outline only |
 | `.task-detail-groups`, `.task-detail-group`, `.task-detail-props`, `.task-detail-prop` | The drawer form: a size container, then groups of label-and-value rows that go two columns at 368px |
+| `.task-detail-footer-meta`, `.resizable-drawer-eyebrow` | The drawer's Created, Updated and Closed line at the bottom (12px secondary), and the eyebrow line above its title |
+| `.task-card`, `.task-card-header`, `.task-card-title`, `.task-card-id` | A Board card (12px padding, 1px `Divider` border), its ID-and-priority row, its three-line 14px/600 title and its 12px ID |
+| `.task-board-column-header`, `.task-state-dot`, `.task-board-column-empty` | A Board column's header (an 8px state dot, the name, the count) and its centred empty line, which ignores the pointer |
+| `.task-due-overdue`, `.task-row-selected` | An overdue date (a 14px warning icon and weight 600) and the selected List row (the 14% and 20% tints) |
+| `.task-list-id-cell`, `.task-list-priority-cell` | The List's fixed-width columns: ID 110px, Priority 120px |
+| `.library-backlinks` | The "Linked from N notes" panel, the width of the reader's text column |
+| `.role-grid`, `.team-type-grid`, `.team-type-card-selected` | The wrapping role grid (220px cards) and team type grid, and the one accent-tinted type tile |
+| `.roster-grid`, `.roster-card` | The Team page's roster of 40px-avatar cards |
+| `.build-team-savebar` | The Team page's save bar: rendered only when there are unsaved changes, sticky at the bottom |
+| `.teammates-list`, `.teammates-item`, `.teammate-tile`, `.teammates-group-count` | The Teammates grid (`minmax(240px, 1fr)`), its bordered `<li>` card, the opening `<button>` inside it, and a group's 12px count |
 | `.sidebar-row-label`, `.sidebar-row-meta`, `.sidebar-show-all` | A one-line sidebar label, its trailing count and the "Show all (N)" row |
 | `.search-hit-flash` | A brief highlight with a reduced-motion branch: the model for any longer animation |
 | `.room-column`, `.main-column` | The fill-the-pane layout that the page rule points to |
 | `.task-filter-chip` with `-set`, `-unset` | The pill behind `TaskFilterChip`: dashed border while unset, primary border and hover tint once set; use the component |
 | `.task-col-resizer` | The column drag handle `task-list-resize.js` adds to each List header cell: a hairline that turns into a 3px primary bar on hover or drag |
-| `.tasks-counts` | The header row's "N open, N need you, N all": secondary text, the numbers in primary text, "need you" in the warning colour |
+| `.tasks-counts` | The header row's "N open, N need you, N all": secondary text, the numbers in primary text at 600, "need you" in the warning colour mixed toward body text |
 
 ### Browser scripts
 

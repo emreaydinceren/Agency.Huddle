@@ -1,0 +1,48 @@
+@*
+    How a page hears the Page commands its sidebar panels send (Spec D-6): put one anywhere in the
+    page's markup. It draws nothing. Outside a Tab (no cascaded TabPageContext) it listens to nothing.
+*@
+@namespace Agency.Huddle.App.Components.Sidebar
+@using Agency.Huddle.App.Sidebar
+@using Agency.Huddle.App.Tabs
+@implements IDisposable
+@inject PageCommandBus Bus
+
+@code {
+    private IDisposable? subscription;
+    private string? subscribedTabId;
+
+    /// <summary>The Tab showing the page, cascaded by its page host.</summary>
+    [CascadingParameter]
+    public TabPageContext? Page { get; set; }
+
+    /// <summary>Called, on the renderer, with each command sent to this page's Tab.</summary>
+    [Parameter]
+    public EventCallback<PageCommand> OnCommand { get; set; }
+
+    /// <summary>Subscribes to the Tab's commands, and moves the subscription when the Tab id changes.</summary>
+    protected override void OnParametersSet()
+    {
+        string? tabId = this.Page?.TabId;
+        if (string.Equals(tabId, this.subscribedTabId, StringComparison.Ordinal))
+        {
+            return;
+        }
+
+        this.subscription?.Dispose();
+        this.subscription = null;
+        this.subscribedTabId = tabId;
+        if (tabId is not null)
+        {
+            this.subscription = this.Bus.Subscribe(
+                tabId,
+                command => this.InvokeAsync(() => this.OnCommand.InvokeAsync(command)));
+        }
+    }
+
+    /// <summary>Stops listening when the page is unmounted.</summary>
+    public void Dispose()
+    {
+        this.subscription?.Dispose();
+    }
+}

@@ -4,6 +4,8 @@
 @using Agency.Huddle.App.Acp
 @using Agency.Huddle.App.Avatars
 @using Agency.Huddle.App.Pipes
+@using Agency.Huddle.App.Sidebar
+@using Agency.Huddle.App.Components.Sidebar
 @using Agency.Huddle.App.Tabs
 @inject ITeamDirectory TeamDirectory
 @inject IChatStore Store
@@ -19,6 +21,7 @@
 @inject ISnackbar Snackbar
 @inject IJSRuntime JS
 
+<PageSubjectSource Value="@this.Subject" />
 @if (this.room is null)
 {
     <MudText Typo="Typo.body2" Class="empty-state">No rooms yet. Start an agent to create one.</MudText>
@@ -284,6 +287,9 @@ else
 
     private string? loadedRoomId;
     private Room? room;
+
+    /// <summary>What this page shows, for the Right sidebar: the loaded Room, or nothing.</summary>
+    private PageSubject? Subject => this.room is null ? null : new RoomSubject(this.room.Id);
     private IReadOnlyList<User> members = [];
     private List<ChatMessage> messages = [];
     private IReadOnlyList<Draft> drafts = [];

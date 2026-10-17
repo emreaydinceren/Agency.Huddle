@@ -106,6 +106,11 @@ public static partial class MarkdownRenderer
 
         if (noteLibrary is not null && from is not null)
         {
+            foreach ((HeadingBlock block, string id) in MarkdownOutline.IdsFor(document))
+            {
+                block.GetAttributes().Id = id;
+            }
+
             MarkdownRenderer.RewriteRelativeLinks(document, noteLibrary, from, trustToken);
             MarkdownRenderer.LinkWikiLinks(document, noteLibrary, from, markdown);
         }

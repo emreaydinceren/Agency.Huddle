@@ -42,6 +42,9 @@ the hub: [Huddle.EngineeringGuide.md](../Huddle.EngineeringGuide.md).
 | `Components/Tasks/NewTaskDefaults.cs` | The Team and Project a freshly opened create-mode `TaskDetail` dialog should default to (Spec §13.3). |
 | `Components/Tasks/TaskToolbar.razor` | The page's toolbar (Spec §13.3): the header row (counts, Group by, List | Kanban, New task) and the Filter-menu row with a `TaskFilterChip` per filter that is set. Every change is saved to the View as it is made. |
 | `Components/Tasks/TaskViewNav.razor` | The sidebar's list of Views (Spec §13.1), one `MudNavGroup` titled "Tasks" between Teammates and Settings. |
+| `Sidebar/SidebarPanelCatalog.cs` | The Right sidebar's panel picker: for a Subject, the registered panels that apply and whose feature switch is on, in Order. Pure over the registrations and the bound options. |
+| `Sidebar/SidebarPanel.cs` | One registered panel: id, title, icon, Order, the Subject test, its component and the optional feature switch. |
+| `Components/Sidebar/` | `SidebarPanelFrame`, `PageSubjectSource`, `PageCommandHandler` and the v1 panels: `MembersPanel`, `RoomTasksPanel`, `RoomDocumentsPanel`, `OutlinePanel`, `LinkedDocumentsPanel`. |
 | `Components/Tasks/TaskListView.razor` | The List (Spec §13.3a): a read-only `MudDataGrid<TaskItem>` whose columns follow `View.Fields` and whose grouping matches `TaskQuery`'s own ordering rule. |
 | `Components/Tasks/TaskBoard.razor` | The Board (Spec §13.4): one `MudDropContainer` with one `MudDropZone` per lane/column, laid out from `BoardLayout.Build`. |
 | `Components/Tasks/TaskCard.razor` | The Board's card (Spec §13.4): a `<div>` root so the ⋮ menu's activator and the Awake link sit outside the clickable open-detail control. |

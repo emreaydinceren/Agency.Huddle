@@ -1,0 +1,47 @@
+@*
+    How a page publishes what it is showing to the Right sidebar (Spec D-2): render this anywhere in the
+    page's markup. It draws nothing where it stands. It reads the cascaded TabPageContext for the Tab, so
+    two panes keep two Subjects apart. Outside a Tab it does nothing, so a component that uses it can
+    still be rendered on its own in a test or a dialog.
+*@
+@using Agency.Huddle.App.Sidebar
+@using Agency.Huddle.App.Tabs
+@implements IDisposable
+@inject RightSidebarService Sidebar
+
+@code {
+    private long id;
+
+    /// <summary>The Tab showing the page, cascaded by its page host.</summary>
+    [CascadingParameter]
+    public TabPageContext? Page { get; set; }
+
+    /// <summary>What the page is showing now, or null for nothing.</summary>
+    [Parameter]
+    public PageSubject? Value { get; set; }
+
+    /// <summary>Takes the handle this source keeps for as long as the page is mounted.</summary>
+    protected override void OnInitialized()
+    {
+        this.id = this.Sidebar.NewId();
+    }
+
+    /// <summary>Publishes this render's Subject, or takes it away when there is none or no Tab.</summary>
+    protected override void OnParametersSet()
+    {
+        if (this.Page is { } page && this.Value is { } value)
+        {
+            this.Sidebar.Set(this.id, page.TabId, value);
+        }
+        else
+        {
+            this.Sidebar.Remove(this.id);
+        }
+    }
+
+    /// <summary>Removes the Subject when the page is unmounted.</summary>
+    public void Dispose()
+    {
+        this.Sidebar.Remove(this.id);
+    }
+}

@@ -25,7 +25,8 @@
     as modified or untracked. Re-freezing a file replaces its copy.
 
 .PARAMETER Check
-    Compare every frozen file with its copy. Exit 1 when any differs or is gone.
+    Compare every frozen file with its copy. Exit 1 when any differs or is gone. A file that differs
+    only in line endings (CRLF against LF) is reported as EOL-ONLY and does not fail the check.
 
 .PARAMETER Release
     Remove the files named by -Path from the freeze (repo-relative or absolute).
@@ -276,6 +277,11 @@ foreach ($key in $keys) {
     }
 
     if ($copy -and (Get-FileHash -LiteralPath $copy).Hash -eq (Get-FileHash -LiteralPath $live).Hash) {
+        continue
+    }
+
+    if ($copy -and (([IO.File]::ReadAllText($copy) -replace "`r`n", "`n") -ceq ([IO.File]::ReadAllText($live) -replace "`r`n", "`n"))) {
+        Write-Host "EOL-ONLY $relative" -ForegroundColor Gray
         continue
     }
 

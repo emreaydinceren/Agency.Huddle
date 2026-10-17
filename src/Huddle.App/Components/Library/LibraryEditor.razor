@@ -101,6 +101,18 @@
         await this.handle.InvokeVoidAsync("setText", text);
     }
 
+    /// <summary>Moves the caret to the start of <paramref name="line"/> (1-based, clamped to the document) and scrolls it to the top. A no-op before the editor exists.</summary>
+    /// <param name="line">The 1-based line to reveal.</param>
+    public async Task RevealLineAsync(int line)
+    {
+        if (this.handle is null)
+        {
+            return;
+        }
+
+        await this.handle.InvokeVoidAsync("revealLine", line);
+    }
+
     /// <summary>Called from JS each time the dirty state flips. Forwards the value unchanged - see <see cref="DirtyChanged"/>.</summary>
     [JSInvokable]
     public async Task OnDirtyChanged(bool dirty) => await this.DirtyChanged.InvokeAsync(dirty);

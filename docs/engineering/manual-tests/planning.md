@@ -50,6 +50,7 @@ is done. Within an area, tests run top to bottom — free tests first, paid test
 | 26 | [Teams: Sidebar, Members, Files, Tasks and Shared Memory](team-pages.md) | 17 | — | 0.6h |
 | 27 | [Turn detail and Spend](turn-detail.md) | 5 | 4 | 1.8h |
 | 28 | [Needs You: the sidebar card of Rooms waiting on the Human](needs-you.md) | 4 | — | 0.4h |
+| 29 | [Right sidebar: the panels by Subject, Outline, collapse and focus](right-sidebar.md) | 8 | — | 0.7h |
 | 29 | [Team chats: the Team Room, Team chats in the sidebar, the Members-tab Message, archiving and Task wakes and digests](team-chats.md) | 11 | — | 1.1h |
 | 30 | [Chat uploads: the paperclip, paste and drop, the chips, the Message's path lines, the Uploads root and Room delete](uploads.md) | 8 | 0 | 1.0h |
 

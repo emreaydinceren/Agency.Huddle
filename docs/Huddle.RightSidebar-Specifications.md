@@ -1,7 +1,9 @@
 # Right sidebar: contextual panels
 
 **Status:** the shell is built. The toggle (`S1c`) and the drawer (`S4`) shipped on
-`feat/right-sidebar`. The panel framework below is **designed, not built**.
+`feat/right-sidebar`. The panel framework below is **built** on `feat/right-sidebar-panels` (2026-10-16). The first build
+delivers the framework and five panels: Outline, Linked documents, Tasks in this chat,
+Documents in this chat and Members ([v1 scope](#v1-scope)).
 
 The Right sidebar is the drawer on the window's right edge (`S4` in
 [wireframes.md](engineering/wireframes.md#figure-1-the-shell)). It shows panels about what the
@@ -29,10 +31,11 @@ the documents a note links to. This page fixes three things before any panel is 
 | Outline | A Markdown document is open | Its headings, nested | Scrolling the document to a heading |
 | Tasks in this chat | A Room is open | Each Task its Messages reference, with live State | Opening the Task |
 | Documents in this chat | A Room is open | Each Library file its Messages reference | Opening the file; jumping to the Message |
-| Linked documents | A Markdown document is open | The notes it links to (and, optionally, its backlinks) | Opening the note |
+| Linked documents | A Markdown document is open | The notes it links to | Opening the note |
+| Members | A Room is open | Each member of the Room, with live status | Opening the member's profile |
 
-Two panels share a Subject in both cases, and no panel is about only one page. That is
-the shape that decides the design.
+Several panels share a Subject, and no panel is about only one page. That is the shape
+that decides the design.
 
 ## Decisions
 
@@ -61,11 +64,10 @@ public abstract record PageSubject
 }
 
 public sealed record RoomSubject(string RoomId) : PageSubject { … }
-public sealed record DocumentSubject(LibraryPath Path, DocumentFormat Format, string? Text) : PageSubject { … }
-public sealed record TaskSubject(TaskId Id) : PageSubject { … }
+public sealed record DocumentSubject(LibraryPath Path, LibraryFileKind Kind, string? Text) : PageSubject { … }
 ```
 
-- **Typed, never a string bag.** A panel pattern-matches (`subject is DocumentSubject { Format: DocumentFormat.Markdown }`),
+- **Typed, never a string bag.** A panel pattern-matches (`subject is DocumentSubject { Kind: LibraryFileKind.Markdown }`),
   and the compiler finds every panel when a Subject gains a field.
 - **Published by the page, not derived from the Tab's URL.** The URL is not enough. Every
   Library Tab has the key `library`, whatever file it shows. A file's format is known only
@@ -87,20 +89,26 @@ public sealed record SidebarPanel(
     string Icon,
     int Order,
     Func<PageSubject, bool> AppliesTo,
-    Type Component);                   // receives [Parameter] PageSubject Subject
+    Type Component,                    // receives [Parameter] PageSubject Subject and [Parameter] string TabId
+    Func<TeamOptions, bool>? IsEnabled = null);   // null: always; else a feature switch such as Library.Enabled
 
 services.AddSidebarPanel(new SidebarPanel("outline", "Outline", Icons.Material.Filled.Toc, 10,
-    static subject => subject is DocumentSubject { Format: DocumentFormat.Markdown },
-    typeof(OutlinePanel)));
+    static subject => subject is DocumentSubject { Kind: LibraryFileKind.Markdown },
+    typeof(OutlinePanel), static options => options.Library.Enabled));
 ```
 
-`SidebarPanelCatalog.For(subject)` is `catalog.Where(p => p.AppliesTo(subject)).OrderBy(p => p.Order)`.
-It is a pure function over registered data, so "which panels does a Room get?" is a unit
-test with no renderer.
+`SidebarPanelCatalog.For(subject)` is `catalog.Where(p => (p.IsEnabled?.Invoke(options) ?? true) && p.AppliesTo(subject)).OrderBy(p => p.Order)`.
+It is a pure function over registered data and the bound options, so "which panels does a
+Room get?" is a unit test with no renderer. A panel whose feature is switched off never
+appears, and is never mounted, so it never asks a store that feature gates.
 
 **The host owns the chrome:** the header row (icon, title, an optional count, collapse).
 A panel draws only its body. The panels then look alike without each one copying the
-header, the same reasoning as `AgentCard` for Transcript cards.
+header, the same reasoning as `AgentCard` for Transcript cards. A panel reports its count
+through a cascaded `SidebarPanelContext` (`SetCount(int? count)`), and the host draws it.
+
+A panel also receives the **Tab id** of its Subject, so it can navigate that Tab
+(`TabService.Navigate(tabId, …)`, D-6) or send it a Page command.
 
 ### D-4. A panel reads the stores, not the page
 
@@ -142,9 +150,9 @@ To make re-publishing cheap, the host keys each mounted panel by `panel.Id` plus
 
 ```csharp
 public abstract record PageCommand;
-public sealed record ScrollToHeading(string HeadingId) : PageCommand;
+public sealed record ScrollToHeading(string HeadingId, int Line) : PageCommand;
 
-pageCommands.Send(tabId, new ScrollToHeading("plan-risks"));       // from the panel
+pageCommands.Send(tabId, new ScrollToHeading("doc-h-plan-risks", 12));   // from the panel
 <PageCommandHandler OnCommand="this.HandleAsync" />                 // in the page
 ```
 
@@ -177,17 +185,17 @@ Human cannot tell "nothing mentioned yet" from "this panel does not exist for ch
 The collapsed state of each panel is remembered per viewer by `panel.Id`. It is a
 per-viewer convenience, so it lives in local storage behind the usual try/catch.
 
-## The four example panels
+## The five v1 panels
 
 ### Outline
 
 | | |
 | --- | --- |
-| **Applies to** | `DocumentSubject { Format: Markdown }` |
-| **Data** | The headings of `Subject.Text`, parsed with the **same Markdig pipeline** the renderer uses, so a heading's id is the one in the rendered page |
-| **Refresh** | A new `DocumentSubject` (same Key) as the editor or a reload changes `Text` |
-| **Acts** | `ScrollToHeading(id)` |
-| **Missing today** | Rendered headings have no `id`; `MarkdownRenderer` would need Markdig's `UseAutoIdentifiers` alone (**never** `UseAdvancedExtensions`, rules.md row 1), with a prefix so a heading cannot collide with an app element id. It also needs a heading parser and a scroll helper beside `teamScroll.toMessage` in `app.js` |
+| **Applies to** | `DocumentSubject { Kind: Markdown }`, while the Library is enabled |
+| **Data** | The headings of `Subject.Text` with the frontmatter split off as `LibraryDocument` does, parsed with the **same pipeline** the renderer uses. Each heading's id comes from one shared function, so it is the id in the rendered page |
+| **Refresh** | A new `DocumentSubject` (same Key). In Split mode `Text` follows the editor 300 ms after typing stops (the existing `PreviewTextChanged`). In Read and Edit modes it is the loaded or last saved text: text crosses from the editor only on save and on mode switch (`library-editor.js`), and this panel does not change that |
+| **Acts** | `ScrollToHeading(id, line)`. In Read and Split the page scrolls the rendered heading into view. In Edit it reveals the heading's line in the editor |
+| **Missing today** | Rendered headings have no `id`. They get one only on the note render path (`MarkdownRenderer.Render` with a `from` note), never in chat, where Messages would repeat ids. The id is `doc-h-` plus a lowercase slug, with `-2`, `-3` for repeats, so it cannot collide with an app element. Markdig's `UseAutoIdentifiers` is not used, because the pipeline is shared with chat and the parsers. Also needed: `huddleLibrary.scrollToHeading` in `app.js` and a `revealLine` on the editor handle in `library-editor.js` |
 
 ### Tasks in this chat
 
@@ -205,7 +213,7 @@ per-viewer convenience, so it lives in local storage behind the usual try/catch.
 | --- | --- |
 | **Applies to** | `RoomSubject` |
 | **Data** | The distinct `MessageReference { Kind: LibraryFile }`, resolved for existence. A gone file is listed as gone, as `MessageReferences` does |
-| **Refresh** | `RoomEvents.MessagePosted`; `LibraryChange` for renames and deletes |
+| **Refresh** | `RoomEvents.MessagePosted` for this Room; `WikiLinkIndex.Invalidated` for renames, moves and deletes |
 | **Acts** | Open the file in the Library; jump to the Message |
 | **Missing today** | Nothing structural; same fallback for old Messages as above |
 
@@ -214,10 +222,20 @@ per-viewer convenience, so it lives in local storage behind the usual try/catch.
 | | |
 | --- | --- |
 | **Applies to** | `DocumentSubject { Format: Markdown }` |
-| **Data** | The note's outgoing links from `WikiLinkIndex`, resolved |
-| **Refresh** | `WikiLinkIndex` invalidation for the root; `LibraryChange` |
+| **Data** | The note's outgoing **wikilinks** from `WikiLinkIndex`, resolved. A link to a note that does not exist is listed as unresolved, not hidden. Relative `[text](other.md)` links are out of v1 |
+| **Refresh** | `WikiLinkIndex.Invalidated` for the note's root, and a new `DocumentSubject` (a save republishes it) |
 | **Acts** | Open the linked note |
-| **Missing today** | `WikiLinkIndex` keeps each note's links privately and has no `LinksFrom(note)`; it indexes wikilinks only, not relative `[text](other.md)` links. Both are decisions for the Library spec, below |
+| **Missing today** | `LibraryChange` is an `EventCallback` inside the explorer, not an event a panel can hear, so `WikiLinkIndex` gains `internal event Action<string>? Invalidated` (the root id), raised **outside its lock** by `Invalidate` and once per root by a roots change. `Invalidate` is already called on every save (`LibraryDocument`) and every file operation (`LibraryFileService`). `WikiLinkIndex` also keeps each note's links privately. It gains an `internal LinksFrom(note)`, the outgoing mirror of the `LinksTo(target)` and `Backlinks(note)` lookups it already has. Backlinks stay in `BacklinksPanel` inside `LibraryDocument` |
+
+### Members
+
+| | |
+| --- | --- |
+| **Applies to** | `RoomSubject` |
+| **Data** | `ITeamDirectory.GetRoomMembersAsync(roomId)`: Agents first, then Humans, each with its avatar (`AvatarStore`) and status dot from `PersonaStatusResolver` (pipe liveness, then reported health), as `TeamRoster` shows them |
+| **Refresh** | `RoomEvents.RoomsChanged` reloads the member list (an invite or a removal); `PersonaHealth.Changed` and `IAgentGateway.PresenceChanged` redraw the dots; `AvatarStore.AvatarsChanged` redraws the avatars |
+| **Acts** | Each row is a `ProfileAvatar` with the member's name, so a click opens the profile popover (Edit, Message), the same one the Room header opens |
+| **Missing today** | Nothing structural. The Room header's avatar strip stays as a glance; the panel is the full list |
 
 ## What changes in the built shell
 
@@ -243,18 +261,23 @@ row gains the panel header once the chrome exists.
 - **Page commands:** an unhandled command is a no-op; a handled one reaches only its own
   Tab's page.
 
+## V1 scope
+
+Settled on 2026-10-16:
+
+| Question | Decision |
+| --- | --- |
+| Which panels | Outline, Linked documents, Tasks in this chat, Documents in this chat, Members |
+| Backlinks | Stay in `BacklinksPanel` inside `LibraryDocument`. Moving them is a later change |
+| Relative links | Wikilinks only. Relative `[text](other.md)` links are a later `WikiLinkIndex` change |
+| Room header strip | Stays. Members adds the full list; it does not replace the glance |
+| Outline source | Follows unsaved edits through `DocumentSubject.Text` in Split mode. Read and Edit show the loaded or saved text, because the editor sends text only on save and mode switch |
+| Feature switches | Outline, Linked documents and Documents in this chat need `Library.Enabled`; Tasks in this chat needs `Tasks.Enabled`; Members needs neither |
+| Subjects | `RoomSubject` and `DocumentSubject` only. `TaskSubject` and the others wait for a panel that needs them |
+| Page commands | Built, because Outline needs `ScrollToHeading` |
+| Open state | Unchanged: starts closed in every circuit |
+
 ## Open questions
 
-1. **Backlinks:** `BacklinksPanel` already sits inside `LibraryDocument`. Should it move
-   into the Right sidebar beside Linked documents, so the document panel has one place
-   for "related notes"?
-2. **Relative links:** should Linked documents include relative `[text](other.md)` links,
-   which means extending `WikiLinkIndex` beyond wikilinks, or wikilinks only at first?
-3. **Outline source:** should the Outline follow unsaved edits (`Text` on the Subject, as
-   designed), or only the saved file? The first is what an editor would expect. The second
-   needs no page state at all.
-4. **Open state:** should the open or closed choice be remembered across reloads (per
-   viewer, in local storage), or start closed in every circuit as it does now?
-5. **Other Subjects:** the Task page, a Task View, the Team page and a Project are
-   obvious next Subjects. Should v1 define only `RoomSubject` and `DocumentSubject`, the
-   two the example panels need?
+1. **Later Subjects:** the Task page, a Task View, the Team page and a Project are the
+   obvious next Subjects. Which panel arrives first decides which one is defined first.
