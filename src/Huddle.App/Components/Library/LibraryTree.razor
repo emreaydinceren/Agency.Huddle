@@ -197,19 +197,20 @@
     }
 
     /// <summary>
-    /// Reveals <paramref name="folder"/>: expands each ancestor from the top (loading its children when they
-    /// are not loaded yet), then selects the folder itself. Works flattened too, where the top items are the
-    /// scope's own children. A folder not under any shown node changes nothing.
+    /// Reveals <paramref name="folder"/>, a folder or a file: expands each ancestor from the top (loading its
+    /// children when they are not loaded yet), then selects the node itself. Works flattened too, where the top
+    /// items are the scope's own children. A path not under any shown node changes nothing.
     /// </summary>
-    /// <param name="folder">The folder to reveal.</param>
-    public async Task RevealAsync(LibraryPath folder)
+    /// <param name="folder">The folder or file to reveal.</param>
+    /// <returns>Whether a shown node holds <paramref name="folder"/>, so the reveal was attempted.</returns>
+    public async Task<bool> RevealAsync(LibraryPath folder)
     {
         ArgumentNullException.ThrowIfNull(folder);
 
         TreeItemData<LibraryPath>? current = FindAncestorOrSelf(this.topItems, folder);
         if (current is null)
         {
-            return;
+            return false;
         }
 
         ClearSelection(this.topItems);
@@ -229,6 +230,7 @@
 
         this.StateHasChanged();
         await this.SelectedPathChanged.InvokeAsync(folder);
+        return true;
     }
 
     private static TreeItemData<LibraryPath>? FindAncestorOrSelf(IEnumerable<ITreeItemData<LibraryPath>>? level, LibraryPath folder)

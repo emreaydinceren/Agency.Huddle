@@ -681,13 +681,11 @@ a.team-ref,
     font-size: var(--mud-typography-caption-size);
 }
 
-/* The trail starts at the workspace's left edge - the sidebar's width, which MudBlazor publishes as
-   --mud-drawer-width-left from the drawer's Width - so it reads as the trail of the page under it. The toolbar
-   already insets its content by its own 16px gutter, which is taken off. The centre cell keeps its 32rem. */
+/* The trail starts at the window's left edge, inside the toolbar's own 16px gutter, so the whole start cell is
+   room for crumbs and the strip above the sidebar is not left empty. The centre cell keeps its 32rem. */
 .top-bar-start {
     min-width: 0;
     overflow: hidden;
-    padding-inline-start: calc(var(--mud-drawer-width-left) - 16px);
 }
 
 /* With nothing in the middle cell (no search box yet) the trail gets that space instead of the 32rem
@@ -2696,14 +2694,29 @@ a.team-ref,
     padding: 0 16px 0 4px;
 }
 
-/* ---- Library document pane: the same 16px sides and 24px top as the tree pane ------------------
-   The toolbar's controls start 24px down and 16px in, level with the tree header's; the content then starts
-   24px below the toolbar, whichever mode draws it. In Split the two columns carry that 24px themselves, so
-   the raw side's tint runs right up to the toolbar. */
+/* ---- A toolbar ends in a hairline (design-system.md "Lines") ------------------------------------
+   A page toolbar is a band: 12px above and below its controls, closed by the chrome line, with the content 24px
+   below that line. The doubled class outranks MudBlazor's fixed dense height, which would otherwise centre the
+   controls in 48px and ignore the padding. The Library document toolbar is the same band at a pane's edge and
+   carries its own copy below, since it also runs the pane's full width. */
+.mud-toolbar.toolbar-hairline {
+    height: auto;
+    min-height: 0;
+    padding-block: 12px;
+    margin-bottom: 24px;
+    border-bottom: 1px solid var(--mud-palette-lines-default);
+}
+
+/* ---- Library document pane: the same 16px sides and 12px top as the tree pane ------------------
+   The toolbar is a band: 12px above and below its controls, 16px in, its controls level with the tree header's,
+   and a lines-default hairline closing it, the full width of the pane like the divider beside it, marks where
+   the toolbar ends and the document begins. The content then starts 24px below that line, whichever mode draws
+   it. In Split the two columns carry that 24px themselves, so the raw side's tint runs right up to the line. */
 .library-document-toolbar.mud-toolbar {
     height: auto;
     min-height: 0;
-    padding: 24px 16px 0;
+    padding: 12px 16px;
+    border-bottom: 1px solid var(--mud-palette-lines-default);
 }
 
 .library-document > .library-rendered {
@@ -2811,7 +2824,7 @@ a.team-ref,
 
 :is(.team-page-wide, .library-page) .library-document .library-document-split > .library-rendered {
     width: 100%;
-    margin-inline: auto;
+    margin-inline: 0;
     overflow: auto;
     padding: 24px 16px 0;
 }
@@ -2884,8 +2897,9 @@ a.team-ref,
 
 /* ---- Library panes: one spacing scale ---------------------------------------------------------
    The Library's panes are spaced on the 4/8/12/16/24px scale (design-system.md "Spacing"): each pane puts
-   16px between its edge and its content and 24px above its first line. The tree header is sticky, so it
-   carries the pane's 24px itself rather than leaving a gap above it for rows to scroll through. */
+   16px between its edge and its content and 12px above its first control, level with the document toolbar's.
+   The tree header is sticky, so it carries the pane's 12px itself rather than leaving a gap above it for rows
+   to scroll through. */
 .library-explorer-tree-header {
     position: sticky;
     top: 0;
@@ -2893,7 +2907,7 @@ a.team-ref,
     display: flex;
     flex-direction: column;
     gap: 8px;
-    padding: 24px 16px 8px;
+    padding: 12px 16px 8px;
     background: var(--mud-palette-surface);
 }
 
@@ -3112,7 +3126,7 @@ a.team-ref,
 
 /* The toolbar's search box takes the segmented controls' track colour, so the row reads as one set of controls. */
 .task-toolbar-search .mud-input-outlined {
-    background-color: var(--mud-palette-background-gray);
+    background-color: color-mix(in srgb, var(--mud-palette-text-primary) 6%, var(--mud-palette-surface));
     border-radius: var(--mud-default-borderradius);
 }
 
@@ -3181,7 +3195,8 @@ a.team-ref,
 /* The reading styles, shared by Read mode and Split's preview. Long-form text is the one size derived from
    the scale rather than taken from it (design-system.md "Typography"): body1 x 8/7 is 16px, at a 1.65
    line height, and the headings step up from that so an h1 is a heading, not a banner. The 35em measure is
-   about 70 characters of Inter prose a line, centred in whatever width the pane has. */
+   about 70 characters of Inter prose a line, set flush left so the text starts on the same 16px line as the
+   toolbar and the notices above it rather than floating in the middle of a wide pane. */
 .library-rendered {
     overflow-wrap: anywhere;
     font-size: calc(var(--mud-typography-body1-size) * 8 / 7);
@@ -3189,14 +3204,14 @@ a.team-ref,
 
     /* 35em of text plus the pane's 16px a side, so the padding does not eat into the measure. */
     max-width: calc(calc(var(--mud-typography-body1-size) * 8 / 7 * 35) + 32px);
-    margin-inline: auto;
+    margin-inline: 0;
 }
 
 /* The "Linked from N notes" panel is the width of the text column above it, its label 13px/500. */
 .library-backlinks {
     box-sizing: border-box;
     max-width: calc(calc(var(--mud-typography-body1-size) * 8 / 7 * 35) + 32px);
-    margin: 16px auto 0;
+    margin: 16px 0 0;
     padding-inline: 16px;
 }
 

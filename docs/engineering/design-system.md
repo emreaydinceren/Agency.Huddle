@@ -59,7 +59,7 @@ Colour comes from the palette of the active Theme. Use a semantic role, never a 
 | Role | MudBlazor variable | Use it for |
 | --- | --- | --- |
 | Surface | `--mud-palette-surface` | **The one shell surface**: the page, the sidebar, the top bar, the tab strip and every pane, plus cards, inputs and dialogs. Panes are separated by hairlines (see Lines), never by a darker ground with gaps around a card |
-| Quiet fill | `--mud-palette-background-gray` | The segmented control's track, tag chips, preview blocks. Not a board lane: a lane is `Surface` (see [Tasks](#tasks)) |
+| Quiet fill | `--mud-palette-background-gray` | Tag chips, preview blocks. Not the segmented control's track or the tab strip: those are `TextPrimary` mixed into `Surface` (6% and 4%), so they follow every Theme. Not a board lane: a lane is `Surface` (see [Tasks](#tasks)) |
 | Ground, Sidebar | `--mud-palette-background`, `--mud-palette-drawer-background` | Not painted by the shell. They stay in each palette because MudBlazor and the theme tests read them |
 | Text | `--mud-palette-text-primary`, `-secondary`, `-disabled` | Body, supporting text, disabled controls. `text-disabled` paints disabled controls only |
 | Accent | `--mud-palette-primary` | **Only** a fill, an indicator bar or a border: the selected row's tint, the active tab's bar, a primary button, the Human's bubble tint. Never a text action's colour and never an open group's chevron |
@@ -70,10 +70,20 @@ Colour comes from the palette of the active Theme. Use a semantic role, never a 
 
 | Line | Rule | Examples |
 | --- | --- | --- |
-| Chrome | `1px solid var(--mud-palette-lines-default)` | Top bar, tab strip, room header, pane splitter, drawer edge. On the one surface this is what separates panes, so it must be clearly visible: Huddle Light's is 2.1:1 and Huddle Dark's 2.5:1 against Surface |
+| Chrome | `1px solid var(--mud-palette-lines-default)` | Top bar, tab strip, room header, a toolbar's bottom edge, pane splitter, drawer edge. On the one surface this is what separates panes, so it must be clearly visible: Huddle Light's is 2.1:1 and Huddle Dark's 2.5:1 against Surface |
 | Card or row border | `1px solid var(--mud-palette-divider)` | Cards, tiles, board lanes, list-row separators, floating panels. At least 1.5:1 against Surface: Huddle Light's is 1.56:1 and Huddle Dark's 1.55:1. This is the only card border: `LinesDefault` is chrome only, never a card, an outlined card or a hover border |
 | Rule inside a card | `1px solid var(--mud-palette-divider-light)` | A sub-section inside a card or dialog |
 | Input border | MudBlazor's own (`--mud-palette-lines-inputs`) | Never restyle it |
+
+**A toolbar ends in a hairline.** A toolbar that heads a pane or a document (its path, its
+mode switch, its actions) is closed by a chrome line along its bottom edge, so the controls
+read as one band and the content as another. The band has 12px above and below its
+controls; the line runs the full width of the pane, not just the toolbar's content, and the
+content starts 24px below it. It is the same line as the top bar's and the tab strip's, so a toolbar reads as chrome,
+never as a card. A toolbar under a page title takes `.toolbar-hairline` (the Teammates
+toolbar, the Tasks toolbar's last row); a toolbar that heads a pane, like the Library
+document toolbar (`.library-document-toolbar`), runs its line the pane's full width. A
+stack of toolbar rows has one line, under the last row.
 
 **States.** Each interaction state has one treatment (UX-064 to UX-067).
 
@@ -266,7 +276,9 @@ outlined and filled alike. The Status and Tag chips set their own shape; see [Ch
 same steps as MudBlazor's utility classes (`pa-1` is 4px, `pa-4` 16px, `pa-6` 24px). In
 a stylesheet, write spacing (`padding`, `margin`, `gap` and their sides) in px on that
 scale; 1px and 2px hairline offsets are fine. A pane puts 16px between its edge and its
-content and 24px above its first line.
+content and 24px above its first line. A pane that opens with a toolbar is the exception:
+the toolbar is a band with 12px above and below its controls, closed by its hairline, and
+the 24px goes below that line instead.
 
 **A clearance is the one larger step.** When padding only keeps text out from under a
 control overlaid on the box (the Composer's Send and attach buttons, a role card's actions),
@@ -511,14 +523,17 @@ The sidebar's content is about 677px tall in an 890px window, so it fits one scr
 
 - **Tab strip.** A Tab title is 13px at weight 400, and 500 when active. A preview Tab is
   marked by `TextSecondary` colour, never by weight or italic; keeping it returns the body
-  colour. Titles ellipsise, and the `title` attribute carries the full title.
+  colour. Titles ellipsise, and the `title` attribute carries the full title. A Tab is a
+  fixed 14rem, so its hover toolbar leaves the start of the title visible. The strip is `TextPrimary` 4% over `Surface`, and the
+  active Tab is `Surface` with a 2px accent top edge, so it opens into the page below. Every
+  unpinned Tab shows its close button, at 60% until hovered or active.
 - **Tab rail** (Settings, the Team page). Labels are 13px at 500 in `TextSecondary`; the
   active label is in accent text over a 2px accent indicator. The icon is 18px
   (`--icon-size-row`) and takes its label's colour. Scroll arrows appear only when the tabs
   overflow the rail.
 - **Breadcrumb.** 13px, ancestors in `TextSecondary`, the current crumb in `TextPrimary`, and
-  8px each side of the "›". It starts at the workspace's left edge (240px, past the sidebar),
-  above the tab strip, so it reads as the trail of the page under it.
+  8px each side of the "›". It starts at the window's left edge, inside the top bar's 16px
+  gutter, so the strip above the sidebar is not left empty and a long trail has room.
 
 ### The Room
 
@@ -570,8 +585,10 @@ The Room is the Transcript over the Composer in one column.
 ### The Library
 
 - **Tree rows** are 30px, 13px text, 16px icons and a 16px indent.
-- **The reader** is `body1` x 8/7 (16px) at 1.65 with a 35em measure. A note's Markdown h1 is
+- **The reader** is `body1` x 8/7 (16px) at 1.65 with a 35em measure, set flush left on the
+  toolbar's 16px line rather than centred in the pane. A note's Markdown h1 is
   24px at 600, the one size above 20px in the app, and only in the reader.
+- **The document toolbar** ends in a hairline, as every toolbar does (see Lines).
 - **The file path** is 12px `TextSecondary`, relative to its Library root ("Teams/Platform/
   Architecture.md"), middle-truncated by `LibraryPathDisplay.Shorten`. The absolute path on
   disk is in the tooltip only.
@@ -618,7 +635,7 @@ Persona file works belongs in the User Guide.
    draw its own breadcrumb.
 2. **Contain it.** Wrap it in a `MudContainer` with `Class="pa-4"` (UX-002). The one
    exception is a page that is nothing but split panes edge to edge, the Library page: it
-   uses `pa-0`, and each pane pads itself (16px sides, 24px above its content) so the
+   uses `pa-0`, and each pane pads itself (16px sides, 12px above its toolbar or tree header) so the
    splitter's hairline runs the full height.
 
    | Kind | `MaxWidth` | Pages |
@@ -1042,8 +1059,7 @@ These are open questions, not decisions. Raise them before relying on them.
   background such as the Human's bubble or the selected row is not measured. The measured
   baseline for the two Huddle Themes is in
   [theme-authoring.md › The tinted-state gap](theme-authoring.md#the-tinted-state-gap).
-- **A quiet fill against Surface has no floor.** `BackgroundGray` (a tag chip, the segmented
-  track) is held to no contrast against `Surface`, so in a dark Theme it can nearly vanish.
+- **A quiet fill against Surface has no floor.** `BackgroundGray` (a tag chip) is held to no contrast against `Surface`, so in a dark Theme it can nearly vanish.
   That is why a board lane is `Surface` with a border, not a fill. Untested until a floor is
   chosen.
 

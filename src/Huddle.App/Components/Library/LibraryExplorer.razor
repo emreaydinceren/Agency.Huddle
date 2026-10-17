@@ -75,7 +75,7 @@
     else
     {
         <MudSplitPanel @ref="this.splitPanel" Horizontal="@(this.Layout == LibraryExplorerLayout.Stacked)"
-                       FirstPanelInitialSize="@(this.Layout == LibraryExplorerLayout.SideBySide ? 300 : 240)" Class="@this.SplitClass()">
+                       FirstPanelInitialSize="@(this.Layout == LibraryExplorerLayout.SideBySide ? 300 : 240)" PanelGap="1" Class="@this.SplitClass()">
             <FirstPanel>
                 @* The tree is never unmounted while filtered (nothing persists its expansion): it is
                    hidden, and the results render beside it. *@
@@ -159,6 +159,7 @@
 
     private LibraryPath? currentPath;
     private LibraryPath? publishedPath;
+    private LibraryPath? revealedPath;
     private bool locationPublished;
     private LibraryPath? selectedPath;
     private bool unavailable;
@@ -406,6 +407,26 @@
             this.locationPublished = true;
             this.publishedPath = this.currentPath;
             await this.OnOpenFileChanged.InvokeAsync(this.currentPath);
+        }
+
+        await this.RevealOpenFileAsync();
+    }
+
+    /// <summary>Expands the tree down to the open file and selects it, however the file was opened: the tree,
+    /// a search hit, a link, <see cref="InitialFile"/>, the query or the remembered state. Runs once per
+    /// file; a tree whose nodes are not loaded yet leaves it for the next render.</summary>
+    private async Task RevealOpenFileAsync()
+    {
+        if (this.tree is null
+            || this.currentPath is not { } open
+            || (this.revealedPath is not null && LibraryPathComparer.Instance.Equals(open, this.revealedPath)))
+        {
+            return;
+        }
+
+        if (await this.tree.RevealAsync(open))
+        {
+            this.revealedPath = open;
         }
     }
 
