@@ -4290,20 +4290,37 @@ a.team-ref,
 
 /* An agent's text is shown verbatim, so the line breaks in a message or a description are kept. */
 .elicitation-card-message,
-.elicitation-card-field-description,
-.elicitation-card-option-description {
+.elicitation-card-field-description {
     white-space: pre-line;
 }
 
-/* Options are at least 44 pixels tall and the card wraps, so it works at phone width. */
+/* Answer options are one-line 32px rows like the Question card's (audit C8, design-system C17): the label and its
+   description share the line and truncate with an ellipsis rather than wrap. The radio or checkbox is Dense, and its
+   focus ring is MudBlazor's own, so keyboard focus stays visible. */
 .elicitation-card-option {
-    min-height: 44px;
+    height: 32px;
+    min-height: 32px;
+    max-width: 100%;
+    margin: 0;
     align-items: center;
+}
+
+.elicitation-card-option-text {
+    display: block;
+    min-width: 0;
+    overflow: hidden;
+    white-space: nowrap;
+    text-overflow: ellipsis;
 }
 
 .elicitation-card-option-label,
 .elicitation-card-option-description {
-    display: block;
+    display: inline;
+    white-space: nowrap;
+}
+
+.elicitation-card-option-description {
+    margin-inline-start: 8px;
 }
 
 .elicitation-card-other {
