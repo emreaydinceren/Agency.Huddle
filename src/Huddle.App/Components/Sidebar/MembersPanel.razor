@@ -13,8 +13,8 @@
 
 @*
     The Members panel (Spec Members): every member of the open Room, Agents first and then Humans, each by name.
-    A row is a ProfileAvatar (so a click opens the profile popover) and the name; an Agent also has its status dot,
-    resolved from pipe liveness and then reported health, as TeamRoster draws it.
+    A row is a ProfileAvatar (so a click opens the profile popover) and the name; an Agent's avatar also wears its
+    presence badge on the rim, resolved from pipe liveness and then reported health, as TeamRoster draws it.
 *@
 
 @if (this.members is { } list)
@@ -27,14 +27,12 @@
     {
         @foreach (User member in list)
         {
-            <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="1" Class="sidebar-row members-row" @key="member.Id">
-                <ProfileAvatar Name="@member.Name" Avatar="this.Avatars.Get(member.Name)" Size="Size.Small" Team="@this.team" />
-                <MudText Typo="Typo.body2" Class="members-name">@member.Name</MudText>
-                @if (member.Kind == UserKind.Agent)
-                {
-                    <StatusDot State="this.StateOf(member)" />
-                }
-            </MudStack>
+            <div class="sidebar-row members-row" @key="member.Id">
+                <PresenceAnchor Cue="@(member.Kind == UserKind.Agent ? PresenceCue.From(this.StateOf(member)) : null)">
+                    <ProfileAvatar Name="@member.Name" Avatar="this.Avatars.Get(member.Name)" Size="Size.Small" Team="@this.team" />
+                </PresenceAnchor>
+                <span class="sidebar-row-text members-name" title="@member.Name">@member.Name</span>
+            </div>
         }
     }
 }

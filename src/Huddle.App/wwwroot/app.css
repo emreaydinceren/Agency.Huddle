@@ -1008,21 +1008,31 @@ a.team-ref,
 }
 
 .right-sidebar .mud-drawer-content {
-    gap: 8px;
+    gap: 0;
     padding: 16px;
     overflow-y: auto;
 }
 
+/* Panels are told apart by an Edge line, not by a gap (B11f). */
+.sidebar-panel + .sidebar-panel {
+    margin-top: 8px;
+    padding-top: 8px;
+    border-top: 1px solid var(--ink-edge);
+}
+
+/* A panel header is 32px: a 13px/600 title in Ink, a 12px count in Quiet ink and the chevron (B11e). */
 .sidebar-panel-header {
     display: flex;
     align-items: center;
     gap: 8px;
     width: 100%;
-    padding: 4px 0;
+    min-height: 32px;
+    padding: 0;
     border: none;
     background: none;
     color: var(--mud-palette-text-primary);
     font: inherit;
+    font-size: var(--mud-typography-body2-size);
     font-weight: 600;
     cursor: pointer;
     text-align: start;
@@ -1034,11 +1044,59 @@ a.team-ref,
 
 .sidebar-panel-count {
     color: var(--mud-palette-text-secondary);
+    font-size: var(--mud-typography-caption-size);
     font-weight: 400;
 }
 
 .sidebar-panel-body {
-    padding: 4px 0 8px 24px;
+    padding: 0 0 8px 0;
+}
+
+/* A row is one line: 32px (28px in the Outline), the text in Ink and ellipsised, its full text in the title (B11a-b).
+   Accent ink marks only the hovered or focused row; the current Outline heading wears .selected-shape. */
+.sidebar-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    min-width: 0;
+    min-height: 32px;
+}
+
+.sidebar-row.outline-row {
+    min-height: 28px;
+}
+
+.sidebar-row-text {
+    display: block;
+    flex: 1 1 auto;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    font-size: var(--mud-typography-body2-size);
+    color: var(--mud-palette-text-primary);
+}
+
+.sidebar-row-text.sidebar-row-quiet {
+    color: var(--mud-palette-text-secondary);
+}
+
+.sidebar-row .mud-link.sidebar-row-text:hover,
+.sidebar-row .mud-link.sidebar-row-text:focus-visible,
+.sidebar-row .mud-link.sidebar-row-text.is-current {
+    color: color-mix(in srgb, var(--mud-palette-primary) 70%, var(--mud-palette-text-primary));
+}
+
+/* A Task row: the ID in 12px Quiet ink, a one-line title, then the state's dot (B11c). */
+.room-task-id {
+    flex: 0 0 auto;
+    font-size: var(--mud-typography-caption-size);
+    color: var(--mud-palette-text-secondary);
+}
+
+/* Nothing to show: the sentence alone, so the empty text line takes no room. */
+.right-sidebar .empty-state-text:empty {
+    display: none;
 }
 
 /* ---- Left menu: a top-level MudNavLink vs. a MudNavGroup and everything inside it ------------
