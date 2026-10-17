@@ -106,6 +106,20 @@ The left sidebar is the whole app. From top to bottom:
 | **Library** | One **Library** link. The Library's roots (**Teams**, **Teammates**, and any folders you pinned) and **Add folder** are on the Library page. |
 | Bottom | **Archived chats** and **Settings**. |
 
+![The sidebar with Needs you, Rooms, Teams, Teammates, Tasks and Library](images/user-guide/sidebar.png)
+
+1. **Needs you**, listing the Rooms waiting on you.
+2. **Rooms**. The arrow folds the group away.
+3. A Room. Its More (⋮) menu sits at the end of the row.
+4. **Show all**, with how many Rooms there are, to list the rest.
+5. **New chat**.
+6. **Teams**, folded here.
+7. **Teammates**.
+8. **Tasks**, folded here.
+9. **Library**.
+10. **Archived chats**.
+11. **Settings**.
+
 Every page has its own address, so you can bookmark it:
 
 | Address | Page |
@@ -154,6 +168,15 @@ The Library is one tab like any other.
 - **Half-written messages:** the text you have typed but not sent is kept for each
   Room while you switch between tabs, and it is still there after you reload the page.
 
+![The tab strip with two kept tabs, one hovered, and a preview tab](images/user-guide/tab-strip.png)
+
+1. A kept tab.
+2. A kept tab under the pointer: its buttons take the place of the end of its name.
+3. **More (⋮)**, for the tab's menu.
+4. The quick **Move left** and **Move right** buttons.
+5. **Close (×)**.
+6. A preview tab, the one open now. The next sidebar item you select replaces it.
+
 **Right-click a tab**, or hover it and press **More (⋮)** beside its **Close (×)**, for its menu (hovering also shows quick **Move left** and **Move right** buttons when those apply):
 
 - **Pin tab** keeps the tab at the start of the strip as just its icon, with no ×
@@ -163,6 +186,14 @@ The Library is one tab like any other.
   item is shown in grey when there is nowhere to move the tab, for example when it is the
   only tab or the window already holds two panes. A moved tab is kept.
 - **Close** closes the tab.
+
+![A tab's More (⋮) menu, open](images/user-guide/tab-menu.png)
+
+1. **More (⋮)** on the hovered tab.
+2. **Pin tab**.
+3. **Move left**.
+4. **Move right**.
+5. **Close**.
 
 With two panes, the one you last clicked or tabbed into is the one the address bar shows,
 and what you open from the menu opens there. The other pane keeps its page exactly as you
@@ -755,6 +786,16 @@ are edited on its **Members** tab (see
 roles it has besides the manager, and **You have one** when you already run a Team of
 that type. The cards wrap into a grid.
 
+![Build a team at step 1, with the team type cards](images/user-guide/build-team.png)
+
+1. Step 1, **Team type**.
+2. Step 2, **Team details**.
+3. Step 3, **Hire**.
+4. Step 4, **Approve**.
+5. **Blank Team**, the first card.
+6. A team type's card: its name, and what it does in a line.
+7. How many roles it has besides the manager.
+
 To set up the Team:
 
 1. **Select a type's card.** Step 1 shows a check and the type's name, and **Team
@@ -1228,6 +1269,21 @@ its adapter reports a cost. It is a figure for this run, not a ledger.
 - When a Task changes and wakes its assignee, the Room shows one slim line (such as "PLAT-0004 changed by You") instead of a message from you. Select the line to see the changes.
 - A Task link carries a status dot in its status colour, the same colour as the status on the List and Board.
 
+![A one-to-one Room with Grace](images/user-guide/room.png)
+
+1. The Room's name.
+2. **Rename** (pencil icon).
+3. **Copy link**.
+4. The Room's members.
+5. **Invite teammate**.
+6. The button that opens the **Right sidebar**.
+7. A day separator.
+8. A Teammate's message: plain text beside its avatar.
+9. A Task link, with its status dot.
+10. The message box.
+11. The paperclip, for attaching files.
+12. **Send**.
+
 ### Attaching files
 
 Press the paperclip beside Send, paste a screenshot, or drop files on the
@@ -1545,6 +1601,17 @@ In a List, Tags show as tag chips and the Assignee as their avatar and name.
 Dates read the way you would say them: "Today", "Tomorrow", "Fri", "Oct 27", and
 "Oct 27, 2025" for another year. Hover a date for the full one. An overdue date has a
 warning icon and is shown in bold.
+
+![A card on the Platform board, in the In Progress column](images/user-guide/board-card.png)
+
+1. The status column, with how many Tasks are in it.
+2. The Task's id.
+3. Its priority chip, amber because **High** needs attention.
+4. **More (⋮)**, the Task's **Actions for {id}** menu.
+5. The Task's title.
+6. Its Tags.
+7. The assignee's avatar, with the [presence badge](#status-at-a-glance) on it (here a hollow grey ring: offline).
+8. The due date, overdue: a warning icon, in bold.
 
 The toolbar above a View has a **Filter** menu, a filter chip for each filter that is set
 (press its **Close (×)** to clear it), a search box, and **Dense**. There is no Save button:
