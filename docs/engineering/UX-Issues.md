@@ -31,7 +31,7 @@ visible drift between screens. **P3** is internal hygiene. Paths are relative to
 | [Code reuse](#2-code-reuse-opportunities) | 1 | UX-R22 |
 | [Pattern violations](#3-pattern-violations) | 1 | UX-V14 |
 | [Documentation drift](#4-documentation-drift) | 0 | |
-| [Round-3 defects](#5-defects-found-in-the-round-3-visual-audit) | 17 | UX-E1 to UX-E17 (E1 to E12 closed in round 3, E17 decided 2026-10-17; E13 to E16 open) |
+| [Round-3 defects](#5-defects-found-in-the-round-3-visual-audit) | 17 | UX-E1 to UX-E17 (all closed: E1 to E16 in round 3, E17 decided 2026-10-17) |
 
 ## 1. Inconsistencies
 
@@ -59,7 +59,7 @@ delivery.
 ## 5. Defects found in the round-3 visual audit
 
 Spotted in passing during the round-3 visual audit (16 Oct 2026, E1 to E12 in the audit's Part E).
-They are not style drift; each was visible in the running app. Round 3 closed E1 to E12 and a later decision closed E17 (the column below says how); E13 to E16 are findings the code still does not meet, each with the area that owns it.
+They are not style drift; each was visible in the running app. Round 3 closed E1 to E16 and a later decision closed E17 (the column below says how); none is open.
 
 | ID | P | Issue | Evidence | Suggested fix | Left to do |
 | --- | --- | --- | --- | --- | --- |
@@ -75,10 +75,10 @@ They are not style drift; each was visible in the running app. Round 3 closed E1
 | UX-E10 | P1 | Close task closes at once and wakes the assignee, who may open a new Room for the wake | Task drawer › Close task | Confirm before closing, or say what the wake does | Fixed in round 3 (`r3/tasks`): Close task… asks first ("Close PLAT-0003?"); there is no undo snackbar |
 | UX-E11 | P2 | The User Guide and the app disagree about the right sidebar | The empty sentence differs; the guide said three Library panels where there are two; the app's sentence promises Task panels, and a Task shows none | One sentence: "Nothing to show for this page." | Fixed in round 3: the guide and the app both read "Nothing to show for this page." (`r3/rside`) |
 | UX-E12 | P2 | MudBlazor's disabled colours are fixed black alphas, near-invisible on a dark Theme | Dialogs | Take the disabled colours from the Theme | Fixed in round 3 (`r3/fnd`): disabled colours follow the Theme |
-| UX-E13 | P3 | Archived chats shows "Created <date>", not "Archived <date>" | Archived chats dialog | Record when a Room was archived and show it | `SHELL`: a Room has no archive timestamp |
-| UX-E14 | P3 | The Move dialog shows raw Teammate-ID folder names | Library › Move | Look up the Teammate's display name for the folder | `LIB`: no display-name lookup for a Teammate folder |
-| UX-E15 | P3 | The New teammate dialog still scrolls inside on a short window | Teammates › New teammate | Let the dialog's content fit, or move the persona text to its own step | `TEAMS` |
-| UX-E16 | P3 | The B7b scrollbar is left native | Teammates | Style it with the rest of the app's scrollbars | `TEAMS` |
+| UX-E13 | P3 | Archived chats shows "Created <date>", not "Archived <date>" | Archived chats dialog | Record when a Room was archived and show it | Fixed in round 3 (`r3/open-items`): the `archived_rooms` row already held the instant, so no schema change; `Room.ArchivedAt` reads it and the dialog shows "Archived Oct 3", falling back to "Created …" when it is unreadable |
+| UX-E14 | P3 | The Move dialog shows raw Teammate-ID folder names | Library › Move | Look up the Teammate's display name for the folder | Fixed in round 3 (`r3/open-items`): a Teammate folder reads "Name · Title" from the Persona store, with the folder name kept in the tooltip |
+| UX-E15 | P3 | The New teammate dialog still scrolls inside on a short window | Teammates › New teammate | Let the dialog's content fit, or move the persona text to its own step | Fixed in round 3 (`r3/e15`, after `r3/open-items` fell about 190px short in the running app): Title and Alias share one row in the create form, and Model, Effort and Work mode are one row of equal selects (`.teammate-card-row`) under the single Model label, in Create and Edit; with the 4-line Persona text this removes about 220px, so the content lands near 700px of the 734px available at 1440x900; a very short window still scrolls the dialog body |
+| UX-E16 | P3 | The B7b scrollbar is left native | Teammates | Style it with the rest of the app's scrollbars | Fixed in round 3 (`r3/open-items`): the role and roster grids' scrollbar is thin and shows (in `--ink-edge`) only on hover or focus-within |
 | UX-E17 | P2 | 17 status-chip colours in ported VS Code Themes stay under 4.5:1, even after the chip text moved from 70% to 50% toward Ink (Light Modern's High chip was 3.68:1 at 70%). The 50% mix also mutes every chip in the Huddle Themes | Status chips, ported Themes | Decide between a per-Theme chip-ink recipe and recording the 17 as documented shortfalls; review the muted look in Huddle Light and Dark | Decided 2026-10-17: keep the 50% mix; the 17 are documented shortfalls in `ThemeCatalogTests` (`DocumentedShortfalls`, pair `chip:<status>`), listed in [theme-authoring.md](theme-authoring.md) |
 
 ## See also

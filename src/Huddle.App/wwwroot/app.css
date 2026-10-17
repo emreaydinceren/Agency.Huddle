@@ -2320,6 +2320,20 @@ a.team-ref,
     margin-top: 0;
 }
 
+/* UX-E15: the New teammate form's Title and Alias sit side by side, and Model, Effort and Work mode are one row of
+   equal selects under the one Model label, so the dialog fits a 900px-high window without an inner scroll. */
+.teammate-card-row {
+    display: flex;
+    gap: 12px;
+    align-items: flex-start;
+}
+
+.teammate-card-row > .mud-input-control,
+.teammate-card-row > .teammate-card-cell {
+    flex: 1 1 0;
+    min-width: 0;
+}
+
 /* The Teammate card's avatar is a button that opens the avatar editor, in every mode. It wraps the
    avatar without restyling it; the pencil in its corner is the only cue, shown on hover and on keyboard
    focus (the ring itself is the global button:focus-visible rule), and always on a device with no hover. */
@@ -2377,7 +2391,9 @@ a.team-ref,
    and An image: 72px preview, the radio row, the field, the group label, three rows of 32px swatches and the
    "Use the theme colour" button. */
 .avatar-editor {
-    min-height: 23rem;
+    /* Measured at 1440x900: the label mode's content is about 421px (5px over 26rem) and the other two modes' 368px, so
+       27rem (432px) makes all three the same height. */
+    min-height: 27rem;
 }
 
 /* The Background palette is a radio group of 32px circles drawn with the avatar recipe for the current mode: the
@@ -4851,6 +4867,18 @@ a.team-ref,
     gap: 12px;
     overflow-x: auto;
     padding-bottom: 8px;
+
+    /* The scrollbar is thin and invisible until the pointer is over the grid or focus is inside it (UX-E16); it still
+       scrolls with the wheel, touch and the arrow keys. */
+    scrollbar-width: thin;
+    scrollbar-color: transparent transparent;
+}
+
+.role-grid:hover,
+.role-grid:focus-within,
+.roster-grid:hover,
+.roster-grid:focus-within {
+    scrollbar-color: var(--ink-edge) transparent;
 }
 
 /* The roles are narrower cards, 220px wide; the roster's are 20rem. */

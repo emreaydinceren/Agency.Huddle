@@ -14,6 +14,12 @@ public sealed record Room(string Id, string Name, DateTimeOffset Created)
     public bool Archived { get; init; }
 
     /// <summary>
+    /// When the Room was archived, or <see langword="null"/> when it is not archived or the instant
+    /// was not recorded. Read from the same <c>archived_rooms</c> row that makes <see cref="Archived"/> true.
+    /// </summary>
+    public DateTimeOffset? ArchivedAt { get; init; }
+
+    /// <summary>
     /// The Team this Room is scoped to (ADR-0052), or <see langword="null"/> for a root Room. Chosen when
     /// the Room is created and never changed.
     /// </summary>
