@@ -610,11 +610,11 @@ else if (this.loaded is { } task)
     [Parameter]
     public EventCallback<bool> TitleEditingChanged { get; set; }
 
-    /// <summary>Raised when the Panel or dialog should close: Cancel (always), and Expand once its own dialog has opened (Spec §13.6, corrections-B7 "14.4" item 1). The caller (the Tasks page, its own drawer's own <c>OnClose</c>) is a later dispatch's wiring (14.5).</summary>
+    /// <summary>Raised when the Panel or dialog should close: Cancel (always), and Expand just before its own dialog opens (Spec §13.6, corrections-B7 "14.4" item 1, theming plan 7.6). The caller (the Tasks page, its own drawer's own <c>OnClose</c>) is a later dispatch's wiring (14.5).</summary>
     [Parameter]
     public EventCallback OnClose { get; set; }
 
-    /// <summary>Unused: Expand is self-contained (<see cref="ExpandAsync"/> opens <see cref="TaskDetailDialog"/> directly through the injected <see cref="IDialogService"/>). Kept for a caller that wants to know Expand happened, independent of the close it triggers.</summary>
+    /// <summary>Unused: Expand is self-contained (<see cref="ExpandAsync"/> opens <see cref="TaskDetailDialog"/> directly through the injected <see cref="IDialogService"/>). Kept for a caller that wants to know Expand happened, independent of the close it triggers (which now comes first, before the dialog opens).</summary>
     [Parameter]
     public EventCallback OnExpand { get; set; }
 
@@ -1236,7 +1236,13 @@ else if (this.loaded is { } task)
         return true;
     }
 
-    /// <summary>Expand (Spec §13.6): guarded by <see cref="ConfirmDiscardAsync"/>, then opens <see cref="TaskDetailDialog"/> with only <see cref="Id"/> - never a <see cref="TaskDraft"/>, since the dialog loads the Task itself (corrections-B5 D14 item 7) - and closes the Panel.</summary>
+    /// <summary>
+    /// Expand (Spec §13.6): guarded by <see cref="ConfirmDiscardAsync"/>, then closes the Panel through <see cref="OnClose"/>,
+    /// yields so the host's close (on <c>/tasks/item/{id}</c> a navigation) can render, and only then opens
+    /// <see cref="TaskDetailDialog"/> with only <see cref="Id"/> - never a <see cref="TaskDraft"/>, since the dialog loads
+    /// the Task itself (corrections-B5 D14 item 7). The dialog opens last: a dialog opened before the close was lost with
+    /// the route the close navigated away from.
+    /// </summary>
     private async Task ExpandAsync()
     {
         if (!await this.ConfirmDiscardAsync())
@@ -1244,9 +1250,11 @@ else if (this.loaded is { } task)
             return;
         }
 
+        string? title = this.loaded is { } expanded ? $"{expanded.Id} · {expanded.Title}" : null;
         DialogParameters<TaskDetailDialog> parameters = new() { { dialog => dialog.Id, this.Id } };
-        _ = await this.Dialogs.ShowAsync<TaskDetailDialog>(this.loaded is { } expanded ? $"{expanded.Id} · {expanded.Title}" : null, parameters, TaskDetailDialog.Options);
         await this.OnClose.InvokeAsync();
+        await Task.Yield();
+        _ = await this.Dialogs.ShowAsync<TaskDetailDialog>(title, parameters, TaskDetailDialog.Options);
     }
 
     /// <summary>

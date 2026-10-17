@@ -3,7 +3,9 @@ namespace Agency.Huddle.Tests.Ui.Tasks;
 using AngleSharp.Dom;
 using Bunit;
 using Bunit.Rendering;
+using Microsoft.AspNetCore.Components.Web;
 using MudBlazor;
+using Agency.Huddle.App.Components.Shared;
 using Agency.Huddle.App.Components.Tasks;
 using Agency.Huddle.App.Tasks;
 using Agency.Huddle.App.Tasks.Views;
@@ -179,6 +181,81 @@ public sealed class TasksPageDetailTests
 
         Assert.True(DetailDrawer(cut).Instance.OverlayAutoClose);
     }
+
+    /// <summary>Escape on the open drawer with nothing pending closes it (theming plan 7.5).</summary>
+    [Fact]
+    public async Task Escape_NothingPending_ClosesTheDrawer()
+    {
+        using TaskToolHarness harness = new();
+        _ = CreateTask(harness, "Alpha");
+        await using MudBunitContext ctx = NewContext(harness);
+        IRenderedComponent<ContainerFragment> cut = RenderPage(ctx);
+        await ClickTaskRowAsync(cut, "Alpha");
+        Assert.True(cut.FindComponent<ResizableEndDrawer>().Instance.Open);
+
+        await PressEscapeAsync(cut);
+
+        Assert.False(cut.FindComponent<ResizableEndDrawer>().Instance.Open);
+    }
+
+    /// <summary>Escape with an unsaved edit asks "Discard changes?" first; Cancel keeps the drawer open with the edit intact (theming plan 7.5, the unsaved-changes guard).</summary>
+    [Fact]
+    public async Task Escape_WithPendingEdit_AsksFirst_CancelKeepsTheDrawerOpen()
+    {
+        using TaskToolHarness harness = new();
+        _ = CreateTask(harness, "Alpha");
+        await using MudBunitContext ctx = NewContext(harness);
+        IRenderedComponent<ContainerFragment> cut = RenderPage(ctx);
+        await ClickTaskRowAsync(cut, "Alpha");
+        await EditPriorityAsync(cut, TaskPriority.Urgent);
+
+        _ = PressEscapeAsync(cut);
+        cut.WaitForAssertion(() => Assert.NotEmpty(cut.FindAll(".mud-dialog-actions button")));
+        Assert.Equal("Discard changes?", cut.Find(".mud-dialog-title").TextContent.Trim());
+        await cut.InvokeAsync(() => cut.FindAll(".mud-dialog-actions button").Single(b => string.Equals(b.TextContent.Trim(), "Cancel", StringComparison.Ordinal)).ClickAsync());
+
+        Assert.True(cut.FindComponent<ResizableEndDrawer>().Instance.Open);
+        Assert.True(cut.FindComponent<TaskDetail>().Instance.HasPending);
+    }
+
+    /// <summary>Confirming the Escape prompt discards the edit and closes the drawer.</summary>
+    [Fact]
+    public async Task Escape_WithPendingEdit_Discard_ClosesTheDrawer()
+    {
+        using TaskToolHarness harness = new();
+        _ = CreateTask(harness, "Alpha");
+        await using MudBunitContext ctx = NewContext(harness);
+        IRenderedComponent<ContainerFragment> cut = RenderPage(ctx);
+        await ClickTaskRowAsync(cut, "Alpha");
+        await EditPriorityAsync(cut, TaskPriority.Urgent);
+
+        _ = PressEscapeAsync(cut);
+        cut.WaitForAssertion(() => Assert.NotEmpty(cut.FindAll(".mud-dialog-actions button")));
+        await cut.InvokeAsync(() => cut.FindAll(".mud-dialog-actions button").Single(b => string.Equals(b.TextContent.Trim(), "Discard", StringComparison.Ordinal)).ClickAsync());
+
+        cut.WaitForAssertion(() => Assert.False(cut.FindComponent<ResizableEndDrawer>().Instance.Open));
+    }
+
+    /// <summary>The drawer's <c>ContentKey</c> is the open Task's id, and <c>new</c> for a New task, so each Task gets a fresh body (theming plan 7.7).</summary>
+    [Fact]
+    public async Task DrawerContentKey_IsTheTaskId_OrNewForANewTask()
+    {
+        using TaskToolHarness harness = new();
+        TaskItem task = CreateTask(harness, "Alpha");
+        await using MudBunitContext ctx = NewContext(harness);
+        IRenderedComponent<ContainerFragment> cut = RenderPage(ctx);
+        await ClickTaskRowAsync(cut, "Alpha");
+
+        Assert.Equal(task.Id.ToString(), cut.FindComponent<ResizableEndDrawer>().Instance.ContentKey);
+
+        await cut.InvokeAsync(() => cut.Find(".page-header-create").ClickAsync());
+
+        Assert.Equal("new", cut.FindComponent<ResizableEndDrawer>().Instance.ContentKey);
+    }
+
+    /// <summary>Presses Escape on the detail drawer's body, as the browser delivers it from a focused element inside.</summary>
+    private static Task PressEscapeAsync(IRenderedComponent<ContainerFragment> cut) =>
+        cut.InvokeAsync(() => cut.Find(".tasks-detail-drawer .resizable-drawer-body").KeyDownAsync(new KeyboardEventArgs { Key = "Escape" }));
 
     /// <summary>The page hosts <see cref="WakeToasts"/> (renders nothing itself) and a page-header <see cref="AiReactingChip"/>.</summary>
     [Fact]

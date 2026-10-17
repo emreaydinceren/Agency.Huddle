@@ -101,6 +101,42 @@ public sealed class TaskDetailActionsTests
         Assert.True(closed);
     }
 
+    /// <summary>Expand raises <c>OnClose</c> BEFORE it shows the dialog (theming plan 7.6): on <c>/tasks/item/{id}</c> the host navigates when it closes, and a dialog opened first was lost with the route.</summary>
+    [Fact]
+    public async Task Expand_RaisesOnCloseBeforeTheDialogIsShown()
+    {
+        using TaskToolHarness harness = new();
+        TaskItem task = CreateTask(harness);
+        IRenderedComponent<ContainerFragment>? cut = null;
+        int? dialogsWhenClosed = null;
+        await using MudBunitContext ctx = NewContext(harness);
+        cut = RenderPanel(ctx, task.Id, onClose: EventCallback.Factory.Create(this, () => dialogsWhenClosed = cut?.FindComponents<TaskDetailDialog>().Count));
+
+        await cut.InvokeAsync(() => cut.Find(".task-detail-expand").ClickAsync());
+
+        Assert.Equal(0, dialogsWhenClosed);
+        cut.WaitForAssertion(() => Assert.NotEmpty(cut.FindComponents<TaskDetailDialog>()));
+    }
+
+    /// <summary>Declining the "Discard changes?" box on Expand raises neither <c>OnClose</c> nor the dialog (theming plan 7.6).</summary>
+    [Fact]
+    public async Task Expand_DeclinedDiscard_NeitherClosesNorOpensTheDialog()
+    {
+        using TaskToolHarness harness = new();
+        TaskItem task = CreateTask(harness, priority: TaskPriority.Medium);
+        int closes = 0;
+        await using MudBunitContext ctx = NewContext(harness);
+        var cut = RenderPanel(ctx, task.Id, onClose: EventCallback.Factory.Create(this, () => closes++));
+        await EditPriorityAsync(cut, TaskPriority.Urgent);
+
+        _ = cut.InvokeAsync(() => cut.Find(".task-detail-expand").Click());
+        cut.WaitForAssertion(() => Assert.NotEmpty(cut.FindAll(".mud-dialog-actions button")));
+        await cut.InvokeAsync(() => cut.FindAll(".mud-dialog-actions button").Single(b => string.Equals(b.TextContent.Trim(), "Cancel", StringComparison.Ordinal)).ClickAsync());
+
+        Assert.Equal(0, closes);
+        Assert.Empty(cut.FindComponents<TaskDetailDialog>());
+    }
+
     /// <summary><see cref="TaskDetail.ConfirmDiscardAsync"/> (the method the page calls before switching <c>Id</c>, corrections-B5 D14 item 7) returns <see langword="true"/> immediately, with no message box, when nothing is pending.</summary>
     [Fact]
     public async Task ConfirmDiscardAsync_NoPending_ReturnsTrueWithNoMessageBox()

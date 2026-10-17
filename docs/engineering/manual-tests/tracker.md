@@ -817,6 +817,7 @@ Tasks: creating, moving, viewing and referencing a unit of work — [area file](
 | [TASKS-17](tasks.md#tasks-17--a-hand-edit-of-sprintsmd-shows-within-a-second-and-changes-no-task-file-deleting-a-task-file-removes-no-sprint) |  | Active |  |  |
 | [TASKS-18](tasks.md#tasks-18--the-toolbar-sprint-filter-a-saved-view-with-current-sprint-and-a-board-grouped-by-sprint) |  | Active |  |  |
 | [TASKS-19](tasks.md#tasks-19--an-agent-given-a-sprint-name-sets-it-with-update_task-a-typo-is-refused-with-the-known-list-and-the-assignee-is-woken) | 💰 | Active |  |  |
+| [TASKS-20](tasks.md#tasks-20--escape-closes-the-task-drawer-expand-opens-the-dialog-over-the-view-and-a-new-task-opens-at-the-top) |  | Active |  |  |
 
 ## adapters
 

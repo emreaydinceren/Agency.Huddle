@@ -205,8 +205,8 @@
             <MudAlert Severity="Severity.Warning" role="status" Class="tasks-item-not-found-alert">@this.itemNotFoundText</MudAlert>
         }
 
-        <ResizableEndDrawer Open="this.detailOpen" OpenChanged="this.OnDetailOpenChanged" StorageKey="taskDetailPanelWidth"
-                            Title="@this.DetailTitle" Eyebrow="@this.DetailEyebrow"
+        <ResizableEndDrawer Open="this.detailOpen" OpenChanged="this.OnDrawerOpenChangedAsync" StorageKey="taskDetailPanelWidth"
+                            ContentKey="@(this.selectedTaskId?.ToString() ?? "new")" Title="@this.DetailTitle" Eyebrow="@this.DetailEyebrow"
                             OverlayAutoClose="@(!this.detailHasPending)" ShowFooter="@this.FooterVisible"
                             Class="@(this.titleEditing ? "tasks-detail-drawer is-title-editing" : "tasks-detail-drawer")">
             <ChildContent>
@@ -553,6 +553,22 @@
 
     /// <summary>Closes the detail drawer (<see cref="TaskDetail.OnClose"/>): Cancel, a successful Close/Reopen, or returning from Expand.</summary>
     private void OnDetailClosed() => this.OnDetailOpenChanged(false);
+
+    /// <summary>
+    /// The drawer's own close request (the close button or Escape). Closing with an unsaved edit asks "Discard changes?"
+    /// through <see cref="TaskDetail.ConfirmDiscardAsync"/> first and stays open when the Human declines; the backdrop
+    /// never reaches here with an edit pending, because <c>OverlayAutoClose</c> is off then.
+    /// </summary>
+    /// <param name="open">The drawer's requested Open state.</param>
+    private async Task OnDrawerOpenChangedAsync(bool open)
+    {
+        if (!open && !await this.ConfirmSwitchAsync())
+        {
+            return;
+        }
+
+        this.OnDetailOpenChanged(open);
+    }
 
     /// <summary>
     /// Reflects the drawer's own chrome (backdrop click, Escape) closing it, and <see cref="TaskDetail.OnClose"/>
