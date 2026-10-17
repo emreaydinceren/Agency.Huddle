@@ -125,7 +125,7 @@ The codes (`S1`, `C6` and so on) are the container names in
 | `S1a` | Breadcrumb | Earlier crumbs `TextSecondary`; the current page and a hovered crumb `TextPrimary` |
 | `S1b` | Search bar | Input `Surface`, the same as the Composer; the highlighted result the hover shade |
 | `S2` | Sidebar | `Surface`; right edge `LinesDefault`; row text `DrawerText` (every Theme sets it to `TextPrimary`) and icons `DrawerIcon` (`TextSecondary`) |
-| `S2a` | Needs You card | `Surface`, border `Divider` |
+| `S2a` | Needs You card | `Surface`, outline the Edge rung (`Divider`) |
 | `S2b`–`S2e` | Group headings | `TextSecondary` |
 | `S2b`–`S2e` | Active row | Text `Primary` 70% + `TextPrimary`, fill `Primary` 14% over `Surface` (20% when hovered) |
 | `S2b` | "New chat" and other action rows | `TextSecondary` text and icon |
@@ -256,18 +256,28 @@ two Themes, so two tables.
 | `DrawerIcon` | | Sidebar icons; set equal to `TextSecondary` |
 | `BackgroundGray` | | Board columns, chips |
 | `TableHover` | | Table row hover |
-| `Divider` | | Card and tile borders: at least 1.5:1 against `Surface` (Huddle: 1.56:1 light, 1.55:1 dark) |
-| `DividerLight` | | Rules inside a card |
-| `LinesInputs` | | Input borders |
-| `LinesDefault` | | Chrome lines and pane dividers, which must be clearly visible on `Surface` (Huddle: 2.1:1 light, 2.5:1 dark); outlined cards |
+| `Divider` | | The Edge: card and tile borders, at least 1.5:1 against `Surface` (Huddle: 1.56:1 light, 1.55:1 dark). Must not be fainter than `DividerLight` |
+| `DividerLight` | | The Rule: lines inside a card; fainter than `Divider` |
+| `LinesInputs` | | The Field: input borders; at least as strong as `Divider` (Field ≥ Edge) |
+| `LinesDefault` | | The Chrome: lines and pane dividers, which must be clearly visible on `Surface` (Huddle: 2.1:1 light, 2.5:1 dark); not fainter than `LinesInputs` |
+| `TableLines` | | Table row lines. MudBlazor's default is `#e0e0e0`, a cool grey outside every palette, so the stylesheet draws table row lines on the Edge rung and overrides it. Set it to `Divider` if you set it at all |
 | `TextPrimary` | | Body text and the focus ring |
 | `TextSecondary` | | Supporting text |
 | `ActionDefault` | | Icon buttons and the drawer resize handle; set equal to `TextSecondary` in the Huddle Themes (MudBlazor's default is a 54% black, too faint on a Tasks screen of icon buttons) |
 | `TextDisabled` | | Disabled controls only. Never information: activity lines, placeholders and picker meta are `TextSecondary` |
 | `Primary` | | The accent; must also read as text. Each Theme sets its own; the Huddle Themes do not share one |
 | `PrimaryContrastText` | | Black or white, whichever reads better on `Primary` (Huddle Dark uses near-black `#141413`, not pure black) |
-| `Secondary` | | A second fill colour; the Review state |
+| `Secondary` | | A second fill colour (no longer a signal) |
+| `Tertiary` | | The Review signal. At least 30° of hue from `Primary` and from `Info`. In a ported Theme, mapped from a VS Code chart colour distinct from `Info`, faithful value |
 | `Success`, `Warning`, `Error`, `Info` | | Status |
+
+**The lines are ranked.** Hand over lines in this order of strength against `Surface`:
+`DividerLight` (Rule) < `Divider` (Edge) < `LinesInputs` (Field) ≤ `LinesDefault` (Chrome).
+Today the table sets no floor for the Field; set **Field ≥ Edge**. The ranks, with their ink
+percentages and measured examples, are in [The ink ladder, measured](#the-ink-ladder-measured).
+Note that the stylesheet draws lines from the ladder custom properties (`--ink-strip`,
+`--ink-wash`, `--ink-rule`, `--ink-edge`, `--ink-field` in `app-vars.css`), so a ported Theme
+gets ranked lines without its faithful palette values being nudged.
 
 Check these before you hand it over, because the build rejects a palette that fails them
 (see [the six contrast pairs](#the-six-contrast-pairs)): `TextPrimary` against
@@ -353,7 +363,7 @@ the last column is where you will see a mistake.
 | `DrawerIcon` | `--mud-palette-drawer-icon` | Sidebar icons. Set equal to `TextSecondary` in every Theme |
 | `BackgroundGray` | `--mud-palette-background-gray` | Quiet fills: chips, preview blocks |
 | `TableHover` | (MudBlazor tables) | Row hover inside a table only |
-| `Divider` | `--mud-palette-divider` | Card, tile and list-row borders; at least 1.5:1 against `Surface` in the Huddle Themes |
+| `Divider` | `--mud-palette-divider` | The Edge: card, tile and list-row borders; at least 1.5:1 against `Surface` in the Huddle Themes |
 | `DividerLight` | `--mud-palette-divider-light` | A rule inside a card or dialog |
 | `LinesInputs` | `--mud-palette-lines-inputs` | Input borders, drawn by MudBlazor |
 | `LinesDefault` | `--mud-palette-lines-default` | Chrome lines: top bar, tab strip, room header, pane splitter, drawer edge |
@@ -363,7 +373,9 @@ the last column is where you will see a mistake.
 | `TextDisabled` | `--mud-palette-text-disabled` | Disabled controls only |
 | `Primary` | `--mud-palette-primary` | The accent: primary buttons, bars and borders, and (mixed 70% toward `TextPrimary`) the text of links and the active nav link; selected rows (as a 14% tint), the Human's bubble tint, the Composer's focused border |
 | `PrimaryContrastText` | `--mud-palette-primary-text` | Text and icons printed on a solid `Primary` fill (filled buttons). Black or white, whichever reads better |
-| `Secondary` | `--mud-palette-secondary` | A secondary fill, such as the reconnect modal's button; the Review task state |
+| `Secondary` | `--mud-palette-secondary` | A secondary fill, such as the reconnect modal's button |
+| `Tertiary` | `--mud-palette-tertiary` | The Review signal: the Review state's dot, chip and column. Each authored Theme picks it at least 30° of hue from `Primary` and from `Info` |
+| `TableLines` | `--mud-palette-table-lines` | Table row lines. Overridden by the stylesheet, which draws them on the Edge rung; MudBlazor's default is `#e0e0e0` |
 | `Success`, `Warning`, `Error`, `Info` | `--mud-palette-success` and so on | Status only — tinted chips, dots, icons, short values. Never body text, never decoration, never a solid fill under text, so there are no `SuccessContrastText`-style properties |
 | `OverlayDark` | `--mud-palette-overlay-dark` | The scrim behind dialogs. Use `rgba(0,0,0,0.4)` for a light Theme and `rgba(0,0,0,0.6)` for a dark one |
 
@@ -583,6 +595,51 @@ reads better. `AccentThemeTests` holds it to 4.5:1 for pale, dark and brand acce
   `InfoContrastText`. `StatusChipText_ReachesFloor_InHuddleLightAndDark` holds the chip
   text to 4.5:1.
 
+### The ink ladder, measured
+
+The ladder is the set of fixed rungs that lines and quiet fills sit on: a **rung** is Ink mixed
+n% over Ground, so the lines keep their order and proportions on any ground. These are the
+measured examples behind the rules in [design-system.md](design-system.md#colour). The ratios are
+computed per ground (sRGB mix, WCAG relative luminance), so a weak Theme gets weaker lines but the
+order holds. "Pure HC" is a 21:1 black-and-white Theme; "weak port" is a Theme whose ink reaches
+only 7:1 against its ground.
+
+| Rung | Name | Used for | Huddle Light | Huddle Dark | Pure HC (21:1) | Weak port (7:1) |
+| --- | --- | --- | --- | --- | --- | --- |
+| Ink 4% | **Strip** | The tab strip | 1.08:1 | 1.11:1 | 1.06:1 | 1.06:1 |
+| Ink 6% | **Wash** | Quiet fills: tag chip, segmented track, preview block | 1.13:1 | 1.18:1 | 1.10:1 | 1.09:1 |
+| Ink 10% | **Rule** | A divider inside a card or dialog | 1.23:1 | 1.33:1 | 1.20:1 | 1.15:1 |
+| Ink 18% | **Edge** | The border of a card, tile, lane, row or panel | 1.47:1 | 1.70:1 | 1.54:1 | 1.30:1 |
+| Ink 30% | **Field** | The boundary of an input | 1.97:1 | 2.46:1 | 2.46:1 | 1.57:1 |
+| Ink 30% | **Chrome** | Top bar, tab strip, toolbar and pane hairlines | 1.97:1 | 2.46:1 | 2.46:1 | 1.57:1 |
+
+#### Where the Huddle palettes sat before the ladder
+
+The same role sat on different rungs in the two Huddle palettes, which let a Field line come out
+fainter than an Edge and a wash vanish on the dark ground:
+
+| Role | Palette property | Huddle Light | Huddle Dark | Ladder |
+| --- | --- | --- | --- | --- |
+| Wash | `BackgroundGray` | 13% | **3%** | 6% |
+| Rule | `DividerLight` | 8% | **3%** | 10% |
+| Edge | `Divider` | 21% | 16% | 18% |
+| Field | `LinesInputs` | **14%**, below Edge | 16% | 30% |
+| Chrome | `LinesDefault` | 33% | 32% | 30% |
+| Quiet ink | `TextSecondary` | 80% | 63% | 50-80% |
+
+#### The measured line ratios (audit of 16 Oct 2026)
+
+| Line | Huddle Light | Huddle Dark |
+| --- | --- | --- |
+| Field (`LinesInputs`: inputs, the Composer) | **1.32:1**, Ink 14% | 1.58:1, Ink 16% |
+| Edge (`Divider`: cards) | 1.56:1, Ink 21% | 1.55:1, Ink 16% |
+| Chrome (`LinesDefault`) | 2.12:1, Ink 33% | 2.55:1, Ink 32% |
+
+On the light ground a field was fainter than the card it sat on, and the Composer read as a
+floating placeholder. WCAG 1.4.11 asks for 3:1 on an input's boundary; the Field rung gives about
+2:1 on Huddle's grounds, a deliberate compromise because the label and placeholder also mark the
+field.
+
 ### The tinted-state gap
 
 The contrast tests measure palette pairs. They do not measure a `color-mix` tint, such as a
@@ -646,11 +703,17 @@ this table.
 | `Primary` | `textLink.foreground` → `focusBorder` → `button.background` |
 | `PrimaryContrastText` | computed: black or white, whichever contrasts more with `Primary` |
 | `Secondary` | `button.background` → `activityBarBadge.background` → `focusBorder` |
+| `Tertiary` | a VS Code chart colour distinct from `Info`, faithful value |
 | `Success` | `charts.green` → `editorGutter.addedBackground` → `terminal.ansiGreen` |
 | `Error` | `errorForeground` → `editorError.foreground` → `charts.red` → `terminal.ansiRed` |
 | `Warning` | `charts.yellow` → `editorWarning.foreground` → `terminal.ansiYellow` |
 | `Info` | `charts.blue` → `textLink.foreground` → `terminal.ansiBlue` |
 | `OverlayDark` | fixed: `rgba(0,0,0,0.4)` light, `rgba(0,0,0,0.6)` dark |
+
+**Two blues collide.** `Info` maps to `charts.blue` and `Primary` to `textLink.foreground`,
+and both are blue in most VS Code Themes. A ported Theme may fall short of the 30° hue
+distance an authored Theme meets, so it relies on second cues (a glyph, a shape, a word)
+to carry the meaning.
 
 **`Primary` is `textLink.foreground`, not `button.background`.** The button colour is
 the obvious choice and it failed the text floor in sixteen of nineteen Themes, because a

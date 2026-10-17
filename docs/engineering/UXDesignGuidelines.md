@@ -109,6 +109,18 @@ component here, move it onto the component rather than writing another copy.
 | An icon | The entity or action table | [Icons](design-system.md#icons) |
 | A tinted, selected or hovered surface | The States table | [Colour](design-system.md#colour) |
 | A border | The Lines table | [Colour](design-system.md#colour) |
+| A border, divider or quiet fill | The ink ladder rung for its job (Rule, Edge, Field, Chrome, Wash) | [Colour](design-system.md#colour) |
+| A colour that means something | A signal **and** a second cue | [Colour](design-system.md#colour) |
+| A heading inside a drawer or dialog | The Group label | [Typography](design-system.md#typography) |
+| A selected row in any list | The Selected treatment and shape | [Colour](design-system.md#colour) |
+| A filter chip | `TaskFilterChip` or `ChipCloud`, in the Filter geometry | [Chips](design-system.md#chips) |
+| A search box or select in a toolbar | `SearchField` with `toolbar-compact` | [Spacing, density and size](design-system.md#spacing-density-and-size) |
+| A highlighted search match | Search match in the States table | [Colour](design-system.md#colour) |
+| A file a message mentions | Its name as a `.ref-link`, path in the tooltip | [The Room](design-system.md#the-room) |
+| A drawer's Save and Cancel | The sticky drawer footer | [Drawer anatomy](design-system.md#drawer-anatomy) |
+| A menu of actions | The Menus rule | [Menus](design-system.md#menus) |
+| A picker of folders or files | The tree's look in a 600px dialog | [Dialog anatomy](design-system.md#dialog-anatomy) |
+| A question an Agent asks | `AgentCard` in the 760px column | [The Room](design-system.md#the-room) |
 | A size, gap or radius in CSS | The 4/8/12/16/24px spacing scale and radius tokens | [Spacing, density and size](design-system.md#spacing-density-and-size) |
 | A font size or weight | The type table's role; nothing under 11px | [Typography](design-system.md#typography) |
 | A label, button text or message | The verb table and casing rules, and [language.md](language.md) | [Interface copy](design-system.md#interface-copy) |
@@ -355,6 +367,7 @@ the catalog above.
 | Document | Owns | Binding? | Read it when |
 | --- | --- | --- | --- |
 | [design-system.md](design-system.md) | How the UI looks, reads and behaves: tokens, type roles, chips, avatars, spacing, shape, elevation, icons, motion, focus, layout, overlay anatomy, component defaults, interface copy, stylesheet rules, the checklist | **Yes**, for new and changed UI | Before you design a screen, write markup or touch a stylesheet |
+| Theme vocabulary (Ground, Ink, Quiet ink, Signal, Second cue, the ink ladder) | Defined once, in [design-system.md › Colour](design-system.md#colour). The measured examples are in [theme-authoring.md](theme-authoring.md#the-ink-ladder-measured) | **Yes**, with design-system.md | Before you pick a line, a fill or a signal colour |
 | [wireframes.md](wireframes.md) | The code, name and component of every container, an SVG figure per screen, and the words for UI parts | **Yes**, for vocabulary; update it with your change | Before you discuss, specify, report on or change a part of the screen |
 | [UX-Issues.md](UX-Issues.md) | The few rows the UX consistency delivery did not close, with a note on what is left | No: a backlog | Before you change an area |
 | [language.md](language.md) | The defined terms and the words to avoid | **Yes** | Before you write a label, a message or help text |
@@ -440,6 +453,8 @@ Check these first. Each links to the rule that owns it.
     ([catalog](#reusable-parts-catalog)).
 11. **One hue, one meaning: amber means attention.** A working or neutral state is never
     `Warning` ([Colour](design-system.md#colour)).
+12. **Lines and fills come from the ink ladder, and a meaning never rests on hue
+    alone** ([Colour](design-system.md#colour)).
 
 ## Working on a UI change
 
@@ -464,8 +479,11 @@ with realistic Teams, Teammates, Rooms, Tasks and Library notes:
 An agent starts the `huddle-seed` entry in `.claude/launch.json` with the built-in
 browser's `preview_start` instead of starting the server itself. Then check:
 
-- **Themes:** Huddle Light, Huddle Dark (the top bar's toggle) and one High Contrast
-  Theme (Settings, Appearance).
+- **Themes:** one of each family, five in all: Huddle Light and Huddle Dark (the top
+  bar's toggle), then **Light Modern** (ported light), **Dark Modern** (ported dark) and
+  **Dark High Contrast** (Settings, Appearance). Always the same three, so every checker
+  opens the same ones. The rules are relationships, so "the lines are in order and the
+  second cues are present" means the same thing in all five.
 - **Width:** the full window and a narrow one; the page fills its pane and scrolls inside.
 - **Keyboard:** every control can be reached with Tab, the focus ring shows, and Escape
   closes overlays.
@@ -476,6 +494,12 @@ browser's `preview_start` instead of starting the server itself. Then check:
   and no size appears that the type table doesn't list.
 - **Contrast:** the census's `failures` list is empty in Huddle Light and in Huddle Dark.
   Every accent-coloured word and every chip label reaches 4.5:1.
+- **Lines and fills:** lines are in ladder order against Ground (Rule < Edge < Field
+  ≤ Chrome), and a washed shape has an Edge. The text census's `lines` report gives each
+  line's ratio and its rung, so one run shows the order in any Theme.
+- **Second cues:** switch to greyscale (DevTools › Rendering › Emulate vision
+  deficiencies › Achromatopsia). Every state, priority and presence still reads.
+- **Position across Tabs:** switch to a sibling page; the title doesn't move.
 - **Dark-mode edges:** cards and tiles are still visibly bordered in Huddle Dark.
 - **Hierarchy:** the item's name is the largest text in its container.
 

@@ -31,6 +31,7 @@ visible drift between screens. **P3** is internal hygiene. Paths are relative to
 | [Code reuse](#2-code-reuse-opportunities) | 1 | UX-R22 |
 | [Pattern violations](#3-pattern-violations) | 1 | UX-V14 |
 | [Documentation drift](#4-documentation-drift) | 0 | |
+| [Round-3 defects](#5-defects-found-in-the-round-3-visual-audit) | 12 | UX-E1 to UX-E12 |
 
 ## 1. Inconsistencies
 
@@ -54,6 +55,27 @@ visible drift between screens. **P3** is internal hygiene. Paths are relative to
 
 None left. wireframes.md, language.md and the `app.css` root-size comment were corrected by the
 delivery.
+
+## 5. Defects found in the round-3 visual audit
+
+Spotted in passing during the round-3 visual audit (16 Oct 2026, E1 to E12 in the audit's Part E).
+They are not style drift; each is visible in the running app. The package named in "Left to do" owns
+the fix.
+
+| ID | P | Issue | Evidence | Suggested fix | Left to do |
+| --- | --- | --- | --- | --- | --- |
+| UX-E1 | P1 | The Human's name reads "YouYouYouYou" | Right sidebar, change log, Room system rows, Settings › Profile. The stored profile Name reads that way; older change-log entries read "YouYou" and "YouYouYou", so something appends "You" | Find what appends "You" and stop it; repair the stored Name | `DEF-E1` |
+| UX-E2 | P2 | The document title stays "All Tasks" | The Tab says "Platform board" or "Task PLAT-0003" | Set the page title from the Tab's title | `TASKS` |
+| UX-E3 | P2 | The New task draft shows "-0000:" before a title exists | Tasks › New task | Show a neutral placeholder until the draft has an ID and a title | `TASKS` |
+| UX-E4 | P3 | Grace and Lena each appear in two Teams | Teammates. If that is real, an "Also in Support" note beats a duplicate card | One card with an "Also in" note | `TEAMS` |
+| UX-E5 | P2 | The Model field shows "Reading the models this agent offers…" in a disabled-looking box with no spinner | Edit teammate | A progress indicator in the field while it loads | `TEAMS` |
+| UX-E6 | P2 | Each Hide switch is labelled "HideHide" | Settings › Library | Fix the label | `SET` |
+| UX-E7 | P3 | `/settings/team-types` shows Profile under a "Team-types" crumb; the real tab `/settings/teamtypes` has the crumb "Teamtypes" | Settings URLs | Make the route, the tab and the crumb agree, with a readable crumb | `SET` |
+| UX-E8 | P2 | The menu stays open above the scrim when it opens a dialog | Every menu that opens a dialog | The `SHR` idiom, applied by each menu's owner | `SHR` sets it; each menu's owner applies it |
+| UX-E9 | P1 | Checked switches draw as unchecked | Tasks › Fields | Bind the switch to the stored value | `TASKS` |
+| UX-E10 | P1 | Close task closes at once and wakes the assignee, who may open a new Room for the wake | Task drawer › Close task | Confirm before closing, or say what the wake does | `TASKS` |
+| UX-E11 | P2 | The User Guide and the app disagree about the right sidebar | The empty sentence differs; the guide said three Library panels where there are two; the app's sentence promises Task panels, and a Task shows none | One sentence: "Nothing to show for this page." | Guide fixed (round 3); `RSIDE` changes the app's sentence |
+| UX-E12 | P2 | MudBlazor's disabled colours are fixed black alphas, near-invisible on a dark Theme | Dialogs | Take the disabled colours from the Theme | `FND` |
 
 ## See also
 
