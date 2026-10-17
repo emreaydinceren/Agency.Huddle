@@ -418,7 +418,7 @@ public sealed class TeamPageTests
 
         IElement duplicate = cut.Find("button.team-page-actions");
         Assert.Equal("Duplicate", duplicate.TextContent.Trim());
-        Assert.Same(cut.Find("h1").ParentElement, duplicate.ParentElement);
+        Assert.Same(cut.Find("h1").Closest(".page-header-row"), duplicate.Closest(".page-header-row"));
         Assert.DoesNotContain("team-page-duplicate", duplicate.ClassList);
     }
 

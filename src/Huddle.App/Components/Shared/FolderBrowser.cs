@@ -83,6 +83,29 @@ internal static class FolderBrowser
         }
     }
 
+    /// <summary>The path to <paramref name="current"/> as clickable segments, outermost first: the drive or root, then each folder with its full path.</summary>
+    /// <param name="current">The folder shown, or <see langword="null"/> for the top level.</param>
+    /// <returns>The segments; empty for the top level.</returns>
+    public static IReadOnlyList<BrowsedFolder> Crumbs(string? current)
+    {
+        if (string.IsNullOrWhiteSpace(current))
+        {
+            return [];
+        }
+
+        List<BrowsedFolder> trail = [];
+        string? path = current;
+        while (path is not null)
+        {
+            string? parent = Path.GetDirectoryName(path);
+            trail.Add(new BrowsedFolder(parent is null ? path : Path.GetFileName(path), path));
+            path = parent;
+        }
+
+        trail.Reverse();
+        return trail;
+    }
+
     /// <summary>The top level: every ready drive on Windows, the root folder elsewhere.</summary>
     private static FolderListing Top()
     {

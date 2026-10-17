@@ -1,6 +1,7 @@
 .inline-confirm {
     display: flex;
     align-items: center;
+    justify-content: flex-end;
     gap: 8px;
 }
 
@@ -8,4 +9,22 @@
     flex: 1 1 auto;
     min-width: 0;
     overflow-wrap: anywhere;
+    text-align: left;
+}
+
+/* The sidebar's form: "Delete?" and its two buttons on one line, level with the row's indent. */
+.inline-confirm-narrow {
+    flex-wrap: nowrap;
+    gap: 4px;
+}
+
+.inline-confirm-narrow ::deep .inline-confirm-prompt {
+    flex: 0 1 auto;
+    overflow-wrap: normal;
+    white-space: nowrap;
+}
+
+.inline-confirm-narrow ::deep .mud-button-root {
+    min-width: 0;
+    padding-inline: 8px;
 }

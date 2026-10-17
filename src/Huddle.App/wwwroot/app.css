@@ -2830,6 +2830,46 @@ a.team-ref,
     --mud-drawer-width: 420px;
 }
 
+/* The drawer never covers the Right sidebar (audit B11 "With a drawer"): while the sidebar is open its 280px is
+   kept clear, so the drawer opens beside it, and the scrim stops at the sidebar's edge and under the Top bar, so
+   the sidebar and its toggle stay visible and pressable. ClipMode Always already starts the drawer under the Top bar.
+   :root:has() reads the sidebar's open state from MudBlazor's own class; 280px is the sidebar's Width in RightSidebar.razor. */
+.mud-overlay.mud-overlay-drawer {
+    top: var(--mud-appbar-height);
+}
+
+:root:has(.mud-drawer.right-sidebar.mud-drawer--open) .mud-drawer.resizable-drawer.mud-drawer-temporary.mud-drawer-pos-right.mud-drawer--open {
+    right: 280px;
+}
+
+:root:has(.mud-drawer.right-sidebar.mud-drawer--open) .mud-overlay.mud-overlay-drawer {
+    right: 280px;
+}
+
+/* The content scrolls and the footer sticks to the bottom of what shows. */
+.resizable-drawer .mud-drawer-content {
+    display: flex;
+    flex-direction: column;
+    overflow-y: auto;
+}
+
+.resizable-drawer-body {
+    flex: 1 0 auto;
+}
+
+/* Actions as a sticky footer (audit B4k): a Chrome line on top, right-aligned, over the drawer's surface. */
+.resizable-drawer-footer {
+    position: sticky;
+    bottom: 0;
+    z-index: 1;
+    display: flex;
+    justify-content: flex-end;
+    gap: 8px;
+    padding: 12px 16px;
+    background-color: var(--mud-palette-surface);
+    border-top: 1px solid var(--mud-palette-lines-default);
+}
+
 /* S6 header: a 12px secondary line (the id and its Team or Project) over the name at 16px/600, up to three lines; the close button stays on the right. */
 .resizable-drawer-heading {
     flex: 1 1 auto;
@@ -3953,6 +3993,75 @@ a.team-ref,
     }
 }
 
+/* ---- Picker rows and the folder picker (audit B10h, B10 "Choose a folder") --------------------------------
+   A list picker's row is 32px at 13px with an 18px icon in a 24px slot, not MudList's 46px at 14px. The doubled
+   class outranks MudBlazor's own list-item padding and icon slot. */
+.mud-list-item.picker-row {
+    min-height: 32px;
+    padding: 0 12px;
+    font-size: var(--mud-typography-body2-size);
+}
+
+.picker-row .mud-list-item-icon {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 24px;
+    width: 24px;
+    margin-inline-end: 8px;
+}
+
+.picker-row .mud-list-item-icon .mud-icon-root {
+    font-size: var(--icon-size-row);
+}
+
+.picker-row .mud-list-item-text,
+.picker-row .mud-list-item-text .mud-typography {
+    margin: 0;
+    font-size: inherit;
+    line-height: 1.4;
+}
+
+/* The folder picker: the up arrow is the action colour (Quiet ink), and the path trail names where the Human is. */
+.folder-picker-up.mud-icon-button:not(.mud-disabled) {
+    color: var(--mud-palette-action-default);
+}
+
+.folder-picker-trail {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 4px;
+    font-size: var(--mud-typography-body2-size);
+    color: var(--mud-palette-text-secondary);
+}
+
+.folder-picker-crumb {
+    padding: 2px 4px;
+    font: inherit;
+    color: inherit;
+    background: transparent;
+    border: 0;
+    border-radius: calc(var(--mud-default-borderradius) * 0.75);
+    cursor: pointer;
+}
+
+.folder-picker-crumb:hover:not(:disabled) {
+    background-color: var(--ink-wash);
+}
+
+/* The current folder is the last crumb: Ink, not a link. */
+.folder-picker-crumb:disabled {
+    color: var(--mud-palette-text-primary);
+    font-weight: 500;
+    cursor: default;
+}
+
+.folder-picker-list {
+    max-height: 50vh;
+    overflow-y: auto;
+}
+
 /* ---- Chip cloud and process step ------------------------------------------------------------- */
 
 .chip-cloud-title {
@@ -3968,25 +4077,28 @@ a.team-ref,
     overflow-y: auto;
 }
 
+/* A chip of the cloud is the Filter chip (audit A6, design-system "Chips"): 28px, a pill, a dashed Field line and no
+   fill while unset; the Accent border, the Accent tint at 14% and the Accent ink at 500 once set. It repeats
+   .mud-chip.filter-chip (FND's global rule) for a native button, which that rule's .mud-chip cannot reach. */
 .chip-cloud-chip,
 .chip-cloud-all {
+    box-sizing: border-box;
+    height: 28px;
+    padding: 0 12px;
     font: inherit;
     font-size: var(--mud-typography-body2-size);
+    font-weight: 400;
     color: var(--mud-palette-text-primary);
-    background: var(--ink-wash);
-    border: 1px solid var(--ink-edge);
+    background-color: transparent;
+    border: 1px dashed var(--ink-field);
     border-radius: 999px;
-    padding: 4px 12px;
     cursor: pointer;
 }
 
-.chip-cloud-chip.is-quiet {
-    background: transparent;
-}
-
-.chip-cloud-chip-selected {
-    font-weight: 600;
-    border: 2px solid var(--mud-palette-primary);
+.chip-cloud-chip.is-set {
+    font-weight: 500;
+    border: 1px solid var(--mud-palette-primary);
+    background-color: color-mix(in srgb, var(--mud-palette-primary) 14%, var(--mud-palette-surface));
     color: color-mix(in srgb, var(--mud-palette-primary) 70%, var(--mud-palette-text-primary));
 }
 
@@ -4020,16 +4132,53 @@ a.team-ref,
     gap: 24px;
 }
 
-/* The title and its subtitle stack: the subtitle is its own 13px secondary line under the title (S10). */
-.page-header-titles {
+/* The page header (audit B1, design-system "A page"): one 32px row on every page, the h1 and its small controls on
+   the left, the aside, the create button and the actions on the right. The page container's 16px padding puts the
+   row 16px below the tab strip, and 16px of margin separates it from what follows. */
+.page-header {
+    margin-bottom: 16px;
+}
+
+.page-header-row {
     display: flex;
-    flex-direction: column;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+    min-height: 32px;
+}
+
+.page-header-title {
+    display: flex;
+    align-items: center;
+    gap: 8px;
     min-width: 0;
 }
 
-.page-header-subtitle {
+.page-header-h1 {
+    margin: 0;
+    min-width: 0;
+    overflow-wrap: anywhere;
+}
+
+.page-header-actions {
+    display: flex;
+    align-items: center;
+    flex: 0 0 auto;
+    gap: 8px;
+}
+
+/* The Room closes its header with a Chrome line (design-system "A page"). */
+.page-header.has-chrome {
+    padding-bottom: 8px;
+    border-bottom: 1px solid var(--mud-palette-lines-default);
+}
+
+/* The intro: body1 (14px) in Quiet ink, at most 75 characters wide (audit B1). */
+.page-header-subtitle,
+.page-lead {
+    margin: 4px 0 0;
     color: var(--mud-palette-text-secondary);
-    font-size: var(--mud-typography-body2-size);
+    font-size: var(--mud-typography-body1-size);
 }
 
 .build-stepper {

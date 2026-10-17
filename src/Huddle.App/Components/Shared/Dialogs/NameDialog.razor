@@ -2,7 +2,8 @@
     The one single-field name dialog (UX-024, UX-025): Outlined Dense field with AutoFocus, live validation
     through the feature's pure validator (the TRIMMED text is validated and submitted), Enter submits like the
     primary, and an error returned by SubmitAsync shows in a Dense MudAlert role="alert" and keeps the dialog
-    open. Open it with HuddleDialogOptions.SmallForm; the title is the caller's.
+    open. Open it with HuddleDialogOptions.SmallForm; the title is the caller's. A caller that creates something
+    inside a place passes Location, and the title names it: "New note" becomes "New note in Platform".
 *@
 
 <MudDialog>
@@ -36,6 +37,10 @@
     [Parameter]
     public string ConfirmText { get; set; } = string.Empty;
 
+    /// <summary>Where the new item goes, such as a project or folder name; when set, the dialog's title becomes "{title} in {location}", for example "New note in Platform".</summary>
+    [Parameter]
+    public string? Location { get; set; }
+
     /// <summary>The text the field starts with.</summary>
     [Parameter]
     public string InitialValue { get; set; } = string.Empty;
@@ -59,6 +64,15 @@
     private bool initialised;
 
     private bool CanSubmit => !this.busy && this.text.Trim().Length > 0 && this.problem is null;
+
+    /// <summary>Appends " in {location}" to the caller's title when a <see cref="Location"/> was given.</summary>
+    protected override async Task OnInitializedAsync()
+    {
+        if (this.Dialog is not null && !string.IsNullOrWhiteSpace(this.Location))
+        {
+            await this.Dialog.SetTitleAsync($"{this.Dialog.Title} in {this.Location}");
+        }
+    }
 
     /// <summary>Takes the initial value once, and validates it when it is not empty.</summary>
     protected override void OnParametersSet()

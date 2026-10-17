@@ -67,7 +67,7 @@ public sealed class ResetAllControlTests
         Assert.True(beginResetRaised);
     }
 
-    /// <summary>While confirming, the plain button is replaced by Confirm/Cancel, never shown alongside it.</summary>
+    /// <summary>While confirming, the plain button is replaced by Cancel then the verb, never shown alongside it.</summary>
     [Fact]
     public async Task Confirming_ShowsConfirmAndCancelInsteadOfThePlainButton()
     {
@@ -77,8 +77,8 @@ public sealed class ResetAllControlTests
             .Add(p => p.AnyModified, true)
             .Add(p => p.Confirming, true));
 
-        Assert.Equal("Reset all", cut.FindAll("button")[0].TextContent.Trim());
-        Assert.Contains(">Cancel<", cut.Markup, StringComparison.Ordinal);
+        Assert.Equal("Cancel", cut.FindAll("button")[0].TextContent.Trim());
+        Assert.Equal("Reset all", cut.FindAll("button")[1].TextContent.Trim());
         Assert.DoesNotContain("Reset all to defaults", cut.Markup, StringComparison.Ordinal);
     }
 
@@ -99,11 +99,11 @@ public sealed class ResetAllControlTests
         var buttons = cut.FindAll("button");
         Assert.Equal(2, buttons.Count);
 
-        await cut.InvokeAsync(() => buttons[0].ClickAsync());
+        await cut.InvokeAsync(() => buttons[1].ClickAsync());
         Assert.True(confirmRaised);
         Assert.False(cancelRaised);
 
-        await cut.InvokeAsync(() => buttons[1].ClickAsync());
+        await cut.InvokeAsync(() => buttons[0].ClickAsync());
         Assert.True(cancelRaised);
     }
 

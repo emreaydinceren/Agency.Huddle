@@ -40,27 +40,38 @@ public sealed partial class PageBreadcrumbsTests
         Assert.Equal("Rooms", Words(bar.Find(".top-bar-start .page-breadcrumbs").TextContent));
     }
 
-    /// <summary>The ancestor is a link and the last crumb, the page itself, is plain text marked as the current page.</summary>
+    /// <summary>An ancestor with a page of its own is a link and an area with none is plain text; the page itself is never in the trail.</summary>
     [Fact]
-    public async Task Trail_LinksTheAncestorAndLeavesTheLastCrumbPlain()
+    public async Task Trail_LinksTheAncestorWithAPage_AndLeavesTheAreaPlain()
     {
         await using MudBunitContext ctx = NewContext();
-        TabService tabs = ctx.Services.GetRequiredService<TabService>();
-        ctx.Services.GetRequiredService<NavigationManager>().NavigateTo("/tasks/my-tasks");
+        ctx.Services.GetRequiredService<NavigationManager>().NavigateTo("/teams/Core/projects/Alpha");
         _ = ctx.Render<TabHost>();
-        tabs.SetTitle("tasks:my-tasks", "My Tasks");
         IRenderedComponent<TopBar> bar = ctx.Render<TopBar>();
 
         IElement link = Assert.Single(bar.FindAll(".page-breadcrumbs a[href]"));
-        Assert.Equal("/tasks", link.GetAttribute("href"));
-        Assert.Equal("Tasks", link.TextContent.Trim());
-        IElement current = bar.Find(".page-breadcrumbs [aria-current='page']");
-        Assert.Equal("My Tasks", current.TextContent.Trim());
+        Assert.Equal("/teams/Core", link.GetAttribute("href"));
+        Assert.Equal("Core", link.TextContent.Trim());
+        Assert.Equal("Teams", Words(bar.Find(".page-breadcrumbs span.page-crumb").TextContent));
+        Assert.Equal("Teams › Core", Words(bar.Find(".page-breadcrumbs").TextContent));
     }
 
-    /// <summary>Retitling the Tab, as a Task View rename does, changes the last crumb.</summary>
+    /// <summary>A page with no ancestor (Teammates) draws no breadcrumb at all: no one-crumb trail repeating its h1.</summary>
     [Fact]
-    public async Task Trail_FollowsTheTabTitle()
+    public async Task PageWithNoAncestor_DrawsNoBreadcrumb()
+    {
+        await using MudBunitContext ctx = NewContext();
+        ctx.Services.GetRequiredService<NavigationManager>().NavigateTo("/teammates");
+        _ = ctx.Render<TabHost>();
+        IRenderedComponent<TopBar> bar = ctx.Render<TopBar>();
+
+        Assert.Empty(bar.FindAll(".page-breadcrumbs"));
+        Assert.Empty(bar.FindAll("nav[aria-label='Breadcrumb']"));
+    }
+
+    /// <summary>Retitling the Tab, as a Task View rename does, leaves the trail alone: the View's name is the page's h1, not a crumb.</summary>
+    [Fact]
+    public async Task Trail_DoesNotRepeatTheTabTitle()
     {
         await using MudBunitContext ctx = NewContext();
         TabService tabs = ctx.Services.GetRequiredService<TabService>();
@@ -70,7 +81,7 @@ public sealed partial class PageBreadcrumbsTests
 
         await bar.InvokeAsync(() => tabs.SetTitle("tasks:my-tasks", "Planning"));
 
-        bar.WaitForAssertion(() => Assert.Equal("Tasks › Planning", Words(bar.Find(".page-breadcrumbs").TextContent)));
+        bar.WaitForAssertion(() => Assert.Equal("Tasks", Words(bar.Find(".page-breadcrumbs").TextContent)));
     }
 
     /// <summary>Following an ancestor crumb navigates the Tab in place, so one Tab remains and it now shows the ancestor's page.</summary>
@@ -113,8 +124,7 @@ public sealed partial class PageBreadcrumbsTests
 
         Assert.Equal(2, host.FindAll("section.tab-group").Count);
         Assert.Empty(host.FindAll(".page-breadcrumbs"));
-        Assert.Single(bar.FindAll(".page-breadcrumbs"));
-        Assert.DoesNotContain("Rooms",Words(bar.Find(".page-breadcrumbs").TextContent), StringComparison.Ordinal);
+        Assert.Empty(bar.FindAll(".page-breadcrumbs"));
 
         await bar.InvokeAsync(() => tabs.FocusGroup(left));
 
@@ -156,6 +166,18 @@ public sealed partial class PageBreadcrumbsTests
             .Add(p => p.Crumbs, ThreeCrumbs()));
 
         Assert.Equal(["Teams", "Core", "Alpha"], CrumbTexts(cut));
+        Assert.Equal("Alpha", Words(cut.Find("[aria-current='page']").TextContent));
+    }
+
+    /// <summary>An empty trail draws nothing, so a page with no ancestor leaves no empty landmark behind.</summary>
+    [Fact]
+    public async Task Control_WithNoCrumbs_DrawsNothing()
+    {
+        await using MudBunitContext ctx = new();
+        IRenderedComponent<PageBreadcrumbs> cut = ctx.Render<PageBreadcrumbs>(parameters => parameters
+            .Add(p => p.Crumbs, []));
+
+        Assert.Empty(cut.Markup.Trim());
     }
 
     private static List<string> CrumbTexts(IRenderedComponent<PageBreadcrumbs> cut) =>

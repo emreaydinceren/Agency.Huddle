@@ -3,11 +3,17 @@
     UX-R05, UX-V10): a header row with the title (Typo.h6) and a close button, the content in pa-4 with a 16px gap, and
     one resize handle that the mouse drags and the arrow keys move. huddleResize.attachDrawer (app.js) does the resizing
     in the browser and remembers the width under StorageKey, so a drag never round-trips to the server.
+
+    The actions are a Footer slot (design-system "Drawer anatomy", audit B4k): sticky at the drawer's bottom,
+    a Chrome line on top, right-aligned, drawn only while ShowFooter is true (the caller passes "there are
+    changes"). The drawer sits beside the Right sidebar, never over it (audit B11 "With a drawer"): ClipMode
+    Always starts it under the Top bar, and app.css offsets it and its scrim by the sidebar's width while the
+    sidebar is open, so the sidebar and its toggle stay visible and usable.
 *@
 @inject IJSRuntime JS
 
 <MudDrawer Open="this.Open" OpenChanged="this.OpenChanged" Anchor="Anchor.End" Variant="DrawerVariant.Temporary"
-           OverlayAutoClose="this.OverlayAutoClose" Class="@this.DrawerClass">
+           OverlayAutoClose="this.OverlayAutoClose" ClipMode="DrawerClipMode.Always" Class="@this.DrawerClass">
     <div @ref="this.handle" class="resizable-drawer-handle" role="separator" tabindex="0" aria-orientation="vertical" aria-label="Resize panel"
          aria-valuemin="@MinWidthPx" aria-valuemax="@MaxWidthPx" aria-valuenow="@DefaultWidthPx"></div>
     <MudStack Row="true" Justify="Justify.SpaceBetween" AlignItems="AlignItems.Start" Class="resizable-drawer-header px-4 pt-4">
@@ -20,9 +26,13 @@
         </div>
         <MudIconButton Icon="@Icons.Material.Filled.Close" Size="Size.Small" aria-label="Close" OnClick="this.CloseAsync" />
     </MudStack>
-    <MudStack Spacing="4" Class="pa-4">
+    <MudStack Spacing="4" Class="resizable-drawer-body pa-4">
         @this.ChildContent
     </MudStack>
+    @if (this.Footer is not null && this.ShowFooter)
+    {
+        <div class="resizable-drawer-footer">@this.Footer</div>
+    }
 </MudDrawer>
 
 @code {
@@ -54,6 +64,14 @@
     /// <summary>The drawer's content, laid out in a <c>pa-4</c> stack.</summary>
     [Parameter]
     public RenderFragment? ChildContent { get; set; }
+
+    /// <summary>The drawer's actions, right-aligned in a sticky footer under a Chrome line: <b>Cancel</b>, then the primary action, as in a dialog. Nothing is drawn while <see cref="ShowFooter"/> is false.</summary>
+    [Parameter]
+    public RenderFragment? Footer { get; set; }
+
+    /// <summary>Whether the <see cref="Footer"/> shows; the caller passes whether the content has changes to save. True by default.</summary>
+    [Parameter]
+    public bool ShowFooter { get; set; } = true;
 
     /// <summary>Whether the drawer is open.</summary>
     [Parameter]

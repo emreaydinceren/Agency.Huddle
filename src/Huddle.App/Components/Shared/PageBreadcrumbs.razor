@@ -4,41 +4,46 @@
     a link that raises OnNavigate instead of navigating: a plain href would open the address through
     the router, which opens it in whichever pane has focus, and a crumb must act on the Tab the bar is
     showing. The last crumb, and an area with no page of its own, is plain text. The bar spans the
-    window, so a trail is never collapsed.
+    window, so a trail is never collapsed. The trail holds only the page's ancestors (design-system "A
+    page"), so a page with none has an empty trail and this draws nothing: no one-crumb trail repeating
+    the page's own h1.
 *@
 @using Agency.Huddle.App.Tabs
 
-<nav class="page-breadcrumbs" aria-label="Breadcrumb">
-    <MudBreadcrumbs Items="this.items" Separator=" › " Class="page-breadcrumbs-list">
-        <ItemTemplate Context="item">
-            @if (item.Href is { } href)
-            {
-                <a class="page-crumb page-crumb-link" href="@href" @onclick="() => this.OnNavigate.InvokeAsync(href)" @onclick:preventDefault>
-                    @if (item.Icon is not null)
-                    {
-                        <MudIcon Icon="@item.Icon" Size="Size.Small" />
-                    }
-                    <span>@item.Text</span>
-                </a>
-            }
-            else
-            {
-                <span class="page-crumb" aria-current="@(ReferenceEquals(item, this.items[^1]) ? "page" : null)">
-                    @if (item.Icon is not null)
-                    {
-                        <MudIcon Icon="@item.Icon" Size="Size.Small" />
-                    }
-                    <span>@item.Text</span>
-                </span>
-            }
-        </ItemTemplate>
-    </MudBreadcrumbs>
-</nav>
+@if (this.Crumbs.Count > 0)
+{
+    <nav class="page-breadcrumbs" aria-label="Breadcrumb">
+        <MudBreadcrumbs Items="this.items" Separator=" › " Class="page-breadcrumbs-list">
+            <ItemTemplate Context="item">
+                @if (item.Href is { } href)
+                {
+                    <a class="page-crumb page-crumb-link" href="@href" @onclick="() => this.OnNavigate.InvokeAsync(href)" @onclick:preventDefault>
+                        @if (item.Icon is not null)
+                        {
+                            <MudIcon Icon="@item.Icon" Size="Size.Small" />
+                        }
+                        <span>@item.Text</span>
+                    </a>
+                }
+                else
+                {
+                    <span class="page-crumb" aria-current="@(ReferenceEquals(item, this.items[^1]) ? "page" : null)">
+                        @if (item.Icon is not null)
+                        {
+                            <MudIcon Icon="@item.Icon" Size="Size.Small" />
+                        }
+                        <span>@item.Text</span>
+                    </span>
+                }
+            </ItemTemplate>
+        </MudBreadcrumbs>
+    </nav>
+}
 
 @code {
     private List<BreadcrumbItem> items = [];
 
-    /// <summary>The trail to draw, first crumb to last. Never empty.</summary>
+    /// <summary>The trail to draw, first crumb to last. Empty for a page with no ancestor, which draws nothing.</summary>
     [Parameter, EditorRequired]
     public required IReadOnlyList<TrailCrumb> Crumbs { get; set; }
 

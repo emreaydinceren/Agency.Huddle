@@ -36,22 +36,23 @@ public sealed class PageHeaderTests
             .Add(p => p.Title, "Settings")
             .Add(p => p.Actions, actions));
 
-        var row = cut.Find("h1").ParentElement;
+        var row = cut.Find("h1").Closest(".page-header-row");
         Assert.NotNull(row);
         Assert.NotNull(row.QuerySelector("button.page-action"));
     }
 
-    /// <summary>The header row is a stack with bottom margin mb-4, as U6 T6.2 names it.</summary>
+    /// <summary>The header is one row with the title cluster on the left and the actions on the right; its 32px height and 16px margin live in <c>.page-header-row</c> and <c>.page-header</c>.</summary>
     [Fact]
-    public async Task Row_HasBottomMargin()
+    public async Task Row_HoldsTheTitleClusterAndTheActions()
     {
         await using MudBunitContext ctx = new();
 
         var cut = ctx.Render<PageHeader>(parameters => parameters.Add(p => p.Title, "Library"));
 
-        var row = cut.Find("h1").ParentElement;
-        Assert.NotNull(row);
-        Assert.Contains("mb-4", row.ClassList);
+        var row = cut.Find(".page-header > .page-header-row");
+        Assert.NotNull(row.QuerySelector(".page-header-title > h1"));
+        Assert.NotNull(row.QuerySelector(".page-header-actions"));
+        Assert.Empty(cut.FindAll(".mb-4"));
     }
 
     /// <summary>A page that sets its own document title turns the header's PageTitle off (UX-001); every other page uses the bare title.</summary>
@@ -68,42 +69,102 @@ public sealed class PageHeaderTests
         Assert.Equal("Business", cut.Find("h1").TextContent);
     }
 
-    /// <summary>
-    /// HideTitle keeps the title as the page's one h1 for a screen reader, clipped out of view by the global
-    /// <c>visually-hidden</c> class, and with no actions it draws no row - so no empty row's height or margin -
-    /// while the document title is still set.
-    /// </summary>
+    /// <summary>There is no way to hide the title: every page shows its h1, and the parameter is gone.</summary>
     [Fact]
-    public async Task HideTitle_KeepsAScreenReaderH1AndDrawsNoRow()
+    public void HideTitle_IsRemoved()
+    {
+        Assert.Null(typeof(PageHeader).GetProperty("HideTitle"));
+    }
+
+    /// <summary>A Subtitle is the intro under the row, drawn at <c>body1</c> in the <c>page-header-subtitle</c> class (Quiet ink, 75ch).</summary>
+    [Fact]
+    public async Task Subtitle_IsBody1UnderTheRow()
     {
         await using MudBunitContext ctx = new();
 
         var cut = ctx.Render<PageHeader>(parameters => parameters
-            .Add(p => p.Title, "Settings")
-            .Add(p => p.HideTitle, true));
+            .Add(p => p.Title, "Teammates")
+            .Add(p => p.Subtitle, "Your people, one place."));
 
-        var heading = cut.Find("h1");
-        Assert.Equal("Settings", heading.TextContent);
-        Assert.Contains("visually-hidden", heading.ClassList);
-        Assert.Empty(cut.FindAll(".mb-4"));
+        var intro = cut.Find(".page-header > .page-header-subtitle");
+        Assert.Equal("Your people, one place.", intro.TextContent.Trim());
+        Assert.Contains("mud-typography-body1", intro.ClassList);
+    }
+
+    /// <summary>The create action is a Small button at the right: filled and Primary by default, outlined when it is not the page's one primary action, and it raises <c>OnCreate</c>.</summary>
+    [Fact]
+    public async Task CreateAction_IsASmallButtonAtTheRight()
+    {
+        await using MudBunitContext ctx = new();
+        int created = 0;
+
+        var primary = ctx.Render<PageHeader>(parameters => parameters
+            .Add(p => p.Title, "Teammates")
+            .Add(p => p.CreateText, "New teammate")
+            .Add(p => p.OnCreate, EventCallback.Factory.Create<MouseEventArgs>(ctx, () => created++)));
+        var quiet = ctx.Render<PageHeader>(parameters => parameters
+            .Add(p => p.Title, "Teammates")
+            .Add(p => p.CreateText, "New teammate")
+            .Add(p => p.CreatePrimary, false));
+
+        var button = primary.Find(".page-header-actions button.page-header-create");
+        Assert.Equal("New teammate", button.TextContent.Trim());
+        Assert.Contains("mud-button-filled-primary", button.ClassList);
+        Assert.Contains("mud-button-filled-size-small", button.ClassList);
+        await primary.InvokeAsync(() => button.ClickAsync());
+        Assert.Equal(1, created);
+        var outlined = quiet.Find(".page-header-actions button.page-header-create");
+        Assert.Contains("mud-button-outlined", outlined.ClassList);
+        Assert.DoesNotContain("mud-button-filled", outlined.ClassList);
+    }
+
+    /// <summary>With no <c>CreateText</c> there is no create button, so a page without a create action draws none.</summary>
+    [Fact]
+    public async Task NoCreateText_DrawsNoCreateButton()
+    {
+        await using MudBunitContext ctx = new();
+
+        var cut = ctx.Render<PageHeader>(parameters => parameters.Add(p => p.Title, "Settings"));
+
+        Assert.Empty(cut.FindAll("button"));
+    }
+
+    /// <summary>The Room's header: a <c>TitleEditor</c> replaces the h1 while it is set, <c>TitleTrailing</c> sits on the title's line, <c>Aside</c> sits at the right before the create button, and <c>Chrome</c> adds the Chrome line.</summary>
+    [Fact]
+    public async Task RoomShape_EditorTrailingAsideAndChrome()
+    {
+        await using MudBunitContext ctx = new();
+        RenderFragment editor = builder => builder.AddMarkupContent(0, "<input class=\"title-edit\" />");
+        RenderFragment trailing = builder => builder.AddMarkupContent(0, "<button class=\"rename\">Rename</button>");
+        RenderFragment aside = builder => builder.AddMarkupContent(0, "<span class=\"members\">Members</span>");
+
+        var cut = ctx.Render<PageHeader>(parameters => parameters
+            .Add(p => p.Title, "Planning")
+            .Add(p => p.TitleEditor, editor)
+            .Add(p => p.TitleTrailing, trailing)
+            .Add(p => p.Aside, aside)
+            .Add(p => p.CreateText, "Invite")
+            .Add(p => p.Chrome, true));
+
+        Assert.Empty(cut.FindAll("h1"));
+        Assert.NotNull(cut.Find(".page-header-title input.title-edit"));
+        Assert.NotNull(cut.Find(".page-header-title button.rename"));
+        var actions = cut.Find(".page-header-actions");
+        Assert.True(actions.FirstElementChild?.ClassList.Contains("members"));
+        Assert.NotNull(actions.QuerySelector("button.page-header-create"));
+        Assert.Contains("has-chrome", cut.Find(".page-header").ClassList);
         Assert.NotNull(cut.FindComponent<PageTitle>());
     }
 
-    /// <summary>A hidden title still leaves the page's actions visible, in their own row on the right.</summary>
+    /// <summary>Without <c>Chrome</c> the header draws no Chrome line.</summary>
     [Fact]
-    public async Task HideTitle_WithActions_KeepsTheActionsRow()
+    public async Task Header_DrawsNoChromeLineByDefault()
     {
         await using MudBunitContext ctx = new();
-        RenderFragment actions = builder => builder.AddMarkupContent(0, "<button class=\"page-action\">Save</button>");
 
-        var cut = ctx.Render<PageHeader>(parameters => parameters
-            .Add(p => p.Title, "Settings")
-            .Add(p => p.HideTitle, true)
-            .Add(p => p.Actions, actions));
+        var cut = ctx.Render<PageHeader>(parameters => parameters.Add(p => p.Title, "Tasks"));
 
-        var row = cut.Find(".mb-4");
-        Assert.NotNull(row.QuerySelector("button.page-action"));
-        Assert.Null(row.QuerySelector("h1"));
+        Assert.DoesNotContain("has-chrome", cut.Find(".page-header").ClassList);
     }
 
     /// <summary>The same text is set as the document title through PageTitle.</summary>
