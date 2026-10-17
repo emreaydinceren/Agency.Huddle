@@ -10,19 +10,6 @@ public sealed partial class R3FixTests
 {
     private static readonly string[] StatusNames = ["Info", "Warning", "Error", "Success", "Secondary", "Tertiary", "Primary", "Neutral"];
 
-    /// <summary>
-    /// The imported VS Code Themes whose own palette cannot carry a 4.5:1 chip at any mix: a grey Surface (Light+, Quiet Light, Solarized Light)
-    /// leaves the Ink itself near 4.5:1 on a tint, and a few dark Secondaries are too close to the Surface. Imported unmodified, so they are
-    /// recorded here, and each must still miss (a fixed one fails the build and is deleted from the list).
-    /// </summary>
-    private static readonly HashSet<string> ImportedShortfalls = new(StringComparer.Ordinal)
-    {
-        "dark-plus/Secondary", "abyss/Secondary", "monokai-dimmed/Secondary",
-        "light-plus/Warning", "light-plus/Success", "light-plus/Secondary", "light-plus/Neutral",
-        "quiet-light/Warning", "quiet-light/Error", "quiet-light/Success", "quiet-light/Neutral",
-        "solarized-light/Info", "solarized-light/Warning", "solarized-light/Success", "solarized-light/Secondary", "solarized-light/Primary", "solarized-light/Neutral",
-    };
-
     private static string AppCss() =>
         File.ReadAllText(CssSource.RepoPath("src", "Huddle.App", "wwwroot", "app.css")).ReplaceLineEndings("\n");
 
@@ -33,7 +20,7 @@ public sealed partial class R3FixTests
         return css[start..css.IndexOf('}', start)];
     }
 
-    /// <summary>The chip text of every status colour reaches 4.5:1 on its tint in every built-in Theme except the recorded imports, which must still miss (round 3: Light Modern's High chip measured 3.68:1).</summary>
+    /// <summary>The chip text of every status colour reaches 4.5:1 on its tint in every built-in Theme except the entries of ThemeCatalogTests.DocumentedShortfalls, which must still miss at the recorded ratio (round 3: Light Modern's High chip measured 3.68:1).</summary>
     [Fact]
     public void StatusChipText_ReachesFloor_InEveryTheme()
     {
@@ -45,13 +32,20 @@ public sealed partial class R3FixTests
             MudColor[] statuses = [palette.Info, palette.Warning, palette.Error, palette.Success, palette.Secondary, palette.Tertiary, palette.Primary, palette.TextSecondary];
             for (int index = 0; index < statuses.Length; index++)
             {
+                string pairName = ThemeCatalogTests.ChipPairPrefix + StatusNames[index];
                 string key = $"{descriptor.Id}/{StatusNames[index]}";
-                bool misses = StatusChipContrast.Ratio(statuses[index], palette.Surface, palette.TextPrimary) < 4.5;
-                if (misses && !ImportedShortfalls.Contains(key))
+                double ratio = StatusChipContrast.Ratio(statuses[index], palette.Surface, palette.TextPrimary);
+                ThemeCatalogTests.DocumentedShortfall? documented = ThemeCatalogTests.DocumentedShortfalls.SingleOrDefault(candidate =>
+                    string.Equals(candidate.ThemeId, descriptor.Id, StringComparison.Ordinal) &&
+                    string.Equals(candidate.Pair, pairName, StringComparison.Ordinal));
+                if (documented is null)
                 {
-                    unexpected.Add(key);
+                    if (ratio < 4.5)
+                    {
+                        unexpected.Add(key);
+                    }
                 }
-                else if (!misses && ImportedShortfalls.Contains(key))
+                else if (ratio >= documented.Floor || Math.Abs(Math.Round(ratio, 2) - documented.Ratio) > 0.001)
                 {
                     stale.Add(key);
                 }
@@ -59,7 +53,7 @@ public sealed partial class R3FixTests
         }
 
         Assert.True(unexpected.Count == 0, $"Chip text under 4.5:1: {string.Join(", ", unexpected)}");
-        Assert.True(stale.Count == 0, $"No longer a shortfall - delete from {nameof(ImportedShortfalls)}: {string.Join(", ", stale)}");
+        Assert.True(stale.Count == 0, $"No longer a shortfall - delete or re-measure in {nameof(ThemeCatalogTests.DocumentedShortfalls)}: {string.Join(", ", stale)}");
     }
 
     /// <summary>No field wearing <c>toolbar-compact</c> sets a Label: a 28px box cannot carry a floating label, and the rule hides one so it can never be drawn over the value (round 3: Teammates "Team" over "All teams").</summary>
