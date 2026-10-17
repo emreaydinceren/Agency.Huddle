@@ -1,6 +1,7 @@
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
+using Microsoft.Extensions.Time.Testing;
 using System.Text.Json;
 using Agency.Huddle.Acp.Abstractions;
 using Agency.Huddle.App;
@@ -171,7 +172,8 @@ public sealed class PersonaRunnerFileChangesTests
         var filePath = Path.Combine(workDir, "a.txt");
         File.WriteAllText(filePath, "v1");
 
-        var factory = new FakeAgentHostFactory();
+        FakeTimeProvider clock = new();
+        var factory = new FakeAgentHostFactory(clock);
         var tracker = fixture.Services.GetRequiredService<FileChangeTracker>();
         var persona = new Persona("nova", "You are Nova.");
 
@@ -208,7 +210,7 @@ public sealed class PersonaRunnerFileChangesTests
         await WaitForToolStatusAsync(drafts, roomAId, ToolActivityStatus.Completed, ct);
         File.WriteAllText(filePath, "v2 edited");
 
-        await WaitForHistoryCountAsync(store, roomAId, 4, ct);
+        await WaitForHistoryCountAsync(store, roomAId, 4, ct, clock);
 
         // Room A's next Turn: the edit was attributed to this Agent's own tool call and must not be listed.
         factory.Session.EnqueueReply("a again");
@@ -239,7 +241,8 @@ public sealed class PersonaRunnerFileChangesTests
         var filePath = Path.Combine(workDir, "a.txt");
         File.WriteAllText(filePath, "v1");
 
-        var factory = new FakeAgentHostFactory();
+        FakeTimeProvider clock = new();
+        var factory = new FakeAgentHostFactory(clock);
         var tracker = fixture.Services.GetRequiredService<FileChangeTracker>();
         var persona = new Persona("nova", "You are Nova.");
 
@@ -266,7 +269,7 @@ public sealed class PersonaRunnerFileChangesTests
         await WaitForToolStatusAsync(drafts, roomId, ToolActivityStatus.Completed, ct);
         File.WriteAllText(filePath, "v2 edited");
 
-        await WaitForHistoryCountAsync(store, roomId, 4, ct);
+        await WaitForHistoryCountAsync(store, roomId, 4, ct, clock);
 
         factory.Session.EnqueueReply("seed again");
         await chat.PostAsync(roomId, KnownIds.Human, "hi again", ct: ct);
@@ -545,9 +548,9 @@ public sealed class PersonaRunnerFileChangesTests
         }
     }
 
-    /// <summary>Waits until <paramref name="roomId"/>'s Transcript holds at least <paramref name="count"/> Messages.</summary>
+    /// <summary>Waits until <paramref name="roomId"/>'s Transcript holds at least <paramref name="count"/> Messages, advancing <paramref name="clock"/> (when given) so a drip-fed reply can finish.</summary>
     private static async Task<IReadOnlyList<ChatMessage>> WaitForHistoryCountAsync(
-        IChatStore store, string roomId, int count, CancellationToken ct)
+        IChatStore store, string roomId, int count, CancellationToken ct, FakeTimeProvider? clock = null)
     {
         while (true)
         {
@@ -556,6 +559,9 @@ public sealed class PersonaRunnerFileChangesTests
             {
                 return history;
             }
+
+            // A drip-fed reply waits on the fake clock; the delay may not be registered yet, so keep advancing.
+            clock?.Advance(TimeSpan.FromSeconds(1));
 
             await Task.Delay(50, ct);
         }
