@@ -323,9 +323,9 @@
             <MudTextField T="string" Value="@this.text" ValueChanged="this.OnTextChanged"
                           Label="Persona text"
                           Placeholder="e.g. You are the Chief of Staff. You keep the team honest."
-                          Lines="6" Variant="Variant.Outlined" Margin="Margin.Dense"
+                          Lines="4" Variant="Variant.Outlined" Margin="Margin.Dense"
                           HelperText="@this.TextHelperText"
-                          Class="mb-4 long-text-field" />
+                          Class="mb-3 long-text-field" />
 
             @* Spec §6.7, §2 U7: next to the Adapter select, and the same WriteListField data flow -
                this.text is the source of truth, re-derived by ReadSkills whenever this.text changes
@@ -336,7 +336,7 @@
                one option is still a legitimate zero/one-Skill catalog, not a control nobody could use. *@
             <MudSelect T="string" Label="Skills" MultiSelection="true" SelectedValues="@this.skills"
                        SelectedValuesChanged="this.OnSkillsChanged" Variant="Variant.Outlined" Margin="Margin.Dense"
-                       HelperText="Changing Skills restarts this Teammate." Class="mb-4">
+                       HelperText="Changing Skills restarts this Teammate." Class="mb-3">
                 @* A draft's Skills that are not installed yet are still options, listed first and checked, so the Human sees what the
                    role brings; they are imported when the Team is approved. *@
                 @foreach ((string Name, string Description, bool FromRole, string Origin) option in this.draftOptions.Where(static option => option.FromRole))
@@ -377,7 +377,7 @@
                write as a fresh selection, just with the missing name filtered out. *@
             @if (this.MissingSkillNames.Count > 0 && !this.OnDraftSaved.HasDelegate)
             {
-                <MudStack Row="true" Spacing="1" Wrap="Wrap.Wrap" Class="mb-4">
+                <MudStack Row="true" Spacing="1" Wrap="Wrap.Wrap" Class="mb-3">
                     @foreach (var missing in this.MissingSkillNames)
                     {
                         <MudChip T="string" Size="Size.Small" Variant="Variant.Text" Class="status-chip status-chip-warning" Icon="@Icons.Material.Filled.Warning" OnClose="@(() => this.RemoveSkill(missing))">@missing</MudChip>
@@ -390,7 +390,7 @@
             @if (this.rolePacks.Count > 0)
             {
                 <MudText Typo="Typo.overline">Packs</MudText>
-                <MudStack Row="true" Spacing="1" Wrap="Wrap.Wrap" Class="mb-4">
+                <MudStack Row="true" Spacing="1" Wrap="Wrap.Wrap" Class="mb-3">
                     @foreach (var pack in this.rolePacks)
                     {
                         var active = this.IsPackActive(pack);
@@ -410,7 +410,7 @@
             @* MS-5: too many skills, or two sharing a catalog Sub Category. *@
             @foreach (var warning in this.SetupWarnings.Skills)
             {
-                <MudAlert Severity="Severity.Warning" Dense="true" Class="mb-4 teammate-card-warning" role="status">@warning</MudAlert>
+                <MudAlert Severity="Severity.Warning" Dense="true" Class="mb-3 teammate-card-warning" role="status">@warning</MudAlert>
             }
 
             <div class="group-label">Model</div>
@@ -426,7 +426,7 @@
             {
                 <MudSelect T="string" Label="Adapter" Value="@(this.adapter ?? string.Empty)" ValueChanged="this.OnAdapterChangedAsync"
                            Variant="Variant.Outlined" Margin="Margin.Dense"
-                           HelperText="@this.AdapterHelperText" Class="mb-4">
+                           HelperText="@this.AdapterHelperText" Class="mb-3">
                     <MudSelectItem T="string" Value="@string.Empty">Use the default adapter</MudSelectItem>
                     @foreach (var choice in this.AdapterChoices)
                     {
@@ -441,7 +441,7 @@
                human just did, not an interruption. *@
             @if (this.adapterResetModelAndEffort)
             {
-                <MudAlert Severity="Severity.Info" Dense="true" Class="mb-4" role="status">
+                <MudAlert Severity="Severity.Info" Dense="true" Class="mb-3" role="status">
                     Changing the adapter reset Model and Effort to their defaults. Each adapter advertises its own models, so choices made for the previous adapter do not carry across — pick them again if you want specific ones.
                 </MudAlert>
             }
@@ -464,7 +464,7 @@
                reason on screen either way, and the window is one adapter spawn long. *@
             <MudSelect T="string" Label="Model" Value="@(this.model ?? string.Empty)" ValueChanged="this.OnModelChangedAsync"
                        Disabled="@this.modelsLoading" aria-busy="@(this.modelsLoading ? "true" : null)" Variant="Variant.Outlined" Margin="Margin.Dense"
-                       HelperText="@this.ModelHelperText" Class="@(this.modelsLoading ? "mb-1 teammate-card-probing" : "mb-4")">
+                       HelperText="@this.ModelHelperText" Class="@(this.modelsLoading ? "mb-1 teammate-card-probing" : "mb-3")">
                 <MudSelectItem T="string" Value="@string.Empty">Use the agent's default</MudSelectItem>
                 @foreach (var choice in this.ModelChoices)
                 {
@@ -473,7 +473,7 @@
             </MudSelect>
             @if (this.modelsLoading)
             {
-                <MudProgressLinear Indeterminate="true" Size="Size.Small" Class="teammate-card-probe mb-4" aria-label="Reading the models this agent offers" />
+                <MudProgressLinear Indeterminate="true" Size="Size.Small" Class="teammate-card-probe mb-3" aria-label="Reading the models this agent offers" />
             }
 
             @* The reset below is deliberate and asserted by PERSONALIFECYCLE-29 - this note exists
@@ -483,7 +483,7 @@
                what the user just did, not an interruption. *@
             @if (this.effortResetByModelChange)
             {
-                <MudAlert Severity="Severity.Info" Dense="true" Class="mb-4" role="status">
+                <MudAlert Severity="Severity.Info" Dense="true" Class="mb-3" role="status">
                     Changing the model reset Effort to the default. Each model advertises its own effort levels, so a level chosen for the previous model does not carry across — pick one again if you want a specific level.
                 </MudAlert>
             }
@@ -509,7 +509,7 @@
             @* MS-3: a vendor shared with a role this one must differ from. *@
             @foreach (var warning in this.SetupWarnings.Model)
             {
-                <MudAlert Severity="Severity.Warning" Dense="true" Class="mt-4 teammate-card-warning" role="status">@warning</MudAlert>
+                <MudAlert Severity="Severity.Warning" Dense="true" Class="mt-3 teammate-card-warning" role="status">@warning</MudAlert>
             }
 
             @* ADR-0033. Same role="status" reasoning as the notes above: a consequence of what the Human
@@ -517,7 +517,7 @@
                one, so the text those tests pin does not move. *@
             @if (this.adapterResetWorkMode)
             {
-                <MudAlert Severity="Severity.Info" Dense="true" Class="mt-4" role="status">
+                <MudAlert Severity="Severity.Info" Dense="true" Class="mt-3" role="status">
                     Changing the adapter reset Work mode to its default. Each adapter advertises its own modes, so a mode chosen for the previous adapter does not carry across — pick one again if you want a specific mode.
                 </MudAlert>
             }
@@ -535,7 +535,7 @@
                 <MudSelect T="string" Label="Work mode" Value="@(this.workMode ?? string.Empty)" ValueChanged="this.OnWorkModeChanged"
                            Disabled="@this.effortsLoading" aria-busy="@(this.effortsLoading ? "true" : null)" ToStringFunc="@this.WorkModeLabel"
                            Variant="Variant.Outlined" Margin="Margin.Dense"
-                           HelperText="@this.WorkModeHelperText" Class="@(this.effortsLoading ? "mt-4 teammate-card-probing" : "mt-4")">
+                           HelperText="@this.WorkModeHelperText" Class="@(this.effortsLoading ? "mt-3 teammate-card-probing" : "mt-3")">
                     <MudSelectItem T="string" Value="@string.Empty">Use the agent's default</MudSelectItem>
                     @foreach (var choice in this.WorkModeChoices)
                     {
