@@ -118,6 +118,31 @@ public sealed class TaskDetailActionsTests
         cut.WaitForAssertion(() => Assert.NotEmpty(cut.FindComponents<TaskDetailDialog>()));
     }
 
+    /// <summary>
+    /// The expanded dialog survives the host's own navigation on close (theming plan 7.6): on <c>/tasks/item/{id}</c> the
+    /// Tasks page answers <c>OnClose</c> by navigating to the view's path. In the browser that location change arrives
+    /// after the dialog has opened (the test replays it in that order), and MudBlazor closes a dialog on any path change
+    /// unless its options say otherwise.
+    /// </summary>
+    [Fact]
+    public async Task Expand_HostNavigatesOnClose_DialogStaysOpen()
+    {
+        using TaskToolHarness harness = new();
+        TaskItem task = CreateTask(harness);
+        await using MudBunitContext ctx = NewContext(harness);
+        NavigationManager navigation = ctx.Services.GetRequiredService<NavigationManager>();
+        navigation.NavigateTo("/tasks/item/" + task.Id);
+        bool closed = false;
+        var cut = RenderPanel(ctx, task.Id, onClose: EventCallback.Factory.Create(this, () => closed = true));
+
+        await cut.InvokeAsync(() => cut.Find(".task-detail-expand").ClickAsync());
+        cut.WaitForAssertion(() => Assert.Single(cut.FindComponents<TaskDetailDialog>()));
+        Assert.True(closed);
+        await cut.InvokeAsync(() => navigation.NavigateTo("/tasks/all", replace: true));
+
+        Assert.Single(cut.FindComponents<TaskDetailDialog>());
+    }
+
     /// <summary>Declining the "Discard changes?" box on Expand raises neither <c>OnClose</c> nor the dialog (theming plan 7.6).</summary>
     [Fact]
     public async Task Expand_DeclinedDiscard_NeitherClosesNorOpensTheDialog()

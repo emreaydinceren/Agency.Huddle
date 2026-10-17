@@ -206,6 +206,27 @@ public sealed class ResizableEndDrawerTests
         Assert.Equal([false], raised);
     }
 
+    /// <summary>
+    /// Opening the drawer and changing its content each scroll MudBlazor's drawer content back to the top (theming plan
+    /// 7.7: New task opened at the scroll position of the Task before it); a re-render with the same content does not.
+    /// </summary>
+    [Fact]
+    public async Task OpenAndContentKeyChange_ScrollTheDrawerToTop_SameKeyDoesNot()
+    {
+        await using MudBunitContext ctx = new();
+        RenderFragment content = builder => builder.AddMarkupContent(0, "<span></span>");
+        int ScrollCalls() => ctx.JSInterop.Invocations.Count(i => string.Equals(i.Identifier, "huddleResize.scrollDrawerToTop", StringComparison.Ordinal));
+        var cut = ctx.Render<ResizableEndDrawer>(parameters => parameters
+            .Add(p => p.StorageKey, Key).Add(p => p.Title, "T").Add(p => p.Open, true).Add(p => p.ContentKey, "PLAT-0002").Add(p => p.ChildContent, content));
+        Assert.Equal(1, ScrollCalls());
+
+        cut.Render(parameters => parameters.Add(p => p.ContentKey, "new"));
+        Assert.Equal(2, ScrollCalls());
+
+        cut.Render(parameters => parameters.Add(p => p.Title, "T2"));
+        Assert.Equal(2, ScrollCalls());
+    }
+
     /// <summary>A drawer that is closed does not steal focus, and it takes focus on the render where it opens.</summary>
     [Fact]
     public async Task Closed_DoesNotFocus_UntilItOpens()

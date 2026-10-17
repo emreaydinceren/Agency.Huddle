@@ -1237,11 +1237,11 @@ else if (this.loaded is { } task)
     }
 
     /// <summary>
-    /// Expand (Spec §13.6): guarded by <see cref="ConfirmDiscardAsync"/>, then closes the Panel through <see cref="OnClose"/>,
-    /// yields so the host's close (on <c>/tasks/item/{id}</c> a navigation) can render, and only then opens
-    /// <see cref="TaskDetailDialog"/> with only <see cref="Id"/> - never a <see cref="TaskDraft"/>, since the dialog loads
-    /// the Task itself (corrections-B5 D14 item 7). The dialog opens last: a dialog opened before the close was lost with
-    /// the route the close navigated away from.
+    /// Expand (Spec §13.6): guarded by <see cref="ConfirmDiscardAsync"/>, then closes the Panel through <see cref="OnClose"/>
+    /// and opens <see cref="TaskDetailDialog"/> with only <see cref="Id"/> - never a <see cref="TaskDraft"/>, since the
+    /// dialog loads the Task itself (corrections-B5 D14 item 7). On <c>/tasks/item/{id}</c> the host answers the close by
+    /// navigating to the view's path, and that location change reaches the server after the dialog has opened; MudBlazor
+    /// closes a dialog on a path change by default, so this one opens with <see cref="ExpandOptions"/>.
     /// </summary>
     private async Task ExpandAsync()
     {
@@ -1253,9 +1253,14 @@ else if (this.loaded is { } task)
         string? title = this.loaded is { } expanded ? $"{expanded.Id} · {expanded.Title}" : null;
         DialogParameters<TaskDetailDialog> parameters = new() { { dialog => dialog.Id, this.Id } };
         await this.OnClose.InvokeAsync();
-        await Task.Yield();
-        _ = await this.Dialogs.ShowAsync<TaskDetailDialog>(title, parameters, TaskDetailDialog.Options);
+        _ = await this.Dialogs.ShowAsync<TaskDetailDialog>(title, parameters, ExpandOptions);
     }
+
+    /// <summary>
+    /// <see cref="TaskDetailDialog.Options"/>, kept open across the path change Expand's own close causes. The dialog is
+    /// modal, so the only other path change while it is open is the browser's Back, which leaves it over the view.
+    /// </summary>
+    private static readonly DialogOptions ExpandOptions = TaskDetailDialog.Options with { CloseOnNavigation = false };
 
     /// <summary>
     /// Make a copy (Spec §13.6): opens a new <see cref="TaskDetailDialog"/> in create mode with a

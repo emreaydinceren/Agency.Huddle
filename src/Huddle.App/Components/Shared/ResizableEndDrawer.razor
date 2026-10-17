@@ -101,7 +101,7 @@
 
     private string DrawerClass => string.IsNullOrEmpty(this.Class) ? "resizable-drawer" : $"resizable-drawer {this.Class}";
 
-    /// <summary>Wires the drag and keyboard handlers once (the drawer is never re-created while this component lives, and every later width is set and remembered in JS), and focuses the body each time the drawer opens so Escape reaches it.</summary>
+    /// <summary>Wires the drag and keyboard handlers once (the drawer is never re-created while this component lives, and every later width is set and remembered in JS), and each time the drawer opens or its content changes, scrolls it back to the top (MudBlazor's scroll container outlives the keyed body) and focuses the body so Escape reaches it.</summary>
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
         if (firstRender)
@@ -114,6 +114,7 @@
         {
             try
             {
+                await this.JS.InvokeVoidAsync("huddleResize.scrollDrawerToTop", this.body);
                 await this.body.FocusAsync(preventScroll: true);
             }
             catch (JSException)
