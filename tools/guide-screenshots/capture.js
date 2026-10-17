@@ -130,27 +130,26 @@ async function main() {
   const aria = (page, label) => page.locator(`[aria-label="${label}"]`).first();
   const tab = (page, name) => page.locator('.tab-item').filter({ hasText: name }).first();
 
-  // 1. The sidebar.
+  // 1. The Activity bar and the sidebar, on its Chats view. The bar's callouts sit in the left band, the
+  // sidebar's in the right one.
   let page = await open(context, '/');
   await nav(page, 'Grace').click();
   await page.waitForTimeout(800);
   const drawer = await page.locator('.mud-drawer').first().boundingBox();
-  const needsYou = page.locator('div')
-    .filter({ has: page.getByText('Needs you', { exact: true }) })
-    .filter({ hasText: 'Launch crew' })
-    .last();
-  await shot(page, annotator, 'sidebar.png', { x: 0, y: drawer.y, width: drawer.width, height: VIEWPORT.height - drawer.y }, { right: 44 }, [
-    { n: 1, target: needsYou, at: 'right', bx: 'right' },
-    { n: 2, target: aria(page, 'Toggle Rooms'), at: 'right', bx: 'right' },
-    { n: 3, target: aria(page, 'Room actions'), at: 'right', bx: 'right' },
-    { n: 4, target: nav(page, 'Show all (13)'), at: 'right', bx: 'right' },
-    { n: 5, target: nav(page, 'New chat'), at: 'right', bx: 'right' },
-    { n: 6, target: aria(page, 'Toggle Teams'), at: 'right', bx: 'right' },
-    { n: 7, target: nav(page, 'Teammates'), at: 'right', bx: 'right' },
-    { n: 8, target: aria(page, 'Toggle Tasks'), at: 'right', bx: 'right' },
-    { n: 9, target: nav(page, 'Library'), at: 'right', bx: 'right' },
-    { n: 10, target: aria(page, 'Archived chats'), at: 'top', dy: -30 },
-    { n: 11, target: aria(page, 'Settings'), at: 'top', dy: -30 },
+  const view = (name) => page.locator(`button[data-view="${name}"]`);
+  // The Needs you card is drawn only while a Room waits, so it has no callout: the guide explains it in prose.
+  await shot(page, annotator, 'sidebar.png', { x: 0, y: drawer.y, width: drawer.width, height: VIEWPORT.height - drawer.y }, { left: 44, right: 44 }, [
+    { n: 1, target: view('Chats'), at: 'left', bx: 'left' },
+    { n: 2, target: view('Teams'), at: 'left', bx: 'left' },
+    { n: 3, target: view('Teammates'), at: 'left', bx: 'left' },
+    { n: 4, target: view('Tasks'), at: 'left', bx: 'left' },
+    { n: 5, target: view('Library'), at: 'left', bx: 'left' },
+    { n: 6, target: aria(page, 'Archived chats'), at: 'left', bx: 'left' },
+    { n: 7, target: aria(page, 'Settings'), at: 'left', bx: 'left' },
+    { n: 8, target: aria(page, 'Toggle Rooms'), at: 'right', bx: 'right' },
+    { n: 9, target: aria(page, 'Room actions'), at: 'right', bx: 'right' },
+    { n: 10, target: nav(page, 'Show all (13)'), at: 'right', bx: 'right' },
+    { n: 11, target: nav(page, 'New chat'), at: 'right', bx: 'right' },
   ]);
 
   // 2. The tab strip: two kept tabs and a preview tab, with the middle one hovered.
