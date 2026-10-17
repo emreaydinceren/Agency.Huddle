@@ -48,6 +48,8 @@ internal static class SeedRunner
         WriteTeammates(plan, dataDir);
         WriteTasks(plan, dataDir, ids);
         WriteFiles(plan, dataDir);
+        WriteBinaryFiles(plan, dataDir, ids);
+        WriteSprints(plan, dataDir);
         SeedIo.WriteText(Path.Combine(dataDir, "views.json"), plan.ViewsJson);
         SeedIo.WriteText(Path.Combine(dataDir, "avatars.json"), plan.AvatarsJson);
         SeedIo.WriteText(Path.Combine(root, "manifest.md"), ManifestWriter.Render(plan, ids, root));
@@ -92,6 +94,32 @@ internal static class SeedRunner
             // recorded as "edited outside Huddle" and loses the backdated Updated date.
             File.SetLastWriteTimeUtc(path, TaskFileWriter.BuildLog(task, plan.Today)[^1].At.UtcDateTime);
         }
+    }
+
+    private static void WriteBinaryFiles(SeedPlan plan, string dataDir, DatabaseResult ids)
+    {
+        foreach (SeedBinaryFile file in plan.BinaryFiles)
+        {
+            SeedIo.WriteBytes(SeedIo.Resolve(dataDir, file.RelativePath), file.Content);
+        }
+
+        // Where the app's upload flow would have saved each file: the folder depends on the Room's Scope and its id.
+        foreach (SeedUpload upload in plan.Uploads)
+        {
+            SeedRoom room = plan.Rooms.First(r => string.Equals(r.Key, upload.RoomKey, StringComparison.Ordinal));
+            SeedIo.WriteBytes(Path.Combine(MessageReferences.UploadFolder(dataDir, room, ids.RoomIds[room.Key]), upload.FileName), upload.Content);
+        }
+    }
+
+    private static void WriteSprints(SeedPlan plan, string dataDir)
+    {
+        if (plan.Sprints.Count == 0)
+        {
+            return;
+        }
+
+        string text = "# Sprints\n\n" + string.Join('\n', plan.Sprints.Select(s => $"- {s.Id} | {s.Name}"));
+        SeedIo.WriteText(Path.Combine(dataDir, "sprints.md"), text);
     }
 
     private static void WriteFiles(SeedPlan plan, string dataDir)

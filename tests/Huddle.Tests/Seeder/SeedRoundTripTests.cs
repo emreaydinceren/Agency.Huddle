@@ -19,7 +19,7 @@ namespace Agency.Huddle.Tests.Seeder;
 public sealed class SeedRoundTripTests
 {
     private static readonly string[] SavedViewIds =
-        ["platform-board", "growth-by-project", "my-open-work", "blocked-work", "awaiting-review", "support-urgent", "unassigned", "closed-work"];
+        ["platform-board", "growth-by-project", "my-open-work", "blocked-work", "awaiting-review", "support-urgent", "unassigned", "current-sprint", "closed-work"];
 
     /// <summary>Every Teammate loads, none is rejected, and Team membership survives.</summary>
     [Fact]

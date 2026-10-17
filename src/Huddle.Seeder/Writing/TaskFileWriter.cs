@@ -119,6 +119,17 @@ internal static class TaskFileWriter
 
         AppendIfPresent(text, "start_date", task.StartOffset is { } start ? Date(today, start) : null);
         AppendIfPresent(text, "due_date", task.DueOffset is { } due ? Date(today, due) : null);
+        AppendIfPresent(text, "sprint", task.Sprint);
+        if (task.Request is { } request)
+        {
+            text.Append("request: ").Append(request.Kind).Append('\n');
+            text.Append("from_team: ").Append(Scalar(request.FromTeam)).Append('\n');
+            text.Append("requester: ").Append(Scalar(request.Requester)).Append('\n');
+            text.Append("triage: ").Append(Scalar(request.Triage)).Append('\n');
+            text.Append("decline_reason: ").Append(Scalar(request.DeclineReason)).Append('\n');
+            text.Append("confirmed_by: ").Append(Scalar(request.ConfirmedBy)).Append('\n');
+        }
+
         text.Append("---\n");
 
         string body = task.Body.ReplaceLineEndings("\n").Trim();
@@ -168,8 +179,9 @@ internal static class TaskFileWriter
         _ => [],
     };
 
-    private static string Scalar(string value) =>
-        value.IndexOfAny([':', '#', '\'', '"', '[', ']', '{', '}']) >= 0
-            ? "'" + value.Replace("'", "''", StringComparison.Ordinal) + "'"
-            : value;
+    private static string Scalar(string value)
+    {
+        bool needsQuotes = value.Length == 0 || value.IndexOfAny([':', '#', '\'', '"', '[', ']', '{', '}']) >= 0;
+        return needsQuotes ? "'" + value.Replace("'", "''", StringComparison.Ordinal) + "'" : value;
+    }
 }

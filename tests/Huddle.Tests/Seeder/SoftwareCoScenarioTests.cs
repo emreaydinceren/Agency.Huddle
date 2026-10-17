@@ -15,6 +15,15 @@ public sealed partial class SoftwareCoScenarioTests
     [GeneratedRegex(@"\b[A-Z]{4}-\d{4}\b", RegexOptions.CultureInvariant)]
     private static partial Regex TaskIdPattern();
 
+    /// <summary>The scenario list shows what the seed now covers: Team Rooms, Sprints and Requests are named.</summary>
+    [Fact]
+    public void Description_NamesTheCoveredFeatures()
+    {
+        Assert.Equal(
+            "A software company: Platform, Growth and Support (7 Projects, shared Teammates, Team Rooms, Sprints and Requests), plus empty-state Teams Sandbox and Archive.",
+            new SoftwareCoScenario().Description);
+    }
+
     /// <summary>The request: at least three Teams, each with at least two Projects, sharing Teammates between them.</summary>
     [Fact]
     public void Plan_HasThreeTeamsWithTwoProjectsEachAndSharedTeammates()
@@ -66,13 +75,13 @@ public sealed partial class SoftwareCoScenarioTests
         Assert.All(plan.Teammates, t => Assert.DoesNotContain(plan.Teammates.Where(o => o != t), o => string.Equals(o.Name, t.Alias, StringComparison.OrdinalIgnoreCase)));
     }
 
-    /// <summary>All eight statuses appear, and roughly forty Tasks are seeded.</summary>
+    /// <summary>All eight statuses appear, and 46 Tasks are seeded: 41 ordinary ones and 5 Requests.</summary>
     [Fact]
     public void Plan_CoversEveryTaskStatus()
     {
         SeedPlan plan = Plan();
 
-        Assert.Equal(41, plan.Tasks.Count);
+        Assert.Equal(46, plan.Tasks.Count);
         Assert.All(AllStatuses, status => Assert.Contains(plan.Tasks, t => t.Status == status));
     }
 
@@ -113,11 +122,18 @@ public sealed partial class SoftwareCoScenarioTests
         });
     }
 
-    /// <summary>A finished Task is closed and an unfinished one is open, so the <c>_closed</c> folder always agrees with the status.</summary>
+    /// <summary>
+    /// A finished Task is closed and an unfinished one is open, so the <c>_closed</c> folder always agrees with the status. The one
+    /// exception is a Done Request nobody has confirmed: the app refuses to close it until the requesting Team's QA confirms.
+    /// </summary>
     [Fact]
     public void Plan_ClosedMeansFinished()
     {
-        Assert.All(Plan().Tasks, task => Assert.Equal(ManifestWriter.IsFinished(task.Status), task.Closed));
+        Assert.All(Plan().Tasks, task =>
+        {
+            bool awaitingConfirmation = task.Status == "Done" && task.Request is { ConfirmedBy.Length: 0 };
+            Assert.Equal(ManifestWriter.IsFinished(task.Status) && !awaitingConfirmation, task.Closed);
+        });
     }
 
     /// <summary>Change log times must run forward, and the last entry must be in the past so Huddle does not see the file as newer.</summary>
@@ -204,14 +220,19 @@ public sealed partial class SoftwareCoScenarioTests
         Assert.Contains(plan.Files, f => Regex.IsMatch(f.RelativePath, "^Teammates/[^/]+/work/memory/[^/]+\\.md$"));
     }
 
-    /// <summary>Six Rooms: two one-to-one, three groups and one archived; one custom-named; transcripts of 8 to 15 messages.</summary>
+    /// <summary>
+    /// Six root Rooms (two one-to-one, three groups and one archived; one custom-named) and six Team-scoped ones (three Team Rooms,
+    /// two Team chats and a Team one-to-one); transcripts of 8 to 15 messages.
+    /// </summary>
     [Fact]
     public void Plan_HasTheAgreedRooms()
     {
         SeedPlan plan = Plan();
 
-        Assert.Equal(["Grace", "Owen", "Platform standup", "Launch crew", "Q2 retro", "Incident 0412 war room"], plan.Rooms.Select(r => r.Name));
-        Assert.Equal(2, plan.Rooms.Count(r => r.Members.Count == 1));
+        Assert.Equal(["Grace", "Owen", "Platform standup", "Launch crew", "Q2 retro", "Incident 0412 war room"], plan.Rooms.Where(r => r.Team is null).Select(r => r.Name));
+        Assert.Equal(["Platform", "Growth", "Support"], plan.Rooms.Where(r => r.IsTeamRoom).Select(r => r.Team));
+        Assert.Equal(3, plan.Rooms.Count(r => r.Team is not null && !r.IsTeamRoom));
+        Assert.Equal(2, plan.Rooms.Count(r => r.Team is null && r.Members.Count == 1));
         Assert.Equal(["Q2 retro"], plan.Rooms.Where(r => r.Archived).Select(r => r.Name));
         Assert.All(plan.Rooms, r => Assert.InRange(r.Messages.Count, 8, 15));
     }

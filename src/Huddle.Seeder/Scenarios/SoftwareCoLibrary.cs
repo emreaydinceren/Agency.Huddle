@@ -1,4 +1,5 @@
 using Agency.Huddle.Seeder.Model;
+using Agency.Huddle.Seeder.Writing;
 
 namespace Agency.Huddle.Seeder.Scenarios;
 
@@ -19,6 +20,25 @@ internal static class SoftwareCoLibrary
         new("Archive", []),
     ];
 
+    /// <summary>The picture files: a chart in a Team folder (Library image preview) and the avatar picture the Avatars file names.</summary>
+    internal static IReadOnlyList<SeedBinaryFile> BinaryFiles { get; } =
+    [
+        new("Teams/Growth/Pricing Page/competitor-chart.png", SeedImages.Gradient(64, (0x2e, 0x7d, 0x6b), (0xd1, 0x8a, 0x00))),
+        new("avatars/5eed00000000000000000000000000a1.png", SeedImages.Gradient(32, (0x3b, 0x6e, 0xa5), (0xff, 0xff, 0xff))),
+    ];
+
+    /// <summary>
+    /// Files attached in chats, one PNG and one text file in a root Room (<c>dm-owen</c>) and in a Team Room (<c>team-platform</c>).
+    /// A Message cites each with the <c>{{upload:name}}</c> token.
+    /// </summary>
+    internal static IReadOnlyList<SeedUpload> Uploads { get; } =
+    [
+        new(SoftwareCoRooms.DmOwen, "signup-funnel.png", SeedImages.Gradient(48, (0xd4, 0x60, 0x02), (0x3b, 0x6e, 0xa5))),
+        new(SoftwareCoRooms.DmOwen, "price-claims.txt", System.Text.Encoding.UTF8.GetBytes("Claims to check with legal:\n- \"Cheapest in class\"\n- \"No hidden fees\"\n")),
+        new(SoftwareCoRooms.TeamPlatform, "gateway-latency.png", SeedImages.Gradient(48, (0x5b, 0x5f, 0x97), (0xc2, 0x45, 0x6b))),
+        new(SoftwareCoRooms.TeamPlatform, "oncall-handover.txt", System.Text.Encoding.UTF8.GetBytes("Open alerts: none.\nPromised to a customer: a postmortem by Friday.\n")),
+    ];
+
     /// <summary>Every note, memory fact and working file.</summary>
     internal static IReadOnlyList<SeedFile> Files { get; } =
     [
@@ -30,6 +50,70 @@ internal static class SoftwareCoLibrary
             is traced end to end; see the [[Runbook]] for what to do when a trace looks wrong.
 
             The public contract is described in [[API-v2-Design]].
+            """),
+        new("Teams/Platform/Engineering-Handbook.md", """
+            # Platform engineering handbook
+
+            How the Platform Team works day to day. Long on purpose: it gives the Outline panel four heading levels to show.
+            The system itself is drawn in [[Architecture]].
+
+            ## Working agreements
+
+            Small changes, reviewed the same day, released behind a flag when they touch a public contract.
+
+            ### Code review
+
+            Every change has one reviewer from the Team. Contract changes also need the author of [[API v2/API-v2-Design]].
+
+            #### Review checklist
+
+            - The change does one thing.
+            - New list endpoints follow [[Pagination#Page size]].
+            - Logs carry the request id.
+
+            #### Review etiquette
+
+            Comment on the code, not the person. Approve with comments when the remaining points are small.
+
+            ### Releases
+
+            Releases go out on weekdays before noon UTC; the Friday rule is in Team memory.
+
+            #### Rollback
+
+            Roll back first, investigate second. The on-call steps are in [[Runbook|the on-call runbook]].
+
+            ## Operations
+
+            Everything that keeps the gateway healthy once it is live.
+
+            ### On call
+
+            One engineer is on call per week and hands over on Monday morning.
+
+            #### Handover notes
+
+            Write down open alerts, flaky dashboards and anything promised to a customer.
+
+            ### Alerts
+
+            Page only for customer impact. Everything else goes to the daily summary.
+
+            ## Reference
+
+            Where to look when this page is not enough.
+
+            ### Related notes
+
+            - [[Architecture]] for the service layout
+            - [[Pagination]] for cursors
+            """),
+        new("Teams/Platform/Observability/oncall-contacts.txt", """
+            On-call contacts (plain text note, not Markdown)
+
+            Primary:   the engineer on the rota this week
+            Secondary: the Engineering Lead
+            Escalate:  after 15 minutes without an acknowledgement
             """),
         new("Teams/Platform/API v2/API-v2-Design.md", """
             # API v2 design

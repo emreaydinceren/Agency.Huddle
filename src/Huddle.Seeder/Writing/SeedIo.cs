@@ -27,6 +27,20 @@ internal static class SeedIo
         File.WriteAllText(path, normalised, Utf8NoBom);
     }
 
+    /// <summary>Writes <paramref name="bytes"/> to <paramref name="path"/>, creating the folder first.</summary>
+    /// <param name="path">The file to write.</param>
+    /// <param name="bytes">The content, written as it is.</param>
+    internal static void WriteBytes(string path, byte[] bytes)
+    {
+        string? directory = Path.GetDirectoryName(path);
+        if (!string.IsNullOrEmpty(directory))
+        {
+            Directory.CreateDirectory(directory);
+        }
+
+        File.WriteAllBytes(path, bytes);
+    }
+
     /// <summary>Combines a data folder with a <c>/</c>-separated relative path.</summary>
     /// <param name="dataDir">The data folder.</param>
     /// <param name="relative">A path such as <c>Teams/Platform/Architecture.md</c>.</param>

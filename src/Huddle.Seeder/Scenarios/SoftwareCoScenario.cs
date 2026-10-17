@@ -97,6 +97,17 @@ internal sealed class SoftwareCoScenario : IScenario
               "columns": []
             },
             {
+              "id": "current-sprint",
+              "name": "Current sprint",
+              "kind": "list",
+              "scope": "active",
+              "fields": ["team", "status", "assignee", "sprint"],
+              "filter": { "sprints": ["@current"] },
+              "grouping": ["assignee"],
+              "sort": [],
+              "columns": []
+            },
+            {
               "id": "closed-work",
               "name": "Closed work",
               "kind": "list",
@@ -115,7 +126,7 @@ internal sealed class SoftwareCoScenario : IScenario
         {
           "You": { "label": "ME", "background": "#d46002" },
           "Grace": { "label": "GR", "background": "#2e7d6b" },
-          "Marcus": { "label": "MA", "background": "#3b6ea5" },
+          "Marcus": { "image": "5eed00000000000000000000000000a1.png", "background": "#3b6ea5" },
           "Lena": { "label": "LE", "background": "#8a4f9e" },
           "Owen": { "label": "OW", "background": "#b5651d" },
           "Sofia": { "label": "SO", "background": "#c2456b" },
@@ -130,7 +141,7 @@ internal sealed class SoftwareCoScenario : IScenario
     public string Name => "software-co";
 
     /// <inheritdoc/>
-    public string Description => "A software company: Platform, Growth and Support (7 Projects, shared Teammates), plus empty-state Teams Sandbox and Archive.";
+    public string Description => "A software company: Platform, Growth and Support (7 Projects, shared Teammates, Team Rooms, Sprints and Requests), plus empty-state Teams Sandbox and Archive.";
 
     /// <inheritdoc/>
     public SeedPlan Build(DateOnly today) => new()
@@ -143,6 +154,9 @@ internal sealed class SoftwareCoScenario : IScenario
         Tasks = SoftwareCoTasks.All,
         Files = SoftwareCoLibrary.Files,
         Rooms = SoftwareCoRooms.All,
+        BinaryFiles = SoftwareCoLibrary.BinaryFiles,
+        Uploads = SoftwareCoLibrary.Uploads,
+        Sprints = SoftwareCoTasks.Sprints,
         ViewsJson = ViewsJson,
         AvatarsJson = AvatarsJson,
         Today = today,

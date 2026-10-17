@@ -34,6 +34,41 @@ entity means to a user, read [the user guide](../docs/Huddle.UserGuide.md).
 > when someone asks for it. Use the manual procedure below for a scenario the tool
 > does not have yet; adding one is a new `IScenario` in `src/Huddle.Seeder/Scenarios/`.
 
+## What the `software-co` seed contains for the newer features
+
+Beyond Teammates, Teams, Tasks, Views and notes, the seed exercises Team Rooms, Message
+References, Uploads, Sprints, Requests, the Right sidebar panels, avatar pictures and the Needs you
+card. `manifest.md` in the seed root lists every one with its ids and paths.
+
+| Feature | What is seeded | Where to look |
+| --- | --- | --- |
+| Team Rooms and Team chats | One Team Room each for Platform, Growth and Support (members are the Human plus the Team's Teammates, as the app's own reconciler creates them); two Team chats (`Pagination design`, `Pricing launch copy`) and a Team one-to-one with Dana. The six root Rooms are unchanged. | `SeedRoom.Team` and `IsTeamRoom`; the manifest's Rooms table has a Scope column |
+| Message References | Every Message that names a Task id, a Library file, a Room or a Team carries `References`, built the way the app's send path builds them. `PLAT-0004` was renamed, so its chip reads "changed" (`SeedTask.FormerTitle`). One cited document, `Customer-Update-Draft.md` in the incident Room, does not exist, so the Documents panel shows "not found". The archived `Q2 retro` Room stores no References, which keeps the reader's text-scan fallback covered. | `Writing/MessageReferences.cs` |
+| Documents in this chat | `Platform standup`, `Launch crew` and `Incident 0412 war room` each cite two to four documents; `Pagination.md` and `Incident-0412.md` are cited more than once. | the Right sidebar |
+| Uploads | A PNG and a text file in the root Room `Owen` (`Uploads/<roomId>/`) and in the Platform Team Room (`Teams/Platform/Uploads/<roomId>/`), each cited by a Message in the composer's format: a blank line, then the path in backticks. | `SoftwareCoLibrary.Uploads`; manifest Uploads table |
+| Sprints | `sprints.md` with `S1 Foundations` and `S2 Launch prep` (the highest number is `@current`), `sprint:` on ten Tasks, and the saved View `Current sprint`. | `SoftwareCoTasks.Sprints` |
+| Requests | Five Tasks with the Request fields: untriaged (`PLAT-0016`), needs-info (`PLAT-0017`), accepted (`SUPP-0011`), declined (`GROW-0016`) and one Done but not confirmed (`PLAT-0018`, still open). | `SoftwareCoRequests.cs`; manifest Requests table |
+| Outline and Linked documents | `Teams/Platform/Engineering-Handbook.md` has headings at levels 1 to 4 and links in every wikilink form: `[[Note]]`, `[[Note#Heading]]`, `[[Note\|alias]]` and `[[folder/Note]]`. `[[Legal-Checklist]]` is still the one unresolved link. A PNG sits in a Team folder and a `.txt` note in `Observability`. | `SoftwareCoLibrary.cs` |
+| Avatars | Marcus has an `image` entry in `avatars.json` and its PNG in `avatars/`. | `SoftwareCoScenario.cs` |
+| Needs you | `Launch crew` ends with an Owen Message that mentions `@You` and has no reply, so the card has a row. | `SoftwareCoRooms.cs` |
+
+### Tokens in seed Message text
+
+The data folder is only known when the seeder runs, so a Message's text holds tokens that the
+seeder expands as it writes the transcript. It also builds the `References` list from them and from
+the Task ids in the text.
+
+| Token | Becomes | Reference stored |
+| --- | --- | --- |
+| `{{lib:Teams/Platform/API v2/Pagination.md}}` | A code span with the absolute path (the data folder plus the segments), as the reference picker inserts it | `LibraryFile`, key the absolute path, label the file name |
+| `{{upload:name.png}}` | A code span with the path in the Message's own Room's upload folder | `LibraryFile`, as above |
+| `{{room:platform-standup}}` | `[label](/rooms/<id>)`, the label saying the Room's Scope | `Room`, key the Room id |
+| `{{team:Growth}}` | `[Growth](/teams/Growth)` | `Team`, key the Team name |
+
+The formats are mirrored from the app's `ReferenceText`, `ReferenceSnapshotter` and
+`ChatUploadService`. `tests/Huddle.Tests/Seeder/SeedRefreshTests.cs` compares them with the app's own
+functions and with its snapshotter, so a change in the app turns those tests red.
+
 ## The rules
 
 1. **Write only Markdown (`.md`) and JSON (`.json`, `.jsonl`) files by hand.**

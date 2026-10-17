@@ -97,7 +97,8 @@ public sealed class SeedCliTests
 
             Assert.Equal(0, exit);
             Assert.Equal(string.Empty, error.ToString());
-            Assert.Contains("Seeded 9 Teammates, 5 Teams, 41 Tasks", output.ToString(), StringComparison.Ordinal);
+            // contains-ok: console output, not markup: the summary line sits among the launch command lines, so only the counts are pinned.
+            Assert.Contains("Seeded 9 Teammates, 5 Teams, 46 Tasks", output.ToString(), StringComparison.Ordinal);
             Assert.Contains("--Team:Acp:Adapters:0:Args:0=--mock", output.ToString(), StringComparison.Ordinal);
             Assert.Contains("--Team:DemoAgent:Enabled=false", output.ToString(), StringComparison.Ordinal);
         }
