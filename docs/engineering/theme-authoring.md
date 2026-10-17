@@ -87,10 +87,11 @@ The blends the app uses:
 | The Library's raw Markdown side in Split | `TextPrimary` 3% over `Surface` |
 | Your message bubble | `Primary` 14% over `Surface`, border `Primary` 28% |
 | A selected row, card or Team type, and the active sidebar row | `Primary` 14% over `Surface` |
-| A selected row while hovered (sidebar, Library tree, Task List, `@` picker), the active sidebar row while hovered | `Primary` 20% over `Surface` |
-| A selected Team type tile while hovered; a search hit's flash | `Primary` 24% over `Surface` |
+| A selected row, card or Team type while hovered (sidebar, Library tree, Task List, `@` picker, Team type tile) | `Primary` 20% over `Surface` |
+| A search hit's flash, at its start | `Primary` 24% over `Surface` |
 | The manager's card in a roster | `Primary` 8% over `Surface` |
-| Team type icon tiles and roster tier labels | The tile's own colour (`Primary`, `Secondary`, `Info`, `Success`, `Warning`, `Error` or `Tertiary`) 14% or 16% over `Surface`, with the icon or text in the full colour |
+| Team type icon tiles | `BackgroundGray` with a `TextSecondary` icon; the selected card's tile is `Primary` 14% over `Surface` with the accent-text icon |
+| Roster tier labels | `Primary` 14%, `Info` 16% or `Success` 16% over `Surface` |
 | A suggested role | `Success` 14% over `Surface`, border and text in `Success` |
 | A tinted status chip | The status colour 14% over `Surface`; text and icon the colour 70% toward `TextPrimary`. Status colours are never a solid fill under text |
 | An avatar monogram, Light Themes | The avatar's colour (`Primary` when none is chosen) 20% over `Surface`; letters the colour 75% toward `TextPrimary` |
