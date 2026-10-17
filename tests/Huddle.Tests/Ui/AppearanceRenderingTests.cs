@@ -1,3 +1,7 @@
+using AngleSharp.Dom;
+using AngleSharp.Html.Dom;
+using AngleSharp.Html.Parser;
+
 namespace Agency.Huddle.Tests.Ui;
 
 /// <summary>
@@ -149,5 +153,49 @@ public sealed class AppearanceRenderingTests
         var html = await client.GetStringAsync("/", ct);
 
         Assert.Contains(BrandPrimaryVariable, html, StringComparison.Ordinal);
+    }
+
+    /// <summary>
+    /// Selecting Nordic Light renders the Theme marker with its id and its style pack (ADR-0057), which is what every
+    /// rule in <c>packs/nordic.css</c> is scoped to; the pack's stylesheet is linked.
+    /// </summary>
+    [Fact]
+    public async Task AppShell_WithNordicSelected_MarksTheThemeAndItsPack()
+    {
+        using CancellationTokenSource cts = new(TimeSpan.FromSeconds(10));
+        CancellationToken ct = cts.Token;
+
+        await using TeamWebApplicationFactory factory = new();
+        File.WriteAllText(factory.AppearanceJsonPath, "{\"theme\":\"nordic-light\"}");
+        using HttpClient client = factory.CreateClient();
+
+        string html = await client.GetStringAsync("/", ct);
+        IHtmlDocument page = new HtmlParser().ParseDocument(html);
+
+        IElement marker = Assert.Single(page.QuerySelectorAll("span.theme-marker"));
+        Assert.Equal("nordic-light", marker.GetAttribute("data-huddle-theme"));
+        Assert.Equal("nordic", marker.GetAttribute("data-theme-pack"));
+        Assert.Single(page.QuerySelectorAll("link[rel='stylesheet'][href^='packs/nordic']"));
+    }
+
+    /// <summary>
+    /// With the default Theme the marker names it and carries no pack, so the Nordic pack, though linked for every
+    /// Theme, has nothing to match.
+    /// </summary>
+    [Fact]
+    public async Task AppShell_WithTheDefaultTheme_MarksNoPack()
+    {
+        using CancellationTokenSource cts = new(TimeSpan.FromSeconds(10));
+        CancellationToken ct = cts.Token;
+
+        await using TeamWebApplicationFactory factory = new();
+        using HttpClient client = factory.CreateClient();
+
+        string html = await client.GetStringAsync("/", ct);
+        IHtmlDocument page = new HtmlParser().ParseDocument(html);
+
+        IElement marker = Assert.Single(page.QuerySelectorAll("span.theme-marker"));
+        Assert.Equal("huddle", marker.GetAttribute("data-huddle-theme"));
+        Assert.False(marker.HasAttribute("data-theme-pack"));
     }
 }

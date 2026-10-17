@@ -6,6 +6,10 @@
    one hard-coded name. Linked in App.razor after app.css. */
 :root {
     --font-mono: ui-monospace, "Cascadia Mono", Consolas, "Courier New", monospace;
+
+    /* The reading face: Library prose and quotes. Every Theme reads in its UI face; a style pack (ADR-0057) may give
+       it a serif, as Nordic gives it Literata. */
+    --font-read: var(--mud-typography-body1-family);
 }
 
 /* ---- The ink ladder (audit round 3, A1) ------------------------------------------------------

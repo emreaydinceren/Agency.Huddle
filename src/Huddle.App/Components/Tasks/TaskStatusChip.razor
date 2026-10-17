@@ -3,10 +3,13 @@
     search draw status (UX-044, UX-R07). The Board card shows none, because its column names the state (OP-11).
 *@
 
-<StatusChip Color="@TaskColors.For(this.Status)" Class="task-status-chip" Icon="@TaskColors.Icon(this.Status)">@this.Status.ToWire()</StatusChip>
+<StatusChip Color="@TaskColors.For(this.Status)" Class="@this.CssClass" Icon="@TaskColors.Icon(this.Status)">@this.Status.ToWire()</StatusChip>
 
 @code {
     /// <summary>The state to show.</summary>
     [Parameter, EditorRequired]
     public TaskState Status { get; set; }
+
+    /// <summary>The chip's own classes, ending in one per state (<c>status-chip-state-inprogress</c>), so a style pack can draw a shape for it.</summary>
+    private string CssClass => $"task-status-chip status-chip-state-{this.Status.ToString().ToLowerInvariant()}";
 }

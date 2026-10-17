@@ -30,4 +30,11 @@ namespace Agency.Huddle.App.Themes;
 /// The picker heading this theme is listed under. Not derivable from <see cref="Mode"/> — see
 /// <see cref="ThemeGroup"/> for the high-contrast case that separates them.
 /// </param>
-internal sealed record ThemeDescriptor(string Id, string Label, MudTheme Theme, ThemeMode Mode, ThemeGroup Group);
+/// <param name="Pack">
+/// The style pack this theme carries, or <see langword="null"/> for none: the name of one stylesheet under
+/// <c>wwwroot/packs/</c> whose every rule is scoped to <c>:root:has([data-theme-pack="name"])</c>.
+/// <see cref="Components.Layout.MainLayout"/> renders the name on a hidden marker, so a pack applies only while
+/// its theme is selected. See <c>docs/adr/0057-a-theme-may-carry-a-style-pack.md</c>.
+/// </param>
+internal sealed record ThemeDescriptor(
+    string Id, string Label, MudTheme Theme, ThemeMode Mode, ThemeGroup Group, string? Pack = null);

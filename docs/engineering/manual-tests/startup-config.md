@@ -322,7 +322,7 @@ Do not confuse `prompts.json` (the override file, under App_Data, absent until s
 - The file stores the display label (`Huddle Dark`) rather than the id `huddle-dark` -> a display name was persisted where the stored value belongs.
 - The app writes a `dark` key of its own -> the retired preference is back; see ADR-0017.
 - A light/dark/system control is present -> the retired preference is back on the UI side.
-- The picker offers a different count than 21 or a different first entry -> the catalog changed; re-check `ThemeCatalog.BuiltIn` before filing, since a new built-in Theme is a real feature addition, not necessarily a defect.
+- The picker offers a different count than 29 or a different first entry -> the catalog changed; re-check `ThemeCatalog.BuiltIn` before filing, since a new built-in Theme is a real feature addition, not necessarily a defect.
 - Choosing `Huddle Dark` on a light-mode OS leaves the page light -> `MainLayout` is not deriving `MudThemeProvider`'s `IsDarkMode` from `ThemeDescriptor.Mode`.
 
 **Inconclusive if**

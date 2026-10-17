@@ -74,6 +74,9 @@
             <MudIconButton Icon="@Icons.Material.Filled.Send" Color="Color.Primary" Size="Size.Small"
                            Disabled="this.Uploading"
                            aria-label="Send message" OnClick="this.SendClickedAsync" />
+            @* A visible "Send" word beside the icon, hidden in app.css; a style pack may show it (Nordic, ADR-0057).
+               aria-hidden because the button already carries its name. *@
+            <span class="composer-send-label" aria-hidden="true">Send</span>
         </MudTooltip>
     </div>
     @if (this.pickerOpen && this.view is not null)

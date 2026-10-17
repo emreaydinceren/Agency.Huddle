@@ -51,9 +51,23 @@
 
             @* The Human's own Message needs no avatar or name to say who wrote it: its side of the
                transcript says that, as in any chat app. Consecutive ones are tighter, and the time
-               stays in the tooltip. *@
+               stays in the tooltip. The avatar, gutter and meta line are rendered but hidden in app.css;
+               a style pack that sets the Human's Message as an ordinary row (Nordic, ADR-0057) shows them. *@
+            var humanName = SenderDisplay.NameOf(message, this.HumanName);
             <div class="@(continues ? "message-row human grouped" : "message-row human")" title="@time" data-message-id="@message.Id" tabindex="-1">
-                <div class="message-bubble message-body">@((MarkupString)MarkdownRenderer.ToHtml(message.Text, this.TaskResolver, this.ChatLibraryResolver))</div>
+                @if (continues)
+                {
+                    <span class="message-gutter"></span>
+                }
+                else
+                {
+                    <ProfileAvatar Name="@humanName" Avatar="this.Avatars.Get(humanName)" Size="Size.Small" Class="avatar-transcript" />
+                    <div class="message-meta">
+                        <span class="message-sender">@humanName</span>
+                        <span class="message-time">@time</span>
+                    </div>
+                }
+                <div class="message-bubble message-body">@((MarkupString)MarkdownRenderer.ToHtml(message.Text, this.TaskResolver, this.ChatLibraryResolver, this.Mentions))</div>
                 <MessageReferences Message="@message" />
             </div>
             continue;
@@ -75,7 +89,7 @@
                         <span class="message-time">@time</span>
                     </div>
                 }
-                <div class="message-body">@((MarkupString)MarkdownRenderer.ToHtml(message.Text, this.TaskResolver, this.ChatLibraryResolver))</div>
+                <div class="message-body">@((MarkupString)MarkdownRenderer.ToHtml(message.Text, this.TaskResolver, this.ChatLibraryResolver, this.Mentions))</div>
                 <MessageReferences Message="@message" />
             </div>
         </div>
@@ -185,6 +199,14 @@
     /// <summary>The ids of the Room's Human Members, whose Messages render as right-aligned bubbles.</summary>
     [Parameter]
     public IReadOnlyCollection<string> HumanIds { get; set; } = [];
+
+    /// <summary>The Human's current Name, shown on their own Message's meta line through <see cref="SenderDisplay"/>; <see langword="null"/> keeps the stored name.</summary>
+    [Parameter]
+    public string? HumanName { get; set; }
+
+    /// <summary>The Room's mentionable handles, drawn as Mention pills in Message text; <see langword="null"/> draws none.</summary>
+    [Parameter]
+    public MentionMarks? Mentions { get; set; }
 
     /// <summary>Every Draft currently open in this Room, rendered after every Message.</summary>
     [Parameter]

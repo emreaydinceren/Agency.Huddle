@@ -330,6 +330,7 @@ Four things follow from that chain, and each one shapes how you write a Theme:
 | Theme | `MudTheme` | The palette, plus the shared typography. Always built with `ThemeDefaults.CreateLight(...)` or `ThemeDefaults.CreateDark(...)`. |
 | Mode | `ThemeMode` | `Light` or `Dark`: which palette slot is filled, and so whether choosing it puts the app in dark mode. |
 | Group | `ThemeGroup` | The picker heading: `Light`, `Dark` or `HighContrast`. Usually the same as `Mode`; it differs only for a high-contrast Theme, which has a mode but its own heading. |
+| Pack | `string?` | Optional. The name of a style pack, `wwwroot/packs/<name>.css`, whose every rule is scoped to this Theme ([ADR-0057](../adr/0057-a-theme-may-carry-a-style-pack.md)). `null` for every Theme but Nordic. |
 
 `MudTheme` has two palette slots, `PaletteLight` and `PaletteDark`. A Theme fills
 **only the one its `Mode` names**; the other keeps MudBlazor's defaults and is never
@@ -821,15 +822,65 @@ the clamped accent is black or white, whichever `ContrastColour.ReadableForegrou
 If you want a Theme that differs from Huddle's only in accent, you do not need a new
 Theme: that is what Custom Accent is for.
 
+## The mockup pairs
+
+Four authored pairs come from the approved mockup directions in `E:\Repos\HuddleUX`, mapped
+by that folder's `Huddle-Theme-Mapping.md`. Each is one file holding a light and a dark
+palette and two descriptors, the shape of `HuddleTheme`:
+
+| File | Ids | Radius | Feel |
+| --- | --- | --- | --- |
+| `LumenTheme.cs` | `lumen-light`, `lumen-dark` | 6px | Linear-style minimal, one soft-violet accent |
+| `FluentTheme.cs` | `fluent-light`, `fluent-dark` | 6px | Teams / Fluent 2 enterprise |
+| `NordicTheme.cs` | `nordic-light`, `nordic-dark` | 8px | Paper grounds, sage accent |
+| `CobaltSoftTheme.cs` | `cobalt-soft-light`, `cobalt-soft-dark` | 8px | Pastel periwinkle |
+
+Each value's comment names its mockup token; **ADJUSTED** marks one moved to clear a Huddle
+floor. They are authored Themes, so the tests hold them to everything Huddle Light and Dark
+meet, including two rules the mapping predates:
+
+- **Review is `Tertiary`, not `Secondary`.** The mapping put each set's Review hue in
+  `Secondary`. Here it is `Tertiary`, and `Secondary` takes another of the set's colours.
+  Lumen has no Review hue, so its `Tertiary` is a magenta at 296 degrees.
+- **Signals 30 degrees apart (audit A2).** Four moves keep every signal 30 degrees from
+  the others and from the accent. Fluent's `Info` is its teal `--k-request`, not brand
+  blue. Fluent's `Warning` is its amber `--warn`, not the orange `--attn`, which sits
+  26 degrees from `--danger`. Nordic's `Success` is its teal `--lichen`, not the accent's
+  own sage. Cobalt Soft's `Tertiary` is `--violet` turned to hue 262.
+
+Fluent Dark's amber is darkened to `#edae1d` so a presence badge's white glyph reads 3:1.
+The mapping's shared-style deltas (fonts, spacing, shadows, layered grounds) are proposals
+that would change every Theme, and are not applied to the other pairs.
+
+### Nordic's style pack
+
+Nordic is the one Theme with a style pack, `wwwroot/packs/nordic.css`
+([ADR-0057](../adr/0057-a-theme-may-carry-a-style-pack.md)). Its alignment with the mockup is specified in
+`E:\Repos\HuddleUX\Huddle-Nordic-Alignment.md`. With the pack, Nordic's palette roles differ from every other
+Theme's:
+
+| Property | Nordic paints | Light / Dark |
+| --- | --- | --- |
+| `Surface` | the white raised paper: cards, composer, inputs, dialogs, menus, the current item | `#ffffff` / `#1c2125` |
+| `Background` | the page ground, which the pack paints on the shell | `#f6f6f1` / `#161a1d` |
+| `DrawerBackground` | the sidebar, and the wells: kanban lanes, properties, tool rows | `#edede6` / `#121518` |
+| `BackgroundGray` | the light rail (dark uses `DrawerBackground`) | `#e6e6de` |
+| `DividerLight` | the faint region hairlines, below the 1.5:1 Divider floor by ADR-0057 | `#d9d9cf` / `#262d32` |
+
+`NordicTheme.WithNordicStyle` also sets the UI face (IBM Plex Sans) and writes the set's three shadows into
+MudBlazor's elevations. The pack sets Literata (`--font-read`) and IBM Plex Mono (`--font-mono`).
+
 ## What a Theme cannot do
 
 Some things look like Theme features and are not. [known-limits.md](known-limits.md)
 records why.
 
-- **Change layout, spacing or component shape** beyond what `MudTheme` exposes. A Theme
-  is colours, plus whatever `MudTheme` settings you change in code. It is not CSS.
-- **Change the font.** Typography is shared through `ThemeDefaults`. Changing it there
-  changes every Theme.
+- **Change layout, spacing or component shape** beyond what `MudTheme` exposes, unless it
+  carries a style pack ([ADR-0057](../adr/0057-a-theme-may-carry-a-style-pack.md)). A Theme
+  without one is colours, plus whatever `MudTheme` settings you change in code.
+- **Change the type scale.** Sizes, weights and line heights are shared through
+  `ThemeDefaults`, and `TypeScaleTests` holds every Theme to them. A Theme may set its own
+  UI face (`Typography.Default.FontFamily`) after building, as Nordic does.
 - **Follow the operating system's light or dark setting.** There is no "System" option;
   the top-bar toggle is manual.
 - **Pair itself with a counterpart.** The Human chooses the light and dark Themes

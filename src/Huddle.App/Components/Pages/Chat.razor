@@ -19,6 +19,8 @@
 @inject NavigationManager Navigation
 @inject ServerNavigator ServerNavigation
 @inject AvatarStore Avatars
+@inject IHumanIdentity Human
+@inject IMentionAliasSource AliasSource
 @inject IServiceProvider Services
 @inject ISnackbar Snackbar
 @inject IJSRuntime JS
@@ -36,6 +38,8 @@ else
         <div class="room-header px-4">
             <PageHeader Title="@this.room.Name" Chrome="true" TitleEditor="@(this.isRenaming ? this.RenameEditor : null)">
                 <TitleTrailing>
+                    @* The Room's kind, hidden in app.css; a style pack may show it as a chip (Nordic, ADR-0057). *@
+                    <span class="room-kind-chip">@this.RoomKind</span>
                     @if (!this.isRenaming && !this.isTeamRoom)
                     {
                         <MudTooltip Text="Rename">
@@ -84,6 +88,8 @@ else
             @key="this.room.Id"
             Messages="this.messages"
             HumanIds="this.HumanIds()"
+            HumanName="@this.Human.Name"
+            Mentions="this.MentionHandles()"
             Drafts="this.drafts"
             StoppingAgentIds="this.stoppingAgentIds"
             Team="@this.room.Team"
@@ -310,6 +316,15 @@ else
 
     /// <summary>True when the shown Room is its Team's Team Room, which is named after the Team and so has no Rename pencil.</summary>
     private bool isTeamRoom;
+
+    /// <summary>The Room's kind as its header chip names it: its Team's Team Room, a one-to-one with one Teammate, or a group.</summary>
+    private string RoomKind => (this.isTeamRoom, this.members.Count(static member => member.Kind == UserKind.Agent)) switch
+    {
+        (true, _) => "Team",
+        (false, 1) => "1:1",
+        _ => "Group",
+    };
+
     private string editingName = string.Empty;
     private string? renameError;
 
@@ -717,6 +732,25 @@ else
     /// <returns>Every Member id whose <see cref="UserKind"/> is <see cref="UserKind.Human"/>.</returns>
     private HashSet<string> HumanIds() =>
         this.members.Where(static member => member.Kind == UserKind.Human).Select(static member => member.Id).ToHashSet(StringComparer.Ordinal);
+
+    /// <summary>
+    /// The handles <see cref="MessageList"/> draws as Mention pills: each Teammate Member's Name and Alias, and the
+    /// Human's own. They come from the Members and the alias source, as <see cref="MentionParser"/>'s do, so a pill is
+    /// drawn exactly where a Mention would be counted.
+    /// </summary>
+    /// <returns>The Room's mentionable handles.</returns>
+    private MentionMarks MentionHandles()
+    {
+        HashSet<string> agentNames = this.members
+            .Where(static member => member.Kind == UserKind.Agent)
+            .Select(static member => member.Name)
+            .ToHashSet(StringComparer.OrdinalIgnoreCase);
+        string humanName = this.Human.Name;
+        IReadOnlyList<MentionAlias> aliases = this.AliasSource.Aliases;
+        List<string> handles = [.. agentNames, .. aliases.Where(alias => agentNames.Contains(alias.Name)).Select(static alias => alias.Alias)];
+        List<string> ownHandles = [humanName, .. aliases.Where(alias => string.Equals(alias.Name, humanName, StringComparison.OrdinalIgnoreCase)).Select(static alias => alias.Alias)];
+        return new MentionMarks(handles, ownHandles);
+    }
 
     private void OnDraftChanged(string roomId)
     {

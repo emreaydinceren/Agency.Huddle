@@ -20,6 +20,10 @@
 {
     <span class="theme-mode-dark" hidden></span>
 }
+@* Which Theme is selected, and the style pack it carries (ADR-0057). A pack's stylesheet scopes every rule to
+   ":root:has([data-theme-pack=...])", so it applies in the same render that swaps the palette, dialogs and popovers
+   included. Blazor omits data-theme-pack when Pack is null. *@
+<span class="theme-marker" data-huddle-theme="@this.descriptor.Id" data-theme-pack="@this.descriptor.Pack" hidden></span>
 <MudPopoverProvider />
 <MudDialogProvider />
 <MudSnackbarProvider />
@@ -30,6 +34,7 @@
             <SearchBar />
         </Search>
         <Actions>
+            <TasksNeedYouPill />
             <RightSidebarToggle />
             <ThemeModeToggle />
         </Actions>
@@ -88,6 +93,7 @@
 @code {
     private MudTheme theme = ThemeCatalog.BuiltIn[0].Theme;
     private bool isDarkMode = ThemeCatalog.BuiltIn[0].Mode == ThemeMode.Dark;
+    private ThemeDescriptor descriptor = ThemeCatalog.BuiltIn[0];
     private SidebarView? sidebarView = SidebarViews.Default;
 
     /// <summary>The area the focused pane's page was last in (see <see cref="SidebarViews.AreaOf(string?)"/>), so the Sidebar follows a change of area and not every navigation.</summary>
@@ -188,9 +194,10 @@
     /// <param name="settings">The snapshot to apply.</param>
     private void ApplyAppearance(AppearanceSettings settings)
     {
-        var descriptor = FindDescriptor(settings.ThemeId);
-        this.theme = ResolveTheme(descriptor, settings.AccentColorHex);
-        this.isDarkMode = descriptor.Mode == ThemeMode.Dark;
+        var selected = FindDescriptor(settings.ThemeId);
+        this.descriptor = selected;
+        this.theme = ResolveTheme(selected, settings.AccentColorHex);
+        this.isDarkMode = selected.Mode == ThemeMode.Dark;
     }
 
     /// <summary>

@@ -276,6 +276,8 @@ public sealed class RoomCopyLinkTests
         ctx.Services.AddSingleton(source.GetRequiredService<RoomFollows>());
         ctx.Services.AddSingleton(source.GetRequiredService<PersonaStore>());
         ctx.Services.AddSingleton(source.GetRequiredService<AvatarStore>());
+        ctx.Services.AddSingleton(source.GetRequiredService<Agency.Huddle.App.Profile.IHumanIdentity>());
+        ctx.Services.AddSingleton(source.GetRequiredService<IMentionAliasSource>());
         ctx.Services.AddSingleton(source.GetRequiredService<ProposalStore>());
         ctx.Services.AddSingleton(source.GetRequiredService<ProposalService>());
         ctx.Services.AddSingleton(source.GetRequiredService<HireLimitGuard>());

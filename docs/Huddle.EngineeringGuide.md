@@ -367,8 +367,9 @@ A Theme is a MudBlazor `MudTheme` in `ThemeCatalog` carrying **one** palette and
 `ThemeMode` naming it, picked on the Appearance tab of `/settings` from a list grouped
 Light / Dark / High contrast. **Picking a Theme picks light or dark with it** — there is
 no separate preference, and so no way for the two to disagree
-([ADR-0017](adr/0017-a-theme-is-a-palette-not-a-pair.md)). Nineteen ship: `huddle`
-(labelled "Huddle Light") and `huddle-dark`, plus seventeen of the colour Themes bundled
+([ADR-0017](adr/0017-a-theme-is-a-palette-not-a-pair.md)). Twenty-nine ship: `huddle`
+(labelled "Huddle Light") and `huddle-dark`, the two Custom Accent Themes, the Lumen,
+Fluent, Nordic and Cobalt Soft pairs mapped from the approved mockup directions, plus seventeen of the colour Themes bundled
 with Visual Studio Code, converted once by hand into C# under `Themes/VsCode/` — one file
 per Theme, **no importer**
 ([ADR-0016](adr/0016-vs-codes-bundled-themes-are-converted-once-not-imported.md)).

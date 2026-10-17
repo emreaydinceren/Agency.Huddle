@@ -108,7 +108,7 @@ If the page will not load at all (connection refused, or an ASP.NET error page),
 
 1. Go to http://localhost:5100/settings/appearance.
 2. Read the paragraph above the Theme picker. Compare it word for word with: `Pick a theme. Each theme is either a light or a dark one, so choosing it sets the application's light or dark colours too.`
-3. Read the credit line: the paragraph below the picker (and, only while a Custom Accent theme is selected, below the `Accent colour` picker too). Compare it word for word with: `Custom Accent lets you pick your own accent colour, adjusted if needed so it stays readable. Every other theme except Huddle Light and Huddle Dark is one of the colour themes bundled with Visual Studio Code, mapped onto this application's palette. Visual Studio Code and its default themes are Microsoft's, under the MIT licence; Solarized is Ethan Schoonover's and Monokai is Wimer Hazenberg's.`
+3. Read the credit line: the paragraph below the picker (and, only while a Custom Accent theme is selected, below the `Accent colour` picker too). Compare it word for word with: `Custom Accent lets you pick your own accent colour, adjusted if needed so it stays readable. Huddle, Custom Accent, Lumen, Fluent, Nordic and Cobalt Soft are this application's own Themes. Every other Theme is one of the colour themes bundled with Visual Studio Code, mapped onto this application's palette. Visual Studio Code and its default themes are Microsoft's, under the MIT licence; Solarized is Ethan Schoonover's and Monokai is Wimer Hazenberg's.`
 4. Read the paragraph directly after the credit line. Compare it word for word with: `The selection is stored at <path>. The file does not exist until you save a choice here, so it being absent is expected, not a bug.` (It is not the last paragraph: the closing `Your own avatar is set on the Profile tab.` follows it. There is no `Your avatar` section and no `avatars.json` path on this tab any more.)
 5. Read the path rendered in monospace in the selection paragraph. Write it down. It must be an absolute path, e.g. `<repo>\src\Huddle.App\App_Data\appearance.json` written out in full.
 6. Scan the whole Appearance panel for the sentence `A prompt is one piece of wording this application sends to a model` and for any mention of `prompts.json`, and for any mention of a token name such as `--font-chat` or an "Overrides" heading.
@@ -122,7 +122,7 @@ If the page will not load at all (connection refused, or an ASP.NET error page),
 - The path shown is absolute and ends in `\appearance.json`.
 - Neither the Prompts intro sentence nor any mention of `prompts.json` appears anywhere on the Appearance panel, and there is no token name and no "Overrides" section — that whole layer is gone, not merely hidden.
 - Both of the Prompts paragraphs DO appear on the Prompts panel.
-- The credit line sits directly below the Theme picker (and the Accent colour picker, when shown), names Visual Studio Code, excepts both `Huddle Light` and `Huddle Dark`, and attributes only Solarized and Monokai. It must not attribute Abyss, Kimbie Dark, Red, Quiet Light, Monokai Dimmed or Tomorrow Night Blue to anyone — those ship in VS Code with no third-party attribution on disk, so naming an author would be inventing one.
+- The credit line sits directly below the Theme picker (and the Accent colour picker, when shown), names Visual Studio Code, names this application's own six families (`Huddle`, `Custom Accent`, `Lumen`, `Fluent`, `Nordic`, `Cobalt Soft`) as not from it, and attributes only Solarized and Monokai. It must not attribute Abyss, Kimbie Dark, Red, Quiet Light, Monokai Dimmed or Tomorrow Night Blue to anyone — those ship in VS Code with no third-party attribution on disk, so naming an author would be inventing one.
 
 **Fail if — any of these**
 
@@ -141,7 +141,7 @@ If the path shown differs from `<repo>\src\Huddle.App\App_Data\appearance.json`,
 
 **Free** · about 3 min
 
-*Proves the picker is rendered from code (`ThemeCatalog.Grouped`) rather than a hand-maintained second list, in the declared order and under the declared headings — and that the light/dark control that used to sit beside it is gone ([ADR-0017](../../adr/0017-a-theme-is-a-palette-not-a-pair.md)). The catalog holds twenty-one entries: seventeen imported on 2026-09-16 ([ADR-0016](../../adr/0016-vs-codes-bundled-themes-are-converted-once-not-imported.md)) plus this application's own four, the Huddle pair and the Custom Accent pair.*
+*Proves the picker is rendered from code (`ThemeCatalog.Grouped`) rather than a hand-maintained second list, in the declared order and under the declared headings — and that the light/dark control that used to sit beside it is gone ([ADR-0017](../../adr/0017-a-theme-is-a-palette-not-a-pair.md)). The catalog holds twenty-nine entries: seventeen imported on 2026-09-16 ([ADR-0016](../../adr/0016-vs-codes-bundled-themes-are-converted-once-not-imported.md)) plus this application's own twelve: the Huddle pair, the Custom Accent pair, and the Lumen, Fluent, Nordic and Cobalt Soft pairs mapped from the approved mockup directions.*
 
 **Before you start**
 
@@ -156,9 +156,9 @@ If the path shown differs from `<repo>\src\Huddle.App\App_Data\appearance.json`,
 
 **Pass if — all of these**
 
-- The list holds exactly twenty-one Themes under exactly three headings, in this order:
-  - **Light** — `Huddle Light`, `Custom Accent Light`, `Light 2026`, `Light Modern`, `Light+`, `Quiet Light`, `Solarized Light`
-  - **Dark** — `Huddle Dark`, `Custom Accent Dark`, `Dark 2026`, `Dark Modern`, `Dark+`, `Abyss`, `Kimbie Dark`, `Monokai`, `Monokai Dimmed`, `Red`, `Solarized Dark`, `Tomorrow Night Blue`
+- The list holds exactly twenty-nine Themes under exactly three headings, in this order:
+  - **Light** — `Huddle Light`, `Custom Accent Light`, `Lumen Light`, `Fluent Light`, `Nordic Light`, `Cobalt Soft Light`, `Light 2026`, `Light Modern`, `Light+`, `Quiet Light`, `Solarized Light`
+  - **Dark** — `Huddle Dark`, `Custom Accent Dark`, `Lumen Dark`, `Fluent Dark`, `Nordic Dark`, `Cobalt Soft Dark`, `Dark 2026`, `Dark Modern`, `Dark+`, `Abyss`, `Kimbie Dark`, `Monokai`, `Monokai Dimmed`, `Red`, `Solarized Dark`, `Tomorrow Night Blue`
   - **High contrast** — `Dark High Contrast`, `Light High Contrast`
 - `Huddle Light` is **first** under `Light`, and `Light` is the first heading. Three call sites read `BuiltIn[0]` to mean "the default Theme", so a Theme appearing above it is a real defect, not a cosmetic one.
 - The two High Contrast Themes are under their **own** heading, not under `Dark` and `Light`. `ThemeGroup` is deliberately not `ThemeMode`.
@@ -1018,8 +1018,8 @@ If the shell will not load, re-run APPEARANCETHEME-01 first.
 
 **Pass if — all of these**
 
-- `Light theme` holds 8 Themes: under `Light` — `Huddle Light`, `Custom Accent Light`, `Light 2026`, `Light Modern`, `Light+`, `Quiet Light`, `Solarized Light`; under `High contrast` — `Light High Contrast`.
-- `Dark theme` holds 13: under `Dark` — `Huddle Dark`, `Custom Accent Dark`, `Dark 2026`, `Dark Modern`, `Dark+`, `Abyss`, `Kimbie Dark`, `Monokai`, `Monokai Dimmed`, `Red`, `Solarized Dark`, `Tomorrow Night Blue`; under `High contrast` — `Dark High Contrast`.
+- `Light theme` holds 12 Themes: under `Light` — `Huddle Light`, `Custom Accent Light`, `Lumen Light`, `Fluent Light`, `Nordic Light`, `Cobalt Soft Light`, `Light 2026`, `Light Modern`, `Light+`, `Quiet Light`, `Solarized Light`; under `High contrast` — `Light High Contrast`.
+- `Dark theme` holds 17: under `Dark` — `Huddle Dark`, `Custom Accent Dark`, `Lumen Dark`, `Fluent Dark`, `Nordic Dark`, `Cobalt Soft Dark`, `Dark 2026`, `Dark Modern`, `Dark+`, `Abyss`, `Kimbie Dark`, `Monokai`, `Monokai Dimmed`, `Red`, `Solarized Dark`, `Tomorrow Night Blue`; under `High contrast` — `Dark High Contrast`.
 - With no file, `Huddle Light` is marked in the first list and `Huddle Dark` in the second.
 - Clicking the marked row again leaves it marked: a slot is never left empty.
 - The intro paragraph mentions the button in the top bar.
