@@ -14,7 +14,7 @@ public sealed class LibrarySplitLayoutSourceTests
     {
         string markup = File.ReadAllText(CssSource.RepoPath("src", "Huddle.App", "Components", "Pages", "Library.razor"));
 
-        Assert.Contains("<PageTitle>Library</PageTitle>", markup, StringComparison.Ordinal); // contains-ok: Razor source text, not rendered markup
+        Assert.Contains("<FocusedPageTitle Title=\"Library\" />", markup, StringComparison.Ordinal); // contains-ok: Razor source text, not rendered markup
         Assert.DoesNotContain("<PageHeader", markup, StringComparison.Ordinal); // contains-ok: Razor source text, not rendered markup
         Assert.Contains("library-page", markup, StringComparison.Ordinal); // contains-ok: Razor source text, not rendered markup
     }

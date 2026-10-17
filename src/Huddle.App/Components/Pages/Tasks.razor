@@ -82,7 +82,7 @@
            filled because it is the page's one primary action (audit B1). The document title follows the Tab's title instead (audit E2). *@
         <PageHeader Title="@this.effectiveView.Name" CreateText="New task" CreateIcon="@Icons.Material.Filled.Add"
                     OnCreate="this.OnCreateClickedAsync" SetPageTitle="false" />
-        <PageTitle>@this.DocumentTitle</PageTitle>
+        <FocusedPageTitle Title="@this.DocumentTitle" />
 
         @if (this.Views.LoadError is { } loadError)
         {

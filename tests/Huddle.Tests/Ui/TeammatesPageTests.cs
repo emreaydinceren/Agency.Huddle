@@ -358,7 +358,7 @@ public sealed class TeammatesPageTests
         // Found and raised in one InvokeAsync for the same reason as ClickNewTeammateAsync: the
         // factory's startup PersonasChanged echo can repaint the page between the two.
         await cut.InvokeAsync(() => cut.FindAll("div.mud-input-control")
-            .First(control => control.QuerySelectorAll("label").Any(label => label.TextContent.Contains("Team", StringComparison.Ordinal)))
+            .First(control => control.ClassList.Contains("teammates-filter"))
             .MouseDownAsync(new Microsoft.AspNetCore.Components.Web.MouseEventArgs()));
 
         Assert.Contains("All teams", cut.Markup, StringComparison.Ordinal);

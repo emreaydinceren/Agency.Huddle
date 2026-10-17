@@ -3,6 +3,8 @@ namespace Agency.Huddle.Tests.Ui.Tasks;
 using AngleSharp.Dom;
 using Bunit;
 using Bunit.Rendering;
+using Microsoft.AspNetCore.Components;
+using Microsoft.AspNetCore.Components.Rendering;
 using Microsoft.Extensions.DependencyInjection;
 using MudBlazor;
 using Agency.Huddle.App.Components.Tasks;
@@ -313,6 +315,134 @@ public sealed class R3TasksTests
         IRenderedComponent<ContainerFragment> item = RenderPageWithTitle(ctx2, viewId: null, taskIdText: task.Id.ToString());
 
         Assert.Equal($"Task {task.Id}", DocumentTitleOf(item));
+    }
+
+    /// <summary>Switching Views in place (the sidebar's View link re-parameterises the mounted page) or by remounting under a new key updates the document title with the h1 (audit E2, round 3).</summary>
+    /// <param name="remount">True to mount the next View under a fresh key, as a new Tab does; false to re-parameterise the same instance.</param>
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task DocumentTitle_FollowsAnInAppViewSwitch(bool remount)
+    {
+        using TaskToolHarness harness = new();
+        Assert.True(harness.Views.Save(new TaskView { Id = "platform-board", Name = "Platform board", Kind = ViewKind.List }).Saved);
+        await using MudBunitContext ctx = NewContext(harness);
+        ctx.JSInterop.Mode = JSRuntimeMode.Loose;
+        ViewSwitchHost? host = null;
+        IRenderedComponent<ContainerFragment> cut = ctx.RenderWithPopovers(builder =>
+        {
+            builder.OpenComponent<ViewSwitchHost>(0);
+            builder.AddAttribute(1, nameof(ViewSwitchHost.Remount), remount);
+            builder.AddComponentReferenceCapture(2, instance => host = (ViewSwitchHost)instance);
+            builder.CloseComponent();
+        });
+        Assert.Equal("All Tasks", DocumentTitleOf(cut));
+
+        Assert.NotNull(host);
+        await cut.InvokeAsync(() => host.Show("platform-board"));
+
+        cut.WaitForAssertion(() => Assert.Equal("Platform board", cut.Find("title").TextContent.Trim()));
+        Assert.Equal("Platform board", cut.Find(".page-header-h1").TextContent.Trim());
+    }
+
+    /// <summary>Following a View link from the Tasks Tab re-points the preview Tab, and the document title follows (audit E2, round 3).</summary>
+    [Fact]
+    public async Task DocumentTitle_FollowsAViewLinkThroughTheTabHost()
+    {
+        using TaskToolHarness harness = new();
+        Assert.True(harness.Views.Save(new TaskView { Id = "platform-board", Name = "Platform board", Kind = ViewKind.List }).Saved);
+        await using MudBunitContext ctx = NewContext(harness);
+        ctx.JSInterop.Mode = JSRuntimeMode.Loose;
+        ctx.Services.AddSingleton<Agency.Huddle.App.Tabs.TabService>();
+        ctx.Services.AddSingleton(new Agency.Huddle.App.Tabs.TabPageRoutes(typeof(TasksPage).Assembly));
+        NavigationManager nav = ctx.Services.GetRequiredService<NavigationManager>();
+        nav.NavigateTo("/tasks");
+        IRenderedComponent<ContainerFragment> cut = ctx.RenderWithPopovers(builder =>
+        {
+            builder.OpenComponent<Microsoft.AspNetCore.Components.Web.HeadOutlet>(0);
+            builder.CloseComponent();
+            builder.OpenComponent<Agency.Huddle.App.Components.Layout.TabHost>(1);
+            builder.CloseComponent();
+        });
+        Assert.Equal("All Tasks", DocumentTitleOf(cut));
+
+        await cut.InvokeAsync(() => nav.NavigateTo("/tasks/platform-board"));
+
+        cut.WaitForAssertion(() => Assert.Equal("Platform board", cut.Find(".page-header-h1").TextContent.Trim()));
+        Assert.Equal("Platform board", cut.Find("title").TextContent.Trim());
+    }
+
+    /// <summary>With the Tasks page open in two panes, the document title is the focused pane's page whichever pane mounted last, and follows the focus (audit E2, round 3: the pane mounted last owned the title).</summary>
+    [Fact]
+    public async Task DocumentTitle_IsTheFocusedPanesPage_NotTheLastMountedPanes()
+    {
+        using TaskToolHarness harness = new();
+        Assert.True(harness.Views.Save(new TaskView { Id = "platform-board", Name = "Platform board", Kind = ViewKind.List }).Saved);
+        Assert.True(harness.Views.Save(new TaskView { Id = "other", Name = "Other", Kind = ViewKind.List }).Saved);
+        await using MudBunitContext ctx = NewContext(harness);
+        ctx.JSInterop.Mode = JSRuntimeMode.Loose;
+        Agency.Huddle.App.Tabs.TabService tabs = new();
+        ctx.Services.AddSingleton(tabs);
+        ctx.Services.AddSingleton(new Agency.Huddle.App.Tabs.TabPageRoutes(typeof(TasksPage).Assembly));
+        ctx.Services.GetRequiredService<NavigationManager>().NavigateTo("/tasks/platform-board");
+        Agency.Huddle.App.Tabs.Tab board = tabs.Open("/tasks/platform-board");
+        tabs.Keep(board.Id);
+        Agency.Huddle.App.Tabs.Tab other = tabs.Open("/tasks/other");
+        tabs.Keep(other.Id);
+        Assert.True(tabs.MoveRight(other.Id));
+        tabs.FocusGroup(tabs.Groups[0].Id);
+
+        IRenderedComponent<ContainerFragment> cut = ctx.RenderWithPopovers(builder =>
+        {
+            builder.OpenComponent<Microsoft.AspNetCore.Components.Web.HeadOutlet>(0);
+            builder.CloseComponent();
+            builder.OpenComponent<Agency.Huddle.App.Components.Layout.TabHost>(1);
+            builder.CloseComponent();
+        });
+
+        cut.WaitForAssertion(() => Assert.Equal(["Platform board", "Other"], cut.FindAll(".page-header-h1").Select(h => h.TextContent.Trim()).ToArray()));
+        Assert.Equal("Platform board", cut.Find("title").TextContent.Trim());
+
+        await cut.InvokeAsync(() => tabs.FocusGroup(tabs.Groups[1].Id));
+
+        cut.WaitForAssertion(() => Assert.Equal("Other", cut.Find("title").TextContent.Trim()));
+    }
+
+    /// <summary>Mounts the Tasks page beside a <c>HeadOutlet</c> and lets a test change its View the way a sidebar link does.</summary>
+    private sealed class ViewSwitchHost : ComponentBase
+    {
+        private string? viewId;
+
+        /// <summary>Whether the next View mounts under a fresh key, as a new Tab does.</summary>
+        [Parameter]
+        public bool Remount { get; set; }
+
+        /// <summary>Shows the View with this id.</summary>
+        /// <param name="id">The View id.</param>
+        public void Show(string id)
+        {
+            this.viewId = id;
+            this.StateHasChanged();
+        }
+
+        /// <inheritdoc />
+        protected override void BuildRenderTree(RenderTreeBuilder builder)
+        {
+            builder.OpenComponent<Microsoft.AspNetCore.Components.Web.HeadOutlet>(0);
+            builder.CloseComponent();
+            builder.OpenComponent<TasksPage>(1);
+            if (this.Remount)
+            {
+                builder.SetKey(this.viewId ?? "all");
+            }
+
+            if (this.viewId is not null)
+            {
+                builder.AddAttribute(2, nameof(TasksPage.ViewId), this.viewId);
+            }
+
+            builder.CloseComponent();
+        }
     }
 
     // ---- B4k, B4j, B4p: the drawer's footer, title edit and draft ----

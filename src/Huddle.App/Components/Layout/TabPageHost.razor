@@ -14,6 +14,7 @@
 *@
 @using Agency.Huddle.App.Tabs
 @inject TabPageRoutes Routes
+@inject TabService Tabs
 
 @* The page is captured in a pattern variable: CascadingValue builds its content after this component has
    rendered, and by then OnParametersSet may have replaced the page (a crumb can point the Tab at a URL
@@ -21,7 +22,9 @@
 @if (this.page is { } shown)
 {
     <CascadingValue Value="this.context">
-        <DynamicComponent Type="shown.Component" Parameters="shown.Parameters" />
+        <CascadingValue Value="this.IsFocused" Name="@Agency.Huddle.App.Components.Shared.FocusedPageTitle.PageFocus">
+            <DynamicComponent Type="shown.Component" Parameters="shown.Parameters" />
+        </CascadingValue>
     </CascadingValue>
 }
 else
@@ -33,6 +36,9 @@ else
     private string? resolvedUrl;
     private TabPage? page;
     private TabPageContext? context;
+
+    /// <summary>Whether this Tab is the active Tab of the focused group, so only that page offers the document title.</summary>
+    private bool IsFocused => string.Equals(this.Tabs.Active?.Id, this.Tab.Id, StringComparison.Ordinal);
 
     /// <summary>The Tab whose page to mount.</summary>
     [Parameter, EditorRequired]
