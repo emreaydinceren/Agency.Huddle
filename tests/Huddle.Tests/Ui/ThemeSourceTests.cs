@@ -22,11 +22,14 @@ public sealed partial class ThemeSourceTests
     /// <c>var()</c> outside this set; a name here that no rule ever uses is harmless, but a
     /// <c>var()</c> in <c>app.css</c> naming anything outside this set is either a typo or a
     /// hand-invented token, and this list is what makes either one a build failure rather than a
-    /// silent no-op in the browser.
+    /// silent no-op in the browser. Internal so <see cref="PackSourceTests"/> holds a style pack to the same set.
     /// </summary>
-    private static readonly HashSet<string> MudBlazorVariables = new(StringComparer.Ordinal)
+    internal static readonly HashSet<string> MudBlazorVariables = new(StringComparer.Ordinal)
     {
         "--font-mono",
+
+        // The reading face, declared in app-vars.css as the UI face; a style pack may give it a serif (ADR-0057).
+        "--font-read",
 
         // The ink ladder, declared once in app-vars.css: Ink mixed into Surface at 4, 6, 10, 18 and 30 percent (audit A1).
         "--ink-strip", "--ink-wash", "--ink-rule", "--ink-edge", "--ink-field",

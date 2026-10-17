@@ -195,6 +195,7 @@ One row per decision. Open the ADR only when its row is your question.
 | [0054](adr/0054-a-light-theme-and-a-dark-theme.md) | The Human picks one light and one dark Theme; a top-bar button switches between them. | Accepted |
 | [0055](adr/0055-a-reference-is-text-with-a-stable-key.md) | A reference in the Composer is ordinary text with a stable key (a Task id, a Room id, a Team Name, a Library path); the Message's `References` snapshot is optional metadata of what the sender saw, additive on the wire with the version unchanged; Agents get a compact, fresh Referenced items header for the trigger Message only. | Accepted |
 | [0056](adr/0056-the-ui-renders-at-100-percent-with-a-px-type-scale.md) | The page is not zoomed (`html { zoom: 0.9 }` removed); the type scale is set in rendered px in the Theme (h5 20, h6 16, subtitle 14, body1 14, body2 13, caption 12, overline 11; nothing under 11px; weights 400, 500, 600); prose is capped at 75ch and the Transcript column at about 760px. | Accepted |
+| [0057](adr/0057-a-theme-may-carry-a-style-pack.md) | A Theme may carry a style pack (`wwwroot/packs/<name>.css`): a stylesheet whose every selector is scoped to the Theme's marker (`data-theme-pack`), holding no colour literal, guarded by `PackSourceTests`. Only Nordic has one; its Surface is the white raised paper and Background the ground. Supersedes ADR-0010's "no `theme.css`" for packs only. | Accepted |
 
 ## 5. Manual tests
 

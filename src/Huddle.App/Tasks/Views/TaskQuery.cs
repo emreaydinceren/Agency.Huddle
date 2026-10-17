@@ -17,6 +17,15 @@ internal static class TaskQuery
         .ToDictionary(pair => pair.state, pair => pair.index);
 
     /// <summary>
+    /// Whether <paramref name="task"/> is waiting on the Human: it is open (not Done, Cancelled, Duplicate or Rejected)
+    /// and assigned to them, matched ignoring case. The Tasks page's "need you" count and the Top bar's pill both use it.
+    /// </summary>
+    /// <param name="task">The Task.</param>
+    /// <param name="humanName">The Human's current Name.</param>
+    public static bool NeedsYou(TaskItem task, string humanName) =>
+        !task.Status.IsTerminal() && string.Equals(task.Assignee, humanName, StringComparison.OrdinalIgnoreCase);
+
+    /// <summary>
     /// Returns the Tasks in <paramref name="scope"/> that match every dimension of <paramref name="filter"/>
     /// and <paramref name="search"/>. Values within one dimension are OR'd; dimensions are AND'd; an empty
     /// dimension matches everything.

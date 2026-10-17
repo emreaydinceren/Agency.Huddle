@@ -330,6 +330,7 @@ Four things follow from that chain, and each one shapes how you write a Theme:
 | Theme | `MudTheme` | The palette, plus the shared typography. Always built with `ThemeDefaults.CreateLight(...)` or `ThemeDefaults.CreateDark(...)`. |
 | Mode | `ThemeMode` | `Light` or `Dark`: which palette slot is filled, and so whether choosing it puts the app in dark mode. |
 | Group | `ThemeGroup` | The picker heading: `Light`, `Dark` or `HighContrast`. Usually the same as `Mode`; it differs only for a high-contrast Theme, which has a mode but its own heading. |
+| Pack | `string?` | Optional. The name of a style pack, `wwwroot/packs/<name>.css`, whose every rule is scoped to this Theme ([ADR-0057](../adr/0057-a-theme-may-carry-a-style-pack.md)). `null` for every Theme but Nordic. |
 
 `MudTheme` has two palette slots, `PaletteLight` and `PaletteDark`. A Theme fills
 **only the one its `Mode` names**; the other keeps MudBlazor's defaults and is never
@@ -849,16 +850,37 @@ meet, including two rules the mapping predates:
 
 Fluent Dark's amber is darkened to `#edae1d` so a presence badge's white glyph reads 3:1.
 The mapping's shared-style deltas (fonts, spacing, shadows, layered grounds) are proposals
-that would change every Theme, and are not applied.
+that would change every Theme, and are not applied to the other pairs.
+
+### Nordic's style pack
+
+Nordic is the one Theme with a style pack, `wwwroot/packs/nordic.css`
+([ADR-0057](../adr/0057-a-theme-may-carry-a-style-pack.md)). Its alignment with the mockup is specified in
+`E:\Repos\HuddleUX\Huddle-Nordic-Alignment.md`. With the pack, Nordic's palette roles differ from every other
+Theme's:
+
+| Property | Nordic paints | Light / Dark |
+| --- | --- | --- |
+| `Surface` | the white raised paper: cards, composer, inputs, dialogs, menus, the current item | `#ffffff` / `#1c2125` |
+| `Background` | the page ground, which the pack paints on the shell | `#f6f6f1` / `#161a1d` |
+| `DrawerBackground` | the sidebar, and the wells: kanban lanes, properties, tool rows | `#edede6` / `#121518` |
+| `BackgroundGray` | the light rail (dark uses `DrawerBackground`) | `#e6e6de` |
+| `DividerLight` | the faint region hairlines, below the 1.5:1 Divider floor by ADR-0057 | `#d9d9cf` / `#262d32` |
+
+`NordicTheme.WithNordicStyle` also sets the UI face (IBM Plex Sans) and writes the set's three shadows into
+MudBlazor's elevations. The pack sets Literata (`--font-read`) and IBM Plex Mono (`--font-mono`).
+
 ## What a Theme cannot do
 
 Some things look like Theme features and are not. [known-limits.md](known-limits.md)
 records why.
 
-- **Change layout, spacing or component shape** beyond what `MudTheme` exposes. A Theme
-  is colours, plus whatever `MudTheme` settings you change in code. It is not CSS.
-- **Change the font.** Typography is shared through `ThemeDefaults`. Changing it there
-  changes every Theme.
+- **Change layout, spacing or component shape** beyond what `MudTheme` exposes, unless it
+  carries a style pack ([ADR-0057](../adr/0057-a-theme-may-carry-a-style-pack.md)). A Theme
+  without one is colours, plus whatever `MudTheme` settings you change in code.
+- **Change the type scale.** Sizes, weights and line heights are shared through
+  `ThemeDefaults`, and `TypeScaleTests` holds every Theme to them. A Theme may set its own
+  UI face (`Typography.Default.FontFamily`) after building, as Nordic does.
 - **Follow the operating system's light or dark setting.** There is no "System" option;
   the top-bar toggle is manual.
 - **Pair itself with a counterpart.** The Human chooses the light and dark Themes

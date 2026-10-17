@@ -35,6 +35,34 @@ public sealed class MessageListJumpTests
     /// <summary>A Task wake-up in the default wording, which renders as the slim system row.</summary>
     private const string WakeText = "@Grace Task PLAT-0004 \"Fix login\" (Done, Platform) was changed by You:\n- status: Review -> Done\nCall get_task with taskId PLAT-0004 for the full task.";
 
+    /// <summary>
+    /// The Human's own Message renders the avatar and meta line a style pack shows (ADR-0057), and <c>app.css</c> hides
+    /// each of those direct children by the class it really carries, so every Theme without a pack keeps the bare
+    /// bubble. <c>ProfileAvatar</c>'s root is <c>.profile-avatar</c>, not the <c>avatar-transcript</c> passed to it.
+    /// </summary>
+    [Fact]
+    public async Task HumanRow_EveryChildBesideTheBubble_IsHiddenByAppCss()
+    {
+        await using TeamWebApplicationFactory factory = new();
+        await using MudBunitContext ctx = MessageListJumpTests.NewContext(factory);
+
+        IRenderedComponent<MessageList> cut = ctx.Render<MessageList>(parameters => parameters
+            .Add(p => p.Messages, [MessageListJumpTests.Human("m-1", "hello")])
+            .Add(p => p.HumanIds, [MessageListJumpTests.HumanId]));
+
+        string[] extraChildren = [.. cut.Find("div.message-row.human").Children
+            .Select(static child => child.ClassList[0])
+            .Where(static name => name is not ("message-bubble" or "message-references"))];
+        string[] expected = ["profile-avatar", "message-meta"];
+        Assert.Equal(expected, extraChildren);
+
+        string css = File.ReadAllText(CssSource.RepoPath("src", "Huddle.App", "wwwroot", "app.css"));
+        foreach (string name in extraChildren)
+        {
+            Assert.Contains($".message-row.human > .{name}", css, StringComparison.Ordinal); // contains-ok: haystack is the stylesheet source
+        }
+    }
+
     /// <summary>A Human bubble, an Agent row and the task-wake system row each carry <c>data-message-id</c> and <c>tabindex="-1"</c> (GS-T22).</summary>
     [Fact]
     public async Task Rows_CarryDataMessageId()

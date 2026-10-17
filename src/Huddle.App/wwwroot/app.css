@@ -236,7 +236,8 @@ button:focus-visible {
 }
 
 /* A field's label is Quiet ink at 400, at rest and floated, in every dialog (audit B10d). MudBlazor draws it at the
-   subtitle1 weight, which is 600 in this scale. */
+   subtitle1 weight, which is 600 in this scale. An outlined field's label, which sits above the box, is set apart at
+   600 by the "label sits above its field" rules below. */
 .mud-input-control > .mud-input-control-input-container > .mud-input-label-inputcontrol {
     font-weight: var(--mud-typography-body1-weight);
 }
@@ -349,17 +350,32 @@ b {
     font-size: var(--mud-typography-body2-size);
 }
 
-/* A raised outlined label is caption size (12px), not MudBlazor's 0.75 scale of the field (10.5px). The notch in
-   the border (the legend) is cut to the same size, so the label and its gap stay the same width. */
-.mud-input.mud-input-outlined > .mud-input-outlined-border legend {
+/* ---- A field's label sits above its field (alignment D6, markup M4) --------------------------------------------
+   An outlined field's label is caption size at 600 in body text, on its own line above the box, at rest, focused and
+   filled alike, so it never floats into the border or over the value. MudBlazor positions it absolutely and moves it
+   with transforms in four states; the chain below matches its most specific rule (0,5,1) and wins on order, so no
+   !important is needed. The label stays a <label for> the input, so a click on it still focuses the field.
+   Excluded: the contexts that visually hide the label because a visible one sits elsewhere (the compact toolbar,
+   the Task detail's property rows and description), which keep their own rules below. */
+.mud-input-control:not(.toolbar-compact):not(.task-detail-prop-value *):not(.task-detail-description-field *) > .mud-input-control-input-container > label.mud-input-label.mud-input-label-inputcontrol.mud-input-label-outlined {
+    position: static;
+    order: -1;
+    transform: none;
+    max-width: 100%;
+    margin: 0 0 4px -4px;
+    pointer-events: auto;
     font-size: var(--mud-typography-caption-size);
+    font-weight: 600;
+    line-height: var(--mud-typography-caption-lineheight);
 }
 
-.mud-shrink ~ label.mud-input-label.mud-input-label-inputcontrol.mud-input-label-outlined,
-.mud-input:focus-within ~ label.mud-input-label.mud-input-label-inputcontrol.mud-input-label-outlined,
-.mud-input:has(:-webkit-autofill) ~ label.mud-input-label.mud-input-label-inputcontrol.mud-input-label-outlined {
-    transform: translate(14px, -7px) scale(0.8572);
-    max-width: calc((100% - 14px) / 0.8572);
+.mud-input-control:not(.toolbar-compact) > .mud-input-control-input-container > label.mud-input-label.mud-input-label-inputcontrol.mud-input-label-outlined:not(.mud-disabled) {
+    color: var(--mud-palette-text-primary);
+}
+
+/* With the label above, the border is drawn whole: no notch is cut for a floated label. */
+.mud-input.mud-input-outlined > .mud-input-outlined-border legend {
+    display: none;
 }
 
 /* ---- Measure: prose never runs wider than 75 characters (ADR-0056) --------------------------------
@@ -422,6 +438,21 @@ a.team-ref,
 .ref-link {
     color: color-mix(in srgb, var(--mud-palette-primary) 70%, var(--mud-palette-text-primary));
     text-decoration: underline dotted;
+}
+
+/* A Mention of a Member inside a Message (MarkdownRenderer marks it): the reference colour at 600, so a name the
+   Message addresses reads as one. A Mention of the Human sits on a light Warning wash in body text, the "Needs you"
+   colour, so the Human finds where they were asked. */
+.mention {
+    color: color-mix(in srgb, var(--mud-palette-primary) 70%, var(--mud-palette-text-primary));
+    font-weight: 600;
+}
+
+.mention.mention--me {
+    color: var(--mud-palette-text-primary);
+    background: color-mix(in srgb, var(--mud-palette-warning) 14%, var(--mud-palette-surface));
+    border-radius: calc(var(--mud-default-borderradius) * .5);
+    padding: 0 4px;
 }
 
 /* A row stacked above the composer: a hairline on top, then the row's own padding. */
@@ -808,6 +839,18 @@ a.team-ref,
 
 .room-header .page-header {
     margin-bottom: 0;
+}
+
+/* The Room's kind ("Group", "1:1", "Team") beside its title is for a style pack that draws it as a chip (ADR-0057);
+   every Theme without one leaves the member count to say it. */
+.room-kind-chip {
+    display: none;
+}
+
+/* The Top bar's "N Tasks need you" pill is for a style pack that draws it (ADR-0057); every Theme without one leaves
+   the count to the Tasks page and My Tasks. */
+.tasks-need-you-pill {
+    display: none;
 }
 
 /* The groups of Tabs side by side. Each takes an equal share of the width; min-width: 0 lets a pane
@@ -1472,6 +1515,14 @@ a.team-ref,
     align-items: flex-end;
 }
 
+/* The Human's avatar, gutter and meta line are rendered for a style pack that sets their Message as an ordinary row
+   (ADR-0057); every Theme without one hides them, and the bubble alone says whose Message it is. */
+.message-row.human > .profile-avatar,
+.message-row.human > .message-gutter,
+.message-row.human > .message-meta {
+    display: none;
+}
+
 /* The Human's reference chips sit under the bubble, at its right edge. */
 .message-row.human .message-references {
     justify-content: flex-end;
@@ -1866,6 +1917,11 @@ a.team-ref,
     position: absolute;
     right: 0.5rem;
     bottom: 0.5rem;
+}
+
+/* The "Send" word beside the icon is for a style pack that draws a labelled button (ADR-0057). */
+.composer-send-label {
+    display: none;
 }
 
 .composer-input {

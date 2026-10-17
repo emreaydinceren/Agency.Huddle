@@ -111,7 +111,7 @@ ratio of each rung in each Theme is evidence, not a rule; it lives in
 
 | Role | MudBlazor variable | Use it for |
 | --- | --- | --- |
-| Surface | `--mud-palette-surface` | **The one shell surface**: the page, the sidebar, the top bar, the tab strip and every pane, plus cards, inputs and dialogs. Panes are separated by hairlines (see Lines), never by a darker ground with gaps around a card |
+| Surface | `--mud-palette-surface` | **The one shell surface**: the page, the sidebar, the top bar, the tab strip and every pane, plus cards, inputs and dialogs. Panes are separated by hairlines (see Lines), never by a darker ground with gaps around a card. This is the default; Nordic's style pack paints four grounds instead and makes Surface the white raised paper ([ADR-0057](../adr/0057-a-theme-may-carry-a-style-pack.md)) |
 | Quiet fill | `--ink-wash`, the Wash rung | Tag chips, preview blocks and the segmented control's track. The tab strip is the Strip rung (`--ink-strip`). All are Ink mixed into Ground, so they follow every Theme. Not a board lane: a lane is Ground (see [Tasks](#tasks)) |
 | Ground, Sidebar | `--mud-palette-background`, `--mud-palette-drawer-background` | Not painted by the shell. They stay in each palette because MudBlazor and the theme tests read them |
 | Text | `--mud-palette-text-primary`, `-secondary`, `-disabled` | Body, supporting text, disabled controls. `text-disabled` paints disabled controls only |
@@ -264,7 +264,7 @@ and one dark Theme, and the top bar's `ThemeModeToggle` switches between them
 
 | Aspect | Value |
 | --- | --- |
-| UI face | Inter, then Helvetica Neue, then `sans-serif`; loaded from Google Fonts in `App.razor` |
+| UI face | By default Inter, then Helvetica Neue, then `sans-serif`; loaded from Google Fonts in `App.razor`. Nordic uses IBM Plex Sans, with Literata as its reading face (`--font-read`) and IBM Plex Mono for code ([ADR-0057](../adr/0057-a-theme-may-carry-a-style-pack.md)) |
 | Monospace | `--font-mono`: `ui-monospace`, Cascadia Mono, Consolas, Courier New |
 | Case | Sentence case everywhere. `Typo.button` is `text-transform: none`; tab rails must be too (UX-009). A Tab title is never italic: a preview Tab is weight 400 and the others 500 |
 | Scale | Set in rendered px, once, in `ThemeDefaults.WithSharedTypography`. The page is not zoomed ([ADR-0056](../adr/0056-the-ui-renders-at-100-percent-with-a-px-type-scale.md)) |
@@ -853,7 +853,7 @@ above the rail or the nav (UX-010).
 | Padding | Title `16px 24px 8px`; content `8px 24px`; actions `12px 24px 16px` |
 | Width | 600px for forms, confirms and pickers under about 12 items (`HuddleDialogOptions.SmallForm` for a form, `ShortPicker` for a picker); 960px (`HuddleDialogOptions.Picker`) only for two-pane or tabular pickers |
 | Disabled primary | Faint ink on Wash; never MudBlazor's fixed black alpha |
-| Field labels | Quiet ink at 400, the same at rest and floated |
+| Field labels | Above the field, never floated into its border: caption size at 600 in body text, the same at rest, focused and filled, with the border drawn whole (alignment D6, `app.css` "A field's label sits above its field"). A context that labels the field elsewhere keeps the control's label visually hidden |
 | Required fields | "(optional)" on optional fields; never an asterisk |
 | From a menu | The menu closes before the dialog opens: wrap the call in `MenuDialogs.AfterClosingAsync(menu, () => dialog call)` |
 | Primary verb | Repeats the title's verb ("Add a role" gives **Add**) |

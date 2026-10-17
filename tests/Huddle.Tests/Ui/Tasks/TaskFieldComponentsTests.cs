@@ -75,6 +75,61 @@ public sealed class TaskFieldComponentsTests : IDisposable
         Assert.Contains("task-priority-chip", cut.Find(".mud-chip").ClassList, StringComparer.Ordinal);
     }
 
+    /// <summary>
+    /// The status chip names its state in one class, which the Nordic style pack draws a shape-coded dot for
+    /// (ADR-0057, markup M6). To do and Backlog share a colour, so only this class tells them apart.
+    /// </summary>
+    /// <param name="status">The state shown.</param>
+    /// <param name="expected">The chip's own classes, the state class the pack's selectors name last.</param>
+    [Theory]
+    [InlineData(TaskState.Backlog, "task-status-chip status-chip-state-backlog")]
+    [InlineData(TaskState.ToDo, "task-status-chip status-chip-state-todo")]
+    [InlineData(TaskState.InProgress, "task-status-chip status-chip-state-inprogress")]
+    [InlineData(TaskState.Review, "task-status-chip status-chip-state-review")]
+    [InlineData(TaskState.Done, "task-status-chip status-chip-state-done")]
+    [InlineData(TaskState.Cancelled, "task-status-chip status-chip-state-cancelled")]
+    public async Task TaskStatusChip_CarriesItsStateClass(TaskState status, string expected)
+    {
+        ArgumentNullException.ThrowIfNull(expected);
+        string[] ownClasses = expected.Split(' ');
+        await using MudBunitContext ctx = new();
+        IRenderedComponent<ContainerFragment> cut = ctx.RenderWithPopovers(builder =>
+        {
+            builder.OpenComponent<TaskStatusChip>(0);
+            builder.AddAttribute(1, nameof(TaskStatusChip.Status), status);
+            builder.CloseComponent();
+        });
+
+        List<string> classes = [.. cut.Find(".mud-chip").ClassList];
+        Assert.Contains(ownClasses[0], classes);
+        Assert.Equal(ownClasses[1], Assert.Single(classes, static name => name.StartsWith("status-chip-state-", StringComparison.Ordinal)));
+    }
+
+    /// <summary>The priority chip names its level in one class, which the Nordic style pack colours clay for High and Urgent (ADR-0057, markup M6).</summary>
+    /// <param name="priority">The priority shown.</param>
+    /// <param name="expected">The chip's own classes, the level class the pack's selectors name last.</param>
+    [Theory]
+    [InlineData(TaskPriority.Low, "task-priority-chip priority-low")]
+    [InlineData(TaskPriority.Medium, "task-priority-chip priority-medium")]
+    [InlineData(TaskPriority.High, "task-priority-chip priority-high")]
+    [InlineData(TaskPriority.Urgent, "task-priority-chip priority-urgent")]
+    public async Task TaskPriorityChip_CarriesItsLevelClass(TaskPriority priority, string expected)
+    {
+        ArgumentNullException.ThrowIfNull(expected);
+        string[] ownClasses = expected.Split(' ');
+        await using MudBunitContext ctx = new();
+        IRenderedComponent<ContainerFragment> cut = ctx.RenderWithPopovers(builder =>
+        {
+            builder.OpenComponent<TaskPriorityChip>(0);
+            builder.AddAttribute(1, nameof(TaskPriorityChip.Priority), priority);
+            builder.CloseComponent();
+        });
+
+        List<string> classes = [.. cut.Find(".mud-chip").ClassList];
+        Assert.Contains(ownClasses[0], classes);
+        Assert.Equal(ownClasses[1], Assert.Single(classes, static name => name.StartsWith("priority-", StringComparison.Ordinal)));
+    }
+
     /// <summary>A named assignee is a Small avatar then the name, once.</summary>
     [Fact]
     public async Task Assignee_Named_ShowsSmallAvatarThenName()

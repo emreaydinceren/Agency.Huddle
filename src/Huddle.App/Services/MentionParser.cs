@@ -68,7 +68,7 @@ public static class MentionParser
 
         for (var i = 0; i < text.Length; i++)
         {
-            if (text[i] != '@' || (i > 0 && IsBlockedBeforeAt(text[i - 1])))
+            if (!CanStartMention(text, i))
             {
                 continue;
             }
@@ -78,16 +78,7 @@ public static class MentionParser
                 var start = i + 1;
                 var end = start + candidate.Handle.Length;
 
-                if (end > text.Length ||
-                    string.Compare(text, start, candidate.Handle, 0, candidate.Handle.Length, StringComparison.OrdinalIgnoreCase) != 0)
-                {
-                    continue;
-                }
-
-                // A Mention ends at a word boundary, so "@echo" never Mentions a Member called
-                // "ech". Note that a space is NOT a boundary blocker: whether the space after
-                // "Emily" continues her Name is precisely what the member list just answered.
-                if (end < text.Length && IsNameCharacter(text[end]))
+                if (!MatchesHandleAt(text, start, candidate.Handle))
                 {
                     continue;
                 }
@@ -110,6 +101,40 @@ public static class MentionParser
         }
 
         return result;
+    }
+
+    /// <summary>
+    /// Whether the character at <paramref name="index"/> is an <c>@</c> that can introduce a Mention: an
+    /// <c>@</c> not joined to the character before it (see <see cref="IsBlockedBeforeAt"/>). Shared with
+    /// <see cref="MarkdownRenderer"/>, so a Mention pill is drawn exactly where a Mention is counted.
+    /// </summary>
+    /// <param name="text">The text being scanned.</param>
+    /// <param name="index">The position to test; must lie inside <paramref name="text"/>.</param>
+    internal static bool CanStartMention(string text, int index)
+    {
+        return text[index] == '@' && (index == 0 || !IsBlockedBeforeAt(text[index - 1]));
+    }
+
+    /// <summary>
+    /// Whether <paramref name="text"/> holds <paramref name="handle"/> at <paramref name="start"/>, compared
+    /// <see cref="StringComparison.OrdinalIgnoreCase"/>, and ending at a word boundary - so "@echo" never
+    /// Mentions a Member called "ech". A space is NOT a boundary blocker: whether the space after "Emily"
+    /// continues her Name is precisely what the longest-first member list answers. Shared with
+    /// <see cref="MarkdownRenderer"/>.
+    /// </summary>
+    /// <param name="text">The text being scanned.</param>
+    /// <param name="start">The position just after the <c>@</c>.</param>
+    /// <param name="handle">The Name or Alias to look for.</param>
+    internal static bool MatchesHandleAt(string text, int start, string handle)
+    {
+        int end = start + handle.Length;
+        if (end > text.Length ||
+            string.Compare(text, start, handle, 0, handle.Length, StringComparison.OrdinalIgnoreCase) != 0)
+        {
+            return false;
+        }
+
+        return end == text.Length || !IsNameCharacter(text[end]);
     }
 
     // '@' itself is here so "you@@echo" is not a Mention, and '_' and the alphanumerics so an

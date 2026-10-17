@@ -239,6 +239,13 @@ public sealed class ThemeCatalogTests
             referencedTokens.AddRange(CssSource.ReadReferencedTokens(cssFile));
         }
 
+        // A style pack (ADR-0057) reads palette slots app.css does not, such as divider-light and table-hover.
+        var packsDirectory = CssSource.RepoPath("src", "Huddle.App", "wwwroot", "packs");
+        foreach (var cssFile in Directory.EnumerateFiles(packsDirectory, "*.css"))
+        {
+            referencedTokens.AddRange(CssSource.ReadReferencedTokens(cssFile));
+        }
+
         var paletteTokens = referencedTokens
             .Where(token => token.StartsWith("--mud-palette-", StringComparison.Ordinal))
             .Distinct(StringComparer.Ordinal)
@@ -450,6 +457,33 @@ public sealed class ThemeCatalogTests
         Assert.Equal(dark ? ThemeMode.Dark : ThemeMode.Light, descriptor.Mode);
         Assert.Equal(dark ? ThemeGroup.Dark : ThemeGroup.Light, descriptor.Group);
         Assert.Equal(radius, descriptor.Theme.LayoutProperties.DefaultBorderRadius);
+    }
+
+    /// <summary>
+    /// Only the two Nordic Themes carry a style pack (ADR-0057), and it is <c>nordic</c>; every other Theme carries none,
+    /// so <c>packs/nordic.css</c> is inert for it.
+    /// </summary>
+    [Fact]
+    public void BuiltIn_OnlyNordicCarriesAStylePack()
+    {
+        foreach (var descriptor in ThemeCatalog.BuiltIn)
+        {
+            bool nordic = descriptor.Id is "nordic-light" or "nordic-dark";
+            Assert.Equal(nordic ? "nordic" : null, descriptor.Pack);
+        }
+    }
+
+    /// <summary>
+    /// Nordic's Surface is the white raised paper and its Background the birch ground (ADR-0057), the reverse of the
+    /// mapping a Theme without a pack uses, so the pack can paint four grounds from the palette.
+    /// </summary>
+    [Fact]
+    public void Nordic_SurfaceIsRaisedPaper_BackgroundIsTheGround()
+    {
+        Assert.Equal("#ffffff", NordicTheme.Light().Surface.ToString(MudColorOutputFormats.Hex));
+        Assert.Equal("#f6f6f1", NordicTheme.Light().Background.ToString(MudColorOutputFormats.Hex));
+        Assert.Equal("#1c2125", NordicTheme.Dark().Surface.ToString(MudColorOutputFormats.Hex));
+        Assert.Equal("#161a1d", NordicTheme.Dark().Background.ToString(MudColorOutputFormats.Hex));
     }
 
     /// <summary>Every authored theme id: the two Huddle themes and the eight mapped from the mockup sets.</summary>

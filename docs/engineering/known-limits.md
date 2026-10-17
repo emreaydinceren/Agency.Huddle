@@ -773,3 +773,17 @@ so, and names its [Roadmap](roadmap.md) item or its ADR. Back to the hub: [Huddl
 - **An Adapter without file tools cannot open an attachment (U19).** The Teammate gets the path line of a file the Human attached, such as `brief.pdf`, and cannot read it: the same limit as any Library path the Adapter cannot open. See [the ChatUploads spec](../Huddle.ChatUploads-Specifications.md) §2.
 - **Later edits to an uploaded file are not announced.** Team Uploads folders are pruned from File Changes scans and the Watched Folder resolver refuses to watch an Uploads folder, so an edit or delete of an uploaded file, by an Agent or the Human, reaches no Teammate. The chat Message is the only notice. See [the ChatUploads spec](../Huddle.ChatUploads-Specifications.md) §6.8.
 - **Unarchiving a Room of a vanished Team lasts until the next restart.** The reconciler archives a vanished Team's Rooms once, and remembers only in memory which ones it archived. A Room the Human unarchives stays in Chats, but a restart archives it again; a Team that returns after a restart does not get its Team Room unarchived.
+- **Nordic follows its mockup, except where a Huddle rule wins.** The Nordic style pack ([ADR-0057](../adr/0057-a-theme-may-carry-a-style-pack.md)) keeps these on purpose:
+  - the TextPrimary focus ring, not the mockup's blue ring;
+  - the type scale, so 17px titles are 16px and 11.5, 12.5 and 13.5px text snaps to 12 and 13px;
+  - the 760px Transcript column;
+  - the 48, 240 and 280px shell widths, not 52, 268 and 304px;
+  - 32px sidebar rows, not 30px;
+  - 28px small buttons, not 26px;
+  - spacing snapped to the 4px scale;
+  - times, counts and row meta in ink-3 rather than the mockup's ink-4, which is TextDisabled at 3.74:1 on the dark ground;
+  - the avatar colour recipe;
+  - a 2px Primary edge on the active Tab;
+  - a visible Divider on rules that carry meaning.
+
+  The pack's faint 1.31:1 hairline is used only for region splits. A one-line field is 33px rather than the mockup's 34px, because the next padding step is off the spacing scale. The mockup's archetype glyphs and priority bars are not drawn.

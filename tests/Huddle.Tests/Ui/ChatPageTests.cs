@@ -1237,6 +1237,10 @@ public sealed class ChatPageTests
         // even though these tests never customise one.
         ctx.Services.AddSingleton(factory.Services.GetRequiredService<AvatarStore>());
 
+        // The Room's Mention pills and the Human's own row read the Human and the aliases (ADR-0057's markup).
+        ctx.Services.AddSingleton(factory.Services.GetRequiredService<Agency.Huddle.App.Profile.IHumanIdentity>());
+        ctx.Services.AddSingleton(factory.Services.GetRequiredService<IMentionAliasSource>());
+
         // Chat.razor now renders ProposalCard directly above the Budget prompt (Task 12.1), which
         // injects these three even though these tests never propose a Teammate - PersonaStore and
         // RoomEvents are already copied above, for the same reason.

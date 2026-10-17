@@ -468,8 +468,7 @@
         get
         {
             string human = this.Human.Name;
-            return this.FilteredTasks(this.search)
-                .Count(task => !task.Status.IsTerminal() && string.Equals(task.Assignee, human, StringComparison.OrdinalIgnoreCase));
+            return this.FilteredTasks(this.search).Count(task => TaskQuery.NeedsYou(task, human));
         }
     }
 

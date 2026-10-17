@@ -1,0 +1,57 @@
+@*
+    The Top bar's "N Tasks need you" pill (alignment markup M5): how many open Tasks are assigned to the Human, by
+    the same rule as the Tasks page's "need you" count (TaskQuery.NeedsYou), linking to My Tasks. Nothing renders
+    while none needs the Human or Tasks are off. Rendered for every Theme and hidden in app.css; a style pack may show
+    it (Nordic, ADR-0057).
+*@
+@using Microsoft.Extensions.Options
+@implements IDisposable
+@inject TaskStore Store
+@inject TaskEvents Events
+@inject IHumanIdentity Human
+@inject IOptions<TeamOptions> Options
+
+@if (this.Count > 0)
+{
+    <a class="tasks-need-you-pill" href="tasks/my-tasks">
+        <span class="tasks-need-you-dot" aria-hidden="true"></span>
+        @Plural.Of(this.Count, "Task needs you", "Tasks need you")
+    </a>
+}
+
+@code {
+    /// <summary>How many open Tasks are assigned to the Human; 0 while Tasks are off.</summary>
+    private int Count
+    {
+        get
+        {
+            if (!this.Options.Value.Tasks.Enabled)
+            {
+                return 0;
+            }
+
+            string human = this.Human.Name;
+            return this.Store.All.Count(task => TaskQuery.NeedsYou(task, human));
+        }
+    }
+
+    /// <summary>Repaints when a Task changes, the Tasks reload, or the Human renames themselves.</summary>
+    protected override void OnInitialized()
+    {
+        this.Events.TaskChanged += this.OnTaskChanged;
+        this.Events.TasksReloaded += this.OnChanged;
+        this.Human.ProfileChanged += this.OnChanged;
+    }
+
+    /// <summary>Unsubscribes from the singleton hubs (rules.md: every subscriber unsubscribes in Dispose).</summary>
+    public void Dispose()
+    {
+        this.Events.TaskChanged -= this.OnTaskChanged;
+        this.Events.TasksReloaded -= this.OnChanged;
+        this.Human.ProfileChanged -= this.OnChanged;
+    }
+
+    private void OnTaskChanged(TaskChange _) => this.OnChanged();
+
+    private void OnChanged() => _ = RendererDispatch.Repaint(this.InvokeAsync, this.StateHasChanged);
+}

@@ -1,0 +1,1512 @@
+/* ==========================================================================================================
+   Nordic Paper style pack (ADR-0057). Every rule is scoped to the two Nordic Themes through the marker
+   MainLayout renders, so this file does nothing for any other Theme:
+     :root:has([data-theme-pack="nordic"])        both Nordic Themes
+     :root:has([data-huddle-theme="nordic-dark"]) Nordic Dark only
+   The tokens below mirror 09-nordic-paper/app.css. Each is built from a palette variable MudBlazor emits, so
+   the pack holds no colour literal, and the rest of the file reads like the mockup's own stylesheet.
+   The pack keeps Huddle's own rules where they win over the mockup (alignment doc section 17): the
+   TextPrimary focus ring, the type scale, the 760px transcript, the shell widths, the pinned row heights.
+   ========================================================================================================== */
+
+/* ---- 5. Tokens ------------------------------------------------------------------------------------------ */
+:root:has([data-theme-pack="nordic"]) {
+    /* Faces. Custom-property values, not font-family declarations. */
+    --font-read: "Literata", "Source Serif 4", Georgia, serif;
+    --font-mono: "IBM Plex Mono", ui-monospace, "Cascadia Mono", Consolas, monospace;
+
+    /* Grounds, darkest first: rail, sidebar and wells, page, raised paper. */
+    --n-ribbon: var(--mud-palette-background-gray);
+    --n-sunk: var(--mud-palette-drawer-background);
+    --n-bg: var(--mud-palette-background);
+    --n-elev: var(--mud-palette-surface);
+    --n-hover: var(--mud-palette-table-hover);
+
+    /* Lines: the faint region hairline, and the control border. */
+    --n-line: var(--mud-palette-divider-light);
+    --n-line-strong: var(--mud-palette-lines-inputs);
+
+    /* The ink ladder. */
+    --n-ink: var(--mud-palette-text-primary);
+    --n-ink-2: color-mix(in srgb, var(--mud-palette-text-secondary) 60%, var(--mud-palette-text-primary));
+    --n-ink-3: var(--mud-palette-text-secondary);
+    --n-ink-4: var(--mud-palette-text-disabled);
+
+    /* Accent families. "-ink" is Huddle's accent-ink recipe, 70% toward TextPrimary. */
+    --n-sage: var(--mud-palette-primary);
+    --n-sage-ink: color-mix(in srgb, var(--mud-palette-primary) 70%, var(--mud-palette-text-primary));
+    --n-sage-soft: color-mix(in srgb, var(--mud-palette-primary) 20%, var(--mud-palette-surface));
+    --n-sage-tint: color-mix(in srgb, var(--mud-palette-primary) 10%, var(--mud-palette-surface));
+
+    --n-blue: var(--mud-palette-info);
+    --n-blue-ink: var(--mud-palette-secondary);
+    --n-blue-soft: color-mix(in srgb, var(--mud-palette-info) 20%, var(--mud-palette-surface));
+
+    --n-cloud: var(--mud-palette-warning);
+    --n-cloud-ink: color-mix(in srgb, var(--mud-palette-warning) 55%, var(--mud-palette-text-primary));
+    --n-cloud-soft: color-mix(in srgb, var(--mud-palette-warning) 23%, var(--mud-palette-surface));
+    --n-cloud-tint: color-mix(in srgb, var(--mud-palette-warning) 12%, var(--mud-palette-surface));
+    --n-cloud-line: color-mix(in srgb, var(--mud-palette-warning) 55%, var(--mud-palette-surface));
+
+    --n-heather: var(--mud-palette-tertiary);
+    --n-heather-ink: color-mix(in srgb, var(--mud-palette-tertiary) 70%, var(--mud-palette-text-primary));
+    --n-heather-soft: color-mix(in srgb, var(--mud-palette-tertiary) 20%, var(--mud-palette-surface));
+
+    --n-lichen: var(--mud-palette-success);
+    --n-lichen-ink: color-mix(in srgb, var(--mud-palette-success) 70%, var(--mud-palette-text-primary));
+    --n-lichen-soft: color-mix(in srgb, var(--mud-palette-success) 23%, var(--mud-palette-surface));
+
+    /* Clay (priority) has no palette slot: halfway between Warning and Error. */
+    --n-clay: color-mix(in srgb, var(--mud-palette-warning) 50%, var(--mud-palette-error));
+    --n-clay-ink: color-mix(in srgb, var(--n-clay) 60%, var(--mud-palette-text-primary));
+    --n-clay-soft: color-mix(in srgb, var(--n-clay) 23%, var(--mud-palette-surface));
+
+    --n-danger: var(--mud-palette-error);
+    --n-danger-soft: color-mix(in srgb, var(--mud-palette-error) 21%, var(--mud-palette-surface));
+
+    --n-on-accent: var(--mud-palette-primary-text);
+
+    /* The set's three shadows, which NordicTheme writes into MudBlazor's elevations. */
+    --n-shadow-1: var(--mud-elevation-1);
+    --n-shadow-2: var(--mud-elevation-2);
+    --n-shadow-3: var(--mud-elevation-24);
+
+    /* The ring a cut-out avatar wears: the ground it sits on (section 7.1). Raised paper by default. */
+    --n-ring: var(--mud-palette-surface);
+
+    /* Huddle's own neutral rungs, re-pointed at the set's warm lines and wells. Huddle mixes them from TextPrimary
+       over Surface, which gives cool greys, and roughly forty rules read them. */
+    --ink-strip: var(--mud-palette-drawer-background);
+    --ink-wash: var(--mud-palette-drawer-background);
+    --ink-rule: var(--mud-palette-divider-light);
+    --ink-edge: var(--mud-palette-divider-light);
+    --ink-field: var(--mud-palette-lines-inputs);
+}
+
+/* Dark: the mockup's soft fills are 14 to 15% over the ground and its tints 6 to 7%, and the rail is the darkest
+   step. Its own rail #101316 has no palette slot, so the rail takes the sunk step #121518. */
+:root:has([data-huddle-theme="nordic-dark"]) {
+    --n-ribbon: var(--mud-palette-drawer-background);
+    --n-sage-soft: color-mix(in srgb, var(--mud-palette-primary) 14%, var(--mud-palette-background));
+    --n-sage-tint: color-mix(in srgb, var(--mud-palette-primary) 7%, var(--mud-palette-background));
+    --n-blue-soft: color-mix(in srgb, var(--mud-palette-info) 15%, var(--mud-palette-background));
+    --n-cloud-ink: color-mix(in srgb, var(--mud-palette-warning) 70%, var(--mud-palette-text-primary));
+    --n-cloud-soft: color-mix(in srgb, var(--mud-palette-warning) 15%, var(--mud-palette-background));
+    --n-cloud-tint: color-mix(in srgb, var(--mud-palette-warning) 6%, var(--mud-palette-background));
+    --n-cloud-line: color-mix(in srgb, var(--mud-palette-warning) 38%, var(--mud-palette-background));
+    --n-heather-soft: color-mix(in srgb, var(--mud-palette-tertiary) 15%, var(--mud-palette-background));
+    --n-lichen-soft: color-mix(in srgb, var(--mud-palette-success) 15%, var(--mud-palette-background));
+    --n-clay-ink: color-mix(in srgb, var(--n-clay) 70%, var(--mud-palette-text-primary));
+    --n-clay-soft: color-mix(in srgb, var(--n-clay) 15%, var(--mud-palette-background));
+    --n-danger-soft: color-mix(in srgb, var(--mud-palette-error) 14%, var(--mud-palette-background));
+}
+
+/* ---- 6. Typography ---------------------------------------------------------------------------------------
+   The faces come from NordicTheme (IBM Plex Sans) and the tokens above. Body text is 14px at 1.5 with normal
+   tracking; MudBlazor's own roles carry a small positive letter-spacing the set does not. */
+:root:has([data-theme-pack="nordic"]) body {
+    line-height: 1.5;
+    -webkit-font-smoothing: antialiased;
+    text-rendering: optimizeLegibility;
+}
+
+:root:has([data-theme-pack="nordic"]) body,
+:root:has([data-theme-pack="nordic"]) .mud-typography-body1,
+:root:has([data-theme-pack="nordic"]) .mud-typography-body2,
+:root:has([data-theme-pack="nordic"]) .mud-typography-caption,
+:root:has([data-theme-pack="nordic"]) .mud-typography-subtitle1,
+:root:has([data-theme-pack="nordic"]) .mud-typography-subtitle2,
+:root:has([data-theme-pack="nordic"]) .mud-button-root {
+    letter-spacing: normal;
+}
+
+:root:has([data-theme-pack="nordic"]) ::selection {
+    background: var(--n-sage-soft);
+}
+
+/* ---- 7.1 Grounds ----------------------------------------------------------------------------------------
+   Surface is the white raised paper in Nordic, so every region that is ground, not paper, is repainted. */
+:root:has([data-theme-pack="nordic"]) body,
+:root:has([data-theme-pack="nordic"]) .mud-layout,
+:root:has([data-theme-pack="nordic"]) .mud-main-content,
+:root:has([data-theme-pack="nordic"]) .mud-appbar.top-bar,
+:root:has([data-theme-pack="nordic"]) .mud-drawer.mud-drawer.right-sidebar,
+:root:has([data-theme-pack="nordic"]) .resizable-drawer-footer,
+:root:has([data-theme-pack="nordic"]) .settings-prompts-actions,
+:root:has([data-theme-pack="nordic"]) .task-board-columns,
+:root:has([data-theme-pack="nordic"]) .mud-data-grid.task-list-grid .mud-table-cell.mud-datagrid-group,
+:root:has([data-theme-pack="nordic"]) .library-editor .cm-editor {
+    background-color: var(--n-bg);
+}
+
+:root:has([data-theme-pack="nordic"]) .mud-drawer.mud-drawer.shell-nav,
+:root:has([data-theme-pack="nordic"]) .library-explorer-tree-header {
+    background-color: var(--n-sunk);
+}
+
+/* Cut-out rings match the ground the avatar sits on, or a white halo appears on birch. */
+:root:has([data-theme-pack="nordic"]) .message-list .agent-dot.on-avatar,
+:root:has([data-theme-pack="nordic"]) .room-header .mud-avatar-group .mud-avatar {
+    --n-ring: var(--mud-palette-background);
+}
+
+:root:has([data-theme-pack="nordic"]) .shell-nav .agent-dot.on-avatar {
+    --n-ring: var(--mud-palette-drawer-background);
+}
+
+:root:has([data-theme-pack="nordic"]) .agent-dot.on-avatar {
+    box-shadow: 0 0 0 2px var(--n-ring);
+}
+
+:root:has([data-theme-pack="nordic"]) .mud-avatar-group.mud-avatar-group-outlined .mud-avatar.mud-avatar-small {
+    border-color: var(--n-ring);
+}
+
+/* ---- 7.2 The rail ---------------------------------------------------------------------------------------
+   The darkest ground, 36px buttons, and the current item as a white tile with the paper shadow and a 3px sage
+   bar hugging the rail's left edge. */
+:root:has([data-theme-pack="nordic"]) .activity-bar {
+    background-color: var(--n-ribbon);
+    border-inline-end: 1px solid var(--n-line);
+}
+
+:root:has([data-theme-pack="nordic"]) .activity-bar-item.mud-icon-button,
+:root:has([data-theme-pack="nordic"]) .activity-bar .nav-settings .mud-nav-link {
+    position: relative;
+    width: 36px;
+    height: 36px;
+    min-height: 36px;
+    margin: 4px auto;
+    border-radius: var(--mud-default-borderradius);
+    color: var(--n-ink-3);
+    transition: background-color .15s, color .15s, box-shadow .15s;
+}
+
+:root:has([data-theme-pack="nordic"]) .activity-bar-item.mud-icon-button .mud-icon-root {
+    width: 19px;
+    height: 19px;
+}
+
+:root:has([data-theme-pack="nordic"]) .activity-bar-item.mud-icon-button:hover,
+:root:has([data-theme-pack="nordic"]) .activity-bar .nav-settings .mud-nav-link:hover {
+    background-color: var(--n-hover);
+    color: var(--n-ink);
+}
+
+:root:has([data-theme-pack="nordic"]) .activity-bar-item.activity-bar-item-selected,
+:root:has([data-theme-pack="nordic"]) .activity-bar-item.activity-bar-item-selected:hover,
+:root:has([data-theme-pack="nordic"]) .activity-bar-item.activity-bar-item-selected:focus-visible,
+:root:has([data-theme-pack="nordic"]) .activity-bar .nav-settings .mud-nav-link.active {
+    background-color: var(--n-elev);
+    color: var(--n-sage);
+    box-shadow: var(--n-shadow-1);
+}
+
+:root:has([data-theme-pack="nordic"]) .activity-bar-item.activity-bar-item-selected::before,
+:root:has([data-theme-pack="nordic"]) .activity-bar .nav-settings .mud-nav-link.active::before {
+    content: "";
+    position: absolute;
+    left: -6px;
+    top: 9px;
+    bottom: 9px;
+    width: 3px;
+    border-radius: 0 calc(var(--mud-default-borderradius) * .375) calc(var(--mud-default-borderradius) * .375) 0;
+    background: var(--n-sage);
+}
+
+/* ---- 7.3 Sidebar ----------------------------------------------------------------------------------------
+   The sunk ground; uppercase micro-label heads; rows in ink-2; the current row a white tile with ink text and only
+   its icon in sage. */
+:root:has([data-theme-pack="nordic"]) .mud-drawer.mud-drawer.shell-nav {
+    border-inline-end: 1px solid var(--n-line);
+}
+
+:root:has([data-theme-pack="nordic"]) .sidebar-views {
+    border-inline-start: 0;
+    padding: 8px 8px 16px;
+}
+
+:root:has([data-theme-pack="nordic"]) .mud-nav-group > .mud-nav-link .mud-nav-link-text,
+:root:has([data-theme-pack="nordic"]) .needs-you-heading {
+    font-size: var(--mud-typography-overline-size);
+    font-weight: 600;
+    letter-spacing: .06em;
+    text-transform: uppercase;
+    color: var(--n-ink-3);
+}
+
+:root:has([data-theme-pack="nordic"]) .mud-nav-group > .mud-nav-link {
+    margin-top: 16px;
+    margin-bottom: 0;
+}
+
+:root:has([data-theme-pack="nordic"]) .mud-drawer .mud-navmenu .mud-nav-link {
+    border-radius: calc(var(--mud-default-borderradius) * .75);
+    color: var(--n-ink-2);
+    transition: background-color .15s, color .15s, box-shadow .15s;
+}
+
+:root:has([data-theme-pack="nordic"]) .mud-drawer .mud-nav-link:not(.mud-nav-link-disabled) .mud-nav-link-icon.mud-nav-link-icon-default {
+    color: var(--n-ink-4);
+}
+
+:root:has([data-theme-pack="nordic"]) .mud-drawer .mud-navmenu .mud-nav-link:hover:not(.active) {
+    background-color: var(--n-hover);
+    color: var(--n-ink);
+}
+
+:root:has([data-theme-pack="nordic"]) .mud-drawer .mud-navmenu .mud-nav-link.active:not(.mud-nav-link-disabled),
+:root:has([data-theme-pack="nordic"]) .mud-drawer .mud-navmenu .mud-nav-link.active:not(.mud-nav-link-disabled):hover:not(.mud-nav-link-disabled),
+:root:has([data-theme-pack="nordic"]) .mud-drawer .mud-navmenu .mud-nav-link.active:not(.mud-nav-link-disabled):focus-visible:not(.mud-nav-link-disabled),
+:root:has([data-theme-pack="nordic"]) .mud-drawer .mud-navmenu .mud-nav-link.active:not(.mud-nav-link-disabled):active:not(.mud-nav-link-disabled) {
+    background-color: var(--n-elev);
+    box-shadow: var(--n-shadow-1);
+    color: var(--n-ink);
+    font-weight: 500;
+}
+
+:root:has([data-theme-pack="nordic"]) .mud-drawer .mud-navmenu .mud-nav-link.active:not(.mud-nav-link-disabled) .mud-nav-link-icon,
+:root:has([data-theme-pack="nordic"]) .mud-drawer .mud-navmenu .mud-nav-link.active:not(.mud-nav-link-disabled) .mud-nav-link-icon.mud-nav-link-icon-default {
+    color: var(--n-sage);
+}
+
+:root:has([data-theme-pack="nordic"]) .mud-drawer .mud-navmenu .mud-nav-link.active .sidebar-row-label {
+    color: inherit;
+}
+
+/* Text that the mockup sets in ink-4 (times, counts, row meta) takes ink-3 here: ink-4 is TextDisabled, 3.74:1 on
+   the dark ground, and Huddle keeps it for icons and disabled controls. */
+:root:has([data-theme-pack="nordic"]) .sidebar-row-meta {
+    font-size: var(--mud-typography-caption-size);
+    font-weight: 500;
+    color: var(--n-ink-3);
+}
+
+:root:has([data-theme-pack="nordic"]) .needs-you-count {
+    min-width: 18px;
+    padding: 0 4px;
+    border-radius: 999px;
+    text-align: center;
+    background: var(--n-cloud-soft);
+    color: var(--n-cloud-ink);
+    font-weight: 600;
+}
+
+:root:has([data-theme-pack="nordic"]) .needs-you-card.mud-paper {
+    background: var(--n-cloud-tint);
+    border: 1px solid var(--n-cloud-line);
+    border-radius: var(--mud-default-borderradius);
+    box-shadow: none;
+}
+
+/* ---- 7.4 Top bar ---------------------------------------------------------------------------------------- */
+:root:has([data-theme-pack="nordic"]) .mud-appbar.top-bar {
+    border-bottom: 1px solid var(--n-line);
+    box-shadow: none;
+}
+
+:root:has([data-theme-pack="nordic"]) .page-breadcrumbs-list {
+    font-size: var(--mud-typography-body2-size);
+    color: var(--n-ink-3);
+}
+
+:root:has([data-theme-pack="nordic"]) .page-breadcrumbs-list .mud-breadcrumb-item:first-child {
+    color: var(--n-ink);
+    font-weight: 600;
+}
+
+:root:has([data-theme-pack="nordic"]) .search-bar .mud-input.mud-input-outlined {
+    height: 32px;
+    background: var(--n-sunk);
+    border-radius: var(--mud-default-borderradius);
+}
+
+:root:has([data-theme-pack="nordic"]) .search-bar .mud-input.mud-input-outlined .mud-input-outlined-border {
+    border-color: var(--n-line);
+}
+
+:root:has([data-theme-pack="nordic"]) .search-bar .mud-input-control .mud-input.mud-input-outlined:focus-within {
+    background: var(--n-elev);
+}
+
+:root:has([data-theme-pack="nordic"]) .search-bar .mud-input.mud-input-outlined:focus-within .mud-input-outlined-border {
+    border-color: var(--n-blue);
+}
+
+:root:has([data-theme-pack="nordic"]) .search-shortcut-hint {
+    font-family: var(--font-mono);
+    font-size: var(--mud-typography-overline-size);
+    padding: 0 4px;
+    border: 1px solid var(--n-line-strong);
+    border-bottom-width: 2px;
+    border-radius: calc(var(--mud-default-borderradius) * .5);
+    background: var(--n-elev);
+    color: var(--n-ink-3);
+}
+
+:root:has([data-theme-pack="nordic"]) .top-bar-end .mud-icon-button {
+    width: 30px;
+    height: 30px;
+    border-radius: var(--mud-default-borderradius);
+    color: var(--n-ink-3);
+}
+
+:root:has([data-theme-pack="nordic"]) .top-bar-end .mud-icon-button:hover {
+    background: var(--n-hover);
+    color: var(--n-ink);
+}
+
+/* The "N Tasks need you" pill: cloud, the set's "Needs you" signal, with a dot in a soft halo. */
+:root:has([data-theme-pack="nordic"]) .tasks-need-you-pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    height: 30px;
+    padding: 0 12px;
+    margin-inline-end: 8px;
+    border: 1px solid var(--n-cloud-line);
+    border-radius: 999px;
+    background: var(--n-cloud-soft);
+    color: var(--n-cloud-ink);
+    font-size: var(--mud-typography-caption-size);
+    font-weight: 600;
+    text-decoration: none;
+    white-space: nowrap;
+    transition: background-color .15s;
+}
+
+:root:has([data-theme-pack="nordic"]) .tasks-need-you-pill:hover {
+    background: var(--n-cloud-tint);
+}
+
+:root:has([data-theme-pack="nordic"]) .tasks-need-you-dot {
+    width: 7px;
+    height: 7px;
+    border-radius: 50%;
+    background: var(--n-cloud);
+    box-shadow: 0 0 0 3px color-mix(in srgb, var(--n-cloud) 25%, transparent);
+}
+
+/* ---- 7.5 The tab strip ----------------------------------------------------------------------------------
+   As quiet as possible: the ground, faint hairlines, the active tab a white tile. It keeps Huddle's 2px Primary top
+   edge, the accessible "which tab" signal, because white on birch alone is 1.08:1. */
+:root:has([data-theme-pack="nordic"]) .tab-strip {
+    background-color: var(--n-bg);
+    box-shadow: inset 0 -1px 0 var(--n-line);
+}
+
+:root:has([data-theme-pack="nordic"]) .tab-item {
+    border-right-color: var(--n-line);
+    color: var(--n-ink-3);
+}
+
+:root:has([data-theme-pack="nordic"]) .tab-item:not(.active):hover {
+    background-color: var(--n-hover);
+    color: var(--n-ink);
+}
+
+:root:has([data-theme-pack="nordic"]) .tab-item.active {
+    background-color: var(--n-elev);
+    color: var(--n-ink);
+}
+
+/* ---- 7.6 Page header ------------------------------------------------------------------------------------
+   Page titles are the h6 role (16px) rather than h5 (20px): the set's 17px title, snapped to the scale. */
+:root:has([data-theme-pack="nordic"]) .page-header-h1.mud-typography {
+    font-size: var(--mud-typography-h6-size);
+    line-height: var(--mud-typography-h6-lineheight);
+    letter-spacing: -.005em;
+}
+
+:root:has([data-theme-pack="nordic"]) .page-header.has-chrome {
+    border-bottom-color: var(--n-line);
+}
+
+/* ---- 8.1 Room header ------------------------------------------------------------------------------------ */
+:root:has([data-theme-pack="nordic"]) .room-kind-chip {
+    display: inline-flex;
+    align-items: center;
+    height: 20px;
+    padding: 0 8px;
+    border: 1px solid var(--n-line-strong);
+    border-radius: 999px;
+    background: var(--n-elev);
+    color: var(--n-ink-2);
+    font-size: var(--mud-typography-overline-size);
+    font-weight: 600;
+    letter-spacing: .03em;
+}
+
+:root:has([data-theme-pack="nordic"]) .room-members-label {
+    color: var(--n-ink-3);
+}
+
+/* ---- 8.2 Transcript rows --------------------------------------------------------------------------------
+   A row tints sage on hover; the 8px spread imitates the mockup's full-bleed tint without moving the pinned layout. */
+:root:has([data-theme-pack="nordic"]) .message-row {
+    border-radius: var(--mud-default-borderradius);
+    transition: background-color .15s, box-shadow .15s;
+}
+
+:root:has([data-theme-pack="nordic"]) .message-row:hover {
+    background: var(--n-sage-tint);
+    box-shadow: 0 0 0 8px var(--n-sage-tint);
+}
+
+:root:has([data-theme-pack="nordic"]) .message-sender {
+    font-size: var(--mud-typography-body1-size);
+}
+
+:root:has([data-theme-pack="nordic"]) .message-time {
+    color: var(--n-ink-3);
+    font-variant-numeric: tabular-nums;
+}
+
+:root:has([data-theme-pack="nordic"]) .message-body {
+    line-height: 1.5;
+}
+
+:root:has([data-theme-pack="nordic"]) .message-body p + p {
+    margin-top: 4px;
+}
+
+/* The Human's own Message is the same left-aligned row as a Teammate's: avatar, name, time, body. No bubbles. */
+:root:has([data-theme-pack="nordic"]) .message-row.human {
+    display: grid;
+    grid-template-columns: auto 1fr;
+    column-gap: 12px;
+    align-items: start;
+}
+
+:root:has([data-theme-pack="nordic"]) .message-row.human > .profile-avatar,
+:root:has([data-theme-pack="nordic"]) .message-row.human > .message-gutter {
+    grid-column: 1;
+    grid-row: 1 / span 3;
+}
+
+:root:has([data-theme-pack="nordic"]) .message-row.human > .profile-avatar {
+    display: flex;
+}
+
+:root:has([data-theme-pack="nordic"]) .message-row.human > .message-gutter {
+    display: block;
+}
+
+:root:has([data-theme-pack="nordic"]) .message-row.human > .message-meta {
+    display: flex;
+    grid-column: 2;
+}
+
+:root:has([data-theme-pack="nordic"]) .message-row.human > .message-bubble,
+:root:has([data-theme-pack="nordic"]) .message-row.human > .message-references {
+    grid-column: 2;
+}
+
+:root:has([data-theme-pack="nordic"]) .message-row.human .message-references {
+    justify-content: flex-start;
+}
+
+:root:has([data-theme-pack="nordic"]) .message-bubble.message-body {
+    max-width: 75ch;
+    padding: 0;
+    background: none;
+    border: 0;
+    border-radius: 0;
+}
+
+/* ---- 8.3 Inline marks in messages ----------------------------------------------------------------------- */
+
+/* A wiki link is a sage highlighter band with grey brackets; it fills on hover. */
+:root:has([data-theme-pack="nordic"]) .library-ref {
+    color: var(--n-sage-ink);
+    font-weight: 500;
+    text-decoration: none;
+    padding: 0 1px;
+    border-radius: calc(var(--mud-default-borderradius) * .25);
+    background: linear-gradient(var(--n-sage-soft), var(--n-sage-soft)) 0 100% / 100% .42em no-repeat;
+    transition: background-size .15s;
+}
+
+:root:has([data-theme-pack="nordic"]) .library-ref:hover {
+    background-size: 100% 100%;
+}
+
+:root:has([data-theme-pack="nordic"]) .library-ref.library-ref-missing {
+    color: var(--n-ink-3);
+    background: none;
+    text-decoration: underline dotted;
+}
+
+/* A Task reference is a blue chip with a mono id; Room and Team references are the same chip in sage. */
+:root:has([data-theme-pack="nordic"]) .task-ref,
+:root:has([data-theme-pack="nordic"]) a.room-ref,
+:root:has([data-theme-pack="nordic"]) a.team-ref {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 0 8px 0 4px;
+    border-radius: calc(var(--mud-default-borderradius) * .75);
+    border: 1px solid color-mix(in srgb, var(--n-blue) 30%, var(--n-line));
+    background: var(--n-blue-soft);
+    color: var(--n-blue-ink);
+    font-size: var(--mud-typography-body2-size);
+    font-weight: 500;
+    text-decoration: none;
+    line-height: 20px;
+}
+
+:root:has([data-theme-pack="nordic"]) a.room-ref,
+:root:has([data-theme-pack="nordic"]) a.team-ref {
+    border-color: color-mix(in srgb, var(--n-sage) 28%, var(--n-line));
+    background: var(--n-sage-tint);
+    color: var(--n-sage-ink);
+}
+
+:root:has([data-theme-pack="nordic"]) .task-ref .task-id {
+    font-family: var(--font-mono);
+    font-size: var(--mud-typography-caption-size);
+}
+
+/* A Mention is a blue pill; a Mention of the Human is the cloud "needs you" pill. */
+:root:has([data-theme-pack="nordic"]) .mention {
+    color: var(--n-blue-ink);
+    background: var(--n-blue-soft);
+    padding: 0 4px;
+    border-radius: calc(var(--mud-default-borderradius) * .5);
+    font-weight: 500;
+}
+
+:root:has([data-theme-pack="nordic"]) .mention.mention--me {
+    color: var(--n-cloud-ink);
+    background: var(--n-cloud-soft);
+}
+
+:root:has([data-theme-pack="nordic"]) .message-body code {
+    font-family: var(--font-mono);
+    background: none;
+}
+
+/* A quote is Literata italic on blue-soft with a 3px blue bar. */
+:root:has([data-theme-pack="nordic"]) .message-body blockquote {
+    margin: 8px 0 0;
+    padding: 4px 12px;
+    border-left: 3px solid var(--n-blue);
+    border-radius: 0 calc(var(--mud-default-borderradius) * .75) calc(var(--mud-default-borderradius) * .75) 0;
+    background: var(--n-blue-soft);
+    color: var(--n-ink-2);
+    font-family: var(--font-read);
+    font-style: italic;
+}
+
+/* A tool-call summary is a sunk well; a live one tints sage. */
+:root:has([data-theme-pack="nordic"]) .turn-detail {
+    padding: 8px 12px;
+    border: 1px solid var(--n-line);
+    border-radius: var(--mud-default-borderradius);
+    background: var(--n-sunk);
+    color: var(--n-ink-2);
+}
+
+:root:has([data-theme-pack="nordic"]) .message-row.streaming .turn-detail {
+    background: var(--n-sage-tint);
+    border-color: color-mix(in srgb, var(--n-sage) 45%, var(--n-line));
+}
+
+/* Agent, proposal and question cards are white paper with no shadow. */
+:root:has([data-theme-pack="nordic"]) .mud-paper.agent-card {
+    background: var(--n-elev);
+    border: 1px solid var(--n-line);
+    border-radius: calc(var(--mud-default-borderradius) * 1.5);
+    box-shadow: none;
+}
+
+/* Notices are the set's banner: cloud tint, a cloud line, a 3px cloud bar on the left. */
+:root:has([data-theme-pack="nordic"]) .budget-prompt,
+:root:has([data-theme-pack="nordic"]) .member-health-alert {
+    background: var(--n-cloud-tint);
+    border: 1px solid var(--n-cloud-line);
+    border-left: 3px solid var(--n-cloud);
+    border-radius: calc(var(--mud-default-borderradius) * 1.5);
+}
+
+/* ---- 8.4 Composer ---------------------------------------------------------------------------------------
+   The box is the paper, the textarea inside it has no border, and its bottom 40px is a tool row with attach on the
+   left and a green Send on the right. The stream fades under it. */
+:root:has([data-theme-pack="nordic"]) .composer {
+    border-top: 0;
+    padding: 8px 24px 16px;
+    background: linear-gradient(transparent, var(--n-bg) 22%);
+}
+
+:root:has([data-theme-pack="nordic"]) .composer-box {
+    background: var(--n-elev);
+    border: 1px solid var(--n-line-strong);
+    border-radius: calc(var(--mud-default-borderradius) * 1.5);
+    box-shadow: var(--n-shadow-2);
+    padding-bottom: 40px;
+    transition: border-color .15s;
+}
+
+:root:has([data-theme-pack="nordic"]) .composer-box:focus-within {
+    border-color: var(--n-blue);
+}
+
+:root:has([data-theme-pack="nordic"]) .composer-input,
+:root:has([data-theme-pack="nordic"]) .composer-box-attach .composer-input {
+    border: 0;
+    box-shadow: none;
+    background: transparent;
+    padding: 12px 16px 4px;
+    line-height: 1.5;
+}
+
+:root:has([data-theme-pack="nordic"]) .composer-input:focus-visible {
+    border: 0;
+    box-shadow: none;
+}
+
+:root:has([data-theme-pack="nordic"]) .composer-input::placeholder {
+    color: var(--n-ink-3);
+}
+
+:root:has([data-theme-pack="nordic"]) .composer-attach {
+    left: 8px;
+    right: auto;
+    bottom: 4px;
+}
+
+:root:has([data-theme-pack="nordic"]) .composer-send {
+    right: 8px;
+    bottom: 8px;
+}
+
+/* Send is a small sage button with its word. The label sits over the button and lets clicks through to it. */
+:root:has([data-theme-pack="nordic"]) .composer-send .mud-icon-button {
+    height: 26px;
+    width: auto;
+    padding: 0 48px 0 8px;
+    border-radius: var(--mud-default-borderradius);
+    background: var(--n-sage);
+    color: var(--n-on-accent);
+}
+
+:root:has([data-theme-pack="nordic"]) .composer-send .mud-icon-button:hover {
+    background: var(--n-sage-ink);
+}
+
+:root:has([data-theme-pack="nordic"]) .composer-send .mud-icon-button .mud-icon-root {
+    width: 16px;
+    height: 16px;
+}
+
+:root:has([data-theme-pack="nordic"]) .composer-send-label {
+    display: block;
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    right: 12px;
+    line-height: 26px;
+    pointer-events: none;
+    color: var(--n-on-accent);
+    font-size: var(--mud-typography-body2-size);
+    font-weight: 500;
+}
+
+/* The @ picker is white paper with a sunk head; the active row is blue-soft with a 2px blue edge. */
+:root:has([data-theme-pack="nordic"]) .composer-picker {
+    background: var(--n-elev);
+    border: 1px solid var(--n-line-strong);
+    border-radius: var(--mud-default-borderradius);
+    box-shadow: var(--n-shadow-2);
+}
+
+/* ---- 9. Right sidebar -----------------------------------------------------------------------------------
+   The ground, a faint left hairline, sections divided by a hairline, uppercase micro-label titles. */
+:root:has([data-theme-pack="nordic"]) .mud-drawer.mud-drawer.right-sidebar {
+    border-inline-start: 1px solid var(--n-line);
+}
+
+:root:has([data-theme-pack="nordic"]) .right-sidebar .mud-drawer-content {
+    padding: 12px 16px 24px;
+}
+
+:root:has([data-theme-pack="nordic"]) .sidebar-panel + .sidebar-panel {
+    margin-top: 12px;
+    padding-top: 12px;
+    border-top: 1px solid var(--n-line);
+}
+
+:root:has([data-theme-pack="nordic"]) .sidebar-panel-title {
+    font-size: var(--mud-typography-overline-size);
+    font-weight: 600;
+    letter-spacing: .06em;
+    text-transform: uppercase;
+    color: var(--n-ink-3);
+}
+
+:root:has([data-theme-pack="nordic"]) .sidebar-panel-header > .mud-icon-root:first-child {
+    display: none;
+}
+
+:root:has([data-theme-pack="nordic"]) .sidebar-panel-count {
+    color: var(--n-ink-3);
+    font-weight: 500;
+}
+
+:root:has([data-theme-pack="nordic"]) .members-row.sidebar-row {
+    min-height: 44px;
+    padding: 4px;
+    gap: 8px;
+    border-radius: var(--mud-default-borderradius);
+}
+
+:root:has([data-theme-pack="nordic"]) .members-row .members-name {
+    font-weight: 600;
+    font-size: var(--mud-typography-body2-size);
+}
+
+:root:has([data-theme-pack="nordic"]) .sidebar-row:hover {
+    background: var(--n-hover);
+}
+
+:root:has([data-theme-pack="nordic"]) .room-task-id {
+    font-family: var(--font-mono);
+    color: var(--n-blue-ink);
+}
+
+/* ---- 10. Avatars ---------------------------------------------------------------------------------------- */
+:root:has([data-theme-pack="nordic"]) .avatar-monogram {
+    letter-spacing: .01em;
+}
+
+/* ---- 11. Library ---------------------------------------------------------------------------------------- */
+:root:has([data-theme-pack="nordic"]) .library-explorer-tree-header {
+    border-bottom-color: var(--n-line);
+}
+
+/* The tree pane sits on the sunk step and the document on the page ground; the split is a faint hairline. */
+:root:has([data-theme-pack="nordic"]) .library-explorer-split > .child-panel {
+    background-color: var(--n-bg);
+}
+
+:root:has([data-theme-pack="nordic"]) .library-explorer-split > .child-panel:first-child {
+    background-color: var(--n-sunk);
+}
+
+:root:has([data-theme-pack="nordic"]) .library-explorer-split > .divider {
+    background-color: var(--n-line);
+}
+
+:root:has([data-theme-pack="nordic"]) .library-tree.mud-treeview {
+    font-size: var(--mud-typography-body2-size);
+    color: var(--n-ink-2);
+}
+
+:root:has([data-theme-pack="nordic"]) .library-tree .mud-treeview-item-content {
+    border-radius: calc(var(--mud-default-borderradius) * .75);
+}
+
+:root:has([data-theme-pack="nordic"]) .library-tree .mud-treeview-item-icon {
+    color: var(--n-ink-4);
+}
+
+/* The tree's current file is sage-soft, not the white tile: the mockup's one exception. */
+:root:has([data-theme-pack="nordic"]) .library-tree .mud-treeview-item-content.mud-treeview-item-selected {
+    background: var(--n-sage-soft);
+    color: var(--n-sage-ink);
+    font-weight: 500;
+    box-shadow: none;
+}
+
+:root:has([data-theme-pack="nordic"]) .library-tree .mud-treeview-group {
+    border-color: var(--n-line);
+}
+
+:root:has([data-theme-pack="nordic"]) .library-document-toolbar {
+    background-color: var(--n-bg);
+    border-bottom-color: var(--n-line);
+}
+
+:root:has([data-theme-pack="nordic"]) .library-document-path {
+    font-family: var(--font-mono);
+    font-size: var(--mud-typography-caption-size);
+    color: var(--n-ink-3);
+}
+
+/* The reading view: Literata prose at the Library's 16px with a 1.72 line, a 32px serif title. */
+:root:has([data-theme-pack="nordic"]) .library-rendered {
+    font-family: var(--font-read);
+    line-height: 1.72;
+}
+
+:root:has([data-theme-pack="nordic"]) .library-rendered > * + * {
+    margin-top: 12px;
+}
+
+:root:has([data-theme-pack="nordic"]) .library-rendered h1,
+:root:has([data-theme-pack="nordic"]) .library-rendered h2,
+:root:has([data-theme-pack="nordic"]) .library-rendered h3 {
+    font-family: var(--font-read);
+    font-weight: 600;
+}
+
+:root:has([data-theme-pack="nordic"]) .library-rendered h1 {
+    font-size: calc(1em * 2);
+    line-height: 1.2;
+    letter-spacing: -.01em;
+    margin: 0 0 12px;
+}
+
+:root:has([data-theme-pack="nordic"]) .library-rendered h2 {
+    font-size: calc(1em * 1.375);
+    line-height: 1.3;
+    letter-spacing: -.005em;
+    margin: 32px 0 0;
+}
+
+:root:has([data-theme-pack="nordic"]) .library-rendered h3 {
+    font-size: calc(1em * 1.09);
+    margin: 24px 0 0;
+}
+
+:root:has([data-theme-pack="nordic"]) .library-rendered ul li::marker {
+    color: var(--n-sage);
+}
+
+:root:has([data-theme-pack="nordic"]) .library-rendered blockquote {
+    margin: 24px 0;
+    padding: 12px 16px;
+    border-left: 3px solid var(--n-blue);
+    border-radius: 0 var(--mud-default-borderradius) var(--mud-default-borderradius) 0;
+    background: var(--n-blue-soft);
+    color: var(--n-ink-2);
+    font-style: italic;
+}
+
+:root:has([data-theme-pack="nordic"]) .library-rendered pre {
+    background: var(--n-sunk);
+    border: 1px solid var(--n-line);
+    border-radius: var(--mud-default-borderradius);
+    font-family: var(--font-mono);
+    font-size: calc(1em * .78);
+    line-height: 1.65;
+}
+
+:root:has([data-theme-pack="nordic"]) .library-rendered code {
+    font-family: var(--font-mono);
+    font-size: calc(1em * .82);
+    background: var(--n-sunk);
+    border: 1px solid var(--n-line);
+    padding: 1px 4px;
+    border-radius: calc(var(--mud-default-borderradius) * .5);
+}
+
+:root:has([data-theme-pack="nordic"]) .library-rendered pre code {
+    font-size: inherit;
+    background: none;
+    border: 0;
+    padding: 0;
+}
+
+:root:has([data-theme-pack="nordic"]) .library-rendered table {
+    border: 1px solid var(--n-line);
+    border-radius: var(--mud-default-borderradius);
+    font-family: var(--mud-typography-default-family);
+    font-size: var(--mud-typography-body2-size);
+}
+
+:root:has([data-theme-pack="nordic"]) .library-rendered th {
+    background: var(--n-sunk);
+    color: var(--n-ink-3);
+    font-weight: 600;
+    font-size: var(--mud-typography-caption-size);
+}
+
+/* Wiki links inside serif prose switch back to the UI face, as in the mockup. */
+:root:has([data-theme-pack="nordic"]) .library-rendered .library-ref {
+    font-family: var(--mud-typography-default-family);
+    font-size: calc(1em * .9);
+}
+
+/* The properties well: sunk, mono keys, dashed row rules. */
+:root:has([data-theme-pack="nordic"]) .library-properties {
+    background: var(--n-sunk);
+    border: 1px solid var(--n-line);
+    border-radius: var(--mud-default-borderradius);
+    padding: 12px 16px;
+    font-size: var(--mud-typography-body2-size);
+    box-shadow: none;
+}
+
+:root:has([data-theme-pack="nordic"]) .library-properties dt,
+:root:has([data-theme-pack="nordic"]) .library-properties th {
+    font-family: var(--font-mono);
+    font-size: var(--mud-typography-caption-size);
+    color: var(--n-ink-3);
+}
+
+/* The outline is a left rail: the current heading carries a sage edge, not a tint. */
+:root:has([data-theme-pack="nordic"]) .outline-row {
+    border-left: 2px solid var(--n-line);
+    border-radius: 0;
+    color: var(--n-ink-2);
+    background: none;
+}
+
+:root:has([data-theme-pack="nordic"]) .outline-row.active,
+:root:has([data-theme-pack="nordic"]) .outline-row[aria-current] {
+    border-left-color: var(--n-sage);
+    color: var(--n-sage-ink);
+    font-weight: 500;
+    background: none;
+}
+
+:root:has([data-theme-pack="nordic"]) .library-backlinks .mud-paper,
+:root:has([data-theme-pack="nordic"]) .library-backlink {
+    background: var(--n-elev);
+    border: 1px solid var(--n-line);
+    border-radius: var(--mud-default-borderradius);
+}
+
+/* ---- 12.1 Tasks toolbar and filters --------------------------------------------------------------------- */
+:root:has([data-theme-pack="nordic"]) .tasks-counts {
+    color: var(--n-ink-3);
+}
+
+:root:has([data-theme-pack="nordic"]) .tasks-count-need-you {
+    color: var(--n-cloud-ink);
+    font-weight: 600;
+}
+
+:root:has([data-theme-pack="nordic"]) .task-toolbar.toolbar-hairline {
+    border-bottom-color: var(--n-line);
+}
+
+:root:has([data-theme-pack="nordic"]) .task-filter-chip.task-filter-chip-set,
+:root:has([data-theme-pack="nordic"]) .mud-chip.filter-chip.filter-chip-set {
+    border-style: solid;
+    border-color: color-mix(in srgb, var(--n-sage) 45%, var(--n-line));
+    background: var(--n-sage-tint);
+    color: var(--n-sage-ink);
+}
+
+/* ---- 12.2 Board: sunk lanes, white cards ---------------------------------------------------------------- */
+:root:has([data-theme-pack="nordic"]) .task-board-column {
+    background: var(--n-sunk);
+    border: 1px solid var(--n-line);
+    border-radius: calc(var(--mud-default-borderradius) * 1.5);
+}
+
+:root:has([data-theme-pack="nordic"]) .task-board-column-label {
+    font-size: var(--mud-typography-body2-size);
+    font-weight: 600;
+    color: var(--n-ink-2);
+}
+
+:root:has([data-theme-pack="nordic"]) .task-board-column-count {
+    color: var(--n-ink-3);
+    font-variant-numeric: tabular-nums;
+}
+
+:root:has([data-theme-pack="nordic"]) .task-card {
+    background: var(--n-elev);
+    border: 1px solid var(--n-line);
+    border-radius: var(--mud-default-borderradius);
+    box-shadow: var(--n-shadow-1);
+    padding: 8px 12px;
+    transition: box-shadow .15s, border-color .15s;
+}
+
+:root:has([data-theme-pack="nordic"]) .task-card:hover {
+    border-color: var(--n-line-strong);
+    box-shadow: var(--n-shadow-2);
+}
+
+:root:has([data-theme-pack="nordic"]) .task-card-id {
+    font-family: var(--font-mono);
+    font-size: var(--mud-typography-overline-size);
+    color: var(--n-ink-3);
+}
+
+:root:has([data-theme-pack="nordic"]) .task-card-title {
+    font-size: var(--mud-typography-body2-size);
+    font-weight: 500;
+    line-height: 1.4;
+}
+
+:root:has([data-theme-pack="nordic"]) .task-card-assignee-row {
+    border-top: 1px solid var(--n-line);
+    padding-top: 8px;
+    margin-top: 8px;
+    color: var(--n-ink-3);
+    font-size: var(--mud-typography-caption-size);
+}
+
+:root:has([data-theme-pack="nordic"]) .task-board-lane-heading.group-heading {
+    border-bottom-color: var(--n-line);
+    font-size: var(--mud-typography-body2-size);
+    color: var(--n-ink-2);
+}
+
+/* The selected card speaks the set's selected-row language: blue-soft with a 3px blue inset bar. */
+:root:has([data-theme-pack="nordic"]) .task-card.task-card-selected {
+    background: var(--n-blue-soft);
+    box-shadow: inset 3px 0 0 var(--n-blue), var(--n-shadow-1);
+}
+
+:root:has([data-theme-pack="nordic"]) .task-card-dragging {
+    transform: rotate(-2.2deg);
+    box-shadow: var(--n-shadow-3);
+    border-color: var(--n-blue);
+}
+
+/* ---- 12.3 List: an open table ---------------------------------------------------------------------------- */
+:root:has([data-theme-pack="nordic"]) .mud-table.task-list-grid .mud-table-head .mud-table-cell {
+    font-size: var(--mud-typography-overline-size);
+    font-weight: 600;
+    letter-spacing: .05em;
+    text-transform: uppercase;
+    color: var(--n-ink-3);
+    background: var(--n-bg);
+}
+
+:root:has([data-theme-pack="nordic"]) .mud-table .mud-table-cell {
+    border-bottom-color: var(--n-line);
+}
+
+:root:has([data-theme-pack="nordic"]) .mud-table.task-list-grid .mud-table-body .mud-table-row:hover .mud-table-cell {
+    background: var(--n-sage-tint);
+}
+
+:root:has([data-theme-pack="nordic"]) .task-list-grid .task-list-id-cell {
+    font-family: var(--font-mono);
+    color: var(--n-ink-3);
+}
+
+:root:has([data-theme-pack="nordic"]) tr.task-row-selected .mud-table-cell {
+    background: var(--n-blue-soft);
+}
+
+:root:has([data-theme-pack="nordic"]) tr.task-row-selected .mud-table-cell:first-child {
+    box-shadow: inset 3px 0 0 var(--n-blue);
+}
+
+/* ---- 12.4 Task drawer: a sheet on the ground, not paper -------------------------------------------------- */
+:root:has([data-theme-pack="nordic"]) .resizable-drawer.mud-drawer {
+    background: var(--n-bg);
+    border-inline-start: 1px solid var(--n-line-strong);
+    box-shadow: var(--n-shadow-3);
+}
+
+:root:has([data-theme-pack="nordic"]) .resizable-drawer-eyebrow,
+:root:has([data-theme-pack="nordic"]) .resizable-drawer-heading .mud-typography-caption {
+    font-family: var(--font-mono);
+    color: var(--n-ink-3);
+}
+
+:root:has([data-theme-pack="nordic"]) .resizable-drawer-title.mud-typography-h6 {
+    font-size: var(--mud-typography-h6-size);
+    line-height: 1.3;
+}
+
+:root:has([data-theme-pack="nordic"]) .group-label {
+    font-size: var(--mud-typography-overline-size);
+    letter-spacing: .06em;
+    text-transform: uppercase;
+    color: var(--n-ink-3);
+}
+
+:root:has([data-theme-pack="nordic"]) .task-detail-prop-label {
+    color: var(--n-ink-3);
+}
+
+:root:has([data-theme-pack="nordic"]) .resizable-drawer-footer {
+    border-top-color: var(--n-line);
+}
+
+:root:has([data-theme-pack="nordic"]) .resizable-drawer-handle::before {
+    background: var(--n-line-strong);
+}
+
+/* ---- 13. Teammates and the Teammate card ---------------------------------------------------------------- */
+:root:has([data-theme-pack="nordic"]) .teammates-item {
+    background: var(--n-elev);
+    border: 1px solid var(--n-line);
+    border-radius: calc(var(--mud-default-borderradius) * 1.5);
+    box-shadow: var(--n-shadow-1);
+    transition: border-color .15s, box-shadow .15s;
+}
+
+:root:has([data-theme-pack="nordic"]) .teammates-item:hover {
+    background: var(--n-elev);
+    border-color: var(--n-line-strong);
+    box-shadow: var(--n-shadow-2);
+}
+
+:root:has([data-theme-pack="nordic"]) .teammates-group-heading {
+    font-family: var(--font-read);
+    border-bottom-color: var(--n-line);
+}
+
+:root:has([data-theme-pack="nordic"]) .teammate-tile-role {
+    color: var(--n-ink-3);
+}
+
+/* The card's hero name is Literata at 30px. The dialog has no class of its own, so it is found by its avatar. */
+:root:has([data-theme-pack="nordic"]) .mud-dialog:has(.teammate-card-avatar) .mud-dialog-title .mud-typography-h6 {
+    font-family: var(--font-read);
+    font-size: calc(var(--mud-typography-h5-size) * 1.5);
+    font-weight: 600;
+    letter-spacing: -.01em;
+    line-height: 1.15;
+}
+
+:root:has([data-theme-pack="nordic"]) .teammate-card-persona {
+    font-family: var(--font-mono);
+    line-height: 1.7;
+    background: var(--n-bg);
+    border: 1px solid var(--n-line-strong);
+    border-radius: var(--mud-default-borderradius);
+}
+
+/* ---- 14. Settings and Appearance ------------------------------------------------------------------------ */
+:root:has([data-theme-pack="nordic"]) .settings-nav .mud-nav-link {
+    border-radius: calc(var(--mud-default-borderradius) * .75);
+    color: var(--n-ink-2);
+}
+
+:root:has([data-theme-pack="nordic"]) .settings-nav .mud-nav-link:hover {
+    background: var(--n-hover);
+    color: var(--n-ink);
+}
+
+:root:has([data-theme-pack="nordic"]) .settings-nav .settings-nav-item-active .mud-nav-link,
+:root:has([data-theme-pack="nordic"]) .settings-nav .settings-nav-item-active .mud-nav-link:hover,
+:root:has([data-theme-pack="nordic"]) .settings-nav .settings-nav-item-active .mud-nav-link:focus-visible {
+    background: var(--n-elev);
+    box-shadow: var(--n-shadow-1);
+    color: var(--n-ink);
+    font-weight: 500;
+}
+
+:root:has([data-theme-pack="nordic"]) .settings-nav .settings-nav-item-active .mud-nav-link .mud-nav-link-icon.mud-nav-link-icon-default {
+    color: var(--n-sage);
+}
+
+:root:has([data-theme-pack="nordic"]) .settings-section + .settings-section {
+    border-top: 1px solid var(--n-line);
+    padding-top: 24px;
+    margin-top: 24px;
+}
+
+:root:has([data-theme-pack="nordic"]) .settings-stored-at code {
+    font-family: var(--font-mono);
+}
+
+:root:has([data-theme-pack="nordic"]) .prompts-field + .prompts-field {
+    border-top: 1px dashed var(--n-line);
+}
+
+:root:has([data-theme-pack="nordic"]) .theme-picker .mud-list-item.mud-selected-item {
+    background: var(--n-sage-tint);
+    box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--n-sage) 35%, transparent);
+}
+
+/* ---- 15.1 Buttons: flat ----------------------------------------------------------------------------------- */
+:root:has([data-theme-pack="nordic"]) .mud-button-root.mud-button-filled,
+:root:has([data-theme-pack="nordic"]) .mud-button-root.mud-button-filled:hover,
+:root:has([data-theme-pack="nordic"]) .mud-button-root.mud-button-filled:active,
+:root:has([data-theme-pack="nordic"]) .mud-button-root.mud-button-filled:focus-visible {
+    box-shadow: none;
+}
+
+:root:has([data-theme-pack="nordic"]) .mud-button-filled.mud-button-filled-primary {
+    background: var(--n-sage);
+    color: var(--n-on-accent);
+}
+
+:root:has([data-theme-pack="nordic"]) .mud-button-filled.mud-button-filled-primary:hover {
+    background: var(--n-sage-ink);
+}
+
+:root:has([data-theme-pack="nordic"]) .mud-button-outlined.mud-button-outlined-default,
+:root:has([data-theme-pack="nordic"]) .mud-button-outlined.mud-button-outlined-primary {
+    background: var(--n-elev);
+    border-color: var(--n-line-strong);
+    color: var(--n-ink);
+}
+
+:root:has([data-theme-pack="nordic"]) .mud-button-outlined:hover {
+    background: var(--n-hover);
+}
+
+:root:has([data-theme-pack="nordic"]) .mud-button-text.mud-button-text-default {
+    color: var(--n-ink-2);
+}
+
+:root:has([data-theme-pack="nordic"]) .mud-button-text:hover {
+    background: var(--n-hover);
+    color: var(--n-ink);
+}
+
+:root:has([data-theme-pack="nordic"]) .mud-button-outlined.mud-button-outlined-error {
+    color: var(--n-danger);
+    border-color: color-mix(in srgb, var(--n-danger) 40%, var(--n-line));
+    background: var(--n-elev);
+}
+
+:root:has([data-theme-pack="nordic"]) .mud-button-outlined.mud-button-outlined-error:hover {
+    background: var(--n-danger-soft);
+}
+
+/* ---- 15.2 Inputs: white fields, the control border, a blue focus border with a halo ----------------------
+   The blue border is an input's border, not the keyboard focus ring, so Huddle's TextPrimary ring is unaffected. */
+:root:has([data-theme-pack="nordic"]) .mud-input.mud-input-outlined {
+    background: var(--n-elev);
+    border-radius: var(--mud-default-borderradius);
+}
+
+:root:has([data-theme-pack="nordic"]) .mud-input.mud-input-outlined .mud-input-outlined-border {
+    border-color: var(--n-line-strong);
+}
+
+:root:has([data-theme-pack="nordic"]) .mud-input.mud-input-outlined:hover .mud-input-outlined-border {
+    border-color: var(--n-ink-4);
+}
+
+:root:has([data-theme-pack="nordic"]) .mud-input.mud-input-outlined.mud-input-focused .mud-input-outlined-border,
+:root:has([data-theme-pack="nordic"]) .mud-input.mud-input-outlined:focus-within .mud-input-outlined-border {
+    border-color: var(--n-blue);
+    border-width: 1px;
+}
+
+:root:has([data-theme-pack="nordic"]) .mud-input.mud-input-outlined:focus-within {
+    box-shadow: 0 0 0 3px var(--n-blue-soft);
+}
+
+/* The label above the field (app.css, alignment M4) is ink-2; the chain matches app.css's and the scope outranks it. */
+:root:has([data-theme-pack="nordic"]) .mud-input-control > .mud-input-control-input-container > label.mud-input-label.mud-input-label-inputcontrol.mud-input-label-outlined:not(.mud-disabled) {
+    color: var(--n-ink-2);
+}
+
+/* A one-line field is the set's 34px box: 8px above and below the text instead of MudBlazor's 10.5px. */
+:root:has([data-theme-pack="nordic"]) .mud-input.mud-input-outlined > input.mud-input-root-outlined.mud-input-root-margin-dense,
+:root:has([data-theme-pack="nordic"]) .mud-input.mud-input-outlined > div.mud-input-slot.mud-input-root-outlined.mud-input-root-margin-dense {
+    padding-top: 8px;
+    padding-bottom: 8px;
+}
+
+:root:has([data-theme-pack="nordic"]) .mud-input-helper-text {
+    color: var(--n-ink-3);
+}
+
+/* ---- 15.3 Status pills: full pills with a shape-coded dot -------------------------------------------------- */
+:root:has([data-theme-pack="nordic"]) .mud-chip.status-chip {
+    height: 22px;
+    padding: 0 8px;
+    border-radius: 999px;
+    gap: 4px;
+    font-size: var(--mud-typography-caption-size);
+    font-weight: 500;
+    background: var(--n-sunk);
+    color: var(--n-ink-2);
+}
+
+:root:has([data-theme-pack="nordic"]) .mud-chip.status-chip .mud-chip-icon {
+    color: inherit;
+}
+
+:root:has([data-theme-pack="nordic"]) .mud-chip.status-chip.status-chip-info {
+    background: var(--n-blue-soft);
+    color: var(--n-blue-ink);
+}
+
+:root:has([data-theme-pack="nordic"]) .mud-chip.status-chip.status-chip-tertiary {
+    background: var(--n-heather-soft);
+    color: var(--n-heather-ink);
+}
+
+:root:has([data-theme-pack="nordic"]) .mud-chip.status-chip.status-chip-warning {
+    background: var(--n-cloud-soft);
+    color: var(--n-cloud-ink);
+    font-weight: 600;
+}
+
+:root:has([data-theme-pack="nordic"]) .mud-chip.status-chip.status-chip-success {
+    background: var(--n-lichen-soft);
+    color: var(--n-lichen-ink);
+}
+
+:root:has([data-theme-pack="nordic"]) .mud-chip.status-chip.status-chip-error {
+    background: var(--n-danger-soft);
+    color: var(--n-danger);
+}
+
+:root:has([data-theme-pack="nordic"]) .mud-chip.status-chip.status-chip-primary {
+    background: var(--n-sage-soft);
+    color: var(--n-sage-ink);
+}
+
+/* A Task's state draws the set's dot instead of an icon: dashed ring Backlog, hollow To do, half In progress, three
+   quarters Review, solid Done. The word stays, so the shape is never the only signal. */
+:root:has([data-theme-pack="nordic"]) .mud-chip.task-status-chip .mud-chip-icon {
+    display: none;
+}
+
+:root:has([data-theme-pack="nordic"]) .mud-chip.task-status-chip::before {
+    content: "";
+    flex: 0 0 auto;
+    width: 7px;
+    height: 7px;
+    box-sizing: border-box;
+    border-radius: 50%;
+    border: 1.5px solid currentColor;
+}
+
+:root:has([data-theme-pack="nordic"]) .mud-chip.status-chip-state-backlog::before {
+    border-style: dashed;
+}
+
+:root:has([data-theme-pack="nordic"]) .mud-chip.status-chip-state-inprogress::before {
+    background: linear-gradient(90deg, currentColor 50%, transparent 50%);
+}
+
+:root:has([data-theme-pack="nordic"]) .mud-chip.status-chip-state-review::before {
+    background: conic-gradient(currentColor 75%, transparent 0);
+}
+
+:root:has([data-theme-pack="nordic"]) .mud-chip.status-chip-state-done::before,
+:root:has([data-theme-pack="nordic"]) .mud-chip.status-chip-state-cancelled::before,
+:root:has([data-theme-pack="nordic"]) .mud-chip.status-chip-state-duplicate::before,
+:root:has([data-theme-pack="nordic"]) .mud-chip.status-chip-state-rejected::before {
+    background: currentColor;
+}
+
+/* Priority: High and Urgent are clay. */
+:root:has([data-theme-pack="nordic"]) .mud-chip.priority-high,
+:root:has([data-theme-pack="nordic"]) .mud-chip.priority-urgent {
+    background: var(--n-clay-soft);
+    color: var(--n-clay-ink);
+}
+
+/* Tags are small rectangles on the sunk step. */
+:root:has([data-theme-pack="nordic"]) .mud-chip.tag-chip,
+:root:has([data-theme-pack="nordic"]) .task-tag {
+    height: 20px;
+    padding: 0 8px;
+    border-radius: calc(var(--mud-default-borderradius) * .75);
+    font-size: var(--mud-typography-overline-size);
+    font-weight: 500;
+    background: var(--n-sunk);
+    border: 0;
+    color: var(--n-ink-2);
+}
+
+/* ---- 15.4 Cards and panels ----------------------------------------------------------------------------- */
+:root:has([data-theme-pack="nordic"]) .process-step,
+:root:has([data-theme-pack="nordic"]) .team-type-card,
+:root:has([data-theme-pack="nordic"]) .roster-card {
+    background: var(--n-elev);
+    border: 1px solid var(--n-line);
+    border-radius: calc(var(--mud-default-borderradius) * 1.5);
+    box-shadow: var(--n-shadow-1);
+}
+
+/* ---- 15.5 Dialogs, menus, popovers, tooltips ------------------------------------------------------------ */
+:root:has([data-theme-pack="nordic"]) .mud-dialog {
+    background: var(--n-elev);
+    border: 1px solid var(--n-line-strong);
+    border-radius: calc(var(--mud-default-borderradius) * 1.5);
+    box-shadow: var(--n-shadow-3);
+}
+
+:root:has([data-theme-pack="nordic"]) .mud-dialog .mud-dialog-title {
+    border-bottom: 1px solid var(--n-line);
+}
+
+:root:has([data-theme-pack="nordic"]) .mud-dialog .mud-dialog-actions {
+    border-top: 1px solid var(--n-line);
+    background: var(--n-sunk);
+    border-radius: 0 0 calc(var(--mud-default-borderradius) * 1.5) calc(var(--mud-default-borderradius) * 1.5);
+}
+
+:root:has([data-theme-pack="nordic"]) .mud-overlay-dialog .mud-overlay-scrim {
+    background-color: color-mix(in srgb, var(--n-ink) 34%, transparent);
+}
+
+:root:has([data-huddle-theme="nordic-dark"]) .mud-overlay-dialog .mud-overlay-scrim {
+    background-color: var(--mud-palette-overlay-dark);
+}
+
+:root:has([data-theme-pack="nordic"]) .mud-popover.mud-paper,
+:root:has([data-theme-pack="nordic"]) .floating-panel,
+:root:has([data-theme-pack="nordic"]) .invite-panel,
+:root:has([data-theme-pack="nordic"]) .new-chat-panel,
+:root:has([data-theme-pack="nordic"]) .profile-popover {
+    background: var(--n-elev);
+    border: 1px solid var(--n-line-strong);
+    border-radius: calc(var(--mud-default-borderradius) * 1.5);
+    box-shadow: var(--n-shadow-3);
+}
+
+:root:has([data-theme-pack="nordic"]) .mud-list-item:hover,
+:root:has([data-theme-pack="nordic"]) .mud-menu-item:hover {
+    background: var(--n-hover);
+}
+
+/* Tooltips are the set's inverted ink pill. */
+:root:has([data-theme-pack="nordic"]) .mud-tooltip.mud-tooltip-default {
+    background: var(--n-ink);
+    color: var(--n-bg);
+    border-radius: calc(var(--mud-default-borderradius) * .75);
+    padding: 4px 8px;
+    font-size: var(--mud-typography-caption-size);
+    font-weight: 500;
+}
+
+/* ---- 15.6 Segmented controls: a sunk track, the selected option a white tile ---------------------------- */
+:root:has([data-theme-pack="nordic"]) .huddle-segmented-control {
+    background-color: var(--n-sunk);
+    border: 1px solid var(--n-line);
+    border-radius: var(--mud-default-borderradius);
+}
+
+:root:has([data-theme-pack="nordic"]) .huddle-segmented-indicator {
+    background-color: var(--n-elev);
+    border-color: var(--n-line);
+    box-shadow: var(--n-shadow-1);
+}
+
+:root:has([data-theme-pack="nordic"]) .huddle-segmented-control .huddle-segmented-active-item {
+    color: var(--n-ink);
+}
+
+/* ---- 15.7 Switches, checkboxes, radios ------------------------------------------------------------------ */
+:root:has([data-theme-pack="nordic"]) .mud-switch .mud-switch-track {
+    background-color: var(--n-line-strong);
+    opacity: 1;
+}
+
+:root:has([data-theme-pack="nordic"]) .mud-switch .mud-checked + .mud-switch-track {
+    background-color: var(--n-sage);
+}
+
+/* The knob is white paper in both states, so it reads apart from the solid track. */
+:root:has([data-theme-pack="nordic"]) .mud-switch .mud-switch-thumb-small,
+:root:has([data-theme-pack="nordic"]) .mud-switch .mud-switch-thumb-medium,
+:root:has([data-theme-pack="nordic"]) .mud-switch .mud-switch-thumb-large {
+    background-color: var(--n-elev);
+    box-shadow: var(--n-shadow-1);
+}
+
+:root:has([data-theme-pack="nordic"]) .mud-checkbox .mud-checked,
+:root:has([data-theme-pack="nordic"]) .mud-radio .mud-checked {
+    color: var(--n-sage);
+}
+
+/* ---- 15.8 Empty states: a dashed paper outline and a serif-italic sentence ------------------------------ */
+:root:has([data-theme-pack="nordic"]) .empty-state .empty-state-text {
+    font-family: var(--font-read);
+    font-style: italic;
+    color: var(--n-ink-3);
+}

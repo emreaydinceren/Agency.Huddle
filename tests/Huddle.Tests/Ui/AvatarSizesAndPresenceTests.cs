@@ -48,13 +48,16 @@ public sealed class AvatarSizesAndPresenceTests
         Assert.Contains("max(10px, calc(40px * 0.4))", RuleBody(css, ".mud-avatar.mud-avatar-medium"), StringComparison.Ordinal); // contains-ok: haystack is one rule of the stylesheet source
     }
 
-    /// <summary>The Transcript's avatars (Messages and Drafts) carry the 32px class.</summary>
+    /// <summary>
+    /// The Transcript's avatars (a Teammate's Message, a Draft, and the Human's own Message, which a style pack shows
+    /// per ADR-0057) carry the 32px class.
+    /// </summary>
     [Fact]
     public void MessageList_Avatars_AreTranscriptSized()
     {
         string source = File.ReadAllText(CssSource.RepoPath("src", "Huddle.App", "Components", "Shared", "MessageList.razor"));
 
-        Assert.Equal(2, Regex.Count(source, @"<ProfileAvatar [^>]*Class=""avatar-transcript""", RegexOptions.CultureInvariant, TimeSpan.FromSeconds(2)));
+        Assert.Equal(3, Regex.Count(source, @"<ProfileAvatar [^>]*Class=""avatar-transcript""", RegexOptions.CultureInvariant, TimeSpan.FromSeconds(2)));
     }
 
     /// <summary>The badge is 10px by default, 12px beside a Medium or Large avatar, and ringed in 2px of Surface on the rim.</summary>
