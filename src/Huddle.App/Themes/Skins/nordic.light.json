@@ -1,0 +1,44 @@
+{
+  "$schema": "skin.schema.json",
+  "id": "nordic-light",
+  "label": "Nordic Light",
+  "mode": "light",
+  "order": 90,
+  "radius": "8px",
+  "faces": {
+    "ui": [ "IBM Plex Sans", "system-ui", "-apple-system", "Segoe UI", "sans-serif" ]
+  },
+  "shadows": {
+    "1": "0 1px 0 rgba(20,24,27,.06), 0 1px 3px rgba(20,24,27,.08)",
+    "2-4": "0 2px 4px rgba(20,24,27,.07), 0 8px 24px rgba(20,24,27,.11)",
+    "5-25": "0 12px 40px rgba(31,36,39,.16), 0 2px 6px rgba(31,36,39,.08)"
+  },
+  "palette": {
+    "background": "#f6f6f1",
+    "surface": "#ffffff",
+    "drawerBackground": "#edede6",
+    "backgroundGray": "#e6e6de",
+    "tableHover": "#e8e8e0",
+    "divider": "#cbcbbe",
+    "dividerLight": "#d9d9cf",
+    "linesInputs": "#bfc1b5",
+    "linesDefault": "#abad9e",
+    "textPrimary": "#14181b",
+    "textSecondary": "#4d555b",
+    "actionDefault": "#4d555b",
+    "drawerText": "#14181b",
+    "drawerIcon": "#4d555b",
+    "textDisabled": "#6b7278",
+    "primary": "#386247",
+    "primaryDarken": "#264631",
+    "primaryContrastText": "#ffffff",
+    "secondary": "#274f75",
+    "tertiary": "#745a88",
+    "success": "#35746c",
+    "warning": "#b07208",
+    "error": "#9c372f",
+    "info": "#43709a",
+    "overlayDark": "rgba(0,0,0,0.4)"
+  },
+  "pack": "nordic"
+}
