@@ -1,6 +1,6 @@
-# Agency.Huddle user guide
+# Huddle user guide
 
-Agency.Huddle is a chat workspace where you work with a small team of AI
+Huddle is a chat workspace where you work with a small team of AI
 **Teammates**. You talk to them in chat Rooms, organise them into Teams and
 Projects, hand them Tasks, and share notes with them through the Library. This
 guide is for the person running Huddle on their own machine. It explains what
@@ -17,12 +17,16 @@ configuring models. See [the chat-surface hub](Huddle.EngineeringGuide.md) for t
 | If you want to… | Read |
 | --- | --- |
 | Get started with your own copy | [Install](#install) |
+| Find your way around the screen | [A quick tour of the screen](#a-quick-tour-of-the-screen), [Tabs](#tabs) and [Global search](#global-search) |
+| See which Rooms are waiting on you | [Needs you](#needs-you) |
+| Read a Teammate's status badge or a chip | [Status at a glance](#status-at-a-glance) and [Chips](#chips) |
 | Understand how Teammates, Teams, Tasks and memory relate | [The data model](#the-data-model) |
 | Free a long-running Teammate's memory without restarting it | [Freeing a Teammate's memory with `/compact`](#freeing-a-teammates-memory-with-compact) |
 | Know which file a change lands in | [Where your data lives](#where-your-data-lives) and [What happens when…](#what-happens-when-reference) |
 | Add or change a Teammate | [Working with Teammates](#working-with-teammates) |
 | Set up Teams and Projects | [Organising Teams and Projects](#organising-teams-and-projects) |
-| Hire a Team from a type, or set its process and gates | [Hiring a Team from a type](#hiring-a-team-from-a-type) and [Process and gates](#process-and-gates) |
+| Hire a Team from a type | [Hiring a Team from a type](#hiring-a-team-from-a-type) |
+| Set a Team's process and gates, schedules and Household | [Running a Team](#running-a-team) |
 | Handle asks between Teams, or Team retrospectives | [Requests between Teams](#requests-between-teams) and [Retrospectives](#retrospectives) |
 | Chat with one or several Teammates | [Chatting in Rooms](#chatting-in-rooms) |
 | Chat inside a Team, or find its Team Room | [Team chats](#team-chats) |
@@ -30,10 +34,13 @@ configuring models. See [the chat-surface hub](Huddle.EngineeringGuide.md) for t
 | Share notes and documents | [Keeping notes in the Library](#keeping-notes-in-the-library) |
 | See a Room's members, Tasks and files, or a note's outline and links | [The Right sidebar](#the-right-sidebar) |
 | Teach Teammates a procedure | [Giving Teammates Skills](#giving-teammates-skills) |
+| See what Teammates remember and which files they changed | [Memory and file changes](#memory-and-file-changes) |
+| Change prompts, Themes, Personas, Skills or Library roots | [Settings](#settings) |
+| Fix something that went wrong | [Troubleshooting](#troubleshooting) |
 
 ## Install
 
-Get Agency.Huddle running on your machine with one command. No admin rights are needed, and
+Get Huddle running on your machine with one command. No admin rights are needed, and
 nothing has to be installed first.
 
 **Windows:** open PowerShell (a normal window) and run:
@@ -91,13 +98,27 @@ The left sidebar is the whole app. From top to bottom:
 
 | Sidebar group | What it holds |
 | --- | --- |
-| **Needs you** | A card above Chats, drawn only while a Room is waiting on you. See [Needs you](#needs-you). |
-| **Chats** | Your root Rooms, plus **New chat**. A Team's chats are not listed here; see [Team chats](#team-chats). |
-| **Teams** | One row per Team. Expand it to see its Team Room, its chats and its Projects. **Build a team** sits at the bottom. The `⋯` menu on a Team row has **New chat** and **New project**. |
-| **Teammates** | The page listing every Teammate, grouped by Team. |
+| **Needs you** | A card above Rooms, drawn only while a Room is waiting on you. See [Needs you](#needs-you). |
+| **Rooms** | Your root Rooms, plus **New chat**. A Team's chats are not listed here; see [Team chats](#team-chats). |
+| **Teams** | One row per Team. Expand it to see its Team Room, its chats and its Projects. **Build a team** sits at the bottom. The More (⋮) menu on a Team row has **New chat** and **New project**. |
+| **Teammates** | A link to the page listing every Teammate, grouped by Team. |
 | **Tasks** | Your saved Views of Tasks: **All Tasks**, **My Tasks**, any you saved, and **New view**. |
-| **Library** | One row per Library root (**Teams**, **Teammates**, and any folders you pinned), plus **Add Folder**. |
+| **Library** | One **Library** link. The Library's roots (**Teams**, **Teammates**, and any folders you pinned) and **Add folder** are on the Library page. |
 | Bottom | **Archived chats** and **Settings**. |
+
+![The sidebar with Needs you, Rooms, Teams, Teammates, Tasks and Library](images/user-guide/sidebar.png)
+
+1. **Needs you**, listing the Rooms waiting on you.
+2. **Rooms**. The arrow folds the group away.
+3. A Room. Its More (⋮) menu sits at the end of the row.
+4. **Show all**, with how many Rooms there are, to list the rest.
+5. **New chat**.
+6. **Teams**, folded here.
+7. **Teammates**.
+8. **Tasks**, folded here.
+9. **Library**.
+10. **Archived chats**.
+11. **Settings**.
 
 Every page has its own address, so you can bookmark it:
 
@@ -110,7 +131,7 @@ Every page has its own address, so you can bookmark it:
 | `/tasks/{viewId}` | A saved Task View |
 | `/tasks/item/{TaskId}` | One Task, opened over your last View, for example `/tasks/item/BUSI-0001` |
 | `/library?scopeRoot=teams&scopePath=` | The Library, scoped to a root |
-| `/settings/{tab}` | Settings: Prompts, Appearance, Personas, Skills, Library |
+| `/settings/{tab}` | Settings: Profile, Prompts, Appearance, Personas, Skills, Team types, Library. A blank system opens on `/settings/profile` until you save a profile |
 
 ### Needs you
 
@@ -120,22 +141,23 @@ When several Rooms are running, **Needs you** at the top of the sidebar lists th
 - a Teammate has asked you a **Question** or opened a **Form** that is still waiting;
 - the Room has used up its **Budget** and is paused until you speak.
 
-Each row shows an icon for every reason, the Room's name, and who asked and when. Click it to open the Room.
+Each row shows an icon for every reason, the Room's name, and who asked and when. Select it to open the Room.
 
-A Room leaves the list when you **post in it**, or when you press the ✕ on its row. Opening a Room does not clear it, so you can read a Room and come back to it later. ✕ hides the Room until something new makes it wait again; it does not answer the Question or Form behind it. Pressing **Continue** on a paused Room clears only the paused reason. When nothing is waiting, the card is not drawn.
+A Room leaves the list when you **post in it**, or when you press the check (✓) on its row. Opening a Room does not clear it, so you can read a Room and come back to it later. The check hides the Room until something new makes it wait again; it does not answer the Question or Form behind it. Pressing **Continue** on a paused Room clears only the paused reason. When nothing is waiting, the card is not drawn.
 
 The list lives in memory. After a restart, Rooms with an unanswered mention (within the last 50 Messages) are listed again; a Question or Form that was waiting is gone, and so is any dismissal.
 
 ### Tabs
 
-Everything you open from the left menu opens in a tab, in a strip above the page.
+Everything you open from the sidebar opens in a tab, in a strip above the page.
 The Library is one tab like any other.
 
-- **One click** on a menu item opens a *preview* tab. Its title is in italics, and
-  the next menu item you click replaces it, so browsing does not pile up tabs.
-- **Keep a tab** by double-clicking its menu item or the tab itself, or by typing in
-  a message box on that tab. The title is no longer in italics, and the next click
-  opens beside it.
+- **One click** on a sidebar item opens a preview tab. Its title is grey until you keep
+  it, and the next sidebar item you select replaces it, so browsing does not pile up
+  tabs.
+- **Keep a tab** by double-clicking its sidebar item or the tab itself, or by typing in
+  a message box on that tab. The title turns the same colour as the other tabs, and the
+  next item you select opens beside it.
 - **Close a tab** with its **×**, by middle-clicking it, or with **Alt+W**. If you
   close the last tab, the page shows "No pages are open". **Alt+Page Down** and
   **Alt+Page Up** move to the next and previous tab. (Ctrl+W and Ctrl+Tab belong to
@@ -146,15 +168,32 @@ The Library is one tab like any other.
 - **Half-written messages:** the text you have typed but not sent is kept for each
   Room while you switch between tabs, and it is still there after you reload the page.
 
-**Right-click a tab**, or hover it and press the small chevron that appears beside its **×**, for its menu (hovering also shows quick Move Left and Move Right buttons when those apply):
+![The tab strip with two kept tabs, one hovered, and a preview tab](images/user-guide/tab-strip.png)
 
-- **Pin Tab** keeps the tab at the start of the strip as just its icon, with no ×
-  (hover for its name). **Unpin Tab** puts it back.
-- **Move Right** and **Move Left** move the tab to the other side of a split. The first
+1. A kept tab.
+2. A kept tab under the pointer: its buttons take the place of the end of its name.
+3. **More (⋮)**, for the tab's menu.
+4. The quick **Move left** and **Move right** buttons.
+5. **Close (×)**.
+6. A preview tab, the one open now. The next sidebar item you select replaces it.
+
+**Right-click a tab**, or hover it and press **More (⋮)** beside its **Close (×)**, for its menu (hovering also shows quick **Move left** and **Move right** buttons when those apply):
+
+- **Pin tab** keeps the tab at the start of the strip as just its icon, with no ×
+  (hover for its name). **Unpin tab** puts it back.
+- **Move right** and **Move left** move the tab to the other side of a split. The first
   time, they open a second pane beside the first, so you can see two pages at once. The
-  item is greyed out when there is nowhere to move the tab, for example when it is the
+  item is shown in grey when there is nowhere to move the tab, for example when it is the
   only tab or the window already holds two panes. A moved tab is kept.
 - **Close** closes the tab.
+
+![A tab's More (⋮) menu, open](images/user-guide/tab-menu.png)
+
+1. **More (⋮)** on the hovered tab.
+2. **Pin tab**.
+3. **Move left**.
+4. **Move right**.
+5. **Close**.
 
 With two panes, the one you last clicked or tabbed into is the one the address bar shows,
 and what you open from the menu opens there. The other pane keeps its page exactly as you
@@ -165,9 +204,9 @@ Your open tabs and panes come back after you reload the page or restart the app,
 same order, with the tab for the page you are on active. They are remembered by the
 browser, so another browser starts with its own. Each tab is at least a fixed width, so with many open the strip scrolls sideways.
 
-### Global Search
+### Global search
 
-The search box sits in the Top Bar, above the left menu and every page.
+The search box sits in the top bar, above the sidebar and every page.
 
 - **Open the box** with `Ctrl+K` from anywhere, with `/` when no text field has focus, or by
   clicking it. `Esc` closes it and returns you to where you were.
@@ -179,8 +218,8 @@ The search box sits in the Top Bar, above the left menu and every page.
   Matching ignores case and looks for the exact phrase you typed.
 - **Results come in groups:** Teams, Teammates, Library, Tasks and Rooms. With All, each group
   shows up to five results. With one chip picked, that group shows up to 50. Library matches
-  its contents as well as its names, for entries up to 1 MB. Closed Tasks and Archived Rooms come
-  last, dimmed.
+  its contents as well as its names, for entries up to 1 MB. Closed Tasks and archived chats come
+  last, shown in grey.
 - **Open a result** with `Enter` in the current Tab, or `Ctrl+Enter` to open it in a new Tab that
   stays. A Teammate opens its card. A Room opens at the matching Message, which is highlighted for
   a moment.
@@ -190,7 +229,7 @@ The search box sits in the Top Bar, above the left menu and every page.
 
 ### The Right sidebar
 
-The button at the right end of the Top Bar opens and closes the **Right sidebar**, a panel on
+The button at the right end of the top bar opens and closes the **Right sidebar**, a panel on
 the window's right edge that shows things about the page you are looking at. It starts closed
 each time you open the app. With two panes open, it follows the pane you last clicked.
 
@@ -202,15 +241,15 @@ It holds one or more panels, depending on the page:
 | A Markdown note in the Library | **Outline**, **Linked documents** |
 | Any other page | None. The sidebar says `This page has nothing to show here.` |
 
-| Panel | What it shows | What a click does |
+| Panel | What it shows | What selecting it does |
 | --- | --- | --- |
-| **Members** | Everyone in the Room, Teammates first, each with their avatar and, for a Teammate, a status dot. | The avatar opens the member's profile. |
+| **Members** | Everyone in the Room, Teammates first, each with their avatar and, for a Teammate, the [presence badge](#status-at-a-glance) on it. | The avatar opens the member's profile. |
 | **Tasks in this chat** | Each Task the Room's Messages mention, most recent first, with its current title and state. A deleted Task shows `(unavailable)`. | The row opens the Task. The arrow beside it scrolls the Room to the Message that last mentioned it. |
-| **Documents in this chat** | Each Library file the Room's Messages mention, most recent first. A file that is no longer in the Library is greyed out. | The row opens the file in the Library. The arrow scrolls the Room to the Message. |
+| **Documents in this chat** | Each Library file the Room's Messages mention, most recent first. A file that is no longer in the Library is shown in grey. | The row opens the file in the Library. The arrow scrolls the Room to the Message. |
 | **Outline** | The note's headings, indented by level. In **Split** mode it follows your typing; in **Read** and **Edit** it shows the note as last loaded or saved. | Scrolls the note to that heading. In **Edit** mode it moves the cursor to the heading's line. |
 | **Linked documents** | The notes this note links to with `[[...]]`, in the order they appear. A link to a note that does not exist shows `(not found)`. | Opens the linked note. |
 
-Each panel's header shows its name and a count. Click the header to fold the panel away; your
+Each panel's header shows its name and a count. Press the header to fold the panel away; your
 browser remembers which panels you folded. A panel with nothing in it stays, with one line
 saying so, such as `No Tasks mentioned in this chat yet.` The Tasks panel appears only while
 Tasks are switched on, and the three Library panels only while the Library is.
@@ -230,7 +269,7 @@ connect. Later sections explain how to work with them.
 
 | Entity | What it is | Stored as |
 | --- | --- | --- |
-| **You (the Human)** | The person using the app. Your display name is `Team:HumanName` (default `You`). You are in every Room. | Config, and a row in `team.db` |
+| **You (the Human)** | The person using the app. You set your Name, Alias, Title and avatar on **Settings > Profile**; `Team:HumanName` (default `You`) is only the Name a blank system starts with. Your Alias @mentions you like your Name. You are in every Room. | `profile.json`, `avatars.json` and a row in `team.db` |
 | **Teammate** (also called a **Persona**) | One AI Teammate: its name, job title, @alias, Teams, Skills, and its instructions. | `Teammates/<Name>/<Name>.md` |
 | **Agent** | A Teammate that is running and online in chat. There is one Agent per Teammate file. | A row in `team.db`, plus a running adapter process |
 | **Team** | A named group of Teammates. Its membership is a label in each member's `teams:` list; a Team set up from a type also has a manager, a workspace and a process. | A label in each member's `teams:` list, plus a folder `Teams/<Team>/` holding `_team.md` (and `Process.md`, once set) |
@@ -369,7 +408,25 @@ App_Data/
 
 Open **Teammates** in the sidebar. The page lists every Teammate, grouped by
 Team, with a **Team** filter at the top. A Teammate in two Teams is listed under
-both. Each card shows a status of Offline, Starting, Online or Degraded.
+both. Each card shows the Teammate's status as a badge on its avatar.
+
+### Status at a glance
+
+The same badge sits on a Teammate's avatar everywhere: the Teammates page, a Room, the
+Board and the Right sidebar. Hover it to see the reason.
+
+| Badge | Means |
+| --- | --- |
+| Green circle with a check | Online: ready to work |
+| Amber circle that pulses | Starting up |
+| Blue circle that pulses | Working on something now, such as a Turn in a Room or a Task |
+| Red circle with a dash | Something is wrong; open the Teammate to see why |
+| Hollow grey ring | Offline, or asleep with nothing to do |
+
+Amber always means something wants your attention: a Teammate starting, a **High**
+priority, an overdue date or a Room that needs you. Working is blue.
+
+![The status badges, the four chip looks, the text sizes and a Board card](images/visual-reference.svg)
 
 Each Teammate has its own card with **Message**, **Edit**, **Open**,
 **Restart** and **Remove**. With no Teammates the page says "No Teammates yet.
@@ -381,7 +438,7 @@ Choose New teammate."
 2. **Name** starts with a random first name that no Teammate has yet. Keep it,
    edit it, or select the reset button (the circular arrow at the right of the
    box) for another one. Then fill in **Title** and **Alias**. Optionally add
-   **Teams** as a comma-separated list, choose **Skills**, **Model**,
+   **Teams** as a comma-separated list, select **Skills**, **Model**,
    **Effort**, **Work mode** and an avatar.
 3. Write the Teammate's instructions in the text area.
 4. Select **Add teammate**.
@@ -428,7 +485,7 @@ or Teams. Changing the avatar does not restart anything.
 ### Changing an avatar
 
 Select the avatar at the top of a Teammate's card. It does this in every mode:
-viewing, editing and creating. A small pencil appears on it when you point at it
+viewing, editing and creating. An **Edit** (✎) mark appears on it when you point at it
 or tab to it. A window titled **Avatar** opens with three choices, and **An image**
 is selected when the avatar has no label or image yet:
 
@@ -439,7 +496,7 @@ is selected when the avatar has no label or image yet:
   one of the ready-made pictures.
 
 The round picture at the top of the window previews your choice as you make it.
-Initials and a label sit on a **Background** colour. Choose it by pressing a swatch
+Initials and a label sit on a **Background** colour. Set it by pressing a swatch
 in the palette in the window; the swatch for the current colour is highlighted. A
 colour can be changed to another swatch but not cleared, so once a Teammate has a
 colour it keeps one. An image covers the background, so the palette is hidden while
@@ -475,11 +532,11 @@ pictures to pick from.
   professions show either one, and two tags show only pictures with both.
 - **Selected chips move to the left.** Each one has an **X**. Press the X to
   turn it off, and it returns to its place. **Clear all** turns everything off.
-- **Pick a picture.** Click it, and the library window closes. The **Avatar**
+- **Pick a picture.** Select it, and the library window closes. The **Avatar**
   window shows the picture and says **New image selected (not yet saved)**.
   Select **Apply** (or **Save**, when you opened it from a viewed Teammate) to
   keep it, or **Cancel** to keep your old avatar. On your own avatar in
-  **Settings → Appearance** the picture is saved at once.
+  **Settings › Appearance** the picture is saved at once.
 
 The library comes with Huddle: its 324 pictures are in the repository, in
 `src/Huddle.App/AvatarLibrary`, and are used as they are, with nothing to set up.
@@ -575,7 +632,7 @@ on the Teammates page, with the reason.
 
 ### Packs, setup warnings and the Process step
 
-A Teammate who was hired from a team type's role has a **Complete Setup** panel on
+A Teammate who was hired from a team type's role has a **Complete setup** panel on
 its card. It shows:
 
 - **Role:** the role and version the Teammate was hired as.
@@ -633,15 +690,15 @@ case.
 ### Adding and removing members
 
 Open the Team, then the **Members** tab. It is the **Hire** step of **Build a team** for
-this Team: the role cards, then the **Roster** with the members first (each with its
-online dot and a **Member** chip) and any new drafts after them.
+this Team: the role cards, then the **Roster** with the members first (each with the
+presence badge on its avatar and the word **Member**) and any new drafts after them.
 
 - **Add** on a role card puts a new draft Teammate on the roster, as in Build a team.
 - **Edit** on a member opens their Teammate card, which saves at once.
 - **Message** opens this Team's own one-to-one chat with that member. It shows once the
   member has connected at least once.
-- **Remove** opens a menu: **Remove from Team** takes the member off this Team and keeps
-  the Teammate; **Delete Teammate** deletes them. Either marks the card until you save,
+- **Remove** opens a menu: **Remove from team** takes the member off this Team and keeps
+  the Teammate; **Delete teammate** deletes them. Either marks the card until you save,
   and **Undo** clears the mark.
 - **Manager** picks who manages the Team, from the members and drafts in a manager role.
 
@@ -664,8 +721,8 @@ Team stays, marked **No members**.
 
 ### Creating a Project
 
-On a Team row in the sidebar, open `⋯` and select **New project**. Or, in the
-Team's **Files** tab, open a Team folder's menu and select **New Project**.
+On a Team row in the sidebar, open More (⋮) and select **New project**. Or, in the
+Team's **Files** tab, open a Team folder's menu and select **New project**.
 
 **In the background:** Huddle creates `Teams/<Team>/<Project>/`. `memory` is
 reserved, and so are names starting with `_` or `.`.
@@ -713,21 +770,45 @@ Under a Team's title (not a Project's), the header has two more things:
 - **Spent** shows what the Team's members have cost in total, one amount per
   currency. It stays blank until something was spent, and it survives restarts.
 
+#### Editing a team
+
+A Team page's last tab, **Details**, holds the first two steps of Build a team for that
+Team: **Team type** and **Team details**, then **Save changes**. The type and name can't be
+changed; **What it's for** and the **Library folder** can. **Save changes** is off until a
+detail changed; it writes them to the Team file and the tab stays open. The Team's members
+are edited on its **Members** tab (see
+[Adding and removing members](#adding-and-removing-members)).
+
 ### Building a team with the Chief of Staff
 
 **Build a team** (`/teams/build`) walks you through making a Team in four steps:
 **Team type**, **Team details**, **Hire** and **Approve**. Step 1 shows a card for each team type: its name, what it does in a line, how many
 roles it has besides the manager, and **You have one** when you already run a Team of
-that type. The cards sit in two rows; scroll to the right for the rest.
+that type. The cards wrap into a grid.
 
-Select a card to choose that type; step 1 then shows a check and the type's name, and
-**Team details** opens under it. There you set the **Team name** (it starts as the
-type's name; a name an existing Team has is refused), **What it's for** (it starts as
-the type's description) and the **Library folder**. Every type has the same field: it
-starts as the Teams folder under your data folder, you may clear it, and a folder you
-type must exist. The folder icon at the end of that field opens a folder picker: walk
-the folders, or type a path and press Enter, then select **Select**. Nothing is
-created yet; the later steps do that.
+![Build a team at step 1, with the team type cards](images/user-guide/build-team.png)
+
+1. Step 1, **Team type**.
+2. Step 2, **Team details**.
+3. Step 3, **Hire**.
+4. Step 4, **Approve**.
+5. **Blank Team**, the first card.
+6. A team type's card: its name, and what it does in a line.
+7. How many roles it has besides the manager.
+
+To set up the Team:
+
+1. **Select a type's card.** Step 1 shows a check and the type's name, and **Team
+   details** opens under it.
+2. **Set the Team name.** It starts as the type's name; a name an existing Team has is
+   refused.
+3. **Set What it's for.** It starts as the type's description.
+4. **Set the Library folder.** It starts as the Teams folder under your data folder. You
+   may clear it, and a folder you type must exist. The folder button at the end of the
+   field opens a folder picker: walk the folders, or type a path and press Enter, then
+   press **Select**.
+
+Nothing is created yet; the later steps do that.
 
 **Blank Team**, the first card, is for when you want to decide everything: it has no
 roles and no process, and its name and purpose start empty.
@@ -735,19 +816,24 @@ Select it again to clear the choice. The choice stays in the address (`?type=`),
 it is still there when you come back to the tab. Open the page with **Build a team**,
 the last link of the Teams group in the sidebar.
 
-**Hire**, step 3, opens once **Team details** is complete. Under **Roles** (*Available
-roles*) it shows the same two scrolling rows of cards: a blank card with a large **+**
-first, then the roles the chosen team type already defines (each with a green
-**Suggested** chip), then your own roles, then the rest of the hiring pool. **Add** on a
-role card puts a new Teammate for that role on the **Draft roster** below, with a name
-and an avatar drawn for it (a picture from the avatar library, one of those the
-role suggests when it has any), and the card gets a small green check to show the
-role is taken care of; add a role again for a second Teammate. Each draft card has **Re-roll**
-(another name and avatar), **Edit** (the Teammate card, saved with **Save draft**; it changes only the
-draft) and **Remove**, and the team type's manager role carries a **Manager** badge. A
-dashed ring means the Teammate is not hired yet; nothing is hired until you approve.
+**Hire**, step 3, opens once **Team details** is complete. Under **Roles** ("Available
+roles") it shows a grid of cards in this order: a blank card with an **Add** (+) button,
+the roles the chosen team type already defines (each with a **Suggested** chip), your own
+roles, then the rest of the hiring pool. To fill the roster:
 
-The **+** card opens a form (title, what it does, instructions, model strength); the
+1. **Press Add on a role card.** A new Teammate for that role joins the **Draft roster**
+   below, with a name and an avatar drawn for it (a picture from the avatar library, one
+   of those the role suggests when it has any). The role card shows a check to say the
+   role is covered. Press **Add** again for a second Teammate in the same role.
+2. **Adjust each draft card.** **Re-roll** draws another name and avatar. **Edit** opens
+   the Teammate card, saved with **Save draft**; it changes only the draft. **Remove**
+   takes the draft off the roster.
+3. **Check the manager.** The team type's manager role carries a **Manager** badge.
+
+A dashed ring around a draft's avatar means the Teammate is not hired yet; nothing is
+hired until you approve. A Teammate who already exists has a solid ring.
+
+The **Add** (+) card opens a form (title, what it does, instructions, model strength); the
 role is saved in `custom-roles.json` in your data folder and stays on the page for next
 time. A role you wrote has **Edit** and **Delete** buttons; Delete asks first.
 
@@ -773,15 +859,6 @@ it lives: its publisher and its path in the repository for an imported or catalo
 its folder (`Skills/<name>`) for one of your own, so you can see who made it. The role form for your own roles has the same **Skills**
 field.
 
-#### Editing a team
-
-A Team page's last tab, **Details**, holds the first two steps of Build a team for that
-Team: **Team type** and **Team details**, then **Save changes**. The type and name can't be
-changed; **What it's for** and the **Library folder** can. **Save changes** is off until a
-detail changed; it writes them to the Team file and the tab stays open. The Team's members
-are edited on its **Members** tab (see
-[Adding and removing members](#adding-and-removing-members)).
-
 ### Hiring a Team from a type
 
 A team type is a template for a kind of Team: its roles, the Teammates that fill
@@ -795,7 +872,7 @@ has. **Reload** rereads the built-in types and your `TeamTypes` folder. Under
 **Problems**, each type Huddle rejected is listed with its file and the reason,
 so you can see why a folder you wrote never reached the Team type list.
 
-To make a Team from a type, use **Build a team**: choose the type in step 1, name the Team
+To make a Team from a type, use **Build a team**: select the type in step 1, name the Team
 and give it a Library folder in step 2, add the roles in step 3 and select **Approve &
 hire** in step 4. See
 [Building a team with the Chief of Staff](#building-a-team-with-the-chief-of-staff).
@@ -828,6 +905,12 @@ mapped model the adapter does not list is ignored in the same way.
 > names it **Web Team** and points its Library folder at his repository. He adds the
 > Development Manager, a Developer, a Reviewer and QA to the roster, and selects
 > **Approve & hire**.
+
+## Running a Team
+
+Once a Team is hired, these decide how it works day to day: its process and gates,
+the schedules that wake its manager, Requests between Teams, retrospectives, and the
+Household team.
 
 ### Process and gates
 
@@ -1066,7 +1149,7 @@ and its default process runs a retro every 14 days.
 ### Starting a chat
 
 Select **New chat** and pick one or more Teammates. Choosing a single Teammate
-reopens your existing one-to-one Room with it, if there is one. In the Chats
+reopens your existing one-to-one Room with it, if there is one. In the Rooms
 group this makes a root Room. From a Team's menu it makes a chat inside that
 Team; see [Team chats](#team-chats).
 
@@ -1139,8 +1222,8 @@ Typing keeps narrowing the list. Ctrl+Z after a pick undoes it in one step and b
 the text you typed. The **Send** button always sends the text exactly as you typed it, even
 while the list is open.
 
-A Teammate who is not a Member of the Room is dimmed and marked **Not in this Room**.
-Choose **/invite @** in the message box, or pick the Teammate after inviting it, to add
+A Teammate who is not a Member of the Room is shown in grey and marked **Not in this Room**.
+Type **/invite @** in the message box, or pick the Teammate after inviting it, to add
 it to the Room first.
 
 When a referenced item changes, the link shows the change. A **changed** chip means
@@ -1156,8 +1239,8 @@ stop that, set `Team:References:ExpandInPrompt` to `false`.
 ### Copying a Room's link
 
 Use **Copy link** to put a Room's reference on the clipboard. It is the link button in
-the Room's header, and *Copy link* in the `…` or right-click menu of a Room in the
-sidebar, both for Chats and for a Team. Paste it into any message box to make the same
+the Room's header, and **Copy link** in the More (⋮) or right-click menu of a Room in the
+sidebar, both under Rooms and under a Team. Paste it into any message box to make the same
 reference the picker writes. The Room opens when a reader selects it.
 
 A plain address from the address bar opens the Room, but it is not a reference: it
@@ -1179,14 +1262,31 @@ its adapter reports a cost. It is a figure for this run, not a ledger.
 
 ### How the conversation reads
 
-- Your messages sit on the right in a bubble tinted with the accent colour; a Teammate's sit on a light card beside its avatar.
+- Your messages sit on the right in a bubble tinted with the accent colour. A Teammate's message is plain text beside its avatar, with no card.
+- Files and notes a message refers to sit under it: under your bubble on the right, under a Teammate's text on the left.
+- A notice, such as "Grace is Offline", sits between the conversation and the message box, in the same column.
 - A separator marks each day ("Today", "Yesterday", "Fri 2 Oct"), and consecutive messages from one Teammate share a single name and avatar.
-- When a Task changes and wakes its assignee, the Room shows one slim line (such as "PLAT-0004 changed by You") instead of a message from you. Choose the line to see the changes.
-- A Task link carries a small dot in its status colour, the same colour as the status on the List and Board.
+- When a Task changes and wakes its assignee, the Room shows one slim line (such as "PLAT-0004 changed by You") instead of a message from you. Select the line to see the changes.
+- A Task link carries a status dot in its status colour, the same colour as the status on the List and Board.
+
+![A one-to-one Room with Grace](images/user-guide/room.png)
+
+1. The Room's name.
+2. **Rename** (pencil icon).
+3. **Copy link**.
+4. The Room's members.
+5. **Invite teammate**.
+6. The button that opens the **Right sidebar**.
+7. A day separator.
+8. A Teammate's message: plain text beside its avatar.
+9. A Task link, with its status dot.
+10. The message box.
+11. The paperclip, for attaching files.
+12. **Send**.
 
 ### Attaching files
 
-Click the paperclip beside Send, paste a screenshot, or drop files on the
+Press the paperclip beside Send, paste a screenshot, or drop files on the
 composer. Each file is saved at once into the Library, and its chip shows above
 the text box. Remove a chip with its close button before you send if you change
 your mind; the saved file is then deleted and nothing is posted. When you send,
@@ -1194,10 +1294,10 @@ each file's path is added to your Message, so the Teammates who answer can open
 it with their own tools.
 
 - The limits are 25 MiB per file and 10 files per Message. A file over the size
-  limit, or one more than the Message can carry, is refused with the reason in
-  the red line under the text box and no chip is added.
-- SVG files and programs (executables) are refused: the chip turns red and shows
-  the reason. Huddle identifies a file by its contents, not its name.
+  limit, or one more than the Message can carry, is refused: an error notice above
+  the message box gives the reason, and no chip is added.
+- SVG files and programs (executables) are refused: the chip stays, outlined in the
+  error colour with a warning icon, and shows the reason. Remove it with its close button. Huddle identifies a file by its contents, not its name.
 - Send waits while a file is still uploading, and the text you typed stays in the
   box.
 - The paperclip, paste and drop appear only when the Library is on.
@@ -1281,12 +1381,12 @@ session; nothing new is written to disk for the compaction itself.
 A Room is either a root Room or belongs to one Team. The two look the same in
 the chat; they differ in where they are listed.
 
-- **Chats** lists the root Rooms: the chats you start from the Chats group, and
+- **Rooms** lists the root Rooms: the chats you start from the Rooms group, and
   your one-to-one Rooms with Teammates.
 - **A Team's chats** are listed under the Team in the sidebar, below its Team
-  Room and above its Projects. Open the Team's `⋯` menu and select **New chat**.
+  Room and above its Projects. Open the Team's More (⋮) menu and select **New chat**.
   The panel is headed *New chat in Marketing* and lists that Team's members
-  first, but you can still tick a Teammate from another Team.
+  first, but you can still select a Teammate from another Team.
 - **The Team Room** is a chat named after the Team, holding you and every member
   of the Team. Every Team has one. It is created when the Team first has a
   member, and a Teammate who joins the Team later is invited into it; the
@@ -1295,15 +1395,15 @@ the chat; they differ in where they are listed.
   no pencil icon.
 - **Message** on a member's roster card in the Team's **Members** tab opens that
   Team's own one-to-one with the Teammate, created if it does not exist. It is
-  separate from the one-to-one under Chats, so the two conversations do not mix.
+  separate from the one-to-one under Rooms, so the two conversations do not mix.
 - **Digests and retrospectives** for a Team post in its Team Room, with a
   mention of the Teammate they are for, so it replies. If the Team Room is
-  archived, they post in that Teammate's one-to-one under Chats instead. A Task
+  archived, they post in that Teammate's one-to-one under Rooms instead. A Task
   whose original chat is gone wakes its assignee in a chat of that Team.
 - **A Team that goes away** (no folder and no Teammate's label names it any more,
   which is what renaming its folder in Explorer does while no Teammate still
   carries the old name) has its chats archived, with their history kept. Find them under **Archived chats**. If you unarchive one of them
-  while its Team is still gone, it is listed under Chats with *(Marketing)* after
+  while its Team is still gone, it is listed under Rooms with "(Marketing)" after
   its name.
 
 **In the background:** when a chat is created inside a Team, Huddle writes a
@@ -1422,7 +1522,7 @@ There is no delete.
 Select **New task** on the Tasks page or a Team page's Tasks tab. The panel has
 Title, Status, Priority, Assignee, Team / Project, Parent, blockers, Tags, Start
 and Due date, and a description with **Edit** and **Preview**. Select **Save**.
-If the Task is assigned to a Teammate, the button reads **Save & Notify
+If the Task is assigned to a Teammate, the button reads **Save & notify
 {Name}**.
 
 | Action | In the background |
@@ -1470,35 +1570,60 @@ and write the same files, and they are also subject to a Team's
 [gates](#the-four-gates) and to the [Request](#requests-between-teams) rules, which
 you can override from the Task panel and they cannot.
 
+### Chips
+
+Huddle draws a small label in one of four looks, and each look has one job:
+
+| Look | Means | Example |
+| --- | --- | --- |
+| Status or priority: a tinted label with an icon | A state or a priority; its colour follows [Status at a glance](#status-at-a-glance) (amber needs attention) | **High**, **In Progress** |
+| Tag: a plain grey label | A word you or a Teammate attached | `api`, `pricing` |
+| Filter: dashed until set, outlined in the accent once set | A filter on a View; press it to change it, **Close (×)** to clear it | **Assignee: Me** |
+| Meta: plain small text, no label at all | A count or a detail | "@jane", "3 need you" |
+
 ### Views: lists and boards
 
 A **View** is a saved way of looking at Tasks. **All Tasks** and **My Tasks**
 are built in. Select **New view** to make your own: it is created at once under
-the name **New view** (or **New view 2** and so on), and you rename it from its `⋯` menu.
+the name **New view** (or **New view 2** and so on), and you rename it from its More (⋮) menu.
 
 | Setting | Options |
 | --- | --- |
-| Kind | **List** or **Kanban** |
+| Kind | **List** or **Board** |
 | Filters | Team, Project, Assignee, Sprint, Status, Priority, and Blocked / Unblocked / All |
 | Grouping | The **Group by** chip: None, Team, Project, Assignee, Sprint, or Status in a List |
-| Fields shown | **Fields…** in the View's `⋯` menu: drag to reorder, switch a field off, remove it or add it back |
+| Fields shown | **Fields…** in the View's More (⋮) menu: drag to reorder, switch a field off, remove it or add it back |
 | Column widths | Drag the right edge of a List column header |
 | Dense | Compact or roomier rows in a List. On by default. |
 
-In a List, Tags show as label chips and the Assignee as a chip with their
-avatar.
+In a List, Tags show as tag chips and the Assignee as their avatar and name.
 
-The toolbar above a View has a **Filter** menu, a chip for each filter that is set
-(click its **×** to clear it), a search box, and **Dense**. There is no Save button:
+Dates read the way you would say them: "Today", "Tomorrow", "Fri", "Oct 27", and
+"Oct 27, 2025" for another year. Hover a date for the full one. An overdue date has a
+warning icon and is shown in bold.
+
+![A card on the Platform board, in the In Progress column](images/user-guide/board-card.png)
+
+1. The status column, with how many Tasks are in it.
+2. The Task's id.
+3. Its priority chip, amber because **High** needs attention.
+4. **More (⋮)**, the Task's **Actions for {id}** menu.
+5. The Task's title.
+6. Its Tags.
+7. The assignee's avatar, with the [presence badge](#status-at-a-glance) on it (here a hollow grey ring: offline).
+8. The due date, overdue: a warning icon, in bold.
+
+The toolbar above a View has a **Filter** menu, a filter chip for each filter that is set
+(press its **Close (×)** to clear it), a search box, and **Dense**. There is no Save button:
 **every change is saved to the View as you make it**, apart from the search text.
 **Reset filters** clears the filter and the search; it is the button on an empty result.
 
-A View's `⋯` menu has **Rename**, **Fields…** and **Delete view**. **Rename** opens a
+A View's More (⋮) menu has **Rename**, **Fields…** and **Delete view**. **Rename** opens a
 small dialog (1 to 60 characters, not the name of another View). **Delete view** asks
 `Delete 'name'?` and says that Tasks are not affected.
 
-A Task's `⋯` menu is titled **Actions for {id}**. It has **Copy id** and **Copy link**
-(the toast reads **Copied link to {id}**). A Task's panel shows **Created**, **Updated**
+A Task's More (⋮) menu is titled **Actions for {id}**. It has **Copy id** and **Copy link**
+(the message at the bottom of the window reads "Copied link to {id}"). A Task's panel shows **Created**, **Updated**
 and **Closed** dates. A Task a Teammate is working on shows a **Teammate working**
 chip, and a Task that woke a Teammate links to **Woken in Room {name}**.
 
@@ -1544,7 +1669,7 @@ A **root** is a top-level folder shown in the Library:
 | --- | --- |
 | **Teams** | `Teams/`: Team and Project folders and their notes. Task folders (`_tasks`) are hidden. |
 | **Teammates** | `Teammates/`: each Teammate's definition and `work/` folder. |
-| Pinned folders | Any folder on your machine you add with **Add Folder** or in **Settings › Library**. |
+| Pinned folders | Any folder on your machine you add with **Add folder** or in **Settings › Library**. |
 
 Pinned folders are saved in `library-roots.json` in the data root. The file is
 created the first time you add, remove or hide a root. **Reset pinned folders**
@@ -1575,7 +1700,7 @@ listed in the [Right sidebar](#the-right-sidebar) while the note is open.
 
 ### Organising files
 
-Open the `⋯` menu on any item, or right-click it.
+Open the More (⋮) menu on any item, or right-click it.
 
 | Action | In the background |
 | --- | --- |
@@ -1676,7 +1801,7 @@ An installed Skill keeps a `.source.json` file in its folder, which records wher
 it came from. Wherever the Skill appears (the Skills tab, a Teammate's card), its
 provenance line shows the publisher, repository, commit and licence. If the folder
 has changed since the import, the line also shows a **modified locally** chip. A
-Skill you wrote yourself shows **Yours**, and a shipped one shows **Built in**.
+Skill you wrote yourself shows "Yours", and a shipped one shows "Built-in".
 
 
 > **Example (Scenario 2).** Emre adds the MSBuild Authoring pack to Jane's card. The
@@ -1688,11 +1813,12 @@ Skill you wrote yourself shows **Yours**, and a shipped one shows **Built in**.
 
 | Tab | What it changes | Saved to |
 | --- | --- | --- |
+| **Profile** | You: Name, Alias (a second name that @mentions you), Title and a short description, shown as the same card a Teammate gets. Click the avatar to change it. A Name or Alias a Teammate already uses is refused. Renaming yourself moves your avatar and your Tasks with you, and every message you ever sent shows the new Name; the transcript files are not rewritten. | `profile.json` (avatar in `avatars.json`) |
 | **Prompts** | The text Huddle sends to Teammates, such as the wake-up message. **Reset all to defaults** (beside the sticky **Save**) asks "Reset every prompt to its default?" and **Reset all** confirms. | `prompts.json` |
-| **Appearance** | Theme, light/dark and accent colour. | `appearance.json` |
+| **Appearance** | You pick one light Theme and one dark Theme; the picker groups the Themes as Light, Dark and High contrast. The button in the top bar switches between your two. An accent colour is set here too; your own avatar moved to **Profile**. | `appearance.json` |
 | **Personas** | The Teammate definitions. | `Teammates/…` |
 | **Skills** | List of Skills with where each came from, and their problems; **Import skill**; **Restore default**. | `Skills/…` |
-| **Team Types** | Read-only list of team types, built-in or yours, with **Reload** and a **Problems** list. | `TeamTypes/…` |
+| **Team types** | Read-only list of team types, built-in or yours, with **Reload** and a **Problems** list. | `TeamTypes/…` |
 | **Library** | Pinned folders; hide the built-in roots. | `library-roots.json` |
 
 ## What happens when… (reference)
@@ -1702,6 +1828,7 @@ Skill you wrote yourself shows **Yours**, and a shipped one shows **Built in**.
 | Add a Teammate | `Teammates/<Name>/<Name>.md`, `team.db`, `Teams/<label>/` if missing | Comes online |
 | Edit a Teammate, or change Model, Effort, Work mode, Skills or Teams | Rewrites `<Name>.md` (Model, Effort and Work mode in `team.db`) | Restarts; conversation memory cleared |
 | Rename a Teammate | Moves `Teammates/<Old>/`; renames entries in `room-sessions/`, `file-state/`, `avatars.json`, `team.db`; rewrites Task creators and assignees and View filters | Restarts |
+| Rename yourself on **Settings > Profile** | `profile.json`; renames your entry in `avatars.json` and your row in `team.db`; rewrites Task creators and assignees and View filters | None; Teammates see your new Name on new and old messages from their next turn |
 | Remove a Teammate | Deletes `<Name>.md` only | Goes offline; Rooms, transcripts and `work/` stay |
 | Restart a Teammate | Deletes `room-sessions/<Name>.json` | Every Room starts fresh, with catch-up |
 | Build a team (**Approve & hire**) | `Teams/<Team>/_team.md`, then a Teammate file for each draft | The Teammates are hired; start them from their cards |

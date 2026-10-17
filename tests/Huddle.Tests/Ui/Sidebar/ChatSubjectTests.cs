@@ -93,6 +93,8 @@ public sealed class ChatSubjectTests
         ctx.Services.AddSingleton(source.GetRequiredService<IChatStore>());
         ctx.Services.AddSingleton(source.GetRequiredService<RoomEvents>());
         ctx.Services.AddSingleton(source.GetRequiredService<ChatService>());
+        // Chat navigates through ServerNavigator, which needs the circuit connection tracker the app registers.
+        Agency.Huddle.App.Circuits.CircuitServiceCollectionExtensions.AddCircuitConnection(ctx.Services);
         ctx.Services.AddSingleton(source.GetRequiredService<Drafts>());
         ctx.Services.AddSingleton(source.GetRequiredService<IAgentGateway>());
         ctx.Services.AddSingleton(source.GetRequiredService<PersonaHealth>());

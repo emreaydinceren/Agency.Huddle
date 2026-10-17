@@ -973,6 +973,8 @@ public sealed class TaskBoardTests
         IReadOnlyList<IElement> headers = cut.FindAll("div.task-board-column-header");
         Assert.All(headers, header => Assert.Equal("task-state-dot", header.Children[0].ClassList[0]));
         Assert.Contains("task-state-dot-success", headers[4].Children[0].ClassList);
+        Assert.Contains("task-state-dot-backlog", headers[0].Children[0].ClassList);
+        Assert.DoesNotContain("task-state-dot-backlog", headers[1].Children[0].ClassList);
         string[] empty = [.. cut.FindAll(".task-board-column-empty").Select(e => e.TextContent.Trim())];
         Assert.Contains("Nothing done yet.", empty);
         Assert.Contains("Backlog is empty.", empty);

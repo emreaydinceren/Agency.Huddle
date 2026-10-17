@@ -2,6 +2,7 @@ using System.Text.RegularExpressions;
 using Agency.Huddle.App.Acp;
 using Agency.Huddle.App.Data;
 using Agency.Huddle.App.Pipes;
+using Agency.Huddle.App.Profile;
 using Agency.Huddle.App.Services;
 using Agency.Huddle.App.TeamTypes;
 using Agency.Huddle.App.Teams;
@@ -30,7 +31,8 @@ internal sealed partial class CandidateChecker(
     ITeamDirectory directory,
     IAgentGateway gateway,
     TeamTypeCatalog? types = null,
-    ITeamCatalog? teams = null)
+    ITeamCatalog? teams = null,
+    IHumanIdentity? humanIdentity = null)
 {
     private const string FrontmatterDelimiter = "---";
 
@@ -152,6 +154,21 @@ internal sealed partial class CandidateChecker(
         {
             problems.Add($"'{candidate.Name}' is the Human's Name.");
             return;
+        }
+
+        // The Human's Alias Mentions the Human, so a Teammate may not take it as a Name or an Alias.
+        if (humanIdentity?.Current.Alias is { } humanAlias)
+        {
+            if (string.Equals(candidate.Name, humanAlias, StringComparison.OrdinalIgnoreCase))
+            {
+                problems.Add($"'{candidate.Name}' is the Human's Alias.");
+                return;
+            }
+
+            if (string.Equals(candidate.Alias, humanAlias, StringComparison.OrdinalIgnoreCase))
+            {
+                problems.Add($"'{candidate.Alias}' is the Human's Alias.");
+            }
         }
 
         var user = await directory.FindUserByNameAsync(candidate.Name, ct);

@@ -43,6 +43,7 @@
 @inject TurnActivity Turns
 @inject AvatarStore Avatars
 @inject IOptions<TeamOptions> Options
+@inject IHumanIdentity Human
 @inject TimeProvider Clock
 @inject IDialogService Dialogs
 @inject IJSRuntime JS
@@ -61,7 +62,7 @@
 else if (this.loaded is { } task)
 {
     TaskItem effective = this.Effective ?? task;
-    WakePreview preview = this.Triggers.Preview(task, effective, TaskActors.Human(this.Options.Value));
+    WakePreview preview = this.Triggers.Preview(task, effective, TaskActors.Human(this.Human));
     string? notice = TaskDetail.NoticeText(preview);
     string saveLabel = TaskDetail.SaveLabel(preview);
     bool budgetExhausted = this.Activity.Budget(task.Id).Exhausted;
@@ -515,11 +516,11 @@ else if (this.loaded is { } task)
 
         @* Footer meta: when the Task was created, last changed and closed, at the bottom of the form. *@
         <div class="task-detail-footer-meta">
-            <span class="task-detail-created">@($"Created {TaskDates.Display(task.Created)}")</span>
-            <span class="task-detail-updated">@($"Updated {TaskDates.Display(task.Updated)}")</span>
+            <span class="task-detail-created" title="@TaskDates.Tooltip(task.Created, this.Clock)">@($"Created {TaskDates.Human(task.Created, this.Clock)}")</span>
+            <span class="task-detail-updated" title="@TaskDates.Tooltip(task.Updated, this.Clock)">@($"Updated {TaskDates.Human(task.Updated, this.Clock)}")</span>
             @if (task.ClosedAt is { } closedAt)
             {
-                <span class="task-detail-closed">@($"Closed {TaskDates.Display(closedAt)}")</span>
+                <span class="task-detail-closed" title="@TaskDates.Tooltip(closedAt, this.Clock)">@($"Closed {TaskDates.Human(closedAt, this.Clock)}")</span>
             }
         </div>
     }
@@ -706,7 +707,7 @@ else if (this.loaded is { } task)
         if (this.Id is null && this.Draft is { } draft)
         {
             this.createMode = true;
-            this.loaded = TaskDetail.BuildDraftItem(draft, TaskActors.Human(this.Options.Value));
+            this.loaded = TaskDetail.BuildDraftItem(draft, TaskActors.Human(this.Human));
         }
         else
         {
@@ -910,7 +911,7 @@ else if (this.loaded is { } task)
     }
 
     /// <summary>
-    /// Searches candidates for the Assignee autocomplete: the Human (<see cref="TeamOptions.HumanName"/>,
+    /// Searches candidates for the Assignee autocomplete: the Human (<see cref="IHumanIdentity.Name"/>,
     /// hardcoded first so the Human can always assign a Task to themselves) followed by every known Persona
     /// by Name, resolving each one's presence (Spec §13.6). The Human's option carries no presence - the item
     /// template skips the badge for <see cref="AssigneeOption.IsHuman"/>, since Awake/Asleep/Offline describes
@@ -921,7 +922,7 @@ else if (this.loaded is { } task)
     private Task<IEnumerable<AssigneeOption>> SearchAssignees(string? query, CancellationToken cancellationToken)
     {
         _ = cancellationToken;
-        AssigneeOption human = new(this.Options.Value.HumanName, string.Empty, null, IsHuman: true);
+        AssigneeOption human = new(this.Human.Name, string.Empty, null, IsHuman: true);
         IEnumerable<AssigneeOption> personas = this.Personas.Entries
             .Select(entry => new AssigneeOption(entry.Name, entry.Title, TaskPresence.For(entry.Name, this.Directory, this.Gateway, this.Health, this.Turns)));
         IEnumerable<AssigneeOption> options = new[] { human }.Concat(personas)
@@ -1203,7 +1204,7 @@ else if (this.loaded is { } task)
             return;
         }
 
-        TaskActor actor = TaskActors.Human(this.Options.Value);
+        TaskActor actor = TaskActors.Human(this.Human);
         TaskResult result = before.Location.Closed
             ? this.Service.Reopen(current.Id, actor)
             : this.Service.Close(current.Id, actor);
@@ -1354,7 +1355,7 @@ else if (this.loaded is { } task)
             return Task.CompletedTask;
         }
 
-        TaskActor actor = TaskActors.Human(this.Options.Value);
+        TaskActor actor = TaskActors.Human(this.Human);
         Sprint? createdSprint = null;
         TaskResult? outcome = null;
 
@@ -1438,11 +1439,11 @@ else if (this.loaded is { } task)
     private static string FormatChangeLogDate(DateTimeOffset at, TimeProvider clock) =>
         TimeZoneInfo.ConvertTime(at, clock.LocalTimeZone).ToString("yyyy-MM-dd HH:mm", CultureInfo.InvariantCulture);
 
-    /// <summary>The Save button's label for <paramref name="preview"/> (Spec §13.6's table): "Save &amp; Notify {name}" only for an Awake or Asleep assignee, plain "Save" otherwise.</summary>
+    /// <summary>The Save button's label for <paramref name="preview"/> (Spec §13.6's table): "Save &amp; notify {name}" only for an Awake or Asleep assignee, plain "Save" otherwise.</summary>
     /// <param name="preview">The wake preview for the Human's pending edit.</param>
     private static string SaveLabel(WakePreview preview) =>
         preview.Block == WakeBlock.None && preview.Presence is PresenceState.Awake or PresenceState.Asleep
-            ? $"Save & Notify {preview.AssigneeName}"
+            ? $"Save & notify {preview.AssigneeName}"
             : "Save";
 
     /// <summary>

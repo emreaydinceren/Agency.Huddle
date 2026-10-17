@@ -449,6 +449,12 @@ internal static class TaskTriggerTestSupport
         public bool RenameUser(string userId, string newName) => inner.RenameUser(userId, newName);
 
         /// <inheritdoc />
+        public Task<string?> ReadHumanNameAsync(CancellationToken ct = default) => inner.ReadHumanNameAsync(ct);
+
+        /// <inheritdoc />
+        public bool RenameHuman(string newName) => inner.RenameHuman(newName);
+
+        /// <inheritdoc />
         public Task<User?> GetUserAsync(string id, CancellationToken ct = default) =>
             this.HideUserId is { } hidden && string.Equals(hidden, id, StringComparison.Ordinal)
                 ? Task.FromResult<User?>(null)

@@ -1,6 +1,5 @@
 namespace Agency.Huddle.Tests.Ui.Tasks;
 
-using System.Globalization;
 using Bunit;
 using MudBlazor;
 using Agency.Huddle.App.Components.Tasks;
@@ -146,23 +145,21 @@ public sealed class TaskDetailPlacementTests
     // Created, Updated, Closed (Spec §13.6: read-only, derived).
     // ---------------------------------------------------------------------------------------------
 
-    /// <summary>Created and Updated show <see cref="TaskItem.Created"/>/<see cref="TaskItem.Updated"/>, formatted (provisionally, the Spec gives no format) as <c>yyyy-MM-dd</c>, invariant.</summary>
+    /// <summary>Created and Updated show <see cref="TaskItem.Created"/>/<see cref="TaskItem.Updated"/> as a human date ("Today"), with the full date in the tooltip.</summary>
     /// <param name="mode">Both entry points.</param>
     [Theory]
     [MemberData(nameof(TaskDetailFieldsTestSupport.BothModesData), MemberType = typeof(TaskDetailFieldsTestSupport))]
-    public async Task CreatedUpdated_ShowDerivedDatesInIsoFormat(TaskDetailMode mode)
+    public async Task CreatedUpdated_ShowDerivedDatesAsHumanDates(TaskDetailMode mode)
     {
-        using TaskToolHarness harness = new();
+        Agency.Huddle.Tests.Acp.Fakes.ManualTimeProvider clock = new(new DateTimeOffset(2026, 10, 16, 12, 0, 0, TimeSpan.Zero), TimeZoneInfo.Utc);
+        using TaskToolHarness harness = new(clock);
         TaskItem task = CreateTask(harness);
         await using MudBunitContext ctx = NewContext(harness);
         var cut = RenderDetail(ctx, task.Id, mode);
 
-        DateTimeOffset created = task.Created ?? throw new InvalidOperationException("Task has no Created date.");
-        DateTimeOffset updated = task.Updated ?? throw new InvalidOperationException("Task has no Updated date.");
-        string expectedCreated = created.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture);
-        string expectedUpdated = updated.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture);
-        Assert.Equal($"Created {expectedCreated}", TextOf(cut, ".task-detail-created"));
-        Assert.Equal($"Updated {expectedUpdated}", TextOf(cut, ".task-detail-updated"));
+        Assert.Equal("Created Today", TextOf(cut, ".task-detail-created"));
+        Assert.Equal("Updated Today", TextOf(cut, ".task-detail-updated"));
+        Assert.Equal("Fri, Oct 16, 2026", cut.Find(".task-detail-created").GetAttribute("title"));
     }
 
     /// <summary>Closed shows only when the Task has a <see cref="TaskItem.ClosedAt"/> (Spec §13.6).</summary>
@@ -171,7 +168,8 @@ public sealed class TaskDetailPlacementTests
     [MemberData(nameof(TaskDetailFieldsTestSupport.BothModesData), MemberType = typeof(TaskDetailFieldsTestSupport))]
     public async Task Closed_ShownOnlyWhenClosedAtIsSet(TaskDetailMode mode)
     {
-        using TaskToolHarness harness = new();
+        Agency.Huddle.Tests.Acp.Fakes.ManualTimeProvider clock = new(new DateTimeOffset(2026, 10, 16, 12, 0, 0, TimeSpan.Zero), TimeZoneInfo.Utc);
+        using TaskToolHarness harness = new(clock);
         TaskItem openTask = CreateTask(harness, title: "Still open");
         await using MudBunitContext openCtx = NewContext(harness);
         var openCut = RenderDetail(openCtx, openTask.Id, mode);
@@ -182,8 +180,6 @@ public sealed class TaskDetailPlacementTests
         await using MudBunitContext closedCtx = NewContext(harness);
         var closedCut = RenderDetail(closedCtx, closedTask.Id, mode);
 
-        DateTimeOffset closedAt = closedTask.ClosedAt ?? throw new InvalidOperationException("Task has no ClosedAt date.");
-        string expected = closedAt.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture);
-        Assert.Equal($"Closed {expected}", TextOf(closedCut, ".task-detail-closed"));
+        Assert.Equal("Closed Today", TextOf(closedCut, ".task-detail-closed"));
     }
 }

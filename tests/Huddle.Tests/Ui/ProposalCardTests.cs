@@ -481,6 +481,18 @@ public sealed class ProposalCardTests
         }
 
         /// <inheritdoc />
+        public Task<string?> ReadHumanNameAsync(CancellationToken ct = default)
+        {
+            return inner.ReadHumanNameAsync(ct);
+        }
+
+        /// <inheritdoc />
+        public bool RenameHuman(string newName)
+        {
+            return inner.RenameHuman(newName);
+        }
+
+        /// <inheritdoc />
         public async Task<User?> GetUserAsync(string id, CancellationToken ct = default)
         {
             if (this.Gate is { } gate)

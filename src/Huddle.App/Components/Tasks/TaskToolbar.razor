@@ -15,7 +15,7 @@
 @if (this.SplitHeader)
 {
     @* The Tasks page's own first row (wireframe): the counts on the left; the page's actions, Group by,
-       List | Kanban and "+ New task" on the right. Same dense MudToolBar as the row below, so the two
+       List | Board and "+ New task" on the right. Same dense MudToolBar as the row below, so the two
        rows are the same height. *@
     <MudToolBar Dense="true" Gutters="false" Class="task-toolbar-header">
         @this.HeaderLeading
@@ -273,7 +273,7 @@
         <MudSelectItem T="TaskGroupField?" Value="TaskGroupField.Sprint">Sprint</MudSelectItem>
         @if (this.EffectiveView.Kind == ViewKind.List)
         {
-            @* Status is a Group by choice on a List only: a Kanban's columns already are the statuses. *@
+            @* Status is a Group by choice on a List only: a Board's columns already are the statuses. *@
             <MudSelectItem T="TaskGroupField?" Value="TaskGroupField.State">Status</MudSelectItem>
         }
     </MudSelect>;
@@ -291,7 +291,7 @@
     private RenderFragment KindControl => @<HuddleSegmentedControl T="ViewKind" Value="this.EffectiveView.Kind" ValueChanged="this.OnKindChangedAsync"
                                                                    Class="task-toolbar-kind" ItemCount="2">
         <MudToggleItem Value="ViewKind.List" Text="List" />
-        <MudToggleItem Value="ViewKind.Board" Text="Kanban" />
+        <MudToggleItem Value="ViewKind.Board" Text="Board" />
     </HuddleSegmentedControl>;
 
     /// <summary>The statuses "Open" stands for: every one that is not terminal.</summary>
@@ -485,7 +485,7 @@
     /// <summary>The Group by chip's text: the chosen field's name, or "None".</summary>
     private string GroupText => this.PrimaryGrouping is { } grouping ? GroupFieldLabel(grouping) : "None";
 
-    /// <summary>The fields the Group by chip offers: State (shown as Status) only on a List, since a Kanban's columns already are the statuses.</summary>
+    /// <summary>The fields the Group by chip offers: State (shown as Status) only on a List, since a Board's columns already are the statuses.</summary>
     private List<TaskGroupField> GroupChoices() =>
     [
         TaskGroupField.Team,

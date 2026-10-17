@@ -30,6 +30,20 @@ public sealed class ComposerTests
         Assert.Equal("huddle:draft:any-room", invocation.Arguments[2]);
     }
 
+    /// <summary>Disposing the Composer tells the script to detach, so the resize observer it attached is disconnected.</summary>
+    [Fact]
+    public async Task Dispose_DetachesTheScript()
+    {
+        using TaskToolHarness harness = new();
+        await using MudBunitContext ctx = ComposerTests.NewContext(harness);
+        _ = ComposerTests.RenderComposer(ctx);
+
+        await ctx.DisposeComponentsAsync();
+
+        var invocation = ctx.JSInterop.VerifyInvoke("teamComposer.detach");
+        Assert.Single(invocation.Arguments);
+    }
+
     /// <summary>The first typing in a Composer makes the Room's Tab permanent.</summary>
     [Fact]
     public async Task TypedAsync_PinsTheRoomsTab()

@@ -43,15 +43,16 @@ public sealed class LibraryNavLinkTests
         Assert.DoesNotContain("Add folder", text, StringComparison.Ordinal);
     }
 
-    /// <summary>The entry is drawn as a section header, the same class the Teammates link takes.</summary>
+    /// <summary>The entry is a destination row, not a section header: the same <c>nav-row-link</c> class the Teammates link takes.</summary>
     [Fact]
-    public async Task IsDrawnAsASectionHeader()
+    public async Task IsDrawnAsADestinationRow()
     {
         await using MudBunitContext ctx = LibraryNavLinkTests.NewContext(libraryEnabled: true);
 
         var cut = ctx.Render<LibraryNavLink>();
 
-        Assert.Single(cut.FindAll(".nav-section-link"));
+        Assert.Single(cut.FindAll(".nav-row-link"));
+        Assert.Empty(cut.FindAll(".nav-section-link"));
     }
 
     /// <summary>With <c>Library.Enabled</c> off, the component renders nothing at all.</summary>

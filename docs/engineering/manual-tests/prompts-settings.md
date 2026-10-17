@@ -16,7 +16,7 @@ oracles `O-LOG` / `O-ADAPTERS` / `O-TRANSCRIPT` / `O-DB`, the four resets, and t
 standing conventions. This area adds:
 
 1. Confirm the clean starting state before the first test: `App_Data` should hold `Teammates` (one folder per Teammate, each holding `<Name>.md` and `work`), `Teams` and `team.db` (plus `team.db-shm` / `team.db-wal`) and NO `prompts.json` and NO `appearance.json`. That absence is correct, not a fault.
-2. Browse to `http://localhost:5100/settings`.
+2. Browse to `http://localhost:5100/settings/prompts`. (A bare `/settings` opens the **Profile** tab, the first of seven; every test below that works on prompt fields means the Prompts tab.)
 3. Keep a File Explorer window on `App_Data` beside the browser with the view set to Details, so the Date modified column is visible. Several tests turn on 'the file did not change'.
 4. Keep a plain-text editor that does not reformat files (VS Code, Notepad++, Notepad) ready — many tests hand-edit `App_Data\prompts.json` while the app is running.
 5. Open `<repo>\src\Huddle.App\prompts.default.json` in that editor and leave it open. It holds every shipped default, one key per prompt, pretty-printed, and is the diff source for every 'did Reset restore the exact shipped wording?' check. Nothing in the running app ever reads it.
@@ -25,11 +25,11 @@ standing conventions. This area adds:
 
 ## Tests
 
-### PROMPTSSETTINGS-01 — /settings opens on the Prompts tab with a six-tab rail
+### PROMPTSSETTINGS-01 — /settings opens on the Profile tab with a seven-tab rail
 
 **Free** · about 2 min
 
-*Proves the page routes, renders, and defaults to Prompts when no tab segment is given.*
+*Proves the page routes, renders, and defaults to Profile, the first tab, when no tab segment is given, with Prompts second.*
 
 **Before you start**
 
@@ -49,15 +49,16 @@ standing conventions. This area adds:
 **Pass if — all of these**
 
 - An `<h1>` reading exactly `Settings` is at the top of the page.
-- The tab rail contains exactly six buttons, in this order: `PROMPTS`, `APPEARANCE`, `PERSONAS`, `SKILLS`, `TEAM TYPES`, `LIBRARY` (MudBlazor renders tab labels in upper case; the underlying text is `Prompts`, `Appearance`, `Personas`, `Skills`, `Team Types`, `Library`), laid out horizontally ABOVE the content, not down its left edge.
-- `PROMPTS` is the visually selected tab and the other five are not.
-- The content pane below shows prompt fields (bold field labels with textareas), not a theme picker.
+- The tab rail contains exactly seven buttons, in this order: `PROFILE`, `PROMPTS`, `APPEARANCE`, `PERSONAS`, `SKILLS`, `TEAM TYPES`, `LIBRARY` (MudBlazor renders tab labels in upper case; the underlying text is `Profile`, `Prompts`, `Appearance`, `Personas`, `Skills`, `Team types`, `Library`), laid out horizontally ABOVE the content, not down its left edge.
+- `PROFILE` is the visually selected tab and the other six are not.
+- The content pane below shows the Human's profile card with fields `Name`, `Alias`, `Title` and `Description` under it, not prompt fields and not a theme picker.
 - The address bar still reads `http://localhost:5100/settings` with no tab segment appended.
 
 **Fail if — any of these**
 
 - A 404 page or a yellow/ASP.NET exception page -> the route `/settings` with no `{Tab}` segment no longer resolves.
-- A blank content pane -> the `default:` fallback arm of the tab switch has broken; landing with no tab must still render Prompts.
+- A blank content pane -> the fallback arm of the tab switch has broken; landing with no tab must still render Profile.
+- The Prompts pane shows on a bare `/settings` -> the fallback still names Prompts, the default before the Profile tab existed.
 - No tab looks active, or more than one does -> `MudTabs`' `ActivePanelIndex` is being computed from a stale or duplicated comparison.
 - The rail renders as a vertical column down the left, or anywhere other than horizontally above the content -> `MudTabs.Position` was set away from its default (`Position.Top`), which nothing in this area asked for.
 
@@ -66,9 +67,9 @@ standing conventions. This area adds:
 If the browser shows a connection error, the app is not running — redo `P-LAUNCH-FREE` and check `T-A` for a startup exception, then re-run. If the page renders but the styling is obviously absent (no colours at all, unstyled text), CSS failed to load: hard-refresh with Ctrl+F5 and re-judge; if it is still unstyled, stop and report a CSS-loading problem rather than judging the tab rail.
 
 > [!NOTE]
-> The tab rail is `MudTabs` (Stage 3 of the MudBlazor migration), rendered at its default `Position.Top` — horizontally, above the content — which is a layout change from the old hand-rolled vertical left rail. That change is expected; do not file it. To confirm the selected-tab styling objectively rather than by eye, open devtools (F12), inspect the `PROMPTS` button, and check its class list contains `mud-tab-active`. The old hand-rolled `settings-tab-active` class no longer exists.
+> The tab rail is `MudTabs` (Stage 3 of the MudBlazor migration), rendered at its default `Position.Top` — horizontally, above the content — which is a layout change from the old hand-rolled vertical left rail. That change is expected; do not file it. To confirm the selected-tab styling objectively rather than by eye, open devtools (F12), inspect the `PROFILE` button, and check its class list contains `mud-tab-active`. The old hand-rolled `settings-tab-active` class no longer exists.
 
-### PROMPTSSETTINGS-02 — Tab clicks change the URL, and an unknown tab segment falls back to Prompts instead of 404ing
+### PROMPTSSETTINGS-02 — Tab clicks change the URL, and an unknown tab segment falls back to Profile instead of 404ing
 
 **Free** · about 4 min
 
@@ -94,13 +95,13 @@ If the browser shows a connection error, the app is not running — redo `P-LAUN
 
 **Pass if — all of these**
 
-- After step 1 the URL is `http://localhost:5100/settings/appearance` and the pane shows the sentence `Pick a theme. Each theme is either a light or a dark one, so choosing it sets the application's light or dark colours too.`, then one list of themes (a single `MudList`, labelled `Theme`, with group sub-headings; Custom Accent Light and Custom Accent Dark are among its items), a `Library pane` radio pair (`Right`, `Left`), a theme-credit paragraph, a note giving the path of `appearance.json`, and a `Your avatar` section. There is NO select control and no light/dark `Appearance` select, and no accent colour picker unless a Custom Accent theme is selected (ADR-0017).
+- After step 1 the URL is `http://localhost:5100/settings/appearance` and the pane shows the sentence `Pick a theme. Each theme is either a light or a dark one, so choosing it sets the application's light or dark colours too.`, then one list of themes (a single `MudList`, labelled `Theme`, with group sub-headings; Custom Accent Light and Custom Accent Dark are among its items), a `Library pane` radio pair (`Right`, `Left`), a theme-credit paragraph, a note giving the path of `appearance.json`, and last a paragraph reading `Your own avatar is set on the Profile tab.`, where `Profile` links to `/settings/profile`. There is no avatar editor on this tab, NO select control and no light/dark `Appearance` select, and no accent colour picker unless a Custom Accent theme is selected (ADR-0017).
 - After step 3 the URL is `http://localhost:5100/settings/prompts` and the prompt textareas are back.
 - Step 5 renders the Prompts pane.
 - Step 6 (`/settings/PROMPTS`) renders the Prompts pane — the parse is case-insensitive.
 - Step 7 (`/settings/Appearance`) renders the Appearance pane.
-- Step 8 (`/settings/nonsense`) renders the PROMPTS pane, with `nonsense` still visible in the address bar.
-- Step 9 renders a page (Prompts pane) rather than an error.
+- Step 8 (`/settings/nonsense`) renders the PROFILE pane (the profile card and its fields) with `PROFILE` the selected tab, and `nonsense` still visible in the address bar.
+- Step 9 renders a page (Profile pane) rather than an error.
 - Back and Forward move between the tabs you visited without error.
 
 **Fail if — any of these**
@@ -122,7 +123,7 @@ If step 9 (`/settings/` with a trailing slash) gives a 404 while every other ste
 **Before you start**
 
 - The app is running.
-- You are on /settings (Prompts tab).
+- You are on /settings/prompts (Prompts tab).
 
 **Steps**
 
@@ -162,7 +163,7 @@ If Explorer says the FILE does not exist but opens the right FOLDER, that is a P
 
 - The app is running.
 - No prompts.json (fresh state).
-- You are on /settings (Prompts tab).
+- You are on /settings/prompts (Prompts tab).
 
 **Steps**
 
@@ -206,7 +207,7 @@ If you cannot tell where one group ends and the next begins because headings are
 **Before you start**
 
 - The app is running.
-- You are on /settings (Prompts tab).
+- You are on /settings/prompts (Prompts tab).
 
 **Steps**
 
@@ -246,7 +247,7 @@ If tooltips do not appear at all in your browser (some kiosk/remote setups suppr
 **Before you start**
 
 - The app is running.
-- You are on /settings (Prompts tab).
+- You are on /settings/prompts (Prompts tab).
 
 **Steps**
 
@@ -290,7 +291,7 @@ If chips render but are visually indistinguishable from the surrounding text, re
 **Before you start**
 
 - No prompts.json (every field must show its shipped default).
-- The app is running and you are on /settings (Prompts tab).
+- The app is running and you are on /settings/prompts (Prompts tab).
 
 **Steps**
 
@@ -327,7 +328,7 @@ Browser Ctrl+F does NOT reliably search inside textarea values, so a 'no hits' r
 
 **Before you start**
 
-- The app is running, on /settings (Prompts tab).
+- The app is running, on /settings/prompts (Prompts tab).
 - No prompts.json.
 
 **Steps**
@@ -368,7 +369,7 @@ A very long SINGLE line with no newlines correctly stays at 2 rows and scrolls s
 **Before you start**
 
 - No prompts.json.
-- The app is running, on /settings (Prompts tab).
+- The app is running, on /settings/prompts (Prompts tab).
 - File Explorer is open on App_Data.
 
 **Steps**
@@ -417,7 +418,7 @@ If you cannot distinguish the amber `Modified` pill from the blue `Unsaved` pill
 **Before you start**
 
 - No prompts.json at the start.
-- The app is running, on /settings (Prompts tab).
+- The app is running, on /settings/prompts (Prompts tab).
 - `src\Huddle.App\prompts.default.json` is open in a text editor.
 
 **Steps**
@@ -462,7 +463,7 @@ Step 7 depends on retyping the default byte-for-byte. If `Modified` refuses to c
 
 **Before you start**
 
-- The app is running, on /settings (Prompts tab).
+- The app is running, on /settings/prompts (Prompts tab).
 - File Explorer open on App_Data in Details view.
 
 **Steps**
@@ -513,7 +514,7 @@ If the Date modified column shows only minutes and both operations happen inside
 **Steps**
 
 1. Confirm in Explorer that `prompts.json` is absent.
-2. Load `http://localhost:5100/settings`, then press F5 twice. Refresh Explorer and check again.
+2. Load `http://localhost:5100/settings/prompts`, then press F5 twice. Refresh Explorer and check again.
 3. Type ` A` into `Room label`, ` B` into `Help: budget`, and ` C` into `Identity`. Refresh Explorer and check again.
 4. Click the `Reset` button on the `Identity` field. Refresh Explorer and check again.
 5. Click `Save`.
@@ -550,7 +551,7 @@ If the file was already present at step 1, you did not reset state — run `P-RE
 
 **Before you start**
 
-- The app is running, on /settings (Prompts tab).
+- The app is running, on /settings/prompts (Prompts tab).
 - No prompts.json to start.
 
 **Steps**
@@ -594,7 +595,7 @@ Straight double quotes inside a prompt's text WILL legitimately appear as `\"` i
 **Before you start**
 
 - No prompts.json.
-- The app is running, on /settings (Prompts tab).
+- The app is running, on /settings/prompts (Prompts tab).
 
 **Steps**
 
@@ -632,13 +633,13 @@ If you reset the wrong field, start over from a clean state rather than reasonin
 
 **Before you start**
 
-- The app is running, on /settings.
+- The app is running, on /settings/prompts.
 - File Explorer open on App_Data.
 
 **Steps**
 
 1. Type ` SEED` at the end of `Room label` and click `Save`, so `prompts.json` exists. Note its Date modified and copy its content into a scratch file for comparison.
-2. Press F5 to reload /settings. Refresh Explorer and compare.
+2. Press F5 to reload /settings/prompts. Refresh Explorer and compare.
 3. Type text into three different fields. Refresh Explorer and compare.
 4. Click the `Reset` button on one of those fields. Refresh Explorer and compare.
 5. Click `Reset all to defaults` in the header, then click `Reset all`. Refresh Explorer and compare.
@@ -675,7 +676,7 @@ If the timestamp granularity is too coarse to distinguish, use content compariso
 **Before you start**
 
 - No prompts.json.
-- The app is running, on /settings (Prompts tab).
+- The app is running, on /settings/prompts (Prompts tab).
 
 **Steps**
 
@@ -717,7 +718,7 @@ If you cannot tell whether the button is disabled, inspect it in devtools and ch
 
 **Before you start**
 
-- The app is running, on /settings (Prompts tab).
+- The app is running, on /settings/prompts (Prompts tab).
 - File Explorer open on App_Data.
 
 **Steps**
@@ -763,7 +764,7 @@ If step 9 shows the overrides gone rather than restored, check `prompts.json` fi
 
 **Before you start**
 
-- The app is running, on /settings (Prompts tab).
+- The app is running, on /settings/prompts (Prompts tab).
 
 **Steps**
 
@@ -798,7 +799,7 @@ The file NOT being deleted is correct — the app never deletes it, it only ever
 
 **Before you start**
 
-- The app is running, on /settings (Prompts tab).
+- The app is running, on /settings/prompts (Prompts tab).
 - You can change file attributes in App_Data.
 
 **Steps**
@@ -845,7 +846,7 @@ If the read-only attribute does not cause a failure on your machine (some enviro
 **Before you start**
 
 - No prompts.json.
-- The app is running, on /settings (Prompts tab).
+- The app is running, on /settings/prompts (Prompts tab).
 
 **Steps**
 
@@ -856,7 +857,7 @@ If the read-only attribute does not cause a failure on your machine (some enviro
 5. Click `Save`.
 6. Look for any dialog, prompt or confirmation.
 7. Open `App_Data\prompts.json` and read the value for `turn.roomLabel`.
-8. Press F5 to reload /settings and look at the `Room label` field again.
+8. Press F5 to reload /settings/prompts and look at the `Room label` field again.
 
 **Pass if — all of these**
 
@@ -889,7 +890,7 @@ If you cannot judge red from amber, inspect the element in devtools: each issue 
 **Before you start**
 
 - No prompts.json.
-- The app is running, on /settings (Prompts tab).
+- The app is running, on /settings/prompts (Prompts tab).
 
 **Steps**
 
@@ -933,7 +934,7 @@ If the message text differs only in the trailing helper sentence (the part after
 **Before you start**
 
 - No prompts.json.
-- The app is running, on /settings (Prompts tab).
+- The app is running, on /settings/prompts (Prompts tab).
 
 **Steps**
 
@@ -972,7 +973,7 @@ The empty parenthesised list at step 7 is ugly but correct — it is what an emp
 **Before you start**
 
 - No prompts.json.
-- The app is running, on /settings (Prompts tab).
+- The app is running, on /settings/prompts (Prompts tab).
 - File Explorer open on App_Data.
 
 **Steps**
@@ -1011,7 +1012,7 @@ If nothing updates live at all, first re-run PROMPTSSETTINGS-08 — if the texta
 **Before you start**
 
 - No prompts.json.
-- The app is running, on /settings (Prompts tab).
+- The app is running, on /settings/prompts (Prompts tab).
 - Browser devtools open on the Console tab.
 
 **Steps**
@@ -1057,7 +1058,7 @@ If your browser blocks alert() dialogs by policy, do not conclude the payload wa
 
 **Before you start**
 
-- The app is running, on /settings (Prompts tab).
+- The app is running, on /settings/prompts (Prompts tab).
 - No prompts.json.
 
 **Steps**
@@ -1101,7 +1102,7 @@ If you are testing over a slow or remote connection, latency is expected and is 
 **Before you start**
 
 - No prompts.json and no appearance.json.
-- The app is running, on /settings (Prompts tab).
+- The app is running, on /settings/prompts (Prompts tab).
 
 **Steps**
 
@@ -1148,7 +1149,7 @@ The absence of an unsaved-changes prompt is documented designed behaviour, not a
 
 **Before you start**
 
-- The app is running, on /settings.
+- The app is running, on /settings/prompts.
 - File Explorer open on App_Data.
 
 **Steps**
@@ -1198,8 +1199,8 @@ If the header button is NOT rendered on the Appearance tab, that is a change fro
 
 **Steps**
 
-1. Open `http://localhost:5100/settings` in browser tab A.
-2. Open `http://localhost:5100/settings` in a second browser tab, tab B.
+1. Open `http://localhost:5100/settings/prompts` in browser tab A.
+2. Open `http://localhost:5100/settings/prompts` in a second browser tab, tab B.
 3. In tab A, type ` FROMA` at the end of `Chat rules` and click `Save`.
 4. Switch to tab B WITHOUT reloading it. Wait up to five seconds and read the `Chat rules` textarea and its badges.
 5. In tab B, type ` TYPEDINB` into `Room label`. Do not save.
@@ -1207,7 +1208,7 @@ If the header button is NOT rendered on the Appearance tab, that is a change fro
 7. Switch to tab B without reloading. Read `Room label` and `Help: footer`.
 8. Close tab B entirely.
 9. Read the server console for the next ten seconds.
-10. Open and close `/settings` in a new tab five times in a row, watching the console each time.
+10. Open and close `/settings/prompts` in a new tab five times in a row, watching the console each time.
 
 **Pass if — all of these**
 
@@ -1236,7 +1237,7 @@ If the repaint takes longer than about five seconds but does arrive, note the de
 **Before you start**
 
 - No prompts.json.
-- The app is running and /settings (Prompts tab) is open and visible.
+- The app is running and /settings/prompts (Prompts tab) is open and visible.
 
 **Steps**
 
@@ -1279,7 +1280,7 @@ If nothing updates, before failing, check the server console for the line `Promp
 **Before you start**
 
 - prompts.json exists with at least two overrides.
-- The app is running and /settings (Prompts tab) is open and visible.
+- The app is running and /settings/prompts (Prompts tab) is open and visible.
 
 **Steps**
 
@@ -1320,7 +1321,7 @@ If Windows refuses the delete because a text editor still holds the file open, c
 
 **Before you start**
 
-- The app is running and /settings (Prompts tab) is open and visible.
+- The app is running and /settings/prompts (Prompts tab) is open and visible.
 - The server console terminal is visible.
 
 **Steps**
@@ -1371,7 +1372,7 @@ The total absence of on-screen feedback is DOCUMENTED DESIGN, not a bug — do n
 2. In the text editor, replace the entire contents of `App_Data\prompts.json` with: `{"turn.roomLabel": 42}` (a non-string value) and save. Copy that content to a scratch file.
 3. Start the app: `dotnet run --project src/Huddle.App` from the repo root.
 4. Watch the console output during startup.
-5. Browse to `http://localhost:5100/settings`.
+5. Browse to `http://localhost:5100/settings/prompts`.
 6. Read every field in every group, and their badges (spot-check at least `Room label`, `Help: footer` and one field from the `Tasks` group).
 7. Read the whole page for any error, banner or mention of an unreadable file.
 8. Open `App_Data\prompts.json` and compare its content to the scratch copy.
@@ -1406,7 +1407,7 @@ No on-screen warning is DOCUMENTED DESIGN — do not file it. If the console scr
 
 **Before you start**
 
-- The app is running, /settings open.
+- The app is running, /settings/prompts open.
 - The server console is visible.
 
 **Steps**
@@ -1445,7 +1446,7 @@ If you do not see the Information line, check that the console log level for `Ag
 **Before you start**
 
 - No prompts.json.
-- The app is running, /settings (Prompts tab) open.
+- The app is running, /settings/prompts (Prompts tab) open.
 - A text editor ready on the prompts.json path.
 
 **Steps**
@@ -1487,7 +1488,7 @@ If neither field updates at step 3, re-run PROMPTSSETTINGS-29 first — if the w
 **Before you start**
 
 - No prompts.json.
-- The app is running, /settings (Prompts tab) open.
+- The app is running, /settings/prompts (Prompts tab) open.
 - A text editor that can set line endings (VS Code shows LF/CRLF in its status bar; Notepad++ has Edit > EOL Conversion).
 
 **Steps**
@@ -1535,7 +1536,7 @@ The comparison ignores line endings by design (decision D6; `PromptStore.cs:406`
 **Steps**
 
 1. In `T-B` run `O-ADAPTERS-LIST` and note the result (probably nothing).
-2. In the browser, load `http://localhost:5100/settings`.
+2. In the browser, load `http://localhost:5100/settings/prompts`.
 3. Re-run `O-ADAPTERS-LIST`.
 4. Press F5 on the page five times, then re-run the command.
 5. Click the `Appearance` tab and the `Prompts` tab three times each, then re-run the command.
@@ -1572,7 +1573,7 @@ If you already have `node` processes running for unrelated reasons (an editor's 
 **Steps**
 
 1. Open `http://localhost:5100/teammates` in browser tab A and confirm Ada's status badge reads Online.
-2. Open `http://localhost:5100/settings` in browser tab B.
+2. Open `http://localhost:5100/settings/prompts` in browser tab B.
 3. Clear or note the current end of the server console output. In `T-B` run `Get-Process mock-acp | Select-Object Id, StartTime` and note the rows (`O-MOCK-ADAPTERS` counts them).
 4. In tab B, type ` EDIT1` into `Room label` (a Live prompt) and click `Save`.
 5. Switch to tab A and watch the status badge for ten seconds.
@@ -1618,7 +1619,7 @@ If Ada is not Online before you start (Offline or Degraded), this test cannot di
 
 1. Open the Room with your teammate and send one short message: `hi`
 2. Confirm the teammate replies. (This is Turn 1.)
-3. In another tab open `/settings`, find `Room label`, and replace its entire text with exactly: `((ROOM {{roomName}} :: {{roomId}}))`
+3. In another tab open `/settings/prompts`, find `Room label`, and replace its entire text with exactly: `((ROOM {{roomName}} :: {{roomId}}))`
 4. Click `Save`. Do NOT restart anything.
 5. Return to the Room and send exactly this one-line message: `Quote back, verbatim, only the first line of the message you just received. Nothing else.`
 6. Read the reply.
@@ -1656,7 +1657,7 @@ A model may paraphrase rather than quote verbatim, which makes the chat reply a 
 **Steps**
 
 1. In the Room, send exactly: `In one short sentence, what is your name and role?` Read the reply. (Turn 1, the baseline.)
-2. In another tab open `/settings`, find the `Identity` field (it carries a `Next session` badge), and change its text to exactly: `You are a member of the Team chat application. You speak as "{{personaName}}". Always begin every reply with the word BANANA.`
+2. In another tab open `/settings/prompts`, find the `Identity` field (it carries a `Next session` badge), and change its text to exactly: `You are a member of the Team chat application. You speak as "{{personaName}}". Always begin every reply with the word BANANA.`
 3. Click `Save`. Confirm the `Unsaved` badge clears.
 4. Watch the page and the server console for ten seconds for any message saying the edit will not apply.
 5. Return to the Room and send exactly: `In one short sentence, what is your name and role?` Read the reply. (Turn 2.)
@@ -1696,12 +1697,12 @@ A model may decline or forget a formatting instruction, so one non-BANANA reply 
 
 **Steps**
 
-1. In another tab open `/settings` and find `Help: budget` (under `Get help`; it carries NO timing badge).
+1. In another tab open `/settings/prompts` and find `Help: budget` (under `Get help`; it carries NO timing badge).
 2. Add this sentence to the end of its text, on its own line: `PINEAPPLE is the safe word.`
 3. Click `Save`. Do NOT restart anything.
 4. In the Room, send exactly: `Call your help tool, then quote back only the BUDGET section of what it returned. Nothing else.`
 5. Read the reply.
-6. Now go back to `/settings` and find `get_help description` (under `Tool descriptions`; it carries a `Next session` badge). Add this to the end of its text: ` MANGO.`
+6. Now go back to `/settings/prompts` and find `get_help description` (under `Tool descriptions`; it carries a `Next session` badge). Add this to the end of its text: ` MANGO.`
 7. Click `Save`. Do NOT restart anything.
 8. In the Room, send exactly: `In one short sentence, what does the description of your help tool say? Quote its last few words.`
 9. Read the reply.
@@ -1727,15 +1728,15 @@ Models are unreliable at quoting tool descriptions back, so step 9 is the weaker
 
 **Free** · about 4 min
 
-*Guards decision D3: the sixth tab used to be unreachable (a click on it, or `/settings/library`, showed Prompts). Proves the tab, the address and the pane agree.*
+*Guards decision D3: the Library tab (then the sixth, now the last of seven) used to be unreachable (a click on it, or `/settings/library`, showed Prompts). Proves the tab, the address and the pane agree.*
 
 **Before you start**
 
-- The app is running, on /settings (Prompts tab).
+- The app is running, on /settings/prompts (Prompts tab).
 
 **Steps**
 
-1. Click the sixth tab, `Library`, in the tab rail.
+1. Click the last tab, `Library` (the seventh), in the tab rail.
 2. Read the address bar and the pane under the tabs.
 3. Look at the table's rows and the control in the last column of each row.
 4. Press F5 and read the address bar and the pane again.
@@ -1752,7 +1753,7 @@ Models are unreliable at quoting tool descriptions back, so step 9 is the weaker
 **Fail if — any of these**
 
 - Clicking `Library` or visiting `/settings/library` shows the Prompts pane -> the tab is unreachable again (the defect decision D3 fixed).
-- The address stays `/settings/prompts` after the click -> the tab rail is not routing for the sixth tab.
+- The address stays `/settings/prompts` after the click -> the tab rail is not routing for the Library tab.
 
 **Inconclusive if**
 

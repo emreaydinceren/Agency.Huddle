@@ -76,7 +76,7 @@ continue. For the totals, run `pwsh agents/scripts/Check-ManualTests.ps1 -Summar
 | [TEAMMATESLIBRARY-01](teammates-library.md#teammateslibrary-01--the-page-loads-is-styled-and-spawns-nothing) | The page loads, is styled, and spawns nothing |
 | [TEAMMATECARD-02](teammate-card.md#teammatecard-02--clicking-new-teammate-opens-a-card-at-all-blank-name-crash-probe) | Clicking New teammate opens a card at all (blank-name crash probe) |
 | [INVITEROOMS-03](invite-rooms.md#inviterooms-03--the-new-chat-panel-toggles-lists-every-agent-with-a-status-dot-and-keeps-start-chat-disabled-until-something-is-ticked) | The New chat panel toggles, lists every Agent with a status dot, and keeps Start chat disabled until something is ticked |
-| [PROMPTSSETTINGS-01](prompts-settings.md#promptssettings-01--settings-opens-on-the-prompts-tab-with-a-six-tab-rail) | /settings opens on the Prompts tab |
+| [PROMPTSSETTINGS-01](prompts-settings.md#promptssettings-01--settings-opens-on-the-profile-tab-with-a-seven-tab-rail) | /settings opens on the Profile tab |
 | [PROMPTSSETTINGS-04](prompts-settings.md#promptssettings-04--every-prompt-is-reachable-in-six-named-groups-in-a-fixed-order) | Every prompt is reachable, in six named groups in a fixed order |
 | [APPEARANCETHEME-03](appearance-theme.md#appearancetheme-03--the-theme-picker-offers-the-whole-built-in-catalog-grouped-and-is-the-tabs-only-control) | The Theme list offers all 21 built-in Themes under Light, Dark and High contrast, and no light/dark/system control exists |
 | [APPEARANCETHEME-04](appearance-theme.md#appearancetheme-04--choosing-a-theme-stores-its-id-and-applies-immediately-with-no-page-reload) | Choosing a Theme stores its id as `theme` in appearance.json and applies it in place, with no page load |

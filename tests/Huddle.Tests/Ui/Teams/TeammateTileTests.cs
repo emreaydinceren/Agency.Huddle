@@ -69,7 +69,7 @@ public sealed class TeammateTileTests
         string css = File.ReadAllText(CssSource.RepoPath("src", "Huddle.App", "wwwroot", "app.css"));
 
         Assert.Contains("grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));", css, StringComparison.Ordinal); // contains-ok: haystack is the stylesheet source
-        Assert.Contains(".teammates-item-name {\r\n    font-size: var(--mud-typography-subtitle2-size);\r\n    font-weight: 600;", css.ReplaceLineEndings("\r\n"), StringComparison.Ordinal); // contains-ok: haystack is the stylesheet source
+        Assert.Contains(".teammates-item-name {\r\n    font-size: var(--mud-typography-subtitle1-size);\r\n    font-weight: 600;", css.ReplaceLineEndings("\r\n"), StringComparison.Ordinal); // contains-ok: haystack is the stylesheet source
         Assert.Contains(".teammate-tile-role {\r\n    font-size: var(--mud-typography-body2-size);", css.ReplaceLineEndings("\r\n"), StringComparison.Ordinal); // contains-ok: haystack is the stylesheet source
         Assert.Contains(".teammate-tile-context {", css, StringComparison.Ordinal); // contains-ok: haystack is the stylesheet source
     }
@@ -124,7 +124,10 @@ public sealed class TeammateTileTests
         Assert.Empty(cut.FindAll(".teammate-tile .teammate-chip"));
     }
 
-    /// <summary>The tile's text and chips are left-aligned inside the tile.</summary>
+    /// <summary>
+    /// The tile's avatar and text start at its left padding: MudBlazor's global <c>button</c> rule centres a flex button's
+    /// content, which put the avatar 50px in and left the "Working on" line's fixed indent off the name's edge.
+    /// </summary>
     [Fact]
     public void Stylesheet_TileContentIsLeftAligned()
     {
@@ -133,8 +136,35 @@ public sealed class TeammateTileTests
         int end = css.IndexOf('}', start);
         string tile = css[start..end];
 
+        Assert.Contains("justify-content: flex-start;", tile, StringComparison.Ordinal); // contains-ok: haystack is one rule of the stylesheet source, not markup
         Assert.Contains("text-align: left;", tile, StringComparison.Ordinal); // contains-ok: haystack is one rule of the stylesheet source, not markup
         Assert.Contains("align-items: flex-start;", tile, StringComparison.Ordinal); // contains-ok: haystack is one rule of the stylesheet source, not markup
+    }
+
+    /// <summary>The page intro says what a Teammate is to the Human, in the defined terms, and no longer describes the Markdown file.</summary>
+    [Fact]
+    public async Task Intro_SaysWhatATeammateIsToTheHuman()
+    {
+        using TempDataDir dir = new();
+        await using MudBunitContext ctx = await NewContextAsync(dir, Xunit.TestContext.Current.CancellationToken);
+
+        IRenderedComponent<TeammatesPage> cut = ctx.Render<TeammatesPage>();
+
+        string intro = string.Join(" ", cut.Find(".page-lead").TextContent.Split((char[]?)null, StringSplitOptions.RemoveEmptyEntries));
+        Assert.Equal("Teammates are the Agents who work with you in Rooms and on Tasks. Open one to see its role and Skills, or to change how it works.", intro);
+    }
+
+    /// <summary>The "Working on" line is left-aligned on the same edge as the name column: it sets its own <c>text-align: left</c> and indents by the tile padding, avatar and gap, so nothing inherited can centre it.</summary>
+    [Fact]
+    public void Stylesheet_ContextLineIsLeftAlignedOnTheNameEdge()
+    {
+        string css = File.ReadAllText(CssSource.RepoPath("src", "Huddle.App", "wwwroot", "app.css"));
+        int start = css.IndexOf(".teammate-tile-context {", StringComparison.Ordinal);
+        int end = css.IndexOf('}', start);
+        string context = css[start..end];
+
+        Assert.Contains("text-align: left;", context, StringComparison.Ordinal); // contains-ok: haystack is one rule of the stylesheet source, not markup
+        Assert.Contains("padding: 0 16px 16px calc(16px + 40px + 16px);", context, StringComparison.Ordinal); // contains-ok: haystack is one rule of the stylesheet source, not markup
     }
 
     /// <summary>Build a team's roster card is the shared <c>ProfileCard</c>, and that card draws its avatar through <c>TeammateAvatar</c>, not a bare <c>MudAvatar</c>.</summary>

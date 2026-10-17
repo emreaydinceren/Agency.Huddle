@@ -66,7 +66,7 @@ public sealed class TasksPageTests
         Assert.EndsWith("need you", NormalizeWhitespace(header.QuerySelector(".tasks-count-need-you")?.TextContent ?? string.Empty), StringComparison.Ordinal);
         Assert.EndsWith("all", NormalizeWhitespace(header.QuerySelector(".tasks-count-all")?.TextContent ?? string.Empty), StringComparison.Ordinal);
         Assert.StartsWith("Group by:", NormalizeWhitespace(header.QuerySelector(".task-toolbar-group")?.TextContent ?? string.Empty), StringComparison.Ordinal);
-        Assert.Equal(["List", "Kanban"], header.QuerySelectorAll(".task-toolbar-kind .mud-toggle-item").Select(item => NormalizeWhitespace(item.TextContent)));
+        Assert.Equal(["List", "Board"], header.QuerySelectorAll(".task-toolbar-kind .mud-toggle-item").Select(item => NormalizeWhitespace(item.TextContent)));
         Assert.NotNull(header.QuerySelector(".btn-action-tight"));
         Assert.Empty(document.QuerySelectorAll(".task-toolbar .task-toolbar-group-sort, .task-toolbar .task-toolbar-grouping"));
     }
@@ -326,6 +326,7 @@ public sealed class TasksPageTests
         ctx.Services.AddSingleton<ISprintCatalog>(sprints);
         ctx.Services.AddSingleton<Agency.Huddle.App.Data.ITeamDirectory>(new Agency.Huddle.App.Data.SqliteTeamDirectory(dir.Options()));
         ctx.Services.AddSingleton(Options.Create(new TeamOptions()));
+        ctx.Services.AddSingleton<Agency.Huddle.App.Profile.IHumanIdentity>(new Agency.Huddle.App.Profile.ConfiguredHumanIdentity("You"));
         // 14.5.i: the page always hosts WakeToasts (Spec §13.8), which @injects TaskActivity.
         ctx.Services.AddSingleton<TaskActivity>();
 

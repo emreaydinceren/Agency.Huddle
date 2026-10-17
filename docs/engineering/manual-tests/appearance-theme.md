@@ -38,10 +38,10 @@ standing conventions. This area adds:
 1. Start from the virgin first-run state: if `<data>\appearance.json` exists (on the free lane `<data>` is `<repo>\src\Huddle.App\App_Data`), delete it (`P-RESET-SETTINGS`). An absent file is normal and is not a broken install.
 2. Set the operating system to LIGHT mode — Windows Settings → Personalisation → Colours → 'Choose your default app mode' → Light. Every dark-Theme test below is deliberately run against a light OS so that a Theme failing to apply is maximally visible. The application ignores the OS setting entirely since 2026-09-21, so this is a contrast aid, not a variable under test.
 3. Open Chrome or Edge at `http://localhost:5100`, then DevTools (F12). Confirm DevTools → three-dot menu → More tools → Rendering → 'Emulate prefers-color-scheme' reads **No emulation**. Nothing in the application reads that signal any more, but a left-over emulation setting can still repaint DevTools itself and confuse a colour reading.
-4. Go to `http://localhost:5100/settings/appearance` and read the path in the paragraph that begins `The selection is stored at` (the first of the two file paths on the tab; the second, under `Your avatar`, is `avatars.json` and is not this file). It should read `<data>\appearance.json`. THE ON-SCREEN PATH IS THE AUTHORITY — if it differs, edit the file the page names, not the one in these steps. Every `<data>\appearance.json` below means that file.
+4. Go to `http://localhost:5100/settings/appearance` and read the path in the paragraph that begins `The selection is stored at` (the only file path on the tab; the avatar and its `avatars.json` moved to the **Profile** tab). It should read `<data>\appearance.json`. THE ON-SCREEN PATH IS THE AUTHORITY — if it differs, edit the file the page names, not the one in these steps. Every `<data>\appearance.json` below means that file.
 5. Have a plain text editor (Notepad, VS Code) ready to create and save that file. A save is picked up by a filesystem watcher about 0.5 seconds later.
 6. Selecting a Theme on this tab does not force a page reload — it applies immediately through MudBlazor's `MudThemeProvider`. No test below needs F5 to see a colour change; where a test does still want a full load (to prove one is no longer required, or to check first-paint) it says so explicitly.
-7. The Theme picker is a **list**, not a dropdown: every Theme is on screen under a `Light`, `Dark` or `High contrast` heading, and "select a Theme" below means clicking its row. Nothing needs opening first. Below the picker the tab also holds a `Your avatar` section; no test in this part touches it.
+7. The Theme picker is a **list**, not a dropdown: every Theme is on screen under a `Light`, `Dark` or `High contrast` heading, and "select a Theme" below means clicking its row. Nothing needs opening first. The tab ends with one paragraph, `Your own avatar is set on the Profile tab.`, where `Profile` links to `/settings/profile`; the avatar editor is no longer on this tab, and no test in this part touches it.
 8. No test in this area needs a Model, and none spends money.
 
 ## Tests
@@ -50,7 +50,7 @@ standing conventions. This area adds:
 
 **Free** · about 3 min
 
-*Proves the Appearance tab exists, navigates by URL so it can be bookmarked and linked, and that an unknown tab segment falls back to Prompts rather than throwing or rendering blank.*
+*Proves the Appearance tab exists, navigates by URL so it can be bookmarked and linked, and that an unknown tab segment falls back to Profile, the first tab, rather than throwing or rendering blank.*
 
 **Before you start**
 
@@ -60,7 +60,7 @@ standing conventions. This area adds:
 
 1. Go to http://localhost:5100/settings.
 2. Read the page heading at the top left. It must read `Settings`.
-3. Count the tab buttons in the horizontal tab bar under the heading. There must be exactly six, reading `Prompts`, `Appearance`, `Personas`, `Skills`, `Team Types` and `Library` (MudBlazor renders them in upper case — `PROMPTS`, `APPEARANCE` and so on — the underlying text is unchanged), in that order.
+3. Count the tab buttons in the horizontal tab bar under the heading. There must be exactly seven, reading `Profile`, `Prompts`, `Appearance`, `Personas`, `Skills`, `Team types` and `Library` (MudBlazor renders them in upper case — `PROFILE`, `PROMPTS`, `APPEARANCE` and so on — the underlying text is unchanged), in that order.
 4. Note which tab button looks selected (it carries the active styling). Note the URL in the address bar.
 5. Click the `Appearance` button.
 6. Read the address bar.
@@ -72,18 +72,18 @@ standing conventions. This area adds:
 
 **Pass if — all of these**
 
-- The heading reads `Settings` and the tab bar holds exactly the six buttons `PROMPTS`, `APPEARANCE`, `PERSONAS`, `SKILLS`, `TEAM TYPES` and `LIBRARY`, in that order.
-- Landing on /settings with no segment shows the Prompts panel with `Prompts` marked active.
+- The heading reads `Settings` and the tab bar holds exactly the seven buttons `PROFILE`, `PROMPTS`, `APPEARANCE`, `PERSONAS`, `SKILLS`, `TEAM TYPES` and `LIBRARY`, in that order.
+- Landing on /settings with no segment shows the Profile panel (the Human's profile card and its fields) with `Profile` marked active.
 - Clicking `Appearance` changes the address bar to http://localhost:5100/settings/appearance and marks `Appearance` active.
 - Typing /settings/appearance directly lands on the same Appearance panel with `Appearance` active.
-- /settings/nonsense renders the Prompts panel - a normal, fully styled page, not a blank page and not an error.
+- /settings/nonsense renders the Profile panel - a normal, fully styled page, not a blank page and not an error.
 - No exception appears in the `dotnet run` console.
 
 **Fail if — any of these**
 
 - The `Appearance` button is missing from the tab bar -> the tab was never wired into Settings.razor's tabs.
 - Clicking `Appearance` swaps the panel but leaves the URL at /settings -> the tab is flipping local state instead of navigating, so the tab cannot be bookmarked, linked or reloaded into.
-- /settings/nonsense renders blank, 404s, or throws -> Routes.razor has no NotFound branch, so an unrecognised tab MUST resolve to Prompts; a blank page means the fallback was removed.
+- /settings/nonsense renders blank, 404s, or throws -> Routes.razor has no NotFound branch, so an unrecognised tab MUST resolve to Profile; a blank page means the fallback was removed.
 - /settings with no segment renders blank -> the same fallback is broken for the null case.
 
 **Inconclusive if**
@@ -109,7 +109,7 @@ If the page will not load at all (connection refused, or an ASP.NET error page),
 1. Go to http://localhost:5100/settings/appearance.
 2. Read the paragraph above the Theme picker. Compare it word for word with: `Pick a theme. Each theme is either a light or a dark one, so choosing it sets the application's light or dark colours too.`
 3. Read the credit line: the paragraph below the picker (and, only while a Custom Accent theme is selected, below the `Accent colour` picker too). Compare it word for word with: `Custom Accent lets you pick your own accent colour, adjusted if needed so it stays readable. Every other theme except Huddle Light and Huddle Dark is one of the colour themes bundled with Visual Studio Code, mapped onto this application's palette. Visual Studio Code and its default themes are Microsoft's, under the MIT licence; Solarized is Ethan Schoonover's and Monokai is Wimer Hazenberg's.`
-4. Read the paragraph directly after the credit line. Compare it word for word with: `The selection is stored at <path>. The file does not exist until you save a choice here, so it being absent is expected, not a bug.` (It is not the last paragraph: the `Your avatar` section and its own `Your avatar is stored at` paragraph follow it.)
+4. Read the paragraph directly after the credit line. Compare it word for word with: `The selection is stored at <path>. The file does not exist until you save a choice here, so it being absent is expected, not a bug.` (It is not the last paragraph: the closing `Your own avatar is set on the Profile tab.` follows it. There is no `Your avatar` section and no `avatars.json` path on this tab any more.)
 5. Read the path rendered in monospace in the selection paragraph. Write it down. It must be an absolute path, e.g. `<repo>\src\Huddle.App\App_Data\appearance.json` written out in full.
 6. Scan the whole Appearance panel for the sentence `A prompt is one piece of wording this application sends to a model` and for any mention of `prompts.json`, and for any mention of a token name such as `--font-chat` or an "Overrides" heading.
 7. Click the `Prompts` button in the tab bar.
@@ -152,7 +152,7 @@ If the path shown differs from `<repo>\src\Huddle.App\App_Data\appearance.json`,
 
 1. Find the Theme picker on the Appearance panel. It is a list, already showing its entries — nothing to open.
 2. Read every heading and every row top to bottom and write the list down. Scroll the list if it does not all fit.
-3. Look over the whole panel for any control offering light, dark or system, a select or a toggle. Note the other control that is there: the `Your avatar` section. Click `Custom Accent Light` and note that an `Accent colour` picker appears below the list, then click `Huddle Light` and note that it goes away. Both clicks write `<data>\appearance.json`; delete it afterwards (`P-RESET-SETTINGS`).
+3. Look over the whole panel for any control offering light, dark or system, a select or a toggle. Note that there is no avatar control on this panel: only the closing paragraph `Your own avatar is set on the Profile tab.`, whose `Profile` link goes to `/settings/profile`. Click `Custom Accent Light` and note that an `Accent colour` picker appears below the list, then click `Huddle Light` and note that it goes away. Both clicks write `<data>\appearance.json`; delete it afterwards (`P-RESET-SETTINGS`).
 
 **Pass if — all of these**
 
@@ -163,7 +163,7 @@ If the path shown differs from `<repo>\src\Huddle.App\App_Data\appearance.json`,
 - `Huddle Light` is **first** under `Light`, and `Light` is the first heading. Three call sites read `BuiltIn[0]` to mean "the default Theme", so a Theme appearing above it is a real defect, not a cosmetic one.
 - The two High Contrast Themes are under their **own** heading, not under `Dark` and `Light`. `ThemeGroup` is deliberately not `ThemeMode`.
 - There is no `Dark (Visual Studio)` and no `Light (Visual Studio)`. Those two were deliberately not imported: their palettes resolve byte-identically to `Dark+` and `Light+`, because upstream they differ only in `tokenColors` — syntax highlighting, which this application does not render.
-- **There is no light/dark/system control.** Besides the intro paragraph, the picker and the credit line, the panel holds only: the `Accent colour` picker (shown only while `Custom Accent Light` or `Custom Accent Dark` is selected), the selection-file path, the `Your avatar` section and its file path.
+- **There is no light/dark/system control.** Besides the intro paragraph, the picker and the credit line, the panel holds only: the `Accent colour` picker (shown only while `Custom Accent Light` or `Custom Accent Dark` is selected), the selection-file path, and the closing paragraph `Your own avatar is set on the Profile tab.` with its `Profile` link. There is no `Your avatar` section and no second file path.
 
 **Fail if — any of these**
 

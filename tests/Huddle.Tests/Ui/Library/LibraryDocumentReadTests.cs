@@ -82,7 +82,7 @@ public sealed class LibraryDocumentReadTests : IDisposable
         await using MudBunitContext ctx = this.fixture.NewContext();
         IRenderedComponent<ContainerFragment> cut = RenderDoc(ctx, path);
 
-        cut.WaitForAssertion(() => Assert.Equal(LibraryPathDisplay.Shorten(path.FullPath), cut.Find(".library-document-path").TextContent.Trim()));
+        cut.WaitForAssertion(() => Assert.Equal(LibraryPathDisplay.Shorten($"{path.Root.DisplayName}/{path.RelativePath}"), cut.Find(".library-document-path").TextContent.Trim()));
         Assert.Empty(cut.FindComponents<MudBlazor.MudBreadcrumbs>());
     }
 

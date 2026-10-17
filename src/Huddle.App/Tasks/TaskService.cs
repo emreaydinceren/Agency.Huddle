@@ -3,6 +3,7 @@ using System.Globalization;
 using Microsoft.Extensions.Options;
 using Agency.Huddle.App.Acp;
 using Agency.Huddle.App.Data;
+using Agency.Huddle.App.Profile;
 using Agency.Huddle.App.Teams;
 
 namespace Agency.Huddle.App.Tasks;
@@ -44,15 +45,15 @@ internal sealed class TaskService : IDisposable
     private readonly TaskEvents events;
     private readonly PersonaStore personas;
     private readonly ISprintCatalog sprints;
-    private readonly TeamOptions options;
     private readonly TimeProvider clock;
     private readonly ILogger<TaskService> logger;
     private readonly ProcessGateService? gates;
+    private readonly IHumanIdentity human;
 
     /// <summary>
     /// Wires this service to the Task index and to the Change log's clock. Deliberately does not
     /// take <see cref="Data.ITeamDirectory"/> (Settled corrections-B2 D6 item 9): it is unused,
-    /// because the Human's Name comes from <see cref="TeamOptions.HumanName"/>, not from a Room
+    /// because the Human's Name comes from <see cref="IHumanIdentity"/>, not from a Room
     /// membership lookup.
     /// </summary>
     /// <param name="store">Owns the Task files this service validates against and writes through.</param>
@@ -60,10 +61,11 @@ internal sealed class TaskService : IDisposable
     /// <param name="events">The hub this service raises <see cref="TaskEvents.TaskChanged"/> and re-raised reloads on.</param>
     /// <param name="personas">Supplies known Team labels and resolves an assignee's Alias to its Name.</param>
     /// <param name="sprints">The read-only Sprint catalogue a Sprint is validated and labelled against (Sprints spec §9.2, §9.4).</param>
-    /// <param name="options">Supplies <see cref="TeamOptions.HumanName"/>.</param>
+    /// <param name="options">Unused beyond the null guard; kept so every existing caller compiles.</param>
     /// <param name="clock">Supplies the Change log entry's timestamp.</param>
     /// <param name="logger">Used for diagnostics; unused so far.</param>
     /// <param name="gates">Decides whether the Team's process gates refuse a status change (PR-7); <see langword="null"/> enforces none.</param>
+    /// <param name="human">The Human's live identity; <see langword="null"/> fixes it at <see cref="TeamOptions.HumanName"/>.</param>
     public TaskService(
         TaskStore store,
         TaskIdAllocator ids,
@@ -73,7 +75,8 @@ internal sealed class TaskService : IDisposable
         IOptions<TeamOptions> options,
         TimeProvider clock,
         ILogger<TaskService> logger,
-        ProcessGateService? gates = null)
+        ProcessGateService? gates = null,
+        IHumanIdentity? human = null)
     {
         ArgumentNullException.ThrowIfNull(store);
         ArgumentNullException.ThrowIfNull(ids);
@@ -89,10 +92,10 @@ internal sealed class TaskService : IDisposable
         this.events = events;
         this.personas = personas;
         this.sprints = sprints;
-        this.options = options.Value;
         this.clock = clock;
         this.logger = logger;
         this.gates = gates;
+        this.human = human ?? new ConfiguredHumanIdentity(options.Value.HumanName);
 
         // Settled corrections-B2 D6 item 13: TaskEvents is a plain hub; this is the one place that
         // turns TaskStore's own index-rebuild notification into the same event a Task mutation
@@ -311,7 +314,7 @@ internal sealed class TaskService : IDisposable
     /// <param name="edit">The Task's state before and after the outside edit.</param>
     private TaskChange? OnOutsideEditCore(OutsideEdit edit)
     {
-        TaskActor actor = new(TaskActorKind.OutsideHuddle, this.options.HumanName, KnownIds.Human);
+        TaskActor actor = new(TaskActorKind.OutsideHuddle, this.human.Name, KnownIds.Human);
         DateTimeOffset at = TruncateToSeconds(this.clock.GetUtcNow());
 
         // Settled corrections-B2 D6 item 8: a file created outside Huddle (no previous Task to
@@ -828,9 +831,9 @@ internal sealed class TaskService : IDisposable
             return assignee;
         }
 
-        if (string.Equals(assignee, this.options.HumanName, StringComparison.OrdinalIgnoreCase))
+        if (this.human.Matches(assignee))
         {
-            return this.options.HumanName;
+            return this.human.Name;
         }
 
         return this.personas.ResolveByNameOrAlias(assignee)?.Name ?? assignee;
@@ -1047,7 +1050,7 @@ internal sealed class TaskService : IDisposable
             return;
         }
 
-        if (string.Equals(assignee, this.options.HumanName, StringComparison.OrdinalIgnoreCase))
+        if (this.human.Matches(assignee))
         {
             return;
         }

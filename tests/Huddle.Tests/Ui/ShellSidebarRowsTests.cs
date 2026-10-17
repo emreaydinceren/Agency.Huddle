@@ -21,24 +21,24 @@ namespace Agency.Huddle.Tests.Ui;
 /// </summary>
 public sealed class ShellSidebarRowsTests
 {
-    /// <summary>The Teammates entry is drawn as a section header through the <c>nav-section-link</c> class (UX-014).</summary>
+    /// <summary>The Teammates entry is a destination, not a header: it is an ordinary row through the <c>nav-row-link</c> class (audit A7).</summary>
     [Fact]
-    public void MainLayout_TeammatesLink_TakesTheSectionHeaderClass()
+    public void MainLayout_TeammatesLink_TakesTheOrdinaryRowClass()
     {
         string markup = File.ReadAllText(CssSource.RepoPath("src", "Huddle.App", "Components", "Layout", "MainLayout.razor"));
 
-        Assert.Matches(@"<NavTabLink Href=""/teammates""[^>]*Class=""nav-section-link""", markup);
+        Assert.Matches(@"<NavTabLink Href=""/teammates""[^>]*Class=""nav-row-link""", markup);
     }
 
-    /// <summary>The <c>nav-section-link</c> rule gives the caption (12px), weight-600, secondary-colour header look of the group headers (UX-014).</summary>
+    /// <summary>The <c>nav-row-link</c> rule gives the 13px, weight-400, body-colour label of every other sidebar row (audit A7).</summary>
     [Fact]
-    public void AppCss_SectionLinkRule_MatchesTheGroupHeaders()
+    public void AppCss_RowLinkRule_MatchesTheOtherRows()
     {
-        string rule = ShellSidebarRowsTests.RuleBody(".nav-section-link .mud-nav-link-text");
+        string rule = ShellSidebarRowsTests.RuleBody(".nav-row-link .mud-nav-link .mud-nav-link-text");
 
-        ShellSidebarRowsTests.SourceHas(rule, "font-size: var(--mud-typography-caption-size)");
-        ShellSidebarRowsTests.SourceHas(rule, "font-weight: 600");
-        ShellSidebarRowsTests.SourceHas(rule, "var(--mud-palette-text-secondary)");
+        ShellSidebarRowsTests.SourceHas(rule, "font-size: var(--mud-typography-body2-size)");
+        ShellSidebarRowsTests.SourceHas(rule, "font-weight: 400");
+        ShellSidebarRowsTests.SourceHas(rule, "var(--mud-palette-text-primary)");
     }
 
     /// <summary>The footer links share the sidebar row height token and the body2 (13px) row size (UX-017, OP-4).</summary>

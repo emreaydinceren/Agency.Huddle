@@ -25,6 +25,7 @@ public sealed partial class SettingsPanelsTests
         ctx.Services.AddSingleton(factory.Services.GetRequiredService<AppearanceStore>());
         ctx.Services.AddSingleton(factory.Services.GetRequiredService<SkillStore>());
         ctx.Services.AddSingleton(factory.Services.GetRequiredService<LibraryRootStore>());
+        ProfileTestServices.AddProfile(ctx.Services, factory);
         return ctx;
     }
 
@@ -50,7 +51,7 @@ public sealed partial class SettingsPanelsTests
         var cut = ctx.Render<Settings>();
 
         var tabs = cut.FindAll(".mud-tab");
-        Assert.Equal(6, tabs.Count);
+        Assert.Equal(7, tabs.Count);
         Assert.All(tabs, tab => Assert.NotEmpty(tab.QuerySelectorAll("svg")));
     }
 
@@ -61,7 +62,7 @@ public sealed partial class SettingsPanelsTests
         await using var factory = new TeamWebApplicationFactory();
         await using var ctx = NewContext(factory);
 
-        var cut = ctx.Render<Settings>();
+        var cut = ctx.Render<Settings>(parameters => parameters.Add(page => page.Tab, "prompts"));
 
         var actions = cut.Find(".mud-tabs .settings-prompts-actions");
         Assert.Single(actions.QuerySelectorAll("button[type='submit']"));

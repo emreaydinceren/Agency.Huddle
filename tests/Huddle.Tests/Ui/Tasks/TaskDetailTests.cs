@@ -97,7 +97,7 @@ public sealed class TaskDetailTests
         var cut = RenderPanel(ctx, task.Id);
 
         Assert.Equal("Nova is asleep and will be notified.", TextOf(cut, ".task-detail-wake-notice"));
-        Assert.Equal("Save & Notify Nova", FindButton(cut, "Save & Notify Nova").TextContent.Trim());
+        Assert.Equal("Save & notify Nova", FindButton(cut, "Save & notify Nova").TextContent.Trim());
     }
 
     /// <summary>An awake assignee (a Turn running) shows "Nova is awake and will be notified." and the same Notify label (Spec §13.6).</summary>
@@ -114,7 +114,7 @@ public sealed class TaskDetailTests
         var cut = RenderPanel(ctx, task.Id);
 
         Assert.Equal("Nova is awake and will be notified.", TextOf(cut, ".task-detail-wake-notice"));
-        Assert.Equal("Save & Notify Nova", FindButton(cut, "Save & Notify Nova").TextContent.Trim());
+        Assert.Equal("Save & notify Nova", FindButton(cut, "Save & notify Nova").TextContent.Trim());
     }
 
     /// <summary>
@@ -599,6 +599,7 @@ public sealed class TaskDetailTests
         {
             MudBunitContext ctx = new();
             ctx.Services.AddSingleton(this.options);
+        ctx.Services.AddSingleton<Agency.Huddle.App.Profile.IHumanIdentity>(new Agency.Huddle.App.Profile.ConfiguredHumanIdentity(this.options.Value.HumanName));
             ctx.Services.AddSingleton(TimeProvider.System);
             ctx.Services.AddSingleton(this.personas);
             ctx.Services.AddSingleton(this.store);

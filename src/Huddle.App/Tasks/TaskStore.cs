@@ -4,6 +4,7 @@ using Microsoft.Extensions.Options;
 using Agency.Huddle.App.Acp;
 using Agency.Huddle.App.FileChanges;
 using Agency.Huddle.App.Library;
+using Agency.Huddle.App.Profile;
 using Agency.Huddle.App.Teams;
 
 namespace Agency.Huddle.App.Tasks;
@@ -72,7 +73,8 @@ internal sealed partial class TaskStore : IDisposable, ITaskReferenceResolver
     /// <param name="personas">Supplies the Team labels a Team folder is checked against for §8.2's orphan flag, and its <see cref="PersonaStore.PersonasChanged"/> event.</param>
     /// <param name="clock">Supplies the timestamp for any startup-reconciliation Change log entry (Spec §8.5); the watcher's own debounce timer runs on real time, not this clock.</param>
     /// <param name="logger">Used to warn when a directory can't be enumerated or a file can't be read during the scan.</param>
-    public TaskStore(IOptions<TeamOptions> options, PersonaStore personas, TimeProvider clock, ILogger<TaskStore> logger)
+    /// <param name="human">Names the Human in a startup-reconciliation entry; <see langword="null"/> uses <see cref="TeamOptions.HumanName"/>.</param>
+    public TaskStore(IOptions<TeamOptions> options, PersonaStore personas, TimeProvider clock, ILogger<TaskStore> logger, IHumanIdentity? human = null)
     {
         ArgumentNullException.ThrowIfNull(options);
         ArgumentNullException.ThrowIfNull(personas);
@@ -96,7 +98,7 @@ internal sealed partial class TaskStore : IDisposable, ITaskReferenceResolver
             this.RecordVersion(task);
         }
 
-        this.ReconcileOutsideEdits(clock, options.Value.HumanName);
+        this.ReconcileOutsideEdits(clock, human?.Name ?? options.Value.HumanName);
 
         this.personas.PersonasChanged += this.OnPersonasChanged;
 
@@ -814,7 +816,7 @@ internal sealed partial class TaskStore : IDisposable, ITaskReferenceResolver
     /// not flood wake-ups at startup, Settled corrections-B2 D6 item 14).
     /// </summary>
     /// <param name="clock">Supplies the appended entry's timestamp, truncated to the second.</param>
-    /// <param name="humanName"><see cref="TeamOptions.HumanName"/>, attributed as the entry's actor - the directory isn't initialised yet when this runs (Spec §8.5).</param>
+    /// <param name="humanName">The Human's current Name, attributed as the entry's actor - the directory isn't initialised yet when this runs (Spec §8.5).</param>
     private void ReconcileOutsideEdits(TimeProvider clock, string humanName)
     {
         foreach (TaskItem task in this.index.All)

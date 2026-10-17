@@ -41,7 +41,7 @@
 @inject TaskTriggerService Triggers
 @inject IDialogService Dialogs
 @inject ISnackbar Snackbar
-@inject IOptions<TeamOptions> TeamOptions
+@inject IHumanIdentity Human
 @inject ViewStore ViewStore
 @inject TaskStore Store
 @inject ISprintCatalog Sprints
@@ -374,12 +374,13 @@
         _ => Icons.Material.Outlined.Label,
     };
 
-    /// <summary>The class of the 8px state dot that opens a column header: the colour of the column's first state (the same mapping as a Task link's dot).</summary>
+    /// <summary>The class of the 8px state dot that opens a column header: the colour of the column's first state (the same mapping as a Task link's dot), plus a dashed hollow modifier for Backlog so it differs from To Do now that both are Default.</summary>
     /// <param name="column">The column.</param>
     private static string StateDotClass(BoardColumn column)
     {
         Color colour = column.States.Count > 0 ? TaskColors.For(column.States[0]) : Color.Default;
-        return string.Create(CultureInfo.InvariantCulture, $"task-state-dot task-state-dot-{colour.ToString().ToLowerInvariant()}");
+        string classes = string.Create(CultureInfo.InvariantCulture, $"task-state-dot task-state-dot-{colour.ToString().ToLowerInvariant()}");
+        return column.States.Count > 0 && column.States[0] == TaskState.Backlog ? $"{classes} task-state-dot-backlog" : classes;
     }
 
     /// <summary>The line an empty column shows, worded for the column's state: "Nothing done yet." for Done.</summary>
@@ -479,7 +480,7 @@
     /// <param name="item">The dragged Task.</param>
     private string? CaptionFor(TaskItem item)
     {
-        WakePreview preview = this.Triggers.Preview(null, item, TaskActors.Human(this.TeamOptions.Value));
+        WakePreview preview = this.Triggers.Preview(null, item, TaskActors.Human(this.Human));
         return preview.Block == WakeBlock.None ? $"{preview.AssigneeName} will be notified" : null;
     }
 
@@ -557,7 +558,7 @@
         }
 
         TaskPatch patch = new() { Status = target, DuplicateOf = duplicateOf, Reason = reason };
-        TaskResult result = this.Service.Update(item.Id, patch, baseVersion: null, TaskActors.Human(this.TeamOptions.Value));
+        TaskResult result = this.Service.Update(item.Id, patch, baseVersion: null, TaskActors.Human(this.Human));
         string? error = result switch
         {
             TaskResult.Refused refused => $"Could not move {item.Id}: {string.Join(' ', refused.Problems)}",

@@ -24,7 +24,7 @@ Set-Content "$vault\draft-old.md" "Delete me.`n"
 Set-Content "$vault\data.json" '{ "name": "huddle", "ok": true }'
 ```
 
-Also copy any `.png` to `$vault\report.png` and any `.pptx` to `$vault\deck.pptx`. Then in the app open **Settings → Library** (the sixth tab). In the **Name** and **Path** fields add two roots, pressing **Add** after each:
+Also copy any `.png` to `$vault\report.png` and any `.pptx` to `$vault\deck.pptx`. Then in the app open **Settings → Library** (the last tab). In the **Name** and **Path** fields add two roots, pressing **Add** after each:
 
 - Name `Vault`, Path `C:\seeds\huddle\uat\vault`.
 - Name `Docs`, Path `<repo>\docs`. L0 only reads from it; no test edits it.

@@ -1,5 +1,5 @@
-using Microsoft.Extensions.Options;
 using Agency.Huddle.App.Data;
+using Agency.Huddle.App.Profile;
 using Agency.Huddle.App.Services;
 using Agency.Huddle.App.Teams;
 using Agency.Huddle.Contracts;
@@ -19,7 +19,7 @@ internal sealed class SprintProposalService(
     ChatService chat,
     ITeamDirectory directory,
     ITeamCatalog teams,
-    IOptions<TeamOptions> options,
+    IHumanIdentity humanIdentity,
     ILogger<SprintProposalService> logger)
 {
     private readonly System.Collections.Concurrent.ConcurrentDictionary<string, SemaphoreSlim> approveGates = new(StringComparer.Ordinal);
@@ -112,7 +112,7 @@ internal sealed class SprintProposalService(
 
         _ = proposals.Remove(proposal.Id);
 
-        TaskActor human = TaskActors.Human(options.Value);
+        TaskActor human = TaskActors.Human(humanIdentity);
         List<string> applied = [];
         List<SkippedTask> skipped = [];
         foreach (string idText in proposal.TaskIds)

@@ -78,17 +78,17 @@ public sealed class LibraryDocumentEditTests : IDisposable
         IRenderedComponent<ContainerFragment> cut = RenderDoc(ctx, path);
         await SwitchModeAsync(cut, LibraryMode.Edit);
 
-        Assert.Equal(LibraryPathDisplay.Shorten(path.FullPath), cut.Find(".library-document-path").TextContent.Trim());
+        Assert.Equal(LibraryPathDisplay.Shorten($"{path.Root.DisplayName}/{path.RelativePath}"), cut.Find(".library-document-path").TextContent.Trim());
 
         LibraryEditor editor = cut.FindComponent<LibraryEditor>().Instance;
         await cut.InvokeAsync(() => editor.OnDirtyChanged(true));
 
-        Assert.Equal($"{LibraryPathDisplay.Shorten(path.FullPath)} ●", cut.Find(".library-document-path").TextContent.Trim());
+        Assert.Equal($"{LibraryPathDisplay.Shorten($"{path.Root.DisplayName}/{path.RelativePath}")} ●", cut.Find(".library-document-path").TextContent.Trim());
     }
 
-    /// <summary>A file under the Teams root shows its full system path on the toolbar, exactly as a file under any other root does, and draws no breadcrumbs.</summary>
+    /// <summary>A file under the Teams root shows its root-relative path with forward slashes (the breadcrumb's own trail, never the drive path), keeps the absolute path in the tooltip, and draws no breadcrumbs.</summary>
     [Fact]
-    public async Task TeamsRootFile_ShowsItsFullSystemPath()
+    public async Task TeamsRootFile_ShowsItsLibraryRelativePath()
     {
         string folder = Path.Combine(this.fixture.LibraryFixture.DataDir, "Teams", "Platform");
         Directory.CreateDirectory(folder);
@@ -98,7 +98,8 @@ public sealed class LibraryDocumentEditTests : IDisposable
         await using MudBunitContext ctx = this.fixture.NewContext();
         IRenderedComponent<ContainerFragment> cut = RenderDoc(ctx, path);
 
-        Assert.Equal(LibraryPathDisplay.Shorten(path.FullPath), cut.Find(".library-document-path").TextContent.Trim());
+        Assert.Equal("Teams/Platform/plan.md", cut.Find(".library-document-path").TextContent.Trim());
+        Assert.Equal(path.FullPath, cut.Find(".library-document-path").GetAttribute("title"));
         Assert.Empty(cut.FindAll(".library-document-breadcrumbs"));
     }
 
@@ -118,6 +119,8 @@ public sealed class LibraryDocumentEditTests : IDisposable
         Assert.NotNull(before);
         Assert.Contains("library-document-copy", before.ClassList, StringComparer.Ordinal);
         Assert.Equal(path.FullPath, shown.GetAttribute("title"));
+        Assert.Equal("Copy full path", before.GetAttribute("aria-label"));
+        Assert.Equal("Copy full path", before.GetAttribute("title"));
     }
 
     /// <summary>Ctrl+S (the editor's <c>SaveRequested</c> callback) writes the edited text through <see cref="LibraryFileService.WriteTextAsync"/> and clears the dirty marker; the bytes on disk equal the expected re-encoded text.</summary>
@@ -137,7 +140,7 @@ public sealed class LibraryDocumentEditTests : IDisposable
 
         LibraryEditor editor = cut.FindComponent<LibraryEditor>().Instance;
         await cut.InvokeAsync(() => editor.OnDirtyChanged(true));
-        Assert.Equal($"{LibraryPathDisplay.Shorten(path.FullPath)} ●", cut.Find(".library-document-path").TextContent.Trim());
+        Assert.Equal($"{LibraryPathDisplay.Shorten($"{path.Root.DisplayName}/{path.RelativePath}")} ●", cut.Find(".library-document-path").TextContent.Trim());
 
         await cut.InvokeAsync(() => editor.OnSaveRequested());
 
@@ -145,7 +148,7 @@ public sealed class LibraryDocumentEditTests : IDisposable
         // bytes for plain ASCII text are exactly its UTF-8 bytes (Spec §6.4 WriteTextAsync).
         byte[] expected = System.Text.Encoding.UTF8.GetBytes("edited text");
         cut.WaitForAssertion(() => Assert.Equal(expected, File.ReadAllBytes(filePath)));
-        cut.WaitForAssertion(() => Assert.Equal(LibraryPathDisplay.Shorten(path.FullPath), cut.Find(".library-document-path").TextContent.Trim()));
+        cut.WaitForAssertion(() => Assert.Equal(LibraryPathDisplay.Shorten($"{path.Root.DisplayName}/{path.RelativePath}"), cut.Find(".library-document-path").TextContent.Trim()));
     }
 
     /// <summary>Saving a Teammate definition asks a confirm first (Spec §6.12); Cancel writes nothing.</summary>

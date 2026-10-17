@@ -38,6 +38,6 @@ public sealed class SkillOriginTests
     [Fact]
     public void Describe_BuiltIn_SaysBuiltIn()
     {
-        Assert.Equal("Built in", SkillOrigin.Describe("anyone", "builtin", "team-management"));
+        Assert.Equal("Built-in", SkillOrigin.Describe("anyone", "builtin", "team-management"));
     }
 }

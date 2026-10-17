@@ -913,7 +913,7 @@ any other field (D-S8).*
 2. Wait for `Rae`'s Turn. Open Task A and read its **Sprint** and Change log.
 3. Send: `Now move <Task A's id> to the Auth hardning sprint.` (misspelled on purpose).
 4. Read `Rae`'s reply and `sprints.md`.
-5. From the panel, move Task A to `Sprint 1`; **Save & Notify Rae**. Watch for a wake-up Message.
+5. From the panel, move Task A to `Sprint 1`; **Save & notify Rae**. Watch for a wake-up Message.
 
 **Pass if — all of these**
 

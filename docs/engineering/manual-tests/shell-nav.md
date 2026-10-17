@@ -325,7 +325,7 @@ If a browser extension or a corporate proxy substitutes its own 404 page, the br
 **Pass if — all of these**
 
 - Both `curl.exe` calls printed `200`.
-- `/Settings` shows an `<h1>` reading `Settings` with the six-tab bar (SHELLNAV-11).
+- `/Settings` shows an `<h1>` reading `Settings` with the seven-tab bar (SHELLNAV-11).
 - `/TEAMMATES` shows an `<h1>` reading `Teammates`.
 
 **Fail if — any of these**
@@ -470,7 +470,7 @@ If a `node` process was already running before the app started (another tool on 
 > [!NOTE]
 > Do NOT click **New teammate** here. That card opens the model picker, which is the one control on this page that probes an adapter, and it belongs to the Teammates area's tests, not this one. No model or effort selection is needed anywhere in this area.
 
-### SHELLNAV-11 — /settings renders the six-tab bar and defaults to Prompts
+### SHELLNAV-11 — /settings renders the seven-tab bar and defaults to Profile
 
 **Free** · about 4 min
 
@@ -488,31 +488,30 @@ If a `node` process was already running before the app started (another tool on 
 3. Read the `<h1>`.
 4. Read the labels of the tabs in the bar ABOVE the content — `MudTabs` renders horizontally at the top by default, not as a column down the left. Read left to right.
 5. In the DevTools Console, type `[...document.querySelectorAll('.mud-tabs .mud-tab')].map(b => b.textContent.trim() + ' | active=' + b.classList.contains('mud-tab-active'))` and press Enter.
-6. Read the pane below and confirm it describes prompts - it should contain the sentence beginning `A prompt is one piece of wording this application sends to a model`.
+6. Read the pane below and confirm it describes the Human's profile - it should contain the sentence beginning `This is you, the Human.`, a profile card, and the fields `Name`, `Alias`, `Title` and `Description`.
 7. In `T-B` run `O-ADAPTERS` and compare with the baseline.
 
 **Pass if — all of these**
 
 - The address bar reads exactly `http://localhost:5100/settings` with no segment appended on load.
 - The `<h1>` reads exactly `Settings`.
-- The tab bar holds exactly six tabs, reading `Prompts`, `Appearance`, `Personas`, `Skills`, `Team Types`, `Library` (title case as typed; MudBlazor does not upper-case them here), left to right, above the pane.
-- Step 5 printed six entries in that order: `Prompts | active=true` and the other five `active=false`.
-- The pane below is the Prompts pane.
-- A `Reset all to defaults` button is present in the page header beside the heading.
+- The tab bar holds exactly seven tabs, reading `Profile`, `Prompts`, `Appearance`, `Personas`, `Skills`, `Team types`, `Library` (title case as typed; MudBlazor does not upper-case them here), left to right, above the pane.
+- Step 5 printed seven entries in that order: `Profile | active=true` and the other six `active=false`.
+- The pane below is the Profile pane.
 - The `node` count is unchanged from the baseline.
 
 **Fail if — any of these**
 
 - More than one tab reports `active=true`, or none does -> the active-tab computation broke; a reader cannot tell which pane they are on.
 - A tab is missing or the order differs -> `Settings.razor`'s `MudTabPanel` list changed; confirm that is intended and update this test.
-- The Appearance pane shows on a bare `/settings` -> the fallback picked the wrong tab.
-- The address bar gains `/prompts` on load -> the page is redirecting where it should not, which would put a spurious entry in the browser history on every visit.
+- The Prompts or Appearance pane shows on a bare `/settings` -> the fallback picked the wrong tab; Profile is the first tab and the fallback.
+- The address bar gains `/profile` on load -> the page is redirecting where it should not, which would put a spurious entry in the browser history on every visit. (The first-run redirect to `/settings/profile` when no `profile.json` exists is a different, expected path and starts from `/`, not from `/settings`.)
 - The `node` count rises -> Settings is spawning an adapter, which it must never do.
 - The tab bar renders as a vertical column down the left rather than horizontally above the content -> `MudTabs.Position` was set away from its default; nothing in this area asks for that.
 
 **Inconclusive if**
 
-If the Prompts pane shows an error line above the tab bar, read it and note it, but it does not invalidate the tab-bar observations - report both. If `<data>\prompts.json` is absent, that is normal and the pane says so on screen.
+If the page shows an error line above the tab bar, read it and note it, but it does not invalidate the tab-bar observations - report both. If the Profile pane opens with a `Welcome.` line, `<data>\profile.json` does not exist yet; that is normal and does not change any check here.
 
 > [!NOTE]
 > `prompts.json` does not exist on a fresh install and the app never creates it just to read from it. Absent means 'nothing is overridden'. Do not file 'the settings file is missing' as a defect.
@@ -533,7 +532,7 @@ If the Prompts pane shows an error line above the tab bar, read it and note it, 
 1. In the browser, navigate to `http://localhost:5100/settings`.
 2. Click the **Appearance** tab button.
 3. Read the address bar.
-4. Confirm the pane below now shows the theme list (rows under `Light`, `Dark` and `High contrast` headings), the a paragraph beginning `The selection is stored at` that names the file path, and the `Your avatar` section.
+4. Confirm the pane below now shows the theme list (rows under `Light`, `Dark` and `High contrast` headings), a paragraph beginning `The selection is stored at` that names the file path, and, last, the paragraph `Your own avatar is set on the Profile tab.` with `Profile` as a link. There is no avatar editor on this pane.
 5. Click the **Prompts** tab button.
 6. Read the address bar.
 7. Press the browser Back button once and read the address bar.
@@ -553,9 +552,9 @@ If the Prompts pane shows an error line above the tab bar, read it and note it, 
 
 **Fail if — any of these**
 
-- The tab flips visually but the address bar does not change -> tab selection was reduced to local component state; a bookmark to `/settings/appearance` would then always land on Prompts, and the Back button would leave the page entirely instead of returning to the previous tab. Defect.
+- The tab flips visually but the address bar does not change -> tab selection was reduced to local component state; a bookmark to `/settings/appearance` would then always land on Profile, and the Back button would leave the page entirely instead of returning to the previous tab. Defect.
 - Back does nothing, or jumps straight past all three entries in one press -> the navigation used replace rather than push. Defect.
-- The fresh tab opens on Prompts despite the `/appearance` URL -> the route parameter is not being read on a cold load; step 12 will print `Prompts` and confirm it.
+- The fresh tab opens on Profile despite the `/appearance` URL -> the route parameter is not being read on a cold load; step 12 will print `Profile` and confirm it.
 
 **Inconclusive if**
 
@@ -564,7 +563,7 @@ If the browser was already deep in history from earlier tests, the Back sequence
 > [!NOTE]
 > The tab segment is always emitted lowercase (`/settings/prompts`, `/settings/appearance`) regardless of the button's displayed capitalisation.
 
-### SHELLNAV-13 — An unrecognised {Tab} segment silently falls back to Prompts, and the tab name is matched without regard to case
+### SHELLNAV-13 — An unrecognised {Tab} segment silently falls back to Profile, and the tab name is matched without regard to case
 
 **Free** · about 6 min
 
@@ -588,18 +587,19 @@ If the browser was already deep in history from earlier tests, the Back sequence
 **Pass if — all of these**
 
 - Every one of the five URLs returned `200`.
-- `/settings/bogus` reports active tab `Prompts`.
+- `/settings/bogus` reports active tab `Profile`.
 - `/settings/PROMPTS` reports `Prompts`.
 - `/settings/Appearance` reports `Appearance`.
 - `/settings/APPEARANCE` reports `Appearance`.
-- `/settings/` reports `Prompts`.
+- `/settings/` reports `Profile`.
 - The browser shows a normal Settings page for `/settings/bogus` - no 404, no error line, no blank content pane.
 
 **Fail if — any of these**
 
 - Any URL returns 404 -> the fallback was lost; because there is no in-app Not Found page, the user lands on the bare browser error page from a typo in a tab name. Defect.
-- `/settings/APPEARANCE` or `/settings/Appearance` falls back to Prompts -> the parse lost `ignoreCase: true`. Defect.
-- An unknown tab renders a blank content pane rather than the Prompts pane -> the switch lost its default branch. Defect.
+- `/settings/PROMPTS`, `/settings/APPEARANCE` or `/settings/Appearance` falls back to Profile -> the parse lost `ignoreCase: true`. Defect.
+- An unknown tab renders a blank content pane rather than the Profile pane -> the switch lost its default branch. Defect.
+- `/settings/bogus` or `/settings/` reports `Prompts` -> the fallback still names Prompts, the default before the Profile tab existed. Defect.
 - An unhandled exception page -> defect, capture the stack from `T-A`.
 
 **Inconclusive if**
@@ -607,7 +607,7 @@ If the browser was already deep in history from earlier tests, the Back sequence
 If the regex oracle prints nothing at all, the markup shape changed - fall back to the browser and read which tab button is visibly highlighted, noting that the source-level check could not be applied.
 
 > [!NOTE]
-> This fallback exists specifically because `Routes.razor` has no `NotFound` branch, and `Settings.razor`'s own comment says so. A seventh tab must inherit the same behaviour. This test checks the fallback and case-insensitivity on Prompts and Appearance only; the other four tabs (Personas, Skills, Team Types, Library) have no URL test in this area.
+> This fallback exists specifically because `Routes.razor` has no `NotFound` branch, and `Settings.razor`'s own comment says so. Any new tab must inherit the same behaviour. This test checks the fallback (Profile, the first tab) and case-insensitivity on Prompts and Appearance only; the other four tabs (Personas, Skills, Team types, Library) have no URL test in this area.
 
 ### SHELLNAV-14 — No route sets a browser tab title
 
@@ -1520,7 +1520,7 @@ The drawer content is shorter than the viewport in step 6 no matter how small yo
 
 ---
 
-### SHELLNAV-39 — Right-clicking a tab offers Pin, Move Left, Move Right and Close, and Pin keeps the tab at the front as an icon
+### SHELLNAV-39 — Right-clicking a tab offers Pin, Move left, Move right and Close, and Pin keeps the tab at the front as an icon
 
 **Free** · about 3 min
 
@@ -1533,16 +1533,16 @@ The drawer content is shorter than the viewport in step 6 no matter how small yo
 **Steps**
 
 1. Right-click the `Settings` tab.
-2. Choose **Pin Tab**.
+2. Choose **Pin tab**.
 3. Right-click the pinned tab and read the first item, then close the menu with Escape.
 4. Open `Tasks` with one click in the menu.
-5. Right-click the pinned tab, choose **Unpin Tab**.
+5. Right-click the pinned tab, choose **Unpin tab**.
 
 **Pass if — all of these**
 
-- Step 1 shows a menu at the pointer with, in order, Pin Tab, Move Left, Move Right and Close, each with an icon.
+- Step 1 shows a menu at the pointer with, in order, Pin tab, Move left, Move right and Close, each with an icon.
 - Step 2 moves `Settings` to the start of the strip as its gear icon alone, with no × and no title text; hovering shows "Settings".
-- Step 3's first item reads **Unpin Tab**.
+- Step 3's first item reads **Unpin tab**.
 - Step 4's new preview tab opens after the pinned tab and the others, never in front of it.
 - Step 5 puts `Settings` back as a titled tab just after any pinned tabs, and it stays in the body colour (not the greyer preview colour).
 
@@ -1554,7 +1554,7 @@ The drawer content is shorter than the viewport in step 6 no matter how small yo
 
 ---
 
-### SHELLNAV-40 — Move Right opens a second pane beside the first, and both pages stay live
+### SHELLNAV-40 — Move right opens a second pane beside the first, and both pages stay live
 
 **Free** · about 4 min
 
@@ -1566,18 +1566,18 @@ The drawer content is shorter than the viewport in step 6 no matter how small yo
 
 **Steps**
 
-1. Right-click the `Settings` tab, choose **Move Right**.
+1. Right-click the `Settings` tab, choose **Move right**.
 2. Look at the page and at the address bar.
-3. Right-click the `Settings` tab again and read **Move Right**.
+3. Right-click the `Settings` tab again and read **Move right**.
 4. Click anywhere in the `Teammates` pane.
 5. Look at the address bar and at the `Settings` pane.
-6. Right-click the only tab in the right pane, choose **Move Left**.
+6. Right-click the only tab in the right pane, choose **Move left**.
 
 **Pass if — all of these**
 
 - Step 1 shows two panes side by side, `Teammates` on the left and `Settings` on the right, each with its own strip.
 - Step 2's address bar reads `/settings`, and the right pane's active tab has the accent line while the left one's is dimmed.
-- Step 3 shows **Move Right** greyed out (no third pane is allowed).
+- Step 3 shows **Move right** greyed out (no third pane is allowed).
 - Step 4 makes the address bar read `/teammates` and moves the accent to the left pane. The `Settings` pane still shows its page, unchanged.
 - Step 6 closes the right pane and leaves one pane holding both tabs.
 

@@ -293,6 +293,7 @@ internal sealed class TaskToolHarness : IDisposable
     internal void AddTo(IServiceCollection services)
     {
         services.AddSingleton(this.Options);
+        services.AddSingleton<Agency.Huddle.App.Profile.IHumanIdentity>(new Agency.Huddle.App.Profile.ConfiguredHumanIdentity(this.Options.Value.HumanName));
         services.AddSingleton(this.Clock);
         services.AddSingleton(this.Personas);
         services.AddSingleton(this.Store);

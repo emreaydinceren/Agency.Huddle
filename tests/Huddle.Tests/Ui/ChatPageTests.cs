@@ -526,6 +526,40 @@ public sealed class ChatPageTests
         Assert.Contains("The Adapter needs authentication.", html, StringComparison.Ordinal);
     }
 
+    /// <summary>
+    /// The Offline notice sits in the Transcript's centred 760px column (the <c>room-notice-column</c> class), between the
+    /// Transcript and the Composer, so the three share one left edge instead of the notice spanning the whole pane.
+    /// </summary>
+    [Fact]
+    public async Task ChatPage_OfflineNotice_SitsInTheColumnBetweenTranscriptAndComposer()
+    {
+        using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(60));
+        var ct = cts.Token;
+
+        await using var factory = new TeamWebApplicationFactory();
+        var (directory, chat, _) = ChatPageTests.Services(factory);
+        var agent = await directory.UpsertAgentUserAsync("echo", "test agent", ct);
+        Assert.NotNull(agent);
+        var room = await chat.EnsureRoomForAsync(agent, ct);
+        var health = factory.Services.GetRequiredService<PersonaHealth>();
+        health.Report(agent.Name, PersonaState.Offline, "The Adapter needs authentication.");
+
+        using var client = factory.CreateClient();
+        var html = await client.GetStringAsync($"/rooms/{room.Id}", ct);
+
+        IDocument document = new AngleSharp.Html.Parser.HtmlParser().ParseDocument(html);
+        IElement alert = Assert.Single(document.QuerySelectorAll(".member-health-alert"));
+        Assert.Contains("room-notice-column", alert.ClassList);
+        IElement transcript = Assert.Single(document.QuerySelectorAll(".message-list"));
+        IElement composer = Assert.Single(document.QuerySelectorAll(".composer"));
+        IElement parent = Assert.IsAssignableFrom<IElement>(transcript.ParentElement);
+        Assert.Same(parent, alert.ParentElement);
+        Assert.Same(parent, composer.ParentElement);
+        List<IElement> siblings = [.. parent.Children];
+        Assert.True(siblings.IndexOf(transcript) < siblings.IndexOf(alert));
+        Assert.True(siblings.IndexOf(alert) < siblings.IndexOf(composer));
+    }
+
     /// <summary>Every Member online and reporting no health problem shows no strip at all - the same rule the budget prompt already follows for a Stop and a spent Budget, neither of which may ever land here either.</summary>
     [Fact]
     public async Task ChatPage_ShowsNoStripWhenEveryMemberIsHealthy()
