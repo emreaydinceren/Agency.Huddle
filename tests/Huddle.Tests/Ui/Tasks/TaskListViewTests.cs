@@ -188,10 +188,8 @@ public sealed class TaskListViewTests : IDisposable
             .Select(header => header.TextContent.Trim())
             .ToList();
 
-        List<string> groupLabels = [.. cut.FindAll("tr")
-            .Select(row => row.TextContent.Trim())
-            .Where(text => text is "Alpha (1)" or "Bravo (1)")];
-        Assert.Equal(["Alpha (1)", "Bravo (1)"], groupLabels);
+        Assert.Equal(["Alpha", "Bravo"], cut.FindAll(".task-group-label").Select(label => label.TextContent.Trim()));
+        Assert.Equal(["1", "1"], cut.FindAll(".task-group-count").Select(count => count.TextContent.Trim()));
         Assert.DoesNotContain("Team", headers);
     }
 

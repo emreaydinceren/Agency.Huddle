@@ -1,0 +1,26 @@
+@*
+    The 8px state dot: the colour of the state (TaskColors.For), dashed and hollow for Backlog so it differs from To Do
+    now that both are Default. The Board's column header and the Task detail's Status field both wear it, so a state
+    reads the same in the drawer as on the Board (audit B4r). Decorative: the state's name is always beside it.
+*@
+@using System.Globalization
+
+<span class="@TaskStateDot.ClassFor(this.State)" aria-hidden="true"></span>
+
+@code {
+    /// <summary>The state whose dot to draw.</summary>
+    [Parameter, EditorRequired]
+    public TaskState State { get; set; }
+
+    /// <summary>The modifier that makes Backlog's dot a dashed hollow ring.</summary>
+    private const string BacklogClass = "task-state-dot-backlog";
+
+    /// <summary>The classes of the dot for <paramref name="state"/>: <c>task-state-dot</c> and its colour, plus the dashed hollow modifier for Backlog.</summary>
+    /// <param name="state">The state.</param>
+    internal static string ClassFor(TaskState state)
+    {
+        Color colour = TaskColors.For(state);
+        string classes = string.Create(CultureInfo.InvariantCulture, $"task-state-dot task-state-dot-{colour.ToString().ToLowerInvariant()}");
+        return state == TaskState.Backlog ? $"{classes} {BacklogClass}" : classes;
+    }
+}

@@ -14,6 +14,7 @@
 
 @implements IDisposable
 @using Microsoft.Extensions.Options
+@using Agency.Huddle.App.Components.Shared.Dialogs
 @inject ViewStore ViewStore
 @inject IOptions<TeamOptions> Options
 @inject IDialogService DialogService
@@ -38,17 +39,18 @@
                            than relying on MudMenu's default ActivationEvent handling
                            (RoomList.razor's own precedent). *@
                         <ActivatorContent Context="menuContext">
-                            <MudTooltip Text="View actions">
-                                <MudIconButton Icon="@Icons.Material.Filled.MoreVert" Size="Size.Small"
-                                               aria-label="View actions" Class="hover-reveal-menu-button"
-                                               OnClick="menuContext.ToggleAsync" />
-                            </MudTooltip>
+                            @* No hover tooltip (it would stay up over the menu's first item); the activator names its View (design-system "Menus"). *@
+                            <MudIconButton Icon="@Icons.Material.Filled.MoreVert" Size="Size.Small"
+                                           aria-label="@MenuDialogs.ActivatorLabel(view.Name)" Class="hover-reveal-menu-button"
+                                           OnClick="menuContext.ToggleAsync" />
                         </ActivatorContent>
                         <ChildContent>
-                            <MudMenuItem OnClick="@(() => ViewActions.RenameAsync(this.DialogService, this.ViewStore, view.Id))">Rename</MudMenuItem>
+                            @* Both items open a dialog: each ends in "…", the menu closes first, and Delete view… is last after a divider, in Error ink. *@
+                            <MudMenuItem OnClick="@(() => this.RenameViewAsync(view))">Rename…</MudMenuItem>
                             @if (!view.BuiltIn)
                             {
-                                <MudMenuItem OnClick="@(() => this.DeleteViewAsync(view))">Delete view</MudMenuItem>
+                                <MudDivider />
+                                <MudMenuItem Class="task-menu-item-destructive" OnClick="@(() => this.DeleteViewAsync(view))">Delete view…</MudMenuItem>
                             }
                         </ChildContent>
                     </MudMenu>
@@ -146,6 +148,14 @@
         }
     }
 
+    /// <summary>Closes the row's menu, then opens the rename dialog for <paramref name="view"/> (design-system "Menus": the menu closes before the dialog opens).</summary>
+    /// <param name="view">The View to rename.</param>
+    private Task RenameViewAsync(TaskView view)
+    {
+        this.menuRefs.TryGetValue(view.Id, out MudMenu? menu);
+        return MenuDialogs.AfterClosingAsync(menu, () => ViewActions.RenameAsync(this.DialogService, this.ViewStore, view.Id));
+    }
+
     /// <summary>
     /// Confirms through <see cref="IDialogService.ShowMessageBoxAsync(string, string, string, string?, string?, DialogOptions?)"/>
     /// with the same Delete wording as the page's own menu, then removes <paramref name="view"/>
@@ -156,7 +166,8 @@
     /// <param name="view">The View to delete.</param>
     private async Task DeleteViewAsync(TaskView view)
     {
-        if (!await ViewActions.ConfirmDeleteAsync(this.DialogService, view))
+        this.menuRefs.TryGetValue(view.Id, out MudMenu? menu);
+        if (!await MenuDialogs.AfterClosingAsync(menu, () => ViewActions.ConfirmDeleteAsync(this.DialogService, view)))
         {
             return;
         }

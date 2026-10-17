@@ -98,7 +98,7 @@ internal static class ViewActions
         ArgumentNullException.ThrowIfNull(view);
 
         return dialogService.ConfirmAsync(
-            $"Delete '{view.Name}'?",
+            ConfirmCopy.DeleteTitle(view.Name),
             "This removes the View. Tasks are not affected.",
             "Delete",
             danger: true,

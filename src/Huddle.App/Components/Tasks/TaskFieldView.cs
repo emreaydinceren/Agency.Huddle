@@ -18,6 +18,16 @@ internal static class TaskFieldView
         _ => null,
     };
 
+    /// <summary>The display name of a field key (design-system "Interface copy": show a display name, never a slug): <c>due_date</c> reads "Due date".</summary>
+    /// <param name="field">A field key such as <c>due_date</c>.</param>
+    public static string Label(string field)
+    {
+        ArgumentException.ThrowIfNullOrEmpty(field);
+
+        string spaced = field.Replace('_', ' ');
+        return string.Concat(char.ToUpperInvariant(spaced[0]).ToString(), spaced.AsSpan(1));
+    }
+
     /// <summary>The origin Room's name, or <see langword="null"/> when there is no origin or the Room is unknown.</summary>
     /// <param name="originRoomId">The Task's origin Room id.</param>
     /// <param name="roomNames">Room names by id.</param>

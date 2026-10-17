@@ -31,15 +31,16 @@
                     <MudDropZone T="string" Identifier="fields" AllowReorder="true" />
                 </ChildContent>
                 <ItemRenderer>
+                    @* The switch is Accent when on, like the toolbar's Dense switch, and its label is the field's display name, so it has an accessible name.
+                       The first row cannot move up and the last cannot move down. *@
                     <div class="view-editor-field-row">
-                        <MudSwitch T="bool" Value="@this.IsShown(context)" ValueChanged="@(shown => this.SetShown(context, shown))"
-                                   Class="@($"view-editor-field-switch-{context}")" />
-                        <MudText>@context</MudText>
-                        <MudIconButton Icon="@Icons.Material.Filled.ArrowUpward" Size="Size.Small" aria-label="@($"Move {context} up")"
-                                       Class="@($"view-editor-field-up-{context}")" OnClick="@(() => this.Move(context, -1))" />
-                        <MudIconButton Icon="@Icons.Material.Filled.ArrowDownward" Size="Size.Small" aria-label="@($"Move {context} down")"
-                                       Class="@($"view-editor-field-down-{context}")" OnClick="@(() => this.Move(context, 1))" />
-                        <MudIconButton Icon="@Icons.Material.Filled.Close" Size="Size.Small" aria-label="@($"Remove {context}")"
+                        <MudSwitch T="bool" Value="@this.IsShown(context)" ValueChanged="@(shown => this.SetShown(context, shown))" Color="Color.Primary"
+                                   Label="@TaskFieldView.Label(context)" Class="@($"view-editor-field-switch-{context}")" />
+                        <MudIconButton Icon="@Icons.Material.Filled.ArrowUpward" Size="Size.Small" aria-label="@($"Move {TaskFieldView.Label(context)} up")"
+                                       Disabled="@this.IsFirst(context)" Class="@($"view-editor-field-up-{context}")" OnClick="@(() => this.Move(context, -1))" />
+                        <MudIconButton Icon="@Icons.Material.Filled.ArrowDownward" Size="Size.Small" aria-label="@($"Move {TaskFieldView.Label(context)} down")"
+                                       Disabled="@this.IsLast(context)" Class="@($"view-editor-field-down-{context}")" OnClick="@(() => this.Move(context, 1))" />
+                        <MudIconButton Icon="@Icons.Material.Filled.Close" Size="Size.Small" aria-label="@($"Remove {TaskFieldView.Label(context)}")"
                                        Class="@($"view-editor-field-remove-{context}")" OnClick="@(() => this.Remove(context))" />
                     </div>
                 </ItemRenderer>
@@ -47,7 +48,7 @@
             <MudMenu Label="Add field" Class="view-editor-fields-add">
                 @foreach (string key in this.Addable())
                 {
-                    <MudMenuItem Class="view-editor-fields-add-option" OnClick="@(() => this.Add(key))">@key</MudMenuItem>
+                    <MudMenuItem Class="view-editor-fields-add-option" OnClick="@(() => this.Add(key))">@TaskFieldView.Label(key)</MudMenuItem>
                 }
             </MudMenu>
         }
@@ -99,6 +100,14 @@
 
     /// <summary>The rows' keys, in their current order (shown and switched-off alike).</summary>
     private List<string> Keys() => [.. this.rows.Select(row => row.Key)];
+
+    /// <summary>Whether <paramref name="key"/> is the first row, which cannot move up.</summary>
+    /// <param name="key">A row's field key.</param>
+    private bool IsFirst(string key) => this.rows.Length > 0 && string.Equals(this.rows[0].Key, key, StringComparison.Ordinal);
+
+    /// <summary>Whether <paramref name="key"/> is the last row, which cannot move down.</summary>
+    /// <param name="key">A row's field key.</param>
+    private bool IsLast(string key) => this.rows.Length > 0 && string.Equals(this.rows[^1].Key, key, StringComparison.Ordinal);
 
     private bool IsShown(string key) => this.rows.First(row => string.Equals(row.Key, key, StringComparison.Ordinal)).Shown;
 

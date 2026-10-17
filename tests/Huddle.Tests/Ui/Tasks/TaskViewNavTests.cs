@@ -141,12 +141,10 @@ public sealed class TaskViewNavTests
         IRenderedComponent<ContainerFragment> cut = RenderNav(ctx);
 
         await OpenRowMenuAsync(cut, "All Tasks");
-        Assert.Contains(MenuItems(cut), item => string.Equals(item.TextContent.Trim(), "Rename", StringComparison.Ordinal));
-        Assert.DoesNotContain(MenuItems(cut), item => string.Equals(item.TextContent.Trim(), "Delete view", StringComparison.Ordinal));
+        Assert.Equal(["Rename…"], MenuTexts(cut));
 
         await OpenRowMenuAsync(cut, "Sprint Board");
-        Assert.Contains(MenuItems(cut), item => string.Equals(item.TextContent.Trim(), "Rename", StringComparison.Ordinal));
-        Assert.Contains(MenuItems(cut), item => string.Equals(item.TextContent.Trim(), "Delete view", StringComparison.Ordinal));
+        Assert.Equal(["Rename…", "Delete view…"], MenuTexts(cut));
     }
 
     /// <summary>Right-clicking a row is the second door onto its own menu, mirroring <c>RoomList</c>'s own precedent.</summary>
@@ -162,8 +160,7 @@ public sealed class TaskViewNavTests
 
         await cut.InvokeAsync(() => RowFor(cut, "Sprint Board").ContextMenuAsync());
 
-        Assert.Contains(MenuItems(cut), item => string.Equals(item.TextContent.Trim(), "Rename", StringComparison.Ordinal));
-        Assert.Contains(MenuItems(cut), item => string.Equals(item.TextContent.Trim(), "Delete view", StringComparison.Ordinal));
+        Assert.Equal(["Rename…", "Delete view…"], MenuTexts(cut));
     }
 
     /// <summary>
@@ -186,7 +183,7 @@ public sealed class TaskViewNavTests
 
         await cut.InvokeAsync(() => RowFor(cut, "Sprint Board").ContextMenuAsync());
 
-        _ = Assert.Single(MenuItems(cut), item => string.Equals(item.TextContent.Trim(), "Rename", StringComparison.Ordinal));
+        _ = Assert.Single(MenuItems(cut), item => string.Equals(item.TextContent.Trim(), "Rename…", StringComparison.Ordinal));
     }
 
     /// <summary>
@@ -211,7 +208,7 @@ public sealed class TaskViewNavTests
 
         await cut.InvokeAsync(() => RowFor(cut, "Beta").ContextMenuAsync());
 
-        _ = Assert.Single(MenuItems(cut), item => string.Equals(item.TextContent.Trim(), "Delete view", StringComparison.Ordinal));
+        _ = Assert.Single(MenuItems(cut), item => string.Equals(item.TextContent.Trim(), "Delete view…", StringComparison.Ordinal));
     }
 
     /// <summary>Delete View opens <c>ShowMessageBoxAsync</c> with the exact wording the Tasks page's own Delete uses.</summary>
@@ -228,7 +225,7 @@ public sealed class TaskViewNavTests
         await OpenRowMenuAsync(cut, "Sprint Board");
         Task deleting = await OpenDeleteDialogAsync(cut);
 
-        Assert.Equal("Delete 'Sprint Board'?", cut.Find(".mud-dialog-title").TextContent.Trim());
+        Assert.Equal("Delete \"Sprint Board\"?", cut.Find(".mud-dialog-title").TextContent.Trim());
         Assert.Equal("This removes the View. Tasks are not affected.", cut.Find(".mud-dialog-content").TextContent.Trim());
         var buttons = cut.FindAll(".mud-dialog-actions button").Select(b => b.TextContent.Trim()).ToList();
         Assert.Equal(["Cancel", "Delete"], buttons);
@@ -338,11 +335,15 @@ public sealed class TaskViewNavTests
     {
         await cut.InvokeAsync(() =>
         {
-            AngleSharp.Dom.IElement? button = RowFor(cut, viewName).QuerySelector("button[aria-label='View actions']");
+            AngleSharp.Dom.IElement? button = RowFor(cut, viewName).QuerySelector("button[aria-label^='Actions for ']");
             Assert.NotNull(button);
             return button.ClickAsync();
         });
     }
+
+    /// <summary>The distinct texts of the open menu items, in order (a menu opened earlier may still be open, so a text can repeat).</summary>
+    private static IReadOnlyList<string> MenuTexts(IRenderedComponent<ContainerFragment> cut) =>
+        [.. MenuItems(cut).Select(item => item.TextContent.Trim()).Distinct(StringComparer.Ordinal)];
 
     /// <summary>Every open <c>MudMenu</c> item - rendered with <c>role="menuitem"</c> and class <c>mud-menu-item</c>, not <c>mud-list-item</c> (that class belongs to <c>MudSelect</c>'s own popover).</summary>
     private static IReadOnlyList<AngleSharp.Dom.IElement> MenuItems(IRenderedComponent<ContainerFragment> cut) =>
@@ -359,7 +360,7 @@ public sealed class TaskViewNavTests
     /// <returns>The click's task, for the test to await once it has answered the dialog.</returns>
     private static async Task<Task> OpenDeleteDialogAsync(IRenderedComponent<ContainerFragment> cut)
     {
-        Task deleting = cut.InvokeAsync(() => MenuItems(cut).First(item => string.Equals(item.TextContent.Trim(), "Delete view", StringComparison.Ordinal)).ClickAsync());
+        Task deleting = cut.InvokeAsync(() => MenuItems(cut).First(item => string.Equals(item.TextContent.Trim(), "Delete view…", StringComparison.Ordinal)).ClickAsync());
         Task shown = cut.WaitForAssertionAsync(() => Assert.NotEmpty(cut.FindAll(".mud-dialog-actions button")));
 
         // A click that fails (no such item, a stale handler) completes first; awaiting it surfaces that error instead of a bare wait timeout.

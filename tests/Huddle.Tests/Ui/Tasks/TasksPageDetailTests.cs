@@ -69,7 +69,7 @@ public sealed class TasksPageDetailTests
         await using MudBunitContext ctx = NewContext(harness);
         IRenderedComponent<ContainerFragment> cut = RenderPage(ctx);
 
-        await cut.InvokeAsync(() => cut.Find(".btn-action-tight").ClickAsync());
+        await cut.InvokeAsync(() => cut.Find(".page-header-create").ClickAsync());
 
         TaskDetail detail = cut.FindComponent<TaskDetail>().Instance;
         Assert.Null(detail.Id);
@@ -95,7 +95,7 @@ public sealed class TasksPageDetailTests
         await using MudBunitContext ctx = NewContext(harness);
         IRenderedComponent<ContainerFragment> cut = RenderPage(ctx, "platform-alpha");
 
-        await cut.InvokeAsync(() => cut.Find(".btn-action-tight").ClickAsync());
+        await cut.InvokeAsync(() => cut.Find(".page-header-create").ClickAsync());
 
         TaskDraft draft = cut.FindComponent<TaskDetail>().Instance.Draft ?? throw new InvalidOperationException("Draft missing.");
         Assert.Equal("Platform", draft.Team);

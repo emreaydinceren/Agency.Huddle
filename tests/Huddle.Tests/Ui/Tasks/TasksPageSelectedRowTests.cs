@@ -56,7 +56,7 @@ public sealed class TasksPageSelectedRowTests
         Assert.Equal(["mud-table-row", "task-row-selected"], FindTaskRow(cut, "Bravo").ClassList);
     }
 
-    /// <summary>Closing the panel (Cancel) clears the mark from every row.</summary>
+    /// <summary>Closing the panel (the drawer's close button; Cancel is a footer action that shows only while there are changes) clears the mark from every row.</summary>
     [Fact]
     public async Task ListRow_ClosingThePanel_ClearsTheMark()
     {
@@ -69,7 +69,7 @@ public sealed class TasksPageSelectedRowTests
         await ClickTaskRowAsync(cut, "Alpha");
         Assert.Single(cut.FindAll("tr.task-row-selected"));
 
-        await cut.InvokeAsync(() => cut.Find(".task-detail-cancel").ClickAsync());
+        await cut.InvokeAsync(() => cut.Find(".resizable-drawer-header button[aria-label='Close']").ClickAsync());
 
         cut.WaitForAssertion(() => Assert.Empty(cut.FindAll("tr.task-row-selected")));
         Assert.Empty(cut.FindAll(".task-list-title[aria-current]"));
@@ -98,7 +98,7 @@ public sealed class TasksPageSelectedRowTests
         Assert.Equal(["task-card", "task-card-selected"], selected.ClassList);
         Assert.Equal("true", Assert.Single(cut.FindAll(".task-card-open[aria-current]")).GetAttribute("aria-current"));
 
-        await cut.InvokeAsync(() => cut.Find(".task-detail-cancel").ClickAsync());
+        await cut.InvokeAsync(() => cut.Find(".resizable-drawer-header button[aria-label='Close']").ClickAsync());
 
         cut.WaitForAssertion(() => Assert.Empty(cut.FindAll(".task-card-selected")));
     }

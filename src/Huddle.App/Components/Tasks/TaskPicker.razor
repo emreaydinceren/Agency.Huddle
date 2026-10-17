@@ -6,7 +6,7 @@
 @using Agency.Huddle.App.Components.Shared
 @inject TaskStore Store
 
-<MudAutocomplete T="TaskItem" Label="@this.Label" Variant="Variant.Outlined" Margin="Margin.Dense" Strict="true"
+<MudAutocomplete T="TaskItem" Label="@this.Label" Placeholder="@this.Placeholder" Variant="Variant.Outlined" Margin="Margin.Dense" Strict="true"
                  SearchFunc="@this.SearchAsync" ToStringFunc="@TaskPicker.Format" DebounceInterval="@SearchField.DebounceMs"
                  Value="@(this.Value is { } id ? this.Store.Get(id) : null)" ValueChanged="@this.OnChosenAsync" Class="@this.Class" />
 
@@ -26,6 +26,10 @@
     /// <summary>The field's label.</summary>
     [Parameter]
     public string Label { get; set; } = string.Empty;
+
+    /// <summary>The Quiet-ink hint an empty optional field shows, such as "None"; <see langword="null"/> for none.</summary>
+    [Parameter]
+    public string? Placeholder { get; set; }
 
     /// <summary>An extra CSS class for the field.</summary>
     [Parameter]

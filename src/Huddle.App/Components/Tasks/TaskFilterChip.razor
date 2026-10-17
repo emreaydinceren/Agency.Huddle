@@ -70,6 +70,6 @@
     public string? Class { get; set; }
 
     private string CssClass => this.IsSet
-        ? $"task-filter-chip task-filter-chip-set {this.Class}"
-        : $"task-filter-chip task-filter-chip-unset {this.Class}";
+        ? $"task-filter-chip filter-chip is-set task-filter-chip-set {this.Class}"
+        : $"task-filter-chip filter-chip task-filter-chip-unset {this.Class}";
 }
