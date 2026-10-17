@@ -5,7 +5,7 @@ namespace Agency.Huddle.App.Themes;
 /// <summary>
 /// One theme the Appearance tab can offer: the id <c>appearance.json</c> stores, the label shown to
 /// the Human, the <see cref="MudTheme"/> itself, which of the theme's two palette slots that theme
-/// actually fills, and the heading the picker lists it under.
+/// actually fills, and the picker list it appears in.
 /// </summary>
 /// <param name="Id">
 /// The theme's id, and what <c>appearance.json</c> stores — never <see cref="Label"/>, per
@@ -27,8 +27,8 @@ namespace Agency.Huddle.App.Themes;
 /// puts the application in dark mode.
 /// </param>
 /// <param name="Group">
-/// The picker heading this theme is listed under. Not derivable from <see cref="Mode"/> — see
-/// <see cref="ThemeGroup"/> for the high-contrast case that separates them.
+/// The picker list this theme appears in. Today it always matches <see cref="Mode"/>; see
+/// <see cref="ThemeGroup"/> for why the two are separate fields.
 /// </param>
 /// <param name="Pack">
 /// The style pack this theme carries, or <see langword="null"/> for none: the name of one stylesheet under

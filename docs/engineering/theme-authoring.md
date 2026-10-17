@@ -14,7 +14,8 @@ It has two readers:
 
 This page explains and walks through. It does not decide: the decisions are
 [ADR-0010](../adr/0010-a-theme-is-a-mudblazor-theme.md),
-[ADR-0016](../adr/0016-vs-codes-bundled-themes-are-converted-once-not-imported.md),
+[ADR-0016](../adr/0016-vs-codes-bundled-themes-are-converted-once-not-imported.md) (superseded:
+the VS Code ports were removed),
 [ADR-0017](../adr/0017-a-theme-is-a-palette-not-a-pair.md) and
 [ADR-0054](../adr/0054-a-light-theme-and-a-dark-theme.md), and the colour roles are
 owned by [design-system.md](design-system.md#colour). Where this page and one of those
@@ -268,7 +269,7 @@ two Themes, so two tables.
 | `Primary` | | The accent; must also read as text. Each Theme sets its own; the Huddle Themes do not share one |
 | `PrimaryContrastText` | | Black or white, whichever reads better on `Primary` (Huddle Dark uses near-black `#141413`, not pure black) |
 | `Secondary` | | A second fill colour (no longer a signal) |
-| `Tertiary` | | The Review signal. At least 30° of hue from `Primary` and from `Info`. In a ported Theme, mapped from a VS Code chart colour distinct from `Info`, faithful value |
+| `Tertiary` | | The Review signal. At least 30° of hue from `Primary` and from `Info`. Authored per Theme and held by `Authored_SignalsAreAtLeastThirtyDegreesApartFromEachOtherAndTheAccent` |
 | `Success`, `Warning`, `Error`, `Info` | | Status |
 
 **The lines are ranked.** Hand over lines in this order of strength against `Surface`:
@@ -276,8 +277,8 @@ two Themes, so two tables.
 Today the table sets no floor for the Field; set **Field ≥ Edge**. The ranks, with their ink
 percentages and measured examples, are in [The ink ladder, measured](#the-ink-ladder-measured).
 Note that the stylesheet draws lines from the ladder custom properties (`--ink-strip`,
-`--ink-wash`, `--ink-rule`, `--ink-edge`, `--ink-field` in `app-vars.css`), so a ported Theme
-gets ranked lines without its faithful palette values being nudged.
+`--ink-wash`, `--ink-rule`, `--ink-edge`, `--ink-field` in `app-vars.css`), so any Theme gets
+ranked lines without its palette values being nudged.
 
 Check these before you hand it over, because the build rejects a palette that fails them
 (see [the six contrast pairs](#the-six-contrast-pairs)): `TextPrimary` against
@@ -325,11 +326,11 @@ Four things follow from that chain, and each one shapes how you write a Theme:
 
 | Part | Type | What it is for |
 | --- | --- | --- |
-| Id | `string` | What `appearance.json` stores. Lower-kebab-case (`solarized-light`). Unique. **Never change it once shipped**: an installation that chose it falls back to the default with a warning. |
-| Label | `string` | What the picker shows (`Solarized Light`). Never stored, so it can be renamed freely. |
+| Id | `string` | What `appearance.json` stores. Lower-kebab-case (`nordic-light`). Unique. **Never change it once shipped**: an installation that chose it falls back to the default with a warning. |
+| Label | `string` | What the picker shows (`Nordic Light`). Never stored, so it can be renamed freely. |
 | Theme | `MudTheme` | The palette, plus the shared typography. Always built with `ThemeDefaults.CreateLight(...)` or `ThemeDefaults.CreateDark(...)`. |
 | Mode | `ThemeMode` | `Light` or `Dark`: which palette slot is filled, and so whether choosing it puts the app in dark mode. |
-| Group | `ThemeGroup` | The picker heading: `Light`, `Dark` or `HighContrast`. Usually the same as `Mode`; it differs only for a high-contrast Theme, which has a mode but its own heading. |
+| Group | `ThemeGroup` | The picker list: `Light` or `Dark`. Today always the same as `Mode`; it is a separate field so a future group can differ from the palette slot a Theme fills. |
 | Pack | `string?` | Optional. The name of a style pack, `wwwroot/packs/<name>.css`, whose every rule is scoped to this Theme ([ADR-0057](../adr/0057-a-theme-may-carry-a-style-pack.md)). `null` for every Theme but Nordic. |
 
 `MudTheme` has two palette slots, `PaletteLight` and `PaletteDark`. A Theme fills
@@ -370,7 +371,7 @@ the last column is where you will see a mistake.
 | `LinesDefault` | `--mud-palette-lines-default` | Chrome lines: top bar, tab strip, room header, pane splitter, drawer edge |
 | `TextPrimary` | `--mud-palette-text-primary` | Body text, **and the keyboard focus ring** |
 | `TextSecondary` | `--mud-palette-text-secondary` | Supporting text — the most-read colour after `TextPrimary` |
-| `ActionDefault` | `--mud-palette-action-default` | Icon buttons (the Tasks row and drawer icons, the Team chevron) and the drawer resize handle. Equal to `TextSecondary` in both Huddle Themes; the 17 VS Code Themes keep MudBlazor's default |
+| `ActionDefault` | `--mud-palette-action-default` | Icon buttons (the Tasks row and drawer icons, the Team chevron) and the drawer resize handle. Equal to `TextSecondary` in both Huddle Themes |
 | `TextDisabled` | `--mud-palette-text-disabled` | Disabled controls only |
 | `Primary` | `--mud-palette-primary` | The accent: primary buttons, bars and borders, and (mixed 70% toward `TextPrimary`) the text of links and the active nav link; selected rows (as a 14% tint), the Human's bubble tint, the Composer's focused border |
 | `PrimaryContrastText` | `--mud-palette-primary-text` | Text and icons printed on a solid `Primary` fill (filled buttons). Black or white, whichever reads better |
@@ -392,10 +393,8 @@ legible without a separate colour. Do not try to give your Theme a coloured focu
 
 ### 1. Create the file
 
-One Theme per file. Your own design goes in `src/Huddle.App/Themes/`; a converted VS Code
-Theme goes in `src/Huddle.App/Themes/VsCode/`, in namespace
-`Agency.Huddle.App.Themes.VsCode`. The file holds an `internal static class` with a
-private palette builder and one public `Descriptor`.
+One Theme per file, in `src/Huddle.App/Themes/`. The file holds an `internal static class`
+with a private palette builder and one public `Descriptor`.
 
 ```csharp
 using MudBlazor;
@@ -436,7 +435,7 @@ internal static class HarbourDarkTheme
         OverlayDark = "rgba(0,0,0,0.6)",
     };
 
-    /// <summary>Harbour Dark's descriptor: a dark palette, listed under the Dark heading.</summary>
+    /// <summary>Harbour Dark's descriptor: a dark palette, listed in the Dark theme list.</summary>
     public static ThemeDescriptor Descriptor { get; } = new(
         Id: "harbour-dark",
         Label: "Harbour Dark",
@@ -464,7 +463,7 @@ order, and the picker lists Themes in that order inside each heading.
 ### 3. Pick `PrimaryContrastText`
 
 Use whichever of pure black or pure white contrasts more with your `Primary`.
-`ContrastColour.ReadableForeground` computes exactly this, and the VS Code Themes record
+`ContrastColour.ReadableForeground` computes exactly this, and a Theme file can record
 the measurement in a comment:
 
 ```csharp
@@ -519,7 +518,6 @@ change.
 | `BuiltIn_FirstEntryIsTheHuddleLightDefault` | Inserting before `BuiltIn[0]` |
 | `Grouped_CoversEveryThemeOnceAndKeepsCatalogOrderWithinAGroup` | A grouping change that drops or reorders Themes |
 | `BuiltIn_NativePaletteContrast_ClearsWcagFloor` | Any of the six contrast pairs below 4.5:1 |
-| `DocumentedShortfalls_StillFallShort` | A listed exception that no longer falls short, or no longer at the recorded ratio |
 | `BuiltIn_EveryThemeSetsEveryPalettePropertyAppCssReads` | Leaving a palette property unset that some stylesheet reads |
 | `BuiltIn_EveryThemeSetsDrawerTextAndIconFromItsOwnTextColours` | `DrawerText` not equal to `TextPrimary`, or `DrawerIcon` not equal to `TextSecondary`, in any Theme |
 | `Huddle_PrimaryAndBackgroundCarryTheExpectedValues` | Either Huddle Theme's `Primary`, `PrimaryContrastText` or `Background` drifting from the recorded value |
@@ -549,39 +547,13 @@ dark one. Lighten it for a dark Theme, darken it for a light one.
 
 Fix the colour first. Prefer a darker or lighter `Primary` to an exception.
 
-If the value must stay — a faithful port of a third-party Theme, or a colour someone asked
-for verbatim — add an entry to `DocumentedShortfalls` in `ThemeCatalogTests` with the
-Theme id, the pair, the measured ratio to two decimals, the floor, and a sentence saying
-why. The list is pinned **in both directions**: a listed pair is skipped by the contrast
-test, and `DocumentedShortfalls_StillFallShort` fails if it ever stops falling short. A
-fixed Theme therefore forces its own exception to be deleted rather than left as a stale
-excuse.
-
-The same list also holds **17 status-chip combinations** (pair `chip:<status>`, floor 4.5:1), measured by `StatusChipText_ReachesFloor_InEveryTheme` in `R3FixTests`, which reads `DocumentedShortfalls` and pins it both ways. Decided 2026-10-17 (UX-E17): the chip text stays at the **50% mix toward Ink**, and these combinations are recorded, not fixed. Each is a faithful palette value of a ported VS Code Theme, and the chip carries a second cue (glyph, dot or word) so colour never carries the meaning alone.
-
-| Theme | Status | Chip text ratio |
-| --- | --- | --- |
-| Dark+ (`dark-plus`) | Secondary | 4.49:1 |
-| Light+ (`light-plus`) | Warning | 3.47:1 |
-| Light+ (`light-plus`) | Success | 4.00:1 |
-| Light+ (`light-plus`) | Secondary | 4.16:1 |
-| Light+ (`light-plus`) | Neutral | 4.20:1 |
-| Abyss (`abyss`) | Secondary | 3.75:1 |
-| Monokai Dimmed (`monokai-dimmed`) | Secondary | 4.43:1 |
-| Quiet Light (`quiet-light`) | Warning | 3.47:1 |
-| Quiet Light (`quiet-light`) | Error | 3.11:1 |
-| Quiet Light (`quiet-light`) | Success | 4.00:1 |
-| Quiet Light (`quiet-light`) | Neutral | 4.20:1 |
-| Solarized Light (`solarized-light`) | Info | 4.21:1 |
-| Solarized Light (`solarized-light`) | Warning | 3.19:1 |
-| Solarized Light (`solarized-light`) | Success | 3.67:1 |
-| Solarized Light (`solarized-light`) | Secondary | 2.98:1 |
-| Solarized Light (`solarized-light`) | Primary | 4.16:1 |
-| Solarized Light (`solarized-light`) | Neutral | 3.82:1 |
-
-Today's exceptions are three ported light Themes (`light-plus`, `quiet-light` and
-`solarized-light`: `TextSecondary` on `Surface`, from VS Code's own `#717171` default). No
-Huddle or Custom Accent Theme has one: each Huddle Theme authors its own accent, as below.
+There is no exception list: `ThemeCatalogTests.DocumentedShortfalls` and its companion
+tests were deleted on 2026-10-17 together with the VS Code ports, whose faithful values were
+the only entries. Every contrast pair, the text ladder and the status-chip text
+(`StatusChipText_ReachesFloor_InEveryTheme` in `R3FixTests`, at the **50% mix toward Ink**
+decided for UX-E17) now hold for all twelve Themes with no exceptions. A Theme whose value
+cannot pass needs a different value, or a decision recorded in an ADR before a test is
+loosened.
 
 ### The Huddle accent
 
@@ -610,8 +582,8 @@ reads better. `AccentThemeTests` holds it to 4.5:1 for pale, dark and brand acce
   cards, so it must be visible against `Surface`: at least **1.5:1** in the Huddle Themes
   (Huddle Light `#d0cfcc` is 1.56:1, Huddle Dark `#444442` is 1.55:1).
   `Huddle_DividerAgainstSurface_ReachesCardBorderVisibility` enforces it for those two, and
-  `BuiltIn_DividerVersusSurface_IsRecorded` records the ratio for every Theme. The ported
-  Themes are held to no floor here, because they are imported faithfully.
+  `BuiltIn_DividerVersusSurface_IsRecorded` records the ratio for every Theme, Custom Accent
+  included, which is held to no floor here.
 - **Status colours are never a solid fill under text.** Status chips are tinted: the colour
   at 14% over `Surface`, with text and icon 70% toward `TextPrimary`. That is why the
   palette has no `SuccessContrastText`, `WarningContrastText`, `ErrorContrastText` or
@@ -691,123 +663,6 @@ new `var(--mud-palette-*)`, `BuiltIn_EveryThemeSetsEveryPalettePropertyAppCssRea
 requires every Theme to have a value for it. That is the point — a variable some Themes
 leave empty is a silent gap that only shows up in the Theme nobody tested.
 
-## Porting a VS Code Theme
-
-Most of the Themes in the catalog are VS Code's bundled colour Themes, converted once by
-hand. [`ThemeCatalog.BuiltIn`](../../src/Huddle.App/Themes/ThemeCatalog.cs) is the one place that
-counts them, so quote a number from there rather than from here. Nothing reads VS Code
-JSON at run time; the C# file **is** the artefact. To port another one, follow the same
-mapping so it reads like the others.
-
-### The mapping
-
-For each palette property, take the first key in the chain that the Theme defines.
-Every chain ends in a key every Theme has, so no property is ever empty.
-[ADR-0016](../adr/0016-vs-codes-bundled-themes-are-converted-once-not-imported.md) owns
-this table.
-
-| Palette property | VS Code keys, first present wins |
-| --- | --- |
-| `Background` | `editor.background` |
-| `Surface` | `editorWidget.background` → `editor.background` |
-| `DrawerBackground` | `sideBar.background` → `activityBar.background` → `editor.background` |
-| `DrawerText` | `sideBar.foreground` → `foreground` |
-| `DrawerIcon` | the Theme's `TextSecondary` |
-| `BackgroundGray` | `sideBarSectionHeader.background` → `panel.background` → `editor.background` |
-| `TableHover` | `list.hoverBackground` → `list.inactiveSelectionBackground` |
-| `Divider` | `panel.border` → `editorGroup.border` → `widget.border` → `contrastBorder` |
-| `DividerLight` | `sideBar.border` → `tab.border` → `Divider` |
-| `LinesInputs` | `input.border` → `dropdown.border` → `checkbox.border` → `Divider` |
-| `LinesDefault` | `focusBorder` |
-| `TextPrimary` | `foreground` → `editor.foreground` |
-| `TextSecondary` | `descriptionForeground` → `sideBarTitle.foreground` |
-| `ActionDefault` | not set: MudBlazor's default (only the Huddle Themes set it, equal to `TextSecondary`) |
-| `TextDisabled` | disabled controls only: `disabledForeground` → `input.placeholderForeground` → `editorLineNumber.foreground` |
-| `Primary` | `textLink.foreground` → `focusBorder` → `button.background` |
-| `PrimaryContrastText` | computed: black or white, whichever contrasts more with `Primary` |
-| `Secondary` | `button.background` → `activityBarBadge.background` → `focusBorder` |
-| `Tertiary` | a VS Code chart colour distinct from `Info`, faithful value |
-| `Success` | `charts.green` → `editorGutter.addedBackground` → `terminal.ansiGreen` |
-| `Error` | `errorForeground` → `editorError.foreground` → `charts.red` → `terminal.ansiRed` |
-| `Warning` | `charts.yellow` → `editorWarning.foreground` → `terminal.ansiYellow` |
-| `Info` | `charts.blue` → `textLink.foreground` → `terminal.ansiBlue` |
-| `OverlayDark` | fixed: `rgba(0,0,0,0.4)` light, `rgba(0,0,0,0.6)` dark |
-
-**Two blues collide.** `Info` maps to `charts.blue` and `Primary` to `textLink.foreground`,
-and both are blue in most VS Code Themes. A ported Theme may fall short of the 30° hue
-distance an authored Theme meets, so it relies on second cues (a glyph, a shape, a word)
-to carry the meaning.
-
-**`Primary` is `textLink.foreground`, not `button.background`.** The button colour is
-the obvious choice and it failed the text floor in sixteen of nineteen Themes, because a
-button fill is designed to carry other text on top of it, not to be read as text itself.
-A link colour, by definition, must read as text on the editor background. The button
-colour goes to `Secondary`, where it is used as a fill.
-
-### Where the values come from
-
-- **Follow the include chain.** Many Theme files extend another (`dark_modern.json` →
-  `dark_plus.json` → `dark_vs.json`). Merge child over parent. Some files have no
-  `colors` at all and only change syntax colours.
-- **Fall back to VS Code's registry defaults.** A missing key still has a colour inside
-  VS Code: the `registerColor(...)` default compiled into the editor, which is not in any
-  JSON file. Read it from the `microsoft/vscode` source at the tag of the version you
-  ported from, for the right variant (`dark`, `light`, `hcDark`, `hcLight`). Some Themes,
-  such as Light High Contrast, are almost entirely registry defaults. That is faithful,
-  not a gap.
-- **Composite alpha away.** A palette property is a flat colour, but many VS Code values
-  carry alpha (`#FFFFFF14`). Blend each one source-over onto the surface it sits on — a
-  hover colour over the drawer, a text colour over `Surface` — and store the opaque
-  result. Hex values may be 3, 4, 6 or 8 digits.
-- **Do not nudge values to pass tests.** Port the colours as they are and record any
-  shortfall as a documented exception.
-- **Skip duplicates.** If the UI palette resolves byte-identically to a Theme already in
-  the catalog (VS Code's "Dark (Visual Studio)" and "Dark+" do), leave it out; the two
-  differ only in syntax colours, which this app does not render.
-
-### Provenance is mandatory
-
-There is no importer, so the comments are the only record of the mapping. A bare
-`Background = "#1f1f1f",` is unreviewable. [rules.md](rules.md) makes this binding.
-
-Open the file with a header recording the source:
-
-```csharp
-// Source: theme-defaults/themes/dark_modern.json, from Visual Studio Code 1.138.0.
-// Include chain: dark_modern.json -> dark_plus.json -> dark_vs.json, merged child-over-parent.
-// The extension declares "license": "MIT", publisher vscode; the theme's contributes.themes
-// id is "Dark Modern", uiTheme "vs-dark".
-// Extracted 2026-09-16.
-// Values VS Code's theme JSON does not carry (rows marked "registry default" below) came from
-// the registerColor defaults in microsoft/vscode at tag 1.138.0 (MIT), selected for the "dark"
-// variant.
-// This file is generated once by hand from that source and is not read at run time - there is
-// no importer in this application, no runtime JSON reading, no file provider. The C# below IS
-// the artefact.
-```
-
-And end every palette line with the key it came from, whether it was the Theme's own value
-or a registry default, any fallback taken, and any compositing:
-
-```csharp
-Surface = "#202020", // editorWidget.background (theme)
-TableHover = "#2a2d2e", // list.hoverBackground (registry default)
-DividerLight = "#ddd6c1", // tab.border (theme, sideBar.border absent)
-TextDisabled = "#767676", // disabledForeground (registry default, composited from #cccccc80 over Surface #202020)
-```
-
-State only what you can verify on disk about the licence. The bundled Themes declare
-`"license": "MIT"` with no per-Theme attribution, so their headers name no upstream
-author.
-
-### High-contrast Themes
-
-Give a high-contrast Theme its real `Mode` (`Dark` or `Light`) and
-`Group = ThemeGroup.HighContrast`. It then appears under the "High contrast" heading of
-the list for its mode. Be aware that it will not look like VS Code's: VS Code draws
-borders around everything through `contrastBorder`, and a MudBlazor palette has no
-equivalent. It lands as a strong-contrast ordinary Theme.
-
 ## The Custom Accent Themes
 
 `AccentTheme` is the one Theme whose colours are not fixed at build time. Its two
@@ -884,14 +739,13 @@ records why.
 - **Follow the operating system's light or dark setting.** There is no "System" option;
   the top-bar toggle is manual.
 - **Pair itself with a counterpart.** The Human chooses the light and dark Themes
-  independently. Nothing ties "Solarized Light" to "Solarized Dark".
+  independently. Nothing ties "Nordic Light" to "Nordic Dark".
 - **Be installed without a rebuild.** There is no `{DataDir}/themes/` folder and no
-  importer for a Theme a Human supplies. That is [roadmap](roadmap.md) item 7, still open,
-  and it will reuse the VS Code mapping above.
+  importer for a Theme a Human supplies. That is [roadmap](roadmap.md) item 7, still open.
 - **Be customised one colour at a time.** `appearance.json` holds Theme ids and the accent
   colour, nothing else. The per-colour override layer was removed with the old CSS Tokens.
-- **Colour syntax.** VS Code's `tokenColors` are ignored; this app renders no syntax
-  highlighting.
+- **Colour syntax.** This app renders no syntax highlighting, so a Theme has nothing to
+  colour there.
 
 ## Checklist
 
@@ -899,21 +753,20 @@ records why.
       `PaletteLight` or `PaletteDark`.
 - [ ] Built with `ThemeDefaults.CreateLight` or `CreateDark`; only one palette slot filled.
 - [ ] Id is lower-kebab-case, unique, and final. Label reads well in the picker.
-- [ ] `Mode` matches the palette; `Group` is `Light`, `Dark` or `HighContrast`.
+- [ ] `Mode` matches the palette; `Group` is `Light` or `Dark`.
 - [ ] Every property in [the palette table](#the-palette-what-each-property-paints) is set, including `DrawerText` (`TextPrimary`) and `DrawerIcon` (`TextSecondary`).
 - [ ] `PrimaryContrastText` is black or white, whichever contrasts more with `Primary`.
 - [ ] `OverlayDark` is `rgba(0,0,0,0.4)` (light) or `rgba(0,0,0,0.6)` (dark).
 - [ ] Registered in `ThemeCatalog.BuiltIn`, after `BuiltIn[0]`.
-- [ ] For a port: a provenance header, and a trailing key comment on every value.
-- [ ] `dotnet build Huddle.slnx` and `dotnet test Huddle.slnx --` are green; any
-      contrast exception is in `DocumentedShortfalls` with its measured ratio and reason.
+- [ ] `dotnet build Huddle.slnx` and `dotnet test Huddle.slnx --` are green, with no
+      contrast exception.
 - [ ] Looked at in the running app: selected rows, the Human's bubble, chips, dialogs and
       the focus ring.
 - [ ] `manual-tests/appearance-theme.md` updated if the picker changed.
 
 ## Round 3 five-Theme check
 
-The running-app check of the five Themes UXG names (Huddle Light, Huddle Dark, one ported light, one ported dark, one High Contrast): the text census `lines` report, greyscale, and sibling-Tab title stability.
+The running-app check of the five Themes UXG names (Huddle Light, Huddle Dark, one ported light, one ported dark, one High Contrast; the three ported ones were removed on 2026-10-17, so the rows below are a record, not a current set): the text census `lines` report, greyscale, and sibling-Tab title stability.
 
 Run on 17 Oct 2026 against `feat/visual-audit-r3`, at 1440×900, with the census `lines` report on
 the Platform board (and Teammates, a Room and the Library in Huddle Dark):
@@ -937,9 +790,9 @@ the Platform board (and Teammates, a Room and the Library in Huddle Dark):
 
 - [design-system.md](design-system.md#colour): the colour roles, lines and states the
   stylesheets use.
-- [rules.md](rules.md): the binding rules on colour literals, provenance comments and
+- [rules.md](rules.md): the binding rules on colour literals and
   contrast floors.
 - [language.md](language.md): the defined words **Theme**, **Palette property** and
   **Appearance**.
-- [known-limits.md](known-limits.md): what a Theme and an imported Theme cannot do.
+- [known-limits.md](known-limits.md): what a Theme cannot do.
 - [manual-tests/appearance-theme.md](manual-tests/appearance-theme.md): the hand checks.

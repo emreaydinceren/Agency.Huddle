@@ -2,15 +2,14 @@
     The Settings page's Appearance tab: pick a theme from ThemeCatalog.Grouped.
 
     A theme carries exactly one palette and its own ThemeMode, so picking a theme picks light or dark
-    with it - there is no separate light/dark control any more, and so no way to ask for "Solarized
+    with it - there is no separate light/dark control any more, and so no way to ask for "Nordic
     Dark, in light mode" and be shown a different theme's palette instead
     (docs/adr/0017-a-theme-is-a-palette-not-a-pair.md). The Human's own Avatar used to be edited here;
     it moved to the Profile tab (ProfilePanel), with the rest of who the Human is.
 
-    A MudList rather than a MudSelect: MudBlazor 9 has no MudSelectItemGroup, so a MudSelect cannot
-    render the Light / Dark / High contrast headings this picker is grouped by. The list also shows
-    every theme at once, which is what a theme picker wants - the same shape VS Code's own picker has,
-    and the catalog these themes came from.
+    A MudList rather than a MudSelect: the list shows every theme of a mode at once with its swatch,
+    which is what a theme picker wants, and its options are all in the markup from the first render.
+    There are two lists, Light theme and Dark theme, and no group headings inside them.
 
     The grouping is ThemeCatalog.Grouped's, computed once there rather than here, because
     ThemeCatalog.BuiltIn's ORDER is load-bearing - three call sites read BuiltIn[0] as "the default
@@ -49,10 +48,6 @@
          aria-label="Light theme">
     @foreach (var grouping in GroupedFor(ThemeMode.Light))
     {
-        @if (grouping.Group == ThemeGroup.HighContrast)
-        {
-            <MudListSubheader Class="theme-picker-heading group-label">@grouping.Heading</MudListSubheader>
-        }
         @foreach (var theme in grouping.Themes)
         {
             <MudListItem T="string" Value="@theme.Id">
@@ -74,10 +69,6 @@
          aria-label="Dark theme">
     @foreach (var grouping in GroupedFor(ThemeMode.Dark))
     {
-        @if (grouping.Group == ThemeGroup.HighContrast)
-        {
-            <MudListSubheader Class="theme-picker-heading group-label">@grouping.Heading</MudListSubheader>
-        }
         @foreach (var theme in grouping.Themes)
         {
             <MudListItem T="string" Value="@theme.Id">
@@ -110,9 +101,8 @@
 <details class="theme-licences mt-4">
     <summary>Licences</summary>
     <p class="theme-credit mt-2">
-        Huddle, Custom Accent, Lumen, Fluent, Nordic and Cobalt Soft are this application's own Themes. Every other
-        Theme is one of the colour themes bundled with Visual Studio Code, mapped onto this application's palette. Visual Studio Code and its default themes are Microsoft's, under the
-        MIT licence; Solarized is Ethan Schoonover's and Monokai is Wimer Hazenberg's.
+        Huddle, Custom Accent, Lumen, Fluent, Nordic and Cobalt Soft are this application's own Themes. None of them
+        is taken from a third-party colour theme.
     </p>
 </details>
 

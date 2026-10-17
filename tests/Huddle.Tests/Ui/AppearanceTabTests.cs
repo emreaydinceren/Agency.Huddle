@@ -21,10 +21,10 @@ public sealed class AppearanceTabTests
 
         IRenderedComponent<ContainerFragment> cut = RenderTab(ctx);
         await cut.InvokeAsync(() => cut.FindAll(".theme-picker .mud-list-item")
-            .First(item => item.TextContent.Contains("Abyss", StringComparison.Ordinal))
+            .First(item => item.TextContent.Contains("Nordic Dark", StringComparison.Ordinal))
             .ClickAsync());
 
-        Assert.Equal("abyss", appearance.Current.DarkThemeId);
+        Assert.Equal("nordic-dark", appearance.Current.DarkThemeId);
     }
 
     /// <summary>The avatar editor is gone from Appearance; the tab points to the Profile tab instead.</summary>

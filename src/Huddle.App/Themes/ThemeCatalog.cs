@@ -1,15 +1,14 @@
-using Agency.Huddle.App.Themes.VsCode;
-
 namespace Agency.Huddle.App.Themes;
 
 /// <summary>
-/// The fixed catalog of every theme this application ships with. This is the single source for the
-/// Appearance tab's picker. Each entry is a <see cref="ThemeDescriptor"/> built in its own file:
-/// <see cref="HuddleTheme"/> for this application's own colours, and one file per imported theme
-/// under <c>Themes/VsCode/</c>. MudBlazor's <see cref="MudBlazor.MudTheme"/> is the single source of
-/// theming — there is no companion stylesheet, no override file, and no per-token fallback layer;
-/// every colour and font this application uses comes from the one <see cref="MudBlazor.MudTheme"/> a
-/// descriptor here carries.
+/// The fixed catalog of every theme this application ships with: twelve, six light and dark pairs
+/// (Huddle, Custom Accent, Lumen, Fluent, Nordic and Cobalt Soft). This is the single source for the
+/// Appearance tab's picker. Each entry is a <see cref="ThemeDescriptor"/> built in its own file. The
+/// seventeen Visual Studio Code ports that once followed them were removed on 2026-10-17 because a
+/// palette alone cannot carry a skin (<c>docs/adr/0016-vs-codes-bundled-themes-are-converted-once-not-imported.md</c>).
+/// MudBlazor's <see cref="MudBlazor.MudTheme"/> carries each theme's palette, type scale and shape; a
+/// descriptor's optional style pack (see <see cref="ThemeDescriptor.Pack"/>) layers a stylesheet on top
+/// of it for the one theme that needs more than a palette.
 /// </summary>
 internal static class ThemeCatalog
 {
@@ -30,15 +29,7 @@ internal static class ThemeCatalog
     /// then <see cref="AccentTheme"/>'s two - Primary is a Human-picked colour rather than
     /// hand-tuned, but otherwise Huddle's own neutrals - then the four authored pairs mapped from the
     /// approved mockup directions (<see cref="LumenTheme"/>, <see cref="FluentTheme"/>,
-    /// <see cref="NordicTheme"/> and <see cref="CobaltSoftTheme"/>), then the <c>theme-defaults</c> set bundled
-    /// with Visual Studio Code, then the nine that began life as TextMate or Atom themes.
-    /// </para>
-    /// <para>
-    /// VS Code's "Dark (Visual Studio)" and "Light (Visual Studio)" are deliberately absent. Their
-    /// palettes resolve byte-identically to <c>Dark+</c> and <c>Light+</c> — upstream the pairs
-    /// differ only in <c>tokenColors</c>, the TextMate syntax-highlighting array, and this
-    /// application renders no syntax highlighting. Shipping all four would offer a distinction the
-    /// picker cannot show.
+    /// <see cref="NordicTheme"/> and <see cref="CobaltSoftTheme"/>).
     /// </para>
     /// </remarks>
     public static IReadOnlyList<ThemeDescriptor> BuiltIn { get; } =
@@ -55,29 +46,12 @@ internal static class ThemeCatalog
         NordicTheme.DarkDescriptor,
         CobaltSoftTheme.LightDescriptor,
         CobaltSoftTheme.DarkDescriptor,
-        Dark2026Theme.Descriptor,
-        Light2026Theme.Descriptor,
-        DarkModernTheme.Descriptor,
-        LightModernTheme.Descriptor,
-        DarkPlusTheme.Descriptor,
-        LightPlusTheme.Descriptor,
-        DarkHighContrastTheme.Descriptor,
-        LightHighContrastTheme.Descriptor,
-        AbyssTheme.Descriptor,
-        KimbieDarkTheme.Descriptor,
-        MonokaiTheme.Descriptor,
-        MonokaiDimmedTheme.Descriptor,
-        QuietLightTheme.Descriptor,
-        RedTheme.Descriptor,
-        SolarizedDarkTheme.Descriptor,
-        SolarizedLightTheme.Descriptor,
-        TomorrowNightBlueTheme.Descriptor,
     ];
 
     /// <summary>
     /// <see cref="BuiltIn"/> arranged for the picker: one entry per <see cref="ThemeGroup"/>, in
     /// <see cref="ThemeGroup"/>'s own declaration order, each holding that group's themes in
-    /// <see cref="BuiltIn"/> order. A group with no themes is omitted rather than rendered empty.
+    /// <see cref="BuiltIn"/> order. A group with no themes is omitted rather than listed empty.
     /// </summary>
     public static IReadOnlyList<ThemeGrouping> Grouped { get; } =
     [

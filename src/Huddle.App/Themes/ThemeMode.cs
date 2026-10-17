@@ -10,7 +10,7 @@ namespace Agency.Huddle.App.Themes;
 /// <remarks>
 /// Until 2026-09-21 every theme carried both halves, the un-authored one borrowed wholesale from
 /// <see cref="HuddleTheme"/>, and a separate light/dark control could select it — so choosing
-/// "Solarized Dark" and then "Light" rendered Huddle's light palette under Solarized Dark's name.
+/// a dark theme and then "Light" rendered Huddle's light palette under that dark theme's name.
 /// The borrowed halves and that second control are both gone; see
 /// <c>docs/adr/0017-a-theme-is-a-palette-not-a-pair.md</c>.
 /// </remarks>

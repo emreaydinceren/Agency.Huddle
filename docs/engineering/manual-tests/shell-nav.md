@@ -532,7 +532,7 @@ If the page shows an error line above the tab bar, read it and note it, but it d
 1. In the browser, navigate to `http://localhost:5100/settings`.
 2. Click the **Appearance** tab button.
 3. Read the address bar.
-4. Confirm the pane below now shows the theme list (rows under `Light`, `Dark` and `High contrast` headings), a paragraph beginning `The selection is stored at` that names the file path, and, last, the paragraph `Your own avatar is set on the Profile tab.` with `Profile` as a link. There is no avatar editor on this pane.
+4. Confirm the pane below now shows the theme lists (a `Light theme` list and a `Dark theme` list, with no group headings), a paragraph beginning `The selection is stored at` that names the file path, and, last, the paragraph `Your own avatar is set on the Profile tab.` with `Profile` as a link. There is no avatar editor on this pane.
 5. Click the **Prompts** tab button.
 6. Read the address bar.
 7. Press the browser Back button once and read the address bar.

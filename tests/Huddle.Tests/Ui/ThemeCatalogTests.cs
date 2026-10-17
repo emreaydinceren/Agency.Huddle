@@ -123,29 +123,7 @@ public sealed class ThemeCatalogTests
         }
     }
 
-    /// <summary>
-    /// A high-contrast theme is grouped under <see cref="ThemeGroup.HighContrast"/> even though its
-    /// <see cref="ThemeDescriptor.Mode"/> is an ordinary light or dark - the exact case that keeps
-    /// <see cref="ThemeGroup"/> and <see cref="ThemeMode"/> two fields rather than one.
-    /// </summary>
-    [Fact]
-    public void BuiltIn_HighContrastThemesAreGroupedApartFromTheirMode()
-    {
-        var darkHighContrast = ThemeCatalog.BuiltIn.Single(descriptor => string.Equals(descriptor.Id, "dark-high-contrast", StringComparison.Ordinal));
-        var lightHighContrast = ThemeCatalog.BuiltIn.Single(descriptor => string.Equals(descriptor.Id, "light-high-contrast", StringComparison.Ordinal));
-
-        Assert.Equal(ThemeMode.Dark, darkHighContrast.Mode);
-        Assert.Equal(ThemeGroup.HighContrast, darkHighContrast.Group);
-
-        Assert.Equal(ThemeMode.Light, lightHighContrast.Mode);
-        Assert.Equal(ThemeGroup.HighContrast, lightHighContrast.Group);
-    }
-
-    /// <summary>
-    /// Every <c>(themeId, pair)</c> combination this suite holds to a WCAG contrast floor, minus the
-    /// combinations <see cref="DocumentedShortfalls"/> pins as known, measured exceptions - a theme
-    /// that cannot clear its floor is recorded there rather than skipped silently.
-    /// </summary>
+    /// <summary>Every <c>(themeId, pair)</c> combination this suite holds to a WCAG contrast floor: every built-in theme against every pair in <see cref="ContrastPairs"/>.</summary>
     public static TheoryData<string, string> ContrastCombinations()
     {
         TheoryData<string, string> data = new();
@@ -153,10 +131,7 @@ public sealed class ThemeCatalogTests
         {
             foreach (var pair in ContrastPairs)
             {
-                if (!IsDocumentedShortfall(descriptor.Id, pair.Name))
-                {
-                    data.Add(descriptor.Id, pair.Name);
-                }
+                data.Add(descriptor.Id, pair.Name);
             }
         }
 
@@ -183,42 +158,6 @@ public sealed class ThemeCatalogTests
         Assert.True(
             ratio >= pair.Floor,
             $"{themeId}: {pairName} contrast ratio {ratio:F2}:1 falls short of the {pair.Floor:F1}:1 WCAG AA {pair.FloorKind} minimum.");
-    }
-
-    /// <summary>Every <c>(themeId, pair)</c> combination <see cref="DocumentedShortfalls"/> pins.</summary>
-    public static TheoryData<string, string> DocumentedShortfallCombinations()
-    {
-        TheoryData<string, string> data = new();
-        foreach (var shortfall in DocumentedShortfalls.Where(candidate => !candidate.Pair.StartsWith(ChipPairPrefix, StringComparison.Ordinal)))
-        {
-            data.Add(shortfall.ThemeId, shortfall.Pair);
-        }
-
-        return data;
-    }
-
-    /// <summary>
-    /// The other half of <see cref="DocumentedShortfalls"/>: a listed combination must still measure
-    /// below its floor, at the exact ratio recorded. If a palette value changes - fixed or otherwise -
-    /// this fails the build, so a stale entry cannot quietly rot; it must be deleted instead.
-    /// </summary>
-    /// <param name="themeId"><see cref="ThemeDescriptor.Id"/> of the documented shortfall under test.</param>
-    /// <param name="pairName">The <see cref="ContrastPairSpec.Name"/> of the documented shortfall under test.</param>
-    [Theory]
-    [MemberData(nameof(DocumentedShortfallCombinations))]
-    public void DocumentedShortfalls_StillFallShort(string themeId, string pairName)
-    {
-        var shortfall = DocumentedShortfalls.Single(candidate =>
-            string.Equals(candidate.ThemeId, themeId, StringComparison.Ordinal) &&
-            string.Equals(candidate.Pair, pairName, StringComparison.Ordinal));
-        var descriptor = ThemeCatalog.BuiltIn.Single(candidate => string.Equals(candidate.Id, themeId, StringComparison.Ordinal));
-        var pair = ContrastPairs.Single(candidate => string.Equals(candidate.Name, pairName, StringComparison.Ordinal));
-        var palette = NativePalette(descriptor);
-
-        var ratio = ContrastColour.Ratio(pair.Foreground(palette), pair.Background(palette));
-
-        Assert.True(ratio < shortfall.Floor, $"{themeId}: {pairName} no longer falls short of {shortfall.Floor:F1}:1 - delete this documented shortfall.");
-        Assert.Equal(shortfall.Ratio, ratio, precision: 2);
     }
 
     /// <summary>
@@ -297,9 +236,8 @@ public sealed class ThemeCatalogTests
 
     /// <summary>
     /// Every authored theme's <c>Divider</c> - the border of message cards, tiles and roster cards - reads at
-    /// least 1.5:1 against <c>Surface</c>: the two Huddle themes and the eight mapped from the mockup sets. The
-    /// VS Code themes are imported faithfully and held to no floor here;
-    /// <see cref="BuiltIn_DividerVersusSurface_IsRecorded"/> measures them.
+    /// least 1.5:1 against <c>Surface</c>: the two Huddle themes and the eight mapped from the mockup sets.
+    /// <see cref="BuiltIn_DividerVersusSurface_IsRecorded"/> measures every built-in theme, Custom Accent included.
     /// </summary>
     /// <param name="themeId"><see cref="ThemeDescriptor.Id"/> of the authored theme under test.</param>
     [Theory]
@@ -353,7 +291,7 @@ public sealed class ThemeCatalogTests
     /// In an authored Theme every pair of signals, and each signal against the Accent, sit at least 30 degrees apart in
     /// hue (audit A2), so a meaning never rests on a hue that collides with another. The signals are Working
     /// (<c>Info</c>), Review (<c>Tertiary</c>), <c>Success</c>, <c>Warning</c> and <c>Error</c>; the Accent is <c>Primary</c>.
-    /// Ported Themes take their signals from VS Code and may fall short; their second cues carry the meaning.
+    /// Custom Accent is not authored, so it is checked separately below.
     /// </summary>
     /// <param name="themeId"><see cref="ThemeDescriptor.Id"/> of the authored theme under test.</param>
     [Theory]
@@ -403,8 +341,8 @@ public sealed class ThemeCatalogTests
     }
 
     /// <summary>
-    /// The text ladder (audit A9): <c>TextPrimary</c> (Ink) reads at least 7:1 on <c>Surface</c> in every theme not
-    /// recorded in <see cref="InkShortfalls"/>, and <c>TextSecondary</c> (Quiet ink) sits between Ink at 50% and Ink at
+    /// The text ladder (audit A9): <c>TextPrimary</c> (Ink) reads at least 7:1 on <c>Surface</c> in every theme, and
+    /// <c>TextSecondary</c> (Quiet ink) sits between Ink at 50% and Ink at
     /// 80% mixed into the Surface, so it is visibly quieter than Ink and never fainter than half of it. The 4.5:1
     /// floor for Quiet ink is held by <see cref="BuiltIn_NativePaletteContrast_ClearsWcagFloor"/>.
     /// </summary>
@@ -420,15 +358,8 @@ public sealed class ThemeCatalogTests
         var fifty = ContrastColour.Ratio(InkMix(palette, 0.5), palette.Surface);
         var eighty = ContrastColour.Ratio(InkMix(palette, 0.8), palette.Surface);
 
-        if (!InkShortfalls.Contains(themeId))
-        {
-            Assert.True(inkRatio >= 7.0, $"{themeId}: Ink on Surface is {inkRatio:F2}:1, under 7:1.");
-            Assert.True(quietRatio >= fifty && quietRatio <= eighty, $"{themeId}: Quiet ink is {quietRatio:F2}:1 on Surface, outside Ink 50% ({fifty:F2}:1) to Ink 80% ({eighty:F2}:1).");
-        }
-        else
-        {
-            Assert.True(inkRatio < 7.0 || quietRatio < fifty || quietRatio > eighty, $"{themeId}: no longer misses the text ladder - delete it from {nameof(InkShortfalls)}.");
-        }
+        Assert.True(inkRatio >= 7.0, $"{themeId}: Ink on Surface is {inkRatio:F2}:1, under 7:1.");
+        Assert.True(quietRatio >= fifty && quietRatio <= eighty, $"{themeId}: Quiet ink is {quietRatio:F2}:1 on Surface, outside Ink 50% ({fifty:F2}:1) to Ink 80% ({eighty:F2}:1).");
     }
 
     /// <summary>
@@ -572,14 +503,6 @@ public sealed class ThemeCatalogTests
         return string.Concat(segments.Select(segment => char.ToUpperInvariant(segment[0]) + segment[1..]));
     }
 
-    /// <summary>Whether <paramref name="themeId"/>/<paramref name="pairName"/> is one of <see cref="DocumentedShortfalls"/>.</summary>
-    /// <param name="themeId">The theme id to look up.</param>
-    /// <param name="pairName">The pair name to look up.</param>
-    private static bool IsDocumentedShortfall(string themeId, string pairName) =>
-        DocumentedShortfalls.Any(shortfall =>
-            string.Equals(shortfall.ThemeId, themeId, StringComparison.Ordinal) &&
-            string.Equals(shortfall.Pair, pairName, StringComparison.Ordinal));
-
     /// <summary>
     /// The palette a theme actually carries: its <see cref="MudTheme.PaletteLight"/> when
     /// <see cref="ThemeDescriptor.Mode"/> is <see cref="ThemeMode.Light"/>, otherwise its
@@ -618,75 +541,6 @@ public sealed class ThemeCatalogTests
         new("PrimaryContrastText vs Primary", palette => palette.PrimaryContrastText, palette => palette.Primary, 4.5, "text"),
     ];
 
-    /// <summary>The <see cref="DocumentedShortfall.Pair"/> prefix of a status-chip entry: <c>chip:Warning</c> is the Warning chip text on its tint, measured by <c>R3FixTests</c>, not a <see cref="ContrastPairs"/> pair.</summary>
-    internal const string ChipPairPrefix = "chip:";
-
-    /// <summary>Why every status-chip entry in <see cref="DocumentedShortfalls"/> is recorded and not fixed.</summary>
-    private const string ChipJustification = "Ported VS Code Theme, faithful palette value; status chip text at the 50% Signal-ink mix still misses; second cue (glyph/dot/word) carries the meaning.";
-
-    /// <summary>
-    /// The themes that genuinely cannot clear their floor, pinned in both directions:
-    /// <see cref="ContrastCombinations"/> skips each one, and <see cref="DocumentedShortfalls_StillFallShort"/>
-    /// asserts it still measures at the recorded ratio, so a later fix - or any other change to the
-    /// underlying palette value - fails the build and forces the stale entry to be deleted rather than
-    /// left to rot. Every value here is imported unmodified from its VS Code source; "themes are
-    /// imported faithfully" is the governing decision this list exists to keep.
-    /// </summary>
-    internal static readonly IReadOnlyList<DocumentedShortfall> DocumentedShortfalls =
-    [
-        new(
-            "light-plus",
-            "TextSecondary vs Surface",
-            4.40,
-            4.5,
-            "VS Code's registry default for descriptionForeground in light themes is #717171, which measures 4.48:1 against pure white; against this theme's own near-white Surface (#f3f3f3) it measures 4.40:1. Imported unmodified."),
-        new(
-            "quiet-light",
-            "TextSecondary vs Surface",
-            4.40,
-            4.5,
-            "VS Code's registry default for descriptionForeground in light themes is #717171, which measures 4.48:1 against pure white; against this theme's own near-white Surface (#f3f3f3) it measures 4.40:1. Imported unmodified."),
-        new(
-            "solarized-light",
-            "TextSecondary vs Surface",
-            3.98,
-            4.5,
-            "TextSecondary is the same #717171 registry default as the themes above, but Solarized Light's own Surface (#eee8d5) is not near-white, lowering the ratio to 3.98:1. Imported unmodified."),
-        new("dark-plus", ChipPairPrefix + "Secondary", 4.49, 4.5, ChipJustification),
-        new("light-plus", ChipPairPrefix + "Warning", 3.47, 4.5, ChipJustification),
-        new("light-plus", ChipPairPrefix + "Success", 4.00, 4.5, ChipJustification),
-        new("light-plus", ChipPairPrefix + "Secondary", 4.16, 4.5, ChipJustification),
-        new("light-plus", ChipPairPrefix + "Neutral", 4.20, 4.5, ChipJustification),
-        new("abyss", ChipPairPrefix + "Secondary", 3.75, 4.5, ChipJustification),
-        new("monokai-dimmed", ChipPairPrefix + "Secondary", 4.43, 4.5, ChipJustification),
-        new("quiet-light", ChipPairPrefix + "Warning", 3.47, 4.5, ChipJustification),
-        new("quiet-light", ChipPairPrefix + "Error", 3.11, 4.5, ChipJustification),
-        new("quiet-light", ChipPairPrefix + "Success", 4.00, 4.5, ChipJustification),
-        new("quiet-light", ChipPairPrefix + "Neutral", 4.20, 4.5, ChipJustification),
-        new("solarized-light", ChipPairPrefix + "Info", 4.21, 4.5, ChipJustification),
-        new("solarized-light", ChipPairPrefix + "Warning", 3.19, 4.5, ChipJustification),
-        new("solarized-light", ChipPairPrefix + "Success", 3.67, 4.5, ChipJustification),
-        new("solarized-light", ChipPairPrefix + "Secondary", 2.98, 4.5, ChipJustification),
-        new("solarized-light", ChipPairPrefix + "Primary", 4.16, 4.5, ChipJustification),
-        new("solarized-light", ChipPairPrefix + "Neutral", 3.82, 4.5, ChipJustification),
-    ];
-
-    /// <summary>
-    /// The ported themes that miss the text ladder (Ink under 7:1 on Surface, or Quiet ink outside Ink 50% to 80%),
-    /// pinned both ways like <see cref="DocumentedShortfalls"/>: a listed theme must still miss, so a stale entry fails
-    /// the build. Every value is imported unmodified from its VS Code source, which is why these are recorded and not fixed.
-    /// </summary>
-    private static readonly HashSet<string> InkShortfalls = new(StringComparer.Ordinal)
-    {
-        // Ink 5.58:1 on Surface: VS Code's registry-default foreground #616161 on the #f3f3f3 Surface.
-        "light-plus",
-        // Ink 5.58:1 on Surface, the same pair.
-        "quiet-light",
-        // Ink 5.05:1 on Surface: the same #616161 foreground on Solarized Light's #eee8d5 Surface.
-        "solarized-light",
-        // Quiet ink 10.55:1 on Surface, above Ink 80% (5.83:1): this theme's descriptionForeground is the same #3b3b3b as its foreground, so Quiet ink equals Ink.
-        "light-modern",
-    };
     /// <summary>One foreground/background pair this suite holds to a WCAG contrast floor.</summary>
     /// <param name="Name">The pair's display name, used as the theory's data label and in failure messages.</param>
     /// <param name="Foreground">Selects the foreground colour from a theme's native palette.</param>
@@ -694,12 +548,4 @@ public sealed class ThemeCatalogTests
     /// <param name="Floor">The minimum WCAG 2.1 contrast ratio this pair must clear.</param>
     /// <param name="FloorKind">Names the floor in a failure message. Every pair here is a text pair against the WCAG 1.4.3 4.5:1 minimum, so this is always "text".</param>
     private sealed record ContrastPairSpec(string Name, Func<Palette, MudColor> Foreground, Func<Palette, MudColor> Background, double Floor, string FloorKind);
-
-    /// <summary>One theme's documented, measured contrast shortfall.</summary>
-    /// <param name="ThemeId"><see cref="ThemeDescriptor.Id"/> of the theme this shortfall belongs to.</param>
-    /// <param name="Pair">The <see cref="ContrastPairSpec.Name"/> of the pair that falls short.</param>
-    /// <param name="Ratio">The measured WCAG 2.1 contrast ratio, to two decimals.</param>
-    /// <param name="Floor">The floor this ratio falls short of.</param>
-    /// <param name="Justification">The factual, measured cause of the shortfall.</param>
-    internal sealed record DocumentedShortfall(string ThemeId, string Pair, double Ratio, double Floor, string Justification);
 }

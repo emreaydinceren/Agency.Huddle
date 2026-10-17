@@ -107,7 +107,7 @@ ratio of each rung in each Theme is evidence, not a rule; it lives in
 | Base radius | `var(--mud-default-borderradius)`: 8px in the Huddle Themes, 4px in the others. Every radius is a multiple of it |
 | Hue distance | The difference in hue angle between two colours. Two signals, or a signal and the Accent, are told apart only if they are far enough apart |
 | Second cue | A glyph, shape, position or word that carries a meaning as well as its hue, so the meaning survives a Theme whose hues collide, and greyscale |
-| Theme families | **Authored** (Huddle Light and Dark), **Custom Accent** (Huddle neutrals, the Human's accent), **Ported** (VS Code, values kept faithful), **High Contrast** |
+| Theme families | **Authored** (Huddle, Lumen, Fluent, Nordic and Cobalt Soft, each a light and dark pair), **Custom Accent** (Huddle neutrals, the Human's accent). The VS Code ports and the High Contrast group were removed on 2026-10-17 |
 
 | Role | MudBlazor variable | Use it for |
 | --- | --- | --- |
@@ -134,7 +134,7 @@ ratio of each rung in each Theme is evidence, not a rule; it lives in
 
 > **A wash never defines a shape on its own.** A washed shape (tag chip, reference chip, preview
 > block) also carries an Edge line, so it keeps its outline where the wash can't (dark grounds,
-> ported Themes). Washes sit on the Wash rung (Ink 6%); inner rules on the Rule rung (Ink 10%),
+> any Theme). Washes sit on the Wash rung (Ink 6%); inner rules on the Rule rung (Ink 10%),
 > or are replaced by spacing.
 
 Edge is the only border of a card, tile or row. Chrome is for chrome only, never a card, an
@@ -199,7 +199,7 @@ mean something else in this table.
 > **A meaning never rests on hue alone.** Every signal has a second cue (the state dot's shape,
 > the priority glyph, a word), so it survives colliding hues and greyscale. **Hue distance:** in
 > an authored Theme, signals are at least 30 degrees apart from each other and from the Accent.
-> A ported Theme may fall short; its second cues carry the meaning.
+> Custom Accent cannot guarantee this against a picked accent; its second cues carry the meaning.
 
 **Status colours carry the same meaning everywhere.** A status colour is chosen by a pure
 mapping function, never at a call site (UX-V14).
@@ -233,9 +233,8 @@ accent colour goes through `AccentPalette.ClampForContrast`, which darkens or li
 it clears the floor, and its `PrimaryContrastText` is black or white, whichever reads better
 (`ContrastColour.ReadableForeground`). Both Huddle Themes set `ActionDefault` equal to
 `TextSecondary`, so an icon button reads as supporting text and not as MudBlazor's 54% black
-(`ThemeCatalogTests` pins it); the 17 VS Code Themes keep MudBlazor's default. A palette
-that fails these tests does not ship; a ported Theme that misses a relationship is listed in
-`DocumentedShortfalls` and nothing else. The tests cover palettes and the chips, not
+(`ThemeCatalogTests` pins it). A palette that fails these tests does not ship, and there is
+no exception list. The tests cover palettes and the chips, not
 other tinted states; see [Known gaps](#known-gaps).
 
 **The shipped palettes.** Huddle Light and Huddle Dark are authored in
@@ -250,9 +249,10 @@ on a Primary fill is never hard-coded; see the [lookup](UXDesignGuidelines.md#i-
 The catalog also holds the Custom Accent pair
 ([`AccentTheme.cs`](../../src/Huddle.App/Themes/AccentTheme.cs)), the four authored pairs mapped from the approved
 mockup directions (Lumen, Fluent, Nordic and Cobalt Soft; see
-[theme-authoring.md › The mockup pairs](theme-authoring.md#the-mockup-pairs)) and 17 palettes converted
-from VS Code ([ADR-0016](../adr/0016-vs-codes-bundled-themes-are-converted-once-not-imported.md)).
-The picker groups them as Light, Dark and High Contrast; the catalog holds the counts.
+[theme-authoring.md › The mockup pairs](theme-authoring.md#the-mockup-pairs)): twelve Themes in all.
+The 17 palettes once converted from VS Code were removed on 2026-10-17
+([ADR-0016](../adr/0016-vs-codes-bundled-themes-are-converted-once-not-imported.md), superseded).
+The picker has a Light theme list and a Dark theme list; the catalog holds the counts.
 
 **One palette per Theme.** A Theme carries one palette and its own `ThemeMode`; the mode
 is derived from the Theme and from nothing else
@@ -269,8 +269,8 @@ and one dark Theme, and the top bar's `ThemeModeToggle` switches between them
 | Case | Sentence case everywhere. `Typo.button` is `text-transform: none`; tab rails must be too (UX-009). A Tab title is never italic: a preview Tab is weight 400 and the others 500 |
 | Scale | Set in rendered px, once, in `ThemeDefaults.WithSharedTypography`. The page is not zoomed ([ADR-0056](../adr/0056-the-ui-renders-at-100-percent-with-a-px-type-scale.md)) |
 
-Set up once in [`ThemeDefaults.cs`](../../src/Huddle.App/Themes/ThemeDefaults.cs). VS Code
-themes carry no fonts, so every Theme inherits this stack.
+Set up once in [`ThemeDefaults.cs`](../../src/Huddle.App/Themes/ThemeDefaults.cs). A
+palette carries no fonts, so every Theme inherits this stack.
 
 **The type scale, by role.** Pick the role, then use its `Typo` and tag. The scale stops
 at `h5`; don't use `h1` to `h4` as a `Typo`. The Rendered column is what the Human sees,
@@ -1154,19 +1154,16 @@ prefers `DateFormat="MMM d, yyyy"`.
 ## Adding a Theme or changing a palette
 
 [theme-authoring.md](theme-authoring.md) walks through these steps in full, with the
-palette table and the VS Code mapping.
+palette table.
 
 1. Build the palette in C# and register a `ThemeDescriptor` in
    [`ThemeCatalog.BuiltIn`](../../src/Huddle.App/Themes/ThemeCatalog.cs). Never insert
    before `BuiltIn[0]`; three call sites treat it as the default.
 2. Give the descriptor a `ThemeMode` and a `ThemeGroup`; the picker groups by `Group`.
-3. For a converted VS Code palette, comment each value with the key it came from. No
-   importer ships, so the comment is the only record
-   ([ADR-0016](../adr/0016-vs-codes-bundled-themes-are-converted-once-not-imported.md)).
-4. Run `ThemeCatalogTests`. Fix the colour (a darker or lighter `Primary`); a shipped Theme
+3. Run `ThemeCatalogTests`. Fix the colour (a darker or lighter `Primary`); a shipped Theme
    carries no exception. Set `DrawerText` and `DrawerIcon` from the palette's own text
    colours.
-5. Update [manual-tests/appearance-theme.md](manual-tests/appearance-theme.md) if the
+4. Update [manual-tests/appearance-theme.md](manual-tests/appearance-theme.md) if the
    picker changes.
 
 ## How the rules are enforced
@@ -1176,7 +1173,7 @@ palette table and the VS Code mapping.
 | No colour or font-family literal in a stylesheet | `AppCss_DeclaresNoColourLiteral`, `AppCss_DeclaresNoFontFamilyLiteral` |
 | Only MudBlazor variables, the five `--ink-*` rungs and `--font-mono` in `var()` | `AppCss_UsesOnlyMudBlazorVariables`, `ScopedCss_UsesOnlyMudBlazorVariables` |
 | Palette contrast and `DrawerText` | `ThemeCatalogTests` |
-| For every Theme: Rule < Edge < Field <= Chrome against Ground; Quiet ink between Ink 50% and Ink 80% and at least 4.5:1; for authored Themes, signal hue distance at least 30 degrees. A ported Theme that misses goes into `DocumentedShortfalls` | `ThemeCatalogTests` |
+| For every Theme: Rule < Edge < Field <= Chrome against Ground; Quiet ink between Ink 50% and Ink 80% and at least 4.5:1; for authored Themes, signal hue distance at least 30 degrees. There are no exceptions | `ThemeCatalogTests` |
 | Type roles, 11px minimum, weights up to 600, input text at 400, 75ch and 760px | `TypeScaleTests` |
 | How a date reads on screen | `HumanDateTests` |
 | One hue per meaning: the state, priority and presence mappings | `TaskColorsTests` |
@@ -1241,7 +1238,7 @@ below.
 **Copy and verification**
 
 - [ ] Labels are sentence case, verbs come from the verb table, counts are pluralised.
-- [ ] It looks right in Huddle Light, Huddle Dark and one High Contrast Theme, run with
+- [ ] It looks right in Huddle Light, Huddle Dark and one other dark Theme (Nordic Dark), run with
       `.\run.ps1 -Seed`.
 - [ ] It fills its pane and scrolls inside it at a narrow width.
 - [ ] The text census (`tools/text-census/`) shows no size under 11px and no contrast

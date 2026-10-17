@@ -30,10 +30,9 @@ public sealed class AppearanceRenderingTests
     // Huddle Light's Primary (#5b64c8), which the Custom Accent Light placeholder carries.
     private const string BrandPrimaryVariable = "--mud-palette-primary: rgba(91,100,200,1);";
 
-    // Solarized Dark's own editor.background, #002b36. Asserted rather than its Primary because
-    // Solarized Dark takes Primary from VS Code's textLink.foreground registry default, which other
-    // imported dark themes share - a background is this theme's and no other's.
-    private const string SolarizedDarkBackgroundVariable = "--mud-palette-background: rgba(0,43,54,1);";
+    // Nordic Dark's own page ground, #161a1d (fjord slate). Asserted rather than its Primary because a
+    // background is this theme's and no other's.
+    private const string NordicDarkBackgroundVariable = "--mud-palette-background: rgba(22,26,29,1);";
 
     /// <summary>
     /// With no <c>appearance.json</c>, the shell links no <c>themes/</c> stylesheet (that mechanism
@@ -79,10 +78,10 @@ public sealed class AppearanceRenderingTests
 
     /// <summary>
     /// The regression this whole change exists for. An <c>appearance.json</c> written before the
-    /// light/dark control was folded into the theme can say <c>"theme": "solarized-dark"</c> and
-    /// <c>"dark": "light"</c> at the same time. That used to render the light palette Solarized Dark
-    /// borrowed - which was Huddle's own - so the application showed Huddle Light under Solarized
-    /// Dark's name. Now the theme decides, the retired key is ignored, and Solarized Dark's real
+    /// light/dark control was folded into the theme can say <c>"theme": "nordic-dark"</c> and
+    /// <c>"dark": "light"</c> at the same time. That used to render the light palette a dark theme
+    /// borrowed - which was Huddle's own - so the application showed Huddle Light under Nordic
+    /// Dark's name. Now the theme decides, the retired key is ignored, and Nordic Dark's real
     /// palette renders.
     /// </summary>
     [Fact]
@@ -92,12 +91,12 @@ public sealed class AppearanceRenderingTests
         CancellationToken ct = cts.Token;
 
         await using TeamWebApplicationFactory factory = new();
-        File.WriteAllText(factory.AppearanceJsonPath, "{\"theme\":\"solarized-dark\",\"dark\":\"light\"}");
+        File.WriteAllText(factory.AppearanceJsonPath, "{\"theme\":\"nordic-dark\",\"dark\":\"light\"}");
         using HttpClient client = factory.CreateClient();
 
         var html = await client.GetStringAsync("/", ct);
 
-        Assert.Contains(SolarizedDarkBackgroundVariable, html, StringComparison.Ordinal);
+        Assert.Contains(NordicDarkBackgroundVariable, html, StringComparison.Ordinal); // contains-ok: rendered CSS variable text
         Assert.DoesNotContain(LightPrimaryVariable, html, StringComparison.Ordinal);
     }
 

@@ -310,7 +310,7 @@ Do not confuse `prompts.json` (the override file, under App_Data, absent until s
 
 - Step 1 returns False.
 - The intro reads exactly `Pick a theme. Each theme is either a light or a dark one, so choosing it sets the application's light or dark colours too.`
-- The Theme list holds 21 Themes (Custom Accent Light and Dark included) under `Light`, `Dark` and `High contrast` headings, with `Huddle Light` first and already selected. `APPEARANCETHEME-03` pins the full list; here only the count of 21 and `Huddle Light` being first and selected matter.
+- The Theme lists hold 12 Themes (Custom Accent Light and Dark included): six in `Light theme` and six in `Dark theme`, with `Huddle Light` first and already selected. `APPEARANCETHEME-03` pins the full list; here only the count of 12 and `Huddle Light` being first and selected matter.
 - **There is no light/dark control** — no `Appearance` select, no light/dark/system choice of any kind.- The file-path paragraph reads `The selection is stored at <path>`, where `<path>` is the absolute path ending `\src\Huddle.App\App_Data\appearance.json`, and states the file does not exist until a choice is saved here, so its absence is expected, not a bug. The path is rendered, not the literal text `this.AppearanceStore.FilePath` (that would be the missing-`@` defect).
 - Choosing `Huddle Dark` applies IMMEDIATELY — the page repaints dark with no navigation, no tab spinner, no address-bar or history change. The page body is `#1c1c1b`.
 - Step 10 returns True, and the file is indented JSON whose `theme` key is `huddle-dark` — the lowercase id, never the display label `Huddle Dark`, and with no `dark` key. Whitespace is not judged (the app writes it indented; `AppearanceStore.cs:73-75`).

@@ -1,3 +1,4 @@
+using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
 using Agency.Huddle.App.Appearance;
 using Agency.Huddle.Tests.Elicitation;
@@ -55,6 +56,52 @@ public sealed class AppearanceStoreTests
     }
 
     /// <summary>
+    /// An <c>appearance.json</c> written while the VS Code ports shipped still names one (here
+    /// <c>dark-modern</c>). That id is gone from the catalogue, so it takes the same path as any unknown id:
+    /// the existing warning naming it, no theme selected (the default applies), and the file left as it was.
+    /// </summary>
+    [Fact]
+    public void Current_WithADeletedVsCodeThemeId_WarnsAndFallsBackToTheDefault()
+    {
+        using var dataDir = new TempDataDir();
+        var path = Path.Combine(dataDir.Path, "appearance.json");
+        File.WriteAllText(path, "{\"theme\":\"dark-modern\"}");
+        WarningRecorder logger = new();
+
+        using var store = new AppearanceStore(dataDir.Options(), logger);
+
+        Assert.Null(store.Current.ThemeId);
+        Assert.Equal("huddle", store.Current.PreferredLightId);
+        Assert.Equal("{\"theme\":\"dark-modern\"}", File.ReadAllText(path));
+        Assert.Equal(
+            $"Appearance file '{path}' selects theme 'dark-modern', which is not a known theme; the default theme is used instead and the file is left unchanged.",
+            Assert.Single(logger.Warnings));
+    }
+
+    /// <summary>Collects the formatted text of every warning an <see cref="AppearanceStore"/> logs.</summary>
+    private sealed class WarningRecorder : ILogger<AppearanceStore>
+    {
+        /// <summary>The formatted warning messages, in order.</summary>
+        public List<string> Warnings { get; } = [];
+
+        /// <inheritdoc />
+        public IDisposable? BeginScope<TState>(TState state)
+            where TState : notnull => null;
+
+        /// <inheritdoc />
+        public bool IsEnabled(LogLevel logLevel) => true;
+
+        /// <inheritdoc />
+        public void Log<TState>(LogLevel logLevel, EventId eventId, TState state, Exception? exception, Func<TState, Exception?, string> formatter)
+        {
+            if (logLevel == LogLevel.Warning)
+            {
+                this.Warnings.Add(formatter(state, exception));
+            }
+        }
+    }
+
+    /// <summary>
     /// The retired <c>dark</c> key, still present in any <c>appearance.json</c> written before the
     /// light/dark control was folded into the theme, is now just an unknown key: the theme beside it
     /// still resolves, nothing warns, and the key itself is left on disk rather than deleted. This is
@@ -65,11 +112,11 @@ public sealed class AppearanceStoreTests
     {
         using var dataDir = new TempDataDir();
         var path = Path.Combine(dataDir.Path, "appearance.json");
-        File.WriteAllText(path, "{\"theme\":\"solarized-dark\",\"dark\":\"light\"}");
+        File.WriteAllText(path, "{\"theme\":\"nordic-dark\",\"dark\":\"light\"}");
 
         using var store = new AppearanceStore(dataDir.Options(), NullLogger<AppearanceStore>.Instance);
 
-        Assert.Equal("solarized-dark", store.Current.ThemeId);
+        Assert.Equal("nordic-dark", store.Current.ThemeId);
         Assert.Contains("\"dark\"", File.ReadAllText(path), StringComparison.Ordinal);
     }
 
@@ -144,14 +191,14 @@ public sealed class AppearanceStoreTests
         using var dataDir = new TempDataDir();
         using var store = new AppearanceStore(dataDir.Options(), NullLogger<AppearanceStore>.Instance);
 
-        store.SavePreferred("solarized-dark");
+        store.SavePreferred("nordic-dark");
 
         Assert.Null(store.Current.ThemeId);
-        Assert.Equal("solarized-dark", store.Current.DarkThemeId);
+        Assert.Equal("nordic-dark", store.Current.DarkThemeId);
 
         store.ToggleMode();
 
-        Assert.Equal("solarized-dark", store.Current.ThemeId);
+        Assert.Equal("nordic-dark", store.Current.ThemeId);
     }
 
     /// <summary>Choosing a theme of the mode already shown repaints at once.</summary>
@@ -161,10 +208,10 @@ public sealed class AppearanceStoreTests
         using var dataDir = new TempDataDir();
         using var store = new AppearanceStore(dataDir.Options(), NullLogger<AppearanceStore>.Instance);
 
-        store.SavePreferred("quiet-light");
+        store.SavePreferred("nordic-light");
 
-        Assert.Equal("quiet-light", store.Current.ThemeId);
-        Assert.Equal("quiet-light", store.Current.LightThemeId);
+        Assert.Equal("nordic-light", store.Current.ThemeId);
+        Assert.Equal("nordic-light", store.Current.LightThemeId);
     }
 
     /// <summary>A file written before the pair existed still toggles back to the theme it was using.</summary>
@@ -172,13 +219,13 @@ public sealed class AppearanceStoreTests
     public void ToggleMode_FromALegacyFile_ReturnsToTheThemeThatWasInUse()
     {
         using var dataDir = new TempDataDir();
-        File.WriteAllText(Path.Combine(dataDir.Path, "appearance.json"), "{\"theme\":\"solarized-dark\"}");
+        File.WriteAllText(Path.Combine(dataDir.Path, "appearance.json"), "{\"theme\":\"nordic-dark\"}");
         using var store = new AppearanceStore(dataDir.Options(), NullLogger<AppearanceStore>.Instance);
 
         store.ToggleMode();
         store.ToggleMode();
 
-        Assert.Equal("solarized-dark", store.Current.ThemeId);
+        Assert.Equal("nordic-dark", store.Current.ThemeId);
     }
 
     /// <summary>A stored light choice that names a dark theme is ignored rather than shown.</summary>
@@ -186,7 +233,7 @@ public sealed class AppearanceStoreTests
     public void Current_WithALightThemeKeyNamingADarkTheme_IgnoresIt()
     {
         using var dataDir = new TempDataDir();
-        File.WriteAllText(Path.Combine(dataDir.Path, "appearance.json"), "{\"lightTheme\":\"solarized-dark\"}");
+        File.WriteAllText(Path.Combine(dataDir.Path, "appearance.json"), "{\"lightTheme\":\"nordic-dark\"}");
         using var store = new AppearanceStore(dataDir.Options(), NullLogger<AppearanceStore>.Instance);
 
         Assert.Equal("huddle", store.Current.PreferredLightId);

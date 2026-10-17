@@ -1,6 +1,6 @@
 # Appearance tab and Themes
 
-Prove that the Appearance tab is an honest control for the Theme: that it is reachable by its own route, lists the whole built-in catalog under the right headings, stores the choice as an id in `appearance.json`, applies it at once with no page load and with no first-paint flash, shares it across browsers, and degrades safely when the file is wrong. The Development profile sets `Team:Acp:Enabled: true`, so the global cost guard in section 0.2 is the only thing holding ACP off. Set it before you launch.
+Prove that the Appearance tab is an honest control for the Theme: that it is reachable by its own route, lists the whole built-in catalog in the right lists, stores the choice as an id in `appearance.json`, applies it at once with no page load and with no first-paint flash, shares it across browsers, and degrades safely when the file is wrong. The Development profile sets `Team:Acp:Enabled: true`, so the global cost guard in section 0.2 is the only thing holding ACP off. Set it before you launch.
 
 **25 tests** · 25 free, none paid · about 2.9 hours.
 
@@ -21,9 +21,9 @@ defines the terminals, states, procedures and oracles this page names. Both are 
 > bar has a mode button (APPEARANCETHEME-30 to 33 cover them). Tests 03, 04, 06, 28 and 29 were
 > written for the single picker: read "the Theme picker" there as whichever of the two lists holds
 > the Theme named; "stores its id as `theme`" as "stores it as `lightTheme` or `darkTheme`, and as
-> `theme` too when it is of the mode currently shown"; and "the catalog's 21 Themes" as the 8 light
-> and 13 dark entries the two lists split them into (each list repeats the `High contrast` heading
-> for its own mode). Hand-editing `theme` to put a dark Theme on screen is unaffected.
+> `theme` too when it is of the mode currently shown"; and "the catalog's Themes" as the 6 light
+> and 6 dark entries the two lists split them into (neither list has group headings; the
+> `High contrast` group was removed on 2026-10-17 with the VS Code ports). Hand-editing `theme` to put a dark Theme on screen is unaffected.
 >
 > [`docs/engineering/known-limits.md`](../known-limits.md) is the source of truth for what a Theme
 > can no longer do — read it before filing anything here as a defect.
@@ -41,7 +41,7 @@ standing conventions. This area adds:
 4. Go to `http://localhost:5100/settings/appearance` and read the path in the paragraph that begins `The selection is stored at` (the only file path on the tab; the avatar and its `avatars.json` moved to the **Profile** tab). It should read `<data>\appearance.json`. THE ON-SCREEN PATH IS THE AUTHORITY — if it differs, edit the file the page names, not the one in these steps. Every `<data>\appearance.json` below means that file.
 5. Have a plain text editor (Notepad, VS Code) ready to create and save that file. A save is picked up by a filesystem watcher about 0.5 seconds later.
 6. Selecting a Theme on this tab does not force a page reload — it applies immediately through MudBlazor's `MudThemeProvider`. No test below needs F5 to see a colour change; where a test does still want a full load (to prove one is no longer required, or to check first-paint) it says so explicitly.
-7. The Theme picker is a **list**, not a dropdown: every Theme is on screen under a `Light`, `Dark` or `High contrast` heading, and "select a Theme" below means clicking its row. Nothing needs opening first. The tab ends with one paragraph, `Your own avatar is set on the Profile tab.`, where `Profile` links to `/settings/profile`; the avatar editor is no longer on this tab, and no test in this part touches it.
+7. The Theme picker is a **list**, not a dropdown: every Theme is on screen in the `Light theme` or `Dark theme` list (neither has group headings), and "select a Theme" below means clicking its row. Nothing needs opening first. The tab ends with one paragraph, `Your own avatar is set on the Profile tab.`, where `Profile` links to `/settings/profile`; the avatar editor is no longer on this tab, and no test in this part touches it.
 8. No test in this area needs a Model, and none spends money.
 
 ## Tests
@@ -108,7 +108,7 @@ If the page will not load at all (connection refused, or an ASP.NET error page),
 
 1. Go to http://localhost:5100/settings/appearance.
 2. Read the paragraph above the Theme picker. Compare it word for word with: `Pick a theme. Each theme is either a light or a dark one, so choosing it sets the application's light or dark colours too.`
-3. Read the credit line: the paragraph below the picker (and, only while a Custom Accent theme is selected, below the `Accent colour` picker too). Compare it word for word with: `Custom Accent lets you pick your own accent colour, adjusted if needed so it stays readable. Huddle, Custom Accent, Lumen, Fluent, Nordic and Cobalt Soft are this application's own Themes. Every other Theme is one of the colour themes bundled with Visual Studio Code, mapped onto this application's palette. Visual Studio Code and its default themes are Microsoft's, under the MIT licence; Solarized is Ethan Schoonover's and Monokai is Wimer Hazenberg's.`
+3. Read the credit line: the paragraph below the picker (and, only while a Custom Accent theme is selected, below the `Accent colour` picker too). Compare it word for word with: `Custom Accent lets you pick your own accent colour, adjusted if needed so it stays readable. Huddle, Custom Accent, Lumen, Fluent, Nordic and Cobalt Soft are this application's own Themes. None of them is taken from a third-party colour theme.`
 4. Read the paragraph directly after the credit line. Compare it word for word with: `The selection is stored at <path>. The file does not exist until you save a choice here, so it being absent is expected, not a bug.` (It is not the last paragraph: the closing `Your own avatar is set on the Profile tab.` follows it. There is no `Your avatar` section and no `avatars.json` path on this tab any more.)
 5. Read the path rendered in monospace in the selection paragraph. Write it down. It must be an absolute path, e.g. `<repo>\src\Huddle.App\App_Data\appearance.json` written out in full.
 6. Scan the whole Appearance panel for the sentence `A prompt is one piece of wording this application sends to a model` and for any mention of `prompts.json`, and for any mention of a token name such as `--font-chat` or an "Overrides" heading.
@@ -122,7 +122,7 @@ If the page will not load at all (connection refused, or an ASP.NET error page),
 - The path shown is absolute and ends in `\appearance.json`.
 - Neither the Prompts intro sentence nor any mention of `prompts.json` appears anywhere on the Appearance panel, and there is no token name and no "Overrides" section — that whole layer is gone, not merely hidden.
 - Both of the Prompts paragraphs DO appear on the Prompts panel.
-- The credit line sits directly below the Theme picker (and the Accent colour picker, when shown), names Visual Studio Code, names this application's own six families (`Huddle`, `Custom Accent`, `Lumen`, `Fluent`, `Nordic`, `Cobalt Soft`) as not from it, and attributes only Solarized and Monokai. It must not attribute Abyss, Kimbie Dark, Red, Quiet Light, Monokai Dimmed or Tomorrow Night Blue to anyone — those ship in VS Code with no third-party attribution on disk, so naming an author would be inventing one.
+- The credit line sits directly below the Theme picker (and the Accent colour picker, when shown), names this application's own six families (`Huddle`, `Custom Accent`, `Lumen`, `Fluent`, `Nordic`, `Cobalt Soft`) as its own, and attributes no one. It must not name Visual Studio Code, Solarized or Monokai: those Themes were removed on 2026-10-17.
 
 **Fail if — any of these**
 
@@ -141,7 +141,7 @@ If the path shown differs from `<repo>\src\Huddle.App\App_Data\appearance.json`,
 
 **Free** · about 3 min
 
-*Proves the picker is rendered from code (`ThemeCatalog.Grouped`) rather than a hand-maintained second list, in the declared order and under the declared headings — and that the light/dark control that used to sit beside it is gone ([ADR-0017](../../adr/0017-a-theme-is-a-palette-not-a-pair.md)). The catalog holds twenty-nine entries: seventeen imported on 2026-09-16 ([ADR-0016](../../adr/0016-vs-codes-bundled-themes-are-converted-once-not-imported.md)) plus this application's own twelve: the Huddle pair, the Custom Accent pair, and the Lumen, Fluent, Nordic and Cobalt Soft pairs mapped from the approved mockup directions.*
+*Proves the picker is rendered from code (`ThemeCatalog.Grouped`) rather than a hand-maintained second list, in the declared order and in the declared lists — and that the light/dark control that used to sit beside it is gone ([ADR-0017](../../adr/0017-a-theme-is-a-palette-not-a-pair.md)). The catalog holds twelve entries: the Huddle pair, the Custom Accent pair, and the Lumen, Fluent, Nordic and Cobalt Soft pairs mapped from the approved mockup directions. The seventeen VS Code ports imported on 2026-09-16 ([ADR-0016](../../adr/0016-vs-codes-bundled-themes-are-converted-once-not-imported.md)) were removed on 2026-10-17.*
 
 **Before you start**
 
@@ -151,18 +151,16 @@ If the path shown differs from `<repo>\src\Huddle.App\App_Data\appearance.json`,
 **Steps**
 
 1. Find the Theme picker on the Appearance panel. It is a list, already showing its entries — nothing to open.
-2. Read every heading and every row top to bottom and write the list down. Scroll the list if it does not all fit.
+2. Read every row of both lists top to bottom and write them down. Scroll the list if it does not all fit.
 3. Look over the whole panel for any control offering light, dark or system, a select or a toggle. Note that there is no avatar control on this panel: only the closing paragraph `Your own avatar is set on the Profile tab.`, whose `Profile` link goes to `/settings/profile`. Click `Custom Accent Light` and note that an `Accent colour` picker appears below the list, then click `Huddle Light` and note that it goes away. Both clicks write `<data>\appearance.json`; delete it afterwards (`P-RESET-SETTINGS`).
 
 **Pass if — all of these**
 
-- The list holds exactly twenty-nine Themes under exactly three headings, in this order:
-  - **Light** — `Huddle Light`, `Custom Accent Light`, `Lumen Light`, `Fluent Light`, `Nordic Light`, `Cobalt Soft Light`, `Light 2026`, `Light Modern`, `Light+`, `Quiet Light`, `Solarized Light`
-  - **Dark** — `Huddle Dark`, `Custom Accent Dark`, `Lumen Dark`, `Fluent Dark`, `Nordic Dark`, `Cobalt Soft Dark`, `Dark 2026`, `Dark Modern`, `Dark+`, `Abyss`, `Kimbie Dark`, `Monokai`, `Monokai Dimmed`, `Red`, `Solarized Dark`, `Tomorrow Night Blue`
-  - **High contrast** — `Dark High Contrast`, `Light High Contrast`
-- `Huddle Light` is **first** under `Light`, and `Light` is the first heading. Three call sites read `BuiltIn[0]` to mean "the default Theme", so a Theme appearing above it is a real defect, not a cosmetic one.
-- The two High Contrast Themes are under their **own** heading, not under `Dark` and `Light`. `ThemeGroup` is deliberately not `ThemeMode`.
-- There is no `Dark (Visual Studio)` and no `Light (Visual Studio)`. Those two were deliberately not imported: their palettes resolve byte-identically to `Dark+` and `Light+`, because upstream they differ only in `tokenColors` — syntax highlighting, which this application does not render.
+- The picker holds exactly twelve Themes in two lists, in this order, and draws no group heading and no `High contrast` group:
+  - **Light theme** — `Huddle Light`, `Custom Accent Light`, `Lumen Light`, `Fluent Light`, `Nordic Light`, `Cobalt Soft Light`
+  - **Dark theme** — `Huddle Dark`, `Custom Accent Dark`, `Lumen Dark`, `Fluent Dark`, `Nordic Dark`, `Cobalt Soft Dark`
+- `Huddle Light` is **first** in `Light theme`. Three call sites read `BuiltIn[0]` to mean "the default Theme", so a Theme appearing above it is a real defect, not a cosmetic one.
+- None of the removed VS Code ports (`Dark Modern`, `Light+`, `Solarized Dark`, `Monokai`, `Abyss`, `Dark High Contrast` and the rest) is listed.
 - **There is no light/dark/system control.** Besides the intro paragraph, the picker and the credit line, the panel holds only: the `Accent colour` picker (shown only while `Custom Accent Light` or `Custom Accent Dark` is selected), the selection-file path, and the closing paragraph `Your own avatar is set on the Profile tab.` with its `Profile` link. There is no `Your avatar` section and no second file path.
 
 **Fail if — any of these**
@@ -170,8 +168,8 @@ If the path shown differs from `<repo>\src\Huddle.App\App_Data\appearance.json`,
 - A light/dark/system control of any kind is present, or the `Accent colour` picker shows for a theme other than the two Custom Accent ones -> ADR-0017 was reverted, or half-reverted; the conflict this whole change removed is back.
 - A row's label is a raw id such as `huddle-dark` rather than `Huddle Dark` -> an id is leaking into the display.
 - The list shows no Themes, or throws -> the catalog failed to enumerate.
-- A Theme appears under the wrong heading — a light Theme under `Dark`, or either High Contrast Theme outside `High contrast` -> `ThemeGroup` and the palette disagree.
-- `Dark (Visual Studio)` or `Light (Visual Studio)` appears -> somebody re-added a duplicate of `Dark+` / `Light+`; see ADR-0016.
+- A Theme appears in the wrong list — a light Theme under `Dark theme`, or the reverse -> `ThemeGroup` and the palette disagree.
+- A `High contrast` heading, or any VS Code port, appears -> the 2026-10-17 removal was reverted; see ADR-0016.
 - A Theme appears above `Huddle Light` -> `BuiltIn[0]` no longer means the default Theme, which silently changes the fallback for an unknown id.
 
 **Inconclusive if**
@@ -179,7 +177,7 @@ If the path shown differs from `<repo>\src\Huddle.App\App_Data\appearance.json`,
 If the list renders but the page is visibly still loading (the Blazor circuit has not connected yet), wait five seconds, reload with F5, and read it again. Record INCONCLUSIVE only if it still will not render after a reload.
 
 > [!NOTE]
-> Labels are what you see; ids are what get stored (`huddle`, `huddle-dark`, `custom-accent`, `custom-accent-dark`, `dark-modern`, `solarized-light`). Test 04 checks the id half. An imported Theme's id is its label lowercased and hyphenated, with two worth knowing: `Dark+` stores `dark-plus` because an id must match `[a-z0-9-]`, and `Huddle Light` stores the bare `huddle` — the id it has always had, kept so a file written before the Theme was split in two still resolves.
+> Labels are what you see; ids are what get stored (`huddle`, `huddle-dark`, `custom-accent`, `custom-accent-dark`, `nordic-dark`, `cobalt-soft-light`). Test 04 checks the id half. A Theme's id is its label lowercased and hyphenated, with one worth knowing: `Huddle Light` stores the bare `huddle` — the id it has always had, kept so a file written before the Theme was split in two still resolves.
 
 ### APPEARANCETHEME-04 — Choosing a Theme stores its id and applies immediately, with no page reload
 
@@ -196,7 +194,7 @@ If the list renders but the page is visibly still loading (the Blazor circuit ha
 
 1. Go to http://localhost:5100/settings/appearance.
 2. Open DevTools with F12 and click the `Network` tab. Click the 'Clear' button (circle-with-slash icon) to empty the request list. Set the filter to `Doc`.
-3. Click `Huddle Dark` in the Theme picker, under the `Dark` heading.
+3. Click `Huddle Dark` in the `Dark theme` list.
 4. Watch the page: does it repaint immediately with no spinner, no blank frame and no new entry in the `Doc`-filtered Network list?
 5. Read the address bar and confirm it is unchanged and still shows `Appearance` active in the tab bar.
 6. Look at the page: is the application now dark?
@@ -250,13 +248,13 @@ If DevTools was opened AFTER the selection, redo it: clear the Network panel, se
 2. Go to http://localhost:5100/settings/appearance and press Ctrl+Shift+R.
 3. Watch the picker from the moment the page paints until it has fully settled (about two seconds). Note which row is marked selected.
 4. Confirm the page itself is dark.
-5. Set the file to exactly `{ "theme": "solarized-light" }`, save, wait one second, and press Ctrl+Shift+R. Read the picker.
+5. Set the file to exactly `{ "theme": "nordic-light" }`, save, wait one second, and press Ctrl+Shift+R. Read the picker.
 6. Delete the file entirely, wait one second, then press Ctrl+Shift+R. Read the picker.
 
 **Pass if — all of these**
 
 - With `"theme": "huddle-dark"` in the file, the picker marks `Huddle Dark` selected and the page is dark.
-- With `"theme": "solarized-light"` in the file, it marks `Solarized Light` and the page is light, on Solarized Light's own tan ground.
+- With `"theme": "nordic-light"` in the file, it marks `Nordic Light` and the page is light, on Nordic Light's own birch ground (`#f6f6f1`).
 - With no file, it marks `Huddle Light` — the catalog's default entry — and the page is light.
 - The file value, the marked row and the page's colours agree in every case, at every moment after the page has settled.
 
@@ -502,13 +500,13 @@ This test has no 'correct' answer to assert against beyond not-throwing. Mark PA
 
 1. Set the file to exactly:
 {
-  "theme": "solarized-dark",
+  "theme": "nordic-dark",
   "dark": "light",
   "note": "keep me"
 }
 and save it. This is precisely the contradictory file the old two-control design could produce: a dark Theme and a light preference.
 2. Press Ctrl+Shift+R on http://localhost:5100/settings/appearance so the app picks it up.
-3. **Confirm the application is on Solarized Dark's own dark palette**, not a light one, and that the picker marks `Solarized Dark`. The `dark` key is ignored entirely.
+3. **Confirm the application is on Nordic Dark's own dark palette**, not a light one, and that the picker marks `Nordic Dark`. The `dark` key is ignored entirely.
 4. Click `Huddle Light` in the picker.
 5. Run `type <data>\appearance.json` and read the exact contents.
 6. Confirm `theme` is now `"huddle"`, and that BOTH `dark` and `note` are still present, untouched.
@@ -516,7 +514,7 @@ and save it. This is precisely the contradictory file the old two-control design
 
 **Pass if — all of these**
 
-- In step 3 the application is dark, on Solarized Dark. The `"dark": "light"` beside it changes nothing.
+- In step 3 the application is dark, on Nordic Dark. The `"dark": "light"` beside it changes nothing.
 - After the Save, the file contains `"theme": "huddle"`, `"dark": "light"` and `"note": "keep me"` — all three.
 - Both the `dark` and `note` keys are byte-for-byte what you wrote.
 - The file stays indented and human-readable.
@@ -679,7 +677,7 @@ A persona with no title.
 Save it, then press F5 on /teammates.
 11. (i) Find the section headed `Files that didn't load` and inspect its heading, the path and the reason text.
 12. (j) Go to http://localhost:5100/settings/prompts and inspect the whole panel, then click `Appearance` and inspect that panel.
-13. Now check native controls specifically: open every MudSelect popup you can find (the team filter, the card's Model and Effort selects) and check the popup itself is dark, not a white system menu. Check the Theme picker's own list and its group headings too — it is a `MudList`, not a popup, so it is always on screen.
+13. Now check native controls specifically: open every MudSelect popup you can find (the team filter, the card's Model and Effort selects) and check the popup itself is dark, not a white system menu. Check the Theme picker's own lists too — it is a `MudList`, not a popup, so it is always on screen.
 14. Click into the composer textarea and check it is dark.
 15. Scroll any scrollable area (the room list, the message list) and check the SCROLLBAR renders dark.
 16. For any element you suspect: select it in DevTools -> Elements, read the suspect colour property in Computed, then click through to the declaring rule. Note whether the value is a literal hex or a `var(--mud-palette-...)` reference.
@@ -802,11 +800,11 @@ If the dialog never appears when you stop the server, reload the page, interact 
 > [!NOTE]
 > Free: stopping and restarting the app costs nothing.
 
-### APPEARANCETHEME-26 — The credit line names Visual Studio Code, and attributes nobody it should not
+### APPEARANCETHEME-26 — The credit line names this application's own Themes, and attributes nobody
 
 **Free** · about 3 min
 
-*Proves the attribution shipped with the imported Themes is present, correctly placed, and claims only what the sources actually support — the bundled themes other than Solarized and Monokai carry no third-party attribution on disk, so naming an author for them would be inventing one.*
+*Proves the credit paragraph is present, correctly placed, and claims only what is true now that every Theme is this application's own: the VS Code ports (and with them the Microsoft, Solarized and Monokai credits) were removed on 2026-10-17, so naming any of them would be stale.*
 
 **Before you start**
 
@@ -818,20 +816,19 @@ If the dialog never appears when you stop the server, reload the page, interact 
 1. Find the paragraph that begins `Custom Accent lets you pick your own accent colour`. It sits after the Theme picker, the Accent colour picker (shown only for Custom Accent), and above the paragraph that begins `The selection is stored at` (`Appearance.razor:101-111`).
 2. Read it word for word.
 3. Click `Huddle Dark` in the picker. Read the same paragraph again.
-4. Scan the paragraph for the names `Abyss`, `Kimbie`, `Red`, `Quiet Light`, `Monokai Dimmed` and `Tomorrow Night Blue`.
+4. Scan the paragraph for the names `Visual Studio Code`, `Microsoft`, `Solarized` and `Monokai`.
 
 **Pass if — all of these**
 
 - The paragraph sits BETWEEN the Theme picker (and the Accent colour picker, when shown) and the `The selection is stored at` line, not above the picker.
-- It names Visual Studio Code, states the themes are Microsoft's under the MIT licence, and credits Solarized to Ethan Schoonover and Monokai to Wimer Hazenberg.
-- It excepts **both** `Huddle Light` and `Huddle Dark` from the Visual Studio Code claim — they are this application's own, and since 2026-09-21 there are two of them.
-- It attributes **no other** theme to any person or organisation.
+- It names Huddle, Custom Accent, Lumen, Fluent, Nordic and Cobalt Soft as this application's own Themes and says none is taken from a third-party colour theme.
+- None of the four names scanned for in step 4 appears.
+- It attributes **no** theme to any person or organisation.
 - It remains legible in Dark — it is muted text (`--mud-palette-text-secondary`), which must still read comfortably against the dark surface.
 
 **Fail if — any of these**
 
-- The paragraph claims this application is MIT-licensed -> the licence statement is about VS Code's themes, not about Huddle.
-- Any other bundled theme (Abyss, Kimbie Dark, Red, Quiet Light, Monokai Dimmed, Tomorrow Night Blue and the rest) is attributed to a named author -> that attribution is not in the source and was invented; see [ADR-0016](../../adr/0016-vs-codes-bundled-themes-are-converted-once-not-imported.md).
+- The paragraph claims this application is MIT-licensed, or still credits Visual Studio Code, Solarized or Monokai -> stale text from before the ports were removed; see [ADR-0016](../../adr/0016-vs-codes-bundled-themes-are-converted-once-not-imported.md) (superseded).
 - The paragraph is invisible or near-invisible in either mode -> a colour literal crept into `.settings-theme-credit`, which `AppCss_DeclaresNoColourLiteral` should have caught.
 
 **Inconclusive if**
@@ -839,13 +836,13 @@ If the dialog never appears when you stop the server, reload the page, interact 
 If the Appearance panel will not render, this is INCONCLUSIVE, not a failure — re-run APPEARANCETHEME-01 first.
 
 > [!NOTE]
-> The file headers under `src/Huddle.App/Themes/VsCode/` are deliberately stricter than this line: they record only the MIT declaration in each extension's `package.json` and assert no upstream author at all. This paragraph is an acknowledgement, which is a different register from a provenance record.
+> The `Licences` disclosure under the picker still exists, but since 2026-10-17 it states no third-party licence: every Theme is this application's own.
 
-### APPEARANCETHEME-27 — Every imported Theme paints its own palette, across the whole application
+### APPEARANCETHEME-27 — Every Theme paints its own palette, across the whole application
 
 **Free** · about 12 min
 
-*Proves the imported catalog actually paints — not just that the labels enumerate. This is the acceptance walk for [ADR-0016](../../adr/0016-vs-codes-bundled-themes-are-converted-once-not-imported.md), rewritten on 2026-09-21: the half of it that exercised a single-mode Theme's **borrowed** palette is gone, because borrowing is gone ([ADR-0017](../../adr/0017-a-theme-is-a-palette-not-a-pair.md)). What replaces it is stricter — a Theme must now show its own colours in every reachable state, with no fallback to Huddle's palette available as an excuse.*
+*Proves the catalog actually paints — not just that the labels enumerate. Originally the acceptance walk for [ADR-0016](../../adr/0016-vs-codes-bundled-themes-are-converted-once-not-imported.md) (superseded), rewritten on 2026-09-21 when borrowing a palette went away ([ADR-0017](../../adr/0017-a-theme-is-a-palette-not-a-pair.md)) and again on 2026-10-17 for the twelve remaining Themes. A Theme must show its own colours in every reachable state, with no fallback to Huddle's palette available as an excuse.*
 
 **Before you start**
 
@@ -853,22 +850,22 @@ If the Appearance panel will not render, this is INCONCLUSIVE, not a failure —
 
 **Steps**
 
-1. Select Theme `Dark Modern`. Without reloading, look at the sidebar, the transcript, a Teammate card, and the fenced code block.
-2. Open DevTools → Elements → `<body>` → Computed, and read `background-color`. It must be `rgb(31, 31, 31)` — Dark Modern's `editor.background`, `#1f1f1f`.
+1. Select Theme `Lumen Dark`. Without reloading, look at the sidebar, the transcript, a Teammate card, and the fenced code block.
+2. Open DevTools → Elements → `<body>` → Computed, and read `background-color`. It must be `rgb(11, 11, 15)` — Lumen Dark's own `#0b0b0f`, not Huddle Dark's `rgb(28, 28, 27)`.
 3. Hover a Room in the sidebar and confirm the row changes colour. Tab to a link or button and confirm a visible focus outline.
-4. Select Theme `Monokai`. Confirm the whole surface changes again, and that nothing is left painted in Dark Modern's colours.
-5. Select Theme `Solarized Dark` and read `background-color` on `<body>` again. It must be `rgb(0, 43, 54)` — Solarized Dark's own `#002b36`, **not** `rgb(255, 255, 255)` and not Huddle Dark's `rgb(28, 28, 27)`.
-6. Select Theme `Solarized Light`. Confirm the surface becomes Solarized Light's own tan palette, and that `background-color` is not plain white.
-7. Select Theme `Dark High Contrast`. Read the transcript and the sidebar.
+4. Select Theme `Cobalt Soft Dark`. Confirm the whole surface changes again, and that nothing is left painted in Lumen Dark's colours.
+5. Select Theme `Nordic Dark` and read `background-color` on `<body>` again. It must be `rgb(22, 26, 29)` — Nordic Dark's own `#161a1d`, **not** `rgb(255, 255, 255)` and not Huddle Dark's `rgb(28, 28, 27)`.
+6. Select Theme `Nordic Light`. Confirm the surface becomes Nordic Light's own birch palette (`#f6f6f1`), and that `background-color` is not plain white.
+7. Select Theme `Fluent Dark`. Read the transcript and the sidebar.
 8. Return to Theme `Huddle Light`.
 
 **Pass if — all of these**
 
 - Each Theme selection repaints immediately, with no page reload and no F5.
-- `<body>`'s computed background under `Dark Modern` is `rgb(31, 31, 31)`, and under `Solarized Dark` is `rgb(0, 43, 54)`.
-- **No Theme ever shows Huddle's palette.** Step 5 is the specific check: before 2026-09-21, `Solarized Dark` with the light preference set rendered Huddle Light under Solarized Dark's name, which is the defect ADR-0017 exists to make unreachable.
+- `<body>`'s computed background under `Nordic Dark` is `rgb(22, 26, 29)`, and under `Lumen Dark` is `rgb(11, 11, 15)`.
+- **No Theme ever shows Huddle's palette.** Step 5 is the specific check: before 2026-09-21, a dark Theme with the light preference set rendered Huddle Light under that Theme's name, which is the defect ADR-0017 exists to make unreachable.
 - Under every Theme tried, body text is comfortably readable against its background, the hover state is visible, and the focus outline is visible.
-- `Dark High Contrast` renders as a legible, strong-contrast dark Theme. It is **not** expected to look like VS Code's high-contrast mode, which draws borders everywhere from `contrastBorder`; MudBlazor has no equivalent.
+- `Fluent Dark` renders as a legible dark Theme. There is no high-contrast Theme to compare it with.
 
 **Fail if — any of these**
 
@@ -883,7 +880,7 @@ If the Appearance panel will not render, this is INCONCLUSIVE, not a failure —
 If the Blazor circuit drops mid-walk (the reconnect modal appears), reload and start again. Record INCONCLUSIVE rather than FAIL — a dropped circuit invalidates every colour observation after it.
 
 > [!NOTE]
-> Three Themes are known to sit just under the 4.5:1 contrast floor for secondary text and are shipped that way on purpose: `Light+`, `Quiet Light` (4.40:1) and `Solarized Light` (3.98:1). Slightly-dim secondary text on those three is **not** a defect — `ThemeCatalogTests` records each with its measured ratio.
+> No Theme is allowed to sit under the 4.5:1 contrast floor for secondary text: the three that once did (`Light+`, `Quiet Light`, `Solarized Light`) were removed on 2026-10-17, and `ThemeCatalogTests` holds the remaining twelve to the floor with no exceptions. Dim secondary text in any Theme is a defect.
 
 ### APPEARANCETHEME-28 — Custom Accent stores the picked colour, clamps it for contrast, and shows its picker only for the two accent Themes
 
@@ -1013,13 +1010,13 @@ If the shell will not load, re-run APPEARANCETHEME-01 first.
 **Steps**
 
 1. Read the intro paragraph, then the two list titles, `Light theme` and `Dark theme`.
-2. Write down every heading and row in each list, and which row is marked selected in each.
+2. Write down every row in each list, and which row is marked selected in each.
 3. Click the marked row in the `Dark theme` list once more, then read the list and the page.
 
 **Pass if — all of these**
 
-- `Light theme` holds 12 Themes: under `Light` — `Huddle Light`, `Custom Accent Light`, `Lumen Light`, `Fluent Light`, `Nordic Light`, `Cobalt Soft Light`, `Light 2026`, `Light Modern`, `Light+`, `Quiet Light`, `Solarized Light`; under `High contrast` — `Light High Contrast`.
-- `Dark theme` holds 17: under `Dark` — `Huddle Dark`, `Custom Accent Dark`, `Lumen Dark`, `Fluent Dark`, `Nordic Dark`, `Cobalt Soft Dark`, `Dark 2026`, `Dark Modern`, `Dark+`, `Abyss`, `Kimbie Dark`, `Monokai`, `Monokai Dimmed`, `Red`, `Solarized Dark`, `Tomorrow Night Blue`; under `High contrast` — `Dark High Contrast`.
+- `Light theme` holds 6 Themes, with no group heading: `Huddle Light`, `Custom Accent Light`, `Lumen Light`, `Fluent Light`, `Nordic Light`, `Cobalt Soft Light`.
+- `Dark theme` holds 6, with no group heading: `Huddle Dark`, `Custom Accent Dark`, `Lumen Dark`, `Fluent Dark`, `Nordic Dark`, `Cobalt Soft Dark`.
 - With no file, `Huddle Light` is marked in the first list and `Huddle Dark` in the second.
 - Clicking the marked row again leaves it marked: a slot is never left empty.
 - The intro paragraph mentions the button in the top bar.
@@ -1046,19 +1043,19 @@ If the page is still loading, wait five seconds, press F5 and read again.
 
 **Steps**
 
-1. In `Dark theme` click `Solarized Dark`. Look at the page colours, the mode button's tooltip and `<data>\appearance.json`.
+1. In `Dark theme` click `Nordic Dark`. Look at the page colours, the mode button's tooltip and `<data>\appearance.json`.
 2. Click the mode button. Look at the page, both lists and the file.
-3. While dark, click `Abyss` in `Dark theme`. Look at the page.
-4. While dark, click `Quiet Light` in `Light theme`. Look at the page and the file.
+3. While dark, click `Cobalt Soft Dark` in `Dark theme`. Look at the page.
+4. While dark, click `Nordic Light` in `Light theme`. Look at the page and the file.
 5. Click the mode button.
 
 **Pass if — all of these**
 
-- Step 1: the page stays light and the tooltip still reads `Switch to dark theme`; the file gains `"darkTheme": "solarized-dark"` and `theme` is absent or `huddle`.
-- Step 2: the page turns Solarized Dark's deep teal ground (`#002b36`); `Huddle Light` and `Solarized Dark` are the marked rows.
-- Step 3: the page repaints at once to Abyss's near-black blue ground (`#000c18`) and `theme` becomes `abyss`.
-- Step 4: the page stays dark, and the file now holds `"lightTheme": "quiet-light"` with `theme` still `abyss`.
-- Step 5: the page becomes Quiet Light's pale grey ground (`#f5f5f5`).
+- Step 1: the page stays light and the tooltip still reads `Switch to dark theme`; the file gains `"darkTheme": "nordic-dark"` and `theme` is absent or `huddle`.
+- Step 2: the page turns Nordic Dark's fjord slate ground (`#161a1d`); `Huddle Light` and `Nordic Dark` are the marked rows.
+- Step 3: the page repaints at once to Cobalt Soft Dark's deep navy ground (`#0e1220`) and `theme` becomes `cobalt-soft-dark`.
+- Step 4: the page stays dark, and the file now holds `"lightTheme": "nordic-light"` with `theme` still `cobalt-soft-dark`.
+- Step 5: the page becomes Nordic Light's birch ground (`#f6f6f1`).
 
 **Fail if — any of these**
 
@@ -1082,22 +1079,22 @@ If a click on a row does nothing at all, check APPEARANCETHEME-04 first.
 
 **Steps**
 
-1. Hand-write `<data>\appearance.json` as `{ "theme": "solarized-dark", "dark": "light", "accentColor": "#e2762d" }` and save. Wait 2 seconds. Read the page, both lists and the button tooltip.
+1. Hand-write `<data>\appearance.json` as `{ "theme": "nordic-dark", "dark": "light", "accentColor": "#e2762d" }` and save. Wait 2 seconds. Read the page, both lists and the button tooltip.
 2. Click the mode button twice. Then run `type <data>\appearance.json`.
-3. Hand-write `{ "theme": "huddle", "lightTheme": "solarized-dark", "darkTheme": "nonsense" }`, save and wait 2 seconds. Read the console in `T-A` and both lists.
+3. Hand-write `{ "theme": "huddle", "lightTheme": "nordic-dark", "darkTheme": "nonsense" }`, save and wait 2 seconds. Read the console in `T-A` and both lists.
 4. Run `type <data>\appearance.json`. Then delete the file.
 
 **Pass if — all of these**
 
-- Step 1: the page repaints to Solarized Dark by itself, `Solarized Dark` is marked in `Dark theme`, `Huddle Light` in `Light theme`, and the tooltip reads `Switch to light theme`.
-- Step 2: the first click goes to Huddle Light, the second back to Solarized Dark. The file keeps `"dark": "light"` and `"accentColor"`, and gains `"lightTheme": "huddle"` and `"darkTheme": "solarized-dark"`.
+- Step 1: the page repaints to Nordic Dark by itself, `Nordic Dark` is marked in `Dark theme`, `Huddle Light` in `Light theme`, and the tooltip reads `Switch to light theme`.
+- Step 2: the first click goes to Huddle Light, the second back to Nordic Dark. The file keeps `"dark": "light"` and `"accentColor"`, and gains `"lightTheme": "huddle"` and `"darkTheme": "nordic-dark"`.
 - Step 3: the console carries two warnings naming `lightTheme` ... `not a known Light theme` and `darkTheme` ... `not a known Dark theme`; the lists mark `Huddle Light` and `Huddle Dark`.
 - Step 4: the file is exactly as hand-written in step 3 — the warnings never rewrite it.
 
 **Fail if — any of these**
 
 - Step 2 lands on Huddle Dark the second time -> the Theme being left is not recorded, so an old file loses its Theme at the first toggle.
-- Step 3 shows `Solarized Dark` in the light list -> a wrong-mode choice is being honoured, and a mode can again contradict its Theme.
+- Step 3 shows `Nordic Dark` in the light list -> a wrong-mode choice is being honoured, and a mode can again contradict its Theme.
 - The retired `dark` key or `accentColor` disappears -> the store is dropping keys it should preserve.
 
 **Inconclusive if**

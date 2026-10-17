@@ -1821,7 +1821,7 @@ Skill you wrote yourself shows "Yours", and a shipped one shows "Built-in".
 | --- | --- | --- |
 | **Profile** | You: Name, Alias (a second name that @mentions you), Title and a short description, shown as the same card a Teammate gets. Click the avatar to change it. A Name or Alias a Teammate already uses is refused. Renaming yourself moves your avatar and your Tasks with you, and every message you ever sent shows the new Name; the transcript files are not rewritten. | `profile.json` (avatar in `avatars.json`) |
 | **Prompts** | The text Huddle sends to Teammates, such as the wake-up message. **Reset all to defaults** (beside the sticky **Save**) asks "Reset every prompt to its default?" and **Reset all** confirms. | `prompts.json` |
-| **Appearance** | You pick one light Theme and one dark Theme; the picker groups the Themes as Light, Dark and High contrast. The button in the top bar switches between your two. An accent colour is set here too; your own avatar moved to **Profile**. | `appearance.json` |
+| **Appearance** | You pick one light Theme and one dark Theme; the picker lists the Light Themes and the Dark Themes separately. The button in the top bar switches between your two. An accent colour is set here too; your own avatar moved to **Profile**. | `appearance.json` |
 | **Personas** | The Teammate definitions. | `Teammates/…` |
 | **Skills** | List of Skills with where each came from, and their problems; **Import skill**; **Restore default**. | `Skills/…` |
 | **Team types** | Read-only list of team types, built-in or yours, with **Reload** and a **Problems** list. | `TeamTypes/…` |

@@ -442,10 +442,10 @@ so, and names its [Roadmap](roadmap.md) item or its ADR. Back to the hub: [Huddl
     one, and the one you pick is the one you get, on every device, until you pick
     another. Doing this honestly needs a **pair** of authored Themes and a rule for
     resolving between them, the way VS Code's *Preferred Light* / *Preferred Dark* and
-    "Sync with OS" work. Several of the twenty-nine Themes already have a real counterpart in the other mode, so
+    "Sync with OS" work. Every one of the twelve Themes has a real counterpart in the other mode, so
     the door is open; it is not built. This replaced a worse limit — until 2026-09-21 the
-    preference could contradict the Theme, and selecting `Solarized Dark` with `Light`
-    showed Huddle's palette under Solarized Dark's name.
+    preference could contradict the Theme, and selecting a dark Theme with `Light`
+    showed Huddle's palette under that Theme's name.
   - **There is no per-Token customisation at all.** `appearance.json` holds the Theme id
     (`theme`) and the accent colour (`accentColor`), and nothing else. The Library pane side
     setting was retired 2026-10-10 with the docked pane; a leftover `libraryPaneSide` key in an
@@ -461,27 +461,12 @@ so, and names its [Roadmap](roadmap.md) item or its ADR. Back to the hub: [Huddl
     deliberate: it lives in `{DataDir}/appearance.json`, so a second browser, a private
     window and a phone on the same install all see the same Theme. One Human per
     installation is the assumption it rests on.
-- **What an imported Theme cannot do.** The catalog gained seventeen of Visual Studio
-  Code's bundled Themes on 2026-09-16 — see
-  [ADR-0016](../adr/0016-vs-codes-bundled-themes-are-converted-once-not-imported.md).
-  Three things about them are worth knowing before reporting a bug:
-  - **A single-mode Theme has no counterpart in the picker.** A VS Code Theme is authored
-    for light *or* dark, so it appears once, under one heading. There is no light Monokai
-    to select: there is no such thing upstream, and deriving one would invent colours
-    nobody designed. Until 2026-09-21 asking for one showed Huddle's light palette instead,
-    which was worse than not offering it
-    ([ADR-0017](../adr/0017-a-theme-is-a-palette-not-a-pair.md)).
-  - **The High Contrast pair is not high contrast.** VS Code draws HC borders throughout
-    from `contrastBorder`, which MudBlazor's palette has no equivalent for. `Dark High
-    Contrast` and `Light High Contrast` land here as strong-contrast ordinary Themes. They
-    are also the most derived of the set: `hc_light.json` carries five colour keys, so
-    eighteen of its twenty slots come from VS Code's own registry defaults. Both sit under
-    the picker's own **High contrast** heading (`ThemeGroup`), not under Light or Dark.
-  - **Three Themes miss the contrast floor, on purpose.** Themes are imported unmodified,
-    so `light-plus` and `quiet-light` (4.40:1) and `solarized-light` (3.98:1) fall just
-    under 4.5:1 for `TextSecondary` on `Surface`. `ThemeCatalogTests` records each with its
-    measured ratio and asserts it *still* falls short, so a fixed Theme forces its entry to
-    be deleted rather than leaving a stale excuse behind.
+- **There is no high-contrast Theme.** The seventeen Visual Studio Code ports, including the
+  two High Contrast ones, were removed on 2026-10-17
+  ([ADR-0016](../adr/0016-vs-codes-bundled-themes-are-converted-once-not-imported.md),
+  superseded). The picker offers the twelve Huddle, Custom Accent, Lumen, Fluent, Nordic and Cobalt
+  Soft Themes, and none of them is designed as a high-contrast mode. A Human who
+  stored a removed id in `appearance.json` gets the default Theme and a log warning, not an error.
 - **A Teammate chooses its own Avatar, and here is what that does not cover.**
   Initials, a short label or an uploaded image, over a background colour —
   [ADR-0019](../adr/0019-an-avatar-is-chosen-and-is-not-part-of-the-persona.md). Six

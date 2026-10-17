@@ -3,9 +3,9 @@ using MudBlazor;
 namespace Agency.Huddle.App.Themes;
 
 /// <summary>
-/// Builds the pieces every theme in this application shares. A VS Code theme — the source most of
-/// the themes in this catalog are ported from — carries colours but no font information, so the UI
-/// font stack is written once here instead of once per theme file.
+/// Builds the pieces every theme in this application shares. A palette carries colours but no font
+/// information, so the UI font stack and type scale are written once here instead of once per theme
+/// file.
 /// </summary>
 /// <remarks>
 /// The two builders below each fill exactly one of <see cref="MudTheme"/>'s two palette slots,

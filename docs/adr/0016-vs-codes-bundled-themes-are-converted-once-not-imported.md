@@ -1,9 +1,18 @@
 ---
-status: accepted
+status: superseded
 date: 2026-09-16
 ---
 
 # VS Code's bundled themes are converted once, not imported at run time
+
+> **Superseded 2026-10-17.** The seventeen ports this record describes were removed, together
+> with `ThemeGroup.HighContrast` and `src/Huddle.App/Themes/VsCode/`, because a palette ported
+> from an editor theme cannot carry a skin (shape, type, density and shadows): they could only
+> ever be recoloured copies of Huddle. The theming plan replaces them with four authored Themes
+> (Lumen, Fluent, Nordic and Cobalt Soft, each a light and dark pair) beside Huddle and Custom
+> Accent, twelve in all. An `appearance.json` that still names a removed id falls back to the
+> default Theme with the usual warning. The text below is kept as the record of what was decided
+> and why; the mapping it documents no longer has code to apply to.
 
 [ADR-0010](0010-a-theme-is-a-mudblazor-theme.md) made a Theme a `MudTheme` object and left
 `ThemeCatalog` with exactly one entry. A catalog with one option is a dropdown that cannot

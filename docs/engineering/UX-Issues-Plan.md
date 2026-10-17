@@ -956,7 +956,7 @@ and View modes.
 | --- | --- |
 | T28.1 | Full suite three times; `Check-All.ps1`; `Check-Diff.ps1 -Scope Branch -Base origin/main -GroupByFile` clean |
 | T28.2 | Every area baseline empty; `Exceptions.txt` entries each have a reason; the convention test green |
-| T28.3 | Live pass ([§3.6](#36-live-checks)) over every **(live)** row in Huddle Light, Huddle Dark and one High Contrast Theme; screenshots under `Conversation/ux-final/` |
+| T28.3 | Live pass ([§3.6](#36-live-checks)) over every **(live)** row in Huddle Light, Huddle Dark and Nordic Dark (the High Contrast Themes were removed on 2026-10-17); screenshots under `Conversation/ux-final/` |
 | T28.4 | UX-Issues.md: delete every closed row, keep any not closed with a note; design-system.md: move built components from "Components to build" to "Huddle components", replace the enforcement table's "Review" rows now covered by CV1 to CV11; UXDesignGuidelines.md: catalog rows for every new component and helper |
 | T28.5 | PR body: rows closed, OP defaults applied, tests changed and why, remaining rows |
 
@@ -1233,7 +1233,7 @@ Ids are `<deliverable number>.<task>`, the form `Set-Tracker.ps1` updates:
 - [ ] Every test added has a `///` summary; every test changed is listed with its row ID.
 - [ ] `Check-All.ps1` clean, apart from failures that also fail on `origin/main`;
       `Check-Diff.ps1 -Scope Branch -Base origin/main -GroupByFile` clean.
-- [ ] Live pass in Huddle Light, Huddle Dark and one High Contrast Theme at 1440×900 and a narrow
+- [ ] Live pass in Huddle Light, Huddle Dark and Nordic Dark (the High Contrast Themes were removed on 2026-10-17) at 1440×900 and a narrow
       width: one `h1` per page, 16px page padding, 25px buttons, outlined inputs, circular avatars,
       one sidebar indent per level, visible focus ring, no animation under reduced motion.
 - [ ] wireframes.md matches the screens (every family a deliverable touched); UX-Issues.md holds only

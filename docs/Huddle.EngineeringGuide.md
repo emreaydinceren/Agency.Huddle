@@ -364,15 +364,14 @@ defaults live in code, and [Rules](engineering/rules.md) for the two things an e
 must never do.
 
 A Theme is a MudBlazor `MudTheme` in `ThemeCatalog` carrying **one** palette and the
-`ThemeMode` naming it, picked on the Appearance tab of `/settings` from a list grouped
-Light / Dark / High contrast. **Picking a Theme picks light or dark with it** — there is
+`ThemeMode` naming it, picked on the Appearance tab of `/settings` from two lists, Light theme and Dark theme.
+**Picking a Theme picks light or dark with it** — there is
 no separate preference, and so no way for the two to disagree
-([ADR-0017](adr/0017-a-theme-is-a-palette-not-a-pair.md)). Twenty-nine ship: `huddle`
-(labelled "Huddle Light") and `huddle-dark`, the two Custom Accent Themes, the Lumen,
-Fluent, Nordic and Cobalt Soft pairs mapped from the approved mockup directions, plus seventeen of the colour Themes bundled
-with Visual Studio Code, converted once by hand into C# under `Themes/VsCode/` — one file
-per Theme, **no importer**
-([ADR-0016](adr/0016-vs-codes-bundled-themes-are-converted-once-not-imported.md)).
+([ADR-0017](adr/0017-a-theme-is-a-palette-not-a-pair.md)). Twelve ship, six light and dark pairs: `huddle`
+(labelled "Huddle Light") and `huddle-dark`, the two Custom Accent Themes, and the Lumen,
+Fluent, Nordic and Cobalt Soft pairs mapped from the approved mockup directions. The seventeen
+Visual Studio Code ports that once shipped, and the High contrast group, were removed on 2026-10-17
+([ADR-0016](adr/0016-vs-codes-bundled-themes-are-converted-once-not-imported.md), superseded).
 See [Language](engineering/language.md) for
 **Theme**, **Palette property** and **Appearance** — note that *Token*, the word for
 the retired 39-value CSS system, is no longer a defined term.

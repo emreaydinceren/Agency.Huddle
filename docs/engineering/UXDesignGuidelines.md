@@ -486,8 +486,8 @@ An agent starts the `huddle-seed` entry in `.claude/launch.json` with the built-
 browser's `preview_start` instead of starting the server itself. Then check:
 
 - **Themes:** one of each family, five in all: Huddle Light and Huddle Dark (the top
-  bar's toggle), then **Light Modern** (ported light), **Dark Modern** (ported dark) and
-  **Dark High Contrast** (Settings, Appearance). Always the same three, so every checker
+  bar's toggle), then **Lumen Light**, **Nordic Dark** and
+  **Cobalt Soft Dark** (Settings, Appearance). Always the same three, so every checker
   opens the same ones. The rules are relationships, so "the lines are in order and the
   second cues are present" means the same thing in all five.
 - **Width:** the full window and a narrow one; the page fills its pane and scrolls inside.
