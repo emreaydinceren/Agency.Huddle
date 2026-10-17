@@ -94,7 +94,7 @@ public sealed partial class R3FixTests
         string name = Rule(css, ".needs-you-name");
         Assert.Contains("flex: 1 1 auto;", name, StringComparison.Ordinal); // contains-ok: one rule of the stylesheet source
         Assert.Contains("min-width: 0;", name, StringComparison.Ordinal); // contains-ok: one rule of the stylesheet source
-        Assert.Contains(".needs-you-detail {\n    flex: 0 0 auto;", css, StringComparison.Ordinal); // contains-ok: one rule of the stylesheet source
+        Assert.Contains(".needs-you-detail {\n    flex: 0 0 auto;\n    min-width: max-content;", css, StringComparison.Ordinal); // contains-ok: one rule of the stylesheet source
     }
 
     /// <summary>A row inset 4px each side is also 8px narrower than its container, so it never overflows it: the Library tree's rows, the Settings menu's links and a selected menu item (round 3: a scrollbar under each expanded folder).</summary>
@@ -109,6 +109,16 @@ public sealed partial class R3FixTests
 
         Assert.Contains("width: calc(100% - 8px);", rule, StringComparison.Ordinal); // contains-ok: one rule of the stylesheet source
         Assert.Contains("margin-inline: 4px;", rule, StringComparison.Ordinal); // contains-ok: one rule of the stylesheet source
+    }
+
+    /// <summary>The head outlet is interactive like the routes, or a PageTitle rendered by an interactive page never reaches the document title after the first load (round 3: the title stayed on the first page).</summary>
+    [Fact]
+    public void HeadOutlet_IsInteractive_LikeTheRoutes()
+    {
+        string app = File.ReadAllText(CssSource.RepoPath("src", "Huddle.App", "Components", "App.razor"));
+
+        Assert.Matches(@"<HeadOutlet\s+@rendermode=""InteractiveServer""\s*/>", app);
+        Assert.Matches(@"<Routes\s+@rendermode=""InteractiveServer""\s*/>", app);
     }
 
     [GeneratedRegex(@"<Mud(?:Select|TextField|Autocomplete|NumericField)\b[^>]*>", RegexOptions.CultureInvariant | RegexOptions.Singleline)]
