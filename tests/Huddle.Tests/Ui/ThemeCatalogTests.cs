@@ -189,7 +189,7 @@ public sealed class ThemeCatalogTests
     public static TheoryData<string, string> DocumentedShortfallCombinations()
     {
         TheoryData<string, string> data = new();
-        foreach (var shortfall in DocumentedShortfalls)
+        foreach (var shortfall in DocumentedShortfalls.Where(candidate => !candidate.Pair.StartsWith(ChipPairPrefix, StringComparison.Ordinal)))
         {
             data.Add(shortfall.ThemeId, shortfall.Pair);
         }
@@ -542,6 +542,12 @@ public sealed class ThemeCatalogTests
         new("PrimaryContrastText vs Primary", palette => palette.PrimaryContrastText, palette => palette.Primary, 4.5, "text"),
     ];
 
+    /// <summary>The <see cref="DocumentedShortfall.Pair"/> prefix of a status-chip entry: <c>chip:Warning</c> is the Warning chip text on its tint, measured by <c>R3FixTests</c>, not a <see cref="ContrastPairs"/> pair.</summary>
+    internal const string ChipPairPrefix = "chip:";
+
+    /// <summary>Why every status-chip entry in <see cref="DocumentedShortfalls"/> is recorded and not fixed.</summary>
+    private const string ChipJustification = "Ported VS Code Theme, faithful palette value; status chip text at the 50% Signal-ink mix still misses; second cue (glyph/dot/word) carries the meaning.";
+
     /// <summary>
     /// The themes that genuinely cannot clear their floor, pinned in both directions:
     /// <see cref="ContrastCombinations"/> skips each one, and <see cref="DocumentedShortfalls_StillFallShort"/>
@@ -550,7 +556,7 @@ public sealed class ThemeCatalogTests
     /// left to rot. Every value here is imported unmodified from its VS Code source; "themes are
     /// imported faithfully" is the governing decision this list exists to keep.
     /// </summary>
-    private static readonly IReadOnlyList<DocumentedShortfall> DocumentedShortfalls =
+    internal static readonly IReadOnlyList<DocumentedShortfall> DocumentedShortfalls =
     [
         new(
             "light-plus",
@@ -570,6 +576,23 @@ public sealed class ThemeCatalogTests
             3.98,
             4.5,
             "TextSecondary is the same #717171 registry default as the themes above, but Solarized Light's own Surface (#eee8d5) is not near-white, lowering the ratio to 3.98:1. Imported unmodified."),
+        new("dark-plus", ChipPairPrefix + "Secondary", 4.49, 4.5, ChipJustification),
+        new("light-plus", ChipPairPrefix + "Warning", 3.47, 4.5, ChipJustification),
+        new("light-plus", ChipPairPrefix + "Success", 4.00, 4.5, ChipJustification),
+        new("light-plus", ChipPairPrefix + "Secondary", 4.16, 4.5, ChipJustification),
+        new("light-plus", ChipPairPrefix + "Neutral", 4.20, 4.5, ChipJustification),
+        new("abyss", ChipPairPrefix + "Secondary", 3.75, 4.5, ChipJustification),
+        new("monokai-dimmed", ChipPairPrefix + "Secondary", 4.43, 4.5, ChipJustification),
+        new("quiet-light", ChipPairPrefix + "Warning", 3.47, 4.5, ChipJustification),
+        new("quiet-light", ChipPairPrefix + "Error", 3.11, 4.5, ChipJustification),
+        new("quiet-light", ChipPairPrefix + "Success", 4.00, 4.5, ChipJustification),
+        new("quiet-light", ChipPairPrefix + "Neutral", 4.20, 4.5, ChipJustification),
+        new("solarized-light", ChipPairPrefix + "Info", 4.21, 4.5, ChipJustification),
+        new("solarized-light", ChipPairPrefix + "Warning", 3.19, 4.5, ChipJustification),
+        new("solarized-light", ChipPairPrefix + "Success", 3.67, 4.5, ChipJustification),
+        new("solarized-light", ChipPairPrefix + "Secondary", 2.98, 4.5, ChipJustification),
+        new("solarized-light", ChipPairPrefix + "Primary", 4.16, 4.5, ChipJustification),
+        new("solarized-light", ChipPairPrefix + "Neutral", 3.82, 4.5, ChipJustification),
     ];
 
     /// <summary>
@@ -602,5 +625,5 @@ public sealed class ThemeCatalogTests
     /// <param name="Ratio">The measured WCAG 2.1 contrast ratio, to two decimals.</param>
     /// <param name="Floor">The floor this ratio falls short of.</param>
     /// <param name="Justification">The factual, measured cause of the shortfall.</param>
-    private sealed record DocumentedShortfall(string ThemeId, string Pair, double Ratio, double Floor, string Justification);
+    internal sealed record DocumentedShortfall(string ThemeId, string Pair, double Ratio, double Floor, string Justification);
 }

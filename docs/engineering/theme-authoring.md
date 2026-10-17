@@ -556,6 +556,28 @@ test, and `DocumentedShortfalls_StillFallShort` fails if it ever stops falling s
 fixed Theme therefore forces its own exception to be deleted rather than left as a stale
 excuse.
 
+The same list also holds **17 status-chip combinations** (pair `chip:<status>`, floor 4.5:1), measured by `StatusChipText_ReachesFloor_InEveryTheme` in `R3FixTests`, which reads `DocumentedShortfalls` and pins it both ways. Decided 2026-10-17 (UX-E17): the chip text stays at the **50% mix toward Ink**, and these combinations are recorded, not fixed. Each is a faithful palette value of a ported VS Code Theme, and the chip carries a second cue (glyph, dot or word) so colour never carries the meaning alone.
+
+| Theme | Status | Chip text ratio |
+| --- | --- | --- |
+| Dark+ (`dark-plus`) | Secondary | 4.49:1 |
+| Light+ (`light-plus`) | Warning | 3.47:1 |
+| Light+ (`light-plus`) | Success | 4.00:1 |
+| Light+ (`light-plus`) | Secondary | 4.16:1 |
+| Light+ (`light-plus`) | Neutral | 4.20:1 |
+| Abyss (`abyss`) | Secondary | 3.75:1 |
+| Monokai Dimmed (`monokai-dimmed`) | Secondary | 4.43:1 |
+| Quiet Light (`quiet-light`) | Warning | 3.47:1 |
+| Quiet Light (`quiet-light`) | Error | 3.11:1 |
+| Quiet Light (`quiet-light`) | Success | 4.00:1 |
+| Quiet Light (`quiet-light`) | Neutral | 4.20:1 |
+| Solarized Light (`solarized-light`) | Info | 4.21:1 |
+| Solarized Light (`solarized-light`) | Warning | 3.19:1 |
+| Solarized Light (`solarized-light`) | Success | 3.67:1 |
+| Solarized Light (`solarized-light`) | Secondary | 2.98:1 |
+| Solarized Light (`solarized-light`) | Primary | 4.16:1 |
+| Solarized Light (`solarized-light`) | Neutral | 3.82:1 |
+
 Today's exceptions are three ported light Themes (`light-plus`, `quiet-light` and
 `solarized-light`: `TextSecondary` on `Surface`, from VS Code's own `#717171` default). No
 Huddle or Custom Accent Theme has one: each Huddle Theme authors its own accent, as below.
