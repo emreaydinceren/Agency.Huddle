@@ -41,7 +41,7 @@ public sealed class ChipStyleTests
         Assert.Equal(Icons.Material.Filled.Warning, cut.FindComponent<MudChip<string>>().Instance.Icon);
     }
 
-    /// <summary>The stylesheet declares each tinted status colour as 14% over Surface with text mixed 70% toward TextPrimary, and never as a solid fill.</summary>
+    /// <summary>The stylesheet declares each tinted status colour as 14% over Surface with text mixed 50% toward TextPrimary, and never as a solid fill.</summary>
     [Theory]
     [InlineData("info")]
     [InlineData("warning")]
@@ -54,7 +54,7 @@ public sealed class ChipStyleTests
         string rule = RuleBody($".mud-chip.status-chip-{colour}");
 
         Assert.Contains($"background-color: color-mix(in srgb, var(--mud-palette-{colour}) 14%, var(--mud-palette-surface));", rule, StringComparison.Ordinal); // contains-ok: one rule of the stylesheet source
-        Assert.Contains($"color: color-mix(in srgb, var(--mud-palette-{colour}) 70%, var(--mud-palette-text-primary));", rule, StringComparison.Ordinal); // contains-ok: one rule of the stylesheet source
+        Assert.Contains($"color: color-mix(in srgb, var(--mud-palette-{colour}) 50%, var(--mud-palette-text-primary));", rule, StringComparison.Ordinal); // contains-ok: one rule of the stylesheet source
         Assert.DoesNotContain($"background-color: var(--mud-palette-{colour});", rule, StringComparison.Ordinal);
     }
 
@@ -75,7 +75,7 @@ public sealed class ChipStyleTests
         Assert.Contains("var(--mud-typography-caption-size)", RuleBody(".chip-meta"), StringComparison.Ordinal); // contains-ok: one rule of the stylesheet source
     }
 
-    /// <summary>The tinted text (status colour 70% toward TextPrimary) on its fill (14% over Surface) reaches 4.5:1 for every status colour, and for the neutral chip, in Huddle Light and Huddle Dark.</summary>
+    /// <summary>The tinted text (status colour 50% toward TextPrimary) on its fill (14% over Surface) reaches 4.5:1 for every status colour, and for the neutral chip, in Huddle Light and Huddle Dark.</summary>
     [Fact]
     public void StatusChipText_ReachesFloor_InHuddleLightAndDark()
     {

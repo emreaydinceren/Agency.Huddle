@@ -36,7 +36,7 @@
 <MudContainer MaxWidth="@(wideActive ? MaxWidth.False : MaxWidth.Large)" Class="@(wideActive ? "team-page-wide pa-4" : "page-reading pa-4")">
     @if (summary is null)
     {
-        <PageTitle>Huddle</PageTitle>
+        <FocusedPageTitle Title="Huddle" />
         <MudAlert Severity="Severity.Warning" role="alert" Class="team-page-notice">
             <span class="team-page-notice-text">There is no Team named "@this.Team".</span>
             <MudLink Href="/teammates" Class="team-page-notice-link">Teammates</MudLink>
@@ -44,7 +44,7 @@
     }
     else if (isProject && project is null)
     {
-        <PageTitle>Huddle</PageTitle>
+        <FocusedPageTitle Title="Huddle" />
         <MudAlert Severity="Severity.Warning" role="alert" Class="team-page-notice">
             <span class="team-page-notice-text">There is no Project named "@this.Project" in Team "@summary.Name".</span>
             <MudLink Href="@TeamHref(summary.Name)" Class="team-page-notice-link">@summary.Name</MudLink>

@@ -291,6 +291,7 @@ button:focus-visible {
 }
 
 .mud-list-item.mud-selected-item {
+    width: calc(100% - 8px);
     margin-inline: 4px;
     padding-inline: 12px;
     border-radius: calc(var(--mud-default-borderradius) * 0.75);
@@ -486,6 +487,12 @@ a.team-ref,
     height: 28px;
     padding: 0 8px;
     font-size: var(--mud-typography-body2-size);
+}
+
+/* A 28px box cannot carry a floating label: it would be drawn over the value. A compact field names itself with an aria-label,
+   a placeholder or an adornment, and this rule keeps a stray Label from colliding with the text. */
+.mud-input-control.toolbar-compact .mud-input-label {
+    display: none;
 }
 /* A preformatted block that scrolls: a Task's process step. */
 .process-step-preview {
@@ -2664,6 +2671,7 @@ a.team-ref,
 
 .settings-nav .mud-nav-link {
     min-height: var(--nav-row-height);
+    width: calc(100% - 8px);
     margin-inline: 4px;
     padding-block: 0;
     border-radius: calc(var(--mud-default-borderradius) * 0.75);
@@ -3701,6 +3709,7 @@ a.team-ref,
 
 .library-tree .mud-treeview-item-content {
     min-height: 30px;
+    width: calc(100% - 8px);
     margin-inline: 4px;
     padding-block: 0;
     padding-inline: 4px;
@@ -5010,14 +5019,19 @@ a.team-ref,
     align-items: center;
     min-height: var(--nav-row-height);
     padding-block: 4px;
+    padding-inline: 8px;
 }
 
+/* The Room's name takes the width the reason icons and the time leave, and only the name ellipsises. The link's own 16px sides and the
+   12px gap MudBlazor puts before the text are given back: the 240px sidebar leaves a card row about 200px, and those 28px were what cut
+   "Launch crew" to "Laun...". */
 .needs-you-row .mud-nav-link-text {
     font-size: var(--mud-typography-body2-size);
     display: flex;
     align-items: center;
     gap: 8px;
     min-width: 0;
+    margin-inline-start: 0;
     flex: 1 1 auto;
 }
 
@@ -5053,6 +5067,7 @@ a.team-ref,
 
 .needs-you-detail {
     flex: 0 0 auto;
+    margin-inline-start: auto;
     font-size: var(--mud-typography-caption-size);
     color: var(--mud-palette-text-secondary);
 }
@@ -5926,7 +5941,7 @@ a.team-ref,
     font-weight: 500;
     line-height: 1;
     background-color: color-mix(in srgb, var(--mud-palette-text-secondary) 14%, var(--mud-palette-surface));
-    color: color-mix(in srgb, var(--mud-palette-text-secondary) 70%, var(--mud-palette-text-primary));
+    color: color-mix(in srgb, var(--mud-palette-text-secondary) 50%, var(--mud-palette-text-primary));
 }
 
 .mud-chip.status-chip .mud-chip-icon,
@@ -5936,37 +5951,37 @@ a.team-ref,
 
 .mud-chip.status-chip-info {
     background-color: color-mix(in srgb, var(--mud-palette-info) 14%, var(--mud-palette-surface));
-    color: color-mix(in srgb, var(--mud-palette-info) 70%, var(--mud-palette-text-primary));
+    color: color-mix(in srgb, var(--mud-palette-info) 50%, var(--mud-palette-text-primary));
 }
 
 .mud-chip.status-chip-warning {
     background-color: color-mix(in srgb, var(--mud-palette-warning) 14%, var(--mud-palette-surface));
-    color: color-mix(in srgb, var(--mud-palette-warning) 70%, var(--mud-palette-text-primary));
+    color: color-mix(in srgb, var(--mud-palette-warning) 50%, var(--mud-palette-text-primary));
 }
 
 .mud-chip.status-chip-error {
     background-color: color-mix(in srgb, var(--mud-palette-error) 14%, var(--mud-palette-surface));
-    color: color-mix(in srgb, var(--mud-palette-error) 70%, var(--mud-palette-text-primary));
+    color: color-mix(in srgb, var(--mud-palette-error) 50%, var(--mud-palette-text-primary));
 }
 
 .mud-chip.status-chip-success {
     background-color: color-mix(in srgb, var(--mud-palette-success) 14%, var(--mud-palette-surface));
-    color: color-mix(in srgb, var(--mud-palette-success) 70%, var(--mud-palette-text-primary));
+    color: color-mix(in srgb, var(--mud-palette-success) 50%, var(--mud-palette-text-primary));
 }
 
 .mud-chip.status-chip-secondary {
     background-color: color-mix(in srgb, var(--mud-palette-secondary) 14%, var(--mud-palette-surface));
-    color: color-mix(in srgb, var(--mud-palette-secondary) 70%, var(--mud-palette-text-primary));
+    color: color-mix(in srgb, var(--mud-palette-secondary) 50%, var(--mud-palette-text-primary));
 }
 
 .mud-chip.status-chip-tertiary {
     background-color: color-mix(in srgb, var(--mud-palette-tertiary) 14%, var(--mud-palette-surface));
-    color: color-mix(in srgb, var(--mud-palette-tertiary) 70%, var(--mud-palette-text-primary));
+    color: color-mix(in srgb, var(--mud-palette-tertiary) 50%, var(--mud-palette-text-primary));
 }
 
 .mud-chip.status-chip-primary {
     background-color: color-mix(in srgb, var(--mud-palette-primary) 14%, var(--mud-palette-surface));
-    color: color-mix(in srgb, var(--mud-palette-primary) 70%, var(--mud-palette-text-primary));
+    color: color-mix(in srgb, var(--mud-palette-primary) 50%, var(--mud-palette-text-primary));
 }
 
 /* 2. Tag, quiet: a Wash fill and an Edge outline (a wash never defines a shape alone), TextPrimary text. */

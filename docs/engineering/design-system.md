@@ -973,7 +973,7 @@ under text. Parameters are in the [catalog](UXDesignGuidelines.md#display).
 
 | Look | Draws | Used for |
 | --- | --- | --- |
-| Status or priority, tinted: `.status-chip-*` | The colour at 14% over Surface; text and icon the colour mixed 70% toward `TextPrimary`; a leading icon | High, Urgent, In Progress |
+| Status or priority, tinted: `.status-chip-*` | The colour at 14% over Surface; text and icon the colour mixed 50% toward `TextPrimary` (a heavier mix than other Signal ink, because the chip text sits on its own tint); a leading icon | High, Urgent, In Progress |
 | Tag, quiet: `.tag-chip` | Wash fill with an Edge line, Ink text | `api`, `pricing` |
 | Filter: `.filter-chip`, `TaskFilterChip` | A dashed Field line while unset; an Accent border and Accent tint 14% once set (`.filter-chip.is-set`) | Assignee: Me |
 | Count or meta: `.chip-meta` | No chip: plain caption text | "@jane", the Needs You count, "Next session" |

@@ -12,7 +12,7 @@ internal static class StatusChipContrast
     internal const double FillShare = 0.14;
 
     /// <summary>How much of the status colour stays in the chip's text; the rest is <c>TextPrimary</c>.</summary>
-    internal const double TextShare = 0.70;
+    internal const double TextShare = 0.50;
 
     /// <summary>The chip's fill: <paramref name="status"/> at <see cref="FillShare"/> over <paramref name="surface"/>.</summary>
     /// <param name="status">The status colour.</param>
