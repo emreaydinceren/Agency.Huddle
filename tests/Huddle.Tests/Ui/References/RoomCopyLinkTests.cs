@@ -289,6 +289,7 @@ public sealed class RoomCopyLinkTests
         ctx.Services.AddSingleton<ITaskReferenceResolver>(new FakeTaskReferenceResolver());
         ctx.Services.AddSingleton<ILibraryReferenceResolver>(new FakeLibraryNoteResolver());
         ctx.Services.AddSingleton(new TabService());
+        ctx.Services.AddFakeCircuitConnection();
         return ctx;
     }
 

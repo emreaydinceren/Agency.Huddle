@@ -1,8 +1,10 @@
+using Microsoft.AspNetCore.Components.Server.Circuits;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Agency.Huddle.App;
 using Agency.Huddle.App.Acp;
+using Agency.Huddle.App.Circuits;
 using Agency.Huddle.App.Data;
 using Agency.Huddle.App.Teammates;
 using Agency.Huddle.App.Teams;
@@ -164,6 +166,23 @@ public sealed class ServiceCollectionExtensionsTests
                 Agency.Huddle.App.Search.SearchFilter.Rooms,
             ],
             groups);
+    }
+
+    /// <summary>
+    /// The app registers one circuit connection tracker per scope that is both the handler the framework reports a
+    /// circuit's connection to and the connection the navigator reads. A circuit's scope is where the framework looks for
+    /// handlers, so this is checked on the real container, not only on <c>AddCircuitConnection</c> by itself.
+    /// </summary>
+    [Fact]
+    public void AddTeamServices_RegistersTheCircuitConnectionTrackerAsTheCircuitHandler()
+    {
+        using TempDataDir dataDir = new();
+        using ServiceProvider provider = BuildTeamProvider(dataDir);
+        using IServiceScope scope = provider.CreateScope();
+
+        CircuitConnectionTracker handler = Assert.Single(scope.ServiceProvider.GetServices<CircuitHandler>().OfType<CircuitConnectionTracker>());
+
+        Assert.Same(handler, scope.ServiceProvider.GetRequiredService<ICircuitConnection>());
     }
 
     /// <summary>The merge gate the permission handler consults resolves to the process-backed implementation.</summary>

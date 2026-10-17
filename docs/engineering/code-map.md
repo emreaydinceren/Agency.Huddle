@@ -469,6 +469,10 @@ Tabs — the open pages in the strip above the content, `docs/Huddle.Tabs-Specif
 | `Components/Layout/NavTabLink.razor` | A left-menu link that opens a Tab (single click previews, double click keeps). |
 | `Components/Layout/TabSync.razor` | Keeps a Room's Tab title and lifetime in step with the Room, and closes the Tab of a removed Team or Project. |
 | `Components/Layout/TabPersistence.razor` | Restores the stored Tabs after the first render and saves every change (`huddle:tabs`). |
+| `Circuits/ICircuitConnection.cs` | Whether the browser behind a circuit is still connected. |
+| `Circuits/CircuitConnectionTracker.cs` | The circuit's `CircuitHandler`: follows the framework's connection callbacks and answers `ICircuitConnection`. |
+| `Circuits/ServerNavigator.cs` | Navigates for a handler that a server event started and skips the call once the browser is gone; `TabSync` and `Chat` use it. |
+| `Circuits/CircuitServiceCollectionExtensions.cs` | `AddCircuitConnection`: registers one scoped tracker as both the handler and the connection. |
 
 `src/Huddle.MockAdapter` — an Adapter this solution builds, assembly `mock-acp`:
 

@@ -3,6 +3,7 @@
 @implements IDisposable
 @using Agency.Huddle.App.Acp
 @using Agency.Huddle.App.Avatars
+@using Agency.Huddle.App.Circuits
 @using Agency.Huddle.App.Pipes
 @using Agency.Huddle.App.Tabs
 @inject ITeamDirectory TeamDirectory
@@ -14,6 +15,7 @@
 @inject PersonaHealth Health
 @inject RoomFollows Follows
 @inject NavigationManager Navigation
+@inject ServerNavigator ServerNavigation
 @inject AvatarStore Avatars
 @inject IServiceProvider Services
 @inject ISnackbar Snackbar
@@ -580,7 +582,8 @@ else
                 {
                     var rooms = await this.TeamDirectory.GetRoomsAsync();
                     var firstActive = rooms.FirstOrDefault(room => !room.Archived);
-                    this.Navigation.NavigateTo(firstActive is not null ? $"/rooms/{firstActive.Id}" : "/");
+                    // A Rooms event, not the Human, started this, so the client may already be gone.
+                    this.ServerNavigation.NavigateTo(firstActive is not null ? $"/rooms/{firstActive.Id}" : "/");
                     return;
                 }
             }
