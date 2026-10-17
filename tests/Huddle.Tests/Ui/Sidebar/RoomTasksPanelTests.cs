@@ -101,9 +101,25 @@ public sealed class RoomTasksPanelTests
 
         IRenderedComponent<CascadingValue<SidebarPanelContext>> cut = setup.Render();
 
-        cut.WaitForAssertion(() => Assert.Equal("SUPP-0010 Fix login", cut.Find(".room-tasks-row a").TextContent.Trim()), TimeSpan.FromSeconds(5));
-        Assert.Equal("In Progress", cut.Find(".room-tasks-row .mud-typography-caption").TextContent.Trim());
+        cut.WaitForAssertion(() => Assert.Equal("Fix login", cut.Find(".room-tasks-row a").TextContent.Trim()), TimeSpan.FromSeconds(5));
+        Assert.Equal("SUPP-0010", cut.Find(".room-tasks-row .room-task-id").TextContent.Trim());
+        Assert.Equal("In Progress", cut.Find(".room-tasks-row .task-state-dot").GetAttribute("aria-label"));
         Assert.Equal(1, setup.Panel.Count);
+    }
+
+    /// <summary>A Backlog Task's dot is the hollow ring, so Backlog and To Do differ by shape and not only by hue (B11c).</summary>
+    [Fact]
+    public async Task Tasks_BacklogState_DrawsTheHollowDot()
+    {
+        CancellationToken ct = Xunit.TestContext.Current.CancellationToken;
+        await using Setup setup = new();
+        setup.Resolver.Add(Ref("SUPP-0010", "Fix login", TaskState.Backlog));
+        await setup.SayAsync("m1", "SUPP-0010", ct);
+
+        IRenderedComponent<CascadingValue<SidebarPanelContext>> cut = setup.Render();
+
+        cut.WaitForAssertion(() => Assert.Equal("task-state-dot task-state-dot-default task-state-dot-backlog", cut.Find(".room-tasks-row .task-state-dot").ClassName), TimeSpan.FromSeconds(5));
+        Assert.Equal("Backlog", cut.Find(".room-tasks-row .task-state-dot").GetAttribute("title"));
     }
 
     /// <summary>A Closed Task's row carries the closed class.</summary>
@@ -177,14 +193,14 @@ public sealed class RoomTasksPanelTests
         setup.Resolver.Add(Ref("SUPP-0010", "Fix login", TaskState.InProgress));
         await setup.SayAsync("m1", "SUPP-0010", ct);
         IRenderedComponent<CascadingValue<SidebarPanelContext>> cut = setup.Render();
-        cut.WaitForAssertion(() => Assert.Equal("In Progress", cut.Find(".room-tasks-row .mud-typography-caption").TextContent.Trim()), TimeSpan.FromSeconds(5));
+        cut.WaitForAssertion(() => Assert.Equal("In Progress", cut.Find(".room-tasks-row .task-state-dot").GetAttribute("aria-label")), TimeSpan.FromSeconds(5));
 
         setup.Resolver.Add(Ref("SUPP-0010", "Fix login", TaskState.Review));
         TaskItem item = TestTasks.Make(id: "SUPP-0010", status: TaskState.Review);
         TaskActor actor = new(TaskActorKind.Human, "Human", null);
         setup.TaskEvents.RaiseTaskChanged(new TaskChange(item, item, [], actor, new ChangeLogEntry(DateTimeOffset.UtcNow, "Human", "Status")));
 
-        cut.WaitForAssertion(() => Assert.Equal("Review", cut.Find(".room-tasks-row .mud-typography-caption").TextContent.Trim()), TimeSpan.FromSeconds(5));
+        cut.WaitForAssertion(() => Assert.Equal("Review", cut.Find(".room-tasks-row .task-state-dot").GetAttribute("aria-label")), TimeSpan.FromSeconds(5));
     }
 
     /// <summary>The Task's link opens its page by address.</summary>

@@ -3,7 +3,7 @@
     and closed by RightSidebarToggle (S1c). It is the panel host (Spec D-3, D-5, D-7): while open, it
     draws the catalog's panels for the active Tab's Subject, each in a SidebarPanelFrame keyed by panel
     id and Subject Key, so a new snapshot of the same Subject updates a panel and a new Subject remounts
-    it. With no Subject, or no panel that applies, it draws the one-line empty state. Closed, it mounts
+    it. With no Subject, or no panel that applies, it draws the EmptyState with the one sentence the User Guide uses. Closed, it mounts
     nothing, so panels are disposed.
 *@
 @using Agency.Huddle.App.Components.Sidebar
@@ -30,7 +30,7 @@
         IReadOnlyList<SidebarPanel> panels = this.Catalog.For(subject);
         if (tab is null || subject is null || panels.Count == 0)
         {
-            <EmptyState Title="Nothing to show here" Text="Open a page with details, such as a Room or a Task, to see them here." />
+            <EmptyState Title="Nothing to show for this page." Text="" />
         }
         else
         {

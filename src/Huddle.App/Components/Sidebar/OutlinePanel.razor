@@ -5,7 +5,9 @@
 @namespace Agency.Huddle.App.Components.Sidebar
 @using Agency.Huddle.App.Library
 @using Agency.Huddle.App.Sidebar
+@implements IAsyncDisposable
 @inject PageCommandBus Bus
+@inject IJSRuntime Js
 
 @if (this.headings.Count == 0)
 {
@@ -20,11 +22,13 @@ else
     {
         int relativeLevel = heading.Level - this.shallowest;
         OutlineHeading target = heading;
-        <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="1" Class="sidebar-row outline-row" @key="heading.Id">
-            <MudLink Typo="Typo.body2" Class="outline-item" data-level="@relativeLevel"
+        bool current = string.Equals(this.currentId, heading.Id, StringComparison.Ordinal);
+        <div class="@(current ? "sidebar-row outline-row selected-shape" : "sidebar-row outline-row")" @key="heading.Id">
+            <MudLink Typo="Typo.body2" Color="Color.Inherit" Underline="Underline.None" Class="@(current ? "sidebar-row-text outline-item is-current" : "sidebar-row-text outline-item")"
+                     data-level="@relativeLevel" title="@heading.Text" aria-current="@(current ? "location" : null)"
                      Style="@($"padding-inline-start: {relativeLevel * 12}px")"
                      OnClick="() => this.ScrollToAsync(target)">@heading.Text</MudLink>
-        </MudStack>
+        </div>
     }
 }
 
@@ -33,6 +37,10 @@ else
     private int shallowest;
     private string? lastKey;
     private string? lastText;
+    private string? currentId;
+    private string? watchedKey;
+    private DotNetObjectReference<OutlinePanel>? self;
+    private bool rendered;
 
     /// <summary>What the page shows; only a Markdown <see cref="DocumentSubject"/> has an outline.</summary>
     [Parameter, EditorRequired]
@@ -71,11 +79,76 @@ else
         this.Panel?.SetCount(this.headings.Count);
     }
 
-    /// <summary>Asks the page of this panel's Tab to scroll the heading into view.</summary>
+    /// <summary>Starts (or restarts) the scroll watch once the headings are on screen, so the heading in view is marked.</summary>
+    /// <param name="firstRender">Whether this is the first render.</param>
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        this.rendered = true;
+        string key = string.Concat(this.lastKey, "|", this.lastText);
+        if (this.headings.Count == 0 || string.Equals(this.watchedKey, key, StringComparison.Ordinal))
+        {
+            return;
+        }
+
+        this.watchedKey = key;
+        this.self ??= DotNetObjectReference.Create(this);
+        try
+        {
+            await this.Js.InvokeVoidAsync("huddleSidebar.watchHeadings", this.headings.Select(static h => h.Id).ToArray(), this.self);
+        }
+        catch (JSException)
+        {
+            // The page cannot report scrolling: only a clicked heading is marked.
+        }
+        catch (InvalidOperationException)
+        {
+            // Prerendering has no JS: only a clicked heading is marked.
+        }
+    }
+
+    /// <summary>Called by the scroll watch when another heading comes into view.</summary>
+    /// <param name="id">The id of the heading in view, or null when none is.</param>
+    [JSInvokable]
+    public void OnHeadingInView(string? id)
+    {
+        if (string.Equals(this.currentId, id, StringComparison.Ordinal))
+        {
+            return;
+        }
+
+        this.currentId = id;
+        _ = RendererDispatch.Repaint(this.InvokeAsync, this.StateHasChanged);
+    }
+
+    /// <summary>Stops the scroll watch and releases the reference it holds.</summary>
+    /// <returns>A task that completes when the watch is stopped.</returns>
+    public async ValueTask DisposeAsync()
+    {
+        if (this.rendered)
+        {
+            try
+            {
+                await this.Js.InvokeVoidAsync("huddleSidebar.unwatchHeadings");
+            }
+            catch (JSDisconnectedException)
+            {
+                // The circuit is gone; the page-side listener went with it.
+            }
+            catch (InvalidOperationException)
+            {
+                // Prerendering has no JS: nothing was started.
+            }
+        }
+
+        this.self?.Dispose();
+    }
+
+    /// <summary>Marks the clicked heading at once and asks the page of this panel's Tab to scroll it into view.</summary>
     /// <param name="heading">The clicked heading.</param>
     /// <returns>A task that completes when the page's handlers have finished.</returns>
     private Task ScrollToAsync(OutlineHeading heading)
     {
+        this.currentId = heading.Id;
         return this.Bus.SendAsync(this.TabId, new ScrollToHeading(heading.Id, heading.Line));
     }
 }
