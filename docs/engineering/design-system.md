@@ -451,6 +451,10 @@ row here before it gets an icon in the code (UX-083, UX-084, UX-R26).
 | Copy text, an id or a path | `Filled.ContentCopy` | `ContentPaste` |
 | Copy a link | `Filled.Link` | |
 | Duplicate an entity | `Filled.FileCopy` | `ContentCopy` |
+| Archive | `Filled.Archive` | |
+| Close a Task | `Filled.Lock`, the glyph of the Closed chip | `Delete` |
+| Reopen a Task | `Filled.LockOpen` | |
+| Move a Board card to a state | The state's glyph, `TaskColors.Icon(state)` | |
 | More actions | `Filled.MoreVert` | A FAB or a chevron (UX-050b) |
 | Search | `Filled.Search` | |
 
@@ -600,6 +604,9 @@ The sidebar's content is about 677px tall in an 890px window, so it fits one scr
   hover or focus) and the inset rounded shape (see [States](#colour)).
 - **The Activity bar follows the focused page's area** unless the Human picked a view since.
   A view whose only content is one group opens that group.
+- **Settings has no Sidebar view.** Opening it collapses the Sidebar, because its sections are
+  the page's own left menu; a Room keeps whichever view is showing, and opens Chats from a
+  collapsed Sidebar.
 - **Meta is trailing, never wrapped.** A Team row ends in a `span.sidebar-row-meta` member
   count whose tooltip reads "3 members" or "No members".
 - **Groups start closed; the group holding the current page opens.** It also opens on
@@ -693,7 +700,10 @@ The Room is the Transcript over the Composer in one column.
 - **A lane** is Ground with an Edge border and the card radius, in every Theme. Its
   column header names the state; the lane itself carries no fill, so an empty lane is not a
   grey block in Light and a lane is not invisible in Dark. A column is 260-300px. Empty
-  terminal columns collapse to a 40px rail with the name and count.
+  terminal columns collapse to a 40px rail with the name and count. A column is **empty
+  terminal** when every state in it is terminal (Done, or the Won't do family) and it holds no
+  Task in any lane. A rail opens while a card is dragged, so its ghost buckets can take a
+  drop, and while its name is being renamed.
 - **A swimlane label** is the page section heading (16px/600) with its count, under a Chrome
   line. In a swimlane an empty cell is blank; the empty line shows only when the whole column
   is empty.
@@ -839,13 +849,14 @@ above the rail or the nav (UX-010).
 | Picker dialog | No actions row; `CloseButton = true` is the way out |
 | Close button | 28px, an 18px icon, `ActionDefault`; restyled once in the Global MudBlazor overrides |
 | Padding | Title `16px 24px 8px`; content `8px 24px`; actions `12px 24px 16px` |
-| Width | 600px for forms, confirms and pickers under about 12 items; 960px only for two-pane or tabular pickers |
+| Width | 600px for forms, confirms and pickers under about 12 items (`HuddleDialogOptions.SmallForm` for a form, `ShortPicker` for a picker); 960px (`HuddleDialogOptions.Picker`) only for two-pane or tabular pickers |
 | Disabled primary | Faint ink on Wash; never MudBlazor's fixed black alpha |
 | Field labels | Quiet ink at 400, the same at rest and floated |
 | Required fields | "(optional)" on optional fields; never an asterisk |
-| From a menu | The menu closes before the dialog opens |
+| From a menu | The menu closes before the dialog opens: wrap the call in `MenuDialogs.AfterClosingAsync(menu, () => dialog call)` |
 | Primary verb | Repeats the title's verb ("Add a role" gives **Add**) |
-| Quotes | One style in copy: "x", never 'x' |
+| Quotes | One style in copy: "x", never 'x'. `ConfirmCopy.Quote(name)` writes it and `ConfirmCopy.DeleteTitle(name)` writes `Delete "x"?` |
+| Place of a new item | `NameDialog.Location` appends the place to the title: "New note in Platform" |
 | List rows in a picker | 32px, 13px, an 18px icon in a 24px slot (`.picker-row`) |
 | Depth | At most two dialogs deep. A picker opened from a dialog replaces its content, with **Back** |
 | Empty optional field | A Quiet-ink placeholder ("None", "Add tag…"), not a blank outlined box |
@@ -896,7 +907,16 @@ A menu is a `MudMenu` of `Dense` 32px, 13px items.
 - Every item has an icon from the action table, or none does.
 - Dividers group items. A destructive item comes last, after a divider, in Error ink.
 - The activator has an `aria-label` naming its target and no hover tooltip.
-- An item that opens a dialog ends in "…", and the menu closes before the dialog opens.
+  `MenuDialogs.ActivatorLabel(target)` writes it ("Actions for {target}").
+- An item that opens a dialog ends in "…", and the menu closes before the dialog opens
+  (`MenuDialogs.AfterClosingAsync`, so the menu is never left above the scrim).
+- A destructive item wears the global `.menu-item-destructive` class: Error ink on the text
+  and the icon.
+- The Task View menu (Rename…, Fields…, Delete view…) and the sidebar View row menu (Rename…,
+  Delete view…) carry no icons, because the action table has no row for Fields; that is the
+  "none does" case, and Delete view… is last after a divider in Error ink. The Task drawer
+  menu is Copy id, Copy link, Make a copy…, a divider, then Close task… (Reopen for a closed
+  Task) in Error ink, every item with an icon.
 - A destructive action is never a top-level button with a caret: it is ⋮ › **Remove from
   team**.
 
@@ -911,7 +931,9 @@ A menu is a `MudMenu` of `Dense` 32px, 13px items.
 - A destructive confirm button is `Color.Error`. All destructive confirms go through one
   shared confirm component (UX-R12); a list row uses `InlineConfirm` (UX-R13).
 - **`InlineConfirm`'s button repeats the verb and follows Cancel.** In the sidebar the prompt
-  is the verb alone ("Delete?"), on one line, in the row's indent.
+  is the verb alone ("Delete?"), on one line, in the row's indent (`InlineConfirm Narrow`).
+- **Closing a Task asks first**, in the shared confirm titled "Close PLAT-0003?" with the
+  button "Close task". There is no undo snackbar: closing wakes the assignee.
 
 ### Notices and snackbars
 

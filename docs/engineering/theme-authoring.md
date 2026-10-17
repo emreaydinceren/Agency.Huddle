@@ -838,6 +838,12 @@ records why.
       the focus ring.
 - [ ] `manual-tests/appearance-theme.md` updated if the picker changed.
 
+## Round 3 five-Theme check
+
+The running-app check of the five Themes UXG names (Huddle Light, Huddle Dark, one ported light, one ported dark, one High Contrast): the text census `lines` report, greyscale, and sibling-Tab title stability.
+
+Results: pending orchestrator run
+
 ## See also
 
 - [design-system.md](design-system.md#colour): the colour roles, lines and states the
