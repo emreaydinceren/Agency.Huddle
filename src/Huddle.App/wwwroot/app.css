@@ -1578,7 +1578,7 @@ a.team-ref,
     font-family: var(--mud-typography-body1-family);
     font-size: var(--mud-typography-body1-size);
     font-weight: 400;
-    line-height: var(--mud-typography-body1-lineheight);
+    line-height: var(--hu-message-line-height);
 }
 
 /* An agent's reply is plain text beside its avatar, with no card of its own: the tinted bubble alone
@@ -1808,7 +1808,7 @@ a.team-ref,
 }
 
 .turn-detail-toggle:hover {
-    background: var(--mud-palette-action-default-hover);
+    background: var(--hu-hover);
 }
 
 .turn-detail-panel {
@@ -1911,7 +1911,7 @@ a.team-ref,
     pointer-events: none;
     font-size: var(--mud-typography-body1-size);
     color: var(--mud-palette-text-primary);
-    background: var(--mud-palette-surface);
+    background: var(--hu-ground-raised);
     border: 1px dashed var(--mud-palette-primary);
     border-radius: calc(var(--mud-default-borderradius) * 1.5);
 }
@@ -2144,14 +2144,16 @@ a.team-ref,
     min-width: 0;
     padding: 0;
     list-style: none;
-    background: var(--mud-palette-surface);
+    background: var(--hu-ground-raised);
     border: 1px solid var(--ink-edge);
     border-radius: var(--mud-default-borderradius);
+    box-shadow: var(--hu-shadow-card);
 }
 
 .teammates-item:hover {
-    background: var(--mud-palette-action-default-hover);
-    border-color: var(--mud-palette-lines-default);
+    background: var(--hu-hover);
+    border-color: var(--hu-line-control);
+    box-shadow: var(--hu-shadow-card-hover);
 }
 
 /* justify-content overrides MudBlazor's global button rule, which centres a flex button's content: the avatar and the
@@ -2261,8 +2263,8 @@ a.team-ref,
 .avatar-library-skin[aria-pressed="true"] {
     font-weight: 500;
     border: 1px solid var(--mud-palette-primary);
-    background-color: color-mix(in srgb, var(--mud-palette-primary) 14%, var(--mud-palette-surface));
-    color: color-mix(in srgb, var(--mud-palette-primary) 70%, var(--mud-palette-text-primary));
+    background-color: var(--hu-selected-background);
+    color: var(--hu-selected-foreground);
 }
 
 .avatar-library-status {
@@ -2379,7 +2381,7 @@ a.team-ref,
 }
 
 .mud-input-control.teammate-card-probing .mud-input.mud-input-outlined.mud-disabled .mud-input-outlined-border {
-    border-color: var(--mud-palette-lines-default);
+    border-color: var(--hu-line-control);
 }
 
 .mud-input-control.teammate-card-probing > .mud-input-control-input-container > .mud-input-label-inputcontrol.mud-disabled,
@@ -2517,7 +2519,7 @@ a.team-ref,
 }
 
 .avatar-swatch-input:focus-visible + .avatar-swatch-dot {
-    outline: 2px solid var(--mud-palette-text-primary);
+    outline: 2px solid var(--hu-focus);
     outline-offset: 3px;
 }
 
@@ -2765,18 +2767,19 @@ a.team-ref,
    accent-text mix on the label and icon. Keyed to the page's own class, not NavLink's "active", because the route
    segment decides the section and /settings alone still means Profile. */
 .settings-nav .settings-nav-item-active .mud-nav-link {
-    color: color-mix(in srgb, var(--mud-palette-primary) 70%, var(--mud-palette-text-primary));
-    background-color: color-mix(in srgb, var(--mud-palette-primary) 14%, var(--mud-palette-surface));
-    font-weight: 500;
+    color: var(--hu-current-foreground);
+    background-color: var(--hu-current-background);
+    font-weight: var(--hu-current-weight);
+    box-shadow: var(--hu-current-shadow);
 }
 
 .settings-nav .settings-nav-item-active .mud-nav-link:hover,
 .settings-nav .settings-nav-item-active .mud-nav-link:focus-visible {
-    background-color: color-mix(in srgb, var(--mud-palette-primary) 20%, var(--mud-palette-surface));
+    background-color: var(--hu-current-background-hover);
 }
 
 .settings-nav .settings-nav-item-active .mud-nav-link .mud-nav-link-icon.mud-nav-link-icon-default {
-    color: color-mix(in srgb, var(--mud-palette-primary) 70%, var(--mud-palette-text-primary));
+    color: var(--hu-current-icon);
 }
 
 /* The Library panel's rows (audit B9f, E6): the add row is one 28px height, fields and button aligned. */
@@ -2860,7 +2863,7 @@ a.team-ref,
     bottom: 0;
     z-index: 1;
     padding: 8px 0;
-    background: var(--mud-palette-surface);
+    background: var(--hu-ground-page);
 }
 
 /* ---- Tasks ------------------------------------------------------------------------------------ */

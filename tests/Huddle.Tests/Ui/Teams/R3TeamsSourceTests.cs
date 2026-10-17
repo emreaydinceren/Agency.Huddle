@@ -100,7 +100,7 @@ public sealed class R3TeamsSourceTests
         Assert.Contains("height: 28px;", unset, StringComparison.Ordinal); // contains-ok: haystack is one rule of the stylesheet source
         Assert.Contains("border: 1px dashed var(--ink-field);", unset, StringComparison.Ordinal); // contains-ok: haystack is one rule of the stylesheet source
         Assert.Contains("border: 1px solid var(--mud-palette-primary);", set, StringComparison.Ordinal); // contains-ok: haystack is one rule of the stylesheet source
-        Assert.Contains("var(--mud-palette-primary) 14%", set, StringComparison.Ordinal); // contains-ok: haystack is one rule of the stylesheet source
+        Assert.Contains("var(--hu-selected-background)", set, StringComparison.Ordinal); // contains-ok: haystack is one rule of the stylesheet source
         Assert.DoesNotContain("font-weight: 600", set, StringComparison.Ordinal);
     }
 
@@ -111,7 +111,7 @@ public sealed class R3TeamsSourceTests
         string css = Css();
 
         Assert.Equal("color: var(--mud-palette-text-primary);", RuleBody(css, ".mud-input-control.teammate-card-probing .mud-input.mud-disabled"));
-        Assert.Equal("border-color: var(--mud-palette-lines-default);", RuleBody(css, ".mud-input-control.teammate-card-probing .mud-input.mud-input-outlined.mud-disabled .mud-input-outlined-border"));
+        Assert.Equal("border-color: var(--hu-line-control);", RuleBody(css, ".mud-input-control.teammate-card-probing .mud-input.mud-input-outlined.mud-disabled .mud-input-outlined-border"));
     }
 
     /// <summary>"Roles" starts 24px under the tab rail's Chrome line: the global panel padding applies and the Team page's wide layout does not override it (B7e).</summary>
