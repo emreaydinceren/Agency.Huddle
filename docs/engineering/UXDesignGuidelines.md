@@ -72,7 +72,7 @@ component here, move it onto the component rather than writing another copy.
 | A new page | `@page` component, `MudContainer pa-4`, a `PageHeader`, `TabKeys.Describe` | [A page](design-system.md#a-page) |
 | A page title with actions | `PageHeader`, with the `Size.Small` buttons in its `Actions` slot | [A page](design-system.md#a-page) |
 | A reading page's container | `MudContainer MaxWidth.Large` with `.page-reading` | [A page](design-system.md#a-page) |
-| A toolbar under the title | `MudToolBar Dense Gutters="false"` | [Spacing, density and size](design-system.md#spacing-density-and-size) |
+| A toolbar under the title | `MudToolBar Dense Gutters="false"` with `.toolbar-hairline` | [Spacing, density and size](design-system.md#spacing-density-and-size); the hairline in [Lines](design-system.md#colour) |
 | A search box | `SearchField` | [House defaults](design-system.md#house-defaults) |
 | A form or short flow | `MudDialog` through `IDialogService`, opened with `HuddleDialogOptions.SmallForm`, with the dialog anatomy | [Dialog anatomy](design-system.md#dialog-anatomy) |
 | A "name this thing" dialog | `NameDialog` | [Dialog anatomy](design-system.md#dialog-anatomy) |
@@ -266,6 +266,7 @@ feature's name. Reuse these before writing a rule:
 
 | Class | Does |
 | --- | --- |
+| `.toolbar-hairline` | On a `MudToolBar` under a page title: a band 12px above and below its controls, closed by the chrome hairline, with 24px to the content. On the last row only when toolbars stack |
 | `.empty-state`, `.empty-state-centered` | An empty state's centred column (icon, title, sentence, action) with 32px above and below; `-centered` fills a pane and rests a third of the way down. The sentence is capped at 45ch |
 | `.flex-1-truncate` | A flex child that ellipsises on one line |
 | `.truncate` | Single-line truncation with an ellipsis, anywhere |

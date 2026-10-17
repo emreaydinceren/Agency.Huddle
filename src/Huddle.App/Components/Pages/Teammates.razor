@@ -23,7 +23,7 @@
     </MudText>
 
     @* The same toolbar shape as the Tasks page: the create action leads, the narrowing controls follow. *@
-    <MudToolBar Dense="true" Class="gap-4 mb-4">
+    <MudToolBar Dense="true" Gutters="false" Class="gap-4 toolbar-hairline">
         <MudButton Size="Size.Small" StartIcon="@Icons.Material.Filled.Add" Color="Color.Primary" OnClick="this.BeginCreate" Class="btn-action-tight">New teammate</MudButton>
 
         @if (this.entries.Count > 0)

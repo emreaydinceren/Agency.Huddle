@@ -163,13 +163,14 @@ public sealed partial class AuditBatchBCssTests
         Assert.Matches(@"font-size:\s*var\(--mud-typography-caption-size\)", AuditBatchBCssTests.DeclarationsFor(".needs-you-detail"));
     }
 
-    /// <summary>The breadcrumb starts at the workspace's left edge: the drawer's width (MudBlazor's own variable) less the toolbar's 16px gutter.</summary>
+    /// <summary>The breadcrumb starts at the window's left edge, inside the toolbar's own 16px gutter: no inset past the drawer's width.</summary>
     [Fact]
-    public void AppCss_TopBarStart_StartsAtTheWorkspaceEdge()
+    public void AppCss_TopBarStart_StartsAtTheWindowEdge()
     {
         string declarations = AuditBatchBCssTests.DeclarationsFor(".top-bar-start");
 
-        Assert.Matches(@"padding-inline-start:\s*calc\(var\(--mud-drawer-width-left\) - 16px\)", declarations);
+        Assert.DoesNotContain("padding-inline-start", declarations, StringComparison.Ordinal);
+        Assert.DoesNotContain("--mud-drawer-width-left", declarations, StringComparison.Ordinal);
         Assert.Matches(@"grid-template-columns:\s*minmax\(0, 1fr\) minmax\(0, 32rem\) minmax\(0, 1fr\)", AuditBatchBCssTests.DeclarationsFor(".top-bar-grid"));
     }
 

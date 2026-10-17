@@ -761,6 +761,25 @@ public sealed class LibraryExplorerTests : IDisposable
         Assert.Equal("welcome body", cut.Find(".library-rendered").TextContent.Trim());
     }
 
+    /// <summary>A file opened without a tree click (here <c>InitialFile</c>, two folders down) is revealed: its
+    /// folders expand and its own row is the one selected, so the tree shows where the open file lives.</summary>
+    [Fact]
+    public async Task InitialFile_Nested_RevealsAndSelectsItInTheTree()
+    {
+        string root = this.fixture.LibraryFixture.CreatePinnedRoot("Notes");
+        Directory.CreateDirectory(Path.Combine(root, "Sub", "Inner"));
+        File.WriteAllText(Path.Combine(root, "Sub", "Inner", "Deep.md"), "deep body");
+        LibraryPath scopePath = this.fixture.LibraryFixture.Resolve(root, "Sub");
+
+        await using MudBunitContext ctx = this.fixture.NewContext();
+        ArrangeStorage(ctx);
+        IRenderedComponent<ContainerFragment> cut = RenderExplorer(
+            ctx, scopes: [new LibraryLocation(scopePath.Root.Id, "Sub")], initialFile: "Inner/Deep.md");
+
+        List<string> expectedSelected = ["Deep.md"];
+        cut.WaitForAssertion(() => Assert.Equal(expectedSelected, SelectedNames(cut)));
+    }
+
     /// <summary>[6.5] A null, empty or whitespace <c>Filter</c> shows the tree unchanged: no result list, and the
     /// tree's wrapper is not hidden (Spec §6.8).</summary>
     /// <param name="filter">The filter the host passes.</param>

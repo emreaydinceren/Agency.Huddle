@@ -136,8 +136,8 @@ The codes (`S1`, `C6` and so on) are the container names in
 
 | Code | Element | Palette |
 | --- | --- | --- |
-| `W3` | Tab strip | `Surface`, bottom line `LinesDefault` |
-| `W4` | Inactive tab | Text `TextSecondary`, separators `LinesDefault` |
+| `W3` | Tab strip | `TextPrimary` 4% over `Surface`, bottom line `LinesDefault` |
+| `W4` | Inactive tab | The strip's tint (7% hovered), text `TextSecondary`, separators `LinesDefault` |
 | `W4` | Active tab | `Surface`, text `TextPrimary`, top line `Primary` |
 | `W2` | The unfocused group's active tab | Top line `LinesDefault` instead of `Primary` |
 | `W8` | Empty group text | `TextSecondary` |
@@ -182,7 +182,8 @@ The codes (`S1`, `C6` and so on) are the container names in
 | `L4` | Splitter | `LinesDefault` |
 | `L2a` | Tree drop target | Hover shade fill, `Primary` border |
 | `L3a` | File path | `TextSecondary` |
-| `L3b` | Read / Edit / Split switch | Track `BackgroundGray`, sliding indicator `Surface` with a `LinesDefault` border; active label `TextPrimary`, others `TextSecondary` |
+| `L3a` | Toolbar's bottom line | `LinesDefault` |
+| `L3b` | Read / Edit / Split switch | Track `TextPrimary` 6% over `Surface`, sliding indicator `Surface` with a `LinesDefault` border; active label `TextPrimary`, others `TextSecondary` |
 | `L3e` | Editor | `Surface`, text `TextPrimary`; current line the hover shade; selection a translucent `Primary`; front matter block `BackgroundGray` |
 | `L3e` | A link to a missing file | `TextSecondary`, with a dashed underline |
 
@@ -253,7 +254,7 @@ two Themes, so two tables.
 | `DrawerBackground` | | Not painted by the shell; still checked against `TextPrimary` |
 | `DrawerText` | | Sidebar row text; set equal to `TextPrimary` |
 | `DrawerIcon` | | Sidebar icons; set equal to `TextSecondary` |
-| `BackgroundGray` | | Board columns, chips, the segmented control's track |
+| `BackgroundGray` | | Board columns, chips |
 | `TableHover` | | Table row hover |
 | `Divider` | | Card and tile borders: at least 1.5:1 against `Surface` (Huddle: 1.56:1 light, 1.55:1 dark) |
 | `DividerLight` | | Rules inside a card |
@@ -350,7 +351,7 @@ the last column is where you will see a mistake.
 | `DrawerBackground` | `--mud-palette-drawer-background` | Nothing in the shell: the sidebar and side drawers are `Surface`. The contrast tests still read it |
 | `DrawerText` | `--mud-palette-drawer-text` | Sidebar row text. Set equal to `TextPrimary` in every Theme |
 | `DrawerIcon` | `--mud-palette-drawer-icon` | Sidebar icons. Set equal to `TextSecondary` in every Theme |
-| `BackgroundGray` | `--mud-palette-background-gray` | Quiet fills: chips, the segmented control's track, preview blocks |
+| `BackgroundGray` | `--mud-palette-background-gray` | Quiet fills: chips, preview blocks |
 | `TableHover` | (MudBlazor tables) | Row hover inside a table only |
 | `Divider` | `--mud-palette-divider` | Card, tile and list-row borders; at least 1.5:1 against `Surface` in the Huddle Themes |
 | `DividerLight` | `--mud-palette-divider-light` | A rule inside a card or dialog |
