@@ -7,6 +7,7 @@ using Microsoft.Extensions.Options;
 using Agency.Huddle.App;
 using Agency.Huddle.App.Acp;
 using Agency.Huddle.App.Avatars;
+using Agency.Huddle.App.Circuits;
 using Agency.Huddle.App.Components.Pages;
 using Agency.Huddle.App.Components.Shared;
 using Agency.Huddle.App.Data;
@@ -1097,6 +1098,68 @@ public sealed class ChatPageTests
     private static IElement FindButtonByText(IRenderedComponent<ContainerFragment> cut, string text) =>
         cut.FindAll("button").First(button => string.Equals(button.TextContent.Trim(), text, StringComparison.Ordinal));
 
+    /// <summary>Archiving the Room being viewed moves the Human off it: while the client is connected the page navigates to the empty state, here "/" because no other Room remains.</summary>
+    [Fact]
+    public async Task ChatPage_TheViewedRoomIsArchived_WhenConnected_NavigatesAway()
+    {
+        using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(60));
+        var ct = cts.Token;
+
+        await using var factory = new TeamWebApplicationFactory();
+        var (directory, chat, _) = ChatPageTests.Services(factory);
+        var agent = await directory.UpsertAgentUserAsync("echo", "test agent", ct);
+        Assert.NotNull(agent);
+        var room = await chat.EnsureRoomForAsync(agent, ct);
+
+        await using MudBunitContext ctx = ChatPageTests.NewContext(factory);
+        Microsoft.AspNetCore.Components.NavigationManager navigation = ctx.Services.GetRequiredService<Microsoft.AspNetCore.Components.NavigationManager>();
+        navigation.NavigateTo($"/rooms/{room.Id}");
+        _ = ChatPageTests.RenderChatPage(ctx, room.Id);
+
+        _ = await chat.SetRoomArchivedAsync(room.Id, archived: true, ct);
+
+        while (!string.Equals(new Uri(navigation.Uri).AbsolutePath, "/", StringComparison.Ordinal))
+        {
+            await Task.Delay(20, ct);
+        }
+
+        Assert.Equal("/", new Uri(navigation.Uri).AbsolutePath);
+    }
+
+    /// <summary>
+    /// The same archive after the client is gone (a closed or reloaded browser whose circuit is still retained) leaves the
+    /// address alone: the Rooms event ran, but the navigation it would make is not issued, because the framework would fail
+    /// and log it as two errors. Nothing signals that the handler has finished, so this lets it run for as long as the
+    /// connected twin above needs several times over before checking; the twin is what proves the navigation does happen.
+    /// </summary>
+    [Fact]
+    public async Task ChatPage_TheViewedRoomIsArchived_WhenTheClientIsGone_DoesNotNavigate()
+    {
+        using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(60));
+        var ct = cts.Token;
+
+        await using var factory = new TeamWebApplicationFactory();
+        var (directory, chat, _) = ChatPageTests.Services(factory);
+        var agent = await directory.UpsertAgentUserAsync("echo", "test agent", ct);
+        Assert.NotNull(agent);
+        var room = await chat.EnsureRoomForAsync(agent, ct);
+
+        await using MudBunitContext ctx = ChatPageTests.NewContext(factory);
+        Microsoft.AspNetCore.Components.NavigationManager navigation = ctx.Services.GetRequiredService<Microsoft.AspNetCore.Components.NavigationManager>();
+        navigation.NavigateTo($"/rooms/{room.Id}");
+        var cut = ChatPageTests.RenderChatPage(ctx, room.Id);
+        ((FakeCircuitConnection)ctx.Services.GetRequiredService<ICircuitConnection>()).IsConnected = false;
+
+        _ = await chat.SetRoomArchivedAsync(room.Id, archived: true, ct);
+        for (int settle = 0; settle < 15; settle++)
+        {
+            await cut.InvokeAsync(static () => { });
+            await Task.Delay(40, ct);
+        }
+
+        Assert.Equal($"/rooms/{room.Id}", new Uri(navigation.Uri).AbsolutePath);
+    }
+
     private static (ITeamDirectory Directory, ChatService Chat, Drafts Drafts) Services(TeamWebApplicationFactory factory)
     {
         return (
@@ -1181,6 +1244,9 @@ public sealed class ChatPageTests
         // Chat.razor's Composer child now injects TaskStore for the # picker (Task 15.3) - needed
         // even though these tests never open it. IOptions<TeamOptions> is already copied above.
         ctx.Services.AddSingleton(factory.Services.GetRequiredService<TaskStore>());
+
+        // Chat.razor navigates through ServerNavigator when a Rooms event, not the Human, moves the Human off a Room.
+        ctx.Services.AddFakeCircuitConnection();
         return ctx;
     }
 

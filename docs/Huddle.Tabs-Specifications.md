@@ -33,7 +33,7 @@ and more than two groups are still to come; the model and the persisted format a
 | The page navigates itself to the same key | The Tab's URL and title update. No new Tab. |
 | The URL changes to a different key (browser Back, a link in a message, a typed URL) | Treated like a menu click: preview Tab, or activate. |
 | A Room is renamed | Its Tab title follows. |
-| A Room is archived or deleted | Its Tab closes (`TabSync`). A removed Team's or Project's Tab closes too, but only when the catalog announces a change and still lists at least one Team: an empty catalog is read as "not loaded yet", so removing the very last Team leaves its Tab open. |
+| A Room is archived or deleted | Its Tab closes (`TabSync`). A removed Team's or Project's Tab closes too, but only when the catalog announces a change and still lists at least one Team: an empty catalog is read as "not loaded yet", so removing the very last Team leaves its Tab open. When closing a Tab moves the active Tab, the router follows it, unless the browser is already gone (a closed or reloaded page whose circuit is still retained): the Tab still closes, and no navigation is issued (`ServerNavigator`). |
 | Reload or restart | Tabs, their order, the active Tab and the preview flags are restored. |
 | Any page opens in a Tab | The Top Bar shows its breadcrumb trail (below). One trail for the window, following the focused pane; no page draws its own. |
 | Click an ancestor crumb | Navigates that Tab in place (`TabService.Navigate`): same slot and group, key, title and icon re-derived, a preview becomes permanent. If another Tab already has the target's key, that Tab is focused instead. |
