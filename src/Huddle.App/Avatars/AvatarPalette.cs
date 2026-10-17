@@ -1,4 +1,3 @@
-using System.Globalization;
 using MudBlazor.Utilities;
 
 namespace Agency.Huddle.App.Avatars;
@@ -24,71 +23,53 @@ internal static class AvatarPalette
         MudColor.GenerateMultiGradientPalette(["#FF4500", "#32CD32", "#8A2BE2"]),
     }.SelectMany(static palette => palette)];
 
+    /// <summary>Everyday colour names with their approximate colours; larger than the palette so every swatch finds an unclaimed name.</summary>
+    private static readonly (string Name, int Rgb)[] NamedColours =
+    [
+        ("Red", 0xFF0000), ("Crimson", 0xDC143C), ("Scarlet", 0xFF2400), ("Rose", 0xE8506E), ("Coral", 0xFF7F50),
+        ("Salmon", 0xFA8072), ("Pink", 0xFFC0CB), ("Blush", 0xF4B6C2), ("Maroon", 0x800000), ("Burgundy", 0x800020),
+        ("Brick", 0xB22222), ("Rust", 0xB7410E), ("Orange", 0xFFA500), ("Vermilion", 0xFF4500), ("Tangerine", 0xF28500),
+        ("Peach", 0xFFCBA4), ("Apricot", 0xFBCEB1), ("Amber", 0xFFBF00), ("Gold", 0xFFD700), ("Yellow", 0xFFFF00),
+        ("Lemon", 0xFFF44F), ("Olive", 0x808000), ("Lime", 0x32CD32), ("Chartreuse", 0x7FFF00), ("Green", 0x008000),
+        ("Emerald", 0x50C878), ("Forest", 0x228B22), ("Mint", 0x98FF98), ("Sage", 0x9CAF88), ("Jade", 0x00A86B),
+        ("Teal", 0x008080), ("Turquoise", 0x40E0D0), ("Aqua", 0x00FFFF), ("Cyan", 0x00B8D4), ("Aquamarine", 0x7FFFD4),
+        ("Seafoam", 0x71EEB8), ("Sky", 0x87CEEB), ("Azure", 0x007FFF), ("Dodger blue", 0x1E90FF), ("Cornflower", 0x6495ED),
+        ("Blue", 0x0000FF), ("Royal blue", 0x4169E1), ("Navy", 0x000080), ("Cobalt", 0x0047AB), ("Steel", 0x4682B4),
+        ("Powder blue", 0xB0E0E6), ("Periwinkle", 0xCCCCFF), ("Indigo", 0x4B0082), ("Violet", 0x8A2BE2), ("Purple", 0x800080),
+        ("Orchid", 0xDA70D6), ("Lavender", 0xE6E6FA), ("Lilac", 0xC8A2C8), ("Plum", 0x8E4585), ("Magenta", 0xFF00FF),
+        ("Mauve", 0xE0B0FF), ("Amethyst", 0x9966CC), ("Grape", 0x8E24AA), ("Slate", 0x708090), ("Charcoal", 0x36454F),
+        ("Silver", 0xC0C0C0), ("Grey", 0x808080), ("Lagoon", 0x20B2AA), ("Spring", 0x00FF7F), ("Fern", 0x4F7942),
+        ("Moss", 0x8A9A5B), ("Honey", 0xE6A817), ("Sand", 0xE6D3A3), ("Ocean", 0x1F6FB2), ("Denim", 0x1560BD),
+    ];
+
     /// <summary>
-    /// Every colour of <see cref="Colours"/> with the name a screen reader says for it: a lightness word and a hue family
-    /// ("Deep red", "Light blue"), made unique within the palette by a trailing number. The editor draws them as a radio
-    /// group, so each swatch needs a name a person can tell from its neighbours; a bare hex code is not one.
+    /// Every colour of <see cref="Colours"/> with the name a screen reader says for it: the nearest unclaimed entry of a
+    /// table of everyday colour names ("Rose", "Coral", "Salmon"). The editor draws the swatches as a radio group, so each
+    /// needs a name a person can tell from its neighbours; a bare hex code is not one, and neither is "Red 2".
     /// </summary>
     internal static IReadOnlyList<AvatarSwatch> Swatches { get; } = BuildSwatches();
 
-    /// <summary>The name of one palette colour before it is made unique: its lightness word and hue family, or a grey for a colour with almost no saturation.</summary>
-    /// <param name="colour">The colour to name.</param>
-    /// <returns>For example "Deep red" or "Light blue".</returns>
-    internal static string NameOf(MudColor colour)
+    private static int Distance(int first, int second)
     {
-        ArgumentNullException.ThrowIfNull(colour);
-
-        double hue = colour.H;
-        double saturation = colour.S;
-        double lightness = colour.L;
-
-        string family;
-        if (saturation < 0.12)
-        {
-            family = lightness switch
-            {
-                < 0.2 => "black",
-                > 0.9 => "white",
-                _ => "grey",
-            };
-            return Capitalise(family);
-        }
-
-        family = hue switch
-        {
-            < 15 or >= 345 => "red",
-            < 45 => "orange",
-            < 70 => "yellow",
-            < 150 => "green",
-            < 190 => "teal",
-            < 250 => "blue",
-            < 290 => "purple",
-            _ => "pink",
-        };
-
-        string prefix = lightness switch
-        {
-            < 0.25 => "deep ",
-            < 0.42 => "dark ",
-            < 0.65 => string.Empty,
-            < 0.82 => "light ",
-            _ => "pale ",
-        };
-        return Capitalise(prefix + family);
+        int red = ((first >> 16) & 0xFF) - ((second >> 16) & 0xFF);
+        int green = ((first >> 8) & 0xFF) - ((second >> 8) & 0xFF);
+        int blue = (first & 0xFF) - (second & 0xFF);
+        return (red * red) + (green * green) + (blue * blue);
     }
-
-    private static string Capitalise(string text) => string.Concat(text[..1].ToUpperInvariant(), text[1..]);
 
     private static List<AvatarSwatch> BuildSwatches()
     {
-        Dictionary<string, int> seen = new(StringComparer.Ordinal);
+        HashSet<string> claimed = new(StringComparer.Ordinal);
         List<AvatarSwatch> swatches = [];
         foreach (MudColor colour in Colours)
         {
-            string name = NameOf(colour);
-            int count = seen.GetValueOrDefault(name) + 1;
-            seen[name] = count;
-            swatches.Add(new AvatarSwatch(colour.ToString(MudColorOutputFormats.Hex), count == 1 ? name : string.Create(CultureInfo.InvariantCulture, $"{name} {count}")));
+            int rgb = (colour.R << 16) | (colour.G << 8) | colour.B;
+            string name = NamedColours
+                .Where(candidate => !claimed.Contains(candidate.Name))
+                .OrderBy(candidate => Distance(rgb, candidate.Rgb))
+                .First().Name;
+            _ = claimed.Add(name);
+            swatches.Add(new AvatarSwatch(colour.ToString(MudColorOutputFormats.Hex), name));
         }
 
         return swatches;

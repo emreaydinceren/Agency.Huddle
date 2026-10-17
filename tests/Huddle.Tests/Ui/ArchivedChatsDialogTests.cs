@@ -226,6 +226,28 @@ public sealed class ArchivedChatsDialogTests
         Assert.Equal($"Delete \"{room.Name}\"?", cut.Find(".inline-confirm-prompt").TextContent.Trim());
     }
 
+    /// <summary>UX-E13: an archived Room's row says when it was archived ("Archived ..."), not when it was created.</summary>
+    [Fact]
+    public async Task Dialog_ArchivedRoom_ShowsArchivedDate_NotCreated()
+    {
+        var ct = Xunit.TestContext.Current.CancellationToken;
+        using var dir = new TempDataDir();
+        var events = new RoomEvents(NullLogger<RoomEvents>.Instance);
+        var directory = new SqliteTeamDirectory(dir.Options());
+        await directory.InitializeAsync("You", ct);
+        var agent = await directory.UpsertAgentUserAsync("coo", null, ct);
+        Assert.NotNull(agent);
+        var chat = CreateChatService(dir, directory, events);
+        var room = await chat.EnsureRoomForAsync(agent, ct);
+        _ = await chat.SetRoomArchivedAsync(room.Id, archived: true, ct);
+
+        await using var ctx = NewContext(directory, chat, events);
+        var cut = await OpenDialogAsync(ctx);
+
+        string date = cut.Find(".archived-chats-date").TextContent.Trim();
+        Assert.Equal("Archived", date.Split(' ')[0]);
+    }
+
     /// <summary>Opens the first row's menu and chooses Delete, which swaps the row for the inline confirm.</summary>
     private static async Task BeginDeleteAsync(IRenderedComponent<ContainerFragment> cut)
     {
