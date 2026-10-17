@@ -120,6 +120,26 @@ public sealed class R3TeamsCardTests
         Assert.Equal(0, CountControlsLabelled(cut, "Persona body"));
     }
 
+    /// <summary>UX-E15: the New teammate form puts Title and Alias in one row, and Model and Effort in one row under a single Model label.</summary>
+    [Fact]
+    public async Task CreateCard_TitleAndAliasShareARow_AndModelEffortShareARow()
+    {
+        await using TeamWebApplicationFactory factory = new();
+        await using MudBunitContext ctx = NewContext(factory);
+
+        IRenderedComponent<ContainerFragment> cut = RenderPage(ctx, factory);
+        await ClickButtonAsync(cut, "New teammate");
+
+        AngleSharp.Dom.IElement identity = cut.Find(".mud-dialog-content .teammate-card-identity-row");
+        Assert.Equal(2, identity.QuerySelectorAll("input").Length);
+        Assert.Equal(1, identity.QuerySelectorAll("input[placeholder='e.g. coo']").Length);
+        AngleSharp.Dom.IElement models = cut.Find(".mud-dialog-content .teammate-card-model-row");
+        Assert.True(models.QuerySelectorAll(".mud-select").Length >= 2);
+        Assert.NotNull(FindInputControl(cut, "Model").Closest(".teammate-card-model-row"));
+        Assert.NotNull(FindInputControl(cut, "Effort").Closest(".teammate-card-model-row"));
+        Assert.Equal(1, cut.FindAll(".mud-dialog-content .group-label").Count(static label => label.TextContent.Trim() == "Model"));
+    }
+
     /// <summary>While the model list is being read the select refuses to open but is styled as busy rather than off: it carries aria-busy and the probing class, and a progress bar sits under it (E5).</summary>
     [Fact]
     public async Task EditCard_WhileTheModelsLoad_ShowsAProgressBarInsteadOfADisabledBox()
