@@ -94,31 +94,37 @@ For the options, troubleshooting and how releases are made, see
 
 ## A quick tour of the screen
 
-The left sidebar is the whole app. From top to bottom:
+You get around the app from the left edge of the window, which works like Visual Studio Code. The narrow
+**Activity bar** at the far left has two rows of buttons. The buttons at the top choose
+what the **sidebar** beside it shows. The highlighted button is the one showing now.
+Select another to switch; select the highlighted one again to fold the sidebar away and
+give the page more room. The sidebar opens on **Chats**.
 
-| Sidebar group | What it holds |
+| Activity bar button | What the sidebar shows |
 | --- | --- |
-| **Needs you** | A card above Rooms, drawn only while a Room is waiting on you. See [Needs you](#needs-you). |
-| **Rooms** | Your root Rooms, plus **New chat**. A Team's chats are not listed here; see [Team chats](#team-chats). |
+| **Chats** | **Needs you**, a card drawn only while a Room is waiting on you (see [Needs you](#needs-you)), then **Rooms**: your root Rooms, plus **New chat**. A Team's chats are not listed here; see [Team chats](#team-chats). |
 | **Teams** | One row per Team. Expand it to see its Team Room, its chats and its Projects. **Build a team** sits at the bottom. The More (⋮) menu on a Team row has **New chat** and **New project**. |
 | **Teammates** | A link to the page listing every Teammate, grouped by Team. |
-| **Tasks** | Your saved Views of Tasks: **All Tasks**, **My Tasks**, any you saved, and **New view**. |
-| **Library** | One **Library** link. The Library's roots (**Teams**, **Teammates**, and any folders you pinned) and **Add folder** are on the Library page. |
-| Bottom | **Archived chats** and **Settings**. |
+| **Tasks** | Your saved Views of Tasks: **All Tasks**, **My Tasks**, any you saved, and **New view**. Not shown when Tasks are turned off. |
+| **Library** | One **Library** link. The Library's roots (**Teams**, **Teammates**, and any folders you pinned) and **Add folder** are on the Library page. Not shown when the Library is turned off. |
 
-![The sidebar with Needs you, Rooms, Teams, Teammates, Tasks and Library](images/user-guide/sidebar.png)
+The two buttons at the bottom of the Activity bar are **Archived chats** and **Settings**.
 
-1. **Needs you**, listing the Rooms waiting on you.
-2. **Rooms**. The arrow folds the group away.
-3. A Room. Its More (⋮) menu sits at the end of the row.
-4. **Show all**, with how many Rooms there are, to list the rest.
-5. **New chat**.
-6. **Teams**, folded here.
-7. **Teammates**.
-8. **Tasks**, folded here.
-9. **Library**.
-10. **Archived chats**.
-11. **Settings**.
+![The Activity bar beside the sidebar, which shows Chats with Grace selected](images/user-guide/sidebar.png)
+
+1. **Chats**, highlighted because the sidebar is showing it.
+2. **Teams**.
+3. **Teammates**.
+4. **Tasks**.
+5. **Library**.
+6. **Archived chats**.
+7. **Settings**.
+8. **Rooms**. The arrow folds the group away.
+9. A Room. Its More (⋮) menu sits at the end of the row.
+10. **Show all**, with how many Rooms there are, to list the rest.
+11. **New chat**.
+
+When a Room is waiting on you, the **Needs you** card sits above **Rooms**.
 
 Every page has its own address, so you can bookmark it:
 
@@ -135,7 +141,7 @@ Every page has its own address, so you can bookmark it:
 
 ### Needs you
 
-When several Rooms are running, **Needs you** at the top of the sidebar lists the ones waiting on you, longest wait first. A Room is listed when:
+When several Rooms are running, **Needs you** at the top of the sidebar's **Chats** view lists the ones waiting on you, longest wait first. A Room is listed when:
 
 - a Teammate **mentions you** in a Message you have not answered (the row shows who and when);
 - a Teammate has asked you a **Question** or opened a **Form** that is still waiting;
@@ -406,7 +412,7 @@ App_Data/
 
 ## Working with Teammates
 
-Open **Teammates** in the sidebar. The page lists every Teammate, grouped by
+Select **Teammates** in the Activity bar, then the **Teammates** link in the sidebar. The page lists every Teammate, grouped by
 Team, with a **Team** filter at the top. A Teammate in two Teams is listed under
 both. Each card shows the Teammate's status as a badge on its avatar.
 
@@ -674,7 +680,7 @@ process its team type offers, or **Start blank**. Either one writes the Team's
 
 ### Creating a Team
 
-Select **Build a team** at the bottom of the Teams group and follow its four steps;
+Select **Teams** in the Activity bar, then **Build a team** at the bottom of the Teams group, and follow its four steps;
 see [Building a team with the Chief of Staff](#building-a-team-with-the-chief-of-staff).
 Approving the last step creates the Team folder and hires the Teammates you drafted.
 
@@ -721,7 +727,7 @@ Team stays, marked **No members**.
 
 ### Creating a Project
 
-On a Team row in the sidebar, open More (⋮) and select **New project**. Or, in the
+On a Team row in the sidebar's **Teams** view, open More (⋮) and select **New project**. Or, in the
 Team's **Files** tab, open a Team folder's menu and select **New project**.
 
 **In the background:** Huddle creates `Teams/<Team>/<Project>/`. `memory` is
@@ -738,7 +744,7 @@ folder and its Tasks remain on disk.
 
 ### The Team and Project pages
 
-Select a Team or Project in the sidebar.
+Select **Teams** in the Activity bar, then a Team or Project in the sidebar.
 
 | Tab | On a Team page | On a Project page |
 | --- | --- | --- |
@@ -814,7 +820,7 @@ Nothing is created yet; the later steps do that.
 roles and no process, and its name and purpose start empty.
 Select it again to clear the choice. The choice stays in the address (`?type=`), so
 it is still there when you come back to the tab. Open the page with **Build a team**,
-the last link of the Teams group in the sidebar.
+the last link of the Teams group in the sidebar's **Teams** view.
 
 **Hire**, step 3, opens once **Team details** is complete. Under **Roles** ("Available
 roles") it shows a grid of cards in this order: a blank card with an **Add** (+) button,
@@ -1240,7 +1246,7 @@ stop that, set `Team:References:ExpandInPrompt` to `false`.
 
 Use **Copy link** to put a Room's reference on the clipboard. It is the link button in
 the Room's header, and **Copy link** in the More (⋮) or right-click menu of a Room in the
-sidebar, both under Rooms and under a Team. Paste it into any message box to make the same
+sidebar, both under Rooms (the **Chats** view) and under a Team (the **Teams** view). Paste it into any message box to make the same
 reference the picker writes. The Room opens when a reader selects it.
 
 A plain address from the address bar opens the Room, but it is not a reference: it
@@ -1383,7 +1389,7 @@ the chat; they differ in where they are listed.
 
 - **Rooms** lists the root Rooms: the chats you start from the Rooms group, and
   your one-to-one Rooms with Teammates.
-- **A Team's chats** are listed under the Team in the sidebar, below its Team
+- **A Team's chats** are listed under the Team in the sidebar's **Teams** view, below its Team
   Room and above its Projects. Open the Team's More (⋮) menu and select **New chat**.
   The panel is headed *New chat in Marketing* and lists that Team's members
   first, but you can still select a Teammate from another Team.

@@ -11,7 +11,7 @@ change that legend in the same commit.
 
 | Image | Shows |
 | --- | --- |
-| `sidebar.png` | The sidebar, with Grace selected |
+| `sidebar.png` | The Activity bar and the sidebar's Chats view, with Grace selected |
 | `tab-strip.png` | Two kept tabs (one hovered) and a preview tab |
 | `tab-menu.png` | A tab's More (⋮) menu, open |
 | `room.png` | The Room with Grace |
