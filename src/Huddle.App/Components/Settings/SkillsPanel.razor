@@ -14,6 +14,7 @@
     folder they just wrote never appeared in the table above or in a Teammate card's picker.
 *@
 
+@using Agency.Huddle.App.Components.Shared.Dialogs
 @using Agency.Huddle.App.Skills
 @implements IDisposable
 
@@ -31,7 +32,7 @@
 
 <MudButton Variant="Variant.Outlined" Size="Size.Small" Class="skills-import-button mb-2" OnClick="this.ImportSkillAsync">Import skill</MudButton>
 
-<MudSimpleTable Hover="true" Dense="true">
+<MudSimpleTable Hover="true" Dense="true" Class="skills-table">
     <thead>
         <tr>
             <th>Name</th>
@@ -47,9 +48,16 @@
         @foreach (var skill in this.Skills.All)
         {
             <tr>
-                <td>@skill.Name</td>
-                <td>@skill.Description</td>
-                <td>@skill.Source<br /><SkillProvenanceLine Skill="@skill" /></td>
+                <td class="skills-name">@SkillNames.Display(skill.Name)</td>
+                <td class="skills-description-cell">@skill.Description</td>
+                <td>
+                    @skill.Source
+                    @if (skill.Provenance is not null)
+                    {
+                        <br />
+                        <SkillProvenanceLine Skill="@skill" />
+                    }
+                </td>
                 <td>@skill.FolderPath</td>
                 <td>@string.Join(", ", skill.Files)</td>
                 <td>
@@ -149,7 +157,7 @@
     {
         var confirmed = await this.DialogService.ShowMessageBoxAsync(
             "Restore default?",
-            $"This restores '{skill.Name}' to its shipped default. This deletes {skill.FolderPath} and everything in it.",
+            $"This restores {ConfirmCopy.Quote(SkillNames.Display(skill.Name))} to its shipped default. This deletes {skill.FolderPath} and everything in it.",
             yesText: "Restore default",
             cancelText: "Cancel");
 

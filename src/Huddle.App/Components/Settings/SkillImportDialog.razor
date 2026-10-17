@@ -7,6 +7,7 @@
     Nothing is written before Install, so Cancel and Back write nothing. A download or network problem
     arrives as a validation problem in the preview and is shown in the downloader's own words.
 *@
+@using Agency.Huddle.App.Components.Shared.Dialogs
 @using Agency.Huddle.App.Skills
 
 @implements IDisposable
@@ -20,7 +21,7 @@
             @if (this.step == ImportStep.Search)
             {
                 <div class="skill-import-search">
-                    <SearchField @bind-Value="this.search" Placeholder="Search the catalog by name, publisher or category" AriaLabel="Search the catalog" />
+                    <SearchField @bind-Value="this.search" Compact="true" Placeholder="Search the catalog by name, publisher or category" AriaLabel="Search the catalog" />
                 </div>
                 <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2">
                     <MudTextField T="string" Label="Or paste a GitHub tree URL" Immediate="true" Variant="Variant.Outlined" Margin="Margin.Dense"
@@ -32,19 +33,19 @@
                 {
                     <MudAlert Severity="Severity.Error" Dense="true" role="alert" Class="skill-import-error">@this.error</MudAlert>
                 }
-                @foreach (SkillsCatalogEntry entry in this.Results)
-                {
-                    <MudPaper Outlined="true" Class="pa-2 skill-import-result">
-                        <MudStack Row="true" AlignItems="AlignItems.Center" Justify="Justify.SpaceBetween">
+                <div class="skill-import-results">
+                    @foreach (SkillsCatalogEntry entry in this.Results)
+                    {
+                        <div class="skill-import-result">
                             <div>
-                                <MudText Typo="Typo.subtitle1" Class="skill-import-result-name">@entry.Name</MudText>
-                                <MudText Typo="Typo.caption">@entry.Publisher Â· @entry.Category</MudText>
+                                <MudText Typo="Typo.body2" Class="skill-import-result-name">@SkillNames.Display(entry.Name)</MudText>
+                                <MudText Typo="Typo.caption" Class="mud-text-secondary">@entry.Publisher · @entry.Category</MudText>
                             </div>
-                            <MudButton Variant="Variant.Outlined" Size="Size.Small" Class="skill-import-pick" Disabled="@this.busy"
+                            <MudButton Variant="Variant.Text" Size="Size.Small" Class="skill-import-pick" Disabled="@this.busy"
                                        OnClick="@(() => this.ReviewCatalogAsync(entry))">Review</MudButton>
-                        </MudStack>
-                    </MudPaper>
-                }
+                        </div>
+                    }
+                </div>
             }
             else if (this.step == ImportStep.Review && this.preview is not null)
             {
@@ -64,16 +65,15 @@
                         }
                     </MudAlert>
                 }
-                <MudSimpleTable Dense="true" Class="skill-import-provenance">
+                <MudSimpleTable Dense="true" Elevation="0" Class="skill-import-provenance">
                     <tbody>
                         <tr><th>Publisher</th><td class="skill-import-publisher">@this.preview.Publisher</td></tr>
-                        <tr><th>Repository</th><td class="skill-import-repo">@this.preview.RepoUrl</td></tr>
-                        <tr>
+                                                <tr>
                             <th>Link</th>
                             <td class="skill-import-link">
                                 @if (SkillImportDialog.TryBrowseUrl(this.preview, out string? browseUrl))
                                 {
-                                    <MudLink Href="@browseUrl" Target="_blank" rel="noopener noreferrer">@browseUrl</MudLink>
+                                    <MudLink Href="@browseUrl" Target="_blank" rel="noopener noreferrer" Color="Color.Primary" title="@browseUrl">@SkillImportDialog.LinkText(this.preview)</MudLink>
                                 }
                                 else
                                 {
@@ -125,8 +125,10 @@
 </MudDialog>
 
 @code {
-    /// <summary>How the Skills panel shows this dialog: medium, full-width, with a close button that cancels.</summary>
-    public static readonly DialogOptions Options = new() { CloseButton = true, MaxWidth = MaxWidth.Medium, FullWidth = true };
+    /// <summary>How the Skills panel shows this dialog: a 600px list picker with a close button that cancels.</summary>
+    public static readonly DialogOptions Options = HuddleDialogOptions.ShortPicker;
+
+    private const string DefaultTitle = "Import skill";
 
     private const int MaxResults = 50;
 
@@ -218,6 +220,11 @@
         return true;
     }
 
+    /// <summary>The short text of the browse link: the repository's host and path, e.g. <c>github.com/owner/repo</c>, with the full address in its tooltip.</summary>
+    /// <param name="preview">The preview.</param>
+    private static string LinkText(ImportPreview preview) =>
+        Uri.TryCreate(preview.RepoUrl, UriKind.Absolute, out Uri? repo) ? (repo.Host + repo.AbsolutePath).TrimEnd('/') : preview.RepoUrl;
+
     private async Task ReviewCatalogAsync(SkillsCatalogEntry entry)
     {
         await this.ReviewAsync(ct => this.Importer.PreviewFromCatalogAsync(entry.Id, ct), "That skill is not in the catalog.");
@@ -247,6 +254,7 @@
 
             this.preview = loaded;
             this.step = ImportStep.Review;
+            await this.SetTitleAsync($"Import {SkillNames.Display(loaded.Name)}");
         }
         catch (OperationCanceledException)
         {
@@ -277,11 +285,22 @@
         this.step = ImportStep.Done;
     }
 
-    private void Back()
+    private async Task Back()
     {
         this.error = null;
         this.preview = null;
         this.step = ImportStep.Search;
+        await this.SetTitleAsync(DefaultTitle);
+    }
+
+    /// <summary>Names the dialog after the item once there is one (audit B10j); the Search step has none and keeps the type word.</summary>
+    /// <param name="title">The new title.</param>
+    private async Task SetTitleAsync(string title)
+    {
+        if (this.Dialog is not null)
+        {
+            await this.Dialog.SetTitleAsync(title);
+        }
     }
 
     private void Cancel() => this.Dialog?.Cancel();

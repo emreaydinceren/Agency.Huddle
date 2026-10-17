@@ -1,0 +1,17 @@
+@*
+    A Theme's Ground, Ink and Accent as three adjacent chips (audit B9b). Decorative: the Theme's name beside it
+    carries the meaning, so the swatch is hidden from assistive technology.
+*@
+
+<span class="theme-swatch" aria-hidden="true">
+    @foreach (string colour in this.Colours)
+    {
+        <span class="theme-swatch-chip" style="@($"background-color: {colour}")"></span>
+    }
+</span>
+
+@code {
+    /// <summary>The chips' colours as hex strings, in order: Ground, Ink, Accent.</summary>
+    [Parameter, EditorRequired]
+    public required IReadOnlyList<string> Colours { get; set; }
+}

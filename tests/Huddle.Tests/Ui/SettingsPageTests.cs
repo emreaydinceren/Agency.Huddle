@@ -295,10 +295,9 @@ public sealed class SettingsPageTests
             Assert.Contains(HtmlEncoder.Default.Encode(theme.Label), html, StringComparison.Ordinal);
         }
 
-        foreach (var grouping in ThemeCatalog.Grouped)
-        {
-            Assert.Contains($">{grouping.Heading}<", html, StringComparison.Ordinal);
-        }
+        // Only "High contrast" keeps a heading; "Light" and "Dark" repeated the picker's own title (audit B9c).
+        Assert.Contains(">High contrast<", html, StringComparison.Ordinal); // contains-ok: rendered markup text
+        Assert.DoesNotContain("theme-picker-heading group-label\">Light<", html, StringComparison.Ordinal);
     }
 
     /// <summary>
@@ -422,7 +421,7 @@ public sealed class SettingsPageTests
 
         var html = await client.GetStringAsync("/settings/skills", ct);
 
-        Assert.Contains("team-building", html, StringComparison.Ordinal);
+        Assert.Contains(">Team building<", html, StringComparison.Ordinal); // contains-ok: rendered markup text
         Assert.Contains(">Default<", html, StringComparison.Ordinal);
     }
 

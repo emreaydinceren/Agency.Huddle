@@ -29,6 +29,7 @@
 
 @using Agency.Huddle.App.Appearance
 @using Agency.Huddle.App.Themes
+@using MudBlazor.Utilities
 @implements IDisposable
 @inject AppearanceStore AppearanceStore
 
@@ -39,7 +40,7 @@
 
 <StoredAt Label="The selection is stored at" Path="@this.AppearanceStore.FilePath" />
 
-<MudText Typo="Typo.subtitle2">Light theme</MudText>
+<MudText Typo="Typo.subtitle2" HtmlTag="h2">Light theme</MudText>
 <MudList T="string"
          Class="theme-picker"
          SelectionMode="SelectionMode.SingleSelection"
@@ -48,15 +49,23 @@
          aria-label="Light theme">
     @foreach (var grouping in GroupedFor(ThemeMode.Light))
     {
-        <MudListSubheader Class="theme-picker-heading">@grouping.Heading</MudListSubheader>
+        @if (grouping.Group == ThemeGroup.HighContrast)
+        {
+            <MudListSubheader Class="theme-picker-heading group-label">@grouping.Heading</MudListSubheader>
+        }
         @foreach (var theme in grouping.Themes)
         {
-            <MudListItem T="string" Value="@theme.Id" Text="@theme.Label" />
+            <MudListItem T="string" Value="@theme.Id">
+                <div class="theme-row">
+                    <ThemeSwatch Colours="@SwatchFor(theme)" />
+                    <span>@theme.Label</span>
+                </div>
+            </MudListItem>
         }
     }
 </MudList>
 
-<MudText Typo="Typo.subtitle2" Class="mt-4">Dark theme</MudText>
+<MudText Typo="Typo.subtitle2" HtmlTag="h2" Class="mt-4">Dark theme</MudText>
 <MudList T="string"
          Class="theme-picker"
          SelectionMode="SelectionMode.SingleSelection"
@@ -65,10 +74,18 @@
          aria-label="Dark theme">
     @foreach (var grouping in GroupedFor(ThemeMode.Dark))
     {
-        <MudListSubheader Class="theme-picker-heading">@grouping.Heading</MudListSubheader>
+        @if (grouping.Group == ThemeGroup.HighContrast)
+        {
+            <MudListSubheader Class="theme-picker-heading group-label">@grouping.Heading</MudListSubheader>
+        }
         @foreach (var theme in grouping.Themes)
         {
-            <MudListItem T="string" Value="@theme.Id" Text="@theme.Label" />
+            <MudListItem T="string" Value="@theme.Id">
+                <div class="theme-row">
+                    <ThemeSwatch Colours="@SwatchFor(theme)" />
+                    <span>@theme.Label</span>
+                </div>
+            </MudListItem>
         }
     }
 </MudList>
@@ -86,12 +103,18 @@
                      Class="mt-2 theme-picker-accent-colour" />
 }
 
-<p class="settings-theme-credit">
+<p class="theme-credit mb-2">
     Custom Accent lets you pick your own accent colour, adjusted if needed so it stays readable.
-    Every other theme except Huddle Light and Huddle Dark is one of the colour themes bundled with Visual Studio Code, mapped onto this application's palette. Visual Studio Code and its default
-    themes are Microsoft's, under the MIT licence; Solarized is Ethan Schoonover's and Monokai is
-    Wimer Hazenberg's.
 </p>
+
+<details class="theme-licences mt-4">
+    <summary>Licences</summary>
+    <p class="theme-credit mt-2">
+        Every Theme except Huddle Light and Huddle Dark is one of the colour themes bundled with Visual Studio Code,
+        mapped onto this application's palette. Visual Studio Code and its default themes are Microsoft's, under the
+        MIT licence; Solarized is Ethan Schoonover's and Monokai is Wimer Hazenberg's.
+    </p>
+</details>
 
 <p class="settings-prompts-file-path">
     Your own avatar is set on the <a href="/settings/profile">Profile</a> tab.
@@ -105,6 +128,24 @@
         return ThemeCatalog.Grouped
             .Select(grouping => grouping with { Themes = [.. grouping.Themes.Where(theme => theme.Mode == mode)] })
             .Where(grouping => grouping.Themes.Count > 0);
+    }
+
+    /// <summary>
+    /// The three roles that tell two Themes apart (audit B9b): Ground (<c>Surface</c>), Ink (<c>TextPrimary</c>)
+    /// and Accent (<c>Primary</c>), read from the palette the Theme fills. Derived here because
+    /// <see cref="ThemeDescriptor"/> does not expose them.
+    /// </summary>
+    /// <param name="theme">The Theme to draw.</param>
+    /// <returns>The Ground, Ink and Accent as hex colours.</returns>
+    internal static IReadOnlyList<string> SwatchFor(ThemeDescriptor theme)
+    {
+        Palette palette = theme.Mode == ThemeMode.Dark ? theme.Theme.PaletteDark : theme.Theme.PaletteLight;
+        return
+        [
+            palette.Surface.ToString(MudColorOutputFormats.Hex),
+            palette.TextPrimary.ToString(MudColorOutputFormats.Hex),
+            palette.Primary.ToString(MudColorOutputFormats.Hex),
+        ];
     }
 
     /// <summary>Whether the colour picker should show at all: only when one of the two <see cref="AccentTheme"/> entries is selected, since every other theme ignores <see cref="AppearanceSettings.AccentColorHex"/> entirely.</summary>

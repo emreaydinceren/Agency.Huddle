@@ -2251,30 +2251,66 @@ a.team-ref,
 
 /* ---- Settings: page shell and the Prompts panel's field layout (tab rail and status badges are MudBlazor) -- */
 
-/* The Appearance tab's theme picker. A bordered, scrollable box rather than a bare list, so the
-   nineteen themes read as one control the way the select they replaced did, and so a long catalog
-   cannot push the credit paragraph and the file path below it off the page. */
+/* The Appearance tab's theme picker (audit B9b-d). The list grows to its content (no inner scrollbar, no sticky band),
+   so the page scrolls and the Human sees every Theme. The selected row wears the global Selected shape. A row carries
+   a swatch of the Theme's Ground, Ink and Accent. */
 .theme-picker {
-    border: 1px solid var(--ink-edge);
-    border-radius: var(--mud-default-borderradius);
-    max-height: 22rem;
-    overflow-y: auto;
     padding: 0;
 }
 
-.theme-picker-heading {
-    font-size: var(--mud-typography-overline-size);
-    font-weight: 600;
-    text-transform: uppercase;
-    letter-spacing: 0.04em;
+.theme-picker .mud-list-item {
+    min-height: 32px;
+    padding-block: 0;
+    font-size: var(--mud-typography-body2-size);
+}
+
+.theme-picker .mud-list-item-text,
+.theme-picker .mud-list-item-text .mud-typography {
+    margin: 0;
+    font-size: inherit;
+}
+
+/* "High contrast" is the one heading left: a Group label, not a band. */
+.theme-picker-heading.group-label {
+    padding: 8px 12px 0;
+    margin: 0 0 4px 0;
+    line-height: var(--mud-typography-caption-lineheight);
+    text-transform: none;
+    background: none;
+}
+
+.theme-swatch {
+    display: inline-flex;
+    flex: none;
+    margin-inline-end: 12px;
+    border: 1px solid var(--ink-edge);
+    border-radius: calc(var(--mud-default-borderradius) * 0.75);
+    overflow: hidden;
+}
+
+.theme-swatch-chip {
+    display: block;
+    width: 14px;
+    height: 16px;
+}
+
+.theme-row {
+    display: flex;
+    align-items: center;
+    width: 100%;
+}
+
+.theme-credit {
+    margin: 0;
+    max-width: 75ch;
+    font-size: var(--mud-typography-caption-size);
     color: var(--mud-palette-text-secondary);
-    background-color: var(--ink-wash);
-    border-bottom: 1px solid var(--ink-rule);
-    line-height: 2rem;
-    min-height: 2rem;
-    position: sticky;
-    top: 0;
-    z-index: 1;
+}
+
+.theme-licences > summary {
+    cursor: pointer;
+    font-size: var(--mud-typography-body2-size);
+    color: var(--mud-palette-text-primary);
 }
 
 .prompts-field {
@@ -2332,6 +2368,7 @@ a.team-ref,
 
 /* The intro is body text (14px); the path line is meta (12px) with the path in the mono face. */
 .settings-intro {
+    max-width: 75ch;
     font-size: var(--mud-typography-body1-size);
 }
 
@@ -2366,7 +2403,10 @@ a.team-ref,
 }
 
 .settings-nav .mud-nav-link {
-    border-radius: var(--mud-default-borderradius);
+    min-height: var(--nav-row-height);
+    margin-inline: 4px;
+    padding-block: 0;
+    border-radius: calc(var(--mud-default-borderradius) * 0.75);
     font-size: var(--mud-typography-body2-size);
     color: var(--mud-palette-text-secondary);
 }
@@ -2391,6 +2431,70 @@ a.team-ref,
 
 .settings-nav .settings-nav-item-active .mud-nav-link .mud-nav-link-icon.mud-nav-link-icon-default {
     color: color-mix(in srgb, var(--mud-palette-primary) 70%, var(--mud-palette-text-primary));
+}
+
+/* The Library panel's rows (audit B9f, E6): the add row is one 28px height, fields and button aligned. */
+.library-panel-add-row {
+    align-items: center;
+}
+
+.library-panel-add-row .mud-input-control {
+    height: 28px;
+    margin-top: 0;
+}
+
+.library-panel-add-row .mud-input.mud-input-outlined .mud-input-root.mud-input-root-outlined {
+    padding-block: 0;
+    font-size: var(--mud-typography-body2-size);
+}
+
+.library-panel-add-row .mud-button-root {
+    height: 28px;
+}
+
+/* The Skills table (audit B9g): the description gets the room, and the line under a name is meta text. */
+.skills-table td.skills-description-cell {
+    min-width: 28ch;
+    max-width: 60ch;
+    white-space: normal;
+}
+
+.skills-table .skills-name {
+    font-weight: 500;
+}
+
+/* Import skill (audit B10 "Import skill"): one list with Edge separators, then a review with quiet 13px labels. */
+.skill-import-results {
+    display: flex;
+    flex-direction: column;
+}
+
+.skill-import-result {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 8px 0;
+    border-bottom: 1px solid var(--ink-edge);
+}
+
+.skill-import-result:last-child {
+    border-bottom: 0;
+}
+
+.skill-import-provenance.mud-table {
+    box-shadow: none;
+    background: none;
+}
+
+.skill-import-provenance th {
+    font-size: var(--mud-typography-body2-size);
+    font-weight: 400;
+    color: var(--mud-palette-text-secondary);
+}
+
+.skill-import-provenance td {
+    font-size: var(--mud-typography-body2-size);
 }
 
 /* A phone has no room for two columns: the menu sits above the section and stops sticking. */
