@@ -813,7 +813,7 @@ public sealed class BuildTeamTests
         Assert.Equal("2 members · 1 leaving · 1 to delete", cut.Find(".build-team-roster-summary").TextContent.Trim());
     }
 
-    /// <summary>Remove from Team takes the member's Team label away on save without asking, and the Teammate stays.</summary>
+    /// <summary>Remove from team takes the member's Team label away on save without asking, and the Teammate stays.</summary>
     [Fact]
     public async Task Members_RemoveFromTeam_KeepsTheTeammate()
     {

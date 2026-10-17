@@ -9,7 +9,7 @@ namespace Agency.Huddle.Tests.Ui;
 
 /// <summary>
 /// The provenance line shown wherever a Skill appears (SK-8, SK-9): publisher, repo link, short commit and
-/// license for an imported Skill, a "modified locally" chip after a local edit, and "Built in" or "Yours"
+/// license for an imported Skill, a "modified locally" chip after a local edit, and "Built-in" or "Yours"
 /// with nothing else for a Skill that was not imported.
 /// </summary>
 public sealed class SkillProvenanceLineTests
@@ -96,7 +96,7 @@ public sealed class SkillProvenanceLineTests
         Assert.Equal("modified locally", cut.Find(".skill-provenance-modified").TextContent.Trim());
     }
 
-    /// <summary>A shipped Skill, with or without an override on disk, reads "Built in" and shows no provenance facts.</summary>
+    /// <summary>A shipped Skill, with or without an override on disk, reads "Built-in" and shows no provenance facts.</summary>
     [Theory]
     [InlineData("Default")]
     [InlineData("Overridden")]
@@ -106,7 +106,7 @@ public sealed class SkillProvenanceLineTests
 
         IRenderedComponent<SkillProvenanceLine> cut = Render(ctx, Plain(Enum.Parse<SkillSource>(source)));
 
-        Assert.Equal("Built in", cut.Find(".skill-provenance-origin").TextContent.Trim());
+        Assert.Equal("Built-in", cut.Find(".skill-provenance-origin").TextContent.Trim());
         Assert.Empty(cut.FindAll(".skill-provenance-publisher"));
         Assert.Empty(cut.FindAll(".skill-provenance-license"));
         Assert.Empty(cut.FindAll(".skill-provenance-modified"));

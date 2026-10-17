@@ -265,4 +265,41 @@ public sealed class AppCssTasksTests
         Assert.Contains("line-clamp: 3;", RuleFor(".resizable-drawer-title"), StringComparison.Ordinal);
         Assert.Contains("font-weight: 600;", RuleFor(".task-detail-group > .group-heading"), StringComparison.Ordinal);
     }
+
+    /// <summary>A Board lane is a Surface panel with a Divider hairline and the card radius, not a Background-gray tint that is heavy in Light and invisible in Dark.</summary>
+    [Fact]
+    public void AppCss_BoardLane_IsASurfaceWithADividerBorder()
+    {
+        string lane = RuleFor(".task-board-column");
+
+        Assert.Contains("background-color: var(--mud-palette-surface);", lane, StringComparison.Ordinal);
+        Assert.Contains("border: 1px solid var(--mud-palette-divider);", lane, StringComparison.Ordinal);
+        Assert.Contains("border-radius: var(--mud-default-borderradius);", lane, StringComparison.Ordinal);
+        Assert.DoesNotContain("background-gray", lane, StringComparison.Ordinal);
+    }
+
+    /// <summary>The Backlog column's dot is a hollow dashed ring, so it differs from To Do now that both are Default.</summary>
+    [Fact]
+    public void AppCss_BacklogStateDot_IsHollowAndDashed()
+    {
+        string dot = RuleFor(".task-state-dot-backlog");
+
+        Assert.Contains("background: transparent;", dot, StringComparison.Ordinal);
+        Assert.Contains("border: 1px dashed var(--mud-palette-text-secondary);", dot, StringComparison.Ordinal);
+    }
+
+    /// <summary>A card's due date is 12px like the id, and the overdue icon takes the date's size (1em), never the subtitle2 size.</summary>
+    [Fact]
+    public void AppCss_CardDueDate_IsCaptionSized_AndTheOverdueIconFollowsIt()
+    {
+        Assert.Contains("font-size: var(--mud-typography-caption-size);", RuleFor(".task-card-field-due-date"), StringComparison.Ordinal);
+        string icon = RuleFor(".task-due-overdue .task-due-icon");
+        Assert.Contains("width: 1em;", icon, StringComparison.Ordinal);
+        Assert.Contains("height: 1em;", icon, StringComparison.Ordinal);
+        Assert.Contains("font-size: inherit;", icon, StringComparison.Ordinal);
+        Assert.DoesNotContain("subtitle2", icon, StringComparison.Ordinal);
+        string overdue = RuleFor(".task-due-overdue");
+        Assert.Contains("font-weight: 600;", overdue, StringComparison.Ordinal);
+        Assert.Contains("var(--mud-palette-error)", overdue, StringComparison.Ordinal);
+    }
 }

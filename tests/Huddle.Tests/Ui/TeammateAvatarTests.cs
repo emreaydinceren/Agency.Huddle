@@ -2,6 +2,7 @@ using AngleSharp.Dom;
 using Bunit;
 using Agency.Huddle.App.Avatars;
 using Agency.Huddle.App.Components.Shared;
+using MudBlazor;
 
 namespace Agency.Huddle.Tests.Ui;
 
@@ -77,6 +78,78 @@ public sealed class TeammateAvatarTests
 
         var image = cut.Find(".mud-avatar img");
         Assert.StartsWith("/teammate-avatars/", image.GetAttribute("src"), StringComparison.Ordinal);
+    }
+
+    /// <summary>At <see cref="Size.Small"/> (24px) an image reads as a blur beside the monograms, so the avatar draws the monogram even when the Teammate has an image.</summary>
+    [Fact]
+    public async Task Render_SmallSize_WithImage_DrawsTheMonogram()
+    {
+        await using MudBunitContext ctx = new();
+        Avatar avatar = new(Label: null, Image: "abc123.png", Background: null);
+
+        var cut = ctx.Render<TeammateAvatar>(parameters => parameters
+            .Add(p => p.Name, "Emily Lee")
+            .Add(p => p.Avatar, avatar)
+            .Add(p => p.Size, Size.Small));
+
+        var root = cut.Find(".mud-avatar");
+        Assert.Empty(root.QuerySelectorAll("img"));
+        Assert.Equal("EL", root.TextContent.Trim());
+        Assert.Contains("avatar-monogram", root.ClassList);
+    }
+
+    /// <summary>A pending (unsaved) image is drawn as the monogram at <see cref="Size.Small"/> too, so a 24px avatar never shows a picture.</summary>
+    [Fact]
+    public async Task Render_SmallSize_WithPendingImage_DrawsTheMonogram()
+    {
+        await using MudBunitContext ctx = new();
+
+        var cut = ctx.Render<TeammateAvatar>(parameters => parameters
+            .Add(p => p.Name, "Emily Lee")
+            .Add(p => p.Avatar, Avatar.None)
+            .Add(p => p.Size, Size.Small)
+            .Add(p => p.PendingImage, [1, 2, 3, 4])
+            .Add(p => p.PendingImageExtension, ".png"));
+
+        var root = cut.Find(".mud-avatar");
+        Assert.Empty(root.QuerySelectorAll("img"));
+        Assert.Equal("EL", root.TextContent.Trim());
+    }
+
+    /// <summary>From <see cref="Size.Medium"/> up the image shows as before.</summary>
+    [Fact]
+    public async Task Render_MediumSize_WithImage_DrawsTheImage()
+    {
+        await using MudBunitContext ctx = new();
+        Avatar avatar = new(Label: null, Image: "abc123.png", Background: null);
+
+        var cut = ctx.Render<TeammateAvatar>(parameters => parameters
+            .Add(p => p.Name, "Emily Lee")
+            .Add(p => p.Avatar, avatar)
+            .Add(p => p.Size, Size.Medium));
+
+        Assert.Single(cut.Find(".mud-avatar").QuerySelectorAll("img"));
+    }
+
+    /// <summary>
+    /// The Transcript's <c>avatar-transcript</c> class makes a <see cref="Size.Small"/> avatar 32px in <c>app.css</c>, and
+    /// images show from 32px up, so that avatar keeps its image.
+    /// </summary>
+    [Fact]
+    public async Task Render_SmallSize_WithTranscriptClass_DrawsTheImage()
+    {
+        await using MudBunitContext ctx = new();
+        Avatar avatar = new(Label: null, Image: "abc123.png", Background: null);
+
+        var cut = ctx.Render<TeammateAvatar>(parameters => parameters
+            .Add(p => p.Name, "Emily Lee")
+            .Add(p => p.Avatar, avatar)
+            .Add(p => p.Size, Size.Small)
+            .Add(p => p.Class, "avatar-transcript"));
+
+        var root = cut.Find(".mud-avatar");
+        Assert.Single(root.QuerySelectorAll("img"));
+        Assert.Contains("avatar-image", root.ClassList);
     }
 
     /// <summary>A pending image that has not been saved yet beats the stored image and renders inline, as a data URL of its own bytes.</summary>

@@ -495,7 +495,7 @@ If a `node` process was already running before the app started (another tool on 
 
 - The address bar reads exactly `http://localhost:5100/settings` with no segment appended on load.
 - The `<h1>` reads exactly `Settings`.
-- The tab bar holds exactly six tabs, reading `Prompts`, `Appearance`, `Personas`, `Skills`, `Team Types`, `Library` (title case as typed; MudBlazor does not upper-case them here), left to right, above the pane.
+- The tab bar holds exactly six tabs, reading `Prompts`, `Appearance`, `Personas`, `Skills`, `Team types`, `Library` (title case as typed; MudBlazor does not upper-case them here), left to right, above the pane.
 - Step 5 printed six entries in that order: `Prompts | active=true` and the other five `active=false`.
 - The pane below is the Prompts pane.
 - A `Reset all to defaults` button is present in the page header beside the heading.
@@ -607,7 +607,7 @@ If the browser was already deep in history from earlier tests, the Back sequence
 If the regex oracle prints nothing at all, the markup shape changed - fall back to the browser and read which tab button is visibly highlighted, noting that the source-level check could not be applied.
 
 > [!NOTE]
-> This fallback exists specifically because `Routes.razor` has no `NotFound` branch, and `Settings.razor`'s own comment says so. A seventh tab must inherit the same behaviour. This test checks the fallback and case-insensitivity on Prompts and Appearance only; the other four tabs (Personas, Skills, Team Types, Library) have no URL test in this area.
+> This fallback exists specifically because `Routes.razor` has no `NotFound` branch, and `Settings.razor`'s own comment says so. A seventh tab must inherit the same behaviour. This test checks the fallback and case-insensitivity on Prompts and Appearance only; the other four tabs (Personas, Skills, Team types, Library) have no URL test in this area.
 
 ### SHELLNAV-14 — No route sets a browser tab title
 
@@ -1520,7 +1520,7 @@ The drawer content is shorter than the viewport in step 6 no matter how small yo
 
 ---
 
-### SHELLNAV-39 — Right-clicking a tab offers Pin, Move Left, Move Right and Close, and Pin keeps the tab at the front as an icon
+### SHELLNAV-39 — Right-clicking a tab offers Pin, Move left, Move right and Close, and Pin keeps the tab at the front as an icon
 
 **Free** · about 3 min
 
@@ -1533,16 +1533,16 @@ The drawer content is shorter than the viewport in step 6 no matter how small yo
 **Steps**
 
 1. Right-click the `Settings` tab.
-2. Choose **Pin Tab**.
+2. Choose **Pin tab**.
 3. Right-click the pinned tab and read the first item, then close the menu with Escape.
 4. Open `Tasks` with one click in the menu.
-5. Right-click the pinned tab, choose **Unpin Tab**.
+5. Right-click the pinned tab, choose **Unpin tab**.
 
 **Pass if — all of these**
 
-- Step 1 shows a menu at the pointer with, in order, Pin Tab, Move Left, Move Right and Close, each with an icon.
+- Step 1 shows a menu at the pointer with, in order, Pin tab, Move left, Move right and Close, each with an icon.
 - Step 2 moves `Settings` to the start of the strip as its gear icon alone, with no × and no title text; hovering shows "Settings".
-- Step 3's first item reads **Unpin Tab**.
+- Step 3's first item reads **Unpin tab**.
 - Step 4's new preview tab opens after the pinned tab and the others, never in front of it.
 - Step 5 puts `Settings` back as a titled tab just after any pinned tabs, and it stays in the body colour (not the greyer preview colour).
 
@@ -1554,7 +1554,7 @@ The drawer content is shorter than the viewport in step 6 no matter how small yo
 
 ---
 
-### SHELLNAV-40 — Move Right opens a second pane beside the first, and both pages stay live
+### SHELLNAV-40 — Move right opens a second pane beside the first, and both pages stay live
 
 **Free** · about 4 min
 
@@ -1566,18 +1566,18 @@ The drawer content is shorter than the viewport in step 6 no matter how small yo
 
 **Steps**
 
-1. Right-click the `Settings` tab, choose **Move Right**.
+1. Right-click the `Settings` tab, choose **Move right**.
 2. Look at the page and at the address bar.
-3. Right-click the `Settings` tab again and read **Move Right**.
+3. Right-click the `Settings` tab again and read **Move right**.
 4. Click anywhere in the `Teammates` pane.
 5. Look at the address bar and at the `Settings` pane.
-6. Right-click the only tab in the right pane, choose **Move Left**.
+6. Right-click the only tab in the right pane, choose **Move left**.
 
 **Pass if — all of these**
 
 - Step 1 shows two panes side by side, `Teammates` on the left and `Settings` on the right, each with its own strip.
 - Step 2's address bar reads `/settings`, and the right pane's active tab has the accent line while the left one's is dimmed.
-- Step 3 shows **Move Right** greyed out (no third pane is allowed).
+- Step 3 shows **Move right** greyed out (no third pane is allowed).
 - Step 4 makes the address bar read `/teammates` and moves the accent to the left pane. The `Settings` pane still shows its page, unchanged.
 - Step 6 closes the right pane and leaves one pane holding both tabs.
 

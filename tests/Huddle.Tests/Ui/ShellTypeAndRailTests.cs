@@ -75,7 +75,8 @@ public sealed class ShellTypeAndRailTests
         Assert.Matches(@"--nav-row-height:\s*32px;[^}]*--icon-size-row:\s*18px;", css);
         Assert.Matches(@"\.mud-nav-group \.mud-collapse-container \.mud-nav-link \.mud-nav-link-icon\s*\{[^}]*font-size:\s*var\(--icon-size-row\);[^}]*margin-inline-end:\s*8px;", css);
         Assert.Matches(@"\.mud-nav-group > \.mud-nav-link \.mud-nav-link-text\s*\{[^}]*font-size:\s*var\(--mud-typography-caption-size\);[^}]*font-weight:\s*600;[^}]*text-secondary", css);
-        Assert.Matches(@"\.nav-section-link \.mud-nav-link\s*\{[^}]*margin-top:\s*16px;[^}]*margin-bottom:\s*4px;", css);
+        Assert.Matches(@"\.mud-nav-group > \.mud-nav-link\s*\{[^}]*margin-top:\s*16px;[^}]*margin-bottom:\s*4px;", css);
+        Assert.DoesNotContain("nav-section-link", css, StringComparison.Ordinal);
     }
 
     private static string AppCss() => File.ReadAllText(CssSource.RepoPath("src", "Huddle.App", "wwwroot", "app.css"));

@@ -1,6 +1,6 @@
 # Writing a Theme
 
-How Themes work in Agency.Huddle, and what you need to know to add one. Read it before
+How Themes work in Huddle, and what you need to know to add one. Read it before
 you create a file under `src/Huddle.App/Themes/` or change a palette value.
 
 It has two readers:
@@ -51,7 +51,7 @@ Each badge marks one element:
 | # | What you see | Palette property | How |
 | --- | --- | --- | --- |
 | 1 | Every pane and card ground: the page behind the messages, the top bar, the sidebar, the tab strip, the active tab, message cards, the Needs You card, the Composer, dialogs | `Surface` | Direct. `Background` and `DrawerBackground` are no longer painted by the shell |
-| 2 | The line under the top bar, the tab strip and the Room header; the sidebar's right edge; an outlined card's border | `LinesDefault` | Direct |
+| 2 | The line under the top bar, the tab strip and the Room header; the sidebar's right edge | `LinesDefault` | Direct. Chrome lines only: a card's border is `Divider` (badge 6) |
 | 3 | The active sidebar row: its text and its fill; links in messages | `Primary` | Blend. Text is `Primary` 70% + `TextPrimary`; the row's fill is `Primary` 14% over `Surface`. "New chat" and other text actions are `TextSecondary` |
 | 4 | Group headings (Rooms, Teams); a message's time; an inactive tab's title; the "Reading launch-checklist.md…" activity line; the Composer's placeholder | `TextSecondary` | Direct |
 | 5 | The 2px line on top of the active tab; the Composer's border while it is focused | `Primary` | Direct |
@@ -61,9 +61,13 @@ Each badge marks one element:
 | 9 | An avatar monogram: the tint and the letters | `Primary` | Blend. Fill is the avatar's colour (`Primary` when none is chosen) 20% over `Surface`; letters are that colour 75% toward `TextPrimary` |
 | 10 | Your own message bubble | `Primary` over `Surface` | Blend: 14% fill, 28% border |
 | 11 | The Composer's border at rest | `LinesInputs` | Direct |
-| 12 | Status and presence badges: online, degraded, offline | `Success`, `Warning`, `Error` | Blend. The filled tones are the colour 20% toward black, with a white glyph; offline is a hollow ring |
+| 12 | Status and presence badges | Online `Success`; Starting `Warning`; Awake `Info`; Degraded `Error` | Blend. The filled tones are the colour 20% toward black, with a white glyph; Offline and Asleep are a hollow ring in the neutral grey. The glyphs are in [design-system.md › Avatars and status](design-system.md#avatars-and-status) |
 | 13 | A tinted status chip ("Review") | `Warning` here; any status colour | Blend: the colour 14% over `Surface`; text and icon the colour 70% toward `TextPrimary` |
 | 14 | A quiet chip ("beta") | `BackgroundGray` | Direct |
+
+The badges, chips and a Board card are drawn larger, one of each, in the shared
+[visual reference](../images/visual-reference.svg) that design-system.md and the User Guide
+also use.
 
 The outlined "Decline" button next to 12 is `Primary` text with a translucent `Primary`
 border; MudBlazor sets the transparency.
@@ -105,7 +109,7 @@ Derived shades you will meet:
 | Hover on rows, buttons, menu items, tabs | MudBlazor's hover shade (`ActionDefaultHover`), a faint translucent dark or light layer, not `TableHover` |
 | A filled button while hovered | `Primary`, darkened |
 | A selected filter chip's fill; selected text in the Library editor | `Primary`, as a translucent hover shade |
-| Warning, info and error notice banners (`MudAlert`) | The status colour, darkened for the text and made translucent for the fill |
+| Warning, info and error notice banners (`MudAlert`) | The status colour, made translucent for the fill; the icon and the 3px leading bar in the status colour. MudBlazor darkens the status colour for the text, but `app.css` overrides that: a notice's sentence is `TextPrimary` |
 | A suggested role's text | `Success`, darkened |
 
 ### Where to look, screen by screen
@@ -126,7 +130,7 @@ The codes (`S1`, `C6` and so on) are the container names in
 | `S2b`–`S2e` | Active row | Text `Primary` 70% + `TextPrimary`, fill `Primary` 14% over `Surface` (20% when hovered) |
 | `S2b` | "New chat" and other action rows | `TextSecondary` text and icon |
 | `S2c` | Expand chevrons, a Project's icon | `TextSecondary`, open or closed |
-| any | Health dots | Online `Success`, degraded and starting `Warning` (starting lighter), offline `Error` |
+| any | Health and presence badges | The tones of badge 12; the glyph for each state is in [design-system.md › Avatars and status](design-system.md#avatars-and-status) |
 
 **The workspace** ([Figure 2](wireframes.md#figure-2-the-workspace-with-two-tab-groups)):
 
@@ -152,7 +156,7 @@ The codes (`S1`, `C6` and so on) are the container names in
 | `C7b` | Turn detail | `TextSecondary`; an edit preview's removed and added sides are marked `Error` and `Success` |
 | `C7c` | Draft caret, tool activity | `TextSecondary` |
 | `C8` | Agent card | `Surface`, border `LinesDefault`; filled button `Primary` with `PrimaryContrastText` |
-| `C9` | Notices | Warning or info banners, derived from `Warning` and `Info` |
+| `C9` | Notices | Warning or info banners: fill, icon and leading bar derived from `Warning` and `Info`; the sentence `TextPrimary` |
 | `C10b` | Composer | `Surface`, border `LinesInputs`, placeholder `TextSecondary`; the focused border is `Primary` |
 | `C10a` | Upload chip | Name `TextPrimary`, size `TextSecondary`, failure `Error` |
 | `C11` | Reference picker | `Surface`; the highlighted item the hover shade; dimmed items `TextSecondary` |
@@ -161,13 +165,13 @@ The codes (`S1`, `C6` and so on) are the container names in
 
 | Code | Element | Palette |
 | --- | --- | --- |
-| `T2d` | Counts | `TextSecondary`, numbers `TextPrimary`; the "need you" count is plain caption text |
-| `T3` | Filter chips | Border `LinesInputs`; a set chip has a `Primary` border and a translucent `Primary` fill |
+| `T2d` | Counts | `TextSecondary`, numbers `TextPrimary`; the "need you" count is `Warning` mixed 70% toward `TextPrimary` |
+| `T3` | Filter chips | A dashed `LinesInputs` border while unset; a set chip has a `Primary` border and `Primary` 14% over `Surface` |
 | `T4` | Board ground | `Surface` |
-| `T5` | Column | `BackgroundGray`. There is no coloured edge per state; the state is named in the header and shown by a tinted status chip |
+| `T5` | Column (lane) | `Surface` with a `Divider` border. There is no coloured edge per state; the state is named by the column header's dot and label |
 | `T6` | Task card | `Surface`; assignee row rule `LinesDefault`; dragging border `Primary` |
 | `T6` | Selected card or list row | `Primary` 14% over `Surface` (20% when hovered), plus a `Primary` outline on cards |
-| `T6` | Priority and State chips | Tinted status chips: the status colour 14% over `Surface`, text and icon 70% toward `TextPrimary` |
+| `T6` | Priority chip (a card shows no State chip) | Tinted status chips: the status colour 14% over `Surface`, text and icon 70% toward `TextPrimary` |
 | `T6` | Overdue date | A warning icon and the date at weight 600; no red text |
 | `T7a` | Drawer resize handle | `ActionDefault`; `Primary` when focused |
 
@@ -189,9 +193,9 @@ The codes (`S1`, `C6` and so on) are the container names in
 | `G3` | "Stored at" lines | `TextSecondary` |
 | `G3` | Theme picker | Border `DividerLight`; headings `TextSecondary` on `BackgroundGray` |
 | `G3` | Prompt fields | Rules `DividerLight`; placeholder names `TextSecondary` on `BackgroundGray` |
-| `P4` | Teammate tile | `Surface`, border `Divider`; on hover the hover shade and a `LinesDefault` border; role `TextSecondary` |
+| `P4` | Teammate tile | `Surface`, border `Divider`; on hover the hover shade, and the border stays `Divider`; role `TextSecondary` |
 | `B3` | Step strip | Current and done steps: `Primary` badge with `PrimaryContrastText`; upcoming steps `TextSecondary` with a `Divider` ring |
-| `B6a` | Team type card | `Surface`, border `Divider`; selected `Primary` 14% fill with a `Primary` border; icon tiles in the type's tint (see blends) |
+| `B6a` | Team type card | `Surface`, border `Divider`; selected `Primary` 14% fill with a `Primary` border; icon tile `BackgroundGray` with a `TextSecondary` icon, the same quiet grey for every type |
 | `B9c` | Roster card | `Surface`, border `Divider`; the manager's card `Primary` 8% with a `Primary` border; a removed card's border `Error` |
 | `B9c` | Tier label | Strongest `Primary` 14%, balanced `Info` 16%, fast `Success` 16%, each over `Surface` |
 | `B9a` | "Add a role" card | `Primary` text, `Divider` dashed border, `Primary` border on hover |
@@ -216,9 +220,6 @@ palette:
   avatar with no colour chosen uses `Primary`. "Use the theme colour" in the avatar
   editor goes back to that.
 - **Tooltips** use MudBlazor's fixed dark grey and white in every Theme.
-- **`Tertiary`** (one Team type tint) is not set by any shipped Theme, so it shows
-  MudBlazor's default. If your design needs it, say so: the engineer must add it to every
-  Theme.
 - **The error banner** ("An unhandled error has occurred", `S0b`) is black on a fixed
   light yellow on purpose, so it stays readable even if a Theme is broken.
 - **Fonts, sizes, spacing and shapes** are shared by every Theme. Only corner rounding
@@ -459,11 +460,17 @@ PrimaryContrastText = "#000000", // computed: black 8.47:1 vs white 2.48:1 again
 One of the two always reaches 4.5:1 against any colour; the proof is in
 `ContrastColour`'s remarks.
 
-The Huddle Themes follow the rule: white on Huddle Light's `#5b64c8` (5.12:1) and near-black `#141413` on
-Huddle Dark's `#8f97e6` (6.79:1; pure black would read 7.74:1, but `#141413` matches Huddle Light's `TextPrimary`).
+The Huddle Themes follow the rule: white on Huddle Light's `#5b64c8` (5.12:1) and
+near-black `#141413` on Huddle Dark's `#8f97e6` (6.79:1; pure black would read 7.74:1, but
+`#141413` matches Huddle Light's `TextPrimary`).
 
-The arithmetic for Huddle Dark: `#141413` has relative luminance 0.00696 and `#8f97e6` has 0.33686, so the ratio
-is (0.33686 + 0.05) / (0.00696 + 0.05) = 6.79.
+<details>
+<summary>The arithmetic for Huddle Dark</summary>
+
+`#141413` has relative luminance 0.00696 and `#8f97e6` has 0.33686, so the ratio is
+(0.33686 + 0.05) / (0.00696 + 0.05) = 6.79.
+
+</details>
 
 ### 4. Run the tests
 
@@ -607,9 +614,9 @@ leave empty is a silent gap that only shows up in the Theme nobody tested.
 
 Most of the Themes in the catalog are VS Code's bundled colour Themes, converted once by
 hand. [`ThemeCatalog.BuiltIn`](../../src/Huddle.App/Themes/ThemeCatalog.cs) is the one place that
-counts them (at the time of writing 21: two Huddle, two Custom Accent and 17 ports), so
-quote a number from there rather than from here. Nothing reads VS Code JSON at run time; the C# file **is** the artefact. To port
-another one, follow the same mapping so it reads like the others.
+counts them, so quote a number from there rather than from here. Nothing reads VS Code
+JSON at run time; the C# file **is** the artefact. To port another one, follow the same
+mapping so it reads like the others.
 
 ### The mapping
 

@@ -95,7 +95,7 @@ public sealed class TaskDetailAssigneeTests
         AssigneeOption nova = (await searchTask).Single();
 
         await cut.InvokeAsync(() => assignee.Instance.ValueChanged.InvokeAsync(nova));
-        await cut.InvokeAsync(() => FindButton(cut, "Save & Notify Nova").ClickAsync());
+        await cut.InvokeAsync(() => FindButton(cut, "Save & notify Nova").ClickAsync());
 
         Assert.Equal("Nova", harness.Store.Get(task.Id)?.Assignee);
     }

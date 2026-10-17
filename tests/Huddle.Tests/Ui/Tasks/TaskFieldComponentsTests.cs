@@ -26,8 +26,8 @@ public sealed class TaskFieldComponentsTests : IDisposable
     /// <summary>The status chip is a Small tinted chip in the state's colour family, with the state's icon and wire name.</summary>
     [Theory]
     [InlineData(TaskState.Backlog, Color.Default)]
-    [InlineData(TaskState.ToDo, Color.Info)]
-    [InlineData(TaskState.InProgress, Color.Warning)]
+    [InlineData(TaskState.ToDo, Color.Default)]
+    [InlineData(TaskState.InProgress, Color.Info)]
     [InlineData(TaskState.Review, Color.Secondary)]
     [InlineData(TaskState.Done, Color.Success)]
     [InlineData(TaskState.Rejected, Color.Error)]

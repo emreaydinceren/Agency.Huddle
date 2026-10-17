@@ -114,7 +114,7 @@
                                   Value="this.name" ValueChanged="this.OnNameChanged"
                                   Error="@(this.NameProblem is not null)" ErrorText="@this.NameProblem" Class="build-team-name" />
                     <MudTextField T="string" Variant="Variant.Outlined" Margin="Margin.Dense" Label="What it&#8217;s for" Immediate="true"
-                                  Lines="6" Value="this.purpose" ValueChanged="this.OnPurposeChanged" Class="build-team-purpose" />
+                                  Lines="6" Value="this.purpose" ValueChanged="this.OnPurposeChanged" Class="build-team-purpose long-text-field" />
                     <MudTextField T="string" Variant="Variant.Outlined" Margin="Margin.Dense" Label="@LibraryFolderLabel" Immediate="true"
                                   Value="this.workspace" ValueChanged="this.OnWorkspaceChanged"
                                   Adornment="Adornment.End" AdornmentIcon="@Icons.Material.Outlined.Folder"
@@ -197,8 +197,8 @@
                                                        aria-label="@($"Message {draft.Name}")" Class="roster-message">Message</MudButton>
                                         }
                                         <MudMenu Label="Remove" Variant="Variant.Text" Size="Size.Small" EndIcon="@Icons.Material.Filled.ArrowDropDown" AriaLabel="@($"Remove {draft.Name}")" Class="roster-remove">
-                                            <MudMenuItem OnClick="@(() => this.LeaveTeam(draft.Key))" Class="roster-leave">Remove from Team</MudMenuItem>
-                                            <MudMenuItem OnClick="@(() => this.RemoveDraft(draft.Key))" Class="roster-delete">Delete Teammate</MudMenuItem>
+                                            <MudMenuItem OnClick="@(() => this.LeaveTeam(draft.Key))" Class="roster-leave">Remove from team</MudMenuItem>
+                                            <MudMenuItem OnClick="@(() => this.RemoveDraft(draft.Key))" Class="roster-delete">Delete teammate</MudMenuItem>
                                         </MudMenu>
                                     }
                                     else

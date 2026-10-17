@@ -153,7 +153,7 @@
                 case "start_date":
                     <TemplateColumn @key="key" HeaderStyle="@this.HeaderStyle("start_date")" InitialDirection="@this.DirectionFor("start_date")" T="TaskItem" Title="Start date" Hidden="@(!this.Shows("start_date"))" Sortable="true"
                                      SortBy="@(t => (object?)t.StartDate)">
-                        <CellTemplate>@TaskDates.Display(context.Item.StartDate)</CellTemplate>
+                        <CellTemplate><span title="@TaskDates.Tooltip(context.Item.StartDate)">@TaskDates.Human(context.Item.StartDate, this.Clock)</span></CellTemplate>
                     </TemplateColumn>
                     break;
                 case "due_date":
@@ -163,11 +163,11 @@
                             @if (this.IsOverdue(context.Item))
                             {
                                 <MudIcon Icon="@Icons.Material.Filled.Warning" Color="Color.Error" Size="Size.Small" aria-label="Overdue" />
-                                <span class="task-due-overdue">@TaskDates.Display(context.Item.DueDate)</span>
+                                <span class="task-due-overdue" title="@TaskDates.Tooltip(context.Item.DueDate)">@TaskDates.Human(context.Item.DueDate, this.Clock)</span>
                             }
                             else
                             {
-                                @TaskDates.Display(context.Item.DueDate)
+                                <span title="@TaskDates.Tooltip(context.Item.DueDate)">@TaskDates.Human(context.Item.DueDate, this.Clock)</span>
                             }
                         </CellTemplate>
                     </TemplateColumn>
@@ -175,19 +175,19 @@
                 case "created":
                     <TemplateColumn @key="key" HeaderStyle="@this.HeaderStyle("created")" InitialDirection="@this.DirectionFor("created")" T="TaskItem" Title="Created" Hidden="@(!this.Shows("created"))" Sortable="true"
                                      SortBy="@(t => (object?)t.Created)">
-                        <CellTemplate>@TaskDates.Display(context.Item.Created)</CellTemplate>
+                        <CellTemplate><span title="@TaskDates.Tooltip(context.Item.Created, this.Clock)">@TaskDates.Human(context.Item.Created, this.Clock)</span></CellTemplate>
                     </TemplateColumn>
                     break;
                 case "updated":
                     <TemplateColumn @key="key" HeaderStyle="@this.HeaderStyle("updated")" InitialDirection="@this.DirectionFor("updated")" T="TaskItem" Title="Updated" Hidden="@(!this.Shows("updated"))" CellClass="task-col-low-2" HeaderClass="task-col-low-2" Sortable="true"
                                      SortBy="@(t => (object?)t.Updated)">
-                        <CellTemplate>@TaskDates.Display(context.Item.Updated)</CellTemplate>
+                        <CellTemplate><span title="@TaskDates.Tooltip(context.Item.Updated, this.Clock)">@TaskDates.Human(context.Item.Updated, this.Clock)</span></CellTemplate>
                     </TemplateColumn>
                     break;
                 case "closed":
                     <TemplateColumn @key="key" HeaderStyle="@this.HeaderStyle("closed")" InitialDirection="@this.DirectionFor("closed")" T="TaskItem" Title="Closed" Hidden="@(!this.Shows("closed"))" Sortable="true"
                                      SortBy="@(t => (object?)t.ClosedAt)">
-                        <CellTemplate>@TaskDates.Display(context.Item.ClosedAt)</CellTemplate>
+                        <CellTemplate><span title="@TaskDates.Tooltip(context.Item.ClosedAt, this.Clock)">@TaskDates.Human(context.Item.ClosedAt, this.Clock)</span></CellTemplate>
                     </TemplateColumn>
                     break;
                 case "origin":

@@ -5,7 +5,7 @@ internal static class SkillOrigin
 {
     private const string GitHubPrefix = "https://github.com/";
 
-    /// <summary>Describes where an installed Skill lives: its publisher and path in the repository it was imported from, or, for one with no provenance record, its folder under the Skills folder. The provenance line already says "Built in" or "Yours", so a shipped Skill with no folder of its own adds nothing.</summary>
+    /// <summary>Describes where an installed Skill lives: its publisher and path in the repository it was imported from, or, for one with no provenance record, its folder under the Skills folder. The provenance line already says "Built-in" or "Yours", so a shipped Skill with no folder of its own adds nothing.</summary>
     /// <param name="skill">The installed Skill.</param>
     /// <returns>The words, or <see langword="null"/> when there is nothing to add.</returns>
     public static string? Of(Skill skill)
@@ -31,7 +31,7 @@ internal static class SkillOrigin
 
         if (string.Equals(source, "builtin", StringComparison.Ordinal))
         {
-            return "Built in";
+            return "Built-in";
         }
 
         string repo = source.StartsWith(GitHubPrefix, StringComparison.OrdinalIgnoreCase) ? source[GitHubPrefix.Length..] : source;

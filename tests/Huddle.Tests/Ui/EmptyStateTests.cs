@@ -7,7 +7,7 @@ namespace Agency.Huddle.Tests.Ui;
 
 /// <summary>
 /// Renders <see cref="EmptyState"/> on its own. An empty state is the one sentence that says what is missing and what to
-/// do next (design-system "Patterns worth copying"; UX-R20, UX-077): a <c>Typo.subtitle2</c> title line with
+/// do next (design-system "Patterns worth copying"; UX-R20, UX-077): a <c>Typo.subtitle1</c> title line with
 /// <c>role="status"</c>, inline in <c>.empty-state</c>, or in <c>.tab-empty</c> when it fills a pane.
 /// </summary>
 public sealed class EmptyStateTests
@@ -15,7 +15,7 @@ public sealed class EmptyStateTests
     private const string Sentence = "Choose one from the menu.";
     private const string Title = "No pages are open";
 
-    /// <summary>The title renders in a role=status region at subtitle2 (14px/600) inside .empty-state; the sentence below it is body2 (13px) in secondary text.</summary>
+    /// <summary>The title renders in a role=status region at subtitle1 (14px/600) inside .empty-state; the sentence below it is body2 (13px) in secondary text.</summary>
     [Fact]
     public async Task TitleAndText_RenderAsStatusTitleAndSecondarySentence()
     {
@@ -25,7 +25,7 @@ public sealed class EmptyStateTests
 
         var status = cut.Find(".empty-state [role='status']");
         Assert.Equal(Title, status.TextContent);
-        Assert.Contains("mud-typography-subtitle2", status.ClassList);
+        Assert.Contains("mud-typography-subtitle1", status.ClassList);
         var sentence = cut.Find(".empty-state .empty-state-text");
         Assert.Equal(Sentence, sentence.TextContent);
         Assert.Contains("mud-typography-body2", sentence.ClassList);

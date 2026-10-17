@@ -111,6 +111,24 @@ button:focus-visible {
     fill: var(--mud-palette-text-secondary);
 }
 
+/* Editable long text (a prompt, a persona, instructions, a description) is body1: 14px, weight 400, the body line
+   height. MudBlazor draws an input's text in its subtitle1 role, which is 600 in this scale, with a 1.1876em line
+   height; this class sets the three properties back on the input and the textarea inside it. Not for monospace or code editors. */
+/* What a Human types is text, not emphasis. MudBlazor puts mud-typography-subtitle1 on every .mud-input, and subtitle1
+   is weight 600 in this scale, so every field, select and search box read bold. The inline title edit sets its own h5
+   weight on the input element and still wins. */
+.mud-input.mud-typography-subtitle1 {
+    font-weight: var(--mud-typography-body1-weight);
+}
+
+.long-text-field .mud-input,
+.long-text-field .mud-input .mud-input-slot,
+.long-text-field .mud-input > textarea.mud-input-root {
+    font-size: var(--mud-typography-body1-size);
+    font-weight: 400;
+    line-height: var(--mud-typography-body1-lineheight);
+}
+
 /* An image avatar fills its circle and is cropped to it. TeammateAvatar renders a bare <img> and MudBlazor
    sizes only its own MudImage, so without this a 256 px picture sat at full size inside a 56 px avatar. */
 .mud-avatar img {
@@ -136,6 +154,39 @@ button:focus-visible {
 
 .mud-tab-slider {
     height: 2px;
+}
+
+/* An alert's sentence is body text in TextPrimary; only its icon and a 3px leading bar carry the status colour
+   (MudBlazor paints the whole sentence in the severity's dark shade, which reads as an error shouted at you). The
+   bar is transparent until a severity names its colour; the icon keeps MudBlazor's own status colour. The doubled
+   class outranks MudBlazor's outlined border shorthand. Filled alerts are left alone: their text sits on the fill. */
+.mud-alert {
+    border-inline-start: 3px solid transparent;
+}
+
+.mud-alert[class*="mud-alert-text-"] .mud-alert-message,
+.mud-alert[class*="mud-alert-outlined-"] .mud-alert-message {
+    color: var(--mud-palette-text-primary);
+}
+
+.mud-alert.mud-alert-text-error,
+.mud-alert.mud-alert-outlined-error {
+    border-inline-start: 3px solid var(--mud-palette-error);
+}
+
+.mud-alert.mud-alert-text-warning,
+.mud-alert.mud-alert-outlined-warning {
+    border-inline-start: 3px solid var(--mud-palette-warning);
+}
+
+.mud-alert.mud-alert-text-info,
+.mud-alert.mud-alert-outlined-info {
+    border-inline-start: 3px solid var(--mud-palette-info);
+}
+
+.mud-alert.mud-alert-text-success,
+.mud-alert.mud-alert-outlined-success {
+    border-inline-start: 3px solid var(--mud-palette-success);
 }
 
 /* ---- The type scale, in rendered pixels (ADR-0056) ---------------------------------------------
@@ -266,13 +317,6 @@ a.team-ref,
     border-top: 1px solid var(--mud-palette-divider);
 }
 
-/* A one-line status or hint: small, muted, no margin of its own. */
-.status-text {
-    margin: 0;
-    color: var(--mud-palette-text-secondary);
-    font-size: var(--mud-typography-body2-size);
-}
-
 /* A heading over a group of fields or tiles on a page: subtitle2 at 600 in the primary text colour, so it is never
    smaller or quieter than what it heads, with a light rule under it. */
 .teammates-group-heading,
@@ -286,17 +330,8 @@ a.team-ref,
     border-bottom: 1px solid var(--mud-palette-divider-light);
 }
 
-/* A bordered card on the page surface. */
-.panel-card {
-    padding: 16px;
-    background: var(--mud-palette-surface);
-    border: 1px solid var(--mud-palette-divider);
-    border-radius: var(--mud-default-borderradius);
-}
-
-/* A preformatted block that scrolls: a Task's process step, a file's text. */
-.process-step-preview,
-.preview-block {
+/* A preformatted block that scrolls: a Task's process step. */
+.process-step-preview {
     max-height: 16rem;
     overflow: auto;
     font-family: var(--font-mono);
@@ -318,8 +353,9 @@ a.team-ref,
 
 /* ---- Presence badge and status dot (DS-6, C3) ----------------------------------------------------
    A circle in the state's tone that carries a glyph, so the state is never colour alone: a green circle with a white
-   check (online), an amber circle with a pulse line that breathes (starting, awake), a red circle with a white dash
-   (degraded) and a hollow grey ring (offline, asleep). The three filled tones are the palette colour mixed 20% toward
+   check (online), an amber circle with a pulse line that breathes (starting), a blue circle with the same pulse
+   (awake: amber means needs attention, a running Turn does not), a red circle with a white dash
+   (degraded) and a hollow grey ring (offline, asleep). The four filled tones are the palette colour mixed 20% toward
    black, so the white glyph keeps 3:1 against the fill in Huddle Light and Huddle Dark (a test holds it). 10px on avatars
    up to 32px and standalone, 12px on 40px and up. Standalone it is the inline dot beside a name; on an avatar
    (.on-avatar, inside .presence-anchor) it sits on the bottom-right rim, ringed in 2px of Surface. */
@@ -343,7 +379,7 @@ a.team-ref,
 }
 
 .agent-dot.awake {
-    background: color-mix(in srgb, var(--mud-palette-warning) 80%, var(--mud-palette-black));
+    background: color-mix(in srgb, var(--mud-palette-info) 80%, var(--mud-palette-black));
     box-shadow: none;
 }
 
@@ -645,9 +681,13 @@ a.team-ref,
     font-size: var(--mud-typography-caption-size);
 }
 
+/* The trail starts at the workspace's left edge - the sidebar's width, which MudBlazor publishes as
+   --mud-drawer-width-left from the drawer's Width - so it reads as the trail of the page under it. The toolbar
+   already insets its content by its own 16px gutter, which is taken off. The centre cell keeps its 32rem. */
 .top-bar-start {
     min-width: 0;
     overflow: hidden;
+    padding-inline-start: calc(var(--mud-drawer-width-left) - 16px);
 }
 
 /* With nothing in the middle cell (no search box yet) the trail gets that space instead of the 32rem
@@ -796,7 +836,7 @@ a.team-ref,
    order - and only the group's own header additionally gets the 600 weight, via the more specific
    *direct*-child selector that a nested view link's ".mud-nav-link" never matches. */
 .mud-nav-link-text {
-    font-size: var(--mud-typography-subtitle2-size);
+    font-size: var(--mud-typography-body2-size);
 }
 
 .mud-nav-group .mud-nav-link-text {
@@ -809,9 +849,9 @@ a.team-ref,
     color: var(--mud-palette-text-secondary);
 }
 
-/* A section header sits 16px below the section above and 4px above its first row (S2). */
-.mud-nav-group > .mud-nav-link,
-.nav-section-link .mud-nav-link {
+/* A section header - a group with children (Rooms, Teams, Tasks) - sits 16px below the section above and 4px above
+   its first row (S2). Teammates and Library are destinations, not headers: see .nav-row-link below. */
+.mud-nav-group > .mud-nav-link {
     margin-top: 16px;
     margin-bottom: 4px;
 }
@@ -832,11 +872,16 @@ a.team-ref,
     padding-left: var(--nav-indent-1);
 }
 
-/* A top-level entry that is a single link (Teammates) is drawn as a section header like the group headers (UX-014). */
-.nav-section-link .mud-nav-link-text {
-    font-size: var(--mud-typography-caption-size);
-    font-weight: 600;
-    color: var(--mud-palette-text-secondary);
+/* A top-level entry that is a single link (Teammates, Library) is a destination, not a header: an ordinary row, 32px
+   high, with the 13px body-colour label and the 18px icon in the 24px slot of every other row. */
+.nav-row-link .mud-nav-link {
+    min-height: var(--nav-row-height);
+}
+
+.nav-row-link .mud-nav-link .mud-nav-link-text {
+    font-size: var(--mud-typography-body2-size);
+    font-weight: 400;
+    color: var(--mud-palette-text-primary);
 }
 
 /* The footer is icon-only (OP-4): the same row height and text size as every other row (UX-017). */
@@ -1035,6 +1080,12 @@ a.team-ref,
    as set apart without shouting over the replies it asked for. */
 .message-row.human {
     display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+}
+
+/* The Human's reference chips sit under the bubble, at its right edge. */
+.message-row.human .message-references {
     justify-content: flex-end;
 }
 
@@ -1552,8 +1603,16 @@ a.team-ref,
 
 .member-health-alert-item {
     margin: 0;
-    color: var(--mud-palette-error);
     font-size: var(--mud-typography-body2-size);
+}
+
+/* A notice in a Room sits in the Transcript's column: the same 760px, centred, with the same 24px inset as the
+   Transcript's padding and the Composer's, so the Transcript, the notice and the Composer share one left edge. */
+.room-notice-column {
+    box-sizing: border-box;
+    width: calc(100% - 48px);
+    max-width: 760px;
+    margin-inline: auto;
 }
 
 /* ---- Room budget: the pause, and the question that offers to lift it ----- */
@@ -1636,8 +1695,11 @@ a.team-ref,
     border-color: var(--mud-palette-lines-default);
 }
 
+/* justify-content overrides MudBlazor's global button rule, which centres a flex button's content: the avatar and the
+   text start at the tile's padding, so the "Working on" line's indent lands on the name's edge. */
 .teammate-tile {
     display: flex;
+    justify-content: flex-start;
     align-items: flex-start;
     gap: 16px;
     width: 100%;
@@ -1669,6 +1731,7 @@ a.team-ref,
 .teammate-tile-context {
     padding: 0 16px 16px calc(16px + 40px + 16px);
     margin-top: -8px;
+    text-align: left;
     font-size: var(--mud-typography-caption-size);
     color: var(--mud-palette-text-secondary);
 }
@@ -1679,7 +1742,7 @@ a.team-ref,
 
 /* The name is 14px at 600, the role 13px (below), the alias and state 12px, all in the tile's text column. */
 .teammates-item-name {
-    font-size: var(--mud-typography-subtitle2-size);
+    font-size: var(--mud-typography-subtitle1-size);
     font-weight: 600;
 }
 
@@ -2014,7 +2077,7 @@ a.team-ref,
 }
 
 .prompts-field-label {
-    font-size: var(--mud-typography-subtitle2-size);
+    font-size: var(--mud-typography-subtitle1-size);
     font-weight: 600;
     color: var(--mud-palette-text-primary);
 }
@@ -2131,6 +2194,13 @@ a.team-ref,
     background: var(--mud-palette-text-secondary);
 }
 
+/* Backlog and To Do are both Default, so Backlog's dot is a hollow dashed ring and To Do's stays solid. */
+.task-state-dot-backlog {
+    box-sizing: border-box;
+    background: transparent;
+    border: 1px dashed var(--mud-palette-text-secondary);
+}
+
 .task-state-dot-info { background: var(--mud-palette-info); }
 .task-state-dot-warning { background: var(--mud-palette-warning); }
 .task-state-dot-secondary { background: var(--mud-palette-secondary); }
@@ -2180,14 +2250,15 @@ a.team-ref,
     padding: 4px 0;
 }
 
-/* A column is a tinted lane (background-gray, darker than the page) and each card on it is a light
-   surface, so cards read as separate objects on a contrasting column. Theme tokens only. */
+/* A column is a Surface lane with a Divider hairline and the card radius: it reads in Light without the heavy gray
+   tint and stays visible in Dark, where a Background-gray lane vanished. Theme tokens only. */
 .task-board-column {
     position: relative;
     display: flex;
     flex-direction: column;
     min-width: 0;
-    background-color: var(--mud-palette-background-gray);
+    background-color: var(--mud-palette-surface);
+    border: 1px solid var(--mud-palette-divider);
     border-radius: var(--mud-default-borderradius);
 }
 
@@ -2273,7 +2344,7 @@ a.team-ref,
 }
 
 .task-card-title {
-    font-size: var(--mud-typography-subtitle2-size);
+    font-size: var(--mud-typography-subtitle1-size);
     font-weight: 600;
     display: -webkit-box;
     -webkit-box-orient: vertical;
@@ -2345,9 +2416,9 @@ a.team-ref,
     box-shadow: inset 0 0 0 2px var(--mud-palette-text-secondary), 0 0 0 2px var(--mud-palette-surface);
 }
 
-/* An awake assignee is mid-Turn: the same darkened amber as the pulse badge, so the white pulse line is readable. */
+/* An awake assignee is mid-Turn: the same darkened info blue as the pulse badge, so the white pulse line is readable. */
 .task-card-presence.awake .mud-badge.mud-badge-overlap {
-    background-color: color-mix(in srgb, var(--mud-palette-warning) 80%, var(--mud-palette-black));
+    background-color: color-mix(in srgb, var(--mud-palette-info) 80%, var(--mud-palette-black));
 }
 
 /* The card currently being dragged. */
@@ -2373,11 +2444,15 @@ a.team-ref,
     color: color-mix(in srgb, var(--mud-palette-error) 70%, var(--mud-palette-text-primary));
 }
 
-/* The 14px warning icon before an overdue date takes the date's colour. */
+/* A card's due date is 12px like the id; the warning icon before an overdue date is 1em of that and takes the date's colour. */
+.task-card-field-due-date {
+    font-size: var(--mud-typography-caption-size);
+}
+
 .task-due-overdue .task-due-icon {
     width: 1em;
     height: 1em;
-    font-size: var(--mud-typography-subtitle2-size);
+    font-size: inherit;
     color: inherit;
 }
 
@@ -3909,7 +3984,14 @@ a.team-ref,
     padding: 4px 16px;
 }
 
+/* The card's title is a sidebar header: caption size, 600, secondary, like the other sidebar section headers. */
+.needs-you-heading {
+    font-weight: 600;
+    color: var(--mud-palette-text-secondary);
+}
+
 .needs-you-row .mud-nav-link-text {
+    font-size: var(--mud-typography-body2-size);
     display: flex;
     align-items: center;
     gap: 8px;
@@ -4010,10 +4092,21 @@ a.team-ref,
     color: var(--mud-palette-text-primary);
 }
 
-/* A row's leading icon is 18px with an 8px gap to its label (a 24px avatar has the same gap). */
+/* Every row in a group has a 24px leading slot and an 8px gap to its label: a small avatar fills the slot (24px), an
+   18px icon is centred in it (3px either side). The avatar sits inside the label span, after MudBlazor's 12px text
+   inset, so the icon is moved over by the same 12px and the label loses that inset: the slot and the label start at
+   one x whichever leads the row. Top-level destinations (Teammates, Library) keep the section header's geometry, so
+   they line up with "Rooms", "Teams" and "Tasks" and do not read as children of the group above. */
 .mud-nav-group .mud-collapse-container .mud-nav-link .mud-nav-link-icon {
+    box-sizing: content-box;
     font-size: var(--icon-size-row);
+    padding-inline: calc((24px - var(--icon-size-row)) / 2);
+    margin-inline-start: 12px;
     margin-inline-end: 8px;
+}
+
+.mud-nav-group .mud-collapse-container .mud-nav-link .mud-nav-link-icon + .mud-nav-link-text {
+    margin-inline-start: 0;
 }
 
 .mud-nav-group .mud-collapse-container .mud-nav-link .mud-nav-link-text {
@@ -4382,7 +4475,7 @@ a.team-ref,
 }
 
 .roster-name {
-    font-size: var(--mud-typography-subtitle2-size);
+    font-size: var(--mud-typography-subtitle1-size);
     font-weight: 600;
 }
 
@@ -4676,7 +4769,7 @@ a.team-ref,
 .mud-chip.status-chip .mud-icon-root {
     width: 14px;
     height: 14px;
-    font-size: var(--mud-typography-subtitle2-size);
+    font-size: var(--mud-typography-subtitle1-size);
     margin-inline: 0 4px;
 }
 
