@@ -287,6 +287,26 @@ public sealed class ElicitationCardTests
         Assert.Equal(["agree=Boolean:False"], await AcceptedAsync(card, ct));
     }
 
+    /// <summary>Radio and checkbox options are dense rows whose label and description share one truncating text span, so each is a one-line 32px row.</summary>
+    [Fact]
+    public async Task SelectOptions_AreDenseOneLineRows()
+    {
+        CancellationToken ct = Xunit.TestContext.Current.CancellationToken;
+        using ElicitationFixture fixture = await ElicitationFixture.CreateAsync(ct);
+        User coach = await fixture.AddAgentAsync("Coach", ct);
+        Room room = await fixture.CreateRoomAsync([coach], ct);
+        string schema = Schema("\"color\":{\"type\":\"string\",\"title\":\"Color\",\"oneOf\":[{\"const\":\"r\",\"title\":\"Red\",\"description\":\"Warm\"},{\"const\":\"g\",\"title\":\"Green\"}]}");
+        _ = fixture.Elicitations.Add(room.Id, coach.Id, coach.Name, FormOf(schema));
+        await using MudBunitContext ctx = new();
+        Register(ctx, fixture);
+
+        IRenderedComponent<ContainerFragment> cut = RenderCard(ctx, room.Id);
+
+        Assert.Equal(2, cut.FindAll(".elicitation-card-option").Count);
+        Assert.All(cut.FindAll(".elicitation-card-option"), option => Assert.NotNull(option.QuerySelector(".elicitation-card-option-text > .elicitation-card-option-label")));
+        Assert.Equal(["Red", "Green"], [.. cut.FindAll("label.mud-radio .elicitation-card-option-label").Select(label => label.TextContent.Trim())]);
+    }
+
     /// <summary>A single select is a radio group showing each option's title and description; choosing one sends its value, not its title.</summary>
     [Fact]
     public async Task SingleSelect_Chosen_ReachesTheAnswerAsTheOptionValue_AndIsPostedToTheTranscript()

@@ -94,6 +94,23 @@ public sealed class RoomLayoutSourceTests
         Assert.Contains("text-transform: none;", body, StringComparison.Ordinal); // contains-ok: stylesheet source text, not markup
     }
 
+    /// <summary>
+    /// An Elicitation card's radio and checkbox options are one-line 32px rows like the Question card's: a fixed
+    /// 32px height, and the label and description truncate on one line instead of wrapping.
+    /// </summary>
+    [Fact]
+    public void AppCss_ElicitationCardOption_IsAOneLine32pxRow()
+    {
+        string css = ReadAppCss();
+        string row = RuleBody(css, ".elicitation-card-option");
+        string text = RuleBody(css, ".elicitation-card-option-text");
+
+        Assert.Contains("height: 32px;", row, StringComparison.Ordinal); // contains-ok: stylesheet source text, not markup
+        Assert.DoesNotContain("44px", row, StringComparison.Ordinal); // contains-ok: stylesheet source text, not markup
+        Assert.Contains("white-space: nowrap;", text, StringComparison.Ordinal); // contains-ok: stylesheet source text, not markup
+        Assert.Contains("text-overflow: ellipsis;", text, StringComparison.Ordinal); // contains-ok: stylesheet source text, not markup
+    }
+
     /// <summary>A ranking row, whose arrow buttons are <c>MudIconButton</c>s, is at least 44 pixels tall.</summary>
     [Fact]
     public void AppCss_QuestionCardRankRow_IsTouchSized()

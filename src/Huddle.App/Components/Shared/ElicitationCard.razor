@@ -115,11 +115,11 @@
                                                        ValueChanged="@(value => this.SetSingle(current, shown, value))">
                                             @foreach (ElicitationOption option in shown.Options)
                                             {
-                                                <MudRadio @key="option.Value" T="string" Value="@option.Value" Color="Color.Primary" Class="elicitation-card-option">
-                                                    <span class="elicitation-card-option-label">@option.Label</span>@if (option.Description is not null)
+                                                <MudRadio @key="option.Value" T="string" Value="@option.Value" Color="Color.Primary" Dense="true" Class="elicitation-card-option">
+                                                    <span class="elicitation-card-option-text"><span class="elicitation-card-option-label">@option.Label</span>@if (option.Description is not null)
                                                     {
                                                         <span class="elicitation-card-option-description">@option.Description</span>
-                                                    }
+                                                    }</span>
                                                 </MudRadio>
                                             }
                                         </MudRadioGroup>
@@ -135,14 +135,15 @@
                                                 string value = option.Value;
                                                 <MudCheckBox @key="value" T="bool"
                                                              Color="Color.Primary"
+                                                             Dense="true"
                                                              Class="elicitation-card-option"
                                                              Disabled="@optionsDisabled"
                                                              Value="@this.IsTicked(current, shown, value)"
                                                              ValueChanged="@(on => this.SetTicked(current, shown, value, on))">
-                                                    <span class="elicitation-card-option-label">@option.Label</span>@if (option.Description is not null)
+                                                    <span class="elicitation-card-option-text"><span class="elicitation-card-option-label">@option.Label</span>@if (option.Description is not null)
                                                     {
                                                         <span class="elicitation-card-option-description">@option.Description</span>
-                                                    }
+                                                    }</span>
                                                 </MudCheckBox>
                                             }
                                         </MudStack>
