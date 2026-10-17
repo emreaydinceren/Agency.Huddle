@@ -96,6 +96,16 @@
     public string? PendingImageExtension { get; set; }
 
     /// <summary>
+    /// <see langword="true"/> at <see cref="MudBlazor.Size.Small"/> (24px), where a picture reads as a blur beside the
+    /// monograms, so no image is drawn - stored or pending. Images show from 32px up, and the Transcript's
+    /// <c>avatar-transcript</c> class makes a <see cref="MudBlazor.Size.Small"/> avatar 32px in <c>app.css</c>, so it
+    /// is exempt.
+    /// </summary>
+    private bool DrawsMonogramOnly =>
+        this.Size == Size.Small
+        && !(this.Class ?? string.Empty).Split(' ', StringSplitOptions.RemoveEmptyEntries).Contains("avatar-transcript", StringComparer.Ordinal);
+
+    /// <summary>
     /// The image's <c>src</c>: the pending image as a data URL when one is set, else the stored image's route,
     /// or <see langword="null"/> when there is neither. A pending image can never be served by route because
     /// nothing is written to <c>{DataDir}/avatars</c> until a save.
@@ -104,6 +114,11 @@
     {
         get
         {
+            if (this.DrawsMonogramOnly)
+            {
+                return null;
+            }
+
             if (this.PendingImage is not null
                 && this.PendingImageExtension is not null
                 && MediaTypeOf(this.PendingImageExtension) is { } mediaType)

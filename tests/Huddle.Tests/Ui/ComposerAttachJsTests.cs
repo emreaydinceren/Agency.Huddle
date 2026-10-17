@@ -122,6 +122,30 @@ public sealed class ComposerAttachJsTests
         Assert.Equal(1, result.GetProperty("newAssigned").GetInt32());
     }
 
+    /// <summary>
+    /// Attaching observes the composer box for resizes, and a change of the box's width refits the textarea, so an empty
+    /// Composer does not stay as tall as it was when the window was narrow; <c>detach</c> disconnects the observer.
+    /// </summary>
+    [Fact]
+    public void Attach_ObservesTheBoxWidth_RefitsOnResize_AndDetachDisconnects()
+    {
+        JsonElement result = Run("resize-observer");
+
+        Assert.Equal(1, result.GetProperty("count").GetInt32());
+        Assert.True(result.GetProperty("observesBox").GetBoolean());
+        Assert.Equal("102px", result.GetProperty("heightAfterResize").GetString());
+        Assert.True(result.GetProperty("disconnected").GetBoolean());
+    }
+
+    /// <summary>A resize that leaves the width unchanged (the textarea's own height change) does not refit, so the observer cannot feed itself.</summary>
+    [Fact]
+    public void ResizeObserver_SameWidth_DoesNotRefit()
+    {
+        JsonElement result = Run("resize-same-width");
+
+        Assert.Equal("999px", result.GetProperty("heightAfterResize").GetString());
+    }
+
     /// <summary>When SendAsync reports it held the message (uploads pending) the box keeps its text; when it posted, the box clears.</summary>
     [Theory]
     [InlineData("send-held", "hello")]
