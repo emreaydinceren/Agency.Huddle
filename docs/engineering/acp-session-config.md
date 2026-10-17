@@ -257,7 +257,7 @@ actually advertised, because a protocol reader that silently drops an
 advertised option is exactly the failure class
 [traps.md](../engineering/traps.md) exists for.
 `ModelCatalogProbe.WithoutAdapterDefault` does the filtering instead, one layer
-up. The Teammate card's blank "Use the agent's default" option *is* that
+up. The Teammate card's blank "Agent default" option *is* that
 filtered-out choice, and it stores `null`, which means no
 `session/set_config_option` is sent for effort at all.
 

@@ -102,9 +102,9 @@
                     @* UX-E15: Title and Alias share one row so the New teammate dialog fits a 900px-high window. *@
                     <div class="teammate-card-row teammate-card-identity-row">
                         <MudTextField T="string" Label="Title" Placeholder="e.g. Chief of Staff" @bind-Value="this.title"
-                                      Variant="Variant.Outlined" Margin="Margin.Dense" HelperText="A short role description, shown alongside the Name." />
+                                      Variant="Variant.Outlined" Margin="Margin.Dense" HelperText="Shown beside the name." />
                         <MudTextField T="string" Label="Alias" Placeholder="e.g. coo" @bind-Value="this.alias"
-                                      Variant="Variant.Outlined" Margin="Margin.Dense" HelperText="A short working handle, for mentions and quick reference." />
+                                      Variant="Variant.Outlined" Margin="Margin.Dense" HelperText="For @@mentions." />
                     </div>
                     <MudTextField T="string" Label="Teams" Placeholder="e.g. Business, Household" @bind-Value="this.teams"
                                   Variant="Variant.Outlined" Margin="Margin.Dense" HelperText="Comma-separated. Leave blank for no team." />
@@ -463,15 +463,15 @@
                .mud-input.mud-disabled dims the text and dots the underline, while the read-only case has
                no input rule at all. A read-only select would therefore look live and silently swallow
                the click - worse than the incomplete list it replaced. Verified against the shipped
-               MudBlazor.min.css, not assumed. The cost is the tab order; ModelHelperText carries the
+               MudBlazor.min.css, not assumed. The cost is the tab order; ModelRowHelperText carries the
                reason on screen either way, and the window is one adapter spawn long. *@
             @* UX-E15: Model, Effort and Work mode are one row of equal selects under the one Model label. *@
-            <div class="teammate-card-row teammate-card-model-row mb-3">
+            <div class="teammate-card-row teammate-card-model-row mb-1">
             <div class="teammate-card-cell">
             <MudSelect T="string" Label="Model" Value="@(this.model ?? string.Empty)" ValueChanged="this.OnModelChangedAsync"
                        Disabled="@this.modelsLoading" aria-busy="@(this.modelsLoading ? "true" : null)" Variant="Variant.Outlined" Margin="Margin.Dense"
-                       HelperText="@this.ModelHelperText" Class="@(this.modelsLoading ? "teammate-card-probing" : null)">
-                <MudSelectItem T="string" Value="@string.Empty">Use the agent's default</MudSelectItem>
+                       title="Which model this teammate thinks with." Class="@(this.modelsLoading ? "teammate-card-probing" : null)">
+                <MudSelectItem T="string" Value="@string.Empty">@DefaultOptionText</MudSelectItem>
                 @foreach (var choice in this.ModelChoices)
                 {
                     <MudSelectItem T="string" Value="@choice.Id">@choice.Name</MudSelectItem>
@@ -490,8 +490,8 @@
                the list it is actually offering. *@
             <MudSelect T="string" Label="Effort" Value="@(this.effort ?? string.Empty)" ValueChanged="this.OnEffortChanged"
                        Disabled="@this.effortsLoading" aria-busy="@(this.effortsLoading ? "true" : null)" Variant="Variant.Outlined" Margin="Margin.Dense"
-                       HelperText="@this.EffortHelperText" Class="@(this.effortsLoading ? "teammate-card-probing" : null)">
-                <MudSelectItem T="string" Value="@string.Empty">Use the agent's default</MudSelectItem>
+                       title="How hard this teammate thinks." Class="@(this.effortsLoading ? "teammate-card-probing" : null)">
+                <MudSelectItem T="string" Value="@string.Empty">@DefaultOptionText</MudSelectItem>
                 @foreach (var choice in this.EffortChoices)
                 {
                     <MudSelectItem T="string" Value="@choice.Id">@choice.Name</MudSelectItem>
@@ -517,8 +517,8 @@
                 <MudSelect T="string" Label="Work mode" Value="@(this.workMode ?? string.Empty)" ValueChanged="this.OnWorkModeChanged"
                            Disabled="@this.effortsLoading" aria-busy="@(this.effortsLoading ? "true" : null)" ToStringFunc="@this.WorkModeLabel"
                            Variant="Variant.Outlined" Margin="Margin.Dense"
-                           HelperText="@this.WorkModeHelperText" Class="@(this.effortsLoading ? "teammate-card-probing" : null)">
-                    <MudSelectItem T="string" Value="@string.Empty">Use the agent's default</MudSelectItem>
+                           title="@this.WorkModeTitle" Class="@(this.effortsLoading ? "teammate-card-probing" : null)">
+                    <MudSelectItem T="string" Value="@string.Empty">@DefaultOptionText</MudSelectItem>
                     @foreach (var choice in this.WorkModeChoices)
                     {
                         <MudSelectItem T="string" Value="@choice.Id">@choice.Name</MudSelectItem>
@@ -531,6 +531,9 @@
                 </div>
             }
             </div>
+            @* One shared line for the three selects (UX-E15): per-select helper text wrapped to 4-5 lines in
+               the narrow columns. Each select's own explanation is its title. *@
+            <MudText Typo="Typo.caption" Class="d-block mb-3 mud-text-secondary teammate-card-row-helper">@this.ModelRowHelperText</MudText>
 
             @* The reset below is deliberate and asserted by PERSONALIFECYCLE-29 - this note exists
                only because it used to happen invisibly (issue #45). role="status" is written out
@@ -1209,18 +1212,25 @@
         }
     }
 
-    private string ModelHelperText
+    /// <summary>The blank option of the Model, Effort and Work mode selects; short enough to read in full in a one-third column.</summary>
+    private const string DefaultOptionText = "Agent default";
+
+    /// <summary>The one line under the Model, Effort and Work mode row: what is being read while a probe is out, otherwise the restart note that applies to all three.</summary>
+    private string ModelRowHelperText
     {
         get
         {
             if (this.modelsLoading)
             {
-                return "Reading the models this agent offers…";
+                return "Reading the models this agent offers...";
             }
 
-            return this.availableModels.Count == 0
-                ? "This agent advertises no models, so it will use its own default."
-                : "Which model this teammate thinks with. Changing it restarts the teammate, which clears what it remembers.";
+            if (this.effortsLoading)
+            {
+                return "Reading the effort levels this model offers...";
+            }
+
+            return "Changing any of these restarts the teammate, which clears what it remembers.";
         }
     }
 
@@ -1254,21 +1264,6 @@
 
             var match = this.availableEfforts.FirstOrDefault(e => string.Equals(e.Id, this.effort, StringComparison.Ordinal));
             return match?.Name ?? this.effort;
-        }
-    }
-
-    private string EffortHelperText
-    {
-        get
-        {
-            if (this.effortsLoading)
-            {
-                return "Reading the effort levels this model offers…";
-            }
-
-            return this.availableEfforts.Count == 0
-                ? "This model offers no effort choice, so it will think as it normally does."
-                : "How hard this teammate thinks. Changing it restarts the teammate, which clears what it remembers.";
         }
     }
 
@@ -1311,22 +1306,17 @@
     private string WorkModeDisplayText => this.workMode is null ? "Agent default" : this.WorkModeLabel(this.workMode);
 
     // The selected mode's own description - what the Adapter says it does - because the names alone
-    // ("Auto", "Plan") do not say what they permit.
-    private string WorkModeHelperText
+    // ("Auto", "Plan") do not say what they permit. A title, not helper text: it must not wrap the row.
+    private string WorkModeTitle
     {
         get
         {
-            if (this.effortsLoading)
-            {
-                return "Reading the work modes this agent offers…";
-            }
-
             var description = this.availableWorkModes
                 .FirstOrDefault(mode => string.Equals(mode.Id, this.workMode, StringComparison.Ordinal))?.Description;
 
             return description is { Length: > 0 }
-                ? $"{description}. Changing it restarts the teammate, which clears what it remembers."
-                : "How much this teammate may do before it must ask. Changing it restarts the teammate, which clears what it remembers.";
+                ? $"{description}."
+                : "How much this teammate may do before it must ask.";
         }
     }
 

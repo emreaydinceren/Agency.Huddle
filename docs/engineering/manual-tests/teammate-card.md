@@ -146,7 +146,7 @@ If the yellow bar appears but the console shows an unrelated exception (a databa
 - The multi-line box is labelled `Persona body`, has placeholder `You are the Chief of Staff. You keep the team honest.`, and its hint reads `Markdown. Becomes the teammate's system prompt, placed after the Name, Title, Alias and Teams above — no front matter needed here.`
 - Below the multi-line box the controls are, in this order (`TeammateCard.razor`):
   1. a multi-select labelled `Skills` with the hint `Changing Skills restarts this Teammate.` (always rendered, `:340`);
-  2. a select labelled `Model` whose blank option reads `Use the agent's default`, then a select labelled `Effort` with the same blank option;
+  2. a select labelled `Model` whose blank option reads `Agent default`, then a select labelled `Effort` with the same blank option;
   3. a select labelled `Work mode`, only while the probe runs or once the adapter advertises modes (`:471`, `ShowWorkModePicker`); it may disappear when the probe finishes with no modes, which is not a failure;
   No avatar controls appear on the card itself: the radios `Initials of the name`, `A short label` and `An image`, the `Background` palette lives in the **Avatar** window that the avatar button opens, and none of those words is on the card.
   A select labelled `Adapter` appears between the multi-line box and `Skills` only when more than one adapter profile is configured; on a stock install it is absent.
@@ -543,7 +543,7 @@ If the status reads `Online`, `Degraded` or `Starting`, the app was started with
 If `Nova` was created with a Model chosen, delete it and re-create it leaving both selects blank, then repeat.
 
 > [!NOTE]
-> The Effort SELECT's blank option is labelled `Use the agent's default` while this View section says `Model default`. That inconsistency is real and worth recording once, but it is a known wording gap, not a failure of this test.
+> The Effort SELECT's blank option is labelled `Agent default` while this View section says `Model default`. That inconsistency is real and worth recording once, but it is a known wording gap, not a failure of this test.
 
 ### TEAMMATECARD-14 — Closing the dialog: focus trap on open, Escape, the close icon, Cancel, scroll locking, and focus return
 
@@ -617,7 +617,7 @@ If your browser or OS has a screen-magnifier or accessibility tool intercepting 
 
 **Pass if — all of these**
 
-- On reopening Create, all four inputs and the body box are empty, both selects show `Use the agent's default`, and no red error line is showing.
+- On reopening Create, all four inputs and the body box are empty, both selects show `Agent default`, and no red error line is showing.
 - After reopening `Nova`, the action row shows the single `Remove` icon button — not the `Remove Nova?` prompt.
 - After reopening `Nova` following the errored Edit, no red error line is showing.
 
@@ -1529,7 +1529,7 @@ If `sqlite3` is missing, seed the values through the UI instead (pick Haiku and 
 
 **Fail if — any of these**
 
-- In Edit, the select falls back to `Use the agent's default` -> and after the save the stored value is GONE from the table; opening Edit for any unrelated reason silently wipes a teammate's model. This is the exact failure the synthesised option exists to prevent.
+- In Edit, the select falls back to `Agent default` -> and after the save the stored value is GONE from the table; opening Edit for any unrelated reason silently wipes a teammate's model. This is the exact failure the synthesised option exists to prevent.
 - The View card shows `Agent default` / `Model default` despite the rows existing -> the stored value is not being read at all.
 - The card refuses to open, or an error appears -> an unrecognised stored value is bricking the Persona; it must be at most a warning at session start, never a failure.
 
@@ -1611,7 +1611,7 @@ If node never appears even after `Edit`, the adapter is missing or needs authent
 
 - While loading, the Model hint reads `Reading the models this agent offers…` and the Effort hint reads `Reading the effort levels this model offers…`.
 - Both hints resolve within 25 seconds to either the real-list wording (`Which model this teammate thinks with. Changing it restarts the teammate, which clears what it remembers.` / `How hard this teammate thinks. Changing it restarts the teammate, which clears what it remembers.`) or the empty wording (`This agent advertises no models, so it will use its own default.` / `This model offers no effort choice, so it will think as it normally does.`).
-- Both selects' first option is labelled `Use the agent's default`.
+- Both selects' first option is labelled `Agent default`.
 - No option labelled or valued `default` appears in the Effort list.
 
 **Fail if — any of these**
@@ -1653,7 +1653,7 @@ An empty catalog is a LEGITIMATE result when node is missing, the adapter is not
 
 **Pass if — all of these**
 
-- Immediately after the model change the **Effort** select shows the blank `Use the agent's default` option.
+- Immediately after the model change the **Effort** select shows the blank `Agent default` option.
 - The Effort hint shows `Reading the effort levels this model offers…` and then settles.
 - A node process appears for the per-model effort probe the first time each model id is chosen.
 - The **Model** select stays on Sonnet throughout.
@@ -1730,7 +1730,7 @@ If the Model select offers no options, the test cannot run — record it as bloc
 4. Click `Edit` again, change **Effort** from low to medium, and click `Save`.
 5. Read the `Effort` section again and re-run the sqlite query.
 6. Open the Persona file (`<data>\Teammates\<Name>\<Name>.md`, or the card's `Open` button) and search it for `effort`, `low` and `medium`.
-7. Click `Edit` once more, set **Effort** back to the blank `Use the agent's default` option, and click `Save`.
+7. Click `Edit` once more, set **Effort** back to the blank `Agent default` option, and click `Save`.
 8. Re-run the sqlite query one last time.
 
 **Pass if — all of these**
@@ -1974,10 +1974,10 @@ If the badge is never `Online` to begin with, this test cannot distinguish a res
 1. Snapshot the adapter processes with the command from TEAMMATECARD-46 step 1.
 2. Seed a Model: `sqlite3 "<data>\team.db" "INSERT OR REPLACE INTO persona_models(persona_name,model) VALUES('Ada','ghost-model-1');"`
 3. Open Ada's card and click `Restart`, so the running session starts with the seeded Model. Wait for `Online` and take the snapshot again (one ProcessId is replaced).
-4. Click `Edit`. Confirm the **Model** select shows `ghost-model-1` selected. Change ONLY the **Model** to `Use the agent's default` (do not touch the text) and click `Save`.
+4. Click `Edit`. Confirm the **Model** select shows `ghost-model-1` selected. Change ONLY the **Model** to `Agent default` (do not touch the text) and click `Save`.
 5. Watch the badge for 20 seconds, take the snapshot again, and run `sqlite3 "<data>\team.db" "SELECT * FROM persona_models WHERE persona_name='Ada';"`.
 6. Seed an Effort: `sqlite3 "<data>\team.db" "INSERT OR REPLACE INTO persona_efforts(persona_name,effort) VALUES('Ada','ghost-effort-1');"`, click `Restart` on the card, wait for `Online` and snapshot.
-7. Click `Edit`, confirm **Effort** shows `ghost-effort-1`, change ONLY the **Effort** to `Use the agent's default` and click `Save`.
+7. Click `Edit`, confirm **Effort** shows `ghost-effort-1`, change ONLY the **Effort** to `Agent default` and click `Save`.
 8. Watch the badge for 20 seconds, snapshot, and run `sqlite3 "<data>\team.db" "SELECT * FROM persona_efforts WHERE persona_name='Ada';"`.
 
 **Pass if — all of these**

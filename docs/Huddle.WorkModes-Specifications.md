@@ -471,7 +471,7 @@ A `MudSelect` after Effort, following its markup and rules exactly.
 | --- | --- |
 | Parameter and field | `[Parameter] WorkMode` and a private `workMode`. **Not** `Mode` or `mode` |
 | Label | *Work mode* |
-| Blank option | *Use the agent's default* (null) |
+| Blank option | *Agent default* (null) |
 | Choices | The catalog's modes. A stored id absent from it is **synthesised**, as `EffortChoices` does |
 | Helper text | The selected mode's `Description`, which the Adapter supplies. Model descriptions are rendered nowhere today; this one is |
 | While probing | `Disabled`, not `ReadOnly` (rules.md) |

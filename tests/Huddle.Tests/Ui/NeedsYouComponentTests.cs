@@ -29,6 +29,7 @@ public sealed class NeedsYouComponentTests
 
         Assert.Single(cut.FindAll(".needs-you-row"));
         Assert.Equal("Backend", cut.Find(".needs-you-name").TextContent);
+        Assert.Equal("Backend", cut.Find(".needs-you-name").GetAttribute("title"));
         Assert.Equal("09:00", cut.Find(".needs-you-detail").TextContent);
         Assert.NotNull(cut.Find($"a[href='/rooms/{room.Id}']"));
     }

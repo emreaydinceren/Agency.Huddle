@@ -57,7 +57,7 @@ oracles `O-LOG` / `O-ADAPTERS` / `O-TRANSCRIPT` / `O-DB` / `O-WIRE`, the four re
 **Pass if — all of these**
 
 - Focus moved into the dialog the instant it opened (step 4) — never left sitting on the **New teammate** button.
-- The first option of the **Model** select reads exactly `Use the agent's default`.
+- The first option of the **Model** select reads exactly `Agent default`.
 - Below it the select lists at least one real model entry, and the entries read as human labels (for example `Sonnet 4.5`, `Haiku 4.5`) rather than raw ids of the shape `claude-sonnet-4-5`.
 - During the first card open `T-B` rises to exactly 1 and returns to 0 - one spawn, not two, and not two spawns in sequence.
 - After the list arrives the Model hint reads exactly `Which model this teammate thinks with. Changing it restarts the teammate, which clears what it remembers.`
@@ -71,7 +71,7 @@ oracles `O-LOG` / `O-ADAPTERS` / `O-TRANSCRIPT` / `O-DB` / `O-WIRE`, the four re
 - Both selects populate but `T-B` shows a peak of 2 -> the model probe and the effort probe are no longer sharing the single semaphore, and every card open costs two adapter processes.
 - `T-B` rises to 1, falls to 0, then rises to 1 again during ONE card open -> the model probe stopped seeding the default-model effort list from its own session; functionally invisible, exactly twice the cost.
 - `T-B` rises above 0 on the SECOND card open -> the successful catalog is no longer cached for the app run, so browsing the card now costs a process every time.
-- The Model select contains only `Use the agent's default` while the log shows no `Model catalog probe ...` warning and no `No ACP adapter is installed` line -> the probe succeeded and returned nothing: suspect a grouped `options` catalog being read only on the flat branch, which silently reads as 'this agent advertises none'.
+- The Model select contains only `Agent default` while the log shows no `Model catalog probe ...` warning and no `No ACP adapter is installed` line -> the probe succeeded and returned nothing: suspect a grouped `options` catalog being read only on the flat branch, which silently reads as 'this agent advertises none'.
 - Every model entry reads as a raw id (`claude-haiku-4-5`) instead of a label (`Haiku 4.5`) -> the label is being read from the wrong field (`displayName` instead of `name`), which silently degrades every label.
 - `T-B` never rose above 0 during the first open, yet the Model select lists real models -> either the 200 ms poll missed a short spawn (see Inconclusive) or no probe ran and the list is not coming from the adapter; restart and repeat before filing anything.
 - `T-B` is still at 1 a minute after the list arrived -> the probe's process was not disposed.
@@ -98,7 +98,7 @@ If the Model select is empty AND the log carries one of `No ACP adapter is insta
 
 1. On `http://localhost:5100/teammates`, click **New teammate**.
 2. Prepare a table with four columns: model label, model id, effort options offered, effort hint text.
-3. In the **Model** select, choose the first real model (the first entry below `Use the agent's default`). Wait until the Effort hint stops reading `Reading the effort levels this model offers…`.
+3. In the **Model** select, choose the first real model (the first entry below `Agent default`). Wait until the Effort hint stops reading `Reading the effort levels this model offers…`.
 4. Write down, for that model: every option in the **Effort** select in order, and the exact hint text under the Effort select.
 5. Note whether `T-B` rose to 1 and back to 0 during that model change.
 6. Repeat steps 3-5 for every remaining entry in the **Model** select, one at a time, waiting for each to settle before moving on.
@@ -112,7 +112,7 @@ If the Model select is empty AND the log carries one of `No ACP adapter is insta
 - Every model in the list yields either a set of real effort levels or the hint `This model offers no effort choice, so it will think as it normally does.` - no model leaves the hint stuck on `Reading the effort levels this model offers…`.
 - `T-B` rises to exactly 1 and returns to 0 once per model id you had not selected before in this app run.
 - `T-B` stays at 0 when you re-select a model already walked (step 7).
-- Where an Effort select is populated, its first option reads `Use the agent's default` and the remaining options are real levels (`Low`, `Medium`, and possibly `High`, `Xhigh`, `Max`).
+- Where an Effort select is populated, its first option reads `Agent default` and the remaining options are real levels (`Low`, `Medium`, and possibly `High`, `Xhigh`, `Max`).
 - No Effort select anywhere contains an option labelled `Default`.
 - The table is complete: HAIKU, SONNET, LADDER-MODEL and NO-LADDER-MODEL are each named, or explicitly recorded as absent.
 
@@ -196,16 +196,16 @@ If **Add teammate** shows a red error line above the fields (for example a name 
 **Steps**
 
 1. On `/teammates`, click **New teammate**.
-2. Open the **Model** select and confirm the blank first option reads exactly `Use the agent's default`.
+2. Open the **Model** select and confirm the blank first option reads exactly `Agent default`.
 3. Look for a SECOND default-ish entry among the real model entries - the adapter's own `default` model. If the list has none, stop and record this test as partially inconclusive (see below), then jump to step 10.
 4. Select that adapter `default` entry.
 5. Type **Name** `Probe Default`, **Title** `Tester`, **Alias** `pd`, pressing Tab after each so it commits (`TeammateCard.razor:497`), leave **Teams** empty, and in **Persona body** type `You are a tester.`
-6. Leave the **Effort** select on `Use the agent's default`.
+6. Leave the **Effort** select on `Agent default`.
 7. Click **Add teammate**.
 8. In `T-C` run `Get-TeamDb "SELECT persona_name, model FROM persona_models WHERE persona_name='Probe Default'"`.
 9. In `T-C` run `Get-TeamDb "SELECT * FROM persona_efforts WHERE persona_name='Probe Default'"`.
 10. Close the card (the × button, whose tooltip reads `Close`). Click **New teammate** again.
-11. Type **Name** `Probe Blank`, **Title** `Tester`, **Alias** `pb` (Tab after each), **Persona body** `You are a tester.` and leave BOTH selects on `Use the agent's default`.
+11. Type **Name** `Probe Blank`, **Title** `Tester`, **Alias** `pb` (Tab after each), **Persona body** `You are a tester.` and leave BOTH selects on `Agent default`.
 12. Click **Add teammate**.
 13. In `T-C` run `Get-TeamDb "SELECT * FROM persona_models WHERE persona_name='Probe Blank'"` and `Get-TeamDb "SELECT * FROM persona_efforts WHERE persona_name='Probe Blank'"`.
 14. Read the **Model** and **Effort** sections of the card now showing for `Probe Blank`.
@@ -231,7 +231,7 @@ If **Add teammate** shows a red error line above the fields (for example a name 
 If the installed adapter's model catalog contains no entry of its own named `default`, steps 3-9 cannot be run: record them INCONCLUSIVE with the adapter version, and report only the `Probe Blank` half plus the Effort-sentinel check. Do not fabricate the missing half.
 
 > [!NOTE]
-> The wording difference between the Effort select's blank option (`Use the agent's default`) and the View card's Effort section (`Model default`) is a known copy inconsistency - report it as an observation if you notice it, not as a defect.
+> The wording difference between the Effort select's blank option (`Agent default`) and the View card's Effort section (`Model default`) is a known copy inconsistency - report it as an observation if you notice it, not as a defect.
 
 ### MODELEFFORT-05 — The card shows the Persona's real values in View and Edit, never a bare field name
 
@@ -348,7 +348,7 @@ If the app was not restarted first, the catalogs may already be cached and the E
 
 **Pass if — all of these**
 
-- Immediately after the model change, the **Effort** select shows `Use the agent's default` as selected - the `Low` chosen for HAIKU is cleared, not carried over.
+- Immediately after the model change, the **Effort** select shows `Agent default` as selected - the `Low` chosen for HAIKU is cleared, not carried over.
 - During the re-probe the Effort hint reads exactly `Reading the effort levels this model offers…`.
 - A status note appears under the Effort select reading `Changing the model reset Effort to the default. Each model advertises its own effort levels, so a level chosen for the previous model does not carry across — pick one again if you want a specific level.` (`TeammateCard.razor:426-431`). Read it in step 6; it only appears when a level had been chosen.
 - When the new list arrives it is SONNET's ladder and it DIFFERS from HAIKU's - a different set of entries, or one model showing `This model offers no effort choice, so it will think as it normally does.` where the other showed levels.
@@ -437,8 +437,8 @@ If the probes complete faster than you can click (the hint never shows `Reading 
 
 - The card closes immediately on each of the four close gestures (Cancel, ×, backdrop, Escape).
 - Nothing repaints or flickers on the page during the 30-second wait after the close.
-- On re-open, the **Model** select is populated instantly from cache and shows `Use the agent's default` selected.
-- On re-open, the **Effort** select shows `Use the agent's default` selected.
+- On re-open, the **Model** select is populated instantly from cache and shows `Agent default` selected.
+- On re-open, the **Effort** select shows `Agent default` selected.
 - On re-open, the Effort hint is NOT `Reading the effort levels this model offers…` - it is either the normal hint or `This model offers no effort choice, so it will think as it normally does.`
 
 **Fail if — any of these**
@@ -481,7 +481,7 @@ If the probe completes before you can click Cancel (the hint never lingers), the
 11. Clean up: click **Remove** on that card, then **Remove** in the prompt.
 **Pass if — all of these**
 
-- The **Effort** select contains ONLY the option `Use the agent's default` - no other entries.
+- The **Effort** select contains ONLY the option `Agent default` - no other entries.
 - The Effort hint reads exactly `This model offers no effort choice, so it will think as it normally does.`
 - The app log contains NONE of: `Model catalog probe failed to start or talk to the adapter.`, `Model catalog probe timed out after 00:00:20.`, `Model catalog probe skipped: the adapter needs authentication.`, `Model catalog probe failed talking to the adapter process.`, `No ACP adapter is installed; the model catalog is empty.`
 - `persona_efforts` has ZERO rows for `Probe NoEffort`.
@@ -527,7 +527,7 @@ If MODELEFFORT-02 found no NO-LADDER-MODEL in this adapter's catalog, this test 
 
 **Pass if — all of these**
 
-- While the Model hint reads `Reading the models this agent offers…`, the **Model** select already shows the stored value selected (rendered as the raw id, since no label is known yet) - not `Use the agent's default`.
+- While the Model hint reads `Reading the models this agent offers…`, the **Model** select already shows the stored value selected (rendered as the raw id, since no label is known yet) - not `Agent default`.
 - That select is also INERT while it says so (issue #39, MODELEFFORT-28): it shows the stored value but refuses to open. Steps 5, 6 and 8 are unaffected - a closed `MudSelect` displays its selection without being opened, which is exactly why the fix disables the control rather than emptying its option list.
 - After the catalog arrives and the option list is replaced, the **Model** select STILL shows the stored model (now with its friendly label).
 - The same holds for the **Effort** select: the stored level is shown before and after the real ladder arrives.
@@ -535,7 +535,7 @@ If MODELEFFORT-02 found no NO-LADDER-MODEL in this adapter's catalog, this test 
 
 **Fail if — any of these**
 
-- Either select snaps back to `Use the agent's default` when the real catalog replaces the option list -> merely opening Edit and pressing Save now destroys the user's stored choice with no message anywhere; this is the worst silent failure on this card.
+- Either select snaps back to `Agent default` when the real catalog replaces the option list -> merely opening Edit and pressing Save now destroys the user's stored choice with no message anywhere; this is the worst silent failure on this card.
 - The stored value is absent from the select during the loading phase (it shows the blank option) -> the synthesised entry for a stored-but-not-yet-known value is gone, and any Save made before the catalog lands writes null.
 - After the no-op Save, either database row is missing or changed -> the save path is writing the select's fallback rather than the stored value.
 
@@ -580,7 +580,7 @@ If the catalogs answer so fast that the loading hints never appear, the 'late ca
 
 **Fail if — any of these**
 
-- Either select omits the stored value and shows `Use the agent's default` selected instead -> opening Edit and saving destroys the user's stored choice merely by looking at the card.
+- Either select omits the stored value and shows `Agent default` selected instead -> opening Edit and saving destroys the user's stored choice merely by looking at the card.
 - After Save, either row is gone or reset -> the same destruction, confirmed in the database.
 - The card refuses to open or throws an error for an unknown stored value -> an unrecognised stored value is being treated as fatal rather than as something to keep and warn about later.
 
@@ -611,11 +611,11 @@ If `Set-TeamDb` errors with 'database is locked', the app was not fully stopped 
 5. On the card now showing, click **Remove**. The prompt `Remove Probe Two?` replaces it, with **Remove** and **Cancel**.
 6. Click **Remove** in the prompt. The card closes and the `Probe Two` tile disappears from the list.
 7. In `T-C` run both queries from step 4 again.
-8. Click **New teammate**. Type **Name** `Probe Two`, **Title** `Tester`, **Alias** `p2` (Tab after each), **Persona body** `You are a tester.` and leave BOTH selects on `Use the agent's default`.
+8. Click **New teammate**. Type **Name** `Probe Two`, **Title** `Tester`, **Alias** `p2` (Tab after each), **Persona body** `You are a tester.` and leave BOTH selects on `Agent default`.
 9. Click **Add teammate**.
 10. Read the **Model** and **Effort** sections of the card now showing.
 11. In `T-C` run both queries from step 4 once more.
-12. Now test the case-insensitive key: click **Remove** then **Remove** in the prompt on `Probe Two`. Click **New teammate** and create `probe two` (all lowercase, Tab after each of Name, Title and Alias) with **Title** `Tester`, **Alias** `p2`, **Persona body** `You are a tester.`, both selects left on `Use the agent's default`.
+12. Now test the case-insensitive key: click **Remove** then **Remove** in the prompt on `Probe Two`. Click **New teammate** and create `probe two` (all lowercase, Tab after each of Name, Title and Alias) with **Title** `Tester`, **Alias** `p2`, **Persona body** `You are a tester.`, both selects left on `Agent default`.
 13. In `T-C` run `Get-TeamDb "SELECT * FROM persona_models"` and `Get-TeamDb "SELECT * FROM persona_efforts"` and look for any row keyed `Probe Two` or `probe two`.
 14. Clean up: remove `probe two` (**Remove**, then **Remove** in the prompt).
 
@@ -806,7 +806,7 @@ If `git status` was already dirty before the test, the comparison is unreliable 
 - `T-B` peaks at 2 -> the gate is no longer shared across circuits and two tabs cost two adapter processes.
 - Either tab hangs with the loading hint for more than 25 seconds -> a deadlock or a lost gate release, which the single-tab tests cannot see.
 - An unhandled exception appears in the log, or a Blazor error bar appears -> the concurrent path is corrupting shared state; the effort cache's concurrency is the documented suspect and it reproduces only under two circuits at once.
-- One tab's Effort list appears in the other tab (they differ though both selects show `Use the agent's default`) -> cross-circuit state bleed.
+- One tab's Effort list appears in the other tab (they differ though both selects show `Agent default`) -> cross-circuit state bleed.
 
 **Inconclusive if**
 
@@ -844,7 +844,7 @@ If you cannot click both within roughly a second, the overlap may not have happe
 
 - Step 4's list is identical to step 1's, even though the adapter has been moved aside - the catalog is cached for the app run.
 - `T-B` stays at 0 during step 4 and no new probe log line appears - the cached answer is returned without spawning anything.
-- After the restart in step 7, the **Model** select contains only `Use the agent's default` and the Model hint reads exactly `This agent advertises no models, so it will use its own default.`
+- After the restart in step 7, the **Model** select contains only `Agent default` and the Model hint reads exactly `This agent advertises no models, so it will use its own default.`
 - After restoring the adapter and restarting, the real model list is back.
 
 **Fail if — any of these**
@@ -895,7 +895,7 @@ If step 3's rename fails with 'file in use', a runner or a probe still holds the
 - `/teammates` renders normally with no adapter present - no error banner, no blank page.
 - The card opens, and the Model hint reads exactly `This agent advertises no models, so it will use its own default.`
 - The Effort hint reads exactly `This model offers no effort choice, so it will think as it normally does.`
-- Both selects contain ONLY the option `Use the agent's default`.
+- Both selects contain ONLY the option `Agent default`.
 - The log contains `No ACP adapter is installed; the model catalog is empty.` at Information from category `Agency.Huddle.App.Acp.ModelCatalogProbe`.
 - `T-B` stays at 0 throughout - nothing is spawned when there is nothing to spawn.
 - The teammate saves successfully, with zero rows in both `persona_models` and `persona_efforts`.
@@ -944,7 +944,7 @@ FALSE PASS TRAP: if any card was opened earlier in the SAME app run, the cached 
 
 **Pass if — all of these**
 
-- In Part A the page renders and the card opens; both selects contain only `Use the agent's default`.
+- In Part A the page renders and the card opens; both selects contain only `Agent default`.
 - Part A's Model hint reads exactly `This agent advertises no models, so it will use its own default.` and its Effort hint reads exactly `This model offers no effort choice, so it will think as it normally does.`
 - Part A's log contains `Model catalog probe failed to start or talk to the adapter.` at Warning.
 - The card settles in well under 20 seconds and never hangs; the page stays usable afterwards.

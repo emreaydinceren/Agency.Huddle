@@ -85,7 +85,7 @@ Run [`P-BUILD`](common.md#p-build) then the lane named in each test from
 **Pass if — all of these**
 
 - Step 2 shows the select disabled (not merely hinted) while the probe is out, then enabled. If the probe answers too fast to see the disabled state, record that half as not-observed and judge the rest.
-- Step 3 lists the blank option **Use the agent's default**, then **Manual** and **Accept edits**, in the Adapter's names. **Plan**, **Auto** and **Bypass permissions** are absent.
+- Step 3 lists the blank option **Agent default**, then **Manual** and **Accept edits**, in the Adapter's names. **Plan**, **Auto** and **Bypass permissions** are absent.
 - Step 4's helper text is the Adapter's own description of Accept edits, not a Huddle sentence.
 
 **Fail if — any of these**

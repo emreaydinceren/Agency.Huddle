@@ -141,7 +141,7 @@ internal sealed class ModelCatalogProbe : IModelCatalog, IDisposable
                 // This probe ran with no model requested, so its session's effort list IS the
                 // default-model answer for this Adapter - store it under the same key
                 // GetEffortLevelsAsync would have probed for itself. The payoff: opening a card and
-                // leaving the model at "Use the agent's default" costs zero extra adapter spawns.
+                // leaving the model at "Agent default" costs zero extra adapter spawns.
                 this.effortCache[ModelCatalogProbe.EffortCacheKey(profile.Id, null)] = new SessionCatalog(result.EffortLevels, result.Modes);
             }
 
@@ -223,7 +223,7 @@ internal sealed class ModelCatalogProbe : IModelCatalog, IDisposable
     /// cref="IAgentSession.EffortLevels"/> must stay a faithful report of what the agent actually
     /// advertised, because a protocol reader that silently drops an advertised option is exactly the
     /// class of failure <c>docs/engineering/traps.md</c> exists for. The reason the filter belongs
-    /// somewhere is that the Teammate card's blank "Use the agent's default" option already IS this
+    /// somewhere is that the Teammate card's blank "Agent default" option already IS this
     /// choice, and already stores <c>null</c> for it — offering the sentinel too would be two
     /// options with one meaning, and would let the literal string <c>"default"</c> reach
     /// <c>persona_efforts</c>, where it would be sent on the wire as a real, named selection: a

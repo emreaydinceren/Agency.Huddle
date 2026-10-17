@@ -1147,7 +1147,7 @@ If the grey line does not update to `1 of 2` but the log line is present, the vi
 2. Start the app with PROFILE B (`Team__Acp__Enabled` MUST be `false` — no model is needed for this test and none must start).
 3. Open `http://localhost:5100`, click **Teammates** in the sidebar, and click **New teammate**.
 4. Fill in Name `Jarvis`, Title `Butler`, Alias `jar`, leave Teams blank, and type `You are Jarvis.` into the Persona body.
-5. Leave Model and Effort at `Use the agent's default` and click **Add teammate**.
+5. Leave Model and Effort at `Agent default` and click **Add teammate**.
 6. Confirm a tile named `Jarvis` now appears on the Teammates page and that the **Files that didn't load** section either is absent or does not list `Jarvis.md`, and that `<data>\Teammates\Jarvis\Jarvis.md` now exists.
 7. In `T-B` run `pwsh <repo>\tools\echo-bot.ps1 -Name Jarvis`.
 8. In TERMINAL C run `pwsh <repo>\tools\echo-bot.ps1 -Name Ada`.

@@ -111,11 +111,9 @@ public sealed class TeammateCardModelEffortTests
 
         var cut = RenderPage(ctx, factory);
         await ClickButtonAsync(cut, "New teammate");
-        await OpenSelectAsync(cut, "Model");
+        var options = await OpenSelectAndListOptionsAsync(cut, "Model");
 
-        Assert.Contains("Opus", cut.Markup, StringComparison.Ordinal);
-        Assert.Contains("Sonnet", cut.Markup, StringComparison.Ordinal);
-        Assert.Contains("Use the agent's default", cut.Markup, StringComparison.Ordinal);
+        Assert.Equal(["Agent default", "Opus", "Sonnet"], options.Select(option => option.TextContent.Trim()).ToList());
     }
 
     /// <summary>No option carries a literal "selected" other than the blank default: the closed select's own input shows the empty label, precisely because Model is null on a fresh Create card.</summary>
@@ -184,7 +182,7 @@ public sealed class TeammateCardModelEffortTests
         await ClickButtonAsync(cut, "New teammate");
 
         Assert.NotEmpty(cut.FindAll(".mud-select"));
-        Assert.Contains("advertises no models", cut.Markup, StringComparison.Ordinal);
+        Assert.Equal("Changing any of these restarts the teammate, which clears what it remembers.", cut.Find(".teammate-card-row-helper").TextContent.Trim());
     }
 
     [Fact]
@@ -197,7 +195,7 @@ public sealed class TeammateCardModelEffortTests
         var cut = RenderPage(ctx, factory);
         await ClickButtonAsync(cut, "New teammate");
 
-        Assert.Contains("Reading the models this agent offers", cut.Markup, StringComparison.Ordinal);
+        Assert.Equal("Reading the models this agent offers...", cut.Find(".teammate-card-row-helper").TextContent.Trim());
     }
 
     [Fact]
@@ -286,11 +284,9 @@ public sealed class TeammateCardModelEffortTests
 
         var cut = RenderPage(ctx, factory);
         await ClickButtonAsync(cut, "New teammate");
-        await OpenSelectAsync(cut, "Effort");
+        var options = await OpenSelectAndListOptionsAsync(cut, "Effort");
 
-        Assert.Contains("High", cut.Markup, StringComparison.Ordinal);
-        Assert.Contains("Low", cut.Markup, StringComparison.Ordinal);
-        Assert.Contains("Use the agent's default", cut.Markup, StringComparison.Ordinal);
+        Assert.Equal(["Agent default", "High", "Low"], options.Select(option => option.TextContent.Trim()).ToList());
     }
 
     /// <summary>Opening Edit shows the Persona's already-stored Effort preselected in the closed select, read back through the real <see cref="PersonaStore"/>.</summary>
@@ -340,7 +336,7 @@ public sealed class TeammateCardModelEffortTests
         var cut = RenderPage(ctx, factory);
         await ClickButtonAsync(cut, "New teammate");
 
-        Assert.Contains("offers no effort choice", cut.Markup, StringComparison.Ordinal);
+        Assert.Equal("Changing any of these restarts the teammate, which clears what it remembers.", cut.Find(".teammate-card-row-helper").TextContent.Trim());
     }
 
     [Fact]
@@ -353,7 +349,7 @@ public sealed class TeammateCardModelEffortTests
         var cut = RenderPage(ctx, factory);
         await ClickButtonAsync(cut, "New teammate");
 
-        Assert.Contains("Reading the effort levels this model offers", cut.Markup, StringComparison.Ordinal);
+        Assert.Equal("Reading the effort levels this model offers...", cut.Find(".teammate-card-row-helper").TextContent.Trim());
     }
 
     /// <summary>
@@ -396,7 +392,7 @@ public sealed class TeammateCardModelEffortTests
     /// <summary>
     /// MODELEFFORT-11's Pass condition in automated form, and the guard that going inert did not cost
     /// it: while the catalog is still out the closed select must already show the STORED value - as the
-    /// raw id, since no label is known yet - and not snap to "Use the agent's default". A read-only
+    /// raw id, since no label is known yet - and not snap to "Agent default". A read-only
     /// MudSelect still displays its selection, which is the whole reason ReadOnly was chosen over
     /// emptying or replacing the option list.
     /// </summary>
@@ -464,7 +460,7 @@ public sealed class TeammateCardModelEffortTests
 
         Assert.False(IsSelectInert(cut, "Model"));
         Assert.True(IsSelectInert(cut, "Effort"));
-        Assert.Contains("Reading the effort levels this model offers", cut.Markup, StringComparison.Ordinal);
+        Assert.Equal("Reading the effort levels this model offers...", cut.Find(".teammate-card-row-helper").TextContent.Trim());
 
         var options = await OpenSelectAndListOptionsAsync(cut, "Model");
         Assert.Contains(options, option => string.Equals(option.TextContent.Trim(), "Opus", StringComparison.Ordinal));

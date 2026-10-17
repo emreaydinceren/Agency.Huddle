@@ -175,7 +175,7 @@ test says otherwise), one sentence in **Persona body**, choose **Model** and
 Writing `<data>\Teammates\<Name>\<Name>.md` by hand (the definition must sit in the
 Teammate's own folder; a `.md` at the `Teammates` root is rejected) still skips the
 `team.db` rows that store Model and Effort, so the Teammate runs on the account
-default — which may be far more expensive than Haiku. Leaving **Model** on `Use the agent's default` does the
+default — which may be far more expensive than Haiku. Leaving **Model** on `Agent default` does the
 same thing and is not equivalent to choosing Haiku.
 
 A file that fails to load appears on `/teammates` under **Files that didn't load**
