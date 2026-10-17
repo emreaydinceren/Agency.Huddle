@@ -621,10 +621,10 @@ link.*
 
 **Steps**
 
-1. On `localhost:5100`, open the Task and click the copy icon in its header.
+1. On `localhost:5100`, open the Task and click the copy icon in the icons row just under the drawer header.
 2. Paste the clipboard contents somewhere visible (a Message composer, a text editor) and confirm
    it is exactly the Task's plain id, nothing more.
-3. In the Task panel header, open the **More actions** (⋮) menu — not a card's menu —
+3. In the Task panel's icons row (just under the header), open the **More actions** (⋮) menu — not a card's menu —
    (`TaskDetail.razor:219-227`), click **Copy link** and paste that; confirm it is a full URL ending in
    `/tasks/item/<id>`.
 4. From the same machine's IP address (not `localhost`), open `http://<ip>:5100` in a second
@@ -636,7 +636,7 @@ link.*
 
 **Pass if — all of these**
 
-- The header copy icon copies exactly the plain id (for example `PLAT-0042`), with a success
+- The copy icon in the icons row copies exactly the plain id (for example `PLAT-0042`), with a success
   Snackbar.
 - **Copy link** copies a full `http://…/tasks/item/<id>` URL.
 - Over plain `http://<ip>:5100` (not `localhost`, so no secure context), the copy button still

@@ -389,16 +389,16 @@ If a banner DOES appear and the name it lists is a Persona (an entry that also a
 **Pass if — all of these**
 
 - While the bot is connected, `mybot`'s dot in the New chat panel is green and its `title` / tooltip reads `online` (the element's class is `agent-dot online`).
-- After Ctrl+C and REOPENING the panel, `mybot`'s dot is red (`--mud-palette-error`, `app.css:71-73`) and its `title` reads `offline` (class `agent-dot offline`).
-- The **Invite teammate** panel in the `otherbot` Room shows the same dot and the same tooltip for `mybot`: red `offline` while `mybot` is stopped, green `online` once it is restarted.
+- After Ctrl+C and REOPENING the panel, `mybot`'s badge is a hollow grey ring and its `title` reads `offline` (class `agent-dot offline`).
+- The **Invite teammate** panel in the `otherbot` Room shows the same dot and the same tooltip for `mybot`: a hollow grey ring (`offline`) while `mybot` is stopped, a green check circle (`online`) once it is restarted.
 - The dot's colour and its tooltip text agree with each other in every case.
 
 **Fail if — any of these**
 
 - The dot stays green after the panel is closed and reopened -> liveness is not being read live; the panel is serving a cached or persisted presence value, which will show dead agents as available forever.
-- Every dot is red while bots are demonstrably connected (their consoles are still running) -> the presence registry is not being consulted, or connections are not being registered at all.
+- Every dot is a hollow grey ring while bots are demonstrably connected (their consoles are still running) -> the presence registry is not being consulted, or connections are not being registered at all.
 - The panel lists no agents at all when agents have connected -> the directory read is broken; nothing can then be invited or chatted with.
-- The tooltip says `online` on a red dot, or `offline` on a green one -> colour and label are computed from different sources.
+- The tooltip says `online` on a hollow ring, or `offline` on a green circle -> colour and label are computed from different sources.
 
 **Inconclusive if**
 
@@ -1342,9 +1342,9 @@ If the browser tab was already disconnected or backgrounded before step 3, the d
 
 **Pass if — all of these**
 
-- The sidebar's Room list reads exactly `No rooms yet. Start an agent to create one.`
+- The sidebar's Room list shows the title `No rooms yet` with the line `Start an agent to create one.` under it.
 - The main pane reads exactly the SAME sentence: `No rooms yet. Start an agent to create one.`
-- The New chat panel reads `No agents have connected yet. Start one with tools/echo-bot.ps1` followed by whatever the rest of that sentence currently says (the app's empty-state copy, which is not what this test judges).
+- The New chat panel shows the title `No agents have connected yet` and, under it, `Start one with tools/echo-bot.ps1` followed by whatever the rest of that line currently says (the app's empty-state copy, which is not what this test judges).
 - After the bot connects, the sidebar gains `mybot` with NO refresh.
 - The MAIN PANE still reads `No rooms yet. Start an agent to create one.` until you click the sidebar entry.
 - Clicking the entry opens the Room with heading `mybot`.

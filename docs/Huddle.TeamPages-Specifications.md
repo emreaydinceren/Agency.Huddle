@@ -740,8 +740,13 @@ stray URL.
 
 > **Superseded (2026-10-14).** The Members tab is now `TeamRoster`: Build a team's Hire section
 > for the Team (`BuildTeam` with `MembersOnly`; `wireframes.md` `M6`, `B12`). It shows the role
-> cards and a roster of the members (status dot, Edit, Message, and a Remove menu with *Remove
-> from Team* and *Delete Teammate*) beside new drafts, a Manager select, and one *Save changes*.
+> cards (220px wide, wrapping in `.role-grid`; the description clamps to three lines; Add is a small
+> outlined button at the bottom left with *Suggested* to its right) and a roster of the members (a 40px
+> avatar carrying the presence badge, no status dot beside the name; the name at 14px/600, the role at 13px, *Member*,
+> *New* or *1 skill* as meta text; Edit, Message and a Remove menu with *Remove from Team* and *Delete Teammate* on
+> one row) beside new drafts, a Manager select, and one *Save changes*. The "Roles" and "Roster" headings are
+> 14px/600 with a 12px count (*Roster · 4 members*, *Roles · N roles available*). The save bar
+> (`.build-team-savebar`) renders only while there are unsaved changes and is sticky to the bottom of the pane.
 > There is no search box, no *+ Add member* and no `AddMemberDialog`: a Teammate joins a Team by
 > being hired into it, or through its `teams:` line. `ITeamMembership.Remove` still does *Remove
 > from Team*, and Message still calls `EnsureTeamOneToOneAsync`. The text below records the

@@ -86,10 +86,10 @@ Browser shows 'connection refused' or the page never finishes loading -> the app
 
 **Pass if — all of these**
 
-- After step 3 there is exactly one group heading, `No team`, holding one tile: `Chief of Staff`, title `Chief of Staff`, chips `@cos` and `Offline`.
-- The sentence `No Personas yet. Choose New teammate to add one.` is not on the page, and no `Files that didn't load` section appears.
+- After step 3 there is exactly one group heading, `No team`, holding one tile: `Chief of Staff`, title `Chief of Staff`, and the meta line `@cos · Offline` (plain text, no chips).
+- The empty state `No Teammates yet` is not on the page, and no `Files that didn't load` section appears.
 - A **Team** dropdown is present, and its only option is `All teams` (no Persona names a Team).
-- After step 5 the page shows exactly the sentence `No Personas yet. Choose New teammate to add one.`, with `New teammate` in bold; no group heading, no tile, and no label reading `Team` or dropdown.
+- After step 5 the page shows exactly the empty state `No Teammates yet` with the line `Choose New teammate to add the first one.` under it; no group heading, no tile, and no label reading `Team` or dropdown.
 - After step 5 the heading, the `New teammate` button and the intro paragraph are all still present.
 - After step 6 the `Chief of Staff` tile is back under `No team`.
 
@@ -160,17 +160,17 @@ teams: ['Business']
 You are Emily Lee. Answer in one short sentence.
 6. Do not create a Chief of Staff file: the app already seeded one (alias `cos`, title `Chief of Staff`, no Teams). A second file named `Chief of Staff` or aliased `cos` would be rejected as a duplicate of it.
 7. Go to http://localhost:5100/teammates and press F5.
-8. Read the Nova tile line by line: the Name, the line beneath it, and the alias caption on the line beneath that.
+8. Read the Nova tile line by line: the Name, the role line beneath it, and the meta line beneath that (`@alias · State`).
 9. Read the round avatar at the left of each of the six tiles.
 10. Hover the badge on the bottom-right rim of each avatar and read its tooltip, and inspect it in the browser's developer tools (F12). There is no `Online` chip or dot on the tile itself.
 
 **Pass if — all of these**
 
 - Six Teammates are on the page: Chief of Staff, Emily Lee, Nova, Quill, Rune, Vale (Vale appears twice, under two headings; see TEAMMATESLIBRARY-05).
-- Nova's tile shows `Nova` on its first line and `Research Lead` on the line beneath it. Beneath those is the plain caption `@nov` (with a leading `@`, no chip). The avatar's badge carries the status and its tooltip reads `Offline`. There is no `Research Lead · @nov` line with a middle dot.
-- Every tile has the same shape: Name, then Title, then an `@<alias>` caption, and an avatar badge, with values matching that Persona's frontmatter (Vale: `Ops Lead`, `@val`; Rune: `Home Steward`, `@run`; Quill: `Scribe`, `@qui`; Chief of Staff: `Chief of Staff`, `@cos`).
+- Nova's tile shows `Nova` on its first line and `Research Lead` on the line beneath it. Beneath those is the plain meta line `@nov · Offline` (with a leading `@`, no chip). The avatar's badge carries the status and its tooltip reads `Offline`.
+- Every tile has the same shape: Name, then Title, then an `@<alias> · State` meta line, and an avatar badge, with values matching that Persona's frontmatter (Vale: `Ops Lead`, `@val`; Rune: `Home Steward`, `@run`; Quill: `Scribe`, `@qui`; Chief of Staff: `Chief of Staff`, `@cos`).
 - Monograms read: Emily Lee -> `EL`; Chief of Staff -> `CS`; Nova -> `NO`; Quill -> `QU`; Rune -> `RU`; Vale -> `VA`.
-- With ACP off, every avatar badge reads `Offline` (its hollow ring is the theme's error red; the badge has the CSS class `agent-dot` with `offline` and `role="img"`, so do not compare an RGB value). The state words the badge can show are `Starting`, `Online`, `Degraded` and `Offline`, each with its own glyph (pulse, check, dash, ring).
+- With ACP off, every avatar badge reads `Offline` (its hollow ring is neutral grey; the badge has the CSS class `agent-dot` with `offline` and `role="img"`, so do not compare an RGB value). The state words the badge can show are `Starting`, `Online`, `Degraded` and `Offline`, each with its own glyph (pulse, check, dash, ring).
 - The tiles have rounded borders and a round monogram avatar — they are tiles, not bullet points.
 
 **Fail if — any of these**
@@ -422,20 +422,20 @@ The browser shows a stale page and other interactions are also dead -> the Blazo
 **Pass if — all of these**
 
 - The page repaints on its own within about a second of the save.
-- It then shows exactly the sentence `No teammates in this team.`
+- It then shows exactly the empty state `No teammates in this team` with the line `Pick another team, or add a teammate to this one.`
 - It does NOT show a `Zulu` heading with nothing under it.
-- It does NOT show `No Personas yet. Choose New teammate to add one.`
+- It does NOT show the `No Teammates yet` empty state
 - Choosing `All teams` brings back every other tile, proving the library is intact; Zed now appears under `Business`, and `Zulu` is gone from the dropdown.
 
 **Fail if — any of these**
 
 - An empty `Zulu` heading is rendered with nothing beneath it -> an empty group is being produced, and a user cannot tell an empty Team from a broken page.
-- The page falls back to `No Personas yet…` while other Personas still exist -> the empty-library state is being reused for an empty filter; the user is told their whole library is gone.
+- The page falls back to `No Teammates yet` while other Personas still exist -> the empty-library state is being reused for an empty filter; the user is told their whole library is gone.
 - The page throws, or the yellow `An unhandled error has occurred.` banner appears -> a filter selection that outlives its Team is crashing the circuit.
 
 **Inconclusive if**
 
-Nothing repaints even after 10 seconds -> this may be the watcher rather than the filter; press F5, and if the correct `No teammates in this team.` sentence then appears, record this test as passing with a note and treat the watcher failure under TEAMMATESLIBRARY-19.
+Nothing repaints even after 10 seconds -> this may be the watcher rather than the filter; press F5, and if the correct `No teammates in this team` empty state then appears, record this test as passing with a note and treat the watcher failure under TEAMMATESLIBRARY-19.
 
 > [!NOTE]
 > Afterwards, delete the `Zed` and `Ada` folders to return to the core fixture set.
@@ -892,7 +892,7 @@ No title here.
 
 - The three broken paths are listed sorted by path (ordinal): `...\AAA\AAA.md`, `...\MMM\MMM.md`, `...\ZZZ\ZZZ.md`.
 - With `Business` selected, the rejected block is still fully visible and still lists all three — the filter does not touch it.
-- With every file broken, the page shows BOTH the `Files that didn't load` block AND the sentence `No Personas yet. Choose New teammate to add one.`
+- With every file broken, the page shows BOTH the `Files that didn't load` block AND the `No Teammates yet` empty state
 - In that all-broken state, no `Team` dropdown is rendered.
 - The definition-file count on disk equals (distinct tiles on screen + entries in the rejected block) at every point in this test — every file is accounted for by exactly one of the two.
 
@@ -1028,7 +1028,7 @@ You are Pike. Answer in one short sentence.
 
 - The tile only appears after F5 -> a user copying in a Persona file sees nothing happen and will assume the app did not accept it.
 - A deleted Persona's tile lingers -> the card would then offer Edit and Open on a file that no longer exists.
-- The tiles update but the dropdown's option list does not -> the filter and the grid are reading from two different moments in time; selecting the stale option shows `No teammates in this team.`
+- The tiles update but the dropdown's option list does not -> the filter and the grid are reading from two different moments in time; selecting the stale option shows `No teammates in this team`
 - The heading survives after its last member is deleted -> an empty group is left behind.
 
 **Inconclusive if**
@@ -1261,7 +1261,7 @@ The card does not open at all and other clicks on the page are also dead -> the 
 
 **Pass if — all of these**
 
-- Every tile reads `Offline` with a red dot (`agent-dot offline`).
+- Every tile reads `Offline` with a hollow grey ring (`agent-dot offline`).
 - The badge tooltip reads just `Offline`, with no colon and no reason after it: no reason is known, so none is invented.
 - The card shows the same `Offline` status line and NO red reason paragraph under it.
 - Nova's action row contains `Edit`, `Open`, `Restart` and a red Remove icon button (tooltip `Remove`); a `Message` link appears only if that teammate already has a Room. The Chief of Staff's row has `Reset to default` where the others have Remove (TeammateCard.razor:198-224).

@@ -1486,6 +1486,7 @@ does what the View asks for. Each of these was checked in the package's XML docs
   filtering belong to the Fields dialog and the toolbar, and two ways to change them would drift apart.
 - **Row styling.** `RowClassFunc` returns `task-overdue` for overdue rows that aren't terminal. The
   row also shows a warning `MudIcon`, because colour is never the only signal.
+- **Density and columns.** Rows are 36px high (32px when Dense) with 13px body text; header cells are 12px, weight 600, `TextSecondary`. The ID column is 110px, Priority 120px (`task-list-priority-cell`) and the row menu 40px; Title takes the rest. The open Task's row is `task-row-selected` (accent 14% over the surface, 20% when hovered).
 - **Row click.** `RowClick` opens the detail panel (§13.6).
 
 > [!NOTE]
@@ -1576,26 +1577,34 @@ dragging are saved immediately; that is by design (D-20).
 lists all eight states. Choosing one takes the same path as a drop, so Duplicate still asks for its
 target.
 
-**Columns.** Each column header shows its label, the count, and a `⋮` `MudMenu` with *Rename*,
-and *Hide*. Changes made
+**Columns.** Each column header shows an 8px dot in the colour of the column's first state, its label (13px,
+weight 600), the count (12px, `TextSecondary`) and a `⋮` `MudMenu` with *Rename*, and *Hide*. An empty column
+shows one centred 12px `TextSecondary` line worded for its state (*"Backlog is empty."*, *"Nothing to do yet."*,
+*"Nothing in progress."*, *"Nothing in review."*, *"Nothing done yet."*, or *"Nothing here yet."* for a
+column of several states). The line ignores the pointer and hides while a card is dragged. Changes made
 from the header menu are saved to the View immediately. When columns are hidden, a hidden-count
 chip on the Board reads *"4 tasks in hidden columns"*.
 
 **Cards — `TaskCard.razor`.** A card is a `<button type="button" class="task-card">`, not a
 MudCard, because keyboard focus matters (the precedent is `Teammates.razor:85-90`). It shows:
 
-- The id, the title (through `MudHighlighter` while searching), and a priority chip
+- A header row (`.task-card-header`) with the id (12px, `TextSecondary`) and the priority chip
   (`StatusChip`: a tinted, text-variant `MudChip Size="Size.Small"` with a leading icon; §13.10 maps the
-  colours).
-- The assignee, drawn with `Components/Shared/TeammateAvatar.razor` inside a
+  colours). Below it, the title (14px, weight 600, up to three lines, through `MudHighlighter` while
+  searching) and the tags as quiet tag chips. The card has 12px of padding, a 1px `Divider` border and the
+  card radius; cards sit 8px apart.
+- The assignee, a 24px avatar drawn with `Components/Shared/TeammateAvatar.razor` inside a
   `MudBadge Dot="true" Overlap="true"` that sits on the avatar's rim and shows presence as a glyph
-  (Awake a pulse, Asleep a neutral ring, Offline a red ring). A `MudTooltip` says it in words.
+  (Awake an amber circle with a breathing pulse, Asleep and Offline a hollow grey ring; red is kept for
+  Degraded health), beside the name at 12px. A `MudTooltip` says it in words.
 - The View's extra fields.
 - No left edge: the column already names the state, so the card has no border in the column's colour.
 - When the card's `LastWake` Room has a Turn running (§10.8), an **Awake** chip and the line
   *"active in Room {name}"*, which links to `/rooms/{id}` with a `MudLink`.
-- Due dates in the past on a Task that isn't terminal get the `task-overdue` marker class, a warning
-  icon beside the date, and the date set at weight 600 (`task-due-overdue`). There is no red text.
+- Due dates in the past on a Task that isn't terminal get the `task-overdue` marker class and a 14px warning
+  icon before the date, inside the date's own span (`task-due-overdue`). The date is set at weight 600 in the
+  error colour mixed with body text (70% error, 30% body text; 5.79:1 Dark, 9.70:1 Light), so it is not plain
+  red text. An overdue card shows its date even when the View hides `due_date`.
   **Colour is never the only signal.**
 
 Clicking a card opens the detail panel.
@@ -1647,11 +1656,16 @@ MudBlazor freezes a dialog's parameters once it opens (the trap at `TeammateCard
 
 **Layout.** The Panel form is four headed groups (`section` with an h3 `.group-heading`, `subtitle2`):
 Status and priority (Status, Duplicate of or Reason, Priority, the wake notice), People (Assignee, the
-"Woken in Room" link), Planning (Team, Project, Sprint, Parent, Blocked by, Tags) and Dates (Start, Due,
-Created, Updated, Closed). Every field has a visible label, the Description included. The groups are a
+"Woken in Room" link), Planning (Team, Project, Sprint, Parent, Blocked by, Tags) and Dates (Start, Due).
+Created, Updated and Closed are not a group: they are the footer meta (`.task-detail-footer-meta`, 12px
+`TextSecondary`) at the bottom of the form, after the Change log. Group headings are 14px, weight 600; the
+label column is 120px and 13px `TextSecondary`. Every field has a visible label, the Description included. The groups are a
 size container (`task-detail`): from 368px of container width (a 400px drawer less its padding) each
-property is two columns, label | value; narrower, the label sits above the value. The drawer's title is
-the item's name as an `h6` ("SUPP-0005 · Build the public status page"). Tag and blocker chips are quiet
+property is two columns, label | value; narrower, the label sits above the value. The drawer (`ResizableEndDrawer`)
+has an `Eyebrow` parameter: a 12px `TextSecondary` line above the title with the id, then the Project or,
+with none, the Team ("PLAT-0013 · Platform"). The title is the Task's name only (16px, weight 600, up to three
+lines). A draft reads "New task" with no eyebrow. The edit, copy-id and menu icons sit in a right-aligned row
+just under the header, not in it. The Expanded dialog is titled "{id} · {title}". Tag and blocker chips are quiet
 (`.tag-chip`); Closed and Request chips are tinted.
 
 **Fields**, in the order of the mockup:
@@ -1669,7 +1683,7 @@ the item's name as an `h6` ("SUPP-0005 · Build the public status page"). Tag an
 | Tags | the same chip-set pattern as Blocked by: closable chips, plus a `MudTextField` that adds a tag on Enter |
 | Description | V1 has an **Edit / Preview** `MudToggleGroup`. Edit is a `MudTextField Lines="10" AutoGrow` (the `TeammateCard.razor:252-257` pattern). Preview is `@((MarkupString)MarkdownRenderer.ToHtml(text))` (the `MessageList.razor:15` pattern) |
 | Origin | a link to `/rooms/{id}`, or *(Room no longer exists)* |
-| Created, Updated, Closed | read-only, derived; shown under the Dates group |
+| Created, Updated, Closed | read-only, derived; shown as the footer meta line at the bottom of the form, after the Change log |
 | Change log | a `MudExpansionPanels` holding one `MudExpansionPanel` titled **Change log (N)**, collapsed. Inside it is a `MudTimeline TimelinePosition="TimelinePosition.Start"` with one small `MudTimelineItem` per entry, newest first. Each item shows the date and time in `ItemOpposite`, and the actor and summary in `ItemContent` (both `RenderFragment`s, confirmed by reflection) |
 
 **The wake notice and the Save button.** On every change to `pending`, call
@@ -1770,7 +1784,7 @@ holds the mapping:
 | --- | --- |
 | State | Backlog `Default`, To Do `Info`, In Progress `Warning`, Review `Secondary`, Done `Success`, Cancelled, Duplicate and Rejected `Error` |
 | Priority | Low `Default`, Medium `Info`, High `Warning`, Urgent `Error`. **Always paired with an icon and the word** |
-| Presence badge | Awake `Success`, Asleep `Default`, Offline `Error`, always with a tooltip in words |
+| Presence badge | Awake `Warning`, Asleep and Offline `Default` (a hollow grey ring), always with a tooltip in words |
 
 Spacing and layout use `MudStack` and the utility classes (`pa-2`, `gap-2`, `d-flex`,
 `overflow-x-auto`) instead of new rules.
