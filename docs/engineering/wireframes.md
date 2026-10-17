@@ -11,6 +11,25 @@ and then to the overlays that float above them. They are drawn from the code as 
 they show where containers sit and what they hold, not spacing, colour or copy. For those
 see [design-system.md](design-system.md).
 
+## Contents
+
+- [How the codes work](#how-the-codes-work)
+  - [Reading a figure](#reading-a-figure)
+- [One word, one meaning](#one-word-one-meaning)
+- [Figure 1: The shell](#figure-1-the-shell)
+- [Figure 2: The workspace with two tab groups](#figure-2-the-workspace-with-two-tab-groups)
+- [Figure 3: A Room (the Chat page)](#figure-3-a-room-the-chat-page)
+- [Figure 4: The Tasks page](#figure-4-the-tasks-page)
+- [Figure 5: The Library page](#figure-5-the-library-page)
+- [Figure 6: Tabbed pages (Team page and Settings)](#figure-6-tabbed-pages-team-page-and-settings)
+  - [Figure 6b: The Project page](#figure-6b-the-project-page)
+- [Figure 7: The Teammates page](#figure-7-the-teammates-page)
+- [Figure 8: Overlays](#figure-8-overlays)
+- [Figure 9: The Build a team page](#figure-9-the-build-a-team-page)
+- [Using the codes](#using-the-codes)
+- [Sources and upkeep](#sources-and-upkeep)
+- [See also](#see-also)
+
 ## How the codes work
 
 A code is **a letter, a number and sometimes a lowercase letter**.
@@ -28,7 +47,7 @@ A code is **a letter, a number and sometimes a lowercase letter**.
 | `C` | A Room, the Chat page | [3](#figure-3-a-room-the-chat-page) |
 | `T` | The Tasks page | [4](#figure-4-the-tasks-page) |
 | `L` | The Library page | [5](#figure-5-the-library-page) |
-| `M` | The Team page | [6](#figure-6-tabbed-pages-team-page-and-settings) |
+| `M` | The Team page and the Project page (`/teams/{Team}/projects/{Project}`) | [6](#figure-6-tabbed-pages-team-page-and-settings) |
 | `G` | Settings | [6](#figure-6-tabbed-pages-team-page-and-settings) |
 | `P` | The Teammates page | [7](#figure-7-the-teammates-page) |
 | `O` | Overlays: dialogs, drawers, menus, toasts | [8](#figure-8-overlays) |
@@ -240,6 +259,8 @@ slate `B` badges name the same containers.
 | `M4b` | Active panel | `TeamRoster`, `TeamFilesTab`, `TeamTasksTab`, `ProcessTab` or `TeamDetails` | Only the selected panel is rendered. The Files panel is the Library explorer alone, with no toolbar above it: its search, New note and New folder are in the tree header (`L2c`) |
 | `M5` | Search | Retired | Moved into the Library tree header (`L2c`); the Tasks panel keeps its own search in its toolbar (`T3e`). The code stays retired |
 | `M6` | Members panel | `TeamRoster`: `BuildTeam` with `MembersOnly` | Drawn in Figure 6 with the reused containers badged as in Figure 9: the roles grid (`B9a`), the roster (`B12`, the cards of `B9c`) and the save row (`B10` without its heading). Build a team's Hire section (`B9`, `B9a`, `B9c`) for the Team, with no number badge and, under "Roles", the team type cloud (`B9f`, with `B9g` floated to its left once a type is picked) that filters the roles grid, then the Manager select and a Save row (`B10` without its heading). A member's roster card (`B12`) shows its presence badge on the avatar (no status dot beside the Name) and, on one row of actions, Edit, Message (once it has connected; opens the Team's own one-to-one) and a Remove menu: Remove from Team (keeps the Teammate) or Delete Teammate. Save changes redraws the panel in place. The Save row is a save bar (`.build-team-savebar`) that renders only while there are unsaved changes, sticky to the bottom of the pane with a top hairline |
+| `M7` | Not-found notice | `MudAlert` Warning, `role="alert"` | Not drawn. "There is no Team named …" (link to Teammates), or on a Project route "There is no Project named … in Team …" (link to the Team page). Nothing else is rendered, and nothing is created |
+| `M8` | Features-off notice | `MudAlert` Info, `role="status"` | Not drawn. "Files and Tasks are turned off in this installation." replaces `M4` when no tab is available |
 | `G1` | Settings container | `MudContainer`, `MaxWidth.Large`, `.settings-page` | Content is left-aligned, not centred, and capped at 960px |
 | `G1a` | Reset all | `ResetAllControl` | In the Prompts panel's action row beside Save; "Reset all to defaults", disabled until a prompt has been changed, then asks inline (`InlineConfirm`) |
 | `G2` | Tabs | `MudTabs` | The active tab follows the route; under a `PageHeader` "Settings" |
@@ -247,6 +268,25 @@ slate `B` badges name the same containers.
 | `G3` | Active panel | `ProfilePanel`, `PromptsPanel`, `Appearance`, `Personas`, `SkillsPanel`, `TeamTypesPanel` or `LibraryPanel` | Each opens with `SettingsIntro` (14px TextSecondary, 75ch), `StoredAt` ("Overrides stored at", 12px TextSecondary, the path in 12px mono) and an action row. `{{tokens}}` are tag chips in 12px mono. The Prompts and Skills panels mark placeholders, status and source with tinted chips that carry an icon |
 | `G3a` | Save | `MudButton` Filled | Prompts panel only, in a sticky action row with Reset all |
 | `G3b` | Profile card | `ProfileCard` with `OnAvatarClick` | The Human's own card at the top of the Profile panel: the avatar is a **Change avatar** button opening `AvatarEditorDialog` (saves at once), with Name, Alias, Title and Description fields and a Save below. A welcome `MudAlert` sits above it until `profile.json` exists |
+
+### Figure 6b: The Project page
+
+`/teams/{Team}/projects/{Project}` (and `…/{Tab}`) is the same component as the Team page,
+`TeamPage.razor`, so it uses the same containers and codes. It differs only by omission.
+
+![The Project page: the shell breadcrumb "Teams › Growth" above a page container that opens with an h1 naming the Project, then the spend strip, a tab rail of Files and Tasks, and a Files panel with the library tree, headed by its search and New note row, beside an empty document panel](../images/wireframes/06b-project-page.svg)
+
+| Code | On the Project page |
+| --- | --- |
+| `S1a` | The breadcrumb is "Teams › Growth": the ancestors only, because the page names itself with an h1 (see `M1`) |
+| `L2`, `L2c`, `L3` | The Files panel's tree, its header and the document panel, as in Figure 5 |
+| `M1` | Same container. It opens with an h1 (`PageHeader`) naming the Project, "Lifecycle Emails", and the shell breadcrumb (`S1a`) holds only the ancestors, "Teams › Growth". The Team page's own tab in the strip (`W4`) is a separate Tab from the Project's |
+| `M2` | Absent: Duplicate is for a Team only |
+| `M3` | Present, and still the spend of the whole Team's members |
+| `M4a` | Files and Tasks only, in that order; with Library off only Tasks shows, with Tasks off only Files. The default tab is the first one shown |
+| `M4b` | `TeamFilesTab` and `TeamTasksTab`, each given the Project so they list only its files and Tasks. No Members, Process or Details panel. The Files panel is the `LibraryExplorer` (Figure 5) alone, with no toolbar above it: the tree (`L2`) on the left, headed by its search and New note / New folder row (`L2c`), and on the right `L3` with its empty state "Select a note to read it, or start a new one." and a New note button |
+| `M5` | Retired, as on the Team page: the search is in the tree header (`L2c`) |
+| `M7`, `M8` | As on the Team page |
 
 ## Figure 7: The Teammates page
 
