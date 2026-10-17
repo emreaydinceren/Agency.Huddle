@@ -68,6 +68,44 @@ public sealed class PageHeaderTests
         Assert.Equal("Business", cut.Find("h1").TextContent);
     }
 
+    /// <summary>
+    /// HideTitle keeps the title as the page's one h1 for a screen reader, clipped out of view by the global
+    /// <c>visually-hidden</c> class, and with no actions it draws no row - so no empty row's height or margin -
+    /// while the document title is still set.
+    /// </summary>
+    [Fact]
+    public async Task HideTitle_KeepsAScreenReaderH1AndDrawsNoRow()
+    {
+        await using MudBunitContext ctx = new();
+
+        var cut = ctx.Render<PageHeader>(parameters => parameters
+            .Add(p => p.Title, "Settings")
+            .Add(p => p.HideTitle, true));
+
+        var heading = cut.Find("h1");
+        Assert.Equal("Settings", heading.TextContent);
+        Assert.Contains("visually-hidden", heading.ClassList);
+        Assert.Empty(cut.FindAll(".mb-4"));
+        Assert.NotNull(cut.FindComponent<PageTitle>());
+    }
+
+    /// <summary>A hidden title still leaves the page's actions visible, in their own row on the right.</summary>
+    [Fact]
+    public async Task HideTitle_WithActions_KeepsTheActionsRow()
+    {
+        await using MudBunitContext ctx = new();
+        RenderFragment actions = builder => builder.AddMarkupContent(0, "<button class=\"page-action\">Save</button>");
+
+        var cut = ctx.Render<PageHeader>(parameters => parameters
+            .Add(p => p.Title, "Settings")
+            .Add(p => p.HideTitle, true)
+            .Add(p => p.Actions, actions));
+
+        var row = cut.Find(".mb-4");
+        Assert.NotNull(row.QuerySelector("button.page-action"));
+        Assert.Null(row.QuerySelector("h1"));
+    }
+
     /// <summary>The same text is set as the document title through PageTitle.</summary>
     [Fact]
     public async Task Title_AlsoSetsThePageTitle()

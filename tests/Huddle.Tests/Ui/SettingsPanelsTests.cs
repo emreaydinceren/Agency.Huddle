@@ -29,16 +29,21 @@ public sealed partial class SettingsPanelsTests
         return ctx;
     }
 
-    /// <summary>The page opens with one <c>h1</c> reading "Settings" (UX-001, DS "A page").</summary>
+    /// <summary>
+    /// The page has one <c>h1</c> reading "Settings" (UX-001, DS "A page"), for a screen reader only: the Tab and the
+    /// one-crumb trail already show the name, so a visible title would say it a third time.
+    /// </summary>
     [Fact]
-    public async Task Settings_HasOneH1ReadingSettings()
+    public async Task Settings_HasOneScreenReaderOnlyH1ReadingSettings()
     {
         await using var factory = new TeamWebApplicationFactory();
         await using var ctx = NewContext(factory);
 
         var cut = ctx.Render<Settings>();
 
-        Assert.Equal("Settings", Assert.Single(cut.FindAll("h1")).TextContent.Trim());
+        var heading = Assert.Single(cut.FindAll("h1"));
+        Assert.Equal("Settings", heading.TextContent.Trim());
+        Assert.Contains("visually-hidden", heading.ClassList);
     }
 
     /// <summary>Every row in the section menu carries an icon, as the Team page rail does (UX-008).</summary>

@@ -17,7 +17,8 @@
 *@
 
 <MudContainer MaxWidth="MaxWidth.Large" Class="page-reading settings-page pa-4">
-    <PageHeader Title="Settings" />
+    @* The Tab and the one-crumb trail already show "Settings", so the h1 is for a screen reader only. *@
+    <PageHeader Title="Settings" HideTitle="true" />
 
     @if (this.error is not null)
     {

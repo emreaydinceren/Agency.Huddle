@@ -647,6 +647,12 @@ Persona file works belongs in the User Guide.
      name, never its slug. Its `<PageTitle>` still sets the document title. The Team page
      and the Project page are not exceptions: both draw a `PageHeader` `h1`. Don't copy
      the Tasks exception to another page.
+   - **The Settings title is for a screen reader.** Settings has no ancestor, so its Tab
+     and its one-crumb trail both already read "Settings"; a visible title would be the
+     third. It passes `HideTitle` to `PageHeader`, which keeps the `h1` and the document
+     title but clips the `h1` out of view with `.visually-hidden`. Only a page whose name
+     the Tab and a one-crumb trail both show may do this; a page with ancestors or a
+     subtitle keeps a visible title.
 4. **Fill the pane.** The page's root is `h-100`, with `min-height: 0` on a flex child so
    inner regions scroll instead of the page growing past the window (`.room-column` is the
    model). Split panes fill the height too (UX-006).

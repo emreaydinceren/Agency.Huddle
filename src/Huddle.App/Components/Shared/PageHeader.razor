@@ -1,23 +1,37 @@
 @*
     The header every routable page opens with (design-system "A page"; UX-001, UX-004): the title as the
     page's only h1 at Typo.h5 on the left, the page's actions on the right, and the same text as the
-    document title through PageTitle.
+    document title through PageTitle. With HideTitle the h1 stays for a screen reader but is clipped out
+    of view, and with no actions to show there is no row, so the page loses the row's height and margin too.
 *@
 
-<MudStack Row="true" Justify="Justify.SpaceBetween" AlignItems="AlignItems.Center" Class="mb-4">
-    @if (this.Subtitle is null)
+@if (this.HideTitle)
+{
+    <MudText Typo="Typo.h5" HtmlTag="h1" Class="visually-hidden">@this.Title</MudText>
+    @if (this.Actions is not null)
     {
-        <MudText Typo="Typo.h5" HtmlTag="h1">@this.Title</MudText>
+        <MudStack Row="true" Justify="Justify.FlexEnd" AlignItems="AlignItems.Center" Class="mb-4">
+            @this.Actions
+        </MudStack>
     }
-    else
-    {
-        <div class="page-header-titles">
+}
+else
+{
+    <MudStack Row="true" Justify="Justify.SpaceBetween" AlignItems="AlignItems.Center" Class="mb-4">
+        @if (this.Subtitle is null)
+        {
             <MudText Typo="Typo.h5" HtmlTag="h1">@this.Title</MudText>
-            <MudText Typo="Typo.body2" Class="page-header-subtitle">@this.Subtitle</MudText>
-        </div>
-    }
-    @this.Actions
-</MudStack>
+        }
+        else
+        {
+            <div class="page-header-titles">
+                <MudText Typo="Typo.h5" HtmlTag="h1">@this.Title</MudText>
+                <MudText Typo="Typo.body2" Class="page-header-subtitle">@this.Subtitle</MudText>
+            </div>
+        }
+        @this.Actions
+    </MudStack>
+}
 @if (this.SetPageTitle)
 {
     <PageTitle>@this.Title</PageTitle>
@@ -40,4 +54,8 @@
     /// <summary>Whether the header also sets the document title to <see cref="Title"/>; the document title is always the bare page name, so a page turns this off only when it sets the title itself.</summary>
     [Parameter]
     public bool SetPageTitle { get; set; } = true;
+
+    /// <summary>Whether the title is for a screen reader only: the h1 and the document title stay, but nothing shows. For a page whose Tab and one-crumb trail already show its name, such as Settings; a page with ancestors or a Subtitle keeps a visible title.</summary>
+    [Parameter]
+    public bool HideTitle { get; set; }
 }
