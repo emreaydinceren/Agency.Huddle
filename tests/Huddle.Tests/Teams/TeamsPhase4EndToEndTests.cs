@@ -52,6 +52,9 @@ public sealed class TeamsPhase4EndToEndTests
 
     private const string BugBody = "## Steps to reproduce\nCall GET /login twice.\n\n## Expected and actual\nExpected 200, got 500.";
 
+    /// <summary>The change-log line only the unblock wake (RQ-6) carries. The blocked Task's own earlier coalesced wakes (its creation and the <c>blocked_by</c> edit) fire about a second after their steps, so counting every wake to its assignee races them.</summary>
+    private const string UnblockedMarker = "Unblocked: ";
+
     private const string OwnedRefusal = "Only managers file Requests; ask your own manager.";
 
     private static readonly TimeSpan WaitLimit = TimeSpan.FromSeconds(30);
@@ -99,13 +102,12 @@ public sealed class TeamsPhase4EndToEndTests
         _ = Saved(service.Update(request.Id, new TaskPatch { Status = TaskState.Review }, null, apiDeveloper));
         await WaitForAsync(() => run.WakesOf(webManager.Name, apiDeveloper.Name) >= 1, ct, run.Describe);
 
-        int developerWakesBefore = run.WakesOf(webDeveloper.Name, null);
         _ = Saved(service.AddEvidence(request.Id, new EvidenceLine(DateTimeOffset.UtcNow, apiQa.Name, CheckCommand, 0, null, null, string.Empty), apiQa));
         _ = Saved(service.Update(request.Id, new TaskPatch { Status = TaskState.Done }, null, apiQa));
-        await WaitForAsync(() => run.WakesOf(webManager.Name, apiQa.Name) >= 1 && run.WakesOf(webDeveloper.Name, null) > developerWakesBefore, ct, run.Describe);
+        await WaitForAsync(() => run.WakesOf(webManager.Name, apiQa.Name) >= 1 && run.Wakes(webDeveloper.Name, UnblockedMarker) >= 1, ct, run.Describe);
 
         Assert.Equal(TaskState.Done, Current(store, request.Id).Status);
-        Assert.Equal(developerWakesBefore + 1, run.WakesOf(webDeveloper.Name, null));
+        Assert.Equal(1, run.Wakes(webDeveloper.Name, UnblockedMarker));
 
         string confirmed = await Tool<ConfirmRequestTool>(run, webQa).InvokeAsync(new JsonObject { ["taskId"] = request.Id.ToString(), ["note"] = "Checked on staging." }, ct);
 
