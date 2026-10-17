@@ -262,7 +262,7 @@ All under the `Team:` section — `TeamOptions.cs`, `Acp/AcpOptions.cs`, `FileCh
 | --- | --- | --- |
 | `DataDir` | `App_Data` | Everything created at runtime lives here. |
 | `PipeName` | `team` | |
-| `HumanName` | `You` | |
+| `HumanName` | `You` | The Human's Name on a blank system only. Once `{DataDir}/profile.json` exists (Settings > Profile, `HumanProfileStore`), that file wins; read the live Name through `IHumanIdentity`, never from this key. |
 | `AgentMessageBudget` | `40` | Agent-authored Messages one Room takes between Human Messages. Any Human Message resets it; the Room view offers the Human one more Budget at a time. **Zero or less removes the runaway-loop guard entirely.** |
 | `DemoAgent:Enabled` | `false` | The echo agents. Off by default; set `true` to get the `echo` and `alpha` Rooms. |
 | `DemoAgent:Names` | `["echo", "alpha"]` | |

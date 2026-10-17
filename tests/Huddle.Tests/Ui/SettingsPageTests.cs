@@ -31,17 +31,18 @@ public sealed class SettingsPageTests
         ctx.Services.AddSingleton(factory.Services.GetRequiredService<AppearanceStore>());
         ctx.Services.AddSingleton(factory.Services.GetRequiredService<SkillStore>());
         ctx.Services.AddSingleton(factory.Services.GetRequiredService<LibraryRootStore>());
+        ProfileTestServices.AddProfile(ctx.Services, factory);
         return ctx;
     }
 
-    /// <summary>MudTabs renders both tab labels and, on the default (Prompts) panel, every group heading the Prompts tab shows.</summary>
+    /// <summary>MudTabs renders both tab labels and, on the Prompts panel, every group heading the Prompts tab shows.</summary>
     [Fact]
     public async Task SettingsPage_Renders_TabRailAndGroupHeadings()
     {
         await using var factory = new TeamWebApplicationFactory();
         await using var ctx = NewContext(factory);
 
-        var cut = ctx.Render<Settings>();
+        var cut = ctx.Render<Settings>(parameters => parameters.Add(page => page.Tab, "prompts"));
 
         Assert.Contains("mud-tabs", cut.Markup, StringComparison.Ordinal);
         Assert.Contains(">Prompts<", cut.Markup, StringComparison.Ordinal);
@@ -52,7 +53,7 @@ public sealed class SettingsPageTests
         Assert.Contains(">Tool descriptions<", cut.Markup, StringComparison.Ordinal);
     }
 
-    /// <summary>The <c>/settings/library</c> route selects the sixth panel and renders the Library panel (D3: the tab was unreachable).</summary>
+    /// <summary>The <c>/settings/library</c> route selects the seventh panel and renders the Library panel (D3: the tab was unreachable).</summary>
     [Fact]
     public async Task SettingsPage_LibraryRoute_RendersLibraryPanel()
     {
@@ -62,10 +63,10 @@ public sealed class SettingsPageTests
         var cut = ctx.Render<Settings>(parameters => parameters.Add(page => page.Tab, "library"));
 
         Assert.Single(cut.FindComponents<LibraryPanel>());
-        Assert.Equal(5, cut.FindAll(".mud-tab").ToList().FindIndex(tab => tab.ClassList.Contains("mud-tab-active")));
+        Assert.Equal(6, cut.FindAll(".mud-tab").ToList().FindIndex(tab => tab.ClassList.Contains("mud-tab-active")));
     }
 
-    /// <summary>Activating the sixth tab header navigates to <c>/settings/library</c> rather than falling back to Prompts.</summary>
+    /// <summary>Activating the seventh tab header navigates to <c>/settings/library</c> rather than falling back to Profile.</summary>
     [Fact]
     public async Task SettingsPage_LibraryTabClick_NavigatesToLibrary()
     {
@@ -74,27 +75,27 @@ public sealed class SettingsPageTests
         var navigation = ctx.Services.GetRequiredService<NavigationManager>();
         var cut = ctx.Render<Settings>();
 
-        cut.FindAll(".mud-tab")[5].Click();
+        cut.FindAll(".mud-tab")[6].Click();
 
         Assert.Equal("settings/library", navigation.ToBaseRelativePath(navigation.Uri));
     }
 
-    /// <summary>The default (Prompts) panel renders the Prompts panel's MudPaper-wrapped groups.</summary>
+    /// <summary>The Prompts panel renders the Prompts panel's MudPaper-wrapped groups.</summary>
     [Fact]
     public async Task SettingsPromptsPage_Renders_PromptsPanel()
     {
         await using var factory = new TeamWebApplicationFactory();
         await using var ctx = NewContext(factory);
 
-        var cut = ctx.Render<Settings>();
+        var cut = ctx.Render<Settings>(parameters => parameters.Add(page => page.Tab, "prompts"));
 
         Assert.NotEmpty(cut.FindAll(".mud-paper"));
         Assert.Contains(">System prompt<", cut.Markup, StringComparison.Ordinal);
     }
 
-    /// <summary>An unrecognised {Tab} value falls back to the Prompts panel rather than 404ing or throwing - a fact about routing, so it stays on HTTP.</summary>
+    /// <summary>An unrecognised {Tab} value falls back to the first tab, Profile, rather than 404ing or throwing - a fact about routing, so it stays on HTTP.</summary>
     [Fact]
-    public async Task SettingsPage_UnknownTab_FallsBackToPromptsPanel()
+    public async Task SettingsPage_UnknownTab_FallsBackToProfilePanel()
     {
         using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(60));
         var ct = cts.Token;
@@ -106,7 +107,9 @@ public sealed class SettingsPageTests
         var html = await response.Content.ReadAsStringAsync(ct);
 
         response.EnsureSuccessStatusCode();
-        Assert.Contains(">System prompt<", html, StringComparison.Ordinal);
+        // contains-ok: a raw prerendered page; the panel's class proves which tab rendered, its markup is pinned by ProfilePanelTests.
+        Assert.Contains("profile-panel", html, StringComparison.Ordinal);
+        Assert.DoesNotContain(">System prompt<", html, StringComparison.Ordinal);
     }
 
     /// <summary>Every one of the catalog's prompt labels reaches the rendered page - unaffected by the MudBlazor conversion, so it stays on HTTP.</summary>
@@ -150,7 +153,7 @@ public sealed class SettingsPageTests
         await using var factory = new TeamWebApplicationFactory();
         await using var ctx = NewContext(factory);
 
-        var cut = ctx.Render<Settings>();
+        var cut = ctx.Render<Settings>(parameters => parameters.Add(page => page.Tab, "prompts"));
 
         var save = cut.Find("button[type='submit']");
         Assert.True(save.HasAttribute("disabled"));
@@ -183,7 +186,7 @@ public sealed class SettingsPageTests
         await using var factory = new TeamWebApplicationFactory();
         await using var ctx = NewContext(factory);
 
-        var cut = ctx.Render<Settings>();
+        var cut = ctx.Render<Settings>(parameters => parameters.Add(page => page.Tab, "prompts"));
 
         var buttons = cut.FindAll("button");
         var resetAll = Assert.Single(buttons, button => button.TextContent.Contains("Reset all to defaults", StringComparison.Ordinal));
@@ -471,7 +474,7 @@ public sealed class SettingsPageTests
     /// <summary>
     /// Spec §6.7, U8/U10: navigating to <c>/settings/skills</c> selects the Skills tab rather than
     /// falling back to Prompts - the same routing guarantee <c>/settings/personas</c> and
-    /// <c>/settings/appearance</c> already have (<see cref="SettingsPage_UnknownTab_FallsBackToPromptsPanel"/>'s
+    /// <c>/settings/appearance</c> already have (<see cref="SettingsPage_UnknownTab_FallsBackToProfilePanel"/>'s
     /// inverse). Asserted by the ABSENCE of the Prompts panel's own content rather than by referencing
     /// <c>SettingsTab.Skills</c> directly, so this stays an assertion red rather than a compile one.
     /// </summary>

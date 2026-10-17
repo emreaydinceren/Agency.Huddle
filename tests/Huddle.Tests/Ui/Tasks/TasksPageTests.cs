@@ -326,6 +326,7 @@ public sealed class TasksPageTests
         ctx.Services.AddSingleton<ISprintCatalog>(sprints);
         ctx.Services.AddSingleton<Agency.Huddle.App.Data.ITeamDirectory>(new Agency.Huddle.App.Data.SqliteTeamDirectory(dir.Options()));
         ctx.Services.AddSingleton(Options.Create(new TeamOptions()));
+        ctx.Services.AddSingleton<Agency.Huddle.App.Profile.IHumanIdentity>(new Agency.Huddle.App.Profile.ConfiguredHumanIdentity("You"));
         // 14.5.i: the page always hosts WakeToasts (Spec §13.8), which @injects TaskActivity.
         ctx.Services.AddSingleton<TaskActivity>();
 

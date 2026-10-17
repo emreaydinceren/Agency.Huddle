@@ -12,6 +12,7 @@ using Agency.Huddle.App.FileChanges;
 using Agency.Huddle.App.HiringPool;
 using Agency.Huddle.App.Library;
 using Agency.Huddle.App.NeedsYou;
+using Agency.Huddle.App.Profile;
 using Agency.Huddle.App.Prompts;
 using Agency.Huddle.App.Pipes;
 using Agency.Huddle.App.Services;
@@ -170,7 +171,17 @@ public static class ServiceCollectionExtensions
         // would mean a second FileSystemWatcher on the same Teams directory, which
         // PipeHostFixture.RemovePersonaSupervisorHostedService's remarks document as the cause of a
         // real, intermittent test flake once already, for the closely related PersonaSupervisor case.
-        services.AddSingleton<IMentionAliasSource>(sp => sp.GetRequiredService<PersonaStore>());
+        services.AddSingleton<IMentionAliasSource>(sp => new CompositeMentionAliasSource(
+            sp.GetRequiredService<PersonaStore>(),
+            sp.GetRequiredService<IHumanIdentity>(),
+            sp.GetRequiredService<ILogger<CompositeMentionAliasSource>>()));
+
+        // The Human's profile (profile.json), served as the live IHumanIdentity every Human-Name
+        // reader uses. Same instance behind both registrations, like PersonaStore just above, so
+        // there is one watcher on the file.
+        services.AddSingleton<HumanProfileStore>();
+        services.AddSingleton<IHumanIdentity>(sp => sp.GetRequiredService<HumanProfileStore>());
+        services.AddSingleton<HumanProfileValidator>();
 
         // Constructor-injected rather than newed up inline inside DotAcpAgentHostFactory (see that
         // type's own remarks): the same registration a Conformance fixture (D10, Task 10.1) replaces
@@ -462,7 +473,11 @@ public static class ServiceCollectionExtensions
         // component must never depend on an IHostedService.
         services.AddSingleton<BuiltinTeammateReset>();
 
+        // A singleton before it is a hosted service: DataInitializer runs it directly at startup for a
+        // rename made while the app was stopped, and the hosted half subscribes to HumanRenamed.
+        services.AddSingleton<HumanRenameCascade>();
         services.AddHostedService<DataInitializer>();
+        services.AddHostedService(sp => sp.GetRequiredService<HumanRenameCascade>());
         services.AddHostedService<PipeServer>();
         services.AddHostedService<DemoAgentHost>();
 

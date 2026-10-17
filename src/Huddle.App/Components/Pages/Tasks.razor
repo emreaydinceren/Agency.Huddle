@@ -48,6 +48,7 @@
 @inject ViewStore Views
 @inject SprintStore Sprints
 @inject IOptions<TeamOptions> Options
+@inject IHumanIdentity Human
 @inject IJSRuntime JS
 @inject ISnackbar Snackbar
 @inject IDialogService DialogService
@@ -434,7 +435,7 @@
             this.effectiveView.Scope,
             this.effectiveView.Filter,
             searchText,
-            this.Options.Value.HumanName,
+            this.Human.Name,
             currentSprint: this.Sprints.Current?.Id);
         return TaskQuery.Sort(filtered, this.effectiveView.Sort);
     }
@@ -447,7 +448,7 @@
     {
         get
         {
-            string human = this.Options.Value.HumanName;
+            string human = this.Human.Name;
             return this.FilteredTasks(this.search)
                 .Count(task => !task.Status.IsTerminal() && string.Equals(task.Assignee, human, StringComparison.OrdinalIgnoreCase));
         }

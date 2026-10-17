@@ -177,7 +177,7 @@ unitless and set with the sizes in `ThemeDefaults.WithSharedTypography`.
 | Dialog or drawer title | `h6` | MudBlazor's | 16px | 1.35 | 600 | "New team", "SUPP-0005 · Build the public status page" |
 | Section heading inside a page or panel | `subtitle2` | `h2` | 14px | 1.4 | 600 | Teammates groups, Prompts groups, "Roles", "Roster" (UX-001) |
 | Card title | `subtitle1` | | 14px | 1.4 | 600 | A Teammate tile's name, an agent card's "Nova is asking" (UX-031) |
-| Group label inside a panel, small and uppercase | `overline` | | 11px, 0.04em tracking | 1.3 | 600 | "Your avatar", "Problems", the search group headings |
+| Group label inside a panel, small and uppercase | `overline` | | 11px, 0.04em tracking | 1.3 | 600 | "Background", "Problems", the search group headings |
 | Prose, Transcript | `body1` | | 14px (the Library reader 16px at 1.65) | 1.55 | 400 | Intro paragraphs, "No tasks yet.", a message's body |
 | Dense UI text, rows, cells, controls | `body2` | | 13px | 1.4 | 400, 500 for controls | List rows, table cells, menu items, sidebar rows, Small buttons |
 | Metadata, timestamps, helper lines, counts | `caption` | | 12px | 1.35 | 400 | "11:48", "3 Members + you" (UX-037) |

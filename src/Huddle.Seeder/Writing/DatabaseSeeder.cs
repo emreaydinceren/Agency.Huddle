@@ -1,6 +1,7 @@
 using System.Globalization;
 using System.Security.Cryptography;
 using System.Text;
+using System.Text.Json;
 using Microsoft.Data.Sqlite;
 using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Options;
@@ -36,6 +37,10 @@ internal static class DatabaseSeeder
         try
         {
             await directory.InitializeAsync(plan.HumanName, ct);
+
+            // A saved profile, so the seeded app opens on its Rooms rather than the first-run redirect to Settings > Profile.
+            string profile = JsonSerializer.Serialize(new Dictionary<string, string>(StringComparer.Ordinal) { ["name"] = plan.HumanName });
+            await File.WriteAllTextAsync(Path.Combine(dataDir, "profile.json"), profile, ct);
 
             Dictionary<string, string> userIds = new(StringComparer.OrdinalIgnoreCase);
             foreach (SeedTeammate teammate in plan.Teammates)

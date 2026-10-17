@@ -198,9 +198,9 @@ Application shell, navigation and layout — [area file](shell-nav.md)
 | [SHELLNAV-08](shell-nav.md#shellnav-08--the-drawer-is-present-identical-and-fixed-width-on-every-route) |  | Active |  |  |
 | [SHELLNAV-09](shell-nav.md#shellnav-09--the-sidebar-marks-exactly-one-room-active-with-aria-current) |  | Active |  |  |
 | [SHELLNAV-10](shell-nav.md#shellnav-10--teammates-renders-and-a-bare-page-load-spawns-no-node-process) |  | Active |  |  |
-| [SHELLNAV-11](shell-nav.md#shellnav-11--settings-renders-the-six-tab-bar-and-defaults-to-prompts) |  | Active |  |  |
+| [SHELLNAV-11](shell-nav.md#shellnav-11--settings-renders-the-seven-tab-bar-and-defaults-to-profile) |  | Active |  |  |
 | [SHELLNAV-12](shell-nav.md#shellnav-12--clicking-a-settings-tab-changes-the-url-and-the-url-round-trips-as-a-bookmark) |  | Active |  |  |
-| [SHELLNAV-13](shell-nav.md#shellnav-13--an-unrecognised-tab-segment-silently-falls-back-to-prompts-and-the-tab-name-is-matched-without-regard-to-case) |  | Active |  |  |
+| [SHELLNAV-13](shell-nav.md#shellnav-13--an-unrecognised-tab-segment-silently-falls-back-to-profile-and-the-tab-name-is-matched-without-regard-to-case) |  | Active |  |  |
 | [SHELLNAV-14](shell-nav.md#shellnav-14--no-route-sets-a-browser-tab-title) |  | Active |  |  |
 | [SHELLNAV-15](shell-nav.md#shellnav-15--focus-moves-to-the-pages-h1-after-every-navigation) |  | Active |  |  |
 | [SHELLNAV-16](shell-nav.md#shellnav-16--sidebar-links-use-enhanced-navigation-not-a-full-page-reload) |  | Active |  |  |
@@ -252,7 +252,7 @@ Startup, configuration and first-run state — [area file](startup-config.md)
 | [STARTUPCONFIG-15](startup-config.md#startupconfig-15--team__agentmessagebudget0-removes-the-guard-entirely-and-hides-every-budget-surface-a-restart-un-pauses-everything) |  | Active |  |  |
 | [STARTUPCONFIG-17](startup-config.md#startupconfig-17--a-mis-spelled-configuration-key-changes-nothing-and-reports-nothing) |  | Active |  |  |
 | [STARTUPCONFIG-20](startup-config.md#startupconfig-20--team__datadir-points-the-whole-application-at-a-different-folder--a-clean-slate-without-deleting-anything) |  | Active |  |  |
-| [STARTUPCONFIG-21](startup-config.md#startupconfig-21--team__humanname-renames-the-human-everywhere-new-while-old-transcript-lines-keep-the-old-name) |  | Active |  |  |
+| [STARTUPCONFIG-21](startup-config.md#startupconfig-21--renaming-yourself-on-settings--profile-renames-you-everywhere-old-messages-included-without-rewriting-a-transcript) |  | Active |  |  |
 | [STARTUPCONFIG-22](startup-config.md#startupconfig-22--the-renamed-team__acp__personadir-key-refuses-to-start-the-app-rather-than-scanning-nothing) |  | Active |  |  |
 | [STARTUPCONFIG-23](startup-config.md#startupconfig-23--an-external-pipe-client-creates-a-room-live-with-no-page-refresh) |  | Active |  |  |
 | [STARTUPCONFIG-24](startup-config.md#startupconfig-24--team__pipename-changes-the-pipe-and-silently-orphans-any-external-client) |  | Active |  |  |
@@ -265,6 +265,7 @@ Startup, configuration and first-run state — [area file](startup-config.md)
 | [STARTUPCONFIG-32](startup-config.md#startupconfig-32--team__acp__tracewiretrue-dumps-the-tool-servers-bearer-token-to-the-console) |  | Active |  |  |
 | [STARTUPCONFIG-33](startup-config.md#startupconfig-33--a-spent-per-persona-token-budget-reads-as-degraded-on-the-teammate-tile-and-in-the-room-banner) | 💰 | Active |  |  |
 | [STARTUPCONFIG-34](startup-config.md#startupconfig-34--a-human-message-clears-a-token-budget-degraded-state-and-lets-the-persona-work-again) | 💰 | Active |  |  |
+| [STARTUPCONFIG-35](startup-config.md#startupconfig-35--a-blank-system-opens-on-settings--profile-until-you-save-a-profile) |  | Active |  |  |
 
 ## room-messaging
 
@@ -603,8 +604,8 @@ Settings: the 24 Prompts, editing, per-field reset and Save — [area file](prom
 
 | Test | 💰 | Status | Issue | Notes |
 | --- | --- | --- | --- | --- |
-| [PROMPTSSETTINGS-01](prompts-settings.md#promptssettings-01--settings-opens-on-the-prompts-tab-with-a-six-tab-rail) |  | Active |  |  |
-| [PROMPTSSETTINGS-02](prompts-settings.md#promptssettings-02--tab-clicks-change-the-url-and-an-unknown-tab-segment-falls-back-to-prompts-instead-of-404ing) |  | Active |  |  |
+| [PROMPTSSETTINGS-01](prompts-settings.md#promptssettings-01--settings-opens-on-the-profile-tab-with-a-seven-tab-rail) |  | Active |  |  |
+| [PROMPTSSETTINGS-02](prompts-settings.md#promptssettings-02--tab-clicks-change-the-url-and-an-unknown-tab-segment-falls-back-to-profile-instead-of-404ing) |  | Active |  |  |
 | [PROMPTSSETTINGS-03](prompts-settings.md#promptssettings-03--the-prompts-tab-prints-the-real-absolute-path-of-promptsjson-and-says-the-files-absence-is-expected) |  | Active |  |  |
 | [PROMPTSSETTINGS-04](prompts-settings.md#promptssettings-04--every-prompt-is-reachable-in-six-named-groups-in-a-fixed-order) |  | Active |  |  |
 | [PROMPTSSETTINGS-05](prompts-settings.md#promptssettings-05--the-next-session-badge-appears-on-exactly-the-prompts-whose-edits-cannot-reach-a-running-teammate) |  | Active |  |  |
@@ -924,13 +925,13 @@ Avatar library: choosing a face from the library — [area file](avatar-library.
 | [AVATARLIB-16](avatar-library.md#avatarlib-16--show-more-adds-48-and-any-filter-change-returns-to-48-at-the-top-grid-paging) |  | Active | |  |
 | [AVATARLIB-17](avatar-library.md#avatarlib-17--the-tag-cloud-shows-40-show-all-reveals-the-rest-and-a-selected-tag-stays-visible-tag-cap) |  | Active | |  |
 | [AVATARLIB-18](avatar-library.md#avatarlib-18--picking-copies-the-file-the-card-shows-the-new-image-and-nothing-is-written-until-save-l9-l10) |  | Active | |  |
-| [AVATARLIB-19](avatar-library.md#avatarlib-19--settings--appearance-writes-at-once-l11) |  | Active | |  |
+| [AVATARLIB-19](avatar-library.md#avatarlib-19--settings--profile-the-avatar-windows-save-writes-at-once-l11) |  | Active | |  |
 | [AVATARLIB-20](avatar-library.md#avatarlib-20--a-malformed-masterjson-shows-the-unreadable-message-and-one-warning-l14-m5) |  | Active | |  |
 | [AVATARLIB-21](avatar-library.md#avatarlib-21--skipped-records-are-reported-once-with-a-count-and-examples) |  | Active | |  |
 | [AVATARLIB-22](avatar-library.md#avatarlib-22--reopening-reads-the-file-afresh-r-1-l16-escape-and-enter-behave) |  | Active | |  |
 | [AVATARLIB-23](avatar-library.md#avatarlib-23--the-picker-sits-above-the-avatar-window-and-the-card-and-focus-and-escape-stay-in-order) |  | Active | |  |
 | [AVATARLIB-24](avatar-library.md#avatarlib-24--real-library-first-look-324-pictures-each-the-right-size-and-shape) |  | Active | |  |
-| [AVATARLIB-25](avatar-library.md#avatarlib-25--on-settings--appearance-a-half-made-choice-is-not-undone-by-the-avatar-stores-own-file-watcher-echo) |  | Active | |  |
+| [AVATARLIB-25](avatar-library.md#avatarlib-25--on-settings--profile-a-half-made-choice-in-the-avatar-window-stays-chosen-and-an-outside-edit-still-reaches-the-card) |  | Active | |  |
 | [AVATARLIB-26](avatar-library.md#avatarlib-26--a-library-file-that-vanishes-before-the-pick-that-image-could-not-be-read) |  | Active | |  |
 | [AVATARLIB-27](avatar-library.md#avatarlib-27--the-avatar-window-opens-from-the-avatar-in-every-card-mode-and-applies-or-saves-as-the-mode-says) |  | Active | |  |
 | [AVATARLIB-28](avatar-library.md#avatarlib-28--nothing-configured-the-bundled-library-is-offered) |  | Active | |  |

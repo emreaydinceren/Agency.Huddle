@@ -42,7 +42,7 @@ oracles `O-LOG` / `O-ADAPTERS` / `O-TRANSCRIPT` / `O-DB` / `O-TOOLCALLS`, the fi
 1. Open http://localhost:5100 in a browser.
 2. Click **Settings** in the left sidebar.
 3. Confirm the browser URL is `http://localhost:5100/settings` and the page heading reads `Settings`.
-4. Confirm the tab rail shows six tabs, in this order: **Prompts**, **Appearance**, **Personas**, **Skills**, **Team Types**, **Library** (`Settings.razor:36-76`), and that **Prompts** is the one currently shown (it is the default — you did not have to click it).
+4. Confirm the tab rail shows seven tabs, in this order: **Profile**, **Prompts**, **Appearance**, **Personas**, **Skills**, **Team Types**, **Library** (`Settings.razor`), and that **Profile** is the one currently shown (it is the default). Click **Prompts** and confirm the URL becomes `http://localhost:5100/settings/prompts`; every step below reads the Prompts tab.
 5. Read the second intro paragraph and confirm it names a file path and says the file 'does not exist until the first time you save here, so it being absent is expected, not a bug'.
 6. Scroll the page and confirm the group headings, in this order, start **System prompt**, **Turn**, **Get help**, **Tool descriptions**, and that **Tasks** and **Cadence** follow (`PromptFieldFactory.cs:32-40`). Do not count the groups' fields: the catalog grows, and the checks below name fields, not totals.
 7. Confirm **System prompt** contains these fields, in this relative order: **Orientation**, **Identity**, **Chat rules**, **Tools**.
@@ -316,7 +316,7 @@ If no streaming row ever appears and nothing arrives, the turn never reached the
 
 - The reply is vague, hedged, or invented — e.g. 'the room probably stops the agent' with no mention of not retrying and not rerouting -> `get_help` was not called. Progressive discovery is not working end to end, and the system prompt alone cannot supply this answer because it carries neither section.
 - The reply describes the budget correctly but says nothing about 'context only', or vice versa -> partial recall; check the Trace log. If there is no `tools/call` line, the model answered from the system prompt and guessed the rest.
-- At Trace level, the decoded payload lacks the BUDGET or MESSAGES section -> a prompt override is in force. Check `<data>\prompts.json` and the **Help: budget** / **Help: messages** fields on /settings.
+- At Trace level, the decoded payload lacks the BUDGET or MESSAGES section -> a prompt override is in force. Check `<data>\prompts.json` and the **Help: budget** / **Help: messages** fields on /settings/prompts.
 - `O-TOOLCALLS` shows no `get_help` line and the newest line names some other tool -> see the INCONCLUSIVE note. A call to another product's tool (`mcp__claude_ai_ms365__…`) never reaches this server at all, so the console cannot show it; `O-TOOLCALLS` can.
 
 **Inconclusive if**
@@ -1046,7 +1046,7 @@ The room is not paused, or its last stored Message is not Nova's own (a Human me
 14. Go to /teammates, click the `Nova` tile, and click **Restart** on the card. Wait for the tile to return to **Online**.
 15. Back in the room, type exactly `Call mcp__team__get_help again and list its TOOLS section.` and press Enter. Run `O-TOOLCALLS` and confirm another `get_help` line for this turn.
 16. Decode the newest `App tool server replied to tools/call:` payload and confirm the `list_agents` entry in its TOOLS section NOW ends with `The word of the day is marmalade.`
-17. Return to /settings, click **Reset** on both edited fields, and click **Save**. Confirm `prompts.json` returns to `{}`.
+17. Return to /settings/prompts, click **Reset** on both edited fields, and click **Save**. Confirm `prompts.json` returns to `{}`.
 
 **Pass if — all of these**
 

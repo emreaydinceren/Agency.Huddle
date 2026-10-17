@@ -1,28 +1,11 @@
 @*
-    The Settings page's Appearance tab: pick a theme from ThemeCatalog.Grouped, and set the Human's
-    own Avatar.
+    The Settings page's Appearance tab: pick a theme from ThemeCatalog.Grouped.
 
-    Two sections, not one control. The first is the Theme picker: a theme carries exactly one
-    palette and its own ThemeMode, so picking a theme picks light or dark with it - there is no
-    separate light/dark control any more, and so no way to ask for "Solarized Dark, in light mode"
-    and be shown a different theme's palette instead (docs/adr/0017-a-theme-is-a-palette-not-a-pair.md).
-
-    The second section edits the Human's Avatar. A Teammate's Avatar is edited on its own
-    TeammateCard, because a Teammate has a Persona file for that card to hold open; the Human has no
-    Persona file and therefore no Teammate card, so this tab - the one place a per-installation
-    display choice already lived - is where the Human's Avatar is edited instead. It reuses Phase
-    5.1's exact editor: the MudRadioGroup, the Immediate label field trimmed through
-    Avatar.TrimLabel, the MudFileUpload validated the same way (Size against AvatarImage.MaxBytes,
-    then AvatarImage.SniffExtension), and the MudColorPicker bound to Text and never Value - see that
-    control's own comment below for the trap. The one deliberate difference: this tab has no Save
-    button, so every change here writes to avatars.json immediately - the same way choosing a theme
-    above applies immediately - rather than buffering until a Save the way TeammateCard's editor does.
-    There is no Cancel to protect here, so there is no reason to hold an upload's bytes back either.
-
-    "Appearance" does not widen to cover this. appearance.json holds the selected Theme id and the
-    Human's own accent colour (AccentColorHex, for the two "Custom Accent" entries) and nothing
-    else; the Human's Avatar is edited on this tab but stored in avatars.json, a different file with
-    a different owner (AvatarStore, not AppearanceStore).
+    A theme carries exactly one palette and its own ThemeMode, so picking a theme picks light or dark
+    with it - there is no separate light/dark control any more, and so no way to ask for "Solarized
+    Dark, in light mode" and be shown a different theme's palette instead
+    (docs/adr/0017-a-theme-is-a-palette-not-a-pair.md). The Human's own Avatar used to be edited here;
+    it moved to the Profile tab (ProfilePanel), with the rest of who the Human is.
 
     A MudList rather than a MudSelect: MudBlazor 9 has no MudSelectItemGroup, so a MudSelect cannot
     render the Light / Dark / High contrast headings this picker is grouped by. The list also shows
@@ -38,21 +21,16 @@
     rewrite, no JavaScript interop of this component's own.
 
     Subscribes to AppearanceStore.AppearanceChanged the same way Settings.razor subscribes to
-    PromptStore.PromptsChanged, and to AvatarStore.AvatarsChanged for the same reason: both stores are
-    singletons, so a hand-edit to appearance.json or avatars.json (or a save from another browser
+    PromptStore.PromptsChanged: the store is a singleton, so a hand-edit to appearance.json (or a save from another browser
     tab) must repaint this tab without a restart, and rules.md's "unsubscribe in Dispose" reasoning
     for RoomEvents applies here for the same reason - a leaked subscription to a singleton never
     dies.
 *@
 
 @using Agency.Huddle.App.Appearance
-@using Agency.Huddle.App.Avatars
 @using Agency.Huddle.App.Themes
-@using Microsoft.Extensions.Options
 @implements IDisposable
 @inject AppearanceStore AppearanceStore
-@inject AvatarStore Avatars
-@inject IOptions<TeamOptions> Options
 
 <SettingsIntro>
     Pick one light theme and one dark theme. The button at the right of the top bar switches between
@@ -115,18 +93,8 @@
     Wimer Hazenberg's.
 </p>
 
-
-@* The Human has no Persona file, so this is where their Avatar is edited instead of on a TeammateCard. Immediate
-   mode: every change is written to avatars.json under the Human's Name at once, because this tab has no Save button.
-   Value is re-read from the store on every render (OnAvatarsChanged repaints), so an outside edit reaches the editor. *@
-<MudPaper Outlined="true" Class="pa-3 mt-4">
-    <MudText Typo="Typo.overline">Your avatar</MudText>
-    <AvatarEditor Name="@this.HumanName" Value="this.Avatars.Get(this.HumanName)" SaveMode="AvatarSaveMode.Immediate" />
-</MudPaper>
-
 <p class="settings-prompts-file-path">
-    Your avatar is stored at <code>@this.Avatars.FilePath</code>, under your Name
-    (<code>@this.HumanName</code>) - a different file from the Theme selection above.
+    Your own avatar is set on the <a href="/settings/profile">Profile</a> tab.
 </p>
 
 @code {
@@ -147,25 +115,16 @@
     /// <summary>The accent colour shown in the picker: the store's own value, read straight through with no local buffer - since there is only one value here and nothing to seed across a mode switch the way the avatar editor's fields need.</summary>
     private string? AccentColorText => this.AppearanceStore.Current.AccentColorHex;
 
-    /// <summary>
-    /// The Human's configured Name (<see cref="TeamOptions.HumanName"/>) - the key this tab's Avatar
-    /// is saved under in <c>avatars.json</c>, and the same Name that later appears as
-    /// <see cref="Agency.Huddle.Contracts.ChatMessage.SenderName"/> on the Human's own messages.
-    /// </summary>
-    private string HumanName => this.Options.Value.HumanName;
-
-    /// <summary>Subscribes to <see cref="AppearanceStore.AppearanceChanged"/> and <see cref="AvatarStore.AvatarsChanged"/> - see the file-level comment for why this matters.</summary>
+    /// <summary>Subscribes to <see cref="AppearanceStore.AppearanceChanged"/> - see the file-level comment for why this matters.</summary>
     protected override void OnInitialized()
     {
         this.AppearanceStore.AppearanceChanged += this.OnAppearanceChanged;
-        this.Avatars.AvatarsChanged += this.OnAvatarsChanged;
     }
 
-    /// <summary>Unsubscribes from <see cref="AppearanceStore.AppearanceChanged"/> and <see cref="AvatarStore.AvatarsChanged"/> - see the file-level comment for why this matters.</summary>
+    /// <summary>Unsubscribes from <see cref="AppearanceStore.AppearanceChanged"/> - see the file-level comment for why this matters.</summary>
     public void Dispose()
     {
         this.AppearanceStore.AppearanceChanged -= this.OnAppearanceChanged;
-        this.Avatars.AvatarsChanged -= this.OnAvatarsChanged;
     }
 
     /// <summary>
@@ -188,22 +147,12 @@
     /// Saves the newly picked accent colour, mirroring <see cref="OnThemeChangedAsync"/> one key over.
     /// Blank input (the picker's Clear action, or a Human who deletes the hex text) maps to
     /// <see langword="null"/>, meaning "no accent colour chosen" - the same convention
-    /// <c>OnAvatarBackgroundTextChanged</c> uses for the avatar's own colour picker below.
+    /// <see cref="AvatarEditor"/> uses for the avatar's own colour picker.
     /// </summary>
     /// <param name="value">The colour picker's newly typed or picked text, or <see langword="null"/>/blank.</param>
     private void OnAccentColorTextChanged(string? value)
     {
         this.AppearanceStore.SaveAccentColor(string.IsNullOrWhiteSpace(value) ? null : value);
-    }
-
-    /// <summary>Repaints this tab whenever <see cref="AvatarStore.AvatarsChanged"/> fires, so <see cref="AvatarEditor"/> is handed the stored avatar again; the editor itself decides whether that is a genuine outside edit to re-seed from.</summary>
-    private void OnAvatarsChanged()
-    {
-        _ = RendererDispatch.RunAsync(this.InvokeAsync, () =>
-        {
-            this.StateHasChanged();
-            return Task.CompletedTask;
-        });
     }
 
     private void OnAppearanceChanged()

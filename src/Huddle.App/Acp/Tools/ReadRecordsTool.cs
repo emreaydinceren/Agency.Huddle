@@ -5,6 +5,7 @@ using Agency.Huddle.Acp.Abstractions;
 using Agency.Huddle.App.Data;
 using Agency.Huddle.App.Prompts;
 using Agency.Huddle.App.Library;
+using Agency.Huddle.App.Services;
 using Agency.Huddle.App.Tasks;
 using Agency.Huddle.App.TeamTypes;
 using Agency.Huddle.App.Teams;
@@ -282,6 +283,10 @@ internal sealed class ReadRecordsTool(
             return $"Room '{roomId}' is not a valid Room id.";
         }
 
+        // The Human's older Messages carry the Name they had then; show the current one (rules.md).
+        string human = (await directory.GetUserAsync(KnownIds.Human, cancellationToken))?.Name ?? string.Empty;
+        messages = [.. messages.Select(message => SenderDisplay.WithCurrentName(message, human.Length == 0 ? null : human))];
+
         Room? scoped = await directory.GetRoomAsync(roomId, cancellationToken);
         if (scoped?.Team is { } scopedTeam)
         {
@@ -298,9 +303,8 @@ internal sealed class ReadRecordsTool(
             return $"Room {roomId} has no messages from Team {team.Name}.";
         }
 
-        string human = (await directory.GetHumanAsync(cancellationToken)).Name;
         if (messages.Any(message => !team.Members.Contains(message.SenderName, StringComparer.OrdinalIgnoreCase)
-            && !string.Equals(message.SenderName, human, StringComparison.OrdinalIgnoreCase)))
+            && !string.Equals(message.SenderId, KnownIds.Human, StringComparison.Ordinal)))
         {
             return $"Room {roomId} has participants outside Team {team.Name}.";
         }

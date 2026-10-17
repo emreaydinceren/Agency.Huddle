@@ -22,6 +22,7 @@
 @inject TaskEvents Events
 @inject ISprintCatalog Sprints
 @inject IOptions<TeamOptions> Options
+@inject IHumanIdentity Human
 @inject IDialogService Dialogs
 @inject IJSRuntime JS
 @inject ISnackbar Snackbar
@@ -148,7 +149,7 @@
             view.Scope,
             view.Filter,
             this.Search,
-            this.Options.Value.HumanName,
+            this.Human.Name,
             currentSprint: this.Sprints.Current?.Id);
         return TaskQuery.Sort(filtered, view.Sort);
     }

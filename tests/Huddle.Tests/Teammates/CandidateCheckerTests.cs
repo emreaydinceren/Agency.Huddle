@@ -190,6 +190,25 @@ public sealed partial class CandidateCheckerTests
         AssertProblemsAreModelFacing(result.Problems);
     }
 
+    /// <summary>The Human's Alias Mentions the Human, so a Candidate may take it neither as a Name nor as an Alias.</summary>
+    [Fact]
+    public async Task CheckAsync_NameOrAliasEqualsHumanAlias_ReportsProblem()
+    {
+        CancellationToken ct = TestContext.Current.CancellationToken;
+        using var fixture = await CreateFixtureAsync(ct);
+        using TempDataDir profileDir = new();
+        using Agency.Huddle.App.Profile.HumanProfileStore human = new(profileDir.Options(), NullLogger<Agency.Huddle.App.Profile.HumanProfileStore>.Instance);
+        human.Save(new Agency.Huddle.App.Profile.HumanProfile("You", "boss", null, null));
+        CandidateChecker checker = new(fixture.Personas, fixture.Directory, fixture.Gateway, humanIdentity: human);
+
+        var byName = await checker.CheckAsync([MakeCandidate(name: "Boss", alias: "bossy")], ct);
+        var byAlias = await checker.CheckAsync([MakeCandidate(name: "Vera", alias: "BOSS")], ct);
+
+        // contains-ok: exact element membership in the problem list, as the other CheckAsync tests in this class do.
+        Assert.Contains("'Boss' is the Human's Alias.", byName.Problems);
+        Assert.Contains("'BOSS' is the Human's Alias.", byAlias.Problems);
+        AssertProblemsAreModelFacing([.. byName.Problems, .. byAlias.Problems]);
+    }
     /// <summary>
     /// Spec §8.3 order 6 / F-9: a Name matching a connected Agent that has no Persona file (a demo
     /// Agent such as <c>echo</c>) is reserved, worded exactly as the Spec's own example - otherwise

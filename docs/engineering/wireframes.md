@@ -243,9 +243,10 @@ slate `B` badges name the same containers.
 | `G1` | Settings container | `MudContainer`, `MaxWidth.Large`, `.settings-page` | Content is left-aligned, not centred, and capped at 960px |
 | `G1a` | Reset all | `ResetAllControl` | In the Prompts panel's action row beside Save; "Reset all to defaults", disabled until a prompt has been changed, then asks inline (`InlineConfirm`) |
 | `G2` | Tabs | `MudTabs` | The active tab follows the route; under a `PageHeader` "Settings" |
-| `G2a` | Tab rail |  | Prompts, Appearance, Personas, Skills, Team Types, Library, each with an icon; the same styling as `M4a` |
-| `G3` | Active panel | `PromptsPanel`, `Appearance`, `Personas`, `SkillsPanel`, `TeamTypesPanel` or `LibraryPanel` | Each opens with `SettingsIntro` (14px TextSecondary, 75ch), `StoredAt` ("Overrides stored at", 12px TextSecondary, the path in 12px mono) and an action row. `{{tokens}}` are tag chips in 12px mono. The Prompts and Skills panels mark placeholders, status and source with tinted chips that carry an icon |
+| `G2a` | Tab rail |  | Profile, Prompts, Appearance, Personas, Skills, Team Types, Library, each with an icon; the same styling as `M4a`. Profile is first, and `/settings` and a blank system open on it |
+| `G3` | Active panel | `ProfilePanel`, `PromptsPanel`, `Appearance`, `Personas`, `SkillsPanel`, `TeamTypesPanel` or `LibraryPanel` | Each opens with `SettingsIntro` (14px TextSecondary, 75ch), `StoredAt` ("Overrides stored at", 12px TextSecondary, the path in 12px mono) and an action row. `{{tokens}}` are tag chips in 12px mono. The Prompts and Skills panels mark placeholders, status and source with tinted chips that carry an icon |
 | `G3a` | Save | `MudButton` Filled | Prompts panel only, in a sticky action row with Reset all |
+| `G3b` | Profile card | `ProfileCard` with `OnAvatarClick` | The Human's own card at the top of the Profile panel: the avatar is a **Change avatar** button opening `AvatarEditorDialog` (saves at once), with Name, Alias, Title and Description fields and a Save below. A welcome `MudAlert` sits above it until `profile.json` exists |
 
 ## Figure 7: The Teammates page
 

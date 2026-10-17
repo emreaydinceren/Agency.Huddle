@@ -79,6 +79,16 @@ public sealed class TeamWebApplicationFactory : WebApplicationFactory<Program>
     /// </summary>
     public string AppearanceJsonPath => Path.Combine(this.dataDir.Path, "appearance.json");
 
+    /// <summary>The path <see cref="Agency.Huddle.App.Profile.HumanProfileStore"/> reads the Human's profile from under this factory's data directory.</summary>
+    public string ProfileJsonPath => Path.Combine(this.dataDir.Path, "profile.json");
+
+    /// <summary>
+    /// Whether the host starts with a saved Human profile (<c>{"name": "You"}</c>). On by default, so a test
+    /// that GETs <c>/</c> lands on the page it asked for rather than the first-run redirect to the Settings
+    /// Profile tab; a test of that redirect sets this to <see langword="false"/> before the host is built.
+    /// </summary>
+    public bool SeedProfile { get; set; } = true;
+
     /// <summary>
     /// The <see cref="IModelCatalog"/> this factory wires in place of the real
     /// <see cref="ModelCatalogProbe"/>. Both fixtures must set <c>DemoAgent:Enabled=false</c>
@@ -126,6 +136,11 @@ public sealed class TeamWebApplicationFactory : WebApplicationFactory<Program>
         // and race that directory's own disposal when the host shuts down.
         builder.UseSetting("Team:FileLog:Enabled", "false");
         builder.UseSetting("Team:Desktop:Enabled", "false");
+
+        if (this.SeedProfile && !File.Exists(this.ProfileJsonPath))
+        {
+            File.WriteAllText(this.ProfileJsonPath, "{ \"name\": \"You\" }");
+        }
 
         if (this.AgentMessageBudget is int budget)
         {

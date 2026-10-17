@@ -110,7 +110,7 @@ Every page has its own address, so you can bookmark it:
 | `/tasks/{viewId}` | A saved Task View |
 | `/tasks/item/{TaskId}` | One Task, opened over your last View, for example `/tasks/item/BUSI-0001` |
 | `/library?scopeRoot=teams&scopePath=` | The Library, scoped to a root |
-| `/settings/{tab}` | Settings: Prompts, Appearance, Personas, Skills, Library |
+| `/settings/{tab}` | Settings: Profile, Prompts, Appearance, Personas, Skills, Team Types, Library. A blank system opens on `/settings/profile` until you save a profile |
 
 ### Needs you
 
@@ -230,7 +230,7 @@ connect. Later sections explain how to work with them.
 
 | Entity | What it is | Stored as |
 | --- | --- | --- |
-| **You (the Human)** | The person using the app. Your display name is `Team:HumanName` (default `You`). You are in every Room. | Config, and a row in `team.db` |
+| **You (the Human)** | The person using the app. You set your Name, Alias, Title and avatar on **Settings > Profile**; `Team:HumanName` (default `You`) is only the Name a blank system starts with. Your Alias @mentions you like your Name. You are in every Room. | `profile.json`, `avatars.json` and a row in `team.db` |
 | **Teammate** (also called a **Persona**) | One AI Teammate: its name, job title, @alias, Teams, Skills, and its instructions. | `Teammates/<Name>/<Name>.md` |
 | **Agent** | A Teammate that is running and online in chat. There is one Agent per Teammate file. | A row in `team.db`, plus a running adapter process |
 | **Team** | A named group of Teammates. Its membership is a label in each member's `teams:` list; a Team set up from a type also has a manager, a workspace and a process. | A label in each member's `teams:` list, plus a folder `Teams/<Team>/` holding `_team.md` (and `Process.md`, once set) |
@@ -1688,8 +1688,9 @@ Skill you wrote yourself shows **Yours**, and a shipped one shows **Built in**.
 
 | Tab | What it changes | Saved to |
 | --- | --- | --- |
+| **Profile** | You: Name, Alias (a second name that @mentions you), Title and a short description, shown as the same card a Teammate gets. Click the avatar to change it. A Name or Alias a Teammate already uses is refused. Renaming yourself moves your avatar and your Tasks with you, and every message you ever sent shows the new Name; the transcript files are not rewritten. | `profile.json` (avatar in `avatars.json`) |
 | **Prompts** | The text Huddle sends to Teammates, such as the wake-up message. **Reset all to defaults** (beside the sticky **Save**) asks "Reset every prompt to its default?" and **Reset all** confirms. | `prompts.json` |
-| **Appearance** | Theme, light/dark and accent colour. | `appearance.json` |
+| **Appearance** | Theme, light/dark and accent colour. Your avatar moved to **Profile**. | `appearance.json` |
 | **Personas** | The Teammate definitions. | `Teammates/…` |
 | **Skills** | List of Skills with where each came from, and their problems; **Import skill**; **Restore default**. | `Skills/…` |
 | **Team Types** | Read-only list of team types, built-in or yours, with **Reload** and a **Problems** list. | `TeamTypes/…` |
@@ -1702,6 +1703,7 @@ Skill you wrote yourself shows **Yours**, and a shipped one shows **Built in**.
 | Add a Teammate | `Teammates/<Name>/<Name>.md`, `team.db`, `Teams/<label>/` if missing | Comes online |
 | Edit a Teammate, or change Model, Effort, Work mode, Skills or Teams | Rewrites `<Name>.md` (Model, Effort and Work mode in `team.db`) | Restarts; conversation memory cleared |
 | Rename a Teammate | Moves `Teammates/<Old>/`; renames entries in `room-sessions/`, `file-state/`, `avatars.json`, `team.db`; rewrites Task creators and assignees and View filters | Restarts |
+| Rename yourself on **Settings > Profile** | `profile.json`; renames your entry in `avatars.json` and your row in `team.db`; rewrites Task creators and assignees and View filters | None; Teammates see your new Name on new and old messages from their next turn |
 | Remove a Teammate | Deletes `<Name>.md` only | Goes offline; Rooms, transcripts and `work/` stay |
 | Restart a Teammate | Deletes `room-sessions/<Name>.json` | Every Room starts fresh, with catch-up |
 | Build a team (**Approve & hire**) | `Teams/<Team>/_team.md`, then a Teammate file for each draft | The Teammates are hired; start them from their cards |

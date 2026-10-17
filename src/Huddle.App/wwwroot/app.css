@@ -4355,6 +4355,17 @@ a.team-ref,
     border-radius: calc(var(--mud-default-borderradius) * 1.5);
 }
 
+/* The Settings Profile tab: the Human's card at roster width, the same width one Build a team column gives a Teammate's,
+   and the fields under it at a readable form width rather than the whole panel. */
+.profile-panel-card {
+    max-width: 24rem;
+    margin-bottom: 16px;
+}
+
+.profile-panel-form {
+    max-width: 40rem;
+}
+
 .roster-card-manager {
     background: color-mix(in srgb, var(--mud-palette-primary) 8%, var(--mud-palette-surface));
     border-color: var(--mud-palette-primary);

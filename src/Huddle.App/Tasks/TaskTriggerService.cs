@@ -4,6 +4,7 @@ using Agency.Huddle.App.Acp;
 using Agency.Huddle.App.Acp.Sessions;
 using Agency.Huddle.App.Data;
 using Agency.Huddle.App.Pipes;
+using Agency.Huddle.App.Profile;
 using Agency.Huddle.App.Prompts;
 using Agency.Huddle.App.Services;
 using Agency.Huddle.App.Teams;
@@ -83,6 +84,7 @@ internal sealed partial class TaskTriggerService : IHostedService, IDisposable
     private readonly TimeProvider clock;
     private readonly ILogger<TaskTriggerService> logger;
     private readonly OwnPosts ownPosts;
+    private readonly IHumanIdentity human;
     private readonly ITeamCatalog? teams;
 
     /// <summary>Guards <see cref="batches"/>, <see cref="inFlight"/>, <see cref="outsideWindow"/>, <see cref="subscribed"/> and <see cref="stopped"/>. Never held across an await.</summary>
@@ -116,11 +118,12 @@ internal sealed partial class TaskTriggerService : IHostedService, IDisposable
     /// <param name="gateway">Reports whether the assignee's pipe connection is live, for <see cref="Preview"/>'s presence.</param>
     /// <param name="health">Reports the assignee's latest health, for <see cref="Preview"/>'s presence.</param>
     /// <param name="prompts">Renders the <c>task.wake.message</c> Prompt.</param>
-    /// <param name="options">Supplies <see cref="TasksOptions"/> (guards 1 and 6, the coalesce window) and <see cref="TeamOptions.HumanName"/> (guard 3).</param>
+    /// <param name="options">Supplies <see cref="TasksOptions"/> (guards 1 and 6, the coalesce window) and the first-run Human Name when <paramref name="human"/> is <see langword="null"/>.</param>
     /// <param name="clock">Creates the coalescing timers.</param>
     /// <param name="logger">Records skipped and failed wakes.</param>
     /// <param name="ownPosts">Records a wake posted as an Agent as that Agent's own post, so its session in the Room gets the catch-up line (corrections-B3 D9 item 17).</param>
     /// <param name="teams">Names a Team's manager, who is woken alongside the assignee (OR-2); <see langword="null"/> wakes the assignee only.</param>
+    /// <param name="human">The Human's live identity, whose Name or Alias is never woken (guard 3); <see langword="null"/> fixes it at <see cref="TeamOptions.HumanName"/>.</param>
     public TaskTriggerService(
         TaskEvents events,
         TaskStore store,
@@ -136,7 +139,8 @@ internal sealed partial class TaskTriggerService : IHostedService, IDisposable
         TimeProvider clock,
         ILogger<TaskTriggerService> logger,
         OwnPosts ownPosts,
-        ITeamCatalog? teams = null)
+        ITeamCatalog? teams = null,
+        IHumanIdentity? human = null)
     {
         ArgumentNullException.ThrowIfNull(events);
         ArgumentNullException.ThrowIfNull(store);
@@ -168,6 +172,7 @@ internal sealed partial class TaskTriggerService : IHostedService, IDisposable
         this.logger = logger;
         this.ownPosts = ownPosts;
         this.teams = teams;
+        this.human = human ?? new ConfiguredHumanIdentity(options.Value.HumanName);
     }
 
     /// <summary>
@@ -197,7 +202,7 @@ internal sealed partial class TaskTriggerService : IHostedService, IDisposable
             return new WakePreview(assignee, null, WakeBlock.NoAssignee);
         }
 
-        if (string.Equals(assignee, this.teamOptions.HumanName, StringComparison.OrdinalIgnoreCase))
+        if (this.human.Matches(assignee))
         {
             return new WakePreview(assignee, null, WakeBlock.AssigneeIsHuman);
         }
@@ -565,7 +570,7 @@ internal sealed partial class TaskTriggerService : IHostedService, IDisposable
             string? manager = this.teams?.Find(blocked.Location.Team)?.Manager;
             bool usable = !string.IsNullOrEmpty(manager)
                 && !string.Equals(manager, actor.Name, StringComparison.OrdinalIgnoreCase)
-                && !string.Equals(manager, this.teamOptions.HumanName, StringComparison.OrdinalIgnoreCase)
+                && !this.human.Matches(manager)
                 && this.personas.Get(manager) is not null;
             recipient = usable ? manager : null;
         }
@@ -715,7 +720,7 @@ internal sealed partial class TaskTriggerService : IHostedService, IDisposable
         if (string.Equals(manager, batch.Actor.Name, StringComparison.OrdinalIgnoreCase)
             || string.Equals(manager, latest.Assignee, StringComparison.OrdinalIgnoreCase)
             || string.Equals(manager, this.teams?.Find(latest.Location.Team)?.Manager, StringComparison.OrdinalIgnoreCase)
-            || string.Equals(manager, this.teamOptions.HumanName, StringComparison.OrdinalIgnoreCase)
+            || this.human.Matches(manager)
             || this.personas.Get(manager) is null)
         {
             return;
@@ -745,7 +750,7 @@ internal sealed partial class TaskTriggerService : IHostedService, IDisposable
         if (!this.teamOptions.Tasks.Enabled
             || !this.teamOptions.Tasks.WakeEnabled
             || string.Equals(recipient, actor.Name, StringComparison.OrdinalIgnoreCase)
-            || string.Equals(recipient, this.teamOptions.HumanName, StringComparison.OrdinalIgnoreCase)
+            || this.human.Matches(recipient)
             || this.personas.Get(recipient) is null)
         {
             return false;
@@ -846,7 +851,7 @@ internal sealed partial class TaskTriggerService : IHostedService, IDisposable
 
         if (string.Equals(manager, batch.Actor.Name, StringComparison.OrdinalIgnoreCase)
             || string.Equals(manager, latest.Assignee, StringComparison.OrdinalIgnoreCase)
-            || string.Equals(manager, this.teamOptions.HumanName, StringComparison.OrdinalIgnoreCase)
+            || this.human.Matches(manager)
             || this.personas.Get(manager) is null)
         {
             return;
