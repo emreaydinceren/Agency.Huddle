@@ -332,6 +332,7 @@ row here before it gets an icon in the code (UX-083, UX-084, UX-R26).
 | A folder, including a Library root | `Outlined.Folder` |
 | A note or document | `Filled.Description` |
 | Settings | `Filled.Settings` |
+| Skill, including the Settings Skills section | `Outlined.AutoAwesome` |
 
 | Action | Icon | Not this |
 | --- | --- | --- |
