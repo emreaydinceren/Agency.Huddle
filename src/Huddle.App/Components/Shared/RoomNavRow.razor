@@ -15,6 +15,7 @@
 *@
 
 @using Agency.Huddle.App.Avatars
+@using Agency.Huddle.App.Components.Shared.Dialogs
 @inject ChatService ChatService
 @inject ISnackbar Snackbar
 @inject IJSRuntime JS
@@ -26,8 +27,12 @@
      @oncontextmenu:preventDefault="true">
     @if (this.confirmingDelete)
     {
-        <InlineConfirm Class="room-list-confirm" Prompt="@RoomDeleteCopy.Prompt(this.Room.Name, this.uploadCount)" Busy="this.busy"
-                       OnConfirm="this.ConfirmDeleteAsync" OnCancel="this.CancelDelete" />
+        @* The sidebar form: "Delete?" on one line, Cancel then Delete, in the row's indent. The full sentence (with the
+           Recycle Bin note) is the row's title, and the Archived chats dialog keeps the long prompt. *@
+        <div class="room-list-confirm-host" title="@RoomDeleteCopy.Prompt(this.Room.Name, this.uploadCount)">
+            <InlineConfirm Class="room-list-confirm" Narrow="true" Prompt="Delete?" Busy="this.busy"
+                           OnConfirm="this.ConfirmDeleteAsync" OnCancel="this.CancelDelete" />
+        </div>
     }
     else
     {
@@ -45,23 +50,24 @@
                 <span class="room-team-label">(@this.TeamLabel)</span>
             }
         </NavTabLink>
-        <MudMenu @ref="this.menu" Class="hover-reveal-menu">
+        <MudMenu @ref="this.menu" Class="hover-reveal-menu" Dense="true">
             @* ActivatorContent replaces MudMenu's own built-in activator entirely, so
                MudMenu does not wire a click listener around it automatically - the
                supplied MenuContext.ToggleAsync is how custom activator content opens
                the menu, which is why the button's OnClick calls it explicitly rather
-               than relying on MudMenu's default ActivationEvent handling. *@
+               than relying on MudMenu's default ActivationEvent handling. The activator
+               has no hover tooltip (it would stay up over the first item); its aria-label
+               names the Room (design-system "Menus"). *@
             <ActivatorContent Context="menuContext">
-                <MudTooltip Text="Room actions">
-                    <MudIconButton Icon="@Icons.Material.Filled.MoreVert" Size="Size.Small"
-                                   aria-label="Room actions" Class="hover-reveal-menu-button"
-                                   OnClick="menuContext.ToggleAsync" />
-                </MudTooltip>
+                <MudIconButton Icon="@Icons.Material.Filled.MoreVert" Size="Size.Small"
+                               aria-label="@MenuDialogs.ActivatorLabel(this.Room.Name)" Class="hover-reveal-menu-button"
+                               OnClick="menuContext.ToggleAsync" />
             </ActivatorContent>
             <ChildContent>
-                <MudMenuItem OnClick="this.CopyLinkAsync">Copy link</MudMenuItem>
-                <MudMenuItem Disabled="this.busy" OnClick="this.ArchiveAsync">Archive</MudMenuItem>
-                <MudMenuItem Disabled="this.busy" OnClick="this.BeginDeleteAsync">Delete</MudMenuItem>
+                <MudMenuItem Icon="@Icons.Material.Filled.Link" OnClick="this.CopyLinkAsync">Copy link</MudMenuItem>
+                <MudMenuItem Icon="@Icons.Material.Filled.Archive" Disabled="this.busy" OnClick="this.ArchiveAsync">Archive</MudMenuItem>
+                <MudDivider />
+                <MudMenuItem Icon="@Icons.Material.Filled.Delete" Class="menu-item-destructive" Disabled="this.busy" OnClick="this.BeginDeleteAsync">Delete</MudMenuItem>
             </ChildContent>
         </MudMenu>
     }

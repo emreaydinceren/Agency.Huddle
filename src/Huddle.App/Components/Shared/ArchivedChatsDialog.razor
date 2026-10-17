@@ -1,5 +1,5 @@
 @*
-    Lists archived Rooms, most recently archived first, with an Unarchive button and the same
+    Lists archived Rooms, most recently archived first, with an Unarchive text button, a row menu holding Delete, and the same
     inline-confirm Delete swap RoomList.razor's own rows use - never a nested MudDialog and never a
     JS confirm(), for the same reason TeammateCard.razor's Remove button gives: a confirmation dialog
     stacked on top of this one would need a second backdrop and a second focus trap for what is only
@@ -17,9 +17,11 @@
 
 @implements IDisposable
 @using Agency.Huddle.App.Components.Shared.Dialogs
+@using Agency.Huddle.App.Tasks
 @inject ITeamDirectory TeamDirectory
 @inject ChatService ChatService
 @inject RoomEvents Events
+@inject TimeProvider Clock
 
 <MudDialog>
     <TitleContent>
@@ -48,12 +50,15 @@
                     }
                     else
                     {
-                        <MudText Typo="Typo.body1" Class="flex-1-truncate">@(room.Team is null ? room.Name : $"{room.Name} · {room.Team}")</MudText>
-                        <MudButton Size="Size.Small" Variant="Variant.Outlined" Disabled="this.busy" OnClick="@(() => this.UnarchiveAsync(room.Id))">Unarchive</MudButton>
-                        <MudTooltip Text="Delete">
-                            <MudIconButton Icon="@Icons.Material.Filled.Delete" Color="Color.Error" Size="Size.Small"
-                                           aria-label="@($"Delete {room.Name}")" OnClick="@(() => this.BeginDelete(room.Id))" />
-                        </MudTooltip>
+                        @* Icon, name and date, then the one primary action as a text button; Delete lives in the row's menu. *@
+                        <span class="archived-chats-icon"><MudIcon Icon="@Icons.Material.Filled.Chat" /></span>
+                        <span class="archived-chats-name flex-1-truncate">@(room.Team is null ? room.Name : $"{room.Name} · {room.Team}")</span>
+                        <span class="archived-chats-date">@this.CreatedLabel(room)</span>
+                        <MudButton Size="Size.Small" Variant="Variant.Text" Disabled="this.busy" OnClick="@(() => this.UnarchiveAsync(room.Id))">Unarchive</MudButton>
+                        <MudMenu Dense="true" Icon="@Icons.Material.Filled.MoreVert" Size="Size.Small"
+                                 AriaLabel="@MenuDialogs.ActivatorLabel(room.Name)">
+                            <MudMenuItem Icon="@Icons.Material.Filled.Delete" Class="menu-item-destructive" Disabled="this.busy" OnClick="@(() => this.BeginDelete(room.Id))">Delete</MudMenuItem>
+                        </MudMenu>
                     }
                 </div>
             }
@@ -62,8 +67,16 @@
 </MudDialog>
 
 @code {
-    /// <summary>The <see cref="DialogOptions"/> this dialog opens with: the shared picker options, with the close button (UX-022).</summary>
-    public static readonly DialogOptions Options = HuddleDialogOptions.Picker;
+    /// <summary>The <see cref="DialogOptions"/> this dialog opens with: a one-column list, so the 600px short picker with the close button (UX-022, audit B10g).</summary>
+    public static readonly DialogOptions Options = HuddleDialogOptions.ShortPicker;
+
+    /// <summary>A Room has no archive instant, so the row shows when it was created, as "Created Oct 3".</summary>
+    /// <param name="room">The archived Room.</param>
+    private string CreatedLabel(Room room)
+    {
+        DateTimeOffset now = this.Clock.GetLocalNow();
+        return $"Created {HumanDate.Format(DateOnly.FromDateTime(room.Created.ToOffset(now.Offset).Date), DateOnly.FromDateTime(now.Date))}";
+    }
 
     private IReadOnlyList<Room> rooms = [];
     private string? confirmingDeleteRoomId;

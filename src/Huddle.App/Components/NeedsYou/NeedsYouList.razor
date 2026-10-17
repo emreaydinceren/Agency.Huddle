@@ -88,10 +88,10 @@
         }
     }
 
-    /// <summary>The second line of a row: who asked and when, with the day only when it was not today.</summary>
+    /// <summary>The trailing time of a row, with the day only when it was not today. Who asked is the reason icon's tooltip, so the row does not repeat it (audit B3e).</summary>
     private static string Describe(NeedsYouEntry entry, DateTimeOffset now)
     {
-        return string.Join(" · ", entry.AskedBy, MessageDisplay.TimeLabel(entry.Since, now));
+        return MessageDisplay.TimeLabel(entry.Since, now);
     }
 
     /// <summary>The icons of a row, one per reason, in a fixed order.</summary>

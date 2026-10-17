@@ -2,10 +2,12 @@
 @implements IDisposable
 @using Agency.Huddle.App.Appearance
 @using Agency.Huddle.App.Components.Search
+@using Agency.Huddle.App.Tabs
 @using Agency.Huddle.App.Themes
 @inject AppearanceStore AppearanceStore
 @inject IHumanIdentity Human
 @inject NavigationManager Navigation
+@inject TabService Tabs
 
 @* IsDarkMode is one-way and ObserveSystemDarkModeChange is off on purpose: the selected theme
    carries exactly one palette and its own ThemeMode, so the mode is derived from the theme and
@@ -88,6 +90,9 @@
     private bool isDarkMode = ThemeCatalog.BuiltIn[0].Mode == ThemeMode.Dark;
     private SidebarView? sidebarView = SidebarViews.Default;
 
+    /// <summary>The area the focused pane's page was last in (see <see cref="SidebarViews.AreaOf(string?)"/>), so the Sidebar follows a change of area and not every navigation.</summary>
+    private string? followedArea;
+
     /// <summary>The Activity bar's 48px and the drawer's 1px edge, plus the Sidebar's 240px while a view is selected.</summary>
     private string DrawerWidth => this.sidebarView is null ? "49px" : "289px";
 
@@ -98,14 +103,55 @@
         this.sidebarView = view;
     }
 
+    /// <summary>
+    /// Makes the Sidebar show the focused page's area (audit B3a) when the page has moved into a different area from the
+    /// one last followed. A view the Human picked stays until the page changes area again, so a pick is never undone by
+    /// navigating within the area it was made in.
+    /// </summary>
+    /// <returns>Whether the Sidebar's view changed.</returns>
+    private bool FollowFocusedArea()
+    {
+        string? area = SidebarViews.AreaOf(this.Tabs.Active?.Url);
+        if (area is null || string.Equals(area, this.followedArea, StringComparison.Ordinal))
+        {
+            return false;
+        }
+
+        this.followedArea = area;
+        SidebarView? view = SidebarViews.ViewForArea(area, this.sidebarView);
+        if (view == this.sidebarView)
+        {
+            return false;
+        }
+
+        this.sidebarView = view;
+        return true;
+    }
+
+    /// <summary>Follows the focused page's area whenever a Tab opens, activates or navigates, or focus moves to another pane.</summary>
+    private void OnTabsChanged()
+    {
+        _ = RendererDispatch.RunAsync(this.InvokeAsync, () =>
+        {
+            if (this.FollowFocusedArea())
+            {
+                this.StateHasChanged();
+            }
+
+            return Task.CompletedTask;
+        });
+    }
+
     /// <summary>The route a blank system opens on: the Settings Profile tab.</summary>
     private const string ProfileRoute = "settings/profile";
 
-    /// <summary>Subscribes to <see cref="AppearanceStore.AppearanceChanged"/>, applies the resolved appearance already on disk, and sends a first-run Human to their profile.</summary>
+    /// <summary>Subscribes to <see cref="AppearanceStore.AppearanceChanged"/> and <see cref="TabService.Changed"/>, applies the resolved appearance already on disk, and sends a first-run Human to their profile.</summary>
     protected override void OnInitialized()
     {
         this.AppearanceStore.AppearanceChanged += this.OnAppearanceChanged;
+        this.Tabs.Changed += this.OnTabsChanged;
         this.ApplyAppearance(this.AppearanceStore.Current);
+        _ = this.FollowFocusedArea();
         this.RedirectFirstRun();
     }
 
@@ -209,9 +255,10 @@
         });
     }
 
-    /// <summary>Unsubscribes from <see cref="AppearanceStore.AppearanceChanged"/> - rules.md is explicit that a leaked subscription to a singleton never dies.</summary>
+    /// <summary>Unsubscribes from <see cref="AppearanceStore.AppearanceChanged"/> and <see cref="TabService.Changed"/> - rules.md is explicit that a leaked subscription to a singleton never dies.</summary>
     public void Dispose()
     {
         this.AppearanceStore.AppearanceChanged -= this.OnAppearanceChanged;
+        this.Tabs.Changed -= this.OnTabsChanged;
     }
 }

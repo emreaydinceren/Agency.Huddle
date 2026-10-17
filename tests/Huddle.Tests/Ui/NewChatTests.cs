@@ -100,9 +100,9 @@ public sealed class NewChatTests
         Assert.Null(room.Team);
     }
 
-    /// <summary>The Team panel's close icon closes the panel and raises OnClosed once; it starts no chat, raises no OnStarted and does not navigate.</summary>
+    /// <summary>The panel's Cancel button closes the panel and raises OnClosed once; it starts no chat, raises no OnStarted and does not navigate.</summary>
     [Fact]
-    public async Task WithTeam_CloseIcon_ClosesThePanel_AndStartsNothing()
+    public async Task WithTeam_Cancel_ClosesThePanel_AndStartsNothing()
     {
         CancellationToken ct = Xunit.TestContext.Current.CancellationToken;
         using TempDataDir dir = new();
@@ -115,7 +115,7 @@ public sealed class NewChatTests
         IElement nova = cut.FindAll(".new-chat-agents input[type=checkbox]")[0];
         await cut.InvokeAsync(() => nova.ChangeAsync(new ChangeEventArgs { Value = true }));
 
-        await cut.InvokeAsync(() => cut.Find("button[aria-label='Close new chat']").ClickAsync());
+        await cut.InvokeAsync(() => cut.Find("button.new-chat-cancel").ClickAsync());
 
         Assert.Equal(1, closed);
         Assert.Equal(0, started);

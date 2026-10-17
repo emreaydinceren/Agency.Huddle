@@ -100,10 +100,10 @@ public sealed class TeamsNavTests
         Assert.Empty(MenuItemTexts(cut));
 
         AngleSharp.Dom.IElement button = MenuButton(cut, "Business");
-        Assert.Equal("Team actions", button.GetAttribute("aria-label"));
+        Assert.Equal("Actions for Business", button.GetAttribute("aria-label"));
         await cut.InvokeAsync(() => button.ClickAsync());
 
-        string[] expected = ["New chat", "New project"];
+        string[] expected = ["New chat", "New project…"];
         Assert.Equal(expected, MenuItemTexts(cut));
     }
 
@@ -118,7 +118,7 @@ public sealed class TeamsNavTests
 
         await cut.InvokeAsync(() => RowFor(cut, "Business").ContextMenuAsync());
 
-        string[] expected = ["New chat", "New project"];
+        string[] expected = ["New chat", "New project…"];
         Assert.Equal(expected, MenuItemTexts(cut));
     }
 
@@ -831,9 +831,9 @@ public sealed class TeamsNavTests
         Assert.Equal(expected, hrefs);
     }
 
-    /// <summary>The panel's close icon collapses the panel the Team menu opened.</summary>
+    /// <summary>The panel's Cancel button collapses the panel the Team menu opened.</summary>
     [Fact]
-    public async Task NewChatPanel_CloseIcon_CollapsesThePanel()
+    public async Task NewChatPanel_Cancel_CollapsesThePanel()
     {
         FakeTeamCatalog catalog = new() { Teams = [Team("Business")] };
         await using MudBunitContext ctx = NewContext(catalog);
@@ -841,7 +841,7 @@ public sealed class TeamsNavTests
         await OpenNewChatAsync(cut, "Business");
         cut.WaitForAssertion(() => Assert.Single(cut.FindAll(".new-chat-heading")));
 
-        await cut.InvokeAsync(() => cut.Find("button[aria-label='Close new chat']").ClickAsync());
+        await cut.InvokeAsync(() => cut.Find("button.new-chat-cancel").ClickAsync());
 
         cut.WaitForAssertion(() => Assert.Empty(cut.FindAll(".new-chat-heading")));
     }
@@ -883,7 +883,7 @@ public sealed class TeamsNavTests
 
         await cut.InvokeAsync(() => MenuButton(cut, "Business").ClickAsync());
 
-        string[] expected = ["New chat", "New project"];
+        string[] expected = ["New chat", "New project…"];
         Assert.Equal(expected, MenuItemTexts(cut));
     }
 
@@ -891,7 +891,7 @@ public sealed class TeamsNavTests
     private static async Task OpenNewProjectDialog(IRenderedComponent<ContainerFragment> cut, string team)
     {
         await cut.InvokeAsync(() => MenuButton(cut, team).ClickAsync());
-        _ = cut.InvokeAsync(() => cut.FindAll("div.mud-menu-item").Single(item => string.Equals(item.TextContent.Trim(), "New project", StringComparison.Ordinal)).Click());
+        _ = cut.InvokeAsync(() => cut.FindAll("div.mud-menu-item").Single(item => string.Equals(item.TextContent.Trim(), "New project…", StringComparison.Ordinal)).Click());
         cut.WaitForAssertion(() => Assert.NotEmpty(cut.FindAll(".mud-dialog-title")));
     }
 

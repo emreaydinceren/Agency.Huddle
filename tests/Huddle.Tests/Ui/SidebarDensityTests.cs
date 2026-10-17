@@ -95,16 +95,16 @@ public sealed class SidebarDensityTests
         Assert.Equal("Rooms", cut.Find(".mud-nav-group .mud-nav-link-text").TextContent.Trim());
     }
 
-    /// <summary>On a page outside the Rooms, the Rooms group starts closed.</summary>
+    /// <summary>The Chats view's only group is the Rooms group, so it starts open (audit B3a), whatever the current page.</summary>
     [Fact]
-    public async Task RoomsGroup_IsClosedByDefault()
+    public async Task RoomsGroup_IsOpenByDefault()
     {
         await using MudBunitContext ctx = SidebarDensityTests.NewContext(out ScriptedRoomsDirectory script, new FakeTeamCatalog());
         script.Rooms.Add(new Room("r1", "First", DateTimeOffset.UnixEpoch));
 
         IRenderedComponent<ContainerFragment> cut = SidebarDensityTests.Render<RoomList>(ctx);
 
-        cut.WaitForAssertion(() => Assert.Equal("false", SidebarDensityTests.GroupHeader(cut).GetAttribute("aria-expanded")));
+        cut.WaitForAssertion(() => Assert.Equal("true", SidebarDensityTests.GroupHeader(cut).GetAttribute("aria-expanded")));
     }
 
     /// <summary>When the current page is one of the Rooms, the Rooms group is the one that is open.</summary>
@@ -120,14 +120,14 @@ public sealed class SidebarDensityTests
         cut.WaitForAssertion(() => Assert.Equal("true", SidebarDensityTests.GroupHeader(cut).GetAttribute("aria-expanded")));
     }
 
-    /// <summary>Navigating into a Room opens the closed group, with no click.</summary>
+    /// <summary>Navigating into a Room leaves the group open, with no click.</summary>
     [Fact]
-    public async Task RoomsGroup_Opens_WhenNavigationLandsOnARoom()
+    public async Task RoomsGroup_StaysOpen_WhenNavigationLandsOnARoom()
     {
         await using MudBunitContext ctx = SidebarDensityTests.NewContext(out ScriptedRoomsDirectory script, new FakeTeamCatalog());
         script.Rooms.Add(new Room("r1", "First", DateTimeOffset.UnixEpoch));
         IRenderedComponent<ContainerFragment> cut = SidebarDensityTests.Render<RoomList>(ctx);
-        cut.WaitForAssertion(() => Assert.Equal("false", SidebarDensityTests.GroupHeader(cut).GetAttribute("aria-expanded")));
+        cut.WaitForAssertion(() => Assert.Equal("true", SidebarDensityTests.GroupHeader(cut).GetAttribute("aria-expanded")));
 
         await cut.InvokeAsync(() => ctx.Services.GetRequiredService<NavigationManager>().NavigateTo("/rooms/r1"));
 
@@ -178,14 +178,14 @@ public sealed class SidebarDensityTests
         Assert.Equal(Limit + 1, cut.FindAll("a[href^='/rooms/']").Count);
     }
 
-    /// <summary>The Teams group starts closed away from the Teams, and is open on a Team's page.</summary>
+    /// <summary>The Teams view's only group is the Teams group, so it starts open (audit B3a), away from the Teams and on a Team's page alike.</summary>
     [Fact]
-    public async Task TeamsGroup_IsClosedByDefault_AndOpenOnATeamPage()
+    public async Task TeamsGroup_IsOpenByDefault_AndOnATeamPage()
     {
         FakeTeamCatalog catalog = new() { Teams = [SidebarDensityTests.Team("Business", members: 1)] };
         await using MudBunitContext closed = SidebarDensityTests.NewContext(out _, catalog);
         IRenderedComponent<ContainerFragment> closedCut = SidebarDensityTests.Render<TeamsNav>(closed);
-        closedCut.WaitForAssertion(() => Assert.Equal("false", SidebarDensityTests.GroupHeader(closedCut).GetAttribute("aria-expanded")));
+        closedCut.WaitForAssertion(() => Assert.Equal("true", SidebarDensityTests.GroupHeader(closedCut).GetAttribute("aria-expanded")));
 
         await using MudBunitContext open = SidebarDensityTests.NewContext(out _, catalog);
         open.Services.GetRequiredService<NavigationManager>().NavigateTo("/teams/Business");
