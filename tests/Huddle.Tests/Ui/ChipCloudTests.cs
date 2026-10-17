@@ -1,5 +1,7 @@
+using AngleSharp.Dom;
 using Agency.Huddle.App.Components.Shared;
 using Bunit;
+using Microsoft.AspNetCore.Components;
 
 namespace Agency.Huddle.Tests.Ui;
 
@@ -49,6 +51,37 @@ public sealed class ChipCloudTests
         await cut.InvokeAsync(() => cut.FindAll(".chip-cloud-chip")[1].ClickAsync());
 
         Assert.Equal(["legal"], toggled);
+    }
+
+    /// <summary>Content passed as <c>Leading</c> is drawn first in the group, ahead of the chips, and is not counted by the cap.</summary>
+    [Fact]
+    public async Task Render_Leading_DrawsBeforeTheChips()
+    {
+        await using MudBunitContext ctx = new();
+
+        IRenderedComponent<ChipCloud> cut = ctx.Render<ChipCloud>(parameters => parameters
+            .Add(p => p.Pool, ["a", "b", "c"])
+            .Add(p => p.Cap, 2)
+            .Add(p => p.Leading, (RenderFragment)(builder => builder.AddMarkupContent(0, "<span class=\"lead\">chosen</span>"))));
+
+        IElement group = cut.Find(".chip-cloud");
+        Assert.Equal("lead", group.FirstElementChild?.ClassName);
+        Assert.Equal(["a", "b"], cut.FindAll(".chip-cloud-chip-text").Select(item => item.TextContent.Trim()));
+    }
+
+    /// <summary>A cloud whose every type is chosen has no pool left but still draws, so the chosen one has somewhere to show.</summary>
+    [Fact]
+    public async Task Render_LeadingWithAnEmptyPool_StillDrawsTheCloud()
+    {
+        await using MudBunitContext ctx = new();
+
+        IRenderedComponent<ChipCloud> cut = ctx.Render<ChipCloud>(parameters => parameters
+            .Add(p => p.Title, "Tags")
+            .Add(p => p.Leading, (RenderFragment)(builder => builder.AddMarkupContent(0, "<span class=\"lead\">chosen</span>"))));
+
+        Assert.Equal("Tags", cut.Find(".chip-cloud-title").TextContent.Trim());
+        Assert.Single(cut.FindAll(".chip-cloud .lead"));
+        Assert.Empty(cut.FindAll(".chip-cloud-chip"));
     }
 
     /// <summary>A capped pool shows only its first chips until "Show all" is pressed, which then reads "Show fewer"; selected chips always show.</summary>

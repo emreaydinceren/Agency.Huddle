@@ -866,6 +866,132 @@ public sealed class BuildTeamTests
         Assert.Empty(cut.FindAll(".build-team-savebar"));
     }
 
+    /// <summary>The Members tab offers a cloud of the catalog's team types between the "Roles" heading (with its count) and the roles, without the Blank Team, which defines no roles to filter by; every role still shows.</summary>
+    [Fact]
+    public async Task Members_OffersATeamTypeCloudBetweenTheRolesHeadingAndTheRoles()
+    {
+        using Fixture fixture = new(typeCount: 2, filterTypes: true);
+        fixture.SeedGarden();
+        await using MudBunitContext ctx = fixture.NewContext();
+
+        IRenderedComponent<ContainerFragment> cut = RenderMembers(ctx, "Garden");
+
+        IElement filter = cut.Find(".build-team-role-type-filter");
+        IElement? heading = filter.PreviousElementSibling;
+        Assert.NotNull(heading);
+        Assert.Contains("build-team-subhead", heading.ClassList);
+        Assert.Equal("Roles", heading.QuerySelector("h3")?.TextContent.Trim());
+        IElement? grid = filter.NextElementSibling;
+        Assert.NotNull(grid);
+        Assert.Contains("role-grid", grid.ClassList);
+        Assert.Equal("Team types", filter.QuerySelector(".chip-cloud-title")?.TextContent.Trim());
+        Assert.Equal(["Type 01", "Type 02", "Solo", "Books"], filter.QuerySelectorAll(".chip-cloud-chip-text").Select(chip => chip.TextContent.Trim()));
+        Assert.Equal(["Tutor", "Bookkeeper"], RoleNames(cut));
+    }
+
+    /// <summary>The Build a team page keeps its roles unfiltered: the team type filter is the Members tab's alone.</summary>
+    [Fact]
+    public async Task Build_DoesNotOfferTheTeamTypeFilter()
+    {
+        using Fixture fixture = new(typeCount: 2, filterTypes: true);
+        await using MudBunitContext ctx = fixture.NewContext();
+        ctx.Services.GetRequiredService<NavigationManager>().NavigateTo("/teams/build?type=t01");
+
+        IRenderedComponent<ContainerFragment> cut = Render(ctx);
+
+        Assert.NotEmpty(cut.FindAll(".build-team-hire"));
+        Assert.Empty(cut.FindAll(".build-team-role-type-filter"));
+        Assert.Equal(["Tutor", "Bookkeeper"], RoleNames(cut));
+    }
+
+    /// <summary>
+    /// Pressing a type in the cloud floats it to the left of the cloud as a "Team type" chip with no caret and no menu, takes it out of the
+    /// cloud's own chips, and keeps only the roles that type defines, the Add card included, so a role the Team's own type suggested goes
+    /// when another type is chosen.
+    /// </summary>
+    [Fact]
+    public async Task Members_PickingATeamType_FloatsItLeftAndFiltersTheRolesToWhatItDefines()
+    {
+        using Fixture fixture = new(typeCount: 2, filterTypes: true);
+        fixture.SeedGarden();
+        await using MudBunitContext ctx = fixture.NewContext();
+        IRenderedComponent<ContainerFragment> cut = RenderMembers(ctx, "Garden");
+
+        await cut.InvokeAsync(() => TypeChip(cut, "Books").ClickAsync());
+
+        IElement chip = cut.Find(".build-team-role-type-chip");
+        Assert.Equal("Team type filter: Books", chip.GetAttribute("aria-label"));
+        Assert.Equal("Team type filter: Books", cut.Find(".build-team-role-type-filter .chip-cloud").FirstElementChild?.GetAttribute("aria-label"));
+        Assert.Equal(["Type 01", "Type 02", "Solo"], CloudTypeNames(cut));
+        Assert.Empty(chip.QuerySelectorAll(".task-filter-chip-menu, .mud-button-icon-end"));
+        Assert.Equal("Books", chip.QuerySelector(".task-filter-chip-value")?.TextContent.Trim());
+        Assert.Equal(["Bookkeeper"], RoleNames(cut));
+        Assert.Single(cut.FindAll("[aria-label='Add a custom role']"));
+        Assert.Empty(cut.FindAll(".build-team-role-type-empty"));
+    }
+
+    /// <summary>The chip's clear button removes the filter: the type goes back among the cloud's chips and every role shows again.</summary>
+    [Fact]
+    public async Task Members_ClearingTheTeamTypeFilter_PutsTheTypeBackAndShowsEveryRoleAgain()
+    {
+        using Fixture fixture = new(typeCount: 2, filterTypes: true);
+        fixture.SeedGarden();
+        await using MudBunitContext ctx = fixture.NewContext();
+        IRenderedComponent<ContainerFragment> cut = RenderMembers(ctx, "Garden");
+        await cut.InvokeAsync(() => TypeChip(cut, "Books").ClickAsync());
+
+        await cut.InvokeAsync(() => cut.Find("[aria-label='Clear Team type filter']").ClickAsync());
+
+        Assert.Empty(cut.FindAll(".build-team-role-type-chip"));
+        Assert.Equal(["Type 01", "Type 02", "Solo", "Books"], CloudTypeNames(cut));
+        Assert.Equal(["Tutor", "Bookkeeper"], RoleNames(cut));
+    }
+
+    /// <summary>Pressing another type in the cloud changes the filter to it instead, and the type that was chosen goes back among the chips.</summary>
+    [Fact]
+    public async Task Members_PickingAnotherTeamType_ReplacesTheFilter()
+    {
+        using Fixture fixture = new(typeCount: 2, filterTypes: true);
+        fixture.SeedGarden();
+        await using MudBunitContext ctx = fixture.NewContext();
+        IRenderedComponent<ContainerFragment> cut = RenderMembers(ctx, "Garden");
+        await cut.InvokeAsync(() => TypeChip(cut, "Books").ClickAsync());
+
+        await cut.InvokeAsync(() => TypeChip(cut, "Type 01").ClickAsync());
+
+        Assert.Equal("Team type filter: Type 01", cut.Find(".build-team-role-type-chip").GetAttribute("aria-label"));
+        Assert.Equal(["Type 02", "Solo", "Books"], CloudTypeNames(cut));
+        Assert.Equal(["Tutor"], RoleNames(cut));
+    }
+
+    /// <summary>A type none of whose roles the hiring pool has a job for leaves only the Add card, and says so instead of showing an unexplained empty grid.</summary>
+    [Fact]
+    public async Task Members_ATeamTypeWithNoHireableRoles_SaysSo()
+    {
+        using Fixture fixture = new(typeCount: 2, filterTypes: true);
+        fixture.SeedGarden();
+        await using MudBunitContext ctx = fixture.NewContext();
+        IRenderedComponent<ContainerFragment> cut = RenderMembers(ctx, "Garden");
+
+        await cut.InvokeAsync(() => TypeChip(cut, "Solo").ClickAsync());
+
+        Assert.Empty(RoleNames(cut));
+        Assert.Single(cut.FindAll("[aria-label='Add a custom role']"));
+        Assert.Equal("Solo has no roles to hire from here.", cut.Find(".build-team-role-type-empty").TextContent.Trim());
+    }
+
+    /// <summary>The role cards' titles in the Hire section, in the order they are drawn.</summary>
+    private static IReadOnlyList<string> RoleNames(IRenderedComponent<ContainerFragment> cut) =>
+        [.. cut.FindAll(".build-team-hire .role-card .team-type-name").Select(name => name.TextContent.Trim())];
+
+    /// <summary>The names of the team types still offered as chips in the Members tab's cloud, in the order drawn: the chosen type is not among them.</summary>
+    private static IReadOnlyList<string> CloudTypeNames(IRenderedComponent<ContainerFragment> cut) =>
+        [.. cut.FindAll(".build-team-role-type-filter .chip-cloud-chip-text").Select(chip => chip.TextContent.Trim())];
+
+    /// <summary>The chip for a team type in the Members tab's cloud.</summary>
+    private static IElement TypeChip(IRenderedComponent<ContainerFragment> cut, string name) =>
+        cut.FindAll(".build-team-role-type-filter .chip-cloud-chip").Single(chip => string.Equals(chip.TextContent.Trim(), name, StringComparison.Ordinal));
+
     /// <summary>Editing a Team that does not exist says so instead of drawing the page.</summary>
     [Fact]
     public async Task Details_UnknownTeam_SaysSo()
@@ -940,12 +1066,16 @@ public sealed class BuildTeamTests
         }
     }
 
-    /// <summary>Real stores behind the page: <c>typeCount</c> team types named "Type 01", "Type 02", … with a manager and two other roles each; Type 02 needs a project folder.</summary>
+    /// <summary>
+    /// Real stores behind the page: <c>typeCount</c> team types named "Type 01", "Type 02", … with a manager and two other roles each; Type 02 needs a project folder.
+    /// With <c>filterTypes</c> two more follow whose roles differ from those and from each other: "Solo" defines only a role the hiring pool has no job for, and "Books" only the pool's Bookkeeper,
+    /// and the catalog sits on the hiring pool, so each type also carries the pool jobs it does not list as Pooled roles.
+    /// </summary>
     private sealed class Fixture : IDisposable
     {
         private readonly TempDataDir dir = new();
 
-        public Fixture(int typeCount)
+        public Fixture(int typeCount, bool filterTypes = false)
         {
             this.Personas = TestTaskStore.CreatePersonaStore(this.dir);
             this.Catalog = new FakeTeamCatalog();
@@ -960,6 +1090,16 @@ public sealed class BuildTeamTests
                 builtins[$"{id}/processes/flow.md"] = "# Flow";
             }
 
+            if (filterTypes)
+            {
+                builtins["t98/team-type.json"] = Manifest("t98", "Solo", 98, """{ "id": "solo", "title": "Soloist", "candidate": "candidates/solo.md", "manager": true, "required": true }""");
+                builtins["t98/candidates/solo.md"] = "---\ntitle: Soloist\nconsult_when: alone\n---\nYou work alone.";
+                builtins["t98/processes/flow.md"] = "# Flow";
+                builtins["t99/team-type.json"] = Manifest("t99", "Books", 99, """{ "id": "bookkeeper", "title": "Bookkeeper", "candidate": "candidates/books.md", "manager": true, "required": true }""");
+                builtins["t99/candidates/books.md"] = "---\ntitle: Bookkeeper\nconsult_when: receipts\n---\nYou keep books.";
+                builtins["t99/processes/flow.md"] = "# Flow";
+            }
+
             this.Roles = new CustomRoleStore(this.dir.Options());
             this.Pool = new HiringPoolCatalog(this.dir.Options(), NullLogger<HiringPoolCatalog>.Instance, new Dictionary<string, string>(StringComparer.Ordinal)
             {
@@ -967,7 +1107,12 @@ public sealed class BuildTeamTests
                 ["personas/tutor.md"] = "---\ntitle: Tutor\nconsult_when: asked\n---\nYou teach.",
                 ["personas/bookkeeper.md"] = "---\ntitle: Bookkeeper\nconsult_when: receipts\n---\nYou keep books.",
             });
-            this.Types = new TeamTypeCatalog(this.dir.Options(), NullLogger<TeamTypeCatalog>.Instance, builtins);
+
+            // With the pool behind it the catalog pads every type with the pool jobs it does not list, as Pooled roles,
+            // which the team type filter must not count as the type's own. Left off otherwise, so the other tests keep the roles they list.
+            this.Types = filterTypes
+                ? new TeamTypeCatalog(this.dir.Options(), NullLogger<TeamTypeCatalog>.Instance, builtins, this.Pool)
+                : new TeamTypeCatalog(this.dir.Options(), NullLogger<TeamTypeCatalog>.Instance, builtins);
             SkillPackStore packs = new(this.dir.Options(), NullLogger<SkillPackStore>.Instance, new Dictionary<string, string>(StringComparer.Ordinal));
             this.Avatars = new AvatarStore(this.dir.Options(), NullLogger<AvatarStore>.Instance);
             HireLimitHarness harness = new(this.dir.Options());
@@ -1045,14 +1190,18 @@ public sealed class BuildTeamTests
             this.dir.Dispose();
         }
 
-        private static string Manifest(string id, string name, int order) => $$"""
+        private static string Manifest(string id, string name, int order) => Manifest(id, name, order, """
+            { "id": "tutor", "title": "Lead", "candidate": "candidates/lead.md", "manager": true, "required": true },
+            { "id": "dev", "title": "Developer", "candidate": "candidates/dev.md" },
+            { "id": "qa", "title": "Tester", "candidate": "candidates/qa.md" }
+            """);
+
+        private static string Manifest(string id, string name, int order, string roles) => $$"""
             { "schemaVersion": 1, "id": "{{id}}", "version": "1.0.0", "displayName": "{{name}}", "order": {{order}},
               "workspace": {{(order == 2 ? """{ "kind": "folder", "label": "Project folder", "required": true }""" : """{ "kind": "none", "label": "None", "required": false }""")}},
               "processes": [{ "id": "flow", "file": "processes/flow.md", "default": true }],
               "roles": [
-                { "id": "tutor", "title": "Lead", "candidate": "candidates/lead.md", "manager": true, "required": true },
-                { "id": "dev", "title": "Developer", "candidate": "candidates/dev.md" },
-                { "id": "qa", "title": "Tester", "candidate": "candidates/qa.md" }
+                {{roles}}
               ] }
             """;
     }

@@ -51,7 +51,7 @@ the hub: [Huddle.EngineeringGuide.md](../Huddle.EngineeringGuide.md).
 | `Components/Tasks/TaskDetail.razor` | Task detail (Spec §13.6), both the drawer and expanded layouts: every field, the Save/Revert cycle, the conflict UI, Expand/Close/Reopen/Make a copy, and the Change log. |
 | `Components/Tasks/TaskDetailDialog.razor` | Task detail's Expanded layout (Spec §13.6): wraps `TaskDetail` in a `MudDialog`, taking only an id or a create/copy draft. |
 | `Components/Tasks/FieldsDialog.razor` | The **Fields…** dialog (Spec §13.5): reorder, switch off, remove and add the View's fields. |
-| `Components/Tasks/TaskFilterChip.razor` | One "Label: Value" filter or Group by chip of the toolbar, with a menu and a clear button. |
+| `Components/Tasks/TaskFilterChip.razor` | One "Label: Value" filter or Group by chip of the toolbar, with a menu and a clear button; also the Members tab's team type filter in `BuildTeam`, in its `NoMenu` form (no caret, no menu). |
 | `Components/Tasks/ViewActions.cs` | Rename (through `NameDialog`), delete confirm and the default name of a new View. |
 | `Components/Tasks/DuplicatePickerDialog.razor` | Asks which Task a moved Task duplicates (Spec §13.4 Dropping step 2), a strict `MudAutocomplete` over the Task index. |
 | `Components/Tasks/ReasonDialog.razor` | Asks for an optional reason when a Task moves to Cancelled or Rejected (Spec §13.4 Dropping step 3). |
