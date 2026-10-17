@@ -79,10 +79,11 @@
             <FirstPanel>
                 @* The tree is never unmounted while filtered (nothing persists its expansion): it is
                    hidden, and the results render beside it. *@
-                @* L2c: the tree panel's own header, shared by every host: search, New note, New folder. *@
+                @* L2c: the tree panel's own header, shared by every host: search, New note, New folder, in one row that is the
+                   same height as the document toolbar beside it (audit B2). *@
                 <div class="library-explorer-tree-header">
                     <SearchField Value="@this.searchText" ValueChanged="this.OnSearchChangedAsync" Placeholder="Search notes"
-                                 AriaLabel="Search notes" Class="library-explorer-search" />
+                                 AriaLabel="Search notes" Compact="true" Class="library-explorer-search" />
                     @if (this.PrimaryScope() is not null)
                     {
                         <div class="library-explorer-tree-actions">

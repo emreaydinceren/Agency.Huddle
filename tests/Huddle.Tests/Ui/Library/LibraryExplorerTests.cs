@@ -67,9 +67,10 @@ public sealed class LibraryExplorerTests : IDisposable
 
         await cut.InvokeAsync(() => cut.Find("div.library-tree-node").ContextMenuAsync());
         cut.WaitForAssertion(() => Assert.NotEmpty(cut.FindAll(".mud-menu-item")));
-        IReadOnlyList<string> renameLabels = [.. cut.FindAll(".library-tree-menu-label").Select(el => el.TextContent.Trim())];
-        int renameIndex = renameLabels.ToList().IndexOf("Rename");
-        Assert.True(cut.FindAll(".mud-menu-item")[renameIndex].ClassList.Contains("mud-disabled"));
+        IReadOnlyList<string> labels = [.. cut.FindAll(".library-tree-menu-label").Select(el => el.TextContent.Trim())];
+        Assert.DoesNotContain("Rename…", labels);
+        Assert.DoesNotContain("Delete…", labels);
+        Assert.Single(cut.FindAll(".library-tree-menu-note"));
     }
 
     /// <summary>[12.7a] A scope that doesn't resolve shows the settled <see cref="MudAlert"/> instead of the tree.</summary>
@@ -112,7 +113,7 @@ public sealed class LibraryExplorerTests : IDisposable
 
         await cut.InvokeAsync(() => cut.Find("div.library-tree-node").ContextMenuAsync());
         cut.WaitForAssertion(() => Assert.NotEmpty(cut.FindAll(".mud-menu-item")));
-        int newNoteIndex = cut.FindAll(".library-tree-menu-label").Select(el => el.TextContent.Trim()).ToList().IndexOf("New note");
+        int newNoteIndex = cut.FindAll(".library-tree-menu-label").Select(el => el.TextContent.Trim()).ToList().IndexOf("New note…");
         _ = cut.InvokeAsync(() => cut.FindAll(".mud-menu-item")[newNoteIndex].Click());
 
         cut.WaitForAssertion(() => Assert.NotEmpty(cut.FindAll(".mud-dialog-content input")));
@@ -190,7 +191,7 @@ public sealed class LibraryExplorerTests : IDisposable
         LibraryExplorer explorer = cut.FindComponent<LibraryExplorer>().Instance;
 
         Task pending = cut.InvokeAsync(() => explorer.NewNoteAsync());
-        await ConfirmNewNoteAsync(cut, pending, "Idea", ct);
+        await ConfirmNewNoteAsync(cut, pending, "Idea", ct, "Inner");
 
         Assert.True(File.Exists(Path.Combine(root, "Sub", "Inner", "Idea.md")));
         Assert.False(File.Exists(Path.Combine(root, "Sub", "Idea.md")));
@@ -272,7 +273,7 @@ public sealed class LibraryExplorerTests : IDisposable
         LibraryExplorer explorer = cut.FindComponent<LibraryExplorer>().Instance;
 
         Task pending = cut.InvokeAsync(() => explorer.NewNoteAsync());
-        await ConfirmNewNoteAsync(cut, pending, "Idea", ct);
+        await ConfirmNewNoteAsync(cut, pending, "Idea", ct, "Inner");
 
         Assert.True(File.Exists(Path.Combine(root, "Sub", "Inner", "Idea.md")));
         Assert.False(File.Exists(Path.Combine(root, "Sub", "Idea.md")));
@@ -298,7 +299,7 @@ public sealed class LibraryExplorerTests : IDisposable
         LibraryExplorer explorer = cut.FindComponent<LibraryExplorer>().Instance;
 
         Task pending = cut.InvokeAsync(() => explorer.NewNoteAsync());
-        cut.WaitForAssertion(() => Assert.Equal("New note", cut.Find(".mud-dialog-title").TextContent.Trim()));
+        cut.WaitForAssertion(() => Assert.Equal("New note in Sub", cut.Find(".mud-dialog-title").TextContent.Trim()));
         await cut.InvokeAsync(() => cut.Find(".mud-dialog-content input").InputAsync(new ChangeEventArgs { Value = "Idea" }));
         await cut.InvokeAsync(() => cut.FindAll(".mud-dialog-actions button").First(b => b.TextContent.Trim() == "Cancel").ClickAsync());
         await pending.WaitAsync(TimeSpan.FromSeconds(5), ct);
@@ -360,7 +361,7 @@ public sealed class LibraryExplorerTests : IDisposable
         LibraryExplorer explorer = cut.FindComponent<LibraryExplorer>().Instance;
 
         Task pending = cut.InvokeAsync(() => explorer.NewNoteAsync());
-        await ConfirmNewNoteAsync(cut, pending, "Idea", ct);
+        await ConfirmNewNoteAsync(cut, pending, "Idea", ct, "Inner");
 
         Assert.True(File.Exists(Path.Combine(root, "Sub", "Inner", "Idea.md")));
         List<string> namesAfter = ["Existing.md", "Idea.md", "Inner", "Sub"];
@@ -654,7 +655,7 @@ public sealed class LibraryExplorerTests : IDisposable
         await cut.InvokeAsync(() => cut.Find("div.mud-treeview-item-arrow button").ClickAsync());
         cut.WaitForAssertion(() => Assert.NotEmpty(NodeRows(cut, "Old.md")));
         await cut.InvokeAsync(() => NodeRows(cut, "Old.md").Single().ContextMenuAsync());
-        int renameIndex = cut.FindAll(".library-tree-menu-label").Select(el => el.TextContent.Trim()).ToList().IndexOf("Rename");
+        int renameIndex = cut.FindAll(".library-tree-menu-label").Select(el => el.TextContent.Trim()).ToList().IndexOf("Rename…");
         _ = cut.InvokeAsync(() => cut.FindAll(".mud-menu-item")[renameIndex].Click());
         cut.WaitForAssertion(() => Assert.NotEmpty(cut.FindAll(".mud-dialog-content input")));
         await cut.InvokeAsync(() => cut.Find(".mud-dialog-content input").InputAsync(new ChangeEventArgs { Value = "New" }));
@@ -686,7 +687,7 @@ public sealed class LibraryExplorerTests : IDisposable
         await cut.InvokeAsync(() => cut.Find("div.mud-treeview-item-arrow button").ClickAsync());
         cut.WaitForAssertion(() => Assert.NotEmpty(NodeRows(cut, "Sub")));
         await cut.InvokeAsync(() => NodeRows(cut, "Sub").Single().ContextMenuAsync());
-        int deleteIndex = cut.FindAll(".library-tree-menu-label").Select(el => el.TextContent.Trim()).ToList().IndexOf("Delete");
+        int deleteIndex = cut.FindAll(".library-tree-menu-label").Select(el => el.TextContent.Trim()).ToList().IndexOf("Delete…");
         _ = cut.InvokeAsync(() => cut.FindAll(".mud-menu-item")[deleteIndex].Click());
         cut.WaitForAssertion(() => Assert.NotEmpty(cut.FindAll(".mud-dialog-actions button")));
         await cut.InvokeAsync(() => cut.FindAll(".mud-dialog-actions button").First(b => b.TextContent.Trim() == "Delete").ClickAsync());
@@ -1292,11 +1293,12 @@ public sealed class LibraryExplorerTests : IDisposable
     }
 
     /// <summary>Waits for the New note dialog, types <paramref name="name"/>, confirms, and waits for
-    /// <paramref name="pending"/> (the <c>NewNoteAsync</c> call) to complete.</summary>
+    /// <paramref name="pending"/> (the <c>NewNoteAsync</c> call) to complete. The dialog's title names the folder the
+    /// note goes into, <paramref name="location"/>.</summary>
     private static async Task ConfirmNewNoteAsync(
-        IRenderedComponent<ContainerFragment> cut, Task pending, string name, CancellationToken ct)
+        IRenderedComponent<ContainerFragment> cut, Task pending, string name, CancellationToken ct, string location = "Sub")
     {
-        cut.WaitForAssertion(() => Assert.Equal("New note", cut.Find(".mud-dialog-title").TextContent.Trim()));
+        cut.WaitForAssertion(() => Assert.Equal("New note in " + location, cut.Find(".mud-dialog-title").TextContent.Trim()));
         await cut.InvokeAsync(() => cut.Find(".mud-dialog-content input").InputAsync(new ChangeEventArgs { Value = name }));
         await cut.InvokeAsync(() => cut.FindAll(".mud-dialog-actions button")[1].ClickAsync());
         await pending.WaitAsync(TimeSpan.FromSeconds(5), ct);

@@ -3028,8 +3028,9 @@ a.team-ref,
    the toolbar ends and the document begins. The content then starts 24px below that line, whichever mode draws
    it. In Split the two columns carry that 24px themselves, so the raw side's tint runs right up to the line. */
 .library-document-toolbar.mud-toolbar {
+    box-sizing: border-box;
     height: auto;
-    min-height: 0;
+    min-height: 61px;
     padding: 12px 16px;
     border-bottom: 1px solid var(--mud-palette-lines-default);
 }
@@ -3210,6 +3211,10 @@ a.team-ref,
     min-height: 0;
 }
 
+/* ---- Library header band (audit B2) ---------------------------------------------------------
+   The tree header and the document toolbar are one band: the same 61px height, so the Chrome line under each lands at the
+   same y and reads as one line across the splitter. New note sits inside the band, beside the search field. */
+
 /* ---- Library panes: one spacing scale ---------------------------------------------------------
    The Library's panes are spaced on the 4/8/12/16/24px scale (design-system.md "Spacing"): each pane puts
    16px between its edge and its content and 12px above its first control, level with the document toolbar's.
@@ -3219,17 +3224,26 @@ a.team-ref,
     position: sticky;
     top: 0;
     z-index: 1;
+    box-sizing: border-box;
     display: flex;
-    flex-direction: column;
+    align-items: center;
     gap: 8px;
-    padding: 12px 16px 8px;
+    min-height: 61px;
+    padding: 12px 16px;
+    border-bottom: 1px solid var(--mud-palette-lines-default);
     background: var(--mud-palette-surface);
+}
+
+.library-explorer-tree-header > .library-explorer-search {
+    flex: 1 1 0;
+    min-width: 0;
 }
 
 .library-explorer-tree-actions {
     display: flex;
+    flex: 0 0 auto;
     align-items: center;
-    gap: 8px;
+    gap: 4px;
 }
 
 /* Explorer filter: the tree is hidden, never unmounted, while name-search results show beside it. */
@@ -3239,8 +3253,8 @@ a.team-ref,
 
 /* ---- Library tree density ----------------------------------------------------------------------
    30px rows; on a touch screen 44px, the minimum target. The tree is inset 8px
-   and each row pads 8px more, so a label column starts 16px from the pane edge while the hover and selected
-   fills reach 8px past it. The chevron sits in a fixed 16px column that MudBlazor renders on every row,
+   and each row is inset 4px (the Selected shape, audit A5) and pads 4px more, so a label column starts 16px from
+   the pane edge while the hover and selected fills reach 4px past it, rounded at 0.75x the base radius. The chevron sits in a fixed 16px column that MudBlazor renders on every row,
    files included, so labels line up at each depth. Each level is indented 16px, which puts the group's
    guide line under the centre of its parent's chevron (8px row padding + half the 16px column). */
 .library-tree.mud-treeview {
@@ -3254,8 +3268,10 @@ a.team-ref,
 
 .library-tree .mud-treeview-item-content {
     min-height: 30px;
+    margin-inline: 4px;
     padding-block: 0;
-    padding-inline: 8px;
+    padding-inline: 4px;
+    border-radius: calc(var(--mud-default-borderradius) * 0.75);
 }
 
 .library-tree .mud-treeview-item-arrow {
@@ -3337,6 +3353,20 @@ a.team-ref,
         padding: 16px;
         margin: -16px;
     }
+}
+
+/* The tree's context menu (audit B10): a protected node's menu ends in one Quiet-ink note rather than three
+   disabled items, and Delete, the last item, is in Error ink. */
+.library-tree-menu-note {
+    max-width: 260px;
+    padding: 8px 16px;
+    font-size: var(--mud-typography-caption-size);
+    line-height: 1.4;
+    color: var(--mud-palette-text-secondary);
+}
+
+.mud-menu-item.library-tree-menu-destructive {
+    color: var(--mud-palette-error);
 }
 
 /* Drag and drop: when the tree is flattened this strip under the list stands for the scope's own folder. */
