@@ -9,6 +9,7 @@
 
     Passes are serialised: a pass that finds more work asks for one more rather than overlapping.
 *@
+@using Agency.Huddle.App.Circuits
 @using Agency.Huddle.App.Tabs
 @implements IDisposable
 @inject TabService Tabs
@@ -16,7 +17,7 @@
 @inject ITeamCatalog Catalog
 @inject ViewStore Views
 @inject RoomEvents Events
-@inject NavigationManager Navigation
+@inject ServerNavigator Navigator
 
 @code {
     private bool running;
@@ -56,7 +57,7 @@
         TabReconciler.ReconcileTeams(this.Tabs, this.Catalog);
         if (activeBefore is not null && this.Tabs.Active is { } now && !string.Equals(now.Id, activeBefore, StringComparison.Ordinal))
         {
-            this.Navigation.NavigateTo(now.Url);
+            this.Navigator.NavigateTo(now.Url);
         }
     }
 
@@ -85,7 +86,7 @@
                 TabReconciler.ReconcileViews(this.Tabs, this.Views.Views);
                 if (activeBefore is not null && this.Tabs.Active is { } now && !string.Equals(now.Id, activeBefore, StringComparison.Ordinal))
                 {
-                    this.Navigation.NavigateTo(now.Url);
+                    this.Navigator.NavigateTo(now.Url);
                 }
             }
             while (this.pending);

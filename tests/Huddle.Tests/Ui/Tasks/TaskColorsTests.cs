@@ -14,8 +14,8 @@ public sealed class TaskColorsTests
     /// <summary>Every <see cref="TaskState"/> maps to the <see cref="Color"/> Spec §13.10 names.</summary>
     [Theory]
     [InlineData(TaskState.Backlog, Color.Default)]
-    [InlineData(TaskState.ToDo, Color.Info)]
-    [InlineData(TaskState.InProgress, Color.Warning)]
+    [InlineData(TaskState.ToDo, Color.Default)]
+    [InlineData(TaskState.InProgress, Color.Info)]
     [InlineData(TaskState.Review, Color.Secondary)]
     [InlineData(TaskState.Done, Color.Success)]
     [InlineData(TaskState.Cancelled, Color.Error)]
@@ -42,11 +42,11 @@ public sealed class TaskColorsTests
     }
 
     /// <summary>
-    /// Every <see cref="PresenceState"/> maps to the badge colour of the presence spec: a Turn running is amber, an idle or offline
+    /// Every <see cref="PresenceState"/> maps to the badge colour of the presence spec: a Turn running is info (amber is only "needs attention"), an idle or offline
     /// assignee is the grey ring, and red is not a Presence colour at all (it belongs to a degraded Health).
     /// </summary>
     [Theory]
-    [InlineData(PresenceState.Awake, Color.Warning)]
+    [InlineData(PresenceState.Awake, Color.Info)]
     [InlineData(PresenceState.Asleep, Color.Default)]
     [InlineData(PresenceState.Offline, Color.Default)]
     public void For_EveryPresenceState_ReturnsSpecColor(PresenceState presence, Color expected)

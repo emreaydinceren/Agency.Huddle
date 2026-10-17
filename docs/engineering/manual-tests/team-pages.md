@@ -106,8 +106,8 @@ connected) and a Remove menu on one row of actions; and that a Teammate joins th
 
 - The tab shows the role cards (**Roles**, *Available roles*) and, under them, **Roster** with
   Ada, Bo and Nova, each with a presence badge on the 40px avatar (no status dot beside the Name) and *Member* as meta text.
-- Each member has **Edit** and **Message**; the Remove menu has **Remove from Team** and
-  **Delete Teammate**.
+- Each member has **Edit** and **Message**; the Remove menu has **Remove from team** and
+  **Delete teammate**.
 - There is no **Save changes** bar yet: the save bar (sticky at the bottom of the pane) appears only once something is changed.
 - There is no Add member button and no search box.
 
@@ -116,16 +116,16 @@ connected) and a Remove menu on one row of actions; and that a Teammate joins th
 - The tab still shows the old member list, or Bo is missing from the roster.
 - A member has no presence badge on its avatar, or Message is missing for an Online member.
 
-### TP-T2 — Remove from Team keeps the Teammate
+### TP-T2 — Remove from team keeps the Teammate
 
 **Free** · about 2 min
 
-*Proves Remove from Team marks a member until Save changes, then takes away only the Team label:
+*Proves Remove from team marks a member until Save changes, then takes away only the Team label:
 the Teammate stays.*
 
 **Steps**
 
-1. On Business Members tab, click **Remove** on Ada's card, then **Remove from Team**.
+1. On Business Members tab, click **Remove** on Ada's card, then **Remove from team**.
 2. Read the card, then click **Save changes**.
 
 **Pass if**
@@ -431,7 +431,7 @@ draft and deletes a removed member (the Teammate, not only the label).*
    field cannot be typed in.
 4. Change **What it's for** to `Grows vegetables.` and click **Save changes**.
 5. On the Garden **Members** tab, add any role from the role cards, then click **Remove** on the
-   first of the two members and choose **Delete Teammate**.
+   first of the two members and choose **Delete teammate**.
 6. Click **Save changes**, then **Delete** in the confirmation.
 
 **Pass if**

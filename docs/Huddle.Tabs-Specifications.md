@@ -33,7 +33,7 @@ and more than two groups are still to come; the model and the persisted format a
 | The page navigates itself to the same key | The Tab's URL and title update. No new Tab. |
 | The URL changes to a different key (browser Back, a link in a message, a typed URL) | Treated like a menu click: preview Tab, or activate. |
 | A Room is renamed | Its Tab title follows. |
-| A Room is archived or deleted | Its Tab closes (`TabSync`). A removed Team's or Project's Tab closes too, but only when the catalog announces a change and still lists at least one Team: an empty catalog is read as "not loaded yet", so removing the very last Team leaves its Tab open. |
+| A Room is archived or deleted | Its Tab closes (`TabSync`). A removed Team's or Project's Tab closes too, but only when the catalog announces a change and still lists at least one Team: an empty catalog is read as "not loaded yet", so removing the very last Team leaves its Tab open. When closing a Tab moves the active Tab, the router follows it, unless the browser is already gone (a closed or reloaded page whose circuit is still retained): the Tab still closes, and no navigation is issued (`ServerNavigator`). |
 | Reload or restart | Tabs, their order, the active Tab and the preview flags are restored. |
 | Any page opens in a Tab | The Top Bar shows its breadcrumb trail (below). One trail for the window, following the focused pane; no page draws its own. |
 | Click an ancestor crumb | Navigates that Tab in place (`TabService.Navigate`): same slot and group, key, title and icon re-derived, a preview becomes permanent. If another Tab already has the target's key, that Tab is focused instead. |
@@ -171,14 +171,14 @@ so the work in it is not lost; its active Tab's top accent is dimmed. A key is o
 across both: opening a page already open in the other group focuses it there instead of duplicating it
 (this is what keeps one open Room per Room).
 
-**The hover toolbar.** Hovering (or focusing into) an unpinned Tab fades in a toolbar over the right end of its title, just left of the x: a chevron that opens the Tab menu, then Move Left and Move Right, each drawn only when that move is possible for the Tab. Tabs are at least 14rem wide, so most of the title is visible before the toolbar appears.
+**The hover toolbar.** Hovering (or focusing into) an unpinned Tab fades in a toolbar over the right end of its title, just left of the x: a More actions button (⋮, `MoreVert`) that opens the Tab menu, then Move left and Move right, each drawn only when that move is possible for the Tab. Tabs are at least 14rem wide, so most of the title is visible before the toolbar appears.
 
-**The Tab menu** (right-click a Tab, or the chevron):
+**The Tab menu** (right-click a Tab, or its More actions button):
 
 | Item | Does |
 | --- | --- |
-| Pin Tab / Unpin Tab | Pins: permanent, moves to the end of the group's pinned Tabs, drawn as its icon alone (the title stays for screen readers and as a tooltip). Unpin keeps it permanent and puts it just after the pinned Tabs. Pinned Tabs always stay at the front of their group; a new preview opens after them. |
-| Move Left / Move Right | Moves the Tab into the neighbouring group on that side, where it becomes the active Tab and the group takes focus. From the outermost group it opens a new group on that side, if fewer than `MaxGroups` exist and the Tab has company. A lone Tab, or one at the outer edge at the limit, has the item disabled. A moved Tab becomes permanent. Emptying a group closes it. |
+| Pin tab / Unpin tab | Pins: permanent, moves to the end of the group's pinned Tabs, drawn as its icon alone (the title stays for screen readers and as a tooltip). Unpin keeps it permanent and puts it just after the pinned Tabs. Pinned Tabs always stay at the front of their group; a new preview opens after them. |
+| Move left / Move right | Moves the Tab into the neighbouring group on that side, where it becomes the active Tab and the group takes focus. From the outermost group it opens a new group on that side, if fewer than `MaxGroups` exist and the Tab has company. A lone Tab, or one at the outer edge at the limit, has the item disabled. A moved Tab becomes permanent. Emptying a group closes it. |
 | Close | Closes the Tab. |
 
 Moving is between groups only; reordering within a strip (drag) is still to come.

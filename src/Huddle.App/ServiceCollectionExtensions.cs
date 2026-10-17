@@ -5,6 +5,7 @@ using Agency.Huddle.App.Acp;
 using Agency.Huddle.App.Acp.Sessions;
 using Agency.Huddle.App.Appearance;
 using Agency.Huddle.App.Avatars;
+using Agency.Huddle.App.Circuits;
 using Agency.Huddle.App.Data;
 using Agency.Huddle.App.Demo;
 using Agency.Huddle.App.Elicitation;
@@ -412,6 +413,10 @@ public static class ServiceCollectionExtensions
 
         // Answers a Sprint proposal (Task 63): Approve is the only path that creates a Sprint.
         services.AddSingleton<SprintProposalService>();
+
+        // Scoped: whether one circuit's client is still connected, and the navigator that skips a server-driven
+        // navigation once it is not (docs/engineering/rules.md).
+        services.AddCircuitConnection();
 
         // Scoped: the open Tabs of one circuit (docs/Huddle.Tabs-Specifications.md).
         services.AddScoped<Tabs.TabService>();

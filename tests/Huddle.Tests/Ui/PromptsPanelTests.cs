@@ -69,6 +69,18 @@ public sealed class PromptsPanelTests
         Assert.True(cut.Find("h2").ClassList.Contains("mud-typography-subtitle2"));
     }
 
+    /// <summary>A prompt's text area carries the shared <c>long-text-field</c> class, so it is body text (400) and not the 600 MudBlazor gives an input.</summary>
+    [Fact]
+    public async Task PromptTextArea_CarriesTheLongTextFieldClass()
+    {
+        await using MudBunitContext ctx = new();
+
+        var cut = ctx.Render<PromptsPanel>(parameters => parameters
+            .Add(p => p.Groups, SingleGroup(MakeField("turn.roomLabel", isModified: false, hasUnsavedChange: false))));
+
+        Assert.NotNull(cut.Find(".long-text-field textarea"));
+    }
+
     /// <summary>The "Modified" badge shows only when <see cref="PromptFieldState.IsModified"/> is true.</summary>
     [Fact]
     public async Task IsModified_ShowsTheModifiedBadge()

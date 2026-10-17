@@ -93,7 +93,7 @@ public sealed partial class AppCssStatesTests
 
     /// <summary>
     /// The repeated blocks are shared classes: the dotted reference link, the room strip, the status
-    /// line, the group heading, the bordered panel card and the preformatted preview block (UX-R22).
+    /// line and the group heading (UX-R22). The status-text, panel-card and preview-block classes were dead and are gone.
     /// </summary>
     [Fact]
     public void AppCss_RepeatedBlocks_AreSharedClasses()
@@ -102,10 +102,29 @@ public sealed partial class AppCssStatesTests
 
         Assert.Matches(@"\.ref-link\s*\{", css);
         Assert.Matches(@"\.room-strip\s*\{", css);
-        Assert.Matches(@"\.status-text\s*\{", css);
         Assert.Matches(@"\.group-heading\s*\{", css);
-        Assert.Matches(@"\.panel-card\s*\{", css);
-        Assert.Matches(@"\.preview-block\s*\{", css);
+        Assert.DoesNotMatch(@"\.status-text\s*[{,]", css);
+        Assert.DoesNotMatch(@"\.panel-card\s*[{,]", css);
+        Assert.DoesNotMatch(@"\.preview-block\s*[{,]", css);
+        Assert.Matches(@"\.process-step-preview\s*\{", css);
+    }
+
+    /// <summary>
+    /// Editable long text is body1 (14px, weight 400, the body line height): MudBlazor draws an input's text in the
+    /// subtitle1 role, which is 600 in this scale, so the shared <c>.long-text-field</c> class sets the three properties back.
+    /// </summary>
+    [Fact]
+    public void AppCss_LongTextField_IsBody1()
+    {
+        string css = AppCss();
+
+        Match rule = Regex.Match(css, @"\.long-text-field[^{]*\{(?<body>[^}]*)\}", RegexOptions.CultureInvariant, TimeSpan.FromSeconds(2));
+
+        Assert.True(rule.Success, "app.css has no .long-text-field rule.");
+        string body = rule.Groups["body"].Value;
+        Assert.Contains("font-size: var(--mud-typography-body1-size);", body, StringComparison.Ordinal); // contains-ok: haystack is one rule of the stylesheet source
+        Assert.Contains("font-weight: 400;", body, StringComparison.Ordinal); // contains-ok: haystack is one rule of the stylesheet source
+        Assert.Contains("line-height: var(--mud-typography-body1-lineheight);", body, StringComparison.Ordinal); // contains-ok: haystack is one rule of the stylesheet source
     }
 
     /// <summary>

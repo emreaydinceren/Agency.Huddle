@@ -25,7 +25,10 @@
         <MudAlert Severity="Severity.Error" Dense="true" role="alert">@this.error</MudAlert>
     }
 
-    <MudTabs ActivePanelIndex="this.ActivePanelIndex" ActivePanelIndexChanged="this.OnActivePanelIndexChanged">
+    @* Scroll arrows only on overflow: AlwaysShowScrollButtons is MudBlazor's default (false) spelled out, and the 112px minimum
+       keeps the seven tabs well inside the 960px reading column - at the default 160px six already summed to exactly 960 and the
+       arrows showed at desktop width. *@
+    <MudTabs AlwaysShowScrollButtons="false" MinimumTabWidth="112px" ActivePanelIndex="this.ActivePanelIndex" ActivePanelIndexChanged="this.OnActivePanelIndexChanged">
         <MudTabPanel Text="Profile" Icon="@Icons.Material.Outlined.AccountCircle">
             <ProfilePanel />
         </MudTabPanel>
@@ -66,7 +69,7 @@
         <MudTabPanel Text="Skills" Icon="@Icons.Material.Outlined.MenuBook">
             <SkillsPanel />
         </MudTabPanel>
-        <MudTabPanel Text="Team Types" Icon="@Icons.Material.Outlined.AccountTree">
+        <MudTabPanel Text="Team types" Icon="@Icons.Material.Outlined.AccountTree">
             <TeamTypesPanel />
         </MudTabPanel>
         <MudTabPanel Text="Library" Icon="@Icons.Material.Outlined.FolderOpen">

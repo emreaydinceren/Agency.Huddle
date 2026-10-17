@@ -140,6 +140,29 @@ if (scenario === "paste-files") {
     ref.sendResult = scenario === "send-posted";
     await context.window.teamComposer.send(textarea);
     out.value = textarea.value;
+} else if (scenario === "resize-observer" || scenario === "resize-same-width") {
+    // A ResizeObserver stand-in: it records what it observes and lets the scenario deliver a size change.
+    const observers = [];
+    context.ResizeObserver = class {
+        constructor(callback) { this.callback = callback; this.targets = []; this.disconnected = false; observers.push(this); }
+        observe(target) { this.targets.push(target); }
+        disconnect() { this.disconnected = true; }
+    };
+    textarea.style = {};
+    textarea.offsetHeight = 40;
+    textarea.clientHeight = 38;
+    textarea.scrollHeight = 100;
+    attach(null);
+    const observer = observers[0];
+    out.count = observers.length;
+    out.observesBox = observer?.targets[0] === box;
+    observer.callback([{ contentRect: { width: 500 } }]);
+    textarea.style.height = "999px";
+    observer.callback([{ contentRect: { width: scenario === "resize-observer" ? 900 : 500 } }]);
+    out.heightAfterResize = textarea.style.height;
+    context.window.teamComposer.detach(textarea);
+    out.disconnected = observer.disconnected;
+    context.window.teamComposer.detach(textarea);
 } else if (scenario === "send-legacy") {
     attach(null);
     ref.sendResult = undefined;

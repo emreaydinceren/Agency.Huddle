@@ -1,7 +1,7 @@
 @*
     The compact provenance line shown wherever a Skill appears (SK-8, SK-9): "Publisher · repo link · abc1234 · MIT"
     for an imported Skill, plus a "modified locally" chip when its folder no longer matches the imported hash.
-    A Skill that was not imported shows only where it came from: "Built in" or "Yours". A repo URL that is not
+    A Skill that was not imported shows only where it came from: "Built-in" or "Yours". A repo URL that is not
     http or https is shown as text, never as a link.
 *@
 @using Agency.Huddle.App.Skills
@@ -31,7 +31,7 @@
 }
 else
 {
-    <MudText Typo="Typo.caption" HtmlTag="span" Class="skill-provenance skill-provenance-origin mud-text-secondary">@(this.Skill.Source == SkillSource.Yours ? "Yours" : "Built in")</MudText>
+    <MudText Typo="Typo.caption" HtmlTag="span" Class="skill-provenance skill-provenance-origin mud-text-secondary">@(this.Skill.Source == SkillSource.Yours ? "Yours" : "Built-in")</MudText>
 }
 
 @code {

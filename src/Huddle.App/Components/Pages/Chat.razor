@@ -3,6 +3,7 @@
 @implements IDisposable
 @using Agency.Huddle.App.Acp
 @using Agency.Huddle.App.Avatars
+@using Agency.Huddle.App.Circuits
 @using Agency.Huddle.App.Pipes
 @using Agency.Huddle.App.Sidebar
 @using Agency.Huddle.App.Components.Sidebar
@@ -16,6 +17,7 @@
 @inject PersonaHealth Health
 @inject RoomFollows Follows
 @inject NavigationManager Navigation
+@inject ServerNavigator ServerNavigation
 @inject AvatarStore Avatars
 @inject IServiceProvider Services
 @inject ISnackbar Snackbar
@@ -112,7 +114,7 @@ else
         {
             @* MudAlert renders no role by default - verified against the rendered markup, not assumed -
                so role="alert" is added explicitly to keep the strip announced, per rules.md. *@
-            <MudAlert Severity="Severity.Warning" Class="member-health-alert" role="alert">
+            <MudAlert Severity="Severity.Warning" Class="member-health-alert room-notice-column" role="alert">
                 <ul class="member-health-alert-list">
                     @foreach (var (member, status) in unhealthyMembers)
                     {
@@ -136,7 +138,7 @@ else
                interruption. Says "No teammate" rather than "Nobody", because @@You is itself a
                Mention, and so is any handle that resolved to the Human - the claim has to be about
                teammates or it is false in its own test case. *@
-            <MudAlert Severity="Severity.Info" Dense="true" Class="reply-note" role="status">
+            <MudAlert Severity="Severity.Info" Dense="true" Class="reply-note room-notice-column" role="status">
                 No teammate was @@-mentioned — name one to ask for a reply.
             </MudAlert>
         }
@@ -168,7 +170,7 @@ else
         {
             @* MudAlert renders no role by default - verified against the rendered markup, not assumed -
                so role="alert" is added explicitly to keep the prompt announced, per rules.md. *@
-            <MudAlert Severity="Severity.Warning" Class="budget-prompt" role="alert">
+            <MudAlert Severity="Severity.Warning" Class="budget-prompt room-notice-column" role="alert">
                 <p class="budget-prompt-text">
                     Agents have sent @this.budget.Used replies since you last spoke, and are paused.
                 </p>
@@ -588,7 +590,8 @@ else
                 {
                     var rooms = await this.TeamDirectory.GetRoomsAsync();
                     var firstActive = rooms.FirstOrDefault(room => !room.Archived);
-                    this.Navigation.NavigateTo(firstActive is not null ? $"/rooms/{firstActive.Id}" : "/");
+                    // A Rooms event, not the Human, started this, so the client may already be gone.
+                    this.ServerNavigation.NavigateTo(firstActive is not null ? $"/rooms/{firstActive.Id}" : "/");
                     return;
                 }
             }

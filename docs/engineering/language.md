@@ -645,7 +645,7 @@ See
   the Human, is the actor, or when the Task's **wake budget** is spent. The wake
   budget is a per-Task count of wake-ups caused by Agents; the Human grants more.
   See [ADR-0026](../adr/0026-a-change-to-a-task-wakes-its-assignee.md).
-: *Avoid*: notify (except in button text such as *Save & Notify Nova*), ping,
+: *Avoid*: notify (except in button text such as *Save & notify Nova*), ping,
   trigger, alert, nudge.
 
 **Awake / Asleep / Offline**

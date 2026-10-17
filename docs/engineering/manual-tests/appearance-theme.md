@@ -60,7 +60,7 @@ standing conventions. This area adds:
 
 1. Go to http://localhost:5100/settings.
 2. Read the page heading at the top left. It must read `Settings`.
-3. Count the tab buttons in the horizontal tab bar under the heading. There must be exactly seven, reading `Profile`, `Prompts`, `Appearance`, `Personas`, `Skills`, `Team Types` and `Library` (MudBlazor renders them in upper case — `PROFILE`, `PROMPTS`, `APPEARANCE` and so on — the underlying text is unchanged), in that order.
+3. Count the tab buttons in the horizontal tab bar under the heading. There must be exactly seven, reading `Profile`, `Prompts`, `Appearance`, `Personas`, `Skills`, `Team types` and `Library` (MudBlazor renders them in upper case — `PROFILE`, `PROMPTS`, `APPEARANCE` and so on — the underlying text is unchanged), in that order.
 4. Note which tab button looks selected (it carries the active styling). Note the URL in the address bar.
 5. Click the `Appearance` button.
 6. Read the address bar.

@@ -50,7 +50,7 @@ internal static class ThemeDefaults
         SetRole(theme.Typography.H5, "20px", "600", "1.3");
         SetRole(theme.Typography.H6, "16px", "600", "1.35");
         SetRole(theme.Typography.Subtitle1, "14px", "600", "1.4");
-        SetRole(theme.Typography.Subtitle2, "14px", "600", "1.4");
+        SetRole(theme.Typography.Subtitle2, "16px", "600", "1.35");
         SetRole(theme.Typography.Body1, "14px", "400", "1.55");
         SetRole(theme.Typography.Body2, "13px", "400", "1.4");
         SetRole(theme.Typography.Caption, "12px", "400", "1.35");

@@ -53,6 +53,25 @@ public sealed class SettingsPageTests
         Assert.Contains(">Tool descriptions<", cut.Markup, StringComparison.Ordinal);
     }
 
+    /// <summary>
+    /// The seven tabs together fit the 960px reading column with room to spare, so MudTabs draws no scroll arrows
+    /// at desktop width: MudBlazor shows them only when the tab widths exceed the bar, and its default 160px
+    /// minimum put six tabs exactly at 960px. Each tab's minimum width is 112px.
+    /// </summary>
+    [Fact]
+    public async Task SettingsPage_TabRail_MinimumWidthLeavesRoomSoNoScrollArrowsShow()
+    {
+        await using var factory = new TeamWebApplicationFactory();
+        await using var ctx = NewContext(factory);
+
+        var cut = ctx.Render<Settings>();
+
+        string?[] styles = [.. cut.FindAll(".mud-tab").Select(static tab => tab.GetAttribute("style"))];
+        Assert.Equal(7, styles.Length);
+        Assert.All(styles, static style => Assert.Contains("min-width:112px", style, StringComparison.Ordinal));
+        Assert.Empty(cut.FindAll(".mud-tabs-scroll-button"));
+    }
+
     /// <summary>The <c>/settings/library</c> route selects the seventh panel and renders the Library panel (D3: the tab was unreachable).</summary>
     [Fact]
     public async Task SettingsPage_LibraryRoute_RendersLibraryPanel()

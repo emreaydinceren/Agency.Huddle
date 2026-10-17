@@ -175,7 +175,7 @@ After each `Post`, stop the app and relaunch it with the `P-LAUNCH-UAT` launch c
 **Before you start**
 
 - TEAMCHATS-03 has passed, so Marketing has a Team Room and at least one more scoped Room.
-- Ada and Bo no longer carry the `Marketing` label: on the Members tab of Marketing, choose **Remove** › **Remove from Team** on each of them, select **Save changes**, and wait for both to be **Online**. A Team that a Teammate still names is not gone, so it would not be archived.
+- Ada and Bo no longer carry the `Marketing` label: on the Members tab of Marketing, choose **Remove** › **Remove from team** on each of them, select **Save changes**, and wait for both to be **Online**. A Team that a Teammate still names is not gone, so it would not be archived.
 - Note the Team Room's id and the number of Messages in it.
 
 **Steps**

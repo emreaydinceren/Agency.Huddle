@@ -516,11 +516,11 @@ else if (this.loaded is { } task)
 
         @* Footer meta: when the Task was created, last changed and closed, at the bottom of the form. *@
         <div class="task-detail-footer-meta">
-            <span class="task-detail-created">@($"Created {TaskDates.Display(task.Created)}")</span>
-            <span class="task-detail-updated">@($"Updated {TaskDates.Display(task.Updated)}")</span>
+            <span class="task-detail-created" title="@TaskDates.Tooltip(task.Created, this.Clock)">@($"Created {TaskDates.Human(task.Created, this.Clock)}")</span>
+            <span class="task-detail-updated" title="@TaskDates.Tooltip(task.Updated, this.Clock)">@($"Updated {TaskDates.Human(task.Updated, this.Clock)}")</span>
             @if (task.ClosedAt is { } closedAt)
             {
-                <span class="task-detail-closed">@($"Closed {TaskDates.Display(closedAt)}")</span>
+                <span class="task-detail-closed" title="@TaskDates.Tooltip(closedAt, this.Clock)">@($"Closed {TaskDates.Human(closedAt, this.Clock)}")</span>
             }
         </div>
     }
@@ -1439,11 +1439,11 @@ else if (this.loaded is { } task)
     private static string FormatChangeLogDate(DateTimeOffset at, TimeProvider clock) =>
         TimeZoneInfo.ConvertTime(at, clock.LocalTimeZone).ToString("yyyy-MM-dd HH:mm", CultureInfo.InvariantCulture);
 
-    /// <summary>The Save button's label for <paramref name="preview"/> (Spec §13.6's table): "Save &amp; Notify {name}" only for an Awake or Asleep assignee, plain "Save" otherwise.</summary>
+    /// <summary>The Save button's label for <paramref name="preview"/> (Spec §13.6's table): "Save &amp; notify {name}" only for an Awake or Asleep assignee, plain "Save" otherwise.</summary>
     /// <param name="preview">The wake preview for the Human's pending edit.</param>
     private static string SaveLabel(WakePreview preview) =>
         preview.Block == WakeBlock.None && preview.Presence is PresenceState.Awake or PresenceState.Asleep
-            ? $"Save & Notify {preview.AssigneeName}"
+            ? $"Save & notify {preview.AssigneeName}"
             : "Save";
 
     /// <summary>

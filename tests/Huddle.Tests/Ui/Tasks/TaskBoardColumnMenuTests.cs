@@ -248,23 +248,29 @@ public sealed partial class TaskBoardColumnMenuTests
     [InlineData("project", "Auth")]
     [InlineData("parent", "PLAT-0009")]
     [InlineData("blocked_by", "PLAT-0007, PLAT-0008")]
-    [InlineData("start_date", "2030-01-02")]
-    [InlineData("due_date", "2030-01-03")]
-    [InlineData("created", "2026-09-20")]
-    [InlineData("updated", "2026-09-24")]
-    [InlineData("closed", "2026-09-25")]
+    [InlineData("start_date", "Jan 2, 2030")]
+    [InlineData("due_date", "Jan 3, 2030")]
+    [InlineData("created", "Sep 20")]
+    [InlineData("updated", "Sep 24")]
+    [InlineData("closed", "Sep 25")]
     public async Task Card_ShowsEveryViewField(string key, string expected)
     {
         ArgumentNullException.ThrowIfNull(key);
         CancellationToken ct = Xunit.TestContext.Current.CancellationToken;
-        using TaskToolHarness harness = await TaskToolHarness.CreateAsync(ct);
+        Agency.Huddle.Tests.Acp.Fakes.ManualTimeProvider clock = new(new DateTimeOffset(2026, 10, 16, 12, 0, 0, TimeSpan.Zero), TimeZoneInfo.Utc);
+        using TaskToolHarness harness = await TaskToolHarness.CreateAsync(ct, clock);
         TaskItem task = FullTask();
 
         await using MudBunitContext ctx = new();
         IRenderedComponent<ContainerFragment> cut = RenderCard(ctx, harness, task, [key], presence: null);
 
         string cssClass = "task-card-field-" + key.Replace('_', '-');
-        Assert.Equal(expected, cut.Find($".{cssClass}").TextContent.Trim());
+        IElement span = cut.Find($".{cssClass}");
+        Assert.Equal(expected, span.TextContent.Trim());
+        if (key.EndsWith("_date", StringComparison.Ordinal))
+        {
+            Assert.Equal(key.StartsWith("start", StringComparison.Ordinal) ? "Wed, Jan 2, 2030" : "Thu, Jan 3, 2030", span.GetAttribute("title"));
+        }
     }
 
     /// <summary>corrections-B7 12.4 item 4: a field the View names but the Task has no value for (no parent, no tags) shows nothing, and fields the View doesn't name show nothing either.</summary>

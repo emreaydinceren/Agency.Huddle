@@ -45,6 +45,39 @@ window.teamComposer = {
         el.style.height = (el.scrollHeight + border) + "px";
     },
 
+    // Refits when the box's width changes (the window or a pane was resized): text that wrapped to many lines
+    // when narrow no longer does, and without this an empty-looking Composer stayed as tall as it had grown.
+    // Only a width change refits - fit() itself changes the box's height, which must not feed the observer.
+    // detach() disconnects it when the Composer is disposed.
+    observeResize(el) {
+        if (typeof ResizeObserver !== "function") {
+            return;
+        }
+
+        const box = el.closest(".composer-box") || el;
+        let lastWidth = null;
+        el._resizeObserver = new ResizeObserver((entries) => {
+            const width = entries[0] ? entries[0].contentRect.width : null;
+            if (width === lastWidth) {
+                return;
+            }
+
+            const first = lastWidth === null;
+            lastWidth = width;
+            if (!first) {
+                window.teamComposer.fit(el);
+            }
+        });
+        el._resizeObserver.observe(box);
+    },
+
+    detach(el) {
+        if (el && el._resizeObserver) {
+            el._resizeObserver.disconnect();
+            el._resizeObserver = null;
+        }
+    },
+
     // Puts dropped or pasted files into the hidden file input and fires `change`, so Blazor's
     // InputFile handles them exactly as a pick from the paperclip.
     handOver(input, files) {
@@ -119,6 +152,7 @@ window.teamComposer = {
             }
         }
         window.teamComposer.fit(el);
+        window.teamComposer.observeResize(el);
 
         el.addEventListener("keydown", async (e) => {
             const picker = el._picker;

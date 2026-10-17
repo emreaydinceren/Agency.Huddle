@@ -66,7 +66,7 @@ public sealed class TasksPageTests
         Assert.EndsWith("need you", NormalizeWhitespace(header.QuerySelector(".tasks-count-need-you")?.TextContent ?? string.Empty), StringComparison.Ordinal);
         Assert.EndsWith("all", NormalizeWhitespace(header.QuerySelector(".tasks-count-all")?.TextContent ?? string.Empty), StringComparison.Ordinal);
         Assert.StartsWith("Group by:", NormalizeWhitespace(header.QuerySelector(".task-toolbar-group")?.TextContent ?? string.Empty), StringComparison.Ordinal);
-        Assert.Equal(["List", "Kanban"], header.QuerySelectorAll(".task-toolbar-kind .mud-toggle-item").Select(item => NormalizeWhitespace(item.TextContent)));
+        Assert.Equal(["List", "Board"], header.QuerySelectorAll(".task-toolbar-kind .mud-toggle-item").Select(item => NormalizeWhitespace(item.TextContent)));
         Assert.NotNull(header.QuerySelector(".btn-action-tight"));
         Assert.Empty(document.QuerySelectorAll(".task-toolbar .task-toolbar-group-sort, .task-toolbar .task-toolbar-grouping"));
     }

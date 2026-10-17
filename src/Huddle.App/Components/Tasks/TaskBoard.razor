@@ -374,12 +374,13 @@
         _ => Icons.Material.Outlined.Label,
     };
 
-    /// <summary>The class of the 8px state dot that opens a column header: the colour of the column's first state (the same mapping as a Task link's dot).</summary>
+    /// <summary>The class of the 8px state dot that opens a column header: the colour of the column's first state (the same mapping as a Task link's dot), plus a dashed hollow modifier for Backlog so it differs from To Do now that both are Default.</summary>
     /// <param name="column">The column.</param>
     private static string StateDotClass(BoardColumn column)
     {
         Color colour = column.States.Count > 0 ? TaskColors.For(column.States[0]) : Color.Default;
-        return string.Create(CultureInfo.InvariantCulture, $"task-state-dot task-state-dot-{colour.ToString().ToLowerInvariant()}");
+        string classes = string.Create(CultureInfo.InvariantCulture, $"task-state-dot task-state-dot-{colour.ToString().ToLowerInvariant()}");
+        return column.States.Count > 0 && column.States[0] == TaskState.Backlog ? $"{classes} task-state-dot-backlog" : classes;
     }
 
     /// <summary>The line an empty column shows, worded for the column's state: "Nothing done yet." for Done.</summary>
