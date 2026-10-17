@@ -340,11 +340,35 @@ public sealed class LibraryFileOpsTests : IDisposable
         Assert.Equal("outer", File.ReadAllText(Path.Combine(root, "A.md")));
     }
 
-    /// <summary>The Move dialog is a picker: the shared <see cref="HuddleDialogOptions.Picker"/> options (medium, full width, close button).</summary>
+    /// <summary>The Move dialog draws the folders as the tree is: picker rows with a folder icon, each level below the first indented 16px more, so repeated names are told apart by their parent.</summary>
     [Fact]
-    public void Move_Options_AreTheSharedPickerOptions()
+    public async Task Move_Folders_AreIndentedPickerRows()
     {
-        Assert.Same(HuddleDialogOptions.Picker, MoveDialog.Options);
+        string root = this.fixture.LibraryFixture.CreatePinnedRoot("Notes");
+        Directory.CreateDirectory(Path.Combine(root, "Sub", "Deep"));
+        File.WriteAllText(Path.Combine(root, "A.md"), "a");
+        LibraryPath item = this.fixture.LibraryFixture.Resolve(root, "A.md");
+
+        await using MudBunitContext ctx = this.fixture.NewContext();
+        IRenderedComponent<ContainerFragment> cut = RenderOps(ctx);
+        LibraryFileOps ops = cut.FindComponent<LibraryFileOps>().Instance;
+
+        _ = cut.InvokeAsync(() => ops.HandleAsync(new LibraryTreeAction(LibraryTreeActionKind.Move, item, null)));
+        cut.WaitForAssertion(() => Assert.NotEmpty(cut.FindAll(".mud-dialog .mud-list-item")));
+
+        IReadOnlyList<AngleSharp.Dom.IElement> rows = cut.FindAll(".mud-dialog .mud-list-item");
+        Assert.All(rows, row => Assert.Contains("picker-row", row.ClassList));
+        Assert.All(rows, row => Assert.NotNull(row.QuerySelector("svg")));
+        Assert.Equal(
+            [null, "padding-inline-start: 28px", "padding-inline-start: 44px"],
+            rows.Select(row => row.GetAttribute("style")));
+    }
+
+    /// <summary>The Move dialog is a one-column pick-one list, so it uses the 600px <see cref="HuddleDialogOptions.ShortPicker"/> options.</summary>
+    [Fact]
+    public void Move_Options_AreTheShortPickerOptions()
+    {
+        Assert.Same(HuddleDialogOptions.ShortPicker, MoveDialog.Options);
     }
 
     /// <summary>[12.5a] In a scoped explorer (a <see cref="LibraryFileOps.Scope"/>), Move lists only folders
@@ -538,7 +562,7 @@ public sealed class LibraryFileOpsTests : IDisposable
         _ = cut.InvokeAsync(() => ops.HandleAsync(new LibraryTreeAction(LibraryTreeActionKind.Delete, item, null)));
         cut.WaitForAssertion(() => Assert.NotEmpty(cut.FindAll(".mud-dialog-title")));
 
-        Assert.Equal("Delete 'Gone.md'?", cut.Find(".mud-dialog-title").TextContent.Trim());
+        Assert.Equal("Delete \"Gone.md\"?", cut.Find(".mud-dialog-title").TextContent.Trim());
         Assert.Equal("It goes to the Recycle Bin.", cut.Find(".mud-dialog-content").TextContent.Trim());
         Assert.Equal(
             ["Cancel", "Delete"],
@@ -663,7 +687,7 @@ public sealed class LibraryFileOpsTests : IDisposable
         _ = cut.InvokeAsync(() => ops.HandleAsync(new LibraryTreeAction(LibraryTreeActionKind.NewNote, folder, null)));
         cut.WaitForAssertion(() => Assert.NotEmpty(cut.FindAll(".mud-dialog-title")));
 
-        Assert.Equal("New note", cut.Find(".mud-dialog-title").TextContent.Trim());
+        Assert.Equal("New note in Notes", cut.Find(".mud-dialog-title").TextContent.Trim());
         Assert.Equal("Name", cut.Find(".mud-dialog-content label").TextContent.Trim());
         Assert.Equal(["Cancel", "Create"], cut.FindAll(".mud-dialog-actions button").Select(b => b.TextContent.Trim()).ToList());
 
@@ -692,7 +716,7 @@ public sealed class LibraryFileOpsTests : IDisposable
         _ = cut.InvokeAsync(() => ops.HandleAsync(new LibraryTreeAction(LibraryTreeActionKind.NewFolder, folder, null)));
         cut.WaitForAssertion(() => Assert.NotEmpty(cut.FindAll(".mud-dialog-title")));
 
-        Assert.Equal("New folder", cut.Find(".mud-dialog-title").TextContent.Trim());
+        Assert.Equal("New folder in Notes", cut.Find(".mud-dialog-title").TextContent.Trim());
 
         await cut.InvokeAsync(() => cut.Find(".mud-dialog-content input").InputAsync(new ChangeEventArgs { Value = "Archive" }));
         await cut.InvokeAsync(() => cut.FindAll(".mud-dialog-actions button")[1].ClickAsync());
@@ -718,7 +742,7 @@ public sealed class LibraryFileOpsTests : IDisposable
         Task pending = cut.InvokeAsync(async () => created = await ops.NewNoteAsync(folder));
         cut.WaitForAssertion(() => Assert.NotEmpty(cut.FindAll(".mud-dialog-title")));
 
-        Assert.Equal("New note", cut.Find(".mud-dialog-title").TextContent.Trim());
+        Assert.Equal("New note in Notes", cut.Find(".mud-dialog-title").TextContent.Trim());
         Assert.Equal(["Cancel", "Create"], cut.FindAll(".mud-dialog-actions button").Select(b => b.TextContent.Trim()).ToList());
 
         await cut.InvokeAsync(() => cut.Find(".mud-dialog-content input").InputAsync(new ChangeEventArgs { Value = "Meeting notes" }));
@@ -753,7 +777,7 @@ public sealed class LibraryFileOpsTests : IDisposable
             created = await ops.NewNoteAsync(folder);
             completed = true;
         });
-        cut.WaitForAssertion(() => Assert.Equal("New note", cut.Find(".mud-dialog-title").TextContent.Trim()));
+        cut.WaitForAssertion(() => Assert.Equal("New note in Notes", cut.Find(".mud-dialog-title").TextContent.Trim()));
         await cut.InvokeAsync(() => cut.Find(".mud-dialog-content input").InputAsync(new ChangeEventArgs { Value = "Meeting notes" }));
         await cut.InvokeAsync(() => cut.FindAll(".mud-dialog-actions button").First(b => b.TextContent.Trim() == "Cancel").ClickAsync());
         await pending.WaitAsync(TimeSpan.FromSeconds(5), ct);
@@ -934,10 +958,10 @@ public sealed class LibraryFileOpsTests : IDisposable
     }
 
     /// <summary>[T17.1, UX-R10] New note, New folder and New project each open the shared <see cref="NameDialog"/> labelled
-    /// "Name" with the verb "Create", under their own titles.</summary>
+    /// "Name" with the verb "Create", under their own titles, which name the place ("New note in Notes").</summary>
     [Theory]
-    [InlineData(LibraryTreeActionKind.NewNote, "New note")]
-    [InlineData(LibraryTreeActionKind.NewFolder, "New folder")]
+    [InlineData(LibraryTreeActionKind.NewNote, "New note in Notes")]
+    [InlineData(LibraryTreeActionKind.NewFolder, "New folder in Notes")]
     public async Task Create_OpensNameDialogWithLabelAndCreateVerb(LibraryTreeActionKind kind, string title)
     {
         string root = this.fixture.LibraryFixture.CreatePinnedRoot("Notes");
@@ -1018,7 +1042,7 @@ public sealed class LibraryFileOpsTests : IDisposable
         cut.WaitForAssertion(() => Assert.NotEmpty(cut.FindAll(".mud-dialog-title")));
 
         ConfirmDialog dialog = cut.FindComponent<ConfirmDialog>().Instance;
-        Assert.Equal("Delete 'Gone.md'?", cut.Find(".mud-dialog-title").TextContent.Trim());
+        Assert.Equal("Delete \"Gone.md\"?", cut.Find(".mud-dialog-title").TextContent.Trim());
         Assert.Equal("It goes to the Recycle Bin.", dialog.Message);
         Assert.Equal("Delete", dialog.ConfirmText);
         Assert.True(dialog.Danger);

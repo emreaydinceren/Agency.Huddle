@@ -201,7 +201,7 @@ public sealed class TeamFilesTabTests : IDisposable
 
         _ = cut.InvokeAsync(() => cut.Find(ActionButton).Click());
 
-        cut.WaitForAssertion(() => Assert.Equal("New note", cut.Find(".mud-dialog-title").TextContent.Trim()));
+        cut.WaitForAssertion(() => Assert.Equal("New note in Business", cut.Find(".mud-dialog-title").TextContent.Trim()));
         await cut.InvokeAsync(() => cut.Find(".mud-dialog-content input").InputAsync(new ChangeEventArgs { Value = "Idea" }));
         await cut.InvokeAsync(() => cut.FindAll(".mud-dialog-actions button").First(button => button.TextContent.Trim() == "Cancel").ClickAsync());
 
@@ -223,7 +223,7 @@ public sealed class TeamFilesTabTests : IDisposable
         cut.WaitForAssertion(() => Assert.Equal(["Existing.md"], SortedNodeNames(cut)));
 
         _ = cut.InvokeAsync(() => cut.Find(ActionButton).Click());
-        cut.WaitForAssertion(() => Assert.Equal("New note", cut.Find(".mud-dialog-title").TextContent.Trim()));
+        cut.WaitForAssertion(() => Assert.Equal("New note in Business", cut.Find(".mud-dialog-title").TextContent.Trim()));
         await cut.InvokeAsync(() => cut.Find(".mud-dialog-content input").InputAsync(new ChangeEventArgs { Value = "Idea" }));
         await cut.InvokeAsync(() => cut.FindAll(".mud-dialog-actions button")[1].ClickAsync());
 
@@ -242,7 +242,7 @@ public sealed class TeamFilesTabTests : IDisposable
         IRenderedComponent<ContainerFragment> cut = RenderTab(ctx, "Business");
 
         _ = cut.InvokeAsync(() => cut.Find(NewFolderButton).Click());
-        cut.WaitForAssertion(() => Assert.Equal("New folder", cut.Find(".mud-dialog-title").TextContent.Trim()));
+        cut.WaitForAssertion(() => Assert.Equal("New folder in Business", cut.Find(".mud-dialog-title").TextContent.Trim()));
         await cut.InvokeAsync(() => cut.Find(".mud-dialog-content input").InputAsync(new ChangeEventArgs { Value = "Plans" }));
         await cut.InvokeAsync(() => cut.FindAll(".mud-dialog-actions button")[1].ClickAsync());
 
