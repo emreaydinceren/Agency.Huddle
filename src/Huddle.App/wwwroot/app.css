@@ -5067,6 +5067,7 @@ a.team-ref,
 
 .needs-you-detail {
     flex: 0 0 auto;
+    min-width: max-content;
     margin-inline-start: auto;
     font-size: var(--mud-typography-caption-size);
     color: var(--mud-palette-text-secondary);
