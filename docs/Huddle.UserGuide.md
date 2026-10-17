@@ -245,7 +245,7 @@ It holds one or more panels, depending on the page:
 | --- | --- |
 | A chat Room | **Members**, **Tasks in this chat**, **Documents in this chat** |
 | A Markdown note in the Library | **Outline**, **Linked documents** |
-| Any other page | None. The sidebar says `This page has nothing to show here.` |
+| Any other page | None. The sidebar says `Nothing to show for this page.` |
 
 | Panel | What it shows | What selecting it does |
 | --- | --- | --- |
@@ -258,7 +258,7 @@ It holds one or more panels, depending on the page:
 Each panel's header shows its name and a count. Press the header to fold the panel away; your
 browser remembers which panels you folded. A panel with nothing in it stays, with one line
 saying so, such as `No Tasks mentioned in this chat yet.` The Tasks panel appears only while
-Tasks are switched on, and the three Library panels only while the Library is.
+Tasks are switched on, and the two Library panels only while the Library is.
 
 **In the background:** the sidebar reads the same files and records as the page beside it and
 changes nothing. The Room panels update when a Message is posted in that Room, and Members
