@@ -45,10 +45,16 @@ internal static class DatabaseSeeder
                 userIds[teammate.Name] = user.Id;
             }
 
+            // Rooms first, Messages second: a Message may link to a Room created after its own, and its link needs that Room's id.
             Dictionary<string, string> roomIds = new(StringComparer.Ordinal);
             foreach (SeedRoom room in plan.Rooms)
             {
-                roomIds[room.Key] = await CreateRoomAsync(plan, room, userIds, directory, chat, ct);
+                roomIds[room.Key] = await CreateRoomAsync(room, userIds, directory, ct);
+            }
+
+            foreach (SeedRoom room in plan.Rooms)
+            {
+                await AppendMessagesAsync(plan, room, dataDir, userIds, roomIds, chat, ct);
             }
 
             return new DatabaseResult(userIds, roomIds);
@@ -60,18 +66,18 @@ internal static class DatabaseSeeder
     }
 
     private static async Task<string> CreateRoomAsync(
-        SeedPlan plan,
         SeedRoom room,
         Dictionary<string, string> userIds,
         SqliteTeamDirectory directory,
-        FileChatStore chat,
         CancellationToken ct)
     {
         List<string> memberIds = [KnownIds.Human, .. room.Members.Select(m => userIds[m])];
-        string derivedName = string.Join(", ", room.Members);
-        Room created = await directory.CreateRoomAsync(derivedName, memberIds, ct);
 
-        if (!string.Equals(room.Name, derivedName, StringComparison.Ordinal))
+        // A Team Room is named for its Team, as the app's own reconciler creates it; every other Room starts with the derived name.
+        string initialName = room.IsTeamRoom ? room.Name : string.Join(", ", room.Members);
+        Room created = await directory.CreateRoomAsync(initialName, memberIds, room.Team, room.IsTeamRoom, ct);
+
+        if (!string.Equals(room.Name, initialName, StringComparison.Ordinal))
         {
             await directory.RenameRoomAsync(created.Id, room.Name, ct);
         }
@@ -81,21 +87,35 @@ internal static class DatabaseSeeder
             await directory.SetRoomArchivedAsync(created.Id, archived: true, ct);
         }
 
+        return created.Id;
+    }
+
+    private static async Task AppendMessagesAsync(
+        SeedPlan plan,
+        SeedRoom room,
+        string dataDir,
+        Dictionary<string, string> userIds,
+        Dictionary<string, string> roomIds,
+        FileChatStore chat,
+        CancellationToken ct)
+    {
         for (int index = 0; index < room.Messages.Count; index++)
         {
             SeedMessage message = room.Messages[index];
             bool human = string.Equals(message.Sender, plan.HumanName, StringComparison.Ordinal);
             string senderId = human ? KnownIds.Human : userIds[message.Sender];
+            ExpandedMessage expanded = MessageReferences.Expand(message.Text, room, plan, dataDir, roomIds);
             ChatMessage chatMessage = new(
                 MessageId(room.Key, index),
                 Timestamp(plan.Today, message),
                 senderId,
                 message.Sender,
-                message.Text);
-            await chat.AppendAsync(created.Id, chatMessage, ct);
+                expanded.Text)
+            {
+                References = expanded.References,
+            };
+            await chat.AppendAsync(roomIds[room.Key], chatMessage, ct);
         }
-
-        return created.Id;
     }
 
     /// <summary>A stable 32-character hex id, so the same scenario always writes the same message ids.</summary>

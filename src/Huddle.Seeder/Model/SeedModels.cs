@@ -35,6 +35,35 @@ internal sealed record SeedTeam(string Name, IReadOnlyList<string> Projects);
 /// <param name="Content">The Markdown text.</param>
 internal sealed record SeedFile(string RelativePath, string Content);
 
+/// <summary>A binary file under the data folder, such as a Library image or an avatar picture.</summary>
+/// <param name="RelativePath">The path below the data folder, using <c>/</c>.</param>
+/// <param name="Content">The bytes.</param>
+internal sealed record SeedBinaryFile(string RelativePath, byte[] Content);
+
+/// <summary>A file the Human attached in a chat, saved where the app's upload flow would save it.</summary>
+/// <param name="RoomKey">The key of the Room the file was attached in.</param>
+/// <param name="FileName">The file name; a Message cites it with the <c>{{upload:FileName}}</c> token.</param>
+/// <param name="Content">The bytes.</param>
+internal sealed record SeedUpload(string RoomKey, string FileName, byte[] Content);
+
+/// <summary>A Sprint: one line of <c>sprints.md</c>.</summary>
+/// <param name="Number">The number; the id is <c>S{Number}</c>.</param>
+/// <param name="Name">The display name.</param>
+internal sealed record SeedSprint(int Number, string Name)
+{
+    /// <summary>The Sprint id as a Task holds it, such as <c>S2</c>.</summary>
+    internal string Id => $"S{this.Number}";
+}
+
+/// <summary>The Request fields of a Task that another Team filed (frontmatter <c>request</c>, <c>from_team</c>, <c>requester</c>, <c>triage</c>, <c>decline_reason</c>, <c>confirmed_by</c>).</summary>
+/// <param name="Kind">The wire kind: <c>bug</c>, <c>feature</c>, <c>feedback</c> or <c>question</c>.</param>
+/// <param name="FromTeam">The Team that filed it.</param>
+/// <param name="Requester">The Teammate who filed it.</param>
+/// <param name="Triage">The wire triage state: empty, <c>needs-info</c>, <c>accepted</c> or <c>declined</c>.</param>
+/// <param name="DeclineReason">Why it was declined; empty otherwise.</param>
+/// <param name="ConfirmedBy">The requesting Team's QA who confirmed it; empty until then.</param>
+internal sealed record SeedTaskRequest(string Kind, string FromTeam, string Requester, string Triage, string DeclineReason = "", string ConfirmedBy = "");
+
 /// <summary>Where a Task lives: a Team, and optionally one of its Projects.</summary>
 /// <param name="Team">The Team name.</param>
 /// <param name="Project">The Project name, or <see langword="null"/> for the Team root.</param>
@@ -111,6 +140,18 @@ internal sealed record SeedTask
 
     /// <summary>Extra Change log lines, written between the status changes and the closing entry.</summary>
     public IReadOnlyList<SeedLogNote> ExtraLog { get; init; } = [];
+
+    /// <summary>The Sprint id the Task is in, such as <c>S2</c>, or <see langword="null"/>.</summary>
+    public string? Sprint { get; init; }
+
+    /// <summary>
+    /// The title the Task had when Messages first referenced it. When set, a Message's Task reference snapshots this instead of
+    /// <see cref="Title"/>, so the reference chip reads "changed".
+    /// </summary>
+    public string? FormerTitle { get; init; }
+
+    /// <summary>The Request fields, or <see langword="null"/> for an ordinary Task.</summary>
+    public SeedTaskRequest? Request { get; init; }
 }
 
 /// <summary>A chat message in a Room transcript.</summary>
@@ -126,7 +167,18 @@ internal sealed record SeedMessage(string Sender, int DaysAgo, string Time, stri
 /// <param name="Members">The Teammates in the Room; the Human is always added.</param>
 /// <param name="Archived">Whether the Room is archived.</param>
 /// <param name="Messages">The transcript, oldest first.</param>
-internal sealed record SeedRoom(string Key, string Name, IReadOnlyList<string> Members, bool Archived, IReadOnlyList<SeedMessage> Messages);
+/// <param name="Team">The Team the Room is scoped to, or <see langword="null"/> for a root Room.</param>
+/// <param name="IsTeamRoom">Whether the Room is its Team's Team Room (at most one per Team).</param>
+/// <param name="WithReferences">Whether the Messages carry <c>References</c>; <see langword="false"/> leaves them null so the reader's text scan is exercised.</param>
+internal sealed record SeedRoom(
+    string Key,
+    string Name,
+    IReadOnlyList<string> Members,
+    bool Archived,
+    IReadOnlyList<SeedMessage> Messages,
+    string? Team = null,
+    bool IsTeamRoom = false,
+    bool WithReferences = true);
 
 /// <summary>Everything a scenario asks the seeder to create.</summary>
 internal sealed record SeedPlan
@@ -160,6 +212,15 @@ internal sealed record SeedPlan
 
     /// <summary>The text of <c>avatars.json</c>.</summary>
     public required string AvatarsJson { get; init; }
+
+    /// <summary>Binary files under the data folder (Library images, avatar pictures).</summary>
+    public IReadOnlyList<SeedBinaryFile> BinaryFiles { get; init; } = [];
+
+    /// <summary>Files attached in chats.</summary>
+    public IReadOnlyList<SeedUpload> Uploads { get; init; } = [];
+
+    /// <summary>The Sprints written to <c>sprints.md</c>; empty writes no file.</summary>
+    public IReadOnlyList<SeedSprint> Sprints { get; init; } = [];
 
     /// <summary>The run date every offset is measured from.</summary>
     public required DateOnly Today { get; init; }

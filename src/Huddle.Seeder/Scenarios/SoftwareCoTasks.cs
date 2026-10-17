@@ -17,8 +17,41 @@ internal static class SoftwareCoTasks
     private const string HelpCenter = "Help Center";
     private const string IncidentTooling = "Incident Tooling";
 
-    /// <summary>All 41 Tasks. Room keys in <see cref="SeedTask.OriginRoom"/> refer to <see cref="SoftwareCoRooms"/>.</summary>
-    internal static IReadOnlyList<SeedTask> All { get; } =
+    /// <summary>The Sprints written to <c>sprints.md</c>: one finished, one current (the highest number is <c>@current</c>).</summary>
+    internal static IReadOnlyList<SeedSprint> Sprints { get; } =
+    [
+        new(1, "Foundations"),
+        new(2, "Launch prep"),
+    ];
+
+    /// <summary>
+    /// Which Sprint each Task belongs to: three finished Tasks in S1 and seven open ones in S2. Every other Task has none.
+    /// </summary>
+    private static readonly Dictionary<string, string> SprintByTask = new(StringComparer.Ordinal)
+    {
+        ["PLAT-0001"] = "S1",
+        ["GROW-0001"] = "S1",
+        ["SUPP-0006"] = "S1",
+        ["PLAT-0002"] = "S2",
+        ["PLAT-0004"] = "S2",
+        ["PLAT-0010"] = "S2",
+        ["GROW-0002"] = "S2",
+        ["GROW-0004"] = "S2",
+        ["SUPP-0005"] = "S2",
+        ["SUPP-0008"] = "S2",
+    };
+
+    /// <summary>
+    /// Tasks that were renamed after Messages first referenced them. A Message's reference keeps the old title, so its chip reads
+    /// "changed".
+    /// </summary>
+    private static readonly Dictionary<string, string> FormerTitleByTask = new(StringComparer.Ordinal)
+    {
+        ["PLAT-0004"] = "Rate limiting",
+    };
+
+    /// <summary>The original 41 Tasks, before Sprint membership and former titles are applied. Room keys in <see cref="SeedTask.OriginRoom"/> refer to <see cref="SoftwareCoRooms"/>.</summary>
+    private static IReadOnlyList<SeedTask> Core { get; } =
     [
         // ---- Platform / API v2 ----
         new()
@@ -375,5 +408,16 @@ internal static class SoftwareCoTasks
             Tags = ["retention"], CreatedDaysAgo = 60, LastTouchedDaysAgo = 45,
             Body = "Tickets and macros from 2025 exported to cold storage and removed from the live system.",
         },
+    ];
+
+    /// <summary>All 46 Tasks: the original 41 with their Sprints and former titles, then the five Requests in <see cref="SoftwareCoRequests"/>. Declared after <see cref="Core"/> because static initialisers run in order.</summary>
+    internal static IReadOnlyList<SeedTask> All { get; } =
+    [
+        .. Core.Select(static task => task with
+        {
+            Sprint = SprintByTask.GetValueOrDefault(task.Id),
+            FormerTitle = FormerTitleByTask.GetValueOrDefault(task.Id),
+        }),
+        .. SoftwareCoRequests.All,
     ];
 }

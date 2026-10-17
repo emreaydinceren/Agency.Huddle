@@ -31,9 +31,13 @@ internal static partial class ManifestWriter
         AppendTeammates(text, plan, ids);
         AppendTeams(text, plan);
         AppendTasks(text, plan);
+        AppendSprints(text, plan);
+        AppendRequests(text, plan);
         AppendRooms(text, plan, ids);
+        AppendUploads(text, plan, root, ids);
         AppendViews(text, plan);
         AppendNotes(text, plan);
+        AppendFiles(text, plan);
         AppendCoverage(text, plan);
         return text.ToString();
     }
@@ -63,7 +67,8 @@ internal static partial class ManifestWriter
         Dictionary<string, IReadOnlyList<string>> links = new(StringComparer.OrdinalIgnoreCase);
         foreach (SeedFile file in NoteFiles(plan))
         {
-            links[NoteName(file)] = [.. WikiLink().Matches(file.Content).Select(m => m.Groups[1].Value.Trim()).Distinct(StringComparer.OrdinalIgnoreCase)];
+            // A link can name a folder too ([[API v2/API-v2-Design]]); the note is the last segment.
+            links[NoteName(file)] = [.. WikiLink().Matches(file.Content).Select(m => m.Groups[1].Value.Trim().Split('/')[^1]).Distinct(StringComparer.OrdinalIgnoreCase)];
         }
 
         return links;
@@ -116,13 +121,84 @@ internal static partial class ManifestWriter
 
     private static void AppendRooms(StringBuilder text, SeedPlan plan, DatabaseResult ids)
     {
-        text.Append("## Rooms\n\n| Name | Room id | Members | Messages | Archived |\n| --- | --- | --- | --- | --- |\n");
+        text.Append("## Rooms\n\n| Name | Scope | Room id | Members | Messages | Archived | References |\n| --- | --- | --- | --- | --- | --- | --- |\n");
         foreach (SeedRoom r in plan.Rooms)
         {
-            text.Append(CultureInfo.InvariantCulture, $"| {r.Name} | `{ids.RoomIds[r.Key]}` | {plan.HumanName}, {Join(r.Members, "none")} | {r.Messages.Count} | {(r.Archived ? "yes" : "no")} |\n");
+            string scope = RoomScope(r);
+            string references = r.WithReferences ? "stored" : "none (text scan)";
+            text.Append(CultureInfo.InvariantCulture, $"| {r.Name} | {scope} | `{ids.RoomIds[r.Key]}` | {plan.HumanName}, {Join(r.Members, "none")} | {r.Messages.Count} | {(r.Archived ? "yes" : "no")} | {references} |\n");
+        }
+
+        text.Append("\nWaiting on the Human (Needs you): ")
+            .Append(Join(plan.Rooms.Where(r => !r.Archived && r.Messages.Count > 0 && r.Messages[^1].Sender != plan.HumanName && r.Messages[^1].Text.Contains("@" + plan.HumanName, StringComparison.Ordinal)).Select(r => r.Name).ToList(), "none"))
+            .Append("\n\n");
+    }
+
+    private static string RoomScope(SeedRoom room)
+    {
+        if (room.Team is null)
+        {
+            return "root";
+        }
+
+        return room.IsTeamRoom ? $"{room.Team} Team Room" : $"{room.Team} chat";
+    }
+
+    private static void AppendSprints(StringBuilder text, SeedPlan plan)
+    {
+        text.Append("## Sprints\n\nThe highest number is the current Sprint (`@current`).\n\n| Id | Name | Tasks |\n| --- | --- | --- |\n");
+        foreach (SeedSprint sprint in plan.Sprints)
+        {
+            text.Append(CultureInfo.InvariantCulture, $"| {sprint.Id} | {sprint.Name} | {Join(plan.Tasks.Where(t => t.Sprint == sprint.Id).Select(t => t.Id).ToList(), "none")} |\n");
         }
 
         text.Append('\n');
+    }
+
+    private static void AppendRequests(StringBuilder text, SeedPlan plan)
+    {
+        text.Append("## Requests\n\n| Id | Kind | From | To | Requester | Triage | Status | Confirmed by |\n| --- | --- | --- | --- | --- | --- | --- | --- |\n");
+        foreach (SeedTask t in plan.Tasks)
+        {
+            if (t.Request is not { } request)
+            {
+                continue;
+            }
+
+            string triage = request.Triage.Length == 0 ? "untriaged" : request.Triage;
+            text.Append(CultureInfo.InvariantCulture, $"| {t.Id} | {request.Kind} | {request.FromTeam} | {t.Location.Team} | {request.Requester} | {triage} | {t.Status} | {(request.ConfirmedBy.Length == 0 ? "-" : request.ConfirmedBy)} |\n");
+        }
+
+        text.Append('\n');
+    }
+
+    private static void AppendUploads(StringBuilder text, SeedPlan plan, string root, DatabaseResult ids)
+    {
+        text.Append("## Uploads\n\n| Room | File | Path |\n| --- | --- | --- |\n");
+        string dataDir = Path.Combine(root, "data");
+        foreach (SeedUpload upload in plan.Uploads)
+        {
+            SeedRoom room = plan.Rooms.First(r => r.Key == upload.RoomKey);
+            text.Append(CultureInfo.InvariantCulture, $"| {room.Name} | {upload.FileName} | `{Path.Combine(MessageReferences.UploadFolder(dataDir, room, ids.RoomIds[room.Key]), upload.FileName)}` |\n");
+        }
+
+        text.Append('\n');
+    }
+
+    private static void AppendFiles(StringBuilder text, SeedPlan plan)
+    {
+        text.Append("## Other Library files and avatars\n\n");
+        foreach (SeedBinaryFile file in plan.BinaryFiles)
+        {
+            text.Append(CultureInfo.InvariantCulture, $"- `{file.RelativePath}` ({file.Content.Length} bytes)\n");
+        }
+
+        foreach (SeedFile file in plan.Files.Where(f => !f.RelativePath.EndsWith(".md", StringComparison.Ordinal)))
+        {
+            text.Append(CultureInfo.InvariantCulture, $"- `{file.RelativePath}` (plain text)\n");
+        }
+
+        text.Append("\nA reference to a Library file that no longer exists (shows \"not found\" in Documents in this chat): `Customer-Update-Draft.md` in the Incident 0412 war room.\n\n");
     }
 
     private static void AppendViews(StringBuilder text, SeedPlan plan)
@@ -151,7 +227,24 @@ internal static partial class ManifestWriter
             && Allows(filter, "states", task.Status)
             && Allows(filter, "priorities", task.Priority)
             && AllowsAssignee(plan, filter, task)
-            && AllowsBlocked(plan, filter, task);
+            && AllowsBlocked(plan, filter, task)
+            && AllowsSprint(plan, filter, task);
+    }
+
+    private static bool AllowsSprint(SeedPlan plan, JsonElement filter, SeedTask task)
+    {
+        if (!filter.TryGetProperty("sprints", out JsonElement list))
+        {
+            return true;
+        }
+
+        string? current = plan.Sprints.Count == 0 ? null : plan.Sprints.MaxBy(s => s.Number)?.Id;
+        return list.EnumerateArray().Select(e => e.GetString()).Any(s => s switch
+        {
+            "@current" => task.Sprint is not null && string.Equals(task.Sprint, current, StringComparison.Ordinal),
+            "@none" => task.Sprint is null,
+            _ => string.Equals(task.Sprint, s, StringComparison.OrdinalIgnoreCase),
+        });
     }
 
     private static bool Allows(JsonElement filter, string property, string value) =>
