@@ -14,7 +14,7 @@
     {
         var message = this.Messages[messageIndex];
         ChatMessage? previousMessage = messageIndex > 0 ? this.Messages[messageIndex - 1] : null;
-        var time = MessageDisplay.TimeLabel(message.Timestamp, this.Clock.GetLocalNow());
+        var time = MessageDisplay.ClockTime(message.Timestamp, this.Clock.GetLocalNow());
         @if (MessageDisplay.StartsNewDay(previousMessage?.Timestamp, message.Timestamp))
         {
             <div class="day-separator" role="separator">

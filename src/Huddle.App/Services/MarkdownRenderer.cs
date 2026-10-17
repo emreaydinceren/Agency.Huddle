@@ -564,16 +564,17 @@ public static partial class MarkdownRenderer
                 continue;
             }
 
-            LinkInline link = new(MarkdownRenderer.BuildLibraryHref(reference.RootId, reference.RelativePath), string.Empty);
+            LinkInline link = new(MarkdownRenderer.BuildLibraryHref(reference.RootId, reference.RelativePath), reference.RelativePath);
             link.GetAttributes().AddClass("library-ref");
             if (!reference.Exists)
             {
                 link.GetAttributes().AddClass("library-ref-missing");
             }
 
+            // A file in a message is its name, not its absolute path in monospace; the relative path is the tooltip (audit B5b).
             code.InsertBefore(link);
             code.Remove();
-            link.AppendChild(code);
+            link.AppendChild(new LiteralInline(MarkdownRenderer.FileNameOf(path)));
         }
     }
 
@@ -629,6 +630,14 @@ public static partial class MarkdownRenderer
         MarkdownRenderer.SpliceRunMatches(run, matches, markdown);
     }
 
+    /// <summary>The name at the end of a chat-text path, for either separator or a <c>file:</c> URL; the whole text when it has no separator.</summary>
+    /// <param name="path">The matched path text.</param>
+    private static string FileNameOf(string path)
+    {
+        string name = path[(path.AsSpan().LastIndexOfAny('\\', '/') + 1)..];
+        return name.Length > 0 ? name : path;
+    }
+
     /// <summary>Resolves <paramref name="path"/> through <paramref name="library"/>: a <c>library-ref</c>
     /// <see cref="LinkInline"/> when it resolves (dimmed via <c>library-ref-missing</c> when the file no longer
     /// exists), or a plain literal holding <paramref name="path"/> exactly as written when it does not.</summary>
@@ -642,8 +651,8 @@ public static partial class MarkdownRenderer
             return new LiteralInline(path);
         }
 
-        LinkInline link = new(MarkdownRenderer.BuildLibraryHref(reference.RootId, reference.RelativePath), string.Empty);
-        link.AppendChild(new LiteralInline(path));
+        LinkInline link = new(MarkdownRenderer.BuildLibraryHref(reference.RootId, reference.RelativePath), reference.RelativePath);
+        link.AppendChild(new LiteralInline(MarkdownRenderer.FileNameOf(path)));
         link.GetAttributes().AddClass("library-ref");
         if (!reference.Exists)
         {
