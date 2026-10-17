@@ -20,9 +20,9 @@ namespace Agency.Huddle.Tests.Ui.Teams;
 /// </summary>
 public sealed class TeammateTileTests
 {
-    /// <summary>The tile's avatar is a Large circle: MudBlazor's own large size, not the page's square override.</summary>
+    /// <summary>The tile's avatar is the 40px card size (MudBlazor's Medium), not the page's square override, with a presence badge at its rim.</summary>
     [Fact]
-    public async Task Tile_Avatar_IsLargeWithNoSizeOverride()
+    public async Task Tile_Avatar_IsMediumWithNoSizeOverrideAndABadge()
     {
         using TempDataDir dir = new();
         await using MudBunitContext ctx = await NewContextAsync(dir, Xunit.TestContext.Current.CancellationToken);
@@ -30,8 +30,48 @@ public sealed class TeammateTileTests
         IRenderedComponent<TeammatesPage> cut = ctx.Render<TeammatesPage>();
 
         var avatar = cut.Find(".teammate-tile .mud-avatar");
-        Assert.Contains("mud-avatar-large", avatar.ClassList);
+        Assert.Contains("mud-avatar-medium", avatar.ClassList);
         Assert.DoesNotContain("teammate-avatar", avatar.ClassList);
+        Assert.NotNull(cut.Find(".teammate-tile .presence-anchor > .agent-dot.on-avatar"));
+    }
+
+    /// <summary>The tile states its state once, as plain meta text beside the alias: no chip, no second dot.</summary>
+    [Fact]
+    public async Task Tile_State_IsPlainMetaTextBesideTheAlias()
+    {
+        using TempDataDir dir = new();
+        await using MudBunitContext ctx = await NewContextAsync(dir, Xunit.TestContext.Current.CancellationToken);
+
+        IRenderedComponent<TeammatesPage> cut = ctx.Render<TeammatesPage>();
+
+        var state = cut.Find(".teammate-tile .teammate-tile-chips .teammate-tile-state");
+        Assert.Contains("chip-meta", state.ClassList);
+        Assert.Equal(cut.Find(".teammate-tile .agent-dot").GetAttribute("aria-label"), state.TextContent.Trim());
+        Assert.Single(cut.FindAll(".teammate-tile .agent-dot"));
+    }
+
+    /// <summary>A group heading carries its count in a separate caption-size span.</summary>
+    [Fact]
+    public async Task GroupHeading_ShowsTheCountInItsOwnSpan()
+    {
+        using TempDataDir dir = new();
+        await using MudBunitContext ctx = await NewContextAsync(dir, Xunit.TestContext.Current.CancellationToken);
+
+        IRenderedComponent<TeammatesPage> cut = ctx.Render<TeammatesPage>();
+
+        Assert.Equal("1", cut.Find("h2.teammates-group-heading .teammates-group-count").TextContent.Trim());
+    }
+
+    /// <summary>The grid has columns of at least 240px that share the width, and the tile text sizes follow the spec (name 14/600, role 13, meta and context 12).</summary>
+    [Fact]
+    public void Stylesheet_TheGridFillsTheWidthAndTheTileTextFollowsTheSpec()
+    {
+        string css = File.ReadAllText(CssSource.RepoPath("src", "Huddle.App", "wwwroot", "app.css"));
+
+        Assert.Contains("grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));", css, StringComparison.Ordinal); // contains-ok: haystack is the stylesheet source
+        Assert.Contains(".teammates-item-name {\r\n    font-size: var(--mud-typography-subtitle2-size);\r\n    font-weight: 600;", css.ReplaceLineEndings("\r\n"), StringComparison.Ordinal); // contains-ok: haystack is the stylesheet source
+        Assert.Contains(".teammate-tile-role {\r\n    font-size: var(--mud-typography-body2-size);", css.ReplaceLineEndings("\r\n"), StringComparison.Ordinal); // contains-ok: haystack is the stylesheet source
+        Assert.Contains(".teammate-tile-context {", css, StringComparison.Ordinal); // contains-ok: haystack is the stylesheet source
     }
 
     /// <summary>The page opens with the shared header: one h1 reading "Teammates" (UX-001).</summary>

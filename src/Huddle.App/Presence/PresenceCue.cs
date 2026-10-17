@@ -26,7 +26,10 @@ public enum PresenceGlyph
 /// <see cref="PresenceState"/> (Presence: what the assignee is doing right now).
 /// </summary>
 /// <param name="Glyph">The shape drawn in the badge.</param>
-/// <param name="Tone">The lower-case CSS class that colours the badge: <c>online</c>, <c>starting</c>, <c>degraded</c>, <c>offline</c>, <c>awake</c> or <c>asleep</c>.</param>
+/// <param name="Tone">
+/// The lower-case CSS class that colours the badge: <c>online</c> (green), <c>starting</c> and <c>awake</c> (amber),
+/// <c>degraded</c> (red), <c>offline</c> and <c>asleep</c> (the hollow grey ring). The words differ; the colours are those four.
+/// </param>
 /// <param name="Label">The state's name, used as the badge's accessible name and title.</param>
 public readonly record struct PresenceCue(PresenceGlyph Glyph, string Tone, string Label)
 {

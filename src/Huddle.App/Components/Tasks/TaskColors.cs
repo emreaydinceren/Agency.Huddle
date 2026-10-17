@@ -28,12 +28,12 @@ internal static class TaskColors
         _ => Color.Default,
     };
 
-    /// <summary>Awake Success, Asleep Default, Offline Error.</summary>
+    /// <summary>Awake Warning (amber, a Turn running: thinking), Asleep and Offline Default (a hollow grey ring); red is kept for Degraded Health.</summary>
     public static Color For(PresenceState presence) => presence switch
     {
-        PresenceState.Awake => Color.Success,
+        PresenceState.Awake => Color.Warning,
         PresenceState.Asleep => Color.Default,
-        PresenceState.Offline => Color.Error,
+        PresenceState.Offline => Color.Default,
         _ => Color.Default,
     };
 

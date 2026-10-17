@@ -174,10 +174,7 @@ public sealed class TeammateAvatarTests
 
         var root = cut.Find(".mud-avatar");
         Assert.Equal(
-            [
-                "background: color-mix(in srgb, #4a154b 20%, var(--mud-palette-surface))",
-                "color: color-mix(in srgb, #4a154b 25%, var(--mud-palette-text-primary))",
-            ],
+            ["--mud-palette-primary: #4a154b"],
             Declarations(root));
         Assert.Contains("avatar-monogram", root.ClassList);
     }
