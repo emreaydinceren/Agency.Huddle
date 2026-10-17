@@ -140,7 +140,7 @@ public sealed class RoomListTests
         await ClickMenuItemAsync(cut, "Delete");
 
         Assert.NotNull(await directory.GetRoomAsync(room.Id, ct));
-        Assert.True(HasButton(cut, "Confirm"));
+        Assert.True(HasButton(cut, "Delete"));
     }
 
     /// <summary>Confirming the inline Delete step actually removes the Room, proven against the real <see cref="ITeamDirectory"/>.</summary>
@@ -161,7 +161,7 @@ public sealed class RoomListTests
         var cut = RenderRoomList(ctx);
         await OpenRowMenuAsync(cut);
         await ClickMenuItemAsync(cut, "Delete");
-        await ClickButtonAsync(cut, "Confirm");
+        await ClickButtonAsync(cut, "Delete");
 
         Assert.Null(await directory.GetRoomAsync(room.Id, ct));
     }

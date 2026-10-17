@@ -30,11 +30,11 @@ public sealed partial class SettingsPanelsTests
     }
 
     /// <summary>
-    /// The page has one <c>h1</c> reading "Settings" (UX-001, DS "A page"), for a screen reader only: the Tab and the
-    /// one-crumb trail already show the name, so a visible title would say it a third time.
+    /// The page has one visible <c>h1</c> reading "Settings" (UX-001, DS "A page"): every page shows its h1, and Settings
+    /// has no ancestor, so it has no breadcrumb.
     /// </summary>
     [Fact]
-    public async Task Settings_HasOneScreenReaderOnlyH1ReadingSettings()
+    public async Task Settings_HasOneVisibleH1ReadingSettings()
     {
         await using var factory = new TeamWebApplicationFactory();
         await using var ctx = NewContext(factory);
@@ -43,7 +43,7 @@ public sealed partial class SettingsPanelsTests
 
         var heading = Assert.Single(cut.FindAll("h1"));
         Assert.Equal("Settings", heading.TextContent.Trim());
-        Assert.Contains("visually-hidden", heading.ClassList);
+        Assert.DoesNotContain("visually-hidden", heading.ClassList);
     }
 
     /// <summary>Every row in the section menu carries an icon, as the Team page rail does (UX-008).</summary>

@@ -126,7 +126,7 @@ public sealed class ArchivedChatsDialogTests
         await cut.InvokeAsync(() => cut.Find("button[aria-label^='Delete ']").ClickAsync());
 
         Assert.NotNull(await directory.GetRoomAsync(room.Id, ct));
-        Assert.Contains(cut.FindAll("button"), button => string.Equals(button.TextContent.Trim(), "Confirm", StringComparison.Ordinal));
+        Assert.Contains(cut.FindAll("button"), button => string.Equals(button.TextContent.Trim(), "Delete", StringComparison.Ordinal)); // contains-ok: collection membership of the verb button
     }
 
     /// <summary>Confirming Delete from the dialog permanently removes the Room, proven against the real <see cref="ITeamDirectory"/>.</summary>
@@ -147,7 +147,7 @@ public sealed class ArchivedChatsDialogTests
         await using var ctx = NewContext(directory, chat, events);
         var cut = await OpenDialogAsync(ctx);
         await cut.InvokeAsync(() => cut.Find("button[aria-label^='Delete ']").ClickAsync());
-        await cut.InvokeAsync(() => cut.FindAll("button").First(button => string.Equals(button.TextContent.Trim(), "Confirm", StringComparison.Ordinal)).ClickAsync());
+        await cut.InvokeAsync(() => cut.FindAll("button").First(button => string.Equals(button.TextContent.Trim(), "Delete", StringComparison.Ordinal)).ClickAsync());
 
         Assert.Null(await directory.GetRoomAsync(room.Id, ct));
     }

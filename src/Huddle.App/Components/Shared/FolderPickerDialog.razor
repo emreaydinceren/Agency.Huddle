@@ -4,7 +4,9 @@
     A folder picker: the Human walks the folders of the machine the app runs on (the app runs on their own machine,
     as rules.md says of the Open action) and chooses one. Nothing is created or changed. Start is where it opens, a
     typed path jumps there on Enter, Up goes one level (a drive root goes up to the list of drives), and Select returns
-    the folder shown as the dialog's string result. FolderBrowser does the reading.
+    the folder shown as the dialog's string result. FolderBrowser does the reading. It is a short picker, so it
+    opens at 600px (HuddleDialogOptions.ShortPicker); a path breadcrumb names where the Human is and each segment
+    jumps back to it, and the rows are .picker-row: 32px, 13px, an 18px icon in a 24px slot.
 *@
 
 <MudDialog>
@@ -16,14 +18,29 @@
                 <MudTextField T="string" Variant="Variant.Outlined" Margin="Margin.Dense" Label="Folder" Value="this.typed"
                               ValueChanged="this.OnTyped" OnKeyDown="this.OnKeyDown" Immediate="true" Class="folder-picker-path flex-grow-1" />
             </MudStack>
+            @if (this.trail.Count > 0)
+            {
+                <nav class="folder-picker-trail" aria-label="Current folder">
+                    @foreach (BrowsedFolder crumb in this.trail)
+                    {
+                        bool last = ReferenceEquals(crumb, this.trail[^1]);
+                        <button type="button" class="folder-picker-crumb" aria-current="@(last ? "location" : null)" disabled="@last"
+                                @onclick="() => this.Open(crumb.Path)">@crumb.Name</button>
+                        @if (!last)
+                        {
+                            <span class="folder-picker-sep" aria-hidden="true">›</span>
+                        }
+                    }
+                </nav>
+            }
             @if (this.listing.Error is not null)
             {
                 <MudAlert Severity="Severity.Warning" Dense="true" role="alert" Class="folder-picker-error">@this.listing.Error</MudAlert>
             }
-            <MudList T="string" Class="folder-picker-list" aria-label="Folders">
+            <MudList T="string" Dense="true" Class="folder-picker-list" aria-label="Folders">
                 @foreach (BrowsedFolder folder in this.listing.Folders)
                 {
-                    <MudListItem T="string" Icon="@Icons.Material.Outlined.Folder" Text="@folder.Name" OnClick="@(() => this.Open(folder.Path))" Class="folder-picker-item" />
+                    <MudListItem T="string" Icon="@Icons.Material.Outlined.Folder" Text="@folder.Name" OnClick="@(() => this.Open(folder.Path))" Class="picker-row folder-picker-item" />
                 }
             </MudList>
             @if (this.listing.Truncated)
@@ -44,11 +61,12 @@
 </MudDialog>
 
 @code {
-    /// <summary>How a caller shows this dialog: the shared picker options (medium, full width, close button).</summary>
-    public static DialogOptions Options => HuddleDialogOptions.Picker;
+    /// <summary>How a caller shows this dialog: the shared short-picker options (600px, full width, close button).</summary>
+    public static DialogOptions Options => HuddleDialogOptions.ShortPicker;
 
     private FolderListing listing = new(null, null, [], false, null);
     private string typed = string.Empty;
+    private IReadOnlyList<BrowsedFolder> trail = [];
 
     [CascadingParameter]
     private IMudDialogInstance? Dialog { get; set; }
@@ -68,6 +86,7 @@
     {
         this.listing = next;
         this.typed = next.Current ?? string.Empty;
+        this.trail = FolderBrowser.Crumbs(next.Current);
     }
 
     private void Open(string path) => this.Show(FolderBrowser.List(path));

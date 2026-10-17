@@ -11,7 +11,7 @@ namespace Agency.Huddle.Tests.Ui;
 
 /// <summary>
 /// Pins U26 rows UX-R19: the Avatar Library renders its Professions and Tags through two shared
-/// <see cref="ChipCloud"/>s in the quiet style, not through its own chip markup, and <c>app.css</c> no longer
+/// <see cref="ChipCloud"/>s drawing the Filter chip, not through its own chip markup, and <c>app.css</c> no longer
 /// carries the duplicate avatar-library chip rules.
 /// </summary>
 public sealed class AvatarLibraryChipCloudTests
@@ -20,35 +20,34 @@ public sealed class AvatarLibraryChipCloudTests
 
     private const string TagsCloud = ".chip-cloud[aria-label='Tags']";
 
-    /// <summary>A pool of chips with <c>Quiet</c> set carries <c>is-quiet</c> on every chip, selected or not; without it none do.</summary>
+    /// <summary>The wash is retired: no chip carries <c>is-quiet</c> and the parameter is gone; only the chip that is set carries <c>is-set</c>, the Filter chip's set state.</summary>
     [Fact]
-    public async Task ChipCloud_Quiet_MarksEveryChip()
+    public async Task ChipCloud_HasNoQuietStyle_AndMarksOnlyTheSetChip()
     {
         await using MudBunitContext ctx = new();
 
-        IRenderedComponent<ChipCloud> quiet = ctx.Render<ChipCloud>(p => p
+        IRenderedComponent<ChipCloud> cloud = ctx.Render<ChipCloud>(p => p
             .Add(c => c.Title, "Tags")
             .Add(c => c.Pool, ["a", "b"])
-            .Add(c => c.Selected, ["a"])
-            .Add(c => c.Quiet, true));
-        IRenderedComponent<ChipCloud> loud = ctx.Render<ChipCloud>(p => p
-            .Add(c => c.Title, "Tags")
-            .Add(c => c.Pool, ["a", "b"]));
+            .Add(c => c.Selected, ["a"]));
 
-        Assert.Equal(2, quiet.FindAll(".chip-cloud-chip.is-quiet").Count);
-        Assert.Empty(loud.FindAll(".is-quiet"));
+        Assert.Null(typeof(ChipCloud).GetProperty("Quiet"));
+        Assert.Empty(cloud.FindAll(".is-quiet"));
+        Assert.Single(cloud.FindAll(".chip-cloud-chip.is-set"));
+        Assert.Equal(2, cloud.FindAll(".chip-cloud-chip").Count);
     }
 
-    /// <summary>The library shows two <see cref="ChipCloud"/>s titled Professions and Tags, both quiet, and none of the old avatar-library chip markup.</summary>
+    /// <summary>The library shows two <see cref="ChipCloud"/>s titled Professions and Tags, and none of the old avatar-library chip markup.</summary>
     [Fact]
-    public async Task Library_RendersTwoQuietChipClouds()
+    public async Task Library_RendersTwoChipClouds()
     {
         await using Harness harness = await Harness.OpenAsync();
 
         Assert.Equal(["Professions", "Tags"], harness.Cut.FindAll(".chip-cloud-title").Select(static t => t.TextContent.Trim()));
         Assert.Equal(2, harness.Cut.FindAll(".chip-cloud").Count);
-        Assert.NotEmpty(harness.Cut.FindAll(ProfessionsCloud + " .chip-cloud-chip.is-quiet"));
-        Assert.NotEmpty(harness.Cut.FindAll(TagsCloud + " .chip-cloud-chip.is-quiet"));
+        Assert.NotEmpty(harness.Cut.FindAll(ProfessionsCloud + " .chip-cloud-chip"));
+        Assert.NotEmpty(harness.Cut.FindAll(TagsCloud + " .chip-cloud-chip"));
+        Assert.Empty(harness.Cut.FindAll(".is-quiet"));
         Assert.Empty(harness.Cut.FindAll(".avatar-library-chip, .avatar-library-chip-text, .avatar-library-cloud, .avatar-library-cloud-title, .avatar-library-tags-all"));
     }
 
@@ -83,7 +82,7 @@ public sealed class AvatarLibraryChipCloudTests
         Assert.Equal("Show fewer", harness.Cut.Find(TagsCloud + " .chip-cloud-all").TextContent.Trim());
     }
 
-    /// <summary>UX-R19: <c>app.css</c> has no <c>.avatar-library-chip</c> rule left and defines the quiet chip once, on the shared cloud.</summary>
+    /// <summary>UX-R19: <c>app.css</c> has no <c>.avatar-library-chip</c> rule left and no quiet chip: the cloud wears the Filter chip.</summary>
     [Fact]
     public void Stylesheet_HasNoDuplicateAvatarLibraryChipRules()
     {
@@ -92,7 +91,8 @@ public sealed class AvatarLibraryChipCloudTests
         Assert.DoesNotContain(".avatar-library-chip", css, StringComparison.Ordinal);
         Assert.DoesNotContain(".avatar-library-cloud", css, StringComparison.Ordinal);
         Assert.DoesNotContain(".avatar-library-tags-all", css, StringComparison.Ordinal);
-        Assert.Matches(@"\.chip-cloud-chip\.is-quiet\s*\{", css);
+        Assert.DoesNotContain("is-quiet", css, StringComparison.Ordinal);
+        Assert.Matches(@"\.chip-cloud-chip\.is-set", css);
     }
 
     private sealed class Harness : IAsyncDisposable

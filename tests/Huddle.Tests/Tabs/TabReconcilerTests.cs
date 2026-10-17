@@ -5,7 +5,7 @@ public sealed class TabReconcilerTests
     private static Data.Room Room(string id, string name, bool archived = false) =>
         new(id, name, DateTimeOffset.UnixEpoch) { Archived = archived };
 
-    /// <summary>A Task View's Tab takes the View's display name, so neither the Tab nor the breadcrumb built from it shows the slug.</summary>
+    /// <summary>A Task View's Tab takes the View's display name, so the Tab shows no slug, and the breadcrumb holds only the ancestor (the View's name is the page's h1).</summary>
     [Fact]
     public void ReconcileViews_ViewTab_TakesTheDisplayNameNotTheSlug()
     {
@@ -17,8 +17,7 @@ public sealed class TabReconcilerTests
 
         Tab retitled = Assert.Single(tabs.Tabs);
         Assert.Equal("My Tasks", retitled.Title);
-        Assert.Equal("My Tasks", tabs.Trail(retitled)[^1].Text);
-        Assert.DoesNotContain(tabs.Trail(retitled), crumb => crumb.Text.Contains("my-tasks", StringComparison.Ordinal));
+        Assert.Equal(["Tasks"], tabs.Trail(retitled).Select(static crumb => crumb.Text));
     }
 
     /// <summary>A Tab whose View is unknown, and a Tab for another page, keep their titles.</summary>

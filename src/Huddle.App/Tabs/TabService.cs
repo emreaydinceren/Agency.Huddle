@@ -295,7 +295,7 @@ internal sealed class TabService
     public IReadOnlyList<TrailCrumb> Trail(Tab tab)
     {
         ArgumentNullException.ThrowIfNull(tab);
-        return this.trails.TryGetValue(tab.Key, out IReadOnlyList<TrailCrumb>? crumbs) ? crumbs : TabTrail.Build(tab.Url, tab.Title);
+        return this.trails.TryGetValue(tab.Key, out IReadOnlyList<TrailCrumb>? crumbs) ? crumbs : TabTrail.Build(tab.Url);
     }
 
     /// <summary>Whether <see cref="MoveLeft(string)"/> would do something for the Tab with <paramref name="id"/>.</summary>
