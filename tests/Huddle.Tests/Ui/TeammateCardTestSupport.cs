@@ -265,7 +265,7 @@ internal static class TeammateCardTestSupport
     internal static async Task OpenDeleteAsync(IRenderedComponent<ContainerFragment> cut, string name)
     {
         await ClickButtonAsync(cut, "Actions for " + name);
-        await ClickAsync(cut, () => cut.Find(".teammate-card-delete"));
+        await ClickAsync(cut, () => cut.Find(".menu-item-destructive"));
     }
 
     /// <summary>The first rendered button whose trimmed text, OR its <c>aria-label</c>, equals <paramref name="text"/> - see <see cref="HasButton"/>.</summary>

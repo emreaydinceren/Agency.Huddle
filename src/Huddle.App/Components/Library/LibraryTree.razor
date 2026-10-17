@@ -80,7 +80,7 @@
                                     }
 
                                     <MudMenuItem Icon="@action.Icon" IconColor="@(action.Kind == LibraryTreeActionKind.Delete ? Color.Error : Color.Default)"
-                                                 Class="@(action.Kind == LibraryTreeActionKind.Delete ? "library-tree-menu-destructive" : null)"
+                                                 Class="@(action.Kind == LibraryTreeActionKind.Delete ? "menu-item-destructive" : null)"
                                                  OnClick="@(() => this.RaiseFromMenuAsync(action.Kind, value))">
                                         <div class="library-tree-menu-label">@action.Label</div>
                                     </MudMenuItem>

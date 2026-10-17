@@ -1,7 +1,7 @@
 @*
     A cloud of Filter chips (design-system "Chips", audit A6: dashed Field line and no fill while unset; Accent
     border, Accent tint 14% and Accent ink at 500 once set): the selected ones first in the order they were pressed, then the pool, optionally capped
-    with a "Show all" toggle. It is the avatar picker's cloud (AvatarChipCloud.Arrange) as a component, so any picker can
+    with a "Show all (N)" toggle. It is the avatar picker's cloud (AvatarChipCloud.Arrange) as a component, so any picker can
     reuse it; selection reads as [ text X ] and aria-pressed, never by colour alone. The caller owns the selection.
 *@
 
@@ -27,7 +27,7 @@
         }
         @if (this.Cap is int cap && this.Pool.Count > cap)
         {
-            <button type="button" class="chip-cloud-all" aria-expanded="@(this.Expanded ? "true" : "false")" @onclick="this.ToggleExpanded">@(this.Expanded ? "Show fewer" : "Show all")</button>
+            <button type="button" class="chip-cloud-all" aria-expanded="@(this.Expanded ? "true" : "false")" @onclick="this.ToggleExpanded">@(this.Expanded ? "Show fewer" : $"Show all ({this.Pool.Count})")</button>
         }
     </div>
 }

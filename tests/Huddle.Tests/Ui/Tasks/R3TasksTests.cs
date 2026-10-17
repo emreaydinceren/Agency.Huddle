@@ -525,7 +525,7 @@ public sealed class R3TasksTests
         IReadOnlyList<IElement> items = cut.FindAll(".mud-menu-item");
         Assert.Equal(["Copy id", "Copy link", "Make a copy…", "Close task…"], items.Select(i => i.TextContent.Trim()));
         Assert.All(items, item => Assert.NotNull(item.QuerySelector(".mud-icon-root")));
-        Assert.Contains("task-menu-item-destructive", items[^1].ClassList);
+        Assert.Contains("menu-item-destructive", items[^1].ClassList);
         Assert.NotNull(items[^1].PreviousElementSibling?.ClassList.Contains("mud-divider") is true ? items[^1].PreviousElementSibling : null);
         Assert.Empty(cut.FindAll(".task-detail-title-row .mud-tooltip-root + button[aria-label^='Actions for']"));
     }
@@ -569,7 +569,7 @@ public sealed class R3TasksTests
         await cut.InvokeAsync(() => cut.Find($"button[aria-label='Actions for {task.Id}']").ClickAsync());
         IReadOnlyList<IElement> items = cut.FindAll(".mud-menu-item");
         Assert.Equal(["Copy id", "Copy link", "Make a copy…", "Reopen"], items.Select(i => i.TextContent.Trim()));
-        Assert.DoesNotContain("task-menu-item-destructive", items[^1].ClassList);
+        Assert.DoesNotContain("menu-item-destructive", items[^1].ClassList);
         await cut.InvokeAsync(() => items[^1].ClickAsync());
 
         Assert.False(harness.Store.Get(task.Id)?.Location.Closed);
@@ -591,7 +591,7 @@ public sealed class R3TasksTests
         await cut.InvokeAsync(() => cut.Find(".tasks-header button[aria-label='Actions for Sprint board']").ClickAsync());
         IReadOnlyList<IElement> items = cut.FindAll(".mud-menu-item");
         Assert.Equal(["Rename…", "Fields…", "Delete view…"], items.Select(i => i.TextContent.Trim()));
-        Assert.Contains("task-menu-item-destructive", items[^1].ClassList);
+        Assert.Contains("menu-item-destructive", items[^1].ClassList);
 
         Task renaming = cut.InvokeAsync(() => items[0].ClickAsync());
         await cut.WaitForAssertionAsync(() => Assert.NotEmpty(cut.FindAll(".mud-dialog-actions button")));

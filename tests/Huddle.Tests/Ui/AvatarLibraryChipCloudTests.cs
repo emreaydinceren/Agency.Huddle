@@ -74,7 +74,7 @@ public sealed class AvatarLibraryChipCloudTests
         string chips = TagsCloud + " .chip-cloud-chip";
         int capped = harness.Cut.FindAll(chips).Count;
 
-        Assert.Equal("Show all", harness.Cut.Find(TagsCloud + " .chip-cloud-all").TextContent.Trim());
+        Assert.Matches(@"^Show all \(\d+\)$", harness.Cut.Find(TagsCloud + " .chip-cloud-all").TextContent.Trim());
 
         await harness.Cut.InvokeAsync(() => harness.Cut.Find(TagsCloud + " .chip-cloud-all").ClickAsync());
 

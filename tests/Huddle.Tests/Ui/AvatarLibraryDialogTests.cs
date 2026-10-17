@@ -205,7 +205,7 @@ public sealed class AvatarLibraryDialogTests
         Assert.Equal(12, capped.Count);
         Assert.Equal(["glasses", "vest", "tag00"], [.. capped.Take(3)]);
         Assert.DoesNotContain("tag49", capped);
-        Assert.Equal("Show all", harness.Cut.Find(TagsAll).TextContent.Trim());
+        Assert.Equal("Show all (52)", harness.Cut.Find(TagsAll).TextContent.Trim());
 
         await harness.ClickAsync(TagsAll);
 
@@ -227,7 +227,7 @@ public sealed class AvatarLibraryDialogTests
         Assert.Equal(13, texts.Count);
         Assert.Equal("tag49", texts[0]);
         Assert.Single(texts, static t => t == "tag49");
-        Assert.Equal("Show all", harness.Cut.Find(TagsAll).TextContent.Trim());
+        Assert.Equal("Show all (52)", harness.Cut.Find(TagsAll).TextContent.Trim());
         Assert.DoesNotContain(texts, static t => t == "man" || t == "woman" || t.StartsWith("bg-", StringComparison.Ordinal) || t.StartsWith("skin-", StringComparison.Ordinal));
     }
 

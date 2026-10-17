@@ -227,7 +227,7 @@
                                             <ChildContent>
                                                 <MudMenuItem Icon="@ActionIcons.RemoveMember" OnClick="@(() => this.LeaveTeam(draft.Key))" Class="roster-leave">Remove from team</MudMenuItem>
                                                 <MudDivider />
-                                                <MudMenuItem Icon="@ActionIcons.Delete" OnClick="@(() => this.RemoveDraft(draft.Key))" Class="roster-delete">Delete teammate</MudMenuItem>
+                                                <MudMenuItem Icon="@ActionIcons.Delete" OnClick="@(() => this.RemoveDraft(draft.Key))" Class="menu-item-destructive">Delete teammate</MudMenuItem>
                                             </ChildContent>
                                         </MudMenu>
                                     }
