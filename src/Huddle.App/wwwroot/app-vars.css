@@ -10,6 +10,13 @@
     /* The reading face: Library prose and quotes. Every Theme reads in its UI face; a style pack (ADR-0057) may give
        it a serif, as Nordic gives it Literata. */
     --font-read: var(--mud-typography-body1-family);
+
+    /* Shared skin tokens (--hu-*). The Composer's Send button: Primary icon on no ground, which is today's look. */
+    --hu-send-fg: var(--mud-palette-primary);
+    --hu-send-bg: transparent;
+
+    /* The cut-out ring around a presence badge on an avatar. A region sets it to the ground behind the avatar. */
+    --hu-ring: var(--mud-palette-surface);
 }
 
 /* ---- The ink ladder (audit round 3, A1) ------------------------------------------------------

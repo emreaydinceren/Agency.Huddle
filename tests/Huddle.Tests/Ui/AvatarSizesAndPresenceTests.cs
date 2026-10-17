@@ -60,7 +60,7 @@ public sealed class AvatarSizesAndPresenceTests
         Assert.Equal(3, Regex.Count(source, @"<ProfileAvatar [^>]*Class=""avatar-transcript""", RegexOptions.CultureInvariant, TimeSpan.FromSeconds(2)));
     }
 
-    /// <summary>The badge is 10px by default, 12px beside a Medium or Large avatar, and ringed in 2px of Surface on the rim.</summary>
+    /// <summary>The badge is 10px by default, 12px beside a Medium or Large avatar, and ringed in 2px of the <c>--hu-ring</c> token (Surface by default) on the rim.</summary>
     [Fact]
     public void Stylesheet_Badge_IsTenPixelsAndTwelveFromFortyPixelAvatars()
     {
@@ -70,7 +70,7 @@ public sealed class AvatarSizesAndPresenceTests
         string twelve = RuleBody(css, ".presence-anchor:has(> .mud-avatar-medium, > .mud-avatar-large) > .agent-dot.on-avatar");
         Assert.Contains("width: 12px;", twelve, StringComparison.Ordinal); // contains-ok: haystack is one rule of the stylesheet source
         Assert.Contains("height: 12px;", twelve, StringComparison.Ordinal); // contains-ok: haystack is one rule of the stylesheet source
-        Assert.Contains("0 0 0 2px var(--mud-palette-surface)", RuleBody(css, ".agent-dot.on-avatar"), StringComparison.Ordinal); // contains-ok: haystack is one rule of the stylesheet source
+        Assert.Contains("0 0 0 2px var(--hu-ring)", RuleBody(css, ".agent-dot.on-avatar"), StringComparison.Ordinal); // contains-ok: haystack is one rule of the stylesheet source
     }
 
     /// <summary>Awake (a Turn running) is the info colour, not amber: amber means needs attention, and only Starting keeps it.</summary>

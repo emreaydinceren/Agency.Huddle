@@ -71,9 +71,6 @@
     --n-shadow-2: var(--mud-elevation-2);
     --n-shadow-3: var(--mud-elevation-24);
 
-    /* The ring a cut-out avatar wears: the ground it sits on (section 7.1). Raised paper by default. */
-    --n-ring: var(--mud-palette-surface);
-
     /* Huddle's own neutral rungs, re-pointed at the set's warm lines and wells. Huddle mixes them from TextPrimary
        over Surface, which gives cool greys, and roughly forty rules read them. */
     --ink-strip: var(--mud-palette-drawer-background);
@@ -144,22 +141,20 @@
     background-color: var(--n-sunk);
 }
 
-/* Cut-out rings match the ground the avatar sits on, or a white halo appears on birch. */
+/* Cut-out rings match the ground the avatar sits on, or a white halo appears on birch. app.css draws the ring from
+   --hu-ring; this pack sets only that token, never the box-shadow, so an offline badge keeps its hollow ring. */
 :root:has([data-theme-pack="nordic"]) .message-list .agent-dot.on-avatar,
+:root:has([data-theme-pack="nordic"]) .room-header .agent-dot.on-avatar,
 :root:has([data-theme-pack="nordic"]) .room-header .mud-avatar-group .mud-avatar {
-    --n-ring: var(--mud-palette-background);
+    --hu-ring: var(--mud-palette-background);
 }
 
 :root:has([data-theme-pack="nordic"]) .shell-nav .agent-dot.on-avatar {
-    --n-ring: var(--mud-palette-drawer-background);
-}
-
-:root:has([data-theme-pack="nordic"]) .agent-dot.on-avatar {
-    box-shadow: 0 0 0 2px var(--n-ring);
+    --hu-ring: var(--mud-palette-drawer-background);
 }
 
 :root:has([data-theme-pack="nordic"]) .mud-avatar-group.mud-avatar-group-outlined .mud-avatar.mud-avatar-small {
-    border-color: var(--n-ring);
+    border-color: var(--hu-ring);
 }
 
 /* ---- 7.2 The rail ---------------------------------------------------------------------------------------
@@ -562,11 +557,6 @@
     color: var(--n-sage-ink);
 }
 
-:root:has([data-theme-pack="nordic"]) .task-ref .task-id {
-    font-family: var(--font-mono);
-    font-size: var(--mud-typography-caption-size);
-}
-
 /* A Mention is a blue pill; a Mention of the Human is the cloud "needs you" pill. */
 :root:has([data-theme-pack="nordic"]) .mention {
     color: var(--n-blue-ink);
@@ -680,14 +670,18 @@
     bottom: 8px;
 }
 
-/* Send is a small sage button with its word. The label sits over the button and lets clicks through to it. */
+/* Send is a small sage button with its word. The label sits over the button and lets clicks through to it. The
+   colours are the shared Send tokens (app.css reads them), so nothing here fights a MudBlazor colour utility. */
+:root:has([data-theme-pack="nordic"]) .composer-send .composer-send-button {
+    --hu-send-bg: var(--n-sage);
+    --hu-send-fg: var(--n-on-accent);
+}
+
 :root:has([data-theme-pack="nordic"]) .composer-send .mud-icon-button {
     height: 26px;
     width: auto;
     padding: 0 48px 0 8px;
     border-radius: var(--mud-default-borderradius);
-    background: var(--n-sage);
-    color: var(--n-on-accent);
 }
 
 :root:has([data-theme-pack="nordic"]) .composer-send .mud-icon-button:hover {
@@ -961,8 +955,7 @@
     background: none;
 }
 
-:root:has([data-theme-pack="nordic"]) .library-backlinks .mud-paper,
-:root:has([data-theme-pack="nordic"]) .library-backlink {
+:root:has([data-theme-pack="nordic"]) .library-backlinks .mud-paper {
     background: var(--n-elev);
     border: 1px solid var(--n-line);
     border-radius: var(--mud-default-borderradius);

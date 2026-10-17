@@ -217,9 +217,25 @@ public sealed partial class ThemeSourceTests
     {
         var referenced = CssSource.ReadReferencedTokens(AppCssPath).Distinct(StringComparer.Ordinal);
 
-        var undeclared = referenced.Where(token => !MudBlazorVariables.Contains(token)).ToList();
+        var allowed = AllowedVariables;
+        var undeclared = referenced.Where(token => !allowed.Contains(token)).ToList();
 
         Assert.Empty(undeclared);
+    }
+
+    /// <summary>
+    /// The names a stylesheet may take in <c>var()</c>: MudBlazor's own variables plus every token <c>app-vars.css</c>
+    /// declares (the shared <c>--hu-*</c> skin tokens among them), so declaring a shared token there admits it without
+    /// editing <see cref="MudBlazorVariables"/>. Internal so <see cref="PackSourceTests"/> holds a pack to the same set.
+    /// </summary>
+    internal static HashSet<string> AllowedVariables
+    {
+        get
+        {
+            HashSet<string> allowed = new(MudBlazorVariables, StringComparer.Ordinal);
+            allowed.UnionWith(CssSource.ReadDeclaredTokens(CssSource.RepoPath("src", "Huddle.App", "wwwroot", "app-vars.css")));
+            return allowed;
+        }
     }
 
     /// <summary>
@@ -271,10 +287,11 @@ public sealed partial class ThemeSourceTests
 
         Assert.NotEmpty(scopedStylesheets);
 
+        var allowed = AllowedVariables;
         var undeclared = scopedStylesheets
             .SelectMany(CssSource.ReadReferencedTokens)
             .Distinct(StringComparer.Ordinal)
-            .Where(token => !MudBlazorVariables.Contains(token))
+            .Where(token => !allowed.Contains(token))
             .ToList();
 
         Assert.Empty(undeclared);

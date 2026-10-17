@@ -62,8 +62,9 @@ public sealed partial class PackSourceTests
             .Where(static token => token.StartsWith("--n-", StringComparison.Ordinal))
             .ToHashSet(StringComparer.Ordinal);
 
+        HashSet<string> allowed = ThemeSourceTests.AllowedVariables;
         List<string> unknown = CssSource.ReadReferencedTokens(path)
-            .Where(token => !ThemeSourceTests.MudBlazorVariables.Contains(token) && !ownTokens.Contains(token))
+            .Where(token => !allowed.Contains(token) && !ownTokens.Contains(token))
             .Distinct(StringComparer.Ordinal)
             .ToList();
 
@@ -79,8 +80,9 @@ public sealed partial class PackSourceTests
     [MemberData(nameof(PackNames))]
     public void Pack_DeclaresOnlyItsOwnOrSharedTokens(string pack)
     {
+        HashSet<string> allowed = ThemeSourceTests.AllowedVariables;
         List<string> foreign = CssSource.ReadDeclaredTokens(PackPath(pack))
-            .Where(static token => !token.StartsWith("--n-", StringComparison.Ordinal) && !ThemeSourceTests.MudBlazorVariables.Contains(token))
+            .Where(token => !token.StartsWith("--n-", StringComparison.Ordinal) && !allowed.Contains(token))
             .Distinct(StringComparer.Ordinal)
             .ToList();
 
