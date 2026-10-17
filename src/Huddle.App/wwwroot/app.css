@@ -745,12 +745,15 @@ a.team-ref,
     min-height: 0;
 }
 
-/* The Room header (title, members, invite). A solid rule under it separates it from the Transcript,
-   drawn like the TopBar's bottom border. The vertical padding is 4px rather than the 16px of
-   MudBlazor's pa-4, which takes about 35% off the bar's height (about 72px down to about 47px). */
+/* The Room header (audit B1): a PageHeader with a Chrome line, so the title row is the same 32px, 16px below the tab
+   strip, as on every other page. This wrapper supplies the 16px above the row; the Chrome line under the header comes
+   from .page-header.has-chrome, and the Transcript's own padding supplies the space below it. */
 .room-header {
-    padding-block: 4px;
-    border-bottom: 1px solid var(--mud-palette-lines-default);
+    padding-top: 16px;
+}
+
+.room-header .page-header {
+    margin-bottom: 0;
 }
 
 /* The groups of Tabs side by side. Each takes an equal share of the width; min-width: 0 lets a pane
@@ -1219,9 +1222,14 @@ a.team-ref,
     position: absolute;
     right: 0;
     top: calc(100% + 0.375rem);
-    min-width: 14rem;
+    min-width: 280px;
     padding: 16px;
     background: var(--mud-palette-surface);
+}
+
+/* The panel's title (audit C3a): "Invite to {Room}" in subtitle2, above the search and the rows. */
+.invite-title {
+    font-weight: 600;
 }
 
 .invite-agents {
@@ -1239,8 +1247,10 @@ a.team-ref,
     align-items: center;
     gap: 8px;
     width: 100%;
+    min-height: 32px;
     padding: 4px 8px;
     font: inherit;
+    font-size: var(--mud-typography-body2-size);
     text-align: left;
     background: none;
     border: none;
@@ -1290,9 +1300,9 @@ a.team-ref,
 }
 
 /* ---- The Human's own Message: a right-aligned bubble ----------------------------------------
-   No avatar gutter, so the grid above is swapped for a flex row pushed to the end. The bubble is
-   one step off the ground (background-gray) rather than an accent fill, so the Human's text reads
-   as set apart without shouting over the replies it asked for. */
+   No avatar gutter, so the grid above is swapped for a flex row pushed to the end. The bubble
+   (.message-bubble below) is an Accent tint at 14% with a 28% Accent border, so the Human's text
+   reads as set apart without shouting over the replies it asked for. */
 .message-row.human {
     display: flex;
     flex-direction: column;
@@ -3849,6 +3859,16 @@ a.team-ref,
     overflow-y: auto;
 }
 
+/* Every Agent card sits in the Transcript's 760px column and is outlined in an Edge, like the notices and the Composer
+   (audit C8): the same 24px inset, centred, so the card, the Transcript and the Composer share one left edge. */
+.mud-paper.agent-card {
+    box-sizing: border-box;
+    width: calc(100% - 48px);
+    max-width: 760px;
+    margin-inline: auto;
+    border-color: var(--ink-edge);
+}
+
 /* An agent card's actions row sits below its body (UX-R01). */
 .agent-card-actions {
     margin-top: 12px;
@@ -3909,10 +3929,16 @@ a.team-ref,
     margin-top: 12px;
 }
 
-/* Options are at least 44 pixels tall and wrap, so the card works at phone width (Questions spec
-   §6.7); an option keeps the case the Agent wrote instead of MudBlazor's button default. */
+/* The options are a column of one-line 32px answer rows, flush left (audit C8), the same height as the Dismiss and
+   Send buttons beside them; an option keeps the case the Agent wrote instead of MudBlazor's button default. */
+.question-card-options {
+    align-items: flex-start;
+}
+
 .question-card-option {
-    min-height: 44px;
+    min-height: 32px;
+    justify-content: flex-start;
+    text-align: left;
     text-transform: none;
 }
 

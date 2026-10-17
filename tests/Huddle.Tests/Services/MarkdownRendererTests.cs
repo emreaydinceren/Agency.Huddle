@@ -361,6 +361,9 @@ public sealed class MarkdownRendererTests
         return id;
     }
 
+    /// <summary>Finds the single anchor in <paramref name="html"/> for a file named by <paramref name="path"/>: a file in a message shows its name, not its path (audit B5b).</summary>
+    private static IElement FindFileAnchor(string html, string path) => MarkdownRendererTests.FindAnchor(html, path[(path.AsSpan().LastIndexOfAny('\\', '/') + 1)..]);
+
     /// <summary>Finds the single anchor in <paramref name="html"/> whose text is exactly <paramref name="text"/>.</summary>
     private static IElement FindAnchor(string html, string text)
     {
@@ -833,7 +836,7 @@ public sealed class MarkdownRendererTests
         FakeLibraryNoteResolver library = MarkdownRendererTests.ResolverFor(MarkdownRendererTests.PlanPath, "teams", "Marketing/plan.md");
 
         var html = MarkdownRenderer.ToHtml(MarkdownRendererTests.PlanPath, null, (ILibraryReferenceResolver)library);
-        IElement anchor = MarkdownRendererTests.FindAnchor(html, MarkdownRendererTests.PlanPath);
+        IElement anchor = MarkdownRendererTests.FindFileAnchor(html, MarkdownRendererTests.PlanPath);
 
         Assert.Equal("?library=teams/Marketing/plan.md", anchor.GetAttribute("href"));
         Assert.Contains("library-ref", anchor.ClassList, StringComparer.Ordinal);
@@ -866,7 +869,7 @@ public sealed class MarkdownRendererTests
         Assert.Equal(MarkdownRendererTests.SpacedPath, document.Body?.TextContent.Trim());
     }
 
-    /// <summary>A whole code span whose content is exactly one path becomes a <c>library-ref</c> link that wraps the <c>&lt;code&gt;</c> element, with no backticks in the visible text.</summary>
+    /// <summary>A whole code span whose content is exactly one path becomes a <c>library-ref</c> link showing the file name (not monospace, not the absolute path) with the relative path as its tooltip, and no backticks in the visible text.</summary>
     [Fact]
     public void ToHtml_PathInCodeSpan_IsLinked()
     {
@@ -877,9 +880,9 @@ public sealed class MarkdownRendererTests
         var anchor = document.QuerySelector("a.library-ref");
 
         Assert.NotNull(anchor);
-        var code = anchor.QuerySelector("code");
-        Assert.NotNull(code);
-        Assert.Equal(MarkdownRendererTests.PlanPath, code.TextContent);
+        Assert.Equal("plan.md", anchor.TextContent);
+        Assert.Null(anchor.QuerySelector("code"));
+        Assert.Equal("Marketing/plan.md", anchor.GetAttribute("title"));
         Assert.DoesNotContain('`', anchor.TextContent);
     }
 
@@ -903,7 +906,7 @@ public sealed class MarkdownRendererTests
         FakeLibraryNoteResolver library = MarkdownRendererTests.ResolverFor(MarkdownRendererTests.PlanPath, "teams", "Marketing/plan.md", exists: false);
 
         var html = MarkdownRenderer.ToHtml(MarkdownRendererTests.PlanPath, null, (ILibraryReferenceResolver)library);
-        IElement anchor = MarkdownRendererTests.FindAnchor(html, MarkdownRendererTests.PlanPath);
+        IElement anchor = MarkdownRendererTests.FindFileAnchor(html, MarkdownRendererTests.PlanPath);
 
         Assert.Equal("library-ref library-ref-missing", anchor.GetAttribute("class"));
     }
@@ -916,7 +919,7 @@ public sealed class MarkdownRendererTests
         FakeLibraryNoteResolver library = MarkdownRendererTests.ResolverFor(FileUrl, "teams", "Marketing/plan.md");
 
         var html = MarkdownRenderer.ToHtml(FileUrl, null, (ILibraryReferenceResolver)library);
-        IElement anchor = MarkdownRendererTests.FindAnchor(html, FileUrl);
+        IElement anchor = MarkdownRendererTests.FindFileAnchor(html, FileUrl);
 
         Assert.Equal("?library=teams/Marketing/plan.md", anchor.GetAttribute("href"));
     }
@@ -931,10 +934,10 @@ public sealed class MarkdownRendererTests
 
         var html = MarkdownRenderer.ToHtml(markdown, null, (ILibraryReferenceResolver)library);
         var document = new HtmlParser().ParseDocument(html);
-        IElement anchor = MarkdownRendererTests.FindAnchor(html, MarkdownRendererTests.PlanPath);
+        IElement anchor = MarkdownRendererTests.FindFileAnchor(html, MarkdownRendererTests.PlanPath);
 
         Assert.Equal("?library=teams/Marketing/plan.md", anchor.GetAttribute("href"));
-        Assert.Equal(string.Concat(before, MarkdownRendererTests.PlanPath, after), document.Body?.TextContent.Trim());
+        Assert.Equal(string.Concat(before, "plan.md", after), document.Body?.TextContent.Trim());
     }
 
     /// <summary>A path parenthesised in prose has the trailing <c>)</c> trimmed from the link.</summary>
@@ -945,10 +948,10 @@ public sealed class MarkdownRendererTests
 
         var html = MarkdownRenderer.ToHtml(string.Concat("See it (", MarkdownRendererTests.PlanPath, ")."), null, (ILibraryReferenceResolver)library);
         var document = new HtmlParser().ParseDocument(html);
-        IElement anchor = MarkdownRendererTests.FindAnchor(html, MarkdownRendererTests.PlanPath);
+        IElement anchor = MarkdownRendererTests.FindFileAnchor(html, MarkdownRendererTests.PlanPath);
 
         Assert.Equal("?library=teams/Marketing/plan.md", anchor.GetAttribute("href"));
-        Assert.Equal(string.Concat("See it (", MarkdownRendererTests.PlanPath, ")."), document.Body?.TextContent.Trim());
+        Assert.Equal(string.Concat("See it (", "plan.md", ")."), document.Body?.TextContent.Trim());
     }
 
     /// <summary>A path whose segments Markdig would otherwise treat as emphasis or list-item delimiters
@@ -962,7 +965,7 @@ public sealed class MarkdownRendererTests
         FakeLibraryNoteResolver library = MarkdownRendererTests.ResolverFor(path, "teams", "x/a.md");
 
         var html = MarkdownRenderer.ToHtml(path, null, (ILibraryReferenceResolver)library);
-        IElement anchor = MarkdownRendererTests.FindAnchor(html, path);
+        IElement anchor = MarkdownRendererTests.FindFileAnchor(html, path);
 
         Assert.Equal("?library=teams/x/a.md", anchor.GetAttribute("href"));
     }
@@ -994,7 +997,7 @@ public sealed class MarkdownRendererTests
         List<(string Text, string Class)> expected =
         [
             ("PLAT-0042", "task-ref"),
-            (MarkdownRendererTests.PlanPath, "library-ref"),
+            ("plan.md", "library-ref"),
         ];
         Assert.Equal(expected, actual);
     }

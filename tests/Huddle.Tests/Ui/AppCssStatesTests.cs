@@ -23,7 +23,7 @@ public sealed partial class AppCssStatesTests
         string css = AppCss();
 
         Assert.Matches(@"\.mud-drawer\s*\{[^}]*border-inline-end:\s*1px solid var\(--mud-palette-lines-default\)", css);
-        Assert.Matches(@"\.room-header\s*\{[^}]*border-bottom:\s*1px solid var\(--mud-palette-lines-default\)", css);
+        Assert.Matches(@"\.page-header\.has-chrome\s*\{[^}]*border-bottom:\s*1px solid var\(--mud-palette-lines-default\)", css);
         Assert.Matches(@"\.mud-appbar\.top-bar\s*\{[^}]*border-bottom:\s*1px solid var\(--mud-palette-lines-default\)", css);
         Assert.Matches(@"\.tab-group \+ \.tab-group\s*\{[^}]*border-left:\s*1px solid var\(--mud-palette-lines-default\)", css);
         Assert.DoesNotMatch(@"[2-9]px solid var\(--mud-palette-lines-default\)", css);

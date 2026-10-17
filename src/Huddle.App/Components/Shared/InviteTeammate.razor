@@ -15,7 +15,8 @@
         <MudIconButton Size="Size.Small" Icon="@Icons.Material.Filled.PersonAddAlt" aria-label="Invite teammate" OnClick="this.TogglePanel" />
     </MudTooltip>
     <MudCollapse Expanded="@this.isOpen">
-        <MudStack Class="invite-panel pa-2 border-l-2 mud-border-lines-default" Spacing="2">
+        <MudStack Class="invite-panel pa-2" Spacing="2">
+            <MudText Typo="Typo.subtitle2" Class="invite-title">@this.PanelTitle</MudText>
             @if (this.errorText is not null)
             {
                 <MudAlert Severity="Severity.Error" Dense="true" role="alert">@this.errorText</MudAlert>
@@ -42,11 +43,13 @@
                     }
                 </MudSelect>
 
+                <SearchField Compact="true" Value="@this.search" ValueChanged="this.OnSearchChanged" Placeholder="Search teammates" AriaLabel="Search teammates" />
+
                 var filtered = this.FilteredCandidates();
 
                 if (filtered.Count == 0)
                 {
-                    <MudText Typo="Typo.body2" Class="empty-state">No agents in this team.</MudText>
+                    <MudText Typo="Typo.body2" Class="empty-state">@(this.NoMatchText)</MudText>
                 }
                 else
                 {
@@ -71,12 +74,23 @@
     [Parameter, EditorRequired]
     public string RoomId { get; set; } = "";
 
+    /// <summary>The Room's name, which the panel's title repeats ("Invite to Platform"); empty draws a bare "Invite".</summary>
+    [Parameter]
+    public string? RoomName { get; set; }
+
+    /// <summary>The panel's title: "Invite to {Room}", so the panel says where the teammate is going (audit C3a).</summary>
+    private string PanelTitle => string.IsNullOrWhiteSpace(this.RoomName) ? "Invite" : $"Invite to {this.RoomName}";
+
+    /// <summary>What the list says when the Team filter or the search leaves no teammate.</summary>
+    private string NoMatchText => string.IsNullOrWhiteSpace(this.search) ? "No agents in this team." : "No teammate matches that search.";
+
     private IReadOnlyList<User> candidates = [];
     private string? loadedRoomId;
     private bool isOpen;
     private string? errorText;
     private string? infoText;
     private string selectedTeam = string.Empty;
+    private string search = string.Empty;
 
     protected override void OnInitialized()
     {
@@ -94,6 +108,7 @@
         // Teammates.razor holds the card's draft text in the parent.
         this.loadedRoomId = this.RoomId;
         this.isOpen = false;
+        this.search = string.Empty;
         this.errorText = null;
         this.infoText = null;
         await this.LoadCandidatesAsync();
@@ -153,6 +168,11 @@
 
     // Never touches PersonaStore's write path or ModelCatalog - selecting a team is pure display
     // narrowing over candidates already loaded.
+    private void OnSearchChanged(string? value)
+    {
+        this.search = value ?? string.Empty;
+    }
+
     private void OnTeamFilterChanged(string value)
     {
         this.selectedTeam = value ?? string.Empty;
@@ -165,12 +185,18 @@
     /// </summary>
     private IReadOnlyList<User> FilteredCandidates()
     {
-        if (string.IsNullOrEmpty(this.selectedTeam))
+        IEnumerable<User> matches = this.candidates;
+        if (!string.IsNullOrEmpty(this.selectedTeam))
         {
-            return this.candidates;
+            matches = matches.Where(agent => this.TeamsFor(agent).Contains(this.selectedTeam, StringComparer.OrdinalIgnoreCase));
         }
 
-        return [.. this.candidates.Where(agent => this.TeamsFor(agent).Contains(this.selectedTeam, StringComparer.OrdinalIgnoreCase))];
+        if (!string.IsNullOrWhiteSpace(this.search))
+        {
+            matches = matches.Where(agent => agent.Name.Contains(this.search.Trim(), StringComparison.OrdinalIgnoreCase));
+        }
+
+        return [.. matches];
     }
 
     /// <summary>The Teams of whichever Persona shares <paramref name="agent"/>'s Name, or empty when no Persona does.</summary>

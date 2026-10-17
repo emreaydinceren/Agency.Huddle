@@ -161,6 +161,28 @@ public sealed class InviteTeammateTests
         Assert.Contains("mud-avatar", html, StringComparison.Ordinal);
     }
 
+    /// <summary>The panel is titled for the Room it invites into and offers a search over the candidates (audit C3a).</summary>
+    [Fact]
+    public async Task Panel_HasATitleNamingTheRoomAndASearchField()
+    {
+        var ct = TestContext.Current.CancellationToken;
+        using var dir = new TempDataDir();
+        var directory = new SqliteTeamDirectory(dir.Options());
+        await directory.InitializeAsync("You", ct);
+        var inside = await directory.UpsertAgentUserAsync("inside", null, ct);
+        var outside = await directory.UpsertAgentUserAsync("outside", null, ct);
+        Assert.NotNull(inside);
+        Assert.NotNull(outside);
+        var chat = CreateChatService(dir, directory);
+        var room = await chat.EnsureRoomForAsync(inside, ct);
+
+        var html = await RenderAsync(dir, directory, chat, room.Id, roomName: "Platform");
+        var document = new AngleSharp.Html.Parser.HtmlParser().ParseDocument(html);
+
+        Assert.Equal("Invite to Platform", document.QuerySelector(".invite-title")?.TextContent);
+        Assert.NotNull(document.QuerySelector(".invite-panel input[aria-label=\"Search teammates\"]"));
+    }
+
     private static ChatService CreateChatService(TempDataDir dir, ITeamDirectory directory)
     {
         var store = new FileChatStore(dir.Options(), NullLogger<FileChatStore>.Instance);
@@ -178,9 +200,10 @@ public sealed class InviteTeammateTests
     /// <param name="chat">The chat service the panel invites through.</param>
     /// <param name="roomId">The room the panel is rendered for.</param>
     /// <param name="openTeamFilter">Whether to open the team filter first, since a <c>MudSelect</c> renders its options only while open.</param>
+    /// <param name="roomName">The Room's name the panel's title repeats, or <see langword="null"/> for none.</param>
     /// <returns>The rendered markup, popover provider included.</returns>
     private static async Task<string> RenderAsync(
-        TempDataDir dir, ITeamDirectory directory, ChatService chat, string roomId, bool openTeamFilter = false)
+        TempDataDir dir, ITeamDirectory directory, ChatService chat, string roomId, bool openTeamFilter = false, string? roomName = null)
     {
         await using MudBunitContext context = new();
         IServiceCollection services = context.Services;
@@ -208,6 +231,7 @@ public sealed class InviteTeammateTests
         {
             builder.OpenComponent<InviteTeammate>(0);
             builder.AddAttribute(1, nameof(InviteTeammate.RoomId), roomId);
+            builder.AddAttribute(2, nameof(InviteTeammate.RoomName), roomName);
             builder.CloseComponent();
         });
 
