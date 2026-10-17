@@ -10,8 +10,14 @@
            OverlayAutoClose="this.OverlayAutoClose" Class="@this.DrawerClass">
     <div @ref="this.handle" class="resizable-drawer-handle" role="separator" tabindex="0" aria-orientation="vertical" aria-label="Resize panel"
          aria-valuemin="@MinWidthPx" aria-valuemax="@MaxWidthPx" aria-valuenow="@DefaultWidthPx"></div>
-    <MudStack Row="true" Justify="Justify.SpaceBetween" AlignItems="AlignItems.Center" Class="resizable-drawer-header px-4 pt-4">
-        <MudText Typo="Typo.h6">@this.Title</MudText>
+    <MudStack Row="true" Justify="Justify.SpaceBetween" AlignItems="AlignItems.Start" Class="resizable-drawer-header px-4 pt-4">
+        <div class="resizable-drawer-heading">
+            @if (!string.IsNullOrEmpty(this.Eyebrow))
+            {
+                <MudText Typo="Typo.caption" Class="resizable-drawer-eyebrow">@this.Eyebrow</MudText>
+            }
+            <MudText Typo="Typo.h6" Class="resizable-drawer-title">@this.Title</MudText>
+        </div>
         <MudIconButton Icon="@Icons.Material.Filled.Close" Size="Size.Small" aria-label="Close" OnClick="this.CloseAsync" />
     </MudStack>
     <MudStack Spacing="4" Class="pa-4">
@@ -40,6 +46,10 @@
     [Parameter]
     [EditorRequired]
     public string Title { get; set; } = string.Empty;
+
+    /// <summary>An optional 12px secondary line above the title, such as "PLAT-0013 · Platform". Nothing is drawn when it is empty.</summary>
+    [Parameter]
+    public string? Eyebrow { get; set; }
 
     /// <summary>The drawer's content, laid out in a <c>pa-4</c> stack.</summary>
     [Parameter]

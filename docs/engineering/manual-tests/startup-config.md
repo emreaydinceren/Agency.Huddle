@@ -1058,7 +1058,7 @@ You are a test teammate. Answer in one short sentence.
 2. In `T-B` run `O-ADAPTERS`. It should print `0`.
 3. Launch with `P-LAUNCH-PAID`.
 4. Open the browser and go straight to `/teammates` — do not wait.
-5. Read the `Tester` tile: its name, its title, its alias chip, and its status (a coloured dot plus a word).
+5. Read the `Tester` tile: its name, its title, its alias caption, and its status (the avatar badge: a glyph, with the word in its tooltip).
 6. Keep watching the status for up to 30 seconds and record every state it passes through.
 7. Open the tile by clicking it, then click `Edit`. In the `Model` dropdown choose the option whose name contains `Haiku`; in the `Effort` dropdown choose `Low`. Click `Save`.
 8. Look at the sidebar room list.
@@ -1068,7 +1068,7 @@ You are a test teammate. Answer in one short sentence.
 
 **Pass if — all of these**
 
-- The tile shows the name `Tester`, the title `Test teammate`, the chip `@tester` (separate elements, `Teammates.razor:98-104`), and a status that reads `Starting` with an amber dot, then `Online` with a green dot.
+- The tile shows the name `Tester`, the title `Test teammate`, the alias caption `@tester` (separate elements, `Teammates.razor:98-104`), and an avatar badge whose tooltip reads `Starting` (pulse glyph), then `Online` (check glyph).
 - `O-ADAPTERS` prints `2` after the start: `Tester`'s adapter and the Chief of Staff's, against `0` before.
 - A Room named `Tester` appears in the sidebar with no refresh (next to the Chief of Staff's).
 - After saving Model = Haiku and Effort = Low, the card shows those values and the teammate restarts (status passes through `Starting` again).
@@ -1177,7 +1177,7 @@ You are a second test teammate. Reply with one very short sentence that ends wit
 
 - The Human Message gets a normal reply from `Tester`, and `Tester2` answers that.
 - `Tester` does NOT answer `Tester2` — the Agent-triggered Turn is the one refused.
-- The `/teammates` tile reads `Degraded` with an amber dot.
+- The `/teammates` tile reads `Degraded` (dash glyph on the avatar badge).
 - The tile's tooltip reads exactly `The per-Persona token Budget of 2000 is spent; no more Turns until a Human speaks.`
 - The Room shows an alert strip between the message list and the message box reading `Tester is Degraded: The per-Persona token Budget of 2000 is spent; no more Turns until a Human speaks.`
 - The console contains `Persona 'Tester' has spent its token budget of 2000 and is taking no more turns until a human speaks to it.`
@@ -1212,7 +1212,7 @@ The check runs at the START of a work item, so the FIRST Turn ALWAYS completes n
 2. Type exactly `Hello again.` and press Enter.
 3. Wait up to 60 seconds and watch the message area.
 4. Look at the area between the message list and the message box.
-5. Go to `/teammates` and read the `Tester` tile's status line and dot colour.
+5. Go to `/teammates` and read the `Tester` tile's avatar badge (glyph and tooltip).
 6. Stop the app. Run `Remove-Item Env:Team__Acp__TokenBudget` and `Remove-Item Env:Team__AgentMessageBudget`.
 7. Delete both test Personas: `Remove-Item -Recurse src\Huddle.App\App_Data\Teammates\Tester, src\Huddle.App\App_Data\Teammates\Tester2`. Their Rooms and history stay in the database and the Teammates go offline (`Teammates.razor:25`); `P-RESET-ALL` gives a fully clean slate.
 8. Run `Get-ChildItem Env:Team__*` and confirm nothing remains set.
@@ -1221,7 +1221,7 @@ The check runs at the START of a work item, so the FIRST Turn ALWAYS completes n
 
 - The Persona answers the new message.
 - The Room's alert strip disappears.
-- The `/teammates` tile returns to `Online` with a green dot.
+- The `/teammates` tile returns to `Online` (check glyph).
 
 **Fail if — any of these**
 

@@ -39,32 +39,31 @@ variable (`--mud-palette-text-secondary`).
 
 ### The palette map
 
-![The shell and a Room drawn in Huddle Light's own colours, with 17 numbered badges marking which palette property paints each part](../images/themes/palette-map.svg)
+![The shell and a Room drawn in Huddle Light's own colours, with 14 numbered badges marking which palette property paints each part](../images/themes/palette-map.svg)
 
 The figure is drawn in Huddle Light's real values, so it is also a reference sample of
-that Theme. It predates the one-surface shell: the page, the sidebar, the top bar and the tab
-strip are now all `Surface`, split by `LinesDefault` hairlines, so read badges 1, 2, 4 and 7
-from the table below rather than from the picture. Each badge marks one element:
+that Theme. The shell is one surface: the page, the sidebar, the top bar, the tab strip and
+every card are `Surface`, split by `LinesDefault` hairlines and `Divider` card borders, which
+is why badge 1 covers all of them. The same screen in Huddle Dark is
+[palette-map-dark.svg](../images/themes/palette-map-dark.svg); the badge numbers are the same.
+Each badge marks one element:
 
 | # | What you see | Palette property | How |
 | --- | --- | --- | --- |
-| 1 | The page ground behind the messages | `Surface` | Direct. `Background` is no longer painted by the shell |
-| 2 | The top bar | `Surface` | Direct |
-| 3 | The line under the top bar, the tab strip and the Room header; the sidebar's right edge; an outlined card's border | `LinesDefault` | Direct |
-| 4 | The sidebar | `Surface` | Direct. `DrawerBackground` is no longer painted by the shell |
-| 5 | The active sidebar row's text; links in messages | `Primary` | Direct for the active row; links blend toward `TextPrimary` (see the blends). "New chat" and other text actions are `TextSecondary` |
-| 6 | Group headings (CHATS, TEAMS); a message's time; an inactive tab's title | `TextSecondary` | Direct |
-| 7 | The tab strip | `Surface` | Direct |
-| 8 | Message cards, the active tab, the Needs You card, the Composer, dialogs | `Surface` | Direct |
-| 9 | The 2px line on top of the active tab | `Primary` | Direct |
-| 10 | Message card borders; the day separator's rule | `Divider` | Direct |
-| 11 | Body text, names, titles | `TextPrimary` | Direct |
-| 12 | A filled button and an avatar monogram: fill and the text on it | `Primary`, `PrimaryContrastText` | Direct |
-| 13 | Your own message bubble | `Primary` over `Surface` | Blend: 14% fill, 28% border |
-| 14 | The Composer's border; its placeholder text | `LinesInputs`; `TextDisabled` | Direct |
-| 15 | Status dots: online, degraded, offline | `Success`, `Warning`, `Error` | Direct |
-| 16 | A quiet chip ("beta") | `BackgroundGray` | Direct |
-| 17 | "Reading launch-checklist.md…" while an Agent works | `TextDisabled` | Direct |
+| 1 | Every pane and card ground: the page behind the messages, the top bar, the sidebar, the tab strip, the active tab, message cards, the Needs You card, the Composer, dialogs | `Surface` | Direct. `Background` and `DrawerBackground` are no longer painted by the shell |
+| 2 | The line under the top bar, the tab strip and the Room header; the sidebar's right edge; an outlined card's border | `LinesDefault` | Direct |
+| 3 | The active sidebar row: its text and its fill; links in messages | `Primary` | Blend. Text is `Primary` 70% + `TextPrimary`; the row's fill is `Primary` 14% over `Surface`. "New chat" and other text actions are `TextSecondary` |
+| 4 | Group headings (Rooms, Teams); a message's time; an inactive tab's title; the "Reading launch-checklist.md…" activity line; the Composer's placeholder | `TextSecondary` | Direct |
+| 5 | The 2px line on top of the active tab; the Composer's border while it is focused | `Primary` | Direct |
+| 6 | Message card borders; the day separator's rule | `Divider` | Direct |
+| 7 | Body text, names, titles | `TextPrimary` | Direct |
+| 8 | A filled button: fill and the text on it | `Primary`, `PrimaryContrastText` | Direct |
+| 9 | An avatar monogram: the tint and the letters | `Primary` | Blend. Fill is the avatar's colour (`Primary` when none is chosen) 20% over `Surface`; letters are that colour 75% toward `TextPrimary` |
+| 10 | Your own message bubble | `Primary` over `Surface` | Blend: 14% fill, 28% border |
+| 11 | The Composer's border at rest | `LinesInputs` | Direct |
+| 12 | Status and presence badges: online, degraded, offline | `Success`, `Warning`, `Error` | Direct |
+| 13 | A tinted status chip ("Review") | `Warning` here; any status colour | Blend: the colour 14% over `Surface`; text and icon the colour 70% toward `TextPrimary` |
+| 14 | A quiet chip ("beta") | `BackgroundGray` | Direct |
 
 The outlined "Decline" button next to 12 is `Primary` text with a translucent `Primary`
 border; MudBlazor sets the transparency.
@@ -83,25 +82,27 @@ The blends the app uses:
 
 | What you see | Recipe |
 | --- | --- |
-| Link text and reference links | `Primary` 70% + `TextPrimary`, which darkens the accent on a light Theme and lightens it on a dark one so it reads as text |
+| Accent text: links and reference links, the active sidebar row and tab, text and outlined accent buttons | `Primary` 70% + `TextPrimary`, which darkens the accent on a light Theme and lightens it on a dark one so it reads as text. Raw `Primary` is for fills, bars and borders only |
 | The orphan-folder warning glyph | `Warning` 75% + `TextPrimary` |
 | The Library's raw Markdown side in Split | `TextPrimary` 3% over `Surface` |
 | Your message bubble | `Primary` 14% over `Surface`, border `Primary` 28% |
-| A selected row, card or Team type | `Primary` 14% over `Surface` |
-| A selected row while hovered; a search hit's flash | `Primary` 24% over `Surface` |
+| A selected row, card or Team type, and the active sidebar row | `Primary` 14% over `Surface` |
+| A selected row while hovered, the active sidebar row while hovered; a search hit's flash | `Primary` 24% over `Surface` |
 | The manager's card in a roster | `Primary` 8% over `Surface` |
 | Team type icon tiles and roster tier labels | The tile's own colour (`Primary`, `Secondary`, `Info`, `Success`, `Warning`, `Error` or `Tertiary`) 14% or 16% over `Surface`, with the icon or text in the full colour |
 | A suggested role | `Success` 14% over `Surface`, border and text in `Success` |
+| A tinted status chip | The status colour 14% over `Surface`; text and icon the colour 70% toward `TextPrimary`. Status colours are never a solid fill under text |
+| An avatar monogram | The avatar's colour (`Primary` when none is chosen) 20% over `Surface`; letters the colour 75% toward `TextPrimary` |
 
 Derived shades you will meet:
 
 | What you see | Derived from |
 | --- | --- |
-| Hover on rows, buttons, menu items, tabs; the active sidebar row's fill | MudBlazor's hover shade (`ActionDefaultHover`), a faint translucent dark or light layer, not `TableHover` |
+| Hover on rows, buttons, menu items, tabs | MudBlazor's hover shade (`ActionDefaultHover`), a faint translucent dark or light layer, not `TableHover` |
 | A filled button while hovered | `Primary`, darkened |
 | A selected filter chip's fill; selected text in the Library editor | `Primary`, as a translucent hover shade |
 | Warning, info and error notice banners (`MudAlert`) | The status colour, darkened for the text and made translucent for the fill |
-| The "N need you" count; a suggested role's text | `Warning` and `Success`, darkened |
+| A suggested role's text | `Success`, darkened |
 
 ### Where to look, screen by screen
 
@@ -115,10 +116,10 @@ The codes (`S1`, `C6` and so on) are the container names in
 | `S1` | Top bar | Fill `Surface`; icons and text `TextSecondary`; bottom line `LinesDefault` |
 | `S1a` | Breadcrumb | Earlier crumbs `TextSecondary`; the current page and a hovered crumb `TextPrimary` |
 | `S1b` | Search bar | Input `Surface`, the same as the Composer; the highlighted result the hover shade |
-| `S2` | Sidebar | `Surface`; right edge `LinesDefault` |
+| `S2` | Sidebar | `Surface`; right edge `LinesDefault`; row text `DrawerText` (every Theme sets it to `TextPrimary`) and icons `DrawerIcon` (`TextSecondary`) |
 | `S2a` | Needs You card | `Surface`, border `Divider` |
 | `S2b`–`S2e` | Group headings | `TextSecondary` |
-| `S2b`–`S2e` | Active row | Text `Primary`, fill the hover shade |
+| `S2b`–`S2e` | Active row | Text `Primary` 70% + `TextPrimary`, fill `Primary` 14% over `Surface` (24% when hovered) |
 | `S2b` | "New chat" and other action rows | `TextSecondary` text and icon |
 | `S2c` | Expand chevrons, a Project's icon | `TextSecondary`, open or closed |
 | any | Health dots | Online `Success`, degraded and starting `Warning` (starting lighter), offline `Error` |
@@ -140,29 +141,30 @@ The codes (`S1`, `C6` and so on) are the container names in
 | `C2` | Room header | On `Surface`; title `TextPrimary`; bottom line `LinesDefault` |
 | `C4a` | Day separator | Label `TextSecondary`, rule `Divider` |
 | `C4b` | System row | `TextSecondary` |
-| `C5a` | Avatar monogram | `Primary` fill, `PrimaryContrastText` letter, unless the Teammate chose a colour (see below) |
+| `C5a` | Avatar monogram | The avatar's colour 20% over `Surface`, letters 75% toward `TextPrimary`; `Primary` is the colour unless the Teammate chose one (see below) |
 | `C5b` | Message meta | Name `TextPrimary`, time `TextSecondary` |
 | `C5c` | Message card | `Surface`, border `Divider`, text `TextPrimary`; quotes `TextSecondary` with a `Divider` bar; links `Primary` 70% + `TextPrimary` |
 | `C6` | Your bubble | `Primary` 14% over `Surface`, border 28% |
-| `C7b` | Turn detail | `TextSecondary` and `TextDisabled`; an edit preview's removed and added sides are marked `Error` and `Success` |
-| `C7c` | Draft caret, tool activity | `TextDisabled` |
+| `C7b` | Turn detail | `TextSecondary`; an edit preview's removed and added sides are marked `Error` and `Success` |
+| `C7c` | Draft caret, tool activity | `TextSecondary` |
 | `C8` | Agent card | `Surface`, border `LinesDefault`; filled button `Primary` with `PrimaryContrastText` |
 | `C9` | Notices | Warning or info banners, derived from `Warning` and `Info` |
-| `C10b` | Composer | `Surface`, border `LinesInputs`, placeholder `TextDisabled`; the focused border is `TextDisabled` too |
+| `C10b` | Composer | `Surface`, border `LinesInputs`, placeholder `TextSecondary`; the focused border is `Primary` |
 | `C10a` | Upload chip | Name `TextPrimary`, size `TextSecondary`, failure `Error` |
-| `C11` | Reference picker | `Surface`; the highlighted item the hover shade; dimmed items `TextDisabled` |
+| `C11` | Reference picker | `Surface`; the highlighted item the hover shade; dimmed items `TextSecondary` |
 
 **Tasks** ([Figure 4](wireframes.md#figure-4-the-tasks-page)):
 
 | Code | Element | Palette |
 | --- | --- | --- |
-| `T2d` | Counts | `TextSecondary`, numbers `TextPrimary`; "need you" darkened `Warning` |
+| `T2d` | Counts | `TextSecondary`, numbers `TextPrimary`; the "need you" count is plain caption text |
 | `T3` | Filter chips | Border `LinesInputs`; a set chip has a `Primary` border and a translucent `Primary` fill |
 | `T4` | Board ground | `Surface` |
-| `T5` | Column | `BackgroundGray`, with a coloured left edge per state: To Do `Info`, In Progress `Warning`, Review `Secondary`, Done `Success`, Cancelled, Duplicate and Rejected `Error`, Backlog `TextDisabled` |
+| `T5` | Column | `BackgroundGray`. There is no coloured edge per state; the state is named in the header and shown by a tinted status chip |
 | `T6` | Task card | `Surface`; assignee row rule `LinesDefault`; dragging border `Primary` |
 | `T6` | Selected card or list row | `Primary` 14% over `Surface` (24% when hovered), plus a `Primary` outline on cards |
-| `T6` | Overdue date | `Error` |
+| `T6` | Priority and State chips | Tinted status chips: the status colour 14% over `Surface`, text and icon 70% toward `TextPrimary` |
+| `T6` | Overdue date | A warning icon and the date at weight 600; no red text |
 | `T7a` | Drawer resize handle | `ActionDefault`; `Primary` when focused |
 
 **Library** ([Figure 5](wireframes.md#figure-5-the-library-page)):
@@ -182,7 +184,7 @@ The codes (`S1`, `C6` and so on) are the container names in
 | --- | --- | --- |
 | `G3` | "Stored at" lines | `TextSecondary` |
 | `G3` | Theme picker | Border `DividerLight`; headings `TextSecondary` on `BackgroundGray` |
-| `G3` | Prompt fields | Rules `DividerLight`; placeholder names `TextDisabled` on `BackgroundGray` |
+| `G3` | Prompt fields | Rules `DividerLight`; placeholder names `TextSecondary` on `BackgroundGray` |
 | `P4` | Teammate tile | `Surface`, border `Divider`; on hover the hover shade and a `LinesDefault` border; role `TextSecondary` |
 | `B3` | Step strip | Current and done steps: `Primary` badge with `PrimaryContrastText`; upcoming steps `TextSecondary` with a `Divider` ring |
 | `B6a` | Team type card | `Surface`, border `Divider`; selected `Primary` 14% fill with a `Primary` border; icon tiles in the type's tint (see blends) |
@@ -210,9 +212,9 @@ palette:
   avatar with no colour chosen uses `Primary`. "Use the theme colour" in the avatar
   editor goes back to that.
 - **Tooltips** use MudBlazor's fixed dark grey and white in every Theme.
-- **`Tertiary`** (one Team type tint) and the sidebar's default text colour
-  (`DrawerText`) are not set by any shipped Theme, so they show MudBlazor's defaults.
-  If your design needs them, say so: the engineer must add them to every Theme.
+- **`Tertiary`** (one Team type tint) is not set by any shipped Theme, so it shows
+  MudBlazor's default. If your design needs it, say so: the engineer must add it to every
+  Theme.
 - **The error banner** ("An unhandled error has occurred", `S0b`) is black on a fixed
   light yellow on purpose, so it stays readable even if a Theme is broken.
 - **Fonts, sizes, spacing and shapes** are shared by every Theme. Only corner rounding
@@ -244,16 +246,18 @@ two Themes, so two tables.
 | `Background` | | Not painted by the shell; still checked against `TextPrimary` |
 | `Surface` | | Cards, inputs, dialogs |
 | `DrawerBackground` | | Not painted by the shell; still checked against `TextPrimary` |
+| `DrawerText` | | Sidebar row text; set equal to `TextPrimary` |
+| `DrawerIcon` | | Sidebar icons; set equal to `TextSecondary` |
 | `BackgroundGray` | | Board columns, chips, the segmented control's track |
 | `TableHover` | | Table row hover |
-| `Divider` | | Card borders |
+| `Divider` | | Card and tile borders: at least 1.5:1 against `Surface` (Huddle: 1.56:1 light, 1.55:1 dark) |
 | `DividerLight` | | Rules inside a card |
 | `LinesInputs` | | Input borders |
 | `LinesDefault` | | Chrome lines and pane dividers, which must be clearly visible on `Surface` (Huddle: 2.1:1 light, 2.5:1 dark); outlined cards |
 | `TextPrimary` | | Body text and the focus ring |
 | `TextSecondary` | | Supporting text |
-| `TextDisabled` | | Placeholders, inert text |
-| `Primary` | | The accent; must also read as text |
+| `TextDisabled` | | Disabled controls only. Never information: activity lines, placeholders and picker meta are `TextSecondary` |
+| `Primary` | | The accent; must also read as text. Each Theme sets its own; the Huddle Themes do not share one |
 | `PrimaryContrastText` | | Black or white, whichever reads better on `Primary` |
 | `Secondary` | | A second fill colour; the Review state |
 | `Success`, `Warning`, `Error`, `Info` | | Status |
@@ -338,19 +342,21 @@ the last column is where you will see a mistake.
 | `Background` | `--mud-palette-background` | Nothing in the shell: the page is `Surface`. MudBlazor and the contrast tests still read it |
 | `Surface` | `--mud-palette-surface` | Cards, inputs, dialogs, menus — the raised layer. Selected and accent-tinted states are mixed over it |
 | `DrawerBackground` | `--mud-palette-drawer-background` | Nothing in the shell: the sidebar and side drawers are `Surface`. The contrast tests still read it |
+| `DrawerText` | `--mud-palette-drawer-text` | Sidebar row text. Set equal to `TextPrimary` in every Theme |
+| `DrawerIcon` | `--mud-palette-drawer-icon` | Sidebar icons. Set equal to `TextSecondary` in every Theme |
 | `BackgroundGray` | `--mud-palette-background-gray` | Quiet fills: chips, the segmented control's track, preview blocks |
 | `TableHover` | (MudBlazor tables) | Row hover inside a table only |
-| `Divider` | `--mud-palette-divider` | Card, tile and list-row borders |
+| `Divider` | `--mud-palette-divider` | Card, tile and list-row borders; at least 1.5:1 against `Surface` in the Huddle Themes |
 | `DividerLight` | `--mud-palette-divider-light` | A rule inside a card or dialog |
 | `LinesInputs` | `--mud-palette-lines-inputs` | Input borders, drawn by MudBlazor |
 | `LinesDefault` | `--mud-palette-lines-default` | Chrome lines: top bar, tab strip, room header, pane splitter, drawer edge |
 | `TextPrimary` | `--mud-palette-text-primary` | Body text, **and the keyboard focus ring** |
 | `TextSecondary` | `--mud-palette-text-secondary` | Supporting text — the most-read colour after `TextPrimary` |
-| `TextDisabled` | `--mud-palette-text-disabled` | Inert text, placeholders, the Composer's focus border |
-| `Primary` | `--mud-palette-primary` | The accent: active nav link **text**, primary buttons, links, selected rows (as a 14% tint), the Human's bubble tint |
-| `PrimaryContrastText` | `--mud-palette-primary-text` | Text and icons printed on a solid `Primary` fill (buttons, avatars, chips) |
+| `TextDisabled` | `--mud-palette-text-disabled` | Disabled controls only |
+| `Primary` | `--mud-palette-primary` | The accent: primary buttons, bars and borders, and (mixed 70% toward `TextPrimary`) the text of links and the active nav link; selected rows (as a 14% tint), the Human's bubble tint, the Composer's focused border |
+| `PrimaryContrastText` | `--mud-palette-primary-text` | Text and icons printed on a solid `Primary` fill (filled buttons). Black or white, whichever reads better |
 | `Secondary` | `--mud-palette-secondary` | A secondary fill, such as the reconnect modal's button; the Review task state |
-| `Success`, `Warning`, `Error`, `Info` | `--mud-palette-success` and so on | Status only — chips, dots, icons, short values. Never body text, never decoration |
+| `Success`, `Warning`, `Error`, `Info` | `--mud-palette-success` and so on | Status only — tinted chips, dots, icons, short values. Never body text, never decoration, never a solid fill under text, so there are no `SuccessContrastText`-style properties |
 | `OverlayDark` | `--mud-palette-overlay-dark` | The scrim behind dialogs. Use `rgba(0,0,0,0.4)` for a light Theme and `rgba(0,0,0,0.6)` for a dark one |
 
 Leave these unset unless you have a reason: `PrimaryDarken`, `PrimaryLighten`,
@@ -388,6 +394,8 @@ internal static class HarbourDarkTheme
         Background = "#16191d",
         Surface = "#1e2227",
         DrawerBackground = "#121417",
+        DrawerText = "#d8dde3",
+        DrawerIcon = "#9aa4af",
         BackgroundGray = "#23282e",
         TableHover = "#262b31",
         Divider = "#2c3239",
@@ -445,11 +453,14 @@ PrimaryContrastText = "#000000", // computed: black 8.47:1 vs white 2.48:1 again
 One of the two always reaches 4.5:1 against any colour; the proof is in
 `ContrastColour`'s remarks.
 
+The Huddle Themes follow the rule: white on Huddle Light's `#5b64c8` (5.12:1) and black on
+Huddle Dark's `#8f97e6` (7.74:1).
+
 ### 4. Run the tests
 
 ```powershell
 dotnet build Huddle.slnx
-dotnet test  Huddle.slnx --
+dotnet test Huddle.slnx --
 ```
 
 `ThemeCatalogTests` picks your Theme up automatically, because its tests run over every
@@ -460,7 +471,8 @@ entry in `BuiltIn`. What it checks is under [What the tests hold you to](#what-t
 Run the app, choose your Theme on the Appearance tab, and walk the screens in
 [manual-tests/appearance-theme.md](manual-tests/appearance-theme.md). The tests measure
 the palette; they do not see tinted states such as a selected row or the Human's bubble,
-which are `color-mix` blends of `Primary` over `Surface`. Check those by eye.
+which are `color-mix` blends of `Primary` over `Surface`. Check those by eye, against the
+baseline in [the tinted-state gap](#the-tinted-state-gap).
 
 If your change alters how the picker looks or what it lists (a new heading, a renamed
 Theme someone's manual test names), update `manual-tests/appearance-theme.md` in the same
@@ -479,6 +491,11 @@ change.
 | `BuiltIn_NativePaletteContrast_ClearsWcagFloor` | Any of the six contrast pairs below 4.5:1 |
 | `DocumentedShortfalls_StillFallShort` | A listed exception that no longer falls short, or no longer at the recorded ratio |
 | `BuiltIn_EveryThemeSetsEveryPalettePropertyAppCssReads` | Leaving a palette property unset that some stylesheet reads |
+| `BuiltIn_EveryThemeSetsDrawerTextAndIconFromItsOwnTextColours` | `DrawerText` not equal to `TextPrimary`, or `DrawerIcon` not equal to `TextSecondary`, in any Theme |
+| `Huddle_PrimaryAndBackgroundCarryTheExpectedValues` | Either Huddle Theme's `Primary`, `PrimaryContrastText` or `Background` drifting from the recorded value |
+| `Huddle_DividerAgainstSurface_ReachesCardBorderVisibility` | A Huddle Theme's `Divider` under 1.5:1 against `Surface` |
+| `BuiltIn_DividerVersusSurface_IsRecorded` | Records `Divider` against `Surface` for every Theme; it fails only on a non-finite ratio |
+| `StatusChipText_ReachesFloor_InHuddleLightAndDark` | A tinted status chip's text under 4.5:1 on its tint (in `ChipStyleTests`) |
 
 ### The six contrast pairs
 
@@ -510,9 +527,63 @@ test, and `DocumentedShortfalls_StillFallShort` fails if it ever stops falling s
 fixed Theme therefore forces its own exception to be deleted rather than left as a stale
 excuse.
 
-Today's exceptions are three ported light Themes (`TextSecondary` on `Surface`, from VS
-Code's own `#717171` default) and the Huddle and Custom Accent Themes' brand accent
-`#6e78da` with white text on it.
+Today's exceptions are three ported light Themes (`light-plus`, `quiet-light` and
+`solarized-light`: `TextSecondary` on `Surface`, from VS Code's own `#717171` default). No
+Huddle or Custom Accent Theme has one: each Huddle Theme authors its own accent, as below.
+
+### The Huddle accent
+
+Each Huddle Theme sets its own `Primary`, because each is its own palette
+([ADR-0017](../adr/0017-a-theme-is-a-palette-not-a-pair.md)). `Primary` also paints
+accent-coloured text, so it is held to the text floor, and every pair below clears 4.5:1:
+
+| Theme | `Primary` | `PrimaryContrastText` | On `Surface` | On `Background` | Contrast text on `Primary` |
+| --- | --- | --- | --- | --- | --- |
+| Huddle Light | `#5b64c8` | White | 5.12:1 | 4.50:1 | 5.12:1 |
+| Huddle Dark | `#8f97e6` | Black | 5.58:1 | 6.28:1 | 7.74:1 |
+
+`PrimaryContrastText` is whichever of black and white reads better on `Primary`.
+`Huddle_PrimaryAndBackgroundCarryTheExpectedValues` pins the values and
+`BuiltIn_NativePaletteContrast_ClearsWcagFloor` the ratios.
+
+**Custom Accent** keeps Huddle's neutrals and replaces `Primary` with the Human's colour,
+darkened (light) or lightened (dark) until it reaches 4.5:1 on `Background` and `Surface`.
+`AccentTheme.ApplyAccent` then picks `PrimaryContrastText` with
+`ContrastColour.ReadableForeground`, so text on the accent is black or white, whichever
+reads better. `AccentThemeTests` holds it to 4.5:1 for pale, dark and brand accents.
+
+### Borders and status colours
+
+- **Card and tile borders.** `Divider` paints the border of message cards, tiles and roster
+  cards, so it must be visible against `Surface`: at least **1.5:1** in the Huddle Themes
+  (Huddle Light `#d0cfcc` is 1.56:1, Huddle Dark `#444442` is 1.55:1).
+  `Huddle_DividerAgainstSurface_ReachesCardBorderVisibility` enforces it for those two, and
+  `BuiltIn_DividerVersusSurface_IsRecorded` records the ratio for every Theme. The ported
+  Themes are held to no floor here, because they are imported faithfully.
+- **Status colours are never a solid fill under text.** Status chips are tinted: the colour
+  at 14% over `Surface`, with text and icon 70% toward `TextPrimary`. That is why the
+  palette has no `SuccessContrastText`, `WarningContrastText`, `ErrorContrastText` or
+  `InfoContrastText`. `StatusChipText_ReachesFloor_InHuddleLightAndDark` holds the chip
+  text to 4.5:1.
+
+### The tinted-state gap
+
+The contrast tests measure palette pairs. They do not measure a `color-mix` tint, such as a
+selected row or the Human's bubble, so that gap is recorded in
+[design-system.md's Known gaps](design-system.md#known-gaps). A baseline for the two
+Huddle Themes, computed from the palette values (sRGB mix, WCAG relative luminance):
+
+| State | Theme | Fill | Text | Ratio |
+| --- | --- | --- | --- | --- |
+| Selected sidebar row (`Primary` 14% over `Surface`) | Huddle Light | `#e8e9f7` | Accent text `#464c92` | 6.43:1 |
+| Selected sidebar row | Huddle Dark | `#353640` | Accent text `#abb0e7` | 5.76:1 |
+| Human bubble (`Primary` 14% over `Surface`) | Huddle Light | `#e8e9f7` | `TextPrimary` `#141413` | 15.30:1 |
+| Human bubble | Huddle Dark | `#353640` | `TextPrimary` `#ececea` | 10.13:1 |
+
+Accent text is `Primary` 70% + `TextPrimary`. Raw `Primary` on the same fill reads only
+4.25:1 in Huddle Light and 4.41:1 in Huddle Dark, which is why raw `Primary` is not used
+for text. Hovered, the row's fill goes to 24% and the accent text reads 5.62:1 (Light) and
+4.82:1 (Dark).
 
 ### Adding a palette property to a stylesheet
 
@@ -523,8 +594,10 @@ leave empty is a silent gap that only shows up in the Theme nobody tested.
 
 ## Porting a VS Code Theme
 
-Seventeen of the twenty-one Themes are VS Code's bundled colour Themes, converted once by
-hand. Nothing reads VS Code JSON at run time; the C# file **is** the artefact. To port
+Most of the Themes in the catalog are VS Code's bundled colour Themes, converted once by
+hand. [`ThemeCatalog.BuiltIn`](../../src/Huddle.App/Themes/ThemeCatalog.cs) is the one place that
+counts them (at the time of writing 21: two Huddle, two Custom Accent and 17 ports), so
+quote a number from there rather than from here. Nothing reads VS Code JSON at run time; the C# file **is** the artefact. To port
 another one, follow the same mapping so it reads like the others.
 
 ### The mapping
@@ -539,6 +612,8 @@ this table.
 | `Background` | `editor.background` |
 | `Surface` | `editorWidget.background` → `editor.background` |
 | `DrawerBackground` | `sideBar.background` → `activityBar.background` → `editor.background` |
+| `DrawerText` | `sideBar.foreground` → `foreground` |
+| `DrawerIcon` | the Theme's `TextSecondary` |
 | `BackgroundGray` | `sideBarSectionHeader.background` → `panel.background` → `editor.background` |
 | `TableHover` | `list.hoverBackground` → `list.inactiveSelectionBackground` |
 | `Divider` | `panel.border` → `editorGroup.border` → `widget.border` → `contrastBorder` |
@@ -547,7 +622,7 @@ this table.
 | `LinesDefault` | `focusBorder` |
 | `TextPrimary` | `foreground` → `editor.foreground` |
 | `TextSecondary` | `descriptionForeground` → `sideBarTitle.foreground` |
-| `TextDisabled` | `disabledForeground` → `input.placeholderForeground` → `editorLineNumber.foreground` |
+| `TextDisabled` | disabled controls only: `disabledForeground` → `input.placeholderForeground` → `editorLineNumber.foreground` |
 | `Primary` | `textLink.foreground` → `focusBorder` → `button.background` |
 | `PrimaryContrastText` | computed: black or white, whichever contrasts more with `Primary` |
 | `Secondary` | `button.background` → `activityBarBadge.background` → `focusBorder` |
@@ -635,7 +710,8 @@ placeholder. Once the Human picks a colour on the Appearance tab, it is stored a
 `accentColor` in `appearance.json`, and `MainLayout` builds the real Theme at run time:
 Huddle's neutrals, with `Primary` replaced by the chosen colour after
 `AccentPalette.ClampForContrast` has darkened it (light) or lightened it (dark) in 2%
-lightness steps until it reaches 4.5:1 against both `Background` and `Surface`.
+lightness steps until it reaches 4.5:1 against both `Background` and `Surface`. Text on
+the clamped accent is black or white, whichever `ContrastColour.ReadableForeground` picks.
 
 If you want a Theme that differs from Huddle's only in accent, you do not need a new
 Theme: that is what Custom Accent is for.
@@ -668,7 +744,7 @@ records why.
 - [ ] Built with `ThemeDefaults.CreateLight` or `CreateDark`; only one palette slot filled.
 - [ ] Id is lower-kebab-case, unique, and final. Label reads well in the picker.
 - [ ] `Mode` matches the palette; `Group` is `Light`, `Dark` or `HighContrast`.
-- [ ] Every property in [the palette table](#the-palette-what-each-property-paints) is set.
+- [ ] Every property in [the palette table](#the-palette-what-each-property-paints) is set, including `DrawerText` (`TextPrimary`) and `DrawerIcon` (`TextSecondary`).
 - [ ] `PrimaryContrastText` is black or white, whichever contrasts more with `Primary`.
 - [ ] `OverlayDark` is `rgba(0,0,0,0.4)` (light) or `rgba(0,0,0,0.6)` (dark).
 - [ ] Registered in `ThemeCatalog.BuiltIn`, after `BuiltIn[0]`.

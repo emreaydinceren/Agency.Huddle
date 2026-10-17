@@ -20,7 +20,7 @@ public sealed class AccentThemeTests
         var theme = AccentTheme.BuildTheme("#ffeb3b", dark: false);
 
         Assert.True(ContrastColour.Ratio(theme.PaletteLight.Primary, theme.PaletteLight.Surface) >= 4.5);
-        Assert.Equal("#ffffff", theme.PaletteLight.PrimaryContrastText.ToString(MudColorOutputFormats.Hex));
+        Assert.Equal(ContrastColour.ReadableForeground(theme.PaletteLight.Primary), theme.PaletteLight.PrimaryContrastText);
     }
 
     /// <summary>An accent too dark to read on Huddle Dark's near-black ground still yields a Primary that clears the same 4.5:1 floor.</summary>
@@ -30,10 +30,10 @@ public sealed class AccentThemeTests
         var theme = AccentTheme.BuildTheme("#1a0033", dark: true);
 
         Assert.True(ContrastColour.Ratio(theme.PaletteDark.Primary, theme.PaletteDark.Surface) >= 4.5);
-        Assert.Equal("#ffffff", theme.PaletteDark.PrimaryContrastText.ToString(MudColorOutputFormats.Hex));
+        Assert.Equal(ContrastColour.ReadableForeground(theme.PaletteDark.Primary), theme.PaletteDark.PrimaryContrastText);
     }
 
-    /// <summary>Whatever accent is chosen, text and icons on an accent-filled button or avatar are white, in both modes.</summary>
+    /// <summary>Whatever accent is chosen, text and icons on an accent-filled button or avatar are whichever of black and white <see cref="ContrastColour.ReadableForeground(MudColor)"/> picks, in both modes.</summary>
     /// <param name="accent">The Human-picked accent colour.</param>
     /// <param name="dark">Whether to build the dark palette.</param>
     [Theory]
@@ -41,12 +41,15 @@ public sealed class AccentThemeTests
     [InlineData("#6e78da", true)]
     [InlineData("#ffeb3b", false)]
     [InlineData("#ffeb3b", true)]
-    public void BuildTheme_AnyAccent_HasWhiteTextOnAccent(string accent, bool dark)
+    [InlineData("#1a0033", true)]
+    public void BuildTheme_AnyAccent_HasReadableTextOnAccent(string accent, bool dark)
     {
         var theme = AccentTheme.BuildTheme(accent, dark);
+        MudColor primary = dark ? theme.PaletteDark.Primary : theme.PaletteLight.Primary;
         MudColor text = dark ? theme.PaletteDark.PrimaryContrastText : theme.PaletteLight.PrimaryContrastText;
 
-        Assert.Equal("#ffffff", text.ToString(MudColorOutputFormats.Hex));
+        Assert.Equal(ContrastColour.ReadableForeground(primary), text);
+        Assert.True(ContrastColour.Ratio(text, primary) >= 4.5, $"text on the {accent} accent is {ContrastColour.Ratio(text, primary):0.00}:1");
     }
 
     /// <summary>Only the Primary family changes: every other palette value matches <see cref="HuddleTheme.Light"/>'s own, unmodified.</summary>

@@ -37,7 +37,7 @@ public sealed class TaskDetailTests
 {
     /// <summary>Rendering with an existing Task's id shows that Task's id and title (Spec §13.6 Title row).</summary>
     [Fact]
-    public async Task Load_ExistingTaskId_ShowsIdAndTitle()
+    public async Task Load_ExistingTaskId_PanelRowHoldsIconsNotTheTitle()
     {
         using TaskToolHarness harness = new();
         TaskItem task = CreateTask(harness, title: "Ship the thing");
@@ -45,7 +45,9 @@ public sealed class TaskDetailTests
 
         var cut = RenderPanel(ctx, task.Id);
 
-        Assert.Equal($"{task.Id}: Ship the thing", TextOf(cut, ".task-detail-title-display"));
+        Assert.Empty(cut.FindAll(".task-detail-title-display"));
+        Assert.Single(cut.FindAll(".task-detail-copy-id"));
+        Assert.Contains("Created", TextOf(cut, ".task-detail-footer-meta"), StringComparison.Ordinal);
     }
 
     /// <summary>Editing Priority adds it to <c>pending</c> and shows the "Unsaved edits" alert with <c>role="status"</c> (Spec §13.6).</summary>
@@ -217,6 +219,7 @@ public sealed class TaskDetailTests
         IRenderedComponent<MudSelect<TaskPriority>> prioritySelect = cut.FindComponents<MudSelect<TaskPriority>>().Single();
         await cut.InvokeAsync(() => prioritySelect.Instance.ValueChanged.InvokeAsync(TaskPriority.Urgent));
 
+        string logBefore = cut.Find(".task-detail-changelog .mud-expand-panel-text").TextContent.Trim();
         TaskResult outsideEdit = harness.Service.Update(
             task.Id,
             new TaskPatch { Title = "Retitled by someone else" },
@@ -224,7 +227,7 @@ public sealed class TaskDetailTests
             TaskActors.Human(harness.Options.Value));
         Assert.IsType<TaskResult.Saved>(outsideEdit);
 
-        cut.WaitForAssertion(() => Assert.Equal($"{task.Id}: Retitled by someone else", TextOf(cut, ".task-detail-title-display")));
+        cut.WaitForAssertion(() => Assert.NotEqual(logBefore, cut.Find(".task-detail-changelog .mud-expand-panel-text").TextContent.Trim()));
         Assert.Equal(TaskPriority.Urgent, cut.FindComponents<MudSelect<TaskPriority>>().Single().Instance.GetState(x => x.Value));
     }
 

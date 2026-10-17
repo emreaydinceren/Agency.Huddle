@@ -25,7 +25,7 @@
         <span class="skill-provenance-license">@SkillProvenanceLine.LicenseLabel(provenance.License)</span>
         @if (this.Skill.ModifiedLocally)
         {
-            <MudChip T="string" Size="Size.Small" Color="Color.Warning" Class="skill-provenance-modified ml-1">modified locally</MudChip>
+            <StatusChip Color="Color.Warning" Icon="@Icons.Material.Filled.Edit" Class="skill-provenance-modified ml-1">modified locally</StatusChip>
         }
     </MudText>
 }

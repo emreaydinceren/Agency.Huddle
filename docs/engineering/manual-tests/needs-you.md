@@ -38,7 +38,7 @@ Run [`P-BUILD`](common.md#p-build) then [`P-LAUNCH-UAT`](common.md#p-launch-uat)
 
 **Steps**
 
-1. Look at the sidebar. Note whether any card sits above `Chats`.
+1. Look at the sidebar. Note whether any card sits above `Rooms`.
 2. Run `Ask $bo 'Bo'`. Wait one minute. Run `Ask $ada 'Ada'`.
 3. Stop and relaunch the app. Open `http://localhost:5100/`.
 4. Look at the top of the sidebar.
@@ -46,8 +46,8 @@ Run [`P-BUILD`](common.md#p-build) then [`P-LAUNCH-UAT`](common.md#p-launch-uat)
 
 **Pass if — all of these**
 
-- At step 1 there is no card, and no empty box, above `Chats`.
-- At step 4 a card titled `Needs you` with a count of `2` sits above `Chats`, holding `Bo` first and `Ada` second (the longer wait first).
+- At step 1 there is no card, and no empty box, above `Rooms`.
+- At step 4 a card titled `Needs you` with a count of `2` sits above `Rooms`, holding `Bo` first and `Ada` second (the longer wait first).
 - Each row has an `@` icon, the Room's name, and a second line of the form `Bo · HH:mm` or `Ada · HH:mm`.
 
 ### NEEDSYOU-02 — Opening a Room does not clear it; posting in it does
@@ -62,7 +62,7 @@ Run [`P-BUILD`](common.md#p-build) then [`P-LAUNCH-UAT`](common.md#p-launch-uat)
 
 **Steps**
 
-1. Click the `Bo` row in the card. Read the Room, then click `Ada` in the Chats group.
+1. Click the `Bo` row in the card. Read the Room, then click `Ada` in the Rooms group.
 2. Look at the card.
 3. Return to `Bo`, type `Option two.` and press Enter.
 4. Look at the card.
@@ -109,7 +109,7 @@ Run [`P-BUILD`](common.md#p-build) then [`P-LAUNCH-UAT`](common.md#p-launch-uat)
 
 **Steps**
 
-1. Use the `⋯` menu on the `Bo` Room in `Chats` and choose **Archive**.
+1. Use the `⋯` menu on the `Bo` Room in `Rooms` and choose **Archive**.
 2. Look at the card.
 3. Open **Archived chats** (bottom of the sidebar) and choose **Unarchive** on `Bo`.
 4. Look at the card.

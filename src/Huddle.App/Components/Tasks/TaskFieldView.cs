@@ -24,16 +24,16 @@ internal static class TaskFieldView
     public static string? OriginText(string? originRoomId, IReadOnlyDictionary<string, string>? roomNames) =>
         originRoomId is not null && roomNames is not null && roomNames.TryGetValue(originRoomId, out string? name) ? name : null;
 
-    /// <summary>One Small Label chip per tag.</summary>
+    /// <summary>One Small tag chip (the quiet <c>tag-chip</c> look) per tag.</summary>
     /// <param name="tags">The tags.</param>
     public static RenderFragment Tags(IReadOnlyList<string> tags) => builder =>
     {
         foreach (string tag in tags)
         {
             builder.OpenComponent<MudChip<string>>(0);
-            builder.AddAttribute(1, nameof(MudChip<string>.Label), true);
+            builder.AddAttribute(1, nameof(MudChip<string>.Variant), Variant.Text);
             builder.AddAttribute(2, nameof(MudChip<string>.Size), Size.Small);
-            builder.AddAttribute(3, nameof(MudChip<string>.Class), "task-tag");
+            builder.AddAttribute(3, nameof(MudChip<string>.Class), "task-tag tag-chip");
             builder.AddAttribute(4, nameof(MudChip<string>.ChildContent), (RenderFragment)(content => content.AddContent(0, tag)));
             builder.CloseComponent();
         }

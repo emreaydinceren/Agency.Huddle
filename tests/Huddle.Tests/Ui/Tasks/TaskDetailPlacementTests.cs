@@ -18,16 +18,20 @@ public sealed class TaskDetailPlacementTests
     // Team, Project (Spec §13.6: the Panel combines them; Expanded keeps them separate).
     // ---------------------------------------------------------------------------------------------
 
-    /// <summary>The Panel combines Team and Project into one "Team / Project" control (Spec §13.6).</summary>
+    /// <summary>The Panel shows Team and Project as two rows, each with its own visible label (the old combined "Team / Project" caption left both controls unlabelled).</summary>
     [Fact]
-    public async Task TeamProject_Panel_ShowsCombinedLabel()
+    public async Task TeamProject_Panel_ShowsSeparateLabels()
     {
         using TaskToolHarness harness = new();
         TaskItem task = CreateTask(harness);
         await using MudBunitContext ctx = NewContext(harness);
         var cut = RenderDetail(ctx, task.Id, TaskDetailMode.Panel);
 
-        Assert.Equal("Team / Project", TextOf(cut, ".task-detail-team-project-label"));
+        IRenderedComponent<MudSelect<string>> team = cut.FindComponents<MudSelect<string>>().Single(m => string.Equals(m.Instance.Class, "task-detail-team", StringComparison.Ordinal));
+        IRenderedComponent<MudAutocomplete<string>> project = cut.FindComponents<MudAutocomplete<string>>().Single(m => string.Equals(m.Instance.Class, "task-detail-project", StringComparison.Ordinal));
+        Assert.Equal("Team", team.Instance.Label);
+        Assert.Equal("Project", project.Instance.Label);
+        Assert.Empty(cut.FindAll(".task-detail-team-project-label"));
     }
 
     /// <summary>The Expanded layout keeps Team and Project as two separately-labelled controls (Spec §13.6, the Panel-only combining implies Expanded does not).</summary>
@@ -48,9 +52,8 @@ public sealed class TaskDetailPlacementTests
     /// <summary>
     /// Manual test TASKS-01 finding F3: in the Panel, Team and Project share only the
     /// "Team / Project" caption with no label of their own - each needs its own accessible name.
-    /// Checked at both entry points (the task lists "both modes"): the Panel's Team/Project have no
-    /// visible <c>Label</c>, so they need <c>aria-label</c>; the Expanded layout already shows a
-    /// visible <c>Label</c>, which must keep working as the accessible name.
+    /// Checked at both entry points (the task lists "both modes"): both
+    /// layouts now show a visible <c>Label</c> too, and the <c>aria-label</c> must keep working as the accessible name.
     /// </summary>
     /// <param name="mode">Both entry points.</param>
     [Theory]

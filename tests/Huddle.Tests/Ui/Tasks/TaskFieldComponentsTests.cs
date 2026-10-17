@@ -23,7 +23,7 @@ public sealed class TaskFieldComponentsTests : IDisposable
     /// <summary>Releases the temporary data directory backing the avatar store.</summary>
     public void Dispose() => this.dataDir.Dispose();
 
-    /// <summary>The status chip is a Small chip in the state's colour holding the state's wire name.</summary>
+    /// <summary>The status chip is a Small tinted chip in the state's colour family, with the state's icon and wire name.</summary>
     [Theory]
     [InlineData(TaskState.Backlog, Color.Default)]
     [InlineData(TaskState.ToDo, Color.Info)]
@@ -42,13 +42,15 @@ public sealed class TaskFieldComponentsTests : IDisposable
         });
 
         IRenderedComponent<MudChip<string>> chip = cut.FindComponent<MudChip<string>>();
-        Assert.Equal(expected, chip.Instance.Color);
+        Assert.Contains($"status-chip-{expected.ToString().ToLowerInvariant()}", cut.Find(".mud-chip").ClassList, StringComparer.Ordinal);
+        Assert.Equal(Variant.Text, chip.Instance.Variant);
         Assert.Equal(Size.Small, chip.Instance.Size);
+        Assert.Equal(TaskColors.Icon(status), chip.Instance.Icon);
         Assert.Equal(status.ToWire(), cut.Find(".mud-chip").TextContent.Trim());
         Assert.Contains("task-status-chip", cut.Find(".mud-chip").ClassList, StringComparer.Ordinal);
     }
 
-    /// <summary>The priority chip is a Small chip coloured by <c>TaskColors.For(priority)</c> (UX-045), with the priority icon and the wire name.</summary>
+    /// <summary>The priority chip is a Small tinted chip in <c>TaskColors.For(priority)</c>'s family (UX-045), with the priority icon and the wire name.</summary>
     [Theory]
     [InlineData(TaskPriority.Low, Color.Default)]
     [InlineData(TaskPriority.Medium, Color.Info)]
@@ -65,7 +67,8 @@ public sealed class TaskFieldComponentsTests : IDisposable
         });
 
         IRenderedComponent<MudChip<string>> chip = cut.FindComponent<MudChip<string>>();
-        Assert.Equal(expected, chip.Instance.Color);
+        Assert.Contains($"status-chip-{expected.ToString().ToLowerInvariant()}", cut.Find(".mud-chip").ClassList, StringComparer.Ordinal);
+        Assert.Equal(Variant.Text, chip.Instance.Variant);
         Assert.Equal(Size.Small, chip.Instance.Size);
         Assert.Equal(TaskColors.Icon(priority), chip.Instance.Icon);
         Assert.Equal(priority.ToWire(), cut.Find(".mud-chip").TextContent.Trim());

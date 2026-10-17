@@ -2,8 +2,7 @@
     The search box that fills the Top Bar's Search slot, and the dropdown under it (Global Search spec §5.1,
     §6, §9, §11). Typing stays in the box: the dropdown has no second input, the highlighted card is named by
     aria-activedescendant and focus never leaves the box. The dropdown is a MudPopover, so it lives in the
-    popover provider, which cancels the page's 90% zoom for placement; its single direct child,
-    .search-dropdown, re-applies it and carries the size rules (spec §6.8, app.css). Nothing here sets a zoom.
+    popover provider; its single direct child, .search-dropdown, carries the size rules (spec §6.8, app.css).
 
     Sticky state (spec §6.4) lives in this component for the life of the circuit: closing keeps the last
     filter and phrase, and reopening shows an empty box, that filter, a header, and runs the phrase again.
@@ -50,6 +49,8 @@
                                  Value="@filter"
                                  Text="@filter.ToString()"
                                  Size="Size.Small"
+                                 Variant="Variant.Outlined"
+                                 Class="filter-chip"
                                  role="radio"
                                  aria-checked="@(filter == this.chip ? "true" : "false")" />
                     }

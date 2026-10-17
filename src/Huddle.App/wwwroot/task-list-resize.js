@@ -47,8 +47,8 @@
   }
 
   /**
-   * How many CSS pixels one pixel of pointer movement is: the page runs at a UI zoom (html { zoom }), so pointer
-   * coordinates and bounding boxes are in zoomed pixels while widths set in a style are not.
+   * How many CSS pixels one pixel of pointer movement is: pointer coordinates and bounding boxes are in visual
+   * pixels while widths set in a style are not; the two agree unless the page is zoomed (ADR-0056 removed the zoom).
    */
   function pointerScale(cell) {
     return cell.offsetWidth > 0 ? cell.getBoundingClientRect().width / cell.offsetWidth : 1;

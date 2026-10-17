@@ -56,7 +56,7 @@
 
 @if (this.EditMode && this.missingTeam)
 {
-    <MudContainer MaxWidth="MaxWidth.Large" Class="build-team pa-4">
+    <MudContainer MaxWidth="MaxWidth.Large" Class="build-team page-reading pa-4">
         <MudAlert Severity="Severity.Warning" role="alert" Class="build-team-missing">There is no Team named "@this.Team".</MudAlert>
     </MudContainer>
     return;
@@ -137,15 +137,15 @@
                     <MudText Typo="Typo.h6" id="build-team-hire-heading">Hire</MudText>
                 </div>
             }
-            <div>
-                <MudText Typo="Typo.subtitle1">Roles</MudText>
-                <MudText Typo="Typo.body2" Class="build-team-intro build-team-roles-subtitle">Available roles</MudText>
+            <div class="build-team-subhead">
+                <MudText Typo="Typo.subtitle2" HtmlTag="h3">Roles</MudText>
+                <span class="chip-meta build-team-roles-subtitle">@Plural.Of(this.Pool.Jobs.Count + this.CustomRoles.Roles.Count, "role", "roles") available</span>
             </div>
             @if (this.CustomRoles.LoadError is not null)
             {
                 <MudAlert Severity="Severity.Warning" Dense="true" role="alert" Class="build-team-roles-error">Your custom roles file could not be read, so roles cannot be added or changed: @this.CustomRoles.LoadError</MudAlert>
             }
-            <div class="team-type-grid" role="group" aria-label="Roles">
+            <div class="role-grid" role="group" aria-label="Roles">
                 <button type="button" class="role-add-card" aria-label="Add a custom role" @onclick="this.AddRoleAsync">
                     <MudIcon Icon="@Icons.Material.Filled.Add" Size="Size.Large" />
                     <span class="role-add-label">Add a role</span>
@@ -166,8 +166,10 @@
             </div>
 
             <div class="build-team-roster">
-                <MudText Typo="Typo.subtitle1">@(this.EditMode ? "Roster" : "Draft roster")</MudText>
-                <MudText Typo="Typo.body2" Class="build-team-intro build-team-roster-summary">@this.RosterSummary</MudText>
+                <div class="build-team-subhead">
+                    <MudText Typo="Typo.subtitle2" HtmlTag="h3">@(this.EditMode ? "Roster" : "Draft roster")</MudText>
+                    <span class="chip-meta build-team-roster-summary">@this.RosterSummary</span>
+                </div>
                 @if (this.drafts.Count > 0)
                 {
                     <div class="roster-grid" role="list" aria-label="@(this.EditMode ? "Roster" : "Draft roster")">
@@ -232,9 +234,9 @@
         </section>
     }
 
-    @if (this.selected is not null)
+    @if (this.selected is not null && (!this.EditMode || this.HasChanges))
     {
-        <section class="build-team-section build-team-approve" aria-labelledby="@(this.EditMode ? null : "build-team-approve-heading")" aria-label="@(this.EditMode ? "Save" : null)">
+        <section class="@(this.EditMode ? "build-team-section build-team-approve build-team-savebar" : "build-team-section build-team-approve")" aria-labelledby="@(this.EditMode ? null : "build-team-approve-heading")" aria-label="@(this.EditMode ? "Save" : null)">
             @if (!this.EditMode)
             {
                 <div class="build-team-section-head">
@@ -279,7 +281,7 @@
             string part;
             if (!this.EditMode)
             {
-                part = "pa-4";
+                part = "page-reading pa-4";
             }
             else
             {

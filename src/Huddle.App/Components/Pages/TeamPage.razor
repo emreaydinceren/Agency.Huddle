@@ -27,31 +27,16 @@
     TeamSummary? summary = this.Catalog.Find(this.Team);
     bool isProject = !string.IsNullOrWhiteSpace(this.Project);
     string? project = summary is not null && isProject ? this.FindProject(summary) : null;
-    string title;
-    if (summary is null || (isProject && project is null))
-    {
-        title = "Huddle";
-    }
-    else if (project is null)
-    {
-        title = $"{summary.Name} — Huddle";
-    }
-    else
-    {
-        title = $"{project} · {summary.Name} — Huddle";
-    }
-
     // Every tab uses the whole page, so the container drops the width cap whenever the Team (and Project) exist;
     // the not-found and "turned off" notices keep the capped container. Both keep the page's 16px padding.
     bool wideActive = summary is not null && (!isProject || project is not null)
         && TeamPageTabs.Available(isProject, this.Features()).Count > 0;
 }
 
-<PageTitle>@title</PageTitle>
-
-<MudContainer MaxWidth="@(wideActive ? MaxWidth.False : MaxWidth.Large)" Class="@(wideActive ? "team-page-wide pa-4" : "pa-4")">
+<MudContainer MaxWidth="@(wideActive ? MaxWidth.False : MaxWidth.Large)" Class="@(wideActive ? "team-page-wide pa-4" : "page-reading pa-4")">
     @if (summary is null)
     {
+        <PageTitle>Huddle</PageTitle>
         <MudAlert Severity="Severity.Warning" role="alert" Class="team-page-notice">
             <span class="team-page-notice-text">There is no Team named "@this.Team".</span>
             <MudLink Href="/teammates" Class="team-page-notice-link">Teammates</MudLink>
@@ -59,6 +44,7 @@
     }
     else if (isProject && project is null)
     {
+        <PageTitle>Huddle</PageTitle>
         <MudAlert Severity="Severity.Warning" role="alert" Class="team-page-notice">
             <span class="team-page-notice-text">There is no Project named "@this.Project" in Team "@summary.Name".</span>
             <MudLink Href="@TeamHref(summary.Name)" Class="team-page-notice-link">@summary.Name</MudLink>
@@ -69,15 +55,22 @@
         IReadOnlyList<TeamPageTab> available = TeamPageTabs.Available(isProject, this.Features());
         int activeIndex = Math.Max(0, available.ToList().IndexOf(TeamPageTabs.Resolve(isProject, this.Tab, this.Features())));
 
-        @* The shell breadcrumb (S1a) names the Team or Project, so the page has no title row or h1 of its own
-           (the document title is set above). A Team page keeps Duplicate in a slim row at the right. *@
+        @* Every page names itself as its h1 (design-system "A page") and the shell breadcrumb holds only the
+           ancestors. PageHeader also sets the document title to the bare name. A Team page keeps Duplicate on
+           the right of the header. *@
         @if (!isProject)
         {
             string sourceTeam = summary.Name;
-            <MudStack Row="true" Justify="Justify.FlexEnd" Class="mb-4 team-page-actions">
-                <MudButton Variant="Variant.Outlined" Size="Size.Small" StartIcon="@Icons.Material.Outlined.ContentCopy"
-                           OnClick="@(() => this.DuplicateAsync(sourceTeam))">Duplicate</MudButton>
-            </MudStack>
+            <PageHeader Title="@summary.Name">
+                <Actions>
+                    <MudButton Variant="Variant.Outlined" Size="Size.Small" StartIcon="@Icons.Material.Outlined.ContentCopy"
+                               Class="team-page-actions" OnClick="@(() => this.DuplicateAsync(sourceTeam))">Duplicate</MudButton>
+                </Actions>
+            </PageHeader>
+        }
+        else
+        {
+            <PageHeader Title="@project" />
         }
         <TeamSpend Members="@summary.Members" />
 

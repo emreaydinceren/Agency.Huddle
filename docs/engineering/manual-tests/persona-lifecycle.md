@@ -318,7 +318,7 @@ If the tile was already Online or the reason line is absent because the app was 
 **Pass if — all of these**
 
 - The card switches to the `Teammate` view showing `Nova` immediately after **Add teammate**.
-- The status line shows **Offline** briefly, then **Starting**, then **Online** with a green dot, reaching Online within about 30 seconds.
+- The status line shows **Offline** briefly, then **Starting**, then **Online** (check glyph), reaching Online within about 30 seconds.
 - A tile `Nova` is in the list and reads **Online**.
 - Within a few seconds and with NO page refresh, the sidebar gains a Room named exactly `Nova`.
 - `Adapters` has gained exactly ONE persistent `node.exe` row, compared with step 2, whose CommandLine contains `claude-agent-acp`.

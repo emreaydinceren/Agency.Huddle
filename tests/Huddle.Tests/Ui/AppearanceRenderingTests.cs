@@ -15,7 +15,7 @@ public sealed class AppearanceRenderingTests
     // The exact CSS custom property MudThemeProvider.GenerateTheme emits for Palette.Background, in
     // MudColor's default (rgba) string form. Present in the response only when the "Huddle Light"
     // theme's palette actually rendered. (Primary can no longer tell the two Huddle themes apart:
-    // both use the brand accent #6e78da, so the neutral ground is what differs.) The constant keeps
+    // the accents differ per theme but the neutral ground is the stable marker.) The constant keeps
     // its historical name.
     private const string LightPrimaryVariable = "--mud-palette-background: rgba(242,240,237,1);";
 
@@ -23,8 +23,8 @@ public sealed class AppearanceRenderingTests
     // response was written. Kept as the literal rendered rgba because that is what reaches the browser.
     private const string DarkPrimaryVariable = "--mud-palette-background: rgba(28,28,27,1);";
 
-    // The brand Primary both Huddle themes - and so the Custom Accent placeholder - carry.
-    private const string BrandPrimaryVariable = "--mud-palette-primary: rgba(110,120,218,1);";
+    // Huddle Light's Primary (#5b64c8), which the Custom Accent Light placeholder carries.
+    private const string BrandPrimaryVariable = "--mud-palette-primary: rgba(91,100,200,1);";
 
     // Solarized Dark's own editor.background, #002b36. Asserted rather than its Primary because
     // Solarized Dark takes Primary from VS Code's textLink.foreground registry default, which other

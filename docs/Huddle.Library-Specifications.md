@@ -398,6 +398,10 @@ As ADR-0029 decided:
   `Layout="SideBySide"`, the tree on the left. When the pane was showing a scoped explorer, the
   pop-out keeps that scope.
 - The sidebar gains a *Library* link beside Teammates and Tasks, which toggles the pane.
+  **Superseded (2026-10):** the sidebar's Library group is now one link to `/library` (shown while
+  `Library:Enabled`). It lists no root rows and has no *+ Add folder*; Add folder is in Settings ›
+  Library. The Library page's breadcrumb holds the open file's location; the document title is the
+  bare name.
 
 ### 6.10 Pinned roots
 

@@ -119,4 +119,19 @@ public sealed class ResizableEndDrawerTests
         Assert.Equal(800, Convert.ToInt32(invocation.Arguments[3], System.Globalization.CultureInfo.InvariantCulture));
         Assert.Equal(420, Convert.ToInt32(invocation.Arguments[4], System.Globalization.CultureInfo.InvariantCulture));
     }
+
+    /// <summary>An eyebrow renders as a caption line above the title; without one no eyebrow element is drawn (S6).</summary>
+    [Fact]
+    public async Task Header_Eyebrow_RendersAboveTheTitleOnlyWhenGiven()
+    {
+        await using MudBunitContext ctx = new();
+        RenderFragment content = builder => builder.AddMarkupContent(0, "<span></span>");
+
+        var with = ctx.Render<ResizableEndDrawer>(parameters => parameters
+            .Add(p => p.StorageKey, Key).Add(p => p.Title, "Ship it").Add(p => p.Eyebrow, "PLAT-0013 · Platform").Add(p => p.Open, true).Add(p => p.ChildContent, content));
+
+        Assert.Equal("PLAT-0013 · Platform", with.Find(".resizable-drawer-eyebrow").TextContent);
+        Assert.Equal("Ship it", with.Find(".resizable-drawer-title").TextContent);
+        Assert.Empty(RenderDrawer(ctx).FindAll(".resizable-drawer-eyebrow"));
+    }
 }

@@ -244,7 +244,7 @@ to the View as they are made, and the Rename and Fields dialogs round-trip.*
 - `/tasks/new` creates a View named **New view** (or **New view 2** and so on) and opens it; there is no
   editor panel and no **Save View**, **Save to View** or Description field anywhere.
 - **Rename** refuses a name over 60 characters and a duplicate (ignoring case), and accepts a fresh
-  name, which shows in the breadcrumb and the sidebar.
+  name, which shows in the last crumb of the Tasks trail (the display name, never a slug) and in the sidebar.
 - After the reload in step 4 the Status filter, layout and grouping are all still set, with no Save
   click.
 - The widened column keeps its width after the reload (`TaskView.ColumnWidths`).
@@ -776,7 +776,7 @@ paid TASKS-15; TASKS-19 is the paid one.
 
 **Steps**
 
-1. Open Task A. In the **Sprint** field (after Team / Project), type `Auth hardening`, and look at
+1. Open Task A. In the **Sprint** field (after the Team and Project fields), type `Auth hardening`, and look at
    the helper text under the field. Do not save yet.
 2. Open `sprints.md` in an editor. Then click **Revert**, and look at the file and the field again.
 3. Type `Auth hardening` again and click **Save**. Read `sprints.md` and Task A's file.
