@@ -9,6 +9,7 @@
 <text x="42.4" y="77.5" font-size="11" font-weight="700" fill="#fff" text-anchor="middle">M1</text>
 <text x="60.8" y="78" font-size="12" font-weight="600" fill="#1f2430" text-anchor="start">Team page</text>
 <text x="131.8" y="78" font-size="11" font-weight="400" fill="#6b7280" text-anchor="start">MudContainer, MaxWidth.False, pa-4</text>
+<text x="48" y="116" font-size="18" font-weight="600" fill="#1f2430" text-anchor="start">Team name (h1)</text>
 <rect x="468" y="98" width="96" height="26" rx="4" fill="#ffffff" stroke="#8b93a1" stroke-width="1.2"/>
 <text x="516.0" y="115.0" font-size="11" font-weight="400" fill="#1f2430" text-anchor="middle">Duplicate</text>
 <rect x="464" y="90" width="25" height="17" rx="8.5" fill="#9d174d"/>
@@ -21,8 +22,19 @@
 <rect x="44" y="192" width="25" height="17" rx="8.5" fill="#9d174d"/>
 <text x="56.4" y="204.5" font-size="11" font-weight="700" fill="#fff" text-anchor="middle">M4</text>
 <text x="75" y="204" font-size="11" font-weight="600" fill="#1f2430" stroke="#ffffff" stroke-width="4" paint-order="stroke">Tabs (MudTabs)</text>
-<rect x="60" y="232" width="488" height="32" rx="4" fill="#f6f7f9" stroke="#8b93a1" stroke-width="1.2"/>
-<text x="304.0" y="252.0" font-size="11" font-weight="400" fill="#1f2430" text-anchor="middle">Members   ·   Files   ·   Tasks   ·   Process   ·   Details</text>
+<rect x="72" y="243" width="12" height="12" rx="3" fill="#0b5f67" stroke="none"/>
+<text x="90" y="254" font-size="13" font-weight="500" fill="#0b5f67" text-anchor="start">Members</text>
+<rect x="160" y="243" width="12" height="12" rx="3" fill="#6b7280" stroke="none"/>
+<text x="178" y="254" font-size="13" font-weight="500" fill="#6b7280" text-anchor="start">Files</text>
+<rect x="228" y="243" width="12" height="12" rx="3" fill="#6b7280" stroke="none"/>
+<text x="246" y="254" font-size="13" font-weight="500" fill="#6b7280" text-anchor="start">Tasks</text>
+<rect x="300" y="243" width="12" height="12" rx="3" fill="#6b7280" stroke="none"/>
+<text x="318" y="254" font-size="13" font-weight="500" fill="#6b7280" text-anchor="start">Process</text>
+<rect x="380" y="243" width="12" height="12" rx="3" fill="#6b7280" stroke="none"/>
+<text x="398" y="254" font-size="13" font-weight="500" fill="#6b7280" text-anchor="start">Details</text>
+<rect x="64" y="262" width="80" height="2" rx="0" fill="#0b5f67" stroke="none"/>
+<line x1="60" y1="264" x2="548" y2="264" stroke="#cfd4dc" stroke-width="1.2"/>
+<text x="548" y="252" font-size="9" font-weight="400" fill="#6b7280" text-anchor="end" font-style="italic">Chrome line</text>
 <rect x="56" y="224" width="32" height="17" rx="8.5" fill="#9d174d"/>
 <text x="72.1" y="236.5" font-size="11" font-weight="700" fill="#fff" text-anchor="middle">M4a</text>
 <rect x="60" y="282" width="488" height="486" rx="4" fill="#f6f7f9" stroke="#8b93a1" stroke-width="1.2"/>
@@ -108,10 +120,7 @@
 <text x="634.4" y="77.5" font-size="11" font-weight="700" fill="#fff" text-anchor="middle">G1</text>
 <text x="652.8" y="78" font-size="12" font-weight="600" fill="#1f2430" text-anchor="start">Settings page</text>
 <text x="751.8" y="78" font-size="11" font-weight="400" fill="#6b7280" text-anchor="start">MudContainer, MaxWidth.Large</text>
-<rect x="1000" y="98" width="150" height="26" rx="4" fill="#ffffff" stroke="#8b93a1" stroke-width="1.2"/>
-<text x="1075.0" y="115.0" font-size="10" font-weight="400" fill="#1f2430" text-anchor="middle">Reset all to defaults</text>
-<rect x="996" y="90" width="32" height="17" rx="8.5" fill="#7c2d12"/>
-<text x="1012.1" y="102.5" font-size="11" font-weight="700" fill="#fff" text-anchor="middle">G1a</text>
+<text x="640" y="122" font-size="18" font-weight="600" fill="#1f2430" text-anchor="start">Settings (h1)</text>
 <rect x="640" y="142" width="512" height="504" rx="4" fill="#ffffff" stroke="#8b93a1" stroke-width="1.2"/>
 <rect x="636" y="134" width="25" height="17" rx="8.5" fill="#7c2d12"/>
 <text x="648.4" y="146.5" font-size="11" font-weight="700" fill="#fff" text-anchor="middle">G2</text>
@@ -119,21 +128,21 @@
 <rect x="652" y="174" width="120" height="458" rx="4" fill="#f6f7f9" stroke="#8b93a1" stroke-width="1.2"/>
 <rect x="648" y="166" width="32" height="17" rx="8.5" fill="#7c2d12"/>
 <text x="664.1" y="178.5" font-size="11" font-weight="700" fill="#fff" text-anchor="middle">G2a</text>
-<text x="686" y="208" font-size="10" font-weight="400" fill="#6b7280" text-anchor="start">Profile</text>
-<rect x="668" y="199" width="10" height="10" rx="2" fill="#9aa1ad"/>
-<rect x="658" y="220" width="108" height="24" rx="4" fill="#d5ebed"/>
-<text x="686" y="236" font-size="10" font-weight="600" fill="#0b5f67" text-anchor="start">Prompts</text>
-<rect x="668" y="227" width="10" height="10" rx="2" fill="#0b5f67"/>
-<text x="686" y="264" font-size="10" font-weight="400" fill="#6b7280" text-anchor="start">Appearance</text>
-<rect x="668" y="255" width="10" height="10" rx="2" fill="#9aa1ad"/>
-<text x="686" y="292" font-size="10" font-weight="400" fill="#6b7280" text-anchor="start">Personas</text>
-<rect x="668" y="283" width="10" height="10" rx="2" fill="#9aa1ad"/>
-<text x="686" y="320" font-size="10" font-weight="400" fill="#6b7280" text-anchor="start">Skills</text>
-<rect x="668" y="311" width="10" height="10" rx="2" fill="#9aa1ad"/>
-<text x="686" y="348" font-size="10" font-weight="400" fill="#6b7280" text-anchor="start">Team types</text>
-<rect x="668" y="339" width="10" height="10" rx="2" fill="#9aa1ad"/>
-<text x="686" y="376" font-size="10" font-weight="400" fill="#6b7280" text-anchor="start">Library</text>
-<rect x="668" y="367" width="10" height="10" rx="2" fill="#9aa1ad"/>
+<rect x="666" y="193" width="10" height="10" rx="2" fill="#9aa1ad" stroke="none"/>
+<text x="684" y="202" font-size="11" font-weight="400" fill="#6b7280" text-anchor="start">Profile</text>
+<rect x="656" y="214" width="112" height="32" rx="4" fill="#d5ebed" stroke="none"/>
+<rect x="666" y="225" width="10" height="10" rx="2" fill="#0b5f67" stroke="none"/>
+<text x="684" y="234" font-size="11" font-weight="600" fill="#0b5f67" text-anchor="start">Prompts</text>
+<rect x="666" y="257" width="10" height="10" rx="2" fill="#9aa1ad" stroke="none"/>
+<text x="684" y="266" font-size="11" font-weight="400" fill="#6b7280" text-anchor="start">Appearance</text>
+<rect x="666" y="289" width="10" height="10" rx="2" fill="#9aa1ad" stroke="none"/>
+<text x="684" y="298" font-size="11" font-weight="400" fill="#6b7280" text-anchor="start">Personas</text>
+<rect x="666" y="321" width="10" height="10" rx="2" fill="#9aa1ad" stroke="none"/>
+<text x="684" y="330" font-size="11" font-weight="400" fill="#6b7280" text-anchor="start">Skills</text>
+<rect x="666" y="353" width="10" height="10" rx="2" fill="#9aa1ad" stroke="none"/>
+<text x="684" y="362" font-size="11" font-weight="400" fill="#6b7280" text-anchor="start">Team types</text>
+<rect x="666" y="385" width="10" height="10" rx="2" fill="#9aa1ad" stroke="none"/>
+<text x="684" y="394" font-size="11" font-weight="400" fill="#6b7280" text-anchor="start">Library</text>
 <text x="662" y="612" font-size="10" font-weight="400" fill="#6b7280" text-anchor="start" font-style="italic">MudNavMenu, sticky</text>
 <rect x="784" y="174" width="356" height="458" rx="4" fill="#f6f7f9" stroke="#8b93a1" stroke-width="1.2"/>
 <rect x="780" y="166" width="25" height="17" rx="8.5" fill="#7c2d12"/>
@@ -158,6 +167,10 @@
 <text x="855.0" y="529.0" font-size="11" font-weight="600" fill="#fff" text-anchor="middle">Save</text>
 <rect x="796" y="502" width="32" height="17" rx="8.5" fill="#7c2d12"/>
 <text x="812.1" y="514.5" font-size="11" font-weight="700" fill="#fff" text-anchor="middle">G3a</text>
+<rect x="920" y="510" width="150" height="30" rx="5" fill="#ffffff" stroke="#8b93a1" stroke-width="1.2"/>
+<text x="995.0" y="529.0" font-size="10" font-weight="500" fill="#1f2430" text-anchor="middle">Reset all to defaults</text>
+<rect x="916" y="502" width="32" height="17" rx="8.5" fill="#7c2d12"/>
+<text x="932.0" y="514.5" font-size="11" font-weight="700" fill="#fff" text-anchor="middle">G1a</text>
 <text x="800" y="584" font-size="10" font-weight="400" fill="#6b7280" text-anchor="start" font-style="italic">Each section has its own panel: Appearance shows the</text>
 <text x="800" y="598" font-size="10" font-weight="400" fill="#6b7280" text-anchor="start" font-style="italic">theme picker; Skills and Personas show tables and</text>
 <text x="800" y="612" font-size="10" font-weight="400" fill="#6b7280" text-anchor="start" font-style="italic">import dialogs. Below 600px the menu stacks above.</text>

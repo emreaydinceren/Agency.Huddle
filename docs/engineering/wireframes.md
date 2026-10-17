@@ -197,7 +197,7 @@ error alert, the budget caption and the "continue" notes, which sit in the `C9` 
 
 `Tasks.razor`. The Board is shown; choosing List replaces `T4`'s columns with a grid.
 
-![The Tasks page: header, notices, a toolbar of controls, a board of five columns of task cards, and a task detail drawer open over its right side](../images/wireframes/04-tasks.svg)
+![The Tasks page: a header with the View name and New task, a counts row, notices, a toolbar of controls, a board of two columns of task cards and two 40px rails, the Right sidebar beside it, and a task detail drawer with Group labels and a sticky footer open at the page's right edge](../images/wireframes/04-tasks.svg)
 
 | Code | Name | Component | Notes |
 | --- | --- | --- | --- |
@@ -229,7 +229,7 @@ Not drawn: `TaskDetailDialog`, the dialog form of the detail (see Figure 8). A V
 
 `Library.razor`, `LibraryExplorer.razor`, `LibraryDocument.razor`. `LibraryExplorer` (a `MudSplitPanel`) fills the page with no code of its own (`L1` and `L1a` are retired); the page has no `h1` and no root-path heading, since the shell breadcrumb (`S1a`) names it: the split is `h-100` with `min-height: 0` and both panels are full height; side by side on this page, other hosts can stack the panels. The page container is `pa-0`, so the two panes run edge to edge on the shell's one surface, split by the `lines-default` hairline; each pane pads itself 16px at the sides and 12px above its first control (the tree header's search box, level with the document toolbar's controls); the document's content starts 24px below the toolbar's hairline.
 
-![The Library page: a root path heading above a split: a tree panel on the left, a draggable divider, and a document panel on the right with a toolbar, banners, an editor and preview, and a backlinks panel](../images/wireframes/05-library.svg)
+![The Library page: a split with a tree panel on the left, a draggable divider, and a document panel on the right; the tree header and the document toolbar form one band closed by one Chrome line, above banners, an editor and preview, and a backlinks panel](../images/wireframes/05-library.svg)
 
 | Code | Name | Component | Notes |
 | --- | --- | --- | --- |
@@ -299,7 +299,7 @@ slate `B` badges name the same containers.
 
 `Teammates.razor`. A tile opens the Teammate card, a dialog.
 
-![The Teammates page: a toolbar with New teammate and a Team filter, a warning notice, and a group of Teammate tiles with avatar, name, role, alias and status chips](../images/wireframes/07-teammates.svg)
+![The Teammates page: a header with New teammate at the right, a toolbar holding the Team select, a warning notice, a group of Teammate tiles, and below them the Teammate card, New teammate and avatar editor dialogs](../images/wireframes/07-teammates.svg)
 
 | Code | Name | Component | Notes |
 | --- | --- | --- | --- |
