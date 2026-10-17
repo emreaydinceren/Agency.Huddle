@@ -33,7 +33,7 @@ those. Everything below follows from that.
 | Palette, typography, corner radius, elevation | `MudTheme` built in C# | `src/Huddle.App/Themes/` |
 | Components | MudBlazor 9.10.0, used with the house defaults below | `src/Huddle.App/Components/` |
 | Compositions and Huddle-only widgets | Plain CSS over `--mud-*` variables | `wwwroot/app.css`, `*.razor.css` |
-| The one non-MudBlazor token | `--font-mono` | `wwwroot/app-vars.css` |
+| The non-MudBlazor tokens | `--font-mono` and the five `--ink-*` rungs, each mixed from MudBlazor variables | `wwwroot/app-vars.css` |
 
 [ADR-0009](../adr/0009-a-theme-is-a-stylesheet-layered-over-the-tokens.md) describes the
 earlier design, a `theme.css` of 39 tokens. It is superseded; do not rebuild it.
@@ -56,46 +56,123 @@ changes.
 
 Colour comes from the palette of the active Theme. Use a semantic role, never a value.
 
+**Theme vocabulary.** These terms say what a colour does on screen, so one rule covers every
+Theme. Each has its palette name beside it, so the rest of this page may use either.
+
+| Term | Means | Palette role |
+| --- | --- | --- |
+| Ground | The one surface everything sits on: page, panes, cards, dialogs | `Surface` |
+| Ink | Body text, and the colour every neutral line and fill is mixed from | `TextPrimary` |
+| Quiet ink | Supporting text: meta, labels, counts, placeholders | `TextSecondary` |
+| Faint ink | Disabled controls only | `TextDisabled` |
+| Accent | The Theme's one brand colour, as a fill, bar or border | `Primary` |
+| Accent ink | Any text or icon in the accent: the Accent 70% toward Ink | The Accent text mix below |
+| Signal | A status colour that carries a meaning (attention, error, done, working, review) | `Warning`, `Error`, `Success`, `Info`, `Tertiary` |
+| Signal ink | Text or an icon in a signal: the Signal 70% toward Ink | `color-mix`; see [Chips](#chips) |
+| Tint n% | Any colour mixed n% over Ground. "Accent tint 14%" is the selected row | `color-mix` |
+
+**The ink ladder.** A *rung* is Ink mixed n% over Ground. Lines and quiet fills sit on fixed
+rungs, so they keep their order and their proportions on any ground. A weak Theme gets weaker
+lines, but the order holds, and order is what makes a screen read.
+
+| Rung | Name | Property | Used for | Palette role it replaces |
+| --- | --- | --- | --- | --- |
+| Ink 4% | Strip | `--ink-strip` | The tab strip | None: it was already a mix |
+| Ink 6% | Wash | `--ink-wash` | Quiet fills: tag chip, segmented track, preview block, a disabled control | `BackgroundGray` |
+| Ink 10% | Rule | `--ink-rule` | A divider inside a card or dialog | `DividerLight` |
+| Ink 18% | Edge | `--ink-edge` | The border of a card, tile, lane, row, panel or table row | `Divider`, `TableLines` |
+| Ink 30% | Field | `--ink-field` | The boundary of an input | `LinesInputs` |
+| Ink 30% | Chrome | `--mud-palette-lines-default` | Top bar, tab strip, tab rail, toolbar and pane hairlines | `LinesDefault`, unchanged |
+| Ink 50-80% | Quiet ink | `--mud-palette-text-secondary` | Supporting text, at least 4.5:1 | `TextSecondary`, unchanged |
+
+The five `--ink-*` properties are defined once in `wwwroot/app-vars.css`, from MudBlazor
+variables only, and a stylesheet reads them with `var()`:
+
+```css
+:root {
+  --ink-strip: color-mix(in srgb, var(--mud-palette-text-primary) 4%, var(--mud-palette-surface));
+  --ink-wash: color-mix(in srgb, var(--mud-palette-text-primary) 6%, var(--mud-palette-surface));
+  --ink-rule: color-mix(in srgb, var(--mud-palette-text-primary) 10%, var(--mud-palette-surface));
+  --ink-edge: color-mix(in srgb, var(--mud-palette-text-primary) 18%, var(--mud-palette-surface));
+  --ink-field: color-mix(in srgb, var(--mud-palette-text-primary) 30%, var(--mud-palette-surface));
+}
+```
+
+Chrome stays the palette's `LinesDefault`, which every Theme sets at the Chrome rung. The measured
+ratio of each rung in each Theme is evidence, not a rule; it lives in
+[theme-authoring.md](theme-authoring.md).
+
+| Other term | Means |
+| --- | --- |
+| Base radius | `var(--mud-default-borderradius)`: 8px in the Huddle Themes, 4px in the others. Every radius is a multiple of it |
+| Hue distance | The difference in hue angle between two colours. Two signals, or a signal and the Accent, are told apart only if they are far enough apart |
+| Second cue | A glyph, shape, position or word that carries a meaning as well as its hue, so the meaning survives a Theme whose hues collide, and greyscale |
+| Theme families | **Authored** (Huddle Light and Dark), **Custom Accent** (Huddle neutrals, the Human's accent), **Ported** (VS Code, values kept faithful), **High Contrast** |
+
 | Role | MudBlazor variable | Use it for |
 | --- | --- | --- |
 | Surface | `--mud-palette-surface` | **The one shell surface**: the page, the sidebar, the top bar, the tab strip and every pane, plus cards, inputs and dialogs. Panes are separated by hairlines (see Lines), never by a darker ground with gaps around a card |
-| Quiet fill | `--mud-palette-background-gray` | Tag chips, preview blocks. Not the segmented control's track or the tab strip: those are `TextPrimary` mixed into `Surface` (6% and 4%), so they follow every Theme. Not a board lane: a lane is `Surface` (see [Tasks](#tasks)) |
+| Quiet fill | `--ink-wash`, the Wash rung | Tag chips, preview blocks and the segmented control's track. The tab strip is the Strip rung (`--ink-strip`). All are Ink mixed into Ground, so they follow every Theme. Not a board lane: a lane is Ground (see [Tasks](#tasks)) |
 | Ground, Sidebar | `--mud-palette-background`, `--mud-palette-drawer-background` | Not painted by the shell. They stay in each palette because MudBlazor and the theme tests read them |
 | Text | `--mud-palette-text-primary`, `-secondary`, `-disabled` | Body, supporting text, disabled controls. `text-disabled` paints disabled controls only |
 | Accent | `--mud-palette-primary` | **Only** a fill, an indicator bar or a border: the selected row's tint, the active tab's bar, a primary button, the Human's bubble tint. Never a text action's colour and never an open group's chevron |
 | Accent text | `color-mix(in srgb, var(--mud-palette-primary) 70%, var(--mud-palette-text-primary))` | Any text or icon in the accent: links, the active sidebar row, the active tab, text and outlined buttons, a selected chip, an accent icon. Raw `Primary` is never text. The mix stays above 4.5:1 on a light and a dark Theme alike |
-| Status | `-success`, `-warning`, `-error`, `-info`, `-secondary` | State, never decoration. Never a solid fill under text; see [Chips](#chips) |
+| Status | `-success`, `-warning`, `-error`, `-info`, `-tertiary` | State, never decoration. Never a solid fill under text; see [Chips](#chips). `-secondary` is kept for fills and is not a signal |
 
-**Lines.** Each kind of line has one token and one width (UX-061, UX-062).
+**Lines.** Each kind of line has one rung and one width (UX-061, UX-062).
 
-| Line | Rule | Examples |
-| --- | --- | --- |
-| Chrome | `1px solid var(--mud-palette-lines-default)` | Top bar, tab strip, room header, a toolbar's bottom edge, pane splitter, drawer edge. On the one surface this is what separates panes, so it must be clearly visible: Huddle Light's is 2.1:1 and Huddle Dark's 2.5:1 against Surface |
-| Card or row border | `1px solid var(--mud-palette-divider)` | Cards, tiles, board lanes, list-row separators, floating panels. At least 1.5:1 against Surface: Huddle Light's is 1.56:1 and Huddle Dark's 1.55:1. This is the only card border: `LinesDefault` is chrome only, never a card, an outlined card or a hover border |
-| Rule inside a card | `1px solid var(--mud-palette-divider-light)` | A sub-section inside a card or dialog |
-| Input border | MudBlazor's own (`--mud-palette-lines-inputs`) | Never restyle it |
+| Line | Rung | Rule | Examples |
+| --- | --- | --- | --- |
+| Rule (inside a card) | Ink 10% | `1px solid var(--ink-rule)`, or use spacing instead | A sub-section inside a card or dialog |
+| Edge | Ink 18% | `1px solid var(--ink-edge)`. Replaces `Divider` and MudBlazor's `TableLines`; the Global MudBlazor overrides draw table row lines on Edge | Cards, tiles, board lanes, rows, table rows, panels, floating panels |
+| Field | Ink 30% | `1px solid var(--ink-field)`. Always at least as strong as Edge | Every input, long-text included |
+| Chrome | Ink 30% | `1px solid var(--mud-palette-lines-default)` | Top bar, tabs, tab rail, toolbars, panes, splitter, drawer edge |
+
+> **Lines are ranked:** Rule < Edge < Field <= Chrome. Each sits on its ink rung (10%, 18%, 30%,
+> 30%). Every input, long-text fields included, draws the Field line. No line is drawn in Ink,
+> Quiet ink or Accent, except a focused field (Accent) and a drop target (dashed Accent).
+
+> **A wash never defines a shape on its own.** A washed shape (tag chip, reference chip, preview
+> block) also carries an Edge line, so it keeps its outline where the wash can't (dark grounds,
+> ported Themes). Washes sit on the Wash rung (Ink 6%); inner rules on the Rule rung (Ink 10%),
+> or are replaced by spacing.
+
+Edge is the only border of a card, tile or row. Chrome is for chrome only, never a card, an
+outlined card or a hover border. On the one surface, Chrome is what separates panes, so it must
+be clearly visible.
 
 **A toolbar ends in a hairline.** A toolbar that heads a pane or a document (its path, its
-mode switch, its actions) is closed by a chrome line along its bottom edge, so the controls
+mode switch, its actions) is closed by a Chrome line along its bottom edge, so the controls
 read as one band and the content as another. The band has 12px above and below its
 controls; the line runs the full width of the pane, not just the toolbar's content, and the
-content starts 24px below it. It is the same line as the top bar's and the tab strip's, so a toolbar reads as chrome,
-never as a card. A toolbar under a page title takes `.toolbar-hairline` (the Teammates
-toolbar, the Tasks toolbar's last row); a toolbar that heads a pane, like the Library
-document toolbar (`.library-document-toolbar`), runs its line the pane's full width. A
+content starts 24px below it. It is the same line as the top bar's and the tab strip's, so a
+toolbar reads as chrome, never as a card. A toolbar under a page title takes `.toolbar-hairline`
+(the Teammates toolbar, the Tasks toolbar's last row); a toolbar that heads a pane, like the
+Library document toolbar (`.library-document-toolbar`), runs its line the pane's full width. A
 stack of toolbar rows has one line, under the last row.
+
+**A tab rail ends in a Chrome line, like a toolbar, and its content starts 24px below.** An
+outlined button's border is the Chrome line; its text is Ink, or Accent ink for `Color.Primary`.
 
 **States.** Each interaction state has one treatment (UX-064 to UX-067).
 
-| State | Treatment |
-| --- | --- |
-| Hover | `background: var(--mud-palette-action-default-hover)`. Not `table-hover`, except inside a table |
-| Selected | `color-mix(in srgb, var(--mud-palette-primary) 14%, var(--mud-palette-surface))`, with accent-text colour and weight 500. It is worn by the active sidebar row, a selected Library tree row (which keeps its 2px bar), a selected Task List row (`task-row-selected`) and the `@` picker's active item, so a selected row never looks like a hovered one |
-| Selected and hovered | The same mix at 20%, on hover and (in the sidebar) on focus |
-| Accent-tinted surface (the Human's bubble) | 14% fill with a 28% border, over `surface`. Never a solid accent fill |
-| Drop target | `1px dashed var(--mud-palette-primary)` plus the hover background |
-| De-emphasised text | `color: var(--mud-palette-text-secondary)`. Don't use opacity, and don't use `text-disabled`, which is for disabled controls only |
-| Archived or gone | `opacity: 0.6` on the whole item, the one use of opacity for muting |
+| State | Treatment | Shape |
+| --- | --- | --- |
+| Hover | `background: var(--mud-palette-action-default-hover)`. Not `table-hover`, except inside a table | None of its own |
+| Selected | Accent tint 14% (`color-mix(in srgb, var(--mud-palette-primary) 14%, var(--mud-palette-surface))`), with Accent ink and weight 500, so a selected row never looks like a hovered one | The selected-row shape, below |
+| Selected and hovered | The same mix at 20%, on hover and (in the sidebar) on focus | The same |
+| Search match | Attention tint 24%, Ink text, weight 600 | None |
+| Accent-tinted surface (the Human's bubble) | 14% fill with a 28% border, over Ground. Never a solid accent fill | The bubble's own |
+| Drop target | `1px dashed var(--mud-palette-primary)` plus the hover background | None |
+| De-emphasised text | `color: var(--mud-palette-text-secondary)`. Don't use opacity, and don't use `text-disabled`, which is for disabled controls only | None |
+| Disabled | Faint ink on Wash, set once in the Global MudBlazor overrides so it follows every Theme. Never MudBlazor's fixed black alpha | The control's own |
+| Archived or gone | `opacity: 0.6` on the whole item, the one use of opacity for muting | None |
+
+> **Selected shape:** the row is inset 4px from its container and rounded at 0.75x the base
+> radius (6px in Huddle, 3px elsewhere). It ships as the global `.selected-shape` class and
+> applies to sidebar rows, tree rows, section-nav rows, list pickers and the Activity bar (a 40px
+> tile). A selected Library tree row keeps its 2px bar inside the shape. A selected Task List row
+> (`task-row-selected`) and the `@` picker's active item wear the same treatment.
 
 Always mix a tint over `surface`, never over `transparent`, so it reads the same on every
 ground.
@@ -108,7 +185,7 @@ ground.
 - Don't colour body text with a status colour. Status colours mark a chip, a dot, an icon
   or a short value such as a date. A whole card of orange text fails contrast and hides the
   state. An overdue date is a warning icon and the date in weight 600, at the date's own
-  size, in the error colour mixed 70% toward body text (5.79:1 Dark, 9.70:1 Light), not
+  size, in the error colour mixed 70% toward body text, not
   plain red text (UX-043). Overdue adds the icon and the weight, never size.
 - A notice's sentence is body text too. Only its icon and its leading bar carry the status
   colour; see [Notices and snackbars](#notices-and-snackbars).
@@ -119,21 +196,28 @@ is never `Warning`, so a Board card never shows amber for its column, its assign
 priority at once. Before you give a new state a colour, check that its hue does not already
 mean something else in this table.
 
+> **A meaning never rests on hue alone.** Every signal has a second cue (the state dot's shape,
+> the priority glyph, a word), so it survives colliding hues and greyscale. **Hue distance:** in
+> an authored Theme, signals are at least 30 degrees apart from each other and from the Accent.
+> A ported Theme may fall short; its second cues carry the meaning.
+
 **Status colours carry the same meaning everywhere.** A status colour is chosen by a pure
 mapping function, never at a call site (UX-V14).
 
 | Subject | Mapping | Source |
 | --- | --- | --- |
-| Task state | Backlog default (its column dot is dashed), To Do default, In Progress info, Review secondary, Done success, Cancelled/Duplicate/Rejected error | [`TaskColors.cs`](../../src/Huddle.App/Components/Tasks/TaskColors.cs), drawn by `TaskStatusChip` |
-| Task priority | Low default, Medium info, High warning, Urgent error | `TaskColors.cs`, drawn by `TaskPriorityChip` |
+| Task state | Backlog default (its column dot is dashed), To Do default, In Progress info, Review tertiary, Done success, Cancelled/Duplicate/Rejected error | [`TaskColors.cs`](../../src/Huddle.App/Components/Tasks/TaskColors.cs), drawn by `TaskStatusChip` |
+| Task priority | Low default, Medium default, High warning (attention), Urgent error. Each also has its glyph | `TaskColors.cs`, drawn by `TaskPriorityChip` |
 | Task due date | Overdue is a warning icon plus the date in weight 600, in the error colour mixed 70% toward body text | `TaskDates.IsOverdue` decides |
 | Presence and Teammate health | Drawn as a [presence badge](#avatars-and-status): a glyph plus a tone. `TaskColors.For(PresenceState)` gives Awake Info, Asleep and Offline Default | `PresenceCue.From` |
 | Needs You reason, search notice | `StatusColors.For(NeedsYouReason)`, `StatusColors.For(SearchNoticeKind)` | [`StatusColors.cs`](../../src/Huddle.App/Components/Shared/StatusColors.cs). The Composer's upload chip still colours itself inline (UX-V14) |
 
 A status colour never stands alone: a chip has its text, a dot has an accessible name
-(UX-V08).
+(UX-V08), and every signal has the second cue above.
 
-**Contrast floors.** Tests check 4.5:1; reviewers check 7:1 for body text. Supporting text
+**Contrast floors.** Tests check 4.5:1; reviewers check 7:1 for body text. **Text ladder:** Ink
+reaches 7:1 for body text; Quiet ink reaches 4.5:1 and sits between Ink 50% and Ink 80%; Faint
+ink is for disabled controls only. Supporting text
 (paths, secondary tree text, breadcrumb separators, line numbers), icons and link text reach
 4.5:1. Use `text-secondary` for supporting text and icons. A status colour used as an icon
 or glyph on its own, such as the tree's orphan warning, is pulled toward the body text the
@@ -142,16 +226,17 @@ way the accent is
 Check every one in a light and a dark Theme.
 
 **Contrast is tested.** `ThemeCatalogTests` holds every Theme to six pairs, including
-`Primary` against both Background and Surface at 4.5:1 (WCAG 1.4.3). It also holds the
-Huddle Themes' `Divider` to 1.5:1 against Surface and every Theme to a `DrawerText` and
-`DrawerIcon` taken from its own text colours. The Human's accent colour goes through
-`AccentPalette.ClampForContrast`, which darkens or lightens it until it clears the floor,
-and its `PrimaryContrastText` is black or white, whichever reads better
+`Primary` against both Background and Surface at 4.5:1 (WCAG 1.4.3), and to the line and text
+relationships under [How the rules are enforced](#how-the-rules-are-enforced). It also holds
+every Theme to a `DrawerText` and `DrawerIcon` taken from its own text colours. The Human's
+accent colour goes through `AccentPalette.ClampForContrast`, which darkens or lightens it until
+it clears the floor, and its `PrimaryContrastText` is black or white, whichever reads better
 (`ContrastColour.ReadableForeground`). Both Huddle Themes set `ActionDefault` equal to
 `TextSecondary`, so an icon button reads as supporting text and not as MudBlazor's 54% black
 (`ThemeCatalogTests` pins it); the 17 VS Code Themes keep MudBlazor's default. A palette
-that fails these tests does not ship, and no shipped Theme carries an exception. The tests
-cover palettes and the chips, not other tinted states; see [Known gaps](#known-gaps).
+that fails these tests does not ship; a ported Theme that misses a relationship is listed in
+`DocumentedShortfalls` and nothing else. The tests cover palettes and the chips, not
+other tinted states; see [Known gaps](#known-gaps).
 
 **The shipped palettes.** Huddle Light and Huddle Dark are authored in
 [`HuddleTheme.cs`](../../src/Huddle.App/Themes/HuddleTheme.cs). Their neutrals are warm
@@ -192,11 +277,12 @@ unitless and set with the sizes in `ThemeDefaults.WithSharedTypography`.
 
 | Role | `Typo` | `HtmlTag` | Rendered | Line height | Weight | Examples |
 | --- | --- | --- | --- | --- | --- | --- |
-| Page title | `h5` | `h1` | 20px | 1.3 | 600 | a Room's name (`C2`, UX-038), "Settings", a Team's name. Tasks is the one page without an `h1`; see [A page](#a-page), step 3 |
-| Dialog or drawer title | `h6` | MudBlazor's | 16px | 1.35 | 600 | "New team", "SUPP-0005 · Build the public status page" |
-| Section heading inside a page or panel | `subtitle2` | `h2` | 16px | 1.35 | 600 | Teammates groups, Prompts groups, "Roles", "Roster", the Task drawer's groups (UX-001) |
+| Page title | `h5` | `h1` | 20px | 1.3 | 600 | a Room's name (`C2`, UX-038), "Settings", a Team's name. Every page shows one; see [A page](#a-page), step 3 |
+| Dialog or drawer title | `h6` | MudBlazor's | 16px | 1.35 | 600 | The item's name, never its type: "Alan", not "Teammate"; "SUPP-0005 · Build the public status page"; "Duplicate Platform" |
+| Section heading inside a page | `subtitle2` | `h2` | 16px | 1.35 | 600 | Teammates groups, Prompts groups, "Roles", "Roster" (UX-001) |
+| Group label inside a drawer or dialog | | | 12px | 1.35 | 600 | The Task drawer's groups. Quiet ink, sentence case, 8px below it: the global `.group-label` class |
 | Card title | `subtitle1` | | 14px | 1.4 | 600 | A Teammate tile's name, an agent card's "Nova is asking" (UX-031) |
-| Group label inside a panel, small and uppercase | `overline` | | 11px, 0.04em tracking | 1.3 | 600 | "Background", "Problems", the search group headings |
+| Overline label inside a panel, small and uppercase | `overline` | | 11px, 0.04em tracking | 1.3 | 600 | "Background", "Problems", the search group headings |
 | Prose, Transcript | `body1` | | 14px (the Library reader 16px at 1.65) | 1.55 | 400 | Intro paragraphs, "No tasks yet.", a message's body |
 | Editable long text | `body1` | | 14px | 1.55 | 400 | Prompt fields, Teammate instructions, a Skill's body. Monospace only when the content is code. Never the input's default weight or line height |
 | Dense UI text, rows, cells, controls | `body2` | | 13px | 1.4 | 400, 500 for controls | List rows, table cells, menu items, sidebar rows, Small buttons |
@@ -227,6 +313,9 @@ title, section heading, card title and body, rows, meta.
   as its body at weight 600.
 - A drawer or dialog title is the item's name, not its type: "SUPP-0005 · Build the public
   status page", never "Task". See [Drawer anatomy](#drawer-anatomy).
+- **In a drawer or dialog, the title is the only 16px text.** Its groups wear the Group label
+  (12px/600 in Quiet ink, `.group-label`), which is a label and so the one heading allowed to
+  be smaller than what it heads.
 - A section heading inside a page is `subtitle2`, weight 600, in `TextPrimary`
   (`.group-heading`). Secondary-grey section headings belong to the sidebar.
 
@@ -262,12 +351,17 @@ renders at 30px against 25px for Small (UX-V01).
 **A Small button is a row-sized control**: 28px high, 13px (`body2`) text, weight 500, for text,
 outlined and filled alike. The Status and Tag chips set their own shape; see [Chips](#chips).
 
+> **One height per toolbar row: 28px.** Small buttons, the segmented control, filter chips, and a
+> `SearchField` or select with `Class="toolbar-compact"` (28px box, 13px text) all match. A
+> full-height dense input belongs in a form. An inline add row (a field and its **Add**) follows
+> the same rule.
+
 **Spacing in markup uses MudBlazor's utility classes**, on a 4px step:
 
 | Place | Class |
 | --- | --- |
 | Page container, drawer content, dialog content | `pa-4` |
-| Card, panel, tile | `pa-3` |
+| Card, panel, tile | `pa-3` (12px), with no exception: a Teammate tile is 12px like a Board card |
 | Between sections | `mb-4` |
 | Between related fields | `mb-2` |
 | A stack | `MudStack` with `Spacing="2"` for fields and `Spacing="4"` for sections |
@@ -296,9 +390,9 @@ area is plain `100vh`. See
 
 | Token | Value | Use it for |
 | --- | --- | --- |
-| `var(--mud-default-borderradius)` | 8px in both Huddle Themes, 4px elsewhere | Cards, tiles, inputs, chips, preview blocks, drawers' inner panels |
-| `calc(var(--mud-default-borderradius) * 1.5)` | 12px or 6px | Message bubbles, the Composer, larger containers |
-| `calc(var(--mud-default-borderradius) * 0.75)` | 6px or 3px | An element nested inside a rounded one, such as the segmented indicator, and the Status and Tag chips |
+| `var(--mud-default-borderradius)` | 8px in both Huddle Themes, 4px elsewhere | Every bordered card, tile and input, whatever its size; chips, preview blocks, drawers' inner panels |
+| `calc(var(--mud-default-borderradius) * 1.5)` | 12px or 6px | The message bubble and the Composer, and nothing else |
+| `calc(var(--mud-default-borderradius) * 0.75)` | 6px or 3px | An element nested inside a rounded one, such as the segmented indicator, the Status and Tag chips, and the selected-row shape |
 | `50%` | Circle | Avatars and status dots, always |
 | `999px` | Pill | Count badges, pill buttons |
 
@@ -373,6 +467,8 @@ Component parameters are in the [catalog](UXDesignGuidelines.md#display).
   cards; `Large` (72px) on a `TeammateCard` and in the avatar editor. Pass the class and the
   `Size`; don't set a width or radius of your own.
 - **A Teammate's handle is written `@alias`**, wherever it is shown.
+- **An avatar-colour swatch is a 32px circle** drawn with the avatar recipe for the current
+  mode, and the swatches are a radio group with colour names.
 
 **The look.** One recipe per Theme mode, drawn by one `app.css` rule, so every monogram clears
 4.5:1 without choosing black or white per colour.
@@ -393,7 +489,7 @@ accent through the same recipe. The contrast tests sweep and sample both modes.
 | --- | --- |
 | Letters | One word gives its first two letters ("Helen" gives HE). Several words give the first and last initials. A one-letter name stays one letter. An empty name gives "?" |
 | Letter size | 40% of the diameter, never under 10px: 10px, 12.8px, 16px and 28.8px on 24px, 32px, 40px and 72px |
-| Image | A photo or illustration keeps the same circle with a 1px inset hairline in `Divider`, so mixed kinds sit together. It shows from 32px up; at 24px (`Size.Small`) every avatar is the monogram, because an image at that size reads as a blur beside the letters. So a 1:1 Room's sidebar row shows the monogram |
+| Image | A photo or illustration keeps the same circle with a 1px inset hairline on the Edge rung, so mixed kinds sit together. It shows from 32px up; at 24px (`Size.Small`) every avatar is the monogram, because an image at that size reads as a blur beside the letters. So a 1:1 Room's sidebar row shows the monogram |
 | Stacked members | The Room header's stack is 24px avatars, each with a 2px Surface ring |
 | Profile ring | On a `ProfileCard`, the avatar sits in a ring: 1px `TextSecondary`, 2px clear of the avatar. Dashed for a proposed Teammate, solid (`Existing`) for one that already exists. Nowhere else |
 
@@ -416,6 +512,7 @@ A filled tone is the palette colour mixed 20% toward black, so the white glyph k
 pulse glyph breathes: the badge fades between full and about half opacity over 1.8s, and is
 static under `prefers-reduced-motion`. The glyph carries the state, so the badge also reads in
 greyscale.
+
 **Health versus Presence.** Health says whether the Adapter can act at all; Presence says
 what an assignee is doing now. They stay two systems that share one glyph set through
 `PresenceCue.From`, and each keeps its own word.
@@ -440,13 +537,13 @@ that shows the control, or it can't be reached on a touch screen (UX-075).
 
 - **The focus ring is `2px solid var(--mud-palette-text-primary)`, offset 2px**, on
   `a:focus-visible` and `button:focus-visible`. MudBlazor resets the outline, so this
-  rule restores it. It uses text colour and not the accent because the dark accent
-  measured 1.63:1; text colour clears 3:1 in every Theme. Don't override it with the
+  rule restores it. It uses text colour and not the accent because a dark Theme's accent
+  can fall below 3:1; text colour clears 3:1 in every Theme. Don't override it with the
   accent, a different width or a hover ring (UX-V07)
   ([app.css](../../src/Huddle.App/wwwroot/app.css) "Keyboard focus ring").
 - **The Composer's focused border is the accent.** `.composer-input:focus-visible` draws a
   `Primary` border plus a 0.5px inset accent ring, which reads as 1.5px and moves no text.
-  `Primary` clears 3:1 against Surface in both Huddle Themes, where `lines-default` would
+  `Primary` clears 3:1 against Surface in both Huddle Themes, where the Chrome line would
   not.
 - **Every `MudAlert` has a role**: `role="alert"` for an interruption, `role="status"` for
   a consequence (UX-V05).
@@ -477,6 +574,7 @@ container's code (`S2`, `C7a`, `T3`) is in [wireframes.md](wireframes.md).
 | Workspace | `MudMainContent.main-column` | A flex column, `overflow: hidden`, holding `TabHost` |
 | Tab groups | `TabHost` then `TabGroupPane` | One or two panes side by side, each a `TabStrip` over a `.tab-body`. The focused pane owns the URL; the other dims its active tab |
 | Page | `TabPageHost` mounts a `DynamicComponent` | Only each group's active Tab is mounted |
+| Right sidebar | Panels that follow the focused page, 280px | See [The Right sidebar](#the-right-sidebar) |
 | Inside a page | `MudTabs` (Team page, Settings), `MudSplitPanel` (Library) | `MudDrawer` is not resizable, so use `MudSplitPanel` for two resizable panes |
 
 ### The sidebar
@@ -494,10 +592,14 @@ The sidebar's content is about 677px tall in an 890px window, so it fits one scr
   Labels at one level therefore start at one x, whether the row shows an avatar or an icon.
 - **A destination is a row, not a header.** "Teammates" and "Library" are rows (13px body,
   18px icon in the leading slot); only a group with children wears the section-header style.
-- **The Needs You card's rows follow the row scale**: a 13px label and 12px meta, like every
-  other sidebar row.
-- **The active row wears the Selected treatment**: accent text and a 14% tint, 20% on hover
-  or focus (see [States](#colour)).
+- **The Needs you card is outlined in Edge.** Its row is 32px: the reason icon, the Room's
+  name, and a trailing time, like every other sidebar row.
+- **A group header is 32px like a row.** Sidebar action rows ("Show all", "New chat") are 13px
+  in Quiet ink.
+- **The active row wears the Selected treatment and shape**: Accent ink, a 14% tint (20% on
+  hover or focus) and the inset rounded shape (see [States](#colour)).
+- **The Activity bar follows the focused page's area** unless the Human picked a view since.
+  A view whose only content is one group opens that group.
 - **Meta is trailing, never wrapped.** A Team row ends in a `span.sidebar-row-meta` member
   count whose tooltip reads "3 members" or "No members".
 - **Groups start closed; the group holding the current page opens.** It also opens on
@@ -521,18 +623,35 @@ The sidebar's content is about 677px tall in an 890px window, so it fits one scr
 - **Row actions are revealed on hover or focus** with a `120ms` opacity transition, and
   stay reachable by keyboard and on touch.
 
+### The Right sidebar
+
+280px, with 16px padding and a Chrome line on its edge. Its panels follow the focused page.
+
+- **Panel header:** 13px/600 in Ink, a 12px Quiet-ink count and a chevron; 32px high, with an
+  Edge line between panels.
+- **Rows:** 32px (28px in the Outline), one line, ellipsised, with the full text in `title`.
+  A Task row is the ID in 12px Quiet ink, the title in Ink, and the state's dot. A member row
+  is a 24px avatar with its presence badge, then the name.
+- **Text:** Ink. Accent ink marks only the hovered or current row. The Outline marks the
+  heading in view with the Selected treatment.
+- **Empty:** `EmptyState` with the sentence "Nothing to show for this page.", the same one the
+  User Guide uses.
+- **With a drawer:** a right-hand drawer opens beside the sidebar, or closes it and restores it
+  afterwards. It never covers the sidebar and its toggle.
+
 ### The tab strip, tab rail and breadcrumb
 
 - **Tab strip.** A Tab title is 13px at weight 400, and 500 when active. A preview Tab is
   marked by `TextSecondary` colour, never by weight or italic; keeping it returns the body
   colour. Titles ellipsise, and the `title` attribute carries the full title. A Tab is a
-  fixed 14rem, so its hover toolbar leaves the start of the title visible. The strip is `TextPrimary` 4% over `Surface`, and the
-  active Tab is `Surface` with a 2px accent top edge, so it opens into the page below. Every
-  unpinned Tab shows its close button, at 60% until hovered or active.
+  fixed 14rem, so its hover toolbar leaves the start of the title visible. The strip is the
+  Strip rung (Ink 4% over Ground), and the active Tab is Ground with a 2px accent top edge, so
+  it opens into the page below. Every unpinned Tab shows its close button, at 60% until hovered
+  or active.
 - **Tab rail** (Settings, the Team page). Labels are 13px at 500 in `TextSecondary`; the
   active label is in accent text over a 2px accent indicator. The icon is 18px
   (`--icon-size-row`) and takes its label's colour. Scroll arrows appear only when the tabs
-  overflow the rail.
+  overflow the rail. The rail ends in a Chrome line and its content starts 24px below it.
 - **Breadcrumb.** 13px, ancestors in `TextSecondary`, the current crumb in `TextPrimary`, and
   8px each side of the "›". It starts at the window's left edge, inside the top bar's 16px
   gutter, so the strip above the sidebar is not left empty and a long trail has room.
@@ -548,6 +667,11 @@ The Room is the Transcript over the Composer in one column.
   after the name. There are 16px between senders and 4px between consecutive messages of one
   sender (`.grouped`).
 - **Day separator.** 12px at 600 in `TextSecondary` on a hairline, 24px above and 16px below.
+  It reads Today, Yesterday, or "Mon, Oct 5"; a message under it shows the time only.
+- **A file in a message** is its name as a `.ref-link` (an attachment chip for uploads), with
+  the relative path in the tooltip.
+- **The Room header is a `PageHeader`** with a Chrome line, not a band of its own; see
+  [A page](#a-page).
 - **A Task link** in a message has a dotted underline, accent text and an 8px status dot.
 - **References sit under their message**, in the same column: left-aligned under an Agent's
   body, right-aligned under the Human's bubble. Never detached beside it.
@@ -560,15 +684,19 @@ The Room is the Transcript over the Composer in one column.
 
 ### Tasks
 
-- **A Board card** has 12px padding, a 1px `Divider` border, the card radius and 8px between
+- **A Board card** has 12px padding, an Edge border, the card radius and 8px between
   cards. Its first row (`.task-card-header`) holds the ID (12px `TextSecondary`) and the
   priority [status chip](#chips). The title is 14px at 600 and runs to three lines. Tags are
   tag chips. The assignee is a 24px avatar with the name at 12px. The due date is `caption`
   (12px), like the ID, written as [Dates and times](#dates-and-times) says. A card shows no
   State chip and has no coloured edge.
-- **A lane** is `Surface` with a 1px `Divider` border and the card radius, in every Theme. Its
+- **A lane** is Ground with an Edge border and the card radius, in every Theme. Its
   column header names the state; the lane itself carries no fill, so an empty lane is not a
-  grey block in Light and a lane is not invisible in Dark.
+  grey block in Light and a lane is not invisible in Dark. A column is 260-300px. Empty
+  terminal columns collapse to a 40px rail with the name and count.
+- **A swimlane label** is the page section heading (16px/600) with its count, under a Chrome
+  line. In a swimlane an empty cell is blank; the empty line shows only when the whole column
+  is empty.
 - **A column header** is an 8px state dot in the colour of the column's first state (dashed for
   Backlog), the name at 13px/600 and the count at 12px `TextSecondary`.
 - **An empty column** shows one centred 12px `TextSecondary` line: "Nothing done yet.", "Nothing
@@ -578,10 +706,13 @@ The Room is the Transcript over the Composer in one column.
 - **Overdue** is the warning icon and the date in one span; see [Colour](#colour). An overdue
   card shows its date even when the View hides `due_date`.
 - **Header counts** are 13px, with the numbers at 600 in body colour; "need you" is the
-  warning colour mixed 70% toward body text.
+  warning colour mixed 70% toward body text. A count wears its signal only above 0.
+- **Hover and focus reveal** (see [Patterns worth copying](#patterns-worth-copying)) applies
+  to Board cards and List rows.
 - **The List** has 36px rows (32px Dense), 13px body and header cells at 12px/600
   `TextSecondary`. The ID column is 110px, Priority 120px (`task-list-priority-cell`), the row
-  menu 40px, and Title takes the rest.
+  menu 40px, and Title takes the rest. A group row is Ground, with a 13px/600 label, a 24px
+  avatar for an assignee group, and a 12px Quiet-ink count. No wash.
 - **The drawer** is in [Drawer anatomy](#drawer-anatomy).
 
 ### The Library
@@ -590,7 +721,9 @@ The Room is the Transcript over the Composer in one column.
 - **The reader** is `body1` x 8/7 (16px) at 1.65 with a 35em measure, set flush left on the
   toolbar's 16px line rather than centred in the pane. A note's Markdown h1 is
   24px at 600, the one size above 20px in the app, and only in the reader.
-- **The document toolbar** ends in a hairline, as every toolbar does (see Lines).
+- **The document toolbar** ends in a hairline, as every toolbar does (see Lines). The tree
+  header and the document toolbar are one band of the same height, with one Chrome line across
+  the splitter.
 - **The file path** is 12px `TextSecondary`, relative to its Library root ("Teams/Platform/
   Architecture.md"), middle-truncated by `LibraryPathDisplay.Shorten`. The absolute path on
   disk is in the tooltip only.
@@ -601,8 +734,9 @@ The Room is the Transcript over the Composer in one column.
 
 ### Settings, the Team page and Build a team
 
-- **Settings.** `.settings-page` caps the content at 960px, left-aligned. The intro is 14px
-  `TextSecondary` at 75ch; "Overrides stored at" is 12px with the path in 12px `--font-mono`;
+- **Settings.** `.settings-page` caps the content at 960px, left-aligned. Its sections sit in a
+  section nav (see [A page](#a-page)). Each Theme row shows a swatch of its Ground, Ink and
+  Accent. The intro is 14px `TextSecondary` at 75ch; "Overrides stored at" is 12px with the path in 12px `--font-mono`;
   `{{tokens}}` are tag chips in 12px mono.
 - **The Team page.** "Roles" and "Roster" are `subtitle2` `h3`s with a 12px `TextSecondary`
   count ("Roster · 4 members", "Roles · N roles available"). Roles fill two rows of `.role-grid`
@@ -625,7 +759,7 @@ The grid is `repeat(auto-fill, minmax(240px, 1fr))`. The `<li>` is the bordered 
 the opening `<button class="teammate-tile">`, so the Task link is not nested in a button. A
 tile has a 40px avatar with the badge, the name at 14px/600, the role at 13px `TextSecondary`,
 `@alias · State` as 12px meta text, and "Working on SUPP-0002" at 12px with the Task as a link
-to `/tasks/item/{id}`. A tile's content is left-aligned on one edge, the "Working on" line
+to `/tasks/item/{id}`. A tile has 12px padding. Its content is left-aligned on one edge, the "Working on" line
 included. Group headings are the section heading (16px/600) with a 12px count
 (`.teammates-group-count`). The page's intro says what a Teammate is to the Human; how a
 Persona file works belongs in the User Guide.
@@ -634,7 +768,7 @@ Persona file works belongs in the User Guide.
 
 1. **Route it.** Make it a routable component (`@page`); `TabPageRoutes` resolves a Tab's
    URL to it. Teach `TabKeys.Describe` the URL's key, title and icon name. A page does not
-   draw its own breadcrumb.
+   draw its own breadcrumb, and a page with no ancestor shows none.
 2. **Contain it.** Wrap it in a `MudContainer` with `Class="pa-4"` (UX-002). The one
    exception is a page that is nothing but split panes edge to edge, the Library page: it
    uses `pa-0`, and each pane pads itself (16px sides, 12px above its toolbar or tree header) so the
@@ -654,34 +788,31 @@ Persona file works belongs in the User Guide.
    each a `Size.Small` button at its natural width, never full width (UX-001, UX-004).
    A page's toolbar sits under the header, lined up with the title.
 
-   - **The page title model.** The page name is the `h1`. The breadcrumb holds only the
-     ancestors, so it never repeats the title: a Room shows "Rooms", a Team "Teams", a
-     Project "Teams › {Team}", and Build a team "Teams". A page with no ancestor keeps a
-     one-crumb trail.
+   - **The page title model.** The page name is the `h1`, and every page shows its `h1`: there
+     is no `HideTitle`. The breadcrumb holds only the ancestors, so it never repeats the
+     title: a Room shows "Rooms", a Team "Teams", a Project "Teams › {Team}", Build a team
+     "Teams", and a Task View "Tasks", with the View's display name (never its slug) as the
+     `h1`. A page with no ancestor, such as Settings, shows no breadcrumb.
    - **The document title is the bare page name**: "Platform", "Grace", "My Tasks". There
      is no "— Huddle" suffix. `PageHeader` sets it; a page that has no `PageHeader` sets
      `<PageTitle>` itself.
-   - **The Tasks exception.** The Tasks page has no `h1`. The View's name is the
-     breadcrumb's last crumb ("Tasks › My Tasks"), and that crumb is the View's display
-     name, never its slug. Its `<PageTitle>` still sets the document title. The Team page
-     and the Project page are not exceptions: both draw a `PageHeader` `h1`. Don't copy
-     the Tasks exception to another page.
-   - **The Settings title is for a screen reader.** Settings has no ancestor, so its Tab
-     and its one-crumb trail both already read "Settings"; a visible title would be the
-     third. It passes `HideTitle` to `PageHeader`, which keeps the `h1` and the document
-     title but clips the `h1` out of view with `.visually-hidden`. Only a page whose name
-     the Tab and a one-crumb trail both show may do this; a page with ancestors or a
-     subtitle keeps a visible title.
+   - **One header geometry.** The `h1` row is 32px high, 16px below the tab strip, on every
+     page. The Room header is a `PageHeader` with a Chrome line, not a band of its own.
+   - **The create action is in the header, at the right**, as a Small button: filled if it is
+     the page's one primary action, otherwise outlined.
+   - **An intro is `body1` (14px) in Quiet ink at 75ch**, through `PageHeader`'s `Subtitle` or
+     `.page-lead`.
 4. **Fill the pane.** The page's root is `h-100`, with `min-height: 0` on a flex child so
    inner regions scroll instead of the page growing past the window (`.room-column` is the
    model). Split panes fill the height too (UX-006).
 5. **Scroll inside the page, not the window.** A horizontally scrolling region keeps its
    scrollbar and headers in view (UX-007).
 
-Two tabbed pages (Team page, Settings) use one tab-rail style (see
-[the tab strip, tab rail and breadcrumb](#the-tab-strip-tab-rail-and-breadcrumb)): an icon per
-tab from `TabIcons` or the entity table, and sentence-case labels (UX-008, UX-009). A control that
-acts on one tab lives inside that tab, not above the rail (UX-010).
+Two patterns for sections. A **tab rail** holds up to five sections (the Team page). A
+**section nav** holds six or more (Settings), with the sidebar's row geometry and the Selected
+shape. Either way, give each section an icon from `TabIcons` or the entity table and a
+sentence-case label (UX-008, UX-009). A control that acts on one section lives inside it, not
+above the rail or the nav (UX-010).
 
 ## Overlays
 
@@ -698,20 +829,36 @@ acts on one tab lives inside that tab, not above the rail (UX-010).
 
 | Part | Rule |
 | --- | --- |
-| Options | `CloseButton = true`, `MaxWidth.Small`, `FullWidth = true` for a form; `BackdropClick = false` when it holds typed input. Don't hand-build a close button in `TitleContent` (UX-022, UX-023) |
-| Title | `Typo.h6`: a verb phrase for an action ("New team", "Rename note") or the item's name for a view. When a caller passes a title, show it |
+| Options | `CloseButton = true`, `FullWidth = true` for a form, width per the Width row; `BackdropClick = false` when it holds typed input. Don't hand-build a close button in `TitleContent` (UX-022, UX-023) |
+| Title | `Typo.h6`, sentence case, and the item's name: a verb phrase naming the item for an action ("Duplicate Platform", "Rename note"), the item itself for a view ("Alan's avatar", "Fields in Awaiting review"). When a caller passes a title, show it |
 | Fields | `Variant.Outlined`, `Margin.Dense`. `AutoFocus` on the first field. In a single-field dialog, Enter submits (UX-024) |
 | Validation | Live, through the feature's pure validator, shown with `Error` and `ErrorText` on the field. Disable the primary action while invalid |
 | An error from the action | `MudAlert Severity.Error Dense role="alert"` above the actions. Not a raw `<p>` or a `MudText` (UX-025) |
 | Actions | Right-aligned in this order: **Cancel** (`Variant.Text`), then **Back** if there is one, then the **primary action** (`Variant.Filled`, `Color.Primary`, or `Color.Error` when it destroys). All `Size.Small` (UX-020, UX-021) |
 | Busy | The primary action disables and shows a busy label ("Saving…") or a spinner |
 | Picker dialog | No actions row; `CloseButton = true` is the way out |
+| Close button | 28px, an 18px icon, `ActionDefault`; restyled once in the Global MudBlazor overrides |
+| Padding | Title `16px 24px 8px`; content `8px 24px`; actions `12px 24px 16px` |
+| Width | 600px for forms, confirms and pickers under about 12 items; 960px only for two-pane or tabular pickers |
+| Disabled primary | Faint ink on Wash; never MudBlazor's fixed black alpha |
+| Field labels | Quiet ink at 400, the same at rest and floated |
+| Required fields | "(optional)" on optional fields; never an asterisk |
+| From a menu | The menu closes before the dialog opens |
+| Primary verb | Repeats the title's verb ("Add a role" gives **Add**) |
+| Quotes | One style in copy: "x", never 'x' |
+| List rows in a picker | 32px, 13px, an 18px icon in a 24px slot (`.picker-row`) |
+| Depth | At most two dialogs deep. A picker opened from a dialog replaces its content, with **Back** |
+| Empty optional field | A Quiet-ink placeholder ("None", "Add tag…"), not a blank outlined box |
 
 ### Drawer anatomy
 
 A side drawer (`T7`, the Task detail) has a header row, content in `pa-4` with
-`MudStack Spacing="4"`, and its actions at the bottom in the dialog order. A resizable
-drawer uses one shared handle (UX-048, UX-R05).
+`MudStack Spacing="4"`, and its actions in the dialog order. A resizable drawer uses one
+shared handle (UX-048, UX-R05).
+
+- **Actions are a sticky footer** with a Chrome line on top, right-aligned, shown while there
+  are changes.
+- **A draft opens with the title field focused**, at title size.
 
 - **The title is the item's name** in `Typo.h6` (16px/600, up to three lines): the Task's
   name alone, or "New task" for a draft. The generic type word "Task" is only the fallback.
@@ -720,9 +867,9 @@ drawer uses one shared handle (UX-048, UX-R05).
   keeps its in-body "ID: title" row after create.
 - **A close `MudIconButton`** sits at the right of the header. Edit, copy and the menu are
   a right-aligned icon row just under the header, not in it.
-- **A form in a drawer is grouped.** Put the fields under `subtitle2` headings
-  (`.group-heading`): the Task detail uses Status and priority, People, Planning and Dates,
-  with the group headings at 16px/600 and a 120px label column at 13px `TextSecondary`.
+- **A form in a drawer is grouped.** Put the fields under Group labels (`.group-label`,
+  12px/600 in Quiet ink): the Task detail uses Status and priority, People, Planning and Dates,
+  with a 120px label column at 13px `TextSecondary`. The title stays the only 16px text.
 - **A property is a label and a value.** `.task-detail-groups` is a size container. At 368px
   of container width or more (a 400px drawer less its padding), `.task-detail-prop` is two
   columns, label left and value right. Narrower, it stacks. This mirrors the Library
@@ -739,16 +886,32 @@ out **left-aligned, primary first**: the Filled primary, then Outlined secondari
 Text quiet actions. This differs from dialogs on purpose: a left-aligned row reads from
 its first button, and a dialog's footer reads from the right (UX-032).
 
+An Agent's card (`C8`) sits in the 760px Transcript column with an Edge line. Its answer options
+are one-line 32px rows.
+
+### Menus
+
+A menu is a `MudMenu` of `Dense` 32px, 13px items.
+
+- Every item has an icon from the action table, or none does.
+- Dividers group items. A destructive item comes last, after a divider, in Error ink.
+- The activator has an `aria-label` naming its target and no hover tooltip.
+- An item that opens a dialog ends in "…", and the menu closes before the dialog opens.
+- A destructive action is never a top-level button with a caret: it is ⋮ › **Remove from
+  team**.
+
 ### Confirming
 
 - **Anything that can't be undone asks first**, including removing a Library root
   (UX-026).
 - **The confirm button repeats the verb**: "Delete", "Remove", "Reset". Never "Confirm",
   "OK" or "Yes, …" (UX-080).
-- **The title is a question ending in "?"**: "Delete 'Notes'?". One sentence of body
+- **The title is a question ending in "?"**: Delete "Notes"?. One sentence of body
   says what is lost.
 - A destructive confirm button is `Color.Error`. All destructive confirms go through one
   shared confirm component (UX-R12); a list row uses `InlineConfirm` (UX-R13).
+- **`InlineConfirm`'s button repeats the verb and follows Cancel.** In the sidebar the prompt
+  is the verb alone ("Delete?"), on one line, in the row's indent.
 
 ### Notices and snackbars
 
@@ -789,26 +952,21 @@ under text. Parameters are in the [catalog](UXDesignGuidelines.md#display).
 | Look | Draws | Used for |
 | --- | --- | --- |
 | Status or priority, tinted: `.status-chip-*` | The colour at 14% over Surface; text and icon the colour mixed 70% toward `TextPrimary`; a leading icon | High, Urgent, In Progress |
-| Tag, quiet: `.tag-chip` | `BackgroundGray` fill, `TextPrimary` text | `api`, `pricing` |
-| Filter: `.filter-chip`, `TaskFilterChip` | Dashed while unset; a `Primary` border and 14% tint once set (`.filter-chip-set` or `mud-chip-selected`) | Assignee: Me |
+| Tag, quiet: `.tag-chip` | Wash fill with an Edge line, Ink text | `api`, `pricing` |
+| Filter: `.filter-chip`, `TaskFilterChip` | A dashed Field line while unset; an Accent border and Accent tint 14% once set (`.filter-chip.is-set`) | Assignee: Me |
 | Count or meta: `.chip-meta` | No chip: plain caption text | "@jane", the Needs You count, "Next session" |
 
 **The Status and Tag chips share one shape**: 22px high, `0 8px` padding, a 6px radius
 (`calc(var(--mud-default-borderradius) * 0.75)`), 12px text at weight 500 and a 14px leading
-icon.
+icon. The Tag chip also carries an Edge line.
+
+> **Filter chip:** 28px high, `0 12px` padding, a pill, 13px at 400. Unset: a dashed Field line,
+> no fill. Set: an Accent border, Accent tint 14%, Accent ink at 500. `TaskFilterChip`,
+> `ChipCloud` and the search scopes all draw it, through the global `.filter-chip` class.
 
 **Text on a status fill reaches 4.5:1.** `StatusChipContrast` mirrors the tint in C#, and a
-test holds every pair to the floor. Measured for the status colours, Huddle Light and
-Huddle Dark:
-
-| Colour | Light | Dark |
-| --- | --- | --- |
-| Info | 8.70 | 6.51 |
-| Warning | 4.75 | 6.32 |
-| Error | 7.68 | 4.94 |
-| Success | 4.88 | 6.14 |
-| Secondary | 6.10 | 6.00 |
-| Neutral | 9.63 | 5.98 |
+test holds every pair to the floor. The measured ratio for each status colour in each Huddle
+Theme is in [theme-authoring.md](theme-authoring.md).
 
 A Board card shows no State chip, because its column names it, and it carries no
 per-state left edge. No palette has `*ContrastText` properties for status colours, because
@@ -847,11 +1005,13 @@ rules that catalog's rows carry out.
 - **A search box is `SearchField`**; a Teammate row is `TeammateLabel`; a Task filter is
   `TaskFilterChip`.
 - **A right-hand drawer is `ResizableEndDrawer`** (see [Drawer anatomy](#drawer-anatomy)).
-- **An inline edit of a title keeps the title's size.** The field renders at the title's
-  size and weight, with no floating label: a Room's rename is `.title-inline-edit` at h5
+- **An inline edit of a title keeps the title's size and replaces it.** The field renders at
+  the title's size and weight, with no floating label: a Room's rename is `.title-inline-edit` at h5
   size, labelled by `aria-label="Room name"`. It stays `Variant.Outlined` and
   `Margin.Dense` because CV2 requires them, so the outline is the only cue that it is
   editable. There is no shared inline-rename component.
+- **An empty optional field shows a Quiet-ink placeholder** ("None", "Add tag…"), not a blank
+  outlined box.
 - **Helpers that remove per-site copies** are listed under
   [Helpers](UXDesignGuidelines.md#helpers). Use them; don't write another copy.
 
@@ -888,6 +1048,7 @@ Words follow [language.md](language.md). These rules decide the form.
   | --- | --- | --- |
   | Cancel | Abandon this dialog or edit; nothing changes | Close, Dismiss |
   | Close | Put away a view; nothing is lost | Cancel |
+  | Close task… | End a Task. Asks first, or offers **Undo** in the snackbar | Delete |
   | Delete | Destroy permanently | Remove |
   | Remove | Take out of a set; the thing survives | Delete |
   | Archive | Hide, recoverably | |
@@ -904,6 +1065,8 @@ Words follow [language.md](language.md). These rules decide the form.
 - **Show a display name, never a raw id or slug**: "Checks before merge", not
   "checks-before-merge" (UX-082).
 - **Busy labels end in an ellipsis character**: "Saving…", "Sending…".
+- **Copy lives in markup**, not in a CSS `content:` (UX-V23).
+- **Don't say "AI"**; language.md lists it under Avoid (UX-082).
 
 ### Dates and times
 
@@ -917,11 +1080,13 @@ Write a date the way a person says it. One helper formats every date on screen
 | Any other date this year | Month and day: "Oct 27" |
 | A date in another year | With the year: "Oct 27, 2025" |
 | A time | 24-hour, as the Transcript already shows: "01:49" |
+| A day separator | "Today", "Yesterday", or "Mon, Oct 5" |
+| A date in a table column | Month and day, never a weekday: "Oct 27" |
+| A message under a day separator | The time only |
 
 The full date is in the tooltip. Never show an ISO date (`2026-10-27`) in the UI, except in
-a raw-Markdown view where it is the file's content, and in a date picker's input.
-- **Copy lives in markup**, not in a CSS `content:` (UX-V23).
-- **Don't say "AI"**; language.md lists it under Avoid (UX-082).
+a raw-Markdown view where it is the file's content, and in a date picker's input. A date picker
+prefers `DateFormat="MMM d, yyyy"`.
 
 ## Writing the stylesheet
 
@@ -931,25 +1096,31 @@ a raw-Markdown view where it is the file's content, and in a date picker's input
    `::deep` rule under a component root never matches and fails silently. This holds for a
    Huddle component's own scoped file too (UX-V16).
 2. **Put a rule in a `.razor.css`** only when it targets markup in that component.
-3. **Colour and font:** `var(--mud-palette-*)` and `var(--mud-typography-*)` only. A
+3. **Colour and font:** `var(--mud-palette-*)`, `var(--mud-typography-*)` and the ink rungs
+   only. A
    literal fails `AppCss_DeclaresNoColourLiteral` or `AppCss_DeclaresNoFontFamilyLiteral`.
    The one allowed exception is `#blazor-error-ui` in `MainLayout.razor.css`.
-4. **Every `var()` names a MudBlazor variable or `--font-mono`.** An unresolved property
-   resolves to nothing, not to a fallback, and a surface goes invisible
-   (`AppCss_UsesOnlyMudBlazorVariables`, `ScopedCss_UsesOnlyMudBlazorVariables`). That
-   includes a feature-local custom property such as `--task-ref-dot` (UX-V15).
+4. **Every `var()` names a MudBlazor variable, one of the five ink rungs (`--ink-strip`,
+   `--ink-wash`, `--ink-rule`, `--ink-edge`, `--ink-field`) or `--font-mono`.** An unresolved
+   property resolves to nothing, not to a fallback, and a surface goes invisible
+   (`AppCss_UsesOnlyMudBlazorVariables` allows exactly those, and
+   `ScopedCss_UsesOnlyMudBlazorVariables` holds scoped files to the same list). That includes a
+   feature-local custom property such as `--task-ref-dot` (UX-V15).
 5. **Sizes, radii and layers use the tokens above**: spacing in px on the 4/8/12/16/24
    scale, typography variables, radius tokens, `--mud-zindex-*`. No literal radius, no
    rem spacing, no literal font size, and nothing under 11px.
 6. **Reuse before you write.** Search `app.css` for an existing class before writing a
    declaration block. Truncation is `.truncate`; screen-reader-only text is
    `.visually-hidden`, one global class in `app.css`. Add a utility there the first time a
-   second site needs it (UX-R21, UX-R22).
+   second site needs it (UX-R21, UX-R22). The shared look-and-feel classes are global:
+   `.group-label`, `.filter-chip`, `.toolbar-compact` and `.selected-shape`.
 7. **No `!important`**, except where it is the only way past an inline style MudBlazor
    writes, with a comment saying so (UX-V16, UX-V22).
 8. **Global MudBlazor overrides** (`.mud-button-root`, `.mud-drawer`, `.mud-avatar img`)
    live in one "Global MudBlazor overrides" section near the top of `app.css`, never in a
-   feature's section (UX-V17).
+   feature's section (UX-V17). The overrides set `.mud-link` and selected list items to Accent
+   ink and the Selected treatment, because MudBlazor paints them in raw Accent; they also draw
+   table row lines on Edge, the Disabled state and the dialog close button.
 9. **Every feature has a section header** in the form
    `/* ---- Room list: the hover/focus-revealed row actions menu ---- */`. The headers are
    the index. Comment the reason, not the property (UX-V21).
@@ -979,8 +1150,9 @@ palette table and the VS Code mapping.
 | Rule | Enforced by |
 | --- | --- |
 | No colour or font-family literal in a stylesheet | `AppCss_DeclaresNoColourLiteral`, `AppCss_DeclaresNoFontFamilyLiteral` |
-| Only MudBlazor variables and `--font-mono` in `var()` | `AppCss_UsesOnlyMudBlazorVariables`, `ScopedCss_UsesOnlyMudBlazorVariables` |
-| Palette contrast, the Divider floor and `DrawerText` | `ThemeCatalogTests` |
+| Only MudBlazor variables, the five `--ink-*` rungs and `--font-mono` in `var()` | `AppCss_UsesOnlyMudBlazorVariables`, `ScopedCss_UsesOnlyMudBlazorVariables` |
+| Palette contrast and `DrawerText` | `ThemeCatalogTests` |
+| For every Theme: Rule < Edge < Field <= Chrome against Ground; Quiet ink between Ink 50% and Ink 80% and at least 4.5:1; for authored Themes, signal hue distance at least 30 degrees. A ported Theme that misses goes into `DocumentedShortfalls` | `ThemeCatalogTests` |
 | Type roles, 11px minimum, weights up to 600, input text at 400, 75ch and 760px | `TypeScaleTests` |
 | How a date reads on screen | `HumanDateTests` |
 | One hue per meaning: the state, priority and presence mappings | `TaskColorsTests` |
@@ -1020,7 +1192,7 @@ below.
       come from a mapping function.
 - [ ] Every line, hover, selected and drop state uses the treatments under Colour.
 - [ ] Every text size comes from the type roles and none renders under 11px; the page has
-      one `h1` (the Tasks page has none, see [A page](#a-page)).
+      one `h1` ([A page](#a-page)).
 - [ ] Every spacing, radius and `z-index` value comes from the scales above.
 - [ ] Every icon comes from the entity or action table.
 
@@ -1067,9 +1239,6 @@ These are open questions, not decisions. Raise them before relying on them.
   background such as the Human's bubble or the selected row is not measured. The measured
   baseline for the two Huddle Themes is in
   [theme-authoring.md › The tinted-state gap](theme-authoring.md#the-tinted-state-gap).
-- **A quiet fill against Surface has no floor.** `BackgroundGray` (a tag chip) is held to no contrast against `Surface`, so in a dark Theme it can nearly vanish.
-  That is why a board lane is `Surface` with a border, not a fill. Untested until a floor is
-  chosen.
 
 ## Keeping this document current
 
@@ -1077,8 +1246,8 @@ These are open questions, not decisions. Raise them before relying on them.
 - **A component's parameters, path and anatomy go in the
   [catalog](UXDesignGuidelines.md#reusable-parts-catalog)**, not here. A component that sets
   a pattern gets a one-line rule here that links to its catalog row.
-- **A Theme value goes in [theme-authoring.md](theme-authoring.md).** Put the ratio here only
-  where a rule depends on it.
+- **A Theme value goes in [theme-authoring.md](theme-authoring.md).** Don't write a measured
+  Huddle ratio here: a rule on this page is a rung or a relationship.
 - **A rendered size changes in `ThemeDefaults`, the Rendered column and `TypeScaleTests`
   together.**
 
