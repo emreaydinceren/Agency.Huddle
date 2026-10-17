@@ -1491,7 +1491,7 @@ You are Mira. Answer in one short sentence.
 
 **Inconclusive if**
 
-The Model dropdown offers only `Use the agent's default`, so no Model can be stored through the UI -> use the sqlite3 fallback: stop the app, run `sqlite3 <data>\team.db "insert into persona_models(persona_name,model) values('Mira','claude-haiku-4-5'); insert into persona_efforts(persona_name,effort) values('Mira','low');"`, restart the app, and read the values off the card before editing the file. If you have no sqlite3 either, run the test without the Model/Effort half and say so — but that half is the part that catches the silent failure.
+The Model dropdown offers only `Agent default`, so no Model can be stored through the UI -> use the sqlite3 fallback: stop the app, run `sqlite3 <data>\team.db "insert into persona_models(persona_name,model) values('Mira','claude-haiku-4-5'); insert into persona_efforts(persona_name,effort) values('Mira','low');"`, restart the app, and read the values off the card before editing the file. If you have no sqlite3 either, run the test without the Model/Effort half and say so — but that half is the part that catches the silent failure.
 
 > [!NOTE]
 > Rows left behind when the folder is deleted from disk (step 9) are not judged here. Honour the standing convention: Model = Haiku, Effort = low.
@@ -1513,7 +1513,7 @@ The Model dropdown offers only `Use the agent's default`, so no Model can be sto
 2. Read the four identity field labels and the hint under the Teams field.
 3. Type `Wren` into **Name**, `Ops Lead` into **Title**, `wre` into **Alias**, and `Business, Household` into **Teams**.
 4. Type `You are Wren. Answer in one short sentence.` into the **Persona body** textarea.
-5. If the **Model** dropdown offers real models, choose the **Haiku** entry and choose **low** in **Effort**. If it only offers `Use the agent's default`, leave both alone and note it.
+5. If the **Model** dropdown offers real models, choose the **Haiku** entry and choose **low** in **Effort**. If it only offers `Agent default`, leave both alone and note it.
 6. Click **Add teammate**.
 7. Read the card that is now on screen: its header, Name, and `Teams:` line. Close it.
 8. Read where the Wren tile appears on the page.

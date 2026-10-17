@@ -150,10 +150,10 @@ public sealed class TeammateCardSharedStructureTests
 
         var cut = await OpenViewCardAsync(ctx, factory, "coo");
         await OpenDeleteAsync(cut, "coo");
-        int before = FocusCalls(ctx);
+        int before = await FocusCallsAsync(ctx, cut);
         await ClickAsync(cut, () => cut.Find(".inline-confirm-cancel"));
 
-        cut.WaitForAssertion(() => Assert.Equal(before + 1, FocusCalls(ctx)));
+        await cut.WaitForAssertionAsync(async () => Assert.Equal(before + 1, await FocusCallsAsync(ctx, cut)));
         Assert.True(HasButton(cut, "Actions for coo"));
     }
 
@@ -168,17 +168,19 @@ public sealed class TeammateCardSharedStructureTests
 
         var cut = await OpenViewCardAsync(ctx, factory, seeded.Name);
         await ClickButtonAsync(cut, "Reset to default");
-        int before = FocusCalls(ctx);
+        int before = await FocusCallsAsync(ctx, cut);
         await ClickAsync(cut, () => cut.Find(".inline-confirm-cancel"));
 
-        cut.WaitForAssertion(() => Assert.Equal(before + 1, FocusCalls(ctx)));
+        await cut.WaitForAssertionAsync(async () => Assert.Equal(before + 1, await FocusCallsAsync(ctx, cut)));
         Assert.True(HasButton(cut, "Reset to default"));
     }
 
     /// <summary>How many times the page asked the browser to move focus.</summary>
+    /// <remarks>The count is taken on the renderer's dispatcher: the renderer records JS invocations there, so enumerating the dictionary from the test thread can race a render and throw "Collection was modified".</remarks>
     /// <param name="ctx">The test context whose JS interop records the calls.</param>
-    private static int FocusCalls(MudBunitContext ctx) =>
-        ctx.JSInterop.Invocations.Count(static call => string.Equals(call.Identifier, "Blazor._internal.domWrapper.focus", StringComparison.Ordinal));
+    /// <param name="cut">Any rendered component of that context; its dispatcher serialises the read with the renderer.</param>
+    private static Task<int> FocusCallsAsync(MudBunitContext ctx, IRenderedComponent<Microsoft.AspNetCore.Components.IComponent> cut) =>
+        cut.InvokeAsync(() => ctx.JSInterop.Invocations.Count(static call => string.Equals(call.Identifier, "Blazor._internal.domWrapper.focus", StringComparison.Ordinal)));
 
     /// <summary>UX-R13 and UX-080: the Chief of Staff's Reset asks through an <see cref="InlineConfirm"/> titled "Reset to default?" whose confirm button says "Reset".</summary>
     [Fact]

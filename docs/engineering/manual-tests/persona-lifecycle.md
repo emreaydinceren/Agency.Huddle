@@ -80,7 +80,7 @@ oracles `O-LOG` / `O-ADAPTERS` / `O-TRANSCRIPT` / `O-DB` / `O-WIRE`, the five re
 
 **Inconclusive if**
 
-If the Model select shows only `Use the agent's default` with the hint "This agent advertises no models, so it will use its own default.", the adapter could not be probed — record steps 10-11 as not-performed, continue the test, and run PERSONALIFECYCLE-04 to find out why. If `<data>\Teammates\` already contained Personas from earlier work, their tiles are expected too (the `Chief of Staff` tile always is); judge only the `Nova` tile. If the browser shows `An unhandled error has occurred.` at any point, reload once and note it; if it recurs, the test is a FAIL on that step, not inconclusive.
+If the Model select shows only `Agent default` with the hint "This agent advertises no models, so it will use its own default.", the adapter could not be probed — record steps 10-11 as not-performed, continue the test, and run PERSONALIFECYCLE-04 to find out why. If `<data>\Teammates\` already contained Personas from earlier work, their tiles are expected too (the `Chief of Staff` tile always is); judge only the `Nova` tile. If the browser shows `An unhandled error has occurred.` at any point, reload once and note it; if it recurs, the test is a FAIL on that step, not inconclusive.
 
 > [!NOTE]
 > Leave the app running — PERSONALIFECYCLE-02 and -05 reuse this same ACP-disabled run, and -02 to -05 reuse the `Nova` Persona it creates (it stays on disk across the app restarts that -03 and -04 begin with).
@@ -214,8 +214,8 @@ If another program on the machine runs `node.exe` (a dev server, an editor exten
 **Pass if — all of these**
 
 - With the adapter aside, `/teammates` renders completely: heading `Teammates`, the **New teammate** button, and every existing tile — no error page and no blank region.
-- The Model select contains exactly one option, `Use the agent's default`, and its hint reads exactly `This agent advertises no models, so it will use its own default.`
-- The Effort select contains exactly one option, `Use the agent's default`, and its hint reads exactly `This model offers no effort choice, so it will think as it normally does.`
+- The Model select contains exactly one option, `Agent default`, and its hint reads exactly `This agent advertises no models, so it will use its own default.`
+- The Effort select contains exactly one option, `Agent default`, and its hint reads exactly `This model offers no effort choice, so it will think as it normally does.`
 - Saving still works: the card switches to `Teammate` showing `Orphan`, its **Model** section reads `Agent default` and its **Effort** section reads `Model default`.
 - `T-A`'s console carries `No ACP adapter is installed; the model catalog is empty.` at Information level (`ModelCatalogProbe.cs:291`).
 - No `node.exe` was spawned while the folder was renamed aside.
@@ -993,7 +993,7 @@ If sqlite3 is not installed, run PERSONALIFECYCLE-20 immediately after this test
 1. In the browser at `/teammates` click **New teammate**.
 2. In **Name** type exactly the Name you removed: `Ada`.
 3. In **Title** type `Test teammate`. In **Alias** type `ada`. In the **Persona body** textarea type `You are Ada. Answer in one short sentence.`
-4. Do NOT touch the **Model** or **Effort** selects — leave both showing `Use the agent's default`.
+4. Do NOT touch the **Model** or **Effort** selects — leave both showing `Agent default`.
 5. Click **Add teammate**.
 6. On the resulting `Teammate` card read the **Model** section and the **Effort** section.
 7. Close the card, click the tile again and read both sections once more.
@@ -1377,7 +1377,7 @@ If the model ignores the PLUM instruction even after a confirmed restart (models
 8. Watch the tile's status for 40 seconds and write down every word.
 9. In `T-B` run `Adapters` and compare `Nova`'s ProcessId with step 1.
 10. Click the `Nova` tile and read its **Model** section.
-11. Click **Edit** again and confirm the Model select still shows the Sonnet entry (not `Use the agent's default`), then click **Cancel**.
+11. Click **Edit** again and confirm the Model select still shows the Sonnet entry (not `Agent default`), then click **Cancel**.
 12. Return to the Room and type `What word did I ask you to remember?`; press Enter and read the reply.
 13. Type `Which model are you? Answer in one short sentence.`; press Enter and compare with step 3.
 14. In `T-A` search the console for any line containing `not in the agent's advertised model catalog`.
@@ -1399,7 +1399,7 @@ If the model ignores the PLUM instruction even after a confirmed restart (models
 - TWO restarts from one Save -> the change is firing the restart path twice, paying for two sessions.
 - The teammate still remembers `ZEBRA` -> the session was not replaced, so the Model cannot have changed either (a Model is fixed when a session is created).
 - A `not in the agent's advertised model catalog` warning appears after picking from the picker itself -> a display NAME was stored where an ID belongs; every start will now fall back to the adapter's default.
-- Reopening Edit shows `Use the agent's default` -> the stored choice is not being read back, so the next save would silently wipe it.
+- Reopening Edit shows `Agent default` -> the stored choice is not being read back, so the next save would silently wipe it.
 
 **Inconclusive if**
 
@@ -1444,11 +1444,11 @@ If the model's answer to "Which model are you?" is vague or identical both times
 - After Save the tile flickers and returns to **Online** with exactly ONE new `node.exe` ProcessId.
 - The card's **Effort** section reads `medium`.
 - The reply to step 10 does NOT know `QUINCE`.
-- When the Model is changed in the Edit card, the Effort select resets to `Use the agent's default` and its hint shows `Reading the effort levels this model offers…` while the new ladder is read.
-- That reset is **announced**: a note appears between the Model and Effort selects saying the Effort was reset and that each model advertises its own effort levels. Added for #45 — the reset was always correct, the silence was the defect. It must NOT appear on a Model change made while the Effort is already `Use the agent's default`, because nothing was discarded.
+- When the Model is changed in the Edit card, the Effort select resets to `Agent default` and its hint shows `Reading the effort levels this model offers…` while the new ladder is read.
+- That reset is **announced**: a note appears between the Model and Effort selects saying the Effort was reset and that each model advertises its own effort levels. Added for #45 — the reset was always correct, the silence was the defect. It must NOT appear on a Model change made while the Effort is already `Agent default`, because nothing was discarded.
 - `T-A`'s console contains NO `not in the agent's advertised effort catalog` warning.
 - If sqlite3 was available: `persona_efforts` holds an effort ID, not a display label.
-- The Effort select does NOT offer the adapter's own `default` entry alongside the blank `Use the agent's default` option — there is exactly one way to say "default".
+- The Effort select does NOT offer the adapter's own `default` entry alongside the blank `Agent default` option — there is exactly one way to say "default".
 
 **Fail if — any of these**
 
@@ -1462,7 +1462,7 @@ If the model's answer to "Which model are you?" is vague or identical both times
 
 **Inconclusive if**
 
-If the Model has no effort ladder at all, the select will show only `Use the agent's default` with the hint `This model offers no effort choice, so it will think as it normally does.` — that is a valid outcome for THAT model; switch to a model that does advertise levels, or record the test as not-applicable for this adapter. If the tile does not restart because the Effort value you picked was the one already stored, re-check step 4.
+If the Model has no effort ladder at all, the select will show only `Agent default` with the hint `This model offers no effort choice, so it will think as it normally does.` — that is a valid outcome for THAT model; switch to a model that does advertise levels, or record the test as not-applicable for this adapter. If the tile does not restart because the Effort value you picked was the one already stored, re-check step 4.
 
 > [!NOTE]
 > The card always shows the STORED Effort, not the session's live value. If the adapter clamps a requested level back to its own default, the card will not say so — that is a recorded limit, not a defect. The restore step is mandatory, for the same reason as PERSONALIFECYCLE-28.

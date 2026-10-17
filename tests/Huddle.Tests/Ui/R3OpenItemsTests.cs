@@ -41,6 +41,24 @@ public sealed partial class R3OpenItemsTests
         Assert.DoesNotContain("Class=\"mb-4", tail[..tail.IndexOf("@code", StringComparison.Ordinal)], StringComparison.Ordinal);
     }
 
+    /// <summary>UX-E15: the three-up row's selects carry no helper text (it wrapped to 4-5 lines), one shared line sits under the row, and the default option reads in full.</summary>
+    [Fact]
+    public void TeammateCard_ModelRow_HasOneSharedHelperAndAShortDefault()
+    {
+        string card = ReadSource("src", "Huddle.App", "Components", "Shared", "TeammateCard.razor");
+        int start = card.IndexOf("teammate-card-model-row", StringComparison.Ordinal);
+        int end = card.IndexOf("teammate-card-row-helper", StringComparison.Ordinal);
+        string row = card[start..end];
+
+        Assert.True(end > start);
+        Assert.DoesNotContain("HelperText=", row, StringComparison.Ordinal);
+        Assert.Equal(3, Regex.Count(row, "@DefaultOptionText", RegexOptions.CultureInvariant));
+        Assert.Contains("DefaultOptionText = \"Agent default\"", card, StringComparison.Ordinal); // contains-ok: component source text
+        Assert.Contains("Changing any of these restarts the teammate, which clears what it remembers.", card, StringComparison.Ordinal); // contains-ok: component source text
+        Assert.Contains("HelperText=\"Shown beside the name.\"", card, StringComparison.Ordinal); // contains-ok: component source text
+        Assert.Contains("HelperText=\"For @@mentions.\"", card, StringComparison.Ordinal); // contains-ok: component source text
+    }
+
     /// <summary>UX-E15: the row container is a flex row whose cells share the width, and the card puts Model, Effort and Work mode in it.</summary>
     [Fact]
     public void TeammateCard_ModelEffortWorkModeAreOneRow()

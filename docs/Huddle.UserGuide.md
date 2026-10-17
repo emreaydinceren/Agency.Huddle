@@ -564,7 +564,7 @@ For the Claude adapter the choices are:
 
 | Choice | What it does |
 | --- | --- |
-| **Use the agent's default** | Huddle sends nothing and the agent starts in its own mode, which is Manual. |
+| **Agent default** | Huddle sends nothing and the agent starts in its own mode, which is Manual. |
 | **Manual** | The agent asks before it makes changes. |
 | **Accept edits** | The agent edits files without asking. |
 

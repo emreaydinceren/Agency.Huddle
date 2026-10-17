@@ -38,7 +38,7 @@ public sealed class TeammateCardWorkModeTests
         var options = await OpenSelectAndListOptionsAsync(cut, "Work mode");
 
         var texts = options.Select(option => option.TextContent.Trim()).ToList();
-        Assert.Equal(["Use the agent's default", "Manual", "Accept edits", "Plan"], texts);
+        Assert.Equal(["Agent default", "Manual", "Accept edits", "Plan"], texts);
     }
 
     /// <summary>A fresh card has no Work Mode: the closed select shows the blank default.</summary>
@@ -88,7 +88,7 @@ public sealed class TeammateCardWorkModeTests
         Assert.Equal("vintage", FindSelectInput(cut, "Work mode").GetAttribute("value"));
     }
 
-    /// <summary>The selected mode's own description, which the Adapter supplies, is the helper text.</summary>
+    /// <summary>The selected mode's own description, which the Adapter supplies, is the select's title (not helper text, which would wrap the row).</summary>
     [Fact]
     public async Task EditMode_ShowsTheSelectedModesDescription()
     {
@@ -100,9 +100,7 @@ public sealed class TeammateCardWorkModeTests
         var cut = await OpenViewCardAsync(ctx, factory, "coo");
         await ClickButtonAsync(cut, "Edit");
 
-        Assert.Equal(
-            "Create a plan before making changes. Changing it restarts the teammate, which clears what it remembers.",
-            HelperTextOf(cut, "Work mode"));
+        Assert.Equal("Create a plan before making changes.", cut.Find("[title^='Create a plan']").GetAttribute("title"));
     }
 
     /// <summary>An Adapter that advertises no mode, with nothing stored, gets no picker at all.</summary>
@@ -165,7 +163,7 @@ public sealed class TeammateCardWorkModeTests
         var cut = await OpenViewCardAsync(ctx, factory, "coo");
         await ClickButtonAsync(cut, "Edit");
 
-        Assert.Equal("Reading the work modes this agent offers…", HelperTextOf(cut, "Work mode"));
+        Assert.Equal("Reading the effort levels this model offers...", cut.Find(".teammate-card-row-helper").TextContent.Trim());
     }
 
     /// <summary>Going inert must not cost the stored value: while the catalog is out the closed select still shows it, as the raw id.</summary>
@@ -293,7 +291,7 @@ public sealed class TeammateCardWorkModeTests
         var cut = await OpenViewCardAsync(ctx, factory, "coo");
         await ClickButtonAsync(cut, "Edit");
         await OpenSelectAsync(cut, "Work mode");
-        await ClickSelectItemAsync(cut, "Use the agent's default");
+        await ClickSelectItemAsync(cut, "Agent default");
         await ClickButtonAsync(cut, "Save");
 
         Assert.Null(StoredWorkMode(factory, "coo"));
@@ -408,14 +406,6 @@ public sealed class TeammateCardWorkModeTests
         Persona? persona = factory.Services.GetRequiredService<PersonaStore>().Get(name);
         Assert.NotNull(persona);
         return persona.WorkMode;
-    }
-
-    /// <summary>The helper text under the select labelled <paramref name="label"/>, trimmed.</summary>
-    private static string HelperTextOf(IRenderedComponent<ContainerFragment> cut, string label)
-    {
-        var helper = FindInputControl(cut, label).QuerySelector(".mud-input-helper-text");
-        Assert.NotNull(helper);
-        return helper.TextContent.Trim();
     }
 
     /// <summary>The body text of the View card's section whose Group label reads <paramref name="overline"/>, trimmed.</summary>

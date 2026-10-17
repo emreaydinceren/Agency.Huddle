@@ -45,9 +45,9 @@ public sealed class NameDialogTests
         _ = await OpenAsync(ctx, cut, "New team", "Team name", "Create", string.Empty, null, static _ => Task.FromResult<string?>(null));
 
         Assert.Single(cut.FindAll(Input));
-        cut.WaitForAssertion(() => Assert.Equal(
+        await cut.WaitForAssertionAsync(async () => Assert.Equal(
             2,
-            ctx.JSInterop.Invocations.Count(static i => string.Equals(i.Identifier, "Blazor._internal.domWrapper.focus", StringComparison.Ordinal))));
+            await cut.InvokeAsync(() => ctx.JSInterop.Invocations.Count(static i => string.Equals(i.Identifier, "Blazor._internal.domWrapper.focus", StringComparison.Ordinal)))));
     }
 
     /// <summary>Cancel comes first as a Text button, then the primary as a Filled, Small, Primary button with the caller's verb.</summary>
