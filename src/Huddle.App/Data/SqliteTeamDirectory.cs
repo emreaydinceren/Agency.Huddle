@@ -312,7 +312,7 @@ public sealed class SqliteTeamDirectory : ITeamDirectory
         await using var connection = await this.OpenConnectionAsync(ct);
         await using var command = connection.CreateCommand();
         command.CommandText = """
-            SELECT r.id, r.name, r.created, a.room_id IS NOT NULL, t.team, COALESCE(t.team_room, 0)
+            SELECT r.id, r.name, r.created, a.room_id IS NOT NULL, t.team, COALESCE(t.team_room, 0), a.archived
             FROM rooms r
             LEFT JOIN archived_rooms a ON a.room_id = r.id
             LEFT JOIN room_teams t ON t.room_id = r.id
@@ -334,7 +334,7 @@ public sealed class SqliteTeamDirectory : ITeamDirectory
         await using var connection = await this.OpenConnectionAsync(ct);
         await using var command = connection.CreateCommand();
         command.CommandText = """
-            SELECT r.id, r.name, r.created, a.room_id IS NOT NULL, t.team, COALESCE(t.team_room, 0)
+            SELECT r.id, r.name, r.created, a.room_id IS NOT NULL, t.team, COALESCE(t.team_room, 0), a.archived
             FROM rooms r
             JOIN room_members m ON m.room_id = r.id
             LEFT JOIN archived_rooms a ON a.room_id = r.id
@@ -359,7 +359,7 @@ public sealed class SqliteTeamDirectory : ITeamDirectory
         await using var connection = await this.OpenConnectionAsync(ct);
         await using var command = connection.CreateCommand();
         command.CommandText = """
-            SELECT r.id, r.name, r.created, a.room_id IS NOT NULL, t.team, COALESCE(t.team_room, 0)
+            SELECT r.id, r.name, r.created, a.room_id IS NOT NULL, t.team, COALESCE(t.team_room, 0), a.archived
             FROM rooms r
             LEFT JOIN archived_rooms a ON a.room_id = r.id
             LEFT JOIN room_teams t ON t.room_id = r.id
@@ -452,7 +452,7 @@ public sealed class SqliteTeamDirectory : ITeamDirectory
         await using var connection = await this.OpenConnectionAsync(ct);
         await using var command = connection.CreateCommand();
         command.CommandText = """
-            SELECT r.id, r.name, r.created, a.room_id IS NOT NULL, t.team, COALESCE(t.team_room, 0)
+            SELECT r.id, r.name, r.created, a.room_id IS NOT NULL, t.team, COALESCE(t.team_room, 0), a.archived
             FROM rooms r
             LEFT JOIN archived_rooms a ON a.room_id = r.id
             JOIN room_teams t ON t.room_id = r.id
@@ -479,7 +479,7 @@ public sealed class SqliteTeamDirectory : ITeamDirectory
         await using var connection = await this.OpenConnectionAsync(ct);
         await using var command = connection.CreateCommand();
         command.CommandText = """
-            SELECT r.id, r.name, r.created, a.room_id IS NOT NULL, t.team, COALESCE(t.team_room, 0)
+            SELECT r.id, r.name, r.created, a.room_id IS NOT NULL, t.team, COALESCE(t.team_room, 0), a.archived
             FROM rooms r
             LEFT JOIN archived_rooms a ON a.room_id = r.id
             JOIN room_teams t ON t.room_id = r.id
@@ -523,7 +523,7 @@ public sealed class SqliteTeamDirectory : ITeamDirectory
         await using var connection = await this.OpenConnectionAsync(ct);
         await using var command = connection.CreateCommand();
         command.CommandText = """
-            SELECT r.id, r.name, r.created, a.room_id IS NOT NULL, t.team, COALESCE(t.team_room, 0)
+            SELECT r.id, r.name, r.created, a.room_id IS NOT NULL, t.team, COALESCE(t.team_room, 0), a.archived
             FROM rooms r
             LEFT JOIN archived_rooms a ON a.room_id = r.id
             LEFT JOIN room_teams t ON t.room_id = r.id
@@ -571,7 +571,7 @@ public sealed class SqliteTeamDirectory : ITeamDirectory
 
         var inClause = string.Join(", ", placeholders);
         command.CommandText = string.Create(CultureInfo.InvariantCulture, $"""
-            SELECT r.id, r.name, r.created, a.room_id IS NOT NULL, t.team, COALESCE(t.team_room, 0)
+            SELECT r.id, r.name, r.created, a.room_id IS NOT NULL, t.team, COALESCE(t.team_room, 0), a.archived
             FROM rooms r
             LEFT JOIN archived_rooms a ON a.room_id = r.id
             LEFT JOIN room_teams t ON t.room_id = r.id
@@ -700,7 +700,14 @@ public sealed class SqliteTeamDirectory : ITeamDirectory
 
         var isTeamRoom = reader.GetBoolean(5);
 
-        return new Room(id, name, created) { Archived = archived, Team = team, IsTeamRoom = isTeamRoom };
+        // The instant is the archived_rooms.archived column, which SetRoomArchivedAsync has always
+        // stamped, so no schema change is needed. A value that is not a timestamp reads as unknown.
+        DateTimeOffset? archivedAt = !reader.IsDBNull(6)
+            && DateTimeOffset.TryParse(reader.GetString(6), CultureInfo.InvariantCulture, DateTimeStyles.None, out DateTimeOffset parsed)
+            ? parsed
+            : null;
+
+        return new Room(id, name, created) { Archived = archived, ArchivedAt = archivedAt, Team = team, IsTeamRoom = isTeamRoom };
     }
 
     private static async Task ExecuteNonQueryAsync(SqliteConnection connection, string sql, CancellationToken ct)
