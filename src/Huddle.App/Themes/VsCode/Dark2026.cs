@@ -44,6 +44,8 @@ internal static class Dark2026Theme
         LinesDefault = "#2d6e8a", // focusBorder (theme, composited from #3994bcb3 over Background #121314)
         TextPrimary = "#bfbfbf", // foreground (theme)
         TextSecondary = "#8c8c8c", // descriptionForeground (theme)
+        DrawerText = "#bfbfbf", // TextPrimary: sideBar.foreground falls back to foreground
+        DrawerIcon = "#8c8c8c", // TextSecondary
         TextDisabled = "#555555", // disabledForeground (theme)
         Primary = "#48a0c7", // textLink.foreground (theme) - see the type-level remarks for why not button.background
         PrimaryContrastText = "#000000", // computed: black 7.13:1 vs white 2.95:1 against Primary #48a0c7

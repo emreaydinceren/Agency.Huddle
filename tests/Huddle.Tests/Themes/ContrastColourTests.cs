@@ -74,13 +74,13 @@ public sealed class ContrastColourTests
         Assert.Equal("#FFFFFFFF", foreground.ToString(MudColorOutputFormats.HexA), ignoreCase: true);
     }
 
-    /// <summary>Huddle Light's <c>Primary</c> is light enough that black is the readable foreground - the choice this theme's own <c>PrimaryContrastText</c> already makes. Reads <see cref="HuddleTheme.Light"/> directly rather than a hardcoded literal, so a future palette change cannot make this pin stale without also failing it.</summary>
+    /// <summary>Huddle Light's <c>Primary</c> (<c>#5b64c8</c>) is deep enough that white is the readable foreground (5.12:1 against black's 4.10:1) - the choice this theme's own <c>PrimaryContrastText</c> makes. Reads <see cref="HuddleTheme.Light"/> directly rather than a hardcoded literal, so a future palette change cannot make this pin stale without also failing it.</summary>
     [Fact]
-    public void ReadableForeground_HuddleLightPrimary_ReturnsBlack()
+    public void ReadableForeground_HuddleLightPrimary_ReturnsWhite()
     {
         var foreground = ContrastColour.ReadableForeground(HuddleTheme.Light().Primary);
 
-        Assert.Equal("#000000FF", foreground.ToString(MudColorOutputFormats.HexA), ignoreCase: true);
+        Assert.Equal("#FFFFFFFF", foreground.ToString(MudColorOutputFormats.HexA), ignoreCase: true);
     }
 
     /// <summary>

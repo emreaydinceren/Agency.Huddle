@@ -5,6 +5,8 @@ wherever the work can be specified exactly and Sonnet where it needs judgement. 
 `/Execute-Project-Plan` and track it in [§9](#9-tracker) with `agents/scripts/Set-Tracker.ps1`. The
 manager reads [DeliveryPlaybook.md](../../agents/DeliveryPlaybook.md) before the first dispatch.
 
+> **Note (2026-10-16): the 90% zoom is gone.** [ADR-0056](../adr/0056-the-ui-renders-at-100-percent-with-a-px-type-scale.md) removed `html { zoom: 0.9 }`, the popover zoom cancel and every `/ 0.9`. The zoom rules, `calc(... / 0.9)` sizes and "at 90%" checks below are the plan as written, not current behaviour: a size in a stylesheet is the size on screen.
+
 **Written:** 2026-10-13 against `main` at `e7c9b89` · **Status:** not started · **Rules:**
 [design-system.md](design-system.md) (binding; cited as **DS "Section"**) · **Backlog:**
 [UX-Issues.md](UX-Issues.md) (rows cited as **UX-nnn**, **UX-Rnn**, **UX-Vnn**, **UX-Dnn**) · **Hub:**

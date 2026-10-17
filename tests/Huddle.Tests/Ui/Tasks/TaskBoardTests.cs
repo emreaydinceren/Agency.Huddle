@@ -958,4 +958,24 @@ public sealed class TaskBoardTests
 
         return (field.GetValue(container) as Delegate)?.GetInvocationList().Count(d => d.Target is TaskBoard) ?? 0;
     }
+
+    /// <summary>Each column header opens with an 8px state dot in the column's state colour, and an empty column says so in words fitted to its state (S4).</summary>
+    [Fact]
+    public async Task Columns_HaveAStateDotAndAnEmptyLine()
+    {
+        CancellationToken ct = Xunit.TestContext.Current.CancellationToken;
+        using TaskToolHarness harness = await TaskToolHarness.CreateAsync(ct);
+        TaskItem[] tasks = [TestTasks.Make(id: "PLAT-0001", status: TaskState.ToDo)];
+
+        await using MudBunitContext ctx = new();
+        IRenderedComponent<TaskBoard> cut = RenderBoard(ctx, harness, BoardView(), tasks);
+
+        IReadOnlyList<IElement> headers = cut.FindAll("div.task-board-column-header");
+        Assert.All(headers, header => Assert.Equal("task-state-dot", header.Children[0].ClassList[0]));
+        Assert.Contains("task-state-dot-success", headers[4].Children[0].ClassList);
+        string[] empty = [.. cut.FindAll(".task-board-column-empty").Select(e => e.TextContent.Trim())];
+        Assert.Contains("Nothing done yet.", empty);
+        Assert.Contains("Backlog is empty.", empty);
+        Assert.DoesNotContain("Nothing to do yet.", empty);
+    }
 }

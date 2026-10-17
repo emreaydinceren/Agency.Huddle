@@ -28,6 +28,7 @@
 }
 else
 {
+    <PageTitle>@this.room.Name</PageTitle>
     <MudStack Class="h-100 room-column" Spacing="0">
         <MudStack Class="room-header px-4" Spacing="2">
             <MudStack Row="true" AlignItems="AlignItems.Center" Justify="Justify.SpaceBetween">
@@ -35,8 +36,9 @@ else
                     <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2">
                         @if (this.isRenaming)
                         {
+                            @* The field takes the title's own size and weight (h5) and has no floating label, so the header does not jump; only the outline shows it is editable. *@
                             <MudTextField T="string" Variant="Variant.Outlined" Margin="Margin.Dense" @bind-Value="this.editingName" Immediate="true" AutoFocus="true"
-                                          Label="Room name"
+                                          Class="title-inline-edit" aria-label="Room name"
                                           OnKeyDown="this.OnRenameKeyDown" OnBlur="this.CommitRenameAsync" />
                         }
                         else
@@ -230,7 +232,7 @@ else
                 There is nothing to re-deliver in this room yet.
             </MudAlert>
         }
-        <Composer RoomId="@this.room.Id" />
+        <Composer RoomId="@this.room.Id" RoomName="@this.room.Name" />
     </MudStack>
 }
 

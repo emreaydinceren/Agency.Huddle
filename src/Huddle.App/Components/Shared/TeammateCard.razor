@@ -396,7 +396,7 @@
                 <MudStack Row="true" Spacing="1" Wrap="Wrap.Wrap" Class="mb-4">
                     @foreach (var missing in this.MissingSkillNames)
                     {
-                        <MudChip T="string" Size="Size.Small" Color="Color.Warning" OnClose="@(() => this.RemoveSkill(missing))">@missing</MudChip>
+                        <MudChip T="string" Size="Size.Small" Variant="Variant.Text" Class="status-chip status-chip-warning" Icon="@Icons.Material.Filled.Warning" OnClose="@(() => this.RemoveSkill(missing))">@missing</MudChip>
                     }
                 </MudStack>
             }
@@ -410,8 +410,8 @@
                     @foreach (var pack in this.rolePacks)
                     {
                         var active = this.IsPackActive(pack);
-                        <MudChip T="string" Size="Size.Small" Class="teammate-card-pack" Color="@(active ? Color.Primary : Color.Default)"
-                                 Variant="@(active ? Variant.Filled : Variant.Outlined)" aria-pressed="@(active ? "true" : "false")"
+                        <MudChip T="string" Size="Size.Small" Class="@(active ? "teammate-card-pack filter-chip filter-chip-set" : "teammate-card-pack filter-chip")"
+                                 Variant="Variant.Outlined" aria-pressed="@(active ? "true" : "false")"
                                  OnClick="@(() => this.TogglePack(pack))">@pack.Title</MudChip>
                     }
                 </MudStack>

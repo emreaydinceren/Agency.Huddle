@@ -4,7 +4,7 @@
     Delete buttons.
 *@
 
-<div class="role-card">
+<div class="@(this.Custom ? "role-card role-card-custom" : "role-card")">
     <div class="team-type-card role-card-body">
         @if (this.Taken)
         {
@@ -13,22 +13,22 @@
                 <span class="visually-hidden">On the draft roster</span>
             </span>
         }
-        <span class="@($"team-type-icon {(this.Custom ? "team-type-tint-secondary" : "team-type-tint-primary")}")" aria-hidden="true">
+        <span class="team-type-icon" aria-hidden="true">
             <MudIcon Icon="@(this.Custom ? Icons.Material.Outlined.PersonAdd : Icons.Material.Outlined.Badge)" Size="Size.Small" />
         </span>
         <span class="team-type-text">
             <span class="team-type-name">@this.Title</span>
             <span class="team-type-tagline">@this.Description</span>
             <span class="team-type-meta">
-                <span class="team-type-roles">@(this.Custom ? "Your role" : "Hiring pool")</span>
+                <span class="chip-meta team-type-roles">@(this.Custom ? "Your role" : "Hiring pool")</span>
             </span>
             <span class="role-card-footer">
+                <MudButton Variant="Variant.Outlined" Size="Size.Small" OnClick="this.OnAddClick"
+                           aria-label="@($"Add {this.Title}")" Class="role-card-add">Add</MudButton>
                 @if (this.Suggested)
                 {
                     <span class="role-suggested">Suggested</span>
                 }
-                <MudButton Variant="Variant.Outlined" Size="Size.Small" OnClick="this.OnAddClick"
-                           aria-label="@($"Add {this.Title}")" Class="role-card-add">Add</MudButton>
             </span>
         </span>
     </div>
@@ -54,7 +54,7 @@
     [EditorRequired]
     public string Title { get; set; } = string.Empty;
 
-    /// <summary>The role's description; the card shows up to two lines of it.</summary>
+    /// <summary>The role's description; the card shows up to three lines of it.</summary>
     [Parameter]
     public string? Description { get; set; }
 

@@ -10,9 +10,10 @@ public sealed record TrailCrumb(string Text, string? Href, string Icon);
 
 /// <summary>
 /// Works out the breadcrumb trail of a Tab from its URL: the area the page belongs to, then the page.
-/// Pure and synchronous, like <see cref="TabKeys"/>, whose table of URLs it follows. The last crumb
-/// is always the Tab's own title, so a Room's name or a renamed Team reaches the trail the moment
-/// <see cref="TabService.SetTitle(string, string)"/> changes it.
+/// Pure and synchronous, like <see cref="TabKeys"/>, whose table of URLs it follows. A page that draws its
+/// name as its h1 (a Room, a Team, a Project) gets only its ancestors, so the name is not said twice; a page
+/// without one (a Task View, a settings tab) ends in the Tab's own title, which is the View's display name and
+/// never its slug (<see cref="TabReconciler.ReconcileViews"/> keeps it so).
 /// </summary>
 internal static class TabTrail
 {
@@ -35,9 +36,10 @@ internal static class TabTrail
 
         return segments switch
         {
-            ["rooms", ..] => [new("Chats", "/", "chat"), last],
-            ["teams", var team, "projects", ..] => [new("Teams", null, "team"), new(team, TeamHref(team), "team"), last],
-            ["teams", ..] => [new("Teams", null, "team"), last],
+            // A Room, Team or Project draws its own name as the page's h1, so the trail holds only its ancestors.
+            ["rooms", ..] => [new("Rooms", "/", "chat")],
+            ["teams", var team, "projects", ..] => [new("Teams", null, "team"), new(team, TeamHref(team), "team")],
+            ["teams", ..] => [new("Teams", null, "team")],
             ["tasks"] => [last],
             ["tasks", ..] => [new("Tasks", "/tasks", "tasks"), last],
             ["settings", var tab, ..] => [new("Settings", "/settings", "settings"), new(Capitalised(tab), null, "settings")],

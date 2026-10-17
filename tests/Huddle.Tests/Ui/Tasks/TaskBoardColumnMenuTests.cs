@@ -329,7 +329,7 @@ public sealed partial class TaskBoardColumnMenuTests
         IRenderedComponent<ContainerFragment> cut = RenderPage(ctx, harness, viewId: null);
 
         IElement empty = Assert.Single(cut.FindAll(".tasks-empty"));
-        Assert.Equal("No tasks yet.", empty.QuerySelector(".empty-state [role=status]")?.TextContent.Trim());
+        Assert.Equal("No tasks yet", empty.QuerySelector(".empty-state [role=status]")?.TextContent.Trim());
         Assert.Null(empty.QuerySelector(".tasks-empty-action"));
     }
 
@@ -346,7 +346,7 @@ public sealed partial class TaskBoardColumnMenuTests
         await OverrideAsync(cut, view => view with { Filter = view.Filter with { States = [TaskState.Done] } });
 
         IElement empty = Assert.Single(cut.FindAll(".tasks-empty"));
-        Assert.Equal("No tasks match this View.", empty.QuerySelector(".empty-state [role=status]")?.TextContent.Trim());
+        Assert.Equal("No tasks match this View", empty.QuerySelector(".empty-state [role=status]")?.TextContent.Trim());
         Assert.Equal("Reset filters", empty.QuerySelector(".tasks-empty-action")?.TextContent.Trim());
     }
 
@@ -386,7 +386,7 @@ public sealed partial class TaskBoardColumnMenuTests
         await cut.InvokeAsync(() => toolbar.Instance.SearchChanged.InvokeAsync("zzz"));
 
         IElement empty = Assert.Single(cut.FindAll(".tasks-empty"));
-        Assert.Equal("No tasks match 'zzz'.", empty.QuerySelector(".empty-state [role=status]")?.TextContent.Trim());
+        Assert.Equal("No tasks match 'zzz'", empty.QuerySelector(".empty-state [role=status]")?.TextContent.Trim());
         Assert.Null(empty.QuerySelector(".tasks-empty-action"));
     }
 
@@ -407,7 +407,7 @@ public sealed partial class TaskBoardColumnMenuTests
         cut.WaitForAssertion(() =>
         {
             IElement empty = Assert.Single(cut.FindAll(".tasks-empty"));
-            Assert.Equal("No tasks yet.", empty.QuerySelector(".empty-state [role=status]")?.TextContent.Trim());
+            Assert.Equal("No tasks yet", empty.QuerySelector(".empty-state [role=status]")?.TextContent.Trim());
             Assert.Single(cut.FindComponents<TaskBoard>());
             IElement board = cut.Find(".task-board");
             Assert.True(board.CompareDocumentPosition(empty).HasFlag(AngleSharp.Dom.DocumentPositions.Following));

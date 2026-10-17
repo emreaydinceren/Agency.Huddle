@@ -15,10 +15,11 @@
      three.
    </summary> *@
 @using Agency.Huddle.App.Avatars
+@using System.Globalization
 @using Agency.Huddle.App.Themes
-@using MudBlazor.Utilities
+@using System.Text
 
-<MudAvatar Color="Color.Primary" Size="this.Size" Class="@this.Class" Style="@this.InlineStyle">
+<MudAvatar Color="Color.Primary" Size="this.Size" Class="@this.RootClass" Style="@this.InlineStyle">
     @if (this.ImageSource is not null)
     {
         <img src="@this.ImageSource" alt="" />
@@ -129,12 +130,27 @@
     };
 
     /// <summary>
-    /// The inline <c>style</c> carrying both <see cref="Avatars.Avatar.Background"/> and its
-    /// <see cref="ContrastColour.ReadableForeground(MudColor)"/> foreground, or <see langword="null"/>
-    /// when <see cref="Resolved"/> has no <see cref="Avatars.Avatar.Background"/> - so the Theme's own
-    /// <c>Color="Color.Primary"</c> styling applies unmodified. Built entirely from this C# string,
-    /// never a literal typed into the markup above: a later task fails the build on a colour literal
-    /// found inside any literal inline style attribute under <c>Components/</c>.
+    /// The root's classes: the caller's <see cref="Class"/>, plus <c>avatar-image</c> for a picture (the same circle
+    /// with a 1px inner hairline) or <c>avatar-monogram</c> for letters (the Teammate's colour at 20% over Surface,
+    /// letters mixed 75% toward TextPrimary; a Dark Theme uses 35% and white, both in <c>app.css</c>).
+    /// </summary>
+    private string RootClass
+    {
+        get
+        {
+            string kind = this.ImageSource is not null ? "avatar-image" : "avatar-monogram";
+            return string.IsNullOrEmpty(this.Class) ? kind : string.Concat(this.Class, " ", kind);
+        }
+    }
+
+    /// <summary>
+    /// The inline <c>style</c> for <see cref="Avatars.Avatar.Background"/>, or <see langword="null"/> when
+    /// <see cref="Resolved"/> has none - so the Theme's own accent applies through <c>.avatar-monogram</c> in
+    /// <c>app.css</c>. A monogram hands the Teammate's colour to <c>app.css</c> as this avatar's own primary
+    /// (<see cref="AvatarColours.MonogramStyle(string)"/>), which makes the fill and letters for the Theme in force;
+    /// there is no per-colour black or white choice); a picture, which may be transparent, sits on the colour itself.
+    /// Built entirely from this C# string, never a literal typed into the markup above: a later task fails the build
+    /// on a colour literal found inside any literal inline style attribute under <c>Components/</c>.
     /// </summary>
     private string? InlineStyle
     {
@@ -145,13 +161,17 @@
                 return null;
             }
 
-            MudColor background = this.Resolved.Background;
-            MudColor foreground = ContrastColour.ReadableForeground(background);
-            return $"background: {this.Resolved.Background}; color: {foreground.ToString(MudColorOutputFormats.Hex)};";
+            return this.ImageSource is not null
+                ? $"background: {this.Resolved.Background};"
+                : AvatarColours.MonogramStyle(this.Resolved.Background);
         }
     }
 
-    /// <summary>Initials from the first and last word of <paramref name="name"/>: "Emily Lee" reads as EL and "Chief of Staff" as CS. First-and-last rather than the first two words, so a middle word like "of" does not get a letter it does not deserve. A one-word name such as "echo" reads as E.</summary>
+    /// <summary>
+    /// Two letters, always. A name of several words reads as its first and last word's initials ("Emily Lee" is EL,
+    /// "Chief of Staff" is CS), so a middle word like "of" does not get a letter it does not deserve; a one-word name
+    /// reads as its first two letters ("Helen" is HE), and a one-letter name as that letter alone.
+    /// </summary>
     /// <param name="name">The Teammate's Name.</param>
     internal static string Monogram(string name)
     {
@@ -159,8 +179,22 @@
         return words.Length switch
         {
             0 => "?",
-            1 => char.ToUpperInvariant(words[0][0]).ToString(),
-            _ => string.Concat(char.ToUpperInvariant(words[0][0]), char.ToUpperInvariant(words[^1][0])),
+            1 => LeadingLetters(words[0], 2),
+            _ => string.Concat(LeadingLetters(words[0], 1), LeadingLetters(words[^1], 1)),
         };
+    }
+
+    /// <summary>The first <paramref name="count"/> text elements of <paramref name="word"/>, upper-cased.</summary>
+    private static string LeadingLetters(string word, int count)
+    {
+        TextElementEnumerator elements = StringInfo.GetTextElementEnumerator(word);
+        StringBuilder letters = new();
+        while (count > 0 && elements.MoveNext())
+        {
+            letters.Append(elements.GetTextElement());
+            count--;
+        }
+
+        return letters.ToString().ToUpperInvariant();
     }
 }

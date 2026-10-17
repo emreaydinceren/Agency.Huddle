@@ -68,7 +68,7 @@ public sealed class RightSidebarTests
         sidebar.WaitForAssertion(() =>
         {
             Assert.Empty(sidebar.FindAll(".right-sidebar-section"));
-            Assert.Equal("This page has nothing to show here.", sidebar.Find("[role='status']").TextContent.Trim());
+            Assert.Equal("Nothing to show here", sidebar.Find("[role='status']").TextContent.Trim());
         });
         Assert.Equal("/settings", tabs.Active?.Url);
     }

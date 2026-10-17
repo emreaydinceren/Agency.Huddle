@@ -176,7 +176,7 @@ public sealed class TeamTypesPanelTests
         Assert.NotEmpty(cut.FindAll(".mud-simple-table"));
         Assert.Empty(cut.FindAll(".mud-table-head"));
         Assert.NotEmpty(cut.FindAll("tbody tr .empty-state"));
-        Assert.Equal("No team types found.", cut.Find(".empty-state [role=status]").TextContent.Trim());
+        Assert.Equal("No team types found", cut.Find(".empty-state [role=status]").TextContent.Trim());
         Assert.Equal("No problems.", cut.Find(".problem-list-empty").TextContent.Trim());
         Assert.Empty(cut.FindAll("tr.teamtypes-row"));
     }

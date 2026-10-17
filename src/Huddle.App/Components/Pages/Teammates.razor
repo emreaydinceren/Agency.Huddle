@@ -16,9 +16,9 @@
 @inject AvatarStore Avatars
 @inject IServiceProvider Services
 
-<MudContainer MaxWidth="MaxWidth.Large" Class="pa-4">
+<MudContainer MaxWidth="MaxWidth.Large" Class="page-reading pa-4">
     <PageHeader Title="Teammates" />
-    <MudText Typo="Typo.body2" Class="mud-text-secondary">
+    <MudText Typo="Typo.body2" Class="mud-text-secondary page-lead">
         A Persona is a Markdown file describing how one teammate should behave, plus the model it
         thinks with. Add one and that teammate comes online with a chat of its own. Editing the file,
         or changing its model, restarts it, which clears what it remembers. Removing the file only
@@ -65,7 +65,7 @@
 
     @if (this.entries.Count == 0)
     {
-        <EmptyState Text="No Teammates yet. Choose New teammate." />
+        <EmptyState Title="No Teammates yet" Text="Choose New teammate to add the first one." />
     }
     else
     {
@@ -73,45 +73,44 @@
 
         if (groups.Count == 0)
         {
-            <EmptyState Text="No teammates in this team." />
+            <EmptyState Title="No teammates in this team" Text="Pick another team, or add a teammate to this one." />
         }
         else
         {
             foreach (var group in groups)
             {
                 <section class="teammates-group">
-                    <MudText Typo="Typo.h6" HtmlTag="h2" Class="teammates-group-heading">@group.Heading</MudText>
+                    <MudText Typo="Typo.subtitle2" HtmlTag="h2" Class="teammates-group-heading">@group.Heading <span class="teammates-group-count">@group.Members.Count</span></MudText>
                     <ul class="teammates-list">
                         @foreach (var entry in group.Members)
                         {
                             var status = this.ResolveStatus(entry.Name);
                             <li class="teammates-item">
-                                @* The whole tile opens the card, the way a person in Slack's directory does.
-                                   Kept as a real <button>, not a MudCard, so it stays keyboard-focusable and
-                                   correctly announced - MudBlazor has no card-sized clickable-area component,
-                                   and nesting a button inside (or around) a MudCard would be two interactive
-                                   elements fighting over the same click. *@
+                                @* The tile opens the card, the way a person in Slack's directory does. The opening
+                                   control is a real <button>, not a MudCard, so it stays keyboard-focusable and
+                                   correctly announced - MudBlazor has no card-sized clickable-area component. The
+                                   card's border belongs to the <li>, so the "Working on" Task link can sit inside
+                                   the card without being nested in the button (a link in a button is invalid). *@
                                 <button type="button" class="teammate-tile" @onclick="() => this.OpenCard(entry.Name)">
-                                    <TeammateAvatar Name="@entry.Name" Avatar="this.Avatars.Get(entry.Name)" Size="Size.Large" />
+                                    <PresenceAnchor Cue="PresenceCue.From(status.State)" Detail="@status.Reason">
+                                        <TeammateAvatar Name="@entry.Name" Avatar="this.Avatars.Get(entry.Name)" Size="Size.Medium" />
+                                    </PresenceAnchor>
                                     <span class="teammate-tile-text">
                                         <span class="teammates-item-name">@entry.Name</span>
                                         <span class="teammate-tile-role">@entry.Title</span>
-                                        @* The reason (when one is known) is a tooltip here rather than a second line - the
-                                           tile is already the densest surface on the page. TeammateCard.razor shows the
-                                           same reason as a full line, where there is room for it. *@
+                                        @* One status signal: the badge on the avatar carries the state; its word is repeated
+                                           here as plain meta text, and the reason (when one is known) is the badge's tooltip. *@
                                         <span class="teammate-tile-chips">
-                                            <MudChip T="string" Size="Size.Small" Variant="Variant.Text">@(Teammates.FormattedAlias(entry.Alias))</MudChip>
-                                            <MudChip T="string" Size="Size.Small" Variant="Variant.Text" Class="teammate-tile-status" title="@status.Reason">
-                                                <StatusDot State="status.State" />
-                                                @Teammates.StatusLabel(status.State)
-                                            </MudChip>
+                                            <span class="chip-meta">@(Teammates.FormattedAlias(entry.Alias))</span>
+                                            <span class="chip-meta" aria-hidden="true">·</span>
+                                            <span class="chip-meta teammate-tile-state">@PresenceCue.From(status.State).Label</span>
                                         </span>
-                                        @if (this.WorkingOn(entry.Name) is { } working)
-                                        {
-                                            <span class="teammate-tile-context">Working on <span class="task-id">@working</span></span>
-                                        }
                                     </span>
                                 </button>
+                                @if (this.WorkingOn(entry.Name) is { } working)
+                                {
+                                    <span class="teammate-tile-context">Working on <MudLink Href="@($"/tasks/item/{Uri.EscapeDataString(working)}")" Class="teammate-tile-task-link">@working</MudLink></span>
+                                }
                             </li>
                         }
                     </ul>
@@ -208,16 +207,6 @@
         var connected = agentId is not null && this.Gateway.IsOnline(agentId);
         return PersonaStatusResolver.Resolve(connected, this.Health.Get(personaName));
     }
-
-    /// <summary>The Human-facing label for <paramref name="state"/> - "Starting" rather than "Offline" so a Persona launching for the first time does not read as a fault.</summary>
-    /// <param name="state">The state to label.</param>
-    private static string StatusLabel(PersonaState state) => state switch
-    {
-        PersonaState.Starting => "Starting",
-        PersonaState.Online => "Online",
-        PersonaState.Degraded => "Degraded",
-        _ => "Offline",
-    };
 
     /// <summary>
     /// Builds the <see cref="DialogParameters"/> <see cref="OpenCard"/> shows <see cref="TeammateCard"/>

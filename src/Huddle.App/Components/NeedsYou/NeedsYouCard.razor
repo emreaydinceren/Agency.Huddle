@@ -8,7 +8,7 @@
 <MudPaper Outlined="true" Class="needs-you-card" hidden="@(this.count == 0)" role="region" aria-label="Needs you">
     <div class="needs-you-title">
         <MudText Typo="Typo.subtitle2">Needs you</MudText>
-        <MudChip T="string" Size="Size.Small" Color="Color.Warning" Class="needs-you-count">@this.count</MudChip>
+        <span class="needs-you-count chip-meta">@this.count</span>
     </div>
     <NeedsYouList CountChanged="this.OnCountChanged" />
 </MudPaper>

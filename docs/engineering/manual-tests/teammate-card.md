@@ -186,7 +186,7 @@ If the card does not open at all, this test is blocked by TEAMMATECARD-02 — re
 **Pass if — all of these**
 
 - Empty Name shows `?`.
-- `ada` shows `A`.
+- `ada` shows `AD` (a single word gives its first two letters).
 - `Emily Lee` shows `EL`.
 - `Chief of Staff` shows `CS`.
 

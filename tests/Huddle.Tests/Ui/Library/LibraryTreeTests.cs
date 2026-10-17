@@ -341,6 +341,7 @@ public sealed class LibraryTreeTests : IDisposable
         Assert.Equal(
             "No teammate has the Team label \"Legacy\".",
             cut.Find("span.library-tree-orphan").GetAttribute("aria-label"));
+        Assert.NotNull(cut.Find(".library-tree-orphan").ParentElement?.QuerySelector("svg"));
     }
 
     /// <summary>An empty folder shows the settled message and a "New note" button rather than nothing.</summary>

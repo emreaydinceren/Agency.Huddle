@@ -33,6 +33,9 @@ public sealed partial class ThemeSourceTests
         "--nav-indent-2",
         "--nav-row-height",
 
+        // The 18px icon of a sidebar row and of a tab-rail label, declared beside the row height (S2, C6).
+        "--icon-size-row",
+
         "--mud-appbar-height",
         "--mud-default-borderradius",
         "--mud-drawer-width-left",
@@ -154,6 +157,46 @@ public sealed partial class ThemeSourceTests
         var hits = CssSource.FindFontFamilyLiterals(AppCssPath);
 
         Assert.Empty(hits);
+    }
+
+    /// <summary>
+    /// <c>app.css</c>'s braces balance outside comments, and never close more than they opened. An
+    /// unclosed block nests every later rule inside it - a merge that dropped one <c>}</c> after an
+    /// <c>@container</c> query once left every chip rule after it unapplied while each source assertion
+    /// on those rules still passed.
+    /// </summary>
+    [Fact]
+    public void AppCss_BracesBalance()
+    {
+        string css = File.ReadAllText(AppCssPath);
+        int depth = 0;
+        int lowest = 0;
+
+        int index = 0;
+        while (index < css.Length)
+        {
+            if (css[index] == '/' && index + 1 < css.Length && css[index + 1] == '*')
+            {
+                int end = css.IndexOf("*/", index + 2, StringComparison.Ordinal);
+                index = end < 0 ? css.Length : end + 2;
+                continue;
+            }
+
+            if (css[index] == '{')
+            {
+                depth++;
+            }
+            else if (css[index] == '}')
+            {
+                depth--;
+                lowest = Math.Min(lowest, depth);
+            }
+
+            index++;
+        }
+
+        Assert.Equal(0, lowest);
+        Assert.Equal(0, depth);
     }
 
     /// <summary>

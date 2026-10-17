@@ -10,6 +10,12 @@
    nothing else may set it. Letting MudBlazor write IsDarkMode back on an OS change would select
    the palette slot the theme does not fill. See docs/adr/0017-a-theme-is-a-palette-not-a-pair.md. *@
 <MudThemeProvider Theme="@this.theme" IsDarkMode="@this.isDarkMode" ObserveSystemDarkModeChange="false" />
+@* The one CSS-visible fact that the Theme is a Dark one (app.css reads it as ":root:has(.theme-mode-dark)"): MudBlazor
+   emits only palette variables, and the avatar recipe needs a different fill strength on a dark Surface. *@
+@if (this.isDarkMode)
+{
+    <span class="theme-mode-dark" hidden></span>
+}
 <MudPopoverProvider />
 <MudDialogProvider />
 <MudSnackbarProvider />

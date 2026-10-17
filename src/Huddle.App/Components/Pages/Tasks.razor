@@ -177,15 +177,15 @@
             <div class="tasks-empty">
                 @if (this.Store.All.Count == 0)
                 {
-                    <EmptyState Text="No tasks yet." />
+                    <EmptyState Title="No tasks yet" Text="Choose New task in the toolbar to add the first one." />
                 }
                 else if (!string.IsNullOrWhiteSpace(this.search) && this.FilteredTasks(null).Count > 0)
                 {
-                    <EmptyState Text="@($"No tasks match '{this.search}'.")" />
+                    <EmptyState Title="@($"No tasks match '{this.search}'")" Text="Try a different search." />
                 }
                 else
                 {
-                    <EmptyState Text="No tasks match this View.">
+                    <EmptyState Title="No tasks match this View" Text="Reset the filters to see every task.">
                         <Action>
                             <MudButton Variant="Variant.Text" Size="Size.Medium" OnClick="this.ResetOverrides" Class="tasks-empty-action">Reset filters</MudButton>
                         </Action>
@@ -201,7 +201,7 @@
         }
 
         <ResizableEndDrawer Open="this.detailOpen" OpenChanged="this.OnDetailOpenChanged" StorageKey="taskDetailPanelWidth"
-                            Title="@(this.selectedDraft is not null ? "New task" : "Task")"
+                            Title="@this.DetailTitle" Eyebrow="@this.DetailEyebrow"
                             OverlayAutoClose="@(!this.detailHasPending)" Class="tasks-detail-drawer">
             @if (this.selectedTaskId is not null || this.selectedDraft is not null)
             {
@@ -578,6 +578,35 @@
 
     /// <summary>The <see cref="DetailKey"/> used when neither a Draft nor a Task is selected.</summary>
     private const string NoDetailKey = "tasks-detail-none";
+
+    /// <summary>
+    /// The detail drawer's title: the Task's own name ("Upgrade every service to .NET 10"), never its type, so
+    /// the drawer says what is open (design-system "Drawer anatomy"). The id and its Team or Project are the
+    /// line above it (<see cref="DetailEyebrow"/>). A Draft has no id yet and reads "New task".
+    /// </summary>
+    private string DetailTitle
+    {
+        get
+        {
+            if (this.selectedDraft is not null)
+            {
+                return "New task";
+            }
+
+            if (this.selectedTaskId is { } id && this.Store.Get(id) is { } task)
+            {
+                return task.Title;
+            }
+
+            return "Task";
+        }
+    }
+
+    /// <summary>The line above the drawer's title: the id, then the Project or, with none, the Team ("PLAT-0013 · Platform"). Null for a Draft or a Task that is gone.</summary>
+    private string? DetailEyebrow =>
+        this.selectedDraft is null && this.selectedTaskId is { } id && this.Store.Get(id) is { } task
+            ? $"{id} · {task.Location.Project ?? task.Location.Team}"
+            : null;
 
     /// <summary>The ids of every Task in the current effective View (Spec §10.8), unnarrowed by the search box, for <see cref="AiReactingChip.Watched"/>.</summary>
     private IReadOnlyList<TaskId> WatchedTaskIds => this.FilteredTasks(null).Select(t => t.Id).ToList();

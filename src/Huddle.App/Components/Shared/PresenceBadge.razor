@@ -1,0 +1,35 @@
+@* <summary>
+     A 10px presence mark: a tone-coloured circle carrying a glyph, with an accessible name that is the state's
+     word. On an avatar (<see cref="OnAvatar"/>, inside a <c>PresenceAnchor</c>) it sits on the bottom-right rim
+     ringed in Surface; on its own it is the inline dot beside a name. Both <c>StatusDot</c> (Health) and the Task
+     assignee (Presence) draw through this one vocabulary, so the colour is never the only cue.
+   </summary> *@
+<span class="@this.CssClass" role="img" aria-label="@this.Name" title="@this.Title"></span>
+
+@code {
+    /// <summary>The state to draw.</summary>
+    [Parameter]
+    public PresenceCue Cue { get; set; }
+
+    /// <summary>Whether the badge sits on an avatar's rim (absolute, ringed in Surface) rather than inline.</summary>
+    [Parameter]
+    public bool OnAvatar { get; set; }
+
+    /// <summary>Extra words for the tooltip after the state name, such as why a Teammate is Offline. The accessible name stays the state's word.</summary>
+    [Parameter]
+    public string? Detail { get; set; }
+
+    /// <summary>The classes: the base dot, the glyph, the tone and, on an avatar, the rim placement.</summary>
+    private string CssClass => string.Concat(
+        "agent-dot presence-badge presence-glyph-",
+        this.Cue.Glyph.ToString().ToLowerInvariant(),
+        " ",
+        this.Cue.Tone,
+        this.OnAvatar ? " on-avatar" : string.Empty);
+
+    /// <summary>The accessible name: the state's word.</summary>
+    private string Name => this.Cue.Label;
+
+    /// <summary>The tooltip: the state's word, then the detail when there is one.</summary>
+    private string Title => string.IsNullOrWhiteSpace(this.Detail) ? this.Cue.Label : string.Concat(this.Cue.Label, ": ", this.Detail);
+}

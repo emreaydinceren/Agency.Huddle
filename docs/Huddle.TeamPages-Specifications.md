@@ -609,7 +609,7 @@ depends on the Room scope that §3 defers.
 
 | Row | Markup | Behaviour |
 | --- | --- | --- |
-| Team | `div.hover-reveal-row` holding a chevron `MudIconButton` (expand/collapse, `aria-expanded`), a `MudNavLink Href="/teams/{team}" Match="NavLinkMatch.Prefix" Class="hover-reveal-link"`, and a `MudMenu Class="hover-reveal-menu"` with **New project** | Clicking the name navigates. The chevron toggles the Projects. Right-click opens the same menu (`RoomList.razor` pattern). A Team with no members shows a muted `MudText` *No members* after its name |
+| Team | `div.hover-reveal-row` holding a chevron `MudIconButton` (expand/collapse, `aria-expanded`), a `MudNavLink Href="/teams/{team}" Match="NavLinkMatch.Prefix" Class="hover-reveal-link"`, and a `MudMenu Class="hover-reveal-menu"` with **New project** | Clicking the name navigates. The chevron toggles the Projects. Right-click opens the same menu (`RoomList.razor` pattern). A Team row trails its member count (`span.sidebar-row-meta`, tooltip *3 members* or *No members*) in place of the old muted *No members* text |
 | Project | `MudNavLink Href="/teams/{team}/projects/{project}" Class="nav-project-link"`, indented one level | Navigates |
 | Action | `NavTabLink Href="/teams/build" Icon="@Icons.Material.Filled.Add" IconColor="Color.Primary" Class="nav-action-link"` **Build a team** | Opens the Build a team page (the sidebar's *New team* and *New team from a type* links were removed) |
 
@@ -617,11 +617,12 @@ depends on the Room scope that §3 defers.
 `Href`, but the design needs the Team name to navigate. A link plus a separate chevron gives both,
 and keeps each keyboard-reachable.
 
-**Expansion state** is kept in `window.huddleStorage` under `teamsNav:collapsed`, a JSON array of
-the lower-cased names of the Teams the Human **collapsed**. Absent means every Team is expanded, so
+**Expansion state** is kept in `window.huddleStorage` under `teamsNav:expanded`, a JSON array of
+the lower-cased names of the Teams the Human **opened**. Absent means every Team is collapsed, so
 that rule also holds for a Team created later. Missing, unreadable or malformed storage means the
-same. The Team of the current route is expanded even when it is in the set, so the active Project
-is never hidden; the chevron collapses it again after the next navigation.
+same. The old `teamsNav:collapsed` key is ignored. The Team of the current route is expanded even
+when it is not in the set, so the active Project is never hidden; the chevron collapses it again
+after the next navigation. A list over 8 rows ends in *Show all (N)*.
 
 **Creation.** `TeamsNav` creates through `ITeamFolders` (`Agency.Huddle.App.Library`), which
 `TeamFolderProvisioner` implements. It never touches the disk itself.
@@ -718,11 +719,11 @@ shows a `MudAlert Severity.Info` *Files and Tasks are turned off in this install
 - `MudTabs ActivePanelIndex` is computed from the route. `ActivePanelIndexChanged` calls
   `NavigationManager.NavigateTo(...)`. The page never flips a local field (the `Settings.razor`
   rule). The tab headers have no `href`: the route drives the tab, and a click only navigates.
-- **Breadcrumbs.** The page draws none. The shell's Top Bar (`TopBar`, drawing `PageBreadcrumbs`,
-  see the Tabs specification) reads *Teams › Team* on a Team page and *Teams › Team › Project* on
-  a Project page, with the Team a link to `/teams/<Team>`. The labels are the Tab's title, which is
-  the route's spelling until the Tab is retitled; the page's own title still takes the catalog's.
-  The page no longer draws a title of its own.
+- **Title and breadcrumbs.** The page names itself with a `PageHeader` h1: the Team's name on a Team
+  page, with **Duplicate** in the header's `Actions` on the right of the same row, and the Project's
+  name on a Project page. The shell's Top Bar (`TopBar`, drawing `PageBreadcrumbs`, see the Tabs
+  specification) therefore holds only the ancestors: *Teams* on a Team page and *Teams › Team* on a
+  Project page, with the Team a link to `/teams/<Team>`.
 - `KeepPanelsAlive` is **off**. Only the active tab is rendered, so a Team with 5,000 files
   doesn't build its tree while the Human reads Members.
 
@@ -732,8 +733,8 @@ An unknown Project shows the same pattern, *There is no Project named "X" in Tea
 with a link to its Team. Both alerts carry `role="alert"`. Neither page creates anything on a
 stray URL.
 
-**Title.** `<PageTitle>` is `Business — Huddle` or `Marketing Project · Business — Huddle`, and
-plain `Huddle` for an unknown Team or Project.
+**Title.** The document title is the bare name (`PageHeader` sets it): `Business` or
+`Marketing Project`, and plain `Huddle` for an unknown Team or Project.
 
 ### 6.7 Members tab
 
@@ -998,7 +999,7 @@ lines here.
 
 | `window.huddleStorage` key | Holds |
 | --- | --- |
-| `teamsNav:collapsed` | JSON array of lower-cased names of the Teams whose Projects are hidden. Absent means all expanded, also for a Team created later |
+| `teamsNav:expanded` | JSON array of lower-cased names of the Teams the Human opened. Absent means all collapsed, also for a Team created later |
 | `library:team:<scope>…` | Set by `LibraryExplorer` from `StateKey` (expanded folders, open file, divider) |
 
 Both follow the Library's rule: failed or missing storage means defaults, never an error.

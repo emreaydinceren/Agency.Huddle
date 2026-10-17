@@ -14,7 +14,7 @@ On 2026-10-12 an agent ran all eight tests in the browser pane on the isolated U
 
 Run [`P-BUILD`](common.md#p-build) then [`P-LAUNCH-UAT`](common.md#p-launch-uat). This area adds:
 
-1. Open Ada's root one-to-one under **Chats** and note the Room's id: the 32 hexadecimal characters after `/rooms/` in the address bar. In `T-B` set `$data = 'C:\seeds\huddle\uat\data'` and `$ada = '<Ada's room id>'`.
+1. Open Ada's root one-to-one under **Rooms** and note the Room's id: the 32 hexadecimal characters after `/rooms/` in the address bar. In `T-B` set `$data = 'C:\seeds\huddle\uat\data'` and `$ada = '<Ada's room id>'`.
 2. Have a small text file `C:\seeds\huddle\uat\notes.txt` and a small PNG `C:\seeds\huddle\uat\chart.png` ready. Do not use a file with a `.svg` or `.exe` name for the positive cases.
 3. Create the Team **Marketing** with Ada as a member, as in [Team chats](team-chats.md) setup step 3 and 4, so its Team Room exists.
 

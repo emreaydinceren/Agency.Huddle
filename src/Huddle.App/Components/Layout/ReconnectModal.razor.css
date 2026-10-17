@@ -26,7 +26,7 @@
     background-color: var(--mud-palette-surface);
     color: var(--mud-palette-text-primary);
     width: 20rem;
-    margin: calc(20vh / 0.9) auto;
+    margin: 20vh auto;
     padding: 32px;
     border: 0;
     border-radius: var(--mud-default-borderradius);

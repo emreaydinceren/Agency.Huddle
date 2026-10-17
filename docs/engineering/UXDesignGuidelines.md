@@ -71,6 +71,7 @@ component here, move it onto the component rather than writing another copy.
 | --- | --- | --- |
 | A new page | `@page` component, `MudContainer pa-4`, a `PageHeader`, `TabKeys.Describe` | [A page](design-system.md#a-page) |
 | A page title with actions | `PageHeader`, with the `Size.Small` buttons in its `Actions` slot | [A page](design-system.md#a-page) |
+| A reading page's container | `MudContainer MaxWidth.Large` with `.page-reading` | [A page](design-system.md#a-page) |
 | A toolbar under the title | `MudToolBar Dense Gutters="false"` | [Spacing, density and size](design-system.md#spacing-density-and-size) |
 | A search box | `SearchField` | [House defaults](design-system.md#house-defaults) |
 | A form or short flow | `MudDialog` through `IDialogService`, opened with `HuddleDialogOptions.SmallForm`, with the dialog anatomy | [Dialog anatomy](design-system.md#dialog-anatomy) |
@@ -83,24 +84,30 @@ component here, move it onto the component rather than writing another copy.
 | A notice on the page | `MudAlert` with a role, `Dense` if one line | [Notices and snackbars](design-system.md#notices-and-snackbars) |
 | A transient result | `ISnackbar.Add(…, key: …)` | [Notices and snackbars](design-system.md#notices-and-snackbars) |
 | An empty list | `EmptyState`, with a next step | [Patterns worth copying](design-system.md#patterns-worth-copying) |
-| A card an Agent puts in the Transcript | Derive from `AgentCardBase`, draw with `AgentCard` | [Huddle components](design-system.md#huddle-components) |
-| A Task's state, priority or Assignee on screen | `TaskStatusChip`, `TaskPriorityChip`, `TaskAssignee` | [Huddle components](design-system.md#huddle-components) |
+| A card an Agent puts in the Transcript | Derive from `AgentCardBase`, draw with `AgentCard` | [Component rules](design-system.md#component-rules) |
+| A Task's state, priority or Assignee on screen | `TaskStatusChip`, `TaskPriorityChip`, `TaskAssignee` | [Chips](design-system.md#chips) |
+| A status or priority in a word | `StatusChip`, the tinted look | [Chips](design-system.md#chips) |
 | A Teammate's face | `TeammateAvatar` | [Avatars and status](design-system.md#avatars-and-status) |
 | A Teammate's face that opens their profile on click | `ProfileAvatar` (only where the avatar is not already inside a button or link) | [wireframes.md `O9`](wireframes.md#figure-8-overlays) |
 | A Teammate's card: avatar, title, chips, your buttons | `ProfileCard` with a `TeammateProfile` | [wireframes.md `B9c`](wireframes.md#figure-9-the-build-a-team-page) |
-| A Teammate's health | `StatusDot` | [Avatars and status](design-system.md#avatars-and-status) |
+| A Teammate's health beside a name | `StatusDot` | [Avatars and status](design-system.md#avatars-and-status) |
+| A presence badge on an avatar | `PresenceAnchor` around the avatar, with a `PresenceCue` | [Avatars and status](design-system.md#avatars-and-status) |
 | A Task's state, priority or presence colour | `TaskColors.For(…)`; the priority icon is `TaskColors.Icon(priority)` | [Colour](design-system.md#colour) |
 | A two- to five-way mode switch | `HuddleSegmentedControl<T>` | [House defaults](design-system.md#house-defaults) |
-| Filter chips | `ChipCloud` | [Huddle components](design-system.md#huddle-components) |
-| A toolbar filter shown as "Label: Value ⌄ ×" | `TaskFilterChip`, with the choices as `MudMenuItem`s; dashed while unset, filled with a clear button once set. The Tasks page's second row (`T3`) is the model: a Filter icon `MudMenu` first, then one chip per filter that is set | [wireframes.md, Figure 4](wireframes.md) |
-| To save a page's own setup (filters, grouping, layout, sort, column widths) | Save each change as it is made; no editor panel and no Save button. The Tasks page writes every change to its View through `ViewStore`. A dialog that edits a list as a whole (`FieldsDialog`) still buffers until Save | [Huddle.Tasks-Specifications.md](../Huddle.Tasks-Specifications.md) |
-| Text or an icon on a Primary fill | `Color.Primary`, and let the theme's `PrimaryContrastText` colour it: white in Huddle Light, Huddle Dark and Custom Accent, whatever the accent. Never hard-code the foreground | [Colour](design-system.md#colour) |
+| Filter chips | `ChipCloud` | [Chips](design-system.md#chips) |
+| A toolbar filter shown as "Label: Value ⌄ ×" | `TaskFilterChip` | [Catalog: actions and input](#actions-and-input) |
+| To save a page's own setup | Save each change as it is made, through `ViewStore` | [Huddle.Tasks-Specifications.md](../Huddle.Tasks-Specifications.md) |
+| Text or an icon on a Primary fill | `Color.Primary`; the Theme's `PrimaryContrastText` (black or white) colours it. Never hard-code the foreground | [Colour](design-system.md#colour) |
+| A property label and value in a drawer form | `.task-detail-prop` inside `.task-detail-props` and `.task-detail-groups` | [Drawer anatomy](design-system.md#drawer-anatomy) |
+| A one-line sidebar list that can grow | `SidebarRows` and `ShowAllRow`, with a `span.sidebar-row-label` | [The sidebar](design-system.md#the-sidebar) |
+| An inline edit of a title | A field with `.title-inline-edit` and an `aria-label`, no floating label | [Component rules](design-system.md#component-rules) |
 | Resizable columns in a List | `task-list-resize.js` on a grid with the `task-list-grid` class; MudDataGrid's own resizing is off because it round-trips per pointer move | [Catalog: browser scripts](#browser-scripts) |
 | Row actions | A `Filled.MoreVert` `MudMenu`, revealed on hover or focus: `hover-reveal-row` on the row, `hover-reveal-menu-button` on the button | [The sidebar](design-system.md#the-sidebar) |
 | An icon | The entity or action table | [Icons](design-system.md#icons) |
 | A tinted, selected or hovered surface | The States table | [Colour](design-system.md#colour) |
 | A border | The Lines table | [Colour](design-system.md#colour) |
-| A size, gap or radius in CSS | The 4/8/12/16/24px spacing scale and radius tokens | [Foundations](design-system.md#foundations) |
+| A size, gap or radius in CSS | The 4/8/12/16/24px spacing scale and radius tokens | [Spacing, density and size](design-system.md#spacing-density-and-size) |
+| A font size or weight | The type table's role; nothing under 11px | [Typography](design-system.md#typography) |
 | A label, button text or message | The verb table and casing rules, and [language.md](language.md) | [Interface copy](design-system.md#interface-copy) |
 | A date or time in the Transcript | `MessageDisplay.DayLabel`, `LocalDay`, `StartsNewDay` | [Catalog: helpers](#helpers) |
 | To update UI from a background event | `RendererDispatch.RunAsync(this.InvokeAsync, …)` | [Catalog: helpers](#helpers) |
@@ -118,27 +125,32 @@ before you create a component, a helper or a CSS class.
 | `TopBar` | `Components/Layout/TopBar.razor` | `S1` | `Search`, `Actions` (`RenderFragment`) | Adding a top-bar control: pass it in a slot |
 | `NavTabLink` | `Components/Layout/NavTabLink.razor` | `S2d` and sidebar rows | `Href`, `TabTitle`, `Icon`, `IconColor`, `Match`, `Class` | Any sidebar link that opens a Tab |
 | `RoomNavRow` | `Components/Shared/RoomNavRow.razor` | A row in `S2b`, `S2c` | `Room`, `TeamLabel`, `Class`, `OnError` | A Room in any list, with its hover menu and delete flow |
-| `PageBreadcrumbs` | `Components/Shared/PageBreadcrumbs.razor` | `S1a` | the trail, `OnNavigate` | Drawn by the shell. A page never draws its own |
+| `PageBreadcrumbs` | `Components/Shared/PageBreadcrumbs.razor` | `S1a` | the trail, `OnNavigate` | Drawn by the shell. A page never draws its own. The trail holds ancestors only |
 | `TabStrip`, `TabGroupPane`, `TabHost`, `TabPageHost` | `Components/Layout/` | `W1` to `W8` | | Don't use directly; a page plugs in through `TabKeys` |
 | `PageSubjectSource` | `Components/Sidebar/PageSubjectSource.razor` | Nothing in place; feeds `S4` | `Value` (the page's Subject) | Telling the Right sidebar what the page shows. It draws nothing, and does nothing outside a Tab |
 | `PageCommandHandler` | `Components/Sidebar/PageCommandHandler.razor` | Nothing in place | `OnCommand` (a callback for each command) | Letting a Right sidebar panel run an action on the page, such as scrolling a document to a heading. It draws nothing |
 | `SidebarPanelFrame` | `Components/Sidebar/SidebarPanelFrame.razor` | One panel in `S4` | `PanelId`, `Title`, `Icon`, `ChildContent` | Wrapping the body of a Right sidebar panel. It draws the icon, the title and the count the panel reports through the cascaded `SidebarPanelContext`, and remembers the collapsed state per viewer |
 | Add a Right sidebar panel | `Sidebar/SidebarPanelServiceCollectionExtensions.cs` | A panel in `S4` | one `AddSidebarPanel` line in `ServiceCollectionExtensions.cs` | Adding a panel: a `SidebarPanel` with its id, title, icon, Order, the Subject test and its component |
 | `RightSidebar`, `RightSidebarToggle` | `Components/Layout/` | `S4`, its button in `S1c` | | Drawn by the shell. State is the scoped `RightSidebarService` (open or closed, and each Tab's blocks) |
+| `SidebarRows`, `ShowAllRow` | `Components/Shared/SidebarRows.cs`, `Components/Shared/ShowAllRow.razor` | The "Show all (N)" row under a sidebar list | `Total`, `Expanded`, `OnToggle`; `SidebarRows.Limit` is 8 | A sidebar list that can pass 8 rows. `SidebarRows` also holds the open-group rules: a group opens when the current page is inside it |
 
 ### Display
 
 | Component | Path | Draws | Key parameters | Use it for |
 | --- | --- | --- | --- | --- |
-| `TeammateAvatar` | `Components/Shared/TeammateAvatar.razor` | `C5a`, `P4` | `Name`, `Avatar`, `Size`, `Class`, `PendingImage` | Every Teammate face: image, then label, then a two-letter monogram |
-| `StatusDot` | `Components/Shared/StatusDot.razor` | In `P4`, pickers | `State` (`PersonaState`) | Every Teammate health dot; it carries its own text label |
+| `TeammateAvatar` | `Components/Shared/TeammateAvatar.razor` | `C5a`, `P4` | `Name`, `Avatar`, `Size`, `Class`, `PendingImage` | Every Teammate face. One `MudAvatar` root with class `avatar-monogram` or `avatar-image`. Letters: two for a name, first and last initials for several words, "?" when empty |
+| `PresenceBadge` | `Components/Shared/PresenceBadge.razor` | The 10px mark on an avatar or inline | `Cue` (`PresenceCue`), `OnAvatar`, `Detail` | A glyph badge: check, pulse, dash or hollow ring, with `role="img"` and the state word as its `aria-label` |
+| `PresenceAnchor` | `Components/Shared/PresenceAnchor.razor` | The frame around an avatar | `ChildContent`, `Cue`, `Detail` | Puts a `PresenceBadge` on an avatar's bottom-right rim. It wraps from outside because a `MudAvatar` clips |
+| `PresenceCue` | `Presence/PresenceCue.cs` | none | `From(PersonaState)`, `From(PresenceState)` | Maps Health and Presence into the four glyphs; each keeps its own word |
+| `StatusDot` | `Components/Shared/StatusDot.razor` | In `P4`, pickers | `State` (`PersonaState`), `OnAvatar`, `Detail` | A Teammate's Health as a 10px badge drawn through `PresenceBadge`, with its own text label |
+| `StatusChip` | `Components/Shared/StatusChip.razor` | The tinted chip in `T3`, `T4`, `T6` | `Color`, `Icon`, `ChildContent`, `Class` | A Small text-variant chip with classes `status-chip status-chip-{colour}` and a leading icon |
 | `ProfileCard` | `Components/Shared/ProfileCard.razor` | `B9c`, `B12`, `O9` | `Profile` (`TeammateProfile`), `Manager`, `Existing`, `Membership` (`ProfileMembership`), `RemovingText`, `ListItem`, `Actions`, `Class` | A Teammate's card: ringed avatar, status dot, Name, title, Manager badge, description, membership, tier and skills chips, "Needs setup" line. It owns the markup and the `roster-*` classes; the caller passes the buttons in `Actions` |
 | `ProfileAvatar` | `Components/Shared/ProfileAvatar.razor` | `C5a`, `C3`, a Task List row's assignee | `Name`, `Avatar`, `Size`, `Class`, `Team` | A `TeammateAvatar` in a button that opens the profile popover (`O9`, `ProfilePopover`) with Edit and Message. `Team` picks the Team's one-to-one for Message. Never inside another button or link; `TaskAssignee` takes `ShowProfile` to opt in |
 | `TeammateLabel` | `Components/Shared/TeammateLabel.razor` | Rows in New chat and Invite | `Name`, `State`, `Avatar`, `IsUser` | A Teammate's dot, avatar and name on one line |
-| `PageHeader` | `Components/Shared/PageHeader.razor` | The page title in `P1`, `G1`, `M1`, `B2` | `Title`, `Subtitle`, `Actions`, `SetPageTitle` | Every page's one `h1`, with its action buttons at the right. The Tasks page is the one exception: its View name is the breadcrumb's last crumb, so it draws no `h1` and sets the document title with `PageTitle` |
-| `EmptyState` | `Components/Shared/EmptyState.razor` | An empty list, table or pane | `Text`, `Icon`, `Action`, `FullPane` | Any "nothing here" line; says what to do next, `role="status"` |
+| `PageHeader` | `Components/Shared/PageHeader.razor` | The page title in `P1`, `G1`, `M1`, `B2` | `Title`, `Subtitle`, `Actions`, `SetPageTitle` | Every page's one `h1`, with its action buttons at the right. It sets the bare-name document title. Tasks is the one page without it: see [A page](design-system.md#a-page), step 3 |
+| `EmptyState` | `Components/Shared/EmptyState.razor` | An empty list, table or pane | `Text`, `Icon`, `Action`, `FullPane` | Any "nothing here" line; says what to do next, `role="status"`. 16px padding inline, 32px with `FullPane` |
 | `ChipCloud` | `Components/Shared/ChipCloud.razor` | Avatar picker, hiring pool | `Title`, `Pool`, `Selected`, `Cap`, `CssClass`, `Quiet`, `OnToggle` | A wrapping cloud of toggle chips, selected first |
-| `TaskStatusChip`, `TaskPriorityChip`, `TaskAssignee` | `Components/Tasks/` | Fields of a Task in `T3`, `T4`, `T6` and search | `Status`; `Priority`; `Name`, `Presence` | A Task's State, Priority or Assignee wherever it is shown. A Board card omits the State chip |
+| `TaskStatusChip`, `TaskPriorityChip`, `TaskAssignee` | `Components/Tasks/` | Fields of a Task in `T3`, `T4`, `T6` and search | `Status`; `Priority`; `Name`, `Presence` | A Task's State, Priority or Assignee wherever it is shown. The two chips draw through `StatusChip`, with the icon from `TaskColors.Icon`. A Board card omits the State chip; its overdue date is a warning icon and weight 600 |
 | `TaskActionsMenu` | `Components/Tasks/TaskActionsMenu.razor` | The "Actions for {id}" menu | `Id`, `ShowMoveTo`, `OnMoveTo`, `OnCopyId`, `OnCopyLink`, `ExtraItems` | The one menu on a Task card, List row and the detail |
 | `TaskPicker` | `Components/Tasks/TaskPicker.razor` | Task pickers in the detail and `DuplicatePickerDialog` | `Value`, `Excluding`, `Label` | Choosing another Task |
 | `ConflictRow` | `Components/Tasks/ConflictRow.razor` | A conflicting field in the Task detail | `Field`, `Stacked`, `TheirsText`, `YoursText`, `Choice` | One field of an edit conflict, in the panel or the expanded table |
@@ -159,9 +171,9 @@ before you create a component, a helper or a CSS class.
 | `InlineConfirm` | `Components/Shared/InlineConfirm.razor` | `O6` | `Prompt`, `ConfirmText`, `Busy`, `OnConfirm`, `OnCancel`, `Class` | A destructive yes or no that replaces a list row. Confirm takes focus, Escape cancels |
 | `ResetAllControl` | `Components/Settings/ResetAllControl.razor` | `G1a` | `AnyModified`, `Confirming`, `OnBeginReset`, `OnConfirm`, `OnCancel` | Prompts' reset-all only; its confirm reads "Reset all" |
 | `SearchField` | `Components/Shared/SearchField.razor` | The search box of `L2c`, `T3e`, Skill import | `Value`, `ValueChanged`, `Placeholder`, `AriaLabel`, `Class` | Any search box: outlined, dense, clearable, one debounce. `Class` lets a surface restyle its own box (`.task-toolbar-search` takes the segmented controls' track colour) |
-| `TaskFilterChip` | `Components/Tasks/TaskFilterChip.razor` | `T3c`, `T3h`, `T3i` and the other set-filter chips in `T3` | `Label`, `Value`, `IsSet`, `ChildContent` (the `MudMenuItem`s), `OnClear`, `Class` | One "Label: Value" filter chip with a menu and a clear button. It owns no state: the toolbar passes the text and handles the change |
+| `TaskFilterChip` | `Components/Tasks/TaskFilterChip.razor` | `T3c`, `T3h`, `T3i` and the other set-filter chips in `T3` | `Label`, `Value`, `IsSet`, `ChildContent` (the `MudMenuItem`s), `OnClear`, `Class` | One "Label: Value" filter chip: a menu, a clear button, dashed while unset, filled once set. It owns no state. The Tasks toolbar's second row (`T3`) is the model: a Filter icon menu, then one chip per set filter |
 | `AvatarEditor` | `Components/Shared/AvatarEditor.razor` | Settings, Appearance; the Teammate card | `Name`, `Value`, `ValueChanged`, `SaveMode`, `PendingImage` | Choosing an avatar: library, upload or text. Immediate in Settings, buffered in dialogs |
-| `ResizableEndDrawer` | `Components/Shared/ResizableEndDrawer.razor` | The Task detail drawer (`T7`) | `Title`, `StorageKey`, `Open`, `OpenChanged`, `OverlayAutoClose`, `Class` | Any right-hand drawer: drag or arrow-key resize, width remembered |
+| `ResizableEndDrawer` | `Components/Shared/ResizableEndDrawer.razor` | The Task detail drawer (`T7`) | `Title` (the item's name), `StorageKey`, `Open`, `OpenChanged`, `OverlayAutoClose`, `Class` | Any right-hand drawer. Resize by drag or Arrow, Home and End; width remembered, 320 to 800px |
 | `TeamTabToolbar` | `Components/Teams/TeamTabToolbar.razor` | none | `ActionText`, `OnAction`, `SearchPlaceholder`, `Search`, `SearchChanged` | A tab toolbar with one action and a search box, built on `SearchField` |
 | `Composer` | `Components/Shared/Composer.razor` | `C10` | `RoomId` | The message input; one per Room |
 | `ReferencePicker` | `Components/References/ReferencePicker.razor` | `C11` | `View`, `ListboxId`, `OnPick` | The `@` picker; driven by `Composer` |
@@ -185,7 +197,7 @@ the shell and follow [In-place action rows](design-system.md#in-place-action-row
 
 | Dialog | Path | Parameters | Pattern worth copying |
 | --- | --- | --- | --- |
-| `NameDialog` | `Components/Shared/Dialogs/` | `Label`, `ConfirmText`, `InitialValue`, `Validate`, `SubmitAsync` | Any one-field name: live validation, Enter submits, focus on open. Used for New team, New project, Rename, Rename view (`ViewActions.RenameAsync`), New note, New folder and Add folder (`NewTeamDialog`, `RenameDialog`, `NamePromptDialog` and `DeleteDialog` were removed) |
+| `NameDialog` | `Components/Shared/Dialogs/` | `Label`, `ConfirmText`, `InitialValue`, `Validate`, `SubmitAsync`, `ChildContent` | Any one-field name: live validation, Enter submits, focus on open. Used for New project (`NewProjectPrompt`), Rename view (`ViewActions.RenameAsync`) and the Library's New note, New folder and Rename note or folder (`LibraryFileOps`). A multi-field flow such as Duplicate team stays bespoke. `NewTeamDialog`, `RenameDialog`, `NamePromptDialog` and `DeleteDialog` were removed |
 | `ConfirmDialog` with `ConfirmAsync` | `Components/Shared/Dialogs/` | `Message`, `ConfirmText`, `Danger` | `await this.DialogService.ConfirmAsync(title, message, confirmText, danger)`; `true` only on confirm |
 | `HuddleDialogOptions` | `Components/Shared/Dialogs/HuddleDialogOptions.cs` | `SmallForm`, `Picker` | The options for every dialog: `SmallForm` for forms and confirms, `Picker` for list pickers |
 | `DuplicateTeamDialog` | `Components/Teams/` | `SourceTeam` | Multi-field, so it stays bespoke; opens with `SmallForm` |
@@ -235,7 +247,11 @@ id or a snapshot: an open dialog ignores new parameters.
 | `TeammateGrouping` | `Components/Pages/TeammateGrouping.cs` | Teammates grouped by Team, as `P3` shows them |
 | `PersonaStatusResolver` | `Acp/PersonaStatusResolver.cs` | A Teammate's current `PersonaStatus`, for `StatusDot` |
 | `TeammateProfiles` | `Components/Shared/TeammateProfiles.cs` | `BuildAsync(name, team, ct)`: a saved Teammate as a `ProfileCard`'s data (role description and tier from its team type, Skills, state, and in a Team its Manager badge and Member chip), or null when no Persona has that Name |
-| `ThemeDefaults`, `ThemeCatalog`, `AccentPalette` | `Themes/` | Typography defaults, the Theme list, accent contrast clamping |
+| `ThemeDefaults`, `ThemeCatalog`, `AccentPalette` | `Themes/` | The px type scale (`WithSharedTypography`), the Theme list, accent contrast clamping |
+| `ContrastColour` | `Themes/ContrastColour.cs` | `ReadableForeground`: black or white, whichever reads better, for `PrimaryContrastText` |
+| `StatusChipContrast` | `Themes/StatusChipContrast.cs` | `Fill`, `Text` and `Ratio`: the tinted chip's mixes in C#, so a test holds them to 4.5:1 |
+| `AvatarColours` | `Themes/AvatarColours.cs` | `MonogramStyle`, `Fill`, `Letters`: a monogram's fill (20% over Surface) and letters (75% toward `TextPrimary`) |
+| `TaskPresence` | `Tasks/TaskPresence.cs` | `For`: an assignee's `PresenceState`, for `PresenceCue` |
 
 ### Stylesheet classes
 
@@ -244,7 +260,7 @@ feature's name. Reuse these before writing a rule:
 
 | Class | Does |
 | --- | --- |
-| `.empty-state` | An inline empty state's spacing and colour |
+| `.empty-state` | An inline empty state's 16px padding and colour; capped at 75ch |
 | `.flex-1-truncate` | A flex child that ellipsises on one line |
 | `.truncate` | Single-line truncation with an ellipsis, anywhere |
 | `.visually-hidden` | Text for a screen reader only (clipped, still in the accessibility tree); replaces every local copy |
@@ -252,14 +268,20 @@ feature's name. Reuse these before writing a rule:
 | `.drop-target` | A drop zone that can take the drop: one 1px dashed primary border |
 | `.ref-link` | A dotted-underline reference to a Task, Library file, Room or Team inside a Message |
 | `.room-strip` | A row stacked above the Composer, with the hairline on top |
-| `.group-heading` | A muted heading with a light rule over a group of fields or tiles |
+| `.group-heading` | A `subtitle2` heading in `TextPrimary` over a group of fields or tiles |
 | `.status-text`, `.panel-card`, `.preview-block` | A one-line muted hint; a bordered card on the page surface; a scrolling preformatted block. Defined, with no markup user yet |
 | `.chip-cloud-chip`, `.is-quiet` | The pill behind `ChipCloud`, and its unfilled variant |
 | `.resizable-drawer` | The handle and width rules of `ResizableEndDrawer` |
 | `.nav-action-link` | A sidebar action link ("New chat"): primary colour, tight icon gap |
 | `.hover-reveal-row` with `.hover-reveal-menu-button` | A row whose menu button shows on hover or focus |
 | `.btn-action-tight` | A button whose start icon sits close to its label |
-| `.agent-dot` and `.online`, `.offline`, `.degraded`, `.starting` | The dot behind `StatusDot`; use the component |
+| `.agent-dot` with `.online`, `.offline`, `.degraded`, `.starting`, `.awake`, `.asleep` and `.presence-glyph-*` | The 10px badge behind `PresenceBadge`; use the component |
+| `.presence-anchor` | The frame `PresenceAnchor` draws around an avatar |
+| `.status-chip-*`, `.tag-chip`, `.filter-chip`, `.filter-chip-set`, `.chip-meta` | The four chip looks: tinted, quiet, filter and plain caption text |
+| `.page-reading` | A reading page's `MudContainer`: left-aligned, with no auto margins |
+| `.title-inline-edit` | An inline edit of a title at h5 size and weight, outline only |
+| `.task-detail-groups`, `.task-detail-group`, `.task-detail-props`, `.task-detail-prop` | The drawer form: a size container, then groups of label-and-value rows that go two columns at 368px |
+| `.sidebar-row-label`, `.sidebar-row-meta`, `.sidebar-show-all` | A one-line sidebar label, its trailing count and the "Show all (N)" row |
 | `.search-hit-flash` | A brief highlight with a reduced-motion branch: the model for any longer animation |
 | `.room-column`, `.main-column` | The fill-the-pane layout that the page rule points to |
 | `.task-filter-chip` with `-set`, `-unset` | The pill behind `TaskFilterChip`: dashed border while unset, primary border and hover tint once set; use the component |
@@ -283,10 +305,9 @@ exists.
 ### Components to build
 
 None are planned: every shape the audit found recurring is built and catalogued above.
-Their anatomy and rules are in design-system.md's
-[Huddle components](design-system.md#huddle-components). If you find a shape hand-built in
-a second place, build the component then, and add it to the catalog above and to that
-table.
+Their rules are in design-system.md's [Component rules](design-system.md#component-rules).
+If you find a shape hand-built in a second place, build the component then and add it to
+the catalog above.
 
 ## Where things live
 
@@ -308,7 +329,7 @@ table.
 
 | Document | Owns | Binding? | Read it when |
 | --- | --- | --- | --- |
-| [design-system.md](design-system.md) | How the UI looks, reads and behaves: tokens, type roles, spacing, shape, elevation, icons, motion, focus, layout, overlay anatomy, component defaults, interface copy, stylesheet rules, the checklist | **Yes**, for new and changed UI | Before you design a screen, write markup or touch a stylesheet |
+| [design-system.md](design-system.md) | How the UI looks, reads and behaves: tokens, type roles, chips, avatars, spacing, shape, elevation, icons, motion, focus, layout, overlay anatomy, component defaults, interface copy, stylesheet rules, the checklist | **Yes**, for new and changed UI | Before you design a screen, write markup or touch a stylesheet |
 | [wireframes.md](wireframes.md) | The code, name and component of every container, an SVG figure per screen, and the words for UI parts | **Yes**, for vocabulary; update it with your change | Before you discuss, specify, report on or change a part of the screen |
 | [UX-Issues.md](UX-Issues.md) | The few rows the UX consistency delivery did not close, with a note on what is left | No: a backlog | Before you change an area |
 | [language.md](language.md) | The defined terms and the words to avoid | **Yes** | Before you write a label, a message or help text |
@@ -372,19 +393,19 @@ Check these first. Each links to the rule that owns it.
 1. **Density on every control:** `Size.Small` on buttons, icon buttons and chips;
    `Variant.Outlined` and `Margin.Dense` on inputs
    ([Spacing, density and size](design-system.md#spacing-density-and-size)).
-2. **Every page has one `h1`**, a `Typo.h5`, inside `MudContainer pa-4`
-   ([A page](design-system.md#a-page)). The Tasks page is the one exception: its View
-   name is the breadcrumb's last crumb, so it draws no `h1` and sets the document title
-   with `PageTitle`. Don't copy it to another page.
+2. **Every page has one `h1`**, a `Typo.h5`, inside `MudContainer pa-4`, and the breadcrumb
+   holds only ancestors. Tasks is the one exception
+   ([A page](design-system.md#a-page), step 3). Don't copy it to another page.
 3. **Dialog actions run Cancel, then a Filled primary**
    ([Dialog anatomy](design-system.md#dialog-anatomy)).
 4. **Every `MudAlert` has a role, every snackbar a `key`, every icon-only control an
    `aria-label` that names its target**
    ([Focus and accessibility](design-system.md#focus-and-accessibility)).
-5. **Values come from tokens**: no literal radius, px spacing or font size in a stylesheet
-   ([Foundations](design-system.md#foundations)).
-6. **One line token per kind of line, one hover, one selected tint**
-   ([Colour](design-system.md#colour)).
+5. **No text under 11px; prose no wider than 75 characters; a heading never smaller than
+   the text it heads** ([Typography](design-system.md#typography)).
+6. **Accent text uses the 70% mix; text on a status fill reaches 4.5:1; one line token per
+   kind of line, one hover, one selected tint** ([Colour](design-system.md#colour),
+   [Chips](design-system.md#chips)).
 7. **One icon per concept** ([Icons](design-system.md#icons)).
 8. **A Teammate's face is always `TeammateAvatar`, a circle**
    ([Avatars and status](design-system.md#avatars-and-status)).
@@ -423,6 +444,13 @@ browser's `preview_start` instead of starting the server itself. Then check:
   closes overlays.
 - **Consistency questions:** measure with `getComputedStyle` in the browser rather than
   reading CSS, and compare against a sibling screen that follows the rule.
+- **Sizes:** run the text census, `tools/text-census/text-census.js`, on the changed
+  screen (see its [README](../../tools/text-census/README.md)). Nothing renders under 11px,
+  and no size appears that the type table doesn't list.
+- **Contrast:** the census's `failures` list is empty in Huddle Light and in Huddle Dark.
+  Every accent-coloured word and every chip label reaches 4.5:1.
+- **Dark-mode edges:** cards and tiles are still visibly bordered in Huddle Dark.
+- **Hierarchy:** the item's name is the largest text in its container.
 
 **Then update what the next reader relies on, in the same commit:**
 
@@ -450,13 +478,15 @@ Build with `dotnet build Huddle.slnx` and test with `dotnet test Huddle.slnx --`
 
 - **A rule changes in design-system.md first**, then in the code. A pattern that reaches
   the code without a rule is drift.
-- **A new shared component, helper or utility class** gets a catalog row here and, if it
-  sets a pattern, a row in design-system.md's
-  [Huddle components](design-system.md#huddle-components). If it wraps a MudBlazor
-  component, it also gets a pattern-file row in
+- **A new shared component, helper or utility class** gets a catalog row here, and nowhere
+  else. If it sets a pattern, design-system.md gets a one-line rule under
+  [Component rules](design-system.md#component-rules) that links to the row. If it wraps a
+  MudBlazor component, it also gets a pattern-file row in
   [MudBlazorImplementation.md](../../agents/MudBlazorImplementation.md).
 - **A new MudBlazor fact** you confirmed against the package gets a row in
   [MudBlazorImplementation.md](../../agents/MudBlazorImplementation.md).
+- **A changed look** (a size, colour or weight) goes in design-system.md and
+  [theme-authoring.md](theme-authoring.md), and the catalog only where a parameter changed.
 - **A new container** gets a code and a row in [wireframes.md](wireframes.md) when it ships.
 - **A new audit** appends to [UX-Issues.md](UX-Issues.md) with the date, commit and method,
   and never reuses an ID.

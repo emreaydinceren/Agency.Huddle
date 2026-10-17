@@ -5,6 +5,36 @@ public sealed class TabReconcilerTests
     private static Data.Room Room(string id, string name, bool archived = false) =>
         new(id, name, DateTimeOffset.UnixEpoch) { Archived = archived };
 
+    /// <summary>A Task View's Tab takes the View's display name, so neither the Tab nor the breadcrumb built from it shows the slug.</summary>
+    [Fact]
+    public void ReconcileViews_ViewTab_TakesTheDisplayNameNotTheSlug()
+    {
+        TabService tabs = new();
+        Tab tab = tabs.Open("/tasks/my-tasks");
+        Assert.Equal("my-tasks", tab.Title);
+
+        TabReconciler.ReconcileViews(tabs, [new Tasks.Views.TaskView { Id = "my-tasks", Name = "My Tasks", Kind = Tasks.Views.ViewKind.List }]);
+
+        Tab retitled = Assert.Single(tabs.Tabs);
+        Assert.Equal("My Tasks", retitled.Title);
+        Assert.Equal("My Tasks", tabs.Trail(retitled)[^1].Text);
+        Assert.DoesNotContain(tabs.Trail(retitled), crumb => crumb.Text.Contains("my-tasks", StringComparison.Ordinal));
+    }
+
+    /// <summary>A Tab whose View is unknown, and a Tab for another page, keep their titles.</summary>
+    [Fact]
+    public void ReconcileViews_UnknownViewAndOtherPages_AreUntouched()
+    {
+        TabService tabs = new();
+        Tab gone = tabs.Open("/tasks/gone");
+        tabs.Keep(gone.Id);
+        tabs.Open("/teammates");
+
+        TabReconciler.ReconcileViews(tabs, [new Tasks.Views.TaskView { Id = "my-tasks", Name = "My Tasks", Kind = Tasks.Views.ViewKind.List }]);
+
+        Assert.Equal(["gone", "Teammates"], tabs.Tabs.Select(static tab => tab.Title));
+    }
+
     /// <summary>A Room's Tab takes the Room's current name.</summary>
     [Fact]
     public void ReconcileRooms_RenamedRoom_RetitlesItsTab()

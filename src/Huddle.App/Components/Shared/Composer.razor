@@ -51,7 +51,7 @@
     }
     <div class="@(this.AttachmentsAvailable ? "composer-box composer-box-attach" : "composer-box")">
         <div class="composer-drop-hint" aria-hidden="true">Drop to attach</div>
-        <textarea @ref="this.textarea" class="composer-input" rows="3" placeholder="Message… (/invite @@agent)"
+        <textarea @ref="this.textarea" class="composer-input" rows="3" placeholder="@this.Placeholder"
                   role="combobox" aria-autocomplete="list"
                   aria-expanded="@(this.pickerOpen ? "true" : "false")"
                   aria-controls="@(this.pickerOpen ? this.listboxId : null)"
@@ -85,6 +85,15 @@
 @code {
     [Parameter, EditorRequired]
     public string RoomId { get; set; } = "";
+
+    /// <summary>The Room's name, which the placeholder addresses ("Message Grace…"); empty for a placeholder with no name.</summary>
+    [Parameter]
+    public string RoomName { get; set; } = "";
+
+    /// <summary>The placeholder: the Room's name, a real ellipsis, and the <c>/invite</c> hint using the defined term Teammate.</summary>
+    private string Placeholder => string.IsNullOrWhiteSpace(this.RoomName)
+        ? "Message… (/invite @Teammate)"
+        : $"Message {this.RoomName}… (/invite @Teammate)";
 
     private ElementReference textarea;
     private ElementReference attachHost;

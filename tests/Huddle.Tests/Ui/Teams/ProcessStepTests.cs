@@ -187,7 +187,7 @@ public sealed class ProcessStepTests
 
         IRenderedComponent<ContainerFragment> cut = RenderTab(ctx);
 
-        Assert.Equal("This Team has no process yet.", cut.Find(".process-tab").TextContent.Trim());
+        Assert.Contains("This Team has no process yet", cut.Find(".process-tab").TextContent, StringComparison.Ordinal);
         Assert.Empty(cut.FindAll("div.process-tab-gate"));
     }
 
