@@ -1,6 +1,5 @@
 namespace Agency.Huddle.Tests.Ui.Tasks;
 
-using System.Globalization;
 using AngleSharp.Dom;
 using Bunit;
 using Bunit.Rendering;
@@ -245,7 +244,7 @@ public sealed class TaskCardTests : IDisposable
         Assert.DoesNotContain(ClassTokens(card), token => token.StartsWith("task-col-edge", StringComparison.Ordinal));
     }
 
-    /// <summary>Spec §13.4 Cards ("The View's extra fields"): a field named in <see cref="TaskCard.Fields"/> shows its value, formatted the same way every Tasks surface formats a date (<c>yyyy-MM-dd</c>, invariant; Settled J53).</summary>
+    /// <summary>Spec §13.4 Cards ("The View's extra fields"): a field named in <see cref="TaskCard.Fields"/> shows its value, formatted the same way every Tasks surface formats a date (<see cref="HumanDate"/>, with the full date as the tooltip).</summary>
     [Fact]
     public async Task Fields_DueDateShownWhenInFields()
     {
@@ -255,7 +254,8 @@ public sealed class TaskCardTests : IDisposable
         await using MudBunitContext ctx = new();
         IRenderedComponent<ContainerFragment> cut = this.Render(ctx, task, fields: ["due_date"]);
 
-        Assert.Equal(dueDate.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture), cut.Find(".task-card-field-due-date").TextContent.Trim());
+        Assert.Equal("Oct 5", cut.Find(".task-card-field-due-date").TextContent.Trim());
+        Assert.Equal("Mon, Oct 5, 2026", cut.Find(".task-card-field-due-date").GetAttribute("title"));
     }
 
     /// <summary>corrections-B5 D12-2: the ⋮ menu is flat - a "Move to" heading, all eight <see cref="TaskState"/>s as <c>MudMenuItem</c>s in declaration order, a divider, then "Copy id".</summary>

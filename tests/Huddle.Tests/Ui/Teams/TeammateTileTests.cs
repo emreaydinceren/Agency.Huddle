@@ -69,7 +69,7 @@ public sealed class TeammateTileTests
         string css = File.ReadAllText(CssSource.RepoPath("src", "Huddle.App", "wwwroot", "app.css"));
 
         Assert.Contains("grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));", css, StringComparison.Ordinal); // contains-ok: haystack is the stylesheet source
-        Assert.Contains(".teammates-item-name {\r\n    font-size: var(--mud-typography-subtitle2-size);\r\n    font-weight: 600;", css.ReplaceLineEndings("\r\n"), StringComparison.Ordinal); // contains-ok: haystack is the stylesheet source
+        Assert.Contains(".teammates-item-name {\r\n    font-size: var(--mud-typography-subtitle1-size);\r\n    font-weight: 600;", css.ReplaceLineEndings("\r\n"), StringComparison.Ordinal); // contains-ok: haystack is the stylesheet source
         Assert.Contains(".teammate-tile-role {\r\n    font-size: var(--mud-typography-body2-size);", css.ReplaceLineEndings("\r\n"), StringComparison.Ordinal); // contains-ok: haystack is the stylesheet source
         Assert.Contains(".teammate-tile-context {", css, StringComparison.Ordinal); // contains-ok: haystack is the stylesheet source
     }

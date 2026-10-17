@@ -70,7 +70,22 @@ public sealed class AvatarSizesAndPresenceTests
         Assert.Contains("0 0 0 2px var(--mud-palette-surface)", RuleBody(css, ".agent-dot.on-avatar"), StringComparison.Ordinal); // contains-ok: haystack is one rule of the stylesheet source
     }
 
-    /// <summary>Online is green, starting and awake amber, degraded red; offline and asleep are a hollow grey ring, never red.</summary>
+    /// <summary>Awake (a Turn running) is the info colour, not amber: amber means needs attention, and only Starting keeps it.</summary>
+    [Fact]
+    public void Stylesheet_AwakeTone_IsInfoNotAmber()
+    {
+        string css = Css();
+
+        string dot = RuleBody(css, ".agent-dot.awake");
+        string card = RuleBody(css, ".task-card-presence.awake .mud-badge.mud-badge-overlap");
+
+        Assert.Contains("color-mix(in srgb, var(--mud-palette-info) 80%, var(--mud-palette-black))", dot, StringComparison.Ordinal); // contains-ok: haystack is one rule of the stylesheet source
+        Assert.Contains("color-mix(in srgb, var(--mud-palette-info) 80%, var(--mud-palette-black))", card, StringComparison.Ordinal); // contains-ok: haystack is one rule of the stylesheet source
+        Assert.DoesNotContain("--mud-palette-warning", dot, StringComparison.Ordinal);
+        Assert.DoesNotContain("--mud-palette-warning", card, StringComparison.Ordinal);
+    }
+
+    /// <summary>Online is green, starting amber, degraded red; offline and asleep are a hollow grey ring, never red.</summary>
     [Fact]
     public void Stylesheet_BadgeTones_AreGreenAmberRedAndAGreyRing()
     {
@@ -97,7 +112,7 @@ public sealed class AvatarSizesAndPresenceTests
     }
 
     /// <summary>
-    /// The white glyph keeps 3:1 against each filled tone (success, warning, error mixed 20% toward the palette's black), in
+    /// The white glyph keeps 3:1 against each filled tone (success, warning, error and info mixed 20% toward the palette's black), in
     /// Huddle Light and Huddle Dark.
     /// </summary>
     [Theory]
@@ -108,7 +123,7 @@ public sealed class AvatarSizesAndPresenceTests
         MudBlazor.Palette palette = dark ? HuddleTheme.Dark() : HuddleTheme.Light();
         MudColor white = new("#ffffff");
         MudColor black = new("#000000");
-        MudColor[] tones = [palette.Success, palette.Warning, palette.Error];
+        MudColor[] tones = [palette.Success, palette.Warning, palette.Error, palette.Info];
 
         foreach (MudColor tone in tones)
         {

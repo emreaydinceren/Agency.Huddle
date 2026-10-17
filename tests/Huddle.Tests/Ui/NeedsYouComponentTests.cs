@@ -139,6 +139,22 @@ public sealed class NeedsYouComponentTests
         cut.WaitForAssertion(() => Assert.True(cut.Find(".needs-you-card").HasAttribute("hidden")));
     }
 
+    /// <summary>The card's title is a sidebar header, so it is caption-sized like the other sidebar section headers, not a 16px section heading.</summary>
+    [Fact]
+    public async Task Card_TitleIsASidebarHeader_NotASectionHeading()
+    {
+        CancellationToken ct = Xunit.TestContext.Current.CancellationToken;
+        using NeedsYouFixture fixture = await NeedsYouFixture.CreateAsync(ct);
+        await using MudBunitContext ctx = NewContext(fixture);
+
+        IRenderedComponent<NeedsYouCard> cut = ctx.Render<NeedsYouCard>();
+
+        var title = cut.Find(".needs-you-title .needs-you-heading");
+        Assert.Equal("Needs you", title.TextContent);
+        Assert.Contains("mud-typography-caption", title.ClassList);
+        Assert.DoesNotContain("mud-typography-subtitle2", title.ClassList);
+    }
+
     /// <summary>Builds a bUnit context holding the services both components inject.</summary>
     /// <param name="fixture">The fixture whose tracker, directory and events the components use.</param>
     /// <returns>The context; the caller disposes it.</returns>

@@ -214,7 +214,7 @@ public sealed class TaskFieldAdoptionTests : IDisposable
         IRenderedComponent<ContainerFragment> cut = this.RenderList(ctx, [task], fields: ["status", "priority"]);
 
         Assert.Equal(TaskState.ToDo, cut.FindComponent<TaskStatusChip>().Instance.Status);
-        Assert.Contains("status-chip-info", cut.Find(".task-status-chip").ClassList, StringComparer.Ordinal);
+        Assert.Contains("status-chip-default", cut.Find(".task-status-chip").ClassList, StringComparer.Ordinal);
         Assert.Equal(TaskPriority.High, cut.FindComponent<TaskPriorityChip>().Instance.Priority);
         Assert.Contains("status-chip-warning", cut.Find(".task-priority-chip").ClassList, StringComparer.Ordinal);
     }
@@ -276,7 +276,8 @@ public sealed class TaskFieldAdoptionTests : IDisposable
         await using MudBunitContext ctx = new();
         IRenderedComponent<ContainerFragment> cut = this.RenderList(ctx, [late], fields: ["due_date"]);
 
-        Assert.Equal("2000-01-01", cut.Find(".task-due-overdue").TextContent.Trim());
+        Assert.Equal("Jan 1, 2000", cut.Find(".task-due-overdue").TextContent.Trim());
+        Assert.Equal("Sat, Jan 1, 2000", cut.Find(".task-due-overdue").GetAttribute("title"));
         Assert.Equal(Color.Error, OverdueIcon(cut).Instance.Color);
         Assert.Empty(cut.FindAll(".task-list-title.task-due-overdue"));
     }

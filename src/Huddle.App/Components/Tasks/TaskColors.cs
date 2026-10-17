@@ -6,12 +6,12 @@ namespace Agency.Huddle.App.Components.Tasks;
 /// <summary>The Spec §13.10 mapping from a Task's state, priority or presence to a MudBlazor <see cref="Color"/>.</summary>
 internal static class TaskColors
 {
-    /// <summary>Backlog Default, To Do Info, In Progress Warning, Review Secondary, Done Success, Cancelled/Duplicate/Rejected Error.</summary>
+    /// <summary>Backlog and To Do Default, In Progress Info, Review Secondary, Done Success, Cancelled/Duplicate/Rejected Error. Amber (Warning) means "needs attention" only, so no state uses it.</summary>
     public static Color For(TaskState state) => state switch
     {
         TaskState.Backlog => Color.Default,
-        TaskState.ToDo => Color.Info,
-        TaskState.InProgress => Color.Warning,
+        TaskState.ToDo => Color.Default,
+        TaskState.InProgress => Color.Info,
         TaskState.Review => Color.Secondary,
         TaskState.Done => Color.Success,
         TaskState.Cancelled or TaskState.Duplicate or TaskState.Rejected => Color.Error,
@@ -28,10 +28,10 @@ internal static class TaskColors
         _ => Color.Default,
     };
 
-    /// <summary>Awake Warning (amber, a Turn running: thinking), Asleep and Offline Default (a hollow grey ring); red is kept for Degraded Health.</summary>
+    /// <summary>Awake Info (a Turn running: thinking; amber is only "needs attention"), Asleep and Offline Default (a hollow grey ring); red is kept for Degraded Health.</summary>
     public static Color For(PresenceState presence) => presence switch
     {
-        PresenceState.Awake => Color.Warning,
+        PresenceState.Awake => Color.Info,
         PresenceState.Asleep => Color.Default,
         PresenceState.Offline => Color.Default,
         _ => Color.Default,
