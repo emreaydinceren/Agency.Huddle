@@ -138,6 +138,39 @@ button:focus-visible {
     height: 2px;
 }
 
+/* An alert's sentence is body text in TextPrimary; only its icon and a 3px leading bar carry the status colour
+   (MudBlazor paints the whole sentence in the severity's dark shade, which reads as an error shouted at you). The
+   bar is transparent until a severity names its colour; the icon keeps MudBlazor's own status colour. The doubled
+   class outranks MudBlazor's outlined border shorthand. Filled alerts are left alone: their text sits on the fill. */
+.mud-alert {
+    border-inline-start: 3px solid transparent;
+}
+
+.mud-alert[class*="mud-alert-text-"] .mud-alert-message,
+.mud-alert[class*="mud-alert-outlined-"] .mud-alert-message {
+    color: var(--mud-palette-text-primary);
+}
+
+.mud-alert.mud-alert-text-error,
+.mud-alert.mud-alert-outlined-error {
+    border-inline-start: 3px solid var(--mud-palette-error);
+}
+
+.mud-alert.mud-alert-text-warning,
+.mud-alert.mud-alert-outlined-warning {
+    border-inline-start: 3px solid var(--mud-palette-warning);
+}
+
+.mud-alert.mud-alert-text-info,
+.mud-alert.mud-alert-outlined-info {
+    border-inline-start: 3px solid var(--mud-palette-info);
+}
+
+.mud-alert.mud-alert-text-success,
+.mud-alert.mud-alert-outlined-success {
+    border-inline-start: 3px solid var(--mud-palette-success);
+}
+
 /* ---- The type scale, in rendered pixels (ADR-0056) ---------------------------------------------
    The Theme (ThemeDefaults) sets the role sizes: h5 20, h6 16, subtitle 14, body1 14, body2 13, caption 12,
    overline 11. Nothing renders under 11px, and there are three weights: 400 text, 500 controls, 600 emphasis and
@@ -645,9 +678,13 @@ a.team-ref,
     font-size: var(--mud-typography-caption-size);
 }
 
+/* The trail starts at the workspace's left edge - the sidebar's width, which MudBlazor publishes as
+   --mud-drawer-width-left from the drawer's Width - so it reads as the trail of the page under it. The toolbar
+   already insets its content by its own 16px gutter, which is taken off. The centre cell keeps its 32rem. */
 .top-bar-start {
     min-width: 0;
     overflow: hidden;
+    padding-inline-start: calc(var(--mud-drawer-width-left, 240px) - 16px);
 }
 
 /* With nothing in the middle cell (no search box yet) the trail gets that space instead of the 32rem
@@ -796,7 +833,7 @@ a.team-ref,
    order - and only the group's own header additionally gets the 600 weight, via the more specific
    *direct*-child selector that a nested view link's ".mud-nav-link" never matches. */
 .mud-nav-link-text {
-    font-size: var(--mud-typography-subtitle2-size);
+    font-size: var(--mud-typography-body2-size);
 }
 
 .mud-nav-group .mud-nav-link-text {
@@ -809,9 +846,9 @@ a.team-ref,
     color: var(--mud-palette-text-secondary);
 }
 
-/* A section header sits 16px below the section above and 4px above its first row (S2). */
-.mud-nav-group > .mud-nav-link,
-.nav-section-link .mud-nav-link {
+/* A section header - a group with children (Rooms, Teams, Tasks) - sits 16px below the section above and 4px above
+   its first row (S2). Teammates and Library are destinations, not headers: see .nav-row-link below. */
+.mud-nav-group > .mud-nav-link {
     margin-top: 16px;
     margin-bottom: 4px;
 }
@@ -832,11 +869,16 @@ a.team-ref,
     padding-left: var(--nav-indent-1);
 }
 
-/* A top-level entry that is a single link (Teammates) is drawn as a section header like the group headers (UX-014). */
-.nav-section-link .mud-nav-link-text {
-    font-size: var(--mud-typography-caption-size);
-    font-weight: 600;
-    color: var(--mud-palette-text-secondary);
+/* A top-level entry that is a single link (Teammates, Library) is a destination, not a header: an ordinary row, 32px
+   high, with the 13px body-colour label and the 18px icon in the 24px slot of every other row. */
+.nav-row-link .mud-nav-link {
+    min-height: var(--nav-row-height);
+}
+
+.nav-row-link .mud-nav-link .mud-nav-link-text {
+    font-size: var(--mud-typography-body2-size);
+    font-weight: 400;
+    color: var(--mud-palette-text-primary);
 }
 
 /* The footer is icon-only (OP-4): the same row height and text size as every other row (UX-017). */
@@ -1035,6 +1077,12 @@ a.team-ref,
    as set apart without shouting over the replies it asked for. */
 .message-row.human {
     display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+}
+
+/* The Human's reference chips sit under the bubble, at its right edge. */
+.message-row.human .message-references {
     justify-content: flex-end;
 }
 
@@ -1552,8 +1600,16 @@ a.team-ref,
 
 .member-health-alert-item {
     margin: 0;
-    color: var(--mud-palette-error);
     font-size: var(--mud-typography-body2-size);
+}
+
+/* A notice in a Room sits in the Transcript's column: the same 760px, centred, with the same 24px inset as the
+   Transcript's padding and the Composer's, so the Transcript, the notice and the Composer share one left edge. */
+.room-notice-column {
+    box-sizing: border-box;
+    width: calc(100% - 48px);
+    max-width: 760px;
+    margin-inline: auto;
 }
 
 /* ---- Room budget: the pause, and the question that offers to lift it ----- */
@@ -3910,6 +3966,7 @@ a.team-ref,
 }
 
 .needs-you-row .mud-nav-link-text {
+    font-size: var(--mud-typography-body2-size);
     display: flex;
     align-items: center;
     gap: 8px;
@@ -4010,9 +4067,13 @@ a.team-ref,
     color: var(--mud-palette-text-primary);
 }
 
-/* A row's leading icon is 18px with an 8px gap to its label (a 24px avatar has the same gap). */
+/* Every row has a 24px leading slot and an 8px gap to its label: a small avatar fills the slot (24px), an 18px icon is
+   centred in it (3px either side), so the labels of one level start at one x whichever leads the row. */
+.nav-row-link .mud-nav-link .mud-nav-link-icon,
 .mud-nav-group .mud-collapse-container .mud-nav-link .mud-nav-link-icon {
+    box-sizing: content-box;
     font-size: var(--icon-size-row);
+    padding-inline: calc((24px - var(--icon-size-row)) / 2);
     margin-inline-end: 8px;
 }
 

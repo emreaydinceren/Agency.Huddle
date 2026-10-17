@@ -543,6 +543,28 @@
             this.search.Dispose();
         }
 
+        if (this.selfReference is not null)
+        {
+            _ = this.DetachAsync();
+        }
+
         this.selfReference?.Dispose();
+    }
+
+    /// <summary>Tells the script to disconnect the resize observer it attached to this Composer's box.</summary>
+    private async Task DetachAsync()
+    {
+        try
+        {
+            await this.JS.InvokeVoidAsync("teamComposer.detach", this.textarea);
+        }
+        catch (JSDisconnectedException)
+        {
+            // The circuit is already gone, and its page with it: there is no observer left to disconnect.
+        }
+        catch (InvalidOperationException)
+        {
+            // No browser to call yet (prerendering): nothing was attached.
+        }
     }
 }
