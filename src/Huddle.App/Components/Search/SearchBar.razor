@@ -50,7 +50,7 @@
                                  Text="@filter.ToString()"
                                  Size="Size.Small"
                                  Variant="Variant.Outlined"
-                                 Class="filter-chip"
+                                 Class="@(filter == this.chip ? "filter-chip is-set" : "filter-chip")"
                                  role="radio"
                                  aria-checked="@(filter == this.chip ? "true" : "false")" />
                     }
@@ -94,11 +94,10 @@
                                         break;
                                     case SearchNoticeRow notice:
                                         <MudText Typo="Typo.body2"
-                                                 Color="@StatusColors.For(notice.Kind)"
                                                  Class="search-notice px-3 py-1">
                                             @if (notice.Kind != SearchNoticeKind.NoMatch)
                                             {
-                                                <MudIcon Icon="@Icons.Material.Filled.WarningAmber" Size="Size.Small" Class="mr-1" aria-hidden="true" />
+                                                <MudIcon Icon="@Icons.Material.Filled.WarningAmber" Color="Color.Warning" Class="search-notice-icon mr-1" aria-hidden="true" />
                                             }
                                             @notice.Text
                                         </MudText>

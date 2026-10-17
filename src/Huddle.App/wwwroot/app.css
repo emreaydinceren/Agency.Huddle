@@ -4616,9 +4616,27 @@ a.team-ref,
     padding: 4px 8px;
 }
 
-/* MudHighlighter draws the match as a mark; make it bold as well as coloured. */
+/* Search match (audit B6a): MudHighlighter draws the match as a mark, which the browser paints #ffff00 with black
+   text in every Theme. Take the Attention tint at 24% over the surface with Ink text at weight 600, so it follows the Theme. */
 .search-card mark {
+    background-color: color-mix(in srgb, var(--mud-palette-warning) 24%, var(--mud-palette-surface));
+    color: var(--mud-palette-text-primary);
     font-weight: 600;
+}
+
+/* A notice in the dropdown (audit B6b): Quiet ink words, with an icon in the Attention signal carrying the signal.
+   1em is 14px: the notice is body2 text, so the icon is sized by the type scale rather than by a literal. */
+.search-notice {
+    display: flex;
+    align-items: center;
+    color: var(--mud-palette-text-secondary);
+}
+
+.search-notice .search-notice-icon.mud-icon-root {
+    flex: none;
+    width: 1em;
+    height: 1em;
+    font-size: inherit;
 }
 
 .search-card-icon {
