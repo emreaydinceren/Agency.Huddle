@@ -305,7 +305,7 @@ public sealed class TabHostTests
 
         await cut.InvokeAsync(() => cut.Find(".tab-item").ContextMenuAsync());
 
-        Assert.Equal(["Pin Tab", "Move Left", "Move Right", "Close"], MenuItems(cut).Select(Label));
+        Assert.Equal(["Pin tab", "Move left", "Move right", "Close"], MenuItems(cut).Select(Label));
     }
 
     /// <summary>With one Tab alone in the only pane there is nowhere to move it, so both moves are disabled.</summary>
@@ -318,10 +318,10 @@ public sealed class TabHostTests
 
         await cut.InvokeAsync(() => cut.Find(".tab-item").ContextMenuAsync());
 
-        Assert.Equal(["Move Left", "Move Right"], MenuItems(cut).Where(static item => item.ClassList.Contains("mud-disabled")).Select(Label));
+        Assert.Equal(["Move left", "Move right"], MenuItems(cut).Where(static item => item.ClassList.Contains("mud-disabled")).Select(Label));
     }
 
-    /// <summary>Pin Tab pins the Tab: its x goes, and the menu then offers Unpin Tab.</summary>
+    /// <summary>Pin tab pins the Tab: its x goes, and the menu then offers Unpin tab.</summary>
     [Fact]
     public async Task PinTab_PinsTheTab()
     {
@@ -331,7 +331,7 @@ public sealed class TabHostTests
         var cut = RenderHostWithMenus(ctx);
         await cut.InvokeAsync(() => cut.Find(".tab-item").ContextMenuAsync());
 
-        await cut.InvokeAsync(() => MenuItems(cut).First(item => Label(item) == "Pin Tab").ClickAsync());
+        await cut.InvokeAsync(() => MenuItems(cut).First(item => Label(item) == "Pin tab").ClickAsync());
 
         Assert.True(Assert.Single(tabs.Tabs).IsPinned);
         cut.WaitForAssertion(() =>
@@ -355,7 +355,7 @@ public sealed class TabHostTests
         cut.WaitForAssertion(() => Assert.Equal(2, cut.FindAll(".tab-item").Count));
         await cut.InvokeAsync(() => cut.FindAll(".tab-item")[1].ContextMenuAsync());
 
-        await cut.InvokeAsync(() => MenuItems(cut).First(item => Label(item) == "Move Right").ClickAsync());
+        await cut.InvokeAsync(() => MenuItems(cut).First(item => Label(item) == "Move right").ClickAsync());
 
         Assert.Equal(2, tabs.Groups.Count);
         Assert.Equal("settings", tabs.Groups[1].Active?.Key);
@@ -387,7 +387,10 @@ public sealed class TabHostTests
         nav.NavigateTo("/teammates");
         var cut = RenderHost(ctx);
 
-        Assert.Equal(["Menu for Teammates"], cut.FindAll(".tab-action").Select(static button => button.GetAttribute("aria-label")));
+        Assert.Equal(["More actions for Teammates"], cut.FindAll(".tab-action").Select(static button => button.GetAttribute("aria-label")));
+        string[] drawn = [.. cut.Find(".tab-action").QuerySelectorAll("path").Select(static path => path.GetAttribute("d") ?? string.Empty)];
+        Assert.Contains(PathData(MudBlazor.Icons.Material.Filled.MoreVert), drawn);
+        Assert.DoesNotContain(PathData(MudBlazor.Icons.Material.Filled.ExpandMore), drawn);
 
         cut.Find(".tab-item").DoubleClick();
         nav.NavigateTo("/settings");
@@ -395,8 +398,15 @@ public sealed class TabHostTests
         await cut.InvokeAsync(() => tabs.MoveRight(ActiveId(tabs)));
 
         cut.WaitForAssertion(() => Assert.Equal(
-            ["Menu for Teammates", "Move Teammates right", "Menu for Settings", "Move Settings left"],
+            ["More actions for Teammates", "Move Teammates right", "More actions for Settings", "Move Settings left"],
             cut.FindAll(".tab-action").Select(static button => button.GetAttribute("aria-label"))));
+    }
+
+    /// <summary>The <c>d</c> attribute of the last <c>path</c> in a Material icon's SVG markup, the part that draws it.</summary>
+    private static string PathData(string icon)
+    {
+        string tail = icon[(icon.LastIndexOf("d=\"", StringComparison.Ordinal) + 3)..];
+        return tail[..tail.IndexOf('"')];
     }
 
     /// <summary>A move button on the toolbar moves its Tab without activating anything else.</summary>
@@ -427,10 +437,10 @@ public sealed class TabHostTests
         ctx.Services.GetRequiredService<NavigationManager>().NavigateTo("/teammates");
         var cut = RenderHostWithMenus(ctx);
 
-        await cut.InvokeAsync(() => cut.Find("button[aria-label='Menu for Teammates']").ClickAsync());
+        await cut.InvokeAsync(() => cut.Find("button[aria-label='More actions for Teammates']").ClickAsync());
 
-        Assert.Equal(["Pin Tab", "Move Left", "Move Right", "Close"], MenuItems(cut).Select(Label));
-        await cut.InvokeAsync(() => MenuItems(cut).First(item => Label(item) == "Pin Tab").ClickAsync());
+        Assert.Equal(["Pin tab", "Move left", "Move right", "Close"], MenuItems(cut).Select(Label));
+        await cut.InvokeAsync(() => MenuItems(cut).First(item => Label(item) == "Pin tab").ClickAsync());
         Assert.True(Assert.Single(tabs.Tabs).IsPinned);
         cut.WaitForAssertion(() => Assert.Empty(cut.FindAll(".tab-actions")));
     }

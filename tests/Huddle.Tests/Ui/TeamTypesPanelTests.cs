@@ -219,6 +219,6 @@ public sealed class TeamTypesPanelTests
         });
 
         Assert.Single(cut.FindAll("tr.teamtypes-row"));
-        Assert.Equal("Team Types", cut.Find(".mud-tab.mud-tab-active").TextContent.Trim());
+        Assert.Equal("Team types", cut.Find(".mud-tab.mud-tab-active").TextContent.Trim());
     }
 }

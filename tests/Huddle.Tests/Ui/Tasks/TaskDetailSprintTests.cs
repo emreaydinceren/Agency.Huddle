@@ -269,7 +269,7 @@ public sealed class TaskDetailSprintTests
 
         await cut.InvokeAsync(() => SprintField(cut).Instance.ValueChanged.InvokeAsync("Sprint 1"));
 
-        Assert.Equal("Save & Notify Nova", FindButton(cut, "Save & Notify Nova").TextContent.Trim());
+        Assert.Equal("Save & notify Nova", FindButton(cut, "Save & notify Nova").TextContent.Trim());
         Assert.Equal("Nova is asleep and will be notified.", TextOf(cut, ".task-detail-wake-notice"));
     }
 

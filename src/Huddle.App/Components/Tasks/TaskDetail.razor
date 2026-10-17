@@ -1438,11 +1438,11 @@ else if (this.loaded is { } task)
     private static string FormatChangeLogDate(DateTimeOffset at, TimeProvider clock) =>
         TimeZoneInfo.ConvertTime(at, clock.LocalTimeZone).ToString("yyyy-MM-dd HH:mm", CultureInfo.InvariantCulture);
 
-    /// <summary>The Save button's label for <paramref name="preview"/> (Spec §13.6's table): "Save &amp; Notify {name}" only for an Awake or Asleep assignee, plain "Save" otherwise.</summary>
+    /// <summary>The Save button's label for <paramref name="preview"/> (Spec §13.6's table): "Save &amp; notify {name}" only for an Awake or Asleep assignee, plain "Save" otherwise.</summary>
     /// <param name="preview">The wake preview for the Human's pending edit.</param>
     private static string SaveLabel(WakePreview preview) =>
         preview.Block == WakeBlock.None && preview.Presence is PresenceState.Awake or PresenceState.Asleep
-            ? $"Save & Notify {preview.AssigneeName}"
+            ? $"Save & notify {preview.AssigneeName}"
             : "Save";
 
     /// <summary>

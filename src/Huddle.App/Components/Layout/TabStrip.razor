@@ -1,12 +1,12 @@
 @*
     The row of one group's Tabs above its page (docs/Huddle.Tabs-Specifications.md). A preview Tab's
     title is italic; a double-click on any Tab makes it permanent; the x and a middle-click close it;
-    a right-click, or the chevron of the hover toolbar, opens the Tab's menu (pin, move to the neighbouring group, close). A pinned Tab is
+    a right-click, or the More actions button of the hover toolbar, opens the Tab's menu (pin, move to the neighbouring group, close). A pinned Tab is
     drawn as its icon alone and has no x. A Tab is a remembered URL, so activating, moving or closing
     one navigates the router to the Tab that ends up active in the focused group - TabService itself
     never touches NavigationManager.
 
-    The hover toolbar (chevron, move left, move right) sits over the right end of the title, between it
+    The hover toolbar (More actions, move left, move right) sits over the right end of the title, between it
     and the x, and is invisible until the Tab is hovered or has focus. A move button is drawn only when
     that move is possible for the Tab. A pinned Tab has no toolbar: it is an icon alone.
 
@@ -44,10 +44,10 @@
             {
                 <span class="tab-title">@tab.Title</span>
                 <span class="tab-actions">
-                    <button type="button" class="tab-action" aria-label="@($"Menu for {tab.Title}")" title="Tab menu"
+                    <button type="button" class="tab-action" aria-label="@($"More actions for {tab.Title}")" title="More actions"
                             @onclick="@(e => this.OnContextMenuAsync(tab, e))" @onclick:stopPropagation="true"
                             @ondblclick:stopPropagation="true">
-                        <MudIcon Icon="@Icons.Material.Filled.ExpandMore" Size="Size.Small" />
+                        <MudIcon Icon="@Icons.Material.Filled.MoreVert" Size="Size.Small" />
                     </button>
                     @if (this.Tabs.CanMoveLeft(tab.Id))
                     {
@@ -80,16 +80,16 @@
             {
                 @if (target.IsPinned)
                 {
-                    <MudMenuItem Icon="@Icons.Material.Filled.PushPin" OnClick="@(() => this.Tabs.Unpin(target.Id))">Unpin Tab</MudMenuItem>
+                    <MudMenuItem Icon="@Icons.Material.Filled.PushPin" OnClick="@(() => this.Tabs.Unpin(target.Id))">Unpin tab</MudMenuItem>
                 }
                 else
                 {
-                    <MudMenuItem Icon="@Icons.Material.Filled.PushPin" OnClick="@(() => this.Tabs.Pin(target.Id))">Pin Tab</MudMenuItem>
+                    <MudMenuItem Icon="@Icons.Material.Filled.PushPin" OnClick="@(() => this.Tabs.Pin(target.Id))">Pin tab</MudMenuItem>
                 }
                 <MudMenuItem Icon="@TabIcons.MoveSelectionLeft" Disabled="@(!this.Tabs.CanMoveLeft(target.Id))"
-                             OnClick="@(() => this.Move(target, left: true))">Move Left</MudMenuItem>
+                             OnClick="@(() => this.Move(target, left: true))">Move left</MudMenuItem>
                 <MudMenuItem Icon="@TabIcons.MoveSelectionRight" Disabled="@(!this.Tabs.CanMoveRight(target.Id))"
-                             OnClick="@(() => this.Move(target, left: false))">Move Right</MudMenuItem>
+                             OnClick="@(() => this.Move(target, left: false))">Move right</MudMenuItem>
                 <MudMenuItem Icon="@Icons.Material.Filled.Close" OnClick="@(() => this.Close(target))">Close</MudMenuItem>
             }
         </ChildContent>
