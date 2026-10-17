@@ -132,8 +132,8 @@ public sealed partial class TypeScaleTests
     [Fact]
     public void AppCss_CapsProseAt75ch()
     {
-        string css = TypeScaleTests.ReadAppCss();
-        int rule = css.IndexOf(".settings-intro,\r\n.settings-stored-at,", StringComparison.Ordinal);
+        string css = TypeScaleTests.ReadAppCss().ReplaceLineEndings("\n");
+        int rule = css.IndexOf(".settings-intro,\n.settings-stored-at,", StringComparison.Ordinal);
         Assert.True(rule >= 0, "Expected the shared measure rule in app.css.");
 
         string body = css[rule..css.IndexOf('}', rule)];
