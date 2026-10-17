@@ -1,6 +1,5 @@
 using System.Text.Encodings.Web;
 using Bunit;
-using Microsoft.AspNetCore.Components;
 using Microsoft.Extensions.DependencyInjection;
 using Agency.Huddle.App.Appearance;
 using Agency.Huddle.App.Components.Pages;
@@ -13,10 +12,10 @@ using Agency.Huddle.App.Themes;
 namespace Agency.Huddle.Tests.Ui;
 
 /// <summary>
-/// Tests for the Settings page's tab rail and its Prompts panel. Split two ways, per
+/// Tests for the Settings page's section menu and its Prompts panel. Split two ways, per
 /// <c>docs/engineering/testing.md</c>: routing, HTTP status, the prompts/appearance file paths and
 /// <c>FakeModelCatalog.ProbeCount</c> are facts about the server, so they stay on a plain HTTP GET
-/// against <see cref="TeamWebApplicationFactory"/>; everything that asserts on the tab rail, the Save
+/// against <see cref="TeamWebApplicationFactory"/>; everything that asserts on the section menu, the Save
 /// button or the Reset-all button now renders <see cref="Settings"/> directly through
 /// <see cref="MudBunitContext"/>, because the MudBlazor migration turned all three into components
 /// whose actual disabled-state markup a raw-HTML tag slice can no longer be trusted to parse.
@@ -35,16 +34,17 @@ public sealed class SettingsPageTests
         return ctx;
     }
 
-    /// <summary>MudTabs renders both tab labels and, on the Prompts panel, every group heading the Prompts tab shows.</summary>
+    /// <summary>The section menu renders inside the page, in its own <c>nav</c>, and the Prompts section shows every group heading.</summary>
     [Fact]
-    public async Task SettingsPage_Renders_TabRailAndGroupHeadings()
+    public async Task SettingsPage_Renders_SectionMenuAndGroupHeadings()
     {
         await using var factory = new TeamWebApplicationFactory();
         await using var ctx = NewContext(factory);
 
         var cut = ctx.Render<Settings>(parameters => parameters.Add(page => page.Tab, "prompts"));
 
-        Assert.Contains("mud-tabs", cut.Markup, StringComparison.Ordinal);
+        Assert.Single(cut.FindAll(".settings-page nav.settings-nav .mud-navmenu"));
+        Assert.Empty(cut.FindAll(".mud-tabs"));
         Assert.Contains(">Prompts<", cut.Markup, StringComparison.Ordinal);
         Assert.Contains(">Appearance<", cut.Markup, StringComparison.Ordinal);
         Assert.Contains(">System prompt<", cut.Markup, StringComparison.Ordinal);
@@ -54,25 +54,46 @@ public sealed class SettingsPageTests
     }
 
     /// <summary>
-    /// The seven tabs together fit the 960px reading column with room to spare, so MudTabs draws no scroll arrows
-    /// at desktop width: MudBlazor shows them only when the tab widths exceed the bar, and its default 160px
-    /// minimum put six tabs exactly at 960px. Each tab's minimum width is 112px.
+    /// Every section is a real link to its own <c>/settings/{section}</c> address, so a section is bookmarkable
+    /// and opening it is ordinary navigation rather than local state. This replaces a click test: bUnit does not
+    /// follow an anchor's <c>href</c>, so the address the link carries is what can be pinned.
     /// </summary>
     [Fact]
-    public async Task SettingsPage_TabRail_MinimumWidthLeavesRoomSoNoScrollArrowsShow()
+    public async Task SettingsPage_SectionMenu_LinksEachSectionToItsRoute()
     {
         await using var factory = new TeamWebApplicationFactory();
         await using var ctx = NewContext(factory);
 
         var cut = ctx.Render<Settings>();
 
-        string?[] styles = [.. cut.FindAll(".mud-tab").Select(static tab => tab.GetAttribute("style"))];
-        Assert.Equal(7, styles.Length);
-        Assert.All(styles, static style => Assert.Contains("min-width:112px", style, StringComparison.Ordinal));
-        Assert.Empty(cut.FindAll(".mud-tabs-scroll-button"));
+        List<string?> hrefs = [.. cut.FindAll(".settings-nav a.mud-nav-link").Select(static link => link.GetAttribute("href"))];
+        Assert.Equal(
+            ["/settings/profile", "/settings/prompts", "/settings/appearance", "/settings/personas", "/settings/skills", "/settings/teamtypes", "/settings/library"],
+            hrefs);
     }
 
-    /// <summary>The <c>/settings/library</c> route selects the seventh panel and renders the Library panel (D3: the tab was unreachable).</summary>
+    /// <summary>
+    /// <c>/settings</c> with no segment, and an unknown segment, highlight Profile - the section that renders - and
+    /// mark it as the current page, which NavLink's own URL match alone would not do for either address.
+    /// </summary>
+    [Theory]
+    [InlineData(null)]
+    [InlineData("nonsense")]
+    [InlineData("99")]
+    public async Task SettingsPage_NoOrUnknownSegment_HighlightsProfile(string? tab)
+    {
+        await using var factory = new TeamWebApplicationFactory();
+        await using var ctx = NewContext(factory);
+
+        var cut = ctx.Render<Settings>(parameters => parameters.Add(page => page.Tab, tab));
+
+        var active = Assert.Single(cut.FindAll(".settings-nav .settings-nav-item-active a.mud-nav-link"));
+        Assert.Equal("Profile", active.TextContent.Trim());
+        Assert.Equal("page", active.GetAttribute("aria-current"));
+        Assert.Single(cut.FindComponents<ProfilePanel>());
+    }
+
+    /// <summary>The <c>/settings/library</c> route highlights the seventh menu row and renders the Library panel (D3: the tab was unreachable).</summary>
     [Fact]
     public async Task SettingsPage_LibraryRoute_RendersLibraryPanel()
     {
@@ -82,21 +103,7 @@ public sealed class SettingsPageTests
         var cut = ctx.Render<Settings>(parameters => parameters.Add(page => page.Tab, "library"));
 
         Assert.Single(cut.FindComponents<LibraryPanel>());
-        Assert.Equal(6, cut.FindAll(".mud-tab").ToList().FindIndex(tab => tab.ClassList.Contains("mud-tab-active")));
-    }
-
-    /// <summary>Activating the seventh tab header navigates to <c>/settings/library</c> rather than falling back to Profile.</summary>
-    [Fact]
-    public async Task SettingsPage_LibraryTabClick_NavigatesToLibrary()
-    {
-        await using var factory = new TeamWebApplicationFactory();
-        await using var ctx = NewContext(factory);
-        var navigation = ctx.Services.GetRequiredService<NavigationManager>();
-        var cut = ctx.Render<Settings>();
-
-        cut.FindAll(".mud-tab")[6].Click();
-
-        Assert.Equal("settings/library", navigation.ToBaseRelativePath(navigation.Uri));
+        Assert.Equal(6, cut.FindAll(".settings-nav .mud-nav-item").ToList().FindIndex(static item => item.ClassList.Contains("settings-nav-item-active")));
     }
 
     /// <summary>The Prompts panel renders the Prompts panel's MudPaper-wrapped groups.</summary>

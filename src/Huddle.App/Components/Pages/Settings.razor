@@ -4,78 +4,95 @@
 @using Agency.Huddle.App.Prompts
 @using Agency.Huddle.App.Components.Settings
 @inject PromptStore Prompts
-@inject NavigationManager Navigation
 
 @*
-    Stage 3 of the MudBlazor migration converts the tab rail to MudTabs, the Save button to a
-    MudButton and the composer-error paragraph to a MudAlert, per the migration brief's Part A
-    mapping. The tab rail's routing behaviour is unchanged: ActivePanelIndex is always derived from
-    CurrentTab (itself parsed from the {Tab} route parameter), and MudTabs' ActivePanelIndexChanged
-    is wired to SelectTab, which still navigates rather than flipping local state - MudTabs never
-    owns which tab is showing, the route does. This keeps /settings/prompts and /settings/appearance
-    bookmarkable and keeps the fallback in CurrentTab (Routes.razor has no NotFound branch) working
-    exactly as before.
+    Settings is two columns: a vertical section menu on the left and the active section's panel on
+    the right. The route owns which section shows: every menu row is a real link to
+    /settings/{section}, so a section is bookmarkable and Back works, and the highlight is computed
+    from CurrentTab (itself parsed from the {Tab} route parameter) rather than from NavLink's own URL
+    match - /settings and an unknown segment both resolve to Profile, and NavLink alone would leave
+    them with nothing highlighted. Routes.razor has no NotFound branch, so that fallback matters.
+    Every /settings/* address shares one Tab key (TabKeys), so moving between sections stays in the
+    same Tab.
 *@
 
 <MudContainer MaxWidth="MaxWidth.Large" Class="page-reading settings-page pa-4">
-    <PageHeader Title="Settings" />
+    @* The Tab and the one-crumb trail already show "Settings", so the h1 is for a screen reader only. *@
+    <PageHeader Title="Settings" HideTitle="true" />
 
     @if (this.error is not null)
     {
         <MudAlert Severity="Severity.Error" Dense="true" role="alert">@this.error</MudAlert>
     }
 
-    @* Scroll arrows only on overflow: AlwaysShowScrollButtons is MudBlazor's default (false) spelled out, and the 112px minimum
-       keeps the seven tabs well inside the 960px reading column - at the default 160px six already summed to exactly 960 and the
-       arrows showed at desktop width. *@
-    <MudTabs AlwaysShowScrollButtons="false" MinimumTabWidth="112px" ActivePanelIndex="this.ActivePanelIndex" ActivePanelIndexChanged="this.OnActivePanelIndexChanged">
-        <MudTabPanel Text="Profile" Icon="@Icons.Material.Outlined.AccountCircle">
-            <ProfilePanel />
-        </MudTabPanel>
-        <MudTabPanel Text="Prompts" Icon="@Icons.Material.Outlined.EditNote">
-            <SettingsIntro>
-                A prompt is one piece of wording this application sends to a model — part of a system prompt,
-                a turn, <code>get_help</code>'s output, or a tool's own description. Editing one changes what every
-                teammate is told, not how the application itself behaves, and a prompt you have changed can
-                always be restored to the wording it shipped with.
-            </SettingsIntro>
+    <div class="settings-layout">
+        <nav class="settings-nav" aria-label="Settings sections">
+            <MudNavMenu>
+                @foreach (var section in Sections)
+                {
+                    bool active = section.Tab == this.CurrentTab;
+                    <MudNavLink Href="@SectionHref(section.Tab)"
+                                Match="NavLinkMatch.All"
+                                Icon="@section.Icon"
+                                ActiveClass="settings-nav-url-match"
+                                Class="@(active ? "settings-nav-item settings-nav-item-active" : "settings-nav-item")"
+                                aria-current="@(active ? "page" : null)">@section.Label</MudNavLink>
+                }
+            </MudNavMenu>
+        </nav>
 
-            <StoredAt Label="Overrides stored at" Path="@this.Prompts.FilePath" />
+        <section class="settings-section">
+            @switch (this.CurrentTab)
+            {
+                case SettingsTab.Prompts:
+                    <SettingsIntro>
+                        A prompt is one piece of wording this application sends to a model — part of a system prompt,
+                        a turn, <code>get_help</code>'s output, or a tool's own description. Editing one changes what every
+                        teammate is told, not how the application itself behaves, and a prompt you have changed can
+                        always be restored to the wording it shipped with.
+                    </SettingsIntro>
 
-            <form @onsubmit="this.Save">
-                <PromptsPanel Groups="this.groups"
-                            ValueChanged="this.OnFieldValueChanged"
-                            ResetRequested="this.OnResetRequested" />
-                <MudStack Row="true" Spacing="2" AlignItems="AlignItems.Center" Class="settings-prompts-actions">
-                    <MudButton Variant="Variant.Filled"
-                               Size="Size.Small"
-                               Color="Color.Primary"
-                               ButtonType="ButtonType.Submit"
-                               Disabled="@(!this.HasUnsavedChanges)">Save</MudButton>
-                    <ResetAllControl AnyModified="this.AnyModified"
-                                     Confirming="this.confirmingResetAll"
-                                     OnBeginReset="this.BeginResetAll"
-                                     OnConfirm="this.ConfirmResetAll"
-                                     OnCancel="this.CancelResetAll" />
-                </MudStack>
-            </form>
-        </MudTabPanel>
-        <MudTabPanel Text="Appearance" Icon="@Icons.Material.Outlined.Palette">
-            <Appearance />
-        </MudTabPanel>
-        <MudTabPanel Text="Personas" Icon="@Icons.Material.Outlined.People">
-            <Personas />
-        </MudTabPanel>
-        <MudTabPanel Text="Skills" Icon="@Icons.Material.Outlined.MenuBook">
-            <SkillsPanel />
-        </MudTabPanel>
-        <MudTabPanel Text="Team types" Icon="@Icons.Material.Outlined.AccountTree">
-            <TeamTypesPanel />
-        </MudTabPanel>
-        <MudTabPanel Text="Library" Icon="@Icons.Material.Outlined.FolderOpen">
-            <LibraryPanel />
-        </MudTabPanel>
-    </MudTabs>
+                    <StoredAt Label="Overrides stored at" Path="@this.Prompts.FilePath" />
+
+                    <form @onsubmit="this.Save">
+                        <PromptsPanel Groups="this.groups"
+                                    ValueChanged="this.OnFieldValueChanged"
+                                    ResetRequested="this.OnResetRequested" />
+                        <MudStack Row="true" Spacing="2" AlignItems="AlignItems.Center" Class="settings-prompts-actions">
+                            <MudButton Variant="Variant.Filled"
+                                       Size="Size.Small"
+                                       Color="Color.Primary"
+                                       ButtonType="ButtonType.Submit"
+                                       Disabled="@(!this.HasUnsavedChanges)">Save</MudButton>
+                            <ResetAllControl AnyModified="this.AnyModified"
+                                             Confirming="this.confirmingResetAll"
+                                             OnBeginReset="this.BeginResetAll"
+                                             OnConfirm="this.ConfirmResetAll"
+                                             OnCancel="this.CancelResetAll" />
+                        </MudStack>
+                    </form>
+                    break;
+                case SettingsTab.Appearance:
+                    <Appearance />
+                    break;
+                case SettingsTab.Personas:
+                    <Personas />
+                    break;
+                case SettingsTab.Skills:
+                    <SkillsPanel />
+                    break;
+                case SettingsTab.TeamTypes:
+                    <TeamTypesPanel />
+                    break;
+                case SettingsTab.Library:
+                    <LibraryPanel />
+                    break;
+                default:
+                    <ProfilePanel />
+                    break;
+            }
+        </section>
+    </div>
 </MudContainer>
 
 @code {
@@ -102,23 +119,21 @@
     // Routes.razor has no NotFound branch, so an unrecognised {Tab} (missing, misspelled, or a tab
     // that once existed and was removed) must resolve to something rather than throw or 404 - the
     // same reasoning a case-insensitive parse with a safe fallback would need for any future second
-    // tab, not just this one.
+    // tab, not just this one. IsDefined turns away a number TryParse would accept, such as "99".
     private SettingsTab CurrentTab =>
-        Enum.TryParse<SettingsTab>(this.Tab, ignoreCase: true, out var parsed) ? parsed : SettingsTab.Profile;
+        Enum.TryParse<SettingsTab>(this.Tab, ignoreCase: true, out var parsed) && Enum.IsDefined(parsed) ? parsed : SettingsTab.Profile;
 
-    // MudTabs is driven, never authoritative: its ActivePanelIndex is computed from CurrentTab (the
-    // route) on every render, and a change is reported back to SelectTab rather than accepted as
-    // MudTabs' own state - see the file-level comment for why.
-    private int ActivePanelIndex => this.CurrentTab switch
-    {
-        SettingsTab.Prompts => 1,
-        SettingsTab.Appearance => 2,
-        SettingsTab.Personas => 3,
-        SettingsTab.Skills => 4,
-        SettingsTab.TeamTypes => 5,
-        SettingsTab.Library => 6,
-        _ => 0,
-    };
+    /// <summary>The menu's rows, in the order they show: one per <see cref="SettingsTab"/>.</summary>
+    private static readonly SettingsSection[] Sections =
+    [
+        new(SettingsTab.Profile, "Profile", Icons.Material.Outlined.AccountCircle),
+        new(SettingsTab.Prompts, "Prompts", Icons.Material.Outlined.EditNote),
+        new(SettingsTab.Appearance, "Appearance", Icons.Material.Outlined.Palette),
+        new(SettingsTab.Personas, "Personas", Icons.Material.Outlined.People),
+        new(SettingsTab.Skills, "Skills", Icons.Material.Outlined.AutoAwesome),
+        new(SettingsTab.TeamTypes, "Team types", Icons.Material.Outlined.AccountTree),
+        new(SettingsTab.Library, "Library", Icons.Material.Outlined.FolderOpen),
+    ];
 
     // Drives the Save button: nothing to commit means nothing to submit. Recomputed from groups
     // rather than tracked separately, so it can never drift from what PromptsPanel is actually showing.
@@ -138,27 +153,11 @@
         this.Prompts.PromptsChanged -= this.OnPromptsChanged;
     }
 
-    // Navigates to the tab's own route rather than just flipping local state, so the URL always
-    // names the active tab - the same route a bookmark or a direct link to /settings/prompts resolves
-    // to via CurrentTab above.
-    private void SelectTab(SettingsTab tab)
-    {
-        this.Navigation.NavigateTo($"/settings/{tab.ToString().ToLowerInvariant()}");
-    }
+    /// <summary>The address that shows <paramref name="tab"/>, e.g. <c>/settings/teamtypes</c>.</summary>
+    private static string SectionHref(SettingsTab tab) => $"/settings/{tab.ToString().ToLowerInvariant()}";
 
-    private void OnActivePanelIndexChanged(int index)
-    {
-        this.SelectTab(index switch
-        {
-            1 => SettingsTab.Prompts,
-            2 => SettingsTab.Appearance,
-            3 => SettingsTab.Personas,
-            4 => SettingsTab.Skills,
-            5 => SettingsTab.TeamTypes,
-            6 => SettingsTab.Library,
-            _ => SettingsTab.Profile,
-        });
-    }
+    /// <summary>One row of the section menu: the section it opens, its label and its icon.</summary>
+    private sealed record SettingsSection(SettingsTab Tab, string Label, string Icon);
 
     private void OnFieldValueChanged(PromptEdit edit)
     {

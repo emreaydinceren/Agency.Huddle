@@ -22,7 +22,7 @@ namespace Agency.Huddle.Tests.Ui.Library;
 /// </summary>
 public sealed class LibraryPanelTests
 {
-    /// <summary>The Library tab follows Skills in the Settings tab rail (Task 13.4.i's deliverable); Team Types (Task 30) sits between them.</summary>
+    /// <summary>The Library section follows Skills in the Settings section menu (Task 13.4.i's deliverable); Team Types (Task 30) sits between them.</summary>
     [Fact]
     public async Task Tab_IsNamedLibrary_AfterSkills()
     {
@@ -36,7 +36,7 @@ public sealed class LibraryPanelTests
 
         var cut = ctx.Render<Settings>();
 
-        List<string> tabLabels = [.. cut.FindAll(".mud-tab").Select(e => e.TextContent.Trim())];
+        List<string> tabLabels = [.. cut.FindAll(".settings-nav a.mud-nav-link").Select(e => e.TextContent.Trim())];
         Assert.Equal(["Profile", "Prompts", "Appearance", "Personas", "Skills", "Team types", "Library"], tabLabels);
     }
 
