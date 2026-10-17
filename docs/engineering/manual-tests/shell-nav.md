@@ -343,7 +343,7 @@ None expected. If the app is not listening, fix the launch first.
 
 **Free** · about 8 min
 
-*Proves no page declares its own layout and the shell's chrome never varies. The shell is now `MudLayout`/`MudDrawer`/`MudMainContent` (Stage 5 of the MudBlazor migration) — the old hand-rolled `.app-grid` CSS grid and its `.sidebar` / `.sidebar-link` classes are gone, but the drawer is still pinned to exactly the same 240px the old grid column was.*
+*Proves no page declares its own layout and the shell's chrome never varies. The shell is now `MudLayout`/`MudDrawer`/`MudMainContent` (Stage 5 of the MudBlazor migration) — the old hand-rolled `.app-grid` CSS grid and its `.sidebar` / `.sidebar-link` classes are gone, and the drawer now holds the 48px Activity bar (`S5`) beside the 240px Sidebar (`S2`), 289px in all with its 1px edge.*
 
 **Before you start**
 
@@ -356,16 +356,16 @@ None expected. If the app is not listening, fix the launch first.
 3. Type `[...document.querySelectorAll('.mud-drawer-content > *')].map(e => e.className)` and press Enter. Record the list in order (the drawer's own content sections; `.mud-drawer > *` would list MudBlazor's wrapper elements instead).
 4. Type `[...document.querySelectorAll('.mud-drawer .mud-nav-link')].filter(a => ['/teammates', '/settings'].includes(a.getAttribute('href'))).map(a => (a.textContent.trim() || a.getAttribute('aria-label')) + ' -> ' + a.getAttribute('href'))` and press Enter. Record the result.
 5. Type `getComputedStyle(document.querySelector('.main-column')).overflow` and press Enter.
-6. Click **Teammates** in the sidebar and repeat steps 2 to 5.
-7. Click the gear icon (**Settings**) at the bottom of the sidebar and repeat steps 2 to 5.
+6. Click the Teammates button in the Activity bar, then **Teammates** in the sidebar, and repeat steps 2 to 5.
+7. Click the gear icon (**Settings**) at the bottom of the Activity bar and repeat steps 2 to 5.
 8. Navigate to `http://localhost:5100/settings/appearance` and repeat steps 2 to 5.
 9. On the Settings route, scroll the drawer with the mouse wheel while hovering over it, then scroll while hovering over the main column.
 
 **Pass if — all of these**
 
-- Step 2 printed `240px` on all four routes.
-- Step 3 lists exactly six sections, in this order, on all four routes: `room-list`, `teams-nav-host`, a `mud-navmenu` (Teammates), then `mud-navmenu` entries whose class lists include `task-view-nav`, `library-nav` and `nav-settings` (`MainLayout.razor`: RoomList, TeamsNav, Teammates, TaskViewNav, LibraryNavLink, and the Archived chats and Settings menu).
-- Step 4 printed exactly `Teammates -> /teammates` and `Settings -> /settings`, in that order, on all four routes — MudBlazor renders the link text as typed (title case), and the Settings link has no text, so its label comes from `aria-label`.
+- Step 2 printed `289px` on all four routes (the Activity bar, its edge and the open Sidebar).
+- Step 3 lists exactly two entries, in this order, on all four routes: `activity-bar` and `sidebar-views` (`MainLayout.razor`: the Activity bar, whose bottom toolbar holds the Archived chats and Settings menu, then the Sidebar's five views: Chats, Teams, Teammates, Tasks and Library).
+- Step 4 printed exactly `Settings -> /settings` and `Teammates -> /teammates`, in that order, on all four routes (every Sidebar view stays mounted while hidden, so the Teammates link is found whichever view is selected) — MudBlazor renders the link text as typed (title case), and the Settings link has no text, so its label comes from `aria-label`.
 - Step 5 printed `"hidden"` on all four routes — `.main-column` is still the literal `Class` MudMainContent carries and its CSS rule is unchanged.
 - The drawer scrolls independently; the browser window itself never grows a page-level horizontal or vertical scrollbar.
 

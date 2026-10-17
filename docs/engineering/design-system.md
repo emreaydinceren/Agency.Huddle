@@ -459,7 +459,8 @@ container's code (`S2`, `C7a`, `T3`) is in [wireframes.md](wireframes.md).
 | Region | Component | Notes |
 | --- | --- | --- |
 | Top bar | `TopBar` (a `MudAppBar`) | Slots: `Search`, `Actions`. Shows the breadcrumb of the focused pane |
-| Sidebar | `MudDrawer`, persistent, 240px | Sections in order: Needs you, Rooms, Teams, Teammates, Tasks, Library, then Archived chats and Settings pinned to the bottom with `.nav-settings { margin-top: auto }`. Section headers are sentence case |
+| Activity bar | `ActivityBar`, 48px, in the left `MudDrawer` | A top toolbar with one button per Sidebar view (Chats, Teams, Teammates, Tasks, Library): the selected one is pressed, and clicking it again collapses the Sidebar. A bottom toolbar holds Archived chats and Settings |
+| Sidebar | `div#sidebar-views` beside the Activity bar, 240px | Shows one view: Chats (Needs you, Rooms), Teams, Teammates, Tasks or Library. Section headers are sentence case |
 | Workspace | `MudMainContent.main-column` | A flex column, `overflow: hidden`, holding `TabHost` |
 | Tab groups | `TabHost` then `TabGroupPane` | One or two panes side by side, each a `TabStrip` over a `.tab-body`. The focused pane owns the URL; the other dims its active tab |
 | Page | `TabPageHost` mounts a `DynamicComponent` | Only each group's active Tab is mounted |
