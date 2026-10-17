@@ -99,10 +99,13 @@
                                   Variant="Variant.Outlined" Margin="Margin.Dense" Adornment="Adornment.End" AdornmentIcon="@Icons.Material.Filled.RestartAlt"
                                   AdornmentAriaLabel="New random name" OnAdornmentClick="this.PickAnotherName"
                                   HelperText="Letters, digits, spaces, - and _. Spaces are fine." />
-                    <MudTextField T="string" Label="Title" Placeholder="e.g. Chief of Staff" @bind-Value="this.title"
-                                  Variant="Variant.Outlined" Margin="Margin.Dense" HelperText="A short role description, shown alongside the Name." />
-                    <MudTextField T="string" Label="Alias" Placeholder="e.g. coo" @bind-Value="this.alias"
-                                  Variant="Variant.Outlined" Margin="Margin.Dense" HelperText="A short working handle, for mentions and quick reference." />
+                    @* UX-E15: Title and Alias share one row so the New teammate dialog fits a 900px-high window. *@
+                    <div class="teammate-card-row teammate-card-identity-row">
+                        <MudTextField T="string" Label="Title" Placeholder="e.g. Chief of Staff" @bind-Value="this.title"
+                                      Variant="Variant.Outlined" Margin="Margin.Dense" HelperText="A short role description, shown alongside the Name." />
+                        <MudTextField T="string" Label="Alias" Placeholder="e.g. coo" @bind-Value="this.alias"
+                                      Variant="Variant.Outlined" Margin="Margin.Dense" HelperText="A short working handle, for mentions and quick reference." />
+                    </div>
                     <MudTextField T="string" Label="Teams" Placeholder="e.g. Business, Household" @bind-Value="this.teams"
                                   Variant="Variant.Outlined" Margin="Margin.Dense" HelperText="Comma-separated. Leave blank for no team." />
                 </MudStack>
@@ -462,9 +465,12 @@
                the click - worse than the incomplete list it replaced. Verified against the shipped
                MudBlazor.min.css, not assumed. The cost is the tab order; ModelHelperText carries the
                reason on screen either way, and the window is one adapter spawn long. *@
+            @* UX-E15: Model, Effort and Work mode are one row of equal selects under the one Model label. *@
+            <div class="teammate-card-row teammate-card-model-row mb-3">
+            <div class="teammate-card-cell">
             <MudSelect T="string" Label="Model" Value="@(this.model ?? string.Empty)" ValueChanged="this.OnModelChangedAsync"
                        Disabled="@this.modelsLoading" aria-busy="@(this.modelsLoading ? "true" : null)" Variant="Variant.Outlined" Margin="Margin.Dense"
-                       HelperText="@this.ModelHelperText" Class="@(this.modelsLoading ? "mb-1 teammate-card-probing" : "mb-3")">
+                       HelperText="@this.ModelHelperText" Class="@(this.modelsLoading ? "teammate-card-probing" : null)">
                 <MudSelectItem T="string" Value="@string.Empty">Use the agent's default</MudSelectItem>
                 @foreach (var choice in this.ModelChoices)
                 {
@@ -473,21 +479,11 @@
             </MudSelect>
             @if (this.modelsLoading)
             {
-                <MudProgressLinear Indeterminate="true" Size="Size.Small" Class="teammate-card-probe mb-3" aria-label="Reading the models this agent offers" />
+                <MudProgressLinear Indeterminate="true" Size="Size.Small" Class="teammate-card-probe" aria-label="Reading the models this agent offers" />
             }
+            </div>
 
-            @* The reset below is deliberate and asserted by PERSONALIFECYCLE-29 - this note exists
-               only because it used to happen invisibly (issue #45). role="status" is written out
-               because MudAlert renders no role by default (rules.md), and "status" rather than
-               "alert" for the same reason the rename note above uses it: this is a consequence of
-               what the user just did, not an interruption. *@
-            @if (this.effortResetByModelChange)
-            {
-                <MudAlert Severity="Severity.Info" Dense="true" Class="mb-3" role="status">
-                    Changing the model reset Effort to the default. Each model advertises its own effort levels, so a level chosen for the previous model does not carry across — pick one again if you want a specific level.
-                </MudAlert>
-            }
-
+            <div class="teammate-card-cell">
             @* Disabled while its own probe is in flight, for the reason spelled out on the Model select
                above. Note the flag is effortsLoading, not modelsLoading: the two catalogs are probed by
                two separate adapter spawns and land at different moments, so each select waits only on
@@ -504,6 +500,48 @@
             @if (this.effortsLoading)
             {
                 <MudProgressLinear Indeterminate="true" Size="Size.Small" Class="teammate-card-probe" aria-label="Reading the effort levels this model offers" />
+            }
+            </div>
+
+            @* Work mode: how much the Agent may do before it must ask (ADR-0033). Offered from the
+               Adapter's own advertised list, so there is no list of modes in this file. Hidden when the
+               Adapter advertises none and nothing is stored (ShowWorkModePicker): a picker with only a
+               blank option is a control nobody can use, but a STORED value keeps it so the Human can
+               still see and clear it. Disabled, not ReadOnly, while the probe is out, for the reason
+               spelled out on the Model select above. The same probe answers this and Effort, so it
+               waits on effortsLoading. ToStringFunc shows the mode's name rather than its id (an id such
+               as "acceptEdits" is for the wire); the selected mode's own description is the helper text. *@
+            @if (this.ShowWorkModePicker)
+            {
+                <div class="teammate-card-cell">
+                <MudSelect T="string" Label="Work mode" Value="@(this.workMode ?? string.Empty)" ValueChanged="this.OnWorkModeChanged"
+                           Disabled="@this.effortsLoading" aria-busy="@(this.effortsLoading ? "true" : null)" ToStringFunc="@this.WorkModeLabel"
+                           Variant="Variant.Outlined" Margin="Margin.Dense"
+                           HelperText="@this.WorkModeHelperText" Class="@(this.effortsLoading ? "teammate-card-probing" : null)">
+                    <MudSelectItem T="string" Value="@string.Empty">Use the agent's default</MudSelectItem>
+                    @foreach (var choice in this.WorkModeChoices)
+                    {
+                        <MudSelectItem T="string" Value="@choice.Id">@choice.Name</MudSelectItem>
+                    }
+                </MudSelect>
+                @if (this.effortsLoading)
+                {
+                    <MudProgressLinear Indeterminate="true" Size="Size.Small" Class="teammate-card-probe" aria-label="Reading the work modes this agent offers" />
+                }
+                </div>
+            }
+            </div>
+
+            @* The reset below is deliberate and asserted by PERSONALIFECYCLE-29 - this note exists
+               only because it used to happen invisibly (issue #45). role="status" is written out
+               because MudAlert renders no role by default (rules.md), and "status" rather than
+               "alert" for the same reason the rename note above uses it: this is a consequence of
+               what the user just did, not an interruption. *@
+            @if (this.effortResetByModelChange)
+            {
+                <MudAlert Severity="Severity.Info" Dense="true" Class="mb-3" role="status">
+                    Changing the model reset Effort to the default. Each model advertises its own effort levels, so a level chosen for the previous model does not carry across — pick one again if you want a specific level.
+                </MudAlert>
             }
 
             @* MS-3: a vendor shared with a role this one must differ from. *@
@@ -522,31 +560,6 @@
                 </MudAlert>
             }
 
-            @* Work mode: how much the Agent may do before it must ask (ADR-0033). Offered from the
-               Adapter's own advertised list, so there is no list of modes in this file. Hidden when the
-               Adapter advertises none and nothing is stored (ShowWorkModePicker): a picker with only a
-               blank option is a control nobody can use, but a STORED value keeps it so the Human can
-               still see and clear it. Disabled, not ReadOnly, while the probe is out, for the reason
-               spelled out on the Model select above. The same probe answers this and Effort, so it
-               waits on effortsLoading. ToStringFunc shows the mode's name rather than its id (an id such
-               as "acceptEdits" is for the wire); the selected mode's own description is the helper text. *@
-            @if (this.ShowWorkModePicker)
-            {
-                <MudSelect T="string" Label="Work mode" Value="@(this.workMode ?? string.Empty)" ValueChanged="this.OnWorkModeChanged"
-                           Disabled="@this.effortsLoading" aria-busy="@(this.effortsLoading ? "true" : null)" ToStringFunc="@this.WorkModeLabel"
-                           Variant="Variant.Outlined" Margin="Margin.Dense"
-                           HelperText="@this.WorkModeHelperText" Class="@(this.effortsLoading ? "mt-3 teammate-card-probing" : "mt-3")">
-                    <MudSelectItem T="string" Value="@string.Empty">Use the agent's default</MudSelectItem>
-                    @foreach (var choice in this.WorkModeChoices)
-                    {
-                        <MudSelectItem T="string" Value="@choice.Id">@choice.Name</MudSelectItem>
-                    }
-                </MudSelect>
-                @if (this.effortsLoading)
-                {
-                    <MudProgressLinear Indeterminate="true" Size="Size.Small" Class="teammate-card-probe" aria-label="Reading the work modes this agent offers" />
-                }
-            }
         }
     </DialogContent>
     <DialogActions>

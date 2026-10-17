@@ -41,6 +41,22 @@ public sealed partial class R3OpenItemsTests
         Assert.DoesNotContain("Class=\"mb-4", tail[..tail.IndexOf("@code", StringComparison.Ordinal)], StringComparison.Ordinal);
     }
 
+    /// <summary>UX-E15: the row container is a flex row whose cells share the width, and the card puts Model, Effort and Work mode in it.</summary>
+    [Fact]
+    public void TeammateCard_ModelEffortWorkModeAreOneRow()
+    {
+        string card = ReadSource("src", "Huddle.App", "Components", "Shared", "TeammateCard.razor");
+        string css = Whitespace().Replace(ReadCss(), " ");
+        int row = card.IndexOf("teammate-card-model-row", StringComparison.Ordinal);
+        string rowTail = card[row..];
+        string rowBody = rowTail[..rowTail.IndexOf("The reset below is deliberate", StringComparison.Ordinal)];
+
+        Assert.Contains("Label=\"Model\"", rowBody, StringComparison.Ordinal); // contains-ok: component source text
+        Assert.Contains("Label=\"Effort\"", rowBody, StringComparison.Ordinal); // contains-ok: component source text
+        Assert.Contains("Label=\"Work mode\"", rowBody, StringComparison.Ordinal); // contains-ok: component source text
+        Assert.Contains(".teammate-card-row { display: flex;", css, StringComparison.Ordinal); // contains-ok: stylesheet source text
+    }
+
     /// <summary>UX-E16: the role and roster grids use a thin scrollbar that is transparent at rest and takes the Edge rung on hover or focus-within.</summary>
     [Fact]
     public void RoleAndRosterGrids_HideTheScrollbarUntilHoverOrFocus()
@@ -51,14 +67,14 @@ public sealed partial class R3OpenItemsTests
         Assert.Contains(".role-grid:hover, .role-grid:focus-within, .roster-grid:hover, .roster-grid:focus-within { scrollbar-color: var(--ink-edge) transparent; }", css, StringComparison.Ordinal); // contains-ok: stylesheet source text
     }
 
-    /// <summary>B8i: the avatar editor reserves 26rem so Initials, A short label and An image measure the same (the label mode's content is about 415px).</summary>
+    /// <summary>B8i: the avatar editor reserves 27rem so Initials, A short label and An image measure the same (the label mode's content measured about 421px).</summary>
     [Fact]
     public void AvatarEditor_ReservesTheTallestModesHeight()
     {
         Match rule = AvatarEditorRule().Match(ReadCss());
 
         Assert.True(rule.Success);
-        Assert.True(double.Parse(rule.Groups[1].Value, System.Globalization.CultureInfo.InvariantCulture) >= 26);
+        Assert.True(double.Parse(rule.Groups[1].Value, System.Globalization.CultureInfo.InvariantCulture) >= 27);
     }
 
     [GeneratedRegex(@"\.avatar-editor \{[^}]*?min-height: ([0-9.]+)rem;", RegexOptions.CultureInvariant)]
