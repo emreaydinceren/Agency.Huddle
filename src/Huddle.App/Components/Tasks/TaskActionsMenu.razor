@@ -1,13 +1,16 @@
 @*
     The ⋮ menu of a Task, the same everywhere (UX-050a): "Actions for {id}" holding, on a Board card
-    only, a flat "Move to" list of every state, then Copy id and Copy link.
+    only, a flat "Move to" list of every state, then Copy id and Copy link, and the caller's ExtraItems.
+    Every item has an icon (design-system "Menus"); the activator has an aria-label naming the Task and no
+    hover tooltip, and a card's or row's activator is revealed on hover or focus (Reveal).
 *@
 @using Agency.Huddle.App.Components.Shared
+@using Agency.Huddle.App.Components.Shared.Dialogs
 
-<MudMenu Class="task-actions-menu">
+<MudMenu @ref="this.menu" Dense="true" Class="@this.MenuClass" Open="this.open" OpenChanged="this.OnOpenChanged">
     <ActivatorContent Context="menuContext">
-        <MudIconButton Icon="@ActionIcons.MoreActions" Size="Size.Small"
-                       aria-label="@($"Actions for {this.Id}")" OnClick="menuContext.ToggleAsync" />
+        <MudIconButton Icon="@ActionIcons.MoreActions" Size="Size.Small" Class="task-actions-button"
+                       aria-label="@MenuDialogs.ActivatorLabel(this.Id.ToString())" OnClick="menuContext.ToggleAsync" />
     </ActivatorContent>
     <ChildContent>
         @if (this.ShowMoveTo)
@@ -15,7 +18,7 @@
             <MudText Typo="Typo.overline" Class="px-4 pt-2 pb-1 mud-text-secondary">Move to</MudText>
             @foreach (TaskState state in TaskStates.All)
             {
-                <MudMenuItem OnClick="@(() => this.OnMoveTo.InvokeAsync(state))">@state.ToWire()</MudMenuItem>
+                <MudMenuItem Icon="@TaskColors.Icon(state)" OnClick="@(() => this.OnMoveTo.InvokeAsync(state))">@state.ToWire()</MudMenuItem>
             }
 
             <MudDivider />
@@ -28,6 +31,9 @@
 </MudMenu>
 
 @code {
+    private MudMenu? menu;
+    private bool open;
+
     /// <summary>The Task the menu acts on.</summary>
     [Parameter, EditorRequired]
     public TaskId Id { get; set; }
@@ -35,6 +41,13 @@
     /// <summary>Whether the "Move to" list shows (the Board card only).</summary>
     [Parameter]
     public bool ShowMoveTo { get; set; }
+
+    /// <summary>
+    /// Whether the activator is revealed on hover or focus of its card or row (design-system "Patterns worth
+    /// copying"), staying visible while the menu is open. Off for the drawer's menu, which is always visible.
+    /// </summary>
+    [Parameter]
+    public bool Reveal { get; set; }
 
     /// <summary>Raised with the chosen state.</summary>
     [Parameter]
@@ -48,7 +61,32 @@
     [Parameter]
     public EventCallback OnCopyLink { get; set; }
 
-    /// <summary>Further <c>MudMenuItem</c>s after Copy link (the detail's Make a copy and Close task).</summary>
+    /// <summary>Further <c>MudMenuItem</c>s after Copy link (the detail's Make a copy and Close task), each with an icon; a destructive one comes last after a divider.</summary>
     [Parameter]
     public RenderFragment? ExtraItems { get; set; }
+
+    /// <summary>The underlying menu, so an item that opens a dialog can close it first (<see cref="MenuDialogs"/>); <see langword="null"/> before the first render.</summary>
+    public MudMenu? Menu => this.menu;
+
+    /// <summary>The menu's classes: <c>task-actions-menu</c>, plus <c>task-actions-reveal</c> when its activator is revealed on hover, plus <c>is-open</c> while the menu is open so the activator stays visible.</summary>
+    private string MenuClass
+    {
+        get
+        {
+            List<string> classes = ["task-actions-menu"];
+            if (this.Reveal)
+            {
+                classes.Add("task-actions-reveal");
+            }
+
+            if (this.open)
+            {
+                classes.Add("is-open");
+            }
+
+            return string.Join(' ', classes);
+        }
+    }
+
+    private void OnOpenChanged(bool value) => this.open = value;
 }

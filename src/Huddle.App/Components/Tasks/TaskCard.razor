@@ -75,7 +75,7 @@
         <MudLink Href="@($"/rooms/{lastWake.RoomId}")" Class="task-card-awake-link">Woken in Room @lastWake.RoomName</MudLink>
     }
 
-    <TaskActionsMenu Id="this.Task.Id" ShowMoveTo="true" OnMoveTo="this.OnMoveTo" OnCopyId="this.OnCopyId" OnCopyLink="this.OnCopyLink" />
+    <TaskActionsMenu Id="this.Task.Id" ShowMoveTo="true" Reveal="true" OnMoveTo="this.OnMoveTo" OnCopyId="this.OnCopyId" OnCopyLink="this.OnCopyLink" />
 </div>
 
 @code {

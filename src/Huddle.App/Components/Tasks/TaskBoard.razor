@@ -52,10 +52,10 @@
         <span class="task-board-hidden-count chip-meta">@HiddenCountText(this.model.HiddenTaskCount)</span>
     }
 
-    <div class="task-board-columns">
+    <div class="task-board-columns" style="@this.GridStyle">
         @foreach ((BoardColumn column, int i) in this.model.VisibleColumns.Select((column, index) => (column, index)))
         {
-            <div class="task-board-column-header">
+            <div class="@(this.IsRail(i) ? "task-board-column-header task-board-column-header-rail" : "task-board-column-header")">
                 <span class="@StateDotClass(column)" aria-hidden="true"></span>
                 @if (this.renamingColumn == i)
                 {
@@ -64,7 +64,8 @@
                 }
                 else
                 {
-                    <span class="task-board-column-label">@column.Label</span>
+                    @* A rail draws the name vertically in the lane below; this copy stays for assistive technology. *@
+                    <span class="@(this.IsRail(i) ? "task-board-column-label visually-hidden" : "task-board-column-label")">@column.Label</span>
                 }
                 <span class="task-board-column-count">@this.ColumnCount(i).ToString(CultureInfo.InvariantCulture)</span>
                 <MudMenu Class="task-board-column-menu">
@@ -95,21 +96,30 @@
                 <div class="task-board-lane">
                     @if (this.View.Grouping.Count > 0)
                     {
-                        <div class="task-board-lane-label">@lane.Label</div>
+                        @* The page section heading (16px/600) with its count, under a Chrome line (design-system "Tasks"). *@
+                        <MudText Typo="Typo.subtitle2" HtmlTag="h2" Class="group-heading task-board-lane-heading">
+                            <span class="task-board-lane-label">@lane.Label</span>
+                            <span class="task-board-lane-count">@lane.Cells.Sum(static cell => cell.Items.Count).ToString(CultureInfo.InvariantCulture)</span>
+                        </MudText>
                         @if (this.OrphanTeamOf(lane) is { } orphan)
                         {
                             <StatusChip Color="Color.Warning" Icon="@Icons.Material.Filled.Warning" Class="task-orphan-team-chip">No teammate is in @orphan</StatusChip>
                         }
                     }
 
-                    <div class="task-board-lane-columns">
+                    <div class="task-board-lane-columns" style="@this.GridStyle">
                         @for (int i = 0; i < lane.Cells.Count; i++)
                         {
                             BoardCell cell = lane.Cells[i];
-                            <div class="task-board-column">
-                                @if (cell.Items.Count == 0 && !this.dragging)
+                            <div class="@(this.IsRail(i) ? "task-board-column task-board-column-rail" : "task-board-column")">
+                                @if (this.IsRail(i))
                                 {
-                                    @* Drawn over the empty zone and ignoring the pointer, so the zone stays a drop target. *@
+                                    @* An empty terminal column: its name, running down the 40px rail. The header above holds the count. *@
+                                    <span class="task-board-rail-label" aria-hidden="true">@cell.Column.Label</span>
+                                }
+                                else if (cell.Items.Count == 0 && !this.dragging && this.ShowsEmptyLine(lane, i))
+                                {
+                                    @* Drawn over the empty zone and ignoring the pointer, so the zone stays a drop target. Only a column that is empty in every lane says so (audit B4c). *@
                                     <span class="task-board-column-empty">@EmptyText(cell.Column)</span>
                                 }
                                 @if (cell.Column.States.Count == 1)
@@ -376,12 +386,39 @@
 
     /// <summary>The class of the 8px state dot that opens a column header: the colour of the column's first state (the same mapping as a Task link's dot), plus a dashed hollow modifier for Backlog so it differs from To Do now that both are Default.</summary>
     /// <param name="column">The column.</param>
-    private static string StateDotClass(BoardColumn column)
-    {
-        Color colour = column.States.Count > 0 ? TaskColors.For(column.States[0]) : Color.Default;
-        string classes = string.Create(CultureInfo.InvariantCulture, $"task-state-dot task-state-dot-{colour.ToString().ToLowerInvariant()}");
-        return column.States.Count > 0 && column.States[0] == TaskState.Backlog ? $"{classes} task-state-dot-backlog" : classes;
-    }
+    private static string StateDotClass(BoardColumn column) =>
+        column.States.Count > 0 ? TaskStateDot.ClassFor(column.States[0]) : "task-state-dot task-state-dot-default";
+
+    /// <summary>The narrowest and widest a column grows (design-system "Tasks": a column is 260-300px).</summary>
+    private const string ColumnTrack = "minmax(260px, 300px)";
+
+    /// <summary>The width of a collapsed column: a rail holding the state dot, the count and the name.</summary>
+    private const string RailTrack = "40px";
+
+    /// <summary>
+    /// Whether the visible column at <paramref name="columnIndex"/> collapses to a 40px rail (audit B4a): every state in it is
+    /// terminal (Done, or the Won't do family) and it holds no Task in any lane. It opens while a drag is in progress, so
+    /// its ghost buckets can take a drop, and while it is being renamed.
+    /// </summary>
+    /// <param name="columnIndex">The column's index among the visible columns.</param>
+    private bool IsRail(int columnIndex) =>
+        !this.dragging
+        && this.renamingColumn != columnIndex
+        && this.model.VisibleColumns[columnIndex].States is { Count: > 0 } states
+        && states.All(static state => state.IsTerminal())
+        && this.ColumnCount(columnIndex) == 0;
+
+    /// <summary>The <c>grid-template-columns</c> the header row and every lane share, so a header cell stays above the cards it describes: a rail is 40px and any other column 260-300px.</summary>
+    private string GridStyle =>
+        "grid-template-columns: "
+        + string.Join(' ', Enumerable.Range(0, this.model.VisibleColumns.Count).Select(index => this.IsRail(index) ? RailTrack : ColumnTrack))
+        + ";";
+
+    /// <summary>Whether the empty line shows in <paramref name="lane"/>'s cell of the column at <paramref name="columnIndex"/>: only when the column is empty in every lane, and then once, in the first lane (audit B4c).</summary>
+    /// <param name="lane">The lane being drawn.</param>
+    /// <param name="columnIndex">The column's index among the visible columns.</param>
+    private bool ShowsEmptyLine(BoardLane lane, int columnIndex) =>
+        this.ColumnCount(columnIndex) == 0 && ReferenceEquals(lane, this.model.Lanes[0]);
 
     /// <summary>The line an empty column shows, worded for the column's state: "Nothing done yet." for Done.</summary>
     /// <param name="column">The column.</param>

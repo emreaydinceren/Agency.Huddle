@@ -65,11 +65,8 @@ public sealed class TaskSprintViewsTests
 
         IRenderedComponent<ContainerFragment> cut = RenderList(ctx, harness, ListView(grouping: [TaskGroupField.Sprint]), [old, current, none]);
 
-        string markup = cut.Markup;
-        int newest = markup.IndexOf("Auth hardening (1)", StringComparison.Ordinal);
-        int oldest = markup.IndexOf("Sprint 1 (1)", StringComparison.Ordinal);
-        int noSprint = markup.IndexOf("No sprint (1)", StringComparison.Ordinal);
-        Assert.True(newest >= 0 && oldest > newest && noSprint > oldest, $"group order was {newest}, {oldest}, {noSprint}");
+        Assert.Equal(["Auth hardening", "Sprint 1", "No sprint"], cut.FindAll(".task-group-label").Select(label => label.TextContent.Trim()));
+        Assert.Equal(["1", "1", "1"], cut.FindAll(".task-group-count").Select(count => count.TextContent.Trim()));
     }
 
     /// <summary>A group by a Sprint that is not in the file reads <c>S9 (missing)</c> (spec §11.4).</summary>
@@ -82,7 +79,8 @@ public sealed class TaskSprintViewsTests
 
         IRenderedComponent<ContainerFragment> cut = RenderList(ctx, harness, ListView(grouping: [TaskGroupField.Sprint]), [orphan]);
 
-        Assert.Contains("S9 (missing) (1)", cut.Markup, StringComparison.Ordinal);
+        Assert.Equal("S9 (missing)", cut.Find(".task-group-label").TextContent.Trim());
+        Assert.Equal("1", cut.Find(".task-group-count").TextContent.Trim());
     }
 
     /// <summary>A card shows the Sprint's name as a field when the View names <c>sprint</c>, and <c>S9 (missing)</c> with a warning icon for an unresolved one (spec §12.2).</summary>

@@ -317,12 +317,12 @@ public sealed class TaskDetailFieldsTests
         Assert.Equal(picked, cut.FindComponents<MudDatePicker>().Single(m => string.Equals(m.Instance.Class, cssClass, StringComparison.Ordinal)).Instance.Date);
     }
 
-    /// <summary>Start and Due each display through their picker's own <c>yyyy-MM-dd</c> format (Settled J53, one date format across the Tasks UI).</summary>
+    /// <summary>Start and Due each display through their picker's own <c>MMM d, yyyy</c> format, never an ISO date (design-system "Dates and times", audit B4q); the stored value stays <c>yyyy-MM-dd</c>.</summary>
     /// <param name="mode">Both entry points.</param>
     /// <param name="which">"start" or "due".</param>
     [Theory]
     [MemberData(nameof(TaskDetailFieldsTestSupport.BothModesTimesDateFields), MemberType = typeof(TaskDetailFieldsTestSupport))]
-    public async Task Dates_StartAndDue_UseTheInvariantYmdPickerFormat(TaskDetailMode mode, string which)
+    public async Task Dates_StartAndDue_UseTheReadablePickerFormat(TaskDetailMode mode, string which)
     {
         using TaskToolHarness harness = new();
         TaskItem task = CreateTask(harness);
@@ -332,7 +332,7 @@ public sealed class TaskDetailFieldsTests
 
         IRenderedComponent<MudDatePicker> picker = cut.FindComponents<MudDatePicker>().Single(m => string.Equals(m.Instance.Class, cssClass, StringComparison.Ordinal));
 
-        Assert.Equal("yyyy-MM-dd", picker.Instance.GetState(x => x.DateFormat));
+        Assert.Equal("MMM d, yyyy", picker.Instance.GetState(x => x.DateFormat));
     }
 
     /// <summary>A past Due date on a non-terminal Task gets the <c>task-overdue</c> class and a warning adornment (Spec §13.6).</summary>

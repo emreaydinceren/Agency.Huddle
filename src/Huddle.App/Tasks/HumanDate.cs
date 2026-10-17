@@ -27,6 +27,21 @@ internal static class HumanDate
         };
     }
 
+    /// <summary>
+    /// The form for a date in a table column (design-system "Dates and times"): the same as <see cref="Format(DateOnly, DateOnly)"/>,
+    /// except that a date two to six days ahead reads <c>MMM d</c> and never a weekday, so a column does not read
+    /// "Tue, Wed, Mon, Thu". "Today", "Tomorrow" and "Yesterday" stay, and another year keeps its year.
+    /// </summary>
+    /// <param name="date">The date to show.</param>
+    /// <param name="today">The local date that counts as today.</param>
+    public static string FormatColumn(DateOnly date, DateOnly today)
+    {
+        int offset = date.DayNumber - today.DayNumber;
+        return offset is >= 2 and <= 6
+            ? date.ToString("MMM d", CultureInfo.InvariantCulture)
+            : Format(date, today);
+    }
+
     /// <summary>The full form for a tooltip, such as <c>Tue, Oct 27, 2026</c>.</summary>
     /// <param name="date">The date to show.</param>
     public static string Full(DateOnly date) => date.ToString("ddd, MMM d, yyyy", CultureInfo.InvariantCulture);

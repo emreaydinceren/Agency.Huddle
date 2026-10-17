@@ -14,7 +14,7 @@ using static Agency.Huddle.Tests.Ui.Tasks.TaskDetailFieldsTestSupport;
 /// </summary>
 public sealed class TaskDetailFormLayoutTests
 {
-    /// <summary>The form is four <c>subtitle2</c> headings, in order: Status and priority, People, Planning, Dates.</summary>
+    /// <summary>The form is four Group labels (12px/600, Quiet ink), in order: Status and priority, People, Planning, Dates (audit B4i).</summary>
     /// <param name="mode">Both entry points.</param>
     [Theory]
     [MemberData(nameof(TaskDetailFieldsTestSupport.BothModesData), MemberType = typeof(TaskDetailFieldsTestSupport))]
@@ -25,10 +25,10 @@ public sealed class TaskDetailFormLayoutTests
         await using MudBunitContext ctx = NewContext(harness);
         var cut = RenderDetail(ctx, task.Id, mode);
 
-        string[] headings = [.. cut.FindAll(".task-detail-group > .group-heading").Select(h => h.TextContent.Trim())];
+        string[] headings = [.. cut.FindAll(".task-detail-group > .group-label").Select(h => h.TextContent.Trim())];
 
         Assert.Equal(["Status and priority", "People", "Planning", "Dates"], headings);
-        Assert.All(cut.FindAll(".task-detail-group > .group-heading"), h => Assert.True(h.ClassList.Contains("mud-typography-subtitle2")));
+        Assert.Empty(cut.FindAll(".task-detail-group > .group-heading"));
     }
 
     /// <summary>The properties sit in the grid class the container query turns into a two-column label | value layout.</summary>

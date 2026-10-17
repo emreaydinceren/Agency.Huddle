@@ -17,9 +17,9 @@ namespace Agency.Huddle.Tests.Ui.Tasks;
 /// </summary>
 public sealed class TasksPageViewMenuTests
 {
-    private const string RenameLabel = "Rename";
+    private const string RenameLabel = "Rename…";
     private const string FieldsLabel = "Fields…";
-    private const string DeleteLabel = "Delete view";
+    private const string DeleteLabel = "Delete view…";
 
     /// <summary>A saved, non-built-in View gets both actions in the MoreVert menu beside its title.</summary>
     [Fact]
@@ -65,7 +65,7 @@ public sealed class TasksPageViewMenuTests
         await OpenMenuAsync(cut);
         Task deleting = await OpenDeleteDialogAsync(cut);
 
-        Assert.Equal("Delete 'Sprint Board'?", cut.Find(".mud-dialog-title").TextContent.Trim());
+        Assert.Equal("Delete \"Sprint Board\"?", cut.Find(".mud-dialog-title").TextContent.Trim());
         Assert.Equal("This removes the View. Tasks are not affected.", cut.Find(".mud-dialog-content").TextContent.Trim());
         Assert.Equal(["Cancel", "Delete"], cut.FindAll(".mud-dialog-actions button").Select(b => b.TextContent.Trim()).ToList());
 
@@ -133,7 +133,7 @@ public sealed class TasksPageViewMenuTests
         ctx.Services.AddSingleton(broken);
         IRenderedComponent<ContainerFragment> cut = RenderPage(ctx, ViewStore.AllTasksId);
 
-        Assert.Empty(cut.FindAll(".tasks-header button[aria-label='View actions']"));
+        Assert.Empty(cut.FindAll(".tasks-header button[aria-label^='Actions for ']"));
     }
 
     /// <summary>Registers the harness's services into a fresh <see cref="MudBunitContext"/>.</summary>
@@ -179,7 +179,7 @@ public sealed class TasksPageViewMenuTests
     /// <summary>Clicks the title row's View actions button, opening the menu.</summary>
     private static async Task OpenMenuAsync(IRenderedComponent<ContainerFragment> cut)
     {
-        await cut.InvokeAsync(() => cut.Find(".tasks-header button[aria-label='View actions']").ClickAsync());
+        await cut.InvokeAsync(() => cut.Find(".tasks-header button[aria-label^='Actions for ']").ClickAsync());
     }
 
     /// <summary>The menu item whose label is <paramref name="label"/>.</summary>

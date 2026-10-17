@@ -234,7 +234,7 @@ public sealed class TaskDetailConflictTests
         TaskItem task = CreateTask(harness);
         await using MudBunitContext ctx = NewContext(harness);
         var cut = RenderPanel(ctx, task.Id);
-        IRenderedComponent<MudTextField<string>> descriptionField = cut.FindComponents<MudTextField<string>>().Single(m => string.Equals(m.Instance.Class, "task-detail-description", StringComparison.Ordinal));
+        IRenderedComponent<MudTextField<string>> descriptionField = cut.FindComponents<MudTextField<string>>().Single(m => m.Instance.Class?.Contains("task-detail-description-field", StringComparison.Ordinal) is true);
         await cut.InvokeAsync(() => descriptionField.Instance.ValueChanged.InvokeAsync("Mine: some plan."));
 
         harness.Service.Update(

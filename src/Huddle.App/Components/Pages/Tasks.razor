@@ -54,7 +54,7 @@
 @inject IDialogService DialogService
 @inject NavigationManager Navigation
 
-<MudContainer MaxWidth="MaxWidth.False" Class="pa-4 pt-2">
+<MudContainer MaxWidth="MaxWidth.False" Class="pa-4">
     <WakeToasts OnOpenTask="this.OnOpenTaskAsync" />
     @if (!this.Options.Value.Tasks.Enabled)
     {
@@ -78,8 +78,11 @@
     }
     else
     {
-        @* The View's name is the breadcrumb's last crumb, so the page has no h1 of its own; PageTitle still sets the document title. *@
-        <PageTitle>@this.effectiveView.Name</PageTitle>
+        @* The page header: the View's display name is the h1 (the breadcrumb holds only "Tasks"), and "New task" is its create action,
+           filled because it is the page's one primary action (audit B1). The document title follows the Tab's title instead (audit E2). *@
+        <PageHeader Title="@this.effectiveView.Name" CreateText="New task" CreateIcon="@Icons.Material.Filled.Add"
+                    OnCreate="this.OnCreateClickedAsync" SetPageTitle="false" />
+        <PageTitle>@this.DocumentTitle</PageTitle>
 
         @if (this.Views.LoadError is { } loadError)
         {
@@ -123,12 +126,13 @@
         <div class="tasks-header">
             <TaskToolbar EffectiveView="this.effectiveView" EffectiveViewChanged="this.OnEffectiveViewChangedAsync"
                          Search="@this.search" SearchChanged="this.OnSearchChangedAsync"
-                         OnNewTask="this.OnNewTaskAsync" SplitHeader="true">
+                         SplitHeader="true">
                 <HeaderLeading>
                     @* Wireframe counts: open and need-you are over the Tasks this View shows (the search included); all is every Task in the store. *@
                     <div class="tasks-counts" role="status">
                         <span class="tasks-count-open"><strong>@this.OpenCount</strong> open</span>
-                        <span class="tasks-count-need-you"><strong>@this.NeedYouCount</strong> need you</span>
+                        @* A count wears its signal only above 0 (audit B4e). *@
+                        <span class="@(this.NeedYouCount > 0 ? "tasks-count-need-you" : "tasks-count-need-you is-zero")"><strong>@this.NeedYouCount</strong> need you</span>
                         <span class="tasks-count-all"><strong>@this.Store.All.Count</strong> all</span>
                     </div>
                 </HeaderLeading>
@@ -139,20 +143,20 @@
                     @* The View's own actions (T2a), the same MoreVert menu as the sidebar row: Rename and Fields for every
                        View, Delete only for a non-built-in one (ViewStore.Delete refuses the two built-ins).
                        Disabled while views.json cannot be read, since the store refuses every write then. *@
-                    <MudMenu Class="tasks-view-menu">
+                    <MudMenu @ref="this.viewMenu" Dense="true" Class="tasks-view-menu">
                         <ActivatorContent Context="menuContext">
-                            @* Opens to the left: centred under a button this close to the right edge, the tooltip would overshoot the viewport and add a horizontal scrollbar, which shifts the page and flickers the tooltip. *@
-                            <MudTooltip Text="View actions" Placement="Placement.Left">
-                                <MudIconButton Icon="@Icons.Material.Filled.MoreVert" Size="Size.Small" aria-label="View actions"
-                                               Disabled="@(this.Views.LoadError is not null)" OnClick="menuContext.ToggleAsync" />
-                            </MudTooltip>
+                            @* No hover tooltip: it would stay up over the menu's first item. The activator names the View instead (design-system "Menus"). *@
+                            <MudIconButton Icon="@Icons.Material.Filled.MoreVert" Size="Size.Small" aria-label="@MenuDialogs.ActivatorLabel(this.effectiveView.Name)"
+                                           Disabled="@(this.Views.LoadError is not null)" OnClick="menuContext.ToggleAsync" />
                         </ActivatorContent>
                         <ChildContent>
-                            <MudMenuItem OnClick="this.OnRenameClickedAsync">Rename</MudMenuItem>
+                            @* Every item opens a dialog, so each ends in "…" and the menu closes before the dialog opens. None has an icon, so all are alike; Delete view… is last, after a divider, in Error ink. *@
+                            <MudMenuItem OnClick="this.OnRenameClickedAsync">Rename…</MudMenuItem>
                             <MudMenuItem OnClick="this.OnFieldsClickedAsync">Fields…</MudMenuItem>
                             @if (!this.effectiveView.BuiltIn)
                             {
-                                <MudMenuItem OnClick="this.DeleteViewAsync">Delete view</MudMenuItem>
+                                <MudDivider />
+                                <MudMenuItem Class="task-menu-item-destructive" OnClick="this.DeleteViewAsync">Delete view…</MudMenuItem>
                             }
                         </ChildContent>
                     </MudMenu>
@@ -203,12 +207,22 @@
 
         <ResizableEndDrawer Open="this.detailOpen" OpenChanged="this.OnDetailOpenChanged" StorageKey="taskDetailPanelWidth"
                             Title="@this.DetailTitle" Eyebrow="@this.DetailEyebrow"
-                            OverlayAutoClose="@(!this.detailHasPending)" Class="tasks-detail-drawer">
-            @if (this.selectedTaskId is not null || this.selectedDraft is not null)
-            {
-                <TaskDetail @ref="this.detail" @key="this.DetailKey" Id="this.selectedTaskId" Draft="this.selectedDraft"
-                            Mode="TaskDetailMode.Panel" OnClose="this.OnDetailClosed" HasPendingChanged="this.OnDetailHasPendingChanged" />
-            }
+                            OverlayAutoClose="@(!this.detailHasPending)" ShowFooter="@this.FooterVisible"
+                            Class="@(this.titleEditing ? "tasks-detail-drawer is-title-editing" : "tasks-detail-drawer")">
+            <ChildContent>
+                @if (this.selectedTaskId is not null || this.selectedDraft is not null)
+                {
+                    <TaskDetail @ref="this.detail" @key="this.DetailKey" Id="this.selectedTaskId" Draft="this.selectedDraft"
+                                Mode="TaskDetailMode.Panel" OnClose="this.OnDetailClosed" HasPendingChanged="this.OnDetailHasPendingChanged"
+                                ExternalFooter="true" FooterStateChanged="this.OnFooterStateChanged" TitleEditingChanged="this.OnTitleEditingChanged" />
+                }
+            </ChildContent>
+            <Footer>
+                @* Cancel, then the one filled primary action, in the drawer's sticky footer while there are changes (audit B4k). *@
+                <MudButton Variant="Variant.Text" Size="Size.Small" Class="task-detail-cancel" OnClick="this.OnFooterCancelAsync">Cancel</MudButton>
+                <MudButton Variant="Variant.Filled" Size="Size.Small" Color="Color.Primary" Class="task-detail-save" OnClick="this.OnFooterSaveAsync"
+                           Disabled="@(this.detail?.FooterSaveDisabled ?? true)">@(this.detail?.FooterSaveLabel ?? "Save")</MudButton>
+            </Footer>
         </ResizableEndDrawer>
     }
 
@@ -233,6 +247,8 @@
     private TaskDraft? selectedDraft;
     private TaskDetail? detail;
     private bool detailHasPending;
+    private bool titleEditing;
+    private MudMenu? viewMenu;
 
     /// <summary>Subscribes to the three hubs Spec §13.2 (narrowed by corrections-B4 D11 item 9) names.</summary>
     protected override void OnInitialized()
@@ -347,6 +363,7 @@
         this.selectedDraft = null;
         this.selectedTaskId = parsed;
         this.detailHasPending = false;
+        this.titleEditing = false;
         this.detailOpen = true;
     }
 
@@ -358,14 +375,16 @@
     [CascadingParameter]
     public TabPageContext? Page { get; set; }
 
-    /// <summary>The title menu's <i>Rename</i>: opens the rename dialog for the effective View; the page follows the saved name through <c>ViewsChanged</c>.</summary>
-    private Task OnRenameClickedAsync() => ViewActions.RenameAsync(this.DialogService, this.Views, this.effectiveView.Id);
+    /// <summary>The title menu's <i>Rename…</i>: closes the menu, then opens the rename dialog for the effective View; the page follows the saved name through <c>ViewsChanged</c>.</summary>
+    private Task OnRenameClickedAsync() =>
+        MenuDialogs.AfterClosingAsync(this.viewMenu, () => ViewActions.RenameAsync(this.DialogService, this.Views, this.effectiveView.Id));
 
-    /// <summary>The title menu's <i>Fields…</i>: opens <see cref="FieldsDialog"/> for the effective View's saved copy.</summary>
-    private async Task OnFieldsClickedAsync()
+    /// <summary>The title menu's <i>Fields…</i>: closes the menu, then opens <see cref="FieldsDialog"/> for the effective View's saved copy, titled "Fields in {View}".</summary>
+    private Task OnFieldsClickedAsync()
     {
         DialogParameters<FieldsDialog> parameters = new() { { dialog => dialog.ViewId, this.effectiveView.Id } };
-        _ = await this.DialogService.ShowAsync<FieldsDialog>("Fields", parameters, HuddleDialogOptions.SmallForm);
+        string title = $"Fields in {this.effectiveView.Name}";
+        return MenuDialogs.AfterClosingAsync(this.viewMenu, () => this.DialogService.ShowAsync<FieldsDialog>(title, parameters, HuddleDialogOptions.SmallForm));
     }
 
     /// <summary>
@@ -377,7 +396,7 @@
     private async Task DeleteViewAsync()
     {
         TaskView view = this.effectiveView;
-        if (!await ViewActions.ConfirmDeleteAsync(this.DialogService, view))
+        if (!await MenuDialogs.AfterClosingAsync(this.viewMenu, () => ViewActions.ConfirmDeleteAsync(this.DialogService, view)))
         {
             return;
         }
@@ -498,7 +517,16 @@
         this.selectedDraft = null;
         this.selectedTaskId = id;
         this.detailHasPending = false;
+        this.titleEditing = false;
         this.detailOpen = true;
+    }
+
+    /// <summary>The page header's "New task" button: opens the drawer's create mode with the Team and Project the effective View's filter names.</summary>
+    /// <param name="args">The click, unused.</param>
+    private Task OnCreateClickedAsync(MouseEventArgs args)
+    {
+        _ = args;
+        return this.OnNewTaskAsync(NewTaskDefaults.For(this.effectiveView));
     }
 
     /// <summary>"+ New task" (the header button, Spec §13.3): opens the drawer's <see cref="TaskDetail"/> in create mode with <paramref name="defaults"/>.</summary>
@@ -513,6 +541,7 @@
         this.selectedTaskId = null;
         this.selectedDraft = new TaskDraft(string.Empty, defaults.Team ?? string.Empty, defaults.Project);
         this.detailHasPending = false;
+        this.titleEditing = false;
         this.detailOpen = true;
     }
 
@@ -536,6 +565,11 @@
     private void OnDetailOpenChanged(bool open)
     {
         this.detailOpen = open;
+        if (!open)
+        {
+            this.titleEditing = false;
+        }
+
         if (!open && this.TaskIdText is not null)
         {
             this.Navigation.NavigateTo($"/tasks/{this.effectiveView.Id}", replace: true);
@@ -551,6 +585,28 @@
     /// </summary>
     /// <param name="hasPending">Whether <see cref="TaskDetail"/> now has an unsaved edit pending.</param>
     private void OnDetailHasPendingChanged(bool hasPending) => this.detailHasPending = hasPending;
+
+    /// <summary>Whether the drawer's footer (Cancel and Save) shows: while the open Task has changes, and for a new draft. It follows the mounted <see cref="TaskDetail"/>, which tells the page through <c>FooterStateChanged</c> when that changes.</summary>
+    private bool FooterVisible => this.detail?.FooterVisible ?? this.selectedDraft is not null;
+
+    /// <summary>The detail's footer state changed (changes appeared or were saved, the Save label or its enabled state moved): draw the footer again.</summary>
+    private void OnFooterStateChanged() => this.StateHasChanged();
+
+    /// <summary>The inline title edit opened or closed: while it is open the drawer's own copy of a saved Task's title is hidden, so the field replaces it (audit B4j).</summary>
+    /// <param name="editing">Whether a saved Task's title is being edited.</param>
+    private void OnTitleEditingChanged(bool editing) => this.titleEditing = editing;
+
+    /// <summary>The footer's Cancel: discards the edits and closes the drawer, as the detail's own Cancel does.</summary>
+    private Task OnFooterCancelAsync() => this.detail is { } open ? open.CancelAsync() : Task.CompletedTask;
+
+    /// <summary>The footer's Save: saves the open Task or creates the draft.</summary>
+    private Task OnFooterSaveAsync() => this.detail is { } open ? open.SaveAsync() : Task.CompletedTask;
+
+    /// <summary>
+    /// The document title (audit E2): the Tab's title, so the browser's tab and the Tab strip agree. A Task's item route is "Task {id}", as
+    /// <c>TabKeys.Describe</c> names it; every other route is the View's display name, which is the Tab's title too.
+    /// </summary>
+    private string DocumentTitle => this.TaskIdText is { } id ? $"Task {id}" : this.effectiveView.Name;
 
     /// <summary>
     /// <see cref="TaskDetail"/> only loads its <see cref="TaskDetail.Id"/>/<see cref="TaskDetail.Draft"/>

@@ -2687,11 +2687,11 @@ a.team-ref,
 /* ---- Board layout (Spec §13.4, §13.10) --------------------------------------------------------
    The Board is a header row (.task-board-columns) followed by one horizontal band per lane
    (.task-board-lane). A lane is flex-column, not grid: its label (rendered only when the View
-   groups) must span the full width above its cards, not be squeezed into a 310px grid track the
-   way a card would be. The actual row of fixed-width columns - both the header's and every
-   lane's - is CSS grid (the Spec's snippet said minmax(240px, 1fr); columns are now a fixed 310px, so
-   a wide page leaves free space on the right instead of stretching them): .task-board-columns and
-   .task-board-lane-columns share the exact same grid-auto-columns function, so their tracks land
+   groups) must span the full width above its cards, not be squeezed into a column's grid track the
+   way a card would be. The actual row of columns - both the header's and every
+   lane's - is CSS grid (a column is 260-300px, and an empty terminal column is a 40px rail, so the
+   page leaves free space on the right instead of stretching them): .task-board-columns and
+   .task-board-lane-columns share the exact same grid-template-columns (set inline by TaskBoard), so their tracks land
    at identical x offsets and a header cell sits directly above the cards it describes. The board
    itself scrolls inside the pane in both directions (OP-3, UX-007): it is capped to the pane's height
    (a viewport unit), which puts its horizontal scrollbar at the pane's bottom
@@ -2712,7 +2712,8 @@ a.team-ref,
 .task-board-lane-columns {
     display: grid;
     grid-auto-flow: column;
-    grid-auto-columns: 310px;
+    grid-auto-columns: minmax(260px, 300px);
+    justify-content: start;
     column-gap: 8px;
 }
 
@@ -2722,6 +2723,16 @@ a.team-ref,
     align-items: center;
     gap: 8px;
     padding: 8px 8px 8px 0;
+}
+
+/* An empty terminal column's header (audit B4a): the 40px rail's top, the dot, the count and the menu stacked and centred. The name is drawn
+   vertically in the lane below (.task-board-rail-label); the header's own copy is visually hidden. */
+.task-board-column-header.task-board-column-header-rail {
+    flex-direction: column;
+    flex-wrap: nowrap;
+    justify-content: flex-start;
+    gap: 4px;
+    padding: 8px 0;
 }
 
 /* S4: the state colour, shown once, as an 8px dot first in the column header (the card has no coloured edge).
@@ -2786,9 +2797,21 @@ a.team-ref,
     margin-bottom: 12px;
 }
 
-.task-board-lane-label {
-    font-weight: 600;
+/* A swimlane label (audit B4b): the page section heading (.group-heading, 16px/600) with its count, over a Chrome line
+   instead of the Rule rung the heading draws elsewhere. The count is 12px in Quiet ink. */
+.task-board-lane-heading.group-heading {
+    display: flex;
+    align-items: baseline;
+    gap: 8px;
+    margin: 0;
     padding: 4px 0;
+    border-bottom: 1px solid var(--mud-palette-lines-default);
+}
+
+.task-board-lane-count {
+    color: var(--mud-palette-text-secondary);
+    font-size: var(--mud-typography-caption-size);
+    font-weight: 400;
 }
 
 /* A column is a Surface lane with a Divider hairline and the card radius: it reads in Light without the heavy gray
@@ -2801,6 +2824,30 @@ a.team-ref,
     background-color: var(--mud-palette-surface);
     border: 1px solid var(--ink-edge);
     border-radius: var(--mud-default-borderradius);
+}
+
+/* An empty terminal column (audit B4a): a 40px rail. Its name runs down it, 13px/600, over the drop zone, which stays beneath so the rail still
+   takes a drop; the count is in the header above. */
+.task-board-column.task-board-column-rail {
+    min-width: 0;
+}
+
+.task-board-column-rail .mud-drop-zone {
+    min-height: 7rem;
+    padding: 0;
+}
+
+.task-board-rail-label {
+    position: absolute;
+    inset: 8px 0 auto 0;
+    display: flex;
+    justify-content: center;
+    writing-mode: vertical-rl;
+    pointer-events: none;
+    font-size: var(--mud-typography-body2-size);
+    font-weight: 600;
+    color: var(--mud-palette-text-secondary);
+    white-space: nowrap;
 }
 
 /* Every zone - a single-state column, a multi-state display zone, or a ghost bucket's own
@@ -2882,6 +2929,34 @@ a.team-ref,
     position: absolute;
     top: 0.25rem;
     right: 0.25rem;
+}
+
+/* The ⋮ of a card or a List row is revealed on hover or focus (audit B4d, design-system "Patterns worth copying"), like the Room list's. It stays in
+   the DOM and the tab order, shows while its menu is open, and shows at once on a device with no hover. */
+.task-actions-reveal .task-actions-button {
+    opacity: 0;
+    transition: opacity 120ms ease;
+}
+
+.task-card:hover .task-actions-reveal .task-actions-button,
+.task-card:focus-within .task-actions-reveal .task-actions-button,
+.mud-table-row:hover .task-actions-reveal .task-actions-button,
+.mud-table-row:focus-within .task-actions-reveal .task-actions-button,
+.task-actions-reveal.is-open .task-actions-button,
+.task-actions-reveal .task-actions-button:focus-visible {
+    opacity: 1;
+}
+
+@media (hover: none) {
+    .task-actions-reveal .task-actions-button {
+        opacity: 1;
+    }
+}
+
+/* A destructive menu item (Close task…) is last, after a divider, in Error ink: the error colour mixed 70% toward body text, as the overdue date is. */
+.mud-menu-item.task-menu-item-destructive,
+.mud-menu-item.task-menu-item-destructive .mud-icon-root {
+    color: color-mix(in srgb, var(--mud-palette-error) 70%, var(--mud-palette-text-primary));
 }
 
 .task-card-title {
@@ -3213,12 +3288,12 @@ a.team-ref,
 }
 
 .view-editor-field-row > .mud-switch {
-    flex: 0 0 auto;
+    flex: 1 1 auto;
+    min-width: 0;
     margin: 0;
 }
 
-.view-editor-field-row > .mud-typography {
-    flex: 1 1 auto;
+.view-editor-field-row > .mud-switch .mud-typography {
     min-width: 0;
     overflow: hidden;
     text-overflow: ellipsis;
@@ -3733,8 +3808,9 @@ a.team-ref,
     font-weight: 600;
 }
 
-/* "need you" is the warning colour mixed toward body text so it keeps 4.5:1 on the page; the number stays body colour. */
-.tasks-count-need-you {
+/* "need you" is the warning colour mixed toward body text so it keeps 4.5:1 on the page; the number stays body colour.
+   A count wears its signal only above 0 (audit B4e), so a zero ("is-zero") reads as the other counts do. */
+.tasks-count-need-you:not(.is-zero) {
     color: color-mix(in srgb, var(--mud-palette-warning) 70%, var(--mud-palette-text-primary));
 }
 
@@ -3750,13 +3826,19 @@ a.team-ref,
     color: var(--mud-palette-text-secondary);
 }
 
+/* The toolbar's filter chip is the Filter chip (audit A6, design-system "Chips"): a 28px pill, a dashed Field line and no fill while unset; the
+   Accent border, the Accent tint at 14% and the Accent ink at 500 once set. It wears the same values as .mud-chip.filter-chip, which a MudChip
+   gets from the global rule and this wrapper (a span around a button and a menu) cannot. */
 .task-filter-chip {
+    box-sizing: border-box;
     display: inline-flex;
     align-items: center;
     flex: none;
+    height: 28px;
     margin-right: 8px;
     border: 1px solid var(--ink-field);
     border-radius: 999px;
+    background-color: transparent;
 }
 
 .task-filter-chip-unset {
@@ -3765,13 +3847,43 @@ a.team-ref,
 
 .task-filter-chip-set {
     border-color: var(--mud-palette-primary);
-    background: var(--mud-palette-primary-hover);
+    background-color: color-mix(in srgb, var(--mud-palette-primary) 14%, var(--mud-palette-surface));
 }
 
 .task-filter-chip .task-filter-chip-button {
+    height: 100%;
+    min-height: 0;
+    padding: 0 12px;
     border: 0;
     border-radius: 999px;
     text-transform: none;
+    font-size: var(--mud-typography-body2-size);
+    font-weight: 400;
+    color: var(--mud-palette-text-primary);
+}
+
+.task-filter-chip-set .task-filter-chip-button {
+    font-weight: 500;
+    color: color-mix(in srgb, var(--mud-palette-primary) 70%, var(--mud-palette-text-primary));
+}
+
+/* Both toolbar rows are one height (audit A7): the controls are 28px boxes, so the row reads level. */
+.task-toolbar .mud-icon-button,
+.task-toolbar-header .mud-icon-button {
+    width: 28px;
+    height: 28px;
+    padding: 4px;
+}
+
+.task-toolbar .btn-action-tight,
+.task-toolbar-header .btn-action-tight {
+    height: 28px;
+    min-height: 0;
+}
+
+.task-toolbar .task-toolbar-dense {
+    height: 28px;
+    margin: 0;
 }
 
 /* A chip without a menu draws its text with the same button but must not answer the pointer or look pressable. */
@@ -3802,7 +3914,10 @@ a.team-ref,
 }
 
 .task-filter-chip .task-filter-chip-clear {
+    width: 22px;
+    height: 22px;
     margin-right: 2px;
+    padding: 2px;
 }
 
 /* A Library document's rendered Markdown. The global reset zeroes block margins, so without these the paragraphs of a Teammate definition run together. */
@@ -4221,6 +4336,30 @@ a.team-ref,
 
 .mud-table.task-list-grid.mud-table-dense .mud-table-body .mud-table-row .mud-table-cell {
     height: 32px;
+}
+
+/* A group row (audit B4f, design-system "Tasks"): Ground, not MudBlazor's Background-gray band, with a 13px/600 label, a 24px avatar for an
+   assignee group and a 12px Quiet-ink count. The row line below it is the table's Edge line. */
+.mud-data-grid.task-list-grid .mud-table-cell.mud-datagrid-group {
+    background-color: var(--mud-palette-surface);
+}
+
+.task-group-heading {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.task-group-label {
+    font-size: var(--mud-typography-body2-size);
+    font-weight: 600;
+    color: var(--mud-palette-text-primary);
+}
+
+.task-group-count {
+    font-size: var(--mud-typography-caption-size);
+    font-weight: 400;
+    color: var(--mud-palette-text-secondary);
 }
 
 .task-list-grid thead th.task-list-id-cell {
@@ -5513,10 +5652,9 @@ a.team-ref,
     gap: 12px;
 }
 
-.task-detail-group > .group-heading {
+/* A group's heading is the Group label (audit B4i): 12px/600 in Quiet ink, so the title is the drawer's only 16px text. */
+.task-detail-group > .group-label {
     margin: 0;
-    font-size: var(--mud-typography-subtitle2-size);
-    font-weight: 600;
 }
 
 /* The title row holds the edit, copy and menu icons on the right; in the Panel the name is in the drawer header, so a spacer pushes them right. */
@@ -5531,6 +5669,71 @@ a.team-ref,
 .task-detail-title-row .task-detail-title {
     flex: 1 1 auto;
     min-width: 0;
+}
+
+/* The inline title edit keeps the title's size (audit B4j): h6, 16px/600, as the drawer's heading, with only the outline of a field, pulled left by
+   its side padding so the typed text starts where the heading's text did. While a saved Task's title is edited, the drawer's own copy is hidden. */
+.mud-input-control.task-detail-title {
+    margin: 0 0 0 -8px;
+}
+
+.task-detail-title .mud-input-slot,
+.task-detail-title .mud-input > input.mud-input-root.mud-input-root-outlined {
+    font-size: var(--mud-typography-h6-size);
+    font-weight: var(--mud-typography-h6-weight);
+    line-height: var(--mud-typography-h6-lineheight);
+    font-family: var(--mud-typography-h6-family);
+    padding: 4px 8px;
+    height: auto;
+}
+
+.tasks-detail-drawer.is-title-editing .resizable-drawer-title {
+    display: none;
+}
+
+/* The Status field is the Board's second cue, a state dot, beside the select (audit B4r). */
+.task-detail-status-field {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.task-detail-status-field .mud-input-control {
+    flex: 1 1 auto;
+    min-width: 0;
+}
+
+/* The change log is a panel with an Edge line and no shadow (audit B4l, design-system "Elevation and layering"). */
+.task-detail-changelog.mud-expansion-panels .mud-expand-panel {
+    box-shadow: none;
+    border: 1px solid var(--ink-edge);
+    border-radius: var(--mud-default-borderradius);
+}
+
+/* The Description keeps its Group label with the Edit | Preview toggle on its line, and its own floating label is visually hidden (audit B4n). */
+.task-detail-description-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    margin-bottom: 8px;
+}
+
+.task-detail-description-header .group-label {
+    margin: 0;
+}
+
+.task-detail-description-field .mud-input-label {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
+}
+
+.task-detail-description-field .mud-input-outlined-border legend {
+    display: none;
 }
 
 /* Created, Updated and Closed: 12px secondary at the bottom of the form, out of the Dates group. */
@@ -5583,6 +5786,14 @@ a.team-ref,
 
 .task-detail-prop-value .mud-input-outlined-border legend {
     display: none;
+}
+
+/* An empty optional field shows a Quiet-ink hint ("None", "Add tag…") instead of a blank box (audit B4o). */
+.task-detail-prop-value input::placeholder,
+.task-detail-prop-value textarea::placeholder,
+.task-detail-description-field textarea::placeholder {
+    color: var(--mud-palette-text-secondary);
+    opacity: 1;
 }
 
 @container task-detail (min-width: 368px) {

@@ -113,7 +113,7 @@ public sealed class TaskDetailSingleSaveTests
         TaskItem task = CreateTask(harness);
         await using MudBunitContext ctx = NewContext(harness);
         IRenderedComponent<ContainerFragment> cut = RenderDetail(ctx, task.Id, mode);
-        IRenderedComponent<MudTextField<string>> description = cut.FindComponents<MudTextField<string>>().Single(m => string.Equals(m.Instance.Class, "task-detail-description", StringComparison.Ordinal));
+        IRenderedComponent<MudTextField<string>> description = cut.FindComponents<MudTextField<string>>().Single(m => m.Instance.Class?.Contains("task-detail-description-field", StringComparison.Ordinal) is true);
         await cut.InvokeAsync(() => description.Instance.ValueChanged.InvokeAsync("Mine: some plan."));
         _ = harness.Service.Update(task.Id, new TaskPatch { Description = "Theirs: a different plan." }, baseVersion: null, new TaskActor(TaskActorKind.Agent, "Nova", null));
 
@@ -142,7 +142,7 @@ public sealed class TaskDetailSingleSaveTests
         await cut.InvokeAsync(() => cut.Find($"button[aria-label=\"Actions for {task.Id}\"]").ClickAsync());
 
         IReadOnlyList<string> items = [.. cut.FindAll(".mud-menu-item").Select(item => item.TextContent.Trim())];
-        Assert.Equal(["Copy id", "Copy link", "Make a copy", "Close task"], items);
+        Assert.Equal(["Copy id", "Copy link", "Make a copy…", "Close task…"], items);
     }
 
     /// <summary><see cref="TaskActionsMenu"/> puts its extra items (the detail's Make a copy and Close task) after Copy link.</summary>
@@ -198,7 +198,7 @@ public sealed class TaskDetailSingleSaveTests
         IRenderedComponent<ContainerFragment> cut = RenderDetail(ctx, task.Id, TaskDetailMode.Panel);
 
         await cut.InvokeAsync(() => cut.Find($"button[aria-label=\"Actions for {task.Id}\"]").ClickAsync());
-        IElement item = cut.FindAll(".mud-menu-item").Single(element => string.Equals(element.TextContent.Trim(), "Make a copy", StringComparison.Ordinal));
+        IElement item = cut.FindAll(".mud-menu-item").Single(element => string.Equals(element.TextContent.Trim(), "Make a copy…", StringComparison.Ordinal));
         await cut.InvokeAsync(() => item.ClickAsync());
 
         Assert.Equal("Copy of Ship the thing", cut.Find(".mud-dialog-title").TextContent.Trim());
