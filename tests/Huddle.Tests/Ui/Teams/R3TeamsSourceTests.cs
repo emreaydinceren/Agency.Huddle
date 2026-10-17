@@ -12,7 +12,7 @@ public sealed class R3TeamsSourceTests
     /// <summary>The body of the first rule in <paramref name="css"/> whose selector is exactly <paramref name="selector"/>, whitespace collapsed.</summary>
     private static string RuleBody(string css, string selector)
     {
-        Match rule = Regex.Match(css, Regex.Escape(selector) + @"\s*\{(?<body>[^}]*)\}", RegexOptions.CultureInvariant, TimeSpan.FromSeconds(2));
+        Match rule = Regex.Match(css, string.Join(@"\s+", selector.Split((char[]?)null, StringSplitOptions.RemoveEmptyEntries).Select(static token => Regex.Escape(token))) + @"\s*\{(?<body>[^}]*)\}", RegexOptions.CultureInvariant, TimeSpan.FromSeconds(2));
         Assert.True(rule.Success, $"app.css has no '{selector}' rule.");
         return Regex.Replace(rule.Groups["body"].Value.Trim(), @"\s+", " ", RegexOptions.CultureInvariant, TimeSpan.FromSeconds(2));
     }
