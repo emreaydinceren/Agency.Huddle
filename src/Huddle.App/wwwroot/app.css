@@ -1080,7 +1080,7 @@ a.team-ref,
     font-family: var(--mud-typography-body1-family);
     font-size: var(--mud-typography-body1-size);
     font-weight: 400;
-    line-height: 1.6;
+    line-height: var(--mud-typography-body1-lineheight);
 }
 
 /* An agent's reply is plain text beside its avatar, with no card of its own: the tinted bubble alone
@@ -3819,7 +3819,7 @@ a.team-ref,
 }
 
 .team-type-card-selected:hover {
-    background: color-mix(in srgb, var(--mud-palette-primary) 24%, var(--mud-palette-surface));
+    background: color-mix(in srgb, var(--mud-palette-primary) 20%, var(--mud-palette-surface));
 }
 
 .team-type-icon {

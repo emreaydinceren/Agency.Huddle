@@ -15,7 +15,7 @@ namespace Agency.Huddle.Tests.Ui.Sidebar;
 /// <summary>Pins the Right sidebar host (Spec D-5, D-7, D-8): it draws the catalog's panels, keys them by Subject, and mounts them only while seen.</summary>
 public sealed class RightSidebarHostTests
 {
-    private const string EmptyText = "This page has nothing to show here.";
+    private const string EmptyText = "Nothing to show here";
 
     private static readonly LibraryPath NotePath = new(
         new LibraryRoot("teams", "Teams", "C:\\teams", LibraryRootKind.Teams),

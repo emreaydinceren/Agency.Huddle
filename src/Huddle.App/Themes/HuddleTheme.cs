@@ -108,7 +108,7 @@ internal static class HuddleTheme
         TextDisabled = "#8a8984",
 
         // A lighter periwinkle than Huddle Light's accent: 5.58:1 against Surface (#262625) and 6.28:1
-        // against Background (#1c1c1b). Near-black #141413 on it reads 7.5:1, so PrimaryContrastText is that, not pure black.
+        // against Background (#1c1c1b). Near-black #141413 on it reads 6.79:1, so PrimaryContrastText is that, not pure black.
         Primary = "#8f97e6",
         PrimaryDarken = "#616bc1",
         PrimaryContrastText = "#141413",
