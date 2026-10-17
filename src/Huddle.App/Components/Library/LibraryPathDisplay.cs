@@ -1,6 +1,6 @@
 namespace Agency.Huddle.App.Components.Library;
 
-/// <summary>How the document toolbar writes a file's full system path when there is not room for all of it.</summary>
+/// <summary>How the document toolbar writes a file's path when there is not room for all of it.</summary>
 internal static class LibraryPathDisplay
 {
     /// <summary>The longest path shown whole; anything longer keeps its start and its file name.</summary>

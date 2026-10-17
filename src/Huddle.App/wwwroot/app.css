@@ -1725,6 +1725,7 @@ a.team-ref,
 .teammate-tile-context {
     padding: 0 16px 16px calc(16px + 40px + 16px);
     margin-top: -8px;
+    text-align: left;
     font-size: var(--mud-typography-caption-size);
     color: var(--mud-palette-text-secondary);
 }

@@ -26,9 +26,10 @@
     <PageCommandHandler OnCommand="this.OnPageCommandAsync" />
     <MudExitPrompt Title="Discard changes?" Text="Your unsaved edits to this file will be lost." Disabled="@(!this.dirty)" Class="library-document-exit-prompt" />
     <MudToolBar Dense="true" Class="library-document-toolbar">
-        @* Every host names the open file the same way: its full system path on the toolbar's left, shortened past
-           LibraryPathDisplay.MaxLength (the whole path stays in the tooltip), with Copy path just before it. *@
-        <MudIconButton Icon="@Icons.Material.Filled.ContentCopy" Size="Size.Small" aria-label="Copy path" title="Copy path" Class="library-document-copy" OnClick="@this.OnCopyAsync" />
+        @* Every host names the open file the same way: its path relative to its Library root (the breadcrumb's own
+           trail, forward slashes) on the toolbar's left, shortened past LibraryPathDisplay.MaxLength, with Copy full
+           path just before it. The absolute system path stays in the tooltip and is what the button copies. *@
+        <MudIconButton Icon="@Icons.Material.Filled.ContentCopy" Size="Size.Small" aria-label="Copy full path" title="Copy full path" Class="library-document-copy" OnClick="@this.OnCopyAsync" />
         <MudText Typo="Typo.caption" Class="library-document-path library-document-path-inline" title="@this.Path.FullPath">@this.FullPathText()</MudText>
         <MudSpacer />
         @if (this.ShowModeToggle())
@@ -528,10 +529,10 @@
     private bool ShowModeToggle() => !this.outsideScope && !this.missing
         && this.content is { Kind: LibraryFileKind.Markdown, Editable: true };
 
-    /// <summary>The document's absolute file system path (<c>C:\...\Teams\Platform\API v2\API-v2-Design.md</c>), shown on the toolbar as the document's title, with a trailing <c>●</c> while dirty (Spec §6.7).</summary>
+    /// <summary>The document's path relative to its Library root, named by the root as the breadcrumb names it (<c>Teams/Platform/API v2/API-v2-Design.md</c>), shown on the toolbar as the document's title, with a trailing <c>●</c> while dirty (Spec §6.7). The absolute path is the tooltip.</summary>
     private string FullPathText()
     {
-        string shown = LibraryPathDisplay.Shorten(this.Path.FullPath);
+        string shown = LibraryPathDisplay.Shorten($"{this.Path.Root.DisplayName}/{this.Path.RelativePath}");
         return this.dirty ? $"{shown} ●" : shown;
     }
 

@@ -58,8 +58,9 @@ public sealed class TeammatesPageTests
         Assert.Contains("New teammate", html, StringComparison.Ordinal);
     }
 
+    /// <summary>The served page opens with what a Teammate is to the Human, not with the Persona file's mechanics.</summary>
     [Fact]
-    public async Task TeammatesPage_ExplainsWhatAPersonaIs()
+    public async Task TeammatesPage_ExplainsWhatATeammateIs()
     {
         using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(10));
         var ct = cts.Token;
@@ -69,11 +70,8 @@ public sealed class TeammatesPageTests
 
         var html = await client.GetStringAsync("/teammates", ct);
 
-        Assert.Contains("Markdown", html, StringComparison.Ordinal);
-
-        // A Persona is the file AND the model it thinks with — the intro should say so, since the
-        // card now lets a user change that model.
-        Assert.Contains("model", html, StringComparison.Ordinal);
+        Assert.Contains("Teammates are the Agents who work with you in Rooms and on Tasks.", html, StringComparison.Ordinal);
+        Assert.DoesNotContain("Markdown file", html, StringComparison.Ordinal);
     }
 
     [Fact]
