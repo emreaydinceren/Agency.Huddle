@@ -112,7 +112,16 @@
         bool bodyReplaced = !string.Equals(this.ContentKey, this.renderedContentKey, StringComparison.Ordinal);
         if (this.Open && (!this.wasOpen || bodyReplaced))
         {
-            await this.body.FocusAsync(preventScroll: true);
+            try
+            {
+                await this.body.FocusAsync(preventScroll: true);
+            }
+            catch (JSException)
+            {
+                // The body can leave the page between this render and the focus call: Expand closes the drawer and the
+                // item route navigates while its dialog opens. Focus only spares the Human a click before Escape, so a
+                // missed focus is harmless, while an unhandled exception here would terminate the circuit.
+            }
         }
 
         this.wasOpen = this.Open;

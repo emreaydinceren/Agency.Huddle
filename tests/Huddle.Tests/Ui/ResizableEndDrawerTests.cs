@@ -187,6 +187,25 @@ public sealed class ResizableEndDrawerTests
         Assert.Equal("Blazor._internal.domWrapper.focus", focus.Identifier);
     }
 
+    /// <summary>
+    /// A focus call that the browser refuses because the body has already left the page (Expand closing the drawer
+    /// and navigating as it opens its dialog) is harmless: the render completes and the drawer still works, instead
+    /// of the exception terminating the circuit.
+    /// </summary>
+    [Fact]
+    public async Task Open_FocusRefusedByTheBrowser_DoesNotFailTheRender()
+    {
+        await using MudBunitContext ctx = new();
+        ctx.JSInterop.SetupVoid("Blazor._internal.domWrapper.focus", _ => true)
+            .SetException(new Microsoft.JSInterop.JSException("Unable to focus an invalid element."));
+        List<bool> raised = [];
+
+        var cut = RenderDrawer(ctx, onOpenChanged: raised.Add);
+        await cut.Find(".resizable-drawer-body").KeyDownAsync(new KeyboardEventArgs { Key = "Escape" });
+
+        Assert.Equal([false], raised);
+    }
+
     /// <summary>A drawer that is closed does not steal focus, and it takes focus on the render where it opens.</summary>
     [Fact]
     public async Task Closed_DoesNotFocus_UntilItOpens()

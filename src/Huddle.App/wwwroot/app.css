@@ -2624,15 +2624,6 @@ a.team-ref,
     font-size: inherit;
 }
 
-/* "High contrast" is the one heading left: a Group label, not a band. */
-.theme-picker-heading.group-label {
-    padding: 8px 12px 0;
-    margin: 0 0 4px 0;
-    line-height: var(--mud-typography-caption-lineheight);
-    text-transform: none;
-    background: none;
-}
-
 .theme-swatch {
     display: inline-flex;
     flex: none;
@@ -3383,6 +3374,11 @@ a.team-ref,
 
 .resizable-drawer-body {
     flex: 1 0 auto;
+}
+
+/* The body takes focus only so Escape reaches it (it is not a control the Human tabs to), so it draws no ring. */
+.resizable-drawer-body:focus {
+    outline: none;
 }
 
 /* Actions as a sticky footer (audit B4k): a Chrome line on top, right-aligned, over the drawer's surface. */
