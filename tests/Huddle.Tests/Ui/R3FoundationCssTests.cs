@@ -9,7 +9,10 @@ namespace Agency.Huddle.Tests.Ui;
 /// </summary>
 public sealed class R3FoundationCssTests
 {
-    /// <summary>The five ladder rungs are declared in <c>app-vars.css</c>, each as Ink mixed into Surface at its percentage.</summary>
+    /// <summary>
+    /// The five ladder rungs are declared in <c>app-vars.css</c> as the <c>--hu-ink-*</c> skin tokens, each as Ink mixed
+    /// into Surface at its percentage; the <c>--ink-*</c> names stay as aliases of them (see <c>SkinCssTests</c>).
+    /// </summary>
     /// <param name="name">The custom property.</param>
     /// <param name="percent">The share of Ink.</param>
     [Theory]
@@ -22,7 +25,9 @@ public sealed class R3FoundationCssTests
     {
         string vars = Normalise(File.ReadAllText(CssSource.RepoPath("src", "Huddle.App", "wwwroot", "app-vars.css")));
 
-        Assert.Contains($"{name}: color-mix(in srgb, var(--mud-palette-text-primary) {percent}%, var(--mud-palette-surface));", vars, StringComparison.Ordinal); // contains-ok: stylesheet source text
+        string token = "--hu-" + name["--".Length..];
+
+        Assert.Contains($"{token}: color-mix(in srgb, var(--mud-palette-text-primary) {percent}%, var(--mud-palette-surface));", vars, StringComparison.Ordinal); // contains-ok: stylesheet source text
     }
 
     /// <summary>Lines and washes come from the ladder: no rule reads the palette's own Divider, DividerLight, LinesInputs or BackgroundGray, which sit on different rungs in different Themes.</summary>

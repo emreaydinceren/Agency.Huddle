@@ -1,4 +1,5 @@
 using System.Text.RegularExpressions;
+using Agency.Huddle.App.Themes.Skins;
 
 namespace Agency.Huddle.Tests.Ui;
 
@@ -16,127 +17,13 @@ namespace Agency.Huddle.Tests.Ui;
 public sealed partial class ThemeSourceTests
 {
     /// <summary>
-    /// Every CSS custom property name <c>MudThemeProvider.GenerateTheme</c> emits for a default
-    /// <c>MudTheme</c> in MudBlazor 9.10.0, plus <c>--font-mono</c> - the one token MudBlazor has no
-    /// equivalent for, declared in <c>app-vars.css</c> instead. <c>app.css</c> may reference no
-    /// <c>var()</c> outside this set; a name here that no rule ever uses is harmless, but a
-    /// <c>var()</c> in <c>app.css</c> naming anything outside this set is either a typo or a
-    /// hand-invented token, and this list is what makes either one a build failure rather than a
-    /// silent no-op in the browser. Internal so <see cref="PackSourceTests"/> holds a style pack to the same set.
+    /// Every CSS custom property name a stylesheet may read besides the registered skin tokens: the variables
+    /// <c>MudThemeProvider.GenerateTheme</c> emits for a default <c>MudTheme</c> in MudBlazor 9.10.0, plus the few
+    /// <c>app-vars.css</c> and <c>app.css</c> declare themselves. The list lives in production
+    /// (<see cref="MudVariables"/>) so the skin expression parser and this test cannot disagree. Internal so
+    /// <see cref="PackSourceTests"/> holds a style pack to the same set.
     /// </summary>
-    internal static readonly HashSet<string> MudBlazorVariables = new(StringComparer.Ordinal)
-    {
-        "--font-mono",
-
-        // The reading face, declared in app-vars.css as the UI face; a style pack may give it a serif (ADR-0057).
-        "--font-read",
-
-        // The ink ladder, declared once in app-vars.css: Ink mixed into Surface at 4, 6, 10, 18 and 30 percent (audit A1).
-        "--ink-strip", "--ink-wash", "--ink-rule", "--ink-edge", "--ink-field",
-
-        // The sidebar's own layout tokens, declared once in app.css "Left menu" (UX-015, UX-017).
-        "--nav-indent-1",
-        "--nav-indent-2",
-        "--nav-row-height",
-
-        // The 18px icon of a sidebar row and of a tab-rail label, declared beside the row height (S2, C6).
-        "--icon-size-row",
-
-        "--mud-appbar-height",
-        "--mud-default-borderradius",
-        "--mud-drawer-width-left",
-        "--mud-drawer-width-mini-left",
-        "--mud-drawer-width-mini-right",
-        "--mud-drawer-width-right",
-        "--mud-elevation-0", "--mud-elevation-1", "--mud-elevation-2", "--mud-elevation-3",
-        "--mud-elevation-4", "--mud-elevation-5", "--mud-elevation-6", "--mud-elevation-7",
-        "--mud-elevation-8", "--mud-elevation-9", "--mud-elevation-10", "--mud-elevation-11",
-        "--mud-elevation-12", "--mud-elevation-13", "--mud-elevation-14", "--mud-elevation-15",
-        "--mud-elevation-16", "--mud-elevation-17", "--mud-elevation-18", "--mud-elevation-19",
-        "--mud-elevation-20", "--mud-elevation-21", "--mud-elevation-22", "--mud-elevation-23",
-        "--mud-elevation-24", "--mud-elevation-25",
-        "--mud-native-html-color-scheme",
-        "--mud-palette-action-default", "--mud-palette-action-default-hover",
-        "--mud-palette-action-disabled", "--mud-palette-action-disabled-background",
-        "--mud-palette-appbar-background", "--mud-palette-appbar-text",
-        "--mud-palette-background", "--mud-palette-background-gray",
-        "--mud-palette-black",
-        "--mud-palette-border-opacity",
-        "--mud-palette-dark", "--mud-palette-dark-darken", "--mud-palette-dark-hover",
-        "--mud-palette-dark-lighten", "--mud-palette-dark-rgb", "--mud-palette-dark-text",
-        "--mud-palette-divider", "--mud-palette-divider-light", "--mud-palette-divider-rgb",
-        "--mud-palette-drawer-background", "--mud-palette-drawer-icon", "--mud-palette-drawer-text",
-        "--mud-palette-error", "--mud-palette-error-darken", "--mud-palette-error-hover",
-        "--mud-palette-error-lighten", "--mud-palette-error-rgb", "--mud-palette-error-text",
-        "--mud-palette-gray-dark", "--mud-palette-gray-darker", "--mud-palette-gray-default",
-        "--mud-palette-gray-light", "--mud-palette-gray-lighter",
-        "--mud-palette-info", "--mud-palette-info-darken", "--mud-palette-info-hover",
-        "--mud-palette-info-lighten", "--mud-palette-info-rgb", "--mud-palette-info-text",
-        "--mud-palette-lines-default", "--mud-palette-lines-inputs",
-        "--mud-palette-overlay-dark", "--mud-palette-overlay-light",
-        "--mud-palette-primary", "--mud-palette-primary-darken", "--mud-palette-primary-hover",
-        "--mud-palette-primary-lighten", "--mud-palette-primary-rgb", "--mud-palette-primary-text",
-        "--mud-palette-secondary", "--mud-palette-secondary-darken", "--mud-palette-secondary-hover",
-        "--mud-palette-secondary-lighten", "--mud-palette-secondary-rgb", "--mud-palette-secondary-text",
-        "--mud-palette-skeleton",
-        "--mud-palette-success", "--mud-palette-success-darken", "--mud-palette-success-hover",
-        "--mud-palette-success-lighten", "--mud-palette-success-rgb", "--mud-palette-success-text",
-        "--mud-palette-surface", "--mud-palette-surface-rgb",
-        "--mud-palette-table-hover", "--mud-palette-table-lines", "--mud-palette-table-striped",
-        "--mud-palette-tertiary", "--mud-palette-tertiary-darken", "--mud-palette-tertiary-hover",
-        "--mud-palette-tertiary-lighten", "--mud-palette-tertiary-rgb", "--mud-palette-tertiary-text",
-        "--mud-palette-text-disabled", "--mud-palette-text-disabled-rgb",
-        "--mud-palette-text-primary", "--mud-palette-text-primary-rgb",
-        "--mud-palette-text-secondary", "--mud-palette-text-secondary-rgb",
-        "--mud-palette-warning", "--mud-palette-warning-darken", "--mud-palette-warning-hover",
-        "--mud-palette-warning-lighten", "--mud-palette-warning-rgb", "--mud-palette-warning-text",
-        "--mud-palette-white",
-        "--mud-ripple-color", "--mud-ripple-opacity", "--mud-ripple-opacity-secondary",
-        "--mud-typography-body1-family", "--mud-typography-body1-letterspacing",
-        "--mud-typography-body1-lineheight", "--mud-typography-body1-size",
-        "--mud-typography-body1-text-transform", "--mud-typography-body1-weight",
-        "--mud-typography-body2-family", "--mud-typography-body2-letterspacing",
-        "--mud-typography-body2-lineheight", "--mud-typography-body2-size",
-        "--mud-typography-body2-text-transform", "--mud-typography-body2-weight",
-        "--mud-typography-button-family", "--mud-typography-button-letterspacing",
-        "--mud-typography-button-lineheight", "--mud-typography-button-size",
-        "--mud-typography-button-text-transform", "--mud-typography-button-weight",
-        "--mud-typography-caption-family", "--mud-typography-caption-letterspacing",
-        "--mud-typography-caption-lineheight", "--mud-typography-caption-size",
-        "--mud-typography-caption-text-transform", "--mud-typography-caption-weight",
-        "--mud-typography-default-family", "--mud-typography-default-letterspacing",
-        "--mud-typography-default-lineheight", "--mud-typography-default-size",
-        "--mud-typography-default-text-transform", "--mud-typography-default-weight",
-        "--mud-typography-h1-family", "--mud-typography-h1-letterspacing",
-        "--mud-typography-h1-lineheight", "--mud-typography-h1-size",
-        "--mud-typography-h1-text-transform", "--mud-typography-h1-weight",
-        "--mud-typography-h2-family", "--mud-typography-h2-letterspacing",
-        "--mud-typography-h2-lineheight", "--mud-typography-h2-size",
-        "--mud-typography-h2-text-transform", "--mud-typography-h2-weight",
-        "--mud-typography-h3-family", "--mud-typography-h3-letterspacing",
-        "--mud-typography-h3-lineheight", "--mud-typography-h3-size",
-        "--mud-typography-h3-text-transform", "--mud-typography-h3-weight",
-        "--mud-typography-h4-family", "--mud-typography-h4-letterspacing",
-        "--mud-typography-h4-lineheight", "--mud-typography-h4-size",
-        "--mud-typography-h4-text-transform", "--mud-typography-h4-weight",
-        "--mud-typography-h5-family", "--mud-typography-h5-letterspacing",
-        "--mud-typography-h5-lineheight", "--mud-typography-h5-size",
-        "--mud-typography-h5-text-transform", "--mud-typography-h5-weight",
-        "--mud-typography-h6-family", "--mud-typography-h6-letterspacing",
-        "--mud-typography-h6-lineheight", "--mud-typography-h6-size",
-        "--mud-typography-h6-text-transform", "--mud-typography-h6-weight",
-        "--mud-typography-overline-family", "--mud-typography-overline-letterspacing",
-        "--mud-typography-overline-lineheight", "--mud-typography-overline-size",
-        "--mud-typography-overline-text-transform", "--mud-typography-overline-weight",
-        "--mud-typography-subtitle1-family", "--mud-typography-subtitle1-letterspacing",
-        "--mud-typography-subtitle1-lineheight", "--mud-typography-subtitle1-size",
-        "--mud-typography-subtitle1-text-transform", "--mud-typography-subtitle1-weight",
-        "--mud-typography-subtitle2-family", "--mud-typography-subtitle2-letterspacing",
-        "--mud-typography-subtitle2-lineheight", "--mud-typography-subtitle2-size",
-        "--mud-typography-subtitle2-text-transform", "--mud-typography-subtitle2-weight",
-        "--mud-zindex-appbar", "--mud-zindex-dialog", "--mud-zindex-drawer",
-        "--mud-zindex-popover", "--mud-zindex-snackbar", "--mud-zindex-tooltip",
-    };
+    internal static IReadOnlySet<string> MudBlazorVariables => MudVariables.All;
 
     /// <summary>
     /// <c>app.css</c> declares no colour literal: every colour comes from a MudBlazor theme
@@ -207,13 +94,14 @@ public sealed partial class ThemeSourceTests
 
     /// <summary>
     /// Every token <c>app.css</c> references through <c>var(...)</c> is one MudBlazor's own theme
-    /// generates, or <c>--font-mono</c> - the one token MudBlazor has no equivalent for. This is the
+    /// generates, a registered skin token, or one of the few names <c>app-vars.css</c> declares as an alias
+    /// (<c>--font-mono</c>, <c>--font-read</c>, the <c>--ink-*</c> ladder). This is the
     /// mechanical successor to the retired <c>AppCss_UsesOnlyTokensDeclaredInThemeCss</c>: with
     /// <c>theme.css</c> gone, "one source of truth" for a token name means MudBlazor's own
-    /// generated variable set rather than a file this repository owns.
+    /// generated variable set plus the skin token registry rather than a file this repository owns.
     /// </summary>
     [Fact]
-    public void AppCss_UsesOnlyMudBlazorVariables()
+    public void AppCss_UsesOnlyMudBlazorOrSkinTokens()
     {
         var referenced = CssSource.ReadReferencedTokens(AppCssPath).Distinct(StringComparer.Ordinal);
 
@@ -224,16 +112,37 @@ public sealed partial class ThemeSourceTests
     }
 
     /// <summary>
-    /// The names a stylesheet may take in <c>var()</c>: MudBlazor's own variables plus every token <c>app-vars.css</c>
-    /// declares (the shared <c>--hu-*</c> skin tokens among them), so declaring a shared token there admits it without
-    /// editing <see cref="MudBlazorVariables"/>. Internal so <see cref="PackSourceTests"/> holds a pack to the same set.
+    /// Every <c>var(--hu-*)</c> read anywhere in <c>app.css</c> and every scoped stylesheet names a registered skin
+    /// token, so a typo such as <c>--hu-ground-pgae</c> fails here instead of resolving to nothing in the browser.
+    /// </summary>
+    [Fact]
+    public void AppCss_ReadsOnlyKnownTokens()
+    {
+        HashSet<string> known = SkinTokens.All.Select(token => token.CssName).ToHashSet(StringComparer.Ordinal);
+        List<string> paths = [AppCssPath];
+        paths.AddRange(Directory.EnumerateFiles(CssSource.RepoPath("src", "Huddle.App", "Components"), "*.razor.css", SearchOption.AllDirectories));
+
+        var unknown = paths
+            .SelectMany(CssSource.ReadReferencedTokens)
+            .Where(token => token.StartsWith("--hu-", StringComparison.Ordinal))
+            .Distinct(StringComparer.Ordinal)
+            .Where(token => !known.Contains(token))
+            .ToList();
+
+        Assert.Empty(unknown);
+    }
+
+    /// <summary>
+    /// The names a stylesheet may take in <c>var()</c>: MudBlazor's own variables and the three aliases
+    /// <c>app-vars.css</c> keeps (<see cref="MudBlazorVariables"/>), plus the CSS name of every registered skin token.
+    /// Internal so <see cref="PackSourceTests"/> holds a pack to the same set.
     /// </summary>
     internal static HashSet<string> AllowedVariables
     {
         get
         {
             HashSet<string> allowed = new(MudBlazorVariables, StringComparer.Ordinal);
-            allowed.UnionWith(CssSource.ReadDeclaredTokens(CssSource.RepoPath("src", "Huddle.App", "wwwroot", "app-vars.css")));
+            allowed.UnionWith(SkinTokens.All.Select(token => token.CssName));
             return allowed;
         }
     }
@@ -267,7 +176,7 @@ public sealed partial class ThemeSourceTests
     /// <summary>
     /// Every <c>var()</c> in every scoped stylesheet under <c>Components/**/*.razor.css</c> names
     /// either a variable MudBlazor's own theme generates or <c>--font-mono</c> - the scoped-stylesheet
-    /// counterpart of <see cref="AppCss_UsesOnlyMudBlazorVariables"/>, and the test that would have
+    /// counterpart of <see cref="AppCss_UsesOnlyMudBlazorOrSkinTokens"/>, and the test that would have
     /// caught <c>ReconnectModal.razor.css</c> being left pointing at tokens <c>theme.css</c> no longer
     /// declares: that file has no colour <em>literal</em>, so <see cref="ScopedCss_DeclaresNoColourLiteral"/>
     /// passed regardless, while its <c>var()</c> calls quietly resolved to nothing. No exemption for
