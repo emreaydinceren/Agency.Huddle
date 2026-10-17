@@ -289,14 +289,14 @@ public sealed class ThemeCatalogTests
     }
 
     /// <summary>
-    /// The two Huddle themes' <c>Divider</c> - the border of message cards, tiles and roster cards - reads at
-    /// least 1.5:1 against <c>Surface</c>. The other themes are imported faithfully and held to no floor here;
+    /// Every authored theme's <c>Divider</c> - the border of message cards, tiles and roster cards - reads at
+    /// least 1.5:1 against <c>Surface</c>: the two Huddle themes and the eight mapped from the mockup sets. The
+    /// VS Code themes are imported faithfully and held to no floor here;
     /// <see cref="BuiltIn_DividerVersusSurface_IsRecorded"/> measures them.
     /// </summary>
-    /// <param name="themeId"><see cref="ThemeDescriptor.Id"/> of the Huddle theme under test.</param>
+    /// <param name="themeId"><see cref="ThemeDescriptor.Id"/> of the authored theme under test.</param>
     [Theory]
-    [InlineData("huddle")]
-    [InlineData("huddle-dark")]
+    [MemberData(nameof(AuthoredThemeIds))]
     public void Huddle_DividerAgainstSurface_ReachesCardBorderVisibility(string themeId)
     {
         var descriptor = ThemeCatalog.BuiltIn.Single(candidate => string.Equals(candidate.Id, themeId, StringComparison.Ordinal));
@@ -350,8 +350,7 @@ public sealed class ThemeCatalogTests
     /// </summary>
     /// <param name="themeId"><see cref="ThemeDescriptor.Id"/> of the authored theme under test.</param>
     [Theory]
-    [InlineData("huddle")]
-    [InlineData("huddle-dark")]
+    [MemberData(nameof(AuthoredThemeIds))]
     public void Authored_SignalsAreAtLeastThirtyDegreesApartFromEachOtherAndTheAccent(string themeId)
     {
         var descriptor = ThemeCatalog.BuiltIn.Single(candidate => string.Equals(candidate.Id, themeId, StringComparison.Ordinal));
@@ -424,6 +423,49 @@ public sealed class ThemeCatalogTests
             Assert.True(inkRatio < 7.0 || quietRatio < fifty || quietRatio > eighty, $"{themeId}: no longer misses the text ladder - delete it from {nameof(InkShortfalls)}.");
         }
     }
+
+    /// <summary>
+    /// The four mockup sets each ship as a light and a dark theme with the id, mode, picker group and corner radius
+    /// the theme mapping gives them, and each sits after Huddle Light so <c>BuiltIn[0]</c> stays the default. An id
+    /// is what <c>appearance.json</c> stores, so it is pinned here rather than left to the descriptor's file.
+    /// </summary>
+    /// <param name="themeId">The theme's id.</param>
+    /// <param name="dark">Whether it fills the dark palette slot rather than the light one.</param>
+    /// <param name="radius">Its <c>DefaultBorderRadius</c>.</param>
+    [Theory]
+    [InlineData("lumen-light", false, "6px")]
+    [InlineData("lumen-dark", true, "6px")]
+    [InlineData("fluent-light", false, "6px")]
+    [InlineData("fluent-dark", true, "6px")]
+    [InlineData("nordic-light", false, "8px")]
+    [InlineData("nordic-dark", true, "8px")]
+    [InlineData("cobalt-soft-light", false, "8px")]
+    [InlineData("cobalt-soft-dark", true, "8px")]
+    public void MockupSets_ShipAsLightAndDarkThemes(string themeId, bool dark, string radius)
+    {
+        var index = ThemeCatalog.BuiltIn.ToList().FindIndex(candidate => string.Equals(candidate.Id, themeId, StringComparison.Ordinal));
+        Assert.True(index > 0, $"{themeId} is missing from the catalog or sits at BuiltIn[0].");
+
+        var descriptor = ThemeCatalog.BuiltIn[index];
+        Assert.Equal(dark ? ThemeMode.Dark : ThemeMode.Light, descriptor.Mode);
+        Assert.Equal(dark ? ThemeGroup.Dark : ThemeGroup.Light, descriptor.Group);
+        Assert.Equal(radius, descriptor.Theme.LayoutProperties.DefaultBorderRadius);
+    }
+
+    /// <summary>Every authored theme id: the two Huddle themes and the eight mapped from the mockup sets.</summary>
+    public static TheoryData<string> AuthoredThemeIds() =>
+    [
+        "huddle",
+        "huddle-dark",
+        "lumen-light",
+        "lumen-dark",
+        "fluent-light",
+        "fluent-dark",
+        "nordic-light",
+        "nordic-dark",
+        "cobalt-soft-light",
+        "cobalt-soft-dark",
+    ];
 
     /// <summary>Every built-in theme id.</summary>
     public static TheoryData<string> ThemeIds()

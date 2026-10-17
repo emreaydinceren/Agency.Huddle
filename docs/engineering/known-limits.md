@@ -442,7 +442,7 @@ so, and names its [Roadmap](roadmap.md) item or its ADR. Back to the hub: [Huddl
     one, and the one you pick is the one you get, on every device, until you pick
     another. Doing this honestly needs a **pair** of authored Themes and a rule for
     resolving between them, the way VS Code's *Preferred Light* / *Preferred Dark* and
-    "Sync with OS" work. Several of the twenty-one Themes already have a real counterpart in the other mode, so
+    "Sync with OS" work. Several of the twenty-nine Themes already have a real counterpart in the other mode, so
     the door is open; it is not built. This replaced a worse limit — until 2026-09-21 the
     preference could contradict the Theme, and selecting `Solarized Dark` with `Light`
     showed Huddle's palette under Solarized Dark's name.

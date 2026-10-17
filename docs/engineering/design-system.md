@@ -248,7 +248,9 @@ in [theme-authoring.md › The Huddle accent](theme-authoring.md#the-huddle-acce
 on a Primary fill is never hard-coded; see the [lookup](UXDesignGuidelines.md#i-need-use-this).
 
 The catalog also holds the Custom Accent pair
-([`AccentTheme.cs`](../../src/Huddle.App/Themes/AccentTheme.cs)) and 17 palettes converted
+([`AccentTheme.cs`](../../src/Huddle.App/Themes/AccentTheme.cs)), the four authored pairs mapped from the approved
+mockup directions (Lumen, Fluent, Nordic and Cobalt Soft; see
+[theme-authoring.md › The mockup pairs](theme-authoring.md#the-mockup-pairs)) and 17 palettes converted
 from VS Code ([ADR-0016](../adr/0016-vs-codes-bundled-themes-are-converted-once-not-imported.md)).
 The picker groups them as Light, Dark and High Contrast; the catalog holds the counts.
 

@@ -821,6 +821,35 @@ the clamped accent is black or white, whichever `ContrastColour.ReadableForegrou
 If you want a Theme that differs from Huddle's only in accent, you do not need a new
 Theme: that is what Custom Accent is for.
 
+## The mockup pairs
+
+Four authored pairs come from the approved mockup directions in `E:\Repos\HuddleUX`, mapped
+by that folder's `Huddle-Theme-Mapping.md`. Each is one file holding a light and a dark
+palette and two descriptors, the shape of `HuddleTheme`:
+
+| File | Ids | Radius | Feel |
+| --- | --- | --- | --- |
+| `LumenTheme.cs` | `lumen-light`, `lumen-dark` | 6px | Linear-style minimal, one soft-violet accent |
+| `FluentTheme.cs` | `fluent-light`, `fluent-dark` | 6px | Teams / Fluent 2 enterprise |
+| `NordicTheme.cs` | `nordic-light`, `nordic-dark` | 8px | Paper grounds, sage accent |
+| `CobaltSoftTheme.cs` | `cobalt-soft-light`, `cobalt-soft-dark` | 8px | Pastel periwinkle |
+
+Each value's comment names its mockup token; **ADJUSTED** marks one moved to clear a Huddle
+floor. They are authored Themes, so the tests hold them to everything Huddle Light and Dark
+meet, including two rules the mapping predates:
+
+- **Review is `Tertiary`, not `Secondary`.** The mapping put each set's Review hue in
+  `Secondary`. Here it is `Tertiary`, and `Secondary` takes another of the set's colours.
+  Lumen has no Review hue, so its `Tertiary` is a magenta at 296 degrees.
+- **Signals 30 degrees apart (audit A2).** Four moves keep every signal 30 degrees from
+  the others and from the accent. Fluent's `Info` is its teal `--k-request`, not brand
+  blue. Fluent's `Warning` is its amber `--warn`, not the orange `--attn`, which sits
+  26 degrees from `--danger`. Nordic's `Success` is its teal `--lichen`, not the accent's
+  own sage. Cobalt Soft's `Tertiary` is `--violet` turned to hue 262.
+
+Fluent Dark's amber is darkened to `#edae1d` so a presence badge's white glyph reads 3:1.
+The mapping's shared-style deltas (fonts, spacing, shadows, layered grounds) are proposals
+that would change every Theme, and are not applied.
 ## What a Theme cannot do
 
 Some things look like Theme features and are not. [known-limits.md](known-limits.md)

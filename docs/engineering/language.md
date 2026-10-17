@@ -835,10 +835,11 @@ See
   `ThemeDescriptor.Mode` naming which — so a Theme *is* a light one or a dark one rather
   than spanning both, and choosing it chooses the mode
   ([ADR-0017](../adr/0017-a-theme-is-a-palette-not-a-pair.md)). It fills only that slot;
-  the other keeps MudBlazor's defaults and is never rendered. Twenty-one ship built in:
+  the other keeps MudBlazor's defaults and is never rendered. Twenty-nine ship built in:
   this application's own `huddle` (labelled "Huddle Light") and `huddle-dark`, the two
   Custom Accent Themes (`custom-accent` and `custom-accent-dark`, whose accent colour the
-  Appearance tab sets), and seventeen of the colour Themes bundled with Visual Studio Code, converted once at
+  Appearance tab sets), the Lumen, Fluent, Nordic and Cobalt Soft pairs (lumen-light,
+  lumen-dark and so on, mapped from the approved mockup directions), and seventeen of the colour Themes bundled with Visual Studio Code, converted once at
   authoring time into `MudTheme` objects under `Themes/VsCode/` — see
   [ADR-0016](../adr/0016-vs-codes-bundled-themes-are-converted-once-not-imported.md).
   A Theme also carries a **`ThemeGroup`** — Light, Dark or High contrast — which is the

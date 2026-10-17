@@ -28,7 +28,9 @@ internal static class ThemeCatalog
     /// and only orders within a group, precisely so that grouping can be changed without moving
     /// <c>BuiltIn[0]</c>. The order here is the authoring order: this application's own two themes,
     /// then <see cref="AccentTheme"/>'s two - Primary is a Human-picked colour rather than
-    /// hand-tuned, but otherwise Huddle's own neutrals - then the <c>theme-defaults</c> set bundled
+    /// hand-tuned, but otherwise Huddle's own neutrals - then the four authored pairs mapped from the
+    /// approved mockup directions (<see cref="LumenTheme"/>, <see cref="FluentTheme"/>,
+    /// <see cref="NordicTheme"/> and <see cref="CobaltSoftTheme"/>), then the <c>theme-defaults</c> set bundled
     /// with Visual Studio Code, then the nine that began life as TextMate or Atom themes.
     /// </para>
     /// <para>
@@ -45,6 +47,14 @@ internal static class ThemeCatalog
         HuddleTheme.DarkDescriptor,
         AccentTheme.LightDescriptor,
         AccentTheme.DarkDescriptor,
+        LumenTheme.LightDescriptor,
+        LumenTheme.DarkDescriptor,
+        FluentTheme.LightDescriptor,
+        FluentTheme.DarkDescriptor,
+        NordicTheme.LightDescriptor,
+        NordicTheme.DarkDescriptor,
+        CobaltSoftTheme.LightDescriptor,
+        CobaltSoftTheme.DarkDescriptor,
         Dark2026Theme.Descriptor,
         Light2026Theme.Descriptor,
         DarkModernTheme.Descriptor,
