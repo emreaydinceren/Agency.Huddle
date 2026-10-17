@@ -3071,6 +3071,12 @@ a.team-ref,
     text-transform: none;
 }
 
+/* A chip without a menu draws its text with the same button but must not answer the pointer or look pressable. */
+.task-filter-chip .task-filter-chip-static {
+    pointer-events: none;
+    cursor: default;
+}
+
 .task-toolbar-filter-state-group .mud-list-item-text {
     font-weight: 600;
 }
@@ -3810,6 +3816,12 @@ a.team-ref,
 
 .build-team-subhead .chip-meta::before {
     content: "\00b7\00a0";
+}
+
+/* The Members tab's team type filter (B9f, B9g): the cloud of types, with the chosen one floated to its left, between
+   the "Roles" heading and the roles. */
+.build-team-role-type-filter {
+    margin: 4px 0 8px;
 }
 
 .team-type-card {

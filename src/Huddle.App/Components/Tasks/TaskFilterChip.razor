@@ -5,18 +5,29 @@
     share the one look: dashed while unset, filled once set.
 *@
 
-<span class="@this.CssClass">
-    <MudMenu Dense="true" Class="task-filter-chip-menu">
-        <ActivatorContent Context="menuContext">
-            <MudButton Variant="Variant.Outlined" Size="Size.Small" EndIcon="@Icons.Material.Filled.ExpandMore" OnClick="menuContext.ToggleAsync"
-                       Class="task-filter-chip-button" aria-label="@($"{this.Label} filter: {this.Value}")">
-                @this.Label: <strong class="task-filter-chip-value">@this.Value</strong>
-            </MudButton>
-        </ActivatorContent>
-        <ChildContent>
-            @this.ChildContent
-        </ChildContent>
-    </MudMenu>
+<span class="@this.CssClass" role="@(this.NoMenu ? "group" : null)" aria-label="@(this.NoMenu ? $"{this.Label} filter: {this.Value}" : null)">
+    @if (this.NoMenu)
+    {
+        @* The same pill without the caret or the menu: the text is drawn by the same button so it looks identical, but it does
+           nothing, so it is out of the tab order and hidden from assistive technology, whose group above carries the text. *@
+        <MudButton Variant="Variant.Outlined" Size="Size.Small" Class="task-filter-chip-button task-filter-chip-static" tabindex="-1" aria-hidden="true">
+            @this.Label: <strong class="task-filter-chip-value">@this.Value</strong>
+        </MudButton>
+    }
+    else
+    {
+        <MudMenu Dense="true" Class="task-filter-chip-menu">
+            <ActivatorContent Context="menuContext">
+                <MudButton Variant="Variant.Outlined" Size="Size.Small" EndIcon="@Icons.Material.Filled.ExpandMore" OnClick="menuContext.ToggleAsync"
+                           Class="task-filter-chip-button" aria-label="@($"{this.Label} filter: {this.Value}")">
+                    @this.Label: <strong class="task-filter-chip-value">@this.Value</strong>
+                </MudButton>
+            </ActivatorContent>
+            <ChildContent>
+                @this.ChildContent
+            </ChildContent>
+        </MudMenu>
+    }
     @if (this.IsSet)
     {
         <MudIconButton Icon="@Icons.Material.Filled.Close" Size="Size.Small" OnClick="this.OnClear" Class="task-filter-chip-clear"
@@ -42,6 +53,13 @@
     /// <summary>The <c>MudMenuItem</c>s offering the choices.</summary>
     [Parameter]
     public RenderFragment? ChildContent { get; set; }
+
+    /// <summary>
+    /// Draws the chip without its caret and menu: the same pill showing "Label: Value" and, once set, its clear button, for a
+    /// choice made somewhere else (a cloud of chips) that this only shows and clears. <see cref="ChildContent"/> is not drawn.
+    /// </summary>
+    [Parameter]
+    public bool NoMenu { get; set; }
 
     /// <summary>Raised when the clear button is clicked.</summary>
     [Parameter]

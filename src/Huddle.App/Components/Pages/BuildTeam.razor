@@ -141,6 +141,22 @@
                 <MudText Typo="Typo.subtitle2" HtmlTag="h3">Roles</MudText>
                 <span class="chip-meta build-team-roles-subtitle">@Plural.Of(this.Pool.Jobs.Count + this.CustomRoles.Roles.Count, "role", "roles") available</span>
             </div>
+            @if (this.MembersOnly)
+            {
+                @* Members tab only: narrow the roles below to the ones a team type defines. A cloud of the types; the chosen one
+                   floats to its left as the Tasks toolbar's filter chip without the caret, with a clear button, and pressing
+                   another type in the cloud changes the choice. *@
+                <div class="build-team-role-type-filter">
+                    <ChipCloud Title="Team types" Pool="@this.TypeChipNames" Cap="12" OnToggle="this.OnTypeChipToggled">
+                        <Leading>
+                            @if (this.RoleTypeFilter is { } filterType)
+                            {
+                                <TaskFilterChip Label="Team type" Value="@filterType.DisplayName" IsSet="true" NoMenu="true" OnClear="this.ClearRoleTypeFilter" Class="build-team-role-type-chip" />
+                            }
+                        </Leading>
+                    </ChipCloud>
+                </div>
+            }
             @if (this.CustomRoles.LoadError is not null)
             {
                 <MudAlert Severity="Severity.Warning" Dense="true" role="alert" Class="build-team-roles-error">Your custom roles file could not be read, so roles cannot be added or changed: @this.CustomRoles.LoadError</MudAlert>
@@ -150,20 +166,24 @@
                     <MudIcon Icon="@Icons.Material.Filled.Add" Size="Size.Large" />
                     <span class="role-add-label">Add a role</span>
                 </button>
-                @foreach (PoolJob job in this.Pool.Jobs.Where(job => this.IsSuggested(job.Id)))
+                @foreach (PoolJob job in this.Pool.Jobs.Where(job => this.IsSuggested(job.Id) && this.ShowsRole(job.Id)))
                 {
                     <RoleCard @key="job.Id" RoleId="@job.Id" Title="@job.Title" Description="@job.Description" Suggested="true" Taken="@this.OnRoster(job.Id)" OnAdd="this.AddDraftAsync" />
                 }
-                @foreach (CustomRole role in this.CustomRoles.Roles)
+                @foreach (CustomRole role in this.CustomRoles.Roles.Where(role => this.ShowsRole(role.Id)))
                 {
                     <RoleCard @key="role.Id" RoleId="@role.Id" Title="@role.Title" Description="@role.Description" Custom="true" Taken="@this.OnRoster(role.Id)"
                               OnAdd="this.AddDraftAsync" OnEdit="this.EditRoleAsync" OnDelete="this.DeleteRoleAsync" />
                 }
-                @foreach (PoolJob job in this.Pool.Jobs.Where(job => !this.IsSuggested(job.Id)))
+                @foreach (PoolJob job in this.Pool.Jobs.Where(job => !this.IsSuggested(job.Id) && this.ShowsRole(job.Id)))
                 {
                     <RoleCard @key="job.Id" RoleId="@job.Id" Title="@job.Title" Description="@job.Description" Taken="@this.OnRoster(job.Id)" OnAdd="this.AddDraftAsync" />
                 }
             </div>
+            @if (this.RoleTypeFilter is { } emptyType && !this.AnyRoleShown)
+            {
+                <MudText Typo="Typo.body2" Class="build-team-intro build-team-role-type-empty" role="status">@emptyType.DisplayName has no roles to hire from here.</MudText>
+            }
 
             <div class="build-team-roster">
                 <div class="build-team-subhead">
@@ -773,10 +793,46 @@
         }
     }
 
-    /// <summary>Whether the chosen type's template defines this pool job as a role (by its job, or by the role id a job takes); roles the catalog only adds from the pool do not count.</summary>
+    /// <summary>Whether the chosen type's template defines this pool job as a role; see <see cref="DefinesRole"/>.</summary>
     /// <param name="jobId">The pool job's id.</param>
-    private bool IsSuggested(string jobId) => this.selected?.Roles.Any(role =>
+    private bool IsSuggested(string jobId) => DefinesRole(this.selected, jobId);
+
+    /// <summary>Whether <paramref name="type"/>'s template defines this pool job as a role (by its job, or by the role id a job takes); roles the catalog only adds from the pool do not count.</summary>
+    /// <param name="type">The team type, or <see langword="null"/> for none.</param>
+    /// <param name="jobId">The pool job's id.</param>
+    private static bool DefinesRole(TeamTypeManifest? type, string jobId) => type?.Roles.Any(role =>
         !role.Pooled && string.Equals(role.Job ?? role.Id, jobId, StringComparison.Ordinal)) ?? false;
+
+    /// <summary>The id of the team type the roles are filtered by in the Members tab, or <see langword="null"/> while they are not.</summary>
+    private string? roleTypeFilterId;
+
+    /// <summary>The team type the roles are filtered by; <see langword="null"/> while they are not, and always outside the Members tab, which alone offers the filter.</summary>
+    private TeamTypeManifest? RoleTypeFilter => this.MembersOnly && this.roleTypeFilterId is { } id ? this.Types.Find(id) : null;
+
+    /// <summary>The names the type cloud offers, in catalog order, without the one chosen, which is drawn first as the filter chip. The Blank Team is left out: it defines no roles, so filtering by it would show none.</summary>
+    private IReadOnlyList<string> TypeChipNames => [.. this.Types.Types
+        .Where(type => !string.Equals(type.Id, this.roleTypeFilterId, StringComparison.Ordinal))
+        .Select(static type => type.DisplayName)];
+
+    /// <summary>Whether a role card shows: always while the roles are not filtered, otherwise only when the filter's team type defines the role.</summary>
+    /// <param name="roleId">The pool job's or the Human's own role's id.</param>
+    private bool ShowsRole(string roleId) => this.RoleTypeFilter is not { } type || DefinesRole(type, roleId);
+
+    /// <summary>Whether any role card shows under the current filter, so a type that defines nothing hireable here can say so.</summary>
+    private bool AnyRoleShown => this.Pool.Jobs.Any(job => this.ShowsRole(job.Id)) || this.CustomRoles.Roles.Any(role => this.ShowsRole(role.Id));
+
+    /// <summary>Filters the roles by the type whose chip was pressed in the cloud, in place of any type chosen before.</summary>
+    /// <param name="displayName">The pressed chip's text, a type's display name.</param>
+    private void OnTypeChipToggled(string displayName)
+    {
+        if (this.Types.Types.FirstOrDefault(type => string.Equals(type.DisplayName, displayName, StringComparison.Ordinal)) is { } type)
+        {
+            this.roleTypeFilterId = type.Id;
+        }
+    }
+
+    /// <summary>Shows every role again: the chosen type goes back among the cloud's chips.</summary>
+    private void ClearRoleTypeFilter() => this.roleTypeFilterId = null;
 
     /// <summary>One Teammate on the draft roster: a role with a Name, not hired until the Human approves.</summary>
     /// <param name="Key">Tells this draft from the others; stable while it is edited or re-rolled.</param>

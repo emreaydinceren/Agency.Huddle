@@ -4,10 +4,11 @@
     reuse it; selection reads as [ text X ] and aria-pressed, never by colour alone. The caller owns the selection.
 *@
 
-@if (this.Pool.Count > 0)
+@if (this.Pool.Count > 0 || this.Leading is not null)
 {
     <div class="chip-cloud-title">@this.Title</div>
     <div class="@($"chip-cloud {this.CssClass}")" role="group" aria-label="@this.Title">
+        @this.Leading
         @foreach (ChipItem chip in AvatarChipCloud.Arrange(this.Pool, this.Selected, this.Expanded ? null : this.Cap))
         {
             <button type="button" class="@this.ChipClass(chip)" aria-pressed="@(chip.Selected ? "true" : "false")" @onclick="() => this.OnToggle.InvokeAsync(chip.Text)">
@@ -48,6 +49,10 @@
     /// <summary>How many pool chips to show before "Show all"; null shows them all.</summary>
     [Parameter]
     public int? Cap { get; set; }
+
+    /// <summary>Content drawn before the chips, at the left of the first row, for something that outranks them (a chosen value shown in its own form). Its presence also draws the cloud when the pool is empty.</summary>
+    [Parameter]
+    public RenderFragment? Leading { get; set; }
 
     /// <summary>Extra CSS classes for the chip container.</summary>
     [Parameter]
