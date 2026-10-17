@@ -60,7 +60,7 @@ oracles `O-LOG` / `O-ADAPTERS` / `O-TRANSCRIPT` / `O-DB` / `O-WIRE`, the four re
 
 - A heading reads exactly `Teammates`, with a text button labelled `New teammate` (an `Add` icon beside it) first in the toolbar, on the left.
 - An intro paragraph begins `A Persona is a Markdown file describing how one teammate should behave, plus the model it thinks with.`
-- The body reads `No Personas yet. Choose New teammate to add one.` with `New teammate` in bold.
+- The body is an empty state: the title `No Teammates yet` with the line `Choose New teammate to add the first one.` under it.
 - No **Team** filter select is rendered at all.
 
 **Fail if — any of these**
@@ -186,7 +186,7 @@ If the card does not open at all, this test is blocked by TEAMMATECARD-02 — re
 **Pass if — all of these**
 
 - Empty Name shows `?`.
-- `ada` shows `A`.
+- `ada` shows `AD` (a single word gives its first two letters).
 - `Emily Lee` shows `EL`.
 - `Chief of Staff` shows `CS`.
 
@@ -715,7 +715,7 @@ If the prompt's `Remove` produces a red line `Persona 'Nova' does not exist.`, t
 
 **Inconclusive if**
 
-If a team with members shows `No teammates in this team.`, first confirm the frontmatter really carries that team (open the `.md`); a typo in the Teams input produces a genuinely empty team. `O-ADAPTERS` prints `0` when nothing is running. The Create card's model probe may start a short-lived adapter while the card is open; read `O-ADAPTERS` with every card closed.
+If a team with members shows `No teammates in this team`, first confirm the frontmatter really carries that team (open the `.md`); a typo in the Teams input produces a genuinely empty team. `O-ADAPTERS` prints `0` when nothing is running. The Create card's model probe may start a short-lived adapter while the card is open; read `O-ADAPTERS` with every card closed.
 
 > [!NOTE]
 > Move `Nova.md` back to `<data>\Teammates\Nova\` and delete the `Household` folder before going on. Then run the Clean-up (Setup step 7) for `Nova`, `Atlas` and `Iris`: TEAMMATECARD-18 creates `Nova` itself and would fail with `Persona 'Nova' already exists.` if the teammate were still there.

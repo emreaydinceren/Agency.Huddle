@@ -29,12 +29,15 @@ internal static class HuddleTheme
     /// darker than the ground rather than mid-grey rules.
     /// </para>
     /// <para>
-    /// <c>Primary</c> is the brand accent <c>#6e78da</c>, shared with <see cref="Dark"/>, set on request
-    /// verbatim. It is a mid-tone: 3.92:1 against Surface and 3.44:1 against Background, under the
-    /// 4.5:1 text floor, so <c>ThemeCatalogTests</c> records "Primary vs Surface" as a documented
-    /// shortfall for the Huddle themes. <c>PrimaryContrastText</c> is white, on request: every button,
-    /// avatar and chip filled with the accent carries white text or icons, even though white measures
-    /// only 3.92:1 against it (black would reach 5.36:1), recorded as a second documented shortfall.
+    /// <c>Primary</c> is <c>#5b64c8</c>, a deeper indigo than the dark palette's: 5.12:1 against Surface
+    /// and 4.50:1 against Background, so accent-coloured text clears the 4.5:1 floor.
+    /// <c>PrimaryContrastText</c> is white, which reads 5.12:1 on it. Each Huddle Theme authors its own
+    /// accent (<c>docs/adr/0017-a-theme-is-a-palette-not-a-pair.md</c>) so neither carries a documented
+    /// shortfall. <c>PrimaryDarken</c> keeps the same hue, a step darker.
+    /// </para>
+    /// <para>
+    /// <c>Divider</c> is <c>#d0cfcc</c>, 1.56:1 against Surface, so message cards and tiles read as
+    /// bordered (at least 1.5:1).
     /// </para>
     /// </remarks>
     public static PaletteLight Light() => new()
@@ -44,7 +47,7 @@ internal static class HuddleTheme
         DrawerBackground = "#e6e2dc",
         BackgroundGray = "#e5e2e0",
         TableHover = "#efefed",
-        Divider = "#e5e5e4",
+        Divider = "#d0cfcc",
         DividerLight = "#ededec",
         LinesInputs = "#e0e0df",
         // The pane and chrome hairlines on the one shell surface: 2.1:1 against Surface, so a divider reads
@@ -53,9 +56,12 @@ internal static class HuddleTheme
         LinesDefault = "#b4b2ad",
         TextPrimary = "#141413",
         TextSecondary = "#45443f",
+        ActionDefault = "#45443f",
+        DrawerText = "#141413",
+        DrawerIcon = "#45443f",
         TextDisabled = "#8a8882",
-        Primary = "#6e78da",
-        PrimaryDarken = "#4b55b8",
+        Primary = "#5b64c8",
+        PrimaryDarken = "#3e47a8",
         PrimaryContrastText = "#ffffff",
         Secondary = "#3a6fd8",
         Success = "#2e9e44",
@@ -75,7 +81,8 @@ internal static class HuddleTheme
     /// <remarks>
     /// The neutrals are near-neutral charcoals sampled from the Claude desktop app's dark surface,
     /// the counterpart of <see cref="Light"/>: inputs and the Human's bubble lifted a step off the
-    /// ground, with hairline borders a step above that.
+    /// ground, with hairline borders a step above that. <c>Divider</c> is <c>#444442</c>, 1.55:1 against
+    /// Surface, so card and tile borders stay visible.
     /// </remarks>
     public static PaletteDark Dark() => new()
     {
@@ -84,7 +91,7 @@ internal static class HuddleTheme
         DrawerBackground = "#1a1a19",
         BackgroundGray = "#2a2a29",
         TableHover = "#2a2a29",
-        Divider = "#333332",
+        Divider = "#444442",
         DividerLight = "#2b2b2a",
         LinesInputs = "#454543",
         // The pane and chrome hairlines: 2.5:1 against Surface (#262625), the same "clearly a line" weight
@@ -92,20 +99,19 @@ internal static class HuddleTheme
         LinesDefault = "#646461",
         TextPrimary = "#ececea",
         TextSecondary = "#a3a29d",
+        ActionDefault = "#a3a29d",
+        DrawerText = "#ececea",
+        DrawerIcon = "#a3a29d",
 
         // Also the composer's focus border, so it must clear WCAG 1.4.11's 3:1 against Surface:
         // 4.32:1.
         TextDisabled = "#8a8984",
 
-        // The brand accent, the same #6e78da as Huddle Light, set on request. Against the dark
-        // neutrals it measures 3.87:1 against Surface (#262625) and 4.35:1 against Background
-        // (#1c1c1b): short of the 4.5:1 text minimum, recorded as a documented shortfall.
-        Primary = "#6e78da",
-        PrimaryDarken = "#4b55b8",
-        // White, on request: anything filled with the accent carries white text or icons. It only
-        // reaches 3.92:1 against this Primary - short of the 4.5:1 text minimum, where black would
-        // reach 5.36:1 - so ThemeCatalogTests records it as a documented shortfall.
-        PrimaryContrastText = "#ffffff",
+        // A lighter periwinkle than Huddle Light's accent: 5.58:1 against Surface (#262625) and 6.28:1
+        // against Background (#1c1c1b). Near-black #141413 on it reads 6.79:1, so PrimaryContrastText is that, not pure black.
+        Primary = "#8f97e6",
+        PrimaryDarken = "#616bc1",
+        PrimaryContrastText = "#141413",
         Secondary = "#7aa2f7",
         Success = "#3fbf5a",
         Error = "#e05a5a",

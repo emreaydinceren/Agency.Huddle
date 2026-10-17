@@ -149,7 +149,7 @@ public sealed class TeammateCardAvatarTests
         await TypeLabelAsync(cut, "AB");
 
         Assert.Equal("AB", EditorPreviewText(cut));
-        Assert.Equal("C", CardAvatarText(cut));
+        Assert.Equal("CO",CardAvatarText(cut));
 
         await ClickEditorButtonAsync(cut, "Apply");
         WaitForEditorClosed(cut);
@@ -213,11 +213,11 @@ public sealed class TeammateCardAvatarTests
         await ClickEditorButtonAsync(cut, "Cancel");
         WaitForEditorClosed(cut);
 
-        Assert.Equal("C", CardAvatarText(cut));
+        Assert.Equal("CO",CardAvatarText(cut));
 
         await OpenAvatarEditorAsync(cut);
 
-        Assert.Equal("C", EditorPreviewText(cut));
+        Assert.Equal("CO",EditorPreviewText(cut));
         Assert.Equal(0, CountControlsLabelled(cut, "Label"));
     }
 
@@ -424,7 +424,7 @@ public sealed class TeammateCardAvatarTests
     private static string CardAvatarBackground(IRenderedComponent<ContainerFragment> cut)
     {
         string style = CardAvatarStyle(cut);
-        Match match = Regex.Match(style, @"background:\s*(#[0-9a-fA-F]{6})", RegexOptions.CultureInvariant, TimeSpan.FromSeconds(2));
+        Match match = Regex.Match(style, @"(?:(?:background|--mud-palette-primary):\s*)(#[0-9a-fA-F]{6})", RegexOptions.CultureInvariant, TimeSpan.FromSeconds(2));
         Assert.True(match.Success, $"The card's avatar has no background in its style: '{style}'.");
         return match.Groups[1].Value;
     }

@@ -1,6 +1,6 @@
 # Global Search: the box, the dropdown, filters and the jump to a Message
 
-Prove, in a real browser against the running app, everything the Global Search box does: the three ways it opens, the browser keys it must win, the order and fill of the groups, the content hits and their cut-off, the jump to a Message in a Room, the dimmed Archived side, a locked folder, the keyboard path, the box's place in the Top Bar and the dropdown's height under the 90% zoom. The automated suite covers the pure parser, the ranker and the providers against fakes; it cannot see the browser keys, the zoom, the fade or the screen reader, so each of those is checked here. The tests are all free: search reads files and the database and never calls an Agent.
+Prove, in a real browser against the running app, everything the Global Search box does: the three ways it opens, the browser keys it must win, the order and fill of the groups, the content hits and their cut-off, the jump to a Message in a Room, the dimmed Archived side, a locked folder, the keyboard path, the box's place in the Top Bar and the dropdown's height at the default 100% render. The automated suite covers the pure parser, the ranker and the providers against fakes; it cannot see the browser keys, the zoom, the fade or the screen reader, so each of those is checked here. The tests are all free: search reads files and the database and never calls an Agent.
 
 **10 tests** · all free · about 2.25 hours.
 
@@ -146,7 +146,7 @@ If the pinned root is too small to take longer than a second, note the time and 
 
 If no file in the root is over 1 MB, make one as in the Before list and rerun the test.
 
-### GLOBALSEARCH-05 — A Room hit jumps to its Message at 90 percent zoom (GS-M5)
+### GLOBALSEARCH-05 — A Room hit jumps to its Message (GS-M5)
 
 **Free** · about 15 min
 
@@ -155,7 +155,7 @@ If no file in the root is over 1 MB, make one as in the Before list and rerun th
 **Before you start**
 
 - The Room `findings` has many Messages, and one of them contains `login` far above the bottom. Note its text.
-- The browser zoom is 90%.
+- The browser zoom is 100%.
 
 **Steps**
 
@@ -300,15 +300,15 @@ If no screen reader is available, record the keyboard steps only and mark the an
 
 If the window cannot show both, resize it and record the width.
 
-### GLOBALSEARCH-10 — The dropdown height under 90 percent zoom (GS-M10)
+### GLOBALSEARCH-10 — The dropdown height and width (GS-M10)
 
 **Free** · about 15 min
 
-*Proves that under the 90% zoom the dropdown is anchored flush under the box at its left edge, with a long list its height is 80% of the window and no more, and it is no wider than a narrow window.*
+*Proves that at the default 100% render (no page zoom) the dropdown is anchored flush under the box at its left edge, with a long list its height is 80% of the window and no more, and it is no wider than a narrow window.*
 
 **Before you start**
 
-- The browser zoom is 90% and the window is at its normal width. Open the browser's developer tools (F12) on the app page, Console tab.
+- The browser zoom is 100% and the window is at its normal width. Open the browser's developer tools (F12) on the app page, Console tab.
 
 **Steps**
 

@@ -44,6 +44,8 @@ internal static class RedTheme
         LinesDefault = "#bd4444", // focusBorder (theme, composited from #ff6666aa over Background #390000)
         TextPrimary = "#cccccc", // foreground (registry default)
         TextSecondary = "#9d8f8f", // descriptionForeground (registry default, composited from #ccccccb2 over Surface #300000)
+        DrawerText = "#cccccc", // TextPrimary: sideBar.foreground falls back to foreground
+        DrawerIcon = "#9d8f8f", // TextSecondary
         TextDisabled = "#7e6666", // disabledForeground (registry default, composited from #cccccc80 over Surface #300000)
         Primary = "#3794ff", // textLink.foreground (registry default) - see the type-level remarks for why not button.background
         PrimaryContrastText = "#000000", // computed: black 6.84:1 vs white 3.07:1 against Primary #3794ff

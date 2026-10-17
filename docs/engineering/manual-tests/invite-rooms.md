@@ -75,7 +75,7 @@ If the page is blank white rather than showing the empty-state sentence, the cir
 
 **Steps**
 
-1. Click **New chat** in the sidebar's Chats group, just under the Room list.
+1. Click **New chat** in the sidebar's Rooms group, just under the Room list.
 2. In the DevTools Console, type `document.querySelector('.new-chat .mud-collapse-container').getBoundingClientRect().height > 0` and press Enter — confirms the panel is genuinely open, not merely present in the DOM.
 3. Count the checkbox rows in the panel that opens and read each row's text.
 4. For each row, hover the small round dot immediately left of the name and read its tooltip.
@@ -91,7 +91,7 @@ If the page is blank white rather than showing the empty-state sentence, the cir
 
 - Step 2 printed `true` while the panel is open, and `false` after step 11 collapses it.
 - The panel lists exactly three rows: `Ada`, `Bo` and the built-in Chief of Staff. `Ada` comes before `Bo`; the Chief of Staff's position is not asserted.
-- Each row has a coloured dot whose tooltip is one of `online`, `offline`, `degraded` or `starting`. With Ada and Bo connected, both of their tooltips read `online`.
+- Each row has a presence badge (a green circle with a check for online, an amber pulse for starting, a red dash for degraded, a hollow grey ring for offline) whose tooltip is one of `online`, `offline`, `degraded` or `starting`. With Ada and Bo connected, both of their tooltips read `online`.
 - Step 5's array contains only those four words.
 - `You` does NOT appear anywhere in the list.
 - Before anything is ticked, **Start chat** is visibly greyed out, does nothing when clicked, and carries the `disabled` attribute in the DOM.
@@ -103,7 +103,7 @@ If the page is blank white rather than showing the empty-state sentence, the cir
 - **Start chat** is clickable with nothing ticked -> the `Disabled="@(this.selectedAgentIds.Count == 0)"` binding regressed and the server will be asked to create a Room with zero Agents.
 - `You` appears as a tickable row -> the list is no longer filtering on `UserKind.Agent`; creating a chat with the Human would produce a nonsense Room name.
 - An Agent is missing, or `Bo` is listed before `Ada` -> the panel is not reading `users ORDER BY rowid`, so the list will not be stable between visits.
-- Every dot is grey while Ada and Bo are clearly connected (the Teammates page shows them Online) -> the presence lookup is broken and the tester can no longer tell a live Agent from a dead one anywhere in the app. Offline is RED (`--mud-palette-error`, `app.css:71-73`) and online is a green; a grey dot means neither state resolved.
+- Every dot is a hollow grey ring while Ada and Bo are clearly connected (the Teammates page shows them Online) -> the presence lookup is broken and the tester can no longer tell a live Agent from a dead one anywhere in the app. Online is a green circle with a white check and Offline a hollow grey ring (`agent-dot`, `presence-glyph-ring`); a ring on a connected Agent means the state did not resolve.
 - Step 2 prints `true` on a fresh page load, before ever clicking **New chat** -> `MudCollapse`'s `Expanded` parameter is defaulting open instead of closed.
 
 **Inconclusive if**
@@ -111,7 +111,7 @@ If the page is blank white rather than showing the empty-state sentence, the cir
 If the dots are not green and you are NOT sure Ada and Bo are connected, open **Teammates** and read their status, and run `O-ADAPTERS` to confirm the `mock-acp` processes are running. If you cannot establish whether the agents are live, the dot colours are inconclusive — judge only the list contents and the disabled button, and say so. The panel's content is only rendered while it is open (`NewChat.razor:16`), and `MudCollapse` animates its height, so do not judge open/closed from View Source or a `curl.exe` fetch — use the Console height check above.
 
 > [!NOTE]
-> The status dots in this panel repaint only on RoomsChanged, not on presence changes. Do NOT test 'disconnect an agent with the panel open and watch the dot go red' — that is current behaviour, not a defect; note it in your report if you see it.
+> The status dots in this panel repaint only on RoomsChanged, not on presence changes. Do NOT test 'disconnect an agent with the panel open and watch the ring appear' — that is current behaviour, not a defect; note it in your report if you see it.
 
 ### INVITEROOMS-04 — A pipe client connecting creates its Room and it appears in the sidebar with no page refresh
 
@@ -297,7 +297,7 @@ If PowerShell's own quoting mangles the argument (you see the script report a di
 
 1. Click the sidebar link `Ada`.
 2. Write down the full `/rooms/<id>` from the address bar. Call it ROOM-ADA.
-3. Click into the composer textarea at the bottom (its placeholder reads `Message… (/invite @agent)`).
+3. Click into the composer textarea at the bottom (its placeholder reads `Message {Room name}… (/invite @Teammate)`).
 4. Type exactly: `hi @Ada`
 5. Press Enter.
 6. Wait up to 15 seconds and confirm two messages are now in the Transcript: yours, and a reply from Ada that contains `hi @Ada` (the mock adapter echoes the whole prompt back, so the reply is long and plain text).
@@ -615,7 +615,7 @@ If every Agent happens to be a Member of both Rooms, both panels will show `Ever
 2. In the `gamma` terminal run exactly: `pwsh tools/echo-bot.ps1 -Name gamma`
 3. Wait until a `gamma` link appears in the sidebar.
 4. Click the `Ada, Bo` Room whose id you recorded as ROOM-EA1 in INVITEROOMS-10 (hover the two `Ada, Bo` links to tell them apart; the other one stays untouched for INVITEROOMS-16). Write its room id down.
-5. Confirm the composer placeholder reads `Message… (/invite @agent)`.
+5. Confirm the composer placeholder reads `Message {Room name}… (/invite @Teammate)`.
 6. Note the current last line in `T-A`.
 7. If the Room already has a `.jsonl` file under `<data>\rooms\`, count its lines and write the number down. If it has none, write down 'no file'.
 8. Click into the composer and type exactly: `/invite @gamma`
@@ -874,7 +874,7 @@ If the textarea does NOT clear, check whether you pressed Shift+Enter (which ins
 If `gamma` is not in the candidate set (the `/invite` returns `Unknown agent @gamma`), the `gamma` terminal has stopped. Restart it with `pwsh tools/echo-bot.ps1 -Name gamma`, wait for the sidebar entry, and retry. Do not record a fail for an absent bot.
 
 > [!NOTE]
-> A Room can be renamed by hand (issue #43), and since 2026-09-21 it can also be **archived or deleted** from the context menu on its sidebar row — see [ADR-0018](../../adr/0018-a-room-can-be-archived-or-deleted.md). A Room still cannot be *left*: membership changes only by Invitation, and there is no control anywhere that removes one Member from a Room. Archiving hides a Room from the sidebar and is reversible from **Archived Chats**, bottom-left; deleting removes the Room and its Transcript for good. A Room name is still always derived until somebody renames it.
+> A Room can be renamed by hand (issue #43), and since 2026-09-21 it can also be **archived or deleted** from the context menu on its sidebar row — see [ADR-0018](../../adr/0018-a-room-can-be-archived-or-deleted.md). A Room still cannot be *left*: membership changes only by Invitation, and there is no control anywhere that removes one Member from a Room. Archiving hides a Room from the sidebar and is reversible from **Archived Rooms**, bottom-left; deleting removes the Room and its Transcript for good. A Room name is still always derived until somebody renames it.
 
 ### INVITEROOMS-21 — An Agent belongs to at most one two-Member Room: after an invite, the next registration mints a fresh Direct Room
 

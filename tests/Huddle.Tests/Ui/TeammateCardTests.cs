@@ -192,7 +192,7 @@ public sealed class TeammateCardTests
     [Theory]
     [InlineData("Emily Lee", "EL")]
     [InlineData("Chief of Staff", "CS")]
-    [InlineData("echo", "E")]
+    [InlineData("echo", "EC")]
     public async Task ViewMode_ShowsMonogramFromFirstAndLastWord(string name, string expectedMonogram)
     {
         await using var factory = new TeamWebApplicationFactory();
@@ -741,7 +741,7 @@ public sealed class TeammateCardTests
         var cut = await OpenViewCardAsync(ctx, factory, "coo");
         await ClickButtonAsync(cut, "Edit");
 
-        var warningChips = cut.FindAll(".mud-chip-color-warning");
+        var warningChips = cut.FindAll(".status-chip-warning");
         Assert.Contains(warningChips, chip => chip.TextContent.Contains("nonexistent", StringComparison.Ordinal));
     }
 

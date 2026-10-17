@@ -67,14 +67,20 @@ public sealed class ThemeCatalogTests
         var dark = ThemeCatalog.BuiltIn.Single(descriptor => string.Equals(descriptor.Id, "huddle-dark", StringComparison.Ordinal));
 
         Assert.Equal(ThemeMode.Light, light.Mode);
-        Assert.Equal("#6E78DA", Hex(light.Theme.PaletteLight.Primary), ignoreCase: true);
+        Assert.Equal("#5B64C8", Hex(light.Theme.PaletteLight.Primary), ignoreCase: true);
+        Assert.Equal("#FFFFFF", Hex(light.Theme.PaletteLight.PrimaryContrastText), ignoreCase: true);
         Assert.Equal("#F2F0ED", Hex(light.Theme.PaletteLight.Background), ignoreCase: true);
         Assert.Equal("#FFFFFF", Hex(light.Theme.PaletteLight.Surface), ignoreCase: true);
         Assert.Equal("#e6e2dc", Hex(light.Theme.PaletteLight.DrawerBackground), ignoreCase: true);
 
         Assert.Equal(ThemeMode.Dark, dark.Mode);
-        Assert.Equal("#6E78DA", Hex(dark.Theme.PaletteDark.Primary), ignoreCase: true);
+        Assert.Equal("#8F97E6", Hex(dark.Theme.PaletteDark.Primary), ignoreCase: true);
+        Assert.Equal("#141413", Hex(dark.Theme.PaletteDark.PrimaryContrastText), ignoreCase: true);
         Assert.Equal("#1C1C1B", Hex(dark.Theme.PaletteDark.Background), ignoreCase: true);
+
+        // F4: default icon buttons draw in the Theme's secondary text colour, not MudBlazor's translucent grey.
+        Assert.Equal(Hex(light.Theme.PaletteLight.TextSecondary), Hex(light.Theme.PaletteLight.ActionDefault), ignoreCase: true);
+        Assert.Equal(Hex(dark.Theme.PaletteDark.TextSecondary), Hex(dark.Theme.PaletteDark.ActionDefault), ignoreCase: true);
     }
 
     /// <summary>
@@ -261,6 +267,66 @@ public sealed class ThemeCatalogTests
     }
 
     /// <summary>
+    /// Every built-in theme sets the sidebar's text to its <c>TextPrimary</c> and the sidebar's icons to its
+    /// <c>TextSecondary</c>. A theme that leaves <c>DrawerText</c> or <c>DrawerIcon</c> unset shows MudBlazor's
+    /// own greys there (a cool <c>#424242</c> on light, 50% white on dark), the one list in the app the
+    /// theme's own greys would not reach.
+    /// </summary>
+    [Fact]
+    public void BuiltIn_EveryThemeSetsDrawerTextAndIconFromItsOwnTextColours()
+    {
+        foreach (var descriptor in ThemeCatalog.BuiltIn)
+        {
+            var palette = NativePalette(descriptor);
+
+            Assert.True(
+                string.Equals(Hex(palette.DrawerText), Hex(palette.TextPrimary), StringComparison.OrdinalIgnoreCase),
+                $"{descriptor.Id}: DrawerText {Hex(palette.DrawerText)} is not TextPrimary {Hex(palette.TextPrimary)}.");
+            Assert.True(
+                string.Equals(Hex(palette.DrawerIcon), Hex(palette.TextSecondary), StringComparison.OrdinalIgnoreCase),
+                $"{descriptor.Id}: DrawerIcon {Hex(palette.DrawerIcon)} is not TextSecondary {Hex(palette.TextSecondary)}.");
+        }
+    }
+
+    /// <summary>
+    /// The two Huddle themes' <c>Divider</c> - the border of message cards, tiles and roster cards - reads at
+    /// least 1.5:1 against <c>Surface</c>. The other themes are imported faithfully and held to no floor here;
+    /// <see cref="BuiltIn_DividerVersusSurface_IsRecorded"/> measures them.
+    /// </summary>
+    /// <param name="themeId"><see cref="ThemeDescriptor.Id"/> of the Huddle theme under test.</param>
+    [Theory]
+    [InlineData("huddle")]
+    [InlineData("huddle-dark")]
+    public void Huddle_DividerAgainstSurface_ReachesCardBorderVisibility(string themeId)
+    {
+        var descriptor = ThemeCatalog.BuiltIn.Single(candidate => string.Equals(candidate.Id, themeId, StringComparison.Ordinal));
+        var palette = NativePalette(descriptor);
+
+        var ratio = ContrastColour.Ratio(palette.Divider, palette.Surface);
+
+        Assert.True(ratio >= 1.5, $"{themeId}: Divider vs Surface is {ratio:F2}:1, under the 1.5:1 card-border floor.");
+    }
+
+    /// <summary>
+    /// Records <c>Divider</c> against <c>Surface</c> for every built-in theme, so a new or imported palette's
+    /// card-border visibility is a measured number rather than a guess. It asserts only that each ratio is
+    /// finite and at least 1:1; the 1.5:1 floor is enforced for the Huddle themes alone.
+    /// </summary>
+    [Fact]
+    public void BuiltIn_DividerVersusSurface_IsRecorded()
+    {
+        Dictionary<string, double> measured = new(StringComparer.Ordinal);
+        foreach (var descriptor in ThemeCatalog.BuiltIn)
+        {
+            var palette = NativePalette(descriptor);
+            measured[descriptor.Id] = ContrastColour.Ratio(palette.Divider, palette.Surface);
+        }
+
+        Assert.Equal(ThemeCatalog.BuiltIn.Count, measured.Count);
+        Assert.All(measured.Values, ratio => Assert.True(double.IsFinite(ratio) && ratio >= 1.0));
+    }
+
+    /// <summary>
     /// Maps a <c>--mud-palette-*</c> custom property name to its <see cref="Palette"/> property name.
     /// Kebab-case converts mechanically (<c>--mud-palette-text-secondary</c> to <c>TextSecondary</c>)
     /// except <c>--mud-palette-primary-text</c>, which MudBlazor names after <see cref="Palette.PrimaryContrastText"/>
@@ -353,58 +419,7 @@ public sealed class ThemeCatalogTests
             3.98,
             4.5,
             "TextSecondary is the same #717171 registry default as the themes above, but Solarized Light's own Surface (#eee8d5) is not near-white, lowering the ratio to 3.98:1. Imported unmodified."),
-        new(
-            "huddle",
-            "Primary vs Surface",
-            3.92,
-            4.5,
-            "The requested brand accent #6e78da is a mid-tone: it measures 3.92:1 against this palette's own Surface, under the 4.5:1 text floor, and is kept as asked."),
-        new(
-            "huddle-dark",
-            "Primary vs Surface",
-            3.87,
-            4.5,
-            "The requested brand accent #6e78da is a mid-tone: it measures 3.87:1 against this palette's own Surface, under the 4.5:1 text floor, and is kept as asked."),
-        new(
-            "custom-accent",
-            "Primary vs Surface",
-            3.92,
-            4.5,
-            "The requested brand accent #6e78da is a mid-tone: it measures 3.92:1 against this palette's own Surface, under the 4.5:1 text floor, and is kept as asked."),
-        new(
-            "custom-accent-dark",
-            "Primary vs Surface",
-            3.87,
-            4.5,
-            "The requested brand accent #6e78da is a mid-tone: it measures 3.87:1 against this palette's own Surface, under the 4.5:1 text floor, and is kept as asked."),
-        new(
-            "huddle",
-            "PrimaryContrastText vs Primary",
-            3.92,
-            4.5,
-            WhiteOnAccent),
-        new(
-            "huddle-dark",
-            "PrimaryContrastText vs Primary",
-            3.92,
-            4.5,
-            WhiteOnAccent),
-        new(
-            "custom-accent",
-            "PrimaryContrastText vs Primary",
-            3.92,
-            4.5,
-            WhiteOnAccent),
-        new(
-            "custom-accent-dark",
-            "PrimaryContrastText vs Primary",
-            3.92,
-            4.5,
-            WhiteOnAccent),
     ];
-
-    /// <summary>Why the Huddle and Custom Accent themes' white-on-accent text sits under the floor: white text and icons on anything filled with the accent were asked for, and black would reach 5.36:1.</summary>
-    private const string WhiteOnAccent = "Text and icons on anything filled with the accent are white, as asked: white measures 3.92:1 against the mid-tone brand accent #6e78da, under the 4.5:1 text floor, where black would reach 5.36:1.";
 
     /// <summary>One foreground/background pair this suite holds to a WCAG contrast floor.</summary>
     /// <param name="Name">The pair's display name, used as the theory's data label and in failure messages.</param>

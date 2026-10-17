@@ -5,8 +5,8 @@ Status: version 1 **built 2026-10-10** on `feat/tabs` ([ADR-0045](adr/0045-a-tab
 ## 1. The idea
 
 Everything the Human opens from the left menu opens in a **Tab**, as in VS Code. A click opens a
-**preview Tab** (its title in italics); it is replaced by the next preview. A double-click, or
-working in the Tab, makes it **permanent** (upright title). The Library is one page and so one Tab.
+**preview Tab** (its title in `TextSecondary`, never italic or lighter in weight); it is replaced by the next preview. A double-click, or
+working in the Tab, makes it **permanent** (its title takes the body colour). The Library is one page and so one Tab.
 
 Version 2 adds a split: two Tabs side by side, a Tab menu, and pinned Tabs (section 9). Stacked groups
 and more than two groups are still to come; the model and the persisted format already allow them.
@@ -16,7 +16,7 @@ and more than two groups are still to come; the model and the persisted format a
 | Term | Meaning |
 | --- | --- |
 | Tab | One open page: a key, a URL, a title, an icon and a preview flag. |
-| Preview Tab | A Tab not yet made permanent. At most one exists per group. Shown in italics. |
+| Preview Tab | A Tab not yet made permanent. At most one exists per group. Its title is marked by `TextSecondary` colour, not by italics or weight; titles are 13px at weight 400 and the active one 500. |
 | Permanent Tab | A Tab the Human kept. Never replaced by opening something else. |
 | Tab key | What makes two URLs the same Tab (section 3). Opening an item whose key is open activates it. |
 | Group | An ordered row of Tabs with one active, drawn as one pane. Version 1 has exactly one; version 2 allows up to `TabService.MaxGroups` (2). Exactly one group has focus. |
@@ -45,23 +45,26 @@ and more than two groups are still to come; the model and the persisted format a
 and moves when focus moves. It is laid out as three cells: the trail, then reserved room for a search
 box (`Search`) and for toolbar buttons (`Actions`), which later features fill.
 `TabTrail.Build(url, tabTitle)` derives it from the URL, following the same table as the keys. The
-last crumb is the Tab's own title (so a renamed Room follows), is plain text, and carries
-`aria-current="page"`. An ancestor with a page of its own is a link; an area with none (*Teams*) is
-plain text.
+trail holds ancestors only when the page names itself with an h1 (a Room, a Team, a Project, Build a
+team): then the page's name is not said twice. A page with no h1 (a Tasks View, a Settings tab) ends in
+the Tab's own title, is plain text and carries `aria-current="page"`; a page with no ancestor keeps a
+one-crumb trail. An ancestor with a page of its own is a link; an area with none (*Teams*) is plain
+text. The document title is the bare page name ("Platform", "Grace", "My Tasks"), with no suffix.
 
 | URL | Trail |
 | --- | --- |
 | `/`, `/tasks`, `/teammates`, `/library`, `/settings` | the title alone |
-| `/rooms/{id}` | Chats (link to `/`), the Room's name |
-| `/teams/build` | Teams, Build a team |
-| `/teams/{team}` | Teams, the Team |
-| `/teams/{team}/projects/{project}` | Teams, the Team (link), the Project |
-| `/tasks/{view}`, `/tasks/new`, `/tasks/item/{id}` | Tasks (link), the Tab's title |
+| `/rooms/{id}` | Rooms (link to `/`); the Room's name is the page's h1 |
+| `/teams/build` | Teams |
+| `/teams/{team}` | Teams; the Team's name is the page's h1 |
+| `/teams/{team}/projects/{project}` | Teams, the Team (link); the Project's name is the page's h1 |
+| `/tasks/{view}`, `/tasks/new`, `/tasks/item/{id}` | Tasks (link), the Tab's title (the View's display name, never its slug) |
 | `/settings/{tab}` | Settings (link), the tab's name |
 
 The bar is fixed, so it stays in view while a long page scrolls, and it spans the window, so a trail is
-never collapsed. Pages drop a title that only repeats the last crumb; Tasks and Chat keep theirs, because
-the Task view's Tab title is its id and the Room's title row carries rename and members.
+never collapsed. Tasks has no h1 (its last crumb is the View's display name; `TabReconciler.ReconcileViews`
+retitles the `tasks:{id}` Tab, also on rename). A Room, Team or Project draws its name as its h1 and the
+trail holds only the ancestors.
 
 ### Tab keys
 
@@ -75,7 +78,7 @@ the Task view's Tab title is its id and the Room's title row carries rename and 
 | `/tasks/item/{id}`, `/tasks/new` | `task:{id}`, `task-new` | |
 | `/teammates` | `teammates` | |
 | `/settings` and its sub-tabs | `settings` | |
-| `/library` with any query | `library` | One page, one Tab. A root row re-scopes it. |
+| `/library` with any query | `library` | One page, one Tab. The sidebar's one Library link opens it; there are no root rows. |
 | anything else | the path | |
 
 Keys compare ordinally and case-sensitively, except Team and Project names, which are lowered.

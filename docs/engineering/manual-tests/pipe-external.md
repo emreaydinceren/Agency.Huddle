@@ -17,7 +17,7 @@ oracles `O-LOG` / `O-ADAPTERS` / `O-TRANSCRIPT` / `O-DB` / `O-WIRE`, the four re
 
 1. Lane is `P-LAUNCH-FREE` (ACP off, data in `<repo>\src\Huddle.App\App_Data`), except PIPEEXTERNAL-03, -18, -19, -20, -21 and -31, which need an in-process Teammate and say in **Before you start** that they use [`P-LAUNCH-UAT`](common.md#p-launch-uat) instead (ACP on with the free mock adapter, data in `C:\seeds\huddle\uat\data`). Nothing in this area needs a real model turn, so nothing spends money. A Room or bot created under one lane does not exist under the other: switching lane means a different data folder.
 2. `T-A` runs the app. Extra terminals are opened by individual tests as `T-C`, `T-D` and so on, each at `<repo>`.
-3. Arrange the browser at `http://localhost:5100` and `T-A` so both are visible at once. Confirm the sidebar shows, top to bottom: the **Chats** group (the Rooms, then **New chat** below them), **Teams**, **Teammates**, **Tasks**, **Library**, **Archived** and the **Settings** icon. If it does not, STOP and report the app as not starting; every test below is INCONCLUSIVE.
+3. Arrange the browser at `http://localhost:5100` and `T-A` so both are visible at once. Confirm the sidebar shows, top to bottom: the **Needs you** card when something waits, the **Rooms** group (the Rooms, then **New chat** below them; the group starts closed), **Teams**, **Teammates**, **Tasks**, **Library** (one link) and, at the foot, the **Archived chats** and **Settings** icons. If it does not, STOP and report the app as not starting; every test below is INCONCLUSIVE.
 4. No test in this area configures a Persona. Under `P-LAUNCH-FREE` ACP stays off, so nothing here spends money; the six UAT tests use the free mock adapter.
 5. A fresh install has no pipe Agents: the sidebar starts with no Rooms of bots, and a bot's own Room appears only when it connects. The built-in Chief of Staff is seeded at every start and is an in-process Agent whatever `Acp:Enabled` is; ignore it wherever these tests read the New chat and Invite teammate lists. Tests that need an extra in-process Agent in a Room use Ada or Bo from `P-LAUNCH-UAT`, and say so in **Before you start**. Do not run `P-ECHO-BOT` under the name `Ada` or `Bo` in such a test: an external client under an in-process Agent's name collides with it.
 6. **RAW-CLIENT** (used by PIPEEXTERNAL-28 through -32): a plain PowerShell pipe client, distinct from `P-ECHO-BOT`. In a new terminal, line by line:
@@ -389,16 +389,16 @@ If a banner DOES appear and the name it lists is a Persona (an entry that also a
 **Pass if — all of these**
 
 - While the bot is connected, `mybot`'s dot in the New chat panel is green and its `title` / tooltip reads `online` (the element's class is `agent-dot online`).
-- After Ctrl+C and REOPENING the panel, `mybot`'s dot is red (`--mud-palette-error`, `app.css:71-73`) and its `title` reads `offline` (class `agent-dot offline`).
-- The **Invite teammate** panel in the `otherbot` Room shows the same dot and the same tooltip for `mybot`: red `offline` while `mybot` is stopped, green `online` once it is restarted.
+- After Ctrl+C and REOPENING the panel, `mybot`'s badge is a hollow grey ring and its `title` reads `offline` (class `agent-dot offline`).
+- The **Invite teammate** panel in the `otherbot` Room shows the same dot and the same tooltip for `mybot`: a hollow grey ring (`offline`) while `mybot` is stopped, a green check circle (`online`) once it is restarted.
 - The dot's colour and its tooltip text agree with each other in every case.
 
 **Fail if — any of these**
 
 - The dot stays green after the panel is closed and reopened -> liveness is not being read live; the panel is serving a cached or persisted presence value, which will show dead agents as available forever.
-- Every dot is red while bots are demonstrably connected (their consoles are still running) -> the presence registry is not being consulted, or connections are not being registered at all.
+- Every dot is a hollow grey ring while bots are demonstrably connected (their consoles are still running) -> the presence registry is not being consulted, or connections are not being registered at all.
 - The panel lists no agents at all when agents have connected -> the directory read is broken; nothing can then be invited or chatted with.
-- The tooltip says `online` on a red dot, or `offline` on a green one -> colour and label are computed from different sources.
+- The tooltip says `online` on a hollow ring, or `offline` on a green circle -> colour and label are computed from different sources.
 
 **Inconclusive if**
 
@@ -1342,9 +1342,9 @@ If the browser tab was already disconnected or backgrounded before step 3, the d
 
 **Pass if — all of these**
 
-- The sidebar's Room list reads exactly `No rooms yet. Start an agent to create one.`
+- The sidebar's Room list shows the title `No rooms yet` with the line `Start an agent to create one.` under it.
 - The main pane reads exactly the SAME sentence: `No rooms yet. Start an agent to create one.`
-- The New chat panel reads `No agents have connected yet. Start one with tools/echo-bot.ps1` followed by whatever the rest of that sentence currently says (the app's empty-state copy, which is not what this test judges).
+- The New chat panel shows the title `No agents have connected yet` and, under it, `Start one with tools/echo-bot.ps1` followed by whatever the rest of that line currently says (the app's empty-state copy, which is not what this test judges).
 - After the bot connects, the sidebar gains `mybot` with NO refresh.
 - The MAIN PANE still reads `No rooms yet. Start an agent to create one.` until you click the sidebar entry.
 - Clicking the entry opens the Room with heading `mybot`.

@@ -1,5 +1,6 @@
 using Bunit;
 using Bunit.Rendering;
+using Microsoft.AspNetCore.Components;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Options;
@@ -200,6 +201,7 @@ public sealed class RoomCopyLinkTests
         await using MudBunitContext ctx = RoomCopyLinkTests.NewTeamsNavContext(directory, catalog, chat, events);
         ctx.JSInterop.Mode = JSRuntimeMode.Loose;
         ctx.JSInterop.Setup<bool>(RoomCopyLinkTests.CopyHelper, expected).SetResult(true);
+        ctx.Services.GetRequiredService<NavigationManager>().NavigateTo("/rooms/room-marketing");
         IRenderedComponent<ContainerFragment> cut = RoomCopyLinkTests.RenderTeamsNav(ctx);
         cut.WaitForAssertion(() => Assert.Single(cut.FindAll("a[href='/rooms/room-marketing']")));
         await RoomCopyLinkTests.OpenRowMenuAsync(cut);

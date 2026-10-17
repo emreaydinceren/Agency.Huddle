@@ -666,7 +666,7 @@ If the click produced neither of the two outcomes above — no file change AND n
 2. In DevTools -> Elements, select `<body>` and read Computed `background-color`. It must be `rgb(28, 28, 27)` (Huddle Dark's Background, `#1c1c1b`; `HuddleTheme.cs:82`).
 3. (a) With no room selected, inspect: the page body; the sidebar drawer; the `New chat` button; the room list; and the two nav links `Teammates` and `Settings`. Note anything light.
 4. (b) Click `New chat`. Inspect the panel: the agent rows for `Ada` and `Bo`, their coloured status dots, and the `Start chat` button.
-5. (c) Close the panel and click the `Ada` Room in the sidebar. In the Room, inspect: the chat header, the member line, each message row (sender name, timestamp, body), the composer textarea including its placeholder `Message… (/invite @agent)`, and the budget note line.
+5. (c) Close the panel and click the `Ada` Room in the sidebar. In the Room, inspect: the chat header, the member line, each message row (sender name, timestamp, body), the composer textarea including its placeholder `Message {Room name}… (/invite @Teammate)`, and the budget note line.
 6. (d) Type `hello` and press Enter. WATCH THE DRAFT STREAM IN: inspect the streaming row, its caret, the stop control (a small outlined button), and any tool-activity line while they are on screen.
 7. (e) Type a fenced code block: type three backticks, then `code`, then three backticks, and press Enter. Inspect the rendered code block - it exercises the monospace token, still declared in `wwwroot/app-vars.css` since MudBlazor's theme has no monospace equivalent.
 8. (f) Click `Teammates` in the sidebar. Inspect the tiles, the avatar monograms, the team filter select, and the `New teammate` button.
@@ -772,7 +772,7 @@ If forcing `:hover` in DevTools has no effect, hover the element with the mouse 
 6. Wait and watch: the text should change to `Rejoin failed... trying again in N seconds.` with a counting number, and eventually to `Failed to rejoin.` / `Please retry or reload the page.` with a `Retry` button.
 7. Look at the panel itself: is it a raised surface with rounded corners and a shadow, and is the page BEHIND it visibly dimmed?
 8. In DevTools -> Elements, find `<dialog id="components-reconnect-modal">`, expand it to reveal the `::backdrop` pseudo-element, select `::backdrop`, and read Computed `background-color`.
-9. Look at the `Retry` button's colour - it must be the application's Primary MudTheme colour (in Huddle Dark the indigo `#6e78da`, `HuddleTheme.cs`), not a light framework blue.
+9. Look at the `Retry` button's colour - it must be the application's Primary MudTheme colour (in Huddle Dark the periwinkle `#8f97e6`, `HuddleTheme.cs`; its text is near-black `#141413`, the theme's accent text, not a framework blue), not a light framework blue.
 10. Restart the server with the same [`P-LAUNCH-FREE`](common.md#p-launch-free) command (it carries the cost-guard variable), reload the page.
 11. Go to /settings/appearance and click `Huddle Light` in the Theme picker.
 12. Open a Room again, stop the server again with Ctrl+C, and repeat the same observations with the light panel.

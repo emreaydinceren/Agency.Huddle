@@ -120,7 +120,7 @@ these.
 | **The only scroll code is "to the bottom".** `MessageList.OnAfterRenderAsync` calls `teamScroll.toBottom` whenever the rendered signature (Messages plus Draft growth) changes, unconditionally. Message rows carry no DOM id. There is no scroll-to-Message. | `src/Huddle.App/Components/Shared/MessageList.razor:290`, `src/Huddle.App/wwwroot/app.js:155` |
 | **The Top Bar is built** (PR #162). `TopBar.razor` is a fixed `MudAppBar` across the whole window, above the left menu (the drawer uses `ClipMode="DrawerClipMode.Always"`, so it starts below the bar) and every pane. It draws `PageBreadcrumbs` for `TabService.Active`, so the trail follows the focused pane; a crumb navigates that Tab in place. It has three cells, `.top-bar-start` (the trail), `.top-bar-center` and `.top-bar-end`, and two `RenderFragment?` parameters, **`Search`** (drawn in `.top-bar-center`) and **`Actions`** (`.top-bar-end`). `MainLayout` draws `<TopBar />` with both slots empty today. | `src/Huddle.App/Components/Layout/TopBar.razor`, `src/Huddle.App/Components/Layout/MainLayout.razor` |
 | **No pane draws a breadcrumb.** `TabPageHost` mounts only the page; `PageBreadcrumbs` has `Crumbs` and `OnNavigate` and no `Collapse` (a trail spanning the window is never collapsed). `TabTrail.Build` makes a page with no trail show its title alone, as `/settings` does. | `src/Huddle.App/Components/Layout/TabPageHost.razor`, `src/Huddle.App/Components/Shared/PageBreadcrumbs.razor`, `tests/Huddle.Tests/Ui/Layout/PageBreadcrumbsTests.cs` |
-| **The whole UI is drawn at 90%.** `html { zoom: 0.9; }`. Viewport units are not zoomed, so `.main-column` is `height: calc(100vh / 0.9)`. MudBlazor places a popover in viewport pixels, so `.mud-popover-provider` cancels the zoom (`zoom: calc(1 / 0.9)`) and `.mud-popover-provider .mud-popover > *` takes it back (`zoom: 0.9`). The scale is a literal `0.9` in each place, never a `var()`, because every `var()` in `app.css` must name a MudBlazor variable (`ThemeSourceTests`). Dialogs, snackbars and `MudSelect` under the zoom have not been checked. | `src/Huddle.App/wwwroot/app.css:19-41`, `:108-116` |
+| **The page is not zoomed.** The UI renders at 100% with plain `vh` and `px` sizes ([ADR-0056](adr/0056-the-ui-renders-at-100-percent-with-a-px-type-scale.md) removed the old 90% `zoom`): `.main-column` is `height: 100vh`, a popover needs no zoom rule, and no rule in `app.css` sets `zoom` (`AppCss_SetsNoZoomAnywhere`). Every `var()` in `app.css` must still name a MudBlazor variable (`ThemeSourceTests`). | `src/Huddle.App/wwwroot/app.css` (`.main-column`) |
 | Global keys: `window.huddleTabs.attach` adds one `document` `keydown` listener for Alt+W, Alt+PageDown and Alt+PageUp, attached from `TabHost.OnAfterRenderAsync`. Alt, because the browser keeps Ctrl+W and Ctrl+Tab. | `src/Huddle.App/wwwroot/app.js:164`, `src/Huddle.App/Components/Layout/TabHost.razor:36` |
 | `TabService` has `Open(url)`, `Navigate(id, url)` (in place; focuses another Tab with the same key instead), `Keep(id)` (makes permanent) and `Active`. | `src/Huddle.App/Tabs/TabService.cs` |
 | `TabPageRoutes` copies every query value onto the page's `[Parameter]` of the same name, so a page reads `?message=` without `SupplyParameterFromQuery`. | `src/Huddle.App/Tabs/TabPageRoutes.cs:88-97` |
@@ -189,7 +189,7 @@ The dropdown follows VS Code's model exactly (D-7):
 - Anchored under the search box, **wider than the box**: about 720 px of the UI, left-aligned under
   the box, shrinking to the window's width on a narrow window.
 - At most **80% of the browser window's height**; the list inside scrolls. §6.8 says how to compute
-  that under the 90% zoom.
+  that in plain viewport units.
 - **Typing stays in the bar.** The dropdown has no second input.
 
 ```text
@@ -331,7 +331,7 @@ need*. Confirm each parameter against 9.10.0 before building
 | The Top Bar | `TopBar` (built: `MudAppBar` with a three-cell grid) | Filled through its `Search` slot, never reshaped |
 | The breadcrumb | `PageBreadcrumbs` (built, `MudBreadcrumbs`) | Untouched by search |
 | The search box | `MudTextField<string>` with a start adornment (search icon) and an end adornment (`Ctrl K` hint) | Not `MudAutocomplete`: that offers one flat list of one type, and this dropdown is grouped, mixed and chip-filtered |
-| The dropdown | `MudPopover` anchored to the box | Size rules in the `/* Global search */` block of `app.css`, `--mud-*` variables only, under the zoom rules of §6.8 |
+| The dropdown | `MudPopover` anchored to the box | Size rules in the `/* Global search */` block of `app.css`, `--mud-*` variables only, under the sizing rules of §6.8 |
 | Filter chips | `MudChipSet<SearchFilter>` with single selection | `SelectedValue` bound to the filter |
 | Group headings, card text | `MudText` | |
 | Avatars | `TeammateAvatar` | The house component |
@@ -340,41 +340,32 @@ need*. Confirm each parameter against 9.10.0 before building
 | A group still searching | `MudProgressCircular Indeterminate="true" Size="Size.Small"` | |
 | A failed or truncated group | `MudText` with `Color.Warning` and an icon | Not a `MudAlert`: it is one line inside a list |
 
-### 6.8 Under the 90% zoom
+### 6.8 Size and placement of the dropdown
 
-The UI is drawn at 90% (`html { zoom: 0.9; }`, §4). The dropdown is a `MudPopover`, so it lives in
-the popover provider and must follow the provider's rule exactly. Read the zoom comment and the two
-provider rules at the top of `app.css` (`:19-41`) before writing any dropdown CSS, and copy that
-approach; do not invent another.
+The page is not zoomed ([ADR-0056](adr/0056-the-ui-renders-at-100-percent-with-a-px-type-scale.md)): sizes are plain `px` and viewport units. The dropdown is a
+`MudPopover`, so it lives in MudBlazor's popover provider, which places it in viewport pixels. That
+is now correct with no help from the stylesheet.
 
-1. **Placement cancels the zoom.** The `.mud-popover` element sits inside `.mud-popover-provider`,
-   whose `zoom: calc(1 / 0.9)` undoes the page's 0.9, so MudBlazor's viewport-pixel placement is
-   right. Do not set a `zoom` on the popover element itself, and do not move the dropdown out of
-   the provider.
-2. **Content re-applies 0.9.** The provider's `.mud-popover > *` rule gives the popover's content
-   `zoom: 0.9`, so the dropdown is drawn at the same size as the rest of the UI. The dropdown's
-   sizing and scrolling live on its **content wrapper** (`.search-dropdown`, the popover's direct
-   child), which is inside that 0.9.
-3. **Heights and widths in viewport units divide by the scale**, as `.main-column` does, because
-   viewport units are not zoomed: inside a 0.9 zoom, `80vh` would come out at 72% of the window.
-   So the wrapper is exactly:
+1. **Placement is MudBlazor's.** Do not set a `zoom` on the popover or any ancestor, and do not move
+   the dropdown out of the provider.
+2. **Sizing and scrolling live on the content wrapper** (`.search-dropdown`, the popover's direct
+   child), in plain viewport units. The wrapper is exactly:
 
    ```css
    .search-dropdown {
-       width: min(720px, calc(100vw / 0.9));
-       max-height: calc(80vh / 0.9);
+       width: min(720px, calc(100vw - 48px));
+       max-height: 80vh;
        overflow-y: auto;
    }
    ```
 
-   which is 80% of the window's height and never wider than the window. `720px` is in the UI's own
-   pixels, like every other px size in the app. The two `0.9` literals join the scale's other
-   places, and the comment above `html { zoom }` must be updated to name them, so a change of scale
-   changes all of them together.
-4. **Verify at 90%, by hand.** bUnit runs no layout. GS-M10 checks that the dropdown is anchored
-   flush under the box at its left edge, that its height reaches 80% of the window with a long
-   result list and no further, and that the list scrolls inside it. GS-M5 checks the Room jump's
-   centring and highlight at 90%.
+   which is 80% of the window's height and never wider than the window.
+3. **Pinned as source facts.** `AppCssSearchTests` holds `max-height: 80vh;` on `.search-dropdown`,
+   and that no rule in the Global search block (or anywhere in `app.css`) sets `zoom`.
+4. **Verify by hand.** bUnit runs no layout. GS-M10 checks that the dropdown is anchored flush under
+   the box at its left edge, that its height reaches 80% of the window with a long result list and
+   no further, and that the list scrolls inside it. GS-M5 checks the Room jump's centring and
+   highlight.
 
 ---
 
@@ -700,7 +691,7 @@ Today none of this exists (§4). The work:
    the middle of the list, adds a `search-hit-flash` class, and removes it after the fade. The
    colour comes from `--mud-palette-*` in `app.css`; the fade is a CSS transition, and
    `prefers-reduced-motion` drops it to a plain outline that clears. `scrollIntoView` works in the
-   zoomed page's own coordinates; GS-M5 checks the centring and the highlight at 90% (§6.8).
+   page's own coordinates; GS-M5 checks the centring and the highlight (§6.8).
 4. **A rule stops the stick-to-bottom logic overriding the jump.** `MessageList.OnAfterRenderAsync`
    today scrolls to the bottom whenever the rendered signature changes, which a newly loaded Room
    always does. With a target set, the first render scrolls to the target instead, and the list
@@ -830,7 +821,7 @@ providers under them are not faked in §12.2.
 | GS-T21 | `Chat.razor` with `Message` set calls `teamScroll.toMessage`, not `toBottom`, on its first render, and a later Message does not call `toBottom` until the Human returns to the bottom |
 | GS-T22 | `MessageList` rows carry `data-message-id` |
 | GS-T23 | The search box is drawn in the Top Bar's `.top-bar-center` cell through the `Search` slot, and `TopBar` itself is unchanged |
-| GS-T24 | `app.css` pins the dropdown's zoom rules as source facts: `.search-dropdown` has `max-height: calc(80vh / 0.9)` and `width: min(720px, calc(100vw / 0.9))`, and no rule sets `zoom` on a search popover |
+| GS-T24 | `app.css` pins the dropdown's size as source facts: `.search-dropdown` has `max-height: 80vh;` in plain viewport units, and no rule sets `zoom` on a search popover or anywhere else (ADR-0056) |
 | GS-T25 | `Enter` on a Teammate hit opens the `TeammateCard` dialog for that Name and changes no Tab |
 
 ### 12.5 Manual tests
@@ -845,12 +836,12 @@ feature is built. All free.
 | GS-M2 | **`Ctrl+K` in Edge** reaches the app and not the address bar; if not, record it and try `Ctrl+Shift+K` |
 | GS-M3 | Groups fill one by one on a large pinned root; typing fast never shows stale results; the time to search every Transcript on the largest real install is recorded (OP-18) |
 | GS-M4 | Content hits, the snippet's bold match, the 1 MB cut-off and the incomplete note |
-| GS-M5 | A Room hit jumps to the Message with a fading highlight, in a closed Room and in the open one, at the 90% zoom: the row is centred in the list and the highlight covers it; a new Message during the highlight does not yank the view |
+| GS-M5 | A Room hit jumps to the Message with a fading highlight, in a closed Room and in the open one: the row is centred in the list and the highlight covers it; a new Message during the highlight does not yank the view |
 | GS-M6 | Archived Rooms and Closed Tasks appear dimmed below, after the active groups |
 | GS-M7 | A locked folder in a pinned root shows `Couldn't search Library.` or skips, and the other groups still render |
 | GS-M8 | Keyboard only: chips, `Alt+1`…`6`, `Ctrl+Left`/`Right`, `Up`/`Down`, `Enter`, `Ctrl+Enter`; a screen reader announces the highlighted card and the result count |
 | GS-M9 | The search box sits in the Top Bar's middle cell beside the breadcrumb, in one pane and in a split, and the trail still follows focus |
-| GS-M10 | **Under the 90% zoom**, the dropdown is anchored flush under the box at its left edge; with a long list its height is 80% of the window (measured: `getBoundingClientRect().height` ≈ `0.8 × window.innerHeight`) and no more; the list scrolls inside it; on a narrow window it is no wider than the window. Checked in Chrome and Edge |
+| GS-M10 | **At the default 100% render**, the dropdown is anchored flush under the box at its left edge; with a long list its height is 80% of the window (measured: `getBoundingClientRect().height` ≈ `0.8 × window.innerHeight`) and no more; the list scrolls inside it; on a narrow window it is no wider than the window. Checked in Chrome and Edge |
 
 ---
 
@@ -960,7 +951,7 @@ as they need to be (PR #162) and do not change.
 | `src/Huddle.App/Components/Shared/MessageList.razor` | `data-message-id` on every row; the jump instead of `toBottom`, and the rule that holds stick-to-bottom off |
 | `src/Huddle.App/Components/Pages/Teammates.razor` | Its card opening moves into the shared opener the search bar also calls (§9); behaviour unchanged |
 | `src/Huddle.App/wwwroot/app.js` | `window.huddleSearch` (keys, focus restore) and `teamScroll.toMessage` |
-| `src/Huddle.App/wwwroot/app.css` | A `/* Global search */` block: the dropdown size under the zoom (§6.8), the flash, the dimmed group; the zoom comment names the new `0.9` places. A protected shared root file: announce the change |
+| `src/Huddle.App/wwwroot/app.css` | A `/* Global search */` block: the dropdown size in viewport units (§6.8), the flash, the dimmed group. A protected shared root file: announce the change |
 | `src/Huddle.App/Library/LibraryFileService.cs` | The shared walk gains the content test (§8.3); `FindAsync` behaves as before |
 | `src/Huddle.App/TeamOptions.cs` | A `Search` property of the new `SearchOptions` |
 | `src/Huddle.App/ServiceCollectionExtensions.cs` | Registers the orchestrator (scoped) and the five providers |
@@ -986,7 +977,7 @@ already delivered (PR #162).
 | --- | --- | --- |
 | 0 | D1 contracts, options and text helpers | Haiku |
 | 0 | D0 ADR-0051 | Sonnet |
-| 1 | D2 parser, ranker, open Team and hit links; D3 Teams, Teammates and Tasks providers; D4 Rooms provider; D8 cards and the zoom-aware stylesheet; D9 dropdown view model | Haiku |
+| 1 | D2 parser, ranker, open Team and hit links; D3 Teams, Teammates and Tasks providers; D4 Rooms provider; D8 cards and the stylesheet; D9 dropdown view model | Haiku |
 | 1 | D5 Library walk with the content test; D13 the Room jump and the Teammate card opener | Sonnet |
 | 2 | D6 Library provider | Haiku |
 | 2 | D7 orchestrator and DI | Sonnet |

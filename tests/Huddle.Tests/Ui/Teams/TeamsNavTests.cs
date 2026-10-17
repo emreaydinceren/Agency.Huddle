@@ -63,7 +63,7 @@ public sealed class TeamsNavTests
             ],
         };
 
-        await using MudBunitContext ctx = NewContext(catalog);
+        await using MudBunitContext ctx = NewContext(catalog, stored: AllOpen);
         IRenderedComponent<ContainerFragment> cut = RenderNav(ctx);
 
         string?[] expectedHrefs =
@@ -76,8 +76,11 @@ public sealed class TeamsNavTests
             "/teams/Lab%20%232/projects/Item%20%231",
             "/teams/build",
         ];
-        string?[] actualHrefs = [.. cut.FindAll(".teams-nav a[href]").Select(a => a.GetAttribute("href"))];
-        Assert.Equal(expectedHrefs, actualHrefs);
+        cut.WaitForAssertion(() =>
+        {
+            string?[] actualHrefs = [.. cut.FindAll(".teams-nav a[href]").Select(a => a.GetAttribute("href"))];
+            Assert.Equal(expectedHrefs, actualHrefs);
+        });
 
         string[] expectedProjects = ["2025 Taxes Project", "Marketing", "Item #1"];
         string[] actualProjects = [.. cut.FindAll(".nav-project-link a").Select(a => a.TextContent.Trim())];
@@ -119,30 +122,33 @@ public sealed class TeamsNavTests
         Assert.Equal(expected, MenuItemTexts(cut));
     }
 
-    /// <summary>A Team no Persona is labelled with shows the muted "No members" hint inside its own row.</summary>
+    /// <summary>A Team no Persona is labelled with shows a trailing member count of 0 whose tooltip says "No members", inside its own row and never as row text.</summary>
     [Fact]
-    public async Task TeamWithNoMembers_ShowsTheNoMembersHint()
+    public async Task TeamWithNoMembers_ShowsATrailingZeroWithTheNoMembersTooltip()
     {
         FakeTeamCatalog catalog = new() { Teams = [Team("Business"), Team("Lab", hasMembers: false)] };
 
         await using MudBunitContext ctx = NewContext(catalog);
         IRenderedComponent<ContainerFragment> cut = RenderNav(ctx);
 
-        Assert.Equal("No members", cut.Find(".teams-nav-nomembers").TextContent.Trim());
-        Assert.Equal("No members", RowFor(cut, "Lab").QuerySelectorAll(".teams-nav-nomembers").Single().TextContent.Trim());
+        IElement meta = RowFor(cut, "Lab").QuerySelectorAll(".sidebar-row-meta").Single();
+        Assert.Equal("0", meta.TextContent.Trim());
+        Assert.Equal("No members", meta.GetAttribute("title"));
+        Assert.DoesNotContain("No members", RowFor(cut, "Lab").QuerySelector(".hover-reveal-link")?.TextContent, StringComparison.Ordinal);
     }
 
-    /// <summary>A Team with members shows no hint at all: with every Team staffed, the hint element is absent.</summary>
+    /// <summary>A Team with members shows its member count as the trailing meta, with a pluralised tooltip.</summary>
     [Fact]
-    public async Task TeamWithMembers_DoesNotShowTheNoMembersHint()
+    public async Task TeamWithMembers_ShowsTheMemberCount()
     {
         FakeTeamCatalog catalog = new() { Teams = [Team("Business"), Team("Sales & Ops")] };
 
         await using MudBunitContext ctx = NewContext(catalog);
         IRenderedComponent<ContainerFragment> cut = RenderNav(ctx);
 
-        Assert.Empty(cut.FindAll(".teams-nav-nomembers"));
-        Assert.Empty(RowFor(cut, "Business").QuerySelectorAll(".teams-nav-nomembers"));
+        IElement meta = RowFor(cut, "Business").QuerySelectorAll(".sidebar-row-meta").Single();
+        Assert.Equal("1", meta.TextContent.Trim());
+        Assert.Equal("1 member", meta.GetAttribute("title"));
     }
 
     /// <summary>At <c>/teams/Business/files</c> the Business link carries the active class and the other Team's link does not.</summary>
@@ -220,9 +226,9 @@ public sealed class TeamsNavTests
         Assert.Equal(0, catalog.ChangedSubscriberCount);
     }
 
-    /// <summary>With nothing stored every Team is expanded: its Projects show, and its chevron says "Collapse Business" with <c>aria-expanded="true"</c>.</summary>
+    /// <summary>With nothing stored every Team starts collapsed: no Project shows, and each chevron says "Expand Business" with <c>aria-expanded="false"</c>. Nothing is written on load.</summary>
     [Fact]
-    public async Task Default_AllTeamsExpanded_ShowingProjects()
+    public async Task Default_AllTeamsCollapsed_ShowingNoProjects()
     {
         FakeTeamCatalog catalog = new()
         {
@@ -235,19 +241,18 @@ public sealed class TeamsNavTests
         cut.WaitForAssertion(() =>
         {
             Assert.Equal(1, Reads(ctx));
-            string[] projects = ["Marketing", "Budget"];
-            Assert.Equal(projects, ProjectTexts(cut));
-            Assert.Equal("true", Chevron(cut, "Business").GetAttribute("aria-expanded"));
-            Assert.Equal("Collapse Business", Chevron(cut, "Business").GetAttribute("aria-label"));
-            Assert.Equal("true", Chevron(cut, "Sales & Ops").GetAttribute("aria-expanded"));
-            Assert.Equal("Collapse Sales & Ops", Chevron(cut, "Sales & Ops").GetAttribute("aria-label"));
+            Assert.Empty(ProjectTexts(cut));
+            Assert.Equal("false", Chevron(cut, "Business").GetAttribute("aria-expanded"));
+            Assert.Equal("Expand Business", Chevron(cut, "Business").GetAttribute("aria-label"));
+            Assert.Equal("false", Chevron(cut, "Sales & Ops").GetAttribute("aria-expanded"));
+            Assert.Equal("Expand Sales & Ops", Chevron(cut, "Sales & Ops").GetAttribute("aria-label"));
         });
         Assert.Empty(Writes(ctx));
     }
 
-    /// <summary>Clicking the chevron collapses the Team: label "Expand Business", <c>aria-expanded="false"</c>, its Projects gone, and <c>teamsNav:collapsed</c> stored as <c>["business"]</c>.</summary>
+    /// <summary>Clicking the chevron opens the Team: label "Collapse Business", <c>aria-expanded="true"</c>, its Projects shown, and <c>teamsNav:expanded</c> stored as <c>["business"]</c>.</summary>
     [Fact]
-    public async Task Chevron_Click_CollapsesAndHidesProjects()
+    public async Task Chevron_Click_OpensAndShowsProjects()
     {
         FakeTeamCatalog catalog = new()
         {
@@ -262,20 +267,20 @@ public sealed class TeamsNavTests
 
         cut.WaitForAssertion(() =>
         {
-            Assert.Equal("false", Chevron(cut, "Business").GetAttribute("aria-expanded"));
-            Assert.Equal("Expand Business", Chevron(cut, "Business").GetAttribute("aria-label"));
-            string[] projects = ["Budget"];
+            Assert.Equal("true", Chevron(cut, "Business").GetAttribute("aria-expanded"));
+            Assert.Equal("Collapse Business", Chevron(cut, "Business").GetAttribute("aria-label"));
+            string[] projects = ["Marketing"];
             Assert.Equal(projects, ProjectTexts(cut));
-            Assert.Equal("true", Chevron(cut, "Sales & Ops").GetAttribute("aria-expanded"));
+            Assert.Equal("false", Chevron(cut, "Sales & Ops").GetAttribute("aria-expanded"));
         });
         IReadOnlyList<object?> write = Assert.Single(Writes(ctx));
-        Assert.Equal(CollapsedKey, write[0]);
+        Assert.Equal(ExpandedKey, write[0]);
         Assert.Equal(BusinessOnly, write[1]);
     }
 
-    /// <summary>A second click expands the Team again, shows its Projects and stores the now-empty list <c>[]</c>.</summary>
+    /// <summary>A second click collapses the Team again, hides its Projects and stores the now-empty list <c>[]</c>.</summary>
     [Fact]
-    public async Task Chevron_ClickedTwice_ExpandsAgainAndStoresAnEmptyList()
+    public async Task Chevron_ClickedTwice_CollapsesAgainAndStoresAnEmptyList()
     {
         FakeTeamCatalog catalog = new() { Teams = [Team("Business", projects: ["Marketing"])] };
 
@@ -284,25 +289,24 @@ public sealed class TeamsNavTests
         cut.WaitForAssertion(() => Assert.Equal(1, Reads(ctx)));
 
         await ClickChevronAsync(cut, "Business");
-        cut.WaitForAssertion(() => Assert.Equal("false", Chevron(cut, "Business").GetAttribute("aria-expanded")));
+        cut.WaitForAssertion(() => Assert.Equal("true", Chevron(cut, "Business").GetAttribute("aria-expanded")));
         await ClickChevronAsync(cut, "Business");
 
         cut.WaitForAssertion(() =>
         {
-            Assert.Equal("true", Chevron(cut, "Business").GetAttribute("aria-expanded"));
-            Assert.Equal("Collapse Business", Chevron(cut, "Business").GetAttribute("aria-label"));
-            string[] projects = ["Marketing"];
-            Assert.Equal(projects, ProjectTexts(cut));
+            Assert.Equal("false", Chevron(cut, "Business").GetAttribute("aria-expanded"));
+            Assert.Equal("Expand Business", Chevron(cut, "Business").GetAttribute("aria-label"));
+            Assert.Empty(ProjectTexts(cut));
         });
         IReadOnlyList<object?>[] writes = Writes(ctx);
         Assert.Equal(2, writes.Length);
-        Assert.Equal(CollapsedKey, writes[1][0]);
+        Assert.Equal(ExpandedKey, writes[1][0]);
         Assert.Equal("[]", writes[1][1]);
     }
 
-    /// <summary>A Team stored as collapsed starts collapsed (the stored name is lower-case, the Team's own is not); an unstored Team stays expanded; nothing is written on load.</summary>
+    /// <summary>A Team stored as opened starts open (the stored name is lower-case, the Team's own is not); an unstored Team stays collapsed; nothing is written on load.</summary>
     [Fact]
-    public async Task StoredCollapsed_OnLoad_StartsCollapsed()
+    public async Task StoredOpened_OnLoad_StartsOpen()
     {
         FakeTeamCatalog catalog = new()
         {
@@ -314,16 +318,16 @@ public sealed class TeamsNavTests
 
         cut.WaitForAssertion(() =>
         {
-            Assert.Equal("false", Chevron(cut, "Business").GetAttribute("aria-expanded"));
-            Assert.Equal("Expand Business", Chevron(cut, "Business").GetAttribute("aria-label"));
-            string[] projects = ["Budget"];
+            Assert.Equal("true", Chevron(cut, "Business").GetAttribute("aria-expanded"));
+            Assert.Equal("Collapse Business", Chevron(cut, "Business").GetAttribute("aria-label"));
+            string[] projects = ["Marketing"];
             Assert.Equal(projects, ProjectTexts(cut));
-            Assert.Equal("true", Chevron(cut, "Sales & Ops").GetAttribute("aria-expanded"));
+            Assert.Equal("false", Chevron(cut, "Sales & Ops").GetAttribute("aria-expanded"));
         });
         Assert.Empty(Writes(ctx));
     }
 
-    /// <summary>At a route inside a collapsed Team the Team is forced open, and nothing is written to storage.</summary>
+    /// <summary>At a route inside a collapsed Team the Team is forced open, the other stays collapsed, and nothing is written to storage.</summary>
     [Fact]
     public async Task CurrentRouteInsideACollapsedTeam_ForcesItOpen_WithoutChangingStorage()
     {
@@ -332,7 +336,7 @@ public sealed class TeamsNavTests
             Teams = [Team("Business", projects: ["Marketing"]), Team("Sales & Ops", projects: ["Budget"])],
         };
 
-        await using MudBunitContext ctx = NewContext(catalog, stored: """["business","sales & ops"]""");
+        await using MudBunitContext ctx = NewContext(catalog, stored: "[]");
         ctx.Services.GetRequiredService<NavigationManager>().NavigateTo("/teams/Business/projects/Marketing");
         IRenderedComponent<ContainerFragment> cut = RenderNav(ctx);
 
@@ -359,7 +363,7 @@ public sealed class TeamsNavTests
             Teams = [Team("Business", projects: ["Marketing"]), Team("Sales & Ops", projects: ["Budget"])],
         };
 
-        await using MudBunitContext ctx = NewContext(catalog, stored: """["sales & ops","business"]""");
+        await using MudBunitContext ctx = NewContext(catalog, stored: "[]");
         ctx.Services.GetRequiredService<NavigationManager>().NavigateTo(route);
         IRenderedComponent<ContainerFragment> cut = RenderNav(ctx);
 
@@ -382,7 +386,7 @@ public sealed class TeamsNavTests
             Teams = [Team("Business", projects: ["Marketing"]), Team("Other", projects: ["Docs"])],
         };
 
-        await using MudBunitContext ctx = NewContext(catalog, stored: BusinessOnly);
+        await using MudBunitContext ctx = NewContext(catalog, stored: "[]");
         NavigationManager nav = ctx.Services.GetRequiredService<NavigationManager>();
         nav.NavigateTo("/teams/Other");
         IRenderedComponent<ContainerFragment> cut = RenderNav(ctx);
@@ -397,19 +401,20 @@ public sealed class TeamsNavTests
         cut.WaitForAssertion(() =>
         {
             Assert.Equal("true", Chevron(cut, "Business").GetAttribute("aria-expanded"));
-            string[] after = ["Marketing", "Docs"];
+            Assert.Equal("false", Chevron(cut, "Other").GetAttribute("aria-expanded"));
+            string[] after = ["Marketing"];
             Assert.Equal(after, ProjectTexts(cut));
         });
         Assert.Empty(Writes(ctx));
     }
 
-    /// <summary>A chevron click on the Team the route forced open collapses it for real: Projects hidden and storage written.</summary>
+    /// <summary>A chevron click on the Team the route forced open collapses it for real: Projects hidden and the (empty) opened list written.</summary>
     [Fact]
     public async Task Chevron_OnTheRouteForcedOpenTeam_CollapsesItAndWritesStorage()
     {
         FakeTeamCatalog catalog = new() { Teams = [Team("Business", projects: ["Marketing"])] };
 
-        await using MudBunitContext ctx = NewContext(catalog, stored: BusinessOnly);
+        await using MudBunitContext ctx = NewContext(catalog, stored: "[]");
         ctx.Services.GetRequiredService<NavigationManager>().NavigateTo("/teams/Business/projects/Marketing");
         IRenderedComponent<ContainerFragment> cut = RenderNav(ctx);
         cut.WaitForAssertion(() =>
@@ -427,8 +432,8 @@ public sealed class TeamsNavTests
             Assert.Empty(ProjectTexts(cut));
         });
         IReadOnlyList<object?> write = Assert.Single(Writes(ctx));
-        Assert.Equal(CollapsedKey, write[0]);
-        Assert.Equal(BusinessOnly, write[1]);
+        Assert.Equal(ExpandedKey, write[0]);
+        Assert.Equal("[]", write[1]);
     }
 
     /// <summary>The chevron's collapse of the route's own Team lasts only until the next navigation into that Team, which opens it again.</summary>
@@ -455,14 +460,14 @@ public sealed class TeamsNavTests
         });
     }
 
-    /// <summary>Stored text that is not a JSON array of strings expands everything and never throws: a further chevron click stores just that Team, so nothing was half-loaded.</summary>
+    /// <summary>Stored text that is not a JSON array of strings leaves everything collapsed and never throws: a further chevron click stores just that Team, so nothing was half-loaded.</summary>
     [Theory]
     [InlineData("not json")]
     [InlineData("")]
     [InlineData("{}")]
     [InlineData("[1,2]")]
     [InlineData("[null]")]
-    public async Task MalformedStorage_ExpandsEverything_WithoutThrowing(string stored)
+    public async Task MalformedStorage_CollapsesEverything_WithoutThrowing(string stored)
     {
         ArgumentNullException.ThrowIfNull(stored);
         FakeTeamCatalog catalog = new()
@@ -478,18 +483,18 @@ public sealed class TeamsNavTests
 
         cut.WaitForAssertion(() =>
         {
-            Assert.Equal("false", Chevron(cut, "Business").GetAttribute("aria-expanded"));
-            Assert.Equal("true", Chevron(cut, "Sales & Ops").GetAttribute("aria-expanded"));
-            string[] projects = ["Budget"];
+            Assert.Equal("true", Chevron(cut, "Business").GetAttribute("aria-expanded"));
+            Assert.Equal("false", Chevron(cut, "Sales & Ops").GetAttribute("aria-expanded"));
+            string[] projects = ["Marketing"];
             Assert.Equal(projects, ProjectTexts(cut));
         });
         IReadOnlyList<object?> write = Assert.Single(Writes(ctx));
         Assert.Equal(BusinessOnly, write[1]);
     }
 
-    /// <summary>A stored JSON <c>null</c> deserializes to no array at all; everything is expanded and a click still works.</summary>
+    /// <summary>A stored JSON <c>null</c> deserializes to no array at all; everything is collapsed and a click still works.</summary>
     [Fact]
-    public async Task StoredJsonNull_ExpandsEverything_WithoutThrowing()
+    public async Task StoredJsonNull_CollapsesEverything_WithoutThrowing()
     {
         FakeTeamCatalog catalog = new()
         {
@@ -504,16 +509,16 @@ public sealed class TeamsNavTests
 
         cut.WaitForAssertion(() =>
         {
-            Assert.Equal("false", Chevron(cut, "Business").GetAttribute("aria-expanded"));
-            Assert.Equal("true", Chevron(cut, "Sales & Ops").GetAttribute("aria-expanded"));
+            Assert.Equal("true", Chevron(cut, "Business").GetAttribute("aria-expanded"));
+            Assert.Equal("false", Chevron(cut, "Sales & Ops").GetAttribute("aria-expanded"));
         });
         IReadOnlyList<object?> write = Assert.Single(Writes(ctx));
         Assert.Equal(BusinessOnly, write[1]);
     }
 
-    /// <summary>When the storage read throws (<c>JSException</c>), everything is expanded; when the write throws too, a click still collapses the Team in memory.</summary>
+    /// <summary>When the storage read throws (<c>JSException</c>), everything is collapsed; when the write throws too, a click still opens the Team in memory.</summary>
     [Fact]
-    public async Task StorageThrows_ExpandsEverything()
+    public async Task StorageThrows_CollapsesEverything()
     {
         FakeTeamCatalog catalog = new()
         {
@@ -525,38 +530,38 @@ public sealed class TeamsNavTests
         cut.WaitForAssertion(() =>
         {
             Assert.Equal(1, Reads(ctx));
-            Assert.Equal("true", Chevron(cut, "Business").GetAttribute("aria-expanded"));
-            Assert.Equal("true", Chevron(cut, "Sales & Ops").GetAttribute("aria-expanded"));
+            Assert.Equal("false", Chevron(cut, "Business").GetAttribute("aria-expanded"));
+            Assert.Equal("false", Chevron(cut, "Sales & Ops").GetAttribute("aria-expanded"));
         });
 
         await ClickChevronAsync(cut, "Business");
 
         cut.WaitForAssertion(() =>
         {
-            Assert.Equal("false", Chevron(cut, "Business").GetAttribute("aria-expanded"));
-            string[] projects = ["Budget"];
+            Assert.Equal("true", Chevron(cut, "Business").GetAttribute("aria-expanded"));
+            string[] projects = ["Marketing"];
             Assert.Equal(projects, ProjectTexts(cut));
         });
     }
 
-    /// <summary>A Team created after storage exists (its name is not in the stored list) starts expanded, and the collapsed one stays collapsed.</summary>
+    /// <summary>A Team created after storage exists (its name is not in the stored list) starts collapsed, and the opened one stays open.</summary>
     [Fact]
-    public async Task ATeamCreatedAfterStorageExists_StartsExpanded()
+    public async Task ATeamCreatedAfterStorageExists_StartsCollapsed()
     {
         FakeTeamCatalog catalog = new() { Teams = [Team("Business", projects: ["Marketing"])] };
 
         await using MudBunitContext ctx = NewContext(catalog, stored: BusinessOnly);
         IRenderedComponent<ContainerFragment> cut = RenderNav(ctx);
-        cut.WaitForAssertion(() => Assert.Equal("false", Chevron(cut, "Business").GetAttribute("aria-expanded")));
+        cut.WaitForAssertion(() => Assert.Equal("true", Chevron(cut, "Business").GetAttribute("aria-expanded")));
 
         catalog.Teams = [Team("Business", projects: ["Marketing"]), Team("Research", projects: ["Notes"])];
         catalog.Raise();
 
         cut.WaitForAssertion(() =>
         {
-            Assert.Equal("true", Chevron(cut, "Research").GetAttribute("aria-expanded"));
-            Assert.Equal("false", Chevron(cut, "Business").GetAttribute("aria-expanded"));
-            string[] projects = ["Notes"];
+            Assert.Equal("false", Chevron(cut, "Research").GetAttribute("aria-expanded"));
+            Assert.Equal("true", Chevron(cut, "Business").GetAttribute("aria-expanded"));
+            string[] projects = ["Marketing"];
             Assert.Equal(projects, ProjectTexts(cut));
         });
         Assert.Empty(Writes(ctx));
@@ -712,7 +717,7 @@ public sealed class TeamsNavTests
         script.Rooms.Add(new Room("root", "Root chat", t0));
         FakeTeamCatalog catalog = new() { Teams = [Team("Business", projects: ["Marketing"]), Team("Sales")] };
 
-        await using MudBunitContext ctx = NewContext(catalog, directory: directory);
+        await using MudBunitContext ctx = NewContext(catalog, stored: """["business","sales"]""", directory: directory);
         IRenderedComponent<ContainerFragment> cut = RenderNav(ctx);
 
         cut.WaitForAssertion(() =>
@@ -741,7 +746,7 @@ public sealed class TeamsNavTests
         script.Rooms.Add(new Room("teamroom", "Business", DateTimeOffset.UnixEpoch) { Team = "Business", IsTeamRoom = true });
         FakeTeamCatalog catalog = new() { Teams = [Team("Business")] };
 
-        await using MudBunitContext ctx = NewContext(catalog, stored: BusinessOnly, directory: directory);
+        await using MudBunitContext ctx = NewContext(catalog, stored: "[]", directory: directory);
         IRenderedComponent<ContainerFragment> cut = RenderNav(ctx);
 
         cut.WaitForAssertion(() => Assert.Empty(cut.FindAll("a[href='/rooms/teamroom']")));
@@ -753,7 +758,7 @@ public sealed class TeamsNavTests
     {
         ITeamDirectory directory = ScriptedRoomsDirectory.Create(out ScriptedRoomsDirectory script);
         FakeTeamCatalog catalog = new() { Teams = [Team("Business")] };
-        await using MudBunitContext ctx = NewContext(catalog, directory: directory);
+        await using MudBunitContext ctx = NewContext(catalog, stored: BusinessOnly, directory: directory);
         IRenderedComponent<ContainerFragment> cut = RenderNav(ctx);
         Assert.Empty(cut.FindAll("a[href='/rooms/fresh']"));
 
@@ -786,7 +791,7 @@ public sealed class TeamsNavTests
         script.Rooms.Add(new Room("chat", "Ada", DateTimeOffset.UnixEpoch.AddDays(1)) { Team = "Business" });
         FakeTeamCatalog catalog = new() { Teams = [Team("Business")] };
 
-        await using MudBunitContext ctx = NewContext(catalog, directory: directory);
+        await using MudBunitContext ctx = NewContext(catalog, stored: BusinessOnly, directory: directory);
         IRenderedComponent<ContainerFragment> cut = RenderNav(ctx);
 
         cut.WaitForAssertion(() => Assert.Single(cut.FindAll("a[href^='/rooms/']")));
@@ -799,7 +804,7 @@ public sealed class TeamsNavTests
     {
         ITeamDirectory directory = ScriptedRoomsDirectory.Create(out ScriptedRoomsDirectory script);
         FakeTeamCatalog catalog = new() { Teams = [Team("Business"), Team("Sales")] };
-        await using MudBunitContext ctx = NewContext(catalog, directory: directory);
+        await using MudBunitContext ctx = NewContext(catalog, stored: BusinessOnly, directory: directory);
         IRenderedComponent<ContainerFragment> cut = RenderNav(ctx);
         cut.WaitForAssertion(() => Assert.Equal(1, script.RoomReads));
         RoomEvents events = ctx.Services.GetRequiredService<RoomEvents>();
@@ -905,7 +910,9 @@ public sealed class TeamsNavTests
     private static Task Flush(IRenderedComponent<ContainerFragment> cut) =>
         cut.InvokeAsync(static () => { });
 
-    private const string CollapsedKey = "teamsNav:collapsed";
+    private const string ExpandedKey = "teamsNav:expanded";
+
+    private const string AllOpen = """["business","sales & ops","lab #2"]""";
 
     private const string BusinessOnly = """["business"]""";
 

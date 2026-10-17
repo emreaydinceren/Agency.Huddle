@@ -30,27 +30,27 @@ public sealed class ShellSidebarRowsTests
         Assert.Matches(@"<NavTabLink Href=""/teammates""[^>]*Class=""nav-section-link""", markup);
     }
 
-    /// <summary>The <c>nav-section-link</c> rule gives the 14px, weight-600, secondary-colour header look of the group headers (UX-014).</summary>
+    /// <summary>The <c>nav-section-link</c> rule gives the caption (12px), weight-600, secondary-colour header look of the group headers (UX-014).</summary>
     [Fact]
     public void AppCss_SectionLinkRule_MatchesTheGroupHeaders()
     {
         string rule = ShellSidebarRowsTests.RuleBody(".nav-section-link .mud-nav-link-text");
 
-        ShellSidebarRowsTests.SourceHas(rule, "font-size: 14px");
+        ShellSidebarRowsTests.SourceHas(rule, "font-size: var(--mud-typography-caption-size)");
         ShellSidebarRowsTests.SourceHas(rule, "font-weight: 600");
         ShellSidebarRowsTests.SourceHas(rule, "var(--mud-palette-text-secondary)");
     }
 
-    /// <summary>The footer links share the sidebar row height token and the 14px size (UX-017, OP-4).</summary>
+    /// <summary>The footer links share the sidebar row height token and the body2 (13px) row size (UX-017, OP-4).</summary>
     [Fact]
     public void AppCss_FooterRows_UseTheRowHeightToken()
     {
         string css = ShellSidebarRowsTests.AppCss();
         string rule = ShellSidebarRowsTests.RuleBody(".nav-settings .mud-nav-link");
 
-        Assert.Matches(@"--nav-row-height\s*:\s*36px\s*;", css);
+        Assert.Matches(@"--nav-row-height\s*:\s*32px\s*;", css);
         ShellSidebarRowsTests.SourceHas(rule, "min-height: var(--nav-row-height)");
-        ShellSidebarRowsTests.SourceHas(rule, "font-size: 14px");
+        ShellSidebarRowsTests.SourceHas(rule, "font-size: var(--mud-typography-body2-size)");
     }
 
     /// <summary>The footer stays icon-only (OP-4), so the Settings link and the Archived chats entry each carry an <c>aria-label</c> and a tooltip (UX-017).</summary>
@@ -66,14 +66,14 @@ public sealed class ShellSidebarRowsTests
         ShellSidebarRowsTests.SourceHas(archived, "aria-label=\"Archived chats\"");
     }
 
-    /// <summary>The Team chevron takes the default icon-button colour, not the secondary text colour (UX-018).</summary>
+    /// <summary>The Team chevron takes the Theme's secondary text colour, not a MudBlazor default grey (F4: one family of greys).</summary>
     [Fact]
-    public void AppCss_TeamChevron_UsesTheActionDefaultColour()
+    public void AppCss_TeamChevron_UsesTheSecondaryTextColour()
     {
         string rule = ShellSidebarRowsTests.RuleBody(".teams-nav-host .teams-nav-chevron");
 
-        ShellSidebarRowsTests.SourceHas(rule, "color: var(--mud-palette-action-default)");
-        Assert.DoesNotContain("text-secondary", rule, StringComparison.Ordinal);
+        ShellSidebarRowsTests.SourceHas(rule, "color: var(--mud-palette-text-secondary)");
+        Assert.DoesNotContain("action-default", rule,StringComparison.Ordinal);
     }
 
     /// <summary>Archiving a Room through the helper returns <see langword="null"/> and archives it (UX-R29).</summary>

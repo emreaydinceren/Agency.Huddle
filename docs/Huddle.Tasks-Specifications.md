@@ -1412,7 +1412,9 @@ release).
 - **Layout:**
   - A header row with the counts, the **AI reacting** chip, Group by, List | Kanban and **+ New task**,
     and the View's ⋮ menu. There is no `h1` and no description: the View name is the breadcrumb's last
-    crumb, and `PageTitle` sets the document title.
+    crumb ("Tasks › {View name}"), and `PageTitle` sets the document title. The crumb and the Tab
+    show the View's display name, never its slug (`my-tasks`, `platform-board`): `TabReconciler.ReconcileViews`
+    retitles the `tasks:{id}` Tab, also when the View is renamed.
   - The toolbar (§13.3).
   - Rejected-file and orphan alerts (§13.12).
   - Then either `TaskListView` or `TaskBoard`.
@@ -1484,6 +1486,7 @@ does what the View asks for. Each of these was checked in the package's XML docs
   filtering belong to the Fields dialog and the toolbar, and two ways to change them would drift apart.
 - **Row styling.** `RowClassFunc` returns `task-overdue` for overdue rows that aren't terminal. The
   row also shows a warning `MudIcon`, because colour is never the only signal.
+- **Density and columns.** Rows are 36px high (32px when Dense) with 13px body text; header cells are 12px, weight 600, `TextSecondary`. The ID column is 110px, Priority 120px (`task-list-priority-cell`) and the row menu 40px; Title takes the rest. The open Task's row is `task-row-selected` (accent 14% over the surface, 20% when hovered).
 - **Row click.** `RowClick` opens the detail panel (§13.6).
 
 > [!NOTE]
@@ -1574,25 +1577,35 @@ dragging are saved immediately; that is by design (D-20).
 lists all eight states. Choosing one takes the same path as a drop, so Duplicate still asks for its
 target.
 
-**Columns.** Each column header shows its label, the count, and a `⋮` `MudMenu` with *Rename*,
-and *Hide*. Changes made
+**Columns.** Each column header shows an 8px dot in the colour of the column's first state, its label (13px,
+weight 600), the count (12px, `TextSecondary`) and a `⋮` `MudMenu` with *Rename*, and *Hide*. An empty column
+shows one centred 12px `TextSecondary` line worded for its state (*"Backlog is empty."*, *"Nothing to do yet."*,
+*"Nothing in progress."*, *"Nothing in review."*, *"Nothing done yet."*, or *"Nothing here yet."* for a
+column of several states). The line ignores the pointer and hides while a card is dragged. Changes made
 from the header menu are saved to the View immediately. When columns are hidden, a hidden-count
 chip on the Board reads *"4 tasks in hidden columns"*.
 
 **Cards — `TaskCard.razor`.** A card is a `<button type="button" class="task-card">`, not a
 MudCard, because keyboard focus matters (the precedent is `Teammates.razor:85-90`). It shows:
 
-- The id, the title (through `MudHighlighter` while searching), and a priority
-  `MudChip Size="Size.Small" Color="…"` with an icon (§13.10 maps the colours).
-- The assignee, drawn with `Components/Shared/TeammateAvatar.razor` inside a
-  `MudBadge Dot="true" Overlap="true"`, whose colour shows presence: Awake is `Color.Success`,
-  Asleep `Color.Default`, Offline `Color.Error`. A `MudTooltip` says it in words.
+- A header row (`.task-card-header`) with the id (12px, `TextSecondary`) and the priority chip
+  (`StatusChip`: a tinted, text-variant `MudChip Size="Size.Small"` with a leading icon; §13.10 maps the
+  colours). Below it, the title (14px, weight 600, up to three lines, through `MudHighlighter` while
+  searching) and the tags as quiet tag chips. The card has 12px of padding, a 1px `Divider` border and the
+  card radius; cards sit 8px apart.
+- The assignee, a 24px avatar drawn with `Components/Shared/TeammateAvatar.razor` inside a
+  `MudBadge Dot="true" Overlap="true"` that sits on the avatar's rim and shows presence as a glyph
+  (Awake an amber circle with a breathing pulse, Asleep and Offline a hollow grey ring; red is kept for
+  Degraded health), beside the name at 12px. A `MudTooltip` says it in words.
 - The View's extra fields.
-- A left border in the column's colour class (§13.10).
+- No left edge: the column already names the state, so the card has no border in the column's colour.
 - When the card's `LastWake` Room has a Turn running (§10.8), an **Awake** chip and the line
   *"active in Room {name}"*, which links to `/rooms/{id}` with a `MudLink`.
-- Due dates in the past on a Task that isn't terminal get the `task-overdue` class and a warning
-  icon. **Colour is never the only signal.**
+- Due dates in the past on a Task that isn't terminal get the `task-overdue` marker class and a 14px warning
+  icon before the date, inside the date's own span (`task-due-overdue`). The date is set at weight 600 in the
+  error colour mixed with body text (70% error, 30% body text; 5.79:1 Dark, 9.70:1 Light), so it is not plain
+  red text. An overdue card shows its date even when the View hides `due_date`.
+  **Colour is never the only signal.**
 
 Clicking a card opens the detail panel.
 
@@ -1641,6 +1654,20 @@ MudBlazor freezes a dialog's parameters once it opens (the trap at `TeammateCard
 - `TaskPatch pending`: the fields the Human has touched.
 - `TaskResult.Conflict? conflict`.
 
+**Layout.** The Panel form is four headed groups (`section` with an h3 `.group-heading`, `subtitle2`):
+Status and priority (Status, Duplicate of or Reason, Priority, the wake notice), People (Assignee, the
+"Woken in Room" link), Planning (Team, Project, Sprint, Parent, Blocked by, Tags) and Dates (Start, Due).
+Created, Updated and Closed are not a group: they are the footer meta (`.task-detail-footer-meta`, 12px
+`TextSecondary`) at the bottom of the form, after the Change log. Group headings are 14px, weight 600; the
+label column is 120px and 13px `TextSecondary`. Every field has a visible label, the Description included. The groups are a
+size container (`task-detail`): from 368px of container width (a 400px drawer less its padding) each
+property is two columns, label | value; narrower, the label sits above the value. The drawer (`ResizableEndDrawer`)
+has an `Eyebrow` parameter: a 12px `TextSecondary` line above the title with the id, then the Project or,
+with none, the Team ("PLAT-0013 · Platform"). The title is the Task's name only (16px, weight 600, up to three
+lines). A draft reads "New task" with no eyebrow. The edit, copy-id and menu icons sit in a right-aligned row
+just under the header, not in it. The Expanded dialog is titled "{id} · {title}". Tag and blocker chips are quiet
+(`.tag-chip`); Closed and Request chips are tinted.
+
 **Fields**, in the order of the mockup:
 
 | Field | Control |
@@ -1649,14 +1676,14 @@ MudBlazor freezes a dialog's parameters once it opens (the trap at `TeammateCard
 | Assignee | `MudAutocomplete<AssigneeOption>` with `Strict="true"` and an `ItemTemplate` showing `TeammateAvatar` inside a presence `MudBadge` (as on cards), the Name, the Persona `title` as a small `MudChip`, and the presence in words. When the Task has a `LastWake`, a line underneath reads *"Woken in Room: {name}"* and links to the Room with a `MudLink` |
 | Status | a `MudToggleGroup<TaskState> SelectionMode="SelectionMode.SingleSelection"` with five `MudToggleItem`s (Backlog, To Do, In Progress, Review, Done), plus a sixth **Won't do ▾** `MudMenu` offering Cancelled, Duplicate and Rejected. The menu's activator shows the chosen Won't do state, and is highlighted while one is selected. Choosing Duplicate reveals a required `duplicate_of` picker. Choosing Cancelled or Rejected reveals an optional Reason field |
 | Priority | `MudSelect` with a priority icon |
-| Team, Project | `MudSelect` for Team. For Project, a `MudAutocomplete<string>` with `CoerceValue="true"`, so a new name can be typed and creates the folder on save. The Panel combines them into one `Team / Project` control |
+| Team, Project | `MudSelect` for Team. For Project, a `MudAutocomplete<string>` with `CoerceValue="true"`, so a new name can be typed and creates the folder on save. Team and Project are two rows in both modes, each with its own label |
 | Parent | `MudAutocomplete<TaskItem>` with `Strict="true"` and `ToStringFunc` giving `"PLAT-0030 · title"` |
 | Blocked by | **`MudAutocomplete` selects one value only in 9.10** (there's no `MultiSelection`), so use the [Adding and removing chips](https://mudblazor.com/components/chipset#adding-and-removing-chips) pattern. A `MudChipSet<TaskId>` shows one closable chip per blocker, with its status (*PLAT-0047 ✓ Done*) and `OnClose` removing it. Next to it, a `MudAutocomplete<TaskItem>` adds a blocker and then clears itself. The read-only summary reads *"Blocked by 2 open tasks"* |
 | Start date, Due date | `MudDatePicker`. Its `Date` is **`DateTime?`**, so convert with `DateOnly.FromDateTime` and `ToDateTime(TimeOnly.MinValue)` in the binding. Don't change the model to `DateTime`. The due date gets a warning `Adornment` icon and the `task-overdue` class when it's past and the Task isn't terminal |
 | Tags | the same chip-set pattern as Blocked by: closable chips, plus a `MudTextField` that adds a tag on Enter |
 | Description | V1 has an **Edit / Preview** `MudToggleGroup`. Edit is a `MudTextField Lines="10" AutoGrow` (the `TeammateCard.razor:252-257` pattern). Preview is `@((MarkupString)MarkdownRenderer.ToHtml(text))` (the `MessageList.razor:15` pattern) |
 | Origin | a link to `/rooms/{id}`, or *(Room no longer exists)* |
-| Created, Updated, Closed | read-only, derived |
+| Created, Updated, Closed | read-only, derived; shown as the footer meta line at the bottom of the form, after the Change log |
 | Change log | a `MudExpansionPanels` holding one `MudExpansionPanel` titled **Change log (N)**, collapsed. Inside it is a `MudTimeline TimelinePosition="TimelinePosition.Start"` with one small `MudTimelineItem` per entry, newest first. Each item shows the date and time in `ItemOpposite`, and the actor and summary in `ItemContent` (both `RenderFragment`s, confirmed by reflection) |
 
 **The wake notice and the Save button.** On every change to `pending`, call
@@ -1748,13 +1775,16 @@ window.huddleStorage = {
 **Use component parameters first, then MudBlazor utility classes. Write CSS last.**
 
 Chips, badges, icons and alerts take a `Color`, or a `Severity` for alerts, so they need **no
-CSS**. One static helper, `TaskColors`, holds the mapping:
+CSS**. A State or Priority chip is a *tinted* chip (`StatusChip`: the colour at 14% over the surface, the
+text and icon the colour mixed toward the text colour so it clears 4.5:1), never a solid fill under text, and
+it always carries an icon (`TaskColors.Icon(TaskState)` for a State). One static helper, `TaskColors`,
+holds the mapping:
 
 | | `Color` |
 | --- | --- |
 | State | Backlog `Default`, To Do `Info`, In Progress `Warning`, Review `Secondary`, Done `Success`, Cancelled, Duplicate and Rejected `Error` |
 | Priority | Low `Default`, Medium `Info`, High `Warning`, Urgent `Error`. **Always paired with an icon and the word** |
-| Presence badge | Awake `Success`, Asleep `Default`, Offline `Error`, always with a tooltip in words |
+| Presence badge | Awake `Warning`, Asleep and Offline `Default` (a hollow grey ring), always with a tooltip in words |
 
 Spacing and layout use `MudStack` and the utility classes (`pa-2`, `gap-2`, `d-flex`,
 `overflow-x-auto`) instead of new rules.
@@ -1764,10 +1794,9 @@ Spacing and layout use `MudStack` and the utility classes (`pa-2`, `gap-2`, `d-f
 | Element | Style |
 | --- | --- |
 | Board scroller and fixed-width columns | `display: grid; grid-auto-flow: column; grid-auto-columns: minmax(240px, 1fr)` on the lane row |
-| Column left edge | one class per state family, with `border-inline-start: 3px solid var(--mud-palette-info)` (and so on, following the `Color` mapping above) |
 | Ghost bucket | a dashed border in `--mud-palette-lines-default`. When it can take the drop (`task-zone-can`), a solid `--mud-palette-primary` border on a `--mud-palette-action-default-hover` background |
 | Dragged card | `task-card-dragging`: a `--mud-palette-primary` border |
-| Overdue row or date | `task-overdue`: `--mud-palette-warning-text`, plus the icon in markup |
+| Overdue date | `task-due-overdue`: weight 600 only, beside the warning icon in markup. `task-overdue` on the row or card is a marker with no style |
 | Card focus ring | `--mud-palette-text-primary` (the rules.md L70 habit) |
 
 - Verify each `--mud-palette-*` name exists in MudBlazor 9.10's generated variables. The

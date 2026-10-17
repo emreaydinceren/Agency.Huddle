@@ -44,6 +44,8 @@ internal static class Light2026Theme
         LinesDefault = "#0069cc", // focusBorder (theme)
         TextPrimary = "#202020", // foreground (theme)
         TextSecondary = "#606060", // descriptionForeground (theme)
+        DrawerText = "#202020", // TextPrimary: sideBar.foreground falls back to foreground
+        DrawerIcon = "#606060", // TextSecondary
         TextDisabled = "#bbbbbb", // disabledForeground (theme)
         Primary = "#0069cc", // textLink.foreground (theme) - see the type-level remarks for why not button.background
         PrimaryContrastText = "#ffffff", // computed: black 3.89:1 vs white 5.39:1 against Primary #0069cc

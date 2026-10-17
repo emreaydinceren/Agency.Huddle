@@ -388,6 +388,13 @@ As ADR-0029 decided:
 - **Closed,** the pane isn't rendered at all and the page body takes the full width. It is
   toggled from the sidebar's *Library* link, the `?library=` link handler (§6.6) and a close
   button in the pane's toolbar.
+- **Density (round 2 of the UI change list).** Tree rows are 30px high with 13px text, 16px icons and a 16px
+  indent. The reader body is 16px at line-height 1.65 in a 35em measure, and the note title is 24px, weight 600
+  (the one size above 20px, reader only). The file path in the toolbar is 12px `TextSecondary`, middle-truncated
+  by `LibraryPathDisplay.Shorten` with the whole path in a tooltip. The "Linked from N notes" panel
+  (`.library-backlinks`) is as wide as the text column, its label 13px at weight 500. Read, Edit and Split are
+  13px. Folder warning triangles are 14px with a tooltip. With nothing open, the empty state (`EmptyState`:
+  title, sentence and a *New note* button) uses the toolbar's small text button.
 - **Inside the pane** is a `LibraryExplorer` (§6.16) with no `Scopes`, meaning every Library Root,
   and `Layout="Stacked"`: a second, vertical `MudSplitPanel` (`Horizontal="false"`) puts the tree
   above the document. The backlinks list is a `MudExpansionPanels` under the document.
@@ -398,6 +405,10 @@ As ADR-0029 decided:
   `Layout="SideBySide"`, the tree on the left. When the pane was showing a scoped explorer, the
   pop-out keeps that scope.
 - The sidebar gains a *Library* link beside Teammates and Tasks, which toggles the pane.
+  **Superseded (2026-10):** the sidebar's Library group is now one link to `/library` (shown while
+  `Library:Enabled`). It lists no root rows and has no *+ Add folder*; Add folder is in Settings ›
+  Library. The Library page's breadcrumb holds the open file's location; the document title is the
+  bare name.
 
 ### 6.10 Pinned roots
 

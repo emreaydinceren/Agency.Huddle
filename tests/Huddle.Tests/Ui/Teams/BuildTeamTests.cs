@@ -321,7 +321,7 @@ public sealed class BuildTeamTests
         await cut.InvokeAsync(() => cut.Find(".build-team-name input").InputAsync("Garden"));
 
         Assert.Equal("Hire", cut.Find("#build-team-hire-heading").TextContent.Trim());
-        Assert.Equal("Available roles", cut.Find(".build-team-roles-subtitle").TextContent.Trim());
+        Assert.Equal("2 roles available", cut.Find(".build-team-roles-subtitle").TextContent.Trim());
         Assert.NotNull(cut.Find("[aria-label='Add a custom role']"));
         Assert.Equal(["Bookkeeper", "Tutor"], cut.FindAll(".build-team-hire .role-card .team-type-name").Select(name => name.TextContent.Trim()));
     }
@@ -338,7 +338,7 @@ public sealed class BuildTeamTests
         IReadOnlyList<IElement> chips = cut.FindAll(".build-team-hire .role-suggested");
 
         Assert.Equal("Suggested", Assert.Single(chips).TextContent.Trim());
-        Assert.Equal(["Suggested", "Add"], chips[0].ParentElement?.Children.Select(child => child.TextContent.Trim()));
+        Assert.Equal(["Add", "Suggested"], chips[0].ParentElement?.Children.Select(child => child.TextContent.Trim()));
         Assert.Equal("Tutor", chips[0].Closest(".role-card")?.QuerySelector(".team-type-name")?.TextContent.Trim());
         Assert.Equal(["Tutor", "Bookkeeper"], cut.FindAll(".build-team-hire .role-card .team-type-name").Select(name => name.TextContent.Trim()));
 
@@ -651,9 +651,8 @@ public sealed class BuildTeamTests
         Assert.True(cut.Find(".build-team-name input").HasAttribute("disabled"));
         Assert.Equal("Grows things.", cut.Find(".build-team-purpose textarea").TextContent.Trim());
         Assert.Empty(cut.FindAll(".build-team-hire"));
-        Assert.True(cut.Find("button.build-team-approve-button").HasAttribute("disabled"));
-        Assert.Equal("Nothing has changed yet.", cut.Find(".build-team-approve-hint").TextContent.Trim());
-        Assert.Equal("Save changes", cut.Find("button.build-team-approve-button").TextContent.Trim());
+        Assert.Empty(cut.FindAll(".build-team-savebar"));
+        Assert.Empty(cut.FindAll("button.build-team-approve-button"));
     }
 
     /// <summary>The Members tab shows the Hire section alone: no header, steps, type or details; the members on the roster with the manager badged, and Save off until something changes.</summary>
@@ -675,9 +674,54 @@ public sealed class BuildTeamTests
         Assert.Equal("Manager", Assert.Single(cut.FindAll(".roster-card")[0].QuerySelectorAll(".roster-manager-badge")).TextContent.Trim());
         Assert.Equal(2, cut.FindAll(".roster-card-existing").Count);
         Assert.Empty(cut.FindAll(".roster-reroll"));
-        Assert.True(cut.Find("button.build-team-approve-button").HasAttribute("disabled"));
-        Assert.Equal("Nothing has changed yet.", cut.Find(".build-team-approve-hint").TextContent.Trim());
-        Assert.Equal("Save changes", cut.Find("button.build-team-approve-button").TextContent.Trim());
+        Assert.Empty(cut.FindAll(".build-team-savebar"));
+        Assert.Empty(cut.FindAll("button.build-team-approve-button"));
+    }
+
+    /// <summary>The save bar is drawn only once something is unsaved, and it goes again after the save.</summary>
+    [Fact]
+    public async Task Members_SaveBar_ShowsOnlyWithUnsavedChanges()
+    {
+        using Fixture fixture = new(typeCount: 3);
+        fixture.SeedGarden();
+        await using MudBunitContext ctx = fixture.NewContext();
+        IRenderedComponent<ContainerFragment> cut = RenderMembers(ctx, "Garden");
+        Assert.Empty(cut.FindAll(".build-team-savebar"));
+
+        await cut.InvokeAsync(() => cut.Find("[aria-label='Add Bookkeeper']").ClickAsync());
+
+        Assert.False(cut.Find(".build-team-savebar button.build-team-approve-button").HasAttribute("disabled"));
+        await cut.InvokeAsync(() => cut.Find("button.build-team-approve-button").ClickAsync());
+        Assert.Empty(cut.FindAll(".build-team-savebar"));
+    }
+
+    /// <summary>The roster and role headings carry their count as secondary meta text, and the roles wrap in their own grid.</summary>
+    [Fact]
+    public async Task Members_Headings_CarryTheirCountAsMeta()
+    {
+        using Fixture fixture = new(typeCount: 3);
+        fixture.SeedGarden();
+        await using MudBunitContext ctx = fixture.NewContext();
+
+        IRenderedComponent<ContainerFragment> cut = RenderMembers(ctx, "Garden");
+
+        Assert.Equal("Roster", cut.Find(".build-team-roster .build-team-subhead h3").TextContent.Trim());
+        Assert.Contains("chip-meta", cut.Find(".build-team-roster-summary").ClassList);
+        Assert.Contains("chip-meta", cut.Find(".build-team-roles-subtitle").ClassList);
+        Assert.Single(cut.FindAll(".role-grid"));
+    }
+
+    /// <summary>A team type's icon tile is the one quiet tile for every type: no per-type hue class.</summary>
+    [Fact]
+    public async Task TeamTypeCards_ShareOneQuietIconTile()
+    {
+        using Fixture fixture = new(typeCount: 3);
+        await using MudBunitContext ctx = fixture.NewContext();
+        ctx.Services.GetRequiredService<NavigationManager>().NavigateTo("/teams/build");
+
+        IRenderedComponent<ContainerFragment> cut = Render(ctx);
+
+        Assert.All(cut.FindAll($"{Card} .team-type-icon"), icon => Assert.Equal("team-type-icon", icon.ClassName));
     }
 
     /// <summary>A new draft saved into an existing Team is the only Teammate hired; the members are left as they were and the tab stays, with nothing pending.</summary>
@@ -698,7 +742,7 @@ public sealed class BuildTeamTests
         Assert.Equal(3, fixture.Personas.Entries.Count);
         Assert.Equal(adaBefore, fixture.Personas.Get("Ada")?.Text);
         Assert.DoesNotContain("CreateTeam:Garden", fixture.Folders.Calls);
-        Assert.Equal("Nothing has changed yet.", cut.Find(".build-team-approve-hint").TextContent.Trim());
+        Assert.Empty(cut.FindAll(".build-team-savebar"));
     }
 
     /// <summary>Remove marks a member, Undo keeps them; saving asks first, then deletes the Teammate (not only their Team label) and takes them off the roster.</summary>
@@ -798,7 +842,7 @@ public sealed class BuildTeamTests
         List<string> messaged = [];
         IRenderedComponent<ContainerFragment> cut = RenderMembers(ctx, "Garden", messaged);
 
-        Assert.Equal(2, cut.FindAll(".roster-name .agent-dot.online").Count);
+        Assert.Equal(2, cut.FindAll(".roster-card .presence-anchor > .agent-dot.on-avatar.online").Count);
         Assert.Empty(cut.FindAll("[aria-label='Message Bo']"));
         await cut.InvokeAsync(() => cut.Find("[aria-label='Message Ada']").ClickAsync());
 
@@ -819,7 +863,7 @@ public sealed class BuildTeamTests
 
         Assert.Equal("Grows vegetables.", fixture.Folders.ReadResult?.Owns);
         Assert.Equal("Ada", fixture.Folders.ReadResult?.Manager);
-        Assert.Equal("Nothing has changed yet.", cut.Find(".build-team-approve-hint").TextContent.Trim());
+        Assert.Empty(cut.FindAll(".build-team-savebar"));
     }
 
     /// <summary>Editing a Team that does not exist says so instead of drawing the page.</summary>

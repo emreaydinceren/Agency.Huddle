@@ -95,7 +95,7 @@ public sealed class TasksPageSelectedRowTests
         cut.WaitForAssertion(() => Assert.Single(cut.FindAll(".task-card-selected")));
         IElement selected = Assert.Single(cut.FindAll(".task-card-selected"));
         Assert.Equal("Alpha", selected.QuerySelector(".task-card-title")?.TextContent.Trim());
-        Assert.Equal(["task-card", "task-col-edge-default", "task-card-selected"], selected.ClassList);
+        Assert.Equal(["task-card", "task-card-selected"], selected.ClassList);
         Assert.Equal("true", Assert.Single(cut.FindAll(".task-card-open[aria-current]")).GetAttribute("aria-current"));
 
         await cut.InvokeAsync(() => cut.Find(".task-detail-cancel").ClickAsync());

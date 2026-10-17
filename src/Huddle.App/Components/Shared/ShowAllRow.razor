@@ -1,0 +1,25 @@
+@*
+    The row under a sidebar list longer than SidebarRows.Limit: "Show all (N)" expands the list and,
+    once expanded, "Show fewer" folds it back. It is a text action, so it takes the neutral
+    secondary colour (design-system "The sidebar"); it is not a nav-action-link because that class
+    is the one for creating something.
+*@
+
+@if (this.Total > SidebarRows.Limit)
+{
+    <MudNavLink Class="sidebar-show-all" OnClick="this.OnToggle">@(this.Expanded ? "Show fewer" : $"Show all ({this.Total})")</MudNavLink>
+}
+
+@code {
+    /// <summary>How many rows the list has in all.</summary>
+    [Parameter]
+    public int Total { get; set; }
+
+    /// <summary>Whether the list is showing every row.</summary>
+    [Parameter]
+    public bool Expanded { get; set; }
+
+    /// <summary>Raised when the Human clicks the row.</summary>
+    [Parameter]
+    public EventCallback OnToggle { get; set; }
+}

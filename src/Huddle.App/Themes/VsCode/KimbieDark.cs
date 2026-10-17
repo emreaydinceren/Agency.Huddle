@@ -45,6 +45,8 @@ internal static class KimbieDarkTheme
         LinesDefault = "#a57a4c", // focusBorder (theme)
         TextPrimary = "#cccccc", // foreground (registry default)
         TextSecondary = "#949594", // descriptionForeground (registry default, composited from #ccccccb2 over Surface #131510)
+        DrawerText = "#cccccc", // TextPrimary: sideBar.foreground falls back to foreground
+        DrawerIcon = "#949594", // TextSecondary
         TextDisabled = "#70716e", // disabledForeground (registry default, composited from #cccccc80 over Surface #131510)
         Primary = "#3794ff", // textLink.foreground (registry default) - see the type-level remarks for why not button.background
         PrimaryContrastText = "#000000", // computed: black 6.84:1 vs white 3.07:1 against Primary #3794ff

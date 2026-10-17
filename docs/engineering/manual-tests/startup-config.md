@@ -49,7 +49,7 @@ standing conventions. This area adds:
 - The console prints `Now listening on: http://localhost:5100`.
 - The console prints `Hosting environment: Development`.
 - The page renders as TWO columns: a narrow sidebar on the left and a wide main column on the right.
-- The sidebar contains, in this order: a button labelled exactly `New chat`, a room list that reads `No rooms yet. Start an agent to create one.`, a link labelled exactly `Teammates`, and, last, an icon-only Settings link (a cog with the accessible name `Settings`, tooltip `Settings`). Other entries (Teams, Tasks, Library, Archived chats) may sit between them; their order and content are not judged here.
+- The sidebar contains, in this order: a button labelled exactly `New chat`, a room list that shows the title `No rooms yet` with the line `Start an agent to create one.` under it, a link labelled exactly `Teammates`, and, last, an icon-only Settings link (a cog with the accessible name `Settings`, tooltip `Settings`). Other entries (Teams, Tasks, Library, Archived chats) may sit between them; their order and content are not judged here.
 - The main column shows the same empty state, `No rooms yet. Start an agent to create one.`, and no Room.
 
 **Fail if — any of these**
@@ -216,7 +216,7 @@ If you have already created extra Rooms by hand in earlier exploration, the coun
 
 - The heading reads exactly `Teammates` and a text button first in the toolbar beside it reads `New teammate` (not upper-cased).
 - The intro paragraph begins `A Persona is a Markdown file describing how one teammate should behave`.
-- The page lists only Personas that have a definition file at `App_Data\Teammates\<Name>\<Name>.md`: the built-in Chief of Staff, which is always there, and nothing you did not create. (`No Personas yet. Choose New teammate to add one.` cannot appear on this launch; the Chief of Staff is seeded whatever `Acp:Enabled` says.)
+- The page lists only Personas that have a definition file at `App_Data\Teammates\<Name>\<Name>.md`: the built-in Chief of Staff, which is always there, and nothing you did not create. (the `No Teammates yet` empty state cannot appear on this launch; the Chief of Staff is seeded whatever `Acp:Enabled` says.)
 - `mybot` does not appear anywhere on the page, although its Room is in the sidebar.
 
 **Fail if — any of these**
@@ -396,7 +396,7 @@ A Draft that was mid-stream when you pressed Ctrl+C is simply gone — that is a
 
 - Step 1 fails with a file-in-use error. It usually names `team.db`, but the open log file under `App_Data\logs` is locked too and the recursive delete may report that one first; either is correct.
 - After the app is stopped, step 3 succeeds and step 4 returns False.
-- After relaunch with the guard, the sidebar room list reads `No rooms yet. Start an agent to create one.` — a fresh App_Data holds no Rooms.
+- After relaunch with the guard, the sidebar room list shows the title `No rooms yet` with the line `Start an agent to create one.` under it — a fresh App_Data holds no Rooms.
 - The App_Data listing contains `team.db`, `team.db-wal` and `team.db-shm`, a `Teammates` folder holding `Chief of Staff\Chief of Staff.md` and the marker file `.layout-migrated`, a `Skills` folder, an `avatars` folder, and (because Development enables `Team:FileLog`) a `logs` folder. Other folders created by features (a `Teams` folder, for one) may appear; they are not judged.
 - The listing does NOT contain `prompts.json`, `appearance.json`, or a top-level `work` directory.
 - No `rooms` directory exists yet; it appears only after the first Message is sent in some Room.
@@ -611,7 +611,7 @@ This test has no failing outcome in the usual sense; its job is to calibrate the
 
 **Pass if — all of these**
 
-- With `data_test` live, the sidebar room list holds no `Ada` or `Bo` Room and none of the earlier messages (it reads `No rooms yet. Start an agent to create one.`, or at most shows the built-in Chief of Staff's own Room, which the app creates itself) — because the seeder never wrote there.
+- With `data_test` live, the sidebar room list holds no `Ada` or `Bo` Room and none of the earlier messages (it shows the title `No rooms yet` with the line `Start an agent to create one.` under it, or at most shows the built-in Chief of Staff's own Room, which the app creates itself) — because the seeder never wrote there.
 - The path printed on the Settings page ends `\uat\data_test\prompts.json`.
 - `C:\seeds\huddle\uat\data_test\` exists and holds its own `team.db` and its own `Teammates\` folder with a freshly seeded `Chief of Staff\Chief of Staff.md` — and no `Ada` or `Bo` folder.
 - After relaunching with the original DataDir, the `Ada` and `Bo` Rooms and Ada's full history are back, untouched.
@@ -779,7 +779,7 @@ The `version` field in the welcome envelope must equal the CURRENT protocol vers
 
 **Pass if — all of these**
 
-- The sidebar room list reads `No rooms yet. Start an agent to create one.` and stays that way.
+- The sidebar room list shows the title `No rooms yet` with the line `Start an agent to create one.` under it and stays that way.
 - The script prints `Connecting to pipe '\\.\pipe\team' as agent 'mybot'...` and then fails (a timeout after roughly five seconds) or blocks — it never prints a `welcome` line.
 - NO `mybot` Room ever appears in the browser.
 - The browser gives no error, no warning and no visible change of any kind.
@@ -867,7 +867,7 @@ If you launched by running the built DLL (`dotnet src/Huddle.App/bin/Debug/net10
 
 - No NEW `node` process exists compared to step 1.
 - `/teammates` renders with heading `Teammates`, a `New teammate` button (a text button, not upper-cased), and the intro paragraph beginning `A Persona is a Markdown file describing how one teammate should behave`.
-- On a clean App_Data, the page shows exactly one tile, the built-in Chief of Staff (alias `@cos`), whose status does not read `Starting` or `Online` because nothing was started. `No Personas yet.` never appears, because the Chief of Staff is always seeded (`Teammates.razor:67-70`).
+- On a clean App_Data, the page shows exactly one tile, the built-in Chief of Staff (alias `@cos`), whose status does not read `Starting` or `Online` because nothing was started. `No Teammates yet` never appears, because the Chief of Staff is always seeded (`Teammates.razor:67-70`).
 - The console contains no `Persona '…' failed to start.` line and no adapter lines.
 - Merely loading `/teammates` spends nothing and spawns nothing.
 
@@ -910,7 +910,7 @@ If you launched by running the built DLL (`dotnet src/Huddle.App/bin/Debug/net10
 
 - The app starts normally with ACP enabled.
 - `O-ADAPTERS` prints exactly `1` after the wait, against `0` before: the Chief of Staff's adapter, and no other.
-- `/teammates` shows exactly one tile, `Chief of Staff` (`@cos`), reading `Online` (or `Starting` for a few seconds first); it never shows `No Personas yet.`
+- `/teammates` shows exactly one tile, `Chief of Staff` (`@cos`), reading `Online` (or `Starting` for a few seconds first); it never shows `No Teammates yet`
 - A `Chief of Staff` direct Room is in the sidebar.
 - Nothing beyond that one Haiku / low Greeting Turn is spent.
 
@@ -1058,7 +1058,7 @@ You are a test teammate. Answer in one short sentence.
 2. In `T-B` run `O-ADAPTERS`. It should print `0`.
 3. Launch with `P-LAUNCH-PAID`.
 4. Open the browser and go straight to `/teammates` — do not wait.
-5. Read the `Tester` tile: its name, its title, its alias chip, and its status (a coloured dot plus a word).
+5. Read the `Tester` tile: its name, its title, its alias caption, and its status (the avatar badge: a glyph, with the word in its tooltip).
 6. Keep watching the status for up to 30 seconds and record every state it passes through.
 7. Open the tile by clicking it, then click `Edit`. In the `Model` dropdown choose the option whose name contains `Haiku`; in the `Effort` dropdown choose `Low`. Click `Save`.
 8. Look at the sidebar room list.
@@ -1068,7 +1068,7 @@ You are a test teammate. Answer in one short sentence.
 
 **Pass if — all of these**
 
-- The tile shows the name `Tester`, the title `Test teammate`, the chip `@tester` (separate elements, `Teammates.razor:98-104`), and a status that reads `Starting` with an amber dot, then `Online` with a green dot.
+- The tile shows the name `Tester`, the title `Test teammate`, the alias caption `@tester` (separate elements, `Teammates.razor:98-104`), and an avatar badge whose tooltip reads `Starting` (pulse glyph), then `Online` (check glyph).
 - `O-ADAPTERS` prints `2` after the start: `Tester`'s adapter and the Chief of Staff's, against `0` before.
 - A Room named `Tester` appears in the sidebar with no refresh (next to the Chief of Staff's).
 - After saving Model = Haiku and Effort = Low, the card shows those values and the teammate restarts (status passes through `Starting` again).
@@ -1177,7 +1177,7 @@ You are a second test teammate. Reply with one very short sentence that ends wit
 
 - The Human Message gets a normal reply from `Tester`, and `Tester2` answers that.
 - `Tester` does NOT answer `Tester2` — the Agent-triggered Turn is the one refused.
-- The `/teammates` tile reads `Degraded` with an amber dot.
+- The `/teammates` tile reads `Degraded` (dash glyph on the avatar badge).
 - The tile's tooltip reads exactly `The per-Persona token Budget of 2000 is spent; no more Turns until a Human speaks.`
 - The Room shows an alert strip between the message list and the message box reading `Tester is Degraded: The per-Persona token Budget of 2000 is spent; no more Turns until a Human speaks.`
 - The console contains `Persona 'Tester' has spent its token budget of 2000 and is taking no more turns until a human speaks to it.`
@@ -1212,7 +1212,7 @@ The check runs at the START of a work item, so the FIRST Turn ALWAYS completes n
 2. Type exactly `Hello again.` and press Enter.
 3. Wait up to 60 seconds and watch the message area.
 4. Look at the area between the message list and the message box.
-5. Go to `/teammates` and read the `Tester` tile's status line and dot colour.
+5. Go to `/teammates` and read the `Tester` tile's avatar badge (glyph and tooltip).
 6. Stop the app. Run `Remove-Item Env:Team__Acp__TokenBudget` and `Remove-Item Env:Team__AgentMessageBudget`.
 7. Delete both test Personas: `Remove-Item -Recurse src\Huddle.App\App_Data\Teammates\Tester, src\Huddle.App\App_Data\Teammates\Tester2`. Their Rooms and history stay in the database and the Teammates go offline (`Teammates.razor:25`); `P-RESET-ALL` gives a fully clean slate.
 8. Run `Get-ChildItem Env:Team__*` and confirm nothing remains set.
@@ -1221,7 +1221,7 @@ The check runs at the START of a work item, so the FIRST Turn ALWAYS completes n
 
 - The Persona answers the new message.
 - The Room's alert strip disappears.
-- The `/teammates` tile returns to `Online` with a green dot.
+- The `/teammates` tile returns to `Online` (check glyph).
 
 **Fail if — any of these**
 

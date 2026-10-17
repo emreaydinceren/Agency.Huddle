@@ -11,10 +11,10 @@
     }
     else
     {
-        <MudStack Row="true" AlignItems="AlignItems.Baseline" Spacing="2">
+        <div class="page-header-titles">
             <MudText Typo="Typo.h5" HtmlTag="h1">@this.Title</MudText>
             <MudText Typo="Typo.body2" Class="page-header-subtitle">@this.Subtitle</MudText>
-        </MudStack>
+        </div>
     }
     @this.Actions
 </MudStack>
@@ -37,7 +37,7 @@
     [Parameter]
     public RenderFragment? Actions { get; set; }
 
-    /// <summary>Whether the header also sets the document title to <see cref="Title"/>; a page whose document title differs from its heading (the Team page) turns it off and sets its own.</summary>
+    /// <summary>Whether the header also sets the document title to <see cref="Title"/>; the document title is always the bare page name, so a page turns this off only when it sets the title itself.</summary>
     [Parameter]
     public bool SetPageTitle { get; set; } = true;
 }

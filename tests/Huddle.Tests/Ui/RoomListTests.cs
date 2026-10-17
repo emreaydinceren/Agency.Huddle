@@ -189,9 +189,9 @@ public sealed class RoomListTests
         Assert.True((await directory.GetRoomAsync(room.Id, ct))?.Archived);
     }
 
-    /// <summary>Chats are grouped under a collapsible "Chats" MudNavGroup, and individual room links carry no icons.</summary>
+    /// <summary>Rooms are grouped under a collapsible "Rooms" MudNavGroup, and individual room links carry no icons.</summary>
     [Fact]
-    public async Task Chats_AreGroupedUnderCollapsibleChatsNavGroup_WithoutIndividualIcons()
+    public async Task Rooms_AreGroupedUnderCollapsibleRoomsNavGroup_WithoutIndividualIcons()
     {
         var ct = Xunit.TestContext.Current.CancellationToken;
         using var dir = new TempDataDir();
@@ -207,7 +207,7 @@ public sealed class RoomListTests
         var cut = RenderRoomList(ctx);
 
         var groupHeader = cut.Find(".mud-nav-group .mud-nav-link-text");
-        Assert.Equal("Chats", groupHeader.TextContent.Trim());
+        Assert.Equal("Rooms", groupHeader.TextContent.Trim());
 
         var roomLink = cut.Find(".hover-reveal-link");
         Assert.Equal(room.Name, NameText(roomLink));
@@ -215,9 +215,9 @@ public sealed class RoomListTests
         Assert.Single(roomLink.QuerySelectorAll(".mud-avatar"));
     }
 
-    /// <summary>When there are no rooms, the collapsible "Chats" group is still present and displays the empty state inside it.</summary>
+    /// <summary>When there are no rooms, the collapsible "Rooms" group is still present and displays the empty state inside it.</summary>
     [Fact]
-    public async Task Chats_WhenEmpty_RendersChatsNavGroupWithEmptyState()
+    public async Task Rooms_WhenEmpty_RendersRoomsNavGroupWithEmptyState()
     {
         var ct = Xunit.TestContext.Current.CancellationToken;
         using var dir = new TempDataDir();
@@ -230,13 +230,13 @@ public sealed class RoomListTests
         var cut = RenderRoomList(ctx);
 
         var groupHeader = cut.Find(".mud-nav-group .mud-nav-link-text");
-        Assert.Equal("Chats", groupHeader.TextContent.Trim());
+        Assert.Equal("Rooms", groupHeader.TextContent.Trim());
         Assert.Contains("No rooms yet", cut.Find(".mud-nav-group").TextContent, StringComparison.Ordinal);
     }
 
-    /// <summary>A Room scoped to a Team in the catalog belongs under that Team in the sidebar, so the root Chats group does not list it (ADR-0052).</summary>
+    /// <summary>A Room scoped to a Team in the catalog belongs under that Team in the sidebar, so the root Rooms group does not list it (ADR-0052).</summary>
     [Fact]
-    public async Task LoadAsync_RoomScopedToAKnownTeam_IsNotListedInChats()
+    public async Task LoadAsync_RoomScopedToAKnownTeam_IsNotListedInRooms()
     {
         var ct = Xunit.TestContext.Current.CancellationToken;
         using var dir = new TempDataDir();
@@ -256,7 +256,7 @@ public sealed class RoomListTests
         Assert.Equal(rootRoom.Name, NameText(Assert.Single(cut.FindAll(".hover-reveal-link a"))));
     }
 
-    /// <summary>T12: a Room whose Team has left the catalog is listed in Chats with a muted "(Team)" after its name, and still opens /rooms/{id}.</summary>
+    /// <summary>T12: a Room whose Team has left the catalog is listed in Rooms with a muted "(Team)" after its name, and still opens /rooms/{id}.</summary>
     [Fact]
     public async Task LoadAsync_RoomOfAVanishedTeam_IsListedWithMutedTeamLabel()
     {
@@ -409,9 +409,9 @@ public sealed class RoomListTests
         return new ChatService(directory, store, events, new FakeMentionAliasSource(), Options.Create(new TeamOptions()), proposals, new QuestionStore(events), NullLogger<ChatService>.Instance);
     }
 
-    /// <summary>When there are rooms, the collapsible "Chats" group also offers the "New chat" control inside it.</summary>
+    /// <summary>When there are rooms, the collapsible "Rooms" group also offers the "New chat" control inside it.</summary>
     [Fact]
-    public async Task Chats_OffersNewChatControlInsideNavGroup()
+    public async Task Rooms_OffersNewChatControlInsideNavGroup()
     {
         var ct = Xunit.TestContext.Current.CancellationToken;
         using var dir = new TempDataDir();

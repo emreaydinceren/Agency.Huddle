@@ -86,10 +86,10 @@ Browser shows 'connection refused' or the page never finishes loading -> the app
 
 **Pass if — all of these**
 
-- After step 3 there is exactly one group heading, `No team`, holding one tile: `Chief of Staff`, title `Chief of Staff`, chips `@cos` and `Offline`.
-- The sentence `No Personas yet. Choose New teammate to add one.` is not on the page, and no `Files that didn't load` section appears.
+- After step 3 there is exactly one group heading, `No team`, holding one tile: `Chief of Staff`, title `Chief of Staff`, and the meta line `@cos · Offline` (plain text, no chips).
+- The empty state `No Teammates yet` is not on the page, and no `Files that didn't load` section appears.
 - A **Team** dropdown is present, and its only option is `All teams` (no Persona names a Team).
-- After step 5 the page shows exactly the sentence `No Personas yet. Choose New teammate to add one.`, with `New teammate` in bold; no group heading, no tile, and no label reading `Team` or dropdown.
+- After step 5 the page shows exactly the empty state `No Teammates yet` with the line `Choose New teammate to add the first one.` under it; no group heading, no tile, and no label reading `Team` or dropdown.
 - After step 5 the heading, the `New teammate` button and the intro paragraph are all still present.
 - After step 6 the `Chief of Staff` tile is back under `No team`.
 
@@ -107,11 +107,11 @@ The folder holds more than the Chief of Staff (leftover Teammates from an earlie
 > [!NOTE]
 > The empty-library sentence is only reachable by removing the Chief of Staff's folder while the app runs. At every start the library holds at least the Chief of Staff, so no start-up state shows the sentence.
 
-### TEAMMATESLIBRARY-03 — The fixture library loads, and a tile shows monogram, Name, Title, an @alias chip and status
+### TEAMMATESLIBRARY-03 — The fixture library loads, and a tile shows monogram, Name, Title, an @alias caption and status
 
 **Free** · about 8 min
 
-*Creates the core fixture set and proves a tile renders every identity field from frontmatter, with the documented first-and-last-word monogram rule.*
+*Creates the core fixture set and proves a tile renders every identity field from frontmatter, with the documented monogram rule (several words give first and last initials, one word gives its first two letters).*
 
 **Before you start**
 
@@ -160,18 +160,18 @@ teams: ['Business']
 You are Emily Lee. Answer in one short sentence.
 6. Do not create a Chief of Staff file: the app already seeded one (alias `cos`, title `Chief of Staff`, no Teams). A second file named `Chief of Staff` or aliased `cos` would be rejected as a duplicate of it.
 7. Go to http://localhost:5100/teammates and press F5.
-8. Read the Nova tile line by line: the Name, the line beneath it, and the two chips on the line beneath that.
-9. Read the coloured square at the left of each of the six tiles.
-10. Read the status chip on each tile, and inspect its coloured dot in the browser's developer tools (F12).
+8. Read the Nova tile line by line: the Name, the role line beneath it, and the meta line beneath that (`@alias · State`).
+9. Read the round avatar at the left of each of the six tiles.
+10. Hover the badge on the bottom-right rim of each avatar and read its tooltip, and inspect it in the browser's developer tools (F12). There is no `Online` chip or dot on the tile itself.
 
 **Pass if — all of these**
 
 - Six Teammates are on the page: Chief of Staff, Emily Lee, Nova, Quill, Rune, Vale (Vale appears twice, under two headings; see TEAMMATESLIBRARY-05).
-- Nova's tile shows `Nova` on its first line and `Research Lead` on the line beneath it. Beneath those are two chips: `@nov` (with a leading `@`) and a status chip reading `Offline`. There is no `Research Lead · @nov` line with a middle dot.
-- Every tile has the same shape: Name, then Title, then an `@<alias>` chip and a status chip, with values matching that Persona's frontmatter (Vale: `Ops Lead`, `@val`; Rune: `Home Steward`, `@run`; Quill: `Scribe`, `@qui`; Chief of Staff: `Chief of Staff`, `@cos`).
-- Monograms read: Emily Lee -> `EL`; Chief of Staff -> `CS`; Nova -> `N`; Quill -> `Q`; Rune -> `R`; Vale -> `V`.
-- With ACP off, every status chip reads `Offline`, and the dot inside it has the CSS class `agent-dot offline` (its red is the theme's error colour, so do not compare an RGB value). The labels the page can show are `Starting`, `Online`, `Degraded` and `Offline`. There is no grey dot in the design.
-- The tiles have rounded borders and a coloured monogram square — they are tiles, not bullet points.
+- Nova's tile shows `Nova` on its first line and `Research Lead` on the line beneath it. Beneath those is the plain meta line `@nov · Offline` (with a leading `@`, no chip). The avatar's badge carries the status and its tooltip reads `Offline`.
+- Every tile has the same shape: Name, then Title, then an `@<alias> · State` meta line, and an avatar badge, with values matching that Persona's frontmatter (Vale: `Ops Lead`, `@val`; Rune: `Home Steward`, `@run`; Quill: `Scribe`, `@qui`; Chief of Staff: `Chief of Staff`, `@cos`).
+- Monograms read: Emily Lee -> `EL`; Chief of Staff -> `CS`; Nova -> `NO`; Quill -> `QU`; Rune -> `RU`; Vale -> `VA`.
+- With ACP off, every avatar badge reads `Offline` (its hollow ring is neutral grey; the badge has the CSS class `agent-dot` with `offline` and `role="img"`, so do not compare an RGB value). The state words the badge can show are `Starting`, `Online`, `Degraded` and `Offline`, each with its own glyph (pulse, check, dash, ring).
+- The tiles have rounded borders and a round monogram avatar — they are tiles, not bullet points.
 
 **Fail if — any of these**
 
@@ -239,7 +239,7 @@ A tile is under the wrong heading AND you have edited a fixture since -03 -> re-
 **Steps**
 
 1. Go to http://localhost:5100/teammates and press F5.
-2. Find the Vale tile under the `Business` heading and write down its Name, Title, alias chip and status label.
+2. Find the Vale tile under the `Business` heading and write down its Name, Title, alias caption and the state word in its avatar badge's tooltip.
 3. Find the Vale tile under the `Household` heading and write down the same four things.
 4. Click the Vale tile under `Business` and note the card's Name and `Teams:` line, then close the card with the × button.
 5. Click the Vale tile under `Household` and note the same two things.
@@ -247,13 +247,13 @@ A tile is under the wrong heading AND you have edited a fixture since -03 -> re-
 **Pass if — all of these**
 
 - A full Vale tile appears under BOTH `Business` and `Household`.
-- Both copies show the identical Name (`Vale`), Title (`Ops Lead`), alias chip (`@val`), monogram (`V`) and status label.
+- Both copies show the identical Name (`Vale`), Title (`Ops Lead`), alias caption (`@val`), monogram (`VA`) and badge state word.
 - Both clicks open the same card: Name `Vale`, and a line reading `Teams: Business, Household`.
 
 **Fail if — any of these**
 
 - Vale appears under only `Business` (the first Team named) -> membership is being read as a single value, not a list.
-- The two copies show different status labels -> the badge is being derived per group instead of once per Persona; two surfaces now disagree about one teammate.
+- The two copies show different badge states -> the badge is being derived per group instead of once per Persona; two surfaces now disagree about one teammate.
 - Clicking one copy opens a card for a different teammate -> the tile's click target is bound to the group index rather than the Persona.
 
 **Inconclusive if**
@@ -422,20 +422,20 @@ The browser shows a stale page and other interactions are also dead -> the Blazo
 **Pass if — all of these**
 
 - The page repaints on its own within about a second of the save.
-- It then shows exactly the sentence `No teammates in this team.`
+- It then shows exactly the empty state `No teammates in this team` with the line `Pick another team, or add a teammate to this one.`
 - It does NOT show a `Zulu` heading with nothing under it.
-- It does NOT show `No Personas yet. Choose New teammate to add one.`
+- It does NOT show the `No Teammates yet` empty state
 - Choosing `All teams` brings back every other tile, proving the library is intact; Zed now appears under `Business`, and `Zulu` is gone from the dropdown.
 
 **Fail if — any of these**
 
 - An empty `Zulu` heading is rendered with nothing beneath it -> an empty group is being produced, and a user cannot tell an empty Team from a broken page.
-- The page falls back to `No Personas yet…` while other Personas still exist -> the empty-library state is being reused for an empty filter; the user is told their whole library is gone.
+- The page falls back to `No Teammates yet` while other Personas still exist -> the empty-library state is being reused for an empty filter; the user is told their whole library is gone.
 - The page throws, or the yellow `An unhandled error has occurred.` banner appears -> a filter selection that outlives its Team is crashing the circuit.
 
 **Inconclusive if**
 
-Nothing repaints even after 10 seconds -> this may be the watcher rather than the filter; press F5, and if the correct `No teammates in this team.` sentence then appears, record this test as passing with a note and treat the watcher failure under TEAMMATESLIBRARY-19.
+Nothing repaints even after 10 seconds -> this may be the watcher rather than the filter; press F5, and if the correct `No teammates in this team` empty state then appears, record this test as passing with a note and treat the watcher failure under TEAMMATESLIBRARY-19.
 
 > [!NOTE]
 > Afterwards, delete the `Zed` and `Ada` folders to return to the core fixture set.
@@ -892,7 +892,7 @@ No title here.
 
 - The three broken paths are listed sorted by path (ordinal): `...\AAA\AAA.md`, `...\MMM\MMM.md`, `...\ZZZ\ZZZ.md`.
 - With `Business` selected, the rejected block is still fully visible and still lists all three — the filter does not touch it.
-- With every file broken, the page shows BOTH the `Files that didn't load` block AND the sentence `No Personas yet. Choose New teammate to add one.`
+- With every file broken, the page shows BOTH the `Files that didn't load` block AND the `No Teammates yet` empty state
 - In that all-broken state, no `Team` dropdown is rendered.
 - The definition-file count on disk equals (distinct tiles on screen + entries in the rejected block) at every point in this test — every file is accounted for by exactly one of the two.
 
@@ -1028,7 +1028,7 @@ You are Pike. Answer in one short sentence.
 
 - The tile only appears after F5 -> a user copying in a Persona file sees nothing happen and will assume the app did not accept it.
 - A deleted Persona's tile lingers -> the card would then offer Edit and Open on a file that no longer exists.
-- The tiles update but the dropdown's option list does not -> the filter and the grid are reading from two different moments in time; selecting the stale option shows `No teammates in this team.`
+- The tiles update but the dropdown's option list does not -> the filter and the grid are reading from two different moments in time; selecting the stale option shows `No teammates in this team`
 - The heading survives after its last member is deleted -> an empty group is left behind.
 
 **Inconclusive if**
@@ -1196,10 +1196,10 @@ No overflow warning ever appears (likely — the watcher buffer is raised to 64 
 **Steps**
 
 1. Go to /teammates and press F5.
-2. Click the Nova tile on its coloured monogram square. Immediately read `document.activeElement` in the DevTools Console. Note whether the card opens and whether focus moved into it.
+2. Click the Nova tile on its round avatar. Immediately read `document.activeElement` in the DevTools Console. Note whether the card opens and whether focus moved into it.
 3. Press Tab a few times and confirm focus never lands on something BEHIND the dialog (the sidebar, another tile).
 4. Close it by clicking the × at the top right. Read `document.activeElement` again — is it back on the Nova tile?
-5. Click the Nova tile on its status line. Note whether the card opens.
+5. Click the Nova tile on its caption line. Note whether the card opens.
 6. Read the card from top to bottom and write down: the header text, the Name, the Title, the status line, the `Alias:` line, whether a `Teams:` line is present and what it says, the section headings, and the text under `Persona file`.
 7. Click INSIDE the card body (on the Persona text). Note whether it closes.
 8. Click the dimmed backdrop outside the card. Note whether it closes, and read `document.activeElement`.
@@ -1210,7 +1210,7 @@ No overflow warning ever appears (likely — the watcher buffer is raised to 64 
 
 **Pass if — all of these**
 
-- Clicking anywhere on the tile — monogram, name, or status line — opens the card, and focus moves INTO the dialog on open (never left sitting on the tile).
+- Clicking anywhere on the tile — avatar, name, or caption — opens the card, and focus moves INTO the dialog on open (never left sitting on the tile).
 - Tab never lets focus escape to the page behind while the dialog is open.
 - The card header reads exactly `Teammate` in View mode.
 - The card shows: Name `Nova`; Title `Research Lead`; a status line with a dot and `Offline`; `Alias: nov`; `Teams: Business`.
@@ -1253,16 +1253,16 @@ The card does not open at all and other clicks on the page are also dead -> the 
 **Steps**
 
 1. Go to /teammates and press F5.
-2. Read the status label and dot colour on every tile.
-3. Hover the mouse over the word `Offline` in a tile's status chip for three seconds and note whether a tooltip appears; then hover the small dot beside it and note what appears.
+2. Read the avatar badge (glyph and tooltip) on every tile.
+3. Hover the mouse over the badge on a tile's avatar for three seconds and note what the tooltip says.
 4. Click the Nova tile and read the lines under the Name.
 5. Note which buttons are in the card's action row, and read any hint sentence below it. Then close the card, open the Chief of Staff's card and read its action row.
 6. In `T-B` run `O-ADAPTERS` and, if you have sqlite3, `sqlite3 <data>\team.db "select id,name,kind from users;"` ([`O-DB`](common.md#o-db)).
 
 **Pass if — all of these**
 
-- Every tile reads `Offline` with a red dot (`agent-dot offline`).
-- Hovering the label text in a tile's status chip shows NO tooltip — no reason is known, so none is invented. (The dot inside the chip always carries its own tooltip, the class name `offline`; that is the dot's label, not a reason: StatusDot.razor:11.)
+- Every tile reads `Offline` with a hollow grey ring (`agent-dot offline`).
+- The badge tooltip reads just `Offline`, with no colon and no reason after it: no reason is known, so none is invented.
 - The card shows the same `Offline` status line and NO red reason paragraph under it.
 - Nova's action row contains `Edit`, `Open`, `Restart` and a red Remove icon button (tooltip `Remove`); a `Message` link appears only if that teammate already has a Room. The Chief of Staff's row has `Reset to default` where the others have Remove (TeammateCard.razor:198-224).
 - A hint below the action row reads `Like saving an edit, this restarts the teammate, which clears what it remembers.`
@@ -1310,10 +1310,10 @@ teams: ['Business']
 You are Scout. Answer in one short sentence.
 2. In a third PowerShell window at the repo root, run `pwsh tools/echo-bot.ps1 -Name Scout` and confirm it prints that it connected.
 3. Go to /teammates and press F5 ONCE (this is the only refresh in this test; it lets the page learn the new agent's id).
-4. Confirm the `Scout` tile reads `Online` with a green dot (an external bot connected under the Name of a Teammate that has a Persona file).
+4. Confirm the `Scout` tile reads `Online` (check glyph on the avatar badge) (an external bot connected under the Name of a Teammate that has a Persona file).
 5. Click the Scout tile so its card is open, and leave it open.
 6. In the third PowerShell window, press Ctrl+C to stop the echo bot.
-7. Watch the page for up to five seconds WITHOUT refreshing: read the tile's dot and label, and the open card's status line.
+7. Watch the page for up to five seconds WITHOUT refreshing: read the tile's avatar badge, and the open card's status line.
 8. Run `pwsh tools/echo-bot.ps1 -Name Scout` again and watch the same two places, again without refreshing.
 9. Close the card, click another page in the sidebar (e.g. **Settings**), then come back to **Teammates**. Check the `dotnet run` console for exceptions.
 10. Stop the echo bot and delete the folder `<data>\Teammates\Scout\`.
@@ -1327,7 +1327,7 @@ You are Scout. Answer in one short sentence.
 
 **Fail if — any of these**
 
-- You must press F5 to see the change -> the page is not subscribed to presence; a user watching a teammate go down sees a green dot indefinitely.
+- You must press F5 to see the change -> the page is not subscribed to presence; a user watching a teammate go down sees the check glyph indefinitely.
 - The tile updates while the open card stays stale -> two surfaces disagree about one teammate.
 - An exception appears in the console when you navigate away -> a component failed to unsubscribe from a singleton event; that leak throws on every circuit disconnect and never dies.
 
@@ -1778,14 +1778,14 @@ No adapter is installed, so no probe could ever spawn -> this test cannot distin
 1. In `T-B` run `O-ADAPTERS` and note the count.
 2. Go to /teammates, press F5, click the Nova tile and read the hint under the action row.
 3. Click **Restart**.
-4. Read the card's status line and any red paragraph under it. Then close the card and hover the word `Offline` in the Nova tile's status chip.
+4. Read the card's status line and any red paragraph under it. Then close the card and hover the badge on the Nova tile's avatar.
 5. Run `O-ADAPTERS` again and `Get-ChildItem <data>\Teammates\Nova`.
 6. Do NOT send the teammate a message.
 
 **Pass if — all of these**
 
 - The hint under the action row reads `Like saving an edit, this restarts the teammate, which clears what it remembers.`
-- After **Restart** the card still reads `Offline` and shows the reason `Teammates are switched off in this configuration, so nothing was started.`; the tile's status chip carries the same text as its tooltip.
+- After **Restart** the card still reads `Offline` and shows the reason `Teammates are switched off in this configuration, so nothing was started.`; the badge's tooltip carries the same text after `Offline: `.
 - `O-ADAPTERS` is unchanged (still `0`) and `Nova` holds only `Nova.md`: nothing was started and no `work\` folder was created (the Work Dir is `Teammates\Nova\work`, F1).
 - The page does not crash and no yellow `An unhandled error has occurred.` banner appears.
 
@@ -1837,7 +1837,7 @@ The restart completes too fast to see the `Restarting…` label -> judge on the 
 
 **Free** · about 5 min
 
-*Proves that when a start genuinely fails, the exact reason reaches the user twice — as a tooltip on the tile's status chip and as a full line on the card — and clears when the cause is fixed.*
+*Proves that when a start genuinely fails, the exact reason reaches the user twice — as a tooltip on the tile's avatar badge and as a full line on the card — and clears when the cause is fixed.*
 
 **Before you start**
 
@@ -1850,8 +1850,8 @@ The restart completes too fast to see the `Restarting…` label -> judge on the 
 2. Rename the folder: `Rename-Item tools\acp\node_modules node_modules.off`
 3. Restart the app with ACP ON: `dotnet run --project src/Huddle.App -- --Team:Acp:Enabled=true`
 4. Go to http://localhost:5100/teammates and press F5.
-5. Read the status label on every tile.
-6. HOVER the mouse over the word `Offline` in the Nova tile's status chip for three seconds and read the tooltip.
+5. Read the avatar badge's tooltip on every tile.
+6. HOVER the mouse over the badge on the Nova tile's avatar for three seconds and read the tooltip.
 7. Click the Nova tile and read the red line directly under its status line.
 8. Check the `dotnet run` console for a warning naming Nova.
 9. Restore the adapter: `Rename-Item tools\acp\node_modules.off node_modules`
@@ -1860,7 +1860,7 @@ The restart completes too fast to see the `Restarting…` label -> judge on the 
 **Pass if — all of these**
 
 - Every tile reads `Offline`.
-- Hovering the status chip shows a tooltip carrying exactly: `No ACP adapter is installed for Persona 'Nova' on Adapter '<id>'. Run tools/acp/install.ps1 (or set Team:Acp:AdapterPath / Team:Acp:Args) before enabling this Persona.`, with `<id>` the Persona's Adapter id (DotAcpAgentHostFactory.cs:138-141).
+- Hovering the badge shows a tooltip that begins `Offline: ` and then carries exactly: `No ACP adapter is installed for Persona 'Nova' on Adapter '<id>'. Run tools/acp/install.ps1 (or set Team:Acp:AdapterPath / Team:Acp:Args) before enabling this Persona.`, with `<id>` the Persona's Adapter id (DotAcpAgentHostFactory.cs:138-141).
 - The card shows that SAME text as a full paragraph line under the status — not as a tooltip.
 - The console logs a warning `Persona 'Nova' failed to start.` (PersonaSupervisor.cs:617).
 - After restoring node_modules and clicking **Restart**, the badge moves `Offline` -> (briefly `Starting`) -> `Online`, and the reason disappears from both the tooltip and the card.
@@ -1906,8 +1906,8 @@ You are Scout. Answer in one short sentence.
 5. In the console, confirm the warning `Persona 'Scout' failed to start.` appears.
 6. In a third PowerShell window at the repo root, run `pwsh tools/echo-bot.ps1 -Name Scout` and confirm it prints `Sent hello. Listening for messages (Ctrl+C to exit)...`.
 7. Go to http://localhost:5100/teammates and press F5.
-8. Read the `Scout` tile's status label and dot colour.
-9. Hover the word `Offline` in its status chip and read the tooltip.
+8. Read the `Scout` tile's avatar badge (glyph and tooltip).
+9. Hover the badge on its avatar and read the tooltip.
 10. If you have sqlite3, run `sqlite3 <data>\team.db "select id,name,kind from users;"` and confirm the `Scout` agent row is there.
 11. Stop the echo bot, delete the folder `<data>\Teammates\Scout\`, restore the adapter (`Rename-Item tools\acp\node_modules.off node_modules`) and restart the app without the ACP flag when you are finished.
 
@@ -1947,7 +1947,7 @@ Only one of the two facts holds -> the setup is not in the state this test needs
 2. Click **Settings** in the left sidebar, then the **Appearance** tab. Note which theme is currently selected.
 3. In the theme list choose **Huddle Dark**. The theme applies immediately through `MudThemeProvider` — no page reload — so do not wait for one; watch the page repaint in place instead. (A theme is one palette, not a pair, so there is no separate Light/Dark selector: ADR-0017.)
 4. Click **Teammates** in the sidebar.
-5. Inspect, one at a time, and note any element that is still light: the page background; the `Files that didn't load` block's background, border and text; the `Team` filter's label and dropdown; each group heading and its underline; each tile's background; a tile's hover state (move the mouse over it); the monogram square; the status dot.
+5. Inspect, one at a time, and note any element that is still light: the page background; the `Files that didn't load` block's background, border and text; the `Team` filter's label and dropdown; each group heading and its underline; each tile's background; a tile's hover state (move the mouse over it); the monogram avatar; the status badge.
 6. Click a tile to open the card (a `MudDialog`) over the page and inspect: the dialog's background, the dimmed backdrop, the header, the `<pre>` block holding the Persona text, and the `Persona file` path line.
 7. Click **Edit** on the card and inspect the textarea, the **Model** dropdown and the **Effort** dropdown.
 8. Close the card. Return to Settings -> Appearance and select the theme you noted in step 2, then restore Quill's `title:` line.
@@ -1990,7 +1990,7 @@ The theme does not change and the page looks identical -> confirm `<data>\appear
 1. Start the app and confirm the teammate under test reads `Online` on /teammates.
 2. Open its Room from the card's **Message** link (or via **New chat** in the sidebar) and send `Say hello in five words.`
 3. While that Turn is running, cut the network (disable the adapter) so the Turn fails. Restore the network. Go to /teammates and read the tile and card now (one failed Turn).
-4. Repeat the previous two steps twice more, so THREE Turns in a row have failed. Read the tile's dot colour, label and tooltip, and open its card and read the line under the status and the action row.
+4. Repeat the previous two steps twice more, so THREE Turns in a row have failed. Read the tile's avatar badge (glyph and tooltip), and open its card and read the line under the status and the action row.
 5. Restore normal operation and let one ordinary Turn complete. Read the tile.
 6. Now prove a stopped Turn does not badge: send `Write a very long story.` and click **Stop** while it is replying. Read the tile.
 7. Now prove a spent Budget does not badge: with `Team__AgentMessageBudget` low, let the teammate post until the Room refuses further agent messages. Read the tile again.
@@ -1998,7 +1998,7 @@ The theme does not change and the page looks identical -> confirm `<data>\appear
 
 **Pass if — all of these**
 
-- After one failed Turn the tile moves to `Degraded` with an amber dot and the reason `A Turn in Room '<room>' failed — <detail>` (PersonaRunner.cs:289-303). A single failure is reported, not hidden.
+- After one failed Turn the tile moves to `Degraded` (dash glyph) and the reason `A Turn in Room '<room>' failed — <detail>` (PersonaRunner.cs:289-303). A single failure is reported, not hidden.
 - After the third consecutive failed Turn the reason reads `3 consecutive Turns have failed; this is unlikely to be transient — the last, in Room '<room>': <detail>`.
 - The tile's tooltip carries the reason, and the card shows that same reason as a full line, plus a **Restart** button.
 - After one ordinary Turn completes, the tile returns to `Online` with no reason, and the streak restarts from zero (PersonaRunner.cs:272-277).

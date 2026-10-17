@@ -54,7 +54,7 @@ public sealed class PageHeaderTests
         Assert.Contains("mb-4", row.ClassList);
     }
 
-    /// <summary>A page whose document title differs from its heading turns the header's PageTitle off (UX-001, the Team page keeps "{Team} - Huddle").</summary>
+    /// <summary>A page that sets its own document title turns the header's PageTitle off (UX-001); every other page uses the bare title.</summary>
     [Fact]
     public async Task SetPageTitleFalse_RendersNoPageTitle()
     {

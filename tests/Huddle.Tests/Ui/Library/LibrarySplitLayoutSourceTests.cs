@@ -3,8 +3,8 @@ namespace Agency.Huddle.Tests.Ui.Library;
 /// <summary>
 /// Source-text guards for the Library page's split filling its pane (UX-006, plan U18 T18.2). A browser is not
 /// rendered here, so each property is pinned in the stylesheet or the markup that carries it, as
-/// <see cref="RoomLayoutSourceTests"/> does. Percent heights are used on purpose: viewport units are not zoomed
-/// with the 90% UI zoom (plan section 3.5).
+/// <see cref="RoomLayoutSourceTests"/> does. Percent heights are used on purpose: the page fills the pane it sits in,
+/// not the window (plan section 3.5).
 /// </summary>
 public sealed class LibrarySplitLayoutSourceTests
 {

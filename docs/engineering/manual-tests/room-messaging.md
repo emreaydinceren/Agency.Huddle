@@ -42,7 +42,7 @@ standing conventions. This area adds:
 3. Read the `<h1>` at the top of the main column.
 4. Read the muted grey line directly beneath that `<h1>`.
 5. Look at the right-hand end of the header row for a button and read its label.
-6. Read the sidebar top to bottom and list every item you see, including the `Chats` group (expand it if collapsed).
+6. Read the sidebar top to bottom and list every item you see, including the `Rooms` group (expand it if collapsed).
 7. Select the whole URL from the address bar, open a new browser tab, paste it, press Enter.
 8. In the new tab, look at the sidebar and note whether the entry for the currently open Room is visually distinguished from the other entries (`Bo`, `Chief of Staff`).
 9. Click `Bo` in the sidebar and confirm the `<h1>` and the address bar both change.
@@ -53,7 +53,7 @@ standing conventions. This area adds:
 - The `<h1>` reads `Ada` (a word, not 32 hex characters).
 - The muted line beneath it reads exactly `You, Ada`.
 - A button labelled `Invite teammate` sits at the right of the header row.
-- The sidebar contains, in order (`MainLayout.razor:17-31`, `RoomList.razor`): a `Chats` group holding the Rooms `Ada`, `Bo` and `Chief of Staff` with a `New chat` link as the last item of that group; then a `Teams` group, a `Teammates` link, a `Tasks` group and a `Library` group; then two icon-only links at the bottom, Archived chats and Settings (a tooltip names Settings).
+- The sidebar contains, in order (`MainLayout.razor:17-31`, `RoomList.razor`): a `Rooms` group (closed until opened, or open when the current page is one of its Rooms) holding the Rooms `Ada`, `Bo` and `Chief of Staff` with a `New chat` link as the last item of that group; then a `Teams` group, a `Teammates` link, a `Tasks` group and a single `Library` link (no Library folder rows and no Add folder in the sidebar); then two icon-only links at the bottom, Archived chats and Settings (a tooltip names Settings).
 - The pasted URL in the second tab opens the same Room with the same `<h1>` and the same transcript.
 - The sidebar entry for the open Room is visually distinguished (different colour or weight) from the other entry.
 - Clicking `Bo` changes the `<h1>` to `Bo` and changes the id in the address bar.
@@ -64,12 +64,12 @@ standing conventions. This area adds:
 - The address bar cycles between `/` and `/rooms/...` repeatedly -> a redirect loop.
 - The `<h1>` shows 32 hex characters instead of `Ada` -> the header is rendering the Room id, not its Name.
 - The members line shows 32-hex ids instead of `You, Ada` -> the member projection is reading Id where it should read Name.
-- The sidebar shows `Ada`/`Bo` but the main column reads `No rooms yet. Start an agent to create one.`, or the reverse -> the two copies of that same literal have drifted apart; the one that disagrees with the sidebar's actual contents is the bug.
+- The sidebar shows `Ada`/`Bo` but the main column reads `No rooms yet. Start an agent to create one.`, or the reverse -> the two empty states (the sidebar's title and line, the main column's single sentence) have drifted apart; the one that disagrees with the sidebar's actual contents is the bug.
 - Clicking `Bo` changes the URL but the `<h1>` and transcript still show `Ada` -> the page is not reloading on a route-parameter change.
 
 **Inconclusive if**
 
-If BOTH the sidebar and the main column read `No rooms yet. Start an agent to create one.`, the seeded Rooms are missing and there are no Rooms to test. Re-run `P-LAUNCH-UAT` and check that the launch used `--Team:DataDir=C:\seeds\huddle\uat\data`. If they are still absent, this test and every agent-dependent test below are INCONCLUSIVE — retry once before recording anything. Do not record a FAIL.
+If BOTH the sidebar (title `No rooms yet`, line `Start an agent to create one.`) and the main column (`No rooms yet. Start an agent to create one.`) show their empty states, the seeded Rooms are missing and there are no Rooms to test. Re-run `P-LAUNCH-UAT` and check that the launch used `--Team:DataDir=C:\seeds\huddle\uat\data`. If they are still absent, this test and every agent-dependent test below are INCONCLUSIVE — retry once before recording anything. Do not record a FAIL.
 
 > [!NOTE]
 > Optional cross-check if you have `sqlite3` on PATH: `sqlite3 "$data\team.db" "select id, name from rooms order by created, id;"`. The first row's `id` must equal the 32 hex characters in the address bar, and its `name` must equal the `<h1>`. Skip this cross-check silently if sqlite3 is not installed — its absence is not a finding.
@@ -88,7 +88,7 @@ If BOTH the sidebar and the main column read `No rooms yet. Start an agent to cr
 **Steps**
 
 1. In `T-B` run `Lines` and write down the number.
-2. In the browser, click into the textarea with placeholder `Message… (/invite @agent)`.
+2. In the browser, click into the textarea with placeholder `Message {Room name}… (/invite @Teammate)`.
 3. Type exactly `hello there`.
 4. Press **Enter** (not Shift+Enter).
 5. Immediately look at the textarea and note whether it still contains text.
@@ -608,7 +608,7 @@ If your terminal cannot display the emoji or CJK correctly when running `Tail`, 
 If the paste is silently truncated by the browser rather than by the app, the prose case proves nothing. Verify by checking the character count in the JSONL against the clipboard length (`(Get-Clipboard).Length`) before judging; if they differ by a browser-side limit, record INCONCLUSIVE.
 
 > [!NOTE]
-> A Human `.message-bubble` and an agent `.message-card` both set `overflow-wrap: anywhere` (`app.css:351`, `:397`), so the 400-character unbroken token is expected to wrap. Fenced code blocks still get no horizontal-scroll container and no word-break of their own, so a 300-character code line CAN overflow the message column sideways. Report a code-block overflow once, as a layout gap, at low severity — unless it (or the long token) pushes the sidebar or composer off screen, which is a real failure.
+> A Human `.message-bubble` and an agent `.message-content > .message-body` both set `overflow-wrap: anywhere` (`.message-bubble` and `.message-content > .message-body` in `app.css`), so the 400-character unbroken token is expected to wrap. Fenced code blocks still get no horizontal-scroll container and no word-break of their own, so a 300-character code line CAN overflow the message column sideways. Report a code-block overflow once, as a layout gap, at low severity — unless it (or the long token) pushes the sidebar or composer off screen, which is a real failure.
 
 ### ROOMMESSAGING-14 — Messages render in post order, and the order on screen equals the order in the file
 

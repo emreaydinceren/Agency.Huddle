@@ -1,6 +1,6 @@
 @*
     One Room's row in a sidebar list: a NavTabLink to /rooms/{id} plus an Archive/Delete MudMenu,
-    shared by RoomList ("Chats") and TeamsNav (a Team's Rooms). The menu is reachable two ways: a
+    shared by RoomList ("Rooms") and TeamsNav (a Team's Rooms). The menu is reachable two ways: a
     keyboard-focusable "..." MudIconButton (revealed on hover/focus via app.css) and a right-click on
     the row itself, which opens the SAME MudMenu instance programmatically through an @ref -
     right-click alone would not be reachable by keyboard, which is why the button is not optional.
@@ -38,7 +38,8 @@
                 @* A 1:1 Room's leading visual is the Teammate's small avatar; a group Room takes the Chat icon (UX-016, OP-5). *@
                 <TeammateAvatar Name="@this.oneToOneTeammate.Name" Avatar="this.Avatars.Get(this.oneToOneTeammate.Name)" Size="Size.Small" Class="room-row-avatar" />
             }
-            @this.Room.Name
+            @* One line: the name truncates with an ellipsis and the full name is the tooltip. *@
+            <span class="sidebar-row-label" title="@this.Room.Name">@this.Room.Name</span>
             @if (this.TeamLabel is not null)
             {
                 <span class="room-team-label">(@this.TeamLabel)</span>
