@@ -92,8 +92,8 @@ with the Team row highlighted and a list of members with avatars, names, titles 
 **Free** · about 2 min
 
 *Proves the Members tab is Build a team's Hire section for the Team: the role cards, then the
-roster with each member's status dot, a Member chip, Edit, Message (for a member that has
-connected) and a Remove menu; and that a Teammate joins through its `teams:` line.*
+roster with each member's presence badge on the avatar, the *Member* meta text, Edit, Message (for a member that has
+connected) and a Remove menu on one row of actions; and that a Teammate joins through its `teams:` line.*
 
 **Steps**
 
@@ -105,16 +105,16 @@ connected) and a Remove menu; and that a Teammate joins through its `teams:` lin
 **Pass if**
 
 - The tab shows the role cards (**Roles**, *Available roles*) and, under them, **Roster** with
-  Ada, Bo and Nova, each with a status dot before the Name and a **Member** chip.
+  Ada, Bo and Nova, each with a presence badge on the 40px avatar (no status dot beside the Name) and *Member* as meta text.
 - Each member has **Edit** and **Message**; the Remove menu has **Remove from Team** and
   **Delete Teammate**.
-- **Save changes** is off with "Nothing has changed yet."
+- There is no **Save changes** bar yet: the save bar (sticky at the bottom of the pane) appears only once something is changed.
 - There is no Add member button and no search box.
 
 **Fail if**
 
 - The tab still shows the old member list, or Bo is missing from the roster.
-- A member has no status dot, or Message is missing for an Online member.
+- A member has no presence badge on its avatar, or Message is missing for an Online member.
 
 ### TP-T2 — Remove from Team keeps the Teammate
 
@@ -436,8 +436,8 @@ draft and deletes a removed member (the Teammate, not only the label).*
 
 **Pass if**
 
-- After step 4 the Details tab stays open with "Nothing has changed yet." and `<data>\Teams\Garden\_team.md` has `owns: Grows vegetables.`.
-- The roster showed the two members with a **Member** chip and the new draft with a **New** chip,
+- After step 4 the Details tab stays open with no save bar showing and `<data>\Teams\Garden\_team.md` has `owns: Grows vegetables.`.
+- The roster showed the two members with *Member* meta text and the new draft with *New* meta text,
   and the removed member's card said "Will be deleted when you save" with an **Undo** button.
 - The confirmation named the removed member.
 - After saving, the roster lists the second member and the new Teammate as members, and the

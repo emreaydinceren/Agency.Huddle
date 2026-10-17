@@ -55,13 +55,13 @@ Each badge marks one element:
 | 3 | The active sidebar row: its text and its fill; links in messages | `Primary` | Blend. Text is `Primary` 70% + `TextPrimary`; the row's fill is `Primary` 14% over `Surface`. "New chat" and other text actions are `TextSecondary` |
 | 4 | Group headings (Rooms, Teams); a message's time; an inactive tab's title; the "Reading launch-checklist.md…" activity line; the Composer's placeholder | `TextSecondary` | Direct |
 | 5 | The 2px line on top of the active tab; the Composer's border while it is focused | `Primary` | Direct |
-| 6 | Message card borders; the day separator's rule | `Divider` | Direct |
+| 6 | A quote's bar; the day separator's rule; card and tile borders | `Divider` | Direct |
 | 7 | Body text, names, titles | `TextPrimary` | Direct |
 | 8 | A filled button: fill and the text on it | `Primary`, `PrimaryContrastText` | Direct |
 | 9 | An avatar monogram: the tint and the letters | `Primary` | Blend. Fill is the avatar's colour (`Primary` when none is chosen) 20% over `Surface`; letters are that colour 75% toward `TextPrimary` |
 | 10 | Your own message bubble | `Primary` over `Surface` | Blend: 14% fill, 28% border |
 | 11 | The Composer's border at rest | `LinesInputs` | Direct |
-| 12 | Status and presence badges: online, degraded, offline | `Success`, `Warning`, `Error` | Direct |
+| 12 | Status and presence badges: online, degraded, offline | `Success`, `Warning`, `Error` | Blend. The filled tones are the colour 20% toward black, with a white glyph; offline is a hollow ring |
 | 13 | A tinted status chip ("Review") | `Warning` here; any status colour | Blend: the colour 14% over `Surface`; text and icon the colour 70% toward `TextPrimary` |
 | 14 | A quiet chip ("beta") | `BackgroundGray` | Direct |
 
@@ -87,12 +87,15 @@ The blends the app uses:
 | The Library's raw Markdown side in Split | `TextPrimary` 3% over `Surface` |
 | Your message bubble | `Primary` 14% over `Surface`, border `Primary` 28% |
 | A selected row, card or Team type, and the active sidebar row | `Primary` 14% over `Surface` |
-| A selected row while hovered, the active sidebar row while hovered; a search hit's flash | `Primary` 24% over `Surface` |
+| A selected row while hovered (sidebar, Library tree, Task List, `@` picker), the active sidebar row while hovered | `Primary` 20% over `Surface` |
+| A selected Team type tile while hovered; a search hit's flash | `Primary` 24% over `Surface` |
 | The manager's card in a roster | `Primary` 8% over `Surface` |
 | Team type icon tiles and roster tier labels | The tile's own colour (`Primary`, `Secondary`, `Info`, `Success`, `Warning`, `Error` or `Tertiary`) 14% or 16% over `Surface`, with the icon or text in the full colour |
 | A suggested role | `Success` 14% over `Surface`, border and text in `Success` |
 | A tinted status chip | The status colour 14% over `Surface`; text and icon the colour 70% toward `TextPrimary`. Status colours are never a solid fill under text |
-| An avatar monogram | The avatar's colour (`Primary` when none is chosen) 20% over `Surface`; letters the colour 75% toward `TextPrimary` |
+| An avatar monogram, Light Themes | The avatar's colour (`Primary` when none is chosen) 20% over `Surface`; letters the colour 75% toward `TextPrimary` |
+| An avatar monogram, Dark Themes | The colour 35% over `Surface`; letters the colour 75% toward white (a deep fill, light letters). Dark is detected by the `theme-mode-dark` marker `MainLayout` renders |
+| A presence badge (online, awake or starting, degraded) | `Success`, `Warning` or `Error` 80% + black (20% toward black), so the white glyph keeps at least 3:1 |
 
 Derived shades you will meet:
 
@@ -119,7 +122,7 @@ The codes (`S1`, `C6` and so on) are the container names in
 | `S2` | Sidebar | `Surface`; right edge `LinesDefault`; row text `DrawerText` (every Theme sets it to `TextPrimary`) and icons `DrawerIcon` (`TextSecondary`) |
 | `S2a` | Needs You card | `Surface`, border `Divider` |
 | `S2b`–`S2e` | Group headings | `TextSecondary` |
-| `S2b`–`S2e` | Active row | Text `Primary` 70% + `TextPrimary`, fill `Primary` 14% over `Surface` (24% when hovered) |
+| `S2b`–`S2e` | Active row | Text `Primary` 70% + `TextPrimary`, fill `Primary` 14% over `Surface` (20% when hovered) |
 | `S2b` | "New chat" and other action rows | `TextSecondary` text and icon |
 | `S2c` | Expand chevrons, a Project's icon | `TextSecondary`, open or closed |
 | any | Health dots | Online `Success`, degraded and starting `Warning` (starting lighter), offline `Error` |
@@ -143,7 +146,7 @@ The codes (`S1`, `C6` and so on) are the container names in
 | `C4b` | System row | `TextSecondary` |
 | `C5a` | Avatar monogram | The avatar's colour 20% over `Surface`, letters 75% toward `TextPrimary`; `Primary` is the colour unless the Teammate chose one (see below) |
 | `C5b` | Message meta | Name `TextPrimary`, time `TextSecondary` |
-| `C5c` | Message card | `Surface`, border `Divider`, text `TextPrimary`; quotes `TextSecondary` with a `Divider` bar; links `Primary` 70% + `TextPrimary` |
+| `C5c` | Message body | No card: plain `TextPrimary` text on the Transcript; quotes `TextSecondary` with a `Divider` bar; links `Primary` 70% + `TextPrimary` |
 | `C6` | Your bubble | `Primary` 14% over `Surface`, border 28% |
 | `C7b` | Turn detail | `TextSecondary`; an edit preview's removed and added sides are marked `Error` and `Success` |
 | `C7c` | Draft caret, tool activity | `TextSecondary` |
@@ -162,7 +165,7 @@ The codes (`S1`, `C6` and so on) are the container names in
 | `T4` | Board ground | `Surface` |
 | `T5` | Column | `BackgroundGray`. There is no coloured edge per state; the state is named in the header and shown by a tinted status chip |
 | `T6` | Task card | `Surface`; assignee row rule `LinesDefault`; dragging border `Primary` |
-| `T6` | Selected card or list row | `Primary` 14% over `Surface` (24% when hovered), plus a `Primary` outline on cards |
+| `T6` | Selected card or list row | `Primary` 14% over `Surface` (20% when hovered), plus a `Primary` outline on cards |
 | `T6` | Priority and State chips | Tinted status chips: the status colour 14% over `Surface`, text and icon 70% toward `TextPrimary` |
 | `T6` | Overdue date | A warning icon and the date at weight 600; no red text |
 | `T7a` | Drawer resize handle | `ActionDefault`; `Primary` when focused |
@@ -256,9 +259,10 @@ two Themes, so two tables.
 | `LinesDefault` | | Chrome lines and pane dividers, which must be clearly visible on `Surface` (Huddle: 2.1:1 light, 2.5:1 dark); outlined cards |
 | `TextPrimary` | | Body text and the focus ring |
 | `TextSecondary` | | Supporting text |
+| `ActionDefault` | | Icon buttons and the drawer resize handle; set equal to `TextSecondary` in the Huddle Themes (MudBlazor's default is a 54% black, too faint on a Tasks screen of icon buttons) |
 | `TextDisabled` | | Disabled controls only. Never information: activity lines, placeholders and picker meta are `TextSecondary` |
 | `Primary` | | The accent; must also read as text. Each Theme sets its own; the Huddle Themes do not share one |
-| `PrimaryContrastText` | | Black or white, whichever reads better on `Primary` |
+| `PrimaryContrastText` | | Black or white, whichever reads better on `Primary` (Huddle Dark uses near-black `#141413`, not pure black) |
 | `Secondary` | | A second fill colour; the Review state |
 | `Success`, `Warning`, `Error`, `Info` | | Status |
 
@@ -352,6 +356,7 @@ the last column is where you will see a mistake.
 | `LinesDefault` | `--mud-palette-lines-default` | Chrome lines: top bar, tab strip, room header, pane splitter, drawer edge |
 | `TextPrimary` | `--mud-palette-text-primary` | Body text, **and the keyboard focus ring** |
 | `TextSecondary` | `--mud-palette-text-secondary` | Supporting text — the most-read colour after `TextPrimary` |
+| `ActionDefault` | `--mud-palette-action-default` | Icon buttons (the Tasks row and drawer icons, the Team chevron) and the drawer resize handle. Equal to `TextSecondary` in both Huddle Themes; the 17 VS Code Themes keep MudBlazor's default |
 | `TextDisabled` | `--mud-palette-text-disabled` | Disabled controls only |
 | `Primary` | `--mud-palette-primary` | The accent: primary buttons, bars and borders, and (mixed 70% toward `TextPrimary`) the text of links and the active nav link; selected rows (as a 14% tint), the Human's bubble tint, the Composer's focused border |
 | `PrimaryContrastText` | `--mud-palette-primary-text` | Text and icons printed on a solid `Primary` fill (filled buttons). Black or white, whichever reads better |
@@ -360,7 +365,7 @@ the last column is where you will see a mistake.
 | `OverlayDark` | `--mud-palette-overlay-dark` | The scrim behind dialogs. Use `rgba(0,0,0,0.4)` for a light Theme and `rgba(0,0,0,0.6)` for a dark one |
 
 Leave these unset unless you have a reason: `PrimaryDarken`, `PrimaryLighten`,
-`ErrorLighten`, `WarningLighten`, and the `ActionDefault*` hover colours. MudBlazor
+`ErrorLighten`, `WarningLighten`, and the `ActionDefaultHover` colours. MudBlazor
 derives them from the base colour. Only `HuddleTheme` overrides some of them by hand.
 
 `TextPrimary` doubles as the focus ring. `app.css` paints it as
@@ -453,8 +458,11 @@ PrimaryContrastText = "#000000", // computed: black 8.47:1 vs white 2.48:1 again
 One of the two always reaches 4.5:1 against any colour; the proof is in
 `ContrastColour`'s remarks.
 
-The Huddle Themes follow the rule: white on Huddle Light's `#5b64c8` (5.12:1) and black on
-Huddle Dark's `#8f97e6` (7.74:1).
+The Huddle Themes follow the rule: white on Huddle Light's `#5b64c8` (5.12:1) and near-black `#141413` on
+Huddle Dark's `#8f97e6` (6.79:1; pure black would read 7.74:1, but `#141413` matches Huddle Light's `TextPrimary`).
+
+The arithmetic for Huddle Dark: `#141413` has relative luminance 0.00696 and `#8f97e6` has 0.33686, so the ratio
+is (0.33686 + 0.05) / (0.00696 + 0.05) = 6.79.
 
 ### 4. Run the tests
 
@@ -540,9 +548,9 @@ accent-coloured text, so it is held to the text floor, and every pair below clea
 | Theme | `Primary` | `PrimaryContrastText` | On `Surface` | On `Background` | Contrast text on `Primary` |
 | --- | --- | --- | --- | --- | --- |
 | Huddle Light | `#5b64c8` | White | 5.12:1 | 4.50:1 | 5.12:1 |
-| Huddle Dark | `#8f97e6` | Black | 5.58:1 | 6.28:1 | 7.74:1 |
+| Huddle Dark | `#8f97e6` | Near-black `#141413` | 5.58:1 | 6.28:1 | 6.79:1 |
 
-`PrimaryContrastText` is whichever of black and white reads better on `Primary`.
+`PrimaryContrastText` is black or white, whichever reads better on `Primary`; Huddle Dark softens black to `#141413`.
 `Huddle_PrimaryAndBackgroundCarryTheExpectedValues` pins the values and
 `BuiltIn_NativePaletteContrast_ClearsWcagFloor` the ratios.
 
@@ -577,13 +585,15 @@ Huddle Themes, computed from the palette values (sRGB mix, WCAG relative luminan
 | --- | --- | --- | --- | --- |
 | Selected sidebar row (`Primary` 14% over `Surface`) | Huddle Light | `#e8e9f7` | Accent text `#464c92` | 6.43:1 |
 | Selected sidebar row | Huddle Dark | `#353640` | Accent text `#abb0e7` | 5.76:1 |
+| Selected sidebar row, hovered (`Primary` 20% over `Surface`) | Huddle Light | `#dee0f4` | Accent text `#464c92` | 5.93:1 |
+| Selected sidebar row, hovered | Huddle Dark | `#3b3d4c` | Accent text `#abb0e7` | 5.16:1 |
 | Human bubble (`Primary` 14% over `Surface`) | Huddle Light | `#e8e9f7` | `TextPrimary` `#141413` | 15.30:1 |
 | Human bubble | Huddle Dark | `#353640` | `TextPrimary` `#ececea` | 10.13:1 |
 
 Accent text is `Primary` 70% + `TextPrimary`. Raw `Primary` on the same fill reads only
 4.25:1 in Huddle Light and 4.41:1 in Huddle Dark, which is why raw `Primary` is not used
-for text. Hovered, the row's fill goes to 24% and the accent text reads 5.62:1 (Light) and
-4.82:1 (Dark).
+for text. Hovered, the row's fill goes to 20% (`#dee0f4` in Light, `#3b3d4c` in Dark) and the accent
+text reads 5.93:1 (Light) and 5.16:1 (Dark).
 
 ### Adding a palette property to a stylesheet
 
@@ -622,6 +632,7 @@ this table.
 | `LinesDefault` | `focusBorder` |
 | `TextPrimary` | `foreground` → `editor.foreground` |
 | `TextSecondary` | `descriptionForeground` → `sideBarTitle.foreground` |
+| `ActionDefault` | not set: MudBlazor's default (only the Huddle Themes set it, equal to `TextSecondary`) |
 | `TextDisabled` | disabled controls only: `disabledForeground` → `input.placeholderForeground` → `editorLineNumber.foreground` |
 | `Primary` | `textLink.foreground` → `focusBorder` → `button.background` |
 | `PrimaryContrastText` | computed: black or white, whichever contrasts more with `Primary` |

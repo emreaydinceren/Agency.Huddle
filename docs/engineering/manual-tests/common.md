@@ -374,7 +374,7 @@ finds where `Team:DataDir` actually resolved.
   that expects an invite to change a Room's name must use a Room nobody has
   renamed, and the reverse is a test of its own.
 - **There is no send button.** The composer is a bare textarea with placeholder
-  `Message… (/invite @agent)`; Enter posts, Shift+Enter adds a newline. Its absence
+  `Message {Room name}… (/invite @Teammate)`; Enter posts, Shift+Enter adds a newline. Its absence
   is not a defect.
 - **There are no demo agents in manual testing.** The built-in `echo` and `alpha`
   agents are off by default (`Team:DemoAgent:Enabled` is `false`) and exist for the

@@ -156,7 +156,7 @@ If `App_Data/prompts.json` cannot be written (a permissions error paragraph appe
 3. Wait for `Now listening on: http://localhost:5100`.
 4. Run `O-ADAPTERS` and note the count (`0`). Do not count `node.exe` in Task Manager: on a development machine unrelated `node.exe` processes are normal.
 5. In the browser open http://localhost:5100/teammates.
-6. Confirm every Persona tile is listed (Chief of Staff, Nova, Jarvis), and that each tile's avatar badge reads **Offline** (hollow ring in the error red, `--mud-palette-error`; red by design, never grey).
+6. Confirm every Persona tile is listed (Chief of Staff, Nova, Jarvis), and that each tile's avatar badge reads **Offline** (a hollow ring in the neutral grey of the secondary text colour, not red; red is Degraded's dash).
 7. Hover each **Offline** tile's status text. Confirm no tooltip reason appears (an Agent that merely never started has no reason).
 8. Click the **Nova** tile to open its card. Confirm the card shows **Offline** and shows NO reason line beneath the status.
 9. Close the card with the × button.
@@ -257,7 +257,7 @@ If `tools/acp/node_modules` is missing, this test is INCONCLUSIVE, not failed �
 
 1. In the left sidebar click the room named `Nova`.
 2. Read the browser address bar and write down the room id — the part after `/rooms/`. It is 32 hexadecimal characters with no dashes, e.g. `019a4f1c8b7d7c9e8f0a1b2c3d4e5f60`.
-3. Click into the composer textarea at the bottom (its placeholder reads `Message… (/invite @agent)`).
+3. Click into the composer textarea at the bottom (its placeholder reads `Message {Room name}… (/invite @Teammate)`).
 4. Type exactly: `What is the id of the room we are in right now? Answer with just the id, nothing else.`
 5. Press Enter to send (Shift+Enter would insert a newline instead).
 6. Wait for the streaming row to finish and a message row from `Nova` to appear.

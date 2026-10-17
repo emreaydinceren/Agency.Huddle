@@ -583,7 +583,7 @@ If step 3's rename fails, stop and fix it — everything after depends on the ad
 If you cannot attribute a `node.exe` row to `Nova` specifically, do not kill any process: instead reach an unhealthy state the safe way — rename `<repo>\tools\acp\node_modules` aside and click Restart (PERSONALIFECYCLE-09) — then run steps 8-9 and restore the folder. Record which route you used.
 
 > [!NOTE]
-> The Starting dot (yellow) and the Degraded dot (orange) are nearly the same colour throughout this suite: always judge by the text label, never by the dot.
+> The Starting badge (amber, a breathing pulse glyph) and the Degraded badge (red, a dash glyph) differ by glyph and colour, but judge by the text label (the badge's tooltip and the tile's status word), never by the colour alone.
 
 ### PERSONALIFECYCLE-12 — Killing the adapter process flips the badge to Offline with a loop reason, even though the pipe stays open
 

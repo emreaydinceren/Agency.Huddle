@@ -49,7 +49,7 @@ standing conventions. This area adds:
 - The console prints `Now listening on: http://localhost:5100`.
 - The console prints `Hosting environment: Development`.
 - The page renders as TWO columns: a narrow sidebar on the left and a wide main column on the right.
-- The sidebar contains, in this order: a button labelled exactly `New chat`, a room list that reads `No rooms yet. Start an agent to create one.`, a link labelled exactly `Teammates`, and, last, an icon-only Settings link (a cog with the accessible name `Settings`, tooltip `Settings`). Other entries (Teams, Tasks, Library, Archived chats) may sit between them; their order and content are not judged here.
+- The sidebar contains, in this order: a button labelled exactly `New chat`, a room list that shows the title `No rooms yet` with the line `Start an agent to create one.` under it, a link labelled exactly `Teammates`, and, last, an icon-only Settings link (a cog with the accessible name `Settings`, tooltip `Settings`). Other entries (Teams, Tasks, Library, Archived chats) may sit between them; their order and content are not judged here.
 - The main column shows the same empty state, `No rooms yet. Start an agent to create one.`, and no Room.
 
 **Fail if — any of these**
@@ -216,7 +216,7 @@ If you have already created extra Rooms by hand in earlier exploration, the coun
 
 - The heading reads exactly `Teammates` and a text button first in the toolbar beside it reads `New teammate` (not upper-cased).
 - The intro paragraph begins `A Persona is a Markdown file describing how one teammate should behave`.
-- The page lists only Personas that have a definition file at `App_Data\Teammates\<Name>\<Name>.md`: the built-in Chief of Staff, which is always there, and nothing you did not create. (`No Personas yet. Choose New teammate to add one.` cannot appear on this launch; the Chief of Staff is seeded whatever `Acp:Enabled` says.)
+- The page lists only Personas that have a definition file at `App_Data\Teammates\<Name>\<Name>.md`: the built-in Chief of Staff, which is always there, and nothing you did not create. (the `No Teammates yet` empty state cannot appear on this launch; the Chief of Staff is seeded whatever `Acp:Enabled` says.)
 - `mybot` does not appear anywhere on the page, although its Room is in the sidebar.
 
 **Fail if — any of these**
@@ -396,7 +396,7 @@ A Draft that was mid-stream when you pressed Ctrl+C is simply gone — that is a
 
 - Step 1 fails with a file-in-use error. It usually names `team.db`, but the open log file under `App_Data\logs` is locked too and the recursive delete may report that one first; either is correct.
 - After the app is stopped, step 3 succeeds and step 4 returns False.
-- After relaunch with the guard, the sidebar room list reads `No rooms yet. Start an agent to create one.` — a fresh App_Data holds no Rooms.
+- After relaunch with the guard, the sidebar room list shows the title `No rooms yet` with the line `Start an agent to create one.` under it — a fresh App_Data holds no Rooms.
 - The App_Data listing contains `team.db`, `team.db-wal` and `team.db-shm`, a `Teammates` folder holding `Chief of Staff\Chief of Staff.md` and the marker file `.layout-migrated`, a `Skills` folder, an `avatars` folder, and (because Development enables `Team:FileLog`) a `logs` folder. Other folders created by features (a `Teams` folder, for one) may appear; they are not judged.
 - The listing does NOT contain `prompts.json`, `appearance.json`, or a top-level `work` directory.
 - No `rooms` directory exists yet; it appears only after the first Message is sent in some Room.
@@ -611,7 +611,7 @@ This test has no failing outcome in the usual sense; its job is to calibrate the
 
 **Pass if — all of these**
 
-- With `data_test` live, the sidebar room list holds no `Ada` or `Bo` Room and none of the earlier messages (it reads `No rooms yet. Start an agent to create one.`, or at most shows the built-in Chief of Staff's own Room, which the app creates itself) — because the seeder never wrote there.
+- With `data_test` live, the sidebar room list holds no `Ada` or `Bo` Room and none of the earlier messages (it shows the title `No rooms yet` with the line `Start an agent to create one.` under it, or at most shows the built-in Chief of Staff's own Room, which the app creates itself) — because the seeder never wrote there.
 - The path printed on the Settings page ends `\uat\data_test\prompts.json`.
 - `C:\seeds\huddle\uat\data_test\` exists and holds its own `team.db` and its own `Teammates\` folder with a freshly seeded `Chief of Staff\Chief of Staff.md` — and no `Ada` or `Bo` folder.
 - After relaunching with the original DataDir, the `Ada` and `Bo` Rooms and Ada's full history are back, untouched.
@@ -779,7 +779,7 @@ The `version` field in the welcome envelope must equal the CURRENT protocol vers
 
 **Pass if — all of these**
 
-- The sidebar room list reads `No rooms yet. Start an agent to create one.` and stays that way.
+- The sidebar room list shows the title `No rooms yet` with the line `Start an agent to create one.` under it and stays that way.
 - The script prints `Connecting to pipe '\\.\pipe\team' as agent 'mybot'...` and then fails (a timeout after roughly five seconds) or blocks — it never prints a `welcome` line.
 - NO `mybot` Room ever appears in the browser.
 - The browser gives no error, no warning and no visible change of any kind.
@@ -867,7 +867,7 @@ If you launched by running the built DLL (`dotnet src/Huddle.App/bin/Debug/net10
 
 - No NEW `node` process exists compared to step 1.
 - `/teammates` renders with heading `Teammates`, a `New teammate` button (a text button, not upper-cased), and the intro paragraph beginning `A Persona is a Markdown file describing how one teammate should behave`.
-- On a clean App_Data, the page shows exactly one tile, the built-in Chief of Staff (alias `@cos`), whose status does not read `Starting` or `Online` because nothing was started. `No Personas yet.` never appears, because the Chief of Staff is always seeded (`Teammates.razor:67-70`).
+- On a clean App_Data, the page shows exactly one tile, the built-in Chief of Staff (alias `@cos`), whose status does not read `Starting` or `Online` because nothing was started. `No Teammates yet` never appears, because the Chief of Staff is always seeded (`Teammates.razor:67-70`).
 - The console contains no `Persona '…' failed to start.` line and no adapter lines.
 - Merely loading `/teammates` spends nothing and spawns nothing.
 
@@ -910,7 +910,7 @@ If you launched by running the built DLL (`dotnet src/Huddle.App/bin/Debug/net10
 
 - The app starts normally with ACP enabled.
 - `O-ADAPTERS` prints exactly `1` after the wait, against `0` before: the Chief of Staff's adapter, and no other.
-- `/teammates` shows exactly one tile, `Chief of Staff` (`@cos`), reading `Online` (or `Starting` for a few seconds first); it never shows `No Personas yet.`
+- `/teammates` shows exactly one tile, `Chief of Staff` (`@cos`), reading `Online` (or `Starting` for a few seconds first); it never shows `No Teammates yet`
 - A `Chief of Staff` direct Room is in the sidebar.
 - Nothing beyond that one Haiku / low Greeting Turn is spent.
 

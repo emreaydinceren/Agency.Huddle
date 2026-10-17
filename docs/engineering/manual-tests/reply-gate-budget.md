@@ -70,7 +70,7 @@ oracles `O-LOG` / `O-ADAPTERS` / `O-TRANSCRIPT` / `O-DB` / `O-WIRE`, the four re
 
 **Inconclusive if**
 
-If `Bo` does not appear in the **Invite teammate** list, it is either already a Member or not Online — check the sidebar for a Room named `Bo` and the Teammates page for `Bo` reading Online, then restart from RESET. If the dot beside `Bo` in the panel is red rather than green, `Bo` is offline and its silence proves nothing about the gate: fix the agent first. If the strip is a red error alert instead of the blue note, read its text and treat the test as inconclusive.
+If `Bo` does not appear in the **Invite teammate** list, it is either already a Member or not Online — check the sidebar for a Room named `Bo` and the Teammates page for `Bo` reading Online, then restart from RESET. If the badge beside `Bo` in the panel is a hollow grey ring rather than a green check circle, `Bo` is offline and its silence proves nothing about the gate: fix the agent first. If the strip is a red error alert instead of the blue note, read its text and treat the test as inconclusive.
 
 > [!NOTE]
 > A Room has no stored kind anywhere: the member count is the whole of this rule. That is why this test changes nothing but membership.
@@ -157,7 +157,7 @@ If `Ada` is already a Member of the `Bo` Room from an earlier test, step 2 will 
 
 **Inconclusive if**
 
-If `Ada` is offline (a red dot beside Ada on the Teammates page, or the tile reads Offline — the **Invite teammate** panel lists only non-Members, so Ada is not in it), every line of this test is inconclusive — no Mention can be observed through an Agent that receives nothing. If the Room has only two Members, a reply proves nothing about Mention resolution because a two-Member Room would be answered anyway: add a second Agent first. If `Bo` does reply, read its text: a reply that merely re-quotes an earlier Message naming `Bo` is the mock echoing a Mention (Setup item 8), not a gate failure — re-run from a fresh seeder.
+If `Ada` is offline (a hollow grey ring on Ada's avatar on the Teammates page, or the tile reads Offline — the **Invite teammate** panel lists only non-Members, so Ada is not in it), every line of this test is inconclusive — no Mention can be observed through an Agent that receives nothing. If the Room has only two Members, a reply proves nothing about Mention resolution because a two-Member Room would be answered anyway: add a second Agent first. If `Bo` does reply, read its text: a reply that merely re-quotes an earlier Message naming `Bo` is the mock echoing a Mention (Setup item 8), not a gate failure — re-run from a fresh seeder.
 
 > [!NOTE]
 > A space is deliberately NOT a boundary character, which is what makes multi-word Names possible; that is covered in REPLYGATEBUDGET-19 and -21.
@@ -1298,8 +1298,8 @@ If the bot fails to reconnect (the terminal shows a connection error), nothing i
   something untrue. Explaining that `Ada` is offline is deliberately not built - see
   `docs/engineering/known-limits.md`.
 - Both terminals show that envelope with `"mentioned":false`.
-- At step 3 both dots are green (`agent-dot online`, `var(--mud-palette-success)`, `app.css:67-69`).
-- At step 5 the dot beside `Ada` is red — `agent-dot offline`, painted with `var(--mud-palette-error)` (`app.css:71-73`; its hover title reads `offline`). There is no grey dot in the design.
+- At step 3 both dots are green (`agent-dot online`, the Success colour mixed 20% toward black, with a white check).
+- At step 5 the badge beside `Ada` is a hollow grey ring — `agent-dot offline` (its hover title reads `offline`). It is not red; red is Degraded's dash.
 - At step 6, with `Ada` offline, TERMINAL C still receives the envelope (with `"mentioned":false`) while `T-B` receives nothing at all — the Agent is a Member but not connected, so no Envelope is queued for it.
 - After restarting at step 8, the same Message produces a reply.
 

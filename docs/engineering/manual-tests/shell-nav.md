@@ -237,7 +237,7 @@ If `sqlite3` is available you can confirm the target exactly with `sqlite3 <data
 3. Read the sidebar room list.
 4. Read the main column.
 5. Look for an `<h1>` anywhere on the page.
-6. Look for a message composer (a textarea with the placeholder `Message… (/invite @agent)`) at the bottom of the main column.
+6. Look for a message composer (a textarea with the placeholder `Message {Room name}… (/invite @Teammate)`) at the bottom of the main column.
 7. Check the address bar still reads `http://localhost:5100/rooms/does-not-exist`.
 
 **Pass if — all of these**
@@ -842,7 +842,7 @@ If `sqlite3` is installed you can confirm with `sqlite3 C:\seeds\huddle\uat\data
 **Steps**
 
 1. In the browser, click `Ada` in the sidebar.
-2. Scroll to the bottom of the main column and find the textarea with the placeholder `Message… (/invite @agent)`.
+2. Scroll to the bottom of the main column and find the textarea with the placeholder `Message {Room name}… (/invite @Teammate)`.
 3. Click into the textarea.
 4. Type exactly: `hi there`
 5. Press **Enter** (not Shift+Enter).
@@ -1131,7 +1131,7 @@ If the browser simply shows a connection-refused error page instead of the modal
 - Step 6's status line is `HTTP/1.1 200 OK` - there is NO redirect.
 - Step 7 printed `2` - the same sentence appears twice, once from the sidebar's room list and once from the main column.
 - Step 8 printed `0` - there is no heading anywhere on the page.
-- The sidebar's room area shows `No rooms yet. Start an agent to create one.`
+- The sidebar's room area shows the title `No rooms yet` with the line `Start an agent to create one.` under it.
 - The main column shows the identical sentence.
 - Step 11 printed `BODY` - with no `<h1>`, focus has nowhere to go.
 
@@ -1175,7 +1175,7 @@ If step 6 still returns a redirect, the app did not start on the empty data fold
 
 **Pass if — all of these**
 
-- The panel shows exactly one sentence: `No agents have connected yet. Start one with tools/echo-bot.ps1, or enable the demo agent in appsettings.json.`
+- The panel shows exactly one empty state: the title `No agents have connected yet` with the line `Start one with tools/echo-bot.ps1, or enable the demo agent in appsettings.json.` under it.
 - Each file name in that sentence is rendered in a monospace face.
 - Step 4 printed `undefined` (`find` returns `undefined` when nothing matches) - the **Start chat** button is not rendered at all in this state.
 - Step 5 printed `null` - there is no agent list.
@@ -1281,7 +1281,7 @@ The drawer content is shorter than the viewport in step 6 no matter how small yo
 
 **Free** · about 5 min
 
-*Tabs ([spec](../../Huddle.Tabs-Specifications.md) §3): browsing from the menu must not pile up tabs. The preview title (regular weight where other tabs are medium) and the replacement are rendering and click behaviour that only a browser shows.*
+*Tabs ([spec](../../Huddle.Tabs-Specifications.md) §3): browsing from the menu must not pile up tabs. The preview title (the greyer secondary text colour; a kept tab's title is the body colour, and weight does not mark it) and the replacement are rendering and click behaviour that only a browser shows.*
 
 **Before you start**
 
@@ -1289,15 +1289,15 @@ The drawer content is shorter than the viewport in step 6 no matter how small yo
 
 **Steps**
 
-1. Click **Teammates** in the sidebar once. Look at the strip above the page: note how many tabs there are, the title of the one that opened, and whether the title is in the lighter regular weight (other tabs are medium; no tab is italic).
-2. Click Ada's Room in the sidebar once. Note the tab count, the tab titles, and which has the lighter regular-weight title.
+1. Click **Teammates** in the sidebar once. Look at the strip above the page: note how many tabs there are, the title of the one that opened, and whether the title is in the greyer secondary text colour (a kept tab's title is the body colour; no tab is italic).
+2. Click Ada's Room in the sidebar once. Note the tab count, the tab titles, and which has the greyer preview title.
 3. Click **Teammates** once more, then Bo's Room once. Note the tab count each time.
 
 **Pass if — all of these**
 
-- Step 1 shows exactly one tab, `Teammates`, with a lighter-weight (regular, not medium) title and no italics, and the page shows the Teammates list.
-- Step 2 shows exactly one tab: Ada's Room, with the lighter regular-weight title, in place of `Teammates`.
-- Step 3 ends with exactly one tab, Bo's Room, with the lighter regular-weight title. The strip never holds more than one tab.
+- Step 1 shows exactly one tab, `Teammates`, with a greyer (secondary-colour) title and no italics, and the page shows the Teammates list.
+- Step 2 shows exactly one tab: Ada's Room, with the greyer preview title, in place of `Teammates`.
+- Step 3 ends with exactly one tab, Bo's Room, with the greyer preview title. The strip never holds more than one tab.
 
 **Fail if — any of these**
 
@@ -1319,22 +1319,22 @@ The drawer content is shorter than the viewport in step 6 no matter how small yo
 
 **Steps**
 
-1. Double-click **Teammates** in the sidebar. Note the tab count and whether the title is in the lighter regular weight (other tabs are medium; no tab is italic).
-2. Click Ada's Room in the sidebar once. Note the tab count and which tab has the lighter regular-weight title.
-3. Double-click the regular-weight Ada tab in the strip. Note whether the title is still in the lighter regular weight.
+1. Double-click **Teammates** in the sidebar. Note the tab count and whether the title is in the greyer secondary text colour (a kept tab's title is the body colour; no tab is italic).
+2. Click Ada's Room in the sidebar once. Note the tab count and which tab has the greyer preview title.
+3. Double-click the greyer preview Ada tab in the strip. Note whether the title is still greyer.
 4. Click Bo's Room once. Note the tab count and titles.
 
 **Pass if — all of these**
 
-- Step 1 shows one tab, `Teammates`, with a medium-weight title.
-- Step 2 shows two tabs: `Teammates` medium weight and Ada's Room regular weight, with Ada's active.
-- Step 3 makes Ada's title upright.
-- Step 4 shows three tabs, `Teammates`, Ada and Bo, with Bo's in regular weight. Nothing was replaced.
+- Step 1 shows one tab, `Teammates`, with a body-colour title.
+- Step 2 shows two tabs: `Teammates` in the body colour and Ada's Room in the greyer preview colour, with Ada's active.
+- Step 3 turns Ada's title from the greyer preview colour to the body colour.
+- Step 4 shows three tabs, `Teammates`, Ada and Bo, with Bo's in the greyer preview colour. Nothing was replaced.
 
 **Fail if — any of these**
 
 - Step 2 replaces `Teammates` -> the double-click did not keep it.
-- Double-clicking the tab itself does not give the title the medium weight of a permanent tab.
+- Double-clicking the tab itself does not turn the title from the greyer preview colour to the body colour of a permanent tab.
 
 ---
 
@@ -1408,7 +1408,7 @@ The drawer content is shorter than the viewport in step 6 no matter how small yo
 
 **Steps**
 
-1. Click Ada's Room once, so a regular-weight preview tab opens. Click in the message box and type `draft for Ada` without sending.
+1. Click Ada's Room once, so a preview tab (greyer title) opens. Click in the message box and type `draft for Ada` without sending.
 2. Look at the Ada tab's title.
 3. Click **Teammates** once. Note that a new tab opens beside Ada's instead of replacing it.
 4. Click Ada's tab. Read the message box.
@@ -1472,14 +1472,14 @@ The drawer content is shorter than the viewport in step 6 no matter how small yo
 
 **Steps**
 
-1. Read the tab strip: three tabs, `Teammates`, `Settings`, and Ada's Room in regular weight.
+1. Read the tab strip: three tabs, `Teammates`, `Settings`, and Ada's Room in the greyer preview colour.
 2. Navigate the browser to the `Teammates` address and press Enter, so the page reloads on a different tab from the one active before.
 3. Read the strip again after about two seconds.
 4. Stop the app and start it again with `P-LAUNCH-UAT`, open the app, and read the strip once more.
 
 **Pass if — all of these**
 
-- Step 3 shows the same three tabs in the same order, `Teammates` active, Ada's Room still in regular weight.
+- Step 3 shows the same three tabs in the same order, `Teammates` active, Ada's Room still in the greyer preview colour.
 - Step 4 shows the same tabs again.
 
 **Fail if — any of these**
@@ -1543,8 +1543,8 @@ The drawer content is shorter than the viewport in step 6 no matter how small yo
 - Step 1 shows a menu at the pointer with, in order, Pin Tab, Move Left, Move Right and Close, each with an icon.
 - Step 2 moves `Settings` to the start of the strip as its gear icon alone, with no × and no title text; hovering shows "Settings".
 - Step 3's first item reads **Unpin Tab**.
-- Step 4's new regular-weight tab opens after the pinned tab and the others, never in front of it.
-- Step 5 puts `Settings` back as a titled tab just after any pinned tabs, and it stays medium weight (not the lighter preview weight).
+- Step 4's new preview tab opens after the pinned tab and the others, never in front of it.
+- Step 5 puts `Settings` back as a titled tab just after any pinned tabs, and it stays in the body colour (not the greyer preview colour).
 
 **Fail if — any of these**
 
@@ -1607,7 +1607,7 @@ The drawer content is shorter than the viewport in step 6 no matter how small yo
 **Pass if — all of these**
 
 - Step 1 focuses the left pane's existing `Teammates` tab; no second `Teammates` tab appears.
-- Step 2 opens a regular-weight `All Tasks` preview tab in the right pane, beside `Settings`, and not in the left pane.
+- Step 2 opens an `All Tasks` preview tab (greyer title) in the right pane, beside `Settings`, and not in the left pane.
 
 **Fail if — any of these**
 
