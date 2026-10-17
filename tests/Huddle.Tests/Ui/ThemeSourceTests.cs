@@ -28,6 +28,9 @@ public sealed partial class ThemeSourceTests
     {
         "--font-mono",
 
+        // The ink ladder, declared once in app-vars.css: Ink mixed into Surface at 4, 6, 10, 18 and 30 percent (audit A1).
+        "--ink-strip", "--ink-wash", "--ink-rule", "--ink-edge", "--ink-field",
+
         // The sidebar's own layout tokens, declared once in app.css "Left menu" (UX-015, UX-017).
         "--nav-indent-1",
         "--nav-indent-2",

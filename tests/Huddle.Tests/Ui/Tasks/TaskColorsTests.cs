@@ -16,7 +16,7 @@ public sealed class TaskColorsTests
     [InlineData(TaskState.Backlog, Color.Default)]
     [InlineData(TaskState.ToDo, Color.Default)]
     [InlineData(TaskState.InProgress, Color.Info)]
-    [InlineData(TaskState.Review, Color.Secondary)]
+    [InlineData(TaskState.Review, Color.Tertiary)]
     [InlineData(TaskState.Done, Color.Success)]
     [InlineData(TaskState.Cancelled, Color.Error)]
     [InlineData(TaskState.Duplicate, Color.Error)]
@@ -31,7 +31,7 @@ public sealed class TaskColorsTests
     /// <summary>Every <see cref="TaskPriority"/> maps to the <see cref="Color"/> Spec §13.10 names.</summary>
     [Theory]
     [InlineData(TaskPriority.Low, Color.Default)]
-    [InlineData(TaskPriority.Medium, Color.Info)]
+    [InlineData(TaskPriority.Medium, Color.Default)]
     [InlineData(TaskPriority.High, Color.Warning)]
     [InlineData(TaskPriority.Urgent, Color.Error)]
     public void For_EveryTaskPriority_ReturnsSpecColor(TaskPriority priority, Color expected)

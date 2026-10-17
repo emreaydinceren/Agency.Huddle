@@ -246,7 +246,7 @@ public sealed class AppCssTasksTests
         string card = RuleFor(".task-card");
         // contains-ok: source-fact test, no CSS parser - the rule's own text is what's pinned.
         Assert.Contains("padding: 12px;", card, StringComparison.Ordinal);
-        Assert.Contains("border: 1px solid var(--mud-palette-divider);", card, StringComparison.Ordinal);
+        Assert.Contains("border: 1px solid var(--ink-edge);", card, StringComparison.Ordinal);
         Assert.Contains("gap: 8px;", RuleFor(".task-zone"), StringComparison.Ordinal);
         Assert.Contains("line-clamp: 3;", RuleFor(".task-card-title"), StringComparison.Ordinal);
         Assert.Contains("font-size: var(--mud-typography-caption-size);", RuleFor(".task-card-id"), StringComparison.Ordinal);
@@ -273,7 +273,7 @@ public sealed class AppCssTasksTests
         string lane = RuleFor(".task-board-column");
 
         Assert.Contains("background-color: var(--mud-palette-surface);", lane, StringComparison.Ordinal);
-        Assert.Contains("border: 1px solid var(--mud-palette-divider);", lane, StringComparison.Ordinal);
+        Assert.Contains("border: 1px solid var(--ink-edge);", lane, StringComparison.Ordinal); // contains-ok: one rule of the stylesheet source
         Assert.Contains("border-radius: var(--mud-default-borderradius);", lane, StringComparison.Ordinal);
         Assert.DoesNotContain("background-gray", lane, StringComparison.Ordinal);
     }

@@ -54,6 +54,7 @@ internal static class Dark2026Theme
         Error = "#f48771", // errorForeground (theme)
         Warning = "#e0b97f", // charts.yellow (theme)
         Info = "#57a3f8", // charts.blue (theme)
+        Tertiary = "#b180d7", // charts.purple (registry default)
         OverlayDark = "rgba(0,0,0,0.6)", // fixed for a dark theme, matching HuddleTheme
         // PrimaryDarken, PrimaryLighten, ErrorLighten and WarningLighten are deliberately left
         // unset: MudBlazor computes them from the base colour, and only HuddleTheme carries
