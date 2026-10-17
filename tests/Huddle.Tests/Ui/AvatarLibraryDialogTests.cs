@@ -195,14 +195,14 @@ public sealed class AvatarLibraryDialogTests
         Assert.Equal("3 of 120", harness.CountText);
     }
 
-    /// <summary>The tag cloud shows its first 40 pool entries (glasses and vest lead) and Show all reveals all 52.</summary>
+    /// <summary>The tag cloud shows its first 12 pool entries (glasses and vest lead) and Show all reveals all 52, so the filters leave the pictures most of the dialog (audit B8j).</summary>
     [Fact]
-    public async Task TagCloud_CappedAtForty_ShowAllReveals()
+    public async Task TagCloud_CappedAtTwelve_ShowAllReveals()
     {
         await using Harness harness = await Harness.OpenAsync();
 
         IReadOnlyList<string> capped = harness.ChipTexts(Tags);
-        Assert.Equal(40, capped.Count);
+        Assert.Equal(12, capped.Count);
         Assert.Equal(["glasses", "vest", "tag00"], [.. capped.Take(3)]);
         Assert.DoesNotContain("tag49", capped);
         Assert.Equal("Show all", harness.Cut.Find(TagsAll).TextContent.Trim());
@@ -224,7 +224,7 @@ public sealed class AvatarLibraryDialogTests
         await harness.ClickAsync(TagsAll);
 
         IReadOnlyList<string> texts = harness.ChipTexts(Tags);
-        Assert.Equal(41, texts.Count);
+        Assert.Equal(13, texts.Count);
         Assert.Equal("tag49", texts[0]);
         Assert.Single(texts, static t => t == "tag49");
         Assert.Equal("Show all", harness.Cut.Find(TagsAll).TextContent.Trim());
@@ -474,14 +474,14 @@ public sealed class AvatarLibraryDialogTests
         IReadOnlyList<string> tagsBefore = harness.ChipTexts(Tags);
 
         await harness.PressChipAsync(Professions, "Pilot");
-        await harness.PressChipAsync(Tags, "tag10");
+        await harness.PressChipAsync(Tags, "tag05");
 
         IReadOnlyList<string> professionsAfter = harness.ChipTexts(Professions);
         IReadOnlyList<string> tagsAfter = harness.ChipTexts(Tags);
         Assert.Equal(professionsBefore.Count, professionsAfter.Count);
         Assert.Equal(professionsBefore.Where(static t => t != "Pilot"), professionsAfter.Skip(1));
         Assert.Equal(tagsBefore.Count, tagsAfter.Count);
-        Assert.Equal(tagsBefore.Where(static t => t != "tag10"), tagsAfter.Skip(1));
+        Assert.Equal(tagsBefore.Where(static t => t != "tag05"), tagsAfter.Skip(1));
     }
 
     /// <summary>The dialog has no confirm button: no dialog actions and no button named OK, Select, Confirm, Choose, Save or Done.</summary>
@@ -506,7 +506,7 @@ public sealed class AvatarLibraryDialogTests
 
         Assert.Equal("Clear all", harness.Cut.Find(Clear).TextContent.Trim());
         Assert.Equal(AlphabeticalProfessions, harness.ChipTexts(Professions));
-        Assert.Equal(40, harness.ChipTexts(Tags).Count);
+        Assert.Equal(12, harness.ChipTexts(Tags).Count);
 
         await harness.ClickAsync(Clear);
 

@@ -5,6 +5,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Agency.Huddle.App.Acp;
 using Agency.Huddle.App.Avatars;
 using Agency.Huddle.App.Components.Shared;
+using Agency.Huddle.App.Components.Shared.Dialogs;
 using Agency.Huddle.App.Teammates;
 using static Agency.Huddle.Tests.Ui.TeammateCardTestSupport;
 
@@ -71,7 +72,7 @@ public sealed class TeammateCardSharedStructureTests
         Assert.Equal(LockedHelper, FindInputControl(cut, label).QuerySelector(".mud-input-helper-text")?.TextContent.Trim());
     }
 
-    /// <summary>UX-R13 and UX-080: Remove asks through an <see cref="InlineConfirm"/> titled "Remove coo?" whose confirm button says "Remove", with a Cancel.</summary>
+    /// <summary>UX-R13 and UX-080: Delete asks through an <see cref="InlineConfirm"/> titled Delete "coo"? whose confirm button repeats the verb "Delete", with a Cancel.</summary>
     [Fact]
     public async Task Remove_AsksThroughInlineConfirmWithItsVerb()
     {
@@ -80,11 +81,11 @@ public sealed class TeammateCardSharedStructureTests
         await using var ctx = NewContext(factory);
 
         var cut = await OpenViewCardAsync(ctx, factory, "coo");
-        await ClickButtonAsync(cut, "Remove");
+        await OpenDeleteAsync(cut, "coo");
 
         IElement group = Assert.Single(cut.FindAll(".inline-confirm"));
-        Assert.Equal("Remove coo?", group.GetAttribute("aria-label"));
-        Assert.Equal("Remove", cut.Find(".inline-confirm-confirm").TextContent.Trim());
+        Assert.Equal(ConfirmCopy.DeleteTitle("coo"), group.GetAttribute("aria-label"));
+        Assert.Equal("Delete", cut.Find(".inline-confirm-confirm").TextContent.Trim());
         Assert.Equal("Cancel", cut.Find(".inline-confirm-cancel").TextContent.Trim());
         Assert.False(HasButton(cut, "Confirm"));
     }
@@ -98,7 +99,7 @@ public sealed class TeammateCardSharedStructureTests
         await using var ctx = NewContext(factory);
 
         var cut = await OpenViewCardAsync(ctx, factory, "coo");
-        await ClickButtonAsync(cut, "Remove");
+        await OpenDeleteAsync(cut, "coo");
         await ClickAsync(cut, () => cut.Find(".inline-confirm-confirm"));
 
         Assert.Null(factory.Services.GetRequiredService<PersonaStore>().Get("coo"));
@@ -114,11 +115,11 @@ public sealed class TeammateCardSharedStructureTests
         await using var ctx = NewContext(factory);
 
         var cut = await OpenViewCardAsync(ctx, factory, "coo");
-        await ClickButtonAsync(cut, "Remove");
+        await OpenDeleteAsync(cut, "coo");
         await ClickAsync(cut, () => cut.Find(".inline-confirm-cancel"));
 
         Assert.Empty(cut.FindAll(".inline-confirm"));
-        Assert.True(HasButton(cut, "Remove"));
+        Assert.True(HasButton(cut, "Actions for coo"));
         Assert.NotNull(factory.Services.GetRequiredService<PersonaStore>().Get("coo"));
     }
 
@@ -131,7 +132,7 @@ public sealed class TeammateCardSharedStructureTests
         await using var ctx = NewContext(factory);
 
         var cut = await OpenViewCardAsync(ctx, factory, "coo");
-        await ClickButtonAsync(cut, "Remove");
+        await OpenDeleteAsync(cut, "coo");
         await cut.InvokeAsync(() => cut.Find(".inline-confirm").KeyDownAsync(new KeyboardEventArgs { Key = "Escape" }));
 
         Assert.Empty(cut.FindAll(".inline-confirm"));
@@ -148,12 +149,12 @@ public sealed class TeammateCardSharedStructureTests
         await using var ctx = NewContext(factory);
 
         var cut = await OpenViewCardAsync(ctx, factory, "coo");
-        await ClickButtonAsync(cut, "Remove");
+        await OpenDeleteAsync(cut, "coo");
         int before = FocusCalls(ctx);
         await ClickAsync(cut, () => cut.Find(".inline-confirm-cancel"));
 
         cut.WaitForAssertion(() => Assert.Equal(before + 1, FocusCalls(ctx)));
-        Assert.True(HasButton(cut, "Remove"));
+        Assert.True(HasButton(cut, "Actions for coo"));
     }
 
     /// <summary>Cancelling the Chief of Staff's Reset confirm hands focus back to the Reset button.</summary>

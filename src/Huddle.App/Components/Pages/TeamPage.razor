@@ -170,7 +170,7 @@
     private async Task DuplicateAsync(string team)
     {
         DialogParameters<DuplicateTeamDialog> parameters = new() { { dialog => dialog.SourceTeam, team } };
-        _ = await this.DialogService.ShowAsync<DuplicateTeamDialog>("Duplicate Team", parameters, DuplicateTeamDialog.Options);
+        _ = await this.DialogService.ShowAsync<DuplicateTeamDialog>($"Duplicate {team}", parameters, DuplicateTeamDialog.Options);
     }
 
     private static string TeamHref(string team) => $"/teams/{Uri.EscapeDataString(team)}";

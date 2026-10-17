@@ -6,14 +6,20 @@
 @using Agency.Huddle.App.Components.Shared.Dialogs
 @using Agency.Huddle.App.Teams
 
+@using Agency.Huddle.App.Components.Shared
+
 @inject TeamDuplicator Duplicator
 @inject NavigationManager Navigation
+@inject IDialogService Dialogs
 
-<MudDialog>
+<MudDialog ContentClass="duplicate-team-content">
     <DialogContent>
         <MudStack Spacing="2">
             <MudTextField Variant="Variant.Outlined" Margin="Margin.Dense" T="string" Label="New team name" @bind-Value="this.title" Class="duplicate-team-title" />
-            <MudTextField Variant="Variant.Outlined" Margin="Margin.Dense" T="string" Label="Workspace folder (optional)" @bind-Value="this.workspace" Class="duplicate-team-workspace" />
+            <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2">
+                <MudTextField Variant="Variant.Outlined" Margin="Margin.Dense" T="string" Label="Workspace folder (optional)" @bind-Value="this.workspace" Class="duplicate-team-workspace flex-grow-1" />
+                <MudButton Variant="Variant.Outlined" Size="Size.Small" StartIcon="@Icons.Material.Outlined.Folder" OnClick="this.BrowseAsync" Class="duplicate-team-browse">Browse</MudButton>
+            </MudStack>
             @if (this.error is not null)
             {
                 <MudAlert Severity="Severity.Error" Dense="true" role="alert" Class="duplicate-team-error">@this.error</MudAlert>
@@ -33,7 +39,7 @@
         <MudButton Variant="Variant.Text" Size="Size.Small" OnClick="this.Cancel">Cancel</MudButton>
         @if (this.result is null)
         {
-            <MudButton Variant="Variant.Filled" Size="Size.Small" Color="Color.Primary" Class="duplicate-team-submit" OnClick="this.Submit">Duplicate</MudButton>
+            <MudButton Variant="Variant.Filled" Size="Size.Small" Color="Color.Primary" Class="duplicate-team-submit" Disabled="@(string.IsNullOrWhiteSpace(this.title))" OnClick="this.Submit">Duplicate</MudButton>
         }
         else
         {
@@ -57,6 +63,18 @@
     private string workspace = string.Empty;
     private string? error;
     private DuplicateResult? result;
+
+    /// <summary>Opens the folder picker at the folder typed so far and, when one is chosen, puts it in the field. The picker is the second dialog, never a third.</summary>
+    private async Task BrowseAsync()
+    {
+        DialogParameters<FolderPickerDialog> parameters = new() { { x => x.Start, this.workspace } };
+        IDialogReference reference = await this.Dialogs.ShowAsync<FolderPickerDialog>("Choose a folder", parameters, FolderPickerDialog.Options);
+        DialogResult? picked = await reference.Result;
+        if (picked is { Canceled: false, Data: string folder })
+        {
+            this.workspace = folder;
+        }
+    }
 
     private void Submit()
     {

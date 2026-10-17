@@ -1034,7 +1034,7 @@ public sealed class BuildTeamTests
     /// <summary>Opens a member's Remove menu and picks one of its items.</summary>
     private static async Task PickRemoveAsync(IRenderedComponent<ContainerFragment> cut, string member, string item)
     {
-        await cut.InvokeAsync(() => cut.Find($"[aria-label='Remove {member}']").ClickAsync());
+        await cut.InvokeAsync(() => cut.Find($"[aria-label='Actions for {member}']").ClickAsync());
         await cut.InvokeAsync(() => cut.Find(item).ClickAsync());
     }
 

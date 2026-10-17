@@ -1918,7 +1918,7 @@ a.team-ref,
     align-items: flex-start;
     gap: 16px;
     width: 100%;
-    padding: 16px;
+    padding: 12px;
     font: inherit;
     text-align: left;
     color: inherit;
@@ -1942,9 +1942,9 @@ a.team-ref,
     margin-top: 4px;
 }
 
-/* "Working on SUPP-0002": 12px secondary, under the avatar's text column (16 padding + 40 avatar + 16 gap). */
+/* "Working on SUPP-0002": 12px secondary, under the avatar's text column (12 padding + 40 avatar + 16 gap). */
 .teammate-tile-context {
-    padding: 0 16px 16px calc(16px + 40px + 16px);
+    padding: 0 12px 12px calc(12px + 40px + 16px);
     margin-top: -8px;
     text-align: left;
     font-size: var(--mud-typography-caption-size);
@@ -1986,7 +1986,6 @@ a.team-ref,
     gap: 4px;
 }
 
-.avatar-library-skin,
 .avatar-library-clear,
 .avatar-library-more {
     font: inherit;
@@ -1999,9 +1998,26 @@ a.team-ref,
     cursor: pointer;
 }
 
+/* A skin tone is the Filter chip (audit A6, B8j): 28px, a pill, a dashed Field line and no fill while unset; the Accent
+   border, the Accent tint at 14% and the Accent ink at 500 once pressed, not weight 600. */
+.avatar-library-skin {
+    box-sizing: border-box;
+    height: 28px;
+    padding: 0 12px;
+    font: inherit;
+    font-size: var(--mud-typography-body2-size);
+    font-weight: 400;
+    color: var(--mud-palette-text-primary);
+    background-color: transparent;
+    border: 1px dashed var(--ink-field);
+    border-radius: 999px;
+    cursor: pointer;
+}
+
 .avatar-library-skin[aria-pressed="true"] {
-    font-weight: 600;
-    border: 2px solid var(--mud-palette-primary);
+    font-weight: 500;
+    border: 1px solid var(--mud-palette-primary);
+    background-color: color-mix(in srgb, var(--mud-palette-primary) 14%, var(--mud-palette-surface));
     color: color-mix(in srgb, var(--mud-palette-primary) 70%, var(--mud-palette-text-primary));
 }
 
@@ -2099,13 +2115,36 @@ a.team-ref,
     }
 }
 
-.teammate-card-name {
-    margin: 0;
-    font-size: var(--mud-typography-subtitle1-size);
+/* The card's sections are a Group label over their content, not boxes (audit B8b): spacing alone separates them. */
+.teammate-card-section {
+    margin-bottom: 16px;
+}
 
-    /* A Name may now contain spaces, so a long one wraps inside the card rather
-       than pushing the avatar or the close button out of it. */
-    overflow-wrap: anywhere;
+.teammate-card-section:last-child {
+    margin-bottom: 0;
+}
+
+/* While the Model, Effort or Work mode list is being read, the field refuses to open but must not look switched off: it keeps
+   its normal ink and border (the disabled colours are put back) and a thin progress bar sits under it (audit E5). */
+.mud-input-control.teammate-card-probing .mud-input.mud-disabled {
+    color: var(--mud-palette-text-primary);
+}
+
+.mud-input-control.teammate-card-probing .mud-input.mud-disabled > .mud-input-adornment {
+    color: var(--mud-palette-text-secondary);
+}
+
+.mud-input-control.teammate-card-probing .mud-input.mud-input-outlined.mud-disabled .mud-input-outlined-border {
+    border-color: var(--mud-palette-lines-default);
+}
+
+.mud-input-control.teammate-card-probing > .mud-input-control-input-container > .mud-input-label-inputcontrol.mud-disabled,
+.mud-input-control.teammate-card-probing .mud-input-helper-text.mud-disabled {
+    color: var(--mud-palette-text-secondary);
+}
+
+.teammate-card-probe {
+    margin-top: 0;
 }
 
 /* The Teammate card's avatar is a button that opens the avatar editor, in every mode. It wraps the
@@ -2160,20 +2199,71 @@ a.team-ref,
     }
 }
 
-/* The avatar editor's Background palette. MudBlazor gives the static picker's content area a fixed 250 px and
-   positions the swatches inside it, which left a blank band under a palette that needs about 160 px. Putting
-   the swatch view back in flow lets that area be as tall as the swatches; the picker's own shadow goes, since
-   the dialog around it already has one. */
-.avatar-editor-background .mud-picker-color-picker {
-    height: auto;
+/* The avatar editor (audit B8h, B8i). The editor reserves the height of its tallest mode (a label field over the
+   Background swatches) so the dialog does not change height when the Human switches between Initials, A short label
+   and An image: 72px preview, the radio row, the field, the group label, three rows of 32px swatches and the
+   "Use the theme colour" button. */
+.avatar-editor {
+    min-height: 23rem;
 }
 
-.avatar-editor-background .mud-picker-color-view {
-    position: static;
+/* The Background palette is a radio group of 32px circles drawn with the avatar recipe for the current mode: the
+   colour at 20% over Surface in a Light Theme and 35% in a Dark one (the same two rules as .avatar-monogram), so a
+   swatch previews the avatar it makes. The input is visually hidden but still the control: Tab reaches the group and
+   the arrow keys move within it. */
+.avatar-swatches {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
 }
 
-.avatar-editor-background .mud-picker-static .mud-paper {
-    box-shadow: none;
+.avatar-swatch {
+    position: relative;
+    display: inline-flex;
+    cursor: pointer;
+}
+
+.avatar-swatch-dot {
+    box-sizing: border-box;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    background-color: color-mix(in srgb, var(--mud-palette-primary) 20%, var(--mud-palette-surface));
+    box-shadow: inset 0 0 0 1px var(--ink-edge);
+    color: color-mix(in srgb, var(--mud-palette-primary) 25%, var(--mud-palette-text-primary));
+}
+
+:root:has(.theme-mode-dark) .avatar-swatch-dot {
+    background-color: color-mix(in srgb, var(--mud-palette-primary) 35%, var(--mud-palette-surface));
+    color: color-mix(in srgb, var(--mud-palette-primary) 25%, var(--mud-palette-white));
+}
+
+.avatar-swatch:hover .avatar-swatch-dot {
+    box-shadow: inset 0 0 0 2px var(--ink-field);
+}
+
+/* Chosen: a ring and a check, so the choice is not colour alone. */
+.avatar-swatch-input:checked + .avatar-swatch-dot {
+    box-shadow: 0 0 0 2px var(--mud-palette-surface), 0 0 0 4px var(--mud-palette-primary);
+}
+
+.avatar-swatch-input:checked + .avatar-swatch-dot::after {
+    content: "\2713";
+    font-size: var(--mud-typography-body2-size);
+    font-weight: 600;
+}
+
+.avatar-swatch-input:focus-visible + .avatar-swatch-dot {
+    outline: 2px solid var(--mud-palette-text-primary);
+    outline-offset: 3px;
+}
+
+/* The library in place of the editor, inside the avatar dialog (audit B8k): the Back button over the picker. */
+.avatar-library-inline .avatar-library-body {
+    max-height: calc(100vh - 16rem);
 }
 
 /* The Persona is Markdown the user wrote, so it is shown as written. It is NOT
@@ -2184,12 +2274,22 @@ a.team-ref,
     padding: 12px;
     max-height: 14rem;
     overflow: auto;
-    font: inherit;
+
+    /* YAML and Markdown source is code, so it is monospace at 13px (audit B8g, design-system "Typography"). */
+    font-family: var(--font-mono);
+    font-size: var(--mud-typography-body2-size);
+    line-height: 1.5;
     white-space: pre-wrap;
     overflow-wrap: anywhere;
     background: var(--ink-wash);
     border: 1px solid var(--ink-edge);
     border-radius: calc(var(--mud-default-borderradius) * 0.75);
+}
+
+/* The Delete teammate item is the card's destructive action: last, in Error ink (design-system "Menus"). */
+.mud-menu-item.teammate-card-delete,
+.mud-menu-item.teammate-card-delete .mud-icon-root {
+    color: var(--mud-palette-error);
 }
 
 .teammate-card-path {
@@ -5004,6 +5104,23 @@ a.team-ref,
     gap: 4px;
     padding-top: 8px;
     border-top: 1px solid var(--ink-rule);
+}
+
+/* The roster's more-actions menu pushes to the end of the row; its destructive item is last, after a divider, in Error ink
+   (design-system "Menus"). */
+.roster-more {
+    margin-inline-start: auto;
+}
+
+.mud-menu-item.roster-delete,
+.mud-menu-item.roster-delete .mud-icon-root {
+    color: var(--mud-palette-error);
+}
+
+/* Duplicate Team's body is two short fields and a Browse button; its stack's last margin used to overflow the content box
+   by a pixel and drew a scrollbar (audit B10), so the box does not scroll. */
+.mud-dialog-content.duplicate-team-content {
+    overflow-y: visible;
 }
 
 .role-card-taken {

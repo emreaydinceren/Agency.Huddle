@@ -65,7 +65,7 @@ public sealed class TeammateCardNameTests
         await ClickButtonAsync(cut, "New teammate");
         await SetTextValueAsync(cut, "Title", "Probe");
         await SetTextValueAsync(cut, "Alias", "zzn");
-        await SetTextValueAsync(cut, "Persona body", "a body");
+        await SetTextValueAsync(cut, "Persona text", "a body");
         string suggested = NameValue(cut);
         await ClickButtonAsync(cut, "Add teammate");
 

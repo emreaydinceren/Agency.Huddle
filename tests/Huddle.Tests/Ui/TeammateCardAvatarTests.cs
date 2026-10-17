@@ -72,7 +72,7 @@ public sealed class TeammateCardAvatarTests
 
         string[] choices = [.. cut.FindAll(EditorDialog + " .mud-radio").Select(radio => radio.TextContent.Trim())];
         Assert.Equal(["Initials of the name", "A short label", "An image"], choices);
-        Assert.Equal("Avatar", cut.Find(EditorDialog + " .mud-dialog-title").TextContent.Trim());
+        Assert.EndsWith("'s avatar", cut.Find(EditorDialog + " .mud-dialog-title").TextContent.Trim(), StringComparison.Ordinal);
     }
 
     /// <summary>Edit mode shows no avatar controls inline; clicking the avatar opens the editor, and its commit button reads Apply.</summary>
@@ -317,7 +317,8 @@ public sealed class TeammateCardAvatarTests
         await SelectAvatarChoiceAsync(cut, "Initials of the name");
 
         Assert.Equal(AvatarPalette.Colours.Count, cut.FindAll(Swatch).Count);
-        Assert.Empty(cut.FindAll(BackgroundPicker + " input"));
+        Assert.Single(cut.FindAll(BackgroundPicker + " [role='radiogroup']"));
+        Assert.Empty(cut.FindAll(BackgroundPicker + " .mud-select"));
     }
 
     /// <summary>Pressing a swatch chooses that colour, and Save writes it as the six-digit hex the palette holds.</summary>
@@ -389,7 +390,7 @@ public sealed class TeammateCardAvatarTests
         await SetTextValueAsync(cut, "Name", "zzcolour");
         await SetTextValueAsync(cut, "Title", "Probe");
         await SetTextValueAsync(cut, "Alias", "zzc");
-        await SetTextValueAsync(cut, "Persona body", "a body");
+        await SetTextValueAsync(cut, "Persona text", "a body");
         await ClickButtonAsync(cut, "Add teammate");
 
         Assert.Equal(shown, avatars.Get("zzcolour").Background, ignoreCase: true);
@@ -523,7 +524,7 @@ public sealed class TeammateCardAvatarTests
         await SetTextValueAsync(cut, "Name", "zzlabel");
         await SetTextValueAsync(cut, "Title", "Probe");
         await SetTextValueAsync(cut, "Alias", "zzl");
-        await SetTextValueAsync(cut, "Persona body", "a body");
+        await SetTextValueAsync(cut, "Persona text", "a body");
         await OpenAvatarEditorAsync(cut);
         await SelectAvatarChoiceAsync(cut, "An image");
         UploadFile(cut, MinimalPng, "avatar.png");
@@ -579,7 +580,7 @@ public sealed class TeammateCardAvatarTests
         await SetTextValueAsync(cut, "Name", "zzavatar");
         await SetTextValueAsync(cut, "Title", "Probe");
         await SetTextValueAsync(cut, "Alias", "zza");
-        await SetTextValueAsync(cut, "Persona body", "a body");
+        await SetTextValueAsync(cut, "Persona text", "a body");
         await OpenAvatarEditorAsync(cut);
         await SelectAvatarChoiceAsync(cut, "An image");
         UploadFile(cut, MinimalPng, "avatar.png");
