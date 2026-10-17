@@ -109,6 +109,18 @@ component here, move it onto the component rather than writing another copy.
 | An icon | The entity or action table | [Icons](design-system.md#icons) |
 | A tinted, selected or hovered surface | The States table | [Colour](design-system.md#colour) |
 | A border | The Lines table | [Colour](design-system.md#colour) |
+| A border, divider or quiet fill | The ink ladder rung for its job (Rule, Edge, Field, Chrome, Wash) | [Colour](design-system.md#colour) |
+| A colour that means something | A signal **and** a second cue | [Colour](design-system.md#colour) |
+| A heading inside a drawer or dialog | The Group label | [Typography](design-system.md#typography) |
+| A selected row in any list | The Selected treatment and shape | [Colour](design-system.md#colour) |
+| A filter chip | `TaskFilterChip` or `ChipCloud`, in the Filter geometry | [Chips](design-system.md#chips) |
+| A search box or select in a toolbar | `SearchField` with `toolbar-compact` | [Spacing, density and size](design-system.md#spacing-density-and-size) |
+| A highlighted search match | Search match in the States table | [Colour](design-system.md#colour) |
+| A file a message mentions | Its name as a `.ref-link`, path in the tooltip | [The Room](design-system.md#the-room) |
+| A drawer's Save and Cancel | The sticky drawer footer | [Drawer anatomy](design-system.md#drawer-anatomy) |
+| A menu of actions | The Menus rule | [Menus](design-system.md#menus) |
+| A picker of folders or files | The tree's look in a 600px dialog | [Dialog anatomy](design-system.md#dialog-anatomy) |
+| A question an Agent asks | `AgentCard` in the 760px column | [The Room](design-system.md#the-room) |
 | A size, gap or radius in CSS | The 4/8/12/16/24px spacing scale and radius tokens | [Spacing, density and size](design-system.md#spacing-density-and-size) |
 | A font size or weight | The type table's role; nothing under 11px | [Typography](design-system.md#typography) |
 | A label, button text or message | The verb table and casing rules, and [language.md](language.md) | [Interface copy](design-system.md#interface-copy) |
@@ -133,7 +145,7 @@ before you create a component, a helper or a CSS class.
 | `TabStrip`, `TabGroupPane`, `TabHost`, `TabPageHost` | `Components/Layout/` | `W1` to `W8` | | Don't use directly; a page plugs in through `TabKeys` |
 | `PageSubjectSource` | `Components/Sidebar/PageSubjectSource.razor` | Nothing in place; feeds `S4` | `Value` (the page's Subject) | Telling the Right sidebar what the page shows. It draws nothing, and does nothing outside a Tab |
 | `PageCommandHandler` | `Components/Sidebar/PageCommandHandler.razor` | Nothing in place | `OnCommand` (a callback for each command) | Letting a Right sidebar panel run an action on the page, such as scrolling a document to a heading. It draws nothing |
-| `SidebarPanelFrame` | `Components/Sidebar/SidebarPanelFrame.razor` | One panel in `S4` | `PanelId`, `Title`, `Icon`, `ChildContent` | Wrapping the body of a Right sidebar panel. It draws the icon, the title and the count the panel reports through the cascaded `SidebarPanelContext`, and remembers the collapsed state per viewer |
+| `SidebarPanelFrame` | `Components/Sidebar/SidebarPanelFrame.razor` | One panel in `S4` | `PanelId`, `Title`, `Icon`, `ChildContent` | Wrapping the body of a Right sidebar panel. It draws the icon, the title and the count the panel reports through the cascaded `SidebarPanelContext`, and remembers the collapsed state per viewer. The header is 32px: the title 13px at 600, the count 12px in Quiet ink; an Edge line separates one panel from the next |
 | Add a Right sidebar panel | `Sidebar/SidebarPanelServiceCollectionExtensions.cs` | A panel in `S4` | one `AddSidebarPanel` line in `ServiceCollectionExtensions.cs` | Adding a panel: a `SidebarPanel` with its id, title, icon, Order, the Subject test and its component |
 | `RightSidebar`, `RightSidebarToggle` | `Components/Layout/` | `S4`, its button in `S1c` | | Drawn by the shell. State is the scoped `RightSidebarService` (open or closed, and each Tab's blocks) |
 | `SidebarRows`, `ShowAllRow` | `Components/Shared/SidebarRows.cs`, `Components/Shared/ShowAllRow.razor` | The "Show all (N)" row under a sidebar list | `Total`, `Expanded`, `OnToggle`; `SidebarRows.Limit` is 8 | A sidebar list that can pass 8 rows. `SidebarRows` also holds the open-group rules: a group opens when the current page is inside it |
@@ -151,9 +163,9 @@ before you create a component, a helper or a CSS class.
 | `ProfileCard` | `Components/Shared/ProfileCard.razor` | `B9c`, `B12`, `O9`, `G3b` | `Profile` (`TeammateProfile`), `Manager`, `Existing`, `Membership` (`ProfileMembership`), `RemovingText`, `ListItem`, `Actions`, `OnAvatarClick`, `Class` | A Teammate's card, and the Human's on Settings > Profile (no `State`, so no presence badge). With `OnAvatarClick` the avatar is a `Change avatar` button styled like the Teammate card's. The card is: [ringed avatar](design-system.md#avatars-and-status) (dashed when proposed, solid with `Existing`) with the presence badge on it, Name, title, Manager badge, description, membership, tier and skills chips, "Needs setup" line. It owns the markup and the `roster-*` classes; the caller passes the buttons in `Actions` |
 | `ProfileAvatar` | `Components/Shared/ProfileAvatar.razor` | `C5a`, `C3`, a Task List row's assignee | `Name`, `Avatar`, `Size`, `Class`, `Team` | A `TeammateAvatar` in a button that opens the profile popover (`O9`, `ProfilePopover`) with Edit and Message. `Team` picks the Team's one-to-one for Message. Never inside another button or link; `TaskAssignee` takes `ShowProfile` to opt in |
 | `TeammateLabel` | `Components/Shared/TeammateLabel.razor` | Rows in New chat and Invite | `Name`, `State`, `Avatar`, `IsUser` | A Teammate's dot, avatar and name on one line |
-| `PageHeader` | `Components/Shared/PageHeader.razor` | The page title in `P1`, `G1`, `M1`, `B2` | `Title`, `Subtitle`, `Actions`, `SetPageTitle` | Every page's one `h1`, with its action buttons at the right. A `Subtitle` stacks under the title on its own secondary line (`.page-header-titles`). It sets the bare-name document title. Tasks is the one page without it: see [A page](design-system.md#a-page), step 3 |
+| `PageHeader` | `Components/Shared/PageHeader.razor` | The page title in `P1`, `G1`, `M1`, `B2` | `Title`, `Subtitle`, `Actions`, `Aside`, `TitleEditor`, `TitleTrailing`, `CreateText`, `CreateIcon`, `CreatePrimary`, `CreateDisabled`, `OnCreate`, `Chrome`, `SetPageTitle` | Every page's one `h1` (32px row), with its action buttons at the right. A `Subtitle` stacks under the title on its own secondary line (`.page-header-titles`). The create-action slot (`CreateText` with `OnCreate`) draws the page's one create button at the right: filled by default, outlined with `CreatePrimary="false"`. `Chrome` draws a Chrome line under the header (the Room). It sets the bare-name document title. Tasks wears it too: its `h1` is the View's name and **New task** is the create button |
 | `EmptyState` | `Components/Shared/EmptyState.razor` | An empty list, table or pane | `Title` (required), `Text` (required), `Icon`, `Action`, `FullPane` | Any "nothing here" state, centred: an icon, the `Title` (`role="status"`), the `Text` sentence that says what to do next, then the `Action`; sizes in [Component rules](design-system.md#component-rules). `FullPane` adds `empty-state-centered` so it sits a third of the way down |
-| `ChipCloud` | `Components/Shared/ChipCloud.razor` | Avatar picker, hiring pool, the Members tab's team type filter (`B9f`) | `Title`, `Pool`, `Selected`, `Cap`, `CssClass`, `Quiet`, `Leading` (content drawn first, at the left), `OnToggle` | A wrapping cloud of toggle chips, selected first |
+| `ChipCloud` | `Components/Shared/ChipCloud.razor` | Avatar picker, hiring pool, the Members tab's team type filter (`B9f`) | `Title`, `Pool`, `Selected`, `Cap`, `CssClass`, `Leading` (content drawn first, at the left), `OnToggle` | A wrapping cloud of toggle chips, selected first. Each chip is the Filter chip (`.chip-cloud-chip`: 28px pill, dashed Field line unset, Accent tint at 14% when set); `Quiet` is gone. Past `Cap` a "Show all" button (28px, same pill) expands it |
 | `TaskStatusChip`, `TaskPriorityChip`, `TaskAssignee` | `Components/Tasks/` | Fields of a Task in `T3`, `T4`, `T6` and search | `Status`; `Priority`; `Name`, `Presence` | A Task's State, Priority or Assignee wherever it is shown. The two chips draw through `StatusChip`, with the icon from `TaskColors.Icon`. A Board card omits the State chip; its overdue date is a warning icon and the date at weight 600 |
 | `TaskActionsMenu` | `Components/Tasks/TaskActionsMenu.razor` | The "Actions for {id}" menu | `Id`, `ShowMoveTo`, `OnMoveTo`, `OnCopyId`, `OnCopyLink`, `ExtraItems` | The one menu on a Task card, List row and the detail |
 | `TaskPicker` | `Components/Tasks/TaskPicker.razor` | Task pickers in the detail and `DuplicatePickerDialog` | `Value`, `Excluding`, `Label` | Choosing another Task |
@@ -172,12 +184,12 @@ before you create a component, a helper or a CSS class.
 
 | Component | Path | Draws | Key parameters | Use it for |
 | --- | --- | --- | --- | --- |
-| `InlineConfirm` | `Components/Shared/InlineConfirm.razor` | `O6` | `Prompt`, `ConfirmText`, `Busy`, `OnConfirm`, `OnCancel`, `Class` | A destructive yes or no that replaces a list row. Confirm takes focus, Escape cancels |
+| `InlineConfirm` | `Components/Shared/InlineConfirm.razor` | `O6` | `Prompt`, `ConfirmText`, `Narrow`, `Busy`, `OnConfirm`, `OnCancel`, `Class` | A destructive yes or no that replaces a list row: Cancel, then the verb (`ConfirmText`, default "Delete"). `Narrow="true"` with `Prompt="Delete?"` is the one-line sidebar form. Confirm takes focus, Escape cancels |
 | `ResetAllControl` | `Components/Settings/ResetAllControl.razor` | `G1a` | `AnyModified`, `Confirming`, `OnBeginReset`, `OnConfirm`, `OnCancel` | Prompts' reset-all only; its confirm reads "Reset all" |
-| `SearchField` | `Components/Shared/SearchField.razor` | The search box of `L2c`, `T3e`, Skill import | `Value`, `ValueChanged`, `Placeholder`, `AriaLabel`, `Class` | Any search box: outlined, dense, clearable, one debounce. `Class` lets a surface restyle its own box (`.task-toolbar-search` takes the segmented controls' track colour) |
+| `SearchField` | `Components/Shared/SearchField.razor` | The search box of `L2c`, `T3e`, Skill import | `Value`, `ValueChanged`, `Placeholder`, `AriaLabel`, `Class`, `Compact` | Any search box: outlined, dense, clearable, one debounce. `Compact="true"` wears `.toolbar-compact` (a 28px box with 13px text) for a toolbar row. `Class` lets a surface restyle its own box (`.task-toolbar-search` takes the segmented controls' track colour) |
 | `TaskFilterChip` | `Components/Tasks/TaskFilterChip.razor` | `T3c`, `T3h`, `T3i` and the other set-filter chips in `T3`; the Members tab's team type filter (`B9g`) | `Label`, `Value`, `IsSet`, `ChildContent` (the `MudMenuItem`s), `NoMenu`, `OnClear`, `Class` | One "Label: Value" filter chip: a menu, a clear button, dashed while unset, filled once set; with `NoMenu` the same pill without the caret and menu, for a choice made elsewhere. It owns no state. The Tasks toolbar's second row (`T3`) is the model: a Filter icon menu, then one chip per set filter |
-| `AvatarEditor` | `Components/Shared/AvatarEditor.razor` | Inside `AvatarEditorDialog` (Teammate card, Settings > Profile) | `Name`, `Value`, `ValueChanged`, `SaveMode`, `PendingImage` | Choosing an avatar: library, upload or text. Buffered in the dialog; `Immediate` mode has no caller since the Human's avatar moved from Appearance to Profile |
-| `ResizableEndDrawer` | `Components/Shared/ResizableEndDrawer.razor` | The Task detail drawer (`T7`) | `Title` (the item's name), `Eyebrow` (a 12px line above it: ID, then Project or Team; none for a draft), `StorageKey`, `Open`, `OpenChanged`, `OverlayAutoClose`, `Class` | Any right-hand drawer. Resize by drag or Arrow, Home and End; width remembered, 320 to 800px |
+| `AvatarEditor` | `Components/Shared/AvatarEditor.razor` | Inside `AvatarEditorDialog` (Teammate card, Settings > Profile) | `Name`, `Value`, `ValueChanged`, `SaveMode`, `PendingImage` | Choosing an avatar: library, upload or text. The Background is a radio group (`role="radiogroup"`) of 32px circles drawn with the avatar recipe, each named by its colour and keyboard-reachable; the chosen one has a ring and a check. Buffered in the dialog; `Immediate` mode has no caller since the Human's avatar moved from Appearance to Profile |
+| `ResizableEndDrawer` | `Components/Shared/ResizableEndDrawer.razor` | The Task detail drawer (`T7`) | `Title` (the item's name), `Eyebrow` (a 12px line above it: ID, then Project or Team; none for a draft), `StorageKey`, `Open`, `OpenChanged`, `Footer` (a `RenderFragment`), `ShowFooter`, `OverlayAutoClose`, `Class` | Any right-hand drawer. Resize by drag or Arrow, Home and End; width remembered, 320 to 800px. `Footer` is a sticky footer with a Chrome line on top, right-aligned, shown while `ShowFooter` is true. The drawer opens beside the Right sidebar |
 | `TeamTabToolbar` | `Components/Teams/TeamTabToolbar.razor` | none | `ActionText`, `OnAction`, `SearchPlaceholder`, `Search`, `SearchChanged` | A tab toolbar with one action and a search box, built on `SearchField` |
 | `Composer` | `Components/Shared/Composer.razor` | `C10` | `RoomId`, `RoomName` | The message input; one per Room. Its box shares the Transcript's 760px column. The placeholder is "Message {RoomName}… (/invite @Teammate)", or "Message… (/invite @Teammate)" when `RoomName` is empty. Its focus border is the accent plus a 0.5px inset ring |
 | `ReferencePicker` | `Components/References/ReferencePicker.razor` | `C11` | `View`, `ListboxId`, `OnPick` | The `@` picker; driven by `Composer` |
@@ -201,9 +213,10 @@ the shell and follow [In-place action rows](design-system.md#in-place-action-row
 
 | Dialog | Path | Parameters | Pattern worth copying |
 | --- | --- | --- | --- |
-| `NameDialog` | `Components/Shared/Dialogs/` | `Label`, `ConfirmText`, `InitialValue`, `Validate`, `SubmitAsync`, `ChildContent` | Any one-field name: live validation, Enter submits, focus on open. Used for New project (`NewProjectPrompt`), Rename view (`ViewActions.RenameAsync`) and the Library's New note, New folder and Rename note or folder (`LibraryFileOps`). A multi-field flow such as Duplicate team stays bespoke. `NewTeamDialog`, `RenameDialog`, `NamePromptDialog` and `DeleteDialog` were removed |
+| `NameDialog` | `Components/Shared/Dialogs/` | `Label`, `ConfirmText`, `InitialValue`, `Validate`, `SubmitAsync`, `Location`, `ChildContent` | Any one-field name (`Location` names the place in the title: "New note in Platform"): live validation, Enter submits, focus on open. Used for New project (`NewProjectPrompt`), Rename view (`ViewActions.RenameAsync`) and the Library's New note, New folder and Rename note or folder (`LibraryFileOps`). A multi-field flow such as Duplicate team stays bespoke. `NewTeamDialog`, `RenameDialog`, `NamePromptDialog` and `DeleteDialog` were removed |
 | `ConfirmDialog` with `ConfirmAsync` | `Components/Shared/Dialogs/` | `Message`, `ConfirmText`, `Danger` | `await this.DialogService.ConfirmAsync(title, message, confirmText, danger)`; `true` only on confirm |
-| `HuddleDialogOptions` | `Components/Shared/Dialogs/HuddleDialogOptions.cs` | `SmallForm`, `Picker` | The options for every dialog: `SmallForm` for forms and confirms, `Picker` for list pickers |
+| `HuddleDialogOptions` | `Components/Shared/Dialogs/HuddleDialogOptions.cs` | `SmallForm`, `ShortPicker`, `Picker` | The options for every dialog: `SmallForm` (600px) for forms and confirms, `ShortPicker` (600px) for a one-column picker under about 12 items, `Picker` (960px) for two-pane or tabular pickers only |
+| `MenuDialogs`, `ConfirmCopy` | `Components/Shared/Dialogs/` | `MenuDialogs.AfterClosingAsync(menu, open)`, `MenuDialogs.ActivatorLabel(target)`; `ConfirmCopy.Quote(name)`, `ConfirmCopy.DeleteTitle(name)` | The menu-opens-dialog idiom: an item that opens a dialog wraps the call in `AfterClosingAsync` so the menu closes first, and the menu's activator carries `ActivatorLabel` ("Actions for {target}") as its `aria-label` with no hover tooltip. `ConfirmCopy` writes the one quote style ("x") |
 | `DuplicateTeamDialog` | `Components/Teams/` | `SourceTeam` | Multi-field, so it stays bespoke; opens with `SmallForm` |
 | `RoleFormDialog` | `Components/Teams/` | `Id`, `Title`, `Description`, `Instructions`, `Tier` | Adding or editing a custom role (Build a team, Hire). Returns a `CustomRole`; the caller stores it with `CustomRoleStore` |
 | `TeamDetails` | `Components/Teams/` | `Team` | A Team's type and details as Build a team's first two steps (`BuildTeam` with only `Team` set) with Save changes; the Team page's Details tab |
@@ -281,14 +294,19 @@ feature's name. Reuse these before writing a rule:
 | `.room-notice-column` | A notice in a Room (`member-health-alert`, `budget-prompt`, `reply-note`): the Transcript's 760px column, centred |
 | `.nav-row-link` | A top-level sidebar destination (Teammates, Library): an ordinary 32px, 13px row with the section header's icon geometry, not a header |
 | `.needs-you-heading` | The Needs You card's title, in the sidebar section-header style |
-| `.chip-cloud-chip`, `.is-quiet` | The pill behind `ChipCloud`, and its unfilled variant |
+| `.chip-cloud-chip` | The Filter-chip pill behind `ChipCloud`; `.is-set` once chosen |
 | `.resizable-drawer` | The handle and width rules of `ResizableEndDrawer` |
+| `.group-label` | The heading of a group of fields in a drawer, dialog or card: 12px at 600 in Quiet ink, 8px above its fields |
+| `.selected-shape` | The chosen row of a list, tree or menu: Accent tint at 14% (20% hovered), Accent ink at 500, inset 4px, rounded to 0.75 of the base radius |
+| `.toolbar-compact` | A field in a toolbar: a 28px box with 13px text. `SearchField Compact` wears it |
+| `.picker-row` | A list row in a picker dialog: 32px, 13px, an 18px icon in a 24px slot |
+| `.menu-item-destructive` | A destructive `MudMenuItem`: Error ink on the text and icon. It goes last, after a divider |
 | `.nav-action-link` | A sidebar action link ("New chat"): secondary text colour, tight icon gap |
 | `.hover-reveal-row` with `.hover-reveal-menu-button` | A row whose menu button shows on hover or focus |
 | `.btn-action-tight` | A button whose start icon sits close to its label |
 | `.agent-dot` with `.online`, `.degraded`, `.starting`, `.awake`, `.on-avatar` and `.presence-glyph-*` | The badge behind `PresenceBadge` (10px, 12px beside a 40px avatar; the pulse animation is `presence-pulse`); use the component |
 | `.presence-anchor` | The frame `PresenceAnchor` draws around an avatar |
-| `.status-chip-*`, `.tag-chip`, `.filter-chip`, `.filter-chip-set`, `.chip-meta` | The four chip looks: tinted, quiet, filter and plain caption text |
+| `.status-chip-*`, `.tag-chip`, `.filter-chip` with `.is-set`, `.chip-meta` | The four chip looks: tinted, quiet (with an Edge), filter (28px, dashed until set) and plain caption text |
 | `.avatar-monogram`, `.avatar-image`, `.avatar-transcript` | The two avatar looks on `TeammateAvatar`'s one `MudAvatar`, and the 32px Transcript size. `:root:has(.theme-mode-dark)` switches the monogram to the Dark recipe |
 | `.message-gutter`, `.message-content`, `.message-row.grouped` | The Transcript's 32px avatar column, its text column (body at most 75ch) and the 4px gap between one sender's consecutive messages |
 | `.composer-box` | The Composer's box: the Transcript's 760px column, centred |
@@ -355,6 +373,7 @@ the catalog above.
 | Document | Owns | Binding? | Read it when |
 | --- | --- | --- | --- |
 | [design-system.md](design-system.md) | How the UI looks, reads and behaves: tokens, type roles, chips, avatars, spacing, shape, elevation, icons, motion, focus, layout, overlay anatomy, component defaults, interface copy, stylesheet rules, the checklist | **Yes**, for new and changed UI | Before you design a screen, write markup or touch a stylesheet |
+| Theme vocabulary (Ground, Ink, Quiet ink, Signal, Second cue, the ink ladder) | Defined once, in [design-system.md › Colour](design-system.md#colour). The measured examples are in [theme-authoring.md](theme-authoring.md#the-ink-ladder-measured) | **Yes**, with design-system.md | Before you pick a line, a fill or a signal colour |
 | [wireframes.md](wireframes.md) | The code, name and component of every container, an SVG figure per screen, and the words for UI parts | **Yes**, for vocabulary; update it with your change | Before you discuss, specify, report on or change a part of the screen |
 | [UX-Issues.md](UX-Issues.md) | The few rows the UX consistency delivery did not close, with a note on what is left | No: a backlog | Before you change an area |
 | [language.md](language.md) | The defined terms and the words to avoid | **Yes** | Before you write a label, a message or help text |
@@ -440,6 +459,8 @@ Check these first. Each links to the rule that owns it.
     ([catalog](#reusable-parts-catalog)).
 11. **One hue, one meaning: amber means attention.** A working or neutral state is never
     `Warning` ([Colour](design-system.md#colour)).
+12. **Lines and fills come from the ink ladder, and a meaning never rests on hue
+    alone** ([Colour](design-system.md#colour)).
 
 ## Working on a UI change
 
@@ -464,8 +485,11 @@ with realistic Teams, Teammates, Rooms, Tasks and Library notes:
 An agent starts the `huddle-seed` entry in `.claude/launch.json` with the built-in
 browser's `preview_start` instead of starting the server itself. Then check:
 
-- **Themes:** Huddle Light, Huddle Dark (the top bar's toggle) and one High Contrast
-  Theme (Settings, Appearance).
+- **Themes:** one of each family, five in all: Huddle Light and Huddle Dark (the top
+  bar's toggle), then **Light Modern** (ported light), **Dark Modern** (ported dark) and
+  **Dark High Contrast** (Settings, Appearance). Always the same three, so every checker
+  opens the same ones. The rules are relationships, so "the lines are in order and the
+  second cues are present" means the same thing in all five.
 - **Width:** the full window and a narrow one; the page fills its pane and scrolls inside.
 - **Keyboard:** every control can be reached with Tab, the focus ring shows, and Escape
   closes overlays.
@@ -476,6 +500,12 @@ browser's `preview_start` instead of starting the server itself. Then check:
   and no size appears that the type table doesn't list.
 - **Contrast:** the census's `failures` list is empty in Huddle Light and in Huddle Dark.
   Every accent-coloured word and every chip label reaches 4.5:1.
+- **Lines and fills:** lines are in ladder order against Ground (Rule < Edge < Field
+  ≤ Chrome), and a washed shape has an Edge. The text census's `lines` report gives each
+  line's ratio and its rung, so one run shows the order in any Theme.
+- **Second cues:** switch to greyscale (DevTools › Rendering › Emulate vision
+  deficiencies › Achromatopsia). Every state, priority and presence still reads.
+- **Position across Tabs:** switch to a sibling page; the title doesn't move.
 - **Dark-mode edges:** cards and tiles are still visibly bordered in Huddle Dark.
 - **Hierarchy:** the item's name is the largest text in its container.
 

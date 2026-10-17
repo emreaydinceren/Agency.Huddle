@@ -1,3 +1,4 @@
+using MudBlazor;
 using MudBlazor.Utilities;
 
 namespace Agency.Huddle.App.Themes;
@@ -52,5 +53,57 @@ internal static class AccentPalette
         }
 
         return towardBlack ? new MudColor(r: 0, g: 0, b: 0, a: 255) : new MudColor(r: 255, g: 255, b: 255, a: 255);
+    }
+
+    /// <summary>The hue step <see cref="ChooseTertiary"/> scans the colour wheel in. Five degrees is fine enough that the winning gap is within a few degrees of the best possible one.</summary>
+    private const int HueScanStep = 5;
+
+    /// <summary>
+    /// Picks the Tertiary (Review) colour for a Custom Accent palette: the hue on the wheel farthest from the accent
+    /// and from the palette's Info, Success, Warning and Error hues, carrying <paramref name="preferred"/>'s saturation
+    /// and lightness, then clamped for contrast like the accent itself. With five reference hues the widest gap on
+    /// the wheel is at least 72 degrees, so the winner is at least 36 degrees from each of them: the 30 degree
+    /// hue-distance rule (audit A2) holds for any accent the Human picks, at least for Tertiary.
+    /// </summary>
+    /// <param name="accent">The clamped accent colour.</param>
+    /// <param name="palette">The palette being built; its Info, Success, Warning and Error hues are avoided.</param>
+    /// <param name="preferred">Huddle's own Tertiary for this mode; its saturation and lightness are kept, and its hue wins a tie.</param>
+    /// <param name="towardBlack">Whether to darken (light palette) or lighten (dark palette) in search of contrast.</param>
+    /// <returns>A Tertiary colour readable against the palette's Background and Surface.</returns>
+    internal static MudColor ChooseTertiary(MudColor accent, Palette palette, MudColor preferred, bool towardBlack)
+    {
+        double[] avoided = [accent.H, palette.Info.H, palette.Success.H, palette.Warning.H, palette.Error.H];
+
+        double bestHue = preferred.H;
+        double bestGap = MinimumHueGap(bestHue, avoided);
+        for (int hue = 0; hue < 360; hue += HueScanStep)
+        {
+            double gap = MinimumHueGap(hue, avoided);
+            if (gap > bestGap + 0.5)
+            {
+                bestGap = gap;
+                bestHue = hue;
+            }
+        }
+
+        MudColor candidate = new(bestHue, preferred.S, preferred.L, 1.0);
+        return ClampForContrast(candidate, palette.Background, palette.Surface, towardBlack);
+    }
+
+    /// <summary>The smallest angular distance, in degrees, from <paramref name="hue"/> to any of <paramref name="others"/>.</summary>
+    /// <param name="hue">A hue angle in degrees.</param>
+    /// <param name="others">The hue angles to keep clear of.</param>
+    /// <returns>The smallest distance around the wheel, 0 to 180.</returns>
+    internal static double MinimumHueGap(double hue, IEnumerable<double> others) =>
+        others.Min(other => HueDistance(hue, other));
+
+    /// <summary>The distance between two hue angles around the wheel.</summary>
+    /// <param name="first">A hue angle in degrees.</param>
+    /// <param name="second">Another hue angle in degrees.</param>
+    /// <returns>The shorter way around, 0 to 180.</returns>
+    internal static double HueDistance(double first, double second)
+    {
+        double difference = Math.Abs(first - second) % 360.0;
+        return difference > 180.0 ? 360.0 - difference : difference;
     }
 }

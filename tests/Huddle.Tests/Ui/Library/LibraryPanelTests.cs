@@ -144,7 +144,7 @@ public sealed class LibraryPanelTests
         Assert.Empty(fixture.Store.Pinned);
     }
 
-    /// <summary>The first click on a pinned root's Remove only asks: the row swaps to an inline "Remove 'Docs'?" with Remove and Cancel, and nothing is saved (UX-026).</summary>
+    /// <summary>The first click on a pinned root's Remove only asks: the row swaps to an inline Remove "Docs"? with Remove and Cancel, and nothing is saved (UX-026).</summary>
     [Fact]
     public async Task Remove_Pinned_AsksFirst_AndSavesNothing()
     {
@@ -155,7 +155,7 @@ public sealed class LibraryPanelTests
         await cut.InvokeAsync(() => cut.Find(".library-panel-root-row[data-root-id='docs'] .library-panel-remove-button").ClickAsync());
 
         var row = cut.Find(".library-panel-root-row[data-root-id='docs']");
-        Assert.Equal("Remove 'Docs'?", row.QuerySelector(".inline-confirm-prompt")?.TextContent.Trim());
+        Assert.Equal("Remove \"Docs\"?", row.QuerySelector(".inline-confirm-prompt")?.TextContent.Trim());
         Assert.Equal("Remove", row.QuerySelector(".inline-confirm-confirm")?.TextContent.Trim());
         Assert.Equal("Cancel", row.QuerySelector(".inline-confirm-cancel")?.TextContent.Trim());
         Assert.Empty(row.QuerySelectorAll(".library-panel-remove-button"));

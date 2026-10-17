@@ -959,7 +959,7 @@ public sealed class TaskBoardTests
         return (field.GetValue(container) as Delegate)?.GetInvocationList().Count(d => d.Target is TaskBoard) ?? 0;
     }
 
-    /// <summary>Each column header opens with an 8px state dot in the column's state colour, and an empty column says so in words fitted to its state (S4).</summary>
+    /// <summary>Each column header opens with an 8px state dot in the column's state colour, and an empty open column says so in words fitted to its state (S4); an empty Done column is a rail and says nothing (audit B4a).</summary>
     [Fact]
     public async Task Columns_HaveAStateDotAndAnEmptyLine()
     {
@@ -976,8 +976,9 @@ public sealed class TaskBoardTests
         Assert.Contains("task-state-dot-backlog", headers[0].Children[0].ClassList);
         Assert.DoesNotContain("task-state-dot-backlog", headers[1].Children[0].ClassList);
         string[] empty = [.. cut.FindAll(".task-board-column-empty").Select(e => e.TextContent.Trim())];
-        Assert.Contains("Nothing done yet.", empty);
+        Assert.Contains("Nothing in review.", empty);
         Assert.Contains("Backlog is empty.", empty);
         Assert.DoesNotContain("Nothing to do yet.", empty);
+        Assert.DoesNotContain("Nothing done yet.", empty); // the empty Done column is a rail, which carries no line (audit B4a)
     }
 }

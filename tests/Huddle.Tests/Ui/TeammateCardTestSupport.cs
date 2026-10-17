@@ -67,8 +67,8 @@ internal static class TeammateCardTestSupport
     /// <summary>The CSS selector of the avatar editor's Background palette, the wrapper around the swatches and the label above them.</summary>
     internal const string BackgroundPicker = EditorDialog + " .avatar-editor-background";
 
-    /// <summary>The CSS selector of one swatch in the Background palette.</summary>
-    internal const string Swatch = BackgroundPicker + " .mud-picker-color-dot";
+    /// <summary>The CSS selector of one swatch in the Background palette: the radio input behind each circle.</summary>
+    internal const string Swatch = BackgroundPicker + " .avatar-swatch-input";
 
     /// <summary>The first button inside the avatar editor dialog whose trimmed text, or <c>aria-label</c>, equals <paramref name="text"/>.</summary>
     /// <param name="cut">The rendered page holding the card.</param>
@@ -256,6 +256,18 @@ internal static class TeammateCardTestSupport
     internal static bool HasButton(IRenderedComponent<ContainerFragment> cut, string text) =>
         cut.FindAll("button").Any(button => MatchesButtonLabel(button, text));
 
+    /// <summary>
+    /// Opens the card's more-actions menu for <paramref name="name"/> and chooses "Delete teammate", which swaps the menu for the
+    /// inline confirm. The menu's activator is named "Actions for {name}" and has no tooltip (design-system "Menus").
+    /// </summary>
+    /// <param name="cut">The rendered page holding the card.</param>
+    /// <param name="name">The Teammate whose card is open.</param>
+    internal static async Task OpenDeleteAsync(IRenderedComponent<ContainerFragment> cut, string name)
+    {
+        await ClickButtonAsync(cut, "Actions for " + name);
+        await ClickAsync(cut, () => cut.Find(".menu-item-destructive"));
+    }
+
     /// <summary>The first rendered button whose trimmed text, OR its <c>aria-label</c>, equals <paramref name="text"/> - see <see cref="HasButton"/>.</summary>
     internal static IElement FindButton(IRenderedComponent<ContainerFragment> cut, string text) =>
         cut.FindAll("button").First(button => MatchesButtonLabel(button, text));
@@ -354,16 +366,20 @@ internal static class TeammateCardTestSupport
 
     /// <summary>
     /// Whether the <c>MudSelect</c> labelled <paramref name="label"/> is refusing interaction, which is
-    /// how the card says "this list is still being probed" (issue #39). Asserted off the rendered
-    /// <c>disabled</c> attribute, not the component's parameter: what matters is what the control does,
-    /// not what it was passed. Note <c>readonly</c> would be useless here - MudSelect puts it on the
-    /// input unconditionally, because a select's text box is never typeable.
+    /// how the card says "this list is still being probed" (issue #39). While the list is read the select is disabled
+    /// (so it refuses to open) but styled as busy, not off (audit E5): it carries <c>aria-busy</c> beside a progress bar. Asserted off the
+    /// rendered attributes, not the component's parameter: what matters is what the control does, not what it was passed.
+    /// A <c>readonly</c> attribute would be useless here - MudSelect puts it on the input unconditionally, because a
+    /// select's text box is never typeable.
     /// </summary>
     /// <param name="cut">The rendered page holding the card.</param>
     /// <param name="label">The select's label text.</param>
-    /// <returns><see langword="true"/> when the select's input is disabled.</returns>
-    internal static bool IsSelectInert(IRenderedComponent<ContainerFragment> cut, string label) =>
-        FindSelectInput(cut, label).HasAttribute("disabled");
+    /// <returns><see langword="true"/> when the select's input is disabled or marked busy.</returns>
+    internal static bool IsSelectInert(IRenderedComponent<ContainerFragment> cut, string label)
+    {
+        IElement input = FindSelectInput(cut, label);
+        return input.HasAttribute("disabled") || input.HasAttribute("aria-busy");
+    }
 
     /// <summary>
     /// Clicks the <c>MudSelect</c> labelled <paramref name="label"/> and returns the options that

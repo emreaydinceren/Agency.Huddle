@@ -50,7 +50,7 @@ public sealed class MessageDisplayTests
 
         Assert.Equal("Today", MessageDisplay.DayLabel(now, now));
         Assert.Equal("Yesterday", MessageDisplay.DayLabel(now.AddDays(-1), now));
-        Assert.Equal(now.AddDays(-4).ToLocalTime().ToString("ddd d MMM", CultureInfo.CurrentCulture), MessageDisplay.DayLabel(now.AddDays(-4), now.AddMinutes(0)));
+        Assert.Equal(now.AddDays(-4).ToLocalTime().ToString("ddd, MMM d", CultureInfo.InvariantCulture), MessageDisplay.DayLabel(now.AddDays(-4), now.AddMinutes(0)));
     }
 
     /// <summary>Only a change of local day starts a new separator, and the first Message always does.</summary>

@@ -117,7 +117,7 @@ public sealed class AppCssTasksTests
         // contains-ok: source-fact test, no CSS parser - the rule's own text is what's pinned.
         Assert.Contains("display: grid", rule, StringComparison.Ordinal);
         // contains-ok: source-fact test, no CSS parser - the rule's own text is what's pinned.
-        Assert.Contains("grid-auto-columns: 310px", rule, StringComparison.Ordinal);
+        Assert.Contains("grid-auto-columns: minmax(260px, 300px)", rule, StringComparison.Ordinal);
     }
 
     /// <summary>The column header lays out its label, count and menu in a row (finding F10).</summary>
@@ -246,7 +246,7 @@ public sealed class AppCssTasksTests
         string card = RuleFor(".task-card");
         // contains-ok: source-fact test, no CSS parser - the rule's own text is what's pinned.
         Assert.Contains("padding: 12px;", card, StringComparison.Ordinal);
-        Assert.Contains("border: 1px solid var(--mud-palette-divider);", card, StringComparison.Ordinal);
+        Assert.Contains("border: 1px solid var(--ink-edge);", card, StringComparison.Ordinal);
         Assert.Contains("gap: 8px;", RuleFor(".task-zone"), StringComparison.Ordinal);
         Assert.Contains("line-clamp: 3;", RuleFor(".task-card-title"), StringComparison.Ordinal);
         Assert.Contains("font-size: var(--mud-typography-caption-size);", RuleFor(".task-card-id"), StringComparison.Ordinal);
@@ -263,7 +263,7 @@ public sealed class AppCssTasksTests
         Assert.Contains("grid-template-columns: 120px minmax(0, 1fr);", css, StringComparison.Ordinal);
         Assert.Contains("font-size: var(--mud-typography-caption-size);", RuleFor(".task-detail-footer-meta"), StringComparison.Ordinal);
         Assert.Contains("line-clamp: 3;", RuleFor(".resizable-drawer-title"), StringComparison.Ordinal);
-        Assert.Contains("font-weight: 600;", RuleFor(".task-detail-group > .group-heading"), StringComparison.Ordinal);
+        Assert.Contains("margin: 0;", RuleFor(".task-detail-group > .group-label"), StringComparison.Ordinal);
     }
 
     /// <summary>A Board lane is a Surface panel with a Divider hairline and the card radius, not a Background-gray tint that is heavy in Light and invisible in Dark.</summary>
@@ -273,7 +273,7 @@ public sealed class AppCssTasksTests
         string lane = RuleFor(".task-board-column");
 
         Assert.Contains("background-color: var(--mud-palette-surface);", lane, StringComparison.Ordinal);
-        Assert.Contains("border: 1px solid var(--mud-palette-divider);", lane, StringComparison.Ordinal);
+        Assert.Contains("border: 1px solid var(--ink-edge);", lane, StringComparison.Ordinal); // contains-ok: one rule of the stylesheet source
         Assert.Contains("border-radius: var(--mud-default-borderradius);", lane, StringComparison.Ordinal);
         Assert.DoesNotContain("background-gray", lane, StringComparison.Ordinal);
     }

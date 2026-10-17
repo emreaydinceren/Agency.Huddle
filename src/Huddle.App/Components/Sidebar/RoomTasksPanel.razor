@@ -1,4 +1,7 @@
+@using System.Globalization
+@using Agency.Huddle.App.Components.Tasks
 @using Agency.Huddle.App.Tabs
+@using Agency.Huddle.App.Tasks
 @implements IDisposable
 @inject IChatStore ChatStore
 @inject RoomEvents Events
@@ -25,20 +28,23 @@ else
     {
         @if (row.Task is { } task)
         {
-            <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="1" Class="@(task.Closed ? "sidebar-row room-tasks-row room-task-closed" : "sidebar-row room-tasks-row")">
-                <MudLink Typo="Typo.body2" Href="@($"/tasks/item/{Uri.EscapeDataString(row.Id)}")">@($"{row.Id} {task.Title}")</MudLink>
+            <div class="@(task.Closed ? "sidebar-row room-tasks-row room-task-closed" : "sidebar-row room-tasks-row")">
+                <span class="room-task-id">@row.Id</span>
+                <MudLink Typo="Typo.body2" Color="Color.Inherit" Underline="Underline.None" Class="sidebar-row-text" title="@($"{row.Id} {task.Title}")"
+                         Href="@($"/tasks/item/{Uri.EscapeDataString(row.Id)}")">@task.Title</MudLink>
                 @if (task.Status is { } status)
                 {
-                    <MudText Typo="Typo.caption">@status.ToWire()</MudText>
+                    string word = status.ToWire();
+                    <span class="@StateDotClass(status)" role="img" aria-label="@word" title="@word"></span>
                 }
                 <MudIconButton Icon="@Icons.Material.Filled.ArrowUpward" Size="Size.Small" aria-label="Show where it was mentioned" OnClick="@(() => this.Jump(row))" />
-            </MudStack>
+            </div>
         }
         else
         {
-            <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="1" Class="sidebar-row room-tasks-row">
-                <MudText Typo="Typo.body2" Class="mud-text-secondary">@($"{row.Label} (unavailable)")</MudText>
-            </MudStack>
+            <div class="sidebar-row room-tasks-row">
+                <span class="sidebar-row-text sidebar-row-quiet">@($"{row.Label} (unavailable)")</span>
+            </div>
         }
     }
 }
@@ -182,6 +188,14 @@ else
 
         return Task.CompletedTask;
     });
+
+    /// <summary>The state's dot: the shared 8px dot in the state's colour, a hollow ring for Backlog (the second cue beside the colour; the word is its title).</summary>
+    /// <param name="status">The Task's state.</param>
+    private static string StateDotClass(TaskState status)
+    {
+        string classes = string.Create(CultureInfo.InvariantCulture, $"task-state-dot task-state-dot-{TaskColors.For(status).ToString().ToLowerInvariant()}");
+        return status == TaskState.Backlog ? $"{classes} task-state-dot-backlog" : classes;
+    }
 
     private sealed record TaskRow(string Id, string Label, string LatestMessageId, TaskReference? Task);
 }

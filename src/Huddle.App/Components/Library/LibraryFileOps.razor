@@ -101,7 +101,7 @@
 
         string fileName = Path.GetFileName(item.FullPath);
         bool confirmed = await this.Dialogs.ConfirmAsync(
-            string.Create(CultureInfo.InvariantCulture, $"Delete '{fileName}'?"), "It goes to the Recycle Bin.", "Delete", danger: true);
+            ConfirmCopy.DeleteTitle(fileName), "It goes to the Recycle Bin.", "Delete", danger: true);
         if (!confirmed)
         {
             return;
@@ -223,6 +223,7 @@
         DialogParameters<NameDialog> parameters = new()
         {
             { dialog => dialog.Label, "Name" },
+            { dialog => dialog.Location, LocationName(folder) },
             { dialog => dialog.ConfirmText, "Create" },
             { dialog => dialog.Validate, LibraryNames.Validate },
             { dialog => dialog.SubmitAsync, SubmitAsync },
@@ -383,6 +384,11 @@
             }
         }
     }
+
+    /// <summary>The name of the place a new item goes, for the dialog's title ("New note in Platform"): a folder's own
+    /// name, or the root's display name for the root itself.</summary>
+    private static string LocationName(LibraryPath folder) =>
+        folder.RelativePath.Length == 0 ? folder.Root.DisplayName : LastSegment(folder.RelativePath);
 
     private static string LastSegment(string relativePath)
     {

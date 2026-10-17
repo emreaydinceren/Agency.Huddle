@@ -754,11 +754,11 @@ public sealed class BuildTeamTests
         await using MudBunitContext ctx = fixture.NewContext();
         IRenderedComponent<ContainerFragment> cut = RenderMembers(ctx, "Garden");
 
-        await PickRemoveAsync(cut, "Bo", ".roster-delete");
+        await PickRemoveAsync(cut, "Bo", ".menu-item-destructive");
         Assert.Equal("Will be deleted when you save", cut.Find(".roster-card-removed .roster-removing").TextContent.Trim());
         await cut.InvokeAsync(() => cut.Find("[aria-label='Keep Bo']").ClickAsync());
         Assert.Empty(cut.FindAll(".roster-card-removed"));
-        await PickRemoveAsync(cut, "Bo", ".roster-delete");
+        await PickRemoveAsync(cut, "Bo", ".menu-item-destructive");
 
         _ = cut.InvokeAsync(() => cut.Find("button.build-team-approve-button").Click());
         Assert.Equal("Delete 1 Teammate?", cut.Find(".mud-dialog-title").TextContent.Trim());
@@ -778,7 +778,7 @@ public sealed class BuildTeamTests
         await using MudBunitContext ctx = fixture.NewContext();
         IRenderedComponent<ContainerFragment> cut = RenderMembers(ctx, "Garden");
 
-        await PickRemoveAsync(cut, "Ada", ".roster-delete");
+        await PickRemoveAsync(cut, "Ada", ".menu-item-destructive");
 
         Assert.True(cut.Find("button.build-team-approve-button").HasAttribute("disabled"));
         Assert.Equal("Choose a new manager before removing Ada.",cut.Find(".build-team-approve-hint").TextContent.Trim());
@@ -805,7 +805,7 @@ public sealed class BuildTeamTests
         await using MudBunitContext ctx = fixture.NewContext();
         IRenderedComponent<ContainerFragment> cut = RenderMembers(ctx, "Garden");
 
-        await PickRemoveAsync(cut, "Ada", ".roster-delete");
+        await PickRemoveAsync(cut, "Ada", ".menu-item-destructive");
         await PickRemoveAsync(cut, "Bo", ".roster-leave");
 
         Assert.True(cut.Find("button.build-team-approve-button").HasAttribute("disabled"));
@@ -1034,7 +1034,7 @@ public sealed class BuildTeamTests
     /// <summary>Opens a member's Remove menu and picks one of its items.</summary>
     private static async Task PickRemoveAsync(IRenderedComponent<ContainerFragment> cut, string member, string item)
     {
-        await cut.InvokeAsync(() => cut.Find($"[aria-label='Remove {member}']").ClickAsync());
+        await cut.InvokeAsync(() => cut.Find($"[aria-label='Actions for {member}']").ClickAsync());
         await cut.InvokeAsync(() => cut.Find(item).ClickAsync());
     }
 

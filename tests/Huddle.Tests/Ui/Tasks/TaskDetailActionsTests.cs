@@ -146,7 +146,7 @@ public sealed class TaskDetailActionsTests
         await EditPriorityAsync(cut, TaskPriority.Urgent);
         int tasksBefore = harness.Store.All.Count;
 
-        await ClickMenuItemAsync(cut, "Make a copy");
+        await ClickMenuItemAsync(cut, "Make a copy…");
 
         IRenderedComponent<TaskDetailDialog> dialog = cut.FindComponent<TaskDetailDialog>();
         Assert.Null(dialog.Instance.Id);
@@ -170,7 +170,7 @@ public sealed class TaskDetailActionsTests
         await using MudBunitContext ctx = NewContext(harness);
         var cut = RenderPanel(ctx, task.Id);
 
-        await ClickMenuItemAsync(cut, "Close task");
+        await CloseTaskAsync(cut);
 
         TaskItem closed = harness.Store.Get(task.Id) ?? throw new InvalidOperationException("Task missing.");
         Assert.True(closed.Location.Closed);
@@ -191,7 +191,7 @@ public sealed class TaskDetailActionsTests
         var cut = RenderPanel(ctx, task.Id);
         await EditPriorityAsync(cut, TaskPriority.Urgent);
 
-        await ClickMenuItemAsync(cut, "Close task");
+        await CloseTaskAsync(cut);
 
         TaskItem closed = harness.Store.Get(task.Id) ?? throw new InvalidOperationException("Task missing.");
         Assert.True(closed.Location.Closed);
@@ -213,7 +213,7 @@ public sealed class TaskDetailActionsTests
         TaskResult outsideEdit = harness.Service.Update(task.Id, new TaskPatch { Priority = TaskPriority.Low }, baseVersion: null, TaskActors.Human(harness.Options.Value));
         Assert.IsType<TaskResult.Saved>(outsideEdit);
 
-        await ClickMenuItemAsync(cut, "Close task");
+        await CloseTaskAsync(cut);
 
         Assert.False(harness.Store.Get(task.Id)?.Location.Closed);
         Assert.Equal("Unsaved edits", TextOf(cut, ".task-detail-unsaved-text"));
@@ -231,7 +231,7 @@ public sealed class TaskDetailActionsTests
         IRenderedComponent<MudTextField<string>> titleField = cut.FindComponents<MudTextField<string>>().Single(HasClass<MudTextField<string>>("task-detail-title"));
         await cut.InvokeAsync(() => titleField.Instance.ValueChanged.InvokeAsync(""));
 
-        await ClickMenuItemAsync(cut, "Close task");
+        await CloseTaskAsync(cut);
 
         Assert.False(harness.Store.Get(task.Id)?.Location.Closed);
         Assert.Equal("Title is empty.", TextOf(cut, ".task-detail-save-error-problem"));
@@ -247,7 +247,7 @@ public sealed class TaskDetailActionsTests
         TaskItem closed = Assert.IsType<TaskResult.Saved>(closeResult).Task;
         await using MudBunitContext ctx = NewContext(harness);
         var cut = RenderPanel(ctx, task.Id);
-        Assert.DoesNotContain(await OpenMenuItemsAsync(cut), HasText("Close task"));
+        Assert.DoesNotContain(await OpenMenuItemsAsync(cut), HasText("Close task…"));
 
         await ClickMenuItemAsync(cut, "Reopen");
 
@@ -605,6 +605,37 @@ public sealed class TaskDetailActionsTests
 
         IElement item = cut.FindAll(".mud-menu-item").Single(element => string.Equals(element.TextContent.Trim(), text, StringComparison.Ordinal));
         await cut.InvokeAsync(() => item.ClickAsync());
+    }
+
+    /// <summary>
+    /// Chooses <c>Close task…</c> and confirms it in the dialog it opens (audit E10). The item's handler awaits the dialog's result, so the click is
+    /// started rather than awaited, and the returned task completes once the dialog has been answered and the close, if any, has happened.
+    /// </summary>
+    /// <param name="cut">The rendered panel.</param>
+    private static async Task CloseTaskAsync(IRenderedComponent<ContainerFragment> cut)
+    {
+        Task closing = await StartCloseTaskAsync(cut);
+        await cut.InvokeAsync(() => cut.FindAll(".mud-dialog-actions button").Single(b => string.Equals(b.TextContent.Trim(), "Close task", StringComparison.Ordinal)).ClickAsync());
+        await closing;
+    }
+
+    /// <summary>Chooses <c>Close task…</c> and returns once the confirm dialog's buttons are rendered, with the click's task for the test to await after it answers.</summary>
+    /// <param name="cut">The rendered panel.</param>
+    private static async Task<Task> StartCloseTaskAsync(IRenderedComponent<ContainerFragment> cut)
+    {
+        if (cut.FindAll(".mud-menu-item").Count == 0)
+        {
+            await cut.InvokeAsync(() => cut.Find("button[aria-label^=\"Actions for \"]").ClickAsync());
+        }
+
+        IElement item = cut.FindAll(".mud-menu-item").Single(element => string.Equals(element.TextContent.Trim(), "Close task…", StringComparison.Ordinal));
+        Task closing = cut.InvokeAsync(() => item.ClickAsync());
+        Task shown = cut.WaitForAssertionAsync(() => Assert.NotEmpty(cut.FindAll(".mud-dialog-actions button")));
+
+        // A click that fails (no such item, a stale handler) completes first; awaiting it surfaces that error instead of a bare wait timeout.
+        await await Task.WhenAny(closing, shown);
+        await shown;
+        return closing;
     }
 
     /// <summary>Finds the one <c>&lt;button&gt;</c> whose trimmed text is exactly <paramref name="text"/> - mirrors <see cref="TaskDetailTests"/>'s own helper.</summary>

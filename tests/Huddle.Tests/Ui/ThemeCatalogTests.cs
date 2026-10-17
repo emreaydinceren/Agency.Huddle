@@ -189,7 +189,7 @@ public sealed class ThemeCatalogTests
     public static TheoryData<string, string> DocumentedShortfallCombinations()
     {
         TheoryData<string, string> data = new();
-        foreach (var shortfall in DocumentedShortfalls)
+        foreach (var shortfall in DocumentedShortfalls.Where(candidate => !candidate.Pair.StartsWith(ChipPairPrefix, StringComparison.Ordinal)))
         {
             data.Add(shortfall.ThemeId, shortfall.Pair);
         }
@@ -326,6 +326,157 @@ public sealed class ThemeCatalogTests
         Assert.All(measured.Values, ratio => Assert.True(double.IsFinite(ratio) && ratio >= 1.0));
     }
 
+    /// <summary>Every built-in theme sets <c>Tertiary</c>, the Review signal, to its own value rather than MudBlazor's default, and it is not the <c>Secondary</c> fill.</summary>
+    [Fact]
+    public void BuiltIn_EveryThemeSetsATertiaryOfItsOwn()
+    {
+        MudTheme untouched = new();
+
+        foreach (var descriptor in ThemeCatalog.BuiltIn)
+        {
+            var palette = NativePalette(descriptor);
+            var bare = descriptor.Mode == ThemeMode.Light ? untouched.PaletteLight.Tertiary : untouched.PaletteDark.Tertiary;
+
+            Assert.NotEqual(Hex(bare), Hex(palette.Tertiary), StringComparer.OrdinalIgnoreCase);
+            Assert.NotEqual(Hex(palette.Secondary), Hex(palette.Tertiary), StringComparer.OrdinalIgnoreCase);
+        }
+    }
+
+    /// <summary>
+    /// In an authored Theme every pair of signals, and each signal against the Accent, sit at least 30 degrees apart in
+    /// hue (audit A2), so a meaning never rests on a hue that collides with another. The signals are Working
+    /// (<c>Info</c>), Review (<c>Tertiary</c>), <c>Success</c>, <c>Warning</c> and <c>Error</c>; the Accent is <c>Primary</c>.
+    /// Ported Themes take their signals from VS Code and may fall short; their second cues carry the meaning.
+    /// </summary>
+    /// <param name="themeId"><see cref="ThemeDescriptor.Id"/> of the authored theme under test.</param>
+    [Theory]
+    [InlineData("huddle")]
+    [InlineData("huddle-dark")]
+    public void Authored_SignalsAreAtLeastThirtyDegreesApartFromEachOtherAndTheAccent(string themeId)
+    {
+        var descriptor = ThemeCatalog.BuiltIn.Single(candidate => string.Equals(candidate.Id, themeId, StringComparison.Ordinal));
+
+        AssertSignalHueDistances(themeId, NativePalette(descriptor));
+    }
+
+    /// <summary>
+    /// Custom Accent derives its Review colour from whatever accent the Human picks, so for accents all round the
+    /// wheel <c>Tertiary</c> stays at least 30 degrees from the accent and from every other signal. What the code cannot
+    /// guarantee is the fixed signals against a picked accent: an accent chosen within 30 degrees of <c>Info</c>,
+    /// <c>Success</c>, <c>Warning</c> or <c>Error</c> collides with that signal, and its second cue (the state dot's
+    /// shape, the priority glyph) carries the meaning. That is the one hue-distance shortfall of Custom Accent.
+    /// </summary>
+    /// <param name="hue">The hue, in degrees, of the accent the Human picks.</param>
+    /// <param name="dark">Whether the dark palette is built.</param>
+    [Theory]
+    [MemberData(nameof(AccentHues))]
+    public void CustomAccent_TertiaryIsAtLeastThirtyDegreesFromTheAccentAndEverySignal(int hue, bool dark)
+    {
+        MudColor picked = new((double)hue, 0.7, 0.5, 1.0);
+        var theme = AccentTheme.BuildTheme(picked.ToString(MudColorOutputFormats.Hex), dark);
+        Palette palette = dark ? theme.PaletteDark : theme.PaletteLight;
+
+        foreach (var (name, other) in new[] { ("Primary", palette.Primary), ("Info", palette.Info), ("Success", palette.Success), ("Warning", palette.Warning), ("Error", palette.Error) })
+        {
+            var distance = AccentPalette.HueDistance(palette.Tertiary.H, other.H);
+            Assert.True(distance >= 30.0, $"Accent hue {hue} ({(dark ? "dark" : "light")}): Tertiary is {distance:F1} degrees from {name}.");
+        }
+    }
+
+    /// <summary>Accent hues round the wheel, in both modes.</summary>
+    public static TheoryData<int, bool> AccentHues()
+    {
+        TheoryData<int, bool> data = new();
+        for (var hue = 0; hue < 360; hue += 20)
+        {
+            data.Add(hue, false);
+            data.Add(hue, true);
+        }
+
+        return data;
+    }
+
+    /// <summary>
+    /// The text ladder (audit A9): <c>TextPrimary</c> (Ink) reads at least 7:1 on <c>Surface</c> in every theme not
+    /// recorded in <see cref="InkShortfalls"/>, and <c>TextSecondary</c> (Quiet ink) sits between Ink at 50% and Ink at
+    /// 80% mixed into the Surface, so it is visibly quieter than Ink and never fainter than half of it. The 4.5:1
+    /// floor for Quiet ink is held by <see cref="BuiltIn_NativePaletteContrast_ClearsWcagFloor"/>.
+    /// </summary>
+    /// <param name="themeId"><see cref="ThemeDescriptor.Id"/> of the theme under test.</param>
+    [Theory]
+    [MemberData(nameof(ThemeIds))]
+    public void BuiltIn_TextLadder_InkIsSevenToOneAndQuietInkSitsBetweenFiftyAndEightyPercent(string themeId)
+    {
+        var descriptor = ThemeCatalog.BuiltIn.Single(candidate => string.Equals(candidate.Id, themeId, StringComparison.Ordinal));
+        var palette = NativePalette(descriptor);
+        var inkRatio = ContrastColour.Ratio(palette.TextPrimary, palette.Surface);
+        var quietRatio = ContrastColour.Ratio(palette.TextSecondary, palette.Surface);
+        var fifty = ContrastColour.Ratio(InkMix(palette, 0.5), palette.Surface);
+        var eighty = ContrastColour.Ratio(InkMix(palette, 0.8), palette.Surface);
+
+        if (!InkShortfalls.Contains(themeId))
+        {
+            Assert.True(inkRatio >= 7.0, $"{themeId}: Ink on Surface is {inkRatio:F2}:1, under 7:1.");
+            Assert.True(quietRatio >= fifty && quietRatio <= eighty, $"{themeId}: Quiet ink is {quietRatio:F2}:1 on Surface, outside Ink 50% ({fifty:F2}:1) to Ink 80% ({eighty:F2}:1).");
+        }
+        else
+        {
+            Assert.True(inkRatio < 7.0 || quietRatio < fifty || quietRatio > eighty, $"{themeId}: no longer misses the text ladder - delete it from {nameof(InkShortfalls)}.");
+        }
+    }
+
+    /// <summary>Every built-in theme id.</summary>
+    public static TheoryData<string> ThemeIds()
+    {
+        TheoryData<string> data = new();
+        foreach (var descriptor in ThemeCatalog.BuiltIn)
+        {
+            data.Add(descriptor.Id);
+        }
+
+        return data;
+    }
+
+    /// <summary>Every signal pair and each signal against the Accent is at least 30 degrees apart in hue.</summary>
+    /// <param name="themeId">The theme under test, for the failure message.</param>
+    /// <param name="palette">The theme's native palette.</param>
+    private static void AssertSignalHueDistances(string themeId, Palette palette)
+    {
+        (string Name, double Hue)[] signals =
+        [
+            ("Info", palette.Info.H),
+            ("Tertiary", palette.Tertiary.H),
+            ("Success", palette.Success.H),
+            ("Warning", palette.Warning.H),
+            ("Error", palette.Error.H),
+        ];
+
+        for (var first = 0; first < signals.Length; first++)
+        {
+            var accentDistance = AccentPalette.HueDistance(signals[first].Hue, palette.Primary.H);
+            Assert.True(accentDistance >= 30.0, $"{themeId}: {signals[first].Name} is {accentDistance:F1} degrees from the Accent.");
+
+            for (var second = first + 1; second < signals.Length; second++)
+            {
+                var distance = AccentPalette.HueDistance(signals[first].Hue, signals[second].Hue);
+                Assert.True(distance >= 30.0, $"{themeId}: {signals[first].Name} and {signals[second].Name} are {distance:F1} degrees apart.");
+            }
+        }
+    }
+
+    /// <summary>Ink (<c>TextPrimary</c>) mixed into <c>Surface</c> at <paramref name="amount"/>, as CSS <c>color-mix(in srgb, ...)</c> does it.</summary>
+    /// <param name="palette">The palette whose Ink and Surface are mixed.</param>
+    /// <param name="amount">The share of Ink, 0 to 1.</param>
+    private static MudColor InkMix(Palette palette, double amount)
+    {
+        static int Channel(int ink, int surface, double share) => (int)Math.Round((ink * share) + (surface * (1.0 - share)));
+
+        return new MudColor(
+            Channel(palette.TextPrimary.R, palette.Surface.R, amount),
+            Channel(palette.TextPrimary.G, palette.Surface.G, amount),
+            Channel(palette.TextPrimary.B, palette.Surface.B, amount),
+            255);
+    }
     /// <summary>
     /// Maps a <c>--mud-palette-*</c> custom property name to its <see cref="Palette"/> property name.
     /// Kebab-case converts mechanically (<c>--mud-palette-text-secondary</c> to <c>TextSecondary</c>)
@@ -391,6 +542,12 @@ public sealed class ThemeCatalogTests
         new("PrimaryContrastText vs Primary", palette => palette.PrimaryContrastText, palette => palette.Primary, 4.5, "text"),
     ];
 
+    /// <summary>The <see cref="DocumentedShortfall.Pair"/> prefix of a status-chip entry: <c>chip:Warning</c> is the Warning chip text on its tint, measured by <c>R3FixTests</c>, not a <see cref="ContrastPairs"/> pair.</summary>
+    internal const string ChipPairPrefix = "chip:";
+
+    /// <summary>Why every status-chip entry in <see cref="DocumentedShortfalls"/> is recorded and not fixed.</summary>
+    private const string ChipJustification = "Ported VS Code Theme, faithful palette value; status chip text at the 50% Signal-ink mix still misses; second cue (glyph/dot/word) carries the meaning.";
+
     /// <summary>
     /// The themes that genuinely cannot clear their floor, pinned in both directions:
     /// <see cref="ContrastCombinations"/> skips each one, and <see cref="DocumentedShortfalls_StillFallShort"/>
@@ -399,7 +556,7 @@ public sealed class ThemeCatalogTests
     /// left to rot. Every value here is imported unmodified from its VS Code source; "themes are
     /// imported faithfully" is the governing decision this list exists to keep.
     /// </summary>
-    private static readonly IReadOnlyList<DocumentedShortfall> DocumentedShortfalls =
+    internal static readonly IReadOnlyList<DocumentedShortfall> DocumentedShortfalls =
     [
         new(
             "light-plus",
@@ -419,8 +576,41 @@ public sealed class ThemeCatalogTests
             3.98,
             4.5,
             "TextSecondary is the same #717171 registry default as the themes above, but Solarized Light's own Surface (#eee8d5) is not near-white, lowering the ratio to 3.98:1. Imported unmodified."),
+        new("dark-plus", ChipPairPrefix + "Secondary", 4.49, 4.5, ChipJustification),
+        new("light-plus", ChipPairPrefix + "Warning", 3.47, 4.5, ChipJustification),
+        new("light-plus", ChipPairPrefix + "Success", 4.00, 4.5, ChipJustification),
+        new("light-plus", ChipPairPrefix + "Secondary", 4.16, 4.5, ChipJustification),
+        new("light-plus", ChipPairPrefix + "Neutral", 4.20, 4.5, ChipJustification),
+        new("abyss", ChipPairPrefix + "Secondary", 3.75, 4.5, ChipJustification),
+        new("monokai-dimmed", ChipPairPrefix + "Secondary", 4.43, 4.5, ChipJustification),
+        new("quiet-light", ChipPairPrefix + "Warning", 3.47, 4.5, ChipJustification),
+        new("quiet-light", ChipPairPrefix + "Error", 3.11, 4.5, ChipJustification),
+        new("quiet-light", ChipPairPrefix + "Success", 4.00, 4.5, ChipJustification),
+        new("quiet-light", ChipPairPrefix + "Neutral", 4.20, 4.5, ChipJustification),
+        new("solarized-light", ChipPairPrefix + "Info", 4.21, 4.5, ChipJustification),
+        new("solarized-light", ChipPairPrefix + "Warning", 3.19, 4.5, ChipJustification),
+        new("solarized-light", ChipPairPrefix + "Success", 3.67, 4.5, ChipJustification),
+        new("solarized-light", ChipPairPrefix + "Secondary", 2.98, 4.5, ChipJustification),
+        new("solarized-light", ChipPairPrefix + "Primary", 4.16, 4.5, ChipJustification),
+        new("solarized-light", ChipPairPrefix + "Neutral", 3.82, 4.5, ChipJustification),
     ];
 
+    /// <summary>
+    /// The ported themes that miss the text ladder (Ink under 7:1 on Surface, or Quiet ink outside Ink 50% to 80%),
+    /// pinned both ways like <see cref="DocumentedShortfalls"/>: a listed theme must still miss, so a stale entry fails
+    /// the build. Every value is imported unmodified from its VS Code source, which is why these are recorded and not fixed.
+    /// </summary>
+    private static readonly HashSet<string> InkShortfalls = new(StringComparer.Ordinal)
+    {
+        // Ink 5.58:1 on Surface: VS Code's registry-default foreground #616161 on the #f3f3f3 Surface.
+        "light-plus",
+        // Ink 5.58:1 on Surface, the same pair.
+        "quiet-light",
+        // Ink 5.05:1 on Surface: the same #616161 foreground on Solarized Light's #eee8d5 Surface.
+        "solarized-light",
+        // Quiet ink 10.55:1 on Surface, above Ink 80% (5.83:1): this theme's descriptionForeground is the same #3b3b3b as its foreground, so Quiet ink equals Ink.
+        "light-modern",
+    };
     /// <summary>One foreground/background pair this suite holds to a WCAG contrast floor.</summary>
     /// <param name="Name">The pair's display name, used as the theory's data label and in failure messages.</param>
     /// <param name="Foreground">Selects the foreground colour from a theme's native palette.</param>
@@ -435,5 +625,5 @@ public sealed class ThemeCatalogTests
     /// <param name="Ratio">The measured WCAG 2.1 contrast ratio, to two decimals.</param>
     /// <param name="Floor">The floor this ratio falls short of.</param>
     /// <param name="Justification">The factual, measured cause of the shortfall.</param>
-    private sealed record DocumentedShortfall(string ThemeId, string Pair, double Ratio, double Floor, string Justification);
+    internal sealed record DocumentedShortfall(string ThemeId, string Pair, double Ratio, double Floor, string Justification);
 }

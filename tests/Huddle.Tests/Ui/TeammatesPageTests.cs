@@ -54,7 +54,7 @@ public sealed class TeammatesPageTests
         // plain GET. What the page owes a first-time visitor is the way in - a real <button>'s own
         // prerendered accessible name, which is its own visible text now that it leads the page's
         // toolbar as a labelled button. TeammateCardTests covers what the card then shows.
-        Assert.Contains("btn-action-tight", html, StringComparison.Ordinal);
+        Assert.Contains("page-header-create", html, StringComparison.Ordinal);
         Assert.Contains("New teammate", html, StringComparison.Ordinal);
     }
 
@@ -139,7 +139,7 @@ public sealed class TeammatesPageTests
         cut.WaitForAssertion(
             () =>
             {
-                Assert.Contains("Persona body", cut.Markup, StringComparison.Ordinal); // contains-ok: proves the whole Create card rendered
+                Assert.Contains("Persona text", cut.Markup, StringComparison.Ordinal); // contains-ok: proves the whole Create card rendered
                 Assert.Contains("Add teammate", cut.Markup, StringComparison.Ordinal); // contains-ok: proves the whole Create card rendered
             },
             TimeSpan.FromSeconds(10));
@@ -358,7 +358,7 @@ public sealed class TeammatesPageTests
         // Found and raised in one InvokeAsync for the same reason as ClickNewTeammateAsync: the
         // factory's startup PersonasChanged echo can repaint the page between the two.
         await cut.InvokeAsync(() => cut.FindAll("div.mud-input-control")
-            .First(control => control.QuerySelectorAll("label").Any(label => label.TextContent.Contains("Team", StringComparison.Ordinal)))
+            .First(control => control.ClassList.Contains("teammates-filter"))
             .MouseDownAsync(new Microsoft.AspNetCore.Components.Web.MouseEventArgs()));
 
         Assert.Contains("All teams", cut.Markup, StringComparison.Ordinal);
@@ -461,7 +461,7 @@ public sealed class TeammatesPageTests
     /// compiles to, shared by the two bUnit tests that click it through the real render pipeline
     /// rather than invoking <c>Teammates.BeginCreate</c> directly.
     /// </summary>
-    private const string NewTeammateSelector = "button.btn-action-tight";
+    private const string NewTeammateSelector = "button.page-header-create";
 
     /// <summary>
     /// Clicks "New teammate" with the <c>Find</c> and the dispatch inside one <c>InvokeAsync</c>, so no

@@ -15,14 +15,16 @@
 <MudDialog>
     <DialogContent>
         <MudStack Spacing="3">
-            <MudTextField T="string" Variant="Variant.Outlined" Margin="Margin.Dense" Label="Title" Immediate="true" Required="true"
+            <MudTextField T="string" Variant="Variant.Outlined" Margin="Margin.Dense" Label="Title" Immediate="true"
+                          HelperText="Names the role on its card."
                           Value="this.title" ValueChanged="this.OnTitleChanged" MaxLength="60" Class="custom-role-title" />
-            <MudTextField T="string" Variant="Variant.Outlined" Margin="Margin.Dense" Label="What it does" Immediate="true"
+            <MudTextField T="string" Variant="Variant.Outlined" Margin="Margin.Dense" Label="What it does (optional)" Immediate="true"
+                          HelperText="One line shown on the role card."
                           Value="this.description" ValueChanged="this.OnDescriptionChanged" MaxLength="200" Class="custom-role-description" />
-            <MudTextField T="string" Variant="Variant.Outlined" Margin="Margin.Dense" Label="Instructions" Immediate="true" Lines="6"
+            <MudTextField T="string" Variant="Variant.Outlined" Margin="Margin.Dense" Label="Instructions (optional)" Immediate="true" Lines="6"
                           HelperText="What a Teammate in this role is told to do."
                           Value="this.instructions" ValueChanged="this.OnInstructionsChanged" Class="custom-role-instructions long-text-field" />
-            <MudSelect T="string" Label="Skills" MultiSelection="true" SelectedValues="@this.skills" SelectedValuesChanged="this.OnSkillsChanged"
+            <MudSelect T="string" Label="Skills (optional)" MultiSelection="true" SelectedValues="@this.skills" SelectedValuesChanged="this.OnSkillsChanged"
                        Variant="Variant.Outlined" Margin="Margin.Dense" HelperText="Installed Skills and the whole catalog; a Teammate in this role carries them." Class="custom-role-skills">
                 @foreach (Skill skill in this.InstalledSkills.All)
                 {
@@ -44,7 +46,7 @@
                     </MudSelectItem>
                 }
             </MudSelect>
-            <MudSelect T="ModelTier" Variant="Variant.Outlined" Margin="Margin.Dense" Label="Model strength"
+            <MudSelect T="ModelTier" Variant="Variant.Outlined" Margin="Margin.Dense" Label="Model strength" HelperText="How capable, and how costly, the Teammate's model is."
                        Value="this.tier" ValueChanged="this.OnTierChanged" Class="custom-role-tier">
                 <MudSelectItem T="ModelTier" Value="ModelTier.Strongest">Strongest</MudSelectItem>
                 <MudSelectItem T="ModelTier" Value="ModelTier.Balanced">Balanced</MudSelectItem>
@@ -55,7 +57,7 @@
     <DialogActions>
         <MudButton Variant="Variant.Text" Size="Size.Small" OnClick="this.Cancel">Cancel</MudButton>
         <MudButton Variant="Variant.Filled" Size="Size.Small" Color="Color.Primary" Disabled="@(this.title.Trim().Length == 0)" OnClick="this.Save"
-                   Class="custom-role-save">Save</MudButton>
+                   Class="custom-role-save">@(this.Id is null ? "Add" : "Save")</MudButton>
     </DialogActions>
 </MudDialog>
 

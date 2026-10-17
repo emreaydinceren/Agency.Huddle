@@ -68,6 +68,9 @@ internal static class AccentTheme
         palette.PrimaryDarken = clamped.ColorRgbDarken().Value;
         // Black or white, whichever reads better on the clamped accent, as every hand-tuned Theme chooses its own.
         palette.PrimaryContrastText = ContrastColour.ReadableForeground(clamped);
+
+        // Review's signal moves with the accent so it stays at least 30 degrees from it, from Info and from the other signals.
+        palette.Tertiary = AccentPalette.ChooseTertiary(clamped, palette, palette.Tertiary, towardBlack);
     }
 
     /// <summary>Custom Accent Light's descriptor. <see cref="ThemeDescriptor.Theme"/> is a placeholder - see the type's remarks.</summary>

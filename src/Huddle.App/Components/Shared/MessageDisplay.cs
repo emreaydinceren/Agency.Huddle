@@ -64,7 +64,7 @@ internal static partial class MessageDisplay
     internal static bool StartsNewDay(DateTimeOffset? previous, DateTimeOffset current) =>
         previous is not { } before || LocalDay(before) != LocalDay(current);
 
-    /// <summary>"Today", "Yesterday", or a short date such as "Fri 2 Oct" (with the year when it is not this one).</summary>
+    /// <summary>"Today", "Yesterday", or a short date such as "Fri, Oct 2" (with the year when it is not this one); invariant culture (design-system "Dates and times").</summary>
     /// <param name="timestamp">The Message time.</param>
     /// <param name="now">The current time.</param>
     internal static string DayLabel(DateTimeOffset timestamp, DateTimeOffset now)
@@ -81,8 +81,8 @@ internal static partial class MessageDisplay
             return "Yesterday";
         }
 
-        string format = day.Year == today.Year ? "ddd d MMM" : "ddd d MMM yyyy";
-        return day.ToString(format, CultureInfo.CurrentCulture);
+        string format = day.Year == today.Year ? "ddd, MMM d" : "ddd, MMM d, yyyy";
+        return day.ToString(format, CultureInfo.InvariantCulture);
     }
 
     /// <summary>
@@ -113,6 +113,16 @@ internal static partial class MessageDisplay
         string format = local.Date == now.Date ? "HH:mm" : "ddd HH:mm";
         return local.ToString(format, CultureInfo.InvariantCulture);
     }
+
+    /// <summary>
+    /// The time a Message shows under its day separator: <c>HH:mm</c> in <paramref name="now"/>'s offset and
+    /// never a weekday, because the separator above already names the day (audit B5a).
+    /// </summary>
+    /// <param name="at">The Message time.</param>
+    /// <param name="now">The current time, whose offset decides the local time.</param>
+    /// <returns>The label, such as "09:30".</returns>
+    internal static string ClockTime(DateTimeOffset at, DateTimeOffset now) =>
+        at.ToOffset(now.Offset).ToString("HH:mm", CultureInfo.InvariantCulture);
 
     /// <summary>
     /// The file name at the end of a path, for either separator. A path that ends in a separator keeps

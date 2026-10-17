@@ -30,66 +30,56 @@
 }
 else
 {
-    <PageTitle>@this.room.Name</PageTitle>
     <MudStack Class="h-100 room-column" Spacing="0">
-        <MudStack Class="room-header px-4" Spacing="2">
-            <MudStack Row="true" AlignItems="AlignItems.Center" Justify="Justify.SpaceBetween">
-                <MudStack Spacing="1">
-                    <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2">
-                        @if (this.isRenaming)
-                        {
-                            @* The field takes the title's own size and weight (h5) and has no floating label, so the header does not jump; only the outline shows it is editable. *@
-                            <MudTextField T="string" Variant="Variant.Outlined" Margin="Margin.Dense" @bind-Value="this.editingName" Immediate="true" AutoFocus="true"
-                                          Class="title-inline-edit" aria-label="Room name"
-                                          OnKeyDown="this.OnRenameKeyDown" OnBlur="this.CommitRenameAsync" />
-                        }
-                        else
-                        {
-                            <MudText HtmlTag="h1" Typo="Typo.h5" Class="mb-0">@this.room.Name</MudText>
-                            @if (!this.isTeamRoom)
-                            {
-                                <MudTooltip Text="Rename">
-                                    <MudIconButton Icon="@Icons.Material.Filled.Edit" Size="Size.Small"
-                                                   aria-label="Rename room" OnClick="this.BeginRename" />
-                                </MudTooltip>
-                            }
-                        }
-                        <MudTooltip Text="Copy link">
-                            <MudIconButton Icon="@Icons.Material.Filled.Link" Size="Size.Small"
-                                           aria-label="Copy link to this Room" OnClick="this.CopyLinkAsync" />
+        @* The Room's header is the page model's PageHeader with a Chrome line (audit B1), so the title sits at the
+           same y as every other page's. The wrapper's top padding is the 16px under the tab strip. *@
+        <div class="room-header px-4">
+            <PageHeader Title="@this.room.Name" Chrome="true" TitleEditor="@(this.isRenaming ? this.RenameEditor : null)">
+                <TitleTrailing>
+                    @if (!this.isRenaming && !this.isTeamRoom)
+                    {
+                        <MudTooltip Text="Rename">
+                            <MudIconButton Icon="@Icons.Material.Filled.Edit" Size="Size.Small"
+                                           aria-label="Rename room" OnClick="this.BeginRename" />
                         </MudTooltip>
-                    </MudStack>
-                </MudStack>
-                <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2" Class="room-members">
-                    @{
-                        var agentMembers = this.members.Where(m => m.Kind == UserKind.Agent).ToList();
                     }
-                    @* The group draws the outline and the overlap, but not its own Max: MudAvatarGroup hides an
-                       avatar past Max by emptying it, which would leave an empty profile button behind. So the
-                       first MembersShown open their profile and the rest are counted in one "+N" avatar here. *@
-                    <MudAvatarGroup Spacing="2">
-                        @foreach (var agent in agentMembers.Take(MembersShown))
-                        {
-                            <ProfileAvatar Name="@agent.Name" Avatar="this.Avatars.Get(agent.Name)" Size="Size.Small" Team="@this.room.Team" />
+                    <MudTooltip Text="Copy link">
+                        <MudIconButton Icon="@Icons.Material.Filled.Link" Size="Size.Small"
+                                       aria-label="Copy link to this Room" OnClick="this.CopyLinkAsync" />
+                    </MudTooltip>
+                </TitleTrailing>
+                <Aside>
+                    <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2" Class="room-members">
+                        @{
+                            var agentMembers = this.members.Where(m => m.Kind == UserKind.Agent).ToList();
                         }
-                        @if (agentMembers.Count > MembersShown)
-                        {
-                            int more = agentMembers.Count - MembersShown;
-                            <MudAvatar Size="Size.Small" Color="Color.Default" Class="room-members-more" aria-label="@($"{Plural.Of(more, "more member", "more members")}")">+@more</MudAvatar>
-                        }
-                    </MudAvatarGroup>
-                    <MudText Typo="Typo.caption" Class="room-members-label">@Plural.Of(agentMembers.Count, "member", "members") + you</MudText>
-                    @* The leading @ is load-bearing: RoomId="this.room.Id" would pass that literal text. *@
-                    <InviteTeammate RoomId="@this.room.Id" />
-                </MudStack>
-            </MudStack>
+                        @* The group draws the outline and the overlap, but not its own Max: MudAvatarGroup hides an
+                           avatar past Max by emptying it, which would leave an empty profile button behind. So the
+                           first MembersShown open their profile and the rest are counted in one "+N" avatar here. *@
+                        <MudAvatarGroup Spacing="2">
+                            @foreach (var agent in agentMembers.Take(MembersShown))
+                            {
+                                <ProfileAvatar Name="@agent.Name" Avatar="this.Avatars.Get(agent.Name)" Size="Size.Small" Team="@this.room.Team" />
+                            }
+                            @if (agentMembers.Count > MembersShown)
+                            {
+                                int more = agentMembers.Count - MembersShown;
+                                <MudAvatar Size="Size.Small" Color="Color.Default" Class="room-members-more" aria-label="@($"{Plural.Of(more, "more member", "more members")}")">+@more</MudAvatar>
+                            }
+                        </MudAvatarGroup>
+                        <MudText Typo="Typo.caption" Class="room-members-label">@Plural.Of(agentMembers.Count, "member", "members") + you</MudText>
+                        @* The leading @ is load-bearing: RoomId="this.room.Id" would pass that literal text. *@
+                        <InviteTeammate RoomId="@this.room.Id" RoomName="@this.room.Name" />
+                    </MudStack>
+                </Aside>
+            </PageHeader>
             @if (this.renameError is not null)
             {
                 @* MudAlert renders no role by default - verified against the rendered markup, not assumed -
                    so role="alert" is added explicitly to keep the message announced, per rules.md. *@
                 <MudAlert Severity="Severity.Error" Dense="true" Class="rename-error" role="alert">@this.renameError</MudAlert>
             }
-        </MudStack>
+        </div>
         <MessageList
             @key="this.room.Id"
             Messages="this.messages"
@@ -239,6 +229,14 @@ else
 }
 
 @code {
+    /// <summary>
+    /// The inline rename field that replaces the title while renaming. It takes the title's own size and weight (h5) and has no
+    /// floating label, so the header does not jump; only the outline shows it is editable.
+    /// </summary>
+    private RenderFragment RenameEditor => @<MudTextField T="string" Variant="Variant.Outlined" Margin="Margin.Dense" @bind-Value="this.editingName" Immediate="true" AutoFocus="true"
+                                                          Class="title-inline-edit" aria-label="Room name"
+                                                          OnKeyDown="this.OnRenameKeyDown" OnBlur="this.CommitRenameAsync" />;
+
     /// <summary>How many member avatars the Room header shows before the rest are counted in "+N".</summary>
     private const int MembersShown = 4;
 

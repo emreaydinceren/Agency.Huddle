@@ -31,12 +31,12 @@ public sealed class FieldsDialogTests
         root.WaitForAssertion(() => Assert.NotEmpty(root.FindAll(".view-editor-fields-add-option")));
 
         string[] offered = [.. root.FindAll(".view-editor-fields-add-option").Select(option => option.TextContent.Trim())];
-        Assert.Contains("sprint", offered);
-        Assert.Contains("assignee", offered);
-        Assert.DoesNotContain("status", offered);
-        Assert.DoesNotContain("priority", offered);
-        Assert.DoesNotContain("id", offered);
-        Assert.DoesNotContain("title", offered);
+        Assert.Contains("Sprint", offered);
+        Assert.Contains("Assignee", offered);
+        Assert.DoesNotContain("Status", offered);
+        Assert.DoesNotContain("Priority", offered);
+        Assert.DoesNotContain("Id", offered);
+        Assert.DoesNotContain("Title", offered);
     }
 
     /// <summary>Choosing a field from the Add field menu adds it to the end of the list, and Save writes it to the View.</summary>
@@ -51,8 +51,8 @@ public sealed class FieldsDialogTests
         IRenderedComponent<ContainerFragment> root = await OpenDialogAsync(ctx);
 
         await root.InvokeAsync(() => root.Find(".view-editor-fields-add button").ClickAsync());
-        root.WaitForAssertion(() => Assert.Single(root.FindAll(".view-editor-fields-add-option"), option => string.Equals(option.TextContent.Trim(), "priority", StringComparison.Ordinal)));
-        await root.InvokeAsync(() => root.FindAll(".view-editor-fields-add-option").Single(option => string.Equals(option.TextContent.Trim(), "priority", StringComparison.Ordinal)).ClickAsync());
+        root.WaitForAssertion(() => Assert.Single(root.FindAll(".view-editor-fields-add-option"), option => string.Equals(option.TextContent.Trim(), "Priority", StringComparison.Ordinal)));
+        await root.InvokeAsync(() => root.FindAll(".view-editor-fields-add-option").Single(option => string.Equals(option.TextContent.Trim(), "Priority", StringComparison.Ordinal)).ClickAsync());
         await SaveAsync(root);
 
         Assert.Equal(["status", "priority"], harness.Views.Get("v1")?.Fields);

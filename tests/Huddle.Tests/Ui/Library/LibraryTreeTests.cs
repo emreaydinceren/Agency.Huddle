@@ -110,7 +110,7 @@ public sealed class LibraryTreeTests : IDisposable
             cut.FindAll("span.library-tree-node-name").Select(e => e.TextContent.Trim()));
     }
 
-    /// <summary>A file's context menu is New note, New folder, Copy path, Rename, Move&#8230;, Delete, in that order (UX-R31), with an icon on each and a divider ahead of Copy Path and Rename.</summary>
+    /// <summary>A file's context menu is New note, New folder, Copy path, Rename, Move&#8230;, Delete, in that order (UX-R31), with an icon on each and a divider ahead of Copy path, Rename and Delete (the destructive item last).</summary>
     [Fact]
     public async Task Menu_OnFile_HasTheSettledActions()
     {
@@ -127,10 +127,10 @@ public sealed class LibraryTreeTests : IDisposable
         await cut.InvokeAsync(() => NodeRow(cut, filePath.RelativePath).ContextMenuAsync());
 
         Assert.Equal(
-            ["New note", "New folder", "Copy path", "Rename", "Move…", "Delete"],
+            ["New note…", "New folder…", "Copy path", "Rename…", "Move…", "Delete…"],
             cut.FindAll("div.mud-menu-item div.library-tree-menu-label").Select(e => e.TextContent.Trim()));
         Assert.Equal(6, cut.FindAll("div.mud-menu-item svg").Count);
-        Assert.Equal(2, cut.FindAll("div.mud-popover-open hr.mud-divider").Count);
+        Assert.Equal(3, cut.FindAll("div.mud-popover-open hr.mud-divider").Count);
     }
 
     /// <summary>Choosing "Move&#8230;" in a file's menu raises <see cref="LibraryTreeActionKind.Move"/> for that file, which is how the Move dialog is reached (UX-R31, OP-10).</summary>
@@ -256,9 +256,9 @@ public sealed class LibraryTreeTests : IDisposable
         cut.FindAll("div.library-tree-node").Single(
             row => string.Equals(row.QuerySelector("span.library-tree-node-name")?.TextContent.Trim(), name, StringComparison.Ordinal));
 
-    /// <summary>A Team folder's menu offers New Project, and Rename/Move/Delete are disabled with the settled protected text.</summary>
+    /// <summary>A Team folder's menu offers New project, and leaves out Rename, Move and Delete, which the one settled protected note explains.</summary>
     [Fact]
-    public async Task Menu_OnTeamFolder_HasNewProject_AndDisabledRenameDelete()
+    public async Task Menu_OnTeamFolder_HasNewProject_AndANoteInsteadOfRenameDelete()
     {
         string teamsPath = this.fixture.LibraryFixture.DataDir;
         Directory.CreateDirectory(Path.Combine(teamsPath, "Teams", "Engineering"));
@@ -276,19 +276,19 @@ public sealed class LibraryTreeTests : IDisposable
 
         Assert.Contains(
             cut.FindAll("div.mud-menu-item div.library-tree-menu-label"),
-            e => string.Equals(e.TextContent.Trim(), "New project", StringComparison.Ordinal));
+            e => string.Equals(e.TextContent.Trim(), "New project…", StringComparison.Ordinal));
 
-        var renameItem = cut.FindAll("div.mud-menu-item").Single(e =>
-            e.QuerySelector("div.library-tree-menu-label")?.TextContent.Trim() == "Rename");
-        Assert.True(renameItem.ClassList.Contains("mud-disabled"));
+        Assert.DoesNotContain(
+            cut.FindAll("div.mud-menu-item div.library-tree-menu-label"),
+            e => e.TextContent.Trim() is "Rename…" or "Move…" or "Delete…");
         Assert.Equal(
             "Team and Project folders can't be renamed, moved or deleted here.",
-            renameItem.QuerySelector("div.library-tree-menu-reason")?.TextContent.Trim());
+            cut.Find("div.library-tree-menu-note").TextContent.Trim());
     }
 
-    /// <summary>A Teammate folder's menu is disabled with the settled teammate-page redirect text (item 26).</summary>
+    /// <summary>A Teammate folder's menu ends in the settled teammate-page redirect note (item 26).</summary>
     [Fact]
-    public async Task Menu_OnTeammateFolder_DisabledWithTeammateText()
+    public async Task Menu_OnTeammateFolder_NoteHasTeammateText()
     {
         this.fixture.LibraryFixture.CreateTeammate("ada", "Ada", "ada");
         LibraryPath teammatesScope = this.fixture.LibraryFixture.ResolveTeammatesFolder(string.Empty);
@@ -301,11 +301,9 @@ public sealed class LibraryTreeTests : IDisposable
 
         await cut.InvokeAsync(() => NodeRow(cut, teammateFolder.RelativePath).ContextMenuAsync());
 
-        var renameItem = cut.FindAll("div.mud-menu-item").Single(e =>
-            e.QuerySelector("div.library-tree-menu-label")?.TextContent.Trim() == "Rename");
         Assert.Equal(
             "Teammate folders can't be renamed, moved or deleted here.",
-            renameItem.QuerySelector("div.library-tree-menu-reason")?.TextContent.Trim());
+            cut.Find("div.library-tree-menu-note").TextContent.Trim());
     }
 
     /// <summary>Right-clicking a node opens its own <c>MudMenu</c> (<c>ActivationEvent="RightClick"</c>, <c>PositionAtCursor</c>).</summary>
@@ -458,9 +456,9 @@ public sealed class LibraryTreeTests : IDisposable
         Assert.Empty(cut.FindAll("div.library-tree-node button"));
     }
 
-    /// <summary>A disabled menu item's reason is rendered as SECONDARY TEXT on the item, never tooltip-only (item 26).</summary>
+    /// <summary>A protected node's reason is one visible note at the bottom of its menu, never three repeated disabled items or a tooltip (item 26, audit B10).</summary>
     [Fact]
-    public async Task Menu_OnTeamFolder_DisabledItems_ShowReasonAsSecondaryText()
+    public async Task Menu_OnTeamFolder_ShowsTheReasonOnceAsANote()
     {
         Directory.CreateDirectory(Path.Combine(this.fixture.LibraryFixture.DataDir, "Teams", "Engineering"));
         this.fixture.LibraryFixture.Reload();
@@ -474,14 +472,10 @@ public sealed class LibraryTreeTests : IDisposable
         cut.WaitForAssertion(() => Assert.Equal(2, cut.FindAll("span.library-tree-node-name").Count));
         await cut.InvokeAsync(() => NodeRow(cut, teamFolder.RelativePath).ContextMenuAsync());
 
-        foreach (string label in new[] { "Rename", "Move…", "Delete" })
-        {
-            var item = cut.FindAll("div.mud-menu-item").Single(e =>
-                e.QuerySelector("div.library-tree-menu-label")?.TextContent.Trim() == label);
-            Assert.Equal(
-                "Team and Project folders can't be renamed, moved or deleted here.",
-                item.QuerySelector("div.library-tree-menu-reason")?.TextContent.Trim());
-        }
+        Assert.Equal(
+            "Team and Project folders can't be renamed, moved or deleted here.",
+            Assert.Single(cut.FindAll("div.library-tree-menu-note")).TextContent.Trim());
+        Assert.Empty(cut.FindAll("div.mud-menu-item.mud-disabled"));
     }
 
     /// <summary>Selecting a file, then changing its length on disk and refreshing, keeps it selected: the tree compares

@@ -58,6 +58,7 @@ internal static class QuietLightTheme
         Error = "#f1897f", // errorForeground (theme)
         Warning = "#bf8803", // charts.yellow (registry default)
         Info = "#0063d3", // charts.blue (registry default)
+        Tertiary = "#652d90", // charts.purple (registry default)
         OverlayDark = "rgba(0,0,0,0.4)", // fixed for a light theme, matching HuddleTheme
         // PrimaryDarken, PrimaryLighten, ErrorLighten and WarningLighten are deliberately left
         // unset: MudBlazor computes them from the base colour, and only HuddleTheme carries

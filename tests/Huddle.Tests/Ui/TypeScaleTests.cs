@@ -88,6 +88,20 @@ public sealed partial class TypeScaleTests
         Assert.Contains("font-weight: 500;", body, StringComparison.Ordinal); // contains-ok: stylesheet source text
     }
 
+    /// <summary>The Group label (audit A4) is the caption role at 600 in Quiet ink: 12px, sentence case, never under 11px.</summary>
+    [Fact]
+    public void AppCss_GroupLabel_IsCaptionAtSemibold()
+    {
+        string css = TypeScaleTests.ReadAppCss().Replace("\r\n", "\n", StringComparison.Ordinal);
+        int rule = css.IndexOf(".group-label {", StringComparison.Ordinal);
+        Assert.True(rule >= 0, "Expected the .group-label rule in app.css.");
+
+        string body = css[rule..css.IndexOf('}', rule)];
+
+        Assert.Contains("font-size: var(--mud-typography-caption-size);", body, StringComparison.Ordinal); // contains-ok: stylesheet source text
+        Assert.Contains("font-weight: 600;", body, StringComparison.Ordinal); // contains-ok: stylesheet source text
+        Assert.Contains("color: var(--mud-palette-text-secondary);", body, StringComparison.Ordinal); // contains-ok: stylesheet source text
+    }
     /// <summary>A Small button is 28px high at weight 500 and the Composer's focused border is 1.5px of accent.</summary>
     [Fact]
     public void AppCss_SmallButtonAndComposerFocusMatchTheSpec()

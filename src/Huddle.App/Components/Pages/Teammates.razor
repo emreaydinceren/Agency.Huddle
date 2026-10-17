@@ -17,30 +17,26 @@
 @inject IServiceProvider Services
 
 <MudContainer MaxWidth="MaxWidth.Large" Class="page-reading pa-4">
-    <PageHeader Title="Teammates" />
-    <MudText Typo="Typo.body2" Class="mud-text-secondary page-lead">
-        Teammates are the Agents who work with you in Rooms and on Tasks. Open one to see its role and Skills, or to change how it works.
-    </MudText>
+    <PageHeader Title="Teammates" CreateText="New teammate" CreateIcon="@Icons.Material.Filled.Add" OnCreate="this.BeginCreate"
+                Subtitle="Teammates are the Agents who work with you in Rooms and on Tasks. Open one to see its role and Skills, or to change how it works." />
 
-    @* The same toolbar shape as the Tasks page: the create action leads, the narrowing controls follow. *@
-    <MudToolBar Dense="true" Gutters="false" Class="gap-4 toolbar-hairline">
-        <MudButton Size="Size.Small" StartIcon="@Icons.Material.Filled.Add" Color="Color.Primary" OnClick="this.BeginCreate" Class="btn-action-tight">New teammate</MudButton>
-
-        @if (this.entries.Count > 0)
-        {
+    @* The create action lives in the page header (design-system "A page"); the toolbar holds only the narrowing control. *@
+    @if (this.entries.Count > 0)
+    {
+        <MudToolBar Dense="true" Gutters="false" Class="gap-4 toolbar-hairline">
             @* @bind-Value, not @oninput: MudSelect raises ValueChanged on selection, the same "change"
                semantics the old <select>'s @onchange comment called out. Never touches ModelCatalog or
                PersonaStore's write path - selecting a team is pure display narrowing over state already
                loaded, the same "never probes" guarantee a plain page load has. *@
-            <MudSelect Variant="Variant.Outlined" Margin="Margin.Dense" T="string" Label="Team" Value="@this.selectedTeam" ValueChanged="this.OnTeamFilterChanged" Class="teammates-filter">
+            <MudSelect Variant="Variant.Outlined" Margin="Margin.Dense" T="string" aria-label="Team" Value="@this.selectedTeam" ValueChanged="this.OnTeamFilterChanged" Class="teammates-filter toolbar-compact">
                 <MudSelectItem T="string" Value="@string.Empty">All teams</MudSelectItem>
                 @foreach (var team in this.teams)
                 {
                     <MudSelectItem T="string" Value="@team">@team</MudSelectItem>
                 }
             </MudSelect>
-        }
-    </MudToolBar>
+        </MudToolBar>
+    }
 
     @* Above the list on purpose: a required-field decision only pays off if the file that fails to
        load is impossible to miss, rather than just silently absent from the directory below. *@

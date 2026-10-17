@@ -4,6 +4,7 @@
 @using Agency.Huddle.App.Prompts
 @using Agency.Huddle.App.Components.Settings
 @inject PromptStore Prompts
+@inject NavigationManager Navigation
 
 @*
     Settings is two columns: a vertical section menu on the left and the active section's panel on
@@ -17,8 +18,7 @@
 *@
 
 <MudContainer MaxWidth="MaxWidth.Large" Class="page-reading settings-page pa-4">
-    @* The Tab and the one-crumb trail already show "Settings", so the h1 is for a screen reader only. *@
-    <PageHeader Title="Settings" HideTitle="true" />
+    <PageHeader Title="Settings" />
 
     @if (this.error is not null)
     {
@@ -100,6 +100,8 @@
     // itself holds nothing. pendingEdits is every uncommitted keystroke, keyed by prompt key; groups is
     // rebuilt from it (and from the store) whenever either changes, so a render never has to
     // reconcile two sources of truth for the same field.
+    private const string TeamTypesAlias = "team-types";
+
     private readonly Dictionary<string, string> pendingEdits = new(StringComparer.Ordinal);
     private IReadOnlyList<PromptFieldGroup> groups = [];
     private string? error;
@@ -141,6 +143,18 @@
 
     // Drives ResetAllControl's enabled state: nothing modified means nothing for "reset all" to do.
     private bool AnyModified => this.groups.SelectMany(group => group.Fields).Any(row => row.IsModified);
+
+    /// <summary>
+    /// Sends the hyphenated address <c>/settings/team-types</c> to the canonical <c>/settings/teamtypes</c> (E7), so
+    /// both addresses land on the Team types section with one Tab key instead of one falling back to Profile.
+    /// </summary>
+    protected override void OnParametersSet()
+    {
+        if (string.Equals(this.Tab, TeamTypesAlias, StringComparison.OrdinalIgnoreCase))
+        {
+            this.Navigation.NavigateTo(SectionHref(SettingsTab.TeamTypes), replace: true);
+        }
+    }
 
     protected override void OnInitialized()
     {

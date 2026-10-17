@@ -26,6 +26,7 @@
 @using Microsoft.Extensions.Options
 @using Agency.Huddle.App.Acp
 @using Agency.Huddle.App.Avatars
+@using Agency.Huddle.App.Components.Shared.Dialogs
 @using Agency.Huddle.App.Pipes
 @using Agency.Huddle.App.Services
 @using Agency.Huddle.App.Teams
@@ -69,9 +70,7 @@ else if (this.loaded is { } task)
     int agentWakeBudget = this.Options.Value.Tasks.AgentWakeBudget;
     string? sprintProblem = this.SprintProblem();
     string? sprintHelper = sprintProblem ?? (this.IsNewSprintName() ? "New sprint: it will be created when you save" : null);
-    bool saveDisabled = (effective.Status == TaskState.Duplicate && effective.DuplicateOf is null) ||
-        sprintProblem is not null ||
-        (this.conflict is { } openConflict && !openConflict.Fields.All(this.conflictChoices.ContainsKey));
+    bool saveDisabled = this.IsSaveDisabled(effective);
 
     @if (this.saveError is not null || this.saveProblems.Count > 0)
     {
@@ -171,7 +170,10 @@ else if (this.loaded is { } task)
             <div class="task-detail-title-row">
                 @if (this.titleEditing)
                 {
-                    <MudTextField T="string" Variant="Variant.Outlined" Margin="Margin.Dense" Value="@effective.Title" ValueChanged="this.OnTitleChanged" Class="task-detail-title" aria-label="Title" />
+                    @* The inline edit keeps the title's size (16px/600) and replaces it: in the drawer the header's own copy is hidden while a saved Task's
+                       title is edited, and a draft opens here with the field focused (design-system "Drawer anatomy"; audit B4j, B4p). *@
+                    <MudTextField T="string" Variant="Variant.Outlined" Margin="Margin.Dense" Value="@effective.Title" ValueChanged="this.OnTitleChanged"
+                                  Class="task-detail-title" aria-label="Title" Placeholder="@(this.createMode ? "Task title" : null)" AutoFocus="true" Immediate="true" />
                 }
                 else
                 {
@@ -184,7 +186,7 @@ else if (this.loaded is { } task)
                     else
                     {
                         @* A Task made from a Draft keeps its name here: the drawer header still reads "New task". *@
-                        <span class="task-detail-title-display">@if (this.Mode == TaskDetailMode.Panel){<span class="task-id">@effective.Id.ToString()</span>@(": ")}@effective.Title</span>
+                        <span class="task-detail-title-display">@if (this.Mode == TaskDetailMode.Panel && !this.createMode){<span class="task-id">@effective.Id.ToString()</span>@(": ")}@effective.Title</span>
                     }
                     <MudIconButton Icon="@Icons.Material.Filled.Edit" Size="Size.Small" aria-label="Edit title" OnClick="this.BeginEditTitle" />
                     @if (!this.createMode)
@@ -202,10 +204,25 @@ else if (this.loaded is { } task)
 
                 @if (!this.createMode)
                 {
-                    <TaskActionsMenu Id="effective.Id" OnCopyId="@(() => this.CopyIdAsync(effective.Id))" OnCopyLink="@(() => this.CopyLinkAsync(effective.Id))">
+                    @if (this.Mode == TaskDetailMode.Panel)
+                    {
+                        @* Expand is a quiet icon of the row under the header, beside Edit, copy and the menu - not in the footer, which holds only Cancel and Save. *@
+                        <MudIconButton Icon="@Icons.Material.Filled.OpenInFull" Size="Size.Small" aria-label="Expand" Class="task-detail-expand" OnClick="this.ExpandAsync" />
+                    }
+
+                    <TaskActionsMenu @ref="this.actionsMenu" Id="effective.Id" OnCopyId="@(() => this.CopyIdAsync(effective.Id))" OnCopyLink="@(() => this.CopyLinkAsync(effective.Id))">
                         <ExtraItems>
-                            <MudMenuItem Class="task-detail-copy" OnClick="this.MakeACopyAsync">Make a copy</MudMenuItem>
-                            <MudMenuItem Class="task-detail-close" OnClick="this.CloseOrReopenAsync">@(task.Location.Closed ? "Reopen" : "Close task")</MudMenuItem>
+                            <MudMenuItem Icon="@ActionIcons.Duplicate" Class="task-detail-copy" OnClick="this.MakeACopyAsync">Make a copy…</MudMenuItem>
+                            @* Close task… is the destructive one: last, after a divider, in Error ink, and it asks first (audit E10). Reopen undoes it, so it is an ordinary item. *@
+                            @if (task.Location.Closed)
+                            {
+                                <MudMenuItem Icon="@Icons.Material.Filled.LockOpen" Class="task-detail-close" OnClick="this.CloseOrReopenAsync">Reopen</MudMenuItem>
+                            }
+                            else
+                            {
+                                <MudDivider />
+                                <MudMenuItem Icon="@Icons.Material.Filled.Lock" Class="task-detail-close menu-item-destructive" OnClick="this.CloseOrReopenAsync">Close task…</MudMenuItem>
+                            }
                         </ExtraItems>
                     </TaskActionsMenu>
                 }
@@ -238,18 +255,22 @@ else if (this.loaded is { } task)
                query in app.css). MudBlazor's own floating labels stay in the DOM as the accessible name. *@
             <div class="task-detail-groups">
                 <section class="task-detail-group" aria-labelledby="task-detail-heading-status">
-                    <MudText Typo="Typo.subtitle2" HtmlTag="h3" Class="group-heading" id="task-detail-heading-status">Status and priority</MudText>
+                    <MudText Typo="Typo.subtitle2" HtmlTag="h3" Class="group-label" id="task-detail-heading-status">Status and priority</MudText>
                     <div class="task-detail-props">
                         <div class="task-detail-prop">
                             <span class="task-detail-prop-label" aria-hidden="true">Status</span>
                             <div class="task-detail-prop-value">
-                                <MudSelect T="TaskState" Variant="Variant.Outlined" Margin="Margin.Dense" Value="effective.Status" ValueChanged="this.OnStatusChanged"
-                                           Label="Status" Class="task-detail-status">
-                                    @foreach (TaskState state in TaskStates.All)
-                                    {
-                                        <MudSelectItem T="TaskState" Value="state">@state.ToWire()</MudSelectItem>
-                                    }
-                                </MudSelect>
+                                @* The Board's second cue: the state dot beside the Status, the glyph in the Priority's adornment (audit B4r). *@
+                                <div class="task-detail-status-field">
+                                    <TaskStateDot State="effective.Status" />
+                                    <MudSelect T="TaskState" Variant="Variant.Outlined" Margin="Margin.Dense" Value="effective.Status" ValueChanged="this.OnStatusChanged"
+                                               Label="Status" Class="task-detail-status">
+                                        @foreach (TaskState state in TaskStates.All)
+                                        {
+                                            <MudSelectItem T="TaskState" Value="state">@state.ToWire()</MudSelectItem>
+                                        }
+                                    </MudSelect>
+                                </div>
                             </div>
                         </div>
 
@@ -259,7 +280,7 @@ else if (this.loaded is { } task)
                                 <span class="task-detail-prop-label" aria-hidden="true">Duplicate of</span>
                                 <div class="task-detail-prop-value">
                                     <TaskPicker Value="effective.DuplicateOf" ValueChanged="this.OnDuplicateOfChanged" Excluding="effective.Id"
-                                                Label="Duplicate of" Class="task-detail-duplicate-of" />
+                                                Label="Duplicate of" Placeholder="None" Class="task-detail-duplicate-of" />
                                 </div>
                             </div>
                         }
@@ -269,7 +290,7 @@ else if (this.loaded is { } task)
                                 <span class="task-detail-prop-label" aria-hidden="true">Reason</span>
                                 <div class="task-detail-prop-value">
                                     <MudTextField T="string" Variant="Variant.Outlined" Margin="Margin.Dense" Value="@(this.pending.Reason ?? string.Empty)" ValueChanged="this.OnReasonChanged"
-                                                  Label="Reason (optional)" Class="task-detail-reason" />
+                                                  Label="Reason (optional)" Placeholder="Optional" Class="task-detail-reason" />
                                 </div>
                             </div>
                         }
@@ -295,14 +316,14 @@ else if (this.loaded is { } task)
                 </section>
 
                 <section class="task-detail-group" aria-labelledby="task-detail-heading-people">
-                    <MudText Typo="Typo.subtitle2" HtmlTag="h3" Class="group-heading" id="task-detail-heading-people">People</MudText>
+                    <MudText Typo="Typo.subtitle2" HtmlTag="h3" Class="group-label" id="task-detail-heading-people">People</MudText>
                     <div class="task-detail-props">
                         <div class="task-detail-prop">
                             <span class="task-detail-prop-label" aria-hidden="true">Assignee</span>
                             <div class="task-detail-prop-value">
                                 <MudAutocomplete T="AssigneeOption" Variant="Variant.Outlined" Margin="Margin.Dense" Strict="true" SearchFunc="this.SearchAssignees" ToStringFunc="@(o => o?.Name)"
                                                   Value="@(effective.Assignee is { } assigneeName ? new AssigneeOption(assigneeName, string.Empty, null) : null)"
-                                                  ValueChanged="this.OnAssigneeChanged" Class="task-detail-assignee" Label="Assignee">
+                                                  ValueChanged="this.OnAssigneeChanged" Class="task-detail-assignee" Label="Assignee" Placeholder="Unassigned">
                                     <ItemTemplate Context="option">
                                         @* The Human has no presence dot; a Persona shows one only when its presence is known. *@
                                         <TaskAssignee Name="@option.Name" Presence="@(option.IsHuman ? null : option.Presence)" />
@@ -322,7 +343,7 @@ else if (this.loaded is { } task)
                 </section>
 
                 <section class="task-detail-group" aria-labelledby="task-detail-heading-planning">
-                    <MudText Typo="Typo.subtitle2" HtmlTag="h3" Class="group-heading" id="task-detail-heading-planning">Planning</MudText>
+                    <MudText Typo="Typo.subtitle2" HtmlTag="h3" Class="group-label" id="task-detail-heading-planning">Planning</MudText>
                     <div class="task-detail-props">
                         @* Team and Project are two rows, each with its own visible label (UX-R09). *@
                         <div class="task-detail-prop">
@@ -341,7 +362,7 @@ else if (this.loaded is { } task)
                             <span class="task-detail-prop-label" aria-hidden="true">Project</span>
                             <div class="task-detail-prop-value">
                                 <MudAutocomplete T="string" Variant="Variant.Outlined" Margin="Margin.Dense" Value="effective.Location.Project" ValueChanged="this.OnProjectChanged"
-                                                  CoerceValue="true" SearchFunc="this.SearchProjects" Class="task-detail-project" Label="Project" aria-label="Project" />
+                                                  CoerceValue="true" SearchFunc="this.SearchProjects" Class="task-detail-project" Label="Project" Placeholder="None" aria-label="Project" />
                             </div>
                         </div>
 
@@ -351,7 +372,7 @@ else if (this.loaded is { } task)
                                 <div class="task-detail-sprint">
                                     <MudAutocomplete T="string" Variant="Variant.Outlined" Margin="Margin.Dense" Value="@this.SprintFieldText(task)" ValueChanged="this.OnSprintChanged" Immediate="true"
                                                       CoerceValue="true" Clearable="true" SearchFunc="this.SearchSprints" Class="task-detail-sprint-field"
-                                                      Label="Sprint" aria-label="Sprint" HelperText="@sprintHelper"
+                                                      Label="Sprint" Placeholder="None" aria-label="Sprint" HelperText="@sprintHelper"
                                                       Error="@(sprintProblem is not null)" ErrorText="@sprintProblem" />
                                     @if (this.SprintIsMissing(task))
                                     {
@@ -367,7 +388,7 @@ else if (this.loaded is { } task)
                         <div class="task-detail-prop">
                             <span class="task-detail-prop-label" aria-hidden="true">Parent</span>
                             <div class="task-detail-prop-value">
-                                <TaskPicker Value="effective.Parent" ValueChanged="this.OnParentChanged" Excluding="effective.Id" Label="Parent" Class="task-detail-parent" />
+                                <TaskPicker Value="effective.Parent" ValueChanged="this.OnParentChanged" Excluding="effective.Id" Label="Parent" Placeholder="None" Class="task-detail-parent" />
                             </div>
                         </div>
 
@@ -383,7 +404,7 @@ else if (this.loaded is { } task)
                                         </MudChip>
                                     }
                                 </MudChipSet>
-                                <TaskPicker Value="null" ValueChanged="this.OnAddBlocker" Excluding="effective.Id" Label="Add blocker" Class="task-detail-blocked-by-add" />
+                                <TaskPicker Value="null" ValueChanged="this.OnAddBlocker" Excluding="effective.Id" Label="Add blocker" Placeholder="Add blocker…" Class="task-detail-blocked-by-add" />
                                 @if (this.BlockedBySummary(effective) is { } blockedBySummary)
                                 {
                                     <div class="task-detail-blocked-by-summary">@blockedBySummary</div>
@@ -401,21 +422,21 @@ else if (this.loaded is { } task)
                                     }
                                 </MudChipSet>
                                 <MudTextField T="string" Variant="Variant.Outlined" Margin="Margin.Dense" Immediate="true" Value="@this.tagInput" ValueChanged="this.OnTagInputChanged"
-                                              OnKeyDown="this.OnTagKeyDown" Label="Add tag" Class="task-detail-tags-add" />
+                                              OnKeyDown="this.OnTagKeyDown" Label="Add tag" Placeholder="Add tag…" Class="task-detail-tags-add" />
                             </div>
                         </div>
                     </div>
                 </section>
 
                 <section class="task-detail-group" aria-labelledby="task-detail-heading-dates">
-                    <MudText Typo="Typo.subtitle2" HtmlTag="h3" Class="group-heading" id="task-detail-heading-dates">Dates</MudText>
+                    <MudText Typo="Typo.subtitle2" HtmlTag="h3" Class="group-label" id="task-detail-heading-dates">Dates</MudText>
                     <div class="task-detail-props">
                         <div class="task-detail-prop">
                             <span class="task-detail-prop-label" aria-hidden="true">Start date</span>
                             <div class="task-detail-prop-value">
                                 <MudDatePicker Variant="Variant.Outlined" Margin="Margin.Dense" Date="@(effective.StartDate is { } startDate ? startDate.ToDateTime(TimeOnly.MinValue) : (DateTime?)null)"
                                                DateChanged="this.OnStartDateChanged" Label="Start date" Class="task-detail-start-date"
-                                               DateFormat="@TaskDates.Format" />
+                                               DateFormat="@TaskDates.PickerFormat" Placeholder="None" />
                             </div>
                         </div>
                         <div class="task-detail-prop">
@@ -426,7 +447,7 @@ else if (this.loaded is { } task)
                                                Class="@($"task-detail-due-date{(this.IsOverdue(effective) ? " task-overdue" : string.Empty)}")"
                                                Adornment="@(this.IsOverdue(effective) ? Adornment.Start : Adornment.None)"
                                                AdornmentIcon="@(this.IsOverdue(effective) ? Icons.Material.Filled.Warning : null)"
-                                               DateFormat="@TaskDates.Format" />
+                                               DateFormat="@TaskDates.PickerFormat" Placeholder="None" />
                             </div>
                         </div>
                     </div>
@@ -436,16 +457,21 @@ else if (this.loaded is { } task)
 
         RenderFragment sideContent = @<text>
             <div class="task-detail-description">
-                <HuddleSegmentedControl T="DescriptionViewMode" Value="this.descriptionMode" ValueChanged="this.OnDescriptionModeChanged"
-                                 Class="task-detail-description-toggle" ItemCount="2">
-                    <MudToggleItem Value="DescriptionViewMode.Edit" Text="Edit" />
-                    <MudToggleItem Value="DescriptionViewMode.Preview" Text="Preview" />
-                </HuddleSegmentedControl>
+                @* Description has a Group label like the groups above it; its Edit | Preview toggle sits on the label's line, so the field's own floating label
+                   (kept in the DOM, visually hidden) overlaps nothing (audit B4n). *@
+                <div class="task-detail-description-header">
+                    <MudText Typo="Typo.subtitle2" HtmlTag="h3" Class="group-label" id="task-detail-heading-description">Description</MudText>
+                    <HuddleSegmentedControl T="DescriptionViewMode" Value="this.descriptionMode" ValueChanged="this.OnDescriptionModeChanged"
+                                     Class="task-detail-description-toggle" ItemCount="2">
+                        <MudToggleItem Value="DescriptionViewMode.Edit" Text="Edit" />
+                        <MudToggleItem Value="DescriptionViewMode.Preview" Text="Preview" />
+                    </HuddleSegmentedControl>
+                </div>
 
                 @if (this.descriptionMode == DescriptionViewMode.Edit)
                 {
                     <MudTextField T="string" Variant="Variant.Outlined" Margin="Margin.Dense" Value="@effective.Description" ValueChanged="this.OnDescriptionChanged"
-                                  Lines="10" Sizing="InputSizing.Auto" MaxLines="30" Label="Description" Class="task-detail-description" />
+                                  Lines="10" Sizing="InputSizing.Auto" MaxLines="30" Label="Description" Placeholder="Add a description…" Class="task-detail-description task-detail-description-field long-text-field" />
                 }
                 else
                 {
@@ -481,22 +507,22 @@ else if (this.loaded is { } task)
         @sideContent
     }
 
-    @* Cancel, then the one filled primary action (Save, always here, never in the alert above); Expand is a quiet
-       sibling. The rare actions - Make a copy and Close/Reopen - live in the title row's Actions menu. *@
-    <div class="task-detail-actions">
-        <MudButton Variant="Variant.Text" Size="Size.Small" Class="task-detail-cancel" OnClick="this.CancelAsync">Cancel</MudButton>
-        <MudButton Variant="Variant.Filled" Size="Size.Small" Color="Color.Primary" OnClick="this.SaveAsync" Disabled="saveDisabled">@saveLabel</MudButton>
-        @if (!this.createMode && this.Mode == TaskDetailMode.Panel)
-        {
-            <MudIconButton Icon="@Icons.Material.Filled.OpenInFull" Size="Size.Small" aria-label="Expand" Class="task-detail-expand" OnClick="this.ExpandAsync" />
-        }
-    </div>
+    @* Cancel, then the one filled primary action (Save, always here, never in the alert above). In the Tasks drawer the host draws
+       them in the drawer's sticky footer instead (ExternalFooter, audit B4k). The rare actions - Make a copy and Close/Reopen -
+       live in the title row's Actions menu, and Expand beside it. *@
+    @if (!this.ExternalFooter)
+    {
+        <div class="task-detail-actions">
+            <MudButton Variant="Variant.Text" Size="Size.Small" Class="task-detail-cancel" OnClick="this.CancelAsync">Cancel</MudButton>
+            <MudButton Variant="Variant.Filled" Size="Size.Small" Color="Color.Primary" OnClick="this.SaveAsync" Disabled="saveDisabled">@saveLabel</MudButton>
+        </div>
+    }
 
     <MudExitPrompt Title="Discard changes?" Text="Your unsaved edits to this task will be lost." Disabled="@(!this.HasPending)" Class="task-detail-exit-prompt" />
 
     @if (!this.createMode)
     {
-        <MudExpansionPanels Class="task-detail-changelog">
+        <MudExpansionPanels Class="task-detail-changelog" Elevation="0">
             <MudExpansionPanel Text="@($"Change log ({task.ChangeLog.Count})")">
                 <MudTimeline TimelinePosition="TimelinePosition.Start">
                     @foreach (ChangeLogEntry entry in task.ChangeLog.Reverse())
@@ -550,6 +576,8 @@ else if (this.loaded is { } task)
     private string? saveError;
     private IReadOnlyList<string> saveProblems = [];
     private bool titleEditing;
+    private TaskActionsMenu? actionsMenu;
+    private (bool Visible, string Label, bool Disabled) notifiedFooter;
     private DescriptionViewMode descriptionMode = DescriptionViewMode.Edit;
     private string tagInput = string.Empty;
     private string? originRoomName;
@@ -565,6 +593,22 @@ else if (this.loaded is { } task)
     /// <summary>Whether this instance is the Panel or the Expanded dialog layout. The two share every field's logic; only the Team/Project combining (Spec §13.6) differs so far.</summary>
     [Parameter]
     public TaskDetailMode Mode { get; set; }
+
+    /// <summary>
+    /// True when the host draws Cancel and Save itself, in <see cref="ResizableEndDrawer"/>'s sticky footer (the Tasks page, audit B4k), so this component draws
+    /// no action row of its own. The host reads <see cref="FooterVisible"/>, <see cref="FooterSaveLabel"/> and <see cref="FooterSaveDisabled"/>, calls
+    /// <see cref="SaveAsync"/> and <see cref="CancelAsync"/>, and re-renders on <see cref="FooterStateChanged"/>. False (the default) keeps the row inline.
+    /// </summary>
+    [Parameter]
+    public bool ExternalFooter { get; set; }
+
+    /// <summary>Raised after a render in which <see cref="FooterVisible"/>, <see cref="FooterSaveLabel"/> or <see cref="FooterSaveDisabled"/> changed, so a host that draws the footer re-renders it.</summary>
+    [Parameter]
+    public EventCallback FooterStateChanged { get; set; }
+
+    /// <summary>Raised with <see langword="true"/> when the inline title edit opens and <see langword="false"/> when it closes. The Tasks page hides the drawer's own copy of a saved Task's title while it is open, so the field replaces the title (audit B4j).</summary>
+    [Parameter]
+    public EventCallback<bool> TitleEditingChanged { get; set; }
 
     /// <summary>Raised when the Panel or dialog should close: Cancel (always), and Expand once its own dialog has opened (Spec §13.6, corrections-B7 "14.4" item 1). The caller (the Tasks page, its own drawer's own <c>OnClose</c>) is a later dispatch's wiring (14.5).</summary>
     [Parameter]
@@ -584,6 +628,37 @@ else if (this.loaded is { } task)
     /// </summary>
     [Parameter]
     public EventCallback<bool> HasPendingChanged { get; set; }
+
+    /// <summary>Whether a host that draws the footer shows it: while there are changes to save, and always for a draft, which is a change from the start.</summary>
+    public bool FooterVisible => !this.deleted && this.loaded is not null && (this.HasPending || this.createMode);
+
+    /// <summary>The footer's Save label ("Save", or "Save &amp; notify {name}" for an awake or asleep assignee), as the inline row would draw it.</summary>
+    public string FooterSaveLabel => this.loaded is { } task
+        ? TaskDetail.SaveLabel(this.Triggers.Preview(task, this.Effective ?? task, TaskActors.Human(this.Human)))
+        : "Save";
+
+    /// <summary>Whether the footer's Save is disabled: a Duplicate with no original, a Sprint name that is not valid, or a conflict field still unresolved.</summary>
+    public bool FooterSaveDisabled => this.IsSaveDisabled(this.Effective ?? this.loaded);
+
+    /// <summary>Whether Save is disabled for <paramref name="effective"/> (the Task with the pending edits applied).</summary>
+    /// <param name="effective">The Task with <see cref="pending"/> applied, or <see langword="null"/> before anything loaded.</param>
+    private bool IsSaveDisabled(TaskItem? effective) =>
+        effective is null
+        || (effective.Status == TaskState.Duplicate && effective.DuplicateOf is null)
+        || this.SprintProblem() is not null
+        || (this.conflict is { } openConflict && !openConflict.Fields.All(this.conflictChoices.ContainsKey));
+
+    /// <summary>Tells a host that draws the footer when what it shows has changed since the last render.</summary>
+    /// <param name="firstRender">Unused: the footer is checked after every render.</param>
+    protected override void OnAfterRender(bool firstRender)
+    {
+        (bool Visible, string Label, bool Disabled) current = (this.FooterVisible, this.FooterSaveLabel, this.FooterSaveDisabled);
+        if (this.ExternalFooter && current != this.notifiedFooter)
+        {
+            this.notifiedFooter = current;
+            _ = this.FooterStateChanged.InvokeAsync();
+        }
+    }
 
     /// <summary>Whether the Human has an unsaved edit pending. Public so the hosting page (corrections-B7 14.5.i item 2) can drive its own drawer's <c>OverlayAutoClose</c> from it - see <see cref="HasPendingChanged"/> for why a page must not simply read this on its own schedule.</summary>
     public bool HasPending => !this.pending.IsEmpty || this.sprintInput is not null;
@@ -707,6 +782,7 @@ else if (this.loaded is { } task)
         if (this.Id is null && this.Draft is { } draft)
         {
             this.createMode = true;
+            this.titleEditing = true;
             this.loaded = TaskDetail.BuildDraftItem(draft, TaskActors.Human(this.Human));
         }
         else
@@ -817,7 +893,20 @@ else if (this.loaded is { } task)
         });
     }
 
-    private void BeginEditTitle() => this.titleEditing = true;
+    private void BeginEditTitle() => this.SetTitleEditing(true);
+
+    /// <summary>Opens or closes the inline title edit and tells the host, which hides the drawer's own title while a saved Task's is edited.</summary>
+    /// <param name="editing">Whether the title is being edited.</param>
+    private void SetTitleEditing(bool editing)
+    {
+        if (this.titleEditing == editing)
+        {
+            return;
+        }
+
+        this.titleEditing = editing;
+        _ = this.TitleEditingChanged.InvokeAsync(editing && !this.createMode);
+    }
 
     private void OnTitleChanged(string value)
     {
@@ -1096,6 +1185,11 @@ else if (this.loaded is { } task)
     private void Revert()
     {
         this.ClearPending();
+        if (!this.createMode)
+        {
+            this.SetTitleEditing(false);
+        }
+
         this.saveError = null;
         this.saveProblems = [];
         this.conflict = null;
@@ -1107,7 +1201,7 @@ else if (this.loaded is { } task)
     /// "Discard changes?" prompt - unlike Expand, corrections-B7 "14.4" item 1 - since clicking Cancel
     /// already says what the Human wants.
     /// </summary>
-    private async Task CancelAsync()
+    public async Task CancelAsync()
     {
         this.Revert();
         await this.OnClose.InvokeAsync();
@@ -1190,6 +1284,11 @@ else if (this.loaded is { } task)
             return;
         }
 
+        if (!before.Location.Closed && !await this.ConfirmCloseAsync(before))
+        {
+            return;
+        }
+
         if (this.HasPending)
         {
             await this.SaveAsync();
@@ -1213,6 +1312,21 @@ else if (this.loaded is { } task)
             this.loaded = saved.Task;
             this.baseVersion = saved.Task.Version;
         }
+    }
+
+    /// <summary>
+    /// Asks before <paramref name="task"/> is closed (audit E10, design-system "Close task…"): closing ends the Task and notifies its assignee,
+    /// so it never happens from one stray click. The menu closes first (<see cref="MenuDialogs"/>), so no popover is left over the dialog's scrim.
+    /// </summary>
+    /// <param name="task">The Task about to be closed.</param>
+    private async Task<bool> ConfirmCloseAsync(TaskItem task)
+    {
+        string consequence = task.Assignee is { } assignee
+            ? $"{assignee} is notified. You can reopen it from this menu."
+            : "You can reopen it from this menu.";
+        return await MenuDialogs.AfterClosingAsync(
+            this.actionsMenu?.Menu,
+            () => this.Dialogs.ConfirmAsync($"Close {task.Id}?", $"This ends the task. {consequence}", "Close task"));
     }
 
     /// <summary>
@@ -1308,7 +1422,7 @@ else if (this.loaded is { } task)
     /// <see cref="HasPending"/> afterwards. An <see cref="IOException"/> from the store (Spec §13.6
     /// "Save errors") is shown in <see cref="saveError"/>, following <c>TeammateCard.SaveAsync</c>.
     /// </summary>
-    private Task SaveAsync() => this.SaveCore(humanOverridesGates: false);
+    public Task SaveAsync() => this.SaveCore(humanOverridesGates: false);
 
     /// <summary>
     /// The Team's process gates, or <see langword="null"/> when none are registered (a host without Teams enforces
@@ -1393,6 +1507,7 @@ else if (this.loaded is { } task)
                     this.conflict = null;
                     this.conflictChoices = [];
                     this.createMode = false;
+                    this.SetTitleEditing(false);
                     break;
                 case TaskResult.Unchanged unchanged:
                     this.loaded = unchanged.Task;
@@ -1400,6 +1515,7 @@ else if (this.loaded is { } task)
                     this.ClearPending();
                     this.conflict = null;
                     this.conflictChoices = [];
+                    this.SetTitleEditing(false);
                     break;
                 case TaskResult.Conflict conflictResult:
                     this.loaded = conflictResult.Current;

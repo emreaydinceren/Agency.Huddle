@@ -150,7 +150,7 @@ public sealed class TeammateTileTests
 
         IRenderedComponent<TeammatesPage> cut = ctx.Render<TeammatesPage>();
 
-        string intro = string.Join(" ", cut.Find(".page-lead").TextContent.Split((char[]?)null, StringSplitOptions.RemoveEmptyEntries));
+        string intro = string.Join(" ", cut.Find(".page-header-subtitle").TextContent.Split((char[]?)null, StringSplitOptions.RemoveEmptyEntries));
         Assert.Equal("Teammates are the Agents who work with you in Rooms and on Tasks. Open one to see its role and Skills, or to change how it works.", intro);
     }
 
@@ -164,7 +164,7 @@ public sealed class TeammateTileTests
         string context = css[start..end];
 
         Assert.Contains("text-align: left;", context, StringComparison.Ordinal); // contains-ok: haystack is one rule of the stylesheet source, not markup
-        Assert.Contains("padding: 0 16px 16px calc(16px + 40px + 16px);", context, StringComparison.Ordinal); // contains-ok: haystack is one rule of the stylesheet source, not markup
+        Assert.Contains("padding: 0 12px 12px calc(12px + 40px + 16px);", context, StringComparison.Ordinal); // contains-ok: haystack is one rule of the stylesheet source, not markup
     }
 
     /// <summary>Build a team's roster card is the shared <c>ProfileCard</c>, and that card draws its avatar through <c>TeammateAvatar</c>, not a bare <c>MudAvatar</c>.</summary>
@@ -178,6 +178,34 @@ public sealed class TeammateTileTests
         Assert.DoesNotContain("<MudAvatar", buildTeam, StringComparison.Ordinal);
         Assert.Contains("<TeammateAvatar ", card, StringComparison.Ordinal); // contains-ok: haystack is the razor source file, which a render cannot distinguish
         Assert.DoesNotContain("<MudAvatar", card, StringComparison.Ordinal);
+    }
+
+    /// <summary>The create action is the page header's Small filled button at the right, not a text button at the toolbar's left (B1, A7).</summary>
+    [Fact]
+    public async Task Page_NewTeammate_IsTheHeadersCreateButton()
+    {
+        using TempDataDir dir = new();
+        await using MudBunitContext ctx = await NewContextAsync(dir, Xunit.TestContext.Current.CancellationToken);
+
+        IRenderedComponent<TeammatesPage> cut = ctx.Render<TeammatesPage>();
+
+        var create = cut.Find(".page-header-actions .page-header-create");
+        Assert.Equal("New teammate", create.TextContent.Trim());
+        Assert.Contains("mud-button-filled", create.ClassList);
+        Assert.Empty(cut.FindAll(".mud-toolbar .page-header-create"));
+        Assert.Empty(cut.FindAll(".mud-toolbar button"));
+    }
+
+    /// <summary>The Team select in the toolbar wears the compact 28px class (A7).</summary>
+    [Fact]
+    public async Task Page_TeamFilter_IsTheCompactToolbarField()
+    {
+        using TempDataDir dir = new();
+        await using MudBunitContext ctx = await NewContextAsync(dir, Xunit.TestContext.Current.CancellationToken);
+
+        IRenderedComponent<TeammatesPage> cut = ctx.Render<TeammatesPage>();
+
+        Assert.NotEmpty(cut.FindAll(".mud-toolbar .mud-input-control.toolbar-compact.teammates-filter"));
     }
 
     private static async Task<MudBunitContext> NewContextAsync(TempDataDir dataDir, CancellationToken ct)

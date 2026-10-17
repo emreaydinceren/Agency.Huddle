@@ -44,23 +44,22 @@
                                 Class="hover-reveal-link"><span class="sidebar-row-label" title="@team.Name">@team.Name</span></NavTabLink>
                     @* Meta never takes the row's text: the member count trails the name, and its tooltip says what it counts. *@
                     <span class="sidebar-row-meta" title="@(team.HasMembers ? Plural.Of(team.Members.Count, "member", "members") : "No members")">@team.Members.Count</span>
-                    <MudMenu @ref="@this.menuRefs[team.Name]" Class="hover-reveal-menu">
+                    <MudMenu @ref="@this.menuRefs[team.Name]" Class="hover-reveal-menu" Dense="true">
                         @* ActivatorContent replaces MudMenu's own built-in activator entirely, so
                            MudMenu does not wire a click listener around it automatically - the
                            supplied MenuContext.ToggleAsync is how custom activator content opens
                            the menu (TaskViewNav.razor's and RoomList.razor's own precedent). *@
                         <ActivatorContent Context="menuContext">
-                            <MudTooltip Text="Team actions">
-                                <MudIconButton Icon="@Icons.Material.Filled.MoreVert" Size="Size.Small"
-                                               aria-label="Team actions" Class="hover-reveal-menu-button"
-                                               OnClick="menuContext.ToggleAsync" />
-                            </MudTooltip>
+                            @* No hover tooltip (it would stay up over the first item); the label names the Team. *@
+                            <MudIconButton Icon="@Icons.Material.Filled.MoreVert" Size="Size.Small"
+                                           aria-label="@MenuDialogs.ActivatorLabel(team.Name)" Class="hover-reveal-menu-button"
+                                           OnClick="menuContext.ToggleAsync" />
                         </ActivatorContent>
                         <ChildContent>
-                            <MudMenuItem OnClick="@(() => this.ToggleNewChat(team.Name))">New chat</MudMenuItem>
+                            <MudMenuItem Icon="@Icons.Material.Filled.Add" OnClick="@(() => this.ToggleNewChat(team.Name))">New chat</MudMenuItem>
                             @if (this.ProjectsAllowed)
                             {
-                                <MudMenuItem OnClick="@(() => this.NewProjectAsync(team.Name))">New project</MudMenuItem>
+                                <MudMenuItem Icon="@Icons.Material.Filled.Add" OnClick="@(() => this.NewProjectAsync(team.Name))">New project…</MudMenuItem>
                             }
                         </ChildContent>
                     </MudMenu>
@@ -96,7 +95,8 @@
 </div>
 
 @code {
-    private bool expanded;
+    /// <summary>Open from the start: the Teams view holds this one group, and a view whose only content is one group opens it (audit B3a).</summary>
+    private bool expanded = true;
     private bool showAllTeams;
     private readonly HashSet<string> showAllRows = new(StringComparer.OrdinalIgnoreCase);
     private readonly Dictionary<string, MudMenu> menuRefs = new(StringComparer.OrdinalIgnoreCase);
@@ -379,7 +379,8 @@
         IReadOnlyList<TeamSummary> teams = this.Catalog.Teams;
         TeamSummary summary = teams.FirstOrDefault(t => string.Equals(t.Name, team, StringComparison.OrdinalIgnoreCase))
             ?? new TeamSummary(team, [], [], false);
-        string? project = await NewProjectPrompt.AskAsync(this.Dialogs, trimmed => TeamNames.ValidateProjectName(trimmed, summary), static _ => Task.FromResult<string?>(null));
+        this.menuRefs.TryGetValue(team, out MudMenu? menu);
+        string? project = await MenuDialogs.AfterClosingAsync(menu, () => NewProjectPrompt.AskAsync(this.Dialogs, trimmed => TeamNames.ValidateProjectName(trimmed, summary), static _ => Task.FromResult<string?>(null)));
         if (project is null)
         {
             return;

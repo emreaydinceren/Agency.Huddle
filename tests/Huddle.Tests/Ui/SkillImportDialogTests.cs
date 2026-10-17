@@ -40,10 +40,10 @@ public sealed class SkillImportDialogTests
 
     /// <summary>Typing part of a name, a publisher or a category narrows the result list to the matching catalog entries, in catalog order.</summary>
     [Theory]
-    [InlineData("alp", "alpha")]
-    [InlineData("bolt", "beta,gamma")]
-    [InlineData("writ", "beta,gamma")]
-    [InlineData("", "alpha,beta,gamma")]
+    [InlineData("alp", "Alpha")]
+    [InlineData("bolt", "Beta,Gamma")]
+    [InlineData("writ", "Beta,Gamma")]
+    [InlineData("", "Alpha,Beta,Gamma")]
     public async Task Search_NarrowsTheResults(string typed, string expected)
     {
         ArgumentNullException.ThrowIfNull(expected);
@@ -176,7 +176,8 @@ public sealed class SkillImportDialogTests
         await PickAsync(cut, 0);
 
         Assert.Equal("Acme", cut.Find(".skill-import-publisher").TextContent.Trim());
-        Assert.Equal("https://github.com/acme/skills", cut.Find(".skill-import-repo").TextContent.Trim());
+        Assert.Empty(cut.FindAll(".skill-import-repo"));
+        Assert.Equal("github.com/acme/skills", cut.Find(".skill-import-link a").TextContent.Trim());
         Assert.Equal("0123456", cut.Find(".skill-import-commit").TextContent.Trim());
         Assert.Equal("MIT", cut.Find(".skill-import-license").TextContent.Trim());
         Assert.Equal(

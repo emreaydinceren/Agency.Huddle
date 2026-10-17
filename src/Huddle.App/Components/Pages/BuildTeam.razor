@@ -216,9 +216,19 @@
                                             <MudButton Variant="Variant.Text" Size="Size.Small" StartIcon="@Icons.Material.Outlined.ChatBubbleOutline" OnClick="@(() => this.OnMessage.InvokeAsync(draft.Name))"
                                                        aria-label="@($"Message {draft.Name}")" Class="roster-message">Message</MudButton>
                                         }
-                                        <MudMenu Label="Remove" Variant="Variant.Text" Size="Size.Small" EndIcon="@Icons.Material.Filled.ArrowDropDown" AriaLabel="@($"Remove {draft.Name}")" Class="roster-remove">
-                                            <MudMenuItem OnClick="@(() => this.LeaveTeam(draft.Key))" Class="roster-leave">Remove from team</MudMenuItem>
-                                            <MudMenuItem OnClick="@(() => this.RemoveDraft(draft.Key))" Class="roster-delete">Delete teammate</MudMenuItem>
+                                        @* A destructive action is never a top-level button with a caret (design-system "Menus"):
+                                           Edit and Message lead, and the removals sit under the more-actions button. The activator
+                                           names its target and carries no hover tooltip; neither item opens a dialog. *@
+                                        <MudMenu Class="roster-more" Dense="true">
+                                            <ActivatorContent Context="menuContext">
+                                                <MudIconButton Icon="@ActionIcons.MoreActions" Size="Size.Small"
+                                                               aria-label="@MenuDialogs.ActivatorLabel(draft.Name)" OnClick="menuContext.ToggleAsync" />
+                                            </ActivatorContent>
+                                            <ChildContent>
+                                                <MudMenuItem Icon="@ActionIcons.RemoveMember" OnClick="@(() => this.LeaveTeam(draft.Key))" Class="roster-leave">Remove from team</MudMenuItem>
+                                                <MudDivider />
+                                                <MudMenuItem Icon="@ActionIcons.Delete" OnClick="@(() => this.RemoveDraft(draft.Key))" Class="menu-item-destructive">Delete teammate</MudMenuItem>
+                                            </ChildContent>
                                         </MudMenu>
                                     }
                                     else

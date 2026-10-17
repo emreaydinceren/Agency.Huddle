@@ -6,23 +6,23 @@ namespace Agency.Huddle.App.Components.Tasks;
 /// <summary>The Spec §13.10 mapping from a Task's state, priority or presence to a MudBlazor <see cref="Color"/>.</summary>
 internal static class TaskColors
 {
-    /// <summary>Backlog and To Do Default, In Progress Info, Review Secondary, Done Success, Cancelled/Duplicate/Rejected Error. Amber (Warning) means "needs attention" only, so no state uses it.</summary>
+    /// <summary>Backlog and To Do Default, In Progress Info, Review Tertiary (its own signal, so Review never reads as the Accent or as In Progress), Done Success, Cancelled/Duplicate/Rejected Error. Amber (Warning) means "needs attention" only, so no state uses it.</summary>
     public static Color For(TaskState state) => state switch
     {
         TaskState.Backlog => Color.Default,
         TaskState.ToDo => Color.Default,
         TaskState.InProgress => Color.Info,
-        TaskState.Review => Color.Secondary,
+        TaskState.Review => Color.Tertiary,
         TaskState.Done => Color.Success,
         TaskState.Cancelled or TaskState.Duplicate or TaskState.Rejected => Color.Error,
         _ => Color.Default,
     };
 
-    /// <summary>Low Default, Medium Info, High Warning, Urgent Error.</summary>
+    /// <summary>Low and Medium Default (both mean "no special attention", so they differ by glyph only), High Warning, Urgent Error.</summary>
     public static Color For(TaskPriority priority) => priority switch
     {
         TaskPriority.Low => Color.Default,
-        TaskPriority.Medium => Color.Info,
+        TaskPriority.Medium => Color.Default,
         TaskPriority.High => Color.Warning,
         TaskPriority.Urgent => Color.Error,
         _ => Color.Default,

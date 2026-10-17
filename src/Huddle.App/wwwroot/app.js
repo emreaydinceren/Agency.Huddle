@@ -420,6 +420,49 @@ window.huddleSidebar = {
             // Storage is unavailable (private window, blocked site data): the choice is not kept.
         }
     },
+    // The Outline's scroll watch: tells the panel (ref.OnHeadingInView) which heading is in view, i.e. the last one
+    // whose top has passed the line just under the Tab strip, or the first one when none has. Only a rendered
+    // (Read mode) document has heading elements; with none found nothing is reported and a clicked heading stays marked.
+    _headingWatch: null,
+    watchHeadings(ids, ref) {
+        window.huddleSidebar.unwatchHeadings();
+        let last;
+        let frame = 0;
+        const report = () => {
+            frame = 0;
+            let current = null;
+            for (const id of ids) {
+                const element = document.getElementById(id);
+                if (!element) {
+                    continue;
+                }
+                if (current === null || element.getBoundingClientRect().top <= 140) {
+                    current = id;
+                } else {
+                    break;
+                }
+            }
+            if (current !== null && current !== last) {
+                last = current;
+                ref.invokeMethodAsync("OnHeadingInView", current);
+            }
+        };
+        const onScroll = () => {
+            if (!frame) {
+                frame = window.requestAnimationFrame(report);
+            }
+        };
+        document.addEventListener("scroll", onScroll, { capture: true, passive: true });
+        window.huddleSidebar._headingWatch = () => document.removeEventListener("scroll", onScroll, { capture: true });
+        window.setTimeout(report, 100);
+    },
+    unwatchHeadings() {
+        const stop = window.huddleSidebar._headingWatch;
+        if (stop) {
+            stop();
+            window.huddleSidebar._headingWatch = null;
+        }
+    },
 };
 
 // Tab shortcuts (docs/Huddle.Tabs-Specifications.md). The browser keeps Ctrl+W, Ctrl+Tab and

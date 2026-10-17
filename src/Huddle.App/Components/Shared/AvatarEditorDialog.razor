@@ -14,6 +14,10 @@
 
     An open dialog's parameters are frozen (see the header of TeammateCard.razor), so every parameter below is a
     snapshot: it seeds the editor once and the editor's own reports are held in local fields.
+
+    The title is the item's name ("Alan's avatar"). "Choose from library" does not open a third dialog: the editor swaps
+    the library into this dialog's content with a Back button (audit B8k), reports it through LibraryOpenChanged, and this
+    dialog then reads "Choose an avatar" and hides its Cancel and Apply, which belong to the editor.
 *@
 
 @using Agency.Huddle.App.Avatars
@@ -21,7 +25,7 @@
 
 <MudDialog Class="avatar-editor-dialog">
     <TitleContent>
-        <MudText Typo="Typo.h6">Avatar</MudText>
+        <MudText Typo="Typo.h6">@this.DialogTitle</MudText>
     </TitleContent>
     <DialogContent>
         @if (this.Deferred)
@@ -30,11 +34,14 @@
         }
         <AvatarEditor Name="@this.Name" Value="this.Current" ValueChanged="this.OnValueChanged" SaveMode="AvatarSaveMode.Buffered"
                       PendingImage="this.PendingImage" PendingImageExtension="@this.PendingImageExtension"
-                      PendingImageChanged="this.OnPendingImageChanged" />
+                      PendingImageChanged="this.OnPendingImageChanged" LibraryOpenChanged="this.OnLibraryOpenChanged" />
     </DialogContent>
     <DialogActions>
-        <MudButton Variant="Variant.Text" Size="Size.Small" OnClick="this.Cancel">Cancel</MudButton>
-        <MudButton Variant="Variant.Filled" Size="Size.Small" Color="Color.Primary" OnClick="this.Commit">@(this.Deferred ? "Apply" : "Save")</MudButton>
+        @if (!this.libraryOpen)
+        {
+            <MudButton Variant="Variant.Text" Size="Size.Small" OnClick="this.Cancel">Cancel</MudButton>
+            <MudButton Variant="Variant.Filled" Size="Size.Small" Color="Color.Primary" OnClick="this.Commit">@(this.Deferred ? "Apply" : "Save")</MudButton>
+        }
     </DialogActions>
 </MudDialog>
 
@@ -72,6 +79,29 @@
     private byte[]? pendingBytes;
     private string? pendingExtension;
     private bool pendingTouched;
+    private bool libraryOpen;
+
+    /// <summary>The title: the Teammate's avatar by name, or "Choose an avatar" while the library replaces the editor's content. A Create card with no Name typed yet has just "Avatar".</summary>
+    private string DialogTitle
+    {
+        get
+        {
+            if (this.libraryOpen)
+            {
+                return "Choose an avatar";
+            }
+
+            return string.IsNullOrWhiteSpace(this.Name) ? "Avatar" : $"{this.Name}'s avatar";
+        }
+    }
+
+    /// <summary>Follows the editor into and out of the in-place library: retitles the dialog and shows or hides its buttons. The dialog owns its title bar, so it is asked to repaint.</summary>
+    /// <param name="open">Whether the library is now showing.</param>
+    private void OnLibraryOpenChanged(bool open)
+    {
+        this.libraryOpen = open;
+        this.Dialog?.StateHasChanged();
+    }
 
     /// <summary>Keeps the editor's latest avatar.</summary>
     /// <param name="value">The avatar after the change.</param>

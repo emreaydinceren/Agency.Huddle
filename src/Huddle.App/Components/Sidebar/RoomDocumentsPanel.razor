@@ -28,19 +28,20 @@ else
 {
     foreach (DocumentRow row in this.rows)
     {
-        <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="1" Class="sidebar-row documents-row" @key="row.Mention.Key">
+        <div class="sidebar-row documents-row" @key="row.Mention.Key">
             @if (row.Reference is { Exists: true } reference)
             {
                 string messageId = row.Mention.LatestMessageId;
-                <MudLink Typo="Typo.body2" Href="@LibraryLinkQuery.BuildPageUri(reference.RootId, reference.RelativePath)" title="@row.Mention.Key">@row.Mention.Label</MudLink>
+                <MudLink Typo="Typo.body2" Color="Color.Inherit" Underline="Underline.None" Class="sidebar-row-text"
+                         Href="@LibraryLinkQuery.BuildPageUri(reference.RootId, reference.RelativePath)" title="@row.Mention.Key">@row.Mention.Label</MudLink>
                 <MudIconButton Icon="@Icons.Material.Filled.ArrowUpward" Size="Size.Small" aria-label="Show where it was mentioned"
                                OnClick="@(() => this.Jump(messageId))" />
             }
             else
             {
-                <MudText Typo="Typo.body2" Class="mud-text-secondary" title="This file is no longer in the Library.">@row.Mention.Label</MudText>
+                <span class="sidebar-row-text sidebar-row-quiet mud-text-secondary" title="This file is no longer in the Library.">@row.Mention.Label</span>
             }
-        </MudStack>
+        </div>
     }
 }
 

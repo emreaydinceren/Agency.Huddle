@@ -14,16 +14,16 @@
 {
     @foreach (LinkedRow row in this.rows)
     {
-        <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="1" Class="sidebar-row linked-row">
+        <div class="sidebar-row linked-row">
             @if (row.Href is not null)
             {
-                <MudLink Typo="Typo.body2" Href="@row.Href">@row.Label</MudLink>
+                <MudLink Typo="Typo.body2" Color="Color.Inherit" Underline="Underline.None" Class="sidebar-row-text" Href="@row.Href" title="@row.Label">@row.Label</MudLink>
             }
             else
             {
-                <MudText Typo="Typo.body2" Class="mud-text-secondary">@row.Label (not found)</MudText>
+                <span class="sidebar-row-text sidebar-row-quiet mud-text-secondary" title="@($"{row.Label} (not found)")">@row.Label (not found)</span>
             }
-        </MudStack>
+        </div>
     }
 }
 else if (this.unavailable)

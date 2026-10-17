@@ -81,8 +81,8 @@ public sealed class RoomLayoutSourceTests
     }
 
     /// <summary>
-    /// A Question card's option buttons are at least 44 pixels tall (Questions spec §6.7, so the card
-    /// works at phone width) and keep the case the Agent wrote. The rule is global because the buttons
+    /// A Question card's option buttons are one-line 32px rows (audit C8, the height of the Send and
+    /// Dismiss buttons beside them) and keep the case the Agent wrote. The rule is global because the buttons
     /// are <c>MudButton</c>s, which Blazor's CSS isolation never stamps its attribute onto.
     /// </summary>
     [Fact]
@@ -90,7 +90,7 @@ public sealed class RoomLayoutSourceTests
     {
         string body = RuleBody(ReadAppCss(), ".question-card-option");
 
-        Assert.Contains("min-height: 44px;", body, StringComparison.Ordinal); // contains-ok: stylesheet source text, not markup
+        Assert.Contains("min-height: 32px;", body, StringComparison.Ordinal); // contains-ok: stylesheet source text, not markup
         Assert.Contains("text-transform: none;", body, StringComparison.Ordinal); // contains-ok: stylesheet source text, not markup
     }
 

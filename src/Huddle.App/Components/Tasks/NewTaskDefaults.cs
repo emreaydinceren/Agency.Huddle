@@ -9,4 +9,16 @@ namespace Agency.Huddle.App.Components.Tasks;
 /// </summary>
 /// <param name="Team">The Team to default to, or <see langword="null"/> when the filter names none or more than one.</param>
 /// <param name="Project">The Project to default to, or <see langword="null"/> when the filter names none or more than one.</param>
-public sealed record NewTaskDefaults(string? Team, string? Project);
+public sealed record NewTaskDefaults(string? Team, string? Project)
+{
+    /// <summary>The defaults a "New task" in <paramref name="view"/> starts with: its filter's Team when it names exactly one, and its Project likewise.</summary>
+    /// <param name="view">The effective View.</param>
+    internal static NewTaskDefaults For(Agency.Huddle.App.Tasks.Views.TaskView view)
+    {
+        ArgumentNullException.ThrowIfNull(view);
+
+        string? team = view.Filter.Teams.Count == 1 ? view.Filter.Teams[0] : null;
+        string? project = view.Filter.Projects.Count == 1 ? view.Filter.Projects[0].Project : null;
+        return new NewTaskDefaults(team, project);
+    }
+}

@@ -67,7 +67,8 @@ public sealed class TasksPageTests
         Assert.EndsWith("all", NormalizeWhitespace(header.QuerySelector(".tasks-count-all")?.TextContent ?? string.Empty), StringComparison.Ordinal);
         Assert.StartsWith("Group by:", NormalizeWhitespace(header.QuerySelector(".task-toolbar-group")?.TextContent ?? string.Empty), StringComparison.Ordinal);
         Assert.Equal(["List", "Board"], header.QuerySelectorAll(".task-toolbar-kind .mud-toggle-item").Select(item => NormalizeWhitespace(item.TextContent)));
-        Assert.NotNull(header.QuerySelector(".btn-action-tight"));
+        Assert.Null(header.QuerySelector(".btn-action-tight")); // "New task" is the page header's create action now (audit B1)
+        Assert.Equal("New task", NormalizeWhitespace(document.QuerySelector(".page-header .page-header-create")?.TextContent ?? string.Empty));
         Assert.Empty(document.QuerySelectorAll(".task-toolbar .task-toolbar-group-sort, .task-toolbar .task-toolbar-grouping"));
     }
 

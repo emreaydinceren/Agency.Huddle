@@ -59,6 +59,13 @@ button:focus-visible {
 /* ---- Global MudBlazor overrides --------------------------------------------------------------
    Rules that restyle a MudBlazor component for the whole app live here, not beside a feature. */
 
+/* A destructive menu item comes last, after a divider, in Error ink (design-system "Menus"). The error colour is mixed 70% toward
+   body text so the ink keeps 4.5:1 on Ground in Light, as the overdue date does. */
+.menu-item-destructive.mud-menu-item,
+.menu-item-destructive.mud-menu-item .mud-icon-root {
+    color: color-mix(in srgb, var(--mud-palette-error) 70%, var(--mud-palette-text-primary));
+}
+
 /* A button label never wraps. */
 .mud-button-root {
     white-space: nowrap;
@@ -82,6 +89,14 @@ button:focus-visible {
    (raw Primary stays a fill, a bar or a border). The active sidebar row takes the Selected treatment - Primary 14%
    over Surface, 20% when hovered - not the generic hover shade MudBlazor paints, so the selected and the hovered
    row no longer look alike. */
+/* The Selected shape on sidebar rows (audit A5): every row in the drawer is inset 4px, selected or not, so labels never
+   shift when a row is selected, and rounds to 0.75x the base radius. The fill below is what marks the selected one. */
+.mud-drawer .mud-navmenu .mud-nav-link {
+    width: calc(100% - 8px);
+    margin-inline: 4px;
+    border-radius: calc(var(--mud-default-borderradius) * 0.75);
+}
+
 .mud-drawer .mud-navmenu .mud-nav-link.active:not(.mud-nav-link-disabled) {
     color: color-mix(in srgb, var(--mud-palette-primary) 70%, var(--mud-palette-text-primary));
     background-color: color-mix(in srgb, var(--mud-palette-primary) 14%, var(--mud-palette-surface));
@@ -99,7 +114,7 @@ button:focus-visible {
 }
 
 /* The active tab-rail label and the words on text and outlined accent buttons: MudBlazor colours them with raw
-   Primary, so they take the accent-text mix. The outlined button's border keeps the raw accent. */
+   Primary, so they take the accent-text mix. An outlined button's border is the Chrome line (rule below), never the accent. */
 .mud-tab.mud-tab-active,
 .mud-button-text.mud-button-text-primary,
 .mud-button-outlined.mud-button-outlined-primary {
@@ -189,6 +204,106 @@ button:focus-visible {
     border-inline-start: 3px solid var(--mud-palette-success);
 }
 
+/* An outlined button's border is the Chrome line, not Ink (the heaviest line in the app) and not the accent (audit B8c).
+   Its words are Ink, or the accent ink above for Color.Primary. Three classes outrank MudBlazor's per-colour border. */
+.mud-button-root.mud-button.mud-button-outlined {
+    border-color: var(--mud-palette-lines-default);
+}
+
+.mud-button-root.mud-button.mud-button-outlined.mud-button-outlined-default {
+    color: var(--mud-palette-text-primary);
+}
+
+/* A disabled button uses the Theme's own colours, Faint ink on Wash, never MudBlazor's rgba(0,0,0,.26) on .12, which
+   ignores the Theme and all but vanishes on a dark one (audit B10c). MudBlazor's own disabled rules are !important,
+   so these are too; they carry three classes so only a disabled button is touched. */
+.mud-button-root.mud-button:disabled {
+    color: var(--mud-palette-text-disabled) !important;
+}
+
+.mud-button-root.mud-button.mud-button-filled:disabled {
+    background-color: var(--ink-wash) !important;
+}
+
+.mud-button-root.mud-button.mud-button-outlined:disabled {
+    border-color: var(--ink-rule);
+}
+
+/* Every outlined input draws the Field line, long-text fields included (audit A1). Hover, focus, error and disabled
+   keep MudBlazor's own colours: those selectors are more specific than this one. */
+.mud-input.mud-input-outlined .mud-input-outlined-border {
+    border-color: var(--ink-field);
+}
+
+/* A field's label is Quiet ink at 400, at rest and floated, in every dialog (audit B10d). MudBlazor draws it at the
+   subtitle1 weight, which is 600 in this scale. */
+.mud-input-control > .mud-input-control-input-container > .mud-input-label-inputcontrol {
+    font-weight: var(--mud-typography-body1-weight);
+}
+
+/* Table row lines are the Edge rung. MudBlazor's TableLines default (#e0e0e0) belongs to no Theme's palette. */
+.mud-table .mud-table-cell {
+    border-bottom-color: var(--ink-edge);
+}
+
+/* The tab rail (Team page): it ends in a Chrome line, and its content starts 24px below that line (audit B2). */
+.mud-tabs:not(.mud-tabs-vertical) > .mud-tabs-tabbar {
+    border-bottom: 1px solid var(--mud-palette-lines-default);
+}
+
+.mud-tabs:not(.mud-tabs-vertical) > .mud-tabs-panels {
+    padding-top: 24px;
+}
+
+/* Dialog chrome, once (audit B10a-b). The close (x) is a 28px box with an 18px icon in the action colour, level with
+   the title's first line, not MudBlazor's 45px Medium icon button. The title, content and actions insets are 16/24,
+   8/24 and 12/24/16, so the content and the actions share one left edge. */
+.mud-dialog .mud-dialog-title {
+    padding: 16px 24px 8px;
+}
+
+.mud-dialog .mud-dialog-content {
+    padding: 8px 24px;
+}
+
+.mud-dialog .mud-dialog-actions {
+    padding: 12px 24px 16px;
+}
+
+.mud-dialog .mud-dialog-title .mud-button-close {
+    top: 12px;
+    right: 16px;
+    width: 28px;
+    height: 28px;
+    padding: 0;
+    color: var(--mud-palette-action-default);
+}
+
+.mud-dialog .mud-dialog-title .mud-button-close .mud-icon-root {
+    font-size: var(--icon-size-row);
+}
+
+/* Links and the selected list row are the accent ink (the accent pulled 30% toward the body text), never raw
+   Primary, which MudBlazor paints both in and which reads under 4.5:1 on a Theme's surface (audit A5). The list row
+   also takes the Selected shape below. MudBlazor's .mud-primary-text is !important, so this is too. */
+.mud-link.mud-primary-text {
+    color: color-mix(in srgb, var(--mud-palette-primary) 70%, var(--mud-palette-text-primary)) !important;
+}
+
+.mud-list-item.mud-selected-item {
+    width: calc(100% - 8px);
+    margin-inline: 4px;
+    padding-inline: 12px;
+    border-radius: calc(var(--mud-default-borderradius) * 0.75);
+    background-color: color-mix(in srgb, var(--mud-palette-primary) 14%, var(--mud-palette-surface));
+    color: color-mix(in srgb, var(--mud-palette-primary) 70%, var(--mud-palette-text-primary)) !important;
+    font-weight: 500;
+}
+
+.mud-list-item.mud-selected-item:hover,
+.mud-list-item.mud-selected-item:focus-visible {
+    background-color: color-mix(in srgb, var(--mud-palette-primary) 20%, var(--mud-palette-surface));
+}
 /* ---- The type scale, in rendered pixels (ADR-0056) ---------------------------------------------
    The Theme (ThemeDefaults) sets the role sizes: h5 20, h6 16, subtitle 14, body1 14, body2 13, caption 12,
    overline 11. Nothing renders under 11px, and there are three weights: 400 text, 500 controls, 600 emphasis and
@@ -266,7 +381,7 @@ b {
 .composer-picker,
 .floating-panel {
     box-shadow: var(--mud-elevation-4);
-    border: 1px solid var(--mud-palette-divider);
+    border: 1px solid var(--ink-edge);
     border-radius: var(--mud-default-borderradius);
     z-index: var(--mud-zindex-popover);
 }
@@ -314,7 +429,7 @@ a.team-ref,
 .budget-prompt,
 .composer,
 .room-strip {
-    border-top: 1px solid var(--mud-palette-divider);
+    border-top: 1px solid var(--ink-rule);
 }
 
 /* A heading over a group of fields or tiles on a page: subtitle2 at 600 in the primary text colour, so it is never
@@ -327,9 +442,58 @@ a.team-ref,
     font-weight: 600;
     color: var(--mud-palette-text-primary);
     padding-bottom: 4px;
-    border-bottom: 1px solid var(--mud-palette-divider-light);
+    border-bottom: 1px solid var(--ink-rule);
 }
 
+/* A group label (audit A4): the heading of a group of fields inside a drawer or dialog. 12px at 600 in Quiet ink,
+   sentence case, 8px above its fields. The page-level heading over a group is .group-heading above, not this. */
+.group-label {
+    margin: 0 0 8px 0;
+    font-size: var(--mud-typography-caption-size);
+    font-weight: 600;
+    line-height: var(--mud-typography-caption-lineheight);
+    color: var(--mud-palette-text-secondary);
+    text-transform: none;
+}
+
+/* The Selected shape (audit A5): one look for the chosen row of a list, tree or menu, whatever component draws it.
+   The Accent tint at 14% (20% hovered) with the accent ink at 500, inset 4px from its container and rounded to
+   three quarters of the base radius. A selected MudListItem and the active sidebar row already wear it. */
+.selected-shape {
+    margin-inline: 4px;
+    border-radius: calc(var(--mud-default-borderradius) * 0.75);
+    background-color: color-mix(in srgb, var(--mud-palette-primary) 14%, var(--mud-palette-surface));
+    color: color-mix(in srgb, var(--mud-palette-primary) 70%, var(--mud-palette-text-primary));
+    font-weight: 500;
+}
+
+.selected-shape:hover,
+.selected-shape:focus-visible {
+    background-color: color-mix(in srgb, var(--mud-palette-primary) 20%, var(--mud-palette-surface));
+}
+
+/* A field in a toolbar (audit A7): a 28px box with 13px text, on a MudTextField or MudSelect. SearchField wears it.
+   The doubled MudBlazor classes outrank its Medium and Dense outlined padding. */
+.mud-input-control.toolbar-compact {
+    height: 28px;
+}
+
+.mud-input-control.toolbar-compact .mud-input.mud-input-outlined {
+    height: 28px;
+    font-size: var(--mud-typography-body2-size);
+}
+
+.mud-input-control.toolbar-compact .mud-input.mud-input-outlined .mud-input-root.mud-input-root-outlined {
+    height: 28px;
+    padding: 0 8px;
+    font-size: var(--mud-typography-body2-size);
+}
+
+/* A 28px box cannot carry a floating label: it would be drawn over the value. A compact field names itself with an aria-label,
+   a placeholder or an adornment, and this rule keeps a stray Label from colliding with the text. */
+.mud-input-control.toolbar-compact .mud-input-label {
+    display: none;
+}
 /* A preformatted block that scrolls: a Task's process step. */
 .process-step-preview {
     max-height: 16rem;
@@ -337,18 +501,51 @@ a.team-ref,
     font-family: var(--font-mono);
     font-size: var(--mud-typography-body2-size);
     white-space: pre-wrap;
-    background: var(--mud-palette-background-gray);
+    background: var(--ink-wash);
+    border: 1px solid var(--ink-edge);
     border-radius: calc(var(--mud-default-borderradius) * 0.75);
 }
 
 /* ---- New chat and the agent status dots ------------------------------------------------------ */
 
+/* The picker floats under the link or the Team row like Invite's panel (audit B10 "New chat"): the .floating-panel Edge and
+   elevation, on the Surface, over the rows below without moving them. Rows are 32px at 13px. */
+.new-chat {
+    position: relative;
+}
+
 .new-chat-panel {
-    padding: 8px 16px 12px 32px;
+    position: absolute;
+    inset-inline: 8px;
+    top: 100%;
+    z-index: var(--mud-zindex-popover);
+    padding: 8px;
+    background: var(--mud-palette-surface);
+    font-size: var(--mud-typography-body2-size);
+}
+
+.new-chat-heading {
+    padding: 0 4px 4px;
 }
 
 .new-chat-agents {
-    margin: 0 0 12px 0;
+    max-height: 16rem;
+    margin: 0 0 8px 0;
+    overflow-y: auto;
+}
+
+.new-chat-agent .mud-checkbox {
+    display: flex;
+    align-items: center;
+    min-height: 32px;
+    margin: 0;
+    font-size: var(--mud-typography-body2-size);
+}
+
+.new-chat-actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 8px;
 }
 
 /* ---- Presence badge and status dot (DS-6, C3) ----------------------------------------------------
@@ -525,7 +722,7 @@ a.team-ref,
     position: absolute;
     inset: 0;
     border-radius: 50%;
-    box-shadow: inset 0 0 0 1px var(--mud-palette-divider);
+    box-shadow: inset 0 0 0 1px var(--ink-edge);
     pointer-events: none;
 }
 
@@ -602,12 +799,15 @@ a.team-ref,
     min-height: 0;
 }
 
-/* The Room header (title, members, invite). A solid rule under it separates it from the Transcript,
-   drawn like the TopBar's bottom border. The vertical padding is 4px rather than the 16px of
-   MudBlazor's pa-4, which takes about 35% off the bar's height (about 72px down to about 47px). */
+/* The Room header (audit B1): a PageHeader with a Chrome line, so the title row is the same 32px, 16px below the tab
+   strip, as on every other page. This wrapper supplies the 16px above the row; the Chrome line under the header comes
+   from .page-header.has-chrome, and the Transcript's own padding supplies the space below it. */
 .room-header {
-    padding-block: 4px;
-    border-bottom: 1px solid var(--mud-palette-lines-default);
+    padding-top: 16px;
+}
+
+.room-header .page-header {
+    margin-bottom: 0;
 }
 
 /* The groups of Tabs side by side. Each takes an equal share of the width; min-width: 0 lets a pane
@@ -709,6 +909,20 @@ a.team-ref,
     gap: 4px;
 }
 
+/* The top bar's icon buttons are 32px boxes with 18px icons (audit B3d), level with the search box and the Activity bar's tiles. */
+.top-bar-end .mud-icon-button {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 32px;
+    height: 32px;
+    padding: 0;
+}
+
+.top-bar-end .mud-icon-button .mud-icon-root {
+    font-size: var(--icon-size-row);
+}
+
 .page-breadcrumbs .page-breadcrumbs-list.mud-breadcrumbs {
     padding: 0;
     font-size: var(--mud-typography-body2-size);
@@ -807,14 +1021,16 @@ a.team-ref,
     margin-top: auto;
 }
 
+/* Each button is a 40px tile inside the 48px column, so the pressed one reads as the Selected shape (audit A5). */
 .activity-bar-item.mud-icon-button {
-    width: 48px;
-    height: 48px;
-    border-radius: 0;
+    width: 40px;
+    height: 40px;
+    margin: 4px;
+    border-radius: calc(var(--mud-default-borderradius) * 0.75);
     color: var(--mud-palette-text-secondary);
 }
 
-/* The pressed button wears the active sidebar row's Selected treatment (see the .mud-drawer .mud-navmenu rules
+/* The pressed button wears the active sidebar row's Selected treatment and shape (see the .mud-drawer .mud-navmenu rules
    above): accent text, Primary 14% over Surface, 20% when hovered or focused. */
 .activity-bar-item.activity-bar-item-selected {
     color: color-mix(in srgb, var(--mud-palette-primary) 70%, var(--mud-palette-text-primary));
@@ -826,11 +1042,13 @@ a.team-ref,
     background-color: color-mix(in srgb, var(--mud-palette-primary) 20%, var(--mud-palette-surface));
 }
 
-/* The bottom toolbar's two links are the same 48px icon-only squares as the buttons above them. */
+/* The bottom toolbar's two links are the same 40px icon-only tiles as the buttons above them. */
 .activity-bar .nav-settings .mud-nav-link {
     justify-content: center;
-    width: 48px;
-    min-height: 48px;
+    align-items: center;
+    width: 40px;
+    min-height: 40px;
+    margin: 4px;
     padding: 0;
 }
 
@@ -865,21 +1083,31 @@ a.team-ref,
 }
 
 .right-sidebar .mud-drawer-content {
-    gap: 8px;
+    gap: 0;
     padding: 16px;
     overflow-y: auto;
 }
 
+/* Panels are told apart by an Edge line, not by a gap (B11f). */
+.sidebar-panel + .sidebar-panel {
+    margin-top: 8px;
+    padding-top: 8px;
+    border-top: 1px solid var(--ink-edge);
+}
+
+/* A panel header is 32px: a 13px/600 title in Ink, a 12px count in Quiet ink and the chevron (B11e). */
 .sidebar-panel-header {
     display: flex;
     align-items: center;
     gap: 8px;
     width: 100%;
-    padding: 4px 0;
+    min-height: 32px;
+    padding: 0;
     border: none;
     background: none;
     color: var(--mud-palette-text-primary);
     font: inherit;
+    font-size: var(--mud-typography-body2-size);
     font-weight: 600;
     cursor: pointer;
     text-align: start;
@@ -891,11 +1119,59 @@ a.team-ref,
 
 .sidebar-panel-count {
     color: var(--mud-palette-text-secondary);
+    font-size: var(--mud-typography-caption-size);
     font-weight: 400;
 }
 
 .sidebar-panel-body {
-    padding: 4px 0 8px 24px;
+    padding: 0 0 8px 0;
+}
+
+/* A row is one line: 32px (28px in the Outline), the text in Ink and ellipsised, its full text in the title (B11a-b).
+   Accent ink marks only the hovered or focused row; the current Outline heading wears .selected-shape. */
+.sidebar-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    min-width: 0;
+    min-height: 32px;
+}
+
+.sidebar-row.outline-row {
+    min-height: 28px;
+}
+
+.sidebar-row-text {
+    display: block;
+    flex: 1 1 auto;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    font-size: var(--mud-typography-body2-size);
+    color: var(--mud-palette-text-primary);
+}
+
+.sidebar-row-text.sidebar-row-quiet {
+    color: var(--mud-palette-text-secondary);
+}
+
+.sidebar-row .mud-link.sidebar-row-text:hover,
+.sidebar-row .mud-link.sidebar-row-text:focus-visible,
+.sidebar-row .mud-link.sidebar-row-text.is-current {
+    color: color-mix(in srgb, var(--mud-palette-primary) 70%, var(--mud-palette-text-primary));
+}
+
+/* A Task row: the ID in 12px Quiet ink, a one-line title, then the state's dot (B11c). */
+.room-task-id {
+    flex: 0 0 auto;
+    font-size: var(--mud-typography-caption-size);
+    color: var(--mud-palette-text-secondary);
+}
+
+/* Nothing to show: the sentence alone, so the empty text line takes no room. */
+.right-sidebar .empty-state-text:empty {
+    display: none;
 }
 
 /* ---- Left menu: a top-level MudNavLink vs. a MudNavGroup and everything inside it ------------
@@ -921,11 +1197,14 @@ a.team-ref,
     color: var(--mud-palette-text-secondary);
 }
 
-/* A section header - a group with children (Rooms, Teams, Tasks) - sits 16px below the section above and 4px above
-   its first row (S2). Teammates and Library are destinations, not headers: see .nav-row-link below. */
+/* A section header - a group with children (Rooms, Teams, Tasks) - is 32px high like a row (audit B3b), and sits 16px below the
+   section above and 4px above its first row (S2). Teammates and Library are destinations, not headers: see .nav-row-link below. */
 .mud-nav-group > .mud-nav-link {
     margin-top: 16px;
     margin-bottom: 4px;
+    align-items: center;
+    height: var(--nav-row-height);
+    padding-block: 0;
 }
 
 /* One indent per nesting level, set here and nowhere else (UX-015). Every child row has a leading visual
@@ -1039,8 +1318,16 @@ a.team-ref,
     color: var(--mud-palette-text-secondary);
 }
 
+/* The sidebar's inline Delete? confirm: one 32px line in the rows' indent, Cancel then Delete (audit B10 "Inline confirm"). */
+.room-list-confirm-host {
+    flex: 1 1 auto;
+    min-width: 0;
+}
+
 .room-list-confirm {
-    padding: 0 16px;
+    align-items: center;
+    height: var(--nav-row-height);
+    padding: 0 8px 0 var(--nav-indent-1);
 }
 
 .flex-1-truncate {
@@ -1057,8 +1344,30 @@ a.team-ref,
     display: flex;
     align-items: center;
     gap: 8px;
-    padding: 8px 0;
-    border-bottom: 1px solid var(--mud-palette-divider);
+    min-height: 32px;
+    padding: 0 4px;
+    font-size: var(--mud-typography-body2-size);
+    border-bottom: 1px solid var(--ink-rule);
+}
+
+/* The icon fills the 24px leading slot of a picker row (audit B10h); the name truncates; the date trails in Quiet ink. */
+.archived-chats-icon {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex: 0 0 24px;
+    width: 24px;
+    color: var(--mud-palette-text-secondary);
+}
+
+.archived-chats-icon .mud-icon-root {
+    font-size: var(--icon-size-row);
+}
+
+.archived-chats-date {
+    flex: 0 0 auto;
+    font-size: var(--mud-typography-caption-size);
+    color: var(--mud-palette-text-secondary);
 }
 
 .archived-chats-row:last-child {
@@ -1076,9 +1385,14 @@ a.team-ref,
     position: absolute;
     right: 0;
     top: calc(100% + 0.375rem);
-    min-width: 14rem;
+    min-width: 280px;
     padding: 16px;
     background: var(--mud-palette-surface);
+}
+
+/* The panel's title (audit C3a): "Invite to {Room}" in subtitle2, above the search and the rows. */
+.invite-title {
+    font-weight: 600;
 }
 
 .invite-agents {
@@ -1096,8 +1410,10 @@ a.team-ref,
     align-items: center;
     gap: 8px;
     width: 100%;
+    min-height: 32px;
     padding: 4px 8px;
     font: inherit;
+    font-size: var(--mud-typography-body2-size);
     text-align: left;
     background: none;
     border: none;
@@ -1147,9 +1463,9 @@ a.team-ref,
 }
 
 /* ---- The Human's own Message: a right-aligned bubble ----------------------------------------
-   No avatar gutter, so the grid above is swapped for a flex row pushed to the end. The bubble is
-   one step off the ground (background-gray) rather than an accent fill, so the Human's text reads
-   as set apart without shouting over the replies it asked for. */
+   No avatar gutter, so the grid above is swapped for a flex row pushed to the end. The bubble
+   (.message-bubble below) is an Accent tint at 14% with a 28% Accent border, so the Human's text
+   reads as set apart without shouting over the replies it asked for. */
 .message-row.human {
     display: flex;
     flex-direction: column;
@@ -1245,7 +1561,7 @@ a.team-ref,
 .day-separator::after {
     content: "";
     flex: 1 1 auto;
-    border-top: 1px solid var(--mud-palette-divider);
+    border-top: 1px solid var(--ink-rule);
 }
 
 .system-row {
@@ -1311,7 +1627,7 @@ a.team-ref,
 .message-body blockquote {
     margin: 12px 0 4px;
     padding-left: 12px;
-    border-left: 3px solid var(--mud-palette-divider);
+    border-left: 3px solid var(--ink-edge);
 }
 
 .message-body blockquote p {
@@ -1340,7 +1656,7 @@ a.team-ref,
 .message-body p.message-heading {
     margin: 16px 0 4px 0;
     padding-top: 8px;
-    border-top: 1px solid var(--mud-palette-divider-light);
+    border-top: 1px solid var(--ink-rule);
     font-size: var(--mud-typography-subtitle1-size);
 }
 
@@ -1444,7 +1760,7 @@ a.team-ref,
 .edit-preview {
     margin: 4px 0 8px;
     padding: 8px;
-    border: 1px solid var(--mud-palette-lines-default);
+    border: 1px solid var(--ink-edge);
     border-radius: var(--mud-default-borderradius);
     color: var(--mud-palette-text-primary);
     font-size: var(--mud-typography-body2-size);
@@ -1462,7 +1778,7 @@ a.team-ref,
 .edit-preview-side {
     margin-top: 4px;
     padding-left: 8px;
-    border-left: 3px solid var(--mud-palette-divider);
+    border-left: 3px solid var(--ink-edge);
 }
 
 .edit-preview-side.removed {
@@ -1573,7 +1889,7 @@ a.team-ref,
     padding: 12px 48px 12px 16px;
     color: var(--mud-palette-text-primary);
     background: var(--mud-palette-surface);
-    border: 1px solid var(--mud-palette-lines-inputs);
+    border: 1px solid var(--ink-field);
 
     /* One and a half times the theme's corner: the message box is the largest control on the
        page, so it reads as a raised card on the ground rather than a form field. */
@@ -1721,7 +2037,7 @@ a.team-ref,
    warning read. */
 .reply-note,
 .continue-note {
-    border-top: 1px solid var(--mud-palette-divider);
+    border-top: 1px solid var(--ink-rule);
     padding: 12px 16px;
 }
 
@@ -1758,7 +2074,7 @@ a.team-ref,
     padding: 0;
     list-style: none;
     background: var(--mud-palette-surface);
-    border: 1px solid var(--mud-palette-divider);
+    border: 1px solid var(--ink-edge);
     border-radius: var(--mud-default-borderradius);
 }
 
@@ -1775,7 +2091,7 @@ a.team-ref,
     align-items: flex-start;
     gap: 16px;
     width: 100%;
-    padding: 16px;
+    padding: 12px;
     font: inherit;
     text-align: left;
     color: inherit;
@@ -1799,9 +2115,9 @@ a.team-ref,
     margin-top: 4px;
 }
 
-/* "Working on SUPP-0002": 12px secondary, under the avatar's text column (16 padding + 40 avatar + 16 gap). */
+/* "Working on SUPP-0002": 12px secondary, under the avatar's text column (12 padding + 40 avatar + 16 gap). */
 .teammate-tile-context {
-    padding: 0 16px 16px calc(16px + 40px + 16px);
+    padding: 0 12px 12px calc(12px + 40px + 16px);
     margin-top: -8px;
     text-align: left;
     font-size: var(--mud-typography-caption-size);
@@ -1843,22 +2159,38 @@ a.team-ref,
     gap: 4px;
 }
 
-.avatar-library-skin,
 .avatar-library-clear,
 .avatar-library-more {
     font: inherit;
     font-size: var(--mud-typography-body2-size);
     color: var(--mud-palette-text-primary);
-    background: var(--mud-palette-background-gray);
-    border: 1px solid var(--mud-palette-divider);
+    background: var(--ink-wash);
+    border: 1px solid var(--ink-edge);
     border-radius: 999px;
     padding: 4px 12px;
     cursor: pointer;
 }
 
+/* A skin tone is the Filter chip (audit A6, B8j): 28px, a pill, a dashed Field line and no fill while unset; the Accent
+   border, the Accent tint at 14% and the Accent ink at 500 once pressed, not weight 600. */
+.avatar-library-skin {
+    box-sizing: border-box;
+    height: 28px;
+    padding: 0 12px;
+    font: inherit;
+    font-size: var(--mud-typography-body2-size);
+    font-weight: 400;
+    color: var(--mud-palette-text-primary);
+    background-color: transparent;
+    border: 1px dashed var(--ink-field);
+    border-radius: 999px;
+    cursor: pointer;
+}
+
 .avatar-library-skin[aria-pressed="true"] {
-    font-weight: 600;
-    border: 2px solid var(--mud-palette-primary);
+    font-weight: 500;
+    border: 1px solid var(--mud-palette-primary);
+    background-color: color-mix(in srgb, var(--mud-palette-primary) 14%, var(--mud-palette-surface));
     color: color-mix(in srgb, var(--mud-palette-primary) 70%, var(--mud-palette-text-primary));
 }
 
@@ -1874,7 +2206,7 @@ a.team-ref,
     min-height: 0;
     overflow: auto;
     padding: 8px 4px;
-    border-top: 1px solid var(--mud-palette-divider);
+    border-top: 1px solid var(--ink-rule);
 }
 
 .avatar-library-thumbs {
@@ -1891,7 +2223,7 @@ a.team-ref,
     border: 0;
     border-radius: 50%;
     overflow: hidden;
-    background: var(--mud-palette-background-gray);
+    background: var(--ink-wash);
     cursor: pointer;
 }
 
@@ -1956,13 +2288,36 @@ a.team-ref,
     }
 }
 
-.teammate-card-name {
-    margin: 0;
-    font-size: var(--mud-typography-subtitle1-size);
+/* The card's sections are a Group label over their content, not boxes (audit B8b): spacing alone separates them. */
+.teammate-card-section {
+    margin-bottom: 16px;
+}
 
-    /* A Name may now contain spaces, so a long one wraps inside the card rather
-       than pushing the avatar or the close button out of it. */
-    overflow-wrap: anywhere;
+.teammate-card-section:last-child {
+    margin-bottom: 0;
+}
+
+/* While the Model, Effort or Work mode list is being read, the field refuses to open but must not look switched off: it keeps
+   its normal ink and border (the disabled colours are put back) and a thin progress bar sits under it (audit E5). */
+.mud-input-control.teammate-card-probing .mud-input.mud-disabled {
+    color: var(--mud-palette-text-primary);
+}
+
+.mud-input-control.teammate-card-probing .mud-input.mud-disabled > .mud-input-adornment {
+    color: var(--mud-palette-text-secondary);
+}
+
+.mud-input-control.teammate-card-probing .mud-input.mud-input-outlined.mud-disabled .mud-input-outlined-border {
+    border-color: var(--mud-palette-lines-default);
+}
+
+.mud-input-control.teammate-card-probing > .mud-input-control-input-container > .mud-input-label-inputcontrol.mud-disabled,
+.mud-input-control.teammate-card-probing .mud-input-helper-text.mud-disabled {
+    color: var(--mud-palette-text-secondary);
+}
+
+.teammate-card-probe {
+    margin-top: 0;
 }
 
 /* The Teammate card's avatar is a button that opens the avatar editor, in every mode. It wraps the
@@ -1985,7 +2340,7 @@ a.team-ref,
     right: -2px;
     bottom: -2px;
     padding: 2px;
-    border: 1px solid var(--mud-palette-divider);
+    border: 1px solid var(--ink-edge);
     border-radius: 50%;
     background: var(--mud-palette-surface);
     color: var(--mud-palette-text-primary);
@@ -2017,20 +2372,71 @@ a.team-ref,
     }
 }
 
-/* The avatar editor's Background palette. MudBlazor gives the static picker's content area a fixed 250 px and
-   positions the swatches inside it, which left a blank band under a palette that needs about 160 px. Putting
-   the swatch view back in flow lets that area be as tall as the swatches; the picker's own shadow goes, since
-   the dialog around it already has one. */
-.avatar-editor-background .mud-picker-color-picker {
-    height: auto;
+/* The avatar editor (audit B8h, B8i). The editor reserves the height of its tallest mode (a label field over the
+   Background swatches) so the dialog does not change height when the Human switches between Initials, A short label
+   and An image: 72px preview, the radio row, the field, the group label, three rows of 32px swatches and the
+   "Use the theme colour" button. */
+.avatar-editor {
+    min-height: 23rem;
 }
 
-.avatar-editor-background .mud-picker-color-view {
-    position: static;
+/* The Background palette is a radio group of 32px circles drawn with the avatar recipe for the current mode: the
+   colour at 20% over Surface in a Light Theme and 35% in a Dark one (the same two rules as .avatar-monogram), so a
+   swatch previews the avatar it makes. The input is visually hidden but still the control: Tab reaches the group and
+   the arrow keys move within it. */
+.avatar-swatches {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
 }
 
-.avatar-editor-background .mud-picker-static .mud-paper {
-    box-shadow: none;
+.avatar-swatch {
+    position: relative;
+    display: inline-flex;
+    cursor: pointer;
+}
+
+.avatar-swatch-dot {
+    box-sizing: border-box;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    background-color: color-mix(in srgb, var(--mud-palette-primary) 20%, var(--mud-palette-surface));
+    box-shadow: inset 0 0 0 1px var(--ink-edge);
+    color: color-mix(in srgb, var(--mud-palette-primary) 25%, var(--mud-palette-text-primary));
+}
+
+:root:has(.theme-mode-dark) .avatar-swatch-dot {
+    background-color: color-mix(in srgb, var(--mud-palette-primary) 35%, var(--mud-palette-surface));
+    color: color-mix(in srgb, var(--mud-palette-primary) 25%, var(--mud-palette-white));
+}
+
+.avatar-swatch:hover .avatar-swatch-dot {
+    box-shadow: inset 0 0 0 2px var(--ink-field);
+}
+
+/* Chosen: a ring and a check, so the choice is not colour alone. */
+.avatar-swatch-input:checked + .avatar-swatch-dot {
+    box-shadow: 0 0 0 2px var(--mud-palette-surface), 0 0 0 4px var(--mud-palette-primary);
+}
+
+.avatar-swatch-input:checked + .avatar-swatch-dot::after {
+    content: "\2713";
+    font-size: var(--mud-typography-body2-size);
+    font-weight: 600;
+}
+
+.avatar-swatch-input:focus-visible + .avatar-swatch-dot {
+    outline: 2px solid var(--mud-palette-text-primary);
+    outline-offset: 3px;
+}
+
+/* The library in place of the editor, inside the avatar dialog (audit B8k): the Back button over the picker. */
+.avatar-library-inline .avatar-library-body {
+    max-height: calc(100vh - 16rem);
 }
 
 /* The Persona is Markdown the user wrote, so it is shown as written. It is NOT
@@ -2041,11 +2447,15 @@ a.team-ref,
     padding: 12px;
     max-height: 14rem;
     overflow: auto;
-    font: inherit;
+
+    /* YAML and Markdown source is code, so it is monospace at 13px (audit B8g, design-system "Typography"). */
+    font-family: var(--font-mono);
+    font-size: var(--mud-typography-body2-size);
+    line-height: 1.5;
     white-space: pre-wrap;
     overflow-wrap: anywhere;
-    background: var(--mud-palette-background-gray);
-    border: 1px solid var(--mud-palette-divider-light);
+    background: var(--ink-wash);
+    border: 1px solid var(--ink-edge);
     border-radius: calc(var(--mud-default-borderradius) * 0.75);
 }
 
@@ -2108,30 +2518,66 @@ a.team-ref,
 
 /* ---- Settings: page shell and the Prompts panel's field layout (tab rail and status badges are MudBlazor) -- */
 
-/* The Appearance tab's theme picker. A bordered, scrollable box rather than a bare list, so the
-   nineteen themes read as one control the way the select they replaced did, and so a long catalog
-   cannot push the credit paragraph and the file path below it off the page. */
+/* The Appearance tab's theme picker (audit B9b-d). The list grows to its content (no inner scrollbar, no sticky band),
+   so the page scrolls and the Human sees every Theme. The selected row wears the global Selected shape. A row carries
+   a swatch of the Theme's Ground, Ink and Accent. */
 .theme-picker {
-    border: 1px solid var(--mud-palette-divider-light);
-    border-radius: var(--mud-default-borderradius);
-    max-height: 22rem;
-    overflow-y: auto;
     padding: 0;
 }
 
-.theme-picker-heading {
-    font-size: var(--mud-typography-overline-size);
-    font-weight: 600;
-    text-transform: uppercase;
-    letter-spacing: 0.04em;
+.theme-picker .mud-list-item {
+    min-height: 32px;
+    padding-block: 0;
+    font-size: var(--mud-typography-body2-size);
+}
+
+.theme-picker .mud-list-item-text,
+.theme-picker .mud-list-item-text .mud-typography {
+    margin: 0;
+    font-size: inherit;
+}
+
+/* "High contrast" is the one heading left: a Group label, not a band. */
+.theme-picker-heading.group-label {
+    padding: 8px 12px 0;
+    margin: 0 0 4px 0;
+    line-height: var(--mud-typography-caption-lineheight);
+    text-transform: none;
+    background: none;
+}
+
+.theme-swatch {
+    display: inline-flex;
+    flex: none;
+    margin-inline-end: 12px;
+    border: 1px solid var(--ink-edge);
+    border-radius: calc(var(--mud-default-borderradius) * 0.75);
+    overflow: hidden;
+}
+
+.theme-swatch-chip {
+    display: block;
+    width: 14px;
+    height: 16px;
+}
+
+.theme-row {
+    display: flex;
+    align-items: center;
+    width: 100%;
+}
+
+.theme-credit {
+    margin: 0;
+    max-width: 75ch;
+    font-size: var(--mud-typography-caption-size);
     color: var(--mud-palette-text-secondary);
-    background-color: var(--mud-palette-background-gray);
-    border-bottom: 1px solid var(--mud-palette-divider-light);
-    line-height: 2rem;
-    min-height: 2rem;
-    position: sticky;
-    top: 0;
-    z-index: 1;
+}
+
+.theme-licences > summary {
+    cursor: pointer;
+    font-size: var(--mud-typography-body2-size);
+    color: var(--mud-palette-text-primary);
 }
 
 .prompts-field {
@@ -2139,7 +2585,7 @@ a.team-ref,
     flex-direction: column;
     gap: 4px;
     padding: 16px 0;
-    border-bottom: 1px solid var(--mud-palette-divider-light);
+    border-bottom: 1px solid var(--ink-rule);
 }
 
 .prompts-field-header {
@@ -2170,7 +2616,8 @@ a.team-ref,
     font-family: var(--font-mono);
     font-size: var(--mud-typography-caption-size);
     color: var(--mud-palette-text-primary);
-    background: var(--mud-palette-background-gray);
+    background: var(--ink-wash);
+    border: 1px solid var(--ink-edge);
     border-radius: calc(var(--mud-default-borderradius) * 0.75);
 }
 
@@ -2188,6 +2635,7 @@ a.team-ref,
 
 /* The intro is body text (14px); the path line is meta (12px) with the path in the mono face. */
 .settings-intro {
+    max-width: 75ch;
     font-size: var(--mud-typography-body1-size);
 }
 
@@ -2222,7 +2670,11 @@ a.team-ref,
 }
 
 .settings-nav .mud-nav-link {
-    border-radius: var(--mud-default-borderradius);
+    min-height: var(--nav-row-height);
+    width: calc(100% - 8px);
+    margin-inline: 4px;
+    padding-block: 0;
+    border-radius: calc(var(--mud-default-borderradius) * 0.75);
     font-size: var(--mud-typography-body2-size);
     color: var(--mud-palette-text-secondary);
 }
@@ -2247,6 +2699,70 @@ a.team-ref,
 
 .settings-nav .settings-nav-item-active .mud-nav-link .mud-nav-link-icon.mud-nav-link-icon-default {
     color: color-mix(in srgb, var(--mud-palette-primary) 70%, var(--mud-palette-text-primary));
+}
+
+/* The Library panel's rows (audit B9f, E6): the add row is one 28px height, fields and button aligned. */
+.library-panel-add-row {
+    align-items: center;
+}
+
+.library-panel-add-row .mud-input-control {
+    height: 28px;
+    margin-top: 0;
+}
+
+.library-panel-add-row .mud-input.mud-input-outlined .mud-input-root.mud-input-root-outlined {
+    padding-block: 0;
+    font-size: var(--mud-typography-body2-size);
+}
+
+.library-panel-add-row .mud-button-root {
+    height: 28px;
+}
+
+/* The Skills table (audit B9g): the description gets the room, and the line under a name is meta text. */
+.skills-table td.skills-description-cell {
+    min-width: 28ch;
+    max-width: 60ch;
+    white-space: normal;
+}
+
+.skills-table .skills-name {
+    font-weight: 500;
+}
+
+/* Import skill (audit B10 "Import skill"): one list with Edge separators, then a review with quiet 13px labels. */
+.skill-import-results {
+    display: flex;
+    flex-direction: column;
+}
+
+.skill-import-result {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 8px 0;
+    border-bottom: 1px solid var(--ink-edge);
+}
+
+.skill-import-result:last-child {
+    border-bottom: 0;
+}
+
+.skill-import-provenance.mud-table {
+    box-shadow: none;
+    background: none;
+}
+
+.skill-import-provenance th {
+    font-size: var(--mud-typography-body2-size);
+    font-weight: 400;
+    color: var(--mud-palette-text-secondary);
+}
+
+.skill-import-provenance td {
+    font-size: var(--mud-typography-body2-size);
 }
 
 /* A phone has no room for two columns: the menu sits above the section and stops sticking. */
@@ -2274,11 +2790,11 @@ a.team-ref,
 /* ---- Board layout (Spec §13.4, §13.10) --------------------------------------------------------
    The Board is a header row (.task-board-columns) followed by one horizontal band per lane
    (.task-board-lane). A lane is flex-column, not grid: its label (rendered only when the View
-   groups) must span the full width above its cards, not be squeezed into a 310px grid track the
-   way a card would be. The actual row of fixed-width columns - both the header's and every
-   lane's - is CSS grid (the Spec's snippet said minmax(240px, 1fr); columns are now a fixed 310px, so
-   a wide page leaves free space on the right instead of stretching them): .task-board-columns and
-   .task-board-lane-columns share the exact same grid-auto-columns function, so their tracks land
+   groups) must span the full width above its cards, not be squeezed into a column's grid track the
+   way a card would be. The actual row of columns - both the header's and every
+   lane's - is CSS grid (a column is 260-300px, and an empty terminal column is a 40px rail, so the
+   page leaves free space on the right instead of stretching them): .task-board-columns and
+   .task-board-lane-columns share the exact same grid-template-columns (set inline by TaskBoard), so their tracks land
    at identical x offsets and a header cell sits directly above the cards it describes. The board
    itself scrolls inside the pane in both directions (OP-3, UX-007): it is capped to the pane's height
    (a viewport unit), which puts its horizontal scrollbar at the pane's bottom
@@ -2299,7 +2815,8 @@ a.team-ref,
 .task-board-lane-columns {
     display: grid;
     grid-auto-flow: column;
-    grid-auto-columns: 310px;
+    grid-auto-columns: minmax(260px, 300px);
+    justify-content: start;
     column-gap: 8px;
 }
 
@@ -2309,6 +2826,16 @@ a.team-ref,
     align-items: center;
     gap: 8px;
     padding: 8px 8px 8px 0;
+}
+
+/* An empty terminal column's header (audit B4a): the 40px rail's top, the dot, the count and the menu stacked and centred. The name is drawn
+   vertically in the lane below (.task-board-rail-label); the header's own copy is visually hidden. */
+.task-board-column-header.task-board-column-header-rail {
+    flex-direction: column;
+    flex-wrap: nowrap;
+    justify-content: flex-start;
+    gap: 4px;
+    padding: 8px 0;
 }
 
 /* S4: the state colour, shown once, as an 8px dot first in the column header (the card has no coloured edge).
@@ -2331,6 +2858,7 @@ a.team-ref,
 .task-state-dot-info { background: var(--mud-palette-info); }
 .task-state-dot-warning { background: var(--mud-palette-warning); }
 .task-state-dot-secondary { background: var(--mud-palette-secondary); }
+.task-state-dot-tertiary { background: var(--mud-palette-tertiary); }
 .task-state-dot-success { background: var(--mud-palette-success); }
 .task-state-dot-error { background: var(--mud-palette-error); }
 
@@ -2372,9 +2900,21 @@ a.team-ref,
     margin-bottom: 12px;
 }
 
-.task-board-lane-label {
-    font-weight: 600;
+/* A swimlane label (audit B4b): the page section heading (.group-heading, 16px/600) with its count, over a Chrome line
+   instead of the Rule rung the heading draws elsewhere. The count is 12px in Quiet ink. */
+.task-board-lane-heading.group-heading {
+    display: flex;
+    align-items: baseline;
+    gap: 8px;
+    margin: 0;
     padding: 4px 0;
+    border-bottom: 1px solid var(--mud-palette-lines-default);
+}
+
+.task-board-lane-count {
+    color: var(--mud-palette-text-secondary);
+    font-size: var(--mud-typography-caption-size);
+    font-weight: 400;
 }
 
 /* A column is a Surface lane with a Divider hairline and the card radius: it reads in Light without the heavy gray
@@ -2385,8 +2925,32 @@ a.team-ref,
     flex-direction: column;
     min-width: 0;
     background-color: var(--mud-palette-surface);
-    border: 1px solid var(--mud-palette-divider);
+    border: 1px solid var(--ink-edge);
     border-radius: var(--mud-default-borderradius);
+}
+
+/* An empty terminal column (audit B4a): a 40px rail. Its name runs down it, 13px/600, over the drop zone, which stays beneath so the rail still
+   takes a drop; the count is in the header above. */
+.task-board-column.task-board-column-rail {
+    min-width: 0;
+}
+
+.task-board-column-rail .mud-drop-zone {
+    min-height: 7rem;
+    padding: 0;
+}
+
+.task-board-rail-label {
+    position: absolute;
+    inset: 8px 0 auto 0;
+    display: flex;
+    justify-content: center;
+    writing-mode: vertical-rl;
+    pointer-events: none;
+    font-size: var(--mud-typography-body2-size);
+    font-weight: 600;
+    color: var(--mud-palette-text-secondary);
+    white-space: nowrap;
 }
 
 /* Every zone - a single-state column, a multi-state display zone, or a ghost bucket's own
@@ -2426,7 +2990,7 @@ a.team-ref,
     align-items: center;
     gap: 8px;
     padding: 8px;
-    border: 1px dashed var(--mud-palette-lines-default);
+    border: 1px dashed var(--ink-field);
 }
 
 /* While a drag is over a bucket that will accept it: a solid primary border on a
@@ -2440,7 +3004,7 @@ a.team-ref,
     text-align: left;
     padding: 12px;
     background-color: var(--mud-palette-surface);
-    border: 1px solid var(--mud-palette-divider);
+    border: 1px solid var(--ink-edge);
     border-radius: var(--mud-default-borderradius);
 }
 
@@ -2468,6 +3032,28 @@ a.team-ref,
     position: absolute;
     top: 0.25rem;
     right: 0.25rem;
+}
+
+/* The ⋮ of a card or a List row is revealed on hover or focus (audit B4d, design-system "Patterns worth copying"), like the Room list's. It stays in
+   the DOM and the tab order, shows while its menu is open, and shows at once on a device with no hover. */
+.task-actions-reveal .task-actions-button {
+    opacity: 0;
+    transition: opacity 120ms ease;
+}
+
+.task-card:hover .task-actions-reveal .task-actions-button,
+.task-card:focus-within .task-actions-reveal .task-actions-button,
+.mud-table-row:hover .task-actions-reveal .task-actions-button,
+.mud-table-row:focus-within .task-actions-reveal .task-actions-button,
+.task-actions-reveal.is-open .task-actions-button,
+.task-actions-reveal .task-actions-button:focus-visible {
+    opacity: 1;
+}
+
+@media (hover: none) {
+    .task-actions-reveal .task-actions-button {
+        opacity: 1;
+    }
 }
 
 .task-card-title {
@@ -2500,7 +3086,7 @@ a.team-ref,
     align-self: stretch;
     margin-top: 4px;
     padding-top: 8px;
-    border-top: 1px solid var(--mud-palette-lines-default);
+    border-top: 1px solid var(--ink-rule);
 }
 
 /* The open button holds every field of the card; they stack top to bottom, left-aligned, rather
@@ -2619,6 +3205,7 @@ a.team-ref,
 .task-ref-status-info::before { background: var(--mud-palette-info); }
 .task-ref-status-warning::before { background: var(--mud-palette-warning); }
 .task-ref-status-secondary::before { background: var(--mud-palette-secondary); }
+.task-ref-status-tertiary::before { background: var(--mud-palette-tertiary); }
 .task-ref-status-success::before { background: var(--mud-palette-success); }
 .task-ref-status-error::before { background: var(--mud-palette-error); }
 .task-ref-status-default::before { background: var(--mud-palette-lines-default); }
@@ -2656,7 +3243,7 @@ a.team-ref,
    just ".mud-input-outlined-border" alone: that prefix makes the library's own rule three classes
    specific, and a two-class override here would lose the cascade to it regardless of load order. */
 .task-detail .mud-input.mud-input-outlined .mud-input-outlined-border {
-    border-radius: calc(var(--mud-default-borderradius) * 1.5);
+    border-radius: var(--mud-default-borderradius);
 }
 
 /* The Panel's conflict rows (manual test TASKS-07 finding F17): at ~300px the table's four columns
@@ -2671,7 +3258,7 @@ a.team-ref,
     flex-direction: column;
     gap: 4px;
     padding-block-end: 8px;
-    border-block-end: 1px solid var(--mud-palette-lines-default);
+    border-block-end: 1px solid var(--ink-rule);
 }
 
 /* ---- ResizableEndDrawer: the Task detail panel and the View editor (UX-R05, UX-V10) -----------
@@ -2682,6 +3269,46 @@ a.team-ref,
    huddleResize finds the drawer itself via ".mud-drawer", so the handle only needs to sit inside it. */
 .resizable-drawer {
     --mud-drawer-width: 420px;
+}
+
+/* The drawer never covers the Right sidebar (audit B11 "With a drawer"): while the sidebar is open its 280px is
+   kept clear, so the drawer opens beside it, and the scrim stops at the sidebar's edge and under the Top bar, so
+   the sidebar and its toggle stay visible and pressable. ClipMode Always already starts the drawer under the Top bar.
+   :root:has() reads the sidebar's open state from MudBlazor's own class; 280px is the sidebar's Width in RightSidebar.razor. */
+.mud-overlay.mud-overlay-drawer {
+    top: var(--mud-appbar-height);
+}
+
+:root:has(.mud-drawer.right-sidebar.mud-drawer--open) .mud-drawer.resizable-drawer.mud-drawer-temporary.mud-drawer-pos-right.mud-drawer--open {
+    right: 280px;
+}
+
+:root:has(.mud-drawer.right-sidebar.mud-drawer--open) .mud-overlay.mud-overlay-drawer {
+    right: 280px;
+}
+
+/* The content scrolls and the footer sticks to the bottom of what shows. */
+.resizable-drawer .mud-drawer-content {
+    display: flex;
+    flex-direction: column;
+    overflow-y: auto;
+}
+
+.resizable-drawer-body {
+    flex: 1 0 auto;
+}
+
+/* Actions as a sticky footer (audit B4k): a Chrome line on top, right-aligned, over the drawer's surface. */
+.resizable-drawer-footer {
+    position: sticky;
+    bottom: 0;
+    z-index: 1;
+    display: flex;
+    justify-content: flex-end;
+    gap: 8px;
+    padding: 12px 16px;
+    background-color: var(--mud-palette-surface);
+    border-top: 1px solid var(--mud-palette-lines-default);
 }
 
 /* S6 header: a 12px secondary line (the id and its Team or Project) over the name at 16px/600, up to three lines; the close button stays on the right. */
@@ -2758,12 +3385,12 @@ a.team-ref,
 }
 
 .view-editor-field-row > .mud-switch {
-    flex: 0 0 auto;
+    flex: 1 1 auto;
+    min-width: 0;
     margin: 0;
 }
 
-.view-editor-field-row > .mud-typography {
-    flex: 1 1 auto;
+.view-editor-field-row > .mud-switch .mud-typography {
     min-width: 0;
     overflow: hidden;
     text-overflow: ellipsis;
@@ -2842,8 +3469,9 @@ a.team-ref,
    the toolbar ends and the document begins. The content then starts 24px below that line, whichever mode draws
    it. In Split the two columns carry that 24px themselves, so the raw side's tint runs right up to the line. */
 .library-document-toolbar.mud-toolbar {
+    box-sizing: border-box;
     height: auto;
-    min-height: 0;
+    min-height: 61px;
     padding: 12px 16px;
     border-bottom: 1px solid var(--mud-palette-lines-default);
 }
@@ -3024,6 +3652,10 @@ a.team-ref,
     min-height: 0;
 }
 
+/* ---- Library header band (audit B2) ---------------------------------------------------------
+   The tree header and the document toolbar are one band: the same 61px height, so the Chrome line under each lands at the
+   same y and reads as one line across the splitter. New note sits inside the band, beside the search field. */
+
 /* ---- Library panes: one spacing scale ---------------------------------------------------------
    The Library's panes are spaced on the 4/8/12/16/24px scale (design-system.md "Spacing"): each pane puts
    16px between its edge and its content and 12px above its first control, level with the document toolbar's.
@@ -3033,17 +3665,26 @@ a.team-ref,
     position: sticky;
     top: 0;
     z-index: 1;
+    box-sizing: border-box;
     display: flex;
-    flex-direction: column;
+    align-items: center;
     gap: 8px;
-    padding: 12px 16px 8px;
+    min-height: 61px;
+    padding: 12px 16px;
+    border-bottom: 1px solid var(--mud-palette-lines-default);
     background: var(--mud-palette-surface);
+}
+
+.library-explorer-tree-header > .library-explorer-search {
+    flex: 1 1 0;
+    min-width: 0;
 }
 
 .library-explorer-tree-actions {
     display: flex;
+    flex: 0 0 auto;
     align-items: center;
-    gap: 8px;
+    gap: 4px;
 }
 
 /* Explorer filter: the tree is hidden, never unmounted, while name-search results show beside it. */
@@ -3053,8 +3694,8 @@ a.team-ref,
 
 /* ---- Library tree density ----------------------------------------------------------------------
    30px rows; on a touch screen 44px, the minimum target. The tree is inset 8px
-   and each row pads 8px more, so a label column starts 16px from the pane edge while the hover and selected
-   fills reach 8px past it. The chevron sits in a fixed 16px column that MudBlazor renders on every row,
+   and each row is inset 4px (the Selected shape, audit A5) and pads 4px more, so a label column starts 16px from
+   the pane edge while the hover and selected fills reach 4px past it, rounded at 0.75x the base radius. The chevron sits in a fixed 16px column that MudBlazor renders on every row,
    files included, so labels line up at each depth. Each level is indented 16px, which puts the group's
    guide line under the centre of its parent's chevron (8px row padding + half the 16px column). */
 .library-tree.mud-treeview {
@@ -3068,8 +3709,11 @@ a.team-ref,
 
 .library-tree .mud-treeview-item-content {
     min-height: 30px;
+    width: calc(100% - 8px);
+    margin-inline: 4px;
     padding-block: 0;
-    padding-inline: 8px;
+    padding-inline: 4px;
+    border-radius: calc(var(--mud-default-borderradius) * 0.75);
 }
 
 .library-tree .mud-treeview-item-arrow {
@@ -3138,7 +3782,7 @@ a.team-ref,
 .library-tree .mud-treeview-group {
     margin-inline-start: 16px;
     padding-inline-start: 0;
-    border-inline-start: 1px solid color-mix(in srgb, var(--mud-palette-lines-default) 70%, var(--mud-palette-surface));
+    border-inline-start: 1px solid var(--ink-rule);
 }
 
 @media (pointer: coarse) {
@@ -3151,6 +3795,16 @@ a.team-ref,
         padding: 16px;
         margin: -16px;
     }
+}
+
+/* The tree's context menu (audit B10): a protected node's menu ends in one Quiet-ink note rather than three
+   disabled items, and Delete, the last item, is in Error ink. */
+.library-tree-menu-note {
+    max-width: 260px;
+    padding: 8px 16px;
+    font-size: var(--mud-typography-caption-size);
+    line-height: 1.4;
+    color: var(--mud-palette-text-secondary);
 }
 
 /* Drag and drop: when the tree is flattened this strip under the list stands for the scope's own folder. */
@@ -3248,8 +3902,9 @@ a.team-ref,
     font-weight: 600;
 }
 
-/* "need you" is the warning colour mixed toward body text so it keeps 4.5:1 on the page; the number stays body colour. */
-.tasks-count-need-you {
+/* "need you" is the warning colour mixed toward body text so it keeps 4.5:1 on the page; the number stays body colour.
+   A count wears its signal only above 0 (audit B4e), so a zero ("is-zero") reads as the other counts do. */
+.tasks-count-need-you:not(.is-zero) {
     color: color-mix(in srgb, var(--mud-palette-warning) 70%, var(--mud-palette-text-primary));
 }
 
@@ -3265,13 +3920,19 @@ a.team-ref,
     color: var(--mud-palette-text-secondary);
 }
 
+/* The toolbar's filter chip is the Filter chip (audit A6, design-system "Chips"): a 28px pill, a dashed Field line and no fill while unset; the
+   Accent border, the Accent tint at 14% and the Accent ink at 500 once set. It wears the same values as .mud-chip.filter-chip, which a MudChip
+   gets from the global rule and this wrapper (a span around a button and a menu) cannot. */
 .task-filter-chip {
+    box-sizing: border-box;
     display: inline-flex;
     align-items: center;
     flex: none;
+    height: 28px;
     margin-right: 8px;
-    border: 1px solid var(--mud-palette-lines-inputs);
+    border: 1px solid var(--ink-field);
     border-radius: 999px;
+    background-color: transparent;
 }
 
 .task-filter-chip-unset {
@@ -3280,13 +3941,43 @@ a.team-ref,
 
 .task-filter-chip-set {
     border-color: var(--mud-palette-primary);
-    background: var(--mud-palette-primary-hover);
+    background-color: color-mix(in srgb, var(--mud-palette-primary) 14%, var(--mud-palette-surface));
 }
 
 .task-filter-chip .task-filter-chip-button {
+    height: 100%;
+    min-height: 0;
+    padding: 0 12px;
     border: 0;
     border-radius: 999px;
     text-transform: none;
+    font-size: var(--mud-typography-body2-size);
+    font-weight: 400;
+    color: var(--mud-palette-text-primary);
+}
+
+.task-filter-chip-set .task-filter-chip-button {
+    font-weight: 500;
+    color: color-mix(in srgb, var(--mud-palette-primary) 70%, var(--mud-palette-text-primary));
+}
+
+/* Both toolbar rows are one height (audit A7): the controls are 28px boxes, so the row reads level. */
+.task-toolbar .mud-icon-button,
+.task-toolbar-header .mud-icon-button {
+    width: 28px;
+    height: 28px;
+    padding: 4px;
+}
+
+.task-toolbar .btn-action-tight,
+.task-toolbar-header .btn-action-tight {
+    height: 28px;
+    min-height: 0;
+}
+
+.task-toolbar .task-toolbar-dense {
+    height: 28px;
+    margin: 0;
 }
 
 /* A chip without a menu draws its text with the same button but must not answer the pointer or look pressable. */
@@ -3317,7 +4008,10 @@ a.team-ref,
 }
 
 .task-filter-chip .task-filter-chip-clear {
+    width: 22px;
+    height: 22px;
     margin-right: 2px;
+    padding: 2px;
 }
 
 /* A Library document's rendered Markdown. The global reset zeroes block margins, so without these the paragraphs of a Teammate definition run together. */
@@ -3434,7 +4128,7 @@ a.team-ref,
 .library-properties {
     margin: 0 0 24px;
     padding: 12px 16px;
-    border: 1px solid var(--mud-palette-divider);
+    border: 1px solid var(--ink-edge);
     border-radius: var(--mud-default-borderradius);
     font-size: var(--mud-typography-body2-size);
     line-height: 1.5;
@@ -3499,9 +4193,9 @@ a.team-ref,
     display: inline-flex;
     align-items: center;
     padding: 0 8px;
-    border: 1px solid var(--mud-palette-divider);
+    border: 1px solid var(--ink-edge);
     border-radius: 999px;
-    background: var(--mud-palette-background-gray);
+    background: var(--ink-wash);
     color: var(--mud-palette-text-primary);
     font-size: var(--mud-typography-body2-size);
     line-height: 1.6;
@@ -3557,6 +4251,16 @@ a.team-ref,
     flex: 1 1 auto;
     min-height: 0;
     overflow-y: auto;
+}
+
+/* Every Agent card sits in the Transcript's 760px column and is outlined in an Edge, like the notices and the Composer
+   (audit C8): the same 24px inset, centred, so the card, the Transcript and the Composer share one left edge. */
+.mud-paper.agent-card {
+    box-sizing: border-box;
+    width: calc(100% - 48px);
+    max-width: 760px;
+    margin-inline: auto;
+    border-color: var(--ink-edge);
 }
 
 /* An agent card's actions row sits below its body (UX-R01). */
@@ -3619,10 +4323,16 @@ a.team-ref,
     margin-top: 12px;
 }
 
-/* Options are at least 44 pixels tall and wrap, so the card works at phone width (Questions spec
-   §6.7); an option keeps the case the Agent wrote instead of MudBlazor's button default. */
+/* The options are a column of one-line 32px answer rows, flush left (audit C8), the same height as the Dismiss and
+   Send buttons beside them; an option keeps the case the Agent wrote instead of MudBlazor's button default. */
+.question-card-options {
+    align-items: flex-start;
+}
+
 .question-card-option {
-    min-height: 44px;
+    min-height: 32px;
+    justify-content: flex-start;
+    text-align: left;
     text-transform: none;
 }
 
@@ -3722,6 +4432,30 @@ a.team-ref,
     height: 32px;
 }
 
+/* A group row (audit B4f, design-system "Tasks"): Ground, not MudBlazor's Background-gray band, with a 13px/600 label, a 24px avatar for an
+   assignee group and a 12px Quiet-ink count. The row line below it is the table's Edge line. */
+.mud-data-grid.task-list-grid .mud-table-cell.mud-datagrid-group {
+    background-color: var(--mud-palette-surface);
+}
+
+.task-group-heading {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.task-group-label {
+    font-size: var(--mud-typography-body2-size);
+    font-weight: 600;
+    color: var(--mud-palette-text-primary);
+}
+
+.task-group-count {
+    font-size: var(--mud-typography-caption-size);
+    font-weight: 400;
+    color: var(--mud-palette-text-secondary);
+}
+
 .task-list-grid thead th.task-list-id-cell {
     width: 110px;
 }
@@ -3807,6 +4541,75 @@ a.team-ref,
     }
 }
 
+/* ---- Picker rows and the folder picker (audit B10h, B10 "Choose a folder") --------------------------------
+   A list picker's row is 32px at 13px with an 18px icon in a 24px slot, not MudList's 46px at 14px. The doubled
+   class outranks MudBlazor's own list-item padding and icon slot. */
+.mud-list-item.picker-row {
+    min-height: 32px;
+    padding: 0 12px;
+    font-size: var(--mud-typography-body2-size);
+}
+
+.picker-row .mud-list-item-icon {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 24px;
+    width: 24px;
+    margin-inline-end: 8px;
+}
+
+.picker-row .mud-list-item-icon .mud-icon-root {
+    font-size: var(--icon-size-row);
+}
+
+.picker-row .mud-list-item-text,
+.picker-row .mud-list-item-text .mud-typography {
+    margin: 0;
+    font-size: inherit;
+    line-height: 1.4;
+}
+
+/* The folder picker: the up arrow is the action colour (Quiet ink), and the path trail names where the Human is. */
+.folder-picker-up.mud-icon-button:not(.mud-disabled) {
+    color: var(--mud-palette-action-default);
+}
+
+.folder-picker-trail {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 4px;
+    font-size: var(--mud-typography-body2-size);
+    color: var(--mud-palette-text-secondary);
+}
+
+.folder-picker-crumb {
+    padding: 2px 4px;
+    font: inherit;
+    color: inherit;
+    background: transparent;
+    border: 0;
+    border-radius: calc(var(--mud-default-borderradius) * 0.75);
+    cursor: pointer;
+}
+
+.folder-picker-crumb:hover:not(:disabled) {
+    background-color: var(--ink-wash);
+}
+
+/* The current folder is the last crumb: Ink, not a link. */
+.folder-picker-crumb:disabled {
+    color: var(--mud-palette-text-primary);
+    font-weight: 500;
+    cursor: default;
+}
+
+.folder-picker-list {
+    max-height: 50vh;
+    overflow-y: auto;
+}
+
 /* ---- Chip cloud and process step ------------------------------------------------------------- */
 
 .chip-cloud-title {
@@ -3822,25 +4625,28 @@ a.team-ref,
     overflow-y: auto;
 }
 
+/* A chip of the cloud is the Filter chip (audit A6, design-system "Chips"): 28px, a pill, a dashed Field line and no
+   fill while unset; the Accent border, the Accent tint at 14% and the Accent ink at 500 once set. It repeats
+   .mud-chip.filter-chip (FND's global rule) for a native button, which that rule's .mud-chip cannot reach. */
 .chip-cloud-chip,
 .chip-cloud-all {
+    box-sizing: border-box;
+    height: 28px;
+    padding: 0 12px;
     font: inherit;
     font-size: var(--mud-typography-body2-size);
+    font-weight: 400;
     color: var(--mud-palette-text-primary);
-    background: var(--mud-palette-background-gray);
-    border: 1px solid var(--mud-palette-divider);
+    background-color: transparent;
+    border: 1px dashed var(--ink-field);
     border-radius: 999px;
-    padding: 4px 12px;
     cursor: pointer;
 }
 
-.chip-cloud-chip.is-quiet {
-    background: transparent;
-}
-
-.chip-cloud-chip-selected {
-    font-weight: 600;
-    border: 2px solid var(--mud-palette-primary);
+.chip-cloud-chip.is-set {
+    font-weight: 500;
+    border: 1px solid var(--mud-palette-primary);
+    background-color: color-mix(in srgb, var(--mud-palette-primary) 14%, var(--mud-palette-surface));
     color: color-mix(in srgb, var(--mud-palette-primary) 70%, var(--mud-palette-text-primary));
 }
 
@@ -3856,7 +4662,7 @@ a.team-ref,
 .process-step {
     padding: 16px;
     background: var(--mud-palette-surface);
-    border: 1px solid var(--mud-palette-divider);
+    border: 1px solid var(--ink-edge);
     border-radius: var(--mud-default-borderradius);
 }
 
@@ -3874,16 +4680,53 @@ a.team-ref,
     gap: 24px;
 }
 
-/* The title and its subtitle stack: the subtitle is its own 13px secondary line under the title (S10). */
-.page-header-titles {
+/* The page header (audit B1, design-system "A page"): one 32px row on every page, the h1 and its small controls on
+   the left, the aside, the create button and the actions on the right. The page container's 16px padding puts the
+   row 16px below the tab strip, and 16px of margin separates it from what follows. */
+.page-header {
+    margin-bottom: 16px;
+}
+
+.page-header-row {
     display: flex;
-    flex-direction: column;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+    min-height: 32px;
+}
+
+.page-header-title {
+    display: flex;
+    align-items: center;
+    gap: 8px;
     min-width: 0;
 }
 
-.page-header-subtitle {
+.page-header-h1 {
+    margin: 0;
+    min-width: 0;
+    overflow-wrap: anywhere;
+}
+
+.page-header-actions {
+    display: flex;
+    align-items: center;
+    flex: 0 0 auto;
+    gap: 8px;
+}
+
+/* The Room closes its header with a Chrome line (design-system "A page"). */
+.page-header.has-chrome {
+    padding-bottom: 8px;
+    border-bottom: 1px solid var(--mud-palette-lines-default);
+}
+
+/* The intro: body1 (14px) in Quiet ink, at most 75 characters wide (audit B1). */
+.page-header-subtitle,
+.page-lead {
+    margin: 4px 0 0;
     color: var(--mud-palette-text-secondary);
-    font-size: var(--mud-typography-body2-size);
+    font-size: var(--mud-typography-body1-size);
 }
 
 .build-stepper {
@@ -3901,7 +4744,7 @@ a.team-ref,
     gap: 8px;
     min-width: 0;
     padding-bottom: 8px;
-    border-bottom: 2px solid var(--mud-palette-divider);
+    border-bottom: 2px solid var(--ink-edge);
 }
 
 .build-step-done,
@@ -3917,7 +4760,7 @@ a.team-ref,
     width: 1.5rem;
     height: 1.5rem;
     border-radius: 50%;
-    border: 1px solid var(--mud-palette-divider);
+    border: 1px solid var(--ink-edge);
     font-size: var(--mud-typography-caption-size);
     font-weight: 600;
     color: var(--mud-palette-text-secondary);
@@ -4054,8 +4897,8 @@ a.team-ref,
     text-align: start;
     color: var(--mud-palette-text-primary);
     background: var(--mud-palette-surface);
-    border: 1px solid var(--mud-palette-divider);
-    border-radius: calc(var(--mud-default-borderradius) * 1.5);
+    border: 1px solid var(--ink-edge);
+    border-radius: var(--mud-default-borderradius);
     cursor: pointer;
 }
 
@@ -4082,7 +4925,7 @@ a.team-ref,
     height: 2rem;
     border-radius: 50%;
     color: var(--mud-palette-text-secondary);
-    background: var(--mud-palette-background-gray);
+    background: var(--ink-wash);
 }
 
 .team-type-card-selected .team-type-icon {
@@ -4149,6 +4992,11 @@ a.team-ref,
     padding: 4px 0;
 }
 
+/* Outlined in Edge, not MudBlazor's Chrome line (audit B3e); the doubled class outranks .mud-paper-outlined. */
+.needs-you-card.mud-paper-outlined {
+    border-color: var(--ink-edge);
+}
+
 .needs-you-card[hidden] {
     display: none;
 }
@@ -4166,12 +5014,25 @@ a.team-ref,
     color: var(--mud-palette-text-secondary);
 }
 
+/* A row is one 32px line: the reason icon, the Room's name, and the time trailing (audit B3e). */
+.needs-you-row .mud-nav-link {
+    align-items: center;
+    min-height: var(--nav-row-height);
+    padding-block: 4px;
+    padding-inline: 8px;
+}
+
+/* The Room's name takes the width the reason icons and the time leave, and only the name ellipsises. The link's own 16px sides and the
+   12px gap MudBlazor puts before the text are given back: the 240px sidebar leaves a card row about 200px, and those 28px were what cut
+   "Launch crew" to "Laun...". */
 .needs-you-row .mud-nav-link-text {
     font-size: var(--mud-typography-body2-size);
     display: flex;
     align-items: center;
     gap: 8px;
     min-width: 0;
+    margin-inline-start: 0;
+    flex: 1 1 auto;
 }
 
 .needs-you-icons {
@@ -4180,9 +5041,20 @@ a.team-ref,
     flex: 0 0 auto;
 }
 
+.needs-you-icons .mud-icon-root {
+    font-size: var(--icon-size-row);
+}
+
 .needs-you-text {
     display: flex;
-    flex-direction: column;
+    flex: 1 1 auto;
+    align-items: center;
+    gap: 8px;
+    min-width: 0;
+}
+
+.needs-you-name {
+    flex: 1 1 auto;
     min-width: 0;
 }
 
@@ -4194,6 +5066,9 @@ a.team-ref,
 }
 
 .needs-you-detail {
+    flex: 0 0 auto;
+    min-width: max-content;
+    margin-inline-start: auto;
     font-size: var(--mud-typography-caption-size);
     color: var(--mud-palette-text-secondary);
 }
@@ -4304,9 +5179,9 @@ a.team-ref,
     color: var(--mud-palette-text-secondary);
 }
 
-/* "Show all (N)" under a list longer than 8 rows: a quiet text action, aligned with the rows above it. */
+/* "Show all (N)" under a list longer than 8 rows (13px like "New chat", audit B3c): a quiet text action, aligned with the rows above it. */
 .sidebar-show-all .mud-nav-link-text {
-    font-size: var(--mud-typography-caption-size);
+    font-size: var(--mud-typography-body2-size);
     color: var(--mud-palette-text-secondary);
 }
 
@@ -4321,9 +5196,27 @@ a.team-ref,
     padding: 4px 8px;
 }
 
-/* MudHighlighter draws the match as a mark; make it bold as well as coloured. */
+/* Search match (audit B6a): MudHighlighter draws the match as a mark, which the browser paints #ffff00 with black
+   text in every Theme. Take the Attention tint at 24% over the surface with Ink text at weight 600, so it follows the Theme. */
 .search-card mark {
+    background-color: color-mix(in srgb, var(--mud-palette-warning) 24%, var(--mud-palette-surface));
+    color: var(--mud-palette-text-primary);
     font-weight: 600;
+}
+
+/* A notice in the dropdown (audit B6b): Quiet ink words, with an icon in the Attention signal carrying the signal.
+   1em is 14px: the notice is body2 text, so the icon is sized by the type scale rather than by a literal. */
+.search-notice {
+    display: flex;
+    align-items: center;
+    color: var(--mud-palette-text-secondary);
+}
+
+.search-notice .search-notice-icon.mud-icon-root {
+    flex: none;
+    width: 1em;
+    height: 1em;
+    font-size: inherit;
 }
 
 .search-card-icon {
@@ -4486,7 +5379,7 @@ a.team-ref,
 .composer-picker-footer {
     padding: 4px 12px 4px;
     font-size: var(--mud-typography-body2-size);
-    border-top: 1px solid var(--mud-palette-divider);
+    border-top: 1px solid var(--ink-rule);
 }
 
 .composer-picker .search-card-snippet,
@@ -4538,8 +5431,8 @@ a.team-ref,
     font: inherit;
     color: color-mix(in srgb, var(--mud-palette-primary) 70%, var(--mud-palette-text-primary));
     background: transparent;
-    border: 1px dashed var(--mud-palette-divider);
-    border-radius: calc(var(--mud-default-borderradius) * 1.5);
+    border: 1px dashed var(--ink-field);
+    border-radius: var(--mud-default-borderradius);
     cursor: pointer;
 }
 
@@ -4596,8 +5489,8 @@ a.team-ref,
     min-height: 9rem;
     padding: 16px;
     text-align: center;
-    border: 1px dashed var(--mud-palette-divider);
-    border-radius: calc(var(--mud-default-borderradius) * 1.5);
+    border: 1px dashed var(--ink-field);
+    border-radius: var(--mud-default-borderradius);
     color: var(--mud-palette-text-secondary);
 }
 
@@ -4614,8 +5507,8 @@ a.team-ref,
     min-width: 0;
     padding: 12px;
     background: var(--mud-palette-surface);
-    border: 1px solid var(--mud-palette-divider);
-    border-radius: calc(var(--mud-default-borderradius) * 1.5);
+    border: 1px solid var(--ink-edge);
+    border-radius: var(--mud-default-borderradius);
 }
 
 /* The Settings Profile tab: the Human's card at roster width, the same width one Build a team column gives a Teammate's,
@@ -4686,7 +5579,8 @@ a.team-ref,
     border-radius: 999px;
     font-size: var(--mud-typography-caption-size);
     color: var(--mud-palette-text-primary);
-    background: var(--mud-palette-background-gray);
+    background: var(--ink-wash);
+    border: 1px solid var(--ink-edge);
 }
 
 .roster-tier-strongest {
@@ -4707,7 +5601,19 @@ a.team-ref,
     align-items: center;
     gap: 4px;
     padding-top: 8px;
-    border-top: 1px solid var(--mud-palette-divider);
+    border-top: 1px solid var(--ink-rule);
+}
+
+/* The roster's more-actions menu pushes to the end of the row; its destructive item is last, after a divider, in Error ink
+   (design-system "Menus"). */
+.roster-more {
+    margin-inline-start: auto;
+}
+
+/* Duplicate Team's body is two short fields and a Browse button; its stack's last margin used to overflow the content box
+   by a pixel and drew a scrollbar (audit B10), so the box does not scroll. */
+.mud-dialog-content.duplicate-team-content {
+    overflow-y: visible;
 }
 
 .role-card-taken {
@@ -4774,7 +5680,7 @@ a.team-ref,
     z-index: 1;
     padding: 12px 0;
     background: var(--mud-palette-surface);
-    border-top: 1px solid var(--mud-palette-divider);
+    border-top: 1px solid var(--ink-edge);
 }
 
 .build-team-manager {
@@ -4859,10 +5765,9 @@ a.team-ref,
     gap: 12px;
 }
 
-.task-detail-group > .group-heading {
+/* A group's heading is the Group label (audit B4i): 12px/600 in Quiet ink, so the title is the drawer's only 16px text. */
+.task-detail-group > .group-label {
     margin: 0;
-    font-size: var(--mud-typography-subtitle2-size);
-    font-weight: 600;
 }
 
 /* The title row holds the edit, copy and menu icons on the right; in the Panel the name is in the drawer header, so a spacer pushes them right. */
@@ -4877,6 +5782,71 @@ a.team-ref,
 .task-detail-title-row .task-detail-title {
     flex: 1 1 auto;
     min-width: 0;
+}
+
+/* The inline title edit keeps the title's size (audit B4j): h6, 16px/600, as the drawer's heading, with only the outline of a field, pulled left by
+   its side padding so the typed text starts where the heading's text did. While a saved Task's title is edited, the drawer's own copy is hidden. */
+.mud-input-control.task-detail-title {
+    margin: 0 0 0 -8px;
+}
+
+.task-detail-title .mud-input-slot,
+.task-detail-title .mud-input > input.mud-input-root.mud-input-root-outlined {
+    font-size: var(--mud-typography-h6-size);
+    font-weight: var(--mud-typography-h6-weight);
+    line-height: var(--mud-typography-h6-lineheight);
+    font-family: var(--mud-typography-h6-family);
+    padding: 4px 8px;
+    height: auto;
+}
+
+.tasks-detail-drawer.is-title-editing .resizable-drawer-title {
+    display: none;
+}
+
+/* The Status field is the Board's second cue, a state dot, beside the select (audit B4r). */
+.task-detail-status-field {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.task-detail-status-field .mud-input-control {
+    flex: 1 1 auto;
+    min-width: 0;
+}
+
+/* The change log is a panel with an Edge line and no shadow (audit B4l, design-system "Elevation and layering"). */
+.task-detail-changelog.mud-expansion-panels .mud-expand-panel {
+    box-shadow: none;
+    border: 1px solid var(--ink-edge);
+    border-radius: var(--mud-default-borderradius);
+}
+
+/* The Description keeps its Group label with the Edit | Preview toggle on its line, and its own floating label is visually hidden (audit B4n). */
+.task-detail-description-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    margin-bottom: 8px;
+}
+
+.task-detail-description-header .group-label {
+    margin: 0;
+}
+
+.task-detail-description-field .mud-input-label {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
+}
+
+.task-detail-description-field .mud-input-outlined-border legend {
+    display: none;
 }
 
 /* Created, Updated and Closed: 12px secondary at the bottom of the form, out of the Dates group. */
@@ -4931,6 +5901,14 @@ a.team-ref,
     display: none;
 }
 
+/* An empty optional field shows a Quiet-ink hint ("None", "Add tag…") instead of a blank box (audit B4o). */
+.task-detail-prop-value input::placeholder,
+.task-detail-prop-value textarea::placeholder,
+.task-detail-description-field textarea::placeholder {
+    color: var(--mud-palette-text-secondary);
+    opacity: 1;
+}
+
 @container task-detail (min-width: 368px) {
     .task-detail-prop {
         grid-template-columns: 120px minmax(0, 1fr);
@@ -4964,7 +5942,7 @@ a.team-ref,
     font-weight: 500;
     line-height: 1;
     background-color: color-mix(in srgb, var(--mud-palette-text-secondary) 14%, var(--mud-palette-surface));
-    color: color-mix(in srgb, var(--mud-palette-text-secondary) 70%, var(--mud-palette-text-primary));
+    color: color-mix(in srgb, var(--mud-palette-text-secondary) 50%, var(--mud-palette-text-primary));
 }
 
 .mud-chip.status-chip .mud-chip-icon,
@@ -4974,35 +5952,40 @@ a.team-ref,
 
 .mud-chip.status-chip-info {
     background-color: color-mix(in srgb, var(--mud-palette-info) 14%, var(--mud-palette-surface));
-    color: color-mix(in srgb, var(--mud-palette-info) 70%, var(--mud-palette-text-primary));
+    color: color-mix(in srgb, var(--mud-palette-info) 50%, var(--mud-palette-text-primary));
 }
 
 .mud-chip.status-chip-warning {
     background-color: color-mix(in srgb, var(--mud-palette-warning) 14%, var(--mud-palette-surface));
-    color: color-mix(in srgb, var(--mud-palette-warning) 70%, var(--mud-palette-text-primary));
+    color: color-mix(in srgb, var(--mud-palette-warning) 50%, var(--mud-palette-text-primary));
 }
 
 .mud-chip.status-chip-error {
     background-color: color-mix(in srgb, var(--mud-palette-error) 14%, var(--mud-palette-surface));
-    color: color-mix(in srgb, var(--mud-palette-error) 70%, var(--mud-palette-text-primary));
+    color: color-mix(in srgb, var(--mud-palette-error) 50%, var(--mud-palette-text-primary));
 }
 
 .mud-chip.status-chip-success {
     background-color: color-mix(in srgb, var(--mud-palette-success) 14%, var(--mud-palette-surface));
-    color: color-mix(in srgb, var(--mud-palette-success) 70%, var(--mud-palette-text-primary));
+    color: color-mix(in srgb, var(--mud-palette-success) 50%, var(--mud-palette-text-primary));
 }
 
 .mud-chip.status-chip-secondary {
     background-color: color-mix(in srgb, var(--mud-palette-secondary) 14%, var(--mud-palette-surface));
-    color: color-mix(in srgb, var(--mud-palette-secondary) 70%, var(--mud-palette-text-primary));
+    color: color-mix(in srgb, var(--mud-palette-secondary) 50%, var(--mud-palette-text-primary));
+}
+
+.mud-chip.status-chip-tertiary {
+    background-color: color-mix(in srgb, var(--mud-palette-tertiary) 14%, var(--mud-palette-surface));
+    color: color-mix(in srgb, var(--mud-palette-tertiary) 50%, var(--mud-palette-text-primary));
 }
 
 .mud-chip.status-chip-primary {
     background-color: color-mix(in srgb, var(--mud-palette-primary) 14%, var(--mud-palette-surface));
-    color: color-mix(in srgb, var(--mud-palette-primary) 70%, var(--mud-palette-text-primary));
+    color: color-mix(in srgb, var(--mud-palette-primary) 50%, var(--mud-palette-text-primary));
 }
 
-/* 2. Tag, quiet: BackgroundGray fill, TextPrimary text. */
+/* 2. Tag, quiet: a Wash fill and an Edge outline (a wash never defines a shape alone), TextPrimary text. */
 .mud-chip.tag-chip {
     box-sizing: border-box;
     height: 22px;
@@ -5011,22 +5994,34 @@ a.team-ref,
     font-size: var(--mud-typography-caption-size);
     font-weight: 500;
     line-height: 1;
-    background-color: var(--mud-palette-background-gray);
+    background-color: var(--ink-wash);
+    border: 1px solid var(--ink-edge);
     color: var(--mud-palette-text-primary);
 }
 
 /* 3. Filter: dashed while unset; a Primary border and tint once set. TaskFilterChip draws its own pill
    (.task-filter-chip); a MudChip that filters wears .filter-chip, and .filter-chip-set when on. */
 .mud-chip.filter-chip {
-    border: 1px dashed var(--mud-palette-lines-inputs);
+    box-sizing: border-box;
+    height: 28px;
+    padding: 0 12px;
+    border: 1px dashed var(--ink-field);
+    border-radius: 999px;
     background-color: transparent;
+    font-size: var(--mud-typography-body2-size);
+    font-weight: 400;
     color: var(--mud-palette-text-primary);
 }
 
+/* Set: the accent border, the Accent tint at 14% and the accent ink at 500. .is-set is the name the screens use;
+   .filter-chip-set and MudBlazor's own selected state still read the same until each screen moves over. */
+.mud-chip.filter-chip.is-set,
 .mud-chip.filter-chip.filter-chip-set,
 .mud-chip.filter-chip.mud-chip-selected {
     border: 1px solid var(--mud-palette-primary);
     background-color: color-mix(in srgb, var(--mud-palette-primary) 14%, var(--mud-palette-surface));
+    color: color-mix(in srgb, var(--mud-palette-primary) 70%, var(--mud-palette-text-primary));
+    font-weight: 500;
 }
 
 /* 4. Count or meta: no chip, plain caption text. */

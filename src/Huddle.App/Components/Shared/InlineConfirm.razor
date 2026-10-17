@@ -1,10 +1,13 @@
 @namespace Agency.Huddle.App.Components.Shared
 
-@* The Confirm/Cancel row that swaps in for a list row while a destructive action awaits a yes or a
-   no. One copy so the sites cannot drift: Confirm takes focus when the row first appears, Escape
-   cancels, and while Busy both buttons are disabled and Confirm shows a spinner. The buttons carry
-   the fixed classes inline-confirm-confirm and inline-confirm-cancel; a caller that needs its own
-   styling or test hook puts a class on the group through Class. *@
+@* The Cancel/verb row that swaps in for a list row while a destructive action awaits a yes or a no
+   (design-system "Confirming"). Cancel comes first and the verb button repeats the action ("Delete",
+   "Remove"), never "Confirm", as a dialog's actions do. One copy so the sites cannot drift: the verb
+   button takes focus when the row first appears, Escape cancels, and while Busy both buttons are
+   disabled and the verb shows a spinner. Narrow is the sidebar's form: the prompt is the verb alone
+   ("Delete?"), and prompt and buttons stay on one line in the caller's indent. The buttons carry the
+   fixed classes inline-confirm-cancel and inline-confirm-confirm; a caller that needs its own styling
+   or test hook puts a class on the group through Class. *@
 <div role="group" aria-label="@(this.Prompt ?? "Confirm")" class="@this.GroupClass"
      @onkeydown="this.OnKeyDownAsync" @onkeydown:stopPropagation="true">
     @if (!string.IsNullOrEmpty(this.Prompt))
@@ -15,10 +18,10 @@
     {
         <MudProgressCircular Size="Size.Small" Indeterminate="true" />
     }
-    <MudButton @ref="this.confirmButton" Size="Size.Small" Variant="Variant.Outlined" Color="Color.Error"
-               Class="inline-confirm-confirm" Disabled="this.Busy" OnClick="this.OnConfirm">@this.ConfirmText</MudButton>
-    <MudButton Size="Size.Small" Variant="Variant.Outlined" Class="inline-confirm-cancel"
+    <MudButton Size="Size.Small" Variant="Variant.Text" Class="inline-confirm-cancel"
                Disabled="this.Busy" OnClick="this.OnCancel">Cancel</MudButton>
+    <MudButton @ref="this.confirmButton" Size="Size.Small" Variant="Variant.Filled" Color="Color.Error"
+               Class="inline-confirm-confirm" Disabled="this.Busy" OnClick="this.OnConfirm">@this.ConfirmText</MudButton>
 </div>
 
 @code {
@@ -28,15 +31,19 @@
     [Parameter]
     public string? Prompt { get; set; }
 
-    /// <summary>The Confirm button's label.</summary>
+    /// <summary>The verb button's label, repeating the action: "Delete" by default, "Remove" or "Reset" where that is the action. Never "Confirm".</summary>
     [Parameter]
-    public string ConfirmText { get; set; } = "Confirm";
+    public string ConfirmText { get; set; } = "Delete";
 
-    /// <summary>True while the confirmed action runs: both buttons are disabled and Confirm shows a spinner.</summary>
+    /// <summary>True for the sidebar's one-line form: the prompt is the verb alone ("Delete?") and nothing wraps, so the row keeps the caller's indent.</summary>
+    [Parameter]
+    public bool Narrow { get; set; }
+
+    /// <summary>True while the confirmed action runs: both buttons are disabled and a spinner shows.</summary>
     [Parameter]
     public bool Busy { get; set; }
 
-    /// <summary>Raised when Confirm is clicked.</summary>
+    /// <summary>Raised when the verb button is clicked.</summary>
     [Parameter]
     public EventCallback OnConfirm { get; set; }
 
@@ -49,9 +56,16 @@
     public string? Class { get; set; }
 
     /// <summary>The group's classes: the component's own <c>inline-confirm</c> plus the caller's <see cref="Class"/>.</summary>
-    private string GroupClass =>string.IsNullOrEmpty(this.Class) ? "inline-confirm" : $"inline-confirm {this.Class}";
+    private string GroupClass
+    {
+        get
+        {
+            string own = this.Narrow ? "inline-confirm inline-confirm-narrow" : "inline-confirm";
+            return string.IsNullOrEmpty(this.Class) ? own : $"{own} {this.Class}";
+        }
+    }
 
-    /// <summary>Moves focus to Confirm the first time the row appears, so a keyboard user lands on the choice they were just asked.</summary>
+    /// <summary>Moves focus to the verb button the first time the row appears, so a keyboard user lands on the choice they were just asked.</summary>
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
         if (firstRender && this.confirmButton is not null)

@@ -136,7 +136,7 @@ public sealed class TeammateCardWorkModeTests
     /// <summary>
     /// While the probe is out the catalog is unread, which looks like an empty one: the select must refuse
     /// to open rather than offer that as the Adapter's whole answer (the same trap as issue #39). It is
-    /// Disabled, not ReadOnly, because only the disabled state is styled.
+    /// Disabled so it refuses to open, but styled as busy with a progress bar and <c>aria-busy</c> so it does not look switched off (audit E5).
     /// </summary>
     [Fact]
     public async Task EditMode_WhileTheCatalogLoads_TheWorkModeSelectIsInert()
@@ -328,7 +328,7 @@ public sealed class TeammateCardWorkModeTests
         await SetTextValueAsync(cut, "Name", "coo");
         await SetTextValueAsync(cut, "Title", "Chief of Staff");
         await SetTextValueAsync(cut, "Alias", "coo");
-        await SetTextValueAsync(cut, "Persona body", "You are the Chief of Staff.");
+        await SetTextValueAsync(cut, "Persona text", "You are the Chief of Staff.");
         await OpenSelectAsync(cut, "Work mode");
         await ClickSelectItemAsync(cut, "Plan");
         await ClickButtonAsync(cut, "Add teammate");
@@ -366,7 +366,7 @@ public sealed class TeammateCardWorkModeTests
         await SetTextValueAsync(cut, "Name", "coo");
         await SetTextValueAsync(cut, "Title", "Chief of Staff");
         await SetTextValueAsync(cut, "Alias", "coo");
-        await SetTextValueAsync(cut, "Persona body", "You are the Chief of Staff.");
+        await SetTextValueAsync(cut, "Persona text", "You are the Chief of Staff.");
         await OpenSelectAsync(cut, "Work mode");
         await ClickSelectItemAsync(cut, "Careful");
         await ClickButtonAsync(cut, "Add teammate");
@@ -418,11 +418,11 @@ public sealed class TeammateCardWorkModeTests
         return helper.TextContent.Trim();
     }
 
-    /// <summary>The body text of the View card's outlined paper whose overline reads <paramref name="overline"/>, trimmed.</summary>
+    /// <summary>The body text of the View card's section whose Group label reads <paramref name="overline"/>, trimmed.</summary>
     private static string ViewPaperText(IRenderedComponent<ContainerFragment> cut, string overline)
     {
-        var paper = cut.FindAll(".mud-paper")
-            .First(candidate => string.Equals(candidate.QuerySelector(".mud-typography-overline")?.TextContent.Trim(), overline, StringComparison.Ordinal));
+        var paper = cut.FindAll(".teammate-card-section")
+            .First(candidate => string.Equals(candidate.QuerySelector(".group-label")?.TextContent.Trim(), overline, StringComparison.Ordinal));
         var body = paper.QuerySelector(".mud-typography-body1");
         Assert.NotNull(body);
         return body.TextContent.Trim();

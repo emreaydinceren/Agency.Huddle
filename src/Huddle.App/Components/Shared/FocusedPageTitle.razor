@@ -1,0 +1,26 @@
+@*
+    A page's document title, offered only while the page is in the focused pane. Every mounted page that renders a PageTitle
+    registers a provider, and the head outlet shows the one registered last, so with two panes open the pane that mounted last
+    owned the title whichever pane the Human was in (round 3: the browser's tab kept saying "All Tasks" over a View named
+    "Platform board"). The page host cascades whether its Tab is the focused pane's active Tab; an unfocused page registers
+    nothing, and the title is keyed on its text so a changed title registers afresh and goes to the top. Outside a Tab host
+    nothing is cascaded and the title is always offered, as PageTitle alone would.
+*@
+
+@if (this.Focused)
+{
+    <PageTitle @key="this.Title">@this.Title</PageTitle>
+}
+
+@code {
+    /// <summary>The document title.</summary>
+    [Parameter, EditorRequired]
+    public string Title { get; set; } = string.Empty;
+
+    /// <summary>Whether this page is in the focused pane. True when no page host is cascading it.</summary>
+    [CascadingParameter(Name = PageFocus)]
+    public bool Focused { get; set; } = true;
+
+    /// <summary>The name <c>TabPageHost</c> cascades the focus under.</summary>
+    internal const string PageFocus = "PageFocused";
+}

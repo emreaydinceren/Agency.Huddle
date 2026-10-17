@@ -23,7 +23,9 @@
     <link rel="stylesheet" href="@Assets["app-vars.css"]" />
     <link rel="stylesheet" href="@Assets["Huddle.App.styles.css"]" />
     <ImportMap />
-    <HeadOutlet />
+    @* Interactive like Routes: a static HeadOutlet exists only in the prerendered HTML, so no PageTitle rendered by an
+       interactive page could ever change the document title after the first load. *@
+    <HeadOutlet @rendermode="InteractiveServer" />
 </head>
 
 <body>
