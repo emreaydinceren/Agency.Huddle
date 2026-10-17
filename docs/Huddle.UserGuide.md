@@ -28,6 +28,7 @@ configuring models. See [the chat-surface hub](Huddle.EngineeringGuide.md) for t
 | Chat inside a Team, or find its Team Room | [Team chats](#team-chats) |
 | Track work | [Tracking work with Tasks](#tracking-work-with-tasks) |
 | Share notes and documents | [Keeping notes in the Library](#keeping-notes-in-the-library) |
+| See a Room's members, Tasks and files, or a note's outline and links | [The Right sidebar](#the-right-sidebar) |
 | Teach Teammates a procedure | [Giving Teammates Skills](#giving-teammates-skills) |
 
 ## Install
@@ -186,6 +187,38 @@ The search box sits in the Top Bar, above the left menu and every page.
 - **Every search reads again.** Global Search keeps no index of its own, so a new Message or file
   shows up on your next search, and nothing is kept after it. `Results may be incomplete.` means a
   limit was reached: narrow the search or pick one chip.
+
+### The Right sidebar
+
+The button at the right end of the Top Bar opens and closes the **Right sidebar**, a panel on
+the window's right edge that shows things about the page you are looking at. It starts closed
+each time you open the app. With two panes open, it follows the pane you last clicked.
+
+It holds one or more panels, depending on the page:
+
+| On | Panels |
+| --- | --- |
+| A chat Room | **Members**, **Tasks in this chat**, **Documents in this chat** |
+| A Markdown note in the Library | **Outline**, **Linked documents** |
+| Any other page | None. The sidebar says `This page has nothing to show here.` |
+
+| Panel | What it shows | What a click does |
+| --- | --- | --- |
+| **Members** | Everyone in the Room, Teammates first, each with their avatar and, for a Teammate, a status dot. | The avatar opens the member's profile. |
+| **Tasks in this chat** | Each Task the Room's Messages mention, most recent first, with its current title and state. A deleted Task shows `(unavailable)`. | The row opens the Task. The arrow beside it scrolls the Room to the Message that last mentioned it. |
+| **Documents in this chat** | Each Library file the Room's Messages mention, most recent first. A file that is no longer in the Library is greyed out. | The row opens the file in the Library. The arrow scrolls the Room to the Message. |
+| **Outline** | The note's headings, indented by level. In **Split** mode it follows your typing; in **Read** and **Edit** it shows the note as last loaded or saved. | Scrolls the note to that heading. In **Edit** mode it moves the cursor to the heading's line. |
+| **Linked documents** | The notes this note links to with `[[...]]`, in the order they appear. A link to a note that does not exist shows `(not found)`. | Opens the linked note. |
+
+Each panel's header shows its name and a count. Click the header to fold the panel away; your
+browser remembers which panels you folded. A panel with nothing in it stays, with one line
+saying so, such as `No Tasks mentioned in this chat yet.` The Tasks panel appears only while
+Tasks are switched on, and the three Library panels only while the Library is.
+
+**In the background:** the sidebar reads the same files and records as the page beside it and
+changes nothing. The Room panels update when a Message is posted in that Room, and Members
+also when someone joins or leaves; the Library
+panels update when a note is saved, renamed, moved or deleted.
 
 ## The data model
 
@@ -1537,7 +1570,8 @@ their watched folders.
 Write `[[Note name]]`, `[[folder/Note]]`, `[[Note|shown text]]` or
 `[[Note#Heading]]`. Links resolve within the same root, in the style of
 Obsidian. Each note shows its **Backlinks**, the notes that link to it. A link to
-a missing note offers to create it.
+a missing note offers to create it. The notes a note links *to*, and its headings, are
+listed in the [Right sidebar](#the-right-sidebar) while the note is open.
 
 ### Organising files
 
