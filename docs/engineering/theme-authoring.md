@@ -842,7 +842,23 @@ records why.
 
 The running-app check of the five Themes UXG names (Huddle Light, Huddle Dark, one ported light, one ported dark, one High Contrast): the text census `lines` report, greyscale, and sibling-Tab title stability.
 
-Results: pending orchestrator run
+Run on 17 Oct 2026 against `feat/visual-audit-r3`, at 1440×900, with the census `lines` report on
+the Platform board (and Teammates, a Room and the Library in Huddle Dark):
+
+| Theme | Line order (Rule < Edge < Field ≤ Chrome) | Edge / Field rung | Text failures | Under 11px |
+| --- | --- | --- | --- | --- |
+| Huddle Light | Holds | 18% / 30% | None | Avatar letters only (10px floor, by design) |
+| Huddle Dark | Holds | 18% / 30% | None | Avatar letters only |
+| Light Modern | Holds | 18% / 30% | The High priority chip's text, 3.68:1. The chip text then moved to a 50% mix; 17 ported combinations still miss (UX-E17) | None |
+| Dark Modern | Holds | 18% / 30% | None | None |
+| Dark High Contrast | Holds | 18% / 30% | None | None |
+
+- **Greyscale:** priority reads by glyph, Backlog by its hollow ring, and every state by its column
+  or field name; nothing rests on hue alone.
+- **Title position:** the Room's and Teammates' `h1` sit at the same y (96.5px), so switching Tabs
+  doesn't move the title.
+- **Washed shapes:** tag and reference chips keep their Edge outline on Huddle Dark, where the wash
+  alone was 1.05:1 before round 3.
 
 ## See also
 

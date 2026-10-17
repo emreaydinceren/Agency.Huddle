@@ -31,7 +31,7 @@ visible drift between screens. **P3** is internal hygiene. Paths are relative to
 | [Code reuse](#2-code-reuse-opportunities) | 1 | UX-R22 |
 | [Pattern violations](#3-pattern-violations) | 1 | UX-V14 |
 | [Documentation drift](#4-documentation-drift) | 0 | |
-| [Round-3 defects](#5-defects-found-in-the-round-3-visual-audit) | 16 | UX-E1 to UX-E16 (E1 to E12 closed in round 3; E13 to E16 open) |
+| [Round-3 defects](#5-defects-found-in-the-round-3-visual-audit) | 17 | UX-E1 to UX-E17 (E1 to E12 closed in round 3; E13 to E17 open) |
 
 ## 1. Inconsistencies
 
@@ -79,6 +79,7 @@ They are not style drift; each was visible in the running app. Round 3 closed E1
 | UX-E14 | P3 | The Move dialog shows raw Teammate-ID folder names | Library › Move | Look up the Teammate's display name for the folder | `LIB`: no display-name lookup for a Teammate folder |
 | UX-E15 | P3 | The New teammate dialog still scrolls inside on a short window | Teammates › New teammate | Let the dialog's content fit, or move the persona text to its own step | `TEAMS` |
 | UX-E16 | P3 | The B7b scrollbar is left native | Teammates | Style it with the rest of the app's scrollbars | `TEAMS` |
+| UX-E17 | P2 | 17 status-chip colours in ported VS Code Themes stay under 4.5:1, even after the chip text moved from 70% to 50% toward Ink (Light Modern's High chip was 3.68:1 at 70%). The 50% mix also mutes every chip in the Huddle Themes | Status chips, ported Themes | Decide between a per-Theme chip-ink recipe and recording the 17 as documented shortfalls; review the muted look in Huddle Light and Dark | `FND`: the 17 are listed in `R3FixTests` |
 
 ## See also
 
