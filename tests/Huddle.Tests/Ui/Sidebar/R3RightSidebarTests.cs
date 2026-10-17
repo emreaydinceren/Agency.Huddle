@@ -26,7 +26,7 @@ public sealed class R3RightSidebarTests
     /// <summary>The declarations of the first rule whose selector is exactly <paramref name="selector"/>.</summary>
     private static string Rule(string selector)
     {
-        Match match = Regex.Match(Css(), @"(?m)^" + Regex.Escape(selector) + @"\s*\{([^}]*)\}");
+        Match match = Regex.Match(Css(), @"(?m)^" + string.Join(@"\s+", selector.Split((char[]?)null, StringSplitOptions.RemoveEmptyEntries).Select(static token => Regex.Escape(token))) + @"\s*\{([^}]*)\}");
         Assert.True(match.Success, $"app.css has no rule for {selector}.");
         return match.Groups[1].Value;
     }
