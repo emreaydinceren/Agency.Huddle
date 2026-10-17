@@ -155,6 +155,15 @@ public sealed partial class TypeScaleTests
         Assert.Matches(@"\.message-bubble\s*\{\s*max-width:\s*min\(75%, calc\(75ch \+ 32px\)\);", css);
     }
 
+    /// <summary>The Composer's box sits in the same centred 760px column as the Transcript above it, not across the whole pane.</summary>
+    [Fact]
+    public void AppCss_ComposerSharesTheTranscriptColumn()
+    {
+        string css = TypeScaleTests.ReadAppCss();
+
+        Assert.Matches(@"\.composer-box\s*\{[^}]*max-width:\s*760px;[^}]*margin-inline:\s*auto;", css);
+    }
+
     /// <summary>The Room's Transcript metrics: 16px between senders, 4px within one, an 8px task dot, 13px sender names, a 12px bubble radius and the day separator's 24px/16px spacing.</summary>
     [Fact]
     public void AppCss_TranscriptMetricsFollowTheRoomSpec()

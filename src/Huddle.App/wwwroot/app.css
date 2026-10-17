@@ -1366,8 +1366,12 @@ a.team-ref,
     padding: 16px 24px;
 }
 
+/* The Composer belongs to the Transcript column (F2): the same 760px, centred, so the box lines up with the
+   messages above it rather than spanning a wide pane. */
 .composer-box {
     position: relative;
+    max-width: 760px;
+    margin-inline: auto;
 }
 
 .composer {
