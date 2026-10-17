@@ -553,8 +553,9 @@ The Room is the Transcript over the Composer in one column.
   `TextSecondary` at 75ch; "Overrides stored at" is 12px with the path in 12px `--font-mono`;
   `{{tokens}}` are tag chips in 12px mono.
 - **The Team page.** "Roles" and "Roster" are `subtitle2` `h3`s with a 12px `TextSecondary`
-  count ("Roster · 4 members", "Roles · N roles available"). Roles wrap in `.role-grid` of
-  220px cards: the description is up to three lines at 13px, "Hiring pool" is meta text, Add is
+  count ("Roster · 4 members", "Roles · N roles available"). Roles fill two rows of `.role-grid`
+  220px cards that scroll sideways, and the roster does the same with 20rem cards in `.roster-grid`
+  (the one place a card grid scrolls; the team types still wrap): the description is up to three lines at 13px, "Hiring pool" is meta text, Add is
   a Small outlined button at the bottom left and "Suggested" sits to its right. A roster card
   has a 40px avatar with the presence badge and no status dot beside the name, the name at
   14px/600, the role at 13px `TextSecondary`, "Member", "New" or "1 skill" as meta text, and

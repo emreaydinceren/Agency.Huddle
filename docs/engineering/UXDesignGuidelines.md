@@ -293,8 +293,8 @@ feature's name. Reuse these before writing a rule:
 | `.task-due-overdue`, `.task-row-selected` | An overdue date (a 14px warning icon and weight 600) and the selected List row (the 14% and 20% tints) |
 | `.task-list-id-cell`, `.task-list-priority-cell` | The List's fixed-width columns: ID 110px, Priority 120px |
 | `.library-backlinks` | The "Linked from N notes" panel, the width of the reader's text column |
-| `.role-grid`, `.team-type-grid`, `.team-type-card-selected` | The wrapping role grid (220px cards) and team type grid, and the one accent-tinted type tile |
-| `.roster-grid`, `.roster-card` | The Team page's roster of 40px-avatar cards |
+| `.role-grid`, `.team-type-grid`, `.team-type-card-selected` | The role grid (two rows of 220px cards, scrolling sideways), the wrapping team type grid, and the one accent-tinted type tile |
+| `.roster-grid`, `.roster-card` | The Team page's roster of 40px-avatar cards, two rows of 20rem cards that scroll sideways like the role grid |
 | `.build-team-savebar` | The Team page's save bar: rendered only when there are unsaved changes, sticky at the bottom |
 | `.teammates-list`, `.teammates-item`, `.teammate-tile`, `.teammates-group-count` | The Teammates grid (`minmax(240px, 1fr)`), its bordered `<li>` card, the opening `<button>` inside it, and a group's 12px count |
 | `.sidebar-row-label`, `.sidebar-row-meta`, `.sidebar-show-all` | A one-line sidebar label, its trailing count and the "Show all (N)" row |
