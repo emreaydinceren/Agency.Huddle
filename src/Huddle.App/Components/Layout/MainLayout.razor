@@ -4,6 +4,8 @@
 @using Agency.Huddle.App.Components.Search
 @using Agency.Huddle.App.Themes
 @inject AppearanceStore AppearanceStore
+@inject IHumanIdentity Human
+@inject NavigationManager Navigation
 
 @* IsDarkMode is one-way and ObserveSystemDarkModeChange is off on purpose: the selected theme
    carries exactly one palette and its own ThemeMode, so the mode is derived from the theme and
@@ -65,11 +67,39 @@
     private MudTheme theme = ThemeCatalog.BuiltIn[0].Theme;
     private bool isDarkMode = ThemeCatalog.BuiltIn[0].Mode == ThemeMode.Dark;
 
-    /// <summary>Subscribes to <see cref="AppearanceStore.AppearanceChanged"/> and applies the resolved appearance already on disk.</summary>
+    /// <summary>The route a blank system opens on: the Settings Profile tab.</summary>
+    private const string ProfileRoute = "settings/profile";
+
+    /// <summary>Subscribes to <see cref="AppearanceStore.AppearanceChanged"/>, applies the resolved appearance already on disk, and sends a first-run Human to their profile.</summary>
     protected override void OnInitialized()
     {
         this.AppearanceStore.AppearanceChanged += this.OnAppearanceChanged;
         this.ApplyAppearance(this.AppearanceStore.Current);
+        this.RedirectFirstRun();
+    }
+
+    /// <summary>
+    /// On a blank system - no <c>profile.json</c> yet - sends the Human to the Settings Profile tab, the
+    /// first thing to set up. Runs once per layout (a server redirect during prerender, then never again
+    /// in that circuit), so the Human can still navigate away before saving and is never trapped.
+    /// </summary>
+    private void RedirectFirstRun()
+    {
+        if (this.Human.IsSaved)
+        {
+            return;
+        }
+
+        var relative = this.Navigation.ToBaseRelativePath(this.Navigation.Uri);
+        var end = relative.IndexOfAny(['?', '#']);
+        var path = (end < 0 ? relative : relative[..end]).TrimEnd('/');
+        if (string.Equals(path, ProfileRoute, StringComparison.OrdinalIgnoreCase))
+        {
+            return;
+        }
+
+        // Relative to the base URI, so it needs no leading '/'.
+        this.Navigation.NavigateTo(ProfileRoute, replace: true);
     }
 
     /// <summary>

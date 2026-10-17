@@ -358,7 +358,7 @@ public sealed class ReadRecordsToolTests
         using Scene scene = await CreateSceneAsync(ct);
         string human = scene.Harness.Options.Value.HumanName;
         await scene.Chat.AppendAsync(RoomId, new ChatMessage("a", Now.AddHours(-2), "u1", "Rae", "hello"), ct);
-        await scene.Chat.AppendAsync(RoomId, new ChatMessage("b", Now.AddHours(-1), "u0", human, "thanks"), ct);
+        await scene.Chat.AppendAsync(RoomId, new ChatMessage("b", Now.AddHours(-1), KnownIds.Human, human, "thanks"), ct);
 
         string result = await scene.Tool("Rae").InvokeAsync(Args(room: RoomId), ct);
 

@@ -2,7 +2,7 @@
 
 Prove that Agency.Huddle launches on http://localhost:5100 with the state a first-time user is promised — no Rooms yet, an App_Data directory built from nothing, a styled two-column shell — and that every `Team:` configuration key and `Team__*` environment variable that a tester can reach actually changes what the browser shows. The area exists because nearly everything in it is a startup side effect (a directory created, a pipe bound, a Persona process spawned) that no unit test observes end to end, and because this repo's most expensive failures here are SILENT: a single-underscore environment variable that binds to nothing, a stale `Logging:LogLevel` key that deletes the console evidence other tests rely on, and an `@Assets` key that 404s a stylesheet with no build warning, no startup error and no log line. Several tests below exist purely as controls for those silences.
 
-**27 tests** · 23 free, 4 paid 💰 · about 3.1 hours.
+**28 tests** · 24 free, 4 paid 💰 · about 3.2 hours.
 
 Read [the manual test script](../manual-tests.md) first — the cost guard, the Model and Effort
 convention, and the rules for concluding a result — then [Common procedures](common.md), which
@@ -50,7 +50,7 @@ standing conventions. This area adds:
 - The console prints `Hosting environment: Development`.
 - The page renders as TWO columns: a narrow sidebar on the left and a wide main column on the right.
 - The sidebar contains, in this order: a button labelled exactly `New chat`, a room list that shows the title `No rooms yet` with the line `Start an agent to create one.` under it, a link labelled exactly `Teammates`, and, last, an icon-only Settings link (a cog with the accessible name `Settings`, tooltip `Settings`). Other entries (Teams, Tasks, Library, Archived chats) may sit between them; their order and content are not judged here.
-- The main column shows the same empty state, `No rooms yet. Start an agent to create one.`, and no Room.
+- On a data folder with no `profile.json` (a fresh install), the address bar reads `/settings/profile` and the main column shows the Settings **Profile** tab with its welcome line - the first-run redirect STARTUPCONFIG-35 covers. Where `profile.json` already exists, the main column shows the same empty state as the sidebar, `No rooms yet. Start an agent to create one.`, and no Room.
 
 **Fail if — any of these**
 
@@ -246,24 +246,24 @@ Expecting `mybot` here is a category error, not a defect — do not file it. If 
 
 1. In `T-B` run `Test-Path src\Huddle.App\App_Data\prompts.json` and note the result.
 2. In the browser click the Settings icon (accessible name `Settings`) in the sidebar.
-3. Read the page heading and the tab buttons in the tab rail, in order.
-4. Read the paragraph that names where overrides are stored, and note the absolute path it prints.
+3. Read the page heading, the tab buttons in the tab rail, in order, and which tab is active.
+4. Click the `Prompts` tab button and read the address bar. Then read the paragraph that names where overrides are stored, and note the absolute path it prints.
 5. Try to click the `Save` button at the bottom of the form.
-6. Try to click the `Reset all to defaults` button in the header.
-7. Click the `Prompts` tab button and read the address bar.
+6. Try to click the `Reset all to defaults` button.
+7. Read the address bar again: it should still be the Prompts tab's address from step 4.
 8. Navigate the browser directly to http://localhost:5100/settings/nonsense and read what renders.
-9. Go back to `/settings`, edit ANY one text field on the Prompts tab (add a single character), and look at the `Save` button again.
+9. Go to `/settings/prompts`, edit ANY one text field on the Prompts tab (add a single character), and look at the `Save` button again.
 10. Click `Save`. Then in `T-B` run `Test-Path src\Huddle.App\App_Data\prompts.json` again.
 
 **Pass if — all of these**
 
 - Step 1 returns False — the file does not exist before any save.
-- The heading reads exactly `Settings`; the tab rail holds six tabs, in this order: `Prompts`, `Appearance`, `Personas`, `Skills`, `Team types`, `Library`, with `Prompts` active by default (`Settings.razor:36-76`). Only the Prompts tab is judged here; the others are not opened.
+- The heading reads exactly `Settings`; the tab rail holds seven tabs, in this order: `Profile`, `Prompts`, `Appearance`, `Personas`, `Skills`, `Team types`, `Library`, with `Profile` active by default (`Settings.razor`). Only the Prompts tab is judged here; the others are not opened beyond the default Profile pane.
 - The overrides paragraph contains the sentence `The file does not exist until the first time you save here, so it being absent is expected, not a bug.`
 - The absolute path printed in that paragraph ends `\src\Huddle.App\App_Data\prompts.json` — matching the live DataDir.
 - With nothing edited, `Save` is disabled and `Reset all to defaults` is disabled.
 - Clicking the `Prompts` tab changes the address bar to `/settings/prompts`.
-- `/settings/nonsense` renders the Prompts tab rather than a 404 or an error page.
+- `/settings/nonsense` renders the Profile tab, the fallback, rather than a 404 or an error page.
 - After one edit, `Save` becomes enabled.
 - After clicking `Save`, step 10 returns True.
 
@@ -285,7 +285,7 @@ Do not confuse `prompts.json` (the override file, under App_Data, absent until s
 
 **Free** · about 8 min
 
-*Proves the Theme choice persists to disk, that it applies live, and that the app never creates appearance.json unbidden. Per [ADR-0010](../../adr/0010-a-theme-is-a-mudblazor-theme.md) the full-page reload is gone — `MudThemeProvider` lives in the render tree, so a change is an ordinary re-render, not a navigation. Per [ADR-0017](../../adr/0017-a-theme-is-a-palette-not-a-pair.md) there is **no** light/dark control: a Theme carries its own palette, so choosing a dark Theme is how you get dark. The tab's Theme picker is a list, not a select, and the tab also holds an accent picker (Custom Accent only), a Library pane Right/Left choice and a **Your avatar** section; this test judges only the Theme list and the file.*
+*Proves the Theme choice persists to disk, that it applies live, and that the app never creates appearance.json unbidden. Per [ADR-0010](../../adr/0010-a-theme-is-a-mudblazor-theme.md) the full-page reload is gone — `MudThemeProvider` lives in the render tree, so a change is an ordinary re-render, not a navigation. Per [ADR-0017](../../adr/0017-a-theme-is-a-palette-not-a-pair.md) there is **no** light/dark control: a Theme carries its own palette, so choosing a dark Theme is how you get dark. The tab's Theme picker is a list, not a select, and the tab also holds an accent picker (Custom Accent only), a Library pane Right/Left choice and a closing line that links to the **Profile** tab, where the Human's avatar is now set; this test judges only the Theme list and the file.*
 
 **Before you start**
 
@@ -361,7 +361,7 @@ The app ignores the OS colour mode (ADR-0017): a dark Theme stays dark on a ligh
 
 **Fail if — any of these**
 
-- Messages are missing after the restart -> transcript durability is broken. Before filing, confirm the DataDir did not change (open `/settings` and read the path in the Prompts tab's overrides paragraph).
+- Messages are missing after the restart -> transcript durability is broken. Before filing, confirm the DataDir did not change (open `/settings/prompts` and read the path in the Prompts tab's overrides paragraph).
 - A DUPLICATE Room appears for `Ada` or `Bo` after the restart -> reconnecting under the same name created a second two-Member Room instead of re-attaching to the existing one by exact membership. This is a real bug.
 - The room count grows by more than the agents that reconnected -> the same duplication bug in another shape.
 
@@ -629,48 +629,50 @@ This test uses an absolute path on purpose. A RELATIVE `Team:DataDir` is resolve
 > [!NOTE]
 > Clean up afterwards with `Remove-Item -Recurse -Force C:\seeds\huddle\uat\data_test` once the app is stopped.
 
-### STARTUPCONFIG-21 — Team__HumanName renames the Human everywhere new, while old transcript lines keep the old name
+### STARTUPCONFIG-21 — Renaming yourself on Settings > Profile renames you everywhere, old messages included, without rewriting a transcript
 
-**Free** · about 7 min
+**Free** · about 8 min
 
-*Proves the rename reaches the members line and new message attribution, and pins the mixed attribution so it is not filed as a half-applied rename.*
+*Proves a rename from the Profile tab reaches the members list, your profile popover, the Tasks assigned to you and the search hits on your OLD messages, and pins that the transcript files on disk are never rewritten.*
 
 **Before you start**
 
-- `P-LAUNCH-UAT` has been run and Ada is Online.
-- The app is running (it is stopped and relaunched below).
+- `P-LAUNCH-UAT` has been run and Ada is Online. Its seeder writes `profile.json` with the Name `You`, so the app opens on its Rooms rather than the first-run redirect.
+- No `Team__HumanName` variable is set (`Get-ChildItem Env:Team__HumanName` prints nothing).
 
 **Steps**
 
-1. Open the `Ada` Room in the browser first (before changing anything), type `hello` and press Enter, wait for the reply, and note that your Message shows sender `You` and the members line reads `You, Ada`.
-2. Stop the app. Run `$env:Team__HumanName = 'Emre'`.
-3. Relaunch in the same window by re-running ONLY the `$mock = ...` line and the `dotnet run` command of `P-LAUNCH-UAT` (not the seeder line, which would wipe the old transcript), and reopen the same Room.
-4. Read the members line under the Room heading.
-5. Read the sender name on the OLD messages already in the transcript.
-6. Type exactly `hello again` and press Enter.
-7. Read the sender name on the message you just sent.
-8. Stop the app and run `Remove-Item Env:Team__HumanName`.
+1. Open the `Ada` Room, type exactly `hello before rename` and press Enter, and wait for Ada's reply.
+2. Open **Tasks**, create a Task titled `rename probe` and assign it to `You`.
+3. Open **Settings**. The **Profile** tab is first and already selected. Change **Name** to `Emre`, **Alias** to `em` and **Title** to `Site Reliability Engineer`, then press **Save**.
+4. Return to the `Ada` Room and read the right sidebar's **Members** panel.
+5. Click your own avatar in the Members panel and read the popover.
+6. Open the `rename probe` Task and read its Assignee.
+7. Type `before rename` in the top-bar search and read the sender on the Room hit.
+8. Stop the app.
 
 **Pass if — all of these**
 
-- The members line now reads exactly `Emre, Ada`.
-- Every message sent BEFORE the change still shows sender `You`.
-- The message sent AFTER the change shows sender `Emre`.
+- The Members panel lists `Emre` and `Ada`, and no `You`.
+- The popover shows a card reading `Emre` over `Site Reliability Engineer`, with only an **Edit** button; **Edit** opens Settings > Profile.
+- The `rename probe` Task's Assignee reads `Emre`.
+- The search hit for `before rename` names the sender `Emre`, although that message was sent as `You`.
 - No error appears anywhere.
 
 **Fail if — any of these**
 
-- The members line still reads `You, Ada` -> the rename did not reach the directory; check the variable spelling before filing.
-- The NEW message still shows `You` -> the sender name is not being read from the renamed directory row at post time.
-- Old messages were rewritten to `Emre` -> transcript lines are being mutated after the fact, which they must never be.
+- The Members panel still shows `You` -> the Team Directory row was not renamed; check the console for `The Team Directory refused to rename the Human`.
+- The popover says `No profile for Emre` -> the profile popover has no Human branch.
+- The Task still names `You` -> the rename cascade did not reach the Task files.
+- The search hit names `You` -> the hit is reading the stored sender name rather than matching your sender id.
+- After the app is stopped, any line in `C:\seeds\huddle\uat\data\rooms\*.jsonl` from step 1 carries `"senderName":"Emre"` -> transcript lines are being rewritten after the fact, which they must never be.
 
 **Inconclusive if**
 
-The mixed attribution is CORRECT and must not be filed as 'the rename only half applied'. The directory row is renamed in place, but each transcript line carries a sender name captured at post time and is never rewritten. If you cannot tell old messages from new, note the time on each message row.
+The `.jsonl` lines from step 1 still reading `"senderName":"You"` is CORRECT: the file records the Name at the time of posting, and the app shows your current Name by matching `"senderId":"human"`. Do not file it as a half-applied rename.
 
 > [!NOTE]
-> Optional oracle if sqlite3 is available: `sqlite3 C:\seeds\huddle\uat\data\team.db "SELECT name FROM users WHERE id='human';"` returns the new name, while older lines in `C:\seeds\huddle\uat\data\rooms\*.jsonl` still carry `"senderName":"You"`.
-
+> `Team__HumanName` no longer renames you once a profile is saved: it is only the Name a blank system starts with. Optional oracle if sqlite3 is available: `sqlite3 C:\seeds\huddle\uat\data\team.db "SELECT name FROM users WHERE id='human';"` returns `Emre`.
 ### STARTUPCONFIG-22 — The renamed Team__Acp__PersonaDir key refuses to start the app rather than scanning nothing
 
 **Free** · about 5 min
@@ -1239,3 +1241,41 @@ A Human Message is documented to clear THIS specific condition and nothing else.
 ---
 
 Back to [the manual test script](../manual-tests.md).
+
+### STARTUPCONFIG-35 — A blank system opens on Settings > Profile until you save a profile
+
+**Free** · about 5 min
+
+*Proves the first thing a new user sees is their own profile, that the redirect never traps them, and that it stops once a profile is saved.*
+
+**Before you start**
+
+- The app is stopped. Delete `src\Huddle.App\App_Data\profile.json` if it exists (`Remove-Item src\Huddle.App\App_Data\profile.json -ErrorAction SilentlyContinue`).
+
+**Steps**
+
+1. Launch with [`P-LAUNCH-FREE`](common.md#p-launch-free) and open http://localhost:5100.
+2. Read the address bar and the main column.
+3. Click **Teammates** in the sidebar.
+4. Open http://localhost:5100 again in a new browser tab.
+5. In that tab, click the avatar on the profile card, choose **A short label**, type `ME` and press **Save** in the dialog.
+6. Press **Save** under the fields without changing anything.
+7. Open http://localhost:5100 in another new tab.
+
+**Pass if — all of these**
+
+- After step 2 the address bar reads `/settings/profile`, the **Profile** tab is selected and a welcome line starts `Welcome. Start by telling your Teammates who you are`.
+- Step 3 opens **Teammates** and stays there - the redirect does not trap you.
+- After step 5 the card's avatar reads `ME`.
+- After step 6 the welcome line is gone and `profile.json` exists under `src\Huddle.App\App_Data`.
+- Step 7 opens the app's normal landing page, not `/settings/profile`.
+
+**Fail if — any of these**
+
+- Step 2 shows the Rooms page -> the first-run redirect did not run.
+- Step 3 bounces back to `/settings/profile` -> the redirect is trapping navigation.
+- Step 7 still lands on `/settings/profile` -> saving did not create `profile.json`, or the store did not see it.
+
+**Inconclusive if**
+
+The browser was already open on another page of the app when you launched: a running circuit keeps its page, and only a fresh page load checks for a profile. Open a new tab and repeat step 2.

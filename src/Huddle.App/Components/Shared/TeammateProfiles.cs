@@ -3,6 +3,7 @@ using Agency.Huddle.App.Avatars;
 using Agency.Huddle.App.Data;
 using Agency.Huddle.App.HiringPool;
 using Agency.Huddle.App.Pipes;
+using Agency.Huddle.App.Profile;
 using Agency.Huddle.App.TeamTypes;
 using Agency.Huddle.App.Teams;
 
@@ -22,6 +23,7 @@ namespace Agency.Huddle.App.Components.Shared;
 /// <param name="directory">The user directory, for the Teammate's agent user.</param>
 /// <param name="gateway">The pipe gateway, for whether the agent is connected.</param>
 /// <param name="health">Reported health, the other input to the status dot.</param>
+/// <param name="human">The Human's live identity, so the Human's own avatar opens their profile too; <see langword="null"/> treats every name as a Teammate's.</param>
 internal sealed class TeammateProfiles(
     PersonaStore personas,
     TeamTypeCatalog types,
@@ -30,9 +32,10 @@ internal sealed class TeammateProfiles(
     ITeamCatalog teams,
     ITeamDirectory directory,
     IAgentGateway gateway,
-    PersonaHealth health)
+    PersonaHealth health,
+    IHumanIdentity? human = null)
 {
-    /// <summary>Builds the profile of the Teammate called <paramref name="name"/>.</summary>
+    /// <summary>Builds the profile of the Teammate - or the Human - called <paramref name="name"/>.</summary>
     /// <param name="name">The Teammate's Name or alias.</param>
     /// <param name="team">The Team the avatar was seen in, or <see langword="null"/> outside any Team.</param>
     /// <param name="ct">Cancels the lookup.</param>
@@ -40,6 +43,13 @@ internal sealed class TeammateProfiles(
     public async Task<TeammateProfileView?> BuildAsync(string name, string? team, CancellationToken ct)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(name);
+        if (human is not null && human.Matches(name))
+        {
+            HumanProfile me = human.Current;
+            TeammateProfile humanProfile = new(me.Name, me.Title ?? string.Empty, me.Description ?? string.Empty, avatars.Get(me.Name));
+            return new TeammateProfileView(humanProfile, Manager: false, ProfileMembership.None, Agent: null, team) { IsHuman = true };
+        }
+
         if (personas.ResolveByNameOrAlias(name) is not { } entry || personas.Get(entry.Name) is not { } persona)
         {
             return null;
@@ -81,4 +91,7 @@ internal sealed record TeammateProfileView(TeammateProfile Profile, bool Manager
 {
     /// <summary>The agent user's id, or <see langword="null"/> when it has never connected.</summary>
     public string? AgentId => this.Agent?.Id;
+
+    /// <summary>Whether this is the Human's own profile, edited on the Settings Profile tab rather than on a Teammate card.</summary>
+    public bool IsHuman { get; init; }
 }

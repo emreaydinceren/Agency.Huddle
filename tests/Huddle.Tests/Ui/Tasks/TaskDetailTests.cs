@@ -599,6 +599,7 @@ public sealed class TaskDetailTests
         {
             MudBunitContext ctx = new();
             ctx.Services.AddSingleton(this.options);
+        ctx.Services.AddSingleton<Agency.Huddle.App.Profile.IHumanIdentity>(new Agency.Huddle.App.Profile.ConfiguredHumanIdentity(this.options.Value.HumanName));
             ctx.Services.AddSingleton(TimeProvider.System);
             ctx.Services.AddSingleton(this.personas);
             ctx.Services.AddSingleton(this.store);

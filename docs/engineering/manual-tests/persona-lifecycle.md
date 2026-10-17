@@ -887,7 +887,7 @@ If `sqlite3` is unavailable, record this test as NOT RUN — there is no UI path
 1. In the browser go to `http://localhost:5100/teammates` and confirm at least one tile reads **Online**.
 2. In `T-B` run `Adapters` and write down every row's ProcessId and CreationDate.
 3. In the sidebar click the **Settings** gear (`MainLayout.razor:28`, link target `/settings`).
-4. Confirm the **Prompts** tab is selected. `/settings` with no tab falls back to Prompts (`Settings.razor:105-106`); if another tab is selected, click **Prompts**.
+4. Click the **Prompts** tab. `/settings` with no tab opens on **Profile**, the first tab, so the prompts are one click away; confirm the address bar reads `/settings/prompts`.
 5. Find the first prompt field. Note whether it carries a `Next session` badge.
 6. Click into that field's textarea and append the text ` (edited)` at the end.
 7. Confirm a `Unsaved` badge appears next to that field's label.

@@ -12,7 +12,17 @@
 <div class="@this.CardClass" role="@(this.ListItem ? "listitem" : null)">
     <div class="roster-card-head">
         <PresenceAnchor Cue="@(profile.State is { } cueState ? PresenceCue.From(cueState) : null)">
-            <span class="roster-avatar-ring" aria-hidden="true"><TeammateAvatar Name="@profile.Name" Avatar="@profile.Avatar" PendingImage="@profile.PendingImage" PendingImageExtension="@profile.PendingImageExtension" Class="roster-avatar" /></span>
+            @if (this.OnAvatarClick.HasDelegate)
+            {
+                <button type="button" class="teammate-card-avatar" aria-label="Change avatar" title="Change avatar" @onclick="this.OnAvatarClick">
+                    <span class="roster-avatar-ring"><TeammateAvatar Name="@profile.Name" Avatar="@profile.Avatar" PendingImage="@profile.PendingImage" PendingImageExtension="@profile.PendingImageExtension" Class="roster-avatar" /></span>
+                    <MudIcon Icon="@Icons.Material.Filled.Edit" Size="Size.Small" Class="teammate-card-avatar-edit" />
+                </button>
+            }
+            else
+            {
+                <span class="roster-avatar-ring" aria-hidden="true"><TeammateAvatar Name="@profile.Name" Avatar="@profile.Avatar" PendingImage="@profile.PendingImage" PendingImageExtension="@profile.PendingImageExtension" Class="roster-avatar" /></span>
+            }
         </PresenceAnchor>
         <span class="roster-card-who">
             <span class="roster-name">@profile.Name</span>
@@ -86,6 +96,10 @@
     /// <summary>The buttons inside the card's actions row; when null the row is not drawn.</summary>
     [Parameter]
     public RenderFragment? Actions { get; set; }
+
+    /// <summary>When set, the avatar becomes a <c>Change avatar</c> button that invokes this; the Settings Profile tab uses it to open the avatar editor.</summary>
+    [Parameter]
+    public EventCallback OnAvatarClick { get; set; }
 
     /// <summary>Extra classes appended to the root.</summary>
     [Parameter]

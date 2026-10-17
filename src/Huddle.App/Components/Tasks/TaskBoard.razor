@@ -41,7 +41,7 @@
 @inject TaskTriggerService Triggers
 @inject IDialogService Dialogs
 @inject ISnackbar Snackbar
-@inject IOptions<TeamOptions> TeamOptions
+@inject IHumanIdentity Human
 @inject ViewStore ViewStore
 @inject TaskStore Store
 @inject ISprintCatalog Sprints
@@ -480,7 +480,7 @@
     /// <param name="item">The dragged Task.</param>
     private string? CaptionFor(TaskItem item)
     {
-        WakePreview preview = this.Triggers.Preview(null, item, TaskActors.Human(this.TeamOptions.Value));
+        WakePreview preview = this.Triggers.Preview(null, item, TaskActors.Human(this.Human));
         return preview.Block == WakeBlock.None ? $"{preview.AssigneeName} will be notified" : null;
     }
 
@@ -558,7 +558,7 @@
         }
 
         TaskPatch patch = new() { Status = target, DuplicateOf = duplicateOf, Reason = reason };
-        TaskResult result = this.Service.Update(item.Id, patch, baseVersion: null, TaskActors.Human(this.TeamOptions.Value));
+        TaskResult result = this.Service.Update(item.Id, patch, baseVersion: null, TaskActors.Human(this.Human));
         string? error = result switch
         {
             TaskResult.Refused refused => $"Could not move {item.Id}: {string.Join(' ', refused.Problems)}",

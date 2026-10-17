@@ -1,7 +1,8 @@
 @* <summary>
      The popover <see cref="ProfileAvatar"/> opens: the same <see cref="ProfileCard"/> Build a team's
      roster shows, with only Edit (opens the Teammate card) and Message (opens the one-to-one, in the
-     Team's own when the avatar was seen in a Team). Remove, Re-roll and Undo are the Human's decisions
+     Team's own when the avatar was seen in a Team). The Human's own avatar opens the same card with
+     only Edit, which goes to the Settings Profile tab. Remove, Re-roll and Undo are the Human's decisions
      on the roster and are not offered here.
 
      It is a separate component so that its services (the profile builder, the card opener, chat,
@@ -39,7 +40,7 @@
         {
             <ProfileCard Profile="@shown.Profile" Existing="true" Manager="@shown.Manager" Membership="@shown.Membership">
                 <Actions>
-                    <MudButton Variant="Variant.Text" Size="Size.Small" StartIcon="@Icons.Material.Outlined.Edit" OnClick="this.EditAsync"
+                    <MudButton Variant="Variant.Text" Size="Size.Small" StartIcon="@Icons.Material.Outlined.Edit" OnClick="@(shown.IsHuman ? this.EditHumanAsync : this.EditAsync)"
                                aria-label="@($"Edit {shown.Profile.Name}")" Class="roster-edit">Edit</MudButton>
                     @if (shown.Agent is not null)
                     {
@@ -117,6 +118,13 @@
         {
             await this.CloseAsync();
         }
+    }
+
+    /// <summary>Closes the popover, then opens the Human's own profile on the Settings Profile tab.</summary>
+    private async Task EditHumanAsync()
+    {
+        await this.CloseAsync();
+        this.Navigation.NavigateTo("/settings/profile");
     }
 
     /// <summary>Closes the popover, then opens the Teammate's card.</summary>

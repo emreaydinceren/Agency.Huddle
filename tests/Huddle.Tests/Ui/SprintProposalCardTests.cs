@@ -62,7 +62,7 @@ public sealed class SprintProposalCardTests
                 harness.Chat,
                 serviceDirectory,
                 catalog,
-                harness.Options,
+                new Agency.Huddle.App.Profile.ConfiguredHumanIdentity(harness.Options.Value.HumanName),
                 NullLogger<SprintProposalService>.Instance);
             return new Fixture(harness, proposals, service, room.Id, gate);
         }

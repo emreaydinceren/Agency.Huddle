@@ -8,6 +8,28 @@ public interface ITeamDirectory
 
     Task<User> GetHumanAsync(CancellationToken ct = default);
 
+    /// <summary>
+    /// The Name the Human's row carries now, read before <see cref="InitializeAsync"/> so startup can
+    /// tell whether the Human was renamed while the app was stopped.
+    /// </summary>
+    /// <param name="ct">Cancels the read.</param>
+    /// <returns>The stored Name, or <see langword="null"/> when there is no database, table or Human row yet.</returns>
+    Task<string?> ReadHumanNameAsync(CancellationToken ct = default);
+
+    /// <summary>
+    /// Renames the Human's row (id <see cref="KnownIds.Human"/>) in place, keeping its id, so every
+    /// Room and Transcript that references it follows the Human to the new Name.
+    /// </summary>
+    /// <param name="newName">The new Name; must be valid and not belong to another row, ignoring case.</param>
+    /// <returns><see langword="true"/> if the row was renamed; otherwise <see langword="false"/>.</returns>
+    /// <remarks>
+    /// Synchronous for the same reason as <see cref="RenameUser"/>: its caller,
+    /// <see cref="Agency.Huddle.App.Profile.HumanRenameCascade"/>, reacts to a plain
+    /// <c>Action&lt;T&gt;</c> event. The only rename that may touch the Human's row - <see cref="RenameUser"/>
+    /// refuses it so no Persona can take the row over.
+    /// </remarks>
+    bool RenameHuman(string newName);
+
     Task<User?> UpsertAgentUserAsync(string name, string? description, CancellationToken ct = default);
 
     /// <summary>

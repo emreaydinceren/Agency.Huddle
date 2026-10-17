@@ -102,9 +102,14 @@ public sealed class SqliteTeamDirectory : ITeamDirectory
         await ExecuteNonQueryAsync(connection, DdlCreateRoomTeamsIndex, ct);
         await ExecuteNonQueryAsync(connection, DdlCreateRoomTeamsTeamRoomIndex, ct);
 
+        // A Name already held by an Agent row is skipped rather than allowed to throw on the unique
+        // index: the Human keeps the Name they had, and startup goes on. On a fresh database there
+        // are no other rows, so the Human's row is always created.
         await using var seed = connection.CreateCommand();
         seed.CommandText = """
-            INSERT INTO users(id, name, kind) VALUES('human', $name, 'human')
+            INSERT INTO users(id, name, kind)
+            SELECT 'human', $name, 'human'
+            WHERE NOT EXISTS (SELECT 1 FROM users WHERE name = $name COLLATE NOCASE AND id <> 'human')
             ON CONFLICT(id) DO UPDATE SET name = excluded.name;
             """;
         seed.Parameters.AddWithValue("$name", humanName);
@@ -115,6 +120,50 @@ public sealed class SqliteTeamDirectory : ITeamDirectory
     {
         var human = await this.GetUserAsync(KnownIds.Human, ct);
         return human ?? throw new InvalidOperationException("The human user has not been seeded. Call InitializeAsync first.");
+    }
+
+    /// <inheritdoc />
+    public async Task<string?> ReadHumanNameAsync(CancellationToken ct = default)
+    {
+        var dbPath = new SqliteConnectionStringBuilder(this.connectionString).DataSource;
+        if (!File.Exists(dbPath))
+        {
+            return null;
+        }
+
+        await using var connection = await this.OpenConnectionAsync(ct);
+        await using var exists = connection.CreateCommand();
+        exists.CommandText = "SELECT 1 FROM sqlite_master WHERE type = 'table' AND name = 'users';";
+        if (await exists.ExecuteScalarAsync(ct) is null)
+        {
+            return null;
+        }
+
+        await using var command = connection.CreateCommand();
+        command.CommandText = "SELECT name FROM users WHERE id = 'human';";
+        return await command.ExecuteScalarAsync(ct) as string;
+    }
+
+    /// <inheritdoc />
+    public bool RenameHuman(string newName)
+    {
+        if (!NameRules.IsValidAgentName(newName))
+        {
+            return false;
+        }
+
+        using var connection = this.OpenConnection();
+        using var command = connection.CreateCommand();
+        command.CommandText = """
+            UPDATE users SET name = $name
+            WHERE id = 'human'
+              AND kind = 'human'
+              AND NOT EXISTS (
+                  SELECT 1 FROM users WHERE name = $name COLLATE NOCASE AND id <> 'human'
+              );
+            """;
+        command.Parameters.AddWithValue("$name", newName);
+        return command.ExecuteNonQuery() == 1;
     }
 
     public async Task<User?> UpsertAgentUserAsync(string name, string? description, CancellationToken ct = default)

@@ -32,11 +32,12 @@ public sealed class LibraryPanelTests
         ctx.Services.AddSingleton(factory.Services.GetRequiredService<AppearanceStore>());
         ctx.Services.AddSingleton(factory.Services.GetRequiredService<SkillStore>());
         ctx.Services.AddSingleton(factory.Services.GetRequiredService<LibraryRootStore>());
+        ProfileTestServices.AddProfile(ctx.Services, factory);
 
         var cut = ctx.Render<Settings>();
 
         List<string> tabLabels = [.. cut.FindAll(".mud-tab").Select(e => e.TextContent.Trim())];
-        Assert.Equal(["Prompts", "Appearance", "Personas", "Skills", "Team types", "Library"], tabLabels);
+        Assert.Equal(["Profile", "Prompts", "Appearance", "Personas", "Skills", "Team types", "Library"], tabLabels);
     }
 
     /// <summary>The roots table lists the two built-ins first, then any pinned root, in

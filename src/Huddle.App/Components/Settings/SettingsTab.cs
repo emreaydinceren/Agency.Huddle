@@ -7,6 +7,9 @@ namespace Agency.Huddle.App.Components.Settings;
 /// </summary>
 public enum SettingsTab
 {
+    /// <summary>The Human's own profile: Name, Alias, Title, Description and Avatar. The first tab, and where a blank system opens.</summary>
+    Profile,
+
     /// <summary>The read-only view of every model-facing prompt, grouped by area.</summary>
     Prompts,
 
