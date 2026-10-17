@@ -3841,18 +3841,38 @@ a.team-ref,
     max-width: 32rem;
 }
 
-/* Cards wrap into rows; the grid never scrolls sideways (S9, S10). */
+/* The team types wrap into rows and never scroll sideways (S9, S10); the roles and the roster below are the exception. */
 .team-type-grid {
     display: grid;
     grid-template-columns: repeat(auto-fill, minmax(16rem, 1fr));
     gap: 12px;
 }
 
-/* The roles are narrower cards, about 220px wide, in the same wrapping grid. */
-.role-grid {
+/* The roles and the roster are two rows of cards that fill down and then across; what does not fit is reached by scrolling
+   sideways, so a long pool or a large roster stays two rows tall (B9a, B9c, B12). The padding keeps the scrollbar off the cards. */
+.role-grid,
+.roster-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fill, 220px);
+    grid-template-rows: repeat(2, auto);
+    grid-auto-flow: column;
     gap: 12px;
+    overflow-x: auto;
+    padding-bottom: 8px;
+}
+
+/* The roles are narrower cards, 220px wide; the roster's are 20rem. */
+.role-grid {
+    grid-auto-columns: 220px;
+}
+
+.roster-grid {
+    grid-auto-columns: 20rem;
+}
+
+/* A lone card needs no second row: an empty explicit row would still add its row gap below the card. */
+.role-grid:not(:has(> :nth-child(2))),
+.roster-grid:not(:has(> :nth-child(2))) {
+    grid-template-rows: auto;
 }
 
 /* A sub-heading with its count beside it ("Roster · 4 members"). */
@@ -4429,12 +4449,6 @@ a.team-ref,
     display: flex;
     flex-direction: column;
     gap: 8px;
-}
-
-.roster-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(20rem, 1fr));
-    gap: 12px;
 }
 
 .roster-card {

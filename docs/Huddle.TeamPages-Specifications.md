@@ -740,7 +740,7 @@ stray URL.
 
 > **Superseded (2026-10-14).** The Members tab is now `TeamRoster`: Build a team's Hire section
 > for the Team (`BuildTeam` with `MembersOnly`; `wireframes.md` `M6`, `B12`). It shows the role
-> cards (220px wide, wrapping in `.role-grid`; the description clamps to three lines; Add is a small
+> cards (220px wide, two scrolling rows in `.role-grid`; the description clamps to three lines; Add is a small
 > outlined button at the bottom left with *Suggested* to its right) and a roster of the members (a 40px
 > avatar carrying the presence badge, no status dot beside the name; the name at 14px/600, the role at 13px, *Member*,
 > *New* or *1 skill* as meta text; Edit, Message and a Remove menu with *Remove from Team* and *Delete Teammate* on

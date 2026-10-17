@@ -118,6 +118,9 @@ public sealed class ChatSubjectTests
         ctx.Services.AddSingleton<ILibraryReferenceResolver>(new FakeLibraryNoteResolver());
         ctx.Services.AddSingleton(new TabService());
         ctx.Services.AddSingleton<RightSidebarService>();
+
+        // Chat navigates through ServerNavigator when a Rooms event moves the Human off a Room.
+        ctx.Services.AddFakeCircuitConnection();
         return ctx;
     }
 }
