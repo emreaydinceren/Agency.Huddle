@@ -95,7 +95,7 @@ public sealed class ChipCloudTests
             .Add(p => p.Cap, 2));
 
         Assert.Equal(["d", "a", "b"], cut.FindAll(".chip-cloud-chip-text").Select(item => item.TextContent.Trim()));
-        Assert.Equal("Show all", cut.Find(".chip-cloud-all").TextContent.Trim());
+        Assert.Equal("Show all (4)", cut.Find(".chip-cloud-all").TextContent.Trim());
 
         await cut.InvokeAsync(() => cut.Find(".chip-cloud-all").ClickAsync());
 

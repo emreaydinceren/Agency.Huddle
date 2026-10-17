@@ -59,6 +59,13 @@ button:focus-visible {
 /* ---- Global MudBlazor overrides --------------------------------------------------------------
    Rules that restyle a MudBlazor component for the whole app live here, not beside a feature. */
 
+/* A destructive menu item comes last, after a divider, in Error ink (design-system "Menus"). The error colour is mixed 70% toward
+   body text so the ink keeps 4.5:1 on Ground in Light, as the overdue date does. */
+.menu-item-destructive.mud-menu-item,
+.menu-item-destructive.mud-menu-item .mud-icon-root {
+    color: color-mix(in srgb, var(--mud-palette-error) 70%, var(--mud-palette-text-primary));
+}
+
 /* A button label never wraps. */
 .mud-button-root {
     white-space: nowrap;
@@ -1316,12 +1323,6 @@ a.team-ref,
     padding: 0 8px 0 var(--nav-indent-1);
 }
 
-/* A destructive menu item comes last, after a divider, in Error ink (design-system "Menus"). */
-.menu-item-destructive.mud-menu-item,
-.menu-item-destructive.mud-menu-item .mud-icon-root {
-    color: var(--mud-palette-error);
-}
-
 .flex-1-truncate {
     flex: 1 1 auto;
     min-width: 0;
@@ -2451,12 +2452,6 @@ a.team-ref,
     border-radius: calc(var(--mud-default-borderradius) * 0.75);
 }
 
-/* The Delete teammate item is the card's destructive action: last, in Error ink (design-system "Menus"). */
-.mud-menu-item.teammate-card-delete,
-.mud-menu-item.teammate-card-delete .mud-icon-root {
-    color: var(--mud-palette-error);
-}
-
 .teammate-card-path {
     margin: 0;
     font-size: var(--mud-typography-body2-size);
@@ -3051,12 +3046,6 @@ a.team-ref,
     .task-actions-reveal .task-actions-button {
         opacity: 1;
     }
-}
-
-/* A destructive menu item (Close task…) is last, after a divider, in Error ink: the error colour mixed 70% toward body text, as the overdue date is. */
-.mud-menu-item.task-menu-item-destructive,
-.mud-menu-item.task-menu-item-destructive .mud-icon-root {
-    color: color-mix(in srgb, var(--mud-palette-error) 70%, var(--mud-palette-text-primary));
 }
 
 .task-card-title {
@@ -3807,10 +3796,6 @@ a.team-ref,
     font-size: var(--mud-typography-caption-size);
     line-height: 1.4;
     color: var(--mud-palette-text-secondary);
-}
-
-.mud-menu-item.library-tree-menu-destructive {
-    color: var(--mud-palette-error);
 }
 
 /* Drag and drop: when the tree is flattened this strip under the list stands for the scope's own folder. */
@@ -5607,11 +5592,6 @@ a.team-ref,
    (design-system "Menus"). */
 .roster-more {
     margin-inline-start: auto;
-}
-
-.mud-menu-item.roster-delete,
-.mud-menu-item.roster-delete .mud-icon-root {
-    color: var(--mud-palette-error);
 }
 
 /* Duplicate Team's body is two short fields and a Browse button; its stack's last margin used to overflow the content box

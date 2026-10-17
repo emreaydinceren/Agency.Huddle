@@ -136,9 +136,9 @@ public sealed class R3TeamsSourceTests
         Assert.Contains("MenuDialogs.ActivatorLabel(draft.Name)", buildTeam, StringComparison.Ordinal); // contains-ok: haystack is the razor source
         Assert.True(
             buildTeam.IndexOf("roster-leave", StringComparison.Ordinal) < buildTeam.IndexOf("<MudDivider />", StringComparison.Ordinal)
-            && buildTeam.IndexOf("<MudDivider />", StringComparison.Ordinal) < buildTeam.IndexOf("roster-delete", StringComparison.Ordinal),
+            && buildTeam.IndexOf("<MudDivider />", StringComparison.Ordinal) < buildTeam.IndexOf("menu-item-destructive", StringComparison.Ordinal),
             "Delete teammate must come last, after a divider.");
-        Assert.Contains("color: var(--mud-palette-error);", RuleBody(Css(), ".mud-menu-item.roster-delete,\r\n.mud-menu-item.roster-delete .mud-icon-root"), StringComparison.Ordinal); // contains-ok: haystack is one rule of the stylesheet source
+        Assert.Contains("color-mix(in srgb, var(--mud-palette-error) 70%, var(--mud-palette-text-primary));", RuleBody(Css(), ".menu-item-destructive.mud-menu-item,\r\n.menu-item-destructive.mud-menu-item .mud-icon-root"), StringComparison.Ordinal); // contains-ok: haystack is one rule of the stylesheet source
     }
 
     /// <summary>Add a role marks optional fields "(optional)", has no asterisk, gives every field a helper line, and its primary repeats the title's verb (B10k).</summary>
