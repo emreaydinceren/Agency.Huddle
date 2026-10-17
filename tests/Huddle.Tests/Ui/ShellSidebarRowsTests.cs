@@ -60,7 +60,7 @@ public sealed class ShellSidebarRowsTests
         string layout = File.ReadAllText(CssSource.RepoPath("src", "Huddle.App", "Components", "Layout", "MainLayout.razor"));
         string archived = File.ReadAllText(CssSource.RepoPath("src", "Huddle.App", "Components", "Shared", "ArchivedChats.razor"));
 
-        ShellSidebarRowsTests.SourceHas(layout, "<MudTooltip Text=\"Settings\">");
+        ShellSidebarRowsTests.SourceHas(layout, "<MudTooltip Text=\"Settings\"");
         ShellSidebarRowsTests.SourceHas(layout, "aria-label=\"Settings\"");
         ShellSidebarRowsTests.SourceHas(archived, "<MudTooltip Text=\"Archived chats\">");
         ShellSidebarRowsTests.SourceHas(archived, "aria-label=\"Archived chats\"");

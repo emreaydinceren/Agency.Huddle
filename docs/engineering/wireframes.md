@@ -42,7 +42,7 @@ A code is **a letter, a number and sometimes a lowercase letter**.
 
 | Family | Covers | Figure |
 | --- | --- | --- |
-| `S` | The shell: top bar, sidebar, workspace | [1](#figure-1-the-shell) |
+| `S` | The shell: top bar, activity bar, sidebar, workspace | [1](#figure-1-the-shell) |
 | `W` | The workspace: tab host, group panes, tabs, pages | [2](#figure-2-the-workspace-with-two-tab-groups) |
 | `C` | A Room, the Chat page | [3](#figure-3-a-room-the-chat-page) |
 | `T` | The Tasks page | [4](#figure-4-the-tasks-page) |
@@ -79,8 +79,9 @@ this.
 
 | Say | Never mean | Because |
 | --- | --- | --- |
-| **Shell** | A single page | It is everything outside the pages: `S0` to `S4` |
-| **Sidebar** | A panel inside a page | It is the persistent left `MudDrawer` (`S2`) |
+| **Shell** | A single page | It is everything outside the pages: `S0` to `S5` |
+| **Activity bar** | The Sidebar | It is the 48px strip of buttons at the far left (`S5`) that picks the Sidebar's view |
+| **Sidebar** | A panel inside a page | It is the left navigation column beside the Activity bar (`S2`), showing one view at a time |
 | **Right sidebar** | The detail drawer | It is the persistent right `MudDrawer` the Top bar toggles (`S4`). It pushes the Workspace aside rather than covering it, and shows the panels the Panel catalog picks for the focused pane's Subject |
 | **Detail drawer** | The sidebar | It is a temporary drawer that slides over a page from the right (`T7`, `O2`) |
 | **Workspace** | The window | It is the area right of the sidebar that holds Tab groups (`S3`) |
@@ -98,7 +99,7 @@ this.
 
 `MainLayout.razor`. Everything the app draws is inside `S0`.
 
-![The shell: a top bar across the window, a sidebar down the left with its sections, the workspace holding one tab group, and the right sidebar drawn dashed at the right edge](../images/wireframes/01-shell.svg)
+![The shell: a top bar across the window, the activity bar at the far left with its top and bottom toolbars, the sidebar beside it drawn dashed showing the Chats view, the workspace holding one tab group, and the right sidebar drawn dashed at the right edge](../images/wireframes/01-shell.svg)
 
 | Code | Name | Component | Notes |
 | --- | --- | --- | --- |
@@ -109,16 +110,19 @@ this.
 | `S1a` | Breadcrumb | `PageBreadcrumbs` | Starts at the window's left edge, inside the bar's 16px gutter, not past the sidebar. 13px; ancestors in TextSecondary, the current crumb in TextPrimary, 8px each side of the "›". The trail of the focused pane's active Tab: ancestors only when the page names itself with an h1. A Room's trail is "Rooms"; a Team page's is "Teams"; a Project page's is "Teams › {Team}"; a Tasks View's is "Tasks › {View name}" (the display name, never the slug). On the Library page it holds the open file's whole location, "Library › Teammates › Lena › Lena.md": the Library page sets it (`TabService.SetTrail`) each time the open file changes, so the page's own toolbar (`L3a`) does not repeat it. Only "Library" is a link (it opens the page with nothing selected) |
 | `S1b` | Search bar | `SearchBar` | Global search; its results open in a dropdown below it |
 | `S1c` | Top bar actions | `RightSidebarToggle`, `ThemeModeToggle` | The first opens and closes the Right sidebar (`S4`): the Material Symbol `dock_to_left`, Primary and `aria-pressed` while open. The second switches between the chosen light and dark Theme |
-| `S2` | Sidebar | `MudDrawer`, persistent, 240px | Always open; not resizable. Rows are 32px (`--nav-row-height`) with 13px body-colour text, a 24px leading slot (an avatar, or an 18px icon centred in it) and an 8px gap; Teammates and Library are rows, not headers. Section headers are 12px/600 in TextSecondary, sentence case, 16px above and 4px below. Every section header is visible at a 900px window |
+| `S2` | Sidebar | `div#sidebar-views` in the left `MudDrawer` (`.shell-nav`), 240px | Drawn dashed: it shows the one view the Activity bar (`S5a`) selects, and is hidden while no view is selected. It opens on Chats in each circuit. The views are Chats (`S2a`, `S2b`), Teams (`S2c`), Teammates (`S2d`), Tasks (`S2e`) and Library (`S2f`); the figure draws Chats. Every view stays mounted while hidden, so it keeps its open groups. The drawer holds `S5` and `S2` side by side and is 49px collapsed, 289px open; not resizable. Rows are 32px (`--nav-row-height`) with 13px body-colour text, a 24px leading slot (an avatar, or an 18px icon centred in it) and an 8px gap; Teammates and Library are rows, not headers. Section headers are 12px/600 in TextSecondary, sentence case, 16px above and 4px below. Every section header is visible at a 900px window |
 | `S2a` | Needs You card | `NeedsYouCard` | Rooms waiting on the Human; the count is plain text, not a badge or a coloured chip |
 | `S2b` | Rooms group | `RoomList` (`MudNavGroup` titled "Rooms"), `RoomNavRow`, `NewChat` | Rooms that belong to no Team. Groups are collapsed behind a chevron except the one holding the active page. A list over 8 rows ends in "Show all (N)" (`ShowAllRow`; "Show fewer" once open). The active row is accent text on Primary 14% over Surface (20% hovered), weight 500. A 1:1 Room's row leads with the Teammate's 24px avatar and its presence badge, a group Room's with the Chat icon; shared actions in `RoomActions` |
 | `S2c` | Teams group | `TeamsNav` (`MudNavGroup`) | Each Team is collapsed behind a chevron until opened (or until the route is inside it) and then shows its Rooms and Projects; the opened Teams are remembered. A Team row trails its member count (`sidebar-row-meta`, tooltip "N members" or "No members") instead of an italic "No members". Over 8 rows the list ends in "Show all (N)". Each row has a hover menu |
 | `S2d` | Teammates link | `NavTabLink` to `/teammates` | |
 | `S2e` | Tasks group | `TaskViewNav` (`MudNavGroup`) | Saved Task Views and "New view" |
 | `S2f` | Library link | `LibraryNavLink` | One link to the Library page. It lists no roots and has no "+ Add folder" |
-| `S2g` | Sidebar footer | `MudNavMenu` `.nav-settings` | Two icon-only 36px rows, Archived chats and Settings, each with an `aria-label` and a tooltip (OP-4), pinned to the bottom |
+| `S2g` | Sidebar footer | | Retired: Archived chats and Settings moved to the Activity bar's bottom toolbar (`S5b`) |
 | `S3` | Workspace | `MudMainContent` `.main-column` | Also holds the invisible `TabSync`, `TabPersistence` and `LibraryLinkRouter` |
 | `S4` | Right sidebar | `RightSidebar` (`MudDrawer`, end, persistent, 280px) | Drawn dashed: shown only while toggled open from `S1c`; starts closed in each circuit. Draws the panels the Panel catalog picks for the focused pane's Subject, sorted by `Order`. Each panel sits in a `SidebarPanelFrame`: a header button with the icon, the title, the count the panel reports (none until it does) and a chevron that collapses the body, remembered per viewer. The v1 panels: for a Room, Members, Tasks in this chat and Documents in this chat; for a Markdown document, Outline and Linked documents. It follows focus to the other pane or another Tab. When no panel applies, it shows the empty state |
+| `S5` | Activity bar | `ActivityBar` (`nav.activity-bar`), 48px | Always shown, at the left edge of the left `MudDrawer`, like VS Code's Activity Bar. Two toolbars: one aligned to the top, one to the bottom |
+| `S5a` | Top toolbar | `.activity-bar-top`, one `MudIconButton` per view | Chats, Teams, Teammates, Tasks and Library, with their entity icons; Tasks and Library are left out when their feature is off. The selected button is pressed (`aria-pressed`) and wears the active sidebar row's Selected treatment: accent icon on Primary 14% over Surface, 20% hovered. The others are not pressed. Clicking another button switches the Sidebar (`S2`) to that view; clicking the pressed one collapses the Sidebar. Each button has a tooltip and an `aria-label`, and names `S2` in `aria-controls` |
+| `S5b` | Bottom toolbar | `.activity-bar-bottom`, `MudNavMenu` `.nav-settings` | Archived chats and Settings: two icon-only 48px links, each with an `aria-label` and a tooltip (OP-4). Settings opens a Tab, so its link wears the active treatment on `/settings` |
 
 `W1`, `W3` and `W6` appear here only to show where Figure 2 plugs in.
 

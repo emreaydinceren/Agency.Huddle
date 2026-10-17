@@ -126,6 +126,7 @@ before you create a component, a helper or a CSS class.
 | Component | Path | Draws | Key parameters | Use it for |
 | --- | --- | --- | --- | --- |
 | `TopBar` | `Components/Layout/TopBar.razor` | `S1` | `Search`, `Actions` (`RenderFragment`) | Adding a top-bar control: pass it in a slot |
+| `ActivityBar` | `Components/Layout/ActivityBar.razor` | `S5` | `Selected`, `SelectedChanged`, `Bottom` | Drawn by the shell. Adding a Sidebar view: a `SidebarView` value and a `SidebarViews` entry in `SidebarView.cs`, and its section in `MainLayout`'s `#sidebar-views` |
 | `NavTabLink` | `Components/Layout/NavTabLink.razor` | `S2d` and sidebar rows | `Href`, `TabTitle`, `Icon`, `IconColor`, `Match`, `Class` | Any sidebar link that opens a Tab |
 | `RoomNavRow` | `Components/Shared/RoomNavRow.razor` | A row in `S2b`, `S2c` | `Room`, `TeamLabel`, `Class`, `OnError` | A Room in any list, with its hover menu and delete flow |
 | `PageBreadcrumbs` | `Components/Shared/PageBreadcrumbs.razor` | `S1a` | the trail, `OnNavigate` | Drawn by the shell. A page never draws its own. The trail holds ancestors only |

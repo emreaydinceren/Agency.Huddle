@@ -780,6 +780,80 @@ a.team-ref,
     margin-top: auto;
 }
 
+/* ---- The Activity bar (S5) and the Sidebar's views (S2) --------------------------------------
+   The left drawer (.shell-nav) lays its two children side by side: the 48px Activity bar, then the Sidebar,
+   whose views stack as the whole drawer did before. Global for the reason given above: both sit inside
+   child components. The buttons take the secondary text colour; the selected one wears the Selected treatment
+   below. */
+.shell-nav .mud-drawer-content {
+    flex-direction: row;
+}
+
+.activity-bar {
+    display: flex;
+    flex: 0 0 48px;
+    flex-direction: column;
+    width: 48px;
+}
+
+.activity-bar-top,
+.activity-bar-bottom {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+}
+
+.activity-bar-bottom {
+    margin-top: auto;
+}
+
+.activity-bar-item.mud-icon-button {
+    width: 48px;
+    height: 48px;
+    border-radius: 0;
+    color: var(--mud-palette-text-secondary);
+}
+
+/* The pressed button wears the active sidebar row's Selected treatment (see the .mud-drawer .mud-navmenu rules
+   above): accent text, Primary 14% over Surface, 20% when hovered or focused. */
+.activity-bar-item.activity-bar-item-selected {
+    color: color-mix(in srgb, var(--mud-palette-primary) 70%, var(--mud-palette-text-primary));
+    background-color: color-mix(in srgb, var(--mud-palette-primary) 14%, var(--mud-palette-surface));
+}
+
+.activity-bar-item.activity-bar-item-selected:hover,
+.activity-bar-item.activity-bar-item-selected:focus-visible {
+    background-color: color-mix(in srgb, var(--mud-palette-primary) 20%, var(--mud-palette-surface));
+}
+
+/* The bottom toolbar's two links are the same 48px icon-only squares as the buttons above them. */
+.activity-bar .nav-settings .mud-nav-link {
+    justify-content: center;
+    width: 48px;
+    min-height: 48px;
+    padding: 0;
+}
+
+.activity-bar .nav-settings .mud-nav-link .mud-nav-link-text {
+    display: none;
+}
+
+/* The hairline between the bar and the Sidebar belongs to the Sidebar, so it goes when the Sidebar collapses and
+   never narrows the bar's 48px buttons. */
+.sidebar-views {
+    border-inline-start: 1px solid var(--mud-palette-lines-default);
+    display: flex;
+    flex: 1 1 auto;
+    flex-direction: column;
+    min-width: 0;
+    overflow-y: auto;
+}
+
+.sidebar-views[hidden],
+.sidebar-view[hidden] {
+    display: none;
+}
+
 /* ---- The Right sidebar (S4) -------------------------------------------------------------------
    A persistent MudDrawer anchored at the end, so its hairline is on the side facing the workspace:
    the .mud-drawer rule above draws the left sidebar's edge on the end side. Global for the same reason

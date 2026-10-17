@@ -32,21 +32,41 @@
             <ThemeModeToggle />
         </Actions>
     </TopBar>
-    <MudDrawer Open="true" Variant="DrawerVariant.Persistent" Width="240px" Elevation="0" ClipMode="DrawerClipMode.Always">
-        <NeedsYouCard />
-        <RoomList />
-        <TeamsNav />
-        <MudNavMenu>
-            <NavTabLink Href="/teammates" TabTitle="Teammates" Icon="@Icons.Material.Filled.Group" Class="nav-row-link">Teammates</NavTabLink>
-        </MudNavMenu>
-        <TaskViewNav />
-        <LibraryNavLink />
-        <MudNavMenu Class="nav-settings">
-            <ArchivedChats />
-            <MudTooltip Text="Settings">
-                <NavTabLink Href="/settings" TabTitle="Settings" Icon="@Icons.Material.Filled.Settings" aria-label="Settings" />
-            </MudTooltip>
-        </MudNavMenu>
+    @* One drawer holds both the Activity bar (S5) and the Sidebar (S2), so MudLayout sees one left drawer and
+       its --mud-drawer-width-left, which the workspace and the breadcrumb follow, is their combined width.
+       Every view stays mounted and only the selected one is shown, so a view keeps its open groups and its
+       subscriptions when the Human switches away and back. *@
+    <MudDrawer Open="true" Variant="DrawerVariant.Persistent" Width="@this.DrawerWidth" Elevation="0" ClipMode="DrawerClipMode.Always" Class="shell-nav">
+        <ActivityBar Selected="this.sidebarView" SelectedChanged="this.OnSidebarViewChanged">
+            <Bottom>
+                <MudNavMenu Class="nav-settings">
+                    <ArchivedChats />
+                    <MudTooltip Text="Settings" Placement="Placement.Right">
+                        <NavTabLink Href="/settings" TabTitle="Settings" Icon="@Icons.Material.Filled.Settings" aria-label="Settings" />
+                    </MudTooltip>
+                </MudNavMenu>
+            </Bottom>
+        </ActivityBar>
+        <div id="@ActivityBar.SidebarElementId" class="sidebar-views" hidden="@(this.sidebarView is null)">
+            <div class="sidebar-view" hidden="@(this.sidebarView != SidebarView.Chats)">
+                <NeedsYouCard />
+                <RoomList />
+            </div>
+            <div class="sidebar-view" hidden="@(this.sidebarView != SidebarView.Teams)">
+                <TeamsNav />
+            </div>
+            <div class="sidebar-view" hidden="@(this.sidebarView != SidebarView.Teammates)">
+                <MudNavMenu>
+                    <NavTabLink Href="/teammates" TabTitle="Teammates" Icon="@Icons.Material.Filled.Group" Class="nav-row-link">Teammates</NavTabLink>
+                </MudNavMenu>
+            </div>
+            <div class="sidebar-view" hidden="@(this.sidebarView != SidebarView.Tasks)">
+                <TaskViewNav />
+            </div>
+            <div class="sidebar-view" hidden="@(this.sidebarView != SidebarView.Library)">
+                <LibraryNavLink />
+            </div>
+        </div>
     </MudDrawer>
     <MudMainContent Class="main-column">
         <TabSync />
@@ -66,6 +86,17 @@
 @code {
     private MudTheme theme = ThemeCatalog.BuiltIn[0].Theme;
     private bool isDarkMode = ThemeCatalog.BuiltIn[0].Mode == ThemeMode.Dark;
+    private SidebarView? sidebarView = SidebarViews.Default;
+
+    /// <summary>The Activity bar's 48px and the drawer's 1px edge, plus the Sidebar's 240px while a view is selected.</summary>
+    private string DrawerWidth => this.sidebarView is null ? "49px" : "289px";
+
+    /// <summary>Shows the view the Activity bar selected, or collapses the Sidebar when it reports none.</summary>
+    /// <param name="view">The view to show, or <see langword="null"/> to collapse.</param>
+    private void OnSidebarViewChanged(SidebarView? view)
+    {
+        this.sidebarView = view;
+    }
 
     /// <summary>The route a blank system opens on: the Settings Profile tab.</summary>
     private const string ProfileRoute = "settings/profile";

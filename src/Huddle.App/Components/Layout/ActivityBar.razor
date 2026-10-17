@@ -1,0 +1,52 @@
+@*
+    The Activity bar (S5): a 48px strip at the left edge of the shell, like VS Code's. Its top toolbar holds one
+    button per Sidebar view; the selected one is pressed and the others are not, and clicking the selected one
+    collapses the Sidebar. Its bottom toolbar is the Bottom slot, which MainLayout fills with Archived chats and
+    Settings. The bar holds no state: MainLayout owns the selected view.
+*@
+@using Microsoft.Extensions.Options
+@inject IOptions<TeamOptions> Options
+
+<nav class="activity-bar" aria-label="Activity bar">
+    <div class="activity-bar-top" role="toolbar" aria-orientation="vertical" aria-label="Sidebar views">
+        @foreach (SidebarViewItem item in SidebarViews.Available(this.Options.Value))
+        {
+            bool pressed = this.Selected == item.View;
+            <MudTooltip Text="@item.Label" Placement="Placement.Right">
+                <MudIconButton Icon="@item.Icon"
+                               Size="Size.Medium"
+                               Class="@(pressed ? "activity-bar-item activity-bar-item-selected" : "activity-bar-item")"
+                               aria-label="@item.Label"
+                               aria-pressed="@(pressed ? "true" : "false")"
+                               aria-controls="@SidebarElementId"
+                               data-view="@item.View"
+                               OnClick="@(() => this.SelectAsync(item.View))" />
+            </MudTooltip>
+        }
+    </div>
+    <div class="activity-bar-bottom">
+        @this.Bottom
+    </div>
+</nav>
+
+@code {
+    /// <summary>The id of the Sidebar's view host, which each top button controls.</summary>
+    public const string SidebarElementId = "sidebar-views";
+
+    /// <summary>The selected view, or <see langword="null"/> while the Sidebar is collapsed.</summary>
+    [Parameter]
+    public SidebarView? Selected { get; set; }
+
+    /// <summary>Raised with the view a click selects, or <see langword="null"/> when the click collapses the Sidebar.</summary>
+    [Parameter]
+    public EventCallback<SidebarView?> SelectedChanged { get; set; }
+
+    /// <summary>The bottom toolbar's content.</summary>
+    [Parameter]
+    public RenderFragment? Bottom { get; set; }
+
+    private async Task SelectAsync(SidebarView clicked)
+    {
+        await this.SelectedChanged.InvokeAsync(SidebarViews.Next(this.Selected, clicked));
+    }
+}
