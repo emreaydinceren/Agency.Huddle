@@ -1,3 +1,4 @@
+using AngleSharp.Dom;
 using Bunit;
 using Bunit.Rendering;
 using Microsoft.AspNetCore.Components;
@@ -353,7 +354,9 @@ public sealed class RoomCopyLinkTests
     /// <param name="cut">The rendered list.</param>
     private static async Task OpenRowMenuAsync(IRenderedComponent<ContainerFragment> cut)
     {
-        await cut.InvokeAsync(() => cut.Find("button[aria-label='Room actions']").ClickAsync());
+        IElement row = cut.FindAll("div.hover-reveal-row").First(candidate => candidate.QuerySelector("a[href^='/rooms/']") is not null);
+        IElement button = row.QuerySelectorAll("button[aria-label^='Actions for ']").Single();
+        await cut.InvokeAsync(() => button.ClickAsync());
     }
 
     /// <summary>Every open menu item of a <c>MudMenu</c>.</summary>

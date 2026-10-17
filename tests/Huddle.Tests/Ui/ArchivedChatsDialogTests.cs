@@ -123,7 +123,7 @@ public sealed class ArchivedChatsDialogTests
 
         await using var ctx = NewContext(directory, chat, events);
         var cut = await OpenDialogAsync(ctx);
-        await cut.InvokeAsync(() => cut.Find("button[aria-label^='Delete ']").ClickAsync());
+        await BeginDeleteAsync(cut);
 
         Assert.NotNull(await directory.GetRoomAsync(room.Id, ct));
         Assert.Contains(cut.FindAll("button"), button => string.Equals(button.TextContent.Trim(), "Delete", StringComparison.Ordinal)); // contains-ok: collection membership of the verb button
@@ -146,7 +146,7 @@ public sealed class ArchivedChatsDialogTests
 
         await using var ctx = NewContext(directory, chat, events);
         var cut = await OpenDialogAsync(ctx);
-        await cut.InvokeAsync(() => cut.Find("button[aria-label^='Delete ']").ClickAsync());
+        await BeginDeleteAsync(cut);
         await cut.InvokeAsync(() => cut.FindAll("button").First(button => string.Equals(button.TextContent.Trim(), "Delete", StringComparison.Ordinal)).ClickAsync());
 
         Assert.Null(await directory.GetRoomAsync(room.Id, ct));
@@ -198,7 +198,7 @@ public sealed class ArchivedChatsDialogTests
 
         await using var ctx = NewContext(directory, chat, events);
         var cut = await OpenDialogAsync(ctx);
-        await cut.InvokeAsync(() => cut.Find("button[aria-label^='Delete ']").ClickAsync());
+        await BeginDeleteAsync(cut);
 
         Assert.Equal($"Delete \"{room.Name}\"? {sentence}", cut.Find(".inline-confirm-prompt").TextContent.Trim());
     }
@@ -221,9 +221,16 @@ public sealed class ArchivedChatsDialogTests
 
         await using var ctx = NewContext(directory, chat, events);
         var cut = await OpenDialogAsync(ctx);
-        await cut.InvokeAsync(() => cut.Find("button[aria-label^='Delete ']").ClickAsync());
+        await BeginDeleteAsync(cut);
 
         Assert.Equal($"Delete \"{room.Name}\"?", cut.Find(".inline-confirm-prompt").TextContent.Trim());
+    }
+
+    /// <summary>Opens the first row's menu and chooses Delete, which swaps the row for the inline confirm.</summary>
+    private static async Task BeginDeleteAsync(IRenderedComponent<ContainerFragment> cut)
+    {
+        await cut.InvokeAsync(() => cut.Find("button[aria-label^='Actions for ']").ClickAsync());
+        await cut.InvokeAsync(() => cut.FindAll("div.mud-menu-item").First(item => string.Equals(item.TextContent.Trim(), "Delete", StringComparison.Ordinal)).ClickAsync());
     }
 
     private static ChatService CreateChatService(TempDataDir dir, ITeamDirectory directory, RoomEvents events)

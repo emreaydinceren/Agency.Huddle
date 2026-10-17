@@ -48,7 +48,8 @@
 </div>
 
 @code {
-    private bool expanded;
+    /// <summary>Open from the start: the Chats view holds this one group beside the Needs you card, and a view whose only content is one group opens it (audit B3a).</summary>
+    private bool expanded = true;
     private bool showAll;
     private IReadOnlyList<Room> rooms = [];
     private string? error;
@@ -64,7 +65,7 @@
         this.Navigation.LocationChanged += this.OnLocationChanged;
         this.activeRoomId = SidebarRows.RoomId(SidebarRows.CurrentPath(this.Navigation));
         await this.LoadAsync();
-        this.expanded = this.HasActiveRoom;
+        this.expanded |= this.HasActiveRoom;
     }
 
     /// <summary>Unsubscribes from the Room events, the catalog and navigation.</summary>

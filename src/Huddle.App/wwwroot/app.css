@@ -82,6 +82,14 @@ button:focus-visible {
    (raw Primary stays a fill, a bar or a border). The active sidebar row takes the Selected treatment - Primary 14%
    over Surface, 20% when hovered - not the generic hover shade MudBlazor paints, so the selected and the hovered
    row no longer look alike. */
+/* The Selected shape on sidebar rows (audit A5): every row in the drawer is inset 4px, selected or not, so labels never
+   shift when a row is selected, and rounds to 0.75x the base radius. The fill below is what marks the selected one. */
+.mud-drawer .mud-navmenu .mud-nav-link {
+    width: calc(100% - 8px);
+    margin-inline: 4px;
+    border-radius: calc(var(--mud-default-borderradius) * 0.75);
+}
+
 .mud-drawer .mud-navmenu .mud-nav-link.active:not(.mud-nav-link-disabled) {
     color: color-mix(in srgb, var(--mud-palette-primary) 70%, var(--mud-palette-text-primary));
     background-color: color-mix(in srgb, var(--mud-palette-primary) 14%, var(--mud-palette-surface));
@@ -486,12 +494,44 @@ a.team-ref,
 
 /* ---- New chat and the agent status dots ------------------------------------------------------ */
 
+/* The picker floats under the link or the Team row like Invite's panel (audit B10 "New chat"): the .floating-panel Edge and
+   elevation, on the Surface, over the rows below without moving them. Rows are 32px at 13px. */
+.new-chat {
+    position: relative;
+}
+
 .new-chat-panel {
-    padding: 8px 16px 12px 32px;
+    position: absolute;
+    inset-inline: 8px;
+    top: 100%;
+    z-index: var(--mud-zindex-popover);
+    padding: 8px;
+    background: var(--mud-palette-surface);
+    font-size: var(--mud-typography-body2-size);
+}
+
+.new-chat-heading {
+    padding: 0 4px 4px;
 }
 
 .new-chat-agents {
-    margin: 0 0 12px 0;
+    max-height: 16rem;
+    margin: 0 0 8px 0;
+    overflow-y: auto;
+}
+
+.new-chat-agent .mud-checkbox {
+    display: flex;
+    align-items: center;
+    min-height: 32px;
+    margin: 0;
+    font-size: var(--mud-typography-body2-size);
+}
+
+.new-chat-actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 8px;
 }
 
 /* ---- Presence badge and status dot (DS-6, C3) ----------------------------------------------------
@@ -852,6 +892,20 @@ a.team-ref,
     gap: 4px;
 }
 
+/* The top bar's icon buttons are 32px boxes with 18px icons (audit B3d), level with the search box and the Activity bar's tiles. */
+.top-bar-end .mud-icon-button {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 32px;
+    height: 32px;
+    padding: 0;
+}
+
+.top-bar-end .mud-icon-button .mud-icon-root {
+    font-size: var(--icon-size-row);
+}
+
 .page-breadcrumbs .page-breadcrumbs-list.mud-breadcrumbs {
     padding: 0;
     font-size: var(--mud-typography-body2-size);
@@ -950,14 +1004,16 @@ a.team-ref,
     margin-top: auto;
 }
 
+/* Each button is a 40px tile inside the 48px column, so the pressed one reads as the Selected shape (audit A5). */
 .activity-bar-item.mud-icon-button {
-    width: 48px;
-    height: 48px;
-    border-radius: 0;
+    width: 40px;
+    height: 40px;
+    margin: 4px;
+    border-radius: calc(var(--mud-default-borderradius) * 0.75);
     color: var(--mud-palette-text-secondary);
 }
 
-/* The pressed button wears the active sidebar row's Selected treatment (see the .mud-drawer .mud-navmenu rules
+/* The pressed button wears the active sidebar row's Selected treatment and shape (see the .mud-drawer .mud-navmenu rules
    above): accent text, Primary 14% over Surface, 20% when hovered or focused. */
 .activity-bar-item.activity-bar-item-selected {
     color: color-mix(in srgb, var(--mud-palette-primary) 70%, var(--mud-palette-text-primary));
@@ -969,11 +1025,13 @@ a.team-ref,
     background-color: color-mix(in srgb, var(--mud-palette-primary) 20%, var(--mud-palette-surface));
 }
 
-/* The bottom toolbar's two links are the same 48px icon-only squares as the buttons above them. */
+/* The bottom toolbar's two links are the same 40px icon-only tiles as the buttons above them. */
 .activity-bar .nav-settings .mud-nav-link {
     justify-content: center;
-    width: 48px;
-    min-height: 48px;
+    align-items: center;
+    width: 40px;
+    min-height: 40px;
+    margin: 4px;
     padding: 0;
 }
 
@@ -1064,11 +1122,14 @@ a.team-ref,
     color: var(--mud-palette-text-secondary);
 }
 
-/* A section header - a group with children (Rooms, Teams, Tasks) - sits 16px below the section above and 4px above
-   its first row (S2). Teammates and Library are destinations, not headers: see .nav-row-link below. */
+/* A section header - a group with children (Rooms, Teams, Tasks) - is 32px high like a row (audit B3b), and sits 16px below the
+   section above and 4px above its first row (S2). Teammates and Library are destinations, not headers: see .nav-row-link below. */
 .mud-nav-group > .mud-nav-link {
     margin-top: 16px;
     margin-bottom: 4px;
+    align-items: center;
+    height: var(--nav-row-height);
+    padding-block: 0;
 }
 
 /* One indent per nesting level, set here and nowhere else (UX-015). Every child row has a leading visual
@@ -1182,8 +1243,22 @@ a.team-ref,
     color: var(--mud-palette-text-secondary);
 }
 
+/* The sidebar's inline Delete? confirm: one 32px line in the rows' indent, Cancel then Delete (audit B10 "Inline confirm"). */
+.room-list-confirm-host {
+    flex: 1 1 auto;
+    min-width: 0;
+}
+
 .room-list-confirm {
-    padding: 0 16px;
+    align-items: center;
+    height: var(--nav-row-height);
+    padding: 0 8px 0 var(--nav-indent-1);
+}
+
+/* A destructive menu item comes last, after a divider, in Error ink (design-system "Menus"). */
+.menu-item-destructive.mud-menu-item,
+.menu-item-destructive.mud-menu-item .mud-icon-root {
+    color: var(--mud-palette-error);
 }
 
 .flex-1-truncate {
@@ -1200,8 +1275,30 @@ a.team-ref,
     display: flex;
     align-items: center;
     gap: 8px;
-    padding: 8px 0;
+    min-height: 32px;
+    padding: 0 4px;
+    font-size: var(--mud-typography-body2-size);
     border-bottom: 1px solid var(--ink-rule);
+}
+
+/* The icon fills the 24px leading slot of a picker row (audit B10h); the name truncates; the date trails in Quiet ink. */
+.archived-chats-icon {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex: 0 0 24px;
+    width: 24px;
+    color: var(--mud-palette-text-secondary);
+}
+
+.archived-chats-icon .mud-icon-root {
+    font-size: var(--icon-size-row);
+}
+
+.archived-chats-date {
+    flex: 0 0 auto;
+    font-size: var(--mud-typography-caption-size);
+    color: var(--mud-palette-text-secondary);
 }
 
 .archived-chats-row:last-child {
@@ -4444,6 +4541,11 @@ a.team-ref,
     padding: 4px 0;
 }
 
+/* Outlined in Edge, not MudBlazor's Chrome line (audit B3e); the doubled class outranks .mud-paper-outlined. */
+.needs-you-card.mud-paper-outlined {
+    border-color: var(--ink-edge);
+}
+
 .needs-you-card[hidden] {
     display: none;
 }
@@ -4461,12 +4563,20 @@ a.team-ref,
     color: var(--mud-palette-text-secondary);
 }
 
+/* A row is one 32px line: the reason icon, the Room's name, and the time trailing (audit B3e). */
+.needs-you-row .mud-nav-link {
+    align-items: center;
+    min-height: var(--nav-row-height);
+    padding-block: 4px;
+}
+
 .needs-you-row .mud-nav-link-text {
     font-size: var(--mud-typography-body2-size);
     display: flex;
     align-items: center;
     gap: 8px;
     min-width: 0;
+    flex: 1 1 auto;
 }
 
 .needs-you-icons {
@@ -4475,9 +4585,20 @@ a.team-ref,
     flex: 0 0 auto;
 }
 
+.needs-you-icons .mud-icon-root {
+    font-size: var(--icon-size-row);
+}
+
 .needs-you-text {
     display: flex;
-    flex-direction: column;
+    flex: 1 1 auto;
+    align-items: center;
+    gap: 8px;
+    min-width: 0;
+}
+
+.needs-you-name {
+    flex: 1 1 auto;
     min-width: 0;
 }
 
@@ -4489,6 +4610,7 @@ a.team-ref,
 }
 
 .needs-you-detail {
+    flex: 0 0 auto;
     font-size: var(--mud-typography-caption-size);
     color: var(--mud-palette-text-secondary);
 }
@@ -4599,9 +4721,9 @@ a.team-ref,
     color: var(--mud-palette-text-secondary);
 }
 
-/* "Show all (N)" under a list longer than 8 rows: a quiet text action, aligned with the rows above it. */
+/* "Show all (N)" under a list longer than 8 rows (13px like "New chat", audit B3c): a quiet text action, aligned with the rows above it. */
 .sidebar-show-all .mud-nav-link-text {
-    font-size: var(--mud-typography-caption-size);
+    font-size: var(--mud-typography-body2-size);
     color: var(--mud-palette-text-secondary);
 }
 

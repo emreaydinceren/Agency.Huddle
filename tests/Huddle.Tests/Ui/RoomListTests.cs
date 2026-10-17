@@ -366,7 +366,8 @@ public sealed class RoomListTests
         await OpenRowMenuAsync(cut);
         await ClickMenuItemAsync(cut, "Delete");
 
-        Assert.Equal($"Delete \"{room.Name}\"? {sentence}", cut.Find(".inline-confirm-prompt").TextContent.Trim());
+        Assert.Equal("Delete?", cut.Find(".inline-confirm-prompt").TextContent.Trim());
+        Assert.Equal($"Delete \"{room.Name}\"? {sentence}", cut.Find(".room-list-confirm-host").GetAttribute("title"));
     }
 
     /// <summary>The Delete confirm of a Room without uploads keeps the plain prompt.</summary>
@@ -389,7 +390,8 @@ public sealed class RoomListTests
         await OpenRowMenuAsync(cut);
         await ClickMenuItemAsync(cut, "Delete");
 
-        Assert.Equal($"Delete \"{room.Name}\"?", cut.Find(".inline-confirm-prompt").TextContent.Trim());
+        Assert.Equal("Delete?", cut.Find(".inline-confirm-prompt").TextContent.Trim());
+        Assert.Equal($"Delete \"{room.Name}\"?", cut.Find(".room-list-confirm-host").GetAttribute("title"));
     }
 
     private static Agency.Huddle.Tests.Teams.FakeTeamCatalog KnownTeam(string name) =>
@@ -467,7 +469,7 @@ public sealed class RoomListTests
     /// </summary>
     private static async Task OpenRowMenuAsync(IRenderedComponent<ContainerFragment> cut)
     {
-        await cut.InvokeAsync(() => cut.Find("button[aria-label='Room actions']").ClickAsync());
+        await cut.InvokeAsync(() => cut.Find("button[aria-label^='Actions for ']").ClickAsync());
     }
 
     /// <summary>Every open <c>MudMenu</c> item - rendered with <c>role="menuitem"</c> and class <c>mud-menu-item</c>, not <c>mud-list-item</c> (that class belongs to <c>MudSelect</c>'s own popover).</summary>
