@@ -23,6 +23,10 @@ public sealed partial class SkinLoaderTests
     [
         "system-ui", "-apple-system", "Segoe UI", "Helvetica Neue", "sans-serif", "serif", "monospace",
         "Georgia", "Source Serif 4", "ui-monospace", "Cascadia Mono", "Consolas",
+
+        // Platform faces a stack names ahead of its web-font fallback: Windows 11's variable Segoe and Cascadia Code,
+        // Android and ChromeOS's Roboto, macOS's SF Mono. None is downloaded; the next family covers a machine without it.
+        "Segoe UI Variable Text", "Cascadia Code", "Roboto", "SF Mono",
     ];
 
     /// <summary>Builds a minimal skin file; <paramref name="extra"/> is spliced in after the required keys.</summary>

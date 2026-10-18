@@ -6,7 +6,8 @@
   "order": 70,
   "radius": "6px",
   "faces": {
-    "ui": [ "Segoe UI", "system-ui", "-apple-system", "Inter", "sans-serif" ]
+    "ui": [ "Segoe UI Variable Text", "Segoe UI", "system-ui", "-apple-system", "Inter", "Roboto", "sans-serif" ],
+    "mono": [ "Cascadia Code", "Cascadia Mono", "Consolas", "monospace" ]
   },
   "typography": {
     "letterSpacing": "normal",

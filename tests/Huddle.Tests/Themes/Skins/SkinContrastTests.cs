@@ -67,7 +67,7 @@ public sealed class SkinContrastTests
     [Fact]
     public void Resolver_MixesInSrgbAndFollowsRefs()
     {
-        Skin skin = SkinLoader.LoadAll().First(static candidate => string.Equals(candidate.Id, "lumen-light", StringComparison.Ordinal));
+        Skin skin = SkinLoader.LoadAll().First(static candidate => string.Equals(candidate.Id, "huddle", StringComparison.Ordinal));
         Resolver resolver = new(skin);
 
         MudColor mixed = resolver.Evaluate("mix(#000000 25%, #ffffff)");
