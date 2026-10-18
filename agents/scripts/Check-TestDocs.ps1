@@ -8,7 +8,7 @@
     and about one in ten of the existing tests predates the rule, so this scans only lines the branch
     added rather than the whole tree.
 
-    Added lines are found with `git diff -U0` against the merge-base with -Base (committed AND
+    Renames are detected, so a moved test is not re-checked. Added lines are found with `git diff -U0` against the merge-base with -Base (committed AND
     uncommitted changes to tracked files), plus every line of an untracked file under tests/. A test is
     a `[Fact]` or `[Theory]` attribute line; the method is documented when the first line above its
     attribute stack (other `[...]` attribute lines) starts with `///`. The attribute line is what has to
@@ -43,7 +43,7 @@ try {
     $added = @{}
 
     $currentFile = $null
-    foreach ($line in (git diff -U0 --no-color $mergeBase -- 'tests/*.cs')) {
+    foreach ($line in (git -c diff.renameLimit=5000 diff -M -U0 --no-color $mergeBase -- 'tests/*.cs')) {
         if ($line -match '^\+\+\+ b/(?<path>.+)$') {
             $currentFile = $Matches['path']
             $added[$currentFile] = [System.Collections.Generic.HashSet[int]]::new()

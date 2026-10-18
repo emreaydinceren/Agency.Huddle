@@ -37,11 +37,11 @@
       2. Acquire Global\HuddleTestRun once for the whole batch.
       3. For each mutation, in spec order:
          - Apply the mutation (byte-faithful).
-         - Build only the test project incrementally: `dotnet build <Huddle.Tests.csproj> --no-restore -v q`
+         - Build only the test project incrementally: `dotnet build <the test project that holds FilterClass> --no-restore -v q`
            (mutations change code, so a fresh per-mutation build is required - `--no-build` on the test
            step below is only valid because this build just ran).
          - On build failure: record BUILD-FAILED, no test run.
-         - On build success: `dotnet test <Huddle.Tests.csproj> --no-build -- --filter-class <FilterClass>`.
+         - On build success: `dotnet test <the test project that holds FilterClass> --no-build -- --filter-class <FilterClass>`.
            Non-zero exit -> CAUGHT (a test went red because of the mutation). Zero exit -> SURVIVED (the
            suite cannot see the mutation - the coverage claim for that spot is false).
          - Restore the original bytes in a finally block and verify the restore is byte-identical,
@@ -106,10 +106,11 @@ if (-not $specData.ContainsKey('Mutations') -or $specData.Mutations.Count -eq 0)
 }
 
 $worktreeRoot = (git rev-parse --show-toplevel).Trim()
-$csprojPath = Join-Path $worktreeRoot 'tests/Huddle.Tests/Huddle.Tests.csproj'
-if (-not (Test-Path -LiteralPath $csprojPath -PathType Leaf)) {
-    throw "Test project not found: $csprojPath"
+$projects = @(& (Join-Path $PSScriptRoot 'Find-TestProject.ps1') -Class $specData.FilterClass -Root $worktreeRoot)
+if ($projects.Count -ne 1) {
+    throw "FilterClass $($specData.FilterClass) matched $($projects.Count) test projects: $($projects -join ', ')"
 }
+$csprojPath = $projects[0]
 
 if (-not (Test-Path -LiteralPath $LogDir)) {
     New-Item -ItemType Directory -Force -Path $LogDir | Out-Null

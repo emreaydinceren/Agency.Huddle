@@ -4,11 +4,11 @@
     regenerate them (expected to fail), runs them again to confirm they now pass, then prints the diff.
 
 .DESCRIPTION
-    Golden files live at tests/Huddle.Tests/Acp/Golden/<Name>, resolved relative to the CALLER's git
+    Golden files live at tests/Huddle.Tests.Hosted/Acp/Golden/<Name>, resolved relative to the CALLER's git
     toplevel (`git rev-parse --show-toplevel`), so this script works unmodified from any worktree.
 
     Sequence, for each name in -Names:
-      1. Delete tests/Huddle.Tests/Acp/Golden/<Name> if it exists.
+      1. Delete tests/Huddle.Tests.Hosted/Acp/Golden/<Name> if it exists.
       2. Run agents/scripts/Run-Tests.ps1 (resolved next to this script via $PSScriptRoot) -NoBuild
          -FilterClass "*PromptGoldenTests" -Label reseed-1. PromptGoldenTests regenerates a missing golden
          from the actual output and then fails the comparison on that same run - this first run is
@@ -24,7 +24,7 @@
     actually regenerated.
 
 .PARAMETER Names
-    One or more golden file names (not paths) under tests/Huddle.Tests/Acp/Golden/, e.g.
+    One or more golden file names (not paths) under tests/Huddle.Tests.Hosted/Acp/Golden/, e.g.
     "systemPrompt.txt", "turnPromptGreeting.txt".
 
 .PARAMETER DryRun
@@ -48,11 +48,17 @@ param(
 $ErrorActionPreference = 'Stop'
 
 $worktreeRoot = (git rev-parse --show-toplevel).Trim()
-$goldenDir = Join-Path $worktreeRoot 'tests/Huddle.Tests/Acp/Golden'
 $scriptRoot = $PSScriptRoot
 $runTestsScript = Join-Path $scriptRoot 'Run-Tests.ps1'
 
-$relativePaths = $Names | ForEach-Object { "tests/Huddle.Tests/Acp/Golden/$_" }
+$goldenProjects = @(& (Join-Path $scriptRoot 'Find-TestProject.ps1') -Class PromptGoldenTests -Root $worktreeRoot)
+if ($goldenProjects.Count -ne 1) {
+    throw "PromptGoldenTests matched $($goldenProjects.Count) test projects: $($goldenProjects -join ', ')"
+}
+$goldenDir = Join-Path (Split-Path -Parent $goldenProjects[0]) 'Acp/Golden'
+$goldenRelative = [IO.Path]::GetRelativePath($worktreeRoot, $goldenDir).Replace('\', '/')
+
+$relativePaths = $Names | ForEach-Object { "$goldenRelative/$_" }
 $fullPaths = $Names | ForEach-Object { Join-Path $goldenDir $_ }
 
 if ($DryRun) {
