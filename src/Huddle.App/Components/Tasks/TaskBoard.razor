@@ -88,7 +88,7 @@
 
     <MudDropContainer T="TaskItem" @key="@this.View.Id" @ref="this.container" Items="@this.Tasks"
                       ItemsSelector="@this.IsInZone" CanDrop="@this.CanDrop" ItemDropped="@this.OnDroppedAsync"
-                      ApplyDropClassesOnDragStarted="true" CanDropClass="task-zone-can" NoDropClass="task-zone-no"
+                      ApplyDropClassesOnDragStarted="false" CanDropClass="task-zone-can" NoDropClass="task-zone-no"
                       ItemDraggingClass="task-card-dragging">
         <ChildContent>
             @foreach (BoardLane lane in this.model.Lanes)

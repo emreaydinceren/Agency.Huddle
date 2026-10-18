@@ -4304,6 +4304,13 @@ a.team-ref,
     color: var(--mud-palette-text-secondary);
 }
 
+/* The Filter menu's popover holds the filters' selects: wide enough to read a value, with a 16px gutter on every side. */
+.task-toolbar-filter-popover .mud-list {
+    box-sizing: border-box;
+    min-width: 20rem;
+    padding: 16px;
+}
+
 /* The toolbar's filter chip is the Filter chip (audit A6, design-system "Chips"): a 28px pill, a dashed Field line and no fill while unset; the
    Accent border, the Accent tint at 14% and the Accent ink at 500 once set. It wears the same values as .mud-chip.filter-chip, which a MudChip
    gets from the global rule and this wrapper (a span around a button and a menu) cannot. */
@@ -4325,7 +4332,12 @@ a.team-ref,
 
 .task-filter-chip-set {
     border-color: var(--mud-palette-primary);
-    background-color: var(--hu-selected-background);
+    background-color: transparent;
+}
+
+/* The filter row wraps when its chips overflow; the row gap keeps a wrapped line clear of the one above. */
+.task-toolbar {
+    row-gap: 8px;
 }
 
 .task-filter-chip .task-filter-chip-button {
@@ -4334,6 +4346,7 @@ a.team-ref,
     padding: 0 12px;
     border: 0;
     border-radius: 999px;
+    background-color: transparent;
     text-transform: none;
     font-size: var(--mud-typography-body2-size);
     font-weight: 400;
@@ -7149,7 +7162,13 @@ a.team-ref,
     color: var(--mud-palette-text-secondary);
 }
 
-:root:has([data-hu-surface="paper"]) .task-filter-chip.task-filter-chip-set,
+:root:has([data-hu-surface="paper"]) .task-filter-chip.task-filter-chip-set {
+    border-style: solid;
+    border-color: color-mix(in srgb, var(--mud-palette-primary) 45%, var(--hu-line-region));
+    background: transparent;
+    color: var(--hu-accent-ink);
+}
+
 :root:has([data-hu-surface="paper"]) .mud-chip.filter-chip.filter-chip-set {
     border-style: solid;
     border-color: color-mix(in srgb, var(--mud-palette-primary) 45%, var(--hu-line-region));
@@ -8076,4 +8095,10 @@ a.team-ref,
 /* Settings › Skills: a Pack card's title is the card's name, at weight 600 (Skill Packs spec 6.9.5, G4c). */
 .pack-card-title {
     font-weight: 600;
+}
+
+/* A toolbar filter chip draws its own pill (transparent, so the page shows through), so the skins' raised ground for an outlined button
+   must not fill the button inside it. Last in the sheet so it wins the tie with those rules. */
+:root:has([data-hu-surface]) .task-filter-chip .task-filter-chip-button.mud-button-outlined:not(:hover) {
+    background: transparent;
 }

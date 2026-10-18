@@ -1525,7 +1525,7 @@ This is the first drag-and-drop in the app. Start from MudBlazor's own kanban,
                   ItemsSelector="@((item, zone) => this.ZoneOf(item) == zone)"
                   CanDrop="@((item, zone) => this.CanDrop(item, zone))"
                   ItemDropped="@this.OnDroppedAsync"
-                  ApplyDropClassesOnDragStarted="true" CanDropClass="task-zone-can" NoDropClass="task-zone-no"
+                  ApplyDropClassesOnDragStarted="false" CanDropClass="task-zone-can" NoDropClass="task-zone-no"
                   ItemDraggingClass="task-card-dragging">
   <ChildContent> … one MudDropZone per (lane, column) … </ChildContent>
   <ItemRenderer> <TaskCard Task="@context" … /> </ItemRenderer>

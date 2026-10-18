@@ -26,9 +26,9 @@
     </MudToolBar>
 }
 
-<MudToolBar Dense="true" Gutters="false" Class="task-toolbar toolbar-hairline">
+<MudToolBar Dense="true" Gutters="false" WrapContent="true" Class="task-toolbar toolbar-hairline">
     @* The Filter menu leads the row, as an icon: every saved filter is chosen here and the ones set show as chips after it. *@
-    <MudMenu Icon="@Icons.Material.Outlined.FilterList" Size="Size.Small" AriaLabel="Filter" Class="task-toolbar-filter">
+    <MudMenu Icon="@Icons.Material.Outlined.FilterAlt" Size="Size.Small" AriaLabel="Filter" Class="task-toolbar-filter" PopoverClass="task-toolbar-filter-popover">
         @* The View editor's Team control (UX-050c, OP-8): a multi-select of the Teams known to the app. *@
         <MudSelect T="string" Variant="Variant.Outlined" Margin="Margin.Dense" Label="Team" MultiSelection="true" SelectedValues="this.EffectiveView.Filter.Teams"
                    SelectedValuesChanged="this.OnTeamFilterChangedAsync" Class="task-toolbar-filter-team">
@@ -295,8 +295,8 @@
                                                                    Class="task-toolbar-kind" ItemCount="2">
         @* The same icons as the View's sidebar row (TaskViewNav). In the content, not SelectedIcon/UnselectedIcon: MudToggleGroup
            draws those only with CheckMark on, and the segmented control turns it off. *@
-        <MudToggleItem Value="ViewKind.List"><MudIcon Icon="@Icons.Material.Filled.TableRows" Size="Size.Small" Class="task-toolbar-kind-icon" />List</MudToggleItem>
-        <MudToggleItem Value="ViewKind.Kanban"><MudIcon Icon="@Icons.Material.Filled.ViewWeek" Size="Size.Small" Class="task-toolbar-kind-icon" />Kanban</MudToggleItem>
+        <MudToggleItem Value="ViewKind.List"><MudIcon Icon="@Icons.Material.Outlined.ViewList" Size="Size.Small" Class="task-toolbar-kind-icon" />List</MudToggleItem>
+        <MudToggleItem Value="ViewKind.Kanban"><MudIcon Icon="@Icons.Material.Outlined.ViewKanban" Size="Size.Small" Class="task-toolbar-kind-icon" />Kanban</MudToggleItem>
     </HuddleSegmentedControl>;
 
     /// <summary>The statuses "Open" stands for: every one that is not terminal.</summary>

@@ -91,8 +91,9 @@
    Tab's own background so the text it covers stays legible. */
 .tab-actions {
     position: absolute;
-    top: 0;
-    bottom: 0;
+    /* Inset by the Tab's 2px accent edge and the strip's 1px hairline, which are inset shadows the overlay would paint over. */
+    top: 2px;
+    bottom: 1px;
     right: 1.85rem;
     display: flex;
     align-items: center;
