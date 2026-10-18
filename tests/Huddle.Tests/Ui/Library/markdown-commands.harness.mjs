@@ -1,9 +1,16 @@
 // Node harness for MarkdownCommandsScriptTests: runs the PURE Markdown toolbar transforms from
 // wwwroot/markdown-commands.js over small documents and prints every outcome as one JSON object.
 // Usage: node markdown-commands.harness.mjs <path to markdown-commands.js>
-import { pathToFileURL } from "node:url";
+import { readFileSync } from "node:fs";
 
-const { planCommand, wikiLinkQuery } = await import(pathToFileURL(process.argv[2]).href);
+// Imported as a data: URL rather than by path: a `.js` file with `export` is CommonJS to Node 18
+// (CI's version) without a "type": "module" package.json, and only newer Node detects ES syntax by
+// itself. A text/javascript data: URL is always an ES module. markdown-commands.js imports nothing,
+// so it has no relative specifiers for the data: URL to break.
+const source = readFileSync(process.argv[2], "utf8");
+const { planCommand, wikiLinkQuery } = await import(
+  `data:text/javascript;base64,${Buffer.from(source, "utf8").toString("base64")}`
+);
 
 /** Applies the plan the way the editor does: every change against the ORIGINAL text, in one go. */
 function run(command, doc, ranges) {
