@@ -4020,6 +4020,15 @@ a.team-ref,
     background-color: var(--hu-line-region);
 }
 
+/* The tree pane sits on the sunk ground and the document on the page ground. Both default to Surface. */
+.library-explorer-split > .child-panel {
+    background-color: var(--hu-ground-page);
+}
+
+.library-explorer-split > .child-panel:first-child {
+    background-color: var(--hu-ground-sunk);
+}
+
 .library-explorer-split-side-by-side > .child-panel:first-child {
     flex: 0 0 auto;
     min-width: 15rem;
@@ -6135,7 +6144,7 @@ a.team-ref,
     box-sizing: content-box;
     width: 24px;
     height: 24px;
-    border: 2px solid var(--mud-palette-surface);
+    border: 2px solid var(--hu-ring);
 }
 
 .profile-avatar-button {
@@ -6943,18 +6952,8 @@ a.team-ref,
     background: currentColor;
 }
 
-/* -- status=pill: High and Urgent priority are clay, which has no palette slot: halfway between Warning and Error -- */
-:root:has([data-hu-status="pill"]) .mud-chip.priority-high,
-:root:has([data-hu-status="pill"]) .mud-chip.priority-urgent {
-    background: color-mix(in srgb, color-mix(in srgb, var(--mud-palette-warning) 50%, var(--mud-palette-error)) 23%, var(--mud-palette-surface));
-    color: color-mix(in srgb, color-mix(in srgb, var(--mud-palette-warning) 50%, var(--mud-palette-error)) 60%, var(--mud-palette-text-primary));
-}
-
-:root:has([data-hu-status="pill"]):has(.theme-mode-dark) .mud-chip.priority-high,
-:root:has([data-hu-status="pill"]):has(.theme-mode-dark) .mud-chip.priority-urgent {
-    background: color-mix(in srgb, color-mix(in srgb, var(--mud-palette-warning) 50%, var(--mud-palette-error)) 15%, var(--mud-palette-background));
-    color: color-mix(in srgb, color-mix(in srgb, var(--mud-palette-warning) 50%, var(--mud-palette-error)) 70%, var(--mud-palette-text-primary));
-}
+/* -- status=pill: High and Urgent priority wear their status chip's tone (Warning, Error). The pack's clay recipe never
+   applied: the chip's own status-chip-warning rule outranked it, so it is not carried over. ------------------------ */
 
 /* -- status=pill: tags are small rectangles on the sunk ground ------------------------------------------------- */
 :root:has([data-hu-status="pill"]) .mud-chip.tag-chip,
@@ -7333,7 +7332,30 @@ a.team-ref,
     background: var(--hu-tone-error-soft);
 }
 
+/* -- surface=paper: the selected Task card keeps its paper shadow under the inset bar (12.2) -------------------- */
+:root:has([data-hu-surface="paper"]) .task-card.task-card-selected {
+    box-shadow: inset 3px 0 0 var(--hu-selected-task-bar), var(--hu-shadow-card);
+}
+
 /* -- surface=paper: inputs, hover line, label ink, one-line height, helper text (15.2) ----------------------- */
+:root:has([data-hu-surface="paper"]) .mud-input.mud-input-outlined {
+    background-color: var(--hu-field-background);
+    border-radius: var(--mud-default-borderradius);
+}
+
+:root:has([data-hu-surface="paper"]) .mud-input-label {
+    letter-spacing: normal;
+}
+
+:root:has([data-hu-surface="paper"]) .tab-item.active {
+    color: var(--mud-palette-text-primary);
+}
+
+:root:has([data-hu-surface="paper"]) .tasks-count-need-you:not(.is-zero) {
+    color: var(--hu-tone-warning-ink);
+    font-weight: 600;
+}
+
 :root:has([data-hu-surface="paper"]) .mud-input.mud-input-outlined:hover:not(.mud-input-focused):not(:focus-within) .mud-input-outlined-border {
     border-color: var(--mud-palette-text-disabled);
 }
@@ -7405,6 +7427,7 @@ a.team-ref,
 /* -- surface=paper: segmented controls, a sunk track and the selected option a raised tile (15.6) ------------------- */
 :root:has([data-hu-surface="paper"]) .huddle-segmented-control {
     background-color: var(--hu-ground-sunk);
+    border: 1px solid var(--hu-line-region);
     border-radius: var(--mud-default-borderradius);
 }
 

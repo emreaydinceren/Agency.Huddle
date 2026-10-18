@@ -76,7 +76,7 @@ public sealed partial class ChromeTraitsTests
 
     /// <summary>
     /// <c>status=pill</c> draws the status chip as a full pill, bolds the warning one, draws a Task state as a shape dot,
-    /// recolours High and Urgent priority from the Warning-Error midpoint, and puts tags on the sunk ground.
+    /// leaves High and Urgent priority in their status chip's tone (the pack's clay recipe never applied), and puts tags on the sunk ground.
     /// </summary>
     [Fact]
     public void StatusPill_PinsShapeDotsPriorityAndTags()
@@ -84,16 +84,14 @@ public sealed partial class ChromeTraitsTests
         string chip = Body("status", "pill", ".mud-chip.status-chip");
         string warning = Body("status", "pill", ".mud-chip.status-chip.status-chip-warning");
         string dot = Body("status", "pill", ".mud-chip.task-status-chip::before");
-        string priority = Body("status", "pill", ".mud-chip.priority-high");
         string tag = Body("status", "pill", ".mud-chip.tag-chip");
 
         Assert.Contains("border-radius: 999px;", chip, StringComparison.Ordinal);
         Assert.Contains("font-weight: 600;", warning, StringComparison.Ordinal);
         Assert.Contains("border-radius: 50%;", dot, StringComparison.Ordinal);
-        Assert.Contains("var(--mud-palette-warning) 50%, var(--mud-palette-error)", priority, StringComparison.Ordinal);
         Assert.Contains("background: var(--hu-ground-sunk);", tag, StringComparison.Ordinal);
         Assert.Contains("color: var(--hu-text-subtle);", tag, StringComparison.Ordinal);
-        Assert.Contains(":root:has([data-hu-status=\"pill\"]):has(.theme-mode-dark) .mud-chip.priority-high", Css, StringComparison.Ordinal);
+        Assert.DoesNotContain("[data-hu-status=\"pill\"]) .mud-chip.priority-high", Css, StringComparison.Ordinal);
     }
 
     /// <summary>
