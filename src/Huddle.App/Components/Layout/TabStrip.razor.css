@@ -6,8 +6,8 @@
     display: flex;
     flex: 0 0 auto;
     overflow-x: auto;
-    background-color: color-mix(in srgb, var(--mud-palette-text-primary) 4%, var(--mud-palette-surface));
-    box-shadow: inset 0 -1px 0 var(--mud-palette-lines-default);
+    background-color: var(--hu-tabs-strip-background);
+    box-shadow: inset 0 -1px 0 var(--hu-line-region);
 }
 
 /* A Tab is a fixed 14rem: the hover toolbar overlays the end of the title, and a narrower Tab left it covering
@@ -27,11 +27,11 @@
     font-size: var(--mud-typography-body2-size);
     font-weight: 400;
     color: var(--mud-palette-text-primary);
-    border-right: 1px solid var(--mud-palette-lines-default);
+    border-right: 1px solid var(--hu-line-region);
 }
 
 .tab-item:not(.active):hover {
-    background-color: color-mix(in srgb, var(--mud-palette-text-primary) 7%, var(--mud-palette-surface));
+    background-color: var(--hu-tabs-item-hover);
 }
 
 .tab-item.active {
@@ -78,7 +78,7 @@
 }
 
 .tab-close:hover {
-    background-color: var(--mud-palette-action-default-hover);
+    background-color: var(--hu-hover);
 }
 
 /* A pinned Tab is its icon alone: the title stays for assistive technology, and there is no x. */
@@ -97,7 +97,7 @@
     display: flex;
     align-items: center;
     padding-inline-start: 12px;
-    background: linear-gradient(to right, transparent, color-mix(in srgb, var(--mud-palette-text-primary) 7%, var(--mud-palette-surface)) 0.75rem);
+    background: linear-gradient(to right, transparent, var(--hu-tabs-item-hover) 0.75rem);
     opacity: 0;
     pointer-events: none;
 }
@@ -141,7 +141,7 @@
     position: absolute;
     inset-block: 0.25rem;
     inset-inline-start: -0.25rem;
-    border-inline-start: 1px solid var(--mud-palette-lines-default);
+    border-inline-start: 1px solid var(--hu-line-region);
 }
 
 .tab-actions::after {
@@ -149,9 +149,9 @@
     align-self: stretch;
     margin-block: 4px;
     margin-inline: 4px 2px;
-    border-inline-start: 1px solid var(--mud-palette-lines-default);
+    border-inline-start: 1px solid var(--hu-line-region);
 }
 
 .tab-action:hover {
-    background-color: var(--mud-palette-action-default-hover);
+    background-color: var(--hu-hover);
 }

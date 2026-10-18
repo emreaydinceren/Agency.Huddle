@@ -442,16 +442,18 @@ so, and names its [Roadmap](roadmap.md) item or its ADR. Back to the hub: [Huddl
     one, and the one you pick is the one you get, on every device, until you pick
     another. Doing this honestly needs a **pair** of authored Themes and a rule for
     resolving between them, the way VS Code's *Preferred Light* / *Preferred Dark* and
-    "Sync with OS" work. Several of the twenty-nine Themes already have a real counterpart in the other mode, so
+    "Sync with OS" work. Every one of the eight Themes has a real counterpart in the other mode, so
     the door is open; it is not built. This replaced a worse limit — until 2026-09-21 the
-    preference could contradict the Theme, and selecting `Solarized Dark` with `Light`
-    showed Huddle's palette under Solarized Dark's name.
-  - **There is no per-Token customisation at all.** `appearance.json` holds the Theme id
-    (`theme`) and the accent colour (`accentColor`), and nothing else. The Library pane side
+    preference could contradict the Theme, and selecting a dark Theme with `Light`
+    showed Huddle's palette under that Theme's name.
+  - **A Human can customize only the accent.** `appearance.json` holds the Theme ids and
+    `customizations` per Theme (a palette and token override), but the Appearance tab writes
+    only `palette.primary` (**Accent for <Theme>**, with Reset); other keys are for hand edits
+    and the Theme lab, which exports JSON and saves nothing. The Library pane side
     setting was retired 2026-10-10 with the docked pane; a leftover `libraryPaneSide` key in an
     existing file is ignored without a warning and left untouched. The override map, its allowlist and the inline `<style>` are gone.
-    Changing one colour means editing `ThemeCatalog` in C# and rebuilding, or waiting for
-    item 7's Theme import.
+    Changing another colour permanently means editing a skin file under `Themes/Skins/`
+    and rebuilding, or waiting for item 7's Theme import.
   - **A bad Theme id is logged, not shown.** `AppearanceStore` warns, names the unknown
     id, leaves the file untouched and falls back to the default Theme — but the
     Appearance tab no longer reports it, because the section that did belonged to the
@@ -461,27 +463,12 @@ so, and names its [Roadmap](roadmap.md) item or its ADR. Back to the hub: [Huddl
     deliberate: it lives in `{DataDir}/appearance.json`, so a second browser, a private
     window and a phone on the same install all see the same Theme. One Human per
     installation is the assumption it rests on.
-- **What an imported Theme cannot do.** The catalog gained seventeen of Visual Studio
-  Code's bundled Themes on 2026-09-16 — see
-  [ADR-0016](../adr/0016-vs-codes-bundled-themes-are-converted-once-not-imported.md).
-  Three things about them are worth knowing before reporting a bug:
-  - **A single-mode Theme has no counterpart in the picker.** A VS Code Theme is authored
-    for light *or* dark, so it appears once, under one heading. There is no light Monokai
-    to select: there is no such thing upstream, and deriving one would invent colours
-    nobody designed. Until 2026-09-21 asking for one showed Huddle's light palette instead,
-    which was worse than not offering it
-    ([ADR-0017](../adr/0017-a-theme-is-a-palette-not-a-pair.md)).
-  - **The High Contrast pair is not high contrast.** VS Code draws HC borders throughout
-    from `contrastBorder`, which MudBlazor's palette has no equivalent for. `Dark High
-    Contrast` and `Light High Contrast` land here as strong-contrast ordinary Themes. They
-    are also the most derived of the set: `hc_light.json` carries five colour keys, so
-    eighteen of its twenty slots come from VS Code's own registry defaults. Both sit under
-    the picker's own **High contrast** heading (`ThemeGroup`), not under Light or Dark.
-  - **Three Themes miss the contrast floor, on purpose.** Themes are imported unmodified,
-    so `light-plus` and `quiet-light` (4.40:1) and `solarized-light` (3.98:1) fall just
-    under 4.5:1 for `TextSecondary` on `Surface`. `ThemeCatalogTests` records each with its
-    measured ratio and asserts it *still* falls short, so a fixed Theme forces its entry to
-    be deleted rather than leaving a stale excuse behind.
+- **There is no high-contrast Theme.** The seventeen Visual Studio Code ports, including the
+  two High Contrast ones, were removed on 2026-10-17
+  ([ADR-0016](../adr/0016-vs-codes-bundled-themes-are-converted-once-not-imported.md),
+  superseded; [ADR-0058](../adr/0058-a-theme-is-a-palette-a-skin-and-traits.md) removed the Huddle and
+  Custom Accent pairs). The picker offers the eight Lumen, Fluent, Nordic and Cobalt Soft Themes, and none of them is designed as a high-contrast mode. A Human who
+  stored a removed id in `appearance.json` gets the default Theme and a log warning, not an error.
 - **A Teammate chooses its own Avatar, and here is what that does not cover.**
   Initials, a short label or an uploaded image, over a background colour —
   [ADR-0019](../adr/0019-an-avatar-is-chosen-and-is-not-part-of-the-persona.md). Six
@@ -773,7 +760,7 @@ so, and names its [Roadmap](roadmap.md) item or its ADR. Back to the hub: [Huddl
 - **An Adapter without file tools cannot open an attachment (U19).** The Teammate gets the path line of a file the Human attached, such as `brief.pdf`, and cannot read it: the same limit as any Library path the Adapter cannot open. See [the ChatUploads spec](../Huddle.ChatUploads-Specifications.md) §2.
 - **Later edits to an uploaded file are not announced.** Team Uploads folders are pruned from File Changes scans and the Watched Folder resolver refuses to watch an Uploads folder, so an edit or delete of an uploaded file, by an Agent or the Human, reaches no Teammate. The chat Message is the only notice. See [the ChatUploads spec](../Huddle.ChatUploads-Specifications.md) §6.8.
 - **Unarchiving a Room of a vanished Team lasts until the next restart.** The reconciler archives a vanished Team's Rooms once, and remembers only in memory which ones it archived. A Room the Human unarchives stays in Chats, but a restart archives it again; a Team that returns after a restart does not get its Team Room unarchived.
-- **Nordic follows its mockup, except where a Huddle rule wins.** The Nordic style pack ([ADR-0057](../adr/0057-a-theme-may-carry-a-style-pack.md)) keeps these on purpose:
+- **Nordic follows its mockup, except where a Huddle rule wins.** The Nordic skin ([ADR-0058](../adr/0058-a-theme-is-a-palette-a-skin-and-traits.md), which replaced ADR-0057's style pack) keeps these on purpose:
   - the TextPrimary focus ring, not the mockup's blue ring;
   - the type scale, so 17px titles are 16px and 11.5, 12.5 and 13.5px text snaps to 12 and 13px;
   - the 760px Transcript column;
@@ -786,6 +773,6 @@ so, and names its [Roadmap](roadmap.md) item or its ADR. Back to the hub: [Huddl
   - a 2px Primary edge on the active Tab;
   - a visible Divider on rules that carry meaning.
 
-  The pack's faint 1.31:1 hairline is used only for region splits. A one-line field is 33px rather than the mockup's 34px, because the next padding step is off the spacing scale. The mockup's archetype glyphs and priority bars are not drawn.
+  Nordic's faint 1.31:1 hairline is used only for region splits. A one-line field is 33px rather than the mockup's 34px, because the next padding step is off the spacing scale. The mockup's archetype glyphs and priority bars are not drawn.
 - **Only the first Huddle to start moves its old Skills into a shared Skill Sources folder.** The move from the old `SkillPacks/` runs only while `SKILLS.md` does not exist. A second Huddle pointed at a folder another one already filled skips it: its Teammates keep their copies in `Skills/`, but those Skills' catalog entries show **Not downloaded** on that computer and never **Update available**, until an AI tool adds a path for it (the row's **Copy fix prompt**). Accepted because the copy in `Skills/` is what a Teammate uses ([the Skill Packs design](../Huddle.SkillPacks-Specifications.md) §6.13).
 - **A computer whose name is one letter cannot have a computer line in `SKILLS.md`.** `E: C:\x` reads as a plain entry that is not a path (`R003`), because a computer name is 2 to 15 characters and a drive path such as `E:\x` must never look like one. The JSON object form `{ "E": "C:\\x" }` works, and the move writes a plain path with a warning when `Team:ComputerName` is one letter ([the Skill Packs design](../Huddle.SkillPacks-Specifications.md) §8.2).

@@ -84,8 +84,12 @@ public sealed partial class AppStylesheetTests
     public void AppCss_FocusRingUsesTextPrimaryForContrast()
     {
         string text = File.ReadAllText(CssSource.RepoPath("src", "Huddle.App", "wwwroot", "app.css"));
+        Agency.Huddle.App.Themes.Skins.Token focus = Assert.Single(
+            Agency.Huddle.App.Themes.Skins.SkinTokens.All, static token => string.Equals(token.Key, "focus", StringComparison.Ordinal));
 
-        Assert.Contains("outline: 2px solid var(--mud-palette-text-primary);", text, StringComparison.Ordinal);
+        // The ring reads the skin's focus token, whose default is TextPrimary in both modes.
+        Assert.Contains("outline: 2px solid var(--hu-focus);", text, StringComparison.Ordinal);
+        Assert.Equal(("palette.textPrimary", "palette.textPrimary"), (focus.LightDefault, focus.DarkDefault));
     }
 
     /// <summary>

@@ -20,40 +20,27 @@ public sealed partial class R3FixTests
         return css[start..css.IndexOf('}', start)];
     }
 
-    /// <summary>The chip text of every status colour reaches 4.5:1 on its tint in every built-in Theme except the entries of ThemeCatalogTests.DocumentedShortfalls, which must still miss at the recorded ratio (round 3: Light Modern's High chip measured 3.68:1).</summary>
+    /// <summary>The chip text of every status colour reaches 4.5:1 on its tint in every built-in Theme (round 3: Light Modern's High chip measured 3.68:1, before the VS Code ports were removed).</summary>
     [Fact]
     public void StatusChipText_ReachesFloor_InEveryTheme()
     {
         List<string> unexpected = [];
-        List<string> stale = [];
         foreach (ThemeDescriptor descriptor in ThemeCatalog.BuiltIn)
         {
             Palette palette = descriptor.Mode == ThemeMode.Light ? descriptor.Theme.PaletteLight : descriptor.Theme.PaletteDark;
             MudColor[] statuses = [palette.Info, palette.Warning, palette.Error, palette.Success, palette.Secondary, palette.Tertiary, palette.Primary, palette.TextSecondary];
             for (int index = 0; index < statuses.Length; index++)
             {
-                string pairName = ThemeCatalogTests.ChipPairPrefix + StatusNames[index];
                 string key = $"{descriptor.Id}/{StatusNames[index]}";
                 double ratio = StatusChipContrast.Ratio(statuses[index], palette.Surface, palette.TextPrimary);
-                ThemeCatalogTests.DocumentedShortfall? documented = ThemeCatalogTests.DocumentedShortfalls.SingleOrDefault(candidate =>
-                    string.Equals(candidate.ThemeId, descriptor.Id, StringComparison.Ordinal) &&
-                    string.Equals(candidate.Pair, pairName, StringComparison.Ordinal));
-                if (documented is null)
+                if (ratio < 4.5)
                 {
-                    if (ratio < 4.5)
-                    {
-                        unexpected.Add(key);
-                    }
-                }
-                else if (ratio >= documented.Floor || Math.Abs(Math.Round(ratio, 2) - documented.Ratio) > 0.001)
-                {
-                    stale.Add(key);
+                    unexpected.Add(key);
                 }
             }
         }
 
         Assert.True(unexpected.Count == 0, $"Chip text under 4.5:1: {string.Join(", ", unexpected)}");
-        Assert.True(stale.Count == 0, $"No longer a shortfall - delete or re-measure in {nameof(ThemeCatalogTests.DocumentedShortfalls)}: {string.Join(", ", stale)}");
     }
 
     /// <summary>No field wearing <c>toolbar-compact</c> sets a Label: a 28px box cannot carry a floating label, and the rule hides one so it can never be drawn over the value (round 3: Teammates "Team" over "All teams").</summary>

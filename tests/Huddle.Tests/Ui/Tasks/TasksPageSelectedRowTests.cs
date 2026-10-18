@@ -116,7 +116,7 @@ public sealed class TasksPageSelectedRowTests
         int start = text.IndexOf("tr.task-row-selected", StringComparison.Ordinal);
         string rule = text[start..text.IndexOf('}', start)];
         // contains-ok: source-fact test, no CSS parser - app.css's own text is what's pinned.
-        Assert.Contains("color-mix(in srgb, var(--mud-palette-primary)", rule, StringComparison.Ordinal);
+        Assert.Contains("var(--hu-selected-task-background)", rule, StringComparison.Ordinal);
         Assert.DoesNotContain('#', rule);
     }
 

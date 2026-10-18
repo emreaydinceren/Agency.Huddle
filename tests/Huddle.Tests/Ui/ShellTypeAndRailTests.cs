@@ -55,7 +55,7 @@ public sealed class ShellTypeAndRailTests
     {
         string css = ShellTypeAndRailTests.AppCss();
 
-        Assert.Matches(@"\.mud-tab\.mud-tab-active,[^{]*\{[^}]*color-mix\(in srgb, var\(--mud-palette-primary\) 70%, var\(--mud-palette-text-primary\)\)", css);
+        Assert.Matches(@"\.mud-tab\.mud-tab-active,[^{]*\{[^}]*color: var\(--hu-accent-ink\)", css);
         Assert.Matches(@"(?m)^\.mud-tab-slider\s*\{[^}]*height:\s*2px;", css);
     }
 

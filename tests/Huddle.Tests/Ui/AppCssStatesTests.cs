@@ -22,10 +22,10 @@ public sealed partial class AppCssStatesTests
     {
         string css = AppCss();
 
-        Assert.Matches(@"\.mud-drawer\s*\{[^}]*border-inline-end:\s*1px solid var\(--mud-palette-lines-default\)", css);
-        Assert.Matches(@"\.page-header\.has-chrome\s*\{[^}]*border-bottom:\s*1px solid var\(--mud-palette-lines-default\)", css);
-        Assert.Matches(@"\.mud-appbar\.top-bar\s*\{[^}]*border-bottom:\s*1px solid var\(--mud-palette-lines-default\)", css);
-        Assert.Matches(@"\.tab-group \+ \.tab-group\s*\{[^}]*border-left:\s*1px solid var\(--mud-palette-lines-default\)", css);
+        Assert.Matches(@"\.mud-drawer\s*\{[^}]*border-inline-end:\s*1px solid var\(--hu-line-region\)", css);
+        Assert.Matches(@"\.page-header\.has-chrome\s*\{[^}]*border-bottom:\s*1px solid var\(--hu-line-region\)", css);
+        Assert.Matches(@"\.mud-appbar\.top-bar\s*\{[^}]*border-bottom:\s*1px solid var\(--hu-line-region\)", css);
+        Assert.Matches(@"\.tab-group \+ \.tab-group\s*\{[^}]*border-left:\s*1px solid var\(--hu-line-region\)", css);
         Assert.DoesNotMatch(@"[2-9]px solid var\(--mud-palette-lines-default\)", css);
     }
 
@@ -56,7 +56,7 @@ public sealed partial class AppCssStatesTests
     {
         string css = AppCss();
 
-        Assert.Matches(@"\.floating-panel\s*\{[^}]*box-shadow:\s*var\(--mud-elevation-4\)", css);
+        Assert.Matches(@"\.floating-panel\s*\{[^}]*box-shadow:\s*var\(--hu-shadow-panel\)", css);
         Assert.Matches(@"\.floating-panel\s*\{[^}]*border:\s*1px solid var\(--ink-edge\)", css);
         Assert.Matches(@"\.floating-panel\s*\{[^}]*z-index:\s*var\(--mud-zindex-popover\)", css);
     }

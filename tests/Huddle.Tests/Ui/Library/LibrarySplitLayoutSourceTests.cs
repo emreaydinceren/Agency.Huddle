@@ -68,7 +68,7 @@ public sealed class LibrarySplitLayoutSourceTests
     {
         string body = RuleBody(ReadAppCss(), ".library-explorer-split > .divider");
 
-        Assert.Contains("background-color: var(--mud-palette-lines-default);", body, StringComparison.Ordinal); // contains-ok: stylesheet source text, not markup
+        Assert.Contains("background-color: var(--hu-line-region);", body, StringComparison.Ordinal); // contains-ok: stylesheet source text, not markup
     }
 
     /// <summary>Reads <c>app.css</c> from the repository.</summary>

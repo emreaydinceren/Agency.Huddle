@@ -49,7 +49,7 @@ public sealed class R3RightSidebarTests
         Assert.Contains("color: var(--mud-palette-text-primary)", text, StringComparison.Ordinal); // contains-ok: stylesheet source text
 
         string accent = R3RightSidebarTests.Rule(".sidebar-row .mud-link.sidebar-row-text:hover,\r\n.sidebar-row .mud-link.sidebar-row-text:focus-visible,\r\n.sidebar-row .mud-link.sidebar-row-text.is-current");
-        Assert.Contains("var(--mud-palette-primary) 70%", accent, StringComparison.Ordinal); // contains-ok: stylesheet source text
+        Assert.Contains("var(--hu-accent-ink)", accent, StringComparison.Ordinal); // contains-ok: stylesheet source text
     }
 
     /// <summary>The panel header is 32px with a 13px/600 title, and the count is 12px Quiet ink (B11e).</summary>

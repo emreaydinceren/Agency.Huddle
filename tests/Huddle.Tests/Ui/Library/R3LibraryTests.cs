@@ -19,8 +19,8 @@ public sealed class R3LibraryTests
         Assert.Contains("min-height: 61px;", toolbar, StringComparison.Ordinal); // contains-ok: stylesheet source text, not markup
         Assert.Contains("box-sizing: border-box;", header, StringComparison.Ordinal); // contains-ok: stylesheet source text, not markup
         Assert.Contains("box-sizing: border-box;", toolbar, StringComparison.Ordinal); // contains-ok: stylesheet source text, not markup
-        Assert.Contains("border-bottom: 1px solid var(--mud-palette-lines-default);", header, StringComparison.Ordinal); // contains-ok: stylesheet source text, not markup
-        Assert.Contains("border-bottom: 1px solid var(--mud-palette-lines-default);", toolbar, StringComparison.Ordinal); // contains-ok: stylesheet source text, not markup
+        Assert.Contains("border-bottom: 1px solid var(--hu-line-region);", header, StringComparison.Ordinal); // contains-ok: stylesheet source text, not markup
+        Assert.Contains("border-bottom: 1px solid var(--hu-line-region);", toolbar, StringComparison.Ordinal); // contains-ok: stylesheet source text, not markup
     }
 
     /// <summary>New note sits inside the band, in the same row as the search field, which is the compact 28px field.</summary>
@@ -45,9 +45,9 @@ public sealed class R3LibraryTests
 
         Assert.Contains("margin-inline: 4px;", row, StringComparison.Ordinal); // contains-ok: stylesheet source text, not markup
         Assert.Contains("border-radius: calc(var(--mud-default-borderradius) * 0.75);", row, StringComparison.Ordinal); // contains-ok: stylesheet source text, not markup
-        Assert.Contains("14%", selected, StringComparison.Ordinal); // contains-ok: stylesheet source text, not markup
+        Assert.Contains("background-color: var(--hu-selected-background);", selected, StringComparison.Ordinal); // contains-ok: stylesheet source text, not markup
         Assert.Contains("font-weight: 500;", selected, StringComparison.Ordinal); // contains-ok: stylesheet source text, not markup
-        Assert.Contains("box-shadow: inset 2px 0 0 var(--mud-palette-primary);", selected, StringComparison.Ordinal); // contains-ok: stylesheet source text, not markup
+        Assert.Contains("box-shadow: inset 2px 0 0 var(--hu-tree-current-bar);", selected, StringComparison.Ordinal); // contains-ok: stylesheet source text, not markup
     }
 
     /// <summary>A menu item that opens a dialog closes its menu first, through the shared idiom, and the menu note is Quiet ink.</summary>

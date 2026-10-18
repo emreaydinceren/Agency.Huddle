@@ -25,7 +25,6 @@ internal static class UiConventionSource
         "src/Huddle.App/Components/Layout/ReconnectModal.razor.css",
         "src/Huddle.App/Components/Teams/TeamsNav.razor.css",
         "src/Huddle.App/Components/Shared/HuddleSegmentedControl.razor.css",
-        "src/Huddle.App/wwwroot/packs/nordic.css",
     ];
 
     private static readonly (string Prefix, string Area)[] AreaPrefixes =
@@ -73,7 +72,6 @@ internal static class UiConventionSource
             "CV4" => razor || csharp,
             "CV7" or "CV8" => components && (razor || csharp),
             "CV11" => string.Equals(path, "src/Huddle.App/wwwroot/app.css", StringComparison.Ordinal)
-                || (path.StartsWith("src/Huddle.App/wwwroot/packs/", StringComparison.Ordinal) && path.EndsWith(".css", StringComparison.Ordinal))
                 || (components && path.EndsWith(".razor.css", StringComparison.Ordinal)),
             _ => components && razor,
         };

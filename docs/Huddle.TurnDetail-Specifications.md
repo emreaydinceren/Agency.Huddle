@@ -1402,8 +1402,8 @@ Exact strings, for the tests to assert with `Assert.Equal`. `language.md` is bin
 
 ### D.7 Themes and width
 
-- New rules read only `var(--mud-palette-*)` or `--font-mono`, so every built-in Theme, including
-  the High contrast group, applies without a per-Theme rule.
+- New rules read only `var(--mud-palette-*)` or `--font-mono`, so every built-in Theme applies
+  without a per-Theme rule.
 - The preview's `<pre>` wraps with `overflow-wrap: anywhere` and scrolls inside a capped height. It
   never widens the Room.
 - At 320 px the row wraps its title; the expander and the marks keep their size.
@@ -1417,7 +1417,7 @@ Exact strings, for the tests to assert with `Assert.Equal`. `language.md` is bin
 | Fast calls make rows appear and finish in one frame, so the list twitches | Watch a Turn that makes ten quick reads. Rows must only append, and nothing already shown may move | TD-M5 |
 | `MudCollapse` animating on every re-render looks like flicker | Open a row during a burst of updates. The animation must play once, on the click | TD-M5 |
 | A long preview dwarfs the reply | A `Write` of a large file. The block must stay inside its capped height | TD-M4 |
-| A dark or High contrast Theme hides a border or a mark | Open the list under three Themes from three groups | TD-M4 |
+| A dark Theme hides a border or a mark | Open the list under Huddle Dark, Nordic Dark and one more dark Theme | TD-M4 |
 | The Spend line reads as a limit | Read the card as the Human would. It must say what was spent, and imply no cap | TD-M2 |
 | A Teammate that reports no cost looks broken | A local Teammate's card must simply have no Spend line | TD-M3 |
 

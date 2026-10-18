@@ -1,6 +1,6 @@
 # Tasks: creating, moving, viewing and referencing a unit of work
 
-**19 tests** · 14 free, 5 paid 💰 · about 3.6 hours.
+**20 tests** · 15 free, 5 paid 💰 · about 3.7 hours.
 
 Prove, in a real browser against a real `node` adapter where a test says so, everything between "a
 Task file exists on disk" and "an Agent reacts to it": that the UI writes the exact frontmatter the
@@ -929,6 +929,38 @@ any other field (D-S8).*
   the tool result.
 - `Rae` never calls `update_task` -> record as a model-behaviour finding per
   [§0.6](../manual-tests.md#06-not-a-defect), unless the tool was unavailable.
+
+### TASKS-20 — Escape closes the Task drawer, Expand opens the dialog over the view, and a new Task opens at the top
+
+**Free** · about 5 min
+
+*Proves the drawer's Escape key (with the unsaved-changes prompt), that Expand on the item route
+shows the expanded dialog instead of closing the Task, and that the drawer body does not carry a
+previous Task's scroll position into the next one.*
+
+**Before you start**
+
+- `E-FREE` app running, at least one Task with a long description (enough to scroll the drawer).
+
+**Steps**
+
+1. Open a Task from `/tasks` so the drawer opens, press **Esc**, then reopen it, change the
+   Priority and press **Esc** again.
+2. Open `/tasks/item/<id>` for a Task directly and click **Expand** (the arrows icon).
+3. Close the dialog. Open the long Task, scroll the drawer to the bottom, then click **+ New task**.
+
+**Pass if — all of these**
+
+- Step 1: the first **Esc** closes the drawer; the second asks **Discard changes?** and the
+  drawer stays open until you answer.
+- Step 2: the expanded dialog opens over the View.
+- Step 3: the new-Task form starts at its top, with the Title field visible.
+
+**Fail if — any of these**
+- **Esc** does nothing, or discards the edit without asking -> `ResizableEndDrawer`'s key handler or
+  the page's close guard is not wired.
+- **Expand** leaves the view with no dialog -> the dialog opened before the host's close navigation.
+- The new-Task form is scrolled down -> the drawer body is not keyed by `ContentKey`.
 
 ---
 

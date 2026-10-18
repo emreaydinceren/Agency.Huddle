@@ -1,6 +1,11 @@
 using AngleSharp.Dom;
 using AngleSharp.Html.Dom;
+using System.Text.RegularExpressions;
 using AngleSharp.Html.Parser;
+using Agency.Huddle.App.Appearance;
+using Agency.Huddle.App.Themes;
+using Agency.Huddle.App.Themes.Skins;
+using Microsoft.Extensions.DependencyInjection;
 
 namespace Agency.Huddle.Tests.Ui;
 
@@ -17,23 +22,20 @@ namespace Agency.Huddle.Tests.Ui;
 public sealed class AppearanceRenderingTests
 {
     // The exact CSS custom property MudThemeProvider.GenerateTheme emits for Palette.Background, in
-    // MudColor's default (rgba) string form. Present in the response only when the "Huddle Light"
-    // theme's palette actually rendered. (Primary can no longer tell the two Huddle themes apart:
-    // the accents differ per theme but the neutral ground is the stable marker.) The constant keeps
-    // its historical name.
-    private const string LightPrimaryVariable = "--mud-palette-background: rgba(242,240,237,1);";
+    // MudColor's default (rgba) string form. Present in the response only when the "Lumen Light"
+    // theme's palette actually rendered. The constant keeps its historical name.
+    private const string LightPrimaryVariable = "--mud-palette-background: rgba(255,255,255,1);";
 
-    // The counterpart for "Huddle Dark", present only when IsDarkMode resolved to true before the
+    // The counterpart for "Lumen Dark", present only when IsDarkMode resolved to true before the
     // response was written. Kept as the literal rendered rgba because that is what reaches the browser.
-    private const string DarkPrimaryVariable = "--mud-palette-background: rgba(28,28,27,1);";
+    private const string DarkPrimaryVariable = "--mud-palette-background: rgba(11,11,15,1);";
 
-    // Huddle Light's Primary (#5b64c8), which the Custom Accent Light placeholder carries.
-    private const string BrandPrimaryVariable = "--mud-palette-primary: rgba(91,100,200,1);";
+    // Lumen Light's own Primary (#7368d3).
+    private const string BrandPrimaryVariable = "--mud-palette-primary: rgba(115,104,211,1);";
 
-    // Solarized Dark's own editor.background, #002b36. Asserted rather than its Primary because
-    // Solarized Dark takes Primary from VS Code's textLink.foreground registry default, which other
-    // imported dark themes share - a background is this theme's and no other's.
-    private const string SolarizedDarkBackgroundVariable = "--mud-palette-background: rgba(0,43,54,1);";
+    // Nordic Dark's own page ground, #161a1d (fjord slate). Asserted rather than its Primary because a
+    // background is this theme's and no other's.
+    private const string NordicDarkBackgroundVariable = "--mud-palette-background: rgba(22,26,29,1);";
 
     /// <summary>
     /// With no <c>appearance.json</c>, the shell links no <c>themes/</c> stylesheet (that mechanism
@@ -68,7 +70,7 @@ public sealed class AppearanceRenderingTests
         CancellationToken ct = cts.Token;
 
         await using TeamWebApplicationFactory factory = new();
-        File.WriteAllText(factory.AppearanceJsonPath, "{\"theme\":\"huddle-dark\"}");
+        File.WriteAllText(factory.AppearanceJsonPath, "{\"theme\":\"lumen-dark\"}");
         using HttpClient client = factory.CreateClient();
 
         var html = await client.GetStringAsync("/", ct);
@@ -79,10 +81,10 @@ public sealed class AppearanceRenderingTests
 
     /// <summary>
     /// The regression this whole change exists for. An <c>appearance.json</c> written before the
-    /// light/dark control was folded into the theme can say <c>"theme": "solarized-dark"</c> and
-    /// <c>"dark": "light"</c> at the same time. That used to render the light palette Solarized Dark
-    /// borrowed - which was Huddle's own - so the application showed Huddle Light under Solarized
-    /// Dark's name. Now the theme decides, the retired key is ignored, and Solarized Dark's real
+    /// light/dark control was folded into the theme can say <c>"theme": "nordic-dark"</c> and
+    /// <c>"dark": "light"</c> at the same time. That used to render the light palette a dark theme
+    /// borrowed - which was Huddle's own - so the application showed Huddle Light under Nordic
+    /// Dark's name. Now the theme decides, the retired key is ignored, and Nordic Dark's real
     /// palette renders.
     /// </summary>
     [Fact]
@@ -92,12 +94,12 @@ public sealed class AppearanceRenderingTests
         CancellationToken ct = cts.Token;
 
         await using TeamWebApplicationFactory factory = new();
-        File.WriteAllText(factory.AppearanceJsonPath, "{\"theme\":\"solarized-dark\",\"dark\":\"light\"}");
+        File.WriteAllText(factory.AppearanceJsonPath, "{\"theme\":\"nordic-dark\",\"dark\":\"light\"}");
         using HttpClient client = factory.CreateClient();
 
         var html = await client.GetStringAsync("/", ct);
 
-        Assert.Contains(SolarizedDarkBackgroundVariable, html, StringComparison.Ordinal);
+        Assert.Contains(NordicDarkBackgroundVariable, html, StringComparison.Ordinal); // contains-ok: rendered CSS variable text
         Assert.DoesNotContain(LightPrimaryVariable, html, StringComparison.Ordinal);
     }
 
@@ -118,19 +120,18 @@ public sealed class AppearanceRenderingTests
     }
 
     /// <summary>
-    /// Selecting "Custom Accent Light" with a chosen accent colour renders that colour, not the
-    /// placeholder Huddle Light Primary - and it does so from a plain HTTP GET, with no browser
-    /// JavaScript involved. Unlike the browser-detection approach this replaced, the accent colour is
-    /// a Human-picked, server-persisted value known synchronously on the very first render.
+    /// A customized <c>palette.primary</c> for the shown Theme renders that colour, not the Theme's own Primary - from a
+    /// plain HTTP GET, with no browser JavaScript involved: the customization is a server-persisted value known
+    /// synchronously on the very first render.
     /// </summary>
     [Fact]
-    public async Task AppShell_WithCustomAccentAndAColourChosen_RendersThatColourNotThePlaceholder()
+    public async Task AppShell_WithACustomizedPrimary_RendersThatColourNotTheThemesOwn()
     {
         using CancellationTokenSource cts = new(TimeSpan.FromSeconds(10));
         CancellationToken ct = cts.Token;
 
         await using TeamWebApplicationFactory factory = new();
-        File.WriteAllText(factory.AppearanceJsonPath, "{\"theme\":\"custom-accent\",\"accentColor\":\"#00b294\"}");
+        File.WriteAllText(factory.AppearanceJsonPath, "{\"theme\":\"lumen-light\",\"customizations\":{\"lumen-light\":{\"palette\":{\"primary\":\"#00b294\"}}}}");
         using HttpClient client = factory.CreateClient();
 
         var html = await client.GetStringAsync("/", ct);
@@ -139,15 +140,63 @@ public sealed class AppearanceRenderingTests
         Assert.DoesNotContain(BrandPrimaryVariable, html, StringComparison.Ordinal);
     }
 
-    /// <summary>Selecting "Custom Accent Light" with no colour chosen yet renders the placeholder - plain Huddle Light's own Primary - rather than an error or a blank palette.</summary>
+    /// <summary>With no customization the shell renders the Theme's own Primary rather than an error or a blank palette.</summary>
     [Fact]
-    public async Task AppShell_WithCustomAccentAndNoColourChosen_RendersThePlaceholder()
+    public async Task AppShell_WithNoCustomization_RendersTheThemesOwnPrimary()
     {
         using CancellationTokenSource cts = new(TimeSpan.FromSeconds(10));
         CancellationToken ct = cts.Token;
 
         await using TeamWebApplicationFactory factory = new();
-        File.WriteAllText(factory.AppearanceJsonPath, "{\"theme\":\"custom-accent\"}");
+        File.WriteAllText(factory.AppearanceJsonPath, "{\"theme\":\"lumen-light\"}");
+        using HttpClient client = factory.CreateClient();
+
+        var html = await client.GetStringAsync("/", ct);
+
+        Assert.Contains(BrandPrimaryVariable, html, StringComparison.Ordinal);
+    }
+
+    /// <summary>A customization of another Theme does not touch the shown one.</summary>
+    [Fact]
+    public async Task AppShell_WithAnotherThemesCustomization_RendersTheShownThemesOwnPrimary()
+    {
+        using CancellationTokenSource cts = new(TimeSpan.FromSeconds(10));
+        CancellationToken ct = cts.Token;
+
+        await using TeamWebApplicationFactory factory = new();
+        File.WriteAllText(factory.AppearanceJsonPath, "{\"theme\":\"lumen-light\",\"customizations\":{\"nordic-light\":{\"palette\":{\"primary\":\"#00b294\"}}}}");
+        using HttpClient client = factory.CreateClient();
+
+        var html = await client.GetStringAsync("/", ct);
+
+        Assert.Contains(BrandPrimaryVariable, html, StringComparison.Ordinal);
+    }
+
+    /// <summary>A customized token reaches the <c>hu-skin</c> block of the prerendered page.</summary>
+    [Fact]
+    public async Task AppShell_WithACustomizedToken_RendersItInTheSkinBlock()
+    {
+        using CancellationTokenSource cts = new(TimeSpan.FromSeconds(10));
+        CancellationToken ct = cts.Token;
+
+        await using TeamWebApplicationFactory factory = new();
+        File.WriteAllText(factory.AppearanceJsonPath, "{\"theme\":\"lumen-light\",\"customizations\":{\"lumen-light\":{\"tokens\":{\"ground.rail\":\"#112233\"}}}}");
+        using HttpClient client = factory.CreateClient();
+
+        string html = await client.GetStringAsync("/", ct);
+
+        Assert.Contains("--hu-ground-rail:#112233;", SkinStyleOf(html), StringComparison.Ordinal);
+    }
+
+    /// <summary>An invalid customization never breaks the render: the page is the Theme without it.</summary>
+    [Fact]
+    public async Task AppShell_WithAnInvalidCustomization_StillRendersTheTheme()
+    {
+        using CancellationTokenSource cts = new(TimeSpan.FromSeconds(10));
+        CancellationToken ct = cts.Token;
+
+        await using TeamWebApplicationFactory factory = new();
+        File.WriteAllText(factory.AppearanceJsonPath, "{\"theme\":\"lumen-light\",\"customizations\":{\"lumen-light\":{\"palette\":{\"primary\":\"nope\"},\"tokens\":{\"ground.rail\":\"url(x)\"}}}}");
         using HttpClient client = factory.CreateClient();
 
         var html = await client.GetStringAsync("/", ct);
@@ -156,11 +205,33 @@ public sealed class AppearanceRenderingTests
     }
 
     /// <summary>
-    /// Selecting Nordic Light renders the Theme marker with its id and its style pack (ADR-0057), which is what every
-    /// rule in <c>packs/nordic.css</c> is scoped to; the pack's stylesheet is linked.
+    /// An <c>appearance.json</c> written by the previous release (<c>custom-accent</c> with an <c>accentColor</c>) opens as Lumen
+    /// Light with that colour as its Primary: the migration reaches the first render.
     /// </summary>
     [Fact]
-    public async Task AppShell_WithNordicSelected_MarksTheThemeAndItsPack()
+    public async Task AppShell_WithALegacyCustomAccentFile_RendersLumenLightWithTheColour()
+    {
+        using CancellationTokenSource cts = new(TimeSpan.FromSeconds(10));
+        CancellationToken ct = cts.Token;
+
+        await using TeamWebApplicationFactory factory = new();
+        File.WriteAllText(factory.AppearanceJsonPath, "{\"theme\":\"custom-accent\",\"accentColor\":\"#00b294\"}");
+        using HttpClient client = factory.CreateClient();
+
+        string html = await client.GetStringAsync("/", ct);
+        IHtmlDocument page = new HtmlParser().ParseDocument(html);
+
+        Assert.Equal("lumen-light", Assert.Single(page.QuerySelectorAll("span.theme-marker")).GetAttribute("data-huddle-theme"));
+        Assert.Contains(LightPrimaryVariable, html, StringComparison.Ordinal);
+        Assert.DoesNotContain(BrandPrimaryVariable, html, StringComparison.Ordinal);
+    }
+
+    /// <summary>
+    /// Selecting Nordic Light renders the Theme marker with its id and Nordic's nine <c>data-hu-*</c> trait values, and
+    /// the <c>hu-skin</c> block carries the reading face <c>--font-read</c> with "Literata"; no pack stylesheet is linked.
+    /// </summary>
+    [Fact]
+    public async Task AppShell_WithNordicSelected_MarksTheThemeAndItsTraits()
     {
         using CancellationTokenSource cts = new(TimeSpan.FromSeconds(10));
         CancellationToken ct = cts.Token;
@@ -174,16 +245,32 @@ public sealed class AppearanceRenderingTests
 
         IElement marker = Assert.Single(page.QuerySelectorAll("span.theme-marker"));
         Assert.Equal("nordic-light", marker.GetAttribute("data-huddle-theme"));
-        Assert.Equal("nordic", marker.GetAttribute("data-theme-pack"));
-        Assert.Single(page.QuerySelectorAll("link[rel='stylesheet'][href^='packs/nordic']"));
+        Assert.False(marker.HasAttribute("data-theme-pack"));
+        Dictionary<string, string> expected = new(StringComparer.Ordinal)
+        {
+            ["data-hu-message"] = "row",
+            ["data-hu-send"] = "text",
+            ["data-hu-status"] = "pill",
+            ["data-hu-labels"] = "upper",
+            ["data-hu-composer"] = "card",
+            ["data-hu-nav"] = "tile",
+            ["data-hu-surface"] = "paper",
+            ["data-hu-marks"] = "chip",
+            ["data-hu-reading"] = "book",
+        };
+        foreach (KeyValuePair<string, string> pair in expected)
+        {
+            Assert.Equal(pair.Value, marker.GetAttribute(pair.Key));
+        }
+
+        string css = SkinStyleOf(html);
+        Assert.Matches("--font-read:[^;]*Literata", css);
+        Assert.Empty(page.QuerySelectorAll("link[rel='stylesheet'][href*='packs/']"));
     }
 
-    /// <summary>
-    /// With the default Theme the marker names it and carries no pack, so the Nordic pack, though linked for every
-    /// Theme, has nothing to match.
-    /// </summary>
+    /// <summary>The marker carries no <c>data-theme-pack</c> attribute for any Theme: the pack mechanism is gone.</summary>
     [Fact]
-    public async Task AppShell_WithTheDefaultTheme_MarksNoPack()
+    public async Task Marker_HasNoPackAttribute()
     {
         using CancellationTokenSource cts = new(TimeSpan.FromSeconds(10));
         CancellationToken ct = cts.Token;
@@ -195,7 +282,99 @@ public sealed class AppearanceRenderingTests
         IHtmlDocument page = new HtmlParser().ParseDocument(html);
 
         IElement marker = Assert.Single(page.QuerySelectorAll("span.theme-marker"));
-        Assert.Equal("huddle", marker.GetAttribute("data-huddle-theme"));
+        Assert.Equal("lumen-light", marker.GetAttribute("data-huddle-theme"));
         Assert.False(marker.HasAttribute("data-theme-pack"));
+    }
+
+    /// <summary>Extracts the raw content of the skin style block from a prerendered response, or fails when there is not exactly one.</summary>
+    /// <param name="html">The response body.</param>
+    private static string SkinStyleOf(string html)
+    {
+        MatchCollection blocks = Regex.Matches(html, "<style id=\"hu-skin\">(?<css>.*?)</style>", RegexOptions.Singleline | RegexOptions.CultureInvariant);
+        return Assert.Single(blocks).Groups["css"].Value;
+    }
+
+    /// <summary>
+    /// The layout prerenders the skin as one raw <c>&lt;style id="hu-skin"&gt;</c> block (C10): every registry token is
+    /// declared, and nothing in it is HTML-encoded, so the quotes in a font stack survive the prerender.
+    /// </summary>
+    [Fact]
+    public async Task AppShell_RendersSkinStyleBlock()
+    {
+        using CancellationTokenSource cts = new(TimeSpan.FromSeconds(10));
+        CancellationToken ct = cts.Token;
+
+        await using TeamWebApplicationFactory factory = new();
+        using HttpClient client = factory.CreateClient();
+
+        string html = await client.GetStringAsync("/", ct);
+        string css = SkinStyleOf(html);
+
+        Assert.Matches(@"^:root\{.*\}$", css);
+        foreach (Token token in SkinTokens.All)
+        {
+            Assert.Matches(Regex.Escape(token.CssName) + ":", css);
+        }
+
+        Assert.DoesNotContain("&quot;", css, StringComparison.Ordinal);
+        Assert.DoesNotContain("&amp;", css, StringComparison.Ordinal);
+        Assert.DoesNotContain("&#", css, StringComparison.Ordinal);
+    }
+
+    /// <summary>The marker carries the nine structural traits as <c>data-hu-*</c> attributes, at Lumen Light's, the default Theme's.</summary>
+    [Fact]
+    public async Task AppShell_MarkerCarriesNineTraitAttributes()
+    {
+        using CancellationTokenSource cts = new(TimeSpan.FromSeconds(10));
+        CancellationToken ct = cts.Token;
+
+        await using TeamWebApplicationFactory factory = new();
+        using HttpClient client = factory.CreateClient();
+
+        string html = await client.GetStringAsync("/", ct);
+        IHtmlDocument page = new HtmlParser().ParseDocument(html);
+
+        IElement marker = Assert.Single(page.QuerySelectorAll("span.theme-marker"));
+        Dictionary<string, string> expected = new(StringComparer.Ordinal)
+        {
+            ["data-hu-message"] = "row",
+            ["data-hu-send"] = "square",
+            ["data-hu-status"] = "glyph",
+            ["data-hu-labels"] = "sentence",
+            ["data-hu-composer"] = "card",
+            ["data-hu-nav"] = "tile",
+            ["data-hu-surface"] = "hairline",
+            ["data-hu-marks"] = "chip",
+            ["data-hu-reading"] = "plain",
+        };
+        Assert.Equal(expected.Count, marker.Attributes.Count(static attribute => attribute.Name.StartsWith("data-hu-", StringComparison.Ordinal)));
+        foreach (KeyValuePair<string, string> pair in expected)
+        {
+            Assert.Equal(pair.Value, marker.GetAttribute(pair.Key));
+        }
+    }
+
+    /// <summary>
+    /// Switching the Theme through the appearance store re-renders the skin block from the newly selected descriptor: still
+    /// exactly one block, and byte-for-byte that descriptor's own. (Every shipped skin overrides no token yet, so two Themes'
+    /// blocks are equal today; <c>Descriptor_TokenOverride_ChangesStyleBlock</c> pins that an override changes the block.)
+    /// </summary>
+    [Fact]
+    public async Task AppShell_ThemeChange_ReplacesStyleBlock()
+    {
+        using CancellationTokenSource cts = new(TimeSpan.FromSeconds(10));
+        CancellationToken ct = cts.Token;
+
+        await using TeamWebApplicationFactory factory = new();
+        using HttpClient client = factory.CreateClient();
+
+        _ = SkinStyleOf(await client.GetStringAsync("/", ct));
+        factory.Services.GetRequiredService<AppearanceStore>().Save("nordic-dark");
+        string html = await client.GetStringAsync("/", ct);
+        string after = SkinStyleOf(html);
+
+        ThemeDescriptor nordicDark = ThemeCatalog.BuiltIn.Single(static descriptor => descriptor.Id == "nordic-dark");
+        Assert.Equal(nordicDark.StyleBlock, $"<style id=\"hu-skin\">{after}</style>");
+        Assert.Equal("nordic-dark", new HtmlParser().ParseDocument(html).QuerySelector("span.theme-marker")?.GetAttribute("data-huddle-theme"));
     }
 }

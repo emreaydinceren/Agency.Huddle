@@ -2,7 +2,7 @@
    MudBlazor's theme generates --mud-typography-* variables for prose fonts, but ships nothing for
    a monospace stack, so --font-mono has no --mud-* counterpart to fall through to. This file is
    the sole declaration of it, kept out of app.css so that file's "every var() must name a
-   MudBlazor variable" rule (AppCss_UsesOnlyMudBlazorVariables) stays true without an exemption for
+   MudBlazor variable" rule (AppCss_UsesOnlyMudBlazorOrSkinTokens) stays true without an exemption for
    one hard-coded name. Linked in App.razor after app.css. */
 :root {
     --font-mono: ui-monospace, "Cascadia Mono", Consolas, "Courier New", monospace;
@@ -10,6 +10,72 @@
     /* The reading face: Library prose and quotes. Every Theme reads in its UI face; a style pack (ADR-0057) may give
        it a serif, as Nordic gives it Literata. */
     --font-read: var(--mud-typography-body1-family);
+
+    /* Skin tokens (--hu-*): the registry defaults, verbatim what SkinCss.RenderDefaults writes (a test pins it). This is
+       the first-paint and no-layout fallback (Error page, ReconnectModal); MainLayout's skin block repeats it per Theme. */
+    --hu-ink-strip: color-mix(in srgb, var(--mud-palette-text-primary) 4%, var(--mud-palette-surface));
+    --hu-ink-wash: color-mix(in srgb, var(--mud-palette-text-primary) 6%, var(--mud-palette-surface));
+    --hu-ink-rule: color-mix(in srgb, var(--mud-palette-text-primary) 10%, var(--mud-palette-surface));
+    --hu-ink-edge: color-mix(in srgb, var(--mud-palette-text-primary) 18%, var(--mud-palette-surface));
+    --hu-ink-field: color-mix(in srgb, var(--mud-palette-text-primary) 30%, var(--mud-palette-surface));
+    --hu-ground-page: var(--mud-palette-surface);
+    --hu-ground-sidebar: var(--mud-palette-surface);
+    --hu-ground-rail: var(--mud-palette-surface);
+    --hu-ground-raised: var(--mud-palette-surface);
+    --hu-ground-sunk: var(--mud-palette-surface);
+    --hu-line-region: var(--mud-palette-lines-default);
+    --hu-line-control: var(--mud-palette-lines-default);
+    --hu-accent-ink: color-mix(in srgb, var(--mud-palette-primary) 70%, var(--mud-palette-text-primary));
+    --hu-current-background: color-mix(in srgb, var(--mud-palette-primary) 14%, var(--mud-palette-surface));
+    --hu-current-background-hover: color-mix(in srgb, var(--mud-palette-primary) 20%, var(--mud-palette-surface));
+    --hu-current-foreground: var(--hu-accent-ink);
+    --hu-current-icon: var(--hu-accent-ink);
+    --hu-current-weight: 500;
+    --hu-current-shadow: none;
+    --hu-selected-background: color-mix(in srgb, var(--mud-palette-primary) 14%, var(--mud-palette-surface));
+    --hu-selected-background-hover: color-mix(in srgb, var(--mud-palette-primary) 20%, var(--mud-palette-surface));
+    --hu-selected-foreground: var(--hu-accent-ink);
+    --hu-selected-task-background: var(--hu-selected-background);
+    --hu-selected-task-bar: var(--mud-palette-primary);
+    --hu-tree-current-bar: var(--mud-palette-primary);
+    --hu-hover: var(--mud-palette-action-default-hover);
+    --hu-focus: var(--mud-palette-text-primary);
+    --hu-needs: var(--mud-palette-warning);
+    --hu-text-subtle: color-mix(in srgb, var(--mud-palette-text-secondary) 50%, var(--mud-palette-text-primary));
+    --hu-tone-neutral-soft: color-mix(in srgb, var(--mud-palette-text-secondary) 14%, var(--mud-palette-surface));
+    --hu-tone-neutral-ink: color-mix(in srgb, var(--mud-palette-text-secondary) 50%, var(--mud-palette-text-primary));
+    --hu-tone-primary-soft: color-mix(in srgb, var(--mud-palette-primary) 14%, var(--mud-palette-surface));
+    --hu-tone-primary-ink: color-mix(in srgb, var(--mud-palette-primary) 50%, var(--mud-palette-text-primary));
+    --hu-tone-primary-tint: color-mix(in srgb, var(--mud-palette-primary) 8%, var(--mud-palette-surface));
+    --hu-tone-info-soft: color-mix(in srgb, var(--mud-palette-info) 14%, var(--mud-palette-surface));
+    --hu-tone-info-ink: color-mix(in srgb, var(--mud-palette-info) 50%, var(--mud-palette-text-primary));
+    --hu-tone-warning-soft: color-mix(in srgb, var(--mud-palette-warning) 14%, var(--mud-palette-surface));
+    --hu-tone-warning-ink: color-mix(in srgb, var(--mud-palette-warning) 50%, var(--mud-palette-text-primary));
+    --hu-tone-warning-tint: color-mix(in srgb, var(--mud-palette-warning) 8%, var(--mud-palette-surface));
+    --hu-tone-warning-line: color-mix(in srgb, var(--mud-palette-warning) 55%, var(--mud-palette-surface));
+    --hu-tone-success-soft: color-mix(in srgb, var(--mud-palette-success) 14%, var(--mud-palette-surface));
+    --hu-tone-success-ink: color-mix(in srgb, var(--mud-palette-success) 50%, var(--mud-palette-text-primary));
+    --hu-tone-error-soft: color-mix(in srgb, var(--mud-palette-error) 14%, var(--mud-palette-surface));
+    --hu-tone-error-ink: color-mix(in srgb, var(--mud-palette-error) 50%, var(--mud-palette-text-primary));
+    --hu-tone-tertiary-soft: color-mix(in srgb, var(--mud-palette-tertiary) 14%, var(--mud-palette-surface));
+    --hu-tone-tertiary-ink: color-mix(in srgb, var(--mud-palette-tertiary) 50%, var(--mud-palette-text-primary));
+    --hu-shadow-card: none;
+    --hu-shadow-card-hover: none;
+    --hu-shadow-panel: var(--mud-elevation-4);
+    --hu-field-background: transparent;
+    --hu-field-focus-line: var(--mud-palette-primary);
+    --hu-field-focus-shadow: none;
+    --hu-scrim: var(--mud-palette-overlay-dark);
+    --hu-tabs-strip-background: color-mix(in srgb, var(--mud-palette-text-primary) 4%, var(--mud-palette-surface));
+    --hu-tabs-item-hover: color-mix(in srgb, var(--mud-palette-text-primary) 7%, var(--mud-palette-surface));
+    --hu-message-line-height: var(--mud-typography-body1-lineheight);
+
+    /* The Composer's Send button: Primary icon on no ground, which is today's look. */
+    --hu-send-fg: var(--mud-palette-primary);
+    --hu-send-bg: transparent;
+
+    /* The cut-out ring around a presence badge on an avatar. A region sets it to the ground behind the avatar. */
+    --hu-ring: var(--mud-palette-surface);
 }
 
 /* ---- The ink ladder (audit round 3, A1) ------------------------------------------------------
@@ -21,9 +87,9 @@
                shell's own hairlines).
    A wash never defines a shape on its own: it also carries an Edge. */
 :root {
-    --ink-strip: color-mix(in srgb, var(--mud-palette-text-primary) 4%, var(--mud-palette-surface));
-    --ink-wash: color-mix(in srgb, var(--mud-palette-text-primary) 6%, var(--mud-palette-surface));
-    --ink-rule: color-mix(in srgb, var(--mud-palette-text-primary) 10%, var(--mud-palette-surface));
-    --ink-edge: color-mix(in srgb, var(--mud-palette-text-primary) 18%, var(--mud-palette-surface));
-    --ink-field: color-mix(in srgb, var(--mud-palette-text-primary) 30%, var(--mud-palette-surface));
+    --ink-strip: var(--hu-ink-strip);
+    --ink-wash: var(--hu-ink-wash);
+    --ink-rule: var(--hu-ink-rule);
+    --ink-edge: var(--hu-ink-edge);
+    --ink-field: var(--hu-ink-field);
 }

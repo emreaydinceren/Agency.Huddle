@@ -226,7 +226,9 @@ unarchiving afterwards yields two identically-named Rooms with the same two Memb
 `FindRoomWithExactMembersAsync` gained an `ORDER BY` it never had so the winner is at least
 deterministic.
 **2026-09-16 — VS Code's bundled Themes are converted once, by hand, and the mapping is
-a claim you test with contrast.**
+a claim you test with contrast.** *(Superseded 2026-10-17: the seventeen ports and the High
+contrast group were removed because a palette cannot carry a skin; the catalog is now twelve
+authored Themes. This entry is kept as history.)*
 
 The catalog had one Theme, so nothing proved its extension point worked. It now has
 eighteen: `huddle` plus seventeen of the colour Themes Visual Studio Code bundles,

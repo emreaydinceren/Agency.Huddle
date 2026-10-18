@@ -245,7 +245,7 @@ Startup, configuration and first-run state — [area file](startup-config.md)
 | [STARTUPCONFIG-07](startup-config.md#startupconfig-07--start-chat-on-one-known-agent-reuses-its-room-two-agents-create-one-new-named-room) |  | Active |  |  |
 | [STARTUPCONFIG-08](startup-config.md#startupconfig-08--teammates-lists-personas-only--pipe-clients-never-appear-there) |  | Active |  |  |
 | [STARTUPCONFIG-09](startup-config.md#startupconfig-09--settings-prompts-tab-on-a-first-run-says-promptsjson-is-absent-and-offers-nothing-to-save-or-reset) |  | Active |  |  |
-| [STARTUPCONFIG-10](startup-config.md#startupconfig-10--appearance-tab-on-a-first-run-reads-huddle-light-picking-a-dark-theme-writes-appearancejson-and-applies-immediately-with-no-reload) |  | Active |  |  |
+| [STARTUPCONFIG-10](startup-config.md#startupconfig-10--appearance-tab-on-a-first-run-reads-lumen-light-picking-a-dark-theme-writes-appearancejson-and-applies-immediately-with-no-reload) |  | Active |  |  |
 | [STARTUPCONFIG-11](startup-config.md#startupconfig-11--rooms-and-transcripts-survive-a-restart-drafts-and-the-budget-do-not) |  | Active |  |  |
 | [STARTUPCONFIG-12](startup-config.md#startupconfig-12--deleting-app_data-while-running-fails-stopping-first-makes-the-clean-slate-reliable) |  | Active |  |  |
 | [STARTUPCONFIG-13](startup-config.md#startupconfig-13--team__agentmessagebudget1-pauses-the-room-after-one-agent-reply-and-shows-the-continue-prompt) |  | Active |  |  |
@@ -670,14 +670,16 @@ Appearance tab, Themes, Tokens and overrides — [area file](appearance-theme.md
 | [APPEARANCETHEME-22](appearance-theme.md#appearancetheme-22--dark-mode-walked-across-every-page-and-every-state---the-acceptance-test-for-the-whole-item) |  | Active |  |  |
 | [APPEARANCETHEME-23](appearance-theme.md#appearancetheme-23--hover-selection-and-focus-surfaces-all-switch-and-the-four-old-hover-colours-are-still-one) |  | Active |  |  |
 | [APPEARANCETHEME-24](appearance-theme.md#appearancetheme-24--the-reconnect-modal-shows-one-themed-state-paragraph-over-a-dimmed-backdrop-in-both-light-and-dark) |  | Active |  |  |
-| [APPEARANCETHEME-26](appearance-theme.md#appearancetheme-26--the-credit-line-names-visual-studio-code-and-attributes-nobody-it-should-not) |  | Active |  | Added 2026-09-16 with the VS Code theme import (ADR-0016). |
-| [APPEARANCETHEME-27](appearance-theme.md#appearancetheme-27--every-imported-theme-paints-its-own-palette-across-the-whole-application) |  | Active |  | Added 2026-09-16 with the VS Code theme import (ADR-0016). The acceptance walk for the imported catalog. |
-| [APPEARANCETHEME-28](appearance-theme.md#appearancetheme-28--custom-accent-stores-the-picked-colour-clamps-it-for-contrast-and-shows-its-picker-only-for-the-two-accent-themes) |  | Active |  |  |
+| [APPEARANCETHEME-26](appearance-theme.md#appearancetheme-26--the-credit-line-names-this-applications-own-themes-and-attributes-nobody) |  | Active |  | Added 2026-09-16 with the VS Code theme import (ADR-0016). |
+| [APPEARANCETHEME-27](appearance-theme.md#appearancetheme-27--every-theme-paints-its-own-palette-across-the-whole-application) |  | Active |  | Added 2026-09-16 with the VS Code theme import (ADR-0016). The acceptance walk for the imported catalog. |
+| [APPEARANCETHEME-28](appearance-theme.md#appearancetheme-28--an-accent-customization-is-stored-per-theme-clamped-for-contrast-and-removed-by-reset) |  | Active |  |  |
 | [APPEARANCETHEME-29](appearance-theme.md#appearancetheme-29--there-is-no-library-pane-setting-and-a-leftover-librarypaneside-key-is-ignored-without-a-warning-and-kept-in-the-file) |  | Active |  |  |
 | [APPEARANCETHEME-30](appearance-theme.md#appearancetheme-30--the-top-bar-button-switches-between-the-chosen-light-and-dark-themes-and-is-the-last-control-in-the-bar) |  | Active |  | Added 2026-10-12 with ADR-0054. |
 | [APPEARANCETHEME-31](appearance-theme.md#appearancetheme-31--the-appearance-tab-has-a-light-picker-and-a-dark-picker-each-holding-only-its-own-mode) |  | Active |  | Added 2026-10-12 with ADR-0054. |
 | [APPEARANCETHEME-32](appearance-theme.md#appearancetheme-32--picking-a-theme-changes-the-screen-only-when-it-is-of-the-mode-already-shown) |  | Active |  | Added 2026-10-12 with ADR-0054. |
 | [APPEARANCETHEME-33](appearance-theme.md#appearancetheme-33--old-files-hand-edits-and-bad-values-the-pair-resolves-safely) |  | Active |  | Added 2026-10-12 with ADR-0054. |
+| [APPEARANCETHEME-34](appearance-theme.md#appearancetheme-34--a-stored-huddle-or-custom-accent-id-migrates-to-lumen-with-its-accent-kept) |  | Active |  | Added 2026-10-17 with ADR-0058. |
+| [APPEARANCETHEME-35](appearance-theme.md#appearancetheme-35--the-theme-lab-edits-a-theme-live-in-development-and-is-absent-elsewhere) |  | Active |  | Added 2026-10-17 with ADR-0058. |
 
 ## pipe-external
 
@@ -818,6 +820,7 @@ Tasks: creating, moving, viewing and referencing a unit of work — [area file](
 | [TASKS-17](tasks.md#tasks-17--a-hand-edit-of-sprintsmd-shows-within-a-second-and-changes-no-task-file-deleting-a-task-file-removes-no-sprint) |  | Active |  |  |
 | [TASKS-18](tasks.md#tasks-18--the-toolbar-sprint-filter-a-saved-view-with-current-sprint-and-a-board-grouped-by-sprint) |  | Active |  |  |
 | [TASKS-19](tasks.md#tasks-19--an-agent-given-a-sprint-name-sets-it-with-update_task-a-typo-is-refused-with-the-known-list-and-the-assignee-is-woken) | 💰 | Active |  |  |
+| [TASKS-20](tasks.md#tasks-20--escape-closes-the-task-drawer-expand-opens-the-dialog-over-the-view-and-a-new-task-opens-at-the-top) |  | Active |  |  |
 
 ## adapters
 

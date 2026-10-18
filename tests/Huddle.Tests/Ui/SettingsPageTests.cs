@@ -277,8 +277,8 @@ public sealed class SettingsPageTests
     /// which is the practical reason to prefer it over the <c>MudSelect</c> it replaced, whose options
     /// only reached a popover after a real <c>MouseDown</c>. Labels are compared through
     /// <see cref="HtmlEncoder.Default"/> because that is the encoder the response was written with,
-    /// and it escapes more than the five XML entities - "Dark+" reaches the browser as
-    /// <c>Dark&amp;#x2B;</c>.
+    /// and it escapes more than the five XML entities - a label such as "Cobalt Soft"
+    /// must match its encoded form, whatever the encoder does to it.
     /// </summary>
     [Fact]
     public async Task SettingsAppearancePage_OffersEveryThemeUnderItsGroupHeading()
@@ -296,8 +296,8 @@ public sealed class SettingsPageTests
             Assert.Contains(HtmlEncoder.Default.Encode(theme.Label), html, StringComparison.Ordinal);
         }
 
-        // Only "High contrast" keeps a heading; "Light" and "Dark" repeated the picker's own title (audit B9c).
-        Assert.Contains(">High contrast<", html, StringComparison.Ordinal); // contains-ok: rendered markup text
+        // No group heading is drawn at all now: "Light" and "Dark" repeated the picker's own title (audit B9c) and the High contrast group is gone.
+        Assert.DoesNotContain(">High contrast<", html, StringComparison.Ordinal);
         Assert.DoesNotContain("theme-picker-heading group-label\">Light<", html, StringComparison.Ordinal);
     }
 
@@ -338,11 +338,12 @@ public sealed class SettingsPageTests
     }
 
     /// <summary>
-    /// The Appearance tab credits Visual Studio Code and the ported themes' original authors under
-    /// the Theme select - an ordinary prerendered paragraph, so this stays on HTTP rather than bUnit.
+    /// The Appearance tab no longer credits Visual Studio Code or any ported theme's author (the ports were
+    /// removed on 2026-10-17); it says the shipped Themes are this application's own - an ordinary
+    /// prerendered paragraph, so this stays on HTTP rather than bUnit.
     /// </summary>
     [Fact]
-    public async Task SettingsAppearancePage_CreditsVisualStudioCode()
+    public async Task SettingsAppearancePage_CreditsNoThirdPartyTheme()
     {
         // A fresh factory boots a whole host and JITs the first request; under CI load that alone outlasted ten seconds.
         using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(60));
@@ -353,7 +354,8 @@ public sealed class SettingsPageTests
 
         var html = await client.GetStringAsync("/settings/appearance", ct);
 
-        Assert.Contains("bundled with Visual Studio Code", html, StringComparison.Ordinal);
+        Assert.Contains("is taken from a third-party colour theme.", html, StringComparison.Ordinal); // contains-ok: rendered markup text
+        Assert.DoesNotContain("Visual Studio Code", html, StringComparison.Ordinal);
     }
 
     /// <summary>The tab rail includes a Personas tab alongside Prompts and Appearance.</summary>

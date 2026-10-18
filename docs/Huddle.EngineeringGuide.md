@@ -379,16 +379,16 @@ Skill Packs and are not sent to a model as such: `installSkillPack.body`, the fi
 `skillPrompt.fetchSkill` and `skillPrompt.needsSetup` (`SkillPromptBuilder`). They are Prompts so
 the Human can reword them on Settings › Prompts like any other.
 
-A Theme is a MudBlazor `MudTheme` in `ThemeCatalog` carrying **one** palette and the
-`ThemeMode` naming it, picked on the Appearance tab of `/settings` from a list grouped
-Light / Dark / High contrast. **Picking a Theme picks light or dark with it** — there is
+A Theme is an embedded JSON skin loaded into a MudBlazor `MudTheme` in `ThemeCatalog` ([ADR-0058](adr/0058-a-theme-is-a-palette-a-skin-and-traits.md)), carrying **one** palette and the
+`ThemeMode` naming it, picked on the Appearance tab of `/settings` from two lists, Light theme and Dark theme.
+**Picking a Theme picks light or dark with it** — there is
 no separate preference, and so no way for the two to disagree
-([ADR-0017](adr/0017-a-theme-is-a-palette-not-a-pair.md)). Twenty-nine ship: `huddle`
-(labelled "Huddle Light") and `huddle-dark`, the two Custom Accent Themes, the Lumen,
-Fluent, Nordic and Cobalt Soft pairs mapped from the approved mockup directions, plus seventeen of the colour Themes bundled
-with Visual Studio Code, converted once by hand into C# under `Themes/VsCode/` — one file
-per Theme, **no importer**
-([ADR-0016](adr/0016-vs-codes-bundled-themes-are-converted-once-not-imported.md)).
+([ADR-0017](adr/0017-a-theme-is-a-palette-not-a-pair.md)). Eight ship, four light and dark pairs: Lumen (the default), Fluent, Nordic and Cobalt Soft,
+mapped from the approved mockup directions. The Huddle pair, the Custom Accent Themes, the seventeen
+Visual Studio Code ports and the High contrast group were removed
+([ADR-0058](adr/0058-a-theme-is-a-palette-a-skin-and-traits.md); ADR-0016 is superseded). The Human's own
+accent is a per-Theme customization in `appearance.json`, and `/settings/theme-lab` (Development only) tunes a
+Theme live. A stored `huddle`, `huddle-dark` or Custom Accent id migrates to Lumen.
 See [Language](engineering/language.md) for
 **Theme**, **Palette property** and **Appearance** — note that *Token*, the word for
 the retired 39-value CSS system, is no longer a defined term.
