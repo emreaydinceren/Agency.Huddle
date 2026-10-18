@@ -47,10 +47,25 @@ public static class Checks
         CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(folder);
+        return RunSkillFolder(folder, Path.GetFileName(folder.TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar)), context, options, files, cancellationToken);
+    }
+
+    /// <summary>Runs the Skill checks on one folder under the name <paramref name="skillName"/>: the copier checks a staged
+    /// copy, whose folder is named <c>&lt;name&gt;-&lt;random&gt;</c>, as the Skill it will become (§8.6 step 5).</summary>
+    public static CheckResult RunSkillFolder(
+        string folder,
+        string skillName,
+        CheckContext context,
+        CheckOptions options,
+        IFileReader files,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(folder);
+        ArgumentNullException.ThrowIfNull(skillName);
         ArgumentNullException.ThrowIfNull(context);
         ArgumentNullException.ThrowIfNull(options);
         ArgumentNullException.ThrowIfNull(files);
-        return new CheckRun(ResolvedRegistry.Empty, context, options, files, cancellationToken).ExecuteFolder(folder);
+        return new CheckRun(ResolvedRegistry.Empty, context, options, files, cancellationToken).ExecuteFolder(folder, skillName);
     }
 
     /// <summary>Whether a row's resolved file is <paramref name="path"/> or under it, or the row reaches a Skill folder
@@ -124,9 +139,8 @@ internal sealed class CheckRun(ResolvedRegistry registry, CheckContext context, 
     }
 
     /// <summary>Runs the Skill checks on one folder, as a virtual Skill.</summary>
-    public CheckResult ExecuteFolder(string folder)
+    public CheckResult ExecuteFolder(string folder, string name)
     {
-        string name = Path.GetFileName(folder.TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar));
         SkillEntry skill = new(name, string.Empty, null, null, null, null, [], string.Empty, null, folder, [], null, null, [], SkillPathState.Present, []);
         string key = skill.StateKey;
         this.states[key] = ItemCheckState.Usable;

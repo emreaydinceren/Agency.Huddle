@@ -243,6 +243,7 @@ public static class ServiceCollectionExtensions
         services.AddSingleton<Agency.Huddle.App.Teams.ISkillAvailability>(static sp => sp.GetRequiredService<Agency.Huddle.App.SkillSources.SkillRegistry>());
         services.AddSingleton<Agency.Huddle.App.SkillSources.ISkillSourcesMove, Agency.Huddle.App.SkillSources.NoSkillSourcesMove>();
         services.AddSingleton<Agency.Huddle.App.SkillSources.RegistryWatcher>();
+        services.AddSingleton<Agency.Huddle.App.SkillSources.ISkillCopier, Agency.Huddle.App.SkillSources.SkillCopier>();
 
         // Skill import (SK-2 to SK-7): the downloader gets its own client with a long timeout for the archive; the importer's client only
         // resolves a branch to a commit, so it times out sooner. Both are plain singletons - nothing here is shared with other HTTP users.
