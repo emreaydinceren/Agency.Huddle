@@ -1,0 +1,40 @@
+@*
+    Remove a Pack that Teammates hold (Skill Packs spec §6.12.2, G6a): says who has it and what each choice does, then
+    Cancel, Keep their Skills (outlined) and Remove from Teammates too (filled, error), in that order. Escape cancels. It
+    returns the choice; the caller runs the removal.
+*@
+@using Agency.Huddle.App.Skills.Ui
+@using Agency.Huddle.App.SkillSources
+
+<MudDialog Class="remove-pack-dialog">
+    <DialogContent>
+        <MudText Typo="Typo.body1" Class="remove-pack-holders mb-2">@SkillStateText.AndList(this.HolderList) @(this.HolderList.Count == 1 ? "has" : "have") this Pack. Choose what happens to them.</MudText>
+        <MudText Typo="Typo.body2" Class="remove-pack-keep mb-1"><strong>Keep their Skills</strong> — Their Skills and copies stay exactly as they are. Only the Pack's mark on their cards goes, so it no longer offers an update.</MudText>
+        <MudText Typo="Typo.body2" Class="remove-pack-too mb-2"><strong>Remove from Teammates too</strong> — Also takes off the Skills nobody else gave them, and the Pack's "consult when" phrase. They restart.</MudText>
+        <MudText Typo="Typo.body2" Class="remove-pack-either">Either way: the row is removed from SKILLS.md and, if the file is in the Skill Sources folder, the file is deleted. Your AI tool's clone is not touched.</MudText>
+        <MudText Typo="Typo.caption" Class="d-block mt-2 mud-text-secondary">@SkillGuide.For("Keep or remove Skills")</MudText>
+    </DialogContent>
+    <DialogActions>
+        <MudButton Variant="Variant.Text" Size="Size.Small" Class="remove-pack-cancel" OnClick="this.Cancel">Cancel</MudButton>
+        <MudButton Variant="Variant.Outlined" Size="Size.Small" Class="remove-pack-keep-button" OnClick="@(() => this.Choose(HolderChoice.Keep))">Keep their Skills</MudButton>
+        <MudButton Variant="Variant.Filled" Size="Size.Small" Color="Color.Error" Class="remove-pack-too-button" OnClick="@(() => this.Choose(HolderChoice.RemoveToo))">Remove from Teammates too</MudButton>
+    </DialogActions>
+</MudDialog>
+
+@code {
+    [CascadingParameter]
+    private IMudDialogInstance? Dialog { get; set; }
+
+    /// <summary>The holders' names, comma-joined.</summary>
+    [Parameter]
+    public string Holders { get; set; } = string.Empty;
+
+    /// <summary>The holders.</summary>
+    private IReadOnlyList<string> HolderList => this.Holders.Split(", ", StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+
+    /// <summary>Closes with the choice.</summary>
+    private void Choose(HolderChoice choice) => this.Dialog?.Close(DialogResult.Ok(choice));
+
+    /// <summary>Cancels.</summary>
+    private void Cancel() => this.Dialog?.Cancel();
+}

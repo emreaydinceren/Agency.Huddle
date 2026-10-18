@@ -3102,49 +3102,9 @@ a.team-ref,
     height: 28px;
 }
 
-/* The Skills table (audit B9g): the description gets the room, and the line under a name is meta text. */
-.skills-table td.skills-description-cell {
-    min-width: 28ch;
-    max-width: 60ch;
-    white-space: normal;
-}
-
-.skills-table .skills-name {
+/* The Skills grid (audit B9g): the name leads and the description under it is meta text. The description is a caption in the name's cell, so no separate description column rule remains. */
+.skills-grid .skills-name {
     font-weight: 500;
-}
-
-/* Import skill (audit B10 "Import skill"): one list with Edge separators, then a review with quiet 13px labels. */
-.skill-import-results {
-    display: flex;
-    flex-direction: column;
-}
-
-.skill-import-result {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: 12px;
-    padding: 8px 0;
-    border-bottom: 1px solid var(--ink-edge);
-}
-
-.skill-import-result:last-child {
-    border-bottom: 0;
-}
-
-.skill-import-provenance.mud-table {
-    box-shadow: none;
-    background: none;
-}
-
-.skill-import-provenance th {
-    font-size: var(--mud-typography-body2-size);
-    font-weight: 400;
-    color: var(--mud-palette-text-secondary);
-}
-
-.skill-import-provenance td {
-    font-size: var(--mud-typography-body2-size);
 }
 
 /* A phone has no room for two columns: the menu sits above the section and stops sticking. */
@@ -8078,4 +8038,9 @@ a.team-ref,
     background: var(--hu-current-background);
     color: var(--hu-current-foreground);
     box-shadow: inset 3px 0 0 var(--hu-accent-ink);
+}
+
+/* Settings › Skills: a Pack card's title is the card's name, at weight 600 (Skill Packs spec 6.9.5, G4c). */
+.pack-card-title {
+    font-weight: 600;
 }

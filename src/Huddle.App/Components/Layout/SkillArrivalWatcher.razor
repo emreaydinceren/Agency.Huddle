@@ -1,0 +1,96 @@
+@*
+    Says "… is ready" when a Pack or Skill becomes usable (Skill Packs spec §6.9.9): Available, In use or Update available
+    from absent, Broken or Not downloaded. It runs in MainLayout, wherever the Human is, because the AI tool finishes while
+    they are elsewhere. It takes the snapshot it starts with as its baseline, so it never announces what was already there.
+    A Skill that arrives as part of a Pack that became ready is not announced on its own. More than three in one snapshot
+    make one snackbar. Show opens Settings › Skills on the right tab with the item highlighted. No markup.
+*@
+@using Agency.Huddle.App.SkillSources
+@using Agency.Huddle.SkillPacks.Resolving
+@implements IDisposable
+
+@inject SkillRegistry Registry
+@inject ISnackbar Snackbar
+@inject NavigationManager Navigation
+
+@code {
+    /// <summary>More than this many arrivals in one snapshot make one snackbar.</summary>
+    internal const int SeparateUpTo = 3;
+
+    private HashSet<string> usablePacks = new(StringComparer.OrdinalIgnoreCase);
+    private HashSet<string> usableSkills = new(StringComparer.Ordinal);
+
+    /// <summary>Unsubscribes.</summary>
+    public void Dispose()
+    {
+        this.Registry.Changed -= this.OnChanged;
+    }
+
+    /// <summary>Takes the current picture as the baseline and subscribes.</summary>
+    protected override void OnInitialized()
+    {
+        (this.usablePacks, this.usableSkills) = this.Usable();
+        this.Registry.Changed += this.OnChanged;
+    }
+
+    /// <summary>Whether a state counts as usable.</summary>
+    private static bool IsUsable(ItemState state) =>
+        state is ItemState.Available or ItemState.InUse or ItemState.UpdateAvailable or ItemState.New;
+
+    /// <summary>The Pack ids and Skill names usable now.</summary>
+    private (HashSet<string> Packs, HashSet<string> Skills) Usable()
+    {
+        ResolvedRegistry resolved = this.Registry.Current.Resolved;
+        HashSet<string> packs = new(resolved.Packs.Where(pack => pack.File is not null && !pack.DuplicateId && IsUsable(this.Registry.DisplayState(pack))).Select(static pack => pack.Id), StringComparer.OrdinalIgnoreCase);
+        HashSet<string> skills = new(resolved.Skills.Where(skill => IsUsable(this.Registry.DisplayState(skill))).Select(static skill => skill.Name), StringComparer.Ordinal);
+        return (packs, skills);
+    }
+
+    /// <summary>Compares the new picture with the last and announces what became usable.</summary>
+    private void OnChanged(RegistryChange change)
+    {
+        _ = RendererDispatch.RunAsync(this.InvokeAsync, () =>
+        {
+            (HashSet<string> packs, HashSet<string> skills) = this.Usable();
+            ResolvedRegistry resolved = this.Registry.Current.Resolved;
+            List<PackEntry> readyPacks = [.. packs.Where(id => !this.usablePacks.Contains(id)).Select(resolved.FindPack).OfType<PackEntry>()];
+            HashSet<string> inReadyPacks = new(readyPacks.SelectMany(static pack => pack.SkillNames), StringComparer.Ordinal);
+            List<string> readySkills = [.. skills.Where(name => !this.usableSkills.Contains(name) && !inReadyPacks.Contains(name)).Order(StringComparer.Ordinal)];
+            this.usablePacks = packs;
+            this.usableSkills = skills;
+
+            int count = readyPacks.Count + readySkills.Count;
+            if (count > SeparateUpTo)
+            {
+                this.Announce($"{count.ToString(System.Globalization.CultureInfo.InvariantCulture)} Packs and Skills are ready", "/settings/skills?view=packs", "skill-ready-many");
+                return Task.CompletedTask;
+            }
+
+            foreach (PackEntry pack in readyPacks)
+            {
+                this.Announce($"{pack.Title} is ready", $"/settings/skills?view=packs&highlight={Uri.EscapeDataString(pack.Id)}", $"skill-ready-{pack.Id}");
+            }
+
+            foreach (string name in readySkills)
+            {
+                this.Announce($"{name} is ready", $"/settings/skills?view=skills&highlight={Uri.EscapeDataString(name)}", $"skill-ready-{name}");
+            }
+
+            return Task.CompletedTask;
+        });
+    }
+
+    /// <summary>One success snackbar with a Show action.</summary>
+    private void Announce(string message, string target, string key)
+    {
+        this.Snackbar.Add(message, Severity.Success, configure: options =>
+        {
+            options.Action = "Show";
+            options.OnClick = _ =>
+            {
+                this.Navigation.NavigateTo(target);
+                return Task.CompletedTask;
+            };
+        }, key: key);
+    }
+}

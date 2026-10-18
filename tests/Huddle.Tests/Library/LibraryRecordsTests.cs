@@ -38,11 +38,11 @@ public sealed class LibraryRecordsTests
         Assert.Equal(a, b);
     }
 
-    /// <summary>LibraryRootKind has exactly Teams, Teammates, Pinned, Uploads members.</summary>
+    /// <summary>LibraryRootKind has exactly Teams, Teammates, Pinned, Uploads and SkillSources members, the last appended so no stored value moves.</summary>
     [Fact]
-    public void LibraryRootKind_Members_AreTeamsTeammatesPinnedUploads()
+    public void LibraryRootKind_Members_AreTeamsTeammatesPinnedUploadsSkillSources()
     {
-        string[] expected = ["Teams", "Teammates", "Pinned", "Uploads"];
+        string[] expected = ["Teams", "Teammates", "Pinned", "Uploads", "SkillSources"];
 
         Assert.Equal(expected, Enum.GetNames<LibraryRootKind>());
     }

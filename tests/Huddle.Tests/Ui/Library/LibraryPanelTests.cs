@@ -33,6 +33,7 @@ public sealed class LibraryPanelTests
         ctx.Services.AddSingleton(factory.Services.GetRequiredService<SkillStore>());
         ctx.Services.AddSingleton(factory.Services.GetRequiredService<LibraryRootStore>());
         ProfileTestServices.AddProfile(ctx.Services, factory);
+        SkillsTestServices.AddFromFactory(ctx.Services, factory);
 
         var cut = ctx.Render<Settings>();
 
@@ -51,7 +52,7 @@ public sealed class LibraryPanelTests
         var cut = ctx.RenderWithPopovers(RenderPanel);
 
         Assert.Equal(
-            ["Teams", "Teammates", "Uploads", "Docs"],
+            ["Teams", "Teammates", "Uploads", "Skill Sources", "Docs"],
             cut.FindAll(".library-panel-root-row td:first-child").Select(e => e.TextContent.Trim()));
     }
 
@@ -73,6 +74,23 @@ public sealed class LibraryPanelTests
         Assert.Empty(pinnedRow.QuerySelectorAll(".library-panel-hide-switch"));
     }
 
+    /// <summary>The Skill Sources row says <i>Read only</i>, has the Hide switch and no Remove button; a writable built-in
+    /// has no such caption (Skill Packs spec §6.11.2).</summary>
+    [Fact]
+    public async Task SkillSourcesRow_SaysReadOnly_HasHideSwitch_NoRemove()
+    {
+        using PanelFixture fixture = PanelFixture.Build(pinnedName: "Docs", pinnedPath: null, createPinned: true);
+        await using MudBunitContext ctx = fixture.NewContext();
+
+        var cut = ctx.RenderWithPopovers(RenderPanel);
+
+        var row = cut.Find(".library-panel-root-row[data-root-id='skill-sources']");
+        Assert.Equal("Read only", row.QuerySelector(".library-panel-read-only")?.TextContent.Trim());
+        Assert.NotEmpty(row.QuerySelectorAll(".library-panel-hide-switch"));
+        Assert.Empty(row.QuerySelectorAll(".library-panel-remove-button"));
+        Assert.Empty(cut.Find(".library-panel-root-row[data-root-id='teams']").QuerySelectorAll(".library-panel-read-only"));
+    }
+
     /// <summary>Adding an existing folder saves it as a new pinned root, which then shows in the table.</summary>
     [Fact]
     public async Task Add_ValidFolder_Saves()
@@ -89,7 +107,7 @@ public sealed class LibraryPanelTests
 
         Assert.Equal(["Notes"], fixture.Store.Pinned.Select(p => p.Name));
         cut.WaitForAssertion(() => Assert.Equal(
-            ["Teams", "Teammates", "Uploads", "Notes"],
+            ["Teams", "Teammates", "Uploads", "Skill Sources", "Notes"],
             cut.FindAll(".library-panel-root-row td:first-child").Select(e => e.TextContent.Trim())));
     }
 
@@ -259,8 +277,8 @@ public sealed class LibraryPanelTests
         await cut.InvokeAsync(() => cut.Find(".library-panel-root-row[data-root-id='teams'] .library-panel-hide-switch input").ChangeAsync(true));
 
         LibraryRootStore reloaded = new(fixture.Options, fixture.Paths, NullLogger<LibraryRootStore>.Instance);
-        Assert.Equal(["teammates", "uploads"], reloaded.VisibleRoots.Select(r => r.Id));
-        Assert.Equal(["teams", "teammates", "uploads"], reloaded.Roots.Select(r => r.Id));
+        Assert.Equal(["teammates", "uploads", "skill-sources"], reloaded.VisibleRoots.Select(r => r.Id));
+        Assert.Equal(["teams", "teammates", "uploads", "skill-sources"], reloaded.Roots.Select(r => r.Id));
     }
 
     /// <summary>The panel re-renders when <see cref="LibraryRootStore.RootsChanged"/> fires from outside it (e.g. another tab or window saving a pinned root).</summary>

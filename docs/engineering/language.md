@@ -125,10 +125,40 @@ contexts](../Huddle.EngineeringGuide.md#two-bounded-contexts). Back to the hub:
 : *Avoid*: template, profile, persona file.
 
 **Pack**
-: A named set of Skills, from the `SkillPacks` folder beside the Team types, that a Teammate's card adds
-  or removes as one chip. A pack can also say when to consult the Teammate, such as
-  build failures.
-: *Avoid*: bundle, plugin.
+: A named set of Skills that a Teammate's card adds or removes as one chip: a `.skillpack.json` file
+  that a row of the Packs table in `SKILLS.md` names. An AI tool writes it; Huddle reads it. A pack
+  can also say when to consult the Teammate, such as build failures. Huddle ships none. See
+  [the Skill Packs design](../Huddle.SkillPacks-Specifications.md).
+: *Avoid*: bundle, plugin, Skill pack in the old sense of a JSON file in `SkillPacks/`.
+
+**Skill Sources folder**
+: The folder that holds `SKILLS.md`, the Pack and catalog files and one folder per **Source**:
+  `{DataDir}/SkillSources` unless `Team:SkillSourcesDir` or Settings › Skills › Sources moves it.
+  The AI tool owns what is in it, and several Huddles may share one. Never confuse it with
+  `{DataDir}/Skills/`, which holds the copies Teammates read.
+: *Avoid*: registry folder, skills repo, library.
+
+**Source**
+: Where a set of Skills came from: a GitHub repository, another git remote, or a local folder,
+  named by an id such as `github.com/anthropics/skills` or `local/my-packs`. Its folder under
+  `sources/` holds `source.json` (URL, commit, when and by what it was fetched, and a status:
+  Active, Deprecated, Withdrawn or Moved), `NOTES.md` and Huddle's `log.jsonl`.
+: *Avoid*: origin, provider, publisher, repo (a Source need not be a repository).
+
+**Catalog**
+: In the Skill sense, a `.skillcatalog.json` file that a row of the Catalogs table names: a list of
+  Skills a Source offers, each with a category and, once the AI tool has fetched it, a **Skill
+  pointer**. A catalog Skill with no pointer on this computer is **Not downloaded**. Not the
+  `PromptCatalog`, `ThemeCatalog` or `TeamTypeCatalog`, which are code.
+: *Avoid*: index, marketplace, store.
+
+**Skill pointer**
+: The `path` a catalog or Pack entry gives for one Skill folder on this computer — usually inside
+  a clone the AI tool made, anywhere on disk. Huddle never runs or edits what a pointer names; it
+  checks the folder and **copies** it into `{DataDir}/Skills/<name>/` with a `.source.json` when a
+  Teammate needs it. A pointer folder whose hash no longer matches the copy is one reason for **Update available**; a
+  Pack whose list of Skills changed is the other.
+: *Avoid*: link, reference (a reference is the chat feature), install path.
 
 **Process**
 : How a Team's work is done: its `Process.md`, copied from a Team type's process

@@ -1,0 +1,44 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:agency-huddle:schema:skillpack",
+  "title": "Huddle skill pack file (<id>.skillpack.json)",
+  "description": "A Pack: a set of Skills chosen together for a role. Property names are matched ignoring case; unknown properties are ignored.",
+  "type": "object",
+  "required": ["schemaVersion", "id", "version", "title", "source", "skills"],
+  "properties": {
+    "schemaVersion": { "const": 1, "description": "Always 1 (P001)." },
+    "id": { "type": "string", "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*$", "maxLength": 64, "description": "The file must be named <id>.skillpack.json (P003)." },
+    "version": { "type": "string", "minLength": 1, "description": "A version or a short commit." },
+    "title": { "type": "string", "minLength": 1 },
+    "source": { "type": "string", "pattern": "^[a-z0-9.-]+(?:/[a-z0-9.-]+)+$", "description": "The Source id: host/owner/repo or local/name (O001)." },
+    "appliesTo": { "type": "array", "items": { "type": "string" }, "description": "Role ids from `huddle-packs roles` (P005, P006)." },
+    "consultWhenAdds": { "type": "string", "maxLength": 200, "description": "When a Teammate should reach for this Pack (P007)." },
+    "skills": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "required": ["name"],
+        "properties": {
+          "name": { "type": "string", "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*$", "maxLength": 64 },
+          "path": { "$ref": "#/$defs/path" },
+          "catalog": { "type": "string", "description": "A catalog id from SKILLS.md that lists this Skill." },
+          "origin": { "type": "string", "description": "A URL pinned to a commit; ignored with catalog." }
+        },
+        "oneOf": [
+          { "required": ["path"], "not": { "required": ["catalog"] } },
+          { "required": ["catalog"], "not": { "required": ["path"] } }
+        ]
+      }
+    }
+  },
+  "$defs": {
+    "path": {
+      "description": "A path for every computer, or an object of computer name to path with an optional \"*\" for every other computer. \"\" means not downloaded yet.",
+      "oneOf": [
+        { "type": "string" },
+        { "type": "object", "additionalProperties": { "type": "string" } }
+      ]
+    }
+  }
+}

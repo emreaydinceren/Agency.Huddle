@@ -22,6 +22,8 @@
     <ProjectReference Include="..\..\src\Huddle.Contracts\Huddle.Contracts.csproj" />
     <ProjectReference Include="..\..\src\Huddle.MockAdapter\Huddle.MockAdapter.csproj" />
     <ProjectReference Include="..\..\src\Huddle.Seeder\Huddle.Seeder.csproj" />
+    <ProjectReference Include="..\..\src\Huddle.SkillPacks\Huddle.SkillPacks.csproj" />
+    <ProjectReference Include="..\..\src\Huddle.Packs\Huddle.Packs.csproj" />
   </ItemGroup>
 
   <ItemGroup>
@@ -33,6 +35,10 @@
          same source into this assembly too would declare a second, ambiguous FakeAcpAgent type. -->
     <Compile Include="..\Huddle.Acp.Tests\Fakes\FakeAgentProcess.cs" Link="Fakes\FakeAgentProcess.cs" />
     <Compile Include="..\Huddle.Acp.Tests\Fakes\FakeAgentProcessLauncher.cs" Link="Fakes\FakeAgentProcessLauncher.cs" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <None Include="SkillPacks\Fixtures\**" CopyToOutputDirectory="PreserveNewest" />
   </ItemGroup>
 
 </Project>

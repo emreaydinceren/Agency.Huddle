@@ -1309,7 +1309,7 @@ public sealed class LibraryExplorerTests : IDisposable
         [.. cut.FindAll("div.library-tree-node").Where(
             row => string.Equals(row.QuerySelector("span.library-tree-node-name")?.TextContent.Trim(), name, StringComparison.Ordinal))];
 
-    private static IRenderedComponent<ContainerFragment> RenderExplorer(
+    internal static IRenderedComponent<ContainerFragment> RenderExplorer(
         MudBunitContext ctx,
         IReadOnlyList<LibraryLocation>? scopes,
         string? title = null,
@@ -1330,7 +1330,7 @@ public sealed class LibraryExplorerTests : IDisposable
         builder.CloseComponent();
     });
 
-    private sealed class ExplorerFixture : IDisposable
+    internal sealed class ExplorerFixture : IDisposable
     {
         private readonly TempDataDir dir;
         private readonly PersonaStore personas;

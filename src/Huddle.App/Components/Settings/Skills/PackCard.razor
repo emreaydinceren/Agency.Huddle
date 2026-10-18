@@ -1,0 +1,248 @@
+@*
+    One Pack (Skill Packs spec §6.9.5, G4c), in the vision's order: the title row with its version and chips, the meta line
+    (Source · N Skills · updated date), the roles, the cause line in text (never only in a tooltip), the actions and the ⋯ menu.
+    A row too broken to give a title is titled by its file name and shows Broken. RowIndex is the Packs row's position, a plain
+    value, because the Pack itself is an internal type; the card reads the registry for the rest.
+*@
+@using Agency.Huddle.App.Components.Shared.Dialogs
+@using Agency.Huddle.App.Library
+@using Agency.Huddle.App.Skills.Ui
+@using Agency.Huddle.App.SkillSources
+@using Agency.Huddle.SkillPacks.Resolving
+
+@inject SkillRegistry Registry
+@inject RoleLister Roles
+@inject SkillSourcesRemover Remover
+@inject SkillPromptBuilder Prompts
+@inject PathFormatChoice PathChoice
+@inject IJSRuntime JS
+@inject ISnackbar Snackbar
+@inject IDialogService DialogService
+@inject NavigationManager Navigation
+@inject TimeProvider Clock
+
+@if (this.View is { } view)
+{
+    <MudPaper Outlined="true" Class="@($"pack-card pa-3 mb-2{(this.Flash ? " search-hit-flash" : string.Empty)}")" id="@($"pack-card-{view.Pack.Id}")" data-pack="@view.Pack.Id">
+        <div class="d-flex flex-wrap align-center gap-2">
+            <MudLink Typo="Typo.subtitle1" Class="pack-card-title" OnClick="this.OpenDetailsAsync">@view.Title</MudLink>
+            @if (view.Pack.Version.Length > 0)
+            {
+                <MudText Typo="Typo.caption" Class="pack-card-version mud-text-secondary">@view.Pack.Version</MudText>
+            }
+            <span class="ml-auto">
+                <SkillStateChips State="@view.State" UsedBy="@view.Holders.Count" HolderNames="@string.Join(", ", view.Holders)" Reason="@view.Reason" Hidden="@view.Hidden" />
+            </span>
+        </div>
+
+        <MudText Typo="Typo.body2" HtmlTag="div" Class="pack-card-meta mud-text-secondary">
+            @view.Pack.Source · @Plural.Of(view.Pack.SkillNames.Count, "Skill", "Skills")
+            @if (view.Pack.Row.LastUpdated is { } updated)
+            {
+                <span> · </span>
+                <MudTooltip Text="@Agency.Huddle.App.Tasks.HumanDate.Full(updated)">
+                    <span class="pack-card-updated">updated @Agency.Huddle.App.Tasks.HumanDate.Format(updated, DateOnly.FromDateTime(this.Clock.GetLocalNow().DateTime))</span>
+                </MudTooltip>
+            }
+        </MudText>
+
+        @if (view.RoleTitles.Count > 0)
+        {
+            <MudTooltip Text="@string.Join(", ", view.RoleTitles)">
+                <MudText Typo="Typo.body2" HtmlTag="div" Class="pack-card-roles">For @view.RolesLine</MudText>
+            </MudTooltip>
+        }
+
+        @if (view.Cause is { } cause)
+        {
+            <MudText Typo="Typo.caption" Class="pack-card-cause d-block">@cause</MudText>
+        }
+
+        <div class="d-flex align-center gap-2 mt-2">
+            @if (view.State == ItemState.UpdateAvailable)
+            {
+                <MudTooltip Text="@SkillGuide.For("Review update")" ShowOnFocus="true">
+                    <MudButton Variant="Variant.Outlined" Size="Size.Small" Class="pack-card-review-update" OnClick="@(() => SkillDialogs.OpenUpdateAsync(this.DialogService, view.Title, view.Pack.Id))">Review update</MudButton>
+                </MudTooltip>
+            }
+            @if (view.CanCopyFix)
+            {
+                <MudTooltip Text="@SkillGuide.For("Copy fix prompt")" ShowOnFocus="true">
+                    <MudButton Variant="Variant.Outlined" Size="Size.Small" Class="pack-card-copy-fix" OnClick="this.CopyFixPromptAsync">Copy fix prompt</MudButton>
+                </MudTooltip>
+            }
+            <MudMenu @ref="this.menu" Icon="@Icons.Material.Filled.MoreVert" Size="Size.Small" Dense="true" Class="hover-reveal-menu-button pack-card-menu ml-auto"
+                     AriaLabel="@MenuDialogs.ActivatorLabel(view.Title)">
+                @foreach (string item in this.MenuItems(view))
+                {
+                    if (item == Divider)
+                    {
+                        <MudDivider />
+                    }
+                    else
+                    {
+                        string chosen = item;
+                        <MudMenuItem Class="@($"pack-card-menu-{chosen.ToLowerInvariant().Replace(' ', '-')}")" OnClick="@(() => this.OnMenuAsync(chosen))">@chosen</MudMenuItem>
+                    }
+                }
+            </MudMenu>
+        </div>
+    </MudPaper>
+}
+
+@code {
+    /// <summary>The menu's divider, as a marker in <see cref="MenuItems"/>.</summary>
+    internal const string Divider = "—";
+
+    private const string DetailsItem = "Details";
+    private const string ReviewUpdateItem = "Review update";
+    private const string CopyFixItem = "Copy fix prompt";
+    private const string HideItem = "Hide";
+    private const string UnhideItem = "Unhide";
+    private const string ShowInLibraryItem = "Show in Library";
+    private const string RemoveFromTeammatesItem = "Remove from Teammates";
+    private const string RemoveItem = "Remove";
+
+    private MudMenu? menu;
+
+    /// <summary>The Packs row's position in SKILLS.md.</summary>
+    [Parameter]
+    public int RowIndex { get; set; }
+
+    /// <summary>A copy of <c>SkillRegistry.Current.Version</c>; a new value is the reason to redraw.</summary>
+    [Parameter]
+    public long Revision { get; set; }
+
+    /// <summary>Whether the card flashes, after the arrival snackbar's Show.</summary>
+    [Parameter]
+    public bool Flash { get; set; }
+
+    /// <summary>The card's content, or null when the row is gone.</summary>
+    private PackView? View =>
+        this.Registry.Current.Resolved.Packs.ElementAtOrDefault(this.RowIndex) is { } pack ? PackView.From(this.Registry, pack, this.Roles.List()) : null;
+
+    /// <summary>The ⋯ items in the spec's order; the ones a later step adds slot in where §6.9.5 puts them.</summary>
+    internal IReadOnlyList<string> MenuItems(PackView view)
+    {
+        List<string> items = [DetailsItem];
+        if (view.State == ItemState.UpdateAvailable)
+        {
+            items.Add(ReviewUpdateItem);
+        }
+
+        if (view.CanCopyFix)
+        {
+            items.Add(CopyFixItem);
+        }
+
+        if (view.Pack.File is not null)
+        {
+            items.Add(view.Hidden ? UnhideItem : HideItem);
+        }
+
+        if (this.LibraryPath(view) is not null)
+        {
+            items.Add(ShowInLibraryItem);
+        }
+
+        if (view.State == ItemState.Withdrawn && view.Holders.Count > 0)
+        {
+            items.Add(RemoveFromTeammatesItem);
+        }
+
+        if (view.Pack.File is not null)
+        {
+            items.Add(Divider);
+            items.Add(RemoveItem);
+        }
+
+        return items;
+    }
+
+    /// <summary>Runs a menu item.</summary>
+    private async Task OnMenuAsync(string item)
+    {
+        if (this.View is not { } view)
+        {
+            return;
+        }
+
+        switch (item)
+        {
+            case DetailsItem:
+                await MenuDialogs.AfterClosingAsync(this.menu, this.OpenDetailsAsync);
+                break;
+            case ReviewUpdateItem:
+                await MenuDialogs.AfterClosingAsync(this.menu, () => SkillDialogs.OpenUpdateAsync(this.DialogService, view.Title, view.Pack.Id));
+                break;
+            case CopyFixItem:
+                await this.CopyFixPromptAsync();
+                break;
+            case HideItem:
+            case UnhideItem:
+                await this.SetHiddenAsync(view, item == HideItem);
+                break;
+            case ShowInLibraryItem when this.LibraryPath(view) is { } relative:
+                this.Navigation.NavigateTo(LibraryLinkQuery.BuildPageUri(LibraryRootStore.SkillSourcesRootId, relative));
+                break;
+            case RemoveFromTeammatesItem:
+                await MenuDialogs.AfterClosingAsync(this.menu, () => this.UnholdAsync(view));
+                break;
+            case RemoveItem:
+                await MenuDialogs.AfterClosingAsync(this.menu, () => PackRemoval.RemoveAsync(this.DialogService, this.Remover, this.Registry, this.Snackbar, view.Pack, view.Title, view.Holders));
+                break;
+            default:
+                break;
+        }
+    }
+
+    /// <summary>The pack file's path in the Skill Sources root, or null when it lives outside the folder (the Library
+    /// shows only its roots).</summary>
+    private string? LibraryPath(PackView view)
+    {
+        if (view.Pack.FilePath is not { } file)
+        {
+            return null;
+        }
+
+        string relative = Path.GetRelativePath(this.Registry.SkillSourcesDir, file);
+        return relative.StartsWith("..", StringComparison.Ordinal) || Path.IsPathRooted(relative) ? null : relative.Replace('\\', '/');
+    }
+
+    /// <summary>Opens Details.</summary>
+    private async Task OpenDetailsAsync()
+    {
+        DialogParameters<PackDetailsDialog> parameters = new() { { dialog => dialog.RowIndex, this.RowIndex } };
+        _ = await this.DialogService.ShowAsync<PackDetailsDialog>(this.View?.Title ?? "Pack", parameters, Agency.Huddle.App.Components.Shared.Dialogs.HuddleDialogOptions.SmallForm);
+    }
+
+    /// <summary>Copies the prompt that names the row and the checks it failed.</summary>
+    private async Task CopyFixPromptAsync()
+    {
+        if (this.View is not { } view)
+        {
+            return;
+        }
+
+        string prompt = this.Prompts.Fix(view.Pack.Row.TableName, view.Pack.Row.LocalPath.FirstText, SkillStateText.For(view.State).Text, view.Findings, this.PathChoice.Format);
+        _ = await PromptClipboard.CopyAsync(this.JS, this.Snackbar, prompt, CancellationToken.None);
+    }
+
+    /// <summary>Hides or unhides the Pack, with Undo.</summary>
+    private Task SetHiddenAsync(PackView view, bool hide) =>
+        HideFlow.SetAsync(this.Remover, this.Registry, this.Snackbar, HiddenKind.Pack, view.Pack.Id, view.Title, view.Pack.Source, hide);
+
+    /// <summary>Takes a withdrawn Pack off its holders after a confirm.</summary>
+    private async Task UnholdAsync(PackView view)
+    {
+        bool confirmed = await this.DialogService.ConfirmAsync(RemovalText.UnholdTitle(view.Holders.Count), RemovalText.UnholdMessage(view.Holders), "Remove from Teammates", danger: true);
+        if (!confirmed)
+        {
+            return;
+        }
+
+        RemovalOutcome outcome = this.Remover.UnholdPack(view.Pack);
+        await this.Registry.RebuildAsync(RebuildScope.All, CancellationToken.None);
+        this.Snackbar.Add(outcome.Message, outcome.Ok ? Severity.Success : Severity.Error, configure: null, key: "skill-removed");
+    }
+}

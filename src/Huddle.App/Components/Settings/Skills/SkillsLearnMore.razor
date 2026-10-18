@@ -1,0 +1,25 @@
+@*
+    Learn more at the end of an intro and in the empty state (Skill Packs spec §6.9.12): a button-styled link that opens
+    SkillsHelpDialog on its tab and navigates nowhere.
+*@
+@using Agency.Huddle.App.Components.Shared.Dialogs
+@using Agency.Huddle.App.Skills.Ui
+
+@inject IDialogService DialogService
+
+<MudTooltip Text="@SkillGuide.For("Learn more")" ShowOnFocus="true">
+    <MudLink Typo="Typo.body2" Class="skills-learn-more" OnClick="this.OpenAsync">Learn more</MudLink>
+</MudTooltip>
+
+@code {
+    /// <summary>The tab: <c>skills</c>, <c>packs</c> or <c>sources</c>.</summary>
+    [Parameter]
+    public string View { get; set; } = "skills";
+
+    /// <summary>Opens the help on this tab.</summary>
+    private async Task OpenAsync()
+    {
+        DialogParameters<SkillsHelpDialog> parameters = new() { { dialog => dialog.View, this.View } };
+        _ = await this.DialogService.ShowAsync<SkillsHelpDialog>(SkillGuide.HelpTitle(this.View), parameters, HuddleDialogOptions.SmallForm);
+    }
+}

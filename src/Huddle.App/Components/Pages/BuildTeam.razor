@@ -27,9 +27,10 @@
 @inject ITeamFolders Folders
 @inject HireService Hiring
 @inject IHireContext HireContext
-@inject SkillPackStore Packs
-@inject SkillsCatalogIndex SkillCatalog
-@inject SkillStore InstalledSkills
+@inject ISkillAvailability Availability
+@inject IServiceProvider Services
+@inject IJSRuntime JS
+@inject ISnackbar Snackbar
 @inject ITeamMembership Membership
 @inject AvatarStore Avatars
 @inject ITeamDirectory TeamDirectory
@@ -233,6 +234,14 @@
                                     }
                                     else
                                     {
+                                        @if (draft.SkillSetup.Any(static item => item.Problem != SkillAvailability.Withdrawn))
+                                        {
+                                            <MudButton Variant="Variant.Outlined" Size="Size.Small" OnClick="@(() => this.CopySetupPromptAsync(draft))" Class="roster-copy-prompt">Copy prompt</MudButton>
+                                        }
+                                        @if (draft.SkillSetup.Any(static item => item.Problem == SkillAvailability.Withdrawn))
+                                        {
+                                            <MudText Typo="Typo.caption" Class="roster-withdrawn mud-text-secondary">Edit the draft to drop it.</MudText>
+                                        }
                                         <MudButton Variant="Variant.Outlined" Size="Size.Small" StartIcon="@Icons.Material.Outlined.Casino" OnClick="@(() => this.RerollDraftAsync(draft.Key))"
                                                    aria-label="@($"Re-roll {draft.Name}")" Class="roster-reroll">Re-roll</MudButton>
                                         <MudButton Variant="Variant.Text" Size="Size.Small" StartIcon="@Icons.Material.Outlined.Edit" OnClick="@(() => this.EditDraftAsync(draft.Key))"
@@ -280,7 +289,7 @@
                     @this.approveError
                     @if (this.skillsBlocked)
                     {
-                        <MudLink Href="/settings/skills" Class="build-team-skills-link">Open Settings › Skills</MudLink>
+                        <MudLink Href="/settings/skills?view=skills" Class="build-team-skills-link">Open Settings › Skills</MudLink>
                     }
                 </MudAlert>
             }
@@ -520,6 +529,9 @@
     private readonly List<DraftMember> drafts = [];
     private string? approveError;
     private bool skillsBlocked;
+
+    /// <summary>Cancelled when the page goes, so leaving it stops a copy (§6.10.6).</summary>
+    private readonly CancellationTokenSource pageCancellation = new();
     private bool approving;
     private string? continueTeam;
     private bool nameEdited;
@@ -586,6 +598,11 @@
                 }
 
                 return this.HasDetailChanges ? null : "Nothing has changed yet.";
+            }
+
+            if (this.drafts.Any(static draft => !draft.Existing && draft.SkillSetup.Count > 0))
+            {
+                return "Some Teammates need setup. Copy their prompt, paste it into your AI tool, and they update here by themselves.";
             }
 
             if (!this.MembersOnly && !this.DetailsReady)
@@ -671,6 +688,10 @@
         this.Pool.Changed += this.OnCatalogChanged;
         this.CustomRoles.Changed += this.OnCatalogChanged;
         this.Personas.PersonasChanged += this.OnPersonasChanged;
+        if (this.Services.GetService<Agency.Huddle.App.SkillSources.SkillRegistry>() is { } registry)
+        {
+            registry.Changed += this.OnRegistryChanged;
+        }
     }
 
     /// <inheritdoc />
@@ -866,7 +887,12 @@
     /// <param name="Effort">The effort chosen in the Teammate card, or <see langword="null"/> for the default.</param>
     /// <param name="Reasons">Why the draft needs setup before it runs well, such as no adapter for its strength; empty when nothing is missing.</param>
     /// <param name="Existing">Whether this is a member of the Team being edited rather than a new draft; a member is never hired again.</param>
-    private sealed record DraftMember(string Key, string RoleId, string Title, string Description, ModelTier Tier, bool Manager, string Name, string Text, IReadOnlyList<string> NameChoices, Avatar Avatar, IReadOnlyList<string> AvatarChoices, string? AvatarFile, byte[]? Image, string? ImageExtension, IReadOnlyList<SkillRef> Skills, IReadOnlyList<VersionedRef> Packs, string? Adapter, string? Model, string? Effort, IReadOnlyList<string> Reasons, bool Existing = false);
+    /// <param name="Setup">The Packs and Skills that are not ready, from the card resolver and again after each edit or registry change.</param>
+    private sealed record DraftMember(string Key, string RoleId, string Title, string Description, ModelTier Tier, bool Manager, string Name, string Text, IReadOnlyList<string> NameChoices, Avatar Avatar, IReadOnlyList<string> AvatarChoices, string? AvatarFile, byte[]? Image, string? ImageExtension, IReadOnlyList<SkillRef> Skills, IReadOnlyList<VersionedRef> Packs, string? Adapter, string? Model, string? Effort, IReadOnlyList<string> Reasons, bool Existing = false, IReadOnlyList<SkillSetupItem>? Setup = null)
+    {
+        /// <summary>What the draft needs before it can be hired (Skill Packs spec §6.10.6); empty when ready.</summary>
+        public IReadOnlyList<SkillSetupItem> SkillSetup => this.Setup ?? [];
+    }
 
     /// <summary>An avatar with a random background colour, drawn together with a Name; the initials show on it until the Teammate gets an image.</summary>
     private static Avatar RandomAvatar() => Avatar.None with { Background = AvatarPalette.Pick(Random.Shared) };
@@ -953,39 +979,54 @@
         }
     }
 
-    /// <summary>The Skills Edit draft offers besides the installed ones: the role's own that are not installed, then the rest of the catalog, so the list is never narrowed to what is already installed.</summary>
-    /// <param name="draft">The draft being edited.</param>
-    private IReadOnlyList<(string Name, string Description, bool FromRole, string Origin)> DraftSkillChoices(DraftMember draft)
+    /// <summary>A Skill by name: Skills resolve through the registry, so a ref's source and path are not used (§6.10.2).</summary>
+    /// <param name="name">The Skill's name.</param>
+    private SkillRef SkillRefFor(string name) => new(name, CardResolver.RegistrySource, null);
+
+    /// <summary>The draft with its setup items worked out again from its Skills and Packs, and its reasons with the old Skill
+    /// lines replaced by the new ones; the name, adapter and connector reasons stay (§6.10.6).</summary>
+    private DraftMember Rechecked(DraftMember draft)
     {
-        List<(string Name, string Description, bool FromRole, string Origin)> choices = [];
-        foreach (SkillRef skill in draft.Skills.Where(skill => this.InstalledSkills.Get(skill.Name) is null))
-        {
-            SkillsCatalogEntry? known = this.SkillCatalog.FindByName(skill.Name);
-            string origin = known is null ? SkillOrigin.Describe(null, skill.Source, skill.Path) : SkillOrigin.Describe(known.Publisher, known.Repo, known.Path);
-            choices.Add((skill.Name, known?.Description ?? string.Empty, true, origin));
-        }
-
-        foreach (SkillsCatalogEntry entry in this.SkillCatalog.All.OrderBy(static entry => entry.Name, StringComparer.OrdinalIgnoreCase))
-        {
-            if (this.InstalledSkills.Get(entry.Name) is null && !choices.Exists(choice => string.Equals(choice.Name, entry.Name, StringComparison.Ordinal)))
-            {
-                choices.Add((entry.Name, entry.Description, false, SkillOrigin.Describe(entry.Publisher, entry.Repo, entry.Path)));
-            }
-        }
-
-        return choices;
+        IReadOnlyList<SkillSetupItem> setup = SkillSetupCheck.For([.. draft.Skills.Select(static skill => skill.Name)], draft.Packs, this.Availability);
+        HashSet<string> oldLines = new(draft.SkillSetup.Select(SkillSetupText.Reason), StringComparer.Ordinal);
+        IReadOnlyList<string> reasons = [.. draft.Reasons.Where(reason => !oldLines.Contains(reason)), .. setup.Select(SkillSetupText.Reason)];
+        return draft with { Setup = setup, Reasons = reasons };
     }
 
-    /// <summary>The Skill to ask the installer for: one already installed stays as it is; otherwise the catalog entry it came from, so approving imports it.</summary>
-    /// <param name="name">The Skill's name.</param>
-    private SkillRef SkillRefFor(string name)
+    /// <summary>Re-checks every new draft when the registry publishes, so a card turns Ready by itself once the AI tool has
+    /// fetched what it needs.</summary>
+    private void OnRegistryChanged(Agency.Huddle.App.SkillSources.RegistryChange change)
     {
-        if (this.InstalledSkills.Get(name) is null && this.SkillCatalog.FindByName(name) is { } entry)
+        _ = RendererDispatch.RunAsync(this.InvokeAsync, () =>
         {
-            return new SkillRef(entry.Name, entry.Repo, entry.Path);
+            for (int index = 0; index < this.drafts.Count; index++)
+            {
+                if (!this.drafts[index].Existing)
+                {
+                    this.drafts[index] = this.Rechecked(this.drafts[index]);
+                }
+            }
+
+            this.StateHasChanged();
+            return Task.CompletedTask;
+        });
+    }
+
+    /// <summary>Copies the Needs setup prompt for a draft, every item grouped by Pack.</summary>
+    private async Task CopySetupPromptAsync(DraftMember draft)
+    {
+        if (this.Services.GetService<Agency.Huddle.App.SkillSources.SkillRegistry>() is not { } registry
+            || this.Services.GetService<Agency.Huddle.App.SkillSources.SkillPromptBuilder>() is not { } prompts)
+        {
+            return;
         }
 
-        return new SkillRef(name, "local", null);
+        HashSet<string> inPacks = new(draft.Packs.Select(pack => registry.FindPack(pack.Id)).OfType<Agency.Huddle.SkillPacks.Resolving.PackEntry>().SelectMany(static pack => pack.SkillNames), StringComparer.Ordinal);
+        IReadOnlyList<Agency.Huddle.App.SkillSources.MissingItem> missing = registry.CheckReady(
+            [.. draft.Packs.Select(static pack => pack.Id)],
+            [.. draft.Skills.Select(static skill => skill.Name).Where(name => !inPacks.Contains(name))]).Missing;
+        Agency.Huddle.App.SkillSources.PathFormat format = this.Services.GetService<Agency.Huddle.App.SkillSources.PathFormatChoice>()?.Format ?? Agency.Huddle.App.SkillSources.PathFormat.Windows;
+        _ = await Agency.Huddle.App.Skills.Ui.PromptClipboard.CopyAsync(this.JS, this.Snackbar, prompts.NeedsSetup(draft.RoleId, draft.Title, missing, format), this.pageCancellation.Token);
     }
 
     /// <summary>A draft for a role, its Skills, packs, adapter, model and setup reasons resolved the way a hire card was (the card resolver).</summary>
@@ -1001,9 +1042,9 @@
     /// <param name="spec">The role as the card resolver reads it.</param>
     private DraftMember NewDraft(string roleId, string title, string description, ModelTier tier, bool manager, string name, string text, IReadOnlyList<string> nameChoices, IReadOnlyList<string> avatarChoices, RoleSpec spec)
     {
-        CardState card = CardResolver.Resolve(spec, [], this.HireContext.Answered, this.HireContext.TierMap, this.HireContext.AvoidAdapters, this.Packs.All, this.HireContext.Connectors, name);
+        CardState card = CardResolver.Resolve(spec, [], this.HireContext.Answered, this.HireContext.TierMap, this.HireContext.AvoidAdapters, this.Availability, this.HireContext.Connectors, name);
         return new DraftMember(Guid.NewGuid().ToString("N"), roleId, title, description, tier, manager, name, text, nameChoices, RandomAvatar(), avatarChoices, null, null, null,
-            card.Skills, card.Packs, card.Pick?.AdapterId, card.Pick?.Model, null, card.Reasons);
+            card.Skills, card.Packs, card.Pick?.AdapterId, card.Pick?.Model, null, card.Reasons, Setup: card.SkillSetup);
     }
 
     /// <summary>The draft with a library avatar drawn for it.</summary>
@@ -1108,7 +1149,6 @@
             [nameof(TeammateCard.DraftAvatar)] = draft.Avatar,
             [nameof(TeammateCard.DraftImage)] = draft.Image,
             [nameof(TeammateCard.DraftImageExtension)] = draft.ImageExtension,
-            [nameof(TeammateCard.DraftSkillChoices)] = this.DraftSkillChoices(draft),
             [nameof(TeammateCard.DraftSkills)] = (IReadOnlyList<string>)[.. draft.Skills.Select(static skill => skill.Name)],
             [nameof(TeammateCard.Adapter)] = draft.Adapter,
             [nameof(TeammateCard.Model)] = draft.Model,
@@ -1121,7 +1161,7 @@
                 {
                     DraftMember current = this.drafts[index];
                     IReadOnlyList<SkillRef> skills = [.. saved.Skills.Select(name => current.Skills.FirstOrDefault(known => string.Equals(known.Name, name, StringComparison.Ordinal)) ?? this.SkillRefFor(name))];
-                    this.drafts[index] = current with { Name = saved.Name, Title = saved.Title, Text = saved.Text, Avatar = saved.Avatar, Image = saved.Image, ImageExtension = saved.ImageExtension, Skills = skills, Adapter = saved.Adapter, Model = saved.Model, Effort = saved.Effort };
+                    this.drafts[index] = this.Rechecked(current with { Name = saved.Name, Title = saved.Title, Text = saved.Text, Avatar = saved.Avatar, Image = saved.Image, ImageExtension = saved.ImageExtension, Skills = skills, Adapter = saved.Adapter, Model = saved.Model, Effort = saved.Effort });
                 }
             }),
         };
@@ -1181,12 +1221,11 @@
         }
 
         IReadOnlyList<SkillRef> needed = [.. this.drafts.Where(static draft => !draft.Existing).SelectMany(static draft => draft.Skills).DistinctBy(static skill => skill.Name, StringComparer.Ordinal)];
-        IReadOnlyList<SkillRef> missing = await this.Hiring.InstallSkillsAsync(needed, CancellationToken.None);
-        if (missing.Count > 0)
+        IReadOnlyList<SkillSetupItem> notReady = await this.Hiring.EnsureSkillsAsync(needed, this.pageCancellation.Token);
+        if (notReady.Count > 0)
         {
             this.skillsBlocked = true;
-            string names = string.Join(", ", missing.Select(static skill => skill.Name));
-            return $"Skills not installed: {names}. Import them yourself, then try again.";
+            return $"Skills not ready: {string.Join(", ", notReady.Select(static item => item.Name))}. Copy a prompt for your AI tool from the cards that need setup, then try again.";
         }
 
         return null;
@@ -1444,6 +1483,13 @@
         this.Pool.Changed -= this.OnCatalogChanged;
         this.CustomRoles.Changed -= this.OnCatalogChanged;
         this.Personas.PersonasChanged -= this.OnPersonasChanged;
+        if (this.Services.GetService<Agency.Huddle.App.SkillSources.SkillRegistry>() is { } registry)
+        {
+            registry.Changed -= this.OnRegistryChanged;
+        }
+
+        this.pageCancellation.Cancel();
+        this.pageCancellation.Dispose();
     }
 
     private static int RoleCount(TeamTypeManifest type) => type.Roles.Count(static role => !role.Manager && !role.Pooled);

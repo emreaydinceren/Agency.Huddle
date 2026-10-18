@@ -19,6 +19,8 @@
   <ItemGroup>
     <ProjectReference Include="..\Huddle.Contracts\Huddle.Contracts.csproj" />
     <ProjectReference Include="..\Huddle.Acp\Huddle.Acp.csproj" />
+    <ProjectReference Include="..\Huddle.SkillPacks\Huddle.SkillPacks.csproj" />
+    <ProjectReference Include="..\Huddle.Packs\Huddle.Packs.csproj" />
   </ItemGroup>
 
   <ItemGroup>
@@ -40,7 +42,6 @@
     <EmbeddedResource Include="Teammates\TeammateNames.json" LogicalName="Teammates/TeammateNames.json" />
     <EmbeddedResource Include="Themes\Skins\*.json" LogicalName="Themes/Skins/%(Filename)%(Extension)" />
     <EmbeddedResource Include="Builtin\*.md" LogicalName="Builtin/%(Filename)%(Extension)" />
-    <EmbeddedResource Include="TeamTypes\Builtin\SkillPacks\*.json" LogicalName="TeamTypes/Builtin/SkillPacks/%(Filename)%(Extension)" />
     <EmbeddedResource Include="TeamTypes\Builtin\**\team-type.json;TeamTypes\Builtin\**\candidates\*.md;TeamTypes\Builtin\**\processes\*.md" LogicalName="TeamTypes/Builtin/%(RecursiveDir)%(Filename)%(Extension)" />
     <EmbeddedResource Include="HiringPool\hiringpool.json" LogicalName="HiringPool/hiringpool.json" />
     <EmbeddedResource Include="HiringPool\personas\*.md" LogicalName="HiringPool/personas/%(Filename)%(Extension)" />

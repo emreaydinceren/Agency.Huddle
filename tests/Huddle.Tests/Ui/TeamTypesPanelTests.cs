@@ -210,6 +210,8 @@ public sealed class TeamTypesPanelTests
         ctx.Services.AddSingleton(factory.Services.GetRequiredService<Agency.Huddle.App.Prompts.PromptStore>());
         ctx.Services.AddSingleton(factory.Services.GetRequiredService<Agency.Huddle.App.Appearance.AppearanceStore>());
         ctx.Services.AddSingleton(Create(dir, Builtins()));
+        ctx.Services.AddSingleton(factory.Services.GetRequiredService<Agency.Huddle.App.Skills.SkillStore>());
+        SkillsTestServices.AddFromFactory(ctx.Services, factory);
 
         IRenderedComponent<ContainerFragment> cut = ctx.RenderWithPopovers(builder =>
         {

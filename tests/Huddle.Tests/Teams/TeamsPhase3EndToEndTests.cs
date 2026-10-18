@@ -313,7 +313,7 @@ public sealed class TeamsPhase3EndToEndTests
         foreach (string roleId in StartRoles)
         {
             RoleSpec role = type.Roles.First(each => string.Equals(each.Id, roleId, StringComparison.Ordinal));
-            CardState card = CardResolver.Resolve(role, used, context.Answered, context.TierMap, context.AvoidAdapters, services.GetRequiredService<SkillPackStore>().All, context.Connectors);
+            CardState card = CardResolver.Resolve(role, used, context.Answered, context.TierMap, context.AvoidAdapters, services.GetRequiredService<ISkillAvailability>(), context.Connectors);
             Assert.Equal(CardReadiness.Ready, card.Readiness);
             used.Add(card.Name);
             cards.Add(card);
@@ -397,8 +397,9 @@ public sealed class TeamsPhase3EndToEndTests
                 {
                     services.RemoveAll<IAgentProcessLauncher>();
                     services.AddSingleton<IAgentProcessLauncher>(launcher);
-                    services.RemoveAll<ISkillInstaller>();
-                    services.AddSingleton<ISkillInstaller>(new FakeSkillInstaller());
+                    services.RemoveAll<Agency.Huddle.App.SkillSources.ISkillCopier>();
+                    services.AddSingleton<Agency.Huddle.App.SkillSources.ISkillCopier>(new FakeSkillCopier());
+                    services.AddSingleton<ISkillAvailability>(new FakeSkillAvailability());
                     services.RemoveAll<IPersonaStartGate>();
                     services.AddSingleton<IPersonaStartGate>(sp =>
                     {

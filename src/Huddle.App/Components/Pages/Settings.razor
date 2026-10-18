@@ -3,8 +3,13 @@
 @implements IDisposable
 @using Agency.Huddle.App.Prompts
 @using Agency.Huddle.App.Components.Settings
+@using Agency.Huddle.App.Skills
+@using Agency.Huddle.App.Skills.Ui
+@using Agency.Huddle.App.SkillSources
 @inject PromptStore Prompts
 @inject NavigationManager Navigation
+@inject SkillRegistry SkillRegistry
+@inject SkillStore SkillStore
 
 @*
     Settings is two columns: a vertical section menu on the left and the active section's panel on
@@ -36,7 +41,16 @@
                                 Icon="@section.Icon"
                                 ActiveClass="settings-nav-url-match"
                                 Class="@(active ? "settings-nav-item settings-nav-item-active" : "settings-nav-item")"
-                                aria-current="@(active ? "page" : null)">@section.Label</MudNavLink>
+                                aria-current="@(active ? "page" : null)">
+                        @section.Label
+                        @if (section.Tab == SettingsTab.Skills && this.skillProblems > 0)
+                        {
+                            @* G2a: the only meaning of the section badge is the count of Broken rows plus SkillStore issues
+                               (Skill Packs spec §6.9.2). The words say what the number is, so it is not colour alone. *@
+                            <MudChip T="string" Size="Size.Small" Color="Color.Error" Variant="Variant.Text" Class="settings-nav-badge ml-2"
+                                     aria-label="@Plural.Of(this.skillProblems, "Skills problem", "Skills problems")">@this.skillProblems</MudChip>
+                        }
+                    </MudNavLink>
                 }
             </MudNavMenu>
         </nav>
@@ -159,12 +173,34 @@
     protected override void OnInitialized()
     {
         this.Prompts.PromptsChanged += this.OnPromptsChanged;
+        this.SkillRegistry.Changed += this.OnSkillRegistryChanged;
+        this.SkillStore.SkillsChanged += this.OnSkillProblemsMayHaveChanged;
+        this.skillProblems = SkillProblemCount.Of(this.SkillRegistry, this.SkillStore);
         this.RebuildGroups();
     }
 
     public void Dispose()
     {
         this.Prompts.PromptsChanged -= this.OnPromptsChanged;
+        this.SkillRegistry.Changed -= this.OnSkillRegistryChanged;
+        this.SkillStore.SkillsChanged -= this.OnSkillProblemsMayHaveChanged;
+    }
+
+    /// <summary>The Skills section badge's number: Broken Packs, catalogs and Skills plus SkillStore issues.</summary>
+    private int skillProblems;
+
+    /// <summary>Recounts the Skills badge on a new registry snapshot.</summary>
+    private void OnSkillRegistryChanged(RegistryChange change) => this.OnSkillProblemsMayHaveChanged();
+
+    /// <summary>Recounts the Skills badge and repaints, on the renderer's thread.</summary>
+    private void OnSkillProblemsMayHaveChanged()
+    {
+        _ = RendererDispatch.RunAsync(this.InvokeAsync, () =>
+        {
+            this.skillProblems = SkillProblemCount.Of(this.SkillRegistry, this.SkillStore);
+            this.StateHasChanged();
+            return Task.CompletedTask;
+        });
     }
 
     /// <summary>The address that shows <paramref name="tab"/>, e.g. <c>/settings/teamtypes</c>.</summary>

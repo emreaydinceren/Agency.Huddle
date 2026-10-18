@@ -44,11 +44,11 @@ public sealed class HireServicePooledRoleTests
             ["web/processes/flow.md"] = "# Flow",
         };
         TeamTypeCatalog types = new(dir.Options(), NullLogger<TeamTypeCatalog>.Instance, builtins, pool);
-        SkillPackStore packs = new(dir.Options(), NullLogger<SkillPackStore>.Instance, new Dictionary<string, string>(StringComparer.Ordinal));
+        FakeSkillAvailability packs = new();
         HireLimitHarness harness = new(Microsoft.Extensions.Options.Options.Create(new TeamOptions()));
         AvatarStore avatars = new(dir.Options(), NullLogger<AvatarStore>.Instance);
-        HireService service = new(personas, types, packs, avatars, harness.Guard, new FakeSkillInstaller(), new FakeStartGate(), NullLogger<HireService>.Instance);
-        CardState card = new("tutor", "Tess", new ModelPick("claude-agent-acp", "sonnet"), [], [], CardReadiness.Ready, []);
+        HireService service = new(personas, types, packs, avatars, harness.Guard, new FakeSkillCopier(), new FakeStartGate(), NullLogger<HireService>.Instance);
+        CardState card = new("tutor", "Tess", new ModelPick("claude-agent-acp", "sonnet"), [], [], CardReadiness.Ready, [], []);
 
         HireResult result = service.Hire(new HireRequest("Web Team", "web", "tutor", card));
 

@@ -25,11 +25,6 @@ internal static class RoleFixtures
           ] }
         """;
 
-    private const string Pack = """
-        { "id": "msbuild-authoring", "version": "1.0.0", "title": "MSBuild", "appliesTo": ["dev"],
-          "consultWhenAdds": ".csproj changes", "skills": [{ "name": "target-authoring", "source": "builtin" }] }
-        """;
-
     /// <summary>Builds the fake team type catalog.</summary>
     /// <param name="dir">The data directory the catalog's options point at.</param>
     /// <returns>A catalog holding the <c>web</c> type.</returns>
@@ -45,13 +40,12 @@ internal static class RoleFixtures
         return new TeamTypeCatalog(dir.Options(), NullLogger<TeamTypeCatalog>.Instance, builtins);
     }
 
-    /// <summary>Builds the fake skill pack store.</summary>
-    /// <param name="dir">The data directory the store's options point at.</param>
-    /// <returns>A store holding the <c>msbuild-authoring</c> pack.</returns>
-    public static SkillPackStore Packs(TempDataDir dir)
+    /// <summary>A registry stand-in holding the <c>msbuild-authoring</c> Pack, every Skill present.</summary>
+    /// <param name="dir">The data directory; kept so callers read as before.</param>
+    public static Agency.Huddle.Tests.Teams.FakeSkillAvailability Packs(TempDataDir dir)
     {
-        return new SkillPackStore(dir.Options(), NullLogger<SkillPackStore>.Instance,
-            new Dictionary<string, string>(StringComparer.Ordinal) { ["msbuild-authoring.json"] = Pack });
+        _ = dir;
+        return new Agency.Huddle.Tests.Teams.FakeSkillAvailability().WithPack("msbuild-authoring", "1.0.0", "MSBuild", ["target-authoring"], ".csproj changes");
     }
 
     /// <summary>A hire context in which one adapter answered and nothing else is connected.</summary>

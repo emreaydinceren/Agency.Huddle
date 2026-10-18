@@ -55,6 +55,11 @@
                     }
                     else
                     {
+                        @if (root.ReadOnly)
+                        {
+                            <MudText Typo="Typo.caption" HtmlTag="span" Class="library-panel-read-only mud-text-secondary mr-2">Read only</MudText>
+                        }
+
                         <MudSwitch T="bool" Value="@this.IsHidden(root.Id)" ValueChanged="@((bool hidden) => this.ToggleHiddenAsync(root.Id, hidden))" Class="library-panel-hide-switch" Label="Hide" />
                     }
                 </td>

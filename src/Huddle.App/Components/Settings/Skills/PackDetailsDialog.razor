@@ -1,0 +1,244 @@
+@*
+    Details of one Pack (Skill Packs spec §6.9.10, G6): where it came from, what its state means (the state's sentence and the
+    cause line, always as text), its SKILLS.md row, the roles and the consult_when phrase, a row per Skill with its state,
+    licence, files and warnings, every finding through SkillProblemText, and the first twenty lines of the Source's notes.
+    It writes nothing: Show notes and Show in Library open the Library, and Close closes.
+*@
+@using Agency.Huddle.App.Library
+@using Agency.Huddle.App.Skills.Ui
+@using Agency.Huddle.App.SkillSources
+@using Agency.Huddle.SkillPacks.Resolving
+@using CheckSeverity = Agency.Huddle.SkillPacks.Checking.Severity
+@using Finding = Agency.Huddle.SkillPacks.Checking.Finding
+
+@inject SkillRegistry Registry
+@inject RoleLister Roles
+@inject NavigationManager Navigation
+@inject SkillSourcesRemover Remover
+@inject IDialogService DialogService
+@inject ISnackbar Snackbar
+
+<MudDialog Class="pack-details-dialog">
+    <DialogContent>
+        @if (this.View is { } view)
+        {
+            <div class="d-flex flex-wrap align-center gap-2 mb-2">
+                <MudText Typo="Typo.body2" Class="pack-details-origin mud-text-secondary">@this.OriginLine(view)</MudText>
+                <SkillStateChips State="@view.State" UsedBy="@view.Holders.Count" HolderNames="@string.Join(", ", view.Holders)" Reason="@view.Reason" Hidden="@view.Hidden" />
+            </div>
+
+            <MudText Typo="Typo.subtitle2">What this state means</MudText>
+            <MudText Typo="Typo.body2" Class="pack-details-sentence">@SkillStateText.Sentence(view.State, view.Holders, view.Reason)</MudText>
+            @if (view.Cause is { } cause)
+            {
+                <MudText Typo="Typo.body2" Class="pack-details-cause">@cause</MudText>
+            }
+
+            <MudText Typo="Typo.subtitle2" Class="mt-3">SKILLS.md row</MudText>
+            <MudText Typo="Typo.body2" Class="pack-details-path">Local path: <code>@(view.Pack.FilePath ?? view.Pack.Row.LocalPath.FirstText)</code></MudText>
+            @if (view.Pack.Row.OriginUrl is { } origin)
+            {
+                <MudText Typo="Typo.body2">Origin: <MudLink Href="@origin" Target="_blank" Class="pack-details-origin-url">@origin</MudLink></MudText>
+            }
+            <MudText Typo="Typo.body2" Class="pack-details-last-updated">Last updated: @(view.Pack.Row.LastUpdatedText ?? "not given")</MudText>
+            <MudText Typo="Typo.body2" Class="pack-details-notes">Notes: @(view.Pack.Row.Notes ?? "none")</MudText>
+
+            @if (view.RoleTitles.Count > 0)
+            {
+                <MudText Typo="Typo.body2" Class="pack-details-roles mt-3">For: @string.Join(", ", view.RoleTitles)</MudText>
+            }
+            @if (!string.IsNullOrWhiteSpace(view.Pack.ConsultWhenAdds))
+            {
+                <MudText Typo="Typo.body2" Class="pack-details-consult">Consult when: "@view.Pack.ConsultWhenAdds"</MudText>
+            }
+
+            <MudSimpleTable Dense="true" Class="pack-details-skills mt-3">
+                <thead>
+                    <tr><th>Skill</th><th>State</th><th>Licence</th><th>Files</th><th>Warnings</th></tr>
+                </thead>
+                <tbody>
+                    @foreach (string name in view.Pack.SkillNames)
+                    {
+                        SkillEntry? entry = this.Registry.Current.Resolved.FindSkill(name);
+                        <tr class="pack-details-skill" data-skill="@name">
+                            <td>@name</td>
+                            <td>
+                                @if (entry is not null)
+                                {
+                                    <SkillStateChips State="@this.Registry.DisplayState(entry)" />
+                                }
+                            </td>
+                            <td>@(entry?.License ?? "not given")</td>
+                            <td>@FilesOf(entry)</td>
+                            <td class="pack-details-warnings">@string.Join(", ", this.WarningsOf(entry).Select(static code => WarningLabel(code)))</td>
+                        </tr>
+                    }
+                </tbody>
+            </MudSimpleTable>
+            @foreach (string code in view.Pack.SkillNames.SelectMany(name => this.WarningsOf(this.Registry.Current.Resolved.FindSkill(name))).Distinct(StringComparer.Ordinal))
+            {
+                <MudText Typo="Typo.caption" Class="@($"pack-details-warning-sentence pack-details-warning-{code.ToLowerInvariant()} d-block")">@WarningLabel(code): @WarningSentence(code)</MudText>
+            }
+
+            @if (view.Findings.Count > 0)
+            {
+                <MudText Typo="Typo.subtitle2" Class="mt-3">Findings</MudText>
+                @foreach (Finding finding in view.Findings)
+                {
+                    <MudText Typo="Typo.body2" Class="@(finding.Severity == CheckSeverity.Error ? "pack-details-finding pack-details-error" : "pack-details-finding")">@SkillProblemText.Compose(finding)</MudText>
+                }
+            }
+
+            @if (this.NotesPath(view) is { } notes)
+            {
+                <MudText Typo="Typo.subtitle2" Class="mt-3">Notes from your AI tool</MudText>
+                <MudTooltip Text="@SkillGuide.For("Show notes")" ShowOnFocus="true">
+                    <MudButton Variant="Variant.Text" Size="Size.Small" Class="pack-details-show-notes" OnClick="@(() => this.Open(notes))">Show notes</MudButton>
+                </MudTooltip>
+                <MudButton Variant="Variant.Text" Size="Size.Small" Class="pack-details-notes-toggle" OnClick="@(() => this.notesOpen = !this.notesOpen)">@(this.notesOpen ? "Hide the first lines" : "Show the first lines")</MudButton>
+                <MudCollapse Expanded="@this.notesOpen">
+                    <pre class="pack-details-notes-text">@this.FirstNoteLines(view)</pre>
+                </MudCollapse>
+            }
+        }
+        else
+        {
+            <MudText Typo="Typo.body2">This Pack is no longer in SKILLS.md.</MudText>
+        }
+    </DialogContent>
+    <DialogActions>
+        @if (this.View is { Pack.File: not null } removable)
+        {
+            <MudTooltip Text="@SkillGuide.For("Remove Pack")" ShowOnFocus="true">
+                <MudButton Variant="Variant.Text" Size="Size.Small" Color="Color.Error" Class="pack-details-remove" OnClick="@(() => this.RemoveAsync(removable))">Remove</MudButton>
+            </MudTooltip>
+        }
+        @if (this.View is { } shown && this.LibraryPath(shown) is { } file)
+        {
+            <MudTooltip Text="@SkillGuide.For("Show in Library")" ShowOnFocus="true">
+                <MudButton Variant="Variant.Text" Size="Size.Small" Class="pack-details-show-in-library" OnClick="@(() => this.Open(file))">Show in Library</MudButton>
+            </MudTooltip>
+        }
+        <MudButton Variant="Variant.Filled" Size="Size.Small" Color="Color.Primary" Class="pack-details-close" OnClick="this.Close">Close</MudButton>
+    </DialogActions>
+</MudDialog>
+
+@code {
+    /// <summary>How many lines of NOTES.md the collapse shows.</summary>
+    private const int NoteLines = 20;
+
+    /// <summary>The warning codes the Skills table names.</summary>
+    private static readonly string[] WarningCodes = ["S007", "S008", "S009", "S010"];
+
+    private bool notesOpen;
+
+    [CascadingParameter]
+    private IMudDialogInstance? Dialog { get; set; }
+
+    /// <summary>The Packs row's position in SKILLS.md.</summary>
+    [Parameter]
+    public int RowIndex { get; set; }
+
+    /// <summary>What the dialog draws, or null when the row is gone.</summary>
+    private PackView? View =>
+        this.Registry.Current.Resolved.Packs.ElementAtOrDefault(this.RowIndex) is { } pack ? PackView.From(this.Registry, pack, this.Roles.List()) : null;
+
+    /// <summary>The short word for a warning code.</summary>
+    internal static string WarningLabel(string code) => code switch
+    {
+        "S007" => "Large files",
+        "S008" => "Unread files",
+        "S009" => "Licence",
+        "S010" => "Scripts",
+        _ => code,
+    };
+
+    /// <summary>The sentence under the table for a warning code.</summary>
+    internal static string WarningSentence(string code) => code switch
+    {
+        "S008" => "Teammates read only the .md files directly in a Skill's folder, up to 64 KB each, so scripts/ and references/ are ignored. A Skill that depends on them may work less well in Huddle than in the tool it was written for.",
+        _ => Agency.Huddle.SkillPacks.Checking.CheckCatalog.HintFor(code),
+    };
+
+    /// <summary>The <c>.md</c> files directly in the Skill's folder, or nothing when it has no folder here.</summary>
+    private static string FilesOf(SkillEntry? entry)
+    {
+        if (entry?.FolderPath is not { } folder || !Directory.Exists(folder))
+        {
+            return string.Empty;
+        }
+
+        return string.Join(", ", Directory.EnumerateFiles(folder, "*.md").Select(Path.GetFileName).Order(StringComparer.OrdinalIgnoreCase));
+    }
+
+    /// <summary>The header line: <i>Source @ short commit · updated date</i>.</summary>
+    private string OriginLine(PackView view)
+    {
+        string? commit = this.Registry.Current.Resolved.FindSource(view.Pack.Source)?.File?.Commit;
+        string at = commit is { Length: >= 7 } ? $" @ {commit[..7]}" : string.Empty;
+        string updated = view.Pack.Row.LastUpdated is { } date ? $" · updated {Agency.Huddle.App.Tasks.HumanDate.Full(date)}" : string.Empty;
+        return $"{view.Pack.Source}{at}{updated}";
+    }
+
+    /// <summary>The warning codes the checks filed under the Skill's folder.</summary>
+    private IReadOnlyList<string> WarningsOf(SkillEntry? entry)
+    {
+        if (entry?.FolderPath is not { } folder)
+        {
+            return [];
+        }
+
+        return [.. this.Registry.Current.Checked.Findings
+            .Where(finding => WarningCodes.Contains(finding.Code, StringComparer.Ordinal) && finding.File.StartsWith(folder, StringComparison.OrdinalIgnoreCase))
+            .Select(static finding => finding.Code)
+            .Distinct(StringComparer.Ordinal)];
+    }
+
+    /// <summary>The Source's NOTES.md in the Skill Sources root, or null when it has none.</summary>
+    private string? NotesPath(PackView view)
+    {
+        return this.Registry.Current.Resolved.FindSource(view.Pack.Source) is { HasNotes: true, Folder: { } folder }
+            ? Path.GetRelativePath(this.Registry.SkillSourcesDir, Path.Combine(folder, "NOTES.md")).Replace('\\', '/')
+            : null;
+    }
+
+    /// <summary>The first lines of the notes.</summary>
+    private string FirstNoteLines(PackView view)
+    {
+        if (this.NotesPath(view) is not { } relative)
+        {
+            return string.Empty;
+        }
+
+        return SkillNotes.FirstLines(Path.Combine(this.Registry.SkillSourcesDir, relative), NoteLines);
+    }
+
+    /// <summary>The pack file's path in the Skill Sources root, or null when it lives outside the folder.</summary>
+    private string? LibraryPath(PackView view)
+    {
+        if (view.Pack.FilePath is not { } file)
+        {
+            return null;
+        }
+
+        string relative = Path.GetRelativePath(this.Registry.SkillSourcesDir, file);
+        return relative.StartsWith("..", StringComparison.Ordinal) || Path.IsPathRooted(relative) ? null : relative.Replace('\\', '/');
+    }
+
+    /// <summary>Closes and opens a Skill Sources file in the Library.</summary>
+    private void Open(string relative)
+    {
+        this.Dialog?.Close();
+        this.Navigation.NavigateTo(LibraryLinkQuery.BuildPageUri(LibraryRootStore.SkillSourcesRootId, relative));
+    }
+
+    /// <summary>Closes and runs Remove.</summary>
+    private Task RemoveAsync(PackView view)
+    {
+        this.Dialog?.Close();
+        return PackRemoval.RemoveAsync(this.DialogService, this.Remover, this.Registry, this.Snackbar, view.Pack, view.Title, view.Holders);
+    }
+
+    /// <summary>Closes the dialog.</summary>
+    private void Close() => this.Dialog?.Close();
+}

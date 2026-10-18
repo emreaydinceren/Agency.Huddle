@@ -62,7 +62,7 @@
 @* The avatar editor (AvatarEditorDialog) opens over this card as a second dialog when the avatar is pressed;
    the Avatar Library picker opens over that, from the editor itself. *@
 @inject IDialogService DialogService
-@* Resolved by hand, not injected: the team-type catalog and pack store only matter to a Teammate hired
+@* Resolved by hand, not injected: the team-type catalog and the Skill registry only matter to a Teammate hired
    from a role, and a card opened in a host that registers neither (a Teammates page without Teams) must
    keep rendering exactly as before. *@
 @inject IServiceProvider Services
@@ -340,17 +340,6 @@
             <MudSelect T="string" Label="Skills" MultiSelection="true" SelectedValues="@this.skills"
                        SelectedValuesChanged="this.OnSkillsChanged" Variant="Variant.Outlined" Margin="Margin.Dense"
                        HelperText="Changing Skills restarts this Teammate." Class="mb-3">
-                @* A draft's Skills that are not installed yet are still options, listed first and checked, so the Human sees what the
-                   role brings; they are imported when the Team is approved. *@
-                @foreach ((string Name, string Description, bool FromRole, string Origin) option in this.draftOptions.Where(static option => option.FromRole))
-                {
-                    <MudSelectItem T="string" Value="@option.Name">
-                        <MudText>@option.Name</MudText>
-                        <MudText Typo="Typo.caption" Class="d-block mud-text-secondary">@option.Description</MudText>
-                        <MudText Typo="Typo.caption" Class="d-block mud-text-secondary skill-origin">@option.Origin</MudText>
-                        <MudText Typo="Typo.caption" Class="d-block mud-text-secondary">Not installed yet; imported when you approve.</MudText>
-                    </MudSelectItem>
-                }
                 @foreach (var skill in this.OrderedSkills)
                 {
                     <MudSelectItem T="string" Value="@skill.Name">
@@ -363,16 +352,41 @@
                         }
                     </MudSelectItem>
                 }
-                @foreach ((string Name, string Description, bool FromRole, string Origin) option in this.draftOptions.Where(static option => !option.FromRole))
+                @* Skill Packs spec §6.10.4: registry Skills Huddle can copy (a folder on this computer, not in Skills/ yet). They are
+                   copied on Save, or for a draft when the Team is approved; a not-downloaded one is never an option. *@
+                @foreach (Agency.Huddle.SkillPacks.Resolving.SkillEntry entry in this.CopyableSkills)
                 {
-                    <MudSelectItem T="string" Value="@option.Name">
-                        <MudText>@option.Name</MudText>
-                        <MudText Typo="Typo.caption" Class="d-block mud-text-secondary">@option.Description</MudText>
-                        <MudText Typo="Typo.caption" Class="d-block mud-text-secondary skill-origin">@option.Origin</MudText>
-                        <MudText Typo="Typo.caption" Class="d-block mud-text-secondary">From the catalog; imported when you approve.</MudText>
+                    <MudSelectItem T="string" Value="@entry.Name">
+                        <MudText>@entry.Name</MudText>
+                        <MudText Typo="Typo.caption" Class="d-block mud-text-secondary">@entry.Description</MudText>
+                        <MudText Typo="Typo.caption" Class="d-block mud-text-secondary skill-origin">@Agency.Huddle.App.Skills.Ui.SkillOriginText.Line(entry.Publisher, entry.Origin, entry.License)</MudText>
+                        <MudText Typo="Typo.caption" Class="d-block mud-text-secondary teammate-card-copy-caption">@(this.OnDraftSaved.HasDelegate ? "Huddle copies it into Skills/ when you approve." : "Huddle copies it into Skills/ when you save.")</MudText>
                     </MudSelectItem>
                 }
             </MudSelect>
+
+            @* Skills a catalog or Pack lists but that have no folder on this computer: not choosable, but visible with their
+               remedy, so a Skill the Human cannot pick yet is still in sight (Skill Packs spec §6.10.4). *@
+            @if (this.NotDownloadedSkills.Count > 0)
+            {
+                <MudButton Variant="Variant.Text" Size="Size.Small" Class="teammate-card-not-here-toggle mb-1" OnClick="@(() => this.notHereOpen = !this.notHereOpen)"
+                           EndIcon="@(this.notHereOpen ? Icons.Material.Filled.ExpandLess : Icons.Material.Filled.ExpandMore)">Not on this computer yet (@this.NotDownloadedSkills.Count)</MudButton>
+                <MudCollapse Expanded="@this.notHereOpen" Class="teammate-card-not-here mb-3">
+                    @foreach (Agency.Huddle.SkillPacks.Resolving.SkillEntry entry in this.NotDownloadedSkills)
+                    {
+                        Agency.Huddle.SkillPacks.Resolving.SkillEntry shown = entry;
+                        <div class="teammate-card-not-here-row d-flex flex-wrap align-center gap-2 mb-1" data-skill="@shown.Name">
+                            <MudCheckBox T="bool" Value="@this.skills.Contains(shown.Name, StringComparer.Ordinal)" Disabled="true" Dense="true" aria-label="@($"{shown.Name} is not on this computer yet")" />
+                            <div>
+                                <MudText Typo="Typo.body2">@shown.Name</MudText>
+                                <MudText Typo="Typo.caption" Class="d-block mud-text-secondary">@shown.Description</MudText>
+                                <MudText Typo="Typo.caption" Class="d-block mud-text-secondary skill-origin">@Agency.Huddle.App.Skills.Ui.SkillOriginText.Line(shown.Publisher, shown.Origin, shown.License)</MudText>
+                            </div>
+                            <MudButton Variant="Variant.Outlined" Size="Size.Small" Class="teammate-card-copy-prompt ml-auto" OnClick="@(() => this.CopyFetchPromptAsync(shown))">Copy prompt</MudButton>
+                        </div>
+                    }
+                </MudCollapse>
+            }
 
             @* An assigned Skill name the store no longer resolves - a Skill folder removed or renamed
                since this Persona last saved (Spec §6.7). Shown as a removable chip rather than silently
@@ -390,18 +404,59 @@
 
             @* MS-4: the packs this role offers. Clicking one adds or removes its skills and its consultWhenAdds
                clause, so the manager who reads the public job description knows to route that work here. *@
+            @* Skill Packs spec §6.10.4: the role's Packs from SKILLS.md, each drawn by its state. A not-downloaded Pack is a line
+               of text with Copy prompt, never a chip; a withdrawn one is not offered, and only a holder sees it, in red, with the
+               warning and Remove from this Teammate. *@
             @if (this.rolePacks.Count > 0)
             {
                 <MudText Typo="Typo.overline">Packs</MudText>
-                <MudStack Row="true" Spacing="1" Wrap="Wrap.Wrap" Class="mb-3">
+                <MudStack Row="true" Spacing="1" Wrap="Wrap.Wrap" AlignItems="AlignItems.Center" Class="mb-1">
                     @foreach (var pack in this.rolePacks)
                     {
-                        var active = this.IsPackActive(pack);
-                        <MudChip T="string" Size="Size.Small" Class="@(active ? "teammate-card-pack filter-chip filter-chip-set" : "teammate-card-pack filter-chip")"
-                                 Variant="Variant.Outlined" aria-pressed="@(active ? "true" : "false")"
-                                 OnClick="@(() => this.TogglePack(pack))">@pack.Title</MudChip>
+                        Agency.Huddle.SkillPacks.Resolving.PackEntry entry = pack;
+                        Agency.Huddle.SkillPacks.Resolving.ItemState state = this.PackState(entry);
+                        bool active = this.IsPackActive(entry.Id);
+                        @if (state == Agency.Huddle.SkillPacks.Resolving.ItemState.Withdrawn)
+                        {
+                            @if (active)
+                            {
+                                <StatusChip Color="Color.Error" Icon="@Icons.Material.Filled.Block" Class="teammate-card-pack-withdrawn">@entry.Title</StatusChip>
+                            }
+                        }
+                        else if (state != Agency.Huddle.SkillPacks.Resolving.ItemState.NotDownloaded || active)
+                        {
+                            <MudTooltip Text="@(state == Agency.Huddle.SkillPacks.Resolving.ItemState.Deprecated ? $"Deprecated: {this.ReasonOf(entry)}" : null)" ShowOnFocus="true">
+                                <MudChip T="string" Size="Size.Small" Class="@(active ? "teammate-card-pack filter-chip filter-chip-set" : "teammate-card-pack filter-chip")"
+                                         Variant="Variant.Outlined" aria-pressed="@(active ? "true" : "false")"
+                                         Icon="@PackIcon(state)" OnClick="@(() => this.TogglePack(entry))">@entry.Title</MudChip>
+                            </MudTooltip>
+                            @if (state == Agency.Huddle.SkillPacks.Resolving.ItemState.UpdateAvailable)
+                            {
+                                <MudLink Typo="Typo.caption" Class="teammate-card-pack-update" OnClick="@(() => this.OpenPackUpdateAsync(entry))">Update available</MudLink>
+                            }
+                        }
                     }
                 </MudStack>
+                @foreach (var pack in this.rolePacks.Where(pack => this.PackState(pack) == Agency.Huddle.SkillPacks.Resolving.ItemState.NotDownloaded && !this.IsPackActive(pack.Id)))
+                {
+                    Agency.Huddle.SkillPacks.Resolving.PackEntry entry = pack;
+                    <div class="teammate-card-pack-missing d-flex flex-wrap align-center gap-2 mb-1">
+                        <MudText Typo="Typo.body2">Pack "@entry.Title" is not downloaded.</MudText>
+                        <MudButton Variant="Variant.Outlined" Size="Size.Small" Class="teammate-card-pack-copy-prompt" OnClick="@(() => this.CopyPackPromptAsync(entry))">Copy prompt</MudButton>
+                    </div>
+                }
+                @foreach (var pack in this.rolePacks.Where(pack => this.PackState(pack) == Agency.Huddle.SkillPacks.Resolving.ItemState.Withdrawn && this.IsPackActive(pack.Id)))
+                {
+                    Agency.Huddle.SkillPacks.Resolving.PackEntry entry = pack;
+                    <MudAlert Severity="Severity.Warning" Dense="true" role="status" Class="mb-2 teammate-card-warning teammate-card-pack-withdrawn-warning">
+                        <span class="teammate-card-pack-withdrawn-text">Pack "@entry.Title" was withdrawn by its Source: @this.ReasonOf(entry). @this.name keeps working.</span>
+                        <MudButton Variant="Variant.Text" Size="Size.Small" Class="teammate-card-pack-remove ml-2" OnClick="@(() => this.TogglePack(entry))">Remove from this Teammate</MudButton>
+                    </MudAlert>
+                }
+            }
+            @if (this.roleSpec is { } findRole && this.Services.GetService<Agency.Huddle.App.SkillSources.SkillRegistry>() is not null)
+            {
+                <MudLink Typo="Typo.body2" Class="teammate-card-find-packs d-block mb-3" OnClick="@(() => this.FindPacksAsync(findRole))">Find more Packs for @findRole.Title</MudLink>
             }
 
             @* PR-2: a manager's Complete Setup panel adds the Process step. *@
@@ -569,7 +624,13 @@
         @if (this.mode != TeammateCardMode.View)
         {
             <MudButton Variant="Variant.Text" Size="Size.Small" OnClick="this.Close">Cancel</MudButton>
-            <MudButton Variant="Variant.Filled" Size="Size.Small" Color="Color.Primary" OnClick="this.SaveAsync">@this.SaveLabel</MudButton>
+            <MudButton Variant="Variant.Filled" Size="Size.Small" Color="Color.Primary" Disabled="@this.copying" OnClick="this.SaveAsync">
+                @if (this.copying)
+                {
+                    <MudProgressCircular Size="Size.Small" Indeterminate="true" Class="mr-2" />
+                }
+                @this.SaveLabel
+            </MudButton>
         }
     </DialogActions>
 </MudDialog>
@@ -656,9 +717,6 @@
     [Parameter]
     public EventCallback<(string Name, string Title, string Text, string? Model, string? Effort, Avatar Avatar, byte[]? Image, string? ImageExtension, string? Adapter, IReadOnlyList<string> Skills)> OnDraftSaved { get; set; }
 
-    /// <summary>The Skills a draft card offers beyond the installed ones, so the whole list can be chosen from: the role's own that are not installed (<c>FromRole</c>), then every other catalog Skill. Only read with <see cref="OnDraftSaved"/>.</summary>
-    [Parameter]
-    public IReadOnlyList<(string Name, string Description, bool FromRole, string Origin)>? DraftSkillChoices { get; set; }
 
     /// <summary>The names of the Skills the draft carries, which a draft card starts with. Only read with <see cref="OnDraftSaved"/>.</summary>
     [Parameter]
@@ -699,7 +757,7 @@
     // assignment lives only in this.text's frontmatter (Spec §6.7), never on the Persona record, so
     // ReadSkills(this.text) is the only source - see its own remarks.
     private IReadOnlyList<string> skills = [];
-    private IReadOnlyList<(string Name, string Description, bool FromRole, string Origin)> draftOptions = [];
+
 
     /// <summary>The installed Skills; a draft card lists the ones its role brings first, so the checked options are the first thing the Human sees.</summary>
     private IEnumerable<Skill> OrderedSkills => this.DraftSkills is null
@@ -863,7 +921,6 @@
             if (this.OnDraftSaved.HasDelegate && this.DraftSkills is not null)
             {
                 this.skills = this.DraftSkills;
-                this.draftOptions = this.DraftSkillChoices ?? [];
             }
 
             this.name = this.Name.Length > 0 ? this.Name : this.PickName(null);
@@ -1556,7 +1613,7 @@
     /// removable warning chips beneath the select.
     /// </summary>
     private IReadOnlyList<string> MissingSkillNames =>
-        [.. this.skills.Where(name => this.Skills.Get(name) is null)];
+        [.. this.skills.Where(name => this.Skills.Get(name) is null && this.Registry?.Of(name) is not (Agency.Huddle.App.Teams.SkillAvailability.Copyable or Agency.Huddle.App.Teams.SkillAvailability.NotDownloaded))];
 
     /// <summary>
     /// Sets the selected Skills, keeping <see cref="text"/>'s frontmatter in step through
@@ -1590,8 +1647,102 @@
     /// <summary>The team-type role <see cref="roleRef"/> names, or <see langword="null"/> when the catalog is absent or no longer defines it.</summary>
     private RoleSpec? roleSpec;
 
-    /// <summary>The packs the catalog offers this role; empty without a <see cref="roleSpec"/>.</summary>
-    private IReadOnlyList<SkillPack> rolePacks = [];
+    /// <summary>The Packs SKILLS.md offers this role, without the Broken ones (those show on the Packs tab) unless this
+    /// Teammate holds one; empty without a <see cref="roleSpec"/> or a registry.</summary>
+    private IReadOnlyList<Agency.Huddle.SkillPacks.Resolving.PackEntry> rolePacks = [];
+
+    /// <summary>Whether the "Not on this computer yet" list is open.</summary>
+    private bool notHereOpen;
+
+    /// <summary>Whether Save is copying Skills into Skills/.</summary>
+    private bool copying;
+
+    /// <summary>The registry, when the host registers one.</summary>
+    private Agency.Huddle.App.SkillSources.SkillRegistry? Registry => this.Services.GetService<Agency.Huddle.App.SkillSources.SkillRegistry>();
+
+    /// <summary>Registry Skills Huddle can copy that have no folder in Skills/ yet: not hidden or withdrawn unless selected.</summary>
+    private IReadOnlyList<Agency.Huddle.SkillPacks.Resolving.SkillEntry> CopyableSkills => this.RegistrySkills(Agency.Huddle.App.Teams.SkillAvailability.Copyable);
+
+    /// <summary>Registry Skills with no folder on this computer, for the collapsed list.</summary>
+    private IReadOnlyList<Agency.Huddle.SkillPacks.Resolving.SkillEntry> NotDownloadedSkills => this.RegistrySkills(Agency.Huddle.App.Teams.SkillAvailability.NotDownloaded);
+
+    /// <summary>The registry Skills of one availability that are not in Skills/, left out when hidden unless already selected.</summary>
+    private IReadOnlyList<Agency.Huddle.SkillPacks.Resolving.SkillEntry> RegistrySkills(Agency.Huddle.App.Teams.SkillAvailability wanted)
+    {
+        if (this.Registry is not { } registry)
+        {
+            return [];
+        }
+
+        return [.. registry.Current.Resolved.Skills
+            .Where(entry => this.Skills.Get(entry.Name) is null && registry.Of(entry.Name) == wanted
+                && (!registry.IsHidden(entry) || this.skills.Contains(entry.Name, StringComparer.Ordinal)))
+            .OrderBy(static entry => entry.Name, StringComparer.OrdinalIgnoreCase)];
+    }
+
+    /// <summary>The state a Pack is drawn in.</summary>
+    private Agency.Huddle.SkillPacks.Resolving.ItemState PackState(Agency.Huddle.SkillPacks.Resolving.PackEntry pack) =>
+        this.Registry?.DisplayState(pack) ?? Agency.Huddle.SkillPacks.Resolving.ItemState.Available;
+
+    /// <summary>The Source's reason for a deprecated or withdrawn Pack.</summary>
+    private string ReasonOf(Agency.Huddle.SkillPacks.Resolving.PackEntry pack) =>
+        (this.Registry?.Current.Resolved.FindSource(pack.Source)?.File?.StatusReason ?? "no reason given").Trim().TrimEnd('.');
+
+    /// <summary>The chip's leading icon for a state, or none.</summary>
+    private static string? PackIcon(Agency.Huddle.SkillPacks.Resolving.ItemState state) => state switch
+    {
+        Agency.Huddle.SkillPacks.Resolving.ItemState.UpdateAvailable => Icons.Material.Filled.SystemUpdateAlt,
+        Agency.Huddle.SkillPacks.Resolving.ItemState.Deprecated => Icons.Material.Filled.NotInterested,
+        _ => null,
+    };
+
+    /// <summary>Opens the update card for a Pack.</summary>
+    private Task OpenPackUpdateAsync(Agency.Huddle.SkillPacks.Resolving.PackEntry pack) =>
+        Agency.Huddle.App.Components.Settings.Skills.SkillDialogs.OpenUpdateAsync(this.DialogService, pack.Title, pack.Id);
+
+    /// <summary>Opens the prompt dialog on Find Packs for a role, with this role.</summary>
+    private Task FindPacksAsync(RoleSpec role) =>
+        Agency.Huddle.App.Components.Settings.Skills.SkillDialogs.OpenAddWithAiAsync(this.DialogService, "find", role.Id);
+
+    /// <summary>Copies the Needs setup prompt for a Pack that is not downloaded.</summary>
+    private async Task CopyPackPromptAsync(Agency.Huddle.SkillPacks.Resolving.PackEntry pack)
+    {
+        if (this.Registry is not { } registry || this.Services.GetService<Agency.Huddle.App.SkillSources.SkillPromptBuilder>() is not { } prompts || this.roleSpec is null)
+        {
+            return;
+        }
+
+        IReadOnlyList<Agency.Huddle.App.SkillSources.MissingItem> missing = registry.CheckReady([pack.Id], []).Missing;
+        string prompt = prompts.NeedsSetup(this.roleSpec.Id, this.roleSpec.Title, missing, this.PathFormat);
+        await this.CopyPromptAsync(prompt);
+    }
+
+    /// <summary>Copies the prompt that asks the AI tool to fetch one Skill.</summary>
+    private async Task CopyFetchPromptAsync(Agency.Huddle.SkillPacks.Resolving.SkillEntry entry)
+    {
+        if (this.Registry is not { } registry || this.Services.GetService<Agency.Huddle.App.SkillSources.SkillPromptBuilder>() is not { } prompts)
+        {
+            return;
+        }
+
+        string? catalogId = entry.Claims.Select(static claim => claim.ViaCatalog ?? (claim.Kind == Agency.Huddle.SkillPacks.Reading.RowKind.Catalog ? claim.Provider["catalog:".Length..] : null))
+            .FirstOrDefault(static id => id is not null);
+        Agency.Huddle.SkillPacks.Resolving.ResolvedCatalog? catalog = catalogId is null ? null : registry.Current.Resolved.FindCatalog(catalogId);
+        await this.CopyPromptAsync(prompts.FetchSkill(entry.Name, catalog?.Id ?? string.Empty, catalog?.FilePath, entry.Origin, this.PathFormat));
+    }
+
+    /// <summary>The circuit's path form.</summary>
+    private Agency.Huddle.App.SkillSources.PathFormat PathFormat =>
+        this.Services.GetService<Agency.Huddle.App.SkillSources.PathFormatChoice>()?.Format ?? Agency.Huddle.App.SkillSources.PathFormat.Windows;
+
+    /// <summary>Copies a prompt with the shared snackbar.</summary>
+    private async Task CopyPromptAsync(string prompt)
+    {
+        if (this.Services.GetService<IJSRuntime>() is { } js && this.Services.GetService<ISnackbar>() is { } snackbar)
+        {
+            _ = await Agency.Huddle.App.Skills.Ui.PromptClipboard.CopyAsync(js, snackbar, prompt, CancellationToken.None);
+        }
+    }
 
     /// <summary>Reads <c>_role</c> from <see cref="text"/> and looks up its role and packs once, at open.</summary>
     private void ResolveRole()
@@ -1604,9 +1755,10 @@
         this.roleRef = role;
         this.roleSpec = this.Services.GetService<TeamTypeCatalog>()?.Find(role.TypeId)?.Roles
             .FirstOrDefault(spec => string.Equals(spec.Id, role.RoleId, StringComparison.Ordinal));
-        if (this.roleSpec is not null)
+        if (this.roleSpec is not null && this.Registry is { } registry)
         {
-            this.rolePacks = this.Services.GetService<SkillPackStore>()?.ForRole(role.RoleId) ?? [];
+            this.rolePacks = [.. registry.PacksForRole(role.RoleId)
+                .Where(pack => registry.DisplayState(pack) != Agency.Huddle.SkillPacks.Resolving.ItemState.Broken || this.IsPackActive(pack.Id))];
         }
 
         if (this.roleSpec is { Manager: true } && this.Services.GetService<Agency.Huddle.App.Library.ITeamFolders>() is { } folders)
@@ -1624,10 +1776,10 @@
     private IReadOnlyList<Agency.Huddle.App.Teams.VersionedRef> ActivePacks =>
         PersonaFrontmatter.TryReadIdentity(this.text, out var identity, out _) ? identity.Packs ?? [] : [];
 
-    /// <summary>Whether <paramref name="pack"/> is recorded in <see cref="text"/>.</summary>
-    /// <param name="pack">The pack to look for.</param>
-    private bool IsPackActive(SkillPack pack) =>
-        this.ActivePacks.Any(active => string.Equals(active.Id, pack.Id, StringComparison.Ordinal));
+    /// <summary>Whether the Pack with <paramref name="packId"/> is recorded in <see cref="text"/>.</summary>
+    /// <param name="packId">The Pack id to look for.</param>
+    private bool IsPackActive(string packId) =>
+        this.ActivePacks.Any(active => string.Equals(active.Id, packId, StringComparison.OrdinalIgnoreCase));
 
     /// <summary>
     /// Adds or removes <paramref name="pack"/>: its skills, its <c>consultWhenAdds</c> clause in the
@@ -1635,50 +1787,26 @@
     /// or another active pack provides, stays when this pack is removed.
     /// </summary>
     /// <param name="pack">The pack to toggle.</param>
-    private void TogglePack(SkillPack pack)
+    private void TogglePack(Agency.Huddle.SkillPacks.Resolving.PackEntry pack)
     {
-        bool removing = this.IsPackActive(pack);
-        List<Agency.Huddle.App.Teams.VersionedRef> active = [.. this.ActivePacks.Where(entry => !string.Equals(entry.Id, pack.Id, StringComparison.Ordinal))];
-        List<string> skillNames = [.. this.skills];
-        if (removing)
+        Agency.Huddle.App.Teams.PackContents contents = Agency.Huddle.App.Teams.PackContents.From(pack);
+        if (this.IsPackActive(pack.Id))
         {
-            HashSet<string> kept = new(this.roleSpec?.Skills.Select(static skill => skill.Name) ?? [], StringComparer.Ordinal);
-            foreach (SkillPack other in active.Select(entry => this.rolePacks.FirstOrDefault(candidate => string.Equals(candidate.Id, entry.Id, StringComparison.Ordinal))).OfType<SkillPack>())
-            {
-                kept.UnionWith(other.Skills.Select(static skill => skill.Name));
-            }
-
-            skillNames.RemoveAll(name => !kept.Contains(name) && pack.Skills.Any(skill => string.Equals(skill.Name, name, StringComparison.Ordinal)));
+            IReadOnlyList<Agency.Huddle.App.Teams.PackContents> others = [.. this.ActivePacks
+                .Where(entry => !string.Equals(entry.Id, pack.Id, StringComparison.OrdinalIgnoreCase))
+                .Select(entry => this.Registry?.FindPack(entry.Id))
+                .OfType<Agency.Huddle.SkillPacks.Resolving.PackEntry>()
+                .Select(Agency.Huddle.App.Teams.PackContents.From)];
+            this.text = Agency.Huddle.App.Teams.PackMembership.Remove(this.text, contents, [.. this.roleSpec?.Skills.Select(static skill => skill.Name) ?? []], others);
         }
         else
         {
-            active.Add(new Agency.Huddle.App.Teams.VersionedRef(pack.Id, pack.Version));
-            skillNames.AddRange(pack.Skills.Select(static skill => skill.Name).Where(name => !skillNames.Contains(name, StringComparer.Ordinal)));
+            this.text = Agency.Huddle.App.Teams.PackMembership.Add(this.text, contents);
         }
 
-        string? existing = PersonaFrontmatter.Parse(this.text).Fields
-            .FirstOrDefault(static field => string.Equals(field.Key, "consult_when", StringComparison.OrdinalIgnoreCase))?.Value;
-        List<string> clauses = [.. (existing ?? string.Empty).Split("; ", StringSplitOptions.TrimEntries | StringSplitOptions.RemoveEmptyEntries)];
-        string clause = pack.ConsultWhenAdds.Trim();
-        if (removing)
-        {
-            clauses.RemoveAll(entry => string.Equals(entry, clause, StringComparison.Ordinal));
-        }
-        else if (clause.Length > 0 && !clauses.Contains(clause, StringComparer.Ordinal))
-        {
-            clauses.Add(clause);
-        }
-
-        this.skills = skillNames;
-        string updated = PersonaFrontmatter.WriteListField(this.text, "skills", this.skills);
-        updated = PersonaFrontmatter.WriteListField(updated, "_packs", [.. active.Select(static entry => entry.ToString())]);
-        if (existing is not null || clauses.Count > 0)
-        {
-            updated = PersonaFrontmatter.WriteScalarField(updated, "consult_when", string.Join("; ", clauses));
-        }
-
-        this.text = updated;
+        this.skills = ReadSkills(this.text);
     }
+
 
     /// <summary>
     /// The MS-3 and MS-5 warnings for this Teammate against the rest of its Team: <c>Model</c> holds the
@@ -1708,12 +1836,14 @@
             }
 
             Agency.Huddle.App.Teams.MemberView self = new(this.name, this.roleRef.RoleId, this.adapter, this.skills);
-            Func<string, string?> subCategoryOf = this.Services.GetService<Agency.Huddle.App.Skills.SkillsCatalogIndex>() is { } catalog
-                ? catalog.SubCategoryOf
-                : static _ => null;
+            Agency.Huddle.App.SkillSources.SkillRegistry? registry = this.Registry;
+            Func<string, string?> subCategoryOf = registry is null ? static _ => null : registry.SubCategoryOf;
             IReadOnlyList<string> vendorOnly = Agency.Huddle.App.Teams.MemberWarnings.For(self with { Skills = [] }, this.roleSpec, members, subCategoryOf);
             IReadOnlyList<string> all = Agency.Huddle.App.Teams.MemberWarnings.For(self, this.roleSpec, members, subCategoryOf);
-            return (vendorOnly, [.. all.Where(warning => !vendorOnly.Contains(warning, StringComparer.Ordinal))]);
+            IReadOnlyList<string> sources = registry is null
+                ? []
+                : Agency.Huddle.App.Teams.MemberWarnings.ForSources(this.name, this.skills, this.ActivePacks, registry, packId => this.DeprecatedReason(registry, packId));
+            return (vendorOnly, [.. all.Where(warning => !vendorOnly.Contains(warning, StringComparer.Ordinal)), .. sources]);
         }
     }
 
@@ -1825,6 +1955,28 @@
             return;
         }
 
+        // Skill Packs spec §6.10.4: a Teammate's file names a Skill only after its copy is in Skills/, so the copy runs before
+        // the write, and a Skill that cannot be copied keeps the file as it was.
+        if (this.Services.GetService<Agency.Huddle.App.SkillSources.ISkillCopier>() is { } copier && this.skills.Count > 0)
+        {
+            IReadOnlyList<Agency.Huddle.App.Teams.SkillSetupItem> notReady;
+            this.copying = true;
+            try
+            {
+                notReady = await copier.EnsureAvailableAsync([.. this.skills], CancellationToken.None);
+            }
+            finally
+            {
+                this.copying = false;
+            }
+
+            if (notReady.Count > 0)
+            {
+                this.error = TeammateCard.NotReadyMessage(notReady);
+                return;
+            }
+        }
+
         Persona persona;
 
         try
@@ -1886,6 +2038,29 @@
         this.nameLocked = false;
         this.titleLocked = false;
         this.aliasLocked = false;
+    }
+
+    /// <summary>"Skills not ready: x (not downloaded). Copy a prompt below, then save again."</summary>
+    internal static string NotReadyMessage(IReadOnlyList<Agency.Huddle.App.Teams.SkillSetupItem> notReady)
+    {
+        IEnumerable<string> names = notReady.Select(static item => $"{item.Name} ({TeammateCard.ProblemWords(item.Problem)})");
+        string list = string.Join(", ", names);
+        return $"Skills not ready: {list}. Copy a prompt below, then save again.";
+    }
+
+    /// <summary>The few words for a setup problem.</summary>
+    private static string ProblemWords(Agency.Huddle.App.Teams.SkillAvailability problem) => problem switch
+    {
+        Agency.Huddle.App.Teams.SkillAvailability.NotDownloaded => "not downloaded",
+        Agency.Huddle.App.Teams.SkillAvailability.Broken => "broken",
+        Agency.Huddle.App.Teams.SkillAvailability.Withdrawn => "withdrawn",
+        _ => "not in any catalog",
+    };
+
+    /// <summary>The Source's reason when it marks the Pack deprecated, else null.</summary>
+    private string? DeprecatedReason(Agency.Huddle.App.SkillSources.SkillRegistry registry, string packId)
+    {
+        return registry.FindPack(packId) is { } pack && registry.DisplayState(pack) == Agency.Huddle.SkillPacks.Resolving.ItemState.Deprecated ? this.ReasonOf(pack) : null;
     }
 
     /// <summary>Hands the draft's fields to <see cref="OnDraftSaved"/> and closes, once the Name is free; a refusal keeps the card open and says why.</summary>

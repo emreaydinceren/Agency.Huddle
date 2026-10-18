@@ -437,9 +437,9 @@ public sealed class BuildTeamTests
         Assert.Equal("/teams/Garden", new Uri(ctx.Services.GetRequiredService<NavigationManager>().Uri).AbsolutePath);
     }
 
-    /// <summary>A role's Skills show on its draft, are imported before anything is written, and are carried by the hired Teammate.</summary>
+    /// <summary>A role's Skills show on its draft, are copied into Skills/ before anything is written, and are carried by the hired Teammate.</summary>
     [Fact]
-    public async Task Approve_ImportsTheRolesSkills_AndTheTeammateCarriesThem()
+    public async Task Approve_CopiesTheRolesSkills_AndTheTeammateCarriesThem()
     {
         using Fixture fixture = new(typeCount: 3);
         await using MudBunitContext ctx = fixture.NewContext();
@@ -453,20 +453,19 @@ public sealed class BuildTeamTests
 
         await cut.InvokeAsync(() => cut.Find("button.build-team-approve-button").ClickAsync());
 
-        SkillRef asked = Assert.Single(Assert.Single(fixture.Installer.Calls));
-        Assert.Equal("ext-skill", asked.Name);
+        Assert.Equal(["ext-skill"], Assert.Single(fixture.Installer.Calls));
         PersonaEntry hired = Assert.Single(fixture.Personas.Entries, entry => entry.Teams.Contains("Garden", StringComparer.Ordinal));
         Assert.True(PersonaFrontmatter.TryReadIdentity(hired.Text, out PersonaIdentity? identity, out _));
         Assert.Equal(["ext-skill"], identity.Skills);
         Assert.Equal("claude-agent-acp", identity.Adapter);
     }
 
-    /// <summary>A Skill that cannot be installed stops the approval before the Team is created, names the Skill and links to Settings.</summary>
+    /// <summary>A Skill that is not ready stops the approval before the Team is created, names the Skill and links to Settings.</summary>
     [Fact]
-    public async Task Approve_SkillThatNeedsReview_BlocksBeforeAnythingIsWritten()
+    public async Task Approve_SkillNotReady_BlocksBeforeAnythingIsWritten()
     {
         using Fixture fixture = new(typeCount: 3);
-        fixture.Installer.Missing = [new SkillRef("ext-skill", "acme/skills", "skills/ext-skill")];
+        fixture.Installer.Missing = [FakeSkillCopier.NotDownloaded("ext-skill")];
         await using MudBunitContext ctx = fixture.NewContext();
         ctx.Services.GetRequiredService<NavigationManager>().NavigateTo("/teams/build?type=blank");
         IRenderedComponent<ContainerFragment> cut = Render(ctx);
@@ -475,8 +474,8 @@ public sealed class BuildTeamTests
 
         await cut.InvokeAsync(() => cut.Find("button.build-team-approve-button").ClickAsync());
 
-        Assert.Equal("Skills not installed: ext-skill. Import them yourself, then try again.",cut.Find(".build-team-approve-error .mud-alert-message").FirstChild?.TextContent.Trim());
-        Assert.Equal("/settings/skills", cut.Find(".build-team-skills-link").GetAttribute("href"));
+        Assert.Equal("Skills not ready: ext-skill. Copy a prompt for your AI tool from the cards that need setup, then try again.", cut.Find(".build-team-approve-error .mud-alert-message").FirstChild?.TextContent.Trim());
+        Assert.Equal("/settings/skills?view=skills", cut.Find(".build-team-skills-link").GetAttribute("href"));
         Assert.DoesNotContain("CreateTeam:Garden", fixture.Folders.Calls);
         Assert.DoesNotContain(fixture.Personas.Entries, entry => entry.Teams.Contains("Garden", StringComparer.Ordinal));
     }
@@ -1031,6 +1030,48 @@ public sealed class BuildTeamTests
         });
     }
 
+    /// <summary>A draft whose role's Skill is not downloaded shows Needs setup and Copy prompt, keeps Approve off with the
+    /// setup hint, and turns Ready by itself once the registry finds the Skill (Skill Packs spec §6.10.6).</summary>
+    [Fact]
+    public async Task BuildTeamSetup_NotDownloaded_WaitsThenFlipsWhenFetched()
+    {
+        using Fixture fixture = new(typeCount: 3);
+        using Agency.Huddle.Tests.SkillPacks.RegistryService.RegistryHost host = new();
+        host.Source();
+        string catalog = host.Catalog("extra", ["ext-skill"]);
+        host.SkillsMd([], [catalog]);
+        await host.ReadAsync();
+        fixture.ExtraServices = services =>
+        {
+            services.AddSingleton(host.Registry);
+            services.AddSingleton<ISkillAvailability>(host.Registry);
+            services.AddSingleton(new Agency.Huddle.App.SkillSources.SkillPromptBuilder(new Agency.Huddle.Tests.SkillPacks.Prompts.RecordingPromptSource(), new FixedInstall(Path.Combine(host.DataDir, "InstallSkillPack.md"))));
+        };
+        await using MudBunitContext ctx = fixture.NewContext();
+        ctx.JSInterop.Mode = JSRuntimeMode.Loose;
+        ctx.Services.GetRequiredService<NavigationManager>().NavigateTo("/teams/build?type=blank");
+        IRenderedComponent<ContainerFragment> cut = Render(ctx);
+        await cut.InvokeAsync(() => cut.Find(".build-team-name input").InputAsync("Garden"));
+        await cut.InvokeAsync(() => cut.Find("[aria-label='Add Bookkeeper']").ClickAsync());
+
+        Assert.NotEmpty(cut.FindAll(".roster-copy-prompt"));
+        Assert.True(cut.Find("button.build-team-approve-button").HasAttribute("disabled"));
+        Assert.Equal("Some Teammates need setup. Copy their prompt, paste it into your AI tool, and they update here by themselves.", cut.Find(".build-team-approve-hint").TextContent.Trim());
+
+        host.Catalog("extra", ["ext-skill"], name => host.CloneSkill(name));
+        await Task.Run(host.ReadAsync, Xunit.TestContext.Current.CancellationToken);
+
+        cut.WaitForAssertion(() => Assert.Empty(cut.FindAll(".roster-copy-prompt")));
+        Assert.False(cut.Find("button.build-team-approve-button").HasAttribute("disabled"));
+    }
+
+    /// <summary>An install file at a fixed path.</summary>
+    /// <param name="path">Its full path.</param>
+    private sealed class FixedInstall(string path) : Agency.Huddle.App.SkillSources.IInstallFileLocation
+    {
+        /// <inheritdoc/>
+        public string InstallFilePath => path;
+    }
     /// <summary>Opens a member's Remove menu and picks one of its items.</summary>
     private static async Task PickRemoveAsync(IRenderedComponent<ContainerFragment> cut, string member, string item)
     {
@@ -1113,7 +1154,7 @@ public sealed class BuildTeamTests
             this.Types = filterTypes
                 ? new TeamTypeCatalog(this.dir.Options(), NullLogger<TeamTypeCatalog>.Instance, builtins, this.Pool)
                 : new TeamTypeCatalog(this.dir.Options(), NullLogger<TeamTypeCatalog>.Instance, builtins);
-            SkillPackStore packs = new(this.dir.Options(), NullLogger<SkillPackStore>.Instance, new Dictionary<string, string>(StringComparer.Ordinal));
+            FakeSkillAvailability packs = new();
             this.Avatars = new AvatarStore(this.dir.Options(), NullLogger<AvatarStore>.Instance);
             HireLimitHarness harness = new(this.dir.Options());
             this.Packs = packs;
@@ -1154,11 +1195,14 @@ public sealed class BuildTeamTests
 
         public HireService Hire { get; }
 
-        public FakeSkillInstaller Installer { get; } = new();
+        public FakeSkillCopier Installer { get; } = new();
 
-        public SkillPackStore Packs { get; private set; }
+        public FakeSkillAvailability Packs { get; private set; }
 
         public SkillStore Skills { get; private set; }
+
+        /// <summary>Registers more services after the fixture's own, so a test can put a real registry in place.</summary>
+        public Action<IServiceCollection>? ExtraServices { get; set; }
 
         public MudBunitContext NewContext()
         {
@@ -1172,9 +1216,9 @@ public sealed class BuildTeamTests
             ctx.Services.AddSingleton<IAvatarLibraryLoader>(this.Library);
             ctx.Services.AddSingleton<ITeamFolders>(this.Folders);
             ctx.Services.AddSingleton(this.Hire);
-            ctx.Services.AddSingleton(this.Packs);
+            ctx.Services.AddSingleton<ISkillAvailability>(this.Packs);
+            this.ExtraServices?.Invoke(ctx.Services);
             ctx.Services.AddSingleton(this.Skills);
-            ctx.Services.AddSingleton(new SkillsCatalogIndex(this.dir.Options(), NullLogger<SkillsCatalogIndex>.Instance));
             ctx.Services.AddSingleton<IHireContext>(new RoleFixtures.Context());
             ctx.Services.AddSingleton<ITeamMembership>(this.Membership);
             ctx.Services.AddSingleton(this.Avatars);

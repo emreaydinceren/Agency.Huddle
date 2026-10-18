@@ -227,6 +227,7 @@ the [Tracker](manual-tests/tracker.md), never here.
 - [Room Sessions](manual-tests/room-sessions.md): per-Room context, resume and Stop (ADR-0024).
 - [Shell and navigation](manual-tests/shell-nav.md): the application shell, navigation and layout.
 - [Skills](manual-tests/skills.md): the Chief of Staff, team-building and the Family Health Advisor.
+- [Skill Packs](manual-tests/skill-packs.md): SKILLS.md, adding with a real AI tool, choosing a Pack, updates, the move, shared folders, an unplugged drive and a withdrawn Source.
 - [Startup and configuration](manual-tests/startup-config.md): start-up, configuration and first-run state.
 - [Turn streaming](manual-tests/streaming-turn.md): Drafts, Stop and failure surfacing.
 - [Tasks](manual-tests/tasks.md): creating, moving, viewing and referencing a Task.

@@ -1,0 +1,51 @@
+@*
+    Change… on the Sources tab (Skill Packs spec §6.9.3): chooses another Skill Sources folder, for example a synced one shared
+    with another Huddle. It writes only skill-sources.json, through SkillSourcesSettings.SetDir, which refuses a folder that
+    does not exist; the refusal shows under the field and nothing changes. It never moves files.
+*@
+@using Agency.Huddle.App.Skills.Ui
+@using Agency.Huddle.App.SkillSources
+
+@inject SkillSourcesSettings Settings
+
+<MudDialog Class="skill-sources-folder-dialog">
+    <DialogContent>
+        <MudTextField T="string" @bind-Value="this.folder" Immediate="true" Label="Folder" Variant="Variant.Outlined" Margin="Margin.Dense"
+                      Error="@(this.error is not null)" ErrorText="@this.error" HelperText="An existing folder, such as a synced one." Class="skill-sources-folder-input" />
+        <MudText Typo="Typo.caption" Class="d-block mt-1 mud-text-secondary">Changing the folder re-reads everything. It never moves files.</MudText>
+    </DialogContent>
+    <DialogActions>
+        <MudButton Variant="Variant.Text" Size="Size.Small" Class="skill-sources-folder-cancel" OnClick="this.Cancel">Cancel</MudButton>
+        <MudButton Variant="Variant.Filled" Size="Size.Small" Color="Color.Primary" Disabled="@string.IsNullOrWhiteSpace(this.folder)" Class="skill-sources-folder-save" OnClick="this.Save">Use this folder</MudButton>
+    </DialogActions>
+</MudDialog>
+
+@code {
+    private string? folder;
+    private string? error;
+
+    [CascadingParameter]
+    private IMudDialogInstance? Dialog { get; set; }
+
+    /// <summary>Starts with the folder in use.</summary>
+    protected override void OnInitialized()
+    {
+        this.folder = this.Settings.Dir;
+    }
+
+    /// <summary>Sets the folder, or shows why not.</summary>
+    private void Save()
+    {
+        SetDirResult result = this.Settings.SetDir(this.folder);
+        if (result.Problem is { } refusal)
+        {
+            this.error = refusal;
+            return;
+        }
+
+        this.Dialog?.Close(DialogResult.Ok(true));
+    }
+
+    /// <summary>Cancels.</summary>
+    private void Cancel() => this.Dialog?.Cancel();
+}

@@ -129,6 +129,7 @@ the per-area tables below.
 | [Tasks: creating, moving, viewing and referencing a unit of work](tasks.md) | [below](#tasks) |
 | [Adapters: choosing one per Persona, and running two at once](adapters.md) | [below](#adapters) |
 | [Skills: the Chief of Staff, team-building, and the Family Health Advisor](skills.md) | [below](#skills) |
+| [Skill Packs: SKILLS.md, the AI tool, updates, the move and shared folders](skill-packs.md) | [below](#skill-packs) |
 | [Work Mode: choosing how much an Agent may do before it asks](work-mode.md) | [below](#work-mode) |
 | [Questions: an Agent asks the Human by tapping, not typing](questions.md) | [below](#questions) |
 | [Prompt blocks: an image the Human names reaches the Teammate](prompt-blocks.md) | [below](#prompt-blocks) |
@@ -842,6 +843,20 @@ Skills: the Chief of Staff, team-building, and the Family Health Advisor — [ar
 | [SKILLS-04](skills.md#skills-04--over-the-limit-approve-creates-nothing-and-the-message-says-why) |  | Active |  |  |
 | [SKILLS-05](skills.md#skills-05--the-greeting-on-a--clean-install-and-no-second-greeting-on-restart) |  | Active |  |  |
 | [SKILLS-06](skills.md#skills-06--the-family-health-advisors-safety-behaviour) |  | Active |  |  |
+
+## skill-packs
+
+Skill Packs: SKILLS.md, the AI tool, updates, the move and shared folders — [area file](skill-packs.md)
+
+| Test | 💰 | Status | Issue | Notes |
+| --- | --- | --- | --- | --- |
+| [SKILLPACKS-01](skill-packs.md#skillpacks-01--a-real-ai-tool-adds-a-pack-and-huddle-shows-it-without-a-reload) | 💰 | Active |  |  |
+| [SKILLPACKS-02](skill-packs.md#skillpacks-02--choosing-a-pack-copies-its-skills-then-changes-the-teammate) |  | Active |  |  |
+| [SKILLPACKS-03](skill-packs.md#skillpacks-03--a-changed-skill-shows-update-available-and-update-copies-then-changes-membership) |  | Active |  |  |
+| [SKILLPACKS-04](skill-packs.md#skillpacks-04--the-move-turns-a-copy-of-a-real-data-folder-into-skillsmd-and-changes-no-teammate) |  | Active |  | Move half run by an agent 2026-10-18 on a 0.6 MB copy with no imported Skills: 6 catalogs, 263 Skills, no problems, no Teammate changed. Not yet run by a person |
+| [SKILLPACKS-05](skill-packs.md#skillpacks-05--two-huddles-share-one-skill-sources-folder-each-with-its-own-paths) |  | Active |  |  |
+| [SKILLPACKS-06](skill-packs.md#skillpacks-06--a-pointer-on-an-unplugged-drive-shows-not-downloaded-and-teammates-keep-working) |  | Active |  |  |
+| [SKILLPACKS-07](skill-packs.md#skillpacks-07--a-withdrawn-source-blocks-a-new-hire-and-its-holders-keep-working) |  | Active |  |  |
 
 
 ## work-mode

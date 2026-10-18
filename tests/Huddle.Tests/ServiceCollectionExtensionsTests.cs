@@ -205,27 +205,40 @@ public sealed class ServiceCollectionExtensionsTests
         Assert.NotNull(provider.GetRequiredService<Agency.Huddle.App.Teams.TeamDuplicator>());
     }
 
-    /// <summary>The skill installer resolves to the importing installer.</summary>
+    /// <summary>The old installer is gone: nothing registered is an <c>ISkillInstaller</c> or <c>ImportingSkillInstaller</c>
+    /// (Skill Packs spec §6.14).</summary>
     [Fact]
-    public void AddTeamServices_ResolvesSkillInstaller()
+    public void ISkillInstaller_NoLongerRegistered()
+    {
+        ServiceCollection services = new();
+        services.AddLogging();
+        services.AddTeamServices(new ConfigurationBuilder().Build());
+
+        Assert.DoesNotContain(services, static descriptor => descriptor.ServiceType.Name is "ISkillInstaller" or "ImportingSkillInstaller" or "SkillPackStore" or "SkillsCatalogIndex");
+    }
+
+    /// <summary><c>ISkillCopier</c> resolves to <c>SkillCopier</c>.</summary>
+    [Fact]
+    public void ISkillCopier_ResolvesToSkillCopier()
     {
         using TempDataDir dataDir = new();
         using ServiceProvider provider = BuildTeamProvider(dataDir);
 
-        Assert.IsType<Agency.Huddle.App.Teams.ImportingSkillInstaller>(provider.GetRequiredService<Agency.Huddle.App.Teams.ISkillInstaller>());
+        Assert.IsType<Agency.Huddle.App.SkillSources.SkillCopier>(provider.GetRequiredService<Agency.Huddle.App.SkillSources.ISkillCopier>());
     }
 
-    /// <summary>The skill downloader and the skill importer resolve from the container.</summary>
+    /// <summary>Huddle downloads nothing for Skills: no download or import type is left in the app, and no Skills service
+    /// takes an <see cref="HttpClient"/>.</summary>
     [Fact]
-    public void AddTeamServices_ResolvesSkillDownloaderAndImporter()
+    public void NoHttpClient_ForSkills()
     {
-        using TempDataDir dataDir = new();
-        using ServiceProvider provider = BuildTeamProvider(dataDir);
+        System.Reflection.Assembly app = typeof(Agency.Huddle.App.SkillSources.SkillRegistry).Assembly;
 
-        Assert.NotNull(provider.GetRequiredService<Agency.Huddle.App.Skills.SkillDownloader>());
-        Assert.NotNull(provider.GetRequiredService<Agency.Huddle.App.Skills.SkillImporter>());
+        Assert.DoesNotContain(app.GetTypes(), static type => type.Name is "SkillDownloader" or "SkillImporter" or "ISkillImporter");
+        Assert.DoesNotContain(
+            app.GetTypes().Where(static type => type.Namespace is "Agency.Huddle.App.Skills" or "Agency.Huddle.App.SkillSources" or "Agency.Huddle.App.SkillSources.Move"),
+            static type => type.GetConstructors().Any(static constructor => constructor.GetParameters().Any(static parameter => parameter.ParameterType == typeof(HttpClient))));
     }
-
     /// <summary>The start gate resolves to the one persona supervisor.</summary>
     [Fact]
     public void AddTeamServices_ResolvesStartGateAsTheSupervisor()
@@ -245,24 +258,6 @@ public sealed class ServiceCollectionExtensionsTests
 
         Assert.NotNull(provider.GetRequiredService<Agency.Huddle.App.Teams.IHireContext>());
         Assert.NotNull(provider.GetRequiredService<Agency.Huddle.App.Teams.RoleHirer>());
-    }
-
-    /// <summary>The skill pack store resolves from the container with the real embedded built-ins.</summary>
-    [Fact]
-    public void AddTeamServices_ResolvesSkillPackStore()
-    {
-        using TempDataDir dataDir = new();
-        var configuration = new ConfigurationBuilder()
-            .AddInMemoryCollection(new Dictionary<string, string?> { ["Team:DataDir"] = dataDir.Path })
-            .Build();
-        var services = new ServiceCollection();
-        services.AddLogging();
-        services.AddTeamServices(configuration);
-        using var provider = services.BuildServiceProvider();
-
-        var store = provider.GetRequiredService<Agency.Huddle.App.TeamTypes.SkillPackStore>();
-
-        Assert.Empty(store.Problems);
     }
 
     /// <summary>

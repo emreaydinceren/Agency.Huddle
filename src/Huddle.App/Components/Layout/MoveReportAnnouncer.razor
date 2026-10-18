@@ -1,0 +1,51 @@
+@*
+    Shows what the one-time move into the Skill Sources folder did (Skill Packs spec §6.13), once per Huddle: on its first
+    render it takes the report MoveReportStore has not shown yet, which marks it shown, so a restart does not repeat it.
+    Show opens Settings › Skills › Packs; after a failed move, Show log opens the move's own log in the Library. No markup.
+*@
+@using Agency.Huddle.App.Library
+@using Agency.Huddle.App.SkillSources.Move
+
+@inject MoveReportStore Reports
+@inject ISnackbar Snackbar
+@inject NavigationManager Navigation
+
+@code {
+    /// <summary>Where Show log points: the move's Source log, in the Skill Sources root.</summary>
+    internal const string MoveLogPath = "sources/local/my-packs/log.jsonl";
+
+    /// <summary>The snackbar's severity for a report: an error when the move failed, a warning when something could not be
+    /// carried over or a Skill's tools are now ignored, success otherwise.</summary>
+    internal static Severity SeverityOf(MoveReport report)
+    {
+        ArgumentNullException.ThrowIfNull(report);
+        if (report.Failed)
+        {
+            return Severity.Error;
+        }
+
+        return report.Problems.Count > 0 || report.SkillsWithIgnoredTools.Count > 0 ? Severity.Warning : Severity.Success;
+    }
+
+    /// <summary>Shows the report once.</summary>
+    protected override void OnAfterRender(bool firstRender)
+    {
+        if (!firstRender || this.Reports.TakeUnshown() is not { } report)
+        {
+            return;
+        }
+
+        string action = report.Failed ? "Show log" : "Show";
+        string target = report.Failed ? LibraryLinkQuery.BuildPageUri(LibraryRootStore.SkillSourcesRootId, MoveLogPath) : "/settings/skills?view=packs";
+        this.Snackbar.Add(report.SnackbarText(), SeverityOf(report), configure: options =>
+        {
+            options.Action = action;
+            options.RequireInteraction = report.Failed;
+            options.OnClick = _ =>
+            {
+                this.Navigation.NavigateTo(target);
+                return Task.CompletedTask;
+            };
+        }, key: "skill-sources-moved");
+    }
+}

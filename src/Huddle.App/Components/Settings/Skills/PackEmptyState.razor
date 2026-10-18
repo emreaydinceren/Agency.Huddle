@@ -1,0 +1,32 @@
+@*
+    The Packs tab with no Packs row (Skill Packs spec §6.9.6, G4d), a missing SKILLS.md included: what Huddle does and does
+    not do, three numbered steps, and Add with your AI tool. The bar's Reload stays above it.
+*@
+@using Agency.Huddle.App.Skills.Ui
+
+<EmptyState Icon="@Icons.Material.Outlined.AutoAwesome" Title="No Packs yet"
+            Text="Huddle does not download Skills; your AI tool does. It signs in where it needs to, fetches the Skills wherever it likes, and adds a pointer to SKILLS.md. Huddle picks it up.">
+    <Action>
+        <ol class="pack-empty-steps text-left mt-2 mb-2">
+            <li>Select Add with your AI tool and say where the Skills are.</li>
+            <li>Paste the prompt into Claude Code, Codex or a similar tool.</li>
+            <li>Come back here; what it added is ready to use.</li>
+        </ol>
+        <div class="d-flex flex-wrap justify-center gap-2">
+            <MudTooltip Text="@SkillGuide.For("Add with your AI tool")" ShowOnFocus="true">
+                <MudButton Variant="Variant.Filled" Color="Color.Primary" Size="Size.Small" StartIcon="@ActionIcons.Add" Class="pack-empty-add" OnClick="this.OnAddWithAi">Add with your AI tool</MudButton>
+            </MudTooltip>
+            @this.ChildContent
+        </div>
+    </Action>
+</EmptyState>
+
+@code {
+    /// <summary>Opens the prompt dialog on Add.</summary>
+    [Parameter]
+    public EventCallback OnAddWithAi { get; set; }
+
+    /// <summary>The controls a later step adds beside the button (Copy path and Learn more).</summary>
+    [Parameter]
+    public RenderFragment? ChildContent { get; set; }
+}

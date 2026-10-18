@@ -146,11 +146,9 @@ public static class ServiceCollectionExtensions
         services.AddSingleton<IAgentGateway>(sp => sp.GetRequiredService<AgentGateway>());
 
         services.AddSingleton<TeammatePaths>();
-        services.AddSingleton<SkillPackStore>();
         services.AddSingleton<HiringPoolCatalog>();
         services.AddSingleton<CustomRoleStore>();
         services.AddSingleton<TeamTypeCatalog>();
-        services.AddSingleton<SkillsCatalogIndex>();
         services.AddSingleton<UserCandidateWriter>();
         services.AddSingleton<IConnectorStatus, FileConnectorStatus>();
 
@@ -232,18 +230,28 @@ public static class ServiceCollectionExtensions
         // running their own FileSystemWatcher over it.
         services.AddSingleton<SkillStore>();
 
-        // Skill import (SK-2 to SK-7): the downloader gets its own client with a long timeout for the archive; the importer's client only
-        // resolves a branch to a commit, so it times out sooner. Both are plain singletons - nothing here is shared with other HTTP users.
-        services.AddSingleton(static sp => new SkillDownloader(
-            new HttpClient { Timeout = TimeSpan.FromMinutes(2) },
-            sp.GetRequiredService<ILogger<SkillDownloader>>()));
-        services.AddSingleton(static sp => new SkillImporter(
-            sp.GetRequiredService<SkillsCatalogIndex>(),
-            sp.GetRequiredService<SkillDownloader>(),
-            sp.GetRequiredService<SkillStore>(),
-            new HttpClient { Timeout = TimeSpan.FromSeconds(15) },
-            sp.GetService<TimeProvider>()));
-        services.AddSingleton<ISkillImporter>(static sp => sp.GetRequiredService<SkillImporter>());
+        // Skill Sources (Skill Packs spec §6.5): the registry of SKILLS.md and the stores beside it. Plain singletons; the
+        // watcher below is the hosted half and the only thing that rebuilds the registry besides Reload.
+        services.AddSingleton<Agency.Huddle.App.SkillSources.SkillSourcesSettings>();
+        services.AddSingleton<Agency.Huddle.App.SkillSources.HiddenStore>();
+        services.AddSingleton<Agency.Huddle.App.SkillSources.SourceLog>();
+        services.AddSingleton<Agency.Huddle.App.SkillSources.SkillsMdWriter>();
+        services.AddSingleton<Agency.Huddle.App.SkillSources.RoleLister>();
+        services.AddSingleton<Agency.Huddle.App.SkillSources.SkillRegistry>();
+        services.AddSingleton<Agency.Huddle.App.Teams.ISkillAvailability>(static sp => sp.GetRequiredService<Agency.Huddle.App.SkillSources.SkillRegistry>());
+        services.AddSingleton<Agency.Huddle.App.SkillSources.Move.IMoveFiles, Agency.Huddle.App.SkillSources.Move.PhysicalMoveFiles>();
+        services.AddSingleton<Agency.Huddle.App.SkillSources.Move.MoveReportStore>();
+        services.AddSingleton<Agency.Huddle.App.SkillSources.Move.SkillSourcesMove>();
+        services.AddSingleton<Agency.Huddle.App.SkillSources.ISkillSourcesMove>(static sp => sp.GetRequiredService<Agency.Huddle.App.SkillSources.Move.SkillSourcesMove>());
+        services.AddSingleton<Agency.Huddle.App.SkillSources.RegistryWatcher>();
+        services.AddSingleton<Agency.Huddle.App.SkillSources.ISkillCopier, Agency.Huddle.App.SkillSources.SkillCopier>();
+        services.AddSingleton<Agency.Huddle.App.SkillSources.InstallFileWriter>();
+        services.AddSingleton<Agency.Huddle.App.SkillSources.IInstallFileLocation>(static sp => sp.GetRequiredService<Agency.Huddle.App.SkillSources.InstallFileWriter>());
+        services.AddSingleton<Agency.Huddle.App.SkillSources.SkillPromptBuilder>();
+        services.AddSingleton<Agency.Huddle.App.SkillSources.SkillSourcesRemover>();
+        services.AddSingleton<Agency.Huddle.App.SkillSources.PackUpdater>();
+        services.AddScoped<Agency.Huddle.App.SkillSources.PathFormatChoice>();
+
 
         // No interface, same reasoning as PromptStore/SkillStore above: nothing needs to
         // substitute this, and it is built entirely from other singletons already registered
@@ -297,7 +305,6 @@ public static class ServiceCollectionExtensions
         // Hiring a role-based Team. The start gate is the supervisor, resolved lazily through a factory
         // so HireService does not force PersonaSupervisor to construct before it is registered below;
         // CardResolver and TierModelPicker are static and need no registration.
-        services.AddSingleton<Agency.Huddle.App.Teams.ISkillInstaller, Agency.Huddle.App.Teams.ImportingSkillInstaller>();
         services.AddSingleton<Agency.Huddle.App.Teams.IPersonaStartGate>(sp => sp.GetService<PersonaSupervisor>() as Agency.Huddle.App.Teams.IPersonaStartGate ?? new Agency.Huddle.App.Teams.NoHostStartGate());
         services.AddSingleton<Agency.Huddle.App.Teams.ProcessProvisioner>();
         services.AddSingleton<Agency.Huddle.App.Teams.IOnboardingPoster, Agency.Huddle.App.Teams.ChatOnboardingPoster>();
@@ -481,6 +488,12 @@ public static class ServiceCollectionExtensions
         // A singleton before it is a hosted service: DataInitializer runs it directly at startup for a
         // rename made while the app was stopped, and the hosted half subscribes to HumanRenamed.
         services.AddSingleton<HumanRenameCascade>();
+
+        // Before every other hosted service that reads Teammates (Skill Packs spec §6.5, "Start-up order"): the move, the
+        // repair of Skills/.trash and the first full read of the registry finish before BuiltinTeammateSeeder,
+        // DataInitializer and PersonaSupervisor start, because the host awaits each StartAsync in registration order.
+        services.AddHostedService(static sp => sp.GetRequiredService<Agency.Huddle.App.SkillSources.RegistryWatcher>());
+        services.AddHostedService(static sp => sp.GetRequiredService<Agency.Huddle.App.SkillSources.InstallFileWriter>());
         services.AddHostedService<DataInitializer>();
         services.AddHostedService(sp => sp.GetRequiredService<HumanRenameCascade>());
         services.AddHostedService<PipeServer>();

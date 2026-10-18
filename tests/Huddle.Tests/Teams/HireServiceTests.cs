@@ -40,10 +40,6 @@ public sealed class HireServiceTests
           ] }
         """;
 
-    private const string Pack = """
-        { "id": "msbuild-authoring", "version": "1.0.0", "title": "MSBuild", "appliesTo": ["dev"],
-          "consultWhenAdds": ".csproj changes", "skills": [{ "name": "target-authoring", "source": "builtin" }] }
-        """;
 
     private static HireService Create(TempDataDir dir, out PersonaStore personas, out HireLimitHarness harness, int perTeam = 8)
     {
@@ -56,19 +52,19 @@ public sealed class HireServiceTests
             ["web/processes/flow.md"] = "# Flow",
         };
         TeamTypeCatalog types = new(dir.Options(), NullLogger<TeamTypeCatalog>.Instance, builtins);
-        SkillPackStore packs = new(dir.Options(), NullLogger<SkillPackStore>.Instance, new Dictionary<string, string>(StringComparer.Ordinal) { ["msbuild-authoring.json"] = Pack });
+        FakeSkillAvailability packs = new FakeSkillAvailability().WithPack("msbuild-authoring", "1.0.0", "MSBuild", ["target-authoring"], ".csproj changes");
         TeamOptions options = new();
         options.Acp.MaxTeammatesPerTeam = perTeam;
         harness = new HireLimitHarness(Microsoft.Extensions.Options.Options.Create(options));
         AvatarStore avatars = new(dir.Options(), NullLogger<AvatarStore>.Instance);
-        return new HireService(personas, types, packs, avatars, harness.Guard, new FakeSkillInstaller(), new FakeStartGate(), NullLogger<HireService>.Instance);
+        return new HireService(personas, types, packs, avatars, harness.Guard, new FakeSkillCopier(), new FakeStartGate(), NullLogger<HireService>.Instance);
     }
 
     private static HireRequest Request(string name, string roleId = "dev", string? model = "sonnet")
     {
         CardState card = new(roleId, name, new ModelPick("claude-agent-acp", model),
             [new SkillRef("test-driven-development", "builtin", null), new SkillRef("target-authoring", "builtin", null)],
-            [new VersionedRef("msbuild-authoring", "1.0.0")], CardReadiness.Ready, []);
+            [new VersionedRef("msbuild-authoring", "1.0.0")], CardReadiness.Ready, [], []);
         return new HireRequest(TeamName, "web", roleId, card);
     }
 

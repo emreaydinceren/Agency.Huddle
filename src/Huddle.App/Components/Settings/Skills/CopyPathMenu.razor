@@ -1,0 +1,65 @@
+@*
+    Copy path ▾ (Skill Packs spec §6.9.7, G5b): the location of InstallSkillPack.md in the form the Human's AI tool can open.
+    Windows path, WSL path and Forward slashes each show their own result. Choosing one sets the circuit's PathFormatChoice
+    (so the prompt box and every later prompt follow it), copies the bare path and says "Path copied.". WSL path is disabled
+    for a network path, which has no drive letter.
+*@
+@using Agency.Huddle.App.Skills.Ui
+@using Agency.Huddle.App.SkillSources
+
+@inject SkillPromptBuilder Prompts
+@inject PathFormatChoice PathChoice
+@inject IJSRuntime JS
+@inject ISnackbar Snackbar
+
+<MudTooltip Text="@SkillGuide.For("Copy path")" ShowOnFocus="true">
+    <MudMenu Dense="true" Disabled="@this.Disabled" Class="copy-path-menu">
+        <ActivatorContent Context="menuContext">
+            <MudButton Variant="Variant.Outlined" Size="Size.Small" EndIcon="@Icons.Material.Filled.ArrowDropDown" Disabled="@this.Disabled" OnClick="menuContext.ToggleAsync" Class="copy-path-button">Copy path</MudButton>
+        </ActivatorContent>
+        <ChildContent>
+            @foreach ((PathFormat format, string label) in Choices)
+            {
+                bool available = format != PathFormat.Wsl || this.HasDrive;
+                <MudMenuItem Disabled="@(!available)" Class="@($"copy-path-{format.ToString().ToLowerInvariant()}")" OnClick="@(() => this.ChooseAsync(format))">
+                    <div>@label</div>
+                    <MudText Typo="Typo.caption" Class="mud-text-secondary">@(available ? this.Prompts.InstallFilePath(format) : "Not available for a network path")</MudText>
+                </MudMenuItem>
+            }
+            <MudText Typo="Typo.caption" Class="copy-path-sentence px-4 pb-2 d-block mud-text-secondary">@SkillGuide.For("Path forms")</MudText>
+        </ChildContent>
+    </MudMenu>
+</MudTooltip>
+
+@code {
+    /// <summary>The three forms, in menu order.</summary>
+    private static readonly (PathFormat Format, string Label)[] Choices =
+        [(PathFormat.Windows, "Windows path"), (PathFormat.Wsl, "WSL path"), (PathFormat.ForwardSlashes, "Forward slashes")];
+
+    /// <summary>Whether the menu is disabled (the prompt dialog with a required field empty).</summary>
+    [Parameter]
+    public bool Disabled { get; set; }
+
+    /// <summary>Raised after the Human picks a form.</summary>
+    [Parameter]
+    public EventCallback<PathFormat> FormatChanged { get; set; }
+
+    /// <summary>Whether the install file's path has a drive letter, which a WSL path needs.</summary>
+    private bool HasDrive
+    {
+        get
+        {
+            string path = this.Prompts.InstallFilePath(PathFormat.Windows);
+            return path.Length >= 2 && char.IsAsciiLetter(path[0]) && path[1] == ':';
+        }
+    }
+
+    /// <summary>Sets the form, copies the path and says so.</summary>
+    private async Task ChooseAsync(PathFormat format)
+    {
+        this.PathChoice.Format = format;
+        await this.FormatChanged.InvokeAsync(format);
+        bool copied = await this.JS.InvokeAsync<bool>("huddleClipboard.copy", CancellationToken.None, new object?[] { this.Prompts.InstallFilePath(format) });
+        this.Snackbar.Add(copied ? "Path copied." : "Couldn't copy the path. Select it and press Ctrl+C.", copied ? Severity.Success : Severity.Warning, configure: null, key: "skill-path-copied");
+    }
+}

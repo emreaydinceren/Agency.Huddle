@@ -539,9 +539,9 @@ public sealed class ProposalServiceTests
             RoleHirer? roleHirer = null;
             if (types is not null)
             {
-                SkillPackStore packs = RoleFixtures.Packs(dataDir);
+                FakeSkillAvailability packs = RoleFixtures.Packs(dataDir);
                 AvatarStore avatars = new(options, NullLogger<AvatarStore>.Instance);
-                HireService hires = new(personas, types, packs, avatars, limits.Guard, new FakeSkillInstaller(), new FakeStartGate(), NullLogger<HireService>.Instance);
+                HireService hires = new(personas, types, packs, avatars, limits.Guard, new FakeSkillCopier(), new FakeStartGate(), NullLogger<HireService>.Instance);
                 roleHirer = new RoleHirer(hires, types, packs, new RoleFixtures.Context());
             }
 

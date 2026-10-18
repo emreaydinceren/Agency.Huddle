@@ -53,6 +53,7 @@ is done. Within an area, tests run top to bottom — free tests first, paid test
 | 29 | [Right sidebar: the panels by Subject, Outline, collapse and focus](right-sidebar.md) | 8 | — | 0.7h |
 | 29 | [Team chats: the Team Room, Team chats in the sidebar, the Members-tab Message, archiving and Task wakes and digests](team-chats.md) | 11 | — | 1.1h |
 | 30 | [Chat uploads: the paperclip, paste and drop, the chips, the Message's path lines, the Uploads root and Room delete](uploads.md) | 8 | 0 | 1.0h |
+| 31 | [Skill Packs: SKILLS.md, the AI tool, updates, the move and shared folders](skill-packs.md) | 7 | 1 | 2.5h |
 
 💰 marks a test that spends real money. Estimates assume you already know the app; first time
 through, roughly double them.
@@ -86,6 +87,7 @@ continue. For the totals, run `pwsh agents/scripts/Check-ManualTests.ps1 -Summar
 | [APPTOOLS-01](app-tools.md#apptools-01--the-prompt-groups-are-readable-in-the-browser-and-no-default-contains-the-literal-mcp__team__) | The prompt groups are readable, and no default names the literal `mcp__team__` tool |
 | [ADAPTERS-02](adapters.md#adapters-02--a-mock-adapters-reply-lands-whole-in-the-room-and-the-transcript-and-the-other-teammate-is-unaffected) | A mock Adapter's reply lands whole in the Room, and the other Teammate is unaffected |
 | [SKILLS-01](skills.md#skills-01--the-chief-of-staff-reads-team-building-unprompted-when-asked-for-a-team) | The Chief of Staff calls `read_skill` on `team-building` unprompted when asked for a team |
+| [SKILLPACKS-02](skill-packs.md#skillpacks-02--choosing-a-pack-copies-its-skills-then-changes-the-teammate) | Choosing a Pack copies its Skills into `Skills/`, then changes the Teammate |
 | [WORKMODE-01](work-mode.md#workmode-01--the-picker-lists-what-the-adapter-advertises-minus-plan-auto-and-bypass-permissions) | The Work Mode picker lists what the Adapter advertises, minus Plan, Auto and Bypass |
 | [QUESTIONS-07](questions.md#questions-07--a-scripted-adapters-forms-reach-the-human-as-cards-with-the-right-types) | A scripted Adapter's forms reach the Human as cards, with the right types |
 | [COMMANDS-03](adapter-commands.md#commands-03--a-command-the-profile-does-not-allow-is-an-ordinary-message) | A command the profile does not allow is an ordinary Message |
@@ -176,6 +178,7 @@ The tests that spend money, with an estimate for each. This register is not yet 
 | [SKILLS-04](skills.md#skills-04--over-the-limit-approve-creates-nothing-and-the-message-says-why) | `skills` | The Teammate limit is re-checked at Approve time, not only when proposed, and Approve creates nothing over it | 15 min |
 | [SKILLS-05](skills.md#skills-05--the-greeting-on-a--clean-install-and-no-second-greeting-on-restart) | `skills` | On a fresh install the Chief of Staff's Room holds an unprompted Greeting built from `onboarding.md`, and a restart never repeats it | 15 min |
 | [SKILLS-06](skills.md#skills-06--the-family-health-advisors-safety-behaviour) | `skills` | The Family Health Advisor's starter Body leads with emergency advice, refuses dose changes, and re-reads its notes after a restart | 30 min |
+| [SKILLPACKS-01](skill-packs.md#skillpacks-01--a-real-ai-tool-adds-a-pack-and-huddle-shows-it-without-a-reload) | `skill-packs` | A real AI tool follows `InstallSkillPack.md`, validates, writes `SKILLS.md` rows, and the Pack appears without a reload; the spend is the AI tool's | 25 min |
 | [WORKMODE-06](work-mode.md#workmode-06--accept-edits-no-permission-request-for-an-edit) | `work-mode` | Accept edits: no permission request for an edit | 15 min |
 | [WORKMODE-07](work-mode.md#workmode-07--plan-nothing-is-written-and-the-request-to-leave-plan-mode-is-refused) | `work-mode` | Plan: nothing is written, and the request to leave plan mode is refused | 15 min |
 | [WORKMODE-08](work-mode.md#workmode-08--accept-edits-a-write-into-claude-is-still-refused) | `work-mode` | Accept edits: a write into `~/.claude` is still refused | 15 min |

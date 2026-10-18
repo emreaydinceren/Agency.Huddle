@@ -25,6 +25,12 @@ internal static class LibraryHiddenFolders
             return true;
         }
 
+        if (name.StartsWith(".move-", StringComparison.Ordinal))
+        {
+            // The move's staging folder in the Skill Sources folder (Skill Packs spec §6.13); never read as data.
+            return true;
+        }
+
         if (hideUnderscoreFolders && name.StartsWith('_'))
         {
             return true;

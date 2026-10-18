@@ -13,6 +13,9 @@ Background, if you need it: [Huddle.Skills-Specifications.md](../../Huddle.Skill
 [ADR-0021](../../adr/0021-a-skill-is-know-how-an-agent-reads-on-demand.md) (a Skill is know-how an
 Agent reads on demand) and [ADR-0020](../../adr/0020-a-hook-is-a-prompt.md) (a Hook is a Prompt).
 
+Getting Skills onto this computer — adding them with an AI tool, choosing a Pack, updates, the move from the old
+`SkillPacks/` — is not tested here: Huddle no longer imports Skills itself. See [Skill Packs](skill-packs.md).
+
 ## Setup
 
 Run [`P-BUILD`](common.md#p-build), then `P-LAUNCH-PAID` — every test here spends money, so there
