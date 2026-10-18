@@ -533,7 +533,7 @@ public sealed partial class PromptCatalogTests
             harness.Service,
             harness.Store,
             harness.Personas,
-            TaskServiceGateTests.BuildGates(gateDir, null),
+            TaskGateText.BuildGates(gateDir, null),
             new FakeRequestNotifier(),
             harness.Directory,
             "caller-id",

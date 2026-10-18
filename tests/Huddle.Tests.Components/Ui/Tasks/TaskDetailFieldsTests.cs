@@ -55,7 +55,7 @@ public sealed class TaskDetailFieldsTests
     /// components in <see cref="TaskStates.All"/>'s declaration order (Spec §13.6; R7: a collection is
     /// asserted whole, never by membership). Each item's own rendered text is <c>state.ToWire()</c> -
     /// TaskDetail.razor's fixed template for every item alike, pinned separately by
-    /// <see cref="Agency.Huddle.Tests.Tasks.TaskStatesTests"/> - so pinning the Values in order
+    /// <c>TaskStatesTests</c> - so pinning the Values in order
     /// already pins what shows.
     /// </summary>
     /// <param name="mode">Both entry points.</param>

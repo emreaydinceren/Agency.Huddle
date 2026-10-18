@@ -23,7 +23,7 @@ public sealed class TaskBoardRefusalActionTests
     public async Task GateRefused_OffersOpenTask_WhichOpensTheTask()
     {
         using TempDataDir gateDir = new();
-        using TaskToolHarness harness = new(gates: TaskServiceGateTests.BuildGates(gateDir, TaskServiceGateTests.Process(TaskServiceGateTests.QaGate)));
+        using TaskToolHarness harness = new(gates: TaskGateText.BuildGates(gateDir, TaskGateText.Process(TaskGateText.QaGate)));
         TaskItem moved = CreateTask(harness, "Ship it", TaskState.ToDo);
         TaskId? opened = null;
         await using MudBunitContext ctx = NewContext(harness);
@@ -32,7 +32,7 @@ public sealed class TaskBoardRefusalActionTests
         await MoveViaMenuAsync(board, popovers, moved, TaskState.Done);
 
         Snackbar shown = Assert.Single(ctx.Services.GetRequiredService<ISnackbar>().ShownSnackbars);
-        Assert.Equal($"Could not move {moved.Id}: {TaskServiceGateTests.QaDone}", shown.Message);
+        Assert.Equal($"Could not move {moved.Id}: {TaskGateText.QaDone}", shown.Message);
         Assert.Equal(Severity.Error, shown.Severity);
         toasts.WaitForAssertion(() => Assert.Single(toasts.FindAll("button"), button => string.Equals(button.TextContent.Trim(), "Open task", StringComparison.Ordinal)));
         await toasts.InvokeAsync(() => toasts.FindAll("button").Single(button => string.Equals(button.TextContent.Trim(), "Open task", StringComparison.Ordinal)).ClickAsync());

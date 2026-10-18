@@ -21,7 +21,7 @@ using TasksPage = Agency.Huddle.App.Components.Pages.Tasks;
 /// <i>Copy link</i> menu and no Closed chip. Corrections-B6 "D15.2" and corrections-B7 "15.2.i" pin
 /// the surrounding decisions this file follows: <see cref="TaskDetail.Id"/> (not a new parameter) is
 /// the id TaskDetail loads; a failed copy leaves the id selected via a <c>.task-id</c> CSS class
-/// (<see cref="AppCssTasksTests"/> pins that rule); and closing the panel opened by the route replaces
+/// (<c>AppCssTasksTests</c> pins that rule); and closing the panel opened by the route replaces
 /// the URL rather than pushing a new history entry.
 /// <para>
 /// The Board card's own "Copy id" wiring (corrections-B7 "15.2.i" item 2) is pinned once here

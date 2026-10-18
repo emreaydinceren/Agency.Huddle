@@ -38,7 +38,7 @@ public sealed class TaskBoardDropTests
     {
         CancellationToken ct = Xunit.TestContext.Current.CancellationToken;
         using TempDataDir gateDir = new();
-        using TaskToolHarness harness = await TaskToolHarness.CreateAsync(ct, gates: TaskServiceGateTests.BuildGates(gateDir, TaskServiceGateTests.Process(TaskServiceGateTests.QaGate)));
+        using TaskToolHarness harness = await TaskToolHarness.CreateAsync(ct, gates: TaskGateText.BuildGates(gateDir, TaskGateText.Process(TaskGateText.QaGate)));
         TaskItem moved = CreateTask(harness, "Ship it", TaskState.ToDo);
 
         await using MudBunitContext ctx = new();
@@ -46,7 +46,7 @@ public sealed class TaskBoardDropTests
         await rig.MoveAsync(moved, TaskState.Done, false);
 
         Snackbar shown = Assert.Single(ctx.Services.GetRequiredService<ISnackbar>().ShownSnackbars);
-        Assert.Equal($"Could not move {moved.Id}: {TaskServiceGateTests.QaDone}", shown.Message);
+        Assert.Equal($"Could not move {moved.Id}: {TaskGateText.QaDone}", shown.Message);
         Assert.Equal(Severity.Error, shown.Severity);
         Assert.Equal(TaskState.ToDo, harness.Store.Get(moved.Id)?.Status);
     }

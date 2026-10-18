@@ -114,7 +114,7 @@ public sealed class RequestTriageToolsTests
         harness.Personas.Add(new PersonaIdentity("Rae", "QA Engineer", "rae", ["Platform"], Role: new RoleRef("web", "qa", "1.2.0")), "You are Rae.");
 
         TempDataDir gateDir = new();
-        Scene scene = new() { Harness = harness, GateDir = gateDir, Gates = TaskServiceGateTests.BuildGates(gateDir, null) };
+        Scene scene = new() { Harness = harness, GateDir = gateDir, Gates = TaskGateText.BuildGates(gateDir, null) };
         foreach (string name in new[] { "Nova", "Kai", "Dana", "Pat", "Quinn", "Rae" })
         {
             Agency.Huddle.App.Data.User? user = await harness.Directory.UpsertAgentUserAsync(name, null, ct);

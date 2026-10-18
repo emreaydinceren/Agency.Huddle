@@ -304,8 +304,8 @@ public sealed class ProcessStepTests
     {
         folders = new DiskTeamFolders(dir.Path);
         ctx.Services.AddSingleton<ITeamFolders>(folders);
-        ctx.Services.AddSingleton(ProcessProvisionerTests.Types(dir));
-        ctx.Services.AddSingleton(ProcessProvisionerTests.Build(dir, folders));
+        ctx.Services.AddSingleton(ProcessProvisionerFixtures.Types(dir));
+        ctx.Services.AddSingleton(ProcessProvisionerFixtures.Build(dir, folders));
     }
 
     private static IRenderedComponent<ContainerFragment> RenderStep(MudBunitContext ctx) =>
