@@ -36,7 +36,7 @@ subtree, and root files are shared — announce changes before making them.
 
 | | ACP effort | Chat surface |
 | --- | --- | --- |
-| Source | `src/Huddle.Acp`, `src/Huddle.Console` | `src/Huddle.App`, `src/Huddle.Contracts`, `src/Huddle.MockAdapter` |
+| Source | `src/Huddle.Acp`, `src/Huddle.Console` | `src/Huddle.App`, `src/Huddle.Contracts`, `src/Huddle.MockAdapter`, `src/Huddle.SkillPacks`, `src/Huddle.Packs` |
 | Tests | `tests/Huddle.Acp.Tests` | `tests/Huddle.Tests` |
 | Docs | `docs/engineering/acp-*.md`, `README.md` | `docs/Huddle.EngineeringGuide.md`, `docs/engineering/**` (except `acp-*.md`), `docs/adr/**`, `docs/Huddle.Adapters-*.md` |
 

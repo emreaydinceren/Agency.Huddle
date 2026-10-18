@@ -1,0 +1,17 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <RootNamespace>Agency.Huddle.Packs</RootNamespace>
+    <AssemblyName>huddle-packs</AssemblyName>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <InternalsVisibleTo Include="Huddle.Tests" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\Huddle.SkillPacks\Huddle.SkillPacks.csproj" />
+  </ItemGroup>
+
+</Project>

@@ -19,6 +19,8 @@
   <ItemGroup>
     <ProjectReference Include="..\Huddle.Contracts\Huddle.Contracts.csproj" />
     <ProjectReference Include="..\Huddle.Acp\Huddle.Acp.csproj" />
+    <ProjectReference Include="..\Huddle.SkillPacks\Huddle.SkillPacks.csproj" />
+    <ProjectReference Include="..\Huddle.Packs\Huddle.Packs.csproj" />
   </ItemGroup>
 
   <ItemGroup>
