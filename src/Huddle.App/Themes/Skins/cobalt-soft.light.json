@@ -5,6 +5,18 @@
   "mode": "light",
   "order": 110,
   "radius": "8px",
+  "faces": {
+    "ui": [ "Inter", "system-ui", "-apple-system", "Segoe UI", "sans-serif" ]
+  },
+  "typography": {
+    "letterSpacing": "normal",
+    "lineHeight": "1.5"
+  },
+  "shadows": {
+    "1": "0 1px 2px rgba(12,19,37,.06)",
+    "2-4": "0 1px 2px rgba(12,19,37,.06), 0 4px 12px rgba(12,19,37,.07)",
+    "5-25": "0 2px 4px rgba(12,19,37,.06), 0 16px 40px rgba(12,19,37,.14)"
+  },
   "palette": {
     "background": "#ffffff",
     "surface": "#ffffff",
@@ -30,6 +42,54 @@
     "warning": "#d38200",
     "error": "#b8232b",
     "info": "#06707a",
-    "overlayDark": "rgba(0,0,0,0.4)"
+    "overlayDark": "rgba(6,10,22,0.46)"
+  },
+  "tokens": {
+    "ink.strip": "palette.tableHover",
+    "ink.wash": "palette.backgroundGray",
+    "ink.rule": "palette.dividerLight",
+    "ink.edge": "palette.divider",
+    "ink.field": "palette.linesDefault",
+    "ground.page": "palette.background",
+    "ground.sidebar": "palette.drawerBackground",
+    "ground.rail": "ref(ground.sidebar)",
+    "ground.sunk": "palette.tableHover",
+    "line.region": "palette.divider",
+    "line.control": "palette.linesInputs",
+    "hover": "mix(palette.backgroundGray 80%, palette.surface)",
+    "accent.ink": "mix(palette.primary 80%, palette.textPrimary)",
+    "current.background": "ref(ground.raised)",
+    "current.background.hover": "ref(ground.raised)",
+    "current.foreground": "palette.textPrimary",
+    "current.icon": "palette.primary",
+    "current.shadow": "mud(elevation-1), inset 0 0 0 1px ref(line.control)",
+    "selected.background": "mix(palette.primary 9%, palette.surface)",
+    "selected.background.hover": "mix(palette.primary 17%, palette.surface)",
+    "focus": "palette.primary",
+    "needs": "palette.secondary",
+    "tone.primary.ink": "ref(accent.ink)",
+    "tone.success.ink": "mix(palette.success 70%, palette.textPrimary)",
+    "tone.warning.ink": "mix(palette.warning 65%, palette.textPrimary)",
+    "tone.error.ink": "palette.error",
+    "tone.info.ink": "palette.info",
+    "tone.tertiary.ink": "mix(palette.tertiary 65%, palette.textPrimary)",
+    "shadow.card": "mud(elevation-1)",
+    "shadow.panel": "mud(elevation-24)",
+    "field.background": "palette.surface",
+    "field.focus.shadow": "0 0 0 3px ref(tone.primary.soft)",
+    "tabs.strip.background": "ref(ground.sunk)",
+    "tabs.item.hover": "ref(hover)",
+    "message.line-height": "1.55"
+  },
+  "traits": {
+    "message": "row",
+    "send": "text",
+    "status": "glyph",
+    "labels": "upper",
+    "composer": "box",
+    "nav": "tint",
+    "surface": "flat",
+    "marks": "chip",
+    "reading": "plain"
   }
 }
