@@ -7,30 +7,6 @@ using Agency.Huddle.SkillPacks.Resolving;
 
 namespace Agency.Huddle.Tests.SkillPacks.Prompts;
 
-/// <summary>An <see cref="IPromptSource"/> over the catalog defaults that records the values it was given.</summary>
-internal sealed class RecordingPromptSource : IPromptSource
-{
-    /// <summary>The values of the last render.</summary>
-    public IReadOnlyDictionary<string, string> LastValues { get; private set; } = new Dictionary<string, string>(StringComparer.Ordinal);
-
-    /// <inheritdoc/>
-    public string Render(string key, IReadOnlyDictionary<string, string> values)
-    {
-        this.LastValues = values;
-        return PromptRenderer.Render(this.Raw(key), values);
-    }
-
-    /// <inheritdoc/>
-    public string Raw(string key)
-    {
-        return PromptCatalog.All.Single(definition => definition.Key == key).Default;
-    }
-}
-
-/// <summary>A fixed install file location.</summary>
-/// <param name="InstallFilePath">The path.</param>
-internal sealed record FixedInstallFile(string InstallFilePath) : IInstallFileLocation;
-
 /// <summary>Pins <see cref="SkillPromptBuilder"/> (§6.8): every placeholder filled, typed text one capped line and never
 /// expanded, the purpose, sources, problems and missing rules, and a quoted install path with spaces.</summary>
 public sealed partial class SkillPromptBuilderTests
