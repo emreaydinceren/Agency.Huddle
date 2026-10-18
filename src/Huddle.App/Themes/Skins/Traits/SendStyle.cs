@@ -8,4 +8,7 @@ internal enum SendStyle
 
     /// <summary>A small button that shows the word "Send" beside its icon.</summary>
     Text,
+
+    /// <summary>A 28px square button filled with the Send colours, icon only.</summary>
+    Square,
 }

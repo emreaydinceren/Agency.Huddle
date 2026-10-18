@@ -6467,6 +6467,201 @@ a.team-ref,
     height: auto;
 }
 
+/* ---- Traits: phase 4 (status, send, composer) ---------------------------------------------------------------
+   Variants of the status, send and composer traits that the Lumen, Fluent and Cobalt Soft Themes choose. Scoped to
+   the marker attribute the layout renders, so a Theme that keeps the default never sees them. Colours are palette
+   variables or skin tokens, so each Theme's palette decides the hue of every state. */
+
+/* -- status=glyph: a Task's state and priority are a plain row, a glyph then a small label, with no chip ----- */
+:root:has([data-hu-status="glyph"]) .mud-chip.task-status-chip,
+:root:has([data-hu-status="glyph"]) .mud-chip.task-priority-chip {
+    box-sizing: border-box;
+    height: auto;
+    padding: 0;
+    gap: 4px;
+    border-radius: 0;
+    background: transparent;
+    font-size: var(--mud-typography-caption-size);
+    font-weight: 500;
+    color: var(--hu-text-subtle);
+}
+
+:root:has([data-hu-status="glyph"]) .mud-chip.task-status-chip .mud-chip-icon,
+:root:has([data-hu-status="glyph"]) .mud-chip.task-priority-chip .mud-chip-icon {
+    display: none;
+}
+
+/* -- status=glyph: the state ring is 10px; the fill says how far along the Task is ----------------------------- */
+:root:has([data-hu-status="glyph"]) .mud-chip.task-status-chip::before {
+    content: "";
+    flex: 0 0 auto;
+    width: 10px;
+    height: 10px;
+    box-sizing: border-box;
+    border-radius: 50%;
+    border: 1.5px solid var(--hu-text-subtle);
+}
+
+:root:has([data-hu-status="glyph"]) .mud-chip.status-chip-state-backlog::before {
+    border-style: dashed;
+    border-color: var(--mud-palette-text-disabled);
+}
+
+:root:has([data-hu-status="glyph"]) .mud-chip.status-chip-state-todo::before {
+    border-color: var(--hu-text-subtle);
+}
+
+:root:has([data-hu-status="glyph"]) .mud-chip.status-chip-state-inprogress::before {
+    border-color: var(--mud-palette-info);
+    background: linear-gradient(90deg, var(--mud-palette-info) 50%, transparent 50%);
+}
+
+:root:has([data-hu-status="glyph"]) .mud-chip.status-chip-state-review::before {
+    border-color: var(--mud-palette-tertiary);
+    background: conic-gradient(var(--mud-palette-tertiary) 75%, transparent 0);
+}
+
+:root:has([data-hu-status="glyph"]) .mud-chip.status-chip-state-done::before {
+    border-color: var(--mud-palette-success);
+    background: var(--mud-palette-success);
+}
+
+:root:has([data-hu-status="glyph"]) .mud-chip.status-chip-state-cancelled::before,
+:root:has([data-hu-status="glyph"]) .mud-chip.status-chip-state-duplicate::before,
+:root:has([data-hu-status="glyph"]) .mud-chip.status-chip-state-rejected::before {
+    border-color: var(--mud-palette-error);
+    background: var(--mud-palette-error);
+}
+
+/* -- status=glyph: priority is three rising bars, filled up to the level; Urgent is one filled square ---------- */
+:root:has([data-hu-status="glyph"]) .mud-chip.task-priority-chip::before {
+    content: "";
+    flex: 0 0 auto;
+    width: 12px;
+    height: 12px;
+    background:
+        linear-gradient(var(--hu-line-control), var(--hu-line-control)) 0 100% / 3px 5px no-repeat,
+        linear-gradient(var(--hu-line-control), var(--hu-line-control)) 4.5px 100% / 3px 8px no-repeat,
+        linear-gradient(var(--hu-line-control), var(--hu-line-control)) 9px 100% / 3px 11px no-repeat;
+}
+
+:root:has([data-hu-status="glyph"]) .mud-chip.priority-low::before {
+    background:
+        linear-gradient(var(--mud-palette-primary), var(--mud-palette-primary)) 0 100% / 3px 5px no-repeat,
+        linear-gradient(var(--hu-line-control), var(--hu-line-control)) 4.5px 100% / 3px 8px no-repeat,
+        linear-gradient(var(--hu-line-control), var(--hu-line-control)) 9px 100% / 3px 11px no-repeat;
+}
+
+:root:has([data-hu-status="glyph"]) .mud-chip.priority-medium::before {
+    background:
+        linear-gradient(var(--mud-palette-primary), var(--mud-palette-primary)) 0 100% / 3px 5px no-repeat,
+        linear-gradient(var(--mud-palette-primary), var(--mud-palette-primary)) 4.5px 100% / 3px 8px no-repeat,
+        linear-gradient(var(--hu-line-control), var(--hu-line-control)) 9px 100% / 3px 11px no-repeat;
+}
+
+:root:has([data-hu-status="glyph"]) .mud-chip.priority-high::before {
+    background:
+        linear-gradient(var(--mud-palette-primary), var(--mud-palette-primary)) 0 100% / 3px 5px no-repeat,
+        linear-gradient(var(--mud-palette-primary), var(--mud-palette-primary)) 4.5px 100% / 3px 8px no-repeat,
+        linear-gradient(var(--mud-palette-primary), var(--mud-palette-primary)) 9px 100% / 3px 11px no-repeat;
+}
+
+:root:has([data-hu-status="glyph"]) .mud-chip.priority-urgent::before {
+    width: 12px;
+    height: 12px;
+    border-radius: calc(var(--mud-default-borderradius) * 0.25);
+    background: var(--mud-palette-error);
+}
+
+/* -- send=square: Send is a 28px square on the shared Send colours with no word; the hover darkens the accent --- */
+:root:has([data-hu-send="square"]) .composer-send .mud-icon-button {
+    width: 28px;
+    height: 28px;
+    padding: 0;
+    border-radius: var(--mud-default-borderradius);
+    background: var(--hu-send-bg);
+    color: var(--hu-send-fg);
+    box-shadow: none;
+}
+
+:root:has([data-hu-send="square"]) .composer-send .mud-icon-button:hover {
+    background: var(--mud-palette-primary-darken);
+}
+
+:root:has([data-hu-send="square"]) .composer-send .mud-icon-button:disabled {
+    background: var(--hu-send-bg);
+    opacity: .5;
+}
+
+:root:has([data-hu-send="square"]) .composer-send .mud-icon-button .mud-icon-root {
+    width: 16px;
+    height: 16px;
+}
+
+:root:has([data-hu-send="square"]) .composer-send-label {
+    display: none;
+}
+
+@media (max-width: 600px) {
+    :root:has([data-hu-send="square"]) .composer-send .mud-icon-button {
+        width: 44px;
+        height: 44px;
+    }
+}
+
+/* -- composer=underlined: the box keeps its frame and gains a permanent accent edge along the bottom, over a
+      tool row (attach left, Send right) that a hairline separates from the field ----------------------------- */
+:root:has([data-hu-composer="underlined"]) .composer-box {
+    background: var(--hu-ground-raised);
+    border: 1px solid var(--hu-line-control);
+    border-bottom: 2px solid var(--mud-palette-primary);
+    border-radius: var(--mud-default-borderradius);
+    box-shadow: var(--hu-shadow-card-hover);
+    padding-bottom: 40px;
+}
+
+:root:has([data-hu-composer="underlined"]) .composer-box:focus-within {
+    border-color: var(--hu-field-focus-line);
+    border-bottom-color: var(--mud-palette-primary);
+    box-shadow: var(--hu-field-focus-shadow);
+}
+
+:root:has([data-hu-composer="underlined"]) .composer-box::after {
+    content: "";
+    position: absolute;
+    left: 0;
+    right: 0;
+    bottom: 40px;
+    height: 1px;
+    background: var(--hu-line-region);
+    pointer-events: none;
+}
+
+:root:has([data-hu-composer="underlined"]) .composer-input,
+:root:has([data-hu-composer="underlined"]) .composer-box-attach .composer-input {
+    border: 0;
+    box-shadow: none;
+    background: transparent;
+    padding: 12px 16px 12px;
+    line-height: 1.5;
+}
+
+:root:has([data-hu-composer="underlined"]) .composer-input:focus-visible {
+    border: 0;
+    box-shadow: none;
+}
+
+:root:has([data-hu-composer="underlined"]) .composer-attach {
+    left: 8px;
+    right: auto;
+    bottom: 4px;
+}
+
+:root:has([data-hu-composer="underlined"]) .composer-send {
+    right: 8px;
+    bottom: 6px;
+}
+
 /* ---- Traits: chrome (labels, nav) --------------------------------------------------------------------------
    Variants of the labels and nav traits (ADR-0057). Each rule is scoped to the marker attribute MainLayout renders for
    the trait, so it does nothing for a skin that keeps the default value. Colours come from skin tokens or palette

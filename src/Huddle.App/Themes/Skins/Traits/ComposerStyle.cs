@@ -8,4 +8,7 @@ internal enum ComposerStyle
 
     /// <summary>A paper card: the box is the surface, the input is borderless and a tool row sits along the bottom.</summary>
     Card,
+
+    /// <summary>The box with a permanent accent edge along its bottom and a tool row below the field behind a hairline.</summary>
+    Underlined,
 }

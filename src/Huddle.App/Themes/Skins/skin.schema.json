@@ -600,13 +600,15 @@
         "send": {
           "enum": [
             "icon",
-            "text"
+            "text",
+            "square"
           ]
         },
         "status": {
           "enum": [
             "chip",
-            "pill"
+            "pill",
+            "glyph"
           ]
         },
         "labels": {
@@ -618,7 +620,8 @@
         "composer": {
           "enum": [
             "box",
-            "card"
+            "card",
+            "underlined"
           ]
         },
         "nav": {

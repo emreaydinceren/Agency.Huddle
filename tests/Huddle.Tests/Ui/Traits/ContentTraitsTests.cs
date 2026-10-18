@@ -88,8 +88,8 @@ public sealed partial class ContentTraitsTests
     public void Traits_EnumsGainThePlannedVariants()
     {
         Assert.Equal(["Bubble", "Row"], Enum.GetNames<MessageLayout>());
-        Assert.Equal(["Icon", "Text"], Enum.GetNames<SendStyle>());
-        Assert.Equal(["Box", "Card"], Enum.GetNames<ComposerStyle>());
+        Assert.Equal(["Icon", "Text", "Square"], Enum.GetNames<SendStyle>());
+        Assert.Equal(["Box", "Card", "Underlined"], Enum.GetNames<ComposerStyle>());
         Assert.Equal(["Plain", "Chip"], Enum.GetNames<MarkStyle>());
     }
 
