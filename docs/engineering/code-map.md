@@ -297,10 +297,12 @@ order decides per Token, independently.
 | `TeamTypes/TeamTypeManifest.cs` | The records a `team-type.json` reads into (roles that name a hiring-pool job, coverage, processes, workspace), and `ModelTier` (`Strongest`, `Balanced`, `Fast`). |
 | `TeamTypes/TeamTypeValidator.cs` | Checks a manifest and reports each problem with a code (`TeamTypeProblem`). |
 | `TeamTypes/CandidateTemplate.cs` | One Candidate: a Teammate template read from a type's `candidates/*.md`. |
-| `TeamTypes/SkillPackStore.cs` | Loads Skill packs from the embedded `SkillPacks/*.json` and `{DataDir}/SkillPacks/`. |
 | `TeamTypes/UserCandidateWriter.cs` | Writes a custom role the Human chose to keep ("Save for next time") into `{DataDir}/TeamTypes/`. |
-| `TeamTypes/Builtin/` | The embedded built-in types: `development/` and `household/` (a manifest, `candidates/` and `processes/` each), and `SkillPacks/`. Picked up by the csproj glob, so a new built-in file needs no csproj change. |
-| `Teams/HireService.cs` | Writes one hire as a Teammate of a Team, enforces the hire limits, installs its Skills and starts it; `StartTeamAsync` starts the hired members in order. |
+| `TeamTypes/Builtin/` | The embedded built-in types: `development/` and `household/` (a manifest, `candidates/` and `processes/` each). No Skill packs ship any more: they come from `SKILLS.md`. Picked up by the csproj glob, so a new built-in file needs no csproj change. |
+| `Teams/HireService.cs` | Writes one hire as a Teammate of a Team, enforces the hire limits, copies its Skills through `ISkillCopier` (`EnsureSkillsAsync`) and starts it; `StartTeamAsync` starts the hired members in order. |
+| `Teams/ISkillAvailability.cs` | What the hire path asks of the registry: a Pack's contents, a Skill's state, and the setup item for one that is not ready. `SkillRegistry` implements it; tests use `FakeSkillAvailability`. |
+| `Teams/SkillSetupCheck.cs` | Turns a card's Packs and Skills into the **Needs setup** items (`For`); a Pack's own problem folds into one item. Pure. |
+| `Teams/PackMembership.cs` | Adds or removes one Pack on a Teammate's `skills`, `_packs` and `consult_when`, keeping Skills another Pack or the Role still gives (`PackContents`). Pure. |
 | `Teams/RoleHirer.cs` | Turns a type's roles into hire cards for `HireService`. `IHireContext` says which adapters answered and which connectors are connected. |
 | `Teams/HireContext.cs` | The production `IHireContext`: every Adapter profile counts as answered, and models come from `Team:Teams:Tiers`. |
 | `Teams/CardResolver.cs` | Resolves one role's defaults into a hire card: `Ready` when all resolve, `NeedsSetup` otherwise. |
@@ -317,13 +319,8 @@ order decides per Token, independently.
 | `Teams/RetroFiles.cs` | Reads and writes a Team's `Retro register.md` and its reports in `_retros/`. |
 | `Teams/RetroProposalService.cs` | Shows a retro's proposed changes to the Human and applies the ones the Human accepts. |
 | `Teams/RetroVerifier.cs` | The register rows the next retro must check against later evidence (RT-7), and which are due. |
-| `Teams/ImportingSkillInstaller.cs` | Before a Team's members start, installs any Skill the Team needs that the `SkillStore` lacks (HR-9). |
+| `Skills/SkillProvenance.cs` | The `.source.json` record written beside a copied Skill (Source, origin, `copiedFrom`, commit, folder hash, time), read back for provenance and local-edit detection. |
 | `Teams/TeamOnboarding.cs`, `Teams/ChatOnboardingPoster.cs` | Posts the manager's onboarding prompt into the manager's direct Room as the Human, once: the Team card then records `onboarded: true`. `IOnboardingPoster` (in `TeamOnboarding.cs`) also has `PostToTeamAsync`, the Team-aware post that cadence uses; onboarding keeps `PostAsync`, which stays root-only (ADR-0052). |
-| `Skills/SkillImporter.cs` | Previews and installs a Skill from the catalog or a GitHub tree URL (`PreviewFromCatalogAsync`, `PreviewFromUrlAsync`, `Install`). Nothing is written before `Install`. |
-| `Skills/SkillDownloader.cs` | Downloads one Skill folder's files, pinned to a commit. |
-| `Skills/SkillsCatalogIndex.cs` | The catalog of offered Skills (`SkillsCatalog.json`), found by id, name or repo path. |
-| `Skills/SkillProvenance.cs` | The `.source.json` record written at import (repo, path, commit, folder hash, publisher, licence, time), read back for provenance and local-edit detection. |
-| `Skills/SkillReviewScanner.cs` | Flags what an imported Skill does (network, shell, paths outside the Work Dir, no licence) for the review step. |
 | `Tasks/RequestFields.cs` | The Request keys of an ordinary Task file, and the `RequestKind` (bug, feature, feedback, question) and `TriageState` enums. ADR-0040. |
 | `Tasks/RequestLifecycle.cs` | The Request state machine: `Apply` decides each transition from the current state and an event, and is pure. |
 | `Acp/Tools/FileRequestTool.cs` (`file_request`) | Files a Request into another Team's backlog. Offered only to a Persona whose Skill lists the tool. |
@@ -341,10 +338,58 @@ order decides per Token, independently.
 | `Components/Teams/ProcessStep.razor` | The Process step on a manager's Teammate card: Use this process, or Start blank. |
 | `Components/Teams/ProcessTab.razor` | The Process tab of a Team page: `Process.md`, with Edit. |
 | `Components/Teams/DuplicateTeamDialog.razor` | The Duplicate dialog: the new Team's title and an optional workspace folder. |
-| `Components/Settings/SkillImportDialog.razor` | The Import skill dialog: catalog search or a URL, Review, then Install. |
 | `Components/Shared/SkillProvenanceLine.razor` | The provenance line shown wherever a Skill appears, with a "modified locally" chip. |
 | `Components/Shared/RetroProposalCard.razor` | A Room's pending retro changes, with Accept and Reject. |
 | `Teams/TeamMemoryIndex.cs` | Builds one Persona's Team Memory snapshot: the Team-wide and per-Project Memory of every Team the Persona carries a label for, capped across all of them (Spec §6.4, §8.4). |
+
+`src/Huddle.App/SkillSources` — the Skill registry, the copier and the files an AI tool reads
+([the Skill Packs design](../Huddle.SkillPacks-Specifications.md) §6.5 to §6.13). Huddle never downloads:
+an AI tool writes `SKILLS.md` and its files, and this folder reads, watches and copies.
+
+| Path | Responsibility |
+| --- | --- |
+| `SkillRegistry.cs` | The singleton every Skills screen and the hire path read: one immutable `RegistrySnapshot` (resolved rows, states, findings, holder counts), replaced whole on each rebuild and announced by `Changed`. Implements `ISkillAvailability`. `RebuildAsync(RebuildScope)` re-reads; `MarkSeenAsync` clears a badge. |
+| `RegistrySnapshot.cs` | The snapshot, `RegistryChangedEventArgs`, `RebuildScope` and the readiness records. |
+| `RegistryWatcher.cs`, `WatchRoots.cs` | The hosted watcher: runs the move first, then watches the Skill Sources folder and each pointer root (at most `MaxWatchers`, the rest polled) and asks for a rebuild, coalesced. `WatchRoots` is the pure rule for what to watch. **It must not throw at process start**, even with an empty `DataDir`. |
+| `CachingFileReader.cs` | The `IFileReader` the registry reads through: file text cached by write time and length, folder hashes by newest write time and file count. |
+| `SkillCopier.cs`, `SkillCopyFolders.cs` | `ISkillCopier`: copies one Skill from its pointer into `Skills/<name>/` through `.staging`, swaps the old copy into `.trash`, writes `.source.json`, and re-checks the folder (an App Tool in `tools:` fails it). |
+| `PackUpdater.cs` | Applies an accepted update: copies the changed Skills, then rewrites the holders' membership. |
+| `InstallFileWriter.cs`, `RoleLister.cs` | Writes `InstallSkillPack.md` and `install-context.json` at start-up and on change (once a second at most); `RoleLister` is the union of Roles its appendix lists. |
+| `SkillPromptBuilder.cs`, `PathFormats.cs` | The six prompts the Human copies into an AI tool, built from the `skillPrompt.*` Prompts; the three path forms (`PathFormatChoice`) the Copy path menu offers. |
+| `SkillSourcesSettings.cs` | `skill-sources.json`: the folder override and the `seen` keys; resolves the Skill Sources folder. |
+| `SkillsMdWriter.cs` | The only code that edits `SKILLS.md`: removes a row's lines, through a temporary file, retrying once. |
+| `SkillSourcesRemover.cs` | Remove and hide: a Pack (with what to do for its holders), a catalog, a whole Source; refuses anything outside the Skill Sources folder. |
+| `HiddenStore.cs`, `SourceLog.cs` | `hidden.json`, and the append-only `log.jsonl` of each Source. |
+| `Move/SkillSourcesMove.cs`, `Move/LegacyReaders.cs`, `Move/MoveTypes.cs` | The one-time move from the old `SkillPacks/` and the embedded `Skills/SkillsCatalog.json` into `SKILLS.md`, six catalogs and the Sources `local/skills` and `local/my-packs`. Runs only while `SKILLS.md` does not exist; writes `skill-sources-move.json`. Changes no Teammate. |
+
+`src/Huddle.App/Skills/Ui` — pure text and view models for the Skills screens, so the components stay
+thin and the wording is tested without rendering:
+
+| Path | Responsibility |
+| --- | --- |
+| `SkillGuide.cs` | Every intro, button sentence, hover text and in-app help page of Settings › Skills (`For`, `HelpFor`). The User Guide subsections are compared with it word for word. |
+| `SkillStateText.cs`, `SkillProblemText.cs`, `SkillProblemCount.cs` | A state's chip text, colour and sentence; a finding's sentence; the count behind a tab badge. |
+| `SkillRow.cs`, `PackView.cs`, `SkillOriginText.cs`, `SkillNotes.cs`, `ReadAgoText.cs` | One Skills tab row; one Pack card; where a Skill came from; the Source's notes link; "read 2 minutes ago". |
+| `PackUpdatePlanner.cs` | Plans an update card from the snapshot and the holders: which Skill files changed and which membership changes each holder accepts. |
+| `RemovalText.cs` | The confirmation and result sentences for Remove. |
+| `PromptClipboard.cs` | Copies a prompt and says so in a snackbar, with the fallback when the clipboard is refused. |
+
+`src/Huddle.App/Components/Settings/Skills` — Settings › Skills, `G4` to `G8` in
+[wireframes](wireframes.md):
+
+| Path | Responsibility |
+| --- | --- |
+| `SkillsTab.razor`, `PacksTab.razor`, `SourcesTab.razor` | The three tabs, each with its intro and **Learn more**. The Skills grid virtualises only above 500 rows. |
+| `PackBar.razor`, `PackCard.razor`, `PackEmptyState.razor`, `PackDetailsDialog.razor` | The Packs tab's filter bar, one card, the empty state and the details dialog. |
+| `SourceRow.razor`, `SkillSourcesFolderDialog.razor` | One Source on the Sources tab; changing the Skill Sources folder. |
+| `AddWithAiDialog.razor`, `CopyPathMenu.razor` | **Add with your AI tool**: the prompt, where `InstallSkillPack.md` is, and the path forms. |
+| `UpdateDialog.razor`, `RemovePackDialog.razor` | The update card (`G7`) and Remove Pack, with the holders' choice. |
+| `SkillStateChips.razor` | The state chips with their hover text. |
+| `SkillsHelpDialog.razor`, `SkillsLearnMore.razor` | The in-app help (`G8`) and the **Learn more** link that opens it. |
+| `SkillDialogs.cs`, `SkillFlows.cs` | Opening the dialogs, and the multi-step flows (Remove a Pack, Hide with Undo). |
+
+`Components/Layout/SkillArrivalWatcher.razor` shows the "ready" snackbar when a new Pack or Skill
+appears, and `Components/Layout/MoveReportAnnouncer.razor` reports the move once.
 
 The Library — the explorer, viewer and editor, Spec §6. Paths are relative to `src/Huddle.App`:
 
@@ -492,3 +537,27 @@ make it *clever* means the assertion belongs in a Huddle test instead.
 | `MockBehaviour.cs` | The default prompt handler: echoes the prompt back as **several** chunks, then `end_turn`. Chunked because it proves the thing most likely to be wrong — that text arrives incrementally, becomes a `MessageDelta` on the pipe, and renders live in a Room. |
 | `MockElicitation.cs` | The five forms `mock-acp` can put to the Human, so the Elicitation card can be exercised without a real model. A prompt containing `[elicit:ask]` (two `AskUserQuestion` questions), `[elicit:one]` (one), `[elicit:form]` (an MCP-style typed form: date, integer, number, boolean, enum, multi select, text), `[elicit:refusal]` (the retry-after-refusal dialog) or `[elicit:unsupported]` (a nested-object schema the app declines) makes `MockBehaviour` send one `elicitation/create` before it echoes, then reply `Got action=<action> content=<json or none>`. It needs `elicitation.form` advertised, which the app does by default |
 | *(linked)* `Fakes/FakeAcpAgent.cs`, `PromptContext.cs`, `FakeRpcError.cs` | **Linked, not copied**, from `tests/Huddle.Acp.Tests/Fakes/` with `<Compile Include=… Link=…>`. No file leaves the ACP effort's subtree and no `internal` widens — a linked file compiles into this assembly as its own. One implementation: their fake is that effort's statement of what an ACP agent does, and the mock inherits it. **Editing those files changes two assemblies.** |
+
+`src/Huddle.SkillPacks` — the Skill Packs library, assembly `Agency.Huddle.SkillPacks`. It references
+Markdig only and knows nothing of the app: the same code reads `SKILLS.md` for Huddle and for
+`huddle-packs`, so the two can never disagree about a file.
+
+| Path | Responsibility |
+| --- | --- |
+| `IFileReader.cs`, `PhysicalFileReader.cs`, `IFolderHasher.cs` | The only disk seam. The library reads through it and never writes. |
+| `InstallContext.cs` | `install-context.json`: `Parse` and `ToJson`. |
+| `Reading/RegistryReader.cs`, `RegistryRow.cs`, `PathEntries.cs` | Reads the Packs and Catalogs tables of `SKILLS.md` into rows; a per-computer path (`DESK-01: …<br>LAPTOP: …`) resolves for this computer's name, ignoring case. |
+| `Files/PackFile.cs`, `CatalogFile.cs`, `SourceFile.cs`, `SchemaFiles.cs`, `JsonFields.cs` | The three file formats, each with `Parse`, and their embedded JSON Schemas. |
+| `Resolving/RegistryResolver.cs`, `ResolvedRegistry.cs`, `SourceId.cs`, `InstalledProvenance.cs` | Rows to Packs, catalogs, Skills and Sources, without states. |
+| `Checking/Checks.cs`, `CheckCatalog.cs`, `CheckContext.cs`, `CheckResult.cs`, `Finding.cs`, `SecretScanner.cs` | `Checks.Run`: every check once, each finding with its code (`R`, `P`, `D`, `S`, `O`, `X`) and the fix hint from `CheckCatalog`, which `InstallSkillPack.md` prints as its table. |
+| `Folders/SkillFolderValidator.cs`, `SkillFolderRules.cs`, `SkillFrontmatter.cs`, `SkillFolderHash.cs`, `SkillReviewScanner.cs` | One Skill folder: its `SKILL.md`, its limits, its hash (and which files changed), and what it does that a Human should review. Moved here from `src/Huddle.App/Skills/`. |
+
+`src/Huddle.Packs` — `huddle-packs`, the command an AI tool runs to check its work. Console exe;
+references `Huddle.SkillPacks` only.
+
+| Path | Responsibility |
+| --- | --- |
+| `Program.cs`, `ArgumentParser.cs`, `HelpText.cs` | `Program.Run` and hand-rolled parsing: `validate`, `roles`, `installed`, `skills`, `schema`; exit 0 with no errors, 1 with errors, 2 when it could not run. |
+| `DataLocator.cs` | Finds Huddle's data folder (`--data-dir`, else `HUDDLE_DATA_DIR`, else `App_Data`) and its `install-context.json`. |
+| `FindingWriter.cs` | One line per finding, or `--json`. |
+| `Commands/ValidateCommand.cs`, `Commands/ListCommands.cs` | `validate` calls `Checks.Run` exactly as the app does; the list commands read the context file. |
