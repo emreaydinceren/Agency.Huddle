@@ -1,4 +1,4 @@
-﻿<Project Sdk="Microsoft.NET.Sdk">
+<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
     <RootNamespace>Agency.Huddle.Tests</RootNamespace>
@@ -25,6 +25,10 @@
     <ProjectReference Include="..\..\src\Huddle.Seeder\Huddle.Seeder.csproj" />
     <ProjectReference Include="..\..\src\Huddle.SkillPacks\Huddle.SkillPacks.csproj" />
     <ProjectReference Include="..\..\src\Huddle.Packs\Huddle.Packs.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <None Include="xunit.runner.json" CopyToOutputDirectory="PreserveNewest" />
   </ItemGroup>
 
 </Project>

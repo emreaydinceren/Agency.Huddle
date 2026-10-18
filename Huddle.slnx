@@ -21,6 +21,6 @@
     <Project Path="tests/Huddle.Tests.Components/Huddle.Tests.Components.csproj" />
     <Project Path="tests/Huddle.Tests.SkillPacks/Huddle.Tests.SkillPacks.csproj" />
     <Project Path="tests/Huddle.Tests.Hosted/Huddle.Tests.Hosted.csproj" />
-    <Project Path="tests/Huddle.Tests/Huddle.Tests.csproj" />
+    <Project Path="tests/Huddle.Tests.Domain/Huddle.Tests.Domain.csproj" />
   </Folder>
 </Solution>
