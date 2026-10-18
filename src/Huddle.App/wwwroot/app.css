@@ -7600,3 +7600,442 @@ a.team-ref,
     font-style: italic;
     color: var(--mud-palette-text-secondary);
 }
+
+/* ==== Traits: phase 4 chrome (surface, nav) ==================================================================
+   Variants added for the Lumen and Fluent Themes. Like the sections above, each rule is scoped to the marker attribute
+   MainLayout renders for the trait and reads skin tokens, so it does nothing for a skin that keeps the default value.
+   The header avoids the dashed section form on purpose: the chrome-section order test closes at the reading section. */
+
+/* -- surface=hairline: top bar, breadcrumbs and the search box (7.4) ------------------------------------------------ */
+:root:has([data-hu-surface="hairline"]) .page-breadcrumbs-list {
+    font-size: var(--mud-typography-body2-size);
+    color: var(--hu-text-subtle);
+}
+
+:root:has([data-hu-surface="hairline"]) .page-breadcrumbs-list .mud-breadcrumb-item:last-child {
+    color: var(--mud-palette-text-primary);
+    font-weight: 600;
+}
+
+:root:has([data-hu-surface="hairline"]) .search-bar .mud-input.mud-input-outlined {
+    height: 30px;
+    background: var(--hu-ground-sunk);
+    border-radius: var(--mud-default-borderradius);
+}
+
+:root:has([data-hu-surface="hairline"]) .search-bar .mud-input.mud-input-outlined:focus-within {
+    background: var(--hu-ground-raised);
+}
+
+:root:has([data-hu-surface="hairline"]) .search-shortcut-hint {
+    font-family: var(--font-mono);
+    font-size: var(--mud-typography-overline-size);
+    font-weight: 500;
+    padding: 0 4px;
+    border: 1px solid var(--hu-line-region);
+    border-bottom-width: 2px;
+    border-radius: calc(var(--mud-default-borderradius) - 2px);
+    background: var(--hu-ground-page);
+    color: var(--hu-text-subtle);
+}
+
+/* -- surface=hairline: top bar, the "N Tasks need you" pill (7.4) ------------------------------------------------------ */
+:root:has([data-hu-surface="hairline"]) .tasks-need-you-pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    height: 28px;
+    padding: 0 12px;
+    margin-inline-end: 4px;
+    border: 1px solid var(--hu-tone-warning-line);
+    border-radius: 999px;
+    background: var(--hu-tone-warning-soft);
+    color: var(--hu-tone-warning-ink);
+    font-size: var(--mud-typography-caption-size);
+    font-weight: 500;
+    text-decoration: none;
+    white-space: nowrap;
+    transition: border-color 0.12s;
+}
+
+:root:has([data-hu-surface="hairline"]) .tasks-need-you-pill:hover {
+    border-color: var(--hu-needs);
+}
+
+:root:has([data-hu-surface="hairline"]) .tasks-need-you-dot {
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: var(--hu-needs);
+}
+
+/* -- surface=hairline: page and room header (7.6, 8.1) ----------------------------------------------------------------- */
+:root:has([data-hu-surface="hairline"]) .page-header-h1.mud-typography {
+    font-size: var(--mud-typography-h6-size);
+    line-height: var(--mud-typography-h6-lineheight);
+    letter-spacing: -0.01em;
+}
+
+:root:has([data-hu-surface="hairline"]) .room-kind-chip {
+    display: inline-flex;
+    align-items: center;
+    height: 18px;
+    padding: 0 8px;
+    margin-inline-start: 8px;
+    border: 1px solid var(--hu-line-control);
+    border-radius: 999px;
+    color: var(--hu-text-subtle);
+    font-size: var(--mud-typography-overline-size);
+    font-weight: 500;
+    letter-spacing: 0.01em;
+}
+
+:root:has([data-hu-surface="hairline"]) .room-members-label {
+    color: var(--hu-text-subtle);
+}
+
+/* -- surface=hairline: Agent, proposal and question cards sit flat on the region line (8.3, 15.4) ------------------------ */
+:root:has([data-hu-surface="hairline"]) .mud-paper.agent-card,
+:root:has([data-hu-surface="hairline"]) .process-step,
+:root:has([data-hu-surface="hairline"]) .team-type-card,
+:root:has([data-hu-surface="hairline"]) .roster-card {
+    background: var(--hu-ground-raised);
+    border: 1px solid var(--hu-line-region);
+    border-radius: calc(var(--mud-default-borderradius) + 2px);
+    box-shadow: none;
+}
+
+:root:has([data-hu-surface="hairline"]) .team-type-card:hover,
+:root:has([data-hu-surface="hairline"]) .roster-card:hover {
+    border-color: var(--hu-line-control);
+}
+
+/* -- surface=hairline: notices keep the 3px bar as an inset shadow so it follows the corner (15.4) ------------------------ */
+:root:has([data-hu-surface="hairline"]) .budget-prompt,
+:root:has([data-hu-surface="hairline"]) .member-health-alert {
+    background: var(--hu-tone-warning-tint);
+    border: 1px solid var(--hu-tone-warning-line);
+    border-radius: calc(var(--mud-default-borderradius) + 2px);
+    box-shadow: inset 3px 0 0 var(--hu-needs);
+}
+
+/* -- surface=hairline: right sidebar, sections divided by a hairline (9) ------------------------------------------------- */
+:root:has([data-hu-surface="hairline"]) .right-sidebar .mud-drawer-content {
+    padding: 12px 16px 24px;
+}
+
+:root:has([data-hu-surface="hairline"]) .sidebar-panel + .sidebar-panel {
+    margin-top: 12px;
+    padding-top: 12px;
+    border-top: 1px solid var(--hu-line-region);
+}
+
+:root:has([data-hu-surface="hairline"]) .sidebar-panel-header > .mud-icon-root:first-child {
+    display: none;
+}
+
+:root:has([data-hu-surface="hairline"]) .sidebar-panel-count {
+    color: var(--hu-text-subtle);
+    font-weight: 500;
+}
+
+:root:has([data-hu-surface="hairline"]) .sidebar-row:hover {
+    background: var(--hu-hover);
+}
+
+:root:has([data-hu-surface="hairline"]) .room-task-id {
+    font-family: var(--font-mono);
+    color: var(--hu-text-subtle);
+}
+
+/* -- surface=hairline: Board, the lane and its card (12.2) --------------------------------------------------------------- */
+:root:has([data-hu-surface="hairline"]) .task-board-column {
+    background: var(--hu-ground-sunk);
+    border: 1px solid var(--hu-line-region);
+    border-radius: calc(var(--mud-default-borderradius) + 2px);
+}
+
+:root:has([data-hu-surface="hairline"]) .task-board-column-label {
+    font-size: var(--mud-typography-body2-size);
+    font-weight: 600;
+    color: var(--mud-palette-text-primary);
+}
+
+:root:has([data-hu-surface="hairline"]) .task-board-column-count {
+    color: var(--hu-text-subtle);
+    font-weight: 400;
+    font-variant-numeric: tabular-nums;
+}
+
+:root:has([data-hu-surface="hairline"]) .task-card {
+    background: var(--hu-ground-raised);
+    border: 1px solid var(--hu-line-region);
+    border-radius: var(--mud-default-borderradius);
+    box-shadow: none;
+    padding: 8px 12px;
+    transition: border-color 0.12s, box-shadow 0.12s;
+}
+
+:root:has([data-hu-surface="hairline"]) .task-card:hover {
+    border-color: var(--hu-line-control);
+    box-shadow: var(--hu-shadow-card-hover);
+}
+
+:root:has([data-hu-surface="hairline"]) .task-card-id {
+    font-family: var(--font-mono);
+    font-size: var(--mud-typography-overline-size);
+    color: var(--hu-text-subtle);
+}
+
+:root:has([data-hu-surface="hairline"]) .task-card-title {
+    font-size: var(--mud-typography-body2-size);
+    font-weight: 500;
+    line-height: 1.4;
+}
+
+:root:has([data-hu-surface="hairline"]) .task-card-assignee-row {
+    border-top: 0;
+    padding-top: 0;
+    color: var(--hu-text-subtle);
+    font-size: var(--mud-typography-caption-size);
+}
+
+:root:has([data-hu-surface="hairline"]) .task-board-lane-heading.group-heading {
+    border-bottom-color: var(--hu-line-region);
+    font-size: var(--mud-typography-body2-size);
+    color: var(--hu-text-subtle);
+}
+
+:root:has([data-hu-surface="hairline"]) .task-card-dragging {
+    transform: rotate(2.2deg);
+    box-shadow: var(--hu-shadow-panel);
+    border-color: var(--mud-palette-primary);
+}
+
+/* -- surface=hairline: buttons are flat; only the filled primary carries the accent (15.1) ------------------------------- */
+:root:has([data-hu-surface="hairline"]) .mud-button-root.mud-button-filled,
+:root:has([data-hu-surface="hairline"]) .mud-button-root.mud-button-filled:hover,
+:root:has([data-hu-surface="hairline"]) .mud-button-root.mud-button-filled:active,
+:root:has([data-hu-surface="hairline"]) .mud-button-root.mud-button-filled:focus-visible {
+    box-shadow: none;
+}
+
+:root:has([data-hu-surface="hairline"]) .mud-button-outlined.mud-button-outlined-default,
+:root:has([data-hu-surface="hairline"]) .mud-button-outlined.mud-button-outlined-primary {
+    background: var(--hu-ground-raised);
+    border-color: var(--hu-line-control);
+    color: var(--mud-palette-text-primary);
+}
+
+:root:has([data-hu-surface="hairline"]) .mud-button-outlined:hover {
+    background: var(--hu-hover);
+}
+
+:root:has([data-hu-surface="hairline"]) .mud-button-text.mud-button-text-default {
+    color: var(--hu-text-subtle);
+}
+
+:root:has([data-hu-surface="hairline"]) .mud-button-text:hover {
+    background: var(--hu-hover);
+    color: var(--mud-palette-text-primary);
+}
+
+/* -- surface=hairline: inputs, the control line and the focus tokens (15.2) --------------------------------------------- */
+:root:has([data-hu-surface="hairline"]) .mud-input.mud-input-outlined {
+    background: var(--hu-ground-raised);
+    border-radius: var(--mud-default-borderradius);
+}
+
+:root:has([data-hu-surface="hairline"]) .mud-input.mud-input-outlined .mud-input-outlined-border {
+    border-color: var(--hu-line-control);
+}
+
+:root:has([data-hu-surface="hairline"]) .mud-input.mud-input-outlined:focus-within {
+    box-shadow: var(--hu-field-focus-shadow);
+}
+
+:root:has([data-hu-surface="hairline"]) .mud-input.mud-input-outlined:focus-within .mud-input-outlined-border {
+    border-color: var(--hu-field-focus-line);
+    border-width: 1px;
+}
+
+:root:has([data-hu-surface="hairline"]) .mud-input-control > .mud-input-control-input-container > label.mud-input-label.mud-input-label-inputcontrol.mud-input-label-outlined:not(.mud-disabled) {
+    color: var(--hu-text-subtle);
+}
+
+:root:has([data-hu-surface="hairline"]) .mud-input-helper-text {
+    color: var(--hu-text-subtle);
+}
+
+/* -- surface=hairline: dialogs and floating layers; the panel shadow's ring replaces the border (15.5) --------------------- */
+:root:has([data-hu-surface="hairline"]) .mud-dialog {
+    background: var(--hu-ground-raised);
+    border: 0;
+    border-radius: calc(var(--mud-default-borderradius) + 2px);
+    box-shadow: var(--hu-shadow-panel);
+}
+
+:root:has([data-hu-surface="hairline"]) .mud-dialog .mud-dialog-title {
+    padding-bottom: 12px;
+    border-bottom: 1px solid var(--hu-line-region);
+}
+
+:root:has([data-hu-surface="hairline"]) .mud-dialog .mud-dialog-actions {
+    border-top: 1px solid var(--hu-line-region);
+    background: var(--hu-ground-sunk);
+    border-radius: 0 0 calc(var(--mud-default-borderradius) + 2px) calc(var(--mud-default-borderradius) + 2px);
+}
+
+:root:has([data-hu-surface="hairline"]) .mud-popover.mud-paper,
+:root:has([data-hu-surface="hairline"]) .floating-panel,
+:root:has([data-hu-surface="hairline"]) .invite-panel,
+:root:has([data-hu-surface="hairline"]) .new-chat-panel,
+:root:has([data-hu-surface="hairline"]) .profile-popover {
+    background: var(--hu-ground-raised);
+    border: 0;
+    border-radius: calc(var(--mud-default-borderradius) + 2px);
+    box-shadow: var(--hu-shadow-panel);
+}
+
+:root:has([data-hu-surface="hairline"]) .mud-list-item:hover,
+:root:has([data-hu-surface="hairline"]) .mud-menu-item:hover {
+    background: var(--hu-hover);
+}
+
+:root:has([data-hu-surface="hairline"]) .mud-tooltip.mud-tooltip-default {
+    background: var(--mud-palette-text-primary);
+    color: var(--hu-ground-page);
+    border-radius: var(--mud-default-borderradius);
+    padding: 4px 8px;
+    font-size: var(--mud-typography-caption-size);
+    font-weight: 500;
+}
+
+/* -- surface=hairline: segmented controls, a sunk track on a hairline with a raised tile (15.6) ---------------------------- */
+:root:has([data-hu-surface="hairline"]) .huddle-segmented-control {
+    background-color: var(--hu-ground-sunk);
+    border: 1px solid var(--hu-line-region);
+    border-radius: var(--mud-default-borderradius);
+}
+
+:root:has([data-hu-surface="hairline"]) .huddle-segmented-indicator {
+    background-color: var(--hu-ground-raised);
+    border-color: var(--hu-line-region);
+    border-radius: calc(var(--mud-default-borderradius) - 2px);
+    box-shadow: var(--hu-shadow-card);
+}
+
+:root:has([data-hu-surface="hairline"]) .huddle-segmented-control .huddle-segmented-group .mud-toggle-item {
+    color: var(--hu-text-subtle);
+    border-radius: calc(var(--mud-default-borderradius) - 2px);
+}
+
+:root:has([data-hu-surface="hairline"]) .huddle-segmented-control .huddle-segmented-group .mud-toggle-item.huddle-segmented-active-item {
+    color: var(--mud-palette-text-primary);
+}
+
+/* -- surface=hairline: switches, checkboxes and radios (15.7) ------------------------------------------------------------ */
+:root:has([data-hu-surface="hairline"]) .mud-switch .mud-switch-track {
+    background-color: var(--hu-line-control);
+    opacity: 1;
+}
+
+:root:has([data-hu-surface="hairline"]) .mud-switch .mud-checked + .mud-switch-track {
+    background-color: var(--mud-palette-primary);
+}
+
+:root:has([data-hu-surface="hairline"]) .mud-switch .mud-switch-thumb-small,
+:root:has([data-hu-surface="hairline"]) .mud-switch .mud-switch-thumb-medium,
+:root:has([data-hu-surface="hairline"]) .mud-switch .mud-switch-thumb-large {
+    background-color: var(--hu-ground-raised);
+    box-shadow: var(--hu-shadow-card);
+}
+
+:root:has([data-hu-surface="hairline"]) .mud-checkbox .mud-checked,
+:root:has([data-hu-surface="hairline"]) .mud-radio .mud-checked {
+    color: var(--mud-palette-primary);
+}
+
+/* -- nav=bar: the top bar reads the rail ground, so the chrome is one frame ------------------------------------------------- */
+:root:has([data-hu-nav="bar"]) .mud-appbar.top-bar {
+    background-color: var(--hu-ground-rail);
+}
+
+/* -- nav=bar: the activity bar; the current item has no fill, an accent glyph and a 3px bar on the edge ------------------------ */
+:root:has([data-hu-nav="bar"]) .activity-bar-item.mud-icon-button,
+:root:has([data-hu-nav="bar"]) .activity-bar .nav-settings .mud-nav-link {
+    position: relative;
+}
+
+:root:has([data-hu-nav="bar"]) .activity-bar-item.mud-icon-button:hover,
+:root:has([data-hu-nav="bar"]) .activity-bar .nav-settings .mud-nav-link:hover {
+    background-color: var(--hu-hover);
+}
+
+:root:has([data-hu-nav="bar"]) .activity-bar-item.activity-bar-item-selected,
+:root:has([data-hu-nav="bar"]) .activity-bar-item.activity-bar-item-selected:hover,
+:root:has([data-hu-nav="bar"]) .activity-bar-item.activity-bar-item-selected:focus-visible,
+:root:has([data-hu-nav="bar"]) .activity-bar .nav-settings .mud-nav-link.active,
+:root:has([data-hu-nav="bar"]) .activity-bar .nav-settings .mud-nav-link.active:hover {
+    background-color: transparent;
+    box-shadow: none;
+    color: var(--hu-accent-ink);
+    font-weight: 600;
+}
+
+:root:has([data-hu-nav="bar"]) .activity-bar-item.activity-bar-item-selected::before,
+:root:has([data-hu-nav="bar"]) .activity-bar .nav-settings .mud-nav-link.active::before {
+    content: "";
+    position: absolute;
+    left: -4px;
+    top: 12px;
+    bottom: 12px;
+    width: 3px;
+    border-radius: 0 calc(var(--mud-default-borderradius) * 0.375) calc(var(--mud-default-borderradius) * 0.375) 0;
+    background: var(--hu-accent-ink);
+}
+
+/* -- nav=bar: sidebar and Settings rows; the current row is a raised fill with a 3px bar inside its left edge ------------------- */
+:root:has([data-hu-nav="bar"]) .mud-drawer .mud-navmenu .mud-nav-link.active:not(.mud-nav-link-disabled),
+:root:has([data-hu-nav="bar"]) .settings-nav .settings-nav-item-active .mud-nav-link {
+    position: relative;
+    background-color: var(--hu-current-background);
+    box-shadow: var(--hu-current-shadow);
+    color: var(--hu-current-foreground);
+    font-weight: var(--hu-current-weight);
+}
+
+:root:has([data-hu-nav="bar"]) .settings-nav .settings-nav-item-active .mud-nav-link {
+    background: var(--hu-current-background);
+}
+
+:root:has([data-hu-nav="bar"]) .mud-drawer .mud-navmenu .mud-nav-link.active:not(.mud-nav-link-disabled):hover,
+:root:has([data-hu-nav="bar"]) .mud-drawer .mud-navmenu .mud-nav-link.active:not(.mud-nav-link-disabled):focus-visible,
+:root:has([data-hu-nav="bar"]) .settings-nav .settings-nav-item-active .mud-nav-link:hover,
+:root:has([data-hu-nav="bar"]) .settings-nav .settings-nav-item-active .mud-nav-link:focus-visible {
+    background-color: var(--hu-current-background-hover);
+}
+
+:root:has([data-hu-nav="bar"]) .mud-drawer .mud-navmenu .mud-nav-link.active:not(.mud-nav-link-disabled)::before,
+:root:has([data-hu-nav="bar"]) .settings-nav .settings-nav-item-active .mud-nav-link::before {
+    content: "";
+    position: absolute;
+    left: 0;
+    top: 8px;
+    bottom: 8px;
+    width: 3px;
+    border-radius: calc(var(--mud-default-borderradius) * 0.375);
+    background: var(--hu-accent-ink);
+}
+
+:root:has([data-hu-nav="bar"]) .mud-drawer .mud-navmenu .mud-nav-link.active:not(.mud-nav-link-disabled) .mud-nav-link-icon,
+:root:has([data-hu-nav="bar"]) .settings-nav .settings-nav-item-active .mud-nav-link .mud-nav-link-icon.mud-nav-link-icon-default {
+    color: var(--hu-current-icon);
+}
+
+/* -- nav=bar: the Library tree's current file uses the same 3px bar ------------------------------------------------------------ */
+:root:has([data-hu-nav="bar"]) .library-tree .mud-treeview-item-content.mud-treeview-item-selected {
+    background: var(--hu-current-background);
+    color: var(--hu-current-foreground);
+    box-shadow: inset 3px 0 0 var(--hu-accent-ink);
+}

@@ -627,13 +627,15 @@
         "nav": {
           "enum": [
             "tint",
-            "tile"
+            "tile",
+            "bar"
           ]
         },
         "surface": {
           "enum": [
             "flat",
-            "paper"
+            "paper",
+            "hairline"
           ]
         },
         "marks": {

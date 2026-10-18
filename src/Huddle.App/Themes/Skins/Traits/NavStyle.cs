@@ -8,4 +8,7 @@ internal enum NavStyle
 
     /// <summary>A lifted tile, with a bar on the activity bar's current item.</summary>
     Tile,
+
+    /// <summary>The current item is marked by a 3px accent bar, on the activity bar and on sidebar rows, instead of a tint fill.</summary>
+    Bar,
 }
