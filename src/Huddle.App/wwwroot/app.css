@@ -6157,3 +6157,8 @@ a.team-ref,
     padding: 0 8px;
     height: auto;
 }
+
+/* Settings › Skills: a Pack card's title is the card's name, at weight 600 (Skill Packs spec 6.9.5, G4c). */
+.pack-card-title {
+    font-weight: 600;
+}

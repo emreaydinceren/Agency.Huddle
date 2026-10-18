@@ -1,18 +1,59 @@
 @*
-    The Packs tab of Settings › Skills (Skill Packs spec §6.9.3, G4b to G4d): its intro, then the bar, a card per Pack in
-    SKILLS.md order and the empty state. The bar, the cards and the empty state are built in their own components.
+    The Packs tab of Settings › Skills (Skill Packs spec §6.9.3, G4b to G4d): its intro, the bar, then a card per Pack in
+    SKILLS.md order; Packs with a problem are cards too, not a list below. Hidden Packs are left out unless Show hidden is on.
+    With no Packs row at all the empty state replaces the cards and the bar stays. ?highlight=<id>, from the arrival
+    snackbar's Show, flashes that card and scrolls it into view.
 *@
 @using Agency.Huddle.App.Skills.Ui
 @using Agency.Huddle.App.SkillSources
+@using Agency.Huddle.SkillPacks.Resolving
+@using Microsoft.AspNetCore.WebUtilities
 
 @inject SkillRegistry Registry
+@inject NavigationManager Navigation
+@inject IJSRuntime JS
 
 <SettingsIntro>@SkillGuide.PacksIntro</SettingsIntro>
 
+<PackBar Revision="@this.Revision" @bind-ShowHidden="this.showHidden" OnAddWithAi="this.OnAddWithAi" OnCheckForUpdates="this.OnCheckForUpdates" />
+
+@if (this.Registry.Current.Resolved.Packs.Count == 0)
+{
+    <PackEmptyState OnAddWithAi="this.OnAddWithAi">@this.EmptyStateExtras</PackEmptyState>
+}
+else
+{
+    <MudStack Spacing="0" Class="pack-cards">
+        @foreach ((PackEntry pack, int index) in this.Registry.Current.Resolved.Packs.Select(static (pack, index) => (pack, index)))
+        {
+            @if (this.showHidden || !this.Registry.IsHidden(pack))
+            {
+                <PackCard @key="@index" RowIndex="@index" Revision="@this.Revision" Flash="@(this.highlight is not null && string.Equals(pack.Id, this.highlight, StringComparison.OrdinalIgnoreCase))" />
+            }
+        }
+    </MudStack>
+}
+
 @code {
+    private bool showHidden;
+    private string? highlight;
+    private bool scrolled;
+
     /// <summary>A copy of <c>SkillRegistry.Current.Version</c>; a new value is the reason to redraw.</summary>
     [Parameter]
     public long Revision { get; set; }
+
+    /// <summary>Opens the prompt dialog on Add.</summary>
+    [Parameter]
+    public EventCallback OnAddWithAi { get; set; }
+
+    /// <summary>Opens the prompt dialog on Check for updates.</summary>
+    [Parameter]
+    public EventCallback OnCheckForUpdates { get; set; }
+
+    /// <summary>The controls the empty state shows beside Add with your AI tool.</summary>
+    [Parameter]
+    public RenderFragment? EmptyStateExtras { get; set; }
 
     /// <summary>The row keys of the Packs and catalogs this tab lists now, for <c>MarkSeenAsync</c> on leaving.</summary>
     public IReadOnlyList<string> ListedKeys
@@ -21,6 +62,31 @@
         {
             RegistrySnapshot snapshot = this.Registry.Current;
             return [.. snapshot.Resolved.Packs.Select(snapshot.Resolved.RowKey), .. snapshot.Resolved.Catalogs.Select(snapshot.Resolved.RowKey)];
+        }
+    }
+
+    /// <summary>Reads <c>?highlight=</c>.</summary>
+    protected override void OnInitialized()
+    {
+        this.highlight = QueryHelpers.ParseQuery(new Uri(this.Navigation.Uri).Query).TryGetValue("highlight", out var values) ? values.ToString() : null;
+    }
+
+    /// <summary>Scrolls the highlighted card into view once it is drawn.</summary>
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (this.scrolled || string.IsNullOrEmpty(this.highlight))
+        {
+            return;
+        }
+
+        this.scrolled = true;
+        try
+        {
+            _ = await this.JS.InvokeAsync<bool>("teamScroll.intoView", $"pack-card-{this.highlight}");
+        }
+        catch (JSDisconnectedException)
+        {
+            // The circuit is gone before the scroll; there is nothing left to scroll.
         }
     }
 }

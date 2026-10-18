@@ -392,6 +392,17 @@ window.teamScroll = {
         setTimeout(clear, 2000);
         return true;
     },
+    // Scrolls the element with this id into the middle of the view (the Pack card a "ready" snackbar's Show points at,
+    // Skill Packs spec 6.9.9). Returns false when no element has the id.
+    intoView(id) {
+        const el = document.getElementById(id);
+        if (!el) {
+            return false;
+        }
+
+        el.scrollIntoView({ block: "center" });
+        return true;
+    },
     // True when the list is scrolled to within 4 px of its bottom, in its own coordinates.
     isAtBottom(el) {
         return el.scrollHeight - el.scrollTop - el.clientHeight <= 4;

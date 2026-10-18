@@ -1,0 +1,120 @@
+@*
+    The Pack bar (Skill Packs spec §6.9.5, G4b): Add with your AI tool, Check for updates, Reload, the Show hidden switch, and
+    the status line "3 Sources · 1 new · 1 problem · SKILLS.md read 1 minute ago", whose zero counts are left out. Reload
+    re-reads everything now, ignoring the two-second grace; the button spins and is disabled while it runs.
+*@
+@using Agency.Huddle.App.Skills.Ui
+@using Agency.Huddle.App.SkillSources
+@using Agency.Huddle.SkillPacks.Resolving
+
+@inject SkillRegistry Registry
+@inject ISnackbar Snackbar
+@inject TimeProvider Clock
+
+<MudToolBar Dense="true" Gutters="false" Class="toolbar-hairline pack-bar flex-wrap gap-2 mb-3">
+    <MudTooltip Text="@SkillGuide.For("Add with your AI tool")" ShowOnFocus="true">
+        <MudButton Variant="Variant.Filled" Color="Color.Primary" Size="Size.Small" StartIcon="@ActionIcons.Add" Class="pack-bar-add" OnClick="this.OnAddWithAi">Add with your AI tool</MudButton>
+    </MudTooltip>
+    <MudTooltip Text="@SkillGuide.For("Check for updates")" ShowOnFocus="true">
+        <MudButton Variant="Variant.Outlined" Size="Size.Small" Class="pack-bar-updates" OnClick="this.OnCheckForUpdates">Check for updates</MudButton>
+    </MudTooltip>
+    <MudTooltip Text="@SkillGuide.For("Reload")" ShowOnFocus="true">
+        <MudButton Variant="Variant.Outlined" Size="Size.Small" StartIcon="@Icons.Material.Filled.Refresh" Class="pack-bar-reload" Disabled="@this.reloading" OnClick="this.ReloadAsync">
+            @if (this.reloading)
+            {
+                <MudProgressCircular Size="Size.Small" Indeterminate="true" Class="mr-2" />
+            }
+            Reload
+        </MudButton>
+    </MudTooltip>
+    <MudTooltip Text="@SkillGuide.For("Show hidden")" ShowOnFocus="true">
+        <MudSwitch T="bool" Value="@this.ShowHidden" ValueChanged="this.ShowHiddenChanged" Color="Color.Primary" Size="Size.Small" Label="Show hidden" Class="pack-bar-show-hidden" />
+    </MudTooltip>
+    <MudText Typo="Typo.caption" Class="pack-bar-status mud-text-secondary ml-auto">@this.Status</MudText>
+</MudToolBar>
+
+@code {
+    private bool reloading;
+
+    /// <summary>A copy of <c>SkillRegistry.Current.Version</c>; a new value is the reason to redraw.</summary>
+    [Parameter]
+    public long Revision { get; set; }
+
+    /// <summary>Whether hidden Packs are listed.</summary>
+    [Parameter]
+    public bool ShowHidden { get; set; }
+
+    /// <summary>Raised when the Show hidden switch changes.</summary>
+    [Parameter]
+    public EventCallback<bool> ShowHiddenChanged { get; set; }
+
+    /// <summary>Opens the prompt dialog on Add.</summary>
+    [Parameter]
+    public EventCallback OnAddWithAi { get; set; }
+
+    /// <summary>Opens the prompt dialog on Check for updates.</summary>
+    [Parameter]
+    public EventCallback OnCheckForUpdates { get; set; }
+
+    /// <summary>The status line.</summary>
+    internal string Status
+    {
+        get
+        {
+            RegistrySnapshot snapshot = this.Registry.Current;
+            int sources = snapshot.Resolved.Sources.Count;
+            int fresh = snapshot.NewKeys.Count(static key => !key.StartsWith("skill:", StringComparison.Ordinal));
+            int problems = this.Problems;
+            List<string> parts = [];
+            if (sources > 0)
+            {
+                parts.Add(Plural.Of(sources, "Source", "Sources"));
+            }
+
+            if (fresh > 0)
+            {
+                parts.Add(string.Create(System.Globalization.CultureInfo.InvariantCulture, $"{fresh} new"));
+            }
+
+            if (problems > 0)
+            {
+                parts.Add(Plural.Of(problems, "problem", "problems"));
+            }
+
+            if (snapshot.Resolved.ReadAt != DateTimeOffset.MinValue)
+            {
+                parts.Add($"SKILLS.md read {ReadAgoText.Format(snapshot.Resolved.ReadAt, this.Clock.GetLocalNow())}");
+            }
+
+            return string.Join(" · ", parts);
+        }
+    }
+
+    /// <summary>The Packs and catalogs shown Broken.</summary>
+    private int Problems
+    {
+        get
+        {
+            RegistrySnapshot snapshot = this.Registry.Current;
+            return snapshot.Resolved.Packs.Count(pack => this.Registry.DisplayState(pack) == ItemState.Broken)
+                + snapshot.Resolved.Catalogs.Count(catalog => (snapshot.Checked.StateOf(catalog.StateKey) ?? Agency.Huddle.SkillPacks.Checking.ItemCheckState.Broken) == Agency.Huddle.SkillPacks.Checking.ItemCheckState.Broken);
+        }
+    }
+
+    /// <summary>Re-reads everything now and says what it found.</summary>
+    private async Task ReloadAsync()
+    {
+        this.reloading = true;
+        try
+        {
+            await this.Registry.ReloadAsync(CancellationToken.None);
+        }
+        finally
+        {
+            this.reloading = false;
+        }
+
+        int problems = this.Problems;
+        this.Snackbar.Add(problems == 0 ? "Reloaded. No problems." : $"Reloaded. {Plural.Of(problems, "problem", "problems")} found.", Severity.Success, configure: null, key: "skills-reload");
+    }
+}

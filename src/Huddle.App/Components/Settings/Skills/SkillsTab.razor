@@ -363,7 +363,7 @@
             this.reloading = false;
         }
 
-        int problems = this.Registry.Current.Checked.Findings.Count(static finding => finding.Severity == CheckSeverity.Error) + this.Store.Issues.Count;
+        int problems = SkillProblemCount.Of(this.Registry, this.Store);
         this.Snackbar.Add(problems == 0 ? "Reloaded. No problems." : $"Reloaded. {Plural.Of(problems, "problem", "problems")} found.", Severity.Success, configure: null, key: "skills-reload");
     }
 
