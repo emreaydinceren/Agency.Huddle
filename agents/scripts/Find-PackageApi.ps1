@@ -39,7 +39,7 @@
     pwsh agents/scripts/Find-PackageApi.ps1 -Package MudBlazor -Type MudList`1
 
 .EXAMPLE
-    pwsh agents/scripts/Find-PackageApi.ps1 -Package MudBlazor -Type MudTextField -Version 9.10.0
+    pwsh agents/scripts/Find-PackageApi.ps1 -Package MudBlazor -Type MudTextField -Version 9.11.0
 #>
 [CmdletBinding()]
 param(
