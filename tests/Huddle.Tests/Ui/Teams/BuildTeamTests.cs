@@ -1154,12 +1154,12 @@ public sealed class BuildTeamTests
             this.Types = filterTypes
                 ? new TeamTypeCatalog(this.dir.Options(), NullLogger<TeamTypeCatalog>.Instance, builtins, this.Pool)
                 : new TeamTypeCatalog(this.dir.Options(), NullLogger<TeamTypeCatalog>.Instance, builtins);
-            SkillPackStore packs = new(this.dir.Options(), NullLogger<SkillPackStore>.Instance, new Dictionary<string, string>(StringComparer.Ordinal));
+            FakeSkillAvailability packs = new();
             this.Avatars = new AvatarStore(this.dir.Options(), NullLogger<AvatarStore>.Instance);
             HireLimitHarness harness = new(this.dir.Options());
             this.Packs = packs;
             this.Skills = new SkillStore(this.dir.Options(), NullLogger<SkillStore>.Instance);
-            this.Hire = new HireService(this.Personas, this.Types, FakeSkillAvailability.From(packs), this.Avatars, harness.Guard, this.Installer, new FakeStartGate(), NullLogger<HireService>.Instance);
+            this.Hire = new HireService(this.Personas, this.Types, packs, this.Avatars, harness.Guard, this.Installer, new FakeStartGate(), NullLogger<HireService>.Instance);
             this.Membership = new TeamMembership(this.Personas, this.Catalog, this.Folders, this.Types);
         }
 
@@ -1197,7 +1197,7 @@ public sealed class BuildTeamTests
 
         public FakeSkillCopier Installer { get; } = new();
 
-        public SkillPackStore Packs { get; private set; }
+        public FakeSkillAvailability Packs { get; private set; }
 
         public SkillStore Skills { get; private set; }
 
@@ -1216,11 +1216,9 @@ public sealed class BuildTeamTests
             ctx.Services.AddSingleton<IAvatarLibraryLoader>(this.Library);
             ctx.Services.AddSingleton<ITeamFolders>(this.Folders);
             ctx.Services.AddSingleton(this.Hire);
-            ctx.Services.AddSingleton(this.Packs);
-            ctx.Services.AddSingleton<ISkillAvailability>(FakeSkillAvailability.From(this.Packs));
+            ctx.Services.AddSingleton<ISkillAvailability>(this.Packs);
             this.ExtraServices?.Invoke(ctx.Services);
             ctx.Services.AddSingleton(this.Skills);
-            ctx.Services.AddSingleton(new SkillsCatalogIndex(this.dir.Options(), NullLogger<SkillsCatalogIndex>.Instance));
             ctx.Services.AddSingleton<IHireContext>(new RoleFixtures.Context());
             ctx.Services.AddSingleton<ITeamMembership>(this.Membership);
             ctx.Services.AddSingleton(this.Avatars);

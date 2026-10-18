@@ -102,6 +102,20 @@ public sealed class SkillsTabTests : IDisposable
         cut.WaitForAssertion(() => Assert.Equal(["alpha", "beta"], cut.FindAll("[data-skill]").Select(static cell => cell.GetAttribute("data-skill"))));
     }
 
+    /// <summary>Import skill opens the prompt dialog on Add from a link or folder (Skill Packs spec §6.9.3).</summary>
+    [Fact]
+    public async Task ImportSkill_OpensThePromptDialogOnAdd()
+    {
+        await this.fixture.SeedAsync();
+        await using MudBunitContext ctx = this.fixture.NewContext();
+        IRenderedComponent<ContainerFragment> cut = Render(ctx);
+
+        await cut.InvokeAsync(() => cut.Find(".skills-import-button").ClickAsync());
+
+        cut.WaitForAssertion(() => Assert.Equal("Add with your AI tool", cut.Find(".mud-dialog-title").TextContent.Trim()));
+        Assert.NotEmpty(cut.FindAll(".add-with-ai-where"));
+    }
+
     /// <summary>With five thousand catalog Skills the grid is virtualised and renders only a window of rows.</summary>
     [Fact]
     public async Task SkillsTab_FiveThousandRows_RendersWindowOnly()

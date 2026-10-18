@@ -1,6 +1,5 @@
 using Agency.Huddle.App.SkillSources;
 using Agency.Huddle.App.Teams;
-using Agency.Huddle.App.TeamTypes;
 using Agency.Huddle.SkillPacks.Reading;
 using Agency.Huddle.SkillPacks.Resolving;
 
@@ -19,20 +18,6 @@ internal sealed class FakeSkillAvailability : ISkillAvailability
     /// <summary>The state of a Skill name no <see cref="WithSkill"/> set; <see cref="SkillAvailability.Unknown"/> models a
     /// stock install with no catalog.</summary>
     public SkillAvailability Default { get; init; } = SkillAvailability.Present;
-
-    /// <summary>The Packs a <see cref="SkillPackStore"/> loads, every Skill <see cref="SkillAvailability.Present"/>: the same
-    /// answers the old Pack store gave.</summary>
-    public static FakeSkillAvailability From(SkillPackStore store)
-    {
-        ArgumentNullException.ThrowIfNull(store);
-        FakeSkillAvailability fake = new();
-        foreach (SkillPack pack in store.All)
-        {
-            fake.WithPack(pack.Id, pack.Version, pack.Title, [.. pack.Skills.Select(static skill => skill.Name)], pack.ConsultWhenAdds);
-        }
-
-        return fake;
-    }
 
     /// <summary>Adds a Pack.</summary>
     public FakeSkillAvailability WithPack(string id, string version, string title, IReadOnlyList<string> skillNames, string? consultWhenAdds = null)

@@ -146,11 +146,9 @@ public static class ServiceCollectionExtensions
         services.AddSingleton<IAgentGateway>(sp => sp.GetRequiredService<AgentGateway>());
 
         services.AddSingleton<TeammatePaths>();
-        services.AddSingleton<SkillPackStore>();
         services.AddSingleton<HiringPoolCatalog>();
         services.AddSingleton<CustomRoleStore>();
         services.AddSingleton<TeamTypeCatalog>();
-        services.AddSingleton<SkillsCatalogIndex>();
         services.AddSingleton<UserCandidateWriter>();
         services.AddSingleton<IConnectorStatus, FileConnectorStatus>();
 
@@ -254,18 +252,6 @@ public static class ServiceCollectionExtensions
         services.AddSingleton<Agency.Huddle.App.SkillSources.PackUpdater>();
         services.AddScoped<Agency.Huddle.App.SkillSources.PathFormatChoice>();
 
-        // Skill import (SK-2 to SK-7): the downloader gets its own client with a long timeout for the archive; the importer's client only
-        // resolves a branch to a commit, so it times out sooner. Both are plain singletons - nothing here is shared with other HTTP users.
-        services.AddSingleton(static sp => new SkillDownloader(
-            new HttpClient { Timeout = TimeSpan.FromMinutes(2) },
-            sp.GetRequiredService<ILogger<SkillDownloader>>()));
-        services.AddSingleton(static sp => new SkillImporter(
-            sp.GetRequiredService<SkillsCatalogIndex>(),
-            sp.GetRequiredService<SkillDownloader>(),
-            sp.GetRequiredService<SkillStore>(),
-            new HttpClient { Timeout = TimeSpan.FromSeconds(15) },
-            sp.GetService<TimeProvider>()));
-        services.AddSingleton<ISkillImporter>(static sp => sp.GetRequiredService<SkillImporter>());
 
         // No interface, same reasoning as PromptStore/SkillStore above: nothing needs to
         // substitute this, and it is built entirely from other singletons already registered
@@ -319,7 +305,6 @@ public static class ServiceCollectionExtensions
         // Hiring a role-based Team. The start gate is the supervisor, resolved lazily through a factory
         // so HireService does not force PersonaSupervisor to construct before it is registered below;
         // CardResolver and TierModelPicker are static and need no registration.
-        services.AddSingleton<Agency.Huddle.App.Teams.ISkillInstaller, Agency.Huddle.App.Teams.ImportingSkillInstaller>();
         services.AddSingleton<Agency.Huddle.App.Teams.IPersonaStartGate>(sp => sp.GetService<PersonaSupervisor>() as Agency.Huddle.App.Teams.IPersonaStartGate ?? new Agency.Huddle.App.Teams.NoHostStartGate());
         services.AddSingleton<Agency.Huddle.App.Teams.ProcessProvisioner>();
         services.AddSingleton<Agency.Huddle.App.Teams.IOnboardingPoster, Agency.Huddle.App.Teams.ChatOnboardingPoster>();

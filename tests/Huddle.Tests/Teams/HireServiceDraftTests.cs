@@ -22,10 +22,10 @@ public sealed class HireServiceDraftTests : IDisposable
     {
         this.personas = TestTaskStore.CreatePersonaStore(this.dir);
         TeamTypeCatalog types = new(this.dir.Options(), NullLogger<TeamTypeCatalog>.Instance, new Dictionary<string, string>(StringComparer.Ordinal));
-        SkillPackStore packs = new(this.dir.Options(), NullLogger<SkillPackStore>.Instance, new Dictionary<string, string>(StringComparer.Ordinal));
+        FakeSkillAvailability packs = new();
         this.avatars = new AvatarStore(this.dir.Options(), NullLogger<AvatarStore>.Instance);
         HireLimitHarness harness = new(this.dir.Options());
-        this.service = new HireService(this.personas, types, FakeSkillAvailability.From(packs), this.avatars, harness.Guard, this.installer, new FakeStartGate(), NullLogger<HireService>.Instance);
+        this.service = new HireService(this.personas, types, packs, this.avatars, harness.Guard, this.installer, new FakeStartGate(), NullLogger<HireService>.Instance);
     }
 
     /// <inheritdoc />

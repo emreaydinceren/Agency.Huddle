@@ -59,16 +59,6 @@ internal sealed record DraftHire(
 /// <param name="Hired">The names written before the batch stopped, in request order.</param>
 internal sealed record DraftHireResult(string? Error, IReadOnlyList<string> Hired);
 
-/// <summary>Makes sure a Team's skills are present before its members start (HR-9).</summary>
-internal interface ISkillInstaller
-{
-    /// <summary>Installs what is missing.</summary>
-    /// <param name="skills">The skills the Team's cards carry.</param>
-    /// <param name="ct">Cancels the installation.</param>
-    /// <returns>The skills that could not be installed; empty when all are present.</returns>
-    Task<IReadOnlyList<SkillRef>> EnsureInstalledAsync(IReadOnlyList<SkillRef> skills, CancellationToken ct);
-}
-
 /// <summary>Tells when a freshly hired Teammate's host is running.</summary>
 internal interface IPersonaStartGate
 {

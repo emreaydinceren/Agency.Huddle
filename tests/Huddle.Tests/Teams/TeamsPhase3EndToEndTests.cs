@@ -397,9 +397,9 @@ public sealed class TeamsPhase3EndToEndTests
                 {
                     services.RemoveAll<IAgentProcessLauncher>();
                     services.AddSingleton<IAgentProcessLauncher>(launcher);
-                    services.RemoveAll<ISkillInstaller>();
+                    services.RemoveAll<Agency.Huddle.App.SkillSources.ISkillCopier>();
                     services.AddSingleton<Agency.Huddle.App.SkillSources.ISkillCopier>(new FakeSkillCopier());
-                    services.AddSingleton<ISkillAvailability>(static sp => FakeSkillAvailability.From(sp.GetRequiredService<SkillPackStore>()));
+                    services.AddSingleton<ISkillAvailability>(new FakeSkillAvailability());
                     services.RemoveAll<IPersonaStartGate>();
                     services.AddSingleton<IPersonaStartGate>(sp =>
                     {

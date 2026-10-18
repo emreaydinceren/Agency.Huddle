@@ -80,12 +80,12 @@ public sealed class HireServiceStartTests
             ["flat/processes/flow.md"] = "# Flow",
         };
         TeamTypeCatalog types = new(dir.Options(), NullLogger<TeamTypeCatalog>.Instance, builtins);
-        SkillPackStore packs = new(dir.Options(), NullLogger<SkillPackStore>.Instance, new Dictionary<string, string>(StringComparer.Ordinal));
+        FakeSkillAvailability packs = new();
         HireLimitHarness harness = new(Microsoft.Extensions.Options.Options.Create(options ?? new TeamOptions()));
         AvatarStore avatars = new(dir.Options(), NullLogger<AvatarStore>.Instance);
         installer = new FakeSkillCopier();
         gate = new FakeStartGate();
-        return new HireService(personas, types, FakeSkillAvailability.From(packs), avatars, harness.Guard, installer, gate, NullLogger<HireService>.Instance, makeProvisioner?.Invoke(types), makeOnboarding?.Invoke(types));
+        return new HireService(personas, types, packs, avatars, harness.Guard, installer, gate, NullLogger<HireService>.Instance, makeProvisioner?.Invoke(types), makeOnboarding?.Invoke(types));
     }
 
     private static HireRequest Request(string name, string roleId, CardReadiness readiness = CardReadiness.Ready)

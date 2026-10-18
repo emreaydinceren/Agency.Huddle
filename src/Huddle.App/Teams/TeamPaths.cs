@@ -9,10 +9,10 @@ internal static class TeamPaths
     /// <summary>Folder holding the user's hiring pool (<c>hiringpool.json</c> and its personas).</summary>
     public const string HiringPoolDir = "HiringPool";
 
-    /// <summary>Folder holding the skill packs.</summary>
+    /// <summary>The folder where Packs were kept before Skill Sources; only the one-time move reads it now (Skill Packs spec §8.7).</summary>
     public const string SkillPacksDir = "SkillPacks";
 
-    /// <summary>The skill catalog file.</summary>
+    /// <summary>The Human's copy of the old Skills catalog; only the one-time move reads it now (Skill Packs spec §8.7).</summary>
     public const string SkillsCatalogFile = "SkillsCatalog.json";
 
     /// <summary>A Team's own file.</summary>
