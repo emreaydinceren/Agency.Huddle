@@ -7,7 +7,7 @@ namespace Agency.Huddle.Tests.Ui.Library;
 /// Pins <see cref="MarkdownToolbar"/>'s markup, the half <c>library-editor.js</c> (<c>attachToolbar</c>) relies on:
 /// the <c>data-md-toolbar</c> marker it finds the row by, a <c>data-md-command</c> on every button, the WAI-ARIA
 /// toolbar role and the roving tabindex. The click behaviour itself runs in the browser and is pinned by the
-/// Node tests of the pure command logic (<see cref="MarkdownCommandsScriptTests"/>).
+/// Node tests of the pure command logic (<c>MarkdownCommandsScriptTests</c>).
 /// </summary>
 public sealed class MarkdownToolbarTests
 {

@@ -1077,7 +1077,7 @@ Ids are `<deliverable>.<task>`:
 `pwsh -NoProfile -File agents/scripts/Set-Tracker.ps1 -Task "2.3" -State Done -TrackerPath docs/engineering/test-split-plan.md`.
 `(H)` is Haiku, `(S)` is Sonnet.
 
-**Status:** 21 of 77 tasks Done · 1 of 5 retrospectives done · 0.6 and 10.2 (load runs) skipped by the user · last updated 2026-10-18.
+**Status:** 24 of 77 tasks Done · 1 of 5 retrospectives done · 0.6 and 10.2 (load runs) skipped by the user · last updated 2026-10-18.
 
 | **Deliverable / Task** | **Model** | **Depends on** | **Active** | **In Progress** | **Done** |
 | --- | --- | --- | --- | --- | --- |
@@ -1109,9 +1109,9 @@ Ids are `<deliverable>.<task>`:
 | 4.2 Move the hosted tests (H) | Haiku | 4.1 | | | ✔ |
 | 4.3 Wire Hosted (S) | Sonnet | 4.2 | | | ✔ |
 | **D5 Agents** | Sonnet | D4 | | | |
-| 5.1 Agents skeleton and setup tests (H) | Haiku | D4 | | | |
-| 5.2 Move the agent tests (H) | Haiku | 5.1 | | | |
-| 5.3 Wire Agents (S) | Sonnet | 5.2 | | | |
+| 5.1 Agents skeleton and setup tests (H) | Haiku | D4 | | | ✔ |
+| 5.2 Move the agent tests (H) | Haiku | 5.1 | | | ✔ |
+| 5.3 Wire Agents (S) | Sonnet | 5.2 | | | ✔ |
 | **D6 Components** | Sonnet | D5 | | | |
 | 6.1 Components skeleton and setup tests (H) | Haiku | D5 | | | |
 | 6.2 Move the component tests (H) | Haiku | 6.1 | | | |
