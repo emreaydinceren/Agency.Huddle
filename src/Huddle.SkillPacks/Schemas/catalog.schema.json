@@ -1,0 +1,41 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://huddle.local/schemas/skillcatalog.schema.json",
+  "title": "Huddle skill catalog file (<id>.skillcatalog.json)",
+  "description": "A list of Skills a Source offers, each fetched when its path is filled in. Property names are matched ignoring case; unknown properties are ignored.",
+  "type": "object",
+  "required": ["schemaVersion", "id", "source", "skills"],
+  "properties": {
+    "schemaVersion": { "const": 1, "description": "Always 1 (D001)." },
+    "id": { "type": "string", "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*$", "maxLength": 64, "description": "The file must be named <id>.skillcatalog.json (D001)." },
+    "title": { "type": "string" },
+    "source": { "type": "string", "pattern": "^[a-z0-9.-]+(?:/[a-z0-9.-]+)+$", "description": "The Source id: host/owner/repo or local/name (O001)." },
+    "skills": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["name", "description", "origin"],
+        "properties": {
+          "name": { "type": "string", "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*$", "maxLength": 64 },
+          "description": { "type": "string", "minLength": 1, "maxLength": 500 },
+          "origin": { "type": "string", "minLength": 1, "description": "A URL pinned to a commit (D004 warns on a branch)." },
+          "publisher": { "type": "string" },
+          "license": { "type": "string" },
+          "category": { "type": "string" },
+          "subCategory": { "type": "string" },
+          "requires": { "type": "array", "items": { "type": "string" } },
+          "path": { "$ref": "#/$defs/path" }
+        }
+      }
+    }
+  },
+  "$defs": {
+    "path": {
+      "description": "A path for every computer, or an object of computer name to path with an optional \"*\" for every other computer. Empty or absent until fetched.",
+      "oneOf": [
+        { "type": "string" },
+        { "type": "object", "additionalProperties": { "type": "string" } }
+      ]
+    }
+  }
+}
