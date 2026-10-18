@@ -5,6 +5,7 @@
 @using Microsoft.Extensions.Hosting
 @using Microsoft.JSInterop
 @inject IWebHostEnvironment Environment
+@inject Agency.Huddle.App.Appearance.AppearanceStore Appearance
 @inject IJSRuntime JS
 @inject NavigationManager Navigation
 
@@ -110,13 +111,23 @@
     private bool inspecting;
     private string status = string.Empty;
 
-    /// <summary>Starts on the first skin, or sends a visitor outside Development back to Settings.</summary>
+    /// <summary>
+    /// Starts on the Theme the Human has selected, so a first edit previews over the page as it is (falling back to the
+    /// first skin), or sends a visitor outside Development back to Settings.
+    /// </summary>
     protected override void OnInitialized()
     {
         this.available = this.Environment.IsDevelopment();
         if (!this.available)
         {
             this.Navigation.NavigateTo("/settings", replace: true);
+            return;
+        }
+
+        string? selectedId = this.Appearance.Current.ThemeId;
+        if (this.skins.FirstOrDefault(skin => string.Equals(skin.Id, selectedId, StringComparison.Ordinal)) is { } selected)
+        {
+            this.model = new ThemeLabModel(selected);
         }
     }
 

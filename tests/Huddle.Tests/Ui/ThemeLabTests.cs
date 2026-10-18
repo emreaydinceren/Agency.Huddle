@@ -5,6 +5,8 @@ using Microsoft.AspNetCore.Components;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.FileProviders;
+using Microsoft.Extensions.Logging.Abstractions;
+using Agency.Huddle.App.Appearance;
 using Agency.Huddle.App.Components.Settings;
 using Agency.Huddle.App.Themes.Skins;
 
@@ -14,9 +16,36 @@ namespace Agency.Huddle.Tests.Ui;
 /// The Theme lab (decision P5-D5): its model (what an edit does to the style block, the MudBlazor palette variables,
 /// the contrast badges and the exported JSON) and the page that draws it. The lab exists only in Development.
 /// </summary>
-public sealed class ThemeLabTests
+public sealed class ThemeLabTests : IDisposable
 {
     private const string ModulePath = "./theme-lab.js";
+
+    private readonly TempDataDir dataDir = new();
+
+    private readonly AppearanceStore appearance;
+
+    /// <summary>Gives every test its own appearance store, so the lab has a selected Theme to start from.</summary>
+    public ThemeLabTests() => this.appearance = new AppearanceStore(this.dataDir.Options(), NullLogger<AppearanceStore>.Instance);
+
+    /// <summary>Removes the test's store and data folder.</summary>
+    public void Dispose()
+    {
+        this.appearance.Dispose();
+        this.dataDir.Dispose();
+    }
+
+    /// <summary>The lab starts on the Theme the Human has selected, so a first edit previews over the page as it is.</summary>
+    [Fact]
+    public async Task Page_StartsOnTheSelectedTheme()
+    {
+        this.appearance.Save("fluent-dark");
+        await using MudBunitContext ctx = this.NewContext("Development");
+        _ = SetupModule(ctx);
+
+        IRenderedComponent<ContainerFragment> cut = RenderLab(ctx);
+
+        Assert.Equal("fluent-dark", cut.Find(".mud-select input").GetAttribute("value"));
+    }
 
     private static Skin LumenLight() =>
         SkinLoader.LoadAll().First(static skin => string.Equals(skin.Id, "lumen-light", StringComparison.Ordinal));
@@ -158,7 +187,7 @@ public sealed class ThemeLabTests
     [Fact]
     public async Task Page_InDevelopment_DrawsEveryInputAndBadge()
     {
-        await using MudBunitContext ctx = NewContext("Development");
+        await using MudBunitContext ctx = this.NewContext("Development");
 
         IRenderedComponent<ContainerFragment> cut = RenderLab(ctx);
 
@@ -172,7 +201,7 @@ public sealed class ThemeLabTests
     [Fact]
     public async Task Page_OutsideDevelopment_RedirectsToSettings()
     {
-        await using MudBunitContext ctx = NewContext("Production");
+        await using MudBunitContext ctx = this.NewContext("Production");
 
         IRenderedComponent<ContainerFragment> cut = RenderLab(ctx);
 
@@ -184,7 +213,7 @@ public sealed class ThemeLabTests
     [Fact]
     public async Task TokenEdit_Valid_AppliesLive()
     {
-        await using MudBunitContext ctx = NewContext("Development");
+        await using MudBunitContext ctx = this.NewContext("Development");
         BunitJSModuleInterop module = SetupModule(ctx);
         IRenderedComponent<ContainerFragment> cut = RenderLab(ctx);
 
@@ -198,7 +227,7 @@ public sealed class ThemeLabTests
     [Fact]
     public async Task TokenEdit_Invalid_ShowsAnErrorAndDoesNotApply()
     {
-        await using MudBunitContext ctx = NewContext("Development");
+        await using MudBunitContext ctx = this.NewContext("Development");
         List<string> seen = [];
         _ = SetupModule(ctx, seen);
         IRenderedComponent<ContainerFragment> cut = RenderLab(ctx);
@@ -213,7 +242,7 @@ public sealed class ThemeLabTests
     [Fact]
     public async Task Export_CopiesTheJsonToTheClipboard()
     {
-        await using MudBunitContext ctx = NewContext("Development");
+        await using MudBunitContext ctx = this.NewContext("Development");
         BunitJSModuleInterop module = SetupModule(ctx);
         IRenderedComponent<ContainerFragment> cut = RenderLab(ctx);
         await cut.InvokeAsync(() => cut.Find("[data-token-key='ground.page'] input").InputAsync("#abcdef"));
@@ -229,7 +258,7 @@ public sealed class ThemeLabTests
     [Fact]
     public async Task Inspect_TogglesTheScript_AndDisposeResets()
     {
-        await using MudBunitContext ctx = NewContext("Development");
+        await using MudBunitContext ctx = this.NewContext("Development");
         BunitJSModuleInterop module = SetupModule(ctx);
         IRenderedComponent<ContainerFragment> cut = RenderLab(ctx);
 
@@ -242,10 +271,11 @@ public sealed class ThemeLabTests
         Assert.NotEmpty(module.Invocations["reset"]);
     }
 
-    private static MudBunitContext NewContext(string environment)
+    private MudBunitContext NewContext(string environment)
     {
         MudBunitContext ctx = new();
         ctx.Services.AddSingleton<IWebHostEnvironment>(new FakeEnvironment(environment));
+        ctx.Services.AddSingleton(this.appearance);
         return ctx;
     }
 
