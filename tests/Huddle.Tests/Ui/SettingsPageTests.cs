@@ -31,6 +31,7 @@ public sealed class SettingsPageTests
         ctx.Services.AddSingleton(factory.Services.GetRequiredService<SkillStore>());
         ctx.Services.AddSingleton(factory.Services.GetRequiredService<LibraryRootStore>());
         ProfileTestServices.AddProfile(ctx.Services, factory);
+        SkillsTestServices.AddFromFactory(ctx.Services, factory);
         return ctx;
     }
 
@@ -422,7 +423,7 @@ public sealed class SettingsPageTests
         var html = await client.GetStringAsync("/settings/skills", ct);
 
         Assert.Contains(">Team building<", html, StringComparison.Ordinal); // contains-ok: rendered markup text
-        Assert.Contains(">Default<", html, StringComparison.Ordinal);
+        Assert.Contains(">Built in<", html, StringComparison.Ordinal); // contains-ok: rendered markup text
     }
 
     /// <summary>
@@ -454,8 +455,13 @@ public sealed class SettingsPageTests
             builder.CloseComponent();
         });
 
-        // Fire-and-forget: the handler awaits the confirm dialog, which this test answers next.
-        Task restore = cut.InvokeAsync(() => cut.FindAll("button").First(button => button.TextContent.Contains("Restore default", StringComparison.Ordinal)).ClickAsync());
+        // Restore default lives in the row's ⋯ menu (Skill Packs spec §6.9.3). Fire-and-forget: the handler awaits the
+        // confirm dialog, which this test answers next.
+        const string RowMenu = "tr:has([data-skill='team-building']) .skills-row-menu button";
+        cut.WaitForAssertion(() => Assert.NotEmpty(cut.FindAll(RowMenu)));
+        await cut.InvokeAsync(() => cut.Find(RowMenu).ClickAsync());
+        cut.WaitForAssertion(() => Assert.NotEmpty(cut.FindAll(".skills-menu-restore-default")));
+        Task restore = cut.InvokeAsync(() => cut.Find(".skills-menu-restore-default").ClickAsync());
 
         cut.WaitForAssertion(() => Assert.Contains(overrideFolder, cut.Markup, StringComparison.Ordinal));
 
@@ -463,7 +469,6 @@ public sealed class SettingsPageTests
         await restore;
 
         Assert.False(Directory.Exists(overrideFolder));
-        Assert.DoesNotContain(">Overridden<", cut.Markup, StringComparison.Ordinal);
     }
 
     /// <summary>

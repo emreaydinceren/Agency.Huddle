@@ -144,7 +144,9 @@ public sealed class SkillProvenanceLineTests
             "MIT",
             new DateTimeOffset(2026, 10, 1, 12, 0, 0, TimeSpan.Zero)).Write(folder);
         using SkillStore store = new(dir.Options(), NullLogger<SkillStore>.Instance);
+        using Agency.Huddle.Tests.SkillPacks.RegistryService.RegistryHost host = new();
         await using MudBunitContext ctx = new();
+        SkillsTestServices.AddFromHost(ctx.Services, host);
         ctx.Services.AddSingleton(store);
 
         IRenderedComponent<SkillsPanel> cut = ctx.Render<SkillsPanel>();

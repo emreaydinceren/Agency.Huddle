@@ -33,6 +33,7 @@ public sealed class LibraryPanelTests
         ctx.Services.AddSingleton(factory.Services.GetRequiredService<SkillStore>());
         ctx.Services.AddSingleton(factory.Services.GetRequiredService<LibraryRootStore>());
         ProfileTestServices.AddProfile(ctx.Services, factory);
+        SkillsTestServices.AddFromFactory(ctx.Services, factory);
 
         var cut = ctx.Render<Settings>();
 

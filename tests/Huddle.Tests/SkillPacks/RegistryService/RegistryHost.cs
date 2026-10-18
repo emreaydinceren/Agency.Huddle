@@ -101,6 +101,26 @@ internal sealed class RegistryHost : IDisposable
             """);
     }
 
+    /// <summary>Writes a catalog file listing <paramref name="names"/>, each with no path (so Not downloaded) unless
+    /// <paramref name="folderOf"/> gives one, and returns its row text for <see cref="SkillsMd"/>.</summary>
+    public string Catalog(string id, IReadOnlyList<string> names, Func<string, string?>? folderOf = null)
+    {
+        IEnumerable<string> entries = names.Select(name =>
+        {
+            string path = (folderOf?.Invoke(name) ?? string.Empty).Replace("\\", "\\\\", StringComparison.Ordinal);
+            return $$"""{ "name": "{{name}}", "description": "Does {{name}} things.", "origin": "https://github.com/o/r/tree/0123456789abcdef0123456789abcdef01234567/skills/{{name}}", "publisher": "Pub", "license": "MIT", "path": "{{path}}" }""";
+        });
+        Write(this.Dir, $"catalogs/{id}.skillcatalog.json", $$"""{ "schemaVersion": 1, "id": "{{id}}", "title": "{{id}} title", "source": "local/test", "skills": [{{string.Join(",\n", entries)}}] }""");
+        return $"catalogs/{id}.skillcatalog.json";
+    }
+
+    /// <summary>Reads everything with the clock far enough ahead that every file is quiet.</summary>
+    public Task ReadAsync()
+    {
+        this.Clock.SetUtcNow(DateTimeOffset.UtcNow.AddHours(1));
+        return this.Registry.ReloadAsync(TestContext.Current.CancellationToken);
+    }
+
     /// <summary>Writes SKILLS.md with the given Packs and Catalogs rows.</summary>
     public void SkillsMd(string[] packs, string[]? catalogs = null)
     {

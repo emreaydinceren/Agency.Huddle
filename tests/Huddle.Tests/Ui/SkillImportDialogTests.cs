@@ -299,8 +299,10 @@ public sealed class SkillImportDialogTests
     public async Task SkillsPanel_ImportButton_OpensTheDialog()
     {
         using TempDataDir dir = new();
+        using Agency.Huddle.Tests.SkillPacks.RegistryService.RegistryHost host = new();
         using SkillStore store = new(dir.Options(), NullLogger<SkillStore>.Instance);
         await using MudBunitContext ctx = new();
+        SkillsTestServices.AddFromHost(ctx.Services, host);
         ctx.Services.AddSingleton(store);
         ctx.Services.AddSingleton<ISkillImporter>(new FakeSkillImporter());
         ctx.Services.AddSingleton(new SkillsCatalogIndex(dir.Options(), NullLogger<SkillsCatalogIndex>.Instance));

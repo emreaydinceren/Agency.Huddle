@@ -1,0 +1,26 @@
+@*
+    The Packs tab of Settings › Skills (Skill Packs spec §6.9.3, G4b to G4d): its intro, then the bar, a card per Pack in
+    SKILLS.md order and the empty state. The bar, the cards and the empty state are built in their own components.
+*@
+@using Agency.Huddle.App.Skills.Ui
+@using Agency.Huddle.App.SkillSources
+
+@inject SkillRegistry Registry
+
+<SettingsIntro>@SkillGuide.PacksIntro</SettingsIntro>
+
+@code {
+    /// <summary>A copy of <c>SkillRegistry.Current.Version</c>; a new value is the reason to redraw.</summary>
+    [Parameter]
+    public long Revision { get; set; }
+
+    /// <summary>The row keys of the Packs and catalogs this tab lists now, for <c>MarkSeenAsync</c> on leaving.</summary>
+    public IReadOnlyList<string> ListedKeys
+    {
+        get
+        {
+            RegistrySnapshot snapshot = this.Registry.Current;
+            return [.. snapshot.Resolved.Packs.Select(snapshot.Resolved.RowKey), .. snapshot.Resolved.Catalogs.Select(snapshot.Resolved.RowKey)];
+        }
+    }
+}

@@ -1,0 +1,71 @@
+@*
+    The chips of one Skill, Pack or catalog (Skill Packs spec §6.9.4): the state chip, then "In use by N" when the state chip
+    is not already InUse, then the Hidden and modified locally flags. Every look comes from SkillStateText, the one mapping.
+    Each chip sits in a focusable span whose aria-label is its sentence, so the explanation reaches the keyboard and a screen
+    reader as well as the pointer; the MudTooltip shows the same sentence on hover and on focus. Plain parameters only: Razor
+    components are public types, so an internal type cannot be a parameter.
+*@
+@using Agency.Huddle.App.Skills.Ui
+@using Agency.Huddle.SkillPacks.Resolving
+
+<span class="skill-state-chips">
+    @if (this.State is { } state)
+    {
+        @this.Chip(SkillStateText.For(state), SkillStateText.ChipText(state, this.UsedBy), SkillStateText.Sentence(state, this.Holders, this.Reason), $"skill-state-chip-{state.ToString().ToLowerInvariant()}")
+    }
+
+    @if (this.UsedBy > 0 && this.State != ItemState.InUse)
+    {
+        @this.Chip(SkillStateText.For(ItemState.InUse), SkillStateText.InUseText(this.UsedBy), SkillStateText.Sentence(ItemState.InUse, this.Holders, null), "skill-state-chip-inuse")
+    }
+
+    @if (this.Hidden)
+    {
+        @this.Chip(SkillStateText.Hidden, SkillStateText.Hidden.Text, SkillStateText.Hidden.Sentence, "skill-state-chip-hidden")
+    }
+
+    @if (this.ModifiedLocally)
+    {
+        @this.Chip(SkillStateText.ModifiedLocally, SkillStateText.ModifiedLocally.Text, SkillStateText.ModifiedLocally.Sentence, "skill-state-chip-modified")
+    }
+</span>
+
+@code {
+    /// <summary>The state from <c>SkillRegistry.DisplayState</c>; null for a built-in or Yours Skill, which has none.</summary>
+    [Parameter]
+    public ItemState? State { get; set; }
+
+    /// <summary>How many Teammates hold the item.</summary>
+    [Parameter]
+    public int UsedBy { get; set; }
+
+    /// <summary>The Source's <c>statusReason</c>, for Deprecated and Withdrawn.</summary>
+    [Parameter]
+    public string? Reason { get; set; }
+
+    /// <summary>The holders' names, comma-joined, for the In use sentence.</summary>
+    [Parameter]
+    public string? HolderNames { get; set; }
+
+    /// <summary>Whether <c>hidden.json</c> hides the item.</summary>
+    [Parameter]
+    public bool Hidden { get; set; }
+
+    /// <summary>Whether the copy in <c>Skills/</c> was edited on this computer.</summary>
+    [Parameter]
+    public bool ModifiedLocally { get; set; }
+
+    /// <summary>The holders, split back out of <see cref="HolderNames"/>.</summary>
+    private IReadOnlyList<string> Holders =>
+        string.IsNullOrWhiteSpace(this.HolderNames) ? [] : this.HolderNames.Split(", ", StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+
+    /// <summary>One chip in its tooltip and focusable wrapper.</summary>
+    private RenderFragment Chip(StateLook look, string text, string sentence, string kind) => __builder =>
+    {
+        <MudTooltip Text="@sentence" ShowOnFocus="true" ShowOnHover="true">
+            <span class="skill-state-chip @kind" tabindex="0" aria-label="@($"{text}: {sentence}")">
+                <StatusChip Color="@look.Color" Icon="@look.Icon" Class="mr-1">@text</StatusChip>
+            </span>
+        </MudTooltip>
+    };
+}

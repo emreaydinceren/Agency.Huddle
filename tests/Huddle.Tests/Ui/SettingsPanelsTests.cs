@@ -26,6 +26,7 @@ public sealed partial class SettingsPanelsTests
         ctx.Services.AddSingleton(factory.Services.GetRequiredService<SkillStore>());
         ctx.Services.AddSingleton(factory.Services.GetRequiredService<LibraryRootStore>());
         ProfileTestServices.AddProfile(ctx.Services, factory);
+        SkillsTestServices.AddFromFactory(ctx.Services, factory);
         return ctx;
     }
 
@@ -58,6 +59,18 @@ public sealed partial class SettingsPanelsTests
         var rows = cut.FindAll(".settings-nav a.mud-nav-link");
         Assert.Equal(7, rows.Count);
         Assert.All(rows, static row => Assert.NotEmpty(row.QuerySelectorAll("svg")));
+    }
+
+    /// <summary>With no Broken Pack, catalog or Skill and no Skill store issue, the Skills row carries no badge (G2a).</summary>
+    [Fact]
+    public async Task SectionMenu_NoSkillProblems_NoBadge()
+    {
+        await using var factory = new TeamWebApplicationFactory();
+        await using var ctx = NewContext(factory);
+
+        var cut = ctx.Render<Settings>();
+
+        Assert.Empty(cut.FindAll(".settings-nav-badge"));
     }
 
     /// <summary>"Reset all to defaults" sits in the Prompts panel's action row beside Save, inside the section and not above the menu (UX-010, G1a).</summary>
