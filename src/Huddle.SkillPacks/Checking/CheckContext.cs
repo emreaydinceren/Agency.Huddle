@@ -22,7 +22,25 @@ public sealed record CheckContext(
     IReadOnlyList<RoleInfo> Roles,
     IReadOnlyList<InstalledSkill> InstalledSkills,
     IReadOnlyList<string> AppToolNames,
-    DateTimeOffset Written);
+    DateTimeOffset Written)
+{
+    /// <summary>The context <c>huddle-packs</c> runs with: one to one with the context file Huddle wrote (§6.7).</summary>
+    public static CheckContext From(InstallContext installContext)
+    {
+        ArgumentNullException.ThrowIfNull(installContext);
+        return new CheckContext(
+            installContext.HuddleVersion,
+            installContext.SchemaVersion,
+            installContext.Computer,
+            installContext.DataDir,
+            installContext.SkillSourcesDir,
+            installContext.SkillsDir,
+            installContext.Roles,
+            installContext.Installed,
+            installContext.AppTools,
+            installContext.Written);
+    }
+}
 
 /// <summary>A role a Pack's <c>appliesTo</c> may name.</summary>
 /// <param name="Id">The role id.</param>
