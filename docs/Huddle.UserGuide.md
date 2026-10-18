@@ -650,7 +650,7 @@ its card. It shows:
   them off. A Skill the role itself carries stays when you remove a pack. Adding
   a pack also adds a short phrase to the Teammate's `consult_when` line, so the
   manager knows to route that kind of work to it.
-- Each Skill's provenance line (see [Importing a Skill](#importing-a-skill)).
+- Each Skill's provenance line (see [Adding Skills with your AI tool](#adding-skills-with-your-ai-tool)).
 
 The panel shows a warning, as a full sentence, in two places:
 
@@ -853,18 +853,14 @@ anything is created.
 Each draft card shows how many **Skills** the role brings (hover for the names) and, when
 something is missing, **Needs setup** with the reason, such as "connector email:read not
 connected". That warning does not stop the approval. Before anything is created, **Approve &
-hire** imports any Skill the roster needs that is not yet on disk, the same way **Settings ›
-Skills** does. If a Skill's review shows more than a missing licence (scripts, shell
-commands, network calls), nothing is created: the message names it and links to
-**Settings › Skills**, where you import it yourself before approving again. A hired Teammate
-runs on the adapter and model its role's strength resolved to and carries the role's Skills
-and packs. **Edit** on a draft can change them: its **Skills** list shows the role's own skills first,
-checked, then your installed skills, then the whole catalog, so you can add any skill and
-it is imported when you approve. Every skill in the list shows where
-it lives: its publisher and its path in the repository for an imported or catalog skill, or
-its folder (`Skills/<name>`) for one of your own, so you can see who made it. The role form for your own roles has the same **Skills**
-field.
-
+hire** copies the Skills the roster needs into `Skills/`. A Skill that cannot be copied (not downloaded,
+broken, or withdrawn by its Source) stops the approval with "Skills not ready: …" and nothing is created.
+A card that names such a Skill already shows **Needs setup** with a **Copy prompt**; paste it into your AI
+tool, and the card turns ready by itself when the tool finishes. A hired Teammate runs on the adapter and
+model its role's strength resolved to and carries the role's Skills and packs. **Edit** on a draft can
+change them: its **Skills** list shows the Skills Huddle has or can copy, and Skills that are not on this
+computer yet are listed below it, each with **Copy prompt**. The role form for your own roles has the
+same **Skills** field.
 ### Hiring a Team from a type
 
 A team type is a template for a kind of Team: its roles, the Teammates that fill
@@ -1774,47 +1770,54 @@ Staff, `team-management`, used by Team managers to see other Teams, handle Reque
 and propose Sprints, and `retrospective`, used by the Retro agent. To change one,
 create `Skills/<name>/` (for example `Skills/team-building/`) and put a file of the
 same name in it, for example `onboarding.md`. Your file replaces that one file; the
-others still come from the built-in version. **Settings › Skills** marks the Skill
-as **Overridden**. **Restore default** deletes your whole `Skills/<name>/` folder,
+others still come from the built-in version. On the **Skills** tab, **Restore default** in the
+Skill's **⋯** menu deletes your whole `Skills/<name>/` folder,
 including any extra files you added. It asks **Restore default?** first; the
 dialog's **Restore default** button confirms.
 
-### Importing a Skill
+### Adding Skills with your AI tool
 
-On the **Settings** page's **Skills** tab, select **Import skill**. The dialog
-takes either an entry from the catalog, found by name, publisher or category, or
-a GitHub tree URL you paste in.
+Huddle does not download Skills; your AI tool does, for example Claude Code or Codex. It signs in where it needs to, fetches the Skills wherever it likes, and adds a pointer to a list called SKILLS.md in Huddle's Skill Sources folder. Huddle reads that list, checks every file it points to, and shows the result in **Settings › Skills**. Whatever passes the checks is ready to use at once; there is no approval step.
 
-Select **Review** to fetch a preview. The URL must be an `https://github.com/<owner>/<repo>/tree/...`
-folder; Huddle pins it to a commit. The preview lists the publisher, the repository,
-the commit, the licence, and any flags, grouped under **Scripts**, **Shell
-commands**, **Network calls**, **Paths outside the Work Dir** or **No license**.
-A flag is a warning for you to read, not a block. A skill is refused, with the
-reason, when its folder is over 5 MB or 200 files, holds a symbolic link or an unsafe
-path, has no valid `SKILL.md`, or is larger than the download limit. Nothing is
-written until you select **Install**. The buttons run **Cancel**, **Back**, **Install**,
-and **Back** and **Cancel** write nothing. After an
-install the dialog links to the Skills tab.
+To add Skills, open **Settings › Skills**, select **Add with your AI tool** on the **Packs** tab, say where the Skills are, and select **Copy prompt**. Paste the prompt into your AI tool. When it finishes, a message says what is ready, and **Show** takes you to it. **Import skill** on the **Skills** tab does the same for a single Skill from a link or folder.
 
-Two cases are safe to repeat or refused:
+When you give a Teammate a Skill, Huddle copies it into `Skills/` and the Teammate uses that copy. Later changes to the AI tool's files reach the Teammate only when you apply an update.
 
-- Importing the **same** skill again, from the same source and commit, is a no-op:
-  it reports success and changes nothing.
-- A name that clashes with a built-in Skill, or with a Skill you wrote yourself or
-  imported from somewhere else, is refused, and the existing one is left alone.
+| You see | It means | What to do |
+| --- | --- | --- |
+| **Not downloaded** | A catalog or Pack lists the Skill, but it has no folder on this computer. | Select **Copy prompt** and paste it into your AI tool. |
+| **Update available** | The files your AI tool has now differ from the copies Teammates use. | Select **Review update** to see what changed and apply it. |
+| **Needs setup** | A hire card or draft names a Pack or Skill that is not ready. | Select **Copy prompt** on the card. The card turns ready by itself when the AI tool finishes. |
+| **Broken** | A check failed or a pointer leads nowhere. | Select **Copy fix prompt** and paste it into your AI tool. |
 
-An installed Skill keeps a `.source.json` file in its folder, which records where
-it came from. Wherever the Skill appears (the Skills tab, a Teammate's card), its
-provenance line shows the publisher, repository, commit and licence. If the folder
-has changed since the import, the line also shows a **modified locally** chip. A
-Skill you wrote yourself shows "Yours", and a shipped one shows "Built-in".
-
+An installed Skill keeps a `.source.json` file in its folder, which records where it came from. Wherever the Skill appears, its provenance line shows the Source, repository, commit and licence. If the folder has changed since the copy, the line also shows a **modified locally** chip. A Skill you wrote yourself shows "Yours", and a shipped one shows "Built in".
 
 > **Example (Scenario 2).** Emre adds the MSBuild Authoring pack to Jane's card. The
 > pack's Skills join hers, and the card's warnings, described under
 > [Packs, setup warnings and the Process step](#packs-setup-warnings-and-the-process-step),
 > show whether the set now crowds or overlaps.
 
+### The Skills tab
+
+A Skill is a folder of instructions that a Teammate reads when its work calls for it. This list shows every Skill Huddle knows about: built in, fetched by your AI tool, or listed in a catalog but not on this computer yet. A Skill marked Not downloaded has no folder here; Copy prompt gives your AI tool what it needs to fetch it. Huddle never downloads Skills itself. Giving a Teammate a Skill copies it to that Teammate, so later changes reach it only when you apply an update.
+
+Each row shows the Skill's name and description, where it came from, its state and the Teammates that use it. Search by name, narrow the list with the **State** filter, or turn on **Show hidden** to see what you hid. The **⋯** menu on a row offers **Copy prompt**, **Hide** or **Unhide**, **Show catalog in Library** and, for a built-in Skill you changed, **Restore default**.
+
+**Reload** reads SKILLS.md and every file it points to again, right now. **Problems** at the bottom lists what failed a check, with the file and the fix.
+
+### The Packs tab
+
+A Pack is a named set of Skills for some roles, such as MSBuild Authoring. Choosing a Pack on a Teammate gives it all the Pack's Skills at once and tells its manager when to use them. Packs come from SKILLS.md, a list your AI tool keeps; Huddle never fetches one itself. To add one, select Add with your AI tool, say where it is, and paste the prompt into Claude Code, Codex or a similar tool. Whatever passes Huddle's checks is ready to use at once; there is no approval step.
+
+Each card shows the Pack's title, version and state, its Source, how many Skills it holds, when it was last updated and the roles it is for. A line under the title says what is wrong when something is. **Details** shows where the Pack came from, each Skill with its licence and warnings, and the notes your AI tool kept.
+
+A card marked **New** appeared since you last left this tab. **Check for updates** copies a prompt that asks your AI tool to look for newer versions. **Hide** leaves a Pack out of lists; Teammates who have it keep it.
+
+### The Sources tab
+
+A Source is one place Skills come from: a GitHub repository, another Git server or a folder on this computer. Your AI tool keeps notes for each Source on how it found and fetched it, so the next update starts from what it learned. Everything here lives in the Skill Sources folder, which you can share with another Huddle. Removing a Source removes its notes and rows, but never the clone itself. Your AI tool reads the install file first; Copy path copies its location.
+
+The tab shows the install file and this computer's name, the Skill Sources folder with **Change…** to choose another, one row per Source and one row per catalog. A Source its owner deprecated, withdrew or moved says so on its row, in words. Withdrawn Skills cannot be given to new hires; Teammates who already have them keep working and are flagged.
 ## Settings
 
 | Tab | What it changes | Saved to |
@@ -1823,7 +1826,7 @@ Skill you wrote yourself shows "Yours", and a shipped one shows "Built-in".
 | **Prompts** | The text Huddle sends to Teammates, such as the wake-up message. **Reset all to defaults** (beside the sticky **Save**) asks "Reset every prompt to its default?" and **Reset all** confirms. | `prompts.json` |
 | **Appearance** | You pick one light Theme and one dark Theme; the picker groups the Themes as Light, Dark and High contrast. The button in the top bar switches between your two. An accent colour is set here too; your own avatar moved to **Profile**. | `appearance.json` |
 | **Personas** | The Teammate definitions. | `Teammates/…` |
-| **Skills** | List of Skills with where each came from, and their problems; **Import skill**; **Restore default**. | `Skills/…` |
+| **Skills** | Three tabs: **Skills** (every Skill, its state and who uses it), **Packs** (Packs from SKILLS.md, **Add with your AI tool**) and **Sources** (where Skills come from, the Skill Sources folder). See [Adding Skills with your AI tool](#adding-skills-with-your-ai-tool). | `Skills/…`, `SkillSources/` |
 | **Team types** | Read-only list of team types, built-in or yours, with **Reload** and a **Problems** list. | `TeamTypes/…` |
 | **Library** | Pinned folders; hide the built-in roots. | `library-roots.json` |
 
