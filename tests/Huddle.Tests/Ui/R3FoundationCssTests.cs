@@ -77,9 +77,9 @@ public sealed class R3FoundationCssTests
 
         Assert.Contains("margin-inline: 4px;", body, StringComparison.Ordinal); // contains-ok: one rule of the stylesheet source
         Assert.Contains("border-radius: calc(var(--mud-default-borderradius) * 0.75);", body, StringComparison.Ordinal); // contains-ok: one rule of the stylesheet source
-        Assert.Contains("var(--mud-palette-primary) 14%, var(--mud-palette-surface)", body, StringComparison.Ordinal); // contains-ok: one rule of the stylesheet source
+        Assert.Contains("var(--hu-selected-background)", body, StringComparison.Ordinal); // contains-ok: one rule of the stylesheet source
         Assert.Contains("font-weight: 500;", body, StringComparison.Ordinal); // contains-ok: one rule of the stylesheet source
-        Assert.Contains("var(--mud-palette-primary) 20%, var(--mud-palette-surface)", RuleBody(".selected-shape:hover,\r\n.selected-shape:focus-visible"), StringComparison.Ordinal); // contains-ok: one rule of the stylesheet source
+        Assert.Contains("var(--hu-selected-background-hover)", RuleBody(".selected-shape:hover,\r\n.selected-shape:focus-visible"), StringComparison.Ordinal); // contains-ok: one rule of the stylesheet source
     }
 
     /// <summary>A filter chip is a 28px pill with 0 12px padding and 13px text; unset it is a dashed Field line, set it takes the accent border and tint.</summary>
@@ -137,9 +137,9 @@ public sealed class R3FoundationCssTests
     {
         string css = AppCss();
 
-        Assert.Matches(@"\.mud-button-outlined \{\s*border-color: var\(--mud-palette-lines-default\);", css);
+        Assert.Matches(@"\.mud-button-outlined \{\s*border-color: var\(--hu-line-control\);", css);
         Assert.Matches(@"\.mud-table \.mud-table-cell \{\s*border-bottom-color: var\(--ink-edge\);", css);
-        Assert.Matches(@"\.mud-tabs-tabbar \{\s*border-bottom: 1px solid var\(--mud-palette-lines-default\);", css);
+        Assert.Matches(@"\.mud-tabs-tabbar \{\s*border-bottom: 1px solid var\(--hu-line-region\);", css);
         Assert.Matches(@"\.mud-tabs-panels \{\s*padding-top: 24px;", css);
         Assert.Matches(@"\.mud-input\.mud-input-outlined \.mud-input-outlined-border \{\s*border-color: var\(--ink-field\);", css);
     }
@@ -150,8 +150,8 @@ public sealed class R3FoundationCssTests
     {
         string css = AppCss();
 
-        Assert.Matches(@"\.mud-link\.mud-primary-text \{\s*color: color-mix\(in srgb, var\(--mud-palette-primary\) 70%, var\(--mud-palette-text-primary\)\) !important;", css);
-        Assert.Matches(@"\.mud-list-item\.mud-selected-item \{[^}]*background-color: color-mix\(in srgb, var\(--mud-palette-primary\) 14%, var\(--mud-palette-surface\)\);", css);
+        Assert.Matches(@"\.mud-link\.mud-primary-text \{\s*color: var\(--hu-accent-ink\) !important;", css);
+        Assert.Matches(@"\.mud-list-item\.mud-selected-item \{[^}]*background-color: var\(--hu-selected-background\);", css);
     }
 
     /// <summary>The stylesheet source with line endings normalised to LF.</summary>

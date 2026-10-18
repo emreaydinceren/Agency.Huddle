@@ -10,7 +10,7 @@
 html, body {
     height: 100%;
     margin: 0;
-    background: var(--mud-palette-surface);
+    background: var(--hu-ground-page);
     color: var(--mud-palette-text-primary);
     font-family: var(--mud-typography-default-family);
 
@@ -52,7 +52,7 @@ code, kbd, samp, pre {
    comfortable in both. Do not "improve" this back to an accent colour. */
 a:focus-visible,
 button:focus-visible {
-    outline: 2px solid var(--mud-palette-text-primary);
+    outline: 2px solid var(--hu-focus);
     outline-offset: 2px;
 }
 
@@ -74,8 +74,8 @@ button:focus-visible {
 /* The sidebar shares the one surface; a hairline edge, not a tint, tells navigation from work. The doubled
    class outranks MudBlazor's own .mud-drawer background regardless of stylesheet order. */
 .mud-drawer.mud-drawer {
-    background-color: var(--mud-palette-surface);
-    border-inline-end: 1px solid var(--mud-palette-lines-default);
+    background-color: var(--hu-ground-sidebar);
+    border-inline-end: 1px solid var(--hu-line-region);
 }
 
 /* Sidebar icons default to --mud-palette-drawer-icon, which a palette that never sets it leaves at MudBlazor's
@@ -98,19 +98,20 @@ button:focus-visible {
 }
 
 .mud-drawer .mud-navmenu .mud-nav-link.active:not(.mud-nav-link-disabled) {
-    color: color-mix(in srgb, var(--mud-palette-primary) 70%, var(--mud-palette-text-primary));
-    background-color: color-mix(in srgb, var(--mud-palette-primary) 14%, var(--mud-palette-surface));
-    font-weight: 500;
+    color: var(--hu-current-foreground);
+    background-color: var(--hu-current-background);
+    font-weight: var(--hu-current-weight);
+    box-shadow: var(--hu-current-shadow);
 }
 
 .mud-drawer .mud-navmenu .mud-nav-link.active:not(.mud-nav-link-disabled):hover:not(.mud-nav-link-disabled),
 .mud-drawer .mud-navmenu .mud-nav-link.active:not(.mud-nav-link-disabled):focus-visible:not(.mud-nav-link-disabled),
 .mud-drawer .mud-navmenu .mud-nav-link.active:not(.mud-nav-link-disabled):active:not(.mud-nav-link-disabled) {
-    background-color: color-mix(in srgb, var(--mud-palette-primary) 20%, var(--mud-palette-surface));
+    background-color: var(--hu-current-background-hover);
 }
 
 .mud-drawer .mud-navmenu .mud-nav-link.active:not(.mud-nav-link-disabled) .mud-nav-link-icon {
-    color: color-mix(in srgb, var(--mud-palette-primary) 70%, var(--mud-palette-text-primary));
+    color: var(--hu-current-icon);
 }
 
 /* The active tab-rail label and the words on text and outlined accent buttons: MudBlazor colours them with raw
@@ -118,7 +119,7 @@ button:focus-visible {
 .mud-tab.mud-tab-active,
 .mud-button-text.mud-button-text-primary,
 .mud-button-outlined.mud-button-outlined-primary {
-    color: color-mix(in srgb, var(--mud-palette-primary) 70%, var(--mud-palette-text-primary));
+    color: var(--hu-accent-ink);
 }
 
 /* MudBlazor fills an open group's chevron with the accent; an open group is not a selection, so it stays neutral. */
@@ -207,7 +208,7 @@ button:focus-visible {
 /* An outlined button's border is the Chrome line, not Ink (the heaviest line in the app) and not the accent (audit B8c).
    Its words are Ink, or the accent ink above for Color.Primary. Three classes outrank MudBlazor's per-colour border. */
 .mud-button-root.mud-button.mud-button-outlined {
-    border-color: var(--mud-palette-lines-default);
+    border-color: var(--hu-line-control);
 }
 
 .mud-button-root.mud-button.mud-button-outlined.mud-button-outlined-default {
@@ -235,6 +236,26 @@ button:focus-visible {
     border-color: var(--ink-field);
 }
 
+/* The outlined input's fill, and its focused border and halo, read the field tokens. Each default is what MudBlazor
+   paints (no fill, a Primary border, no shadow). The two selectors repeat MudBlazor's focused-border rule so they tie
+   it on specificity and win on order; an error border is !important there and still wins. */
+.mud-input.mud-input-outlined {
+    background-color: var(--hu-field-background);
+}
+
+.mud-input.mud-input-outlined:focus-within > .mud-input-outlined-border,
+.mud-input.mud-input-outlined:focus-within .mud-shrink > .mud-input-outlined-border {
+    border-color: var(--hu-field-focus-line);
+    box-shadow: var(--hu-field-focus-shadow);
+}
+
+/* The dialog scrim: MudBlazor's dark overlay colour, as a token. Only the dark scrim is named, so a dialog with no
+   backdrop stays clear. */
+.mud-overlay.mud-overlay-dialog .mud-overlay-scrim.mud-overlay-dark {
+    border-color: var(--hu-scrim);
+    background-color: var(--hu-scrim);
+}
+
 /* A field's label is Quiet ink at 400, at rest and floated, in every dialog (audit B10d). MudBlazor draws it at the
    subtitle1 weight, which is 600 in this scale. An outlined field's label, which sits above the box, is set apart at
    600 by the "label sits above its field" rules below. */
@@ -249,7 +270,7 @@ button:focus-visible {
 
 /* The tab rail (Team page): it ends in a Chrome line, and its content starts 24px below that line (audit B2). */
 .mud-tabs:not(.mud-tabs-vertical) > .mud-tabs-tabbar {
-    border-bottom: 1px solid var(--mud-palette-lines-default);
+    border-bottom: 1px solid var(--hu-line-region);
 }
 
 .mud-tabs:not(.mud-tabs-vertical) > .mud-tabs-panels {
@@ -288,7 +309,7 @@ button:focus-visible {
    Primary, which MudBlazor paints both in and which reads under 4.5:1 on a Theme's surface (audit A5). The list row
    also takes the Selected shape below. MudBlazor's .mud-primary-text is !important, so this is too. */
 .mud-link.mud-primary-text {
-    color: color-mix(in srgb, var(--mud-palette-primary) 70%, var(--mud-palette-text-primary)) !important;
+    color: var(--hu-accent-ink) !important;
 }
 
 .mud-list-item.mud-selected-item {
@@ -296,14 +317,14 @@ button:focus-visible {
     margin-inline: 4px;
     padding-inline: 12px;
     border-radius: calc(var(--mud-default-borderradius) * 0.75);
-    background-color: color-mix(in srgb, var(--mud-palette-primary) 14%, var(--mud-palette-surface));
-    color: color-mix(in srgb, var(--mud-palette-primary) 70%, var(--mud-palette-text-primary)) !important;
+    background-color: var(--hu-selected-background);
+    color: var(--hu-selected-foreground) !important;
     font-weight: 500;
 }
 
 .mud-list-item.mud-selected-item:hover,
 .mud-list-item.mud-selected-item:focus-visible {
-    background-color: color-mix(in srgb, var(--mud-palette-primary) 20%, var(--mud-palette-surface));
+    background-color: var(--hu-selected-background-hover);
 }
 /* ---- The type scale, in rendered pixels (ADR-0056) ---------------------------------------------
    The Theme (ThemeDefaults) sets the role sizes: h5 20, h6 16, subtitle 14, body1 14, body2 13, caption 12,
@@ -396,7 +417,7 @@ b {
 .invite-panel,
 .composer-picker,
 .floating-panel {
-    box-shadow: var(--mud-elevation-4);
+    box-shadow: var(--hu-shadow-panel);
     border: 1px solid var(--ink-edge);
     border-radius: var(--mud-default-borderradius);
     z-index: var(--mud-zindex-popover);
@@ -436,7 +457,7 @@ b {
 a.room-ref,
 a.team-ref,
 .ref-link {
-    color: color-mix(in srgb, var(--mud-palette-primary) 70%, var(--mud-palette-text-primary));
+    color: var(--hu-accent-ink);
     text-decoration: underline dotted;
 }
 
@@ -450,13 +471,13 @@ a.team-ref,
    Message addresses reads as one. A Mention of the Human sits on a light Warning wash in body text, the "Needs you"
    colour, so the Human finds where they were asked. */
 .mention {
-    color: color-mix(in srgb, var(--mud-palette-primary) 70%, var(--mud-palette-text-primary));
+    color: var(--hu-accent-ink);
     font-weight: 600;
 }
 
 .mention.mention--me {
     color: var(--mud-palette-text-primary);
-    background: color-mix(in srgb, var(--mud-palette-warning) 14%, var(--mud-palette-surface));
+    background: var(--hu-tone-warning-soft);
     border-radius: calc(var(--mud-default-borderradius) * .5);
     padding: 0 4px;
 }
@@ -499,14 +520,14 @@ a.team-ref,
 .selected-shape {
     margin-inline: 4px;
     border-radius: calc(var(--mud-default-borderradius) * 0.75);
-    background-color: color-mix(in srgb, var(--mud-palette-primary) 14%, var(--mud-palette-surface));
-    color: color-mix(in srgb, var(--mud-palette-primary) 70%, var(--mud-palette-text-primary));
+    background-color: var(--hu-selected-background);
+    color: var(--hu-selected-foreground);
     font-weight: 500;
 }
 
 .selected-shape:hover,
 .selected-shape:focus-visible {
-    background-color: color-mix(in srgb, var(--mud-palette-primary) 20%, var(--mud-palette-surface));
+    background-color: var(--hu-selected-background-hover);
 }
 
 /* A field in a toolbar (audit A7): a 28px box with 13px text, on a MudTextField or MudSelect. SearchField wears it.
@@ -879,7 +900,7 @@ a.team-ref,
 }
 
 .tab-group + .tab-group {
-    border-left: 1px solid var(--mud-palette-lines-default);
+    border-left: 1px solid var(--hu-line-region);
 }
 
 .tab-group:not(.focused) .tab-item.active {
@@ -919,8 +940,8 @@ a.team-ref,
    not the other two have content. */
 .mud-appbar.top-bar {
     color: var(--mud-palette-text-secondary);
-    background-color: var(--mud-palette-surface);
-    border-bottom: 1px solid var(--mud-palette-lines-default);
+    background-color: var(--hu-ground-page);
+    border-bottom: 1px solid var(--hu-line-region);
 }
 
 .top-bar-grid {
@@ -1059,6 +1080,7 @@ a.team-ref,
     flex: 0 0 48px;
     flex-direction: column;
     width: 48px;
+    background-color: var(--hu-ground-rail);
 }
 
 .activity-bar-top,
@@ -1084,13 +1106,14 @@ a.team-ref,
 /* The pressed button wears the active sidebar row's Selected treatment and shape (see the .mud-drawer .mud-navmenu rules
    above): accent text, Primary 14% over Surface, 20% when hovered or focused. */
 .activity-bar-item.activity-bar-item-selected {
-    color: color-mix(in srgb, var(--mud-palette-primary) 70%, var(--mud-palette-text-primary));
-    background-color: color-mix(in srgb, var(--mud-palette-primary) 14%, var(--mud-palette-surface));
+    color: var(--hu-current-foreground);
+    background-color: var(--hu-current-background);
+    box-shadow: var(--hu-current-shadow);
 }
 
 .activity-bar-item.activity-bar-item-selected:hover,
 .activity-bar-item.activity-bar-item-selected:focus-visible {
-    background-color: color-mix(in srgb, var(--mud-palette-primary) 20%, var(--mud-palette-surface));
+    background-color: var(--hu-current-background-hover);
 }
 
 /* The bottom toolbar's two links are the same 40px icon-only tiles as the buttons above them. */
@@ -1110,7 +1133,7 @@ a.team-ref,
 /* The hairline between the bar and the Sidebar belongs to the Sidebar, so it goes when the Sidebar collapses and
    never narrows the bar's 48px buttons. */
 .sidebar-views {
-    border-inline-start: 1px solid var(--mud-palette-lines-default);
+    border-inline-start: 1px solid var(--hu-line-region);
     display: flex;
     flex: 1 1 auto;
     flex-direction: column;
@@ -1130,7 +1153,13 @@ a.team-ref,
    16px step and scroll inside the drawer's own content element. */
 .mud-drawer.right-sidebar {
     border-inline-end: none;
-    border-inline-start: 1px solid var(--mud-palette-lines-default);
+    border-inline-start: 1px solid var(--hu-line-region);
+}
+
+/* The Right sidebar sits on the page ground, not the Left sidebar's (the doubled .mud-drawer above gives it that); the
+   tripled class outranks it. Both are Surface until a Theme sets the two ground tokens apart. */
+.mud-drawer.mud-drawer.right-sidebar {
+    background-color: var(--hu-ground-page);
 }
 
 .right-sidebar .mud-drawer-content {
@@ -1210,7 +1239,7 @@ a.team-ref,
 .sidebar-row .mud-link.sidebar-row-text:hover,
 .sidebar-row .mud-link.sidebar-row-text:focus-visible,
 .sidebar-row .mud-link.sidebar-row-text.is-current {
-    color: color-mix(in srgb, var(--mud-palette-primary) 70%, var(--mud-palette-text-primary));
+    color: var(--hu-accent-ink);
 }
 
 /* A Task row: the ID in 12px Quiet ink, a one-line title, then the state's dot (B11c). */
@@ -1438,7 +1467,7 @@ a.team-ref,
     top: calc(100% + 0.375rem);
     min-width: 280px;
     padding: 16px;
-    background: var(--mud-palette-surface);
+    background: var(--hu-ground-raised);
 }
 
 /* The panel's title (audit C3a): "Invite to {Room}" in subtitle2, above the search and the rows. */
@@ -1478,7 +1507,7 @@ a.team-ref,
 }
 
 .invite-agent:hover {
-    background: var(--mud-palette-action-default-hover);
+    background: var(--hu-hover);
 }
 
 .message-list {
