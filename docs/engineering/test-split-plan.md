@@ -1077,7 +1077,7 @@ Ids are `<deliverable>.<task>`:
 `pwsh -NoProfile -File agents/scripts/Set-Tracker.ps1 -Task "2.3" -State Done -TrackerPath docs/engineering/test-split-plan.md`.
 `(H)` is Haiku, `(S)` is Sonnet.
 
-**Status:** 27 of 77 tasks Done · 1 of 5 retrospectives done · 0.6 and 10.2 (load runs) skipped by the user · last updated 2026-10-18.
+**Status:** 30 of 77 tasks Done · 1 of 5 retrospectives done · 0.6 and 10.2 (load runs) skipped by the user · last updated 2026-10-18.
 
 | **Deliverable / Task** | **Model** | **Depends on** | **Active** | **In Progress** | **Done** |
 | --- | --- | --- | --- | --- | --- |
@@ -1117,9 +1117,9 @@ Ids are `<deliverable>.<task>`:
 | 6.2 Move the component tests (H) | Haiku | 6.1 | | | ✔ |
 | 6.3 Wire Components (S) | Sonnet | 6.2 | | | ✔ |
 | **D7 SkillPacks** | Sonnet | D6 | | | |
-| 7.1 SkillPacks skeleton and setup tests (H) | Haiku | D6 | | | |
-| 7.2 Move the SkillPacks tests (H) | Haiku | 7.1 | | | |
-| 7.3 Wire SkillPacks (S) | Sonnet | 7.2 | | | |
+| 7.1 SkillPacks skeleton and setup tests (H) | Haiku | D6 | | | ✔ |
+| 7.2 Move the SkillPacks tests (H) | Haiku | 7.1 | | | ✔ |
+| 7.3 Wire SkillPacks (S) | Sonnet | 7.2 | | | ✔ |
 | **D8 The remainder becomes Domain** | Sonnet | D7 | | | |
 | 8.1 Rename the project (H) | Haiku | D7 | | | |
 | 8.2 Domain project file, runner file and literals (H) | Haiku | 8.1 | | | |
