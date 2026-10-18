@@ -1300,17 +1300,20 @@ a.team-ref,
 
 /* One indent per nesting level, set here and nowhere else (UX-015). Every child row has a leading visual
    (an icon or, for a 1:1 Room, the Teammate's small avatar), so the text of every row of a level starts at the
-   same x. Level 1 is a row inside a group (a Room, a task view, a Library entry, a Team); level 2 is a row
-   inside a Team (its Rooms and Projects), used by the "Teams nav" rules further down. Every sidebar row is
-   one height (UX-014, UX-017). */
+   same x. Level 1 is a row inside a group (a Room, a task view, a Library entry, a Team): with the icon's 12px inset
+   it puts the row's icon a short step right of the group header's icon. Level 2 is a row inside a Team (its Rooms and
+   Projects), used by the "Teams nav" rules further down; it equals level 1 because a Team row has no leading icon, so
+   that indent already puts a child's icon under the Team's name. Every sidebar row is one height (UX-014, UX-017). */
 :root {
-    --nav-indent-1: 2.25rem;
-    --nav-indent-2: 3.25rem;
+    --nav-indent-1: 1rem;
+    --nav-indent-2: 1rem;
     --nav-row-height: 32px;
     --icon-size-row: 18px;
 }
 
-.mud-nav-group .mud-collapse-container .mud-nav-link {
+/* .mud-nav-item lifts this to (0,4,0): MudBlazor's own ".mud-nav-group * .mud-navmenu .mud-nav-item .mud-nav-link"
+   sets 36px at that weight, and a weaker rule here loses to it whatever the token says. */
+.mud-nav-group .mud-collapse-container .mud-nav-item .mud-nav-link {
     padding-left: var(--nav-indent-1);
 }
 
@@ -5503,11 +5506,11 @@ a.team-ref,
 }
 
 /* ---- Teams nav: the Team, Project and Room rows in the sidebar -------------------------------
-   Every other group's child text starts at 62px (36px link padding). A Team row keeps that: the chevron
-   floats over the link's left padding instead of pushing the name right, and a Project's icon starts
-   at that same 62px so it sits directly under the Team's name, with the Project name after the icon. */
-.teams-nav-host .nav-project-link .mud-nav-link,
-.teams-nav-host .nav-team-room-link .mud-nav-link {
+   A Team row has no leading icon, so its name starts where a row's icon slot does, and its Rooms and Projects keep
+   the level-1 indent: their icon sits directly under the Team's name, with the name after it. The chevron floats
+   in the gutter left of the name instead of pushing it right. The class sits on the .mud-nav-item itself. */
+.teams-nav-host .mud-nav-item.nav-project-link .mud-nav-link,
+.teams-nav-host .mud-nav-item.nav-team-room-link .mud-nav-link {
     padding-left: var(--nav-indent-2);
 }
 
@@ -5518,7 +5521,7 @@ a.team-ref,
 
 .teams-nav-host .teams-nav-chevron {
     position: absolute;
-    left: 0.75rem;
+    left: 0.25rem;
     z-index: 1;
     padding: 0;
     color: var(--mud-palette-text-secondary);
