@@ -6147,6 +6147,12 @@ a.team-ref,
     border: 2px solid var(--hu-ring);
 }
 
+/* MudBlazor colours that ring Surface with a selector one class stronger than the rule above; this one matches its
+   weight, and app.css loads after MudBlazor's sheet, so the ring takes the region's ground (--hu-ring). */
+.mud-avatar-group.mud-avatar-group-outlined.mud-avatar-group-outlined-surface .mud-avatar:not(.mud-avatar-outlined) {
+    border-color: var(--hu-ring);
+}
+
 .profile-avatar-button {
     display: inline-flex;
     padding: 0;

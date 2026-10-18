@@ -145,6 +145,8 @@ public sealed class NordicSkinTests
         Assert.True(RuleBody(css, ".library-explorer-split > .child-panel:first-child").Contains("var(--hu-ground-sunk)", StringComparison.Ordinal));
         // 9: the outlined avatar group border is the ring.
         Assert.True(RuleBody(css, ".mud-avatar-group.mud-avatar-group-outlined .mud-avatar.mud-avatar-small").Contains("border: 2px solid var(--hu-ring);", StringComparison.Ordinal));
+        // ... and it outweighs MudBlazor's own Surface ring, which is one class stronger than the rule above.
+        Assert.Equal("border-color: var(--hu-ring);", RuleBody(css, ".mud-avatar-group.mud-avatar-group-outlined.mud-avatar-group-outlined-surface .mud-avatar:not(.mud-avatar-outlined)").Trim());
         // 10: the input label does not track.
         Assert.True(RuleBody(css, paper + ".mud-input-label").Contains("letter-spacing: normal;", StringComparison.Ordinal));
         // 11: body paints the page ground, so the layout needs no background of its own.
