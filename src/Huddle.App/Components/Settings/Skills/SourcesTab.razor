@@ -1,13 +1,174 @@
 @*
-    The Sources tab of Settings › Skills (Skill Packs spec §6.9.3, G4f): its intro, then the install file, the folder, the
-    skills repository, one row per Source and the catalogs. The blocks are built in their own components.
+    The Sources tab of Settings › Skills (Skill Packs spec §6.9.3, G4f): the install file and this computer's name, the Skill
+    Sources folder with Change… and Use default, the skills repository (read only), one row per Source, one row per catalog,
+    and Problems. Changing the folder writes only skill-sources.json and never moves files.
 *@
+@using Agency.Huddle.App.Components.Shared.Dialogs
+@using Agency.Huddle.App.Library
 @using Agency.Huddle.App.Skills.Ui
+@using Agency.Huddle.App.SkillSources
+@using Finding = Agency.Huddle.SkillPacks.Checking.Finding
+@using ItemCheckState = Agency.Huddle.SkillPacks.Checking.ItemCheckState
+@using Agency.Huddle.SkillPacks.Resolving
+@using Microsoft.Extensions.Options
+@using CheckSeverity = Agency.Huddle.SkillPacks.Checking.Severity
+
+@inject SkillRegistry Registry
+@inject SkillSourcesSettings Settings
+@inject SkillSourcesRemover Remover
+@inject SkillPromptBuilder Prompts
+@inject PathFormatChoice PathChoice
+@inject IOptions<TeamOptions> Options
+@inject IJSRuntime JS
+@inject ISnackbar Snackbar
+@inject IDialogService DialogService
+@inject NavigationManager Navigation
 
 <SettingsIntro>@SkillGuide.SourcesIntro <SkillsLearnMore View="sources" /></SettingsIntro>
+
+<MudText Typo="Typo.subtitle2" Class="mt-2">Install file</MudText>
+<div class="d-flex flex-wrap align-center gap-2 mb-1">
+    <code class="sources-install-path">@this.Prompts.InstallFilePath(this.PathChoice.Format)</code>
+    <CopyPathMenu FormatChanged="@((PathFormat _) => this.StateHasChanged())" />
+</div>
+<MudText Typo="Typo.body2" Class="sources-computer mud-text-secondary mb-3">This computer: @this.Settings.ComputerName</MudText>
+
+<MudText Typo="Typo.subtitle2">Skill Sources folder</MudText>
+<div class="d-flex flex-wrap align-center gap-2 mb-1">
+    <code class="sources-folder-path">@this.Settings.Dir</code>
+    <MudTooltip Text="@SkillGuide.For("Change")" ShowOnFocus="true">
+        <MudButton Variant="Variant.Outlined" Size="Size.Small" Class="sources-folder-change" OnClick="this.ChangeFolderAsync">Change…</MudButton>
+    </MudTooltip>
+    @if (this.Settings.FileDir is not null)
+    {
+        <MudTooltip Text="@SkillGuide.For("Use default")" ShowOnFocus="true">
+            <MudButton Variant="Variant.Text" Size="Size.Small" Class="sources-folder-default" OnClick="this.UseDefault">Use default</MudButton>
+        </MudTooltip>
+    }
+</div>
+<MudText Typo="Typo.caption" Class="d-block mud-text-secondary mb-3">Changing the folder re-reads everything. It never moves files.</MudText>
+
+<MudText Typo="Typo.subtitle2">Skills repository</MudText>
+<MudText Typo="Typo.body2" Class="sources-repository">@(string.IsNullOrWhiteSpace(this.Options.Value.SkillsRepositoryDir) ? "Not set" : this.Options.Value.SkillsRepositoryDir)</MudText>
+<MudText Typo="Typo.caption" Class="d-block mud-text-secondary mb-3">Set in configuration; used once, when Packs moved to SKILLS.md.</MudText>
+
+<MudText Typo="Typo.subtitle2">Sources</MudText>
+@if (this.Registry.Current.Resolved.Sources.Count == 0)
+{
+    <MudText Typo="Typo.body2" Class="sources-none mud-text-secondary mb-3">No Sources yet. Your AI tool adds one when it fetches Skills.</MudText>
+}
+@foreach (ResolvedSource source in this.Registry.Current.Resolved.Sources)
+{
+    <SourceRow @key="@source.Id" SourceId="@source.Id" Revision="@this.Revision" />
+}
+
+<MudText Typo="Typo.subtitle2" Class="mt-3">Catalogs</MudText>
+@if (this.Registry.Current.Resolved.Catalogs.Count == 0)
+{
+    <MudText Typo="Typo.body2" Class="sources-no-catalogs mud-text-secondary">No catalogs yet.</MudText>
+}
+@foreach (ResolvedCatalog catalog in this.Registry.Current.Resolved.Catalogs)
+{
+    ItemState state = this.StateOf(catalog);
+    <MudPaper Outlined="true" Class="catalog-row pa-3 mb-2" data-catalog="@catalog.Id">
+        <div class="d-flex flex-wrap align-center gap-2">
+            <MudText Typo="Typo.subtitle2" Class="catalog-row-title">@catalog.Title</MudText>
+            <MudText Typo="Typo.caption" Class="mud-text-secondary">@catalog.Id · @catalog.Source</MudText>
+            <span class="ml-auto"><SkillStateChips State="@state" /></span>
+            <MudMenu Icon="@Icons.Material.Filled.MoreVert" Size="Size.Small" Dense="true" Class="hover-reveal-menu-button catalog-row-menu" AriaLabel="@MenuDialogs.ActivatorLabel(catalog.Title)">
+                @if (this.LibraryPath(catalog) is { } file)
+                {
+                    <MudMenuItem Class="catalog-row-menu-show-in-library" OnClick="@(() => this.Navigation.NavigateTo(LibraryLinkQuery.BuildPageUri(LibraryRootStore.SkillSourcesRootId, file)))">Show in Library</MudMenuItem>
+                }
+                @if (state is ItemState.Broken or ItemState.NotDownloaded)
+                {
+                    <MudMenuItem Class="catalog-row-menu-copy-fix-prompt" OnClick="@(() => this.CopyFixAsync(catalog, state))">Copy fix prompt</MudMenuItem>
+                }
+                @if (catalog.File is not null)
+                {
+                    <MudDivider />
+                    <MudMenuItem Class="catalog-row-menu-remove menu-item-destructive" OnClick="@(() => this.RemoveCatalogAsync(catalog))">Remove</MudMenuItem>
+                }
+            </MudMenu>
+        </div>
+        <MudText Typo="Typo.body2" Class="catalog-row-counts">@Plural.Of(catalog.SkillNames.Count, "Skill", "Skills"), @catalog.DownloadedCount downloaded</MudText>
+        @if (catalog.Row.LastUpdatedText is { } updated)
+        {
+            <MudText Typo="Typo.caption" Class="catalog-row-updated mud-text-secondary">Last updated @updated</MudText>
+        }
+    </MudPaper>
+}
+
+<ProblemList Count="this.Problems.Count">
+    @foreach (string problem in this.Problems)
+    {
+        <MudText Typo="Typo.body2" Class="sources-problem mb-1">@problem</MudText>
+    }
+</ProblemList>
 
 @code {
     /// <summary>A copy of <c>SkillRegistry.Current.Version</c>; a new value is the reason to redraw.</summary>
     [Parameter]
     public long Revision { get; set; }
+
+    /// <summary>The findings about SKILLS.md itself and about Sources, composed.</summary>
+    private IReadOnlyList<string> Problems =>
+        [.. this.Registry.Current.Resolved.Findings
+            .Where(static finding => finding.Severity == CheckSeverity.Error && (finding.Code.StartsWith('R') || finding.Code.StartsWith('O')))
+            .Select(finding => SkillProblemText.Compose(finding))];
+
+    /// <summary>A catalog's state, as the checks left it.</summary>
+    private ItemState StateOf(ResolvedCatalog catalog)
+    {
+        return (this.Registry.Current.Checked.StateOf(catalog.StateKey) ?? ItemCheckState.Broken) switch
+        {
+            ItemCheckState.Usable => ItemState.Available,
+            ItemCheckState.NotDownloaded => ItemState.NotDownloaded,
+            _ => ItemState.Broken,
+        };
+    }
+
+    /// <summary>The catalog file in the Skill Sources root, or null when it lives outside.</summary>
+    private string? LibraryPath(ResolvedCatalog catalog)
+    {
+        return catalog.FilePath is { } file && SkillSourcesRemover.IsInside(file, this.Registry.SkillSourcesDir)
+            ? Path.GetRelativePath(this.Registry.SkillSourcesDir, file).Replace('\\', '/')
+            : null;
+    }
+
+    /// <summary>Opens the folder dialog.</summary>
+    private async Task ChangeFolderAsync()
+    {
+        _ = await this.DialogService.ShowAsync<SkillSourcesFolderDialog>("Change the Skill Sources folder", HuddleDialogOptions.SmallForm);
+    }
+
+    /// <summary>Goes back to the folder from configuration.</summary>
+    private void UseDefault()
+    {
+        _ = this.Settings.SetDir(null);
+    }
+
+    /// <summary>Copies the prompt that names the catalog row and its findings.</summary>
+    private async Task CopyFixAsync(ResolvedCatalog catalog, ItemState state)
+    {
+        IReadOnlyList<Finding> findings = [.. catalog.Findings, .. this.Registry.Current.Checked.Findings.Where(finding => catalog.FilePath is not null && string.Equals(finding.File, catalog.FilePath, StringComparison.OrdinalIgnoreCase))];
+        string prompt = this.Prompts.Fix(catalog.Row.TableName, catalog.Row.LocalPath.FirstText, SkillStateText.For(state).Text, findings, this.PathChoice.Format);
+        _ = await PromptClipboard.CopyAsync(this.JS, this.Snackbar, prompt, CancellationToken.None);
+    }
+
+    /// <summary>Asks, removes the catalog, re-reads and reports.</summary>
+    private async Task RemoveCatalogAsync(ResolvedCatalog catalog)
+    {
+        IReadOnlyList<string> packs = [.. this.Registry.Current.Resolved.PacksUsingCatalog(catalog.Id).Select(static pack => pack.Title)];
+        string? inside = this.LibraryPath(catalog)?.Replace('/', Path.DirectorySeparatorChar);
+        string? outside = inside is null ? catalog.FilePath : null;
+        if (!await this.DialogService.ConfirmAsync(RemovalText.CatalogTitle(catalog.Id), RemovalText.CatalogMessage(inside, outside, catalog.SkillNames.Count, packs), "Remove", danger: true))
+        {
+            return;
+        }
+
+        RemovalOutcome outcome = this.Remover.RemoveCatalog(catalog);
+        await this.Registry.RebuildAsync(RebuildScope.All, CancellationToken.None);
+        this.Snackbar.Add(outcome.Message, outcome.Ok ? Severity.Success : Severity.Error, configure: null, key: PackRemoval.SnackbarKey);
+    }
 }
