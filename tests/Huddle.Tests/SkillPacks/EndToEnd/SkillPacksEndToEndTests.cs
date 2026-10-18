@@ -190,8 +190,9 @@ public sealed class SkillPacksEndToEndTests
     {
         await using SkillPacksWorld world = await SkillPacksWorld.StartAsync(quietFiles: false);
         FakeAiTool tool = world.AiTool();
-        List<RegistrySnapshot> published = [];
-        world.Registry.Changed += change => published.Add(change.Snapshot);
+        // Changed is raised from the registry's own thread, which may still publish while the asserts enumerate: a List throws "Collection was modified" there.
+        System.Collections.Concurrent.ConcurrentQueue<RegistrySnapshot> published = [];
+        world.Registry.Changed += change => published.Enqueue(change.Snapshot);
         _ = world.Host.CloneSkill("docx");
         string packFile = RegistryHost.Write(tool.SkillSourcesDir, $"packs/{PackId}.skillpack.json", "{ \"schemaVersion\": 1, \"id\": \"documents\", \"vers");
         File.WriteAllText(tool.RegistryPath, $"# Skills registry\n\n## Packs\n\n| Local path |\n| --- |\n| packs/{PackId}.skillpack.json |\n\n## Catalogs\n\n| Local path |\n| --- |\n");
