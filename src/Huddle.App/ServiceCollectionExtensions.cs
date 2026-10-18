@@ -241,7 +241,10 @@ public static class ServiceCollectionExtensions
         services.AddSingleton<Agency.Huddle.App.SkillSources.RoleLister>();
         services.AddSingleton<Agency.Huddle.App.SkillSources.SkillRegistry>();
         services.AddSingleton<Agency.Huddle.App.Teams.ISkillAvailability>(static sp => sp.GetRequiredService<Agency.Huddle.App.SkillSources.SkillRegistry>());
-        services.AddSingleton<Agency.Huddle.App.SkillSources.ISkillSourcesMove, Agency.Huddle.App.SkillSources.NoSkillSourcesMove>();
+        services.AddSingleton<Agency.Huddle.App.SkillSources.Move.IMoveFiles, Agency.Huddle.App.SkillSources.Move.PhysicalMoveFiles>();
+        services.AddSingleton<Agency.Huddle.App.SkillSources.Move.MoveReportStore>();
+        services.AddSingleton<Agency.Huddle.App.SkillSources.Move.SkillSourcesMove>();
+        services.AddSingleton<Agency.Huddle.App.SkillSources.ISkillSourcesMove>(static sp => sp.GetRequiredService<Agency.Huddle.App.SkillSources.Move.SkillSourcesMove>());
         services.AddSingleton<Agency.Huddle.App.SkillSources.RegistryWatcher>();
         services.AddSingleton<Agency.Huddle.App.SkillSources.ISkillCopier, Agency.Huddle.App.SkillSources.SkillCopier>();
         services.AddSingleton<Agency.Huddle.App.SkillSources.InstallFileWriter>();

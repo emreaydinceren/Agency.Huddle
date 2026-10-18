@@ -4046,7 +4046,7 @@ A Pack that today's `SkillPackStore` file would have held (`Id`, `Version`, `Tit
 | `source` | string | Yes | The Source id (`D001`) |
 | `skills` | object[] | Yes | May be empty |
 | `skills[].name` | string | Yes | Skill name rule; unique in the catalog (`D002`) |
-| `skills[].description` | string | Yes | One line, at most 500 characters. (The `SKILL.md` description of the Skill itself is checked separately: error over 500, `S002`; warning over 300, `S012`) |
+| `skills[].description` | string | Yes | One line. Its length is not checked, because the catalog Huddle shipped has descriptions over 500 characters; the `SKILL.md` description of the Skill itself is checked: error over 500, `S002`; warning over 300, `S012` |
 | `skills[].origin` | string | Yes | URL pinned to a commit (`D004` warns on a branch) |
 | `skills[].publisher`, `license`, `category`, `subCategory` | string | No | Same as today's `SkillsCatalog.json` |
 | `skills[].requires` | string[] | No | Skill names this one depends on; default `[]` |

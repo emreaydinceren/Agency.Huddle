@@ -37,4 +37,8 @@
     <Compile Include="..\Huddle.Acp.Tests\Fakes\FakeAgentProcessLauncher.cs" Link="Fakes\FakeAgentProcessLauncher.cs" />
   </ItemGroup>
 
+  <ItemGroup>
+    <None Include="SkillPacks\Fixtures\**" CopyToOutputDirectory="PreserveNewest" />
+  </ItemGroup>
+
 </Project>

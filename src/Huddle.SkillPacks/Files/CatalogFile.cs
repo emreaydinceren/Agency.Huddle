@@ -41,9 +41,6 @@ public sealed record CatalogFile(
     /// <summary>The file name suffix.</summary>
     public const string Suffix = ".skillcatalog.json";
 
-    /// <summary>The longest catalog description.</summary>
-    public const int MaxDescription = 500;
-
     /// <summary>The entry named <paramref name="name"/>, or null.</summary>
     public CatalogEntry? Find(string name)
     {
@@ -120,11 +117,6 @@ public sealed record CatalogFile(
             return null;
         }
 
-        if (description.Length > MaxDescription)
-        {
-            findings.Add(Finding.Error("D002", filePath, $"{label}: the description is over {MaxDescription} characters."));
-            return null;
-        }
 
         PathEntries? path = JsonFields.Get(item, "path") is { } pathValue ? PathEntries.FromJson(pathValue) : PathEntries.Empty;
         if (path is null)
