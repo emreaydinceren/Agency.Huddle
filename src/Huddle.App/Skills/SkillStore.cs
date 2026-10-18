@@ -314,7 +314,7 @@ internal sealed class SkillStore : IDisposable
             all.Add(new Skill(
                 name,
                 description,
-                validation.Tools,
+                HasProvenanceFile(folderPath) ? [] : validation.Tools,
                 validation.Files,
                 source,
                 folderPath,
@@ -328,6 +328,17 @@ internal sealed class SkillStore : IDisposable
         this.LogIssues(issues);
 
         return new SkillSnapshot(all, byName, resolvedFiles.ToFrozenDictionary(StringComparer.Ordinal), issues);
+    }
+
+    /// <summary>
+    /// Whether a Skill's folder holds a <c>.source.json</c>: a copy from a pointer, whose <c>tools:</c> line is ignored so a
+    /// hand-edited copy cannot grant an App Tool that check S011 forbids (Skill Packs spec §6.3). Built-in Skills have none.
+    /// </summary>
+    /// <param name="folderPath">The Skill's folder, or <see langword="null"/> for a shipped default with no folder.</param>
+    /// <returns><see langword="true"/> when the file exists.</returns>
+    private static bool HasProvenanceFile(string? folderPath)
+    {
+        return folderPath is not null && File.Exists(Path.Combine(folderPath, SkillProvenance.FileName));
     }
 
     /// <summary>Logs every Issue found while resolving Skills, at a level matching its severity.</summary>
@@ -425,6 +436,12 @@ internal sealed class SkillStore : IDisposable
         foreach (string folder in Directory.EnumerateDirectories(this.skillsDir))
         {
             string skillName = Path.GetFileName(folder);
+            if (skillName.StartsWith('.'))
+            {
+                // Skills/.staging and Skills/.trash belong to SkillCopier, and the Skill name rule never accepts a leading dot.
+                continue;
+            }
+
             Dictionary<string, string> files = new(StringComparer.Ordinal);
 
             if (SkillProvenance.TryRead(folder, out SkillProvenance? provenance) && provenance is not null)
