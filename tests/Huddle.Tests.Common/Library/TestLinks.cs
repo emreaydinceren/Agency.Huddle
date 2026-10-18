@@ -5,7 +5,7 @@ namespace Agency.Huddle.Tests.Library;
 /// <summary>
 /// Creates and removes a directory link for tests that need one on disk: a junction on Windows
 /// (the only unelevated way, per Task 0.2), a symbolic link elsewhere. Shared by
-/// <see cref="WindowsRecycleBinTests"/> and <see cref="TeamFolderCatalogTests"/>.
+/// <c>WindowsRecycleBinTests</c> and <c>TeamFolderCatalogTests</c>.
 /// </summary>
 internal static class TestLinks
 {

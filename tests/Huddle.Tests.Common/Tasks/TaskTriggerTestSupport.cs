@@ -27,7 +27,7 @@ internal static class TaskTriggerTestSupport
     /// <summary>A <c>task.wake.message</c> override naming every placeholder once, bar-separated, so one literal comparison pins what each resolved to.</summary>
     internal const string ProbeTemplate = "@{{assignee}}|{{taskId}}|{{title}}|{{status}}|{{team}}|{{actor}}|{{changes}}";
 
-    /// <summary>Rounds for <see cref="TaskTriggerConcurrencyTests.Concurrent_TwoBatchesSameTask_SerialisedByGate"/> (facts R3: ≥25 rounds of real threads).</summary>
+    /// <summary>Rounds for <c>TaskTriggerConcurrencyTests.Concurrent_TwoBatchesSameTask_SerialisedByGate</c> (facts R3: ≥25 rounds of real threads).</summary>
     internal const int ConcurrencyRounds = 25;
 
     /// <summary>The Human, acting in the interface.</summary>

@@ -20,8 +20,8 @@ namespace Agency.Huddle.Tests.Ui;
 
 /// <summary>
 /// The real stores a Teammate's profile is built from, wired the way the app wires them, with only the
-/// gateway and the Team catalog faked. Shared by <see cref="TeammateProfilesTests"/> and
-/// <see cref="ProfileAvatarTests"/>.
+/// gateway and the Team catalog faked. Shared by <c>TeammateProfilesTests</c> and
+/// <c>ProfileAvatarTests</c>.
 /// </summary>
 internal sealed class ProfileFixture : IDisposable
 {

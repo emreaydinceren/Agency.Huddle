@@ -8,7 +8,7 @@ using Agency.Huddle.Tests.Acp.Fakes;
 
 namespace Agency.Huddle.Tests.Acp;
 
-/// <summary>Builders and doubles shared by <see cref="PersonaSupervisorLifecycleTests"/>, <see cref="PersonaSupervisorHealthTests"/> and <see cref="PersonaSupervisorRestartTests"/>.</summary>
+/// <summary>Builders and doubles shared by <c>PersonaSupervisorLifecycleTests</c>, <c>PersonaSupervisorHealthTests</c> and <c>PersonaSupervisorRestartTests</c>.</summary>
 internal static class PersonaSupervisorTestSupport
 {
     /// <summary>Builds a fresh <see cref="PersonaHealth"/> against the real clock - nothing in this file asserts against <see cref="PersonaStatus.Since"/> precisely enough to need a controllable one.</summary>
@@ -33,7 +33,7 @@ internal static class PersonaSupervisorTestSupport
     /// <summary>Minimal valid Persona frontmatter (Name, Title and Alias all <paramref name="name"/>) wrapped around <paramref name="body"/> - identity is front-matter driven from this phase on, so every seeded Persona needs one to be discoverable at all.</summary>
     internal static string PersonaText(string name, string body) => $"---\nName: {name}\nTitle: {name}\nAlias: {name}\n---\n{body}";
 
-    /// <summary><see cref="PersonaText"/>, plus a <c>skills: [team-building]</c> field - for <see cref="PersonaSupervisorLifecycleTests.OnPersonasChanged_UnrelatedFileEvent_DoesNotRestartPersonaWithSkills"/> alone.</summary>
+    /// <summary><see cref="PersonaText"/>, plus a <c>skills: [team-building]</c> field - for <c>PersonaSupervisorLifecycleTests.OnPersonasChanged_UnrelatedFileEvent_DoesNotRestartPersonaWithSkills</c> alone.</summary>
     internal static string SkillsPersonaText(string name) => $"---\nName: {name}\nTitle: {name}\nAlias: {name}\nskills: [team-building]\n---\nYou are a persona.";
 
     /// <summary>A valid <see cref="PersonaIdentity"/> for <paramref name="name"/>, with Title and Alias both <paramref name="name"/> too and no Teams - the structured input <see cref="PersonaStore.Add"/> now takes.</summary>

@@ -39,7 +39,7 @@ internal sealed class RecordingRecycleBin : IRecycleBin
 
 /// <summary>An isolated fixture: a real <see cref="LibraryRootStore"/> and <see cref="LibraryPathResolver"/>
 /// over a temp <c>DataDir</c>, plus the <see cref="RecordingRecycleBin"/> fake. Shared by
-/// <see cref="LibraryFileServiceWriteTests"/> and <see cref="LibraryFileServiceCreateTests"/>.</summary>
+/// <c>LibraryFileServiceWriteTests</c> and <c>LibraryFileServiceCreateTests</c>.</summary>
 internal sealed class LibraryFileServiceFixture : IDisposable
 {
     private readonly TempDataDir? temp;

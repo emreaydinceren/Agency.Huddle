@@ -5,7 +5,7 @@ namespace Agency.Huddle.Tests.Library;
 /// <summary>
 /// A delegate-backed fake of <see cref="ILibraryNoteResolver"/>, configurable per test through the three
 /// optional callbacks (default: every method returns <see langword="null"/>). Shared by
-/// <see cref="Agency.Huddle.Tests.Services.MarkdownRendererTests"/> (Task 9.2) and reusable as-is by 9.1's
+/// <c>MarkdownRendererTests</c> (Task 9.2) and reusable as-is by 9.1's
 /// chat-path tests and 9.4's note-view tests, since it also implements the base
 /// <see cref="ILibraryReferenceResolver"/> members they need.
 /// </summary>

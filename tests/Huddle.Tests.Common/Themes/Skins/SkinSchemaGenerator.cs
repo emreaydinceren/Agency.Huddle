@@ -6,7 +6,7 @@ namespace Agency.Huddle.Tests.Themes.Skins;
 
 /// <summary>
 /// Generates <c>skin.schema.json</c> from the skin model and the token registry, so an editor validates a skin file
-/// against exactly what <see cref="SkinLoader"/> accepts. <see cref="SkinSchemaTests"/> compares the generated text to the
+/// against exactly what <see cref="SkinLoader"/> accepts. <c>SkinSchemaTests</c> compares the generated text to the
 /// file on disk and rewrites it on request.
 /// </summary>
 internal static class SkinSchemaGenerator

@@ -15,8 +15,8 @@ using Agency.Huddle.App.Teammates;
 namespace Agency.Huddle.Tests.Ui;
 
 /// <summary>
-/// Shared rendering, seeding and interaction helpers for <see cref="TeammateCardTests"/>,
-/// <see cref="TeammateCardModelEffortTests"/> and <see cref="TeammateCardAvatarTests"/>, which were one class
+/// Shared rendering, seeding and interaction helpers for <c>TeammateCardTests</c>,
+/// <c>TeammateCardModelEffortTests</c> and <c>TeammateCardAvatarTests</c>, which were one class
 /// until it became the suite's slowest.
 /// </summary>
 internal static class TeammateCardTestSupport
@@ -110,7 +110,7 @@ internal static class TeammateCardTestSupport
             () => FindInputControl(cut, label).QuerySelector("input") ?? throw new InvalidOperationException($"No input under '{label}'."),
             input => input.Input(value));
 
-    /// <summary>Registers this factory's real services (<see cref="PersonaStore"/> and friends) into a fresh <see cref="MudBunitContext"/>, the same pattern <see cref="TeammatesPageTests"/> uses.</summary>
+    /// <summary>Registers this factory's real services (<see cref="PersonaStore"/> and friends) into a fresh <see cref="MudBunitContext"/>, the same pattern <c>TeammatesPageTests</c> uses.</summary>
     internal static MudBunitContext NewContext(TeamWebApplicationFactory factory)
     {
         MudBunitContext ctx = new();
@@ -248,7 +248,7 @@ internal static class TeammateCardTestSupport
 
     /// <summary>
     /// Whether any rendered button's trimmed text, OR its <c>aria-label</c>, equals <paramref name="text"/>.
-    /// The Remove button became an icon-only <c>MudIconButton</c> (see <see cref="TeammateCardTests.ViewMode_ShowsDetailsAndActions"/>
+    /// The Remove button became an icon-only <c>MudIconButton</c> (see <c>TeammateCardTests.ViewMode_ShowsDetailsAndActions</c>
     /// and its neighbours) and carries no text content at all - <c>aria-label</c> is the reliable, accessible
     /// handle for it, and this helper is deliberately not scoped to just that one button so every other
     /// text-button caller keeps working unchanged.

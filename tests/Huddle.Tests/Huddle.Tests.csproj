@@ -27,8 +27,4 @@
     <ProjectReference Include="..\..\src\Huddle.Packs\Huddle.Packs.csproj" />
   </ItemGroup>
 
-  <ItemGroup>
-    <None Include="SkillPacks\Fixtures\**" CopyToOutputDirectory="PreserveNewest" />
-  </ItemGroup>
-
 </Project>
