@@ -84,7 +84,7 @@ public sealed class R3SharedComponentsTests
         Assert.Contains("position: sticky;", footer, StringComparison.Ordinal); // contains-ok: stylesheet source text
         Assert.Contains("bottom: 0;", footer, StringComparison.Ordinal); // contains-ok: stylesheet source text
         Assert.Contains("justify-content: flex-end;", footer, StringComparison.Ordinal); // contains-ok: stylesheet source text
-        Assert.Contains("border-top: 1px solid var(--mud-palette-lines-default);", footer, StringComparison.Ordinal); // contains-ok: stylesheet source text
+        Assert.Contains("border-top: 1px solid var(--hu-line-region);", footer, StringComparison.Ordinal); // contains-ok: stylesheet source text
     }
 
     /// <summary>The header row is 32px high, and the intro is body1 in Quiet ink.</summary>
