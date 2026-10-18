@@ -78,6 +78,7 @@ public static class RegistryReader
         }
 
         List<Finding> findings = [];
+        List<RowFinding> rowFindings = [];
         List<RegistryRow> packs = [];
         List<RegistryRow> catalogs = [];
         bool sawPacks = false;
@@ -132,7 +133,7 @@ public static class RegistryReader
 
             anyTable = true;
             List<RegistryRow> target = kind == RowKind.Pack ? packs : catalogs;
-            ReadTable(table, kind.Value, file, target, findings);
+            ReadTable(table, kind.Value, file, target, findings, rowFindings);
         }
 
         if (!anyTable)
@@ -140,7 +141,7 @@ public static class RegistryReader
             findings.Insert(0, Finding.Error("R001", file, $"{FileName} has no Packs or Catalogs table under a level-2 heading."));
         }
 
-        return new Registry(registryDir, packs, catalogs, findings);
+        return new Registry(registryDir, packs, catalogs, findings, rowFindings);
     }
 
     /// <summary>The table a level-2 heading introduces, or null for any other heading.</summary>
@@ -178,7 +179,7 @@ public static class RegistryReader
     }
 
     /// <summary>Reads one table's rows into <paramref name="rows"/>.</summary>
-    private static void ReadTable(Table table, RowKind kind, string file, List<RegistryRow> rows, List<Finding> findings)
+    private static void ReadTable(Table table, RowKind kind, string file, List<RegistryRow> rows, List<Finding> findings, List<RowFinding> rowFindings)
     {
         string tableName = kind == RowKind.Pack ? "Packs" : "Catalogs";
         TableRow? header = table.OfType<TableRow>().FirstOrDefault(static row => row.IsHeader);
@@ -230,6 +231,7 @@ public static class RegistryReader
             string? notesText = Blank(Cell(row, notes, keepUrl: false)?.Replace('\n', ' '));
             DateOnly? updated = null;
             string where = string.Create(CultureInfo.InvariantCulture, $"{tableName} row {index + 1}");
+            int before = findings.Count;
 
             if (entries.IsEmpty)
             {
@@ -263,6 +265,7 @@ public static class RegistryReader
                 findings.Add(Finding.Warning("R007", file, $"{where}: Origin URL '{originUrl}' is not an absolute https, ssh or git URL."));
             }
 
+            rowFindings.AddRange(findings.Skip(before).Select(finding => new RowFinding(kind, index, finding)));
             rows.Add(new RegistryRow(kind, index, entries, originUrl, updatedText, updated, notesText, new LineSpan(line, line)));
         }
     }
