@@ -4,6 +4,10 @@ Prove in a real browser and on real disks what the automated suite cannot: that 
 
 **7 tests** · 6 free, 1 paid 💰 · about 2.5 hours. Written 2026-10-18; **not yet run by a person**.
 
+## Run record
+
+On 2026-10-18 an agent ran the move half of SKILLPACKS-04 on a copy of this computer's src\Huddle.App\App_Data (0.6 MB, two Teammates, no imported Skills, no Packs of the user's own), starting the built app as a process with Team:SkillsRepositoryDir at E:\Repos\skills. It wrote SKILLS.md, six catalogs holding 263 Skills (two duplicates omitted), the Sources local/skills and local/my-packs, two Packs rows for this computer and a report with no problems; no Teammate file changed. The snackbar, the second start and the other six tests were not run. A person still has to run all seven, and SKILLPACKS-04 on an older data folder that has imported Skills and Packs of its own.
+
 Read [the manual test script](../manual-tests.md) first, then [Common procedures](common.md), which defines the terminals, procedures and oracles this page names. Both are assumed below.
 
 Background, if you need it: [the Skill Packs design](../../Huddle.SkillPacks-Specifications.md) (§6.7 `InstallSkillPack.md`, §6.9 Settings › Skills, §6.13 the move, §8.2 per-computer paths, §8.4 noticing an update, §13 the end-to-end flow) and the User Guide's "Adding Skills with your AI tool".
@@ -122,7 +126,7 @@ Run [`P-BUILD`](common.md#p-build). This area adds:
 **Pass if — all of these**
 
 - At step 2 the snackbar reads *"Packs and Skills moved to SKILLS.md"*, possibly with *"· N could not be moved"* or *"· N Skills no longer grant tools"*, and has **Show log**. Record it verbatim.
-- At step 3 `SKILLS.md` exists, `catalogs\` has six `.skillcatalog.json` files, and `sources\local\` has `skills` and `my-packs` (the latter only when the copy had Packs of your own). Every problem in `skill-sources-move.json` names a file and a reason.
+- At step 3 `SKILLS.md` exists, `catalogs\` has six `.skillcatalog.json` files, and `sources\local\` has `skills` and `my-packs`; `my-packs` is created on every run, so its `log.jsonl` exists even when you had no Packs of your own. Every problem in `skill-sources-move.json` names a file and a reason.
 - At step 3 the Packs tab shows no *New* chip for what the move wrote.
 - At step 4 `Compare-Object` prints nothing: no Teammate file changed.
 - At step 5 there is no move snackbar and `SKILLS.md` is unchanged: the move ran once.
