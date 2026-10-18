@@ -14,6 +14,9 @@
 @inject SkillRegistry Registry
 @inject RoleLister Roles
 @inject NavigationManager Navigation
+@inject SkillSourcesRemover Remover
+@inject IDialogService DialogService
+@inject ISnackbar Snackbar
 
 <MudDialog Class="pack-details-dialog">
     <DialogContent>
@@ -104,6 +107,12 @@
         }
     </DialogContent>
     <DialogActions>
+        @if (this.View is { Pack.File: not null } removable)
+        {
+            <MudTooltip Text="@SkillGuide.For("Remove Pack")" ShowOnFocus="true">
+                <MudButton Variant="Variant.Text" Size="Size.Small" Color="Color.Error" Class="pack-details-remove" OnClick="@(() => this.RemoveAsync(removable))">Remove</MudButton>
+            </MudTooltip>
+        }
         @if (this.View is { } shown && this.LibraryPath(shown) is { } file)
         {
             <MudTooltip Text="@SkillGuide.For("Show in Library")" ShowOnFocus="true">
@@ -221,6 +230,13 @@
     {
         this.Dialog?.Close();
         this.Navigation.NavigateTo(LibraryLinkQuery.BuildPageUri(LibraryRootStore.SkillSourcesRootId, relative));
+    }
+
+    /// <summary>Closes and runs Remove.</summary>
+    private Task RemoveAsync(PackView view)
+    {
+        this.Dialog?.Close();
+        return PackRemoval.RemoveAsync(this.DialogService, this.Remover, this.Registry, this.Snackbar, view.Pack, view.Title, view.Holders);
     }
 
     /// <summary>Closes the dialog.</summary>

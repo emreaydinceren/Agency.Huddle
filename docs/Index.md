@@ -53,6 +53,7 @@ subtree a page is in: **chat** is the chat surface, **acp** is the ACP effort
 | Revisit a decision | [decisions.md](engineering/decisions.md), then the ADR in §4 |
 | Enable, disable or suppress an analyzer rule | [analyzer-decisions.md](engineering/analyzer-decisions.md) first |
 | Add to the product plan | [roadmap.md](engineering/roadmap.md) |
+| Pick up a small agreed refactor, or check whether a package was already evaluated | [backlog.md](engineering/backlog.md) |
 | Learn what the product is for | [why-agency-huddle.md](why-agency-huddle.md), then [Huddle.EngineeringGuide.md](Huddle.EngineeringGuide.md) |
 
 ## 2. By feature
@@ -110,6 +111,7 @@ that exercise it. All are **chat** unless stated.
 | [architecture.md](engineering/architecture.md) | How a Message travels at run time | chat | ~1.1k |
 | [testing.md](engineering/testing.md) | How to add a test, and what no test can prove | chat | ~2.3k |
 | [known-limits.md](engineering/known-limits.md) | What is deliberately absent, before you "fix" it | chat | ~1.9k |
+| [backlog.md](engineering/backlog.md) | Agreed but unscheduled engineering work, and the packages evaluated and declined | chat | ~1k |
 | [roadmap.md](engineering/roadmap.md) | The numbered plan, and what exists before work in `PersonaRunner`, `ReplyGate`, `app.css` or `Themes/` | chat | ~10.7k |
 | [analysis-hardening-plan.md](engineering/analysis-hardening-plan.md) | The ranked plan for hardening automated code analysis against agent shortcuts, with each item's state | chat | ~5k |
 | [teams-plan.md](engineering/teams-plan.md) | The 85-task, test-first delivery plan for Teams: team types, hiring, skills with provenance, process gates, Requests, retrospectives and Household | chat | ~40k, read by task range only |

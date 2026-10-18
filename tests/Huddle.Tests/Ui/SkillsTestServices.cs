@@ -18,6 +18,7 @@ internal static class SkillsTestServices
         services.AddSingleton(factory.Services.GetRequiredService<SkillSourcesSettings>());
         services.AddSingleton(factory.Services.GetRequiredService<HiddenStore>());
         services.AddSingleton(factory.Services.GetRequiredService<RoleLister>());
+        services.AddSingleton(factory.Services.GetRequiredService<SkillSourcesRemover>());
         services.AddSingleton(factory.Services.GetRequiredService<SkillPromptBuilder>());
         services.AddScoped<PathFormatChoice>();
     }
@@ -31,6 +32,7 @@ internal static class SkillsTestServices
         services.AddSingleton(host.Settings);
         services.AddSingleton(host.Hidden);
         services.AddSingleton(host.Roles);
+        services.AddSingleton(host.Remover);
         services.AddSingleton<SkillStore>(host.Skills);
         services.AddSingleton(new SkillPromptBuilder(new Agency.Huddle.Tests.SkillPacks.Prompts.RecordingPromptSource(), installFile ?? new FixedInstallFile(Path.Combine(host.Settings.DataDir, "InstallSkillPack.md"))));
         services.AddScoped<PathFormatChoice>();

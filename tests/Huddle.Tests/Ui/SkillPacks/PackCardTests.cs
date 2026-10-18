@@ -97,7 +97,7 @@ public sealed class PackCardTests : IDisposable
         Assert.NotEmpty(cut.FindAll(".pack-card-copy-fix"));
     }
 
-    /// <summary>The ⋯ menu lists Details, Copy fix prompt, Hide and Show in Library, in that order; Hide hides the Pack.</summary>
+    /// <summary>The ⋯ menu lists Details, Copy fix prompt, Hide, Show in Library, then a divider and Remove; Hide hides the Pack.</summary>
     [Fact]
     public async Task Menu_Order_AndHideHides()
     {
@@ -111,11 +111,61 @@ public sealed class PackCardTests : IDisposable
         await cut.InvokeAsync(() => cut.Find(".pack-card-menu button").ClickAsync());
         cut.WaitForAssertion(() => Assert.NotEmpty(cut.FindAll(".mud-menu-item")));
         IReadOnlyList<string> items = [.. cut.FindAll(".mud-menu-item").Select(static item => item.TextContent.Trim())];
+        Assert.Single(cut.FindAll(".pack-card-menu-remove"));
         await cut.InvokeAsync(() => cut.Find(".pack-card-menu-hide").ClickAsync());
 
-        Assert.Equal(["Details", "Copy fix prompt", "Hide", "Show in Library"], items);
+        Assert.Equal(["Details", "Copy fix prompt", "Hide", "Show in Library", "Remove"], items);
         Assert.True(this.fixture.Host.Registry.IsHidden(this.fixture.Host.Registry.Current.Resolved.Packs[0]));
-        Assert.Equal("lost title is hidden.", Assert.Single(ctx.Services.GetRequiredService<ISnackbar>().ShownSnackbars).Message);
+        Assert.Equal("lost title hidden", Assert.Single(ctx.Services.GetRequiredService<ISnackbar>().ShownSnackbars).Message);
+    }
+
+    /// <summary>Remove with no holders asks with the confirm, and confirming deletes the row and the file.</summary>
+    [Fact]
+    public async Task Remove_NoHolders_ConfirmsThenRemoves()
+    {
+        this.fixture.Host.Source();
+        this.fixture.Host.Pack("documents", "docx", this.fixture.Host.CloneSkill("docx"));
+        this.fixture.Host.SkillsMd(["packs/documents.skillpack.json"]);
+        await this.fixture.Host.ReadAsync();
+        string file = this.fixture.Host.Registry.Current.Resolved.Packs[0].FilePath ?? string.Empty;
+        await using MudBunitContext ctx = this.fixture.NewContext();
+        IRenderedComponent<ContainerFragment> cut = Render(ctx, 0);
+
+        await cut.InvokeAsync(() => cut.Find(".pack-card-menu button").ClickAsync());
+        cut.WaitForAssertion(() => Assert.NotEmpty(cut.FindAll(".pack-card-menu-remove")));
+        Task removing = cut.InvokeAsync(() => cut.Find(".pack-card-menu-remove").ClickAsync());
+        cut.WaitForAssertion(() => Assert.Equal("Remove \"documents title\"?", cut.Find(".mud-dialog-title").TextContent.Trim()));
+        Assert.Equal(RemovalText.PackMessage("packs\\documents.skillpack.json".Replace('\\', Path.DirectorySeparatorChar), null), cut.Find(".mud-dialog-content").TextContent.Trim());
+
+        await cut.InvokeAsync(() => cut.FindAll(".mud-dialog-actions button")[^1].ClickAsync());
+        await removing;
+
+        cut.WaitForAssertion(() => Assert.False(File.Exists(file)));
+        Assert.Equal("documents title removed.", ctx.Services.GetRequiredService<ISnackbar>().ShownSnackbars.Last().Message);
+    }
+
+    /// <summary>Remove with holders opens the three-way dialog naming them; Cancel changes nothing.</summary>
+    [Fact]
+    public async Task Remove_WithHolders_OpensRemovePackDialog()
+    {
+        this.fixture.Host.Source();
+        this.fixture.Host.Pack("documents", "docx", this.fixture.Host.CloneSkill("docx"));
+        this.fixture.Host.SkillsMd(["packs/documents.skillpack.json"]);
+        this.fixture.Host.Teammate("Jane", ["docx"], [new Agency.Huddle.App.Teams.VersionedRef("documents", "1.0.0")]);
+        await this.fixture.Host.ReadAsync();
+        string file = this.fixture.Host.Registry.Current.Resolved.Packs[0].FilePath ?? string.Empty;
+        await using MudBunitContext ctx = this.fixture.NewContext();
+        IRenderedComponent<ContainerFragment> cut = Render(ctx, 0);
+
+        await cut.InvokeAsync(() => cut.Find(".pack-card-menu button").ClickAsync());
+        cut.WaitForAssertion(() => Assert.NotEmpty(cut.FindAll(".pack-card-menu-remove")));
+        Task removing = cut.InvokeAsync(() => cut.Find(".pack-card-menu-remove").ClickAsync());
+
+        cut.WaitForAssertion(() => Assert.Equal("Jane has this Pack. Choose what happens to them.", cut.Find(".remove-pack-holders").TextContent.Trim()));
+        Assert.Equal(["Cancel", "Keep their Skills", "Remove from Teammates too"], cut.FindAll(".remove-pack-dialog .mud-dialog-actions button, .mud-dialog-actions button").Select(static button => button.TextContent.Trim()).Distinct());
+        await cut.InvokeAsync(() => cut.Find(".remove-pack-cancel").ClickAsync());
+        await removing;
+        Assert.True(File.Exists(file));
     }
 
     /// <summary>Writes SKILLS.md with one Packs row and a Last updated cell.</summary>

@@ -12,7 +12,7 @@
 
 @inject SkillRegistry Registry
 @inject RoleLister Roles
-@inject HiddenStore HiddenFile
+@inject SkillSourcesRemover Remover
 @inject SkillPromptBuilder Prompts
 @inject PathFormatChoice PathChoice
 @inject IJSRuntime JS
@@ -93,6 +93,8 @@
     private const string HideItem = "Hide";
     private const string UnhideItem = "Unhide";
     private const string ShowInLibraryItem = "Show in Library";
+    private const string RemoveFromTeammatesItem = "Remove from Teammates";
+    private const string RemoveItem = "Remove";
 
     private MudMenu? menu;
 
@@ -131,6 +133,17 @@
             items.Add(ShowInLibraryItem);
         }
 
+        if (view.State == ItemState.Withdrawn && view.Holders.Count > 0)
+        {
+            items.Add(RemoveFromTeammatesItem);
+        }
+
+        if (view.Pack.File is not null)
+        {
+            items.Add(Divider);
+            items.Add(RemoveItem);
+        }
+
         return items;
     }
 
@@ -156,6 +169,12 @@
                 break;
             case ShowInLibraryItem when this.LibraryPath(view) is { } relative:
                 this.Navigation.NavigateTo(LibraryLinkQuery.BuildPageUri(LibraryRootStore.SkillSourcesRootId, relative));
+                break;
+            case RemoveFromTeammatesItem:
+                await MenuDialogs.AfterClosingAsync(this.menu, () => this.UnholdAsync(view));
+                break;
+            case RemoveItem:
+                await MenuDialogs.AfterClosingAsync(this.menu, () => PackRemoval.RemoveAsync(this.DialogService, this.Remover, this.Registry, this.Snackbar, view.Pack, view.Title, view.Holders));
                 break;
             default:
                 break;
@@ -194,17 +213,21 @@
         _ = await PromptClipboard.CopyAsync(this.JS, this.Snackbar, prompt, CancellationToken.None);
     }
 
-    /// <summary>Hides or unhides the Pack in <c>hidden.json</c>, then re-reads it.</summary>
-    private async Task SetHiddenAsync(PackView view, bool hide)
+    /// <summary>Hides or unhides the Pack, with Undo.</summary>
+    private Task SetHiddenAsync(PackView view, bool hide) =>
+        HideFlow.SetAsync(this.Remover, this.Registry, this.Snackbar, HiddenKind.Pack, view.Pack.Id, view.Title, view.Pack.Source, hide);
+
+    /// <summary>Takes a withdrawn Pack off its holders after a confirm.</summary>
+    private async Task UnholdAsync(PackView view)
     {
-        HiddenWriteResult result = hide ? this.HiddenFile.Hide(HiddenKind.Pack, view.Pack.Id) : this.HiddenFile.Unhide(HiddenKind.Pack, view.Pack.Id);
-        if (result == HiddenWriteResult.Refused)
+        bool confirmed = await this.DialogService.ConfirmAsync(RemovalText.UnholdTitle(view.Holders.Count), RemovalText.UnholdMessage(view.Holders), "Remove from Teammates", danger: true);
+        if (!confirmed)
         {
-            this.Snackbar.Add("hidden.json could not be read, so nothing was changed. Fix or delete the file, then try again.", Severity.Error, configure: null, key: "skills-hide");
             return;
         }
 
-        await this.Registry.RebuildAsync(new RebuildScope(false, [this.HiddenFile.FilePath], []), CancellationToken.None);
-        this.Snackbar.Add(hide ? $"{view.Title} is hidden." : $"{view.Title} is shown again.", Severity.Success, configure: null, key: "skills-hide");
+        RemovalOutcome outcome = this.Remover.UnholdPack(view.Pack);
+        await this.Registry.RebuildAsync(RebuildScope.All, CancellationToken.None);
+        this.Snackbar.Add(outcome.Message, outcome.Ok ? Severity.Success : Severity.Error, configure: null, key: "skill-removed");
     }
 }

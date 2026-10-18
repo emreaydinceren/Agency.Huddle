@@ -285,6 +285,7 @@ slate `B` badges name the same containers.
 | `G5a` | Task choice | `MudRadioGroup<SkillTask>` | **Add from a link or folder**, **Find Packs for a role**, **Check for updates**, **Fix a problem**, each with a caption saying what the AI tool will do |
 | `G5b` | Copy path menu | `CopyPathMenu` | **Windows path**, **WSL path** (disabled for a network path), **Forward slashes**, each with its own result; choosing one sets the form for the circuit, copies the path and says "Path copied." |
 | `G6` | Details card | `PackDetailsDialog` | Small form dialog: Source @ commit · updated date and the chips; "What this state means" (the sentence and the cause line, as text); the SKILLS.md row; For and Consult when; a Skills table (Skill, State, Licence, Files, Warnings) with each warning's sentence below; the findings; Notes from your AI tool (**Show notes**, the first 20 lines); **Show in Library**, **Close** |
+| `G6a` | Remove Pack dialog | `RemovePackDialog` | When Teammates hold the Pack: who has it, what **Keep their Skills** and **Remove from Teammates too** each do, and that the row and an in-folder file go either way; **Cancel**, **Keep their Skills** (outlined), **Remove from Teammates too** (filled, error). With no holders, Remove is the shared confirm |
 | `G8` | Skills help | `SkillsHelpDialog` | In-app help for one tab, opened by **Learn more** at the end of each intro and by the empty state. Titled with the tab; **Close** only; the text is the tab's User Guide subsection, word for word |
 
 ### Figure 6b: The Project page

@@ -24,7 +24,7 @@
 
 @inject SkillRegistry Registry
 @inject SkillStore Store
-@inject HiddenStore HiddenFile
+@inject SkillSourcesRemover Remover
 @inject SkillPromptBuilder Prompts
 @inject PathFormatChoice PathChoice
 @inject IJSRuntime JS
@@ -84,7 +84,7 @@
             <CellTemplate>
                 @if (context.Item.Copy is { Provenance: not null } copy)
                 {
-                    <SkillProvenanceLine Skill="@copy" />
+                    <SkillProvenanceLine Skill="@copy" SourceRemoved="@this.SourceRemoved(copy)" />
                 }
                 else
                 {
@@ -247,6 +247,12 @@
             || row.Description.Contains(this.search.Trim(), StringComparison.OrdinalIgnoreCase);
     }
 
+    /// <summary>Whether the copy names a Source the registry no longer has (§6.12.5).</summary>
+    private bool SourceRemoved(Skill copy)
+    {
+        return copy.Provenance?.EffectiveSource is { Length: > 0 } source && this.Registry.Current.Resolved.FindSource(source) is null;
+    }
+
     /// <summary>The Source's reason, for a Deprecated or Withdrawn row.</summary>
     private string? ReasonOf(SkillRow row)
     {
@@ -324,19 +330,9 @@
         _ = await PromptClipboard.CopyAsync(this.JS, this.Snackbar, prompt, CancellationToken.None);
     }
 
-    /// <summary>Hides or unhides the Skill in <c>hidden.json</c>, then re-reads it.</summary>
-    private async Task SetHiddenAsync(SkillRow row, bool hide)
-    {
-        HiddenWriteResult result = hide ? this.HiddenFile.Hide(HiddenKind.Skill, row.Name) : this.HiddenFile.Unhide(HiddenKind.Skill, row.Name);
-        if (result == HiddenWriteResult.Refused)
-        {
-            this.Snackbar.Add("hidden.json could not be read, so nothing was changed. Fix or delete the file, then try again.", Severity.Error, configure: null, key: "skills-hide");
-            return;
-        }
-
-        await this.Registry.RebuildAsync(new RebuildScope(false, [this.HiddenFile.FilePath], []), CancellationToken.None);
-        this.Snackbar.Add(hide ? $"{SkillNames.Display(row.Name)} is hidden." : $"{SkillNames.Display(row.Name)} is shown again.", Severity.Success, configure: null, key: "skills-hide");
-    }
+    /// <summary>Hides or unhides the Skill, with Undo.</summary>
+    private Task SetHiddenAsync(SkillRow row, bool hide) =>
+        HideFlow.SetAsync(this.Remover, this.Registry, this.Snackbar, HiddenKind.Skill, row.Name, row.Name, row.Entry?.Source, hide);
 
     /// <summary>Opens the catalog file, read only, in the Library.</summary>
     private void ShowCatalog(SkillRow row)

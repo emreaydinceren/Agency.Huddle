@@ -26,10 +26,18 @@ internal sealed class RegistryHost : IDisposable
         this.Personas = new PersonaStore(new TeammatePaths(this.Options), new PersonaModelStore(this.Options), new PersonaEffortStore(this.Options), new PersonaWorkModeStore(this.Options), NullLogger<PersonaStore>.Instance);
         this.Hidden = new HiddenStore(this.Settings);
         this.Log = new SourceLog(this.Settings, this.Clock);
-        this.Roles = new RoleLister(new HiringPoolCatalog(this.Options, NullLogger<HiringPoolCatalog>.Instance), new CustomRoleStore(this.Options), RoleFixtures.Types(this.dir));
+        this.Types = RoleFixtures.Types(this.dir);
+        this.Roles = new RoleLister(new HiringPoolCatalog(this.Options, NullLogger<HiringPoolCatalog>.Instance), new CustomRoleStore(this.Options), this.Types);
         this.Registry = new SkillRegistry(this.Settings, this.Skills, this.Personas, this.Hidden, this.Log, this.Roles, NullLogger<SkillRegistry>.Instance, this.Clock);
+        this.Remover = new SkillSourcesRemover(this.Registry, this.Settings, new SkillsMdWriter(this.Settings), this.Hidden, this.Log, this.Personas, this.Types, NullLogger<SkillSourcesRemover>.Instance);
         Directory.CreateDirectory(this.Settings.Dir);
     }
+
+    /// <summary>The team types the roles come from.</summary>
+    public Agency.Huddle.App.TeamTypes.TeamTypeCatalog Types { get; }
+
+    /// <summary>The remove and hide flows over these files.</summary>
+    public SkillSourcesRemover Remover { get; }
 
     /// <summary>The fake clock.</summary>
     public FakeTimeProvider Clock { get; } = new(new DateTimeOffset(2026, 10, 17, 12, 0, 0, TimeSpan.Zero));
