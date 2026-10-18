@@ -16,6 +16,7 @@ internal static class SkillSetupText
             SkillAvailability.NotDownloaded => $"{noun} \"{name}\" not downloaded",
             SkillAvailability.Broken => $"{noun} \"{item.Name}\" is broken: {item.Detail}",
             SkillAvailability.Withdrawn => $"{noun} \"{item.Name}\" was withdrawn by its Source: {item.Detail}",
+            SkillAvailability.Unknown when item.Kind == SkillSetupKind.Pack => $"Pack \"{item.Name}\" lists Skill \"{item.Detail}\", which is not in any catalog",
             SkillAvailability.Unknown => $"Skill \"{item.Name}\" is not in any catalog",
             _ => $"{noun} \"{item.Name}\" is not ready",
         };

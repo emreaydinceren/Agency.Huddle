@@ -20,12 +20,12 @@ public sealed class RoleHirerTests
         using TempDataDir dir = new();
         TeamOptions options = new();
         PersonaStore personas = new(new TeammatePaths(dir.Options()), new PersonaModelStore(dir.Options()), new PersonaEffortStore(dir.Options()), new PersonaWorkModeStore(dir.Options()), NullLogger<PersonaStore>.Instance);
-        FakeSkillInstaller installer = new();
+        FakeSkillCopier installer = new();
         HireLimitHarness harness = new(Microsoft.Extensions.Options.Options.Create(options));
         TeamTypeCatalog types = RoleFixtures.Types(dir);
         SkillPackStore packs = RoleFixtures.Packs(dir);
-        HireService hires = new(personas, types, packs, new AvatarStore(dir.Options(), NullLogger<AvatarStore>.Instance), harness.Guard, installer, new FakeStartGate(), NullLogger<HireService>.Instance);
-        RoleHirer hirer = new(hires, types, packs, new RoleFixtures.Context());
+        HireService hires = new(personas, types, FakeSkillAvailability.From(packs), new AvatarStore(dir.Options(), NullLogger<AvatarStore>.Instance), harness.Guard, installer, new FakeStartGate(), NullLogger<HireService>.Instance);
+        RoleHirer hirer = new(hires, types, FakeSkillAvailability.From(packs), new RoleFixtures.Context());
 
         HireResult unknown = hirer.Hire(new Candidate("Jane", "jane", "Dev", "Body.", [RoleFixtures.TeamName], null, "web/ghost"));
         HireResult noTeam = hirer.Hire(new Candidate("Kai", "kai", "Dev", "Body.", [], null, "web/dev"));

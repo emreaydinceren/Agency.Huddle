@@ -246,9 +246,9 @@ public sealed class TeamDuplicatorTests
             this.Packs = new SkillPackStore(this.Dir.Options(), NullLogger<SkillPackStore>.Instance, new Dictionary<string, string>(StringComparer.Ordinal));
             this.avatars = new AvatarStore(this.Dir.Options(), NullLogger<AvatarStore>.Instance);
             HireLimitHarness harness = new(this.Dir.Options());
-            this.Hire = new HireService(this.Personas, this.Types, this.Packs, this.avatars, harness.Guard, new FakeSkillInstaller(), new FakeStartGate(), NullLogger<HireService>.Instance);
+            this.Hire = new HireService(this.Personas, this.Types, FakeSkillAvailability.From(this.Packs), this.avatars, harness.Guard, new FakeSkillCopier(), new FakeStartGate(), NullLogger<HireService>.Instance);
             this.Folders = new TeamFolderProvisioner(this.Personas, this.library.RootStore, this.library.Resolver, NullLogger<TeamFolderProvisioner>.Instance, this.Catalog);
-            this.Duplicator = new TeamDuplicator(this.Catalog, this.Types, this.Folders, this.Hire, this.Personas, this.Packs, this.hireContext);
+            this.Duplicator = new TeamDuplicator(this.Catalog, this.Types, this.Folders, this.Hire, this.Personas, FakeSkillAvailability.From(this.Packs), this.hireContext);
             this.SourceWorkspace = Path.Combine(this.Dir.Path, "old-ws");
         }
 
@@ -305,7 +305,7 @@ public sealed class TeamDuplicatorTests
             Assert.NotNull(type);
             RoleSpec role = type.Roles.First(r => r.Id == roleId);
             CardState card = CardResolver.Resolve(role, this.Personas.ListNames(), this.hireContext.Answered, this.hireContext.TierMap,
-                this.hireContext.AvoidAdapters, this.Packs.All, this.hireContext.Connectors);
+                this.hireContext.AvoidAdapters, FakeSkillAvailability.From(this.Packs), this.hireContext.Connectors);
             HireResult hired = this.Hire.Hire(new HireRequest(team, "web", roleId, card));
             Assert.True(hired.Ok);
         }

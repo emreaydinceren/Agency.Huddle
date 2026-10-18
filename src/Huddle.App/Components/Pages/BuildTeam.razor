@@ -27,7 +27,7 @@
 @inject ITeamFolders Folders
 @inject HireService Hiring
 @inject IHireContext HireContext
-@inject SkillPackStore Packs
+@inject ISkillAvailability Availability
 @inject SkillsCatalogIndex SkillCatalog
 @inject SkillStore InstalledSkills
 @inject ITeamMembership Membership
@@ -1001,7 +1001,7 @@
     /// <param name="spec">The role as the card resolver reads it.</param>
     private DraftMember NewDraft(string roleId, string title, string description, ModelTier tier, bool manager, string name, string text, IReadOnlyList<string> nameChoices, IReadOnlyList<string> avatarChoices, RoleSpec spec)
     {
-        CardState card = CardResolver.Resolve(spec, [], this.HireContext.Answered, this.HireContext.TierMap, this.HireContext.AvoidAdapters, this.Packs.All, this.HireContext.Connectors, name);
+        CardState card = CardResolver.Resolve(spec, [], this.HireContext.Answered, this.HireContext.TierMap, this.HireContext.AvoidAdapters, this.Availability, this.HireContext.Connectors, name);
         return new DraftMember(Guid.NewGuid().ToString("N"), roleId, title, description, tier, manager, name, text, nameChoices, RandomAvatar(), avatarChoices, null, null, null,
             card.Skills, card.Packs, card.Pick?.AdapterId, card.Pick?.Model, null, card.Reasons);
     }
@@ -1181,12 +1181,11 @@
         }
 
         IReadOnlyList<SkillRef> needed = [.. this.drafts.Where(static draft => !draft.Existing).SelectMany(static draft => draft.Skills).DistinctBy(static skill => skill.Name, StringComparer.Ordinal)];
-        IReadOnlyList<SkillRef> missing = await this.Hiring.InstallSkillsAsync(needed, CancellationToken.None);
-        if (missing.Count > 0)
+        IReadOnlyList<SkillSetupItem> notReady = await this.Hiring.EnsureSkillsAsync(needed, CancellationToken.None);
+        if (notReady.Count > 0)
         {
             this.skillsBlocked = true;
-            string names = string.Join(", ", missing.Select(static skill => skill.Name));
-            return $"Skills not installed: {names}. Import them yourself, then try again.";
+            return $"Skills not ready: {string.Join(", ", notReady.Select(static item => item.Name))}. Copy a prompt for your AI tool from the cards that need setup, then try again.";
         }
 
         return null;

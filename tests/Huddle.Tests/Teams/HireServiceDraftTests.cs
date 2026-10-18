@@ -15,7 +15,7 @@ public sealed class HireServiceDraftTests : IDisposable
     private readonly PersonaStore personas;
     private readonly AvatarStore avatars;
     private readonly HireService service;
-    private readonly FakeSkillInstaller installer = new();
+    private readonly FakeSkillCopier installer = new();
 
     /// <summary>Builds a hire service over real stores in a temporary data folder.</summary>
     public HireServiceDraftTests()
@@ -25,7 +25,7 @@ public sealed class HireServiceDraftTests : IDisposable
         SkillPackStore packs = new(this.dir.Options(), NullLogger<SkillPackStore>.Instance, new Dictionary<string, string>(StringComparer.Ordinal));
         this.avatars = new AvatarStore(this.dir.Options(), NullLogger<AvatarStore>.Instance);
         HireLimitHarness harness = new(this.dir.Options());
-        this.service = new HireService(this.personas, types, packs, this.avatars, harness.Guard, this.installer, new FakeStartGate(), NullLogger<HireService>.Instance);
+        this.service = new HireService(this.personas, types, FakeSkillAvailability.From(packs), this.avatars, harness.Guard, this.installer, new FakeStartGate(), NullLogger<HireService>.Instance);
     }
 
     /// <inheritdoc />
@@ -76,18 +76,19 @@ public sealed class HireServiceDraftTests : IDisposable
         Assert.Equal("sonnet", this.personas.Get("Ada")?.Model);
     }
 
-    /// <summary>Installing the Skills of a batch asks the installer and returns what it could not install.</summary>
+    /// <summary>Ensuring the Skills of a batch asks the copier once for the distinct names, ignoring each ref's source and
+    /// path, and returns what is not ready.</summary>
     [Fact]
-    public async Task InstallSkillsAsync_ReturnsWhatTheInstallerCouldNotInstall()
+    public async Task EnsureSkillsAsync_ReturnsWhatTheCopierReportsNotReady()
     {
         CancellationToken ct = TestContext.Current.CancellationToken;
-        SkillRef wanted = new("a-skill", "acme/skills", "skills/a-skill");
-        this.installer.Missing = [wanted];
+        SkillSetupItem notReady = FakeSkillCopier.NotDownloaded("a-skill");
+        this.installer.Missing = [notReady];
 
-        IReadOnlyList<SkillRef> missing = await this.service.InstallSkillsAsync([wanted], ct);
+        IReadOnlyList<SkillSetupItem> missing = await this.service.EnsureSkillsAsync([new SkillRef("a-skill", "acme/skills", "skills/a-skill"), new SkillRef("a-skill", "builtin", null)], ct);
 
-        Assert.Equal([wanted], missing);
-        Assert.Equal([wanted], Assert.Single(this.installer.Calls));
+        Assert.Equal([notReady], missing);
+        Assert.Equal(["a-skill"], Assert.Single(this.installer.Calls));
     }
 
     /// <summary>A drafted library image is saved with the Teammate's avatar.</summary>

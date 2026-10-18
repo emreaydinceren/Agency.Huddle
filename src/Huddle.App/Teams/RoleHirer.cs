@@ -26,9 +26,9 @@ internal interface IHireContext
 /// </summary>
 /// <param name="hires">Writes the Teammate.</param>
 /// <param name="types">The team types, for the role.</param>
-/// <param name="packs">The skill packs a card draws skills from.</param>
+/// <param name="skills">The registry a card draws its Packs and Skills from.</param>
 /// <param name="context">The adapters and connectors the card resolves against.</param>
-internal sealed class RoleHirer(HireService hires, TeamTypeCatalog types, SkillPackStore packs, IHireContext context)
+internal sealed class RoleHirer(HireService hires, TeamTypeCatalog types, ISkillAvailability skills, IHireContext context)
 {
     /// <summary>Hires <paramref name="candidate"/> into its first Team as its role.</summary>
     /// <param name="candidate">A Candidate with a <see cref="Candidate.Role"/> and at least one Team.</param>
@@ -45,7 +45,7 @@ internal sealed class RoleHirer(HireService hires, TeamTypeCatalog types, SkillP
             return new HireResult(false, $"{candidate.Name} does not name a known role and Team.", null);
         }
 
-        CardState card = CardResolver.Resolve(role, [], context.Answered, context.TierMap, context.AvoidAdapters, packs.All, context.Connectors, candidate.Name);
+        CardState card = CardResolver.Resolve(role, [], context.Answered, context.TierMap, context.AvoidAdapters, skills, context.Connectors, candidate.Name);
         return hires.Hire(new HireRequest(candidate.Teams[0], type.Id, role.Id, card));
     }
 }

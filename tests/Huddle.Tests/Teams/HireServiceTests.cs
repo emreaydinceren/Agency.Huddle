@@ -61,14 +61,14 @@ public sealed class HireServiceTests
         options.Acp.MaxTeammatesPerTeam = perTeam;
         harness = new HireLimitHarness(Microsoft.Extensions.Options.Options.Create(options));
         AvatarStore avatars = new(dir.Options(), NullLogger<AvatarStore>.Instance);
-        return new HireService(personas, types, packs, avatars, harness.Guard, new FakeSkillInstaller(), new FakeStartGate(), NullLogger<HireService>.Instance);
+        return new HireService(personas, types, FakeSkillAvailability.From(packs), avatars, harness.Guard, new FakeSkillCopier(), new FakeStartGate(), NullLogger<HireService>.Instance);
     }
 
     private static HireRequest Request(string name, string roleId = "dev", string? model = "sonnet")
     {
         CardState card = new(roleId, name, new ModelPick("claude-agent-acp", model),
             [new SkillRef("test-driven-development", "builtin", null), new SkillRef("target-authoring", "builtin", null)],
-            [new VersionedRef("msbuild-authoring", "1.0.0")], CardReadiness.Ready, []);
+            [new VersionedRef("msbuild-authoring", "1.0.0")], CardReadiness.Ready, [], []);
         return new HireRequest(TeamName, "web", roleId, card);
     }
 

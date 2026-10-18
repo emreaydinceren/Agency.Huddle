@@ -1637,48 +1637,26 @@
     /// <param name="pack">The pack to toggle.</param>
     private void TogglePack(SkillPack pack)
     {
-        bool removing = this.IsPackActive(pack);
-        List<Agency.Huddle.App.Teams.VersionedRef> active = [.. this.ActivePacks.Where(entry => !string.Equals(entry.Id, pack.Id, StringComparison.Ordinal))];
-        List<string> skillNames = [.. this.skills];
-        if (removing)
+        Agency.Huddle.App.Teams.PackContents contents = TeammateCard.ContentsOf(pack);
+        if (this.IsPackActive(pack))
         {
-            HashSet<string> kept = new(this.roleSpec?.Skills.Select(static skill => skill.Name) ?? [], StringComparer.Ordinal);
-            foreach (SkillPack other in active.Select(entry => this.rolePacks.FirstOrDefault(candidate => string.Equals(candidate.Id, entry.Id, StringComparison.Ordinal))).OfType<SkillPack>())
-            {
-                kept.UnionWith(other.Skills.Select(static skill => skill.Name));
-            }
-
-            skillNames.RemoveAll(name => !kept.Contains(name) && pack.Skills.Any(skill => string.Equals(skill.Name, name, StringComparison.Ordinal)));
+            IReadOnlyList<Agency.Huddle.App.Teams.PackContents> others = [.. this.ActivePacks
+                .Select(entry => this.rolePacks.FirstOrDefault(candidate => string.Equals(candidate.Id, entry.Id, StringComparison.Ordinal)))
+                .OfType<SkillPack>()
+                .Select(TeammateCard.ContentsOf)];
+            this.text = Agency.Huddle.App.Teams.PackMembership.Remove(this.text, contents, [.. this.roleSpec?.Skills.Select(static skill => skill.Name) ?? []], others);
         }
         else
         {
-            active.Add(new Agency.Huddle.App.Teams.VersionedRef(pack.Id, pack.Version));
-            skillNames.AddRange(pack.Skills.Select(static skill => skill.Name).Where(name => !skillNames.Contains(name, StringComparer.Ordinal)));
+            this.text = Agency.Huddle.App.Teams.PackMembership.Add(this.text, contents);
         }
 
-        string? existing = PersonaFrontmatter.Parse(this.text).Fields
-            .FirstOrDefault(static field => string.Equals(field.Key, "consult_when", StringComparison.OrdinalIgnoreCase))?.Value;
-        List<string> clauses = [.. (existing ?? string.Empty).Split("; ", StringSplitOptions.TrimEntries | StringSplitOptions.RemoveEmptyEntries)];
-        string clause = pack.ConsultWhenAdds.Trim();
-        if (removing)
-        {
-            clauses.RemoveAll(entry => string.Equals(entry, clause, StringComparison.Ordinal));
-        }
-        else if (clause.Length > 0 && !clauses.Contains(clause, StringComparer.Ordinal))
-        {
-            clauses.Add(clause);
-        }
-
-        this.skills = skillNames;
-        string updated = PersonaFrontmatter.WriteListField(this.text, "skills", this.skills);
-        updated = PersonaFrontmatter.WriteListField(updated, "_packs", [.. active.Select(static entry => entry.ToString())]);
-        if (existing is not null || clauses.Count > 0)
-        {
-            updated = PersonaFrontmatter.WriteScalarField(updated, "consult_when", string.Join("; ", clauses));
-        }
-
-        this.text = updated;
+        this.skills = ReadSkills(this.text);
     }
+
+    /// <summary>The parts of a Pack that <see cref="Agency.Huddle.App.Teams.PackMembership"/> writes into the file.</summary>
+    private static Agency.Huddle.App.Teams.PackContents ContentsOf(SkillPack pack) =>
+        new(pack.Id, pack.Version, pack.ConsultWhenAdds, [.. pack.Skills.Select(static skill => skill.Name)]);
 
     /// <summary>
     /// The MS-3 and MS-5 warnings for this Teammate against the rest of its Team: <c>Model</c> holds the

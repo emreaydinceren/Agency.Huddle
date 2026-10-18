@@ -437,9 +437,9 @@ public sealed class BuildTeamTests
         Assert.Equal("/teams/Garden", new Uri(ctx.Services.GetRequiredService<NavigationManager>().Uri).AbsolutePath);
     }
 
-    /// <summary>A role's Skills show on its draft, are imported before anything is written, and are carried by the hired Teammate.</summary>
+    /// <summary>A role's Skills show on its draft, are copied into Skills/ before anything is written, and are carried by the hired Teammate.</summary>
     [Fact]
-    public async Task Approve_ImportsTheRolesSkills_AndTheTeammateCarriesThem()
+    public async Task Approve_CopiesTheRolesSkills_AndTheTeammateCarriesThem()
     {
         using Fixture fixture = new(typeCount: 3);
         await using MudBunitContext ctx = fixture.NewContext();
@@ -453,20 +453,19 @@ public sealed class BuildTeamTests
 
         await cut.InvokeAsync(() => cut.Find("button.build-team-approve-button").ClickAsync());
 
-        SkillRef asked = Assert.Single(Assert.Single(fixture.Installer.Calls));
-        Assert.Equal("ext-skill", asked.Name);
+        Assert.Equal(["ext-skill"], Assert.Single(fixture.Installer.Calls));
         PersonaEntry hired = Assert.Single(fixture.Personas.Entries, entry => entry.Teams.Contains("Garden", StringComparer.Ordinal));
         Assert.True(PersonaFrontmatter.TryReadIdentity(hired.Text, out PersonaIdentity? identity, out _));
         Assert.Equal(["ext-skill"], identity.Skills);
         Assert.Equal("claude-agent-acp", identity.Adapter);
     }
 
-    /// <summary>A Skill that cannot be installed stops the approval before the Team is created, names the Skill and links to Settings.</summary>
+    /// <summary>A Skill that is not ready stops the approval before the Team is created, names the Skill and links to Settings.</summary>
     [Fact]
-    public async Task Approve_SkillThatNeedsReview_BlocksBeforeAnythingIsWritten()
+    public async Task Approve_SkillNotReady_BlocksBeforeAnythingIsWritten()
     {
         using Fixture fixture = new(typeCount: 3);
-        fixture.Installer.Missing = [new SkillRef("ext-skill", "acme/skills", "skills/ext-skill")];
+        fixture.Installer.Missing = [FakeSkillCopier.NotDownloaded("ext-skill")];
         await using MudBunitContext ctx = fixture.NewContext();
         ctx.Services.GetRequiredService<NavigationManager>().NavigateTo("/teams/build?type=blank");
         IRenderedComponent<ContainerFragment> cut = Render(ctx);
@@ -475,7 +474,7 @@ public sealed class BuildTeamTests
 
         await cut.InvokeAsync(() => cut.Find("button.build-team-approve-button").ClickAsync());
 
-        Assert.Equal("Skills not installed: ext-skill. Import them yourself, then try again.",cut.Find(".build-team-approve-error .mud-alert-message").FirstChild?.TextContent.Trim());
+        Assert.Equal("Skills not ready: ext-skill. Copy a prompt for your AI tool from the cards that need setup, then try again.", cut.Find(".build-team-approve-error .mud-alert-message").FirstChild?.TextContent.Trim());
         Assert.Equal("/settings/skills", cut.Find(".build-team-skills-link").GetAttribute("href"));
         Assert.DoesNotContain("CreateTeam:Garden", fixture.Folders.Calls);
         Assert.DoesNotContain(fixture.Personas.Entries, entry => entry.Teams.Contains("Garden", StringComparer.Ordinal));
@@ -1118,7 +1117,7 @@ public sealed class BuildTeamTests
             HireLimitHarness harness = new(this.dir.Options());
             this.Packs = packs;
             this.Skills = new SkillStore(this.dir.Options(), NullLogger<SkillStore>.Instance);
-            this.Hire = new HireService(this.Personas, this.Types, packs, this.Avatars, harness.Guard, this.Installer, new FakeStartGate(), NullLogger<HireService>.Instance);
+            this.Hire = new HireService(this.Personas, this.Types, FakeSkillAvailability.From(packs), this.Avatars, harness.Guard, this.Installer, new FakeStartGate(), NullLogger<HireService>.Instance);
             this.Membership = new TeamMembership(this.Personas, this.Catalog, this.Folders, this.Types);
         }
 
@@ -1154,7 +1153,7 @@ public sealed class BuildTeamTests
 
         public HireService Hire { get; }
 
-        public FakeSkillInstaller Installer { get; } = new();
+        public FakeSkillCopier Installer { get; } = new();
 
         public SkillPackStore Packs { get; private set; }
 
@@ -1173,6 +1172,7 @@ public sealed class BuildTeamTests
             ctx.Services.AddSingleton<ITeamFolders>(this.Folders);
             ctx.Services.AddSingleton(this.Hire);
             ctx.Services.AddSingleton(this.Packs);
+            ctx.Services.AddSingleton<ISkillAvailability>(FakeSkillAvailability.From(this.Packs));
             ctx.Services.AddSingleton(this.Skills);
             ctx.Services.AddSingleton(new SkillsCatalogIndex(this.dir.Options(), NullLogger<SkillsCatalogIndex>.Instance));
             ctx.Services.AddSingleton<IHireContext>(new RoleFixtures.Context());

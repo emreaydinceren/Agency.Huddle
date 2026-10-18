@@ -1,6 +1,7 @@
 using Agency.Huddle.App.Acp;
 using Agency.Huddle.App.Avatars;
 using Agency.Huddle.App.Services;
+using Agency.Huddle.App.SkillSources;
 using Agency.Huddle.App.TeamTypes;
 using Agency.Huddle.App.Teammates;
 
@@ -30,7 +31,7 @@ internal sealed record HireResult(bool Ok, string? Error, string? PersonaName);
 /// <param name="Adapter">The adapter the Teammate runs on, or <see langword="null"/> for the default.</param>
 /// <param name="Model">The model, or <see langword="null"/> for the adapter's default.</param>
 /// <param name="Effort">The effort, or <see langword="null"/> for the default.</param>
-/// <param name="Skills">The names of the Skills the Teammate carries; they must be installed (see <see cref="HireService.InstallSkillsAsync"/>).</param>
+/// <param name="Skills">The names of the Skills the Teammate carries; they must be in <c>Skills/</c> (see <see cref="HireService.EnsureSkillsAsync"/>).</param>
 /// <param name="Packs">The skill packs the Teammate was drawn from.</param>
 internal sealed record DraftHire(
     string Name,
@@ -92,10 +93,10 @@ internal sealed record StartTeamResult(bool Ok, string? Error, IReadOnlyList<str
 /// </summary>
 /// <param name="personas">Where the Teammate file is written.</param>
 /// <param name="types">The team types, for the role and its candidate.</param>
-/// <param name="packs">The skill packs, for their consult-when additions.</param>
+/// <param name="skills">The registry, for each Pack's consult-when addition.</param>
 /// <param name="avatars">Where the avatar is saved.</param>
 /// <param name="limits">The shared hire-limit check.</param>
-/// <param name="installer">Installs the Team's skills before any member is hired.</param>
+/// <param name="copier">Copies the Team's Skills into <c>Skills/</c> before any member is hired.</param>
 /// <param name="startGate">Tells when the manager is running.</param>
 /// <param name="logger">Receives post-write failures.</param>
 /// <param name="processProvisioner">Gives a started Team the type's default process when it has none; <see langword="null"/> skips that step.</param>
@@ -103,10 +104,10 @@ internal sealed record StartTeamResult(bool Ok, string? Error, IReadOnlyList<str
 internal sealed class HireService(
     PersonaStore personas,
     TeamTypeCatalog types,
-    SkillPackStore packs,
+    ISkillAvailability skills,
     AvatarStore avatars,
     HireLimitGuard limits,
-    ISkillInstaller installer,
+    ISkillCopier copier,
     IPersonaStartGate startGate,
     ILogger<HireService> logger,
     ProcessProvisioner? processProvisioner = null,
@@ -138,12 +139,13 @@ internal sealed class HireService(
             return blocked ?? HireService.Stop("The team needs a manager.", []);
         }
 
-        IReadOnlyList<SkillRef> skills = [.. hires.SelectMany(static h => h.Card.Skills).DistinctBy(static s => s.Name, StringComparer.Ordinal)];
-        IReadOnlyList<SkillRef> missing = await installer.EnsureInstalledAsync(skills, ct).ConfigureAwait(false);
-        if (missing.Count > 0)
+        // CardResolver normally stops a card that is not ready earlier; this covers a clone removed in the meantime.
+        IReadOnlyList<SkillRef> needed = [.. hires.SelectMany(static h => h.Card.Skills)];
+        IReadOnlyList<SkillSetupItem> notReady = await this.EnsureSkillsAsync(needed, ct).ConfigureAwait(false);
+        if (notReady.Count > 0)
         {
-            string names = string.Join(", ", missing.Select(static s => s.Name));
-            return HireService.Stop($"Skills not installed: {names}.", []);
+            string names = string.Join(", ", notReady.Select(static item => item.Name));
+            return HireService.Stop($"Skills not ready: {names}. {SkillSetupText.Reason(notReady[0])}.", []);
         }
 
         _ = processProvisioner?.ProvisionDefault(team);
@@ -366,14 +368,15 @@ internal sealed class HireService(
         }
     }
 
-    /// <summary>Makes sure the Skills of a batch of drafts are on disk, importing the missing ones from the catalog; a Skill whose review shows more than a missing licence is not installed.</summary>
-    /// <param name="skills">The Skills the drafts carry.</param>
-    /// <param name="ct">Cancels the downloads.</param>
-    /// <returns>The Skills that could not be installed; empty when every one is in place.</returns>
-    public Task<IReadOnlyList<SkillRef>> InstallSkillsAsync(IReadOnlyList<SkillRef> skills, CancellationToken ct)
+    /// <summary>Makes sure every named Skill is in <c>Skills/</c>, copying the copyable ones (Skill Packs spec §6.10.3). It
+    /// downloads nothing and never replaces a folder that is there. A <see cref="SkillRef"/>'s source and path are ignored.</summary>
+    /// <param name="skills">The Skills the cards or drafts carry.</param>
+    /// <param name="ct">Cancels the copy.</param>
+    /// <returns>One item per Skill that is not ready; empty when every one is in place.</returns>
+    public Task<IReadOnlyList<SkillSetupItem>> EnsureSkillsAsync(IReadOnlyList<SkillRef> skills, CancellationToken ct)
     {
         ArgumentNullException.ThrowIfNull(skills);
-        return installer.EnsureInstalledAsync(skills, ct);
+        return copier.EnsureAvailableAsync([.. skills.Select(static skill => skill.Name).Distinct(StringComparer.Ordinal)], ct);
     }
 
     /// <summary>Checks that a batch of drafts can be hired together, writing nothing: no repeated name, no name in use, and the hire limits hold for the whole batch.</summary>
@@ -567,7 +570,7 @@ internal sealed class HireService(
 
         foreach (VersionedRef reference in card.Packs)
         {
-            string? adds = packs.Get(reference.Id)?.ConsultWhenAdds;
+            string? adds = skills.FindPack(reference.Id)?.ConsultWhenAdds;
             if (!string.IsNullOrWhiteSpace(adds))
             {
                 parts.Add(adds.Trim());

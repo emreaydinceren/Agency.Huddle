@@ -27,7 +27,7 @@ internal sealed class TeamDuplicator(
     ITeamFolders folders,
     HireService hire,
     PersonaStore personas,
-    SkillPackStore packs,
+    ISkillAvailability skills,
     IHireContext context)
 {
     /// <summary>The refusal for a target name that is taken.</summary>
@@ -130,7 +130,7 @@ internal sealed class TeamDuplicator(
     /// <summary>Resolves a fresh card for the member's role and hires it into <paramref name="target"/>.</summary>
     private void CopyOne(SourceMember member, string target, List<string> hired, List<SkippedMember> skipped)
     {
-        CardState card = CardResolver.Resolve(member.Spec, personas.ListNames(), context.Answered, context.TierMap, context.AvoidAdapters, packs.All, context.Connectors);
+        CardState card = CardResolver.Resolve(member.Spec, personas.ListNames(), context.Answered, context.TierMap, context.AvoidAdapters, skills, context.Connectors);
         if (card.Readiness != CardReadiness.Ready)
         {
             skipped.Add(new SkippedMember(member.Name, string.Join(", ", card.Reasons)));

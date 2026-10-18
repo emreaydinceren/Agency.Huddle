@@ -41,30 +41,36 @@ internal sealed class EmptyConnectorStatus : IConnectorStatus
 /// <param name="Skills">The role's skills plus its packs' skills, without duplicates.</param>
 /// <param name="Packs">The role's packs that exist, at their version.</param>
 /// <param name="Readiness">Ready, or Needs setup when a default is missing.</param>
-/// <param name="Reasons">Why the card needs setup; empty when Ready.</param>
+/// <param name="Reasons">Why the card needs setup; empty when Ready. Holds one line per <paramref name="SkillSetup"/> item too.</param>
+/// <param name="SkillSetup">The Packs and Skills that are not ready to hire (Skill Packs spec §6.10.2); empty when none.</param>
 internal sealed record CardState(string RoleId, string Name, ModelPick? Pick, IReadOnlyList<SkillRef> Skills,
-    IReadOnlyList<VersionedRef> Packs, CardReadiness Readiness, IReadOnlyList<string> Reasons);
+    IReadOnlyList<VersionedRef> Packs, CardReadiness Readiness, IReadOnlyList<string> Reasons, IReadOnlyList<SkillSetupItem> SkillSetup);
 
 /// <summary>Resolves every default on a hire card and decides Ready or Needs setup (HR-6, HR-7).</summary>
 internal static class CardResolver
 {
-    /// <summary>Resolves a role's card. Needs setup only when no default exists: a name conflict, no adapter for the tier, or an unmet connector.</summary>
+    /// <summary>The <see cref="SkillRef.Source"/> every resolved Skill carries: Skills resolve by name through the registry,
+    /// so a ref's own source and path are ignored (Skill Packs spec §6.10.2).</summary>
+    public const string RegistrySource = "registry";
+
+    /// <summary>Resolves a role's card. Needs setup when a default is missing (a name conflict, no adapter for the tier, an
+    /// unmet connector) or a Pack or Skill is not ready to hire.</summary>
     /// <param name="role">The role being hired.</param>
     /// <param name="namesInUse">The Teammate names already taken, compared without case.</param>
     /// <param name="answered">The adapters that answered their model probe.</param>
     /// <param name="tierMap">Configured model ids by adapter id, then tier.</param>
     /// <param name="avoidAdapters">Adapter ids to avoid when another adapter answered.</param>
-    /// <param name="packs">The known skill packs.</param>
+    /// <param name="skills">The registry: which Packs exist and which Skills are ready.</param>
     /// <param name="connectors">The connector status.</param>
     /// <param name="chosenName">A name the user chose, or <see langword="null"/> to take the first free suggestion.</param>
     /// <returns>The resolved card.</returns>
     public static CardState Resolve(RoleSpec role, IReadOnlyCollection<string> namesInUse, IReadOnlyList<AdapterAvailability> answered,
         IReadOnlyDictionary<string, IReadOnlyDictionary<ModelTier, string>> tierMap, IReadOnlyCollection<string> avoidAdapters,
-        IReadOnlyList<SkillPack> packs, IConnectorStatus connectors, string? chosenName = null)
+        ISkillAvailability skills, IConnectorStatus connectors, string? chosenName = null)
     {
         ArgumentNullException.ThrowIfNull(role);
         ArgumentNullException.ThrowIfNull(namesInUse);
-        ArgumentNullException.ThrowIfNull(packs);
+        ArgumentNullException.ThrowIfNull(skills);
         ArgumentNullException.ThrowIfNull(connectors);
 
         List<string> reasons = [];
@@ -102,23 +108,26 @@ internal static class CardResolver
             }
         }
 
-        List<SkillRef> skills = [.. role.Skills];
+        List<string> names = [.. role.Skills.Select(static skill => skill.Name)];
         List<VersionedRef> usedPacks = [];
         foreach (string packId in role.Packs)
         {
-            SkillPack? pack = packs.FirstOrDefault(candidate => string.Equals(candidate.Id, packId, StringComparison.Ordinal));
-            if (pack is null)
+            // A Pack no row provides is skipped silently: R008 warns on the Packs tab, and a stock install with no skills
+            // repository must still be able to hire a role that names one.
+            if (skills.FindPack(packId) is not { } pack)
             {
                 continue;
             }
 
             usedPacks.Add(new VersionedRef(pack.Id, pack.Version));
-            skills.AddRange(pack.Skills);
+            names.AddRange(pack.SkillNames);
         }
 
-        IReadOnlyList<SkillRef> distinctSkills = [.. skills.DistinctBy(static skill => skill.Name, StringComparer.Ordinal)];
+        IReadOnlyList<SkillSetupItem> setup = SkillSetupCheck.For([.. role.Skills.Select(static skill => skill.Name)], usedPacks, skills);
+        reasons.AddRange(setup.Select(SkillSetupText.Reason));
+        IReadOnlyList<SkillRef> distinctSkills = [.. names.Distinct(StringComparer.Ordinal).Select(static skillName => new SkillRef(skillName, RegistrySource, null))];
         CardReadiness readiness = reasons.Count == 0 ? CardReadiness.Ready : CardReadiness.NeedsSetup;
-        return new CardState(role.Id, name, pick, distinctSkills, usedPacks, readiness, reasons);
+        return new CardState(role.Id, name, pick, distinctSkills, usedPacks, readiness, reasons, setup);
     }
 
     /// <summary>The reason a card gives when <paramref name="connector"/> is not connected.</summary>

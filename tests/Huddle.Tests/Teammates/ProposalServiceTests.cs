@@ -541,8 +541,8 @@ public sealed class ProposalServiceTests
             {
                 SkillPackStore packs = RoleFixtures.Packs(dataDir);
                 AvatarStore avatars = new(options, NullLogger<AvatarStore>.Instance);
-                HireService hires = new(personas, types, packs, avatars, limits.Guard, new FakeSkillInstaller(), new FakeStartGate(), NullLogger<HireService>.Instance);
-                roleHirer = new RoleHirer(hires, types, packs, new RoleFixtures.Context());
+                HireService hires = new(personas, types, FakeSkillAvailability.From(packs), avatars, limits.Guard, new FakeSkillCopier(), new FakeStartGate(), NullLogger<HireService>.Instance);
+                roleHirer = new RoleHirer(hires, types, FakeSkillAvailability.From(packs), new RoleFixtures.Context());
             }
 
             var service = new ProposalService(proposals, checker, personas, chat, directory, limits.Guard, NullLogger<ProposalService>.Instance, roleHirer);

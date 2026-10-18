@@ -2961,7 +2961,7 @@ too many Skills, sub-category, withdrawn, deprecated.
 | Test class | Pins |
 | --- | --- |
 | `CardResolverTests` (updated) | A known Pack with `NotDownloaded` makes the card `NeedsSetup` with *Pack "MSBuild Authoring" not downloaded* in `Reasons` and a `SkillSetupItem` |
-| `CardResolverTests` | A role Skill with `Unknown`, `Broken`, `Withdrawn`, `NotDownloaded` each gives the matching item and reason; `Present` and `Copyable` give none; A Pack id no row provides is skipped without setup; a stock install still resolves a developer to Ready; `SkillRef.Source` and `Path` are ignored: two refs with different Source and Path and the same name resolve the same |
+| `CardResolverTests` | A role Skill with `Unknown`, `Broken`, `Withdrawn`, `NotDownloaded` each gives the matching item and reason; `Present` and `Copyable` give none; A Pack id no row provides is skipped without setup; a stock install still resolves the built-in developer's card with its Pack skipped, and its pooled Skills (not built in, so not on a fresh computer) make it Needs setup until fetched, while with those Skills present it is Ready; `SkillRef.Source` and `Path` are ignored: two refs with different Source and Path and the same name resolve the same |
 | `SkillSetupCheckTests` | One Pack with two missing Skills gives one Pack item, not three |
 | `HireServiceStartTests` (updated) | `StartTeamAsync` stops with *Skills not ready* when `ISkillCopier` reports a problem and writes no Teammate |
 | `HireServiceStartTests` | A `Copyable` Skill is copied before the manager is hired |

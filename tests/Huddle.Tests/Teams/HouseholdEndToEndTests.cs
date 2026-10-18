@@ -103,7 +103,8 @@ public sealed class HouseholdEndToEndTests
         builder.ConfigureTestServices(static services =>
         {
             services.RemoveAll<ISkillInstaller>();
-            services.AddSingleton<ISkillInstaller>(new FakeSkillInstaller());
+            services.AddSingleton<Agency.Huddle.App.SkillSources.ISkillCopier>(new FakeSkillCopier());
+            services.AddSingleton<ISkillAvailability>(static sp => FakeSkillAvailability.From(sp.GetRequiredService<SkillPackStore>()));
             services.RemoveAll<IPersonaStartGate>();
             services.AddSingleton<IPersonaStartGate>(new FakeStartGate());
         });
@@ -119,7 +120,7 @@ public sealed class HouseholdEndToEndTests
         IHireContext context = services.GetRequiredService<IHireContext>();
         RoleSpec role = type.Roles.First(each => string.Equals(each.Id, roleId, StringComparison.Ordinal));
         List<string> used = [.. services.GetRequiredService<PersonaStore>().ListNames()];
-        return CardResolver.Resolve(role, used, context.Answered, context.TierMap, context.AvoidAdapters, services.GetRequiredService<SkillPackStore>().All, context.Connectors);
+        return CardResolver.Resolve(role, used, context.Answered, context.TierMap, context.AvoidAdapters, services.GetRequiredService<ISkillAvailability>(), context.Connectors);
     }
 
     /// <summary>Unwraps a saved Task result, failing the test on any refusal.</summary>

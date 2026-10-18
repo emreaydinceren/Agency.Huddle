@@ -10,22 +10,6 @@ using Microsoft.Extensions.Logging.Abstractions;
 
 namespace Agency.Huddle.Tests.Teams;
 
-/// <summary>A skill installer that records what it was asked for and reports a configured set as missing.</summary>
-internal sealed class FakeSkillInstaller : ISkillInstaller
-{
-    /// <summary>Gets the calls, each the skills asked for.</summary>
-    public List<IReadOnlyList<SkillRef>> Calls { get; } = [];
-
-    /// <summary>Gets or sets the skills reported as not installed.</summary>
-    public IReadOnlyList<SkillRef> Missing { get; set; } = [];
-
-    /// <inheritdoc />
-    public Task<IReadOnlyList<SkillRef>> EnsureInstalledAsync(IReadOnlyList<SkillRef> skills, CancellationToken ct)
-    {
-        this.Calls.Add(skills);
-        return Task.FromResult(this.Missing);
-    }
-}
 
 /// <summary>A start gate that records the waits and answers with a configured outcome.</summary>
 internal sealed class FakeStartGate : IPersonaStartGate
@@ -81,7 +65,7 @@ public sealed class HireServiceStartTests
           ] }
         """;
 
-    private static HireService Create(TempDataDir dir, out PersonaStore personas, out FakeSkillInstaller installer, out FakeStartGate gate, TeamOptions? options = null, Func<TeamTypeCatalog, ProcessProvisioner>? makeProvisioner = null, Func<TeamTypeCatalog, TeamOnboarding>? makeOnboarding = null)
+    private static HireService Create(TempDataDir dir, out PersonaStore personas, out FakeSkillCopier installer, out FakeStartGate gate, TeamOptions? options = null, Func<TeamTypeCatalog, ProcessProvisioner>? makeProvisioner = null, Func<TeamTypeCatalog, TeamOnboarding>? makeOnboarding = null)
     {
         personas = new(new TeammatePaths(dir.Options()), new PersonaModelStore(dir.Options()), new PersonaEffortStore(dir.Options()), new PersonaWorkModeStore(dir.Options()), NullLogger<PersonaStore>.Instance);
         Dictionary<string, string> builtins = new(StringComparer.Ordinal)
@@ -99,16 +83,16 @@ public sealed class HireServiceStartTests
         SkillPackStore packs = new(dir.Options(), NullLogger<SkillPackStore>.Instance, new Dictionary<string, string>(StringComparer.Ordinal));
         HireLimitHarness harness = new(Microsoft.Extensions.Options.Options.Create(options ?? new TeamOptions()));
         AvatarStore avatars = new(dir.Options(), NullLogger<AvatarStore>.Instance);
-        installer = new FakeSkillInstaller();
+        installer = new FakeSkillCopier();
         gate = new FakeStartGate();
-        return new HireService(personas, types, packs, avatars, harness.Guard, installer, gate, NullLogger<HireService>.Instance, makeProvisioner?.Invoke(types), makeOnboarding?.Invoke(types));
+        return new HireService(personas, types, FakeSkillAvailability.From(packs), avatars, harness.Guard, installer, gate, NullLogger<HireService>.Instance, makeProvisioner?.Invoke(types), makeOnboarding?.Invoke(types));
     }
 
     private static HireRequest Request(string name, string roleId, CardReadiness readiness = CardReadiness.Ready)
     {
         CardState card = new(roleId, name, new ModelPick("claude-agent-acp", "sonnet"),
             [new SkillRef("tdd", "builtin", null), new SkillRef(roleId == "lead" ? "planning" : "coding", "builtin", null)],
-            [], readiness, []);
+            [], readiness, [], []);
         return new HireRequest(TeamName, "web", roleId, card);
     }
 
@@ -153,18 +137,37 @@ public sealed class HireServiceStartTests
         Assert.Equal("# Edited\n", File.ReadAllText(path));
     }
 
-    /// <summary>The installer is asked once for the distinct skills of every card, before anything is hired.</summary>
+    /// <summary>The copier is asked once for the distinct Skills of every card, before anything is hired.</summary>
     [Fact]
-    public async Task StartTeamAsync_AllCards_InstallsDistinctSkillsOnce()
+    public async Task StartTeamAsync_AllCards_EnsuresDistinctSkillsOnce()
     {
         CancellationToken ct = TestContext.Current.CancellationToken;
         using TempDataDir dir = new();
-        HireService service = Create(dir, out _, out FakeSkillInstaller installer, out _);
+        HireService service = Create(dir, out _, out FakeSkillCopier installer, out _);
 
         _ = await service.StartTeamAsync(TeamName, [Request("Lee", "lead"), Request("Dan", "dev"), Request("Dee", "dev")], ct);
 
-        IReadOnlyList<SkillRef> asked = Assert.Single(installer.Calls);
-        Assert.Equal(["tdd", "planning", "coding"], asked.Select(static s => s.Name));
+        IReadOnlyList<string> asked = Assert.Single(installer.Calls);
+        Assert.Equal(["tdd", "planning", "coding"], asked);
+    }
+
+    /// <summary>A copyable Skill is copied into Skills/ before the manager is hired: no Teammate exists while the copier runs
+    /// (Skill Packs spec §6.10.3).</summary>
+    [Fact]
+    public async Task StartTeamAsync_CopiesSkillsBeforeTheManagerIsHired()
+    {
+        CancellationToken ct = TestContext.Current.CancellationToken;
+        using TempDataDir dir = new();
+        HireService service = Create(dir, out PersonaStore personas, out FakeSkillCopier copier, out _);
+        IReadOnlyList<string>? namesWhileCopying = null;
+        copier.OnEnsure = _ => namesWhileCopying = [.. personas.ListNames()];
+
+        StartTeamResult result = await service.StartTeamAsync(TeamName, [Request("Lee", "lead"), Request("Dan", "dev")], ct);
+
+        Assert.True(result.Ok);
+        Assert.NotNull(namesWhileCopying);
+        Assert.Empty(namesWhileCopying);
+        Assert.Equal(["Lee", "Dan"], result.Started);
     }
 
     /// <summary>A Needs-setup card blocks the whole start and nothing is written or installed.</summary>
@@ -173,7 +176,7 @@ public sealed class HireServiceStartTests
     {
         CancellationToken ct = TestContext.Current.CancellationToken;
         using TempDataDir dir = new();
-        HireService service = Create(dir, out PersonaStore personas, out FakeSkillInstaller installer, out FakeStartGate gate);
+        HireService service = Create(dir, out PersonaStore personas, out FakeSkillCopier installer, out FakeStartGate gate);
 
         StartTeamResult result = await service.StartTeamAsync(TeamName, [Request("Lee", "lead"), Request("Dan", "dev", CardReadiness.NeedsSetup)], ct);
 
@@ -223,7 +226,7 @@ public sealed class HireServiceStartTests
     {
         CancellationToken ct = TestContext.Current.CancellationToken;
         using TempDataDir dir = new();
-        HireService service = Create(dir, out _, out FakeSkillInstaller installer, out _);
+        HireService service = Create(dir, out _, out FakeSkillCopier installer, out _);
 
         StartTeamResult result = await service.StartTeamAsync(TeamName, [], ct);
 
@@ -248,19 +251,19 @@ public sealed class HireServiceStartTests
         Assert.Empty(personas.ListNames());
     }
 
-    /// <summary>A skill that cannot be installed blocks the start and is named.</summary>
+    /// <summary>A Skill that is not ready blocks the start, is named with its reason, and no Teammate is written.</summary>
     [Fact]
     public async Task StartTeamAsync_SkillMissing_BlocksNamingIt()
     {
         CancellationToken ct = TestContext.Current.CancellationToken;
         using TempDataDir dir = new();
-        HireService service = Create(dir, out PersonaStore personas, out FakeSkillInstaller installer, out FakeStartGate gate);
-        installer.Missing = [new SkillRef("coding", "builtin", null)];
+        HireService service = Create(dir, out PersonaStore personas, out FakeSkillCopier installer, out FakeStartGate gate);
+        installer.Missing = [FakeSkillCopier.NotDownloaded("coding")];
 
         StartTeamResult result = await service.StartTeamAsync(TeamName, [Request("Lee", "lead"), Request("Dan", "dev")], ct);
 
         Assert.False(result.Ok);
-        Assert.Equal("Skills not installed: coding.", result.Error);
+        Assert.Equal("Skills not ready: coding. Skill \"coding\" not downloaded.", result.Error);
         Assert.Empty(personas.ListNames());
         Assert.Empty(gate.Waited);
     }

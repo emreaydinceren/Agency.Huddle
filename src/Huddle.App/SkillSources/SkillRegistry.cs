@@ -158,6 +158,37 @@ internal sealed class SkillRegistry : ISkillAvailability, IDisposable
         return string.IsNullOrWhiteSpace(sub) ? null : sub;
     }
 
+    /// <inheritdoc/>
+    public SkillSetupItem? SetupItem(SkillSetupKind kind, string name)
+    {
+        ArgumentNullException.ThrowIfNull(name);
+        if (kind == SkillSetupKind.Pack)
+        {
+            if (this.FindPack(name) is not { } pack)
+            {
+                return null;
+            }
+
+            return this.DisplayState(pack) switch
+            {
+                ItemState.Broken => new SkillSetupItem(kind, name, SkillAvailability.Broken, this.FirstError(pack.StateKey)),
+                ItemState.Withdrawn => new SkillSetupItem(kind, name, SkillAvailability.Withdrawn, this.ReasonOf(pack.Source)),
+                ItemState.NotDownloaded => new SkillSetupItem(kind, name, SkillAvailability.NotDownloaded, pack.Title),
+                _ => null,
+            };
+        }
+
+        SkillAvailability availability = this.Of(name);
+        SkillEntry? entry = this.Current.Resolved.FindSkill(name);
+        return availability switch
+        {
+            SkillAvailability.Present or SkillAvailability.Copyable => null,
+            SkillAvailability.Broken => new SkillSetupItem(kind, name, availability, entry is null ? string.Empty : this.FirstError(entry.StateKey)),
+            SkillAvailability.Withdrawn => new SkillSetupItem(kind, name, availability, this.ReasonOf(entry?.Source)),
+            _ => new SkillSetupItem(kind, name, availability, string.Empty),
+        };
+    }
+
     /// <summary>The Teammates whose <c>_packs</c> names the Pack.</summary>
     public IReadOnlyList<string> HolderNames(PackEntry pack)
     {
