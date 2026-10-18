@@ -15,6 +15,57 @@ internal static class MemberWarnings
 {
     private const int MaxSkills = 10;
 
+    /// <summary>The warnings about what the Teammate holds from its Sources (Skill Packs spec §6.10.7): a withdrawn Pack or
+    /// Skill, a deprecated Pack, and a Pack no SKILLS.md row provides any more. In that order.</summary>
+    /// <param name="name">The Teammate's name.</param>
+    /// <param name="skills">Its <c>skills:</c>.</param>
+    /// <param name="packs">Its <c>_packs</c>.</param>
+    /// <param name="availability">The registry.</param>
+    /// <param name="deprecatedReason">The Source's reason when it marks a Pack deprecated, else null.</param>
+    public static IReadOnlyList<string> ForSources(string name, IReadOnlyList<string> skills, IReadOnlyList<VersionedRef> packs, ISkillAvailability availability, Func<string, string?> deprecatedReason)
+    {
+        ArgumentNullException.ThrowIfNull(name);
+        ArgumentNullException.ThrowIfNull(skills);
+        ArgumentNullException.ThrowIfNull(packs);
+        ArgumentNullException.ThrowIfNull(availability);
+        ArgumentNullException.ThrowIfNull(deprecatedReason);
+
+        List<string> withdrawn = [];
+        List<string> deprecated = [];
+        List<string> gone = [];
+        foreach (VersionedRef pack in packs)
+        {
+            if (availability.FindPack(pack.Id) is null)
+            {
+                gone.Add($"Pack \"{pack.Id}\" is no longer in SKILLS.md. {name} keeps its Skills; remove the Pack here, or ask your AI tool to add it back.");
+            }
+            else if (availability.SetupItem(SkillSetupKind.Pack, pack.Id) is { Problem: SkillAvailability.Withdrawn } item)
+            {
+                withdrawn.Add($"Pack \"{pack.Id}\" was withdrawn by its Source: {Reason(item.Detail)}.");
+            }
+            else if (deprecatedReason(pack.Id) is { } reason)
+            {
+                deprecated.Add($"Pack \"{pack.Id}\" is deprecated: {Reason(reason)}.");
+            }
+        }
+
+        foreach (string skill in skills)
+        {
+            if (availability.SetupItem(SkillSetupKind.Skill, skill) is { Problem: SkillAvailability.Withdrawn } item)
+            {
+                withdrawn.Add($"Skill \"{skill}\" was withdrawn by its Source: {Reason(item.Detail)}.");
+            }
+        }
+
+        return [.. withdrawn, .. deprecated, .. gone];
+    }
+
+    /// <summary>The reason without a trailing full stop, or "no reason given".</summary>
+    private static string Reason(string? text)
+    {
+        return string.IsNullOrWhiteSpace(text) ? "no reason given" : text.Trim().TrimEnd('.');
+    }
+
     /// <summary>Returns the warnings for a member: shared vendor, too many skills, then skills sharing a sub-category.</summary>
     /// <param name="member">The member to check.</param>
     /// <param name="role">The member's role.</param>

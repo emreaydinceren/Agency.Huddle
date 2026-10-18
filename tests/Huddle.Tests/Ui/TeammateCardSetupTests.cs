@@ -4,10 +4,8 @@ using Bunit.Rendering;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging.Abstractions;
 using Agency.Huddle.App.Acp;
-using Agency.Huddle.App.Skills;
 using Agency.Huddle.App.TeamTypes;
 using Agency.Huddle.App.Teams;
-using Agency.Huddle.Tests.Teammates;
 using static Agency.Huddle.Tests.Ui.TeammateCardTestSupport;
 
 namespace Agency.Huddle.Tests.Ui;
@@ -40,7 +38,31 @@ public sealed class TeammateCardSetupTests
     private static string Dev(string extra = "") =>
         $"---\nname: Dev\ntitle: Developer\nalias: dev\nteams: [Web Team]\nadapter: a1\n_role: 'web/dev@1.2.0'\n{extra}---\nYou build.";
 
-    /// <summary>Registers the web team type and the msbuild pack into the context, as the real app's singletons would be.</summary>
+    /// <summary>Registers the web team type, and a registry whose SKILLS.md lists the msbuild Pack (its Skill downloaded) and,
+    /// when given, a catalog, into the context, as the real app's singletons would be.</summary>
+    private static async Task<Agency.Huddle.Tests.SkillPacks.RegistryService.RegistryHost> AddRegistryAsync(MudBunitContext ctx, string? catalogJson = null)
+    {
+        Agency.Huddle.Tests.SkillPacks.RegistryService.RegistryHost host = new();
+        host.Source();
+        string skill = host.CloneSkill("target-authoring").Replace("\\", "\\\\", StringComparison.Ordinal);
+        Agency.Huddle.Tests.SkillPacks.RegistryService.RegistryHost.Write(host.Dir, "packs/msbuild-authoring.skillpack.json", $$"""
+            { "schemaVersion": 1, "id": "msbuild-authoring", "version": "1.0.0", "title": "MSBuild", "source": "local/test", "appliesTo": ["dev"],
+              "consultWhenAdds": ".csproj changes", "skills": [{ "name": "target-authoring", "path": "{{skill}}", "origin": "https://github.com/o/r/tree/0123456789abcdef0123456789abcdef01234567/skills/target-authoring" }] }
+            """);
+        string[] catalogs = [];
+        if (catalogJson is not null)
+        {
+            Agency.Huddle.Tests.SkillPacks.RegistryService.RegistryHost.Write(host.Dir, "catalogs/subs.skillcatalog.json", catalogJson);
+            catalogs = ["catalogs/subs.skillcatalog.json"];
+        }
+
+        host.SkillsMd(["packs/msbuild-authoring.skillpack.json"], catalogs);
+        await host.ReadAsync();
+        ctx.Services.AddSingleton(host.Registry);
+        return host;
+    }
+
+    /// <summary>Registers the web team type into the context, as the real app's singleton would be.</summary>
     private static void AddTeamTypes(MudBunitContext ctx, TempDataDir dir)
     {
         Dictionary<string, string> builtins = new(StringComparer.Ordinal)
@@ -51,7 +73,6 @@ public sealed class TeammateCardSetupTests
             ["web/processes/flow.md"] = "# Flow",
         };
         ctx.Services.AddSingleton(new TeamTypeCatalog(dir.Options(), NullLogger<TeamTypeCatalog>.Instance, builtins));
-        ctx.Services.AddSingleton(RoleFixtures.Packs(dir));
     }
 
     /// <summary>Opens the View card of <paramref name="name"/> and switches it to Edit.</summary>
@@ -93,6 +114,7 @@ public sealed class TeammateCardSetupTests
         await factory.WriteDefinitionAsync("Dev", Dev("consult_when: code changes\n"), CancellationToken.None);
         await using MudBunitContext ctx = NewContext(factory);
         AddTeamTypes(ctx, dir);
+        using Agency.Huddle.Tests.SkillPacks.RegistryService.RegistryHost host = await AddRegistryAsync(ctx);
         IRenderedComponent<ContainerFragment> cut = await OpenEditAsync(factory, ctx, "Dev");
 
         await ClickAsync(cut, () => cut.FindAll(".teammate-card-pack").First(chip => chip.TextContent.Contains("MSBuild", StringComparison.Ordinal)));
@@ -114,6 +136,7 @@ public sealed class TeammateCardSetupTests
         await factory.WriteDefinitionAsync("Dev", Dev("consult_when: code changes\n"), CancellationToken.None);
         await using MudBunitContext ctx = NewContext(factory);
         AddTeamTypes(ctx, dir);
+        using Agency.Huddle.Tests.SkillPacks.RegistryService.RegistryHost host = await AddRegistryAsync(ctx);
         IRenderedComponent<ContainerFragment> cut = await OpenEditAsync(factory, ctx, "Dev");
         await ClickAsync(cut, () => cut.FindAll(".teammate-card-pack")[0]);
 
@@ -159,24 +182,20 @@ public sealed class TeammateCardSetupTests
         Assert.Equal(["Dev has 11 skills; more than 10 makes skill choice harder."], cut.FindAll(".teammate-card-warning").Select(alert => alert.TextContent.Trim()).ToList());
     }
 
-    /// <summary>Two skills the catalog files under one Sub Category produce the shared-Sub-Category warning.</summary>
+    /// <summary>Two skills a registry catalog files under one Sub Category produce the shared-Sub-Category warning.</summary>
     [Fact]
     public async Task SharedSubCategory_ShowsTheCatalogWarning()
     {
         using TempDataDir dir = new();
-        await File.WriteAllTextAsync(Path.Combine(dir.Path, TeamPaths.SkillsCatalogFile), """
-            [
-              { "id": "a/b/alpha", "name": "alpha", "description": "A.", "publisher": "P", "repo": "https://github.com/a/b",
-                "path": "alpha", "link": "l", "commit": "c", "license": "MIT", "category": "Cat", "subCategory": "Sub", "requires": [] },
-              { "id": "a/b/beta", "name": "beta", "description": "B.", "publisher": "P", "repo": "https://github.com/a/b",
-                "path": "beta", "link": "l", "commit": "c", "license": "MIT", "category": "Cat", "subCategory": "Sub", "requires": [] }
-            ]
-            """, Xunit.TestContext.Current.CancellationToken);
         await using TeamWebApplicationFactory factory = new();
         await factory.WriteDefinitionAsync("Dev", Dev("skills: [alpha, beta]\n"), CancellationToken.None);
         await using MudBunitContext ctx = NewContext(factory);
         AddTeamTypes(ctx, dir);
-        ctx.Services.AddSingleton(new SkillsCatalogIndex(dir.Options(), NullLogger<SkillsCatalogIndex>.Instance));
+        using Agency.Huddle.Tests.SkillPacks.RegistryService.RegistryHost host = await AddRegistryAsync(ctx, """
+            { "schemaVersion": 1, "id": "subs", "title": "Subs", "source": "local/test", "skills": [
+              { "name": "alpha", "description": "A.", "origin": "https://github.com/a/b/tree/0123456789abcdef0123456789abcdef01234567/alpha", "license": "MIT", "category": "Cat", "subCategory": "Sub" },
+              { "name": "beta", "description": "B.", "origin": "https://github.com/a/b/tree/0123456789abcdef0123456789abcdef01234567/beta", "license": "MIT", "category": "Cat", "subCategory": "Sub" } ] }
+            """);
 
         IRenderedComponent<ContainerFragment> cut = await OpenEditAsync(factory, ctx, "Dev");
 

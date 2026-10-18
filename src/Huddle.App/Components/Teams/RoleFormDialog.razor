@@ -10,7 +10,8 @@
 *@
 
 @inject SkillStore InstalledSkills
-@inject SkillsCatalogIndex SkillCatalog
+@* The registry is looked up, not injected, so a host without the Skill Sources services still opens this form. *@
+@inject IServiceProvider Services
 
 <MudDialog>
     <DialogContent>
@@ -25,7 +26,7 @@
                           HelperText="What a Teammate in this role is told to do."
                           Value="this.instructions" ValueChanged="this.OnInstructionsChanged" Class="custom-role-instructions long-text-field" />
             <MudSelect T="string" Label="Skills (optional)" MultiSelection="true" SelectedValues="@this.skills" SelectedValuesChanged="this.OnSkillsChanged"
-                       Variant="Variant.Outlined" Margin="Margin.Dense" HelperText="Installed Skills and the whole catalog; a Teammate in this role carries them." Class="custom-role-skills">
+                       Variant="Variant.Outlined" Margin="Margin.Dense" HelperText="Skills this Huddle has or can copy; a Teammate in this role carries them." Class="custom-role-skills">
                 @foreach (Skill skill in this.InstalledSkills.All)
                 {
                     <MudSelectItem T="string" Value="@skill.Name">
@@ -37,15 +38,39 @@
                         }
                     </MudSelectItem>
                 }
-                @foreach (SkillsCatalogEntry entry in this.SkillCatalog.All.Where(entry => this.InstalledSkills.Get(entry.Name) is null).OrderBy(static entry => entry.Name, StringComparer.OrdinalIgnoreCase))
+                @foreach (Agency.Huddle.SkillPacks.Resolving.SkillEntry entry in this.RegistrySkills(copyable: true))
                 {
                     <MudSelectItem T="string" Value="@entry.Name">
                         <MudText>@entry.Name</MudText>
-                        <MudText Typo="Typo.caption" Class="d-block mud-text-secondary skill-origin">@SkillOrigin.Describe(entry.Publisher, entry.Repo, entry.Path)</MudText>
-                        <MudText Typo="Typo.caption" Class="d-block mud-text-secondary">From the catalog; imported when a Team is approved.</MudText>
+                        <MudText Typo="Typo.caption" Class="d-block mud-text-secondary skill-origin">@Agency.Huddle.App.Skills.Ui.SkillOriginText.Line(entry.Publisher, entry.Origin, entry.License)</MudText>
+                        <MudText Typo="Typo.caption" Class="d-block mud-text-secondary custom-role-copy-caption">Huddle copies it into Skills/ when a Teammate in this role is hired.</MudText>
+                    </MudSelectItem>
+                }
+                @* A Skill the role already names that is not usable here stays checked, so editing an old role does not drop it. *@
+                @foreach (string kept in this.KeptUnusable)
+                {
+                    <MudSelectItem T="string" Value="@kept">
+                        <MudText>@kept</MudText>
+                        <MudText Typo="Typo.caption" Class="d-block mud-text-secondary custom-role-not-downloaded">Not downloaded</MudText>
                     </MudSelectItem>
                 }
             </MudSelect>
+            @if (this.RegistrySkills(copyable: false).Count > 0)
+            {
+                <MudText Typo="Typo.caption" Class="custom-role-skills-helper d-block mud-text-secondary">Skills not downloaded are listed below; ask your AI tool to fetch them.</MudText>
+                <MudButton Variant="Variant.Text" Size="Size.Small" Class="custom-role-not-here-toggle" OnClick="@(() => this.notHereOpen = !this.notHereOpen)"
+                           EndIcon="@(this.notHereOpen ? Icons.Material.Filled.ExpandLess : Icons.Material.Filled.ExpandMore)">Not on this computer yet (@this.RegistrySkills(copyable: false).Count)</MudButton>
+                <MudCollapse Expanded="@this.notHereOpen" Class="custom-role-not-here">
+                    @foreach (Agency.Huddle.SkillPacks.Resolving.SkillEntry entry in this.RegistrySkills(copyable: false))
+                    {
+                        Agency.Huddle.SkillPacks.Resolving.SkillEntry shown = entry;
+                        <div class="custom-role-not-here-row d-flex flex-wrap align-center gap-2 mb-1" data-skill="@shown.Name">
+                            <MudText Typo="Typo.body2">@shown.Name</MudText>
+                            <MudButton Variant="Variant.Outlined" Size="Size.Small" Class="custom-role-copy-prompt ml-auto" OnClick="@(() => this.CopyFetchPromptAsync(shown))">Copy prompt</MudButton>
+                        </div>
+                    }
+                </MudCollapse>
+            }
             <MudSelect T="ModelTier" Variant="Variant.Outlined" Margin="Margin.Dense" Label="Model strength" HelperText="How capable, and how costly, the Teammate's model is."
                        Value="this.tier" ValueChanged="this.OnTierChanged" Class="custom-role-tier">
                 <MudSelectItem T="ModelTier" Value="ModelTier.Strongest">Strongest</MudSelectItem>
@@ -121,4 +146,41 @@
     private void Save() => this.Dialog?.Close(DialogResult.Ok(new CustomRole(this.Id ?? string.Empty, this.title, this.description, this.instructions, this.tier, this.skills)));
 
     private void Cancel() => this.Dialog?.Cancel();
+
+    /// <summary>Whether the Not on this computer yet list is open.</summary>
+    private bool notHereOpen;
+
+    /// <summary>The registry, when the host registers one.</summary>
+    private Agency.Huddle.App.SkillSources.SkillRegistry? Registry => this.Services.GetService<Agency.Huddle.App.SkillSources.SkillRegistry>();
+
+    /// <summary>Registry Skills not in Skills/ and not hidden: the ones Huddle can copy, or the ones with no folder here.</summary>
+    private IReadOnlyList<Agency.Huddle.SkillPacks.Resolving.SkillEntry> RegistrySkills(bool copyable)
+    {
+        if (this.Registry is not { } registry)
+        {
+            return [];
+        }
+
+        Agency.Huddle.App.Teams.SkillAvailability wanted = copyable ? Agency.Huddle.App.Teams.SkillAvailability.Copyable : Agency.Huddle.App.Teams.SkillAvailability.NotDownloaded;
+        return [.. registry.Current.Resolved.Skills
+            .Where(entry => this.InstalledSkills.Get(entry.Name) is null && !registry.IsHidden(entry) && registry.Of(entry.Name) == wanted)
+            .OrderBy(static entry => entry.Name, StringComparer.OrdinalIgnoreCase)];
+    }
+
+    /// <summary>Skills the role names that are neither installed nor copyable, kept as checked options.</summary>
+    private IReadOnlyList<string> KeptUnusable =>
+        [.. this.skills.Where(name => this.InstalledSkills.Get(name) is null && !this.RegistrySkills(copyable: true).Any(entry => string.Equals(entry.Name, name, StringComparison.Ordinal)))];
+
+    /// <summary>Copies the prompt that asks the AI tool to fetch one Skill.</summary>
+    private async Task CopyFetchPromptAsync(Agency.Huddle.SkillPacks.Resolving.SkillEntry entry)
+    {
+        if (this.Services.GetService<Agency.Huddle.App.SkillSources.SkillPromptBuilder>() is not { } prompts
+            || this.Services.GetService<IJSRuntime>() is not { } js
+            || this.Services.GetService<ISnackbar>() is not { } snackbar)
+        {
+            return;
+        }
+
+        _ = await Agency.Huddle.App.Skills.Ui.PromptClipboard.CopyAsync(js, snackbar, prompts.FetchSkill(entry.Name, string.Empty, null, entry.Origin), CancellationToken.None);
+    }
 }
