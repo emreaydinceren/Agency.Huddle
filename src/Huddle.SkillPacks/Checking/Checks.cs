@@ -36,6 +36,51 @@ public static class Checks
         ArgumentNullException.ThrowIfNull(files);
         return new CheckRun(registry, context, options, files, cancellationToken).Execute();
     }
+
+    /// <summary>Runs the Skill checks on one folder that no row reaches (<c>huddle-packs validate &lt;folder&gt;</c>): a
+    /// virtual Skill, so the result has no rows and one Skill.</summary>
+    public static CheckResult RunSkillFolder(
+        string folder,
+        CheckContext context,
+        CheckOptions options,
+        IFileReader files,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(folder);
+        ArgumentNullException.ThrowIfNull(context);
+        ArgumentNullException.ThrowIfNull(options);
+        ArgumentNullException.ThrowIfNull(files);
+        return new CheckRun(ResolvedRegistry.Empty, context, options, files, cancellationToken).ExecuteFolder(folder);
+    }
+
+    /// <summary>Whether a row's resolved file is <paramref name="path"/> or under it, or the row reaches a Skill folder
+    /// that is (the rows <c>validate &lt;path&gt;</c> checks, §6.4).</summary>
+    public static bool RowReaches(ResolvedRegistry registry, RegistryRow row, string path)
+    {
+        ArgumentNullException.ThrowIfNull(registry);
+        ArgumentNullException.ThrowIfNull(row);
+        ArgumentNullException.ThrowIfNull(path);
+        string? file = row.Kind == RowKind.Pack ? registry.Packs[row.Index].FilePath : registry.Catalogs[row.Index].FilePath;
+        if (file is not null && IsUnder(file, path))
+        {
+            return true;
+        }
+
+        return registry.Skills.Any(skill => skill.FolderPath is not null
+            && IsUnder(skill.FolderPath, path)
+            && skill.Claims.Any(claim => claim.Kind == row.Kind && claim.RowIndex == row.Index));
+    }
+
+    /// <summary>Whether <paramref name="path"/> is <paramref name="root"/> or lies under it, ignoring case.</summary>
+    public static bool IsUnder(string path, string root)
+    {
+        ArgumentNullException.ThrowIfNull(path);
+        ArgumentNullException.ThrowIfNull(root);
+        string full = Path.GetFullPath(path).TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar);
+        string top = Path.GetFullPath(root).TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar);
+        return string.Equals(full, top, StringComparison.OrdinalIgnoreCase)
+            || full.StartsWith(top + Path.DirectorySeparatorChar, StringComparison.OrdinalIgnoreCase);
+    }
 }
 
 /// <summary>The state of one <see cref="Checks.Run"/>.</summary>
@@ -71,21 +116,24 @@ internal sealed class CheckRun(ResolvedRegistry registry, CheckContext context, 
     {
         foreach (RegistryRow row in registry.Registry.AllRows)
         {
-            string? path = this.FileOf(row);
-            if (options.OnlyPath is null || (path is not null && IsUnder(path, options.OnlyPath)))
+            if (options.OnlyPath is null || Checks.RowReaches(registry, row, options.OnlyPath))
             {
                 this.checkedRows.Add(row);
             }
         }
     }
 
-    /// <summary>Whether <paramref name="path"/> is <paramref name="root"/> or lies under it.</summary>
-    private static bool IsUnder(string path, string root)
+    /// <summary>Runs the Skill checks on one folder, as a virtual Skill.</summary>
+    public CheckResult ExecuteFolder(string folder)
     {
-        string full = Path.GetFullPath(path).TrimEnd(Path.DirectorySeparatorChar);
-        string top = Path.GetFullPath(root).TrimEnd(Path.DirectorySeparatorChar);
-        return string.Equals(full, top, StringComparison.OrdinalIgnoreCase)
-            || full.StartsWith(top + Path.DirectorySeparatorChar, StringComparison.OrdinalIgnoreCase);
+        string name = Path.GetFileName(folder.TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar));
+        SkillEntry skill = new(name, string.Empty, null, null, null, null, [], string.Empty, null, folder, [], null, null, [], SkillPathState.Present, []);
+        string key = skill.StateKey;
+        this.states[key] = ItemCheckState.Usable;
+        this.FolderChecks(skill, folder, null, key);
+        this.PackAndCatalogStates();
+        CheckResult result = this.Result();
+        return result with { Summary = result.Summary with { Skills = 1 } };
     }
 
     /// <summary>The resolved file of a row.</summary>
@@ -444,7 +492,7 @@ internal sealed class CheckRun(ResolvedRegistry registry, CheckContext context, 
     }
 
     /// <summary>S002 to S012 and X001 on a Skill folder.</summary>
-    private void FolderChecks(SkillEntry skill, string folder, RegistryRow row, string key)
+    private void FolderChecks(SkillEntry skill, string folder, RegistryRow? row, string key)
     {
         IReadOnlyList<string> all;
         try
@@ -527,6 +575,7 @@ internal sealed class CheckRun(ResolvedRegistry registry, CheckContext context, 
         InstalledSkill? other = context.InstalledSkills.FirstOrDefault(installed => !installed.BuiltIn
             && string.Equals(installed.Name, skill.Name, StringComparison.Ordinal)
             && installed.Origin is not null
+            && skill.Origin.Length > 0
             && !OriginIdentity.Same(installed.Origin, skill.Origin));
         if (other is not null)
         {
@@ -558,7 +607,7 @@ internal sealed class CheckRun(ResolvedRegistry registry, CheckContext context, 
     }
 
     /// <summary>S009: the effective licence, in order catalog entry, SKILL.md, a licence file (§6.3, "S009 in full").</summary>
-    private void LicenceCheck(SkillEntry skill, string folder, SkillFolderValidation validation, RegistryRow row, string key)
+    private void LicenceCheck(SkillEntry skill, string folder, SkillFolderValidation validation, RegistryRow? row, string key)
     {
         string? catalogLicence = skill.Claims.Select(static claim => claim.License).FirstOrDefault(static licence => !string.IsNullOrWhiteSpace(licence));
         string? frontmatterLicence = SkillFrontmatter.Get(validation.Fields, "license");
@@ -585,7 +634,7 @@ internal sealed class CheckRun(ResolvedRegistry registry, CheckContext context, 
     }
 
     /// <summary>S010: one finding per kind of review flag, from the unchanged scanner.</summary>
-    private void ReviewCheck(Dictionary<string, byte[]> bytes, string folder, RegistryRow row, string key)
+    private void ReviewCheck(Dictionary<string, byte[]> bytes, string folder, RegistryRow? row, string key)
     {
         IReadOnlyList<ReviewFlag> flags = SkillReviewScanner.Scan(bytes, "declared");
         foreach (IGrouping<ReviewFlagKind, ReviewFlag> group in flags.Where(static flag => flag.Kind != ReviewFlagKind.NoLicense).GroupBy(static flag => flag.Kind))
