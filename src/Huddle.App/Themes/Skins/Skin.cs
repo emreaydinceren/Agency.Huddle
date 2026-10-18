@@ -17,7 +17,6 @@ namespace Agency.Huddle.App.Themes.Skins;
 /// <param name="Palette">The merged palette overrides: camelCase palette key to colour text.</param>
 /// <param name="Tokens">The merged token overrides: dotted token key to an unresolved skin expression.</param>
 /// <param name="Traits">The structural traits.</param>
-/// <param name="Pack">The temporary style-pack name (phases 1 and 2), or <see langword="null"/>.</param>
 /// <param name="Theme">The MudBlazor theme built from this skin.</param>
 internal sealed record Skin(
     string Id,
@@ -31,5 +30,4 @@ internal sealed record Skin(
     IReadOnlyDictionary<string, string> Palette,
     IReadOnlyDictionary<string, string> Tokens,
     SkinTraits Traits,
-    string? Pack,
     MudTheme Theme);

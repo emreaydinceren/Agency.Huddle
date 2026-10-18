@@ -15,8 +15,15 @@ namespace Agency.Huddle.Tests.Themes.Skins;
 /// </summary>
 public sealed partial class SkinLoaderTests
 {
-    /// <summary>The families a skin may name that need no web font: the system and generic faces.</summary>
-    private static readonly string[] SystemFonts = ["system-ui", "-apple-system", "Segoe UI", "Helvetica Neue", "sans-serif", "serif", "monospace"];
+    /// <summary>
+    /// The families a skin may name that need no web font: the system and generic faces, and the locally installed
+    /// fallbacks Nordic's reading and mono stacks list behind their web font (Source Serif 4 is used only when installed).
+    /// </summary>
+    private static readonly string[] SystemFonts =
+    [
+        "system-ui", "-apple-system", "Segoe UI", "Helvetica Neue", "sans-serif", "serif", "monospace",
+        "Georgia", "Source Serif 4", "ui-monospace", "Cascadia Mono", "Consolas",
+    ];
 
     /// <summary>Builds a minimal skin file; <paramref name="extra"/> is spliced in after the required keys.</summary>
     private static string File(string id, string mode, int order, string extra = "") =>
@@ -73,7 +80,7 @@ public sealed partial class SkinLoaderTests
     {
         IReadOnlyList<Skin> skins = Load(
             ("a.light.json", File("a", "light", 1, """
-                "radius": "6px", "pack": "p", "faces": { "ui": ["Inter"], "mono": ["IBM Plex Mono"] },
+                "radius": "6px", "faces": { "ui": ["Inter"], "mono": ["IBM Plex Mono"] },
                 "typography": { "letterSpacing": "normal", "lineHeight": "1.5" },
                 "shadows": { "1": "0 1px 0 red", "2-4": "0 2px 0 blue" }, "palette": { "primary": "#112233" }
                 """)),
@@ -84,7 +91,6 @@ public sealed partial class SkinLoaderTests
         Skin dark = Assert.Single(skins, static skin => skin.Id == "a-dark");
         Assert.Equal("6px", dark.Radius);
         Assert.Equal("6px", dark.Theme.LayoutProperties.DefaultBorderRadius);
-        Assert.Equal("p", dark.Pack);
         Assert.Equal(["Literata"], dark.Faces.Ui);
         Assert.Equal(["IBM Plex Mono"], dark.Faces.Mono);
         Assert.Equal("1.5", dark.Typography.LineHeight);
@@ -239,7 +245,6 @@ public sealed partial class SkinLoaderTests
             Assert.Equal(expected.Shadows.Elevation[i], actual.Shadows.Elevation[i]);
         }
 
-        Assert.Null(skin.Pack);
         Assert.Equal(dark ? "Huddle Dark" : "Huddle Light", skin.Label);
     }
 

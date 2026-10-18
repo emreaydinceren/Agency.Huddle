@@ -35,9 +35,6 @@
     "radius": {
       "type": "string"
     },
-    "pack": {
-      "type": "string"
-    },
     "faces": {
       "type": "object",
       "additionalProperties": false,

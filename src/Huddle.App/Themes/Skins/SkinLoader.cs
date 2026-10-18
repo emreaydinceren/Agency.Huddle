@@ -150,7 +150,6 @@ internal static partial class SkinLoader
             Order = self.Order,
             Include = self.Include,
             Radius = self.Radius ?? inherited.Radius,
-            Pack = self.Pack ?? inherited.Pack,
             LetterSpacing = self.LetterSpacing ?? inherited.LetterSpacing,
             LineHeight = self.LineHeight ?? inherited.LineHeight,
         };
@@ -244,9 +243,6 @@ internal static partial class SkinLoader
                         break;
                     case "radius":
                         draft.Radius = ReadString(file, "radius", property.Value);
-                        break;
-                    case "pack":
-                        draft.Pack = ReadString(file, "pack", property.Value);
                         break;
                     case "faces":
                         ParseFaces(file, property.Value, draft);
@@ -483,7 +479,6 @@ internal static partial class SkinLoader
             new Dictionary<string, string>(draft.Palette, StringComparer.Ordinal),
             new Dictionary<string, string>(draft.Tokens, StringComparer.Ordinal),
             traits,
-            draft.Pack,
             BuildTheme(draft));
     }
 
@@ -616,8 +611,6 @@ internal static partial class SkinLoader
         public string? Include { get; set; }
 
         public string? Radius { get; set; }
-
-        public string? Pack { get; set; }
 
         public string? LetterSpacing { get; set; }
 

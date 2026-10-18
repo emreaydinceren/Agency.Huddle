@@ -5,7 +5,7 @@ namespace Agency.Huddle.Tests.Ui;
 /// <summary>
 /// Source assertions for the three shared-skin fixes of the theming plan (section 7.2 to 7.4): the Composer's Send
 /// button is coloured by a class and two tokens rather than by MudBlazor's <c>!important</c> colour utility, the
-/// avatar cut-out ring is a token the base rules read, and no selector in <c>app.css</c> or a style pack names a
+/// avatar cut-out ring is a token the base rules read, and no selector in <c>app.css</c> names a
 /// class nothing emits. A source test, for the reason <see cref="ThemeSourceTests"/> gives: no browser renders here.
 /// </summary>
 public sealed partial class ThemeFixSourceTests
@@ -70,19 +70,6 @@ public sealed partial class ThemeFixSourceTests
         Assert.Matches(@"--hu-send-bg:\s*transparent;", vars);
     }
 
-    /// <summary>The Nordic pack re-points the Send button's tokens and does not repaint the button with a colour of its own.</summary>
-    [Fact]
-    public void Nordic_SendButton_SetsTokensInsteadOfColours()
-    {
-        string pack = StripComments(File.ReadAllText(NordicPath()));
-
-        string body = RuleBody(pack, ":root:has([data-theme-pack=\"nordic\"]) .composer-send .composer-send-button");
-
-        Assert.Contains("--hu-send-bg: var(--n-sage);", body, StringComparison.Ordinal);
-        Assert.Contains("--hu-send-fg: var(--n-on-accent);", body, StringComparison.Ordinal);
-        Assert.DoesNotContain("!important", pack, StringComparison.Ordinal);
-    }
-
     /// <summary>The base rules for the presence dot read the ring from <c>--hu-ring</c>, and <c>app-vars.css</c> defaults it to Surface.</summary>
     [Fact]
     public void PresenceRing_BaseRules_ReadTheRingToken()
@@ -98,25 +85,6 @@ public sealed partial class ThemeFixSourceTests
         Assert.Matches(@"--hu-ring:\s*var\(--mud-palette-surface\);", vars);
     }
 
-    /// <summary>
-    /// The Nordic pack never sets a <c>box-shadow</c> on the presence dot (that is what hid the hollow ring on an offline
-    /// badge); it sets <c>--hu-ring</c> per region and keeps no <c>--n-ring</c> of its own.
-    /// </summary>
-    [Fact]
-    public void Nordic_PresenceRing_SetsOnlyTheToken()
-    {
-        string pack = StripComments(File.ReadAllText(NordicPath()));
-
-        List<string> shadowed = [.. PackRule().Matches(pack)
-            .Where(static match => match.Groups["selectors"].Value.Contains(".agent-dot", StringComparison.Ordinal)
-                && match.Groups["body"].Value.Contains("box-shadow", StringComparison.Ordinal))
-            .Select(static match => match.Groups["selectors"].Value.Trim())];
-
-        Assert.Empty(shadowed);
-        Assert.Contains("--hu-ring: var(--mud-palette-drawer-background);", RuleBody(pack, ":root:has([data-theme-pack=\"nordic\"]) .shell-nav .agent-dot.on-avatar"), StringComparison.Ordinal);
-        Assert.DoesNotContain("--n-ring", pack, StringComparison.Ordinal);
-    }
-
     /// <summary>A Task reference is one <c>a.task-ref</c> link, so <c>app.css</c> sets its mono face and caption size on the link itself, for every Theme.</summary>
     [Fact]
     public void TaskRef_IsStyledOnTheLinkItself()
@@ -128,10 +96,10 @@ public sealed partial class ThemeFixSourceTests
     }
 
     /// <summary>
-    /// Every class used in a selector of <c>app.css</c> or a style pack is emitted by some <c>.razor</c>, <c>.cs</c> or
+    /// Every class used in a selector of <c>app.css</c> is emitted by some <c>.razor</c>, <c>.cs</c> or
     /// <c>.js</c> file under <c>src/Huddle.App</c>, apart from MudBlazor's own classes and the interpolated prefixes
     /// listed above. A selector that names a class nothing emits matches nothing in any Theme, which is how
-    /// <c>.task-ref .task-id</c> sat in the Nordic pack unnoticed.
+    /// <c>.task-ref .task-id</c> once sat in a stylesheet unnoticed.
     /// </summary>
     [Fact]
     public void Css_SelectorClasses_AreEmittedBySomeSource()
@@ -139,7 +107,7 @@ public sealed partial class ThemeFixSourceTests
         HashSet<string> emitted = EmittedTokens();
         List<string> dead = [];
 
-        foreach (string path in new[] { AppCssPath(), NordicPath() })
+        foreach (string path in new[] { AppCssPath() })
         {
             foreach (string selector in Selectors(File.ReadAllText(path)))
             {
@@ -248,9 +216,6 @@ public sealed partial class ThemeFixSourceTests
 
     /// <summary>The path of <c>app-vars.css</c>.</summary>
     private static string AppVarsPath() => CssSource.RepoPath("src", "Huddle.App", "wwwroot", "app-vars.css");
-
-    /// <summary>The path of the Nordic pack.</summary>
-    private static string NordicPath() => CssSource.RepoPath("src", "Huddle.App", "wwwroot", "packs", "nordic.css");
 
     [GeneratedRegex(@"<MudIconButton\b[^>]*Icons\.Material\.Filled\.Send[^>]*/>", RegexOptions.CultureInvariant | RegexOptions.Singleline)]
     private static partial Regex SendButtonElement();

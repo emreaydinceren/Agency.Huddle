@@ -9,8 +9,7 @@ namespace Agency.Huddle.App.Themes;
 /// seventeen Visual Studio Code ports that once followed them were removed on 2026-10-17 because a
 /// palette alone cannot carry a skin (<c>docs/adr/0016-vs-codes-bundled-themes-are-converted-once-not-imported.md</c>).
 /// MudBlazor's <see cref="MudBlazor.MudTheme"/> carries each theme's palette, type scale and shape; a
-/// descriptor's optional style pack (see <see cref="ThemeDescriptor.Pack"/>) layers a stylesheet on top
-/// of it for the one theme that needs more than a palette.
+/// descriptor's skin tokens and traits (see <see cref="ThemeDescriptor.Skin"/>) carry everything a palette cannot.
 /// </summary>
 internal static class ThemeCatalog
 {

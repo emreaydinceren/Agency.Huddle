@@ -160,11 +160,11 @@ public sealed class AppearanceRenderingTests
     }
 
     /// <summary>
-    /// Selecting Nordic Light renders the Theme marker with its id and its style pack (ADR-0057), which is what every
-    /// rule in <c>packs/nordic.css</c> is scoped to; the pack's stylesheet is linked.
+    /// Selecting Nordic Light renders the Theme marker with its id and Nordic's nine <c>data-hu-*</c> trait values, and
+    /// the <c>hu-skin</c> block carries the reading face <c>--font-read</c> with "Literata"; no pack stylesheet is linked.
     /// </summary>
     [Fact]
-    public async Task AppShell_WithNordicSelected_MarksTheThemeAndItsPack()
+    public async Task AppShell_WithNordicSelected_MarksTheThemeAndItsTraits()
     {
         using CancellationTokenSource cts = new(TimeSpan.FromSeconds(10));
         CancellationToken ct = cts.Token;
@@ -178,16 +178,32 @@ public sealed class AppearanceRenderingTests
 
         IElement marker = Assert.Single(page.QuerySelectorAll("span.theme-marker"));
         Assert.Equal("nordic-light", marker.GetAttribute("data-huddle-theme"));
-        Assert.Equal("nordic", marker.GetAttribute("data-theme-pack"));
-        Assert.Single(page.QuerySelectorAll("link[rel='stylesheet'][href^='packs/nordic']"));
+        Assert.False(marker.HasAttribute("data-theme-pack"));
+        Dictionary<string, string> expected = new(StringComparer.Ordinal)
+        {
+            ["data-hu-message"] = "row",
+            ["data-hu-send"] = "text",
+            ["data-hu-status"] = "pill",
+            ["data-hu-labels"] = "upper",
+            ["data-hu-composer"] = "card",
+            ["data-hu-nav"] = "tile",
+            ["data-hu-surface"] = "paper",
+            ["data-hu-marks"] = "chip",
+            ["data-hu-reading"] = "book",
+        };
+        foreach (KeyValuePair<string, string> pair in expected)
+        {
+            Assert.Equal(pair.Value, marker.GetAttribute(pair.Key));
+        }
+
+        string css = SkinStyleOf(html);
+        Assert.Matches("--font-read:[^;]*Literata", css);
+        Assert.Empty(page.QuerySelectorAll("link[rel='stylesheet'][href*='packs/']"));
     }
 
-    /// <summary>
-    /// With the default Theme the marker names it and carries no pack, so the Nordic pack, though linked for every
-    /// Theme, has nothing to match.
-    /// </summary>
+    /// <summary>The marker carries no <c>data-theme-pack</c> attribute for any Theme: the pack mechanism is gone.</summary>
     [Fact]
-    public async Task AppShell_WithTheDefaultTheme_MarksNoPack()
+    public async Task Marker_HasNoPackAttribute()
     {
         using CancellationTokenSource cts = new(TimeSpan.FromSeconds(10));
         CancellationToken ct = cts.Token;

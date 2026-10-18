@@ -9,7 +9,7 @@
     @* Inter is the application's UI font (see ThemeDefaults.UiFontFamily); preconnect first so the
        DNS/TLS handshake to Google's font hosts overlaps with the rest of the head parsing instead
        of stalling behind it, then load the variable-weight family itself. The same request carries
-       the Nordic pack's three faces (IBM Plex Sans, Literata, IBM Plex Mono at 400/500/600), which
+       Nordic's three faces (IBM Plex Sans, Literata, IBM Plex Mono at 400/500/600), which
        the browser downloads only when a rule uses them. *@
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin="anonymous" />
@@ -24,8 +24,6 @@
     <link rel="stylesheet" href="@Assets["app.css"]" />
     <link rel="stylesheet" href="@Assets["app-vars.css"]" />
     <link rel="stylesheet" href="@Assets["Huddle.App.styles.css"]" />
-    @* Theme style packs load last so their scoped rules win ties (ADR-0057). Each rule is scoped to its Theme. *@
-    <link rel="stylesheet" href="@Assets["packs/nordic.css"]" />
     <ImportMap />
     @* Interactive like Routes: a static HeadOutlet exists only in the prerendered HTML, so no PageTitle rendered by an
        interactive page could ever change the document title after the first load. *@

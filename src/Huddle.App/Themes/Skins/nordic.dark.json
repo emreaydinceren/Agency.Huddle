@@ -35,5 +35,19 @@
     "error": "#e08a82",
     "info": "#8ea9c1",
     "overlayDark": "rgba(0,0,0,0.6)"
+  },
+  "tokens": {
+    "ground.rail": "palette.drawerBackground",
+    "tone.primary.soft": "mix(palette.primary 14%, palette.background)",
+    "tone.primary.tint": "mix(palette.primary 7%, palette.background)",
+    "tone.info.soft": "mix(palette.info 15%, palette.background)",
+    "tone.warning.soft": "mix(palette.warning 15%, palette.background)",
+    "tone.warning.ink": "mix(palette.warning 70%, palette.textPrimary)",
+    "tone.warning.tint": "mix(palette.warning 6%, palette.background)",
+    "tone.warning.line": "mix(palette.warning 38%, palette.background)",
+    "tone.success.soft": "mix(palette.success 15%, palette.background)",
+    "tone.error.soft": "mix(palette.error 14%, palette.background)",
+    "tone.tertiary.soft": "mix(palette.tertiary 15%, palette.background)",
+    "scrim": "palette.overlayDark"
   }
 }

@@ -20,8 +20,7 @@ public sealed partial class ThemeSourceTests
     /// Every CSS custom property name a stylesheet may read besides the registered skin tokens: the variables
     /// <c>MudThemeProvider.GenerateTheme</c> emits for a default <c>MudTheme</c> in MudBlazor 9.10.0, plus the few
     /// <c>app-vars.css</c> and <c>app.css</c> declare themselves. The list lives in production
-    /// (<see cref="MudVariables"/>) so the skin expression parser and this test cannot disagree. Internal so
-    /// <see cref="PackSourceTests"/> holds a style pack to the same set.
+    /// (<see cref="MudVariables"/>) so the skin expression parser and this test cannot disagree.
     /// </summary>
     internal static IReadOnlySet<string> MudBlazorVariables => MudVariables.All;
 
@@ -135,7 +134,6 @@ public sealed partial class ThemeSourceTests
     /// <summary>
     /// The names a stylesheet may take in <c>var()</c>: MudBlazor's own variables and the three aliases
     /// <c>app-vars.css</c> keeps (<see cref="MudBlazorVariables"/>), plus the CSS name of every registered skin token.
-    /// Internal so <see cref="PackSourceTests"/> holds a pack to the same set.
     /// </summary>
     internal static HashSet<string> AllowedVariables
     {

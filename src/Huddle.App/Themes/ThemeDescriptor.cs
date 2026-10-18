@@ -35,14 +35,8 @@ namespace Agency.Huddle.App.Themes;
 /// The skin whose tokens, faces and traits the layout renders for this theme. The Custom Accent descriptors
 /// carry Huddle's own skin.
 /// </param>
-/// <param name="Pack">
-/// The style pack this theme carries, or <see langword="null"/> for none: the name of one stylesheet under
-/// <c>wwwroot/packs/</c> whose every rule is scoped to <c>:root:has([data-theme-pack="name"])</c>.
-/// <see cref="Components.Layout.MainLayout"/> renders the name on a hidden marker, so a pack applies only while
-/// its theme is selected. See <c>docs/adr/0057-a-theme-may-carry-a-style-pack.md</c>.
-/// </param>
 internal sealed record ThemeDescriptor(
-    string Id, string Label, MudTheme Theme, ThemeMode Mode, ThemeGroup Group, Skin Skin, string? Pack = null)
+    string Id, string Label, MudTheme Theme, ThemeMode Mode, ThemeGroup Group, Skin Skin)
 {
     /// <summary>The id of the element <see cref="StyleBlock"/> renders, so a test or a probe can find it.</summary>
     public const string StyleElementId = "hu-skin";
@@ -57,7 +51,7 @@ internal sealed record ThemeDescriptor(
     /// <summary>The skin's nine traits as the <c>data-hu-*</c> attributes of the layout's Theme marker, built once.</summary>
     public IReadOnlyDictionary<string, object> TraitAttributes { get; } = Skin.Traits.ToMarkerAttributes();
 
-    /// <summary>Builds the descriptor a skin implies: its theme, mode, the picker group that mode selects, and its pack.</summary>
+    /// <summary>Builds the descriptor a skin implies: its theme, mode, and the picker group that mode selects.</summary>
     /// <param name="skin">A loaded skin.</param>
     /// <returns>The descriptor for <paramref name="skin"/>.</returns>
     public static ThemeDescriptor From(Skin skin)
@@ -69,8 +63,7 @@ internal sealed record ThemeDescriptor(
             skin.Theme,
             skin.Mode,
             skin.Mode == ThemeMode.Dark ? ThemeGroup.Dark : ThemeGroup.Light,
-            skin,
-            skin.Pack);
+            skin);
     }
 
     private static string RenderStyleBlock(Skin skin)

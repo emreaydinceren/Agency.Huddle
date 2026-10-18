@@ -44,7 +44,6 @@ internal static class SkinSchemaGenerator
             WriteType(json, "order", "integer");
             WriteType(json, "include", "string");
             WriteType(json, "radius", "string");
-            WriteType(json, "pack", "string");
             WriteFaces(json);
             WriteTypography(json);
             WriteShadows(json);
