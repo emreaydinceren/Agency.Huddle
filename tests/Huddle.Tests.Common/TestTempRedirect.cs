@@ -1,5 +1,3 @@
-using System.Runtime.CompilerServices;
-
 namespace Agency.Huddle.Tests;
 
 /// <summary>
@@ -33,10 +31,18 @@ internal static class TestTempRedirect
     /// </summary>
     internal const string SystemTempVariableName = "HUDDLE_TEST_SYSTEM_TEMP";
 
-    /// <summary>Runs once when the test assembly loads, before the first test touches the temp folder.</summary>
-    [ModuleInitializer]
+    /// <summary>Gets a value indicating whether <see cref="Apply"/> has run in this process.</summary>
+    internal static bool HasRun { get; private set; }
+
+    /// <summary>Applies the redirect once; each test assembly calls it from its own module initializer.</summary>
     internal static void Apply()
     {
+        bool alreadyRan = HasRun;
+        HasRun = true;
+        if (alreadyRan)
+        {
+            return;
+        }
 
         string? folder = Resolve(Environment.GetEnvironmentVariable(VariableName));
         if (folder is null)
