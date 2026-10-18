@@ -28,6 +28,17 @@ public sealed class CobaltSoftSkinTests
         Assert.Equal(ReadingStyle.Plain, traits.Reading);
     }
 
+    /// <summary>The labelled Send is the mockup's filled primary button (<c>btn-primary</c>) in both modes, not a text-only one.</summary>
+    [Theory]
+    [InlineData("cobalt-soft-light")]
+    [InlineData("cobalt-soft-dark")]
+    public void CobaltSoft_SendIsAFilledPrimaryButton(string id)
+    {
+        Skin skin = Load(id);
+
+        Assert.Equal(("palette.primary", "palette.primaryContrastText"), (skin.Tokens["send.bg"], skin.Tokens["send.fg"]));
+    }
+
     /// <summary>
     /// Every token a Cobalt Soft file sets is a registry key whose value differs from the registry default for that mode.
     /// The one allowed repeat is a dark value that equals the dark default but must stay because the included light file
