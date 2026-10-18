@@ -449,7 +449,7 @@ agent resumes from it.
 dotnet build Huddle.slnx
 pwsh -NoProfile -File agents/scripts/Run-Tests.ps1                         # full suite, holds the machine mutex
 pwsh -NoProfile -File agents/scripts/Run-Tests.ps1 -FilterClass '*FooTests'
-pwsh -NoProfile -File agents/scripts/test-split/Check-TestSplit.ps1 -Baseline E:\Repos\Huddle\Conversation\test-split\baseline-tests.txt
+pwsh -NoProfile -File agents/scripts/test-split/Check-TestSplit.ps1 -Baseline E:/Repos/Huddle/Conversation/test-split/baseline-tests.txt
 pwsh -NoProfile -File agents/scripts/test-split/Move-TestFiles.ps1 -Target Hosted -WhatIf
 pwsh -NoProfile -File agents/scripts/Check-All.ps1
 ```
@@ -484,6 +484,9 @@ committed as `test-split: wire Huddle.Tests.<Target>`.
 | `IDE0005` unused using after a move | Rare; a `global using` differs | Each project's `GlobalUsings.cs` is only `global using Xunit;` |
 | A Hosted test fails with "content root" or missing `.deps.json` | `Microsoft.AspNetCore.Mvc.Testing` not referenced directly by the test project | §S5 template |
 | A test can't find a file under `tests/Huddle.Tests/…` | A §S10 literal or §S9 content row | Fix the literal / move the content with its test |
+| `CS1574` cref could not be resolved | A `///` in a moved Common file names a test type that stayed behind | Replace `<see cref="X"/>` with `<c>X</c>` using Edit; never `sed -i` (R1, 2026-10-18: 2.3 and 3.3 each spent about 6 calls rediscovering this) |
+
+Leftover empty folders after a move are harmless; do not `rm -rf` them (a recursive delete timed out in 3.3).
 
 ---
 
@@ -1074,33 +1077,33 @@ Ids are `<deliverable>.<task>`:
 `pwsh -NoProfile -File agents/scripts/Set-Tracker.ps1 -Task "2.3" -State Done -TrackerPath docs/engineering/test-split-plan.md`.
 `(H)` is Haiku, `(S)` is Sonnet.
 
-**Status:** 0 of 77 tasks Done (Phase 1: 41, Phase 2: 36) · 0 of 5 retrospectives done · last updated 2026-10-18.
+**Status:** 18 of 77 tasks Done · 1 of 5 retrospectives done · 0.6 and 10.2 (load runs) skipped by the user · last updated 2026-10-18.
 
 | **Deliverable / Task** | **Model** | **Depends on** | **Active** | **In Progress** | **Done** |
 | --- | --- | --- | --- | --- | --- |
 | **D0 Baseline and migration tools** | Sonnet | none | | | |
-| 0.1 Record the baseline (H) | Haiku | none | | | |
-| 0.2 Red: `Test-CheckTestSplit.ps1` (S) | Sonnet | none | | | |
-| 0.3 `Check-TestSplit.ps1` (S) | Sonnet | 0.1, 0.2 | | | |
-| 0.4 Red: `Test-MoveTestFiles.ps1` (S) | Sonnet | none | | | |
-| 0.5 Manifest and `Move-TestFiles.ps1` (S) | Sonnet | 0.4 | | | |
-| 0.6 Load baseline on `main` (H) | Haiku | none | | | |
+| 0.1 Record the baseline (H) | Haiku | none | | | ✔ |
+| 0.2 Red: `Test-CheckTestSplit.ps1` (S) | Sonnet | none | | | ✔ |
+| 0.3 `Check-TestSplit.ps1` (S) | Sonnet | 0.1, 0.2 | | | ✔ |
+| 0.4 Red: `Test-MoveTestFiles.ps1` (S) | Sonnet | none | | | ✔ |
+| 0.5 Manifest and `Move-TestFiles.ps1` (S) | Sonnet | 0.4 | | | ✔ |
+| 0.6 Load baseline on `main` (H) — skipped by the user, 2026-10-18 | Haiku | none | | | |
 | **D1 Scripts that route by project** | Sonnet | none | | | |
-| 1.1 Red: `Test-FindTestProject.ps1` (S) | Sonnet | none | | | |
-| 1.2 `Find-TestProject.ps1` (S) | Sonnet | 1.1 | | | |
-| 1.3 `Run-Tests.ps1` routing (S) | Sonnet | 1.2 | | | |
-| 1.4 Prove-Mutations, Reseed-Goldens, Freeze-Tests (H) | Haiku | 1.2 | | | |
-| 1.5 `Check-TestDocs.ps1` sees renames (H) | Haiku | none | | | |
+| 1.1 Red: `Test-FindTestProject.ps1` (S) | Sonnet | none | | | ✔ |
+| 1.2 `Find-TestProject.ps1` (S) | Sonnet | 1.1 | | | ✔ |
+| 1.3 `Run-Tests.ps1` routing (S) | Sonnet | 1.2 | | | ✔ |
+| 1.4 Prove-Mutations, Reseed-Goldens, Freeze-Tests (H) | Haiku | 1.2 | | | ✔ |
+| 1.5 `Check-TestDocs.ps1` sees renames (H) | Haiku | none | | | ✔ |
 | **D2 Common skeleton and the temp redirect** | Sonnet | D0 | | | |
-| 2.1 Red: `HuddleTestsAssemblySetupTests` (H) | Haiku | D0 | | | |
-| 2.2 `InternalsVisibleTo` grants (H) | Haiku | none | | | |
-| 2.3 Create `Huddle.Tests.Common` (S) | Sonnet | 2.1, 2.2 | | | |
+| 2.1 Red: `HuddleTestsAssemblySetupTests` (H) | Haiku | D0 | | | ✔ |
+| 2.2 `InternalsVisibleTo` grants (H) | Haiku | none | | | ✔ |
+| 2.3 Create `Huddle.Tests.Common` (S) | Sonnet | 2.1, 2.2 | | | ✔ |
 | **D3 All helpers into Common** | Sonnet | D2 | | | |
-| 3.1 Extract the four embedded helpers (H) | Haiku | D2 | | | |
-| 3.2 Move the helpers (H) | Haiku | 3.1 | | | |
-| 3.3 Make Common build (S) | Sonnet | 3.2 | | | |
-| 3.4 Red: `RepoPathsTests` (H) | Haiku | 3.3 | | | |
-| 3.5 `RepoPaths` and the seven literals (S) | Sonnet | 3.4 | | | |
+| 3.1 Extract the four embedded helpers (H) | Haiku | D2 | | | ✔ |
+| 3.2 Move the helpers (H) | Haiku | 3.1 | | | ✔ |
+| 3.3 Make Common build (S) | Sonnet | 3.2 | | | ✔ |
+| 3.4 Red: `RepoPathsTests` (H) | Haiku | 3.3 | | | ✔ |
+| 3.5 `RepoPaths` and the seven literals (S) | Sonnet | 3.4 | | | ✔ |
 | **D4 Hosted** | Sonnet | D1, D3 | | | |
 | 4.1 Hosted skeleton and setup tests (H) | Haiku | D3 | | | |
 | 4.2 Move the hosted tests (H) | Haiku | 4.1 | | | |
@@ -1128,9 +1131,9 @@ Ids are `<deliverable>.<task>`:
 | 9.4 Index and plan status (H) | Haiku | 9.2 | | | |
 | **D10 Measure, tune, clean up** | Sonnet | D8 | | | |
 | 10.1 Full verification (H) | Haiku | D8 | | | |
-| 10.2 Load measurement and tuning (S) | Sonnet | 10.1, 0.6 | | | |
+| 10.2 Load measurement and tuning (S) — skipped by the user, 2026-10-18 | Sonnet | 10.1, 0.6 | | | |
 | 10.3 Remove the migration tooling (H) | Haiku | 10.2, D9 | | | |
-| R1 Retrospective at 15 Done | Opus | 15 Done | | | |
+| R1 Retrospective at 15 Done | Opus | 15 Done | | | ✔ |
 | R2 Retrospective at 30 Done | Opus | 30 Done | | | |
 | **D11 One way to wait** | Sonnet | D10 | | | |
 | 11.1 Red: `EventuallyTests` (S) | Sonnet | D10 | | | |

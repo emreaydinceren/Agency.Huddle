@@ -147,11 +147,11 @@ internal static class UiConventionSource
     public static string Key(string rule, string path) => $"{rule}|{path}";
 
     /// <summary>Reads every <c>Baseline/&lt;Area&gt;.txt</c> into key to allowed count.</summary>
-    public static Dictionary<string, int> ReadBaselines()
+    /// <param name="baselineDirectory">The folder holding the baseline files.</param>
+    public static Dictionary<string, int> ReadBaselines(string baselineDirectory)
     {
         Dictionary<string, int> allowed = new(StringComparer.Ordinal);
-        string directory = BaselineDirectory();
-        foreach (string file in Directory.EnumerateFiles(directory, "*.txt").Order(StringComparer.Ordinal))
+        foreach (string file in Directory.EnumerateFiles(baselineDirectory, "*.txt").Order(StringComparer.Ordinal))
         {
             if (string.Equals(Path.GetFileName(file), "Exceptions.txt", StringComparison.Ordinal))
             {
@@ -169,10 +169,11 @@ internal static class UiConventionSource
     }
 
     /// <summary>Reads <c>Baseline/Exceptions.txt</c> (<c>CVn|path|count|reason</c>) into key to extra allowed count.</summary>
-    public static Dictionary<string, int> ReadExceptions()
+    /// <param name="baselineDirectory">The folder holding the baseline files.</param>
+    public static Dictionary<string, int> ReadExceptions(string baselineDirectory)
     {
         Dictionary<string, int> allowed = new(StringComparer.Ordinal);
-        string file = Path.Combine(BaselineDirectory(), "Exceptions.txt");
+        string file = Path.Combine(baselineDirectory, "Exceptions.txt");
         foreach (string line in File.ReadLines(file).Where(static l => l.Trim().Length > 0 && !l.StartsWith('#')))
         {
             string[] parts = line.Split('|');
@@ -253,15 +254,13 @@ internal static class UiConventionSource
 
     /// <summary>Writes the rendered baselines into the repository's <c>Baseline</c> folder.</summary>
     /// <param name="actual">What the scanner found.</param>
-    public static void WriteBaselines(IReadOnlyList<RuleCount> actual)
+    /// <param name="baselineDirectory">The folder to write the baseline files into.</param>
+    public static void WriteBaselines(IReadOnlyList<RuleCount> actual, string baselineDirectory)
     {
         foreach ((string area, string text) in RenderBaselines(actual))
         {
-            File.WriteAllText(Path.Combine(BaselineDirectory(), area + ".txt"), text);
+            File.WriteAllText(Path.Combine(baselineDirectory, area + ".txt"), text);
         }
     }
 
-    /// <summary>The <c>Baseline</c> folder under <c>tests/Huddle.Tests/Ui/Conventions</c>.</summary>
-    public static string BaselineDirectory() =>
-        CssSource.RepoPath("tests", "Huddle.Tests", "Ui", "Conventions", "Baseline");
 }

@@ -11,32 +11,10 @@ namespace Agency.Huddle.Tests.Ui;
 internal static partial class CssSource
 {
     /// <summary>
-    /// Walks up from <see cref="AppContext.BaseDirectory"/> until it finds the directory that
-    /// holds <c>Huddle.slnx</c>, then combines that directory with <paramref name="segments"/>.
+    /// Combines the repository root with <paramref name="segments"/>; forwards to <see cref="RepoPaths.Combine"/>.
     /// </summary>
     /// <param name="segments">Path segments relative to the repository root.</param>
-    public static string RepoPath(params string[] segments)
-    {
-        var directory = new DirectoryInfo(AppContext.BaseDirectory);
-        while (directory is not null && !File.Exists(Path.Combine(directory.FullName, "Huddle.slnx")))
-        {
-            directory = directory.Parent;
-        }
-
-        if (directory is null)
-        {
-            throw new InvalidOperationException(
-                $"Could not locate Huddle.slnx by walking up from '{AppContext.BaseDirectory}'.");
-        }
-
-        var path = directory.FullName;
-        foreach (var segment in segments)
-        {
-            path = Path.Combine(path, segment);
-        }
-
-        return path;
-    }
+    public static string RepoPath(params string[] segments) => RepoPaths.Combine(segments);
 
     /// <summary>
     /// Every custom property declared in <paramref name="cssPath"/> (a line beginning

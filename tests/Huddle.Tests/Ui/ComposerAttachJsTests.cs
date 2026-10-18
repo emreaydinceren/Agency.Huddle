@@ -12,7 +12,7 @@ public sealed class ComposerAttachJsTests
 {
     private static JsonElement Run(string scenario)
     {
-        string script = CssSource.RepoPath("tests", "Huddle.Tests", "Ui", "Composer", "composer-attach-harness.mjs");
+        string script = RepoPaths.Data(Path.Combine("Composer", "composer-attach-harness.mjs"));
         ProcessStartInfo info = new("node")
         {
             RedirectStandardOutput = true,

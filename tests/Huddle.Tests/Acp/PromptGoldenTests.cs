@@ -960,18 +960,6 @@ public sealed class PromptGoldenTests
     /// <returns>The golden file's full path, whether or not it exists yet.</returns>
     private static string GoldenFilePath(string fileName)
     {
-        var directory = new DirectoryInfo(AppContext.BaseDirectory);
-        while (directory is not null && !File.Exists(Path.Combine(directory.FullName, "Huddle.slnx")))
-        {
-            directory = directory.Parent;
-        }
-
-        if (directory is null)
-        {
-            throw new InvalidOperationException(
-                $"Could not locate Huddle.slnx by walking up from '{AppContext.BaseDirectory}'.");
-        }
-
-        return Path.Combine(directory.FullName, "tests", "Huddle.Tests", "Acp", "Golden", fileName);
+        return RepoPaths.Data(Path.Combine("Golden", fileName));
     }
 }

@@ -133,7 +133,7 @@ public sealed class RoleNeutralityTests
     /// <returns>The allowed paths.</returns>
     private static List<string> AllowedFiles()
     {
-        string path = Path.Combine(RepoRoot(), "tests", "Huddle.Tests", "Teams", AllowListFileName);
+        string path = RepoPaths.Data(AllowListFileName);
         return [.. File.ReadAllLines(path)
             .Select(static line => line.Split('#')[0].Trim())
             .Where(static line => line.Length > 0)];

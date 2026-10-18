@@ -100,7 +100,7 @@ public sealed class ComposerScriptTests
             RedirectStandardError = true,
             StandardOutputEncoding = Encoding.UTF8,
         };
-        info.ArgumentList.Add(CssSource.RepoPath("tests", "Huddle.Tests", "Ui", "References", "composer-picker.harness.js"));
+        info.ArgumentList.Add(RepoPaths.Data("composer-picker.harness.js"));
         info.ArgumentList.Add(CssSource.RepoPath("src", "Huddle.App", "wwwroot", "app.js"));
         using Process process = Process.Start(info) ?? throw new InvalidOperationException("node did not start.");
         Task<string> error = process.StandardError.ReadToEndAsync(ct);

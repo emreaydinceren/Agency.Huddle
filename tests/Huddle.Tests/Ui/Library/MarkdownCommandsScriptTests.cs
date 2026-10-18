@@ -200,7 +200,7 @@ public sealed class MarkdownCommandsScriptTests
             RedirectStandardError = true,
             StandardOutputEncoding = Encoding.UTF8,
         };
-        info.ArgumentList.Add(CssSource.RepoPath("tests", "Huddle.Tests", "Ui", "Library", "markdown-commands.harness.mjs"));
+        info.ArgumentList.Add(RepoPaths.Data("markdown-commands.harness.mjs"));
         info.ArgumentList.Add(CssSource.RepoPath("src", "Huddle.App", "wwwroot", "markdown-commands.js"));
         using Process process = Process.Start(info) ?? throw new InvalidOperationException("node did not start.");
         Task<string> error = process.StandardError.ReadToEndAsync(ct);

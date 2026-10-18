@@ -9,6 +9,10 @@ public sealed class UiConventionTests
 {
     private static readonly Lazy<IReadOnlyList<RuleCount>> Scanned = new(UiConventionSource.ScanRepo);
 
+    /// <summary>The <c>Baseline</c> folder beside this source file.</summary>
+    /// <returns>The folder path.</returns>
+    private static string BaselineDirectory() => RepoPaths.Data("Baseline");
+
     /// <summary>A file never has more violations of a rule than its baseline allows, and none unlisted.</summary>
     /// <param name="rule">The rule id.</param>
     [Theory]
@@ -28,7 +32,7 @@ public sealed class UiConventionTests
         IReadOnlyList<RuleCount> actual = Scanned.Value.Where(a => string.Equals(a.Rule, rule, StringComparison.Ordinal)).ToList();
 
         IReadOnlyList<string> overruns =
-            UiConventionSource.Overruns(actual, UiConventionSource.ReadBaselines(), UiConventionSource.ReadExceptions());
+            UiConventionSource.Overruns(actual, UiConventionSource.ReadBaselines(BaselineDirectory()), UiConventionSource.ReadExceptions(BaselineDirectory()));
 
         Assert.True(overruns.Count == 0, "rule, path, actual, allowed:" + Environment.NewLine + string.Join(Environment.NewLine, overruns));
     }
@@ -38,7 +42,7 @@ public sealed class UiConventionTests
     public void Baseline_IsNoLooserThanTheSource()
     {
         IReadOnlyList<string> loose =
-            UiConventionSource.Loose(Scanned.Value, UiConventionSource.ReadBaselines(), UiConventionSource.ReadExceptions());
+            UiConventionSource.Loose(Scanned.Value, UiConventionSource.ReadBaselines(BaselineDirectory()), UiConventionSource.ReadExceptions(BaselineDirectory()));
 
         Assert.True(loose.Count == 0, "Lower these baseline entries:" + Environment.NewLine + string.Join(Environment.NewLine, loose));
     }
@@ -49,11 +53,11 @@ public sealed class UiConventionTests
     {
         if (string.Equals(Environment.GetEnvironmentVariable("HUDDLE_WRITE_BASELINES"), "1", StringComparison.Ordinal))
         {
-            UiConventionSource.WriteBaselines(Scanned.Value);
+            UiConventionSource.WriteBaselines(Scanned.Value, BaselineDirectory());
         }
 
         IReadOnlyDictionary<string, string> rendered = UiConventionSource.RenderBaselines(Scanned.Value);
-        string[] onDisk = Directory.EnumerateFiles(UiConventionSource.BaselineDirectory(), "*.txt")
+        string[] onDisk = Directory.EnumerateFiles(BaselineDirectory(), "*.txt")
             .Select(static f => Path.GetFileNameWithoutExtension(f))
             .Where(static n => !string.Equals(n, "Exceptions", StringComparison.Ordinal))
             .Order(StringComparer.Ordinal)

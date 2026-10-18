@@ -12,7 +12,7 @@ public sealed class ThemeLabJsTests
 {
     private static JsonElement Run(string scenario)
     {
-        string script = CssSource.RepoPath("tests", "Huddle.Tests", "Ui", "ThemeLabScript", "theme-lab-harness.mjs");
+        string script = RepoPaths.Data("theme-lab-harness.mjs");
         ProcessStartInfo info = new("node")
         {
             RedirectStandardOutput = true,
