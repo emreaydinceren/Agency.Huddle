@@ -78,8 +78,9 @@ public sealed class AppCssSearchTests
         string searchRule = text[rule..(text.IndexOf('}', rule) + 1)];
 
         // contains-ok: source-fact test, no CSS parser - the rules' own text is what's pinned.
-        Assert.Contains("background: var(--mud-palette-surface);", composerRule, StringComparison.Ordinal);
-        Assert.Contains("background: var(--mud-palette-surface);", searchRule, StringComparison.Ordinal);
+        // The composer's fill is the raised ground (its own package converts it), the search box's the sunk ground; both default to Surface.
+        Assert.Matches(@"background: var\((--mud-palette-surface|--hu-ground-raised)\);", composerRule);
+        Assert.Contains("background: var(--hu-ground-sunk);", searchRule, StringComparison.Ordinal); // contains-ok: source-fact test, the rule's own text is what's pinned
         Assert.Contains(":hover", searchRule, StringComparison.Ordinal);
         Assert.Contains(".mud-focused", searchRule, StringComparison.Ordinal);
     }

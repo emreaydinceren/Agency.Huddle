@@ -4521,7 +4521,7 @@ a.team-ref,
     bottom: 25%;
     right: 3px;
     width: 1px;
-    background: var(--mud-palette-lines-default);
+    background: var(--hu-line-region);
 }
 
 .task-col-resizer:hover::after,
@@ -4572,7 +4572,7 @@ a.team-ref,
 /* A group row (audit B4f, design-system "Tasks"): Ground, not MudBlazor's Background-gray band, with a 13px/600 label, a 24px avatar for an
    assignee group and a 12px Quiet-ink count. The row line below it is the table's Edge line. */
 .mud-data-grid.task-list-grid .mud-table-cell.mud-datagrid-group {
-    background-color: var(--mud-palette-surface);
+    background-color: var(--hu-ground-page);
 }
 
 .task-group-heading {
@@ -4783,8 +4783,8 @@ a.team-ref,
 .chip-cloud-chip.is-set {
     font-weight: 500;
     border: 1px solid var(--mud-palette-primary);
-    background-color: color-mix(in srgb, var(--mud-palette-primary) 14%, var(--mud-palette-surface));
-    color: color-mix(in srgb, var(--mud-palette-primary) 70%, var(--mud-palette-text-primary));
+    background-color: var(--hu-selected-background);
+    color: var(--hu-selected-foreground);
 }
 
 .chip-cloud-close {
@@ -4798,7 +4798,7 @@ a.team-ref,
 
 .process-step {
     padding: 16px;
-    background: var(--mud-palette-surface);
+    background: var(--hu-ground-raised);
     border: 1px solid var(--ink-edge);
     border-radius: var(--mud-default-borderradius);
 }
@@ -4855,7 +4855,7 @@ a.team-ref,
 /* The Room closes its header with a Chrome line (design-system "A page"). */
 .page-header.has-chrome {
     padding-bottom: 8px;
-    border-bottom: 1px solid var(--mud-palette-lines-default);
+    border-bottom: 1px solid var(--hu-line-region);
 }
 
 /* The intro: body1 (14px) in Quiet ink, at most 75 characters wide (audit B1). */
@@ -4960,7 +4960,7 @@ a.team-ref,
     background: color-mix(in srgb, var(--mud-palette-primary) 14%, var(--mud-palette-surface));
     font-size: var(--mud-typography-caption-size);
     font-weight: 600;
-    color: color-mix(in srgb, var(--mud-palette-primary) 70%, var(--mud-palette-text-primary));
+    color: var(--hu-accent-ink);
 }
 
 .build-team-intro {
@@ -5045,24 +5045,24 @@ a.team-ref,
     font: inherit;
     text-align: start;
     color: var(--mud-palette-text-primary);
-    background: var(--mud-palette-surface);
+    background: var(--hu-ground-raised);
     border: 1px solid var(--ink-edge);
     border-radius: var(--mud-default-borderradius);
     cursor: pointer;
 }
 
 .team-type-card:hover {
-    background: var(--mud-palette-action-default-hover);
+    background: var(--hu-hover);
 }
 
 .team-type-card-selected,
 .team-type-card-selected:hover {
-    background: color-mix(in srgb, var(--mud-palette-primary) 14%, var(--mud-palette-surface));
+    background: var(--hu-selected-background);
     border-color: var(--mud-palette-primary);
 }
 
 .team-type-card-selected:hover {
-    background: color-mix(in srgb, var(--mud-palette-primary) 20%, var(--mud-palette-surface));
+    background: var(--hu-selected-background-hover);
 }
 
 .team-type-icon {
@@ -5078,7 +5078,7 @@ a.team-ref,
 }
 
 .team-type-card-selected .team-type-icon {
-    color: color-mix(in srgb, var(--mud-palette-primary) 70%, var(--mud-palette-text-primary));
+    color: var(--hu-accent-ink);
     background: color-mix(in srgb, var(--mud-palette-primary) 14%, var(--mud-palette-surface));
 }
 
@@ -5442,7 +5442,7 @@ a.team-ref,
 .search-bar .mud-input-control .mud-input.mud-input-outlined:hover,
 .search-bar .mud-input-control .mud-input.mud-input-outlined.mud-focused,
 .search-bar .mud-input-control .mud-input.mud-input-outlined:focus-within {
-    background: var(--mud-palette-surface);
+    background: var(--hu-ground-sunk);
 }
 
 /* The Room jump (spec 9.1): the matching Message row is flashed by app.js for about two seconds. */
@@ -5478,7 +5478,7 @@ a.team-ref,
     max-height: min(320px, 40vh);
     overflow-y: auto;
     overflow-x: hidden;
-    background: var(--mud-palette-surface);
+    background: var(--hu-ground-raised);
 }
 
 .composer-picker-heading,
@@ -5498,17 +5498,17 @@ a.team-ref,
 }
 
 .composer-picker-item:hover {
-    background: var(--mud-palette-action-default-hover);
+    background: var(--hu-hover);
 }
 
 .composer-picker-item[aria-selected="true"] {
-    background: color-mix(in srgb, var(--mud-palette-primary) 14%, var(--mud-palette-surface));
-    color: color-mix(in srgb, var(--mud-palette-primary) 70%, var(--mud-palette-text-primary));
+    background: var(--hu-selected-background);
+    color: var(--hu-selected-foreground);
     font-weight: 500;
 }
 
 .composer-picker-item[aria-selected="true"]:hover {
-    background: color-mix(in srgb, var(--mud-palette-primary) 20%, var(--mud-palette-surface));
+    background: var(--hu-selected-background-hover);
 }
 
 .composer-picker-item[aria-disabled="true"] {
@@ -5578,7 +5578,7 @@ a.team-ref,
     min-height: 5rem;
     padding: 12px;
     font: inherit;
-    color: color-mix(in srgb, var(--mud-palette-primary) 70%, var(--mud-palette-text-primary));
+    color: var(--hu-accent-ink);
     background: transparent;
     border: 1px dashed var(--ink-field);
     border-radius: var(--mud-default-borderradius);
@@ -5655,7 +5655,7 @@ a.team-ref,
     gap: 8px;
     min-width: 0;
     padding: 12px;
-    background: var(--mud-palette-surface);
+    background: var(--hu-ground-raised);
     border: 1px solid var(--ink-edge);
     border-radius: var(--mud-default-borderradius);
 }
@@ -5672,7 +5672,7 @@ a.team-ref,
 }
 
 .roster-card-manager {
-    background: color-mix(in srgb, var(--mud-palette-primary) 8%, var(--mud-palette-surface));
+    background: var(--hu-tone-primary-tint);
     border-color: var(--mud-palette-primary);
 }
 
@@ -5877,7 +5877,7 @@ a.team-ref,
 }
 
 .profile-avatar-button:focus-visible {
-    outline: 2px solid var(--mud-palette-text-primary);
+    outline: 2px solid var(--hu-focus);
     outline-offset: 2px;
 }
 
@@ -6090,8 +6090,8 @@ a.team-ref,
     font-size: var(--mud-typography-caption-size);
     font-weight: 500;
     line-height: 1;
-    background-color: color-mix(in srgb, var(--mud-palette-text-secondary) 14%, var(--mud-palette-surface));
-    color: color-mix(in srgb, var(--mud-palette-text-secondary) 50%, var(--mud-palette-text-primary));
+    background-color: var(--hu-tone-neutral-soft);
+    color: var(--hu-tone-neutral-ink);
 }
 
 .mud-chip.status-chip .mud-chip-icon,
@@ -6100,23 +6100,23 @@ a.team-ref,
 }
 
 .mud-chip.status-chip-info {
-    background-color: color-mix(in srgb, var(--mud-palette-info) 14%, var(--mud-palette-surface));
-    color: color-mix(in srgb, var(--mud-palette-info) 50%, var(--mud-palette-text-primary));
+    background-color: var(--hu-tone-info-soft);
+    color: var(--hu-tone-info-ink);
 }
 
 .mud-chip.status-chip-warning {
-    background-color: color-mix(in srgb, var(--mud-palette-warning) 14%, var(--mud-palette-surface));
-    color: color-mix(in srgb, var(--mud-palette-warning) 50%, var(--mud-palette-text-primary));
+    background-color: var(--hu-tone-warning-soft);
+    color: var(--hu-tone-warning-ink);
 }
 
 .mud-chip.status-chip-error {
-    background-color: color-mix(in srgb, var(--mud-palette-error) 14%, var(--mud-palette-surface));
-    color: color-mix(in srgb, var(--mud-palette-error) 50%, var(--mud-palette-text-primary));
+    background-color: var(--hu-tone-error-soft);
+    color: var(--hu-tone-error-ink);
 }
 
 .mud-chip.status-chip-success {
-    background-color: color-mix(in srgb, var(--mud-palette-success) 14%, var(--mud-palette-surface));
-    color: color-mix(in srgb, var(--mud-palette-success) 50%, var(--mud-palette-text-primary));
+    background-color: var(--hu-tone-success-soft);
+    color: var(--hu-tone-success-ink);
 }
 
 .mud-chip.status-chip-secondary {
@@ -6125,13 +6125,13 @@ a.team-ref,
 }
 
 .mud-chip.status-chip-tertiary {
-    background-color: color-mix(in srgb, var(--mud-palette-tertiary) 14%, var(--mud-palette-surface));
-    color: color-mix(in srgb, var(--mud-palette-tertiary) 50%, var(--mud-palette-text-primary));
+    background-color: var(--hu-tone-tertiary-soft);
+    color: var(--hu-tone-tertiary-ink);
 }
 
 .mud-chip.status-chip-primary {
-    background-color: color-mix(in srgb, var(--mud-palette-primary) 14%, var(--mud-palette-surface));
-    color: color-mix(in srgb, var(--mud-palette-primary) 50%, var(--mud-palette-text-primary));
+    background-color: var(--hu-tone-primary-soft);
+    color: var(--hu-tone-primary-ink);
 }
 
 /* 2. Tag, quiet: a Wash fill and an Edge outline (a wash never defines a shape alone), TextPrimary text. */
@@ -6168,8 +6168,8 @@ a.team-ref,
 .mud-chip.filter-chip.filter-chip-set,
 .mud-chip.filter-chip.mud-chip-selected {
     border: 1px solid var(--mud-palette-primary);
-    background-color: color-mix(in srgb, var(--mud-palette-primary) 14%, var(--mud-palette-surface));
-    color: color-mix(in srgb, var(--mud-palette-primary) 70%, var(--mud-palette-text-primary));
+    background-color: var(--hu-selected-background);
+    color: var(--hu-selected-foreground);
     font-weight: 500;
 }
 

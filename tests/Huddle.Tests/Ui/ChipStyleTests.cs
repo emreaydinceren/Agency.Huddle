@@ -53,8 +53,16 @@ public sealed class ChipStyleTests
     {
         string rule = RuleBody($".mud-chip.status-chip-{colour}");
 
-        Assert.Contains($"background-color: color-mix(in srgb, var(--mud-palette-{colour}) 14%, var(--mud-palette-surface));", rule, StringComparison.Ordinal); // contains-ok: one rule of the stylesheet source
-        Assert.Contains($"color: color-mix(in srgb, var(--mud-palette-{colour}) 50%, var(--mud-palette-text-primary));", rule, StringComparison.Ordinal); // contains-ok: one rule of the stylesheet source
+        // Secondary is the one tone no Theme differs on, so it keeps the literal recipe; every other colour reads its tone tokens,
+        // whose registered defaults are that same recipe (pinned once in SkinTokensTests).
+        string background = string.Equals(colour, "secondary", StringComparison.Ordinal)
+            ? $"color-mix(in srgb, var(--mud-palette-{colour}) 14%, var(--mud-palette-surface))"
+            : $"var(--hu-tone-{colour}-soft)";
+        string text = string.Equals(colour, "secondary", StringComparison.Ordinal)
+            ? $"color-mix(in srgb, var(--mud-palette-{colour}) 50%, var(--mud-palette-text-primary))"
+            : $"var(--hu-tone-{colour}-ink)";
+        Assert.Contains($"background-color: {background};", rule, StringComparison.Ordinal); // contains-ok: one rule of the stylesheet source
+        Assert.Contains($"color: {text};", rule, StringComparison.Ordinal); // contains-ok: one rule of the stylesheet source
         Assert.DoesNotContain($"background-color: var(--mud-palette-{colour});", rule, StringComparison.Ordinal);
     }
 
@@ -70,7 +78,7 @@ public sealed class ChipStyleTests
         Assert.Contains("1px dashed", RuleBody(".mud-chip.filter-chip"), StringComparison.Ordinal); // contains-ok: one rule of the stylesheet source
         string set = RuleBody(".mud-chip.filter-chip.mud-chip-selected");
         Assert.Contains("1px solid var(--mud-palette-primary)", set, StringComparison.Ordinal); // contains-ok: one rule of the stylesheet source
-        Assert.Contains("color-mix(in srgb, var(--mud-palette-primary) 14%", set, StringComparison.Ordinal); // contains-ok: one rule of the stylesheet source
+        Assert.Contains("background-color: var(--hu-selected-background);", set, StringComparison.Ordinal); // contains-ok: one rule of the stylesheet source
 
         Assert.Contains("var(--mud-typography-caption-size)", RuleBody(".chip-meta"), StringComparison.Ordinal); // contains-ok: one rule of the stylesheet source
     }
