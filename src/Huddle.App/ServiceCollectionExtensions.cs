@@ -244,6 +244,10 @@ public static class ServiceCollectionExtensions
         services.AddSingleton<Agency.Huddle.App.SkillSources.ISkillSourcesMove, Agency.Huddle.App.SkillSources.NoSkillSourcesMove>();
         services.AddSingleton<Agency.Huddle.App.SkillSources.RegistryWatcher>();
         services.AddSingleton<Agency.Huddle.App.SkillSources.ISkillCopier, Agency.Huddle.App.SkillSources.SkillCopier>();
+        services.AddSingleton<Agency.Huddle.App.SkillSources.InstallFileWriter>();
+        services.AddSingleton<Agency.Huddle.App.SkillSources.IInstallFileLocation>(static sp => sp.GetRequiredService<Agency.Huddle.App.SkillSources.InstallFileWriter>());
+        services.AddSingleton<Agency.Huddle.App.SkillSources.SkillPromptBuilder>();
+        services.AddScoped<Agency.Huddle.App.SkillSources.PathFormatChoice>();
 
         // Skill import (SK-2 to SK-7): the downloader gets its own client with a long timeout for the archive; the importer's client only
         // resolves a branch to a commit, so it times out sooner. Both are plain singletons - nothing here is shared with other HTTP users.
@@ -499,6 +503,7 @@ public static class ServiceCollectionExtensions
         // repair of Skills/.trash and the first full read of the registry finish before BuiltinTeammateSeeder,
         // DataInitializer and PersonaSupervisor start, because the host awaits each StartAsync in registration order.
         services.AddHostedService(static sp => sp.GetRequiredService<Agency.Huddle.App.SkillSources.RegistryWatcher>());
+        services.AddHostedService(static sp => sp.GetRequiredService<Agency.Huddle.App.SkillSources.InstallFileWriter>());
         services.AddHostedService<DataInitializer>();
         services.AddHostedService(sp => sp.GetRequiredService<HumanRenameCascade>());
         services.AddHostedService<PipeServer>();

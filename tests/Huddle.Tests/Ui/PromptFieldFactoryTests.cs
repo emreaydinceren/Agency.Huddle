@@ -26,16 +26,16 @@ public sealed class PromptFieldFactoryTests
         }
     }
 
-    /// <summary>The six groups appear in the documented order, with the labels the Settings page shows; the Cadence group (Task 64) holds the digest and retro prompts.</summary>
+    /// <summary>The eight groups appear in the documented order, with the labels the Settings page shows; the Cadence group (Task 64) holds the digest and retro prompts, and the two Skill Packs groups hold the install file body and the prompts the Human pastes.</summary>
     [Fact]
-    public void Build_GroupsInOrder_SystemPromptTurnGetHelpToolTasksCadence()
+    public void Build_GroupsInOrder_SystemPromptTurnGetHelpToolTasksCadenceSkillPacks()
     {
         var prompts = new FakePromptSource();
 
         var groups = PromptFieldFactory.Build(prompts, NoPendingEdits);
 
         Assert.Equal(
-            ["System prompt", "Turn", "Get help", "Tool descriptions", "Tasks", "Cadence"],
+            ["System prompt", "Turn", "Get help", "Tool descriptions", "Tasks", "Cadence", "Skill Packs: install file", "Skill Packs: prompts you paste"],
             groups.Select(group => group.Label).ToList());
     }
 
