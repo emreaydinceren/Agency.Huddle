@@ -55,6 +55,21 @@ public sealed class TeamOptions
 
     /// <summary>Configuration for the Referenced items header of an Agent's Turn, bound from <c>Team:References</c> per spec §10.</summary>
     public ReferencesOptions References { get; set; } = new();
+
+    /// <summary>The Skill Sources folder (Skill Packs spec §8.7); empty means <c>{DataDir}/SkillSources</c>. A folder set on
+    /// Settings › Skills › Sources (<c>skill-sources.json</c>) wins over this key.</summary>
+    public string SkillSourcesDir { get; set; } = string.Empty;
+
+    /// <summary>The name per-computer paths are matched against; empty means <see cref="Environment.MachineName"/>.</summary>
+    public string ComputerName { get; set; } = string.Empty;
+
+    /// <summary>Where this computer's copy of the skills repository is. Read once, by the move; empty means the move adds
+    /// no rows for the two Packs Huddle used to ship.</summary>
+    public string SkillsRepositoryDir { get; set; } = string.Empty;
+
+    /// <summary>The <c>huddle-packs</c> program <c>InstallSkillPack.md</c> gives for validating; empty means
+    /// <c>huddle-packs.exe</c> beside the app, else <c>dotnet huddle-packs.dll</c>.</summary>
+    public string HuddlePacksPath { get; set; } = string.Empty;
 }
 
 public sealed class DemoAgentOptions
