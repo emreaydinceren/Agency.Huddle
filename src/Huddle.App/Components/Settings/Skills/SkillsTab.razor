@@ -32,7 +32,7 @@
 @inject IDialogService DialogService
 @inject NavigationManager Navigation
 
-<SettingsIntro>@SkillGuide.SkillsIntro</SettingsIntro>
+<SettingsIntro>@SkillGuide.SkillsIntro <SkillsLearnMore View="skills" /></SettingsIntro>
 
 <StoredAt Label="Copies stored at" Path="@this.Store.SkillsDirectory" />
 
@@ -367,10 +367,10 @@
         this.Snackbar.Add(problems == 0 ? "Reloaded. No problems." : $"Reloaded. {Plural.Of(problems, "problem", "problems")} found.", Severity.Success, configure: null, key: "skills-reload");
     }
 
-    /// <summary>Opens the import dialog; the Skills watcher repaints this tab when an install lands.</summary>
+    /// <summary>Opens the prompt dialog on Add from a link or folder (it replaced the old import dialog, §6.9.3).</summary>
     private async Task ImportSkillAsync()
     {
-        _ = await this.DialogService.ShowAsync<SkillImportDialog>("Import skill", SkillImportDialog.Options);
+        _ = await SkillDialogs.OpenAddWithAiAsync(this.DialogService, "add");
     }
 
     /// <summary>Sets the search text.</summary>

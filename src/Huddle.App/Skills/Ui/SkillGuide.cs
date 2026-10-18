@@ -1,5 +1,28 @@
 namespace Agency.Huddle.App.Skills.Ui;
 
+/// <summary>What the prompt dialog asks the AI tool to do (Skill Packs spec §6.9.2). The first four are the radio choices of
+/// <c>G5a</c>; <see cref="FetchSkill"/> and <see cref="NeedsSetup"/> copy at once without the dialog.</summary>
+internal enum SkillTask
+{
+    /// <summary>Add from a link or folder.</summary>
+    Add,
+
+    /// <summary>Find Packs for a role.</summary>
+    FindForRole,
+
+    /// <summary>Check for updates.</summary>
+    CheckForUpdates,
+
+    /// <summary>Fix a problem.</summary>
+    Fix,
+
+    /// <summary>Fetch one Not downloaded Skill.</summary>
+    FetchSkill,
+
+    /// <summary>Set up what a draft needs.</summary>
+    NeedsSetup,
+}
+
 /// <summary>The guidance text of Settings › Skills (Skill Packs spec §6.9.12): the three tab intros and the one sentence each
 /// button and menu item carries. UI text, not model-facing text (ADR-0007).</summary>
 internal static class SkillGuide
@@ -59,6 +82,43 @@ internal static class SkillGuide
         ["Keep or remove Skills"] = "Only stops tracking the Pack, or also takes off the Skills nobody else gave them.",
         ["Restore default"] = "Deletes the edited copy of a built-in Skill so the shipped one is used again.",
     };
+
+    /// <summary>The help views, in tab order, with the dialog title of each.</summary>
+    public static IReadOnlyList<(string View, string Title)> HelpViews { get; } = [("skills", "Skills"), ("packs", "Packs"), ("sources", "Sources")];
+
+    /// <summary>The Markdown <c>SkillsHelpDialog</c> shows for a tab (§6.9.12): the body of the matching subsection of the
+    /// User Guide, word for word, so the two cannot drift (<c>SkillsHelpTextTests</c> checks it). An unknown view is Skills.</summary>
+    public static string HelpFor(string? view)
+    {
+        return view?.ToLowerInvariant() switch
+        {
+            "packs" => $"""
+                {PacksIntro}
+
+                Each card shows the Pack's title, version and state, its Source, how many Skills it holds, when it was last updated and the roles it is for. A line under the title says what is wrong when something is. **Details** shows where the Pack came from, each Skill with its licence and warnings, and the notes your AI tool kept.
+
+                A card marked **New** appeared since you last left this tab. **Check for updates** opens a prompt that asks your AI tool to look for newer versions. **Hide** leaves a Pack out of lists; Teammates who have it keep it.
+                """,
+            "sources" => $"""
+                {SourcesIntro}
+
+                The tab shows the install file and this computer's name, the Skill Sources folder with **Change…** to choose another, one row per Source and one row per catalog. A Source its owner deprecated, withdrew or moved says so on its row, in words. Withdrawn Skills cannot be given to new hires; Teammates who already have them keep working and are flagged.
+                """,
+            _ => $"""
+                {SkillsIntro}
+
+                Each row shows the Skill's name and description, where it came from, its state and the Teammates that use it. Search by name, narrow the list with the **State** filter, or turn on **Show hidden** to see what you hid. The **⋯** menu on a row offers **Copy prompt**, **Hide** or **Unhide**, **Show catalog in Library** and, for a built-in Skill you changed, **Restore default**.
+
+                **Reload** reads SKILLS.md and every file it points to again, right now. **Problems** at the bottom lists what failed a check, with the file and the fix.
+                """,
+        };
+    }
+
+    /// <summary>The dialog title of a help view.</summary>
+    public static string HelpTitle(string? view)
+    {
+        return HelpViews.FirstOrDefault(entry => string.Equals(entry.View, view, StringComparison.OrdinalIgnoreCase)).Title ?? "Skills";
+    }
 
     /// <summary>The sentence for a control label.</summary>
     /// <exception cref="KeyNotFoundException">The label has no sentence; every control must have one.</exception>

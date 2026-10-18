@@ -294,7 +294,7 @@ public sealed class SkillImportDialogTests
         Assert.Empty(importer.Installs);
     }
 
-    /// <summary>The Skills panel's "Import skill" button opens this dialog.</summary>
+    /// <summary>The Skills panel's "Import skill" button opens the prompt dialog on Add (Skill Packs spec §6.9.3).</summary>
     [Fact]
     public async Task SkillsPanel_ImportButton_OpensTheDialog()
     {
@@ -314,7 +314,7 @@ public sealed class SkillImportDialogTests
 
         await cut.InvokeAsync(() => cut.Find(".skills-import-button").ClickAsync());
 
-        cut.WaitForAssertion(() => Assert.Equal("Import skill", cut.Find(".mud-dialog-title").TextContent.Trim()));
+        cut.WaitForAssertion(() => Assert.Equal("Add with your AI tool", cut.Find(".mud-dialog-title").TextContent.Trim()));
     }
 
     /// <summary>Clicks the Pick button of the <paramref name="index"/>th result and waits for the review.</summary>

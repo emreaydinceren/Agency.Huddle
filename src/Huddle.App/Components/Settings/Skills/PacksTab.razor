@@ -12,14 +12,18 @@
 @inject SkillRegistry Registry
 @inject NavigationManager Navigation
 @inject IJSRuntime JS
+@inject IDialogService DialogService
 
-<SettingsIntro>@SkillGuide.PacksIntro</SettingsIntro>
+<SettingsIntro>@SkillGuide.PacksIntro <SkillsLearnMore View="packs" /></SettingsIntro>
 
-<PackBar Revision="@this.Revision" @bind-ShowHidden="this.showHidden" OnAddWithAi="this.OnAddWithAi" OnCheckForUpdates="this.OnCheckForUpdates" />
+<PackBar Revision="@this.Revision" @bind-ShowHidden="this.showHidden" OnAddWithAi="this.OpenAddAsync" OnCheckForUpdates="this.OpenUpdatesAsync" />
 
 @if (this.Registry.Current.Resolved.Packs.Count == 0)
 {
-    <PackEmptyState OnAddWithAi="this.OnAddWithAi">@this.EmptyStateExtras</PackEmptyState>
+    <PackEmptyState OnAddWithAi="this.OpenAddAsync">
+        <CopyPathMenu />
+        <SkillsLearnMore View="packs" />
+    </PackEmptyState>
 }
 else
 {
@@ -43,17 +47,6 @@ else
     [Parameter]
     public long Revision { get; set; }
 
-    /// <summary>Opens the prompt dialog on Add.</summary>
-    [Parameter]
-    public EventCallback OnAddWithAi { get; set; }
-
-    /// <summary>Opens the prompt dialog on Check for updates.</summary>
-    [Parameter]
-    public EventCallback OnCheckForUpdates { get; set; }
-
-    /// <summary>The controls the empty state shows beside Add with your AI tool.</summary>
-    [Parameter]
-    public RenderFragment? EmptyStateExtras { get; set; }
 
     /// <summary>The row keys of the Packs and catalogs this tab lists now, for <c>MarkSeenAsync</c> on leaving.</summary>
     public IReadOnlyList<string> ListedKeys
@@ -64,6 +57,12 @@ else
             return [.. snapshot.Resolved.Packs.Select(snapshot.Resolved.RowKey), .. snapshot.Resolved.Catalogs.Select(snapshot.Resolved.RowKey)];
         }
     }
+
+    /// <summary>Opens the prompt dialog on Add.</summary>
+    private Task OpenAddAsync() => SkillDialogs.OpenAddWithAiAsync(this.DialogService, "add");
+
+    /// <summary>Opens the prompt dialog on Check for updates, every Source ticked.</summary>
+    private Task OpenUpdatesAsync() => SkillDialogs.OpenAddWithAiAsync(this.DialogService, "update");
 
     /// <summary>Reads <c>?highlight=</c>.</summary>
     protected override void OnInitialized()

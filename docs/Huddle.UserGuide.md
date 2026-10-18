@@ -1811,7 +1811,7 @@ A Pack is a named set of Skills for some roles, such as MSBuild Authoring. Choos
 
 Each card shows the Pack's title, version and state, its Source, how many Skills it holds, when it was last updated and the roles it is for. A line under the title says what is wrong when something is. **Details** shows where the Pack came from, each Skill with its licence and warnings, and the notes your AI tool kept.
 
-A card marked **New** appeared since you last left this tab. **Check for updates** copies a prompt that asks your AI tool to look for newer versions. **Hide** leaves a Pack out of lists; Teammates who have it keep it.
+A card marked **New** appeared since you last left this tab. **Check for updates** opens a prompt that asks your AI tool to look for newer versions. **Hide** leaves a Pack out of lists; Teammates who have it keep it.
 
 ### The Sources tab
 
