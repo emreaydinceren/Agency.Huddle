@@ -1194,7 +1194,7 @@ palette table.
 | In a stylesheet: radius, font size, spacing over 2px, `z-index` over 2 and `!important` come from the scales (CV11) | `UiConventionTests` |
 | Everything else on this page | Review, and the checklist below |
 
-`UiConventionTests` (`tests/Huddle.Tests/Ui/Conventions`) scans `src/Huddle.App` and fails
+`UiConventionTests` (`tests/Huddle.Tests.Domain/Ui/Conventions`) scans `src/Huddle.App` and fails
 on any violation not listed in `Baseline/Exceptions.txt`. Every area baseline file is empty;
 an exception names the rule, the file, a count and the reason, and only the manager adds
 one. What the test can't see stays with review: copy, icon choice, layout and the checklist

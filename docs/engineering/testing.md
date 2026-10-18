@@ -10,7 +10,7 @@ in the hub: [Huddle.EngineeringGuide.md](../Huddle.EngineeringGuide.md).
 ## How the suite is built
 
 This repo is test-first. Real stores over temp directories, and **no mocking
-framework** — hand-written fakes under `tests/Huddle.Tests/Acp/Fakes/`.
+framework** — hand-written fakes under `tests/Huddle.Tests.Common/Acp/Fakes/`.
 
 ### Proving a schema change against a database that predates it
 
@@ -33,7 +33,7 @@ that is never there.
 ### The composer's `@` picker: a Node harness
 
 The picker's key rules, its suppression and its insert are tested by a Node harness
-(`tests/Huddle.Tests/Ui/References/composer-picker.harness.js`, driven by `ComposerScriptTests.cs`).
+(`tests/Huddle.Tests.Agents/Ui/References/composer-picker.harness.js`, driven by `ComposerScriptTests.cs`).
 Like the other node-dependent tests, it needs `node` on PATH; the six such tests are listed in
 `agents/CIPipeline.md`. The source-text checks in `AppJsSourceTests` do not replace it.
 
@@ -44,7 +44,7 @@ every test either stopped at `FakeAgentHostFactory` or needed Node installed and
 `TEAM_E2E=1` (the tests that show as **skipped** in every run). **Nothing exercised the
 real `DotAcpAgentHostFactory` path at all.**
 
-`tests/Huddle.Tests/Conformance/MockAdapterFixture.cs` closes it: the real factory, the
+`tests/Huddle.Tests.Common/Conformance/MockAdapterFixture.cs` closes it: the real factory, the
 real `DotAcpAgentHost`, the real session, the real `AppToolServer` and the real prompt
 composition, with **only the process launch** substituted for an in-memory duplex stream
 pair onto a `FakeAcpAgent`. No process, microseconds, deterministic.
@@ -89,7 +89,7 @@ already a referenced package — is the way to test anything containing a MudBla
 component.
 
 **Use bUnit whenever a MudBlazor component is in the tree.** `MudBunitContext`
-(`tests/Huddle.Tests/Ui/MudBunitContext.cs`) is the shared setup: `AddMudServices`,
+(`tests/Huddle.Tests.Common/Ui/MudBunitContext.cs`) is the shared setup: `AddMudServices`,
 loose JSInterop, and `RenderWithPopovers`, which wraps content together with
 `MudPopoverProvider` and `MudDialogProvider` in one synthetic root — the providers
 are *siblings* of the component that opens a popover or dialog, not descendants,

@@ -9,6 +9,11 @@ Verified end to end on 2026-09-21 against SDK 10.0.401 in the CI container: **13
 test). That is the whole suite minus the three quarantined tests below; an unfiltered run of
 the same tree is 1332.
 
+After the test split (2026-10-18) a local Windows run of `Run-Tests.ps1` reports **10714 tests,
+10695 passed, 19 skipped, 0 failed**, spread over five test projects (listed test methods: Hosted 683,
+Agents 470, Components 1592, SkillPacks 293, Domain 5032; `Huddle.Tests.Common` holds no tests). The
+CI-container figures above were not re-measured; refresh them from the next green CI run's summary.
+
 The figures in this file were **970/962/8 until 2026-09-21**, and **656/648/659 before
 2026-09-15**. Refresh them when you next read a green run's summary rather than trusting them —
 a count nobody updates stops being a check and becomes noise.
@@ -74,9 +79,9 @@ Two of those steps exist for reasons specific to this repo:
 - **Install Node.js.** `AgentProcessLauncherTests` (marked `[Trait("Category", "Process")]`)
   launches a real `node -e` subprocess to prove the stdio pipe wiring works. The SDK image
   ships no Node, and without this step those six tests fail with `Failed to start 'node'`.
-  `ComposerScriptTests` (6 test methods; the picker harness `tests/Huddle.Tests/Ui/References/composer-picker.harness.js`
+  `ComposerScriptTests` (6 test methods; the picker harness `tests/Huddle.Tests.Agents/Ui/References/composer-picker.harness.js`
   loads the real `app.js` into a `vm` context under `node`) need it too, and so does
-  `MarkdownCommandsScriptTests` (the harness `tests/Huddle.Tests/Ui/Library/markdown-commands.harness.mjs`
+  `MarkdownCommandsScriptTests` (the harness `tests/Huddle.Tests.Agents/Ui/Library/markdown-commands.harness.mjs`
   imports the pure `wwwroot/markdown-commands.js` as an ES module; plain Node 18 runs it). One
   `node` process serves the whole class, so a missing `node` fails all its methods together.
   Ubuntu's `nodejs` package (v18) is enough for `node -e`; the ACP adapter wants something
@@ -143,9 +148,9 @@ runs. Cap the container's CPU and run the **built test executable** in parallel 
 docker run --rm --cpus=1 -v "$PWD:/repo:ro" -v huddle-nuget:/root/.nuget/packages \
   -w /repo mcr.microsoft.com/dotnet/sdk:10.0.401 bash -c '
     cp -r /repo /src && cd /src && rm -rf */*/bin */*/obj
-    dotnet build tests/Huddle.Tests/Huddle.Tests.csproj -c Release -v q
+    dotnet build tests/Huddle.Tests.Agents/Huddle.Tests.Agents.csproj -c Release -v q
     for p in $(seq 8); do
-      ( for i in 1 2; do tests/Huddle.Tests/bin/Release/net10.0/Huddle.Tests \
+      ( for i in 1 2; do tests/Huddle.Tests.Agents/bin/Release/net10.0/Huddle.Tests.Agents \
           -class Agency.Huddle.Tests.Acp.PersonaSupervisorLifecycleTests | grep "Total:"; done ) &
     done; wait'
 ```
@@ -202,7 +207,7 @@ Test run summary: Passed!
 
 The last line of the container script is the same smoke test `validate` ends with. It runs the
 Release build as a real process and GETs `/health`, which is the one thing no test in
-`tests/Huddle.Tests` can check — they all host the app in-process. It builds nothing, so it has
+`tests/Huddle.Tests.*` can check; the tests that touch the app host it in-process. It builds nothing, so it has
 to follow the build step.
 
 Run it from **PowerShell**, not Git Bash. In Git Bash on Windows `$PWD` expands to an MSYS
@@ -266,7 +271,7 @@ Check these before reading the code.
 | `pwsh: command not found` at the Health endpoint smoke test step | The SDK image stopped shipping PowerShell. `10.0.401` installs it as a global tool and symlinks `/usr/bin/pwsh` (`PowerShell.Linux.arm64` on this runner), but that is the image's choice, not a guarantee across bumps | Add a step before it — `dotnet tool install --global PowerShell` and put `$HOME/.dotnet/tools` on `PATH` — in **both** workflows. Confirm with `command -v pwsh && pwsh --version` |
 | The smoke test FAILs while the whole test suite is green | Read the stderr and stdout tails the script prints; that is what they are for. `AddressInUseException`, a missing `libe_sqlite3.so`, or a timeout waiting for `Now listening on:` are environmental — the app never bound. A `404 - the endpoint is not mapped` is **not** environmental | For 404, `app.MapHealthChecks("/health")` was removed from `Program.cs` and this step caught a real regression the suite cannot see. For the rest, re-run; if it persists, reproduce with the Docker command above |
 | The build step fails with `error MSB3883: Unexpected exception` and `ReleaseMutex failed. WaitOne Id: N Release Id: N`, on a project the change does not touch, with no `CS` diagnostic | The Roslyn compiler server (`VBCSCompiler`) lost a race on its own mutex. It is the runner, not the code. Seen once, on 2026-10-18 (run 1014, job 1702), on `Huddle.Contracts` | Re-run the job. If it recurs, add `-p:UseSharedCompilation=false` to `dotnet build` in **both** workflows, which trades the server's speed for no shared state |
-| Several tests that host the app (`TeamWebApplicationFactory`: `TeammatesPageTests`, `TasksPageTests`, `AvatarEndpointTests`) fail with `TaskCanceledException`, `The client aborted the request`, each after 12-38 s, and the `Huddle.Tests` step takes about twice its usual ~1 m 55 s | The runner was starved for CPU, so app start-up plus one request outran the tests' 10-second `CancellationTokenSource`. The runner shares the desktop with everything else running there. A plain avatar 404 failing the same way is the tell, because it renders no component. Seen on 2026-10-18 (run 1014, job 1704): 9 failures in a 4 m 00 s step, then green in 1 m 58 s on re-run (job 1706) with no change | Check the step's duration first. If it is about double the usual, re-run once the desktop is quiet. If these fail at a normal duration, it is real: the request never completed, so read the first failure's stack rather than raising the budget |
+| Several tests that host the app (`TeamWebApplicationFactory`: `TeammatesPageTests`, `TasksPageTests`, `AvatarEndpointTests`) fail with `TaskCanceledException`, `The client aborted the request`, each after 12-38 s, and the `Huddle.Tests` step takes about twice its usual ~1 m 55 s | The runner was starved for CPU, so app start-up plus one request outran the tests' 10-second `CancellationTokenSource`. The runner shares the desktop with everything else running there. A plain avatar 404 failing the same way is the tell, because it renders no component. Seen on 2026-10-18 (run 1014, job 1704): 9 failures in a 4 m 00 s step, then green in 1 m 58 s on re-run (job 1706) with no change. These tests run in `Huddle.Tests.Hosted` at `maxParallelThreads: 2` | Check the step's duration first. If it is about double the usual, re-run once the desktop is quiet. If these fail at a normal duration, it is real: the request never completed, so read the first failure's stack rather than raising the budget |
 
 ### Line endings
 

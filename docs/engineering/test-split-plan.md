@@ -6,7 +6,7 @@ can run with less parallelism than the thousands of in-memory tests around them.
 `/Execute-Project-Plan` and track it in [§9](#9-tracker) with `agents/scripts/Set-Tracker.ps1`. The
 manager reads [DeliveryPlaybook.md](../../agents/DeliveryPlaybook.md) before the first dispatch.
 
-**Written:** 2026-10-18 against `main` at `573bf44e` · **Status:** not started · **Spec:** Part 1 of
+**Written:** 2026-10-18 against `main` at `573bf44e` · **Status:** Phase 1 (D0 to D10) delivered 2026-10-18 on `chore/test-split`; the load runs (0.6, 10.2) were skipped by the user; Phase 2 not started · **Spec:** Part 1 of
 this page, cited below as **§S1** to **§S12**.
 
 > [!IMPORTANT]
@@ -1063,14 +1063,14 @@ Apply each finding to this plan (§3.4, a task's Read first, or the template) be
 
 ## 8. Verification checklist
 
-- [ ] `dotnet build Huddle.slnx` — `0 Warning(s) 0 Error(s)`
-- [ ] `pwsh -NoProfile -File agents/scripts/Run-Tests.ps1` — `failed: 0`
-- [ ] `Check-TestSplit.ps1 -Final` — `missing 0, duplicate 0`
-- [ ] `Check-All.ps1` clean
-- [ ] `Run-Tests.ps1 -FilterClass '*PromptGoldenTests'` runs one project
-- [ ] `Prove-Mutations.ps1` on any existing spec resolves its project
-- [ ] `load-after.md` shows fewer failures than `load-before.md`
-- [ ] No living page names `tests/Huddle.Tests/`
+- [x] `dotnet build Huddle.slnx` — `0 Warning(s) 0 Error(s)`
+- [x] `pwsh -NoProfile -File agents/scripts/Run-Tests.ps1` — `failed: 0`
+- [x] `Check-TestSplit.ps1 -Final` — `missing 0, duplicate 0` (the script was deleted in 10.3 after its final pass)
+- [x] `Check-All.ps1` clean, except `Protected=1` for `src/Huddle.App/wwwroot/app.css`: the file is unmodified, so the hash in `Conversation/teampages/protected.sha256` is stale (not from this delivery)
+- [x] `Run-Tests.ps1 -FilterClass '*PromptGoldenTests'` runs one project
+- [x] `Prove-Mutations.ps1` on any existing spec resolves its project (resolution checked, mutations not run)
+- [ ] `load-after.md` shows fewer failures than `load-before.md` — skipped by the user, 2026-10-18
+- [x] No living page names `tests/Huddle.Tests/`
 
 ---
 
@@ -1080,7 +1080,7 @@ Ids are `<deliverable>.<task>`:
 `pwsh -NoProfile -File agents/scripts/Set-Tracker.ps1 -Task "2.3" -State Done -TrackerPath docs/engineering/test-split-plan.md`.
 `(H)` is Haiku, `(S)` is Sonnet.
 
-**Status:** 33 of 77 tasks Done · 2 of 5 retrospectives done · 0.6 and 10.2 (load runs) skipped by the user · last updated 2026-10-18.
+**Status:** 39 of 77 tasks Done · 2 of 5 retrospectives done · 0.6 and 10.2 (load runs) skipped by the user · last updated 2026-10-18.
 
 | **Deliverable / Task** | **Model** | **Depends on** | **Active** | **In Progress** | **Done** |
 | --- | --- | --- | --- | --- | --- |
@@ -1128,14 +1128,14 @@ Ids are `<deliverable>.<task>`:
 | 8.2 Domain project file, runner file and literals (H) | Haiku | 8.1 | | | ✔ |
 | 8.3 Drop the old grants and prove the end state (S) | Sonnet | 8.2, 1.5 | | | ✔ |
 | **D9 CI comments and docs** | Haiku | D8 | | | |
-| 9.1 CI comments (H) | Haiku | D8 | | | |
-| 9.2 `Testing.md` and `testing.md` (H) | Haiku | D8 | | | |
-| 9.3 Other living pages and `CLAUDE.md` (H) | Haiku | D8 | | | |
-| 9.4 Index and plan status (H) | Haiku | 9.2 | | | |
+| 9.1 CI comments (H) | Haiku | D8 | | | ✔ |
+| 9.2 `Testing.md` and `testing.md` (H) | Haiku | D8 | | | ✔ |
+| 9.3 Other living pages and `CLAUDE.md` (H) | Haiku | D8 | | | ✔ |
+| 9.4 Index and plan status (H) | Haiku | 9.2 | | | ✔ |
 | **D10 Measure, tune, clean up** | Sonnet | D8 | | | |
-| 10.1 Full verification (H) | Haiku | D8 | | | |
+| 10.1 Full verification (H) | Haiku | D8 | | | ✔ |
 | 10.2 Load measurement and tuning (S) — skipped by the user, 2026-10-18 | Sonnet | 10.1, 0.6 | | | |
-| 10.3 Remove the migration tooling (H) | Haiku | 10.2, D9 | | | |
+| 10.3 Remove the migration tooling (H) | Haiku | 10.2, D9 | | | ✔ |
 | R1 Retrospective at 15 Done | Opus | 15 Done | | | ✔ |
 | R2 Retrospective at 30 Done | Opus | 30 Done | | | ✔ |
 | **D11 One way to wait** | Sonnet | D10 | | | |
